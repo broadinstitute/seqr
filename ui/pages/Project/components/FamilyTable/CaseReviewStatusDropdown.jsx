@@ -38,7 +38,7 @@ const CaseReviewStatusDropdown = props =>
       }] : [])]}
     />
     {/* edit case review discussion for individual: */}
-    <div>
+    <div style={{ padding: '5px 12px' }}>
       {
         props.individual.caseReviewStatus === CASE_REVIEW_STATUS_MORE_INFO_NEEDED &&
         <TextFieldView

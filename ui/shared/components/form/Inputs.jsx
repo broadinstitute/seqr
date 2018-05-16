@@ -139,15 +139,22 @@ BooleanCheckbox.propTypes = {
 export const InlineToggle = styled(BooleanCheckbox).attrs({ toggle: true, inline: true })`
   .ui.toggle.checkbox label {
     font-size: small;
-    padding-top: 0;
+    padding: 0 4.5em 0 0;
   }
   
   .ui.toggle.checkbox, .ui.toggle.checkbox input, .ui.toggle.checkbox label, .ui.toggle.checkbox label:before, .ui.toggle.checkbox label:after {
+    left: auto !important;
+    right: 0  !important;
     height: 1.2em !important;
     min-height: 1.2em !important;
   }
   
   .ui.toggle.checkbox input:checked ~ label:before {
-    background-color: ${props => `${props.color || '#2185D0'} !important`}
+    background-color: ${props => `${props.color || '#2185D0'} !important`};
+    right: 0.1em !important;
+  }
+  
+  .ui.toggle.checkbox input:not(:checked) ~ label:after {
+    right: 2em !important;
   }
 `

@@ -16,7 +16,6 @@ import {
 } from 'shared/utils/constants'
 import { getProject, getProjectDetailsIsLoading, getShowDetails, getAnalysisStatusCounts } from '../selectors'
 import ProjectOverview from './ProjectOverview'
-// import VariantTags from './VariantTags'
 import ProjectCollaborators from './ProjectCollaborators'
 import GeneLists from './GeneLists'
 import FamilyTable from './FamilyTable/FamilyTable'

@@ -24,54 +24,56 @@ const BaseFieldView = (props) => {
     return null
   }
   const modalId = props.isEditable ? `edit-${props.initialValues[props.idField] || 'new'}-${props.field}` : null
+
+  const editButton = props.isEditable && (props.formFields ?
+    <Modal key="edit" title={props.modalTitle} modalName={modalId} trigger={
+      <a role="button" tabIndex="0">
+        {props.editLabel && <span style={{ cursor: 'pointer', paddingRight: '5px' }}>{props.editLabel}</span>}
+        <Icon link size="small" name={props.editIconName || 'write'} />
+      </a>
+    }
+    >
+      <ReduxFormWrapper
+        onSubmit={props.onSubmit}
+        form={modalId}
+        initialValues={props.initialValues}
+        fields={props.formFields}
+        confirmCloseIfNotSaved
+      />
+    </Modal>
+    : (
+      <DispatchRequestButton
+        key="edit"
+        buttonContent={<Icon link size="small" name="plus" />}
+        onSubmit={() => props.onSubmit(props.initialValues)}
+        confirmDialog={props.addConfirm}
+      />
+    ))
+  const deleteButton = props.isDeletable && (
+    <DispatchRequestButton
+      key="delete"
+      buttonContent={<Icon link size="small" name="trash" />}
+      onSubmit={() => props.onSubmit({ ...props.initialValues, delete: true })}
+      confirmDialog={props.deleteConfirm}
+    />
+  )
+  const buttons = [editButton, deleteButton]
+
   return (
     <span style={props.style || {}}>
       {props.isPrivate && <StaffOnlyIcon />}
-      {props.fieldName && <b>{props.fieldName}{hasValue(fieldValue) && ':'}<HorizontalSpacer width={20} /></b>}
-      {props.isEditable && (props.formFields ?
-        <Modal title={props.modalTitle} modalName={modalId} trigger={
-          <a role="button" tabIndex="0">
-            {
-              props.editLabel ?
-                <div>
-                  <div style={{ cursor: 'pointer', display: 'inline-block', padding: '5px 10px 10px 12px' }}>{props.editLabel}</div>
-                  <Icon link size="small" name={props.editIconName || 'write'} />
-                </div>
-                : <Icon link size="small" name={props.editIconName || 'write'} />
-            }
-          </a>
-        }
-        >
-          <ReduxFormWrapper
-            onSubmit={props.onSubmit}
-            form={modalId}
-            initialValues={props.initialValues}
-            fields={props.formFields}
-            confirmCloseIfNotSaved
-          />
-        </Modal>
-        : (
-          <DispatchRequestButton
-            buttonContent={<Icon link size="small" name="plus" />}
-            onSubmit={() => props.onSubmit(props.initialValues)}
-            confirmDialog={props.addConfirm}
-          />
-        )
-      )}
-      {props.isDeletable &&
-        <DispatchRequestButton
-          buttonContent={<Icon link size="small" name="trash" />}
-          onSubmit={() => props.onSubmit({ ...props.initialValues, delete: true })}
-          confirmDialog={props.deleteConfirm}
-        />
-      }
-      {props.fieldName && <br />}
+      {props.fieldName && [
+        <b key="name">{props.fieldName}{hasValue(fieldValue) && ':'}<HorizontalSpacer width={10} /></b>,
+        ...buttons,
+        <br key="br" />,
+      ]}
       {
         hasValue(fieldValue) && !props.hideValue &&
-        <div style={{ paddingBottom: props.compact ? 0 : '15px', paddingLeft: props.isDeletable || props.compact ? 0 : ' 22px', display: props.fieldName ? 'block' : 'inline-block' }}>
+        <div style={{ paddingBottom: props.compact ? 0 : '15px', paddingLeft: props.compact ? 0 : ' 22px', paddingRight: '5px', display: props.fieldName ? 'block' : 'inline-block' }}>
           {props.fieldDisplay(fieldValue)}
         </div>
       }
+      {!props.fieldName && buttons}
     </span>)
 }
 

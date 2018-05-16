@@ -11,7 +11,7 @@ const VariantTagTypeBar = ({ project, familyGuid, ...props }) =>
     title={`Saved ${familyGuid ? 'Family ' : ''}Variants`}
     noDataMessage="No Saved Variants"
     linkPath={`/project/${project.projectGuid}/saved_variants${familyGuid ? `/family/${familyGuid}` : ''}`}
-    data={project.variantTagTypes.map((vtt) => {
+    data={(project.variantTagTypes || []).map((vtt) => {
       return { count: familyGuid ? vtt.tagCounts[familyGuid] || 0 : vtt.numTags, ...vtt }
     })}
   />

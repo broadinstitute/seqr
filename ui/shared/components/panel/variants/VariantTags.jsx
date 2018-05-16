@@ -18,10 +18,6 @@ const InlineForm = styled.div`
   .form {
     display: inline-block;
   }
-  
-  .field.inline {
-    padding-right: 10px;
-  }
 `
 
 const SHORTCUT_TAGS = ['Review', 'Excluded']
@@ -36,8 +32,18 @@ const VARIANT_NOTE_FIELDS = [{
 const taggedByPopupContent = tag =>
   <span>{tag.user || 'unknown user'}{tag.dateSaved && <br />}{tag.dateSaved}</span>
 
+const reRunTagSearch = tag => tag.searchParameters &&
+  <a href={tag.searchParameters} target="_blank">
+    <Icon name="search" title="Re-run search" fitted />
+  </a>
+
 const ShortcutTagToggle = ({ value, ...props }) =>
-  <InlineToggle value={value.isApplied} color={value.color} label={value.name} {...props} />
+  <span>
+    <InlineToggle value={value.isApplied} color={value.color} label={value.name} {...props} />
+    <HorizontalSpacer width={5} />
+    {reRunTagSearch(value)}
+    {value.searchParameters && <HorizontalSpacer width={5} />}
+  </span>
 
 ShortcutTagToggle.propTypes = {
   value: PropTypes.any,
@@ -85,13 +91,13 @@ ShortcutTags.propTypes = {
 const VariantTags = ({ variant, project, updateVariantNote: dispatchUpdateVariantNote, updateVariantTags: dispatchUpdateVariantTags }) =>
   <span style={{ display: 'flex' }}>
     <span style={{ minWidth: 'fit-content' }}>
-      <b>Tags:</b>
-      <HorizontalSpacer width={10} />
+      <b>Tags:<HorizontalSpacer width={10} /></b>
       <ShortcutTags variant={variant} dispatchUpdateVariantTags={dispatchUpdateVariantTags} />
       <TagFieldView
         field="tags"
         idField="variantId"
         modalTitle="Edit Variant Tags"
+        editLabel="Edit Tags"
         initialValues={variant}
         tagOptions={project.variantTagTypes}
         hiddenTags={SHORTCUT_TAGS}
@@ -99,16 +105,12 @@ const VariantTags = ({ variant, project, updateVariantNote: dispatchUpdateVarian
         isEditable
         popupContent={taggedByPopupContent}
         onSubmit={dispatchUpdateVariantTags}
-        tagAnnotation={tag => tag.searchParameters &&
-          <a href={tag.searchParameters} target="_blank">
-            <Icon name="search" title="Re-run search" fitted />
-          </a>
-        }
+        tagAnnotation={reRunTagSearch}
       />
       <HorizontalSpacer width={5} />
       {variant.tags.some(tag => tag.category === 'CMG Discovery Tags') &&
         <span>
-          <b>Fxnl Data:</b>
+          <b>Fxnl Data:<HorizontalSpacer width={10} /></b>
           <TagFieldView
             field="functionalData"
             idField="variantId"
@@ -132,19 +134,7 @@ const VariantTags = ({ variant, project, updateVariantNote: dispatchUpdateVarian
           <HorizontalSpacer width={5} />
         </span>
       }
-      <b>Notes:</b>
-      <HorizontalSpacer width={5} />
-      <TextFieldView
-        isEditable
-        editIconName="plus"
-        field="note"
-        idField="variantId"
-        modalTitle="Add Variant Note"
-        initialValues={{ variantId: variant.variantId }}
-        additionalEditFields={VARIANT_NOTE_FIELDS}
-        onSubmit={dispatchUpdateVariantNote}
-      />
-      <HorizontalSpacer width={5} />
+      <b>Notes:<HorizontalSpacer width={10} /></b>
     </span>
     <span>
       {variant.notes.map(note =>
@@ -164,6 +154,18 @@ const VariantTags = ({ variant, project, updateVariantNote: dispatchUpdateVarian
           style={{ display: 'flex', fontSize: '1.2em' }}
         />,
       )}
+      <TextFieldView
+        style={{ verticalAlign: 'middle' }}
+        isEditable
+        editIconName="plus"
+        editLabel="Add Note"
+        field="note"
+        idField="variantId"
+        modalTitle="Add Variant Note"
+        initialValues={{ variantId: variant.variantId }}
+        additionalEditFields={VARIANT_NOTE_FIELDS}
+        onSubmit={dispatchUpdateVariantNote}
+      />
     </span>
   </span>
 
