@@ -27,6 +27,7 @@ const PageHeader = ({ user, project, familiesByGuid, match }) => {
     return null
   }
 
+  let originalPageLink
   const BREADCRUMBS = {
     project_page: {
       breadcrumb: false,
@@ -34,24 +35,41 @@ const PageHeader = ({ user, project, familiesByGuid, match }) => {
     },
     saved_variants: {
       breadcrumbIdParsers: [
-        (breadcrumbId) => { return breadcrumbId === 'family' ? { content: null } : null },
-        (breadcrumbId) => { return {
-          content: `Family: ${(familiesByGuid[breadcrumbId] || {}).familyId || breadcrumbId}`,
-          link: `/project/${project.projectGuid}/saved_variants/family/${breadcrumbId}`,
-        } },
+        (breadcrumbId) => {
+          if (breadcrumbId === 'family') { return { content: null } }
+          originalPageLink = `variants/${breadcrumbId}`
+          return null
+        },
+        (breadcrumbId) => {
+          const { familyId } = familiesByGuid[breadcrumbId] || {}
+          originalPageLink = `saved-variants?family=${familyId}`
+          return {
+            content: `Family: ${familyId || breadcrumbId}`,
+            link: `/project/${project.projectGuid}/saved_variants/family/${breadcrumbId}`,
+          }
+        },
+        (breadcrumbId) => {
+          originalPageLink = `variants/${breadcrumbId}?${originalPageLink.split('?')[1]}`
+          return null
+        },
       ],
-      originalPages: [{ path: 'saved-variants', idPath: 'variants' }],
+      originalPages: [{ path: 'saved-variants' }],
     },
   }
 
-  const { breadcrumb, breadcrumbIdParsers = [], originalPages = [] } = BREADCRUMBS[match.params.breadcrumb] || {}
+  const {
+    breadcrumb = match.params.breadcrumb.split('_').map(word => word[0].toUpperCase() + word.slice(1)).join(' '),
+    breadcrumbIdParsers = [],
+    originalPages = [],
+  } = BREADCRUMBS[match.params.breadcrumb] || {}
+
   let breadcrumbSections = [
     { content: 'Project' },
     { content: project.name, link: `/project/${project.projectGuid}/project_page` },
   ]
   if (breadcrumb !== false) {
     breadcrumbSections.push({
-      content: breadcrumb || match.params.breadcrumb.split('_').map(word => word[0].toUpperCase() + word.slice(1)).join(' '),
+      content: breadcrumb,
       link: `/project/${project.projectGuid}/${match.params.breadcrumb}`,
     })
   }
@@ -114,7 +132,7 @@ const PageHeader = ({ user, project, familiesByGuid, match }) => {
         {originalPages.map(page =>
           <a
             key={page.name || match.params.breadcrumb}
-            href={`/project/${project.deprecatedProjectId}/${match.params.breadcrumbId && page.idPath ? `${page.idPath}/${match.params.breadcrumbId}` : page.path}`}
+            href={`/project/${project.deprecatedProjectId}/${originalPageLink || page.path}`}
           >
             Original {page.name || breadcrumb} Page<br />
           </a>,

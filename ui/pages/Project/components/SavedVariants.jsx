@@ -93,10 +93,10 @@ class SavedVariants extends React.Component {
         </Grid.Row>
         {!this.props.loading &&
           <Grid.Row>
-            <Grid.Column width={3}>
+            <Grid.Column width={6}>
               Showing {this.props.savedVariants.length} of {this.props.totalVariantsCount} {tag && <b>{`"${tag}"`}</b>} variants
             </Grid.Column>
-            <InlineFormColumn width={13} floated="right" textAlign="right">
+            <InlineFormColumn width={10} floated="right" textAlign="right">
               <ReduxFormWrapper
                 onSubmit={this.props.updateSavedVariantTable}
                 form="editSavedVariantTable"
