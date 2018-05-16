@@ -1,34 +1,53 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Loader, Checkbox, Dropdown } from 'semantic-ui-react'
+import { Loader, Grid } from 'semantic-ui-react'
+import styled from 'styled-components'
 
 import VariantTagTypeBar from 'shared/components/graph/VariantTagTypeBar'
 import Variants from 'shared/components/panel/variants/Variants'
-import { VerticalSpacer, HorizontalSpacer } from 'shared/components/Spacers'
-import { CLINSIG_SEVERITY } from 'shared/utils/constants'
-import { loadProjectVariants } from '../reducers'
-import { getProject, getProjectSavedVariantsIsLoading, getProjectSavedVariants } from '../selectors'
+import { Dropdown, InlineToggle } from 'shared/components/form/Inputs'
+import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
+import { loadProjectVariants, updateSavedVariantTable } from '../reducers'
+import {
+  getProject, getProjectSavedVariantsIsLoading, getProjectSavedVariants, getVisibleSortedProjectSavedVariants,
+  getSavedVariantTableState,
+} from '../selectors'
+import { VARIANT_SORT_OPTONS } from '../constants'
 
-const clinsigSeverity = (clinvar) => {
-  const significance = clinvar.clinsig && clinvar.clinsig.split('/')[0]
-  if (!significance) return -10
-  return significance in CLINSIG_SEVERITY ? CLINSIG_SEVERITY[significance] : -0.5
+
+const BASE_CATEGORY_FILTER_FIELD = {
+  name: 'categoryFilter',
+  component: Dropdown,
+  inline: true,
+  selection: false,
+  fluid: false,
+  label: 'Show category:',
 }
 
-const sortOptions = [
-  { key: 'familyGuid', value: 'familyGuid', text: 'Family' },
-  { key: 'position', value: 'xpos', text: 'Position' },
-  { key: 'clinvar', value: 'clinvar', text: 'Clinvar Significance' },
-  { key: 'inDiseaseGeneDb', value: 'genes', text: 'In OMIM' },
+const FILTER_FIELDS = [
+  {
+    name: 'sortOrder',
+    component: Dropdown,
+    inline: true,
+    selection: false,
+    fluid: false,
+    label: 'Sort By:',
+    options: VARIANT_SORT_OPTONS,
+  },
+  {
+    name: 'hideExcluded',
+    component: InlineToggle,
+    label: 'Hide Excluded',
+  },
 ]
 
-const sortFuncs = {
-  familyGuid: (a, b) => a.localeCompare(b),
-  xpos: (a, b) => a - b,
-  clinvar: (a, b) => clinsigSeverity(b) - clinsigSeverity(a),
-  genes: (a, b) => b.some(gene => gene.inDiseaseDb) - a.some(gene => gene.inDiseaseDb),
-}
+const InlineFormColumn = styled(Grid.Column)`
+  .field.inline {
+    padding-left: 20px;
+  }
+`
+
 
 class SavedVariants extends React.Component {
 
@@ -37,18 +56,20 @@ class SavedVariants extends React.Component {
     project: PropTypes.object,
     loading: PropTypes.bool,
     savedVariants: PropTypes.array,
+    totalVariantsCount: PropTypes.number,
+    tableState: PropTypes.object,
     loadProjectVariants: PropTypes.func,
+    updateSavedVariantTable: PropTypes.func,
   }
 
   constructor(props) {
     super(props)
 
     props.loadProjectVariants(props.match.params.familyGuid)
-    this.state = {
-      hideExcluded: false,
-      category: 'All',
-      sort: props.match.params.familyGuid ? 'xpos' : 'familyGuid',
-    }
+
+    this.categoryOptions = [...new Set(
+      this.props.project.variantTagTypes.map(type => type.category).filter(category => category),
+    )].map((category) => { return { value: category } })
   }
 
   componentWillReceiveProps(nextProps) {
@@ -59,66 +80,40 @@ class SavedVariants extends React.Component {
 
   render() {
     const { familyGuid, tag } = this.props.match.params
-    let variantsToShow = (this.props.savedVariants || [])
-    const variantCount = variantsToShow.length
-    if (this.state.hideExcluded) {
-      variantsToShow = variantsToShow.filter(variant => variant.tags.every(t => t.name !== 'Excluded'))
-    }
-    if (this.state.category !== 'All' && !tag) {
-      variantsToShow = variantsToShow.filter(variant => variant.tags.some(t => t.category === this.state.category))
-    }
-    // Always secondary sort on xpos
-    variantsToShow.sort((a, b) => {
-      return sortFuncs[this.state.sort](a[this.state.sort], b[this.state.sort]) || a.xpos - b.xpos
-    })
-
-    const categoryOptions = [...new Set(
-      this.props.project.variantTagTypes.map(type => type.category).filter(category => category),
-    )].map((category) => { return { value: category, text: category, key: category } })
+    const filterFields = (this.categoryOptions.length && !tag) ?
+      [{ ...BASE_CATEGORY_FILTER_FIELD, options: [{ value: 'ALL', text: 'All' }, ...this.categoryOptions] }].concat(FILTER_FIELDS) :
+      FILTER_FIELDS
 
     return (
-      <div>
-        <div style={{ paddingTop: '20px', paddingBottom: '20px' }}>
-          <VariantTagTypeBar height={30} project={this.props.project} familyGuid={familyGuid} />
-          <VerticalSpacer height={10} />
-          {!this.props.loading &&
-            <span>
-              Showing {variantsToShow.length} of {variantCount} {tag && <b>{`"${tag}"`}</b>} variants
-            </span>
-          }
-          <div style={{ float: 'right' }}>
-            Sort by:
-            <HorizontalSpacer width={5} />
-            <Dropdown
-              inline
-              onChange={(e, data) => this.setState({ sort: data.value })}
-              value={this.state.sort}
-              options={familyGuid ? sortOptions.slice(1) : sortOptions}
-            />
-            <HorizontalSpacer width={20} />
-            {
-              !tag && categoryOptions.length > 0 &&
-              <span>
-                Show category:
-                <HorizontalSpacer width={5} />
-                <Dropdown
-                  inline
-                  onChange={(e, data) => this.setState({ category: data.value })}
-                  value={this.state.category}
-                  options={[{ value: 'All', text: 'All', key: 'all' }, ...categoryOptions]}
-                />
-                <HorizontalSpacer width={15} />
-              </span>
-            }
-            <Checkbox toggle label="Hide Excluded" onChange={(e, data) => this.setState({ hideExcluded: data.checked })} />
-          </div>
-          <VerticalSpacer height={20} />
-        </div>
-        {this.props.loading ?
-          <Loader inline="centered" active /> :
-          <div style={{ paddingTop: '20px' }}><Variants variants={variantsToShow} /></div>
+      <Grid>
+        <Grid.Row>
+          <Grid.Column width={16}>
+            <VariantTagTypeBar height={30} project={this.props.project} familyGuid={familyGuid} />
+          </Grid.Column>
+        </Grid.Row>
+        {!this.props.loading &&
+          <Grid.Row>
+            <Grid.Column width={3}>
+              Showing {this.props.savedVariants.length} of {this.props.totalVariantsCount} {tag && <b>{`"${tag}"`}</b>} variants
+            </Grid.Column>
+            <InlineFormColumn width={13} floated="right" textAlign="right">
+              <ReduxFormWrapper
+                onSubmit={this.props.updateSavedVariantTable}
+                form="editSavedVariantTable"
+                initialValues={this.props.tableState}
+                closeOnSuccess={false}
+                submitOnChange
+                fields={filterFields}
+              />
+            </InlineFormColumn>
+          </Grid.Row>
         }
-      </div>
+        <Grid.Row>
+          <Grid.Column width={16}>
+            {this.props.loading ? <Loader inline="centered" active /> : <Variants variants={this.props.savedVariants} />}
+          </Grid.Column>
+        </Grid.Row>
+      </Grid>
     )
   }
 }
@@ -126,11 +121,14 @@ class SavedVariants extends React.Component {
 const mapStateToProps = (state, ownProps) => ({
   project: getProject(state),
   loading: getProjectSavedVariantsIsLoading(state),
-  savedVariants: getProjectSavedVariants(state, ownProps),
+  savedVariants: getVisibleSortedProjectSavedVariants(state, ownProps),
+  totalVariantsCount: getProjectSavedVariants(state, ownProps).length,
+  tableState: getSavedVariantTableState(state),
 })
 
 const mapDispatchToProps = {
   loadProjectVariants,
+  updateSavedVariantTable,
 }
 
 export default connect(mapStateToProps, mapDispatchToProps)(SavedVariants)

@@ -1,7 +1,7 @@
 import React, { createElement } from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Field, FieldArray, reduxForm, getFormSyncErrors, submit, initialize } from 'redux-form'
+import { Field, FieldArray, reduxForm, getFormSyncErrors } from 'redux-form'
 import { Form, Message } from 'semantic-ui-react'
 
 import { closeModal, setModalConfirm } from 'redux/utils/modalReducer'
@@ -13,14 +13,20 @@ export const validators = {
 }
 
 const renderField = (props) => {
-  const { fieldComponent = Form.Input, meta: { touched, invalid }, input, ...additionalProps } = props
-  return createElement(fieldComponent, { error: touched && invalid, meta: props.meta, ...input, ...additionalProps })
+  const { fieldComponent = Form.Input, meta: { touched, invalid }, submitForm, input, ...additionalProps } = props
+  const { onBlur, ...additionalInput } = input
+  const onChangeSubmit = submitForm ? (value) => {
+    onBlur(value)
+    submitForm()
+  } : null
+  return createElement(fieldComponent, { error: touched && invalid, meta: props.meta, onBlur: onChangeSubmit, ...additionalInput, ...additionalProps })
 }
 
 renderField.propTypes = {
   fieldComponent: PropTypes.oneOfType([PropTypes.func, PropTypes.string]),
   meta: PropTypes.object,
   input: PropTypes.object,
+  submitForm: PropTypes.func,
 }
 
 class ReduxFormWrapper extends React.Component {
@@ -77,8 +83,6 @@ class ReduxFormWrapper extends React.Component {
     warning: PropTypes.string,
     handleSubmit: PropTypes.func,
     setModalConfirm: PropTypes.func,
-    submit: PropTypes.func,
-    initialize: PropTypes.func,
   }
 
   static defaultProps = {
@@ -99,18 +103,23 @@ class ReduxFormWrapper extends React.Component {
     const saveErrorMessage = this.props.submitFailed ?
       (this.props.error && this.props.error.join('; ')) || (this.props.invalid ? 'Invalid input' : 'Unknown') : null
 
+    const errorMessages = this.props.showErrorPanel && (this.props.error || (this.props.submitFailed && Object.values(this.props.validationErrors)))
+
     const fieldComponents = this.props.renderChildren ? React.createElement(this.props.renderChildren) :
       this.props.fields.map(({ component, name, isArrayField, key, ...fieldProps }) => {
         const baseProps = { key: key || name, name }
-        const singleFieldProps = { component: renderField, fieldComponent: component, ...fieldProps }
+        const singleFieldProps = {
+          component: renderField,
+          fieldComponent: component,
+          submitForm: this.props.submitOnChange ? this.props.handleSubmit : null,
+          ...fieldProps,
+        }
         return isArrayField ?
           <FieldArray {...baseProps} component={({ fields }) =>
             fields.map(fieldPath => <Field key={fieldPath} name={fieldPath} {...singleFieldProps} />)}
           /> :
           <Field {...baseProps} {...singleFieldProps} />
       })
-
-    const errorMessages = this.props.showErrorPanel && (this.props.error || (this.props.submitFailed && Object.values(this.props.validationErrors)))
 
     return (
       <Form onSubmit={this.props.handleSubmit} size={this.props.size} loading={this.props.submitting}>
@@ -167,10 +176,6 @@ class ReduxFormWrapper extends React.Component {
   componentWillUpdate(nextProps) {
     if (nextProps.submitSucceeded && nextProps.closeOnSuccess) {
       this.props.handleClose(true)
-    } else if (this.props.submitOnChange && nextProps.dirty && !this.props.dirty) {
-      this.props.submit()
-    } else if (this.props.submitOnChange && nextProps.submitSucceeded && !this.props.submitSucceeded) {
-      this.props.initialize()
     } else if (this.props.confirmCloseIfNotSaved) {
       if (nextProps.dirty && !this.props.dirty) {
         this.props.setModalConfirm('The form contains unsaved changes. Are you sure you want to close it?')
@@ -193,8 +198,6 @@ const mapDispatchToProps = (dispatch, ownProps) => {
     setModalConfirm: (confirm) => {
       dispatch(setModalConfirm(ownProps.modalName || ownProps.form, confirm))
     },
-    initialize: () => dispatch(initialize(ownProps.form, ownProps.initialValues)),
-    submit: () => dispatch(submit(ownProps.form)),
   }
 }
 

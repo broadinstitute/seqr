@@ -11,6 +11,7 @@ import {
   FAMILY_STATUS_REVIEWED_PURSUING_CANDIDATES,
   FAMILY_STATUS_REVIEWED_NO_CLEAR_CANDIDATE,
   FAMILY_STATUS_ANALYSIS_IN_PROGRESS,
+  CLINSIG_SEVERITY,
 } from 'shared/utils/constants'
 
 export const ANALYSIS_TYPE_VARIANT_CALLS = 'VARIANTS'
@@ -296,4 +297,22 @@ export const FAMILY_SORT_OPTIONS = [
         '2000-01-01T01:00:00.000Z',
       ),
   },
+]
+
+export const SORT_BY_FAMILY_GUID = 'FAMILY_GUID'
+export const SORT_BY_XPOS = 'XPOS'
+export const SORT_BY_CLINVAR = 'CLINVAR'
+export const SORT_BY_IN_OMIM = 'IN_OMIM'
+
+const clinsigSeverity = (variant) => {
+  const significance = variant.clinvar.clinsig && variant.clinvar.clinsig.split('/')[0]
+  if (!significance) return -10
+  return significance in CLINSIG_SEVERITY ? CLINSIG_SEVERITY[significance] : -0.5
+}
+
+export const VARIANT_SORT_OPTONS = [
+  { value: SORT_BY_FAMILY_GUID, text: 'Default', comparator: (a, b) => a.familyGuid.localeCompare(b.familyGuid) },
+  { value: SORT_BY_XPOS, text: 'Position', comparator: (a, b) => a.xpos - b.xpos },
+  { value: SORT_BY_CLINVAR, text: 'Clinvar Significance', comparator: (a, b) => clinsigSeverity(b) - clinsigSeverity(a) },
+  { value: SORT_BY_IN_OMIM, text: 'In OMIM', comparator: (a, b) => b.genes.some(gene => gene.inDiseaseDb) - a.genes.some(gene => gene.inDiseaseDb) },
 ]

@@ -18,7 +18,7 @@ class BaseSemanticInput extends React.Component {
 
   render() {
     const { inputType, ...props } = this.props
-    return createElement(Form[inputType], { ...props, onChange: this.handleChange, onBlur: null })
+    return createElement(Form[inputType], { ...props, onChange: this.handleChange })
   }
 }
 
@@ -26,22 +26,29 @@ const labelStyle = (color) => { return color ? { color: 'white', backgroundColor
 
 const styledOption = (option) => {
   return {
+    value: option.value,
     key: option.text || option.value,
     text: option.text || option.name || option.value,
     label: option.color ? { empty: true, circular: true, style: labelStyle(option.color) } : null,
-    ...option,
   }
 }
 
-export const Select = props =>
+export const Dropdown = props =>
   <BaseSemanticInput
     {...props}
-    inputType="Select"
+    inputType="Dropdown"
     options={props.options.map(styledOption)}
-    fluid
     noResultsMessage={null}
     tabIndex="0"
   />
+
+
+Dropdown.propTypes = {
+  options: PropTypes.array,
+}
+
+export const Select = props =>
+  <Dropdown selection fluid {...props} />
 
 
 Select.propTypes = {
@@ -114,19 +121,21 @@ StringValueCheckboxGroup.propTypes = {
 }
 
 export const BooleanCheckbox = (props) => {
-  const { value, ...baseProps } = props
+  const { value, onChange, ...baseProps } = props
   return <BaseSemanticInput
     {...baseProps}
     inputType="Checkbox"
     defaultChecked={Boolean(value)}
+    onChange={data => onChange(data.checked)}
   />
 }
 
 BooleanCheckbox.propTypes = {
   value: PropTypes.any,
+  onChange: PropTypes.func,
 }
 
-const StyledInlineToggle = styled(BooleanCheckbox)`
+export const InlineToggle = styled(BooleanCheckbox).attrs({ toggle: true, inline: true })`
   .ui.toggle.checkbox label {
     font-size: small;
     padding-top: 0;
@@ -141,5 +150,3 @@ const StyledInlineToggle = styled(BooleanCheckbox)`
     background-color: ${props => `${props.color || '#2185D0'} !important`}
   }
 `
-
-export const InlineToggle = props => <StyledInlineToggle toggle inline {...props} />

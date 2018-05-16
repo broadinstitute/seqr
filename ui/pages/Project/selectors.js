@@ -13,6 +13,8 @@ import {
   CASE_REVIEW_STATUS_OPTIONS,
   FAMILY_FILTER_OPTIONS,
   FAMILY_SORT_OPTIONS,
+  SORT_BY_FAMILY_GUID,
+  VARIANT_SORT_OPTONS,
 } from './constants'
 
 
@@ -27,6 +29,13 @@ const FAMILY_SORT_LOOKUP = FAMILY_SORT_OPTIONS.reduce(
   (acc, opt) => ({
     ...acc,
     ...{ [opt.value]: opt.createSortKeyGetter },
+  }), {},
+)
+
+const VARIANT_SORT_LOOKUP = VARIANT_SORT_OPTONS.reduce(
+  (acc, opt) => ({
+    ...acc,
+    ...{ [opt.value]: opt.comparator },
   }), {},
 )
 
@@ -51,12 +60,37 @@ export const getProjectDatasets = createSelector(getDatasetsByGuid, getProjectGu
 
 export const getProjectSamples = createSelector(getSamplesByGuid, getProjectGuid, filterProjectEntities)
 
+// Saved variant selectors
+
+export const getSavedVariantTableState = state => state.savedVariantTableState
+export const getSavedVariantCategoryFilter = (state, props) => { return props.match.params.tag ? SHOW_ALL : (state.savedVariantTableState.categoryFilter || SHOW_ALL) }
+export const getSavedVariantSortOrder = state => state.savedVariantTableState.sortOrder || SORT_BY_FAMILY_GUID
+export const getSavedVariantHideExcluded = state => state.savedVariantTableState.hideExcluded
+
 export const getProjectSavedVariants = createSelector(
   state => state.projectSavedVariants,
   (state, props) => props.match.params,
   (projectSavedVariants, { tag, familyGuid }) => {
     const variants = familyGuid ? projectSavedVariants[familyGuid] || [] : Object.values(projectSavedVariants).reduce((a, b) => a.concat(b), [])
     return tag ? variants.filter(o => o.tags.some(t => t.name === tag)) : variants
+  },
+)
+
+export const getVisibleSortedProjectSavedVariants = createSelector(
+  getProjectSavedVariants, getSavedVariantCategoryFilter, getSavedVariantSortOrder, getSavedVariantHideExcluded,
+  (projectSavedVariants, categoryFilter, sortOrder, hideExcluded) => {
+    let variantsToShow = projectSavedVariants
+    if (hideExcluded) {
+      variantsToShow = variantsToShow.filter(variant => variant.tags.every(t => t.name !== 'Excluded'))
+    }
+    if (categoryFilter !== SHOW_ALL) {
+      variantsToShow = variantsToShow.filter(variant => variant.tags.some(t => t.category === categoryFilter))
+    }
+    // Always secondary sort on xpos
+    variantsToShow.sort((a, b) => {
+      return VARIANT_SORT_LOOKUP[sortOrder](a, b) || a.xpos - b.xpos
+    })
+    return variantsToShow
   },
 )
 
