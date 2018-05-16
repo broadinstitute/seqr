@@ -92,6 +92,9 @@ def deploy(deployment_target, components, output_dir=None, other_settings={}):
     if "postgres" in components:
         deploy_postgres(settings)
 
+    if "redis" in components:
+        deploy_redis(settings)
+
     if "phenotips" in components:
         deploy_phenotips(settings)
 
@@ -298,6 +301,21 @@ def deploy_postgres(settings):
     )
 
     _deploy_pod("postgres", settings, wait_until_pod_is_ready=True)
+
+
+def deploy_redis(settings):
+    print_separator("redis")
+
+    if settings["DELETE_BEFORE_DEPLOY"]:
+        delete_pod("redis", settings)
+
+    docker_build(
+        "redis",
+        settings,
+        ["--build-arg REDIS_SERVICE_PORT=%s" % settings["REDIS_SERVICE_PORT"]],
+    )
+
+    _deploy_pod("redis", settings, wait_until_pod_is_ready=True)
 
 
 def deploy_elasticsearch(settings):
