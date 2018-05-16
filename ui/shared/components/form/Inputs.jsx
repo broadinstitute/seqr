@@ -30,6 +30,7 @@ const styledOption = (option) => {
     key: option.text || option.value,
     text: option.text || option.name || option.value,
     label: option.color ? { empty: true, circular: true, style: labelStyle(option.color) } : null,
+    color: option.color,
   }
 }
 
@@ -90,7 +91,7 @@ export class Multiselect extends React.Component {
 }
 
 export const StringValueCheckboxGroup = (props) => {
-  const { value, options, onChange, ...baseProps } = props
+  const { value = '', options, onChange, ...baseProps } = props
   return (
     <Form.Group inline style={{ flexWrap: 'wrap' }}>
       {options.map(option =>
@@ -116,7 +117,7 @@ export const StringValueCheckboxGroup = (props) => {
 }
 
 StringValueCheckboxGroup.propTypes = {
-  value: PropTypes.string,
+  value: PropTypes.any,
   options: PropTypes.array,
   onChange: PropTypes.func,
 }

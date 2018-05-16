@@ -44,11 +44,8 @@ const Variants = ({ variants }) =>
   <Grid divided="vertically" columns="equal">
     {variants.map(variant =>
       <VariantRow key={variant.variantId} severity={CLINSIG_SEVERITY[(variant.clinvar.clinsig || '').split('/')[0]]}>
-        <Grid.Column width={16}>
-          <VariantTags variant={variant} />
-        </Grid.Column>
-        <Grid.Column width={4}>
-          {variant.clinvar.variantId &&
+        {variant.clinvar.variantId &&
+          <Grid.Column width={16}>
             <span>
               <b>ClinVar:</b>
               {variant.clinvar.clinsig.split('/').map(clinsig =>
@@ -58,10 +55,10 @@ const Variants = ({ variants }) =>
                 </a>,
               )}
             </span>
-          }
-        </Grid.Column>
-        <Grid.Column width={12} textAlign="right">
-          <VariantFamily variant={variant} />
+          </Grid.Column>
+        }
+        <Grid.Column width={16}>
+          <VariantTags variant={variant} />
         </Grid.Column>
         {variant.genes.length > 0 &&
           <Grid.Column>
@@ -72,6 +69,9 @@ const Variants = ({ variants }) =>
         <Grid.Column><Annotations variant={variant} /></Grid.Column>
         <Grid.Column><Predictions annotation={variant.annotation} /></Grid.Column>
         <Grid.Column><Frequencies variant={variant} /></Grid.Column>
+        <Grid.Column width={16}>
+          <VariantFamily variant={variant} />
+        </Grid.Column>
       </VariantRow>,
     )}
   </Grid>

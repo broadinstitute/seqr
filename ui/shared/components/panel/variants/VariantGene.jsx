@@ -71,6 +71,8 @@ const VariantGene = ({ gene, project }) =>
           }
         />
       }
+    </div>
+    <div>
       {gene.diseaseGeneLists.map(geneListName =>
         <GeneLabel
           key={geneListName}

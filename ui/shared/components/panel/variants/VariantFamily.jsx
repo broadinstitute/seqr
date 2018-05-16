@@ -24,7 +24,7 @@ const IndividualCell = styled.div`
   display: inline-block;
   vertical-align: top;
   text-align: center;
-  padding: 0 10px;
+  padding-right: 20px;
   
   .alleles {
     color: black;

@@ -1,5 +1,6 @@
 import React from 'react'
 import PropTypes from 'prop-types'
+import styled from 'styled-components'
 import { Label, Popup, Form } from 'semantic-ui-react'
 import { Field } from 'redux-form'
 
@@ -8,6 +9,12 @@ import { Multiselect } from '../../form/Inputs'
 import OptionFieldView from './OptionFieldView'
 
 const NOTES_CATEGORY = 'Functional Data'
+
+const LargeMultiselect = styled(Multiselect)`
+  .ui.search.dropdown .menu {
+    max-height: calc(50vh - 20px);
+  }
+`
 
 const MetadataField = ({ value, name, error }) => {
   const label =
@@ -51,7 +58,7 @@ const TagFieldView = ({ initialValues, field, tagOptions, popupContent, tagAnnot
     field={field}
     tagOptions={tagOptions}
     formFieldProps={{
-      component: Multiselect,
+      component: LargeMultiselect,
       placeholder: 'Variant Tags',
       normalize: (value, previousValue, allValues, previousAllValues) => value.map(option => previousAllValues[field].find(prevFieldValue => prevFieldValue.name === option) || tagOptionsMap[option]),
       format: options => options.map(tag => tag.name),
