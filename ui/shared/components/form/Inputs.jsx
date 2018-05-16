@@ -88,6 +88,7 @@ export class Multiselect extends React.Component {
     />
   }
 }
+
 export const StringValueCheckboxGroup = (props) => {
   const { value, options, onChange, ...baseProps } = props
   return (

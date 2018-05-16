@@ -15,8 +15,8 @@ export const validators = {
 const renderField = (props) => {
   const { fieldComponent = Form.Input, meta: { touched, invalid }, submitForm, input, ...additionalProps } = props
   const { onBlur, ...additionalInput } = input
-  const onChangeSubmit = submitForm ? (value) => {
-    onBlur(value)
+  const onChangeSubmit = submitForm ? () => {
+    onBlur()
     submitForm()
   } : null
   return createElement(fieldComponent, { error: touched && invalid, meta: props.meta, onBlur: onChangeSubmit, ...additionalInput, ...additionalProps })
