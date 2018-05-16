@@ -1,0 +1,46 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: redis
+  labels:
+    name: redis
+    deployment: {{ DEPLOY_TO }}
+spec:
+  ports:
+  - port: {{ REDIS_SERVICE_PORT }}
+  selector:
+    name: redis
+---
+kind: Deployment
+apiVersion: extensions/v1beta1
+metadata:
+  name: redis
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        name: redis
+        deployment: {{ DEPLOY_TO }}
+    spec:
+      containers:
+      - name: redis-pod
+        image: {{ DOCKER_IMAGE_PREFIX }}/redis:{{ TIMESTAMP }}
+        ports:
+        - containerPort: {{ REDIS_SERVICE_PORT }}
+          protocol: TCP
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            memory: "3Gi"
+            cpu: "1"
+          limits:
+            memory: "15Gi"
+            cpu: "5"
+#        readinessProbe:
+#          exec:
+#            command:
+#            - cat
+#            - /tmp/ready
+      restartPolicy: Always
+      dnsPolicy: ClusterFirst
