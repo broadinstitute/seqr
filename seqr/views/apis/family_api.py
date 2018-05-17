@@ -48,11 +48,9 @@ def edit_families_handler(request, project_guid):
     #    return create_json_response({'errors': errors, 'warnings': warnings})
 
     updated_families = []
-    valid_family_fields = [_to_snake_case(field) for field in Family._meta.json_fields]
     for fields in modified_families:
         family = Family.objects.get(project=project, guid=fields['familyGuid'])
-        family_fields = {k: v for k, v in fields.items() if k in valid_family_fields}
-        update_family_from_json(family, family_fields)
+        update_family_from_json(family, fields, user=request.user, allow_unknown_keys=True)
         updated_families.append(family)
 
         for key, value in fields.items():

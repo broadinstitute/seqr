@@ -91,8 +91,11 @@ def _get_json_for_families(families, user=None, add_individual_guids_field=False
     """
 
     def _get_pedigree_image_url(pedigree_image):
-        if isinstance(pedigree_image, ImageFieldFile) and pedigree_image.readable():
-            pedigree_image = pedigree_image.url
+        if isinstance(pedigree_image, ImageFieldFile):
+            try:
+                pedigree_image = pedigree_image.url
+            except:
+                pedigree_image = None
         return os.path.join("/media/", pedigree_image) if pedigree_image else None
 
     fields = _get_record_fields(Family, 'family', user)

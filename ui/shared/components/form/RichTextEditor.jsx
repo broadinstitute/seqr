@@ -32,6 +32,10 @@ class RichTextEditor extends React.Component {
     { label: 'Underline', type: 'UNDERLINE', icon: 'underline' },
   ]
 
+  static defaultProps = {
+    onChange: () => {},
+  }
+
   constructor(props) {
     super(props)
 
@@ -63,6 +67,10 @@ class RichTextEditor extends React.Component {
     return false
   }
 
+  updateEditorState = (editorState) => {
+    this.setState({ editorState }, () => this.props.onChange(this.getMarkdown()))
+  }
+
   render() {
     const es = this.state.editorState
     return (
@@ -72,7 +80,7 @@ class RichTextEditor extends React.Component {
             currentInlineStyle={es.getCurrentInlineStyle()}
             onButtonClick={(e, data) => {
               e.preventDefault()
-              this.setState({ editorState: RichUtils.toggleInlineStyle(es, data.id) })
+              this.updateEditorState(RichUtils.toggleInlineStyle(es, data.id))
             }}
           />
           {' '}
@@ -80,7 +88,7 @@ class RichTextEditor extends React.Component {
             currentBlockType={es.getCurrentContent().getBlockForKey(es.getSelection().getStartKey()).getType()}
             onButtonClick={(e, data) => {
               e.preventDefault()
-              this.setState({ editorState: RichUtils.toggleBlockType(es, data.id) })
+              this.updateEditorState(RichUtils.toggleBlockType(es, data.id))
             }}
           />
         </div>
@@ -89,12 +97,7 @@ class RichTextEditor extends React.Component {
             editorState={this.state.editorState}
             handleKeyCommand={this.handleKeyCommand}
             placeholder=""
-            onChange={(editorState) => {
-              if (this.props.onChange) {
-                this.props.onChange(this.getMarkdown())
-              }
-              this.setState({ editorState })
-            }}
+            onChange={this.updateEditorState}
           />
         </div>
       </div>)
