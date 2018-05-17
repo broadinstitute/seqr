@@ -6,6 +6,7 @@ import { connect } from 'react-redux'
 import { Form, Grid, Popup, Icon } from 'semantic-ui-react'
 import styled from 'styled-components'
 import { getProject } from 'redux/rootReducer'
+import { HorizontalSpacer } from 'shared/components/Spacers'
 import FormWrapper from 'shared/components/form/FormWrapper'
 
 
@@ -19,6 +20,30 @@ const StyledIcon = styled(Icon)`
   color: #888888;
   padding-right: 20px;
 `
+
+
+const SAMPLE_TYPES = [
+  { key: 'WES', value: 'WES', text: 'Exome' },
+  { key: 'WGS', value: 'WGS', text: 'Genome' },
+  { key: 'RNA', value: 'RNA', text: 'RNA-seq' },
+]
+
+const GENOME_VERSIONS = [
+  { key: 'GRCH37', value: 'GRCH37', text: 'GRCh37' },
+  { key: 'GRCH38', value: 'GRCH38', text: 'GRCh38' },
+]
+
+const IGNORE_CHECKBOX_LABEL = { children:
+  <span>
+    Ignore extra samples in callset <HorizontalSpacer width={10} />
+    <Popup
+      trigger={<StyledIcon name="question circle outline" />}
+      content="If the callset contains sample ids that don't match individuals in this project, ignore them instead of reporting an error."
+      size="small"
+      position="top center"
+    />
+  </span>,
+}
 
 class UploadCallsetForm extends React.PureComponent
 {
@@ -82,7 +107,6 @@ class UploadCallsetForm extends React.PureComponent
                   position="top center"
                 />
                 <Form.Dropdown
-                  style={{ height: '35px', padding: '10px 15px' }}
                   name="sample_type"
                   onChange={(event, data) => {
                     this.formDataJson.sampleType = data.value
@@ -90,13 +114,7 @@ class UploadCallsetForm extends React.PureComponent
                   fluid
                   selection
                   placeholder="select sample type"
-                  options={
-                    [
-                      { key: 'WES', value: 'WES', text: 'Exome' },
-                      { key: 'WGS', value: 'WGS', text: 'Genome' },
-                      { key: 'RNA', value: 'RNA', text: 'RNA-seq' },
-                    ]
-                  }
+                  options={SAMPLE_TYPES}
                 />
               </Form.Field>
             </Grid.Column>
@@ -111,7 +129,6 @@ class UploadCallsetForm extends React.PureComponent
                 />
 
                 <Form.Dropdown
-                  style={{ height: '37px', padding: '10px 15px' }}
                   name="genome_version"
                   onChange={(event, data) => {
                     this.formDataJson.genomeVersion = data.value
@@ -119,12 +136,7 @@ class UploadCallsetForm extends React.PureComponent
                   fluid
                   selection
                   placeholder="select genome version"
-                  options={
-                    [
-                      { key: 'GRCH37', value: 'GRCH37', text: 'GRCh37' },
-                      { key: 'GRCH38', value: 'GRCH38', text: 'GRCh38' },
-                    ]
-                  }
+                  options={GENOME_VERSIONS}
                 />
               </Form.Field>
             </Grid.Column>
@@ -166,20 +178,17 @@ class UploadCallsetForm extends React.PureComponent
                   }}
                 />
               </Form.Field>
-              <Form.Field style={{ display: 'flex', alignItems: 'center', paddingTop: '15px' }}>
-                <input
-                  type="checkbox"
+            </Grid.Column>
+          </Grid.Row>
+          <Grid.Row>
+            <Grid.Column width={16}>
+              <Form.Field>
+                <Form.Checkbox
+                  label={IGNORE_CHECKBOX_LABEL}
                   onChange={(e) => {
                     const isChecked = e.target.checked
                     this.formDataJson.ignoreExtraSamplesInCallset = isChecked
                   }}
-                />
-                <div style={{ padding: '0 20px 0 10px' }}>Ignore extra samples in callset</div>
-                <Popup
-                  trigger={<StyledIcon name="question circle outline" />}
-                  content="If the callset contains sample ids that don't match individuals in this project, ignore them instead of reporting an error."
-                  size="small"
-                  position="top center"
                 />
               </Form.Field>
             </Grid.Column>

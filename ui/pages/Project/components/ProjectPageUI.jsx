@@ -14,7 +14,9 @@ import VariantTags from './VariantTags'
 import ProjectCollaborators from './ProjectCollaborators'
 import GeneLists from './GeneLists'
 import FamilyTable from './FamilyTable/FamilyTable'
-import { DESCRIPTION, ANALYSIS_STATUS, ANALYSED_BY, ANALYSIS_NOTES, ANALYSIS_SUMMARY } from './FamilyTable/FamilyRow'
+import {
+  DESCRIPTION, ANALYSIS_STATUS, ANALYSED_BY, ANALYSIS_NOTES, ANALYSIS_SUMMARY,
+} from './FamilyTable/FamilyRow'
 
 
 /**
@@ -67,53 +69,63 @@ const mapSectionStateToProps = state => ({
 
 const ProjectSection = connect(mapSectionStateToProps)(ProjectSectionComponent)
 
+const DETAIL_FIELDS = [
+  { id: DESCRIPTION, canEdit: true },
+  { id: ANALYSIS_STATUS, canEdit: true },
+  { id: ANALYSED_BY, canEdit: true },
+  { id: ANALYSIS_NOTES, canEdit: true },
+  { id: ANALYSIS_SUMMARY, canEdit: true },
+]
 
-const ProjectPageUI = props =>
-  <div>
-    <DocumentTitle title={`seqr: ${props.project.name}`} />
-    <Grid stackable style={{ margin: '0px', padding: '0px' }}>
-      <Grid.Row style={{ padding: '0px' }}>
-        <Grid.Column width={4} style={{ margin: '0px', padding: '0px' }}>
-          <ProjectSection label="Overview">
-            <ProjectOverview />
-          </ProjectSection>
-        </Grid.Column>
-      </Grid.Row>
-      <Grid.Row>
-        <Grid.Column width={12} style={{ paddingLeft: '0' }}>
-          <ProjectSection label="Variant Tags" linkPath="saved-variants" linkText="View All">
-            <VariantTags />
-          </ProjectSection>
-        </Grid.Column>
-        <Grid.Column width={4} style={{ paddingLeft: '0' }}>
-          <ProjectSection label="Collaborators" editPath="collaborators">
-            <ProjectCollaborators />
-          </ProjectSection>
-          <VerticalSpacer height={30} />
-          <ProjectSection label="Gene Lists" editPath="project_gene_list_settings">
-            <GeneLists />
-          </ProjectSection>
-        </Grid.Column>
-      </Grid.Row>
-    </Grid>
+const NO_DETAIL_FIELDS = [
+  { id: ANALYSIS_STATUS, canEdit: true },
+]
 
-    <SectionHeader>Families</SectionHeader>
-    <FamilyTable
-      headerStatus={{ title: 'Analysis Statuses', data: props.analysisStatusCounts }}
-      exportUrls={[
-        { name: 'Families', url: `/api/project/${props.project.projectGuid}/export_project_families` },
-        { name: 'Individuals', url: `/api/project/${props.project.projectGuid}/export_project_individuals?include_phenotypes=1` },
-      ]}
-      showSearchLinks
-      fields={props.showDetails ? [
-        { id: DESCRIPTION, canEdit: true },
-        { id: ANALYSIS_STATUS, canEdit: true },
-        { id: ANALYSED_BY, canEdit: true },
-        { id: ANALYSIS_NOTES, canEdit: true },
-        { id: ANALYSIS_SUMMARY, canEdit: true },
-      ] : [{ id: ANALYSIS_STATUS, canEdit: true }]}
-    />
-  </div>
+const ProjectPageUI = (props) => {
+  const headerStatus = { title: 'Analysis Statuses', data: props.analysisStatusCounts }
+  const exportUrls = [
+    { name: 'Families', url: `/api/project/${props.project.projectGuid}/export_project_families` },
+    { name: 'Individuals', url: `/api/project/${props.project.projectGuid}/export_project_individuals?include_phenotypes=1` },
+  ]
+  return (
+    <div>
+      <DocumentTitle title={`seqr: ${props.project.name}`} />
+      <Grid stackable>
+        <Grid.Row>
+          <Grid.Column width={4}>
+            <ProjectSection label="Overview">
+              <ProjectOverview />
+            </ProjectSection>
+          </Grid.Column>
+        </Grid.Row>
+        <Grid.Row>
+          <Grid.Column width={12}>
+            <ProjectSection label="Variant Tags" linkPath="saved-variants" linkText="View All">
+              <VariantTags />
+            </ProjectSection>
+          </Grid.Column>
+          <Grid.Column width={4}>
+            <ProjectSection label="Collaborators" editPath="collaborators">
+              <ProjectCollaborators />
+            </ProjectSection>
+            <VerticalSpacer height={30} />
+            <ProjectSection label="Gene Lists" editPath="project_gene_list_settings">
+              <GeneLists />
+            </ProjectSection>
+          </Grid.Column>
+        </Grid.Row>
+      </Grid>
+
+      <SectionHeader>Families</SectionHeader>
+      <FamilyTable
+        headerStatus={headerStatus}
+        exportUrls={exportUrls}
+        showSearchLinks
+        fields={props.showDetails ? DETAIL_FIELDS : NO_DETAIL_FIELDS}
+      />
+    </div>
+  )
+}
 
 ProjectPageUI.propTypes = {
   project: PropTypes.object.isRequired,

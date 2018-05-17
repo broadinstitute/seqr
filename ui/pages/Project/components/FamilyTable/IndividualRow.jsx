@@ -1,6 +1,6 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-
+import styled from 'styled-components'
 import { connect } from 'react-redux'
 import { Grid, Popup, Icon } from 'semantic-ui-react'
 import Timeago from 'timeago.js'
@@ -21,7 +21,7 @@ import {
 } from 'shared/constants/datasetAndSampleConstants'
 
 import { getUser, getProject, updateIndividual } from 'redux/rootReducer'
-
+import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
 import { getProjectSamples, getProjectDatasets } from '../../utils/selectors'
 import CaseReviewStatusDropdown from './CaseReviewStatusDropdown'
 
@@ -29,12 +29,21 @@ import {
   getShowDetails,
 } from '../../reducers'
 
-const detailsStyle = {
-  padding: '5px 0 5px 5px',
-  fontSize: '11px',
-  fontWeight: '500',
-  color: '#999999',
-}
+const Detail = styled.span`
+  padding: 5px 0 5px 5px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #999999;
+`
+
+const ColoredSpan = styled.span`
+  color: ${props => props.color}
+`
+
+const CaseReviewDropdownContainer = styled.div`
+  float: right;
+  width: 220px;
+`
 
 class IndividualRow extends React.Component
 {
@@ -76,59 +85,60 @@ class IndividualRow extends React.Component
               position="left center"
             />
           }
-          <span style={{ marginLeft: '8px' }}><b>{sample.sampleType}</b></span>
+          <span><HorizontalSpacer width={8} /><b>{sample.sampleType}</b></span>
           {
             loadedVariantCallDatasets.length > 0 &&
-            <span style={detailsStyle}>
+            <Detail>
               LOADED {new Timeago().format(loadedVariantCallDatasets[0].loadedDate).toUpperCase()}
-            </span>
+            </Detail>
           }
         </div>
       )
     })
 
     const individualRow = (
-      <Grid stackable style={{ width: '100%' }}>
-        <Grid.Row style={{ padding: '0px' }}>
-          <Grid.Column width={3} style={{ maxWidth: '250px', padding: '0px 0px 15px 15px' }}>
+      <Grid stackable>
+        <Grid.Row>
+          <Grid.Column width={3}>
             <span>
-              <div style={{ display: 'block', verticalAlign: 'top', whiteSpace: 'nowrap' }} >
-                <PedigreeIcon style={{ fontSize: '13px' }} sex={sex} affected={affected} />
+              <div>
+                <PedigreeIcon sex={sex} affected={affected} />
                 &nbsp;
                 {displayName || individualId}
               </div>
-              <div style={{ display: 'block' }} >
+              <div>
                 {
                   (!family.pedigreeImage && ((paternalId && paternalId !== '.') || (maternalId && maternalId !== '.'))) ? (
-                    <div style={detailsStyle}>
+                    <Detail>
                       child of &nbsp;
                       <i>{(paternalId && maternalId) ? `${paternalId} and ${maternalId}` : (paternalId || maternalId) }</i>
                       <br />
-                    </div>
+                    </Detail>
                   ) : null
                 }
                 {
                   showDetails ? (
-                    <div style={detailsStyle}>
+                    <Detail>
                       ADDED {new Timeago().format(createdDate).toUpperCase()}
-                    </div>
+                    </Detail>
                   ) : null
                 }
               </div>
             </span>
           </Grid.Column>
-          <Grid.Column width={10} style={{ maxWidth: '950px', padding: '0px 0px 15px 15px' }}>
+          <Grid.Column width={10}>
             {
               ((showDetails && editCaseReview) ||
               (showDetails && individual.caseReviewStatus && individual.caseReviewStatus !== CASE_REVIEW_STATUS_NOT_IN_REVIEW) ||
               (individual.caseReviewStatus === CASE_REVIEW_STATUS_MORE_INFO_NEEDED)) ?
-                <div style={{ padding: '0px 0px 10px 0px' }}>
+                <div>
                   {!editCaseReview &&
-                    <span style={{ paddingRight: '10px' }}>
+                    <span>
                       <b>Case Review - Status:</b>
-                      <span style={{ marginLeft: '15px', color: caseReviewStatusOpt ? caseReviewStatusOpt.color : 'black' }}>
+                      <HorizontalSpacer width={15} />
+                      <ColoredSpan color={caseReviewStatusOpt ? caseReviewStatusOpt.color : 'black'}>
                         <b>{caseReviewStatusOpt ? caseReviewStatusOpt.name : individual.caseReviewStatus}</b>
-                      </span>
+                      </ColoredSpan>
                     </span>
                   }
                   {!editCaseReview && individual.caseReviewStatus === CASE_REVIEW_STATUS_MORE_INFO_NEEDED && <br />}
@@ -145,23 +155,23 @@ class IndividualRow extends React.Component
                     textEditorTitle={`Case Review Discussion for Individual ${individual.individualId}`}
                     textEditorSubmit={this.props.updateIndividual}
                   />
+                  <VerticalSpacer height={10} />
                 </div>
                 : null
             }
             {
               showDetails ?
-                <div style={{ padding: '0px 0px 10px 0px' }}>
-                  {
-                    <TextFieldView
-                      isEditable={(user.is_staff || project.canEdit) && !editCaseReview}
-                      fieldName="Individual Notes"
-                      fieldId="notes"
-                      initialText={individual.notes}
-                      textEditorId={`editNotes-${individual.individualGuid}`}
-                      textEditorTitle={`Notes for Individual ${individual.individualId}`}
-                      textEditorSubmit={this.props.updateIndividual}
-                    />
-                  }
+                <div>
+                  <TextFieldView
+                    isEditable={(user.is_staff || project.canEdit) && !editCaseReview}
+                    fieldName="Individual Notes"
+                    fieldId="notes"
+                    initialText={individual.notes}
+                    textEditorId={`editNotes-${individual.individualGuid}`}
+                    textEditorTitle={`Notes for Individual ${individual.individualId}`}
+                    textEditorSubmit={this.props.updateIndividual}
+                  />
+                  <VerticalSpacer height={10} />
                 </div>
                 : null
             }
@@ -175,17 +185,18 @@ class IndividualRow extends React.Component
           <Grid.Column width={3}>
             {
               editCaseReview ?
-                <div style={{ float: 'right', width: '220px' }}>
+                <CaseReviewDropdownContainer>
                   <CaseReviewStatusDropdown individual={individual} />
                   {
                     showDetails && individual.caseReviewStatusLastModifiedDate ? (
-                      <div style={{ ...detailsStyle, marginLeft: '2px' }}>
+                      <Detail>
+                        <HorizontalSpacer width={5} />
                         CHANGED {new Timeago().format(individual.caseReviewStatusLastModifiedDate).toUpperCase()}
                         { individual.caseReviewStatusLastModifiedBy && ` BY ${individual.caseReviewStatusLastModifiedBy}` }
-                      </div>
+                      </Detail>
                     ) : null
                   }
-                </div> : sampleDetails
+                </CaseReviewDropdownContainer> : sampleDetails
             }
           </Grid.Column>
         </Grid.Row>

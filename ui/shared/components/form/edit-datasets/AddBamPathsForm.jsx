@@ -19,6 +19,17 @@ const StyledIcon = styled(Icon)`
   color: #888888;
 `
 
+const SAMPLE_TYPES = [
+  { key: 'WES', value: 'WES', text: 'Exome' },
+  { key: 'WGS', value: 'WGS', text: 'Genome' },
+  { key: 'RNA', value: 'RNA', text: 'RNA-seq' },
+]
+
+const GENOME_VERSIONS = [
+  { key: 'GRCH37', value: 'GRCH37', text: 'GRCh37' },
+  { key: 'GRCH38', value: 'GRCH38', text: 'GRCh38' },
+]
+
 class AddLoadedCallsetForm extends React.PureComponent
 {
   static propTypes = {
@@ -62,7 +73,6 @@ class AddLoadedCallsetForm extends React.PureComponent
                   position="top center"
                 />
                 <Form.Dropdown
-                  style={{ height: '35px', padding: '10px 15px' }}
                   name="sample_type"
                   onChange={(event, data) => {
                     this.formDataJson.sampleType = data.value
@@ -70,13 +80,7 @@ class AddLoadedCallsetForm extends React.PureComponent
                   fluid
                   selection
                   placeholder="select sample type"
-                  options={
-                    [
-                      { key: 'WES', value: 'WES', text: 'Exome' },
-                      { key: 'WGS', value: 'WGS', text: 'Genome' },
-                      { key: 'RNA', value: 'RNA', text: 'RNA-seq' },
-                    ]
-                  }
+                  options={SAMPLE_TYPES}
                 />
               </Form.Field>
             </Grid.Column>
@@ -91,7 +95,6 @@ class AddLoadedCallsetForm extends React.PureComponent
                 />
 
                 <Form.Dropdown
-                  style={{ height: '37px', padding: '10px 15px' }}
                   name="genome_version"
                   onChange={(event, data) => {
                     this.formDataJson.genomeVersion = data.value
@@ -99,12 +102,7 @@ class AddLoadedCallsetForm extends React.PureComponent
                   fluid
                   selection
                   placeholder="select genome version"
-                  options={
-                    [
-                      { key: 'GRCH37', value: 'GRCH37', text: 'GRCh37' },
-                      { key: 'GRCH38', value: 'GRCH38', text: 'GRCh38' },
-                    ]
-                  }
+                  options={GENOME_VERSIONS}
                 />
               </Form.Field>
             </Grid.Column>

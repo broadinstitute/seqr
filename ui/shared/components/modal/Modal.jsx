@@ -4,6 +4,7 @@ import { connect } from 'react-redux'
 import { Modal, Icon, Popup, Confirm } from 'semantic-ui-react'
 
 import { getModalOpen, getModalConfim, openModal, closeModal, cancelCloseModal } from 'redux/utils/modalReducer'
+import ButtonLink from '../buttons/ButtonLink'
 
 class CustomModal extends React.Component
 {
@@ -41,10 +42,10 @@ class CustomModal extends React.Component
     return (
       <Modal open={this.props.isOpen} trigger={trigger} onClose={this.handleClose} size={this.props.size}>
         <Modal.Header>
-          <span style={{ fontSize: '15px' }}>{this.props.title}</span>
-          <a role="button" tabIndex="0" style={{ float: 'right', cursor: 'pointer' }} onClick={this.handleClose}>
-            <Icon name="remove" style={{ fontSize: '15px', color: '#A3A3A3' }} />
-          </a>
+          {this.props.title}
+          <ButtonLink float="right" onClick={this.handleClose}>
+            <Icon name="remove" color="grey" size="small" />
+          </ButtonLink>
         </Modal.Header>
         <Modal.Content>
           {this.props.children}

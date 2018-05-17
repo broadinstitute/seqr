@@ -20,10 +20,8 @@ import {
 
 const TableHeaderCell = styled(Table.HeaderCell)`
   padding: 12px 10px 12px 3px !important; 
-  background-color: #F3F3F3 !important;
-  color: #333333 !important;
   font-weight: 500 !important;
-  height: 10px;
+  text-align: ${props => props.textAlign}
 `
 
 class ProjectTableHeader extends React.PureComponent {
@@ -39,25 +37,25 @@ class ProjectTableHeader extends React.PureComponent {
           <TableHeaderCell>
             <SortableColumnHeader columnLabel="Name" sortBy={SORT_BY_PROJECT_NAME} />
           </TableHeaderCell>
-          <TableHeaderCell collapsing style={{ textAlign: 'right' }}>
+          <TableHeaderCell collapsing textAlign="right">
             <SortableColumnHeader columnLabel="Created" sortBy={SORT_BY_DATE_CREATED} />
           </TableHeaderCell>
           {
             this.props.user.is_staff &&
-            <TableHeaderCell collapsing style={{ textAlign: 'right' }}>
+            <TableHeaderCell collapsing textAlign="right">
               <SortableColumnHeader columnLabel="Last Accessed" sortBy={SORT_BY_DATE_LAST_ACCESSED} />
             </TableHeaderCell>
           }
-          <TableHeaderCell collapsing style={{ textAlign: 'right' }}>
+          <TableHeaderCell collapsing textAlign="right">
             <SortableColumnHeader columnLabel="Fam." sortBy={SORT_BY_NUM_FAMILIES} />
           </TableHeaderCell>
-          <TableHeaderCell collapsing style={{ textAlign: 'right' }}>
+          <TableHeaderCell collapsing textAlign="right">
             <SortableColumnHeader columnLabel="Indiv." sortBy={SORT_BY_NUM_INDIVIDUALS} />
           </TableHeaderCell>
-          <TableHeaderCell collapsing style={{ textAlign: 'right' }}>
+          <TableHeaderCell collapsing textAlign="right">
             <SortableColumnHeader columnLabel="Samples" sortBy={SORT_BY_PROJECT_SAMPLES} />
           </TableHeaderCell>
-          <TableHeaderCell collapsing style={{ textAlign: 'right' }}>
+          <TableHeaderCell collapsing textAlign="right">
             <SortableColumnHeader columnLabel="Tags" sortBy={SORT_BY_TAGS} />
           </TableHeaderCell>
           <TableHeaderCell collapsing>

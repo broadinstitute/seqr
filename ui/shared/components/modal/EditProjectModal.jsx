@@ -17,6 +17,11 @@ const EditProjectModal = (props) => {
   if (props.field) {
     fields = fields.filter(field => field.name === props.field)
   }
+  const initialValues = {
+    name: props.project && props.project.name,
+    description: props.project && props.project.description,
+    projectGuid: props.project && props.project.projectGuid,
+  }
   return (
     <Modal
       trigger={props.trigger}
@@ -27,11 +32,7 @@ const EditProjectModal = (props) => {
         onSubmit={props.updateProject}
         form={name}
         submitButtonText="Save"
-        initialValues={{
-          name: props.project && props.project.name,
-          description: props.project && props.project.description,
-          projectGuid: props.project && props.project.projectGuid,
-        }}
+        initialValues={initialValues}
         fields={fields}
       />
     </Modal>
