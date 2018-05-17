@@ -6,9 +6,6 @@ import { connect } from 'react-redux'
 
 import { getProject } from 'redux/rootReducer'
 
-const GeneListContainer = styled.div`
-  margin-bottom: 14px;
-`
 const ItemContainer = styled.div`
   padding: 2px 0px;
   whitespace: nowrap;
@@ -20,7 +17,7 @@ const HelpIcon = styled(Icon)`
 `
 
 const GeneLists = props => (
-  <GeneListContainer>
+  <div>
     {
       props.project.locusLists &&
       props.project.locusLists.map(locusList => (
@@ -45,7 +42,7 @@ const GeneLists = props => (
         </ItemContainer>),
       )
     }
-  </GeneListContainer>
+  </div>
 )
 
 

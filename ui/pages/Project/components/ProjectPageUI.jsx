@@ -51,6 +51,7 @@ const ProjectSectionComponent = ({ loading, label, children, editPath, linkPath,
     </div>,
     editPath && project.canEdit ? (
       <a key="edit" href={`/project/${project.deprecatedProjectId}/${editPath}`}>
+        <VerticalSpacer height={15} />
         {`Edit ${label}`}
       </a>
     ) : null,

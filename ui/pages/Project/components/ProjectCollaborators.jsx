@@ -17,7 +17,7 @@ const ManagerCell = styled(Table.Cell)`
 `
 
 const ProjectCollaborators = props => (
-  <Table className="noBorder">
+  <Table className="noBorder" compact="very">
     <Table.Body className="noBorder">
       {
         orderBy(props.project.collaborators, [c => c.hasEditPermissions, c => c.email], ['desc', 'asc']).map((c, i) =>
