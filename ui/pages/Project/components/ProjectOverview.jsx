@@ -12,11 +12,12 @@ import { getProject, getProjectFamilies, getProjectIndividuals, getProjectDatase
 
 
 const FAMILY_SIZE_LABELS = {
-  1: ' families with 1 individual',
-  2: ' families with 2 individuals',
-  3: ' trios',
-  4: ' quads',
-  5: ' families with 5+ individuals',
+  0: plural => ` ${plural ? 'families' : 'family'} with no individuals`,
+  1: plural => ` ${plural ? 'families' : 'family'} with 1 individual`,
+  2: plural => ` ${plural ? 'families' : 'family'} with 2 individuals`,
+  3: plural => ` trio${plural ? 's' : ''}`,
+  4: plural => ` quad${plural ? 's' : ''}`,
+  5: plural => ` ${plural ? 'families' : 'family'} with 5+ individuals`,
 }
 
 const SAMPLE_TYPE_LABELS = {
@@ -48,7 +49,7 @@ const ProjectOverview = (props) => {
           {
             sortBy(Object.keys(familySizeHistogram)).map(size =>
               <div key={size}>
-                {familySizeHistogram[size]} {FAMILY_SIZE_LABELS[size]}
+                {familySizeHistogram[size]} {FAMILY_SIZE_LABELS[size](familySizeHistogram[size] > 1)}
               </div>)
           }
           {props.project.canEdit ? <span><br /><EditFamiliesAndIndividualsButton /></span> : null }<br />
@@ -63,14 +64,16 @@ const ProjectOverview = (props) => {
                   <div key={currentSampleType}>
                     {
                       props.datasets.filter(dataset =>
-                        dataset.analysisType === 'VARIANTS' && dataset.isLoaded && dataset.sampleType === currentSampleType).slice(0, 1).map(dataset =>
-                          <div key={dataset.datasetGuid}>
-                            {SAMPLE_TYPE_LABELS[dataset.sampleType]} {ANALYSIS_TYPE_LABELS[dataset.analysisType]} - {dataset.sampleGuids.length}  samples
-                            {dataset.isLoaded ? ` loaded on ${dataset.loadedDate.slice(0, 10)}` : ' not yet loaded'}
-                          </div>)
+                        dataset.analysisType === 'VARIANTS' && dataset.isLoaded && dataset.sampleType === currentSampleType,
+                      ).slice(0, 1).map(dataset =>
+                        <div key={dataset.datasetGuid}>
+                          {SAMPLE_TYPE_LABELS[dataset.sampleType]} {ANALYSIS_TYPE_LABELS[dataset.analysisType]} - {dataset.sampleGuids.length}  samples
+                          {dataset.isLoaded ? ` loaded on ${dataset.loadedDate.slice(0, 10)}` : ' not yet loaded'}
+                        </div>,
+                      )
                     }
                   </div>
-              )) : <div>No Datasets Loaded</div>
+                )) : <div>No Datasets Loaded</div>
             }
             <ShowIfStaff><span><br /><EditDatasetsButton /></span></ShowIfStaff><br />
           </div>

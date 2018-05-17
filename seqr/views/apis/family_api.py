@@ -4,7 +4,6 @@ APIs used to retrieve and modify Individual fields
 
 import json
 import logging
-from pprint import pformat
 
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
@@ -13,7 +12,7 @@ from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.individual_api import delete_individuals
 from seqr.views.utils.export_table_utils import export_table, _convert_html_to_plain_text
 from seqr.views.utils.json_to_orm_utils import update_family_from_json
-from seqr.views.utils.json_utils import create_json_response, _to_snake_case
+from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_family
 from seqr.models import Family, CAN_EDIT, Individual
 from seqr.views.utils.permissions_utils import check_permissions, get_project_and_check_permissions
@@ -48,11 +47,9 @@ def edit_families_handler(request, project_guid):
     #    return create_json_response({'errors': errors, 'warnings': warnings})
 
     updated_families = []
-    valid_family_fields = [_to_snake_case(field) for field in Family._meta.json_fields]
     for fields in modified_families:
         family = Family.objects.get(project=project, guid=fields['familyGuid'])
-        family_fields = {k: v for k, v in fields.items() if k in valid_family_fields}
-        update_family_from_json(family, family_fields, request.user)
+        update_family_from_json(family, fields, user=request.user, allow_unknown_keys=True)
         updated_families.append(family)
 
         for key, value in fields.items():
