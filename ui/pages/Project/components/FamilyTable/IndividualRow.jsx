@@ -20,8 +20,9 @@ import {
   ANALYSIS_TYPE_VARIANT_CALLS,
 } from 'shared/constants/datasetAndSampleConstants'
 
-import { getUser, getProject, getProjectSamples, getProjectDatasets, updateIndividual } from 'redux/rootReducer'
+import { getUser, getProject, updateIndividual } from 'redux/rootReducer'
 
+import { getProjectSamples, getProjectDatasets } from '../../utils/selectors'
 import CaseReviewStatusDropdown from './CaseReviewStatusDropdown'
 
 import {

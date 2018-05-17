@@ -18,7 +18,7 @@ const renderField = (props) => {
 }
 
 renderField.propTypes = {
-  fieldComponent: PropTypes.func,
+  fieldComponent: PropTypes.oneOfType([PropTypes.func, PropTypes.string]),
   meta: PropTypes.object,
   input: PropTypes.object,
 }
@@ -63,8 +63,8 @@ class ReduxFormWrapper extends React.Component {
     /* Each field must have a name and a component, and can have any additional props accepted by redux-form's Field */
     fields: PropTypes.arrayOf(PropTypes.object),
 
-    /* React child components. Mutually exclusive with fields */
-    children: PropTypes.node,
+    /* React child component class. Mutually exclusive with fields */
+    renderChildren: PropTypes.func,
 
     /*  These props are added by redux-form and should never be passed explicitly */
     submitting: PropTypes.bool,
@@ -86,6 +86,8 @@ class ReduxFormWrapper extends React.Component {
     submitButtonText: 'Submit',
   }
 
+  handleUnconfirmedClose = () => this.props.handleClose()
+
   render() {
     let saveStatus = RequestStatus.NONE
     if (this.props.submitSucceeded) {
@@ -93,11 +95,15 @@ class ReduxFormWrapper extends React.Component {
     } else if (this.props.submitFailed) {
       saveStatus = RequestStatus.ERROR
     }
-    const saveErrorMessage = (this.props.error && this.props.error.join('; ')) || (this.props.invalid ? 'Invalid input' : 'Unknown')
+    const saveErrorMessage = this.props.submitFailed ?
+      (this.props.error && this.props.error.join('; ')) || (this.props.invalid ? 'Invalid input' : 'Unknown') : null
 
-    const fieldComponents = this.props.children || this.props.fields.map(({ component, name, ...fieldProps }) =>
-      <Field key={name} name={name} component={renderField} fieldComponent={component} {...fieldProps} />,
-    )
+    const fieldComponents = this.props.renderChildren ? React.createElement(this.props.renderChildren) :
+      this.props.fields.map(({ component, name, displayOnly, ...fieldProps }) => {
+        return displayOnly ? React.createElement(component, { key: name }) : (
+          <Field key={name} name={name} component={renderField} fieldComponent={component} {...fieldProps} />
+        )
+      })
 
     const errorMessages = this.props.showErrorPanel && (this.props.error || (this.props.submitFailed && Object.values(this.props.validationErrors)))
 
@@ -118,11 +124,40 @@ class ReduxFormWrapper extends React.Component {
               submitButtonText={this.props.submitButtonText}
               saveStatus={saveStatus}
               saveErrorMessage={saveErrorMessage}
-              handleClose={() => this.props.handleClose()}
+              handleClose={this.handleUnconfirmedClose}
             />
         }
       </Form>
     )
+  }
+
+  shouldComponentUpdate(nextProps, nextState) {
+    const updateProps = [
+      'modalName',
+      'form',
+      'submitSucceeded',
+      'submitFailed',
+      'closeOnSuccess',
+      'error',
+      'invalid',
+      'renderChildren',
+      'fields',
+      'showErrorPanel',
+      'validationErrors',
+      'size',
+      'submitting',
+      'warning',
+      'secondarySubmitButton',
+      'submitOnChange',
+      'cancelButtonText',
+      'submitButtonText',
+      'dirty',
+      'confirmCloseIfNotSaved',
+    ]
+    if (updateProps.some(k => nextProps[k] !== this.props[k])) {
+      return true
+    }
+    return nextState !== this.state
   }
 
   componentWillUpdate(nextProps) {

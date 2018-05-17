@@ -8,7 +8,6 @@ import EditFamiliesForm from '../form/edit-families-and-individuals/EditFamilies
 
 const TabPane = styled(Tab.Pane)`
   padding: 1em 0 !important;
-  height: 670px;
 `
 
 const MODAL_NAME = 'editFamiliesAndIndividuals'

@@ -13,7 +13,7 @@ const UPDATE_FAMILY_TABLE_STATE = 'UPDATE_FAMILY_TABLE_STATE'
 export const reducers = {
   familyTableState: createSingleObjectReducer(UPDATE_FAMILY_TABLE_STATE, {
     currentPage: 1,
-    recordsPerPage: 10,
+    recordsPerPage: 25,
     familiesFilter: SHOW_ALL,
     familiesSortOrder: SORT_BY_FAMILY_NAME,
     familiesSortDirection: 1,
@@ -31,7 +31,7 @@ export const updateShowDetails = showDetails => ({ type: UPDATE_FAMILY_TABLE_STA
 
 export const getProjectTableState = state => state.familyTableState
 export const getProjectTablePage = state => state.familyTableState.currentPage || 1
-export const getProjectTableRecordsPerPage = state => Math.min(state.familyTableState.recordsPerPage, 10) || 10
+export const getProjectTableRecordsPerPage = state => Math.min(state.familyTableState.recordsPerPage, 25) || 25
 
 export const getFamiliesFilter = state => state.familyTableState.familiesFilter || SHOW_ALL
 export const getFamiliesSortOrder = state => state.familyTableState.familiesSortOrder || SORT_BY_FAMILY_NAME

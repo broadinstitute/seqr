@@ -37,17 +37,8 @@ const TableCell = styled(Table.Cell)`
 
 const FORM_NAME = 'bulkUploadIndividuals'
 
-const EditIndividualsBulkForm = props =>
-  <ReduxFormWrapper
-    form={FORM_NAME}
-    modalName={props.modalName}
-    submitButtonText="Apply"
-    onSubmit={values => props.updateIndividuals(values.uploadedFile)}
-    confirmCloseIfNotSaved
-    closeOnSuccess
-    showErrorPanel
-    size="small"
-  >
+const BaseBulkContent = props =>
+  <div>
     <Container>
       To bulk-add or edit individuals, upload a table in one of these formats:
       <StyledTable>
@@ -151,19 +142,37 @@ const EditIndividualsBulkForm = props =>
       uploaderStyle={{ maxWidth: '700px', margin: 'auto' }}
     />
     <br />
-  </ReduxFormWrapper>
+  </div>
 
-EditIndividualsBulkForm.propTypes = {
-  modalName: PropTypes.string,
+BaseBulkContent.propTypes = {
   project: PropTypes.object,
-  updateIndividuals: PropTypes.func,
 }
-
-export { EditIndividualsBulkForm as EditIndividualsBulkFormComponent }
 
 const mapStateToProps = state => ({
   project: getProject(state),
 })
+
+const BulkContent = connect(mapStateToProps)(BaseBulkContent)
+
+const EditIndividualsBulkForm = props =>
+  <ReduxFormWrapper
+    form={FORM_NAME}
+    modalName={props.modalName}
+    submitButtonText="Apply"
+    onSubmit={values => props.updateIndividuals(values.uploadedFile)}
+    confirmCloseIfNotSaved
+    closeOnSuccess
+    showErrorPanel
+    size="small"
+    renderChildren={BulkContent}
+  />
+
+EditIndividualsBulkForm.propTypes = {
+  modalName: PropTypes.string,
+  updateIndividuals: PropTypes.func,
+}
+
+export { EditIndividualsBulkForm as EditIndividualsBulkFormComponent }
 
 const mapDispatchToProps = (dispatch) => {
   return {
@@ -172,4 +181,4 @@ const mapDispatchToProps = (dispatch) => {
 }
 
 
-export default connect(mapStateToProps, mapDispatchToProps)(EditIndividualsBulkForm)
+export default connect(null, mapDispatchToProps)(EditIndividualsBulkForm)

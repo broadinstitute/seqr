@@ -24,7 +24,7 @@ export const setModalConfirm = (modalName, confirmMessage) => dispatch =>
 
 // root reducer
 export default {
-  modal: createObjectsByIdReducer(UPDATE_MODAL_STATE, { open: false, confirming: false, confirmOnClose: null }),
+  modal: createObjectsByIdReducer(UPDATE_MODAL_STATE, null, { open: false, confirming: false, confirmOnClose: null }),
 }
 
 // basic selectors
