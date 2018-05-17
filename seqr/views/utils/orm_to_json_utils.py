@@ -94,7 +94,7 @@ def _get_json_for_families(families, user=None, add_individual_guids_field=False
         if isinstance(pedigree_image, ImageFieldFile):
             try:
                 pedigree_image = pedigree_image.url
-            except:
+            except Exception:
                 pedigree_image = None
         return os.path.join("/media/", pedigree_image) if pedigree_image else None
 

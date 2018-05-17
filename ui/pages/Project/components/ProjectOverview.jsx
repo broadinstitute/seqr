@@ -64,14 +64,16 @@ const ProjectOverview = (props) => {
                   <div key={currentSampleType}>
                     {
                       props.datasets.filter(dataset =>
-                        dataset.analysisType === 'VARIANTS' && dataset.isLoaded && dataset.sampleType === currentSampleType).slice(0, 1).map(dataset =>
-                          <div key={dataset.datasetGuid}>
-                            {SAMPLE_TYPE_LABELS[dataset.sampleType]} {ANALYSIS_TYPE_LABELS[dataset.analysisType]} - {dataset.sampleGuids.length}  samples
-                            {dataset.isLoaded ? ` loaded on ${dataset.loadedDate.slice(0, 10)}` : ' not yet loaded'}
-                          </div>)
+                        dataset.analysisType === 'VARIANTS' && dataset.isLoaded && dataset.sampleType === currentSampleType,
+                      ).slice(0, 1).map(dataset =>
+                        <div key={dataset.datasetGuid}>
+                          {SAMPLE_TYPE_LABELS[dataset.sampleType]} {ANALYSIS_TYPE_LABELS[dataset.analysisType]} - {dataset.sampleGuids.length}  samples
+                          {dataset.isLoaded ? ` loaded on ${dataset.loadedDate.slice(0, 10)}` : ' not yet loaded'}
+                        </div>,
+                      )
                     }
                   </div>
-              )) : <div>No Datasets Loaded</div>
+                )) : <div>No Datasets Loaded</div>
             }
             <ShowIfStaff><span><br /><EditDatasetsButton /></span></ShowIfStaff><br />
           </div>

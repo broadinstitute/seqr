@@ -120,8 +120,7 @@ const FamilyRow = ({ family, project, fields = [], updateFamily, showSearchLinks
               textEditorTitle={`${renderDetails.name} for Family ${family.displayName}`}
               textEditorSubmit={updateFamily}
             />
-          },
-        )}
+        })}
         <br />
       </Grid.Column>
       {showSearchLinks &&
