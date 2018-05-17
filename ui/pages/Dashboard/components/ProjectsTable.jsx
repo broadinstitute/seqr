@@ -1,8 +1,9 @@
 import React from 'react'
 import PropTypes from 'prop-types'
+import styled from 'styled-components'
 
 import { connect } from 'react-redux'
-import { Table } from 'semantic-ui-react'
+import { Table, Header } from 'semantic-ui-react'
 
 import { HorizontalSpacer } from 'shared/components/Spacers'
 import ExportTableButton from 'shared/components/buttons/export-table/ExportTableButton'
@@ -17,10 +18,21 @@ import { getProjectsIsLoading, fetchProjects } from '../../../redux/rootReducer'
 import { getVisibleProjectsInSortedOrder } from '../utils/visibleProjectsSelector'
 
 
+const InlineHeader = styled(Header)`
+  display: inline-block;
+  margin: 0 !important;
+`
+
+const RightAligned = styled.span`
+  float: right;
+`
+
+const PROJECT_EXPORT_URLS = [{ name: 'Projects', url: '/api/dashboard/export_projects_table' }]
+
 const TABLE_IS_EMPTY_ROW = (
   <Table.Row>
     <Table.Cell />
-    <Table.Cell style={{ padding: '10px' }}>0 projects found</Table.Cell>
+    <Table.Cell>0 projects found</Table.Cell>
   </Table.Row>)
 
 class ProjectsTable extends React.Component
@@ -45,22 +57,20 @@ class ProjectsTable extends React.Component
 
     return (
       <div>
-        <div style={{ marginLeft: '10px' }}>
-          <span style={{ fontSize: '12pt', fontWeight: '600' }}>
-            Projects:
-          </span>
-          <HorizontalSpacer width={30} />
-          <FilterSelector />
-          <div style={{ float: 'right', padding: '0px 45px 10px 0px' }}>
-            <ExportTableButton urls={[{ name: 'Projects', url: '/api/dashboard/export_projects_table' }]} />
-          </div>
-        </div>
-        <Table striped stackable style={{ width: '100%' }}>
+        <HorizontalSpacer width={10} />
+        <InlineHeader size="medium" content="Projects:" />
+        <HorizontalSpacer width={30} />
+        <FilterSelector />
+        <RightAligned>
+          <ExportTableButton urls={PROJECT_EXPORT_URLS} />
+          <HorizontalSpacer width={45} />
+        </RightAligned>
+        <Table striped stackable>
           <ProjectTableHeader />
           <Table.Body>
             {tableContent}
-            <ProjectTableFooter />
           </Table.Body>
+          <ProjectTableFooter />
         </Table>
       </div>)
   }

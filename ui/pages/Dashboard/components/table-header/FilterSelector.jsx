@@ -2,8 +2,9 @@
 
 import React from 'react'
 import PropTypes from 'prop-types'
+import styled from 'styled-components'
 import { connect } from 'react-redux'
-import { Dropdown } from 'semantic-ui-react'
+import { Form } from 'semantic-ui-react'
 
 import { getProjectCategoriesByGuid } from 'redux/rootReducer'
 import { getProjectFilter, updateFilter } from '../../reducers'
@@ -11,24 +12,32 @@ import {
   SHOW_ALL,
 } from '../../constants'
 
+const FilterContainer = styled.span`
+  display: inline-block;
+  min-width: 8em;
+  font-size: 12px;
+`
 
-const FilterSelector = props =>
-  <div style={{ display: 'inline-block', minWidth: '8em' }}>
-    <Dropdown
-      selection
-      fluid
-      name="filterSelector"
-      value={props.filter}
-      onChange={(event, data) => {
-        props.onChange(data.value)
-      }}
-      style={{ display: 'inline-block', padding: '0px !important' }}
-      options={[
-        { value: SHOW_ALL, text: 'All', key: SHOW_ALL },
-        ...Object.values(props.projectCategoriesByGuid).map(projectCategory => ({ value: projectCategory.guid, text: projectCategory.name, key: projectCategory.guid })),
-      ]}
-    />
-  </div>
+const FilterSelector = (props) => {
+  const options = [
+    { value: SHOW_ALL, text: 'All', key: SHOW_ALL },
+    ...Object.values(props.projectCategoriesByGuid).map(projectCategory => ({ value: projectCategory.guid, text: projectCategory.name, key: projectCategory.guid })),
+  ]
+  return (
+    <FilterContainer>
+      <Form.Select
+        fluid
+        name="filterSelector"
+        value={props.filter}
+        onChange={(event, data) => {
+          props.onChange(data.value)
+        }}
+        options={options}
+      />
+    </FilterContainer>
+  )
+}
+
 
 export { FilterSelector as FilterSelectorComponent }
 

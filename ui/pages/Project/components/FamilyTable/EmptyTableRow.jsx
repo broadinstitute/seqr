@@ -1,17 +1,23 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-
+import styled from 'styled-components'
 import { connect } from 'react-redux'
 import { Table } from 'semantic-ui-react'
 import { getFamiliesFilter } from '../../reducers'
 import { SHOW_ALL } from '../../constants'
 
+const EmptyCell = styled(Table.Cell)`
+  padding: 10px 0px 10px 15px;
+  color: gray;
+  border-width: 0px;
+`
+
 const EmptyTableRow = ({ familiesFilter }) =>
   <Table.Row>
-    <Table.Cell style={{ padding: '10px 0px 10px 15px', color: 'gray', borderWidth: '0px' }}>
+    <EmptyCell>
       0 families
       { familiesFilter !== SHOW_ALL ? ' in this category' : ' in this project' }
-    </Table.Cell>
+    </EmptyCell>
   </Table.Row>
 
 export { EmptyTableRow as EmptyTableRowComponent }

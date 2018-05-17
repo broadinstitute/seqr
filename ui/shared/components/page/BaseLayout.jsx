@@ -5,17 +5,25 @@
 
 import React from 'react'
 import PropTypes from 'prop-types'
+import styled from 'styled-components'
 import { Grid } from 'semantic-ui-react'
 
 import Header from './Header'
 import PageHeader from './PageHeader'
 import Footer from './Footer'
 
+const LayoutContainer = styled.div`
+  height: calc(100% - 46px);
+`
+
+const ContentGrid = styled(Grid)`
+  min-height: calc(100% - 46px);
+`
 
 const BaseLayout = ({ children }) =>
-  <div style={{ height: 'calc(100% - 46px)' }}>
+  <LayoutContainer>
     <Header />
-    <Grid style={{ minHeight: 'calc(100% - 46px)' }}>
+    <ContentGrid>
       <PageHeader />
       <Grid.Row>
         <Grid.Column width={1} />
@@ -24,9 +32,9 @@ const BaseLayout = ({ children }) =>
         </Grid.Column>
         <Grid.Column width={1} />
       </Grid.Row>
-    </Grid>
+    </ContentGrid>
     <Footer />
-  </div>
+  </LayoutContainer>
 
 export { BaseLayout as BaseLayoutComponent }
 

@@ -36,6 +36,7 @@ const TableCell = styled(Table.Cell)`
 `
 
 const FORM_NAME = 'bulkUploadIndividuals'
+const UPLOADER_STYLE = { maxWidth: '700px', margin: 'auto' }
 
 const BaseBulkContent = props =>
   <div>
@@ -88,9 +89,9 @@ const BaseBulkContent = props =>
 
       The table must have a header row with the following column names.<br />
       <br />
-      <div style={{ padding: '3px 0px 5px 25px' }}>
+      <div>
         <BoldText>Required Columns:</BoldText><br />
-        <Table className="noBorder" style={{ padding: '3px 0px 5px 25px' }}>
+        <StyledTable className="noBorder">
           <Table.Body>
             <TableRow>
               <TableCell><BoldText>Family ID</BoldText></TableCell>
@@ -101,7 +102,7 @@ const BaseBulkContent = props =>
               <TableCell />
             </TableRow>
           </Table.Body>
-        </Table>
+        </StyledTable>
         <BoldText>Optional Columns:</BoldText>
         <StyledTable>
           <Table.Body>
@@ -139,7 +140,7 @@ const BaseBulkContent = props =>
       dropzoneLabel="Click here to upload a table, or drag-drop it into this box"
       url={`/api/project/${props.project.projectGuid}/upload_individuals_table`}
       auto
-      uploaderStyle={{ maxWidth: '700px', margin: 'auto' }}
+      uploaderStyle={UPLOADER_STYLE}
     />
     <br />
   </div>

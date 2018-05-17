@@ -7,6 +7,8 @@ import StaffOnlyIcon from 'shared/components/icons/StaffOnlyIcon'
 import EditTextButton from 'shared/components/buttons/EditTextButton'
 import { HorizontalSpacer } from 'shared/components/Spacers'
 
+const MARKDOWN_OPTIONS = { breaks: true }
+
 const TextFieldView = (props) => {
   if (props.isVisible !== undefined && !props.isVisible) {
     return null
@@ -35,7 +37,7 @@ const TextFieldView = (props) => {
       {
         props.initialText &&
         <div style={{ padding: '0px 0px 15px 22px' }}>
-          <MarkdownRenderer markdown={props.initialText} options={{ breaks: true }} />
+          <MarkdownRenderer markdown={props.initialText} options={MARKDOWN_OPTIONS} />
         </div>
       }
     </span>)

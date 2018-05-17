@@ -2,8 +2,20 @@
 
 import React from 'react'
 import PropTypes from 'prop-types'
+import styled from 'styled-components'
 
 import { Table, Icon, Popup } from 'semantic-ui-react'
+
+const NameCell = styled(Table.Cell)`
+ height: 20px;
+ padding: 3px;
+`
+
+const LinkCell = styled(Table.Cell)`
+  padding: 3px 3px 3px 20px;
+  width: 80px;
+ verticalAlign: middle;
+`
 
 const ExportTableButton = props =>
   <Popup
@@ -25,21 +37,21 @@ const ExportTableButton = props =>
               }
               return [
                 <Table.Row key={1} className="noBorder">
-                  <Table.Cell colSpan="2" className="noBorder" style={{ height: '20px', padding: '3px' }}>
+                  <NameCell colSpan="2" className="noBorder">
                     <b>{name}:</b>
-                  </Table.Cell>
+                  </NameCell>
                 </Table.Row>,
                 <Table.Row key={2} className="noBorder">
-                  <Table.Cell className="noBorder" style={{ padding: '3px 3px 3px 20px', width: '80px', verticalAlign: 'middle' }}>
+                  <LinkCell className="noBorder">
                     <a href={`${url}file_format=xls`}>
                       <img alt="xls" src="/static/images/table_excel.png" /> &nbsp; .xls
                     </a>
-                  </Table.Cell>
-                  <Table.Cell className="noBorder" style={{ padding: '3px 3px 3px 10px', width: '80px', verticalAlign: 'middle' }}>
+                  </LinkCell>
+                  <LinkCell className="noBorder">
                     <a href={`${url}file_format=tsv`}>
                       <img alt="tsv" src="/static/images/table_tsv.png" /> &nbsp; .tsv
                     </a><br />
-                  </Table.Cell>
+                  </LinkCell>
                 </Table.Row>,
               ]
             })
