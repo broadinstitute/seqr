@@ -43,7 +43,11 @@ DATABASES = {
 
 ALLOWED_HOSTS = ['*']
 
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+EMAIL_BACKEND = 'anymail.backends.postmark.EmailBackend'
+
+ANYMAIL = {
+            'POSTMARK_SERVER_TOKEN': '<put-token-here>'
+            }
 
 
 #
