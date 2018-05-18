@@ -1,6 +1,5 @@
 import json
 import logging
-from pprint import pprint, pformat
 import re
 
 import elasticsearch_dsl
@@ -18,6 +17,7 @@ from settings import LOGIN_URL
 
 logger = logging.getLogger(__name__)
 
+OPERATIONS_LOG = "index_operations_log"
 
 @staff_member_required(login_url=LOGIN_URL)
 def elasticsearch_status(request):
@@ -31,7 +31,8 @@ def elasticsearch_status(request):
             index_to_dataset[index_name] = dataset
 
     # get index snapshots
-    response = requests.get("http://%s:9200/_snapshot/%s/_all" % (settings.ELASTICSEARCH_SERVICE_HOSTNAME, "callsets"))
+    response = requests.get("http://{0}:{1}/_snapshot/{2}/_all".format(
+        settings.ELASTICSEARCH_SERVICE_HOSTNAME, settings.ELASTICSEARCH_PORT, "callsets"))
     snapshots = json.loads(response.content)
 
     index_snapshot_states = defaultdict(list)
@@ -42,7 +43,6 @@ def elasticsearch_status(request):
     # get indices
     indices = []
     for index in client.cat.indices(format="json", h="*"):
-        #pprint(index)
         index_name = index['index']
 
         # skip special indices
@@ -63,7 +63,7 @@ def elasticsearch_status(request):
         indices.append(index_json)
 
     # get operations log
-    s = elasticsearch_dsl.Search(using=client, index="index_operations_log")
+    s = elasticsearch_dsl.Search(using=client, index=OPERATIONS_LOG)
     s = s.params(size=5000)
     operations = [doc.to_dict() for doc in s.execute().hits]
 
