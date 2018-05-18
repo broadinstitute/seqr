@@ -301,18 +301,24 @@ export const FAMILY_SORT_OPTIONS = [
 
 export const SORT_BY_FAMILY_GUID = 'FAMILY_GUID'
 export const SORT_BY_XPOS = 'XPOS'
-export const SORT_BY_CLINVAR = 'CLINVAR'
+export const SORT_BY_PATHOGENICITY = 'PATHOGENICITY'
 export const SORT_BY_IN_OMIM = 'IN_OMIM'
 
 const clinsigSeverity = (variant) => {
-  const significance = variant.clinvar.clinsig && variant.clinvar.clinsig.split('/')[0]
-  if (!significance) return -10
-  return significance in CLINSIG_SEVERITY ? CLINSIG_SEVERITY[significance] : -0.5
+  const clinvarSignificance = variant.clinvar.clinsig && variant.clinvar.clinsig.split('/')[0]
+  const hgmdSignificance = variant.hgmd.class
+  if (!clinvarSignificance && !hgmdSignificance) return -10
+  let clinvarSeverity = 0.1
+  if (clinvarSignificance) {
+    clinvarSeverity = clinvarSignificance in CLINSIG_SEVERITY ? CLINSIG_SEVERITY[clinvarSignificance] + 1 : 0.5
+  }
+  const hgmdSeverity = hgmdSignificance in CLINSIG_SEVERITY ? CLINSIG_SEVERITY[hgmdSignificance] + 0.5 : 0
+  return clinvarSeverity + hgmdSeverity
 }
 
 export const VARIANT_SORT_OPTONS = [
   { value: SORT_BY_FAMILY_GUID, text: 'Default', comparator: (a, b) => a.familyGuid.localeCompare(b.familyGuid) },
   { value: SORT_BY_XPOS, text: 'Position', comparator: (a, b) => a.xpos - b.xpos },
-  { value: SORT_BY_CLINVAR, text: 'Clinvar Significance', comparator: (a, b) => clinsigSeverity(b) - clinsigSeverity(a) },
+  { value: SORT_BY_PATHOGENICITY, text: 'Pathogenicity', comparator: (a, b) => clinsigSeverity(b) - clinsigSeverity(a) },
   { value: SORT_BY_IN_OMIM, text: 'In OMIM', comparator: (a, b) => b.genes.some(gene => gene.inDiseaseDb) - a.genes.some(gene => gene.inDiseaseDb) },
 ]

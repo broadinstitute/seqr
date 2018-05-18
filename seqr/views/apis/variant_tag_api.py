@@ -72,13 +72,13 @@ def saved_variant_data(request, project_guid):
             } for tag in saved_variant.variantnote_set.all()],
         }
         if variant['tags'] or variant['notes']:
-            variant.update(_variant_details(variant_json))
+            variant.update(_variant_details(variant_json, request.user))
             variants[variant['familyGuid']].append(variant)
 
     return create_json_response({'savedVariants': variants})
 
 
-def _variant_details(variant_json):
+def _variant_details(variant_json, user):
     annotation = variant_json.get('annotation', {})
     extras = variant_json.get('extras', {})
     worst_vep_annotation = annotation['vep_annotation'][annotation['worst_vep_annotation_index']] if annotation.get('worst_vep_annotation_index') is not None else None
@@ -156,7 +156,7 @@ def _variant_details(variant_json):
         },
         'hgmd': {
             'accession': extras.get('hgmd_accession'),
-            'class': extras.get('hgmd_class'),
+            'class': extras.get('hgmd_class') if user.is_staff else None,
         },
         'genes': [{
             'constraints': {

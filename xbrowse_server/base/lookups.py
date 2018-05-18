@@ -29,7 +29,7 @@ def get_saved_variants_for_family(family):
     return variants, couldntfind
 
 
-def get_variants_from_variant_tuples(project, variant_tuples):
+def get_variants_from_variant_tuples(project, variant_tuples, user=None):
     datastore = get_datastore(project)
     population_slugs = project.get_reference_population_slugs()
 
@@ -44,7 +44,8 @@ def get_variants_from_variant_tuples(project, variant_tuples):
         variants_for_family = datastore.get_multiple_variants(
             project.project_id,
             family_id,
-            variant_tuples
+            variant_tuples,
+            user=user
         )
         for (xpos, ref, alt), variant in zip(variant_tuples, variants_for_family):
             if not variant:
@@ -58,7 +59,7 @@ def get_variants_from_variant_tuples(project, variant_tuples):
     return variants
 
 
-def get_all_saved_variants_for_project(project, family_id=None):
+def get_all_saved_variants_for_project(project, family_id=None, user=None):
     all_tuples = set()
     notes = VariantNote.objects.filter(project=project).order_by('-date_saved').select_related('family').only('xpos', 'alt', 'ref', 'family__family_id')
     if family_id:
@@ -75,7 +76,7 @@ def get_all_saved_variants_for_project(project, family_id=None):
     all_tuples |= {(t.xpos, t.ref, t.alt, t.family.family_id) for t in tags if t.project_tag.tag.lower() != 'excluded'}
 
     all_tuples = list(sorted(all_tuples))
-    variants = get_variants_from_variant_tuples(project, all_tuples)
+    variants = get_variants_from_variant_tuples(project, all_tuples, user=user)
     return variants
 
 

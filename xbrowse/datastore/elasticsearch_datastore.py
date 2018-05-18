@@ -626,10 +626,10 @@ class ElasticsearchDatastore(datastore.Datastore):
             modified_variant_filter = copy.deepcopy(variant_filter)
         modified_variant_filter.add_gene(gene_id)
 
-        #db_query = self._make_db_query(genotype_filter, modified_variant_filter)
+        #db_query = self._make_db_query(genotype_filter, modified_variant_filter, user=None)
         raise ValueError("Not Implemented")
 
-    def get_single_variant(self, project_id, family_id, xpos, ref, alt):
+    def get_single_variant(self, project_id, family_id, xpos, ref, alt, user=None):
         chrom, pos = get_chr_pos(xpos)
 
         variant_id = "%s-%s-%s-%s" % (chrom, pos, ref, alt)
@@ -638,7 +638,7 @@ class ElasticsearchDatastore(datastore.Datastore):
         if cache_key in self._results_cache:
             results = self._results_cache[cache_key]
         else:
-            results = list(self.get_elasticsearch_variants(project_id, family_id=family_id, variant_id_filter=[variant_id]))
+            results = list(self.get_elasticsearch_variants(project_id, family_id=family_id, variant_id_filter=[variant_id], user=user))
             self._results_cache[cache_key] = results
 
         if not results:
@@ -652,7 +652,7 @@ class ElasticsearchDatastore(datastore.Datastore):
 
         return variant
 
-    def get_multiple_variants(self, project_id, family_id, xpos_ref_alt_tuples):
+    def get_multiple_variants(self, project_id, family_id, xpos_ref_alt_tuples, user=None):
         """
         Get one or more specific variants in a family
         Variant should be identifiable by xpos, ref, and alt
@@ -667,7 +667,7 @@ class ElasticsearchDatastore(datastore.Datastore):
         if cache_key in self._results_cache:
             results = self._results_cache[cache_key]
         else:
-            results = list(self.get_elasticsearch_variants(project_id, family_id=family_id, variant_id_filter=variant_ids))
+            results = list(self.get_elasticsearch_variants(project_id, family_id=family_id, variant_id_filter=variant_ids, user=user))
             # make sure all variants in xpos_ref_alt_tuples were retrieved and are in the same order.
             # Return None for tuples that weren't found in ES.
             results_by_xpos_ref_alt = {}
@@ -687,7 +687,7 @@ class ElasticsearchDatastore(datastore.Datastore):
 
         raise ValueError("Not implemented")
 
-    def get_project_variants_in_gene(self, project_id, gene_id, variant_filter=None):
+    def get_project_variants_in_gene(self, project_id, gene_id, variant_filter=None, user=None):
 
         if variant_filter is None:
             modified_variant_filter = VariantFilter()
@@ -695,7 +695,7 @@ class ElasticsearchDatastore(datastore.Datastore):
             modified_variant_filter = copy.deepcopy(variant_filter)
         modified_variant_filter.add_gene(gene_id)
 
-        variants = [variant for variant in self.get_elasticsearch_variants(project_id, variant_filter=modified_variant_filter)]
+        variants = [variant for variant in self.get_elasticsearch_variants(project_id, variant_filter=modified_variant_filter, user=user)]
         return variants
 
     def _make_db_query(self, genotype_filter=None, variant_filter=None):

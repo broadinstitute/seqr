@@ -6,7 +6,7 @@ import pymongo
 from tqdm import tqdm
 import settings
 
-
+from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 from django.db.models import Q
@@ -905,13 +905,15 @@ def _set_saved_variant_json(new_saved_variant, source_variant_tag_or_note, new_f
 
     project_id = new_family.project.deprecated_project_id
     project = Project.objects.get(project_id=project_id)
+    user = User.objects.filter(is_staff=True).first(),  # HGMD annotations are only returned for staff users
     try:
         variant_info = get_datastore(project).get_single_variant(
             project_id,
             new_family.family_id,
             source_variant_tag_or_note.xpos,
             source_variant_tag_or_note.ref,
-            source_variant_tag_or_note.alt)
+            source_variant_tag_or_note.alt,
+            user=user)
     except Exception as e:
         logger.error("Unable to retrieve variant annotations for %s %s: %s" % (
             new_family, source_variant_tag_or_note, e))

@@ -148,7 +148,7 @@ class MongoDatastore(datastore.Datastore):
         for v in variants:
             yield v
 
-    def get_single_variant(self, project_id, family_id, xpos, ref, alt):
+    def get_single_variant(self, project_id, family_id, xpos, ref, alt, user=None):
         collection = self._get_family_collection(project_id, family_id)
         if not collection:
             return None

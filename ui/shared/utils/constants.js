@@ -39,6 +39,7 @@ export const FAMILY_ANALYSIS_STATUS_OPTIONS = [
 // CLINVAR
 
 export const CLINSIG_SEVERITY = {
+  // clinvar
   pathogenic: 1,
   'risk factor': 0,
   risk_factor: 0,
@@ -48,4 +49,11 @@ export const CLINSIG_SEVERITY = {
   'likely benign': -1,
   likely_benign: -1,
   protective: -1,
+  // hgmd
+  DM: 1,
+  'DM?': 0,
+  FPV: 0,
+  FP: 0,
+  DFP: 0,
+  DP: 0,
 }

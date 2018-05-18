@@ -1,17 +1,18 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import { Grid, Label } from 'semantic-ui-react'
+import { Grid } from 'semantic-ui-react'
 
 import { CLINSIG_SEVERITY } from 'shared/utils/constants'
-import { HorizontalSpacer } from '../../Spacers'
 import VariantTags from './VariantTags'
 import VariantLocations from './VariantLocations'
 import Annotations from './Annotations'
+import Pathogenicity from './Pathogenicity'
 import Predictions from './Predictions'
 import Frequencies from './Frequencies'
 import VariantGene from './VariantGene'
 import VariantFamily from './VariantFamily'
+
 
 const VariantRow = styled(Grid.Row)`
   .column {
@@ -34,30 +35,11 @@ const VariantRow = styled(Grid.Row)`
   }}
 `
 
-const CLINSIG_COLOR = {
-  1: 'red',
-  0: 'orange',
-  [-1]: 'green',
-}
-
 const Variants = ({ variants }) =>
   <Grid divided="vertically" columns="equal">
     {variants.map(variant =>
       <VariantRow key={variant.variantId} severity={CLINSIG_SEVERITY[(variant.clinvar.clinsig || '').split('/')[0]]}>
-        {variant.hgmd.class && <Label color="red">{variant.hgmd.class}/{variant.hgmd.accession}</Label>}
-        {variant.clinvar.variantId &&
-          <Grid.Column width={16}>
-            <span>
-              <b>ClinVar:</b>
-              {variant.clinvar.clinsig.split('/').map(clinsig =>
-                <a key={clinsig} target="_blank" href={`http://www.ncbi.nlm.nih.gov/clinvar/variation/${variant.clinvar.variantId}`}>
-                  <HorizontalSpacer width={5} />
-                  <Label color={CLINSIG_COLOR[CLINSIG_SEVERITY[clinsig]] || 'grey'} size="small" horizontal>{clinsig.replace(/_/g, ' ')}</Label>
-                </a>,
-              )}
-            </span>
-          </Grid.Column>
-        }
+        <Pathogenicity variant={variant} />
         <Grid.Column width={16}>
           <VariantTags variant={variant} />
         </Grid.Column>
