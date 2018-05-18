@@ -11,7 +11,7 @@ from django.views.decorators.csrf import csrf_exempt
 from seqr.models import Project, Family, Individual, Sample, Dataset, _slugify, CAN_EDIT, IS_OWNER
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.phenotips_api import create_phenotips_user, _get_phenotips_uname_and_pwd_for_project
-from seqr.views.apis.variant_tag_api import _add_default_variant_tag_types
+from seqr.views.apis.variant_tag_api import _deprecated_add_default_tags_to_original_project
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_project
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_permissions
@@ -152,7 +152,7 @@ def create_project(name, description=None, user=None):
 
         _enable_phenotips_for_project(project)
 
-    _add_default_variant_tag_types(project)
+    _deprecated_add_default_tags_to_original_project(project)
 
     # TODO: add custom populations
 

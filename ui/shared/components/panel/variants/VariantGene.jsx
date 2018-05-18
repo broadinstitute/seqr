@@ -16,7 +16,7 @@ const GeneLabelContent = styled(Label).attrs({
   color: props => props.color || 'grey',
   content: props => props.label,
 })`
-   margin: 0px 10px 10px 0px;
+   margin: 0px 10px 10px 0px !important;
 `
 
 const InlineHeader = styled(Header)`

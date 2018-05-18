@@ -12,12 +12,28 @@ import { InlineToggle, BooleanCheckbox } from '../../form/Inputs'
 import TagFieldView from '../view-fields/TagFieldView'
 import TextFieldView from '../view-fields/TextFieldView'
 
-const InlineForm = styled.div`
+const ShortcutToggleContainer = styled.div`
   display: inline-block;
   
   .form {
     display: inline-block;
   }
+`
+
+const TagContainer = styled.span`
+  display: flex;
+  
+  .fit-content {
+    min-width: fit-content;
+  } 
+`
+
+const ReRunSearchLink = styled.a.attrs({ target: '_blank' })`
+  font-size: 12px;
+  max-width: 40px;
+  display: inline-block;
+  line-height: .9em;
+  vertical-align: bottom;
 `
 
 const NOTE_STYLE = { display: 'flex', fontSize: '1.2em' }
@@ -33,12 +49,10 @@ const VARIANT_NOTE_FIELDS = [{
 }]
 
 const taggedByPopupContent = tag =>
-  <span>{tag.user || 'unknown user'}{tag.dateSaved && <br />}{tag.dateSaved}</span>
+  <span>{tag.user || 'unknown user'}{tag.dateSaved && <span><br /> on {new Date(tag.dateSaved).toLocaleDateString()}</span>}</span>
 
 const reRunTagSearch = tag => tag.searchParameters &&
-  <a href={tag.searchParameters} target="_blank">
-    <Icon name="search" title="Re-run search" fitted />
-  </a>
+  <ReRunSearchLink href={tag.searchParameters}>Re-run search</ReRunSearchLink>
 
 const ShortcutTagToggle = ({ value, ...props }) =>
   <span>
@@ -76,7 +90,7 @@ const ShortcutTags = ({ variant, dispatchUpdateVariantTags }) => {
     return dispatchUpdateVariantTags({ ...variant, tags: updatedTags })
   }
   return (
-    <InlineForm>
+    <ShortcutToggleContainer>
       <ReduxFormWrapper
         onSubmit={onSubmit}
         form={`editShorcutTags-${variant.variantId}`}
@@ -85,7 +99,7 @@ const ShortcutTags = ({ variant, dispatchUpdateVariantTags }) => {
         submitOnChange
         fields={SHORTCUT_TAG_FIELDS}
       />
-    </InlineForm>
+    </ShortcutToggleContainer>
   )
 }
 
@@ -96,8 +110,8 @@ ShortcutTags.propTypes = {
 
 
 const VariantTags = ({ variant, project, updateVariantNote: dispatchUpdateVariantNote, updateVariantTags: dispatchUpdateVariantTags }) =>
-  <span style={{ display: 'flex' }}>
-    <span style={{ minWidth: 'fit-content' }}>
+  <TagContainer>
+    <span className="fit-content">
       <b>Tags:<HorizontalSpacer width={10} /></b>
       <ShortcutTags variant={variant} dispatchUpdateVariantTags={dispatchUpdateVariantTags} />
       <TagFieldView
@@ -174,7 +188,7 @@ const VariantTags = ({ variant, project, updateVariantNote: dispatchUpdateVarian
         style={ADD_NOTE_STYLE}
       />
     </span>
-  </span>
+  </TagContainer>
 
 VariantTags.propTypes = {
   variant: PropTypes.object,

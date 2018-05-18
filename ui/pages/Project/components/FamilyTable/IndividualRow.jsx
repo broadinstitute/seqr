@@ -184,7 +184,7 @@ class IndividualRow extends React.Component
                     showDetails && individual.caseReviewStatusLastModifiedDate ? (
                       <Detail>
                         <HorizontalSpacer width={5} />
-                        CHANGED {new Timeago().format(individual.caseReviewStatusLastModifiedDate).toUpperCase()}
+                        CHANGED ON {new Date(individual.caseReviewStatusLastModifiedDate).toLocaleDateString()}
                         { individual.caseReviewStatusLastModifiedBy && ` BY ${individual.caseReviewStatusLastModifiedBy}` }
                       </Detail>
                     ) : null

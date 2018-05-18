@@ -51,14 +51,17 @@ MetadataField.propTypes = {
 const TagFieldView = ({ initialValues, field, tagOptions, popupContent, tagAnnotation, editMetadata, hiddenTags = [], ...props }) => {
   const fieldValues = initialValues[field]
 
-  tagOptions = tagOptions.map((tag) => {
-    return { ...tag, ...fieldValues.find(val => val.name === tag.name) }
+  tagOptions = tagOptions.map((tag, i) => {
+    return { ...tag, ...fieldValues.find(val => val.name === tag.name), optionIndex: i }
   })
   const tagOptionsMap = tagOptions.reduce((acc, tag) => {
     return { [tag.name]: tag, ...acc }
   }, {})
 
-  const mappedValues = { ...initialValues, [field]: fieldValues.map(tag => tagOptionsMap[tag.name]) }
+  const mappedValues = {
+    ...initialValues,
+    [field]: fieldValues.map(tag => tagOptionsMap[tag.name]).sort((a, b) => a.optionIndex - b.optionIndex),
+  }
 
   const formFieldProps = {
     component: LargeMultiselect,
