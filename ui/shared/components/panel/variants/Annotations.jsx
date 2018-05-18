@@ -1,7 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import { Popup, Label, Header, Table } from 'semantic-ui-react'
+import { Popup, Label, Header, Table, Segment } from 'semantic-ui-react'
 
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
 import Modal from '../../modal/Modal'
@@ -124,50 +124,58 @@ const Annotations = ({ variant }) => {
         >
           {variant.genes.map(gene =>
             <div key={gene.geneId}>
-              <Header size="large" content={gene.symbol} subheader={`Gene Id: ${gene.geneId}`} />
-              <Table basic="very">
-                <Table.Body>
-                  {vepAnnotations.filter(annotation => (annotation.gene || annotation.gene_id) !== gene.geneId).map(annotation =>
-                    <Table.Row key={annotation.transcriptId}>
-                      <Table.Cell width={3}>
-                        <TranscriptLink
-                          target="_blank"
-                          href={`http://useast.ensembl.org/Homo_sapiens/Transcript/Summary?t=${annotation.transcriptId}`}
-                          isChosen={annotation.isChosenTranscript}
-                        >
-                          {annotation.transcriptId}
-                        </TranscriptLink>
-                        <div>
-                          {(annotation.isChosenTranscript || annotation.canonical) && <VerticalSpacer height={5} />}
-                          {annotation.isChosenTranscript &&
-                            <Label content="Chosen Transcript" color="orange" size="small" />
-                          }
-                          {annotation.canonical &&
-                            <Label content="Canonical Transcript" color="green" size="small" />
-                          }
-                        </div>
-                      </Table.Cell>
-                      <Table.Cell width={4}>
-                        {annotation.consequence}
-                      </Table.Cell>
-                      <Table.Cell width={9}>
-                        <AnnotationSection>
-                          <AnnotationLabel>Codons</AnnotationLabel>{annotation.codons}<br />
-                          <AnnotationLabel>Amino Acids</AnnotationLabel>{annotation.aminoAcids}<br />
-                        </AnnotationSection>
-                        <AnnotationSection>
-                          <AnnotationLabel>cDNA Position</AnnotationLabel>{annotation.cdnaPosition}<br />
-                          <AnnotationLabel>CDS Position</AnnotationLabel>{annotation.cdsPosition}<br />
-                        </AnnotationSection>
-                        <AnnotationSection>
-                          <AnnotationLabel>HGVS.C</AnnotationLabel><ProtenSequence hgvs={annotation.hgvsc} size="1em" /><br />
-                          <AnnotationLabel>HGVS.P</AnnotationLabel><ProtenSequence hgvs={annotation.hgvsp} size="1em" /><br />
-                        </AnnotationSection>
-                      </Table.Cell>
-                    </Table.Row>,
-                  )}
-                </Table.Body>
-              </Table>
+              <Header size="large" attached="top" content={gene.symbol} subheader={`Gene Id: ${gene.geneId}`} />
+              <Segment attached="bottom">
+                <Table basic="very">
+                  <Table.Body>
+                    {vepAnnotations.filter(annotation => (annotation.gene || annotation.gene_id) !== gene.geneId).map(annotation =>
+                      <Table.Row key={annotation.transcriptId}>
+                        <Table.Cell width={3}>
+                          <TranscriptLink
+                            target="_blank"
+                            href={`http://useast.ensembl.org/Homo_sapiens/Transcript/Summary?t=${annotation.transcriptId}`}
+                            isChosen={annotation.isChosenTranscript}
+                          >
+                            {annotation.transcriptId}
+                          </TranscriptLink>
+                          <div>
+                            {annotation.isChosenTranscript &&
+                              <span>
+                                <VerticalSpacer height={5} />
+                                <Label content="Chosen Transcript" color="orange" size="small" />
+                              </span>
+                            }
+                            {annotation.canonical &&
+                              <span>
+                                <VerticalSpacer height={5} />
+                                <Label content="Canonical Transcript" color="green" size="small" />
+                              </span>
+                            }
+                          </div>
+                        </Table.Cell>
+                        <Table.Cell width={4}>
+                          {annotation.consequence}
+                        </Table.Cell>
+                        <Table.Cell width={9}>
+                          <AnnotationSection>
+                            <AnnotationLabel>Codons</AnnotationLabel>{annotation.codons}<br />
+                            <AnnotationLabel>Amino Acids</AnnotationLabel>{annotation.aminoAcids}<br />
+                          </AnnotationSection>
+                          <AnnotationSection>
+                            <AnnotationLabel>cDNA Position</AnnotationLabel>{annotation.cdnaPosition}<br />
+                            <AnnotationLabel>CDS Position</AnnotationLabel>{annotation.cdsPosition}<br />
+                          </AnnotationSection>
+                          <AnnotationSection>
+                            <AnnotationLabel>HGVS.C</AnnotationLabel>{annotation.hgvsc && <ProtenSequence hgvs={annotation.hgvsc} size="1em" />}<br />
+                            <AnnotationLabel>HGVS.P</AnnotationLabel>{annotation.hgvsp && <ProtenSequence hgvs={annotation.hgvsp} size="1em" />}<br />
+                          </AnnotationSection>
+                        </Table.Cell>
+                      </Table.Row>,
+                    )}
+                  </Table.Body>
+                </Table>
+              </Segment>
+              <VerticalSpacer height={10} />
             </div>,
           )}
         </Modal>
