@@ -90,10 +90,14 @@ export class Multiselect extends React.Component {
   }
 }
 
+const InlineFormGroup = styled(Form.Group).attrs({ inline: true })`
+  flex-wrap: wrap;
+`
+
 export const StringValueCheckboxGroup = (props) => {
   const { value = '', options, onChange, ...baseProps } = props
   return (
-    <Form.Group inline style={{ flexWrap: 'wrap' }}>
+    <InlineFormGroup>
       {options.map(option =>
         <BaseSemanticInput
           {...baseProps}
@@ -112,7 +116,7 @@ export const StringValueCheckboxGroup = (props) => {
           }}
         />,
       )}
-    </Form.Group>
+    </InlineFormGroup>
   )
 }
 

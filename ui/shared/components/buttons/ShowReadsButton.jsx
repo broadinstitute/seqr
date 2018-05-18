@@ -67,6 +67,15 @@ const ShowReadsButton = ({ locus, familyGuid, samples, individualsByGuid, datase
     displayMode: 'SQUISHED',
   })
 
+  const igvOptions = {
+    tracks: igvTracks,
+    locus,
+    genome,
+    showIdeogram: true,
+    showCenterGuide: true,
+    showCursorTrackingGuide: true,
+  }
+
   return (
     <Modal
       trigger={<a><Icon name="options" /> SHOW READS</a>}
@@ -74,16 +83,7 @@ const ShowReadsButton = ({ locus, familyGuid, samples, individualsByGuid, datase
       title="IGV"
       size="fullscreen"
     >
-      <IGV
-        igvOptions={{
-          tracks: igvTracks,
-          locus,
-          genome,
-          showIdeogram: true,
-          showCenterGuide: true,
-          showCursorTrackingGuide: true,
-        }}
-      />
+      <IGV igvOptions={igvOptions} />
     </Modal>
   )
 }

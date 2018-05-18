@@ -1,5 +1,6 @@
 import React from 'react'
 import PropTypes from 'prop-types'
+import styled from 'styled-components'
 import { connect } from 'react-redux'
 import { Label, Popup, Header } from 'semantic-ui-react'
 
@@ -10,8 +11,20 @@ import GeneDetail from '../genes/GeneDetail'
 
 const CONSTRAINED_GENE_RANK_THRESHOLD = 1000
 
-const GeneLabel = ({ label, color, popupHeader, popupContent }) => {
-  const content = <Label size="small" color={color || 'grey'} style={{ margin: '0px 10px 10px 0px' }}>{label}</Label>
+const GeneLabelContent = styled(Label).attrs({
+  size: 'small',
+  color: props => props.color || 'grey',
+  content: props => props.label,
+})`
+   margin: 0px 10px 10px 0px;
+`
+
+const InlineHeader = styled(Header)`
+  display: inline-block;
+`
+
+const GeneLabel = ({ popupHeader, popupContent, ...labelProps }) => {
+  const content = <GeneLabelContent {...labelProps} />
   return popupContent ? <Popup header={popupHeader} trigger={content} content={popupContent} size="tiny" wide /> : content
 }
 
@@ -26,7 +39,7 @@ GeneLabel.propTypes = {
 const VariantGene = ({ gene, project }) =>
   <div>
     <Modal
-      trigger={<Header size="large" style={{ display: 'inline-block' }}><a>{gene.symbol}</a></Header>}
+      trigger={<InlineHeader size="large"><a>{gene.symbol}</a></InlineHeader>}
       title={gene.symbol}
       modalName={`gene-${gene.geneId}`}
       size="fullscreen"

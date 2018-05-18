@@ -6,6 +6,7 @@ import { Grid, Icon, Header } from 'semantic-ui-react'
 import { updateFamily } from 'redux/rootReducer'
 import { getProjectsByGuid } from 'redux/selectors'
 import VariantTagTypeBar from '../graph/VariantTagTypeBar'
+import { ColoredIcon } from '../StyledComponents'
 import PedigreeImagePanel from './view-pedigree-image/PedigreeImagePanel'
 import OptionFieldView from './view-fields/OptionFieldView'
 import TextFieldView from './view-fields/TextFieldView'
@@ -30,7 +31,7 @@ const fieldRenderDetails = {
     component: OptionFieldView,
     props: {
       tagOptions: FAMILY_ANALYSIS_STATUS_OPTIONS,
-      tagAnnotation: value => <Icon name="play" style={{ color: value.color }} />,
+      tagAnnotation: value => <ColoredIcon name="play" color={value.color} />,
     },
   },
   [FAMILY_FIELD_ANALYSED_BY]: {

@@ -1,9 +1,11 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 
-import { Icon, Popup } from 'semantic-ui-react'
+import { Popup } from 'semantic-ui-react'
 import { Link } from 'react-router-dom'
 //import randomMC from 'random-material-color'
+
+import { ColoredIcon } from '../StyledComponents'
 
 class HorizontalStackedBar extends React.Component {
 
@@ -83,7 +85,7 @@ class HorizontalStackedBar extends React.Component {
                         <tr key={d.name} style={{ whitespace: 'nowrap' }}>
                           {!d.header &&
                             <td style={{ paddingRight: '5px', width: '55px', verticalAlign: 'top' }}>
-                              <Icon name="square" size="small" style={{ color: d.color }} /> {d.count}
+                              <ColoredIcon name="square" size="small" color={d.color} /> {d.count}
                             </td>
                           }
                           <td colSpan={d.header ? 3 : 1} style={{ whitespace: 'nowrap', color: d.header ? 'grey' : 'inherit' }}>
@@ -98,7 +100,7 @@ class HorizontalStackedBar extends React.Component {
                       ))
                     }
                     <tr>
-                      <td><Icon name="square" size="small" style={{ color: 'white' }} /> {total}</td>
+                      <td><ColoredIcon name="square" size="small" color="white" /> {total}</td>
                       <td>Total</td>
                       <td />
                     </tr>

@@ -6,25 +6,27 @@ import EditRecordsForm from 'shared/components/form/EditRecordsForm'
 import { updateFamilies } from 'pages/Project/reducers'
 import { getProjectFamilies } from 'pages/Project/selectors'
 
+const FAMILY_FIELDS = [
+  {
+    header: 'Family Id',
+    field: 'familyId',
+    fieldProps: { component: ({ input }) => input.value },
+    cellProps: { collapsing: true, style: { minWidth: '100px' } },
+  },
+  {
+    header: 'Family Description',
+    field: 'description',
+    fieldProps: { component: 'input', type: 'text' },
+    cellProps: { style: { paddingRight: '150px' } },
+  },
+]
+
 const EditFamiliesForm = props =>
   <EditRecordsForm
     formName="editFamilies"
     modalName={props.modalName}
     records={props.families}
-    fields={[
-      {
-        header: 'Family Id',
-        field: 'familyId',
-        fieldProps: { component: ({ input }) => input.value },
-        cellProps: { collapsing: true, style: { minWidth: '100px' } },
-      },
-      {
-        header: 'Family Description',
-        field: 'description',
-        fieldProps: { component: 'input', type: 'text' },
-        cellProps: { style: { paddingRight: '150px' } },
-      },
-    ]}
+    fields={FAMILY_FIELDS}
     onSubmit={({ records, ...values }) => props.updateFamilies({ families: records, ...values })}
   />
 

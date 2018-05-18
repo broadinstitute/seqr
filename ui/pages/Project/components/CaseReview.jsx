@@ -13,27 +13,39 @@ import {
 import { getShowDetails, getProject, getCaseReviewStatusCounts } from '../selectors'
 import FamilyTable from './FamilyTable/FamilyTable'
 
-const CaseReviewTable = props =>
-  <FamilyTable
-    showInternalFilters
-    editCaseReview
-    headerStatus={{ title: 'Individual Statuses', data: props.caseReviewStatusCounts }}
-    exportUrls={[
-      { name: 'Families', url: `/api/project/${props.project.projectGuid}/export_case_review_families` },
-      { name: 'Individuals', url: `/api/project/${props.project.projectGuid}/export_case_review_individuals` },
-    ]}
-    fields={props.showDetails ? [
-      { id: FAMILY_FIELD_DESCRIPTION },
-      { id: FAMILY_FIELD_ANALYSED_BY },
-      { id: FAMILY_FIELD_ANALYSIS_NOTES },
-      { id: FAMILY_FIELD_ANALYSIS_SUMMARY },
-      { id: FAMILY_FIELD_INTERNAL_NOTES, canEdit: true },
-      { id: FAMILY_FIELD_INTERNAL_SUMMARY, canEdit: true },
-    ] : [
-      { id: FAMILY_FIELD_INTERNAL_NOTES, canEdit: true },
-      { id: FAMILY_FIELD_INTERNAL_SUMMARY, canEdit: true },
-    ]}
-  />
+const DETAIL_FIELDS = [
+  { id: FAMILY_FIELD_DESCRIPTION },
+  { id: FAMILY_FIELD_ANALYSED_BY },
+  { id: FAMILY_FIELD_ANALYSIS_NOTES },
+  { id: FAMILY_FIELD_ANALYSIS_SUMMARY },
+]
+
+const NO_DETAIL_FIELDS = [
+  { id: FAMILY_FIELD_INTERNAL_NOTES, canEdit: true },
+  { id: FAMILY_FIELD_INTERNAL_SUMMARY, canEdit: true },
+]
+
+const ALL_FIELDS = DETAIL_FIELDS.concat(NO_DETAIL_FIELDS)
+
+const CaseReviewTable = (props) => {
+  const headerStatus = { title: 'Individual Statuses', data: props.caseReviewStatusCounts }
+  const exportUrls = [
+    { name: 'Families', url: `/api/project/${props.project.projectGuid}/export_case_review_families` },
+    { name: 'Individuals', url: `/api/project/${props.project.projectGuid}/export_case_review_individuals` },
+  ]
+  return (
+    <div>
+      <FamilyTable
+        showInternalFilters
+        editCaseReview
+        headerStatus={headerStatus}
+        exportUrls={exportUrls}
+        fields={props.showDetails ? ALL_FIELDS : NO_DETAIL_FIELDS}
+      />
+    </div>
+  )
+}
+
 
 export { CaseReviewTable as CaseReviewTableComponent }
 

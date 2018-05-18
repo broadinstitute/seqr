@@ -7,14 +7,19 @@ import RichTextEditor from '../../form/RichTextEditor'
 import { HorizontalSpacer } from '../../Spacers'
 import BaseFieldView from './BaseFieldView'
 
+const MARKDOWN_OPTIONS = { breaks: true }
+const INLINE_STYLE = { display: 'inline-block' }
+
 const TextFieldView = (props) => {
   const { textPopupContent, textAnnotation, additionalEditFields = [], ...baseProps } = props
+  const fields = [{ name: props.field, component: RichTextEditor }, ...additionalEditFields]
   return <BaseFieldView
     fieldDisplay={(initialText) => {
+      const style = props.textAnnotation ? INLINE_STYLE : {}
       const markdown = <MarkdownRenderer
         markdown={initialText || ''}
-        options={{ breaks: true }}
-        style={props.textAnnotation ? { display: 'inline-block' } : {}}
+        options={MARKDOWN_OPTIONS}
+        style={style}
       />
       return (
         <span>
@@ -30,7 +35,7 @@ const TextFieldView = (props) => {
         </span>
       ) }
     }
-    formFields={[{ name: props.field, component: RichTextEditor }, ...additionalEditFields]}
+    formFields={fields}
     {...baseProps}
   />
 }

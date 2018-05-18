@@ -3,12 +3,16 @@
 
 import React from 'react'
 import PropTypes from 'prop-types'
+import styled from 'styled-components'
 import { Field } from 'redux-form'
 import { Message } from 'semantic-ui-react'
 
 //XHRUploader widget: https://github.com/rma-consulting/react-xhr-uploader/blob/master/src/index.js
 import XHRUploader from 'react-xhr-uploader'
 
+const MessagePanel = styled(Message)`
+  margin: 20px;
+`
 
 class XHRUploaderWithEvents extends XHRUploader {
 
@@ -138,7 +142,7 @@ class UploaderFieldComponent extends React.PureComponent {
           maxFiles={1}
         />
       </div>,
-      (input.value && input.value.info) ? <Message key="info" info visible list={input.value.info} style={{ margin: '20px' }} /> : null,
+      (input.value && input.value.info) ? <MessagePanel key="info" info visible list={input.value.info} /> : null,
     ])
   }
 }

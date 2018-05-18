@@ -35,6 +35,10 @@ const IndividualCell = styled.div`
       font-style: italic;
     }
   }
+  
+  .ui.header {
+    padding-top: 3px;
+  }
 `
 
 const FAMILY_FIELDS = [
@@ -72,7 +76,7 @@ const VariantFamily = ({ variant, project, family, individualsByGuid }) => {
   return (
     <div>
       <IndividualCell>
-        <Header size="small" style={{ paddingTop: '5px' }}>
+        <Header size="small">
           Family<HorizontalSpacer width={5} />
           <Popup
             hoverable

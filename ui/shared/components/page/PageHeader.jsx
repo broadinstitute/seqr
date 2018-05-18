@@ -20,6 +20,17 @@ const PageHeaderRow = styled(Grid.Row)`
 
 const BreadcrumbContainer = styled.div`
   margin: 50px 0px 35px 0px;
+  
+  a.active {
+    color: #111;
+    font-weight: 750;
+    cursor: auto;
+  }
+`
+const NavLinkNoActive = styled(NavLink)`
+  &.active {
+    display: none;
+  }
 `
 
 const PageHeader = ({ user, project, familiesByGuid, match }) => {
@@ -124,9 +135,9 @@ const PageHeader = ({ user, project, familiesByGuid, match }) => {
         }
         {
           user.is_staff &&
-            <NavLink to={`/project/${project.projectGuid}/case_review`} activeStyle={{ display: 'none' }}>
+            <NavLinkNoActive to={`/project/${project.projectGuid}/case_review`}>
               <b>Case Review</b><br />
-            </NavLink>
+            </NavLinkNoActive>
         }
         <br />
         {originalPages.map(page =>

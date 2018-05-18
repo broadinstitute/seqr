@@ -11,6 +11,20 @@ const TabPane = styled(Tab.Pane)`
 `
 
 const MODAL_NAME = 'editFamiliesAndIndividuals'
+const PANES = [
+  {
+    menuItem: 'Edit Families',
+    pane: <TabPane key={1}><EditFamiliesForm modalName={MODAL_NAME} /></TabPane>,
+  },
+  {
+    menuItem: 'Edit Individuals',
+    pane: <TabPane key={2}><EditIndividualsForm modalName={MODAL_NAME} /></TabPane>,
+  },
+  {
+    menuItem: 'Bulk Upload',
+    pane: <TabPane key={3}><EditIndividualsBulkForm modalName={MODAL_NAME} /></TabPane>,
+  },
+]
 
 export default () => (
   <Modal
@@ -27,20 +41,7 @@ export default () => (
   >
     <Tab
       renderActiveOnly={false}
-      panes={[
-        {
-          menuItem: 'Edit Families',
-          pane: <TabPane key={1}><EditFamiliesForm modalName={MODAL_NAME} /></TabPane>,
-        },
-        {
-          menuItem: 'Edit Individuals',
-          pane: <TabPane key={2}><EditIndividualsForm modalName={MODAL_NAME} /></TabPane>,
-        },
-        {
-          menuItem: 'Bulk Upload',
-          pane: <TabPane key={3}><EditIndividualsBulkForm modalName={MODAL_NAME} /></TabPane>,
-        },
-      ]}
+      panes={PANES}
     />
   </Modal>
 

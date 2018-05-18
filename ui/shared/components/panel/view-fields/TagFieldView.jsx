@@ -5,6 +5,7 @@ import { Label, Popup, Form } from 'semantic-ui-react'
 import { Field } from 'redux-form'
 
 import { HorizontalSpacer } from '../../Spacers'
+import { ColoredLabel } from '../../StyledComponents'
 import { Multiselect } from '../../form/Inputs'
 import OptionFieldView from './OptionFieldView'
 
@@ -16,11 +17,14 @@ const LargeMultiselect = styled(Multiselect)`
   }
 `
 
+const MetadataLabel = styled(Label).attrs({ size: 'large', pointing: 'right', basic: true })`
+  color: ${props => props.color};
+  border-color: ${props => props.color};
+  min-width: content;
+`
+
 const MetadataField = ({ value, name, error }) => {
-  const label =
-    <Label style={{ color: value.color, borderColor: value.color, minWidth: 'fit-content' }} size="large" pointing="right" basic>
-      {value.name}
-    </Label>
+  const label = <MetadataLabel color={value.color} content={value.name} />
   return (
     <Form.Group inline>
       {value.description ? <Popup trigger={label} content={value.description} /> : label}
@@ -54,30 +58,33 @@ const TagFieldView = ({ initialValues, field, tagOptions, popupContent, tagAnnot
     return { [tag.name]: tag, ...acc }
   }, {})
 
+  const mappedValues = { ...initialValues, [field]: fieldValues.map(tag => tagOptionsMap[tag.name]) }
+
+  const formFieldProps = {
+    component: LargeMultiselect,
+    placeholder: 'Variant Tags',
+    normalize: (value, previousValue, allValues, previousAllValues) => value.map(option => previousAllValues[field].find(prevFieldValue => prevFieldValue.name === option) || tagOptionsMap[option]),
+    format: options => options.map(tag => tag.name),
+  }
+
+  const additionalFields = editMetadata ? [{
+    name: field,
+    key: 'test',
+    isArrayField: true,
+    validate: (val) => { return (!val || val.category === NOTES_CATEGORY || val.metadata) ? undefined : 'Required' },
+    component: MetadataField,
+  }] : []
+
   return <OptionFieldView
     field={field}
     tagOptions={tagOptions}
-    formFieldProps={{
-      component: LargeMultiselect,
-      placeholder: 'Variant Tags',
-      normalize: (value, previousValue, allValues, previousAllValues) => value.map(option => previousAllValues[field].find(prevFieldValue => prevFieldValue.name === option) || tagOptionsMap[option]),
-      format: options => options.map(tag => tag.name),
-    }}
-    additionalEditFields={editMetadata ? [{
-      name: field,
-      key: 'test',
-      isArrayField: true,
-      validate: (val) => { return (!val || val.category === NOTES_CATEGORY || val.metadata) ? undefined : 'Required' },
-      component: MetadataField,
-    }] : []}
-    initialValues={{ ...initialValues, [field]: fieldValues.map(tag => tagOptionsMap[tag.name]) }}
+    formFieldProps={formFieldProps}
+    additionalEditFields={additionalFields}
+    initialValues={mappedValues}
     fieldDisplay={displayFieldValues =>
       <span>
         {displayFieldValues.filter(tag => !hiddenTags.includes(tag.name)).map((tag) => {
-          const label =
-            <Label size="small" style={{ color: 'white', backgroundColor: tag.color }} horizontal>
-              {tag.name || tag.text}
-            </Label>
+          const label = <ColoredLabel size="small" color={tag.color} horizontal content={tag.name || tag.text} />
           return (
             <span key={tag.name}>
               <HorizontalSpacer width={5} />

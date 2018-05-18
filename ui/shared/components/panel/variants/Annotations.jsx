@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { Popup, Label, Header, Table } from 'semantic-ui-react'
 
-import { HorizontalSpacer } from '../../Spacers'
+import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
 import Modal from '../../modal/Modal'
 
 
@@ -103,6 +103,15 @@ const Annotations = ({ variant }) => {
   }
 
   const variations = annotationVariations(worstVepAnnotation, variant)
+  const lofDetails = (worstVepAnnotation.lof === 'LC' || worstVepAnnotation.lofFlags === 'NAGNAG_SITE') ? [
+    ...[...new Set(worstVepAnnotation.lofFilter.split('&'))].map((lofFilterKey) => {
+      const lofFilter = LOF_FILTER_MAP[lofFilterKey]
+      return <div key={lofFilterKey}><b>LOFTEE: {lofFilter.title}</b><br />{lofFilter.message}.</div>
+    }),
+    worstVepAnnotation.lofFlags === 'NAGNAG_SITE' ?
+      <div key="NAGNAG_SITE">LOFTEE: <b>NAGNAG site</b>This acceptor site is rescued by another adjacent in-frame acceptor site.</div>
+      : null,
+  ] : null
 
   return (
     <div>
@@ -129,11 +138,12 @@ const Annotations = ({ variant }) => {
                           {annotation.transcriptId}
                         </TranscriptLink>
                         <div>
+                          {(annotation.isChosenTranscript || annotation.canonical) && <VerticalSpacer height={5} />}
                           {annotation.isChosenTranscript &&
-                            <Label content="Chosen Transcript" color="orange" size="small" style={{ marginTop: '5px' }} />
+                            <Label content="Chosen Transcript" color="orange" size="small" />
                           }
                           {annotation.canonical &&
-                            <Label content="Canonical Transcript" color="green" size="small" style={{ marginTop: '5px' }} />
+                            <Label content="Canonical Transcript" color="green" size="small" />
                           }
                         </div>
                       </Table.Cell>
@@ -162,20 +172,12 @@ const Annotations = ({ variant }) => {
           )}
         </Modal>
       }
-      { (worstVepAnnotation.lof === 'LC' || worstVepAnnotation.lofFlags === 'NAGNAG_SITE') &&
+      { lofDetails &&
         <span>
           <HorizontalSpacer width={12} />
           <Popup
             trigger={<Label color="red" horizontal size="tiny">LC LoF</Label>}
-            content={[
-              ...[...new Set(worstVepAnnotation.lofFilter.split('&'))].map((lofFilterKey) => {
-                const lofFilter = LOF_FILTER_MAP[lofFilterKey]
-                return <div key={lofFilterKey}><b>LOFTEE: {lofFilter.title}</b><br />{lofFilter.message}.</div>
-              }),
-              worstVepAnnotation.lofFlags === 'NAGNAG_SITE' ?
-                <div key="NAGNAG_SITE">LOFTEE: <b>NAGNAG site</b>This acceptor site is rescued by another adjacent in-frame acceptor site.</div>
-                : null,
-            ]}
+            content={lofDetails}
           />
         </span>
       }

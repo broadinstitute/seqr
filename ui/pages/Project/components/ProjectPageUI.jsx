@@ -53,6 +53,7 @@ const ProjectSectionComponent = ({ loading, label, children, editPath, linkPath,
     </div>,
     editPath && project.canEdit ? (
       <a key="edit" href={`/project/${project.deprecatedProjectId}/${editPath}`}>
+        <VerticalSpacer height={15} />
         {`Edit ${label}`}
       </a>
     ) : null,
@@ -71,9 +72,25 @@ const mapSectionStateToProps = state => ({
 
 const ProjectSection = connect(mapSectionStateToProps)(ProjectSectionComponent)
 
+const DETAIL_FIELDS = [
+  { id: FAMILY_FIELD_DESCRIPTION, canEdit: true },
+  { id: FAMILY_FIELD_ANALYSIS_STATUS, canEdit: true },
+  { id: FAMILY_FIELD_ANALYSED_BY, canEdit: true },
+  { id: FAMILY_FIELD_ANALYSIS_NOTES, canEdit: true },
+  { id: FAMILY_FIELD_ANALYSIS_SUMMARY, canEdit: true },
+]
 
-const ProjectPageUI = props =>
-  <div>
+const NO_DETAIL_FIELDS = [
+  { id: FAMILY_FIELD_ANALYSIS_STATUS, canEdit: true },
+]
+
+const ProjectPageUI = (props) => {
+  const headerStatus = { title: 'Analysis Statuses', data: props.analysisStatusCounts }
+  const exportUrls = [
+    { name: 'Families', url: `/api/project/${props.project.projectGuid}/export_project_families` },
+    { name: 'Individuals', url: `/api/project/${props.project.projectGuid}/export_project_individuals?include_phenotypes=1` },
+  ]
+  return (
     <Grid stackable>
       <Grid.Row>
         <Grid.Column width={12}>
@@ -94,25 +111,20 @@ const ProjectPageUI = props =>
           </ProjectSection>
         </Grid.Column>
       </Grid.Row>
+      <Grid.Row>
+        <Grid.Column width={16}>
+          <SectionHeader>Families</SectionHeader>
+          <FamilyTable
+            headerStatus={headerStatus}
+            exportUrls={exportUrls}
+            showSearchLinks
+            fields={props.showDetails ? DETAIL_FIELDS : NO_DETAIL_FIELDS}
+          />
+        </Grid.Column>
+      </Grid.Row>
     </Grid>
-
-    <SectionHeader>Families</SectionHeader>
-    <FamilyTable
-      headerStatus={{ title: 'Analysis Statuses', data: props.analysisStatusCounts }}
-      exportUrls={[
-        { name: 'Families', url: `/api/project/${props.project.projectGuid}/export_project_families` },
-        { name: 'Individuals', url: `/api/project/${props.project.projectGuid}/export_project_individuals?include_phenotypes=1` },
-      ]}
-      showSearchLinks
-      fields={props.showDetails ? [
-        { id: FAMILY_FIELD_DESCRIPTION, canEdit: true },
-        { id: FAMILY_FIELD_ANALYSIS_STATUS, canEdit: true },
-        { id: FAMILY_FIELD_ANALYSED_BY, canEdit: true },
-        { id: FAMILY_FIELD_ANALYSIS_NOTES, canEdit: true },
-        { id: FAMILY_FIELD_ANALYSIS_SUMMARY, canEdit: true },
-      ] : [{ id: FAMILY_FIELD_ANALYSIS_STATUS, canEdit: true }]}
-    />
-  </div>
+  )
+}
 
 ProjectPageUI.propTypes = {
   project: PropTypes.object.isRequired,

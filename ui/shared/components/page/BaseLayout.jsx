@@ -5,6 +5,7 @@
 
 import React from 'react'
 import PropTypes from 'prop-types'
+import styled from 'styled-components'
 import { Grid } from 'semantic-ui-react'
 import { Route } from 'react-router-dom'
 
@@ -12,25 +13,29 @@ import Header from './Header'
 import PageHeader from './PageHeader'
 import Footer from './Footer'
 
+const LayoutContainer = styled.div`
+  height: calc(100% - 46px);
+`
+
+const ContentGrid = styled(Grid)`
+  min-height: calc(100% - 46px);
+`
 
 const BaseLayout = ({ children }) =>
-  <div style={{ height: '100%' }}>
-    <div style={{ minHeight: 'calc(100% - 20px)', paddingBottom: '40px' }}>
-      <Header />
-      <Grid>
-        <Route path="/project/:projectGuid/:breadcrumb/:breadcrumbId*" component={PageHeader} />
-        <PageHeader />
-        <Grid.Row>
-          <Grid.Column width={1} />
-          <Grid.Column width={14}>
-            {children}
-          </Grid.Column>
-          <Grid.Column width={1} />
-        </Grid.Row>
-      </Grid>
-    </div>
+  <LayoutContainer>
+    <Header />
+    <ContentGrid>
+      <Route path="/project/:projectGuid/:breadcrumb/:breadcrumbId*" component={PageHeader} />
+      <Grid.Row>
+        <Grid.Column width={1} />
+        <Grid.Column width={14}>
+          {children}
+        </Grid.Column>
+        <Grid.Column width={1} />
+      </Grid.Row>
+    </ContentGrid>
     <Footer />
-  </div>
+  </LayoutContainer>
 
 export { BaseLayout as BaseLayoutComponent }
 

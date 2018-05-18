@@ -11,6 +11,10 @@ const BreakWord = styled.span`
   word-break: break-all;
 `
 
+const LargeText = styled.div`
+  font-size: 16px;
+`
+
 const locus = (variant, rangeSize) =>
   `chr${variant.chrom}:${variant.pos - rangeSize}-${variant.pos + rangeSize}`
 
@@ -25,13 +29,13 @@ const ucscBrowserLink = (variant, genomeVersion) => {
 
 const VariantLocations = ({ variant }) =>
   <div>
-    <div style={{ fontSize: '16px' }}>
+    <LargeText>
       <a href={ucscBrowserLink(variant)} target="_blank"><b>chr{variant.chrom}:{variant.pos}</b></a>
       <HorizontalSpacer width={10} />
       <BreakWord>{variant.ref}</BreakWord>
-      <Icon name="angle right" style={{ marginRight: 0 }} />
+      <Icon name="angle right" />
       <BreakWord>{variant.alt}</BreakWord>
-    </div>
+    </LargeText>
 
     {variant.annotation && variant.annotation.rsid &&
       <div>

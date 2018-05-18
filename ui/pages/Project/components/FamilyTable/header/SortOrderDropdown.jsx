@@ -2,7 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Form } from 'semantic-ui-react'
-import { injectGlobal } from 'styled-components'
+import styled, { injectGlobal } from 'styled-components'
 
 import { updateFamiliesSortOrder } from '../../../reducers'
 import { getFamiliesSortOrder } from '../../../selectors'
@@ -15,15 +15,23 @@ injectGlobal`
   }
 `
 
+const SortLabel = styled.span`
+  padding-right: 10px;
+`
+
+const SortField = styled(Form.Field)`
+  max-width: 150px;
+  padding: 0px !important;
+`
+
 const SortOrderDropdown = ({
   sortOrder,
   updateSortOrder,
 }) =>
-  <Form.Field
+  <SortField
     inline
-    label={<span style={{ paddingRight: '10px' }}>Sort By: </span>}
+    label={<SortLabel>Sort By: </SortLabel>}
     control="select"
-    style={{ maxWidth: '150px', padding: '0px !important' }}
     name="familiesSortOrder"
     value={sortOrder}
     onChange={e => updateSortOrder(e.target.value)}
@@ -31,7 +39,7 @@ const SortOrderDropdown = ({
     {
       FAMILY_SORT_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.name}</option>)
     }
-  </Form.Field>
+  </SortField>
 
 export { SortOrderDropdown as SortOrderDropdownComponent }
 

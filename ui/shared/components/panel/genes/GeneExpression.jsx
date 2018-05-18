@@ -9,6 +9,9 @@ const COLORS = [
 
 const MIN_EXPONENT = -3.2
 const MAX_EXPONENT = 3.2
+const RANGE = [MIN_EXPONENT, MAX_EXPONENT]
+const X_LABELS = { x: 'LOG 10 EXPRESSION' }
+const MARGIN = { top: 24, right: 24, bottom: 0, left: 400 }
 
 const tissueName = (tissue) => {
   if (tissue.includes('-')) {
@@ -42,6 +45,24 @@ const GeneExpression = ({ expression }) => {
     ), [])
   const config = tissues.map((tissue, i) => { return { type: tissue, color: COLORS[i % COLORS.length] } })
 
+  const style = {
+    // Make dots more transparent
+    '.dot': { opacity: 0.12 },
+    // Hide unwanted axis lines
+    '.axis path': { display: 'none' },
+    '.x .tick-circle': { display: 'none' },
+    // Move x axis to top and format text
+    '.x.axis, .x.axis .label': { transform: 'translate(0, -20px)', opacity: 0.5, 'font-size': '11px', 'font-weight': '600', fill: 'black' },
+    '.x.axis .label': { transform: 'translate(-790px, 6px)', opacity: 1 },
+    // Format y axis
+    '.y.axis': { 'font-size': '14px', 'font-weight': '600' },
+    '.y .tick-circle': { r: '4px', opacity: 0.7 },
+    // Make y axis tick circles match the dot color
+    ...config.reduce((acc, cfg, i) => {
+      return { [`.y g:nth-child(${i + 2}) .tick-circle`]: { fill: cfg.color }, ...acc }
+    }, {}),
+  }
+
   return (
     <Segment padded>
       <ScatterplotChart
@@ -51,26 +72,10 @@ const GeneExpression = ({ expression }) => {
         height={750}
         data={data}
         config={config}
-        xDomainRange={[MIN_EXPONENT, MAX_EXPONENT]}
-        axisLabels={{ x: 'LOG 10 EXPRESSION' }}
-        style={{
-          // Make dots more transparent
-          '.dot': { opacity: 0.12 },
-          // Hide unwanted axis lines
-          '.axis path': { display: 'none' },
-          '.x .tick-circle': { display: 'none' },
-          // Move x axis to top and format text
-          '.x.axis, .x.axis .label': { transform: 'translate(0, -20px)', opacity: 0.5, 'font-size': '11px', 'font-weight': '600', fill: 'black' },
-          '.x.axis .label': { transform: 'translate(-790px, 6px)', opacity: 1 },
-          // Format y axis
-          '.y.axis': { 'font-size': '14px', 'font-weight': '600' },
-          '.y .tick-circle': { r: '4px', opacity: 0.7 },
-          // Make y axis tick circles match the dot color
-          ...config.reduce((acc, cfg, i) => {
-            return { [`.y g:nth-child(${i + 2}) .tick-circle`]: { fill: cfg.color }, ...acc }
-          }, {}),
-        }}
-        margin={{ top: 24, right: 24, bottom: 0, left: 400 }}
+        xDomainRange={RANGE}
+        axisLabels={X_LABELS}
+        style={style}
+        margin={MARGIN}
       />
     </Segment>
   )

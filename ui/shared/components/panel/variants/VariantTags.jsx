@@ -20,6 +20,9 @@ const InlineForm = styled.div`
   }
 `
 
+const NOTE_STYLE = { display: 'flex', fontSize: '1.2em' }
+const ADD_NOTE_STYLE = { verticalAlign: 'middle' }
+
 const SHORTCUT_TAGS = ['Review', 'Excluded']
 
 const VARIANT_NOTE_FIELDS = [{
@@ -49,34 +52,38 @@ ShortcutTagToggle.propTypes = {
   value: PropTypes.any,
 }
 
+const SHORTCUT_TAG_FIELDS = [{
+  name: 'tags',
+  isArrayField: true,
+  component: ShortcutTagToggle,
+}]
+
 const ShortcutTags = ({ variant, dispatchUpdateVariantTags }) => {
   const appliedShortcutTags = SHORTCUT_TAGS.map((tagName) => {
     const appliedTag = variant.tags.find(tag => tag.name === tagName)
     return appliedTag ? { ...appliedTag, isApplied: true } : { name: tagName, isApplied: false }
   })
+  const initialValues = { tags: appliedShortcutTags }
+  const onSubmit = ({ tags }) => {
+    const updatedTags = tags.reduce((allTags, applied, index) => {
+      if (applied === true) {
+        return [...allTags, { name: appliedShortcutTags[index].name }]
+      } else if (applied === false) {
+        return allTags.filter(tag => tag.name !== appliedShortcutTags[index].name)
+      }
+      return allTags
+    }, variant.tags)
+    return dispatchUpdateVariantTags({ ...variant, tags: updatedTags })
+  }
   return (
     <InlineForm>
       <ReduxFormWrapper
-        onSubmit={({ tags }) => {
-          const updatedTags = tags.reduce((allTags, applied, index) => {
-            if (applied === true) {
-              return [...allTags, { name: appliedShortcutTags[index].name }]
-            } else if (applied === false) {
-              return allTags.filter(tag => tag.name !== appliedShortcutTags[index].name)
-            }
-            return allTags
-          }, variant.tags)
-          return dispatchUpdateVariantTags({ ...variant, tags: updatedTags })
-        }}
+        onSubmit={onSubmit}
         form={`editShorcutTags-${variant.variantId}`}
-        initialValues={{ tags: appliedShortcutTags }}
+        initialValues={initialValues}
         closeOnSuccess={false}
         submitOnChange
-        fields={[{
-          name: 'tags',
-          isArrayField: true,
-          component: ShortcutTagToggle,
-        }]}
+        fields={SHORTCUT_TAG_FIELDS}
       />
     </InlineForm>
   )
@@ -151,20 +158,20 @@ const VariantTags = ({ variant, project, updateVariantNote: dispatchUpdateVarian
           textEditorAdditionalFields={VARIANT_NOTE_FIELDS}
           deleteConfirm="Are you sure you want to delete this note?"
           textPopupContent={taggedByPopupContent(note)}
-          style={{ display: 'flex', fontSize: '1.2em' }}
+          style={NOTE_STYLE}
         />,
       )}
       <TextFieldView
-        style={{ verticalAlign: 'middle' }}
         isEditable
         editIconName="plus"
         editLabel="Add Note"
         field="note"
         idField="variantId"
         modalTitle="Add Variant Note"
-        initialValues={{ variantId: variant.variantId }}
+        initialValues={variant}
         additionalEditFields={VARIANT_NOTE_FIELDS}
         onSubmit={dispatchUpdateVariantNote}
+        style={ADD_NOTE_STYLE}
       />
     </span>
   </span>

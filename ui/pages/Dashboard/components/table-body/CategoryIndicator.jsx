@@ -1,10 +1,10 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 
-import { Icon } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 import randomMC from 'random-material-color'
 
+import { ColoredIcon } from 'shared/components/StyledComponents'
 import { getProjectCategoriesByGuid } from 'redux/selectors'
 import EditProjectCategoriesModal from './EditProjectCategoriesModal'
 
@@ -34,7 +34,7 @@ class CategoryIndicator extends React.Component {
   render() {
     const StarButton = (
       <a role="button" tabIndex="0" style={{ cursor: 'pointer' }}>
-        <Icon name={`${this.categoryGuids.length === 0 ? 'empty ' : ''}star`} style={{ color: this.color }} />
+        <ColoredIcon name={`${this.categoryGuids.length === 0 ? 'empty ' : ''}star`} color={this.color} />
       </a>
     )
 

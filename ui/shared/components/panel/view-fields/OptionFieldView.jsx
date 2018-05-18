@@ -18,17 +18,19 @@ const OptionFieldView = ({ field, tagOptions, fieldDisplay, tagAnnotation, formF
     return acc
   }, [])
 
+  const fields = [
+    {
+      name: field,
+      options: tagSelectOptions,
+      component: Select,
+      ...formFieldProps,
+    },
+    ...additionalEditFields,
+  ]
+
   return (
     <BaseFieldView
-      formFields={[
-        {
-          name: field,
-          options: tagSelectOptions,
-          component: Select,
-          ...formFieldProps,
-        },
-        ...additionalEditFields,
-      ]}
+      formFields={fields}
       field={field}
       fieldDisplay={fieldDisplay || ((value) => {
         const valueConfig = tagSelectOptions.find(option => option.value === value)

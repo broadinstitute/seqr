@@ -1,5 +1,6 @@
 import React, { createElement } from 'react'
 import PropTypes from 'prop-types'
+import styled from 'styled-components'
 import { connect } from 'react-redux'
 import { Field, FieldArray, reduxForm, getFormSyncErrors } from 'redux-form'
 import { Form, Message } from 'semantic-ui-react'
@@ -7,6 +8,10 @@ import { Form, Message } from 'semantic-ui-react'
 import { closeModal, setModalConfirm } from 'redux/utils/modalReducer'
 import ButtonPanel from './ButtonPanel'
 import RequestStatus from './RequestStatus'
+
+const MessagePanel = styled(Message)`
+  margin: 0px 20px;
+`
 
 export const validators = {
   required: value => (value ? undefined : 'Required'),
@@ -124,8 +129,8 @@ class ReduxFormWrapper extends React.Component {
     return (
       <Form onSubmit={this.props.handleSubmit} size={this.props.size} loading={this.props.submitting}>
         {fieldComponents}
-        {this.props.showErrorPanel && this.props.warning && <Message warning visible content={this.props.warning} style={{ margin: '0px 20px' }} />}
-        {errorMessages && errorMessages.length > 0 && <Message error visible list={errorMessages} style={{ margin: '0px 20px' }} />}
+        {this.props.showErrorPanel && this.props.warning && <MessagePanel warning visible content={this.props.warning} />}
+        {errorMessages && errorMessages.length > 0 && <MessagePanel error visible list={errorMessages} />}
         {
           this.props.secondarySubmitButton && this.props.onSecondarySubmit &&
           React.cloneElement(this.props.secondarySubmitButton, { onClick: this.props.handleSubmit(values => this.props.onSecondarySubmit(values)) })

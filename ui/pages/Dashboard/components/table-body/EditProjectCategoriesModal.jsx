@@ -15,27 +15,29 @@ const EditProjectCategoriesModal = (props) => {
     return { value: projectCategory.guid, text: projectCategory.name }
   })
   const formName = `editProjectCategories-${props.project.projectGuid}`
+  const fields = [
+    {
+      name: 'categories',
+      options: categories,
+      component: Multiselect,
+      allowAdditions: true,
+      additionLabel: 'Category: ',
+      placeholder: 'Project categories',
+      color: 'blue',
+    },
+  ]
+  const initialValues = {
+    categories: props.project.projectCategoryGuids,
+    projectGuid: props.project.projectGuid,
+    projectField: 'categories',
+  }
   return (
     <Modal trigger={props.trigger} popup={props.popup} title="Edit Project Categories" modalName={formName}>
       <ReduxFormWrapper
-        initialValues={{
-          categories: props.project.projectCategoryGuids,
-          projectGuid: props.project.projectGuid,
-          projectField: 'categories',
-        }}
+        initialValues={initialValues}
         onSubmit={props.updateProject}
         form={formName}
-        fields={[
-          {
-            name: 'categories',
-            options: categories,
-            component: Multiselect,
-            allowAdditions: true,
-            additionLabel: 'Category: ',
-            placeholder: 'Project categories',
-            color: 'blue',
-          },
-        ]}
+        fields={fields}
       />
     </Modal>
   )

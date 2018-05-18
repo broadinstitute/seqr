@@ -2,6 +2,7 @@
 
 import React from 'react'
 import PropTypes from 'prop-types'
+import styled from 'styled-components'
 import { connect } from 'react-redux'
 import { Field } from 'redux-form'
 
@@ -22,11 +23,15 @@ const affectedOptions = [
   { value: 'U', label: '?' },
 ]
 
+const RadioField = styled(Field)`
+  margin: 0 7px;
+`
+
 const RadioGroup = (props) => {
   const { input, options } = props
   return options.map(option =>
     <label key={`${input.name}.${option.value}`}>
-      <Field component="input" type="radio" style={{ margin: '0 7px' }} {...input} {...option} />
+      <RadioField component="input" type="radio" {...input} {...option} />
       {option.label}
     </label>,
   )
@@ -45,48 +50,51 @@ const EditIndividualsForm = (props) => {
     }
     return acc
   }, {})
+  const fields = [
+    {
+      header: 'Family Id',
+      field: 'family.familyId',
+      fieldProps: { component: 'input', type: 'text' },
+    },
+    {
+      header: 'Individual Id',
+      field: 'individualId',
+      fieldProps: { component: 'input', type: 'text' },
+    },
+    {
+      header: 'Paternal Id',
+      field: 'paternalId',
+      fieldProps: { component: 'input', type: 'text' },
+    },
+    {
+      header: 'Maternal Id',
+      field: 'maternalId',
+      fieldProps: { component: 'input', type: 'text' },
+    },
+    {
+      header: 'Sex',
+      field: 'sex',
+      fieldProps: { component: RadioGroup, options: sexOptions },
+      cellProps: { collapsing: true },
+    },
+    {
+      header: 'Affected Status',
+      field: 'affected',
+      fieldProps: { component: RadioGroup, options: affectedOptions },
+      cellProps: { collapsing: true, style: { paddingRight: '30px' } },
+    },
+  ]
+  const submitIndividuals = ({ records, ...values }) => props.updateIndividuals({ individuals: records, ...values })
+  const isActiveRow = individual => familyActiveMap[individual.familyGuid]
 
   return (
     <EditRecordsForm
       formName="editIndividuals"
       modalName={props.modalName}
       records={sortedIndividuals}
-      fields={[
-        {
-          header: 'Family Id',
-          field: 'family.familyId',
-          fieldProps: { component: 'input', type: 'text' },
-        },
-        {
-          header: 'Individual Id',
-          field: 'individualId',
-          fieldProps: { component: 'input', type: 'text' },
-        },
-        {
-          header: 'Paternal Id',
-          field: 'paternalId',
-          fieldProps: { component: 'input', type: 'text' },
-        },
-        {
-          header: 'Maternal Id',
-          field: 'maternalId',
-          fieldProps: { component: 'input', type: 'text' },
-        },
-        {
-          header: 'Sex',
-          field: 'sex',
-          fieldProps: { component: RadioGroup, options: sexOptions },
-          cellProps: { collapsing: true },
-        },
-        {
-          header: 'Affected Status',
-          field: 'affected',
-          fieldProps: { component: RadioGroup, options: affectedOptions },
-          cellProps: { collapsing: true, style: { paddingRight: '30px' } },
-        },
-      ]}
-      onSubmit={({ records, ...values }) => props.updateIndividuals({ individuals: records, ...values })}
-      isActiveRow={individual => familyActiveMap[individual.familyGuid]}
+      fields={fields}
+      onSubmit={submitIndividuals}
+      isActiveRow={isActiveRow}
     />
   )
 }
