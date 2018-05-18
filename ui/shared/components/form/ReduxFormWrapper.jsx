@@ -9,6 +9,11 @@ import { closeModal, setModalConfirm } from 'redux/utils/modalReducer'
 import ButtonPanel from './ButtonPanel'
 import RequestStatus from './RequestStatus'
 
+const StyledForm = styled(Form)`
+  min-height: inherit;
+  padding-bottom: 40px;
+`
+
 const MessagePanel = styled(Message)`
   margin: 0px 20px;
 `
@@ -127,7 +132,7 @@ class ReduxFormWrapper extends React.Component {
       })
 
     return (
-      <Form onSubmit={this.props.handleSubmit} size={this.props.size} loading={this.props.submitting}>
+      <StyledForm onSubmit={this.props.handleSubmit} size={this.props.size} loading={this.props.submitting}>
         {fieldComponents}
         {this.props.showErrorPanel && this.props.warning && <MessagePanel warning visible content={this.props.warning} />}
         {errorMessages && errorMessages.length > 0 && <MessagePanel error visible list={errorMessages} />}
@@ -145,7 +150,7 @@ class ReduxFormWrapper extends React.Component {
               handleClose={this.handleUnconfirmedClose}
             />
         }
-      </Form>
+      </StyledForm>
     )
   }
 

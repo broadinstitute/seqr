@@ -33,13 +33,15 @@ const BaseFieldView = (props) => {
       </a>
     }
     >
-      <ReduxFormWrapper
-        onSubmit={props.onSubmit}
-        form={modalId}
-        initialValues={props.initialValues}
-        fields={props.formFields}
-        confirmCloseIfNotSaved
-      />
+      <div style={props.modalStyle}>
+        <ReduxFormWrapper
+          onSubmit={props.onSubmit}
+          form={modalId}
+          initialValues={props.initialValues}
+          fields={props.formFields}
+          confirmCloseIfNotSaved
+        />
+      </div>
     </Modal>
     : (
       <DispatchRequestButton

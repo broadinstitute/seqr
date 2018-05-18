@@ -11,16 +11,22 @@ import OptionFieldView from './OptionFieldView'
 
 const NOTES_CATEGORY = 'Functional Data'
 
+const MODAL_STYLE = { minHeight: 'calc(90vh - 100px)' }
+
 const LargeMultiselect = styled(Multiselect)`
   .ui.search.dropdown .menu {
-    max-height: calc(50vh - 20px);
+    max-height: calc(90vh - 220px);
   }
 `
 
 const MetadataLabel = styled(Label).attrs({ size: 'large', pointing: 'right', basic: true })`
-  color: ${props => props.color};
-  border-color: ${props => props.color};
-  min-width: content;
+  color: ${props => props.color} !important;
+  border-color: ${props => props.color} !important;
+      white-space: nowrap;
+`
+
+const FieldLabel = styled.label`
+  white-space: nowrap;
 `
 
 const MetadataField = ({ value, name, error }) => {
@@ -31,7 +37,7 @@ const MetadataField = ({ value, name, error }) => {
       <Field
         name={`${name}.metadata`}
         component={Form.Input}
-        label={value.metadataTitle || 'Notes'}
+        label={<FieldLabel>{value.metadataTitle || 'Notes'}</FieldLabel>}
         maxLength={50}
         error={error}
         width={value.category === NOTES_CATEGORY ? 16 : 4}
@@ -66,6 +72,7 @@ const TagFieldView = ({ initialValues, field, tagOptions, popupContent, tagAnnot
   const formFieldProps = {
     component: LargeMultiselect,
     placeholder: 'Variant Tags',
+    defaultOpen: true,
     normalize: (value, previousValue, allValues, previousAllValues) => value.map(option => previousAllValues[field].find(prevFieldValue => prevFieldValue.name === option) || tagOptionsMap[option]),
     format: options => options.map(tag => tag.name),
   }
@@ -84,6 +91,7 @@ const TagFieldView = ({ initialValues, field, tagOptions, popupContent, tagAnnot
     formFieldProps={formFieldProps}
     additionalEditFields={additionalFields}
     initialValues={mappedValues}
+    modalStyle={MODAL_STYLE}
     fieldDisplay={displayFieldValues =>
       <span>
         {displayFieldValues.filter(tag => !hiddenTags.includes(tag.name)).map((tag) => {

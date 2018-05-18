@@ -19,13 +19,13 @@ const OptionFieldView = ({ field, tagOptions, fieldDisplay, tagAnnotation, formF
   }, [])
 
   const fields = [
+    ...additionalEditFields,
     {
       name: field,
       options: tagSelectOptions,
       component: Select,
       ...formFieldProps,
     },
-    ...additionalEditFields,
   ]
 
   return (

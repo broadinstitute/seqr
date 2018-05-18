@@ -109,22 +109,35 @@ ShortcutTags.propTypes = {
 }
 
 
+const VariantTagField = ({ variant, fieldName, ...props }) =>
+  <TagFieldView
+    idField="variantId"
+    modalTitle={`Edit Variant ${fieldName} for chr${variant.chrom}:${variant.pos} ${variant.ref} > ${variant.alt}`}
+    editLabel={`Edit ${fieldName}`}
+    initialValues={variant}
+    compact
+    isEditable
+    popupContent={taggedByPopupContent}
+    {...props}
+  />
+
+VariantTagField.propTypes = {
+  variant: PropTypes.object,
+  fieldName: PropTypes.string,
+}
+
+
 const VariantTags = ({ variant, project, updateVariantNote: dispatchUpdateVariantNote, updateVariantTags: dispatchUpdateVariantTags }) =>
   <TagContainer>
     <span className="fit-content">
       <b>Tags:<HorizontalSpacer width={10} /></b>
       <ShortcutTags variant={variant} dispatchUpdateVariantTags={dispatchUpdateVariantTags} />
-      <TagFieldView
+      <VariantTagField
         field="tags"
-        idField="variantId"
-        modalTitle="Edit Variant Tags"
-        editLabel="Edit Tags"
-        initialValues={variant}
+        fieldName="Tags"
+        variant={variant}
         tagOptions={project.variantTagTypes}
         hiddenTags={SHORTCUT_TAGS}
-        compact
-        isEditable
-        popupContent={taggedByPopupContent}
         onSubmit={dispatchUpdateVariantTags}
         tagAnnotation={reRunTagSearch}
       />
@@ -132,16 +145,12 @@ const VariantTags = ({ variant, project, updateVariantNote: dispatchUpdateVarian
       {variant.tags.some(tag => tag.category === 'CMG Discovery Tags') &&
         <span>
           <b>Fxnl Data:<HorizontalSpacer width={10} /></b>
-          <TagFieldView
+          <VariantTagField
             field="functionalData"
-            idField="variantId"
-            modalTitle="Edit Variant Functional Data"
-            initialValues={variant}
+            fieldName="Functional Data"
+            variant={variant}
             tagOptions={project.variantFunctionalTagTypes}
             editMetadata
-            compact
-            isEditable
-            popupContent={taggedByPopupContent}
             onSubmit={dispatchUpdateVariantTags}
             tagAnnotation={tag => tag.metadata &&
               <Popup
