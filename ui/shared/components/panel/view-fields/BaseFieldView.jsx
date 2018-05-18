@@ -100,6 +100,7 @@ BaseFieldView.propTypes = {
   editIconName: PropTypes.string,
   hideValue: PropTypes.bool,
   user: PropTypes.object,
+  modalStyle: PropTypes.object,
 }
 
 const mapStateToProps = state => ({

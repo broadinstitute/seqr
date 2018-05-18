@@ -44,6 +44,7 @@ const Variants = ({ variants }) =>
   <Grid divided="vertically" columns="equal">
     {variants.map(variant =>
       <VariantRow key={variant.variantId} severity={CLINSIG_SEVERITY[(variant.clinvar.clinsig || '').split('/')[0]]}>
+        {variant.hgmd.class && <Label color="red">{variant.hgmd.class}/{variant.hgmd.accession}</Label>}
         {variant.clinvar.variantId &&
           <Grid.Column width={16}>
             <span>

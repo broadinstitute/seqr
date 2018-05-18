@@ -154,6 +154,10 @@ def _variant_details(variant_json):
             'clinsig': extras.get('clinvar_clinsig'),
             'variantId': extras.get('clinvar_variant_id'),
         },
+        'hgmd': {
+            'accession': extras.get('hgmd_accession'),
+            'class': extras.get('hgmd_class'),
+        },
         'genes': [{
             'constraints': {
                 'lof': {
