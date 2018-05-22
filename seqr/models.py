@@ -95,7 +95,6 @@ class Project(ModelWithGUID):
     can_view_group = models.ForeignKey(Group, related_name='+', on_delete=models.PROTECT)
 
     #primary_investigator = models.ForeignKey(User, null=True, blank=True, related_name='+')
-
     is_phenotips_enabled = models.BooleanField(default=False)
     phenotips_user_id = models.CharField(max_length=100, null=True, blank=True, db_index=True)
 
@@ -106,6 +105,8 @@ class Project(ModelWithGUID):
 
     is_functional_data_enabled = models.BooleanField(default=False)
     disease_area = models.CharField(max_length=20, null=True, blank=True, choices=DISEASE_AREA)
+
+    disable_staff_access = models.BooleanField(default=False)
 
     # legacy
     custom_reference_populations = models.ManyToManyField('base.ReferencePopulation', blank=True, related_name='+')
@@ -146,7 +147,7 @@ class Project(ModelWithGUID):
 
             # add the user that created this Project to all permissions groups
             user = self.created_by
-            if user and not user.is_staff:  # staff have access too all resources anyway
+            if user and not user.is_staff:  # staff have access to all resources anyway
                 user.groups.add(self.owners_group, self.can_edit_group, self.can_view_group)
 
     def delete(self, *args, **kwargs):

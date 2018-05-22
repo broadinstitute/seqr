@@ -176,6 +176,8 @@ class Project(models.Model):
 
     default_control_cohort = models.CharField(max_length=100, default="", blank=True)
 
+    disable_staff_access = models.BooleanField(default=False)
+
     # users
     collaborators = models.ManyToManyField(User, blank=True, through='ProjectCollaborator')
     is_public = models.BooleanField(default=False)
@@ -192,19 +194,19 @@ class Project(models.Model):
 
         if self.is_public:
             return True
-        elif user.is_staff:
+        elif (user.is_staff and not self.disable_staff_access) or ProjectCollaborator.objects.filter(project=self, user=user).exists():
             return True
         else:
             return ProjectCollaborator.objects.filter(project=self, user=user).exists()
 
     def can_edit(self, user):
-        if user.is_staff:
+        if (user.is_staff and not self.disable_staff_access) or ProjectCollaborator.objects.filter(project=self, user=user).exists():
             return True
         else:
             return ProjectCollaborator.objects.filter(project=self, user=user).exists()
 
     def can_admin(self, user):
-        if user.is_staff or user.is_superuser:
+        if ((user.is_staff or user.is_superuser) and not self.disable_staff_access) or ProjectCollaborator.objects.filter(project=self, user=user, collaborator_type="manager").exists():
             return True
         else:
             return ProjectCollaborator.objects.filter(project=self, user=user, collaborator_type="manager").exists()
