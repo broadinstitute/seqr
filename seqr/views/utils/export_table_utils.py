@@ -7,7 +7,6 @@ import openpyxl as xl
 from django.http.response import HttpResponse
 
 from seqr.views.utils.json_utils import _to_title_case
-from xbrowse_server.base.model_utils import _to_snake_case
 
 
 def export_table(filename_prefix, header, rows, file_format):
