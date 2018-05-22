@@ -203,7 +203,7 @@ export const createSingleObjectReducer = (updateActionType, initialState = {}, d
  *
  * @param updateStateActionId (string) action.type that will later be used to update the state object.
  */
-export const createObjectsByIdReducer = (updateActionType, initialState = {}, debug = false) => {
+export const createObjectsByIdReducer = (updateActionType, key, initialState = {}, debug = false) => {
   const reducer = (state = initialState, action) => {
     if (!action) {
       return state
@@ -215,9 +215,15 @@ export const createObjectsByIdReducer = (updateActionType, initialState = {}, de
           console.error(`Invalid ${updateActionType} action. action.updatesById is undefined: `, action)
           return state
         }
-
+        let updates = action.updatesById
+        if (key) {
+          if (!(key in updates)) {
+            return state
+          }
+          updates = updates[key]
+        }
         const shallowCopy = { ...state }
-        Object.entries(action.updatesById).forEach(([id, obj]) => {
+        Object.entries(updates).forEach(([id, obj]) => {
           if (obj == null) {
             // if the id is mapped to a null or undefined value, then delete this id
             delete shallowCopy[id]

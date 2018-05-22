@@ -87,7 +87,7 @@ describe('reducerUtils tests', () => {
 
 
   test('createObjectsByIdReducer test initialization', () => {
-    const objectsByIdReducerWithInitialState = createObjectsByIdReducer('TEST_ACTION', { i1: { test: 1 } })
+    const objectsByIdReducerWithInitialState = createObjectsByIdReducer('TEST_ACTION', null, { i1: { test: 1 } })
     expect(objectsByIdReducerWithInitialState()).toEqual({ i1: { test: 1 } })
 
     const objectsByIdReducerWithoutInitialState = createObjectsByIdReducer('TEST_ACTION')
@@ -101,7 +101,7 @@ describe('reducerUtils tests', () => {
       id2: { key1: 3, key2: 4 },
     }
 
-    const objectsByIdReducer = createObjectsByIdReducer('UPDATE_TEST_ACTION', initialState)
+    const objectsByIdReducer = createObjectsByIdReducer('UPDATE_TEST_ACTION', null, initialState)
 
     // test #1 - undefined or invalid actions
     expect(objectsByIdReducer()).toEqual(initialState)
@@ -129,6 +129,31 @@ describe('reducerUtils tests', () => {
     expect(objectsByIdReducer(undefined, action)).toEqual({
       id2: { key1: 3, key2: 5, newKey: 5 },
       newId: { key1: 5, key2: 6 },
+    })
+  })
+
+  test('createObjectsByIdReducer test update action with key', () => {
+    const key = 'parentKey'
+    const initialState = {
+      id1: { key1: 1, key2: 1 },
+      id2: { key1: 3, key2: 4 },
+    }
+
+    const objectsByIdReducer = createObjectsByIdReducer('UPDATE_TEST_ACTION', key, initialState)
+
+    // test #1 - undefined or invalid actions
+    expect(objectsByIdReducer()).toEqual(initialState)
+    expect(objectsByIdReducer(initialState)).toEqual(initialState)
+    expect(objectsByIdReducer(initialState, { type: 'UNKNOWN_ACTION' })).toEqual(initialState)
+    expect(objectsByIdReducer(initialState, { type: 'UPDATE_TEST_ACTION', wrongKeyName: { someKey: 3 } })).toEqual(initialState)
+
+    // test #2 - valid update action
+    const action = { type: 'UPDATE_TEST_ACTION', updatesById: {
+      [key]: { id1: { key1: 2, key2: 3, newKey: 4 } },
+    } }
+    expect(objectsByIdReducer(undefined, action)).toEqual({
+      id1: { key1: 2, key2: 3, newKey: 4 },
+      id2: { key1: 3, key2: 4 },
     })
   })
 })

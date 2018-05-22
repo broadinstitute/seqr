@@ -1,7 +1,7 @@
 import React from 'react'
 import { shallow, configure } from 'enzyme'
 import Adapter from 'enzyme-adapter-react-16'
-import Modal from './Modal'
+import { ModalComponent } from './Modal'
 
 configure({ adapter: new Adapter() })
 
@@ -19,5 +19,5 @@ test('shallow-render without crashing', () => {
     handleClose: () => {},
   }
 
-  shallow(<Modal {...props} />)
+  shallow(<ModalComponent {...props} />)
 })

@@ -9,7 +9,7 @@ const ListFieldView = (props) => {
   if (props.isVisible !== undefined && !props.isVisible) {
     return null
   }
-  if (!props.isEditable && !props.values) {
+  if (!props.isEditable && !props.values.length > 0) {
     return null
   }
 

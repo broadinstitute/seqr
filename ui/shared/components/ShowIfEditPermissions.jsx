@@ -1,6 +1,6 @@
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { getUser } from 'redux/utils/commonDataActionsAndSelectors'
+import { getUser } from 'redux/rootReducer'
 
 
 const ShowIfEditPermissions = props => (

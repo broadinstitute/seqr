@@ -18,3 +18,5 @@ deploy/secrets/gcloud*
 deploy/secrets/minikube*
 deploy/secrets/kube-solo*
 deploy/secrets/shared*
+
+pedigree_images/*

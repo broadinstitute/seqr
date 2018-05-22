@@ -6,7 +6,7 @@ import PropTypes from 'prop-types'
 
 import { HorizontalSpacer } from 'shared/components/Spacers'
 
-import ShowPhenotipsModalButton from 'shared/components/panel/view-phenotips-info/ShowPhenotipsModalButton'
+import ShowPhenotipsModalButton from 'shared/components/buttons/ShowPhenotipsModalButton'
 import PresentAbsentPhenotypesView from './PresentAbsentPhenotypesView'
 
 const infoDivStyle = {

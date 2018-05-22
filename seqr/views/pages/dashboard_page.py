@@ -7,7 +7,7 @@ import logging
 from django.db import connection
 from django.contrib.auth.decorators import login_required
 
-from seqr.models import ProjectCategory, Sample, Family
+from seqr.models import ProjectCategory, Sample, Family, Project
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.utils.export_table_utils import export_table
 from seqr.views.utils.json_utils import create_json_response, _to_camel_case
@@ -99,20 +99,22 @@ def _retrieve_projects_by_guid(cursor, projects_user_can_view, projects_user_can
         WHERE f.project_id=p.id
     """.strip()
 
+    project_fields = ', '.join(Project._meta.json_fields)
+
     projects_query = """
       SELECT
         guid AS project_guid,
-        p.name AS name,
-        description,
-        deprecated_project_id,
-        created_date,
-        deprecated_last_accessed_date,
-        (%(num_variant_tags_subquery)s) AS num_variant_tags,
-        (%(num_families_subquery)s) AS num_families,
-        (%(num_individuals_subquery)s) AS num_individuals
+        {project_fields},
+        ({num_variant_tags_subquery}) AS num_variant_tags,
+        ({num_families_subquery}) AS num_families,
+        ({num_individuals_subquery}) AS num_individuals
       FROM seqr_project AS p
-      %(projects_WHERE_clause)s
-    """.strip() % locals()
+      {projects_WHERE_clause}
+    """.strip().format(
+        project_fields=project_fields, num_variant_tags_subquery=num_variant_tags_subquery,
+        num_families_subquery=num_families_subquery, num_individuals_subquery=num_individuals_subquery,
+        projects_WHERE_clause=projects_WHERE_clause
+    )
 
     cursor.execute(projects_query)
 

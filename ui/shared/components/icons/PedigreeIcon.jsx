@@ -11,6 +11,7 @@ const rotate45deg = {
   WebkitTransform: 'rotate(45deg)', /* Chrome, Safari, Opera */
   transform: 'rotate(45deg)',
   fontSize: '0.85em',
+  ...iconStyle,
 }
 
 const ICON_LOOKUP = {
@@ -32,8 +33,8 @@ const ICON_LOOKUP = {
   FN: <Popup trigger={<Icon style={iconStyle} name="circle thin" />} content="unaffected female" size="small" />,
   FU: <Popup trigger={<Icon style={iconStyle} name="question circle outline" />} content="female with unknown affected status" size="small" />,
 
-  UA: <Popup trigger={<Icon style={{ ...iconStyle, ...rotate45deg }} name="square" />} content="affected inidividual with unknown sex" size="small" />,
-  UN: <Popup trigger={<span style={{ ...iconStyle, ...rotate45deg }} name="square outline" />} content="unaffected inidividual with unknown sex" size="small" />,
+  UA: <Popup trigger={<Icon style={rotate45deg} name="square" />} content="affected inidividual with unknown sex" size="small" />,
+  UN: <Popup trigger={<span style={rotate45deg} name="square outline" />} content="unaffected inidividual with unknown sex" size="small" />,
   UU: <Popup trigger={<Icon style={iconStyle} name="help" />} content="sex and affected status are unknown" size="small" />,
 }
 

@@ -4,7 +4,6 @@ APIs used to retrieve and modify Individual fields
 
 import json
 import logging
-from pprint import pformat
 
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
@@ -33,21 +32,14 @@ def edit_families_handler(request, project_guid):
         project_guid (string): GUID of project that contains these individuals.
     """
 
-    project = get_project_and_check_permissions(project_guid, request.user, CAN_EDIT)
-
     request_json = json.loads(request.body)
 
-    if 'form' not in request_json:
+    modified_families = request_json.get('families')
+    if modified_families is None:
         return create_json_response(
-            {}, status=400, reason="Invalid request: 'form' key not specified")
+            {}, status=400, reason="'families' not specified")
 
-    form_data = request_json['form']
-
-    modified_families_by_guid = form_data.get('modifiedFamilies')
-    if modified_families_by_guid is None:
-        return create_json_response(
-            {}, status=400, reason="'modifiedIndividuals' not specified")
-
+    project = get_project_and_check_permissions(project_guid, request.user, CAN_EDIT)
 
     # TODO more validation
     #errors, warnings = validate_fam_file_records(modified_individuals_list)
@@ -55,9 +47,9 @@ def edit_families_handler(request, project_guid):
     #    return create_json_response({'errors': errors, 'warnings': warnings})
 
     updated_families = []
-    for familyGuid, fields in modified_families_by_guid.items():
-        family = Family.objects.get(project=project, guid=familyGuid)
-        update_family_from_json(family, fields)
+    for fields in modified_families:
+        family = Family.objects.get(project=project, guid=fields['familyGuid'])
+        update_family_from_json(family, fields, user=request.user, allow_unknown_keys=True)
         updated_families.append(family)
 
         for key, value in fields.items():
@@ -86,18 +78,13 @@ def delete_families_handler(request, project_guid):
 
     request_json = json.loads(request.body)
 
-    if 'form' not in request_json:
-        return create_json_response(
-            {}, status=400, reason="Invalid request: 'form' not in request_json")
-
     logger.info("delete_families_handler %s", request_json)
 
-    form_data = request_json['form']
-
-    family_guids_to_delete = form_data.get('recordIdsToDelete')
-    if family_guids_to_delete is None:
+    families_to_delete = request_json.get('families')
+    if families_to_delete is None:
         return create_json_response(
             {}, status=400, reason="'recordIdsToDelete' not specified")
+    family_guids_to_delete = [f['familyGuid'] for f in families_to_delete]
 
     # delete individuals 1st
     individual_guids_to_delete = [i.guid for i in Individual.objects.filter(
