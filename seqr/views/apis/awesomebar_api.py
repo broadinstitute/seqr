@@ -30,10 +30,9 @@ def _get_matching_projects(user, query):
     Returns:
         Sorted list of matches where each match is a dictionary of strings
     """
-    project_permissions_check = Q()
-    if not user.is_staff:
-        projects_can_view = [p.id for p in get_objects_for_user(user, CAN_VIEW, Project)]
-        project_permissions_check = Q(id__in=projects_can_view)
+    project_permissions_check = Q(can_view_group__user=user)
+    if user.is_staff:
+        project_permissions_check |= Q(disable_staff_access=False)
 
     matching_projects = Project.objects.filter(
         project_permissions_check & (
@@ -66,10 +65,9 @@ def _get_matching_families(user, query):
     Returns:
         Sorted list of matches where each match is a dictionary of strings
     """
-    family_permissions_check = Q()
-    if not user.is_staff:
-        projects_can_view = [p.id for p in get_objects_for_user(user, CAN_VIEW, Project)]
-        family_permissions_check = Q(project__id__in=projects_can_view)
+    family_permissions_check = Q(project__can_view_group__user=user)
+    if user.is_staff:
+        family_permissions_check |= Q(project__disable_staff_access=False)
 
     matching_families = Family.objects.select_related('project').filter(
         family_permissions_check & (Q(family_id__icontains=query) | Q(display_name__icontains=query))
@@ -99,10 +97,9 @@ def _get_matching_individuals(user, query):
     Returns:
         Sorted list of matches where each match is a dictionary of strings
     """
-    individual_permissions_check = Q()
-    if not user.is_staff:
-        projects_can_view = [p.id for p in get_objects_for_user(user, CAN_VIEW, Project)]
-        individual_permissions_check = Q(family__project__id__in=projects_can_view)
+    individual_permissions_check = Q(family__project__can_view_group__user=user)
+    if user.is_staff:
+        individual_permissions_check |= Q(family__project__disable_staff_access=False)
 
     matching_individuals = Individual.objects.select_related('family__project').filter(
         individual_permissions_check & (Q(individual_id__icontains=query) | Q(display_name__icontains=query))

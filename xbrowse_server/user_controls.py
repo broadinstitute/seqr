@@ -26,10 +26,10 @@ def add_new_collaborator(email, referrer):
 
 def get_projects_for_user(user):
     """
-
+    Return all projects for which the given user has 'view' access.
     """
     if user.is_staff:
-        return Project.objects.all()
+        return [p for p in Project.objects.all() if not p.disable_staff_access or p.can_view(user)]
     else:
         return [p for p in Project.objects.all() if p.can_view(user)]
 

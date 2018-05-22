@@ -1,4 +1,5 @@
 from django.core.exceptions import PermissionDenied
+from django.db.models.query_utils import Q
 
 from seqr.models import Project, CAN_VIEW, CAN_EDIT, IS_OWNER
 
@@ -30,22 +31,26 @@ def get_project_and_check_permissions(project_guid, user, permission_level=CAN_V
 
 
 def check_permissions(project, user, permission_level=CAN_VIEW):
-    if not user.is_staff and not user.has_perm(permission_level, project):
+    if user.has_perm(permission_level, project) or (user.is_staff and not project.disable_staff_access):
+        pass
+    else:
         raise PermissionDenied("%(user)s does not have %(permission_level)s permissions for %(project)s" % locals())
 
 
 def get_projects_user_can_view(user):
+    can_view_filter = Q(can_view_group__user=user)
     if user.is_staff:
-        return Project.objects.all()
+        return Project.objects.filter(can_view_filter | Q(disable_staff_access=False))
     else:
-        return Project.objects.filter(can_view_group__user=user)
+        return Project.objects.filter(can_view_filter)
 
 
 def get_projects_user_can_edit(user):
+    can_edit_filter = Q(can_edit_group__user=user)
     if user.is_staff:
-        return Project.objects.all()
+        return Project.objects.filter(can_edit_filter | Q(disable_staff_access=False))
     else:
-        return Project.objects.filter(can_edit_group__user=user)
+        return Project.objects.filter(can_edit_filter)
 
 
 def add_user_to_project(user, project, permission_level=CAN_VIEW):
