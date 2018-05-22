@@ -13,6 +13,9 @@ const infoDivStyle = {
   padding: '0px 0px 10px 20px',
 }
 
+export const hasPhenotipsDetails = phenotipsData =>
+  phenotipsData && (phenotipsData.features || phenotipsData.rejectedGenes || phenotipsData.genes)
+
 class PhenotipsDataPanel extends React.Component
 {
   static propTypes = {
@@ -38,8 +41,7 @@ class PhenotipsDataPanel extends React.Component
         }
         {showDetails ?
           <div style={infoDivStyle}>
-            {(phenotipsData && (phenotipsData.features || phenotipsData.rejectedGenes || phenotipsData.genes)) ?
-
+            {phenotipsData && hasPhenotipsDetails(phenotipsData) &&
               <div style={{ paddingTop: '10px', paddingBottom: '10px' }}>
                 {
                   phenotipsData.features ?
@@ -107,7 +109,6 @@ class PhenotipsDataPanel extends React.Component
                     : null
                 }
               </div>
-              : null
             }
           </div> :
           <div style={{ display: 'inline-block', paddingBottom: '15px', color: 'gray' }}>

@@ -17,7 +17,7 @@ import {
 import PedigreeIcon from '../../icons/PedigreeIcon'
 import { HorizontalSpacer } from '../../Spacers'
 import Family from '../family'
-import PhenotipsDataPanel from '../view-phenotips-info/PhenotipsDataPanel'
+import PhenotipsDataPanel, { hasPhenotipsDetails } from '../view-phenotips-info/PhenotipsDataPanel'
 
 
 const IndividualCell = styled.div`
@@ -81,7 +81,7 @@ const VariantFamily = ({ variant, project, family, individualsByGuid }) => {
           <Popup
             hoverable
             wide="very"
-            position="top center"
+            position="top left"
             trigger={
               <Link to={`/project/${project.projectGuid}/saved_variants/family/${family.familyGuid}`}>
                 {family.displayName}
@@ -111,7 +111,7 @@ const VariantFamily = ({ variant, project, family, individualsByGuid }) => {
 
         const variantIndividual =
           <IndividualCell key={individual.individualGuid}>
-            {individual.affected === 'A' &&
+            {hasPhenotipsDetails(individual.phenotipsData) &&
               <Popup
                 hoverable
                 wide="very"
