@@ -155,6 +155,8 @@ const GeneDetailContent = connect(null, { updateGeneNote })(({ gene, updateGeneN
     { title: 'NCBI Gene', titleLink: `http://www.ncbi.nlm.nih.gov/gene/?term=${gene.symbol}`, content: 'NCBI\'s gene information resource' },
     { title: 'GTEx Portal', titleLink: `http://www.gtexportal.org/home/gene/${gene.gene_id}`, content: 'Reference of public data for this gene' },
     { title: 'Monarch', titleLink: `http://monarchinitiative.org/search/${gene.gene_id}`, content: 'Cross-species gene and phenotype resource' },
+    { title: 'Decipher', titleLink: `https://decipher.sanger.ac.uk/gene/${gene.symbol}`, content: 'DatabasE of genomiC varIation and Phenotype in Humans using Ensembl Resources' },
+    { title: 'UniProt', titleLink: `http://www.uniprot.org/uniprot/?random=true&query=gene:${gene.symbol}+AND+reviewed:yes+AND+organism:9606`, content: 'Protein sequence and functional information' },
   ]
   return (
     <div>
