@@ -19,16 +19,17 @@ class PhenotipsDataPanel extends React.Component
     individual: PropTypes.object.isRequired,
     showDetails: PropTypes.bool.isRequired,
     showEditPhenotipsLink: PropTypes.bool.isRequired,
+    showViewPhenotipsLink: PropTypes.bool,
   }
 
   render() {
-    const { individual, showDetails, showEditPhenotipsLink } = this.props
+    const { individual, showDetails, showEditPhenotipsLink, showViewPhenotipsLink = true } = this.props
     const { phenotipsData } = individual
 
     return (
       <div>
         <b>PhenoTips</b><HorizontalSpacer width={15} />
-        <ShowPhenotipsModalButton individual={individual} isViewOnly />
+        { showViewPhenotipsLink && <ShowPhenotipsModalButton individual={individual} isViewOnly /> }
         {
           (individual.phenotipsPatientId && showEditPhenotipsLink) && [
             <HorizontalSpacer key={1} width={10} />,

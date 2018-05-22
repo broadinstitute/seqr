@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
-import { Popup, Label, Header } from 'semantic-ui-react'
+import { Popup, Label, Header, Icon } from 'semantic-ui-react'
 
 import { getFamiliesByGuid, getIndividualsByGuid } from 'redux/selectors'
 import { getProject } from 'pages/Project/selectors'
@@ -16,8 +16,8 @@ import {
 } from 'shared/utils/constants'
 import PedigreeIcon from '../../icons/PedigreeIcon'
 import { HorizontalSpacer } from '../../Spacers'
-import ShowPhenotipsModalButton from '../../buttons/ShowPhenotipsModalButton'
 import Family from '../family'
+import PhenotipsDataPanel from '../view-phenotips-info/PhenotipsDataPanel'
 
 
 const IndividualCell = styled.div`
@@ -111,7 +111,17 @@ const VariantFamily = ({ variant, project, family, individualsByGuid }) => {
 
         const variantIndividual =
           <IndividualCell key={individual.individualGuid}>
-            {individual.affected === 'A' && <ShowPhenotipsModalButton individual={individual} isViewOnly modalId={variant.variantId} />}
+            {individual.affected === 'A' &&
+              <Popup
+                hoverable
+                wide="very"
+                position="top left"
+                trigger={<a><Icon name="info circle" /></a>}
+                content={
+                  <PhenotipsDataPanel individual={individual} showDetails showEditPhenotipsLink={false} showViewPhenotipsLink={false} />
+                }
+              />
+            }
             <PedigreeIcon sex={individual.sex} affected={individual.affected} />
             <small>{individual.displayName || individual.individualId}</small>
             <br />
