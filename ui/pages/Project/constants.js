@@ -320,5 +320,5 @@ export const VARIANT_SORT_OPTONS = [
   { value: SORT_BY_FAMILY_GUID, text: 'Default', comparator: (a, b) => a.familyGuid.localeCompare(b.familyGuid) },
   { value: SORT_BY_XPOS, text: 'Position', comparator: (a, b) => a.xpos - b.xpos },
   { value: SORT_BY_PATHOGENICITY, text: 'Pathogenicity', comparator: (a, b) => clinsigSeverity(b) - clinsigSeverity(a) },
-  { value: SORT_BY_IN_OMIM, text: 'In OMIM', comparator: (a, b) => b.genes.some(gene => gene.inDiseaseDb) - a.genes.some(gene => gene.inDiseaseDb) },
+  { value: SORT_BY_IN_OMIM, text: 'In OMIM', comparator: (a, b) => b.genes.some(gene => gene.diseaseDbPheotypes.length > 0) - a.genes.some(gene => gene.diseaseDbPheotypes.length > 0) },
 ]

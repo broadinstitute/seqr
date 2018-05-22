@@ -173,7 +173,7 @@ def _variant_details(variant_json, user):
             },
             'diseaseGeneLists': gene.get('disease_gene_lists', []),
             'geneId': gene_id,
-            'inDiseaseDb': gene.get('in_disease_db'),
+            'diseaseDbPheotypes': gene.get('disease_db_pheotypes', []),
             'symbol': gene.get('symbol') or extras.get('gene_names', {}).get(gene_id),
         } for gene_id, gene in extras.get('genes', {}).items()],
         'genotypes': {

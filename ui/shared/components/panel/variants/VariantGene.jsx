@@ -2,7 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { connect } from 'react-redux'
-import { Label, Popup, Header } from 'semantic-ui-react'
+import { Label, Popup, Header, List } from 'semantic-ui-react'
 
 import { getProject } from 'pages/Project/selectors'
 import { HorizontalSpacer } from '../../Spacers'
@@ -23,16 +23,27 @@ const InlineHeader = styled(Header)`
   display: inline-block;
 `
 
+const ListItemLink = styled(List.Item).attrs({ as: 'a', icon: 'linkify' })`
+ .content {
+    color: initial;
+    cursor: auto;
+ }
+ 
+ i.icon {
+  color: #4183C4 !important;
+ }
+`
+
 const GeneLabel = ({ popupHeader, popupContent, ...labelProps }) => {
   const content = <GeneLabelContent {...labelProps} />
-  return popupContent ? <Popup header={popupHeader} trigger={content} content={popupContent} size="tiny" wide /> : content
+  return popupContent ? <Popup header={popupHeader} trigger={content} content={popupContent} size="tiny" wide hoverable /> : content
 }
 
 GeneLabel.propTypes = {
   label: PropTypes.string.isRequired,
   color: PropTypes.string,
   popupHeader: PropTypes.string,
-  popupContent: PropTypes.string,
+  popupContent: PropTypes.oneOfType([PropTypes.string, PropTypes.node]),
 }
 
 
@@ -53,7 +64,25 @@ const VariantGene = ({ gene, project }) =>
       <a href={`/project/${project.deprecatedProjectId}/gene/${gene.geneId}`} target="_blank">Gene Search</a><br />
     </div>
     <div>
-      {gene.inDiseaseDb && <GeneLabel color="orange" label="IN OMIM" />}
+      {gene.diseaseDbPheotypes.length > 0 &&
+        <GeneLabel
+          color="orange"
+          label="IN OMIM"
+          popupHeader="Disease Phenotypes"
+          popupContent={
+            <List>
+              {gene.diseaseDbPheotypes.map(pheotype =>
+                <ListItemLink
+                  key={pheotype.description}
+                  content={pheotype.description}
+                  target="_blank"
+                  href={`https://www.omim.org/entry/${pheotype.mim_id}`}
+                />,
+              )}
+            </List>
+          }
+        />
+      }
       {((gene.constraints.missense.constraint && gene.constraints.missense.constraint > 3) ||
         (gene.constraints.missense.rank && gene.constraints.missense.rank < CONSTRAINED_GENE_RANK_THRESHOLD)) &&
         <GeneLabel
