@@ -20,7 +20,13 @@ def saved_variant_data(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user)
 
     variants = defaultdict(list)
-    variant_query = SavedVariant.objects.filter(project=project)
+    variant_query = SavedVariant.objects.filter(project=project)\
+        .select_related('family')\
+        .only('genome_version', 'xpos_start', 'ref', 'alt', 'lifted_over_genome_version', 'lifted_over_xpos_start',
+              'saved_variant_json', 'family__guid', 'guid')\
+        .prefetch_related('varianttag_set', 'varianttag_set__created_by', 'varianttag_set__variant_tag_type',
+                          'variantfunctionaldata_set', 'variantfunctionaldata_set__created_by', 'variantnote_set',
+                          'variantnote_set__created_by')
     if request.GET.get('family'):
         variant_query = variant_query.filter(family__guid=request.GET.get('family'))
     for saved_variant in variant_query:
@@ -37,7 +43,7 @@ def saved_variant_data(request, project_guid):
             lifted_over_pos = coords[1] if len(coords) > 1 else ''
         variant = {
             'variantId': saved_variant.guid,
-            'xpos': saved_variant.xpos,
+            'xpos': saved_variant.xpos_start,
             'ref': saved_variant.ref,
             'alt': saved_variant.alt,
             'chrom': chrom,
@@ -81,7 +87,7 @@ def saved_variant_data(request, project_guid):
 def _variant_details(variant_json, user):
     annotation = variant_json.get('annotation', {})
     extras = variant_json.get('extras', {})
-    worst_vep_annotation = annotation['vep_annotation'][annotation['worst_vep_annotation_index']] if annotation.get('worst_vep_annotation_index') is not None else None
+    worst_vep_annotation = annotation['vep_annotation'][annotation['worst_vep_annotation_index']] if annotation.get('worst_vep_annotation_index') is not None and annotation['vep_annotation'] else None
     is_es_variant = annotation.get('db') == 'elasticsearch'
     return {
         'annotation': {
@@ -137,7 +143,7 @@ def _variant_details(variant_json, user):
                 'consequence': vep_a.get('consequence') or vep_a.get('major_consequence'),
                 'hgvsc': vep_a.get('hgvsc'),
                 'hgvsp': vep_a.get('hgvsp'),
-            } for i, vep_a in enumerate(annotation.get('vep_annotation', []))],
+            } for i, vep_a in enumerate(annotation.get('vep_annotation') or [])],
             'vepGroup': annotation.get('vep_group'),
             'worstVepAnnotation': {
                 'symbol': worst_vep_annotation.get('gene_symbol') or worst_vep_annotation.get('symbol'),

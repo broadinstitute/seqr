@@ -45,7 +45,7 @@ const LOF_FILTER_MAP = {
   SMALL_INTRON: { title: 'Small Intron', message: 'The LoF falls in a transcript whose exon/intron boundaries are undefined in the EnsEMBL API' },
   NON_CAN_SPLICE: { title: 'Non Canonical Splicing', message: 'This variant falls in a non-canonical splice site (not GT..AG)' },
   NON_CAN_SPLICE_SURR: { title: 'Non Canonical Splicing', message: 'This exon has surrounding splice sites that are non-canonical (not GT..AG)' },
-  ANC_ALLELE: { title: 'Ancestral BreakWord', message: 'The alternate allele reverts the sequence back to the ancestral state' },
+  ANC_ALLELE: { title: 'Ancestral Allele', message: 'The alternate allele reverts the sequence back to the ancestral state' },
 }
 
 const annotationVariations = (worstVepAnnotation, variant) => {
@@ -104,8 +104,8 @@ const Annotations = ({ variant }) => {
 
   const variations = annotationVariations(worstVepAnnotation, variant)
   const lofDetails = (worstVepAnnotation.lof === 'LC' || worstVepAnnotation.lofFlags === 'NAGNAG_SITE') ? [
-    ...[...new Set(worstVepAnnotation.lofFilter.split('&'))].map((lofFilterKey) => {
-      const lofFilter = LOF_FILTER_MAP[lofFilterKey]
+    ...[...new Set(worstVepAnnotation.lofFilter.split(/&|,/g))].map((lofFilterKey) => {
+      const lofFilter = LOF_FILTER_MAP[lofFilterKey] || { message: lofFilterKey }
       return <div key={lofFilterKey}><b>LOFTEE: {lofFilter.title}</b><br />{lofFilter.message}.</div>
     }),
     worstVepAnnotation.lofFlags === 'NAGNAG_SITE' ?

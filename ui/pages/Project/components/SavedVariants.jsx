@@ -1,17 +1,18 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Loader, Grid } from 'semantic-ui-react'
+import { Loader, Grid, Pagination } from 'semantic-ui-react'
 import styled from 'styled-components'
 
 import VariantTagTypeBar from 'shared/components/graph/VariantTagTypeBar'
 import Variants from 'shared/components/panel/variants/Variants'
 import { Dropdown, InlineToggle } from 'shared/components/form/Inputs'
 import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
+import { HorizontalSpacer } from 'shared/components/Spacers'
 import { loadProjectVariants, updateSavedVariantTable } from '../reducers'
 import {
   getProject, getProjectSavedVariantsIsLoading, getProjectSavedVariants, getVisibleSortedProjectSavedVariants,
-  getSavedVariantTableState,
+  getFilteredProjectSavedVariants, getSavedVariantTableState, getSavedVariantVisibleIndices, getSavedVariantTotalPages,
 } from '../selectors'
 import { VARIANT_SORT_OPTONS } from '../constants'
 
@@ -43,6 +44,10 @@ const FILTER_FIELDS = [
 ]
 
 const InlineFormColumn = styled(Grid.Column)`
+  .form {
+    padding-bottom: 20px;
+  }
+  
   .field.inline {
     padding-left: 20px;
   }
@@ -57,9 +62,13 @@ class SavedVariants extends React.Component {
     loading: PropTypes.bool,
     savedVariants: PropTypes.array,
     totalVariantsCount: PropTypes.number,
+    filteredVariantsCount: PropTypes.number,
     tableState: PropTypes.object,
+    firstRecordIndex: PropTypes.number,
+    totalPages: PropTypes.number,
     loadProjectVariants: PropTypes.func,
     updateSavedVariantTable: PropTypes.func,
+    updateSavedVariantPage: PropTypes.func,
   }
 
   constructor(props) {
@@ -75,6 +84,9 @@ class SavedVariants extends React.Component {
   componentWillReceiveProps(nextProps) {
     if (nextProps.match.params.familyGuid !== this.props.match.params.familyGuid) {
       this.props.loadProjectVariants(nextProps.match.params.familyGuid)
+      this.props.updateSavedVariantTable() // resets the page
+    } else if (nextProps.match.params.tag !== this.props.match.params.tag) {
+      this.props.updateSavedVariantTable() // resets the page
     }
   }
 
@@ -93,10 +105,19 @@ class SavedVariants extends React.Component {
         </Grid.Row>
         {!this.props.loading &&
           <Grid.Row>
-            <Grid.Column width={6}>
-              Showing {this.props.savedVariants.length} of {this.props.totalVariantsCount} {tag && <b>{`"${tag}"`}</b>} variants
+            <Grid.Column width={8}>
+              Showing {this.props.firstRecordIndex + 1}-
+              {this.props.firstRecordIndex + this.props.savedVariants.length} of {this.props.filteredVariantsCount}
+              {tag && <b>{` "${tag}"`}</b>} variants ({this.props.totalVariantsCount} total)
+              <HorizontalSpacer width={20} />
+              <Pagination
+                activePage={this.props.tableState.currentPage || 1}
+                totalPages={this.props.totalPages}
+                onPageChange={this.props.updateSavedVariantPage}
+                size="mini"
+              />
             </Grid.Column>
-            <InlineFormColumn width={10} floated="right" textAlign="right">
+            <InlineFormColumn width={8} floated="right" textAlign="right">
               <ReduxFormWrapper
                 onSubmit={this.props.updateSavedVariantTable}
                 form="editSavedVariantTable"
@@ -123,12 +144,16 @@ const mapStateToProps = (state, ownProps) => ({
   loading: getProjectSavedVariantsIsLoading(state),
   savedVariants: getVisibleSortedProjectSavedVariants(state, ownProps),
   totalVariantsCount: getProjectSavedVariants(state, ownProps).length,
-  tableState: getSavedVariantTableState(state),
+  filteredVariantsCount: getFilteredProjectSavedVariants(state, ownProps).length,
+  tableState: getSavedVariantTableState(state, ownProps),
+  firstRecordIndex: getSavedVariantVisibleIndices(state, ownProps)[0],
+  totalPages: getSavedVariantTotalPages(state, ownProps),
 })
 
 const mapDispatchToProps = {
   loadProjectVariants,
-  updateSavedVariantTable,
+  updateSavedVariantTable: updates => updateSavedVariantTable({ ...updates, currentPage: 1 }),
+  updateSavedVariantPage: (e, data) => updateSavedVariantTable({ currentPage: data.activePage }),
 }
 
 export default connect(mapStateToProps, mapDispatchToProps)(SavedVariants)

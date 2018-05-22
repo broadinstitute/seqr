@@ -61,11 +61,12 @@ export const getProjectDatasets = createSelector(getDatasetsByGuid, getProjectGu
 export const getProjectSamples = createSelector(getSamplesByGuid, getProjectGuid, filterProjectEntities)
 
 // Saved variant selectors
-
 export const getSavedVariantTableState = state => state.savedVariantTableState
 export const getSavedVariantCategoryFilter = (state, props) => { return props.match.params.tag ? SHOW_ALL : (state.savedVariantTableState.categoryFilter || SHOW_ALL) }
 export const getSavedVariantSortOrder = state => state.savedVariantTableState.sortOrder || SORT_BY_FAMILY_GUID
 export const getSavedVariantHideExcluded = state => state.savedVariantTableState.hideExcluded
+export const getSavedVariantCurrentPage = state => state.savedVariantTableState.currentPage || 1
+export const getSavedVariantRecordsPerPage = state => state.savedVariantTableState.recordsPerPage || 25
 
 export const getProjectSavedVariants = createSelector(
   state => state.projectSavedVariants,
@@ -76,9 +77,18 @@ export const getProjectSavedVariants = createSelector(
   },
 )
 
-export const getVisibleSortedProjectSavedVariants = createSelector(
-  getProjectSavedVariants, getSavedVariantCategoryFilter, getSavedVariantSortOrder, getSavedVariantHideExcluded,
-  (projectSavedVariants, categoryFilter, sortOrder, hideExcluded) => {
+export const getSavedVariantVisibleIndices = createSelector(
+  getSavedVariantCurrentPage, getSavedVariantRecordsPerPage,
+  (currentPage, recordsPerPage) => {
+    return [(currentPage - 1) * recordsPerPage, currentPage * recordsPerPage]
+  },
+)
+
+export const getFilteredProjectSavedVariants = createSelector(
+  getProjectSavedVariants,
+  getSavedVariantCategoryFilter,
+  getSavedVariantHideExcluded,
+  (projectSavedVariants, categoryFilter, hideExcluded) => {
     let variantsToShow = projectSavedVariants
     if (hideExcluded) {
       variantsToShow = variantsToShow.filter(variant => variant.tags.every(t => t.name !== 'Excluded'))
@@ -86,11 +96,27 @@ export const getVisibleSortedProjectSavedVariants = createSelector(
     if (categoryFilter !== SHOW_ALL) {
       variantsToShow = variantsToShow.filter(variant => variant.tags.some(t => t.category === categoryFilter))
     }
+    return variantsToShow
+  },
+)
+
+export const getVisibleSortedProjectSavedVariants = createSelector(
+  getFilteredProjectSavedVariants,
+  getSavedVariantSortOrder,
+  getSavedVariantVisibleIndices,
+  (filteredSavedVariants, sortOrder, visibleIndices) => {
     // Always secondary sort on xpos
-    variantsToShow.sort((a, b) => {
+    filteredSavedVariants.sort((a, b) => {
       return VARIANT_SORT_LOOKUP[sortOrder](a, b) || a.xpos - b.xpos
     })
-    return variantsToShow
+    return filteredSavedVariants.slice(...visibleIndices)
+  },
+)
+
+export const getSavedVariantTotalPages = createSelector(
+  getFilteredProjectSavedVariants, getSavedVariantRecordsPerPage,
+  (filteredSavedVariants, recordsPerPage) => {
+    return Math.max(1, Math.ceil(filteredSavedVariants.length / recordsPerPage))
   },
 )
 

@@ -141,6 +141,8 @@ export const reducers = {
     hideExcluded: false,
     categoryFilter: SHOW_ALL,
     sortOrder: SORT_BY_FAMILY_GUID,
+    currentPage: 1,
+    recordsPerPage: 25,
   }, false),
 }
 
