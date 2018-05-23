@@ -230,14 +230,14 @@ window.utils = {
                 hgvsc.replace(">","-->"),        //1282C-->T
                 ('c.'+hgvsc).replace(">","/"), 	 //c.1282C/T
                 hgvsc.replace(">","/"),  	     //1282C/T
-                symbol+':'+hgvsc                //TTN:78674T>C
+                symbol+':'+hgvsc                 //TTN:78674T>C
             );
         }
 
         if (worst_vep_annotation.hgvsp) {
             var hgvsp = worst_vep_annotation.hgvsp.split(":")[1].replace("p.", "");
             variations.push(
-                symbol+":p."+hgvsc,          //TTN:p.Ile26225Thr
+                symbol+":p."+hgvsp,         //TTN:p.Ile26225Thr
                 symbol+":"+hgvsp            //TTN:Ile26225Thr
             );
         }
