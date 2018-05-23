@@ -1,7 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 
-import { Popup } from 'semantic-ui-react'
+import { Popup, Table } from 'semantic-ui-react'
 import { Link } from 'react-router-dom'
 //import randomMC from 'random-material-color'
 
@@ -78,34 +78,29 @@ class HorizontalStackedBar extends React.Component {
             content={
               <div>
                 {title && <div><b>{title}</b><br /></div>}
-                <table>
-                  <tbody>
+                <Table basic="very" compact="very">
+                  <Table.Body>
                     {
                       popupData.map(d => (
-                        <tr key={d.name} style={{ whitespace: 'nowrap' }}>
+                        <Table.Row key={d.name} verticalAlign="top" >
                           {!d.header &&
-                            <td style={{ paddingRight: '5px', width: '55px', verticalAlign: 'top' }}>
-                              <ColoredIcon name="square" size="small" color={d.color} /> {d.count}
-                            </td>
+                            <Table.Cell collapsing><ColoredIcon name="square" size="small" color={d.color} /> {d.count}</Table.Cell>
                           }
-                          <td colSpan={d.header ? 3 : 1} style={{ whitespace: 'nowrap', color: d.header ? 'grey' : 'inherit' }}>
-                            {d.name}
-                          </td>
-                          {!d.header &&
-                            <td style={{ paddingLeft: '5px', width: '50px', verticalAlign: 'top' }}>
-                              ({Math.trunc(d.percent)}%)
-                            </td>
-                          }
-                        </tr>
+                          <Table.Cell singleLine colSpan={d.header ? 3 : 1} disabled={Boolean(d.header)}>{d.name}</Table.Cell>
+                          {!d.header && <Table.Cell collapsing>({d.percent}%)</Table.Cell>}
+                        </Table.Row>
                       ))
                     }
-                    <tr>
-                      <td><ColoredIcon name="square" size="small" color="white" /> {total}</td>
-                      <td>Total</td>
-                      <td />
-                    </tr>
-                  </tbody>
-                </table>
+                    {
+                      dataWithPercents.filter(d => d.count > 0).length > 1 ?
+                        <Table.Row>
+                          <Table.Cell><ColoredIcon name="square" size="small" color="white" /> {total}</Table.Cell>
+                          <Table.Cell>Total</Table.Cell>
+                          <Table.Cell />
+                        </Table.Row> : null
+                    }
+                  </Table.Body>
+                </Table>
               </div>
             }
             position="bottom center"
