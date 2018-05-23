@@ -99,9 +99,9 @@ def _get_matching_individuals(user, query):
     individual_filter = Q(individual_id__icontains=query) | Q(display_name__icontains=query)
     if not user.is_superuser:
         if user.is_staff:
-            individual_filter = Q(family__project__can_view_group__user=user) | Q(family__project__disable_staff_access=False)
+            individual_filter &= Q(family__project__can_view_group__user=user) | Q(family__project__disable_staff_access=False)
         else:
-            individual_filter = Q(family__project__can_view_group__user=user)
+            individual_filter &= Q(family__project__can_view_group__user=user)
 
     matching_individuals = Individual.objects.select_related('family__project').filter(individual_filter).distinct()
 
