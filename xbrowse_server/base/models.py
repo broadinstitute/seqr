@@ -475,6 +475,7 @@ class Family(models.Model):
     internal_case_review_notes = models.TextField(default="", blank=True, null=True)
     internal_case_review_summary = models.TextField(default="", blank=True, null=True)
 
+
     coded_phenotype = models.TextField(default="", blank=True, null=True)
     post_discovery_omim_number = models.TextField(default="", blank=True, null=True)
 
@@ -1296,6 +1297,8 @@ class VariantFunctionalData(models.Model):
     alt = models.TextField()
 
     search_url = models.TextField(null=True)
+
+    seqr_variant_functional_data = models.ForeignKey('seqr.VariantFunctionalData', null=True, blank=True, on_delete=models.SET_NULL)  # simplifies migration to new seqr.models sche
 
     def __str__(self):
         chrom, pos = genomeloc.get_chr_pos(self.xpos)

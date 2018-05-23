@@ -6,33 +6,28 @@ import pymongo
 from tqdm import tqdm
 import settings
 
-from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 from django.db.models import Q
 from guardian.shortcuts import assign_perm
 
-from seqr import models
+from seqr.utils.model_sync_utils import get_or_create_saved_variant
 from seqr.views.apis import phenotips_api
 from seqr.views.apis.phenotips_api import _update_individual_phenotips_data
-from xbrowse_server.api.utils import add_extra_info_to_variants_project
 from xbrowse_server.base.models import \
     Project, \
     Family, \
-    FamilyGroup, \
     Individual, \
     VariantNote, \
     ProjectTag, \
     VariantTag, \
     VariantFunctionalData, \
-    ProjectCollaborator, \
-    ReferencePopulation
+    ProjectCollaborator,
 
 from seqr.models import \
     Project as SeqrProject, \
     Family as SeqrFamily, \
     Individual as SeqrIndividual, \
-    SavedVariant as SeqrSavedVariant, \
     VariantTagType as SeqrVariantTagType, \
     VariantTag as SeqrVariantTag, \
     VariantNote as SeqrVariantNote, \
@@ -40,9 +35,9 @@ from seqr.models import \
     Sample as SeqrSample, \
     Dataset as SeqrDataset, \
     LocusList, \
-    CAN_EDIT, CAN_VIEW, ModelWithGUID
+    CAN_VIEW, ModelWithGUID
 
-from xbrowse_server.mall import get_datastore, get_annotator, get_reference
+from xbrowse_server.mall import get_datastore, get_annotator
 
 logger = logging.getLogger(__name__)
 
@@ -811,16 +806,13 @@ def get_or_create_variant_tag_type(source_variant_tag_type, new_project):
 
 
 def get_or_create_variant_tag(source_variant_tag, new_project, new_family, new_variant_tag_type):
-    new_saved_variant, created = SeqrSavedVariant.objects.get_or_create(
-        xpos_start=source_variant_tag.xpos,
-        xpos_end=source_variant_tag.xpos + len(source_variant_tag.ref) - 1,
+    new_saved_variant = get_or_create_saved_variant(
+        xpos=source_variant_tag.xpos,
         ref=source_variant_tag.ref,
         alt=source_variant_tag.alt,
         family=new_family,
-        project=new_project,
+        project=new_project
     )
-    if not new_saved_variant.saved_variant_json:
-        _set_saved_variant_json(new_saved_variant, source_variant_tag, new_family)
 
     new_variant_tag, created = SeqrVariantTag.objects.get_or_create(
         saved_variant=new_saved_variant,
@@ -841,16 +833,13 @@ def get_or_create_variant_tag(source_variant_tag, new_project, new_family, new_v
 
 
 def get_or_create_variant_functional_data(source_variant_functional_data, new_project, new_family):
-    new_saved_variant, created = SeqrSavedVariant.objects.get_or_create(
-        xpos_start=source_variant_functional_data.xpos,
-        xpos_end=source_variant_functional_data.xpos + len(source_variant_functional_data.ref) - 1,
-        ref=source_variant_functional_data.ref,
-        alt=source_variant_functional_data.alt,
+    new_saved_variant = get_or_create_saved_variant(
+        xpos=source_variant_functional_data.xpos,
+        alt=source_variant_functional_data.ref,
+        ref=source_variant_functional_data.alt,
         family=new_family,
-        project=new_project,
+        project=new_project
     )
-    if not new_saved_variant.saved_variant_json:
-        _set_saved_variant_json(new_saved_variant, source_variant_functional_data, new_family)
 
     new_variant_functional_data, created = SeqrVariantFunctionalData.objects.get_or_create(
         saved_variant=new_saved_variant,
@@ -858,6 +847,10 @@ def get_or_create_variant_functional_data(source_variant_functional_data, new_pr
     )
     if created:
         print("=== created variant functional data: " + str(new_variant_functional_data))
+
+    if source_variant_functional_data.seqr_variant_functional_data != new_variant_functional_data:
+        source_variant_functional_data.seqr_variant_functional_data = new_variant_functional_data
+        source_variant_functional_data.save()
 
     new_variant_functional_data.search_parameters = source_variant_functional_data.search_url
     new_variant_functional_data.created_by = source_variant_functional_data.user
@@ -868,16 +861,13 @@ def get_or_create_variant_functional_data(source_variant_functional_data, new_pr
 
 
 def get_or_create_variant_note(source_variant_note, new_project, new_family):
-    new_saved_variant, created = SeqrSavedVariant.objects.get_or_create(
-        xpos_start=source_variant_note.xpos,
-        xpos_end=source_variant_note.xpos + len(source_variant_note.ref) - 1,
+    new_saved_variant = get_or_create_saved_variant(
+        xpos=source_variant_note.xpos,
         ref=source_variant_note.ref,
         alt=source_variant_note.alt,
         family=new_family,
-        project=new_project,
+        project=new_project
     )
-    if not new_saved_variant.saved_variant_json:
-        _set_saved_variant_json(new_saved_variant, source_variant_note, new_family)
 
     new_variant_note, created = SeqrVariantNote.objects.get_or_create(
         created_by=source_variant_note.user,
@@ -897,34 +887,6 @@ def get_or_create_variant_note(source_variant_note, new_project, new_family):
     new_variant_note.save(last_modified_date=source_variant_note.date_saved)
 
     return new_variant_note, created
-
-
-def _set_saved_variant_json(new_saved_variant, source_variant_tag_or_note, new_family):
-    if new_family is None:
-        return
-
-    project_id = new_family.project.deprecated_project_id
-    project = Project.objects.get(project_id=project_id)
-    user = User.objects.filter(is_staff=True).first(),  # HGMD annotations are only returned for staff users
-    try:
-        variant_info = get_datastore(project).get_single_variant(
-            project_id,
-            new_family.family_id,
-            source_variant_tag_or_note.xpos,
-            source_variant_tag_or_note.ref,
-            source_variant_tag_or_note.alt,
-            user=user)
-    except Exception as e:
-        logger.error("Unable to retrieve variant annotations for %s %s: %s" % (
-            new_family, source_variant_tag_or_note, e))
-        return
-
-    if variant_info:
-        add_extra_info_to_variants_project(get_reference(), project, [variant_info], add_populations=True)
-        variant_json = variant_info.toJSON()
-
-        new_saved_variant.saved_variant_json = json.dumps(variant_json)
-        new_saved_variant.save()
 
 
 def look_up_individual_loaded_date(source_individual, earliest_loaded_date=False):

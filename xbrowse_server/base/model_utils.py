@@ -3,10 +3,12 @@ import re
 import traceback
 
 from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import Q
 
 from seqr.models import Project as SeqrProject, Family as SeqrFamily, Individual as SeqrIndividual, \
     VariantTagType as SeqrVariantTagType, VariantTag as SeqrVariantTag, VariantNote as SeqrVariantNote, \
-    LocusList as SeqrLocusList, LocusListGene as SeqrLocusListGene
+    SavedVariant as SeqrSavedVariant, LocusList as SeqrLocusList, LocusListGene as SeqrLocusListGene
+from seqr.utils.model_sync_utils import get_or_create_saved_variant
 
 
 XBROWSE_TO_SEQR_CLASS_MAPPING = {
@@ -50,8 +52,12 @@ XBROWSE_TO_SEQR_FIELD_MAPPING = {
         "project_tag": "variant_tag_type",
         "date_saved": "created_date",
         "user": "created_by",
-        "xpos": "xpos_start",
+        "xpos": _DELETED_FIELD,
+        "ref": _DELETED_FIELD,
+        "alt": _DELETED_FIELD,
+        "family": _DELETED_FIELD,
     },
+    # TODO add functional data
     "VariantNote": {
         "project_tag": "variant_tag_type",
         "date_saved": "created_date",
@@ -66,7 +72,12 @@ XBROWSE_TO_SEQR_FIELD_MAPPING = {
     "GeneListItem": {
         "gene_list": "locus_list",
     },
+}
 
+XBROWSE_TO_SEQR_ADDITIONAL_ENTITIES_MAPPING = {
+    "VariantTag": {
+        "saved_variant": get_or_create_saved_variant
+    }
 }
 
 
@@ -103,42 +114,30 @@ def find_matching_seqr_model(xbrowse_model):
                 individual_id=xbrowse_model.indiv_id)
         elif xbrowse_class_name == "ProjectTag":
             return xbrowse_model.seqr_variant_tag_type if xbrowse_model.seqr_variant_tag_type else SeqrVariantTagType.objects.get(
-                project__deprecated_project_id=xbrowse_model.project.project_id,
-                name=xbrowse_model.title)
+                Q(project__deprecated_project_id=xbrowse_model.project.project_id) | Q(project__isnull=True),
+                Q(name=xbrowse_model.tag))
         elif xbrowse_class_name == "VariantTag":
             if xbrowse_model.seqr_variant_tag:
                 return xbrowse_model.seqr_variant_tag
 
+            variant_tag_type = find_matching_seqr_model(xbrowse_model.project_tag)
             if xbrowse_model.family:
                 return SeqrVariantTag.objects.get(
-                    variant_tag_type__project__deprecated_project_id=xbrowse_model.project_tag.project.project_id,
-                    xpos_start=xbrowse_model.xpos,
-                    ref=xbrowse_model.ref,
-                    alt=xbrowse_model.alt,
-                    family__family_id=xbrowse_model.family.family_id)
+                    variant_tag_type=variant_tag_type,
+                    saved_variant__xpos_start=xbrowse_model.xpos,
+                    saved_variant__ref=xbrowse_model.ref,
+                    saved_variant__alt=xbrowse_model.alt,
+                    saved_variant__family__family_id=xbrowse_model.family.family_id)
             else:
                 return SeqrVariantTag.objects.get(
-                    variant_tag_type__project__deprecated_project_id=xbrowse_model.project_tag.project.project_id,
-                    xpos_start=xbrowse_model.xpos,
-                    ref=xbrowse_model.ref,
-                    alt=xbrowse_model.alt)
+                    variant_tag_type=variant_tag_type,
+                    saved_variant__xpos_start=xbrowse_model.xpos,
+                    saved_variant__ref=xbrowse_model.ref,
+                    saved_variant__alt=xbrowse_model.alt)
+        # TODO add functional data
         elif xbrowse_class_name == "VariantNote":
             if xbrowse_model.seqr_variant_note:
                 return xbrowse_model.seqr_variant_note
-
-            if xbrowse_model.family:
-                return SeqrVariantNote.objects.get(
-                    project__deprecated_project_id=xbrowse_model.project.project_id,
-                    xpos_start=xbrowse_model.xpos,
-                    ref=xbrowse_model.ref,
-                    alt=xbrowse_model.alt,
-                    family__family_id=xbrowse_model.family.family_id)
-            else:
-                return SeqrVariantNote.objects.get(
-                    project__deprecated_project_id=xbrowse_model.project.project_id,
-                    xpos_start=xbrowse_model.xpos,
-                    ref=xbrowse_model.ref,
-                    alt=xbrowse_model.alt)
         elif xbrowse_class_name == "GeneList":
             return xbrowse_model.seqr_locus_list or SeqrLocusList.objects.get(
                 name=xbrowse_model.name,
@@ -160,11 +159,11 @@ def find_matching_seqr_model(xbrowse_model):
     return None
 
 
-def _convert_xbrowse_kwargs_to_seqr_kwargs(xbrowse_model, **kwargs):
+def _convert_xbrowse_kwargs_to_seqr_kwargs(xbrowse_model, include_all=False, **kwargs):
     # rename fields
     xbrowse_class_name = type(xbrowse_model).__name__
     field_mapping = XBROWSE_TO_SEQR_FIELD_MAPPING[xbrowse_class_name]
-    seqr_kwargs = {
+    seqr_kwargs = kwargs if include_all else {
         field_mapping.get(field, field): value for field, value in kwargs.items()
         if not field_mapping.get(field, field) == _DELETED_FIELD
     }
@@ -180,6 +179,16 @@ def _convert_xbrowse_kwargs_to_seqr_kwargs(xbrowse_model, **kwargs):
                 del seqr_kwargs[key]
 
     return seqr_kwargs
+
+
+def _create_additional_seqr_entities(xbrowse_model, **kwargs):
+    xbrowse_class_name = type(xbrowse_model).__name__
+    additional_entities_mapping = XBROWSE_TO_SEQR_ADDITIONAL_ENTITIES_MAPPING.get(xbrowse_class_name)
+    if not additional_entities_mapping:
+        return {}
+    seqr_kwargs = _convert_xbrowse_kwargs_to_seqr_kwargs(xbrowse_model, include_all=True, **kwargs)
+    return {field: entity_func(**seqr_kwargs) for field, entity_func in additional_entities_mapping.items()}
+
 
 def update_xbrowse_model(xbrowse_model, **kwargs):
     print("update_xbrowse_model(%s, %s)" % (xbrowse_model, kwargs))
@@ -205,6 +214,7 @@ def _create_seqr_model(xbrowse_model, **kwargs):
         xbrowse_model_class = xbrowse_model.__class__
         xbrowse_model_class_name = xbrowse_model_class.__name__
         seqr_kwargs = _convert_xbrowse_kwargs_to_seqr_kwargs(xbrowse_model, **kwargs)
+        seqr_kwargs.update(_create_additional_seqr_entities(xbrowse_model, **kwargs))
         seqr_model_class = XBROWSE_TO_SEQR_CLASS_MAPPING[xbrowse_model_class_name]
         seqr_model_class_name = seqr_model_class.__name__
         logging.info("_create_seqr_model(%s, %s)" % (seqr_model_class_name, seqr_kwargs))
