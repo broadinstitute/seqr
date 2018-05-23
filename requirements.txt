@@ -33,7 +33,7 @@ requests==2.13.0                 # simpler way to make http requests
 tqdm                             # convenient way to create progress bar for long-running command-line operations
 whitenoise==3.3.0                # simplified static file handling
 requests_toolbelt		 # for troubleshooting requests
-redis-py==2.10.5                 # client lib for the redis in-memory database - used for caching server-side objects
+redis==2.10.6                    # client lib for the redis in-memory database - used for caching server-side objects
 
 # legacy dependencies we're moving away from
 #fisher==0.1.5	      	    	 # compute Fisher exact test p-values
