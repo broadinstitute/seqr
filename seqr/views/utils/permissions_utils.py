@@ -60,14 +60,13 @@ def get_projects_user_can_edit(user):
 
 
 def add_user_to_project(user, project, permission_level=CAN_VIEW):
-    _validate_permissions_arg(permission_level)
 
-    if user.is_superuser or user.is_staff:
-        return
+    if not user.is_superuser and (not user.is_staff or project.disable_staff_access):
+        _validate_permissions_arg(permission_level)
 
-    if permission_level == CAN_VIEW:
-        project.can_view_group.user_set.add(user)
-    elif permission_level == CAN_EDIT:
-        project.can_edit_group.user_set.add(user)
+        if permission_level == CAN_VIEW:
+            project.can_view_group.user_set.add(user)
+        elif permission_level == CAN_EDIT:
+            project.can_edit_group.user_set.add(user)
 
 
