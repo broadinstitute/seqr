@@ -53,10 +53,7 @@ def get_projects_for_user(user):
     if user.is_superuser:
         return all_projects
 
-    if user.is_staff:
-        return [p for p in all_projects if (user.is_staff and not p.disable_staff_access) or p.can_view(user)]
-    else: 
-        return [p for p in all_projects if p.can_view(user)]
+    return [p for p in all_projects if (user.is_staff and not p.disable_staff_access) or p.can_view(user)]
 
 
 def get_loaded_projects_for_user(user, fields=None):
