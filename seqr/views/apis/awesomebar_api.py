@@ -30,16 +30,14 @@ def _get_matching_projects(user, query):
     Returns:
         Sorted list of matches where each match is a dictionary of strings
     """
-    project_permissions_check = Q(can_view_group__user=user)
-    if user.is_staff:
-        project_permissions_check |= Q(disable_staff_access=False)
+    project_filter = Q(deprecated_project_id__icontains=query) | Q(name__icontains=query)
+    if not user.is_superuser:
+        if user.is_staff:
+            project_filter &= Q(can_view_group__user=user) | Q(disable_staff_access=False)
+        else:
+            project_filter &= Q(can_view_group__user=user)
 
-    matching_projects = Project.objects.filter(
-        project_permissions_check & (
-            Q(deprecated_project_id__icontains=query) |
-            Q(name__icontains=query)
-        )  # Q(description__icontains=query) | Q(project_category__icontains=query)
-    ).distinct()
+    matching_projects = Project.objects.filter(project_filter).distinct()
 
     projects_result = []
     for p in matching_projects[:MAX_RESULTS_PER_CATEGORY]:
@@ -65,13 +63,14 @@ def _get_matching_families(user, query):
     Returns:
         Sorted list of matches where each match is a dictionary of strings
     """
-    family_permissions_check = Q(project__can_view_group__user=user)
-    if user.is_staff:
-        family_permissions_check |= Q(project__disable_staff_access=False)
+    family_filter = Q(family_id__icontains=query) | Q(display_name__icontains=query)
+    if not user.is_superuser:
+        if user.is_staff:
+            family_filter &= Q(project__can_view_group__user=user) | Q(project__disable_staff_access=False)
+        else:
+            family_filter &= Q(project__can_view_group__user=user)
 
-    matching_families = Family.objects.select_related('project').filter(
-        family_permissions_check & (Q(family_id__icontains=query) | Q(display_name__icontains=query))
-    ).distinct()
+    matching_families = Family.objects.select_related('project').filter(family_filter).distinct()
 
     families_result = []
     for f in matching_families[:MAX_RESULTS_PER_CATEGORY]:
@@ -97,13 +96,14 @@ def _get_matching_individuals(user, query):
     Returns:
         Sorted list of matches where each match is a dictionary of strings
     """
-    individual_permissions_check = Q(family__project__can_view_group__user=user)
-    if user.is_staff:
-        individual_permissions_check |= Q(family__project__disable_staff_access=False)
+    individual_filter = Q(individual_id__icontains=query) | Q(display_name__icontains=query)
+    if not user.is_superuser:
+        if user.is_staff:
+            individual_filter = Q(family__project__can_view_group__user=user) | Q(family__project__disable_staff_access=False)
+        else:
+            individual_filter = Q(family__project__can_view_group__user=user)
 
-    matching_individuals = Individual.objects.select_related('family__project').filter(
-        individual_permissions_check & (Q(individual_id__icontains=query) | Q(display_name__icontains=query))
-    ).distinct()
+    matching_individuals = Individual.objects.select_related('family__project').filter(individual_filter).distinct()
 
     individuals_result = []
     for i in matching_individuals[:MAX_RESULTS_PER_CATEGORY]:

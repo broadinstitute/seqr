@@ -31,13 +31,16 @@ def get_project_and_check_permissions(project_guid, user, permission_level=CAN_V
 
 
 def check_permissions(project, user, permission_level=CAN_VIEW):
-    if user.has_perm(permission_level, project) or (user.is_staff and not project.disable_staff_access):
+    if user.has_perm(permission_level, project) or user.is_superuser or (user.is_staff and not project.disable_staff_access):
         pass
     else:
         raise PermissionDenied("%(user)s does not have %(permission_level)s permissions for %(project)s" % locals())
 
 
 def get_projects_user_can_view(user):
+    if user.is_superuser:
+        return Project.objects.all()
+
     can_view_filter = Q(can_view_group__user=user)
     if user.is_staff:
         return Project.objects.filter(can_view_filter | Q(disable_staff_access=False))
@@ -46,6 +49,9 @@ def get_projects_user_can_view(user):
 
 
 def get_projects_user_can_edit(user):
+    if user.is_superuser:
+        return Project.objects.all()
+
     can_edit_filter = Q(can_edit_group__user=user)
     if user.is_staff:
         return Project.objects.filter(can_edit_filter | Q(disable_staff_access=False))
@@ -56,7 +62,7 @@ def get_projects_user_can_edit(user):
 def add_user_to_project(user, project, permission_level=CAN_VIEW):
     _validate_permissions_arg(permission_level)
 
-    if user.is_staff:
+    if user.is_superuser or user.is_staff:
         return
 
     if permission_level == CAN_VIEW:
