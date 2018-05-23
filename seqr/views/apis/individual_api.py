@@ -13,7 +13,6 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import MultipleObjectsReturned
 from django.views.decorators.csrf import csrf_exempt
 
-from seqr.model_utils import update_seqr_model, get_or_create_seqr_model
 from seqr.models import Sample, Individual, Family, CAN_EDIT
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.pedigree_image_api import update_pedigree_images
@@ -366,11 +365,12 @@ def add_or_update_individuals_and_families(project, individual_records):
         if created:
             logger.info("Created family: %s", family)
             if not family.display_name:
-                update_seqr_model(family, display_name=family.family_id)
+                family.display_name = family.family_id
+                family.save()
 
         # uploaded files do not have unique guid's so fall back to a combination of family and individualId
         criteria = {'guid': record['individualGuid']} if record.get('individualGuid') else {'family': family, 'individual_id': record['individualId']}
-        individual, created = get_or_create_seqr_model(Individual, **criteria)
+        individual, created = Individual.objects.get_or_create(**criteria)
 
         record['family'] = family
         update_individual_from_json(individual, record, allow_unknown_keys=True)
