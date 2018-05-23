@@ -224,6 +224,7 @@ if args.command in [DEPLOY_COMMAND, DEPLOY_ALL_COMMAND, DEPLOY_AND_LOAD_COMMAND]
         deployable_components += [
             "mongo",
             "postgres",
+            "redis",
             "phenotips",
             "seqr",
             #"pipeline-runner",
