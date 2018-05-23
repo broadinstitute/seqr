@@ -1,10 +1,7 @@
 import json
-import itertools
 import csv
-import datetime
 import sys
 
-from pprint import pprint
 from django.core.exceptions import PermissionDenied
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ObjectDoesNotExist
@@ -25,14 +22,14 @@ from xbrowse_server.base.models import Project, Individual, Family, FamilyGroup,
 from xbrowse_server import sample_management, json_displays
 from xbrowse_server import server_utils
 from xbrowse_server.base.utils import get_collaborators_for_user, get_filtered_families, get_loaded_projects_for_user
-from xbrowse_server.gene_lists.models import GeneList, GeneListItem
+from xbrowse_server.gene_lists.models import GeneList
 from xbrowse_server.base.models import ProjectGeneList
 from xbrowse_server.base.lookups import get_all_saved_variants_for_project, get_variants_by_tag, get_causal_variants_for_project
 from xbrowse_server.api.utils import add_extra_info_to_variants_project
 from xbrowse_server.base import forms as base_forms
 from xbrowse_server import user_controls
 from xbrowse_server.analysis import project as project_analysis
-from xbrowse.utils.basic_utils import get_alt_allele_count, get_gene_id_from_str
+from xbrowse.utils.basic_utils import get_gene_id_from_str
 from xbrowse.core.variant_filters import get_default_variant_filter
 from xbrowse_server.mall import get_reference
 from xbrowse_server import mall
@@ -798,7 +795,7 @@ def gene_quicklook(request, project_id, gene_id):
         rare_variants.extend(project_variants)
 
     all_variants = sum([i['variants'] for i in individ_ids_and_variants], rare_variants)
-    add_extra_info_to_variants_project(get_reference(), project, all_variants)
+    add_extra_info_to_variants_project(get_reference(), project, all_variants, add_family_tags=True)
     download_csv = request.GET.get('download', '')
     if download_csv:
         response = HttpResponse(content_type='text/csv')
