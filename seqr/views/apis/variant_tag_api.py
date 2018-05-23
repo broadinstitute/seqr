@@ -1,4 +1,6 @@
 import logging
+
+from seqr.model_utils import get_or_create_seqr_model, update_seqr_model
 from seqr.models import VariantTagType
 from xbrowse_server.base.models import Project as BaseProject, ProjectTag
 
@@ -197,13 +199,14 @@ def _add_default_variant_tag_types(project):
     is_built_in = models.BooleanField(default=False)  # built-in tags (eg. "Pathogenic") can't be modified by users through the UI
     """
     for r in DEFAULT_VARIANT_TAGS:
-        vtt, created = VariantTagType.objects.get_or_create(project=project, name=r['tag_name'])
+        vtt, created = get_or_create_seqr_model(VariantTagType, project=project, name=r['tag_name'])
         if created:
             logger.info("Created variant tag: %(tag_name)s" % r)
-        vtt.order = r['order']
-        vtt.category = r['category']
-        vtt.description = r['description']
-        vtt.color = r['color']
-        vtt.save()
+        update_seqr_model(
+            vtt,
+            order=r['order'],
+            category=r['category'],
+            description=r['description'],
+            color=r['color'])
 
     _deprecated_add_default_tags_to_original_project(project)
