@@ -32,7 +32,7 @@ from xbrowse_server.api.utils import add_extra_info_to_variants_project
 from xbrowse_server.base import forms as base_forms
 from xbrowse_server import user_controls
 from xbrowse_server.analysis import project as project_analysis
-from xbrowse.utils.basic_utils import get_gene_id_from_str
+from xbrowse.utils.basic_utils import get_alt_allele_count, get_gene_id_from_str
 from xbrowse.core.variant_filters import get_default_variant_filter
 from xbrowse_server.mall import get_reference
 from xbrowse_server import mall
@@ -483,7 +483,7 @@ def variants_with_tag(request, project_id, tag=None):
                 genotype_values.append(genotype.extras["ad"] if genotype else "")
                 genotype_values.append(genotype.extras["dp"] if genotype else "")
                 genotype_values.append(genotype.gq if genotype and genotype.gq is not None else "")
-                genotype_values.append("%0.3f" % genotype.ab if genotype and genotype.ab is not None else "")
+                genotype_values.append(genotype.ab if genotype and genotype.ab is not None else "")
 
 
             writer.writerow(map(lambda s: unicode(s).encode('UTF-8'),
@@ -496,17 +496,17 @@ def variants_with_tag(request, project_id, tag=None):
                   "|".join([note['user']['display_name'] +":"+ note['note'] for note in variant.extras['family_notes']]) if 'family_notes' in variant.extras else '',
 
                   variant.extras["family_id"],
-                  worst_annotation.get("symbol", ""),
-                  variant.annotation.get("vep_consequence", ""),
+                  worst_annotation.get("symbol") or "",
+                  variant.annotation.get("vep_consequence") or "",
 
-                  variant.annotation["freqs"].get("1kg_wgs_phase3", ""),
-                  variant.annotation["freqs"].get("1kg_wgs_phase3_popmax", ""),
-                  variant.annotation["freqs"].get("exac_v3", ""),
-                  variant.annotation["freqs"].get("exac_v3_popmax", ""),
-                  worst_annotation.get("sift", ""),
-                  worst_annotation.get("polyphen", ""),
-                  worst_annotation.get("hgvsc", ""),
-                  worst_annotation.get("hgvsp", "").replace("%3D", "="),
+                  variant.annotation["freqs"].get("1kg_wgs_phase3") or "",
+                  variant.annotation["freqs"].get("1kg_wgs_phase3_popmax") or "",
+                  variant.annotation["freqs"].get("exac_v3") or "",
+                  variant.annotation["freqs"].get("exac_v3_popmax") or "",
+                  worst_annotation.get("sift") or "",
+                  worst_annotation.get("polyphen") or "",
+                  worst_annotation.get("hgvsc") or "",
+                  (worst_annotation.get("hgvsp") or "").replace("%3D", "="),
                   ] + genotype_values))
 
         return response
@@ -659,14 +659,14 @@ def edit_collaborator(request, project_id, username):
     if request.method == 'POST':
         form = base_forms.EditCollaboratorForm(request.POST)
         if form.is_valid():
-            seqr_projects = SeqrProject.objects.filter(deprecated_project_id=project_id)
-            if seqr_projects:
+            seqr_project = project.seqr_project if project.seqr_project else (SeqrProject.objects.get(deprecated_project_id=project_id) if SeqrProject.objects.filter(deprecated_project_id=project_id) else None)
+            if seqr_project:
                 if form.cleaned_data['collaborator_type'] == 'manager':
-                    seqr_projects[0].can_edit_group.user_set.add(project_collaborator.user)
-                    seqr_projects[0].can_view_group.user_set.add(project_collaborator.user)
+                    seqr_project.can_edit_group.user_set.add(project_collaborator.user)
+                    seqr_project.can_view_group.user_set.add(project_collaborator.user)
                 elif form.cleaned_data['collaborator_type'] == 'collaborator':
-                    seqr_projects[0].can_edit_group.user_set.remove(project_collaborator.user)
-                    seqr_projects[0].can_view_group.user_set.add(project_collaborator.user)
+                    seqr_project.can_edit_group.user_set.remove(project_collaborator.user)
+                    seqr_project.can_view_group.user_set.add(project_collaborator.user)
                 else:
                     raise ValueError("Unexpected collaborator_type: " + str(form.cleaned_data['collaborator_type']))
 
@@ -697,10 +697,10 @@ def delete_collaborator(request, project_id, username):
     project_collaborator = get_object_or_404(ProjectCollaborator, project=project, user__username=username)
     if request.method == 'POST':
         if request.POST.get('confirm') == 'yes':
-            seqr_projects = SeqrProject.objects.filter(deprecated_project_id=project_id)
-            if seqr_projects:
-                seqr_projects[0].can_edit_group.user_set.remove(project_collaborator.user)
-                seqr_projects[0].can_view_group.user_set.remove(project_collaborator.user)
+            seqr_project = project.seqr_project if project.seqr_project else (SeqrProject.objects.get(deprecated_project_id=project_id) if SeqrProject.objects.filter(deprecated_project_id=project_id) else None)
+            if seqr_project:
+                seqr_project.can_edit_group.user_set.remove(project_collaborator.user)
+                seqr_project.can_view_group.user_set.remove(project_collaborator.user)
 
             project_collaborator.delete()
             return redirect('project_collaborators', project_id)
@@ -798,7 +798,7 @@ def gene_quicklook(request, project_id, gene_id):
         rare_variants.extend(project_variants)
 
     all_variants = sum([i['variants'] for i in individ_ids_and_variants], rare_variants)
-    add_extra_info_to_variants_project(get_reference(), project, all_variants, add_family_tags=True)
+    add_extra_info_to_variants_project(get_reference(), project, all_variants)
     download_csv = request.GET.get('download', '')
     if download_csv:
         response = HttpResponse(content_type='text/csv')
