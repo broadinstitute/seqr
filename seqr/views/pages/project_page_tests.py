@@ -45,7 +45,7 @@ class ProjectPageTest(TestCase):
             {'projectGuid', 'familyGuid', 'individualGuid', 'sampleGuids', 'caseReviewStatusLastModifiedBy',
              'phenotipsData', 'individualId', 'paternalId', 'maternalId', 'sex', 'affected', 'displayName', 'notes',
              'phenotipsPatientId', 'phenotipsData', 'createdDate', 'lastModifiedDate', 'caseReviewStatus',
-             'caseReviewStatusAcceptedFor', 'caseReviewDiscussion', 'caseReviewStatusLastModifiedDate',
+             'caseReviewDiscussion', 'caseReviewStatusLastModifiedDate',
              'caseReviewStatusLastModifiedBy'}
         )
         self.assertSetEqual(
