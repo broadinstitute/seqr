@@ -14,6 +14,7 @@ import { configureStore } from 'redux/utils/configureStore'
 import 'semantic-ui-css/semantic-custom.css'
 import 'shared/global.css'
 
+
 ReactDOM.render(
   <Provider store={configureStore(rootReducer, window.initialJSON)}>
     <AppContainer>

@@ -48,7 +48,7 @@ const TableHeaderRow = ({ headerStatus, showInternalFilters, visibleFamiliesCoun
                 <HorizontalSpacer width={10} />
                 <HorizontalStackedBar
                   width={100}
-                  height={10}
+                  height={14}
                   title={headerStatus.title}
                   data={headerStatus.data}
                 />

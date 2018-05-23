@@ -22,9 +22,8 @@ const BreadcrumbContainer = styled.div`
   margin: 50px 0px 35px 0px;
   
   a.active {
-    color: #111;
-    font-weight: 750;
-    cursor: auto;
+    color: #111 !important;
+    cursor: auto !important;
   }
 `
 const NavLinkNoActive = styled(NavLink)`
@@ -101,9 +100,9 @@ const PageHeader = ({ user, project, familiesByGuid, match }) => {
         return acc
       }
       const sectionProps = sectionConfig.link ?
-        { as: NavLink, to: sectionConfig.link, activeStyle: { color: '#111', cursor: 'auto' }, exact: true } : {}
+        { as: NavLink, to: sectionConfig.link, exact: true } : {}
       const section =
-        <Breadcrumb.Section key={sectionConfig.content} {...sectionProps}>{sectionConfig.content}</Breadcrumb.Section>
+        <Breadcrumb.Section key={sectionConfig.content} {...sectionProps} content={sectionConfig.content} />
       if (i && i < length) {
         return [...acc, <Breadcrumb.Divider key={`divider${sectionConfig.content}`} icon="angle double right" />, section]
       }

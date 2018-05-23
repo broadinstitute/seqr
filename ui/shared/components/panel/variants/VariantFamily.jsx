@@ -26,19 +26,16 @@ const IndividualCell = styled.div`
   text-align: center;
   padding-right: 20px;
   
-  .alleles {
-    color: black;
-    font-size: 1.2em;
-    
-    .alt {
-      font-weight: bolder;
-      font-style: italic;
-    }
-  }
-  
   .ui.header {
     padding-top: 3px;
   }
+`
+
+const Allele = styled.span`
+  color: black;
+  font-size: 1.2em;
+  font-weight: ${(props) => { return props.isRef ? 'inherit' : 'bolder' }};
+  font-style: ${(props) => { return props.isRef ? 'inherit' : 'italic' }};
 `
 
 const FAMILY_FIELDS = [
@@ -55,11 +52,11 @@ const Alleles = ({ alleles, variant }) => {
     if (allele.length > 3) {
       alleleText += '..'
     }
-    return { text: alleleText, class: allele === variant.ref ? 'ref' : 'alt' }
+    return { text: alleleText, isRef: allele === variant.ref }
   })
   return (
-    <span className="alleles">
-      <span className={alleles[0].class}>{alleles[0].text}</span>/<span className={alleles[1].class}>{alleles[1].text}</span>
+    <span>
+      <Allele isRef={alleles[0].isRef}>{alleles[0].text}</Allele>/<Allele isRef={alleles[1].isRef}>{alleles[1].text}</Allele>
     </span>
   )
 }
@@ -67,6 +64,78 @@ const Alleles = ({ alleles, variant }) => {
 Alleles.propTypes = {
   alleles: PropTypes.array,
   variant: PropTypes.object,
+}
+
+
+const Genotype = ({ variant, individualId }) => {
+  const genotype = variant.genotypes && variant.genotypes[individualId]
+  if (!genotype) {
+    return null
+  }
+
+  const qualityDetails = [
+    {
+      title: 'Raw Alt. Alleles',
+      value: variant.origAltAlleles.join(', '),
+      shouldHide: variant.origAltAlleles.length < 1 ||
+      (variant.origAltAlleles.length === 1 && variant.origAltAlleles[0] === variant.alt),
+    },
+    { title: 'Allelic Depth', value: genotype.ad },
+    { title: 'Read Depth', value: genotype.dp },
+    { title: 'Genotype Quality', value: genotype.gq },
+    { title: 'Allelic Balance', value: genotype.ab && genotype.ab.toPrecision(2) },
+    { title: 'Filter', value: genotype.filter, shouldHide: genotype.filter === 'pass' },
+    { title: 'Phred Likelihoods', value: genotype.pl },
+  ]
+  return [
+    genotype.alleles.length > 0 && genotype.numAlt !== -1 ?
+      <Popup
+        key="alleles"
+        position="top center"
+        flowing
+        trigger={
+          <span>
+            <Alleles alleles={genotype.alleles} variant={variant} />
+            <HorizontalSpacer width={5} />
+            ({genotype.gq || '?'}, {genotype.ab ? genotype.ab.toPrecision(2) : '?'})
+            {genotype.filter && genotype.filter !== 'pass' && <span><br />Filter: {genotype.filter}</span>}
+          </span>
+        }
+        content={
+          qualityDetails.map(({ shouldHide, title, value }) => {
+            return value && !shouldHide ?
+              <div key={title}>{title}:<HorizontalSpacer width={10} /><b>{value}</b></div> : null
+          })
+        }
+      />
+      : <b key="no-call">NO CALL</b>,
+    genotype.cnvs.cn !== null ?
+      <Popup
+        key="cnvs"
+        position="top center"
+        content={
+          <span>
+            Copy Number: {genotype.cnvs.cn}<br />
+            LRR median:{genotype.cnvs.LRR_median}<br />
+            LRR stdev: {genotype.cnvs.LRR_sd}<br />
+            SNPs supporting call: {genotype.cnvs.snps}<br />
+            Size: {genotype.cnvs.size}<br />
+            Found in: {parseInt(genotype.cnvs.freq, 10) - 1} other samples<br />
+            Type: {genotype.cnvs.type}<br />
+            Array: {genotype.cnvs.array.replace(/_/g, ' ')}<br />
+            Caller: {genotype.cnvs.caller}<br />
+          </span>
+        }
+        trigger={
+          <span>
+            <HorizontalSpacer width={5} />
+            <Label color="red" size="small" horizontal>
+              CNV: {genotype.cnvs.cn > 2 ? 'Duplication' : 'Deletion'}
+            </Label>
+          </span>
+        }
+      /> : null,
+  ]
 }
 
 
@@ -91,92 +160,25 @@ const VariantFamily = ({ variant, project, family, individualsByGuid }) => {
           />
         </Header>
       </IndividualCell>
-      {individuals.map((individual) => {
-        const genotype = variant.genotypes && variant.genotypes[individual.individualId]
-
-        const qualityDetails = genotype ? [
-          {
-            title: 'Raw Alt. Alleles',
-            value: variant.origAltAlleles.join(', '),
-            shouldHide: variant.origAltAlleles.length < 1 ||
-            (variant.origAltAlleles.length === 1 && variant.origAltAlleles[0] === variant.alt),
-          },
-          { title: 'Allelic Depth', value: genotype.ad },
-          { title: 'Read Depth', value: genotype.dp },
-          { title: 'Genotype Quality', value: genotype.gq },
-          { title: 'Allelic Balance', value: genotype.ab && genotype.ab.toPrecision(2) },
-          { title: 'Filter', value: genotype.filter, shouldHide: genotype.filter === 'pass' },
-          { title: 'Phred Likelihoods', value: genotype.pl },
-        ] : []
-
-        const variantIndividual =
-          <IndividualCell key={individual.individualGuid}>
-            {hasPhenotipsDetails(individual.phenotipsData) &&
-              <Popup
-                hoverable
-                wide="very"
-                position="top left"
-                trigger={<a><Icon name="info circle" /></a>}
-                content={
-                  <PhenotipsDataPanel individual={individual} showDetails showEditPhenotipsLink={false} showViewPhenotipsLink={false} />
-                }
-              />
-            }
-            <PedigreeIcon sex={individual.sex} affected={individual.affected} />
-            <small>{individual.displayName || individual.individualId}</small>
-            <br />
-            {genotype && genotype.alleles.length === 2 && genotype.numAlt !== -1 ?
-              <span>
-                <Alleles alleles={genotype.alleles} variant={variant} />
-                <HorizontalSpacer width={5} />
-                ({genotype.gq || '?'}, {genotype.ab ? genotype.ab.toPrecision(2) : '?'})
-                {genotype.filter && genotype.filter !== 'pass' && <span><br />Filter: {genotype.filter}</span>}
-              </span>
-              : <b>NO CALL</b>
-            }
-            {genotype && genotype.cnvs.cn !== null &&
+      {individuals.map(individual =>
+        <IndividualCell key={individual.individualGuid}>
+          {hasPhenotipsDetails(individual.phenotipsData) &&
             <Popup
-              position="top center"
+              hoverable
+              wide="very"
+              position="top left"
+              trigger={<a><Icon name="info circle" /></a>}
               content={
-                <span>
-                  Copy Number: {genotype.cnvs.cn}<br />
-                  LRR median:{genotype.cnvs.LRR_median}<br />
-                  LRR stdev: {genotype.cnvs.LRR_sd}<br />
-                  SNPs supporting call: {genotype.cnvs.snps}<br />
-                  Size: {genotype.cnvs.size}<br />
-                  Found in: {parseInt(genotype.cnvs.freq, 10) - 1} other samples<br />
-                  Type: {genotype.cnvs.type}<br />
-                  Array: {genotype.cnvs.array.replace(/_/g, ' ')}<br />
-                  Caller: {genotype.cnvs.caller}<br />
-                </span>
-              }
-              trigger={
-                <span>
-                  <HorizontalSpacer width={5} />
-                  <Label color="red" size="small" horizontal>
-                    CNV: {genotype.cnvs.cn > 2 ? 'Duplication' : 'Deletion'}
-                  </Label>
-                </span>
+                <PhenotipsDataPanel individual={individual} showDetails showEditPhenotipsLink={false} showViewPhenotipsLink={false} />
               }
             />
-            }
-          </IndividualCell>
-
-        return genotype && genotype.alleles.length > 0 ?
-          <Popup
-            key={individual.individualGuid}
-            position="top center"
-            flowing
-            trigger={variantIndividual}
-            content={
-              qualityDetails.map(({ shouldHide, title, value }) => {
-                return value && !shouldHide ?
-                  <div key={title}>{title}:<HorizontalSpacer width={10} /><b>{value}</b></div> : null
-              })
-            }
-          />
-          : variantIndividual
-      })}
+          }
+          <PedigreeIcon sex={individual.sex} affected={individual.affected} />
+          <small>{individual.displayName || individual.individualId}</small>
+          <br />
+          <Genotype variant={variant} individualId={individual.individualId} />
+        </IndividualCell>,
+      )}
     </div>
   )
 }

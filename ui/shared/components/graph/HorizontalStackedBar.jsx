@@ -1,11 +1,30 @@
 import React from 'react'
 import PropTypes from 'prop-types'
+import styled from 'styled-components'
 
 import { Popup, Table } from 'semantic-ui-react'
 import { Link } from 'react-router-dom'
 //import randomMC from 'random-material-color'
 
 import { ColoredIcon } from '../StyledComponents'
+
+
+const BarContainer = styled.div`
+  display: inline-block;
+  width: ${(props) => { return props.width ? `${props.width}px` : '100%' }};
+  height: ${(props) => { return props.height ? `${props.height}px` : 'auto' }};
+  line-height: ${(props) => { return props.height ? `${props.height - 2}px` : 'inherit' }};
+  text-align: center;
+  border: 1px solid gray;`
+
+const BarSection = styled(({ to, ...props }) => React.createElement(to ? Link : 'div', { to, ...props }))`  
+  display: inline-block;
+  height: 100%;
+  width: ${props => props.percent}%;
+  background-color: ${props => props.color};`
+
+const NoWrap = styled.span`
+  white-space: nowrap;`
 
 class HorizontalStackedBar extends React.Component {
 
@@ -23,6 +42,11 @@ class HorizontalStackedBar extends React.Component {
   render() {
     const { title, data, width, height, linkPath, showAllPopupCategories, minPercent = 1, noDataMessage = 'No Data' } = this.props
     const total = data.reduce((acc, d) => acc + d.count, 0)
+
+    if (total === 0) {
+      return <BarContainer width={width} height={height}>{noDataMessage}</BarContainer>
+    }
+
     const dataWithPercents = data.reduce(
       (acc, d) => [
         ...acc,
@@ -50,70 +74,46 @@ class HorizontalStackedBar extends React.Component {
     }, [])
 
     return (
-      <div style={{
-        display: 'inline-block',
-        ...{ width: width ? `${width}px` : '100%' },
-        ...(height ? { height: `${height}px` } : {}),
-      }}
-      >
-        {total > 0 ?
-          <Popup
-            trigger={
-              <span style={{ whiteSpace: 'nowrap' }}>
-                {dataWithPercents.filter(d => d.percent >= minPercent).map((d, i) => {
-                  const barProps = {
-                    key: i,
-                    style: {
-                      height: '100%',
-                      width: `${d.percent}%`,
-                      backgroundColor: d.color,
-                      display: 'inline-block',
-                    },
+      <BarContainer width={width} height={height}>
+        <Popup
+          trigger={
+            <NoWrap>
+              {dataWithPercents.filter(d => d.percent >= minPercent).map(d =>
+                <BarSection key={d.name} to={linkPath && `${linkPath}/${d.name}`} color={d.color} percent={d.percent} />,
+              )}
+            </NoWrap>
+          }
+          content={
+            <div>
+              {title && <div><b>{title}</b><br /></div>}
+              <Table basic="very" compact="very">
+                <Table.Body>
+                  {
+                    popupData.map(d => (
+                      <Table.Row key={d.name} verticalAlign="top" >
+                        {!d.header &&
+                          <Table.Cell collapsing><ColoredIcon name="square" size="small" color={d.color} /> {d.count}</Table.Cell>
+                        }
+                        <Table.Cell singleLine colSpan={d.header ? 3 : 1} disabled={Boolean(d.header)}>{d.name}</Table.Cell>
+                        {!d.header && <Table.Cell collapsing>({d.percent.toPrecision(2)}%)</Table.Cell>}
+                      </Table.Row>
+                    ))
                   }
-                  return linkPath ? <Link to={`${linkPath}/${d.name}`} {...barProps} /> : <div {...barProps} />
-                })
-                }
-              </span>
-            }
-            content={
-              <div>
-                {title && <div><b>{title}</b><br /></div>}
-                <Table basic="very" compact="very">
-                  <Table.Body>
-                    {
-                      popupData.map(d => (
-                        <Table.Row key={d.name} verticalAlign="top" >
-                          {!d.header &&
-                            <Table.Cell collapsing><ColoredIcon name="square" size="small" color={d.color} /> {d.count}</Table.Cell>
-                          }
-                          <Table.Cell singleLine colSpan={d.header ? 3 : 1} disabled={Boolean(d.header)}>{d.name}</Table.Cell>
-                          {!d.header && <Table.Cell collapsing>({d.percent}%)</Table.Cell>}
-                        </Table.Row>
-                      ))
-                    }
-                    {
-                      dataWithPercents.filter(d => d.count > 0).length > 1 ?
-                        <Table.Row>
-                          <Table.Cell><ColoredIcon name="square" size="small" color="white" /> {total}</Table.Cell>
-                          <Table.Cell>Total</Table.Cell>
-                          <Table.Cell />
-                        </Table.Row> : null
-                    }
-                  </Table.Body>
-                </Table>
-              </div>
-            }
-            position="bottom center"
-            size="small"
-            hoverable
-            flowing
-          />
-          :
-          <div style={{ lineHeight: height ? `${height - 2}px` : 'inherit', textAlign: 'center', border: '1px solid gray' }}>
-            {noDataMessage}
-          </div>
-        }
-      </div>)
+                  <Table.Row>
+                    <Table.Cell><ColoredIcon name="square" size="small" color="white" /> {total}</Table.Cell>
+                    <Table.Cell>Total</Table.Cell>
+                    <Table.Cell />
+                  </Table.Row>
+                </Table.Body>
+              </Table>
+            </div>
+          }
+          position="bottom center"
+          size="small"
+          hoverable
+          flowing
+        />
+      </BarContainer>)
   }
 }
 
