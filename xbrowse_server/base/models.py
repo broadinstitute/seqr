@@ -211,24 +211,15 @@ class Project(models.Model):
             return True
 
         is_collaborator = self.is_collaborator(user)
-        if (user.is_staff and not self.disable_staff_access) or user.is_superuser or is_collaborator:
-            return True
-
-        return is_collaborator
+        return (user.is_staff and not self.disable_staff_access) or user.is_superuser or is_collaborator
 
     def can_edit(self, user):
         is_collaborator = self.is_collaborator(user)
-        if (user.is_staff and not self.disable_staff_access) or user.is_superuser or is_collaborator:
-            return True
-
-        return is_collaborator
+        return (user.is_staff and not self.disable_staff_access) or user.is_superuser or is_collaborator
 
     def can_admin(self, user):
         is_manager = self.is_collaborator(user, collaborator_type="manager")
-        if (user.is_staff and not self.disable_staff_access) or user.is_superuser or is_manager:
-            return True
-
-        return is_manager
+        return (user.is_staff and not self.disable_staff_access) or user.is_superuser or is_manager
 
     def set_as_manager(self, user):
         collab = ProjectCollaborator.objects.get_or_create(user=user, project=self)[0]
