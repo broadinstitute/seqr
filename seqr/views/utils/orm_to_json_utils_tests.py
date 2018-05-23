@@ -62,7 +62,7 @@ class JSONUtilsTest(TestCase):
         self.assertSetEqual(set(json.keys()), individual_fields)
 
         individual_fields.update({
-            'caseReviewStatus', 'caseReviewStatusAcceptedFor', 'caseReviewDiscussion',
+            'caseReviewStatus', 'caseReviewDiscussion',
             'caseReviewStatusLastModifiedDate', 'caseReviewStatusLastModifiedBy',
         })
         user = User.objects.filter(is_staff=True).first()
