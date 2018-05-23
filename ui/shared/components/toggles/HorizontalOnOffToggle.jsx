@@ -1,21 +1,27 @@
 import React from 'react'
 import PropTypes from 'prop-types'
+import styled from 'styled-components'
 
-import { Icon } from 'semantic-ui-react'
+import ColoredIcon from '../icons/ColoredIcon'
+
+const Toggle = styled.a.attrs({ role: 'button', tabIndex: '0' })`
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -khtml-user-select: none;
+  -ms-user-select: none;
+  cursor: pointer;
+  outline: none;
+  vertical-align: bottom;
+`
 
 const HorizontalOnOffToggle = props =>
-  <a
-    role="button"
-    tabIndex="0"
-    onClick={props.onClick}
-    className="clickable"
-    style={{ verticalAlign: 'bottom' }}
-  >
+  <Toggle onClick={props.onClick}>
     {props.isOn ?
-      <Icon size="large" style={{ color: props.color || '#BBBBBB' }} name="toggle on" /> :
-      <Icon size="large" style={{ color: '#BBBBBB' }} name="toggle off" />
+      <ColoredIcon size="large" color={props.color || '#BBBBBB'} name="toggle on" /> :
+      <ColoredIcon size="large" color="#BBBBBB" name="toggle off" />
     }
-  </a>
+  </Toggle>
+
 
 HorizontalOnOffToggle.propTypes = {
   onClick: PropTypes.func.isRequired,

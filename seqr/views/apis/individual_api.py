@@ -41,13 +41,12 @@ __AFFECTED_TO_EXPORTED_VALUE['U'] = ''
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
-def update_individual_field_handler(request, individual_guid, field_name):
+def update_individual_handler(request, individual_guid):
     """Updates a single field in an Individual record.
 
     Args:
         request (object): Django HTTP Request object.
         individual_guid (string): GUID of the Individual.
-        field_name (string): Name of the field to update (eg. "maternalId").
 
     Request:
         body should be a json dictionary like: { 'value': xxx }
@@ -71,11 +70,9 @@ def update_individual_field_handler(request, individual_guid, field_name):
     check_permissions(project, request.user, CAN_EDIT)
 
     request_json = json.loads(request.body)
-    if "value" not in request_json:
-        raise ValueError("Request is missing 'value' key: %s" % (request.body,))
 
-    individual_json = {field_name: request_json['value']}
-    update_individual_from_json(individual, individual_json)
+    update_individual_from_json(individual, request_json, user=request.user)
+    _deprecated_update_original_individual_data(None, individual)
 
     return create_json_response({
         individual.guid: _get_json_for_individual(individual, request.user)
@@ -92,17 +89,15 @@ def edit_individuals_handler(request, project_guid):
         project_guid (string): GUID of project that contains these individuals.
 
     Request:
-        body should be a json dictionary that contains a 'modifiedIndividuals' dictionary that
-        includes the individuals to update, mapped to the specific fields that should be updated
-        for each individual - for example:
+        body should be a json dictionary that contains a 'individuals' list that includes the individuals to update,
+         represented by dictionaries of their guid and fields to update -
+        for example:
             {
-                'form': {
-                    'modifiedIndividuals': {
-                        <individualGuid1>: { 'paternalId': <paternalId>, 'affected': 'A' },
-                        <individualGuid2>: { 'sex': 'U' },
-                        ...
-                    }
-                }
+                'individuals': [
+                    { 'individualGuid': <individualGuid1>, 'paternalId': <paternalId>, 'affected': 'A' },
+                    { 'individualGuid': <individualGuid1>, 'sex': 'U' },
+                    ...
+                [
             }
 
     Response:
@@ -118,42 +113,47 @@ def edit_individuals_handler(request, project_guid):
 
     request_json = json.loads(request.body)
 
-    if 'form' not in request_json:
+    modified_individuals_list = request_json.get('individuals')
+    if modified_individuals_list is None:
         return create_json_response(
-            {}, status=400, reason="Invalid request: 'form' key not specified")
+            {}, status=400, reason="'individuals' not specified")
 
-    form_data = request_json['form']
+    update_individuals = {ind['individualGuid']: ind for ind in modified_individuals_list}
+    update_individual_models = {ind.guid: ind for ind in Individual.objects.filter(guid__in=update_individuals.keys())}
 
-    modified_individuals_by_guid = form_data.get('modifiedIndividuals')
-    if modified_individuals_by_guid is None:
-        return create_json_response(
-            {}, status=400, reason="'modifiedIndividuals' not specified")
+    modified_family_ids = {ind['family']['familyId'] for ind in modified_individuals_list}
+    modified_family_ids.update({ind.family.family_id for ind in update_individual_models.values()})
+    related_individuals = Individual.objects.filter(
+        family__family_id__in=modified_family_ids, family__project=project).exclude(guid__in=update_individuals.keys())
+    # can't use _get_json_for_individual because validation needs familyId, not familyGuid
+    related_individuals_json = [{
+        'individualId': ind.individual_id,
+        'familyId': ind.family.family_id,
+        'sex': ind.sex,
+        'maternalId': ind.maternal_id,
+        'paternalId': ind.paternal_id,
+    } for ind in related_individuals]
+    individuals_list = modified_individuals_list + related_individuals_json
 
-    # edit individuals
-    modified_individuals_list = list(modified_individuals_by_guid.values())
-
-    # TODO more validation
-    errors, warnings = validate_fam_file_records(modified_individuals_list)
+    # TODO more validation?
+    errors, warnings = validate_fam_file_records(individuals_list, fail_on_warnings=True)
     if errors:
-        return create_json_response({'errors': errors, 'warnings': warnings})
+        return create_json_response({'errors': errors, 'warnings': warnings}, status=400, reason='Invalid updates')
 
-    updated_families, updated_individuals = add_or_update_individuals_and_families(
-        project, modified_individuals_list)
+    updated_families, updated_individuals = add_or_update_individuals_and_families(project, modified_individuals_list)
 
     individuals_by_guid = {
         individual.guid: _get_json_for_individual(individual, request.user) for individual in updated_individuals
     }
-
     families_by_guid = {
-        family.guid: _get_json_for_family(family, request.user, add_individual_guids_field=True) for family in updated_families
-    }  # families whose list of individuals may have changed
-
-    updated_individuals_by_guid = {
-        'individualsByGuid': individuals_by_guid,
-        'familiesByGuid': families_by_guid,
+        family.guid: _get_json_for_family(family, request.user, add_individual_guids_field=True)
+        for family in updated_families
     }
 
-    return create_json_response(updated_individuals_by_guid)
+    return create_json_response({
+        'individualsByGuid': individuals_by_guid,
+        'familiesByGuid': families_by_guid,
+    })
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -191,19 +191,14 @@ def delete_individuals_handler(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user, CAN_EDIT)
 
     request_json = json.loads(request.body)
-
-    if 'form' not in request_json:
+    individuals_list = request_json.get('individuals')
+    if individuals_list is None:
         return create_json_response(
-            {}, status=400, reason="Invalid request: 'form' not in request_json")
+            {}, status=400, reason="Invalid request: 'individuals' not in request_json")
 
     logger.info("delete_individuals_handler %s", request_json)
 
-    form_data = request_json['form']
-
-    individual_guids_to_delete = form_data.get('recordIdsToDelete')
-    if individual_guids_to_delete is None:
-        return create_json_response(
-            {}, status=400, reason="'individualGuidsToDelete' not specified")
+    individual_guids_to_delete = [ind['individualGuid'] for ind in individuals_list]
 
     # delete the individuals
     families_with_deleted_individuals = delete_individuals(project, individual_guids_to_delete)
@@ -251,9 +246,8 @@ def receive_individuals_table_handler(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user)
 
     if len(request.FILES) != 1:
-        return create_json_response({
-            'errors': ["Received %s files instead of 1" % len(request.FILES)]
-        })
+        error = "Received %s files instead of 1" % len(request.FILES)
+        return create_json_response({'errors': error}, status=400, reason=error)
 
     # parse file
     stream = request.FILES.values()[0]
@@ -267,7 +261,7 @@ def receive_individuals_table_handler(request, project_guid):
     json_records, errors, warnings = parse_pedigree_table(filename, stream)
 
     if errors:
-        return create_json_response({'errors': errors, 'warnings': warnings})
+        return create_json_response({'errors': errors, 'warnings': warnings}, status=400, reason=errors)
 
     # save json to temporary file
     uploadedFileId = hashlib.md5(str(json_records)).hexdigest()
@@ -356,14 +350,17 @@ def add_or_update_individuals_and_families(project, individual_records):
     families = {}
     updated_individuals = []
     for i, record in enumerate(individual_records):
-        if 'familyId' not in record:
+        # family id will be in different places in the json depending on whether it comes from a flat uploaded file or from the nested individual object
+        family_id = record.get('familyId') or record.get('family', {}).get('familyId')
+        if not family_id:
             raise ValueError("record #%s doesn't contain a 'familyId' key: %s" % (i, record))
-        if 'individualId' not in record:
+
+        if 'individualId' not in record and 'individualGuid' not in record:
             raise ValueError("record #%s doesn't contain an 'individualId' key: %s" % (i, record))
 
         family, created = Family.objects.get_or_create(
             project=project,
-            family_id=record['familyId'])
+            family_id=family_id)
 
         if created:
             logger.info("Created family: %s", family)
@@ -371,10 +368,11 @@ def add_or_update_individuals_and_families(project, individual_records):
                 family.display_name = family.family_id
                 family.save()
 
-        individual, created = Individual.objects.get_or_create(
-            family=family,
-            individual_id=record['individualId'])
+        # uploaded files do not have unique guid's so fall back to a combination of family and individualId
+        criteria = {'guid': record['individualGuid']} if record.get('individualGuid') else {'family': family, 'individual_id': record['individualId']}
+        individual, created = Individual.objects.get_or_create(**criteria)
 
+        record['family'] = family
         update_individual_from_json(individual, record, allow_unknown_keys=True)
 
         updated_individuals.append(individual)
@@ -414,7 +412,7 @@ def add_or_update_individuals_and_families(project, individual_records):
 
 
 def _deprecated_update_original_individual_data(project, individual):
-    base_project = BaseProject.objects.filter(project_id=project.deprecated_project_id)
+    base_project = BaseProject.objects.filter(project_id=project.deprecated_project_id if project else individual.family.project.deprecated_project_id)
     base_project = base_project[0]
 
     try:
@@ -441,6 +439,7 @@ def _deprecated_update_original_individual_data(project, individual):
     base_individual.affected = individual.affected
     base_individual.nickname = individual.display_name
     base_individual.case_review_status = individual.case_review_status
+    base_individual.case_review_status_accepted_for = individual.case_review_status_accepted_for
 
     if created or not base_individual.phenotips_id:
         base_individual.phenotips_id = individual.phenotips_eid

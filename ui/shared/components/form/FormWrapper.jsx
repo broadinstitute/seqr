@@ -3,6 +3,7 @@
 
 import React from 'react'
 import PropTypes from 'prop-types'
+import styled from 'styled-components'
 
 import { Confirm, Form } from 'semantic-ui-react'
 import isEqual from 'lodash/isEqual'
@@ -11,6 +12,10 @@ import { HttpRequestHelper } from '../../utils/httpRequestHelper'
 import RequestStatus from '../form/RequestStatus'
 import ButtonPanel from './ButtonPanel'
 import MessagesPanel from './MessagesPanel'
+
+const StyledForm = styled(Form)`
+  text-align: left;
+`
 
 /**
  * Form wrapper that provides Submit and Cancel functionality.
@@ -180,9 +185,9 @@ class FormWrapper extends React.Component
     )
 
     return (
-      <Form onSubmit={this.doSave} style={{ textAlign: 'left' }} size={this.props.size}>
+      <StyledForm onSubmit={this.doSave} size={this.props.size}>
         {children}
-      </Form>
+      </StyledForm>
     )
   }
 

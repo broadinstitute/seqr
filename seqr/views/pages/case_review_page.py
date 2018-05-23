@@ -2,7 +2,6 @@
 APIs used by the case review page
 """
 
-import json
 import logging
 
 from django.contrib.admin.views.decorators import staff_member_required
@@ -10,74 +9,10 @@ from django.contrib.admin.views.decorators import staff_member_required
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.family_api import export_families
 from seqr.views.apis.individual_api import export_individuals
-from seqr.views.utils.json_utils import render_with_initial_json, create_json_response
-from seqr.views.utils.orm_to_json_utils import _get_json_for_user, \
-    _get_json_for_project, \
-    _get_json_for_family, \
-    _get_json_for_individual
-from seqr.models import Family, Individual, _slugify
+from seqr.models import Individual, _slugify
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions
-from settings import LOGIN_URL
 
 logger = logging.getLogger(__name__)
-
-
-@staff_member_required(login_url=LOGIN_URL)
-def case_review_page(request, project_guid):
-    """Generates the case review page, with initial case_review_page_data json embedded.
-
-    Args:
-        project_guid (string): GUID of the Project under case review.
-    """
-
-    initial_json = json.loads(
-        case_review_page_data(request, project_guid).content
-    )
-
-    return render_with_initial_json('case_review.html', initial_json)
-
-
-@staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
-def case_review_page_data(request, project_guid):
-    """Returns a JSON object containing information used by the case review page:
-    ::
-
-      json_response = {
-         'user': {..},
-         'project': {..},
-         'familiesByGuid': {..},
-         'individualsByGuid': {..},
-       }
-    Args:
-        project_guid (string): GUID of the project being case-reviewed.
-    """
-
-    # get all families in this project
-    project = get_project_and_check_permissions(project_guid, request.user)
-
-    json_response = {
-        'user': _get_json_for_user(request.user),
-        'project': _get_json_for_project(project, request.user),
-        'familiesByGuid': {},
-        'individualsByGuid': {},
-    }
-
-    for i in Individual.objects.select_related('family').filter(family__project=project):
-
-        # filter out individuals that were never in case review
-        if not i.case_review_status:
-            continue
-
-        # process family record if it hasn't been added already
-        family = i.family
-        if family.guid not in json_response['familiesByGuid']:
-            json_response['familiesByGuid'][family.guid] = _get_json_for_family(family, request.user)
-            json_response['familiesByGuid'][family.guid]['individualGuids'] = []
-
-        json_response['individualsByGuid'][i.guid] = _get_json_for_individual(i, request.user)
-        json_response['familiesByGuid'][family.guid]['individualGuids'].append(i.guid)
-
-    return create_json_response(json_response)
 
 
 def _convert_html_to_plain_text(html_string):
