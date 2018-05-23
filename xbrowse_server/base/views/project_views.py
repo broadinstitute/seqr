@@ -32,7 +32,7 @@ from xbrowse_server.api.utils import add_extra_info_to_variants_project
 from xbrowse_server.base import forms as base_forms
 from xbrowse_server import user_controls
 from xbrowse_server.analysis import project as project_analysis
-from xbrowse.utils.basic_utils import get_gene_id_from_str
+from xbrowse.utils.basic_utils import get_alt_allele_count, get_gene_id_from_str
 from xbrowse.core.variant_filters import get_default_variant_filter
 from xbrowse_server.mall import get_reference
 from xbrowse_server import mall
@@ -659,14 +659,14 @@ def edit_collaborator(request, project_id, username):
     if request.method == 'POST':
         form = base_forms.EditCollaboratorForm(request.POST)
         if form.is_valid():
-            seqr_projects = SeqrProject.objects.filter(deprecated_project_id=project_id)
-            if seqr_projects:
+            seqr_project = project.seqr_project if project.seqr_project else (SeqrProject.objects.get(deprecated_project_id=project_id) if SeqrProject.objects.filter(deprecated_project_id=project_id) else None)
+            if seqr_project:
                 if form.cleaned_data['collaborator_type'] == 'manager':
-                    seqr_projects[0].can_edit_group.user_set.add(project_collaborator.user)
-                    seqr_projects[0].can_view_group.user_set.add(project_collaborator.user)
+                    seqr_project.can_edit_group.user_set.add(project_collaborator.user)
+                    seqr_project.can_view_group.user_set.add(project_collaborator.user)
                 elif form.cleaned_data['collaborator_type'] == 'collaborator':
-                    seqr_projects[0].can_edit_group.user_set.remove(project_collaborator.user)
-                    seqr_projects[0].can_view_group.user_set.add(project_collaborator.user)
+                    seqr_project.can_edit_group.user_set.remove(project_collaborator.user)
+                    seqr_project.can_view_group.user_set.add(project_collaborator.user)
                 else:
                     raise ValueError("Unexpected collaborator_type: " + str(form.cleaned_data['collaborator_type']))
 
@@ -697,10 +697,10 @@ def delete_collaborator(request, project_id, username):
     project_collaborator = get_object_or_404(ProjectCollaborator, project=project, user__username=username)
     if request.method == 'POST':
         if request.POST.get('confirm') == 'yes':
-            seqr_projects = SeqrProject.objects.filter(deprecated_project_id=project_id)
-            if seqr_projects:
-                seqr_projects[0].can_edit_group.user_set.remove(project_collaborator.user)
-                seqr_projects[0].can_view_group.user_set.remove(project_collaborator.user)
+            seqr_project = project.seqr_project if project.seqr_project else (SeqrProject.objects.get(deprecated_project_id=project_id) if SeqrProject.objects.filter(deprecated_project_id=project_id) else None)
+            if seqr_project:
+                seqr_project.can_edit_group.user_set.remove(project_collaborator.user)
+                seqr_project.can_view_group.user_set.remove(project_collaborator.user)
 
             project_collaborator.delete()
             return redirect('project_collaborators', project_id)
