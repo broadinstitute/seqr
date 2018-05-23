@@ -18,7 +18,7 @@ class BaseSemanticInput extends React.Component {
 
   render() {
     const { inputType, ...props } = this.props
-    return createElement(Form[inputType], { ...props, onChange: this.handleChange })
+    return createElement(Form[inputType], { ...props, onChange: this.handleChange, onBlur: null })
   }
 }
 
@@ -56,12 +56,10 @@ Select.propTypes = {
   options: PropTypes.array,
 }
 
-export class Multiselect extends React.Component {
+export class Multiselect extends React.PureComponent {
   static propTypes = {
     color: PropTypes.string,
     options: PropTypes.array,
-    onBlur: PropTypes.func,
-    onChange: PropTypes.func,
   }
 
   state = {

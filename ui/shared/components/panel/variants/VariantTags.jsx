@@ -66,24 +66,23 @@ ShortcutTagToggle.propTypes = {
   value: PropTypes.any,
 }
 
-const SHORTCUT_TAG_FIELDS = [{
-  name: 'tags',
-  isArrayField: true,
+const SHORTCUT_TAG_FIELDS = SHORTCUT_TAGS.map(tagName => ({
+  name: tagName,
   component: ShortcutTagToggle,
-}]
+}))
 
 const ShortcutTags = ({ variant, dispatchUpdateVariantTags }) => {
-  const appliedShortcutTags = SHORTCUT_TAGS.map((tagName) => {
+  const appliedShortcutTags = SHORTCUT_TAGS.reduce((acc, tagName) => {
     const appliedTag = variant.tags.find(tag => tag.name === tagName)
-    return appliedTag ? { ...appliedTag, isApplied: true } : { name: tagName, isApplied: false }
-  })
-  const initialValues = { tags: appliedShortcutTags }
-  const onSubmit = ({ tags }) => {
-    const updatedTags = tags.reduce((allTags, applied, index) => {
+    return { ...acc, [tagName]: appliedTag ? { ...appliedTag, isApplied: true } : { name: tagName, isApplied: false } }
+  }, {})
+  const onSubmit = (values) => {
+    const updatedTags = Object.keys(values).reduce((allTags, tagName) => {
+      const applied = values[tagName]
       if (applied === true) {
-        return [...allTags, { name: appliedShortcutTags[index].name }]
+        return [...allTags, { name: tagName }]
       } else if (applied === false) {
-        return allTags.filter(tag => tag.name !== appliedShortcutTags[index].name)
+        return allTags.filter(tag => tag.name !== tagName)
       }
       return allTags
     }, variant.tags)
@@ -94,7 +93,7 @@ const ShortcutTags = ({ variant, dispatchUpdateVariantTags }) => {
       <ReduxFormWrapper
         onSubmit={onSubmit}
         form={`editShorcutTags-${variant.variantId}`}
-        initialValues={initialValues}
+        initialValues={appliedShortcutTags}
         closeOnSuccess={false}
         submitOnChange
         fields={SHORTCUT_TAG_FIELDS}

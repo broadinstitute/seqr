@@ -80,8 +80,12 @@ CaseReviewStatusDropdown.propTypes = {
   updateIndividual: PropTypes.func.isRequired,
 }
 
-const mapDispatchToProps = {
-  updateIndividual,
+const mapDispatchToProps = (dispatch, ownProps) => {
+  return {
+    updateIndividual: (updates) => {
+      dispatch(updateIndividual({ individualGuid: ownProps.individual.individualGuid, ...updates }))
+    },
+  }
 }
 
 export default connect(null, mapDispatchToProps)(CaseReviewStatusDropdown)

@@ -9,9 +9,9 @@ import { closeModal, setModalConfirm } from 'redux/utils/modalReducer'
 import ButtonPanel from './ButtonPanel'
 import RequestStatus from './RequestStatus'
 
-const StyledForm = styled(Form)`
+const StyledForm = styled(({ hasSubmitButton, ...props }) => <Form {...props} />)`
   min-height: inherit;
-  padding-bottom: 40px;
+  padding-bottom: ${props => props.hasSubmitButton && '40px'};
 `
 
 const MessagePanel = styled(Message)`
@@ -24,12 +24,12 @@ export const validators = {
 
 const renderField = (props) => {
   const { fieldComponent = Form.Input, meta: { touched, invalid }, submitForm, input, ...additionalProps } = props
-  const { onBlur, ...additionalInput } = input
-  const onChangeSubmit = submitForm ? () => {
-    onBlur()
-    submitForm()
-  } : null
-  return createElement(fieldComponent, { error: touched && invalid, meta: props.meta, onBlur: onChangeSubmit, ...additionalInput, ...additionalProps })
+  const { onChange, ...additionalInput } = input
+  const onChangeSubmit = submitForm ? (data) => {
+    onChange(data)
+    submitForm({ [props.input.name]: data })
+  } : onChange
+  return createElement(fieldComponent, { error: touched && invalid, meta: props.meta, onChange: onChangeSubmit, ...additionalInput, ...additionalProps })
 }
 
 renderField.propTypes = {
@@ -121,7 +121,7 @@ class ReduxFormWrapper extends React.Component {
         const singleFieldProps = {
           component: renderField,
           fieldComponent: component,
-          submitForm: this.props.submitOnChange ? this.props.handleSubmit : null,
+          submitForm: this.props.submitOnChange ? this.props.onSubmit : null,
           ...fieldProps,
         }
         return isArrayField ?
@@ -132,7 +132,7 @@ class ReduxFormWrapper extends React.Component {
       })
 
     return (
-      <StyledForm onSubmit={this.props.handleSubmit} size={this.props.size} loading={this.props.submitting}>
+      <StyledForm onSubmit={this.props.handleSubmit} size={this.props.size} loading={this.props.submitting} hasSubmitButton={!this.props.submitOnChange}>
         {fieldComponents}
         {this.props.showErrorPanel && this.props.warning && <MessagePanel warning visible content={this.props.warning} />}
         {errorMessages && errorMessages.length > 0 && <MessagePanel error visible list={errorMessages} />}
