@@ -28,7 +28,7 @@ Add charts:
  Phenotypes:
    Cardio - 32 individuals
    Eye - 10 individuals
-   Ear - 5 inidividuals
+   Ear - 5 individuals
    Neuro - 10 individuals
    Other - 5 individuals
 

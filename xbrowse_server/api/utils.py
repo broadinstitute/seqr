@@ -1,4 +1,5 @@
 from collections import defaultdict
+from django.db.models.query_utils import Q
 from django.shortcuts import get_object_or_404
 from django.conf import settings
 from django.http import Http404
@@ -173,21 +174,22 @@ def add_gene_names_to_variants(reference, variants):
 
 def add_family_tags_to_variants(project, variants):
     for variant in variants:
-        notes = list(VariantNote.objects.filter(
-            project=project, xpos=variant.xpos, ref=variant.ref, alt=variant.alt,
-            family__family_id=variant.extras['family_id'],
-        ).order_by('-date_saved').select_related('user__userprofile').only(*VariantNote.VARIANT_JSON_FIELDS))
+        notes_query = Q(project=project) & Q(xpos=variant.xpos) & Q(ref=variant.ref) & Q(alt=variant.alt)
+        if variant.extras.get('family_id'):
+            notes_query &= Q(family__family_id=variant.extras['family_id'])
+        notes = list(VariantNote.objects.filter(notes_query).order_by('-date_saved').select_related('user__userprofile').only(*VariantNote.VARIANT_JSON_FIELDS))
         variant.set_extra('family_notes', [n.to_variant_json() for n in notes])
 
-        tags = list(VariantTag.objects.filter(
-            project_tag__project=project, xpos=variant.xpos, ref=variant.ref, alt=variant.alt,
-            family__family_id=variant.extras['family_id'],
-        ).select_related('user__userprofile').select_related('project_tag').only(*VariantTag.VARIANT_JSON_FIELDS))
+        variant_tag_query = Q(project_tag__project=project) & Q(xpos=variant.xpos) & Q(ref=variant.ref) & Q(alt=variant.alt)
+        if variant.extras.get('family_id'):
+            variant_tag_query &= Q(family__family_id=variant.extras['family_id'])
+        tags = list(VariantTag.objects.filter(variant_tag_query).select_related('user__userprofile').select_related('project_tag').only(*VariantTag.VARIANT_JSON_FIELDS))
         variant.set_extra('family_tags', [t.to_variant_json() for t in tags])
 
-        functional_data = list(VariantFunctionalData.objects.filter(
-            family__family_id=variant.extras['family_id'], xpos=variant.xpos, ref=variant.ref, alt=variant.alt
-        ).select_related('user__userprofile').only(*VariantFunctionalData.VARIANT_FUNCTIONAL_DATA_JSON_FIELDS))
+        functional_data_query = Q(family__project=project) & Q(xpos=variant.xpos) & Q(ref=variant.ref) & Q(alt=variant.alt)
+        if variant.extras.get('family_id'):
+            functional_data_query &= Q(family__family_id=variant.extras['family_id'])
+        functional_data = list(VariantFunctionalData.objects.filter(functional_data_query).select_related('user__userprofile').only(*VariantFunctionalData.VARIANT_FUNCTIONAL_DATA_JSON_FIELDS))
         variant.set_extra('family_functional_data', [t.to_variant_json() for t in functional_data])
 
 

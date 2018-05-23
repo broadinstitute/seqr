@@ -420,10 +420,10 @@ class Project(models.Model):
             return None
 
     def has_elasticsearch_index(self):
-        if hasattr(self, 'datastore_type'):
-            return self.datastore_type == 'es'
-        else:
-            return self.get_elasticsearch_index() is not None
+        #if hasattr(self, 'datastore_type'):
+        #    return self.datastore_type == 'es'
+        #else:
+        return self.get_elasticsearch_index() is not None
 
 
 class ProjectGeneList(models.Model):

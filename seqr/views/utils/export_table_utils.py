@@ -1,5 +1,7 @@
 import datetime
 from bs4 import BeautifulSoup
+from collections import OrderedDict
+import json
 import openpyxl as xl
 
 from django.http.response import HttpResponse
@@ -14,7 +16,7 @@ def export_table(filename_prefix, header, rows, file_format):
         filename_prefix (string): Filename without the extension.
         header (list): List of column names
         rows (list): List of rows, where each row is a list of column values
-        file_format (string): "tsv" or "xls"
+        file_format (string): "tsv", "xls", or "json"
     Returns:
         Django HttpResponse object with the table data as an attachment.
     """
@@ -45,6 +47,14 @@ def export_table(filename_prefix, header, rows, file_format):
         response['Content-Disposition'] = 'attachment; filename="{}.tsv"'.format(filename_prefix)
         response.writelines(['\t'.join(header)+'\n'])
         response.writelines(('\t'.join(map(unicode, row))+'\n' for row in rows))
+        return response
+    elif file_format == "json":
+        response = HttpResponse(content_type='application/json')
+        response['Content-Disposition'] = 'attachment; filename="{}.json"'.format(filename_prefix)
+        for row in rows:
+            json_keys = map(lambda s: s.replace(" ", "_").lower(), header)
+            json_values = map(unicode, row)
+            response.write(json.dumps(OrderedDict(zip(json_keys, json_values)))+'\n')
         return response
     elif file_format == "xls":
         response = HttpResponse(content_type="application/ms-excel")
