@@ -49,8 +49,10 @@ const ReRunSearchLink = styled.a.attrs({ target: '_blank' })`
   white-space: normal
 `
 
-const NOTE_STYLE = { display: 'flex', fontSize: '1.2em' }
-const ADD_NOTE_STYLE = { verticalAlign: 'middle' }
+const NOTE_STYLES = {
+  Edit: { display: 'flex', fontSize: '1.2em' },
+  Add: { verticalAlign: 'middle' },
+}
 
 const SHORTCUT_TAGS = ['Review', 'Excluded']
 
@@ -138,6 +140,19 @@ VariantTagField.propTypes = {
   fieldName: PropTypes.string,
 }
 
+const VariantNoteField = ({ action, ...props }) =>
+  <TextFieldView
+    isEditable
+    field="note"
+    modalTitle={`${action} Variant Note`}
+    additionalEditFields={VARIANT_NOTE_FIELDS}
+    style={NOTE_STYLES[action]}
+    {...props}
+  />
+
+VariantNoteField.propTypes = {
+  action: PropTypes.string,
+}
 
 const VariantTags = ({ variant, project, updateVariantNote: dispatchUpdateVariantNote, updateVariantTags: dispatchUpdateVariantTags }) =>
   <TagContainer>
@@ -182,33 +197,25 @@ const VariantTags = ({ variant, project, updateVariantNote: dispatchUpdateVarian
     <FitContent><b>Notes:</b></FitContent>
     <div>
       {variant.notes.map(note =>
-        <TextFieldView
+        <VariantNoteField
           key={note.noteGuid}
           initialValues={note}
-          isEditable
           isDeletable
           compact
-          field="note"
           idField="noteGuid"
           onSubmit={dispatchUpdateVariantNote}
-          modalTitle="Edit Variant Note"
-          textEditorAdditionalFields={VARIANT_NOTE_FIELDS}
+          action="Edit"
           deleteConfirm="Are you sure you want to delete this note?"
           textPopupContent={taggedByPopupContent(note)}
-          style={NOTE_STYLE}
         />,
       )}
-      <TextFieldView
-        isEditable
+      <VariantNoteField
         editIconName="plus"
         editLabel="Add Note"
-        field="note"
         idField="variantId"
-        modalTitle="Add Variant Note"
+        action="Add"
         initialValues={variant}
-        additionalEditFields={VARIANT_NOTE_FIELDS}
         onSubmit={dispatchUpdateVariantNote}
-        style={ADD_NOTE_STYLE}
       />
     </div>
   </TagContainer>
