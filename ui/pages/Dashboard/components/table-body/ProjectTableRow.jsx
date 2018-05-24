@@ -82,7 +82,7 @@ class ProjectTableRow extends React.Component {
             title="Family Analysis Status"
             data={analysisStatusDataWithCountKey}
             width={67}
-            height={10}
+            height={12}
           />}
           {/* this.props.user.is_staff && formatDate('', project.deprecatedLastAccessedDate, false) */}
         </Table.Cell>

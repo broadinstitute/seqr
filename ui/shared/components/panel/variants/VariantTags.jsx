@@ -20,20 +20,33 @@ const ShortcutToggleContainer = styled.div`
   }
 `
 
-const TagContainer = styled.span`
+const TagContainer = styled.div`
   display: flex;
-  
-  .fit-content {
-    min-width: fit-content;
-  } 
 `
+
+const FitContent = styled.div`
+   width: fit-content;
+   margin-right: 5px;
+`
+
+const TagSection = styled.div`
+  display: inline-block;
+  padding-bottom: 5px;
+  white-space: nowrap;
+  vertical-align: top;
+  
+  a {
+    vertical-align: text-bottom;
+  }
+`
+
 
 const ReRunSearchLink = styled.a.attrs({ target: '_blank' })`
   font-size: 12px;
   max-width: 40px;
   display: inline-block;
   line-height: .9em;
-  vertical-align: bottom;
+  white-space: normal
 `
 
 const NOTE_STYLE = { display: 'flex', fontSize: '1.2em' }
@@ -128,25 +141,27 @@ VariantTagField.propTypes = {
 
 const VariantTags = ({ variant, project, updateVariantNote: dispatchUpdateVariantNote, updateVariantTags: dispatchUpdateVariantTags }) =>
   <TagContainer>
-    <span className="fit-content">
-      <b>Tags:<HorizontalSpacer width={10} /></b>
-      <ShortcutTags variant={variant} dispatchUpdateVariantTags={dispatchUpdateVariantTags} />
-      <VariantTagField
-        field="tags"
-        fieldName="Tags"
-        variant={variant}
-        tagOptions={project.variantTagTypes}
-        hiddenTags={SHORTCUT_TAGS}
-        onSubmit={dispatchUpdateVariantTags}
-        tagAnnotation={reRunTagSearch}
-      />
-      <HorizontalSpacer width={5} />
+    <FitContent>
+      <TagSection>
+        <b>Tags:<HorizontalSpacer width={10} /></b>
+        <ShortcutTags variant={variant} dispatchUpdateVariantTags={dispatchUpdateVariantTags} />
+        <VariantTagField
+          field="tags"
+          fieldName="Tags"
+          variant={variant}
+          tagOptions={project.variantTagTypes}
+          hiddenTags={SHORTCUT_TAGS}
+          onSubmit={dispatchUpdateVariantTags}
+          tagAnnotation={reRunTagSearch}
+        />
+        <HorizontalSpacer width={5} />
+      </TagSection>
       {variant.tags.some(tag => tag.category === 'CMG Discovery Tags') &&
-        <span>
-          <b>Fxnl Data:<HorizontalSpacer width={10} /></b>
+        <TagSection>
+          <b>Fxnl Data:<HorizontalSpacer width={5} /></b>
           <VariantTagField
             field="functionalData"
-            fieldName="Functional Data"
+            fieldName="Fxnl Data"
             variant={variant}
             tagOptions={project.variantFunctionalTagTypes}
             editMetadata
@@ -161,11 +176,11 @@ const VariantTags = ({ variant, project, updateVariantNote: dispatchUpdateVarian
             }
           />
           <HorizontalSpacer width={5} />
-        </span>
+        </TagSection>
       }
-      <b>Notes:<HorizontalSpacer width={10} /></b>
-    </span>
-    <span>
+    </FitContent>
+    <FitContent><b>Notes:</b></FitContent>
+    <div>
       {variant.notes.map(note =>
         <TextFieldView
           key={note.noteGuid}
@@ -195,7 +210,7 @@ const VariantTags = ({ variant, project, updateVariantNote: dispatchUpdateVarian
         onSubmit={dispatchUpdateVariantNote}
         style={ADD_NOTE_STYLE}
       />
-    </span>
+    </div>
   </TagContainer>
 
 VariantTags.propTypes = {
