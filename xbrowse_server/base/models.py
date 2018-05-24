@@ -821,15 +821,6 @@ CASE_REVIEW_STATUS_CHOICES = (
     ('DP', 'Declined to Participate'),
 )
 
-CASE_REVIEW_STATUS_ACCEPTED_FOR_OPTIONS = (
-    ('A', 'Array'),   # allow multiple-select. No selection = Platform Uncertain
-    ('E', 'Exome'),
-    ('G', 'Genome'),
-    ('R', 'RNA-seq'),
-    ('S', 'Store DNA'),
-    ('P', 'Reprocess'),
-)
-
 
 class Individual(models.Model):
     # metadata tags
@@ -850,7 +841,6 @@ class Individual(models.Model):
     other_notes = models.TextField(default="", blank=True, null=True)
 
     case_review_status = models.CharField(max_length=2, choices=CASE_REVIEW_STATUS_CHOICES, blank=True, null=True, default='')
-    case_review_status_accepted_for = models.CharField(max_length=10, null=True, blank=True)
     case_review_status_last_modified_date = models.DateTimeField(null=True, blank=True, db_index=True)
     case_review_status_last_modified_by = models.ForeignKey(User, null=True, blank=True, related_name='+', on_delete=models.SET_NULL)
     case_review_discussion = models.TextField(null=True, blank=True)

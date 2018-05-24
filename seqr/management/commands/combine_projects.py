@@ -226,7 +226,6 @@ class Command(BaseCommand):
                 to_i.other_notes = choose_one(to_i, 'other_notes', from_i.other_notes, to_i.other_notes)
 
                 to_i.case_review_status = choose_one(to_i, 'case_review_status', from_i.case_review_status, to_i.case_review_status)
-                to_i.case_review_status_accepted_for = choose_one(to_i, 'case_review_status_accepted_for', from_i.case_review_status_accepted_for, to_i.case_review_status_accepted_for)
 
                 to_i.phenotips_id = choose_one(to_i, 'phenotips_id', from_i.phenotips_id, to_i.phenotips_id)
                 to_i.phenotips_data = choose_one(to_i, 'phenotips_data', from_i.phenotips_data, to_i.phenotips_data)

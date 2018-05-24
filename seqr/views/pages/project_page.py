@@ -146,7 +146,6 @@ def _retrieve_individuals(cursor, project_guid, user):
           i.affected AS individual_affected,
           i.notes as individual_notes,
           i.case_review_status AS individual_case_review_status,
-          i.case_review_status_accepted_for AS individual_case_review_status_accepted_for,
           i.case_review_status_last_modified_date AS individual_case_review_status_last_modified_date,
           i.case_review_status_last_modified_by_id AS individual_case_review_status_last_modified_by,
           i.case_review_discussion AS individual_case_review_discussion,
