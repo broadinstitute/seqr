@@ -7,7 +7,7 @@ from django.db.models import Q
 
 from seqr.models import Project as SeqrProject, Family as SeqrFamily, Individual as SeqrIndividual, \
     VariantTagType as SeqrVariantTagType, VariantTag as SeqrVariantTag, VariantNote as SeqrVariantNote, \
-    SavedVariant as SeqrSavedVariant, LocusList as SeqrLocusList, LocusListGene as SeqrLocusListGene
+    VariantFunctionalData as SeqrVariantFunctionalData, LocusList as SeqrLocusList, LocusListGene as SeqrLocusListGene
 from seqr.utils.model_sync_utils import get_or_create_saved_variant
 
 
@@ -17,6 +17,7 @@ XBROWSE_TO_SEQR_CLASS_MAPPING = {
     "Individual": SeqrIndividual,
     "ProjectTag": SeqrVariantTagType,
     "VariantTag": SeqrVariantTag,
+    "VariantFunctionalData": SeqrVariantFunctionalData,
     "VariantNote": SeqrVariantNote,
     "GeneList": SeqrLocusList,
     "GeneListItem": SeqrLocusListGene,
@@ -50,6 +51,7 @@ XBROWSE_TO_SEQR_FIELD_MAPPING = {
     },
     "VariantTag": {
         "project_tag": "variant_tag_type",
+        "search_url": "search_parameters",
         "date_saved": "created_date",
         "user": "created_by",
         "xpos": _DELETED_FIELD,
@@ -57,12 +59,24 @@ XBROWSE_TO_SEQR_FIELD_MAPPING = {
         "alt": _DELETED_FIELD,
         "family": _DELETED_FIELD,
     },
-    # TODO add functional data
-    "VariantNote": {
-        "project_tag": "variant_tag_type",
+    "VariantFunctionalData": {
+        "search_url": "search_parameters",
         "date_saved": "created_date",
         "user": "created_by",
-        "xpos": "xpos_start",
+        "xpos": _DELETED_FIELD,
+        "ref": _DELETED_FIELD,
+        "alt": _DELETED_FIELD,
+        "family": _DELETED_FIELD,
+    },
+    "VariantNote": {
+        "search_url": "search_parameters",
+        "date_saved": "created_date",
+        "user": "created_by",
+        "xpos": _DELETED_FIELD,
+        "ref": _DELETED_FIELD,
+        "alt": _DELETED_FIELD,
+        "family": _DELETED_FIELD,
+        "project": _DELETED_FIELD,
     },
     "GeneList": {
         "owner": "created_by",
@@ -76,6 +90,12 @@ XBROWSE_TO_SEQR_FIELD_MAPPING = {
 
 XBROWSE_TO_SEQR_ADDITIONAL_ENTITIES_MAPPING = {
     "VariantTag": {
+        "saved_variant": get_or_create_saved_variant
+    },
+    "VariantFunctionalData": {
+        "saved_variant": get_or_create_saved_variant
+    },
+    "VariantNote": {
         "saved_variant": get_or_create_saved_variant
     }
 }
@@ -121,23 +141,44 @@ def find_matching_seqr_model(xbrowse_model):
                 return xbrowse_model.seqr_variant_tag
 
             variant_tag_type = find_matching_seqr_model(xbrowse_model.project_tag)
+            criteria = {
+                'variant_tag_type': variant_tag_type,
+                'saved_variant__project__deprecated_project_id': xbrowse_model.project_tag.project.project_id,
+                'saved_variant__xpos_start': xbrowse_model.xpos,
+                'saved_variant__ref': xbrowse_model.ref,
+                'saved_variant__alt': xbrowse_model.alt,
+            }
             if xbrowse_model.family:
-                return SeqrVariantTag.objects.get(
-                    variant_tag_type=variant_tag_type,
-                    saved_variant__xpos_start=xbrowse_model.xpos,
-                    saved_variant__ref=xbrowse_model.ref,
-                    saved_variant__alt=xbrowse_model.alt,
-                    saved_variant__family__family_id=xbrowse_model.family.family_id)
-            else:
-                return SeqrVariantTag.objects.get(
-                    variant_tag_type=variant_tag_type,
-                    saved_variant__xpos_start=xbrowse_model.xpos,
-                    saved_variant__ref=xbrowse_model.ref,
-                    saved_variant__alt=xbrowse_model.alt)
-        # TODO add functional data
+                criteria['saved_variant__family__family_id'] = xbrowse_model.family.family_id
+            return SeqrVariantTag.objects.get(**criteria)
+        elif xbrowse_class_name == "VariantFunctionalData":
+            if xbrowse_model.seqr_variant_functional_data:
+                return xbrowse_model.seqr_variant_functional_data
+
+            criteria = {
+                'functional_data_tag': xbrowse_model.functional_data_tag,
+                'saved_variant__xpos_start': xbrowse_model.xpos,
+                'saved_variant__ref': xbrowse_model.ref,
+                'saved_variant__alt': xbrowse_model.alt,
+            }
+            if xbrowse_model.family:
+                criteria['saved_variant__family__family_id'] = xbrowse_model.family.family_id
+                criteria['saved_variant__project__deprecated_project_id'] = xbrowse_model.family.project.project_id
+            return SeqrVariantFunctionalData.objects.get(**criteria)
         elif xbrowse_class_name == "VariantNote":
             if xbrowse_model.seqr_variant_note:
                 return xbrowse_model.seqr_variant_note
+
+            criteria = {
+                'note': xbrowse_model.note,
+                'saved_variant__project__deprecated_project_id': xbrowse_model.project.project_id,
+                'saved_variant__xpos_start': xbrowse_model.xpos,
+                'saved_variant__ref': xbrowse_model.ref,
+                'saved_variant__alt': xbrowse_model.alt,
+            }
+            if xbrowse_model.family:
+                criteria['saved_variant__family__family_id'] = xbrowse_model.family.family_id
+            return SeqrVariantNote.objects.get(**criteria)
         elif xbrowse_class_name == "GeneList":
             return xbrowse_model.seqr_locus_list or SeqrLocusList.objects.get(
                 name=xbrowse_model.name,
@@ -192,9 +233,9 @@ def _create_additional_seqr_entities(xbrowse_model, **kwargs):
 
 def update_xbrowse_model(xbrowse_model, **kwargs):
     print("update_xbrowse_model(%s, %s)" % (xbrowse_model, kwargs))
+    seqr_model = find_matching_seqr_model(xbrowse_model)
     _update_model(xbrowse_model, **kwargs)
 
-    seqr_model = find_matching_seqr_model(xbrowse_model)
     if not seqr_model:
         return
 
