@@ -5,7 +5,7 @@ import traceback
 from django.core.exceptions import ObjectDoesNotExist
 
 from xbrowse_server.base.models import Project as BaseProject, Family as BaseFamily, Individual as BaseIndividual, ProjectTag as BaseProjectTag, VariantTag as BaseVariantTag, VariantNote as BaseVariantNote
-from xbrowse_server.gene_lists.models import GeneList, GeneListItem
+from xbrowse_server.gene_lists.models import GeneList as BaseGeneList, GeneListItem as BaseGeneListItem
 
 SEQR_TO_XBROWSE_CLASS_MAPPING = {
     "Project": BaseProject,
@@ -14,8 +14,8 @@ SEQR_TO_XBROWSE_CLASS_MAPPING = {
     "VariantTagType": BaseProjectTag,
     "VariantTag": BaseVariantTag,
     "VariantNote": BaseVariantNote,
-    "LocusList": GeneList,
-    "LocusListGene": GeneListItem,
+    "LocusList": BaseGeneList,
+    "LocusListGene": BaseGeneListItem,
 }
 
 _DELETED_FIELD = "__DELETED__"
@@ -94,9 +94,30 @@ def find_matching_xbrowse_model(seqr_model):
                 family__project__project_id=seqr_model.family.project.deprecated_project_id,
                 family__family_id=seqr_model.family.family_id,
                 indiv_id=seqr_model.individual_id)
-
+        elif seqr_class_name == "Individual":
+            return BaseIndividual.objects.get(
+                family__project__project_id=seqr_model.family.project.deprecated_project_id,
+                family__family_id=seqr_model.family.family_id,
+                indiv_id=seqr_model.individual_id)
+        elif seqr_class_name == "VariantTag":
+            raise ValueError("VariantTag sync not yet implemented")
+        elif seqr_class_name == "VariantTagType":
+            raise ValueError("VariantTagType sync not yet implemented")
+        elif seqr_class_name == "VariantNote":
+            raise ValueError("VariantNote sync not yet implemented")
+        elif seqr_class_name == "LocusList":
+            return BaseGeneList.objects.get(
+                name=seqr_model.name,
+                description=seqr_model.description,
+                is_public=seqr_model.is_public)
+        elif seqr_class_name == "LocusListGene":
+            return BaseGeneListItem.objects.get(
+                gene_list=find_matching_xbrowse_model(seqr_model.locus_list),
+                description=seqr_model.description,
+                gene_id=seqr_model.gene_id)
     except Exception as e:
-        logging.error("ERROR: ", e)
+        logging.error("ERROR: when looking up xbrowse model for seqr %s model: %s" % (seqr_model, e))
+        traceback.print_exc()
 
     return None
 
@@ -123,7 +144,7 @@ def _convert_seqr_kwargs_to_xbrowse_kwargs(seqr_model, **kwargs):
     return xbrowse_kwargs
 
 def update_seqr_model(seqr_model, **kwargs):
-    print("update_seqr_model(%s, %s)" % (seqr_model, kwargs))
+    logging.info("update_seqr_model(%s, %s)" % (seqr_model, kwargs))
     _update_model(seqr_model, **kwargs)
 
     xbrowse_model = find_matching_xbrowse_model(seqr_model)
@@ -171,7 +192,7 @@ def create_seqr_model(seqr_model_class, **kwargs):
 
 
 def get_or_create_seqr_model(seqr_model_class, **kwargs):
-    print("get_or_create_seqr_model(%s, %s)" % (seqr_model_class, kwargs))
+    logging.info("get_or_create_seqr_model(%s, %s)" % (seqr_model_class, kwargs))
     seqr_model, created = seqr_model_class.objects.get_or_create(**kwargs)
 
     xbrowse_model = find_matching_xbrowse_model(seqr_model)
@@ -192,11 +213,6 @@ def delete_seqr_model(seqr_model):
     seqr_model.delete()
 
     try:
-        #if type(seqr_model).__name__ == "Individual":
-            # first delete vcf files
-            #for vcf_file in xbrowse_model.vcffile_set.all():
-            #    vcf_file.delete()
-
         xbrowse_model.delete()
     except Exception as e:
         logging.error("ERROR: error when deleting seqr model %s: %s" % (seqr_model, e))
