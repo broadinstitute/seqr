@@ -32,7 +32,7 @@ def get_saved_variant_json(xpos, ref, alt, new_family, new_project):
 
     project_id = new_project.deprecated_project_id if new_project else new_family.project.deprecated_project_id
     project = Project.objects.get(project_id=project_id)
-    user = User.objects.filter(is_staff=True).first(),  # HGMD annotations are only returned for staff users
+    user = User.objects.filter(is_staff=True).first()  # HGMD annotations are only returned for staff users
     try:
         variant_info = get_datastore(project).get_single_variant(
             project_id, new_family.family_id, xpos, ref, alt, user=user

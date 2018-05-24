@@ -22,7 +22,7 @@ from xbrowse_server.base.models import \
     ProjectTag, \
     VariantTag, \
     VariantFunctionalData, \
-    ProjectCollaborator,
+    ProjectCollaborator
 
 from seqr.models import \
     Project as SeqrProject, \
@@ -240,7 +240,8 @@ class Command(BaseCommand):
                     counters['seqr_variant_tag_type_deleted'] += 1
 
             # delete Tag
-            SeqrVariantTag.objects.filter(saved_variant__isnull=True).delete()
+            delete_count, _ = SeqrVariantTag.objects.filter(saved_variant__isnull=True).delete()
+            counters['seqr_variant_tag_deleted'] += delete_count
             for seqr_variant_tag in SeqrVariantTag.objects.filter(saved_variant__project__deprecated_project_id=deprecated_project_id):
 
                 if not VariantTag.objects.filter(
@@ -256,7 +257,8 @@ class Command(BaseCommand):
                     counters['seqr_variant_tag_deleted'] += 1
 
             # delete functional data tags
-            SeqrVariantFunctionalData.objects.filter(saved_variant__isnull=True).delete()
+            delete_count, _ = SeqrVariantFunctionalData.objects.filter(saved_variant__isnull=True).delete()
+            counters['seqr_variant_functional_data_deleted'] += delete_count
             for seqr_variant_functional_data in SeqrVariantFunctionalData.objects.filter(
                     saved_variant__project__deprecated_project_id=deprecated_project_id):
 
@@ -273,7 +275,8 @@ class Command(BaseCommand):
                     counters['seqr_variant_tag_deleted'] += 1
 
             # delete Variant Note
-            SeqrVariantNote.objects.filter(saved_variant__isnull=True).delete()
+            delete_count, _ = SeqrVariantNote.objects.filter(saved_variant__isnull=True).delete()
+            counters['seqr_variant_note_deleted'] += delete_count
             for seqr_variant_note in SeqrVariantNote.objects.filter(saved_variant__project__deprecated_project_id=deprecated_project_id):
 
                 if not VariantNote.objects.filter(
@@ -342,7 +345,8 @@ class Command(BaseCommand):
         logger.info("Done")
         logger.info("Stats: ")
         for k, v in counters.items():
-            logger.info("  %s: %s" % (k, v))
+            if v > 0:
+                logger.info("  %s: %s" % (k, v))
 
 
 def create_sample_records(sample_type, source_project, source_individual, new_project, new_individual, counters):
@@ -769,7 +773,8 @@ def get_or_create_earliest_dataset(current_dataset, new_sample, new_project, sou
 
 def get_or_create_variant_tag_type(source_variant_tag_type, new_project):
     try:
-        core_variant_tag_type = SeqrVariantTagType.objects.get(
+        created = False
+        new_variant_tag_type = SeqrVariantTagType.objects.get(
             project=None,
             name=source_variant_tag_type.tag,
         )
@@ -780,7 +785,6 @@ def get_or_create_variant_tag_type(source_variant_tag_type, new_project):
         ).delete()
         for model, delete_count in deleted.items():
             print("=== deleted {} {} models with tag type {}".format(delete_count, model, source_variant_tag_type.tag))
-        return core_variant_tag_type, False
 
     except ObjectDoesNotExist:
         new_variant_tag_type, created = SeqrVariantTagType.objects.get_or_create(
@@ -791,10 +795,6 @@ def get_or_create_variant_tag_type(source_variant_tag_type, new_project):
         if created:
             print("=== created variant tag type: " + str(new_variant_tag_type))
 
-        if source_variant_tag_type.seqr_variant_tag_type != new_variant_tag_type:
-            source_variant_tag_type.seqr_variant_tag_type = new_variant_tag_type
-            source_variant_tag_type.save()
-
         new_variant_tag_type.description = source_variant_tag_type.title
         new_variant_tag_type.color = source_variant_tag_type.color
         new_variant_tag_type.order = source_variant_tag_type.order
@@ -802,7 +802,11 @@ def get_or_create_variant_tag_type(source_variant_tag_type, new_project):
         new_variant_tag_type.is_built_in = False
         new_variant_tag_type.save()
 
-        return new_variant_tag_type, created
+    if source_variant_tag_type.seqr_variant_tag_type != new_variant_tag_type:
+        source_variant_tag_type.seqr_variant_tag_type = new_variant_tag_type
+        source_variant_tag_type.save()
+
+    return new_variant_tag_type, created
 
 
 def get_or_create_variant_tag(source_variant_tag, new_project, new_family, new_variant_tag_type):
@@ -835,8 +839,8 @@ def get_or_create_variant_tag(source_variant_tag, new_project, new_family, new_v
 def get_or_create_variant_functional_data(source_variant_functional_data, new_project, new_family):
     new_saved_variant = get_or_create_saved_variant(
         xpos=source_variant_functional_data.xpos,
-        alt=source_variant_functional_data.ref,
-        ref=source_variant_functional_data.alt,
+        ref=source_variant_functional_data.ref,
+        alt=source_variant_functional_data.alt,
         family=new_family,
         project=new_project
     )
