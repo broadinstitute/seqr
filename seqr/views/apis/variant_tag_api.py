@@ -144,6 +144,7 @@ def _variant_details(variant_json, user):
                 'hgvsc': vep_a.get('hgvsc'),
                 'hgvsp': vep_a.get('hgvsp'),
             } for i, vep_a in enumerate(annotation.get('vep_annotation') or [])],
+            'vepConsequence': annotation.get('vep_consequence'),
             'vepGroup': annotation.get('vep_group'),
             'worstVepAnnotation': {
                 'symbol': worst_vep_annotation.get('gene_symbol') or worst_vep_annotation.get('symbol'),

@@ -15,6 +15,8 @@ import {
   FAMILY_SORT_OPTIONS,
   SORT_BY_FAMILY_GUID,
   VARIANT_SORT_OPTONS,
+  VARIANT_EXPORT_DATA,
+  VARIANT_GENOTYPE_EXPORT_DATA,
 } from './constants'
 
 
@@ -117,6 +119,27 @@ export const getSavedVariantTotalPages = createSelector(
   getFilteredProjectSavedVariants, getSavedVariantRecordsPerPage,
   (filteredSavedVariants, recordsPerPage) => {
     return Math.max(1, Math.ceil(filteredSavedVariants.length / recordsPerPage))
+  },
+)
+
+export const getSavedVariantExportConfig = createSelector(
+  getFilteredProjectSavedVariants,
+  (filteredSavedVariants) => {
+    const maxGenotypes = Math.max(...filteredSavedVariants.map(variant => Object.keys(variant.genotypes).length), 0)
+    return {
+      rawData: filteredSavedVariants,
+      headers: [...Array(maxGenotypes).keys()].reduce(
+        (acc, i) => [...acc, ...VARIANT_GENOTYPE_EXPORT_DATA.map(config => `${config.header}_${i + 1}`)],
+        VARIANT_EXPORT_DATA.map(config => config.header),
+      ),
+      processRow: variant => Object.keys(variant.genotypes).reduce(
+        (acc, individualId) => [...acc, ...VARIANT_GENOTYPE_EXPORT_DATA.map((config) => {
+          const genotype = variant.genotypes[individualId]
+          return config.getVal ? config.getVal(genotype, individualId) : genotype[config.header]
+        })],
+        VARIANT_EXPORT_DATA.map(config => (config.getVal ? config.getVal(variant) : variant[config.header])),
+      ),
+    }
   },
 )
 

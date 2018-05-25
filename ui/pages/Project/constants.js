@@ -322,3 +322,31 @@ export const VARIANT_SORT_OPTONS = [
   { value: SORT_BY_PATHOGENICITY, text: 'Pathogenicity', comparator: (a, b) => clinsigSeverity(b) - clinsigSeverity(a) },
   { value: SORT_BY_IN_OMIM, text: 'In OMIM', comparator: (a, b) => b.genes.some(gene => gene.diseaseDbPheotypes.length > 0) - a.genes.some(gene => gene.diseaseDbPheotypes.length > 0) },
 ]
+
+export const VARIANT_EXPORT_DATA = [
+  { header: 'chrom' },
+  { header: 'pos' },
+  { header: 'ref' },
+  { header: 'alt' },
+  { header: 'tags', getVal: variant => variant.tags.map(tag => tag.name).join('|') },
+  { header: 'notes', getVal: variant => variant.notes.map(note => `${note.user}: ${note.note}`).join('|') },
+  { header: 'family', getVal: variant => variant.familyGuid.split(/_(.+)/)[1] },
+  { header: 'gene', getVal: variant => variant.annotation.worstVepAnnotation.symbol },
+  { header: 'consequence', getVal: variant => variant.annotation.vepConsequence },
+  { header: '1kg_freq', getVal: variant => variant.annotation.freqs.g1k },
+  { header: 'exac_freq', getVal: variant => variant.annotation.freqs.exac },
+  { header: 'sift', getVal: variant => variant.annotation.sift },
+  { header: 'polyphen', getVal: variant => variant.annotation.polyphen },
+  { header: 'hgvsc', getVal: variant => variant.annotation.worstVepAnnotation.hgvsc },
+  { header: 'hgvsp', getVal: variant => variant.annotation.worstVepAnnotation.hgvsp },
+]
+
+export const VARIANT_GENOTYPE_EXPORT_DATA = [
+  { header: 'sample_id', getVal: (genotype, individualId) => individualId },
+  { header: 'genotype', getVal: genotype => (genotype.alleles.length ? genotype.alleles.join('/') : './.') },
+  { header: 'filter' },
+  { header: 'ad' },
+  { header: 'dp' },
+  { header: 'gq' },
+  { header: 'ab' },
+]

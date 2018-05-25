@@ -63,7 +63,7 @@ class ProjectsTable extends React.Component
         <HorizontalSpacer width={30} />
         <FilterSelector />
         <RightAligned>
-          <ExportTableButton urls={PROJECT_EXPORT_URLS} />
+          <ExportTableButton downloads={PROJECT_EXPORT_URLS} />
           <HorizontalSpacer width={45} />
         </RightAligned>
         <Table striped stackable>

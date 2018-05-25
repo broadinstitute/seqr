@@ -25,7 +25,7 @@ const FamilyTable = ({ visibleFamilies, loading, headerStatus, showSearchLinks, 
   <div>
     <PageSelector />
     <ExportContainer>
-      <ExportTableButton urls={exportUrls} />
+      <ExportTableButton downloads={exportUrls} />
       <HorizontalSpacer width={45} />
     </ExportContainer>
     <Table celled striped padded>

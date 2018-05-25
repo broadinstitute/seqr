@@ -4,15 +4,18 @@ import { connect } from 'react-redux'
 import { Loader, Grid, Pagination } from 'semantic-ui-react'
 import styled from 'styled-components'
 
+import ExportTableButton from 'shared/components/buttons/export-table/ExportTableButton'
 import VariantTagTypeBar from 'shared/components/graph/VariantTagTypeBar'
 import Variants from 'shared/components/panel/variants/Variants'
 import { Dropdown, InlineToggle } from 'shared/components/form/Inputs'
 import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
 import { HorizontalSpacer } from 'shared/components/Spacers'
+import { titlecase } from 'shared/utils/stringUtils'
 import { loadProjectVariants, updateSavedVariantTable } from '../reducers'
 import {
   getProject, getProjectSavedVariantsIsLoading, getProjectSavedVariants, getVisibleSortedProjectSavedVariants,
   getFilteredProjectSavedVariants, getSavedVariantTableState, getSavedVariantVisibleIndices, getSavedVariantTotalPages,
+  getSavedVariantExportConfig,
 } from '../selectors'
 import { VARIANT_SORT_OPTONS } from '../constants'
 
@@ -44,6 +47,10 @@ const FILTER_FIELDS = [
 ]
 
 const InlineFormColumn = styled(Grid.Column)`
+  .ui.form {
+    display: inline-block;
+  }
+  
   .field.inline {
     padding-left: 20px;
   }
@@ -56,9 +63,10 @@ class SavedVariants extends React.Component {
     match: PropTypes.object,
     project: PropTypes.object,
     loading: PropTypes.bool,
-    savedVariants: PropTypes.array,
+    variantsToDisplay: PropTypes.array,
     totalVariantsCount: PropTypes.number,
-    filteredVariantsCount: PropTypes.number,
+    filteredVariants: PropTypes.array,
+    variantExportConfig: PropTypes.object,
     tableState: PropTypes.object,
     firstRecordIndex: PropTypes.number,
     totalPages: PropTypes.number,
@@ -92,6 +100,15 @@ class SavedVariants extends React.Component {
       [{ ...BASE_CATEGORY_FILTER_FIELD, options: [{ value: 'ALL', text: 'All' }, ...this.categoryOptions] }].concat(FILTER_FIELDS) :
       FILTER_FIELDS
 
+    const familyId = familyGuid && familyGuid.split(/_(.+)/)[1]
+    const exports = [{
+      name: `${tag || titlecase(this.props.tableState.categoryFilter)} Variants ${familyId ? `in Family ${familyId}` : ''}`,
+      data: {
+        filename: `saved_${tag || this.props.tableState.categoryFilter}_variants_${this.props.project.name}${familyId ? `_family_${familyId}` : ''}`.replace(/ /g, '-').toLowerCase(),
+        ...this.props.variantExportConfig,
+      },
+    }]
+
     return (
       <Grid>
         <Grid.Row>
@@ -103,7 +120,7 @@ class SavedVariants extends React.Component {
           <Grid.Row>
             <Grid.Column width={8}>
               Showing {this.props.firstRecordIndex + 1}-
-              {this.props.firstRecordIndex + this.props.savedVariants.length} of {this.props.filteredVariantsCount}
+              {this.props.firstRecordIndex + this.props.variantsToDisplay.length} of {this.props.filteredVariants.length}
               {tag && <b>{` "${tag}"`}</b>} variants ({this.props.totalVariantsCount} total)
               <HorizontalSpacer width={20} />
               <Pagination
@@ -122,12 +139,14 @@ class SavedVariants extends React.Component {
                 submitOnChange
                 fields={filterFields}
               />
+              <HorizontalSpacer width={20} />
+              <ExportTableButton downloads={exports} />
             </InlineFormColumn>
           </Grid.Row>
         }
         <Grid.Row>
           <Grid.Column width={16}>
-            {this.props.loading ? <Loader inline="centered" active /> : <Variants variants={this.props.savedVariants} />}
+            {this.props.loading ? <Loader inline="centered" active /> : <Variants variants={this.props.variantsToDisplay} />}
           </Grid.Column>
         </Grid.Row>
       </Grid>
@@ -138,12 +157,13 @@ class SavedVariants extends React.Component {
 const mapStateToProps = (state, ownProps) => ({
   project: getProject(state),
   loading: getProjectSavedVariantsIsLoading(state),
-  savedVariants: getVisibleSortedProjectSavedVariants(state, ownProps),
+  variantsToDisplay: getVisibleSortedProjectSavedVariants(state, ownProps),
   totalVariantsCount: getProjectSavedVariants(state, ownProps).length,
-  filteredVariantsCount: getFilteredProjectSavedVariants(state, ownProps).length,
+  filteredVariants: getFilteredProjectSavedVariants(state, ownProps),
   tableState: getSavedVariantTableState(state, ownProps),
   firstRecordIndex: getSavedVariantVisibleIndices(state, ownProps)[0],
   totalPages: getSavedVariantTotalPages(state, ownProps),
+  variantExportConfig: getSavedVariantExportConfig(state, ownProps),
 })
 
 const mapDispatchToProps = {
