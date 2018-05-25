@@ -176,6 +176,7 @@ class ReduxFormWrapper extends React.Component {
       'submitButtonText',
       'dirty',
       'confirmCloseIfNotSaved',
+      'initialValues',
     ]
     if (updateProps.some(k => nextProps[k] !== this.props[k])) {
       return true

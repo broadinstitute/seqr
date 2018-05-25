@@ -69,40 +69,41 @@ const taggedByPopupContent = tag =>
 const reRunTagSearch = tag => tag.searchParameters &&
   <ReRunSearchLink href={tag.searchParameters}>Re-run search</ReRunSearchLink>
 
-const ShortcutTagToggle = ({ value, ...props }) =>
+const ShortcutTagToggle = ({ searchParameters, ...props }) =>
   <span>
-    <InlineToggle value={value.isApplied} color={value.color} label={value.name} {...props} />
+    <InlineToggle {...props} />
     <HorizontalSpacer width={5} />
-    {reRunTagSearch(value)}
-    {value.searchParameters && <HorizontalSpacer width={5} />}
+    {reRunTagSearch({ searchParameters })}
+    {searchParameters && <HorizontalSpacer width={5} />}
   </span>
 
 ShortcutTagToggle.propTypes = {
-  value: PropTypes.any,
+  searchParameters: PropTypes.string,
 }
-
-const SHORTCUT_TAG_FIELDS = SHORTCUT_TAGS.map(tagName => ({
-  name: tagName,
-  component: ShortcutTagToggle,
-}))
 
 const ShortcutTags = ({ variant, dispatchUpdateVariantTags }) => {
   const appliedShortcutTags = SHORTCUT_TAGS.reduce((acc, tagName) => {
     const appliedTag = variant.tags.find(tag => tag.name === tagName)
-    return { ...acc, [tagName]: appliedTag ? { ...appliedTag, isApplied: true } : { name: tagName, isApplied: false } }
+    return appliedTag ? { ...acc, [tagName]: { color: appliedTag.color, searchParameters: appliedTag.searchParameters } } : acc
   }, {})
+  const shortcutTagFields = SHORTCUT_TAGS.map(tagName => ({
+    name: tagName,
+    label: tagName,
+    component: ShortcutTagToggle,
+    ...appliedShortcutTags[tagName],
+  }))
+
   const onSubmit = (values) => {
     const updatedTags = Object.keys(values).reduce((allTags, tagName) => {
       const applied = values[tagName]
-      if (applied === true) {
+      if (applied) {
         return [...allTags, { name: tagName }]
-      } else if (applied === false) {
-        return allTags.filter(tag => tag.name !== tagName)
       }
-      return allTags
+      return allTags.filter(tag => tag.name !== tagName)
     }, variant.tags)
     return dispatchUpdateVariantTags({ ...variant, tags: updatedTags })
   }
+
   return (
     <ShortcutToggleContainer>
       <ReduxFormWrapper
@@ -111,7 +112,7 @@ const ShortcutTags = ({ variant, dispatchUpdateVariantTags }) => {
         initialValues={appliedShortcutTags}
         closeOnSuccess={false}
         submitOnChange
-        fields={SHORTCUT_TAG_FIELDS}
+        fields={shortcutTagFields}
       />
     </ShortcutToggleContainer>
   )

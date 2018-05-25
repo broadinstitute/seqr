@@ -125,7 +125,6 @@ StringValueCheckboxGroup.propTypes = {
 }
 
 export const BooleanCheckbox = (props) => {
-  console.log(props)
   const { value, onChange, ...baseProps } = props
   return <BaseSemanticInput
     {...baseProps}

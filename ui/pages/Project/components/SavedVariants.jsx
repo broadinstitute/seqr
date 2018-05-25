@@ -109,6 +109,9 @@ class SavedVariants extends React.Component {
       },
     }]
 
+    const allShown = this.props.variantsToDisplay.length === this.props.totalVariantsCount
+    const shownSummary = allShown ? 'all' :
+      `${this.props.firstRecordIndex + 1}-${this.props.firstRecordIndex + this.props.variantsToDisplay.length} of`
     return (
       <Grid>
         <Grid.Row>
@@ -119,9 +122,7 @@ class SavedVariants extends React.Component {
         {!this.props.loading &&
           <Grid.Row>
             <Grid.Column width={8}>
-              Showing {this.props.firstRecordIndex + 1}-
-              {this.props.firstRecordIndex + this.props.variantsToDisplay.length} of {this.props.filteredVariants.length}
-              {tag && <b>{` "${tag}"`}</b>} variants ({this.props.totalVariantsCount} total)
+              Showing {shownSummary} {this.props.filteredVariants.length}{tag && <b>{` "${tag}"`}</b>} variants {!allShown && `(${this.props.totalVariantsCount} total)`}
               <HorizontalSpacer width={20} />
               <Pagination
                 activePage={this.props.tableState.currentPage || 1}

@@ -63,6 +63,7 @@ const TagFieldView = ({ initialValues, field, tagOptions, popupContent, tagAnnot
   const tagOptionsMap = tagOptions.reduce((acc, tag) => {
     return { [tag.name]: tag, ...acc }
   }, {})
+  tagOptions = tagOptions.filter(tag => !hiddenTags.includes(tag.name))
 
   const mappedValues = {
     ...initialValues,
