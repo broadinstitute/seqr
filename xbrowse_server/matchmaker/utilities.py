@@ -17,6 +17,8 @@ from tqdm import tqdm
 from reference_data.models import HumanPhenotypeOntology
 import logging
 from django.core.exceptions import ObjectDoesNotExist
+from django.template.loader import render_to_string
+from django.core.mail import send_mail
 
 logger = logging.getLogger()
 
@@ -188,8 +190,8 @@ def generate_notification_for_incoming_match(response_from_matchbox,incoming_req
     incoming_patient_as_json = json.loads(incoming_external_request_patient.strip())
     
     institution = incoming_patient_as_json['patient']['contact'].get('institution','(institution name not given)')
-    message = 'Dear collaborators, this match request came in from ' + institution  + ' today (' + time.strftime('%d, %b %Y')  + ').' 
-    message += ' Their contact URL was: ' + incoming_patient_as_json['patient']['contact'].get('href','(invalid URL!') + '. '
+    message = 'Dear collaborators, \n\nThis match request came in from ' + institution  + ' today (' + time.strftime('%d, %b %Y')  + ').' 
+    message += ' The contact information given was: ' + incoming_patient_as_json['patient']['contact'].get('href','(sorry the information given was invalid') + '. \n\n'
     if len(results_from_matchbox) > 0:
         if incoming_patient_as_json['patient'].has_key('genomicFeatures'):
             message += 'The following gene(s), '
@@ -209,13 +211,13 @@ def generate_notification_for_incoming_match(response_from_matchbox,incoming_req
                 if i<len(incoming_patient_as_json['patient']['genomicFeatures'])-1:
                     message += ', '
                     
-            message += ' came-in with this request.\n\n'
+            message += ', came-in with this request.\n\n'
         
-        message += '*We found matches to these genes in matchbox! The matches are*,\n '
+        message += 'We found matches to these genes in matchbox! The matches are,\n\n '
         for result in results_from_matchbox:
             seqr_id_maps = settings.SEQR_ID_TO_MME_ID_MAP.find({"submitted_data.patient.id":result['patient']['id']}).sort('insertion_date',-1).limit(1)
             for seqr_id_map in seqr_id_maps:
-                message += ' seqr ID ' + seqr_id_map['seqr_id'] 
+                message += 'seqr ID ' + seqr_id_map['seqr_id'] 
                 message += ' from project ' +    seqr_id_map['project_id'] 
                 message += ' in family ' +  seqr_id_map['family_id'] 
                 message += ', inserted into matchbox on ' + seqr_id_map['insertion_date'].strftime('%d, %b %Y')
@@ -233,10 +235,11 @@ def generate_notification_for_incoming_match(response_from_matchbox,incoming_req
         message += 'These matches were sent back today (' + time.strftime('%d, %b %Y')  + ').'
         if settings.SLACK_TOKEN is not None:
             post_in_slack(message,settings.MME_SLACK_MATCH_NOTIFICATION_CHANNEL)
+        print ("boo")
         if settings.EMAIL_NOTIFICATIONS_ACTIVATED:
             email_content = render_to_string(
                 'emails/mme_returned_match_result_message.txt',
-                {'mme_match_message': "test_alert" },
+                {'mme_match_message': message },
             )
             send_mail('test alert', 
                       email_content, 

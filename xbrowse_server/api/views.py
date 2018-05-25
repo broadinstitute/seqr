@@ -11,8 +11,6 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404
 from django.http import HttpResponse, HttpResponseBadRequest, Http404
 from django.core.exceptions import PermissionDenied, ObjectDoesNotExist
-from django.core.mail import send_mail
-
 from settings import LOGIN_URL
 from xbrowse.analysis_modules.combine_mendelian_families import get_variants_by_family_for_gene
 from xbrowse_server.analysis.diagnostic_search import get_gene_diangostic_info
@@ -38,13 +36,11 @@ from xbrowse_server import server_utils
 from . import basicauth
 from xbrowse_server import user_controls
 from django.utils import timezone
-from django.template.loader import render_to_string
-
 from xbrowse_server.phenotips.reporting_utilities import phenotype_entry_metric_for_individual
 from xbrowse_server.base.models import ANALYSIS_STATUS_CHOICES
 from xbrowse_server.matchmaker.utilities import get_all_clinical_data_for_family
 from xbrowse_server.matchmaker.utilities import is_a_valid_patient_structure
-from xbrowse_server.matchmaker.utilities import generate_slack_notification_for_incoming_match
+from xbrowse_server.matchmaker.utilities import generate_notification_for_incoming_match
 from xbrowse_server.matchmaker.utilities import generate_slack_notification_for_seqr_match
 from xbrowse_server.matchmaker.utilities import find_latest_family_member_submissions
 from xbrowse_server.matchmaker.utilities import convert_matchbox_id_to_seqr_id
@@ -1666,16 +1662,7 @@ def match(request):
                           data=query_patient_data,
                           headers=mme_headers)
         if r.status_code==200:
-            email_content = render_to_string(
-                'emails/mme_returned_match_result_message.txt',
-                {'mme_match_message': "test_alert" },
-            )
-            send_mail('test alert', 
-                      email_content, 
-                      settings.FROM_EMAIL, 
-                      ['harindra@broadinstitute.org',], 
-                      fail_silently=False)
-            generate_slack_notification_for_incoming_match(r,request,query_patient_data)
+            generate_notification_for_incoming_match(r,request,query_patient_data)
         resp = HttpResponse(r.text)
         resp.status_code=r.status_code
         for k,v in r.headers.iteritems():

@@ -43,10 +43,10 @@ DATABASES = {
 
 ALLOWED_HOSTS = ['*']
 
+EMAIL_NOTIFICATIONS_ACTIVATED=True
 EMAIL_BACKEND = 'anymail.backends.postmark.EmailBackend'
-
 ANYMAIL = {
-            'POSTMARK_SERVER_TOKEN': '<put-token-here>'
+            'POSTMARK_SERVER_TOKEN': 'token'
             }
 
 
