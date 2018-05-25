@@ -439,7 +439,6 @@ def _deprecated_update_original_individual_data(project, individual):
     base_individual.affected = individual.affected
     base_individual.nickname = individual.display_name
     base_individual.case_review_status = individual.case_review_status
-    base_individual.case_review_status_accepted_for = individual.case_review_status_accepted_for
 
     if created or not base_individual.phenotips_id:
         base_individual.phenotips_id = individual.phenotips_eid

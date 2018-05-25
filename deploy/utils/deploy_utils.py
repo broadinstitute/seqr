@@ -634,6 +634,10 @@ def deploy_secrets(settings):
             "--from-file deploy/secrets/shared/gcloud/client_secrets.json",
             "--from-file deploy/secrets/shared/gcloud/boto",
         ]))
+    else:
+        run(" ".join([
+            "kubectl create secret generic gcloud-client-secrets"   # create an empty set of client secrets
+        ]))
 
 
 def deploy_elasticsearch_sharded(component, settings):

@@ -287,16 +287,6 @@ class Individual(ModelWithGUID):
         ('DP', 'Declined to Participate'),
     )
 
-    CASE_REVIEW_STATUS_ACCEPTED_FOR_OPTIONS = (
-        ('S', 'Store DNA'),
-        ('A', 'Array'),   # allow multiple-select. No selection = Platform Uncertain
-        ('E', 'Exome'),
-        ('G', 'Genome'),
-        ('R', 'RNA-seq'),
-        ('P', 'Reprocess'),
-
-    )
-
     SEX_LOOKUP = dict(SEX_CHOICES)
     AFFECTED_STATUS_LOOKUP = dict(AFFECTED_STATUS_CHOICES)
     CASE_REVIEW_STATUS_LOOKUP = dict(CASE_REVIEW_STATUS_CHOICES)
@@ -318,7 +308,6 @@ class Individual(ModelWithGUID):
     notes = models.TextField(blank=True, null=True)
 
     case_review_status = models.CharField(max_length=2, choices=CASE_REVIEW_STATUS_CHOICES, null=True, blank=True)
-    case_review_status_accepted_for = models.CharField(max_length=10, null=True, blank=True)
     case_review_status_last_modified_date = models.DateTimeField(null=True, blank=True, db_index=True)
     case_review_status_last_modified_by = models.ForeignKey(User, null=True, blank=True, related_name='+', on_delete=models.SET_NULL)
     case_review_discussion = models.TextField(null=True, blank=True)
@@ -344,7 +333,7 @@ class Individual(ModelWithGUID):
             'phenotips_patient_id', 'phenotips_data', 'created_date', 'last_modified_date'
         ]
         internal_json_fields = [
-            'case_review_status', 'case_review_status_accepted_for', 'case_review_discussion',
+            'case_review_status', 'case_review_discussion',
             'case_review_status_last_modified_date', 'case_review_status_last_modified_by',
         ]
 
