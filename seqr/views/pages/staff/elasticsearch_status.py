@@ -79,7 +79,6 @@ def elasticsearch_status(request):
                               'disk_used':disk_json['disk_used'],    
                               'disk_percent_used':disk_json['disk_percent'],     
                                 })
-    pprint(disk_status)
     return render(request, "staff/elasticsearch_status.html", {
         'indices': indices,
         'operations': operations,

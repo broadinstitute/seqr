@@ -6,6 +6,8 @@
     
     <script>
       $(document).ready(function() {
+    	  
+      
           window.dataTable = $('#dataTable').DataTable({
             paging: false,
             columnDefs: [ {
@@ -25,6 +27,11 @@
               cell.innerHTML = i+1;
             } );
           } ).draw();
+          
+          
+          $(document).ready(function() {
+              window.dataTable = $('#diskStatusDataTable').DataTable({});
+          
       });
     </script>
     <style>
