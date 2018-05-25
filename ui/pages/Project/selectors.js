@@ -74,7 +74,10 @@ export const getProjectSavedVariants = createSelector(
   state => state.projectSavedVariants,
   (state, props) => props.match.params,
   (projectSavedVariants, { tag, familyGuid }) => {
-    const variants = familyGuid ? projectSavedVariants[familyGuid] || [] : Object.values(projectSavedVariants).reduce((a, b) => a.concat(b), [])
+    let variants = Object.values(projectSavedVariants)
+    if (familyGuid) {
+      variants = variants.filter(o => o.familyGuid === familyGuid)
+    }
     return tag ? variants.filter(o => o.tags.some(t => t.name === tag)) : variants
   },
 )

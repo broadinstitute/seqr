@@ -14,6 +14,7 @@ import modalReducers from './utils/modalReducer'
 // actions
 export const RECEIVE_DATA = 'RECEIVE_DATA'
 export const REQUEST_PROJECTS = 'REQUEST_PROJECTS'
+const RECEIVE_SAVED_VARIANTS = 'RECEIVE_SAVED_VARIANTS'
 const REQUEST_GENES = 'REQUEST_GENES'
 const RECEIVE_GENES = 'RECEIVE_GENES'
 
@@ -134,10 +135,15 @@ export const updateVariantNote = (values) => {
 }
 
 export const updateVariantTags = (values) => {
-  return () => {
-    console.log(values)
-    // TODO updateVariantTags should do something
-    return Promise.resolve()
+  return (dispatch) => {
+    return new HttpRequestHelper(`/api/saved_variant/${values.variantId}/update_tags`,
+      (responseJson) => {
+        dispatch({ type: RECEIVE_SAVED_VARIANTS, updatesById: responseJson })
+      },
+      (e) => {
+        throw new SubmissionError({ _error: [e.message] })
+      },
+    ).post(values)
   }
 }
 

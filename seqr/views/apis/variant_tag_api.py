@@ -1,14 +1,14 @@
 import logging
 import json
-from collections import defaultdict
 from django.contrib.auth.decorators import login_required
+from django.db.models import Q
 from django.views.decorators.csrf import csrf_exempt
 
-from seqr.models import SavedVariant
+from seqr.models import SavedVariant, VariantTagType, VariantTag, CAN_EDIT
 from seqr.utils.xpos_utils import get_chrom_pos
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.permissions_utils import get_project_and_check_permissions
+from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_permissions
 from xbrowse_server.base.models import Project as BaseProject, ProjectTag
 
 logger = logging.getLogger(__name__)
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 def saved_variant_data(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user)
 
-    variants = defaultdict(list)
+    variants = {}
     variant_query = SavedVariant.objects.filter(project=project)\
         .select_related('family')\
         .only('genome_version', 'xpos_start', 'ref', 'alt', 'lifted_over_genome_version', 'lifted_over_xpos_start',
@@ -53,14 +53,7 @@ def saved_variant_data(request, project_guid):
             'liftedOverChrom': lifted_over_chrom,
             'liftedOverPos': lifted_over_pos,
             'familyGuid': saved_variant.family.guid,
-            'tags': [{
-                'name': tag.variant_tag_type.name,
-                'category': tag.variant_tag_type.category,
-                'color': tag.variant_tag_type.color,
-                'user': (tag.created_by.get_full_name() or tag.created_by.email) if tag.created_by else None,
-                'dateSaved': tag.last_modified_date,
-                'searchParameters': tag.search_parameters,
-            } for tag in saved_variant.varianttag_set.all()],
+            'tags': _variant_tags(saved_variant),
             'functionalData': [{
                 'name': tag.functional_data_tag,
                 'metadata': tag.metadata,
@@ -79,9 +72,55 @@ def saved_variant_data(request, project_guid):
         }
         if variant['tags'] or variant['notes']:
             variant.update(_variant_details(variant_json, request.user))
-            variants[variant['familyGuid']].append(variant)
+            variants[variant['variantId']] = variant
 
     return create_json_response({'savedVariants': variants})
+
+
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@csrf_exempt
+def update_variant_tags_handler(request, variant_guid):
+    saved_variant = SavedVariant.objects.get(guid=variant_guid)
+    check_permissions(saved_variant.project, request.user, CAN_EDIT)
+
+    request_json = json.loads(request.body)
+    updated_tags = request_json.get('tags')
+    if updated_tags is None:
+        return create_json_response({}, status=400, reason="'tags' not specified")
+
+    existing_tag_guids = [tag['tagGuid'] for tag in updated_tags if tag.get('tagGuid')]
+    new_tags = [tag for tag in updated_tags if not tag.get('tagGuid')]
+
+    variant_tags_to_delete = saved_variant.varianttag_set.exclude(guid__in=existing_tag_guids)
+    # TODO in xbrowse
+    variant_tags_to_delete.delete()
+
+    for tag in new_tags:
+        variant_tag_type = VariantTagType.objects.get(
+            Q(name=tag['name']),
+            Q(project=saved_variant.project) | Q(project__isnull=True)
+        )
+        # TODO in xbrowse
+        VariantTag.objects.create(
+            saved_variant=saved_variant,
+            variant_tag_type=variant_tag_type,
+            search_parameters=request_json.get('search_parameters'),
+            created_by=request.user,
+        )
+
+    return create_json_response({variant_guid: {'tags': _variant_tags(saved_variant)}})
+
+
+def _variant_tags(saved_variant):
+    return [{
+        'tagGuid': tag.guid,
+        'name': tag.variant_tag_type.name,
+        'category': tag.variant_tag_type.category,
+        'color': tag.variant_tag_type.color,
+        'user': (tag.created_by.get_full_name() or tag.created_by.email) if tag.created_by else None,
+        'dateSaved': tag.last_modified_date,
+        'searchParameters': tag.search_parameters,
+    } for tag in saved_variant.varianttag_set.all()]
 
 
 def _variant_details(variant_json, user):

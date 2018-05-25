@@ -30,7 +30,9 @@ from seqr.views.apis.case_review_api import \
     save_internal_case_review_notes, \
     save_internal_case_review_summary
 
-from seqr.views.apis.variant_tag_api import saved_variant_data
+from seqr.views.apis.variant_tag_api import \
+    saved_variant_data, \
+    update_variant_tags_handler
 
 from seqr.views.pages.case_review_page import \
     export_case_review_families_handler, \
@@ -102,6 +104,8 @@ api_endpoints = {
     'project/(?P<project_guid>[^/]+)/igv_track/(?P<igv_track_path>.+)': fetch_igv_track,
     'project/(?P<project_guid>[^/]+)/patient/(?P<patient_id>[^/]+)/phenotips_pdf': phenotips_pdf_handler,
     'project/(?P<project_guid>[^/]+)/patient/(?P<patient_id>[^/]+)/phenotips_edit': phenotips_edit_handler,
+
+    'saved_variant/(?P<variant_guid>[^/]+)/update_tags': update_variant_tags_handler,
 
     'awesomebar': awesomebar_autocomplete_handler,
 

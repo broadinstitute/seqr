@@ -1,7 +1,7 @@
 import { combineReducers } from 'redux'
 import { SubmissionError } from 'redux-form'
 
-import { loadingReducer, createSingleObjectReducer, createSingleValueReducer } from 'redux/utils/reducerFactories'
+import { loadingReducer, createSingleObjectReducer, createObjectsByIdReducer, createSingleValueReducer } from 'redux/utils/reducerFactories'
 import { REQUEST_PROJECTS, RECEIVE_DATA } from 'redux/rootReducer'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 import { getProject, getProjectFamilies } from './selectors'
@@ -16,7 +16,6 @@ const REQUEST_PROJECT_DETAILS = 'REQUEST_PROJECT_DETAILS'
 const RECEIVE_PROJECT_DETAILS = 'RECEIVE_PROJECT_DETAILS'
 const REQUEST_SAVED_VARIANTS = 'REQUEST_SAVED_VARIANTS'
 const RECEIVE_SAVED_VARIANTS = 'RECEIVE_SAVED_VARIANTS'
-
 
 // Data actions
 
@@ -50,25 +49,29 @@ export const loadProjectVariants = (familyGuid) => {
 
     // Do not load if already loaded
     const expectedFamilyGuids = familyGuid ? [familyGuid] : getProjectFamilies(state).map(family => family.familyGuid)
-    if (expectedFamilyGuids.length > 0 && expectedFamilyGuids.every(family => family in state.projectSavedVariants)) {
+    const loadedFamilies = new Set(Object.values(state.projectSavedVariants).map(o => o.familyGuid))
+    if (expectedFamilyGuids.length > 0 && expectedFamilyGuids.every(family => loadedFamilies.has(family))) {
       return
     }
 
     dispatch({ type: REQUEST_SAVED_VARIANTS })
     new HttpRequestHelper(`/api/project/${project.projectGuid}/saved_variants`,
       (responseJson) => {
-        dispatch({ type: RECEIVE_SAVED_VARIANTS, updates: responseJson.savedVariants })
+        dispatch({ type: RECEIVE_SAVED_VARIANTS, updatesById: responseJson.savedVariants })
       },
       (e) => {
-        dispatch({ type: RECEIVE_SAVED_VARIANTS, error: e.message, updates: {} })
+        dispatch({ type: RECEIVE_SAVED_VARIANTS, error: e.message, updatesById: {} })
       },
     ).get(familyGuid ? { family: familyGuid } : {})
   }
 }
 
 export const unloadProject = () => {
-  return (dispatch) => {
+  return (dispatch, getState) => {
+    const state = getState()
+    const deleteVariants = Object.keys(state.projectSavedVariants).reduce((acc, o) => ({ ...acc, [o]: null }))
     dispatch({ type: UPDATE_CURRENT_PROJECT, newValue: null })
+    dispatch({ type: REQUEST_SAVED_VARIANTS, updatesById: deleteVariants })
   }
 }
 
@@ -127,7 +130,7 @@ export const updateSavedVariantTable = updates => ({ type: UPDATE_SAVED_VARIANT_
 export const reducers = {
   currentProjectGuid: createSingleValueReducer(UPDATE_CURRENT_PROJECT, null),
   projectDetailsLoading: loadingReducer(REQUEST_PROJECT_DETAILS, RECEIVE_PROJECT_DETAILS),
-  projectSavedVariants: createSingleObjectReducer(RECEIVE_SAVED_VARIANTS, {}),
+  projectSavedVariants: createObjectsByIdReducer(RECEIVE_SAVED_VARIANTS),
   projectSavedVariantsLoading: loadingReducer(REQUEST_SAVED_VARIANTS, RECEIVE_SAVED_VARIANTS),
   familyTableState: createSingleObjectReducer(UPDATE_FAMILY_TABLE_STATE, {
     currentPage: 1,
