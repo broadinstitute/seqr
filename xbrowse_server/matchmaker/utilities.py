@@ -174,7 +174,7 @@ def is_a_valid_patient_structure(patient_struct):
     return submission_validity
 
 
-def generate_slack_notification_for_incoming_match(response_from_matchbox,incoming_request,incoming_external_request_patient):
+def generate_notification_for_incoming_match(response_from_matchbox,incoming_request,incoming_external_request_patient):
     """
     Generate a SLACK notifcation to say that a VALID match request came in and the following
     results were sent back. If Slack is not supported, a message is not sent, but details persisted.
@@ -188,7 +188,7 @@ def generate_slack_notification_for_incoming_match(response_from_matchbox,incomi
     incoming_patient_as_json = json.loads(incoming_external_request_patient.strip())
     
     institution = incoming_patient_as_json['patient']['contact'].get('institution','(institution name not given)')
-    message = 'Hey folks, this match request came in from ' + institution  + ' today (' + time.strftime('%d, %b %Y')  + ').' 
+    message = 'Dear collaborators, this match request came in from ' + institution  + ' today (' + time.strftime('%d, %b %Y')  + ').' 
     message += ' Their contact URL was: ' + incoming_patient_as_json['patient']['contact'].get('href','(invalid URL!') + '. '
     if len(results_from_matchbox) > 0:
         if incoming_patient_as_json['patient'].has_key('genomicFeatures'):
@@ -233,6 +233,16 @@ def generate_slack_notification_for_incoming_match(response_from_matchbox,incomi
         message += 'These matches were sent back today (' + time.strftime('%d, %b %Y')  + ').'
         if settings.SLACK_TOKEN is not None:
             post_in_slack(message,settings.MME_SLACK_MATCH_NOTIFICATION_CHANNEL)
+        if settings.EMAIL_NOTIFICATIONS_ACTIVATED:
+            email_content = render_to_string(
+                'emails/mme_returned_match_result_message.txt',
+                {'mme_match_message': "test_alert" },
+            )
+            send_mail('test alert', 
+                      email_content, 
+                      settings.FROM_EMAIL, 
+                      ['harindra@broadinstitute.org',], 
+                      fail_silently=False)
     else:
         message += " We didn't find any individuals in matchbox that matched that query well, *so no results were sent back*. "
         if settings.SLACK_TOKEN is not None:
