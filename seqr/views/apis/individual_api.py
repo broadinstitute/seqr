@@ -366,7 +366,8 @@ def add_or_update_individuals_and_families(project, individual_records):
         if created:
             logger.info("Created family: %s", family)
             if not family.display_name:
-                update_seqr_model(family, display_name=family.family_id)
+                family.display_name = family.family_id
+                family.save()
 
         # uploaded files do not have unique guid's so fall back to a combination of family and individualId
         if record.get('individualGuid'):
@@ -375,7 +376,6 @@ def add_or_update_individuals_and_families(project, individual_records):
             criteria = {'family': family, 'individual_id': record['individualId']}
 
         individual, created = get_or_create_seqr_model(Individual, **criteria)
-
         record['family'] = family
         update_individual_from_json(individual, record, allow_unknown_keys=True)
 
@@ -443,7 +443,6 @@ def _deprecated_update_original_individual_data(project, individual):
     base_individual.affected = individual.affected
     base_individual.nickname = individual.display_name
     base_individual.case_review_status = individual.case_review_status
-    base_individual.case_review_status_accepted_for = individual.case_review_status_accepted_for
 
     if created or not base_individual.phenotips_id:
         base_individual.phenotips_id = individual.phenotips_eid

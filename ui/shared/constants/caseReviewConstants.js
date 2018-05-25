@@ -12,13 +12,6 @@ export const CASE_REVIEW_STATUS_WITHDREW = 'WD'
 export const CASE_REVIEW_STATUS_INELIGIBLE = 'IE'
 export const CASE_REVIEW_STATUS_DECLINED_TO_PARTICIPATE = 'DP'
 
-export const CASE_REVIEW_STATUS_ACCEPTED_FOR_STORE_DNA = 'S'
-export const CASE_REVIEW_STATUS_ACCEPTED_FOR_ARRAY = 'A'
-export const CASE_REVIEW_STATUS_ACCEPTED_FOR_EXOME = 'E'
-export const CASE_REVIEW_STATUS_ACCEPTED_FOR_GENOME = 'G'
-export const CASE_REVIEW_STATUS_ACCEPTED_FOR_RNASEQ = 'R'
-export const CASE_REVIEW_STATUS_ACCEPTED_FOR_REPROCESSING = 'P'
-
 
 export const CASE_REVIEW_STATUS_OPTIONS = [
   { value: CASE_REVIEW_STATUS_IN_REVIEW,                   name: 'In Review',             color: '#2196F3' },
@@ -40,14 +33,3 @@ export const CASE_REVIEW_STATUS_OPT_LOOKUP = CASE_REVIEW_STATUS_OPTIONS.reduce(
     ...{ [opt.value]: opt },
   }), {},
 )
-
-export const CASE_REVIEW_STATUS_ACCEPTED_FOR_OPTIONS = [
-  { value: CASE_REVIEW_STATUS_ACCEPTED_FOR_STORE_DNA,   name: 'Store DNA' },
-  { value: CASE_REVIEW_STATUS_ACCEPTED_FOR_ARRAY,       name: 'Array' },
-  '---', /* adds line break */
-  { value: CASE_REVIEW_STATUS_ACCEPTED_FOR_EXOME,       name: 'WES' },
-  { value: CASE_REVIEW_STATUS_ACCEPTED_FOR_GENOME,      name: 'WGS' },
-  { value: CASE_REVIEW_STATUS_ACCEPTED_FOR_RNASEQ,      name: 'RNA' },
-  '---',
-  { value: CASE_REVIEW_STATUS_ACCEPTED_FOR_REPROCESSING,      name: 'Reprocess' },
-]

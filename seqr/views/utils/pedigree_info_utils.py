@@ -45,11 +45,12 @@ def parse_pedigree_table(filename, stream, user=None, project=None):
         return json_records, errors, warnings
 
     # parse rows from file
+    temp_file = tempfile.NamedTemporaryFile()
     try:
         if filename.endswith('.fam') or filename.endswith('.ped') or filename.endswith('.tsv'):
             rows = parse_rows_from_fam_file(stream)
         elif filename.endswith('.xls') or filename.endswith('.xlsx'):
-            rows = parse_rows_from_xls(stream)
+            rows = parse_rows_from_xls(stream, save_to_path=temp_file.name)
     except Exception as e:
         traceback.print_exc()
         errors.append("Error while parsing file: %(filename)s. %(e)s" % locals())
@@ -59,7 +60,6 @@ def parse_pedigree_table(filename, stream, user=None, project=None):
     is_merged_pedigree_sample_manifest = len(rows) > 1 and _is_merged_pedigree_sample_manifest_header_row("\t".join(rows[0]))
     if is_merged_pedigree_sample_manifest:
         logger.info("Parsing merged pedigree-sample-manifest file")
-        original_rows = rows
         rows, sample_manifest_rows, kit_id = _parse_merged_pedigree_sample_manifest_format(rows)
     else:
         logger.info("Parsing regular pedigree file")
@@ -74,7 +74,8 @@ def parse_pedigree_table(filename, stream, user=None, project=None):
     errors, warnings = validate_fam_file_records(json_records)
 
     if not errors and is_merged_pedigree_sample_manifest:
-        _send_sample_manifest(sample_manifest_rows, original_rows, kit_id, original_filename=filename)
+        with open(temp_file.name) as original_file:
+            _send_sample_manifest(sample_manifest_rows, kit_id, original_filename=filename, original_file_stream=original_file)
 
     return json_records, errors, warnings
 
@@ -111,21 +112,32 @@ def parse_rows_from_fam_file(stream):
     return result
 
 
-def parse_rows_from_xls(stream):
+def parse_rows_from_xls(stream, save_to_path=None):
     """Parses an Excel table into a list of rows.
 
     Args:
         stream (object): a file handle or stream for reading the Excel file
+        save_to_path (string): (optional) writes out a copy of the stream contents to the given file path
     Returns:
         list: a list of rows where each row is a list of strings corresponding to values in the table
     """
     wb = xlrd.open_workbook(file_contents=stream.read())
     ws = wb.sheet_by_index(0)
 
+    if save_to_path is not None:
+        wb_out = xlwt.Workbook()
+        ws_out = wb_out.add_sheet(ws.name)
+
+        def copy_row(i_out, ncols):
+            [ws_out.write(i_out, j_out, ws.cell(rowx=i_out, colx=j_out).value) for j_out in range(ncols)]
+
     header = []
     rows = []
     row_idx_iter = iter(range(ws.nrows))
     for i in row_idx_iter:
+        if save_to_path is not None:
+            copy_row(i, ws.ncols)
+
         row_fields = [ws.cell(rowx=i, colx=j).value for j in range(ws.ncols)]
         row_string = "\t".join(map(str, row_fields))
         if i == 0 and _is_header_row(row_string):
@@ -137,13 +149,17 @@ def parse_rows_from_xls(stream):
             row_idx_iter.next() # skip the 2 header rows
             row_idx_iter.next()
 
+            if save_to_path is not None:
+                copy_row(i + 1, ws.ncols)
+                copy_row(i + 2, ws.ncols)
+
             # validate manifest_header_row1
             expected_header_columns = MergedPedigreeSampleManifestConstants.MERGED_PEDIGREE_SAMPLE_MANIFEST_COLUMN_NAMES
             expected_header_columns = expected_header_columns[:4] + ["Alias", "Alias"] + expected_header_columns[6:]
             actual_header_columns = [ws.cell(rowx=1, colx=j).value for j in range(len(MergedPedigreeSampleManifestConstants.MERGED_PEDIGREE_SAMPLE_MANIFEST_COLUMN_NAMES))]
-            unexpected_header_columns = "\t".join(difflib.unified_diff(expected_header_columns, actual_header_columns))
+            unexpected_header_columns = "\t".join(difflib.unified_diff(expected_header_columns, actual_header_columns)).split("\n")[3:]
             if unexpected_header_columns:
-                raise ValueError("Unexpected header columns: " + unexpected_header_columns)
+                raise ValueError("Expected vs. actual header columns: " + "\t".join(unexpected_header_columns))
 
             header = MergedPedigreeSampleManifestConstants.MERGED_PEDIGREE_SAMPLE_MANIFEST_COLUMN_NAMES
             continue
@@ -175,6 +191,9 @@ def parse_rows_from_xls(stream):
 
             row_dict = collections.OrderedDict(zip(header, parsed_row))
             rows.append(row_dict)
+
+    if save_to_path is not None:
+        wb_out.save(save_to_path)
 
     return rows
 
@@ -428,7 +447,7 @@ def _parse_merged_pedigree_sample_manifest_format(rows):
     return pedigree_rows, sample_manifest_rows, kit_id
 
 
-def _send_sample_manifest(sample_manifest_rows, original_rows, kit_id, original_filename):
+def _send_sample_manifest(sample_manifest_rows, kit_id, original_filename, original_file_stream):
 
     # write out the sample manifest file
     wb = xlwt.Workbook()
@@ -449,26 +468,20 @@ def _send_sample_manifest(sample_manifest_rows, original_rows, kit_id, original_
     wb.save(temp_sample_manifest_file.name)
     temp_sample_manifest_file.seek(0)
 
-    # write out original file
-    wb = xlwt.Workbook()
-    ws = wb.add_sheet(kit_id)
-    for i, row in enumerate(original_rows):
-        for j, value in enumerate(row):
-            ws.write(i, j, value)
-
-    temp_original_file = tempfile.NamedTemporaryFile()
-    wb.save(temp_original_file.name)
-    temp_original_file.seek(0)
-
     sample_manifest_filename = kit_id+'.xlsx'
     logger.info("Sending sample manifest file %s to %s" % (sample_manifest_filename, settings.UPLOADED_PEDIGREE_FILE_RECIPIENTS))
 
     email_message = EmailMessage(
-        kit_id + " Merged Sample Pedigree File",
-        settings.UPLOADED_PEDIGREE_FILE_RECIPIENTS,
+        subject=kit_id + " Merged Sample Pedigree File",
+        body="""
+        File uploaded by user: %(original_filename)s
+
+        For GP: %(sample_manifest_filename)s
+        """ % locals(),
+        to=settings.UPLOADED_PEDIGREE_FILE_RECIPIENTS,
         attachments=[
+            (os.path.basename(original_filename), original_file_stream.read(), "application/xls"),
             (sample_manifest_filename, temp_sample_manifest_file.read(), "application/xls"),
-            (os.path.basename(original_filename), temp_original_file.read(), "application/xls"),
         ],
     )
     email_message.send()
@@ -553,7 +566,7 @@ class MergedPedigreeSampleManifestConstants:
         CONCENTRATION_COLUMN,
     ]
 
-    SAMPLE_MANIFEST_HEADER_ROW1 = list(SAMPLE_MANIFEST_COLUMN_NAMES) # make a copy
+    SAMPLE_MANIFEST_HEADER_ROW1 = list(SAMPLE_MANIFEST_COLUMN_NAMES)  # make a copy
     SAMPLE_MANIFEST_HEADER_ROW1[3] = 'Alias'
     SAMPLE_MANIFEST_HEADER_ROW1[4] = 'Alias'
 
