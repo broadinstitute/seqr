@@ -10,9 +10,9 @@ test('shallow-render without crashing', () => {
     urls: PropTypes.array.isRequired,
    */
   const props = {
-    urls: [
+    downloads: [
       { name: 'Table1', url: '/api/project/table2' },
-      { name: 'Table2', url: '/api/project/export_table2' },
+      { name: 'Table2', data: { rawData: [ { a: 1 }, { a: 2 }], processRow: row => [row.a] } },
     ],
   }
 
