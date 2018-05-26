@@ -12,7 +12,6 @@
 <table id="diskStatusDataTable" class="display">
     <thead>
         <tr>
-            <th />
             <th>Node name</th>
             <th>Disk available</th>
             <th>Disk used (%)</th>
@@ -20,7 +19,6 @@
     </thead>
    {% for disk in disk_stats %}
         <tr>
-            <td />
             <td>{{ disk.node_name }}</td>
             <td>{{ disk.disk_available }}</td>
             <td>{{ disk.disk_used }} ( {{ disk.disk_percent_used }} %)</td>
@@ -33,7 +31,6 @@
 <table id="dataTable" class="display">
     <thead>
         <tr>
-            <th />
             <th>status</th>
             <th width="50%">name</th>
             <th># records</th>
@@ -44,7 +41,6 @@
 
     {% for index in indices %}
         <tr>
-            <td />
             <td>{{ index.health }}</td>
             <td>{{ index.index }}</td>
             <td>{{ index.docs_count }}</td>
@@ -60,14 +56,12 @@ Snapshots:<br />
 <table id="dataTable2" class="display">
     <thead>
     <tr>
-        <th />
         <th>snapshots</th>
     </tr>
     </thead>
 
     {% for snapshot in snapshots %}
     <tr>
-        <td />
         <td>{{ snapshot }}</td>
     </tr>
     {% endfor %}

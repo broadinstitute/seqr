@@ -82,7 +82,8 @@ def elasticsearch_status(request):
     return render(request, "staff/elasticsearch_status.html", {
         'indices': indices,
         'operations': operations,
-        'disk_stats': disk_status
+        'disk_stats': disk_status,
+        #'snapshots': index_snapshot_states
     })
 
 
