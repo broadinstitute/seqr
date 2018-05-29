@@ -1,17 +1,20 @@
 # dev dependencies
-pip                              # make sure the latest version of pip is installed
 mock                             # mock objects for unit tests
+pip                              # make sure the latest version of pip is installed
 sphinx                           # doc generator
+#selenium
+
 
 # kubernetes deployment dependencies
+gunicorn==19.7.1                 # web server
 Jinja2==2.9.6                    # jinja templates are used in the kubernetes deployment scripts
 PyYAML==3.12                     # yaml parsing
-gunicorn==19.7.1                 # web server
+
 
 # runtime dependencies
 beautifulsoup4==4.5.3            # used for html parsing utilites
 Django==1.11                     # core server-side framework
-django-anymail==0.11.1           # for sending emails using cloud mail service providers
+django-anymail==0.11.1           # for sending emails using cloud-based mail service providers
 django-debug-toolbar             # https://github.com/jazzband/django-debug-toolbar
 django-debug-toolbar-request-history  # for debugging database queries on async requests.
 django-guardian==1.4.6           # object-level permissions for database records
@@ -19,41 +22,35 @@ django-activity-stream==0.6.3    # used to log various user and application acti
 django-hijack==2.1.3             # allows admins to login as other user
 django-cors-headers==2.2.0       # allows CORS requests for client-side development
 
-elasticsearch==5.4.0
-elasticsearch-dsl==5.3.0	 # used for querying elastic search
+elasticsearch==6.2.0             # elasticsearch client
+elasticsearch-dsl==6.1.0	     # elasticsearch query utilities
+
 ipython                          # used by shell.py
-pyliftover==0.3                  # grch37/grch38 liftover
 numpy==1.12.1
 openpyxl==2.4.8                  # library for reading/writing Excel files
-xlrd==1.0.0                      # faster library for parsing Excel
-xlwt==1.0.0                      # library for writing Excel
 pandas==0.19.2
 psycopg2==2.7.1                  # postgres database access
+pyliftover==0.3                  # GRCh37/GRCh38 liftover
 requests==2.13.0                 # simpler way to make http requests
+requests_toolbelt		         # for troubleshooting requests
+redis==2.10.6                    # client lib for the redis in-memory database - used for caching server-side objects
 tqdm                             # convenient way to create progress bar for long-running command-line operations
 whitenoise==3.3.0                # simplified static file handling
-requests_toolbelt		 # for troubleshooting requests
-redis==2.10.6                    # client lib for the redis in-memory database - used for caching server-side objects
+xlrd==1.0.0                      # faster library for parsing Excel
+xlwt==1.0.0                      # library for writing Excel
+
 
 # legacy dependencies we're moving away from
-#fisher==0.1.5	      	    	 # compute Fisher exact test p-values
-Pillow==4.0.0                    # required dependency of Djagno ImageField-type database records
-pysam==0.10.0                    # bam and tabix library
-django-pretty-times==0.2.0       # date rendering should happen in javascript
 django-compressor==2.1.1
-pymongo==3.4.0                   # switching to other database
-PyVCF==0.6.8
-Markdown==2.6.8
-slacker==0.9.42                  # intend to move this to separate external modules
 django-crispy-forms==1.6.1       # switching to client-side form creation/rendering
+django-pretty-times==0.2.0       # date rendering should happen in javascript
+#fisher==0.1.5	      	    	 # compute Fisher exact test p-values
+Markdown==2.6.8
+Pillow==4.0.0                    # required dependency of Djagno ImageField-type database records
 progressbar==2.3                 # using tqdm instead
-slugify
-
+pymongo==3.4.0                   # switching to other database
+pysam==0.10.0                    # bam and tabix library
+PyVCF==0.6.8
 six==1.10.0
-
-#django-appconf
-
-#selenium
-#sh
-#simplejson
-#reportlab
+slacker==0.9.42                  # intend to move this to separate external modules
+slugify
