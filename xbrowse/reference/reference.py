@@ -391,7 +391,7 @@ class Reference(object):
 
     def get_gene_summary(self, gene_id):
         self._ensure_cache('gene_summaries')
-        return self._gene_summaries.get(gene_id, "")
+        return self._gene_summaries.get(gene_id, {})
 
     def get_gene_symbols(self):
         """

@@ -235,7 +235,7 @@ def add_extra_info_to_variants_project(reference, project, variants, add_family_
     - disease annotations
     - coding_gene_ids
     """
-    if not project.has_elasticsearch_index():
+    if not project.has_elasticsearch_index() or any(v for v in variants if v.get_extra('created_variant')):
         add_gene_names_to_variants(reference, variants)
         add_gene_info_to_variants(variants)
         add_clinical_info_to_variants(variants)
@@ -246,10 +246,6 @@ def add_extra_info_to_variants_project(reference, project, variants, add_family_
                                     v.annotation and not populations.issubset(v.annotation['freqs'])]
             add_populations_to_variants(missing_pop_variants, settings.ANNOTATOR_REFERENCE_POPULATION_SLUGS)
             add_custom_populations_to_variants(missing_pop_variants, project.private_reference_population_slugs())
-    else:
-        #  Elasticsearch can have an empty string as the value for gene, but we expect a dict
-        for variant in variants:
-            variant.set_extra('genes', {k: v or {} for k, v in variant.extras['genes'].items()})
 
     add_disease_genes_to_variants(project, variants)
     add_gene_databases_to_variants(variants)

@@ -51,6 +51,7 @@ def get_variants_from_variant_tuples(project, variant_tuples, user=None):
             if not variant:
                 variant = Variant(xpos, ref, alt)
                 get_annotator().annotate_variant(variant, population_slugs)
+                variant.set_extra('created_variant', True)
 
             variant.set_extra('family_id', family_id)
             variant.set_extra('project_id', project.project_id)

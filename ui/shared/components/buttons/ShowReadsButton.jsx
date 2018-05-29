@@ -34,7 +34,7 @@ const ShowReadsButton = ({ locus, familyGuid, samples, individualsByGuid, datase
       dataset => dataset.isLoaded && dataset.analysisType === 'ALIGN',
     )
     if (datasets.length > 1) {
-      console.log(`Error: found ${sample.datasets.length} alignment datasets for ${sample.individualGuid}`)
+      console.log(`Error: found ${datasets.length} alignment datasets for ${sample.individualGuid}`)
     } else if (datasets.length < 1) {
       return null
     }
