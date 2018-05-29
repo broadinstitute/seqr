@@ -26,6 +26,13 @@ const BarSection = styled(({ to, ...props }) => React.createElement(to ? Link : 
 const NoWrap = styled.span`
   white-space: nowrap;`
 
+const TableRow = styled(Table.Row)`
+  padding: 0px !important;`
+
+const TableCell = styled(Table.Cell)`
+  padding: .2em .6em !important;`
+
+
 class HorizontalStackedBar extends React.Component {
 
   static propTypes = {
@@ -90,20 +97,20 @@ class HorizontalStackedBar extends React.Component {
                 <Table.Body>
                   {
                     popupData.map(d => (
-                      <Table.Row key={d.name} verticalAlign="top" >
+                      <TableRow key={d.name} verticalAlign="top" >
                         {!d.header &&
-                          <Table.Cell collapsing><ColoredIcon name="square" size="small" color={d.color} /> {d.count}</Table.Cell>
+                          <TableCell collapsing><ColoredIcon name="square" size="small" color={d.color} /> {d.count}</TableCell>
                         }
-                        <Table.Cell singleLine colSpan={d.header ? 3 : 1} disabled={Boolean(d.header)}>{d.name}</Table.Cell>
-                        {!d.header && <Table.Cell collapsing>({d.percent.toPrecision(2)}%)</Table.Cell>}
-                      </Table.Row>
+                        <TableCell singleLine colSpan={d.header ? 3 : 1} disabled={Boolean(d.header)}>{d.name}</TableCell>
+                        {!d.header && <TableCell collapsing>({d.percent.toPrecision(2)}%)</TableCell>}
+                      </TableRow>
                     ))
                   }
-                  <Table.Row>
-                    <Table.Cell><ColoredIcon name="square" size="small" color="white" /> {total}</Table.Cell>
-                    <Table.Cell>Total</Table.Cell>
-                    <Table.Cell />
-                  </Table.Row>
+                  <TableRow>
+                    <TableCell collapsing><ColoredIcon name="square" size="small" color="white" /><b> {total}</b></TableCell>
+                    <TableCell><b>Total</b></TableCell>
+                    <TableCell />
+                  </TableRow>
                 </Table.Body>
               </Table>
             </div>
