@@ -143,6 +143,7 @@ def _convert_seqr_kwargs_to_xbrowse_kwargs(seqr_model, **kwargs):
 
     return xbrowse_kwargs
 
+
 def update_seqr_model(seqr_model, **kwargs):
     logging.info("update_seqr_model(%s, %s)" % (seqr_model, kwargs))
     _update_model(seqr_model, **kwargs)
@@ -171,10 +172,12 @@ def _create_xbrowse_model(seqr_model, **kwargs):
         xbrowse_model_class_name = xbrowse_model_class.__name__
         logging.info("_create_xbrowse_model(%s, %s)" % (xbrowse_model_class_name, xbrowse_kwargs))
         xbrowse_model = seqr_model_class.objects.create(**xbrowse_kwargs)
-        seqr_model_foreign_key_name = "xbrowse_"+_to_snake_case(xbrowse_model_class_name)
-        if hasattr(seqr_model, seqr_model_foreign_key_name):
-            setattr(seqr_model, seqr_model_foreign_key_name, xbrowse_model)
-            seqr_model.save()
+
+        seqr_model_foreign_key_name = "seqr_"+_to_snake_case(seqr_model_class_name)
+        if hasattr(xbrowse_model, seqr_model_foreign_key_name):
+            setattr(xbrowse_model, seqr_model_foreign_key_name, seqr_model)
+            xbrowse_model.save()
+
         return xbrowse_model
 
     except Exception as e:
