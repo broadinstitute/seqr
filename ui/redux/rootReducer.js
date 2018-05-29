@@ -127,10 +127,20 @@ export const updateGeneNote = (values) => {
 }
 
 export const updateVariantNote = (values) => {
-  return () => {
-    console.log(values)
-    // TODO updateVariantNote should work for add (!values.noteGuid), update, and delete (values.delete === true)
-    return Promise.resolve()
+  return (dispatch) => {
+    let urlPath = `/api/saved_variant/${values.variantId}/note`
+    let action = 'create'
+    if (values.noteGuid) {
+      urlPath = `${urlPath}/${values.noteGuid}`
+      action = values.delete ? 'delete' : 'update'
+    }
+
+    return new HttpRequestHelper(`${urlPath}/${action}`,
+      (responseJson) => {
+        dispatch({ type: RECEIVE_SAVED_VARIANTS, updatesById: responseJson })
+      },
+      (e) => { throw new SubmissionError({ _error: [e.message] }) },
+    ).post(values)
   }
 }
 

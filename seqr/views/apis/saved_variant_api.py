@@ -4,9 +4,10 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.views.decorators.csrf import csrf_exempt
 
-from seqr.models import SavedVariant, VariantTagType, VariantTag, CAN_EDIT
+from seqr.models import SavedVariant, VariantTagType, VariantTag, VariantNote, CAN_EDIT
 from seqr.utils.xpos_utils import get_chrom_pos
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
+from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_permissions
 from xbrowse_server.base.models import Project as BaseProject, ProjectTag
@@ -62,19 +63,56 @@ def saved_variant_data(request, project_guid):
                 'user': (tag.created_by.get_full_name() or tag.created_by.email) if tag.created_by else None,
                 'dateSaved': tag.last_modified_date,
             } for tag in saved_variant.variantfunctionaldata_set.all()],
-            'notes': [{
-                'noteGuid': tag.guid,
-                'note': tag.note,
-                'submitToClinvar': tag.submit_to_clinvar,
-                'user': (tag.created_by.get_full_name() or tag.created_by.email) if tag.created_by else None,
-                'dateSaved': tag.last_modified_date,
-            } for tag in saved_variant.variantnote_set.all()],
+            'notes': _variant_notes(saved_variant),
         }
         if variant['tags'] or variant['notes']:
             variant.update(_variant_details(variant_json, request.user))
             variants[variant['variantId']] = variant
 
     return create_json_response({'savedVariants': variants})
+
+
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@csrf_exempt
+def create_variant_note_handler(request, variant_guid):
+    saved_variant = SavedVariant.objects.get(guid=variant_guid)
+    check_permissions(saved_variant.project, request.user, CAN_EDIT)
+
+    request_json = json.loads(request.body)
+    # TODO in xbrowse
+    VariantNote.objects.create(
+        saved_variant=saved_variant,
+        note=request_json.get('note'),
+        submit_to_clinvar=request_json.get('submitToClinvar', False),
+        search_parameters=request_json.get('searchParameters'),
+        created_by=request.user,
+    )
+
+    return create_json_response({variant_guid: {'notes': _variant_notes(saved_variant)}})
+
+
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@csrf_exempt
+def update_variant_note_handler(request, variant_guid, note_guid):
+    saved_variant = SavedVariant.objects.get(guid=variant_guid)
+    check_permissions(saved_variant.project, request.user, CAN_EDIT)
+    note = VariantNote.objects.get(guid=note_guid, saved_variant=saved_variant)
+
+    request_json = json.loads(request.body)
+    update_model_from_json(note, request_json, allow_unknown_keys=True)
+
+    return create_json_response({variant_guid: {'notes': _variant_notes(saved_variant)}})
+
+
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@csrf_exempt
+def delete_variant_note_handler(request, variant_guid, note_guid):
+    saved_variant = SavedVariant.objects.get(guid=variant_guid)
+    check_permissions(saved_variant.project, request.user, CAN_EDIT)
+    note = VariantNote.objects.get(guid=note_guid, saved_variant=saved_variant)
+    # TODO in xbrowse
+    note.delete()
+    return create_json_response({variant_guid: {'notes': _variant_notes(saved_variant)}})
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -104,7 +142,7 @@ def update_variant_tags_handler(request, variant_guid):
         VariantTag.objects.create(
             saved_variant=saved_variant,
             variant_tag_type=variant_tag_type,
-            search_parameters=request_json.get('search_parameters'),
+            search_parameters=request_json.get('searchParameters'),
             created_by=request.user,
         )
 
@@ -121,6 +159,16 @@ def _variant_tags(saved_variant):
         'dateSaved': tag.last_modified_date,
         'searchParameters': tag.search_parameters,
     } for tag in saved_variant.varianttag_set.all()]
+
+
+def _variant_notes(saved_variant):
+    return [{
+        'noteGuid': tag.guid,
+        'note': tag.note,
+        'submitToClinvar': tag.submit_to_clinvar,
+        'user': (tag.created_by.get_full_name() or tag.created_by.email) if tag.created_by else None,
+        'dateSaved': tag.last_modified_date,
+    } for tag in saved_variant.variantnote_set.all()]
 
 
 def _variant_details(variant_json, user):

@@ -8,11 +8,11 @@ logger = logging.getLogger(__name__)
 
 def update_project_from_json(project, json, verbose=False):
 
-    _update_model_from_json(project, json, verbose=verbose)
+    update_model_from_json(project, json, verbose=verbose)
 
 
 def update_family_from_json(family, json, verbose=False, user=None, allow_unknown_keys=False):
-    _update_model_from_json(
+    update_model_from_json(
         family, json, user=user, verbose=verbose, allow_unknown_keys=allow_unknown_keys, restricted_keys=['pedigree_image']
     )
 
@@ -25,12 +25,12 @@ def update_individual_from_json(individual, json, verbose=False, user=None, allo
         json.pop('caseReviewStatusLastModifiedBy', None)
         json.pop('caseReviewStatusLastModifiedDate', None)
 
-    _update_model_from_json(
+    update_model_from_json(
         individual, json, user=user, verbose=verbose, allow_unknown_keys=allow_unknown_keys, restricted_keys=['phenotips_data']
     )
-
-
-def _update_model_from_json(model_obj, json, user=None, verbose=False, allow_unknown_keys=False, restricted_keys=[]):
+    
+    
+def update_model_from_json(model_obj, json, user=None, verbose=False, allow_unknown_keys=False, restricted_keys=[]):
     modified = False
     for json_key, value in json.items():
         orm_key = _to_snake_case(json_key)

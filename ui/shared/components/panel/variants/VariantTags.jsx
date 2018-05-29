@@ -151,17 +151,25 @@ VariantTagField.propTypes = {
   fieldName: PropTypes.string,
 }
 
-const VariantNoteField = ({ action, ...props }) =>
-  <TextFieldView
+const VariantNoteField = ({ action, note, variant, ...props }) => {
+  const values = { ...variant, ...note }
+  return <TextFieldView
     isEditable
     field="note"
     modalTitle={`${action} Variant Note`}
     additionalEditFields={VARIANT_NOTE_FIELDS}
     style={NOTE_STYLES[action]}
+    initialValues={values}
+    idField={note ? 'noteGuid' : 'variantId'}
+    deleteConfirm="Are you sure you want to delete this note?"
+    textPopupContent={note && taggedByPopupContent(note)}
     {...props}
   />
+}
 
 VariantNoteField.propTypes = {
+  note: PropTypes.object,
+  variant: PropTypes.object,
   action: PropTypes.string,
 }
 
@@ -210,22 +218,19 @@ const VariantTags = ({ variant, project, updateVariantNote: dispatchUpdateVarian
       {variant.notes.map(note =>
         <VariantNoteField
           key={note.noteGuid}
-          initialValues={note}
+          note={note}
+          variant={variant}
           isDeletable
           compact
-          idField="noteGuid"
-          onSubmit={dispatchUpdateVariantNote}
           action="Edit"
-          deleteConfirm="Are you sure you want to delete this note?"
-          textPopupContent={taggedByPopupContent(note)}
+          onSubmit={dispatchUpdateVariantNote}
         />,
       )}
       <VariantNoteField
+        variant={variant}
         editIconName="plus"
         editLabel="Add Note"
-        idField="variantId"
         action="Add"
-        initialValues={variant}
         onSubmit={dispatchUpdateVariantNote}
       />
     </div>

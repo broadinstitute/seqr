@@ -49,6 +49,9 @@ class ModelWithGUID(models.Model):
     class Meta:
         abstract = True
 
+        json_fields = []
+        internal_json_fields = []
+
     @abstractmethod
     def _compute_guid(self):
         """Returns a human-readable label (aka. slug) for this object with only alphanumeric
