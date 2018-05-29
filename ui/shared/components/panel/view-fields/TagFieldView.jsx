@@ -107,7 +107,7 @@ const TagFieldView = ({ initialValues, field, tagOptions, popupContent, tagAnnot
                 header="Tagged by"
                 content={popupContent(tag)}
               /> : label}
-              {tagAnnotation && <span>{tagAnnotation(tag)}<HorizontalSpacer width={5} /></span>}
+              {tagAnnotation && tagAnnotation(tag)}
             </span>
           )
         })}

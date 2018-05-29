@@ -46,7 +46,8 @@ const ReRunSearchLink = styled.a.attrs({ target: '_blank' })`
   max-width: 40px;
   display: inline-block;
   line-height: .9em;
-  white-space: normal
+  white-space: normal;
+  margin-right: 5px;
 `
 
 const NOTE_STYLES = {
@@ -69,28 +70,37 @@ const taggedByPopupContent = tag =>
 const reRunTagSearch = tag => tag.searchParameters &&
   <ReRunSearchLink href={tag.searchParameters}>Re-run search</ReRunSearchLink>
 
-const ShortcutTagToggle = ({ searchParameters, ...props }) =>
-  <span>
-    <InlineToggle {...props} />
-    <HorizontalSpacer width={5} />
-    {reRunTagSearch({ searchParameters })}
-    {searchParameters && <HorizontalSpacer width={5} />}
-  </span>
+const ShortcutTagToggle = ({ tag, ...props }) => {
+  const toggle = <InlineToggle color={tag && tag.color} {...props} />
+  return (
+    <span>
+      {tag ? <Popup
+        position="top right"
+        size="tiny"
+        trigger={toggle}
+        header="Tagged by"
+        content={taggedByPopupContent(tag)}
+      /> : toggle}
+      <HorizontalSpacer width={5} />
+      {tag && reRunTagSearch(tag)}
+    </span>
+  )
+}
 
 ShortcutTagToggle.propTypes = {
-  searchParameters: PropTypes.string,
+  tag: PropTypes.object,
 }
 
 const ShortcutTags = ({ variant, dispatchUpdateVariantTags }) => {
   const appliedShortcutTags = SHORTCUT_TAGS.reduce((acc, tagName) => {
     const appliedTag = variant.tags.find(tag => tag.name === tagName)
-    return appliedTag ? { ...acc, [tagName]: { color: appliedTag.color, searchParameters: appliedTag.searchParameters } } : acc
+    return appliedTag ? { ...acc, [tagName]: appliedTag } : acc
   }, {})
   const shortcutTagFields = SHORTCUT_TAGS.map(tagName => ({
     name: tagName,
     label: tagName,
     component: ShortcutTagToggle,
-    ...appliedShortcutTags[tagName],
+    tag: appliedShortcutTags[tagName],
   }))
 
   const onSubmit = (values) => {
