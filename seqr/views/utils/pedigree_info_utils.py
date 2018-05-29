@@ -10,6 +10,8 @@ import traceback
 import xlrd
 import xlwt
 from django.core.mail import EmailMessage
+from django.core.mail.message import EmailMultiAlternatives
+from django.utils.html import strip_tags
 
 import settings
 from reference_data.models import HumanPhenotypeOntology
@@ -483,15 +485,16 @@ def _send_sample_manifest(sample_manifest_rows, kit_id, original_filename, origi
     <b>%(original_filename)s</b> is the original file uploaded by the user.
     """ % locals()
 
-    email_message = EmailMessage(
+    email_message = EmailMultiAlternatives(
         subject=kit_id + " Merged Sample Pedigree File",
-        body=email_body,
+        body=strip_tags(email_body),
         to=settings.UPLOADED_PEDIGREE_FILE_RECIPIENTS,
         attachments=[
             (sample_manifest_filename, temp_sample_manifest_file.read(), "application/xls"),
             (os.path.basename(original_filename), original_file_stream.read(), "application/xls"),
         ],
     )
+    email_message.attach_alternative(email_body, 'text/html')
     email_message.send()
 
 
