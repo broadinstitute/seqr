@@ -140,7 +140,9 @@ def edit_individuals_handler(request, project_guid):
     if errors:
         return create_json_response({'errors': errors, 'warnings': warnings}, status=200, reason='Invalid updates')
 
-    updated_families, updated_individuals = add_or_update_individuals_and_families(project, modified_individuals_list)
+    updated_families, updated_individuals = add_or_update_individuals_and_families(
+        project, modified_individuals_list, user=request.user
+    )
 
     individuals_by_guid = {
         individual.guid: _get_json_for_individual(individual, request.user) for individual in updated_individuals
@@ -315,7 +317,9 @@ def save_individuals_table_handler(request, project_guid, upload_file_id):
     with gzip.open(serialized_file_path) as f:
         json_records = json.load(f)
 
-    updated_families, updated_individuals = add_or_update_individuals_and_families(project, individual_records=json_records)
+    updated_families, updated_individuals = add_or_update_individuals_and_families(
+        project, individual_records=json_records, user=request.user
+    )
 
     os.remove(serialized_file_path)
 
@@ -336,7 +340,7 @@ def save_individuals_table_handler(request, project_guid, upload_file_id):
     return create_json_response(updated_families_and_individuals_by_guid)
 
 
-def add_or_update_individuals_and_families(project, individual_records):
+def add_or_update_individuals_and_families(project, individual_records, user=None):
     """Add or update individual and family records in the given project.
 
     Args:
@@ -373,7 +377,8 @@ def add_or_update_individuals_and_families(project, individual_records):
         individual, created = Individual.objects.get_or_create(**criteria)
 
         record['family'] = family
-        update_individual_from_json(individual, record, allow_unknown_keys=True)
+        record.pop('familyId', None)
+        update_individual_from_json(individual, record, allow_unknown_keys=True, user=user)
 
         updated_individuals.append(individual)
 
