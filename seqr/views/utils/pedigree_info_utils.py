@@ -75,7 +75,7 @@ def parse_pedigree_table(filename, stream, user=None, project=None):
 
     if not errors and is_merged_pedigree_sample_manifest:
         with open(temp_file.name) as original_file:
-            _send_sample_manifest(sample_manifest_rows, kit_id, original_filename=filename, original_file_stream=original_file)
+            _send_sample_manifest(sample_manifest_rows, kit_id, original_filename=filename, original_file_stream=original_file, user=user, project=project)
 
     return json_records, errors, warnings
 
@@ -447,7 +447,7 @@ def _parse_merged_pedigree_sample_manifest_format(rows):
     return pedigree_rows, sample_manifest_rows, kit_id
 
 
-def _send_sample_manifest(sample_manifest_rows, kit_id, original_filename, original_file_stream):
+def _send_sample_manifest(sample_manifest_rows, kit_id, original_filename, original_file_stream, user=None, project=None):
 
     # write out the sample manifest file
     wb = xlwt.Workbook()
@@ -471,21 +471,28 @@ def _send_sample_manifest(sample_manifest_rows, kit_id, original_filename, origi
     sample_manifest_filename = kit_id+'.xlsx'
     logger.info("Sending sample manifest file %s to %s" % (sample_manifest_filename, settings.UPLOADED_PEDIGREE_FILE_RECIPIENTS))
 
+    if user is not None and project is not None:
+        email_body = "%(user)s just uploaded pedigree info to %(project)s.\n" % locals()
+    else:
+        email_body = ""
+
+    email_body += """This email has 2 attached files:
+
+    <b>%(sample_manifest_filename)s</b> is the sample manifest to send to GP.
+
+    <b>%(original_filename)s</b> is the original file uploaded by the user.
+    """ % locals()
+
     email_message = EmailMessage(
         subject=kit_id + " Merged Sample Pedigree File",
-        body="""
-        File uploaded by user: %(original_filename)s
-
-        For GP: %(sample_manifest_filename)s
-        """ % locals(),
+        body=email_body,
         to=settings.UPLOADED_PEDIGREE_FILE_RECIPIENTS,
         attachments=[
-            (os.path.basename(original_filename), original_file_stream.read(), "application/xls"),
             (sample_manifest_filename, temp_sample_manifest_file.read(), "application/xls"),
+            (os.path.basename(original_filename), original_file_stream.read(), "application/xls"),
         ],
     )
     email_message.send()
-
 
 
 class JsonConstants:
