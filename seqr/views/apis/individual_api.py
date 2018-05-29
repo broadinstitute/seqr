@@ -359,15 +359,12 @@ def add_or_update_individuals_and_families(project, individual_records):
         if 'individualId' not in record and 'individualGuid' not in record:
             raise ValueError("record #%s doesn't contain an 'individualId' key: %s" % (i, record))
 
-        family, created = Family.objects.get_or_create(
-            project=project,
-            family_id=family_id)
+        family, created = get_or_create_seqr_model(Family, project=project, family_id=family_id)
 
         if created:
             logger.info("Created family: %s", family)
             if not family.display_name:
-                family.display_name = family.family_id
-                family.save()
+                update_seqr_model(family, display_name = family.family_id)
 
         # uploaded files do not have unique guid's so fall back to a combination of family and individualId
         if record.get('individualGuid'):
@@ -399,9 +396,7 @@ def add_or_update_individuals_and_families(project, individual_records):
             set_patient_hpo_terms(project, individual.phenotips_eid, record.get('hpoTerms'), is_external_id=True)
 
         if not individual.display_name:
-            individual.display_name = individual.individual_id
-
-        individual.save()
+            update_seqr_model(individual, display_name=individual.individual_id)
 
         _deprecated_update_original_individual_data(project, individual)
 
