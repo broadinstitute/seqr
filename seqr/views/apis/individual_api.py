@@ -258,7 +258,7 @@ def receive_individuals_table_handler(request, project_guid):
     #for chunk in value.chunks():
     #   destination.write(chunk)
 
-    json_records, errors, warnings = parse_pedigree_table(filename, stream)
+    json_records, errors, warnings = parse_pedigree_table(filename, stream, user=request.user, project=project)
 
     if errors:
         return create_json_response({'errors': errors, 'warnings': warnings}, status=400, reason=errors)
