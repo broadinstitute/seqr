@@ -178,17 +178,6 @@ DEFAULT_VARIANT_TAGS = [
 ]
 
 
-def _deprecated_add_default_tags_to_original_project(project):
-    base_project = BaseProject.objects.get(project_id=project.deprecated_project_id)
-    for r in DEFAULT_VARIANT_TAGS:
-        t, created = ProjectTag.objects.get_or_create(project=base_project, tag=r['tag_name'])
-        t.order = r['order']
-        t.category = r['category']
-        t.title = r['description']
-        t.color = r['color']
-        t.save()
-
-
 def _add_default_variant_tag_types(project):
     """
     name = models.TextField()
@@ -208,5 +197,3 @@ def _add_default_variant_tag_types(project):
             category=r['category'],
             description=r['description'],
             color=r['color'])
-
-    _deprecated_add_default_tags_to_original_project(project)

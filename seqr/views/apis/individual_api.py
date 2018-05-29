@@ -13,7 +13,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import MultipleObjectsReturned
 from django.views.decorators.csrf import csrf_exempt
 
-from seqr.model_utils import get_or_create_seqr_model, update_seqr_model
+from seqr.model_utils import get_or_create_seqr_model, update_seqr_model, delete_seqr_model
 from seqr.models import Sample, Individual, Family, CAN_EDIT
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.pedigree_image_api import update_pedigree_images
@@ -480,27 +480,14 @@ def delete_individuals(project, individual_guids):
                          individual)
 
         # delete Individual
-        individual.delete()
+        delete_seqr_model(individual)
 
-        _deprecated_delete_individual(project, individual)
 
     update_pedigree_images(families.values())
 
     families_with_deleted_individuals = list(families.values())
 
     return families_with_deleted_individuals
-
-
-def _deprecated_delete_individual(project, individual):
-    base_projects = BaseProject.objects.filter(project_id=project.deprecated_project_id)
-    base_project = base_projects[0]
-
-    base_individuals = BaseIndividual.objects.filter(
-        project=base_project,
-        family__family_id=individual.family.family_id,
-        indiv_id=individual.individual_id)
-    base_individual = base_individuals[0]
-    base_individual.delete()
 
 
 def export_individuals(
