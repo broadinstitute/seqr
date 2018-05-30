@@ -1,10 +1,7 @@
 import json
-import itertools
 import csv
-import datetime
 import sys
 
-from pprint import pprint
 from django.core.exceptions import PermissionDenied
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ObjectDoesNotExist
@@ -25,7 +22,7 @@ from xbrowse_server.base.models import Project, Individual, Family, FamilyGroup,
 from xbrowse_server import sample_management, json_displays
 from xbrowse_server import server_utils
 from xbrowse_server.base.utils import get_collaborators_for_user, get_filtered_families, get_loaded_projects_for_user
-from xbrowse_server.gene_lists.models import GeneList, GeneListItem
+from xbrowse_server.gene_lists.models import GeneList
 from xbrowse_server.base.models import ProjectGeneList
 from xbrowse_server.base.lookups import get_all_saved_variants_for_project, get_variants_by_tag, get_causal_variants_for_project
 from xbrowse_server.api.utils import add_extra_info_to_variants_project
@@ -483,7 +480,7 @@ def variants_with_tag(request, project_id, tag=None):
                 genotype_values.append(genotype.extras["ad"] if genotype else "")
                 genotype_values.append(genotype.extras["dp"] if genotype else "")
                 genotype_values.append(genotype.gq if genotype and genotype.gq is not None else "")
-                genotype_values.append("%0.3f" % genotype.ab if genotype and genotype.ab is not None else "")
+                genotype_values.append(genotype.ab if genotype and genotype.ab is not None else "")
 
 
             writer.writerow(map(lambda s: unicode(s).encode('UTF-8'),
@@ -496,17 +493,17 @@ def variants_with_tag(request, project_id, tag=None):
                   "|".join([note['user']['display_name'] +":"+ note['note'] for note in variant.extras['family_notes']]) if 'family_notes' in variant.extras else '',
 
                   variant.extras["family_id"],
-                  worst_annotation.get("symbol", ""),
-                  variant.annotation.get("vep_consequence", ""),
+                  worst_annotation.get("symbol") or "",
+                  variant.annotation.get("vep_consequence") or "",
 
-                  variant.annotation["freqs"].get("1kg_wgs_phase3", ""),
-                  variant.annotation["freqs"].get("1kg_wgs_phase3_popmax", ""),
-                  variant.annotation["freqs"].get("exac_v3", ""),
-                  variant.annotation["freqs"].get("exac_v3_popmax", ""),
-                  worst_annotation.get("sift", ""),
-                  worst_annotation.get("polyphen", ""),
-                  worst_annotation.get("hgvsc", ""),
-                  worst_annotation.get("hgvsp", "").replace("%3D", "="),
+                  variant.annotation["freqs"].get("1kg_wgs_phase3") or "",
+                  variant.annotation["freqs"].get("1kg_wgs_phase3_popmax") or "",
+                  variant.annotation["freqs"].get("exac_v3") or "",
+                  variant.annotation["freqs"].get("exac_v3_popmax") or "",
+                  worst_annotation.get("sift") or "",
+                  worst_annotation.get("polyphen") or "",
+                  worst_annotation.get("hgvsc") or "",
+                  (worst_annotation.get("hgvsp") or "").replace("%3D", "="),
                   ] + genotype_values))
 
         return response
