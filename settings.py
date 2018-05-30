@@ -108,6 +108,9 @@ if ENABLE_DJANGO_DEBUG_TOOLBAR:
         'debug_toolbar.panels.logging.LoggingPanel',
         'debug_toolbar.panels.redirects.RedirectsPanel',
     ]
+    DEBUG_TOOLBAR_CONFIG = {
+        'RESULTS_CACHE_SIZE': 100,
+    }
 
 
 # Internationalization
