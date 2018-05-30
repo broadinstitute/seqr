@@ -91,7 +91,7 @@ PHENOTYPIC_SERIES_CACHE = {}
 def discovery_sheet(request, project_guid=None):
     projects = Project.objects.filter(projectcategory__name__iexact='cmg').distinct()
 
-    projects_json = [_get_json_for_project(project) for project in projects]
+    projects_json = [_get_json_for_project(project, request.user, add_project_category_guids_field=False) for project in projects]
     projects_json.sort(key=lambda project: project["name"])
 
     rows = []
@@ -147,16 +147,19 @@ def generate_rows(project, errors):
         logger.info("No data loaded for project: %s" % project)
         return []
 
+    loaded_datasets_by_family = collections.defaultdict(set)
     for d in loaded_datasets:
         print("Loaded time %s: %s" % (d, d.loaded_date))
+        for sample in d.samples.select_related('individual__family').all():
+            loaded_datasets_by_family[sample.individual.family.guid].add(d)
 
-    #project_variant_tag_filter = Q(family__project=project) & (
-    #            Q(variant_tag_type__name__icontains="tier 1") |
-    #            Q(variant_tag_type__name__icontains="tier 2") |
-    #            Q(variant_tag_type__name__icontains="known gene for phenotype"))
+    project_variant_tag_filter = Q(family__project=project) & (
+               Q(variant_tag_type__name__icontains="tier 1") |
+               Q(variant_tag_type__name__icontains="tier 2") |
+               Q(variant_tag_type__name__icontains="known gene for phenotype"))
 
-    #project_variant_tags = list(VariantTag.objects.select_related('variant_tag_type').filter(project_variant_tag_filter))
-    #project_variant_tag_names = [vt.variant_tag_type.name.lower() for vt in project_variant_tags]
+    project_variant_tags = list(VariantTag.objects.select_related('variant_tag_type').select_related('family').select_related('family__project').filter(project_variant_tag_filter))
+    # project_variant_tag_names = [vt.variant_tag_type.name.lower() for vt in project_variant_tags]
     #project_has_tier1 = any([vt_name.startswith("tier 1") for vt_name in project_variant_tag_names])
     #project_has_tier2 = any([vt_name.startswith("tier 2") for vt_name in project_variant_tag_names])
     #project_has_known_gene_for_phenotype = any([(vt_name == "known gene for phenotype") for vt_name in project_variant_tag_names])
@@ -177,9 +180,14 @@ def generate_rows(project, errors):
         sequencing_approach = "WES"
 
     now = timezone.now()
-    for family in Family.objects.filter(project=project):
-        individuals = list(Individual.objects.filter(family=family))
-        samples = list(Sample.objects.filter(individual__family=family))
+    for family in Family.objects.filter(project=project).prefetch_related('individual_set'):
+        datesets_loaded_date_for_family = [dataset.loaded_date for dataset in loaded_datasets_by_family[family.guid] if
+                                           dataset.loaded_date is not None]
+        if not datesets_loaded_date_for_family:
+            errors.append("No data loaded for family: %s. Skipping..." % family)
+            continue
+
+        individuals = list(family.individual_set.all())
 
         phenotips_individual_data_records = [json.loads(i.phenotips_data) for i in individuals if i.phenotips_data]
 
@@ -226,15 +234,6 @@ def generate_rows(project, errors):
                     logger.info("Unable to look up phenotypic series for OMIM initial number: %s. %s" % (omim_number_initial, e))
 
         submitted_to_mme = any([individual.mme_submitted_data for individual in individuals if individual.mme_submitted_data])
-
-        #samples
-        #print([s for s in samples])
-        #print([(dataset, dataset.is_loaded, dataset.loaded_date) for sample in samples for dataset in sample.dataset_set.all()])
-
-        datesets_loaded_date_for_family = [dataset.loaded_date for sample in samples for dataset in sample.dataset_set.filter(analysis_type="VARIANTS") if dataset.loaded_date is not None]
-        if not datesets_loaded_date_for_family:
-            errors.append("No data loaded for family: %s. Skipping..." % family)
-            continue
 
         t0 = min(datesets_loaded_date_for_family)
 
@@ -339,12 +338,7 @@ def generate_rows(project, errors):
         if category_not_set_on_some_features:
             errors.append("HPO category field not set for some HPO terms in %s" % family)
 
-        variant_tag_filter = Q(family=family) & (
-            Q(variant_tag_type__name__icontains="tier 1") |
-            Q(variant_tag_type__name__icontains="tier 2") |
-            Q(variant_tag_type__name__icontains="known gene for phenotype"))
-
-        variant_tags = list(VariantTag.objects.select_related('variant_tag_type').filter(variant_tag_filter))
+        variant_tags = [vt for vt in project_variant_tags if vt.family == family]
         if not variant_tags:
             rows.append(row)
             continue
@@ -410,10 +404,10 @@ def generate_rows(project, errors):
                 if vt.saved_variant_json["genotypes"]:
                     chrom, pos = genomeloc.get_chr_pos(vt.xpos_start)
                     is_x_linked = "X" in chrom
-                    for indiv_id, genotype in json.loads(vt.saved_variant_json["genotypes"]).items():
+                    for indiv_id, genotype in vt.saved_variant_json["genotypes"].items():
                         try:
-                            i = Individual.objects.get(family=family, individual_id=indiv_id)
-                        except ObjectDoesNotExist as e:
+                            i = next(i for i in individuals if i.individual_id == indiv_id)
+                        except StopIteration as e:
                             logger.warn("WARNING: Couldn't find individual: %s, %s" % (family, indiv_id))
                             continue
 
