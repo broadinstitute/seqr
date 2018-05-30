@@ -138,7 +138,7 @@ def edit_individuals_handler(request, project_guid):
     # TODO more validation?
     errors, warnings = validate_fam_file_records(individuals_list, fail_on_warnings=True)
     if errors:
-        return create_json_response({'errors': errors, 'warnings': warnings}, status=200, reason='Invalid updates')
+        return create_json_response({'errors': errors, 'warnings': warnings}, status=400, reason='Invalid updates')
 
     updated_families, updated_individuals = add_or_update_individuals_and_families(
         project, modified_individuals_list, user=request.user
@@ -249,7 +249,7 @@ def receive_individuals_table_handler(request, project_guid):
 
     if len(request.FILES) != 1:
         error = "Received %s files instead of 1" % len(request.FILES)
-        return create_json_response({'errors': error}, status=200, reason=error)
+        return create_json_response({'errors': error}, status=400, reason=error)
 
     # parse file
     stream = request.FILES.values()[0]
@@ -263,7 +263,7 @@ def receive_individuals_table_handler(request, project_guid):
     json_records, errors, warnings = parse_pedigree_table(filename, stream, user=request.user, project=project)
 
     if errors:
-        return create_json_response({'errors': errors, 'warnings': warnings}, status=200, reason=errors)
+        return create_json_response({'errors': errors, 'warnings': warnings}, status=400, reason=errors)
 
     # save json to temporary file
     uploadedFileId = hashlib.md5(str(json_records)).hexdigest()
