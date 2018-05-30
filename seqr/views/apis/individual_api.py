@@ -406,7 +406,7 @@ def add_or_update_individuals_and_families(project, individual_records, user=Non
                 is_external_id=True,
                 hpo_terms_present=record.get(JsonConstants.HPO_TERMS_PRESENT_COLUMN, []),
                 hpo_terms_absent=record.get(JsonConstants.HPO_TERMS_ABSENT_COLUMN, []),
-                final_diagnosis_omim=record.get(JsonConstants.FINAL_DIAGNOSIS_OMIM_COLUMN, []))
+                final_diagnosis_mim_ids=record.get(JsonConstants.FINAL_DIAGNOSIS_OMIM_COLUMN, []))
 
         if not individual.display_name:
             update_seqr_model(individual, display_name=individual.individual_id)
