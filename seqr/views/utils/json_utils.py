@@ -87,4 +87,6 @@ def _to_title_case(snake_case_str):
 
 
 def _to_snake_case(camel_case_str):
+    """Convert CamelCase string to snake_case (from https://gist.github.com/jaytaylor/3660565)"""
+
     return re.sub('([A-Z])', '_\\1', camel_case_str).lower().lstrip('_')

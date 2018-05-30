@@ -5,6 +5,7 @@ import traceback
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models.query_utils import Q
 
+from seqr.views.utils.json_utils import _to_snake_case
 from xbrowse_server.base.models import Project as BaseProject, Family as BaseFamily, Individual as BaseIndividual, ProjectTag as BaseProjectTag, VariantTag as BaseVariantTag, VariantNote as BaseVariantNote
 from xbrowse_server.gene_lists.models import GeneList as BaseGeneList, GeneListItem as BaseGeneListItem
 
@@ -159,12 +160,6 @@ def update_seqr_model(seqr_model, **kwargs):
     xbrowse_kwargs = convert_seqr_kwargs_to_xbrowse_kwargs(seqr_model, **kwargs)
 
     _update_model(xbrowse_model, **xbrowse_kwargs)
-
-
-def _to_snake_case(camel_case_str):
-    """Convert CamelCase string to snake_case (from https://gist.github.com/jaytaylor/3660565)"""
-
-    return re.sub("([A-Z])", "_\\1", camel_case_str).lower().lstrip("_")
 
 
 def _create_xbrowse_model(seqr_model, **kwargs):

@@ -73,7 +73,6 @@ def update_individual_handler(request, individual_guid):
     request_json = json.loads(request.body)
 
     update_individual_from_json(individual, request_json, user=request.user)
-    _deprecated_update_original_individual_data(None, individual)
 
     return create_json_response({
         individual.guid: _get_json_for_individual(individual, request.user)
@@ -389,8 +388,8 @@ def add_or_update_individuals_and_families(project, individual_records, user=Non
         if created:
             # create new PhenoTips patient record
             patient_record = create_patient(project, individual.phenotips_eid)
-            individual.phenotips_patient_id = patient_record['id']
-            individual.case_review_status = 'I'
+            update_seqr_model(individual, phenotips_patient_id=patient_record['id'])
+            update_seqr_model(individual, case_review_status='I')
 
             logger.info("Created PhenoTips record with patient id %s and external id %s" % (
                 str(individual.phenotips_patient_id), str(individual.phenotips_eid)))
@@ -403,8 +402,6 @@ def add_or_update_individuals_and_families(project, individual_records, user=Non
         if not individual.display_name:
             update_seqr_model(individual, display_name=individual.individual_id)
 
-        _deprecated_update_original_individual_data(project, individual)
-
         families[family.family_id] = family
 
     updated_families = list(families.values())
@@ -413,42 +410,6 @@ def add_or_update_individuals_and_families(project, individual_records, user=Non
     update_pedigree_images(updated_families)
 
     return updated_families, updated_individuals
-
-
-def _deprecated_update_original_individual_data(project, individual):
-    base_project = BaseProject.objects.filter(project_id=project.deprecated_project_id if project else individual.family.project.deprecated_project_id)
-    base_project = base_project[0]
-
-    try:
-        created = False
-        base_family, created = BaseFamily.objects.get_or_create(project=base_project, family_id=individual.family.family_id)
-    except MultipleObjectsReturned:
-        raise ValueError("Multiple families in %s have id: %s " % (base_project.project_id, individual.family.family_id))
-
-    if created:
-        logger.info("Created xbrowse family: %s" % (base_family,))
-
-    try:
-        base_individual, created = BaseIndividual.objects.get_or_create(project=base_project, family=base_family, indiv_id=individual.individual_id)
-    except MultipleObjectsReturned:
-        raise ValueError("Multiple individuals in %s have id: %s " % (base_project.project_id, individual.individual_id))
-
-    if created:
-        logger.info("Created xbrowse individual: %s" % (base_individual,))
-
-    base_individual.created_date = individual.created_date
-    base_individual.maternal_id = individual.maternal_id or ''
-    base_individual.paternal_id = individual.paternal_id or ''
-    base_individual.gender = individual.sex
-    base_individual.affected = individual.affected
-    base_individual.nickname = individual.display_name
-    base_individual.case_review_status = individual.case_review_status
-
-    if created or not base_individual.phenotips_id:
-        base_individual.phenotips_id = individual.phenotips_eid
-
-    base_individual.phenotips_data = individual.phenotips_data
-    base_individual.save()
 
 
 def delete_individuals(project, individual_guids):
