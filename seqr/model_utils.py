@@ -126,7 +126,7 @@ def find_matching_xbrowse_model(seqr_model):
     return None
 
 
-def _convert_seqr_kwargs_to_xbrowse_kwargs(seqr_model, **kwargs):
+def convert_seqr_kwargs_to_xbrowse_kwargs(seqr_model, **kwargs):
     # rename fields
     seqr_class_name = type(seqr_model).__name__
     field_mapping = SEQR_TO_XBROWSE_FIELD_MAPPING[seqr_class_name]
@@ -156,7 +156,7 @@ def update_seqr_model(seqr_model, **kwargs):
     if not xbrowse_model:
         return
 
-    xbrowse_kwargs = _convert_seqr_kwargs_to_xbrowse_kwargs(seqr_model, **kwargs)
+    xbrowse_kwargs = convert_seqr_kwargs_to_xbrowse_kwargs(seqr_model, **kwargs)
 
     _update_model(xbrowse_model, **xbrowse_kwargs)
 
@@ -171,7 +171,7 @@ def _create_xbrowse_model(seqr_model, **kwargs):
     try:
         seqr_model_class = seqr_model.__class__
         seqr_model_class_name = seqr_model_class.__name__
-        xbrowse_kwargs = _convert_seqr_kwargs_to_xbrowse_kwargs(seqr_model, **kwargs)
+        xbrowse_kwargs = convert_seqr_kwargs_to_xbrowse_kwargs(seqr_model, **kwargs)
         xbrowse_model_class = SEQR_TO_XBROWSE_CLASS_MAPPING[seqr_model_class_name]
         xbrowse_model_class_name = xbrowse_model_class.__name__
         logging.info("_create_xbrowse_model(%s, %s)" % (xbrowse_model_class_name, xbrowse_kwargs))
