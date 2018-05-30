@@ -1,7 +1,6 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import igv from 'igv'
 import style from 'igv/igv.css' //eslint-disable-line no-unused-vars
 
 // Map font-awesome icons to semantic-ui icons
@@ -105,6 +104,7 @@ class IGV extends React.Component {
 
   componentDidMount() {
     if (this.container) {
+      const igv = require('igv') //eslint-disable-line global-require
       igv.createBrowser(this.container, this.props.igvOptions)
     }
   }
