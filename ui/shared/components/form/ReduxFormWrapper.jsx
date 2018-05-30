@@ -10,7 +10,7 @@ import ButtonPanel from './ButtonPanel'
 import RequestStatus from './RequestStatus'
 
 const MessagePanel = styled(Message)`
-  margin: 0px 20px;
+  margin: 1em 2em !important;
 `
 
 export const validators = {
