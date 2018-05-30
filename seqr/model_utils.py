@@ -1,8 +1,6 @@
 import logging
-import re
 import traceback
 
-from django.core.exceptions import ObjectDoesNotExist
 from django.db.models.query_utils import Q
 
 from seqr.views.utils.json_utils import _to_snake_case
@@ -105,7 +103,12 @@ def find_matching_xbrowse_model(seqr_model):
         elif seqr_class_name == "VariantTag":
             raise ValueError("VariantTag sync not yet implemented")
         elif seqr_class_name == "VariantTagType":
-            raise ValueError("VariantTagType sync not yet implemented")
+            return BaseProjectTag.objects.get(
+                Q(seqr_variant_tag_type=seqr_model) |
+                (Q(seqr_variant_tag_type__isnull=True) &
+                 Q(project__project_id=seqr_model.project.deprecated_project_id) &
+                 Q(tag=seqr_model.name) &
+                 Q(category=seqr_model.category)))
         elif seqr_class_name == "VariantNote":
             raise ValueError("VariantNote sync not yet implemented")
         elif seqr_class_name == "LocusList":
@@ -137,14 +140,14 @@ def convert_seqr_kwargs_to_xbrowse_kwargs(seqr_model, **kwargs):
     }
 
     # handle foreign keys
-    for key, value in field_mapping.items():
+    for key, value in xbrowse_kwargs.items():
         if _is_seqr_model(value):
             value = find_matching_xbrowse_model(value)
             if value is not None:
-                field_mapping[key] = value
+                xbrowse_kwargs[key] = value
             else:
                 logging.info("ERROR: unable to find equivalent seqr model for %s: %s" % (key, value))
-                del field_mapping[key]
+                del xbrowse_kwargs[key]
 
     return xbrowse_kwargs
 
@@ -170,13 +173,12 @@ def _create_xbrowse_model(seqr_model, **kwargs):
         xbrowse_model_class = SEQR_TO_XBROWSE_CLASS_MAPPING[seqr_model_class_name]
         xbrowse_model_class_name = xbrowse_model_class.__name__
         logging.info("_create_xbrowse_model(%s, %s)" % (xbrowse_model_class_name, xbrowse_kwargs))
-        xbrowse_model = seqr_model_class.objects.create(**xbrowse_kwargs)
+        xbrowse_model = xbrowse_model_class.objects.create(**xbrowse_kwargs)
 
         seqr_model_foreign_key_name = "seqr_"+_to_snake_case(seqr_model_class_name)
         if hasattr(xbrowse_model, seqr_model_foreign_key_name):
             setattr(xbrowse_model, seqr_model_foreign_key_name, seqr_model)
             xbrowse_model.save()
-
         return xbrowse_model
 
     except Exception as e:
