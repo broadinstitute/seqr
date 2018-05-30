@@ -95,7 +95,7 @@ def update_project_handler(request, project_guid):
         update_seqr_model(project, name=request_json.get('name'))
 
     if 'description' in request_json:
-        update_seqr_model(project, name=request_json.get('description'))
+        update_seqr_model(project, description=request_json.get('description'))
 
     return create_json_response({
         'projectsByGuid': {
