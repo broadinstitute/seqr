@@ -1,10 +1,20 @@
 import React from 'react'
 import PropTypes from 'prop-types'
+import styled from 'styled-components'
 
 import { Popup, Table } from 'semantic-ui-react'
 //import randomMC from 'random-material-color'
 
 import ColoredIcon from '../icons/ColoredIcon'
+
+const TableRow = styled(Table.Row)`
+  padding: 0px !important;
+`
+
+const TableCell = styled(Table.Cell)`
+  padding: .2em .6em !important;
+`
+
 
 class HorizontalStackedBar extends React.Component {
 
@@ -62,11 +72,11 @@ class HorizontalStackedBar extends React.Component {
                   {
                     dataWithPercents.map(d => (
                       d.count > 0 ?
-                        <Table.Row key={d.name} verticalAlign="top" >
-                          <Table.Cell collapsing><ColoredIcon name="square" size="small" color={d.color} /> {d.count}</Table.Cell>
-                          <Table.Cell singleLine>{d.name}</Table.Cell>
-                          <Table.Cell collapsing>({d.percent}%)</Table.Cell>
-                        </Table.Row> : null
+                        <TableRow key={d.name} verticalAlign="top" >
+                          <TableCell collapsing><ColoredIcon name="square" size="small" color={d.color} /> {d.count}</TableCell>
+                          <TableCell singleLine>{d.name}</TableCell>
+                          <TableCell collapsing>({d.percent}%)</TableCell>
+                        </TableRow> : null
                     ))
                   }
 

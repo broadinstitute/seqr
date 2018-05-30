@@ -117,7 +117,7 @@ def edit_individuals_handler(request, project_guid):
     modified_individuals_list = request_json.get('individuals')
     if modified_individuals_list is None:
         return create_json_response(
-            {}, status=400, reason="'individuals' not specified")
+            {}, status=200, reason="'individuals' not specified")
 
     update_individuals = {ind['individualGuid']: ind for ind in modified_individuals_list}
     update_individual_models = {ind.guid: ind for ind in Individual.objects.filter(guid__in=update_individuals.keys())}
@@ -139,9 +139,11 @@ def edit_individuals_handler(request, project_guid):
     # TODO more validation?
     errors, warnings = validate_fam_file_records(individuals_list, fail_on_warnings=True)
     if errors:
-        return create_json_response({'errors': errors, 'warnings': warnings}, status=400, reason='Invalid updates')
+        return create_json_response({'errors': errors, 'warnings': warnings}, status=200, reason='Invalid updates')
 
-    updated_families, updated_individuals = add_or_update_individuals_and_families(project, modified_individuals_list)
+    updated_families, updated_individuals = add_or_update_individuals_and_families(
+        project, modified_individuals_list, user=request.user
+    )
 
     individuals_by_guid = {
         individual.guid: _get_json_for_individual(individual, request.user) for individual in updated_individuals
@@ -248,7 +250,7 @@ def receive_individuals_table_handler(request, project_guid):
 
     if len(request.FILES) != 1:
         error = "Received %s files instead of 1" % len(request.FILES)
-        return create_json_response({'errors': error}, status=400, reason=error)
+        return create_json_response({'errors': error}, status=200, reason=error)
 
     # parse file
     stream = request.FILES.values()[0]
@@ -259,10 +261,10 @@ def receive_individuals_table_handler(request, project_guid):
     #for chunk in value.chunks():
     #   destination.write(chunk)
 
-    json_records, errors, warnings = parse_pedigree_table(filename, stream)
+    json_records, errors, warnings = parse_pedigree_table(filename, stream, user=request.user, project=project)
 
     if errors:
-        return create_json_response({'errors': errors, 'warnings': warnings}, status=400, reason=errors)
+        return create_json_response({'errors': errors, 'warnings': warnings}, status=200, reason=errors)
 
     # save json to temporary file
     uploadedFileId = hashlib.md5(str(json_records)).hexdigest()
@@ -316,7 +318,9 @@ def save_individuals_table_handler(request, project_guid, upload_file_id):
     with gzip.open(serialized_file_path) as f:
         json_records = json.load(f)
 
-    updated_families, updated_individuals = add_or_update_individuals_and_families(project, individual_records=json_records)
+    updated_families, updated_individuals = add_or_update_individuals_and_families(
+        project, individual_records=json_records, user=request.user
+    )
 
     os.remove(serialized_file_path)
 
@@ -337,7 +341,7 @@ def save_individuals_table_handler(request, project_guid, upload_file_id):
     return create_json_response(updated_families_and_individuals_by_guid)
 
 
-def add_or_update_individuals_and_families(project, individual_records):
+def add_or_update_individuals_and_families(project, individual_records, user=None):
     """Add or update individual and family records in the given project.
 
     Args:
@@ -374,7 +378,8 @@ def add_or_update_individuals_and_families(project, individual_records):
 
         individual, created = get_or_create_seqr_model(Individual, **criteria)
         record['family'] = family
-        update_individual_from_json(individual, record, allow_unknown_keys=True)
+        record.pop('familyId', None)
+        update_individual_from_json(individual, record, allow_unknown_keys=True, user=user)
 
         updated_individuals.append(individual)
 

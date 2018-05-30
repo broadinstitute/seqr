@@ -152,7 +152,7 @@ UploaderFieldComponent.propTypes = {
   uploaderProps: PropTypes.object,
 }
 
-const validate = value => (value && value.errors) || (value && value.uploadedFileId ? undefined : 'File not uploaded')
+const validate = value => (value && value.errors && value.errors.length) || (value && value.uploadedFileId ? undefined : 'File not uploaded')
 
 export default props =>
   <Field

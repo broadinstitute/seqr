@@ -48,7 +48,7 @@ const PageHeader = ({ user, project }) => {
       <Grid.Column width={1} />
       <Grid.Column width={11}>
         <ProjectTitleContainer>
-          Project »
+          {'Project » '}
           <NavLink to={`/project/${project.projectGuid}/project_page`}>
             {project.name}
           </NavLink>
