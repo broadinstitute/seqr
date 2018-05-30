@@ -70,4 +70,5 @@ def elasticsearch_status(request):
     return render(request, "staff/elasticsearch_status.html", {
         'indices': indices,
         'operations': operations,
+        'elasticsearch_host': settings.ELASTICSEARCH_SERVER,
     })
