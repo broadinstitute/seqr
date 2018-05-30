@@ -3,6 +3,7 @@ import re
 import traceback
 
 from django.core.exceptions import ObjectDoesNotExist
+from django.db.models.query_utils import Q
 
 from xbrowse_server.base.models import Project as BaseProject, Family as BaseFamily, Individual as BaseIndividual, ProjectTag as BaseProjectTag, VariantTag as BaseVariantTag, VariantNote as BaseVariantNote
 from xbrowse_server.gene_lists.models import GeneList as BaseGeneList, GeneListItem as BaseGeneListItem
@@ -84,21 +85,22 @@ def find_matching_xbrowse_model(seqr_model):
 
         if seqr_class_name == "Project":
             return BaseProject.objects.get(
-                project_id=seqr_model.deprecated_project_id)
+                Q(seqr_project=seqr_model) |
+                (Q(seqr_project__isnull=True) &
+                 Q(project_id=seqr_model.deprecated_project_id)))
         elif seqr_class_name == "Family":
             return BaseFamily.objects.get(
-                project__project_id=seqr_model.project.deprecated_project_id,
-                family_id=seqr_model.family_id)
+                Q(seqr_family=seqr_model) |
+                (Q(seqr_family__isnull=True) &
+                 Q(project__project_id=seqr_model.project.deprecated_project_id) &
+                 Q(family_id=seqr_model.family_id)))
         elif seqr_class_name == "Individual":
             return BaseIndividual.objects.get(
-                family__project__project_id=seqr_model.family.project.deprecated_project_id,
-                family__family_id=seqr_model.family.family_id,
-                indiv_id=seqr_model.individual_id)
-        elif seqr_class_name == "Individual":
-            return BaseIndividual.objects.get(
-                family__project__project_id=seqr_model.family.project.deprecated_project_id,
-                family__family_id=seqr_model.family.family_id,
-                indiv_id=seqr_model.individual_id)
+                Q(seqr_individual=seqr_model) |
+                (Q(seqr_individual__isnull=True) &
+                 Q(family__project__project_id=seqr_model.family.project.deprecated_project_id) &
+                 Q(family__family_id=seqr_model.family.family_id) &
+                 Q(indiv_id=seqr_model.individual_id)))
         elif seqr_class_name == "VariantTag":
             raise ValueError("VariantTag sync not yet implemented")
         elif seqr_class_name == "VariantTagType":
@@ -107,9 +109,11 @@ def find_matching_xbrowse_model(seqr_model):
             raise ValueError("VariantNote sync not yet implemented")
         elif seqr_class_name == "LocusList":
             return BaseGeneList.objects.get(
-                name=seqr_model.name,
-                description=seqr_model.description,
-                is_public=seqr_model.is_public)
+                Q(seqr_locus_list=seqr_model) |
+                (Q(seqr_locus_list__isnull=True) &
+                 Q(name=seqr_model.name) &
+                 Q(description=seqr_model.description) &
+                 Q(is_public=seqr_model.is_public)))
         elif seqr_class_name == "LocusListGene":
             return BaseGeneListItem.objects.get(
                 gene_list=find_matching_xbrowse_model(seqr_model.locus_list),
