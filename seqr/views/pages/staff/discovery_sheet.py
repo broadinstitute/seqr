@@ -288,7 +288,7 @@ def generate_rows(project, errors):
             "animal_model": "NS",
             "non_human_cell_culture_model": "NS",
             "rescue": "NS",
-            
+
             "komp_early_release": "NS",
         }
 

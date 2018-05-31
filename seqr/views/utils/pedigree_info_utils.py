@@ -241,7 +241,7 @@ def convert_fam_file_rows_to_json(rows):
             JsonConstants.HPO_TERMS_PRESENT_COLUMN: '',
             JsonConstants.HPO_TERMS_ABSENT_COLUMN: '',
             JsonConstants.FINAL_DIAGNOSIS_OMIM_COLUMN: '',
-            #JsonConstants.CODED_PHENOTYPE_COLUMN: '',
+            JsonConstants.CODED_PHENOTYPE_COLUMN: '',
             #JsonConstants.FUNDING_SOURCE_COLUMN: '',
             #JsonConstants.CASE_REVIEW_STATUS_COLUMN: '',
         }
@@ -270,8 +270,8 @@ def convert_fam_file_rows_to_json(rows):
                 json_record[JsonConstants.HPO_TERMS_ABSENT_COLUMN] = filter(None, map(lambda s: s.strip(), value.split(',')))
             elif re.match("diagnosis", key) or re.match("disorder", key):
                 json_record[JsonConstants.FINAL_DIAGNOSIS_OMIM_COLUMN] = filter(None, map(lambda s: s.strip(), value.split(',')))
-            #elif "coded" in key and "phenotype" in key:
-            #    json_record[JsonConstants.CODED_PHENOTYPE_COLUMN] = value
+            elif "coded" in key and "phenotype" in key:
+                json_record[JsonConstants.CODED_PHENOTYPE_COLUMN] = value
             #elif key.startswith("funding"):
             #    json_record[JsonConstants.FUNDING_SOURCE_COLUMN] = value
             #elif re.match("case.*review.*status", key):
@@ -514,9 +514,11 @@ class JsonConstants:
     HPO_TERMS_ABSENT_COLUMN = 'hpoTermsAbsent'
     FINAL_DIAGNOSIS_OMIM_COLUMN = 'finalDiagnosisOmim'
 
+    CODED_PHENOTYPE_COLUMN = 'codedPhenotype'
+
     # staff-only uploads
     #CASE_REVIEW_STATUS_COLUMN = 'caseReviewStatus'
-    #CODED_PHENOTYPE_COLUMN = 'codedPhenotype'
+
     #POST_DISCOVERY_OMIM_COLUMN = 'postDiscoveryOmim'
     #FUNDING_SOURCE_COLUMN = 'fundingSource'
 
