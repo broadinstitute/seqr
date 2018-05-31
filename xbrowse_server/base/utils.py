@@ -2,6 +2,7 @@ import json
 
 from django.core import urlresolvers
 from django.db.models import Prefetch
+from django.db.models.query_utils import Q
 from django.utils.http import urlquote
 
 from xbrowse_server.base.models import Project, Family, Individual
@@ -46,18 +47,23 @@ def get_inheritances(family):
 
     return x_inheritance.get_family_inheritances(family)
 
-def get_projects_for_user(user):
 
-    if user.is_staff: 
-        return Project.objects.all().order_by('project_id')
-    else: 
-        return [p for p in Project.objects.all().order_by('project_id') if p.can_view(user)]
+def get_projects_for_user(user):
+    all_projects = Project.objects.all().order_by('project_id')
+    if user.is_superuser:
+        return all_projects
+
+    return [p for p in all_projects if (user.is_staff and not p.disable_staff_access) or p.can_view(user)]
 
 
 def get_loaded_projects_for_user(user, fields=None):
     projects = Project.objects.all()
-    if not user.is_staff:
-        projects = projects.filter(projectcollaborator__user=user)
+    collaborators_filter = Q(projectcollaborator__user=user)
+    if user.is_staff:
+        projects = projects.filter(collaborators_filter | Q(disable_staff_access=False))
+    else:
+        projects = projects.filter(collaborators_filter)
+
     if fields:
         projects = projects.only(*fields)
 

@@ -72,7 +72,12 @@ export class HttpRequestHelper {
       // decided against auto-redirect to login form (in case user has unsaved text)
       if (!response.ok) {
         console.log('ERROR: ', response.statusText, response.status, response)
-        throw new Error(`${response.statusText.toLowerCase()} (${response.status})`)
+        // throw new Error(`${response.statusText.toLowerCase()} (${response.status})`)
+        return response.json().then((responseJson) => {
+          const err = new Error(`${response.statusText.toLowerCase()} (${response.status})`)
+          err.body = responseJson
+          throw err
+        })
       }
       return response.json()
     })

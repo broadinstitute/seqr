@@ -4,35 +4,43 @@
 
 <br />
 <br />
-<h3>Elasticsearch</h3><br />
+<b>Elasticsearch Host:</b><br />
+{{ elasticsearch_host }} <br />
 <br />
-Hostname: {{ hostname }}
 <br />
 <b>Loaded Indices:</b>
-<table id="dataTable" class="display">
+<table id="dataTable" data-order='[[ 7, "desc" ]]' class="display">
     <thead>
         <tr>
             <th />
-            <th>status</th>
-            <th width="50%">name</th>
+            <th>project</th>
+            <th>data type</th>
+            <th>genome version</th>
+            <th>snapshot</th>
+            <th>index</th>
             <th># records</th>
             <th>size</th>
-            <th width="30%">created date</th>
+            <th>created date</th>
+            <th>status</th>
         </tr>
     </thead>
 
     {% for index in indices %}
         <tr>
             <td />
-            <td>{{ index.health }}</td>
+
+            <td><a href="/project/{{ index.project_guid }}/project_page">{{ index.project_id }}</a></td>
+            <td>{{ index.analysis_type }}</td>
+            <td>{{ index.genome_version }}</td>
+            <td>{{ index.snapshots }}</td>
             <td>{{ index.index }}</td>
             <td>{{ index.docs_count }}</td>
             <td>{{ index.store_size }}</td>
             <td>{{ index.creation_date_string }}</td>
+            <td>{{ index.health }}</td>
         </tr>
     {% endfor %}
 </table>
-
 <br />
 Snapshots:<br />
 <br />

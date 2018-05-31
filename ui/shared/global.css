@@ -63,17 +63,3 @@ body {
   font-weight: 500;
   font-size: 0.95em;
 }
-
-.ui.selection.dropdown {
-  padding: .3em 2.1em .3em .5em;
-  min-height: 0px !important;
-}
-
-.ui.selection.dropdown .menu > .item {
-  padding: .7em .5em !important;
-}
-
-.ui.selection.dropdown > .dropdown.icon {
-  top: 0.4em !important;
-  right: 0.5em !important;
-}

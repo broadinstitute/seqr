@@ -195,21 +195,32 @@ def update_patient_field_value(project, patient_id, field_name, field_value, is_
     update_patient_data(project, patient_id, patient_json, is_external_id=is_external_id)
 
 
-def set_patient_hpo_terms(project, patient_id, hpo_terms, is_external_id=False):
+def set_patient_hpo_terms(project, patient_id, hpo_terms_present=[], hpo_terms_absent=[], final_diagnosis_mim_ids=[], is_external_id=False):
     """Utility method for specifying a list of HPO IDs for a patient.
 
     Args:
         project (Model): used to retrieve PhenoTips credentials
         patient_id (string): PhenoTips patient id (either internal eg. "P000001" or external eg. "NA12878")
-        hpo_terms (list): list of HPO ID strings (eg. ["HP:00012345", "HP:0012346", ...])
+        hpo_terms_present (list): list of HPO IDs for phenotypes present in this patient (eg. ["HP:00012345", "HP:0012346", ...])
+        hpo_terms_absent (list): list of HPO IDs for phenotypes not present in this patient (eg. ["HP:00012345", "HP:0012346", ...])
+        final_diagnosis_mim_ids (int): one or more MIM Ids (eg. [105650, ..])
         is_external_id (bool): whether the provided id is an external id
     Raises:
         PhenotipsException: if api call fails
     """
-    field_name = "features"
-    field_value = [{"id": hpo_term} for hpo_term in hpo_terms]
 
-    update_patient_field_value(project, patient_id, field_name, field_value, is_external_id=is_external_id)
+    if hpo_terms_present or hpo_terms_absent:
+        features_value = [{"id": hpo_term, "observed": "yes"} for hpo_term in hpo_terms_present]
+        features_value += [{"id": hpo_term, "observed": "no"} for hpo_term in hpo_terms_absent]
+        update_patient_field_value(project, patient_id, "features", features_value, is_external_id=is_external_id)
+
+    if final_diagnosis_mim_ids:
+        omim_disorders = []
+        for mim_id in final_diagnosis_mim_ids:
+            if int(mim_id) < 100000:
+                raise ValueError("Invalid final_diagnosis_mim_id: %s. Expected a 6-digit number." % str(mim_id))
+            omim_disorders.append({'id': 'MIM:%s' % mim_id})
+        update_patient_field_value(project, patient_id, "disorders", omim_disorders, is_external_id=is_external_id)
 
 
 def add_user_to_patient(username, patient_id, allow_edit=True):
@@ -219,7 +230,7 @@ def add_user_to_patient(username, patient_id, allow_edit=True):
         username (string): PhenoTips username to grant access to.
         patient_id (string): PhenoTips internal patient id.
     """
-    headers = { "Content-Type": "application/x-www-form-urlencoded" }
+    headers = {"Content-Type": "application/x-www-form-urlencoded"}
     data = {
         'collaborator': 'XWiki.' + str(username),
         'patient': patient_id,

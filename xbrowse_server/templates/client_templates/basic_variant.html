@@ -5,7 +5,7 @@
         <div class="highlight-msg" style="font-size:12pt">
             <% console.log(variant); %>
             <% if(variant.extras && variant.extras.clinvar_clinsig) { %>
-                <div>
+                <div style="display: inline-block;">
                     <% if(variant.extras.clinvar_variant_id) { %>
                         <a target="_blank" href="http://www.ncbi.nlm.nih.gov/clinvar/variation/<%= variant.extras.clinvar_variant_id %>">
                     <% } else if(variant.extras.clinvar_allele_id) { %>

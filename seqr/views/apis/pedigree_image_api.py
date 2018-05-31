@@ -13,6 +13,8 @@ import random
 import tempfile
 
 from django.core.files import File
+
+from seqr.model_utils import update_seqr_model
 from seqr.models import Individual
 from seqr.views.utils.orm_to_json_utils import _get_json_for_individual
 from settings import BASE_DIR
@@ -44,7 +46,7 @@ def update_pedigree_image(family):
     individuals = Individual.objects.filter(family=family)
 
     if len(individuals) < 2:
-        clear_pedigree_image(family)
+        update_seqr_model(family, pedigree_image=None)
         return
 
     # convert individuals to json
@@ -115,7 +117,7 @@ def update_pedigree_image(family):
 
     if not os.path.isfile(png_file_path):
         logger.error("Failed to generated pedigree image for family: %s" % family_id)
-        clear_pedigree_image(family)
+        update_seqr_model(family, pedigree_image=None)
         return
 
     _save_pedigree_image_file(family, png_file_path)
@@ -140,20 +142,6 @@ def _save_pedigree_image_file(family, png_file_path):
         logger.error("Couldn't sync pedigree image to BaseFamily: " + str(e))
 
     #print("saving "+os.path.abspath(os.path.join(settings.MEDIA_ROOT, family.pedigree_image.name)))
-
-
-def clear_pedigree_image(family):
-    family.pedigree_image = None
-    family.save()
-
-    try:
-        base_families = BaseFamily.objects.filter(family_id=family.family_id, project__project_id=family.project.deprecated_project_id)
-        if base_families:
-            base_family = base_families[0]
-            base_family.pedigree_image = None
-            base_family.save()
-    except Exception as e:
-        logger.error("Couldn't clear pedigree image from BaseFamily: " + str(e))
 
 
 def _random_string(size=10):
