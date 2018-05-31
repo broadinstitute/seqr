@@ -685,6 +685,9 @@ class ElasticsearchDatastore(datastore.Datastore):
             results_by_xpos_ref_alt = {}
             for r in results:
                 results_by_xpos_ref_alt[(r.xpos, r.ref, r.alt)] = r
+
+            # create a list that's the same length as the input list of xpos_ref_alt_tuples, putting None for
+            # xpos-ref-alt's that weren't found in the elasticsearch index
             results = [results_by_xpos_ref_alt.get(t) for t in xpos_ref_alt_tuples]
 
             self._results_cache[cache_key] = results

@@ -66,7 +66,7 @@ class Datastore(object):
         Variant should be identifiable by xpos, ref, and alt
         Note that ref and alt are just strings from the VCF (for now)
         """
-        for xpos, ref, alt in  xpos_ref_alt_tuples:
+        for xpos, ref, alt in xpos_ref_alt_tuples:
             yield self.get_single_variant(project_id, family_id, xpos, ref, alt, user=None)
 
     def get_variants_cohort(self, project_id, cohort_id, variant_filter=None):

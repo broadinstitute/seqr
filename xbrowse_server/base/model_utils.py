@@ -122,7 +122,7 @@ def find_matching_seqr_model(xbrowse_model):
 
         if xbrowse_class_name == "Project":
             return xbrowse_model.seqr_project if xbrowse_model.seqr_project else SeqrProject.objects.get(
-                    deprecated_project_id=xbrowse_model.project_id)
+                deprecated_project_id=xbrowse_model.project_id)
         elif xbrowse_class_name == "Family":
             return xbrowse_model.seqr_family if xbrowse_model.seqr_family else SeqrFamily.objects.get(
                 project__deprecated_project_id=xbrowse_model.project.project_id,
@@ -232,7 +232,7 @@ def _create_additional_seqr_entities(xbrowse_model, **kwargs):
 
 
 def update_xbrowse_model(xbrowse_model, **kwargs):
-    print("update_xbrowse_model(%s, %s)" % (xbrowse_model, kwargs))
+    logging.info("update_xbrowse_model(%s, %s)" % (xbrowse_model, kwargs))
     seqr_model = find_matching_seqr_model(xbrowse_model)
     _update_model(xbrowse_model, **kwargs)
 
@@ -281,7 +281,7 @@ def create_xbrowse_model(xbrowse_model_class, **kwargs):
 
 
 def get_or_create_xbrowse_model(xbrowse_model_class, **kwargs):
-    print("get_or_create_xbrowse_model(%s, %s)" % (xbrowse_model_class, kwargs))
+    logging.info("get_or_create_xbrowse_model(%s, %s)" % (xbrowse_model_class, kwargs))
     xbrowse_model, created = xbrowse_model_class.objects.get_or_create(**kwargs)
 
     seqr_model = find_matching_seqr_model(xbrowse_model)

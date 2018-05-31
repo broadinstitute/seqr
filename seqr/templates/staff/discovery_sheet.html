@@ -86,7 +86,6 @@
                   {% endif %}
                 </td>
                 <td class="data-table-row" style="min-width: 100px">{{ row.t0|date:'Y-m-d' }}</td>
-                <td class="data-table-row">{{ row.months_since_t0 }}</td>
                 <td class="data-table-row"><a href="/project/{{ row.project_id }}/family/{{ row.family_id }}" target="_blank">{{ row.family_id }}</a></td>
                 <td class="data-table-row">{{ row.coded_phenotype }}</td>
                 <td class="data-table-row">{{ row.sequencing_approach }}</td>
@@ -137,8 +136,11 @@
                 <td class="data-table-row">{{ row.metabolism_homeostasis }}</td>
                 <td class="data-table-row">{{ row.genitourinary_system }}</td>
                 <td class="data-table-row">{{ row.integument }}</td>
+                <td class="data-table-row">{{ row.t0|date:'Y-m-d' }}</td>
+                <td class="data-table-row">{{ row.months_since_t0 }}</td>
                 <td class="data-table-row">{{ row.submitted_to_mme }}</td>
                 <td class="data-table-row">{{ row.posted_publicly }}</td>
+                <td class="data-table-row">{{ row.komp_early_release }}</td>
                 <td class="data-table-row">{{ row.pubmed_ids }}</td>
                 <td class="data-table-row">{{ row.collaborator }}</td>
                 <td class="data-table-row" style="min-width:800px">{{ row.analysis_summary }}</td>

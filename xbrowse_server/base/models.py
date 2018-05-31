@@ -7,6 +7,7 @@ import logging
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.db import models
+from django.db.models.query_utils import Q
 from django.utils import timezone
 from pretty_times import pretty
 from xbrowse import genomeloc
@@ -176,6 +177,8 @@ class Project(models.Model):
 
     default_control_cohort = models.CharField(max_length=100, default="", blank=True)
 
+    disable_staff_access = models.BooleanField(default=False)
+
     # users
     collaborators = models.ManyToManyField(User, blank=True, through='ProjectCollaborator')
     is_public = models.BooleanField(default=False)
@@ -187,27 +190,36 @@ class Project(models.Model):
     def __unicode__(self):
         return self.project_name if self.project_name != "" else self.project_id
 
-    # Authx
+    def is_collaborator(self, user, collaborator_type=None):
+        """Returns True if user is a collaborator on this project and (optionally) has the given collaborator_type.
+
+        Args:
+            user (Model): Django User model instance
+            collaborator_type (string): specific collaborator type (eg. "manager"). If specified, this method will only
+                return True if the User is listed as this specific collaborator type on this project. If None, it will
+                return True for a User if they are listed as any type of collaborator.
+        """
+        criteria = Q(project=self) & Q(user=user)
+        if collaborator_type is not None:
+            criteria &= Q(collaborator_type=collaborator_type)
+
+        return ProjectCollaborator.objects.filter(criteria).exists()
+
     def can_view(self, user):
 
         if self.is_public:
             return True
-        elif user.is_staff:
-            return True
-        else:
-            return ProjectCollaborator.objects.filter(project=self, user=user).exists()
+
+        is_collaborator = self.is_collaborator(user)
+        return (user.is_staff and not self.disable_staff_access) or user.is_superuser or is_collaborator
 
     def can_edit(self, user):
-        if user.is_staff:
-            return True
-        else:
-            return ProjectCollaborator.objects.filter(project=self, user=user).exists()
+        is_collaborator = self.is_collaborator(user)
+        return (user.is_staff and not self.disable_staff_access) or user.is_superuser or is_collaborator
 
     def can_admin(self, user):
-        if user.is_staff or user.is_superuser:
-            return True
-        else:
-            return ProjectCollaborator.objects.filter(project=self, user=user, collaborator_type="manager").exists()
+        is_manager = self.is_collaborator(user, collaborator_type="manager")
+        return (user.is_staff and not self.disable_staff_access) or user.is_superuser or is_manager
 
     def set_as_manager(self, user):
         collab = ProjectCollaborator.objects.get_or_create(user=user, project=self)[0]
