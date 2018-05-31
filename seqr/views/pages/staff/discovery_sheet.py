@@ -26,7 +26,6 @@ logger = logging.getLogger(__name__)
 
 HEADER = collections.OrderedDict([
     ("t0", "T0"),
-    ("months_since_t0", "Months since T0"),
     ("family_id", "Family ID"),
     ("coded_phenotype", "Phenotype"),
     ("sequencing_approach", "Sequencing Approach"),
@@ -77,8 +76,11 @@ HEADER = collections.OrderedDict([
     ("metabolism_homeostasis", "Abnormality of Metabolism / Homeostasis"),
     ("genitourinary_system", "Abnormality of the Genitourinary System"),
     ("integument", "Abnormality of the Integument"),
+    ("t0_copy", "T0"),
+    ("months_since_t0", "Months since T0"),
     ("submitted_to_mme", "Submitted to MME (deadline 7 months post T0)"),
     ("posted_publicly", "Posted publicly (deadline 12 months posted T0)"),
+    ("komp_early_release", "KOMP Early Release"),
     ("pubmed_ids", "PubMed IDs for gene"),
     ("collaborator", "Collaborator"),
     ("analysis_summary", "Analysis Summary"),
@@ -378,6 +380,7 @@ def generate_rows(project, errors):
             lower_case_variant_tag_type_names = [vt.variant_tag_type.name.lower() for vt in variant_tags]
             has_tier1 = any(name.startswith("tier 1") for name in lower_case_variant_tag_type_names)
             has_tier2 = any(name.startswith("tier 2") for name in lower_case_variant_tag_type_names)
+            has_tier2_phenotype_expansion = any(name.startswith("tier 2") and "expansion" in name for name in lower_case_variant_tag_type_names)
             has_known_gene_for_phenotype = any(name == "known gene for phenotype" for name in lower_case_variant_tag_type_names)
 
             has_tier1_phenotype_expansion_or_novel_mode_of_inheritance = any(
@@ -461,7 +464,7 @@ def generate_rows(project, errors):
             KPG_or_blank_or_NS = "KPG" if has_known_gene_for_phenotype else ("" if has_tier1 or has_tier2 else "NS")
 
             # "disorders"  UE, NEW, MULTI, EXPAN, KNOWN - If there is a MIM number enter "Known" - otherwise put "New"  and then we will need to edit manually for the other possible values
-            phenotype_class = "EXPAN" if has_tier1_phenotype_expansion_or_novel_mode_of_inheritance else (
+            phenotype_class = "EXPAN" if has_tier1_phenotype_expansion_or_novel_mode_of_inheritance or has_tier2_phenotype_expansion else (
                 "UE" if has_tier_1_or_2_phenotype_not_delineated else (
                     "Known" if omim_number_initial else "New"))
 
@@ -473,7 +476,7 @@ def generate_rows(project, errors):
                 "extras_num_variant_tags": len(variant_tags),
                 "gene_name": str(gene_symbol) if gene_symbol and (has_tier1 or has_tier2 or has_known_gene_for_phenotype) else "NS",
                 "gene_count": len(gene_ids_to_variant_tags.keys()) if len(gene_ids_to_variant_tags.keys()) > 1 else "NA",
-                "novel_mendelian_gene": "Y" if any("novel gene" in name for name in lower_case_variant_tag_type_names) else ("N" if has_tier1 or has_tier2 or has_known_gene_for_phenotype else "NS"),
+                "novel_mendelian_gene": "Y" if any("novel gene" in name for name in lower_case_variant_tag_type_names) else ("N" if has_tier1 or has_tier2 or has_known_gene_for_phenotype or has_tier2_phenotype_expansion else "NS"),
                 "solved": ("TIER 1 GENE" if (has_tier1 or has_known_gene_for_phenotype) else ("TIER 2 GENE" if has_tier2 else "N")),
                 "posted_publicly": ("" if has_tier1 or has_tier2 or has_known_gene_for_phenotype else "NS"),
                 "submitted_to_mme": "Y" if submitted_to_mme else ("TBD" if has_tier1 or has_tier2 else ("KPG" if has_known_gene_for_phenotype else "NS")),
