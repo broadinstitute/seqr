@@ -252,6 +252,7 @@ def generate_rows(project, errors):
             "project_id": project.deprecated_project_id,
             "project_name": project.name,
             "t0": t0,
+            "t0_copy": t0,
             "months_since_t0": t0_months_since_t0,
             "family_id": family.family_id,
             "coded_phenotype": family.coded_phenotype or "",  # "Coded Phenotype" field - Ben will add a field that only staff can edit.  Will be on the family page, above short description.
