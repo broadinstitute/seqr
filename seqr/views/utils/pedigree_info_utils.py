@@ -472,8 +472,10 @@ def _send_sample_manifest(sample_manifest_rows, kit_id, original_filename, origi
     wb.save(temp_sample_manifest_file.name)
     temp_sample_manifest_file.seek(0)
 
-    sample_manifest_filename = kit_id+'.xlsx'
+    sample_manifest_filename = kit_id+".xls"
     logger.info("Sending sample manifest file %s to %s" % (sample_manifest_filename, settings.UPLOADED_PEDIGREE_FILE_RECIPIENTS))
+
+    original_table_attachment_filename = os.path.basename(original_filename).replace(".xlsx", ".xls")
 
     if user is not None and project is not None:
         email_body = "User '%(user)s' just uploaded pedigree info to %(project)s.<br />" % locals()
@@ -493,7 +495,7 @@ def _send_sample_manifest(sample_manifest_rows, kit_id, original_filename, origi
         to=settings.UPLOADED_PEDIGREE_FILE_RECIPIENTS,
         attachments=[
             (sample_manifest_filename, temp_sample_manifest_file.read(), "application/xls"),
-            (os.path.basename(original_filename), original_file_stream.read(), "application/xls"),
+            (original_table_attachment_filename, original_file_stream.read(), "application/xls"),
         ],
     )
     email_message.attach_alternative(email_body, 'text/html')
