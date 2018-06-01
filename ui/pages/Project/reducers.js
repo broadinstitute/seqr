@@ -31,7 +31,7 @@ export const updateShowDetails = showDetails => ({ type: UPDATE_FAMILY_TABLE_STA
 
 export const getProjectTableState = state => state.familyTableState
 export const getProjectTablePage = state => state.familyTableState.currentPage || 1
-export const getProjectTableRecordsPerPage = state => Math.min(state.familyTableState.recordsPerPage, 25) || 25
+export const getProjectTableRecordsPerPage = state => Math.min(state.familyTableState.recordsPerPage, 100) || 100
 
 export const getFamiliesFilter = state => state.familyTableState.familiesFilter || SHOW_ALL
 export const getFamiliesSortOrder = state => state.familyTableState.familiesSortOrder || SORT_BY_FAMILY_NAME
