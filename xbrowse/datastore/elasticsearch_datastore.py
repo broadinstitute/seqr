@@ -176,13 +176,19 @@ class ElasticsearchDatastore(datastore.Datastore):
             matching_indices = []
             mapping = self._es_client.indices.get_mapping(str(elasticsearch_index)+"*")
 
-            indiv_id = _encode_name(family_individual_ids[0])
-            for index_name, index_mapping in mapping.items():
-                if indiv_id+"_num_alt" in index_mapping["mappings"]["variant"]["properties"]:
-                    matching_indices.append(index_name)
+            if family_individual_ids:
+                indiv_id = _encode_name(family_individual_ids[0])
+                for index_name, index_mapping in mapping.items():
+                    if indiv_id+"_num_alt" in index_mapping["mappings"]["variant"]["properties"]:
+                        matching_indices.append(index_name)
 
             if not matching_indices:
-                logger.error("%s not found in %s:\n%s" % (indiv_id, elasticsearch_index, pformat(index_mapping["mappings"]["variant"]["properties"])))
+                if not family_individual_ids:
+                    logger.error("no individuals found for family %s" % (family_id))
+                elif not mapping:
+                    logger.error("no es mapping found for found with prefix %s" % (elasticsearch_index))
+                else:
+                    logger.error("%s not found in %s:\n%s" % (indiv_id, elasticsearch_index, pformat(index_mapping["mappings"]["variant"]["properties"])))
             else:
                 logger.info("matching indices: " + str(elasticsearch_index))
                 elasticsearch_index = ",".join(matching_indices)
