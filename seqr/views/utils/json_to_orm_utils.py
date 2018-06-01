@@ -33,6 +33,7 @@ def update_individual_from_json(individual, json, verbose=False, user=None, allo
 
 def update_model_from_json(model_obj, json, user=None, verbose=False, allow_unknown_keys=False, restricted_keys=[]):
     seqr_update_fields = {}
+    internal_fields = model_obj._meta.internal_json_fields if hasattr(model_obj._meta, 'internal_json_fields') else []
 
     for json_key, value in json.items():
         orm_key = _to_snake_case(json_key)
@@ -43,7 +44,7 @@ def update_model_from_json(model_obj, json, user=None, verbose=False, allow_unkn
         if allow_unknown_keys and not hasattr(model_obj, orm_key):
             continue
         if getattr(model_obj, orm_key) != value:
-            if orm_key in model_obj._meta.internal_json_fields and not (user and user.is_staff):
+            if orm_key in internal_fields and not (user and user.is_staff):
                 raise ValueError('User {0} is not authorized to edit the internal field {1}'.format(user, orm_key))
             if verbose:
                 model_obj_name = getattr(model_obj, 'guid', model_obj.__name__)

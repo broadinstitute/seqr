@@ -52,8 +52,8 @@ XBROWSE_TO_SEQR_FIELD_MAPPING = {
     "VariantTag": {
         "project_tag": "variant_tag_type",
         "search_url": "search_parameters",
-        "date_saved": "created_date",
         "user": "created_by",
+        "date_saved": _DELETED_FIELD,
         "xpos": _DELETED_FIELD,
         "ref": _DELETED_FIELD,
         "alt": _DELETED_FIELD,
@@ -61,8 +61,8 @@ XBROWSE_TO_SEQR_FIELD_MAPPING = {
     },
     "VariantFunctionalData": {
         "search_url": "search_parameters",
-        "date_saved": "created_date",
         "user": "created_by",
+        "date_saved": _DELETED_FIELD,
         "xpos": _DELETED_FIELD,
         "ref": _DELETED_FIELD,
         "alt": _DELETED_FIELD,
@@ -70,8 +70,8 @@ XBROWSE_TO_SEQR_FIELD_MAPPING = {
     },
     "VariantNote": {
         "search_url": "search_parameters",
-        "date_saved": "created_date",
         "user": "created_by",
+        "date_saved": _DELETED_FIELD,
         "xpos": _DELETED_FIELD,
         "ref": _DELETED_FIELD,
         "alt": _DELETED_FIELD,
@@ -80,7 +80,7 @@ XBROWSE_TO_SEQR_FIELD_MAPPING = {
     },
     "GeneList": {
         "owner": "created_by",
-        "last_updated": "created_date",
+        "last_updated": _DELETED_FIELD,
         "slug": _DELETED_FIELD,
     },
     "GeneListItem": {
@@ -140,9 +140,8 @@ def find_matching_seqr_model(xbrowse_model):
             if xbrowse_model.seqr_variant_tag:
                 return xbrowse_model.seqr_variant_tag
 
-            variant_tag_type = find_matching_seqr_model(xbrowse_model.project_tag)
             criteria = {
-                'variant_tag_type': variant_tag_type,
+                'variant_tag_type__name': xbrowse_model.project_tag.tag,
                 'saved_variant__project__deprecated_project_id': xbrowse_model.project_tag.project.project_id,
                 'saved_variant__xpos_start': xbrowse_model.xpos,
                 'saved_variant__ref': xbrowse_model.ref,

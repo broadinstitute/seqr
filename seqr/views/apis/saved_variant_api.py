@@ -4,7 +4,8 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.views.decorators.csrf import csrf_exempt
 
-from seqr.models import SavedVariant, VariantTagType, VariantTag, VariantNote, CAN_EDIT
+from seqr.models import SavedVariant, VariantTagType, VariantTag, VariantNote, VariantFunctionalData, CAN_EDIT
+from seqr.model_utils import create_seqr_model, delete_seqr_model
 from seqr.utils.xpos_utils import get_chrom_pos
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
@@ -55,14 +56,7 @@ def saved_variant_data(request, project_guid):
             'liftedOverPos': lifted_over_pos,
             'familyGuid': saved_variant.family.guid,
             'tags': _variant_tags(saved_variant),
-            'functionalData': [{
-                'name': tag.functional_data_tag,
-                'metadata': tag.metadata,
-                'metadataTitle': json.loads(tag.get_functional_data_tag_display()).get('metadata_title'),
-                'color': json.loads(tag.get_functional_data_tag_display())['color'],
-                'user': (tag.created_by.get_full_name() or tag.created_by.email) if tag.created_by else None,
-                'dateSaved': tag.last_modified_date,
-            } for tag in saved_variant.variantfunctionaldata_set.all()],
+            'functionalData': _variant_functional_data(saved_variant),
             'notes': _variant_notes(saved_variant),
         }
         if variant['tags'] or variant['notes']:
@@ -79,8 +73,8 @@ def create_variant_note_handler(request, variant_guid):
     check_permissions(saved_variant.project, request.user, CAN_EDIT)
 
     request_json = json.loads(request.body)
-    # TODO in xbrowse
-    VariantNote.objects.create(
+    create_seqr_model(
+        VariantNote,
         saved_variant=saved_variant,
         note=request_json.get('note'),
         submit_to_clinvar=request_json.get('submitToClinvar', False),
@@ -110,8 +104,7 @@ def delete_variant_note_handler(request, variant_guid, note_guid):
     saved_variant = SavedVariant.objects.get(guid=variant_guid)
     check_permissions(saved_variant.project, request.user, CAN_EDIT)
     note = VariantNote.objects.get(guid=note_guid, saved_variant=saved_variant)
-    # TODO in xbrowse
-    note.delete()
+    delete_seqr_model(note)
     return create_json_response({variant_guid: {'notes': _variant_notes(saved_variant)}})
 
 
@@ -122,31 +115,59 @@ def update_variant_tags_handler(request, variant_guid):
     check_permissions(saved_variant.project, request.user, CAN_EDIT)
 
     request_json = json.loads(request.body)
-    updated_tags = request_json.get('tags')
-    if updated_tags is None:
-        return create_json_response({}, status=400, reason="'tags' not specified")
+    updated_tags = request_json.get('tags', [])
+    updated_functional_data = request_json.get('functionalData', [])
+
+    # Update tags
 
     existing_tag_guids = [tag['tagGuid'] for tag in updated_tags if tag.get('tagGuid')]
     new_tags = [tag for tag in updated_tags if not tag.get('tagGuid')]
 
-    variant_tags_to_delete = saved_variant.varianttag_set.exclude(guid__in=existing_tag_guids)
-    # TODO in xbrowse
-    variant_tags_to_delete.delete()
+    for tag in saved_variant.varianttag_set.exclude(guid__in=existing_tag_guids):
+        delete_seqr_model(tag)
 
     for tag in new_tags:
         variant_tag_type = VariantTagType.objects.get(
             Q(name=tag['name']),
             Q(project=saved_variant.project) | Q(project__isnull=True)
         )
-        # TODO in xbrowse
-        VariantTag.objects.create(
+        create_seqr_model(
+            VariantTag,
             saved_variant=saved_variant,
             variant_tag_type=variant_tag_type,
             search_parameters=request_json.get('searchParameters'),
             created_by=request.user,
         )
 
-    return create_json_response({variant_guid: {'tags': _variant_tags(saved_variant)}})
+    # Update functional data
+
+    existing_functional_guids = [tag['tagGuid'] for tag in updated_functional_data if tag.get('tagGuid')]
+    new_functional_data = [tag for tag in updated_functional_data if not tag.get('tagGuid')]
+
+    for tag in saved_variant.variantfunctionaldata_set.exclude(guid__in=existing_functional_guids):
+        delete_seqr_model(tag)
+
+    for tag in updated_functional_data:
+        if tag.get('tagGuid'):
+            tag_model = VariantFunctionalData.objects.get(
+                guid=tag.get('tagGuid'),
+                functional_data_tag=tag.get('name'),
+                saved_variant=saved_variant
+            )
+            update_model_from_json(tag_model, tag, allow_unknown_keys=True)
+        else:
+            create_seqr_model(
+                VariantFunctionalData,
+                saved_variant=saved_variant,
+                functional_data_tag=tag.get('name'),
+                metadata=tag.get('metadata'),
+                search_parameters=request_json.get('searchParameters'),
+                created_by=request.user,
+            )
+
+    return create_json_response({
+        variant_guid: {'tags': _variant_tags(saved_variant), 'functionalData': _variant_functional_data(saved_variant)}
+    })
 
 
 def _variant_tags(saved_variant):
@@ -159,6 +180,18 @@ def _variant_tags(saved_variant):
         'dateSaved': tag.last_modified_date,
         'searchParameters': tag.search_parameters,
     } for tag in saved_variant.varianttag_set.all()]
+
+
+def _variant_functional_data(saved_variant):
+    return [{
+        'tagGuid': tag.guid,
+        'name': tag.functional_data_tag,
+        'metadata': tag.metadata,
+        'metadataTitle': json.loads(tag.get_functional_data_tag_display()).get('metadata_title'),
+        'color': json.loads(tag.get_functional_data_tag_display())['color'],
+        'user': (tag.created_by.get_full_name() or tag.created_by.email) if tag.created_by else None,
+        'dateSaved': tag.last_modified_date,
+    } for tag in saved_variant.variantfunctionaldata_set.all()]
 
 
 def _variant_notes(saved_variant):
