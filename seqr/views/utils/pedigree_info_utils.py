@@ -389,7 +389,7 @@ def _is_header_row(row):
         True if it's a header row rather than data
     """
     row = row.lower()
-    if "sex" in row or "gender" in row:
+    if "family" in row and "indiv" in row:
         return True
     else:
         return False
