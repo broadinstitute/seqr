@@ -33,9 +33,11 @@ SEQR_TO_XBROWSE_FIELD_MAPPING = {
         "analysis_summary": "analysis_summary_content",
     },
     "Individual": {
-        'sex': 'gender',
-        'display_name': 'nickname',
-        'phenotips_eid': 'phenotips_id',
+        "individual_id": "indiv_id",
+        "sex": "gender",
+        "display_name": "nickname",
+        "phenotips_eid": "phenotips_id",
+        "notes": "other_notes",
     },
     "VariantTagType": {
         "name": "tag",
@@ -125,7 +127,7 @@ def find_matching_xbrowse_model(seqr_model):
                 gene_id=seqr_model.gene_id)
     except Exception as e:
         logging.error("ERROR: when looking up xbrowse model for seqr %s model: %s" % (seqr_model, e))
-        traceback.print_exc()
+        #traceback.print_exc()
 
     return None
 
@@ -138,6 +140,9 @@ def convert_seqr_kwargs_to_xbrowse_kwargs(seqr_model, **kwargs):
         field_mapping.get(field, field): value for field, value in kwargs.items()
         if not field_mapping.get(field, field) == _DELETED_FIELD
     }
+
+    if seqr_class_name == "Individual" and "family" in xbrowse_kwargs:
+        xbrowse_kwargs["project"] = getattr(seqr_model, "family").project
 
     # handle foreign keys
     for key, value in xbrowse_kwargs.items():
