@@ -99,18 +99,7 @@ api_endpoints = {
 
 }
 
-
-# core react page templates
-urlpatterns = [url("^%(url_endpoint)s$" % locals(), main_app) for url_endpoint in react_app_pages]
-
-# api
-for url_endpoint, handler_function in api_endpoints.items():
-    urlpatterns.append( url("^api/%(url_endpoint)s$" % locals(), handler_function) )
-
-# login redirect for ajax calls
-urlpatterns += [
-    url(API_LOGIN_REQUIRED_URL.lstrip('/'), login_required_error)
-]
+urlpatterns = []
 
 # phenotips urls
 phenotips_urls = '^(?:%s)' % ('|'.join([
@@ -123,8 +112,20 @@ urlpatterns += [
 ]
 
 urlpatterns += [
-    url('project/(?P<project_guid>[^/]+)/patient/(?P<patient_id>[^/]+)/phenotips_pdf', phenotips_pdf_handler),
-    url('project/(?P<project_guid>[^/]+)/patient/(?P<patient_id>[^/]+)/phenotips_edit', phenotips_edit_handler),
+    url('^project/(?P<project_guid>[^/]+)/patient/(?P<patient_id>[^/]+)/phenotips_pdf', phenotips_pdf_handler),
+    url('^project/(?P<project_guid>[^/]+)/patient/(?P<patient_id>[^/]+)/phenotips_edit', phenotips_edit_handler),
+]
+
+# core react page templates
+urlpatterns += [url("^%(url_endpoint)s$" % locals(), main_app) for url_endpoint in react_app_pages]
+
+# api
+for url_endpoint, handler_function in api_endpoints.items():
+    urlpatterns.append( url("^api/%(url_endpoint)s$" % locals(), handler_function) )
+
+# login redirect for ajax calls
+urlpatterns += [
+    url(API_LOGIN_REQUIRED_URL.lstrip('/'), login_required_error)
 ]
 
 #urlpatterns += [
