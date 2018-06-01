@@ -476,15 +476,15 @@ def _send_sample_manifest(sample_manifest_rows, kit_id, original_filename, origi
     logger.info("Sending sample manifest file %s to %s" % (sample_manifest_filename, settings.UPLOADED_PEDIGREE_FILE_RECIPIENTS))
 
     if user is not None and project is not None:
-        email_body = "%(user)s just uploaded pedigree info to %(project)s.\n" % locals()
+        email_body = "User '%(user)s' just uploaded pedigree info to %(project)s.<br />" % locals()
     else:
         email_body = ""
 
-    email_body += """This email has 2 attached files:
-
-    <b>%(sample_manifest_filename)s</b> is the sample manifest to send to GP.
-
-    <b>%(original_filename)s</b> is the original file uploaded by the user.
+    email_body += """This email has 2 attached files:<br />
+    <br />
+    <b>%(sample_manifest_filename)s</b> is the sample manifest file in a format that can be sent to GP.<br />
+    <br />
+    <b>%(original_filename)s</b> is the original merged pedigree-sample-manifest file that the user uploaded.<br />
     """ % locals()
 
     email_message = EmailMultiAlternatives(
