@@ -134,7 +134,7 @@ export const reducers = {
   projectSavedVariantsLoading: loadingReducer(REQUEST_SAVED_VARIANTS, RECEIVE_SAVED_VARIANTS),
   familyTableState: createSingleObjectReducer(UPDATE_FAMILY_TABLE_STATE, {
     currentPage: 1,
-    recordsPerPage: 25,
+    recordsPerPage: 100,
     familiesFilter: SHOW_ALL,
     familiesSortOrder: SORT_BY_FAMILY_NAME,
     familiesSortDirection: 1,

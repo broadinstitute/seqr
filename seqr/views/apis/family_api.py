@@ -138,9 +138,6 @@ def update_family_fields_handler(request, family_guid):
     request_json = json.loads(request.body)
     update_family_from_json(family, request_json, user=request.user, allow_unknown_keys=True)
 
-    for field_name, value in request_json.items():
-        _deprecated_update_original_family_field(project, family, field_name, value)
-
     return create_json_response({
         family.guid: _get_json_for_family(family, request.user)
     })

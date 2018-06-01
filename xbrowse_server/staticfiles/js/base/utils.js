@@ -97,7 +97,7 @@ window.utils = {
    	        "</b><br/>Read Depth: <b>" + (variant.genotypes[indiv_id].extras.dp === null ? "" : variant.genotypes[indiv_id].extras.dp)  +
 			"</b><br/>Genotype Quality: <b>" + variant.genotypes[indiv_id].gq +
             "</b><br/>" + (variant.genotypes[indiv_id].extras.pl ? "Phred Likelihoods: <b>"+variant.genotypes[indiv_id].extras.pl+"</b>" : "") +
-            (variant.genotypes[indiv_id].ab ? "</b><br/>BreakWord Balance: <b>" + variant.genotypes[indiv_id].ab.toPrecision(2) + "</b>" : "")
+            (variant.genotypes[indiv_id].ab ? "</b><br/>Allele Balance: <b>" + variant.genotypes[indiv_id].ab.toPrecision(2) + "</b>" : "")
           ;
 
 	    return s; 

@@ -66,7 +66,7 @@ class VCFFile(models.Model):
         #(DATASET_TYPE_ALIGNMENT, 'Alignment'),
         #(DATASET_TYPE_BREAKPOINTS, 'Breakpoints'),
         #(DATASET_TYPE_SPLICE_JUNCTIONS, 'Splice Junction Calls'),
-        #(DATASET_TYPE_ASE, 'BreakWord Specific Expression'),
+        #(DATASET_TYPE_ASE, 'Allele Specific Expression'),
     )
 
     SAMPLE_TYPE_WES = 'WES'
@@ -486,7 +486,6 @@ class Family(models.Model):
 
     internal_case_review_notes = models.TextField(default="", blank=True, null=True)
     internal_case_review_summary = models.TextField(default="", blank=True, null=True)
-
 
     coded_phenotype = models.TextField(default="", blank=True, null=True)
     post_discovery_omim_number = models.TextField(default="", blank=True, null=True)

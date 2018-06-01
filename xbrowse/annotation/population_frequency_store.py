@@ -104,11 +104,11 @@ class PopulationFrequencyStore():
                     for meta_key in meta_fields:
                         freq = max(freq, float(variant.extras.get(meta_key, 0).split(',')[allele_idx]))
 
-                    ##INFO=<ID=EAS_AF,Number=A,Type=Float,Description="BreakWord frequency in the EAS populations calculated from AC and AN, in the range (0,1)">
-                    ##INFO=<ID=EUR_AF,Number=A,Type=Float,Description="BreakWord frequency in the EUR populations calculated from AC and AN, in the range (0,1)">
-                    ##INFO=<ID=AFR_AF,Number=A,Type=Float,Description="BreakWord frequency in the AFR populations calculated from AC and AN, in the range (0,1)">
-                    ##INFO=<ID=AMR_AF,Number=A,Type=Float,Description="BreakWord frequency in the AMR populations calculated from AC and AN, in the range (0,1)">
-                    ##INFO=<ID=SAS_AF,Number=A,Type=Float,Description="BreakWord frequency in the SAS populations calculated from AC and AN, in the range (0,1)">
+                    ##INFO=<ID=EAS_AF,Number=A,Type=Float,Description="Allele frequency in the EAS populations calculated from AC and AN, in the range (0,1)">
+                    ##INFO=<ID=EUR_AF,Number=A,Type=Float,Description="Allele frequency in the EUR populations calculated from AC and AN, in the range (0,1)">
+                    ##INFO=<ID=AFR_AF,Number=A,Type=Float,Description="Allele frequency in the AFR populations calculated from AC and AN, in the range (0,1)">
+                    ##INFO=<ID=AMR_AF,Number=A,Type=Float,Description="Allele frequency in the AMR populations calculated from AC and AN, in the range (0,1)">
+                    ##INFO=<ID=SAS_AF,Number=A,Type=Float,Description="Allele frequency in the SAS populations calculated from AC and AN, in the range (0,1)">
                 else:
                     freq = float(variant.extras.get(meta_key, 0).split(',')[variant.extras['alt_allele_pos']])
 
