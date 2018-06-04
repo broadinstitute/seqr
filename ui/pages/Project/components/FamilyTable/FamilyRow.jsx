@@ -1,6 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
+import styled from 'styled-components'
 import { Grid, Icon, Popup } from 'semantic-ui-react'
 import PedigreeImagePanel from 'shared/components/panel/view-pedigree-image/PedigreeImagePanel'
 import TextFieldView from 'shared/components/panel/view-fields/TextFieldView'
@@ -16,7 +17,6 @@ const mapDispatchToProps = (dispatch, ownProps) => {
     },
   }
 }
-
 
 const AnalysisStatus = ({ family, project, canEdit }) => {
   const familyAnalysisStatus = (
@@ -87,10 +87,18 @@ const fieldRenderDetails = {
 }
 
 
+const GridColumn1 = styled(Grid.Column)`
+  max-width: 250px;
+`
+
+const GridColumn2 = styled(Grid.Column)`
+  max-width: 950px;
+`
+
 const FamilyRow = ({ family, project, fields = [], updateFamily, showSearchLinks }) =>
   <Grid stackable>
     <Grid.Row>
-      <Grid.Column width={3}>
+      <GridColumn1 width={3}>
         <span style={{ paddingLeft: '0px' }}>
           <b>
             Family: &nbsp;
@@ -102,9 +110,9 @@ const FamilyRow = ({ family, project, fields = [], updateFamily, showSearchLinks
         </span>
         <br />
         <PedigreeImagePanel family={family} />
-      </Grid.Column>
+      </GridColumn1>
 
-      <Grid.Column width={10}>
+      <GridColumn2 width={10}>
         {fields.map((field) => {
           const renderDetails = fieldRenderDetails[field.id]
           return renderDetails.component ?
@@ -122,7 +130,7 @@ const FamilyRow = ({ family, project, fields = [], updateFamily, showSearchLinks
             />
         })}
         <br />
-      </Grid.Column>
+      </GridColumn2>
       {showSearchLinks &&
         <Grid.Column width={3}>
           <a
