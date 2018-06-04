@@ -31,13 +31,13 @@ def update_individual_from_json(individual, json, verbose=False, user=None, allo
     )
 
 
-def update_model_from_json(model_obj, json, user=None, verbose=False, allow_unknown_keys=False, restricted_keys=[]):
+def update_model_from_json(model_obj, json, user=None, verbose=False, allow_unknown_keys=False, restricted_keys=None):
     seqr_update_fields = {}
     internal_fields = model_obj._meta.internal_json_fields if hasattr(model_obj._meta, 'internal_json_fields') else []
 
     for json_key, value in json.items():
         orm_key = _to_snake_case(json_key)
-        if orm_key in restricted_keys:
+        if orm_key in (restricted_keys or []):
             if allow_unknown_keys:
                 continue
             raise ValueError('Cannot edit field field {}'.format(orm_key))

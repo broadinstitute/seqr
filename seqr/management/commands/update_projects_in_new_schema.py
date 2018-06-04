@@ -202,7 +202,7 @@ class Command(BaseCommand):
             for source_variant_functional_data in VariantFunctionalData.objects.filter(family__project=source_project):
                 new_family = source_family_id_to_new_family.get(source_variant_functional_data.family.id)
 
-                new_variant_functional_data, variant_functional_data_created = get_or_create_variant_functional_data(
+                _, variant_functional_data_created = get_or_create_variant_functional_data(
                     source_variant_functional_data,
                     new_project,
                     new_family,
@@ -372,7 +372,7 @@ def create_sample_records(sample_type, source_project, source_individual, new_pr
         for vcf_file in vcf_files:
             try:
                 vcf_loaded_date = look_up_vcf_loaded_date(vcf_file.file_path)
-            except:
+            except Exception:
                 vcf_loaded_date = None
 
             new_vcf_dataset, vcf_dataset_created = get_or_create_dataset(

@@ -409,7 +409,7 @@ def generate_rows(project, errors, discovery_tag_types):
                 unaffected_total_individuals = 0
                 is_x_linked = False
                 if vt.saved_variant_json["genotypes"]:
-                    chrom, pos = genomeloc.get_chr_pos(vt.saved_variant.xpos_start)
+                    chrom, _ = genomeloc.get_chr_pos(vt.saved_variant.xpos_start)
                     is_x_linked = "X" in chrom
                     for indiv_id, genotype in vt.saved_variant_json["genotypes"].items():
                         try:
