@@ -681,7 +681,9 @@ def edit_collaborator(request, project_id, username):
             return redirect('project_collaborators', project_id)
 
     else:
-        form = base_forms.EditCollaboratorForm()
+        form = base_forms.EditCollaboratorForm(initial={
+            "collaborator_type": project_collaborator.collaborator_type,
+        })
 
     return render(request, 'project/edit_collaborator.html', {
         'project_collaborator': project_collaborator,
