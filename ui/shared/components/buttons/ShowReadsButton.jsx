@@ -20,32 +20,24 @@ const BAM_TRACK_OPTIONS = {
   indexed: true,
 }
 
-const ShowReadsButton = ({ locus, familyGuid, samples, individualsByGuid, datasetsByGuid }) => {
+const ShowReadsButton = ({ locus, familyGuid, samples, individualsByGuid }) => {
 
-  const igvTracks = samples.map((sample) => {
+  const igvTracks = samples.filter(
+    sample => sample.isLoaded && sample.datasetType === 'ALIGN',
+  ).map((sample) => {
     const individual = individualsByGuid[sample.individualGuid]
     if (individual.familyGuid !== familyGuid) {
       return null
     }
 
-    const datasets = sample.datasetGuids.map(
-      datasetGuid => datasetsByGuid[datasetGuid],
-    ).filter(
-      dataset => dataset.isLoaded && dataset.analysisType === 'ALIGN',
-    )
-    if (datasets.length > 1) {
-      console.log(`Error: found ${datasets.length} alignment datasets for ${sample.individualGuid}`)
-    } else if (datasets.length < 1) {
-      return null
-    }
-    const { sourceFilePath } = datasets[0]
+    const { datasetFilePath } = datasets[0]
 
-    const trackOptions = sourceFilePath.endsWith('.cram') ? CRAM_TRACK_OPTIONS : BAM_TRACK_OPTIONS
+    const trackOptions = datasetFilePath.endsWith('.cram') ? CRAM_TRACK_OPTIONS : BAM_TRACK_OPTIONS
     const trackName = ReactDOMServer.renderToString(
       <span><PedigreeIcon sex={individual.sex} affected={individual.affected} />{individual.individualId}</span>,
     )
     return {
-      url: `/api/project/${sample.projectGuid}/igv_track/${encodeURIComponent(sourceFilePath)}`,
+      url: `/api/project/${sample.projectGuid}/igv_track/${encodeURIComponent(datasetFilePath)}`,
       name: trackName,
       type: 'bam',
       alignmentShading: 'strand',

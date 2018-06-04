@@ -1,9 +1,9 @@
 from django.contrib.auth.models import User
 from django.test import TestCase
 
-from seqr.models import Project, Family, Individual, Sample, Dataset
+from seqr.models import Project, Family, Individual, Sample
 from seqr.views.utils.orm_to_json_utils import _get_json_for_user, _get_json_for_project, _get_json_for_family, \
-    _get_json_for_individual, _get_json_for_sample, _get_json_for_dataset
+    _get_json_for_individual, _get_json_for_sample
 
 
 class JSONUtilsTest(TestCase):
@@ -76,13 +76,4 @@ class JSONUtilsTest(TestCase):
         self.assertSetEqual(
             set(json.keys()),
             {'projectGuid', 'individualGuid', 'sampleGuid', 'createdDate', 'sampleType', 'sampleId', 'sampleStatus'}
-        )
-
-    def test_json_for_dataset(self):
-        dataset = Dataset.objects.first()
-        json = _get_json_for_dataset(dataset, add_sample_type_field=False)
-
-        self.assertSetEqual(
-            set(json.keys()),
-            {'projectGuid', 'datasetGuid', 'createdDate', 'analysisType', 'isLoaded', 'loadedDate', 'sourceFilePath'}
         )

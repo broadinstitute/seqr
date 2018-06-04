@@ -41,8 +41,8 @@ XBROWSE_TO_SEQR_FIELD_MAPPING = {
         "project": _DELETED_FIELD,
         "indiv_id": "individual_id",
         "gender": "sex",
-        'nickname': "display_name",
-        'phenotips_id': "phenotips_eid",
+        "nickname": "display_name",
+        "phenotips_id": "phenotips_eid",
         "other_notes": "notes",
     },
     "ProjectTag": {

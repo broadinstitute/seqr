@@ -55,15 +55,15 @@ User.profile = property(lambda u: UserProfile.objects.get_or_create(user=u)[0])
 class VCFFile(models.Model):
 
     DATASET_TYPE_VARIANT_CALLS = 'VARIANTS'
-    DATASET_TYPE_SV = 'SV'
-    #DATASET_TYPE_ALIGNMENT = 'ALIGN'
+    DATASET_TYPE_SV_CALLS = 'SV'
+    #DATASET_TYPE_READ_ALIGNMENTS = 'ALIGN'
     #DATASET_TYPE_BREAKPOINTS = 'BREAK'
     #DATASET_TYPE_SPLICE_JUNCTIONS = 'SPLICE'
     #DATASET_TYPE_ASE = 'ASE'
     DATASET_TYPE_CHOICES = (
         (DATASET_TYPE_VARIANT_CALLS, 'Variant Calls'),
-        (DATASET_TYPE_SV, 'SV Calls'),
-        #(DATASET_TYPE_ALIGNMENT, 'Alignment'),
+        (DATASET_TYPE_SV_CALLS, 'SV Calls'),
+        #(DATASET_TYPE_READ_ALIGNMENTS, 'Alignment'),
         #(DATASET_TYPE_BREAKPOINTS, 'Breakpoints'),
         #(DATASET_TYPE_SPLICE_JUNCTIONS, 'Splice Junction Calls'),
         #(DATASET_TYPE_ASE, 'Allele Specific Expression'),

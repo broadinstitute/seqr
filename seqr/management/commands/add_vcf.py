@@ -6,16 +6,11 @@ from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
 from reference_data.models import GENOME_VERSION_CHOICES
-from seqr.models import Project, Sample, Dataset
-from seqr.utils.file_utils import does_file_exist, file_iter, inputs_older_than_outputs, \
-    copy_file
-from seqr.views.utils.dataset.dataset_utils import link_dataset_to_sample_records, \
-    get_or_create_elasticsearch_dataset
-
+from seqr.models import Project, Sample
+from seqr.utils.file_utils import does_file_exist, file_iter
 from seqr.views.apis.individual_api import add_or_update_individuals_and_families
 from seqr.views.apis.samples_api import match_sample_ids_to_sample_records
 from seqr.views.utils.pedigree_info_utils import parse_pedigree_table
-from settings import PROJECT_DATA_DIR
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +35,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
 
-        analysis_type = Dataset.ANALYSIS_TYPE_VARIANT_CALLS
+        dataset_type = Sample.DATASET_TYPE_VARIANT_CALLS
 
         # parse and validate args
         sample_type = options["sample_type"]
@@ -139,9 +134,9 @@ class Command(BaseCommand):
         # retrieve or create Dataset record and link it to sample(s)
         dataset = get_or_create_elasticsearch_dataset(
             project=project,
-            analysis_type=analysis_type,
+            dataset_type=dataset_type,
             genome_version=genome_version,
-            source_file_path=vcf_path,
+            dataset_file_path=vcf_path,
             elasticsearch_index=elasticsearch_index,
             is_loaded=is_loaded,
         )

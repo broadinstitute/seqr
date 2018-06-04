@@ -26,7 +26,7 @@ const SAMPLE_TYPE_LABELS = {
   RNA: 'RNA-seq',
 }
 
-const ANALYSIS_TYPE_LABELS = {
+const DATASET_TYPE_LABELS = {
   VARIANTS: 'callset',
   SV: 'SV callset',
 }
@@ -64,10 +64,10 @@ const ProjectOverview = (props) => {
                   <div key={currentSampleType}>
                     {
                       props.datasets.filter(dataset =>
-                        dataset.analysisType === 'VARIANTS' && dataset.isLoaded && dataset.sampleType === currentSampleType,
+                        dataset.datasetType === 'VARIANTS' && dataset.isLoaded && dataset.sampleType === currentSampleType,
                       ).slice(0, 1).map(dataset =>
                         <div key={dataset.datasetGuid}>
-                          {SAMPLE_TYPE_LABELS[dataset.sampleType]} {ANALYSIS_TYPE_LABELS[dataset.analysisType]} - {dataset.sampleGuids.length}  samples
+                          {SAMPLE_TYPE_LABELS[dataset.sampleType]} {DATASET_TYPE_LABELS[dataset.datasetType]} - {dataset.sampleGuids.length}  samples
                           {dataset.isLoaded ? ` loaded on ${dataset.loadedDate.slice(0, 10)}` : ' not yet loaded'}
                         </div>,
                       )

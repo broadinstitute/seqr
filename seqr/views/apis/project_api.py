@@ -5,11 +5,10 @@ APIs for updating project metadata, as well as creating or deleting projects
 import json
 import logging
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import PermissionDenied
 from django.views.decorators.csrf import csrf_exempt
 
-from seqr.model_utils import update_seqr_model
-from seqr.models import Project, Family, Individual, Sample, Dataset, _slugify, CAN_EDIT, IS_OWNER
+from seqr.model_utils import update_seqr_model, delete_seqr_model
+from seqr.models import Project, Family, Individual, Sample, _slugify, CAN_EDIT, IS_OWNER
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.phenotips_api import create_phenotips_user, _get_phenotips_uname_and_pwd_for_project
 from seqr.views.apis.saved_variant_api import _deprecated_add_default_tags_to_original_project
@@ -165,11 +164,13 @@ def delete_project(project):
 
     _deprecated_delete_original_project(project)
 
-    Dataset.objects.filter(project=project).delete()
     Sample.objects.filter(individual__family__project=project).delete()
-    Individual.objects.filter(family__project=project).delete()
-    Family.objects.filter(project=project).delete()
-    project.delete()
+    for individual in Individual.objects.filter(family__project=project):
+        delete_seqr_model(individual)
+    for family in Family.objects.filter(project=project):
+        delete_seqr_model(family)
+
+    delete_seqr_model(project)
 
     # TODO delete PhenoTips, etc. and other objects under this project
 
@@ -220,18 +221,6 @@ def _deprecated_create_original_project(project):
             logger.error("Unable to add reference population %s: %s" % (reference_population_id, e))
             
     return base_project
-
-
-def _deprecated_delete_original_project(project):
-    """DEPRECATED - delete project in original xbrowse schema to keep things in sync.
-    Args:
-        project (object): new-style seqr project model
-    """
-
-    for base_project in BaseProject.objects.filter(project_id=project.deprecated_project_id):
-        BaseIndividual.objects.filter(family__project=base_project).delete()
-        BaseFamily.objects.filter(project=base_project).delete()
-        base_project.delete()
 
 
 

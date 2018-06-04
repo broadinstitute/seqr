@@ -164,7 +164,6 @@ const rootReducer = combineReducers(Object.assign({
   projectsLoading: loadingReducer(REQUEST_PROJECTS, RECEIVE_DATA),
   familiesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'familiesByGuid'),
   individualsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'individualsByGuid'),
-  datasetsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'datasetsByGuid'),
   samplesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'samplesByGuid'),
   genesById: createObjectsByIdReducer(RECEIVE_GENES),
   genesLoading: loadingReducer(REQUEST_GENES, RECEIVE_GENES),

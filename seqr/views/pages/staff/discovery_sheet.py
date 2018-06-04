@@ -13,7 +13,7 @@ from seqr.views.utils.export_table_utils import export_table
 from xbrowse_server.mall import get_reference
 from xbrowse import genomeloc
 from reference_data.models import HPO_CATEGORY_NAMES
-from seqr.models import Project, Family, Dataset, VariantTag, VariantTagType
+from seqr.models import Project, Family, VariantTag, VariantTagType, Sample
 from dateutil import relativedelta as rdelta
 from django.db.models import Q
 from django.shortcuts import render
@@ -150,17 +150,18 @@ def discovery_sheet(request, project_guid=None):
 def generate_rows(project, errors, discovery_tag_types):
     rows = []
 
-    loaded_datasets = list(Dataset.objects.filter(project=project, analysis_type="VARIANTS", is_loaded=True))
-    if not loaded_datasets:
+    loaded_samples = Sample.objects.filter(
+        project=project, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS, sample_status=Sample.SAMPLE_STATUS_LOADED)
+
+    if not loaded_samples:
         errors.append("No data loaded for project: %s" % project)
         logger.info("No data loaded for project: %s" % project)
         return []
 
-    loaded_datasets_by_family = collections.defaultdict(set)
-    for d in loaded_datasets:
-        print("Loaded time %s: %s" % (d, d.loaded_date))
-        for sample in d.samples.select_related('individual__family').all():
-            loaded_datasets_by_family[sample.individual.family.guid].add(d)
+    loaded_samples_by_family = collections.defaultdict(set)
+    for sample in loaded_samples:
+        print("Loaded time %s: %s" % (sample, sample.loaded_date))
+        loaded_samples_by_family[sample.individual.family.guid].add(sample)
 
     project_variant_tags = list(
         VariantTag.objects.select_related('variant_tag_type').select_related('saved_variant').filter(
@@ -184,9 +185,9 @@ def generate_rows(project, errors, discovery_tag_types):
 
     now = timezone.now()
     for family in Family.objects.filter(project=project).prefetch_related('individual_set'):
-        datesets_loaded_date_for_family = [dataset.loaded_date for dataset in loaded_datasets_by_family[family.guid] if
-                                           dataset.loaded_date is not None]
-        if not datesets_loaded_date_for_family:
+        samples_loaded_date_for_family = [sample.loaded_date for sample in loaded_samples_by_family[family.guid] if
+                                           sample.loaded_date is not None]
+        if not samples_loaded_date_for_family:
             errors.append("No data loaded for family: %s. Skipping..." % family)
             continue
 
@@ -238,7 +239,7 @@ def generate_rows(project, errors, discovery_tag_types):
 
         submitted_to_mme = any([individual.mme_submitted_data for individual in individuals if individual.mme_submitted_data])
 
-        t0 = min(datesets_loaded_date_for_family)
+        t0 = min(samples_loaded_date_for_family)
 
         t0_diff = rdelta.relativedelta(now, t0)
         t0_months_since_t0 = t0_diff.years*12 + t0_diff.months

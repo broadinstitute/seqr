@@ -3,10 +3,8 @@ import logging
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils import timezone
 
-from seqr.models import Project, Sample, Dataset
+from seqr.models import Sample
 from seqr.utils.file_utils import does_file_exist, file_iter, get_file_stats
-from seqr.views.utils.dataset.dataset_utils import get_dataset, get_or_create_elasticsearch_dataset, \
-    link_dataset_to_sample_records
 from seqr.views.apis.samples_api import match_sample_ids_to_sample_records
 
 logger = logging.getLogger(__name__)
@@ -15,33 +13,26 @@ logger = logging.getLogger(__name__)
 def add_dataset(
     project,
     sample_type,
-    analysis_type,
-    genome_version,
+    dataset_type,
     dataset_path,
     max_edit_distance=0,
-    dataset_id=None,
-    name=None,
-    description=None,
+    elasticsearch_index=None,
     ignore_extra_samples_in_callset=False):
 
     """Validates the given dataset.
+
     Args:
         project (object):
         sample_type (string):
-        analysis_type (string):
+        dataset_type (string):
         genome_version (string):
         dataset_path (string):
         max_edit_distance (int):
-        dataset_id (string):
+        elasticsearch_index (string):
         ignore_extra_samples_in_callset (bool):
     Return:
         (errors, warnings, info) tuple
-
-    Dataset.ANALYSIS_TYPE_VARIANT_CALLS
     """
-    #elasticsearch_host = options["elasticsearch_host"]
-    #elasticsearch_index = options["elasticsearch_index"]
-    #is_loaded = options["is_loaded"]
 
     # check args
     errors = []
@@ -49,14 +40,14 @@ def add_dataset(
     info = []
 
     # basic file path checks
-    if analysis_type == Dataset.ANALYSIS_TYPE_VARIANT_CALLS:
+    if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
         if not dataset_path.endswith(".vcf.gz") and not dataset_path.endswith(".vds"):
             errors.append("Dataset path must end with .vcf.gz or .vds")
-    elif analysis_type == Dataset.ANALYSIS_TYPE_ALIGNMENT:
+    elif dataset_type == Sample.DATASET_TYPE_READ_ALIGNMENTS:
         if not any([dataset_path.endswith(suffix) for suffix in ('.txt', '.tsv', '.xls', '.xlsx')]):
             errors.append("BAM / CRAM table must have a .txt or .xls extension")
     else:
-        errors.append("dataset type not supported: %s" % (analysis_type,))
+        errors.append("dataset type not supported: %s" % (dataset_type,))
 
     if errors:
         return errors, warnings, info
@@ -78,10 +69,10 @@ def add_dataset(
         return errors, warnings, info
 
     # validate dataset contents
-    if analysis_type == Dataset.ANALYSIS_TYPE_VARIANT_CALLS:
+    if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
         # validate VCF and get sample ids
         try:
-            all_vcf_sample_ids = _validate_vcf(dataset_path, sample_type=sample_type, genome_version=genome_version)
+            all_vcf_sample_ids = _validate_vcf(dataset_path, sample_type=sample_type)
         except ValueError as e:
             errors.append(str(e))
             return errors, warnings, info
@@ -105,24 +96,6 @@ def add_dataset(
 
             # if Dataset record exists, retrieve it and check if it's already been loaded previously
 
-        # retrieve or create Dataset record and link it to sample(s)
-        dataset = get_or_create_elasticsearch_dataset(
-            project=project,
-            analysis_type=analysis_type,
-            genome_version=genome_version,
-            source_file_path=dataset_path,
-            elasticsearch_index=dataset_id,
-        )
-
-        if dataset_id is not None:
-            dataset.is_loaded = True
-            dataset.loaded_date = timezone.now()
-
-        dataset.name = name
-        dataset.description = description
-        dataset.save()
-
-        link_dataset_to_sample_records(dataset, matched_sample_id_to_sample_record.values())
 
         # check if all VCF samples loaded already - TODO update this?
         vcf_sample_ids = set(matched_sample_id_to_sample_record.keys())
@@ -138,12 +111,12 @@ def add_dataset(
     return errors, warnings, info
 
 
-def validate_dataset(project, sample_type, analysis_type, genome_version, dataset_path, max_edit_distance=0, dataset_id=None):
+def validate_dataset(project, sample_type, dataset_type, genome_version, dataset_path, max_edit_distance=0, dataset_id=None):
     """Validates the given dataset.
     Args:
         project (object):
         sample_type (string):
-        analysis_type (string):
+        dataset_type (string):
         genome_version (string):
         dataset_path (string):
         max_edit_distance (int):
@@ -151,7 +124,7 @@ def validate_dataset(project, sample_type, analysis_type, genome_version, datase
     Return:
         (errors, warnings, info) tuple
 
-    Dataset.ANALYSIS_TYPE_VARIANT_CALLS
+    Dataset.DATASET_TYPE_VARIANT_CALLS
     """
     #elasticsearch_host = options["elasticsearch_host"]
     #elasticsearch_index = options["elasticsearch_index"]
@@ -163,14 +136,14 @@ def validate_dataset(project, sample_type, analysis_type, genome_version, datase
     info = []
 
     # basic file path checks
-    if analysis_type == Dataset.ANALYSIS_TYPE_VARIANT_CALLS:
+    if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
         if not dataset_path.endswith(".vcf.gz") and not dataset_path.endswith(".vds"):
             errors.append("Dataset path must end with .vcf.gz or .vds")
-    elif analysis_type == Dataset.ANALYSIS_TYPE_ALIGNMENT:
+    elif dataset_type == Sample.DATASET_TYPE_READ_ALIGNMENTS:
         if not any([dataset_path.endswith(suffix) for suffix in ('.txt', '.tsv', '.xls', '.xlsx')]):
             errors.append("BAM / CRAM table must have a .txt or .xls extension")
     else:
-        errors.append("dataset type not supported: %s" % (analysis_type,))
+        errors.append("dataset type not supported: %s" % (dataset_type,))
 
     if errors:
         return errors, warnings, info
@@ -192,7 +165,7 @@ def validate_dataset(project, sample_type, analysis_type, genome_version, datase
         return errors, warnings, info
 
     # validate dataset contents
-    if analysis_type == Dataset.ANALYSIS_TYPE_VARIANT_CALLS:
+    if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
         # validate VCF and get sample ids
         try:
             sample_ids = _validate_vcf(dataset_path, sample_type=sample_type, genome_version=genome_version)
@@ -213,13 +186,20 @@ def validate_dataset(project, sample_type, analysis_type, genome_version, datase
             errors.append("None of the individuals or samples in the project matched the %(all_vcf_sample_id_count)s sample id(s) in the VCF" % locals())
             return errors, warnings, info
 
+        project=project,
+        dataset_type=dataset_type,
+        dataset_file_path=dataset_path,
+        elasticsearch_index=elasticsearch_index,
+        dataset.is_loaded = True
+        dataset.loaded_date = timezone.now()
+
          # if Dataset record exists, retrieve it and check if it's already been loaded previously
         try:
             dataset = get_dataset(
                 project=project,
-                analysis_type=analysis_type,
+                dataset_type=dataset_type,
                 genome_version=genome_version,
-                source_file_path=dataset_path,
+                dataset_file_path=dataset_path,
                 #elasticsearch_host=elasticsearch_host,
                 #elasticsearch_index=elasticsearch_index,
                 #is_loaded=is_loaded,
@@ -239,6 +219,28 @@ def validate_dataset(project, sample_type, analysis_type, genome_version, datase
             info.append("Data will be loaded for these samples: %s" % (vcf_sample_ids - existing_sample_ids, ))
 
     return errors, warnings, info
+
+
+def _deprecated_update_base_individuals(dataset, sample_records):
+    if not dataset.is_loaded:
+        return
+
+    vcf_file, created = VCFFile.objects.get_or_create(file_path=dataset.dataset_file_path)
+    for sample in sample_records:
+        base_individual = BaseIndividual.objects.get(
+            project__project_id=dataset.project.deprecated_project_id,
+            indiv_id=sample.individual.individual_id)
+        base_individual.vcf_files.add(vcf_file)
+
+        base_family = base_individual.family
+        if base_family.analysis_status == "Q":
+            base_family.analysis_status = 'I'
+            base_family.save()
+
+        seqr_family = sample.individual.family
+        if seqr_family.analysis_status == "Q":
+            seqr_family.analysis_status = "I"
+            seqr_family.save()
 
 
 def _validate_vcf(vcf_path, sample_type=None, genome_version=None):

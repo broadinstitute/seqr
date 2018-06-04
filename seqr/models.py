@@ -98,6 +98,8 @@ class Project(ModelWithGUID):
     can_edit_group = models.ForeignKey(Group, related_name='+', on_delete=models.PROTECT)
     can_view_group = models.ForeignKey(Group, related_name='+', on_delete=models.PROTECT)
 
+    genome_version = models.CharField(max_length=5, choices=GENOME_VERSION_CHOICES, default=GENOME_VERSION_GRCh37)
+
     #primary_investigator = models.ForeignKey(User, null=True, blank=True, related_name='+')
     is_phenotips_enabled = models.BooleanField(default=False)
     phenotips_user_id = models.CharField(max_length=100, null=True, blank=True, db_index=True)
@@ -167,8 +169,9 @@ class Project(ModelWithGUID):
         permissions = _SEQR_OBJECT_PERMISSIONS
 
         json_fields = [
-            'name', 'description', 'created_date', 'last_modified_date', 'is_phenotips_enabled', 'phenotips_user_id',
-            'deprecated_project_id', 'deprecated_last_accessed_date', 'is_mme_enabled', 'mme_primary_data_owner', 'guid'
+            'name', 'description', 'created_date', 'last_modified_date', 'genome_version', 'is_phenotips_enabled',
+            'phenotips_user_id', 'deprecated_project_id', 'deprecated_last_accessed_date',
+            'is_mme_enabled', 'mme_primary_data_owner', 'guid'
         ]
 
 
@@ -327,7 +330,7 @@ class Individual(ModelWithGUID):
         return self.individual_id.strip()
 
     def _compute_guid(self):
-        return 'I%06d_%s' % (self.id, _slugify(str(self)))
+        return 'I%07d_%s' % (self.id, _slugify(str(self)))
 
     class Meta:
         unique_together = ('family', 'individual_id')
@@ -366,7 +369,11 @@ class ProjectLastAccessedDate(models.Model):
 
 
 class Sample(ModelWithGUID):
-    """Represents a single biological sample.
+    """This model represents a single data type (eg. Read Alignments, Variant Calls, or SV Calls) that's generated from
+    a single biological sample (eg. WES, WGS, RNA, Array).
+
+    It stores metadata on both the dataset (fields: dataset_type, dataset_file_path, loaded_date, etc.) and the
+    underlying sample (fields: sample_type)
 
     A sample can have be used to generate multiple types of analysis results, depending on the
     sample type. For example, an exome, genome or rna sample can be used to generate an aligned bam,
@@ -377,13 +384,6 @@ class Sample(ModelWithGUID):
     if versioning is needed for analysis results, it'll be necessary to create a separate table
     for each analysis type, where records have a many(analysis-versions)-to-one(sample) relationship with this table.
     """
-
-    SAMPLE_STATUS_CHOICES = (
-        ('S', 'In Sequencing'),
-        ('I', 'Interim'),    # needs additional sequencing to reach expected (95x) coverage
-        ('C', 'Complete'),   # sample sequencing complete and achieved expected coverage
-        ('A', 'Abandoned'),  # sample failed sequencing
-    )
 
     SAMPLE_TYPE_WES = 'WES'
     SAMPLE_TYPE_WGS = 'WGS'
@@ -397,115 +397,68 @@ class Sample(ModelWithGUID):
         # ('ILLUMINA_INFINIUM_250K', ),
     )
 
-    sample_type = models.CharField(max_length=3, choices=SAMPLE_TYPE_CHOICES)
+    DATASET_TYPE_READ_ALIGNMENTS = 'ALIGN'
+    DATASET_TYPE_VARIANT_CALLS = 'VARIANTS'
+    DATASET_TYPE_SV_CALLS = 'SV'
+    DATASET_TYPE_BREAKPOINTS = 'BREAK'
+    DATASET_TYPE_SPLICE_JUNCTIONS = 'SPLICE'
+    DATASET_TYPE_ASE = 'ASE'
+    DATASET_TYPE_CHOICES = (
+        (DATASET_TYPE_READ_ALIGNMENTS, 'Alignment'),
+        (DATASET_TYPE_VARIANT_CALLS, 'Variant Calls'),
+        (DATASET_TYPE_SV_CALLS, 'SV Calls'),
+        (DATASET_TYPE_BREAKPOINTS, 'Breakpoints'),
+        (DATASET_TYPE_SPLICE_JUNCTIONS, 'Splice Junction Calls'),
+        (DATASET_TYPE_ASE, 'Allele Specific Expression'),
+    )
+
+    SAMPLE_STATUS_IN_SEQUENCING = 'seq'
+    SAMPLE_STATUS_COMPLETED_SEQUENCING = 'seq_done'
+    SAMPLE_STATUS_SEQUENCING_FAILED = 'seq_fail_1'
+    SAMPLE_STATUS_LOADING = 'loading'
+    SAMPLE_STATUS_LOADED = 'loaded'
+
+    SAMPLE_STATUS_CHOICES = (
+        (SAMPLE_STATUS_IN_SEQUENCING, 'In Sequencing'),
+        (SAMPLE_STATUS_COMPLETED_SEQUENCING, 'Completed Sequencing'),
+        (SAMPLE_STATUS_SEQUENCING_FAILED, 'Failed Sequencing - Abandoned'),
+        (SAMPLE_STATUS_LOADING, 'Loading'),
+        (SAMPLE_STATUS_LOADED, 'Loaded'),
+    )
 
     individual = models.ForeignKey('Individual', on_delete=models.PROTECT, null=True)
 
-    # This sample_id should be used for looking up this sample in the underlying dataset (for
-    # example, for variant callsets, it should be the VCF sample id). It is not a ForeignKey
-    # into another table.
+    sample_type = models.CharField(max_length=20, choices=SAMPLE_TYPE_CHOICES, null=True, blank=True)
+    dataset_type = models.CharField(max_length=20, choices=DATASET_TYPE_CHOICES, null=True, blank=True)
+
+    # The sample's id in the underlying dataset (eg. the VCF Id for variant callsets).
     sample_id = models.TextField(db_index=True)
 
-    # biological sample status
-    sample_status = models.CharField(max_length=1, choices=SAMPLE_STATUS_CHOICES, default='S')
+    # only set for data stored in elasticsearch
+    elasticsearch_index = models.TextField(null=True, blank=True, db_index=True)
+
+    # source file
+    dataset_name = models.TextField(null=True, blank=True)  # optional name to display instead of filename
+    dataset_file_path = models.TextField(db_index=True, null=True, blank=True)
+
+    # sample status
+    sample_status = models.CharField(max_length=20, choices=SAMPLE_STATUS_CHOICES, null=True, blank=True, db_index=True)
+    loaded_date = models.DateTimeField(null=True, blank=True)
 
     #funding_source = models.CharField(max_length=20, null=True)
-
-    is_external_data = models.BooleanField(default=False)
-
-
-    #sample_batch = models.ForeignKey('SampleBatch', on_delete=models.PROTECT, null=True)
-
-    # reference back to xbrowse base_project is a temporary work-around to support merging of
-    # different projects into one - including those that contain different types of callsets
-    # such as exome and genome
-    deprecated_base_project = models.ForeignKey('base.Project', null=True, on_delete=models.SET_NULL)
+    #is_external_data = models.BooleanField(default=False)
 
     def __unicode__(self):
         return self.sample_id.strip()
 
     def _compute_guid(self):
-        return 'S%06d_%s' % (self.id, _slugify(str(self)))
+        return 'S%10d_%s' % (self.id, _slugify(str(self)))
 
     class Meta:
-       # unique_together = ('sample_batch', 'sample_id')
        json_fields = [
-           'guid', 'created_date', 'sample_type', 'sample_id', 'sample_status',
+           'guid', 'created_date', 'sample_type', 'dataset_type', 'sample_id', 'elasticsearch_index',
+           'dataset_name', 'dataset_file_path', 'sample_status', 'loaded_date',
        ]
-
-
-class Dataset(ModelWithGUID):
-    """Dataset represents a single analysis type and result file"""
-
-    ANALYSIS_TYPE_ALIGNMENT = 'ALIGN'
-    ANALYSIS_TYPE_VARIANT_CALLS = 'VARIANTS'
-    ANALYSIS_TYPE_SV = 'SV'
-    ANALYSIS_TYPE_BREAKPOINTS = 'BREAK'
-    ANALYSIS_TYPE_SPLICE_JUNCTIONS = 'SPLICE'
-    ANALYSIS_TYPE_ASE = 'ASE'
-    ANALYSIS_TYPE_CHOICES = (
-        (ANALYSIS_TYPE_ALIGNMENT, 'Alignment'),
-        (ANALYSIS_TYPE_VARIANT_CALLS, 'Variant Calls'),
-        (ANALYSIS_TYPE_SV, 'SV Calls'),
-        (ANALYSIS_TYPE_BREAKPOINTS, 'Breakpoints'),
-        (ANALYSIS_TYPE_SPLICE_JUNCTIONS, 'Splice Junction Calls'),
-        (ANALYSIS_TYPE_ASE, 'Allele Specific Expression'),
-    )
-
-    DATASET_STATUS_QUEUED = 'Q'
-    DATASET_STATUS_LOADING = 'G'
-    DATASET_STATUS_LOADED = 'L'
-    DATASET_STATUS_FAILED = 'F'
-    DATASET_STATUS_CHOICES = (
-        (DATASET_STATUS_QUEUED, 'Queued'),
-        (DATASET_STATUS_LOADING, 'Loading'),
-        (DATASET_STATUS_LOADED, 'Loaded'),
-        (DATASET_STATUS_FAILED, 'Failed'),
-    )
-
-    name = models.TextField(null=True, blank=True)
-    description = models.TextField(null=True, blank=True)
-    status = models.CharField(null=True, blank=True, db_index=True, max_length=1, choices=DATASET_STATUS_CHOICES)
-
-    genome_version = models.CharField(max_length=5, choices=GENOME_VERSION_CHOICES, default=GENOME_VERSION_GRCh37)
-
-    # When a dataset is copied from source_file_path to an internal seqr database or directory,
-    # the dataset_id should be the pointer used to query this data. Although global uniqueness
-    # is not enforced, the dataset_id value should avoid collisions, and should be derived only from
-    # properties of the dataset itself (eg. creation date, size, or md5) so that if a dataset
-    # is added a second time, it would be assigned the same dataset id as before.
-    # This will allow datasets to be processed and loaded only once, but shared between projects if
-    # needed by using the same dataset_id in the Dataset records of different projects.
-    dataset_id = models.TextField(null=True, blank=True, db_index=True)   # elasticsearch index
-
-    dataset_location = models.TextField(null=True, blank=True, db_index=True)
-
-    analysis_type = models.CharField(max_length=10, choices=ANALYSIS_TYPE_CHOICES)
-
-    source_file_path = models.TextField(db_index=True)
-
-    is_loaded = models.BooleanField(default=False)
-    loaded_date = models.DateTimeField(null=True, blank=True)
-
-    samples = models.ManyToManyField('Sample')
-
-    # for convenience, add a pointer to the project that this dataset and samples belong to
-    project = models.ForeignKey('Project', null=True, on_delete=models.CASCADE)
-
-    #tool = models.TextField(null=True, blank=True)
-    #tool_version = models.TextField(null=True, blank=True)
-
-    def __unicode__(self):
-        return self.guid
-
-    def _compute_guid(self):
-        filename = os.path.basename(self.source_file_path).split(".")[0]
-        return 'D%06d_%s_%s' % (self.id, self.analysis_type[0:3], filename)
-
-    class Meta:
-        json_fields = [
-            'guid', 'created_date', 'analysis_type', 'is_loaded', 'loaded_date', 'source_file_path',
-        ]
 
 
 # TODO AliasFields work for lookups, but save/update doesn't work?

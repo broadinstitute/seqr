@@ -14,7 +14,7 @@ import {
   CLINSIG_SEVERITY,
 } from 'shared/utils/constants'
 
-export const ANALYSIS_TYPE_VARIANT_CALLS = 'VARIANTS'
+export const DATASET_TYPE_VARIANT_CALLS = 'VARIANTS'
 
 export const CASE_REVIEW_STATUS_NOT_IN_REVIEW = 'N'
 export const CASE_REVIEW_STATUS_IN_REVIEW = 'I'

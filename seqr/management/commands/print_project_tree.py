@@ -5,7 +5,7 @@ from pprint import pprint
 from django.core.management.base import BaseCommand
 from django.db.models.query_utils import Q
 
-from seqr.models import Dataset, Project, Family, Individual, Sample
+from seqr.models import Project, Family, Individual, Sample
 
 logger = logging.getLogger(__name__)
 
@@ -50,8 +50,6 @@ class Command(BaseCommand):
                     individual_tree = family_tree[individual_label] = OrderedDict()
                     for sample_i, sample in enumerate(Sample.objects.filter(individual=individual)):
                         sample_label = "sample: %s" % (sample, )
-                        datasets = Dataset.objects.filter(samples=sample)
-                        sample_label += "   - dataset(s): " + str(["%s: %s" % (d, d.source_file_path) for d in datasets])
                         individual_tree[sample_label] = OrderedDict()
 
         pprint(projects_tree)

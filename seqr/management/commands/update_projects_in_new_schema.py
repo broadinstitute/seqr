@@ -33,7 +33,6 @@ from seqr.models import \
     VariantNote as SeqrVariantNote, \
     VariantFunctionalData as SeqrVariantFunctionalData, \
     Sample as SeqrSample, \
-    Dataset as SeqrDataset, \
     LocusList, \
     CAN_VIEW, ModelWithGUID
 
@@ -76,12 +75,13 @@ class Command(BaseCommand):
         #    SeqrProject.objects.all().delete()
 
         # reset models that'll be regenerated
-        #if not project_ids_to_process:
+        if not project_ids_to_process:
+            SeqrSample.objects.all().delete()
         #    SeqrVariantTagType.objects.all().delete()
         #    SeqrVariantTag.objects.all().delete()
         #    SeqrVariantNote.objects.all().delete()
-        #    SeqrSample.objects.all().delete()
-        #    SeqrDataset.objects.all().delete()
+
+
 
         if project_ids_to_process:
             projects = Project.objects.filter(project_id__in=project_ids_to_process)
@@ -131,8 +131,7 @@ class Command(BaseCommand):
             # transfer Families and Individuals
             source_family_id_to_new_family = {}
             for source_family in Family.objects.filter(project=source_project):
-                new_family, family_created = transfer_family(
-                    source_family, new_project)
+                new_family, family_created = transfer_family(source_family, new_project)
 
                 updated_seqr_family_guids.add(new_family.guid)
 
@@ -311,15 +310,10 @@ class Command(BaseCommand):
                 counters["deleted SeqrSample"] += 1
                 #sample.delete()
 
-            for sample in SeqrSample.objects.filter(dataset__isnull=True):
-                # print("--- deleting SeqrSample without dataset: %s" % sample)
+            for sample in SeqrSample.objects.filter(individual__isnull=True):
+                print("--- deleting SeqrSample without dataset: %s" % sample)
                 counters["deleted SeqrSample"] += 1
-                #sample.delete()
-
-            #for dataset in SeqrDataset.objects.filter(dataset__isnull=True):
-            #    print("Deleting SeqrSample without dataset: %s" % sample)
-            #    counters["deleted SeqrSample"] += 1
-            #    #sample.delete()
+                sample.delete()
 
 
                 # delete projects that are in SeqrProject table, but not in BaseProject table
@@ -353,13 +347,6 @@ def create_sample_records(sample_type, source_project, source_individual, new_pr
 
     vcf_files = [f for f in source_individual.vcf_files.all()]
     if len(vcf_files) > 0:
-        new_sample, sample_created = get_or_create_sample(
-            source_individual,
-            new_individual,
-            sample_type=sample_type
-        )
-
-        if sample_created: counters['samples_created'] += 1
 
         # get the most recent VCF file (the one with the highest primary key)
         #vcf_files_max_pk = max([f.pk for f in vcf_files])
@@ -380,7 +367,7 @@ def create_sample_records(sample_type, source_project, source_individual, new_pr
                 new_project,
                 source_individual,
                 vcf_file.file_path,
-                analysis_type=SeqrDataset.ANALYSIS_TYPE_VARIANT_CALLS,
+                dataset_type=SeqrDataset.DATASET_TYPE_VARIANT_CALLS,
                 loaded_date=vcf_loaded_date,
             )
 
@@ -392,23 +379,30 @@ def create_sample_records(sample_type, source_project, source_individual, new_pr
 
         # find and record the earliest callset for this individual
         if earliest_vcf_dataset is not None:
-            new_earliest_dataset, earliest_dataset_created = get_or_create_earliest_dataset(
-                earliest_vcf_dataset,
-                new_sample,
-                new_project,
+            new_sample, sample_created = get_or_create_sample(
                 source_individual,
-                analysis_type=SeqrDataset.ANALYSIS_TYPE_VARIANT_CALLS,
+                new_individual,
+                sample_type=sample_type,
+                dataset_type=SeqrSample.DATASET_TYPE_VARIANT_CALLS,
+                dataset_file_path=earliest_vcf_dataset.source_file_path,
+                elasticsearch_index=earliest_vcf_dataset.elasticsearch_index,
+                loaded_date=vcf_loaded_date,
+                sample_status="loaded" if vcf_loaded_date else None,
             )
 
+            if sample_created: counters['samples_created'] += 1
+
+
         if source_individual.bam_file_path:
-            new_bam_dataset, bam_dataset_created = get_or_create_dataset(
-                new_sample,
-                new_project,
+            new_sample, sample_created = get_or_create_sample(
                 source_individual,
-                source_individual.bam_file_path,
-                analysis_type=SeqrDataset.ANALYSIS_TYPE_ALIGNMENT,
+                new_individual,
+                sample_type=sample_type,
+                dataset_type=SeqrSample.DATASET_TYPE_READ_ALIGNMENTS,
+                dataset_file_path=source_individual.bam_file_path,
+                elasticsearch_index=earliest_vcf_dataset.elasticsearch_index,
                 loaded_date=vcf_loaded_date,
-                genome_version=new_vcf_dataset.genome_version,
+                sample_status=None,
             )
 
 
@@ -646,7 +640,37 @@ def _retrieve_and_update_individual_phenotips_data(project, individual):
     _update_individual_phenotips_data(individual, latest_phenotips_json)
 
 
-def get_or_create_sample(source_individual, new_individual, sample_type):
+def transfer_info_from_dataset_to_sample_fields(apps, schema_editor):
+    Dataset = apps.get_model('seqr', 'Dataset')
+    Sample = apps.get_model('seqr', 'Sample')
+
+    project_genome_versions = {}
+    for dataset in Dataset.objects.filter(analysis_type="VARIANTS"):
+        project = dataset.project
+        if project in project_genome_versions and project_genome_versions[project] != dataset.genome_version:
+            print("WARNING: {0}.genome_version already = {1}".format(project.deprecated_project_id, project.genome_version))
+            project_genome_versions[project] = "38"
+
+        project_genome_versions[project] = dataset.genome_version
+
+    for project, genome_version in project_genome_versions.items():
+        print("Setting {0}.genome_version = {1}".format(project.deprecated_project_id, genome_version))
+
+        project.genome_version = genome_version
+        project.save()
+
+    for sample in enumerate(Sample.objects.all()):
+        dataset = sample.dataset_set.filter(analysis_type="VARIANTS", is_loaded=True).order_by('-loaded_date').first()
+        if dataset:
+            sample.dataset_file_path = dataset.source_file_path
+            sample.dataset_type = dataset.analysis_type
+            sample.elasticsearch_index = dataset.dataset_id
+            sample.loaded_date = dataset.loaded_date
+            sample.sample_status = "loaded" if dataset.is_loaded else None
+            sample.save()
+
+
+def get_or_create_sample(source_individual, new_individual, sample_type, dataset_type=None, dataset_file_path=None, elasticsearch_index=None, loaded_date=None, sample_status=None):
     """Creates and returns a new Sample based on the provided models."""
 
     new_sample, created = SeqrSample.objects.get_or_create(
@@ -654,23 +678,28 @@ def get_or_create_sample(source_individual, new_individual, sample_type):
         individual=new_individual,
         sample_id=(source_individual.vcf_id or source_individual.indiv_id).strip(),
         deprecated_base_project=source_individual.family.project,
+        dataset_type=dataset_type,
+        dataset_file_path=dataset_file_path,
+        elasticsearch_index=elasticsearch_index,
     )
-    new_sample.created_date=new_individual.created_date
-    new_sample.sample_status=source_individual.coverage_status
+    new_sample.created_date = new_individual.created_date
+    new_sample.sample_status = source_individual.coverage_status
+    new_sample.loaded_date = loaded_date
+    new_sample.sample_status = sample_status
     new_sample.save()
 
     return new_sample, created
 
 
-def get_or_create_dataset(new_sample, new_project, source_individual, source_file_path, analysis_type, loaded_date=None, genome_version=None):
+def get_or_create_dataset(new_sample, new_project, source_individual, dataset_file_path, dataset_type, loaded_date=None, genome_version=None):
 
     new_dataset, created = SeqrDataset.objects.get_or_create(
-        analysis_type=analysis_type,
-        source_file_path=source_file_path,
+        dataset_type=dataset_type,
+        dataset_file_path=dataset_file_path,
         project=new_project,
     )
 
-    new_dataset.name = os.path.basename(source_file_path)
+    new_dataset.name = os.path.basename(dataset_file_path)
     num_samples = new_dataset.samples.count()
     new_dataset.description = "%s %s sample" % (num_samples, new_sample.sample_type)
     if num_samples > 1:
@@ -709,7 +738,7 @@ def date_difference_in_days(date1, date2):
     return abs(delta.days)
 
 
-def get_or_create_earliest_dataset(current_dataset, new_sample, new_project, source_individual, analysis_type):
+def get_or_create_earliest_dataset(current_dataset, new_sample, new_project, source_individual, dataset_type):
 
     created = False
 
@@ -720,8 +749,8 @@ def get_or_create_earliest_dataset(current_dataset, new_sample, new_project, sou
 
     # check if an early dataset already exists for this sample
     matching_datasets = new_sample.dataset_set.filter(
-        analysis_type=analysis_type,
-        source_file_path='unknown-previous-callset-path',
+        dataset_type=dataset_type,
+        dataset_file_path='unknown-previous-callset-path',
         project=new_project)
     
     if matching_datasets:
@@ -739,7 +768,7 @@ def get_or_create_earliest_dataset(current_dataset, new_sample, new_project, sou
         return current_dataset, created
 
     # if there's another sample in this project that had data loaded within 20 days of this one, reuse that dataset
-    for existing_dataset_record in SeqrDataset.objects.filter(project=new_project, analysis_type=analysis_type):
+    for existing_dataset_record in SeqrDataset.objects.filter(project=new_project, dataset_type=dataset_type):
         if existing_dataset_record.loaded_date and date_difference_in_days(earliest_loaded_date, existing_dataset_record.loaded_date) <= 25:
             logger.info("Updated earliest dataset record for sample %s %s: %s" % (new_project, new_sample, existing_dataset_record.loaded_date))
             existing_dataset_record.samples.add(new_sample)
@@ -747,7 +776,7 @@ def get_or_create_earliest_dataset(current_dataset, new_sample, new_project, sou
 
     # else create a new dataset
     earliest_dataset, created = SeqrDataset.objects.get_or_create(
-        analysis_type=analysis_type,
+        dataset_type=dataset_type,
         source_file_path='unknown-previous-callset-path',
         project=new_project,
         loaded_date=earliest_loaded_date,

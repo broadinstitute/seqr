@@ -34,7 +34,6 @@ from seqr.models import \
     VariantTag as SeqrVariantTag, \
     VariantNote as SeqrVariantNote, \
     Sample as SeqrSample, \
-    Dataset as SeqrDataset, \
     LocusList, \
     CAN_EDIT, CAN_VIEW, ModelWithGUID
 
@@ -84,7 +83,7 @@ class Command(BaseCommand):
             # transfer Project data
             project = Project.objects.get(project_id=seqr_project.deprecated_project_id)
             for dataset in seqr_project.dataset_set.all():
-                if dataset.analysis_type == "VARIANTS":
+                if dataset.dataset_type == "VARIANTS":
                     project.genome_version = dataset.genome_version
 
             project.project_name = seqr_project.name
@@ -128,7 +127,7 @@ class Command(BaseCommand):
                     for sample in seqr_individual.sample_set.all():
                         logging.info("    %s has %s datasets" % (sample, len(sample.dataset_set.all())))
                         for dataset in sample.dataset_set.all():
-                            if dataset.analysis_type != "VARIANTS" or not dataset.is_loaded:
+                            if dataset.dataset_type != "VARIANTS" or not dataset.is_loaded:
                                 continue
 
                             for vcf_file in individual.vcf_files.all():

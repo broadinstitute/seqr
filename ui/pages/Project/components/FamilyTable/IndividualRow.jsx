@@ -17,7 +17,7 @@ import {
   CASE_REVIEW_STATUS_MORE_INFO_NEEDED,
   CASE_REVIEW_STATUS_NOT_IN_REVIEW,
   CASE_REVIEW_STATUS_OPT_LOOKUP,
-  ANALYSIS_TYPE_VARIANT_CALLS,
+  DATASET_TYPE_VARIANT_CALLS
 } from '../../constants'
 import { getShowDetails, getProject, getProjectSamples, getProjectDatasets } from '../../selectors'
 import CaseReviewStatusDropdown from './CaseReviewStatusDropdown'
@@ -64,7 +64,7 @@ class IndividualRow extends React.Component
       let loadedVariantCallDatasets = this.props.datasets
         .filter(dataset => (
           dataset.sampleGuids.includes(sample.sampleGuid) &&
-          dataset.analysisType === ANALYSIS_TYPE_VARIANT_CALLS &&
+          dataset.datasetType === DATASET_TYPE_VARIANT_CALLS &&
           dataset.isLoaded
         ))
 
