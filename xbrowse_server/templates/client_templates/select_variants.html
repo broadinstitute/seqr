@@ -129,6 +129,28 @@
                                 </div>
                             </div>
                         </div>
+                        <% if (thisCallsetFilter) { %>
+                            <div class="row" style="border-top: 1px solid #EEE;">
+                                <div class="col-sm-4" style="min-height: 90px;">
+                                    <div class="annot-section-title">This Callset</div>
+                                    <div class="annot-section-content row">
+                                        <div class="col-sm-3">
+                                            <div>AC</div>
+                                            <select class="ac-select" data-population="AF">
+                                                <% var filterValues = ['---', 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]; %>
+                                                <% filterValues.forEach(function(value) { %>
+                                                    <option value="<%= value %>"><%= value %></option>
+                                                <% }); %>
+                                            </select>
+                                        </div>
+                                        <div class="sliderContainer col-sm-9" style="margin-top:10px">
+                                            <div class="freq-slider-label" data-population="AF" style="min-width: 30px; min-height: 20px">&nbsp;</div>
+                                            <div class="freq-slider" data-population="AF"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        <% }; %>
                     </div>
                 </div>
                 <div class="panel panel-default">

@@ -147,7 +147,8 @@ window.SelectVariantsView = Backbone.View.extend({
         	hbc: this.hbc,
             annotDefs: this.annotDefs,
             defaultVariantFilters: this.defaultVariantFilters,
-            reference_populations: this.reference_populations,
+            reference_populations: _.filter(this.reference_populations, function(x) { return x.slug !== 'AF' }),
+            thisCallsetFilter: _.find(this.reference_populations, function(x) { return x.slug === 'AF' }),
             showPopAcFilter: this.project_options.db === "elasticsearch",
         }));
 
@@ -300,7 +301,9 @@ window.SelectVariantsView = Backbone.View.extend({
         }
 
         _.each(this.reference_populations, function(pop) {
-            that.setSlider(pop.slug, val);
+            if(pop.slug !== 'AF') {
+              that.setSlider(pop.slug, val);
+            }
         });
         this.$('#set-all-ac-filters').val( '---' );
     },
@@ -314,7 +317,9 @@ window.SelectVariantsView = Backbone.View.extend({
         }
 
         _.each(this.reference_populations, function(pop) {
-            that.setAcSelect(pop.slug, val);
+            if(pop.slug !== 'AF') {
+              that.setAcSelect(pop.slug, val);
+            }
         });
         this.$('#set-all-freq-filters').val( '---' );
     },
