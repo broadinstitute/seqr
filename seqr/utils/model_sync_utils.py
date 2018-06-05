@@ -9,7 +9,7 @@ from xbrowse_server.base.models import Project
 
 
 def get_or_create_saved_variant(xpos=None, ref=None, alt=None, family=None, project=None, **kwargs):
-    new_saved_variant, created = SeqrSavedVariant.objects.get_or_create(
+    new_saved_variant, _ = SeqrSavedVariant.objects.get_or_create(
         xpos_start=xpos,
         xpos_end=xpos + len(ref) - 1,
         ref=ref,

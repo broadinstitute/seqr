@@ -427,12 +427,13 @@ def _parse_merged_pedigree_sample_manifest_format(rows):
 
     RENAME_COLUMNS = {
         MergedPedigreeSampleManifestConstants.FAMILY_ID_COLUMN: JsonConstants.FAMILY_ID_COLUMN,
-        MergedPedigreeSampleManifestConstants.COLLABORATOR_PARTICIPANT_ID_COLUMN: JsonConstants.INDIVIDUAL_ID_COLUMN,
+        # TODO change this to COLLABORATOR_PARTICIPANT_ID_COLUMN once Sample ids are used for database lookups
+        MergedPedigreeSampleManifestConstants.COLLABORATOR_SAMPLE_ID_COLUMN: JsonConstants.INDIVIDUAL_ID_COLUMN,
         MergedPedigreeSampleManifestConstants.PATERNAL_ID_COLUMN: JsonConstants.PATERNAL_ID_COLUMN,
         MergedPedigreeSampleManifestConstants.MATERNAL_ID_COLUMN: JsonConstants.MATERNAL_ID_COLUMN,
         MergedPedigreeSampleManifestConstants.SEX_COLUMN: JsonConstants.SEX_COLUMN,
         MergedPedigreeSampleManifestConstants.AFFECTED_COLUMN: JsonConstants.AFFECTED_COLUMN,
-        MergedPedigreeSampleManifestConstants.COLLABORATOR_SAMPLE_ID_COLUMN: JsonConstants.SAMPLE_ID_COLUMN,
+        #MergedPedigreeSampleManifestConstants.COLLABORATOR_SAMPLE_ID_COLUMN: JsonConstants.SAMPLE_ID_COLUMN,
         MergedPedigreeSampleManifestConstants.NOTES_COLUMN: JsonConstants.NOTES_COLUMN,
         MergedPedigreeSampleManifestConstants.CODED_PHENOTYPE_COLUMN: JsonConstants.CODED_PHENOTYPE_COLUMN,
     }
@@ -472,19 +473,21 @@ def _send_sample_manifest(sample_manifest_rows, kit_id, original_filename, origi
     wb.save(temp_sample_manifest_file.name)
     temp_sample_manifest_file.seek(0)
 
-    sample_manifest_filename = kit_id+'.xlsx'
+    sample_manifest_filename = kit_id+".xls"
     logger.info("Sending sample manifest file %s to %s" % (sample_manifest_filename, settings.UPLOADED_PEDIGREE_FILE_RECIPIENTS))
 
+    original_table_attachment_filename = os.path.basename(original_filename).replace(".xlsx", ".xls")
+
     if user is not None and project is not None:
-        email_body = "%(user)s just uploaded pedigree info to %(project)s.\n" % locals()
+        email_body = "User '%(user)s' just uploaded pedigree info to %(project)s.<br />" % locals()
     else:
         email_body = ""
 
-    email_body += """This email has 2 attached files:
-
-    <b>%(sample_manifest_filename)s</b> is the sample manifest to send to GP.
-
-    <b>%(original_filename)s</b> is the original file uploaded by the user.
+    email_body += """This email has 2 attached files:<br />
+    <br />
+    <b>%(sample_manifest_filename)s</b> is the sample manifest file in a format that can be sent to GP.<br />
+    <br />
+    <b>%(original_filename)s</b> is the original merged pedigree-sample-manifest file that the user uploaded.<br />
     """ % locals()
 
     email_message = EmailMultiAlternatives(
@@ -493,7 +496,7 @@ def _send_sample_manifest(sample_manifest_rows, kit_id, original_filename, origi
         to=settings.UPLOADED_PEDIGREE_FILE_RECIPIENTS,
         attachments=[
             (sample_manifest_filename, temp_sample_manifest_file.read(), "application/xls"),
-            (os.path.basename(original_filename), original_file_stream.read(), "application/xls"),
+            (original_table_attachment_filename, original_file_stream.read(), "application/xls"),
         ],
     )
     email_message.attach_alternative(email_body, 'text/html')

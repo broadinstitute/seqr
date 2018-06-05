@@ -142,7 +142,6 @@ def update_variant_tags_handler(request, variant_guid):
     # Update functional data
 
     existing_functional_guids = [tag['tagGuid'] for tag in updated_functional_data if tag.get('tagGuid')]
-    new_functional_data = [tag for tag in updated_functional_data if not tag.get('tagGuid')]
 
     for tag in saved_variant.variantfunctionaldata_set.exclude(guid__in=existing_functional_guids):
         delete_seqr_model(tag)
@@ -504,7 +503,7 @@ def _deprecated_add_default_tags_to_original_project(project):
 
     base_project = BaseProject.objects.get(project_id=project.deprecated_project_id)
     for r in DEFAULT_VARIANT_TAGS:
-        t, created = ProjectTag.objects.get_or_create(project=base_project, tag=r['tag_name'])
+        t, _ = ProjectTag.objects.get_or_create(project=base_project, tag=r['tag_name'])
         t.order = r['order']
         t.category = r['category']
         t.title = r['description']

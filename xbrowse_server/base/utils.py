@@ -74,7 +74,7 @@ def get_loaded_projects_for_user(user, fields=None):
         for project in mongo_projects:
             project.datastore_type = 'mongo'
 
-    es_projects = list(projects.exclude(vcffile__elasticsearch_index=None))
+    es_projects = list(projects.exclude(vcffile__elasticsearch_index=None).distinct())
     for project in es_projects:
         project.datastore_type = 'es'
 

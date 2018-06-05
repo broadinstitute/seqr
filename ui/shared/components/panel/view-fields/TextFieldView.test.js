@@ -22,7 +22,7 @@ test('shallow-render without crashing', () => {
     textEditorId: 'test title',
     textEditorSubmitUrl: 'http://test',
     textEditorTitle: 'test title',
-    fieldName: 'SOME_NAME',
+    field: 'SOME_NAME',
     initialText: 'SOME INITIAL TEXT WITH UNIØDE´',
     showRichTextEditorModal: () => {},
   }
@@ -35,7 +35,7 @@ test('shallow-render without crashing', () => {
     textEditorId: 'test title',
     textEditorSubmitUrl: 'http://test',
     textEditorTitle: 'test title',
-    fieldName: 'SOME_NAME',
+    field: 'SOME_NAME',
     initialText: 'SOME INITIAL TEXT WITH UNIØDE´',
     showRichTextEditorModal: () => {},
   }

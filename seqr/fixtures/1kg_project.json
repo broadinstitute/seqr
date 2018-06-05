@@ -27,7 +27,7 @@
     "fields": {
         "guid": "PC000002_categry_with_unicde",
         "created_date": "2017-03-12T23:52:36.401Z",
-        "created_by": 1,
+        "created_by": null,
         "last_modified_date": "2017-03-12T23:52:36.401Z",
         "name": "c\u00e5teg\u00f8ry with uni\u00e7\u00f8de",
         "projects": [
@@ -41,7 +41,7 @@
     "fields": {
         "guid": "PC000003_test_category_name",
         "created_date": "2017-03-12T23:52:55.846Z",
-        "created_by": 1,
+        "created_by": null,
         "last_modified_date": "2017-03-12T23:52:55.846Z",
         "name": "test category name",
         "projects": [
@@ -331,7 +331,7 @@
 	"notes": "",
         "case_review_status": "I",
         "case_review_status_last_modified_date": "2017-03-12T22:34:43.204Z",
-        "case_review_status_last_modified_by": 1,
+        "case_review_status_last_modified_by": null,
         "case_review_discussion": null,
         "phenotips_patient_id": "P0000001",
         "phenotips_eid": "20161012_131013_744125_NA19675",
@@ -358,7 +358,7 @@
 	"notes": "",
         "case_review_status": "U",
         "case_review_status_last_modified_date": "2017-03-12T22:34:46.200Z",
-        "case_review_status_last_modified_by": 1,
+        "case_review_status_last_modified_by": null,
         "case_review_discussion": null,
         "phenotips_patient_id": "P0000002",
         "phenotips_eid": "20161012_131013_752998_NA19678",
@@ -385,7 +385,7 @@
 	"notes": "",
         "case_review_status": "A",
         "case_review_status_last_modified_date": "2017-03-12T22:34:49.964Z",
-        "case_review_status_last_modified_by": 1,
+        "case_review_status_last_modified_by": null,
         "case_review_discussion": null,
         "phenotips_patient_id": "P0000003",
         "phenotips_eid": "20161012_131013_759726_NA19679",
@@ -412,7 +412,7 @@
 	"notes": "",
         "case_review_status": "3",
         "case_review_status_last_modified_date": "2017-03-12T22:34:59.093Z",
-        "case_review_status_last_modified_by": 1,
+        "case_review_status_last_modified_by": null,
         "case_review_discussion": null,
         "phenotips_patient_id": "P0000004",
         "phenotips_eid": "20161012_131013_767240_HG00731",
@@ -466,7 +466,7 @@
 	"notes": "",
         "case_review_status": "H",
         "case_review_status_last_modified_date": "2017-03-12T22:35:06.446Z",
-        "case_review_status_last_modified_by": 1,
+        "case_review_status_last_modified_by": null,
         "case_review_discussion": null,
         "phenotips_patient_id": "P0000006",
         "phenotips_eid": "20161012_131013_783081_HG00733",
@@ -709,7 +709,7 @@
 	"notes": "",
         "case_review_status": "E",
         "case_review_status_last_modified_date": "2017-03-12T22:34:52.302Z",
-        "case_review_status_last_modified_by": 1,
+        "case_review_status_last_modified_by": null,
         "case_review_discussion": null,
         "phenotips_patient_id": "P0000015",
         "phenotips_eid": "20161012_131013_859533_NA20885",
@@ -736,7 +736,7 @@
 	"notes": "",
         "case_review_status": "G",
         "case_review_status_last_modified_date": "2017-03-12T22:34:55.895Z",
-        "case_review_status_last_modified_by": 1,
+        "case_review_status_last_modified_by": null,
         "case_review_discussion": null,
         "phenotips_patient_id": "P0000016",
         "phenotips_eid": "20161012_131013_867124_NA20888",
@@ -1090,6 +1090,198 @@
         "is_loaded": true,
         "loaded_date": "2017-02-05T06:42:55.397Z",
         "deprecated_base_project": null
+    }
+},
+{
+    "model": "seqr.varianttagtype",
+    "pk": 1,
+    "fields": {
+        "guid": "VTT_tier_1_novel_gene_and_phen",
+        "created_date": "2018-04-27T00:00:00.000Z",
+        "created_by": null,
+        "last_modified_date": null,
+        "project": null,
+        "name": "Tier 1 - Novel gene and phenotype",
+        "category": "CMG Discovery Tags",
+        "description": "Gene not previously associated with a Mendelian condition",
+        "color": "#03441E",
+        "order": 1.0,
+        "is_built_in": true
+    }
+},
+{
+    "model": "seqr.varianttagtype",
+    "pk": 2,
+    "fields": {
+        "guid": "VTT_review",
+        "created_date": "2018-04-27T00:00:00.000Z",
+        "created_by": null,
+        "last_modified_date": null,
+        "project": null,
+        "name": "Review",
+        "category": "Collaboration",
+        "description": "To mark a variant and/or gene of interest for further review.",
+        "color": "#668FE3",
+        "order": 11.0,
+        "is_built_in": true
+    }
+},
+{
+    "model": "seqr.varianttagtype",
+    "pk": 3,
+    "fields": {
+        "guid": "VTT_excluded",
+        "created_date": "2018-04-27T00:00:00.000Z",
+        "created_by": null,
+        "last_modified_date": null,
+        "project": null,
+        "name": "Excluded",
+        "category": "Collaboration",
+        "description": "To mark a variant and/or gene you previously reviewed but do not think it contributing to the phenotype in this case. To help other members of your team (and yourself), please consider also adding a note with details of why you reprioritized this variant.",
+        "color": "#555555",
+        "order": 15.0,
+        "is_built_in": true
+    }
+},
+{
+    "model": "seqr.savedvariant",
+    "pk": 1,
+    "fields": {
+        "guid": "SV0000001_2103343353_r0390_100",
+        "created_date": "2018-05-15T14:51:54.491Z",
+        "created_by": null,
+        "last_modified_date": "2018-05-31T16:36:02.812Z",
+        "genome_version": "37",
+        "xpos_start": 2103343353,
+        "xpos_end": 2103343356,
+        "ref": "GAGA",
+        "alt": "G",
+        "lifted_over_genome_version": null,
+        "lifted_over_xpos_start": null,
+        "saved_variant_json": "{\"xpos\": 2103343353, \"vcf_id\": null, \"pos\": 103343353, \"vartype\": \"indel\", \"alt\": \"G\", \"annotation\": {\"gene_ids\": [\"ENSG00000135953\"], \"coding_gene_ids\": [\"ENSG00000135953\"], \"cadd_phred\": \"14.33\", \"worst_vep_annotation_index\": 0, \"vep_annotation\": [{\"appris\": \"\", \"aa_maf\": \"\", \"ea_maf\": \"\", \"exac_fin_maf\": \"\", \"clin_sig\": \"\", \"hgnc_id\": \"28158\", \"existing_variation\": \"rs772070439\", \"exac_oth_maf\": \"\", \"hgvs_offset\": \"\", \"fathmm_pred\": \"\", \"cadd_phred\": \"\", \"eas_maf\": \"\", \"gene_pheno\": \"\", \"ccds\": \"CCDS2063.1\", \"exac_nfe_maf\": \"\", \"high_inf_pos\": \"\", \"cdna_position\": \"419-421\", \"canonical\": \"YES\", \"impact\": \"MODERATE\", \"tsl\": \"\", \"lof\": \"\", \"metasvm_pred\": \"\", \"intron\": \"\", \"trembl\": \"B4DKY6\", \"feature\": \"ENST00000258436\", \"codons\": \"ctTCTc/ctc\", \"motif_name\": \"\", \"polyphen\": \"\", \"lof_filter\": \"\", \"motif_pos\": \"\", \"strand\": \"-1\", \"exac_eas_maf\": \"\", \"protein_position\": \"125-126\", \"lof_flags\": \"\", \"afr_maf\": \"\", \"sift_pred\": \"\", \"consequence\": \"inframe_deletion\", \"cds_position\": \"375-377\", \"ensp\": \"ENSP00000258436\", \"symbol\": \"MFSD9\", \"exac_amr_maf\": \"\", \"exac_adj_maf\": \"\", \"uniparc\": \"UPI0000070215\", \"eur_maf\": \"\", \"mutationtaster_pred\": \"\", \"sift\": \"\", \"variant_class\": \"deletion\", \"exon\": \"4/6\", \"biotype\": \"protein_coding\", \"exac_afr_maf\": \"\", \"is_nc\": false, \"gmaf\": \"\", \"exac_sas_maf\": \"\", \"exac_maf\": \"\", \"feature_type\": \"Transcript\", \"allele_num\": \"1\", \"distance\": \"\", \"hgvsp\": \"ENSP00000258436.5:p.Leu126del\", \"amino_acids\": \"LL/L\", \"allele\": \"-\", \"symbol_source\": \"HGNC\", \"amr_maf\": \"\", \"lof_info\": \"POSITION:0.264561403508772\", \"motif_score_change\": \"\", \"somatic\": \"\", \"hgvsc\": \"ENST00000258436.5:c.375_377delTCT\", \"pheno\": \"\", \"pubmed\": \"\", \"flags\": \"\", \"is_nmd\": false, \"domains\": \"Low_complexity_(Seg):seg&Transmembrane_helices:TMhelix&PROSITE_profiles:PS50850&hmmpanther:PTHR24003:SF492&hmmpanther:PTHR24003&Pfam_domain:PF07690&Gene3D:1.20.1250.20&Superfamily_domains:SSF103473&Prints_domain:PR01035\", \"gene\": \"ENSG00000135953\", \"polyphen2_hvar_pred\": \"\", \"sas_maf\": \"\", \"swissprot\": \"Q8NBP5\"}, {\"appris\": \"\", \"aa_maf\": \"\", \"ea_maf\": \"\", \"exac_fin_maf\": \"\", \"clin_sig\": \"\", \"hgnc_id\": \"28158\", \"existing_variation\": \"rs772070439\", \"exac_oth_maf\": \"\", \"hgvs_offset\": \"\", \"fathmm_pred\": \"\", \"cadd_phred\": \"\", \"eas_maf\": \"\", \"gene_pheno\": \"\", \"ccds\": \"\", \"exac_nfe_maf\": \"\", \"high_inf_pos\": \"\", \"cdna_position\": \"558-560\", \"canonical\": \"\", \"impact\": \"MODIFIER\", \"tsl\": \"\", \"lof\": \"\", \"metasvm_pred\": \"\", \"intron\": \"\", \"trembl\": \"F2Z2A2\", \"feature\": \"ENST00000411991\", \"codons\": \"\", \"motif_name\": \"\", \"polyphen\": \"\", \"lof_filter\": \"\", \"motif_pos\": \"\", \"strand\": \"-1\", \"exac_eas_maf\": \"\", \"protein_position\": \"\", \"lof_flags\": \"\", \"afr_maf\": \"\", \"sift_pred\": \"\", \"consequence\": \"3_prime_UTR_variant\", \"cds_position\": \"\", \"ensp\": \"ENSP00000392605\", \"symbol\": \"MFSD9\", \"exac_amr_maf\": \"\", \"exac_adj_maf\": \"\", \"uniparc\": \"UPI0000207F51\", \"eur_maf\": \"\", \"mutationtaster_pred\": \"\", \"sift\": \"\", \"variant_class\": \"deletion\", \"exon\": \"5/7\", \"biotype\": \"nonsense_mediated_decay\", \"exac_afr_maf\": \"\", \"is_nc\": false, \"gmaf\": \"\", \"exac_sas_maf\": \"\", \"exac_maf\": \"\", \"feature_type\": \"Transcript\", \"allele_num\": \"1\", \"distance\": \"\", \"hgvsp\": \"\", \"amino_acids\": \"\", \"allele\": \"-\", \"symbol_source\": \"HGNC\", \"amr_maf\": \"\", \"lof_info\": \"\", \"motif_score_change\": \"\", \"somatic\": \"\", \"hgvsc\": \"ENST00000411991.1:c.*211_*213delTCT\", \"pheno\": \"\", \"pubmed\": \"\", \"flags\": \"\", \"is_nmd\": false, \"domains\": \"\", \"gene\": \"ENSG00000135953\", \"polyphen2_hvar_pred\": \"\", \"sas_maf\": \"\", \"swissprot\": \"\"}, {\"appris\": \"\", \"aa_maf\": \"\", \"ea_maf\": \"\", \"exac_fin_maf\": \"\", \"clin_sig\": \"\", \"hgnc_id\": \"28158\", \"existing_variation\": \"rs772070439\", \"exac_oth_maf\": \"\", \"hgvs_offset\": \"\", \"fathmm_pred\": \"\", \"cadd_phred\": \"\", \"eas_maf\": \"\", \"gene_pheno\": \"\", \"ccds\": \"\", \"exac_nfe_maf\": \"\", \"high_inf_pos\": \"\", \"cdna_position\": \"\", \"canonical\": \"\", \"impact\": \"MODIFIER\", \"tsl\": \"\", \"lof\": \"\", \"metasvm_pred\": \"\", \"intron\": \"\", \"trembl\": \"F8WE00\", \"feature\": \"ENST00000421966\", \"codons\": \"\", \"motif_name\": \"\", \"polyphen\": \"\", \"lof_filter\": \"\", \"motif_pos\": \"\", \"strand\": \"-1\", \"exac_eas_maf\": \"\", \"protein_position\": \"\", \"lof_flags\": \"\", \"afr_maf\": \"\", \"sift_pred\": \"\", \"consequence\": \"downstream_gene_variant\", \"cds_position\": \"\", \"ensp\": \"ENSP00000402411\", \"symbol\": \"MFSD9\", \"exac_amr_maf\": \"\", \"exac_adj_maf\": \"\", \"uniparc\": \"UPI00018816BD\", \"eur_maf\": \"\", \"mutationtaster_pred\": \"\", \"sift\": \"\", \"variant_class\": \"deletion\", \"exon\": \"\", \"biotype\": \"nonsense_mediated_decay\", \"exac_afr_maf\": \"\", \"is_nc\": false, \"gmaf\": \"\", \"exac_sas_maf\": \"\", \"exac_maf\": \"\", \"feature_type\": \"Transcript\", \"allele_num\": \"1\", \"distance\": \"21\", \"hgvsp\": \"\", \"amino_acids\": \"\", \"allele\": \"-\", \"symbol_source\": \"HGNC\", \"amr_maf\": \"\", \"lof_info\": \"\", \"motif_score_change\": \"\", \"somatic\": \"\", \"hgvsc\": \"\", \"pheno\": \"\", \"pubmed\": \"\", \"flags\": \"\", \"is_nmd\": false, \"domains\": \"\", \"gene\": \"ENSG00000135953\", \"polyphen2_hvar_pred\": \"\", \"sas_maf\": \"\", \"swissprot\": \"\"}, {\"appris\": \"\", \"aa_maf\": \"\", \"ea_maf\": \"\", \"exac_fin_maf\": \"\", \"clin_sig\": \"\", \"hgnc_id\": \"28158\", \"existing_variation\": \"rs772070439\", \"exac_oth_maf\": \"\", \"hgvs_offset\": \"\", \"fathmm_pred\": \"\", \"cadd_phred\": \"\", \"eas_maf\": \"\", \"gene_pheno\": \"\", \"ccds\": \"\", \"exac_nfe_maf\": \"\", \"high_inf_pos\": \"\", \"cdna_position\": \"141-143\", \"canonical\": \"\", \"impact\": \"MODERATE\", \"tsl\": \"\", \"lof\": \"\", \"metasvm_pred\": \"\", \"intron\": \"\", \"trembl\": \"H7C3S7\", \"feature\": \"ENST00000428085\", \"codons\": \"ctTCTc/ctc\", \"motif_name\": \"\", \"polyphen\": \"\", \"lof_filter\": \"\", \"motif_pos\": \"\", \"strand\": \"-1\", \"exac_eas_maf\": \"\", \"protein_position\": \"47-48\", \"lof_flags\": \"\", \"afr_maf\": \"\", \"sift_pred\": \"\", \"consequence\": \"inframe_deletion\", \"cds_position\": \"141-143\", \"ensp\": \"ENSP00000413641\", \"symbol\": \"MFSD9\", \"exac_amr_maf\": \"\", \"exac_adj_maf\": \"\", \"uniparc\": \"UPI00018816BC\", \"eur_maf\": \"\", \"mutationtaster_pred\": \"\", \"sift\": \"\", \"variant_class\": \"deletion\", \"exon\": \"3/5\", \"biotype\": \"nonsense_mediated_decay\", \"exac_afr_maf\": \"\", \"is_nc\": false, \"gmaf\": \"\", \"exac_sas_maf\": \"\", \"exac_maf\": \"\", \"feature_type\": \"Transcript\", \"allele_num\": \"1\", \"distance\": \"\", \"hgvsp\": \"ENSP00000413641.1:p.Leu48del\", \"amino_acids\": \"LL/L\", \"allele\": \"-\", \"symbol_source\": \"HGNC\", \"amr_maf\": \"\", \"lof_info\": \"\", \"motif_score_change\": \"\", \"somatic\": \"\", \"hgvsc\": \"ENST00000428085.1:c.141_143delTCT\", \"pheno\": \"\", \"pubmed\": \"\", \"flags\": \"cds_start_NF\", \"is_nmd\": false, \"domains\": \"Low_complexity_(Seg):seg&Transmembrane_helices:TMhelix&Gene3D:1.20.1250.20&Superfamily_domains:SSF103473&Pfam_domain:PF07690&hmmpanther:PTHR24003&hmmpanther:PTHR24003:SF492&PROSITE_profiles:PS50850\", \"gene\": \"ENSG00000135953\", \"polyphen2_hvar_pred\": \"\", \"sas_maf\": \"\", \"swissprot\": \"\"}, {\"appris\": \"\", \"aa_maf\": \"\", \"ea_maf\": \"\", \"exac_fin_maf\": \"\", \"clin_sig\": \"\", \"hgnc_id\": \"28158\", \"existing_variation\": \"rs772070439\", \"exac_oth_maf\": \"\", \"hgvs_offset\": \"\", \"fathmm_pred\": \"\", \"cadd_phred\": \"\", \"eas_maf\": \"\", \"gene_pheno\": \"\", \"ccds\": \"\", \"exac_nfe_maf\": \"\", \"high_inf_pos\": \"\", \"cdna_position\": \"541-543\", \"canonical\": \"\", \"impact\": \"MODIFIER\", \"tsl\": \"\", \"lof\": \"\", \"metasvm_pred\": \"\", \"intron\": \"\", \"trembl\": \"F8WDV5\", \"feature\": \"ENST00000437075\", \"codons\": \"\", \"motif_name\": \"\", \"polyphen\": \"\", \"lof_filter\": \"\", \"motif_pos\": \"\", \"strand\": \"-1\", \"exac_eas_maf\": \"\", \"protein_position\": \"\", \"lof_flags\": \"\", \"afr_maf\": \"\", \"sift_pred\": \"\", \"consequence\": \"3_prime_UTR_variant\", \"cds_position\": \"\", \"ensp\": \"ENSP00000414870\", \"symbol\": \"MFSD9\", \"exac_amr_maf\": \"\", \"exac_adj_maf\": \"\", \"uniparc\": \"UPI00018816BB\", \"eur_maf\": \"\", \"mutationtaster_pred\": \"\", \"sift\": \"\", \"variant_class\": \"deletion\", \"exon\": \"5/7\", \"biotype\": \"nonsense_mediated_decay\", \"exac_afr_maf\": \"\", \"is_nc\": false, \"gmaf\": \"\", \"exac_sas_maf\": \"\", \"exac_maf\": \"\", \"feature_type\": \"Transcript\", \"allele_num\": \"1\", \"distance\": \"\", \"hgvsp\": \"\", \"amino_acids\": \"\", \"allele\": \"-\", \"symbol_source\": \"HGNC\", \"amr_maf\": \"\", \"lof_info\": \"\", \"motif_score_change\": \"\", \"somatic\": \"\", \"hgvsc\": \"ENST00000437075.2:c.*176_*178delTCT\", \"pheno\": \"\", \"pubmed\": \"\", \"flags\": \"\", \"is_nmd\": false, \"domains\": \"\", \"gene\": \"ENSG00000135953\", \"polyphen2_hvar_pred\": \"\", \"sas_maf\": \"\", \"swissprot\": \"\"}, {\"appris\": \"\", \"aa_maf\": \"\", \"ea_maf\": \"\", \"exac_fin_maf\": \"\", \"clin_sig\": \"\", \"hgnc_id\": \"28158\", \"existing_variation\": \"rs772070439\", \"exac_oth_maf\": \"\", \"hgvs_offset\": \"\", \"fathmm_pred\": \"\", \"cadd_phred\": \"\", \"eas_maf\": \"\", \"gene_pheno\": \"\", \"ccds\": \"\", \"exac_nfe_maf\": \"\", \"high_inf_pos\": \"\", \"cdna_position\": \"558-560\", \"canonical\": \"\", \"impact\": \"MODIFIER\", \"tsl\": \"\", \"lof\": \"\", \"metasvm_pred\": \"\", \"intron\": \"\", \"trembl\": \"F2Z2A2\", \"feature\": \"ENST00000438943\", \"codons\": \"\", \"motif_name\": \"\", \"polyphen\": \"\", \"lof_filter\": \"\", \"motif_pos\": \"\", \"strand\": \"-1\", \"exac_eas_maf\": \"\", \"protein_position\": \"\", \"lof_flags\": \"\", \"afr_maf\": \"\", \"sift_pred\": \"\", \"consequence\": \"3_prime_UTR_variant\", \"cds_position\": \"\", \"ensp\": \"ENSP00000408630\", \"symbol\": \"MFSD9\", \"exac_amr_maf\": \"\", \"exac_adj_maf\": \"\", \"uniparc\": \"UPI0000207F51\", \"eur_maf\": \"\", \"mutationtaster_pred\": \"\", \"sift\": \"\", \"variant_class\": \"deletion\", \"exon\": \"5/7\", \"biotype\": \"nonsense_mediated_decay\", \"exac_afr_maf\": \"\", \"is_nc\": false, \"gmaf\": \"\", \"exac_sas_maf\": \"\", \"exac_maf\": \"\", \"feature_type\": \"Transcript\", \"allele_num\": \"1\", \"distance\": \"\", \"hgvsp\": \"\", \"amino_acids\": \"\", \"allele\": \"-\", \"symbol_source\": \"HGNC\", \"amr_maf\": \"\", \"lof_info\": \"\", \"motif_score_change\": \"\", \"somatic\": \"\", \"hgvsc\": \"ENST00000438943.1:c.*211_*213delTCT\", \"pheno\": \"\", \"pubmed\": \"\", \"flags\": \"\", \"is_nmd\": false, \"domains\": \"\", \"gene\": \"ENSG00000135953\", \"polyphen2_hvar_pred\": \"\", \"sas_maf\": \"\", \"swissprot\": \"\"}], \"fathmm\": null, \"vep_consequence\": \"inframe_deletion\", \"annotation_tags\": [\"inframe_deletion\", \"3_prime_UTR_variant\", \"downstream_gene_variant\"], \"muttaster\": null, \"worst_vep_index_per_gene\": {\"ENSG00000135953\": 0}, \"freqs\": {\"gnomad-genomes2\": 0.0, \"1kg_wgs_phase3\": 0.0, \"exac_v3\": 4.944946264917255e-05, \"exac_v3_popmax\": 0.000242306760358614, \"1kg_wgs_phase3_popmax\": 0.0, \"gnomad-exomes2\": 2.4418633044922146e-05}, \"sift\": null, \"metasvm\": \"\", \"vep_group\": \"inframe\", \"polyphen\": null}, \"gene_ids\": [\"ENSG00000135953\"], \"coding_gene_ids\": [\"ENSG00000135953\"], \"pos_end\": 103343352.0, \"xposx\": 2103343352, \"chr\": \"2\", \"extras\": {\"gene_info\": {}, \"orig_alt_alleles\": [\"G\"], \"genes\": {\"ENSG00000135953\": {\"disease_gene_lists\": [], \"missense_constraint\": -1.4328463799518898, \"high_variability\": false, \"symbol\": \"MFSD9\", \"lof_constraint_rank\": [14340, 18225], \"gene_id\": \"ENSG00000135953\", \"missense_constraint_rank\": [16775, 18225], \"lof_constraint\": 7.72060377762361e-06, \"coding_size\": 1482}}, \"alt_allele_pos\": 0, \"disease_genes\": [], \"family_id\": \"1\", \"in_disease_gene_db\": false, \"clinvar_clinsig\": \"\", \"project_id\": \"1kg\", \"gene_names\": {\"ENSG00000135953\": \"MFSD9\"}, \"clinvar_variant_id\": null}, \"ref\": \"GAGA\", \"genotypes\": {\"NA19675\": {\"ab\": 0.7021276595744681, \"gq\": 46.0, \"alleles\": [\"GAGA\", \"G\"], \"num_alt\": 1, \"filter\": \"pass\", \"extras\": {\"dp\": \"50\", \"pl\": \"46,0,686\", \"ad\": \"14,33\"}}, \"NA19679\": {\"ab\": 0.0, \"gq\": 99.0, \"alleles\": [\"GAGA\", \"GAGA\"], \"num_alt\": 0, \"filter\": \"pass\", \"extras\": {\"dp\": \"45\", \"pl\": \"0,135,1525\", \"ad\": \"45,0\"}}, \"NA19678\": {\"ab\": 0.0, \"gq\": 99.0, \"alleles\": [\"GAGA\", \"GAGA\"], \"num_alt\": 0, \"filter\": \"pass\", \"extras\": {\"dp\": \"43\", \"pl\": \"0,126,1479\", \"ad\": \"42,0\"}}}}",
+        "project": 1,
+        "family": 1
+    }
+},
+{
+    "model": "seqr.savedvariant",
+    "pk": 2,
+    "fields": {
+        "guid": "SV0000002_1248367227_r0390_100",
+        "created_date": "2018-05-15T14:51:56.943Z",
+        "created_by": null,
+        "last_modified_date": "2018-05-31T16:36:02.805Z",
+        "genome_version": "37",
+        "xpos_start": 1248367227,
+        "xpos_end": 1248367228,
+        "ref": "TC",
+        "alt": "T",
+        "lifted_over_genome_version": null,
+        "lifted_over_xpos_start": null,
+        "saved_variant_json": "{\"xpos\": 1248367227, \"vcf_id\": null, \"pos\": 248367227, \"vartype\": \"indel\", \"alt\": \"T\", \"annotation\": {\"gene_ids\": [\"ENSG00000228198\"], \"coding_gene_ids\": [\"ENSG00000228198\"], \"cadd_phred\": \"27.2\", \"worst_vep_annotation_index\": 0, \"vep_annotation\": [{\"appris\": \"\", \"aa_maf\": \"\", \"ea_maf\": \"-:0.0117\", \"exac_fin_maf\": \"-:0&T:0\", \"clin_sig\": \"\", \"hgnc_id\": \"8269\", \"existing_variation\": \"rs745772346&rs779518126&COSM322277&COSM356384\", \"minimised\": \"1\", \"exac_oth_maf\": \"-:0&T:0\", \"hgvs_offset\": \"3\", \"fathmm_pred\": \"\", \"cadd_phred\": \"\", \"eas_maf\": \"\", \"gene_pheno\": \"\", \"ccds\": \"CCDS31107.1\", \"exac_nfe_maf\": \"-:0&T:0\", \"high_inf_pos\": \"\", \"cdna_position\": \"897\", \"canonical\": \"YES\", \"impact\": \"HIGH\", \"tsl\": \"\", \"lof\": \"HC\", \"metasvm_pred\": \"\", \"intron\": \"\", \"trembl\": \"\", \"feature\": \"ENST00000456743\", \"codons\": \"Ccc/cc\", \"motif_name\": \"\", \"polyphen\": \"\", \"lof_filter\": \"\", \"motif_pos\": \"\", \"strand\": \"1\", \"exac_eas_maf\": \"-:6.595e-05&T:8.245e-06\", \"protein_position\": \"287\", \"lof_flags\": \"SINGLE_EXON\", \"afr_maf\": \"T:0\", \"sift_pred\": \"\", \"consequence\": \"frameshift_variant\", \"cds_position\": \"859\", \"ensp\": \"ENSP00000389625\", \"symbol\": \"OR2M3\", \"exac_amr_maf\": \"-:0.0006727&T:0\", \"exac_adj_maf\": \"-:0&T:8.69e-05\", \"uniparc\": \"UPI000004B234\", \"eur_maf\": \"\", \"mutationtaster_pred\": \"\", \"sift\": \"\", \"variant_class\": \"deletion\", \"exon\": \"1/1\", \"biotype\": \"protein_coding\", \"exac_afr_maf\": \"-:6.589e-05&T:8.238e-06\", \"is_nc\": false, \"gmaf\": \"\", \"exac_sas_maf\": \"-:0&T:0\", \"exac_maf\": \"-:0.0104\", \"feature_type\": \"Transcript\", \"allele_num\": \"1\", \"distance\": \"\", \"hgvsp\": \"ENSP00000389625.1:p.Leu288SerfsTer10\", \"amino_acids\": \"P/X\", \"allele\": \"-\", \"symbol_source\": \"HGNC\", \"amr_maf\": \"\", \"motif_score_change\": \"\", \"somatic\": \"0&0&1&1\", \"hgvsc\": \"ENST00000456743.1:c.862delC\", \"pheno\": \"0&0&1&1\", \"pubmed\": \"\", \"flags\": \"\", \"is_nmd\": false, \"domains\": \"Transmembrane_helices:TMhelix&Prints_domain:PR00237&Prints_domain:PR00245&Superfamily_domains:SSF81321&Gene3D:1.20.1070.10&hmmpanther:PTHR26453:SF204&hmmpanther:PTHR26453&PROSITE_profiles:PS50262\", \"lof_info\\\">\\n\": \"POSITION:0.914802981895634\", \"gene\": \"ENSG00000228198\", \"polyphen2_hvar_pred\": \"\", \"sas_maf\": \"\", \"swissprot\": \"Q8NG83\"}], \"fathmm\": null, \"vep_consequence\": \"frameshift_variant\", \"annotation_tags\": [\"frameshift_variant\"], \"muttaster\": null, \"worst_vep_index_per_gene\": {\"ENSG00000228198\": 0}, \"freqs\": {\"gnomad-genomes2\": 0.00012925741614425127, \"1kg_wgs_phase3\": 0.0, \"exac_v3\": 6.594783526230752e-05, \"exac_v3_popmax\": 0.0006726888333653661, \"1kg_wgs_phase3_popmax\": 0.0, \"gnomad-exomes2\": 6.505916317651364e-05}, \"sift\": null, \"metasvm\": \"\", \"vep_group\": \"frameshift\", \"polyphen\": null}, \"gene_ids\": [\"ENSG00000228198\"], \"coding_gene_ids\": [\"ENSG00000228198\"], \"pos_end\": 248367226.0, \"xposx\": 1248367226, \"chr\": \"1\", \"extras\": {\"gene_info\": {}, \"orig_alt_alleles\": [\"T\"], \"genes\": {\"ENSG00000228198\": {\"disease_gene_lists\": [], \"missense_constraint\": -0.7885573790993861, \"high_variability\": false, \"symbol\": \"OR2M3\", \"lof_constraint_rank\": [8248, 18225], \"gene_id\": \"ENSG00000228198\", \"missense_constraint_rank\": [15052, 18225], \"lof_constraint\": 0.0671997116609769, \"coding_size\": 936}}, \"alt_allele_pos\": 0, \"disease_genes\": [], \"family_id\": \"1\", \"in_disease_gene_db\": false, \"clinvar_clinsig\": \"\", \"project_id\": \"1kg\", \"gene_names\": {\"ENSG00000228198\": \"OR2M3\"}, \"clinvar_variant_id\": null}, \"ref\": \"TC\", \"genotypes\": {\"NA19675\": {\"ab\": 1.0, \"gq\": 99.0, \"alleles\": [\"T\", \"T\"], \"num_alt\": 2, \"filter\": \"pass\", \"extras\": {\"dp\": \"74\", \"pl\": \"358,132,0\", \"ad\": \"0,74\"}}, \"NA19679\": {\"ab\": 0.0, \"gq\": 99.0, \"alleles\": [\"TC\", \"TC\"], \"num_alt\": 0, \"filter\": \"pass\", \"extras\": {\"dp\": \"71\", \"pl\": \"0,213,1918\", \"ad\": \"71,0\"}}, \"NA19678\": {\"ab\": 0.0, \"gq\": 99.0, \"alleles\": [\"TC\", \"TC\"], \"num_alt\": 0, \"filter\": \"pass\", \"extras\": {\"dp\": \"77\", \"pl\": \"0,232,3036\", \"ad\": \"77,0\"}}}}",
+        "project": 1,
+        "family": 2
+    }
+},
+{
+    "model": "seqr.savedvariant",
+    "pk": 3,
+    "fields": {
+        "guid": "SV0000003_2246859832_r0390_100",
+        "created_date": "2018-05-15T14:51:57.255Z",
+        "created_by": null,
+        "last_modified_date": "2018-05-31T16:36:02.817Z",
+        "genome_version": "37",
+        "xpos_start": 22046859832,
+        "xpos_end": 22046859832,
+        "ref": "C",
+        "alt": "T",
+        "lifted_over_genome_version": null,
+        "lifted_over_xpos_start": null,
+        "saved_variant_json": "{\"xpos\": 22046859832, \"vcf_id\": null, \"pos\": 46859832, \"vartype\": \"snp\", \"alt\": \"T\", \"annotation\": {\"gene_ids\": [\"ENSG00000075275\"], \"coding_gene_ids\": [\"ENSG00000075275\"], \"cadd_phred\": \"31\", \"worst_vep_annotation_index\": 0, \"vep_annotation\": [{\"ea_maf\": \"\", \"clin_sig\": \"\", \"hgnc_id\": \"1850\", \"existing_variation\": \"\", \"pubmed\": \"\", \"fathmm_pred\": \"T%3BT\", \"cadd_phred\": \"33\", \"aa_maf\": \"\", \"ccds\": \"CCDS14076.1\", \"high_inf_pos\": \"\", \"cdna_position\": \"3955\", \"canonical\": \"YES\", \"tsl\": \"\", \"lof\": \"\", \"metasvm_pred\": \"D\", \"intron\": \"\", \"trembl\": \"Q8NDT0_HUMAN\", \"feature\": \"ENST00000262738\", \"codons\": \"Gtg/Atg\", \"motif_name\": \"\", \"polyphen\": \"probably_damaging(0.999)\", \"lof_filter\": \"\", \"motif_pos\": \"\", \"protein_position\": \"1319\", \"lof_flags\": \"\", \"afr_maf\": \"\", \"sift_pred\": \"D%3BD\", \"consequence\": \"missense_variant\", \"cds_position\": \"3955\", \"ensp\": \"ENSP00000262738\", \"symbol\": \"CELSR1\", \"uniparc\": \"UPI0000040648\", \"eur_maf\": \"\", \"mutationtaster_pred\": \"D\", \"sift\": \"deleterious(0)\", \"exon\": \"2/35\", \"biotype\": \"protein_coding\", \"is_nc\": false, \"gmaf\": \"\", \"fathmm_pred\\\">\\n\": \"T%3BT\", \"strand\": \"-1\", \"feature_type\": \"Transcript\", \"allele_num\": \"1\", \"distance\": \"\", \"hgvsp\": \"ENSP00000262738.3:p.Val1319Met\", \"amino_acids\": \"V/M\", \"allele\": \"T\", \"symbol_source\": \"HGNC\", \"amr_maf\": \"\", \"lof_info\": \"POSITION:0.437258153676064\", \"motif_score_change\": \"\", \"somatic\": \"\", \"hgvsc\": \"ENST00000262738.3:c.3955G>A\", \"asn_maf\": \"\", \"is_nmd\": false, \"domains\": \"PROSITE_profiles:PS50026&SMART_domains:SM00181\", \"gene\": \"ENSG00000075275\", \"polyphen2_hvar_pred\": \"D\", \"swissprot\": \"CELR1_HUMAN\"}, {\"ea_maf\": \"\", \"clin_sig\": \"\", \"hgnc_id\": \"1850\", \"existing_variation\": \"\", \"pubmed\": \"\", \"cadd_phred\": \"33\", \"aa_maf\": \"\", \"ccds\": \"\", \"high_inf_pos\": \"\", \"cdna_position\": \"3955\", \"canonical\": \"\", \"tsl\": \"\", \"lof\": \"\", \"metasvm_pred\": \"D\", \"intron\": \"\", \"trembl\": \"C9JDM9_HUMAN\", \"feature\": \"ENST00000395964\", \"codons\": \"Gtg/Atg\", \"motif_name\": \"\", \"polyphen\": \"probably_damaging(0.926)\", \"lof_filter\": \"\", \"motif_pos\": \"\", \"protein_position\": \"1319\", \"lof_flags\": \"\", \"afr_maf\": \"\", \"sift_pred\": \"D%3BD\", \"consequence\": \"missense_variant\", \"cds_position\": \"3955\", \"ensp\": \"ENSP00000379293\", \"symbol\": \"CELSR1\", \"uniparc\": \"UPI00015DF80E\", \"eur_maf\": \"\", \"mutationtaster_pred\": \"D\", \"sift\": \"deleterious(0.02)\", \"exon\": \"2/3\", \"biotype\": \"protein_coding\", \"is_nc\": false, \"gmaf\": \"\", \"fathmm_pred\\\">\\n\": \"T%3BT\", \"strand\": \"-1\", \"feature_type\": \"Transcript\", \"allele_num\": \"1\", \"distance\": \"\", \"hgvsp\": \"ENSP00000379293.1:p.Val1319Met\", \"amino_acids\": \"V/M\", \"allele\": \"T\", \"symbol_source\": \"HGNC\", \"amr_maf\": \"\", \"lof_info\": \"POSITION:0.943013829279924\", \"motif_score_change\": \"\", \"somatic\": \"\", \"hgvsc\": \"ENST00000395964.1:c.3955G>A\", \"asn_maf\": \"\", \"is_nmd\": false, \"domains\": \"PROSITE_profiles:PS50026&SMART_domains:SM00181\", \"gene\": \"ENSG00000075275\", \"polyphen2_hvar_pred\": \"D\", \"swissprot\": \"\"}, {\"ea_maf\": \"\", \"clin_sig\": \"\", \"hgnc_id\": \"1850\", \"existing_variation\": \"\", \"pubmed\": \"\", \"cadd_phred\": \"\", \"aa_maf\": \"\", \"ccds\": \"\", \"high_inf_pos\": \"\", \"cdna_position\": \"2079\", \"canonical\": \"\", \"tsl\": \"\", \"lof\": \"\", \"metasvm_pred\": \"\", \"intron\": \"\", \"trembl\": \"\", \"feature\": \"ENST00000454637\", \"codons\": \"Gtg/Atg\", \"motif_name\": \"\", \"polyphen\": \"probably_damaging(0.958)\", \"lof_filter\": \"\", \"motif_pos\": \"\", \"protein_position\": \"694\", \"lof_flags\": \"\", \"afr_maf\": \"\", \"sift_pred\": \"\", \"consequence\": \"missense_variant\", \"cds_position\": \"2080\", \"ensp\": \"ENSP00000414689\", \"symbol\": \"CELSR1\", \"uniparc\": \"UPI00016110F0\", \"eur_maf\": \"\", \"mutationtaster_pred\": \"\", \"sift\": \"deleterious(0.01)\", \"exon\": \"2/3\", \"biotype\": \"protein_coding\", \"is_nc\": false, \"gmaf\": \"\", \"fathmm_pred\\\">\\n\": \"\", \"strand\": \"-1\", \"feature_type\": \"Transcript\", \"allele_num\": \"1\", \"distance\": \"\", \"hgvsp\": \"ENSP00000414689.1:p.Val694Met\", \"amino_acids\": \"V/M\", \"allele\": \"T\", \"symbol_source\": \"HGNC\", \"amr_maf\": \"\", \"lof_info\": \"POSITION:0.89732528041415\", \"motif_score_change\": \"\", \"somatic\": \"\", \"hgvsc\": \"ENST00000454637.1:c.2079G>A\", \"asn_maf\": \"\", \"is_nmd\": false, \"domains\": \"PROSITE_profiles:PS50026&SMART_domains:SM00181\", \"gene\": \"ENSG00000075275\", \"polyphen2_hvar_pred\": \"\", \"swissprot\": \"\"}], \"fathmm\": \"tolerated\", \"vep_consequence\": \"missense_variant\", \"annotation_tags\": [\"missense_variant\"], \"muttaster\": \"disease_causing\", \"worst_vep_index_per_gene\": {\"ENSG00000075275\": 0}, \"freqs\": {\"gnomad-genomes2\": 0.0, \"1kg_wgs_phase3\": 0.0, \"exac_v3\": 0.0, \"exac_v3_popmax\": 0.0, \"1kg_wgs_phase3_popmax\": 0.0, \"gnomad-exomes2\": 8.142526788913136e-06}, \"sift\": \"damaging\", \"metasvm\": \"D\", \"vep_group\": \"missense\", \"polyphen\": \"probably_damaging\"}, \"gene_ids\": [\"ENSG00000075275\"], \"coding_gene_ids\": [\"ENSG00000075275\"], \"pos_end\": 46859832.0, \"xposx\": 22046859832, \"chr\": \"22\", \"extras\": {\"gene_info\": {}, \"orig_alt_alleles\": [\"T\"], \"genes\": {\"ENSG00000075275\": {\"disease_gene_lists\": [], \"missense_constraint\": 4.415910134394981, \"high_variability\": false, \"symbol\": \"CELSR1\", \"lof_constraint_rank\": [448, 18225], \"gene_id\": \"ENSG00000075275\", \"missense_constraint_rank\": [427, 18225], \"lof_constraint\": 0.9999907474320858, \"coding_size\": 9050}}, \"alt_allele_pos\": 0, \"disease_genes\": [], \"family_id\": \"1\", \"in_disease_gene_db\": false, \"clinvar_clinsig\": \"\", \"project_id\": \"1kg\", \"gene_names\": {\"ENSG00000075275\": \"CELSR1\"}, \"clinvar_variant_id\": null}, \"ref\": \"C\", \"genotypes\": {\"NA19675\": {\"ab\": 0.25, \"gq\": 86.0, \"alleles\": [\"C\", \"T\"], \"num_alt\": 1, \"filter\": \"pass\", \"extras\": {\"dp\": \"19\", \"pl\": \"86,0,393\", \"ad\": \"15,5\"}}, \"NA19679\": {\"ab\": 0.0, \"gq\": 69.0, \"alleles\": [\"C\", \"C\"], \"num_alt\": 0, \"filter\": \"pass\", \"extras\": {\"dp\": \"23\", \"pl\": \"0,69,769\", \"ad\": \"23,0\"}}, \"NA19678\": {\"ab\": 0.0, \"gq\": 66.0, \"alleles\": [\"C\", \"C\"], \"num_alt\": 0, \"filter\": \"pass\", \"extras\": {\"dp\": \"22\", \"pl\": \"0,66,736\", \"ad\": \"22,0\"}}}}",
+        "project": 1,
+        "family": 1
+    }
+},
+{
+    "model": "seqr.variantnote",
+    "pk": 714935,
+    "fields": {
+        "guid": "VN0714935_2103343353_r0390_100",
+        "created_date": "2018-05-15T14:51:58.410Z",
+        "created_by": null,
+        "last_modified_date": "2018-02-23T17:32:23.054Z",
+        "saved_variant": 2,
+        "note": "test",
+        "submit_to_clinvar": false,
+        "search_parameters": null
+    }
+},
+{
+    "model": "seqr.varianttag",
+    "pk": 1708633,
+    "fields": {
+        "guid": "VT1708633_2103343353_r0390_100",
+        "created_date": "2018-05-15T14:54:47.121Z",
+        "created_by": null,
+        "last_modified_date": "2018-02-23T17:32:30.373Z",
+        "saved_variant": 1,
+        "variant_tag_type": 2,
+        "search_parameters": "https://seqr.broadinstitute.org/project/1kg/family/1/mendelian-variant-search#search/125897d6/results"
+    }
+},
+{
+    "model": "seqr.varianttag",
+    "pk": 1726945,
+    "fields": {
+        "guid": "VT1726945_2103343353_r0390_100",
+        "created_date": "2018-05-25T21:01:33.193Z",
+        "created_by": null,
+        "last_modified_date": "2018-05-25T21:01:33.193Z",
+        "saved_variant": 2,
+        "variant_tag_type": 2,
+        "search_parameters": null
+    }
+},
+{
+    "model": "seqr.varianttag",
+    "pk": 1726961,
+    "fields": {
+        "guid": "VT1726961_2103343353_r0390_100",
+        "created_date": "2018-05-29T16:32:51.449Z",
+        "created_by": null,
+        "last_modified_date": "2018-05-29T16:32:51.449Z",
+        "saved_variant": 1,
+        "variant_tag_type": 1,
+        "search_parameters": null
+    }
+},
+{
+    "model": "seqr.variantfunctionaldata",
+    "pk": 23,
+    "fields": {
+        "guid": "VFD0000023_1248367227_r0390_10",
+        "created_date": "2018-05-24T15:30:04.465Z",
+        "created_by": null,
+        "last_modified_date": "2018-05-24T15:30:04.483Z",
+        "saved_variant": 1,
+        "functional_data_tag": "Biochemical Function",
+        "metadata": "A note",
+        "search_parameters": ""
+    }
+},
+{
+    "model": "seqr.variantfunctionaldata",
+    "pk": 24,
+    "fields": {
+        "guid": "VFD0000024_1248367227_r0390_10",
+        "created_date": "2018-05-24T15:34:01.353Z",
+        "created_by": null,
+        "last_modified_date": "2018-05-24T15:34:01.365Z",
+        "saved_variant": 1,
+        "functional_data_tag": "Genome-wide Linkage",
+        "metadata": "2",
+        "search_parameters": ""
     }
 }
 ]
