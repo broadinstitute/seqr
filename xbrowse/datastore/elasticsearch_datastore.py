@@ -366,6 +366,22 @@ class ElasticsearchDatastore(datastore.Datastore):
                 s = s.filter(Q('range', **{filter_key: af_filter_setting}) | ~Q('exists', field=filter_key))
                 #logger.info("==> %s: %s" % (filter_key, af_filter_setting))
 
+            ac_key_map = {
+                "db_acs.AF": "AC",
+                "db_acs.1kg_wgs_phase3": "g1k_AC",
+                "db_acs.exac_v3": "exac_AC",
+                "db_acs.topmed": "topmed_AC",
+                "db_acs.gnomad_exomes": "gnomad_exomes_AC",
+                "db_acs.gnomad_genomes": "gnomad_genomes_AC",
+                "db_acs.gnomad-exomes2": "gnomad_exomes_AC",
+                "db_acs.gnomad-genomes2": "gnomad_genomes_AC",
+            }
+
+            if key in ac_key_map:
+                filter_key = ac_key_map[key]
+                ac_filter_setting = {k.replace("$", ""): v for k, v in value.items()}
+                s = s.filter(Q('range', **{filter_key: ac_filter_setting}) | ~Q('exists', field=filter_key))
+
             #s = s.sort("xpos")
 
         #logger.info("=====")
@@ -756,6 +772,9 @@ class ElasticsearchDatastore(datastore.Datastore):
                 for population, freq in variant_filter.ref_freqs:
                     #if population in self._annotator.reference_population_slugs:
                     db_query['db_freqs.' + population] = {'$lte': freq}
+            if variant_filter.ref_acs:
+                for population, ac in variant_filter.ref_acs:
+                    db_query['db_acs.' + population] = {'$lte': ac}
 
         return db_query
 

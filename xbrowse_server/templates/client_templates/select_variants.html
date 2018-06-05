@@ -65,7 +65,7 @@
                         <div class="row">
                             <% _.each(reference_populations, function(pop) { %>
                                 <% pop.name = pop.name.replace("1000 Genomes", "1000G") %>
-                                <div class="col-sm-3" style="min-height: 90px;">
+                                <div class="col-sm-<%= showPopAcFilter ? '4' : '3' %>" style="min-height: 90px;">
                                     <div class="annot-section-title">
                                         <%= pop.name %>
                                         <% if(pop.slug == "1kg_wgs_phase3") { %>
@@ -81,20 +81,44 @@
                                             <i class="icon-question-sign icon-popover" title="ExAC popmax" data-placement="top" data-content="Filter out variants that are found at a frequency higher than this threshold in any one of the 6 ExAC subpopulations: AFR, AMR, EAS, FIN, NFE, SAS"></i>
                                         <% } %>
 				                    </div>
-                                    <div class="annot-section-content">
-                                        <div class="sliderContainer">
-                                            <div class="freq-slider-label" data-population="<%= pop.slug %>" style="min-width: 30px">&nbsp;</div>
+                                    <div class="annot-section-content row">
+                                        <% if (showPopAcFilter) { %>
+                                            <div class="col-sm-3">
+                                                <% if (!pop.slug.includes('popmax')) { %>
+                                                    <div>AC</div>
+                                                    <select class="ac-select" data-population="<%= pop.slug %>">
+                                                        <% var filterValues = ['---', 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]; %>
+                                                        <% filterValues.forEach(function(value) { %>
+                                                            <option value="<%= value %>"><%= value %></option>
+                                                        <% }); %>
+                                                    </select>
+                                                <% }; %>
+                                            </div>
+                                        <% }; %>
+                                        <div class="sliderContainer col-sm-<%= showPopAcFilter ? '9' : '12' %>" style="margin-top:10px">
+                                            <div class="freq-slider-label" data-population="<%= pop.slug %>" style="min-width: 30px; min-height: 20px">&nbsp;</div>
                                             <div class="freq-slider" data-population="<%= pop.slug %>"></div>
                                         </div>
                                     </div>
                                 </div>
                             <% }); %>
-                            <div class="col-sm-3" style="min-height: 90px; align:center;">
+                            <div class="col-sm-<%= showPopAcFilter ? '4' : '3' %>" style="min-height: 90px; align:center;">
                                 <div class="annot-section-title">
                                     Adjust All
                                 </div>
                                 <div class="annot-section-content">
                                     <div>
+                                        <% if (showPopAcFilter) { %>
+                                            AC:&nbsp;
+                                            <select id="set-all-ac-filters" style="margin-top: 15px;">
+                                                <% var filterValues = ['---', 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]; %>
+                                                <% filterValues.forEach(function(value) { %>
+                                                    <option value="<%= value %>"><%= value %></option>
+                                                <% }); %>
+                                            </select>
+                                            &nbsp;&nbsp;&nbsp;
+                                            AF:&nbsp;
+                                        <% }; %>
                                         <select id="set-all-freq-filters" style="margin-top: 15px;">
                                             <% var filterValues = ['---', 0, 0.0001, 0.0005, 0.001, 0.005, 0.01, 0.02, 0.03, 0.05, 0.1, 1]; %>
                                             <% filterValues.forEach(function(value) { %>
