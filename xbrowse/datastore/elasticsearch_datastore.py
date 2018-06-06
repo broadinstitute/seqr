@@ -342,22 +342,15 @@ class ElasticsearchDatastore(datastore.Datastore):
 
                 #logger.info("==> xpos range: " + str({"xpos": xpos_filter_setting}))
 
-
             af_key_map = {
                 "db_freqs.AF": "AF",
-                "db_freqs.1kg_wgs_phase3": "g1k_AF",
-                "db_freqs.1kg_wgs_phase3_popmax": "g1k_POPMAX_AF",
-                "db_freqs.exac_v3": "exac_AF",
-                "db_freqs.exac_v3_popmax": "exac_AF_POPMAX",
+                "db_freqs.1kg_wgs_phase3": "g1k_POPMAX_AF",
+                "db_freqs.exac_v3": "exac_AF_POPMAX",
                 "db_freqs.topmed": "topmed_AF",
-                "db_freqs.gnomad_exomes": "gnomad_exomes_AF",
-                "db_freqs.gnomad_exomes_popmax": "gnomad_exomes_AF_POPMAX",
-                "db_freqs.gnomad_genomes": "gnomad_genomes_AF",
-                "db_freqs.gnomad_genomes_popmax": "gnomad_genomes_AF_POPMAX",
-                "db_freqs.gnomad-exomes2": "gnomad_exomes_AF",
-                "db_freqs.gnomad-exomes2_popmax": "gnomad_exomes_AF_POPMAX",
-                "db_freqs.gnomad-genomes2": "gnomad_genomes_AF",
-                "db_freqs.gnomad-genomes2_popmax": "gnomad_genomes_AF_POPMAX",
+                "db_freqs.gnomad_exomes": "gnomad_exomes_AF_POPMAX",
+                "db_freqs.gnomad_genomes": "gnomad_genomes_AF_POPMAX",
+                "db_freqs.gnomad-exomes2": "gnomad_exomes_AF_POPMAX",
+                "db_freqs.gnomad-genomes2": "gnomad_genomes_AF_POPMAX",
             }
 
             if key in af_key_map:

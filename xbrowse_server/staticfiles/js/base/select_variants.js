@@ -296,7 +296,7 @@ window.SelectVariantsView = Backbone.View.extend({
 
         var val = $(event.target).val();
         var that = this;
-        if (typeof val === "undefined" || val == "---") {
+        if (typeof val === "undefined" || val === "---") {
             return;
         }
 
@@ -312,7 +312,7 @@ window.SelectVariantsView = Backbone.View.extend({
 
         var val = $(event.target).val();
         var that = this;
-        if (typeof val === "undefined" || val == "---") {
+        if (typeof val === "undefined" || val === "---") {
             return;
         }
 
@@ -328,7 +328,7 @@ window.SelectVariantsView = Backbone.View.extend({
 
         var val = $(event.target).val();
         var pop = $(event.target).data('population');
-        if (typeof val === "undefined" || val == "---") {
+        if (typeof val === "undefined" || val === "---") {
             return;
         }
 
