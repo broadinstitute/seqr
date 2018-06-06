@@ -192,6 +192,7 @@ def generate_notification_for_incoming_match(response_from_matchbox,incoming_req
     institution = incoming_patient_as_json['patient']['contact'].get('institution','(institution name not given)')
     message = 'Dear collaborators, \n\nThis match request came in from ' + institution  + ' today (' + time.strftime('%d, %b %Y')  + ').' 
     message += ' The contact information given was: ' + incoming_patient_as_json['patient']['contact'].get('href','(sorry the information given was invalid') + '. \n\n'
+    incoming_query_details={"genes":[],"phenotypes":[]}
     if len(results_from_matchbox) > 0:
         if incoming_patient_as_json['patient'].has_key('genomicFeatures'):
             message += 'The following gene(s), '
@@ -210,7 +211,7 @@ def generate_notification_for_incoming_match(response_from_matchbox,incoming_req
                     message += ")"
                 if i<len(incoming_patient_as_json['patient']['genomicFeatures'])-1:
                     message += ', '
-                    
+                incoming_query_details['genes'].append(gene_symbol)
             message += ', came-in with this request.\n\n'
         
         message += 'We found matches to these genes in matchbox! The matches are,\n\n '
@@ -235,11 +236,14 @@ def generate_notification_for_incoming_match(response_from_matchbox,incoming_req
         message += 'These matches were sent back today (' + time.strftime('%d, %b %Y')  + ').'
         if settings.SLACK_TOKEN is not None:
             post_in_slack(message,settings.MME_SLACK_MATCH_NOTIFICATION_CHANNEL)
-        print ("boo")
         if settings.EMAIL_NOTIFICATIONS_ACTIVATED:
             email_content = render_to_string(
                 'emails/mme_returned_match_result_message.txt',
-                {'mme_match_message': message },
+                {'query_institution': institution,
+                 'number_of_results': len(results_from_matchbox),
+                 'genes':','.join(incoming_query_details['genes'])
+    
+                 },
             )
             send_mail('test alert', 
                       email_content, 
