@@ -1,1 +1,16 @@
 {{ mme_match_message }}
+
+Dear collaborators, 
+
+matchbox found a match between a patient from <institution> and the following <number> case(s) in matchbox. The following information was included with the query,
+
+genes: []
+phenotypes: []
+others:
+contact:
+email:
+
+We sent back,
+seqr ID NA19675 from project 1kg in family 1, inserted into matchbox on 17, May 2018. https://seqr.broadinstitute.org/project/1kg/family/1
+
+<a href=“<seqr-link>”>  <projectname>  <family> individual  <seqr-id> inserted into matchbox on  <date> </a>
