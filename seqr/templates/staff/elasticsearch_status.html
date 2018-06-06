@@ -14,14 +14,16 @@
         <tr>
             <th>Node name</th>
             <th>Disk available</th>
-            <th>Disk used (%)</th>
+            <th>Disk used</th>
+            <th>Disk percentage used</th>
         </tr>
     </thead>
    {% for disk in disk_stats %}
         <tr>
             <td>{{ disk.node_name }}</td>
             <td>{{ disk.disk_available }}</td>
-            <td>{{ disk.disk_used }} ( {{ disk.disk_percent_used }} %)</td>
+            <td>{{ disk.disk_used }}</td>
+            <td>{{ disk.disk_percent_used }}</td>
         </tr>
     {% endfor %}
 </table>
