@@ -420,10 +420,8 @@ STATICFILES_DIRS = (
 
 
 ANNOTATOR_REFERENCE_POPULATIONS_IN_ELASTICSEARCH = [
-    {"slug": "1kg_wgs_phase3", "name": "1000G v3"},
-    {"slug": "1kg_wgs_phase3_popmax", "name": "1000G v3 popmax"},
-    {"slug": "exac_v3", "name": "ExAC v0.3"},
-    {"slug": "exac_v3_popmax", "name": "ExAC v0.3 popmax"},
+    {"slug": "1kg_wgs_phase3", "name": "1000G v3", "full_name": "1000 Genomes Samples", "description": "Filter out variants that are found at a frequency higher than this threshold in any one of the 5 subpopulations in the 1000 Genomes Phase 3 release (5/2/2013) dataset - specifically: AFR, AMR, EAS, EUR, SAS"},
+    {"slug": "exac_v3", "name": "ExAC v0.3", "full_name": "ExAC", "description": "Filter out variants that are found at a frequency higher than this threshold in any one of the 6 ExAC subpopulations: AFR, AMR, EAS, FIN, NFE, SAS"},
     {"slug": "gnomad-genomes2", "name": "gnomAD 15k genomes"},
     {"slug": "gnomad-exomes2", "name": "gnomAD 123k exomes"},
     {"slug": "topmed", "name": "TOPMed"},

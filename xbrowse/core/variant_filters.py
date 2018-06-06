@@ -12,6 +12,7 @@ class VariantFilter(object):
         self.so_annotations = kwargs.get('so_annotations')  # todo: rename (and refactor)
         self.annotations = kwargs.get('annotations', {})
         self.ref_freqs = kwargs.get('ref_freqs')
+        self.ref_acs = kwargs.get('ref_acs')
         self.locations = kwargs.get('locations')  # list of intervals - represented as 2-tuples of xpos locations (A, B)
         self.genes = kwargs.get('genes')
         self.exclude_genes = kwargs.get('exclude_genes') # boolean - whether to exclude the given gene list
@@ -22,6 +23,7 @@ class VariantFilter(object):
             'variant_types',
             'so_annotations',
             'ref_freqs',
+            'ref_acs',
             'annotations',
             'genes',
             'exclude_genes',
