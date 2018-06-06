@@ -15,7 +15,9 @@
        * Activate data table for disk status
        */
       function startDiskStatusTable(){
-    	  $('#diskStatusDataTable').DataTable();
+    	  $('#diskStatusDataTable').DataTable({
+              order: [[ 3, 'asc' ]],
+    	  });
       }
       
       /**
