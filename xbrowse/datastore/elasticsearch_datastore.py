@@ -375,6 +375,32 @@ class ElasticsearchDatastore(datastore.Datastore):
                 ac_filter_setting = {k.replace("$", ""): v for k, v in value.items()}
                 s = s.filter(Q('range', **{filter_key: ac_filter_setting}) | ~Q('exists', field=filter_key))
 
+            hemi_key_map = {
+                "db_hemi.exac_v3": "exac_AC_Hemi",
+                "db_hemi.gnomad_exomes": "gnomad_exomes_Hemi",
+                "db_hemi.gnomad_genomes": "gnomad_genomes_Hemi",
+                "db_hemi.gnomad-exomes2": "gnomad_exomes_Hemi",
+                "db_hemi.gnomad-genomes2": "gnomad_genomes_Hemi",
+            }
+
+            if key in hemi_key_map:
+                filter_key = hemi_key_map[key]
+                hemi_filter_setting = {k.replace("$", ""): v for k, v in value.items()}
+                s = s.filter(Q('range', **{filter_key: hemi_filter_setting}) | ~Q('exists', field=filter_key))
+
+            hom_key_map = {
+                "db_hom.exac_v3": "exac_AC_Hom",
+                "db_hom.gnomad_exomes": "gnomad_exomes_Hom",
+                "db_hom.gnomad_genomes": "gnomad_genomes_Hom",
+                "db_hom.gnomad-exomes2": "gnomad_exomes_Hom",
+                "db_hom.gnomad-genomes2": "gnomad_genomes_Hom",
+            }
+
+            if key in hom_key_map:
+                filter_key = hom_key_map[key]
+                hom_filter_setting = {k.replace("$", ""): v for k, v in value.items()}
+                s = s.filter(Q('range', **{filter_key: hom_filter_setting}) | ~Q('exists', field=filter_key))
+
             #s = s.sort("xpos")
 
         #logger.info("=====")
@@ -768,6 +794,10 @@ class ElasticsearchDatastore(datastore.Datastore):
             if variant_filter.ref_acs:
                 for population, ac in variant_filter.ref_acs:
                     db_query['db_acs.' + population] = {'$lte': ac}
+            if variant_filter.ref_hom_hemi:
+                for population, count in variant_filter.ref_hom_hemi:
+                    db_query['db_hemi.' + population] = {'$lte': count}
+                    db_query['db_hom.' + population] = {'$lte': count}
 
         return db_query
 
