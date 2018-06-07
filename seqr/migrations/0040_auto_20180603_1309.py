@@ -13,7 +13,7 @@ def transfer_info_from_dataset_to_sample_fields(apps, schema_editor):
     Dataset = apps.get_model('seqr', 'Dataset')
     Sample = apps.get_model('seqr', 'Sample')
 
-    print("Transferring metadata from {0} Dataset records to {1} Sample records".format(
+    print("\nTransferring metadata from {0} Dataset records to {1} Sample records".format(
         Dataset.objects.filter(analysis_type="VARIANTS").count(),
         Sample.objects.count(),
         ))
