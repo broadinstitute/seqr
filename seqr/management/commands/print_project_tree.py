@@ -40,7 +40,7 @@ class Command(BaseCommand):
 
         projects_tree = OrderedDict()
         for project_i, project in enumerate(projects):
-            project_label = "P%s project: %s" % (project_i + 1, project, )
+            project_label = "P%s project: %s. GRCh%s" % (project_i + 1, project, project.genome_version)
             project_tree = projects_tree[project_label] = OrderedDict()
             for family_i, family in enumerate(Family.objects.filter(project=project)):
                 family_label = "F%s family: %s" % (family_i + 1, family, )
@@ -49,12 +49,10 @@ class Command(BaseCommand):
                     individual_label = "I%s individual: %s" % (individual_i + 1, individual, )
                     individual_tree = family_tree[individual_label] = OrderedDict()
                     for sample_i, sample in enumerate(Sample.objects.filter(individual=individual)):
-                        sample_label = "sample: %s" % (sample, )
-                        datasets = Dataset.objects.filter(samples=sample)
-                        sample_label += "   - dataset(s): " + str(["%s: %s" % (d, d.source_file_path) for d in datasets])
+                        sample_label = "S%s sample: %s" % (sample_i+1, "{sample_type}, elasticsearch_index: {elasticsearch_index} {dataset_file_path}".format(**sample.json()), )
                         individual_tree[sample_label] = OrderedDict()
 
-        pprint(projects_tree)
+        #pprint(projects_tree)
         print(apply(
             asciitree.LeftAligned(draw=asciitree.BoxStyle(gfx=asciitree.drawing.BOX_HEAVY, horiz_len=1)),
             [{'Projects:': projects_tree}]
