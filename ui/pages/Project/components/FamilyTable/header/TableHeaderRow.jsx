@@ -2,6 +2,7 @@ import React from 'react'
 import { Grid, Table } from 'semantic-ui-react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
+import { withRouter } from 'react-router'
 
 import { HorizontalSpacer } from 'shared/components/Spacers'
 import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
@@ -69,18 +70,18 @@ TableHeaderRow.propTypes = {
   showInternalFilters: PropTypes.bool,
   visibleFamiliesCount: PropTypes.number,
   totalFamiliesCount: PropTypes.number,
-  currentPage: PropTypes.number,
+  currentPage: PropTypes.string,
   recordsPerPage: PropTypes.number,
 }
 
-const mapStateToProps = state => ({
-  currentPage: getProjectTablePage(state),
+const mapStateToProps = (state, ownProps) => ({
+  currentPage: getProjectTablePage(state, ownProps),
   recordsPerPage: getProjectTableRecordsPerPage(state),
-  visibleFamiliesCount: getVisibleFamilies(state).length,
+  visibleFamiliesCount: getVisibleFamilies(state, ownProps).length,
   totalFamiliesCount: getProjectFamilies(state).length,
 })
 
 
 export { TableHeaderRow as TableHeaderRowComponent }
 
-export default connect(mapStateToProps)(TableHeaderRow)
+export default withRouter(connect(mapStateToProps)(TableHeaderRow))

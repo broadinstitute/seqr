@@ -114,10 +114,6 @@ export const updateIndividuals = (values) => {
 }
 
 // Family table actions
-
-export const setCurrentPage = currentPage => ({ type: UPDATE_FAMILY_TABLE_STATE, updates: { currentPage } })
-export const setRecordsPerPage = recordsPerPage => ({ type: UPDATE_FAMILY_TABLE_STATE, updates: { recordsPerPage } })
-
 export const updateFamiliesFilter = familiesFilter => ({ type: UPDATE_FAMILY_TABLE_STATE, updates: { familiesFilter } })
 export const updateFamiliesSortOrder = familiesSortOrder => ({ type: UPDATE_FAMILY_TABLE_STATE, updates: { familiesSortOrder } })
 export const updateFamiliesSortDirection = familiesSortDirection => ({ type: UPDATE_FAMILY_TABLE_STATE, updates: { familiesSortDirection } })
@@ -133,7 +129,6 @@ export const reducers = {
   projectSavedVariants: createObjectsByIdReducer(RECEIVE_SAVED_VARIANTS),
   projectSavedVariantsLoading: loadingReducer(REQUEST_SAVED_VARIANTS, RECEIVE_SAVED_VARIANTS),
   familyTableState: createSingleObjectReducer(UPDATE_FAMILY_TABLE_STATE, {
-    currentPage: 1,
     recordsPerPage: 100,
     familiesFilter: SHOW_ALL,
     familiesSortOrder: SORT_BY_FAMILY_NAME,

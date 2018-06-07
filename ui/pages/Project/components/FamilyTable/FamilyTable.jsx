@@ -3,6 +3,7 @@ import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { Table } from 'semantic-ui-react'
 import { connect } from 'react-redux'
+import { withRouter } from 'react-router'
 
 import Family from 'shared/components/panel/family'
 import ExportTableButton from 'shared/components/buttons/export-table/ExportTableButton'
@@ -76,9 +77,9 @@ FamilyTable.propTypes = {
   showSearchLinks: PropTypes.bool,
 }
 
-const mapStateToProps = state => ({
-  visibleFamilies: getVisibleSortedFamiliesWithIndividuals(state),
+const mapStateToProps = (state, ownProps) => ({
+  visibleFamilies: getVisibleSortedFamiliesWithIndividuals(state, ownProps),
   loading: getProjectDetailsIsLoading(state),
 })
 
-export default connect(mapStateToProps)(FamilyTable)
+export default withRouter(connect(mapStateToProps)(FamilyTable))

@@ -1,4 +1,5 @@
 import orderBy from 'lodash/orderBy'
+import queryString from 'query-string'
 import { createSelector } from 'reselect'
 
 import { getSearchResults } from 'redux/utils/reduxSearchEnhancer'
@@ -149,7 +150,7 @@ export const getSavedVariantExportConfig = createSelector(
 
 // Family table selectors
 export const getProjectTableState = state => state.familyTableState
-export const getProjectTablePage = state => state.familyTableState.currentPage || 1
+export const getProjectTablePage = (state, props) => queryString.parse(props.location.search).page || 1
 export const getProjectTableRecordsPerPage = state => state.familyTableState.recordsPerPage || 200
 export const getFamiliesFilter = state => state.familyTableState.familiesFilter || SHOW_ALL
 export const getFamiliesSortOrder = state => state.familyTableState.familiesSortOrder || SORT_BY_FAMILY_NAME

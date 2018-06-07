@@ -3,10 +3,17 @@ import { withRouter } from 'react-router'
 import queryString from 'query-string'
 
 const QueryParamEditor = ({ queryParam, history, location, children }) => {
-  const updateQueryParam = value => history.push({ ...location, search: value ? `?${queryParam}=${value}` : null })
-  const currentQueryParam = queryString.parse(location.search)[queryParam]
+  let params = queryString.parse(location.search)
+  const updateQueryParam = (value) => {
+    if (value) {
+      params = { ...params, [queryParam]: value }
+    } else {
+      delete params[queryParam]
+    }
+    history.push({ ...location, search: `?${queryString.stringify(params)}` })
+  }
 
-  return React.cloneElement(children, { updateQueryParam, currentQueryParam })
+  return React.cloneElement(children, { updateQueryParam, currentQueryParam: params[queryParam] })
 }
 
 export default withRouter(QueryParamEditor)

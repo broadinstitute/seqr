@@ -3,37 +3,34 @@ import PropTypes from 'prop-types'
 import { Pagination } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 
-import {
-  setCurrentPage,
-} from '../../reducers'
+import QueryParamEditor from 'shared/components/QueryParamEditor'
 
 import {
-  getProjectTablePage,
   getTotalPageCount,
 } from '../../selectors'
 
 
-const PageSelector = ({ activePage, totalPages, setPage }) =>
+const BasePageSelector = ({ currentQueryParam, totalPages, updateQueryParam }) =>
   <Pagination
-    activePage={activePage}
+    activePage={currentQueryParam || null}
     totalPages={totalPages}
-    onPageChange={(e, d) => setPage(d.activePage)}
+    onPageChange={(e, d) => updateQueryParam(d.activePage)}
     size="mini"
   />
 
-PageSelector.propTypes = {
-  activePage: PropTypes.number.isRequired,
+BasePageSelector.propTypes = {
+  currentQueryParam: PropTypes.string,
   totalPages: PropTypes.number.isRequired,
-  setPage: PropTypes.func.isRequired,
+  updateQueryParam: PropTypes.func.isRequired,
 }
 
 const mapStateToProps = state => ({
-  activePage: getProjectTablePage(state),
   totalPages: getTotalPageCount(state),
 })
 
-const mapDispatchToProps = {
-  setPage: setCurrentPage,
-}
+const PageSelector = connect(mapStateToProps)(BasePageSelector)
 
-export default connect(mapStateToProps, mapDispatchToProps)(PageSelector)
+export default () =>
+  <QueryParamEditor queryParam="page">
+    <PageSelector />
+  </QueryParamEditor>
