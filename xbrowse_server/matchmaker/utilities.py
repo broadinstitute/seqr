@@ -287,6 +287,16 @@ def generate_slack_notification_for_seqr_match(response_from_matchbox,project_id
             message += '\n\n'
             post_in_slack(message,'matchmaker_seqr_match')
 
+def extract_phenotypes_from_mme_patient(mme_patient):
+    '''
+    Given a MME patient structure, extract 
+    Args:
+        (json) a MME patient structure
+    
+    Returns:
+        (list) a list of phenotypes
+    '''
+    pass
     
 def post_in_slack(message,channel):
     """
