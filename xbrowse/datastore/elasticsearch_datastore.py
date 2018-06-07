@@ -182,7 +182,7 @@ class ElasticsearchDatastore(datastore.Datastore):
                     matching_indices.append(index_name)
 
             if not matching_indices:
-                logger.error("%s not found in %s:\n%s" % (indiv_id, elasticsearch_index, pformat(index_mapping["mappings"]["variant"]["properties"])))
+                logger.error("%s not found in %s" % (indiv_id, elasticsearch_index)) # , pformat(index_mapping["mappings"]["variant"]["properties"])))
             else:
                 logger.info("matching indices: " + str(elasticsearch_index))
                 elasticsearch_index = ",".join(matching_indices)
