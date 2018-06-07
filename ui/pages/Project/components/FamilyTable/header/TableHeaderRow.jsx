@@ -9,6 +9,7 @@ import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
 import { getProjectFamilies, getVisibleFamilies, getProjectTablePage, getProjectTableRecordsPerPage } from '../../../selectors'
 
 import FamiliesFilterDropdown from './FilterDropdown'
+import FamiliesFilterSearchBox from './FilterSearchBox'
 import FamiliesSortOrderDropdown from './SortOrderDropdown'
 import SortDirectionToggle from './SortDirectionToggle'
 import ShowDetailsToggle from './ShowDetailsToggle'
@@ -19,7 +20,7 @@ const TableHeaderRow = ({ headerStatus, showInternalFilters, visibleFamiliesCoun
     <Table.Row>
       <Table.HeaderCell>
         <Grid stackable>
-          <Grid.Column width={6}>
+          <Grid.Column width={7}>
             <span style={{ fontWeight: 'normal' }}>
               Showing &nbsp;
               {
@@ -30,6 +31,8 @@ const TableHeaderRow = ({ headerStatus, showInternalFilters, visibleFamiliesCoun
               &nbsp; families
             </span>
             <FamiliesFilterDropdown showInternalFilters={showInternalFilters} />
+            <HorizontalSpacer width={10} />
+            <FamiliesFilterSearchBox />
           </Grid.Column>
           <Grid.Column width={3}>
             <div style={{ whitespace: 'nowrap' }}>
@@ -41,7 +44,7 @@ const TableHeaderRow = ({ headerStatus, showInternalFilters, visibleFamiliesCoun
           <Grid.Column width={3}>
             <ShowDetailsToggle />
           </Grid.Column>
-          <Grid.Column width={4}>
+          <Grid.Column width={3}>
             {headerStatus &&
               <span style={{ float: 'right' }}>
                 {headerStatus.title}:

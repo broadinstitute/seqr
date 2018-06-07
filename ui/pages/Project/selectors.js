@@ -1,6 +1,7 @@
 import orderBy from 'lodash/orderBy'
 import { createSelector } from 'reselect'
 
+import { getSearchResults } from 'redux/utils/reduxSearchEnhancer'
 import { FAMILY_ANALYSIS_STATUS_OPTIONS } from 'shared/utils/constants'
 
 import {
@@ -162,6 +163,7 @@ export const getProjectIndividualsWithFamily = createSelector(
     projectIndividuals.map((ind) => { return { family: familiesByGuid[ind.familyGuid], ...ind } }),
 )
 
+
 /**
  * function that returns an array of family guids that pass the currently-selected
  * familiesFilter.
@@ -172,13 +174,16 @@ export const getFilteredFamilies = createSelector(
   getProjectFamilies,
   getProjectIndividuals,
   getFamiliesFilter,
-  (families, individuals, familiesFilter) => {
+  getSearchResults('familiesByGuid'),
+  (families, individuals, familiesFilter, familySearchResults) => {
+    const searchedFamilies = families.filter(family => familySearchResults.includes(family.familyGuid))
+
     if (!familiesFilter || !FAMILY_FILTER_LOOKUP[familiesFilter]) {
-      return families
+      return searchedFamilies
     }
 
-    const familyFilter = FAMILY_FILTER_LOOKUP[familiesFilter](families, individuals)
-    return families.filter(familyFilter)
+    const familyFilter = FAMILY_FILTER_LOOKUP[familiesFilter](searchedFamilies, individuals)
+    return searchedFamilies.filter(familyFilter)
   },
 )
 
