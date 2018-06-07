@@ -72,7 +72,7 @@
                                     }
                                     else if(pop.slug == "1kg_wgs_phase3_popmax") {
                                         pop.full_name = "1000 Genomes Samples Popmax";
-                                        pop.description = "Filter out variants that are found at a frequency higher than this threshold in any one of the 5 subpopulations in the 1000 Genomes Phase 3 release (5/2/2013) dataset - specifically: AFR, AMR, EAS, EUR, SAS";
+                                        pop.description = "Filter out variants that have a higher allele count (AC) in the 1000 Genomes Phase 3 release (5/2/2013), or a higher allele frequency (popmax AF) in any one of these five subpopulations defined for 1000 Genomes Phase 3: AFR, AMR, EAS, EUR, SAS";
                                     }
                                     else if(pop.slug == "exac_v3") {
                                         pop.full_name = "ExAC";
@@ -80,7 +80,7 @@
                                     }
                                     else if(pop.slug == "exac_v3_popmax") {
                                         pop.full_name = "ExAC Popmax";
-                                        pop.description = "Filter out variants that are found at a frequency higher than this threshold in any one of the 6 ExAC subpopulations: AFR, AMR, EAS, FIN, NFE, SAS";
+                                        pop.description = "Filter out variants that have a higher allele count (AC) in ExAC, or a higher allele frequency (popmax AF) in any one of these six subpopulations defined for ExAC: AFR, AMR, EAS, FIN, NFE, SAS";
                                     }
                                 }; %>
                                 <div class="col-sm-<%= showPopAcFilter ? '4' : '3' %>" style="min-height: 90px;">
