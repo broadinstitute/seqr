@@ -10,6 +10,8 @@ import traceback
 import xlrd
 import xlwt
 from django.core.mail import EmailMessage
+from django.core.mail.message import EmailMultiAlternatives
+from django.utils.html import strip_tags
 
 import settings
 from reference_data.models import HumanPhenotypeOntology
@@ -75,7 +77,7 @@ def parse_pedigree_table(filename, stream, user=None, project=None):
 
     if not errors and is_merged_pedigree_sample_manifest:
         with open(temp_file.name) as original_file:
-            _send_sample_manifest(sample_manifest_rows, kit_id, original_filename=filename, original_file_stream=original_file)
+            _send_sample_manifest(sample_manifest_rows, kit_id, original_filename=filename, original_file_stream=original_file, user=user, project=project)
 
     return json_records, errors, warnings
 
@@ -236,11 +238,12 @@ def convert_fam_file_rows_to_json(rows):
             JsonConstants.SEX_COLUMN: '',
             JsonConstants.AFFECTED_COLUMN: '',
             JsonConstants.NOTES_COLUMN: '',
-            JsonConstants.CODED_PHENOTYPE_COLUMN: '',
             JsonConstants.HPO_TERMS_PRESENT_COLUMN: '',
             JsonConstants.HPO_TERMS_ABSENT_COLUMN: '',
-            JsonConstants.FUNDING_SOURCE_COLUMN: '',
-            JsonConstants.CASE_REVIEW_STATUS_COLUMN: '',
+            JsonConstants.FINAL_DIAGNOSIS_OMIM_COLUMN: '',
+            JsonConstants.CODED_PHENOTYPE_COLUMN: '',
+            #JsonConstants.FUNDING_SOURCE_COLUMN: '',
+            #JsonConstants.CASE_REVIEW_STATUS_COLUMN: '',
         }
 
         # parse
@@ -261,16 +264,18 @@ def convert_fam_file_rows_to_json(rows):
                 json_record[JsonConstants.AFFECTED_COLUMN] = value
             elif key.startswith("notes"):
                 json_record[JsonConstants.NOTES_COLUMN] = value
-            elif "coded" in key and "phenotype" in key:
-                json_record[JsonConstants.CODED_PHENOTYPE_COLUMN] = value
             elif re.match("hpo.*present", key):
                 json_record[JsonConstants.HPO_TERMS_PRESENT_COLUMN] = filter(None, map(lambda s: s.strip(), value.split(',')))
             elif re.match("hpo.*absent", key):
                 json_record[JsonConstants.HPO_TERMS_ABSENT_COLUMN] = filter(None, map(lambda s: s.strip(), value.split(',')))
-            elif key.startswith("funding"):
-                json_record[JsonConstants.FUNDING_SOURCE_COLUMN] = value
-            elif re.match("case.*review.*status", key):
-                json_record[JsonConstants.CASE_REVIEW_STATUS_COLUMN] = value
+            elif re.match("diagnosis", key) or re.match("disorder", key):
+                json_record[JsonConstants.FINAL_DIAGNOSIS_OMIM_COLUMN] = filter(None, map(lambda s: s.strip(), value.split(',')))
+            elif "coded" in key and "phenotype" in key:
+                json_record[JsonConstants.CODED_PHENOTYPE_COLUMN] = value
+            #elif key.startswith("funding"):
+            #    json_record[JsonConstants.FUNDING_SOURCE_COLUMN] = value
+            #elif re.match("case.*review.*status", key):
+            #    json_record[JsonConstants.CASE_REVIEW_STATUS_COLUMN] = value
 
         # validate
         if not json_record[JsonConstants.FAMILY_ID_COLUMN]:
@@ -296,10 +301,10 @@ def convert_fam_file_rows_to_json(rows):
         elif json_record[JsonConstants.AFFECTED_COLUMN]:
             raise ValueError("Invalid value '%s' for affected status in row #%d" % (json_record[JsonConstants.AFFECTED_COLUMN], i+1))
 
-        if json_record[JsonConstants.CASE_REVIEW_STATUS_COLUMN]:
-            if json_record[JsonConstants.CASE_REVIEW_STATUS_COLUMN].lower() not in Individual.CASE_REVIEW_STATUS_REVERSE_LOOKUP:
-                raise ValueError("Invalid value '%s' in the 'Case Review Status' column in row #%d." % (json_record[JsonConstants.CASE_REVIEW_STATUS_COLUMN], i+1))
-            json_record[JsonConstants.CASE_REVIEW_STATUS_COLUMN] = Individual.CASE_REVIEW_STATUS_REVERSE_LOOKUP[json_record[JsonConstants.CASE_REVIEW_STATUS_COLUMN].lower()]
+        #if json_record[JsonConstants.CASE_REVIEW_STATUS_COLUMN]:
+        #    if json_record[JsonConstants.CASE_REVIEW_STATUS_COLUMN].lower() not in Individual.CASE_REVIEW_STATUS_REVERSE_LOOKUP:
+        #        raise ValueError("Invalid value '%s' in the 'Case Review Status' column in row #%d." % (json_record[JsonConstants.CASE_REVIEW_STATUS_COLUMN], i+1))
+        #    json_record[JsonConstants.CASE_REVIEW_STATUS_COLUMN] = Individual.CASE_REVIEW_STATUS_REVERSE_LOOKUP[json_record[JsonConstants.CASE_REVIEW_STATUS_COLUMN].lower()]
 
         json_results.append(json_record)
 
@@ -354,14 +359,13 @@ def validate_fam_file_records(records, fail_on_warnings=False):
                 errors.append("%(parent_id)s is recorded as the %(parent_id_type)s of %(individual_id)s but they have different family ids: %(parent_family_id)s and %(family_id)s" % locals())
 
         # check HPO ids
-        if r.get(JsonConstants.HPO_TERMS_PRESENT_COLUMN):
-            for hpo_id in r[JsonConstants.HPO_TERMS_PRESENT_COLUMN]:
-                if not HumanPhenotypeOntology.objects.filter(hpo_id=hpo_id):
-                    warnings.append("HPO term in 'HPO Terms Present' column not recognized: %(hpo_id)s" % locals())
-        if r.get(JsonConstants.HPO_TERMS_ABSENT_COLUMN):
-            for hpo_id in r[JsonConstants.HPO_TERMS_ABSENT_COLUMN]:
-                if not HumanPhenotypeOntology.objects.filter(hpo_id=hpo_id):
-                    warnings.append("HPO term in 'HPO Terms Absent' column not recognized: %(hpo_id)s" % locals())
+        for column_key, column_label in [
+            (JsonConstants.HPO_TERMS_PRESENT_COLUMN, 'HPO Terms Present'),
+            (JsonConstants.HPO_TERMS_ABSENT_COLUMN, 'HPO Terms Absent')]:
+            if r.get(column_key):
+                for hpo_id in r[column_key]:
+                    if not HumanPhenotypeOntology.objects.filter(hpo_id=hpo_id):
+                        warnings.append("Invalid HPO term \"{hpo_id}\" found in the {column_label} column".format(**locals()))
 
     if errors:
         for error in errors:
@@ -385,7 +389,7 @@ def _is_header_row(row):
         True if it's a header row rather than data
     """
     row = row.lower()
-    if "sex" in row or "gender" in row:
+    if "family" in row and "indiv" in row:
         return True
     else:
         return False
@@ -423,12 +427,13 @@ def _parse_merged_pedigree_sample_manifest_format(rows):
 
     RENAME_COLUMNS = {
         MergedPedigreeSampleManifestConstants.FAMILY_ID_COLUMN: JsonConstants.FAMILY_ID_COLUMN,
-        MergedPedigreeSampleManifestConstants.COLLABORATOR_PARTICIPANT_ID_COLUMN: JsonConstants.INDIVIDUAL_ID_COLUMN,
+        # TODO change this to COLLABORATOR_PARTICIPANT_ID_COLUMN once Sample ids are used for database lookups
+        MergedPedigreeSampleManifestConstants.COLLABORATOR_SAMPLE_ID_COLUMN: JsonConstants.INDIVIDUAL_ID_COLUMN,
         MergedPedigreeSampleManifestConstants.PATERNAL_ID_COLUMN: JsonConstants.PATERNAL_ID_COLUMN,
         MergedPedigreeSampleManifestConstants.MATERNAL_ID_COLUMN: JsonConstants.MATERNAL_ID_COLUMN,
         MergedPedigreeSampleManifestConstants.SEX_COLUMN: JsonConstants.SEX_COLUMN,
         MergedPedigreeSampleManifestConstants.AFFECTED_COLUMN: JsonConstants.AFFECTED_COLUMN,
-        MergedPedigreeSampleManifestConstants.COLLABORATOR_SAMPLE_ID_COLUMN: JsonConstants.SAMPLE_ID_COLUMN,
+        #MergedPedigreeSampleManifestConstants.COLLABORATOR_SAMPLE_ID_COLUMN: JsonConstants.SAMPLE_ID_COLUMN,
         MergedPedigreeSampleManifestConstants.NOTES_COLUMN: JsonConstants.NOTES_COLUMN,
         MergedPedigreeSampleManifestConstants.CODED_PHENOTYPE_COLUMN: JsonConstants.CODED_PHENOTYPE_COLUMN,
     }
@@ -447,7 +452,7 @@ def _parse_merged_pedigree_sample_manifest_format(rows):
     return pedigree_rows, sample_manifest_rows, kit_id
 
 
-def _send_sample_manifest(sample_manifest_rows, kit_id, original_filename, original_file_stream):
+def _send_sample_manifest(sample_manifest_rows, kit_id, original_filename, original_file_stream, user=None, project=None):
 
     # write out the sample manifest file
     wb = xlwt.Workbook()
@@ -468,24 +473,34 @@ def _send_sample_manifest(sample_manifest_rows, kit_id, original_filename, origi
     wb.save(temp_sample_manifest_file.name)
     temp_sample_manifest_file.seek(0)
 
-    sample_manifest_filename = kit_id+'.xlsx'
+    sample_manifest_filename = kit_id+".xls"
     logger.info("Sending sample manifest file %s to %s" % (sample_manifest_filename, settings.UPLOADED_PEDIGREE_FILE_RECIPIENTS))
 
-    email_message = EmailMessage(
-        subject=kit_id + " Merged Sample Pedigree File",
-        body="""
-        File uploaded by user: %(original_filename)s
+    original_table_attachment_filename = os.path.basename(original_filename).replace(".xlsx", ".xls")
 
-        For GP: %(sample_manifest_filename)s
-        """ % locals(),
+    if user is not None and project is not None:
+        email_body = "User '%(user)s' just uploaded pedigree info to %(project)s.<br />" % locals()
+    else:
+        email_body = ""
+
+    email_body += """This email has 2 attached files:<br />
+    <br />
+    <b>%(sample_manifest_filename)s</b> is the sample manifest file in a format that can be sent to GP.<br />
+    <br />
+    <b>%(original_filename)s</b> is the original merged pedigree-sample-manifest file that the user uploaded.<br />
+    """ % locals()
+
+    email_message = EmailMultiAlternatives(
+        subject=kit_id + " Merged Sample Pedigree File",
+        body=strip_tags(email_body),
         to=settings.UPLOADED_PEDIGREE_FILE_RECIPIENTS,
         attachments=[
-            (os.path.basename(original_filename), original_file_stream.read(), "application/xls"),
             (sample_manifest_filename, temp_sample_manifest_file.read(), "application/xls"),
+            (original_table_attachment_filename, original_file_stream.read(), "application/xls"),
         ],
     )
+    email_message.attach_alternative(email_body, 'text/html')
     email_message.send()
-
 
 
 class JsonConstants:
@@ -497,11 +512,18 @@ class JsonConstants:
     AFFECTED_COLUMN = 'affected'
     SAMPLE_ID_COLUMN = 'sampleId'
     NOTES_COLUMN = 'notes'
-    CODED_PHENOTYPE_COLUMN = 'codedPhenotype'
+
     HPO_TERMS_PRESENT_COLUMN = 'hpoTermsPresent'
     HPO_TERMS_ABSENT_COLUMN = 'hpoTermsAbsent'
-    FUNDING_SOURCE_COLUMN = 'fundingSource'
-    CASE_REVIEW_STATUS_COLUMN = 'caseReviewStatus'
+    FINAL_DIAGNOSIS_OMIM_COLUMN = 'finalDiagnosisOmim'
+
+    CODED_PHENOTYPE_COLUMN = 'codedPhenotype'
+
+    # staff-only uploads
+    #CASE_REVIEW_STATUS_COLUMN = 'caseReviewStatus'
+
+    #POST_DISCOVERY_OMIM_COLUMN = 'postDiscoveryOmim'
+    #FUNDING_SOURCE_COLUMN = 'fundingSource'
 
 
 class MergedPedigreeSampleManifestConstants:

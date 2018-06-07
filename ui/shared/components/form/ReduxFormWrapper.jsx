@@ -2,15 +2,16 @@ import React, { createElement } from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { connect } from 'react-redux'
-import { Field, reduxForm, getFormSyncErrors, submit } from 'redux-form'
+import { Field, reduxForm, getFormSyncErrors, getFormSyncWarnings, submit } from 'redux-form'
 import { Form, Message } from 'semantic-ui-react'
+import flatten from 'lodash/flatten'
 
 import { closeModal, setModalConfirm } from 'redux/utils/modalReducer'
 import ButtonPanel from './ButtonPanel'
 import RequestStatus from './RequestStatus'
 
 const MessagePanel = styled(Message)`
-  margin: 0px 20px;
+  margin: 1em 2em !important;
 `
 
 export const validators = {
@@ -79,6 +80,7 @@ class ReduxFormWrapper extends React.Component {
     dirty: PropTypes.bool,
     error: PropTypes.array,
     validationErrors: PropTypes.object,
+    validationWarnings: PropTypes.object,
     warning: PropTypes.string,
     handleSubmit: PropTypes.func,
     setModalConfirm: PropTypes.func,
@@ -110,13 +112,16 @@ class ReduxFormWrapper extends React.Component {
         )
       })
 
-    const errorMessages = this.props.showErrorPanel && (this.props.error || (this.props.submitFailed && Object.values(this.props.validationErrors)))
+    const warningMessages = this.props.warning || flatten(Object.values(this.props.validationWarnings))
+    const errorMessages = this.props.error || flatten(Object.values(this.props.validationErrors))
 
     return (
       <Form onSubmit={this.props.handleSubmit} size={this.props.size} loading={this.props.submitting}>
         {fieldComponents}
-        {this.props.showErrorPanel && this.props.warning && <MessagePanel warning visible content={this.props.warning} />}
-        {errorMessages && errorMessages.length > 0 && <MessagePanel error visible list={errorMessages} />}
+        {this.props.showErrorPanel && (this.props.dirty || this.props.submitFailed) && [
+          warningMessages && warningMessages.length > 0 ? <MessagePanel key="w" warning visible list={warningMessages} /> : null,
+          errorMessages && errorMessages.length > 0 ? <MessagePanel key="e" error visible list={errorMessages} /> : null,
+        ]}
         {
           this.props.secondarySubmitButton && this.props.onSecondarySubmit &&
           React.cloneElement(this.props.secondarySubmitButton, { onClick: this.props.handleSubmit(values => this.props.onSecondarySubmit(values)) })
@@ -149,6 +154,7 @@ class ReduxFormWrapper extends React.Component {
       'fields',
       'showErrorPanel',
       'validationErrors',
+      'validationWarnings',
       'size',
       'submitting',
       'warning',
@@ -182,6 +188,7 @@ class ReduxFormWrapper extends React.Component {
 
 const mapStateToProps = (state, ownProps) => ({
   validationErrors: getFormSyncErrors(ownProps.form)(state),
+  validationWarnings: getFormSyncWarnings(ownProps.form)(state),
 })
 
 const mapDispatchToProps = (dispatch, ownProps) => {

@@ -83,6 +83,7 @@ def elasticsearch_status(request):
         'indices': indices,
         'operations': operations,
         'disk_stats': disk_status,
+        'elasticsearch_host': settings.ELASTICSEARCH_SERVER,
     })
 
 

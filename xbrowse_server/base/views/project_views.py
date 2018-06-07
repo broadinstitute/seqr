@@ -1,10 +1,9 @@
-import json
-import itertools
 import csv
-import datetime
+import json
+import logging
 import sys
+import urllib
 
-from pprint import pprint
 from django.core.exceptions import PermissionDenied
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ObjectDoesNotExist
@@ -25,22 +24,21 @@ from xbrowse_server.base.models import Project, Individual, Family, FamilyGroup,
 from xbrowse_server import sample_management, json_displays
 from xbrowse_server import server_utils
 from xbrowse_server.base.utils import get_collaborators_for_user, get_filtered_families, get_loaded_projects_for_user
-from xbrowse_server.gene_lists.models import GeneList, GeneListItem
+from xbrowse_server.gene_lists.models import GeneList
 from xbrowse_server.base.models import ProjectGeneList
 from xbrowse_server.base.lookups import get_all_saved_variants_for_project, get_variants_by_tag, get_causal_variants_for_project
 from xbrowse_server.api.utils import add_extra_info_to_variants_project
 from xbrowse_server.base import forms as base_forms
 from xbrowse_server import user_controls
 from xbrowse_server.analysis import project as project_analysis
-from xbrowse.utils.basic_utils import get_alt_allele_count, get_gene_id_from_str
+from xbrowse.utils.basic_utils import get_gene_id_from_str
 from xbrowse.core.variant_filters import get_default_variant_filter
 from xbrowse_server.mall import get_reference
 from xbrowse_server import mall
 from xbrowse_server.gene_lists.views import download_response as gene_list_download_response
 from xbrowse_server.decorators import log_request
 from seqr.models import Project as SeqrProject
-import urllib
-import logging
+
 
 log = logging.getLogger('xbrowse_server')
 
@@ -453,9 +451,12 @@ def variants_with_tag(request, project_id, tag=None):
         response = HttpResponse(content_type='text/csv')
         response['Content-Disposition'] = 'attachment; filename="{}_{}.csv"'.format(project_id, tag)
 
-        header_fields = ["chrom", "pos", "ref", "alt",  "tags", "notes", "family", "gene", "effect",
-                         "1kg_wgs_phase3", "1kg_wgs_phase3_popmax", "exac_v3", "exac_v3_popmax",
-                         "sift", "polyphen", "hgvsc", "hgvsp"]
+        header_fields = [
+            "chrom", "pos", "ref", "alt",  "tags", "notes", "family", "gene", "effect",
+            "1kg_wgs_phase3", "1kg_wgs_phase3_popmax", "exac_v3", "exac_v3_popmax",
+            "gnomad_exomes", "gnomad_exomes_popmax", "gnomad_genomes", "gnomad_genomes_popmax",
+            "sift", "polyphen", "hgvsc", "hgvsp"
+        ]
 
         genotype_header_fields = ['sample_id', 'GT_genotype', 'filter', 'AD_allele_depth', 'DP_read_depth', 'GQ_genotype_quality', 'AB_allele_balance']
         for i in range(0, 10):
@@ -483,31 +484,36 @@ def variants_with_tag(request, project_id, tag=None):
                 genotype_values.append(genotype.extras["ad"] if genotype else "")
                 genotype_values.append(genotype.extras["dp"] if genotype else "")
                 genotype_values.append(genotype.gq if genotype and genotype.gq is not None else "")
-                genotype_values.append("%0.3f" % genotype.ab if genotype and genotype.ab is not None else "")
+                genotype_values.append(genotype.ab if genotype and genotype.ab is not None else "")
 
 
-            writer.writerow(map(lambda s: unicode(s).encode('UTF-8'),
-                [ variant.chr,
-                  variant.pos,
-                  variant.ref,
-                  variant.alt,
-                  "|".join([tag['tag'] for tag in variant.extras['family_tags']]) if 'family_tags' in variant.extras else '',
+            row = [
+                variant.chr,
+                variant.pos,
+                variant.ref,
+                variant.alt,
+                "|".join([tag['tag'] for tag in variant.extras['family_tags']]) if 'family_tags' in variant.extras else '',
 
-                  "|".join([note['user']['display_name'] +":"+ note['note'] for note in variant.extras['family_notes']]) if 'family_notes' in variant.extras else '',
+                "|".join([note['user']['display_name'] +":"+ note['note'] for note in variant.extras['family_notes']]) if 'family_notes' in variant.extras else '',
 
-                  variant.extras["family_id"],
-                  worst_annotation.get("symbol", ""),
-                  variant.annotation.get("vep_consequence", ""),
+                variant.extras["family_id"],
+                worst_annotation["gene_symbol"],
+                variant.annotation.get("vep_consequence") or "",
 
-                  variant.annotation["freqs"].get("1kg_wgs_phase3", ""),
-                  variant.annotation["freqs"].get("1kg_wgs_phase3_popmax", ""),
-                  variant.annotation["freqs"].get("exac_v3", ""),
-                  variant.annotation["freqs"].get("exac_v3_popmax", ""),
-                  worst_annotation.get("sift", ""),
-                  worst_annotation.get("polyphen", ""),
-                  worst_annotation.get("hgvsc", ""),
-                  worst_annotation.get("hgvsp", "").replace("%3D", "="),
-                  ] + genotype_values))
+                variant.annotation["freqs"].get("1kg_wgs_phase3") or variant.annotation["freqs"].get("1kg_wgs_AF") or "",
+                variant.annotation["freqs"].get("1kg_wgs_phase3_popmax") or variant.annotation["freqs"].get("1kg_wgs_popmax_AF") or "",
+                variant.annotation["freqs"].get("exac_v3") or variant.annotation["freqs"].get("exac_v3_AF") or "",
+                variant.annotation["freqs"].get("exac_v3_popmax") or variant.annotation["freqs"].get("exac_v3_popmax_AF") or "",
+                variant.annotation["freqs"].get("gnomad_exomes_AF") or "",
+                variant.annotation["freqs"].get("gnomad_exomes_popmax_AF") or "",
+                variant.annotation["freqs"].get("gnomad_genomes_AF") or "",
+                variant.annotation["freqs"].get("gnomad_genomes_popmax_AF") or "",
+                worst_annotation.get("sift") or "",
+                worst_annotation.get("polyphen") or "",
+                worst_annotation.get("hgvsc") or "",
+                (worst_annotation.get("hgvsp") or "").replace("%3D", "="),
+            ] + genotype_values
+            writer.writerow(map(lambda s: unicode(s).encode('UTF-8'), row))
 
         return response
     else:
@@ -752,7 +758,6 @@ def gene_quicklook(request, project_id, gene_id):
 
     gene_id = get_gene_id_from_str(gene_id, get_reference())
     gene = get_reference().get_gene(gene_id)
-    sys.stderr.write(project_id + " - staring gene search for: %s in projects: %s\n" % (gene_id, ",".join([p.project_id for p in projects_to_search])+"\n"))
 
     # all rare coding variants
     variant_filter = get_default_variant_filter('all_coding', mall.get_annotator().reference_population_slugs)
@@ -804,6 +809,48 @@ def gene_quicklook(request, project_id, gene_id):
         response = HttpResponse(content_type='text/csv')
         response['Content-Disposition'] = 'attachment; filename="{}_{}.csv"'.format(download_csv, gene.get("symbol") or gene.get("transcript_name"))
 
+        def get_row(variant, worst_annotation):
+            measureset_id, clinvar_significance = get_reference().get_clinvar_info(*variant.unique_tuple())
+            genotypes = []
+
+            all_genotypes_string = ""
+            for indiv_id in individuals_to_include:
+                if indiv_id in variant.genotypes and variant.genotypes[indiv_id].num_alt > 0:
+                    genotype = variant.genotypes[indiv_id]
+                    allele_string = ">".join(genotype.alleles)
+                    all_genotypes_string += indiv_id + ":" + allele_string + "  "
+                    genotypes.append(allele_string + "   (" + str(genotype.gq) + ")")
+                else:
+                    genotypes.append("")
+            return [
+                gene["symbol"],
+                variant.chr,
+                variant.pos,
+                variant.ref,
+                variant.alt,
+                variant.vcf_id or "",
+                variant.annotation.get("vep_consequence") or "",
+                worst_annotation.get("hgvsc") or "",
+                (worst_annotation.get("hgvsp") or "").replace("%3D", "="),
+                worst_annotation.get("sift") or "",
+                worst_annotation.get("polyphen") or "",
+                worst_annotation.get("mutationtaster_pred") or "",
+                (";".join(set((worst_annotation.get("fathmm_pred") or "").split('%3B')))),
+
+                measureset_id or "",
+                clinvar_significance or "",
+
+                variant.annotation["freqs"].get("1kg_wgs_phase3") or variant.annotation["freqs"].get("1kg_wgs_AF") or "",
+                variant.annotation["freqs"].get("1kg_wgs_phase3_popmax") or variant.annotation["freqs"].get("1kg_wgs_popmax_AF") or "",
+                variant.annotation["freqs"].get("exac_v3") or variant.annotation["freqs"].get("exac_v3_AF") or "",
+                variant.annotation["freqs"].get("exac_v3_popmax") or variant.annotation["freqs"].get("exac_v3_popmax_AF") or "",
+                variant.annotation["freqs"].get("gnomad_exomes_AF") or "",
+                variant.annotation["freqs"].get("gnomad_exomes_popmax_AF") or "",
+                variant.annotation["freqs"].get("gnomad_genomes_AF") or "",
+                variant.annotation["freqs"].get("gnomad_genomes_popmax_AF") or "",
+                all_genotypes_string,
+            ] + genotypes
+
         if download_csv == 'knockouts':
 
             individuals_to_include = [individ_id_and_variants["indiv_id"] for individ_id_and_variants in individ_ids_and_variants]
@@ -825,31 +872,8 @@ def gene_quicklook(request, project_id, gene_id):
                         else:
                             genotypes.append("")
 
-                    measureset_id, clinvar_significance = get_reference().get_clinvar_info(*variant.unique_tuple())
-                    rows.append(map(str,
-                        [ gene["symbol"],
-                          variant.chr,
-                          variant.pos,
-                          variant.ref,
-                          variant.alt,
-                          variant.vcf_id or "",
-                          variant.annotation.get("vep_consequence", ""),
-                          worst_annotation.get("hgvsc", ""),
-                          worst_annotation.get("hgvsp", "").replace("%3D", "="),
-                          worst_annotation.get("sift", ""),
-                          worst_annotation.get("polyphen", ""),
-                          worst_annotation.get("mutationtaster_pred", ""),
-                          ";".join(set(worst_annotation.get("fathmm_pred", "").split('%3B'))),
+                    rows.append(map(str, get_row(variant, worst_annotation)))
 
-                          measureset_id,
-                          clinvar_significance,
-
-                          variant.annotation["freqs"].get("1kg_wgs_phase3", ""),
-                          variant.annotation["freqs"].get("1kg_wgs_phase3_popmax", ""),
-                          variant.annotation["freqs"].get("exac_v3", ""),
-                          variant.annotation["freqs"].get("exac_v3_popmax", ""),
-                          all_genotypes_string,
-                        ] + genotypes))
         elif download_csv == 'rare_variants':
             individuals_to_include = []
             for variant in rare_variants:
@@ -860,46 +884,15 @@ def gene_quicklook(request, project_id, gene_id):
             for variant in rare_variants:
                 worst_annotation_idx = variant.annotation["worst_vep_index_per_gene"][gene_id]
                 worst_annotation = variant.annotation["vep_annotation"][worst_annotation_idx]
-                genotypes = []
-                all_genotypes_string = ""
-                for indiv_id in individuals_to_include:
-                    if indiv_id in variant.genotypes and variant.genotypes[indiv_id].num_alt > 0:
-                        genotype = variant.genotypes[indiv_id]
-                        allele_string = ">".join(genotype.alleles)
-                        all_genotypes_string += indiv_id + ":" + allele_string + "  "
-                        genotypes.append(allele_string + "   (" + str(genotype.gq) + ")")
-                    else:
-                        genotypes.append("")
 
-                measureset_id, clinvar_significance = get_reference().get_clinvar_info(*variant.unique_tuple())
-                rows.append(map(str,
-                    [ gene["symbol"],
-                      variant.chr,
-                      variant.pos,
-                      variant.ref,
-                      variant.alt,
-                      variant.vcf_id or "",
-                      variant.annotation.get("vep_consequence", ""),
-                      worst_annotation.get("hgvsc", ""),
-                      worst_annotation.get("hgvsp", "").replace("%3D", "="),
-                      worst_annotation.get("sift", ""),
-                      worst_annotation.get("polyphen", ""),
-                      worst_annotation.get("mutationtaster_pred", ""),
-                      ";".join(set(worst_annotation.get("fathmm_pred", "").split('%3B'))),
-                      measureset_id,
-                      clinvar_significance,
-                      variant.annotation["freqs"].get("1kg_wgs_phase3", ""),
-                      variant.annotation["freqs"].get("1kg_wgs_phase3_popmax", ""),
-                      variant.annotation["freqs"].get("exac_v3", ""),
-                      variant.annotation["freqs"].get("exac_v3_popmax", ""),
-                      all_genotypes_string,
-                    ] + genotypes))
-
+                rows.append(map(str, get_row(variant, worst_annotation)))
 
         header = ["gene", "chr", "pos", "ref", "alt", "rsID", "impact",
                   "HGVS.c", "HGVS.p", "sift", "polyphen", "muttaster", "fathmm", "clinvar_id", "clinvar_clinical_sig",
                   "freq_1kg_wgs_phase3", "freq_1kg_wgs_phase3_popmax",
                   "freq_exac_v3", "freq_exac_v3_popmax",
+                  "freq_gnomad_exomes", "freq_gnomad_exomes_popmax",
+                  "freq_gnomad_genomes", "freq_gnomad_genomes_popmax",
                   "all_genotypes"] + list(map(lambda i: i + " (from %s)" % indiv_id_to_project_id[i], individuals_to_include))
 
         writer = csv.writer(response)

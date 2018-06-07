@@ -11,7 +11,7 @@ import { Message } from 'semantic-ui-react'
 import XHRUploader from 'react-xhr-uploader'
 
 const MessagePanel = styled(Message)`
-  margin: 20px;
+  margin: 2em !important;
 `
 
 class XHRUploaderWithEvents extends XHRUploader {
@@ -152,12 +152,16 @@ UploaderFieldComponent.propTypes = {
   uploaderProps: PropTypes.object,
 }
 
-const validate = value => (value && value.errors) || (value && value.uploadedFileId ? undefined : 'File not uploaded')
+const hasErrors = value => value && value.errors && (value.errors.length ? value.errors : undefined)
+const hasUploadedFile = value => (value && value.uploadedFileId ? undefined : 'File not uploaded')
+const validate = value => hasErrors(value) || hasUploadedFile(value)
+const warn = value => value && value.warnings && (value.warnings.length ? value.warnings : undefined)
 
 export default props =>
   <Field
     name="uploadedFile"
     validate={validate}
+    warn={warn}
     uploaderProps={props}
     component={UploaderFieldComponent}
   />

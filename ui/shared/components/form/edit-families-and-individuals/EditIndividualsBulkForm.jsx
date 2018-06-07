@@ -126,6 +126,18 @@ const BaseBulkContent = props =>
               <TableCell><BoldText>Notes</BoldText></TableCell>
               <TableCell>free-text notes related to this individual</TableCell>
             </TableRow>
+            <TableRow>
+              <TableCell><BoldText>HPO Terms (Present)</BoldText></TableCell>
+              <TableCell>comma-separated list of HPO Terms for <i>present</i> phenotypes in this individual</TableCell>
+            </TableRow>
+            <TableRow>
+              <TableCell><BoldText>HPO Terms (Absent)</BoldText></TableCell>
+              <TableCell>comma-separated list of HPO Terms for phenotypes <i>not present</i> in this individual</TableCell>
+            </TableRow>
+            <TableRow>
+              <TableCell><BoldText>Diagnosis: OMIM Ids</BoldText></TableCell>
+              <TableCell>comma-separated list of MIM ids for disorders diagnosed in this individual</TableCell>
+            </TableRow>
           </Table.Body>
         </StyledTable>
       </div>

@@ -108,6 +108,9 @@ if ENABLE_DJANGO_DEBUG_TOOLBAR:
         'debug_toolbar.panels.logging.LoggingPanel',
         'debug_toolbar.panels.redirects.RedirectsPanel',
     ]
+    DEBUG_TOOLBAR_CONFIG = {
+        'RESULTS_CACHE_SIZE': 100,
+    }
 
 
 # Internationalization
@@ -342,7 +345,7 @@ READ_VIZ_USERNAME=None   # used to authenticate to remote HTTP bam server
 READ_VIZ_PASSWD=None
 
 
-PHENOTIPS_PORT=os.environ.get('PHENOTIPS_SERVICE_PORT', 9010)
+PHENOTIPS_PORT=os.environ.get('PHENOTIPS_SERVICE_PORT', 8080)
 PHENOTIPS_SERVICE_HOSTNAME = os.environ.get('PHENOTIPS_SERVICE_HOSTNAME', 'localhost')
 PHENOTIPS_SERVER = "%s:%s" % (PHENOTIPS_SERVICE_HOSTNAME, PHENOTIPS_PORT)
 PHENOPTIPS_BASE_URL='http://%s:%s' % (os.environ.get('PHENOTIPS_SERVICE_HOSTNAME', 'localhost'), PHENOTIPS_PORT)
@@ -417,14 +420,12 @@ STATICFILES_DIRS = (
 
 
 ANNOTATOR_REFERENCE_POPULATIONS_IN_ELASTICSEARCH = [
-    {"slug": "1kg_wgs_phase3", "name": "1000G v3"},
-    {"slug": "1kg_wgs_phase3_popmax", "name": "1000G v3 popmax"},
-    {"slug": "exac_v3", "name": "ExAC v0.3"},
-    {"slug": "exac_v3_popmax", "name": "ExAC v0.3 popmax"},
-    {"slug": "gnomad-genomes2", "name": "gnomAD 15k genomes"},
-    {"slug": "gnomad-exomes2", "name": "gnomAD 123k exomes"},
-    {"slug": "topmed", "name": "TOPMed"},
-    {"slug": "AF", "name": "This Callset"},
+    {"slug": "1kg_wgs_phase3", "name": "1000G v3", "full_name": "1000 Genomes Samples", "description": "Filter out variants that have a higher allele count (AC) in the 1000 Genomes Phase 3 release (5/2/2013), or a higher allele frequency (popmax AF) in any one of these five subpopulations defined for 1000 Genomes Phase 3: AFR, AMR, EAS, EUR, SAS"},
+    {"slug": "exac_v3", "name": "ExAC v0.3", "full_name": "ExAC", "description": "Filter out variants that have a higher allele count (AC) in ExAC, or a higher allele frequency (popmax AF) in any one of these six subpopulations defined for ExAC: AFR, AMR, EAS, FIN, NFE, SAS"},
+    {"slug": "gnomad-genomes2", "name": "gnomAD 15k genomes", "description": "Filter out variants that have a higher allele count (AC) among gnomAD genomes, or a higher allele frequency (popmax AF) in any one of these six subpopulations defined for gnomAD genomes: AFR, AMR, EAS, FIN, NFE, ASJ"},
+    {"slug": "gnomad-exomes2", "name": "gnomAD 123k exomes", "description": "Filter out variants that have a higher allele count (AC) among gnomAD genomes, or a higher allele frequency (popmax AF) in any one of these seven subpopulations defined for gnomAD genomes: AFR, AMR, EAS, FIN, NFE, ASJ, SAS"},
+    {"slug": "topmed", "name": "TOPMed", "description": "Filter out variants that have a higher allele count (AC), or a higher allele frequency (AF) in TOPMed"},
+    {"slug": "AF", "name": "This Callset", "description": "Filter out variants that have a higher allele count (AC), or a higher allele frequency (AF) among the samples in this family plus the rest of the samples that were joint-called as part of variant calling for this project." },
 ]
 
 ANNOTATOR_REFERENCE_POPULATIONS = ANNOTATOR_SETTINGS.reference_populations
