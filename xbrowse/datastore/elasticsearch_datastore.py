@@ -182,7 +182,7 @@ class ElasticsearchDatastore(datastore.Datastore):
                     matching_indices.append(index_name)
 
             if not matching_indices:
-                logger.error("%s not found in %s:\n%s" % (indiv_id, elasticsearch_index, pformat(index_mapping["mappings"]["variant"]["properties"])))
+                logger.error("%s not found in %s" % (indiv_id, elasticsearch_index)) # , pformat(index_mapping["mappings"]["variant"]["properties"])))
             else:
                 logger.info("matching indices: " + str(elasticsearch_index))
                 elasticsearch_index = ",".join(matching_indices)
@@ -342,22 +342,15 @@ class ElasticsearchDatastore(datastore.Datastore):
 
                 #logger.info("==> xpos range: " + str({"xpos": xpos_filter_setting}))
 
-
             af_key_map = {
                 "db_freqs.AF": "AF",
-                "db_freqs.1kg_wgs_phase3": "g1k_AF",
-                "db_freqs.1kg_wgs_phase3_popmax": "g1k_POPMAX_AF",
-                "db_freqs.exac_v3": "exac_AF",
-                "db_freqs.exac_v3_popmax": "exac_AF_POPMAX",
+                "db_freqs.1kg_wgs_phase3": "g1k_POPMAX_AF",
+                "db_freqs.exac_v3": "exac_AF_POPMAX",
                 "db_freqs.topmed": "topmed_AF",
-                "db_freqs.gnomad_exomes": "gnomad_exomes_AF",
-                "db_freqs.gnomad_exomes_popmax": "gnomad_exomes_AF_POPMAX",
-                "db_freqs.gnomad_genomes": "gnomad_genomes_AF",
-                "db_freqs.gnomad_genomes_popmax": "gnomad_genomes_AF_POPMAX",
-                "db_freqs.gnomad-exomes2": "gnomad_exomes_AF",
-                "db_freqs.gnomad-exomes2_popmax": "gnomad_exomes_AF_POPMAX",
-                "db_freqs.gnomad-genomes2": "gnomad_genomes_AF",
-                "db_freqs.gnomad-genomes2_popmax": "gnomad_genomes_AF_POPMAX",
+                "db_freqs.gnomad_exomes": "gnomad_exomes_AF_POPMAX",
+                "db_freqs.gnomad_genomes": "gnomad_genomes_AF_POPMAX",
+                "db_freqs.gnomad-exomes2": "gnomad_exomes_AF_POPMAX",
+                "db_freqs.gnomad-genomes2": "gnomad_genomes_AF_POPMAX",
             }
 
             if key in af_key_map:
@@ -365,6 +358,22 @@ class ElasticsearchDatastore(datastore.Datastore):
                 af_filter_setting = {k.replace("$", ""): v for k, v in value.items()}
                 s = s.filter(Q('range', **{filter_key: af_filter_setting}) | ~Q('exists', field=filter_key))
                 #logger.info("==> %s: %s" % (filter_key, af_filter_setting))
+
+            ac_key_map = {
+                "db_acs.AF": "AC",
+                "db_acs.1kg_wgs_phase3": "g1k_AC",
+                "db_acs.exac_v3": "exac_AC",
+                "db_acs.topmed": "topmed_AC",
+                "db_acs.gnomad_exomes": "gnomad_exomes_AC",
+                "db_acs.gnomad_genomes": "gnomad_genomes_AC",
+                "db_acs.gnomad-exomes2": "gnomad_exomes_AC",
+                "db_acs.gnomad-genomes2": "gnomad_genomes_AC",
+            }
+
+            if key in ac_key_map:
+                filter_key = ac_key_map[key]
+                ac_filter_setting = {k.replace("$", ""): v for k, v in value.items()}
+                s = s.filter(Q('range', **{filter_key: ac_filter_setting}) | ~Q('exists', field=filter_key))
 
             #s = s.sort("xpos")
 
@@ -756,6 +765,9 @@ class ElasticsearchDatastore(datastore.Datastore):
                 for population, freq in variant_filter.ref_freqs:
                     #if population in self._annotator.reference_population_slugs:
                     db_query['db_freqs.' + population] = {'$lte': freq}
+            if variant_filter.ref_acs:
+                for population, ac in variant_filter.ref_acs:
+                    db_query['db_acs.' + population] = {'$lte': ac}
 
         return db_query
 
