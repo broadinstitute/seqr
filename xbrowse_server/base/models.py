@@ -703,11 +703,11 @@ class Family(models.Model):
         return self.project.get_variant_tags(family=self)
 
     def get_elasticsearch_index(self):
-        for vcf_file in self.get_vcf_files():
-            if vcf_file.elasticsearch_index is not None:
-                return vcf_file.elasticsearch_index
-
-        return None
+        vcf_file = self.project.vcffile_set.order_by('-pk').exclude(elasticsearch_index=None).only('elasticsearch_index').first()
+        if vcf_file:
+            return vcf_file.elasticsearch_index
+        else:
+            return None
 
 
 class FamilyImageSlide(models.Model):
