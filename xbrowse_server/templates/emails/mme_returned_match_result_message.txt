@@ -8,6 +8,7 @@ contact: {{ incoming_query_contact_name }}
 email: {{ incoming_query_contact_url }}
 
 We sent back,
-seqr ID NA19675 from project 1kg in family 1, inserted into matchbox on 17, May 2018. https://seqr.broadinstitute.org/project/1kg/family/1
 
-<a href=“<seqr-link>”>  <projectname>  <family> individual  <seqr-id> inserted into matchbox on  <date> </a>
+{{ match_results }}
+
+Thank you for using the matchbox system for the Matchmaker Exchange at the Broad Center for Mendelian Genomics. Our website can be found <a href="https://seqr.broadinstitute.org/matchmaker/matchbox">here</a> and our legal disclaimers can be found <a href="https://seqr.broadinstitute.org/matchmaker/disclaimer">here</a>. 

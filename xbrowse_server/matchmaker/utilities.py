@@ -193,6 +193,7 @@ def generate_notification_for_incoming_match(response_from_matchbox,incoming_req
     message = 'Dear collaborators, \n\nThis match request came in from ' + institution  + ' today (' + time.strftime('%d, %b %Y')  + ').' 
     message += ' The contact information given was: ' + incoming_patient_as_json['patient']['contact'].get('href','(sorry the information given was invalid') + '. \n\n'
     incoming_query_genes=[]
+    incoming_query_phenotypes=extract_hpo_id_list_from_mme_patient_struct(incoming_patient_as_json)
     if len(results_from_matchbox) > 0:
         if incoming_patient_as_json['patient'].has_key('genomicFeatures'):
             message += 'The following gene(s), '
@@ -215,16 +216,18 @@ def generate_notification_for_incoming_match(response_from_matchbox,incoming_req
             message += ', came-in with this request.\n\n'
         
         message += 'We found matches to these genes in matchbox! The matches are,\n\n '
+        match_results=[]
         for result in results_from_matchbox:
             seqr_id_maps = settings.SEQR_ID_TO_MME_ID_MAP.find({"submitted_data.patient.id":result['patient']['id']}).sort('insertion_date',-1).limit(1)
             for seqr_id_map in seqr_id_maps:
-                message += 'seqr ID ' + seqr_id_map['seqr_id'] 
-                message += ' from project ' +    seqr_id_map['project_id'] 
-                message += ' in family ' +  seqr_id_map['family_id'] 
-                message += ', inserted into matchbox on ' + seqr_id_map['insertion_date'].strftime('%d, %b %Y')
-                message += '. '
-                message += settings.SEQR_HOSTNAME_FOR_SLACK_POST + '/' + seqr_id_map['project_id'] + '/family/' +  seqr_id_map['family_id']
-                message += '\n\n'
+                result = 'seqr ID ' + seqr_id_map['seqr_id'] 
+                result += ' from project ' +    seqr_id_map['project_id'] 
+                result += ' in family ' +  seqr_id_map['family_id'] 
+                result += ', inserted into matchbox on ' + seqr_id_map['insertion_date'].strftime('%d, %b %Y')
+                result += '. '
+                result += settings.SEQR_HOSTNAME_FOR_SLACK_POST + '/' + seqr_id_map['project_id'] + '/family/' +  seqr_id_map['family_id']
+                message += result +'\n\n'
+                match_results.append(result)
             settings.MME_EXTERNAL_MATCH_REQUEST_LOG.insert({
                                                         'seqr_id':seqr_id_map['seqr_id'],
                                                         'project_id':seqr_id_map['project_id'],
@@ -242,9 +245,10 @@ def generate_notification_for_incoming_match(response_from_matchbox,incoming_req
                 {'query_institution': institution,
                  'number_of_results': len(results_from_matchbox),
                  'incoming_query_contact_genes':','.join(incoming_query_genes),
-                 'incoming_query_contact_phenotypes':','.join([key for key in extract_hpo_id_list_from_mme_patient_struct(incoming_patient_as_json)]),
+                 'incoming_query_contact_phenotypes':', '.join([key + '(' + incoming_query_phenotypes[key]['name'] +')' for key in incoming_query_phenotypes]),
                  'incoming_query_contact_url':incoming_patient_as_json['patient']['contact'].get('href','(sorry I was not able to read the information given for URL'),
-                 'incoming_query_contact_name':incoming_patient_as_json['patient']['contact'].get('name','(sorry I was not able to read the information given for name')
+                 'incoming_query_contact_name':incoming_patient_as_json['patient']['contact'].get('name','(sorry I was not able to read the information given for name'),
+                 'match_results':'\n'.join(match_results)
                  },
             )
             send_mail('test alert', 
