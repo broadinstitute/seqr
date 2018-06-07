@@ -3,9 +3,8 @@ Dear collaborators,
 matchbox found a match between a patient from {{ query_institution }} and the following {{ number_of_results }} case(s) in matchbox. The following information was included with the query,
 
 genes: {{ genes }}
-phenotypes: []
-others:
-contact:
+phenotypes: {{ phenotypes }}
+contact: {{ contact }}
 email:
 
 We sent back,
