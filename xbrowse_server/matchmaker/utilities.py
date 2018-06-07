@@ -241,9 +241,10 @@ def generate_notification_for_incoming_match(response_from_matchbox,incoming_req
                 'emails/mme_returned_match_result_message.txt',
                 {'query_institution': institution,
                  'number_of_results': len(results_from_matchbox),
-                 'genes':','.join(incoming_query_genes),
-                 'phenotypes':','.join([key for key in extract_hpo_id_list_from_mme_patient_struct(incoming_patient_as_json)]),
-                 'contact':incoming_patient_as_json['patient']['contact'].get('href','(sorry I was not able to read the information given')
+                 'incoming_query_contact_genes':','.join(incoming_query_genes),
+                 'incoming_query_contact_phenotypes':','.join([key for key in extract_hpo_id_list_from_mme_patient_struct(incoming_patient_as_json)]),
+                 'incoming_query_contact_url':incoming_patient_as_json['patient']['contact'].get('href','(sorry I was not able to read the information given for URL'),
+                 'incoming_query_contact_name':incoming_patient_as_json['patient']['contact'].get('name','(sorry I was not able to read the information given for name')
                  },
             )
             send_mail('test alert', 

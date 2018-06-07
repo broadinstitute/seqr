@@ -2,10 +2,10 @@ Dear collaborators,
 
 matchbox found a match between a patient from {{ query_institution }} and the following {{ number_of_results }} case(s) in matchbox. The following information was included with the query,
 
-genes: {{ genes }}
-phenotypes: {{ phenotypes }}
-contact: {{ contact }}
-email:
+genes: {{ incoming_query_contact_genes }}
+phenotypes: {{ incoming_query_contact_phenotypes }}
+contact: {{ incoming_query_contact_name }}
+email: {{ incoming_query_contact_url }}
 
 We sent back,
 seqr ID NA19675 from project 1kg in family 1, inserted into matchbox on 17, May 2018. https://seqr.broadinstitute.org/project/1kg/family/1
