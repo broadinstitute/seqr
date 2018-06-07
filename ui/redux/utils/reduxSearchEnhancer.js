@@ -1,6 +1,6 @@
-import { reduxSearch, SearchApi, createSearchAction, getSearchSelectors, INDEX_MODES } from 'redux-search'
+import { reduxSearch, SearchApi, createSearchAction, getSearchSelectors } from 'redux-search'
 
-const searchApi = new SearchApi({ indexMode: INDEX_MODES.PREFIXES })
+const searchApi = new SearchApi()
 
 const resourceSelector = (resourceName, state) => state[resourceName]
 
@@ -9,7 +9,6 @@ const resourceIndexes = {
     Object.values(resources).forEach((family) => {
       indexDocument(family.familyGuid, family.displayName)
       indexDocument(family.familyGuid, family.familyId)
-      indexDocument(family.familyGuid, family.familyGuid)
     })
   },
 }
@@ -20,7 +19,7 @@ export const indexAndSearch = resourceName => searchText => (dispatch, getState)
   const state = getState()
   searchApi.indexResource({
     fieldNamesOrIndexFunction: resourceIndexes[resourceName],
-    resources: state[resourceName],
+    resources: resourceSelector(resourceName, state),
     resourceName,
     state,
   })
