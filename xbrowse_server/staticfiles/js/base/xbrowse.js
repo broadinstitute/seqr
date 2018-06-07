@@ -105,10 +105,24 @@ _.extend(HeadBallCoach.prototype, {
     },
 
     variant_info: function(variant) {
-        var view = new AnnotationDetailsView({
-            variant: variant
-        });
-        this.pushModal("title", view);
+        var that = this;
+
+        if (variant.annotation.vep_annotation) {
+            var view = new AnnotationDetailsView({
+                variant: variant
+            });
+            that.pushModal("title", view);
+        } else {
+            that.push_modal_loading()
+            new Variant(variant).fetch({
+              success: function(model) {
+                that.replace_loading_with_view(new AnnotationDetailsView({variant: model.toJSON()}));
+              },
+              error: function() {
+                that.replace_loading_with_view(new AnnotationDetailsView({variant: variant}));
+            }
+            })
+        }
     },
 
     variant_infos: function(variant) {
