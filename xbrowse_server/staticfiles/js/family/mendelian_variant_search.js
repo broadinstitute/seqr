@@ -605,14 +605,6 @@ var MendelianVariantSearchHBC = HeadBallCoach.extend({
         });
     },
 
-    variant_info: function(variant) {
-        var that = this;
-        var view = new AnnotationDetailsView({
-            variant: variant
-        });
-        that.pushModal("title", view);
-    },
-
     get_suggested_inheritance: function() {
         return this.search_form_view.ge
     },

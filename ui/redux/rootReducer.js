@@ -15,6 +15,7 @@ import modalReducers from './utils/modalReducer'
 export const RECEIVE_DATA = 'RECEIVE_DATA'
 export const REQUEST_PROJECTS = 'REQUEST_PROJECTS'
 const RECEIVE_SAVED_VARIANTS = 'RECEIVE_SAVED_VARIANTS'
+const REQUEST_VARIANT = 'REQUEST_VARIANT'
 const REQUEST_GENES = 'REQUEST_GENES'
 const RECEIVE_GENES = 'RECEIVE_GENES'
 
@@ -102,6 +103,23 @@ export const loadGene = (geneId) => {
   }
 }
 
+export const loadVariantTranscripts = (variantId) => {
+  return (dispatch, getState) => {
+    const variant = getState().projectSavedVariants[variantId]
+    if (!(variant && variant.transcripts)) {
+      dispatch({ type: REQUEST_VARIANT })
+      new HttpRequestHelper(`/api/saved_variant/${variantId}/transcripts`,
+        (responseJson) => {
+          dispatch({ type: RECEIVE_SAVED_VARIANTS, updatesById: responseJson })
+        },
+        (e) => {
+          dispatch({ type: RECEIVE_SAVED_VARIANTS, error: e.message, updatesById: {} })
+        },
+      ).get()
+    }
+  }
+}
+
 export const updateGeneNote = (values) => {
   return (dispatch, getState) => {
     // TODO use new gene note endpoints, this is the xbrowse one
@@ -168,6 +186,7 @@ const rootReducer = combineReducers(Object.assign({
   samplesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'samplesByGuid'),
   genesById: createObjectsByIdReducer(RECEIVE_GENES),
   genesLoading: loadingReducer(REQUEST_GENES, RECEIVE_GENES),
+  variantLoading: loadingReducer(REQUEST_VARIANT, RECEIVE_SAVED_VARIANTS),
   user: zeroActionsReducer,
   form: formReducer,
 }, modalReducers, dashboardReducers, projectReducers))

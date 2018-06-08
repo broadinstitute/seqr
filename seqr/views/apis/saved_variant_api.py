@@ -4,7 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.views.decorators.csrf import csrf_exempt
 
-from seqr.models import SavedVariant, VariantTagType, VariantTag, VariantNote, VariantFunctionalData, CAN_EDIT
+from seqr.models import SavedVariant, VariantTagType, VariantTag, VariantNote, VariantFunctionalData, CAN_EDIT, CAN_VIEW
 from seqr.model_utils import create_seqr_model, delete_seqr_model
 from seqr.utils.xpos_utils import get_chrom_pos
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
@@ -64,6 +64,16 @@ def saved_variant_data(request, project_guid):
             variants[variant['variantId']] = variant
 
     return create_json_response({'savedVariants': variants})
+
+
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@csrf_exempt
+def saved_variant_transcripts(request, variant_guid):
+    saved_variant = SavedVariant.objects.get(guid=variant_guid)
+    check_permissions(saved_variant.project, request.user, CAN_VIEW)
+
+    # TODO for real
+    return create_json_response({variant_guid: {'transcripts': []}})
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -204,9 +214,9 @@ def _variant_notes(saved_variant):
 
 
 def _variant_details(variant_json, user):
-    annotation = variant_json.get('annotation', {})
-    extras = variant_json.get('extras', {})
-    worst_vep_annotation = annotation['vep_annotation'][annotation['worst_vep_annotation_index']] if annotation.get('worst_vep_annotation_index') is not None and annotation['vep_annotation'] else None
+    annotation = variant_json.get('annotation') or {}
+    extras = variant_json.get('extras') or {}
+    main_transcript = annotation.get('main_transcript') or (annotation['vep_annotation'][annotation['worst_vep_annotation_index']] if annotation.get('worst_vep_annotation_index') is not None and annotation['vep_annotation'] else None)
     is_es_variant = annotation.get('db') == 'elasticsearch'
     return {
         'annotation': {
@@ -251,30 +261,18 @@ def _variant_details(variant_json, user):
             'revel_score': annotation.get('revel_score'),
             'rsid': annotation.get('rsid'),
             'sift': annotation.get('sift'),
-            'vepAnnotations': [{
-                'transcriptId': vep_a.get('feature') or vep_a.get('transcript_id'),
-                'isChosenTranscript': i == annotation.get('worst_vep_annotation_index'),
-                'aminoAcids': vep_a.get('amino_acids'),
-                'canonical': vep_a.get('canonical'),
-                'cdnaPosition': vep_a.get('cdna_position') or vep_a.get('cdna_start'),
-                'cdsPosition': vep_a.get('cds_position'),
-                'codons': vep_a.get('codons'),
-                'consequence': vep_a.get('consequence') or vep_a.get('major_consequence'),
-                'hgvsc': vep_a.get('hgvsc'),
-                'hgvsp': vep_a.get('hgvsp'),
-            } for i, vep_a in enumerate(annotation.get('vep_annotation') or [])],
             'vepConsequence': annotation.get('vep_consequence'),
             'vepGroup': annotation.get('vep_group'),
-            'worstVepAnnotation': {
-                'symbol': worst_vep_annotation.get('gene_symbol') or worst_vep_annotation.get('symbol'),
-                'lof': worst_vep_annotation.get('lof'),
-                'lofFlags': worst_vep_annotation.get('lof_flags'),
-                'lofFilter': worst_vep_annotation.get('lof_filter'),
-                'hgvsc': worst_vep_annotation.get('hgvsc'),
-                'hgvsp': worst_vep_annotation.get('hgvsp'),
-                'aminoAcids': worst_vep_annotation.get('amino_acids'),
-                'proteinPosition': worst_vep_annotation.get('protein_position'),
-            } if worst_vep_annotation else None,
+            'mainTranscript': {
+                'symbol': main_transcript.get('gene_symbol') or main_transcript.get('symbol'),
+                'lof': main_transcript.get('lof'),
+                'lofFlags': main_transcript.get('lof_flags'),
+                'lofFilter': main_transcript.get('lof_filter'),
+                'hgvsc': main_transcript.get('hgvsc'),
+                'hgvsp': main_transcript.get('hgvsp'),
+                'aminoAcids': main_transcript.get('amino_acids'),
+                'proteinPosition': main_transcript.get('protein_position'),
+            } if main_transcript else None,
         },
         'clinvar': {
             'clinsig': extras.get('clinvar_clinsig'),
@@ -326,6 +324,18 @@ def _variant_details(variant_json, user):
             } for individual_id, genotype in variant_json.get('genotypes', {}).items()
         },
         'origAltAlleles': extras.get('orig_alt_alleles', []),
+        'transcripts': [{
+            'transcriptId': vep_a.get('feature') or vep_a.get('transcript_id'),
+            'isChosenTranscript': i == annotation.get('worst_vep_annotation_index'),
+            'aminoAcids': vep_a.get('amino_acids'),
+            'canonical': vep_a.get('canonical'),
+            'cdnaPosition': vep_a.get('cdna_position') or vep_a.get('cdna_start'),
+            'cdsPosition': vep_a.get('cds_position'),
+            'codons': vep_a.get('codons'),
+            'consequence': vep_a.get('consequence') or vep_a.get('major_consequence'),
+            'hgvsc': vep_a.get('hgvsc'),
+            'hgvsp': vep_a.get('hgvsp'),
+        } for i, vep_a in enumerate(annotation['vep_annotation'])] if annotation.get('vep_annotation') else None,
     }
 
 

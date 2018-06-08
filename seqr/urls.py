@@ -32,6 +32,7 @@ from seqr.views.apis.case_review_api import \
 
 from seqr.views.apis.saved_variant_api import \
     saved_variant_data, \
+    saved_variant_transcripts, \
     update_variant_tags_handler, \
     create_variant_note_handler, \
     update_variant_note_handler, \
@@ -108,6 +109,7 @@ api_endpoints = {
     'project/(?P<project_guid>[^/]+)/patient/(?P<patient_id>[^/]+)/phenotips_pdf': phenotips_pdf_handler,
     'project/(?P<project_guid>[^/]+)/patient/(?P<patient_id>[^/]+)/phenotips_edit': phenotips_edit_handler,
 
+    'saved_variant/(?P<variant_guid>[^/]+)/transcripts': saved_variant_transcripts,
     'saved_variant/(?P<variant_guid>[^/]+)/update_tags': update_variant_tags_handler,
     'saved_variant/(?P<variant_guid>[^/]+)/note/create': create_variant_note_handler,
     'saved_variant/(?P<variant_guid>[^/]+)/note/(?P<note_guid>[^/]+)/update': update_variant_note_handler,
