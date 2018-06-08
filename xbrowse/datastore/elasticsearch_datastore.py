@@ -133,6 +133,7 @@ class ElasticsearchDatastore(datastore.Datastore):
             variant_id_filter=None,
             quality_filter=None,
             indivs_to_consider=None,
+            include_all_consequences=False,
             user=None):
         from xbrowse_server.base.models import Individual
         from xbrowse_server.mall import get_reference
@@ -385,6 +386,8 @@ class ElasticsearchDatastore(datastore.Datastore):
         start = time.time()
 
         s = s.params(size=settings.VARIANT_QUERY_RESULTS_LIMIT + 1)
+        if not include_all_consequences:
+            s = s.source(exclude=["sortedTranscriptConsequences"])
         response = s.execute()
         logger.info("=====")
 
@@ -444,7 +447,7 @@ class ElasticsearchDatastore(datastore.Datastore):
                 #print("Filtered all_num_alt <= 0 - Result %s: GRCh38: %s:%s,  cadd: %s  %s - %s" % (i, hit["contig"], hit["start"], hit["cadd_PHRED"] if "cadd_PHRED" in hit else "", hit["transcriptConsequenceTerms"], all_num_alt))
                 continue
 
-            vep_annotation = json.loads(str(hit['sortedTranscriptConsequences']))
+            vep_annotation = json.loads(str(hit['sortedTranscriptConsequences'])) if 'sortedTranscriptConsequences' in hit else None
 
             if project.genome_version == GENOME_VERSION_GRCh37:
                 grch38_coord = None
@@ -492,6 +495,7 @@ class ElasticsearchDatastore(datastore.Datastore):
                     'vep_annotation': vep_annotation,
                     'vep_group': str(hit['mainTranscript_major_consequence'] or ""),
                     'vep_consequence': str(hit['mainTranscript_major_consequence'] or ""),
+                    'main_transcript': {k.replace('mainTranscript_', ''): hit[k] for k in dir(hit) if k.startswith('mainTranscript_')},
                     'worst_vep_annotation_index': 0,
                     'worst_vep_index_per_gene': {str(hit['mainTranscript_gene_id']): 0},
                 },
@@ -659,7 +663,7 @@ class ElasticsearchDatastore(datastore.Datastore):
         if cache_key in self._results_cache:
             results = self._results_cache[cache_key]
         else:
-            results = list(self.get_elasticsearch_variants(project_id, family_id=family_id, variant_id_filter=[variant_id]))
+            results = list(self.get_elasticsearch_variants(project_id, family_id=family_id, variant_id_filter=[variant_id], include_all_consequences=True))
             self._results_cache[cache_key] = results
 
         if not results:

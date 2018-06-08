@@ -218,14 +218,6 @@ var CohortVariantSearchHBC = HeadBallCoach.extend({
         });
     },
 
-    variant_info: function(variant) {
-        var that = this;
-        var view = new AnnotationDetailsView({
-            variant: variant
-        });
-        that.pushModal("title", view);
-    },
-
     redisplay_results: function() {
         $('#results-container').html(this.variants_view.render().el);
     },
