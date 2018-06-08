@@ -36,24 +36,24 @@ const Transcripts = ({ variant, loading, loadVariantTranscripts: dispatchLoadVar
         <Segment attached="bottom">
           <Table basic="very">
             <Table.Body>
-              {variant.transcripts.filter(annotation => (annotation.gene || annotation.gene_id) !== gene.geneId).map(annotation =>
-                <Table.Row key={annotation.transcriptId}>
+              {variant.transcripts[gene.geneId].map(transcript =>
+                <Table.Row key={transcript.transcriptId}>
                   <Table.Cell width={3}>
                     <TranscriptLink
                       target="_blank"
-                      href={`http://useast.ensembl.org/Homo_sapiens/Transcript/Summary?t=${annotation.transcriptId}`}
-                      isChosen={annotation.isChosenTranscript}
+                      href={`http://useast.ensembl.org/Homo_sapiens/Transcript/Summary?t=${transcript.transcriptId}`}
+                      isChosen={transcript.isChosenTranscript}
                     >
-                      {annotation.transcriptId}
+                      {transcript.transcriptId}
                     </TranscriptLink>
                     <div>
-                      {annotation.isChosenTranscript &&
+                      {transcript.isChosenTranscript &&
                         <span>
                           <VerticalSpacer height={5} />
                           <Label content="Chosen Transcript" color="orange" size="small" />
                         </span>
                       }
-                      {annotation.canonical &&
+                      {transcript.canonical &&
                         <span>
                           <VerticalSpacer height={5} />
                           <Label content="Canonical Transcript" color="green" size="small" />
@@ -62,20 +62,20 @@ const Transcripts = ({ variant, loading, loadVariantTranscripts: dispatchLoadVar
                     </div>
                   </Table.Cell>
                   <Table.Cell width={4}>
-                    {annotation.consequence}
+                    {transcript.consequence}
                   </Table.Cell>
                   <Table.Cell width={9}>
                     <AnnotationSection>
-                      <AnnotationLabel>Codons</AnnotationLabel>{annotation.codons}<br />
-                      <AnnotationLabel>Amino Acids</AnnotationLabel>{annotation.aminoAcids}<br />
+                      <AnnotationLabel>Codons</AnnotationLabel>{transcript.codons}<br />
+                      <AnnotationLabel>Amino Acids</AnnotationLabel>{transcript.aminoAcids}<br />
                     </AnnotationSection>
                     <AnnotationSection>
-                      <AnnotationLabel>cDNA Position</AnnotationLabel>{annotation.cdnaPosition}<br />
-                      <AnnotationLabel>CDS Position</AnnotationLabel>{annotation.cdsPosition}<br />
+                      <AnnotationLabel>cDNA Position</AnnotationLabel>{transcript.cdnaPosition}<br />
+                      <AnnotationLabel>CDS Position</AnnotationLabel>{transcript.cdsPosition}<br />
                     </AnnotationSection>
                     <AnnotationSection>
-                      <AnnotationLabel>HGVS.C</AnnotationLabel>{annotation.hgvsc && <ProteinSequence hgvs={annotation.hgvsc} size="1em" />}<br />
-                      <AnnotationLabel>HGVS.P</AnnotationLabel>{annotation.hgvsp && <ProteinSequence hgvs={annotation.hgvsp} size="1em" />}<br />
+                      <AnnotationLabel>HGVS.C</AnnotationLabel>{transcript.hgvsc && <ProteinSequence hgvs={transcript.hgvsc} size="1em" />}<br />
+                      <AnnotationLabel>HGVS.P</AnnotationLabel>{transcript.hgvsp && <ProteinSequence hgvs={transcript.hgvsp} size="1em" />}<br />
                     </AnnotationSection>
                   </Table.Cell>
                 </Table.Row>,

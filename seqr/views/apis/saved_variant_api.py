@@ -1,17 +1,19 @@
 import logging
 import json
+from collections import defaultdict
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.views.decorators.csrf import csrf_exempt
 
 from seqr.models import SavedVariant, VariantTagType, VariantTag, VariantNote, VariantFunctionalData, CAN_EDIT, CAN_VIEW
-from seqr.model_utils import create_seqr_model, delete_seqr_model
+from seqr.model_utils import create_seqr_model, delete_seqr_model, find_matching_xbrowse_model
 from seqr.utils.xpos_utils import get_chrom_pos
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_permissions
 from xbrowse_server.base.models import Project as BaseProject, ProjectTag
+from xbrowse_server.mall import get_datastore
 
 logger = logging.getLogger(__name__)
 
@@ -72,8 +74,17 @@ def saved_variant_transcripts(request, variant_guid):
     saved_variant = SavedVariant.objects.get(guid=variant_guid)
     check_permissions(saved_variant.project, request.user, CAN_VIEW)
 
-    # TODO for real
-    return create_json_response({variant_guid: {'transcripts': []}})
+    # TODO when variant search is rewritten for seqr models use that here
+    base_project = find_matching_xbrowse_model(saved_variant.project)
+    loaded_variant = get_datastore(base_project).get_single_variant(
+        base_project.project_id,
+        saved_variant.family.family_id,
+        saved_variant.xpos,
+        saved_variant.ref,
+        saved_variant.alt,
+    )
+
+    return create_json_response({variant_guid: {'transcripts': _variant_transcripts(loaded_variant.annotation)}})
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -213,6 +224,24 @@ def _variant_notes(saved_variant):
     } for tag in saved_variant.variantnote_set.all()]
 
 
+def _variant_transcripts(annotation):
+    transcripts = defaultdict(list)
+    for i, vep_a in enumerate(annotation['vep_annotation']):
+        transcripts[vep_a.get('gene', vep_a.get('gene_id'))].append({
+            'transcriptId': vep_a.get('feature') or vep_a.get('transcript_id'),
+            'isChosenTranscript': i == annotation.get('worst_vep_annotation_index'),
+            'aminoAcids': vep_a.get('amino_acids'),
+            'canonical': vep_a.get('canonical'),
+            'cdnaPosition': vep_a.get('cdna_position') or vep_a.get('cdna_start'),
+            'cdsPosition': vep_a.get('cds_position'),
+            'codons': vep_a.get('codons'),
+            'consequence': vep_a.get('consequence') or vep_a.get('major_consequence'),
+            'hgvsc': vep_a.get('hgvsc'),
+            'hgvsp': vep_a.get('hgvsp'),
+        })
+    return transcripts
+
+
 def _variant_details(variant_json, user):
     annotation = variant_json.get('annotation') or {}
     extras = variant_json.get('extras') or {}
@@ -324,18 +353,7 @@ def _variant_details(variant_json, user):
             } for individual_id, genotype in variant_json.get('genotypes', {}).items()
         },
         'origAltAlleles': extras.get('orig_alt_alleles', []),
-        'transcripts': [{
-            'transcriptId': vep_a.get('feature') or vep_a.get('transcript_id'),
-            'isChosenTranscript': i == annotation.get('worst_vep_annotation_index'),
-            'aminoAcids': vep_a.get('amino_acids'),
-            'canonical': vep_a.get('canonical'),
-            'cdnaPosition': vep_a.get('cdna_position') or vep_a.get('cdna_start'),
-            'cdsPosition': vep_a.get('cds_position'),
-            'codons': vep_a.get('codons'),
-            'consequence': vep_a.get('consequence') or vep_a.get('major_consequence'),
-            'hgvsc': vep_a.get('hgvsc'),
-            'hgvsp': vep_a.get('hgvsp'),
-        } for i, vep_a in enumerate(annotation['vep_annotation'])] if annotation.get('vep_annotation') else None,
+        'transcripts': _variant_transcripts(annotation) if annotation.get('vep_annotation') else None,
     }
 
 
