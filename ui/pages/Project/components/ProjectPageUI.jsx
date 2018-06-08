@@ -13,8 +13,9 @@ import {
   FAMILY_FIELD_ANALYSED_BY,
   FAMILY_FIELD_ANALYSIS_NOTES,
   FAMILY_FIELD_ANALYSIS_SUMMARY,
+  FAMILY_FIELD_INDIVIDUALS,
 } from 'shared/utils/constants'
-import { getProject, getProjectDetailsIsLoading, getShowDetails, getAnalysisStatusCounts } from '../selectors'
+import { getProject, getProjectDetailsIsLoading, getAnalysisStatusCounts } from '../selectors'
 import ProjectOverview from './ProjectOverview'
 import ProjectCollaborators from './ProjectCollaborators'
 import GeneLists from './GeneLists'
@@ -81,7 +82,8 @@ const DETAIL_FIELDS = [
 ]
 
 const NO_DETAIL_FIELDS = [
-  { id: FAMILY_FIELD_ANALYSIS_STATUS, canEdit: true },
+  { id: FAMILY_FIELD_INDIVIDUALS },
+  { id: FAMILY_FIELD_ANALYSIS_STATUS },
 ]
 
 const ProjectPageUI = (props) => {
@@ -118,7 +120,9 @@ const ProjectPageUI = (props) => {
             headerStatus={headerStatus}
             exportUrls={exportUrls}
             showSearchLinks
-            fields={props.showDetails ? DETAIL_FIELDS : NO_DETAIL_FIELDS}
+            showVariantTags
+            detailFields={DETAIL_FIELDS}
+            noDetailFields={NO_DETAIL_FIELDS}
           />
         </Grid.Column>
       </Grid.Row>
@@ -129,13 +133,11 @@ const ProjectPageUI = (props) => {
 ProjectPageUI.propTypes = {
   project: PropTypes.object.isRequired,
   analysisStatusCounts: PropTypes.array,
-  showDetails: PropTypes.bool,
 }
 
 const mapStateToProps = state => ({
   project: getProject(state),
   analysisStatusCounts: getAnalysisStatusCounts(state),
-  showDetails: getShowDetails(state),
 })
 
 export { ProjectPageUI as ProjectPageUIComponent }

@@ -2,6 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Icon } from 'semantic-ui-react'
+import styled from 'styled-components'
 
 import { getUser } from 'redux/selectors'
 import StaffOnlyIcon from '../../icons/StaffOnlyIcon'
@@ -9,6 +10,13 @@ import DispatchRequestButton from '../../buttons/DispatchRequestButton'
 import ReduxFormWrapper from '../../form/ReduxFormWrapper'
 import Modal from '../../modal/Modal'
 import { HorizontalSpacer } from '../../Spacers'
+
+const FieldValue = styled.div`
+  padding-bottom: ${props => (props.compact ? 0 : '15px')}; 
+  padding-left: ${props => (props.compact ? 0 : '22px')};
+  padding-right: ${props => (props.fieldName ? '20px' : '5px')};
+  display: ${props => ((props.fieldName && !props.compact) ? 'block' : 'inline-block')};
+`
 
 const hasValue = val => val && (!('length' in Object.getOwnPropertyNames(val)) || val.length > 0)
 
@@ -67,13 +75,14 @@ const BaseFieldView = (props) => {
       {props.fieldName && [
         <b key="name">{props.fieldName}{hasValue(fieldValue) && ':'}<HorizontalSpacer width={10} /></b>,
         ...buttons,
-        <br key="br" />,
+        props.compact && (buttons.some(b => b) ? <HorizontalSpacer width={10} key="hs" /> : null),
+        !props.compact && <br key="br" />,
       ]}
       {
         hasValue(fieldValue) && !props.hideValue &&
-        <div style={{ paddingBottom: props.compact ? 0 : '15px', paddingLeft: props.compact ? 0 : ' 22px', paddingRight: '5px', display: props.fieldName ? 'block' : 'inline-block' }}>
+        <FieldValue compact={props.compact} fieldName={props.fieldName}>
           {props.fieldDisplay(fieldValue)}
-        </div>
+        </FieldValue>
       }
       {!props.fieldName && buttons}
     </span>)

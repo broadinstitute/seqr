@@ -2,6 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Grid, Icon, Header } from 'semantic-ui-react'
+import styled from 'styled-components'
 
 import { updateFamily } from 'redux/rootReducer'
 import { getProjectsByGuid } from 'redux/selectors'
@@ -21,6 +22,7 @@ import {
   FAMILY_FIELD_INTERNAL_NOTES,
   FAMILY_FIELD_INTERNAL_SUMMARY,
   FAMILY_ANALYSIS_STATUS_OPTIONS,
+  FAMILY_FIELD_INDIVIDUALS,
 } from '../../utils/constants'
 
 
@@ -43,6 +45,12 @@ const fieldRenderDetails = {
       formatValue: analysedBy => `${analysedBy.user.display_name} (${analysedBy.date_saved})`,
     },
   },
+  [FAMILY_FIELD_INDIVIDUALS]: {
+    name: '# Individuals',
+    props: {
+      fieldDisplay: individuals => individuals.length,
+    },
+  },
   [FAMILY_FIELD_ANALYSIS_NOTES]: { name: 'Analysis Notes' },
   [FAMILY_FIELD_ANALYSIS_SUMMARY]: { name: 'Analysis Summary' },
   [FAMILY_FIELD_INTERNAL_NOTES]: { name: 'Internal Notes', internal: true },
@@ -50,14 +58,19 @@ const fieldRenderDetails = {
 }
 
 
-const Family = ({ project, family, fields = [], showSearchLinks, useFullWidth, disablePedigreeZoom, updateFamily: dispatchUpdateFamily }) =>
+const InlineHeader = styled(({ inline, ...props }) => <Header {...props} />)`
+  display: ${props => (props.inline ? 'inline-block' : 'block')};
+  margin-right: 15px !important;
+`
+
+const Family = ({ project, family, fields = [], showSearchLinks, showVariantTags, compact, useFullWidth, disablePedigreeZoom, updateFamily: dispatchUpdateFamily }) =>
   <Grid stackable>
     <Grid.Row>
-      <Grid.Column width={(useFullWidth && !showSearchLinks) ? 6 : 3}>
-        <Header size="small">
+      <Grid.Column width={(useFullWidth && !(showSearchLinks || showVariantTags)) ? 6 : 3}>
+        <InlineHeader inline={compact} size="small">
           Family: {family.displayName}
-        </Header>
-        <PedigreeImagePanel family={family} disablePedigreeZoom={disablePedigreeZoom} />
+        </InlineHeader>
+        <PedigreeImagePanel family={family} disablePedigreeZoom={disablePedigreeZoom} compact={compact} />
       </Grid.Column>
 
       <Grid.Column width={10}>
@@ -75,27 +88,32 @@ const Family = ({ project, family, fields = [], showSearchLinks, useFullWidth, d
             initialValues: family,
             onSubmit: submitFunc,
             modalTitle: `${renderDetails.name} for Family ${family.displayName}`,
+            compact,
             ...(renderDetails.props || {}),
           }) },
         )}
       </Grid.Column>
-      {showSearchLinks &&
+      {(showSearchLinks || showVariantTags) &&
         <Grid.Column width={3}>
-          <VariantTagTypeBar height={15} project={project} familyGuid={family.familyGuid} />
-          <VerticalSpacer height={20} />
-          <a href={`/project/${project.deprecatedProjectId}/family/${family.familyId}`}>
-            Original Family Page
-          </a>
-          <VerticalSpacer height={10} />
-          <a href={`/project/${project.deprecatedProjectId}/family/${family.familyId}/mendelian-variant-search`}>
-            <Icon name="search" />Variant Search
-          </a>
-          <VerticalSpacer height={10} />
-          {
-            project.isMmeEnabled &&
-            <a href={`/matchmaker/search/project/${project.deprecatedProjectId}/family/${family.familyId}`}>
-              <Icon name="search" />Match Maker Exchange
-            </a>
+          {showVariantTags && <VariantTagTypeBar height={15} project={project} familyGuid={family.familyGuid} />}
+          {showSearchLinks &&
+            <div>
+              <VerticalSpacer height={20} />
+              <a href={`/project/${project.deprecatedProjectId}/family/${family.familyId}`}>
+                Original Family Page
+              </a>
+              <VerticalSpacer height={10} />
+              <a href={`/project/${project.deprecatedProjectId}/family/${family.familyId}/mendelian-variant-search`}>
+                <Icon name="search" />Variant Search
+              </a>
+              <VerticalSpacer height={10} />
+              {
+                project.isMmeEnabled &&
+                <a href={`/matchmaker/search/project/${project.deprecatedProjectId}/family/${family.familyId}`}>
+                  <Icon name="search" />Match Maker Exchange
+                </a>
+              }
+            </div>
           }
         </Grid.Column>
       }
@@ -108,9 +126,11 @@ Family.propTypes = {
   project: PropTypes.object.isRequired,
   family: PropTypes.object.isRequired,
   fields: PropTypes.array,
+  showVariantTags: PropTypes.bool,
   showSearchLinks: PropTypes.bool,
   useFullWidth: PropTypes.bool,
   disablePedigreeZoom: PropTypes.bool,
+  compact: PropTypes.bool,
   updateFamily: PropTypes.func,
 }
 

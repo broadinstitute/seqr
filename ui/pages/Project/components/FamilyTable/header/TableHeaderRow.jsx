@@ -70,7 +70,7 @@ TableHeaderRow.propTypes = {
   showInternalFilters: PropTypes.bool,
   visibleFamiliesCount: PropTypes.number,
   totalFamiliesCount: PropTypes.number,
-  currentPage: PropTypes.string,
+  currentPage: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
   recordsPerPage: PropTypes.number,
 }
 

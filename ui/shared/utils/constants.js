@@ -7,6 +7,7 @@ export const FAMILY_FIELD_ANALYSIS_NOTES = 'analysisNotes'
 export const FAMILY_FIELD_ANALYSIS_SUMMARY = 'analysisSummary'
 export const FAMILY_FIELD_INTERNAL_NOTES = 'internalCaseReviewNotes'
 export const FAMILY_FIELD_INTERNAL_SUMMARY = 'internalCaseReviewSummary'
+export const FAMILY_FIELD_INDIVIDUALS = 'individualGuids'
 
 // ANALYSIS STATUS
 

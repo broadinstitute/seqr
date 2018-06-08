@@ -19,7 +19,7 @@ import {
   CASE_REVIEW_STATUS_OPT_LOOKUP,
   ANALYSIS_TYPE_VARIANT_CALLS,
 } from '../../constants'
-import { getShowDetails, getProject, getProjectSamples, getProjectDatasets } from '../../selectors'
+import { getProject, getProjectSamples, getProjectDatasets } from '../../selectors'
 import CaseReviewStatusDropdown from './CaseReviewStatusDropdown'
 
 
@@ -46,7 +46,6 @@ class IndividualRow extends React.Component
     project: PropTypes.object.isRequired,
     family: PropTypes.object.isRequired,
     individual: PropTypes.object.isRequired,
-    showDetails: PropTypes.bool.isRequired,
     samples: PropTypes.array.isRequired,
     datasets: PropTypes.array.isRequired,
     updateIndividual: PropTypes.func,
@@ -54,7 +53,7 @@ class IndividualRow extends React.Component
   }
 
   render() {
-    const { user, project, family, individual, showDetails, editCaseReview } = this.props
+    const { user, project, family, individual, editCaseReview } = this.props
 
     const { individualId, displayName, paternalId, maternalId, sex, affected, createdDate } = individual
 
@@ -110,20 +109,16 @@ class IndividualRow extends React.Component
                     </Detail>
                   ) : null
                 }
-                {
-                  showDetails ? (
-                    <Detail>
-                      ADDED {new Timeago().format(createdDate).toUpperCase()}
-                    </Detail>
-                  ) : null
-                }
+                <Detail>
+                  ADDED {new Timeago().format(createdDate).toUpperCase()}
+                </Detail>
               </div>
             </span>
           </Grid.Column>
           <Grid.Column width={10}>
             {
-              ((showDetails && editCaseReview) ||
-              (showDetails && individual.caseReviewStatus && individual.caseReviewStatus !== CASE_REVIEW_STATUS_NOT_IN_REVIEW) ||
+              (editCaseReview ||
+              (individual.caseReviewStatus && individual.caseReviewStatus !== CASE_REVIEW_STATUS_NOT_IN_REVIEW) ||
               (individual.caseReviewStatus === CASE_REVIEW_STATUS_MORE_INFO_NEEDED)) ?
                 <div>
                   {!editCaseReview &&
@@ -152,26 +147,18 @@ class IndividualRow extends React.Component
                 </div>
                 : null
             }
-            {
-              showDetails ?
-                <div>
-                  {
-                    <TextFieldView
-                      isEditable={(user.is_staff || project.canEdit) && !editCaseReview}
-                      fieldName="Individual Notes"
-                      field="notes"
-                      idField="individualGuid"
-                      initialValues={individual}
-                      modalTitle={`Notes for Individual ${individual.individualId}`}
-                      onSubmit={this.props.updateIndividual}
-                    />
-                  }
-                </div>
-                : null
-            }
+            <TextFieldView
+              isEditable={(user.is_staff || project.canEdit) && !editCaseReview}
+              fieldName="Individual Notes"
+              field="notes"
+              idField="individualGuid"
+              initialValues={individual}
+              modalTitle={`Notes for Individual ${individual.individualId}`}
+              onSubmit={this.props.updateIndividual}
+            />
             <PhenotipsDataPanel
               individual={individual}
-              showDetails={showDetails}
+              showDetails
               showEditPhenotipsLink={project.canEdit && !editCaseReview}
             />
           </Grid.Column>
@@ -181,7 +168,7 @@ class IndividualRow extends React.Component
                 <CaseReviewDropdownContainer>
                   <CaseReviewStatusDropdown individual={individual} />
                   {
-                    showDetails && individual.caseReviewStatusLastModifiedDate ? (
+                    individual.caseReviewStatusLastModifiedDate ? (
                       <Detail>
                         <HorizontalSpacer width={5} />
                         CHANGED ON {new Date(individual.caseReviewStatusLastModifiedDate).toLocaleDateString()}
@@ -204,7 +191,6 @@ export { IndividualRow as IndividualRowComponent }
 const mapStateToProps = state => ({
   user: getUser(state),
   project: getProject(state),
-  showDetails: getShowDetails(state),
   samples: getProjectSamples(state),
   datasets: getProjectDatasets(state),
 })

@@ -10,7 +10,7 @@ import {
   FAMILY_FIELD_INTERNAL_NOTES,
   FAMILY_FIELD_INTERNAL_SUMMARY,
 } from 'shared/utils/constants'
-import { getShowDetails, getProject, getCaseReviewStatusCounts } from '../selectors'
+import { getProject, getCaseReviewStatusCounts } from '../selectors'
 import FamilyTable from './FamilyTable/FamilyTable'
 
 const DETAIL_FIELDS = [
@@ -40,7 +40,8 @@ const CaseReviewTable = (props) => {
         editCaseReview
         headerStatus={headerStatus}
         exportUrls={exportUrls}
-        fields={props.showDetails ? ALL_FIELDS : NO_DETAIL_FIELDS}
+        detailFields={ALL_FIELDS}
+        noDetailFields={NO_DETAIL_FIELDS}
       />
     </div>
   )
@@ -52,13 +53,11 @@ export { CaseReviewTable as CaseReviewTableComponent }
 CaseReviewTable.propTypes = {
   project: PropTypes.object.isRequired,
   caseReviewStatusCounts: PropTypes.array,
-  showDetails: PropTypes.bool,
 }
 
 const mapStateToProps = state => ({
   project: getProject(state),
   caseReviewStatusCounts: getCaseReviewStatusCounts(state),
-  showDetails: getShowDetails(state),
 })
 
 export default connect(mapStateToProps)(CaseReviewTable)
