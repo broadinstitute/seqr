@@ -14,6 +14,7 @@ import elasticsearch
 
 from seqr.models import Dataset
 from settings import LOGIN_URL
+from pprint import pprint
 
 logger = logging.getLogger(__name__)
 
@@ -66,9 +67,23 @@ def elasticsearch_status(request):
     s = elasticsearch_dsl.Search(using=client, index=OPERATIONS_LOG)
     s = s.params(size=5000)
     operations = [doc.to_dict() for doc in s.execute().hits]
-
+    
+    #making a new list since dots in es client keys are confusing template
+    disk_status=[]
+    for disk in client.cat.allocation(format="json"):
+        disk_json = {k.replace('.', '_'): v for k, v in disk.items()}
+        disk_status.append(
+                            {
+                              'node_name':disk_json['node'],
+                              'disk_available':disk_json['disk_avail'],
+                              'disk_used':disk_json['disk_used'],    
+                              'disk_percent_used':disk_json['disk_percent'],     
+                                })
     return render(request, "staff/elasticsearch_status.html", {
         'indices': indices,
         'operations': operations,
+        'disk_stats': disk_status,
         'elasticsearch_host': settings.ELASTICSEARCH_SERVER,
     })
+
+

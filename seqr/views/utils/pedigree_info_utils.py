@@ -230,21 +230,7 @@ def convert_fam_file_rows_to_json(rows):
     json_results = []
     for i, row_dict in enumerate(rows):
 
-        json_record = {
-            JsonConstants.FAMILY_ID_COLUMN: '',
-            JsonConstants.INDIVIDUAL_ID_COLUMN: '',
-            JsonConstants.PATERNAL_ID_COLUMN: '',
-            JsonConstants.MATERNAL_ID_COLUMN: '',
-            JsonConstants.SEX_COLUMN: '',
-            JsonConstants.AFFECTED_COLUMN: '',
-            JsonConstants.NOTES_COLUMN: '',
-            JsonConstants.HPO_TERMS_PRESENT_COLUMN: '',
-            JsonConstants.HPO_TERMS_ABSENT_COLUMN: '',
-            JsonConstants.FINAL_DIAGNOSIS_OMIM_COLUMN: '',
-            JsonConstants.CODED_PHENOTYPE_COLUMN: '',
-            #JsonConstants.FUNDING_SOURCE_COLUMN: '',
-            #JsonConstants.CASE_REVIEW_STATUS_COLUMN: '',
-        }
+        json_record = {}
 
         # parse
         for key, value in row_dict.items():
@@ -278,28 +264,30 @@ def convert_fam_file_rows_to_json(rows):
             #    json_record[JsonConstants.CASE_REVIEW_STATUS_COLUMN] = value
 
         # validate
-        if not json_record[JsonConstants.FAMILY_ID_COLUMN]:
+        if not json_record.get(JsonConstants.FAMILY_ID_COLUMN):
             raise ValueError("Family Id not specified in row #%d:\n%s" % (i+1, json_record))
-        if not json_record[JsonConstants.INDIVIDUAL_ID_COLUMN]:
+        if not json_record.get(JsonConstants.INDIVIDUAL_ID_COLUMN):
             raise ValueError("Individual Id not specified in row #%d:\n%s" % (i+1, json_record))
 
-        if json_record[JsonConstants.SEX_COLUMN] == '1' or json_record[JsonConstants.SEX_COLUMN].upper().startswith('M'):
-            json_record[JsonConstants.SEX_COLUMN] = 'M'
-        elif json_record[JsonConstants.SEX_COLUMN] == '2' or json_record[JsonConstants.SEX_COLUMN].upper().startswith('F'):
-            json_record[JsonConstants.SEX_COLUMN] = 'F'
-        elif json_record[JsonConstants.SEX_COLUMN] == '0' or not json_record[JsonConstants.SEX_COLUMN] or json_record[JsonConstants.SEX_COLUMN].lower() == 'unknown':
-            json_record[JsonConstants.SEX_COLUMN] = 'U'
-        else:
-            raise ValueError("Invalid value '%s' for sex in row #%d" % (json_record[JsonConstants.SEX_COLUMN], i+1))
+        if JsonConstants.SEX_COLUMN in json_record:
+            if json_record[JsonConstants.SEX_COLUMN] == '1' or json_record[JsonConstants.SEX_COLUMN].upper().startswith('M'):
+                json_record[JsonConstants.SEX_COLUMN] = 'M'
+            elif json_record[JsonConstants.SEX_COLUMN] == '2' or json_record[JsonConstants.SEX_COLUMN].upper().startswith('F'):
+                json_record[JsonConstants.SEX_COLUMN] = 'F'
+            elif json_record[JsonConstants.SEX_COLUMN] == '0' or not json_record[JsonConstants.SEX_COLUMN] or json_record[JsonConstants.SEX_COLUMN].lower() == 'unknown':
+                json_record[JsonConstants.SEX_COLUMN] = 'U'
+            else:
+                raise ValueError("Invalid value '%s' for sex in row #%d" % (json_record[JsonConstants.SEX_COLUMN], i+1))
 
-        if json_record[JsonConstants.AFFECTED_COLUMN] == '1' or json_record[JsonConstants.AFFECTED_COLUMN].upper() == "U" or json_record[JsonConstants.AFFECTED_COLUMN].lower() == 'unaffected':
-            json_record[JsonConstants.AFFECTED_COLUMN] = 'N'
-        elif json_record[JsonConstants.AFFECTED_COLUMN] == '2' or json_record[JsonConstants.AFFECTED_COLUMN].upper().startswith('A'):
-            json_record[JsonConstants.AFFECTED_COLUMN] = 'A'
-        elif json_record[JsonConstants.AFFECTED_COLUMN] == '0' or not json_record[JsonConstants.AFFECTED_COLUMN] or json_record[JsonConstants.AFFECTED_COLUMN].lower() == 'unknown':
-            json_record[JsonConstants.AFFECTED_COLUMN] = 'U'
-        elif json_record[JsonConstants.AFFECTED_COLUMN]:
-            raise ValueError("Invalid value '%s' for affected status in row #%d" % (json_record[JsonConstants.AFFECTED_COLUMN], i+1))
+        if JsonConstants.AFFECTED_COLUMN in json_record:
+            if json_record[JsonConstants.AFFECTED_COLUMN] == '1' or json_record[JsonConstants.AFFECTED_COLUMN].upper() == "U" or json_record[JsonConstants.AFFECTED_COLUMN].lower() == 'unaffected':
+                json_record[JsonConstants.AFFECTED_COLUMN] = 'N'
+            elif json_record[JsonConstants.AFFECTED_COLUMN] == '2' or json_record[JsonConstants.AFFECTED_COLUMN].upper().startswith('A'):
+                json_record[JsonConstants.AFFECTED_COLUMN] = 'A'
+            elif json_record[JsonConstants.AFFECTED_COLUMN] == '0' or not json_record[JsonConstants.AFFECTED_COLUMN] or json_record[JsonConstants.AFFECTED_COLUMN].lower() == 'unknown':
+                json_record[JsonConstants.AFFECTED_COLUMN] = 'U'
+            elif json_record[JsonConstants.AFFECTED_COLUMN]:
+                raise ValueError("Invalid value '%s' for affected status in row #%d" % (json_record[JsonConstants.AFFECTED_COLUMN], i+1))
 
         #if json_record[JsonConstants.CASE_REVIEW_STATUS_COLUMN]:
         #    if json_record[JsonConstants.CASE_REVIEW_STATUS_COLUMN].lower() not in Individual.CASE_REVIEW_STATUS_REVERSE_LOOKUP:
@@ -335,10 +323,10 @@ def validate_fam_file_records(records, fail_on_warnings=False):
 
         # check maternal and paternal ids for consistency
         for parent_id_type, parent_id, expected_sex in [
-            ('father', r[JsonConstants.PATERNAL_ID_COLUMN], 'M'),
-            ('mother', r[JsonConstants.MATERNAL_ID_COLUMN], 'F')
+            ('father', r.get(JsonConstants.PATERNAL_ID_COLUMN), 'M'),
+            ('mother', r.get(JsonConstants.MATERNAL_ID_COLUMN), 'F')
         ]:
-            if len(parent_id) == 0:
+            if not parent_id:
                 continue
 
             # is there a separate record for the parent id?
@@ -347,10 +335,11 @@ def validate_fam_file_records(records, fail_on_warnings=False):
                 continue
 
             # is father male and mother female?
-            actual_sex = records_by_id[parent_id][JsonConstants.SEX_COLUMN]
-            if actual_sex != expected_sex:
-                actual_sex_label = dict(Individual.SEX_CHOICES)[actual_sex]
-                errors.append("%(parent_id)s is recorded as %(actual_sex_label)s and also as the %(parent_id_type)s of %(individual_id)s" % locals())
+            if JsonConstants.SEX_COLUMN in records_by_id[parent_id]:
+                actual_sex = records_by_id[parent_id][JsonConstants.SEX_COLUMN]
+                if actual_sex != expected_sex:
+                    actual_sex_label = dict(Individual.SEX_CHOICES)[actual_sex]
+                    errors.append("%(parent_id)s is recorded as %(actual_sex_label)s and also as the %(parent_id_type)s of %(individual_id)s" % locals())
 
             # is the parent in the same family?
             parent = records_by_id[parent_id]

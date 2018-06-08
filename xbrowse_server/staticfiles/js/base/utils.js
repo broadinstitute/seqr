@@ -214,7 +214,7 @@ window.utils = {
     },
 
 	getVariantSearchLinks: function(variant) {
-        var worst_vep_annotation = variant.annotation.vep_annotation[variant.annotation.worst_vep_annotation_index];
+        var worst_vep_annotation = variant.annotation.main_transcript || variant.annotation.vep_annotation[variant.annotation.worst_vep_annotation_index];
 
         var symbol = worst_vep_annotation.gene_symbol || worst_vep_annotation.symbol;
 
