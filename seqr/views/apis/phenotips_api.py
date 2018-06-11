@@ -172,6 +172,7 @@ def update_patient_field_value(project, patient_id, field_name, field_value, is_
         "date_of_death",
         "disorders",
         "ethnicity",
+        "external_id",
         "family_history",
         "features",
         "genes",
