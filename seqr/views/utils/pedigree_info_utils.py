@@ -445,7 +445,7 @@ def _send_sample_manifest(sample_manifest_rows, kit_id, original_filename, origi
 
     # write out the sample manifest file
     wb = xlwt.Workbook()
-    ws = wb.add_sheet(kit_id)
+    ws = wb.add_sheet("Sample Info")
 
     for i, header_row in enumerate([
         MergedPedigreeSampleManifestConstants.SAMPLE_MANIFEST_HEADER_ROW1,
@@ -567,7 +567,6 @@ class MergedPedigreeSampleManifestConstants:
     ]
 
     SAMPLE_MANIFEST_COLUMN_NAMES = [
-        KIT_ID_COLUMN,
         WELL_POSITION_COLUMN,
         SAMPLE_ID_COLUMN,
         COLLABORATOR_PARTICIPANT_ID_COLUMN,
@@ -578,14 +577,14 @@ class MergedPedigreeSampleManifestConstants:
     ]
 
     SAMPLE_MANIFEST_HEADER_ROW1 = list(SAMPLE_MANIFEST_COLUMN_NAMES)  # make a copy
+    SAMPLE_MANIFEST_HEADER_ROW1[2] = 'Alias'
     SAMPLE_MANIFEST_HEADER_ROW1[3] = 'Alias'
-    SAMPLE_MANIFEST_HEADER_ROW1[4] = 'Alias'
 
     SAMPLE_MANIFEST_HEADER_ROW2 = [''] * len(SAMPLE_MANIFEST_COLUMN_NAMES)
-    SAMPLE_MANIFEST_HEADER_ROW2[1] = 'Position'
-    SAMPLE_MANIFEST_HEADER_ROW2[3] = COLLABORATOR_PARTICIPANT_ID_COLUMN
-    SAMPLE_MANIFEST_HEADER_ROW2[4] = COLLABORATOR_SAMPLE_ID_COLUMN
-    SAMPLE_MANIFEST_HEADER_ROW2[6] = 'ul'
-    SAMPLE_MANIFEST_HEADER_ROW2[7] = 'ng/ul'
+    SAMPLE_MANIFEST_HEADER_ROW2[0] = 'Position'
+    SAMPLE_MANIFEST_HEADER_ROW2[2] = COLLABORATOR_PARTICIPANT_ID_COLUMN
+    SAMPLE_MANIFEST_HEADER_ROW2[3] = COLLABORATOR_SAMPLE_ID_COLUMN
+    SAMPLE_MANIFEST_HEADER_ROW2[5] = 'ul'
+    SAMPLE_MANIFEST_HEADER_ROW2[6] = 'ng/ul'
 
 
