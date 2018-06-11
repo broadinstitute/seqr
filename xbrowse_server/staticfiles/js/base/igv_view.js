@@ -22,7 +22,6 @@ window.IgvView = Backbone.View.extend({
             if (indiv.read_data_is_available) {
                 var alignmentTrack = null
                 if (indiv.read_data_format == 'cram') {
-                    options.genome = "hg38"  //this is a temporary hack - TODO add explicit support for grch38
                     alignmentTrack = {
                         url: "/project/" + indiv.project_id + "/igv-track/" + indiv.indiv_id,
                         sourceType: 'pysam',
@@ -52,14 +51,15 @@ window.IgvView = Backbone.View.extend({
         }
 
         //initialize IGV.js browser
-        if (options.genome == "hg38" || options.genome == "GRCh38") {
+        if (options.genome_version == "38" || options.genome_version == "GRCh38") {
+            options.genome_version = "hg38"
             if (!options.gencodeUrl) {
                 options.gencodeVersion = "gencode GRCh38v27";
                 options.gencodeUrl = 'https://storage.googleapis.com/seqr-reference-data/GRCh38/gencode/gencode.v27.annotation.sorted.gtf.gz';
             }
         } else {
-            if (!options.genome) {
-                options.genome = "hg19"
+            if (!options.genome_version) {
+                options.genome_version = "hg19"
             }
             if (!options.gencodeUrl) {
                 options.gencodeVersion = "gencode GRCh37v27";
@@ -78,10 +78,10 @@ window.IgvView = Backbone.View.extend({
             showCommandBar: true,
             locus: options.locus,
         //reference: {
-        // 	id: options.genome,
+        // 	id: options.genome_version,
         //},
-        genome: options.genome,
-            showKaryo: false,
+        genome: options.genome_version,
+        showKaryo: false,
         showIdeogram: true,
         showNavigation: true,
         showRuler: true,
