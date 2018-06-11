@@ -222,7 +222,6 @@ def generate_notification_for_incoming_match(response_from_matchbox,incoming_req
             for seqr_id_map in seqr_id_maps:
                 
                 seqr_project =  project = get_object_or_404(Project, project_id=seqr_id_map['project_id']).seqr_project
-                print (seqr_project.mme_contact_url)
                 
                 result = 'seqr ID ' + seqr_id_map['seqr_id'] 
                 result += ' from project ' +    seqr_id_map['project_id'] 
@@ -255,10 +254,10 @@ def generate_notification_for_incoming_match(response_from_matchbox,incoming_req
                  'match_results':'\n'.join(match_results)
                  },
             )
-            send_mail('test alert', 
+            send_mail('match found by matchbox, the Matchmaker Exchange @Broad', 
                       email_content, 
                       settings.FROM_EMAIL, 
-                      ['harindra@broadinstitute.org',], 
+                      [i for i in seqr_project.mme_contact_url.replace('mailto:','').split(',')],
                       fail_silently=False)
     else:
         message += " We didn't find any individuals in matchbox that matched that query well, *so no results were sent back*. "
