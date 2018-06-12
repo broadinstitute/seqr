@@ -58,9 +58,7 @@ window.IgvView = Backbone.View.extend({
                 options.gencodeUrl = 'https://storage.googleapis.com/seqr-reference-data/GRCh38/gencode/gencode.v27.annotation.sorted.gtf.gz';
             }
         } else {
-            if (!options.genome_version) {
-                options.genome_version = "hg19"
-            }
+            options.genome_version = "hg19"
             if (!options.gencodeUrl) {
                 options.gencodeVersion = "gencode GRCh37v27";
                 options.gencodeUrl = 'https://storage.googleapis.com/seqr-reference-data/GRCh37/gencode/gencode.v27lift37.annotation.sorted.gtf.gz';
