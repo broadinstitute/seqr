@@ -367,7 +367,7 @@ window.SelectVariantsView = Backbone.View.extend({
             return;
         }
 
-        this.setAcSelect(pop, val);
+        this.setHomHemiSelect(pop, val);
     },
 
     setSlider: function(population, val) {
