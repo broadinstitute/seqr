@@ -545,7 +545,7 @@ class SavedVariant(ModelWithGUID):
     # Cache genotypes and annotations for the variant as gene id and consequence - in case the dataset gets deleted, etc.
     saved_variant_json = models.TextField(null=True, blank=True)
 
-    project = models.ForeignKey('Project', null=True, on_delete=models.SET_NULL)
+    project = models.ForeignKey('Project')
     family = models.ForeignKey('Family', null=True, blank=True, on_delete=models.SET_NULL)
 
     def __unicode__(self):
