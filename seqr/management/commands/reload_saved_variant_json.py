@@ -1,10 +1,9 @@
-import json
 import logging
 from django.core.management.base import BaseCommand
 from tqdm import tqdm
 
 from seqr.models import Project, SavedVariant
-from seqr.utils.model_sync_utils import retrieve_saved_variants_json
+from seqr.utils.model_sync_utils import retrieve_saved_variants_json, update_saved_variant_json
 
 logger = logging.getLogger(__name__)
 
@@ -43,8 +42,7 @@ class Command(BaseCommand):
 
             for var in variants_json:
                 saved_variant = saved_variants_map[(var['xpos'], var['ref'], var['alt'], var['extras']['family_id'])]
-                saved_variant.saved_variant_json = json.dumps(var)
-                saved_variant.save()
+                update_saved_variant_json(saved_variant, var)
             success[project.name] = len(variants_json)
             logger.info('Updated {0} variants for project {1}'.format(len(variants_json), project.name))
 

@@ -560,6 +560,10 @@ class SavedVariant(ModelWithGUID):
 
         unique_together = ('genome_version', 'xpos_start', 'xpos_end', 'ref', 'alt', 'project', 'family')
 
+        json_fields = [
+            'guid', 'xpos', 'ref', 'alt', 'genome_version', 'lifted_over_genome_version', 'lifted_over_xpos_start'
+        ]
+
 
 class VariantTagType(ModelWithGUID):
     """
@@ -611,6 +615,8 @@ class VariantTag(ModelWithGUID):
     class Meta:
         unique_together = ('variant_tag_type', 'saved_variant')
 
+        json_fields = ['guid', 'search_parameters', 'last_modified_date', 'created_by']
+
 
 class VariantNote(ModelWithGUID):
     saved_variant = models.ForeignKey('SavedVariant', on_delete=models.CASCADE, null=True)
@@ -625,6 +631,9 @@ class VariantNote(ModelWithGUID):
 
     def _compute_guid(self):
         return 'VN%07d_%s' % (self.id, _slugify(str(self)))
+
+    class Meta:
+        json_fields = ['guid', 'note', 'submit_to_clinvar', 'last_modified_date', 'created_by']
 
 
 class VariantFunctionalData(ModelWithGUID):
@@ -703,6 +712,8 @@ class VariantFunctionalData(ModelWithGUID):
 
     class Meta:
         unique_together = ('functional_data_tag', 'saved_variant')
+
+        json_fields = ['guid', 'functional_data_tag', 'metadata', 'last_modified_date', 'created_by']
 
 
 class LocusList(ModelWithGUID):

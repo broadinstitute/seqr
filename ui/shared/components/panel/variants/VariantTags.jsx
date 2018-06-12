@@ -65,7 +65,7 @@ const VARIANT_NOTE_FIELDS = [{
 }]
 
 const taggedByPopupContent = tag =>
-  <span>{tag.user || 'unknown user'}{tag.dateSaved && <span><br /> on {new Date(tag.dateSaved).toLocaleDateString()}</span>}</span>
+  <span>{tag.createdBy || 'unknown user'}{tag.lastModifiedDate && <span><br /> on {new Date(tag.lastModifiedDate).toLocaleDateString()}</span>}</span>
 
 const reRunTagSearch = tag => tag.searchParameters &&
   <ReRunSearchLink href={tag.searchParameters}>Re-run search</ReRunSearchLink>
