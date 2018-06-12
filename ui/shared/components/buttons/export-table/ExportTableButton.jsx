@@ -6,6 +6,8 @@ import styled from 'styled-components'
 
 import { Table, Icon, Popup } from 'semantic-ui-react'
 
+import ButtonLink from '../ButtonLink'
+
 const NameCell = styled(Table.Cell)`
  height: 20px;
  padding: 3px;
@@ -62,9 +64,9 @@ FileLink.propTypes = {
 const ExportTableButton = props =>
   <Popup
     trigger={
-      <a>
+      <ButtonLink>
         <Icon name="download" />Download Table
-      </a>
+      </ButtonLink>
     }
     content={
       <Table className="noBorder">

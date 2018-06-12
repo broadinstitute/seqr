@@ -203,7 +203,10 @@ def _convert_xbrowse_kwargs_to_seqr_kwargs(xbrowse_model, include_all=False, **k
     # rename fields
     xbrowse_class_name = type(xbrowse_model).__name__
     field_mapping = XBROWSE_TO_SEQR_FIELD_MAPPING[xbrowse_class_name]
-    seqr_kwargs = kwargs if include_all else {
+    if include_all:
+        field_mapping = {k: v for k, v in field_mapping.items() if v != _DELETED_FIELD}
+
+    seqr_kwargs = {
         field_mapping.get(field, field): value for field, value in kwargs.items()
         if not field_mapping.get(field, field) == _DELETED_FIELD
     }

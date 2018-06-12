@@ -14,7 +14,7 @@ def update_project_from_json(project, json, verbose=False):
 
 def update_family_from_json(family, json, verbose=False, user=None, allow_unknown_keys=False):
     update_model_from_json(
-        family, json, user=user, verbose=verbose, allow_unknown_keys=allow_unknown_keys, restricted_keys=['pedigree_image']
+        family, json, user=user, verbose=verbose, allow_unknown_keys=allow_unknown_keys, immutable_keys=['pedigree_image']
     )
 
 
@@ -27,20 +27,20 @@ def update_individual_from_json(individual, json, verbose=False, user=None, allo
         json.pop('caseReviewStatusLastModifiedDate', None)
 
     update_model_from_json(
-        individual, json, user=user, verbose=verbose, allow_unknown_keys=allow_unknown_keys, restricted_keys=['phenotips_data']
+        individual, json, user=user, verbose=verbose, allow_unknown_keys=allow_unknown_keys, immutable_keys=['phenotips_data']
     )
 
 
-def update_model_from_json(model_obj, json, user=None, verbose=False, allow_unknown_keys=False, restricted_keys=None):
+def update_model_from_json(model_obj, json, user=None, verbose=False, allow_unknown_keys=False, immutable_keys=None):
     seqr_update_fields = {}
     internal_fields = model_obj._meta.internal_json_fields if hasattr(model_obj._meta, 'internal_json_fields') else []
 
     for json_key, value in json.items():
         orm_key = _to_snake_case(json_key)
-        if orm_key in (restricted_keys or []):
+        if orm_key in (immutable_keys or []):
             if allow_unknown_keys:
                 continue
-            raise ValueError('Cannot edit field field {}'.format(orm_key))
+            raise ValueError('Cannot edit field {}'.format(orm_key))
         if allow_unknown_keys and not hasattr(model_obj, orm_key):
             continue
         if getattr(model_obj, orm_key) != value:
