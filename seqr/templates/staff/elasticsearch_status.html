@@ -33,8 +33,11 @@
 <table id="dataTable" class="display">
     <thead>
         <tr>
-            <th>status</th>
-            <th width="50%">name</th>
+            <th />
+            <th>project</th>
+            <th>data type</th>
+            <th>genome version</th>
+            <th>index</th>
             <th># records</th>
             <th>size</th>
             <th width="30%">created date</th>
@@ -43,7 +46,10 @@
 
     {% for index in indices %}
         <tr>
-            <td>{{ index.health }}</td>
+            <td />
+            <td><a href="/project/{{ index.project_guid }}/project_page">{{ index.project_id }}</a></td>
+            <td>{{ index.analysis_type }}</td>
+            <td>{{ index.genome_version }}</td>
             <td>{{ index.index }}</td>
             <td>{{ index.docs_count }}</td>
             <td>{{ index.store_size }}</td>

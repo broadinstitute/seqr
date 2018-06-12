@@ -1,3 +1,7 @@
+import asciitree
+from asciitree.util import *
+from asciitree.drawing import *
+
 import logging
 from collections import OrderedDict
 from pprint import pprint
@@ -27,16 +31,6 @@ class Command(BaseCommand):
                 if not matched_projects:
                     logger.warn("No matching project found for keyword: %s" % project_id)
                 projects.extend(matched_projects)
-
-        try:
-            import pip
-            pip.main(["install", "asciitree"])
-            import asciitree
-            from asciitree.util import *
-            from asciitree.drawing import *
-        except ImportError as e:
-            logger.error(e)
-            return
 
         projects_tree = OrderedDict()
         for project_i, project in enumerate(projects):
