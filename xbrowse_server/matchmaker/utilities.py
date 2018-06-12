@@ -251,13 +251,16 @@ def generate_notification_for_incoming_match(response_from_matchbox,incoming_req
                  'incoming_query_contact_phenotypes':', '.join([key + '(' + incoming_query_phenotypes[key]['name'] +')' for key in incoming_query_phenotypes]),
                  'incoming_query_contact_url':incoming_patient_as_json['patient']['contact'].get('href','(sorry I was not able to read the information given for URL'),
                  'incoming_query_contact_name':incoming_patient_as_json['patient']['contact'].get('name','(sorry I was not able to read the information given for name'),
-                 'match_results':'\n'.join(match_results)
+                 'match_results':'\n'.join(match_results),
+                 'email_addresses_alert_sent_to':','.join([i for i in seqr_project.mme_contact_url.replace('mailto:','').split(',')]),
                  },
             )
             send_mail('match found by matchbox, the Matchmaker Exchange @Broad', 
                       email_content, 
                       settings.FROM_EMAIL, 
-                      [i for i in seqr_project.mme_contact_url.replace('mailto:','').split(',')],
+                      #commenting for now for advanced testing
+                      #[i for i in seqr_project.mme_contact_url.replace('mailto:','').split(',')],
+                      ['harindra@broadinstitute.org'],
                       fail_silently=False)
     else:
         message += " We didn't find any individuals in matchbox that matched that query well, *so no results were sent back*. "
