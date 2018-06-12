@@ -56,13 +56,12 @@ DO_NOT_PROXY_URL_KEYWORDS = [
 ]
 
 
-def create_patient(project, patient_eid, patient_json=None):
+def create_patient(project, individual):
     """Create a new PhenoTips patient record with the given patient id.
 
     Args:
-        project (Model): PhenoTips permissions will be set to only allow access from this seqr project.
-        patient_eid (string): external id (eg. "NA12878") to use for the patient. Must be globally unique across all PhenoTips patients.
-        patient_json (dict): optional - phenotips patient record like the object returned by get_patient_data(..).
+        project (Model): seqr Project - used to retrieve PhenoTips credentials
+        individual (Model): seqr Individual
     Raises:
         PhenotipsException: if unable to create patient record
     """
@@ -78,7 +77,7 @@ def create_patient(project, patient_eid, patient_json=None):
     #auth_tuple = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id)
     #_make_api_call('POST', url, data=data, auth_tuple=auth_tuple, verbose=False, parse_json_resonse=False)
 
-    patient_data = get_patient_data(project, patient_eid, is_external_id=True)
+    patient_data = get_patient_data(project, individual)
     patient_id = patient_data['id']
 
     username, _ = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id)

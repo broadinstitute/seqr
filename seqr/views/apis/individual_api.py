@@ -387,7 +387,7 @@ def add_or_update_individuals_and_families(project, individual_records, user=Non
 
         if created:
             # create new PhenoTips patient record
-            patient_record = create_patient(project, individual.phenotips_eid)
+            patient_record = create_patient(project, individual)
             update_seqr_model(
                 individual,
                 phenotips_patient_id=patient_record['id'],
@@ -447,7 +447,7 @@ def delete_individuals(project, individual_guids):
 
         # delete phenotips records
         try:
-            delete_patient(project, individual.phenotips_eid, is_external_id=True)
+            delete_patient(project, individual)
         except (PhenotipsException, ValueError) as e:
             logger.error("Error: couldn't delete patient from phenotips: %s %s",
                          individual.phenotips_eid,
