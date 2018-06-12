@@ -468,7 +468,8 @@ def _send_sample_manifest(sample_manifest_rows, kit_id, original_filename, origi
     original_table_attachment_filename = os.path.basename(original_filename).replace(".xlsx", ".xls")
 
     if user is not None and project is not None:
-        email_body = "User '%(user)s' just uploaded pedigree info to %(project)s.<br />" % locals()
+        user_email_or_username = user.email or user.username
+        email_body = "User %(user_email_or_username)s just uploaded pedigree info to %(project)s.<br />" % locals()
     else:
         email_body = ""
 
