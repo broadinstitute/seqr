@@ -133,6 +133,7 @@ class ElasticsearchDatastore(datastore.Datastore):
             variant_id_filter=None,
             quality_filter=None,
             indivs_to_consider=None,
+            include_all_consequences=False,
             user=None):
         from xbrowse_server.base.models import Individual
         from xbrowse_server.mall import get_reference
@@ -348,22 +349,15 @@ class ElasticsearchDatastore(datastore.Datastore):
 
                 #logger.info("==> xpos range: " + str({"xpos": xpos_filter_setting}))
 
-
             af_key_map = {
                 "db_freqs.AF": "AF",
-                "db_freqs.1kg_wgs_phase3": "g1k_AF",
-                "db_freqs.1kg_wgs_phase3_popmax": "g1k_POPMAX_AF",
-                "db_freqs.exac_v3": "exac_AF",
-                "db_freqs.exac_v3_popmax": "exac_AF_POPMAX",
+                "db_freqs.1kg_wgs_phase3": "g1k_POPMAX_AF",
+                "db_freqs.exac_v3": "exac_AF_POPMAX",
                 "db_freqs.topmed": "topmed_AF",
-                "db_freqs.gnomad_exomes": "gnomad_exomes_AF",
-                "db_freqs.gnomad_exomes_popmax": "gnomad_exomes_AF_POPMAX",
-                "db_freqs.gnomad_genomes": "gnomad_genomes_AF",
-                "db_freqs.gnomad_genomes_popmax": "gnomad_genomes_AF_POPMAX",
-                "db_freqs.gnomad-exomes2": "gnomad_exomes_AF",
-                "db_freqs.gnomad-exomes2_popmax": "gnomad_exomes_AF_POPMAX",
-                "db_freqs.gnomad-genomes2": "gnomad_genomes_AF",
-                "db_freqs.gnomad-genomes2_popmax": "gnomad_genomes_AF_POPMAX",
+                "db_freqs.gnomad_exomes": "gnomad_exomes_AF_POPMAX",
+                "db_freqs.gnomad_genomes": "gnomad_genomes_AF_POPMAX",
+                "db_freqs.gnomad-exomes2": "gnomad_exomes_AF_POPMAX",
+                "db_freqs.gnomad-genomes2": "gnomad_genomes_AF_POPMAX",
             }
 
             if key in af_key_map:
@@ -371,6 +365,48 @@ class ElasticsearchDatastore(datastore.Datastore):
                 af_filter_setting = {k.replace("$", ""): v for k, v in value.items()}
                 s = s.filter(Q('range', **{filter_key: af_filter_setting}) | ~Q('exists', field=filter_key))
                 #logger.info("==> %s: %s" % (filter_key, af_filter_setting))
+
+            ac_key_map = {
+                "db_acs.AF": "AC",
+                "db_acs.1kg_wgs_phase3": "g1k_AC",
+                "db_acs.exac_v3": "exac_AC",
+                "db_acs.topmed": "topmed_AC",
+                "db_acs.gnomad_exomes": "gnomad_exomes_AC",
+                "db_acs.gnomad_genomes": "gnomad_genomes_AC",
+                "db_acs.gnomad-exomes2": "gnomad_exomes_AC",
+                "db_acs.gnomad-genomes2": "gnomad_genomes_AC",
+            }
+
+            if key in ac_key_map:
+                filter_key = ac_key_map[key]
+                ac_filter_setting = {k.replace("$", ""): v for k, v in value.items()}
+                s = s.filter(Q('range', **{filter_key: ac_filter_setting}) | ~Q('exists', field=filter_key))
+
+            hemi_key_map = {
+                "db_hemi.exac_v3": "exac_AC_Hemi",
+                "db_hemi.gnomad_exomes": "gnomad_exomes_Hemi",
+                "db_hemi.gnomad_genomes": "gnomad_genomes_Hemi",
+                "db_hemi.gnomad-exomes2": "gnomad_exomes_Hemi",
+                "db_hemi.gnomad-genomes2": "gnomad_genomes_Hemi",
+            }
+
+            if key in hemi_key_map:
+                filter_key = hemi_key_map[key]
+                hemi_filter_setting = {k.replace("$", ""): v for k, v in value.items()}
+                s = s.filter(Q('range', **{filter_key: hemi_filter_setting}) | ~Q('exists', field=filter_key))
+
+            hom_key_map = {
+                "db_hom.exac_v3": "exac_AC_Hom",
+                "db_hom.gnomad_exomes": "gnomad_exomes_Hom",
+                "db_hom.gnomad_genomes": "gnomad_genomes_Hom",
+                "db_hom.gnomad-exomes2": "gnomad_exomes_Hom",
+                "db_hom.gnomad-genomes2": "gnomad_genomes_Hom",
+            }
+
+            if key in hom_key_map:
+                filter_key = hom_key_map[key]
+                hom_filter_setting = {k.replace("$", ""): v for k, v in value.items()}
+                s = s.filter(Q('range', **{filter_key: hom_filter_setting}) | ~Q('exists', field=filter_key))
 
             #s = s.sort("xpos")
 
@@ -382,6 +418,8 @@ class ElasticsearchDatastore(datastore.Datastore):
         start = time.time()
 
         s = s.params(size=settings.VARIANT_QUERY_RESULTS_LIMIT + 1)
+        if not include_all_consequences:
+            s = s.source(exclude=["sortedTranscriptConsequences"])
         response = s.execute()
         logger.info("=====")
 
@@ -441,7 +479,7 @@ class ElasticsearchDatastore(datastore.Datastore):
                 #print("Filtered all_num_alt <= 0 - Result %s: GRCh38: %s:%s,  cadd: %s  %s - %s" % (i, hit["contig"], hit["start"], hit["cadd_PHRED"] if "cadd_PHRED" in hit else "", hit["transcriptConsequenceTerms"], all_num_alt))
                 continue
 
-            vep_annotation = json.loads(str(hit['sortedTranscriptConsequences']))
+            vep_annotation = json.loads(str(hit['sortedTranscriptConsequences'])) if 'sortedTranscriptConsequences' in hit else None
 
             if project.genome_version == GENOME_VERSION_GRCh37:
                 grch38_coord = None
@@ -489,6 +527,7 @@ class ElasticsearchDatastore(datastore.Datastore):
                     'vep_annotation': vep_annotation,
                     'vep_group': str(hit['mainTranscript_major_consequence'] or ""),
                     'vep_consequence': str(hit['mainTranscript_major_consequence'] or ""),
+                    'main_transcript': {k.replace('mainTranscript_', ''): hit[k] for k in dir(hit) if k.startswith('mainTranscript_')},
                     'worst_vep_annotation_index': 0,
                     'worst_vep_index_per_gene': {str(hit['mainTranscript_gene_id']): 0},
                 },
@@ -656,7 +695,7 @@ class ElasticsearchDatastore(datastore.Datastore):
         if cache_key in self._results_cache:
             results = self._results_cache[cache_key]
         else:
-            results = list(self.get_elasticsearch_variants(project_id, family_id=family_id, variant_id_filter=[variant_id], user=user))
+            results = list(self.get_elasticsearch_variants(project_id, family_id=family_id, variant_id_filter=[variant_id], user=user, include_all_consequences=True))
             self._results_cache[cache_key] = results
 
         if not results:
@@ -762,6 +801,13 @@ class ElasticsearchDatastore(datastore.Datastore):
                 for population, freq in variant_filter.ref_freqs:
                     #if population in self._annotator.reference_population_slugs:
                     db_query['db_freqs.' + population] = {'$lte': freq}
+            if variant_filter.ref_acs:
+                for population, ac in variant_filter.ref_acs:
+                    db_query['db_acs.' + population] = {'$lte': ac}
+            if variant_filter.ref_hom_hemi:
+                for population, count in variant_filter.ref_hom_hemi:
+                    db_query['db_hemi.' + population] = {'$lte': count}
+                    db_query['db_hom.' + population] = {'$lte': count}
 
         return db_query
 

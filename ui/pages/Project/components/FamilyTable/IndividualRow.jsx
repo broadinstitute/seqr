@@ -60,7 +60,11 @@ class IndividualRow extends React.Component
 
     const caseReviewStatusOpt = CASE_REVIEW_STATUS_OPT_LOOKUP[individual.caseReviewStatus]
 
-    const sampleDetails = this.props.samples.filter(s => s.individualGuid === individual.individualGuid).map((sample) => {
+    const sampleDetails = this.props.samples.filter(s =>
+      s.individualGuid === individual.individualGuid &&
+      s.datasetType === DATASET_TYPE_VARIANT_CALLS &&
+      s.loadedStatus === "loaded"
+    ).map((sample) => {
       let loadedVariantCallDatasets = this.props.datasets
         .filter(dataset => (
           dataset.sampleGuids.includes(sample.sampleGuid) &&

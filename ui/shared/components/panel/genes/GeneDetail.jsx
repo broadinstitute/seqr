@@ -4,19 +4,17 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { connect } from 'react-redux'
-import { Loader, Header, Dimmer, Grid } from 'semantic-ui-react'
+import { Grid } from 'semantic-ui-react'
 
 import { loadGene, updateGeneNote } from 'redux/rootReducer'
 import { getGenesIsLoading, getGenesById } from 'redux/selectors'
 import SectionHeader from '../../SectionHeader'
+import DataLoader from '../../DataLoader'
 import TextFieldView from '../view-fields/TextFieldView'
 import GeneExpression from './GeneExpression'
 
 
 const NOTE_STYLE = { display: 'block' }
-
-// TODO shared 404 component
-const Error404 = () => (<Header size="huge" textAlign="center">Error 404: Gene Not Found</Header>)
 
 const CompactGrid = styled(Grid)`
   padding: 10px !important;
@@ -29,7 +27,7 @@ const CompactGrid = styled(Grid)`
 const GeneSection = ({ details }) =>
   <CompactGrid>
     {details.map(row => row &&
-      <Grid.Row>
+      <Grid.Row key={row.title}>
         <Grid.Column width={2} textAlign="right">
           <b>{row.titleLink ? <a target="_blank" href={row.titleLink}>{row.title}</a> : row.title}</b>
         </Grid.Column>
@@ -74,7 +72,7 @@ const textWithLinks = (text) => {
   )
 }
 
-const GeneDetailContent = connect(null, { updateGeneNote })(({ gene, updateGeneNote: dispatchUpdateGeneNote }) => {
+const GeneDetailContent = ({ gene, updateGeneNote: dispatchUpdateGeneNote }) => {
   const basicDetails = [
     { title: 'Symbol', content: gene.symbol },
     { title: 'Ensembl ID', content: gene.gene_id },
@@ -207,42 +205,28 @@ const GeneDetailContent = connect(null, { updateGeneNote })(({ gene, updateGeneN
       <GeneExpression expression={gene.expression} />
     </div>
   )
-})
+}
 
 GeneDetailContent.propTypes = {
   gene: PropTypes.object,
+  updateGeneNote: PropTypes.func.isRequired,
 }
 
-class GeneDetail extends React.Component
-{
-  static propTypes = {
-    geneId: PropTypes.string.isRequired,
-    gene: PropTypes.object,
-    loading: PropTypes.bool.isRequired,
-    loadGene: PropTypes.func.isRequired,
-  }
+const GeneDetail = ({ geneId, gene, loading, loadGene: dispatchLoadGene, updateGeneNote: dispatchUpdateGeneNote }) =>
+  <DataLoader contentId={geneId} content={gene} loading={loading} load={dispatchLoadGene}>
+    <GeneDetailContent gene={gene} updateGeneNote={dispatchUpdateGeneNote} />
+  </DataLoader>
 
-  constructor(props) {
-    super(props)
-
-    props.loadGene(props.geneId)
-  }
-
-  render() {
-    const { loading, gene } = this.props
-    if (loading) {
-      // Loader needs to be in an extra Dimmer to properly show up if it is in a modal (https://github.com/Semantic-Org/Semantic-UI-React/issues/879)
-      return <Dimmer inverted active><Loader content="Loading" /></Dimmer>
-    }
-    else if (gene) {
-      return <GeneDetailContent gene={gene} />
-    }
-    return <Error404 />
-  }
+GeneDetail.propTypes = {
+  geneId: PropTypes.string.isRequired,
+  gene: PropTypes.object,
+  loading: PropTypes.bool.isRequired,
+  loadGene: PropTypes.func.isRequired,
+  updateGeneNote: PropTypes.func.isRequired,
 }
 
 const mapDispatchToProps = {
-  loadGene,
+  loadGene, updateGeneNote,
 }
 
 const mapStateToProps = (state, ownProps) => ({

@@ -238,8 +238,8 @@
                        <%= variant.annotation.vep_group.replace(/_/g, ' ') %>
                 <% } %>
             </a>
-            <% if(variant.annotation && variant.annotation.vep_annotation) { %>
-                <% var worst_vep_annotation = variant.annotation.vep_annotation[variant.annotation.worst_vep_annotation_index];
+            <% if(variant.annotation && (variant.annotation.main_transcript || variant.annotation.vep_annotation)) { %>
+                <% var worst_vep_annotation = variant.annotation.main_transcript || variant.annotation.vep_annotation[variant.annotation.worst_vep_annotation_index];
                 if (worst_vep_annotation.lof == 'LC' || worst_vep_annotation.lof_flags == 'NAGNAG_SITE') {
                     var loftee_tooltip = '';
                     if (worst_vep_annotation.lof_filter != '') {
@@ -414,17 +414,17 @@
 
                     <% if (callsetAF != null) { %>
                         <div>
-                          <span>THIS CALLSET</span>
-			  <%= callsetAF.toPrecision(2) %>
-			  <% if (popCounts["AC"] != null) { %>
-                            <small style="margin-left: 10px;">
-			      AC=<%= popCounts["AC"] %>
-			      <% if (popCounts["AN"]) { %>
-			        out of
-			        <%= popCounts["AN"] %>
-			      <% } %> 
-			    </small>
-			  <% } %> 
+                            <span>THIS CALLSET</span>
+                            <%= callsetAF.toPrecision(2) %>
+                            <% if (popCounts["AC"] != null) { %>
+                                <small style="margin-left: 10px;">
+                                    AC=<%= popCounts["AC"] %>
+                                    <% if (popCounts["AN"]) { %>
+                                        out of
+                                        <%= popCounts["AN"] %>
+                                    <% } %>
+                                </small>
+                            <% } %>
                           <% if (popCounts["Hom"] != null) { %>
                               <small style="margin-left: 10px">Hom=<%= popCounts["Hom"] %></small>
                           <% } %>

@@ -8,7 +8,6 @@ window.IgvView = Backbone.View.extend({
         var tracks = [];
         for (var i = 0; i < this.individuals.length; i += 1) {
             var indiv = this.individuals[i];
-	    console.log(indiv)
             if(indiv.cnv_bed_file) {
                 var bedTrack = {
                     url: '/static/igv/' + indiv.cnv_bed_file,
@@ -23,7 +22,6 @@ window.IgvView = Backbone.View.extend({
             if (indiv.read_data_is_available) {
                 var alignmentTrack = null
                 if (indiv.read_data_format == 'cram') {
-                    options.genome = "hg38"  //this is a temporary hack - TODO add explicit support for grch38
                     alignmentTrack = {
                         url: "/project/" + indiv.project_id + "/igv-track/" + indiv.indiv_id,
                         sourceType: 'pysam',
@@ -53,15 +51,14 @@ window.IgvView = Backbone.View.extend({
         }
 
         //initialize IGV.js browser
-        if (options.genome == "hg38" || options.genome == "GRCh38") {
+        if (options.genome_version == "38" || options.genome_version == "GRCh38") {
+            options.genome_version = "hg38"
             if (!options.gencodeUrl) {
                 options.gencodeVersion = "gencode GRCh38v27";
                 options.gencodeUrl = 'https://storage.googleapis.com/seqr-reference-data/GRCh38/gencode/gencode.v27.annotation.sorted.gtf.gz';
             }
         } else {
-            if (!options.genome) {
-                options.genome = "hg19"
-            }
+            options.genome_version = "hg19"
             if (!options.gencodeUrl) {
                 options.gencodeVersion = "gencode GRCh37v27";
                 options.gencodeUrl = 'https://storage.googleapis.com/seqr-reference-data/GRCh37/gencode/gencode.v27lift37.annotation.sorted.gtf.gz';
@@ -79,10 +76,10 @@ window.IgvView = Backbone.View.extend({
             showCommandBar: true,
             locus: options.locus,
         //reference: {
-        // 	id: options.genome,
+        // 	id: options.genome_version,
         //},
-        genome: options.genome,
-            showKaryo: false,
+        genome: options.genome_version,
+        showKaryo: false,
         showIdeogram: true,
         showNavigation: true,
         showRuler: true,

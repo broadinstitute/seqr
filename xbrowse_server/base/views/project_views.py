@@ -466,11 +466,11 @@ def variants_with_tag(request, project_id, tag=None):
         writer = csv.writer(response)
         writer.writerow(header_fields)
         for variant in variants:
-            if not (variant and variant.annotation and variant.annotation.get("vep_annotation")):
+            if not (variant and variant.annotation and (variant.annotation.get('main_transcript') or variant.annotation.get("vep_annotation"))):
                 continue
 
             worst_annotation_idx = variant.annotation["worst_vep_annotation_index"]
-            worst_annotation = variant.annotation["vep_annotation"][worst_annotation_idx]
+            worst_annotation = variant.annotation.get('main_transcript') or variant.annotation["vep_annotation"][worst_annotation_idx]
 
             family_id = variant.extras["family_id"]
             family = Family.objects.get(project=project, family_id=family_id)
@@ -681,7 +681,9 @@ def edit_collaborator(request, project_id, username):
             return redirect('project_collaborators', project_id)
 
     else:
-        form = base_forms.EditCollaboratorForm()
+        form = base_forms.EditCollaboratorForm(initial={
+            "collaborator_type": project_collaborator.collaborator_type,
+        })
 
     return render(request, 'project/edit_collaborator.html', {
         'project_collaborator': project_collaborator,

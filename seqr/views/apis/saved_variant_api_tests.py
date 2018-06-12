@@ -1,10 +1,11 @@
 import json
+import mock
 
 from django.test import TransactionTestCase
 from django.urls.base import reverse
 
 from seqr.models import VariantNote, VariantTag, VariantFunctionalData
-from seqr.views.apis.saved_variant_api import saved_variant_data, create_variant_note_handler, \
+from seqr.views.apis.saved_variant_api import saved_variant_data, saved_variant_transcripts, create_variant_note_handler, \
     update_variant_note_handler, delete_variant_note_handler, update_variant_tags_handler
 from seqr.views.utils.test_utils import _check_login
 
@@ -30,7 +31,7 @@ class ProjectAPITest(TransactionTestCase):
             set(variant.keys()),
             {'variantId', 'xpos', 'ref', 'alt', 'chrom', 'pos', 'genomeVersion', 'liftedOverGenomeVersion',
              'liftedOverChrom', 'liftedOverPos', 'familyGuid', 'tags', 'functionalData', 'notes', 'clinvar',
-             'origAltAlleles', 'genes', 'genotypes', 'hgmd', 'annotation'}
+             'origAltAlleles', 'genes', 'genotypes', 'hgmd', 'annotation', 'transcripts'}
         )
 
         # filter by family
@@ -38,6 +39,17 @@ class ProjectAPITest(TransactionTestCase):
         self.assertEqual(response.status_code, 200)
 
         self.assertSetEqual(set(response.json()['savedVariants'].keys()), {'SV0000002_1248367227_r0390_100'})
+
+    @mock.patch('seqr.views.apis.saved_variant_api.find_matching_xbrowse_model')
+    @mock.patch('seqr.views.apis.saved_variant_api.get_datastore')
+    def test_saved_variant_transcripts(self, mock_datastore, mock_xbrowse_model):
+        mock_datastore.get_single_variant.return_value.annotation = {'vep_annotation': []}
+        url = reverse(saved_variant_transcripts, args=[VARIANT_GUID])
+        _check_login(self, url)
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {VARIANT_GUID: {'transcripts': {}}})
 
     def test_create_update_and_delete_variant_note(self):
         create_variant_note_url = reverse(create_variant_note_handler, args=[VARIANT_GUID])

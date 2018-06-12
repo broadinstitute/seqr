@@ -6,26 +6,44 @@
     
     <script>
       $(document).ready(function() {
-          window.dataTable = $('#dataTable').DataTable({
-            paging: false,
-            columnDefs: [ {
-              searchable: false,
-              orderable: false,
-              targets: 0,
-            } ],
-            order: [[ 1, 'asc' ]],
-            buttons: [
-              'csv', 'excel', 'pdf'
-            ],
-          });
-
-          // index column (https://datatables.net/examples/api/counter_columns.html)
-          window.dataTable.on( 'order.dt search.dt', function () {
-          window.dataTable.column(0, {search:'applied', order:'applied'}).nodes().each( function (cell, i) {
-              cell.innerHTML = i+1;
-            } );
-          } ).draw();
+    	  startIndiceTable();
+    	  startDiskStatusTable();
       });
+      
+      
+      /**
+       * Activate data table for disk status
+       */
+      function startDiskStatusTable(){
+    	  $('#diskStatusDataTable').DataTable({
+              order: [[ 3, 'asc' ]],
+    	  });
+      }
+      
+      /**
+      * Activate data table for indices
+      */
+      function startIndiceTable(){
+          window.dataTable = $('#dataTable').DataTable({
+              paging: false,
+              columnDefs: [ {
+                searchable: false,
+                orderable: false,
+                targets: 0,
+              } ],
+              order: [[ 1, 'asc' ]],
+              buttons: [
+                'csv', 'excel', 'pdf'
+              ],
+            });
+
+            // index column (https://datatables.net/examples/api/counter_columns.html)
+            window.dataTable.on( 'order.dt search.dt', function () {
+            window.dataTable.column(0, {search:'applied', order:'applied'}).nodes().each( function (cell, i) {
+                cell.innerHTML = i+1;
+              } );
+            } ).draw();  
+      }
     </script>
     <style>
       .data-table-header {

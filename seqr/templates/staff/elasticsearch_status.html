@@ -7,56 +7,57 @@
 <b>Elasticsearch Host:</b><br />
 {{ elasticsearch_host }} <br />
 <br />
+
+<b>Disk status:</b>
+<table id="diskStatusDataTable" class="display">
+    <thead>
+        <tr>
+            <th>Node name</th>
+            <th>Disk available</th>
+            <th>Disk used</th>
+            <th>Disk percentage used</th>
+        </tr>
+    </thead>
+   {% for disk in disk_stats %}
+        <tr>
+            <td>{{ disk.node_name }}</td>
+            <td>{{ disk.disk_available }}</td>
+            <td>{{ disk.disk_used }}</td>
+            <td>{{ disk.disk_percent_used }}</td>
+        </tr>
+    {% endfor %}
+</table>
+
 <br />
 <b>Loaded Indices:</b>
-<table id="dataTable" data-order='[[ 7, "desc" ]]' class="display">
+<table id="dataTable" class="display">
     <thead>
         <tr>
             <th />
             <th>project</th>
             <th>data type</th>
             <th>genome version</th>
-            <th>snapshot</th>
             <th>index</th>
             <th># records</th>
             <th>size</th>
-            <th>created date</th>
-            <th>status</th>
+            <th width="30%">created date</th>
         </tr>
     </thead>
 
     {% for index in indices %}
         <tr>
             <td />
-
             <td><a href="/project/{{ index.project_guid }}/project_page">{{ index.project_id }}</a></td>
             <td>{{ index.sample_type }}</td>
             <td>{{ index.genome_version }}</td>
-            <td>{{ index.snapshots }}</td>
             <td>{{ index.index }}</td>
             <td>{{ index.docs_count }}</td>
             <td>{{ index.store_size }}</td>
             <td>{{ index.creation_date_string }}</td>
-            <td>{{ index.health }}</td>
         </tr>
     {% endfor %}
 </table>
-<br />
-Snapshots:<br />
-<br />
-<table id="dataTable2" class="display">
-    <thead>
-    <tr>
-        <th />
-        <th>snapshots</th>
-    </tr>
-    </thead>
 
-    {% for snapshot in snapshots %}
-    <tr>
-        <td />
-        <td>{{ snapshot }}</td>
-    </tr>
-    {% endfor %}
-</table>
+<br />
+<br />
 {% endblock %}

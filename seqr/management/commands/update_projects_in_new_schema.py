@@ -22,7 +22,7 @@ from xbrowse_server.base.models import \
     ProjectTag, \
     VariantTag, \
     VariantFunctionalData, \
-    ProjectCollaborator
+    ProjectCollaborator, VCFFile
 
 from seqr.models import \
     Project as SeqrProject, \
@@ -177,9 +177,9 @@ class Command(BaseCommand):
                             #source_family_i = Project.objects.get(project_id=combined_individuals_info_i['family_id'])
                             source_individual_i = Project.objects.get(project_id=combined_individuals_info_i['indiv_id'])
 
-                            create_sample_records(sample_type_i, source_project_i, source_individual_i, new_project, new_individual, counters)
+                            create_sample_records(sample_type_i, source_individual_i, new_project, new_individual, counters)
                     else:
-                        create_sample_records(sample_type, source_project, source_individual, new_project, new_individual, counters)
+                        create_sample_records(sample_type, source_individual, new_project, new_individual, counters)
                         #combined_families_info.update({from_project_datatype: {'project_id': from_project.project_id, 'family_id': from_f.family_id}})
 
             # TODO family groups, cohorts
@@ -343,67 +343,38 @@ class Command(BaseCommand):
                 logger.info("  %s: %s" % (k, v))
 
 
-def create_sample_records(sample_type, source_project, source_individual, new_project, new_individual, counters):
+def create_sample_records(sample_type, source_individual, new_project, new_individual, counters):
 
-    vcf_files = [f for f in source_individual.vcf_files.all()]
-    if len(vcf_files) > 0:
+    newest_loaded_vcf_file = source_individual.vcf_files.filter(dataset_type=VCFFile.DATASET_TYPE_VARIANT_CALLS, loaded_date__isnull=False).order_by('-pk').first()
+    if newest_loaded_vcf_file is None:
+        return
 
-        # get the most recent VCF file (the one with the highest primary key)
-        #vcf_files_max_pk = max([f.pk for f in vcf_files])
-        #vcf_path = [f.file_path for f in vcf_files if f.pk == vcf_files_max_pk][0]
+    # find and record the earliest callset for this individual
+    new_sample, sample_created = get_or_create_sample(
+        source_individual,
+        new_individual,
+        sample_type=sample_type,
+        dataset_type=SeqrSample.DATASET_TYPE_VARIANT_CALLS,
+        dataset_file_path=newest_loaded_vcf_file.file_path,
+        elasticsearch_index=newest_loaded_vcf_file.elasticsearch_index,
+        loaded_date=newest_loaded_vcf_file.loaded_date,
+        sample_status="loaded" if newest_loaded_vcf_file else None,
+    )
 
-        # get the earliest VCF file (the one with the lowest primary key)
-        vcf_files_min_pk = min([f.pk for f in vcf_files])
+    if sample_created:
+        counters['samples_created'] += 1
 
-        earliest_vcf_dataset = None
-        for vcf_file in vcf_files:
-            try:
-                vcf_loaded_date = look_up_vcf_loaded_date(vcf_file.file_path)
-            except Exception:
-                vcf_loaded_date = None
+    if source_individual.bam_file_path:
+        new_sample, sample_created = get_or_create_sample(
+            source_individual,
+            new_individual,
+            sample_type=sample_type,
+            dataset_type=SeqrSample.DATASET_TYPE_READ_ALIGNMENTS,
+            dataset_file_path=source_individual.bam_file_path,
+            loaded_date=newest_loaded_vcf_file.loaded_date,
+            sample_status="loaded" if newest_loaded_vcf_file else None,
+        )
 
-            new_vcf_dataset, vcf_dataset_created = get_or_create_dataset(
-                new_sample,
-                new_project,
-                source_individual,
-                vcf_file.file_path,
-                dataset_type=SeqrDataset.DATASET_TYPE_VARIANT_CALLS,
-                loaded_date=vcf_loaded_date,
-            )
-
-            if vcf_file.pk == vcf_files_min_pk:
-                earliest_vcf_dataset = new_vcf_dataset
-
-        #logger.info("get_or_create_dataset(%s, %s, %s, %s) returned %s" % (new_sample, new_project, source_individual, vcf_path, new_vcf_dataset))
-        # logger.info("get_or_create_dataset(%s, %s, %s) returned %s" % (new_sample, new_project, source_individual, new_vcf_dataset))
-
-        # find and record the earliest callset for this individual
-        if earliest_vcf_dataset is not None:
-            new_sample, sample_created = get_or_create_sample(
-                source_individual,
-                new_individual,
-                sample_type=sample_type,
-                dataset_type=SeqrSample.DATASET_TYPE_VARIANT_CALLS,
-                dataset_file_path=earliest_vcf_dataset.source_file_path,
-                elasticsearch_index=earliest_vcf_dataset.elasticsearch_index,
-                loaded_date=vcf_loaded_date,
-                sample_status="loaded" if vcf_loaded_date else None,
-            )
-
-            if sample_created: counters['samples_created'] += 1
-
-
-        if source_individual.bam_file_path:
-            new_sample, sample_created = get_or_create_sample(
-                source_individual,
-                new_individual,
-                sample_type=sample_type,
-                dataset_type=SeqrSample.DATASET_TYPE_READ_ALIGNMENTS,
-                dataset_file_path=source_individual.bam_file_path,
-                elasticsearch_index=earliest_vcf_dataset.elasticsearch_index,
-                loaded_date=vcf_loaded_date,
-                sample_status=None,
-            )
 
 
 def look_up_vcf_loaded_date(vcf_path):
@@ -460,6 +431,7 @@ def transfer_project(source_project):
     update_model_field(new_project, 'guid', new_project._compute_guid()[:ModelWithGUID.MAX_GUID_SIZE])
     update_model_field(new_project, 'name', (source_project.project_name or source_project.project_id).strip())
     update_model_field(new_project, 'description', source_project.description)
+    update_model_field(new_project, 'genome_version', source_project.genome_version)
 
     update_model_field(new_project, 'is_phenotips_enabled', source_project.is_phenotips_enabled)
 
@@ -640,6 +612,7 @@ def _retrieve_and_update_individual_phenotips_data(project, individual):
     _update_individual_phenotips_data(individual, latest_phenotips_json)
 
 
+<<<<<<< Updated upstream
 def transfer_info_from_dataset_to_sample_fields(apps, schema_editor):
     Dataset = apps.get_model('seqr', 'Dataset')
     Sample = apps.get_model('seqr', 'Sample')
@@ -674,13 +647,13 @@ def get_or_create_sample(source_individual, new_individual, sample_type, dataset
     """Creates and returns a new Sample based on the provided models."""
 
     new_sample, created = SeqrSample.objects.get_or_create(
-        sample_type=sample_type,
         individual=new_individual,
         sample_id=(source_individual.vcf_id or source_individual.indiv_id).strip(),
         deprecated_base_project=source_individual.family.project,
         dataset_type=dataset_type,
         dataset_file_path=dataset_file_path,
         elasticsearch_index=elasticsearch_index,
+        sample_type=sample_type,
     )
     new_sample.created_date = new_individual.created_date
     new_sample.sample_status = source_individual.coverage_status
@@ -689,48 +662,6 @@ def get_or_create_sample(source_individual, new_individual, sample_type, dataset
     new_sample.save()
 
     return new_sample, created
-
-
-def get_or_create_dataset(new_sample, new_project, source_individual, dataset_file_path, dataset_type, loaded_date=None, genome_version=None):
-
-    new_dataset, created = SeqrDataset.objects.get_or_create(
-        dataset_type=dataset_type,
-        dataset_file_path=dataset_file_path,
-        project=new_project,
-    )
-
-    new_dataset.name = os.path.basename(dataset_file_path)
-    num_samples = new_dataset.samples.count()
-    new_dataset.description = "%s %s sample" % (num_samples, new_sample.sample_type)
-    if num_samples > 1:
-        new_dataset.description += "s"
-
-    # set name = vcf file path
-    # set description = "WES callset with x samples"
-
-    new_dataset.created_date = new_sample.individual.family.project.created_date
-    if genome_version is not None:
-        new_dataset.genome_version = genome_version
-    new_dataset.save()
-
-    if source_individual.is_loaded():
-        new_dataset.is_loaded = True
-        if loaded_date is not None:
-            new_dataset.loaded_date = loaded_date
-        elif not new_dataset.loaded_date:
-            new_dataset.loaded_date = look_up_individual_loaded_date(source_individual)
-        new_dataset.save()
-
-    new_dataset.samples.add(new_sample)
-
-    #if created:
-        # SampleBatch permissions - handled same way as for gene lists, except - since SampleBatch
-        # currently can't be shared with more than one project, allow SampleBatch metadata to be
-        # edited by users with project CAN_EDIT permissions
-    #    assign_perm(user_or_group=new_project.can_edit_group, perm=CAN_EDIT, obj=new_sample_batch)
-    #    assign_perm(user_or_group=new_project.can_view_group, perm=CAN_VIEW, obj=new_sample_batch)
-
-    return new_dataset, created
 
 
 def date_difference_in_days(date1, date2):
@@ -799,6 +730,8 @@ def get_or_create_earliest_dataset(current_dataset, new_sample, new_project, sou
     return earliest_dataset, created
 
 
+=======
+>>>>>>> Stashed changes
 def get_or_create_variant_tag_type(source_variant_tag_type, new_project):
     try:
         created = False

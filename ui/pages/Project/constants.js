@@ -315,14 +315,14 @@ export const VARIANT_EXPORT_DATA = [
   { header: 'tags', getVal: variant => variant.tags.map(tag => tag.name).join('|') },
   { header: 'notes', getVal: variant => variant.notes.map(note => `${note.user}: ${note.note}`).join('|') },
   { header: 'family', getVal: variant => variant.familyGuid.split(/_(.+)/)[1] },
-  { header: 'gene', getVal: variant => variant.annotation.worstVepAnnotation.symbol },
+  { header: 'gene', getVal: variant => variant.annotation.mainTranscript.symbol },
   { header: 'consequence', getVal: variant => variant.annotation.vepConsequence },
   { header: '1kg_freq', getVal: variant => variant.annotation.freqs.g1k },
   { header: 'exac_freq', getVal: variant => variant.annotation.freqs.exac },
   { header: 'sift', getVal: variant => variant.annotation.sift },
   { header: 'polyphen', getVal: variant => variant.annotation.polyphen },
-  { header: 'hgvsc', getVal: variant => variant.annotation.worstVepAnnotation.hgvsc },
-  { header: 'hgvsp', getVal: variant => variant.annotation.worstVepAnnotation.hgvsp },
+  { header: 'hgvsc', getVal: variant => variant.annotation.mainTranscript.hgvsc },
+  { header: 'hgvsp', getVal: variant => variant.annotation.mainTranscript.hgvsp },
 ]
 
 export const VARIANT_GENOTYPE_EXPORT_DATA = [
