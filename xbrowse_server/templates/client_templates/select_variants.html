@@ -86,7 +86,7 @@
                                 <div class="col-sm-<%= showPopAcFilter ? '4' : '3' %>" style="min-height: 90px;">
                                     <div class="annot-section-title">
                                         <%= pop.name %>
-                                         <% if (pop.description) {  %>
+                                        <% if (pop.description) {  %>
                                             <i class="icon-question-sign icon-popover" title="<%= pop.full_name || pop.name %>" data-placement="top" data-content="<%= pop.description %>"></i>
                                         <% }; %>
 				                    </div>
@@ -102,7 +102,18 @@
                                                 </select>
                                             </div>
                                         <% }; %>
-                                        <div class="sliderContainer col-sm-<%= showPopAcFilter ? '9' : '12' %>" style="margin-top:10px">
+                                        <% if (pop.has_hom_hemi) { %>
+                                            <div class="col-sm-3">
+                                                <div>H/H</div>
+                                                <select class="hom-hemi-select" data-population="<%= pop.slug %>">
+                                                    <% var filterValues = ['---', 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]; %>
+                                                    <% filterValues.forEach(function(value) { %>
+                                                        <option value="<%= value %>"><%= value %></option>
+                                                    <% }); %>
+                                                </select>
+                                            </div>
+                                        <% }; %>
+                                        <div class="sliderContainer col-sm-<%= showPopAcFilter ? (pop.has_hom_hemi ? '6' : '9') : '12' %>" style="margin-top:10px">
                                             <div class="freq-slider-label" data-population="<%= pop.slug %>" style="min-width: 30px; min-height: 20px">&nbsp;</div>
                                             <div class="freq-slider" data-population="<%= pop.slug %>"></div>
                                         </div>
@@ -123,8 +134,14 @@
                                                     <option value="<%= value %>"><%= value %></option>
                                                 <% }); %>
                                             </select>
-                                            &nbsp;&nbsp;&nbsp;
-                                            AF:&nbsp;
+                                            &nbsp;H/H:&nbsp;
+                                            <select id="set-all-hom-hemi-filters" style="margin-top: 15px;">
+                                                <% var filterValues = ['---', 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]; %>
+                                                <% filterValues.forEach(function(value) { %>
+                                                    <option value="<%= value %>"><%= value %></option>
+                                                <% }); %>
+                                            </select>
+                                            &nbsp;AF:&nbsp;
                                         <% }; %>
                                         <select id="set-all-freq-filters" style="margin-top: 15px;">
                                             <% var filterValues = ['---', 0, 0.0001, 0.0005, 0.001, 0.005, 0.01, 0.02, 0.03, 0.05, 0.1, 1]; %>
@@ -139,7 +156,10 @@
                         <% if (thisCallsetFilter) { %>
                             <div class="row" style="border-top: 1px solid #EEE;">
                                 <div class="col-sm-4" style="min-height: 90px;">
-                                    <div class="annot-section-title">This Callset</div>
+                                    <div class="annot-section-title">
+                                        This Callset <i class="icon-question-sign icon-popover" title="This Callset" data-placement="top" data-content="Filter out variants that have a higher allele count (AC), or a higher allele frequency (AF) among the samples in this family plus the rest of the samples that were joint-called as part of variant calling for this project."></i>
+                                    </div>
+
                                     <div class="annot-section-content row">
                                         <div class="col-sm-3">
                                             <div>AC</div>

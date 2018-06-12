@@ -288,7 +288,7 @@ class Command(BaseCommand):
                 to_project.phenotips_user_id = to_project.project_id
                 try:
                     json_obj = json.loads(i.phenotips_data)
-                    update_patient_data(to_project, i.phenotips_id, patient_json=json_obj, is_external_id=True)
+                    update_patient_data(to_project, i, patient_json=json_obj)
                 except Exception as e:
                     logger.error("%s - error while updating phenotips for %s: %s", e, i.phenotips_id, json_obj)
 

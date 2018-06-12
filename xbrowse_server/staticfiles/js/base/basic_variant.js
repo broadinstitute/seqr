@@ -143,6 +143,7 @@ window.BasicVariantView = Backbone.View.extend({
             this.hbc.igv_view = new IgvView({
               individuals: this.individuals,
               locus: locus,
+              genome_version: this.variant.extras.genome_version || "37",
             });
         }
 

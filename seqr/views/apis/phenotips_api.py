@@ -20,7 +20,6 @@ https://phenotips.org/DevGuide/PermissionsRESTfulAPI
 
 import json
 import logging
-#import pickle
 import re
 import requests
 from requests.auth import HTTPBasicAuth
@@ -33,6 +32,7 @@ from django.http import HttpResponse
 from django.core.exceptions import PermissionDenied, ObjectDoesNotExist
 
 from reference_data.models import HumanPhenotypeOntology
+from seqr.model_utils import update_seqr_model
 from seqr.models import Project, CAN_EDIT, CAN_VIEW, Individual
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.utils.permissions_utils import check_permissions
@@ -56,21 +56,19 @@ DO_NOT_PROXY_URL_KEYWORDS = [
 ]
 
 
-def create_patient(project, patient_eid, patient_json=None):
+def create_patient(project, individual):
     """Create a new PhenoTips patient record with the given patient id.
 
     Args:
-        project (Model): PhenoTips permissions will be set to only allow access from this seqr project.
-        patient_eid (string): external id (eg. "NA12878") to use for the patient. Must be globally unique across all PhenoTips patients.
-        patient_json (dict): optional - phenotips patient record like the object returned by get_patient_data(..).
+        project (Model): seqr Project - used to retrieve PhenoTips credentials
+        individual (Model): seqr Individual
     Raises:
         PhenotipsException: if unable to create patient record
     """
     url = '/bin/PhenoTips/OpenPatientRecord?create=true&eid=%(patient_eid)s' % locals()
+
     auth_tuple = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id)
     _make_api_call('GET', url, auth_tuple=auth_tuple, verbose=False, parse_json_resonse=False)
-
-    #url = '/rest/patients/eid/%(patient_eid)s' % locals()
 
     #data = {}
     #if patient_json is not None:
@@ -79,7 +77,7 @@ def create_patient(project, patient_eid, patient_json=None):
     #auth_tuple = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id)
     #_make_api_call('POST', url, data=data, auth_tuple=auth_tuple, verbose=False, parse_json_resonse=False)
 
-    patient_data = get_patient_data(project, patient_eid, is_external_id=True)
+    patient_data = get_patient_data(project, individual)
     patient_id = patient_data['id']
 
     username, _ = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id)
@@ -92,75 +90,70 @@ def create_patient(project, patient_eid, patient_json=None):
     return patient_data
 
 
-def get_patient_data(project, patient_id, is_external_id=False):
+def get_patient_data(project, individual):
     """Retrieves patient data from PhenoTips and returns a json obj.
 
     Args:
-        project (Model): used to retrieve PhenoTips credentials
-        patient_id (string): PhenoTips patient id (either internal eg. "P000001" or external eg. "NA12878")
-        is_external_id (bool): whether the provided id is an external id
+        project (Model): seqr Project - used to retrieve PhenoTips credentials
+        individual (Model): seqr Individual
     Returns:
         dict: json dictionary containing all PhenoTips information for this patient
     Raises:
         PhenotipsException: if unable to retrieve data from PhenoTips
     """
-
-    if is_external_id:  url = '/rest/patients/eid/%(patient_id)s' % locals()
-    else:               url = '/rest/patients/%(patient_id)s' % locals()
+    url = '/rest/patients/{0}'.format(individual.phenotips_patient_id)
 
     auth_tuple = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id)
     return _make_api_call('GET', url, auth_tuple=auth_tuple, verbose=False)
 
 
-def update_patient_data(project, patient_id, patient_json, is_external_id=False):
+def update_patient_data(project, individual, patient_json):
     """Updates patient data in PhenoTips to the values in patient_json.
 
     Args:
-        project (Model): used to retrieve PhenoTips credentials
-        patient_id (string): PhenoTips patient id (either internal eg. "P000001" or external eg. "NA12878")
+        project (Model): seqr Project - used to retrieve PhenoTips credentials
+        individual (Model): seqr Individual
         patient_json (dict): phenotips patient record like the object returned by get_patient_data(..).
-        is_external_id (bool): whether the provided id is an external id
     Raises:
         PhenotipsException: if api call fails
     """
     if not patient_json:
         raise ValueError("patient_json arg is empty")
 
-    if is_external_id:  url = '/rest/patients/eid/%(patient_id)s' % locals()
-    else:               url = '/rest/patients/%(patient_id)s' % locals()
+    url = '/rest/patients/{0}'.format(individual.phenotips_patient_id)
+    patient_json_string = json.dumps(patient_json)
 
     auth_tuple = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=False)
-    return _make_api_call('PUT', url, data=json.dumps(patient_json), auth_tuple=auth_tuple, expected_status_code=204)
+    result = _make_api_call('PUT', url, data=patient_json_string, auth_tuple=auth_tuple, expected_status_code=204)
+
+    return result
 
 
-def delete_patient(project, patient_id, is_external_id=False):
+def delete_patient(project, individual):
     """Deletes patient from PhenoTips for the given patient_id.
 
     Args:
-        project (Model): used to retrieve PhenoTips credentials
-        patient_id (string): PhenoTips patient id (either internal eg. "P000001" or external eg. "NA12878")
-        is_external_id (bool): whether the provided id is an external id
+        project (Model): seqr Project - used to retrieve PhenoTips credentials
+        individual (Model): seqr Individual
     Raises:
         PhenotipsException: if api call fails
     """
 
-    if is_external_id:  url = '/rest/patients/eid/%(patient_id)s' % locals()
-    else:               url = '/rest/patients/%(patient_id)s' % locals()
+    url = '/rest/patients/{0}'.format(individual.phenotips_patient_id)
 
     auth_tuple = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=False)
     return _make_api_call('DELETE', url, auth_tuple=auth_tuple, expected_status_code=204)
 
 
-def update_patient_field_value(project, patient_id, field_name, field_value, is_external_id=False):
+def update_patient_field_value(project, individual, field_name, field_value):
     """ Utility method for updating one field in the patient record, while keeping other fields
     the same. For field descriptions, see https://phenotips.org/DevGuide/JSONExport1.3
 
     Args:
-        project (Model): used to retrieve PhenoTips credentials
-        patient_id (string): PhenoTips patient id (either internal eg. "P000001" or external eg. "NA12878")
+        project (Model): seqr Project - used to retrieve PhenoTips credentials
+        individual (Model): seqr Individual
         field_name (string): PhenoTips patient field name (eg. "family_history").
         field_value (string or dict): PhenoTips HPO terms.
-        is_external_id (bool): whether the provided patient id is an external id
     Raises:
         PhenotipsException: if api call fails
     """
@@ -172,6 +165,7 @@ def update_patient_field_value(project, patient_id, field_name, field_value, is_
         "date_of_death",
         "disorders",
         "ethnicity",
+        "external_id",
         "family_history",
         "features",
         "genes",
@@ -188,31 +182,29 @@ def update_patient_field_value(project, patient_id, field_name, field_value, is_
     ]):
         raise ValueError("Unexpected field_name: %s" % (field_name, ))
 
-    patient_json = get_patient_data(project, patient_id, is_external_id=is_external_id)
-
+    patient_json = get_patient_data(project, individual)
     patient_json[field_name] = field_value
 
-    update_patient_data(project, patient_id, patient_json, is_external_id=is_external_id)
+    update_patient_data(project, individual, patient_json)
 
 
-def set_patient_hpo_terms(project, patient_id, hpo_terms_present=[], hpo_terms_absent=[], final_diagnosis_mim_ids=[], is_external_id=False):
+def set_patient_hpo_terms(project, individual, hpo_terms_present=[], hpo_terms_absent=[], final_diagnosis_mim_ids=[]):
     """Utility method for specifying a list of HPO IDs for a patient.
 
     Args:
-        project (Model): used to retrieve PhenoTips credentials
-        patient_id (string): PhenoTips patient id (either internal eg. "P000001" or external eg. "NA12878")
+        project (Model): seqr Project - used to retrieve PhenoTips credentials
+        individual (Model): seqr Individual
         hpo_terms_present (list): list of HPO IDs for phenotypes present in this patient (eg. ["HP:00012345", "HP:0012346", ...])
         hpo_terms_absent (list): list of HPO IDs for phenotypes not present in this patient (eg. ["HP:00012345", "HP:0012346", ...])
         final_diagnosis_mim_ids (int): one or more MIM Ids (eg. [105650, ..])
-        is_external_id (bool): whether the provided id is an external id
     Raises:
         PhenotipsException: if api call fails
     """
 
     if hpo_terms_present or hpo_terms_absent:
-        features_value = [{"id": hpo_term, "observed": "yes"} for hpo_term in hpo_terms_present]
-        features_value += [{"id": hpo_term, "observed": "no"} for hpo_term in hpo_terms_absent]
-        update_patient_field_value(project, patient_id, "features", features_value, is_external_id=is_external_id)
+        features_value = [{"id": hpo_term, "observed": "yes", "type": "phenotype"} for hpo_term in hpo_terms_present]
+        features_value += [{"id": hpo_term, "observed": "no", "type": "phenotype"} for hpo_term in hpo_terms_absent]
+        update_patient_field_value(project, individual, "features", features_value)
 
     if final_diagnosis_mim_ids:
         omim_disorders = []
@@ -220,7 +212,11 @@ def set_patient_hpo_terms(project, patient_id, hpo_terms_present=[], hpo_terms_a
             if int(mim_id) < 100000:
                 raise ValueError("Invalid final_diagnosis_mim_id: %s. Expected a 6-digit number." % str(mim_id))
             omim_disorders.append({'id': 'MIM:%s' % mim_id})
-        update_patient_field_value(project, patient_id, "disorders", omim_disorders, is_external_id=is_external_id)
+        update_patient_field_value(project, individual, "disorders", omim_disorders)
+
+    patient_json = get_patient_data(project, individual)
+    _update_individual_phenotips_data(individual, patient_json)
+
 
 
 def add_user_to_patient(username, patient_id, allow_edit=True):
@@ -555,10 +551,11 @@ def _update_individual_phenotips_data(individual, patient_json):
         except ObjectDoesNotExist as e:
             logger.error("ERROR: PhenoTips HPO id %s not found in seqr HumanPhenotypeOntology table." % hpo_id)
 
-    individual.phenotips_data = json.dumps(patient_json)
-    individual.phenotips_patient_id = patient_json['id']  # phenotips internal id
-    individual.phenotips_eid = patient_json.get('external_id')  # phenotips external id
-    individual.save()
+    update_seqr_model(
+        individual,
+        phenotips_data = json.dumps(patient_json),
+        phenotips_patient_id = patient_json['id'],        # phenotips internal id
+        phenotips_eid = patient_json.get('external_id'))  # phenotips external id
 
 
 def _get_phenotips_uname_and_pwd_for_project(phenotips_user_id, read_only=False):
