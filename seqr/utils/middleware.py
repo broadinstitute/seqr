@@ -5,7 +5,8 @@ import settings, traceback
 
 class JsonErrorMiddleware(MiddlewareMixin):
 
-    def process_exception(self, request, exception):
+    @staticmethod
+    def process_exception(request, exception):
         if request.path.startswith('/api'):
             exception_json = {'message': exception.message}
             if settings.DEBUG:
