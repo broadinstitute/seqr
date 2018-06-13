@@ -412,14 +412,14 @@ class ElasticsearchDatastore(datastore.Datastore):
         start = time.time()
 
         s = s.params(size=settings.VARIANT_QUERY_RESULTS_LIMIT + 1)
-        if not include_all_consequences:
-            s = s.source(exclude=["sortedTranscriptConsequences"])
+        #if not include_all_consequences:
+        #    s = s.source(exclude=["sortedTranscriptConsequences"])
         response = s.execute()
         logger.info("=====")
 
         logger.info("TOTAL: %s. Query took %s seconds" % (response.hits.total, time.time() - start))
 
-        if response.hits.total > settings.VARIANT_QUERY_RESULTS_LIMIT+15000:
+        if response.hits.total > settings.VARIANT_QUERY_RESULTS_LIMIT + 1:
             raise Exception("this search exceeded the variant result size limit. Please set additional filters and try again.")
 
         #print(pformat(response.to_dict()))
@@ -456,12 +456,12 @@ class ElasticsearchDatastore(datastore.Datastore):
                     raise ValueError("Invalid num_alt: " + str(num_alt))
 
                 genotypes[individual_id] = {
-                    'ab': hit["%s_ab" % encoded_individual_id] if ("%s_ab" % encoded_individual_id) in hit else '',
+                    'ab': hit["%s_ab" % encoded_individual_id] if ("%s_ab" % encoded_individual_id) in hit else None,
                     'alleles': map(str, alleles),
                     'extras': {
-                        'ad': hit["%s_ab" % encoded_individual_id]  if ("%s_ad" % encoded_individual_id) in hit else '',
-                        'dp': hit["%s_dp" % encoded_individual_id]  if ("%s_dp" % encoded_individual_id) in hit else '',
-                        'pl': '',
+                        'ad': hit["%s_ab" % encoded_individual_id]  if ("%s_ad" % encoded_individual_id) in hit else None,
+                        'dp': hit["%s_dp" % encoded_individual_id]  if ("%s_dp" % encoded_individual_id) in hit else None,
+                        #'pl': '',
                     },
                     'filter': filters or "pass",
                     'gq': hit["%s_gq" % encoded_individual_id] if ("%s_gq" % encoded_individual_id in hit and hit["%s_gq" % encoded_individual_id] is not None) else '',
@@ -588,7 +588,8 @@ class ElasticsearchDatastore(datastore.Datastore):
                     'grch37_coords': grch37_coord,
                     'grch38_coords': grch38_coord,
                     'alt_allele_pos': 0,
-                    'orig_alt_alleles': map(str, [a.split("-")[-1] for a in hit["originalAltAlleles"]]) if "originalAltAlleles" in hit else []},
+                    'orig_alt_alleles': map(str, [a.split("-")[-1] for a in hit["originalAltAlleles"]]) if "originalAltAlleles" in hit else None
+                },
                 'genotypes': genotypes,
                 'pos': long(hit['start']),
                 'pos_end': str(hit['end']),
