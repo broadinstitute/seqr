@@ -604,6 +604,10 @@ class ElasticsearchDatastore(datastore.Datastore):
             result["annotation"]["pop_counts"] = result["pop_counts"]
             result["annotation"]["db"] = "elasticsearch"
 
+            result["extras"]["svlen"] = hit["SVLEN"] if "SVLEN" in hit else None
+            result["extras"]["svtype"] = hit["SVTYPE"] if "SVTYPE" in hit else None
+
+
             logger.info("Result %s: GRCh37: %s GRCh38: %s:,  cadd: %s  %s - gene ids: %s, coding gene_ids: %s" % (
                 i, grch37_coord, grch38_coord,
                 hit["cadd_PHRED"] if "cadd_PHRED" in hit else "",
