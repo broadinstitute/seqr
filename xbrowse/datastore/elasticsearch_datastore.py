@@ -2,6 +2,7 @@
 import copy
 import json
 import logging
+import redis
 import sys
 
 from xbrowse.core.constants import GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38, ANNOTATION_GROUPS_MAP, \
@@ -119,10 +120,13 @@ class ElasticsearchDatastore(datastore.Datastore):
         self.liftover_grch38_to_grch37 = None
         self.liftover_grch37_to_grch38 = None
 
-        self._results_cache = {}
         self._annotator = annotator
 
         self._es_client = elasticsearch.Elasticsearch(host=settings.ELASTICSEARCH_SERVICE_HOSTNAME)
+
+        self._redis_client = None
+        if settings.REDIS_SERVICE_HOSTNAME:
+            self._redis_client = redis.StrictRedis(host=settings.REDIS_SERVICE_HOSTNAME)
 
     def get_elasticsearch_variants(
             self,
@@ -145,9 +149,9 @@ class ElasticsearchDatastore(datastore.Datastore):
                 indivs_to_consider = []
 
         if family_id is not None:
-            family_individual_ids = [i.indiv_id for i in Individual.objects.filter(family__family_id=family_id)]
+            family_individual_ids = [i.indiv_id for i in Individual.objects.filter(family__family_id=family_id).only("indiv_id")]
         else:
-            family_individual_ids = [i.indiv_id for i in Individual.objects.filter(family__project__project_id=project_id)]
+            family_individual_ids = [i.indiv_id for i in Individual.objects.filter(family__project__project_id=project_id).only("indiv_id")]
 
         from xbrowse_server.base.models import Project, Family
         from pyliftover import LiftOver
@@ -425,7 +429,7 @@ class ElasticsearchDatastore(datastore.Datastore):
 
         logger.info("TOTAL: %s. Query took %s seconds" % (response.hits.total, time.time() - start))
 
-        if response.hits.total > settings.VARIANT_QUERY_RESULTS_LIMIT+15000:
+        if response.hits.total > settings.VARIANT_QUERY_RESULTS_LIMIT + 1:
             raise Exception("this search exceeded the variant result size limit. Please set additional filters and try again.")
 
         #print(pformat(response.to_dict()))
@@ -462,12 +466,12 @@ class ElasticsearchDatastore(datastore.Datastore):
                     raise ValueError("Invalid num_alt: " + str(num_alt))
 
                 genotypes[individual_id] = {
-                    'ab': hit["%s_ab" % encoded_individual_id] if ("%s_ab" % encoded_individual_id) in hit else '',
+                    'ab': hit["%s_ab" % encoded_individual_id] if ("%s_ab" % encoded_individual_id) in hit else None,
                     'alleles': map(str, alleles),
                     'extras': {
-                        'ad': hit["%s_ab" % encoded_individual_id]  if ("%s_ad" % encoded_individual_id) in hit else '',
-                        'dp': hit["%s_dp" % encoded_individual_id]  if ("%s_dp" % encoded_individual_id) in hit else '',
-                        'pl': '',
+                        'ad': hit["%s_ab" % encoded_individual_id]  if ("%s_ad" % encoded_individual_id) in hit else None,
+                        'dp': hit["%s_dp" % encoded_individual_id]  if ("%s_dp" % encoded_individual_id) in hit else None,
+                        #'pl': '',
                     },
                     'filter': filters or "pass",
                     'gq': hit["%s_gq" % encoded_individual_id] if ("%s_gq" % encoded_individual_id in hit and hit["%s_gq" % encoded_individual_id] is not None) else '',
@@ -594,7 +598,8 @@ class ElasticsearchDatastore(datastore.Datastore):
                     'grch37_coords': grch37_coord,
                     'grch38_coords': grch38_coord,
                     'alt_allele_pos': 0,
-                    'orig_alt_alleles': map(str, [a.split("-")[-1] for a in hit["originalAltAlleles"]]) if "originalAltAlleles" in hit else []},
+                    'orig_alt_alleles': map(str, [a.split("-")[-1] for a in hit["originalAltAlleles"]]) if "originalAltAlleles" in hit else None
+                },
                 'genotypes': genotypes,
                 'pos': long(hit['start']),
                 'pos_end': str(hit['end']),
@@ -608,6 +613,10 @@ class ElasticsearchDatastore(datastore.Datastore):
             result["annotation"]["freqs"] = result["db_freqs"]
             result["annotation"]["pop_counts"] = result["pop_counts"]
             result["annotation"]["db"] = "elasticsearch"
+
+            result["extras"]["svlen"] = hit["SVLEN"] if "SVLEN" in hit else None
+            result["extras"]["svtype"] = hit["SVTYPE"] if "SVTYPE" in hit else None
+
 
             logger.info("Result %s: GRCh37: %s GRCh38: %s:,  cadd: %s  %s - gene ids: %s, coding gene_ids: %s" % (
                 i, grch37_coord, grch38_coord,
@@ -692,11 +701,13 @@ class ElasticsearchDatastore(datastore.Datastore):
         variant_id = "%s-%s-%s-%s" % (chrom, pos, ref, alt)
 
         cache_key = (project_id, family_id, xpos, ref, alt)
-        if cache_key in self._results_cache:
-            results = self._results_cache[cache_key]
+        cached_results = self._redis_client and self._redis_client.get(cache_key)
+        if cached_results is not None:
+            results = [Variant.fromJSON(v) if v else None for v in json.loads(cached_results)]
         else:
             results = list(self.get_elasticsearch_variants(project_id, family_id=family_id, variant_id_filter=[variant_id], user=user, include_all_consequences=True))
-            self._results_cache[cache_key] = results
+            if self._redis_client:
+                self._redis_client.set(cache_key, json.dumps([r.toJSON() if r else None for r in results]))
 
         if not results:
             return None
@@ -721,8 +732,9 @@ class ElasticsearchDatastore(datastore.Datastore):
             variant_ids.append("%s-%s-%s-%s" % (chrom, pos, ref, alt))
 
         cache_key = (project_id, family_id, tuple(xpos_ref_alt_tuples))
-        if cache_key in self._results_cache:
-            results = self._results_cache[cache_key]
+        cached_results = self._redis_client and self._redis_client.get(cache_key)
+        if cached_results is not None:
+            results = [Variant.fromJSON(v) if v else None for v in json.loads(cached_results)]
         else:
             results = list(self.get_elasticsearch_variants(project_id, family_id=family_id, variant_id_filter=variant_ids, user=user))
             # make sure all variants in xpos_ref_alt_tuples were retrieved and are in the same order.
@@ -735,7 +747,8 @@ class ElasticsearchDatastore(datastore.Datastore):
             # xpos-ref-alt's that weren't found in the elasticsearch index
             results = [results_by_xpos_ref_alt.get(t) for t in xpos_ref_alt_tuples]
 
-            self._results_cache[cache_key] = results
+            if self._redis_client:
+                self._redis_client.set(cache_key, json.dumps([r.toJSON() if r else None for r in results]))
 
         return results
 

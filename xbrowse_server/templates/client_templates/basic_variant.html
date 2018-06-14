@@ -279,8 +279,15 @@
                 <% } %>
 
                 <% var variantSearchLinks = utils.getVariantSearchLinks(variant); %>
-                <sup><a target="_blank" href="<%= variantSearchLinks['google'] %>">google</a> | <a target="_blank" href="<%= variantSearchLinks['pubmed'] %>">pubmed</a></sup>
-            <% } %>
+                    <sup><a target="_blank" href="<%= variantSearchLinks['google'] %>">google</a> | <a target="_blank" href="<%= variantSearchLinks['pubmed'] %>">pubmed</a></sup>
+                <% } %>
+                <% if (variant.extras && variant.extras.svtype) { %>
+                    <br /><br />
+                    <span>VARIANT TYPE</span><br />
+                     <%= variant.extras.svtype.replace("INS", "Insertion").replace("DEL", "Deletion") %> (<%= Math.abs(variant.extras.svlen) %>bp)<br/>
+                <% } %>
+
+
         </div>
 
         <div class="cell predictions">
@@ -389,11 +396,30 @@
                         var grch38Region = grch38VariantIdSplit[0] + "-" + (grch38Pos - 100) + "-" + (grch38Pos + 100);
                     }
                     var freqTooltipText = 'Allele Counts <table>' +
-                        '<tr><td>this callset</td><td>AC=' + popCounts["AC"] + ', </td><td>AN=' + popCounts["AN"] + '</td></tr>' +
-                        '<tr><td>1kg WGS</td><td>AC=' + popCounts["1kg_AC"] + ', </td><td>AN=' + popCounts["1kg_AN"] + '</td></tr>' +
-                        '<tr><td>gnomad exomes</td><td>AC=' + popCounts["gnomad_exomes_AC"] + ', </td><td>AN=' + popCounts["gnomad_exomes_AN"] + '</td></tr>' +
-                        '<tr><td>gnomad genomes</td><td>AC=' + popCounts["gnomad_genomes_AC"] + ', </td><td>AN=' + popCounts["gnomad_genomes_AN"] + '</td></tr>' +
-                        (variant.extras.genome_version == "38" ? '<tr><td>topmed</td><td>AC=' + popCounts["topmed_AC"] + ', </td><td>AN=' + popCounts["topmed_AN"] + '</td></tr></table>' : '');
+                        '<tr>'+
+                            '<td>this callset</td>'+
+                            '<td>AC=' + popCounts["AC"] + ', </td>'+
+                            '<td>AN=' + (popCounts["AN"] != null ? popCounts["AN"] : "?") + '</td>'+
+                        '</tr>'+
+                        '<tr>'+
+                            '<td>1kg WGS</td>'+
+                            '<td>AC=' + popCounts["1kg_AC"] + ', </td>'+
+                            '<td>AN=' + (popCounts["1kg_AN"] != null ? popCounts["1kg_AN"] : "?") + '</td>'+
+                        '</tr>'+
+                        '<tr>'+
+                            '<td>gnomad exomes</td>'+
+                            '<td>AC=' + popCounts["gnomad_exomes_AC"] + ', </td>'+
+                            '<td>AN=' + (popCounts["gnomad_exomes_AN"] != null ? popCounts["gnomad_exomes_AN"] : "?") + '</td>'+
+                         '</tr>' +
+                        '<tr>'+
+                            '<td>gnomad genomes</td>'+
+                            '<td>AC=' + popCounts["gnomad_genomes_AC"] + ', </td>'+
+                            '<td>AN=' + popCounts["gnomad_genomes_AN"] + '</td>'+
+                        '</tr>' +
+                        (variant.extras.genome_version == "38" ? ('<tr>'+
+                            '<td>topmed</td><td>AC=' + popCounts["topmed_AC"] + ', </td>'+
+                            '<td>AN=' + (popCounts["topmed_AN"] != null ? popCounts["topmed_AN"] : "?") + '</td>'+
+                        '</tr></table>') : '');
 
                 } else {
                     var g1kAF = freqs["1kg_wgs_phase3_popmax"] || freqs["1kg_wgs_phase3"];
@@ -533,9 +559,12 @@
                                 <span class="other-allele">no call</span>
                             <% } %><br>
                             <span class="gq">
-                                <% if(genotype) {
-                                    print(genotype.gq + (genotype.filter == "pass" ? "" : (", filter: " + genotype.filter)));
-                                } %>
+                                <% if(genotype) { %>
+                                    <%= genotype.gq %>
+                                    <% if (genotype.filter != "pass") { %>
+                                        <br />filter: <%= genotype.filter %>
+                                    <% } %>
+                                <% } %>
                             </span>
                         </div>
                         <% if(genotype && genotype.extras && genotype.extras.cnvs)  {
