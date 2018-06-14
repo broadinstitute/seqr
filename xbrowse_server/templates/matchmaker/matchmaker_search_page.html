@@ -12,6 +12,9 @@
 <!--  tables -->
 <script src="https://cdn.datatables.net/1.10.10/js/jquery.dataTables.min.js"></script>
 <link rel="stylesheet" href="https://cdn.datatables.net/1.10.10/css/jquery.dataTables.min.css"/>
+<!--  font awesome -->
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.0.13/css/all.css" integrity="sha384-DNOHZ68U8hZfKXOrtjWvjxusGo9WQnrNx2sqG0tfsghAvtVlRW3tvkXWZh58N9jp" crossorigin="anonymous">
+
 <script>
 $(document).ready(
 		function(){
@@ -840,6 +843,26 @@ function addAdditionalContactName(){
 }
 
 /**
+ * Listens and updates the MME submission with regards to how much variant data to share
+ */
+function limitSharingOfVariantData(divId){
+	var lockedIcon='<a href="javascript:limitSharingOfVariantData();">&nbsp&nbsp<i class="fas fa-lock fa-lg" aria-hidden="true"></i></a>';
+	var unlockedIcon='<a href="javascript:limitSharingOfVariantData();">&nbsp&nbsp<i class="fas fa-lock-open fa-lg" aria-hidden="true"></i></a>';
+	var currState = document.getElementById(divId).className;
+	$('#'+divId).empty();
+	
+	if (currState == 'open'){
+		$('#'+divId).append(lockedIcon);	
+		$('#'+divId).removeClass('open').addClass('closed');
+	}
+	else{
+		$('#'+divId).append(unlockedIcon);
+		$('#'+divId).removeClass('closed').addClass('open');
+	}
+	return;
+}
+
+/**
  * Add new contact to contact name data structure. This gets triggered when user hits "save" button on dynamic text field
  */
 function updateWithNewContactName(divName,dynamicTextContainerName,updateTarget,localContactName){
@@ -1153,6 +1176,7 @@ function showMMECandidates(result){
 	 	html += '<th>Gene symbol</th>';
 	 	html += '<th>Assembly</th>';
 	 	html += '<th>Variant</th>';
+	 	html += '<th></th>';
 	 	html += '<th>Zygosity</th>';
 	 	html += '<th><i>seqr</i> Tag name</th>';
 	 	html += '<th>Submit</th>';	
@@ -1186,6 +1210,9 @@ function showMMECandidates(result){
 		 		html += '&nbsp>&nbsp';
 		 		html += patient['genomicFeatures'][k]['variant']['alternateBases'];
 		 		html += '</p></td>';
+		 		
+		 		var limitSharingDivId='limit-variant-icon-' + k.toString();
+		 		html += '<td id="' + limitSharingDivId + '" class="open"><a href="javascript:limitSharingOfVariantData('+"'"+limitSharingDivId+ "'" +');">&nbsp&nbsp<i class="fas fa-lock-open fa-lg" aria-hidden="true"></i></a></td>';
 		 		
 		 		singlePatientGenotypeInfo += ',' + patient['genomicFeatures'][k]['variant']['referenceName'];
 		 		singlePatientGenotypeInfo += ',' + patient['genomicFeatures'][k]['variant']['start'] ;
