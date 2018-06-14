@@ -54,7 +54,7 @@ MetadataField.propTypes = {
 }
 
 
-const TagFieldView = ({ initialValues, field, tagOptions, popupContent, tagAnnotation, editMetadata, hiddenTags = [], ...props }) => {
+const TagFieldView = ({ initialValues, field, tagOptions, popup, tagAnnotation, editMetadata, hiddenTags = [], ...props }) => {
   const fieldValues = initialValues[field]
 
   tagOptions = tagOptions.map((tag, i) => {
@@ -100,13 +100,7 @@ const TagFieldView = ({ initialValues, field, tagOptions, popupContent, tagAnnot
           return (
             <span key={tag.name}>
               <HorizontalSpacer width={5} />
-              {popupContent ? <Popup
-                position="top center"
-                size="tiny"
-                trigger={label}
-                header="Tagged by"
-                content={popupContent(tag)}
-              /> : label}
+              {popup ? popup(tag)(label) : label}
               {tagAnnotation && tagAnnotation(tag)}
             </span>
           )
@@ -124,7 +118,7 @@ TagFieldView.propTypes = {
   tagOptions: PropTypes.array.isRequired,
   onSubmit: PropTypes.func.isRequired,
   editMetadata: PropTypes.bool,
-  popupContent: PropTypes.func,
+  popup: PropTypes.func,
   tagAnnotation: PropTypes.func,
   hiddenTags: PropTypes.array,
 }

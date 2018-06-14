@@ -140,7 +140,7 @@ class SavedVariants extends React.Component {
                 submitOnChange
                 fields={filterFields}
               />
-              <HorizontalSpacer width={20} />
+              <HorizontalSpacer width={10} />
               <ExportTableButton downloads={exports} />
             </InlineFormColumn>
           </Grid.Row>

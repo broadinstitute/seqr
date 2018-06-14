@@ -167,7 +167,7 @@ const VariantFamily = ({ variant, project, family, individualsByGuid }) => {
               hoverable
               wide="very"
               position="top left"
-              trigger={<a><Icon name="info circle" /></a>}
+              trigger={<a><Icon name="file powerpoint outline" /></a>}
               content={
                 <PhenotipsDataPanel individual={individual} showDetails showEditPhenotipsLink={false} showViewPhenotipsLink={false} />
               }
