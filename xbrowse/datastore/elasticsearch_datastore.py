@@ -694,10 +694,10 @@ class ElasticsearchDatastore(datastore.Datastore):
         cache_key = (project_id, family_id, xpos, ref, alt)
         cached_results = self._redis_client.get(cache_key)
         if cached_results is not None:
-            results = json.loads(cached_results)
+            results = [Variant.fromJSON(v) for v in json.loads(cached_results)]
         else:
             results = list(self.get_elasticsearch_variants(project_id, family_id=family_id, variant_id_filter=[variant_id], include_all_consequences=True))
-            self._redis_client.set(cache_key, results)
+            self._redis_client.set(cache_key, [r.toJSON() for r in results])
 
         if not results:
             return None
@@ -724,7 +724,7 @@ class ElasticsearchDatastore(datastore.Datastore):
         cache_key = (project_id, family_id, tuple(xpos_ref_alt_tuples))
         cached_results = self._redis_client.get(cache_key)
         if cached_results is not None:
-            results = json.loads(cached_results)
+            results = [Variant.fromJSON(v) for v in json.loads(cached_results)]
         else:
             results = list(self.get_elasticsearch_variants(project_id, family_id=family_id, variant_id_filter=variant_ids))
             # make sure all variants in xpos_ref_alt_tuples were retrieved and are in the same order.
@@ -737,7 +737,7 @@ class ElasticsearchDatastore(datastore.Datastore):
             # xpos-ref-alt's that weren't found in the elasticsearch index
             results = [results_by_xpos_ref_alt.get(t) for t in xpos_ref_alt_tuples]
 
-            self._redis_client.set(cache_key, results)
+            self._redis_client.set(cache_key, [r.toJSON() for r in results])
 
         return results
 
