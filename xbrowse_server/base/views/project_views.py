@@ -235,7 +235,7 @@ def project_individuals(request, project_id):
           i.case_review_status AS case_review_status,
           f.family_name AS family_name,
           ({loaded_vcfs_subquery}) AS has_variant_data,
-          i.bam_file_path IS NULL AS has_read_data
+          i.bam_file_path IS NOT NULL AS has_read_data
         FROM base_individual AS i
           JOIN base_family AS f ON i.family_id=f.id
         WHERE f.project_id=%s
