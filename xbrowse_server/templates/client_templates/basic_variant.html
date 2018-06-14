@@ -279,8 +279,15 @@
                 <% } %>
 
                 <% var variantSearchLinks = utils.getVariantSearchLinks(variant); %>
-                <sup><a target="_blank" href="<%= variantSearchLinks['google'] %>">google</a> | <a target="_blank" href="<%= variantSearchLinks['pubmed'] %>">pubmed</a></sup>
-            <% } %>
+                    <sup><a target="_blank" href="<%= variantSearchLinks['google'] %>">google</a> | <a target="_blank" href="<%= variantSearchLinks['pubmed'] %>">pubmed</a></sup>
+                <% } %>
+                <% if (variant.extras && variant.extras.svtype) { %>
+                    <br /><br />
+                    <span>VARIANT TYPE</span><br />
+                     <%= variant.extras.svtype.replace("INS", "Insertion").replace("DEL", "Deletion") %> (<%= Math.abs(variant.extras.svlen) %>bp)<br/>
+                <% } %>
+
+
         </div>
 
         <div class="cell predictions">
