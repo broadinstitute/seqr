@@ -846,16 +846,16 @@ function addAdditionalContactName(){
  * Listens and updates the MME submission with regards to how much variant data to share
  */
 function limitSharingOfVariantData(divId){
-	var lockedIcon='<a href="javascript:limitSharingOfVariantData();">&nbsp&nbsp<i class="fas fa-lock fa-lg" aria-hidden="true"></i></a>';
-	var unlockedIcon='<a href="javascript:limitSharingOfVariantData();">&nbsp&nbsp<i class="fas fa-lock-open fa-lg" aria-hidden="true"></i></a>';
-	var currState = document.getElementById(divId).className;
-	$('#'+divId).empty();
+	var lockedIcon='<a href="javascript:limitSharingOfVariantData('+"'"+divId+ "'" +');">&nbsp&nbsp<i class="fas fa-lock fa-lg" aria-hidden="true"></i></a>';
+	var unlockedIcon='<a href="javascript:limitSharingOfVariantData('+"'"+divId+ "'" +');">&nbsp&nbsp<i class="fas fa-lock-open fa-lg" aria-hidden="true"></i></a>';
 	
-	if (currState == 'open'){
+	if ($('#'+divId).hasClass('open')){
+		$('#'+divId).empty();
 		$('#'+divId).append(lockedIcon);	
 		$('#'+divId).removeClass('open').addClass('closed');
 	}
 	else{
+		$('#'+divId).empty();
 		$('#'+divId).append(unlockedIcon);
 		$('#'+divId).removeClass('closed').addClass('open');
 	}
