@@ -2,6 +2,7 @@
 import copy
 import json
 import logging
+import redis
 import sys
 
 from xbrowse.core.constants import GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38, ANNOTATION_GROUPS_MAP, \
@@ -119,10 +120,10 @@ class ElasticsearchDatastore(datastore.Datastore):
         self.liftover_grch38_to_grch37 = None
         self.liftover_grch37_to_grch38 = None
 
-        self._results_cache = {}
         self._annotator = annotator
 
         self._es_client = elasticsearch.Elasticsearch(host=settings.ELASTICSEARCH_SERVICE_HOSTNAME)
+        self._redis_client = redis.StrictRedis(host=settings.REDIS_SERVICE_HOSTNAME)
 
     def get_elasticsearch_variants(
             self,
@@ -145,9 +146,9 @@ class ElasticsearchDatastore(datastore.Datastore):
                 indivs_to_consider = []
 
         if family_id is not None:
-            family_individual_ids = [i.indiv_id for i in Individual.objects.filter(family__family_id=family_id)]
+            family_individual_ids = [i.indiv_id for i in Individual.objects.filter(family__family_id=family_id).only("indiv_id")]
         else:
-            family_individual_ids = [i.indiv_id for i in Individual.objects.filter(family__project__project_id=project_id)]
+            family_individual_ids = [i.indiv_id for i in Individual.objects.filter(family__project__project_id=project_id).only("indiv_id")]
 
         from xbrowse_server.base.models import Project, Family
         from pyliftover import LiftOver
@@ -691,11 +692,12 @@ class ElasticsearchDatastore(datastore.Datastore):
         variant_id = "%s-%s-%s-%s" % (chrom, pos, ref, alt)
 
         cache_key = (project_id, family_id, xpos, ref, alt)
-        if cache_key in self._results_cache:
-            results = self._results_cache[cache_key]
+        cached_results = self._redis_client.get(cache_key)
+        if cached_results is not None:
+            results = json.loads(cached_results)
         else:
             results = list(self.get_elasticsearch_variants(project_id, family_id=family_id, variant_id_filter=[variant_id], include_all_consequences=True))
-            self._results_cache[cache_key] = results
+            self._redis_client.set(cache_key, results)
 
         if not results:
             return None
@@ -720,8 +722,9 @@ class ElasticsearchDatastore(datastore.Datastore):
             variant_ids.append("%s-%s-%s-%s" % (chrom, pos, ref, alt))
 
         cache_key = (project_id, family_id, tuple(xpos_ref_alt_tuples))
-        if cache_key in self._results_cache:
-            results = self._results_cache[cache_key]
+        cached_results = self._redis_client.get(cache_key)
+        if cached_results is not None:
+            results = json.loads(cached_results)
         else:
             results = list(self.get_elasticsearch_variants(project_id, family_id=family_id, variant_id_filter=variant_ids))
             # make sure all variants in xpos_ref_alt_tuples were retrieved and are in the same order.
@@ -734,7 +737,7 @@ class ElasticsearchDatastore(datastore.Datastore):
             # xpos-ref-alt's that weren't found in the elasticsearch index
             results = [results_by_xpos_ref_alt.get(t) for t in xpos_ref_alt_tuples]
 
-            self._results_cache[cache_key] = results
+            self._redis_client.set(cache_key, results)
 
         return results
 
