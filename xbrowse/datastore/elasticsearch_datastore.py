@@ -697,7 +697,7 @@ class ElasticsearchDatastore(datastore.Datastore):
             results = [Variant.fromJSON(v) for v in json.loads(cached_results)]
         else:
             results = list(self.get_elasticsearch_variants(project_id, family_id=family_id, variant_id_filter=[variant_id], include_all_consequences=True))
-            self._redis_client.set(cache_key, [r.toJSON() for r in results])
+            self._redis_client.set(cache_key, json.dumps([r.toJSON() for r in results]))
 
         if not results:
             return None
@@ -737,7 +737,7 @@ class ElasticsearchDatastore(datastore.Datastore):
             # xpos-ref-alt's that weren't found in the elasticsearch index
             results = [results_by_xpos_ref_alt.get(t) for t in xpos_ref_alt_tuples]
 
-            self._redis_client.set(cache_key, [r.toJSON() for r in results])
+            self._redis_client.set(cache_key, json.dumps([r.toJSON() for r in results]))
 
         return results
 
