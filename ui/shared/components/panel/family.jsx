@@ -81,6 +81,7 @@ const Family = ({ project, family, fields = [], showSearchLinks, useFullWidth, d
       </Grid.Column>
       {showSearchLinks &&
         <Grid.Column width={3}>
+          <b>Saved Variants:</b>
           <VariantTagTypeBar height={15} project={project} familyGuid={family.familyGuid} />
           <VerticalSpacer height={20} />
           <a href={`/project/${project.deprecatedProjectId}/family/${family.familyId}`}>

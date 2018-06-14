@@ -8,6 +8,7 @@ const VariantTagTypeBar = ({ project, familyGuid, ...props }) =>
   <HorizontalStackedBar
     {...props}
     minPercent={0.1}
+    showPercent={false}
     title={`Saved ${familyGuid ? 'Family ' : ''}Variants`}
     noDataMessage="No Saved Variants"
     linkPath={`/project/${project.projectGuid}/saved_variants${familyGuid ? `/family/${familyGuid}` : ''}`}
