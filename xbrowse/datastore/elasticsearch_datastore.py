@@ -127,6 +127,7 @@ class ElasticsearchDatastore(datastore.Datastore):
         self._redis_client = None
         if settings.REDIS_SERVICE_HOSTNAME:
             self._redis_client = redis.StrictRedis(host=settings.REDIS_SERVICE_HOSTNAME)
+            logger.info("Redis config: " + str(self._redis_client.config_get('*')))
             self._redis_client.config_set('maxmemory', '2500mb')
             self._redis_client.config_set('maxmemory-policy', 'allkeys-lru')
 
