@@ -849,7 +849,7 @@ function limitSharingOfVariantData(divId,genotypeSeriesId){
 	var lockedIcon='<a href="javascript:limitSharingOfVariantData('+"'"+divId+ "'" +');">&nbsp&nbsp<i class="fas fa-lock fa-lg" aria-hidden="true"></i></a>';
 	var unlockedIcon='<a href="javascript:limitSharingOfVariantData('+"'"+divId+ "'" +');">&nbsp&nbsp<i class="fas fa-lock-open fa-lg" aria-hidden="true"></i></a>';
 	var limit_sharing_of_variant_level_data = JSON.parse(sessionStorage.limit_sharing_of_variant_level_data);
-	
+
 	if ($('#'+divId).hasClass('open')){
 		$('#'+divId).empty();
 		$('#'+divId).append(lockedIcon);	
@@ -1281,7 +1281,8 @@ function isValidHpoTerm(term){
  */
 function showDataToBeSubmitted(){
 	var patient = JSON.parse(sessionStorage.patient);
-	var genotypes_to_submit = JSON.parse(sessionStorage.genotypes_to_submit);	
+	var genotypes_to_submit = JSON.parse(sessionStorage.genotypes_to_submit);
+	var variants_to_limit_sharing = JSON.parse(sessionStorage.limit_sharing_of_variant_level_data);
 	var phenotypes_to_submit = {};
 	var temp=JSON.parse(sessionStorage.phenotypes_to_submit);
 	for (var i in temp){
