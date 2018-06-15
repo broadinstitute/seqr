@@ -142,6 +142,22 @@ class ElasticsearchDatastore(datastore.Datastore):
         from xbrowse_server.base.models import Individual
         from xbrowse_server.mall import get_reference
 
+        cache_key = json.dumps([
+            project_id,
+            family_id,
+            variant_filter.toJSON() if variant_filter else None,
+            genotype_filter,
+            quality_filter,
+            variant_id_filter,
+            indivs_to_consider,
+            include_all_consequences,
+        ])
+
+        cached_results = self._redis_client and self._redis_client.get(cache_key)
+        if cached_results is not None:
+            return json.loads(cached_results)
+
+
         if indivs_to_consider is None:
             if genotype_filter:
                 indivs_to_consider = genotype_filter.keys()
@@ -435,6 +451,7 @@ class ElasticsearchDatastore(datastore.Datastore):
         reference = get_reference()
 
         #for i, hit in enumerate(response.hits):
+        variant_results = []
         for i, hit in enumerate(s.scan()):  # preserve_order=True
             #logger.info("HIT %s: %s %s %s" % (i, hit["variantId"], hit["geneIds"], pformat(hit.__dict__)))
             #print("HIT %s: %s" % (i, pformat(hit.to_dict())))
@@ -619,35 +636,34 @@ class ElasticsearchDatastore(datastore.Datastore):
                 result["gene_ids"],
                 result["coding_gene_ids"]))
 
-            variant = Variant.fromJSON(result)
-            variant.set_extra('project_id', project_id)
-            variant.set_extra('family_id', family_id)
+            result["extras"]["project_id"] = project_id
+            result["extras"]["family_id"] = family_id
 
             # add gene info
             gene_names = {}
             if vep_annotation is not None:
                 gene_names = {vep_anno["gene_id"]: vep_anno.get("gene_symbol") for vep_anno in vep_annotation if vep_anno.get("gene_symbol")}
-            variant.set_extra('gene_names', gene_names)
+
+            result["extras"]["gene_names"] = gene_names
 
             try:
                 genes = {}
-                for gene_id in variant.coding_gene_ids:
+                for gene_id in result["coding_gene_ids"]:
                     if gene_id:
                         genes[gene_id] = reference.get_gene_summary(gene_id)
 
                 if not genes:
-                    for gene_id in variant.gene_ids:
+                    for gene_id in result["gene_ids"]:
                         if gene_id:
                             genes[gene_id] = reference.get_gene_summary(gene_id)
 
                 #if not genes:
                 #    genes =  {vep_anno["gene_id"]: {"symbol": vep_anno["gene_symbol"]} for vep_anno in vep_annotation}
 
-                variant.set_extra('genes', genes)
+                result["extras"]["genes"] = genes
             except Exception as e:
                 exc_type, exc_obj, exc_tb = sys.exc_info()
                 logger.warn("WARNING: got unexpected error in add_gene_names_to_variants: %s : line %s" % (e, exc_tb.tb_lineno))
-
 
             #add_disease_genes_to_variants(gene_list_map, [variant])
             #add_gene_databases_to_variants([variant])
@@ -662,12 +678,17 @@ class ElasticsearchDatastore(datastore.Datastore):
             #        variant.set_extra('family_tags', [t.toJSON() for t in tags])
             #    except Exception, e:
             #        print("WARNING: got unexpected error in add_notes_to_variants_family for family %s %s" % (family, e))
-            yield variant
+            variant_results.append(result)
 
         logger.info("Finished returning the %s variants: %s seconds" % (response.hits.total, time.time() - start))
 
+        if self._redis_client:
+            self._redis_client.set(cache_key, json.dumps(variant_results))
+
+        return [Variant.fromJSON(variant_json) for variant_json in variant_results]
+
     def get_variants(self, project_id, family_id, genotype_filter=None, variant_filter=None, quality_filter=None, indivs_to_consider=None, user=None):
-        for i, variant in enumerate(self.get_elasticsearch_variants(
+        for variant in self.get_elasticsearch_variants(
                 project_id,
                 family_id,
                 variant_filter=variant_filter,
@@ -675,7 +696,8 @@ class ElasticsearchDatastore(datastore.Datastore):
                 quality_filter=quality_filter,
                 indivs_to_consider=indivs_to_consider,
                 user=user,
-        )):
+        ):
+
             yield variant
 
     def get_variants_in_gene(self, project_id, family_id, gene_id, genotype_filter=None, variant_filter=None):
@@ -694,14 +716,14 @@ class ElasticsearchDatastore(datastore.Datastore):
 
         variant_id = "%s-%s-%s-%s" % (chrom, pos, ref, alt)
 
-        cache_key = (project_id, family_id, xpos, ref, alt)
-        cached_results = self._redis_client and self._redis_client.get(cache_key)
+        #cache_key = (project_id, family_id, xpos, ref, alt)
+        cached_results = None #self._redis_client and self._redis_client.get(cache_key)
         if cached_results is not None:
             results = [Variant.fromJSON(v) if v else None for v in json.loads(cached_results)]
         else:
-            results = list(self.get_elasticsearch_variants(project_id, family_id=family_id, variant_id_filter=[variant_id], include_all_consequences=True))
-            if self._redis_client:
-                self._redis_client.set(cache_key, json.dumps([r.toJSON() if r else None for r in results]))
+            results = self.get_elasticsearch_variants(project_id, family_id=family_id, variant_id_filter=[variant_id], include_all_consequences=True)
+            #if self._redis_client:
+            #    self._redis_client.set(cache_key, json.dumps([r.toJSON() if r else None for r in results]))
 
         if not results:
             return None
@@ -725,12 +747,12 @@ class ElasticsearchDatastore(datastore.Datastore):
             chrom, pos = get_chr_pos(xpos)
             variant_ids.append("%s-%s-%s-%s" % (chrom, pos, ref, alt))
 
-        cache_key = (project_id, family_id, tuple(xpos_ref_alt_tuples))
-        cached_results = self._redis_client and self._redis_client.get(cache_key)
+        #cache_key = (project_id, family_id, tuple(xpos_ref_alt_tuples))
+        cached_results = None #self._redis_client and self._redis_client.get(cache_key)
         if cached_results is not None:
             results = [Variant.fromJSON(v) if v else None for v in json.loads(cached_results)]
         else:
-            results = list(self.get_elasticsearch_variants(project_id, family_id=family_id, variant_id_filter=variant_ids))
+            results = self.get_elasticsearch_variants(project_id, family_id=family_id, variant_id_filter=variant_ids)
             # make sure all variants in xpos_ref_alt_tuples were retrieved and are in the same order.
             # Return None for tuples that weren't found in ES.
             results_by_xpos_ref_alt = {}
@@ -741,8 +763,8 @@ class ElasticsearchDatastore(datastore.Datastore):
             # xpos-ref-alt's that weren't found in the elasticsearch index
             results = [results_by_xpos_ref_alt.get(t) for t in xpos_ref_alt_tuples]
 
-            if self._redis_client:
-                self._redis_client.set(cache_key, json.dumps([r.toJSON() if r else None for r in results]))
+            #if self._redis_client:
+            #    self._redis_client.set(cache_key, json.dumps([r.toJSON() if r else None for r in results]))
 
         return results
 
