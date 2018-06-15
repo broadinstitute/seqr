@@ -23,7 +23,7 @@ def _record_to_dict(record, fields, nested_fields=None):
         for nested_field in (nested_fields or []):
             field_value = model
             for field in nested_field:
-                field_value = getattr(field_value, field)
+                field_value = getattr(field_value, field) if field_value else None
             record['_'.join(nested_field)] = field_value
     return record
 

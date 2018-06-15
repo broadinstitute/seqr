@@ -28,7 +28,7 @@ const FamilyTable = ({ visibleFamilies, loading, headerStatus, showSearchLinks, 
       <ExportTableButton downloads={exportUrls} />
       <HorizontalSpacer width={45} />
     </ExportContainer>
-    <Table celled striped padded>
+    <Table celled striped padded fixed>
       <TableHeaderRow headerStatus={headerStatus} showInternalFilters={showInternalFilters} />
       <Table.Body>
         {loading ? <TableLoading /> : null}

@@ -140,6 +140,9 @@ const Genotype = ({ variant, individualId }) => {
 
 
 const VariantFamily = ({ variant, project, family, individualsByGuid }) => {
+  if (!family) {
+    return null
+  }
   const individuals = family.individualGuids.map(individualGuid => individualsByGuid[individualGuid])
   individuals.sort((a, b) => a.affected.localeCompare(b.affected))
   return (
