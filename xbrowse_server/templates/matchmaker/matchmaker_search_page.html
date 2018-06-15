@@ -706,6 +706,11 @@ function getGoBackMessageHtml(){
 	return html;
 }
 
+
+$('.open').mouseover( function(){
+	console.log('boo');
+});
+
 $('body').on('click', 'input.host_contacted_us', 
 		function(i) {
 			var matchId = $(this)[0]['id'];
@@ -1387,7 +1392,7 @@ function showDataToBeSubmitted(){
 	//store this for later use in submission event
 	sessionStorage.structToBeSubmitted = JSON.stringify(structToBeSubmitted);
 	
-	var limit_sharing_of_variant_level_data = JSON.parse(sessionStorage.limit_sharing_of_variant_level_data);
+	//var limit_sharing_of_variant_level_data = JSON.parse(sessionStorage.limit_sharing_of_variant_level_data);
 	console.log(limit_sharing_of_variant_level_data);
 
 	$('#dataToBeSubmittedReceipt').empty();
