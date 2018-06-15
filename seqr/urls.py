@@ -67,7 +67,8 @@ from seqr.views.apis.variant_search_api import query_variants_handler
 
 react_app_pages = [
     'dashboard',
-    'project/(?P<project_guid>[^/]+)/.*'
+    'project/(?P<project_guid>[^/]+)/.*',
+    'gene_info/.*'
 ]
 
 # NOTE: the actual url will be this with an '/api' prefix

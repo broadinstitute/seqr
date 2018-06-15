@@ -144,7 +144,7 @@ def _get_matching_genes(user, query):
             'key': g.gene_id,
             'title': title,
             'description': '('+description+')' if description else '',
-            'href': '/gene/'+g.gene_id,
+            'href': '/gene_info/'+g.gene_id,
         })
 
     return result
