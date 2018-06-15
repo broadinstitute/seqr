@@ -7,7 +7,7 @@ from django.utils import timezone
 from seqr.views.utils.json_utils import _to_snake_case
 from xbrowse_server.base.models import Project as BaseProject, Family as BaseFamily, Individual as BaseIndividual, \
     ProjectTag as BaseProjectTag, VariantTag as BaseVariantTag, VariantNote as BaseVariantNote, \
-    VariantFunctionalData as BaseVariantFunctionalData
+    VariantFunctionalData as BaseVariantFunctionalData, GeneNote as BaseGeneNote
 from xbrowse_server.gene_lists.models import GeneList as BaseGeneList, GeneListItem as BaseGeneListItem
 
 SEQR_TO_XBROWSE_CLASS_MAPPING = {
@@ -20,6 +20,7 @@ SEQR_TO_XBROWSE_CLASS_MAPPING = {
     "VariantNote": BaseVariantNote,
     "LocusList": BaseGeneList,
     "LocusListGene": BaseGeneListItem,
+    "GeneNote": BaseGeneNote,
 }
 
 _DELETED_FIELD = "__DELETED__"
@@ -68,6 +69,9 @@ SEQR_TO_XBROWSE_FIELD_MAPPING = {
     },
     "LocusListGene": {
         "locus_list": "gene_list",
+    },
+    "GeneNote": {
+        "created_by": "user",
     },
 }
 
@@ -182,6 +186,11 @@ def find_matching_xbrowse_model(seqr_model):
                 gene_list=find_matching_xbrowse_model(seqr_model.locus_list),
                 description=seqr_model.description,
                 gene_id=seqr_model.gene_id)
+        elif seqr_class_name == "GeneNote":
+            return BaseGeneNote.objects.get(
+                note=seqr_model.note,
+                gene_id=seqr_model.gene_id,
+            )
     except Exception as e:
         logging.error("ERROR: when looking up xbrowse model for seqr %s model: %s" % (seqr_model, e))
         #traceback.print_exc()
@@ -228,9 +237,9 @@ def convert_seqr_kwargs_to_xbrowse_kwargs(seqr_model, **kwargs):
 
 def update_seqr_model(seqr_model, **kwargs):
     logging.info("update_seqr_model(%s, %s)" % (seqr_model, kwargs))
+    xbrowse_model = find_matching_xbrowse_model(seqr_model)
     _update_model(seqr_model, **kwargs)
 
-    xbrowse_model = find_matching_xbrowse_model(seqr_model)
     if not xbrowse_model:
         return
 
