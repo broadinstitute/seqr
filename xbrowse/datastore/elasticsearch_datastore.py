@@ -761,7 +761,7 @@ class ElasticsearchDatastore(datastore.Datastore):
         if cached_results is not None:
             results = [Variant.fromJSON(v) if v else None for v in json.loads(cached_results)]
         else:
-            results = self.get_elasticsearch_variants(project_id, family_id=family_id, variant_id_filter=variant_ids user=user)
+            results = self.get_elasticsearch_variants(project_id, family_id=family_id, variant_id_filter=variant_ids, user=user)
             # make sure all variants in xpos_ref_alt_tuples were retrieved and are in the same order.
             # Return None for tuples that weren't found in ES.
             results_by_xpos_ref_alt = {}
