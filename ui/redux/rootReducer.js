@@ -90,10 +90,9 @@ export const loadGene = (geneId) => {
   return (dispatch, getState) => {
     if (!getState().genesById[geneId]) {
       dispatch({ type: REQUEST_GENES })
-      // TODO use a new gene info endpoint, this is the xbrowse one
-      new HttpRequestHelper(`/api/gene-info/${geneId}`,
+      new HttpRequestHelper(`/api/gene_info/${geneId}`,
         (responseJson) => {
-          dispatch({ type: RECEIVE_GENES, updatesById: { [geneId]: responseJson.gene } })
+          dispatch({ type: RECEIVE_GENES, updatesById: responseJson })
         },
         (e) => {
           dispatch({ type: RECEIVE_GENES, error: e.message, updatesById: {} })

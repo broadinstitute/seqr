@@ -172,11 +172,11 @@ const GeneDetailContent = ({ gene, showTitle, updateGeneNote: dispatchUpdateGene
       </p>
       {gene.notes.map(geneNote =>
         <TextFieldView
-          key={geneNote.note_id}
+          key={geneNote.noteGuid}
           initialValues={geneNote}
           field="note"
-          idField="note_id"
-          textAnnotation={<i style={{ color: 'gray' }}>By {geneNote.user ? geneNote.user.display_name : 'unknown user'} {geneNote.date_saved && `(${geneNote.date_saved})`}</i>}
+          idField="noteGuid"
+          textAnnotation={<i style={{ color: 'gray' }}>By {geneNote.createdBy || 'unknown user'} {geneNote.lastModifiedDate && `(${new Date(geneNote.lastModifiedDate).toLocaleDateString()})`}</i>}
           isEditable={geneNote.editable}
           onSubmit={dispatchUpdateGeneNote}
           modalTitle="Edit Gene Note"
@@ -188,7 +188,7 @@ const GeneDetailContent = ({ gene, showTitle, updateGeneNote: dispatchUpdateGene
       <TextFieldView
         isEditable
         editLabel="Add Note"
-        field="note_text"
+        field="note"
         idField="gene_id"
         modalTitle="Add Gene Note"
         initialValues={gene}
