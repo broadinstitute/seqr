@@ -16,6 +16,34 @@ const infoDivStyle = {
 export const hasPhenotipsDetails = phenotipsData =>
   phenotipsData && (phenotipsData.features || phenotipsData.rejectedGenes || phenotipsData.genes)
 
+const PhenotipsSection = ({ phenotipsData, field, formatFieldRow, title, join }) => {
+  const fieldData = phenotipsData[field]
+  if (!fieldData || fieldData.length < 1) {
+    return null
+  }
+  return (
+    <div>
+      <b>{title}:</b>
+      <div style={infoDivStyle}>
+        {
+          join ? fieldData.map(row => formatFieldRow(row)).join(join) : fieldData.map((row, i) => {
+            return <div key={i}>{formatFieldRow(row)}</div>
+          })
+        }
+      </div>
+    </div>
+  )
+}
+
+PhenotipsSection.propTypes = {
+  phenotipsData: PropTypes.object,
+  field: PropTypes.string,
+  formatFieldRow: PropTypes.func,
+  title: PropTypes.string,
+  join: PropTypes.string,
+}
+
+
 class PhenotipsDataPanel extends React.Component
 {
   static propTypes = {
@@ -47,37 +75,20 @@ class PhenotipsDataPanel extends React.Component
                   phenotipsData.features ?
                     <PresentAbsentPhenotypesView features={phenotipsData.features} /> : null
                 }
-                {
-                  phenotipsData.rejectedGenes ?
-                    <div>
-                      <b>Previously Tested Genes: </b>
-                      <div style={infoDivStyle}>
-                        {
-                          phenotipsData.rejectedGenes.map((gene, i) => {
-                            return <div key={i}>{`${gene.gene} ${gene.comments ? `(${gene.comments.trim()})` : ''}`}</div>
-                          })
-                        }
-                      </div>
-                    </div> : null
-                }
-                {
-                  phenotipsData.genes ?
-                    <div>
-                      <b>Candidate Genes: </b>
-                      <div style={infoDivStyle}>
-                        {
-                          phenotipsData.genes.map((gene, i) => {
-                            return <div key={i}>{`${gene.gene} ${gene.comments ? `(${gene.comments.trim()})` : ''}`}</div>
-                          })
-                        }
-                      </div>
-                    </div> :
-                    null
-                }
-
+                <PhenotipsSection
+                  phenotipsData={phenotipsData}
+                  field="rejectedGenes"
+                  title="Previously Tested Genes"
+                  formatFieldRow={gene => `${gene.gene} ${gene.comments ? `(${gene.comments.trim()})` : ''}`}
+                />
+                <PhenotipsSection
+                  phenotipsData={phenotipsData}
+                  field="genes"
+                  title="Candidate Genes"
+                  formatFieldRow={gene => `${gene.gene} ${gene.comments ? `(${gene.comments.trim()})` : ''}`}
+                />
                 {
                   phenotipsData.ethnicity && (phenotipsData.ethnicity.paternal_ethnicity.length || phenotipsData.ethnicity.maternal_ethnicity.length) ?
-
                     <div>
                       <b>Ancestry:</b><br />
                       <div style={infoDivStyle}>
@@ -97,17 +108,13 @@ class PhenotipsDataPanel extends React.Component
                     </div>
                     : null
                 }
-
-                {
-                  phenotipsData.global_age_of_onset ?
-                    <div>
-                      <b>Age of Onset:</b><br />
-                      <div style={infoDivStyle}>
-                        { phenotipsData.global_age_of_onset.map(s => s.label).join(', ') }
-                      </div>
-                    </div>
-                    : null
-                }
+                <PhenotipsSection
+                  phenotipsData={phenotipsData}
+                  field="global_age_of_onset"
+                  title="Age of Onset"
+                  formatFieldRow={s => s.label}
+                  join=", "
+                />
               </div>
             }
           </div> :

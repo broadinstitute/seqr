@@ -56,11 +56,11 @@ class Migration(migrations.Migration):
         ),
         migrations.AlterUniqueTogether(
             name='savedvariant',
-            unique_together=set([('genome_version', 'xpos_start', 'xpos_end', 'ref', 'alt', 'project', 'family')]),
+            unique_together=set([('xpos_start', 'xpos_end', 'ref', 'alt', 'project', 'family')]),
         ),
         migrations.AlterIndexTogether(
             name='savedvariant',
-            index_together=set([('xpos_start', 'ref', 'alt', 'genome_version', 'project')]),
+            index_together=set([('xpos_start', 'ref', 'alt', 'project')]),
         ),
         migrations.RemoveField(
             model_name='variantnote',

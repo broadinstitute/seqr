@@ -140,6 +140,8 @@ BooleanCheckbox.propTypes = {
 }
 
 export const InlineToggle = styled(BooleanCheckbox).attrs({ toggle: true, inline: true })`
+  padding-right: 10px;
+  
   .ui.toggle.checkbox label {
     font-size: small;
     padding: 0 4.5em 0 0;

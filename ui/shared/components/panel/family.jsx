@@ -95,7 +95,12 @@ const Family = ({ project, family, fields = [], showSearchLinks, showVariantTags
       </Grid.Column>
       {(showSearchLinks || showVariantTags) &&
         <Grid.Column width={3}>
-          {showVariantTags && <VariantTagTypeBar height={15} project={project} familyGuid={family.familyGuid} />}
+          {showVariantTags &&
+            <div>
+              <b>Saved Variants:</b>
+              <VariantTagTypeBar height={15} project={project} familyGuid={family.familyGuid} />
+            </div>
+          }
           {showSearchLinks &&
             <div>
               <VerticalSpacer height={20} />

@@ -5,7 +5,7 @@ import { Grid, Loader } from 'semantic-ui-react'
 import { Link } from 'react-router-dom'
 
 import SectionHeader from 'shared/components/SectionHeader'
-import { VerticalSpacer } from 'shared/components/Spacers'
+import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
 import VariantTagTypeBar from 'shared/components/graph/VariantTagTypeBar'
 import {
   FAMILY_FIELD_DESCRIPTION,
@@ -20,6 +20,7 @@ import ProjectOverview from './ProjectOverview'
 import ProjectCollaborators from './ProjectCollaborators'
 import GeneLists from './GeneLists'
 import FamilyTable from './FamilyTable/FamilyTable'
+import VariantTags from './VariantTags'
 
 
 /**
@@ -59,7 +60,9 @@ const ProjectSectionComponent = ({ loading, label, children, editPath, linkPath,
       </a>
     ) : null,
     linkText ? (
-      <div key="link" style={{ paddingTop: '15px', paddingLeft: '35px' }}>
+      <div key="link">
+        <VerticalSpacer height={15} />
+        <HorizontalSpacer width={35} />
         <Link to={`/project/${project.projectGuid}/${linkPath}`}>{linkText}</Link>
       </div>
     ) : null,
@@ -101,6 +104,8 @@ const ProjectPageUI = (props) => {
           </ProjectSection>
           <ProjectSection label="Variant Tags" linkPath="saved_variants" linkText="View All">
             <VariantTagTypeBar project={props.project} height={30} showAllPopupCategories />
+            <VerticalSpacer height={10} />
+            <VariantTags project={props.project} />
           </ProjectSection>
         </Grid.Column>
         <Grid.Column width={4}>

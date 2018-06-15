@@ -1,13 +1,14 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Loader, Grid, Pagination } from 'semantic-ui-react'
+import { Loader, Grid, Pagination, Dropdown } from 'semantic-ui-react'
+import { Link } from 'react-router-dom'
 import styled from 'styled-components'
 
 import ExportTableButton from 'shared/components/buttons/export-table/ExportTableButton'
 import VariantTagTypeBar from 'shared/components/graph/VariantTagTypeBar'
 import Variants from 'shared/components/panel/variants/Variants'
-import { Dropdown, InlineToggle } from 'shared/components/form/Inputs'
+import { Dropdown as DropdownInput, InlineToggle } from 'shared/components/form/Inputs'
 import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
 import { HorizontalSpacer } from 'shared/components/Spacers'
 import { titlecase } from 'shared/utils/stringUtils'
@@ -22,7 +23,7 @@ import { VARIANT_SORT_OPTONS } from '../constants'
 
 const BASE_CATEGORY_FILTER_FIELD = {
   name: 'categoryFilter',
-  component: Dropdown,
+  component: DropdownInput,
   inline: true,
   selection: false,
   fluid: false,
@@ -32,7 +33,7 @@ const BASE_CATEGORY_FILTER_FIELD = {
 const FILTER_FIELDS = [
   {
     name: 'sortOrder',
-    component: Dropdown,
+    component: DropdownInput,
     inline: true,
     selection: false,
     fluid: false,
@@ -56,6 +57,13 @@ const InlineFormColumn = styled(Grid.Column)`
   }
 `
 
+const LabelLink = styled(Link)`
+  color: black;
+  
+  &:hover {
+    color: black;
+  }
+`
 
 class SavedVariants extends React.Component {
 
@@ -109,6 +117,20 @@ class SavedVariants extends React.Component {
       },
     }]
 
+    const tagOptions = [
+      {
+        value: 'ALL',
+        text: <LabelLink to={`/project/${this.props.project.projectGuid}/saved_variants/${familyGuid ? `family/${familyGuid}/` : ''}`}>All Saved</LabelLink>,
+        key: 'all',
+      },
+      ...this.props.project.variantTagTypes.map(vtt => ({
+        value: vtt.name,
+        text: <LabelLink to={`/project/${this.props.project.projectGuid}/saved_variants/${familyGuid ? `family/${familyGuid}/` : ''}${vtt.name}`}>{vtt.name}</LabelLink>,
+        key: vtt.name,
+        label: { empty: true, circular: true, style: { backgroundColor: vtt.color } },
+      })),
+    ]
+
     const allShown = this.props.variantsToDisplay.length === this.props.totalVariantsCount
     const shownSummary = allShown ? 'all' :
       `${this.props.firstRecordIndex + 1}-${this.props.firstRecordIndex + this.props.variantsToDisplay.length} of`
@@ -122,7 +144,9 @@ class SavedVariants extends React.Component {
         {!this.props.loading &&
           <Grid.Row>
             <Grid.Column width={8}>
-              Showing {shownSummary} {this.props.filteredVariants.length}{tag && <b>{` "${tag}"`}</b>} variants {!allShown && `(${this.props.totalVariantsCount} total)`}
+              Showing {shownSummary} {this.props.filteredVariants.length}
+              &nbsp;&nbsp;<Dropdown inline options={tagOptions} value={tag || 'ALL'} />
+              &nbsp;variants {!allShown && `(${this.props.totalVariantsCount} total)`}
               <HorizontalSpacer width={20} />
               <Pagination
                 activePage={this.props.tableState.currentPage || 1}
@@ -140,7 +164,7 @@ class SavedVariants extends React.Component {
                 submitOnChange
                 fields={filterFields}
               />
-              <HorizontalSpacer width={20} />
+              <HorizontalSpacer width={10} />
               <ExportTableButton downloads={exports} />
             </InlineFormColumn>
           </Grid.Row>

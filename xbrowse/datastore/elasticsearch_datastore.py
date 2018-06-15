@@ -422,8 +422,8 @@ class ElasticsearchDatastore(datastore.Datastore):
         start = time.time()
 
         s = s.params(size=settings.VARIANT_QUERY_RESULTS_LIMIT + 1)
-        #if not include_all_consequences:
-        #    s = s.source(exclude=["sortedTranscriptConsequences"])
+        if not include_all_consequences:
+            s = s.source(exclude=["sortedTranscriptConsequences"])
         response = s.execute()
         logger.info("=====")
 
