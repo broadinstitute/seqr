@@ -7,6 +7,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 from seqr.models import SavedVariant, VariantTagType, VariantTag, VariantNote, VariantFunctionalData, CAN_EDIT, CAN_VIEW
 from seqr.model_utils import create_seqr_model, delete_seqr_model, find_matching_xbrowse_model
+from seqr.utils.xpos_utils import get_chrom_pos
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.json_utils import create_json_response
@@ -26,8 +27,7 @@ def saved_variant_data(request, project_guid):
     variants = {}
     variant_query = SavedVariant.objects.filter(project=project)\
         .select_related('family')\
-        .only('genome_version', 'xpos_start', 'ref', 'alt', 'lifted_over_genome_version', 'lifted_over_xpos_start',
-              'saved_variant_json', 'family__guid', 'guid')\
+        .only('xpos_start', 'ref', 'alt', 'saved_variant_json', 'family__guid', 'guid')\
         .prefetch_related('varianttag_set', 'varianttag_set__created_by', 'varianttag_set__variant_tag_type',
                           'variantfunctionaldata_set', 'variantfunctionaldata_set__created_by', 'variantnote_set',
                           'variantnote_set__created_by')
@@ -196,9 +196,17 @@ def _variant_transcripts(annotation):
 
 def _variant_details(variant_json, user):
     annotation = variant_json.get('annotation') or {}
-    extras = variant_json.get('extras') or {}
     main_transcript = annotation.get('main_transcript') or (annotation['vep_annotation'][annotation['worst_vep_annotation_index']] if annotation.get('worst_vep_annotation_index') is not None and annotation['vep_annotation'] else None)
     is_es_variant = annotation.get('db') == 'elasticsearch'
+
+    extras = variant_json.get('extras') or {}
+    genome_version = extras.get('genome_version') or '37'
+    lifted_over_genome_version = '37' if genome_version == '38' else '38'
+    coords_field = 'grch%s_coords' % lifted_over_genome_version
+    coords = extras.get(coords_field, '').split('-')
+    lifted_over_chrom = coords[0].lstrip('chr')
+    lifted_over_pos = coords[1] if len(coords) > 1 else ''
+
     return {
         'annotation': {
             'cadd_phred': annotation.get('cadd_phred'),
@@ -304,6 +312,10 @@ def _variant_details(variant_json, user):
                 'pl': genotype.get('extras', {}).get('pl'),
             } for individual_id, genotype in variant_json.get('genotypes', {}).items()
         },
+        'genomeVersion': genome_version,
+        'liftedOverGenomeVersion': lifted_over_genome_version,
+        'liftedOverChrom': lifted_over_chrom,
+        'liftedOverPos': lifted_over_pos,
         'origAltAlleles': extras.get('orig_alt_alleles', []),
         'transcripts': _variant_transcripts(annotation) if annotation.get('vep_annotation') else None,
     }

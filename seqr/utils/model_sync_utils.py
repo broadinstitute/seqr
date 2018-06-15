@@ -42,15 +42,5 @@ def retrieve_saved_variants_json(project, variant_tuples):
 
 
 def update_saved_variant_json(saved_variant, saved_variant_json):
-    extras = saved_variant_json.get('extras', {})
-    saved_variant.genome_version = extras.get('genome_version', saved_variant.genome_version)
-    if not saved_variant.lifted_over_genome_version:
-        saved_variant.lifted_over_genome_version = '37' if saved_variant.genome_version == '38' else '38'
-    if not saved_variant.lifted_over_xpos_start:
-        coords_field = 'grch%s_coords' % saved_variant.lifted_over_genome_version
-        coords = extras.get(coords_field, '').split('-')
-        if len(coords) > 1:
-            saved_variant.lifted_over_xpos_start = get_xpos(coords[0], coords[1])
-
     saved_variant.saved_variant_json = json.dumps(saved_variant_json)
     saved_variant.save()

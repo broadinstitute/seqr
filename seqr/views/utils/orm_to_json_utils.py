@@ -250,16 +250,11 @@ def get_json_for_saved_variant(saved_variant, add_tags=False):
     result = _get_json_for_record(saved_variant_dict, fields)
 
     chrom, pos = get_chrom_pos(result['xpos'])
-    lifted_over_xpos = result.pop('liftedOverXposStart')
-    lifted_over_chrom, lifted_over_pos = get_chrom_pos(result.pop('liftedOverXposStart')) if lifted_over_xpos else ('', '')
-
     result.update({
         'variantId': result.pop('guid'),
         'familyGuid': saved_variant_dict['family_guid'],
         'chrom': chrom,
         'pos': pos,
-        'liftedOverChrom': lifted_over_chrom,
-        'liftedOverPos': lifted_over_pos,
     })
     if add_tags:
         result.update({

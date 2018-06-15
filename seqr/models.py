@@ -531,16 +531,11 @@ class AliasField(models.Field):
 
 
 class SavedVariant(ModelWithGUID):
-    genome_version = models.CharField(max_length=5, choices=GENOME_VERSION_CHOICES, default=GENOME_VERSION_GRCh37)
     xpos_start = models.BigIntegerField()
     xpos_end = models.BigIntegerField(null=True)
     xpos = AliasField(db_column="xpos_start")
     ref = models.TextField()
     alt = models.TextField()
-
-    lifted_over_genome_version = models.CharField(max_length=5, null=True, blank=True, choices=GENOME_VERSION_CHOICES)
-    lifted_over_xpos_start = models.BigIntegerField(null=True)
-    lifted_over_xpos = AliasField(db_column="lifted_over_xpos_start")
 
     # Cache genotypes and annotations for the variant as gene id and consequence - in case the dataset gets deleted, etc.
     saved_variant_json = models.TextField(null=True, blank=True)
@@ -556,13 +551,11 @@ class SavedVariant(ModelWithGUID):
         return 'SV%07d_%s' % (self.id, _slugify(str(self)))
 
     class Meta:
-        index_together = ('xpos_start', 'ref', 'alt', 'genome_version', 'project')
+        index_together = ('xpos_start', 'ref', 'alt', 'project')
 
-        unique_together = ('genome_version', 'xpos_start', 'xpos_end', 'ref', 'alt', 'project', 'family')
+        unique_together = ('xpos_start', 'xpos_end', 'ref', 'alt', 'project', 'family')
 
-        json_fields = [
-            'guid', 'xpos', 'ref', 'alt', 'genome_version', 'lifted_over_genome_version', 'lifted_over_xpos_start'
-        ]
+        json_fields = ['guid', 'xpos', 'ref', 'alt']
 
 
 class VariantTagType(ModelWithGUID):

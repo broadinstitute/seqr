@@ -18,4 +18,16 @@ class Migration(migrations.Migration):
             name='project',
             field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='seqr.Project'),
         ),
+        migrations.RemoveField(
+            model_name='savedvariant',
+            name='genome_version',
+        ),
+        migrations.RemoveField(
+            model_name='savedvariant',
+            name='lifted_over_genome_version',
+        ),
+        migrations.RemoveField(
+            model_name='savedvariant',
+            name='lifted_over_xpos_start',
+        ),
     ]
