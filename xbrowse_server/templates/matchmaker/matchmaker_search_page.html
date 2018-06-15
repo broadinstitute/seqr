@@ -845,20 +845,26 @@ function addAdditionalContactName(){
 /**
  * Listens and updates the MME submission with regards to how much variant data to share
  */
-function limitSharingOfVariantData(divId){
+function limitSharingOfVariantData(divId,genotypeSeriesId){
 	var lockedIcon='<a href="javascript:limitSharingOfVariantData('+"'"+divId+ "'" +');">&nbsp&nbsp<i class="fas fa-lock fa-lg" aria-hidden="true"></i></a>';
 	var unlockedIcon='<a href="javascript:limitSharingOfVariantData('+"'"+divId+ "'" +');">&nbsp&nbsp<i class="fas fa-lock-open fa-lg" aria-hidden="true"></i></a>';
+	var limit_sharing_of_variant_level_data = JSON.parse(sessionStorage.limit_sharing_of_variant_level_data);
 	
 	if ($('#'+divId).hasClass('open')){
 		$('#'+divId).empty();
 		$('#'+divId).append(lockedIcon);	
 		$('#'+divId).removeClass('open').addClass('closed');
+		limit_sharing_of_variant_level_data[genotypeSeriesId]='restrict';
 	}
 	else{
 		$('#'+divId).empty();
 		$('#'+divId).append(unlockedIcon);
 		$('#'+divId).removeClass('closed').addClass('open');
+		limit_sharing_of_variant_level_data[genotypeSeriesId]='share';
 	}
+	
+	//serialize back
+	sessionStorage.limit_sharing_of_variant_level_data = JSON.stringify(limit_sharing_of_variant_level_data);
 	return;
 }
 
@@ -1072,6 +1078,7 @@ function updateMatchResultStateEvent(newMatchResultState,matchId,projectId, indi
  */
 function startORUpdateASubmitionToMME(){
 	sessionStorage.genotypes_to_submit  = JSON.stringify([]); //list of genotypes to submit to MME
+	sessionStorage.limit_sharing_of_variant_level_data = JSON.stringify({}); //don't share variant info with matches
 	sessionStorage.phenotypes_to_submit = JSON.stringify([]); //list of phenotypes to submit to MME
 	sessionStorage.patient = {}; 							  //patient data back from server
 
@@ -1131,6 +1138,8 @@ function showMMECandidates(result){
  	var patient=result['submission_candidate'];
  	sessionStorage.patient = JSON.stringify(patient);
  	var idMap = result['id_map'];
+ 	
+ 	limit_sharing_of_variant_level_data = JSON.parse(sessionStorage.limit_sharing_of_variant_level_data);
  	
  	//-------------------------------------------Phenotype info
  	if (patient['features'].length>0){
@@ -1211,8 +1220,9 @@ function showMMECandidates(result){
 		 		html += patient['genomicFeatures'][k]['variant']['alternateBases'];
 		 		html += '</p></td>';
 		 		
-		 		var limitSharingDivId='limit-variant-icon-' + k.toString();
-		 		html += '<td id="' + limitSharingDivId + '" class="open"><a href="javascript:limitSharingOfVariantData('+"'"+limitSharingDivId+ "'" +');">&nbsp&nbsp<i class="fas fa-lock-open fa-lg" aria-hidden="true"></i></a></td>';
+		 		var limitSharingDivId='limit-variant-sharing-' + k.toString();
+		 		limit_sharing_of_variant_level_data[k.toString()]='share';
+		 		html += '<td id="' + limitSharingDivId + '" class="open"><a href="javascript:limitSharingOfVariantData('+"'"+limitSharingDivId+ "'" + ",'"+k.toString()+ "'" +');">&nbsp&nbsp<i class="fas fa-lock-open fa-lg" aria-hidden="true"></i></a></td>';
 		 		
 		 		singlePatientGenotypeInfo += ',' + patient['genomicFeatures'][k]['variant']['referenceName'];
 		 		singlePatientGenotypeInfo += ',' + patient['genomicFeatures'][k]['variant']['start'] ;
@@ -1245,6 +1255,9 @@ function showMMECandidates(result){
  		  $('[data-toggle="tooltip"]').tooltip();
  	});
  	$('#submissionCandidatesContainer').show();
+ 	
+ 	//serialize back
+ 	sessionStorage.limit_sharing_of_variant_level_data = JSON.stringify(limit_sharing_of_variant_level_data);
  }
 
  /**
@@ -1372,6 +1385,9 @@ function showDataToBeSubmitted(){
 	
 	//store this for later use in submission event
 	sessionStorage.structToBeSubmitted = JSON.stringify(structToBeSubmitted);
+	
+	var limit_sharing_of_variant_level_data = JSON.parse(sessionStorage.limit_sharing_of_variant_level_data);
+	console.log(limit_sharing_of_variant_level_data);
 
 	$('#dataToBeSubmittedReceipt').empty();
 	$('#dataToBeSubmittedReceipt').append(html);
