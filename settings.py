@@ -362,6 +362,9 @@ PHENOTIPS_UPLOAD_EXTERNAL_PHENOTYPE_URL="http://"+PHENOTIPS_SERVICE_HOSTNAME+":"
 PROJECTS_WITHOUT_PHENOTIPS = []
 
 
+REDIS_SERVICE_HOSTNAME = os.environ.get('REDIS_SERVICE_HOST')
+
+
 #-----------------Matchmaker constants-----------------
 
 #########################################################

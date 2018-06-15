@@ -9,23 +9,21 @@
                         <input type="checkbox" id="select-all-families" />
                     </th>
                 <% } %>
-                <th>Family</th>
-				<th># Individuals</th>
-                <th>Pedigree</th>
+                <th style="min-width:5em;">Family</th>
+				<th style="min-width:9em;"># Individuals</th>
+                <th style="min-width:7em;">Pedigree</th>
                 <th>Description</th>
                 <% if(analysis_statuses) {  %>
-                    <th>Analysis Status</th>
+                    <th style="min-width:15em;">Analysis Status</th>
                 <% } %>
 	            <th>Data Available</th>
-                    <% if (show_edit_links) print('<th></th>'); %>
+                <% if (show_edit_links) { %>
+                    <th></th>
+                <% } %>
             </tr>
         </thead>
         <tbody>
-            <% _.each(families, function(family) {
-                if(show_case_review_status && family.in_case_review) {
-                    return;
-                }
-            %>
+            <% _.each(families, function(family) { %>
                 <tr class="family-row" data-family_id="<%= family.family_id %>">
                     <% if (selectable) { %>
                         <td>
@@ -90,70 +88,12 @@
                         </span>
                     </td>
 					<td>
-                        <% if (show_edit_links) print('<a href="'+family.url+'/edit">Edit</a>'); %>
+                        <% if (show_edit_links) { print('<a href="'+family.url+'/edit">Edit</a>'); } %>
                     </td>
                 </tr>
             <% }); %>
         </tbody>
     </table>
-
-    <% if(show_case_review_status && _.any(_.filter(families, function(family) { return family.in_case_review }))) { %>
-        <br/>
-        <hr/>
-        <br/>
-        <h3><b>Case Review:</b></h3>
-
-        <% var case_review_status_lookup = {
-        'U': 'Uncertain',
-        'A': 'Accepted',
-        'R': 'Not Accepted',
-        'Q': 'More Info Needed',
-        }; %>
-
-
-        <table class="tablesorter table">
-            <thead>
-            <tr>
-                <th>
-                    Family
-                </th>
-                <th># Individuals</th>
-                <th>Pedigree</th>
-            </tr>
-            </thead>
-            <tbody>
-            <% _.each(families, function(family) {
-               if(!family.in_case_review) { return; }
-            %>
-                <tr class="family-row">
-                    <td>
-                        <% if (family_id_link) { print('<a href="'+family.url+'">'); } %>
-                            <strong><% if (family.family_name) { print(family.family_name) } else { print(family.family_id)} %></strong>
-                            <% if (family_id_link) { print('</a>'); } %>
-                    </td>
-                    <td><%= family.num_individuals %></td>
-                    <td style='margin:0px; padding:4px 0px 4px 12px;'>
-                        <% if (family.pedigree_image_url) { %>
-                            <div class="modal fade" role="dialog" id="pedigree-modal-<%= family.family_id %>" >
-                                <div class="modal-dialog" role="document"  style="width:700px"><div class="modal-content">
-                                    <div class="modal-header">
-                                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"> <span aria-hidden="true">&times;</span> </button>Family: <%= family.family_id %>
-                                    </div><img width="650px" src="<%= family.pedigree_image_url %>">
-                                </div>
-                                </div></div>
-                            </div>
-
-                            <a id="show-large-pedigree" onclick="javascript:$('#pedigree-modal-<%= family.family_id %>').modal('show');">
-                                <img style='width:30px;height:25px;border-style:none' src="<%= family.pedigree_image_url %>" >
-                            </a>
-                        <% } %>
-                    </td>
-                </tr>
-            <% }); %>
-            </tbody>
-        </table>
-
-    <% } %>
 </script>
 
 

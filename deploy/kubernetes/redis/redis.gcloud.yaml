@@ -33,10 +33,10 @@ spec:
         resources:
           requests:
             memory: "3Gi"
-            cpu: "1"
+            cpu: "0.25"
           limits:
             memory: "15Gi"
-            cpu: "5"
+            cpu: "1"
 #        readinessProbe:
 #          exec:
 #            command:
