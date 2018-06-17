@@ -146,20 +146,24 @@ window.SelectVariantsView = Backbone.View.extend({
 
     render: function() {
         $(this.el).html(this.template({
-        	hbc: this.hbc,
+        	  hbc: this.hbc,
             annotDefs: this.annotDefs,
             defaultVariantFilters: this.defaultVariantFilters,
             reference_populations: _.filter(this.reference_populations, function(x) { return x.slug !== 'AF' }),
             thisCallsetFilter: _.find(this.reference_populations, function(x) { return x.slug === 'AF' }),
             showPopAcFilter: this.project_options.db === "elasticsearch",
+            showVartypeFilter: this.project_options.db !== "elasticsearch",
+            showDeleteriousnessPredictorFilters: this.project_options.db !== "elasticsearch",
         }));
 
         this.createRefFreqSliders();
-        this.vartype_widget.setElement(this.$('#vartype-widget-container')).render();
-        this.polyphen_widget.setElement(this.$('#polyphen-widget-container')).render();
-        this.sift_widget.setElement(this.$('#sift-widget-container')).render();
-        this.muttaster_widget.setElement(this.$('#muttaster-widget-container')).render();
-        this.fathmm_widget.setElement(this.$('#fathmm-widget-container')).render();
+        if (this.project_options.db !== "elasticsearch") {
+            this.vartype_widget.setElement(this.$('#vartype-widget-container')).render();
+            this.polyphen_widget.setElement(this.$('#polyphen-widget-container')).render();
+            this.sift_widget.setElement(this.$('#sift-widget-container')).render();
+            this.muttaster_widget.setElement(this.$('#muttaster-widget-container')).render();
+            this.fathmm_widget.setElement(this.$('#fathmm-widget-container')).render();
+        }
         utils.initializeHovers(this);
 
         return this;
