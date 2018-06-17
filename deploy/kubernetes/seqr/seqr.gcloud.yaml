@@ -61,10 +61,10 @@ spec:
               command: ["fusermount", "-u", "/mounted-bucket"]
         resources:
           requests:
-            memory: "3Gi"
-            cpu: "1"
-          limits:
             memory: "8Gi"
+            cpu: "2"
+          limits:
+            memory: "25Gi"
             cpu: "5"
         envFrom:
           - configMapRef:
@@ -164,3 +164,15 @@ spec:
             - /readiness_probe
       restartPolicy: Always
       dnsPolicy: ClusterFirst
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 1.0
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: "name"
+                      operator: In
+                      values:
+                      - seqr
+                topologyKey: "kubernetes.io/hostname"
