@@ -58,6 +58,7 @@ def elasticsearch_status(request):
             index_json['project_id'] = index_to_dataset[index_name].project.deprecated_project_id
             index_json['analysis_type'] = index_to_dataset[index_name].analysis_type
             index_json['genome_version'] = index_to_dataset[index_name].genome_version
+            index_json['source_file_path'] = index_to_dataset[index_name].source_file_path
 
         if index_name in index_snapshot_states:
             index_json['snapshots'] = ", ".join(set(index_snapshot_states[index_name]))
