@@ -47,10 +47,12 @@
                                 </div>
                             </div>
                             <div class="col-sm-4">
-                                <div class="annot-section-title">Variant Type</div>
-                                <div class="annot-section-content">
-                                    <div id="vartype-widget-container"></div>
-                                </div>
+                                <% if (showVartypeFilter) { %>
+                                    <div class="annot-section-title">Variant Type</div>
+                                    <div class="annot-section-content">
+                                        <div id="vartype-widget-container"></div>
+                                    </div>
+                                <% } %>
                             </div>
                         </div>
                     </div>
@@ -180,31 +182,33 @@
                         <% }; %>
                     </div>
                 </div>
-                <div class="panel panel-default">
-                    <div class="panel-heading">
-                        <a data-toggle="collapse" href="#collapse-predictions">Deleteriousness Predictions</a>
-                    </div>
-                    <div id="collapse-predictions" class="panel-body panel-collapse collapse">
-                        <div class="row">
-                            <div class="col-sm-3">
-                                <div class="annot-section-title">PolyPhen</div>
-                                <div class="annot-section-content" id="polyphen-widget-container"></div>
-                            </div>
-                            <div class="col-sm-3">
-                                <div class="annot-section-title">SIFT</div>
-                                <div class="annot-section-content" id="sift-widget-container"></div>
-                            </div>
-                            <div class="col-sm-3">
-                                <div class="annot-section-title">MutationTaster</div>
-                                <div class="annot-section-content" id="muttaster-widget-container"></div>
-                            </div>
-                            <div class="col-sm-3">
-                                <div class="annot-section-title">FATHMM</div>
-                                <div class="annot-section-content" id="fathmm-widget-container"></div>
+                <% if (showDeleteriousnessPredictorFilters) { %>
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <a data-toggle="collapse" href="#collapse-predictions">Deleteriousness Predictions</a>
+                        </div>
+                        <div id="collapse-predictions" class="panel-body panel-collapse collapse">
+                            <div class="row">
+                                <div class="col-sm-3">
+                                    <div class="annot-section-title">PolyPhen</div>
+                                    <div class="annot-section-content" id="polyphen-widget-container"></div>
+                                </div>
+                                <div class="col-sm-3">
+                                    <div class="annot-section-title">SIFT</div>
+                                    <div class="annot-section-content" id="sift-widget-container"></div>
+                                </div>
+                                <div class="col-sm-3">
+                                    <div class="annot-section-title">MutationTaster</div>
+                                    <div class="annot-section-content" id="muttaster-widget-container"></div>
+                                </div>
+                                <div class="col-sm-3">
+                                    <div class="annot-section-title">FATHMM</div>
+                                    <div class="annot-section-content" id="fathmm-widget-container"></div>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
+                <% } %>
                 <div class="panel panel-default">
                     <div class="panel-heading">
                         <a class="accordion-toggle" data-toggle="collapse" href="#collapse-region">
