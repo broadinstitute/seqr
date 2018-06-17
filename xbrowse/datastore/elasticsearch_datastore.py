@@ -127,10 +127,7 @@ class ElasticsearchDatastore(datastore.Datastore):
         self._redis_client = None
         if settings.REDIS_SERVICE_HOSTNAME:
             self._redis_client = redis.StrictRedis(host=settings.REDIS_SERVICE_HOSTNAME)
-            logger.info("Redis config: " + str(self._redis_client.config_get('*')))
-            self._redis_client.config_set('maxmemory', '2500mb')
-            self._redis_client.config_set('maxmemory-policy', 'allkeys-lru')
-
+            
     def get_elasticsearch_variants(
             self,
             project_id,
@@ -158,8 +155,8 @@ class ElasticsearchDatastore(datastore.Datastore):
 
         cached_results = self._redis_client and self._redis_client.get(cache_key)
         if cached_results is not None:
-            return json.loads(cached_results)
-
+            variant_results = json.loads(cached_results)
+            return [Variant.fromJSON(variant_json) for variant_json in variant_results]
 
         if indivs_to_consider is None:
             if genotype_filter:
