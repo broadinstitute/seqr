@@ -150,7 +150,8 @@ window.SelectVariantsView = Backbone.View.extend({
             annotDefs: this.annotDefs,
             defaultVariantFilters: this.defaultVariantFilters,
             reference_populations: _.filter(this.reference_populations, function(x) { return x.slug !== 'AF' }),
-            thisCallsetFilter: _.find(this.reference_populations, function(x) { return x.slug === 'AF' }),
+            thisCallsetFilter: this.project_options.project_id && !this.project_options.project_id.startsWith('project_')
+                && _.find(this.reference_populations, function(x) { return x.slug === 'AF' }),
             showPopAcFilter: this.project_options.db === "elasticsearch",
             showVartypeFilter: this.project_options.db !== "elasticsearch",
             showDeleteriousnessPredictorFilters: this.project_options.db !== "elasticsearch",
