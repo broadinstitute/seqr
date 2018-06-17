@@ -19,7 +19,7 @@ metadata:
     name: seqr
     deployment: {{ DEPLOY_TO }}
 spec:
-  replicas: 2
+  replicas: 1
   template:
     metadata:
       labels:
@@ -62,7 +62,7 @@ spec:
         resources:
           requests:
             memory: "5Gi"
-            cpu: "1.5"
+            cpu: "1"
           limits:
             memory: "25Gi"
             cpu: "8"
