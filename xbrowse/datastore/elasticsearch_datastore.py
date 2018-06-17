@@ -220,6 +220,18 @@ class ElasticsearchDatastore(datastore.Datastore):
                     variant_id_filter_term |= q_obj
             s = s.filter(variant_id_filter_term)
 
+        if indivs_to_consider:
+            atleast_one_nonref_genotype_filter = None
+            for sample_id in indivs_to_consider:
+                encoded_sample_id = _encode_name(sample_id)
+                q = Q('range', **{encoded_sample_id+"_num_alt": {'gte': 1}})
+                if atleast_one_nonref_genotype_filter is None:
+                    atleast_one_nonref_genotype_filter = q
+                else:
+                    atleast_one_nonref_genotype_filter |= q
+
+            s = s.filter(atleast_one_nonref_genotype_filter)
+
         if quality_filter is not None and indivs_to_consider:
             #'vcf_filter': u'pass', u'min_ab': 17, u'min_gq': 46
             min_ab = quality_filter.get('min_ab')
