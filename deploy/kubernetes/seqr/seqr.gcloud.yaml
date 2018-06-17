@@ -19,7 +19,7 @@ metadata:
     name: seqr
     deployment: {{ DEPLOY_TO }}
 spec:
-  replicas: 1
+  replicas: 2
   template:
     metadata:
       labels:
@@ -61,11 +61,11 @@ spec:
               command: ["fusermount", "-u", "/mounted-bucket"]
         resources:
           requests:
-            memory: "8Gi"
-            cpu: "2"
+            memory: "5Gi"
+            cpu: "1.5"
           limits:
             memory: "25Gi"
-            cpu: "5"
+            cpu: "8"
         envFrom:
           - configMapRef:
               name: all-settings
