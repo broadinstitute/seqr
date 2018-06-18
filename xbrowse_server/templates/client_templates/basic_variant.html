@@ -414,7 +414,7 @@
                         '<tr>'+
                             '<td>gnomad genomes</td>'+
                             '<td>AC=' + popCounts["gnomad_genomes_AC"] + ', </td>'+
-                            '<td>AN=' + popCounts["gnomad_genomes_AN"] + '</td>'+
+                            '<td>AN=' + popCounts["gnomad_genomes_AN"] != null ? popCounts["gnomad_genomes_AN"] : "?") + '</td>'+
                         '</tr>' +
                         (variant.extras.genome_version == "38" ? ('<tr>'+
                             '<td>topmed</td><td>AC=' + popCounts["topmed_AC"] + ', </td>'+
