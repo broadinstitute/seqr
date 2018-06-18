@@ -19,6 +19,7 @@ class AwesomeBar extends React.Component
   static propTypes = {
     categories: PropTypes.array,
     newWindow: PropTypes.bool,
+    placeholder: PropTypes.string,
     history: PropTypes.object,
   }
 
@@ -53,7 +54,7 @@ class AwesomeBar extends React.Component
       results={this.state.results}
       value={this.state.value}
       minCharacters={1}
-      placeholder="Search project, family, gene name, etc."
+      placeholder={this.props.placeholder || 'Search project, family, gene name, etc.'}
     />
   }
 

@@ -20,9 +20,7 @@ const GeneInfoSearch = () =>
           <Header dividing size="large" content="Gene Summary Information" />
           To access the summary page for a gene start typing the gene symbol in the form below and select the appropriate gene.
           <VerticalSpacer height={15} />
-          <b><i>Gene Name: </i></b> Enter the gene name to search for variants.
-          <VerticalSpacer height={15} />
-          <AwesomeBar categories={SEARCH_CATEGORIES} />
+          <AwesomeBar categories={SEARCH_CATEGORIES} placeholder="Search by gene name" />
         </Segment>
       </Grid.Column>
       <Grid.Column width={5} />
