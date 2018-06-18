@@ -390,7 +390,7 @@
                     var popCounts = variant.annotation.pop_counts;
 
                     var grch38Coords = variant.extras.grch38_coords;
-                    if (topmedAF == 0) {
+                    if (topmedAF == 0 && grch38Coords) {
                         var grch38VariantIdSplit = grch38Coords.split("-");
                         var grch38Pos = parseInt(grch38VariantIdSplit[1]);
                         var grch38Region = grch38VariantIdSplit[0] + "-" + (grch38Pos - 100) + "-" + (grch38Pos + 100);
