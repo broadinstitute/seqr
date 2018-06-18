@@ -175,9 +175,11 @@ class ElasticsearchDatastore(datastore.Datastore):
         query_json = self._make_db_query(genotype_filter, variant_filter)
 
         try:
-            if self.liftover_grch38_to_grch37 is None or self.liftover_grch37_to_grch38 is None:
-                self.liftover_grch38_to_grch37 = LiftOver('hg38', 'hg19')
-                self.liftover_grch37_to_grch38 = LiftOver('hg19', 'hg38')
+            if self.liftover_grch38_to_grch37 is None:
+                self.liftover_grch38_to_grch37 = None # LiftOver('hg38', 'hg19')
+
+            if self.liftover_grch37_to_grch38 is None:
+                self.liftover_grch37_to_grch38 = None # LiftOver('hg19', 'hg38')
         except Exception as e:
             logger.info("WARNING: Unable to set up liftover. Is there a working internet connection? " + str(e))
 
@@ -515,7 +517,7 @@ class ElasticsearchDatastore(datastore.Datastore):
                     if grch38_coord and grch38_coord[0]:
                         grch38_coord = "%s-%s-%s-%s "% (grch38_coord[0][0], grch38_coord[0][1], hit["ref"], hit["alt"])
                     else:
-                        grch38_coord = ""
+                        grch38_coord = None
             else:
                 grch38_coord = hit["variantId"]
 
@@ -526,7 +528,7 @@ class ElasticsearchDatastore(datastore.Datastore):
                     if grch37_coord and grch37_coord[0]:
                         grch37_coord = "%s-%s-%s-%s "% (grch37_coord[0][0], grch37_coord[0][1], hit["ref"], hit["alt"])
                     else:
-                        grch37_coord = ""
+                        grch37_coord = None
             else:
                 grch37_coord = hit["variantId"]
 
