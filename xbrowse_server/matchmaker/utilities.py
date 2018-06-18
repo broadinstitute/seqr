@@ -221,7 +221,7 @@ def generate_notification_for_incoming_match(response_from_matchbox,incoming_req
             seqr_id_maps = settings.SEQR_ID_TO_MME_ID_MAP.find({"submitted_data.patient.id":result['patient']['id']}).sort('insertion_date',-1).limit(1)
             for seqr_id_map in seqr_id_maps:
                 
-                seqr_project =  project = get_object_or_404(Project, project_id=seqr_id_map['project_id']).seqr_project
+                seqr_project = get_object_or_404(Project, project_id=seqr_id_map['project_id']).seqr_project
                 
                 result = 'seqr ID ' + seqr_id_map['seqr_id'] 
                 result += ' from project ' +    seqr_id_map['project_id'] 
