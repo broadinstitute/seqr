@@ -22,6 +22,10 @@ class AwesomeBar extends React.Component
     history: PropTypes.object,
   }
 
+  static defaultProps = {
+    categories: ['projects', 'families', 'individuals', 'genes'],
+  }
+
   constructor(props) {
     super(props)
 

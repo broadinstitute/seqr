@@ -159,11 +159,7 @@ def awesomebar_autocomplete_handler(request):
     if query is None:
         raise ValueError("missing ?q=<prefix> url arg")
 
-    categories = request.GET.get('categories')
-    if categories:
-        categories = categories.split(',')
-    else:
-        categories = {'projects', 'families', 'individuals', 'genes'}
+    categories = request.GET.get('categories', '').split(',')
 
     results = collections.OrderedDict()
     if len(query) > 0:
