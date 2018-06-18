@@ -159,21 +159,27 @@ def awesomebar_autocomplete_handler(request):
     if query is None:
         raise ValueError("missing ?q=<prefix> url arg")
 
+    categories = request.GET.get('categories')
+    if categories:
+        categories = categories.split(',')
+    else:
+        categories = {'projects', 'families', 'individuals', 'genes'}
+
     results = collections.OrderedDict()
     if len(query) > 0:
-        projects = _get_matching_projects(request.user, query)
+        projects = _get_matching_projects(request.user, query) if 'projects' in categories else None
         if projects:
             results['projects'] = {'name': 'Projects', 'results': projects}
 
-        families = _get_matching_families(request.user, query)
+        families = _get_matching_families(request.user, query) if 'families' in categories else None
         if families:
             results['families'] = {'name': 'Families', 'results': families}
 
-        individuals = _get_matching_individuals(request.user, query)
+        individuals = _get_matching_individuals(request.user, query) if 'individuals' in categories else None
         if individuals:
             results['individuals'] = {'name': 'Individuals', 'results': individuals}
 
-        genes = _get_matching_genes(request.user, query)
+        genes = _get_matching_genes(request.user, query) if 'genes' in categories else None
         if genes:
             results['genes'] = {'name': 'Genes', 'results': genes}
 
