@@ -1633,6 +1633,10 @@ div.d3-tooltip {
     pointer-events: none;
 }
 
+.tooltip-inner {
+  max-width: unset;
+  text-align: left !important;
+}
 
 @media (min-width: 1200px) {
   .container {

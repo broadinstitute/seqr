@@ -395,30 +395,31 @@
                         var grch38Pos = parseInt(grch38VariantIdSplit[1]);
                         var grch38Region = grch38VariantIdSplit[0] + "-" + (grch38Pos - 100) + "-" + (grch38Pos + 100);
                     }
-                    var freqTooltipText = 'Allele Counts <table>' +
+                    var freqTooltipText = '<table>' +
                         '<tr>'+
-                            '<td>this callset</td>'+
-                            '<td>AC=' + popCounts["AC"] + ', </td>'+
-                            '<td>AN=' + (popCounts["AN"] != null ? popCounts["AN"] : "?") + '</td>'+
+                            '<td>this callset: </td>'+
+                            '<td> AC=' + popCounts["AC"] + ', </td>'+
+                            '<td> AN=' + (popCounts["AN"] != null ? popCounts["AN"] : "?") + '</td>'+
                         '</tr>'+
                         '<tr>'+
-                            '<td>1kg WGS</td>'+
-                            '<td>AC=' + popCounts["1kg_AC"] + ', </td>'+
-                            '<td>AN=' + (popCounts["1kg_AN"] != null ? popCounts["1kg_AN"] : "?") + '</td>'+
+                            '<td>1kg WGS: </td>'+
+                            '<td> AC=' + popCounts["1kg_AC"] + ', </td>'+
+                            '<td> AN=' + (popCounts["1kg_AN"] != null ? popCounts["1kg_AN"] : "?") + '</td>'+
                         '</tr>'+
                         '<tr>'+
-                            '<td>gnomad exomes</td>'+
-                            '<td>AC=' + popCounts["gnomad_exomes_AC"] + ', </td>'+
-                            '<td>AN=' + (popCounts["gnomad_exomes_AN"] != null ? popCounts["gnomad_exomes_AN"] : "?") + '</td>'+
+                            '<td>gnomad exomes: </td>'+
+                            '<td> AC=' + popCounts["gnomad_exomes_AC"] + ', </td>'+
+                            '<td> AN=' + (popCounts["gnomad_exomes_AN"] != null ? popCounts["gnomad_exomes_AN"] : "?") + '</td>'+
                          '</tr>' +
                         '<tr>'+
-                            '<td>gnomad genomes</td>'+
-                            '<td>AC=' + popCounts["gnomad_genomes_AC"] + ', </td>'+
-                            '<td>AN=' + (popCounts["gnomad_genomes_AN"] != null ? popCounts["gnomad_genomes_AN"] : "?") + '</td>'+
+                            '<td>gnomad genomes: </td>'+
+                            '<td> AC=' + popCounts["gnomad_genomes_AC"] + ', </td>'+
+                            '<td> AN=' + (popCounts["gnomad_genomes_AN"] != null ? popCounts["gnomad_genomes_AN"] : "?") + '</td>'+
                         '</tr>' +
                         (variant.extras.genome_version == "38" ? ('<tr>'+
-                            '<td>topmed</td><td>AC=' + popCounts["topmed_AC"] + ', </td>'+
-                            '<td>AN=' + (popCounts["topmed_AN"] != null ? popCounts["topmed_AN"] : "?") + '</td>'+
+                            '<td>topmed: </td>'+
+                            '<td> AC=' + popCounts["topmed_AC"] + ', </td>'+
+                            '<td> AN=' + (popCounts["topmed_AN"] != null ? popCounts["topmed_AN"] : "?") + '</td>'+
                         '</tr></table>') : '');
 
                 } else {
@@ -437,20 +438,19 @@
                 }
                 %>
                 <div class="gotooltip" data-placement="top" title="<%= freqTooltipText %>">
-
                     <% if (callsetAF != null) { %>
                         <div>
                           <span>THIS CALLSET</span>
-			  <%= callsetAF.toPrecision(2) %>
-			  <% if (popCounts["AC"] != null) { %>
+                          <%= callsetAF.toPrecision(2) %>
+                          <% if (popCounts["AC"] != null) { %>
                             <small style="margin-left: 10px;">
-			      AC=<%= popCounts["AC"] %>
-			      <% if (popCounts["AN"]) { %>
-			        out of
-			        <%= popCounts["AN"] %>
-			      <% } %> 
-			    </small>
-			  <% } %> 
+                              AC=<%= popCounts["AC"] %>
+                              <% if (popCounts["AN"]) { %>
+                                out of
+                                <%= popCounts["AN"] %>
+                              <% } %>
+                            </small>
+                          <% } %>
                           <% if (popCounts["Hom"] != null) { %>
                               <small style="margin-left: 10px">Hom=<%= popCounts["Hom"] %></small>
                           <% } %>
