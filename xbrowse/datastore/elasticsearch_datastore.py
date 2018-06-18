@@ -191,7 +191,7 @@ class ElasticsearchDatastore(datastore.Datastore):
             project = family.project
             logger.info("Searching in family elasticsearch index: " + str(elasticsearch_index))
 
-        if family_id is not None:
+        if family_id is not None and len(family_individual_ids) > 0:
             # figure out which index to use
             # TODO add caching
             matching_indices = []
