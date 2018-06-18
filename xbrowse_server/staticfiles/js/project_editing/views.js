@@ -121,7 +121,7 @@ window.IndividualListTable = Backbone.View.extend({
             for (var i=0; i<formdata.length; i++) {
                 postdata[formdata[i].name] = formdata[i].value;
             }
-            $.post(URL_PREFIX + 'project/' + that.options.project_id + '/add-phenotype',
+            $.post('/project/' + that.options.project_id + '/add-phenotype',
                 postdata,
                 function(data) {
                     if (data.is_error) {
@@ -148,7 +148,7 @@ window.IndividualListTable = Backbone.View.extend({
         if ($(e.target).hasClass('disabled')) return;
         $(e.target).addClass('disabled');
         that.saveCurrentForm();
-        $.post(URL_PREFIX + 'project/' + that.options.project_id + '/save-all-individuals',
+        $.post('/project/' + that.options.project_id + '/save-all-individuals',
             { individuals_json: JSON.stringify(that.collection.toJSON()) },
             function(data) {
                 $(e.target).removeClass('disabled');
@@ -166,7 +166,7 @@ window.IndividualListTable = Backbone.View.extend({
         var indiv_id = $(e.target).data('indiv');
         var indiv = that.collection.find(function(x) { return x.indiv_id = indiv_id; });
         that.update_individual_from_html(indiv);
-        $.post(URL_PREFIX + 'project/' + that.options.project_id + '/save-one-individual',
+        $.post('/project/' + that.options.project_id + '/save-one-individual',
             { individual_json: JSON.stringify(indiv.toJSON()) },
             function(data) {
                 if (data.is_error) {
@@ -186,7 +186,7 @@ window.IndividualListTable = Backbone.View.extend({
         this.$('#base-modal-container').modal();
         this.$('#add-individuals-submit').click(function() {
             var indiv_id_list = $('#add-individuals-textarea').val().split('\n');
-            $.post(URL_PREFIX + 'project/' + that.options.project_id + '/add-individuals',
+            $.post('/project/' + that.options.project_id + '/add-individuals',
                 { indiv_id_list: JSON.stringify(indiv_id_list) },
                 function(data) {
                     if (data.is_error) {

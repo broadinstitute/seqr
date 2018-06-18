@@ -293,7 +293,7 @@ class VariantFunctionalDataForm(forms.Form):
         def valid_value(self, value):
             return isinstance(value, dict) and {'tag', 'metadata'}.issuperset(value) and (isinstance(value.get('tag'), unicode) or isinstance(value.get('tag'), basestring))
 
-    tags = TagsField()
+    tags = TagsField(required=False)
     xpos = forms.IntegerField(max_value=10**20)
     ref = forms.CharField(max_length=1000)
     alt = forms.CharField(max_length=1000)

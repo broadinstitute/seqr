@@ -20,7 +20,7 @@ const StyledRequestStatus = styled(RequestStatus)`
   padding: 0px 5px;
 `
 
-class ButtonPanel extends React.Component {
+class ButtonPanel extends React.PureComponent {
 
   static propTypes = {
     cancelButtonText: PropTypes.string,
@@ -34,7 +34,7 @@ class ButtonPanel extends React.Component {
   render() {
     return (
       <ContainerDiv>
-        <StyledButton onClick={this.props.handleClose}>
+        <StyledButton onClick={this.props.handleClose} type="button">
           {this.props.cancelButtonText || 'Cancel'}
         </StyledButton>
         <StyledButton onClick={this.props.handleSave} type="submit" color="vk">

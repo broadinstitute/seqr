@@ -1,10 +1,20 @@
-/* eslint-disable react/no-array-index-key */
-
 import React from 'react'
 import PropTypes from 'prop-types'
+import styled from 'styled-components'
 
-import { Icon, Popup } from 'semantic-ui-react'
+import { Popup, Table } from 'semantic-ui-react'
 //import randomMC from 'random-material-color'
+
+import ColoredIcon from '../icons/ColoredIcon'
+
+const TableRow = styled(Table.Row)`
+  padding: 0px !important;
+`
+
+const TableCell = styled(Table.Cell)`
+  padding: .2em .6em !important;
+`
+
 
 class HorizontalStackedBar extends React.Component {
 
@@ -42,8 +52,8 @@ class HorizontalStackedBar extends React.Component {
           trigger={
             <span style={{ whiteSpace: 'nowrap' }}>
               {
-                dataWithPercents.map((d, i) => (d.percent >= 1 ?
-                  <div key={i} style={{
+                dataWithPercents.map(d => (d.percent >= 1 ?
+                  <div key={d.name} style={{
                     height: '100%',
                     width: `${d.percent}%`,
                     backgroundColor: d.color,
@@ -57,29 +67,29 @@ class HorizontalStackedBar extends React.Component {
           content={
             <div>
               {title && <div><b>{title}</b><br /></div>}
-              <table>
-                <tbody>
+              <Table basic="very" compact="very">
+                <Table.Body>
                   {
-                    dataWithPercents.map((d, i) => (
+                    dataWithPercents.map(d => (
                       d.count > 0 ?
-                        <tr key={i} style={{ whitespace: 'nowrap' }}>
-                          <td style={{ paddingRight: '5px', width: '55px', verticalAlign: 'top' }}><Icon name="square" size="small" style={{ color: d.color }} /> {d.count}</td>
-                          <td style={{ whitespace: 'nowrap' }}>{d.name}</td>
-                          <td style={{ paddingLeft: '5px', width: '50px', verticalAlign: 'top' }}>({d.percent}%)</td>
-                        </tr> : null
+                        <TableRow key={d.name} verticalAlign="top" >
+                          <TableCell collapsing><ColoredIcon name="square" size="small" color={d.color} /> {d.count}</TableCell>
+                          <TableCell singleLine>{d.name}</TableCell>
+                          <TableCell collapsing>({d.percent}%)</TableCell>
+                        </TableRow> : null
                     ))
                   }
 
                   {
                     dataWithPercents.filter(d => d.count > 0).length > 1 ?
-                      <tr>
-                        <td><Icon name="square" size="small" style={{ color: 'white' }} /> {total}</td>
-                        <td>Total</td>
-                        <td />
-                      </tr> : null
+                      <Table.Row>
+                        <Table.Cell><ColoredIcon name="square" size="small" color="white" /> {total}</Table.Cell>
+                        <Table.Cell>Total</Table.Cell>
+                        <Table.Cell />
+                      </Table.Row> : null
                   }
-                </tbody>
-              </table>
+                </Table.Body>
+              </Table>
             </div>
           }
           position="right center"

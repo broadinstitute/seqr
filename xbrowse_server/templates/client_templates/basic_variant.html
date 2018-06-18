@@ -2,20 +2,41 @@
 
 <script type="text/template" id="tpl-basic-variant">
     <div class="basicvariant">
-        <div class="highlight-msg">
+        <div class="highlight-msg" style="font-size:12pt">
             <% console.log(variant); %>
-            <% if(variant.extras && variant.extras.clinvar_variant_id) { %>
-                <div>
-                    This variant is <a target="_blank" href="http://www.ncbi.nlm.nih.gov/clinvar/variation/<%= variant.extras.clinvar_variant_id %>">in ClinVar</a> as
-                    <i style="font-weight:500">
-                        <% _.each(variant.extras.clinvar_clinsig.split(";"),
-                            function(clinsig) {
-                                var color = utils.getClinvarClinsigColor(clinsig);
+            <% if(variant.extras && variant.extras.clinvar_clinsig) { %>
+                <div style="display: inline-block;">
+                    <% if(variant.extras.clinvar_variant_id) { %>
+                        <a target="_blank" href="http://www.ncbi.nlm.nih.gov/clinvar/variation/<%= variant.extras.clinvar_variant_id %>">
+                    <% } else if(variant.extras.clinvar_allele_id) { %>
+                        <a target="_blank" href="http://www.ncbi.nlm.nih.gov/clinvar/?term=<%= variant.extras.clinvar_allele_id %>[alleleid]">
+                    <% } else { %>
+                        <a target="_blank" href="http://www.ncbi.nlm.nih.gov/clinvar">
+                    <% } %>
+                        ClinVar:
+                        <span style="font-weight:500">
+                            <% _.each(variant.extras.clinvar_clinsig.split(";"),
+                                function(clinsig) {
+                                    var color = utils.getClinvarClinsigColor(clinsig);
                             %>
                                 <i style="color:<%= color %>"><%= clinsig %></i>
-                            <% });
-                        %>
-                    </i>
+                            <% }); %>
+                        </span>
+                    </a>
+                </div>
+            <% } %>
+            <% if(variant.extras && variant.extras.hgmd_class) {
+                if(variant.extras.clinvar_clinsig) {
+                    print(', ');
+                }
+                var hgmd_color = utils.getHGMDClassColor(variant.extras.hgmd_class);
+                var hgmd_label = utils.getHGMDClassName(variant.extras.hgmd_class); %>
+                <div style="display: inline-block;">
+                    <a target="_blank" href="https://portal.biobase-international.com/hgmd/pro/mut.php?acc=<%= variant.extras.hgmd_accession %>">
+                        HGMD: <span style="font-weight:500">
+                            <i style="color:<%= hgmd_color %>"><%= hgmd_label %></i>
+                        </span>
+                    </a>
                 </div>
             <% } %>
             <% if (variant.extras && variant.extras.family_tags && variant.extras.family_tags.length > 0) { %>
@@ -217,8 +238,8 @@
                        <%= variant.annotation.vep_group.replace(/_/g, ' ') %>
                 <% } %>
             </a>
-            <% if(variant.annotation && variant.annotation.vep_annotation) { %>
-                <% var worst_vep_annotation = variant.annotation.vep_annotation[variant.annotation.worst_vep_annotation_index];
+            <% if(variant.annotation && (variant.annotation.main_transcript || variant.annotation.vep_annotation)) { %>
+                <% var worst_vep_annotation = variant.annotation.main_transcript || variant.annotation.vep_annotation[variant.annotation.worst_vep_annotation_index];
                 if (worst_vep_annotation.lof == 'LC' || worst_vep_annotation.lof_flags == 'NAGNAG_SITE') {
                     var loftee_tooltip = '';
                     if (worst_vep_annotation.lof_filter != '') {
@@ -258,8 +279,15 @@
                 <% } %>
 
                 <% var variantSearchLinks = utils.getVariantSearchLinks(variant); %>
-                <sup><a target="_blank" href="<%= variantSearchLinks['google'] %>">google</a> | <a target="_blank" href="<%= variantSearchLinks['pubmed'] %>">pubmed</a></sup>
-            <% } %>
+                    <sup><a target="_blank" href="<%= variantSearchLinks['google'] %>">google</a> | <a target="_blank" href="<%= variantSearchLinks['pubmed'] %>">pubmed</a></sup>
+                <% } %>
+                <% if (variant.extras && variant.extras.svtype) { %>
+                    <br /><br />
+                    <span>VARIANT TYPE</span><br />
+                     <%= variant.extras.svtype.replace("INS", "Insertion").replace("DEL", "Deletion") %> (<%= Math.abs(variant.extras.svlen) %>bp)<br/>
+                <% } %>
+
+
         </div>
 
         <div class="cell predictions">
@@ -351,10 +379,10 @@
 
                 var freqs = variant.annotation.freqs;
                 if (variant.annotation.db == "elasticsearch") {
-                    var g1kAF = freqs["1kg_wgs_popmax_AF"] || freqs["1kg_wgs_AF"] || 0;
-                    var exacAF = freqs["exac_v3_popmax_AF"] || freqs["exac_v3_AF"] || 0;
-                    var gnomadExomesAF = freqs["gnomad_exomes_popmax_AF"] || freqs["gnomad_exomes_AF"] || 0;
-                    var gnomadGenomesAF = freqs["gnomad_genomes_popmax_AF"] || freqs["gnomad_genomes_AF"] || 0;
+                    var g1kAF = freqs["1kg_wgs_popmax_AF"] || freqs["1kg_wgs_AF"];
+                    var exacAF = freqs["exac_v3_popmax_AF"] || freqs["exac_v3_AF"];
+                    var gnomadExomesAF = freqs["gnomad_exomes_popmax_AF"] || freqs["gnomad_exomes_AF"];
+                    var gnomadGenomesAF = freqs["gnomad_genomes_popmax_AF"] || freqs["gnomad_genomes_AF"];
                     var topmedAF = freqs["topmed_AF"];
 
                     var callsetAF = freqs["AF"];
@@ -362,26 +390,47 @@
                     var popCounts = variant.annotation.pop_counts;
 
                     var grch38Coords = variant.extras.grch38_coords;
-                    if (topmedAF == 0) {
+                    if (topmedAF == 0 && grch38Coords) {
                         var grch38VariantIdSplit = grch38Coords.split("-");
                         var grch38Pos = parseInt(grch38VariantIdSplit[1]);
                         var grch38Region = grch38VariantIdSplit[0] + "-" + (grch38Pos - 100) + "-" + (grch38Pos + 100);
                     }
-                    var freqTooltipText = 'Allele Counts <table>' +
-                        '<tr><td>this callset</td><td>' + popCounts["AC"] + '</td></tr>' +
-                        '<tr><td>gnomad exomes</td><td>' + popCounts["gnomad_exomes_AC"] + '</td></tr>' +
-                        '<tr><td>gnomad genomes</td><td>' + popCounts["gnomad_genomes_AC"] + '</td></tr>' +
-                        '<tr><td>topmed</td><td>' + popCounts["topmed_AC"] + '</td></tr></table>';
+                    var freqTooltipText = '<table>' +
+                        '<tr>'+
+                            '<td>this callset: </td>'+
+                            '<td> AC=' + popCounts["AC"] + ', </td>'+
+                            '<td> AN=' + (popCounts["AN"] != null ? popCounts["AN"] : "?") + '</td>'+
+                        '</tr>'+
+                        '<tr>'+
+                            '<td>1kg WGS: </td>'+
+                            '<td> AC=' + popCounts["1kg_AC"] + ', </td>'+
+                            '<td> AN=' + (popCounts["1kg_AN"] != null ? popCounts["1kg_AN"] : "?") + '</td>'+
+                        '</tr>'+
+                        '<tr>'+
+                            '<td>gnomad exomes: </td>'+
+                            '<td> AC=' + popCounts["gnomad_exomes_AC"] + ', </td>'+
+                            '<td> AN=' + (popCounts["gnomad_exomes_AN"] != null ? popCounts["gnomad_exomes_AN"] : "?") + '</td>'+
+                         '</tr>' +
+                        '<tr>'+
+                            '<td>gnomad genomes: </td>'+
+                            '<td> AC=' + popCounts["gnomad_genomes_AC"] + ', </td>'+
+                            '<td> AN=' + (popCounts["gnomad_genomes_AN"] != null ? popCounts["gnomad_genomes_AN"] : "?") + '</td>'+
+                        '</tr>' +
+                        (variant.extras.genome_version == "38" ? ('<tr>'+
+                            '<td>topmed: </td>'+
+                            '<td> AC=' + popCounts["topmed_AC"] + ', </td>'+
+                            '<td> AN=' + (popCounts["topmed_AN"] != null ? popCounts["topmed_AN"] : "?") + '</td>'+
+                        '</tr></table>') : '');
 
                 } else {
-                    var g1kAF = freqs["1kg_wgs_phase3_popmax"] || freqs["1kg_wgs_phase3"] || 0;
-                    var exacAF = freqs["exac_v3_popmax"] || freqs["exac_v3"] || 0;
+                    var g1kAF = freqs["1kg_wgs_phase3_popmax"] || freqs["1kg_wgs_phase3"];
+                    var exacAF = freqs["exac_v3_popmax"] || freqs["exac_v3"];
                     var gnomadExomesAF = freqs["gnomad-exomes2_popmax"];
-                    if ( typeof gnomadExomesAF === 'undefined' ) {
+                    if ( gnomadExomesAF == null ) {
                         gnomadExomesAF = freqs["gnomad-exomes2"];
                     }
                     var gnomadGenomesAF = freqs["gnomad-genomes2_popmax"];
-                    if ( typeof gnomadGenomesAF === 'undefined' ) {
+                    if ( gnomadGenomesAF == null ) {
                         gnomadGenomesAF = freqs["gnomad-genomes2"];
                     }
                     var popCounts = {};
@@ -389,21 +438,33 @@
                 }
                 %>
                 <div class="gotooltip" data-placement="top" title="<%= freqTooltipText %>">
-
-                    <% if (typeof callsetAF !== 'undefined') { %>
+                    <% if (callsetAF != null) { %>
                         <div>
-                            <span>THIS CALLSET</span> <%= callsetAF.toPrecision(2) %>
-                            <small style="margin-left: 10px;">AC=<%= popCounts["AC"] %> out of <%= popCounts["AN"] %></small>
+                          <span>THIS CALLSET</span>
+                          <%= callsetAF.toPrecision(2) %>
+                          <% if (popCounts["AC"] != null) { %>
+                            <small style="margin-left: 10px;">
+                              AC=<%= popCounts["AC"] %>
+                              <% if (popCounts["AN"]) { %>
+                                out of
+                                <%= popCounts["AN"] %>
+                              <% } %>
+                            </small>
+                          <% } %>
+                          <% if (popCounts["Hom"] != null) { %>
+                              <small style="margin-left: 10px">Hom=<%= popCounts["Hom"] %></small>
+                          <% } %>
                         </div>
                     <% } %>
 
-                    <% if (typeof g1kAF !== 'undefined') { %>
+                    <% if (g1kAF != null) { %>
                         <div>
                             <span>1KG WGS</span><%= g1kAF.toPrecision(2) %>
                         </div>
+                        <!-- 1kg Hom counts not available in dataset -->
                     <% } %>
 
-                    <% if (typeof exacAF !== 'undefined') { %>
+                    <% if (exacAF != null) { %>
                         <div>
                             <span>EXAC</span>
                             <% if (exacAF > 0) { %>
@@ -411,16 +472,16 @@
                             <% } else { %>
                                  <a target="_blank" href="http://exac.broadinstitute.org/region/<%= grch37Region %>">0.0 </a>
                             <% } %>
-                            <% if (typeof popCounts["exac_v3_Hom"] !== 'undefined') { %>
+                            <% if (popCounts["exac_v3_Hom"] != null) { %>
                                 <small style="margin-left: 10px">Hom=<%= popCounts["exac_v3_Hom"] %></small>
-                                <% if (variant.chr.endsWith('X') && typeof popCounts["exac_v3_Hemi"] !== 'undefined') { %>
+                                <% if (variant.chr.endsWith('X') && popCounts["exac_v3_Hemi"] != null) { %>
                                     <small style="margin-left:10px">Hemi=<%= popCounts["exac_v3_Hemi"] %></small>
                                 <% } %>
                             <% } %>
                         </div>
                     <% } %>
 
-                    <% if (typeof gnomadExomesAF !== 'undefined') { %>
+                    <% if (gnomadExomesAF != null) { %>
                         <div>
                             <span>GNOMAD EXOMES</span>
                             <% if (gnomadExomesAF > 0) { %>
@@ -428,16 +489,16 @@
                             <% } else { %>
                                 <a target="_blank" href="http://gnomad.broadinstitute.org/region/<%= grch37Region %>">0.0 </a>
                             <% } %>
-                            <% if (typeof popCounts["gnomad_exomes_AC"] !== 'undefined') { %>
+                            <% if (popCounts["gnomad_exomes_Hom"] != null) { %>
                                 <small style="margin-left: 10px">Hom=<%= popCounts["gnomad_exomes_Hom"] %></small>
-                                <% if (variant.chr.endsWith('X') && typeof popCounts["gnomad_exomes_Hemi"] !== 'undefined') { %>
+                                <% if (variant.chr.endsWith('X') && popCounts["gnomad_exomes_Hemi"] != null) { %>
                                     <small style="margin-left:10px">Hemi=<%= popCounts["gnomad_exomes_Hemi"] %></small>
                                 <% } %>
                             <% } %>
                         </div>
                     <% } %>
 
-                    <% if (typeof gnomadGenomesAF !== 'undefined') { %>
+                    <% if (gnomadGenomesAF != null) { %>
                         <div>
                             <span>GNOMAD GENOMES</span>
                             <% if (gnomadGenomesAF > 0) { %>
@@ -445,21 +506,24 @@
                             <% } else { %>
                                 <a target="_blank" href="http://gnomad.broadinstitute.org/region/<%= grch37Region %>">0.0</a>
                             <% } %>
-                            <% if (typeof popCounts["gnomad_genomes_AC"] !== 'undefined') { %>
+                            <% if (popCounts["gnomad_genomes_Hom"] != null) { %>
                                 <small style="margin-left: 10px">Hom=<%= popCounts["gnomad_genomes_Hom"] %></small>
-                                <% if (variant.chr.endsWith('X') && typeof popCounts["gnomad_genomes_Hemi"] !== 'undefined') { %>
+                                <% if (variant.chr.endsWith('X') && popCounts["gnomad_genomes_Hemi"] != null) { %>
                                     <small style="margin-left:10px">Hemi=<%= popCounts["gnomad_genomes_Hemi"] %></small>
                                 <% } %>
                             <% } %>
                         </div>
                     <% } %>
-                    <% if (typeof topmedAF !== 'undefined') { %>
+                    <% if (topmedAF != null && variant.extras.genome_version == "38") { %>
                         <div>
                             <span>TOPMED</span>
                             <% if (topmedAF > 0) { %>
                                 <a target="_blank" href="https://bravo.sph.umich.edu/freeze5/hg38/variant/<%= grch38Coords %>"><%= topmedAF.toPrecision(3) %></a>
                             <% } else { %>
                                 <a target="_blank" href="https://bravo.sph.umich.edu/freeze5/hg38/region/<%= grch38Region %>">0.0</a>
+                            <% } %>
+                            <% if (popCounts["topmed_Hom"] != null) { %>
+                                <small style="margin-left: 10px">Hom=<%= popCounts["topmed_Hom"] %></small>
                             <% } %>
                         </div>
                     <% } %>
@@ -495,9 +559,12 @@
                                 <span class="other-allele">no call</span>
                             <% } %><br>
                             <span class="gq">
-                                <% if(genotype) {
-                                    print(genotype.gq + (genotype.filter == "pass" ? "" : (", filter: " + genotype.filter)));
-                                } %>
+                                <% if(genotype) { %>
+                                    <%= genotype.gq %>
+                                    <% if (genotype.filter != "pass") { %>
+                                        <br />filter: <%= genotype.filter %>
+                                    <% } %>
+                                <% } %>
                             </span>
                         </div>
                         <% if(genotype && genotype.extras && genotype.extras.cnvs)  {

@@ -268,8 +268,8 @@ var MendelianVariantSearchResultsView = Backbone.View.extend({
                 break;
             case "clinvar_pathogenicity":
                 comparison_function = function (a, b) {
-                    var clinvar_a = (a.extras && a.extras.clinvar_variant_id) ? a.extras.clinvar_clinsig : '';
-                    var clinvar_b = (b.extras && b.extras.clinvar_variant_id) ? b.extras.clinvar_clinsig : '';
+                    var clinvar_a = (a.extras && a.extras.clinvar_clinsig) ? a.extras.clinvar_clinsig : '';
+                    var clinvar_b = (b.extras && b.extras.clinvar_clinsig) ? b.extras.clinvar_clinsig : '';
 		            clinvar_a = clinvar_a.replace("path", "z_path").replace("benign", "k_benign").replace("uncertain", "a_uncertain");  // change alphabetical order
 		            clinvar_b = clinvar_b.replace("path", "z_path").replace("benign", "k_benign").replace("uncertain", "a_uncertain");  // change alphabetical order
 
@@ -447,7 +447,7 @@ var MendelianVariantSearchHBC = HeadBallCoach.extend({
             search_hash: search_hash,
         };
 
-        $.get(URL_PREFIX + 'api/mendelian-variant-search-spec', postData, function(data) {
+        $.get('/api/mendelian-variant-search-spec', postData, function(data) {
             if (!data.is_error) {
                 that.search_form_view.load_search_spec(data.search_spec);  // form controls
                 that.setResults(search_hash, data.search_spec, data.variants);  // and results
@@ -514,7 +514,7 @@ var MendelianVariantSearchHBC = HeadBallCoach.extend({
         that.set_loading();
 
         // these things are the same regardless of search mode
-        var url = URL_PREFIX + 'api/mendelian-variant-search';
+        var url = '/api/mendelian-variant-search';
         var post_data = {
             project_id: that.family.get('project_id'),
             family_id: that.family.get('family_id'),
@@ -605,14 +605,6 @@ var MendelianVariantSearchHBC = HeadBallCoach.extend({
         });
     },
 
-    variant_info: function(variant) {
-        var that = this;
-        var view = new AnnotationDetailsView({
-            variant: variant
-        });
-        that.pushModal("title", view);
-    },
-
     get_suggested_inheritance: function() {
         return this.search_form_view.ge
     },
@@ -628,7 +620,7 @@ var MendelianVariantSearchHBC = HeadBallCoach.extend({
             search_hash: this.search_hash,
             return_type: 'csv',
         };
-        window.location.href = URL_PREFIX + 'api/mendelian-variant-search-spec?' + $.param(params);
+        window.location.href = '/api/mendelian-variant-search-spec?' + $.param(params);
     },
 
 });

@@ -129,7 +129,7 @@ var CohortVariantSearchHBC = HeadBallCoach.extend({
             search_hash: search_hash,
         };
 
-        $.get(URL_PREFIX + 'api/cohort-variant-search-spec', postData, function(data) {
+        $.get('/api/cohort-variant-search-spec', postData, function(data) {
             if (!data.is_error) {
                 that.search_form_view.load_search_spec(data.search_spec);  // form controls
                 that.setResults(search_hash, data.search_spec, data.variants);  // and results
@@ -193,7 +193,7 @@ var CohortVariantSearchHBC = HeadBallCoach.extend({
             quality_filter: JSON.stringify(search_spec.quality_filter.toJSON()),
         };
 
-        var url = URL_PREFIX + 'api/cohort-variant-search';
+        var url = '/api/cohort-variant-search';
         postData.inheritance_mode = search_spec.inheritance_mode;
         postData.search_mode = search_spec.inheritance_mode ? 'standard_inheritance' : 'all_variants';
 
@@ -216,14 +216,6 @@ var CohortVariantSearchHBC = HeadBallCoach.extend({
         $('#run-search').on('click', function() {
             that.run_search();
         });
-    },
-
-    variant_info: function(variant) {
-        var that = this;
-        var view = new AnnotationDetailsView({
-            variant: variant
-        });
-        that.pushModal("title", view);
     },
 
     redisplay_results: function() {

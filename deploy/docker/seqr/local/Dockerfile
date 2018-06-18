@@ -4,7 +4,7 @@ MAINTAINER MacArthur Lab
 
 # install commmon utilities
 RUN apt-get update \
-    && apt-get install -y apt-utils wget curl xterm vim emacs nano less git bzip2 \
+    && apt-get install -y apt-utils wget curl xterm vim emacs nano less git htop bzip2 \
     && TERM=xterm
 
 
@@ -34,6 +34,9 @@ RUN echo 'deb http://apt.postgresql.org/pub/repos/apt/ jessie-pgdg main' >> /etc
 RUN apt-get install -y python-dev \
     && wget https://bootstrap.pypa.io/get-pip.py \
     && python get-pip.py
+
+RUN apt-get install -y redis-tools
+
 
 # install gsutil from https://cloud.google.com/storage/docs/gsutil_install#linux
 ENV TERM=xterm

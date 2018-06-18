@@ -5,9 +5,37 @@ Utility functions for converting Django ORM object to JSON
 import json
 import logging
 import os
+from django.db.models import Model
+from django.db.models.fields.files import ImageFieldFile
 
+from seqr.models import CAN_EDIT, Project, Family, Individual, Sample, Dataset
+from seqr.views.utils.json_utils import _to_camel_case
 from family_info_utils import retrieve_family_analysed_by
 logger = logging.getLogger(__name__)
+
+
+def _record_to_dict(record, fields, nested_fields=None):
+    if isinstance(record, Model):
+        model = record
+        record = {field[1]: getattr(model, field[0]) for field in fields}
+        for nested_field in (nested_fields or []):
+            field_value = model
+            for field in nested_field:
+                field_value = getattr(field_value, field)
+            record['_'.join(nested_field)] = field_value
+    return record
+
+
+def _get_record_fields(model_class, model_type, user=None):
+    fields = [(field, '{}_{}'.format(model_type, field)) for field in model_class._meta.json_fields]
+    if user and user.is_staff:
+        internal_fields = getattr(model_class._meta, 'internal_json_fields', [])
+        fields += [(field, '{}_{}'.format(model_type, field)) for field in internal_fields]
+    return fields
+
+
+def _get_json_for_record(record, fields):
+    return {_to_camel_case(field[0]): record.get(field[1]) for field in fields}
 
 
 def _get_json_for_user(user):
@@ -31,154 +59,174 @@ def _get_json_for_user(user):
     return json_obj
 
 
-def _get_json_for_project(project, user=None):
+def _get_json_for_project(project, user, add_project_category_guids_field=True):
     """Returns JSON representation of the given Project.
 
     Args:
-        project (object): django model for the project
+        project (object): dictionary or django model for the project
         user (object): Django User object for determining whether to include restricted/internal-only fields
     Returns:
         dict: json object
     """
-    result = {
-        'projectGuid': project.guid,
-        'name': project.name,
-        'description': project.description,
-        'createdDate': project.created_date,
-        'lastModifiedDate': project.last_modified_date,
-        'deprecatedProjectId': project.deprecated_project_id,
-        'projectCategoryGuids': [c.guid for c in project.projectcategory_set.all()],
-        'isPhenotipsEnabled': project.is_phenotips_enabled,
-        'phenotipsUserId': project.phenotips_user_id,
-        'isMmeEnabled': project.is_mme_enabled,
-        'mmePrimaryDataOwner': project.mme_primary_data_owner,
-    }
-
-    if user and user.is_staff:
-        result.update({
-            'deprecatedLastAccessedDate': project.deprecated_last_accessed_date
-        })
-
+    fields = _get_record_fields(Project, 'project')
+    project_dict = _record_to_dict(project, fields)
+    result = _get_json_for_record(project_dict, fields)
+    result.update({
+        'projectGuid': result.pop('guid'),
+        'projectCategoryGuids': [c.guid for c in project.projectcategory_set.all()] if add_project_category_guids_field else [],
+        'canEdit': user.is_staff or user.has_perm(CAN_EDIT, project),
+    })
     return result
 
 
-def _get_json_for_family(family, user=None, add_individual_guids_field=False):
+def _get_json_for_families(families, user=None, add_individual_guids_field=False, add_analysed_by_field=True):
     """Returns a JSON representation of the given Family.
 
     Args:
-        family (object): django model representing the family.
+        families (array): array of dictionaries or django models representing the family.
+        user (object): Django User object for determining whether to include restricted/internal-only fields
+        add_individual_guids_field (bool): whether to add an 'individualGuids' field. NOTE: this will require a database query.
+    Returns:
+        array: json objects
+    """
+
+    def _get_pedigree_image_url(pedigree_image):
+        if isinstance(pedigree_image, ImageFieldFile):
+            try:
+                pedigree_image = pedigree_image.url
+            except Exception:
+                pedigree_image = None
+        return os.path.join("/media/", pedigree_image) if pedigree_image else None
+
+    fields = _get_record_fields(Family, 'family', user)
+    results = []
+    for family in families:
+        family_dict = _record_to_dict(family, fields, nested_fields=[('project', 'guid')])
+        result = _get_json_for_record(family_dict, fields)
+        if add_analysed_by_field:
+            family_pk = result.pop('id')
+            result['analysedBy'] = retrieve_family_analysed_by(family_pk)
+        result.update({
+            'projectGuid': family_dict['project_guid'],
+            'familyGuid': result.pop('guid'),
+            'pedigreeImage': _get_pedigree_image_url(result['pedigreeImage']),
+        })
+
+        if add_individual_guids_field:
+            result['individualGuids'] = [i.guid for i in family.individual_set.all()]
+        results.append(result)
+
+    return results
+
+
+def _get_json_for_family(family, user=None, add_individual_guids_field=False, add_analysed_by_field=True):
+    """Returns a JSON representation of the given Family.
+
+    Args:
+        family (object): dictionary or django model representing the family.
         user (object): Django User object for determining whether to include restricted/internal-only fields
         add_individual_guids_field (bool): whether to add an 'individualGuids' field. NOTE: this will require a database query.
     Returns:
         dict: json object
     """
 
-    result = {
-        'familyGuid':      family.guid,
-        'familyId':        family.family_id,
-        'displayName':     family.display_name,
-        'description':     family.description,
-        'pedigreeImage':   os.path.join("/media/", family.pedigree_image.url) if family.pedigree_image and family.pedigree_image.url else None,
-        'analysisNotes':   family.analysis_notes,
-        'analysisSummary': family.analysis_summary,
-        'causalInheritanceMode': family.causal_inheritance_mode,
-        'analysisStatus':  family.analysis_status,
-        'analysedBy': retrieve_family_analysed_by(family.id),
-    }
+    return _get_json_for_families([family], user, add_individual_guids_field, add_analysed_by_field)[0]
 
-    if user and user.is_staff:
+
+def _get_json_for_individuals(individuals, user=None):
+    """Returns a JSON representation for the given list of Individuals.
+
+    Args:
+        individuals (array): array of dictionaries or django models for the individual.
+        user (object): Django User object for determining whether to include restricted/internal-only fields
+    Returns:
+        array: array of json objects
+    """
+
+    def _get_case_review_status_modified_by(modified_by):
+        return modified_by.email or modified_by.username if hasattr(modified_by, 'email') else modified_by
+
+    def _load_phenotips_data(phenotips_data):
+        phenotips_json = None
+        if phenotips_data:
+            try:
+                phenotips_json = json.loads(phenotips_data)
+            except Exception as e:
+                logger.error("Couldn't parse phenotips: {}".format(e))
+        return phenotips_json
+
+    fields = _get_record_fields(Individual, 'individual', user)
+
+    results = []
+    for individual in individuals:
+        individual_dict = _record_to_dict(
+            individual, fields, nested_fields=[('family', 'project', 'guid'), ('family', 'guid')]
+        )
+
+        result = _get_json_for_record(individual_dict, fields)
         result.update({
-            'internalAnalysisStatus': family.internal_analysis_status,
-            'internalCaseReviewNotes': family.internal_case_review_notes,
-            'internalCaseReviewSummary': family.internal_case_review_summary,
+            'projectGuid': individual_dict.get('family_project_guid') or individual_dict['project_guid'],
+            'familyGuid': individual_dict['family_guid'],
+            'individualGuid': result.pop('guid'),
+            'caseReviewStatusLastModifiedBy': _get_case_review_status_modified_by(result.get('caseReviewStatusLastModifiedBy')),
+            'phenotipsData': _load_phenotips_data(result['phenotipsData'])
         })
-
-    if add_individual_guids_field:
-        result['individualGuids'] = [i.guid for i in family.individual_set.all()]
-
-    return result
+        results.append(result)
+    return results
 
 
 def _get_json_for_individual(individual, user=None):
     """Returns a JSON representation of the given Individual.
 
     Args:
-        individual (object): django model for the individual.
+        individual (object): dictionary or django model for the individual.
         user (object): Django User object for determining whether to include restricted/internal-only fields
     Returns:
         dict: json object
     """
-
-    case_review_status_last_modified_by = None
-    if individual.case_review_status_last_modified_by:
-        u = individual.case_review_status_last_modified_by
-        case_review_status_last_modified_by = u.email or u.username
-
-    try:
-        phenotips_json = None
-        if individual.phenotips_data:
-            phenotips_json = json.loads(individual.phenotips_data)
-    except Exception as e:
-        logger.error("Unable to parse %s individual.phenotips_data: '%s': %s",
-            individual.individual_id, individual.phenotips_data, e)
-
-    return {
-        'individualGuid': individual.guid,
-        'individualId': individual.individual_id,
-        'paternalId': individual.paternal_id,
-        'maternalId': individual.maternal_id,
-        'sex': individual.sex,
-        'affected': individual.affected,
-        'displayName': individual.display_name,
-        'notes': individual.notes or '',
-        'caseReviewStatus': individual.case_review_status,
-        'caseReviewStatusAcceptedFor': individual.case_review_status_accepted_for,
-        'caseReviewStatusLastModifiedDate': individual.case_review_status_last_modified_date,
-        'caseReviewStatusLastModifiedBy': case_review_status_last_modified_by,
-        'caseReviewDiscussion': individual.case_review_discussion,
-        #'phenotipsPatientExternalId': individual.phenotips_eid,
-        'phenotipsPatientId': individual.phenotips_patient_id,
-        'phenotipsData': phenotips_json,
-        'createdDate': individual.created_date,
-        'lastModifiedDate': individual.last_modified_date,
-    }
+    return _get_json_for_individuals([individual], user)[0]
 
 
-def _get_json_for_sample(sample, user=None):
+def _get_json_for_sample(sample):
     """Returns a JSON representation of the given Sample.
 
     Args:
-        sample (object): django model for the Sample.
-        user (object): Django User object for determining whether to include any restricted/internal-only fields
+        sample (object): dictionary or django model for the Sample.
     Returns:
         dict: json object
     """
 
-    return {
-        'sampleGuid': sample.guid,
-        'createdDate': sample.created_date,
-        'sampleType': sample.sample_type,
-        'sampleId': sample.sample_id,
-        'sampleStatus': sample.sample_status,
-    }
+    fields = _get_record_fields(Sample, 'sample')
+    sample_dict = _record_to_dict(
+        sample, fields, nested_fields=[('individual', 'family', 'project', 'guid'), ('individual', 'guid')]
+    )
+
+    result = _get_json_for_record(sample_dict, fields)
+    result.update({
+        'projectGuid': sample_dict.get('individual_family_project_guid') or sample_dict['project_guid'],
+        'individualGuid': sample_dict['individual_guid'],
+        'sampleGuid': result.pop('guid'),
+    })
+    return result
 
 
-def _get_json_for_dataset(dataset, user=None):
+def _get_json_for_dataset(dataset, add_sample_type_field=True):
     """Returns a JSON representation of the given Dataset.
 
     Args:
-        dataset (object): django model for the Dataset.
-        user (object): Django User object for determining whether to include any restricted/internal-only fields
+        dataset (object): dictionary or django model for the Dataset.
     Returns:
         dict: json object
     """
 
-    return {
-        'datasetGuid': dataset.guid,
-        'createdDate': dataset.created_date,
-        'analysisType': dataset.analysis_type,
-        'isLoaded': dataset.is_loaded,
-        'loadedDate': dataset.loaded_date,
-        'sourceFilePath': dataset.source_file_path,
-    }
+    fields = _get_record_fields(Dataset, 'dataset')
+    dataset_dict = _record_to_dict(dataset, fields, nested_fields=[('project', 'guid')])
 
+    result = _get_json_for_record(dataset_dict, fields)
+    if add_sample_type_field:
+        result['sampleType'] = dataset_dict['sample_sample_type']
+    result.update({
+        'projectGuid': dataset_dict['project_guid'],
+        'datasetGuid': result.pop('guid'),
+    })
+    return result

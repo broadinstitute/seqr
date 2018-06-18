@@ -30,7 +30,7 @@ window.BasicVariantView = Backbone.View.extend({
         this.reference_populations = this.hbc.project_options.reference_populations;
 
         this.highlight_background = false;
-        if (this.show_variant_notes && this.variant.extras.clinvar_variant_id) {
+        if (this.show_variant_notes && this.variant.extras.clinvar_clinsig) {
 	        if(this.variant.extras.clinvar_clinsig.indexOf("pathogenic") != -1) {
 		        this.highlight_background = true;
 	        }
@@ -143,6 +143,7 @@ window.BasicVariantView = Backbone.View.extend({
             this.hbc.igv_view = new IgvView({
               individuals: this.individuals,
               locus: locus,
+              genome_version: this.variant.extras.genome_version || "37",
             });
         }
 

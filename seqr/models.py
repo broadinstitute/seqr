@@ -5,6 +5,7 @@ import uuid
 
 from django.contrib.auth.models import User, Group
 from django.db import models
+from django.db.models import options
 from django.utils import timezone
 from django.utils.text import slugify as __slugify
 
@@ -13,6 +14,10 @@ from guardian.shortcuts import assign_perm
 from seqr.utils.xpos_utils import get_chrom_pos, get_xpos
 from reference_data.models import GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38, GENOME_VERSION_CHOICES
 from django.conf import settings
+
+#  Allow adding the custom json_fields and internal_json_fields to the model Meta
+# (from https://stackoverflow.com/questions/1088431/adding-attributes-into-django-models-meta-class)
+options.DEFAULT_NAMES = options.DEFAULT_NAMES + ('json_fields', 'internal_json_fields',)
 
 CAN_VIEW = 'can_view'
 CAN_EDIT = 'can_edit'
@@ -90,7 +95,6 @@ class Project(ModelWithGUID):
     can_view_group = models.ForeignKey(Group, related_name='+', on_delete=models.PROTECT)
 
     #primary_investigator = models.ForeignKey(User, null=True, blank=True, related_name='+')
-
     is_phenotips_enabled = models.BooleanField(default=False)
     phenotips_user_id = models.CharField(max_length=100, null=True, blank=True, db_index=True)
 
@@ -102,11 +106,12 @@ class Project(ModelWithGUID):
     is_functional_data_enabled = models.BooleanField(default=False)
     disease_area = models.CharField(max_length=20, null=True, blank=True, choices=DISEASE_AREA)
 
+    disable_staff_access = models.BooleanField(default=False)
+
     # legacy
     custom_reference_populations = models.ManyToManyField('base.ReferencePopulation', blank=True, related_name='+')
     deprecated_last_accessed_date = models.DateTimeField(null=True, blank=True, db_index=True)
     deprecated_project_id = models.TextField(default="", blank=True, db_index=True)  # replace with model's 'id' field
-
 
     def __unicode__(self):
         return self.name.strip()
@@ -142,7 +147,7 @@ class Project(ModelWithGUID):
 
             # add the user that created this Project to all permissions groups
             user = self.created_by
-            if user and not user.is_staff:  # staff have access too all resources anyway
+            if user and not user.is_staff:  # staff have access to all resources anyway
                 user.groups.add(self.owners_group, self.can_edit_group, self.can_view_group)
 
     def delete(self, *args, **kwargs):
@@ -156,6 +161,11 @@ class Project(ModelWithGUID):
 
     class Meta:
         permissions = _SEQR_OBJECT_PERMISSIONS
+
+        json_fields = [
+            'name', 'description', 'created_date', 'last_modified_date', 'is_phenotips_enabled', 'phenotips_user_id',
+            'deprecated_project_id', 'deprecated_last_accessed_date', 'is_mme_enabled', 'mme_primary_data_owner', 'guid'
+        ]
 
 
 class ProjectCategory(ModelWithGUID):
@@ -240,6 +250,14 @@ class Family(ModelWithGUID):
     class Meta:
         unique_together = ('project', 'family_id')
 
+        json_fields = [
+            'guid', 'id', 'family_id', 'display_name', 'description', 'analysis_notes', 'analysis_summary',
+            'causal_inheritance_mode', 'analysis_status', 'pedigree_image',
+        ]
+        internal_json_fields = [
+            'internal_analysis_status', 'internal_case_review_notes', 'internal_case_review_summary'
+        ]
+
 
 class Individual(ModelWithGUID):
     SEX_CHOICES = (
@@ -269,16 +287,6 @@ class Individual(ModelWithGUID):
         ('DP', 'Declined to Participate'),
     )
 
-    CASE_REVIEW_STATUS_ACCEPTED_FOR_OPTIONS = (
-        ('S', 'Store DNA'),
-        ('A', 'Array'),   # allow multiple-select. No selection = Platform Uncertain
-        ('E', 'Exome'),
-        ('G', 'Genome'),
-        ('R', 'RNA-seq'),
-        ('P', 'Reprocess'),
-
-    )
-
     SEX_LOOKUP = dict(SEX_CHOICES)
     AFFECTED_STATUS_LOOKUP = dict(AFFECTED_STATUS_CHOICES)
     CASE_REVIEW_STATUS_LOOKUP = dict(CASE_REVIEW_STATUS_CHOICES)
@@ -300,7 +308,6 @@ class Individual(ModelWithGUID):
     notes = models.TextField(blank=True, null=True)
 
     case_review_status = models.CharField(max_length=2, choices=CASE_REVIEW_STATUS_CHOICES, null=True, blank=True)
-    case_review_status_accepted_for = models.CharField(max_length=10, null=True, blank=True)
     case_review_status_last_modified_date = models.DateTimeField(null=True, blank=True, db_index=True)
     case_review_status_last_modified_by = models.ForeignKey(User, null=True, blank=True, related_name='+', on_delete=models.SET_NULL)
     case_review_discussion = models.TextField(null=True, blank=True)
@@ -320,6 +327,15 @@ class Individual(ModelWithGUID):
 
     class Meta:
         unique_together = ('family', 'individual_id')
+
+        json_fields = [
+            'guid', 'individual_id', 'paternal_id', 'maternal_id', 'sex', 'affected', 'display_name', 'notes',
+            'phenotips_patient_id', 'phenotips_data', 'created_date', 'last_modified_date'
+        ]
+        internal_json_fields = [
+            'case_review_status', 'case_review_discussion',
+            'case_review_status_last_modified_date', 'case_review_status_last_modified_by',
+        ]
 
 
 class UploadedFileForFamily(models.Model):
@@ -407,8 +423,11 @@ class Sample(ModelWithGUID):
     def _compute_guid(self):
         return 'S%06d_%s' % (self.id, _slugify(str(self)))
 
-    #class Meta:
-    #    unique_together = ('sample_batch', 'sample_id')
+    class Meta:
+       # unique_together = ('sample_batch', 'sample_id')
+       json_fields = [
+           'guid', 'created_date', 'sample_type', 'sample_id', 'sample_status',
+       ]
 
 
 class Dataset(ModelWithGUID):
@@ -478,6 +497,11 @@ class Dataset(ModelWithGUID):
     def _compute_guid(self):
         filename = os.path.basename(self.source_file_path).split(".")[0]
         return 'D%06d_%s_%s' % (self.id, self.analysis_type[0:3], filename)
+
+    class Meta:
+        json_fields = [
+            'guid', 'created_date', 'analysis_type', 'is_loaded', 'loaded_date', 'source_file_path',
+        ]
 
 
 # TODO AliasFields work for lookups, but save/update doesn't work?

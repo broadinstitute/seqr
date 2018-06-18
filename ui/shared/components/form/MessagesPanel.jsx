@@ -4,6 +4,9 @@ import styled from 'styled-components'
 
 import { Message } from 'semantic-ui-react'
 
+const MessagePanelContainer = styled.div`
+  padding: 5px 10px;
+`
 
 const StyledMessage = styled(Message)`
   margin: 10px 0px 30px 0px!important;
@@ -21,7 +24,7 @@ class MessagesPanel extends React.Component {
 
   render() {
     return (
-      <div>
+      <MessagePanelContainer>
         {
           this.props.info && this.props.info.length > 0 &&
           <StyledMessage info>
@@ -40,7 +43,7 @@ class MessagesPanel extends React.Component {
             {this.props.errors.map(error => <div key={error}><b>ERROR:</b> {error}<br /></div>)}
           </StyledMessage>
         }
-      </div>)
+      </MessagePanelContainer>)
   }
 }
 

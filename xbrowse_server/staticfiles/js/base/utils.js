@@ -24,6 +24,24 @@ _CLINSIG_COLOR = {
     'risk factor': 'orange',
 }
 
+_HGMD_CLASS_COLOR = {
+    'DM': 'red',
+    'DM?': 'orange',
+    'FPV': 'orange',
+    'FP': 'orange',
+    'DFP': 'orange',
+    'DP': 'orange',
+}
+
+_HGMD_CLASS_NAME = {
+	'DM': 'Disease Causing (DM)',
+    'DM?': 'Disease Causing? (DM?)',
+	'FPV': 'Frameshift or truncating variant (FTV)',
+    'FP': 'In vitro/laboratory or in vivo functional polymorphism (FP)',
+    'DFP': 'Disease-associated polymorphism with additional supporting functional evidence (DFP)',
+    'DP': 'Disease-associated polymorphism (DP)',
+}
+
 window.utils = {
 	
 	getCoord: function(variant) {
@@ -70,17 +88,35 @@ window.utils = {
     },
 	
 	getGenoMouseover: function(variant, indiv_id) {
-		if (variant.genotypes[indiv_id] == undefined) {
-			return "Error: genotype does not exist"; 
-		}
+      var g = variant.genotypes[indiv_id];
+	    if (g == null) {
+        return "Error: genotype not found";
+      }
 
-        var s = "Raw Alt. Alleles: <b><br>" + variant.extras.orig_alt_alleles.join().replace(/,/g, ", ") +
-            "</b><br/>Allelic Depth: <b>" + variant.genotypes[indiv_id].extras.ad +
-   	        "</b><br/>Read Depth: <b>" + (variant.genotypes[indiv_id].extras.dp === null ? "" : variant.genotypes[indiv_id].extras.dp)  +
-			"</b><br/>Genotype Quality: <b>" + variant.genotypes[indiv_id].gq +
-            "</b><br/>" + (variant.genotypes[indiv_id].extras.pl ? "Phred Likelihoods: <b>"+variant.genotypes[indiv_id].extras.pl+"</b>" : "") +
-            (variant.genotypes[indiv_id].ab ? "</b><br/>Allele Balance: <b>" + variant.genotypes[indiv_id].ab.toPrecision(2) + "</b>" : "")
-          ;
+      var s = "";
+      if (variant.extras.orig_alt_alleles) {
+          s += "Raw Alt. Alleles: <b>" + variant.extras.orig_alt_alleles.join().replace(/,/g, ", ") + "</b><br />";
+      }
+
+      if (g.extras.ad != null) {
+          s += "Allelic Depth: <b>" + g.extras.ad + "</b><br />";
+      }
+
+      if (g.extras.dp != null) {
+          s += "Read Depth: <b>" + (g.extras.dp === null ? "" : g.extras.dp) + "</b><br />";
+      }
+
+      if (g.extras.gq != null) {
+          s += "Genotype Quality: <b>" + g.extras.gq + "</b><br />";
+      }
+
+      if (g.extras.pl != null) {
+          s += "Phred Likelihoods: <b>" + g.extras.pl + "</b><br />";
+      }
+
+      if (g.ab != null) {
+          s += "Allele Balance: <b>" + g.ab.toPrecision(2) + "</b><br />";
+      }
 
 	    return s; 
 	},
@@ -92,8 +128,8 @@ window.utils = {
 		else if (val == .001) return 4;
 		else if (val == .005) return 5;
 		else if (val == .01) return 6;
-        else if (val == .02) return 7;
-        else if (val == .03) return 8;
+    else if (val == .02) return 7;
+    else if (val == .03) return 8;
 		else if (val == .05) return 9;
 		else if (val == .1) return 10;
 		else return 11;
@@ -106,8 +142,8 @@ window.utils = {
 		else if (position == 4) return Number(.001).toExponential();
 		else if (position == 5) return Number(.005).toExponential();
 		else if (position == 6) return .01;
-        else if (position == 7) return .02;
-        else if (position == 8) return .03;
+    else if (position == 7) return .02;
+    else if (position == 8) return .03;
 		else if (position == 9) return .05;
 		else if (position == 10) return .1;
 		else return 1;
@@ -179,8 +215,24 @@ window.utils = {
 		}
 	},
 
+    getHGMDClassColor: function(hgmdClass) {
+        if (hgmdClass in _HGMD_CLASS_COLOR) {
+            return _HGMD_CLASS_COLOR[hgmdClass];
+        } else {
+            return 'gray';
+        }
+    },
+
+    getHGMDClassName: function(hgmdClass) {
+        if (hgmdClass in _HGMD_CLASS_NAME) {
+            return _HGMD_CLASS_NAME[hgmdClass];
+        } else {
+            return hgmdClass;
+        }
+    },
+
 	getVariantSearchLinks: function(variant) {
-        var worst_vep_annotation = variant.annotation.vep_annotation[variant.annotation.worst_vep_annotation_index];
+        var worst_vep_annotation = variant.annotation.main_transcript || variant.annotation.vep_annotation[variant.annotation.worst_vep_annotation_index];
 
         var symbol = worst_vep_annotation.gene_symbol || worst_vep_annotation.symbol;
 
@@ -196,14 +248,14 @@ window.utils = {
                 hgvsc.replace(">","-->"),        //1282C-->T
                 ('c.'+hgvsc).replace(">","/"), 	 //c.1282C/T
                 hgvsc.replace(">","/"),  	     //1282C/T
-                symbol+':'+hgvsc                //TTN:78674T>C
+                symbol+':'+hgvsc                 //TTN:78674T>C
             );
         }
 
         if (worst_vep_annotation.hgvsp) {
             var hgvsp = worst_vep_annotation.hgvsp.split(":")[1].replace("p.", "");
             variations.push(
-                symbol+":p."+hgvsc,          //TTN:p.Ile26225Thr
+                symbol+":p."+hgvsp,         //TTN:p.Ile26225Thr
                 symbol+":"+hgvsp            //TTN:Ile26225Thr
             );
         }

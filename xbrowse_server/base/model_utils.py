@@ -2,6 +2,8 @@ import logging
 import re
 import traceback
 
+from django.core.exceptions import ObjectDoesNotExist
+
 from seqr.models import Project as SeqrProject, Family as SeqrFamily, Individual as SeqrIndividual, \
     VariantTagType as SeqrVariantTagType, VariantTag as SeqrVariantTag, VariantNote as SeqrVariantNote, \
     LocusList as SeqrLocusList, LocusListGene as SeqrLocusListGene
@@ -33,9 +35,12 @@ XBROWSE_TO_SEQR_FIELD_MAPPING = {
         "analysis_summary_content": "analysis_summary",
     },
     "Individual": {
-        'gender': 'sex',
-        'nickname': 'display_name',
-        'phenotips_id': 'phenotips_eid',
+        "project": _DELETED_FIELD,
+        "indiv_id": "individual_id",
+        "gender": "sex",
+        'nickname': "display_name",
+        'phenotips_id': "phenotips_eid",
+        "other_notes": "notes",
     },
     "ProjectTag": {
         "tag": "name",
@@ -77,7 +82,7 @@ def _is_xbrowse_model(obj):
 
 
 def find_matching_seqr_model(xbrowse_model):
-    logging.info("find_matching_seqr_model(%s)" % xbrowse_model)
+    logging.info("find matching seqr %s for %s" % (type(xbrowse_model).__name__, xbrowse_model))
     if not _is_xbrowse_model(xbrowse_model):
         raise ValueError("Unexpected model class: %s.%s" % (type(xbrowse_model).__module__, type(xbrowse_model).__name__))
 
@@ -86,7 +91,7 @@ def find_matching_seqr_model(xbrowse_model):
 
         if xbrowse_class_name == "Project":
             return xbrowse_model.seqr_project if xbrowse_model.seqr_project else SeqrProject.objects.get(
-                    deprecated_project_id=xbrowse_model.project_id)
+                deprecated_project_id=xbrowse_model.project_id)
         elif xbrowse_class_name == "Family":
             return xbrowse_model.seqr_family if xbrowse_model.seqr_family else SeqrFamily.objects.get(
                 project__deprecated_project_id=xbrowse_model.project.project_id,
@@ -98,22 +103,22 @@ def find_matching_seqr_model(xbrowse_model):
                 individual_id=xbrowse_model.indiv_id)
         elif xbrowse_class_name == "ProjectTag":
             return xbrowse_model.seqr_variant_tag_type if xbrowse_model.seqr_variant_tag_type else SeqrVariantTagType.objects.get(
-                project__project_id=xbrowse_model.deprecated_project_id,
-                name=xbrowse_model.tag)
+                project__deprecated_project_id=xbrowse_model.project.project_id,
+                name=xbrowse_model.title)
         elif xbrowse_class_name == "VariantTag":
             if xbrowse_model.seqr_variant_tag:
                 return xbrowse_model.seqr_variant_tag
 
             if xbrowse_model.family:
                 return SeqrVariantTag.objects.get(
-                    variant_tag_type__project__project_id=xbrowse_model.deprecated_project_id,
+                    variant_tag_type__project__deprecated_project_id=xbrowse_model.project_tag.project.project_id,
                     xpos_start=xbrowse_model.xpos,
                     ref=xbrowse_model.ref,
                     alt=xbrowse_model.alt,
                     family__family_id=xbrowse_model.family.family_id)
             else:
                 return SeqrVariantTag.objects.get(
-                    variant_tag_type__project__project_id=xbrowse_model.deprecated_project_id,
+                    variant_tag_type__project__deprecated_project_id=xbrowse_model.project_tag.project.project_id,
                     xpos_start=xbrowse_model.xpos,
                     ref=xbrowse_model.ref,
                     alt=xbrowse_model.alt)
@@ -123,14 +128,14 @@ def find_matching_seqr_model(xbrowse_model):
 
             if xbrowse_model.family:
                 return SeqrVariantNote.objects.get(
-                    project__project_id=xbrowse_model.deprecated_project_id,
+                    project__deprecated_project_id=xbrowse_model.project.project_id,
                     xpos_start=xbrowse_model.xpos,
                     ref=xbrowse_model.ref,
                     alt=xbrowse_model.alt,
                     family__family_id=xbrowse_model.family.family_id)
             else:
                 return SeqrVariantNote.objects.get(
-                    project__project_id=xbrowse_model.deprecated_project_id,
+                    project__deprecated_project_id=xbrowse_model.project.project_id,
                     xpos_start=xbrowse_model.xpos,
                     ref=xbrowse_model.ref,
                     alt=xbrowse_model.alt)
@@ -146,6 +151,8 @@ def find_matching_seqr_model(xbrowse_model):
                 description=xbrowse_model.description,
                 gene_id=xbrowse_model.gene_id)
 
+    except ObjectDoesNotExist:
+        pass
     except Exception as e:
         logging.error("ERROR: when looking up seqr model for xbrowse %s model: %s" % (xbrowse_model, e))
         traceback.print_exc()
@@ -175,7 +182,7 @@ def _convert_xbrowse_kwargs_to_seqr_kwargs(xbrowse_model, **kwargs):
     return seqr_kwargs
 
 def update_xbrowse_model(xbrowse_model, **kwargs):
-    print("update_xbrowse_model(%s, %s)" % (xbrowse_model, kwargs))
+    logging.info("update_xbrowse_model(%s, %s)" % (xbrowse_model, kwargs))
     _update_model(xbrowse_model, **kwargs)
 
     seqr_model = find_matching_seqr_model(xbrowse_model)
@@ -223,13 +230,13 @@ def create_xbrowse_model(xbrowse_model_class, **kwargs):
 
 
 def get_or_create_xbrowse_model(xbrowse_model_class, **kwargs):
-    print("get_or_create_xbrowse_model(%s, %s)" % (xbrowse_model_class, kwargs))
+    logging.info("get_or_create_xbrowse_model(%s, %s)" % (xbrowse_model_class, kwargs))
     xbrowse_model, created = xbrowse_model_class.objects.get_or_create(**kwargs)
 
-    if created:
-        seqr_model = find_matching_seqr_model(xbrowse_model)
+    seqr_model = find_matching_seqr_model(xbrowse_model)
+    if created or seqr_model is None:
         if seqr_model is not None:
-            logging.error("ERROR: created xbrowse model: %s, but seqr model already exists: %s" % (xbrowse_model, seqr_model))
+            logging.error("ERROR: created xbrowse model: %s while seqr model already exists: %s" % (xbrowse_model, seqr_model))
         elif xbrowse_model_class.__name__ not in XBROWSE_TO_SEQR_CLASS_MAPPING:
             logging.error("ERROR: create operation not implemented for xbrowse model: %s" % (xbrowse_model_class.__name__))
         else:

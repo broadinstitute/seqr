@@ -10,7 +10,6 @@ xbrowse_reference_data_dir = os.path.join(xbrowse_install_dir, 'data/reference_d
 DEBUG = True
 #COMPRESS_ENABLED = False
 BASE_URL = '/'
-URL_PREFIX = '/'
 
 GENERATED_FILES_DIR = os.path.join(xbrowse_install_dir, 'generated_files')
 

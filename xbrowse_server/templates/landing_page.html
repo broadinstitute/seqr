@@ -8,9 +8,15 @@
 
 
 {% block content %}
+    <style>
+        #main {
+            padding-bottom: 0px !important;
+        }
+    </style>
+
     <div class="landing-page">
         <div class="section">
-            <div class="grabber seqr-font"><i>seqr</i></div>	    
+            <div class="grabber seqr-font"><i>seqr</i></div>
             <div class="container">
               <div class="row">
                 <div class="col-md-8 col-md-offset-2">
@@ -18,145 +24,38 @@
                 </div>
               </div>
             </div>
-            <div class="login"><a href="{{ BASE_URL }}login" class="flatbutton" >Sign In Here</a></div>
-	    Don't have an account? <a href='#more_info'>Click here</a> for more info.
-
-	    <div class="row">
-                    <div class="col-md-10 col-md-offset-1">
-                        <p>
-                        </p>
-                    </div>
-                </div>
-        </div>
+            <div class="login"><a href="/login" class="flatbutton" >Sign In Here</a></div>
+	    </div>
         <div class="section">
             <div class="container">
                 <div class="row">
                     <div class="col-md-10 col-md-offset-1">
-			<img src="{% static 'images/landing_page_icon1.png' %}" width="225px" height="225px"/>
-			<img src="{% static 'images/landing_page_icon3.png' %}" width="225px" height="225px"/>
-			<img src="{% static 'images/landing_page_icon2.png' %}" width="225px" height="225px"/>
+                        <img src="{% static 'images/landing_page_icon1.png' %}" width="225px" height="225px"/>
+                        <img src="{% static 'images/landing_page_icon3.png' %}" width="225px" height="225px"/>
+                        <img src="{% static 'images/landing_page_icon2.png' %}" width="225px" height="225px"/>
+                    </div>
+	            </div>
             </div>
-	</div>
-      </div>
-   </div> 
-	<div class="section">
+        </div>
+	    <div class="section">
             <div class="container">
                 <div class="row">
                     <div class="col-md-10 col-md-offset-1">
                         <div class="sectiontitle">about <i>seqr</i></div>
-                        <p>
-			  Next Generation Sequencing (NGS) is a powerful diagnostic and research tool for Mendelian disease, but without proper tools, this data can be inaccessible to researchers. We are developing <i>seqr</i> as an open source web interface to make research productive, accessible, and user-friendly while leveraging resources and infrastructure at the Broad Institute. 
-                        </p>
-   			<span style="font-size:20px; font-weight:500; float:left"><b>Features:</b></span><br><br>
-			<ul class="feature-list">
-			  <li>Integration with <b><a href='http://phenotips.org'>PhenoTips</a></b> allows the collection of detailed phenotype information to be entered for individuals</li>
-			  <li>Integration with <b><a href='http://github.com/igvteam/igv.js/tree/master'>igv.js</a></b> allows for interactive visualization of read-level data</li>
-			</ul>
-			<br>
-			<a name="more_info"></a>
-			<span style="font-size:20px; font-weight:500; float:left"><b>Additional Details:</b></span><br><br>
-			<br>
-   			<div style="font-size:20px; font-weight:500; float:left; clear:both; overflow:hidden; whitespace:nowrap">Currently, <i>seqr</i> is in closed beta-testing mode and is only used by our group and collaborators</div><br><br>
-			<br>
-			<ul class="feature-list">
-			  <li>If you are interested in collaborating with our group, please <a href="mailto:seqr@broadinstitute.org"><b>contact us</b></a> </li>
-			  <li>To get updates about seqr, &nbsp; <a href='http://groups.google.com/a/broadinstitute.org/forum/#!forum/seqr-updates/join'><b>join our mailing list</b></a>
-			  <li>The <a href='http://github.com/macarthur-lab/seqr'><b>source code</b></a> is available on github. Please use the <a href='http://github.com/macarthur-lab/seqr/issues'><b>github issues page</b></a> to submit bug reports or feature requests<br></li>
-			  <li>If you are interested in other open-source variant analysis tools, we also recommend <a href='http://gemini.readthedocs.org/en/latest/#'><b>GEMINI</b></a> - a flexible framework for exploring genome variation</li>
-			</ul>
-			</div>
-		
+                        <p>Next Generation Sequencing (NGS) is a powerful diagnostic and research tool for Mendelian disease, but without proper tools, this data can be inaccessible to researchers. We are developing <i>seqr</i> as an open source web interface to make research productive, accessible, and user-friendly while leveraging resources and infrastructure at the Broad Institute.</p>
+                        <a name="more_info"></a>
+                        <span style="font-size:20px; font-weight:500; float:left"><b>Additional Details:</b></span><br><br>
+                        <br>
+                        <div style="font-size:20px; font-weight:500; float:left; clear:both; overflow:hidden; whitespace:nowrap">Currently, <i>seqr</i> is in closed beta-testing mode and is only used by our group and collaborators</div><br><br>
+                        <br>
+                        <ul class="feature-list">
+                          <li>If you are interested in collaborating with our group, please <a href="mailto:seqr@broadinstitute.org"><b>contact us</b></a> </li>
+                          <li>To get updates about seqr, &nbsp; <a href='http://groups.google.com/a/broadinstitute.org/forum/#!forum/seqr-updates/join'><b>join our mailing list</b></a>
+                          <li>The <a href='http://github.com/macarthur-lab/seqr'><b>source code</b></a> is available on github. Please use the <a href='http://github.com/macarthur-lab/seqr/issues'><b>github issues page</b></a> to submit bug reports or feature requests<br></li>
+                        </ul>
+                    </div>
                 </div>
             </div>
         </div>
-<div class="section">
-            <div class="container">
-            <div class="row">
-                <div class="col-md-10 col-md-offset-1">
-                    <div class="sectiontitle">who we are</div>
-                    <p>
-                        Developed at the Analytic and Translational Genetics Unit (ATGU) at Massachusetts General Hospital (MGH) in collaboration with the Broad Institute of Harvard and MIT, <i>seqr</i> is the analytic platform used by the Broad’s joint Center for Mendelian Genomics.
-                    </p>
-                    <div class="container">
-                        <div class="row person-row">
-                            <div class="col-xs-3 img-container"><img class="img-circle" src="{% static 'images/faces/elise.png' %}" alt="Elise"/></div>
-                            <div class="col-xs-8">
-                                <div class="name">Elise Valkanas</div>
-                                <div class="bio">
-                                  Specializing in whole exome sequencing analysis, Elise is working with users to ensure the functionality and usability of <i>seqr</i> meet the needs of our collaborators.
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="container">
-                        <div class="row person-row">
-                            <div class="col-xs-3 img-container"><img class="img-circle" src="{% static 'images/faces/harindra.png' %}" alt="Harindra"/></div>
-                            <div class="col-xs-8">
-                                <div class="name">Harindra Arachchi</div>
-                                <div class="bio">
-				  Harindra is working on integrating phenotype data into <i>seqr</i> as well as building and extending its capabilities to search, compare, export individual data and function as a platform.
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="container">
-                        <div class="row person-row">
-                            <div class="col-xs-3 img-container"><img class="img-circle" src="{% static 'images/faces/ben.png' %}" alt="Ben"/></div>
-                            <div class="col-xs-8">
-                                <div class="name">Ben Weisburd</div>
-                                <div class="bio">
-
-		
-                                  Ben is the software engineering team lead and is working on extending <i>seqr</i> to support larger and more complex datasets.
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="container">
-                        <div class="row person-row">
-                            <div class="col-xs-3 img-container"><img class="img-circle" src="{% static 'images/faces/brett.png' %}" alt="Brett"/></div>
-                            <div class="col-xs-8">
-                                <div class="name">Brett Thomas</div>
-                                <div class="bio">
-                                    Brett created <i>seqr</i> and scaled it to enable the analysis of 1000's of rare disease cases. 
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="container">
-                        <div class="row person-row">
-                            <div class="col-xs-3 img-container"><img class="img-circle" src="{% static 'images/faces/daniel.png' %}" alt="Daniel"/></div>
-                            <div class="col-xs-8">
-                                <div class="name">Daniel MacArthur</div>
-                                <div class="bio">
-                                    Daniel is an Assistant Professor at Harvard Medical School that leads the research for <i>seqr</i>.
-                                    Much of the science that powers <i>seqr</i> is being developed in Daniel's lab.
-                                    <br>
-                                    <a href="http://www.macarthurlab.org/">Lab Website</a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="container">
-                        <div class="row person-row">
-                            <div class="col-xs-3 img-container"><img class="img-circle" src="{% static 'images/faces/mark.png' %}" alt="Mark"/></div>
-                            <div class="col-xs-8">
-                                <div class="name">Mark Daly</div>
-                                <div class="bio">
-                                    Mark is the Chief of ATGU and the initial visionary behind <i>seqr</i>.
-                                    His guidance and support has enabled <i>seqr</i> from its inception.
-                                    <br>
-                                    <a href="http://atgu.mgh.harvard.edu/people/mark-daly">Lab Website</a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                 </div>
-            </div>
-            </div>
-        </div>
-     </div>
     </div>
-  </div>
-
 {% endblock %}

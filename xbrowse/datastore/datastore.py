@@ -34,7 +34,7 @@ class Datastore(object):
     #
     #
 
-    def get_variants(self, project_id, family_id, genotype_filter=None, variant_filter=None, quality_filter=None, indivs_to_consider=None):
+    def get_variants(self, project_id, family_id, genotype_filter=None, variant_filter=None, quality_filter=None, indivs_to_consider=None, user=None):
         """
         Get variants with a specific genotype *combination* in a family
         No error checking, assumes that caller knows what she is doing
@@ -59,6 +59,15 @@ class Datastore(object):
         Note that ref and alt are just strings from the VCF (for now)
         """
         raise NotImplementedError
+
+    def get_multiple_variants(self, project_id, family_id, xpos_ref_alt_tuples):
+        """
+        Get one or more specific variants in a family
+        Variant should be identifiable by xpos, ref, and alt
+        Note that ref and alt are just strings from the VCF (for now)
+        """
+        for xpos, ref, alt in xpos_ref_alt_tuples:
+            yield self.get_single_variant(project_id, family_id, xpos, ref, alt)
 
     def get_variants_cohort(self, project_id, cohort_id, variant_filter=None):
         """

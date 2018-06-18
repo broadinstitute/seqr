@@ -1,8 +1,7 @@
 import React from 'react'
 import { shallow, configure } from 'enzyme'
 import Adapter from 'enzyme-adapter-react-16'
-import { PedigreeImageComponent } from './PedigreeImagePanel'
-import { getPedigreeImageZoomModalFamily } from './zoom-modal/PedigreeImageZoomModal-redux'
+import PedigreeImagePanel from './PedigreeImagePanel'
 
 import { STATE1 } from '../fixtures'
 
@@ -15,9 +14,8 @@ test('shallow-render without crashing', () => {
    */
 
   const props = {
-    family: getPedigreeImageZoomModalFamily(STATE1),
-    showPedigreeImageZoomModal: () => {},
+    family: STATE1.familiesByGuid.F011652_1,
   }
 
-  shallow(<PedigreeImageComponent {...props} />)
+  shallow(<PedigreeImagePanel {...props} />)
 })
