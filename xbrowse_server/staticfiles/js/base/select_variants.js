@@ -145,11 +145,15 @@ window.SelectVariantsView = Backbone.View.extend({
     },
 
     render: function() {
+        var that = this;
         $(this.el).html(this.template({
         	  hbc: this.hbc,
             annotDefs: this.annotDefs,
             defaultVariantFilters: this.defaultVariantFilters,
-            reference_populations: _.filter(this.reference_populations, function(x) { return x.slug !== 'AF' }),
+            reference_populations: _.filter(this.reference_populations, function(x) {
+                return x.slug !== 'AF' && !(
+                    that.project_options.project_id.startsWith('project_') && x.slug == "topmed" )
+            }),
             thisCallsetFilter: this.project_options.project_id && !this.project_options.project_id.startsWith('project_')
                 && _.find(this.reference_populations, function(x) { return x.slug === 'AF' }),
             showPopAcFilter: this.project_options.db === "elasticsearch",
