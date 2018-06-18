@@ -260,7 +260,7 @@ def generate_notification_for_incoming_match(response_from_matchbox,incoming_req
                       settings.FROM_EMAIL, 
                       #commenting for now for advanced testing
                       #[i for i in seqr_project.mme_contact_url.replace('mailto:','').split(',')],
-                      ['harindra@broadinstitute.org'],
+                      [admin[1] for admin in settings.ADMINS],
                       fail_silently=False)
     else:
         message += " We didn't find any individuals in matchbox that matched that query well, *so no results were sent back*. "
