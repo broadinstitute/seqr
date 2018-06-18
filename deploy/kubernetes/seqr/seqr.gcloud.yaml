@@ -61,10 +61,10 @@ spec:
               command: ["fusermount", "-u", "/mounted-bucket"]
         resources:
           requests:
-            memory: "5Gi"
+            memory: "8Gi"
             cpu: "1"
           limits:
-            memory: "25Gi"
+            memory: "20Gi"
             cpu: "8"
         envFrom:
           - configMapRef:

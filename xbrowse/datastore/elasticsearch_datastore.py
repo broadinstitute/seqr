@@ -452,7 +452,7 @@ class ElasticsearchDatastore(datastore.Datastore):
         logger.info("TOTAL: %s. Query took %s seconds" % (response.hits.total, time.time() - start))
 
         if response.hits.total > settings.VARIANT_QUERY_RESULTS_LIMIT + 1:
-            raise Exception("this search exceeded the variant result size limit. Please set additional filters and try again.")
+            raise Exception("This search matched too many variants. Please set additional filters and try again.")
 
         #print(pformat(response.to_dict()))
 
