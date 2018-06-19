@@ -18,7 +18,7 @@ const FieldValue = styled.div`
   display: ${props => ((props.fieldName && !props.compact) ? 'block' : 'inline-block')};
 `
 
-const hasValue = val => val && (!('length' in Object.getOwnPropertyNames(val)) || val.length > 0)
+const hasValue = val => val && (!Object.getOwnPropertyNames(val).includes('length') || val.length > 0)
 
 const BaseFieldView = (props) => {
   if (props.isVisible !== undefined && !props.isVisible) {
@@ -28,7 +28,7 @@ const BaseFieldView = (props) => {
     return null
   }
   const fieldValue = props.initialValues[props.field]
-  if (!props.isEditable && !hasValue(fieldValue)) {
+  if (!props.isEditable && !hasValue(fieldValue) && !props.showEmptyValues) {
     return null
   }
   const modalId = props.isEditable ? `edit-${props.initialValues[props.idField] || 'new'}-${props.field}` : null
@@ -79,7 +79,7 @@ const BaseFieldView = (props) => {
         !props.compact && <br key="br" />,
       ]}
       {
-        hasValue(fieldValue) && !props.hideValue &&
+        (props.showEmptyValues || hasValue(fieldValue)) && !props.hideValue &&
         <FieldValue compact={props.compact} fieldName={props.fieldName} hasButtons={props.isEditable || props.isDeletable}>
           {props.fieldDisplay(fieldValue)}
         </FieldValue>
@@ -108,6 +108,7 @@ BaseFieldView.propTypes = {
   editLabel: PropTypes.string,
   editIconName: PropTypes.string,
   hideValue: PropTypes.bool,
+  showEmptyValues: PropTypes.bool,
   user: PropTypes.object,
   modalStyle: PropTypes.object,
 }

@@ -9,9 +9,11 @@ import { getProjectsByGuid } from 'redux/selectors'
 import VariantTagTypeBar from '../graph/VariantTagTypeBar'
 import { ColoredIcon } from '../StyledComponents'
 import PedigreeImagePanel from './view-pedigree-image/PedigreeImagePanel'
+import BaseFieldView from './view-fields/BaseFieldView'
 import OptionFieldView from './view-fields/OptionFieldView'
 import TextFieldView from './view-fields/TextFieldView'
 import ListFieldView from './view-fields/ListFieldView'
+import Dataset from './dataset'
 import { VerticalSpacer } from '../Spacers'
 import {
   FAMILY_FIELD_DESCRIPTION,
@@ -23,6 +25,7 @@ import {
   FAMILY_FIELD_INTERNAL_SUMMARY,
   FAMILY_ANALYSIS_STATUS_OPTIONS,
   FAMILY_FIELD_INDIVIDUALS,
+  FAMILY_FIELD_LATEST_DATASET,
 } from '../../utils/constants'
 
 
@@ -48,6 +51,13 @@ const fieldRenderDetails = {
   [FAMILY_FIELD_INDIVIDUALS]: {
     props: {
       fieldDisplay: individuals => `${individuals.length} Individuals`,
+    },
+  },
+  [FAMILY_FIELD_LATEST_DATASET]: {
+    component: BaseFieldView,
+    props: {
+      showEmptyValues: true,
+      fieldDisplay: loadedDataset => <Dataset loadedDataset={loadedDataset} />,
     },
   },
   [FAMILY_FIELD_ANALYSIS_NOTES]: { name: 'Analysis Notes' },

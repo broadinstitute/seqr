@@ -18,7 +18,7 @@ import {
   SORT_BY_FAMILY_GUID,
   VARIANT_SORT_OPTONS,
   VARIANT_EXPORT_DATA,
-  VARIANT_GENOTYPE_EXPORT_DATA,
+  VARIANT_GENOTYPE_EXPORT_DATA, ANALYSIS_TYPE_VARIANT_CALLS,
 } from './constants'
 
 
@@ -251,13 +251,29 @@ export const getVisibleFamiliesInSortedOrder = createSelector(
 export const getVisibleSortedFamiliesWithIndividuals = createSelector(
   getVisibleFamiliesInSortedOrder,
   getProjectIndividuals,
-  (visibleFamilies, individuals) => {
+  getProjectSamples,
+  getProjectDatasets,
+  (visibleFamilies, individuals, samples, datasets) => {
     const AFFECTED_STATUS_ORDER = { A: 1, N: 2, U: 3 }
     const getIndivSortKey = individual => AFFECTED_STATUS_ORDER[individual.affected] || 0
 
     return visibleFamilies.map((family) => {
       const familyIndividuals = orderBy(individuals.filter(ind => ind.familyGuid === family.familyGuid), [getIndivSortKey])
-      return Object.assign(family, { individuals: familyIndividuals })
+
+      const familyDatasetGuids = samples.filter(s => family.individualGuids.includes(s.individualGuid)).reduce(
+        (acc, sample) => new Set([...acc, ...sample.datasetGuids]), new Set(),
+      )
+      let loadedDatasets = datasets.filter(dataset => (
+        familyDatasetGuids.has(dataset.datasetGuid) &&
+        dataset.analysisType === ANALYSIS_TYPE_VARIANT_CALLS &&
+        dataset.isLoaded
+      ))
+      loadedDatasets = orderBy(loadedDatasets, [d => d.loadedDate], 'desc')
+
+      return Object.assign(family, {
+        individuals: familyIndividuals,
+        latestDataset: loadedDatasets.length > 0 ? loadedDatasets[0] : null,
+      })
     })
   },
 )

@@ -2,13 +2,14 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { connect } from 'react-redux'
-import { Grid, Popup, Icon } from 'semantic-ui-react'
+import { Grid } from 'semantic-ui-react'
 import Timeago from 'timeago.js'
 import orderBy from 'lodash/orderBy'
 
 import PedigreeIcon from 'shared/components/icons/PedigreeIcon'
 import TextFieldView from 'shared/components/panel/view-fields/TextFieldView'
 import PhenotipsDataPanel from 'shared/components/panel/view-phenotips-info/PhenotipsDataPanel'
+import Dataset from 'shared/components/panel/dataset'
 import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
 import { updateIndividual } from 'redux/rootReducer'
 import { getUser } from 'redux/selectors'
@@ -68,25 +69,9 @@ class IndividualRow extends React.Component
         ))
 
       loadedVariantCallDatasets = orderBy(loadedVariantCallDatasets, [d => d.loadedDate], 'desc')
+      const recentLoadedVariantCallDataset = loadedVariantCallDatasets.length > 0 ? loadedVariantCallDatasets[0] : null
 
-      return (
-        <div key={sample.sampleGuid}>
-          {
-            <Popup
-              trigger={<Icon size="small" name="circle" color={loadedVariantCallDatasets.length > 0 ? 'green' : 'red'} />}
-              content={loadedVariantCallDatasets.length > 0 ? 'data has been loaded' : 'no data available'}
-              position="left center"
-            />
-          }
-          <span><HorizontalSpacer width={8} /><b>{sample.sampleType}</b></span>
-          {
-            loadedVariantCallDatasets.length > 0 &&
-            <Detail>
-              LOADED {new Timeago().format(loadedVariantCallDatasets[0].loadedDate).toUpperCase()}
-            </Detail>
-          }
-        </div>
-      )
+      return <Dataset key={sample.sampleGuid} loadedDataset={recentLoadedVariantCallDataset} />
     })
 
     const individualRow = (

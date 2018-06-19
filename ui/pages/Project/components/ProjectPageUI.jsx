@@ -14,6 +14,7 @@ import {
   FAMILY_FIELD_ANALYSIS_NOTES,
   FAMILY_FIELD_ANALYSIS_SUMMARY,
   FAMILY_FIELD_INDIVIDUALS,
+  FAMILY_FIELD_LATEST_DATASET,
 } from 'shared/utils/constants'
 import { getProject, getProjectDetailsIsLoading, getAnalysisStatusCounts } from '../selectors'
 import ProjectOverview from './ProjectOverview'
@@ -87,6 +88,7 @@ const DETAIL_FIELDS = [
 const NO_DETAIL_FIELDS = [
   { id: FAMILY_FIELD_INDIVIDUALS },
   { id: FAMILY_FIELD_ANALYSIS_STATUS },
+  { id: FAMILY_FIELD_LATEST_DATASET },
 ]
 
 const ProjectPageUI = (props) => {
