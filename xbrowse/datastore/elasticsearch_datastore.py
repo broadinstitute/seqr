@@ -127,10 +127,7 @@ class ElasticsearchDatastore(datastore.Datastore):
         self._redis_client = None
         if settings.REDIS_SERVICE_HOSTNAME:
             self._redis_client = redis.StrictRedis(host=settings.REDIS_SERVICE_HOSTNAME)
-            logger.info("Redis config: " + str(self._redis_client.config_get('*')))
-            self._redis_client.config_set('maxmemory', '2500mb')
-            self._redis_client.config_set('maxmemory-policy', 'allkeys-lru')
-
+            
     def get_elasticsearch_variants(
             self,
             project_id,
@@ -158,8 +155,8 @@ class ElasticsearchDatastore(datastore.Datastore):
 
         cached_results = self._redis_client and self._redis_client.get(cache_key)
         if cached_results is not None:
-            return json.loads(cached_results)
-
+            variant_results = json.loads(cached_results)
+            return [Variant.fromJSON(variant_json) for variant_json in variant_results]
 
         if indivs_to_consider is None:
             if genotype_filter:
@@ -178,9 +175,11 @@ class ElasticsearchDatastore(datastore.Datastore):
         query_json = self._make_db_query(genotype_filter, variant_filter)
 
         try:
-            if self.liftover_grch38_to_grch37 is None or self.liftover_grch37_to_grch38 is None:
-                self.liftover_grch38_to_grch37 = LiftOver('hg38', 'hg19')
-                self.liftover_grch37_to_grch38 = LiftOver('hg19', 'hg38')
+            if self.liftover_grch38_to_grch37 is None:
+                self.liftover_grch38_to_grch37 = None # LiftOver('hg38', 'hg19')
+
+            if self.liftover_grch37_to_grch38 is None:
+                self.liftover_grch37_to_grch38 = None # LiftOver('hg19', 'hg38')
         except Exception as e:
             logger.info("WARNING: Unable to set up liftover. Is there a working internet connection? " + str(e))
 
@@ -194,7 +193,7 @@ class ElasticsearchDatastore(datastore.Datastore):
             project = family.project
             logger.info("Searching in family elasticsearch index: " + str(elasticsearch_index))
 
-        if family_id is not None:
+        if family_id is not None and len(family_individual_ids) > 0:
             # figure out which index to use
             # TODO add caching
             matching_indices = []
@@ -228,6 +227,18 @@ class ElasticsearchDatastore(datastore.Datastore):
                 else:
                     variant_id_filter_term |= q_obj
             s = s.filter(variant_id_filter_term)
+
+        if indivs_to_consider:
+            atleast_one_nonref_genotype_filter = None
+            for sample_id in indivs_to_consider:
+                encoded_sample_id = _encode_name(sample_id)
+                q = Q('range', **{encoded_sample_id+"_num_alt": {'gte': 1}})
+                if atleast_one_nonref_genotype_filter is None:
+                    atleast_one_nonref_genotype_filter = q
+                else:
+                    atleast_one_nonref_genotype_filter |= q
+
+            s = s.filter(atleast_one_nonref_genotype_filter)
 
         if quality_filter is not None and indivs_to_consider:
             #'vcf_filter': u'pass', u'min_ab': 17, u'min_gq': 46
@@ -449,7 +460,7 @@ class ElasticsearchDatastore(datastore.Datastore):
         logger.info("TOTAL: %s. Query took %s seconds" % (response.hits.total, time.time() - start))
 
         if response.hits.total > settings.VARIANT_QUERY_RESULTS_LIMIT + 1:
-            raise Exception("this search exceeded the variant result size limit. Please set additional filters and try again.")
+            raise Exception("This search matched too many variants. Please set additional filters and try again.")
 
         #print(pformat(response.to_dict()))
 
@@ -512,7 +523,7 @@ class ElasticsearchDatastore(datastore.Datastore):
                     if grch38_coord and grch38_coord[0]:
                         grch38_coord = "%s-%s-%s-%s "% (grch38_coord[0][0], grch38_coord[0][1], hit["ref"], hit["alt"])
                     else:
-                        grch38_coord = ""
+                        grch38_coord = None
             else:
                 grch38_coord = hit["variantId"]
 
@@ -523,7 +534,7 @@ class ElasticsearchDatastore(datastore.Datastore):
                     if grch37_coord and grch37_coord[0]:
                         grch37_coord = "%s-%s-%s-%s "% (grch37_coord[0][0], grch37_coord[0][1], hit["ref"], hit["alt"])
                     else:
-                        grch37_coord = ""
+                        grch37_coord = None
             else:
                 grch37_coord = hit["variantId"]
 

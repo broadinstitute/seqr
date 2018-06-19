@@ -4,7 +4,7 @@ MAINTAINER MacArthur Lab
 
 # install commmon utilities
 RUN apt-get update \
-    && apt-get install -y apt-utils wget curl xterm vim emacs nano less git bzip2
+    && apt-get install -y apt-utils wget curl xterm vim emacs nano less git htop bzip2
 
 
 # install dependencies of generate_pedigree_images command which generates static images using HaploPainter.pl
@@ -28,6 +28,8 @@ RUN echo 'deb http://apt.postgresql.org/pub/repos/apt/ jessie-pgdg main' >> /etc
 RUN apt-get install -y python-dev \
     && wget https://bootstrap.pypa.io/get-pip.py \
     && python get-pip.py
+
+RUN apt-get install -y redis-tools
 
 RUN GCSFUSE_REPO=gcsfuse-$(lsb_release -c -s) \
     && echo "deb http://packages.cloud.google.com/apt $GCSFUSE_REPO main" | tee /etc/apt/sources.list.d/gcsfuse.list \

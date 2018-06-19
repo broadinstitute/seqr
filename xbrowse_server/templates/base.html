@@ -47,91 +47,17 @@
                 </div>
             </div>
         </div>
-
-        <!-- modal dialog for 'seqr - whats new' -->
-        <div class="modal fade" id="whatsNewModal" tabindex="-1" role="dialog" aria-labelledby="whatsNewModal">
-            <div class="modal-dialog" role="document">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                        <h5 class="modal-title" id="whatsNewModal"><span style='color:black;font-size:12pt'><b>What's New</b></span></h5>
-                    </div>
-                    <div class="modal-body">
-
-
-                        <table class="table">
-                            <tbody>
-			      <tr>
-				<td class="col-sm-2"><b>August 19, 2016</b><br></td>
-				<td>
-				  <i class="fa fa-angle-double-right"></i> Added a new Gene + ExAC Freq. sort option to variant search results which first sorts by Gene and then by ExAC allele frequency. <br>
-				  <i class="fa fa-angle-double-right"></i> Gene Details dialog now includes a description of the gene's function from UniProt.<br>
-				  <i class="fa fa-angle-double-right"></i> New 'Summary of Findings' link on the Project page presents a summary of family analysis statuses, tagged variants, and phenotypes entered.<br>
-				  <i class="fa fa-angle-double-right"></i> Fixed bug where Variant search showed an error message when using very long gene lists.<br>
-				</td>
-			      </tr>
-			      <tr>
-				<td class="col-sm-2"><b>July 17, 2016</b><br></td>
-				<td>
-				  <i class="fa fa-angle-double-right"></i> Variant Search results can be sorted by different criteria using the <i>Sort By:</i> &nbsp; drop-down that appears to the right of the <b>Search</b> button.<br>
-				  <i class="fa fa-angle-double-right"></i> Gene Search now allows searching for variants in two or more projects at the same time. <br> 
-				  <i class="fa fa-angle-double-right"></i> Updated Gene Details tissue expression view to use GTEx release V6 which includes more tissues and samples. <br>
-				</td>
-			      </tr>
-			      </tr>
-				<!--center><span style='font-size:15px'>Sign up for our <a href="https://groups.google.com/a/broadinstitute.org/forum/#!forum/seqr-updates/join"><b>mailing list</b></a> to also receive <i>seqr</i> updates and announcements over email.<br><br></span></center-->
-                                <td class="col-sm-2"><b>Previous</b><br></td>
-				<td>				
-				  <i class="fa fa-angle-double-right"></i> On the project page, a table near the bottom now shows a summary of the number of Phenotips terms entered. This table is only shown for accounts with 'manager' permissions on a project.<br>
-
-                                  <i class="fa fa-angle-double-right"></i> <a href='https://phenotips.org/'>PhenoTips™</a> has been integrated for structured entry of patient phenotypes.<br>
-                                  <i class="fa fa-angle-double-right"></i>For projects that were sequenced at the Broad Institute, we have access to the underlying sequencing read data (.bam files) and will now be able to show an IGV-like view of the reads directly in the browser. In projects with this feature enabled, read visualization can be accessed through a <sup><a class="view-reads" name="<%= individual_idx %>">         <img src='{% static "images/igv_reads_12x12.png" %}'/> &nbsp; SHOW READS</a></sup> icon that appears next to each variant in the search results.<br>
-
-                        <i class="fa fa-angle-double-right"></i> When a variant falls in a gene that has multiple transcript isoforms, seqr selects only one of these transcripts
-                    to show in variant search results. The choice of transcript may affect things like whether the variant is labeled missense or splice-disrupting, as well as 'HGVSp' and other annotations.<br>
-                    Before this update, seqr always chose the worst-affected transcript, but this sometimes led to obscure transcripts being shown for important disease genes. <br>
-                    To avoid this, we've updated the transcript selection logic to:<br>
-                    - ignore non-protein-coding transcripts (except when all transcripts for a given gene are non-protein-coding).<br>
-                    - of the remaining transcripts, select the worst-affected transcripts for the given variant.<br>
-                    - if there's a tie where multiple transcripts are worst-affected in the same way, see if any of them is canonical according to Gencode v19.
-                    If yes, use the canonical transcript. Otherwise, chose by alphabetical order of the transcript id.<br>
-                    <br>
-                    <i class="fa fa-angle-double-right"></i> For De Novo Dominant variant searches on families that have data for mother, father and child,
-                    more stringent filters are now applied as follows. A variant will only be shown if:<br>
-                    1) the read coverage in the child is no less than 10% of the total read coverage in the parents at the variant site<br>
-                    2) the variant GQ score is >= 20 in the child<br>
-                    3) the parents' variant call allele balance (number of reads supporting alt allele / total reads ) is less than 5%<br>
-                    - in this case, the setting from the adjustable Allele Balance slider is still applied, but only to the child, while the GQ slider value only applies to the parents.
-                    <br>
-                    <i class="fa fa-angle-double-right"></i> Clicking on the variant effect (for example 'missense' in
-                    <img width='15%' height='10%' style="position:relative; bottom:10px; padding-top:10px" src="{% static 'whatsnew/screenshot_20151210_variant_effect_link.png' %}" />)
-                    brings up a popup dialog with all transcripts listed. After this update, the popup dialog will now show which of the transcripts
-                    is canonical, and also the HGVSp for each.<br>
-                    <br>
-                    </td>
-                  </tr>
-                </tbody>
-                        </table>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-                    </div>
-                </div>
-            </div>
-        </div>
         <div id="headerbar">
             <div class="container">
                 <div class="row">
                     {% if user.is_authenticated %}
-                    <div class="col-sm-4" id="logo-container">
-                        <a href="/"><i>seqr</i></a>
-                    </div>
-                    <div class="col-sm-3" id="headerbar-right-links">
-                        <!-- <a href="#" data-toggle="modal" data-target="#whatsNewModal" style="color:white">What's new (8/19/2016) </a> -->
-                    </div>
-                    <div class="col-sm-5" id="headerbar-right-links">
-                        Logged in as <strong>{{ user.profile }}</strong> | <a href="/logout">Log out</a>
-                    </div>
+                        <div class="col-sm-4" id="logo-container">
+                            <a href="/"><i>seqr</i></a>
+                        </div>
+                        <div class="col-sm-3" id="headerbar-right-links"></div>
+                        <div class="col-sm-5" id="headerbar-right-links">
+                            Logged in as <strong>{{ user.profile }}</strong> | <a href="/logout">Log out</a>
+                        </div>
                     {% endif %}
                 </div>
             </div>
@@ -167,5 +93,4 @@
             <div class="col-sm-1"></div>
         </div>
     {% endif %}
-
 </body>
