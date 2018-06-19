@@ -2,6 +2,7 @@
 import copy
 import json
 import logging
+import redis
 import sys
 
 from xbrowse.core.constants import GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38, ANNOTATION_GROUPS_MAP, \
@@ -119,11 +120,14 @@ class ElasticsearchDatastore(datastore.Datastore):
         self.liftover_grch38_to_grch37 = None
         self.liftover_grch37_to_grch38 = None
 
-        self._results_cache = {}
         self._annotator = annotator
 
         self._es_client = elasticsearch.Elasticsearch(host=settings.ELASTICSEARCH_SERVICE_HOSTNAME)
 
+        self._redis_client = None
+        if settings.REDIS_SERVICE_HOSTNAME:
+            self._redis_client = redis.StrictRedis(host=settings.REDIS_SERVICE_HOSTNAME)
+            
     def get_elasticsearch_variants(
             self,
             project_id,
@@ -138,6 +142,22 @@ class ElasticsearchDatastore(datastore.Datastore):
         from xbrowse_server.base.models import Individual
         from xbrowse_server.mall import get_reference
 
+        cache_key = json.dumps([
+            project_id,
+            family_id,
+            variant_filter.toJSON() if variant_filter else None,
+            genotype_filter,
+            quality_filter,
+            variant_id_filter,
+            indivs_to_consider,
+            include_all_consequences,
+        ])
+
+        cached_results = self._redis_client and self._redis_client.get(cache_key)
+        if cached_results is not None:
+            variant_results = json.loads(cached_results)
+            return [Variant.fromJSON(variant_json) for variant_json in variant_results]
+
         if indivs_to_consider is None:
             if genotype_filter:
                 indivs_to_consider = genotype_filter.keys()
@@ -145,9 +165,9 @@ class ElasticsearchDatastore(datastore.Datastore):
                 indivs_to_consider = []
 
         if family_id is not None:
-            family_individual_ids = [i.indiv_id for i in Individual.objects.filter(family__family_id=family_id)]
+            family_individual_ids = [i.indiv_id for i in Individual.objects.filter(family__family_id=family_id).only("indiv_id")]
         else:
-            family_individual_ids = [i.indiv_id for i in Individual.objects.filter(family__project__project_id=project_id)]
+            family_individual_ids = [i.indiv_id for i in Individual.objects.filter(family__project__project_id=project_id).only("indiv_id")]
 
         from xbrowse_server.base.models import Project, Family
         from pyliftover import LiftOver
@@ -155,9 +175,11 @@ class ElasticsearchDatastore(datastore.Datastore):
         query_json = self._make_db_query(genotype_filter, variant_filter)
 
         try:
-            if self.liftover_grch38_to_grch37 is None or self.liftover_grch37_to_grch38 is None:
-                self.liftover_grch38_to_grch37 = LiftOver('hg38', 'hg19')
-                self.liftover_grch37_to_grch38 = LiftOver('hg19', 'hg38')
+            if self.liftover_grch38_to_grch37 is None:
+                self.liftover_grch38_to_grch37 = None # LiftOver('hg38', 'hg19')
+
+            if self.liftover_grch37_to_grch38 is None:
+                self.liftover_grch37_to_grch38 = None # LiftOver('hg19', 'hg38')
         except Exception as e:
             logger.info("WARNING: Unable to set up liftover. Is there a working internet connection? " + str(e))
 
@@ -171,7 +193,7 @@ class ElasticsearchDatastore(datastore.Datastore):
             project = family.project
             logger.info("Searching in family elasticsearch index: " + str(elasticsearch_index))
 
-        if family_id is not None:
+        if family_id is not None and len(family_individual_ids) > 0:
             # figure out which index to use
             # TODO add caching
             matching_indices = []
@@ -205,6 +227,18 @@ class ElasticsearchDatastore(datastore.Datastore):
                 else:
                     variant_id_filter_term |= q_obj
             s = s.filter(variant_id_filter_term)
+
+        if indivs_to_consider:
+            atleast_one_nonref_genotype_filter = None
+            for sample_id in indivs_to_consider:
+                encoded_sample_id = _encode_name(sample_id)
+                q = Q('range', **{encoded_sample_id+"_num_alt": {'gte': 1}})
+                if atleast_one_nonref_genotype_filter is None:
+                    atleast_one_nonref_genotype_filter = q
+                else:
+                    atleast_one_nonref_genotype_filter |= q
+
+            s = s.filter(atleast_one_nonref_genotype_filter)
 
         if quality_filter is not None and indivs_to_consider:
             #'vcf_filter': u'pass', u'min_ab': 17, u'min_gq': 46
@@ -425,8 +459,8 @@ class ElasticsearchDatastore(datastore.Datastore):
 
         logger.info("TOTAL: %s. Query took %s seconds" % (response.hits.total, time.time() - start))
 
-        if response.hits.total > settings.VARIANT_QUERY_RESULTS_LIMIT+15000:
-            raise Exception("this search exceeded the variant result size limit. Please set additional filters and try again.")
+        if response.hits.total > settings.VARIANT_QUERY_RESULTS_LIMIT + 1:
+            raise Exception("This search matched too many variants. Please set additional filters and try again.")
 
         #print(pformat(response.to_dict()))
 
@@ -437,6 +471,7 @@ class ElasticsearchDatastore(datastore.Datastore):
         reference = get_reference()
 
         #for i, hit in enumerate(response.hits):
+        variant_results = []
         for i, hit in enumerate(s.scan()):  # preserve_order=True
             #logger.info("HIT %s: %s %s %s" % (i, hit["variantId"], hit["geneIds"], pformat(hit.__dict__)))
             #print("HIT %s: %s" % (i, pformat(hit.to_dict())))
@@ -462,12 +497,12 @@ class ElasticsearchDatastore(datastore.Datastore):
                     raise ValueError("Invalid num_alt: " + str(num_alt))
 
                 genotypes[individual_id] = {
-                    'ab': hit["%s_ab" % encoded_individual_id] if ("%s_ab" % encoded_individual_id) in hit else '',
+                    'ab': hit["%s_ab" % encoded_individual_id] if ("%s_ab" % encoded_individual_id) in hit else None,
                     'alleles': map(str, alleles),
                     'extras': {
-                        'ad': hit["%s_ab" % encoded_individual_id]  if ("%s_ad" % encoded_individual_id) in hit else '',
-                        'dp': hit["%s_dp" % encoded_individual_id]  if ("%s_dp" % encoded_individual_id) in hit else '',
-                        'pl': '',
+                        'ad': hit["%s_ab" % encoded_individual_id]  if ("%s_ad" % encoded_individual_id) in hit else None,
+                        'dp': hit["%s_dp" % encoded_individual_id]  if ("%s_dp" % encoded_individual_id) in hit else None,
+                        #'pl': '',
                     },
                     'filter': filters or "pass",
                     'gq': hit["%s_gq" % encoded_individual_id] if ("%s_gq" % encoded_individual_id in hit and hit["%s_gq" % encoded_individual_id] is not None) else '',
@@ -488,7 +523,7 @@ class ElasticsearchDatastore(datastore.Datastore):
                     if grch38_coord and grch38_coord[0]:
                         grch38_coord = "%s-%s-%s-%s "% (grch38_coord[0][0], grch38_coord[0][1], hit["ref"], hit["alt"])
                     else:
-                        grch38_coord = ""
+                        grch38_coord = None
             else:
                 grch38_coord = hit["variantId"]
 
@@ -499,7 +534,7 @@ class ElasticsearchDatastore(datastore.Datastore):
                     if grch37_coord and grch37_coord[0]:
                         grch37_coord = "%s-%s-%s-%s "% (grch37_coord[0][0], grch37_coord[0][1], hit["ref"], hit["alt"])
                     else:
-                        grch37_coord = ""
+                        grch37_coord = None
             else:
                 grch37_coord = hit["variantId"]
 
@@ -594,7 +629,8 @@ class ElasticsearchDatastore(datastore.Datastore):
                     'grch37_coords': grch37_coord,
                     'grch38_coords': grch38_coord,
                     'alt_allele_pos': 0,
-                    'orig_alt_alleles': map(str, [a.split("-")[-1] for a in hit["originalAltAlleles"]]) if "originalAltAlleles" in hit else []},
+                    'orig_alt_alleles': map(str, [a.split("-")[-1] for a in hit["originalAltAlleles"]]) if "originalAltAlleles" in hit else None
+                },
                 'genotypes': genotypes,
                 'pos': long(hit['start']),
                 'pos_end': str(hit['end']),
@@ -609,6 +645,10 @@ class ElasticsearchDatastore(datastore.Datastore):
             result["annotation"]["pop_counts"] = result["pop_counts"]
             result["annotation"]["db"] = "elasticsearch"
 
+            result["extras"]["svlen"] = hit["SVLEN"] if "SVLEN" in hit else None
+            result["extras"]["svtype"] = hit["SVTYPE"] if "SVTYPE" in hit else None
+
+
             logger.info("Result %s: GRCh37: %s GRCh38: %s:,  cadd: %s  %s - gene ids: %s, coding gene_ids: %s" % (
                 i, grch37_coord, grch38_coord,
                 hit["cadd_PHRED"] if "cadd_PHRED" in hit else "",
@@ -616,35 +656,34 @@ class ElasticsearchDatastore(datastore.Datastore):
                 result["gene_ids"],
                 result["coding_gene_ids"]))
 
-            variant = Variant.fromJSON(result)
-            variant.set_extra('project_id', project_id)
-            variant.set_extra('family_id', family_id)
+            result["extras"]["project_id"] = project_id
+            result["extras"]["family_id"] = family_id
 
             # add gene info
             gene_names = {}
             if vep_annotation is not None:
                 gene_names = {vep_anno["gene_id"]: vep_anno.get("gene_symbol") for vep_anno in vep_annotation if vep_anno.get("gene_symbol")}
-            variant.set_extra('gene_names', gene_names)
+
+            result["extras"]["gene_names"] = gene_names
 
             try:
                 genes = {}
-                for gene_id in variant.coding_gene_ids:
+                for gene_id in result["coding_gene_ids"]:
                     if gene_id:
                         genes[gene_id] = reference.get_gene_summary(gene_id)
 
                 if not genes:
-                    for gene_id in variant.gene_ids:
+                    for gene_id in result["gene_ids"]:
                         if gene_id:
                             genes[gene_id] = reference.get_gene_summary(gene_id)
 
                 #if not genes:
                 #    genes =  {vep_anno["gene_id"]: {"symbol": vep_anno["gene_symbol"]} for vep_anno in vep_annotation}
 
-                variant.set_extra('genes', genes)
+                result["extras"]["genes"] = genes
             except Exception as e:
                 exc_type, exc_obj, exc_tb = sys.exc_info()
                 logger.warn("WARNING: got unexpected error in add_gene_names_to_variants: %s : line %s" % (e, exc_tb.tb_lineno))
-
 
             #add_disease_genes_to_variants(gene_list_map, [variant])
             #add_gene_databases_to_variants([variant])
@@ -659,12 +698,17 @@ class ElasticsearchDatastore(datastore.Datastore):
             #        variant.set_extra('family_tags', [t.toJSON() for t in tags])
             #    except Exception, e:
             #        print("WARNING: got unexpected error in add_notes_to_variants_family for family %s %s" % (family, e))
-            yield variant
+            variant_results.append(result)
 
         logger.info("Finished returning the %s variants: %s seconds" % (response.hits.total, time.time() - start))
 
+        if self._redis_client:
+            self._redis_client.set(cache_key, json.dumps(variant_results))
+
+        return [Variant.fromJSON(variant_json) for variant_json in variant_results]
+
     def get_variants(self, project_id, family_id, genotype_filter=None, variant_filter=None, quality_filter=None, indivs_to_consider=None, user=None):
-        for i, variant in enumerate(self.get_elasticsearch_variants(
+        for variant in self.get_elasticsearch_variants(
                 project_id,
                 family_id,
                 variant_filter=variant_filter,
@@ -672,7 +716,8 @@ class ElasticsearchDatastore(datastore.Datastore):
                 quality_filter=quality_filter,
                 indivs_to_consider=indivs_to_consider,
                 user=user,
-        )):
+        ):
+
             yield variant
 
     def get_variants_in_gene(self, project_id, family_id, gene_id, genotype_filter=None, variant_filter=None):
@@ -691,12 +736,14 @@ class ElasticsearchDatastore(datastore.Datastore):
 
         variant_id = "%s-%s-%s-%s" % (chrom, pos, ref, alt)
 
-        cache_key = (project_id, family_id, xpos, ref, alt)
-        if cache_key in self._results_cache:
-            results = self._results_cache[cache_key]
+        #cache_key = (project_id, family_id, xpos, ref, alt)
+        cached_results = None #self._redis_client and self._redis_client.get(cache_key)
+        if cached_results is not None:
+            results = [Variant.fromJSON(v) if v else None for v in json.loads(cached_results)]
         else:
             results = list(self.get_elasticsearch_variants(project_id, family_id=family_id, variant_id_filter=[variant_id], user=user, include_all_consequences=True))
-            self._results_cache[cache_key] = results
+            #if self._redis_client:
+            #    self._redis_client.set(cache_key, json.dumps([r.toJSON() if r else None for r in results]))
 
         if not results:
             return None
@@ -720,11 +767,12 @@ class ElasticsearchDatastore(datastore.Datastore):
             chrom, pos = get_chr_pos(xpos)
             variant_ids.append("%s-%s-%s-%s" % (chrom, pos, ref, alt))
 
-        cache_key = (project_id, family_id, tuple(xpos_ref_alt_tuples))
-        if cache_key in self._results_cache:
-            results = self._results_cache[cache_key]
+        #cache_key = (project_id, family_id, tuple(xpos_ref_alt_tuples))
+        cached_results = None #self._redis_client and self._redis_client.get(cache_key)
+        if cached_results is not None:
+            results = [Variant.fromJSON(v) if v else None for v in json.loads(cached_results)]
         else:
-            results = list(self.get_elasticsearch_variants(project_id, family_id=family_id, variant_id_filter=variant_ids, user=user))
+            results = self.get_elasticsearch_variants(project_id, family_id=family_id, variant_id_filter=variant_ids, user=user)
             # make sure all variants in xpos_ref_alt_tuples were retrieved and are in the same order.
             # Return None for tuples that weren't found in ES.
             results_by_xpos_ref_alt = {}
@@ -735,7 +783,8 @@ class ElasticsearchDatastore(datastore.Datastore):
             # xpos-ref-alt's that weren't found in the elasticsearch index
             results = [results_by_xpos_ref_alt.get(t) for t in xpos_ref_alt_tuples]
 
-            self._results_cache[cache_key] = results
+            #if self._redis_client:
+            #    self._redis_client.set(cache_key, json.dumps([r.toJSON() if r else None for r in results]))
 
         return results
 

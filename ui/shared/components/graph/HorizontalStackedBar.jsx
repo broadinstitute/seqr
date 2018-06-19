@@ -44,10 +44,11 @@ class HorizontalStackedBar extends React.Component {
     minPercent: PropTypes.number,
     noDataMessage: PropTypes.string,
     showAllPopupCategories: PropTypes.bool,
+    showPercent: PropTypes.bool,
   }
 
   render() {
-    const { title, data, width, height, linkPath, showAllPopupCategories, minPercent = 1, noDataMessage = 'No Data' } = this.props
+    const { title, data, width, height, linkPath, showAllPopupCategories, minPercent = 1, noDataMessage = 'No Data', showPercent = true } = this.props
     const total = data.reduce((acc, d) => acc + d.count, 0)
 
     if (total === 0) {
@@ -99,15 +100,15 @@ class HorizontalStackedBar extends React.Component {
                     popupData.map(d => (
                       <TableRow key={d.name} verticalAlign="top" >
                         {!d.header &&
-                          <TableCell collapsing><ColoredIcon name="square" size="small" color={d.color} /> {d.count}</TableCell>
+                          <TableCell collapsing>{d.count} <ColoredIcon name="square" size="small" color={d.color} /></TableCell>
                         }
                         <TableCell singleLine colSpan={d.header ? 3 : 1} disabled={Boolean(d.header)}>{d.name}</TableCell>
-                        {!d.header && <TableCell collapsing>({d.percent.toPrecision(2)}%)</TableCell>}
+                        {!d.header && <TableCell collapsing>{showPercent && `(${d.percent.toPrecision(2)}%)`}</TableCell>}
                       </TableRow>
                     ))
                   }
                   <TableRow>
-                    <TableCell collapsing><ColoredIcon name="square" size="small" color="white" /><b> {total}</b></TableCell>
+                    <TableCell><b>{total}</b></TableCell>
                     <TableCell><b>Total</b></TableCell>
                     <TableCell />
                   </TableRow>

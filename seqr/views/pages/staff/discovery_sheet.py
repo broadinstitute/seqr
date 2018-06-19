@@ -193,7 +193,7 @@ def generate_rows(project, errors, discovery_tag_types):
 
         individuals = list(family.individual_set.all())
 
-        phenotips_individual_data_records = [_load_dict(i.phenotips_data) for i in individuals if i.phenotips_data]
+        phenotips_individual_data_records = [json.loads(i.phenotips_data) for i in individuals if i.phenotips_data]
 
         phenotips_individual_features = [phenotips_data.get("features", []) for phenotips_data in phenotips_individual_data_records]
         phenotips_individual_mim_disorders = [phenotips_data.get("disorders", []) for phenotips_data in phenotips_individual_data_records]
@@ -504,10 +504,3 @@ def generate_rows(project, errors, discovery_tag_types):
             rows.append(row)
 
     return rows
-
-
-def _load_dict(s):
-    try:
-        return json.loads(s)
-    except ValueError:
-        return eval(s)

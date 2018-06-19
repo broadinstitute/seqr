@@ -140,6 +140,9 @@ const Genotype = ({ variant, individualId }) => {
 
 
 const VariantFamily = ({ variant, project, family, individualsByGuid }) => {
+  if (!family) {
+    return null
+  }
   const individuals = family.individualGuids.map(individualGuid => individualsByGuid[individualGuid])
   individuals.sort((a, b) => a.affected.localeCompare(b.affected))
   return (
@@ -167,7 +170,7 @@ const VariantFamily = ({ variant, project, family, individualsByGuid }) => {
               hoverable
               wide="very"
               position="top left"
-              trigger={<a><Icon name="info circle" /></a>}
+              trigger={<a><Icon name="file powerpoint outline" /></a>}
               content={
                 <PhenotipsDataPanel individual={individual} showDetails showEditPhenotipsLink={false} showViewPhenotipsLink={false} />
               }

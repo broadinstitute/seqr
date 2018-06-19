@@ -47,10 +47,12 @@
                                 </div>
                             </div>
                             <div class="col-sm-4">
-                                <div class="annot-section-title">Variant Type</div>
-                                <div class="annot-section-content">
-                                    <div id="vartype-widget-container"></div>
-                                </div>
+                                <% if (showVartypeFilter) { %>
+                                    <div class="annot-section-title">Variant Type</div>
+                                    <div class="annot-section-content">
+                                        <div id="vartype-widget-container"></div>
+                                    </div>
+                                <% } %>
                             </div>
                         </div>
                     </div>
@@ -86,7 +88,7 @@
                                 <div class="col-sm-<%= showPopAcFilter ? '4' : '3' %>" style="min-height: 90px;">
                                     <div class="annot-section-title">
                                         <%= pop.name %>
-                                         <% if (pop.description) {  %>
+                                        <% if (pop.description) {  %>
                                             <i class="icon-question-sign icon-popover" title="<%= pop.full_name || pop.name %>" data-placement="top" data-content="<%= pop.description %>"></i>
                                         <% }; %>
 				                    </div>
@@ -156,7 +158,10 @@
                         <% if (thisCallsetFilter) { %>
                             <div class="row" style="border-top: 1px solid #EEE;">
                                 <div class="col-sm-4" style="min-height: 90px;">
-                                    <div class="annot-section-title">This Callset</div>
+                                    <div class="annot-section-title">
+                                        This Callset <i class="icon-question-sign icon-popover" title="This Callset" data-placement="top" data-content="Filter out variants that have a higher allele count (AC), or a higher allele frequency (AF) among the samples in this family plus the rest of the samples that were joint-called as part of variant calling for this project."></i>
+                                    </div>
+
                                     <div class="annot-section-content row">
                                         <div class="col-sm-3">
                                             <div>AC</div>
@@ -177,31 +182,33 @@
                         <% }; %>
                     </div>
                 </div>
-                <div class="panel panel-default">
-                    <div class="panel-heading">
-                        <a data-toggle="collapse" href="#collapse-predictions">Deleteriousness Predictions</a>
-                    </div>
-                    <div id="collapse-predictions" class="panel-body panel-collapse collapse">
-                        <div class="row">
-                            <div class="col-sm-3">
-                                <div class="annot-section-title">PolyPhen</div>
-                                <div class="annot-section-content" id="polyphen-widget-container"></div>
-                            </div>
-                            <div class="col-sm-3">
-                                <div class="annot-section-title">SIFT</div>
-                                <div class="annot-section-content" id="sift-widget-container"></div>
-                            </div>
-                            <div class="col-sm-3">
-                                <div class="annot-section-title">MutationTaster</div>
-                                <div class="annot-section-content" id="muttaster-widget-container"></div>
-                            </div>
-                            <div class="col-sm-3">
-                                <div class="annot-section-title">FATHMM</div>
-                                <div class="annot-section-content" id="fathmm-widget-container"></div>
+                <% if (showDeleteriousnessPredictorFilters) { %>
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <a data-toggle="collapse" href="#collapse-predictions">Deleteriousness Predictions</a>
+                        </div>
+                        <div id="collapse-predictions" class="panel-body panel-collapse collapse">
+                            <div class="row">
+                                <div class="col-sm-3">
+                                    <div class="annot-section-title">PolyPhen</div>
+                                    <div class="annot-section-content" id="polyphen-widget-container"></div>
+                                </div>
+                                <div class="col-sm-3">
+                                    <div class="annot-section-title">SIFT</div>
+                                    <div class="annot-section-content" id="sift-widget-container"></div>
+                                </div>
+                                <div class="col-sm-3">
+                                    <div class="annot-section-title">MutationTaster</div>
+                                    <div class="annot-section-content" id="muttaster-widget-container"></div>
+                                </div>
+                                <div class="col-sm-3">
+                                    <div class="annot-section-title">FATHMM</div>
+                                    <div class="annot-section-content" id="fathmm-widget-container"></div>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
+                <% } %>
                 <div class="panel panel-default">
                     <div class="panel-heading">
                         <a class="accordion-toggle" data-toggle="collapse" href="#collapse-region">

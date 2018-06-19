@@ -19,7 +19,7 @@ def _check_login(test_case, url):
     test_case.client.force_login(test_user)
 
 
-def create_send_requests_to_phenotips_stub(response_status=200, reason="OK"):
+def create_proxy_request_stub(response_status=200, reason="OK"):
 
     """Factory for creating a PhenoTips mock function to replace _send_request_to_phenotips.
     This allows unit tests to be decoupled from communicating with PhenoTips.
@@ -29,7 +29,7 @@ def create_send_requests_to_phenotips_stub(response_status=200, reason="OK"):
     @mock.patch('seqr.views.apis.phenotips_api._send_request_to_phenotips', create_send_requests_to_phenotips_stub())
     """
 
-    def _send_request_to_phenotips_stub(method, url, scheme="http", http_headers=None, data=None, auth_tuple=None, verbose=False):
+    def _proxy_request_stub(*args, **kwargs):
         """Function that stubs out sending a request to PhenoTips."""
 
         http_response = HttpResponse(
@@ -41,4 +41,4 @@ def create_send_requests_to_phenotips_stub(response_status=200, reason="OK"):
 
         return http_response
 
-    return _send_request_to_phenotips_stub
+    return _proxy_request_stub

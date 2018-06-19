@@ -471,7 +471,7 @@ i.greencircle {
     .basicvariant .genotypes .geno-cell:first-child {
       clear: left; }
     .basicvariant .genotypes .geno-cell {
-      width: 95px;
+      width: 105px;
       font-size: 12px;
       text-transform: uppercase; }
       .basicvariant .genotypes .geno-cell .genotype-icon-container {
@@ -1633,6 +1633,10 @@ div.d3-tooltip {
     pointer-events: none;
 }
 
+.tooltip-inner {
+  max-width: unset;
+  text-align: left !important;
+}
 
 @media (min-width: 1200px) {
   .container {

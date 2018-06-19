@@ -22,6 +22,6 @@ class Command(BaseCommand):
         for family in Family.objects.filter(project=proj):
             for individual in Individual.objects.filter(family=family):
                 print("Deleting records for %s - %s" % (family.family_id, individual.individual_id))
-                delete_patient(proj, individual.phenotips_eid, is_external_id=True)
+                delete_patient(proj, individual)
 
         print("Deleted all phenotips records for %s!" % project_id)

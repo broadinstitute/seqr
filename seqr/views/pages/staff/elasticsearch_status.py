@@ -46,8 +46,7 @@ def elasticsearch_status(request):
         index_json = {k.replace('.', '_'): v for k, v in index.items()}
 
         index_name = re.sub("_[0-9]{1,2}$", "", index_name)
-
-        sample = Sample.objects.filter(elasticsearch_index=index_name).select_related('individual__family__project').only('sample_tye').first()
+        sample = Sample.objects.filter(elasticsearch_index=index_name).select_related('individual__family__project').first()
         if sample:
             project = sample.individual.family.project
             index_json['project_guid'] = project.guid
@@ -68,13 +67,13 @@ def elasticsearch_status(request):
     disk_status=[]
     for disk in client.cat.allocation(format="json"):
         disk_json = {k.replace('.', '_'): v for k, v in disk.items()}
-        disk_status.append(
-                            {
-                              'node_name':disk_json['node'],
-                              'disk_available':disk_json['disk_avail'],
-                              'disk_used':disk_json['disk_used'],    
-                              'disk_percent_used':disk_json['disk_percent'],     
-                                })
+        disk_status.append({
+            'node_name': disk_json['node'],
+            'disk_available': disk_json['disk_avail'],
+            'disk_used': disk_json['disk_used'],
+            'disk_percent_used': disk_json['disk_percent'],
+        })
+
     return render(request, "staff/elasticsearch_status.html", {
         'indices': indices,
         'operations': operations,

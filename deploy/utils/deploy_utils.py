@@ -706,7 +706,7 @@ def create_vpc(gcloud_project, network_name):
         #"gcloud compute networks create seqr-project-custom-vpc --project=%(GCLOUD_PROJECT)s --mode=custom"
         "gcloud compute networks create %(network_name)s",
         "--project=%(gcloud_project)s",
-        "--mode=auto"
+        "--subnet-mode=auto"
     ]) % locals(), errors_to_ignore=["already exists"])
 
     # add recommended firewall rules to enable ssh, etc.

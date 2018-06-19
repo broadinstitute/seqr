@@ -40,16 +40,6 @@ const TagSection = styled.div`
   }
 `
 
-
-const ReRunSearchLink = styled.a.attrs({ target: '_blank' })`
-  font-size: 12px;
-  max-width: 40px;
-  display: inline-block;
-  line-height: .9em;
-  white-space: normal;
-  margin-right: 5px;
-`
-
 const NOTE_STYLES = {
   Edit: { display: 'flex', fontSize: '1.2em' },
   Add: { verticalAlign: 'middle' },
@@ -64,27 +54,27 @@ const VARIANT_NOTE_FIELDS = [{
   style: { paddingTop: '2em' },
 }]
 
-const taggedByPopupContent = tag =>
-  <span>{tag.user || 'unknown user'}{tag.dateSaved && <span><br /> on {new Date(tag.dateSaved).toLocaleDateString()}</span>}</span>
+const taggedByPopup = tag => trigger =>
+  <Popup
+    position="top right"
+    size="tiny"
+    trigger={trigger}
+    header="Tagged by"
+    hoverable
+    flowing
+    content={
+      <div>
+        {tag.createdBy || 'unknown user'}
+        {tag.lastModifiedDate && <span>on {new Date(tag.lastModifiedDate).toLocaleDateString()}</span>}
+        {tag.searchParameters && <div><a href={tag.searchParameters} target="_blank">Re-run search</a></div>}
+      </div>
+    }
+  />
 
-const reRunTagSearch = tag => tag.searchParameters &&
-  <ReRunSearchLink href={tag.searchParameters}>Re-run search</ReRunSearchLink>
 
 const ShortcutTagToggle = ({ tag, ...props }) => {
   const toggle = <InlineToggle color={tag && tag.color} {...props} />
-  return (
-    <span>
-      {tag ? <Popup
-        position="top right"
-        size="tiny"
-        trigger={toggle}
-        header="Tagged by"
-        content={taggedByPopupContent(tag)}
-      /> : toggle}
-      <HorizontalSpacer width={5} />
-      {tag && reRunTagSearch(tag)}
-    </span>
-  )
+  return tag ? taggedByPopup(tag)(toggle) : toggle
 }
 
 ShortcutTagToggle.propTypes = {
@@ -142,7 +132,7 @@ const VariantTagField = ({ variant, fieldName, ...props }) =>
     initialValues={variant}
     compact
     isEditable
-    popupContent={taggedByPopupContent}
+    popup={taggedByPopup}
     {...props}
   />
 
@@ -162,7 +152,7 @@ const VariantNoteField = ({ action, note, variant, ...props }) => {
     initialValues={values}
     idField={note ? 'noteGuid' : 'variantId'}
     deleteConfirm="Are you sure you want to delete this note?"
-    textPopupContent={note && taggedByPopupContent(note)}
+    textPopup={note && taggedByPopup(note)}
     {...props}
   />
 }
@@ -186,7 +176,6 @@ const VariantTags = ({ variant, project, updateVariantNote: dispatchUpdateVarian
           tagOptions={project.variantTagTypes}
           hiddenTags={SHORTCUT_TAGS}
           onSubmit={dispatchUpdateVariantTags}
-          tagAnnotation={reRunTagSearch}
         />
         <HorizontalSpacer width={5} />
       </TagSection>

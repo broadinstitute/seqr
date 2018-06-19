@@ -51,6 +51,11 @@ class ProjectAPITest(TransactionTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {VARIANT_GUID: {'transcripts': {}}})
 
+        invalid_url = reverse(saved_variant_transcripts, args=['not_a_guid'])
+        response = self.client.get(invalid_url)
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(response.json().get('message'), 'SavedVariant matching query does not exist.')
+
     def test_create_update_and_delete_variant_note(self):
         create_variant_note_url = reverse(create_variant_note_handler, args=[VARIANT_GUID])
         _check_login(self, create_variant_note_url)

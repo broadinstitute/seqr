@@ -8,7 +8,9 @@ import os
 from django.db.models import Model
 from django.db.models.fields.files import ImageFieldFile
 
-from seqr.models import CAN_EDIT, Project, Family, Individual, Sample
+from seqr.models import CAN_EDIT, Project, Family, Individual, Sample, SavedVariant, VariantTag, \
+    VariantFunctionalData, VariantNote
+from seqr.utils.xpos_utils import get_chrom_pos
 from seqr.views.utils.json_utils import _to_camel_case
 from family_info_utils import retrieve_family_analysed_by
 logger = logging.getLogger(__name__)
@@ -21,7 +23,7 @@ def _record_to_dict(record, fields, nested_fields=None):
         for nested_field in (nested_fields or []):
             field_value = model
             for field in nested_field:
-                field_value = getattr(field_value, field)
+                field_value = getattr(field_value, field) if field_value else None
             record['_'.join(nested_field)] = field_value
     return record
 
@@ -207,5 +209,107 @@ def _get_json_for_sample(sample):
         'projectGuid': sample_dict.get('individual_family_project_guid') or sample_dict['project_guid'],
         'individualGuid': sample_dict['individual_guid'],
         'sampleGuid': result.pop('guid'),
+    })
+    return result
+
+
+def get_json_for_saved_variant(saved_variant, add_tags=False):
+    """Returns a JSON representation of the given variant.
+
+    Args:
+        saved_variant (object): dictionary or django model for the SavedVariant.
+    Returns:
+        dict: json object
+    """
+
+    fields = _get_record_fields(SavedVariant, 'variant')
+    saved_variant_dict = _record_to_dict(saved_variant, fields, nested_fields=[('family', 'guid')])
+
+    result = _get_json_for_record(saved_variant_dict, fields)
+
+    chrom, pos = get_chrom_pos(result['xpos'])
+    result.update({
+        'variantId': result.pop('guid'),
+        'familyGuid': saved_variant_dict['family_guid'],
+        'chrom': chrom,
+        'pos': pos,
+    })
+    if add_tags:
+        result.update({
+            'tags': [get_json_for_variant_tag(tag) for tag in saved_variant.varianttag_set.all()],
+            'functionalData': [get_json_for_variant_functional_data(tag) for tag in saved_variant.variantfunctionaldata_set.all()],
+            'notes': [get_json_for_variant_note(tag) for tag in saved_variant.variantnote_set.all()],
+        })
+    return result
+
+
+def get_json_for_variant_tag(tag):
+    """Returns a JSON representation of the given variant tag.
+
+    Args:
+        tag (object): dictionary or django model for the VarianTag.
+    Returns:
+        dict: json object
+    """
+
+    fields = _get_record_fields(VariantTag, 'tag')
+    tag_dict = _record_to_dict(tag, fields, nested_fields=[
+        ('variant_tag_type', 'name'),  ('variant_tag_type', 'category'),  ('variant_tag_type', 'color')
+    ])
+
+    result = _get_json_for_record(tag_dict, fields)
+    created_by = result.pop('createdBy')
+    result.update({
+        'tagGuid': result.pop('guid'),
+        'name': tag_dict['variant_tag_type_name'],
+        'category': tag_dict['variant_tag_type_category'],
+        'color': tag_dict['variant_tag_type_color'],
+        'createdBy': (created_by.get_full_name() or created_by.email) if created_by else None,
+    })
+    return result
+
+
+def get_json_for_variant_functional_data(tag):
+    """Returns a JSON representation of the given variant tag.
+
+    Args:
+        tag (object): dictionary or django model for the VariantFunctionalData.
+    Returns:
+        dict: json object
+    """
+
+    fields = _get_record_fields(VariantFunctionalData, 'tag')
+    tag_dict = _record_to_dict(tag, fields)
+    result = _get_json_for_record(tag_dict, fields)
+
+    display_data = json.loads(tag.get_functional_data_tag_display())
+    created_by = result.pop('createdBy')
+    result.update({
+        'tagGuid': result.pop('guid'),
+        'name': result.pop('functionalDataTag'),
+        'metadataTitle': display_data.get('metadata_title'),
+        'color': display_data['color'],
+        'createdBy': (created_by.get_full_name() or created_by.email) if created_by else None,
+    })
+    return result
+
+
+def get_json_for_variant_note(note):
+    """Returns a JSON representation of the given variant note.
+
+    Args:
+        note (object): dictionary or django model for the VariantNote.
+    Returns:
+        dict: json object
+    """
+
+    fields = _get_record_fields(VariantNote, 'note')
+    note_dict = _record_to_dict(note, fields)
+    result = _get_json_for_record(note_dict, fields)
+
+    created_by = result.pop('createdBy')
+    result.update({
+        'noteGuid': result.pop('guid'),
+        'createdBy': (created_by.get_full_name() or created_by.email) if created_by else None,
     })
     return result

@@ -17,7 +17,7 @@ ENV PT_VERSION="1.2.6"
 
 # dev utilities
 RUN apt-get update
-RUN apt-get install -y curl xterm vim emacs nano less bzip2
+RUN apt-get install -y curl xterm vim emacs nano less htop bzip2
 RUN apt-get update && apt-get install -y postgresql postgresql-client --fix-missing
 
 RUN wget https://nexus.phenotips.org/nexus/content/repositories/releases/org/phenotips/phenotips-standalone/${PT_VERSION}/phenotips-standalone-${PT_VERSION}.zip

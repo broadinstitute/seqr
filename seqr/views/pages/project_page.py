@@ -279,9 +279,9 @@ def _get_json_for_locus_lists(project):
 
 def _get_json_for_variant_tag_types(project):
     project_variant_tags = []
-    tag_counts = VariantTag.objects.filter(saved_variant__project=project).values('saved_variant__family__guid', 'variant_tag_type__name').annotate(count=Count('*'))
+    tag_counts_by_type_and_family = VariantTag.objects.filter(saved_variant__project=project).values('saved_variant__family__guid', 'variant_tag_type__name').annotate(count=Count('*'))
     for variant_tag_type in VariantTagType.objects.filter(Q(project=project) | Q(project__isnull=True)):
-        tag_type_counts = [o for o in tag_counts if o['variant_tag_type__name'] == variant_tag_type.name]
+        current_tag_type_counts = [counts for counts in tag_counts_by_type_and_family if counts['variant_tag_type__name'] == variant_tag_type.name]
         project_variant_tags.append({
             'variantTagTypeGuid': variant_tag_type.guid,
             'name': variant_tag_type.name,
@@ -290,8 +290,8 @@ def _get_json_for_variant_tag_types(project):
             'color': variant_tag_type.color,
             'order': variant_tag_type.order,
             'is_built_in': variant_tag_type.is_built_in,
-            'numTags': sum(o['count'] for o in tag_type_counts),
-            'tagCounts': {o['saved_variant__family__guid']: o['count'] for o in tag_type_counts},
+            'numTags': sum(count['count'] for count in current_tag_type_counts),
+            'numTagsPerFamily': {count['saved_variant__family__guid']: count['count'] for count in current_tag_type_counts},
         })
 
     project_functional_tags = []

@@ -74,7 +74,8 @@ export class HttpRequestHelper {
         console.log('ERROR: ', response.statusText, response.status, response)
         // throw new Error(`${response.statusText.toLowerCase()} (${response.status})`)
         return response.json().then((responseJson) => {
-          const err = new Error(`${response.statusText.toLowerCase()} (${response.status})`)
+          const message = responseJson.message || `${response.statusText.toLowerCase()} (${response.status})`
+          const err = new Error(message)
           err.body = responseJson
           throw err
         })

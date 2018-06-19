@@ -1,6 +1,5 @@
 from django.contrib.auth.models import User
 from django.test import TestCase
-
 from seqr.models import Project, Family, Individual, Sample
 from seqr.views.utils.orm_to_json_utils import _get_json_for_user, _get_json_for_project, _get_json_for_family, \
     _get_json_for_individual, _get_json_for_sample
@@ -77,3 +76,41 @@ class JSONUtilsTest(TestCase):
             set(json.keys()),
             {'projectGuid', 'individualGuid', 'sampleGuid', 'createdDate', 'sampleType', 'sampleId', 'sampleStatus'}
         )
+
+    def test_json_for_saved_variant(self):
+        variant = SavedVariant.objects.first()
+        json = get_json_for_saved_variant(variant)
+
+        fields = {'variantId', 'familyGuid', 'xpos', 'ref', 'alt', 'chrom', 'pos'}
+        self.assertSetEqual(set(json.keys()), fields)
+
+        fields.update({'tags', 'functionalData', 'notes'})
+        json = get_json_for_saved_variant(variant, add_tags=True)
+        self.assertSetEqual(set(json.keys()), fields)
+
+    def test_json_for_variant_tag(self):
+        tag = VariantTag.objects.first()
+        json = get_json_for_variant_tag(tag)
+
+        fields = {
+             'tagGuid', 'name', 'category', 'color', 'searchParameters', 'lastModifiedDate', 'createdBy'
+        }
+        self.assertSetEqual(set(json.keys()), fields)
+
+    def test_json_for_variant_functional_data(self):
+        tag = VariantFunctionalData.objects.first()
+        json = get_json_for_variant_functional_data(tag)
+
+        fields = {
+             'tagGuid', 'name', 'color', 'metadata', 'metadataTitle', 'lastModifiedDate', 'createdBy'
+        }
+        self.assertSetEqual(set(json.keys()), fields)
+
+    def test_json_for_variant_note(self):
+        tag = VariantNote.objects.first()
+        json = get_json_for_variant_note(tag)
+
+        fields = {
+             'noteGuid', 'note', 'submitToClinvar', 'lastModifiedDate', 'createdBy'
+        }
+        self.assertSetEqual(set(json.keys()), fields)

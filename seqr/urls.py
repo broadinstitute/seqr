@@ -131,11 +131,6 @@ urlpatterns += [
     url(phenotips_urls, proxy_to_phenotips_handler, name='proxy_to_phenotips'),
 ]
 
-urlpatterns += [
-    url('^project/(?P<project_guid>[^/]+)/patient/(?P<patient_id>[^/]+)/phenotips_pdf', phenotips_pdf_handler),
-    url('^project/(?P<project_guid>[^/]+)/patient/(?P<patient_id>[^/]+)/phenotips_edit', phenotips_edit_handler),
-]
-
 # core react page templates
 urlpatterns += [url("^%(url_endpoint)s$" % locals(), main_app) for url_endpoint in react_app_pages]
 
