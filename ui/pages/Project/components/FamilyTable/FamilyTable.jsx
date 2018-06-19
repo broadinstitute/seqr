@@ -7,9 +7,8 @@ import { withRouter } from 'react-router'
 
 import Family from 'shared/components/panel/family'
 import ExportTableButton from 'shared/components/buttons/export-table/ExportTableButton'
-import ButtonLink from 'shared/components/buttons/ButtonLink'
 import TableLoading from 'shared/components/table/TableLoading'
-import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
+import { HorizontalSpacer } from 'shared/components/Spacers'
 
 import { getVisibleSortedFamiliesWithIndividuals, getProjectDetailsIsLoading, getShowDetails } from '../../selectors'
 import TableHeaderRow from './header/TableHeaderRow'
@@ -21,6 +20,16 @@ import PageSelector from './PageSelector'
 const ExportContainer = styled.span`
   float: right;
   padding-top: 15px;
+`
+
+const ToggleIcon = styled(Icon).attrs({ size: 'large', link: true, name: 'dropdown' })`
+  position: relative;
+  z-index: 1;
+`
+
+const FamilyContainer = styled.div`
+  margin-left: 25px;
+  margin-top: -33px;
 `
 
 class FamilyTableRow extends React.PureComponent {
@@ -48,14 +57,17 @@ class FamilyTableRow extends React.PureComponent {
     return (
       <Table.Row>
         <Table.Cell>
-          <Family
-            key={family.familyGuid}
-            family={family}
-            showSearchLinks={this.state.showDetails && showSearchLinks}
-            showVariantTags={showVariantTags}
-            fields={this.state.showDetails ? detailFields : noDetailFields}
-            compact={!this.state.showDetails}
-          />
+          <ToggleIcon rotated={this.state.showDetails ? undefined : 'counterclockwise'} onClick={this.toggle} />
+          <FamilyContainer>
+            <Family
+              key={family.familyGuid}
+              family={family}
+              showSearchLinks={this.state.showDetails && showSearchLinks}
+              showVariantTags={showVariantTags}
+              fields={this.state.showDetails ? detailFields : noDetailFields}
+              compact={!this.state.showDetails}
+            />
+          </FamilyContainer>
           {this.state.showDetails && family.individuals.map(individual => (
             <IndividualRow
               key={individual.individualGuid}
@@ -64,11 +76,6 @@ class FamilyTableRow extends React.PureComponent {
               editCaseReview={editCaseReview}
             />),
           )}
-          <VerticalSpacer height={10} />
-          <ButtonLink onClick={this.toggle}>
-            <Icon name={`angle double ${this.state.showDetails ? 'up' : 'down'}`} />
-            Show {this.state.showDetails ? 'Less' : 'More'}
-          </ButtonLink>
         </Table.Cell>
       </Table.Row>
     )

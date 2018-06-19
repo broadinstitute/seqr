@@ -14,7 +14,7 @@ import { HorizontalSpacer } from '../../Spacers'
 const FieldValue = styled.div`
   padding-bottom: ${props => (props.compact ? 0 : '15px')}; 
   padding-left: ${props => (props.compact ? 0 : '22px')};
-  padding-right: ${props => (props.fieldName ? '20px' : '5px')};
+  padding-right: ${props => ((props.fieldName || !props.hasButtons) ? '20px' : '5px')};
   display: ${props => ((props.fieldName && !props.compact) ? 'block' : 'inline-block')};
 `
 
@@ -80,7 +80,7 @@ const BaseFieldView = (props) => {
       ]}
       {
         hasValue(fieldValue) && !props.hideValue &&
-        <FieldValue compact={props.compact} fieldName={props.fieldName}>
+        <FieldValue compact={props.compact} fieldName={props.fieldName} hasButtons={props.isEditable || props.isDeletable}>
           {props.fieldDisplay(fieldValue)}
         </FieldValue>
       }

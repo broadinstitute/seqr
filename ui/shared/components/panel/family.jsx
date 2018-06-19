@@ -46,9 +46,8 @@ const fieldRenderDetails = {
     },
   },
   [FAMILY_FIELD_INDIVIDUALS]: {
-    name: '# Individuals',
     props: {
-      fieldDisplay: individuals => individuals.length,
+      fieldDisplay: individuals => `${individuals.length} Individuals`,
     },
   },
   [FAMILY_FIELD_ANALYSIS_NOTES]: { name: 'Analysis Notes' },
@@ -67,9 +66,7 @@ const Family = ({ project, family, fields = [], showSearchLinks, showVariantTags
   <Grid stackable>
     <Grid.Row>
       <Grid.Column width={(useFullWidth && !(showSearchLinks || showVariantTags)) ? 6 : 3}>
-        <InlineHeader inline={compact} size="small">
-          Family: {family.displayName}
-        </InlineHeader>
+        <InlineHeader inline={compact} size="small" content={family.displayName} />
         <PedigreeImagePanel family={family} disablePedigreeZoom={disablePedigreeZoom} compact={compact} />
       </Grid.Column>
 
@@ -82,7 +79,7 @@ const Family = ({ project, family, fields = [], showSearchLinks, showVariantTags
             key: field.id,
             isEditable: project.canEdit && field.canEdit,
             isPrivate: renderDetails.internal,
-            fieldName: renderDetails.name,
+            fieldName: compact ? null : renderDetails.name,
             field: field.id,
             idField: 'familyGuid',
             initialValues: family,
