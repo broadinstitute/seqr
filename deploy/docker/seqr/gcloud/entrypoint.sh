@@ -33,11 +33,21 @@ python -u manage.py collectstatic --no-input
 
 # launch django dev server in background
 cd /seqr_settings
-gunicorn -w 4 -c gunicorn_config.py wsgi:application |& stdbuf -o0 grep -v curl |& tee /var/log/gunicorn.log &
+gunicorn -w 32 -c gunicorn_config.py wsgi:application |& stdbuf -o0 grep -v curl |& tee /var/log/gunicorn.log &
 
 # allow pg_dump and other postgres command-line tools to run without having to enter a password
 echo "*:*:*:*:$POSTGRES_PASSWORD" > ~/.pgpass
 chmod 600 ~/.pgpass
+
+# check if a settings backup exists
+LATEST_SETTINGS_BACKUP=$(ls -tr1 /mounted-bucket/settings_backups/seqr_${DEPLOYMENT_TYPE}_settings* | tail -n 1)
+if [[ -e "$LATEST_SETTINGS_BACKUP" ]]; then
+    echo Restoring $LATEST_SETTINGS_BACKUP
+
+    # restore latest settings backup
+    tar -C / -xzf $LATEST_SETTINGS_BACKUP
+fi
+
 
 # set up cron database backups
 echo 'SHELL=/bin/bash

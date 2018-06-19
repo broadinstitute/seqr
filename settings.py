@@ -220,7 +220,6 @@ AUTHENTICATION_BACKENDS = (
     'guardian.backends.ObjectPermissionBackend',
 )
 
-
 # ===========================================================
 # ===========================================================
 # legacy settings that need to be reviewed
@@ -318,7 +317,7 @@ ANNOTATION_BATCH_SIZE = 25000
 CONSTRUCTION_TEMPLATE = None
 CLINVAR_TSV = "/dev/null"
 
-VARIANT_QUERY_RESULTS_LIMIT = 5000
+VARIANT_QUERY_RESULTS_LIMIT = 1500
 
 UPLOADED_PEDIGREE_FILE_RECIPIENTS = []
 # READ_VIZ

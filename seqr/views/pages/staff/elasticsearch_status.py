@@ -58,6 +58,7 @@ def elasticsearch_status(request):
             index_json['project_id'] = index_to_dataset[index_name].project.deprecated_project_id
             index_json['analysis_type'] = index_to_dataset[index_name].analysis_type
             index_json['genome_version'] = index_to_dataset[index_name].genome_version
+            index_json['source_file_path'] = index_to_dataset[index_name].source_file_path
 
         if index_name in index_snapshot_states:
             index_json['snapshots'] = ", ".join(set(index_snapshot_states[index_name]))
@@ -72,13 +73,13 @@ def elasticsearch_status(request):
     disk_status=[]
     for disk in client.cat.allocation(format="json"):
         disk_json = {k.replace('.', '_'): v for k, v in disk.items()}
-        disk_status.append(
-                            {
-                              'node_name':disk_json['node'],
-                              'disk_available':disk_json['disk_avail'],
-                              'disk_used':disk_json['disk_used'],    
-                              'disk_percent_used':disk_json['disk_percent'],     
-                                })
+        disk_status.append({
+            'node_name': disk_json['node'],
+            'disk_available': disk_json['disk_avail'],
+            'disk_used': disk_json['disk_used'],
+            'disk_percent_used': disk_json['disk_percent'],
+        })
+
     return render(request, "staff/elasticsearch_status.html", {
         'indices': indices,
         'operations': operations,

@@ -95,7 +95,7 @@ window.utils = {
 
       var s = "";
       if (variant.extras.orig_alt_alleles) {
-          s += "Raw Alt. Alleles: <br /><b>" + variant.extras.orig_alt_alleles.join().replace(/,/g, ", ") + "</b><br />";
+          s += "Raw Alt. Alleles: <b>" + variant.extras.orig_alt_alleles.join().replace(/,/g, ", ") + "</b><br />";
       }
 
       if (g.extras.ad != null) {
