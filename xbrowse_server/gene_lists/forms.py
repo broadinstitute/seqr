@@ -34,7 +34,7 @@ class GeneListForm(forms.Form):
             'description',
             'is_public',
             'genes',
-            StrictButton('Submit', css_class='btn-primary btn-lg col-lg-offset-2', type='submit'),
+            StrictButton('Submit', style="margin: 30px 0px", css_class='btn-primary btn-lg col-lg-offset-2', type='submit'),
         )
 
     def clean(self):

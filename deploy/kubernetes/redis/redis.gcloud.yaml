@@ -35,7 +35,7 @@ spec:
             memory: "3Gi"
             cpu: "0.25"
           limits:
-            memory: "15Gi"
+            memory: "25Gi"
             cpu: "1"
 #        readinessProbe:
 #          exec:
@@ -44,3 +44,15 @@ spec:
 #            - /tmp/ready
       restartPolicy: Always
       dnsPolicy: ClusterFirst
+      affinity:
+        podAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 1.0
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: "name"
+                      operator: In
+                      values:
+                      - seqr
+                topologyKey: "kubernetes.io/hostname"
