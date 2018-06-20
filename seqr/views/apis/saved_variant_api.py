@@ -7,7 +7,6 @@ from django.views.decorators.csrf import csrf_exempt
 
 from seqr.models import SavedVariant, VariantTagType, VariantTag, VariantNote, VariantFunctionalData, CAN_EDIT, CAN_VIEW
 from seqr.model_utils import create_seqr_model, delete_seqr_model, find_matching_xbrowse_model
-from seqr.utils.xpos_utils import get_chrom_pos
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.json_utils import create_json_response
@@ -21,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
-def saved_variant_data(request, project_guid):
+def saved_variant_data(request, project_guid, variant_guid=None):
     project = get_project_and_check_permissions(project_guid, request.user)
 
     variants = {}
@@ -33,6 +32,10 @@ def saved_variant_data(request, project_guid):
                           'variantnote_set__created_by')
     if request.GET.get('family'):
         variant_query = variant_query.filter(family__guid=request.GET.get('family'))
+    if variant_guid:
+        variant_query = variant_query.filter(guid=variant_guid)
+        if variant_query.count() < 1:
+            return create_json_response({}, status=404, reason='Variant {} not found'.format(variant_guid))
     for saved_variant in variant_query:
         variant = get_json_for_saved_variant(saved_variant, add_tags=True)
         if variant['tags'] or variant['notes']:

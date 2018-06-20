@@ -16,6 +16,7 @@ const REQUEST_PROJECT_DETAILS = 'REQUEST_PROJECT_DETAILS'
 const RECEIVE_PROJECT_DETAILS = 'RECEIVE_PROJECT_DETAILS'
 const REQUEST_SAVED_VARIANTS = 'REQUEST_SAVED_VARIANTS'
 const RECEIVE_SAVED_VARIANTS = 'RECEIVE_SAVED_VARIANTS'
+const RECEIVE_SAVED_VARIANT_FAMILIES = 'RECEIVE_SAVED_VARIANT_FAMILIES'
 
 // Data actions
 
@@ -42,22 +43,37 @@ export const loadProject = (projectGuid) => {
   }
 }
 
-export const loadProjectVariants = (familyGuid) => {
+export const loadProjectVariants = (familyGuid, variantGuid) => {
   return (dispatch, getState) => {
     const state = getState()
     const project = getProject(state)
 
+    let url = `/api/project/${project.projectGuid}/saved_variants`
+
     // Do not load if already loaded
-    const expectedFamilyGuids = familyGuid ? [familyGuid] : getProjectFamilies(state).map(family => family.familyGuid)
-    const loadedFamilies = new Set(Object.values(state.projectSavedVariants).map(o => o.familyGuid))
-    if (expectedFamilyGuids.length > 0 && expectedFamilyGuids.every(family => loadedFamilies.has(family))) {
-      return
+    let expectedFamilyGuids
+    if (variantGuid) {
+      if (state.projectSavedVariants[variantGuid]) {
+        return
+      }
+      url = `${url}/${variantGuid}`
+    } else {
+      expectedFamilyGuids = familyGuid ? [familyGuid] : getProjectFamilies(state).map(family => family.familyGuid)
+      if (expectedFamilyGuids.length > 0 && expectedFamilyGuids.every(family => state.projectSavedVariantFamilies[family])) {
+        return
+      }
     }
 
     dispatch({ type: REQUEST_SAVED_VARIANTS })
-    new HttpRequestHelper(`/api/project/${project.projectGuid}/saved_variants`,
+    new HttpRequestHelper(url,
       (responseJson) => {
         dispatch({ type: RECEIVE_SAVED_VARIANTS, updatesById: responseJson.savedVariants })
+        if (expectedFamilyGuids) {
+          dispatch({
+            type: RECEIVE_SAVED_VARIANT_FAMILIES,
+            updates: expectedFamilyGuids.reduce((acc, family) => ({ ...acc, [family]: true }), {}),
+          })
+        }
       },
       (e) => {
         dispatch({ type: RECEIVE_SAVED_VARIANTS, error: e.message, updatesById: {} })
@@ -70,8 +86,10 @@ export const unloadProject = () => {
   return (dispatch, getState) => {
     const state = getState()
     const deleteVariants = Object.keys(state.projectSavedVariants).reduce((acc, o) => ({ ...acc, [o]: null }))
+    const deleteVariantFamilies = Object.keys(state.projectSavedVariantFamilies).reduce((acc, o) => ({ ...acc, [o]: false }))
     dispatch({ type: UPDATE_CURRENT_PROJECT, newValue: null })
     dispatch({ type: REQUEST_SAVED_VARIANTS, updatesById: deleteVariants })
+    dispatch({ type: RECEIVE_SAVED_VARIANT_FAMILIES, updates: deleteVariantFamilies })
   }
 }
 
@@ -128,6 +146,7 @@ export const reducers = {
   projectDetailsLoading: loadingReducer(REQUEST_PROJECT_DETAILS, RECEIVE_PROJECT_DETAILS),
   projectSavedVariants: createObjectsByIdReducer(RECEIVE_SAVED_VARIANTS),
   projectSavedVariantsLoading: loadingReducer(REQUEST_SAVED_VARIANTS, RECEIVE_SAVED_VARIANTS),
+  projectSavedVariantFamilies: createSingleObjectReducer(RECEIVE_SAVED_VARIANT_FAMILIES),
   familyTableState: createSingleObjectReducer(UPDATE_FAMILY_TABLE_STATE, {
     recordsPerPage: 100,
     familiesFilter: SHOW_ALL,

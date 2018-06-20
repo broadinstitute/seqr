@@ -86,7 +86,7 @@ class SavedVariants extends React.Component {
   constructor(props) {
     super(props)
 
-    props.loadProjectVariants(props.match.params.familyGuid)
+    props.loadProjectVariants(props.match.params.familyGuid, props.match.params.variantGuid)
 
     this.categoryOptions = [...new Set(
       this.props.project.variantTagTypes.map(type => type.category).filter(category => category),
@@ -94,16 +94,18 @@ class SavedVariants extends React.Component {
   }
 
   componentWillReceiveProps(nextProps) {
-    if (nextProps.match.params.familyGuid !== this.props.match.params.familyGuid) {
-      this.props.loadProjectVariants(nextProps.match.params.familyGuid)
+    const { familyGuid: nextFamilyGuid, variantGuid: nextVariantGuid, tag: nextTag } = nextProps.match.params
+    const { familyGuid, variantGuid, tag } = this.props.match.params
+    if (nextFamilyGuid !== familyGuid || nextVariantGuid !== variantGuid) {
+      this.props.loadProjectVariants(nextFamilyGuid, nextVariantGuid)
       this.props.updateSavedVariantTable() // resets the page
-    } else if (nextProps.match.params.tag !== this.props.match.params.tag) {
+    } else if (nextTag !== tag) {
       this.props.updateSavedVariantTable() // resets the page
     }
   }
 
   render() {
-    const { familyGuid, tag } = this.props.match.params
+    const { familyGuid, variantGuid, tag } = this.props.match.params
     const filterFields = (this.categoryOptions.length && !tag) ?
       [{ ...BASE_CATEGORY_FILTER_FIELD, options: [{ value: 'ALL', text: 'All' }, ...this.categoryOptions] }].concat(FILTER_FIELDS) :
       FILTER_FIELDS
@@ -136,12 +138,14 @@ class SavedVariants extends React.Component {
       `${this.props.firstRecordIndex + 1}-${this.props.firstRecordIndex + this.props.variantsToDisplay.length} of`
     return (
       <Grid>
-        <Grid.Row>
-          <Grid.Column width={16}>
-            <VariantTagTypeBar height={30} project={this.props.project} familyGuid={familyGuid} />
-          </Grid.Column>
-        </Grid.Row>
-        {!this.props.loading &&
+        {!variantGuid &&
+          <Grid.Row>
+            <Grid.Column width={16}>
+              <VariantTagTypeBar height={30} project={this.props.project} familyGuid={familyGuid} />
+            </Grid.Column>
+          </Grid.Row>
+        }
+        {!this.props.loading && !variantGuid &&
           <Grid.Row>
             <Grid.Column width={8}>
               Showing {shownSummary} {this.props.filteredVariants.length}
@@ -171,7 +175,8 @@ class SavedVariants extends React.Component {
         }
         <Grid.Row>
           <Grid.Column width={16}>
-            {this.props.loading ? <Loader inline="centered" active /> : <Variants variants={this.props.variantsToDisplay} />}
+            {this.props.loading ? <Loader inline="centered" active /> :
+            <Variants variants={this.props.variantsToDisplay} projectGuid={this.props.project.projectGuid} />}
           </Grid.Column>
         </Grid.Row>
       </Grid>
