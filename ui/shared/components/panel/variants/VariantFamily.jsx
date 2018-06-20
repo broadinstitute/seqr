@@ -46,7 +46,7 @@ const FAMILY_FIELDS = [
   { id: FAMILY_FIELD_INTERNAL_SUMMARY },
 ]
 
-const Alleles = ({ alleles, variant }) => {
+const Alleles = ({ alleles, variant, individual }) => {
   alleles = alleles.map((allele) => {
     let alleleText = allele.substring(0, 3)
     if (allele.length > 3) {
@@ -54,6 +54,14 @@ const Alleles = ({ alleles, variant }) => {
     }
     return { text: alleleText, isRef: allele === variant.ref }
   })
+  if (variant.chrom === 'X' && individual.sex === 'M') {
+    if (alleles[0].text !== alleles[1].text) {
+      console.log(`Invalid genotype for male ${individual.individualId}: multiple alleles found on the X chromosome`)
+      alleles = [{ text: '?' }, { text: '?' }]
+    } else {
+      alleles[1] = { text: '-' }
+    }
+  }
   return (
     <span>
       <Allele isRef={alleles[0].isRef}>{alleles[0].text}</Allele>/<Allele isRef={alleles[1].isRef}>{alleles[1].text}</Allele>
@@ -64,11 +72,12 @@ const Alleles = ({ alleles, variant }) => {
 Alleles.propTypes = {
   alleles: PropTypes.array,
   variant: PropTypes.object,
+  individual: PropTypes.object,
 }
 
 
-const Genotype = ({ variant, individualId }) => {
-  const genotype = variant.genotypes && variant.genotypes[individualId]
+const Genotype = ({ variant, individual }) => {
+  const genotype = variant.genotypes && variant.genotypes[individual.individualId]
   if (!genotype) {
     return null
   }
@@ -95,7 +104,7 @@ const Genotype = ({ variant, individualId }) => {
         flowing
         trigger={
           <span>
-            <Alleles alleles={genotype.alleles} variant={variant} />
+            <Alleles alleles={genotype.alleles} variant={variant} individual={individual} />
             <HorizontalSpacer width={5} />
             ({genotype.gq || '?'}, {genotype.ab ? genotype.ab.toPrecision(2) : '?'})
             {genotype.filter && genotype.filter !== 'pass' && <span><br />Filter: {genotype.filter}</span>}
@@ -179,7 +188,7 @@ const VariantFamily = ({ variant, project, family, individualsByGuid }) => {
           <PedigreeIcon sex={individual.sex} affected={individual.affected} />
           <small>{individual.displayName || individual.individualId}</small>
           <br />
-          <Genotype variant={variant} individualId={individual.individualId} />
+          <Genotype variant={variant} individual={individual} />
         </IndividualCell>,
       )}
     </div>

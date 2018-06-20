@@ -100,7 +100,7 @@ api_endpoints = {
     'project/(?P<project_guid>[^/]+)/delete_project': delete_project_handler,
     'project/(?P<project_guid>[^/]+)/update_project_categories': update_project_categories_handler,
 
-    'project/(?P<project_guid>[^/]+)/saved_variants': saved_variant_data,
+    'project/(?P<project_guid>[^/]+)/saved_variants/(?P<variant_guid>[^/]+)?': saved_variant_data,
     'project/(?P<project_guid>[^/]+)/query_variants': query_variants_handler,
 
     'project/(?P<project_guid>[^/]+)/edit_families': edit_families_handler,
