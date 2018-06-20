@@ -1,7 +1,6 @@
 from bson import json_util
 import json
 import logging
-import os
 import pymongo
 from tqdm import tqdm
 import settings
@@ -376,7 +375,6 @@ def create_sample_records(sample_type, source_individual, new_project, new_indiv
         )
 
 
-
 def look_up_vcf_loaded_date(vcf_path):
     vcf_record = get_annotator().get_vcf_file_from_annotator(vcf_path)
     if vcf_record is None:
@@ -609,6 +607,21 @@ def _retrieve_and_update_individual_phenotips_data(project, individual):
         return
 
     _update_individual_phenotips_data(individual, latest_phenotips_json)
+
+def get_or_create_sample(source_individual, new_individual, sample_type):
+    """Creates and returns a new Sample based on the provided models."""
+
+    new_sample, created = SeqrSample.objects.get_or_create(
+        sample_type=sample_type,
+        individual=new_individual,
+        sample_id=(source_individual.vcf_id or source_individual.indiv_id).strip(),
+        deprecated_base_project=source_individual.family.project,
+    )
+    new_sample.created_date=new_individual.created_date
+    new_sample.sample_status=source_individual.coverage_status
+    new_sample.save()
+
+    return new_sample, created
 
 
 def get_or_create_variant_tag_type(source_variant_tag_type, new_project):
