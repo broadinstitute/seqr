@@ -1,5 +1,4 @@
 import orderBy from 'lodash/orderBy'
-import queryString from 'query-string'
 import { createSelector } from 'reselect'
 
 import { getSearchResults } from 'redux/utils/reduxSearchEnhancer'
@@ -153,8 +152,6 @@ export const getSavedVariantExportConfig = createSelector(
 
 // Family table selectors
 export const getProjectTableState = state => state.familyTableState
-export const getProjectTablePage = (state, props) => queryString.parse(props.location.search).page || 1
-export const getProjectTableRecordsPerPage = state => state.familyTableState.recordsPerPage || 200
 export const getFamiliesFilter = state => state.familyTableState.familiesFilter || SHOW_ALL
 export const getFamiliesSortOrder = state => state.familyTableState.familiesSortOrder || SORT_BY_FAMILY_NAME
 export const getFamiliesSortDirection = state => state.familyTableState.familiesSortDirection || 1
@@ -173,7 +170,7 @@ export const getProjectIndividualsWithFamily = createSelector(
  *
  * @param state {object} global Redux state
  */
-export const getFilteredFamilies = createSelector(
+export const getVisibleFamilies = createSelector(
   getProjectFamilies,
   getProjectIndividuals,
   getFamiliesFilter,
@@ -187,35 +184,6 @@ export const getFilteredFamilies = createSelector(
 
     const familyFilter = FAMILY_FILTER_LOOKUP[familiesFilter](searchedFamilies, individuals)
     return searchedFamilies.filter(familyFilter)
-  },
-)
-
-/**
- * function that returns the total number of pages to show.
- *
- * @param state {object} global Redux state
- */
-export const getTotalPageCount = createSelector(
-  getFilteredFamilies,
-  getProjectTableRecordsPerPage,
-  (filteredFamilies, recordsPerPage) => {
-    return Math.max(1, Math.ceil(filteredFamilies.length / recordsPerPage))
-  },
-)
-
-/**
- * function that returns an array of currently-visible familyGuids based on the selected page.
- *
- * @param state {object} global Redux state
- */
-export const getVisibleFamilies = createSelector(
-  getFilteredFamilies,
-  getProjectTablePage,
-  getProjectTableRecordsPerPage,
-  getTotalPageCount,
-  (filteredFamilies, currentPage, recordsPerPage, totalPageCount) => {
-    const page = Math.min(currentPage, totalPageCount) - 1
-    return filteredFamilies.slice(page * recordsPerPage, (page + 1) * recordsPerPage)
   },
 )
 

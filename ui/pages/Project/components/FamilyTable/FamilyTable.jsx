@@ -14,12 +14,11 @@ import { getVisibleSortedFamiliesWithIndividuals, getProjectDetailsIsLoading } f
 import TableHeaderRow from './header/TableHeaderRow'
 import EmptyTableRow from './EmptyTableRow'
 import IndividualRow from './IndividualRow'
-import PageSelector from './PageSelector'
 
 
 const ExportContainer = styled.span`
   float: right;
-  padding-top: 15px;
+  padding-bottom: 15px;
 `
 
 const ToggleIcon = styled(Icon).attrs({ size: 'large', link: true, name: 'dropdown' })`
@@ -88,7 +87,6 @@ FamilyTableRow.propTypes = {
 
 const FamilyTable = ({ visibleFamilies, loading, headerStatus, showInternalFilters, exportUrls, ...props }) =>
   <div>
-    <PageSelector />
     <ExportContainer>
       <ExportTableButton downloads={exportUrls} />
       <HorizontalSpacer width={45} />
