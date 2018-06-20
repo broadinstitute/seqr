@@ -13,7 +13,7 @@ from seqr.views.utils.export_table_utils import export_table
 from xbrowse_server.mall import get_reference
 from xbrowse import genomeloc
 from reference_data.models import HPO_CATEGORY_NAMES
-from seqr.models import Project, Family, Sample, Dataset, Individual, VariantTag
+from seqr.models import Project, Family, Dataset, VariantTag, VariantTagType
 from dateutil import relativedelta as rdelta
 from django.db.models import Q
 from django.shortcuts import render
@@ -89,6 +89,7 @@ HEADER = collections.OrderedDict([
 
 PHENOTYPIC_SERIES_CACHE = {}
 
+
 @staff_member_required(login_url=LOGIN_URL)
 def discovery_sheet(request, project_guid=None):
     projects = Project.objects.filter(projectcategory__name__iexact='cmg').distinct()
@@ -98,6 +99,12 @@ def discovery_sheet(request, project_guid=None):
 
     rows = []
     errors = []
+
+    discovery_tag_types = VariantTagType.objects.filter(
+        Q(name__icontains="tier 1") |
+        Q(name__icontains="tier 2") |
+        Q(name__icontains="known gene for phenotype")
+    ).only('id')
 
     # export table for all cmg projects
     if "download" in request.GET and project_guid is None:
@@ -109,7 +116,7 @@ def discovery_sheet(request, project_guid=None):
                 continue
 
             rows.extend(
-                generate_rows(project, errors)
+                generate_rows(project, errors, discovery_tag_types)
             )
 
         return export_table("discovery_sheet", HEADER, rows, file_format="xls")
@@ -124,7 +131,7 @@ def discovery_sheet(request, project_guid=None):
             'errors': errors,
         })
 
-    rows = generate_rows(project, errors)
+    rows = generate_rows(project, errors, discovery_tag_types)
 
     logger.info("request.get: " + str(request.GET))
     if "download" in request.GET:
@@ -140,7 +147,7 @@ def discovery_sheet(request, project_guid=None):
     })
 
 
-def generate_rows(project, errors):
+def generate_rows(project, errors, discovery_tag_types):
     rows = []
 
     loaded_datasets = list(Dataset.objects.filter(project=project, analysis_type="VARIANTS", is_loaded=True))
@@ -155,16 +162,10 @@ def generate_rows(project, errors):
         for sample in d.samples.select_related('individual__family').all():
             loaded_datasets_by_family[sample.individual.family.guid].add(d)
 
-    project_variant_tag_filter = Q(family__project=project) & (
-               Q(variant_tag_type__name__icontains="tier 1") |
-               Q(variant_tag_type__name__icontains="tier 2") |
-               Q(variant_tag_type__name__icontains="known gene for phenotype"))
-
-    project_variant_tags = list(VariantTag.objects.select_related('variant_tag_type').select_related('family').select_related('family__project').filter(project_variant_tag_filter))
-    # project_variant_tag_names = [vt.variant_tag_type.name.lower() for vt in project_variant_tags]
-    #project_has_tier1 = any([vt_name.startswith("tier 1") for vt_name in project_variant_tag_names])
-    #project_has_tier2 = any([vt_name.startswith("tier 2") for vt_name in project_variant_tag_names])
-    #project_has_known_gene_for_phenotype = any([(vt_name == "known gene for phenotype") for vt_name in project_variant_tag_names])
+    project_variant_tags = list(
+        VariantTag.objects.select_related('variant_tag_type').select_related('saved_variant').filter(
+            variant_tag_type__in=discovery_tag_types, saved_variant__project=project
+        ))
 
 
     #"External" = REAN
@@ -343,7 +344,7 @@ def generate_rows(project, errors):
         if category_not_set_on_some_features:
             errors.append("HPO category field not set for some HPO terms in %s" % family)
 
-        variant_tags = [vt for vt in project_variant_tags if vt.family == family]
+        variant_tags = [vt for vt in project_variant_tags if vt.saved_variant.family_id == family.id]
         if not variant_tags:
             rows.append(row)
             continue
@@ -351,12 +352,12 @@ def generate_rows(project, errors):
         gene_ids_to_variant_tags = defaultdict(list)
         for vt in variant_tags:
 
-            if not vt.saved_variant_json:
+            if not vt.saved_variant.saved_variant_json:
                 errors.append("%s - variant annotation not found" % vt)
                 rows.append(row)
                 continue
 
-            vt.saved_variant_json = json.loads(vt.saved_variant_json)
+            vt.saved_variant_json = json.loads(vt.saved_variant.saved_variant_json)
 
             if "coding_gene_ids" not in vt.saved_variant_json["annotation"] and "gene_ids" not in vt.saved_variant_json["annotation"]:
                 errors.append("%s - no gene_ids" % vt)
@@ -395,7 +396,7 @@ def generate_rows(project, errors):
             if has_tier1 or has_tier2 or has_known_gene_for_phenotype:
                 analysis_complete_status = "complete"
 
-            variant_tag_list = [("%s  %s  %s" % ("-".join(map(str, list(genomeloc.get_chr_pos(vt.xpos_start)) + [vt.ref, vt.alt])), gene_symbol, vt.variant_tag_type.name.lower())) for vt in variant_tags]
+            variant_tag_list = [("%s  %s  %s" % ("-".join(map(str, list(genomeloc.get_chr_pos(vt.saved_variant.xpos_start)) + [vt.saved_variant.ref, vt.saved_variant.alt])), gene_symbol, vt.variant_tag_type.name.lower())) for vt in variant_tags]
 
             actual_inheritance_models = set()
             potential_compound_hets = defaultdict(int)  # gene_id to compound_hets counter
@@ -408,7 +409,7 @@ def generate_rows(project, errors):
                 unaffected_total_individuals = 0
                 is_x_linked = False
                 if vt.saved_variant_json["genotypes"]:
-                    chrom, pos = genomeloc.get_chr_pos(vt.xpos_start)
+                    chrom, _ = genomeloc.get_chr_pos(vt.saved_variant.xpos_start)
                     is_x_linked = "X" in chrom
                     for indiv_id, genotype in vt.saved_variant_json["genotypes"].items():
                         try:
@@ -448,7 +449,6 @@ def generate_rows(project, errors):
 
                 if not unaffected_indivs_with_hom_alt_variants and (unaffected_total_individuals < 2 or unaffected_indivs_with_het_variants) and affected_indivs_with_het_variants and not affected_indivs_with_hom_alt_variants:
                     potential_compound_hets[gene_id] += 1
-                    print("%s incremented compound het for %s to %s" % (vt, gene_id, potential_compound_hets[gene_id]))
                     if potential_compound_hets[gene_id] >= 2:
                         actual_inheritance_models.clear()
                         actual_inheritance_models.add("AR-comphet")

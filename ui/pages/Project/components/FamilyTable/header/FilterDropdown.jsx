@@ -3,14 +3,9 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import styled from 'styled-components'
 
-import {
-  getFamiliesFilter,
-  updateFamiliesFilter,
-} from '../../../reducers'
-
-import {
-  FAMILY_FILTER_OPTIONS,
-} from '../../../constants'
+import { updateFamiliesFilter } from '../../../reducers'
+import { getFamiliesFilter } from '../../../selectors'
+import { FAMILY_FILTER_OPTIONS } from '../../../constants'
 
 const StyledSelect = styled.select`
   max-width: 170px;

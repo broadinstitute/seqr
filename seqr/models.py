@@ -1,7 +1,7 @@
 from abc import abstractmethod
 import os
 import uuid
-
+import json
 
 from django.contrib.auth.models import User, Group
 from django.db import models
@@ -49,6 +49,9 @@ class ModelWithGUID(models.Model):
     class Meta:
         abstract = True
 
+        json_fields = []
+        internal_json_fields = []
+
     @abstractmethod
     def _compute_guid(self):
         """Returns a human-readable label (aka. slug) for this object with only alphanumeric
@@ -70,8 +73,9 @@ class ModelWithGUID(models.Model):
         being_created = not self.pk
         if being_created and not self.created_date:
             self.created_date = timezone.now()
-        else:
-            self.last_modified_date = timezone.now()
+
+        # Allows for overriding last_modified_date during save. Should only be used for migrations
+        self.last_modified_date = kwargs.pop('last_modified_date', timezone.now())
 
         super(ModelWithGUID, self).save(*args, **kwargs)
 
@@ -526,6 +530,34 @@ class AliasField(models.Field):
 #        return 'D%05d_%s' % (self.id, _slugify(str(self)))
 
 
+class SavedVariant(ModelWithGUID):
+    xpos_start = models.BigIntegerField()
+    xpos_end = models.BigIntegerField(null=True)
+    xpos = AliasField(db_column="xpos_start")
+    ref = models.TextField()
+    alt = models.TextField()
+
+    # Cache genotypes and annotations for the variant as gene id and consequence - in case the dataset gets deleted, etc.
+    saved_variant_json = models.TextField(null=True, blank=True)
+
+    project = models.ForeignKey('Project')
+    family = models.ForeignKey('Family', null=True, blank=True, on_delete=models.SET_NULL)
+
+    def __unicode__(self):
+        chrom, pos = get_chrom_pos(self.xpos_start)
+        return "%s:%s-%s:%s" % (chrom, pos, self.project.guid, self.family.guid if self.family else '')
+
+    def _compute_guid(self):
+        return 'SV%07d_%s' % (self.id, _slugify(str(self)))
+
+    class Meta:
+        index_together = ('xpos_start', 'ref', 'alt', 'project')
+
+        unique_together = ('xpos_start', 'xpos_end', 'ref', 'alt', 'project', 'family')
+
+        json_fields = ['guid', 'xpos', 'ref', 'alt']
+
+
 class VariantTagType(ModelWithGUID):
     """
     Previous color choices:
@@ -541,7 +573,7 @@ class VariantTagType(ModelWithGUID):
         '#8F754F',
         '#383838',
     """
-    project = models.ForeignKey('Project', on_delete=models.CASCADE)
+    project = models.ForeignKey('Project', null=True, on_delete=models.CASCADE)
 
     name = models.TextField()
     category = models.TextField(null=True, blank=True)
@@ -561,69 +593,120 @@ class VariantTagType(ModelWithGUID):
 
 
 class VariantTag(ModelWithGUID):
+    saved_variant = models.ForeignKey('SavedVariant', on_delete=models.CASCADE, null=True)
     variant_tag_type = models.ForeignKey('VariantTagType', on_delete=models.CASCADE)
 
-    genome_version = models.CharField(max_length=5, choices=GENOME_VERSION_CHOICES, default=GENOME_VERSION_GRCh37)
-    xpos_start = models.BigIntegerField()
-    xpos_end = models.BigIntegerField(null=True)
-    xpos = AliasField(db_column="xpos_start")
-    ref = models.TextField()
-    alt = models.TextField()
-
-    lifted_over_genome_version = models.CharField(max_length=5, null=True, blank=True, choices=GENOME_VERSION_CHOICES)
-    lifted_over_xpos_start = models.BigIntegerField(null=True)
-    lifted_over_xpos = AliasField(db_column="lifted_over_xpos_start")
-
-    # Cache genotypes and annotations for the variant as gene id and consequence - in case the dataset gets deleted, etc.
-    saved_variant_json = models.TextField(null=True, blank=True)
-
     # context in which a variant tag was saved
-    family = models.ForeignKey('Family', null=True, blank=True, on_delete=models.SET_NULL)
     search_parameters = models.TextField(null=True, blank=True)  # aka. search url
 
     def __unicode__(self):
-        chrom, pos = get_chrom_pos(self.xpos_start)
-        return "%s:%s: %s" % (chrom, pos, self.variant_tag_type.name)
+        return "%s:%s" % (str(self.saved_variant), self.variant_tag_type.name)
 
     def _compute_guid(self):
         return 'VT%07d_%s' % (self.id, _slugify(str(self)))
 
     class Meta:
-        index_together = ('xpos_start', 'ref', 'alt', 'genome_version')
+        unique_together = ('variant_tag_type', 'saved_variant')
 
-        unique_together = ('variant_tag_type', 'genome_version', 'xpos_start', 'xpos_end', 'ref', 'alt', 'family')
+        json_fields = ['guid', 'search_parameters', 'last_modified_date', 'created_by']
 
 
 class VariantNote(ModelWithGUID):
-    project = models.ForeignKey('Project', null=True, on_delete=models.SET_NULL)
-
+    saved_variant = models.ForeignKey('SavedVariant', on_delete=models.CASCADE, null=True)
     note = models.TextField(null=True, blank=True)
     submit_to_clinvar = models.BooleanField(default=False)
 
-    genome_version = models.CharField(max_length=5, choices=GENOME_VERSION_CHOICES, default=GENOME_VERSION_GRCh37)
-    xpos_start = models.BigIntegerField()
-    xpos_end = models.BigIntegerField(null=True)
-    xpos = AliasField(db_column="xpos_start")
-    ref = models.TextField()
-    alt = models.TextField()
-
-    lifted_over_genome_version = models.CharField(max_length=5, null=True, blank=True, choices=GENOME_VERSION_CHOICES)
-    lifted_over_xpos_start = models.BigIntegerField(null=True)
-    lifted_over_xpos = AliasField(db_column="lifted_over_xpos_start")
-
-    # Cache genotypes and annotations for the variant as gene id and consequence - in case the dataset gets deleted, etc.
-    saved_variant_json = models.TextField(null=True, blank=True)
-
-    # these are for context - if note was saved for a family or an individual
-    family = models.ForeignKey('Family', null=True, blank=True, on_delete=models.SET_NULL)
+    # these are for context
     search_parameters = models.TextField(null=True, blank=True)  # aka. search url
 
     def __unicode__(self):
-        chrom, pos = get_chrom_pos(self.xpos_start)
-        return "%s:%s: %s" % (chrom, pos, (self.note or "")[:20])
+        return "%s:%s" % (str(self.saved_variant), (self.note or "")[:20])
 
     def _compute_guid(self):
-        return 'VT%07d_%s' % (self.id, _slugify(str(self)))
+        return 'VN%07d_%s' % (self.id, _slugify(str(self)))
+
+    class Meta:
+        json_fields = ['guid', 'note', 'submit_to_clinvar', 'last_modified_date', 'created_by']
+
+
+class VariantFunctionalData(ModelWithGUID):
+    FUNCTIONAL_DATA_CHOICES = (
+        ('Functional Data', (
+            ('Biochemical Function', json.dumps({
+                'description': 'Gene product performs a biochemical function shared with other known genes in the disease of interest, or consistent with the phenotype.',
+                'color': '#311B92',
+            })),
+            ('Protein Interaction', json.dumps({
+                'description': 'Gene product interacts with proteins previously implicated (genetically or biochemically) in the disease of interest.',
+                'color': '#4A148C',
+            })),
+            ('Expression', json.dumps({
+                'description': 'Gene is expressed in tissues relevant to the disease of interest and/or is altered in expression in patients who have the disease.',
+                'color': '#7C4DFF',
+            })),
+            ('Patient Cells', json.dumps({
+                'description': 'Gene and/or gene product function is demonstrably altered in patients carrying candidate mutations.',
+                'color': '#B388FF',
+            })),
+            ('Non-patient cells', json.dumps({
+                'description': 'Gene and/or gene product function is demonstrably altered in human cell culture models carrying candidate mutations.',
+                'color': '#9575CD',
+            })),
+            ('Animal Model', json.dumps({
+                'description': 'Non-human animal models with a similarly disrupted copy of the affected gene show a phenotype consistent with human disease state.',
+                'color': '#AA00FF',
+            })),
+            ('Non-human cell culture model', json.dumps({
+                'description': 'Non-human cell-culture models with a similarly disrupted copy of the affected gene show a phenotype consistent with human disease state.',
+                'color': '#BA68C8',
+            })),
+            ('Rescue', json.dumps({
+                'description': 'The cellular phenotype in patient-derived cells or engineered equivalents can be rescued by addition of the wild-type gene product.',
+                'color': '#663399',
+            })),
+        )),
+        ('Functional Scores', (
+            ('Genome-wide Linkage', json.dumps({
+                'metadata_title': 'LOD Score',
+                'description': 'Max LOD score used in analysis to restrict where you looked for causal variants; provide best score available, whether it be a cumulative LOD score across multiple families or just the best family\'s LOD score.',
+                'color': '#880E4F',
+            })),
+            ('Bonferroni corrected p-value', json.dumps({
+                'metadata_title': 'P-value',
+                'description': 'Bonferroni-corrected p-value for gene if association testing/burden testing/etc was used to identify the gene.',
+                'color': '#E91E63',
+            })),
+            ('Kindreds w/ Overlapping SV & Similar Phenotype', json.dumps({
+                'metadata_title': '#',
+                'description': 'Number of kindreds (1+) previously reported/in databases as having structural variant overlapping the gene and a similar phenotype.',
+                'color': '#FF5252',
+            })),
+        )),
+        ('Additional Kindreds (Literature, MME)', (
+             ('Additional Unrelated Kindreds w/ Causal Variants in Gene', json.dumps({
+                'metadata_title': '# additional families',
+                'description': 'Number of additional kindreds with causal variants in this gene (Any other kindreds from collaborators, MME, literature etc). Do not count your family in this total.',
+                'color': '#D84315',
+             })),
+         )),
+    )
+
+    saved_variant = models.ForeignKey('SavedVariant', on_delete=models.CASCADE, null=True)
+    functional_data_tag = models.TextField(choices=FUNCTIONAL_DATA_CHOICES)
+    metadata = models.TextField(null=True)
+
+    search_parameters = models.TextField(null=True, blank=True)
+
+    def __unicode__(self):
+        return "%s:%s" % (str(self.saved_variant), self.functional_data_tag)
+
+    def _compute_guid(self):
+        return 'VFD%07d_%s' % (self.id, _slugify(str(self)))
+
+    class Meta:
+        unique_together = ('functional_data_tag', 'saved_variant')
+
+        json_fields = ['guid', 'functional_data_tag', 'metadata', 'last_modified_date', 'created_by']
 
 
 class LocusList(ModelWithGUID):

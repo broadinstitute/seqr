@@ -9,7 +9,7 @@ from settings import ENABLE_DJANGO_DEBUG_TOOLBAR
 from django.conf.urls import url, include
 
 from seqr.views.apis.family_api import \
-    update_family_field_handler, \
+    update_family_fields_handler, \
     edit_families_handler, \
     delete_families_handler, \
     update_family_analysed_by
@@ -29,6 +29,14 @@ from seqr.views.apis.phenotips_api import \
 from seqr.views.apis.case_review_api import \
     save_internal_case_review_notes, \
     save_internal_case_review_summary
+
+from seqr.views.apis.saved_variant_api import \
+    saved_variant_data, \
+    saved_variant_transcripts, \
+    update_variant_tags_handler, \
+    create_variant_note_handler, \
+    update_variant_note_handler, \
+    delete_variant_note_handler
 
 from seqr.views.pages.case_review_page import \
     export_case_review_families_handler, \
@@ -52,6 +60,7 @@ from seqr.views.pages.staff.elasticsearch_status import elasticsearch_status
 
 from seqr.views.apis.awesomebar_api import awesomebar_autocomplete_handler
 from seqr.views.apis.auth_api import login_required_error, API_LOGIN_REQUIRED_URL
+from seqr.views.apis.igv_api import fetch_igv_track
 from seqr.views.apis.project_api import create_project_handler, update_project_handler, delete_project_handler
 from seqr.views.apis.project_categories_api import update_project_categories_handler
 from seqr.views.apis.variant_search_api import query_variants_handler
@@ -67,7 +76,7 @@ api_endpoints = {
 
     'family/(?P<family_guid>[\w.|-]+)/save_internal_case_review_notes': save_internal_case_review_notes,
     'family/(?P<family_guid>[\w.|-]+)/save_internal_case_review_summary': save_internal_case_review_summary,
-    'family/(?P<family_guid>[\w.|-]+)/update/(?P<field_name>[\w.|-]+)': update_family_field_handler,
+    'family/(?P<family_guid>[\w.|-]+)/update': update_family_fields_handler,
     'family/(?P<family_guid>[\w.|-]+)/update_analysed_by': update_family_analysed_by,
 
     'dashboard': dashboard_page_data,
@@ -84,6 +93,7 @@ api_endpoints = {
     'project/(?P<project_guid>[^/]+)/delete_project': delete_project_handler,
     'project/(?P<project_guid>[^/]+)/update_project_categories': update_project_categories_handler,
 
+    'project/(?P<project_guid>[^/]+)/saved_variants/(?P<variant_guid>[^/]+)?': saved_variant_data,
     'project/(?P<project_guid>[^/]+)/query_variants': query_variants_handler,
 
     'project/(?P<project_guid>[^/]+)/edit_families': edit_families_handler,
@@ -94,6 +104,16 @@ api_endpoints = {
     'project/(?P<project_guid>[^/]+)/upload_individuals_table': receive_individuals_table_handler,
     'project/(?P<project_guid>[^/]+)/save_individuals_table/(?P<upload_file_id>[^/]+)': save_individuals_table_handler,
     'project/(?P<project_guid>[^/]+)/add_dataset': add_dataset_handler,
+
+    'project/(?P<project_guid>[^/]+)/igv_track/(?P<igv_track_path>.+)': fetch_igv_track,
+    'project/(?P<project_guid>[^/]+)/patient/(?P<patient_id>[^/]+)/phenotips_pdf': phenotips_pdf_handler,
+    'project/(?P<project_guid>[^/]+)/patient/(?P<patient_id>[^/]+)/phenotips_edit': phenotips_edit_handler,
+
+    'saved_variant/(?P<variant_guid>[^/]+)/transcripts': saved_variant_transcripts,
+    'saved_variant/(?P<variant_guid>[^/]+)/update_tags': update_variant_tags_handler,
+    'saved_variant/(?P<variant_guid>[^/]+)/note/create': create_variant_note_handler,
+    'saved_variant/(?P<variant_guid>[^/]+)/note/(?P<note_guid>[^/]+)/update': update_variant_note_handler,
+    'saved_variant/(?P<variant_guid>[^/]+)/note/(?P<note_guid>[^/]+)/delete': delete_variant_note_handler,
 
     'awesomebar': awesomebar_autocomplete_handler,
 
@@ -109,11 +129,6 @@ phenotips_urls = '^(?:%s)' % ('|'.join([
 
 urlpatterns += [
     url(phenotips_urls, proxy_to_phenotips_handler, name='proxy_to_phenotips'),
-]
-
-urlpatterns += [
-    url('^project/(?P<project_guid>[^/]+)/patient/(?P<patient_id>[^/]+)/phenotips_pdf', phenotips_pdf_handler),
-    url('^project/(?P<project_guid>[^/]+)/patient/(?P<patient_id>[^/]+)/phenotips_edit', phenotips_edit_handler),
 ]
 
 # core react page templates

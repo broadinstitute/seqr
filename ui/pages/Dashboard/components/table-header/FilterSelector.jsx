@@ -6,7 +6,7 @@ import styled from 'styled-components'
 import { connect } from 'react-redux'
 import { Form } from 'semantic-ui-react'
 
-import { getProjectCategoriesByGuid } from 'redux/rootReducer'
+import { getProjectCategoriesByGuid } from 'redux/selectors'
 import { getProjectFilter, updateFilter } from '../../reducers'
 import {
   SHOW_ALL,

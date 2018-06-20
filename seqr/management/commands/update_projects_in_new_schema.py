@@ -6,26 +6,23 @@ import pymongo
 from tqdm import tqdm
 import settings
 
-
 from django.core.management.base import BaseCommand
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 from django.db.models import Q
 from guardian.shortcuts import assign_perm
 
-from seqr import models
+from seqr.utils.model_sync_utils import get_or_create_saved_variant
 from seqr.views.apis import phenotips_api
 from seqr.views.apis.phenotips_api import _update_individual_phenotips_data
-from xbrowse_server.api.utils import add_extra_info_to_variants_project
 from xbrowse_server.base.models import \
     Project, \
     Family, \
-    FamilyGroup, \
     Individual, \
     VariantNote, \
     ProjectTag, \
     VariantTag, \
-    ProjectCollaborator, \
-    ReferencePopulation
+    VariantFunctionalData, \
+    ProjectCollaborator
 
 from seqr.models import \
     Project as SeqrProject, \
@@ -34,12 +31,13 @@ from seqr.models import \
     VariantTagType as SeqrVariantTagType, \
     VariantTag as SeqrVariantTag, \
     VariantNote as SeqrVariantNote, \
+    VariantFunctionalData as SeqrVariantFunctionalData, \
     Sample as SeqrSample, \
     Dataset as SeqrDataset, \
     LocusList, \
-    CAN_EDIT, CAN_VIEW, ModelWithGUID
+    CAN_VIEW, ModelWithGUID
 
-from xbrowse_server.mall import get_datastore, get_annotator, get_reference
+from xbrowse_server.mall import get_datastore, get_annotator
 
 logger = logging.getLogger(__name__)
 
@@ -201,6 +199,17 @@ class Command(BaseCommand):
 
                     if variant_tag_created: counters['variant_tags_created'] += 1
 
+            for source_variant_functional_data in VariantFunctionalData.objects.filter(family__project=source_project):
+                new_family = source_family_id_to_new_family.get(source_variant_functional_data.family.id)
+
+                _, variant_functional_data_created = get_or_create_variant_functional_data(
+                    source_variant_functional_data,
+                    new_project,
+                    new_family,
+                )
+
+                if variant_functional_data_created:   counters['variant_functional_data_created'] += 1
+
             for source_variant_note in VariantNote.objects.filter(project=source_project):
                 new_family = source_family_id_to_new_family.get(source_variant_note.family.id if source_variant_note.family else None)
 
@@ -231,30 +240,52 @@ class Command(BaseCommand):
                     counters['seqr_variant_tag_type_deleted'] += 1
 
             # delete Tag
-            for seqr_variant_tag in SeqrVariantTag.objects.filter(variant_tag_type__project__deprecated_project_id=deprecated_project_id):
+            delete_count, _ = SeqrVariantTag.objects.filter(saved_variant__isnull=True).delete()
+            counters['seqr_variant_tag_deleted'] += delete_count
+            for seqr_variant_tag in SeqrVariantTag.objects.filter(saved_variant__project__deprecated_project_id=deprecated_project_id):
 
                 if not VariantTag.objects.filter(
                         project_tag__project=base_project,
                         project_tag__tag=seqr_variant_tag.variant_tag_type.name,
                         #project_tag__title=seqr_variant_tag.variant_tag_type.description,
-                        xpos=seqr_variant_tag.xpos_start,
-                        ref=seqr_variant_tag.ref,
-                        alt=seqr_variant_tag.alt,
+                        xpos=seqr_variant_tag.saved_variant.xpos_start,
+                        ref=seqr_variant_tag.saved_variant.ref,
+                        alt=seqr_variant_tag.saved_variant.alt,
                 ):
                     seqr_variant_tag.delete()
                     print("--- deleting variant tag: " + str(seqr_variant_tag))
                     counters['seqr_variant_tag_deleted'] += 1
 
+            # delete functional data tags
+            delete_count, _ = SeqrVariantFunctionalData.objects.filter(saved_variant__isnull=True).delete()
+            counters['seqr_variant_functional_data_deleted'] += delete_count
+            for seqr_variant_functional_data in SeqrVariantFunctionalData.objects.filter(
+                    saved_variant__project__deprecated_project_id=deprecated_project_id):
+
+                if not VariantFunctionalData.objects.filter(
+                        family__project=base_project,
+                        functional_data_tag=seqr_variant_functional_data.functional_data_tag,
+                        metadata=seqr_variant_functional_data.metadata,
+                        xpos=seqr_variant_functional_data.saved_variant.xpos_start,
+                        ref=seqr_variant_functional_data.saved_variant.ref,
+                        alt=seqr_variant_functional_data.saved_variant.alt,
+                ):
+                    seqr_variant_functional_data.delete()
+                    print("--- deleting variant tag: " + str(seqr_variant_functional_data))
+                    counters['seqr_variant_tag_deleted'] += 1
+
             # delete Variant Note
-            for seqr_variant_note in SeqrVariantNote.objects.filter(project__deprecated_project_id=deprecated_project_id):
+            delete_count, _ = SeqrVariantNote.objects.filter(saved_variant__isnull=True).delete()
+            counters['seqr_variant_note_deleted'] += delete_count
+            for seqr_variant_note in SeqrVariantNote.objects.filter(saved_variant__project__deprecated_project_id=deprecated_project_id):
 
                 if not VariantNote.objects.filter(
                     project=base_project,
                     note=seqr_variant_note.note,
-                    xpos=seqr_variant_note.xpos_start,
-                    ref=seqr_variant_note.ref,
-                    alt=seqr_variant_note.alt,
-                    date_saved=seqr_variant_note.created_date,
+                    xpos=seqr_variant_note.saved_variant.xpos_start,
+                    ref=seqr_variant_note.saved_variant.ref,
+                    alt=seqr_variant_note.saved_variant.alt,
+                    date_saved=seqr_variant_note.last_modified_date,
                     user=seqr_variant_note.created_by,
                 ):
                     print("--- deleting variant note: " + str(new_variant_note))
@@ -281,7 +312,7 @@ class Command(BaseCommand):
                 #sample.delete()
 
             for sample in SeqrSample.objects.filter(dataset__isnull=True):
-                print("--- deleting SeqrSample without dataset: %s" % sample)
+                # print("--- deleting SeqrSample without dataset: %s" % sample)
                 counters["deleted SeqrSample"] += 1
                 #sample.delete()
 
@@ -314,7 +345,8 @@ class Command(BaseCommand):
         logger.info("Done")
         logger.info("Stats: ")
         for k, v in counters.items():
-            logger.info("  %s: %s" % (k, v))
+            if v > 0:
+                logger.info("  %s: %s" % (k, v))
 
 
 def create_sample_records(sample_type, source_project, source_individual, new_project, new_individual, counters):
@@ -338,7 +370,10 @@ def create_sample_records(sample_type, source_project, source_individual, new_pr
 
         earliest_vcf_dataset = None
         for vcf_file in vcf_files:
-            vcf_loaded_date = look_up_vcf_loaded_date(vcf_file.file_path)
+            try:
+                vcf_loaded_date = look_up_vcf_loaded_date(vcf_file.file_path)
+            except Exception:
+                vcf_loaded_date = None
 
             new_vcf_dataset, vcf_dataset_created = get_or_create_dataset(
                 new_sample,
@@ -353,7 +388,7 @@ def create_sample_records(sample_type, source_project, source_individual, new_pr
                 earliest_vcf_dataset = new_vcf_dataset
 
         #logger.info("get_or_create_dataset(%s, %s, %s, %s) returned %s" % (new_sample, new_project, source_individual, vcf_path, new_vcf_dataset))
-        logger.info("get_or_create_dataset(%s, %s, %s) returned %s" % (new_sample, new_project, source_individual, new_vcf_dataset))
+        # logger.info("get_or_create_dataset(%s, %s, %s) returned %s" % (new_sample, new_project, source_individual, new_vcf_dataset))
 
         # find and record the earliest callset for this individual
         if earliest_vcf_dataset is not None:
@@ -383,7 +418,7 @@ def look_up_vcf_loaded_date(vcf_path):
         raise ValueError("Couldn't find loaded date for %s" % vcf_path)
 
     loaded_date = vcf_record['_id'].generation_time
-    logger.info("%s data-loaded date: %s" % (vcf_path, loaded_date))
+    # logger.info("%s data-loaded date: %s" % (vcf_path, loaded_date))
     return loaded_date
 
 
@@ -735,36 +770,55 @@ def get_or_create_earliest_dataset(current_dataset, new_sample, new_project, sou
 
 
 def get_or_create_variant_tag_type(source_variant_tag_type, new_project):
+    try:
+        created = False
+        new_variant_tag_type = SeqrVariantTagType.objects.get(
+            project=None,
+            name=source_variant_tag_type.tag,
+        )
+        # If a core tag type exists with that name, delete any project-specific tag types
+        _, deleted = SeqrVariantTagType.objects.filter(
+            project=new_project,
+            name=source_variant_tag_type.tag,
+        ).delete()
+        for model, delete_count in deleted.items():
+            print("=== deleted {} {} models with tag type {}".format(delete_count, model, source_variant_tag_type.tag))
 
-    new_variant_tag_type, created = SeqrVariantTagType.objects.get_or_create(
-        project=new_project,
-        name=source_variant_tag_type.tag,
-    )
+    except ObjectDoesNotExist:
+        new_variant_tag_type, created = SeqrVariantTagType.objects.get_or_create(
+            project=new_project,
+            name=source_variant_tag_type.tag,
+        )
 
-    if created:
-        print("=== created variant tag type: " + str(new_variant_tag_type))
+        if created:
+            print("=== created variant tag type: " + str(new_variant_tag_type))
+
+        new_variant_tag_type.description = source_variant_tag_type.title
+        new_variant_tag_type.color = source_variant_tag_type.color
+        new_variant_tag_type.order = source_variant_tag_type.order
+        new_variant_tag_type.category = source_variant_tag_type.category
+        new_variant_tag_type.is_built_in = False
+        new_variant_tag_type.save()
 
     if source_variant_tag_type.seqr_variant_tag_type != new_variant_tag_type:
         source_variant_tag_type.seqr_variant_tag_type = new_variant_tag_type
         source_variant_tag_type.save()
 
-    new_variant_tag_type.description = source_variant_tag_type.title
-    new_variant_tag_type.color = source_variant_tag_type.color
-    new_variant_tag_type.order = source_variant_tag_type.order
-    new_variant_tag_type.is_built_in = (source_variant_tag_type.order is not None)
-    new_variant_tag_type.save()
-
     return new_variant_tag_type, created
 
 
 def get_or_create_variant_tag(source_variant_tag, new_project, new_family, new_variant_tag_type):
-
-    new_variant_tag, created = SeqrVariantTag.objects.get_or_create(
-        variant_tag_type=new_variant_tag_type,
-        xpos_start=source_variant_tag.xpos,
+    new_saved_variant = get_or_create_saved_variant(
+        xpos=source_variant_tag.xpos,
         ref=source_variant_tag.ref,
         alt=source_variant_tag.alt,
         family=new_family,
+        project=new_project
+    )
+
+    new_variant_tag, created = SeqrVariantTag.objects.get_or_create(
+        saved_variant=new_saved_variant,
+        variant_tag_type=new_variant_tag_type,
     )
     if created:
         print("=== created variant tag: " + str(new_variant_tag))
@@ -773,27 +827,56 @@ def get_or_create_variant_tag(source_variant_tag, new_project, new_family, new_v
         source_variant_tag.seqr_variant_tag = new_variant_tag
         source_variant_tag.save()
 
-    new_variant_tag.xpos_end=source_variant_tag.xpos + len(source_variant_tag.ref)-1
     new_variant_tag.search_parameters = source_variant_tag.search_url
-    new_variant_tag.save()
-
-    if not new_variant_tag.saved_variant_json:
-        _set_saved_variant_json(new_variant_tag, source_variant_tag, new_family)
+    new_variant_tag.created_by = source_variant_tag.user
+    new_variant_tag.save(last_modified_date=source_variant_tag.date_saved)
 
     return new_variant_tag, created
 
 
-def get_or_create_variant_note(source_variant_note, new_project, new_family):
+def get_or_create_variant_functional_data(source_variant_functional_data, new_project, new_family):
+    new_saved_variant = get_or_create_saved_variant(
+        xpos=source_variant_functional_data.xpos,
+        ref=source_variant_functional_data.ref,
+        alt=source_variant_functional_data.alt,
+        family=new_family,
+        project=new_project
+    )
 
-    new_variant_note, created = SeqrVariantNote.objects.get_or_create(
-        created_date=source_variant_note.date_saved,
-        created_by=source_variant_note.user,
-        project=new_project,
-        xpos_start=source_variant_note.xpos,
+    new_variant_functional_data, created = SeqrVariantFunctionalData.objects.get_or_create(
+        saved_variant=new_saved_variant,
+        functional_data_tag=source_variant_functional_data.functional_data_tag,
+    )
+    if created:
+        print("=== created variant functional data: " + str(new_variant_functional_data))
+
+    if source_variant_functional_data.seqr_variant_functional_data != new_variant_functional_data:
+        source_variant_functional_data.seqr_variant_functional_data = new_variant_functional_data
+        source_variant_functional_data.save()
+
+    new_variant_functional_data.search_parameters = source_variant_functional_data.search_url
+    new_variant_functional_data.created_by = source_variant_functional_data.user
+    new_variant_functional_data.metadata = source_variant_functional_data.metadata
+    new_variant_functional_data.save(last_modified_date=source_variant_functional_data.date_saved)
+
+    return new_variant_functional_data, created
+
+
+def get_or_create_variant_note(source_variant_note, new_project, new_family):
+    new_saved_variant = get_or_create_saved_variant(
+        xpos=source_variant_note.xpos,
         ref=source_variant_note.ref,
         alt=source_variant_note.alt,
         family=new_family,
+        project=new_project
     )
+
+    new_variant_note, created = SeqrVariantNote.objects.get_or_create(
+        created_by=source_variant_note.user,
+        saved_variant=new_saved_variant,
+        note=source_variant_note.note,
+    )
+
     if created:
         print("=== created variant note: " + str(new_variant_note))
 
@@ -801,43 +884,11 @@ def get_or_create_variant_note(source_variant_note, new_project, new_family):
         source_variant_note.seqr_variant_note = new_variant_note
         source_variant_note.save()
 
-    new_variant_note.xpos_end = source_variant_note.xpos + len(source_variant_note.ref) - 1
-    new_variant_note.note = source_variant_note.note
-    new_variant_note.submit_to_clinvar = source_variant_note.submit_to_clinvar
     new_variant_note.search_parameters = source_variant_note.search_url
-    new_variant_note.save()
-
-    if not new_variant_note.saved_variant_json:
-        _set_saved_variant_json(new_variant_note, source_variant_note, new_family)
+    new_variant_note.submit_to_clinvar = source_variant_note.submit_to_clinvar or False
+    new_variant_note.save(last_modified_date=source_variant_note.date_saved)
 
     return new_variant_note, created
-
-
-def _set_saved_variant_json(new_variant_tag_or_note, source_variant_tag_or_note, new_family):
-    if new_family is None:
-        return
-
-    project_id = new_family.project.deprecated_project_id
-    project = Project.objects.get(project_id=project_id)
-    try:
-        variant_info = get_datastore(project).get_single_variant(
-            project_id,
-            new_family.family_id,
-            source_variant_tag_or_note.xpos,
-            source_variant_tag_or_note.ref,
-            source_variant_tag_or_note.alt)
-    except Exception as e:
-        logger.error("Unable to retrieve variant annotations for %s %s: %s" % (
-            new_family, source_variant_tag_or_note, e))
-        return
-
-    if variant_info:
-        add_extra_info_to_variants_project(get_reference(), project, [variant_info], add_family_tags=True,
-                                           add_populations=True)
-        variant_json = variant_info.toJSON()
-
-        new_variant_tag_or_note.saved_variant_json = json.dumps(variant_json)
-        new_variant_tag_or_note.save()
 
 
 def look_up_individual_loaded_date(source_individual, earliest_loaded_date=False):
@@ -853,7 +904,7 @@ def look_up_individual_loaded_date(source_individual, earliest_loaded_date=False
         if earliest_loaded_date:
             project_id += "_previous1" # add suffix
 
-        family_collection = datastore._get_family_collection(project_id, family_id)
+        family_collection = datastore._get_family_collection(project_id, family_id) if hasattr(datastore, '_get_family_collection') else None
         if not family_collection:
             #logger.error("mongodb family collection not found for %s %s" % (project_id, family_id))
             return loaded_date
@@ -861,7 +912,7 @@ def look_up_individual_loaded_date(source_individual, earliest_loaded_date=False
         record = family_collection.find_one()
         if record:
             loaded_date = record['_id'].generation_time
-            logger.info("%s data-loaded date: %s" % (project_id, loaded_date))
+            # logger.info("%s data-loaded date: %s" % (project_id, loaded_date))
         else:
             family_info_record = datastore._get_family_info(project_id, family_id)
             loaded_date = family_info_record['_id'].generation_time

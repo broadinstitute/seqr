@@ -4,7 +4,8 @@ import { connect } from 'react-redux'
 import { Form } from 'semantic-ui-react'
 import styled, { injectGlobal } from 'styled-components'
 
-import { getFamiliesSortOrder, updateFamiliesSortOrder } from '../../../reducers'
+import { updateFamiliesSortOrder } from '../../../reducers'
+import { getFamiliesSortOrder } from '../../../selectors'
 import { FAMILY_SORT_OPTIONS } from '../../../constants'
 
 /* eslint-disable no-unused-expressions*/

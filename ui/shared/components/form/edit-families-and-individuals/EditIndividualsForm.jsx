@@ -6,8 +6,8 @@ import styled from 'styled-components'
 import { connect } from 'react-redux'
 import { Field } from 'redux-form'
 
-import { updateIndividuals } from 'redux/rootReducer'
-import { getProjectIndividualsWithFamily } from 'pages/Project/utils/selectors'
+import { updateIndividuals } from 'pages/Project/reducers'
+import { getProjectIndividualsWithFamily } from 'pages/Project/selectors'
 import EditRecordsForm from '../EditRecordsForm'
 
 

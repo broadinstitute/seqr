@@ -2,7 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 
-import ColoredIcon from '../icons/ColoredIcon'
+import { ColoredIcon } from '../StyledComponents'
 
 const Toggle = styled.a.attrs({ role: 'button', tabIndex: '0' })`
   -webkit-user-select: none;

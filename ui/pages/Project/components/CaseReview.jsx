@@ -1,27 +1,28 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import DocumentTitle from 'react-document-title'
 import { connect } from 'react-redux'
 
-import { getProject } from 'redux/rootReducer'
-
-import { getCaseReviewStatusCounts } from '../utils/selectors'
-import { getShowDetails } from '../reducers'
-import FamilyTable from './FamilyTable/FamilyTable'
 import {
-  DESCRIPTION, ANALYSED_BY, ANALYSIS_NOTES, ANALYSIS_SUMMARY, INTERNAL_NOTES, INTERNAL_SUMMARY,
-} from './FamilyTable/FamilyRow'
+  FAMILY_FIELD_DESCRIPTION,
+  FAMILY_FIELD_ANALYSED_BY,
+  FAMILY_FIELD_ANALYSIS_NOTES,
+  FAMILY_FIELD_ANALYSIS_SUMMARY,
+  FAMILY_FIELD_INTERNAL_NOTES,
+  FAMILY_FIELD_INTERNAL_SUMMARY,
+} from 'shared/utils/constants'
+import { getShowDetails, getProject, getCaseReviewStatusCounts } from '../selectors'
+import FamilyTable from './FamilyTable/FamilyTable'
 
 const DETAIL_FIELDS = [
-  { id: DESCRIPTION },
-  { id: ANALYSED_BY },
-  { id: ANALYSIS_NOTES },
-  { id: ANALYSIS_SUMMARY },
+  { id: FAMILY_FIELD_DESCRIPTION },
+  { id: FAMILY_FIELD_ANALYSED_BY },
+  { id: FAMILY_FIELD_ANALYSIS_NOTES },
+  { id: FAMILY_FIELD_ANALYSIS_SUMMARY },
 ]
 
 const NO_DETAIL_FIELDS = [
-  { id: INTERNAL_NOTES, canEdit: true },
-  { id: INTERNAL_SUMMARY, canEdit: true },
+  { id: FAMILY_FIELD_INTERNAL_NOTES, canEdit: true },
+  { id: FAMILY_FIELD_INTERNAL_SUMMARY, canEdit: true },
 ]
 
 const ALL_FIELDS = DETAIL_FIELDS.concat(NO_DETAIL_FIELDS)
@@ -34,7 +35,6 @@ const CaseReviewTable = (props) => {
   ]
   return (
     <div>
-      <DocumentTitle title={`Case Review: ${props.project.name}`} />
       <FamilyTable
         showInternalFilters
         editCaseReview

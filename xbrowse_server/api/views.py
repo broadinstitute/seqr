@@ -720,7 +720,8 @@ def add_or_edit_functional_data(request):
     tag_ids = set()
     for tag_data in form.cleaned_data['tags']:
         # retrieve tags
-        tag, created = VariantFunctionalData.objects.get_or_create(
+        tag, created = get_or_create_xbrowse_model(
+            VariantFunctionalData,
             functional_data_tag=tag_data['tag'],
             family=family,
             xpos=form.cleaned_data['xpos'],
@@ -737,11 +738,12 @@ def add_or_edit_functional_data(request):
             continue
 
         # this a new/changed tag, so update who saved it and when
-        tag.metadata = tag_data.get('metadata')
-        tag.user = request.user
-        tag.date_saved = timezone.now()
-        tag.search_url = form.cleaned_data['search_url']
-        tag.save()
+        update_xbrowse_model(
+            tag,
+            metadata=tag_data.get('metadata'),
+            user=request.user,
+            date_saved=timezone.now(),
+            search_url=form.cleaned_data['search_url'])
 
     # delete the tags that are no longer checked.
 
@@ -753,7 +755,7 @@ def add_or_edit_functional_data(request):
     ).exclude(id__in=tag_ids)
     for variant_tag in variant_tags_to_delete:
         project_tag_events[variant_tag.functional_data_tag] = "delete_variant_functional_data"
-    variant_tags_to_delete.delete()
+        delete_xbrowse_model(variant_tag)
 
     # add the extra info after updating the tag info in the database, so that the new tag info is added to the variant JSON
     variant = get_datastore(project).get_single_variant(

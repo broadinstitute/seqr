@@ -1,0 +1,444 @@
+[
+{
+    "model": "seqr.varianttagtype",
+    "pk": null,
+    "fields": {
+        "guid": "VTT_tier_1_novel_gene_and_phen",
+        "created_date": "2018-04-27T00:00:00.000Z",
+        "created_by": null,
+        "last_modified_date": null,
+        "project": null,
+        "name": "Tier 1 - Novel gene and phenotype",
+        "category": "CMG Discovery Tags",
+        "description": "Gene not previously associated with a Mendelian condition",
+        "color": "#03441E",
+        "order": 1.0,
+        "is_built_in": true
+    }
+},
+{
+    "model": "seqr.varianttagtype",
+    "pk": null,
+    "fields": {
+        "guid": "VTT_tier_1_novel_gene_for_know",
+        "created_date": "2018-04-27T00:00:00.000Z",
+        "created_by": null,
+        "last_modified_date": null,
+        "project": null,
+        "name": "Tier 1 - Novel gene for known phenotype",
+        "category": "CMG Discovery Tags",
+        "description": "Phenotype known but no causal gene known (includes adding to locus heterogeneity)",
+        "color": "#096C2F",
+        "order": 2.0,
+        "is_built_in": true
+    }
+},
+{
+    "model": "seqr.varianttagtype",
+    "pk": null,
+    "fields": {
+        "guid": "VTT_tier_1_phenotype_expansion",
+        "created_date": "2018-04-27T00:00:00.000Z",
+        "created_by": null,
+        "last_modified_date": null,
+        "project": null,
+        "name": "Tier 1 - Phenotype expansion",
+        "category": "CMG Discovery Tags",
+        "description": "Phenotype studies have different clinical characteristics and/or natural history",
+        "color": "#298A49",
+        "order": 3.0,
+        "is_built_in": true
+    }
+},
+{
+    "model": "seqr.varianttagtype",
+    "pk": null,
+    "fields": {
+        "guid": "VTT_tier_1_phenotype_not_delin",
+        "created_date": "2018-04-27T00:00:00.000Z",
+        "created_by": null,
+        "last_modified_date": null,
+        "project": null,
+        "name": "Tier 1 - Phenotype not delineated",
+        "category": "CMG Discovery Tags",
+        "description": "Phenotype not previously delineated (i.e. no MIM #)",
+        "color": "#44AA60",
+        "order": 4.0,
+        "is_built_in": true
+    }
+},
+{
+    "model": "seqr.varianttagtype",
+    "pk": null,
+    "fields": {
+        "guid": "VTT_tier_1_novel_mode_of_inher",
+        "created_date": "2018-04-27T00:00:00.000Z",
+        "created_by": null,
+        "last_modified_date": null,
+        "project": null,
+        "name": "Tier 1 - Novel mode of inheritance",
+        "category": "CMG Discovery Tags",
+        "description": "Gene previously associated with a Mendelian condition but mode of inheritance is different",
+        "color": "#75C475",
+        "order": 5.0,
+        "is_built_in": true
+    }
+},
+{
+    "model": "seqr.varianttagtype",
+    "pk": null,
+    "fields": {
+        "guid": "VTT_tier_2_novel_gene_and_phen",
+        "created_date": "2018-04-27T00:00:00.000Z",
+        "created_by": null,
+        "last_modified_date": null,
+        "project": null,
+        "name": "Tier 2 - Novel gene and phenotype",
+        "category": "CMG Discovery Tags",
+        "description": "Gene not previously associated with a Mendelian condition",
+        "color": "#0B437D",
+        "order": 6.0,
+        "is_built_in": true
+    }
+},
+{
+    "model": "seqr.varianttagtype",
+    "pk": null,
+    "fields": {
+        "guid": "VTT_tier_2_novel_gene_for_know",
+        "created_date": "2018-04-27T00:00:00.000Z",
+        "created_by": null,
+        "last_modified_date": null,
+        "project": null,
+        "name": "Tier 2 - Novel gene for known phenotype",
+        "category": "CMG Discovery Tags",
+        "description": "Phenotype known but no causal gene known (includes adding to locus heterogeneity)",
+        "color": "#1469B0",
+        "order": 7.0,
+        "is_built_in": true
+    }
+},
+{
+    "model": "seqr.varianttagtype",
+    "pk": null,
+    "fields": {
+        "guid": "VTT_tier_2_phenotype_expansion",
+        "created_date": "2018-04-27T00:00:00.000Z",
+        "created_by": null,
+        "last_modified_date": null,
+        "project": null,
+        "name": "Tier 2 - Phenotype expansion",
+        "category": "CMG Discovery Tags",
+        "description": "Phenotype studies have different clinical characteristics and/or natural history",
+        "color": "#318CC2",
+        "order": 8.0,
+        "is_built_in": true
+    }
+},
+{
+    "model": "seqr.varianttagtype",
+    "pk": null,
+    "fields": {
+        "guid": "VTT_tier_2_phenotype_not_deli",
+        "created_date": "2018-04-27T00:00:00.000Z",
+        "created_by": null,
+        "last_modified_date": null,
+        "project": null,
+        "name": "Tier 2 - Phenotype not delineated",
+        "category": "CMG Discovery Tags",
+        "description": "Phenotype not previously delineated (i.e. no OMIM #)",
+        "color": "#5383aa",
+        "order": 9.0,
+        "is_built_in": true
+    }
+},
+{
+    "model": "seqr.varianttagtype",
+    "pk": null,
+    "fields": {
+        "guid": "VTT_known_gene_for_phenotype",
+        "created_date": "2018-04-27T00:00:00.000Z",
+        "created_by": null,
+        "last_modified_date": null,
+        "project": null,
+        "name": "Known gene for phenotype",
+        "category": "CMG Discovery Tags",
+        "description": "The gene overlapping the variant has been previously associated with the same phenotype presented by the patient",
+        "color": "#030A75",
+        "order": 10.0,
+        "is_built_in": true
+    }
+},
+{
+    "model": "seqr.varianttagtype",
+    "pk": null,
+    "fields": {
+        "guid": "VTT_review",
+        "created_date": "2018-04-27T00:00:00.000Z",
+        "created_by": null,
+        "last_modified_date": null,
+        "project": null,
+        "name": "Review",
+        "category": "Collaboration",
+        "description": "To mark a variant and/or gene of interest for further review.",
+        "color": "#668FE3",
+        "order": 11.0,
+        "is_built_in": true
+    }
+},
+{
+    "model": "seqr.varianttagtype",
+    "pk": null,
+    "fields": {
+        "guid": "VTT_send_for_sanger_validation",
+        "created_date": "2018-04-27T00:00:00.000Z",
+        "created_by": null,
+        "last_modified_date": null,
+        "project": null,
+        "name": "Send for Sanger validation",
+        "category": "Collaboration",
+        "description": "",
+        "color": "#f1af5f",
+        "order": 12.0,
+        "is_built_in": true
+    }
+},
+{
+    "model": "seqr.varianttagtype",
+    "pk": null,
+    "fields": {
+        "guid": "VTT_sanger_validated",
+        "created_date": "2018-04-27T00:00:00.000Z",
+        "created_by": null,
+        "last_modified_date": null,
+        "project": null,
+        "name": "Sanger validated",
+        "category": "Collaboration",
+        "description": "Confirmed by Sanger sequencing",
+        "color": "#b2df8a",
+        "order": 13.0,
+        "is_built_in": true
+    }
+},
+{
+    "model": "seqr.varianttagtype",
+    "pk": null,
+    "fields": {
+        "guid": "VTT_sanger_did_not_confirm",
+        "created_date": "2018-04-27T00:00:00.000Z",
+        "created_by": null,
+        "last_modified_date": null,
+        "project": null,
+        "name": "Sanger did not confirm",
+        "category": "Collaboration",
+        "description": "",
+        "color": "#823a3a",
+        "order": 14.0,
+        "is_built_in": true
+    }
+},
+{
+    "model": "seqr.varianttagtype",
+    "pk": null,
+    "fields": {
+        "guid": "VTT_confident_ar_one_hit",
+        "created_date": "2018-04-27T00:00:00.000Z",
+        "created_by": null,
+        "last_modified_date": null,
+        "project": null,
+        "name": "Confident AR one hit",
+        "category": "Collaboration",
+        "description": "To mark a variant/gene where one disease causing variant has been identified in a KNOWN disease gene that is consistent with the patient's phenotype - but a second variant is needed. These families may be candidates for WGS or other approaches.",
+        "color": "#764080",
+        "order": 15.0,
+        "is_built_in": true
+    }
+},
+{
+    "model": "seqr.varianttagtype",
+    "pk": null,
+    "fields": {
+        "guid": "VTT_analyst_high_priority",
+        "created_date": "2018-04-27T00:00:00.000Z",
+        "created_by": null,
+        "last_modified_date": null,
+        "project": null,
+        "name": "Analyst high priority",
+        "category": "Collaboration",
+        "description": "To mark a variant that is viewed by the analyst as a likely disease-causing variant but further review is needed by a clinician and/or collaborator. These tags should be transitioned to more appropriate tags prior to progress reporting.",
+        "color": "#e46b2e",
+        "order": 16.0,
+        "is_built_in": true
+    }
+},
+{
+    "model": "seqr.varianttagtype",
+    "pk": null,
+    "fields": {
+        "guid": "VTT_excluded",
+        "created_date": "2018-04-27T00:00:00.000Z",
+        "created_by": null,
+        "last_modified_date": null,
+        "project": null,
+        "name": "Excluded",
+        "category": "Collaboration",
+        "description": "To mark a variant and/or gene you previously reviewed but do not think it contributing to the phenotype in this case. To help other members of your team (and yourself), please consider also adding a note with details of why you reprioritized this variant.",
+        "color": "#555555",
+        "order": 17.0,
+        "is_built_in": true
+    }
+},
+{
+    "model": "seqr.varianttagtype",
+    "pk": null,
+    "fields": {
+        "guid": "VTT_pathogenic",
+        "created_date": "2018-04-27T00:00:00.000Z",
+        "created_by": null,
+        "last_modified_date": null,
+        "project": null,
+        "name": "Pathogenic",
+        "category": "ACMG Variant Classification",
+        "description": "",
+        "color": "#B92732",
+        "order": 18.0,
+        "is_built_in": true
+    }
+},
+{
+    "model": "seqr.varianttagtype",
+    "pk": null,
+    "fields": {
+        "guid": "VTT_likely_pathogenic",
+        "created_date": "2018-04-27T00:00:00.000Z",
+        "created_by": null,
+        "last_modified_date": null,
+        "project": null,
+        "name": "Likely Pathogenic",
+        "category": "ACMG Variant Classification",
+        "description": "",
+        "color": "#E48065",
+        "order": 19.0,
+        "is_built_in": true
+    }
+},
+{
+    "model": "seqr.varianttagtype",
+    "pk": null,
+    "fields": {
+        "guid": "VTT_vus",
+        "created_date": "2018-04-27T00:00:00.000Z",
+        "created_by": null,
+        "last_modified_date": null,
+        "project": null,
+        "name": "VUS",
+        "category": "ACMG Variant Classification",
+        "description": "Variant of uncertain significance",
+        "color": "#FACCB4",
+        "order": 20.0,
+        "is_built_in": true
+    }
+},
+{
+    "model": "seqr.varianttagtype",
+    "pk": null,
+    "fields": {
+        "guid": "VTT_likely_benign",
+        "created_date": "2018-04-27T00:00:00.000Z",
+        "created_by": null,
+        "last_modified_date": null,
+        "project": null,
+        "name": "Likely Benign",
+        "category": "ACMG Variant Classification",
+        "description": "",
+        "color": "#6BACD0",
+        "order": 21.0,
+        "is_built_in": true
+    }
+},
+{
+    "model": "seqr.varianttagtype",
+    "pk": null,
+    "fields": {
+        "guid": "VTT_benign",
+        "created_date": "2018-04-27T00:00:00.000Z",
+        "created_by": null,
+        "last_modified_date": null,
+        "project": null,
+        "name": "Benign",
+        "category": "ACMG Variant Classification",
+        "description": "",
+        "color": "#2971B1",
+        "order": 22.0,
+        "is_built_in": true
+    }
+},
+{
+    "model": "seqr.varianttagtype",
+    "pk": null,
+    "fields": {
+        "guid": "VTT_secondary_finding",
+        "created_date": "2018-04-27T00:00:00.000Z",
+        "created_by": null,
+        "last_modified_date": null,
+        "project": null,
+        "name": "Secondary finding",
+        "category": "ACMG Variant Classification",
+        "description": "The variant was found during the course of searching for candidate disease genes and can be described as pathogenic or likely pathogenic according to ACMG criteria and overlaps a gene known to cause a disease that differs from the patient's primary indication for sequencing.",
+        "color": "#FED82F",
+        "order": 23.0,
+        "is_built_in": true
+    }
+},
+{
+    "model": "seqr.varianttagtype",
+    "pk": null,
+    "fields": {
+        "guid": "VTT_matchbox_mme",
+        "created_date": "2018-04-27T00:00:00.000Z",
+        "created_by": null,
+        "last_modified_date": null,
+        "project": null,
+        "name": "MatchBox (MME)",
+        "category": "Data Sharing",
+        "description": "Gene, variant, and phenotype to be submitted to Matchmaker Exchange",
+        "color": "#531B86",
+        "order": 24.0,
+        "is_built_in": true
+    }
+},
+{
+    "model": "seqr.varianttagtype",
+    "pk": null,
+    "fields": {
+        "guid": "VTT_submit_to_clinvar",
+        "created_date": "2018-04-27T00:00:00.000Z",
+        "created_by": null,
+        "last_modified_date": null,
+        "project": null,
+        "name": "Submit to Clinvar",
+        "category": "Data Sharing",
+        "description": "By selecting this tag, you are notifying CMG staff that this variant should be submitted to ClinVar. Generally, this is for pathogenic or likely pathogenic variants in known disease genes or for any benign or likely benign variants that are incorrectly annotated in ClinVar. Please also add a note that describes supporting evidence for how you interpreted this variant.",
+        "color": "#8A62AE",
+        "order": 25.0,
+        "is_built_in": true
+    }
+},
+{
+    "model": "seqr.varianttagtype",
+    "pk": null,
+    "fields": {
+        "guid": "VTT_share_with_komp",
+        "created_date": "2018-04-27T00:00:00.000Z",
+        "created_by": null,
+        "last_modified_date": null,
+        "project": null,
+        "name": "Share with KOMP",
+        "category": "Data Sharing",
+        "description": "To mark a variant/gene that you would like us to share with the Mouse Knockout Project for their knockout and phenotyping pipeline. Add additional notes to comments as needed.",
+        "color": "#ad627a",
+        "order": 26.0,
+        "is_built_in": true
+    }
+}
+]

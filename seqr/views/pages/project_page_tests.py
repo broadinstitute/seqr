@@ -29,10 +29,10 @@ class ProjectPageTest(TestCase):
         )
         self.assertSetEqual(
             set(response_json['project'].keys()),
-            {'collaborators', 'locusLists', 'variantTagTypes', 'hasGeneSearch', 'detailsLoaded', 'projectGuid',
-             'projectCategoryGuids', 'canEdit', 'name', 'description', 'createdDate', 'lastModifiedDate',
-             'isPhenotipsEnabled', 'phenotipsUserId', 'deprecatedProjectId', 'deprecatedLastAccessedDate',
-             'isMmeEnabled', 'mmePrimaryDataOwner'}
+            {'collaborators', 'locusLists', 'variantTagTypes', 'variantFunctionalTagTypes', 'hasGeneSearch',
+             'detailsLoaded', 'projectGuid', 'projectCategoryGuids', 'canEdit', 'name', 'description', 'createdDate',
+             'lastModifiedDate', 'isPhenotipsEnabled', 'phenotipsUserId', 'deprecatedProjectId',
+             'deprecatedLastAccessedDate', 'isMmeEnabled', 'mmePrimaryDataOwner'}
         )
         self.assertSetEqual(
             set(response_json['familiesByGuid'].values()[0].keys()),

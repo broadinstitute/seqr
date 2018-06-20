@@ -6,8 +6,7 @@ import { connect } from 'react-redux'
 import { HorizontalSpacer } from 'shared/components/Spacers'
 import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
 
-import { getProjectTablePage, getProjectTableRecordsPerPage } from '../../../reducers'
-import { getProjectFamilies, getVisibleFamilies } from '../../../utils/selectors'
+import { getProjectFamilies, getVisibleFamilies, getProjectTablePage, getProjectTableRecordsPerPage } from '../../../selectors'
 
 import FamiliesFilterDropdown from './FilterDropdown'
 import FamiliesSortOrderDropdown from './SortOrderDropdown'
@@ -49,7 +48,7 @@ const TableHeaderRow = ({ headerStatus, showInternalFilters, visibleFamiliesCoun
                 <HorizontalSpacer width={10} />
                 <HorizontalStackedBar
                   width={100}
-                  height={10}
+                  height={14}
                   title={headerStatus.title}
                   data={headerStatus.data}
                 />

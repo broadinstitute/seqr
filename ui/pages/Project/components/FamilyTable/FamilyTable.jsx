@@ -4,16 +4,16 @@ import styled from 'styled-components'
 import { Table } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 
-import { getProjectDetailsIsLoading } from 'redux/rootReducer'
+import Family from 'shared/components/panel/family'
 import ExportTableButton from 'shared/components/buttons/export-table/ExportTableButton'
 import TableLoading from 'shared/components/table/TableLoading'
 import { HorizontalSpacer } from 'shared/components/Spacers'
+
+import { getVisibleSortedFamiliesWithIndividuals, getProjectDetailsIsLoading } from '../../selectors'
 import TableHeaderRow from './header/TableHeaderRow'
 import EmptyTableRow from './EmptyTableRow'
-import FamilyRow from './FamilyRow'
 import IndividualRow from './IndividualRow'
 import PageSelector from './PageSelector'
-import { getVisibleSortedFamiliesWithIndividuals } from '../../utils/selectors'
 
 
 const ExportContainer = styled.span`
@@ -25,10 +25,10 @@ const FamilyTable = ({ visibleFamilies, loading, headerStatus, showSearchLinks, 
   <div>
     <PageSelector />
     <ExportContainer>
-      <ExportTableButton urls={exportUrls} />
+      <ExportTableButton downloads={exportUrls} />
       <HorizontalSpacer width={45} />
     </ExportContainer>
-    <Table celled striped padded>
+    <Table celled striped padded fixed>
       <TableHeaderRow headerStatus={headerStatus} showInternalFilters={showInternalFilters} />
       <Table.Body>
         {loading ? <TableLoading /> : null}
@@ -38,7 +38,12 @@ const FamilyTable = ({ visibleFamilies, loading, headerStatus, showSearchLinks, 
               <Table.Row key={family.familyGuid}>
                 <Table.Cell>
                   {[
-                    <FamilyRow key={family.familyGuid} family={family} showSearchLinks={showSearchLinks} fields={fields} />,
+                    <Family
+                      key={family.familyGuid}
+                      family={family}
+                      showSearchLinks={showSearchLinks}
+                      fields={fields}
+                    />,
                     family.individuals.map(individual => (
                       <IndividualRow
                         key={individual.individualGuid}

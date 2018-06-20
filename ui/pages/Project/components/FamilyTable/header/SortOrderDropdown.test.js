@@ -2,7 +2,7 @@ import React from 'react'
 import { shallow, configure } from 'enzyme'
 import Adapter from 'enzyme-adapter-react-16'
 import { SortOrderDropdownComponent } from './SortOrderDropdown'
-import { getFamiliesSortOrder } from '../../../reducers'
+import { getFamiliesSortOrder } from '../../../selectors'
 
 import { STATE1 } from '../../../fixtures'
 

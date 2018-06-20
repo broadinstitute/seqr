@@ -121,12 +121,11 @@ def _deprecated_update_original_family_fields(project, family, fields):
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
-def update_family_field_handler(request, family_guid, field_name):
+def update_family_fields_handler(request, family_guid):
     """Updates the specified field in the Family model.
 
     Args:
         family_guid (string): GUID of the family.
-        field_name (string): Family model field name to update
     """
 
     family = Family.objects.get(guid=family_guid)
@@ -137,14 +136,7 @@ def update_family_field_handler(request, family_guid, field_name):
     check_permissions(project, request.user, CAN_EDIT)
 
     request_json = json.loads(request.body)
-    if "value" not in request_json:
-        raise ValueError("Request is missing 'value' key: %s" % (request.body,))
-
-    value = request_json['value']
-    family_json = {field_name: value}
-    update_family_from_json(family, family_json)
-
-    _deprecated_update_original_family_field(project, family, field_name, value)
+    update_family_from_json(family, request_json, user=request.user, allow_unknown_keys=True)
 
     return create_json_response({
         family.guid: _get_json_for_family(family, request.user)

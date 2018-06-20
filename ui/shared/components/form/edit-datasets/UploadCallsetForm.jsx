@@ -5,8 +5,8 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Form, Grid, Popup, Icon } from 'semantic-ui-react'
 import styled from 'styled-components'
-import { getProject } from 'redux/rootReducer'
 import { HorizontalSpacer } from 'shared/components/Spacers'
+import { getProject } from 'pages/Project/selectors'
 import FormWrapper from 'shared/components/form/FormWrapper'
 
 
@@ -20,7 +20,6 @@ const StyledIcon = styled(Icon)`
   color: #888888;
   padding-right: 20px;
 `
-
 
 const SAMPLE_TYPES = [
   { key: 'WES', value: 'WES', text: 'Exome' },

@@ -2,13 +2,18 @@ import React, { createElement } from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { connect } from 'react-redux'
-import { Field, reduxForm, getFormSyncErrors, getFormSyncWarnings, submit } from 'redux-form'
+import { Field, FieldArray, reduxForm, getFormSyncErrors, getFormSyncWarnings } from 'redux-form'
 import { Form, Message } from 'semantic-ui-react'
 import flatten from 'lodash/flatten'
 
 import { closeModal, setModalConfirm } from 'redux/utils/modalReducer'
 import ButtonPanel from './ButtonPanel'
 import RequestStatus from './RequestStatus'
+
+const StyledForm = styled(({ hasSubmitButton, ...props }) => <Form {...props} />)`
+  min-height: inherit;
+  padding-bottom: ${props => props.hasSubmitButton && '40px'};
+`
 
 const MessagePanel = styled(Message)`
   margin: 1em 2em !important;
@@ -19,14 +24,20 @@ export const validators = {
 }
 
 const renderField = (props) => {
-  const { fieldComponent = Form.Input, meta: { touched, invalid }, input, ...additionalProps } = props
-  return createElement(fieldComponent, { error: touched && invalid, ...input, ...additionalProps })
+  const { fieldComponent = Form.Input, meta: { touched, invalid }, submitForm, input, ...additionalProps } = props
+  const { onChange, ...additionalInput } = input
+  const onChangeSubmit = submitForm ? (data) => {
+    onChange(data)
+    submitForm({ [props.input.name]: data })
+  } : onChange
+  return createElement(fieldComponent, { error: touched && invalid, meta: props.meta, onChange: onChangeSubmit, ...additionalInput, ...additionalProps })
 }
 
 renderField.propTypes = {
   fieldComponent: PropTypes.oneOfType([PropTypes.func, PropTypes.string]),
   meta: PropTypes.object,
   input: PropTypes.object,
+  submitForm: PropTypes.func,
 }
 
 class ReduxFormWrapper extends React.Component {
@@ -84,7 +95,6 @@ class ReduxFormWrapper extends React.Component {
     warning: PropTypes.string,
     handleSubmit: PropTypes.func,
     setModalConfirm: PropTypes.func,
-    submit: PropTypes.func,
   }
 
   static defaultProps = {
@@ -105,18 +115,27 @@ class ReduxFormWrapper extends React.Component {
     const saveErrorMessage = this.props.submitFailed ?
       (this.props.error && this.props.error.join('; ')) || (this.props.invalid ? 'Invalid input' : 'Unknown') : null
 
-    const fieldComponents = this.props.renderChildren ? React.createElement(this.props.renderChildren) :
-      this.props.fields.map(({ component, name, displayOnly, ...fieldProps }) => {
-        return displayOnly ? React.createElement(component, { key: name }) : (
-          <Field key={name} name={name} component={renderField} fieldComponent={component} {...fieldProps} />
-        )
-      })
-
     const warningMessages = this.props.warning || flatten(Object.values(this.props.validationWarnings))
     const errorMessages = this.props.error || flatten(Object.values(this.props.validationErrors))
 
+    const fieldComponents = this.props.renderChildren ? React.createElement(this.props.renderChildren) :
+      this.props.fields.map(({ component, name, isArrayField, key, ...fieldProps }) => {
+        const baseProps = { key: key || name, name }
+        const singleFieldProps = {
+          component: renderField,
+          fieldComponent: component,
+          submitForm: this.props.submitOnChange ? this.props.onSubmit : null,
+          ...fieldProps,
+        }
+        return isArrayField ?
+          <FieldArray {...baseProps} component={({ fields }) =>
+            fields.map(fieldPath => <Field key={fieldPath} name={fieldPath} {...singleFieldProps} />)}
+          /> :
+          <Field {...baseProps} {...singleFieldProps} />
+      })
+
     return (
-      <Form onSubmit={this.props.handleSubmit} size={this.props.size} loading={this.props.submitting}>
+      <StyledForm onSubmit={this.props.handleSubmit} size={this.props.size} loading={this.props.submitting} hasSubmitButton={!this.props.submitOnChange}>
         {fieldComponents}
         {this.props.showErrorPanel && (this.props.dirty || this.props.submitFailed) && [
           warningMessages && warningMessages.length > 0 ? <MessagePanel key="w" warning visible list={warningMessages} /> : null,
@@ -127,8 +146,7 @@ class ReduxFormWrapper extends React.Component {
           React.cloneElement(this.props.secondarySubmitButton, { onClick: this.props.handleSubmit(values => this.props.onSecondarySubmit(values)) })
         }
         {
-          this.props.submitOnChange ?
-            <RequestStatus status={this.props.submitting ? RequestStatus.IN_PROGRESS : saveStatus} errorMessage={saveErrorMessage} /> :
+          !this.props.submitOnChange &&
             <ButtonPanel
               cancelButtonText={this.props.cancelButtonText}
               submitButtonText={this.props.submitButtonText}
@@ -137,7 +155,7 @@ class ReduxFormWrapper extends React.Component {
               handleClose={this.handleUnconfirmedClose}
             />
         }
-      </Form>
+      </StyledForm>
     )
   }
 
@@ -164,6 +182,7 @@ class ReduxFormWrapper extends React.Component {
       'submitButtonText',
       'dirty',
       'confirmCloseIfNotSaved',
+      'initialValues',
     ]
     if (updateProps.some(k => nextProps[k] !== this.props[k])) {
       return true
@@ -174,8 +193,6 @@ class ReduxFormWrapper extends React.Component {
   componentWillUpdate(nextProps) {
     if (nextProps.submitSucceeded && nextProps.closeOnSuccess) {
       this.props.handleClose(true)
-    } else if (this.props.submitOnChange && nextProps.dirty && !this.props.dirty) {
-      this.props.submit()
     } else if (this.props.confirmCloseIfNotSaved) {
       if (nextProps.dirty && !this.props.dirty) {
         this.props.setModalConfirm('The form contains unsaved changes. Are you sure you want to close it?')
@@ -199,7 +216,6 @@ const mapDispatchToProps = (dispatch, ownProps) => {
     setModalConfirm: (confirm) => {
       dispatch(setModalConfirm(ownProps.modalName || ownProps.form, confirm))
     },
-    submit: () => dispatch(submit(ownProps.form)),
   }
 }
 

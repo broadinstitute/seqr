@@ -1,16 +1,4 @@
-import {
-  CASE_REVIEW_STATUS_MORE_INFO_NEEDED,
-  CASE_REVIEW_STATUS_IN_REVIEW,
-  CASE_REVIEW_STATUS_ACCEPTED,
-  CASE_REVIEW_STATUS_NOT_ACCEPTED,
-  CASE_REVIEW_STATUS_UNCERTAIN,
-  CASE_REVIEW_STATUS_NOT_IN_REVIEW,
-  CASE_REVIEW_STATUS_PENDING_RESULTS_AND_RECORDS,
-  CASE_REVIEW_STATUS_WAITLIST,
-  CASE_REVIEW_STATUS_WITHDREW,
-  CASE_REVIEW_STATUS_INELIGIBLE,
-  CASE_REVIEW_STATUS_DECLINED_TO_PARTICIPATE,
-} from 'shared/constants/caseReviewConstants'
+/* eslint-disable no-multi-spaces */
 
 import {
   FAMILY_STATUS_SOLVED,
@@ -23,7 +11,43 @@ import {
   FAMILY_STATUS_REVIEWED_PURSUING_CANDIDATES,
   FAMILY_STATUS_REVIEWED_NO_CLEAR_CANDIDATE,
   FAMILY_STATUS_ANALYSIS_IN_PROGRESS,
-} from 'shared/constants/familyAndIndividualConstants'
+  CLINSIG_SEVERITY,
+} from 'shared/utils/constants'
+
+export const ANALYSIS_TYPE_VARIANT_CALLS = 'VARIANTS'
+
+export const CASE_REVIEW_STATUS_NOT_IN_REVIEW = 'N'
+export const CASE_REVIEW_STATUS_IN_REVIEW = 'I'
+export const CASE_REVIEW_STATUS_UNCERTAIN = 'U'
+export const CASE_REVIEW_STATUS_ACCEPTED = 'A'
+export const CASE_REVIEW_STATUS_NOT_ACCEPTED = 'R'
+export const CASE_REVIEW_STATUS_MORE_INFO_NEEDED = 'Q'
+export const CASE_REVIEW_STATUS_PENDING_RESULTS_AND_RECORDS = 'P'
+export const CASE_REVIEW_STATUS_WAITLIST = 'W'
+export const CASE_REVIEW_STATUS_WITHDREW = 'WD'
+export const CASE_REVIEW_STATUS_INELIGIBLE = 'IE'
+export const CASE_REVIEW_STATUS_DECLINED_TO_PARTICIPATE = 'DP'
+
+export const CASE_REVIEW_STATUS_OPTIONS = [
+  { value: CASE_REVIEW_STATUS_IN_REVIEW,                   name: 'In Review',             color: '#2196F3' },
+  { value: CASE_REVIEW_STATUS_UNCERTAIN,                   name: 'Uncertain',             color: '#fddb28' },
+  { value: CASE_REVIEW_STATUS_ACCEPTED,                    name: 'Accepted',              color: '#8BC34A' },
+  { value: CASE_REVIEW_STATUS_NOT_ACCEPTED,                name: 'Not Accepted',          color: '#4f5cb3' },  //#C5CAE9
+  { value: CASE_REVIEW_STATUS_MORE_INFO_NEEDED,            name: 'More Info Needed',      color: '#F44336' },  //#673AB7
+  { value: CASE_REVIEW_STATUS_PENDING_RESULTS_AND_RECORDS, name: 'Pending Results and Records', color: '#996699' },
+  { value: CASE_REVIEW_STATUS_NOT_IN_REVIEW,               name: 'Not In Review',         color: '#118833' },
+  { value: CASE_REVIEW_STATUS_WAITLIST,                    name: 'Waitlist',              color: '#990099' },
+  { value: CASE_REVIEW_STATUS_WITHDREW,                    name: 'Withdrew',              color: '#999999' },
+  { value: CASE_REVIEW_STATUS_INELIGIBLE,                  name: 'Ineligible',            color: '#111111' },
+  { value: CASE_REVIEW_STATUS_DECLINED_TO_PARTICIPATE,     name: 'Declined To Participate', color: '#FF8800' },
+]
+
+export const CASE_REVIEW_STATUS_OPT_LOOKUP = CASE_REVIEW_STATUS_OPTIONS.reduce(
+  (acc, opt) => ({
+    ...acc,
+    ...{ [opt.value]: opt },
+  }), {},
+)
 
 export const SHOW_ALL = 'ALL'
 
@@ -257,4 +281,56 @@ export const FAMILY_SORT_OPTIONS = [
         '2000-01-01T01:00:00.000Z',
       ),
   },
+]
+
+export const SORT_BY_FAMILY_GUID = 'FAMILY_GUID'
+export const SORT_BY_XPOS = 'XPOS'
+export const SORT_BY_PATHOGENICITY = 'PATHOGENICITY'
+export const SORT_BY_IN_OMIM = 'IN_OMIM'
+
+const clinsigSeverity = (variant) => {
+  const clinvarSignificance = variant.clinvar.clinsig && variant.clinvar.clinsig.split('/')[0]
+  const hgmdSignificance = variant.hgmd.class
+  if (!clinvarSignificance && !hgmdSignificance) return -10
+  let clinvarSeverity = 0.1
+  if (clinvarSignificance) {
+    clinvarSeverity = clinvarSignificance in CLINSIG_SEVERITY ? CLINSIG_SEVERITY[clinvarSignificance] + 1 : 0.5
+  }
+  const hgmdSeverity = hgmdSignificance in CLINSIG_SEVERITY ? CLINSIG_SEVERITY[hgmdSignificance] + 0.5 : 0
+  return clinvarSeverity + hgmdSeverity
+}
+
+export const VARIANT_SORT_OPTONS = [
+  { value: SORT_BY_FAMILY_GUID, text: 'Default', comparator: (a, b) => a.familyGuid.localeCompare(b.familyGuid) },
+  { value: SORT_BY_XPOS, text: 'Position', comparator: (a, b) => a.xpos - b.xpos },
+  { value: SORT_BY_PATHOGENICITY, text: 'Pathogenicity', comparator: (a, b) => clinsigSeverity(b) - clinsigSeverity(a) },
+  { value: SORT_BY_IN_OMIM, text: 'In OMIM', comparator: (a, b) => b.genes.some(gene => gene.diseaseDbPheotypes.length > 0) - a.genes.some(gene => gene.diseaseDbPheotypes.length > 0) },
+]
+
+export const VARIANT_EXPORT_DATA = [
+  { header: 'chrom' },
+  { header: 'pos' },
+  { header: 'ref' },
+  { header: 'alt' },
+  { header: 'tags', getVal: variant => variant.tags.map(tag => tag.name).join('|') },
+  { header: 'notes', getVal: variant => variant.notes.map(note => `${note.user}: ${note.note}`).join('|') },
+  { header: 'family', getVal: variant => variant.familyGuid.split(/_(.+)/)[1] },
+  { header: 'gene', getVal: variant => variant.annotation.mainTranscript.symbol },
+  { header: 'consequence', getVal: variant => variant.annotation.vepConsequence },
+  { header: '1kg_freq', getVal: variant => variant.annotation.freqs.g1k },
+  { header: 'exac_freq', getVal: variant => variant.annotation.freqs.exac },
+  { header: 'sift', getVal: variant => variant.annotation.sift },
+  { header: 'polyphen', getVal: variant => variant.annotation.polyphen },
+  { header: 'hgvsc', getVal: variant => variant.annotation.mainTranscript.hgvsc },
+  { header: 'hgvsp', getVal: variant => variant.annotation.mainTranscript.hgvsp },
+]
+
+export const VARIANT_GENOTYPE_EXPORT_DATA = [
+  { header: 'sample_id', getVal: (genotype, individualId) => individualId },
+  { header: 'genotype', getVal: genotype => (genotype.alleles.length ? genotype.alleles.join('/') : './.') },
+  { header: 'filter' },
+  { header: 'ad' },
+  { header: 'dp' },
+  { header: 'gq' },
+  { header: 'ab' },
 ]

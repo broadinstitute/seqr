@@ -199,13 +199,19 @@ class ElasticsearchDatastore(datastore.Datastore):
             matching_indices = []
             mapping = self._es_client.indices.get_mapping(str(elasticsearch_index)+"*")
 
-            indiv_id = _encode_name(family_individual_ids[0])
-            for index_name, index_mapping in mapping.items():
-                if indiv_id+"_num_alt" in index_mapping["mappings"]["variant"]["properties"]:
-                    matching_indices.append(index_name)
+            if family_individual_ids:
+                indiv_id = _encode_name(family_individual_ids[0])
+                for index_name, index_mapping in mapping.items():
+                    if indiv_id+"_num_alt" in index_mapping["mappings"]["variant"]["properties"]:
+                        matching_indices.append(index_name)
 
             if not matching_indices:
-                logger.error("%s not found in %s" % (indiv_id, elasticsearch_index)) # , pformat(index_mapping["mappings"]["variant"]["properties"])))
+                if not family_individual_ids:
+                    logger.error("no individuals found for family %s" % (family_id))
+                elif not mapping:
+                    logger.error("no es mapping found for found with prefix %s" % (elasticsearch_index))
+                else:
+                    logger.error("%s not found in %s:\n%s" % (indiv_id, elasticsearch_index, pformat(index_mapping["mappings"]["variant"]["properties"])))
             else:
                 logger.info("matching indices: " + str(elasticsearch_index))
                 elasticsearch_index = ",".join(matching_indices)
@@ -446,8 +452,8 @@ class ElasticsearchDatastore(datastore.Datastore):
         start = time.time()
 
         s = s.params(size=settings.VARIANT_QUERY_RESULTS_LIMIT + 1)
-        #if not include_all_consequences:
-        #    s = s.source(exclude=["sortedTranscriptConsequences"])
+        if not include_all_consequences:
+            s = s.source(exclude=["sortedTranscriptConsequences"])
         response = s.execute()
         logger.info("=====")
 
@@ -722,10 +728,10 @@ class ElasticsearchDatastore(datastore.Datastore):
             modified_variant_filter = copy.deepcopy(variant_filter)
         modified_variant_filter.add_gene(gene_id)
 
-        #db_query = self._make_db_query(genotype_filter, modified_variant_filter)
+        #db_query = self._make_db_query(genotype_filter, modified_variant_filter, user=None)
         raise ValueError("Not Implemented")
 
-    def get_single_variant(self, project_id, family_id, xpos, ref, alt):
+    def get_single_variant(self, project_id, family_id, xpos, ref, alt, user=None):
         chrom, pos = get_chr_pos(xpos)
 
         variant_id = "%s-%s-%s-%s" % (chrom, pos, ref, alt)
@@ -735,7 +741,7 @@ class ElasticsearchDatastore(datastore.Datastore):
         if cached_results is not None:
             results = [Variant.fromJSON(v) if v else None for v in json.loads(cached_results)]
         else:
-            results = self.get_elasticsearch_variants(project_id, family_id=family_id, variant_id_filter=[variant_id], include_all_consequences=True)
+            results = list(self.get_elasticsearch_variants(project_id, family_id=family_id, variant_id_filter=[variant_id], user=user, include_all_consequences=True))
             #if self._redis_client:
             #    self._redis_client.set(cache_key, json.dumps([r.toJSON() if r else None for r in results]))
 
@@ -750,7 +756,7 @@ class ElasticsearchDatastore(datastore.Datastore):
 
         return variant
 
-    def get_multiple_variants(self, project_id, family_id, xpos_ref_alt_tuples):
+    def get_multiple_variants(self, project_id, family_id, xpos_ref_alt_tuples, user=None):
         """
         Get one or more specific variants in a family
         Variant should be identifiable by xpos, ref, and alt
@@ -766,7 +772,7 @@ class ElasticsearchDatastore(datastore.Datastore):
         if cached_results is not None:
             results = [Variant.fromJSON(v) if v else None for v in json.loads(cached_results)]
         else:
-            results = self.get_elasticsearch_variants(project_id, family_id=family_id, variant_id_filter=variant_ids)
+            results = self.get_elasticsearch_variants(project_id, family_id=family_id, variant_id_filter=variant_ids, user=user)
             # make sure all variants in xpos_ref_alt_tuples were retrieved and are in the same order.
             # Return None for tuples that weren't found in ES.
             results_by_xpos_ref_alt = {}
@@ -790,7 +796,7 @@ class ElasticsearchDatastore(datastore.Datastore):
 
         raise ValueError("Not implemented")
 
-    def get_project_variants_in_gene(self, project_id, gene_id, variant_filter=None):
+    def get_project_variants_in_gene(self, project_id, gene_id, variant_filter=None, user=None):
 
         if variant_filter is None:
             modified_variant_filter = VariantFilter()
@@ -798,7 +804,7 @@ class ElasticsearchDatastore(datastore.Datastore):
             modified_variant_filter = copy.deepcopy(variant_filter)
         modified_variant_filter.add_gene(gene_id)
 
-        variants = [variant for variant in self.get_elasticsearch_variants(project_id, variant_filter=modified_variant_filter)]
+        variants = [variant for variant in self.get_elasticsearch_variants(project_id, variant_filter=modified_variant_filter, user=user)]
         return variants
 
     def _make_db_query(self, genotype_filter=None, variant_filter=None):

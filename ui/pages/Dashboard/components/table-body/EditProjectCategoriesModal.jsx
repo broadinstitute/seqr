@@ -6,12 +6,13 @@ import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
 import { Multiselect } from 'shared/components/form/Inputs'
 import Modal from 'shared/components/modal/Modal'
 
-import { updateProject, getProjectCategoriesByGuid } from 'redux/rootReducer'
+import { updateProject } from 'redux/rootReducer'
+import { getProjectCategoriesByGuid } from 'redux/selectors'
 
 
 const EditProjectCategoriesModal = (props) => {
   const categories = Object.values(props.projectCategoriesByGuid).map((projectCategory) => {
-    return { value: projectCategory.guid, text: projectCategory.name, key: projectCategory.guid }
+    return { value: projectCategory.guid, text: projectCategory.name }
   })
   const formName = `editProjectCategories-${props.project.projectGuid}`
   const fields = [
@@ -19,6 +20,7 @@ const EditProjectCategoriesModal = (props) => {
       name: 'categories',
       options: categories,
       component: Multiselect,
+      allowAdditions: true,
       additionLabel: 'Category: ',
       placeholder: 'Project categories',
       color: 'blue',

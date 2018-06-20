@@ -4,13 +4,15 @@ APIs used by the project page
 
 import itertools
 import logging
+import json
 
 from guardian.shortcuts import get_objects_for_group
 from django.contrib.auth.decorators import login_required
 from django.db import connection
+from django.db.models import Q, Count
 
 from seqr.models import Family, Individual, _slugify, CAN_VIEW, LocusList, \
-    LocusListGene, LocusListInterval, VariantTagType, VariantTag
+    LocusListGene, LocusListInterval, VariantTagType, VariantTag, VariantFunctionalData
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.family_api import export_families
 from seqr.views.apis.individual_api import export_individuals
@@ -58,7 +60,7 @@ def project_page_data(request, project_guid):
     project_json = _get_json_for_project(project, request.user)
     project_json['collaborators'] = _get_json_for_collaborator_list(project)
     project_json['locusLists'] = _get_json_for_locus_lists(project)
-    project_json['variantTagTypes'] = _get_json_for_variant_tag_types(project)
+    project_json.update(_get_json_for_variant_tag_types(project))
     #project_json['referencePopulations'] = _get_json_for_reference_populations(project)
 
     # gene search will be deprecated once the new database is online.
@@ -292,10 +294,11 @@ def _get_json_for_locus_lists(project):
 
 
 def _get_json_for_variant_tag_types(project):
-    result = []
-
-    for variant_tag_type in VariantTagType.objects.filter(project=project):
-        result.append({
+    project_variant_tags = []
+    tag_counts_by_type_and_family = VariantTag.objects.filter(saved_variant__project=project).values('saved_variant__family__guid', 'variant_tag_type__name').annotate(count=Count('*'))
+    for variant_tag_type in VariantTagType.objects.filter(Q(project=project) | Q(project__isnull=True)):
+        current_tag_type_counts = [counts for counts in tag_counts_by_type_and_family if counts['variant_tag_type__name'] == variant_tag_type.name]
+        project_variant_tags.append({
             'variantTagTypeGuid': variant_tag_type.guid,
             'name': variant_tag_type.name,
             'category': variant_tag_type.category,
@@ -303,10 +306,24 @@ def _get_json_for_variant_tag_types(project):
             'color': variant_tag_type.color,
             'order': variant_tag_type.order,
             'is_built_in': variant_tag_type.is_built_in,
-            'numTags': VariantTag.objects.filter(variant_tag_type=variant_tag_type).count(),
+            'numTags': sum(count['count'] for count in current_tag_type_counts),
+            'numTagsPerFamily': {count['saved_variant__family__guid']: count['count'] for count in current_tag_type_counts},
         })
 
-    return sorted(result, key=lambda variant_tag_type: variant_tag_type['order'])
+    project_functional_tags = []
+    for category, tags in VariantFunctionalData.FUNCTIONAL_DATA_CHOICES:
+        project_functional_tags += [{
+            'category': category,
+            'name': name,
+            'metadataTitle': json.loads(tag_json).get('metadata_title'),
+            'color': json.loads(tag_json)['color'],
+            'description': json.loads(tag_json).get('description'),
+        } for name, tag_json in tags]
+
+    return {
+        'variantTagTypes': sorted(project_variant_tags, key=lambda variant_tag_type: variant_tag_type['order']),
+        'variantFunctionalTagTypes': project_functional_tags,
+    }
 
 
 """

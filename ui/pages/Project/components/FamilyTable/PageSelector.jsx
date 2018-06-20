@@ -5,12 +5,12 @@ import { connect } from 'react-redux'
 
 import {
   setCurrentPage,
-  getProjectTablePage,
 } from '../../reducers'
 
 import {
+  getProjectTablePage,
   getTotalPageCount,
-} from '../../utils/selectors'
+} from '../../selectors'
 
 
 const PageSelector = ({ activePage, totalPages, setPage }) =>

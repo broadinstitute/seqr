@@ -1,13 +1,65 @@
-import React from 'react'
+/* eslint-disable react/no-multi-comp */
+
+import React, { createElement } from 'react'
 import PropTypes from 'prop-types'
+import styled from 'styled-components'
 import { Form } from 'semantic-ui-react'
 
-export class Multiselect extends React.Component {
+class BaseSemanticInput extends React.Component {
+
+  static propTypes = {
+    onChange: PropTypes.func,
+    inputType: PropTypes.string.isRequired,
+  }
+
+  handleChange = (e, data) => {
+    this.props.onChange(data.value || data)
+  }
+
+  render() {
+    const { inputType, ...props } = this.props
+    return createElement(Form[inputType], { ...props, onChange: this.handleChange, onBlur: null })
+  }
+}
+
+const labelStyle = (color) => { return color ? { color: 'white', backgroundColor: color } : {} }
+
+const styledOption = (option) => {
+  return {
+    value: option.value,
+    key: option.text || option.value,
+    text: option.text || option.name || option.value,
+    label: option.color ? { empty: true, circular: true, style: labelStyle(option.color) } : null,
+    color: option.color,
+  }
+}
+
+export const Dropdown = props =>
+  <BaseSemanticInput
+    {...props}
+    inputType="Dropdown"
+    options={props.options.map(styledOption)}
+    noResultsMessage={null}
+    tabIndex="0"
+  />
+
+
+Dropdown.propTypes = {
+  options: PropTypes.array,
+}
+
+export const Select = props =>
+  <Dropdown selection fluid {...props} />
+
+
+Select.propTypes = {
+  options: PropTypes.array,
+}
+
+export class Multiselect extends React.PureComponent {
   static propTypes = {
     color: PropTypes.string,
     options: PropTypes.array,
-    onBlur: PropTypes.func,
-    onChange: PropTypes.func,
   }
 
   state = {
@@ -15,34 +67,99 @@ export class Multiselect extends React.Component {
   }
 
   renderLabel = (data) => {
-    return { color: this.props.color, content: data.text || data.value }
+    return { color: this.props.color, content: data.text || data.value, style: labelStyle(data.color) }
   }
 
-  handleChange = (e, data) => {
-    this.props.onChange(data.value)
-  }
-
-  handleAddition = (e, { value }) => {
+  handleAddition = (e, option) => {
     this.setState({
-      options: [{ text: value, value }, ...this.state.options],
+      options: [option, ...this.state.options],
     })
   }
 
   render() {
-    return <Form.Select
+    return <Select
       {...this.props}
       options={this.state.options}
       renderLabel={this.renderLabel}
-      onChange={this.handleChange}
-      onBlur={null}
       onAddItem={this.handleAddition}
-      allowAdditions
-      fluid
       multiple
       search
-      selection
-      noResultsMessage={null}
-      tabIndex="0"
     />
   }
 }
+
+const InlineFormGroup = styled(Form.Group).attrs({ inline: true })`
+  flex-wrap: wrap;
+`
+
+export const StringValueCheckboxGroup = (props) => {
+  const { value = '', options, onChange, ...baseProps } = props
+  return (
+    <InlineFormGroup>
+      {options.map(option =>
+        <BaseSemanticInput
+          {...baseProps}
+          key={option.value}
+          inputType="Checkbox"
+          defaultChecked={value && value.includes(option.value)}
+          label={option.name}
+          onChange={({ checked }) => {
+            let newValue
+            if (checked) {
+              newValue = value + option.value
+            } else {
+              newValue = value.replace(option.value, '')
+            }
+            onChange(newValue)
+          }}
+        />,
+      )}
+    </InlineFormGroup>
+  )
+}
+
+StringValueCheckboxGroup.propTypes = {
+  value: PropTypes.any,
+  options: PropTypes.array,
+  onChange: PropTypes.func,
+}
+
+export const BooleanCheckbox = (props) => {
+  const { value, onChange, ...baseProps } = props
+  return <BaseSemanticInput
+    {...baseProps}
+    inputType="Checkbox"
+    checked={Boolean(value)}
+    onChange={data => onChange(data.checked)}
+  />
+}
+
+BooleanCheckbox.propTypes = {
+  value: PropTypes.any,
+  onChange: PropTypes.func,
+}
+
+export const InlineToggle = styled(BooleanCheckbox).attrs({ toggle: true, inline: true })`
+  padding-right: 10px;
+  
+  .ui.toggle.checkbox label {
+    font-size: small;
+    padding: 0 4.5em 0 0;
+  }
+  
+  .ui.toggle.checkbox, .ui.toggle.checkbox input, .ui.toggle.checkbox label, .ui.toggle.checkbox label:before, .ui.toggle.checkbox label:after {
+    left: auto !important;
+    right: 0  !important;
+    height: 1.2em !important;
+    min-height: 1.2em !important;
+  }
+  
+  .ui.toggle.checkbox input:checked ~ label:before {
+    background-color: ${props => `${props.color || '#2185D0'} !important`};
+    right: 0.1em !important;
+  }
+  
+  .ui.toggle.checkbox input:not(:checked) ~ label:after {
+    right: 2em !important;
+  }
+`

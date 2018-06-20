@@ -5,7 +5,7 @@ import styled from 'styled-components'
 
 import { Table, Popup } from 'semantic-ui-react'
 import { connect } from 'react-redux'
-import { getProject } from 'redux/rootReducer'
+import { getProject } from '../selectors'
 
 const NameCell = styled(Table.Cell)`
   padding: 0;

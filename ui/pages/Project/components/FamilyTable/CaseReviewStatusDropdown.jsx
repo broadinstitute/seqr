@@ -6,13 +6,14 @@ import styled from 'styled-components'
 import { connect } from 'react-redux'
 
 import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
-import EditTextButton from 'shared/components/buttons/EditTextButton'
+import { Select } from 'shared/components/form/Inputs'
+import TextFieldView from 'shared/components/panel/view-fields/TextFieldView'
 import { updateIndividual } from 'redux/rootReducer'
 
 import {
   CASE_REVIEW_STATUS_MORE_INFO_NEEDED,
   CASE_REVIEW_STATUS_OPTIONS,
-} from 'shared/constants/caseReviewConstants'
+} from '../../constants'
 
 const StatusContainer = styled.span`
   display: inline-block;
@@ -22,49 +23,39 @@ const StatusContainer = styled.span`
 
 const STATUS_FORM_FIELDS = [{
   name: 'caseReviewStatus',
-  component: 'select',
+  component: Select,
   tabIndex: '1',
-  style: { margin: '3px !important', maxWidth: '170px', display: 'inline-block', padding: '0px !important', marginRight: '10px' },
-  children: CASE_REVIEW_STATUS_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.name}</option>),
+  options: CASE_REVIEW_STATUS_OPTIONS,
 }]
 
-const CaseReviewStatusForm = (props) => {
-  const initialValues = { caseReviewStatus: props.individual.caseReviewStatus }
-  return (
+const CaseReviewStatusDropdown = props =>
+  <StatusContainer>
     <ReduxFormWrapper
       onSubmit={props.updateIndividual}
       form={`editCaseReviewStatus-${props.individual.individualGuid}`}
-      initialValues={initialValues}
+      initialValues={props.individual}
       closeOnSuccess={false}
       submitOnChange
       fields={STATUS_FORM_FIELDS}
     />
-  )
-}
-
-CaseReviewStatusForm.propTypes = {
-  individual: PropTypes.object.isRequired,
-  updateIndividual: PropTypes.func.isRequired,
-}
-
-const CaseReviewStatusDropdown = props =>
-  <StatusContainer>
-    <CaseReviewStatusForm {...props} />
     {/* edit case review discussion for individual: */}
-    <div>
+    <div style={{ padding: '5px 12px' }}>
       {
         props.individual.caseReviewStatus === CASE_REVIEW_STATUS_MORE_INFO_NEEDED &&
-        <EditTextButton
-          label="Edit Questions"
-          initialText={props.individual.caseReviewDiscussion}
-          fieldId="caseReviewDiscussion"
+        <TextFieldView
+          hideValue
+          isEditable
+          editLabel="Edit Questions"
+          initialValues={props.individual}
+          field="caseReviewDiscussion"
+          idField="individualGuid"
           modalTitle={`${props.individual.individualId}: Case Review Discussion`}
-          modalId={`editCaseReviewDiscussion -${props.individual.individualGuid}`}
           onSubmit={props.updateIndividual}
         />
       }
     </div>
   </StatusContainer>
+
 
 export { CaseReviewStatusDropdown as CaseReviewStatusDropdownComponent }
 
@@ -75,8 +66,8 @@ CaseReviewStatusDropdown.propTypes = {
 
 const mapDispatchToProps = (dispatch, ownProps) => {
   return {
-    updateIndividual: (values) => {
-      dispatch(updateIndividual(ownProps.individual.individualGuid, values))
+    updateIndividual: (updates) => {
+      dispatch(updateIndividual({ individualGuid: ownProps.individual.individualGuid, ...updates }))
     },
   }
 }

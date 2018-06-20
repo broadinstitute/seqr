@@ -1299,6 +1299,8 @@ class VariantFunctionalData(models.Model):
 
     search_url = models.TextField(null=True)
 
+    seqr_variant_functional_data = models.ForeignKey('seqr.VariantFunctionalData', null=True, blank=True, on_delete=models.SET_NULL)  # simplifies migration to new seqr.models sche
+
     def __str__(self):
         chrom, pos = genomeloc.get_chr_pos(self.xpos)
         return "%s-%s-%s-%s:%s" % (chrom, pos, self.ref, self.alt, self.functional_data_tag)

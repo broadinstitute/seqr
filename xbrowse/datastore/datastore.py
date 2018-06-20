@@ -52,7 +52,7 @@ class Datastore(object):
         """
         raise NotImplementedError
 
-    def get_single_variant(self, project_id, family_id, xpos, ref, alt):
+    def get_single_variant(self, project_id, family_id, xpos, ref, alt, user=None):
         """
         Get a single variant in a family
         Variant should be identifiable by xpos, ref, and alt
@@ -60,14 +60,14 @@ class Datastore(object):
         """
         raise NotImplementedError
 
-    def get_multiple_variants(self, project_id, family_id, xpos_ref_alt_tuples):
+    def get_multiple_variants(self, project_id, family_id, xpos_ref_alt_tuples, user=None):
         """
         Get one or more specific variants in a family
         Variant should be identifiable by xpos, ref, and alt
         Note that ref and alt are just strings from the VCF (for now)
         """
         for xpos, ref, alt in xpos_ref_alt_tuples:
-            yield self.get_single_variant(project_id, family_id, xpos, ref, alt)
+            yield self.get_single_variant(project_id, family_id, xpos, ref, alt, user=None)
 
     def get_variants_cohort(self, project_id, cohort_id, variant_filter=None):
         """

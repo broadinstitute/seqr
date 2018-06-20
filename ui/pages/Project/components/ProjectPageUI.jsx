@@ -2,21 +2,24 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Grid, Loader } from 'semantic-ui-react'
-import DocumentTitle from 'react-document-title'
+import { Link } from 'react-router-dom'
 
 import SectionHeader from 'shared/components/SectionHeader'
-import { VerticalSpacer } from 'shared/components/Spacers'
-import { getProject, getProjectDetailsIsLoading } from 'redux/rootReducer'
-import { getShowDetails } from '../reducers'
-import { getAnalysisStatusCounts } from '../utils/selectors'
+import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
+import VariantTagTypeBar from 'shared/components/graph/VariantTagTypeBar'
+import {
+  FAMILY_FIELD_DESCRIPTION,
+  FAMILY_FIELD_ANALYSIS_STATUS,
+  FAMILY_FIELD_ANALYSED_BY,
+  FAMILY_FIELD_ANALYSIS_NOTES,
+  FAMILY_FIELD_ANALYSIS_SUMMARY,
+} from 'shared/utils/constants'
+import { getProject, getProjectDetailsIsLoading, getShowDetails, getAnalysisStatusCounts } from '../selectors'
 import ProjectOverview from './ProjectOverview'
-import VariantTags from './VariantTags'
 import ProjectCollaborators from './ProjectCollaborators'
 import GeneLists from './GeneLists'
 import FamilyTable from './FamilyTable/FamilyTable'
-import {
-  DESCRIPTION, ANALYSIS_STATUS, ANALYSED_BY, ANALYSIS_NOTES, ANALYSIS_SUMMARY,
-} from './FamilyTable/FamilyRow'
+import VariantTags from './VariantTags'
 
 
 /**
@@ -56,8 +59,10 @@ const ProjectSectionComponent = ({ loading, label, children, editPath, linkPath,
       </a>
     ) : null,
     linkText ? (
-      <div key="link" style={{ paddingTop: '15px', paddingLeft: '35px' }}>
-        <a href={`/project/${project.deprecatedProjectId}/${linkPath}`}>{linkText}</a>
+      <div key="link">
+        <VerticalSpacer height={15} />
+        <HorizontalSpacer width={35} />
+        <Link to={`/project/${project.projectGuid}/${linkPath}`}>{linkText}</Link>
       </div>
     ) : null,
   ])
@@ -71,15 +76,15 @@ const mapSectionStateToProps = state => ({
 const ProjectSection = connect(mapSectionStateToProps)(ProjectSectionComponent)
 
 const DETAIL_FIELDS = [
-  { id: DESCRIPTION, canEdit: true },
-  { id: ANALYSIS_STATUS, canEdit: true },
-  { id: ANALYSED_BY, canEdit: true },
-  { id: ANALYSIS_NOTES, canEdit: true },
-  { id: ANALYSIS_SUMMARY, canEdit: true },
+  { id: FAMILY_FIELD_DESCRIPTION, canEdit: true },
+  { id: FAMILY_FIELD_ANALYSIS_STATUS, canEdit: true },
+  { id: FAMILY_FIELD_ANALYSED_BY, canEdit: true },
+  { id: FAMILY_FIELD_ANALYSIS_NOTES, canEdit: true },
+  { id: FAMILY_FIELD_ANALYSIS_SUMMARY, canEdit: true },
 ]
 
 const NO_DETAIL_FIELDS = [
-  { id: ANALYSIS_STATUS, canEdit: true },
+  { id: FAMILY_FIELD_ANALYSIS_STATUS, canEdit: true },
 ]
 
 const ProjectPageUI = (props) => {
@@ -89,42 +94,40 @@ const ProjectPageUI = (props) => {
     { name: 'Individuals', url: `/api/project/${props.project.projectGuid}/export_project_individuals?include_phenotypes=1` },
   ]
   return (
-    <div>
-      <DocumentTitle title={`seqr: ${props.project.name}`} />
-      <Grid stackable>
-        <Grid.Row>
-          <Grid.Column width={4}>
-            <ProjectSection label="Overview">
-              <ProjectOverview />
-            </ProjectSection>
-          </Grid.Column>
-        </Grid.Row>
-        <Grid.Row>
-          <Grid.Column width={12}>
-            <ProjectSection label="Variant Tags" linkPath="saved-variants" linkText="View All">
-              <VariantTags />
-            </ProjectSection>
-          </Grid.Column>
-          <Grid.Column width={4}>
-            <ProjectSection label="Collaborators" editPath="collaborators">
-              <ProjectCollaborators />
-            </ProjectSection>
-            <VerticalSpacer height={30} />
-            <ProjectSection label="Gene Lists" editPath="project_gene_list_settings">
-              <GeneLists />
-            </ProjectSection>
-          </Grid.Column>
-        </Grid.Row>
-      </Grid>
-
-      <SectionHeader>Families</SectionHeader>
-      <FamilyTable
-        headerStatus={headerStatus}
-        exportUrls={exportUrls}
-        showSearchLinks
-        fields={props.showDetails ? DETAIL_FIELDS : NO_DETAIL_FIELDS}
-      />
-    </div>
+    <Grid stackable>
+      <Grid.Row>
+        <Grid.Column width={12}>
+          <ProjectSection label="Overview">
+            <ProjectOverview />
+          </ProjectSection>
+          <ProjectSection label="Variant Tags" linkPath="saved_variants" linkText="View All">
+            <VariantTagTypeBar project={props.project} height={30} showAllPopupCategories />
+            <VerticalSpacer height={10} />
+            <VariantTags project={props.project} />
+          </ProjectSection>
+        </Grid.Column>
+        <Grid.Column width={4}>
+          <ProjectSection label="Collaborators" editPath="collaborators">
+            <ProjectCollaborators />
+          </ProjectSection>
+          <VerticalSpacer height={30} />
+          <ProjectSection label="Gene Lists" editPath="project_gene_list_settings">
+            <GeneLists />
+          </ProjectSection>
+        </Grid.Column>
+      </Grid.Row>
+      <Grid.Row>
+        <Grid.Column width={16}>
+          <SectionHeader>Families</SectionHeader>
+          <FamilyTable
+            headerStatus={headerStatus}
+            exportUrls={exportUrls}
+            showSearchLinks
+            fields={props.showDetails ? DETAIL_FIELDS : NO_DETAIL_FIELDS}
+          />
+        </Grid.Column>
+      </Grid.Row>
+    </Grid>
   )
 }
 

@@ -9,7 +9,7 @@ import { loadState, saveState } from 'shared/utils/localStorage'
 const env = process.env.NODE_ENV || 'development'
 console.log('ENV: ', env)
 
-const PERSISTING_STATE = ['projectsTableState', 'familyTableState']
+const PERSISTING_STATE = ['projectsTableState', 'familyTableState', 'savedVariantTableState']
 
 /**
  * Initialize the Redux store

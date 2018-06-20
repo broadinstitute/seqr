@@ -9,25 +9,19 @@ import orderBy from 'lodash/orderBy'
 import PedigreeIcon from 'shared/components/icons/PedigreeIcon'
 import TextFieldView from 'shared/components/panel/view-fields/TextFieldView'
 import PhenotipsDataPanel from 'shared/components/panel/view-phenotips-info/PhenotipsDataPanel'
+import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
+import { updateIndividual } from 'redux/rootReducer'
+import { getUser } from 'redux/selectors'
 
 import {
   CASE_REVIEW_STATUS_MORE_INFO_NEEDED,
   CASE_REVIEW_STATUS_NOT_IN_REVIEW,
   CASE_REVIEW_STATUS_OPT_LOOKUP,
-} from 'shared/constants/caseReviewConstants'
-
-import {
   ANALYSIS_TYPE_VARIANT_CALLS,
-} from 'shared/constants/datasetAndSampleConstants'
-
-import { getUser, getProject, updateIndividual } from 'redux/rootReducer'
-import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
-import { getProjectSamples, getProjectDatasets } from '../../utils/selectors'
+} from '../../constants'
+import { getShowDetails, getProject, getProjectSamples, getProjectDatasets } from '../../selectors'
 import CaseReviewStatusDropdown from './CaseReviewStatusDropdown'
 
-import {
-  getShowDetails,
-} from '../../reducers'
 
 const Detail = styled.span`
   padding: 5px 0 5px 5px;
@@ -147,13 +141,12 @@ class IndividualRow extends React.Component
                       individual.caseReviewStatus === CASE_REVIEW_STATUS_MORE_INFO_NEEDED
                       || (editCaseReview && individual.caseReviewDiscussion) || false
                     }
-                    isEditable={user.is_staff || project.canEdit}
                     fieldName={editCaseReview ? 'Case Review Discussion' : 'Discussion'}
-                    fieldId="caseReviewDiscussion"
-                    initialText={individual.caseReviewDiscussion}
-                    textEditorId={`editCaseReviewDiscussion-${individual.individualGuid}`}
-                    textEditorTitle={`Case Review Discussion for Individual ${individual.individualId}`}
-                    textEditorSubmit={this.props.updateIndividual}
+                    field="caseReviewDiscussion"
+                    idField="individualGuid"
+                    initialValues={individual}
+                    modalTitle={`Case Review Discussion for Individual ${individual.individualId}`}
+                    onSubmit={this.props.updateIndividual}
                   />
                   <VerticalSpacer height={10} />
                 </div>
@@ -162,21 +155,21 @@ class IndividualRow extends React.Component
             {
               showDetails ?
                 <div>
-                  <TextFieldView
-                    isEditable={(user.is_staff || project.canEdit) && !editCaseReview}
-                    fieldName="Individual Notes"
-                    fieldId="notes"
-                    initialText={individual.notes}
-                    textEditorId={`editNotes-${individual.individualGuid}`}
-                    textEditorTitle={`Notes for Individual ${individual.individualId}`}
-                    textEditorSubmit={this.props.updateIndividual}
-                  />
-                  <VerticalSpacer height={10} />
+                  {
+                    <TextFieldView
+                      isEditable={(user.is_staff || project.canEdit) && !editCaseReview}
+                      fieldName="Individual Notes"
+                      field="notes"
+                      idField="individualGuid"
+                      initialValues={individual}
+                      modalTitle={`Notes for Individual ${individual.individualId}`}
+                      onSubmit={this.props.updateIndividual}
+                    />
+                  }
                 </div>
                 : null
             }
             <PhenotipsDataPanel
-              project={project}
               individual={individual}
               showDetails={showDetails}
               showEditPhenotipsLink={project.canEdit && !editCaseReview}
@@ -191,7 +184,7 @@ class IndividualRow extends React.Component
                     showDetails && individual.caseReviewStatusLastModifiedDate ? (
                       <Detail>
                         <HorizontalSpacer width={5} />
-                        CHANGED {new Timeago().format(individual.caseReviewStatusLastModifiedDate).toUpperCase()}
+                        CHANGED ON {new Date(individual.caseReviewStatusLastModifiedDate).toLocaleDateString()}
                         { individual.caseReviewStatusLastModifiedBy && ` BY ${individual.caseReviewStatusLastModifiedBy}` }
                       </Detail>
                     ) : null
@@ -216,12 +209,8 @@ const mapStateToProps = state => ({
   datasets: getProjectDatasets(state),
 })
 
-const mapDispatchToProps = (dispatch, ownProps) => {
-  return {
-    updateIndividual: (values) => {
-      dispatch(updateIndividual(ownProps.individual.individualGuid, values))
-    },
-  }
+const mapDispatchToProps = {
+  updateIndividual,
 }
 
 export default connect(mapStateToProps, mapDispatchToProps)(IndividualRow)

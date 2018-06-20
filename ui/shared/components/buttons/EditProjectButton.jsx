@@ -1,9 +1,8 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-
 import { connect } from 'react-redux'
 
-import { getProject } from 'redux/rootReducer'
+import { getProject } from 'pages/Project/selectors'
 import EditProjectModal from '../modal/EditProjectModal'
 
 
@@ -11,7 +10,7 @@ const EditProjectButton = (props) => {
   if (props.project && props.project.canEdit) {
     return (
       <EditProjectModal
-        trigger={<a tabIndex="0" role="button" style={{ cursor: 'pointer' }}>Edit</a>}
+        trigger={<a tabIndex="0" role="button" style={{ cursor: 'pointer' }}>Edit Project</a>}
         project={props.project}
       />
     )

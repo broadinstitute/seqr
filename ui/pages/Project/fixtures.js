@@ -354,6 +354,7 @@ export const STATE_WITH_2_FAMILIES = {
     I021476_na19678_1: {
       projectGuid: 'R0237_1000_genomes_demo',
       familyGuid: 'F011652_1',
+      individualId: 'NA19678',
       affected: 'N',
       caseReviewStatus: 'A',
       caseReviewStatusLastModifiedBy: null,
@@ -364,6 +365,7 @@ export const STATE_WITH_2_FAMILIES = {
     I021475_na19675_1: {
       projectGuid: 'R0237_1000_genomes_demo',
       familyGuid: 'F011652_1',
+      individualId: 'NA19675',
       affected: 'A',
       caseReviewStatus: 'I',
       caseReviewStatusLastModifiedBy: null,
@@ -374,6 +376,7 @@ export const STATE_WITH_2_FAMILIES = {
     I021474_na19679_1: {
       projectGuid: 'R0237_1000_genomes_demo',
       familyGuid: 'F011652_1',
+      individualId: 'NA19679',
       affected: 'N',
       caseReviewStatus: 'I',
       caseReviewStatusLastModifiedBy: null,
@@ -449,4 +452,313 @@ export const STATE_WITH_2_FAMILIES = {
     last_name: '',
     username: 'test',
   },
+  savedVariantTableState: { hideExcluded: true, recordsPerPage: 1 },
+  projectSavedVariantsLoading: {},
+  projectSavedVariants: {
+    SV0000004_116042722_r0390_1000: {
+      alt: "T",
+      annotation: {
+        cadd_phred: "27.2",
+        freqs: { AF: null, exac: 0.0006726888333653661, g1k: 0, gnomad_exomes: 0.00006505916317651364 },
+        popCounts: { AC: null, AN: null, exac_hemi: null, exac_hom: null, gnomadExomesAC: null, gnomadGenomesAC: null} ,
+        vepAnnotations: [
+          {
+            aminoAcids: "P/X",
+            canonical: "YES",
+            cdnaPosition: "897",
+            cdsPosition: "859",
+            codons: "Ccc/cc",
+            consequence: "frameshift_variant",
+            hgvsc: "ENST00000456743.1:c.862delC",
+            hgvsp: "ENSP00000389625.1:p.Leu288SerfsTer10",
+            isChosenTranscript: true,
+            transcriptId: "ENST00000456743",
+          }
+        ],
+        vepConsequence: "frameshift_variant",
+        vepGroup: "frameshift",
+        worstVepAnnotation: {
+          aminoAcids: "P/X", hgvsc: "ENST00000456743.1:c.862delC", hgvsp: "ENSP00000389625.1:p.Leu288SerfsTer10",
+          lof: "HC", lofFilter: "", lofFlags: "SINGLE_EXON", proteinPosition: "287", symbol: "OR2M3"
+        }
+      },
+      chrom: "22",
+      clinvar: { clinsig: "", variantId: null },
+      familyGuid: "F011652_1",
+      functionalData: [],
+      genes: [
+        {
+          constraints: {
+            lof: { constraint: 0.0671997116609769, rank: 8248, totalGenes: 18225 },
+            missense: { constraint: -0.7885573790993861, rank: 15052, totalGenes: 18225 },
+          },
+          diseaseDbPheotypes: [],
+          diseaseGeneLists: [],
+          geneId: "ENSG00000228198",
+          symbol: "OR2M3",
+        }
+      ],
+      genomeVersion: "37",
+      genotypes: {
+        NA19675: {
+          ab: 1,
+          ad: "0,74",
+          alleles: ["T", "T"],
+          cnvs: {LRR_median: null, LRR_sd: null, array: null, caller: null, cn: null, freq: null, size: null},
+          dp: "74",
+          filter: "pass",
+          gq: 99,
+          numAlt: 2,
+          pl: "358,132,0",
+        },
+        NA19678: {
+          ab: 0,
+          ad: "77,0",
+          alleles: ["TC", "TC"],
+          cnvs: {LRR_median: null, LRR_sd: null, array: null, caller: null, cn: null, freq: null, size: null},
+          dp: "77",
+          filter: "pass",
+          gq: 99,
+          numAlt: 0,
+          pl: "0,232,3036",
+        },
+        NA19679: {
+          ab: 0,
+          ad: "71,0",
+          alleles: ["TC", "TC"],
+          cnvs: {LRR_median: null, LRR_sd: null, array: null, caller: null, cn: null, freq: null, size: null},
+          dp: "71",
+          filter: "pass",
+          gq: 99,
+          numAlt: 0,
+          pl: "0,213,1918",
+        },
+      },
+      hgmd: {accession: null, class: null},
+      liftedOverChrom: "",
+      liftedOverGenomeVersion: "38",
+      liftedOverPos: "",
+      notes: [{
+        dateSaved: "2018-05-29T17:25:23.770Z", note: "test note edited", noteGuid: "VN0727076_116042722_r0390_1000",
+        submitToClinvar: true, user: "hsnow@broadinstitute.org"
+      }],
+      origAltAlleles: ["T"],
+      pos: 45919065,
+      ref: "TTTC",
+      tags: [
+        {
+          category: "Collaboration", color: "#668FE3", dateSaved: "2018-05-25T21:00:51.260Z", name: "Review",
+          searchParameters: null, tagGuid: "VT1726942_1248367227_r0390_100", user: "hsnow@broadinstitute.org",
+        },
+      ],
+      variantId: "SV0000004_116042722_r0390_1000",
+      xpos: 22045919065,
+    },
+    SV0000002_1248367227_r0390_100: {
+      alt: "T",
+      annotation: {
+        cadd_phred: "27.2",
+        freqs: { AF: null, exac: 0.0006726888333653661, g1k: 0, gnomad_exomes: 0.00006505916317651364 },
+        popCounts: { AC: null, AN: null, exac_hemi: null, exac_hom: null, gnomadExomesAC: null, gnomadGenomesAC: null} ,
+        vepAnnotations: [
+          {
+            aminoAcids: "P/X",
+            canonical: "YES",
+            cdnaPosition: "897",
+            cdsPosition: "859",
+            codons: "Ccc/cc",
+            consequence: "frameshift_variant",
+            hgvsc: "ENST00000456743.1:c.862delC",
+            hgvsp: "ENSP00000389625.1:p.Leu288SerfsTer10",
+            isChosenTranscript: true,
+            transcriptId: "ENST00000456743",
+          }
+        ],
+        vepConsequence: "frameshift_variant",
+        vepGroup: "frameshift",
+        worstVepAnnotation: {
+          aminoAcids: "P/X", hgvsc: "ENST00000456743.1:c.862delC", hgvsp: "ENSP00000389625.1:p.Leu288SerfsTer10",
+          lof: "HC", lofFilter: "", lofFlags: "SINGLE_EXON", proteinPosition: "287", symbol: "OR2M3"
+        }
+      },
+      chrom: "1",
+      clinvar: { clinsig: "", variantId: null },
+      familyGuid: "F011652_1",
+      functionalData: [
+        { color: "#311B92", dateSaved: "2018-05-24T15:30:04.483Z", metadata: "An updated note",
+          metadataTitle: null, name: "Biochemical Function", user: "hsnow@broadinstitute.org" },
+        { color: "#880E4F", dateSaved: "2018-05-24T15:34:01.365Z", metadata: "2", metadataTitle: "LOD Score",
+          name: "Genome-wide Linkage", user: "hsnow@broadinstitute.org" },
+      ],
+      genes: [
+        {
+          constraints: {
+            lof: { constraint: 0.0671997116609769, rank: 8248, totalGenes: 18225 },
+            missense: { constraint: -0.7885573790993861, rank: 15052, totalGenes: 18225 },
+          },
+          diseaseDbPheotypes: [],
+          diseaseGeneLists: [],
+          geneId: "ENSG00000228198",
+          symbol: "OR2M3",
+        }
+      ],
+      genomeVersion: "37",
+      genotypes: {
+        NA19675: {
+          ab: 1,
+          ad: "0,74",
+          alleles: ["T", "T"],
+          cnvs: {LRR_median: null, LRR_sd: null, array: null, caller: null, cn: null, freq: null, size: null},
+          dp: "74",
+          filter: "pass",
+          gq: 99,
+          numAlt: 2,
+          pl: "358,132,0",
+        },
+        NA19678: {
+          ab: 0,
+          ad: "77,0",
+          alleles: ["TC", "TC"],
+          cnvs: {LRR_median: null, LRR_sd: null, array: null, caller: null, cn: null, freq: null, size: null},
+          dp: "77",
+          filter: "pass",
+          gq: 99,
+          numAlt: 0,
+          pl: "0,232,3036",
+        },
+        NA19679: {
+          ab: 0,
+          ad: "71,0",
+          alleles: ["TC", "TC"],
+          cnvs: {LRR_median: null, LRR_sd: null, array: null, caller: null, cn: null, freq: null, size: null},
+          dp: "71",
+          filter: "pass",
+          gq: 99,
+          numAlt: 0,
+          pl: "0,213,1918",
+        },
+      },
+      hgmd: {accession: null, class: null},
+      liftedOverChrom: "",
+      liftedOverGenomeVersion: "38",
+      liftedOverPos: "",
+      notes: [],
+      origAltAlleles: ["T"],
+      pos: 248367227,
+      ref: "TC",
+      tags: [
+        {
+          category: "Collaboration", color: "#668FE3", dateSaved: "2018-05-25T21:00:51.260Z", name: "Review",
+          searchParameters: null, tagGuid: "VT1726942_1248367227_r0390_100", user: "hsnow@broadinstitute.org",
+        },
+        {
+          category: "CMG Discovery Tags",
+          color: "#44AA60",
+          dateSaved: "2018-03-23T19:59:12.262Z",
+          name: "Tier 1 - Phenotype not delineated",
+          searchParameters: "https://seqr.broadinstitute.org/project/1kg/family/1/mendelian-variant-search#search/c2edbeae/results",
+          tagGuid: "VT1708635_1248367227_r0390_100",
+          user: "hsnow@broadinstitute.org",
+        },
+      ],
+      variantId: "SV0000002_1248367227_r0390_100",
+      xpos: 1248367227,
+    },
+    SV0000003_2246859832_r0390_100: {
+      alt: "T",
+      annotation: {
+        cadd_phred: "27.2",
+        freqs: { AF: null, exac: 0.0006726888333653661, g1k: 0, gnomad_exomes: 0.00006505916317651364 },
+        popCounts: { AC: null, AN: null, exac_hemi: null, exac_hom: null, gnomadExomesAC: null, gnomadGenomesAC: null} ,
+        vepAnnotations: [
+          {
+            aminoAcids: "P/X",
+            canonical: "YES",
+            cdnaPosition: "897",
+            cdsPosition: "859",
+            codons: "Ccc/cc",
+            consequence: "frameshift_variant",
+            hgvsc: "ENST00000456743.1:c.862delC",
+            hgvsp: "ENSP00000389625.1:p.Leu288SerfsTer10",
+            isChosenTranscript: true,
+            transcriptId: "ENST00000456743",
+          }
+        ],
+        vepConsequence: "frameshift_variant",
+        vepGroup: "frameshift",
+        worstVepAnnotation: {
+          aminoAcids: "P/X", hgvsc: "ENST00000456743.1:c.862delC", hgvsp: "ENSP00000389625.1:p.Leu288SerfsTer10",
+          lof: "HC", lofFilter: "", lofFlags: "SINGLE_EXON", proteinPosition: "287", symbol: "OR2M3"
+        }
+      },
+      chrom: "22",
+      clinvar: { clinsig: "", variantId: null },
+      familyGuid: "F011652_2",
+      functionalData: [],
+      genes: [
+        {
+          constraints: {
+            lof: { constraint: 0.0671997116609769, rank: 8248, totalGenes: 18225 },
+            missense: { constraint: -0.7885573790993861, rank: 15052, totalGenes: 18225 },
+          },
+          diseaseDbPheotypes: [],
+          diseaseGeneLists: [],
+          geneId: "ENSG00000228198",
+          symbol: "OR2M3",
+        }
+      ],
+      genomeVersion: "37",
+      genotypes: {
+        NA19675: {
+          ab: 1,
+          ad: "0,74",
+          alleles: ["T", "T"],
+          cnvs: {LRR_median: null, LRR_sd: null, array: null, caller: null, cn: null, freq: null, size: null},
+          dp: "74",
+          filter: "pass",
+          gq: 99,
+          numAlt: 2,
+          pl: "358,132,0",
+        },
+        NA19678: {
+          ab: 0,
+          ad: "77,0",
+          alleles: ["TC", "TC"],
+          cnvs: {LRR_median: null, LRR_sd: null, array: null, caller: null, cn: null, freq: null, size: null},
+          dp: "77",
+          filter: "pass",
+          gq: 99,
+          numAlt: 0,
+          pl: "0,232,3036",
+        },
+        NA19679: {
+          ab: 0,
+          ad: "71,0",
+          alleles: ["TC", "TC"],
+          cnvs: {LRR_median: null, LRR_sd: null, array: null, caller: null, cn: null, freq: null, size: null},
+          dp: "71",
+          filter: "pass",
+          gq: 99,
+          numAlt: 0,
+          pl: "0,213,1918",
+        },
+      },
+      hgmd: {accession: null, class: null},
+      liftedOverChrom: "",
+      liftedOverGenomeVersion: "38",
+      liftedOverPos: "",
+      notes: [],
+      origAltAlleles: ["T"],
+      pos: 248367227,
+      ref: "C",
+      tags: [
+        {
+          category: "Collaboration", color: "#668FE3", dateSaved: "2018-05-25T21:00:51.260Z", name: "Excluded",
+          searchParameters: null, tagGuid: "VT1726942_1248367227_r0390_100", user: "hsnow@broadinstitute.org",
+        }
+      ],
+      variantId: "SV0000003_2246859832_r0390_100",
+      xpos: 22046859832,
+    },
+  }
 }

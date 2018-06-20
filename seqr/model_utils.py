@@ -2,9 +2,12 @@ import logging
 import traceback
 
 from django.db.models.query_utils import Q
+from django.utils import timezone
 
 from seqr.views.utils.json_utils import _to_snake_case
-from xbrowse_server.base.models import Project as BaseProject, Family as BaseFamily, Individual as BaseIndividual, ProjectTag as BaseProjectTag, VariantTag as BaseVariantTag, VariantNote as BaseVariantNote
+from xbrowse_server.base.models import Project as BaseProject, Family as BaseFamily, Individual as BaseIndividual, \
+    ProjectTag as BaseProjectTag, VariantTag as BaseVariantTag, VariantNote as BaseVariantNote, \
+    VariantFunctionalData as BaseVariantFunctionalData
 from xbrowse_server.gene_lists.models import GeneList as BaseGeneList, GeneListItem as BaseGeneListItem
 
 SEQR_TO_XBROWSE_CLASS_MAPPING = {
@@ -13,6 +16,7 @@ SEQR_TO_XBROWSE_CLASS_MAPPING = {
     "Individual": BaseIndividual,
     "VariantTagType": BaseProjectTag,
     "VariantTag": BaseVariantTag,
+    "VariantFunctionalData": BaseVariantFunctionalData,
     "VariantNote": BaseVariantNote,
     "LocusList": BaseGeneList,
     "LocusListGene": BaseGeneListItem,
@@ -43,24 +47,39 @@ SEQR_TO_XBROWSE_FIELD_MAPPING = {
         "name": "tag",
         "description": "title",
     },
-    "VariantTag": {
-        "variant_tag_type": "project_tag",
-        "created_date": "date_saved",
-        "created_by": "user",
+    "SavedVariant": {
         "xpos_start": "xpos",
     },
+    "VariantTag": {
+        "variant_tag_type": "project_tag",
+        "created_by": "user",
+        "search_parameters": "search_url",
+    },
     "VariantNote": {
-        "project_tag": "variant_tag_type",
-        "date_saved": "created_date",
-        "user": "created_by",
-        "xpos": "xpos_start",
+        "created_by": "user",
+        "search_parameters": "search_url",
+    },
+    "VariantFunctionalData": {
+        "created_by": "user",
+        "search_parameters": "search_url",
     },
     "LocusList": {
         "created_by": "owner",
-        "created_date": "last_updated",
     },
     "LocusListGene": {
         "locus_list": "gene_list",
+    },
+}
+
+FLATTENED_MODEL_FIELDS = {
+    'VariantTag': {
+        'saved_variant': ['xpos_start', 'ref', 'alt', 'family']
+    },
+    'VariantFunctionalData': {
+        'saved_variant': ['xpos_start', 'ref', 'alt', 'family']
+    },
+    'VariantNote': {
+        'saved_variant': ['xpos_start', 'ref', 'alt', 'family', 'project']
     },
 }
 
@@ -102,17 +121,55 @@ def find_matching_xbrowse_model(seqr_model):
                  Q(family__project__project_id=seqr_model.family.project.deprecated_project_id) &
                  Q(family__family_id=seqr_model.family.family_id) &
                  Q(indiv_id=seqr_model.individual_id)))
-        elif seqr_class_name == "VariantTag":
-            raise ValueError("VariantTag sync not yet implemented")
         elif seqr_class_name == "VariantTagType":
             return BaseProjectTag.objects.get(
-                Q(seqr_variant_tag_type=seqr_model) |
-                (Q(seqr_variant_tag_type__isnull=True) &
-                 Q(project__project_id=seqr_model.project.deprecated_project_id) &
-                 Q(tag=seqr_model.name) &
-                 Q(category=seqr_model.category)))
+                Q(project__project_id=seqr_model.project.deprecated_project_id) &
+                (Q(seqr_variant_tag_type=seqr_model) |
+                 Q(seqr_variant_tag_type__isnull=True,
+                   tag=seqr_model.name,
+                   category=seqr_model.category,
+                   project__project_id=seqr_model.project.deprecated_project_id))
+                )
+        elif seqr_class_name == "VariantTag":
+            match_filter = Q(
+                seqr_variant_tag__isnull=True,
+                project_tag__project__project_id=seqr_model.saved_variant.project.deprecated_project_id,
+                project_tag__tag=seqr_model.variant_tag_type.name,
+                xpos=seqr_model.saved_variant.xpos_start,
+                ref=seqr_model.saved_variant.ref,
+                alt=seqr_model.saved_variant.alt
+            )
+            if seqr_model.saved_variant.family:
+                match_filter &= Q(
+                    family__family_id=seqr_model.saved_variant.family.family_id,
+                )
+            return BaseVariantTag.objects.get(Q(seqr_variant_tag=seqr_model) | match_filter)
+        elif seqr_class_name == "VariantFunctionalData":
+            match_filter = Q(
+                seqr_variant_functional_data__isnull=True,
+                functional_data_tag=seqr_model.functional_data_tag,
+                xpos=seqr_model.saved_variant.xpos_start,
+                ref=seqr_model.saved_variant.ref,
+                alt=seqr_model.saved_variant.alt
+            )
+            if seqr_model.saved_variant.family:
+                match_filter &= Q(
+                    family__family_id=seqr_model.saved_variant.family.family_id,
+                    family__project__project_id=seqr_model.saved_variant.project.deprecated_project_id,
+                )
+            return BaseVariantFunctionalData.objects.get(Q(seqr_variant_functional_data=seqr_model) | match_filter)
         elif seqr_class_name == "VariantNote":
-            raise ValueError("VariantNote sync not yet implemented")
+            match_filter = Q(
+                seqr_variant_note__isnull=True,
+                note=seqr_model.note,
+                project__project_id=seqr_model.saved_variant.project.deprecated_project_id,
+                xpos=seqr_model.saved_variant.xpos_start,
+                ref=seqr_model.saved_variant.ref,
+                alt=seqr_model.saved_variant.alt
+            )
+            if seqr_model.saved_variant.family:
+                match_filter &= Q(family__family_id=seqr_model.saved_variant.family.family_id)
+            return BaseVariantNote.objects.get(Q(seqr_variant_note=seqr_model) | match_filter)
         elif seqr_class_name == "LocusList":
             return BaseGeneList.objects.get(
                 Q(seqr_locus_list=seqr_model) |
@@ -147,12 +204,24 @@ def convert_seqr_kwargs_to_xbrowse_kwargs(seqr_model, **kwargs):
     # handle foreign keys
     for key, value in xbrowse_kwargs.items():
         if _is_seqr_model(value):
-            value = find_matching_xbrowse_model(value)
-            if value is not None:
-                xbrowse_kwargs[key] = value
-            else:
-                logging.info("ERROR: unable to find equivalent seqr model for %s: %s" % (key, value))
+            if key in FLATTENED_MODEL_FIELDS.get(seqr_class_name, {}):
+                nested_model_kwargs = {k: getattr(value, k, None) for k in FLATTENED_MODEL_FIELDS[seqr_class_name][key]}
+                xbrowse_kwargs.update(convert_seqr_kwargs_to_xbrowse_kwargs(value, **nested_model_kwargs))
                 del xbrowse_kwargs[key]
+            else:
+                if key == 'project_tag':
+                    value.project = seqr_model.saved_variant.project
+                new_value = find_matching_xbrowse_model(value)
+                if new_value is not None:
+                    xbrowse_kwargs[key] = new_value
+                else:
+                    logging.info("ERROR: unable to find equivalent seqr model for %s: %s" % (key, value))
+                    del xbrowse_kwargs[key]
+
+    # Explicitly add timestamps
+    xbrowse_model_class = SEQR_TO_XBROWSE_CLASS_MAPPING.get(seqr_class_name)
+    if xbrowse_model_class and hasattr(xbrowse_model_class, 'date_saved') and 'date_saved' not in xbrowse_kwargs:
+        xbrowse_kwargs['date_saved'] = timezone.now()
 
     return xbrowse_kwargs
 
@@ -221,8 +290,9 @@ def delete_seqr_model(seqr_model):
     xbrowse_model = find_matching_xbrowse_model(seqr_model)
     seqr_model.delete()
 
-    try:
-        xbrowse_model.delete()
-    except Exception as e:
-        logging.error("ERROR: error when deleting seqr model %s: %s" % (seqr_model, e))
-        traceback.print_exc()
+    if xbrowse_model:
+        try:
+            xbrowse_model.delete()
+        except Exception as e:
+            logging.error("ERROR: error when deleting seqr model %s: %s" % (seqr_model, e))
+            traceback.print_exc()

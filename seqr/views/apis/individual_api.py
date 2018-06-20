@@ -72,7 +72,7 @@ def update_individual_handler(request, individual_guid):
 
     request_json = json.loads(request.body)
 
-    update_individual_from_json(individual, request_json, user=request.user)
+    update_individual_from_json(individual, request_json, user=request.user, allow_unknown_keys=True)
 
     return create_json_response({
         individual.guid: _get_json_for_individual(individual, request.user)
