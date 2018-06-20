@@ -2,6 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { Grid } from 'semantic-ui-react'
+import { NavLink } from 'react-router-dom'
 
 import { CLINSIG_SEVERITY } from 'shared/utils/constants'
 import VariantTags from './VariantTags'
@@ -35,7 +36,9 @@ const VariantRow = styled(Grid.Row)`
   }}
 `
 
-const Variants = ({ variants }) =>
+const NO_DISPLAY = { display: 'none' }
+
+const Variants = ({ variants, projectGuid }) =>
   <Grid divided="vertically" columns="equal">
     {variants.map(variant =>
       <VariantRow key={variant.variantId} severity={CLINSIG_SEVERITY[(variant.clinvar.clinsig || '').split('/')[0]]}>
@@ -52,8 +55,15 @@ const Variants = ({ variants }) =>
         <Grid.Column><Annotations variant={variant} /></Grid.Column>
         <Grid.Column><Predictions annotation={variant.annotation} /></Grid.Column>
         <Grid.Column><Frequencies variant={variant} /></Grid.Column>
-        <Grid.Column width={16}>
+        <Grid.Column width={15}>
           <VariantFamily variant={variant} />
+        </Grid.Column>
+        <Grid.Column width={1} verticalAlign="bottom">
+          {projectGuid &&
+            <NavLink to={`/project/${projectGuid}/saved_variants/variant/${variant.variantId}`} activeStyle={NO_DISPLAY}>
+              Variant Page
+            </NavLink>
+          }
         </Grid.Column>
       </VariantRow>,
     )}
@@ -61,6 +71,7 @@ const Variants = ({ variants }) =>
 
 Variants.propTypes = {
   variants: PropTypes.array,
+  projectGuid: PropTypes.string,
 }
 
 export default Variants

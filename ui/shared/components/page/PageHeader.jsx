@@ -46,11 +46,15 @@ const PageHeader = ({ user, project, familiesByGuid, match }) => {
     saved_variants: {
       breadcrumbIdParsers: [
         (breadcrumbId) => {
-          if (breadcrumbId === 'family') { return { content: null } }
+          if (breadcrumbId === 'family' || breadcrumbId === 'variant') { return { content: null } }
           originalPageLink = `variants/${breadcrumbId}`
           return null
         },
         (breadcrumbId) => {
+          if (breadcrumbId.startsWith('SV')) {
+            originalPageLink = false
+            return { content: `Variant: ${breadcrumbId.split('_')[1]}` }
+          }
           const { familyId } = familiesByGuid[breadcrumbId] || {}
           originalPageLink = `saved-variants?family=${familyId}`
           return {
@@ -139,7 +143,7 @@ const PageHeader = ({ user, project, familiesByGuid, match }) => {
             </NavLinkNoActive>
         }
         <br />
-        {originalPages.map(page =>
+        {originalPageLink !== false && originalPages.map(page =>
           <a
             key={page.name || match.params.breadcrumb}
             href={`/project/${project.deprecatedProjectId}/${originalPageLink || page.path}`}

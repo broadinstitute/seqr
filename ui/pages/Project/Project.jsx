@@ -41,6 +41,7 @@ class Project extends React.Component
         <Switch>
           <Route path={`${this.props.match.url}/project_page`} component={ProjectPageUI} />
           <Route path={`${this.props.match.url}/case_review`} component={CaseReview} />
+          <Route path={`${this.props.match.url}/saved_variants/variant/:variantGuid`} component={SavedVariants} />
           <Route path={`${this.props.match.url}/saved_variants/family/:familyGuid/:tag?`} component={SavedVariants} />
           <Route path={`${this.props.match.url}/saved_variants/:tag?`} component={SavedVariants} />
           <Route component={() => <Error404 />} />
