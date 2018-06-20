@@ -3,6 +3,7 @@
 import orderBy from 'lodash/orderBy'
 
 import { hasPhenotipsDetails } from 'shared/components/panel/view-phenotips-info/PhenotipsDataPanel'
+import { stripMarkdown } from 'shared/utils/stringUtils'
 import {
   FAMILY_STATUS_SOLVED,
   FAMILY_STATUS_SOLVED_KNOWN_GENE_KNOWN_PHENOTYPE,
@@ -275,6 +276,22 @@ export const FAMILY_SORT_OPTIONS = [
     createSortKeyGetter: () => family =>
       FAMILY_ANALYSIS_STATUS_OPTIONS.map(status => status.value).indexOf(family.analysisStatus),
   },
+]
+
+export const FAMILY_EXPORT_DATA = [
+  { header: 'Family ID', field: 'familyId' },
+  { header: 'Display Name', field: 'displayName' },
+  { header: 'Created Date', field: 'createdDate' },
+  { header: 'Latest Data Loaded Date', field: 'latestDataset', format: latestDataset => (latestDataset || {}).loadedDate },
+  { header: 'Description', field: 'description', format: stripMarkdown },
+  {
+    header: 'Analysis Status',
+    field: 'analysisStatus',
+    format: status => (FAMILY_ANALYSIS_STATUS_OPTIONS.find(option => option.value === status) || {}).name,
+  },
+  { header: 'Analysed By', field: 'analysedBy', format: analysedBy => analysedBy.map(o => o.user.display_name).join(',') },
+  { header: 'Analysis Summary', field: 'analysisSummary', format: stripMarkdown },
+  { header: 'Analysis Notes', field: 'analysisNotes', format: stripMarkdown },
 ]
 
 export const SORT_BY_FAMILY_GUID = 'FAMILY_GUID'

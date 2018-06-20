@@ -11,10 +11,9 @@ from django.contrib.auth.decorators import login_required
 from django.db import connection
 from django.db.models import Q, Count
 
-from seqr.models import Family, Individual, _slugify, CAN_VIEW, LocusList, \
+from seqr.models import Individual, _slugify, CAN_VIEW, LocusList, \
     LocusListGene, LocusListInterval, VariantTagType, VariantTag, VariantFunctionalData
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
-from seqr.views.apis.family_api import export_families
 from seqr.views.apis.individual_api import export_individuals
 from seqr.views.utils.family_info_utils import retrieve_multi_family_analysed_by
 from seqr.views.utils.json_utils import create_json_response
@@ -94,6 +93,7 @@ def _retrieve_families(cursor, project_guid, user):
           f.id AS family_id,
           f.guid AS family_guid,
           f.family_id AS family_family_id,
+          f.created_date AS family_created_date,
           f.display_name AS family_display_name,
           f.description AS family_description,
           f.analysis_notes AS family_analysis_notes,
@@ -338,25 +338,6 @@ def _get_json_for_reference_populations(project):
 
     return result
 """
-
-
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
-def export_project_families_handler(request, project_guid):
-    """Export project Families table.
-
-    Args:
-        project_guid (string): GUID of the project for which to export family data
-    """
-    format = request.GET.get('file_format', 'tsv')
-
-    project = get_project_and_check_permissions(project_guid, request.user)
-
-    # get all families in this project
-    families = Family.objects.filter(project=project).order_by('family_id')
-
-    filename_prefix = "%s_families" % _slugify(project.name)
-
-    return export_families(filename_prefix, families, format, include_internal_case_review_summary=False, include_internal_case_review_notes=False)
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)

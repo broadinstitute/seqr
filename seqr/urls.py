@@ -48,7 +48,6 @@ from seqr.views.pages.dashboard_page import \
 
 from seqr.views.pages.project_page import \
     project_page_data, \
-    export_project_families_handler, \
     export_project_individuals_handler
 
 from seqr.views.pages.staff.staff_pages import \
@@ -85,7 +84,6 @@ api_endpoints = {
     'project/(?P<project_guid>[^/]+)/export_case_review_individuals': export_case_review_individuals_handler,
 
     'project/(?P<project_guid>[^/]+)/details': project_page_data,
-    'project/(?P<project_guid>[^/]+)/export_project_families': export_project_families_handler,
     'project/(?P<project_guid>[^/]+)/export_project_individuals': export_project_individuals_handler,
 
     'project/create_project': create_project_handler,

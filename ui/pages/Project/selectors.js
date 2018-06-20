@@ -14,6 +14,7 @@ import {
   CASE_REVIEW_STATUS_OPTIONS,
   FAMILY_FILTER_OPTIONS,
   FAMILY_SORT_OPTIONS,
+  FAMILY_EXPORT_DATA,
   SORT_BY_FAMILY_GUID,
   VARIANT_SORT_OPTONS,
   VARIANT_EXPORT_DATA,
@@ -248,6 +249,20 @@ export const getVisibleSortedFamiliesWithIndividuals = createSelector(
       })
     })
   },
+)
+
+export const getFamiliesExportConfig = createSelector(
+  getProject,
+  getVisibleSortedFamiliesWithIndividuals,
+  (project, families) => ({
+    filename: `${project.name.replace(' ', '_').toLowerCase()}_families`,
+    rawData: families,
+    headers: FAMILY_EXPORT_DATA.map(config => config.header),
+    processRow: family => FAMILY_EXPORT_DATA.map((config) => {
+      const val = family[config.field]
+      return config.format ? config.format(val) : val
+    }),
+  }),
 )
 
 export const getCaseReviewStatusCounts = createSelector(
