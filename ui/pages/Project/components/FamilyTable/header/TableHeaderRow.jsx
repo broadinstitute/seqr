@@ -36,6 +36,7 @@ const TableHeaderRow = ({ headerStatus, showInternalFilters, visibleFamiliesCoun
       </Table.HeaderCell>
       <Table.HeaderCell collapsing textAlign="right">
         <FamiliesSortOrderDropdown />
+        <HorizontalSpacer width={5} />
         <SortDirectionToggle />
       </Table.HeaderCell>
       <Table.HeaderCell collapsing textAlign="right">

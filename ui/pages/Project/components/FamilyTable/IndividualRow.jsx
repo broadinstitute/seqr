@@ -20,7 +20,7 @@ import {
   CASE_REVIEW_STATUS_OPT_LOOKUP,
   ANALYSIS_TYPE_VARIANT_CALLS,
 } from '../../constants'
-import { getProject, getProjectSamples, getProjectDatasets } from '../../selectors'
+import { getProject, getProjectDatasets } from '../../selectors'
 import CaseReviewStatusDropdown from './CaseReviewStatusDropdown'
 
 
@@ -47,32 +47,28 @@ class IndividualRow extends React.Component
     project: PropTypes.object.isRequired,
     family: PropTypes.object.isRequired,
     individual: PropTypes.object.isRequired,
-    samples: PropTypes.array.isRequired,
     datasets: PropTypes.array.isRequired,
     updateIndividual: PropTypes.func,
     editCaseReview: PropTypes.bool,
   }
 
   render() {
-    const { user, project, family, individual, editCaseReview } = this.props
+    const { user, project, family, individual, datasets, editCaseReview } = this.props
 
     const { individualId, displayName, paternalId, maternalId, sex, affected, createdDate } = individual
 
     const caseReviewStatusOpt = CASE_REVIEW_STATUS_OPT_LOOKUP[individual.caseReviewStatus]
 
-    const sampleDetails = this.props.samples.filter(s => s.individualGuid === individual.individualGuid).map((sample) => {
-      let loadedVariantCallDatasets = this.props.datasets
-        .filter(dataset => (
-          dataset.sampleGuids.includes(sample.sampleGuid) &&
-          dataset.analysisType === ANALYSIS_TYPE_VARIANT_CALLS &&
-          dataset.isLoaded
-        ))
+    let loadedDatasets = datasets.filter(dataset =>
+      dataset.sampleGuids.some(sampleGuid => individual.sampleGuids.includes(sampleGuid)) &&
+      dataset.analysisType === ANALYSIS_TYPE_VARIANT_CALLS &&
+      dataset.isLoaded,
+    )
+    loadedDatasets = orderBy(loadedDatasets, [d => d.loadedDate], 'desc')
 
-      loadedVariantCallDatasets = orderBy(loadedVariantCallDatasets, [d => d.loadedDate], 'desc')
-      const recentLoadedVariantCallDataset = loadedVariantCallDatasets.length > 0 ? loadedVariantCallDatasets[0] : null
-
-      return <Dataset key={sample.sampleGuid} loadedDataset={recentLoadedVariantCallDataset} />
-    })
+    const sampleDetails = loadedDatasets.map((dataset, i) =>
+      <div key={dataset.datasetGuid}><Dataset loadedDataset={dataset} isOutdated={i !== 0} /></div>,
+    )
 
     const individualRow = (
       <Grid stackable>
@@ -176,7 +172,6 @@ export { IndividualRow as IndividualRowComponent }
 const mapStateToProps = state => ({
   user: getUser(state),
   project: getProject(state),
-  samples: getProjectSamples(state),
   datasets: getProjectDatasets(state),
 })
 

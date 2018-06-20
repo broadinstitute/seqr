@@ -1,5 +1,8 @@
 /* eslint-disable no-multi-spaces */
 
+import orderBy from 'lodash/orderBy'
+
+import { hasPhenotipsDetails } from 'shared/components/panel/view-phenotips-info/PhenotipsDataPanel'
 import {
   FAMILY_STATUS_SOLVED,
   FAMILY_STATUS_SOLVED_KNOWN_GENE_KNOWN_PHENOTYPE,
@@ -12,6 +15,7 @@ import {
   FAMILY_STATUS_REVIEWED_NO_CLEAR_CANDIDATE,
   FAMILY_STATUS_ANALYSIS_IN_PROGRESS,
   CLINSIG_SEVERITY,
+  FAMILY_ANALYSIS_STATUS_OPTIONS,
 } from 'shared/utils/constants'
 
 export const ANALYSIS_TYPE_VARIANT_CALLS = 'VARIANTS'
@@ -70,6 +74,7 @@ export const SHOW_INELIGIBLE = 'INELIGIBLE'
 export const SHOW_DECLINED_TO_PARTICIPATE = 'DECLINED_TO_PARTICIPATE'
 
 export const SHOW_DATA_LOADED = 'SHOW_DATA_LOADED'
+export const SHOW_PHENOTYPES_ENTERED = 'SHOW_PHENOTYPES_ENTERED'
 
 
 const SOLVED_STATUSES = new Set([
@@ -90,6 +95,19 @@ const ANALYSIS_IN_PROGRESS_STATUSES = new Set([
   FAMILY_STATUS_REVIEWED_PURSUING_CANDIDATES,
 ])
 
+const caseReviewStatusFilter = status => individualsByGuid => family =>
+  family.individualGuids.map(individualGuid => individualsByGuid[individualGuid]).some(
+    individual => individual.caseReviewStatus === status,
+  )
+
+const familyDatasetsLoaded = (family, individualsByGuid, samplesByGuid, datasetsByGuid) => {
+  const familySampleGuids = family.individualGuids.map(individualGuid => individualsByGuid[individualGuid]).reduce(
+    (acc, individual) => new Set([...acc, ...individual.sampleGuids]), new Set(),
+  )
+  return Object.values(datasetsByGuid).filter(
+    dataset => dataset.sampleGuids.some(sampleGuid => familySampleGuids.has(sampleGuid)) && dataset.loadedDate,
+  )
+}
 
 export const FAMILY_FILTER_OPTIONS = [
   {
@@ -97,25 +115,28 @@ export const FAMILY_FILTER_OPTIONS = [
     name: 'All',
     createFilter: () => () => (true),
   },
-  /*
   {
     value: SHOW_DATA_LOADED,
     name: 'Data Loaded',
-    createFilter: (familiesByGuid, individualsByGuid, samplesByGuid) => familyGuid =>
-      familiesByGuid[familyGuid].individualGuids.filter(
-        individualGuid => individualsByGuid[individualGuid].sampleGuids.filter(
-          sampleGuid => samplesByGuid[sampleGuid].isLoaded,
-        ).length > 0,
-      ).length > 0,
+    internalOmit: true,
+    createFilter: (individualsByGuid, samplesByGuid, datasetsByGuid) => family =>
+      familyDatasetsLoaded(family, individualsByGuid, samplesByGuid, datasetsByGuid).length > 0,
   },
-   CASE_REVIEW_STATUS_ACCEPTED
-  */
+  {
+    value: SHOW_PHENOTYPES_ENTERED,
+    name: 'Phenotypes Entered',
+    internalOmit: true,
+    createFilter: individualsByGuid => family =>
+      family.individualGuids.map(individualGuid => individualsByGuid[individualGuid].phenotipsData).some(
+        phenotipsData => hasPhenotipsDetails(phenotipsData),
+      ),
+  },
   {
     value: SHOW_SOLVED,
     name: 'Solved',
     internalOmit: true,
     /* eslint-disable no-unused-vars */
-    createFilter: families => family =>
+    createFilter: () => family =>
       SOLVED_STATUSES.has(family.analysisStatus),
   },
   {
@@ -123,7 +144,7 @@ export const FAMILY_FILTER_OPTIONS = [
     name: 'Strong Candidate',
     internalOmit: true,
     /* eslint-disable no-unused-vars */
-    createFilter: families => family =>
+    createFilter: () => family =>
       STRONG_CANDIDATE_STATUSES.has(family.analysisStatus),
   },
   {
@@ -131,111 +152,78 @@ export const FAMILY_FILTER_OPTIONS = [
     name: 'No Clear Candidate',
     internalOmit: true,
     /* eslint-disable no-unused-vars */
-    createFilter: families => family => family.analysisStatus === FAMILY_STATUS_REVIEWED_NO_CLEAR_CANDIDATE,
+    createFilter: () => family => family.analysisStatus === FAMILY_STATUS_REVIEWED_NO_CLEAR_CANDIDATE,
   },
   {
     value: SHOW_ANALYSIS_IN_PROGRESS,
     name: 'Analysis In Progress',
     internalOmit: true,
     /* eslint-disable no-unused-vars */
-    createFilter: families => family =>
+    createFilter: () => family =>
       ANALYSIS_IN_PROGRESS_STATUSES.has(family.analysisStatus),
   },
   {
     value: SHOW_ACCEPTED,
     name: 'Accepted',
-    createFilter: (families, individuals) => family =>
-      individuals.filter(individual =>
-        individual.familyGuid === family.familyGuid &&
-        individual.caseReviewStatus === CASE_REVIEW_STATUS_ACCEPTED).length > 0,
+    createFilter: caseReviewStatusFilter(CASE_REVIEW_STATUS_ACCEPTED),
   },
   {
     value: SHOW_NOT_ACCEPTED,
     name: 'Not Accepted',
     internalOnly: true,
-    createFilter: (families, individuals) => family =>
-      individuals.filter(individual =>
-        individual.familyGuid === family.familyGuid &&
-        individual.caseReviewStatus === CASE_REVIEW_STATUS_NOT_ACCEPTED).length > 0,
+    createFilter: caseReviewStatusFilter(CASE_REVIEW_STATUS_NOT_ACCEPTED),
   },
   {
     value: SHOW_IN_REVIEW,
     name: 'In Review',
-    createFilter: (families, individuals) => family =>
-      individuals.filter(individual =>
-        individual.familyGuid === family.familyGuid &&
-        individual.caseReviewStatus === CASE_REVIEW_STATUS_IN_REVIEW).length > 0,
+    createFilter: caseReviewStatusFilter(CASE_REVIEW_STATUS_IN_REVIEW),
   },
   {
     value: SHOW_UNCERTAIN,
     name: 'Uncertain',
     internalOnly: true,
-    createFilter: (families, individuals) => family =>
-      individuals.filter(individual =>
-        individual.familyGuid === family.familyGuid &&
-        individual.caseReviewStatus === CASE_REVIEW_STATUS_UNCERTAIN).length > 0,
+    createFilter: caseReviewStatusFilter(CASE_REVIEW_STATUS_UNCERTAIN),
   },
   {
     value: SHOW_MORE_INFO_NEEDED,
     name: 'More Info Needed',
-    createFilter: (families, individuals) => family =>
-      individuals.filter(individual =>
-        individual.familyGuid === family.familyGuid &&
-        individual.caseReviewStatus === CASE_REVIEW_STATUS_MORE_INFO_NEEDED).length > 0,
+    createFilter: caseReviewStatusFilter(CASE_REVIEW_STATUS_MORE_INFO_NEEDED),
   },
   {
     value: SHOW_NOT_IN_REVIEW,
     name: 'Not In Review',
     internalOnly: true,
-    createFilter: (families, individuals) => family =>
-      individuals.filter(individual =>
-        individual.familyGuid === family.familyGuid &&
-        individual.caseReviewStatus === CASE_REVIEW_STATUS_NOT_IN_REVIEW).length > 0,
+    createFilter: caseReviewStatusFilter(CASE_REVIEW_STATUS_NOT_IN_REVIEW),
   },
   {
     value: SHOW_PENDING_RESULTS_AND_RECORDS,
     name: 'Pending Results and Records',
     internalOnly: true,
-    createFilter: (families, individuals) => family =>
-      individuals.filter(individual =>
-        individual.familyGuid === family.familyGuid &&
-        individual.caseReviewStatus === CASE_REVIEW_STATUS_PENDING_RESULTS_AND_RECORDS).length > 0,
+    createFilter: caseReviewStatusFilter(CASE_REVIEW_STATUS_PENDING_RESULTS_AND_RECORDS),
   },
   {
     value: SHOW_WAITLIST,
     name: 'Waitlist',
     internalOnly: true,
-    createFilter: (families, individuals) => family =>
-      individuals.filter(individual =>
-        individual.familyGuid === family.familyGuid &&
-        individual.caseReviewStatus === CASE_REVIEW_STATUS_WAITLIST).length > 0,
+    createFilter: caseReviewStatusFilter(CASE_REVIEW_STATUS_WAITLIST),
   },
   {
     value: SHOW_WITHDREW,
     name: 'Withdrew',
     internalOnly: true,
-    createFilter: (families, individuals) => family =>
-      individuals.filter(individual =>
-        individual.familyGuid === family.familyGuid &&
-        individual.caseReviewStatus === CASE_REVIEW_STATUS_WITHDREW).length > 0,
+    createFilter: caseReviewStatusFilter(CASE_REVIEW_STATUS_WITHDREW),
   },
   {
     value: SHOW_INELIGIBLE,
     name: 'Ineligible',
     internalOnly: true,
-    createFilter: (families, individuals) => family =>
-      individuals.filter(individual =>
-        individual.familyGuid === family.familyGuid &&
-        individual.caseReviewStatus === CASE_REVIEW_STATUS_INELIGIBLE).length > 0,
+    createFilter: caseReviewStatusFilter(CASE_REVIEW_STATUS_INELIGIBLE),
   },
   {
     value: SHOW_DECLINED_TO_PARTICIPATE,
     name: 'Declined to Participate',
     internalOnly: true,
-    createFilter: (families, individuals) => family =>
-      individuals.filter(individual =>
-        individual.familyGuid === family.familyGuid &&
-        individual.caseReviewStatus === CASE_REVIEW_STATUS_DECLINED_TO_PARTICIPATE).length > 0,
+    createFilter: caseReviewStatusFilter(CASE_REVIEW_STATUS_DECLINED_TO_PARTICIPATE),
   },
 ]
 
@@ -243,19 +231,21 @@ export const FAMILY_FILTER_OPTIONS = [
 export const SORT_BY_FAMILY_NAME = 'FAMILY_NAME'
 export const SORT_BY_FAMILY_ADDED_DATE = 'FAMILY_ADDED_DATE'
 export const SORT_BY_DATA_LOADED_DATE = 'DATA_LOADED_DATE'
+export const SORT_BY_DATA_FIRST_LOADED_DATE = 'DATA_FIRST_LOADED_DATE'
+export const SORT_BY_ANALYSIS_STATUS = 'SORT_BY_ANALYSIS_STATUS'
 
 export const FAMILY_SORT_OPTIONS = [
   {
     value: SORT_BY_FAMILY_NAME,
     name: 'Family Name',
     /* eslint-disable no-unused-vars */
-    createSortKeyGetter: families => family => family.displayName,
+    createSortKeyGetter: () => family => family.displayName,
   },
   {
     value: SORT_BY_FAMILY_ADDED_DATE,
     name: 'Date Added',
-    createSortKeyGetter: (families, individuals) => family =>
-      individuals.filter(ind => ind.familyGuid === family.familyGuid).reduce(
+    createSortKeyGetter: individualsByGuid => family =>
+      family.individualGuids.map(individualGuid => individualsByGuid[individualGuid]).reduce(
         (acc, individual) => {
           const indivCreatedDate = individual.createdDate || '2000-01-01T01:00:00.000Z'
           return indivCreatedDate > acc ? indivCreatedDate : acc
@@ -266,20 +256,24 @@ export const FAMILY_SORT_OPTIONS = [
   {
     value: SORT_BY_DATA_LOADED_DATE,
     name: 'Date Loaded',
-    createSortKeyGetter: (families, individuals, samples) => family =>
-      individuals.filter(ind => ind.familyGuid === family.familyGuid).reduce(
-        (acc, individual) => {
-          const indivLoadedDate = samples.filter(s => s.individualGuid === individual.individualGuid).reduce(
-            (acc2, sample) => {
-              const sampleLoadedDate = sample.loadedDate
-              return sampleLoadedDate > acc2 ? sampleLoadedDate : acc2
-            },
-            '2000-01-01T01:00:00.000Z',
-          )
-          return indivLoadedDate > acc ? indivLoadedDate : acc
-        },
-        '2000-01-01T01:00:00.000Z',
-      ),
+    createSortKeyGetter: (individualsByGuid, samplesByGuid, datasetsByGuid) => (family) => {
+      const loadedDatasets = familyDatasetsLoaded(family, individualsByGuid, samplesByGuid, datasetsByGuid)
+      return loadedDatasets.length ? orderBy(loadedDatasets, [d => d.loadedDate], 'desc')[0].loadedDate : '2000-01-01T01:00:00.000Z'
+    },
+  },
+  {
+    value: SORT_BY_DATA_FIRST_LOADED_DATE,
+    name: 'Date First Loaded',
+    createSortKeyGetter: (individualsByGuid, samplesByGuid, datasetsByGuid) => (family) => {
+      const loadedDatasets = familyDatasetsLoaded(family, individualsByGuid, samplesByGuid, datasetsByGuid)
+      return loadedDatasets.length ? orderBy(loadedDatasets, [d => d.loadedDate], 'asc')[0].loadedDate : '2000-01-01T01:00:00.000Z'
+    },
+  },
+  {
+    value: SORT_BY_ANALYSIS_STATUS,
+    name: 'Analysis Status',
+    createSortKeyGetter: () => family =>
+      FAMILY_ANALYSIS_STATUS_OPTIONS.map(status => status.value).indexOf(family.analysisStatus),
   },
 ]
 

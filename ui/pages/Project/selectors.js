@@ -172,17 +172,19 @@ export const getProjectIndividualsWithFamily = createSelector(
  */
 export const getVisibleFamilies = createSelector(
   getProjectFamilies,
-  getProjectIndividuals,
+  getIndividualsByGuid,
+  getSamplesByGuid,
+  getDatasetsByGuid,
   getFamiliesFilter,
   getSearchResults('familiesByGuid'),
-  (families, individuals, familiesFilter, familySearchResults) => {
+  (families, individualsByGuid, samplesByGuid, datsetsByGuid, familiesFilter, familySearchResults) => {
     const searchedFamilies = families.filter(family => familySearchResults.includes(family.familyGuid))
 
     if (!familiesFilter || !FAMILY_FILTER_LOOKUP[familiesFilter]) {
       return searchedFamilies
     }
 
-    const familyFilter = FAMILY_FILTER_LOOKUP[familiesFilter](searchedFamilies, individuals)
+    const familyFilter = FAMILY_FILTER_LOOKUP[familiesFilter](individualsByGuid, samplesByGuid, datsetsByGuid)
     return searchedFamilies.filter(familyFilter)
   },
 )
@@ -196,17 +198,17 @@ export const getVisibleFamilies = createSelector(
  */
 export const getVisibleFamiliesInSortedOrder = createSelector(
   getVisibleFamilies,
-  getProjectFamilies,
-  getProjectIndividuals,
-  getProjectSamples,
+  getIndividualsByGuid,
+  getSamplesByGuid,
+  getDatasetsByGuid,
   getFamiliesSortOrder,
   getFamiliesSortDirection,
-  (visibleFamilies, families, individuals, samples, familiesSortOrder, familiesSortDirection) => {
+  (visibleFamilies, individualsByGuid, samplesByGuid, datsetsByGuid, familiesSortOrder, familiesSortDirection) => {
     if (!familiesSortOrder || !FAMILY_SORT_LOOKUP[familiesSortOrder]) {
       return visibleFamilies
     }
 
-    const getSortKey = FAMILY_SORT_LOOKUP[familiesSortOrder](families, individuals, samples)
+    const getSortKey = FAMILY_SORT_LOOKUP[familiesSortOrder](individualsByGuid, samplesByGuid, datsetsByGuid)
 
     return orderBy(visibleFamilies, [getSortKey], [familiesSortDirection > 0 ? 'asc' : 'desc'])
   },
@@ -220,15 +222,15 @@ export const getVisibleFamiliesInSortedOrder = createSelector(
  */
 export const getVisibleSortedFamiliesWithIndividuals = createSelector(
   getVisibleFamiliesInSortedOrder,
-  getProjectIndividuals,
+  getIndividualsByGuid,
   getProjectSamples,
   getProjectDatasets,
-  (visibleFamilies, individuals, samples, datasets) => {
+  (visibleFamilies, individualsByGuid, samples, datasets) => {
     const AFFECTED_STATUS_ORDER = { A: 1, N: 2, U: 3 }
     const getIndivSortKey = individual => AFFECTED_STATUS_ORDER[individual.affected] || 0
 
     return visibleFamilies.map((family) => {
-      const familyIndividuals = orderBy(individuals.filter(ind => ind.familyGuid === family.familyGuid), [getIndivSortKey])
+      const familyIndividuals = orderBy(family.individualGuids.map(individualGuid => individualsByGuid[individualGuid]), [getIndivSortKey])
 
       const familyDatasetGuids = samples.filter(s => family.individualGuids.includes(s.individualGuid)).reduce(
         (acc, sample) => new Set([...acc, ...sample.datasetGuids]), new Set(),

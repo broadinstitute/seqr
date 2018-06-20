@@ -10,11 +10,16 @@ const Detail = styled.span`
   color: #999999;
 `
 
-const Dataset = ({ loadedDataset }) =>
+const iconColor = (loadedDataset, isOutdated) => {
+  if (!loadedDataset) return 'red'
+  return isOutdated ? 'yellow' : 'green'
+}
+
+const Dataset = ({ loadedDataset, isOutdated }) =>
   <span>
     <Popup
-      trigger={<Icon size="small" name="circle" color={loadedDataset ? 'green' : 'red'} />}
-      content={loadedDataset ? 'data has been loaded' : 'no data available'}
+      trigger={<Icon size="small" name="circle" color={iconColor(loadedDataset, isOutdated)} />}
+      content={loadedDataset ? `data has been ${isOutdated ? 're-' : ''}loaded` : 'no data available'}
       position="left center"
     />
     <HorizontalSpacer width={8} />
@@ -30,6 +35,7 @@ const Dataset = ({ loadedDataset }) =>
 
 Dataset.propTypes = {
   loadedDataset: PropTypes.object,
+  isOutdated: PropTypes.bool,
 }
 
 export default Dataset
