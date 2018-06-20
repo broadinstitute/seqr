@@ -1,6 +1,7 @@
 import React from 'react'
-import { Grid, Table } from 'semantic-ui-react'
+import { Table } from 'semantic-ui-react'
 import PropTypes from 'prop-types'
+import styled from 'styled-components'
 import { connect } from 'react-redux'
 import { withRouter } from 'react-router'
 
@@ -13,55 +14,45 @@ import FamiliesFilterDropdown from './FilterDropdown'
 import FamiliesFilterSearchBox from './FilterSearchBox'
 import FamiliesSortOrderDropdown from './SortOrderDropdown'
 import SortDirectionToggle from './SortDirectionToggle'
-import ShowDetailsToggle from './ShowDetailsToggle'
 
+const RegularFontHeaderCell = styled(Table.HeaderCell)`
+  font-weight: normal !important;
+`
 
 const TableHeaderRow = ({ headerStatus, showInternalFilters, visibleFamiliesCount, totalFamiliesCount, currentPage, recordsPerPage }) =>
   <Table.Header fullWidth>
     <Table.Row>
-      <Table.HeaderCell>
-        <Grid stackable>
-          <Grid.Column width={7}>
-            <span style={{ fontWeight: 'normal' }}>
-              Showing &nbsp;
-              {
-                visibleFamiliesCount !== totalFamiliesCount ?
-                  <span><b>{((currentPage - 1) * recordsPerPage) + 1}-{((currentPage - 1) * recordsPerPage) + visibleFamiliesCount}</b> out of <b>{totalFamiliesCount}</b></span>
-                  : <span>all <b>{totalFamiliesCount}</b></span>
-              }
-              &nbsp; families
-            </span>
-            <FamiliesFilterDropdown showInternalFilters={showInternalFilters} />
-            <HorizontalSpacer width={10} />
-            <FamiliesFilterSearchBox />
-          </Grid.Column>
-          <Grid.Column width={3}>
-            <div style={{ whitespace: 'nowrap' }}>
-              <FamiliesSortOrderDropdown />
-              <HorizontalSpacer width={5} />
-              <SortDirectionToggle />
-            </div>
-          </Grid.Column>
-          <Grid.Column width={3}>
-            <ShowDetailsToggle />
-          </Grid.Column>
-          <Grid.Column width={3}>
-            {headerStatus &&
-              <span style={{ float: 'right' }}>
-                {headerStatus.title}:
-                <HorizontalSpacer width={10} />
-                <HorizontalStackedBar
-                  width={100}
-                  height={14}
-                  title={headerStatus.title}
-                  data={headerStatus.data}
-                />
-              </span>
-            }
-          </Grid.Column>
-
-        </Grid>
+      <RegularFontHeaderCell>
+        Showing &nbsp;
+        {
+          visibleFamiliesCount !== totalFamiliesCount ?
+            <span><b>{((currentPage - 1) * recordsPerPage) + 1}-{((currentPage - 1) * recordsPerPage) + visibleFamiliesCount}</b> out of <b>{totalFamiliesCount}</b></span>
+            : <span>all <b>{totalFamiliesCount}</b></span>
+        }
+        &nbsp; families
+      </RegularFontHeaderCell>
+      <Table.HeaderCell collapsing textAlign="right">
+        <FamiliesFilterSearchBox />
       </Table.HeaderCell>
+      <Table.HeaderCell collapsing textAlign="right">
+        <FamiliesSortOrderDropdown />
+        <SortDirectionToggle />
+      </Table.HeaderCell>
+      <Table.HeaderCell collapsing textAlign="right">
+        Status: <FamiliesFilterDropdown showInternalFilters={showInternalFilters} />
+      </Table.HeaderCell>
+      {headerStatus &&
+        <Table.HeaderCell collapsing textAlign="right">
+          {headerStatus.title}:
+          <HorizontalSpacer width={10} />
+          <HorizontalStackedBar
+            width={100}
+            height={14}
+            title={headerStatus.title}
+            data={headerStatus.data}
+          />
+        </Table.HeaderCell>
+      }
     </Table.Row>
   </Table.Header>
 

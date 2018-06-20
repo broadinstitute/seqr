@@ -152,7 +152,6 @@ export const reducers = {
     familiesFilter: SHOW_ALL,
     familiesSortOrder: SORT_BY_FAMILY_NAME,
     familiesSortDirection: 1,
-    showDetails: true,
   }, false),
   savedVariantTableState: createSingleObjectReducer(UPDATE_SAVED_VARIANT_TABLE_STATE, {
     hideExcluded: false,

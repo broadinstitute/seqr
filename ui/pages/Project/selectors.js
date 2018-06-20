@@ -158,7 +158,6 @@ export const getProjectTableRecordsPerPage = state => state.familyTableState.rec
 export const getFamiliesFilter = state => state.familyTableState.familiesFilter || SHOW_ALL
 export const getFamiliesSortOrder = state => state.familyTableState.familiesSortOrder || SORT_BY_FAMILY_NAME
 export const getFamiliesSortDirection = state => state.familyTableState.familiesSortDirection || 1
-export const getShowDetails = state => (state.familyTableState.showDetails !== undefined ? state.familyTableState.showDetails : true)
 
 export const getProjectIndividualsWithFamily = createSelector(
   getProjectIndividuals,

@@ -10,7 +10,7 @@ import ExportTableButton from 'shared/components/buttons/export-table/ExportTabl
 import TableLoading from 'shared/components/table/TableLoading'
 import { HorizontalSpacer } from 'shared/components/Spacers'
 
-import { getVisibleSortedFamiliesWithIndividuals, getProjectDetailsIsLoading, getShowDetails } from '../../selectors'
+import { getVisibleSortedFamiliesWithIndividuals, getProjectDetailsIsLoading } from '../../selectors'
 import TableHeaderRow from './header/TableHeaderRow'
 import EmptyTableRow from './EmptyTableRow'
 import IndividualRow from './IndividualRow'
@@ -39,12 +39,6 @@ class FamilyTableRow extends React.PureComponent {
 
     this.state = {
       showDetails: props.showDetails,
-    }
-  }
-
-  componentWillReceiveProps(nextProps) {
-    if (nextProps.showDetails !== this.props.showDetails) {
-      this.setState({ showDetails: nextProps.showDetails })
     }
   }
 
@@ -99,8 +93,10 @@ const FamilyTable = ({ visibleFamilies, loading, headerStatus, showInternalFilte
       <ExportTableButton downloads={exportUrls} />
       <HorizontalSpacer width={45} />
     </ExportContainer>
-    <Table celled striped padded fixed>
+    <Table attached="top">
       <TableHeaderRow headerStatus={headerStatus} showInternalFilters={showInternalFilters} />
+    </Table>
+    <Table celled striped padded fixed attached="bottom">
       <Table.Body>
         {loading ? <TableLoading /> : null}
         {
@@ -125,12 +121,10 @@ FamilyTable.propTypes = {
   exportUrls: PropTypes.array,
   showSearchLinks: PropTypes.bool,
   showVariantTags: PropTypes.bool,
-  showDetails: PropTypes.bool,
 }
 
 const mapStateToProps = (state, ownProps) => ({
   visibleFamilies: getVisibleSortedFamiliesWithIndividuals(state, ownProps),
-  showDetails: getShowDetails(state),
   loading: getProjectDetailsIsLoading(state),
 })
 
