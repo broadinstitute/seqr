@@ -21,11 +21,11 @@ def transfer_info_from_dataset_to_sample_fields(apps, schema_editor):
     for sample in Sample.objects.all():
         dataset = sample.dataset_set.filter(analysis_type="VARIANTS").order_by('-loaded_date', '-pk').first()
         if dataset:
-            sample.dataset_file_path = dataset.source_file_path
             sample.dataset_type = dataset.analysis_type
             sample.elasticsearch_index = dataset.dataset_id
-            sample.loaded_date = dataset.loaded_date
+            sample.dataset_file_path = dataset.source_file_path
             sample.sample_status = "loaded" if dataset.is_loaded else None
+            sample.loaded_date = dataset.loaded_date
             sample.save()
 
 
