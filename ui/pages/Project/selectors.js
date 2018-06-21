@@ -73,8 +73,11 @@ export const getSavedVariantRecordsPerPage = state => state.savedVariantTableSta
 export const getProjectSavedVariants = createSelector(
   state => state.projectSavedVariants,
   (state, props) => props.match.params,
-  (projectSavedVariants, { tag, familyGuid }) => {
+  (projectSavedVariants, { tag, familyGuid, variantGuid }) => {
     let variants = Object.values(projectSavedVariants)
+    if (variantGuid) {
+      return variants.filter(o => o.variantId === variantGuid)
+    }
     if (familyGuid) {
       variants = variants.filter(o => o.familyGuid === familyGuid)
     }

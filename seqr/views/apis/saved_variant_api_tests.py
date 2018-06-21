@@ -40,6 +40,16 @@ class ProjectAPITest(TransactionTestCase):
 
         self.assertSetEqual(set(response.json()['savedVariants'].keys()), {'SV0000002_1248367227_r0390_100'})
 
+        # filter by variant guid
+        response = self.client.get('{}{}'.format(url, VARIANT_GUID))
+        self.assertEqual(response.status_code, 200)
+
+        self.assertSetEqual(set(response.json()['savedVariants'].keys()), {VARIANT_GUID})
+
+        # filter by invalid variant guid
+        response = self.client.get('{}foo'.format(url))
+        self.assertEqual(response.status_code, 404)
+
     @mock.patch('seqr.views.apis.saved_variant_api.find_matching_xbrowse_model')
     @mock.patch('seqr.views.apis.saved_variant_api.get_datastore')
     def test_saved_variant_transcripts(self, mock_datastore, mock_xbrowse_model):

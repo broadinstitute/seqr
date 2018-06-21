@@ -638,6 +638,7 @@ def get_or_create_variant_tag_type(source_variant_tag_type, new_project):
         ).delete()
         for model, delete_count in deleted.items():
             print("=== deleted {} {} models with tag type {}".format(delete_count, model, source_variant_tag_type.tag))
+            source_variant_tag_type.seqr_variant_tag_type = None
 
     except ObjectDoesNotExist:
         new_variant_tag_type, created = SeqrVariantTagType.objects.get_or_create(
