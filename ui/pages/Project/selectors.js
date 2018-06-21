@@ -241,11 +241,11 @@ export const getVisibleSortedFamiliesWithIndividuals = createSelector(
         dataset.analysisType === ANALYSIS_TYPE_VARIANT_CALLS &&
         dataset.isLoaded
       ))
-      loadedDatasets = orderBy(loadedDatasets, [d => d.loadedDate], 'desc')
+      loadedDatasets = orderBy(loadedDatasets, [d => d.loadedDate], 'asc')
 
       return Object.assign(family, {
         individuals: familyIndividuals,
-        latestDataset: loadedDatasets.length > 0 ? loadedDatasets[0] : null,
+        firstDataset: loadedDatasets.length > 0 ? loadedDatasets[0] : null,
       })
     })
   },

@@ -26,11 +26,6 @@ const ToggleIcon = styled(Icon).attrs({ size: 'large', link: true, name: 'dropdo
   z-index: 1;
 `
 
-const FamilyContainer = styled.div`
-  margin-left: 25px;
-  margin-top: -33px;
-`
-
 class FamilyTableRow extends React.PureComponent {
 
   constructor(props) {
@@ -50,17 +45,15 @@ class FamilyTableRow extends React.PureComponent {
     return (
       <Table.Row>
         <Table.Cell>
-          <ToggleIcon rotated={this.state.showDetails ? undefined : 'counterclockwise'} onClick={this.toggle} />
-          <FamilyContainer>
-            <Family
-              key={family.familyGuid}
-              family={family}
-              showSearchLinks={this.state.showDetails && showSearchLinks}
-              showVariantTags={showVariantTags}
-              fields={this.state.showDetails ? detailFields : noDetailFields}
-              compact={!this.state.showDetails}
-            />
-          </FamilyContainer>
+          <Family
+            key={family.familyGuid}
+            family={family}
+            showSearchLinks={this.state.showDetails && showSearchLinks}
+            showVariantTags={showVariantTags}
+            fields={this.state.showDetails ? detailFields : noDetailFields}
+            compact={!this.state.showDetails}
+            annotation={<ToggleIcon rotated={this.state.showDetails ? undefined : 'counterclockwise'} onClick={this.toggle} />}
+          />
           {this.state.showDetails && family.individuals.map(individual => (
             <IndividualRow
               key={individual.individualGuid}
@@ -85,22 +78,22 @@ FamilyTableRow.propTypes = {
   showDetails: PropTypes.bool,
 }
 
-const FamilyTable = ({ visibleFamilies, loading, headerStatus, showInternalFilters, exportUrls, ...props }) =>
+const FamilyTable = ({ visibleFamilies, loading, headerStatus, showInternalFilters, exportUrls, noDetailFields, ...props }) =>
   <div>
     <ExportContainer>
       <ExportTableButton downloads={exportUrls} />
       <HorizontalSpacer width={45} />
     </ExportContainer>
     <Table attached="top">
-      <TableHeaderRow headerStatus={headerStatus} showInternalFilters={showInternalFilters} />
+      <TableHeaderRow headerStatus={headerStatus} showInternalFilters={showInternalFilters} fields={noDetailFields} />
     </Table>
     <Table celled striped padded fixed attached="bottom">
       <Table.Body>
-        {loading ? <TableLoading /> : null}
-        {
-          !loading && visibleFamilies.length > 0 ?
-            visibleFamilies.map(family => <FamilyTableRow key={family.familyGuid}family={family} {...props} />)
-            : <EmptyTableRow />
+        {loading && <TableLoading />}
+        {!loading && (visibleFamilies.length > 0 ?
+          visibleFamilies.map(family =>
+            <FamilyTableRow key={family.familyGuid} family={family} noDetailFields={noDetailFields} {...props} />,
+          ) : <EmptyTableRow />)
         }
       </Table.Body>
       <Table.Footer><Table.Row><Table.HeaderCell /></Table.Row></Table.Footer>
@@ -119,6 +112,7 @@ FamilyTable.propTypes = {
   exportUrls: PropTypes.array,
   showSearchLinks: PropTypes.bool,
   showVariantTags: PropTypes.bool,
+  noDetailFields: PropTypes.array,
 }
 
 const mapStateToProps = (state, ownProps) => ({

@@ -7,6 +7,9 @@ import { withRouter } from 'react-router'
 
 import { HorizontalSpacer } from 'shared/components/Spacers'
 import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
+import { FamilyLayout } from 'shared/components/panel/family'
+
+import { FAMILY_FIELD_RENDER_LOOKUP } from 'shared/utils/constants'
 
 import { getProjectFamilies, getVisibleFamilies } from '../../../selectors'
 
@@ -19,7 +22,7 @@ const RegularFontHeaderCell = styled(Table.HeaderCell)`
   font-weight: normal !important;
 `
 
-const TableHeaderRow = ({ headerStatus, showInternalFilters, visibleFamiliesCount, totalFamiliesCount }) =>
+const TableHeaderRow = ({ headerStatus, showInternalFilters, visibleFamiliesCount, totalFamiliesCount, fields }) =>
   <Table.Header fullWidth>
     <Table.Row>
       <RegularFontHeaderCell>
@@ -55,6 +58,18 @@ const TableHeaderRow = ({ headerStatus, showInternalFilters, visibleFamiliesCoun
         </Table.HeaderCell>
       }
     </Table.Row>
+    {fields &&
+      <Table.Row>
+        <Table.HeaderCell colSpan={5} textAlign="left">
+          <FamilyLayout
+            compact
+            offset
+            fields={fields}
+            fieldDisplay={field => FAMILY_FIELD_RENDER_LOOKUP[field.id].name}
+          />
+        </Table.HeaderCell>
+      </Table.Row>
+    }
   </Table.Header>
 
 TableHeaderRow.propTypes = {
@@ -62,6 +77,7 @@ TableHeaderRow.propTypes = {
   showInternalFilters: PropTypes.bool,
   visibleFamiliesCount: PropTypes.number,
   totalFamiliesCount: PropTypes.number,
+  fields: PropTypes.array,
 }
 
 const mapStateToProps = (state, ownProps) => ({

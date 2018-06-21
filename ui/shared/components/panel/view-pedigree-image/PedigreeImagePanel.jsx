@@ -25,14 +25,16 @@ const PedigreeImagePanel = (props) => {
     <Modal
       modalName={`Pedigree-${props.family.familyGuid}`}
       title={`Family ${props.family.displayName}`}
-      trigger={<a role="button" tabIndex="0">{image}</a>}
+      trigger={
+        <span>
+          {props.compact && `(${props.family.individualGuids.length}) `} <a role="button" tabIndex="0">{image}</a>
+        </span>
+      }
     >
-      <center>
-        <img src={props.family.pedigreeImage} alt="pedigree" style={{ maxHeight: '250px', maxWidth: '400px' }} /><br />
-        <a href={props.family.pedigreeImage} target="_blank" rel="noopener noreferrer">
-          <Icon name="zoom" /> Original Size
-        </a>
-      </center>
+      <img src={props.family.pedigreeImage} alt="pedigree" style={{ maxHeight: '250px', maxWidth: '400px' }} /><br />
+      <a href={props.family.pedigreeImage} target="_blank" rel="noopener noreferrer">
+        <Icon name="zoom" /> Original Size
+      </a>
     </Modal>
   )
 }

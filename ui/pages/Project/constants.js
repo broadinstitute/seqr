@@ -282,7 +282,7 @@ export const FAMILY_EXPORT_DATA = [
   { header: 'Family ID', field: 'familyId' },
   { header: 'Display Name', field: 'displayName' },
   { header: 'Created Date', field: 'createdDate' },
-  { header: 'Latest Data Loaded Date', field: 'latestDataset', format: latestDataset => (latestDataset || {}).loadedDate },
+  { header: 'First Data Loaded Date', field: 'firstDataset', format: firstDataset => (firstDataset || {}).loadedDate },
   { header: 'Description', field: 'description', format: stripMarkdown },
   {
     header: 'Analysis Status',

@@ -15,27 +15,30 @@ const iconColor = (loadedDataset, isOutdated) => {
   return isOutdated ? 'yellow' : 'green'
 }
 
-const Dataset = ({ loadedDataset, isOutdated }) =>
+const Dataset = ({ loadedDataset, isOutdated, hoverDetails }) =>
   <span>
     <Popup
       trigger={<Icon size="small" name="circle" color={iconColor(loadedDataset, isOutdated)} />}
-      content={loadedDataset ? `data has been ${isOutdated ? 're-' : ''}loaded` : 'no data available'}
+      content={loadedDataset ?
+        `data was${isOutdated ? ' previously' : ''} loaded${hoverDetails ? ` on ${new Date(loadedDataset.loadedDate).toLocaleDateString()}` : ''}` :
+        'no data available'
+      }
       position="left center"
     />
-    <HorizontalSpacer width={8} />
-    {loadedDataset ? <b>{loadedDataset.sampleType}</b> : <small>NO LOADED DATA</small>}
+    {loadedDataset && <b>{loadedDataset.sampleType}</b>}
     {
-      loadedDataset &&
-      <Detail>
-        <HorizontalSpacer width={6} />
-        LOADED {new Date(loadedDataset.loadedDate).toLocaleDateString().toUpperCase()}
-      </Detail>
+      !hoverDetails && (loadedDataset ?
+        <Detail>
+          <HorizontalSpacer width={6} />
+          LOADED {new Date(loadedDataset.loadedDate).toLocaleDateString().toUpperCase()}
+        </Detail> : <small>NO LOADED DATA</small>)
     }
   </span>
 
 Dataset.propTypes = {
   loadedDataset: PropTypes.object,
   isOutdated: PropTypes.bool,
+  hoverDetails: PropTypes.bool,
 }
 
 export default Dataset

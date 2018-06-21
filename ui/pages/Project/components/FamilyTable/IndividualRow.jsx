@@ -65,6 +65,8 @@ class IndividualRow extends React.Component
       dataset.isLoaded,
     )
     loadedDatasets = orderBy(loadedDatasets, [d => d.loadedDate], 'desc')
+    // only show first and latest datsets
+    loadedDatasets.splice(1, loadedDatasets.length - 2)
 
     const sampleDetails = loadedDatasets.map((dataset, i) =>
       <div key={dataset.datasetGuid}><Dataset loadedDataset={dataset} isOutdated={i !== 0} /></div>,

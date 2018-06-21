@@ -1,14 +1,11 @@
-// FAMILY FIELDS
+import React from 'react'
+import { Popup } from 'semantic-ui-react'
 
-export const FAMILY_FIELD_DESCRIPTION = 'description'
-export const FAMILY_FIELD_ANALYSIS_STATUS = 'analysisStatus'
-export const FAMILY_FIELD_ANALYSED_BY = 'analysedBy'
-export const FAMILY_FIELD_ANALYSIS_NOTES = 'analysisNotes'
-export const FAMILY_FIELD_ANALYSIS_SUMMARY = 'analysisSummary'
-export const FAMILY_FIELD_INTERNAL_NOTES = 'internalCaseReviewNotes'
-export const FAMILY_FIELD_INTERNAL_SUMMARY = 'internalCaseReviewSummary'
-export const FAMILY_FIELD_INDIVIDUALS = 'individualGuids'
-export const FAMILY_FIELD_LATEST_DATASET = 'latestDataset'
+import BaseFieldView from '../components/panel/view-fields/BaseFieldView'
+import OptionFieldView from '../components/panel/view-fields/OptionFieldView'
+import { AnalysedBy } from '../components/panel/family'
+import Dataset from '../components/panel/dataset'
+import { ColoredIcon } from '../components/StyledComponents'
 
 // ANALYSIS STATUS
 
@@ -37,6 +34,53 @@ export const FAMILY_ANALYSIS_STATUS_OPTIONS = [
   { value: FAMILY_STATUS_ANALYSIS_IN_PROGRESS, color: '#4682B4', name: 'Analysis in Progress' },
   { value: FAMILY_STATUS_WAITING_FOR_DATA, color: '#FFC107', name: 'Waiting for data' },
 ]
+
+// FAMILY FIELDS
+
+export const FAMILY_FIELD_DESCRIPTION = 'description'
+export const FAMILY_FIELD_ANALYSIS_STATUS = 'analysisStatus'
+export const FAMILY_FIELD_ANALYSED_BY = 'analysedBy'
+export const FAMILY_FIELD_ANALYSIS_NOTES = 'analysisNotes'
+export const FAMILY_FIELD_ANALYSIS_SUMMARY = 'analysisSummary'
+export const FAMILY_FIELD_INTERNAL_NOTES = 'internalCaseReviewNotes'
+export const FAMILY_FIELD_INTERNAL_SUMMARY = 'internalCaseReviewSummary'
+export const FAMILY_FIELD_FIRST_DATASET = 'firstDataset'
+
+export const FAMILY_FIELD_RENDER_LOOKUP = {
+  [FAMILY_FIELD_DESCRIPTION]: { name: 'Family Description' },
+  [FAMILY_FIELD_ANALYSIS_STATUS]: {
+    name: 'Analysis Status',
+    component: OptionFieldView,
+    props: {
+      tagOptions: FAMILY_ANALYSIS_STATUS_OPTIONS,
+      tagAnnotation: (value, compact) => (
+        compact ? <Popup trigger={<ColoredIcon name="stop" color={value.color} />} content={value.text} /> :
+        <ColoredIcon name="stop" color={value.color} />
+      ),
+    },
+  },
+  [FAMILY_FIELD_ANALYSED_BY]: {
+    name: 'Analysed By',
+    component: BaseFieldView,
+    submitArgs: { familyField: 'analysed_by' },
+    props: {
+      addConfirm: 'Are you sure you want to add that you analysed this family?',
+      fieldDisplay: (analysedByList, compact) => <AnalysedBy analysedByList={analysedByList} compact={compact} />,
+    },
+  },
+  [FAMILY_FIELD_FIRST_DATASET]: {
+    name: 'Data Loaded?',
+    component: BaseFieldView,
+    props: {
+      showEmptyValues: true,
+      fieldDisplay: (loadedDataset, compact) => <Dataset loadedDataset={loadedDataset} hoverDetails={compact} />,
+    },
+  },
+  [FAMILY_FIELD_ANALYSIS_NOTES]: { name: 'Analysis Notes' },
+  [FAMILY_FIELD_ANALYSIS_SUMMARY]: { name: 'Analysis Summary' },
+  [FAMILY_FIELD_INTERNAL_NOTES]: { name: 'Internal Notes', internal: true },
+  [FAMILY_FIELD_INTERNAL_SUMMARY]: { name: 'Internal Summary', internal: true },
+}
 
 // CLINVAR
 

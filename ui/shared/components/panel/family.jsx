@@ -1,136 +1,151 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Grid, Icon, Header } from 'semantic-ui-react'
+import { Grid, Header } from 'semantic-ui-react'
 import styled from 'styled-components'
 
 import { updateFamily } from 'redux/rootReducer'
 import { getProjectsByGuid } from 'redux/selectors'
 import VariantTagTypeBar from '../graph/VariantTagTypeBar'
-import { ColoredIcon } from '../StyledComponents'
 import PedigreeImagePanel from './view-pedigree-image/PedigreeImagePanel'
-import BaseFieldView from './view-fields/BaseFieldView'
-import OptionFieldView from './view-fields/OptionFieldView'
 import TextFieldView from './view-fields/TextFieldView'
-import ListFieldView from './view-fields/ListFieldView'
-import Dataset from './dataset'
 import { VerticalSpacer } from '../Spacers'
 import {
-  FAMILY_FIELD_DESCRIPTION,
-  FAMILY_FIELD_ANALYSIS_STATUS,
-  FAMILY_FIELD_ANALYSED_BY,
-  FAMILY_FIELD_ANALYSIS_NOTES,
-  FAMILY_FIELD_ANALYSIS_SUMMARY,
-  FAMILY_FIELD_INTERNAL_NOTES,
-  FAMILY_FIELD_INTERNAL_SUMMARY,
-  FAMILY_ANALYSIS_STATUS_OPTIONS,
-  FAMILY_FIELD_INDIVIDUALS,
-  FAMILY_FIELD_LATEST_DATASET,
+  FAMILY_FIELD_RENDER_LOOKUP,
 } from '../../utils/constants'
 
-
-const fieldRenderDetails = {
-  [FAMILY_FIELD_DESCRIPTION]: { name: 'Family Description' },
-  [FAMILY_FIELD_ANALYSIS_STATUS]: {
-    name: 'Analysis Status',
-    component: OptionFieldView,
-    props: {
-      tagOptions: FAMILY_ANALYSIS_STATUS_OPTIONS,
-      tagAnnotation: value => <ColoredIcon name="play" color={value.color} />,
-    },
-  },
-  [FAMILY_FIELD_ANALYSED_BY]: {
-    name: 'Analysed By',
-    component: ListFieldView,
-    submitArgs: { familyField: 'analysed_by' },
-    props: {
-      addConfirm: 'Are you sure you want to add that you analysed this family?',
-      formatValue: analysedBy => `${analysedBy.user.display_name} (${analysedBy.date_saved})`,
-    },
-  },
-  [FAMILY_FIELD_INDIVIDUALS]: {
-    props: {
-      fieldDisplay: individuals => `${individuals.length} Individuals`,
-    },
-  },
-  [FAMILY_FIELD_LATEST_DATASET]: {
-    component: BaseFieldView,
-    props: {
-      showEmptyValues: true,
-      fieldDisplay: loadedDataset => <Dataset loadedDataset={loadedDataset} />,
-    },
-  },
-  [FAMILY_FIELD_ANALYSIS_NOTES]: { name: 'Analysis Notes' },
-  [FAMILY_FIELD_ANALYSIS_SUMMARY]: { name: 'Analysis Summary' },
-  [FAMILY_FIELD_INTERNAL_NOTES]: { name: 'Internal Notes', internal: true },
-  [FAMILY_FIELD_INTERNAL_SUMMARY]: { name: 'Internal Summary', internal: true },
-}
-
+const FamilyGrid = styled(Grid)`
+  margin-left: ${props => ((props.annotation || props.offset) ? '25px !important' : 'inherit')};
+  margin-top: ${props => (props.annotation ? '-33px !important' : 'inherit')};
+`
 
 const InlineHeader = styled(({ inline, ...props }) => <Header {...props} />)`
   display: ${props => (props.inline ? 'inline-block' : 'block')};
   margin-right: 15px !important;
 `
 
-const Family = ({ project, family, fields = [], showSearchLinks, showVariantTags, compact, useFullWidth, disablePedigreeZoom, updateFamily: dispatchUpdateFamily }) =>
-  <Grid stackable>
-    <Grid.Row>
-      <Grid.Column width={(useFullWidth && !(showSearchLinks || showVariantTags)) ? 6 : 3}>
-        <InlineHeader inline={compact} size="small" content={family.displayName} />
-        <PedigreeImagePanel family={family} disablePedigreeZoom={disablePedigreeZoom} compact={compact} />
-      </Grid.Column>
+const NoWrap = styled.div`
+  white-space: nowrap;
+`
 
-      <Grid.Column width={10}>
-        {fields.map((field) => {
-          const renderDetails = fieldRenderDetails[field.id]
-          const submitFunc = renderDetails.submitArgs ?
-            values => dispatchUpdateFamily({ ...values, ...renderDetails.submitArgs }) : dispatchUpdateFamily
-          return React.createElement(renderDetails.component || TextFieldView, {
-            key: field.id,
-            isEditable: project.canEdit && field.canEdit,
-            isPrivate: renderDetails.internal,
-            fieldName: compact ? null : renderDetails.name,
-            field: field.id,
-            idField: 'familyGuid',
-            initialValues: family,
-            onSubmit: submitFunc,
-            modalTitle: `${renderDetails.name} for Family ${family.displayName}`,
-            compact,
-            ...(renderDetails.props || {}),
-          }) },
+const formatAnalysedByList = analysedByList =>
+  analysedByList.map(analysedBy => `${analysedBy.user.display_name} (${analysedBy.date_saved})`).join(', ')
+
+export const AnalysedBy = ({ analysedByList, compact }) => {
+  if (compact) {
+    return (
+      <small>
+        {[...analysedByList.reduce((acc, analysedBy) => acc.add(analysedBy.user.display_name), new Set())].map(
+          analysedByUser => <NoWrap key={analysedByUser}>{analysedByUser}</NoWrap>,
         )}
-      </Grid.Column>
-      {(showSearchLinks || showVariantTags) &&
-        <Grid.Column width={3}>
-          {showVariantTags &&
-            <div>
-              <b>Saved Variants:</b>
-              <VariantTagTypeBar height={15} project={project} familyGuid={family.familyGuid} />
-            </div>
-          }
-          {showSearchLinks &&
-            <div>
-              <VerticalSpacer height={20} />
-              <a href={`/project/${project.deprecatedProjectId}/family/${family.familyId}`}>
-                Original Family Page
-              </a>
-              <VerticalSpacer height={10} />
-              <a href={`/project/${project.deprecatedProjectId}/family/${family.familyId}/mendelian-variant-search`}>
-                <Icon name="search" />Variant Search
-              </a>
-              <VerticalSpacer height={10} />
-              {
-                project.isMmeEnabled &&
-                <a href={`/matchmaker/search/project/${project.deprecatedProjectId}/family/${family.familyId}`}>
-                  <Icon name="search" />Match Maker Exchange
-                </a>
-              }
-            </div>
-          }
+      </small>
+    )
+  }
+  const staffUsers = analysedByList.filter(analysedBy => analysedBy.user.is_staff)
+  const externalUsers = analysedByList.filter(analysedBy => !analysedBy.user.is_staff)
+  return [
+    staffUsers.length > 0 ? <div key="staff"><b>CMG Analysts:</b> {formatAnalysedByList(staffUsers)}</div> : null,
+    externalUsers.length > 0 ? <div key="ext"><b>External Collaborators:</b> {formatAnalysedByList(externalUsers)}</div> : null,
+  ]
+}
+
+AnalysedBy.propTypes = {
+  analysedByList: PropTypes.array,
+  compact: PropTypes.bool,
+}
+
+export const FamilyLayout = ({ leftContent, rightContent, annotation, offset, fields, fieldDisplay, useFullWidth, compact }) =>
+  <div>
+    {annotation}
+    <FamilyGrid annotation={annotation} offset={offset}>
+      <Grid.Row>
+        <Grid.Column width={(useFullWidth && !rightContent) ? 6 : 3}>
+          {leftContent}
         </Grid.Column>
-      }
-    </Grid.Row>
-  </Grid>
+        {compact ? fields.map((field, i) =>
+          <Grid.Column width={i === fields.length - 1 ? 11 - fields.length : 1} key={field.id}>
+            {fieldDisplay(field)}
+          </Grid.Column>,
+          ) : (
+            <Grid.Column width={10}>
+              {fields.map(field => fieldDisplay(field))}
+            </Grid.Column>
+          )
+        }
+        {rightContent && <Grid.Column width={3}>{rightContent}</Grid.Column>}
+      </Grid.Row>
+    </FamilyGrid>
+  </div>
+
+FamilyLayout.propTypes = {
+  fieldDisplay: PropTypes.func,
+  fields: PropTypes.array,
+  useFullWidth: PropTypes.bool,
+  compact: PropTypes.bool,
+  offset: PropTypes.bool,
+  annotation: PropTypes.node,
+  leftContent: PropTypes.node,
+  rightContent: PropTypes.node,
+}
+
+const Family = ({ project, family, fields = [], showSearchLinks, showVariantTags, compact, useFullWidth, disablePedigreeZoom, annotation, updateFamily: dispatchUpdateFamily }) => {
+  const familyField = (field) => {
+    const renderDetails = FAMILY_FIELD_RENDER_LOOKUP[field.id]
+    const submitFunc = renderDetails.submitArgs ?
+      values => dispatchUpdateFamily({ ...values, ...renderDetails.submitArgs }) : dispatchUpdateFamily
+    return React.createElement(renderDetails.component || TextFieldView, {
+      key: field.id,
+      isEditable: project.canEdit && field.canEdit,
+      isPrivate: renderDetails.internal,
+      fieldName: compact ? null : renderDetails.name,
+      field: field.id,
+      idField: 'familyGuid',
+      initialValues: family,
+      onSubmit: submitFunc,
+      modalTitle: `${renderDetails.name} for Family ${family.displayName}`,
+      compact,
+      ...(renderDetails.props || {}),
+    })
+  }
+
+  const leftContent = [
+    <InlineHeader key="name" inline={compact} size="small" content={family.displayName} />,
+    <PedigreeImagePanel key="pedigree" family={family} disablePedigreeZoom={disablePedigreeZoom} compact={compact} />,
+  ]
+
+  const rightContent = (showSearchLinks || showVariantTags) ? [
+    showVariantTags ?
+      <div key="variants">
+        <b>Saved Variants:</b> <VariantTagTypeBar height={15} project={project} familyGuid={family.familyGuid} />
+      </div> : null,
+    showSearchLinks ?
+      <div key="links">
+        <VerticalSpacer height={20} />
+        <a href={`/project/${project.deprecatedProjectId}/family/${family.familyId}`}>Original Family Page</a>
+        <VerticalSpacer height={10} />
+        <a href={`/project/${project.deprecatedProjectId}/family/${family.familyId}/mendelian-variant-search`}>
+          <annotation name="search" /> Variant Search
+        </a>
+        <VerticalSpacer height={10} />
+        {
+          project.isMmeEnabled &&
+          <a href={`/matchmaker/search/project/${project.deprecatedProjectId}/family/${family.familyId}`}>
+            <annotation name="search" /> Match Maker Exchange
+          </a>
+        }
+      </div> : null,
+  ] : null
+
+  return <FamilyLayout
+    useFullWidth={useFullWidth}
+    compact={compact}
+    annotation={annotation}
+    fields={fields}
+    fieldDisplay={familyField}
+    leftContent={leftContent}
+    rightContent={rightContent}
+  />
+}
 
 export { Family as FamilyComponent }
 
@@ -144,6 +159,7 @@ Family.propTypes = {
   disablePedigreeZoom: PropTypes.bool,
   compact: PropTypes.bool,
   updateFamily: PropTypes.func,
+  annotation: PropTypes.node,
 }
 
 
