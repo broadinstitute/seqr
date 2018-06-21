@@ -354,10 +354,10 @@ def create_sample_records(sample_type, source_individual, new_project, new_indiv
         new_individual,
         sample_type=sample_type,
         dataset_type=SeqrSample.DATASET_TYPE_VARIANT_CALLS,
-        dataset_file_path=newest_loaded_vcf_file.file_path,
         elasticsearch_index=newest_loaded_vcf_file.elasticsearch_index,
-        loaded_date=newest_loaded_vcf_file.loaded_date,
+        dataset_file_path=newest_loaded_vcf_file.file_path,
         sample_status="loaded" if newest_loaded_vcf_file else None,
+        loaded_date=newest_loaded_vcf_file.loaded_date,
     )
 
     if sample_created:
@@ -369,6 +369,7 @@ def create_sample_records(sample_type, source_individual, new_project, new_indiv
             new_individual,
             sample_type=sample_type,
             dataset_type=SeqrSample.DATASET_TYPE_READ_ALIGNMENTS,
+            elasticsearch_index=None,
             dataset_file_path=source_individual.bam_file_path,
             loaded_date=newest_loaded_vcf_file.loaded_date,
             sample_status="loaded" if newest_loaded_vcf_file else None,
@@ -608,17 +609,29 @@ def _retrieve_and_update_individual_phenotips_data(project, individual):
 
     _update_individual_phenotips_data(individual, latest_phenotips_json)
 
-def get_or_create_sample(source_individual, new_individual, sample_type):
+
+def get_or_create_sample(
+        source_individual,
+        new_individual,
+        sample_type,
+        dataset_type,
+        elasticsearch_index,
+        dataset_file_path,
+        sample_status,
+        loaded_date):
     """Creates and returns a new Sample based on the provided models."""
 
     new_sample, created = SeqrSample.objects.get_or_create(
         sample_type=sample_type,
         individual=new_individual,
         sample_id=(source_individual.vcf_id or source_individual.indiv_id).strip(),
-        deprecated_base_project=source_individual.family.project,
+        dataset_type=dataset_type,
+        elasticsearch_index=elasticsearch_index,
+        dataset_file_path=dataset_file_path,
+        sample_status=sample_status,
     )
+    new_sample.loaded_date = loaded_date
     new_sample.created_date=new_individual.created_date
-    new_sample.sample_status=source_individual.coverage_status
     new_sample.save()
 
     return new_sample, created
@@ -656,9 +669,8 @@ def get_or_create_variant_tag_type(source_variant_tag_type, new_project):
         new_variant_tag_type.is_built_in = False
         new_variant_tag_type.save()
 
-    if source_variant_tag_type.seqr_variant_tag_type != new_variant_tag_type:
-        source_variant_tag_type.seqr_variant_tag_type = new_variant_tag_type
-        source_variant_tag_type.save()
+    source_variant_tag_type.seqr_variant_tag_type = new_variant_tag_type
+    source_variant_tag_type.save()
 
     return new_variant_tag_type, created
 
