@@ -206,8 +206,8 @@ def _variant_details(variant_json, user):
     genome_version = extras.get('genome_version') or '37'
     lifted_over_genome_version = '37' if genome_version == '38' else '38'
     coords_field = 'grch%s_coords' % lifted_over_genome_version
-    coords = extras.get(coords_field, '').split('-')
-    lifted_over_chrom = coords[0].lstrip('chr')
+    coords = extras.get(coords_field).split('-') if extras.get(coords_field) else []
+    lifted_over_chrom = coords[0].lstrip('chr') if len(coords) > 0 else ''
     lifted_over_pos = coords[1] if len(coords) > 1 else ''
 
     return {
