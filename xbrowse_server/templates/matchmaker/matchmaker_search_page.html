@@ -31,6 +31,10 @@ $(document).ready(
 			$('#projectIdA').attr('href',"/project/"+projectId);
 			$('#familyIdA').attr('href',"/project/" + projectId + "/family/"+familyId);
 			startSearch();
+			
+			var x = document.getElementsByClassName("open");
+			x.addEventListener("mouseover",showLimitMsg);
+			
 		});
 </script>
 Project: <a id="projectIdA" href=""><span id="projId"></span></a>
@@ -707,9 +711,9 @@ function getGoBackMessageHtml(){
 }
 
 
-$('.open').mouseover( function(){
+function showLimitMsg(){
 	console.log('boo');
-});
+}
 
 $('body').on('click', 'input.host_contacted_us', 
 		function(i) {
@@ -825,6 +829,15 @@ $('body').on('click', 'input.selected_phenotype_features',
 		}
 		sessionStorage.phenotypes_to_submit = JSON.stringify(phenotypes_to_submit);
 });
+
+
+/**
+ * Handles mouseovers on limit variant sharing icons
+ */
+function showLimitMessage() {
+	console.log('boo');
+};
+
 
 
 /**
@@ -1353,6 +1366,7 @@ function showDataToBeSubmitted(){
 	html += '<td>Reference bases</td>';
 	html += '<td>Alternate bases</td>';
 	html += '<td>Zygosity</td>';
+	html += '<td></td>';
 	html += '</tr></thead><tbody>'
 	//-----------let's also put this info into a structure we can use to submit to MME (genotypes)
 	structToBeSubmitted['genomicFeatures']=[];
@@ -1360,14 +1374,20 @@ function showDataToBeSubmitted(){
 			html += '<tr>';
 			html += '<td><p>'  +  genotypes_to_submit[k]['ensemblGeneId'] + '(' + genotypes_to_submit[k]['hgncId']  +  ')'  + '</p></td>';
 			html += '<td><p>'  +  genotypes_to_submit[k]['referenceName']   + '</p></td>';
+			html += '<td><p>'  +  genotypes_to_submit[k]['assembly']   + '</p></td>';
+			html += '<td><p>'  +  genotypes_to_submit[k]['variantStart']   + '</p></td>';
+			html += '<td><p>'  +  genotypes_to_submit[k]['variantEnd']   + '</p></td>';
+			html += '<td><p>'  +  genotypes_to_submit[k]['referenceBases']   + '</p></td>';
+			html += '<td><p>'  +  genotypes_to_submit[k]['alternateBases']   + '</p></td>';
+			html += '<td><p>'  +  genotypes_to_submit[k]['zygosity']   + '</p></td>';
 			
+			var lockedIcon='&nbsp&nbsp<i class="fas fa-lock fa-lg" aria-hidden="true"></i>';
+			var unlockedIcon='&nbsp&nbsp<i class="fas fa-lock-open fa-lg" aria-hidden="true"></i>';
 			if ('share' == variants_to_limit_sharing[genotypes_to_submit[k]['genotypeId']]){
-				html += '<td><p>'  +  genotypes_to_submit[k]['assembly']   + '</p></td>';
-				html += '<td><p>'  +  genotypes_to_submit[k]['variantStart']   + '</p></td>';
-				html += '<td><p>'  +  genotypes_to_submit[k]['variantEnd']   + '</p></td>';
-				html += '<td><p>'  +  genotypes_to_submit[k]['referenceBases']   + '</p></td>';
-				html += '<td><p>'  +  genotypes_to_submit[k]['alternateBases']   + '</p></td>';
-				html += '<td><p>'  +  genotypes_to_submit[k]['zygosity']   + '</p></td>';
+				html += '<td class="limit-variant-sharing">' + unlockedIcon + '</td>';
+			}
+			else{
+				html += '<td class="limit-variant-sharing">' + lockedIcon + '</td>';
 			}
 			html += '</tr>';
 			
