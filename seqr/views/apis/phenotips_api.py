@@ -65,7 +65,7 @@ def create_patient(project, individual):
     Raises:
         PhenotipsException: if unable to create patient record
     """
-    url = '/bin/PhenoTips/OpenPatientRecord?create=true&eid=%(patient_eid)s' % locals()
+    url = '/bin/PhenoTips/OpenPatientRecord?create=true&eid={patient_eid}'.format(patient_eid=individual.guid)
 
     auth_tuple = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id)
     _make_api_call('GET', url, auth_tuple=auth_tuple, verbose=False, parse_json_resonse=False)
@@ -82,10 +82,10 @@ def create_patient(project, individual):
 
     username, _ = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id)
     response = add_user_to_patient(username, patient_id, allow_edit=True)
-    logger.info("Added PhenoTips user %(username)s to %(patient_id)s: %(response)s" % locals())
+    logger.info("Added PhenoTips user {username} to {patient_id}: {response}".format(username=username, patient_id=patient_id, response=response))
     username_read_only, _ = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=True)
     add_user_to_patient(username_read_only, patient_id, allow_edit=False)
-    logger.info("Added PhenoTips user %(username)s to %(patient_id)s: %(response)s" % locals())
+    logger.info("Added PhenoTips user {username} to {patient_id}: {response}".format(username=username_read_only, patient_id=patient_id, response=response))
 
     return patient_data
 
@@ -252,7 +252,7 @@ def create_phenotips_user(username, password):
     headers = { "Content-Type": "application/x-www-form-urlencoded" }
     data = { 'parent': 'XWiki.XWikiUsers' }
 
-    url = '/rest/wikis/xwiki/spaces/XWiki/pages/%(username)s' % locals()
+    url = '/rest/wikis/xwiki/spaces/XWiki/pages/{username}'.format(username=username)
     _make_api_call(
         'PUT',
         url,
@@ -271,7 +271,7 @@ def create_phenotips_user(username, password):
         #'property#email': email_address,
     }
 
-    url = '/rest/wikis/xwiki/spaces/XWiki/pages/%(username)s/objects' % locals()
+    url = '/rest/wikis/xwiki/spaces/XWiki/pages/{username}/objects'.format(username=username)
     return _make_api_call(
         'POST',
         url,
@@ -293,7 +293,7 @@ def phenotips_pdf_handler(request, project_guid, patient_id):
         patient_id (string): PhenoTips internal patient id
     """
 
-    url = "/bin/export/data/%(patient_id)s?format=pdf&pdfcover=0&pdftoc=0&pdftemplate=PhenoTips.PatientSheetCode" % locals()
+    url = "/bin/export/data/{patient_id}?format=pdf&pdfcover=0&pdftoc=0&pdftemplate=PhenoTips.PatientSheetCode".format(patient_id=patient_id)
     project = Project.objects.get(guid=project_guid)
 
     check_permissions(project, request.user, CAN_VIEW)
@@ -317,7 +317,7 @@ def phenotips_edit_handler(request, project_guid, patient_id):
 
     # query string forwarding needed for PedigreeEditor button
     query_string = request.META["QUERY_STRING"]
-    url = "/bin/edit/data/%(patient_id)s?%(query_string)s" % locals()
+    url = "/bin/edit/data/{patient_id}?{query_string}".format(patient_id=patient_id, query_string=query_string)
 
     project = Project.objects.get(guid=project_guid)
 
@@ -469,15 +469,15 @@ def _send_request_to_phenotips(method, url, scheme="http", http_headers=None, da
         url = "%s://%s%s" % (scheme, settings.PHENOTIPS_SERVER, url)
 
     if verbose or DEBUG:
-        logger.info("Sending %(method)s request to %(url)s" % locals())
+        logger.info("Sending {method} request to {url}".format(method=method, url=url))
         if http_headers:
             logger.info("  headers:")
             for key, value in sorted(http_headers.items(), key=lambda i: i[0]):
-                logger.info("---> %(key)s: %(value)s" % locals())
+                logger.info("---> {key}: {value}".format(key=key, value=value))
         if data:
-            logger.info("  data: %(data)s" % locals())
+            logger.info("  data: {data}".format(data=data))
         if auth:
-            logger.info("  auth: %(auth_tuple)s" % locals())
+            logger.info("  auth: {auth_tuple}".format(auth_tuple=auth_tuple))
 
     response = method_impl(url, headers=http_headers, data=data, auth=auth)
 
@@ -492,11 +492,10 @@ def _send_request_to_phenotips(method, url, scheme="http", http_headers=None, da
         data = dump.dump_all(response)
         logger.info("===> dump - phenotips_api:\n" + str(data))
 
-
         logger.info("  response: <Response: %s> %s" % (response.status_code, response.reason))
         logger.info("  response-headers:")
         for key, value in sorted(response.headers.items(), key=lambda i: i[0]):
-            logger.info("<--- %(key)s: %(value)s" % locals())
+            logger.info("---> {key}: {value}".format(key=key, value=value))
 
     for header_key, header_value in response.headers.items():
         if header_key.lower() not in HTTP_RESPONSE_HEADERS_TO_NOT_PROXY:
