@@ -31,14 +31,11 @@ $(document).ready(
 			$('#projectIdA').attr('href',"/project/"+projectId);
 			$('#familyIdA').attr('href',"/project/" + projectId + "/family/"+familyId);
 			startSearch();
-			
-			var x = document.getElementsByClassName("open");
-			x.addEventListener("mouseover",showLimitMsg);
-			
 		});
 </script>
 Project: <a id="projectIdA" href=""><span id="projId"></span></a>
 Family: <a id="familyIdA" href=""><span id="familyId"></span></a>
+
 {% endblock %}
 {% block innercontent %}
 {% include 'javascript.html' %}
@@ -831,14 +828,6 @@ $('body').on('click', 'input.selected_phenotype_features',
 });
 
 
-/**
- * Handles mouseovers on limit variant sharing icons
- */
-function showLimitMessage() {
-	console.log('boo');
-};
-
-
 
 /**
  * Listens and updates when MME reciept contact name change requests happen
@@ -1245,8 +1234,8 @@ function showMMECandidates(result){
 		 		singlePatientGenotypeInfo += ',' + patient['genomicFeatures'][k]['variant']['referenceName'];
 		 		singlePatientGenotypeInfo += ',' + patient['genomicFeatures'][k]['variant']['start'] ;
 		 		singlePatientGenotypeInfo += ',' + patient['genomicFeatures'][k]['variant']['end'];
-		 		singlePatientGenotypeInfo += ','+patient['genomicFeatures'][k]['variant']['referenceBases'];
-		 		singlePatientGenotypeInfo += ','+ patient['genomicFeatures'][k]['variant']['alternateBases'];
+		 		singlePatientGenotypeInfo += ',' + patient['genomicFeatures'][k]['variant']['referenceBases'];
+		 		singlePatientGenotypeInfo += ',' + patient['genomicFeatures'][k]['variant']['alternateBases'];
 		 		
 		 		html += '<td><p>'  +  patient['genomicFeatures'][k]['zygosity'].toString()   + '</p></td>';
 		 		singlePatientGenotypeInfo += ','+ patient['genomicFeatures'][k]['zygosity'].toString();
@@ -1267,11 +1256,6 @@ function showMMECandidates(result){
 	 	$('#genotypeSubmissionCandidateInfo').empty();
 	 	$('#genotypeSubmissionCandidateInfo').append(html);
  	}
- 	
- 	
- 	$(function () {
- 		  $('[data-toggle="tooltip"]').tooltip();
- 	});
  	$('#submissionCandidatesContainer').show();
  	
  	//serialize back
@@ -1381,6 +1365,7 @@ function showDataToBeSubmitted(){
 			html += '<td><p>'  +  genotypes_to_submit[k]['alternateBases']   + '</p></td>';
 			html += '<td><p>'  +  genotypes_to_submit[k]['zygosity']   + '</p></td>';
 			
+			var sharePreference={'variant':variants_to_limit_sharing[genotypes_to_submit[k]['genotypeId']]};
 			var lockedIcon='&nbsp&nbsp<i class="fas fa-lock fa-lg" aria-hidden="true"></i>';
 			var unlockedIcon='&nbsp&nbsp<i class="fas fa-lock-open fa-lg" aria-hidden="true"></i>';
 			if ('share' == variants_to_limit_sharing[genotypes_to_submit[k]['genotypeId']]){
@@ -1402,6 +1387,7 @@ function showDataToBeSubmitted(){
 															"referenceBases":genotypes_to_submit[k]['referenceBases'],
 															"referenceName":genotypes_to_submit[k]['referenceName'],
 															"start":genotypes_to_submit[k]['variantStart'],
+															'_share':sharePreference
 														},
 														"zygosity":genotypes_to_submit[k]['zygosity'] 
 														});
