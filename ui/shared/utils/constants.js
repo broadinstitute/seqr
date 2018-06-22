@@ -53,8 +53,8 @@ export const FAMILY_FIELD_RENDER_LOOKUP = {
     component: OptionFieldView,
     props: {
       tagOptions: FAMILY_ANALYSIS_STATUS_OPTIONS,
-      tagAnnotation: (value, compact) => (
-        compact ? <Popup trigger={<ColoredIcon name="stop" color={value.color} />} content={value.text} /> :
+      tagAnnotation: (value, compact) => (compact ?
+        <Popup trigger={<ColoredIcon name="stop" color={value.color} />} content={value.text} position="top center" /> :
         <ColoredIcon name="stop" color={value.color} />
       ),
     },

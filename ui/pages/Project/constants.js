@@ -76,6 +76,7 @@ export const SHOW_DECLINED_TO_PARTICIPATE = 'DECLINED_TO_PARTICIPATE'
 
 export const SHOW_DATA_LOADED = 'SHOW_DATA_LOADED'
 export const SHOW_PHENOTYPES_ENTERED = 'SHOW_PHENOTYPES_ENTERED'
+export const SHOW_NO_PHENOTYPES_ENTERED = 'SHOW_NO_PHENOTYPES_ENTERED'
 
 
 const SOLVED_STATUSES = new Set([
@@ -130,6 +131,15 @@ export const FAMILY_FILTER_OPTIONS = [
     createFilter: individualsByGuid => family =>
       family.individualGuids.map(individualGuid => individualsByGuid[individualGuid].phenotipsData).some(
         phenotipsData => hasPhenotipsDetails(phenotipsData),
+      ),
+  },
+  {
+    value: SHOW_NO_PHENOTYPES_ENTERED,
+    name: 'No Phenotypes Entered',
+    internalOmit: true,
+    createFilter: individualsByGuid => family =>
+      family.individualGuids.map(individualGuid => individualsByGuid[individualGuid].phenotipsData).every(
+        phenotipsData => !hasPhenotipsDetails(phenotipsData),
       ),
   },
   {

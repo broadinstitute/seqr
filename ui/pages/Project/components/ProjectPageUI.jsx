@@ -86,9 +86,9 @@ const DETAIL_FIELDS = [
 
 const NO_DETAIL_FIELDS = [
   { id: FAMILY_FIELD_ANALYSIS_STATUS },
-  { id: FAMILY_FIELD_ANALYSED_BY },
+  { id: FAMILY_FIELD_ANALYSED_BY, colWidth: 2 },
   { id: FAMILY_FIELD_FIRST_DATASET },
-  { id: FAMILY_FIELD_DESCRIPTION },
+  { id: FAMILY_FIELD_DESCRIPTION, colWidth: 6 },
 ]
 
 const ProjectPageUI = (props) => {
