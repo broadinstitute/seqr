@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
-import { Popup, Label, Header, Icon } from 'semantic-ui-react'
+import { Popup, Label, Header } from 'semantic-ui-react'
 
 import { getFamiliesByGuid, getIndividualsByGuid } from 'redux/selectors'
 import { getProject } from 'pages/Project/selectors'
@@ -107,7 +107,7 @@ const Genotype = ({ variant, individual }) => {
             <Alleles alleles={genotype.alleles} variant={variant} individual={individual} />
             <HorizontalSpacer width={5} />
             ({genotype.gq || '?'}, {genotype.ab ? genotype.ab.toPrecision(2) : '?'})
-            {genotype.filter && genotype.filter !== 'pass' && <span><br />Filter: {genotype.filter}</span>}
+            {genotype.filter && genotype.filter !== 'pass' && <span><br />{genotype.filter}</span>}
           </span>
         }
         content={
@@ -174,18 +174,18 @@ const VariantFamily = ({ variant, project, family, individualsByGuid }) => {
       </IndividualCell>
       {individuals.map(individual =>
         <IndividualCell key={individual.individualGuid}>
-          {hasPhenotipsDetails(individual.phenotipsData) &&
-            <Popup
-              hoverable
-              wide="very"
-              position="top left"
-              trigger={<a><Icon name="file powerpoint outline" /></a>}
-              content={
-                <PhenotipsDataPanel individual={individual} showDetails showEditPhenotipsLink={false} showViewPhenotipsLink={false} />
-              }
-            />
-          }
-          <PedigreeIcon sex={individual.sex} affected={individual.affected} />
+          <PedigreeIcon
+            sex={individual.sex}
+            affected={individual.affected}
+            popupContent={
+              hasPhenotipsDetails(individual.phenotipsData) ?
+                <PhenotipsDataPanel
+                  individual={individual}
+                  showDetails showEditPhenotipsLink={false}
+                  showViewPhenotipsLink={false}
+                /> : null
+            }
+          />
           <small>{individual.displayName || individual.individualId}</small>
           <br />
           <Genotype variant={variant} individual={individual} />

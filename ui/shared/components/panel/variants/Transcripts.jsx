@@ -21,8 +21,7 @@ const AnnotationSection = styled.div`
   padding-right: 30px;
 `
 
-const AnnotationLabel = styled.span`
-  font-size: .8em;
+const AnnotationLabel = styled.small`
   font-weight: bolder;
   color: grey;
   padding-right: 10px;
@@ -74,8 +73,8 @@ const Transcripts = ({ variant, loading, loadVariantTranscripts: dispatchLoadVar
                       <AnnotationLabel>CDS Position</AnnotationLabel>{transcript.cdsPosition}<br />
                     </AnnotationSection>
                     <AnnotationSection>
-                      <AnnotationLabel>HGVS.C</AnnotationLabel>{transcript.hgvsc && <ProteinSequence hgvs={transcript.hgvsc} size="1em" />}<br />
-                      <AnnotationLabel>HGVS.P</AnnotationLabel>{transcript.hgvsp && <ProteinSequence hgvs={transcript.hgvsp} size="1em" />}<br />
+                      <AnnotationLabel>HGVS.C</AnnotationLabel>{transcript.hgvsc && <ProteinSequence hgvs={transcript.hgvsc} />}<br />
+                      <AnnotationLabel>HGVS.P</AnnotationLabel>{transcript.hgvsp && <ProteinSequence hgvs={transcript.hgvsp} />}<br />
                     </AnnotationSection>
                   </Table.Cell>
                 </Table.Row>,

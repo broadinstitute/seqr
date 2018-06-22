@@ -12,7 +12,7 @@ const BreakWord = styled.span`
 `
 
 const LargeText = styled.div`
-  font-size: 16px;
+  font-size: 1.2em;
 `
 
 const locus = (variant, rangeSize) =>

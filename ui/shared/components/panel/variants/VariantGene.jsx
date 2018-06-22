@@ -2,11 +2,12 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { connect } from 'react-redux'
-import { Label, Popup, Header, List } from 'semantic-ui-react'
+import { Label, Popup, List } from 'semantic-ui-react'
 
 import { getProject } from 'pages/Project/selectors'
 import { HorizontalSpacer } from '../../Spacers'
 import Modal from '../../modal/Modal'
+import ButtonLink from '../../buttons/ButtonLink'
 import GeneDetail from '../genes/GeneDetail'
 
 const CONSTRAINED_GENE_RANK_THRESHOLD = 1000
@@ -19,8 +20,11 @@ const GeneLabelContent = styled(Label).attrs({
    margin: 0px 10px 10px 0px !important;
 `
 
-const InlineHeader = styled(Header)`
+const GeneLinks = styled.div`
+  font-size: .9em;
   display: inline-block;
+  padding-right: 10px;
+  padding-bottom: .5em;
 `
 
 const ListItemLink = styled(List.Item).attrs({ as: 'a', icon: 'linkify' })`
@@ -50,7 +54,7 @@ GeneLabel.propTypes = {
 const VariantGene = ({ gene, project }) =>
   <div>
     <Modal
-      trigger={<InlineHeader size="large"><a>{gene.symbol}</a></InlineHeader>}
+      trigger={<ButtonLink fontWeight="bold" fontSize="1.5em">{gene.symbol}</ButtonLink>}
       title={gene.symbol}
       modalName={`gene-${gene.geneId}`}
       size="fullscreen"
@@ -58,11 +62,11 @@ const VariantGene = ({ gene, project }) =>
       <GeneDetail geneId={gene.geneId} />
     </Modal>
     <HorizontalSpacer width={10} />
-    <div style={{ display: 'inline-block' }}>
+    <GeneLinks>
       <a href={`http://gnomad-beta.broadinstitute.org/gene/${gene.symbol}`} target="_blank">gnomAD</a>
       <HorizontalSpacer width={5} />|<HorizontalSpacer width={5} />
       <a href={`/project/${project.deprecatedProjectId}/gene/${gene.geneId}`} target="_blank">Gene Search</a><br />
-    </div>
+    </GeneLinks>
     <div>
       {gene.diseaseDbPheotypes.length > 0 &&
         <GeneLabel

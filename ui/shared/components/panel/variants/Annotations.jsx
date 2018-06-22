@@ -5,21 +5,20 @@ import { Popup, Label } from 'semantic-ui-react'
 
 import { HorizontalSpacer } from '../../Spacers'
 import Modal from '../../modal/Modal'
+import ButtonLink from '../../buttons/ButtonLink'
 import Transcripts from './Transcripts'
 
 
 const ProteinSequenceContainer = styled.span`
   word-break: break-all;
   color: black;
-  font-size: ${props => props.size || '1.2em'};
 `
 
-export const ProteinSequence = ({ hgvs, size }) =>
-  <ProteinSequenceContainer size={size}>{hgvs.split(':').pop()}</ProteinSequenceContainer>
+export const ProteinSequence = ({ hgvs }) =>
+  <ProteinSequenceContainer>{hgvs.split(':').pop()}</ProteinSequenceContainer>
 
 ProteinSequence.propTypes = {
   hgvs: PropTypes.string.isRequired,
-  size: PropTypes.string,
 }
 
 const LOF_FILTER_MAP = {
@@ -104,7 +103,7 @@ const Annotations = ({ variant }) => {
           modalName={`${variant.variantId}-annotations`}
           title="Transcripts"
           size="large"
-          trigger={<a style={{ fontSize: '14px' }}>{vepGroup.replace(/_/g, ' ')}</a>}
+          trigger={<ButtonLink>{vepGroup.replace(/_/g, ' ')}</ButtonLink>}
         >
           <Transcripts variant={variant} />
         </Modal>

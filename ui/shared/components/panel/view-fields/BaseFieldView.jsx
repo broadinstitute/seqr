@@ -6,6 +6,7 @@ import { Icon } from 'semantic-ui-react'
 import { getUser } from 'redux/selectors'
 import StaffOnlyIcon from '../../icons/StaffOnlyIcon'
 import DispatchRequestButton from '../../buttons/DispatchRequestButton'
+import ButtonLink from '../../buttons/ButtonLink'
 import ReduxFormWrapper from '../../form/ReduxFormWrapper'
 import Modal from '../../modal/Modal'
 import { HorizontalSpacer } from '../../Spacers'
@@ -27,10 +28,10 @@ const BaseFieldView = (props) => {
 
   const editButton = props.isEditable && (props.formFields ?
     <Modal key="edit" title={props.modalTitle} modalName={modalId} trigger={
-      <a role="button" tabIndex="0">
-        {props.editLabel && <span style={{ cursor: 'pointer', paddingRight: '5px' }}>{props.editLabel}</span>}
+      <ButtonLink>
+        {props.editLabel && <small>{props.editLabel}<HorizontalSpacer width={5} /></small>}
         <Icon link size="small" name={props.editIconName || 'write'} />
-      </a>
+      </ButtonLink>
     }
     >
       <div style={props.modalStyle}>
