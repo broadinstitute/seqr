@@ -53,7 +53,7 @@ const PageHeader = ({ user, project, familiesByGuid, match }) => {
         (breadcrumbId) => {
           if (breadcrumbId.startsWith('SV')) {
             originalPageLink = false
-            return { content: `Variant: ${breadcrumbId.split('_')[1]}` }
+            return { content: 'Variant', link: match.url }
           }
           const { familyId } = familiesByGuid[breadcrumbId] || {}
           originalPageLink = `saved-variants?family=${familyId}`

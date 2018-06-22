@@ -20,7 +20,7 @@ const FreqLink = ({ url, value, variant, genomeVersion, precision }) => {
 
   return (
     <a target="_blank" href={`http://${url}/${value > 0 ? 'variant' : 'region'}/${coords}`}>
-      {value > 0 ? value.toPrecision(precision || 2) : 0.0}
+      {value > 0 ? value.toPrecision(precision || 2) : '0.0'}
     </a>
   )
 }

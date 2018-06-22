@@ -41,7 +41,7 @@ const TagSection = styled.div`
 `
 
 const NOTE_STYLES = {
-  Edit: { display: 'flex', fontSize: '1.2em' },
+  Edit: { display: 'flex' },
   Add: { verticalAlign: 'middle' },
 }
 

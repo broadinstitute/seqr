@@ -34,7 +34,7 @@ const Prediction = ({ field, annotation, dangerThreshold, warningThreshold }) =>
     value = value.replace('_', ' ')
   }
 
-  return <div><Icon name="circle" color={color} /><b>{field.replace('_', ' ').toUpperCase()} </b>{value}</div>
+  return <div><Icon name="circle" size="small" color={color} /><b>{field.replace('_', ' ').toUpperCase()} </b>{value}</div>
 }
 
 Prediction.propTypes = {
