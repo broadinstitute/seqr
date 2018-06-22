@@ -50,6 +50,12 @@ from seqr.views.pages.project_page import \
     project_page_data, \
     export_project_individuals_handler
 
+from seqr.views.apis.gene_api import \
+    gene_info, \
+    create_gene_note_handler, \
+    update_gene_note_handler, \
+    delete_gene_note_handler
+
 from seqr.views.pages.staff.staff_pages import \
     staff_dashboard, \
     users_page
@@ -66,7 +72,8 @@ from seqr.views.apis.variant_search_api import query_variants_handler
 
 react_app_pages = [
     'dashboard',
-    'project/(?P<project_guid>[^/]+)/.*'
+    'project/(?P<project_guid>[^/]+)/.*',
+    'gene_info/.*'
 ]
 
 # NOTE: the actual url will be this with an '/api' prefix
@@ -112,6 +119,11 @@ api_endpoints = {
     'saved_variant/(?P<variant_guid>[^/]+)/note/create': create_variant_note_handler,
     'saved_variant/(?P<variant_guid>[^/]+)/note/(?P<note_guid>[^/]+)/update': update_variant_note_handler,
     'saved_variant/(?P<variant_guid>[^/]+)/note/(?P<note_guid>[^/]+)/delete': delete_variant_note_handler,
+
+    'gene_info/(?P<gene_id>[^/]+)': gene_info,
+    'gene_info/(?P<gene_id>[^/]+)/note/create': create_gene_note_handler,
+    'gene_info/(?P<gene_id>[^/]+)/note/(?P<note_guid>[^/]+)/update': update_gene_note_handler,
+    'gene_info/(?P<gene_id>[^/]+)/note/(?P<note_guid>[^/]+)/delete': delete_gene_note_handler,
 
     'awesomebar': awesomebar_autocomplete_handler,
 

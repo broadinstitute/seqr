@@ -818,7 +818,7 @@ def delete_gene_note(request, note_id):
     if not note.can_edit(request.user):
         raise PermissionDenied
 
-    note.delete()
+    delete_xbrowse_model(note)
 
     return JSONResponse({
         'is_error': False,
@@ -850,14 +850,17 @@ def add_or_edit_gene_note(request):
         if not note.can_edit(request.user):
             raise PermissionDenied
 
-        note.note = form.cleaned_data['note_text']
-        note.user = request.user
-        note.date_saved = timezone.now()
-        note.save()
+        update_xbrowse_model(
+            note,
+            note=form.cleaned_data['note_text'],
+            user=request.user,
+            date_saved=timezone.now(),
+        )
     else:
         event_type = "add_variant_note"
 
-        note = GeneNote.objects.create(
+        note = create_xbrowse_model(
+            GeneNote,
             user=request.user,
             gene_id=form.cleaned_data['gene_id'],
             note=form.cleaned_data['note_text'],
