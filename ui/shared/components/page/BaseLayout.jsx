@@ -14,10 +14,11 @@ import PageHeader from './PageHeader'
 import Footer from './Footer'
 
 const LayoutContainer = styled.div`
-  height: calc(100% - 46px);
+  height: calc(100% - 32px);
 `
 
 const ContentGrid = styled(Grid)`
+  padding-top: 15px !important;
   min-height: calc(100% - 46px);
 `
 

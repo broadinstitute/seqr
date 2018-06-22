@@ -7,7 +7,8 @@ from django.db.models import Q
 
 from seqr.models import Project as SeqrProject, Family as SeqrFamily, Individual as SeqrIndividual, \
     VariantTagType as SeqrVariantTagType, VariantTag as SeqrVariantTag, VariantNote as SeqrVariantNote, \
-    VariantFunctionalData as SeqrVariantFunctionalData, LocusList as SeqrLocusList, LocusListGene as SeqrLocusListGene
+    VariantFunctionalData as SeqrVariantFunctionalData, LocusList as SeqrLocusList, LocusListGene as SeqrLocusListGene, \
+    GeneNote as SeqrGeneNote
 from seqr.utils.model_sync_utils import get_or_create_saved_variant
 
 
@@ -21,6 +22,7 @@ XBROWSE_TO_SEQR_CLASS_MAPPING = {
     "VariantNote": SeqrVariantNote,
     "GeneList": SeqrLocusList,
     "GeneListItem": SeqrLocusListGene,
+    "GeneNote": SeqrGeneNote,
 }
 
 _DELETED_FIELD = "__DELETED__"
@@ -85,6 +87,10 @@ XBROWSE_TO_SEQR_FIELD_MAPPING = {
     },
     "GeneListItem": {
         "gene_list": "locus_list",
+    },
+    "GeneNote": {
+        "user": "created_by",
+        "date_saved": _DELETED_FIELD,
     },
 }
 
@@ -189,6 +195,11 @@ def find_matching_seqr_model(xbrowse_model):
                 locus_list=xbrowse_model.gene_list.seqr_locus_list or find_matching_seqr_model(xbrowse_model.gene_list),
                 description=xbrowse_model.description,
                 gene_id=xbrowse_model.gene_id)
+        elif xbrowse_class_name == "GeneNote":
+            return SeqrGeneNote.objects.get(
+                note=xbrowse_model.note,
+                gene_id=xbrowse_model.gene_id,
+            )
 
     except ObjectDoesNotExist:
         pass

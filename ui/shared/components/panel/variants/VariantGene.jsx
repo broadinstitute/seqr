@@ -55,7 +55,7 @@ const VariantGene = ({ gene, project }) =>
       modalName={`gene-${gene.geneId}`}
       size="fullscreen"
     >
-      <GeneDetail geneId={gene.geneId} />
+      <GeneDetail geneId={gene.geneId} showTitle={false} />
     </Modal>
     <HorizontalSpacer width={10} />
     <div style={{ display: 'inline-block' }}>

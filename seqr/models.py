@@ -709,6 +709,20 @@ class VariantFunctionalData(ModelWithGUID):
         json_fields = ['guid', 'functional_data_tag', 'metadata', 'last_modified_date', 'created_by']
 
 
+class GeneNote(ModelWithGUID):
+    note = models.TextField(default="", blank=True)
+    gene_id = models.CharField(max_length=20)  # ensembl ID
+
+    def __unicode__(self):
+        return "%s:%s" % (self.gene_id, (self.note or "")[:20])
+
+    def _compute_guid(self):
+        return 'GN%07d_%s' % (self.id, _slugify(str(self)))
+
+    class Meta:
+        json_fields = ['guid', 'note', 'gene_id', 'last_modified_date', 'created_by']
+
+
 class LocusList(ModelWithGUID):
     """List of gene ids or regions"""
 
