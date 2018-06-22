@@ -131,12 +131,8 @@ export const updateIndividuals = (values) => {
   }
 }
 
-// Family table actions
-export const updateFamiliesFilter = familiesFilter => ({ type: UPDATE_FAMILY_TABLE_STATE, updates: { familiesFilter } })
-export const updateFamiliesSortOrder = familiesSortOrder => ({ type: UPDATE_FAMILY_TABLE_STATE, updates: { familiesSortOrder } })
-export const updateFamiliesSortDirection = familiesSortDirection => ({ type: UPDATE_FAMILY_TABLE_STATE, updates: { familiesSortDirection } })
-export const updateShowDetails = showDetails => ({ type: UPDATE_FAMILY_TABLE_STATE, updates: { showDetails } })
-
+// Table actions
+export const updateFamiliesTable = updates => ({ type: UPDATE_FAMILY_TABLE_STATE, updates })
 export const updateSavedVariantTable = updates => ({ type: UPDATE_SAVED_VARIANT_TABLE_STATE, updates })
 
 // reducers

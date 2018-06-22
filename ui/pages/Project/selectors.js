@@ -152,7 +152,7 @@ export const getSavedVariantExportConfig = createSelector(
 )
 
 // Family table selectors
-export const getProjectTableState = state => state.familyTableState
+export const getFamiliesTableState = state => state.familyTableState
 export const getFamiliesFilter = state => state.familyTableState.familiesFilter || SHOW_ALL
 export const getFamiliesSortOrder = state => state.familyTableState.familiesSortOrder || SORT_BY_FAMILY_NAME
 export const getFamiliesSortDirection = state => state.familyTableState.familiesSortDirection || 1
