@@ -2,7 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 
-import { Grid } from 'semantic-ui-react'
+import { Menu, Header } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
 
@@ -11,54 +11,24 @@ import { getUser } from 'redux/selectors'
 
 import AwesomeBar from './AwesomeBar'
 
-const HeaderGrid = styled(Grid)`
-  background-color: #000;
-  border-style: solid;
-  border-width: 0 0 0.15em 0;
-  border-color: #888;
-  padding-top: 12px !important;
-`
-const HeaderRow = styled(Grid.Row)`
-  padding: 9px !important;
-`
-const DashboardColumn = styled(Grid.Column)`
-  padding: 6px 5px 0px 10px;
-  vertical-align: bottom;
-`
-const AwesomeBarColumn = styled(Grid.Column)`
-  padding: 0;
-`
-const UserColumn = styled(Grid.Column)`
-  padding: 6px 0px 0px 0px;
-  color: white;
-  text-align: right;
-  white-space: nowrap;
+const HeaderMenu = styled(Menu)`
+  padding-left: 100px;
+  padding-right: 100px;
 `
 
-const Header = ({ user }) =>
-  <HeaderGrid stackable>
-    <HeaderRow>
-      <Grid.Column width={1} />
-      <DashboardColumn width={1}>
-        <Link to="/dashboard">
-          <span style={{ color: 'white', fontWeight: 500, fontSize: '16px', fontFamily: 'sans-serif', fontStyle: 'italic' }}>seqr</span>
-        </Link>
-      </DashboardColumn>
-      <AwesomeBarColumn width={9}>
-        <AwesomeBar />
-      </AwesomeBarColumn>
-      <UserColumn width={4}>
-        Logged in as <b>{user ? (user.email || user.username) : null}</b>
-        <HorizontalSpacer width={30} />
-        <a href="/logout">
-          <span>Log out</span>
-        </a>
-      </UserColumn>
-      <Grid.Column width={1} />
-    </HeaderRow>
-  </HeaderGrid>
+const PageHeader = ({ user }) =>
+  <HeaderMenu borderless inverted attached>
+    <Menu.Item as={Link} to="/dashboard"><Header size="medium" inverted>seqr</Header></Menu.Item>
+    <Menu.Item as={Link} to="/gene_info" content="Gene Info" />
+    <Menu.Item fitted="vertically"><AwesomeBar newWindow /></Menu.Item>
+    <Menu.Item position="right">
+      Logged in as &nbsp; <b>{user ? (user.email || user.username) : null}</b>
+      <HorizontalSpacer width={30} />
+      <a href="/logout">Log out</a>
+    </Menu.Item>
+  </HeaderMenu>
 
-Header.propTypes = {
+PageHeader.propTypes = {
   user: PropTypes.object.isRequired,
 }
 
@@ -67,6 +37,6 @@ const mapStateToProps = state => ({
   user: getUser(state),
 })
 
-export { Header as HeaderComponent }
+export { PageHeader as PageHeaderComponent }
 
-export default connect(mapStateToProps)(Header)
+export default connect(mapStateToProps)(PageHeader)

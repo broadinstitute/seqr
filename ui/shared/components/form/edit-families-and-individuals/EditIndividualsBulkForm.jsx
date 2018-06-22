@@ -190,7 +190,7 @@ export { EditIndividualsBulkForm as EditIndividualsBulkFormComponent }
 
 const mapDispatchToProps = (dispatch) => {
   return {
-    updateIndividuals: (values) => { dispatch(updateIndividuals(values)) },
+    updateIndividuals: values => dispatch(updateIndividuals(values)),
   }
 }
 
