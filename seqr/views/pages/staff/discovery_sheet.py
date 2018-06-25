@@ -13,7 +13,7 @@ from seqr.views.utils.export_table_utils import export_table
 from xbrowse_server.mall import get_reference
 from xbrowse import genomeloc
 from reference_data.models import HPO_CATEGORY_NAMES
-from seqr.models import Project, Family, Dataset, VariantTag, VariantTagType
+from seqr.models import Project, Family, Dataset, VariantTag, VariantTagType, VariantFunctionalData
 from dateutil import relativedelta as rdelta
 from django.db.models import Q
 from django.shortcuts import render
@@ -21,7 +21,6 @@ from settings import PROJECT_IDS_TO_EXCLUDE_FROM_DISCOVERY_SHEET_DOWNLOAD, LOGIN
 from seqr.views.utils.orm_to_json_utils import _get_json_for_project
 
 logger = logging.getLogger(__name__)
-
 
 
 HEADER = collections.OrderedDict([
@@ -100,12 +99,6 @@ def discovery_sheet(request, project_guid=None):
     rows = []
     errors = []
 
-    discovery_tag_types = VariantTagType.objects.filter(
-        Q(name__icontains="tier 1") |
-        Q(name__icontains="tier 2") |
-        Q(name__icontains="known gene for phenotype")
-    ).only('id')
-
     # export table for all cmg projects
     if "download" in request.GET and project_guid is None:
         logger.info("exporting xls table for all projects")
@@ -116,7 +109,7 @@ def discovery_sheet(request, project_guid=None):
                 continue
 
             rows.extend(
-                generate_rows(project, errors, discovery_tag_types)
+                generate_rows(project, errors)
             )
 
         return export_table("discovery_sheet", HEADER, rows, file_format="xls")
@@ -131,7 +124,7 @@ def discovery_sheet(request, project_guid=None):
             'errors': errors,
         })
 
-    rows = generate_rows(project, errors, discovery_tag_types)
+    rows = generate_rows(project, errors)
 
     logger.info("request.get: " + str(request.GET))
     if "download" in request.GET:
@@ -147,7 +140,7 @@ def discovery_sheet(request, project_guid=None):
     })
 
 
-def generate_rows(project, errors, discovery_tag_types):
+def generate_rows(project, errors):
     rows = []
 
     loaded_datasets = list(Dataset.objects.filter(project=project, analysis_type="VARIANTS", is_loaded=True))
@@ -164,9 +157,12 @@ def generate_rows(project, errors, discovery_tag_types):
 
     project_variant_tags = list(
         VariantTag.objects.select_related('variant_tag_type').select_related('saved_variant').filter(
-            variant_tag_type__in=discovery_tag_types, saved_variant__project=project
+            Q(saved_variant__project=project) & (
+            Q(variant_tag_type__name__icontains="tier 1") |
+            Q(variant_tag_type__name__icontains="tier 2") |
+            Q(variant_tag_type__name__icontains="known gene for phenotype") |
+            Q(variant_tag_type__name__icontains="komp"))
         ))
-
 
     #"External" = REAN
     #"RNA" = RNA
@@ -350,6 +346,7 @@ def generate_rows(project, errors, discovery_tag_types):
             continue
 
         gene_ids_to_variant_tags = defaultdict(list)
+        gene_ids_to_functional_tags = defaultdict(list)
         for vt in variant_tags:
 
             if not vt.saved_variant.saved_variant_json:
@@ -378,14 +375,22 @@ def generate_rows(project, errors, discovery_tag_types):
 
             gene_ids_to_variant_tags[gene_id].append(vt)
 
+            functional_tags = VariantFunctionalData.objects.filter((
+                Q(saved_variant__family=family) | Q(saved_variant__family__isnull=True)) &
+                Q(saved_variant__xpos=vt.saved_variant.xpos) & Q(saved_variant__ref=vt.saved_variant.ref) & Q(saved_variant__alt=vt.saved_variant.alt))
+            gene_ids_to_functional_tags[gene_id].extend(functional_tags)
+
         for gene_id, variant_tags in gene_ids_to_variant_tags.items():
             gene_symbol = get_reference().get_gene_symbol(gene_id)
+
+            functional_tags = gene_ids_to_functional_tags.get(gene_id, [])
 
             lower_case_variant_tag_type_names = [vt.variant_tag_type.name.lower() for vt in variant_tags]
             has_tier1 = any(name.startswith("tier 1") for name in lower_case_variant_tag_type_names)
             has_tier2 = any(name.startswith("tier 2") for name in lower_case_variant_tag_type_names)
             has_tier2_phenotype_expansion = any(name.startswith("tier 2") and "expansion" in name for name in lower_case_variant_tag_type_names)
             has_known_gene_for_phenotype = any(name == "known gene for phenotype" for name in lower_case_variant_tag_type_names)
+            has_share_with_komp_tag = any("komp" in name and "share" in name for name in lower_case_variant_tag_type_names)
 
             has_tier1_phenotype_expansion_or_novel_mode_of_inheritance = any(
                 name.startswith("tier 1") and ('expansion' in name.lower() or 'novel mode' in name.lower()) for name in lower_case_variant_tag_type_names)
@@ -485,21 +490,41 @@ def generate_rows(project, errors, discovery_tag_types):
                 "submitted_to_mme": "Y" if submitted_to_mme else ("TBD" if has_tier1 or has_tier2 else ("KPG" if has_known_gene_for_phenotype else "NS")),
                 "actual_inheritance_model": actual_inheritance_model,
                 "analysis_complete_status": analysis_complete_status,  # If known gene for phenotype, tier 1 or tier 2 tag is used on any variant  in project, or 1 year past t0 = complete.  If less than a year and none of the tags above = first pass in progress
-                "genome_wide_linkage": NA_or_KPG_or_NS,
-                "p_value": NA_or_KPG_or_NS,
-                "n_kindreds_overlapping_sv_similar_phenotype": NA_or_KPG_or_NS,
-                "n_unrelated_kindreds_with_causal_variants_in_gene": "1" if has_tier1 or has_tier2 else ("KPG" if has_known_gene_for_phenotype else "NS"),
-                "biochemical_function": KPG_or_blank_or_NS,
-                "protein_interaction": KPG_or_blank_or_NS,
-                "expression": KPG_or_blank_or_NS,
-                "patient_cells": KPG_or_blank_or_NS,
-                "non_patient_cell_model": KPG_or_blank_or_NS,
-                "animal_model": KPG_or_blank_or_NS,
-                "non_human_cell_culture_model": KPG_or_blank_or_NS,
-                "rescue": KPG_or_blank_or_NS,
+                "genome_wide_linkage": " ".join(set([f.metadata for f in functional_tags if f.functional_data_tag == "Genome-wide Linkage"])) or NA_or_KPG_or_NS,
+                "p_value": " ".join(set([f.metadata for f in functional_tags if "p-value" in f.functional_data_tag.lower()])) or NA_or_KPG_or_NS,
+                "n_kindreds_overlapping_sv_similar_phenotype": " ".join(set([f.metadata for f in functional_tags if "overlapping sv" in f.functional_data_tag.lower()])) or NA_or_KPG_or_NS,
+                "n_unrelated_kindreds_with_causal_variants_in_gene": "KPG" if has_known_gene_for_phenotype else (" ".join(set([str(int(f.metadata) + 1) for f in functional_tags if f.metadata and "causal variants" in f.functional_data_tag.lower()])) or ("1" if has_tier1 or has_tier2 else "NS")),
+                "biochemical_function": ("Y" if any([f for f in functional_tags if f.functional_data_tag == 'Biochemical Function']) else "N") if has_tier1 or has_tier2 else KPG_or_blank_or_NS,
+                "protein_interaction": ("Y" if any([f for f in functional_tags if f.functional_data_tag == 'Protein Interaction']) else "N") if has_tier1 or has_tier2 else KPG_or_blank_or_NS,
+                "expression": ("Y" if any([f for f in functional_tags if f.functional_data_tag == 'Expression']) else "N") if has_tier1 or has_tier2 else KPG_or_blank_or_NS,
+                "patient_cells": ("Y" if any([f for f in functional_tags if f.functional_data_tag == "Patient Cells"]) else "N") if has_tier1 or has_tier2 else KPG_or_blank_or_NS,
+                "non_patient_cell_model": ("Y" if any([f for f in functional_tags if f.functional_data_tag.startswith('Non-patient')]) else "N") if has_tier1 or has_tier2 else KPG_or_blank_or_NS,
+                "animal_model": ("Y" if any([f for f in functional_tags if f.functional_data_tag == "Animal Model"]) else "N") if has_tier1 or has_tier2 else KPG_or_blank_or_NS,
+                "non_human_cell_culture_model": ("Y" if any([f for f in functional_tags if f.functional_data_tag.startswith('Non-human')]) else "N") if has_tier1 or has_tier2 else KPG_or_blank_or_NS,
+                "rescue": ("Y" if any([f for f in functional_tags if f.functional_data_tag == "Rescue"]) else "N") if has_tier1 or has_tier2 else KPG_or_blank_or_NS,
+                "komp_early_release": "Y" if has_share_with_komp_tag else "N",
                 "phenotype_class": phenotype_class,
             })
 
             rows.append(row)
 
     return rows
+
+
+
+
+"""
+'tag': 'Genome-wide Linkage',
+'tag': 'Bonferroni corrected p-value',
+'tag': 'Kindreds w/ Overlapping SV & Similar Phenotype',
+'tag': 'Additional Unrelated Kindreds w/ Causal Variants in Gene',
+
+'tag': 'Biochemical Function',
+'tag': 'Protein Interaction',
+'tag': 'Expression',
+'tag': 'Patient Cells',
+'tag': 'Non-patient cells',
+'tag': 'Animal Model',
+'tag': 'Non-human cell culture model',
+'tag': 'Rescue',
+"""

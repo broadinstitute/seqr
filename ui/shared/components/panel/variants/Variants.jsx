@@ -1,7 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import { Grid } from 'semantic-ui-react'
+import { Grid, Icon, Popup } from 'semantic-ui-react'
 import { NavLink } from 'react-router-dom'
 
 import { CLINSIG_SEVERITY } from 'shared/utils/constants'
@@ -23,7 +23,6 @@ const VariantRow = styled(Grid.Row)`
   
   padding: 0;
   color: #999;
-  font-size: 12px;
   background-color: ${({ severity }) => {
     if (severity > 0) {
       return '#eaa8a857'
@@ -36,12 +35,29 @@ const VariantRow = styled(Grid.Row)`
   }}
 `
 
+const VariantLinkContainer = styled.div`
+  position: absolute;
+  right: 1em;
+`
+
 const NO_DISPLAY = { display: 'none' }
 
 const Variants = ({ variants, projectGuid }) =>
   <Grid divided="vertically" columns="equal">
     {variants.map(variant =>
       <VariantRow key={variant.variantId} severity={CLINSIG_SEVERITY[(variant.clinvar.clinsig || '').split('/')[0]]}>
+        {projectGuid &&
+          <VariantLinkContainer>
+            <NavLink to={`/project/${projectGuid}/saved_variants/variant/${variant.variantId}`} activeStyle={NO_DISPLAY}>
+              <Popup
+                trigger={<Icon name="linkify" link />}
+                content="Go to the page for this individual variant. Note: There is no additional information on this page, it is intended for sharing specific variants."
+                position="right center"
+                wide
+              />
+            </NavLink>
+          </VariantLinkContainer>
+        }
         <Pathogenicity variant={variant} />
         <Grid.Column width={16}>
           <VariantTags variant={variant} />
@@ -55,15 +71,8 @@ const Variants = ({ variants, projectGuid }) =>
         <Grid.Column><Annotations variant={variant} /></Grid.Column>
         <Grid.Column><Predictions annotation={variant.annotation} /></Grid.Column>
         <Grid.Column><Frequencies variant={variant} /></Grid.Column>
-        <Grid.Column width={15}>
+        <Grid.Column width={16}>
           <VariantFamily variant={variant} />
-        </Grid.Column>
-        <Grid.Column width={1} verticalAlign="bottom">
-          {projectGuid &&
-            <NavLink to={`/project/${projectGuid}/saved_variants/variant/${variant.variantId}`} activeStyle={NO_DISPLAY}>
-              Variant Page
-            </NavLink>
-          }
         </Grid.Column>
       </VariantRow>,
     )}

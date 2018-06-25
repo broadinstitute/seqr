@@ -1,7 +1,9 @@
+/* eslint-disable jsx-a11y/label-has-for */
+
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Loader, Grid, Pagination, Dropdown } from 'semantic-ui-react'
+import { Loader, Grid, Pagination, Dropdown, Popup, Icon } from 'semantic-ui-react'
 import { Link } from 'react-router-dom'
 import styled from 'styled-components'
 
@@ -43,7 +45,16 @@ const FILTER_FIELDS = [
   {
     name: 'hideExcluded',
     component: InlineToggle,
-    label: 'Hide Excluded',
+    label: (
+      <label>
+        Hide Excluded &nbsp;
+        <Popup
+          content="Remove all variants tagged with the ''Excluded'' tag from the results"
+          position="top center"
+          trigger={<a><Icon name="info circle" link /></a>}
+        />
+      </label>
+    ),
   },
 ]
 
@@ -106,7 +117,7 @@ class SavedVariants extends React.Component {
 
   render() {
     const { familyGuid, variantGuid, tag } = this.props.match.params
-    const filterFields = (this.categoryOptions.length && !tag) ?
+    const filterFields = this.categoryOptions ?
       [{ ...BASE_CATEGORY_FILTER_FIELD, options: [{ value: 'ALL', text: 'All' }, ...this.categoryOptions] }].concat(FILTER_FIELDS) :
       FILTER_FIELDS
 
@@ -135,39 +146,41 @@ class SavedVariants extends React.Component {
 
     const allShown = this.props.variantsToDisplay.length === this.props.totalVariantsCount
     const shownSummary = allShown ? 'all' :
-      `${this.props.firstRecordIndex + 1}-${this.props.firstRecordIndex + this.props.variantsToDisplay.length} of`
+      `${this.props.variantsToDisplay.length > 0 ? this.props.firstRecordIndex + 1 : 0}-${this.props.firstRecordIndex + this.props.variantsToDisplay.length} of`
     return (
       <Grid>
-        {!variantGuid &&
-          <Grid.Row>
-            <Grid.Column width={16}>
-              <VariantTagTypeBar height={30} project={this.props.project} familyGuid={familyGuid} />
-            </Grid.Column>
-          </Grid.Row>
-        }
-        {!this.props.loading && !variantGuid &&
+        <Grid.Row>
+          <Grid.Column width={16}>
+            <VariantTagTypeBar height={30} project={this.props.project} familyGuid={familyGuid} />
+          </Grid.Column>
+        </Grid.Row>
+        {!this.props.loading &&
           <Grid.Row>
             <Grid.Column width={8}>
               Showing {shownSummary} {this.props.filteredVariants.length}
               &nbsp;&nbsp;<Dropdown inline options={tagOptions} value={tag || 'ALL'} />
               &nbsp;variants {!allShown && `(${this.props.totalVariantsCount} total)`}
               <HorizontalSpacer width={20} />
-              <Pagination
-                activePage={this.props.tableState.currentPage || 1}
-                totalPages={this.props.totalPages}
-                onPageChange={this.props.updateSavedVariantPage}
-                size="mini"
-              />
+              {this.props.totalPages > 1 &&
+                <Pagination
+                  activePage={this.props.tableState.currentPage || 1}
+                  totalPages={this.props.totalPages}
+                  onPageChange={this.props.updateSavedVariantPage}
+                  size="mini"
+                />
+              }
             </Grid.Column>
             <InlineFormColumn width={8} floated="right" textAlign="right">
-              <ReduxFormWrapper
-                onSubmit={this.props.updateSavedVariantTable}
-                form="editSavedVariantTable"
-                initialValues={this.props.tableState}
-                closeOnSuccess={false}
-                submitOnChange
-                fields={filterFields}
-              />
+              {!variantGuid &&
+                <ReduxFormWrapper
+                  onSubmit={this.props.updateSavedVariantTable}
+                  form="editSavedVariantTable"
+                  initialValues={this.props.tableState}
+                  closeOnSuccess={false}
+                  submitOnChange
+                  fields={filterFields}
+                />
+              }
               <HorizontalSpacer width={10} />
               <ExportTableButton downloads={exports} />
             </InlineFormColumn>

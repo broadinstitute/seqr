@@ -138,7 +138,9 @@ class ElasticsearchDatastore(datastore.Datastore):
             quality_filter=None,
             indivs_to_consider=None,
             include_all_consequences=False,
-            user=None):
+            user=None,
+            max_results_limit=settings.VARIANT_QUERY_RESULTS_LIMIT,
+        ):
         from xbrowse_server.base.models import Individual
         from xbrowse_server.mall import get_reference
 
@@ -451,7 +453,7 @@ class ElasticsearchDatastore(datastore.Datastore):
         # https://elasticsearch-py.readthedocs.io/en/master/helpers.html#elasticsearch.helpers.scan
         start = time.time()
 
-        s = s.params(size=settings.VARIANT_QUERY_RESULTS_LIMIT + 1)
+        s = s.params(size=max_results_limit + 1)
         if not include_all_consequences:
             s = s.source(exclude=["sortedTranscriptConsequences"])
         response = s.execute()
@@ -459,7 +461,7 @@ class ElasticsearchDatastore(datastore.Datastore):
 
         logger.info("TOTAL: %s. Query took %s seconds" % (response.hits.total, time.time() - start))
 
-        if response.hits.total > settings.VARIANT_QUERY_RESULTS_LIMIT + 1:
+        if response.hits.total > max_results_limit + 1:
             raise Exception("This search matched too many variants. Please set additional filters and try again.")
 
         #print(pformat(response.to_dict()))
@@ -804,7 +806,7 @@ class ElasticsearchDatastore(datastore.Datastore):
             modified_variant_filter = copy.deepcopy(variant_filter)
         modified_variant_filter.add_gene(gene_id)
 
-        variants = [variant for variant in self.get_elasticsearch_variants(project_id, variant_filter=modified_variant_filter, user=user)]
+        variants = [variant for variant in self.get_elasticsearch_variants(project_id, variant_filter=modified_variant_filter, user=user, max_results_limit=10000)]
         return variants
 
     def _make_db_query(self, genotype_filter=None, variant_filter=None):

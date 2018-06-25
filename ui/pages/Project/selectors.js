@@ -66,7 +66,7 @@ export const getProjectSamples = createSelector(getSamplesByGuid, getProjectGuid
 
 // Saved variant selectors
 export const getSavedVariantTableState = state => state.savedVariantTableState
-export const getSavedVariantCategoryFilter = (state, props) => { return props.match.params.tag ? SHOW_ALL : (state.savedVariantTableState.categoryFilter || SHOW_ALL) }
+export const getSavedVariantCategoryFilter = state => state.savedVariantTableState.categoryFilter || SHOW_ALL
 export const getSavedVariantSortOrder = state => state.savedVariantTableState.sortOrder || SORT_BY_FAMILY_GUID
 export const getSavedVariantHideExcluded = state => state.savedVariantTableState.hideExcluded
 export const getSavedVariantCurrentPage = state => state.savedVariantTableState.currentPage || 1

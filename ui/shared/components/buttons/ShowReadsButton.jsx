@@ -9,6 +9,7 @@ import { getIndividualsByGuid, getDatasetsByGuid } from 'redux/selectors'
 import Modal from '../modal/Modal'
 import PedigreeIcon from '../icons/PedigreeIcon'
 import IGV from '../graph/IGV'
+import ButtonLink from './ButtonLink'
 
 const CRAM_TRACK_OPTIONS = {
   sourceType: 'pysam',
@@ -78,7 +79,7 @@ const ShowReadsButton = ({ locus, familyGuid, samples, individualsByGuid, datase
 
   return (
     <Modal
-      trigger={<a><Icon name="options" /> SHOW READS</a>}
+      trigger={<ButtonLink><Icon name="options" /> SHOW READS</ButtonLink>}
       modalName={`${familyGuid}-${locus}-igv`}
       title="IGV"
       size="fullscreen"
