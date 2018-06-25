@@ -377,7 +377,7 @@ def generate_rows(project, errors, discovery_tag_types):
             # get the shortest gene_id
             gene_id = list(sorted(gene_ids, key=lambda gene_id: len(gene_id)))[0]
 
-            functional_tags = VariantFunctionalData.objects.filter(xpos=vt.xpos, ref=vt.ref, alt=vt.alt, family=family)
+            functional_tags = VariantFunctionalData.objects.filter(saved_variant__xpos=vt.saved_variant.xpos, saved_variant__ref=vt.saved_variant.ref, saved_variant__alt=vt.saved_variant.alt, family=family)
             gene_ids_to_functional_tags[gene_ids].extend(functional_tags)
 
             gene_ids_to_variant_tags[gene_id].append(vt)
