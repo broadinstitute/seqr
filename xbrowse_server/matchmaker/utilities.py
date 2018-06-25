@@ -206,15 +206,9 @@ def generate_notification_for_incoming_match(response_from_matchbox,incoming_req
         for result in results_from_matchbox:
             seqr_id_maps = settings.SEQR_ID_TO_MME_ID_MAP.find({"submitted_data.patient.id":result['patient']['id']}).sort('insertion_date',-1).limit(1)
             for seqr_id_map in seqr_id_maps:
-                
                 seqr_project = get_object_or_404(Project, project_id=seqr_id_map['project_id']).seqr_project
-                
-                result = 'seqr ID ' + seqr_id_map['seqr_id'] 
-                result += ' from project ' +    seqr_id_map['project_id'] 
-                result += ' in family ' +  seqr_id_map['family_id'] 
-                result += ', inserted into matchbox on ' + seqr_id_map['insertion_date'].strftime('%d, %b %Y')
-                result += '. '
-                result += settings.SEQR_HOSTNAME_FOR_SLACK_POST + '/' + seqr_id_map['project_id'] + '/family/' +  seqr_id_map['family_id']
+                seqr_url=settings.SEQR_HOSTNAME_FOR_SLACK_POST + '/' + seqr_id_map['project_id'] + '/family/' +  seqr_id_map['family_id']
+                result = 'seqr ID %s from project %s in family %s inserted into matchbox on %s, with seqr link %s ' % (seqr_id_map['seqr_id'],seqr_id_map['project_id'],seqr_id_map['family_id'],seqr_id_map['insertion_date'].strftime('%d, %b %Y'),seqr_url )
                 match_results.append(result)
             settings.MME_EXTERNAL_MATCH_REQUEST_LOG.insert({
                                                         'seqr_id':seqr_id_map['seqr_id'],
@@ -232,7 +226,7 @@ def generate_notification_for_incoming_match(response_from_matchbox,incoming_req
                  'incoming_query_contact_phenotypes':', '.join([key + '(' + incoming_query_phenotypes[key]['name'] +')' for key in incoming_query_phenotypes]),
                  'incoming_query_contact_url':incoming_patient_as_json['patient']['contact'].get('href','(sorry I was not able to read the information given for URL'),
                  'incoming_query_contact_name':incoming_patient_as_json['patient']['contact'].get('name','(sorry I was not able to read the information given for name'),
-                 'match_results':'\n'.join(match_results),
+                 'match_results':match_results,
                  'email_addresses_alert_sent_to':','.join([i for i in seqr_project.mme_contact_url.replace('mailto:','').split(',')]),
                  },
             )
