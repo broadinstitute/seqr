@@ -408,7 +408,7 @@ def create_sample_records(sample_type, source_project, source_individual, new_pr
                 source_individual,
                 source_individual.bam_file_path,
                 analysis_type=SeqrDataset.ANALYSIS_TYPE_ALIGNMENT,
-                loaded_date=vcf_loaded_date,
+                loaded_date=vcf_file.loaded_date,
                 genome_version=new_vcf_dataset.genome_version,
             )
 
