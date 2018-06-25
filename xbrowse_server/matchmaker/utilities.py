@@ -242,7 +242,7 @@ def generate_notification_for_incoming_match(response_from_matchbox,incoming_req
         message += 'These matches were sent back today (' + time.strftime('%d, %b %Y')  + ').'
         if settings.SLACK_TOKEN is not None:
             post_in_slack(message,settings.MME_SLACK_MATCH_NOTIFICATION_CHANNEL)
-        if settings.EMAIL_NOTIFICATIONS_ACTIVATED:
+        if settings.ENABLE_MME_MATCH_EMAIL_NOTIFICATIONS:
             email_content = render_to_string(
                 'emails/mme_returned_match_result_message.txt',
                 {'query_institution': institution,
@@ -260,7 +260,8 @@ def generate_notification_for_incoming_match(response_from_matchbox,incoming_req
                       settings.FROM_EMAIL, 
                       #commenting for now for advanced testing
                       #[i for i in seqr_project.mme_contact_url.replace('mailto:','').split(',')],
-                      [admin[1] for admin in settings.ADMINS],
+                      #[admin[1] for admin in settings.ADMINS],
+                      ['harindra@broadinstitute.org'],
                       fail_silently=False)
     else:
         message += " We didn't find any individuals in matchbox that matched that query well, *so no results were sent back*. "
