@@ -10,11 +10,10 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.utils import timezone
 
 from seqr.views.utils.export_table_utils import export_table
-from xbrowse_server.base.models import VariantFunctionalData
 from xbrowse_server.mall import get_reference
 from xbrowse import genomeloc
 from reference_data.models import HPO_CATEGORY_NAMES
-from seqr.models import Project, Family, Dataset, VariantTag, VariantTagType
+from seqr.models import Project, Family, Dataset, VariantTag, VariantTagType, VariantFunctionalData
 from dateutil import relativedelta as rdelta
 from django.db.models import Q
 from django.shortcuts import render
@@ -100,12 +99,6 @@ def discovery_sheet(request, project_guid=None):
     rows = []
     errors = []
 
-    discovery_tag_types = VariantTagType.objects.filter(
-        Q(name__icontains="tier 1") |
-        Q(name__icontains="tier 2") |
-        Q(name__icontains="known gene for phenotype")
-    ).only('id')
-
     # export table for all cmg projects
     if "download" in request.GET and project_guid is None:
         logger.info("exporting xls table for all projects")
@@ -116,7 +109,7 @@ def discovery_sheet(request, project_guid=None):
                 continue
 
             rows.extend(
-                generate_rows(project, errors, discovery_tag_types)
+                generate_rows(project, errors)
             )
 
         return export_table("discovery_sheet", HEADER, rows, file_format="xls")
@@ -131,7 +124,7 @@ def discovery_sheet(request, project_guid=None):
             'errors': errors,
         })
 
-    rows = generate_rows(project, errors, discovery_tag_types)
+    rows = generate_rows(project, errors)
 
     logger.info("request.get: " + str(request.GET))
     if "download" in request.GET:
@@ -147,7 +140,7 @@ def discovery_sheet(request, project_guid=None):
     })
 
 
-def generate_rows(project, errors, discovery_tag_types):
+def generate_rows(project, errors):
     rows = []
 
     loaded_datasets = list(Dataset.objects.filter(project=project, analysis_type="VARIANTS", is_loaded=True))
@@ -164,9 +157,12 @@ def generate_rows(project, errors, discovery_tag_types):
 
     project_variant_tags = list(
         VariantTag.objects.select_related('variant_tag_type').select_related('saved_variant').filter(
-            variant_tag_type__in=discovery_tag_types, saved_variant__project=project
+            Q(saved_variant__project=project) & (
+            Q(variant_tag_type__name__icontains="tier 1") |
+            Q(variant_tag_type__name__icontains="tier 2") |
+            Q(variant_tag_type__name__icontains="known gene for phenotype") |
+            Q(variant_tag_type__name__icontains="komp"))
         ))
-
 
     #"External" = REAN
     #"RNA" = RNA
@@ -377,10 +373,12 @@ def generate_rows(project, errors, discovery_tag_types):
             # get the shortest gene_id
             gene_id = list(sorted(gene_ids, key=lambda gene_id: len(gene_id)))[0]
 
-            functional_tags = VariantFunctionalData.objects.filter(xpos=vt.saved_variant.xpos, ref=vt.saved_variant.ref, alt=vt.saved_variant.alt, family_id=family.id)
-            gene_ids_to_functional_tags[gene_id].extend(functional_tags)
-
             gene_ids_to_variant_tags[gene_id].append(vt)
+
+            functional_tags = VariantFunctionalData.objects.filter((
+                Q(saved_variant__family=family) | Q(saved_variant__family__isnull=True)) &
+                Q(saved_variant__xpos=vt.saved_variant.xpos) & Q(saved_variant__ref=vt.saved_variant.ref) & Q(saved_variant__alt=vt.saved_variant.alt))
+            gene_ids_to_functional_tags[gene_id].extend(functional_tags)
 
         for gene_id, variant_tags in gene_ids_to_variant_tags.items():
             gene_symbol = get_reference().get_gene_symbol(gene_id)
@@ -513,19 +511,20 @@ def generate_rows(project, errors, discovery_tag_types):
     return rows
 
 
+
+
 """
-        'tag': 'Genome-wide Linkage',
-        'tag': 'Bonferroni corrected p-value',
-        'tag': 'Kindreds w/ Overlapping SV & Similar Phenotype',
-        'tag': 'Additional Unrelated Kindreds w/ Causal Variants in Gene',
+'tag': 'Genome-wide Linkage',
+'tag': 'Bonferroni corrected p-value',
+'tag': 'Kindreds w/ Overlapping SV & Similar Phenotype',
+'tag': 'Additional Unrelated Kindreds w/ Causal Variants in Gene',
 
-        'tag': 'Biochemical Function',
-        'tag': 'Protein Interaction',
-        'tag': 'Expression',
-        'tag': 'Patient Cells',
-        'tag': 'Non-patient cells',
-        'tag': 'Animal Model',
-        'tag': 'Non-human cell culture model',
-        'tag': 'Rescue',
-
+'tag': 'Biochemical Function',
+'tag': 'Protein Interaction',
+'tag': 'Expression',
+'tag': 'Patient Cells',
+'tag': 'Non-patient cells',
+'tag': 'Animal Model',
+'tag': 'Non-human cell culture model',
+'tag': 'Rescue',
 """
