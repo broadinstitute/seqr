@@ -234,10 +234,9 @@ def generate_notification_for_incoming_match(response_from_matchbox,incoming_req
             send_mail('match found by matchbox, the Matchmaker Exchange @Broad', 
                       message_content, 
                       settings.FROM_EMAIL, 
-                      #commenting for now for advanced testing
+                      #commenting for now for advanced testing, and swapping in with admin alerts
                       #[i for i in seqr_project.mme_contact_url.replace('mailto:','').split(',')],
-                      #[admin[1] for admin in settings.ADMINS],
-                      ['harindra@broadinstitute.org'],
+                      [admin[1] for admin in settings.ADMINS],
                       fail_silently=False)
         if settings.SLACK_TOKEN is not None:
             post_in_slack(message_content,settings.MME_SLACK_MATCH_NOTIFICATION_CHANNEL)
