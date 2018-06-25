@@ -5,7 +5,7 @@ import { getSearchResults } from 'redux/utils/reduxSearchEnhancer'
 import { FAMILY_ANALYSIS_STATUS_OPTIONS } from 'shared/utils/constants'
 
 import {
-  getProjectsByGuid, getFamiliesByGuid, getIndividualsByGuid, getSamplesByGuid, getDatasetsByGuid,
+  getProjectsByGuid, getFamiliesByGuid, getIndividualsByGuid, getSamplesByGuid, getDatasetsByGuid, getUser,
 } from 'redux/selectors'
 
 import {
@@ -176,16 +176,17 @@ export const getVisibleFamilies = createSelector(
   getIndividualsByGuid,
   getSamplesByGuid,
   getDatasetsByGuid,
+  getUser,
   getFamiliesFilter,
   getSearchResults('familiesByGuid'),
-  (families, individualsByGuid, samplesByGuid, datsetsByGuid, familiesFilter, familySearchResults) => {
+  (families, individualsByGuid, samplesByGuid, datsetsByGuid, user, familiesFilter, familySearchResults) => {
     const searchedFamilies = families.filter(family => familySearchResults.includes(family.familyGuid))
 
     if (!familiesFilter || !FAMILY_FILTER_LOOKUP[familiesFilter]) {
       return searchedFamilies
     }
 
-    const familyFilter = FAMILY_FILTER_LOOKUP[familiesFilter](individualsByGuid, samplesByGuid, datsetsByGuid)
+    const familyFilter = FAMILY_FILTER_LOOKUP[familiesFilter](individualsByGuid, samplesByGuid, datsetsByGuid, user)
     return searchedFamilies.filter(familyFilter)
   },
 )

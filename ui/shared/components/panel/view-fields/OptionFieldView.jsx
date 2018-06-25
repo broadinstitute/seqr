@@ -6,23 +6,14 @@ import BaseFieldView from './BaseFieldView'
 
 const OptionFieldView = ({ field, tagOptions, fieldDisplay, tagAnnotation, compact, formFieldProps = {}, additionalEditFields = [], ...props }) => {
 
-  let currCategory = null
-  const tagSelectOptions = tagOptions.reduce((acc, tag) => {
-    if (tag.category !== currCategory) {
-      currCategory = tag.category
-      if (tag.category) {
-        acc.push({ text: tag.category, disabled: true })
-      }
-    }
-    acc.push({ value: tag.value || tag.name, text: tag.name, color: tag.color })
-    return acc
-  }, [])
+  const tagSelectOptions = tagOptions.map(({ value, name, ...tag }) => ({ value: value || name, text: name, ...tag }))
 
   const fields = [
     ...additionalEditFields,
     {
       name: field,
       options: tagSelectOptions,
+      includeCategories: true,
       component: Select,
       ...formFieldProps,
     },

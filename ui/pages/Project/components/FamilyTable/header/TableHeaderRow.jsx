@@ -51,7 +51,9 @@ const TableHeaderRow = ({ headerStatus, showInternalFilters, visibleFamiliesCoun
       inline: true,
       fluid: false,
       selection: true,
-      label: 'Status:',
+      search: true,
+      includeCategories: true,
+      label: 'Filter:',
       options: FAMILY_FILTER_OPTIONS.filter((f) => { return showInternalFilters ? !f.internalOmit : !f.internalOnly }),
     },
   ]

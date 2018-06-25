@@ -78,6 +78,13 @@ export const SHOW_DATA_LOADED = 'SHOW_DATA_LOADED'
 export const SHOW_PHENOTYPES_ENTERED = 'SHOW_PHENOTYPES_ENTERED'
 export const SHOW_NO_PHENOTYPES_ENTERED = 'SHOW_NO_PHENOTYPES_ENTERED'
 
+export const SHOW_ANALYSED_BY_ME = 'SHOW_ANALYSED_BY_ME'
+export const SHOW_NOT_ANALYSED_BY_ME = 'SHOW_NOT_ANALYSED_BY_ME'
+export const SHOW_ANALYSED_BY_CMG = 'SHOW_ANALYSED_BY_CMG'
+export const SHOW_NOT_ANALYSED_BY_CMG = 'SHOW_NOT_ANALYSED_BY_CMG'
+export const SHOW_ANALYSED = 'SHOW_ANALYSED'
+export const SHOW_NOT_ANALYSED = 'SHOW_NOT_ANALYSED'
+
 
 const SOLVED_STATUSES = new Set([
   FAMILY_STATUS_SOLVED,
@@ -119,6 +126,7 @@ export const FAMILY_FILTER_OPTIONS = [
   },
   {
     value: SHOW_DATA_LOADED,
+    category: 'Data Status:',
     name: 'Data Loaded',
     internalOmit: true,
     createFilter: (individualsByGuid, samplesByGuid, datasetsByGuid) => family =>
@@ -126,6 +134,7 @@ export const FAMILY_FILTER_OPTIONS = [
   },
   {
     value: SHOW_PHENOTYPES_ENTERED,
+    category: 'Data Status:',
     name: 'Phenotypes Entered',
     internalOmit: true,
     createFilter: individualsByGuid => family =>
@@ -135,6 +144,7 @@ export const FAMILY_FILTER_OPTIONS = [
   },
   {
     value: SHOW_NO_PHENOTYPES_ENTERED,
+    category: 'Data Status:',
     name: 'No Phenotypes Entered',
     internalOmit: true,
     createFilter: individualsByGuid => family =>
@@ -143,95 +153,153 @@ export const FAMILY_FILTER_OPTIONS = [
       ),
   },
   {
+    value: SHOW_ANALYSED_BY_ME,
+    category: 'Analysed By:',
+    name: 'Analysed By Me',
+    internalOmit: true,
+    createFilter: (individualsByGuid, samplesByGuid, datsetsByGuid, user) => family =>
+      family.analysedBy.map(analysedBy => analysedBy.user.username).includes(user.username),
+  },
+  {
+    value: SHOW_NOT_ANALYSED_BY_ME,
+    category: 'Analysed By:',
+    name: 'Not Analysed By Me',
+    internalOmit: true,
+    createFilter: (individualsByGuid, samplesByGuid, datsetsByGuid, user) => family =>
+      !family.analysedBy.map(analysedBy => analysedBy.user.username).includes(user.username),
+  },
+  {
+    value: SHOW_ANALYSED_BY_CMG,
+    category: 'Analysed By:',
+    name: 'Analysed By CMG',
+    internalOmit: true,
+    createFilter: () => family =>
+      family.analysedBy.some(analysedBy => analysedBy.user.is_staff),
+  },
+  {
+    value: SHOW_NOT_ANALYSED_BY_CMG,
+    category: 'Analysed By:',
+    name: 'Not Analysed By CMG',
+    internalOmit: true,
+    createFilter: () => family =>
+      family.analysedBy.every(analysedBy => !analysedBy.user.is_staff),
+  },
+  {
+    value: SHOW_ANALYSED,
+    category: 'Analysed By:',
+    name: 'Analysed',
+    internalOmit: true,
+    createFilter: () => family => family.analysedBy.length > 0,
+  },
+  {
+    value: SHOW_NOT_ANALYSED,
+    category: 'Analysed By:',
+    name: 'Not Analysed',
+    internalOmit: true,
+    createFilter: () => family => family.analysedBy.length < 1,
+  },
+  {
     value: SHOW_SOLVED,
+    category: 'Analysis Status:',
     name: 'Solved',
     internalOmit: true,
-    /* eslint-disable no-unused-vars */
     createFilter: () => family =>
       SOLVED_STATUSES.has(family.analysisStatus),
   },
   {
     value: SHOW_STRONG_CANDIDATE,
+    category: 'Analysis Status:',
     name: 'Strong Candidate',
     internalOmit: true,
-    /* eslint-disable no-unused-vars */
     createFilter: () => family =>
       STRONG_CANDIDATE_STATUSES.has(family.analysisStatus),
   },
   {
     value: SHOW_REVIEWED_NO_CLEAR_CANDIDATE,
+    category: 'Analysis Status:',
     name: 'No Clear Candidate',
     internalOmit: true,
-    /* eslint-disable no-unused-vars */
     createFilter: () => family => family.analysisStatus === FAMILY_STATUS_REVIEWED_NO_CLEAR_CANDIDATE,
   },
   {
     value: SHOW_ANALYSIS_IN_PROGRESS,
+    category: 'Analysis Status:',
     name: 'Analysis In Progress',
     internalOmit: true,
-    /* eslint-disable no-unused-vars */
     createFilter: () => family =>
       ANALYSIS_IN_PROGRESS_STATUSES.has(family.analysisStatus),
   },
   {
     value: SHOW_ACCEPTED,
+    category: 'Analysis Status:',
     name: 'Accepted',
     createFilter: caseReviewStatusFilter(CASE_REVIEW_STATUS_ACCEPTED),
   },
   {
     value: SHOW_NOT_ACCEPTED,
+    category: 'Analysis Status:',
     name: 'Not Accepted',
     internalOnly: true,
     createFilter: caseReviewStatusFilter(CASE_REVIEW_STATUS_NOT_ACCEPTED),
   },
   {
     value: SHOW_IN_REVIEW,
+    category: 'Analysis Status:',
     name: 'In Review',
     createFilter: caseReviewStatusFilter(CASE_REVIEW_STATUS_IN_REVIEW),
   },
   {
     value: SHOW_UNCERTAIN,
+    category: 'Analysis Status:',
     name: 'Uncertain',
     internalOnly: true,
     createFilter: caseReviewStatusFilter(CASE_REVIEW_STATUS_UNCERTAIN),
   },
   {
     value: SHOW_MORE_INFO_NEEDED,
+    category: 'Analysis Status:',
     name: 'More Info Needed',
+    internalOnly: true,
     createFilter: caseReviewStatusFilter(CASE_REVIEW_STATUS_MORE_INFO_NEEDED),
   },
   {
     value: SHOW_NOT_IN_REVIEW,
+    category: 'Analysis Status:',
     name: 'Not In Review',
     internalOnly: true,
     createFilter: caseReviewStatusFilter(CASE_REVIEW_STATUS_NOT_IN_REVIEW),
   },
   {
     value: SHOW_PENDING_RESULTS_AND_RECORDS,
+    category: 'Analysis Status:',
     name: 'Pending Results and Records',
     internalOnly: true,
     createFilter: caseReviewStatusFilter(CASE_REVIEW_STATUS_PENDING_RESULTS_AND_RECORDS),
   },
   {
     value: SHOW_WAITLIST,
+    category: 'Analysis Status:',
     name: 'Waitlist',
     internalOnly: true,
     createFilter: caseReviewStatusFilter(CASE_REVIEW_STATUS_WAITLIST),
   },
   {
     value: SHOW_WITHDREW,
+    category: 'Analysis Status:',
     name: 'Withdrew',
     internalOnly: true,
     createFilter: caseReviewStatusFilter(CASE_REVIEW_STATUS_WITHDREW),
   },
   {
     value: SHOW_INELIGIBLE,
+    category: 'Analysis Status:',
     name: 'Ineligible',
     internalOnly: true,
     createFilter: caseReviewStatusFilter(CASE_REVIEW_STATUS_INELIGIBLE),
   },
   {
     value: SHOW_DECLINED_TO_PARTICIPATE,
+    category: 'Analysis Status:',
     name: 'Declined to Participate',
     internalOnly: true,
     createFilter: caseReviewStatusFilter(CASE_REVIEW_STATUS_DECLINED_TO_PARTICIPATE),
