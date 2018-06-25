@@ -6,16 +6,16 @@ import PedigreeIcon from './PedigreeIcon'
 configure({ adapter: new Adapter() })
 
 test('shallow-render without crashing', () => {
-  /*
+  /*w
     sex: PropTypes.string.isRequired,
     affected: PropTypes.string.isRequired,
    */
 
   const m = shallow(<PedigreeIcon sex="M" affected="A" />)
-  expect(m.props().content).toEqual('affected male')
+  expect(m.props().content.props.children).toEqual(expect.arrayContaining(['Male', 'Affected']))
 
-  const f = shallow(<PedigreeIcon sex="F" affected="A" />)
-  expect(f.props().content).toEqual('affected female')
+  const f = shallow(<PedigreeIcon sex="F" affected="U" />)
+  expect(f.props().content.props.children).toEqual(expect.arrayContaining(['Female', 'Unknown']))
 
   // https://github.com/airbnb/enzyme/tree/master/docs/api/ShallowWrapper
 })

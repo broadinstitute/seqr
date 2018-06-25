@@ -4,7 +4,7 @@ import { createSelector } from 'reselect'
 import { FAMILY_ANALYSIS_STATUS_OPTIONS } from 'shared/utils/constants'
 
 import {
-  getProjectsByGuid, getFamiliesByGuid, getIndividualsByGuid, getSamplesByGuid, getDatasetsByGuid,
+  getProjectsByGuid, getFamiliesByGuid, getIndividualsByGuid, getSamplesByGuid,
 } from 'redux/selectors'
 
 import {
@@ -58,13 +58,11 @@ export const getProjectFamilies = createSelector(getFamiliesByGuid, getProjectGu
 
 export const getProjectIndividuals = createSelector(getIndividualsByGuid, getProjectGuid, filterProjectEntities)
 
-export const getProjectDatasets = createSelector(getDatasetsByGuid, getProjectGuid, filterProjectEntities)
-
 export const getProjectSamples = createSelector(getSamplesByGuid, getProjectGuid, filterProjectEntities)
 
 // Saved variant selectors
 export const getSavedVariantTableState = state => state.savedVariantTableState
-export const getSavedVariantCategoryFilter = (state, props) => { return props.match.params.tag ? SHOW_ALL : (state.savedVariantTableState.categoryFilter || SHOW_ALL) }
+export const getSavedVariantCategoryFilter = state => state.savedVariantTableState.categoryFilter || SHOW_ALL
 export const getSavedVariantSortOrder = state => state.savedVariantTableState.sortOrder || SORT_BY_FAMILY_GUID
 export const getSavedVariantHideExcluded = state => state.savedVariantTableState.hideExcluded
 export const getSavedVariantCurrentPage = state => state.savedVariantTableState.currentPage || 1

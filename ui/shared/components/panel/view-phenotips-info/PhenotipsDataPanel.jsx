@@ -59,7 +59,7 @@ class PhenotipsDataPanel extends React.Component
 
     return (
       <div>
-        <b>PhenoTips</b><HorizontalSpacer width={15} />
+        <b>PhenoTips{(showDetails && hasPhenotipsDetails(phenotipsData)) ? ':' : ''}</b><HorizontalSpacer width={15} />
         { showViewPhenotipsLink && <ShowPhenotipsModalButton individual={individual} isViewOnly /> }
         {
           (individual.phenotipsPatientId && showEditPhenotipsLink) && [

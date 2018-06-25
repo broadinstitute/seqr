@@ -8,7 +8,7 @@ import ShowIfStaff from 'shared/components/ShowIfStaff'
 import EditDatasetsButton from 'shared/components/buttons/EditDatasetsButton'
 import EditFamiliesAndIndividualsButton from 'shared/components/buttons/EditFamiliesAndIndividualsButton'
 
-import { getProject, getProjectFamilies, getProjectIndividuals, getProjectDatasets } from '../selectors'
+import { getProject, getProjectFamilies, getProjectIndividuals } from '../selectors'
 
 
 const FAMILY_SIZE_LABELS = {
@@ -57,6 +57,7 @@ const ProjectOverview = (props) => {
         <div>
           <br />
           Datasets:
+          {/*
           <div style={{ padding: '5px 0px 0px 20px' }}>
             {
               props.datasets.length > 0 ?
@@ -77,6 +78,7 @@ const ProjectOverview = (props) => {
             }
             <ShowIfStaff><span><br /><EditDatasetsButton /></span></ShowIfStaff><br />
           </div>
+          */}
         </div>
         {/* console.log('hpoTerms', props.hpoTermHistogram) */}
       </Grid.Column>

@@ -90,10 +90,9 @@ export const loadGene = (geneId) => {
   return (dispatch, getState) => {
     if (!getState().genesById[geneId]) {
       dispatch({ type: REQUEST_GENES })
-      // TODO use a new gene info endpoint, this is the xbrowse one
-      new HttpRequestHelper(`/api/gene-info/${geneId}`,
+      new HttpRequestHelper(`/api/gene_info/${geneId}`,
         (responseJson) => {
-          dispatch({ type: RECEIVE_GENES, updatesById: { [geneId]: responseJson.gene } })
+          dispatch({ type: RECEIVE_GENES, updatesById: responseJson })
         },
         (e) => {
           dispatch({ type: RECEIVE_GENES, error: e.message, updatesById: {} })
@@ -121,26 +120,22 @@ export const loadVariantTranscripts = (variantId) => {
 }
 
 export const updateGeneNote = (values) => {
-  return (dispatch, getState) => {
-    // TODO use new gene note endpoints, this is the xbrowse one
-    const action = values.delete ? 'delete' : 'add-or-edit'
-    const path = values.delete ? `/${values.note_id}` : ''
-    return new HttpRequestHelper(`/api/${action}-gene-note${path}`,
+  return (dispatch) => {
+    let urlPath = `/api/gene_info/${values.geneId || values.gene_id}/note`
+    let action = 'create'
+    if (values.noteGuid) {
+      urlPath = `${urlPath}/${values.noteGuid}`
+      action = values.delete ? 'delete' : 'update'
+    }
+
+    return new HttpRequestHelper(`${urlPath}/${action}`,
       (responseJson) => {
-        if (responseJson.is_error) {
-          throw new SubmissionError({ _error: [responseJson.error] })
-        }
-        let notes = getState().genesById[values.gene_id].notes || []
-        notes = notes.filter(note => note.note_id !== values.note_id)
-        if (responseJson.note) {
-          notes.push(responseJson.note)
-        }
-        dispatch({ type: RECEIVE_GENES, updatesById: { [values.gene_id]: { notes } } })
+        dispatch({ type: RECEIVE_GENES, updatesById: responseJson })
       },
       (e) => {
         throw new SubmissionError({ _error: [e.message] })
       },
-    ).get({ note_text: values.note, ...values })
+    ).post(values)
   }
 }
 

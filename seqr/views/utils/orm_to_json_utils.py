@@ -9,7 +9,7 @@ from django.db.models import Model
 from django.db.models.fields.files import ImageFieldFile
 
 from seqr.models import CAN_EDIT, Project, Family, Individual, Sample, SavedVariant, VariantTag, \
-    VariantFunctionalData, VariantNote
+    VariantFunctionalData, VariantNote, GeneNote
 from seqr.utils.xpos_utils import get_chrom_pos
 from seqr.views.utils.json_utils import _to_camel_case
 from family_info_utils import retrieve_family_analysed_by
@@ -311,5 +311,27 @@ def get_json_for_variant_note(note):
     result.update({
         'noteGuid': result.pop('guid'),
         'createdBy': (created_by.get_full_name() or created_by.email) if created_by else None,
+    })
+    return result
+
+
+def get_json_for_gene_note(note, user):
+    """Returns a JSON representation of the given gene note.
+
+    Args:
+        note (object): dictionary or django model for the GeneNote.
+    Returns:
+        dict: json object
+    """
+
+    fields = _get_record_fields(GeneNote, 'note')
+    note_dict = _record_to_dict(note, fields)
+    result = _get_json_for_record(note_dict, fields)
+
+    created_by = result.pop('createdBy')
+    result.update({
+        'noteGuid': result.pop('guid'),
+        'createdBy': (created_by.get_full_name() or created_by.email) if created_by else None,
+        'editable': user.is_staff or user == created_by,
     })
     return result

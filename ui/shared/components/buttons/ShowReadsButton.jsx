@@ -5,10 +5,11 @@ import { connect } from 'react-redux'
 import { Icon } from 'semantic-ui-react'
 
 import { getProjectSamples } from 'pages/Project/selectors'
-import { getIndividualsByGuid, getDatasetsByGuid } from 'redux/selectors'
+import { getIndividualsByGuid } from 'redux/selectors'
 import Modal from '../modal/Modal'
 import PedigreeIcon from '../icons/PedigreeIcon'
 import IGV from '../graph/IGV'
+import ButtonLink from './ButtonLink'
 
 const CRAM_TRACK_OPTIONS = {
   sourceType: 'pysam',
@@ -30,14 +31,12 @@ const ShowReadsButton = ({ locus, familyGuid, samples, individualsByGuid }) => {
       return null
     }
 
-    const { datasetFilePath } = datasets[0]
-
-    const trackOptions = datasetFilePath.endsWith('.cram') ? CRAM_TRACK_OPTIONS : BAM_TRACK_OPTIONS
+    const trackOptions = sample.datasetFilePath.endsWith('.cram') ? CRAM_TRACK_OPTIONS : BAM_TRACK_OPTIONS
     const trackName = ReactDOMServer.renderToString(
       <span><PedigreeIcon sex={individual.sex} affected={individual.affected} />{individual.individualId}</span>,
     )
     return {
-      url: `/api/project/${sample.projectGuid}/igv_track/${encodeURIComponent(datasetFilePath)}`,
+      url: `/api/project/${sample.projectGuid}/igv_track/${encodeURIComponent(sample.datasetFilePath)}`,
       name: trackName,
       type: 'bam',
       alignmentShading: 'strand',
@@ -70,7 +69,7 @@ const ShowReadsButton = ({ locus, familyGuid, samples, individualsByGuid }) => {
 
   return (
     <Modal
-      trigger={<a><Icon name="options" /> SHOW READS</a>}
+      trigger={<ButtonLink><Icon name="options" /> SHOW READS</ButtonLink>}
       modalName={`${familyGuid}-${locus}-igv`}
       title="IGV"
       size="fullscreen"
@@ -85,13 +84,11 @@ ShowReadsButton.propTypes = {
   familyGuid: PropTypes.string,
   samples: PropTypes.array,
   individualsByGuid: PropTypes.object,
-  datasetsByGuid: PropTypes.object,
 }
 
 const mapStateToProps = state => ({
   samples: getProjectSamples(state),
   individualsByGuid: getIndividualsByGuid(state),
-  datasetsByGuid: getDatasetsByGuid(state),
 })
 
 export default connect(mapStateToProps)(ShowReadsButton)

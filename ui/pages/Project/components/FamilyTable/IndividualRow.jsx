@@ -17,9 +17,9 @@ import {
   CASE_REVIEW_STATUS_MORE_INFO_NEEDED,
   CASE_REVIEW_STATUS_NOT_IN_REVIEW,
   CASE_REVIEW_STATUS_OPT_LOOKUP,
-  DATASET_TYPE_VARIANT_CALLS
+  DATASET_TYPE_VARIANT_CALLS,
 } from '../../constants'
-import { getShowDetails, getProject, getProjectSamples, getProjectDatasets } from '../../selectors'
+import { getShowDetails, getProject, getProjectSamples } from '../../selectors'
 import CaseReviewStatusDropdown from './CaseReviewStatusDropdown'
 
 
@@ -48,7 +48,6 @@ class IndividualRow extends React.Component
     individual: PropTypes.object.isRequired,
     showDetails: PropTypes.bool.isRequired,
     samples: PropTypes.array.isRequired,
-    datasets: PropTypes.array.isRequired,
     updateIndividual: PropTypes.func,
     editCaseReview: PropTypes.bool,
   }
@@ -63,7 +62,7 @@ class IndividualRow extends React.Component
     const sampleDetails = this.props.samples.filter(s =>
       s.individualGuid === individual.individualGuid &&
       s.datasetType === DATASET_TYPE_VARIANT_CALLS &&
-      s.loadedStatus === "loaded"
+      s.loadedStatus === 'loaded',
     ).map((sample) => {
       let loadedVariantCallDatasets = this.props.datasets
         .filter(dataset => (
@@ -210,7 +209,6 @@ const mapStateToProps = state => ({
   project: getProject(state),
   showDetails: getShowDetails(state),
   samples: getProjectSamples(state),
-  datasets: getProjectDatasets(state),
 })
 
 const mapDispatchToProps = {

@@ -31,6 +31,12 @@ def update_individual_from_json(individual, json, verbose=False, user=None, allo
     )
 
 
+def update_gene_note_from_json(note, json, allow_unknown_keys=False):
+    update_model_from_json(
+        note, json, allow_unknown_keys=allow_unknown_keys, immutable_keys=['created_by']
+    )
+
+
 def update_model_from_json(model_obj, json, user=None, verbose=False, allow_unknown_keys=False, immutable_keys=None):
     seqr_update_fields = {}
     internal_fields = model_obj._meta.internal_json_fields if hasattr(model_obj._meta, 'internal_json_fields') else []

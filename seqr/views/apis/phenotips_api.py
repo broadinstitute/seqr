@@ -62,7 +62,7 @@ def create_patient(project, individual):
     Raises:
         PhenotipsException: if unable to create patient record
     """
-    url = '/bin/PhenoTips/OpenPatientRecord?create=true&eid=%(patient_eid)s' % locals()
+    url = '/bin/PhenoTips/OpenPatientRecord?create=true&eid={patient_eid}'.format(patient_eid=individual.guid)
 
     auth_tuple = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id)
     _make_api_call('GET', url, auth_tuple=auth_tuple, verbose=False, parse_json_resonse=False)
@@ -79,10 +79,10 @@ def create_patient(project, individual):
 
     username, _ = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id)
     response = add_user_to_patient(username, patient_id, allow_edit=True)
-    logger.info("Added PhenoTips user %(username)s to %(patient_id)s: %(response)s" % locals())
+    logger.info("Added PhenoTips user {username} to {patient_id}: {response}".format(username=username, patient_id=patient_id, response=response))
     username_read_only, _ = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=True)
     add_user_to_patient(username_read_only, patient_id, allow_edit=False)
-    logger.info("Added PhenoTips user %(username)s to %(patient_id)s: %(response)s" % locals())
+    logger.info("Added PhenoTips user {username} to {patient_id}: {response}".format(username=username_read_only, patient_id=patient_id, response=response))
 
     return patient_data
 
@@ -249,7 +249,7 @@ def create_phenotips_user(username, password):
     headers = { "Content-Type": "application/x-www-form-urlencoded" }
     data = { 'parent': 'XWiki.XWikiUsers' }
 
-    url = '/rest/wikis/xwiki/spaces/XWiki/pages/%(username)s' % locals()
+    url = '/rest/wikis/xwiki/spaces/XWiki/pages/{username}'.format(username=username)
     _make_api_call(
         'PUT',
         url,
@@ -268,7 +268,7 @@ def create_phenotips_user(username, password):
         #'property#email': email_address,
     }
 
-    url = '/rest/wikis/xwiki/spaces/XWiki/pages/%(username)s/objects' % locals()
+    url = '/rest/wikis/xwiki/spaces/XWiki/pages/{username}/objects'.format(username=username)
     return _make_api_call(
         'POST',
         url,
@@ -290,7 +290,7 @@ def phenotips_pdf_handler(request, project_guid, patient_id):
         patient_id (string): PhenoTips internal patient id
     """
 
-    url = "/bin/export/data/%(patient_id)s?format=pdf&pdfcover=0&pdftoc=0&pdftemplate=PhenoTips.PatientSheetCode" % locals()
+    url = "/bin/export/data/{patient_id}?format=pdf&pdfcover=0&pdftoc=0&pdftemplate=PhenoTips.PatientSheetCode".format(patient_id=patient_id)
     project = Project.objects.get(guid=project_guid)
 
     check_permissions(project, request.user, CAN_VIEW)
@@ -313,7 +313,7 @@ def phenotips_edit_handler(request, project_guid, patient_id):
 
     # query string forwarding needed for PedigreeEditor button
     query_string = request.META["QUERY_STRING"]
-    url = "/bin/edit/data/%(patient_id)s?%(query_string)s" % locals()
+    url = "/bin/edit/data/{patient_id}?{query_string}".format(patient_id=patient_id, query_string=query_string)
 
     project = Project.objects.get(guid=project_guid)
 
