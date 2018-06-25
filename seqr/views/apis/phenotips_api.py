@@ -403,7 +403,7 @@ def _make_api_call(
             raise PhenotipsException("Unable to parse response for %s:\n%s" % (url, e))
 
 
-def _handle_phenotips_save_request(patient_id, http_headers):
+def _handle_phenotips_save_request(request, patient_id):
     """Update the seqr SQL database record for this patient with the just-saved phenotype data."""
 
     url = '/rest/patients/%s' % patient_id
