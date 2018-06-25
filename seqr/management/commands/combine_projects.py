@@ -25,7 +25,6 @@ from seqr.models import \
     VariantTag as SeqrVariantTag, \
     VariantNote as SeqrVariantNote, \
     Sample as SeqrSample, \
-    Dataset as SeqrDataset, \
     LocusList, \
     CAN_EDIT, \
     CAN_VIEW, \

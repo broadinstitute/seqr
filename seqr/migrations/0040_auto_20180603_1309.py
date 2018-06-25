@@ -6,10 +6,10 @@ from django.db import migrations, models
 
 
 def transfer_info_from_dataset_to_sample_fields(apps, schema_editor):
+    # since Django doesn't currently support creating new records inside a RunPython migration.
     # for cases where a sample is attached to multiple datasets (for example both VARIANTS and read alignments),
-    # then use the existing Sample record to store metadata from the most recent VARIANTS Dataset, and use
+    # use the existing Sample record to store metadata from the newest VARIANTS Dataset, and use
     # update_projects_in_new_schema to create the additional Sample records for read alignments.
-    # This is because Django doesn't currently support creating new records inside a RunPython migration.
     Dataset = apps.get_model('seqr', 'Dataset')
     Sample = apps.get_model('seqr', 'Sample')
 
