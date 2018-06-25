@@ -454,8 +454,8 @@ class ElasticsearchDatastore(datastore.Datastore):
         start = time.time()
 
         s = s.params(size=max_results_limit + 1)
-        if not include_all_consequences:
-            s = s.source(exclude=["sortedTranscriptConsequences"])
+        #if not include_all_consequences:
+        #    s = s.source(exclude=["sortedTranscriptConsequences"])
         response = s.execute()
         logger.info("=====")
 
@@ -502,8 +502,8 @@ class ElasticsearchDatastore(datastore.Datastore):
                     'ab': hit["%s_ab" % encoded_individual_id] if ("%s_ab" % encoded_individual_id) in hit else None,
                     'alleles': map(str, alleles),
                     'extras': {
-                        'ad': hit["%s_ab" % encoded_individual_id]  if ("%s_ad" % encoded_individual_id) in hit else None,
-                        'dp': hit["%s_dp" % encoded_individual_id]  if ("%s_dp" % encoded_individual_id) in hit else None,
+                        'ad': hit["%s_ab" % encoded_individual_id] if ("%s_ad" % encoded_individual_id) in hit else None,
+                        'dp': hit["%s_dp" % encoded_individual_id] if ("%s_dp" % encoded_individual_id) in hit else None,
                         #'pl': '',
                     },
                     'filter': filters or "pass",
@@ -806,7 +806,7 @@ class ElasticsearchDatastore(datastore.Datastore):
             modified_variant_filter = copy.deepcopy(variant_filter)
         modified_variant_filter.add_gene(gene_id)
 
-        variants = [variant for variant in self.get_elasticsearch_variants(project_id, variant_filter=modified_variant_filter, user=user, max_results_limit=10000)]
+        variants = [variant for variant in self.get_elasticsearch_variants(project_id, variant_filter=modified_variant_filter, user=user, max_results_limit=9999)]
         return variants
 
     def _make_db_query(self, genotype_filter=None, variant_filter=None):
