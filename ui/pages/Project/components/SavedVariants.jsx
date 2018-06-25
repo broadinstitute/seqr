@@ -13,7 +13,7 @@ import Variants from 'shared/components/panel/variants/Variants'
 import { Dropdown as DropdownInput, InlineToggle } from 'shared/components/form/Inputs'
 import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
 import { HorizontalSpacer } from 'shared/components/Spacers'
-import { titlecase } from 'shared/utils/stringUtils'
+import { snakecase } from 'shared/utils/stringUtils'
 import { loadProjectVariants, updateSavedVariantTable } from '../reducers'
 import {
   getProject, getProjectSavedVariantsIsLoading, getProjectSavedVariants, getVisibleSortedProjectSavedVariants,
@@ -22,15 +22,7 @@ import {
 } from '../selectors'
 import { VARIANT_SORT_OPTONS } from '../constants'
 
-
-const BASE_CATEGORY_FILTER_FIELD = {
-  name: 'categoryFilter',
-  component: DropdownInput,
-  inline: true,
-  selection: false,
-  fluid: false,
-  label: 'Show category:',
-}
+const ALL_FILTER = 'ALL'
 
 const FILTER_FIELDS = [
   {
@@ -80,6 +72,7 @@ class SavedVariants extends React.Component {
 
   static propTypes = {
     match: PropTypes.object,
+    history: PropTypes.object,
     project: PropTypes.object,
     loading: PropTypes.bool,
     variantsToDisplay: PropTypes.array,
@@ -101,7 +94,7 @@ class SavedVariants extends React.Component {
 
     this.categoryOptions = [...new Set(
       this.props.project.variantTagTypes.map(type => type.category).filter(category => category),
-    )].map((category) => { return { value: category } })
+    )]
   }
 
   componentWillReceiveProps(nextProps) {
@@ -115,33 +108,55 @@ class SavedVariants extends React.Component {
     }
   }
 
+  navigateTag = (e, data) => {
+    const { familyGuid } = this.props.match.params
+    const isCategory = this.categoryOptions.includes(data.value)
+    const urlPath = `/project/${this.props.project.projectGuid}/saved_variants/${familyGuid ? `family/${familyGuid}/` : ''}`
+    const tag = data.value === ALL_FILTER ? '' : data.value
+    this.props.updateSavedVariantTable({ categoryFilter: isCategory ? data.value : null })
+    this.props.history.push(`${urlPath}${isCategory ? '' : tag}`)
+  }
+
   render() {
     const { familyGuid, variantGuid, tag } = this.props.match.params
-    const filterFields = this.categoryOptions ?
-      [{ ...BASE_CATEGORY_FILTER_FIELD, options: [{ value: 'ALL', text: 'All' }, ...this.categoryOptions] }].concat(FILTER_FIELDS) :
-      FILTER_FIELDS
 
     const familyId = familyGuid && familyGuid.split(/_(.+)/)[1]
     const exports = [{
-      name: `${tag || titlecase(this.props.tableState.categoryFilter)} Variants ${familyId ? `in Family ${familyId}` : ''}`,
+      name: `${tag || snakecase(this.props.tableState.categoryFilter)} Variants ${familyId ? `in Family ${familyId}` : ''}`,
       data: {
         filename: `saved_${tag || this.props.tableState.categoryFilter}_variants_${this.props.project.name}${familyId ? `_family_${familyId}` : ''}`.replace(/ /g, '-').toLowerCase(),
         ...this.props.variantExportConfig,
       },
     }]
 
+    let currCategory = null
     const tagOptions = [
       {
-        value: 'ALL',
-        text: <LabelLink to={`/project/${this.props.project.projectGuid}/saved_variants/${familyGuid ? `family/${familyGuid}/` : ''}`}>All Saved</LabelLink>,
+        value: ALL_FILTER,
+        text: 'All Saved',
+        content: <LabelLink to={`/project/${this.props.project.projectGuid}/saved_variants/${familyGuid ? `family/${familyGuid}/` : ''}`}>All Saved</LabelLink>,
         key: 'all',
       },
-      ...this.props.project.variantTagTypes.map(vtt => ({
-        value: vtt.name,
-        text: <LabelLink to={`/project/${this.props.project.projectGuid}/saved_variants/${familyGuid ? `family/${familyGuid}/` : ''}${vtt.name}`}>{vtt.name}</LabelLink>,
-        key: vtt.name,
-        label: { empty: true, circular: true, style: { backgroundColor: vtt.color } },
-      })),
+      ...this.props.project.variantTagTypes.reduce((acc, vtt) => {
+        if (vtt.category !== currCategory) {
+          currCategory = vtt.category
+          if (vtt.category) {
+            acc.push({
+              key: vtt.category,
+              text: vtt.category,
+              value: vtt.category,
+            })
+          }
+        }
+        acc.push({
+          value: vtt.name,
+          text: vtt.name,
+          // content: <LabelLink to={`/project/${this.props.project.projectGuid}/saved_variants/${familyGuid ? `family/${familyGuid}/` : ''}${vtt.name}`}>{vtt.name}</LabelLink>,
+          key: vtt.name,
+          label: { empty: true, circular: true, style: { backgroundColor: vtt.color } },
+        })
+        return acc
+      }, []),
     ]
 
     const allShown = this.props.variantsToDisplay.length === this.props.totalVariantsCount
@@ -158,7 +173,13 @@ class SavedVariants extends React.Component {
           <Grid.Row>
             <Grid.Column width={8}>
               Showing {shownSummary} {this.props.filteredVariants.length}
-              &nbsp;&nbsp;<Dropdown inline options={tagOptions} value={tag || 'ALL'} />
+              &nbsp;&nbsp;
+              <Dropdown
+                inline
+                options={tagOptions}
+                value={tag || this.props.tableState.categoryFilter || ALL_FILTER}
+                onChange={this.navigateTag}
+              />
               &nbsp;variants {!allShown && `(${this.props.totalVariantsCount} total)`}
               <HorizontalSpacer width={20} />
               {this.props.totalPages > 1 &&
@@ -178,7 +199,7 @@ class SavedVariants extends React.Component {
                   initialValues={this.props.tableState}
                   closeOnSuccess={false}
                   submitOnChange
-                  fields={filterFields}
+                  fields={FILTER_FIELDS}
                 />
               }
               <HorizontalSpacer width={10} />

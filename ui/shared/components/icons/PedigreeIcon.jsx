@@ -51,7 +51,7 @@ const STATUS_LOOKUP = {
 const PedigreeIcon = (props) => {
   const iconProps = ICON_LOOKUP[`${props.sex}${props.affected}`]
   return <Popup
-    trigger={iconProps.iconGroup || <Icon style={iconProps.rotate ? rotate45deg : iconStyle} name={iconProps.icon || 'warning sign'} />}
+    trigger={iconProps.iconGroup || <span><Icon style={iconProps.rotate ? rotate45deg : iconStyle} name={iconProps.icon || 'warning sign'} />{props.label}</span>}
     content={
       <div>
         <b>Sex:</b> {SEX_LOOKUP[props.sex] || 'INVALID'} <br />
@@ -62,6 +62,7 @@ const PedigreeIcon = (props) => {
     size="small"
     wide="very"
     position="top center"
+    hoverable
   />
 }
 
@@ -70,6 +71,7 @@ PedigreeIcon.propTypes = {
   sex: PropTypes.string.isRequired,
   affected: PropTypes.string.isRequired,
   popupContent: PropTypes.node,
+  label: PropTypes.any,
 }
 
 export default PedigreeIcon

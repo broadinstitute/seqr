@@ -100,7 +100,7 @@ class HorizontalStackedBar extends React.Component {
                     popupData.map(d => (
                       <TableRow key={d.name} verticalAlign="top" >
                         {!d.header &&
-                          <TableCell collapsing>{d.count} <ColoredIcon name="square" size="small" color={d.color} /></TableCell>
+                          <TableCell collapsing textAlign="right">{d.count} <ColoredIcon name="square" size="small" color={d.color} /></TableCell>
                         }
                         <TableCell singleLine colSpan={d.header ? 3 : 1} disabled={Boolean(d.header)}>{d.name}</TableCell>
                         {!d.header && <TableCell collapsing>{showPercent && `(${d.percent.toPrecision(2)}%)`}</TableCell>}
@@ -108,7 +108,7 @@ class HorizontalStackedBar extends React.Component {
                     ))
                   }
                   <TableRow>
-                    <TableCell><b>{total}</b></TableCell>
+                    <TableCell textAlign="right"><b>{total}</b></TableCell>
                     <TableCell><b>Total</b></TableCell>
                     <TableCell />
                   </TableRow>

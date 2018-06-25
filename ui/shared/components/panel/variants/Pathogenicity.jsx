@@ -53,15 +53,19 @@ const Pathogenicity = ({ variant }) => {
 
   return (
     <Grid.Column width={16}>
-      <b>ClinVar:<HorizontalSpacer width={5} /></b>
-      {variant.clinvar.clinsig ? variant.clinvar.clinsig.split('/').map(clinsig =>
-        <PathogenicityLink
-          key={clinsig}
-          clinsig={clinsig}
-          href={`http://www.ncbi.nlm.nih.gov/clinvar/variation/${variant.clinvar.variantId}`}
-          formatName={titlecase}
-        />,
-      ) : <PathogenicityLabel clinsig="Not In Clinvar" />}
+      {variant.clinvar.clinsig &&
+        <span>
+          <b>ClinVar:<HorizontalSpacer width={5} /></b>
+          {variant.clinvar.clinsig.split('/').map(clinsig =>
+            <PathogenicityLink
+              key={clinsig}
+              clinsig={clinsig}
+              href={`http://www.ncbi.nlm.nih.gov/clinvar/variation/${variant.clinvar.variantId}`}
+              formatName={titlecase}
+            />,
+          )}
+        </span>
+      }
       {variant.hgmd.class &&
         <span>
           <HorizontalSpacer width={5} />
