@@ -90,7 +90,8 @@ class Command(BaseCommand):
                 ~Q(project_id__contains="DEPRECATED") &
                 ~Q(project_name__contains="DEPRECATED") &
                 ~Q(project_id__istartswith="temp") &
-                ~Q(project_id__istartswith="test_")
+                ~Q(project_id__istartswith="test_") &
+                ~Q(project_name__contains="DISABLED_")
             )
             logging.info("Processing all %s projects" % len(projects))
             project_ids_to_process = [p.project_id for p in projects]
@@ -374,7 +375,6 @@ def create_sample_records(sample_type, source_individual, new_project, new_indiv
             loaded_date=newest_loaded_vcf_file.loaded_date,
             sample_status="loaded" if newest_loaded_vcf_file else None,
         )
-
 
 def look_up_vcf_loaded_date(vcf_path):
     vcf_record = get_annotator().get_vcf_file_from_annotator(vcf_path)
