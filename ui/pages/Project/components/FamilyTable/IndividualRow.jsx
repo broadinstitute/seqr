@@ -12,11 +12,12 @@ import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
 import { updateIndividual } from 'redux/rootReducer'
 import { getUser } from 'redux/selectors'
 
+import { DATASET_TYPE_VARIANT_CALLS } from 'shared/utils/constants'
+
 import {
   CASE_REVIEW_STATUS_MORE_INFO_NEEDED,
   CASE_REVIEW_STATUS_NOT_IN_REVIEW,
   CASE_REVIEW_STATUS_OPT_LOOKUP,
-  DATASET_TYPE_VARIANT_CALLS,
 } from '../../constants'
 import { getShowDetails, getProject, getProjectSamples } from '../../selectors'
 import CaseReviewStatusDropdown from './CaseReviewStatusDropdown'
