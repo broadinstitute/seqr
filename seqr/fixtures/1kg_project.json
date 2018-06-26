@@ -753,14 +753,15 @@
         "created_date": "2017-02-05T06:42:55.397Z",
         "created_by": null,
         "last_modified_date": "2017-03-13T09:07:49.744Z",
-        
-        "sample_id": "NA19675",
-        "sample_type": "WES",
-        "sample_status": "S",
+
         "individual": 1,
+        "sample_type": "WES",
         "dataset_type": "VARIANTS",
+        "sample_id": "NA19675",
+        "sample_status": "loaded",
+
         "dataset_file_path": "1kg.vcf.gz",
-        "loaded_date": "2017-02-05T06:42:55.397Z",
+        "loaded_date": "2017-02-05T06:42:55.397Z"
     }
 },
 {
@@ -774,11 +775,11 @@
         
         "sample_id": "NA19678",
         "sample_type": "WES",
-        "sample_status": "S",
+        "sample_status": "loaded",
         "individual": 2,
         "dataset_type": "VARIANTS",
         "dataset_file_path": "1kg.vcf.gz",
-        "loaded_date": "2017-02-05T06:42:55.397Z",
+        "loaded_date": "2017-02-05T06:42:55.397Z"
     }
 },
 {
@@ -792,11 +793,11 @@
         
         "sample_id": "NA19679",
         "sample_type": "WES",
-        "sample_status": "S",
+        "sample_status": "loaded",
         "individual": 3,
         "dataset_type": "VARIANTS",
         "dataset_file_path": "1kg.vcf.gz",
-        "loaded_date": "2017-02-05T06:42:55.397Z",
+        "loaded_date": "2017-02-05T06:42:55.397Z"
     }
 },
 {
@@ -810,11 +811,11 @@
         
         "sample_id": "HG00731",
         "sample_type": "WES",
-        "sample_status": "S",
+        "sample_status": "loaded",
         "individual": 4,
         "dataset_type": "VARIANTS",
         "dataset_file_path": "1kg.vcf.gz",
-        "loaded_date": "2017-02-05T06:42:55.397Z",
+        "loaded_date": "2017-02-05T06:42:55.397Z"
     }
 },
 {
@@ -828,11 +829,11 @@
         
         "sample_id": "HG00732",
         "sample_type": "WES",
-        "sample_status": "S",
+        "sample_status": "loaded",
         "individual": 5,
         "dataset_type": "VARIANTS",
         "dataset_file_path": "1kg.vcf.gz",
-        "loaded_date": "2017-02-05T06:42:55.397Z",
+        "loaded_date": "2017-02-05T06:42:55.397Z"
     }
 },
 {
@@ -846,11 +847,11 @@
         
         "sample_id": "HG00733",
         "sample_type": "WES",
-        "sample_status": "S",
+        "sample_status": "loaded",
         "individual": 6,
         "dataset_type": "VARIANTS",
         "dataset_file_path": "1kg.vcf.gz",
-        "loaded_date": "2017-02-05T06:42:55.397Z",
+        "loaded_date": "2017-02-05T06:42:55.397Z"
     }
 },
 {
@@ -864,11 +865,11 @@
         
         "sample_id": "NA20870",
         "sample_type": "WES",
-        "sample_status": "S",
+        "sample_status": "loaded",
         "individual": 7,
         "dataset_type": "VARIANTS",
         "dataset_file_path": "1kg.vcf.gz",
-        "loaded_date": "2017-02-05T06:42:55.397Z",
+        "loaded_date": "2017-02-05T06:42:55.397Z"
     }
 },
 {
@@ -882,11 +883,11 @@
         
         "sample_id": "NA20872",
         "sample_type": "WES",
-        "sample_status": "S",
+        "sample_status": "loaded",
         "individual": 8,
         "dataset_type": "VARIANTS",
         "dataset_file_path": "1kg.vcf.gz",
-        "loaded_date": "2017-02-05T06:42:55.397Z",
+        "loaded_date": "2017-02-05T06:42:55.397Z"
     }
 },
 {
@@ -900,11 +901,11 @@
         
         "sample_id": "NA20874",
         "sample_type": "WES",
-        "sample_status": "S",
+        "sample_status": "loaded",
         "individual": 9,
         "dataset_type": "VARIANTS",
         "dataset_file_path": "1kg.vcf.gz",
-        "loaded_date": "2017-02-05T06:42:55.397Z",
+        "loaded_date": "2017-02-05T06:42:55.397Z"
     }
 },
 {
@@ -918,11 +919,11 @@
         
         "sample_id": "NA20875",
         "sample_type": "WES",
-        "sample_status": "S",
+        "sample_status": "loaded",
         "individual": 10,
         "dataset_type": "VARIANTS",
         "dataset_file_path": "1kg.vcf.gz",
-        "loaded_date": "2017-02-05T06:42:55.397Z",
+        "loaded_date": "2017-02-05T06:42:55.397Z"
     }
 },
 {
@@ -936,11 +937,11 @@
         
         "sample_id": "NA20876",
         "sample_type": "WES",
-        "sample_status": "S",
+        "sample_status": "loaded",
         "individual": 11,
         "dataset_type": "VARIANTS",
         "dataset_file_path": "1kg.vcf.gz",
-        "loaded_date": "2017-02-05T06:42:55.397Z",
+        "loaded_date": "2017-02-05T06:42:55.397Z"
     }
 },
 {
@@ -954,11 +955,11 @@
         
         "sample_id": "NA20877",
         "sample_type": "WES",
-        "sample_status": "S",
+        "sample_status": "loaded",
     	"individual": 12,
         "dataset_type": "VARIANTS",
         "dataset_file_path": "1kg.vcf.gz",
-        "loaded_date": "2017-02-05T06:42:55.397Z",
+        "loaded_date": "2017-02-05T06:42:55.397Z"
     }
 },
 {
@@ -972,11 +973,11 @@
         
         "sample_id": "NA20878",
         "sample_type": "WES",
-        "sample_status": "S",
+        "sample_status": "loaded",
     	"individual": 13,
         "dataset_type": "VARIANTS",
         "dataset_file_path": "1kg.vcf.gz",
-        "loaded_date": "2017-02-05T06:42:55.397Z",
+        "loaded_date": "2017-02-05T06:42:55.397Z"
     }
 },
 {
@@ -990,11 +991,11 @@
         
         "sample_id": "NA20881",
         "sample_type": "WES",
-        "sample_status": "S",
+        "sample_status": "loaded",
     	"individual": 14,
         "dataset_type": "VARIANTS",
         "dataset_file_path": "1kg.vcf.gz",
-        "loaded_date": "2017-02-05T06:42:55.397Z",
+        "loaded_date": "2017-02-05T06:42:55.397Z"
     }
 },
 {
@@ -1008,11 +1009,11 @@
         
         "sample_id": "NA20885",
         "sample_type": "WES",
-        "sample_status": "S",
+        "sample_status": "loaded",
         "individual": 15,
         "dataset_type": "VARIANTS",
         "dataset_file_path": "1kg.vcf.gz",
-        "loaded_date": "2017-02-05T06:42:55.397Z",
+        "loaded_date": "2017-02-05T06:42:55.397Z"
     }
 },
 {
@@ -1026,11 +1027,11 @@
         
         "sample_id": "NA20888",
         "sample_type": "WES",
-        "sample_status": "S",
+        "sample_status": "loaded",
         "individual": 16,
         "dataset_type": "VARIANTS",
         "dataset_file_path": "1kg.vcf.gz",
-        "loaded_date": "2017-02-05T06:42:55.397Z",
+        "loaded_date": "2017-02-05T06:42:55.397Z"
     }
 },
 {
