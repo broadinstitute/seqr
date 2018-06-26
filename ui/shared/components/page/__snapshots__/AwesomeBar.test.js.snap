@@ -3,7 +3,6 @@
 exports[`shallow-render without crashing 1`] = `
 <AwesomeBar__AwesomebarSearch
   category={true}
-  fluid={true}
   loading={false}
   minCharacters={1}
   onResultSelect={[Function]}
