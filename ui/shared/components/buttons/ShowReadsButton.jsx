@@ -10,6 +10,7 @@ import Modal from '../modal/Modal'
 import PedigreeIcon from '../icons/PedigreeIcon'
 import IGV from '../graph/IGV'
 import ButtonLink from './ButtonLink'
+import { DATASET_TYPE_READ_ALIGNMENTS } from '../../utils/constants'
 
 const CRAM_TRACK_OPTIONS = {
   sourceType: 'pysam',
@@ -24,7 +25,7 @@ const BAM_TRACK_OPTIONS = {
 const ShowReadsButton = ({ locus, familyGuid, samples, individualsByGuid }) => {
 
   const igvTracks = samples.filter(
-    sample => sample.loadedDate && sample.datasetType === 'ALIGN',
+    sample => sample.loadedDate && sample.datasetType === DATASET_TYPE_READ_ALIGNMENTS,
   ).map((sample) => {
     const individual = individualsByGuid[sample.individualGuid]
     if (individual.familyGuid !== familyGuid) {
