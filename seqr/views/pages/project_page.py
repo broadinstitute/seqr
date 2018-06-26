@@ -48,7 +48,7 @@ def project_page_data(request, project_guid):
     cursor = connection.cursor()
 
     families_by_guid = _retrieve_families(cursor, project.guid, request.user)
-    individuals_by_guid = _retrieve_individuals(cursor, project.guid, request.user)
+    individuals_by_guid = _retrieve_individuals(project.guid, request.user)
     for individual_guid, individual in individuals_by_guid.items():
         families_by_guid[individual['familyGuid']]['individualGuids'].add(individual_guid)
     samples_by_guid = _retrieve_samples(cursor, project.guid, individuals_by_guid)
@@ -124,47 +124,22 @@ def _retrieve_families(cursor, project_guid, user):
     return families_by_guid
 
 
-def _retrieve_individuals(cursor, project_guid, user):
+def _retrieve_individuals(project_guid, user):
     """Retrieves individual-level metadata for the given project.
 
     Args:
-        cursor: connected database cursor that can be used to execute SQL queries.
         project_guid (string): project_guid
     Returns:
         dictionary: individuals_by_guid
     """
-    individuals_query = """
-        SELECT DISTINCT
-          p.guid AS project_guid,
-          f.guid AS family_guid,
-          i.guid AS individual_guid,
-          i.individual_id AS individual_individual_id,
-          i.display_name AS individual_display_name,
-          i.paternal_id AS individual_paternal_id,
-          i.maternal_id AS individual_maternal_id,
-          i.sex AS individual_sex,
-          i.affected AS individual_affected,
-          i.notes as individual_notes,
-          i.case_review_status AS individual_case_review_status,
-          i.case_review_status_last_modified_date AS individual_case_review_status_last_modified_date,
-          i.case_review_status_last_modified_by_id AS individual_case_review_status_last_modified_by,
-          i.case_review_discussion AS individual_case_review_discussion,
-          i.phenotips_patient_id AS individual_phenotips_patient_id,
-          i.phenotips_data AS individual_phenotips_data,
-          i.created_date AS individual_created_date,
-          i.last_modified_date AS individual_last_modified_date
 
-        FROM seqr_individual AS i
-          JOIN seqr_family AS f ON i.family_id=f.id
-          JOIN seqr_project AS p ON f.project_id=p.id
-        WHERE p.guid=%s
-    """.strip()
+    fields = Individual._meta.json_fields + Individual._meta.internal_json_fields + \
+             ['family__guid', 'case_review_status_last_modified_by__email']
+    individual_models = Individual.objects.filter(family__project__guid=project_guid)\
+        .select_related('family', 'case_review_status_last_modified_by').only(*fields)
 
-    cursor.execute(individuals_query, [project_guid])
+    individuals = _get_json_for_individuals(individual_models, user=user, project_guid=project_guid)
 
-    columns = [col[0] for col in cursor.description]
-
-    individuals = _get_json_for_individuals([dict(zip(columns, row)) for row in cursor.fetchall()], user)
     individuals_by_guid = {}
     for i in individuals:
         i['sampleGuids'] = set()

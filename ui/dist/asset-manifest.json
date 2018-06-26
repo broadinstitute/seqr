@@ -1,8 +1,13 @@
 {
   "app.css": "app.85e35760.css",
   "app.css.map": "app.85e35760.css.map",
+<<<<<<< HEAD
   "app.js": "app-767c117e.js",
   "app.js.map": "app-767c117e.js.map",
+=======
+  "app.js": "app-f2ad0e0e.js",
+  "app.js.map": "app-f2ad0e0e.js.map",
+>>>>>>> dev
   "flags.png": "flags.9c74e172.png",
   "icons.eot": "icons.674f50d2.eot",
   "icons.svg": "icons.912ec66d.svg",

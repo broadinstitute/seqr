@@ -23,7 +23,8 @@ import {
 import CaseReviewStatusDropdown from './CaseReviewStatusDropdown'
 
 
-const Detail = styled.span`
+const Detail = styled.div`
+  display: inline-block;
   padding: 5px 0 5px 5px;
   font-size: 11px;
   font-weight: 500;
@@ -178,7 +179,6 @@ class IndividualRow extends React.Component
                   {
                     showDetails && individual.caseReviewStatusLastModifiedDate ? (
                       <Detail>
-                        <HorizontalSpacer width={5} />
                         CHANGED ON {new Date(individual.caseReviewStatusLastModifiedDate).toLocaleDateString()}
                         { individual.caseReviewStatusLastModifiedBy && ` BY ${individual.caseReviewStatusLastModifiedBy}` }
                       </Detail>
