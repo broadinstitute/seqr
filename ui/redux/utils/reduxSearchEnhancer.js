@@ -5,10 +5,16 @@ const searchApi = new SearchApi()
 const resourceSelector = (resourceName, state) => state[resourceName]
 
 const resourceIndexes = {
-  familiesByGuid: ({ resources, indexDocument }) => {
+  familiesByGuid: ({ resources, indexDocument, state }) => {
     Object.values(resources).forEach((family) => {
       indexDocument(family.familyGuid, family.displayName)
       indexDocument(family.familyGuid, family.familyId)
+      indexDocument(
+        family.familyGuid,
+        family.individualGuids.map(individualGuid =>
+          ((state.individualsByGuid[individualGuid].phenotipsData || {}).features || []).map(feature => feature.label).join(';'),
+        ).join('\n'),
+      )
     })
   },
 }
