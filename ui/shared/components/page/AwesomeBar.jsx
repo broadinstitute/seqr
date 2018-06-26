@@ -7,10 +7,16 @@ import { Search } from 'semantic-ui-react'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 
 const AwesomebarSearch = styled(Search)`
-  min-width: 350px;
-  
+  width: 100%;
+
   .ui.icon.input {
     max-width: 100%;
+    width: ${props => props.inputWidth || '100%'};
+  }
+  
+  .results {
+    min-width: ${props => props.inputWidth || '100%'};
+    width: fit-content !important;
   }
 `
 
@@ -21,6 +27,7 @@ class AwesomeBar extends React.Component
     newWindow: PropTypes.bool,
     placeholder: PropTypes.string,
     history: PropTypes.object,
+    inputWidth: PropTypes.string,
   }
 
   static defaultProps = {
@@ -45,9 +52,9 @@ class AwesomeBar extends React.Component
 
   render() {
     return <AwesomebarSearch
-      fluid
       category
       selectFirstResult
+      inputWidth={this.props.inputWidth}
       loading={this.state.isLoading}
       onResultSelect={this.handleResultSelect}
       onSearchChange={this.handleSearchChange}
