@@ -1,5 +1,7 @@
 import logging
 import numpy as np
+from django.utils import timezone
+
 from seqr.models import Individual, Sample
 
 logger = logging.getLogger(__name__)
@@ -68,7 +70,12 @@ def match_sample_ids_to_sample_records(
         if create_sample_records:
             for sample_id, individual in sample_id_to_individual_record.items():
                 new_sample = Sample.objects.create(
-                    sample_id=sample_id, sample_type=sample_type, individual=individual)
+                    sample_id=sample_id,
+                    sample_type=sample_type,
+                    individual=individual,
+                    sample_status = Sample.SAMPLE_STATUS_LOADED,
+                    loaded_date = timezone.now(),
+                )
                 sample_id_to_sample_record[sample_id] = new_sample
 
     return sample_id_to_sample_record
