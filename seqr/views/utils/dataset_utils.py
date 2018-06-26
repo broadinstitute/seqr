@@ -221,28 +221,6 @@ def validate_dataset(project, sample_type, dataset_type, genome_version, dataset
     return errors, warnings, info
 
 
-def _deprecated_update_base_individuals(dataset, sample_records):
-    if not dataset.is_loaded:
-        return
-
-    vcf_file, created = VCFFile.objects.get_or_create(file_path=dataset.dataset_file_path)
-    for sample in sample_records:
-        base_individual = BaseIndividual.objects.get(
-            project__project_id=dataset.project.deprecated_project_id,
-            indiv_id=sample.individual.individual_id)
-        base_individual.vcf_files.add(vcf_file)
-
-        base_family = base_individual.family
-        if base_family.analysis_status == "Q":
-            base_family.analysis_status = 'I'
-            base_family.save()
-
-        seqr_family = sample.individual.family
-        if seqr_family.analysis_status == "Q":
-            seqr_family.analysis_status = "I"
-            seqr_family.save()
-
-
 def _validate_vcf(vcf_path, sample_type=None, genome_version=None):
     if not vcf_path or not isinstance(vcf_path, basestring):
         raise ValueError("Invalid vcf_path arg: %(vcf_path)s" % locals())
