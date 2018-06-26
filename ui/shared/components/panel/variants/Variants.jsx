@@ -37,6 +37,7 @@ const VariantRow = styled(Grid.Row)`
 
 const VariantLinkContainer = styled.div`
   position: absolute;
+  top: .5em;
   right: 1em;
 `
 

@@ -125,7 +125,7 @@ const VariantGene = ({ gene, project }) =>
           label={`${geneListName.substring(0, 10)}${geneListName.length > 6 ? ' ..' : ''}`}
           color="teal"
           popupHeader="Gene Lists"
-          popupContent={gene.diseaseGeneLists.join(', ')}
+          popupContent={gene.diseaseGeneLists.map(geneList => <div>{geneList}</div>)}
         />,
       )}
     </div>

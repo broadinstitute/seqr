@@ -4,7 +4,7 @@ import styled from 'styled-components'
 import { Segment, Popup } from 'semantic-ui-react'
 import { ScatterplotChart } from 'react-easy-chart'
 
-import { titlecase } from '../../../utils/stringUtils'
+import { snakecaseToTitlecase } from '../../../utils/stringUtils'
 
 const FixedPositionPopup = styled(Popup)`
   top: ${props => props.top - 90}px !important;
@@ -55,7 +55,7 @@ const tissueName = (tissue) => {
     const split = tissue.split('-')
     tissue = split[0].replace('_', ':_') + split.pop().split('_').pop()
   }
-  return titlecase(tissue)
+  return snakecaseToTitlecase(tissue)
 }
 
 const xcoord = (d) => {
