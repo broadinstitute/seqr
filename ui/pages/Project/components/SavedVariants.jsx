@@ -13,7 +13,7 @@ import Variants from 'shared/components/panel/variants/Variants'
 import { Dropdown as DropdownInput, InlineToggle } from 'shared/components/form/Inputs'
 import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
 import { HorizontalSpacer } from 'shared/components/Spacers'
-import { snakecase } from 'shared/utils/stringUtils'
+import { toSnakecase } from 'shared/utils/stringUtils'
 import { loadProjectVariants, updateSavedVariantTable } from '../reducers'
 import {
   getProject, getProjectSavedVariantsIsLoading, getProjectSavedVariants, getVisibleSortedProjectSavedVariants,
@@ -108,7 +108,7 @@ class SavedVariants extends React.Component {
     }
   }
 
-  navigateTag = (e, data) => {
+  navigateToTag = (e, data) => {
     const { familyGuid } = this.props.match.params
     const isCategory = this.categoryOptions.includes(data.value)
     const urlPath = `/project/${this.props.project.projectGuid}/saved_variants/${familyGuid ? `family/${familyGuid}/` : ''}`
@@ -122,7 +122,7 @@ class SavedVariants extends React.Component {
 
     const familyId = familyGuid && familyGuid.split(/_(.+)/)[1]
     const exports = [{
-      name: `${tag || snakecase(this.props.tableState.categoryFilter)} Variants ${familyId ? `in Family ${familyId}` : ''}`,
+      name: `${tag || toSnakecase(this.props.tableState.categoryFilter)} Variants ${familyId ? `in Family ${familyId}` : ''}`,
       data: {
         filename: `saved_${tag || this.props.tableState.categoryFilter}_variants_${this.props.project.name}${familyId ? `_family_${familyId}` : ''}`.replace(/ /g, '-').toLowerCase(),
         ...this.props.variantExportConfig,
@@ -178,7 +178,7 @@ class SavedVariants extends React.Component {
                 inline
                 options={tagOptions}
                 value={tag || this.props.tableState.categoryFilter || ALL_FILTER}
-                onChange={this.navigateTag}
+                onChange={this.navigateToTag}
               />
               &nbsp;variants {!allShown && `(${this.props.totalVariantsCount} total)`}
               <HorizontalSpacer width={20} />

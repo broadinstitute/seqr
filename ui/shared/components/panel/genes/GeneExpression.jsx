@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import { Segment } from 'semantic-ui-react'
 import { ScatterplotChart } from 'react-easy-chart'
 
-import { titlecase } from '../../../utils/stringUtils'
+import { snakecaseToTitlecase } from '../../../utils/stringUtils'
 
 const COLORS = [
   '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf',
@@ -20,7 +20,7 @@ const tissueName = (tissue) => {
     const split = tissue.split('-')
     tissue = split[0].replace('_', ':_') + split.pop().split('_').pop()
   }
-  return titlecase(tissue)
+  return snakecaseToTitlecase(tissue)
 }
 
 const xcoord = (d) => {

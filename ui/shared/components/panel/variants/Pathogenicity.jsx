@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import { Grid, Label } from 'semantic-ui-react'
 
 import { CLINSIG_SEVERITY } from '../../../utils/constants'
-import { titlecase } from '../../../utils/stringUtils'
+import { snakecaseToTitlecase } from '../../../utils/stringUtils'
 import { HorizontalSpacer } from '../../Spacers'
 
 
@@ -61,7 +61,7 @@ const Pathogenicity = ({ variant }) => {
               key={clinsig}
               clinsig={clinsig}
               href={`http://www.ncbi.nlm.nih.gov/clinvar/variation/${variant.clinvar.variantId}`}
-              formatName={titlecase}
+              formatName={snakecaseToTitlecase}
             />,
           )}
         </span>
