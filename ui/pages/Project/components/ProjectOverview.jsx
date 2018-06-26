@@ -6,7 +6,7 @@ import { Grid } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 import EditFamiliesAndIndividualsButton from 'shared/components/buttons/EditFamiliesAndIndividualsButton'
 
-import { getProject, getProjectFamilies, getProjectIndividuals } from '../selectors'
+import { getProject, getProjectFamilies, getProjectIndividuals } from 'pages/Project/selectors'
 
 
 const FAMILY_SIZE_LABELS = {

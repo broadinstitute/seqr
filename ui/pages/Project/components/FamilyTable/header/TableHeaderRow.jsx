@@ -6,7 +6,7 @@ import { connect } from 'react-redux'
 import { HorizontalSpacer } from 'shared/components/Spacers'
 import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
 
-import { getProjectFamilies, getVisibleFamilies, getProjectTablePage, getProjectTableRecordsPerPage } from '../../../selectors'
+import { getProjectFamilies, getVisibleFamilies, getProjectTablePage, getProjectTableRecordsPerPage } from 'pages/Project/selectors'
 
 import FamiliesFilterDropdown from './FilterDropdown'
 import FamiliesSortOrderDropdown from './SortOrderDropdown'
