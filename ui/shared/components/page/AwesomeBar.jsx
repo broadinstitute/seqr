@@ -11,11 +11,11 @@ const AwesomebarSearch = styled(Search)`
 
   .ui.icon.input {
     max-width: 100%;
-    width: ${props => props.inputWidth || '100%'};
+    width: ${props => props.inputwidth || '100%'};
   }
   
   .results {
-    min-width: ${props => props.inputWidth || '100%'};
+    min-width: ${props => props.inputwidth || '100%'};
     width: fit-content !important;
   }
 `
@@ -27,7 +27,7 @@ class AwesomeBar extends React.Component
     newWindow: PropTypes.bool,
     placeholder: PropTypes.string,
     history: PropTypes.object,
-    inputWidth: PropTypes.string,
+    inputwidth: PropTypes.string,
   }
 
   static defaultProps = {
@@ -54,7 +54,7 @@ class AwesomeBar extends React.Component
     return <AwesomebarSearch
       category
       selectFirstResult
-      inputWidth={this.props.inputWidth}
+      inputwidth={this.props.inputwidth}
       loading={this.state.isLoading}
       onResultSelect={this.handleResultSelect}
       onSearchChange={this.handleSearchChange}
