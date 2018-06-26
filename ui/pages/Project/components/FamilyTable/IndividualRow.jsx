@@ -4,7 +4,6 @@ import styled from 'styled-components'
 import { connect } from 'react-redux'
 import { Grid, Popup, Icon } from 'semantic-ui-react'
 import Timeago from 'timeago.js'
-import orderBy from 'lodash/orderBy'
 
 import PedigreeIcon from 'shared/components/icons/PedigreeIcon'
 import TextFieldView from 'shared/components/panel/view-fields/TextFieldView'
@@ -64,29 +63,20 @@ class IndividualRow extends React.Component
       s.datasetType === DATASET_TYPE_VARIANT_CALLS &&
       s.loadedStatus === 'loaded',
     ).map((sample) => {
-      let loadedVariantCallDatasets = this.props.datasets
-        .filter(dataset => (
-          dataset.sampleGuids.includes(sample.sampleGuid) &&
-          dataset.datasetType === DATASET_TYPE_VARIANT_CALLS &&
-          dataset.isLoaded
-        ))
-
-      loadedVariantCallDatasets = orderBy(loadedVariantCallDatasets, [d => d.loadedDate], 'desc')
-
       return (
         <div key={sample.sampleGuid}>
           {
             <Popup
-              trigger={<Icon size="small" name="circle" color={loadedVariantCallDatasets.length > 0 ? 'green' : 'red'} />}
-              content={loadedVariantCallDatasets.length > 0 ? 'data has been loaded' : 'no data available'}
+              trigger={<Icon size="small" name="circle" color={sample.loadedDate ? 'green' : 'red'} />}
+              content={sample.loadedDate ? 'data has been loaded' : 'no data available'}
               position="left center"
             />
           }
           <span><HorizontalSpacer width={8} /><b>{sample.sampleType}</b></span>
           {
-            loadedVariantCallDatasets.length > 0 &&
+            sample.loadedDate &&
             <Detail>
-              LOADED {new Timeago().format(loadedVariantCallDatasets[0].loadedDate).toUpperCase()}
+              LOADED {new Timeago().format(sample.loadedDate).toUpperCase()}
             </Detail>
           }
         </div>
