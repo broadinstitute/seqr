@@ -1,8 +1,10 @@
 from django.contrib.auth.models import User
 from django.test import TestCase
-from seqr.models import Project, Family, Individual, Sample
+from seqr.models import Project, Family, Individual, Sample, SavedVariant, VariantTag, VariantFunctionalData, \
+    VariantNote
 from seqr.views.utils.orm_to_json_utils import _get_json_for_user, _get_json_for_project, _get_json_for_family, \
-    _get_json_for_individual, _get_json_for_sample
+    _get_json_for_individual, _get_json_for_sample, get_json_for_saved_variant, get_json_for_variant_tag, \
+    get_json_for_variant_functional_data, get_json_for_variant_note
 
 
 class JSONUtilsTest(TestCase):
@@ -27,7 +29,7 @@ class JSONUtilsTest(TestCase):
             set(json.keys()),
             {'projectGuid', 'projectCategoryGuids', 'canEdit', 'name', 'description', 'createdDate', 'lastModifiedDate',
              'isPhenotipsEnabled', 'phenotipsUserId', 'deprecatedProjectId', 'deprecatedLastAccessedDate',
-             'isMmeEnabled', 'mmePrimaryDataOwner'}
+             'isMmeEnabled', 'mmePrimaryDataOwner', 'genomeVersion'}
         )
 
     def test_json_for_family(self):
@@ -74,7 +76,8 @@ class JSONUtilsTest(TestCase):
 
         self.assertSetEqual(
             set(json.keys()),
-            {'projectGuid', 'individualGuid', 'sampleGuid', 'createdDate', 'sampleType', 'sampleId', 'sampleStatus'}
+            {'projectGuid', 'individualGuid', 'sampleGuid', 'createdDate', 'sampleType', 'sampleId', 'sampleStatus',
+             'datasetFilePath', 'loadedDate', 'datasetName', 'datasetType', 'elasticsearchIndex'}
         )
 
     def test_json_for_saved_variant(self):

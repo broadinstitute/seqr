@@ -32,7 +32,7 @@ class ProjectPageTest(TestCase):
             {'collaborators', 'locusLists', 'variantTagTypes', 'variantFunctionalTagTypes', 'hasGeneSearch',
              'detailsLoaded', 'projectGuid', 'projectCategoryGuids', 'canEdit', 'name', 'description', 'createdDate',
              'lastModifiedDate', 'isPhenotipsEnabled', 'phenotipsUserId', 'deprecatedProjectId',
-             'deprecatedLastAccessedDate', 'isMmeEnabled', 'mmePrimaryDataOwner'}
+             'deprecatedLastAccessedDate', 'isMmeEnabled', 'mmePrimaryDataOwner', 'genomeVersion'}
         )
         self.assertSetEqual(
             set(response_json['familiesByGuid'].values()[0].keys()),
@@ -50,7 +50,7 @@ class ProjectPageTest(TestCase):
         self.assertSetEqual(
             set(response_json['samplesByGuid'].values()[0].keys()),
             {'projectGuid', 'individualGuid', 'sampleGuid', 'createdDate', 'sampleType', 'datasetType', 'sampleId',
-             'sampleStatus',  'loadedDate', 'datasetFilePath', 'elasticsearchIndex'}
+             'sampleStatus',  'loadedDate', 'datasetFilePath', 'elasticsearchIndex', 'datasetName'}
         )
 
     @mock.patch('seqr.views.pages.project_page._has_gene_search', _has_gene_search)
