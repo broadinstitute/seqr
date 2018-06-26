@@ -74,8 +74,8 @@ class Command(BaseCommand):
         #    SeqrProject.objects.all().delete()
 
         # reset models that'll be regenerated
-        if not project_ids_to_process:
-            SeqrSample.objects.all().delete()
+        #if not project_ids_to_process:
+        #    SeqrSample.objects.all().delete()
         #    SeqrVariantTagType.objects.all().delete()
         #    SeqrVariantTag.objects.all().delete()
         #    SeqrVariantNote.objects.all().delete()
@@ -308,15 +308,9 @@ class Command(BaseCommand):
             for sample in SeqrSample.objects.filter(individual__isnull=True):
                 print("--- deleting SeqrSample without indiv: %s" % sample)
                 counters["deleted SeqrSample"] += 1
-                #sample.delete()
-
-            for sample in SeqrSample.objects.filter(individual__isnull=True):
-                print("--- deleting SeqrSample without dataset: %s" % sample)
-                counters["deleted SeqrSample"] += 1
                 sample.delete()
 
-
-                # delete projects that are in SeqrProject table, but not in BaseProject table
+            # delete projects that are in SeqrProject table, but not in BaseProject table
             #for p in SeqrProject.objects.filter():
             #    if p.guid not in updated_seqr_project_guids:
             #        while True:
@@ -335,7 +329,6 @@ class Command(BaseCommand):
                     #seqr_project.delete()
                     print("--- Deleting SeqrProject: %s ??" % seqr_project)
 
-
         logger.info("Done")
         logger.info("Stats: ")
         for k, v in counters.items():
@@ -344,37 +337,33 @@ class Command(BaseCommand):
 
 
 def create_sample_records(sample_type, source_individual, new_project, new_individual, counters):
-
-    newest_loaded_vcf_file = source_individual.vcf_files.filter(dataset_type=VCFFile.DATASET_TYPE_VARIANT_CALLS, loaded_date__isnull=False).order_by('-pk').first()
-    if newest_loaded_vcf_file is None:
-        return
-
-    # find and record the earliest callset for this individual
-    new_sample, sample_created = get_or_create_sample(
-        source_individual,
-        new_individual,
-        sample_type=sample_type,
-        dataset_type=SeqrSample.DATASET_TYPE_VARIANT_CALLS,
-        elasticsearch_index=newest_loaded_vcf_file.elasticsearch_index,
-        dataset_file_path=newest_loaded_vcf_file.file_path,
-        sample_status="loaded" if newest_loaded_vcf_file else None,
-        loaded_date=newest_loaded_vcf_file.loaded_date,
-    )
-
-    if sample_created:
-        counters['samples_created'] += 1
-
-    if source_individual.bam_file_path:
+    loaded_vcf_files = source_individual.vcf_files.filter(dataset_type=VCFFile.DATASET_TYPE_VARIANT_CALLS, loaded_date__isnull=False)
+    for loaded_vcf_file in loaded_vcf_files:
         new_sample, sample_created = get_or_create_sample(
             source_individual,
             new_individual,
             sample_type=sample_type,
-            dataset_type=SeqrSample.DATASET_TYPE_READ_ALIGNMENTS,
-            elasticsearch_index=None,
-            dataset_file_path=source_individual.bam_file_path,
-            loaded_date=newest_loaded_vcf_file.loaded_date,
-            sample_status="loaded" if newest_loaded_vcf_file else None,
+            dataset_type=SeqrSample.DATASET_TYPE_VARIANT_CALLS,
+            elasticsearch_index=loaded_vcf_file.elasticsearch_index,
+            dataset_file_path=loaded_vcf_file.file_path,
+            sample_status=SeqrSample.SAMPLE_STATUS_LOADED if loaded_vcf_file else None,
+            loaded_date=loaded_vcf_file.loaded_date,
         )
+
+        if sample_created:
+            counters['samples_created'] += 1
+
+        if source_individual.bam_file_path:
+            new_sample, sample_created = get_or_create_sample(
+                source_individual,
+                new_individual,
+                sample_type=sample_type,
+                dataset_type=SeqrSample.DATASET_TYPE_READ_ALIGNMENTS,
+                elasticsearch_index=None,
+                dataset_file_path=source_individual.bam_file_path,
+                loaded_date=loaded_vcf_file.loaded_date,
+                sample_status=SeqrSample.SAMPLE_STATUS_LOADED if loaded_vcf_file else None,
+            )
 
 def look_up_vcf_loaded_date(vcf_path):
     vcf_record = get_annotator().get_vcf_file_from_annotator(vcf_path)
