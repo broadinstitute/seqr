@@ -41,8 +41,11 @@ DATABASES = {
 #"""
 
 ALLOWED_HOSTS = ['*']
-
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+ENABLE_MME_MATCH_EMAIL_NOTIFICATIONS=True
+EMAIL_BACKEND = 'anymail.backends.postmark.EmailBackend'
+ANYMAIL = {
+            'POSTMARK_SERVER_TOKEN': 'token'
+            }
 
 
 #
