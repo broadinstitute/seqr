@@ -3,9 +3,7 @@ import { createSelector } from 'reselect'
 
 import { FAMILY_ANALYSIS_STATUS_OPTIONS } from 'shared/utils/constants'
 
-import {
-  getProjectsByGuid, getFamiliesByGuid, getIndividualsByGuid, getSamplesByGuid,
-} from 'redux/selectors'
+import { getProjectsByGuid, getFamiliesByGuid, getIndividualsByGuid, getSamplesByGuid } from 'redux/selectors'
 
 import {
   SHOW_ALL,
@@ -23,21 +21,21 @@ import {
 const FAMILY_FILTER_LOOKUP = FAMILY_FILTER_OPTIONS.reduce(
   (acc, opt) => ({
     ...acc,
-    ...{ [opt.value]: opt.createFilter },
+    [opt.value]: opt.createFilter,
   }), {},
 )
 
 const FAMILY_SORT_LOOKUP = FAMILY_SORT_OPTIONS.reduce(
   (acc, opt) => ({
     ...acc,
-    ...{ [opt.value]: opt.createSortKeyGetter },
+    [opt.value]: opt.createSortKeyGetter,
   }), {},
 )
 
 const VARIANT_SORT_LOOKUP = VARIANT_SORT_OPTONS.reduce(
   (acc, opt) => ({
     ...acc,
-    ...{ [opt.value]: opt.comparator },
+    [opt.value]: opt.comparator,
   }), {},
 )
 
@@ -51,14 +49,20 @@ export const getProject = createSelector(
   getProjectsByGuid, getProjectGuid, (projectsByGuid, currentProjectGuid) => projectsByGuid[currentProjectGuid],
 )
 
-const filterProjectEntities = (entities, currentProjectGuid) =>
-  Object.values(entities).filter(o => o.projectGuid === currentProjectGuid)
+const filterProjectEntities = (entities, currentProjectGuid) => Object.entries(entities).filter(
+  ([, o]) => o.projectGuid === currentProjectGuid,
+).reduce((acc, [k, o]) => {
+  return { ...acc, [k]: o }
+}, {})
 
-export const getProjectFamilies = createSelector(getFamiliesByGuid, getProjectGuid, filterProjectEntities)
 
-export const getProjectIndividuals = createSelector(getIndividualsByGuid, getProjectGuid, filterProjectEntities)
+export const getProjectFamiliesByGuid = createSelector(getFamiliesByGuid, getProjectGuid, filterProjectEntities)
+export const getProjectIndividualsByGuid = createSelector(getIndividualsByGuid, getProjectGuid, filterProjectEntities)
+export const getProjectSamplesByGuid = createSelector(getSamplesByGuid, getProjectGuid, filterProjectEntities)
 
-export const getProjectSamples = createSelector(getSamplesByGuid, getProjectGuid, filterProjectEntities)
+export const getProjectFamilies = createSelector(getProjectFamiliesByGuid, d => Object.values(d))
+export const getProjectIndividuals = createSelector(getProjectIndividualsByGuid, d => Object.values(d))
+export const getProjectSamples = createSelector(getProjectSamplesByGuid, d => Object.values(d))
 
 // Saved variant selectors
 export const getSavedVariantTableState = state => state.savedVariantTableState
