@@ -91,7 +91,8 @@ class Command(BaseCommand):
                 ~Q(project_id__contains="DEPRECATED") &
                 ~Q(project_name__contains="DEPRECATED") &
                 ~Q(project_id__istartswith="temp") &
-                ~Q(project_id__istartswith="test_")
+                ~Q(project_id__istartswith="test_") &
+                ~Q(project_name__contains="DISABLED_")
             )
             logging.info("Processing all %s projects" % len(projects))
             project_ids_to_process = [p.project_id for p in projects]
@@ -370,10 +371,10 @@ def create_sample_records(sample_type, source_project, source_individual, new_pr
 
         earliest_vcf_dataset = None
         for vcf_file in vcf_files:
-            try:
-                vcf_loaded_date = look_up_vcf_loaded_date(vcf_file.file_path)
-            except Exception:
-                vcf_loaded_date = None
+            #try:
+            #    vcf_loaded_date = look_up_vcf_loaded_date(vcf_file.file_path)
+            #except Exception:
+            #    vcf_loaded_date = None
 
             new_vcf_dataset, vcf_dataset_created = get_or_create_dataset(
                 new_sample,
@@ -381,7 +382,7 @@ def create_sample_records(sample_type, source_project, source_individual, new_pr
                 source_individual,
                 vcf_file.file_path,
                 analysis_type=SeqrDataset.ANALYSIS_TYPE_VARIANT_CALLS,
-                loaded_date=vcf_loaded_date,
+                loaded_date=vcf_file.loaded_date,
             )
 
             if vcf_file.pk == vcf_files_min_pk:
@@ -407,7 +408,7 @@ def create_sample_records(sample_type, source_project, source_individual, new_pr
                 source_individual,
                 source_individual.bam_file_path,
                 analysis_type=SeqrDataset.ANALYSIS_TYPE_ALIGNMENT,
-                loaded_date=vcf_loaded_date,
+                loaded_date=vcf_file.loaded_date,
                 genome_version=new_vcf_dataset.genome_version,
             )
 
