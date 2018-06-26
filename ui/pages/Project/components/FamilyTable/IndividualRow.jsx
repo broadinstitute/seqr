@@ -11,15 +11,15 @@ import PhenotipsDataPanel from 'shared/components/panel/view-phenotips-info/Phen
 import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
 import { updateIndividual } from 'redux/rootReducer'
 import { getUser } from 'redux/selectors'
-
-import { DATASET_TYPE_VARIANT_CALLS } from 'shared/utils/constants'
+import { getShowDetails, getProject, getProjectSamplesByGuid } from 'pages/Project/selectors'
+import { SAMPLE_STATUS_LOADED, DATASET_TYPE_VARIANT_CALLS } from 'shared/utils/constants'
 
 import {
   CASE_REVIEW_STATUS_MORE_INFO_NEEDED,
   CASE_REVIEW_STATUS_NOT_IN_REVIEW,
   CASE_REVIEW_STATUS_OPT_LOOKUP,
 } from '../../constants'
-import { getShowDetails, getProject, getProjectSamples } from '../../selectors'
+
 import CaseReviewStatusDropdown from './CaseReviewStatusDropdown'
 
 
@@ -47,7 +47,7 @@ class IndividualRow extends React.Component
     family: PropTypes.object.isRequired,
     individual: PropTypes.object.isRequired,
     showDetails: PropTypes.bool.isRequired,
-    samples: PropTypes.array.isRequired,
+    samplesByGuid: PropTypes.object.isRequired,
     updateIndividual: PropTypes.func,
     editCaseReview: PropTypes.bool,
   }
@@ -59,10 +59,11 @@ class IndividualRow extends React.Component
 
     const caseReviewStatusOpt = CASE_REVIEW_STATUS_OPT_LOOKUP[individual.caseReviewStatus]
 
-    const sampleDetails = this.props.samples.filter(s =>
-      s.individualGuid === individual.individualGuid &&
+    const sampleDetails = individual.sampleGuids.map(
+      sampleGuid => this.props.samplesByGuid[sampleGuid],
+    ).filter(s =>
       s.datasetType === DATASET_TYPE_VARIANT_CALLS &&
-      s.loadedStatus === 'loaded',
+      s.sampleStatus === SAMPLE_STATUS_LOADED,
     ).map((sample) => {
       return (
         <div key={sample.sampleGuid}>
@@ -199,7 +200,7 @@ const mapStateToProps = state => ({
   user: getUser(state),
   project: getProject(state),
   showDetails: getShowDetails(state),
-  samples: getProjectSamples(state),
+  samplesByGuid: getProjectSamplesByGuid(state),
 })
 
 const mapDispatchToProps = {
