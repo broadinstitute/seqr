@@ -760,10 +760,7 @@
         "individual": 1,
         "dataset_type": "VARIANTS",
         "dataset_file_path": "1kg.vcf.gz",
-        "is_loaded": true,
         "loaded_date": "2017-02-05T06:42:55.397Z",
-        "is_external_data": false,
-        "deprecated_base_project": null
     }
 },
 {
@@ -781,11 +778,7 @@
         "individual": 2,
         "dataset_type": "VARIANTS",
         "dataset_file_path": "1kg.vcf.gz",
-        "is_loaded": true,
         "loaded_date": "2017-02-05T06:42:55.397Z",
-
-        "is_external_data": false,
-        "deprecated_base_project": null
     }
 },
 {
@@ -803,11 +796,7 @@
         "individual": 3,
         "dataset_type": "VARIANTS",
         "dataset_file_path": "1kg.vcf.gz",
-        "is_loaded": true,
         "loaded_date": "2017-02-05T06:42:55.397Z",
-
-        "is_external_data": false,
-        "deprecated_base_project": null
     }
 },
 {
@@ -825,11 +814,7 @@
         "individual": 4,
         "dataset_type": "VARIANTS",
         "dataset_file_path": "1kg.vcf.gz",
-        "is_loaded": true,
         "loaded_date": "2017-02-05T06:42:55.397Z",
-
-        "is_external_data": false,
-        "deprecated_base_project": null
     }
 },
 {
@@ -847,11 +832,7 @@
         "individual": 5,
         "dataset_type": "VARIANTS",
         "dataset_file_path": "1kg.vcf.gz",
-        "is_loaded": true,
         "loaded_date": "2017-02-05T06:42:55.397Z",
-
-        "is_external_data": false,
-        "deprecated_base_project": null
     }
 },
 {
@@ -869,11 +850,7 @@
         "individual": 6,
         "dataset_type": "VARIANTS",
         "dataset_file_path": "1kg.vcf.gz",
-        "is_loaded": true,
         "loaded_date": "2017-02-05T06:42:55.397Z",
-
-        "is_external_data": false,
-        "deprecated_base_project": null
     }
 },
 {
@@ -891,11 +868,7 @@
         "individual": 7,
         "dataset_type": "VARIANTS",
         "dataset_file_path": "1kg.vcf.gz",
-        "is_loaded": true,
         "loaded_date": "2017-02-05T06:42:55.397Z",
-
-        "is_external_data": false,
-        "deprecated_base_project": null
     }
 },
 {
@@ -913,11 +886,7 @@
         "individual": 8,
         "dataset_type": "VARIANTS",
         "dataset_file_path": "1kg.vcf.gz",
-        "is_loaded": true,
         "loaded_date": "2017-02-05T06:42:55.397Z",
-
-        "is_external_data": false,
-        "deprecated_base_project": null
     }
 },
 {
@@ -935,11 +904,7 @@
         "individual": 9,
         "dataset_type": "VARIANTS",
         "dataset_file_path": "1kg.vcf.gz",
-        "is_loaded": true,
         "loaded_date": "2017-02-05T06:42:55.397Z",
-
-        "is_external_data": false,
-        "deprecated_base_project": null
     }
 },
 {
@@ -957,10 +922,7 @@
         "individual": 10,
         "dataset_type": "VARIANTS",
         "dataset_file_path": "1kg.vcf.gz",
-        "is_loaded": true,
         "loaded_date": "2017-02-05T06:42:55.397Z",
-        "is_external_data": false,
-        "deprecated_base_project": null
     }
 },
 {
@@ -978,10 +940,7 @@
         "individual": 11,
         "dataset_type": "VARIANTS",
         "dataset_file_path": "1kg.vcf.gz",
-        "is_loaded": true,
         "loaded_date": "2017-02-05T06:42:55.397Z",
-        "is_external_data": false,
-        "deprecated_base_project": null
     }
 },
 {
@@ -999,11 +958,7 @@
     	"individual": 12,
         "dataset_type": "VARIANTS",
         "dataset_file_path": "1kg.vcf.gz",
-        "is_loaded": true,
         "loaded_date": "2017-02-05T06:42:55.397Z",
-
-        "is_external_data": false,
-	    "deprecated_base_project": null
     }
 },
 {
@@ -1021,11 +976,7 @@
     	"individual": 13,
         "dataset_type": "VARIANTS",
         "dataset_file_path": "1kg.vcf.gz",
-        "is_loaded": true,
         "loaded_date": "2017-02-05T06:42:55.397Z",
-
-        "is_external_data": false,
-	    "deprecated_base_project": null
     }
 },
 {
@@ -1043,11 +994,7 @@
     	"individual": 14,
         "dataset_type": "VARIANTS",
         "dataset_file_path": "1kg.vcf.gz",
-        "is_loaded": true,
         "loaded_date": "2017-02-05T06:42:55.397Z",
-
-        "is_external_data": false,
-	    "deprecated_base_project": null
     }
 },
 {
@@ -1065,10 +1012,7 @@
         "individual": 15,
         "dataset_type": "VARIANTS",
         "dataset_file_path": "1kg.vcf.gz",
-        "is_loaded": true,
         "loaded_date": "2017-02-05T06:42:55.397Z",
-        "is_external_data": false,
-        "deprecated_base_project": null
     }
 },
 {
@@ -1084,12 +1028,9 @@
         "sample_type": "WES",
         "sample_status": "S",
         "individual": 16,
-        "is_external_data": false,
         "dataset_type": "VARIANTS",
         "dataset_file_path": "1kg.vcf.gz",
-        "is_loaded": true,
         "loaded_date": "2017-02-05T06:42:55.397Z",
-        "deprecated_base_project": null
     }
 },
 {
