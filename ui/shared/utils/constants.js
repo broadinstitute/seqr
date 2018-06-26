@@ -1,3 +1,11 @@
+
+// SAMPLES
+export const DATASET_TYPE_READ_ALIGNMENTS = 'ALIGN'
+export const DATASET_TYPE_VARIANT_CALLS = 'VARIANTS'
+
+export const SAMPLE_STATUS_LOADED = 'loaded'
+
+
 // FAMILY FIELDS
 
 export const FAMILY_FIELD_DESCRIPTION = 'description'

@@ -9,11 +9,15 @@ import { Link } from 'react-router-dom'
 import { ColoredIcon } from '../StyledComponents'
 
 
-const BarContainer = styled.div`
+const BarContainer = styled.div.attrs({
+  w: (props) => { return props.width ? `${props.width}px` : '100%' },
+  h: (props) => { return props.height ? `${props.height}px` : 'auto' },
+  lh: (props) => { return props.height ? `${props.height - 2}px` : 'inherit' },
+})`
   display: inline-block;
-  width: ${(props) => { return props.width ? `${props.width}px` : '100%' }};
-  height: ${(props) => { return props.height ? `${props.height}px` : 'auto' }};
-  line-height: ${(props) => { return props.height ? `${props.height - 2}px` : 'inherit' }};
+  width: ${props => props.w};
+  height: ${props => props.h};
+  line-height: ${props => props.lh};
   text-align: center;
   border: 1px solid gray;`
 

@@ -7,7 +7,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 from seqr.models import CAN_EDIT
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
-from seqr.views.utils.dataset.dataset_validation import validate_dataset, add_dataset
+from seqr.views.utils.dataset_utils import add_dataset
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions
 
@@ -49,21 +49,18 @@ def add_dataset_handler(request, project_guid):
 
     logger.info("add_dataset_handler: received %s" % pformat(form_data))
 
-    if "sampleType" not in form_data or \
-            "datasetType" not in form_data or \
-            "genomeVersion" not in form_data or \
-            "datasetPath" not in form_data:
+    if "sampleType" not in form_data or "datasetType" not in form_data or "genomeVersion" not in form_data or "datasetPath" not in form_data:
         raise ValueError(
             "request must contain fields: sampleType, datasetType, genomeVersion, datasetPath")
 
-    name = form_data.get('name')
-    description = form_data.get('description')
     sample_type = form_data.get('sampleType')
     dataset_type = form_data.get('datasetType')
     genome_version = form_data.get('genomeVersion')
     dataset_path = form_data.get('datasetPath')
     ignore_extra_samples_in_callset = form_data.get('ignoreExtraSamplesInCallset')
     sample_ids_to_individual_ids_path = form_data.get('sampleIdsToIndividualIdsPath')
+    elasticsearch_index = form_data.get('elasticsearchIndex')
+
     if sample_ids_to_individual_ids_path:
         return create_json_response({
             'errors': ["Sample ids to individual ids mapping - not yet supported"],
@@ -71,19 +68,14 @@ def add_dataset_handler(request, project_guid):
             'info': [],
         })
 
-    elasticsearch_index = form_data.get('elasticsearchIndex')
-
     errors, warnings, info = add_dataset(
         project,
         sample_type,
         dataset_type,
-        genome_version,
         dataset_path,
         max_edit_distance=0,
-        dataset_id=elasticsearch_index,
+        elasticsearch_index=elasticsearch_index,
         ignore_extra_samples_in_callset=ignore_extra_samples_in_callset,
-        name=name,
-        description=description
     )
 
     return create_json_response({
