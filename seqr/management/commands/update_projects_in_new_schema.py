@@ -352,6 +352,7 @@ def create_sample_records(sample_type, source_individual, new_project, new_indiv
 
         if sample_created:
             counters['samples_created'] += 1
+            logger.info("Created sample: " + str(new_sample.json()))
 
         if source_individual.bam_file_path:
             new_sample, sample_created = get_or_create_sample(
