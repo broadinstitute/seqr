@@ -24,7 +24,7 @@ const BAM_TRACK_OPTIONS = {
 const ShowReadsButton = ({ locus, familyGuid, samples, individualsByGuid }) => {
 
   const igvTracks = samples.filter(
-    sample => sample.isLoaded && sample.datasetType === 'ALIGN',
+    sample => sample.loadedDate && sample.datasetType === 'ALIGN',
   ).map((sample) => {
     const individual = individualsByGuid[sample.individualGuid]
     if (individual.familyGuid !== familyGuid) {
