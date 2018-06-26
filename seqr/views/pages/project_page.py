@@ -194,12 +194,12 @@ def _retrieve_samples(cursor, project_guid, individuals_by_guid):
           s.guid AS sample_guid,
           s.created_date AS sample_created_date,
           s.sample_type AS sample_sample_type,
-          s.dataset_type AS sample_dateset_type,
+          s.dataset_type AS sample_dataset_type,
           s.sample_id AS sample_sample_id,
           s.elasticsearch_index AS sample_elasticsearch_index,
           s.dataset_file_path AS sample_dataset_file_path,
-          s.sample_status AS sample_sample_status
-          s.loaded_date AS sample_loaded_date,
+          s.sample_status AS sample_sample_status,
+          s.loaded_date AS sample_loaded_date
         FROM seqr_sample AS s
           JOIN seqr_individual AS i ON s.individual_id=i.id
           JOIN seqr_family AS f ON i.family_id=f.id
