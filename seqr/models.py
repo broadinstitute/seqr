@@ -452,7 +452,7 @@ class Sample(ModelWithGUID):
         return self.sample_id.strip()
 
     def _compute_guid(self):
-        return 'S%10d_%s' % (self.id, _slugify(str(self)))
+        return 'S%010d_%s' % (self.id, _slugify(str(self)))
 
     class Meta:
        json_fields = [
