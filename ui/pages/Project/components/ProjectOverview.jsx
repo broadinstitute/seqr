@@ -6,7 +6,7 @@ import { Grid } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 import EditFamiliesAndIndividualsButton from 'shared/components/buttons/EditFamiliesAndIndividualsButton'
 
-import { getProject, getProjectFamilies, getProjectIndividuals } from 'pages/Project/selectors'
+import { getProject, getProjectFamiliesByGuid, getProjectIndividualsByGuid } from 'pages/Project/selectors'
 
 
 const FAMILY_SIZE_LABELS = {
@@ -32,7 +32,7 @@ const DATASET_TYPE_LABELS = {
 */
 
 const ProjectOverview = (props) => {
-  const familySizeHistogram = props.families
+  const familySizeHistogram = Object.values(props.familiesByGuid)
     .map(family => Math.min(family.individualGuids.length, 5))
     .reduce((acc, familySize) => (
       { ...acc, [familySize]: (acc[familySize] || 0) + 1 }
@@ -41,9 +41,8 @@ const ProjectOverview = (props) => {
   return (
     <Grid>
       <Grid.Column>
-        {/* families */}
         <div>
-          {props.families.length} Families, {props.individuals.length} Individuals
+          {Object.keys(props.familiesByGuid).length} Families, {Object.keys(props.individualsByGuid).length} Individuals
         </div>
         <div style={{ padding: '5px 0px 0px 20px' }}>
           {
@@ -54,35 +53,6 @@ const ProjectOverview = (props) => {
           }
           {props.project.canEdit ? <span><br /><EditFamiliesAndIndividualsButton /></span> : null }<br />
         </div>
-        {/*
-        <div>
-          <br />
-
-          Datasets:
-
-          <div style={{ padding: '5px 0px 0px 20px' }}>
-            {
-              props.datasets.length > 0 ?
-                Object.keys(SAMPLE_TYPE_LABELS).map(currentSampleType => (
-                  <div key={currentSampleType}>
-                    {
-                      props.datasets.filter(dataset =>
-                        dataset.datasetType === 'VARIANTS' && dataset.isLoaded && dataset.sampleType === currentSampleType,
-                      ).slice(0, 1).map(dataset =>
-                        <div key={dataset.datasetGuid}>
-                          {SAMPLE_TYPE_LABELS[dataset.sampleType]} {DATASET_TYPE_LABELS[dataset.datasetType]} - {dataset.sampleGuids.length}  samples
-                          {dataset.isLoaded ? ` loaded on ${dataset.loadedDate.slice(0, 10)}` : ' not yet loaded'}
-                        </div>,
-                      )
-                    }
-                  </div>
-                )) : <div>No Datasets Loaded</div>
-            }
-            <ShowIfStaff><span><br /><EditDatasetsButton /></span></ShowIfStaff><br />
-          </div>
-         </div>
-        */}
-        {/* console.log('hpoTerms', props.hpoTermHistogram) */}
       </Grid.Column>
     </Grid>
   )
@@ -91,14 +61,14 @@ const ProjectOverview = (props) => {
 
 ProjectOverview.propTypes = {
   project: PropTypes.object,
-  families: PropTypes.array.isRequired,
-  individuals: PropTypes.array.isRequired,
+  familiesByGuid: PropTypes.object.isRequired,
+  individualsByGuid: PropTypes.object.isRequired,
 }
 
 const mapStateToProps = state => ({
   project: getProject(state),
-  families: getProjectFamilies(state),
-  individuals: getProjectIndividuals(state),
+  familiesByGuid: getProjectFamiliesByGuid(state),
+  individualsByGuid: getProjectIndividualsByGuid(state),
 })
 
 

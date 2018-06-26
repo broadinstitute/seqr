@@ -4,7 +4,7 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Icon } from 'semantic-ui-react'
 
-import { getProjectSamples } from 'pages/Project/selectors'
+import { getProjectSamplesByGuid } from 'pages/Project/selectors'
 import { getIndividualsByGuid } from 'redux/selectors'
 import Modal from '../modal/Modal'
 import PedigreeIcon from '../icons/PedigreeIcon'
@@ -22,9 +22,9 @@ const BAM_TRACK_OPTIONS = {
   indexed: true,
 }
 
-const ShowReadsButton = ({ locus, familyGuid, samples, individualsByGuid }) => {
+const ShowReadsButton = ({ locus, familyGuid, samplesByGuid, individualsByGuid }) => {
 
-  const igvTracks = samples.filter(
+  const igvTracks = Object.values(samplesByGuid).filter(
     sample => sample.loadedDate && sample.datasetType === DATASET_TYPE_READ_ALIGNMENTS,
   ).map((sample) => {
     const individual = individualsByGuid[sample.individualGuid]
@@ -83,12 +83,12 @@ const ShowReadsButton = ({ locus, familyGuid, samples, individualsByGuid }) => {
 ShowReadsButton.propTypes = {
   locus: PropTypes.string,
   familyGuid: PropTypes.string,
-  samples: PropTypes.array,
+  samplesByGuid: PropTypes.object,
   individualsByGuid: PropTypes.object,
 }
 
 const mapStateToProps = state => ({
-  samples: getProjectSamples(state),
+  samplesByGuid: getProjectSamplesByGuid(state),
   individualsByGuid: getIndividualsByGuid(state),
 })
 

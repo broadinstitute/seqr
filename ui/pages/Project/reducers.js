@@ -4,7 +4,7 @@ import { SubmissionError } from 'redux-form'
 import { loadingReducer, createSingleObjectReducer, createObjectsByIdReducer, createSingleValueReducer } from 'redux/utils/reducerFactories'
 import { REQUEST_PROJECTS, RECEIVE_DATA } from 'redux/rootReducer'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
-import { getProject, getProjectFamilies } from 'pages/Project/selectors'
+import { getProject, getProjectFamiliesByGuid } from 'pages/Project/selectors'
 import { SHOW_ALL, SORT_BY_FAMILY_NAME, SORT_BY_FAMILY_GUID } from './constants'
 
 // action creators and reducers in one file as suggested by https://github.com/erikras/ducks-modular-redux
@@ -58,7 +58,7 @@ export const loadProjectVariants = (familyGuid, variantGuid) => {
       }
       url = `${url}/${variantGuid}`
     } else {
-      expectedFamilyGuids = familyGuid ? [familyGuid] : getProjectFamilies(state).map(family => family.familyGuid)
+      expectedFamilyGuids = familyGuid ? [familyGuid] : Object.keys(getProjectFamiliesByGuid(state))
       if (expectedFamilyGuids.length > 0 && expectedFamilyGuids.every(family => state.projectSavedVariantFamilies[family])) {
         return
       }

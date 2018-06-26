@@ -247,13 +247,13 @@ export const FAMILY_SORT_OPTIONS = [
     value: SORT_BY_FAMILY_NAME,
     name: 'Family Name',
     /* eslint-disable no-unused-vars */
-    createSortKeyGetter: families => family => family.displayName,
+    createSortKeyGetter: familiesByGuid => family => family.displayName,
   },
   {
     value: SORT_BY_FAMILY_ADDED_DATE,
     name: 'Date Added',
-    createSortKeyGetter: (families, individuals) => family =>
-      individuals.filter(ind => ind.familyGuid === family.familyGuid).reduce(
+    createSortKeyGetter: (familiesByGuid, individualsByGuid) => family =>
+      family.individualGuids.map(individualGuid => individualsByGuid[individualGuid]).reduce(
         (acc, individual) => {
           const indivCreatedDate = individual.createdDate || '2000-01-01T01:00:00.000Z'
           return indivCreatedDate > acc ? indivCreatedDate : acc
@@ -264,10 +264,10 @@ export const FAMILY_SORT_OPTIONS = [
   {
     value: SORT_BY_DATA_LOADED_DATE,
     name: 'Date Loaded',
-    createSortKeyGetter: (families, individuals, samples) => family =>
-      individuals.filter(ind => ind.familyGuid === family.familyGuid).reduce(
+    createSortKeyGetter: (familiesByGuid, individualsByGuid, samplesByGuid) => family =>
+      family.individualGuids.map(individualGuid => individualsByGuid[individualGuid]).reduce(
         (acc, individual) => {
-          const indivLoadedDate = samples.filter(s => s.individualGuid === individual.individualGuid).reduce(
+          const indivLoadedDate = individual.sampleGuids.map(sampleGuid => samplesByGuid[sampleGuid]).reduce(
             (acc2, sample) => {
               const sampleLoadedDate = sample.loadedDate
               return sampleLoadedDate > acc2 ? sampleLoadedDate : acc2
