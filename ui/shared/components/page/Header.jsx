@@ -6,7 +6,6 @@ import { Menu, Header } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
 
-import { HorizontalSpacer } from 'shared/components/Spacers'
 import { getUser } from 'redux/selectors'
 
 import AwesomeBar from './AwesomeBar'
@@ -20,12 +19,11 @@ const PageHeader = ({ user }) =>
   <HeaderMenu borderless inverted attached>
     <Menu.Item as={Link} to="/dashboard"><Header size="medium" inverted>seqr</Header></Menu.Item>
     <Menu.Item as={Link} to="/gene_info" content="Gene Info" />
-    <Menu.Item fitted="vertically"><AwesomeBar newWindow /></Menu.Item>
+    <Menu.Item fitted="vertically"><AwesomeBar newWindow inputWidth="350px" /></Menu.Item>
     <Menu.Item position="right">
-      Logged in as &nbsp; <b>{user ? (user.email || user.username) : null}</b>
-      <HorizontalSpacer width={30} />
-      <a href="/logout">Log out</a>
+      <p>Logged in as &nbsp; <b>{user ? (user.email || user.username) : null}</b></p>
     </Menu.Item>
+    <Menu.Item as="a" href="/logout">Log out</Menu.Item>
   </HeaderMenu>
 
 PageHeader.propTypes = {

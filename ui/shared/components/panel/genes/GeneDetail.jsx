@@ -4,7 +4,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { connect } from 'react-redux'
-import { Grid, Header } from 'semantic-ui-react'
+import { Grid, Header, Popup } from 'semantic-ui-react'
 
 import { loadGene, updateGeneNote } from 'redux/rootReducer'
 import { getGenesIsLoading, getGenesById } from 'redux/selectors'
@@ -12,6 +12,7 @@ import SectionHeader from '../../SectionHeader'
 import DataLoader from '../../DataLoader'
 import TextFieldView from '../view-fields/TextFieldView'
 import GeneExpression from './GeneExpression'
+import { HorizontalSpacer } from '../../Spacers'
 
 
 const NOTE_STYLE = { display: 'block' }
@@ -29,7 +30,7 @@ const GeneSection = ({ details }) =>
     {details.map(row => row &&
       <Grid.Row key={row.title}>
         <Grid.Column width={2} textAlign="right">
-          <b>{row.titleLink ? <a target="_blank" href={row.titleLink}>{row.title}</a> : row.title}</b>
+          <b>{row.title}</b>
         </Grid.Column>
         <Grid.Column width={14}>{row.content}</Grid.Column>
       </Grid.Row>,
@@ -146,19 +147,26 @@ const GeneDetailContent = ({ gene, showTitle, updateGeneNote: dispatchUpdateGene
     } : null,
   ]
   const linkDetails = [
-    gene.phenotype_info.mim_id ? { title: 'OMIM', titleLink: `http://www.omim.org/entry/${gene.phenotype_info.mim_id}`, content: 'Database of Mendelian phenotypes' } : null,
-    { title: 'PubMed', titleLink: `http://www.ncbi.nlm.nih.gov/pubmed/?term=${gene.symbol}`, content: `Search PubMed for ${gene.symbol}` },
-    { title: 'GeneCards', titleLink: `http://www.genecards.org/cgi-bin/carddisp.pl?gene=${gene.symbol}`, content: 'Reference of public data for this gene' },
-    { title: 'Protein Atlas', titleLink: `http://www.proteinatlas.org/${gene.gene_id}/tissue`, content: 'Detailed protein and transcript expression' },
-    { title: 'NCBI Gene', titleLink: `http://www.ncbi.nlm.nih.gov/gene/?term=${gene.symbol}`, content: 'NCBI\'s gene information resource' },
-    { title: 'GTEx Portal', titleLink: `http://www.gtexportal.org/home/gene/${gene.gene_id}`, content: 'Reference of public data for this gene' },
-    { title: 'Monarch', titleLink: `http://monarchinitiative.org/search/${gene.gene_id}`, content: 'Cross-species gene and phenotype resource' },
-    { title: 'Decipher', titleLink: `https://decipher.sanger.ac.uk/gene/${gene.symbol}`, content: 'DatabasE of genomiC varIation and Phenotype in Humans using Ensembl Resources' },
-    { title: 'UniProt', titleLink: `http://www.uniprot.org/uniprot/?random=true&query=gene:${gene.symbol}+AND+reviewed:yes+AND+organism:9606`, content: 'Protein sequence and functional information' },
+    gene.phenotype_info.mim_id ? { title: 'OMIM', link: `http://www.omim.org/entry/${gene.phenotype_info.mim_id}`, description: 'Database of Mendelian phenotypes' } : null,
+    { title: 'PubMed', link: `http://www.ncbi.nlm.nih.gov/pubmed/?term=${gene.symbol}`, description: `Search PubMed for ${gene.symbol}` },
+    { title: 'GeneCards', link: `http://www.genecards.org/cgi-bin/carddisp.pl?gene=${gene.symbol}`, description: 'Reference of public data for this gene' },
+    { title: 'Protein Atlas', link: `http://www.proteinatlas.org/${gene.gene_id}/tissue`, description: 'Detailed protein and transcript expression' },
+    { title: 'NCBI Gene', link: `http://www.ncbi.nlm.nih.gov/gene/?term=${gene.symbol}`, description: 'NCBI\'s gene information resource' },
+    { title: 'GTEx Portal', link: `http://www.gtexportal.org/home/gene/${gene.gene_id}`, description: 'Reference of public data for this gene' },
+    { title: 'Monarch', link: `http://monarchinitiative.org/search/${gene.gene_id}`, description: 'Cross-species gene and phenotype resource' },
+    { title: 'Decipher', link: `https://decipher.sanger.ac.uk/gene/${gene.symbol}`, description: 'DatabasE of genomiC varIation and Phenotype in Humans using Ensembl Resources' },
+    { title: 'UniProt', link: `http://www.uniprot.org/uniprot/?random=true&query=gene:${gene.symbol}+AND+reviewed:yes+AND+organism:9606`, description: 'Protein sequence and functional information' },
   ]
   return (
     <div>
       {showTitle && <Header size="huge" dividing>{gene.symbol}</Header>}
+      {linkDetails.map(linkConfig =>
+        <Popup
+          key={linkConfig.title}
+          trigger={<a target="_blank" href={linkConfig.link}><b>{linkConfig.title}</b><HorizontalSpacer width={20} /></a>}
+          content={linkConfig.description}
+        />,
+      )}
       <SectionHeader>Basics</SectionHeader>
       <GeneSection details={basicDetails} />
       <SectionHeader>Stats</SectionHeader>
@@ -195,8 +203,6 @@ const GeneDetailContent = ({ gene, showTitle, updateGeneNote: dispatchUpdateGene
         onSubmit={dispatchUpdateGeneNote}
         style={NOTE_STYLE}
       />
-      <SectionHeader>Links</SectionHeader>
-      <GeneSection details={linkDetails} />
       <SectionHeader>Tissue-Specific Expression</SectionHeader>
       <p>
         This plot shows tissue-specific expression from GTEx release V6. These are normalized expression values with
