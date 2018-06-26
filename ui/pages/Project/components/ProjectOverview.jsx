@@ -4,8 +4,6 @@ import sortBy from 'lodash/sortBy'
 
 import { Grid } from 'semantic-ui-react'
 import { connect } from 'react-redux'
-import ShowIfStaff from 'shared/components/ShowIfStaff'
-import EditDatasetsButton from 'shared/components/buttons/EditDatasetsButton'
 import EditFamiliesAndIndividualsButton from 'shared/components/buttons/EditFamiliesAndIndividualsButton'
 
 import { getProject, getProjectFamilies, getProjectIndividuals } from '../selectors'
@@ -20,6 +18,7 @@ const FAMILY_SIZE_LABELS = {
   5: plural => ` ${plural ? 'families' : 'family'} with 5+ individuals`,
 }
 
+/*
 const SAMPLE_TYPE_LABELS = {
   WES: 'Exome',
   WGS: 'WGS',
@@ -30,6 +29,7 @@ const DATASET_TYPE_LABELS = {
   VARIANTS: 'callset',
   SV: 'SV callset',
 }
+*/
 
 const ProjectOverview = (props) => {
   const familySizeHistogram = props.families
@@ -91,14 +91,12 @@ ProjectOverview.propTypes = {
   project: PropTypes.object,
   families: PropTypes.array.isRequired,
   individuals: PropTypes.array.isRequired,
-  datasets: PropTypes.array,
 }
 
 const mapStateToProps = state => ({
   project: getProject(state),
   families: getProjectFamilies(state),
   individuals: getProjectIndividuals(state),
-  datasets: getProjectDatasets(state),
 })
 
 
