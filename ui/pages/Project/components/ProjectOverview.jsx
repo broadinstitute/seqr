@@ -54,10 +54,12 @@ const ProjectOverview = (props) => {
           }
           {props.project.canEdit ? <span><br /><EditFamiliesAndIndividualsButton /></span> : null }<br />
         </div>
+        {/*
         <div>
           <br />
+
           Datasets:
-          {/*
+
           <div style={{ padding: '5px 0px 0px 20px' }}>
             {
               props.datasets.length > 0 ?
@@ -78,8 +80,8 @@ const ProjectOverview = (props) => {
             }
             <ShowIfStaff><span><br /><EditDatasetsButton /></span></ShowIfStaff><br />
           </div>
-          */}
-        </div>
+         </div>
+        */}
         {/* console.log('hpoTerms', props.hpoTermHistogram) */}
       </Grid.Column>
     </Grid>
