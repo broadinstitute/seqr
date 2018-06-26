@@ -1,5 +1,5 @@
-import { titlecase } from './stringUtils'
+import { snakecaseToTitlecase } from './stringUtils'
 
 test('genericComparator', () => {
-  expect(titlecase('hello_world_foo')).toEqual('Hello World Foo')
+  expect(snakecaseToTitlecase('hello_world_foo')).toEqual('Hello World Foo')
 })
