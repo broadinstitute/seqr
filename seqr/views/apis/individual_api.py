@@ -19,7 +19,8 @@ from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.pedigree_image_api import update_pedigree_images
 from seqr.views.apis.phenotips_api import create_patient, set_patient_hpo_terms, delete_patient, \
     PhenotipsException
-from seqr.views.utils.export_table_utils import _convert_html_to_plain_text, export_table
+from seqr.utils.model_sync_utils import convert_html_to_plain_text  # TODO should be markdown not html
+from seqr.views.utils.export_table_utils import export_table
 from seqr.views.utils.json_to_orm_utils import update_individual_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_individual, _get_json_for_family
@@ -543,7 +544,7 @@ def export_individuals(
             i.maternal_id,
             _SEX_TO_EXPORTED_VALUE.get(i.sex),
             __AFFECTED_TO_EXPORTED_VALUE.get(i.affected),
-            _convert_html_to_plain_text(i.notes),
+            convert_html_to_plain_text(i.notes),
         ])
 
         if include_display_name:

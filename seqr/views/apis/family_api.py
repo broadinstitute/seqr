@@ -10,7 +10,9 @@ from django.views.decorators.csrf import csrf_exempt
 
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.individual_api import delete_individuals
-from seqr.views.utils.export_table_utils import export_table, _convert_html_to_plain_text
+from seqr.utils.model_sync_utils import convert_html_to_plain_text  # TODO should be markdown not html
+
+from seqr.views.utils.export_table_utils import export_table
 from seqr.views.utils.json_to_orm_utils import update_family_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_family
@@ -233,23 +235,23 @@ def export_families(
             family.created_date,
             family.description,
             analysis_status_lookup.get(family.analysis_status, family.analysis_status),
-            _convert_html_to_plain_text(
+            convert_html_to_plain_text(
                 family.analysis_summary,
                 remove_line_breaks=(file_format == 'tsv')),
-            _convert_html_to_plain_text(
+            convert_html_to_plain_text(
                 family.analysis_notes,
                 remove_line_breaks=(file_format == 'tsv')),
         ])
 
         if include_internal_case_review_summary:
             row.append(
-                _convert_html_to_plain_text(
+                convert_html_to_plain_text(
                     family.internal_case_review_summary,
                     remove_line_breaks=(file_format == 'tsv')),
             )
         if include_internal_case_review_notes:
             row.append(
-                _convert_html_to_plain_text(
+                convert_html_to_plain_text(
                     family.internal_case_review_notes,
                     remove_line_breaks=(file_format == 'tsv')),
             )
