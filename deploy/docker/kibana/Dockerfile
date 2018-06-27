@@ -5,7 +5,7 @@ ENV KIBANA_VERSION="5.6.3"
 
 # install commmon utilities
 RUN apt-get update \
-    && apt-get install -y lsof apt-utils wget curl xterm vim emacs nano less
+    && apt-get install -y lsof apt-utils wget curl xterm vim emacs nano less --fix-missing
 
 RUN useradd -ms /bin/bash kibana
 
