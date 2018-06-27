@@ -619,8 +619,9 @@ def get_or_create_sample(
         elasticsearch_index=elasticsearch_index,
         dataset_file_path=dataset_file_path,
         sample_status=sample_status,
+        loaded_date=loaded_date,
     )
-    new_sample.loaded_date = loaded_date
+
     new_sample.created_date=new_individual.created_date
     new_sample.save()
 
