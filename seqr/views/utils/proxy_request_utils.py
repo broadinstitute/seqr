@@ -45,13 +45,6 @@ def proxy_request(request, url, host=None, scheme=None, method=None, session=Non
         django.http.HttpResponse: The response returned by the target http server, wrapped in a Django HttpResponse object.
 
     """
-    if not url.startswith("http"):
-        if not url.startswith("/"):
-            raise ValueError("%s url doesn't start with /" % url)
-        if not host:
-            raise ValueError("%s url is a path but no host is specified" % url)
-        url = "%s://%s%s" % (scheme, host, url)
-
     method = method if method is not None else request.method
     scheme = scheme if scheme is not None else request.scheme
     auth = HTTPBasicAuth(*auth_tuple) if auth_tuple is not None else None
@@ -60,6 +53,13 @@ def proxy_request(request, url, host=None, scheme=None, method=None, session=Non
     headers['Host'] = host if host is not None else headers.get('Host')
     if filter_request_headers:
         headers = {k: v for k, v in headers.items() if k.lower() not in EXCLUDE_HTTP_REQUEST_HEADERS}
+
+    if not url.startswith("http"):
+        if not url.startswith("/"):
+            raise ValueError("%s url doesn't start with /" % url)
+        if not host:
+            raise ValueError("%s url is a path but no host is specified" % url)
+        url = "%s://%s%s" % (scheme, host, url)
 
     if verbose:
         logger.info("Sending %(method)s request to %(url)s" % locals())
