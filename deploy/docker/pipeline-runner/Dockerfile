@@ -4,7 +4,7 @@ MAINTAINER MacArthur Lab
 
 # install commmon utilities
 RUN apt-get update \
-    && apt-get install -y apt-utils wget curl xterm vim emacs nano less git htop bzip2 g++ cmake  \
+    && apt-get install -y apt-utils wget curl xterm vim emacs nano less git htop bzip2 g++ cmake --fix-missing \
     && TERM=xterm
 
 RUN apt-get install -y postgresql postgresql-client

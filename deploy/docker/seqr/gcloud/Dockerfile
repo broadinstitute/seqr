@@ -4,7 +4,7 @@ MAINTAINER MacArthur Lab
 
 # install commmon utilities
 RUN apt-get update \
-    && apt-get install -y apt-utils wget curl xterm vim emacs nano less git htop bzip2
+    && apt-get install -y apt-utils wget curl xterm vim emacs nano less git htop bzip2 --fix-missing
 
 
 # install dependencies of generate_pedigree_images command which generates static images using HaploPainter.pl
