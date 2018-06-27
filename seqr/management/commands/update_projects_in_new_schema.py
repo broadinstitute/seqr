@@ -622,7 +622,7 @@ def get_or_create_sample(
         loaded_date=loaded_date,
     )
 
-    new_sample.created_date=new_individual.created_date
+    new_sample.created_date = new_individual.created_date
     new_sample.save()
 
     return new_sample, created
