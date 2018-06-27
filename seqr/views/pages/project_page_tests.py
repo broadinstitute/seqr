@@ -25,14 +25,14 @@ class ProjectPageTest(TestCase):
         response_json = response.json()
         self.assertSetEqual(
             set(response_json.keys()),
-            {'project', 'familiesByGuid', 'individualsByGuid', 'samplesByGuid', 'datasetsByGuid'}
+            {'project', 'familiesByGuid', 'individualsByGuid', 'samplesByGuid'}
         )
         self.assertSetEqual(
             set(response_json['project'].keys()),
             {'collaborators', 'locusLists', 'variantTagTypes', 'variantFunctionalTagTypes', 'hasGeneSearch',
              'detailsLoaded', 'projectGuid', 'projectCategoryGuids', 'canEdit', 'name', 'description', 'createdDate',
              'lastModifiedDate', 'isPhenotipsEnabled', 'phenotipsUserId', 'deprecatedProjectId',
-             'deprecatedLastAccessedDate', 'isMmeEnabled', 'mmePrimaryDataOwner'}
+             'deprecatedLastAccessedDate', 'isMmeEnabled', 'mmePrimaryDataOwner', 'genomeVersion'}
         )
         self.assertSetEqual(
             set(response_json['familiesByGuid'].values()[0].keys()),
@@ -49,12 +49,8 @@ class ProjectPageTest(TestCase):
         )
         self.assertSetEqual(
             set(response_json['samplesByGuid'].values()[0].keys()),
-            {'projectGuid', 'individualGuid', 'sampleGuid', 'datasetGuids', 'createdDate', 'sampleType', 'sampleId', 'sampleStatus'}
-        )
-        self.assertSetEqual(
-            set(response_json['datasetsByGuid'].values()[0].keys()),
-            {'projectGuid', 'datasetGuid', 'sampleType', 'sampleGuids', 'createdDate', 'analysisType', 'isLoaded',
-             'loadedDate', 'sourceFilePath'}
+            {'projectGuid', 'individualGuid', 'sampleGuid', 'createdDate', 'sampleType', 'datasetType', 'sampleId',
+             'sampleStatus',  'loadedDate', 'datasetFilePath', 'elasticsearchIndex', 'datasetName'}
         )
 
     @mock.patch('seqr.views.pages.project_page._has_gene_search', _has_gene_search)

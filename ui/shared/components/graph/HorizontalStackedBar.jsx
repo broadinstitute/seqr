@@ -9,11 +9,15 @@ import { Link } from 'react-router-dom'
 import { ColoredIcon } from '../StyledComponents'
 
 
-const BarContainer = styled.div`
+const BarContainer = styled.div.attrs({
+  w: (props) => { return props.width ? `${props.width}px` : '100%' },
+  h: (props) => { return props.height ? `${props.height}px` : 'auto' },
+  lh: (props) => { return props.height ? `${props.height - 2}px` : 'inherit' },
+})`
   display: inline-block;
-  width: ${(props) => { return props.width ? `${props.width}px` : '100%' }};
-  height: ${(props) => { return props.height ? `${props.height}px` : 'auto' }};
-  line-height: ${(props) => { return props.height ? `${props.height - 2}px` : 'inherit' }};
+  width: ${props => props.w};
+  height: ${props => props.h};
+  line-height: ${props => props.lh};
   text-align: center;
   border: 1px solid gray;`
 
@@ -100,7 +104,7 @@ class HorizontalStackedBar extends React.Component {
                     popupData.map(d => (
                       <TableRow key={d.name} verticalAlign="top" >
                         {!d.header &&
-                          <TableCell collapsing>{d.count} <ColoredIcon name="square" size="small" color={d.color} /></TableCell>
+                          <TableCell collapsing textAlign="right">{d.count} <ColoredIcon name="square" size="small" color={d.color} /></TableCell>
                         }
                         <TableCell singleLine colSpan={d.header ? 3 : 1} disabled={Boolean(d.header)}>{d.name}</TableCell>
                         {!d.header && <TableCell collapsing>{showPercent && `(${d.percent.toPrecision(2)}%)`}</TableCell>}
@@ -108,7 +112,7 @@ class HorizontalStackedBar extends React.Component {
                     ))
                   }
                   <TableRow>
-                    <TableCell><b>{total}</b></TableCell>
+                    <TableCell textAlign="right"><b>{total}</b></TableCell>
                     <TableCell><b>Total</b></TableCell>
                     <TableCell />
                   </TableRow>

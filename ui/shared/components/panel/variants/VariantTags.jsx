@@ -1,7 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Popup, Icon } from 'semantic-ui-react'
+import { Popup } from 'semantic-ui-react'
 import styled from 'styled-components'
 
 import { updateVariantNote, updateVariantTags } from 'redux/rootReducer'
@@ -54,18 +54,19 @@ const VARIANT_NOTE_FIELDS = [{
   style: { paddingTop: '2em' },
 }]
 
-const taggedByPopup = tag => trigger =>
+const taggedByPopup = (tag, title) => trigger =>
   <Popup
     position="top right"
     size="tiny"
     trigger={trigger}
-    header="Tagged by"
+    header={title || 'Tagged by'}
     hoverable
     flowing
     content={
       <div>
         {tag.createdBy || 'unknown user'}
         {tag.lastModifiedDate && <span>on {new Date(tag.lastModifiedDate).toLocaleDateString()}</span>}
+        {tag.metadata && <div>{tag.metadataTitle ? <span><b>{tag.metadataTitle}:</b> {tag.metadata}</span> : <i>{tag.metadata}</i>}</div>}
         {tag.searchParameters && <div><a href={tag.searchParameters} target="_blank">Re-run search</a></div>}
       </div>
     }
@@ -152,7 +153,7 @@ const VariantNoteField = ({ action, note, variant, ...props }) => {
     initialValues={values}
     idField={note ? 'noteGuid' : 'variantId'}
     deleteConfirm="Are you sure you want to delete this note?"
-    textPopup={note && taggedByPopup(note)}
+    textPopup={note && taggedByPopup(note, 'Note By')}
     {...props}
   />
 }
@@ -189,14 +190,6 @@ const VariantTags = ({ variant, project, updateVariantNote: dispatchUpdateVarian
             tagOptions={project.variantFunctionalTagTypes}
             editMetadata
             onSubmit={dispatchUpdateVariantTags}
-            tagAnnotation={tag => tag.metadata &&
-              <Popup
-                position="top center"
-                trigger={<Icon name="info circle" size="large" color="black" fitted />}
-                header={tag.metadataTitle}
-                content={tag.metadata}
-              />
-            }
           />
           <HorizontalSpacer width={5} />
         </TagSection>

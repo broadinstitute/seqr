@@ -7,6 +7,12 @@ import { AnalysedBy } from '../components/panel/family'
 import Dataset from '../components/panel/dataset'
 import { ColoredIcon } from '../components/StyledComponents'
 
+// SAMPLES
+export const DATASET_TYPE_READ_ALIGNMENTS = 'ALIGN'
+export const DATASET_TYPE_VARIANT_CALLS = 'VARIANTS'
+
+export const SAMPLE_STATUS_LOADED = 'loaded'
+
 // ANALYSIS STATUS
 
 export const FAMILY_STATUS_SOLVED = 'S'

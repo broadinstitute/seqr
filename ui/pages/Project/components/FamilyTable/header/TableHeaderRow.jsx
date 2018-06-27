@@ -13,7 +13,7 @@ import { Dropdown } from 'shared/components/form/Inputs'
 
 import { FAMILY_FIELD_RENDER_LOOKUP } from 'shared/utils/constants'
 
-import { getProjectFamilies, getVisibleFamilies, getFamiliesTableState } from '../../../selectors'
+import { getProjectFamiliesByGuid, getVisibleFamilies, getFamiliesTableState } from '../../../selectors'
 import { updateFamiliesTable } from '../../../reducers'
 import { FAMILY_FILTER_OPTIONS, FAMILY_SORT_OPTIONS } from '../../../constants'
 
@@ -123,7 +123,7 @@ TableHeaderRow.propTypes = {
 
 const mapStateToProps = (state, ownProps) => ({
   visibleFamiliesCount: getVisibleFamilies(state, ownProps).length,
-  totalFamiliesCount: getProjectFamilies(state).length,
+  totalFamiliesCount: Object.keys(getProjectFamiliesByGuid(state)).length,
   familiesTableState: getFamiliesTableState(state),
 })
 

@@ -3,7 +3,6 @@ import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { connect } from 'react-redux'
 import { Grid } from 'semantic-ui-react'
-import Timeago from 'timeago.js'
 import orderBy from 'lodash/orderBy'
 
 import PedigreeIcon from 'shared/components/icons/PedigreeIcon'
@@ -11,16 +10,17 @@ import TextFieldView from 'shared/components/panel/view-fields/TextFieldView'
 import PhenotipsDataPanel from 'shared/components/panel/view-phenotips-info/PhenotipsDataPanel'
 import Dataset from 'shared/components/panel/dataset'
 import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
+
 import { updateIndividual } from 'redux/rootReducer'
 import { getUser } from 'redux/selectors'
-
+import { getProject, getProjectSamplesByGuid } from 'pages/Project/selectors'
+import { SAMPLE_STATUS_LOADED, DATASET_TYPE_VARIANT_CALLS } from 'shared/utils/constants'
 import {
   CASE_REVIEW_STATUS_MORE_INFO_NEEDED,
   CASE_REVIEW_STATUS_NOT_IN_REVIEW,
   CASE_REVIEW_STATUS_OPT_LOOKUP,
-  ANALYSIS_TYPE_VARIANT_CALLS,
 } from '../../constants'
-import { getProject, getProjectDatasets } from '../../selectors'
+
 import CaseReviewStatusDropdown from './CaseReviewStatusDropdown'
 
 
@@ -48,29 +48,32 @@ class IndividualRow extends React.Component
     project: PropTypes.object.isRequired,
     family: PropTypes.object.isRequired,
     individual: PropTypes.object.isRequired,
-    datasets: PropTypes.array.isRequired,
+    samplesByGuid: PropTypes.object.isRequired,
     updateIndividual: PropTypes.func,
     editCaseReview: PropTypes.bool,
   }
 
   render() {
-    const { user, project, family, individual, datasets, editCaseReview } = this.props
+    const { user, project, family, individual, editCaseReview } = this.props
 
     const { individualId, displayName, paternalId, maternalId, sex, affected, createdDate } = individual
 
     const caseReviewStatusOpt = CASE_REVIEW_STATUS_OPT_LOOKUP[individual.caseReviewStatus]
 
-    let loadedDatasets = datasets.filter(dataset =>
-      dataset.sampleGuids.some(sampleGuid => individual.sampleGuids.includes(sampleGuid)) &&
-      dataset.analysisType === ANALYSIS_TYPE_VARIANT_CALLS &&
-      dataset.isLoaded,
+    let loadedSamples = individual.sampleGuids.map(
+      sampleGuid => this.props.samplesByGuid[sampleGuid],
+    ).filter(s =>
+      s.datasetType === DATASET_TYPE_VARIANT_CALLS &&
+      s.sampleStatus === SAMPLE_STATUS_LOADED,
     )
-    loadedDatasets = orderBy(loadedDatasets, [d => d.loadedDate], 'desc')
-    // only show first and latest datsets
-    loadedDatasets.splice(1, loadedDatasets.length - 2)
+    loadedSamples = orderBy(loadedSamples, [s => s.loadedDate], 'desc')
+    // only show first and latest datasets
+    loadedSamples.splice(1, loadedSamples.length - 2)
 
-    const sampleDetails = loadedDatasets.map((dataset, i) =>
-      <div key={dataset.datasetGuid}><Dataset loadedDataset={dataset} isOutdated={i !== 0} /></div>,
+    const sampleDetails = loadedSamples.map((sample, i) =>
+      <div key={sample.sampleGuid}>
+        <Dataset loadedDataset={sample} isOutdated={i !== 0} />
+      </div>,
     )
 
     const individualRow = (
@@ -94,7 +97,7 @@ class IndividualRow extends React.Component
                   ) : null
                 }
                 <Detail>
-                  ADDED {new Timeago().format(createdDate).toUpperCase()}
+                  ADDED {new Date(createdDate).toLocaleDateString().toUpperCase()}
                 </Detail>
               </div>
             </span>
@@ -174,7 +177,7 @@ export { IndividualRow as IndividualRowComponent }
 const mapStateToProps = state => ({
   user: getUser(state),
   project: getProject(state),
-  datasets: getProjectDatasets(state),
+  samplesByGuid: getProjectSamplesByGuid(state),
 })
 
 const mapDispatchToProps = {

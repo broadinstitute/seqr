@@ -1,8 +1,8 @@
 import React from 'react'
 import PropTypes from 'prop-types'
+import styled from 'styled-components'
 import { connect } from 'react-redux'
 import { Icon } from 'semantic-ui-react'
-import styled from 'styled-components'
 
 import { getUser } from 'redux/selectors'
 import StaffOnlyIcon from '../../icons/StaffOnlyIcon'
@@ -12,6 +12,10 @@ import ReduxFormWrapper from '../../form/ReduxFormWrapper'
 import Modal from '../../modal/Modal'
 import { HorizontalSpacer } from '../../Spacers'
 
+const EditLabel = styled.span`
+  font-size: .9em;
+  padding-right: 5px;
+`
 const FieldValue = styled.div`
   padding-bottom: ${props => (props.compact ? 0 : '15px')}; 
   padding-left: ${props => (props.compact ? 0 : '22px')};
@@ -37,7 +41,7 @@ const BaseFieldView = (props) => {
   const editButton = props.isEditable && (props.formFields ?
     <Modal key="edit" title={props.modalTitle} modalName={modalId} trigger={
       <ButtonLink>
-        {props.editLabel && <small>{props.editLabel}<HorizontalSpacer width={5} /></small>}
+        {props.editLabel && <EditLabel>{props.editLabel}</EditLabel>}
         <Icon link size="small" name={props.editIconName || 'write'} />
       </ButtonLink>
     }

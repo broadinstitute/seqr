@@ -12,7 +12,7 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.shortcuts import render
 import elasticsearch
 
-from seqr.models import Dataset
+from seqr.models import Sample
 from settings import LOGIN_URL
 from pprint import pprint
 
@@ -23,13 +23,6 @@ OPERATIONS_LOG = "index_operations_log"
 @staff_member_required(login_url=LOGIN_URL)
 def elasticsearch_status(request):
     client = elasticsearch.Elasticsearch(host=settings.ELASTICSEARCH_SERVICE_HOSTNAME)
-
-    # look up seqr dataset records
-    index_to_dataset = {}
-    for dataset in Dataset.objects.all():
-        if dataset.dataset_id:
-            index_name = dataset.dataset_id
-            index_to_dataset[index_name] = dataset
 
     # get index snapshots
     response = requests.get("http://{0}:{1}/_snapshot/{2}/_all".format(
@@ -53,12 +46,13 @@ def elasticsearch_status(request):
         index_json = {k.replace('.', '_'): v for k, v in index.items()}
 
         index_name = re.sub("_[0-9]{1,2}$", "", index_name)
-        if index_name in index_to_dataset:
-            index_json['project_guid'] = index_to_dataset[index_name].project.guid
-            index_json['project_id'] = index_to_dataset[index_name].project.deprecated_project_id
-            index_json['analysis_type'] = index_to_dataset[index_name].analysis_type
-            index_json['genome_version'] = index_to_dataset[index_name].genome_version
-            index_json['source_file_path'] = index_to_dataset[index_name].source_file_path
+        sample = Sample.objects.filter(elasticsearch_index=index_name).select_related('individual__family__project').first()
+        if sample:
+            project = sample.individual.family.project
+            index_json['project_guid'] = project.guid
+            index_json['project_id'] = project.deprecated_project_id
+            index_json['dataset_type'] = sample.sample_type
+            index_json['genome_version'] = project.genome_version
 
         if index_name in index_snapshot_states:
             index_json['snapshots'] = ", ".join(set(index_snapshot_states[index_name]))

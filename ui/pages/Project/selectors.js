@@ -2,10 +2,10 @@ import orderBy from 'lodash/orderBy'
 import { createSelector } from 'reselect'
 
 import { getSearchResults } from 'redux/utils/reduxSearchEnhancer'
-import { FAMILY_ANALYSIS_STATUS_OPTIONS } from 'shared/utils/constants'
+import { FAMILY_ANALYSIS_STATUS_OPTIONS, DATASET_TYPE_VARIANT_CALLS } from 'shared/utils/constants'
 
 import {
-  getProjectsByGuid, getFamiliesByGuid, getIndividualsByGuid, getSamplesByGuid, getDatasetsByGuid, getUser,
+  getProjectsByGuid, getFamiliesByGuid, getIndividualsByGuid, getSamplesByGuid, getUser,
 } from 'redux/selectors'
 
 import {
@@ -18,28 +18,28 @@ import {
   SORT_BY_FAMILY_GUID,
   VARIANT_SORT_OPTONS,
   VARIANT_EXPORT_DATA,
-  VARIANT_GENOTYPE_EXPORT_DATA, ANALYSIS_TYPE_VARIANT_CALLS,
+  VARIANT_GENOTYPE_EXPORT_DATA,
 } from './constants'
 
 
 const FAMILY_FILTER_LOOKUP = FAMILY_FILTER_OPTIONS.reduce(
   (acc, opt) => ({
     ...acc,
-    ...{ [opt.value]: opt.createFilter },
+    [opt.value]: opt.createFilter,
   }), {},
 )
 
 const FAMILY_SORT_LOOKUP = FAMILY_SORT_OPTIONS.reduce(
   (acc, opt) => ({
     ...acc,
-    ...{ [opt.value]: opt.createSortKeyGetter },
+    [opt.value]: opt.createSortKeyGetter,
   }), {},
 )
 
 const VARIANT_SORT_LOOKUP = VARIANT_SORT_OPTONS.reduce(
   (acc, opt) => ({
     ...acc,
-    ...{ [opt.value]: opt.comparator },
+    [opt.value]: opt.comparator,
   }), {},
 )
 
@@ -53,16 +53,27 @@ export const getProject = createSelector(
   getProjectsByGuid, getProjectGuid, (projectsByGuid, currentProjectGuid) => projectsByGuid[currentProjectGuid],
 )
 
-const filterProjectEntities = (entities, currentProjectGuid) =>
-  Object.values(entities).filter(o => o.projectGuid === currentProjectGuid)
 
-export const getProjectFamilies = createSelector(getFamiliesByGuid, getProjectGuid, filterProjectEntities)
+const groupEntitiesByProjectGuid = entities => Object.entries(entities).reduce((acc, [entityGuid, entity]) => {
+  if (!(entity.projectGuid in acc)) {
+    acc[entity.projectGuid] = {}
+  }
+  acc[entity.projectGuid][entityGuid] = entity
 
-export const getProjectIndividuals = createSelector(getIndividualsByGuid, getProjectGuid, filterProjectEntities)
+  return acc
 
-export const getProjectDatasets = createSelector(getDatasetsByGuid, getProjectGuid, filterProjectEntities)
+}, {})
 
-export const getProjectSamples = createSelector(getSamplesByGuid, getProjectGuid, filterProjectEntities)
+export const getFamiliesGroupedByProjectGuid = createSelector(getFamiliesByGuid, groupEntitiesByProjectGuid)
+export const getIndividualsGroupedByProjectGuid = createSelector(getIndividualsByGuid, groupEntitiesByProjectGuid)
+export const getSamplesGroupedByProjectGuid = createSelector(getSamplesByGuid, groupEntitiesByProjectGuid)
+
+
+const selectEntitiesForProjectGuid = (entitiesGroupedByProjectGuid, projectGuid) => entitiesGroupedByProjectGuid[projectGuid] || {}
+
+export const getProjectFamiliesByGuid = createSelector(getFamiliesGroupedByProjectGuid, getProjectGuid, selectEntitiesForProjectGuid)
+export const getProjectIndividualsByGuid = createSelector(getIndividualsGroupedByProjectGuid, getProjectGuid, selectEntitiesForProjectGuid)
+export const getProjectSamplesByGuid = createSelector(getSamplesGroupedByProjectGuid, getProjectGuid, selectEntitiesForProjectGuid)
 
 // Saved variant selectors
 export const getSavedVariantTableState = state => state.savedVariantTableState
@@ -157,14 +168,6 @@ export const getFamiliesFilter = state => state.familyTableState.familiesFilter 
 export const getFamiliesSortOrder = state => state.familyTableState.familiesSortOrder || SORT_BY_FAMILY_NAME
 export const getFamiliesSortDirection = state => state.familyTableState.familiesSortDirection || 1
 
-export const getProjectIndividualsWithFamily = createSelector(
-  getProjectIndividuals,
-  getFamiliesByGuid,
-  (projectIndividuals, familiesByGuid) =>
-    projectIndividuals.map((ind) => { return { family: familiesByGuid[ind.familyGuid], ...ind } }),
-)
-
-
 /**
  * function that returns an array of family guids that pass the currently-selected
  * familiesFilter.
@@ -172,21 +175,20 @@ export const getProjectIndividualsWithFamily = createSelector(
  * @param state {object} global Redux state
  */
 export const getVisibleFamilies = createSelector(
-  getProjectFamilies,
-  getIndividualsByGuid,
-  getSamplesByGuid,
-  getDatasetsByGuid,
+  getProjectFamiliesByGuid,
+  getProjectIndividualsByGuid,
+  getProjectSamplesByGuid,
   getUser,
   getFamiliesFilter,
   getSearchResults('familiesByGuid'),
-  (families, individualsByGuid, samplesByGuid, datsetsByGuid, user, familiesFilter, familySearchResults) => {
-    const searchedFamilies = families.filter(family => familySearchResults.includes(family.familyGuid))
+  (familiesByGuid, individualsByGuid, samplesByGuid, user, familiesFilter, familySearchResults) => {
+    const searchedFamilies = familySearchResults.map(family => familiesByGuid[family]).filter(family => family)
 
     if (!familiesFilter || !FAMILY_FILTER_LOOKUP[familiesFilter]) {
       return searchedFamilies
     }
 
-    const familyFilter = FAMILY_FILTER_LOOKUP[familiesFilter](individualsByGuid, samplesByGuid, datsetsByGuid, user)
+    const familyFilter = FAMILY_FILTER_LOOKUP[familiesFilter](individualsByGuid, samplesByGuid, user)
     return searchedFamilies.filter(familyFilter)
   },
 )
@@ -200,17 +202,17 @@ export const getVisibleFamilies = createSelector(
  */
 export const getVisibleFamiliesInSortedOrder = createSelector(
   getVisibleFamilies,
-  getIndividualsByGuid,
-  getSamplesByGuid,
-  getDatasetsByGuid,
+  getProjectFamiliesByGuid,
+  getProjectIndividualsByGuid,
+  getProjectSamplesByGuid,
   getFamiliesSortOrder,
   getFamiliesSortDirection,
-  (visibleFamilies, individualsByGuid, samplesByGuid, datsetsByGuid, familiesSortOrder, familiesSortDirection) => {
+  (visibleFamilies, familiesByGuid, individualsByGuid, samplesByGuid, familiesSortOrder, familiesSortDirection) => {
     if (!familiesSortOrder || !FAMILY_SORT_LOOKUP[familiesSortOrder]) {
       return visibleFamilies
     }
 
-    const getSortKey = FAMILY_SORT_LOOKUP[familiesSortOrder](individualsByGuid, samplesByGuid, datsetsByGuid)
+    const getSortKey = FAMILY_SORT_LOOKUP[familiesSortOrder](familiesByGuid, individualsByGuid, samplesByGuid)
 
     return orderBy(visibleFamilies, [getSortKey], [familiesSortDirection > 0 ? 'asc' : 'desc'])
   },
@@ -224,29 +226,25 @@ export const getVisibleFamiliesInSortedOrder = createSelector(
  */
 export const getVisibleSortedFamiliesWithIndividuals = createSelector(
   getVisibleFamiliesInSortedOrder,
-  getIndividualsByGuid,
-  getProjectSamples,
-  getProjectDatasets,
-  (visibleFamilies, individualsByGuid, samples, datasets) => {
+  getProjectIndividualsByGuid,
+  getProjectSamplesByGuid,
+  (visibleFamilies, individualsByGuid, samplesByGuid) => {
     const AFFECTED_STATUS_ORDER = { A: 1, N: 2, U: 3 }
     const getIndivSortKey = individual => AFFECTED_STATUS_ORDER[individual.affected] || 0
 
     return visibleFamilies.map((family) => {
       const familyIndividuals = orderBy(family.individualGuids.map(individualGuid => individualsByGuid[individualGuid]), [getIndivSortKey])
 
-      const familyDatasetGuids = samples.filter(s => family.individualGuids.includes(s.individualGuid)).reduce(
-        (acc, sample) => new Set([...acc, ...sample.datasetGuids]), new Set(),
+      let familySamples = Object.values(samplesByGuid).filter(s =>
+        family.individualGuids.includes(s.individualGuid) &&
+        s.datasetType === DATASET_TYPE_VARIANT_CALLS &&
+        s.loadedDate,
       )
-      let loadedDatasets = datasets.filter(dataset => (
-        familyDatasetGuids.has(dataset.datasetGuid) &&
-        dataset.analysisType === ANALYSIS_TYPE_VARIANT_CALLS &&
-        dataset.isLoaded
-      ))
-      loadedDatasets = orderBy(loadedDatasets, [d => d.loadedDate], 'asc')
+      familySamples = orderBy(familySamples, [d => d.familySamples], 'asc')
 
       return Object.assign(family, {
         individuals: familyIndividuals,
-        firstDataset: loadedDatasets.length > 0 ? loadedDatasets[0] : null,
+        firstDataset: familySamples.length > 0 ? familySamples[0] : null,
       })
     })
   },
@@ -267,9 +265,9 @@ export const getFamiliesExportConfig = createSelector(
 )
 
 export const getCaseReviewStatusCounts = createSelector(
-  getProjectIndividuals,
-  (individuals) => {
-    const caseReviewStatusCounts = individuals.reduce((acc, individual) => ({
+  getProjectIndividualsByGuid,
+  (individualsByGuid) => {
+    const caseReviewStatusCounts = Object.values(individualsByGuid).reduce((acc, individual) => ({
       ...acc, [individual.caseReviewStatus]: (acc[individual.caseReviewStatus] || 0) + 1,
     }), {})
 
@@ -279,9 +277,9 @@ export const getCaseReviewStatusCounts = createSelector(
   })
 
 export const getAnalysisStatusCounts = createSelector(
-  getProjectFamilies,
-  (families) => {
-    const analysisStatusCounts = families.reduce((acc, family) => ({
+  getProjectFamiliesByGuid,
+  (familiesByGuid) => {
+    const analysisStatusCounts = Object.values(familiesByGuid).reduce((acc, family) => ({
       ...acc, [family.analysisStatus]: (acc[family.analysisStatus] || 0) + 1,
     }), {})
 

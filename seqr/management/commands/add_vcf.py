@@ -6,16 +6,11 @@ from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
 from reference_data.models import GENOME_VERSION_CHOICES
-from seqr.models import Project, Sample, Dataset
-from seqr.utils.file_utils import does_file_exist, file_iter, inputs_older_than_outputs, \
-    copy_file
-from seqr.views.utils.dataset.dataset_utils import link_dataset_to_sample_records, \
-    get_or_create_elasticsearch_dataset
-
+from seqr.models import Project, Sample
+from seqr.utils.file_utils import does_file_exist, file_iter
 from seqr.views.apis.individual_api import add_or_update_individuals_and_families
 from seqr.views.apis.samples_api import match_sample_ids_to_sample_records
 from seqr.views.utils.pedigree_info_utils import parse_pedigree_table
-from settings import PROJECT_DATA_DIR
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +35,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
 
-        analysis_type = Dataset.ANALYSIS_TYPE_VARIANT_CALLS
+        dataset_type = Sample.DATASET_TYPE_VARIANT_CALLS
 
         # parse and validate args
         sample_type = options["sample_type"]
@@ -136,32 +131,20 @@ class Command(BaseCommand):
             logger.info("None of the individuals or samples in the project matched the %(all_vcf_sample_id_count)s sample id(s) in the VCF" % locals())
             return
 
-        # retrieve or create Dataset record and link it to sample(s)
-        dataset = get_or_create_elasticsearch_dataset(
-            project=project,
-            analysis_type=analysis_type,
-            genome_version=genome_version,
-            source_file_path=vcf_path,
-            elasticsearch_index=elasticsearch_index,
-            is_loaded=is_loaded,
-        )
-
-        if is_loaded and not dataset.loaded_date:
-            dataset.loaded_date=timezone.now()
-            dataset.save()
-
-        link_dataset_to_sample_records(dataset, vcf_sample_ids_to_sample_records.values())
+        for sample in vcf_sample_ids_to_sample_records.values():
+            sample.dataset_type = dataset_type
+            sample.dataset_file_path = vcf_path
+            sample.elasticsearch_index = elasticsearch_index
+            sample.save()
 
         # check if all VCF samples loaded already
         vcf_sample_ids = set(vcf_sample_ids_to_sample_records.keys())
-        existing_sample_ids = set([s.sample_id for s in dataset.samples.all()])
-        if dataset.is_loaded and len(vcf_sample_ids - existing_sample_ids) == 0:
+        existing_sample_ids = set([s.sample_id for s in vcf_sample_ids_to_sample_records.values()])
+        if len(vcf_sample_ids - existing_sample_ids) == 0:
             logger.info("All %s samples in this VCF have already been loaded" % len(vcf_sample_ids))
             return
-        elif not dataset.is_loaded:
-            logger.info("Dataset not loaded. %s Loading..." % (is_loaded,))
-        elif len(vcf_sample_ids - existing_sample_ids) != 0:
-            logger.info("Dataset is loaded but these samples aren't included in the dataset: %s" % (vcf_sample_ids - existing_sample_ids, ))
+        else:
+            logger.info("Samples are already loaded except for: %s" % (vcf_sample_ids - existing_sample_ids, ))
 
         logger.info("done")
 
