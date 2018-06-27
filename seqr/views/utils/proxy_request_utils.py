@@ -86,15 +86,19 @@ def proxy_request(request, url, host=None, scheme=None, method=None, session=Non
     else:
         raise ValueError("Unexpected HTTP method: %s. %s" % (method, url))
 
-    with method_impl(url, headers=headers, data=data, auth=auth, stream=stream, verify=verify) as response:
-        response_content = response.raw.read() if stream else response.content
+    response = method_impl(url, headers=headers, data=data, auth=auth, stream=stream, verify=verify)
+    response_content = response.raw.read() if stream else response.content
+    if stream:
+        # make sure the connection is released back to the connection pool
+        # (based on http://docs.python-requests.org/en/master/user/advanced/#body-content-workflow)
+        response.close()
 
-        proxy_response = HttpResponse(
-            content=response_content,
-            status=response.status_code,
-            reason=response.reason,
-            charset=response.encoding
-        )
+    proxy_response = HttpResponse(
+        content=response_content,
+        status=response.status_code,
+        reason=response.reason,
+        charset=response.encoding
+    )
 
     if verbose:
         from requests_toolbelt.utils import dump
