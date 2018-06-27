@@ -1,5 +1,5 @@
 import React from 'react'
-import { Table } from 'semantic-ui-react'
+import { Table, Popup, Icon } from 'semantic-ui-react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { connect } from 'react-redux'
@@ -70,7 +70,14 @@ const TableHeaderRow = ({ headerStatus, showInternalFilters, visibleFamiliesCoun
           &nbsp; families
         </RegularFontHeaderCell>
         <Table.HeaderCell collapsing textAlign="right">
-          Search: <FamiliesFilterSearchBox />
+          <Popup
+            content="Filter families by searching on family name or individual phenotypes"
+            position="top center"
+            trigger={<a><Icon name="info circle" link /></a>}
+          />
+          Search:
+          <HorizontalSpacer width={10} />
+          <FamiliesFilterSearchBox />
         </Table.HeaderCell>
         <Table.HeaderCell collapsing textAlign="right">
           <ReduxFormWrapper
