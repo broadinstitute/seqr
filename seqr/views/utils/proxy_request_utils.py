@@ -122,10 +122,7 @@ def _convert_django_META_to_http_headers(request_meta_dict):
 
     def convert_key(key):
         # converting Django's all-caps keys (eg. 'HTTP_RANGE') to regular HTTP header keys (eg. 'Range')
-        key = key.replace("HTTP_", "")
-        tokens = key.split("_")
-        capitalized_tokens = map(lambda x: x.capitalize(), tokens)
-        return "-".join(capitalized_tokens)
+        return key.replace("HTTP_", "").replace('_', '-').title()
 
     http_headers = {
         convert_key(key): str(value)
