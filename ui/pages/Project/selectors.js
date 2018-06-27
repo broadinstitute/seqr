@@ -2,7 +2,7 @@ import orderBy from 'lodash/orderBy'
 import { createSelector } from 'reselect'
 
 import { getSearchResults } from 'redux/utils/reduxSearchEnhancer'
-import { FAMILY_ANALYSIS_STATUS_OPTIONS, DATASET_TYPE_VARIANT_CALLS } from 'shared/utils/constants'
+import { FAMILY_ANALYSIS_STATUS_OPTIONS } from 'shared/utils/constants'
 
 import {
   getProjectsByGuid, getFamiliesByGuid, getIndividualsByGuid, getSamplesByGuid, getUser,
@@ -19,6 +19,7 @@ import {
   VARIANT_SORT_OPTONS,
   VARIANT_EXPORT_DATA,
   VARIANT_GENOTYPE_EXPORT_DATA,
+  familySamplesLoaded,
 } from './constants'
 
 
@@ -212,7 +213,7 @@ export const getVisibleFamiliesInSortedOrder = createSelector(
       return visibleFamilies
     }
 
-    const getSortKey = FAMILY_SORT_LOOKUP[familiesSortOrder](familiesByGuid, individualsByGuid, samplesByGuid)
+    const getSortKey = FAMILY_SORT_LOOKUP[familiesSortOrder](individualsByGuid, samplesByGuid)
 
     return orderBy(visibleFamilies, [getSortKey], [familiesSortDirection > 0 ? 'asc' : 'desc'])
   },
@@ -235,16 +236,11 @@ export const getVisibleSortedFamiliesWithIndividuals = createSelector(
     return visibleFamilies.map((family) => {
       const familyIndividuals = orderBy(family.individualGuids.map(individualGuid => individualsByGuid[individualGuid]), [getIndivSortKey])
 
-      let familySamples = Object.values(samplesByGuid).filter(s =>
-        family.individualGuids.includes(s.individualGuid) &&
-        s.datasetType === DATASET_TYPE_VARIANT_CALLS &&
-        s.loadedDate,
-      )
-      familySamples = orderBy(familySamples, [d => d.familySamples], 'asc')
+      const familySamples = familySamplesLoaded(family, individualsByGuid, samplesByGuid)
 
       return Object.assign(family, {
         individuals: familyIndividuals,
-        firstDataset: familySamples.length > 0 ? familySamples[0] : null,
+        firstSample: familySamples.length > 0 ? familySamples[0] : null,
       })
     })
   },

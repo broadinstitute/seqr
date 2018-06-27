@@ -4,7 +4,7 @@ import { Popup } from 'semantic-ui-react'
 import BaseFieldView from '../components/panel/view-fields/BaseFieldView'
 import OptionFieldView from '../components/panel/view-fields/OptionFieldView'
 import { AnalysedBy } from '../components/panel/family'
-import Dataset from '../components/panel/dataset'
+import Sample from '../components/panel/sample'
 import { ColoredIcon } from '../components/StyledComponents'
 
 // SAMPLES
@@ -50,7 +50,7 @@ export const FAMILY_FIELD_ANALYSIS_NOTES = 'analysisNotes'
 export const FAMILY_FIELD_ANALYSIS_SUMMARY = 'analysisSummary'
 export const FAMILY_FIELD_INTERNAL_NOTES = 'internalCaseReviewNotes'
 export const FAMILY_FIELD_INTERNAL_SUMMARY = 'internalCaseReviewSummary'
-export const FAMILY_FIELD_FIRST_DATASET = 'firstDataset'
+export const FAMILY_FIELD_FIRST_SAMPLE = 'firstSample'
 
 export const FAMILY_FIELD_RENDER_LOOKUP = {
   [FAMILY_FIELD_DESCRIPTION]: { name: 'Family Description' },
@@ -74,12 +74,12 @@ export const FAMILY_FIELD_RENDER_LOOKUP = {
       fieldDisplay: (analysedByList, compact) => <AnalysedBy analysedByList={analysedByList} compact={compact} />,
     },
   },
-  [FAMILY_FIELD_FIRST_DATASET]: {
+  [FAMILY_FIELD_FIRST_SAMPLE]: {
     name: 'Data Loaded?',
     component: BaseFieldView,
     props: {
       showEmptyValues: true,
-      fieldDisplay: (loadedDataset, compact) => <Dataset loadedDataset={loadedDataset} hoverDetails={compact} />,
+      fieldDisplay: (loadedSample, compact) => <Sample loadedSample={loadedSample} hoverDetails={compact} />,
     },
   },
   [FAMILY_FIELD_ANALYSIS_NOTES]: { name: 'Analysis Notes' },

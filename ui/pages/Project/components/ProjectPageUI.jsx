@@ -13,7 +13,7 @@ import {
   FAMILY_FIELD_ANALYSED_BY,
   FAMILY_FIELD_ANALYSIS_NOTES,
   FAMILY_FIELD_ANALYSIS_SUMMARY,
-  FAMILY_FIELD_FIRST_DATASET,
+  FAMILY_FIELD_FIRST_SAMPLE,
 } from 'shared/utils/constants'
 import { getProject, getProjectDetailsIsLoading, getAnalysisStatusCounts, getFamiliesExportConfig } from '../selectors'
 import ProjectOverview from './ProjectOverview'
@@ -87,7 +87,7 @@ const DETAIL_FIELDS = [
 const NO_DETAIL_FIELDS = [
   { id: FAMILY_FIELD_ANALYSIS_STATUS },
   { id: FAMILY_FIELD_ANALYSED_BY, colWidth: 2 },
-  { id: FAMILY_FIELD_FIRST_DATASET },
+  { id: FAMILY_FIELD_FIRST_SAMPLE },
   { id: FAMILY_FIELD_DESCRIPTION, colWidth: 6 },
 ]
 

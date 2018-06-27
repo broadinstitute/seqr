@@ -17,6 +17,8 @@ import {
   FAMILY_STATUS_ANALYSIS_IN_PROGRESS,
   CLINSIG_SEVERITY,
   FAMILY_ANALYSIS_STATUS_OPTIONS,
+  SAMPLE_STATUS_LOADED,
+  DATASET_TYPE_VARIANT_CALLS,
 } from 'shared/utils/constants'
 
 export const CASE_REVIEW_STATUS_NOT_IN_REVIEW = 'N'
@@ -107,13 +109,15 @@ const caseReviewStatusFilter = status => individualsByGuid => family =>
     individual => individual.caseReviewStatus === status,
   )
 
-const familyDatasetsLoaded = (family, individualsByGuid, samplesByGuid, datasetsByGuid) => {
-  const familySampleGuids = family.individualGuids.map(individualGuid => individualsByGuid[individualGuid]).reduce(
+export const familySamplesLoaded = (family, individualsByGuid, samplesByGuid) => {
+  const loadedSamples = [...family.individualGuids.map(individualGuid => individualsByGuid[individualGuid]).reduce(
     (acc, individual) => new Set([...acc, ...individual.sampleGuids]), new Set(),
+  )].map(sampleGuid => samplesByGuid[sampleGuid]).filter(sample =>
+    sample.datasetType === DATASET_TYPE_VARIANT_CALLS &&
+    sample.sampleStatus === SAMPLE_STATUS_LOADED &&
+    sample.loadedDate,
   )
-  return Object.values(datasetsByGuid).filter(
-    dataset => dataset.sampleGuids.some(sampleGuid => familySampleGuids.has(sampleGuid)) && dataset.loadedDate,
-  )
+  return orderBy(loadedSamples, [s => s.loadedDate], 'asc')
 }
 
 export const FAMILY_FILTER_OPTIONS = [
@@ -127,8 +131,8 @@ export const FAMILY_FILTER_OPTIONS = [
     category: 'Data Status:',
     name: 'Data Loaded',
     internalOmit: true,
-    createFilter: (individualsByGuid, samplesByGuid, datasetsByGuid) => family =>
-      familyDatasetsLoaded(family, individualsByGuid, samplesByGuid, datasetsByGuid).length > 0,
+    createFilter: (individualsByGuid, samplesByGuid) => family =>
+      familySamplesLoaded(family, individualsByGuid, samplesByGuid).length > 0,
   },
   {
     value: SHOW_PHENOTYPES_ENTERED,
@@ -155,7 +159,7 @@ export const FAMILY_FILTER_OPTIONS = [
     category: 'Analysed By:',
     name: 'Analysed By Me',
     internalOmit: true,
-    createFilter: (individualsByGuid, samplesByGuid, datsetsByGuid, user) => family =>
+    createFilter: (individualsByGuid, samplesByGuid, user) => family =>
       family.analysedBy.map(analysedBy => analysedBy.user.username).includes(user.username),
   },
   {
@@ -163,7 +167,7 @@ export const FAMILY_FILTER_OPTIONS = [
     category: 'Analysed By:',
     name: 'Not Analysed By Me',
     internalOmit: true,
-    createFilter: (individualsByGuid, samplesByGuid, datsetsByGuid, user) => family =>
+    createFilter: (individualsByGuid, samplesByGuid, user) => family =>
       !family.analysedBy.map(analysedBy => analysedBy.user.username).includes(user.username),
   },
   {
@@ -332,17 +336,17 @@ export const FAMILY_SORT_OPTIONS = [
   {
     value: SORT_BY_DATA_LOADED_DATE,
     name: 'Date Loaded',
-    createSortKeyGetter: (individualsByGuid, samplesByGuid, datasetsByGuid) => (family) => {
-      const loadedDatasets = familyDatasetsLoaded(family, individualsByGuid, samplesByGuid, datasetsByGuid)
-      return loadedDatasets.length ? orderBy(loadedDatasets, [d => d.loadedDate], 'desc')[0].loadedDate : '2000-01-01T01:00:00.000Z'
+    createSortKeyGetter: (individualsByGuid, samplesByGuid) => (family) => {
+      const loadedSamples = familySamplesLoaded(family, individualsByGuid, samplesByGuid)
+      return loadedSamples.length ? loadedSamples[loadedSamples.length - 1].loadedDate : '2000-01-01T01:00:00.000Z'
     },
   },
   {
     value: SORT_BY_DATA_FIRST_LOADED_DATE,
     name: 'Date First Loaded',
-    createSortKeyGetter: (individualsByGuid, samplesByGuid, datasetsByGuid) => (family) => {
-      const loadedDatasets = familyDatasetsLoaded(family, individualsByGuid, samplesByGuid, datasetsByGuid)
-      return loadedDatasets.length ? orderBy(loadedDatasets, [d => d.loadedDate], 'asc')[0].loadedDate : '2000-01-01T01:00:00.000Z'
+    createSortKeyGetter: (individualsByGuid, samplesByGuid) => (family) => {
+      const loadedSamples = familySamplesLoaded(family, individualsByGuid, samplesByGuid)
+      return loadedSamples.length ? loadedSamples[0].loadedDate : '2000-01-01T01:00:00.000Z'
     },
   },
   {
@@ -357,7 +361,7 @@ export const FAMILY_EXPORT_DATA = [
   { header: 'Family ID', field: 'familyId' },
   { header: 'Display Name', field: 'displayName' },
   { header: 'Created Date', field: 'createdDate' },
-  { header: 'First Data Loaded Date', field: 'firstDataset', format: firstDataset => (firstDataset || {}).loadedDate },
+  { header: 'First Data Loaded Date', field: 'firstSample', format: firstSample => (firstSample || {}).loadedDate },
   { header: 'Description', field: 'description', format: stripMarkdown },
   {
     header: 'Analysis Status',

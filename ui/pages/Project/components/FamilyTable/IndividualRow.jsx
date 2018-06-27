@@ -8,7 +8,7 @@ import orderBy from 'lodash/orderBy'
 import PedigreeIcon from 'shared/components/icons/PedigreeIcon'
 import TextFieldView from 'shared/components/panel/view-fields/TextFieldView'
 import PhenotipsDataPanel from 'shared/components/panel/view-phenotips-info/PhenotipsDataPanel'
-import Dataset from 'shared/components/panel/dataset'
+import Sample from 'shared/components/panel/sample'
 import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
 
 import { updateIndividual } from 'redux/rootReducer'
@@ -72,7 +72,7 @@ class IndividualRow extends React.Component
 
     const sampleDetails = loadedSamples.map((sample, i) =>
       <div key={sample.sampleGuid}>
-        <Dataset loadedDataset={sample} isOutdated={i !== 0} />
+        <Sample loadedSample={sample} isOutdated={i !== 0} />
       </div>,
     )
 
