@@ -373,6 +373,44 @@ export const FAMILY_EXPORT_DATA = [
   { header: 'Analysis Notes', field: 'analysisNotes', format: stripMarkdown },
 ]
 
+const SEX_LOOKUP = {
+  M: 'Male',
+  F: 'Female',
+}
+
+const AFFECTED_LOOKUP = {
+  A: 'Affected',
+  N: 'Unaffected',
+}
+
+export const INDIVIDUAL_EXPORT_DATA = [
+  { header: 'Family ID', field: 'familyId' },
+  { header: 'Individual ID', field: 'individualId' },
+  { header: 'Paternal ID', field: 'paternalId' },
+  { header: 'Maternal ID', field: 'maternalId' },
+  { header: 'Sex', field: 'sex', format: sex => SEX_LOOKUP[sex] },
+  { header: 'Affected Status', field: 'affected', format: affected => AFFECTED_LOOKUP[affected] },
+  { header: 'Notes', field: 'notes', format: stripMarkdown  },
+  {
+    header: 'HPO Terms (present)',
+    field: 'phenotipsData',
+    format: phenotipsData => (
+      (phenotipsData || {}).features ?
+        phenotipsData.features.filter(feature => feature.observed === 'yes').map(feature => feature.label).join(', ') :
+        ''
+    ),
+  },
+  {
+    header: 'HPO Terms (absent)',
+    field: 'phenotipsData',
+    format: phenotipsData => (
+      (phenotipsData || {}).features ?
+        phenotipsData.features.filter(feature => feature.observed === 'no').map(feature => feature.label).join(', ') :
+        ''
+    ),
+  },
+]
+
 export const SORT_BY_FAMILY_GUID = 'FAMILY_GUID'
 export const SORT_BY_XPOS = 'XPOS'
 export const SORT_BY_PATHOGENICITY = 'PATHOGENICITY'

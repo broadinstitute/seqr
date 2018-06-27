@@ -15,6 +15,7 @@ import {
   FAMILY_FILTER_OPTIONS,
   FAMILY_SORT_OPTIONS,
   FAMILY_EXPORT_DATA,
+  INDIVIDUAL_EXPORT_DATA,
   SORT_BY_FAMILY_GUID,
   VARIANT_SORT_OPTONS,
   VARIANT_EXPORT_DATA,
@@ -255,6 +256,22 @@ export const getFamiliesExportConfig = createSelector(
     headers: FAMILY_EXPORT_DATA.map(config => config.header),
     processRow: family => FAMILY_EXPORT_DATA.map((config) => {
       const val = family[config.field]
+      return config.format ? config.format(val) : val
+    }),
+  }),
+)
+
+export const getIndividualsExportConfig = createSelector(
+  getProject,
+  getVisibleSortedFamiliesWithIndividuals,
+  (project, families) => ({
+    filename: `${project.name.replace(' ', '_').toLowerCase()}_individuals`,
+    rawData: families.reduce((acc, family) =>
+      [...acc, ...family.individuals.map(individual => ({ ...individual, familyId: family.familyId }))], [],
+    ),
+    headers: INDIVIDUAL_EXPORT_DATA.map(config => config.header),
+    processRow: individual => INDIVIDUAL_EXPORT_DATA.map((config) => {
+      const val = individual[config.field]
       return config.format ? config.format(val) : val
     }),
   }),

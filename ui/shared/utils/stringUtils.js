@@ -7,4 +7,4 @@ export const snakecaseToTitlecase = s => (s || '').split('_').map(word => word[0
 export const toSnakecase = s => (s || '').replace(/ /g, '_').toLowerCase()
 
 export const stripMarkdown = s =>
-  ReactDOMServer.renderToStaticMarkup(<MarkdownRenderer markdown={s} />).replace(/(<([^>]+)>)/ig, '')
+  ReactDOMServer.renderToStaticMarkup(<MarkdownRenderer markdown={s || ''} />).replace(/(<([^>]+)>)/ig, '')

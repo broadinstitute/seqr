@@ -15,7 +15,13 @@ import {
   FAMILY_FIELD_ANALYSIS_SUMMARY,
   FAMILY_FIELD_FIRST_SAMPLE,
 } from 'shared/utils/constants'
-import { getProject, getProjectDetailsIsLoading, getAnalysisStatusCounts, getFamiliesExportConfig } from '../selectors'
+import {
+  getProject,
+  getProjectDetailsIsLoading,
+  getAnalysisStatusCounts,
+  getFamiliesExportConfig,
+  getIndividualsExportConfig,
+} from '../selectors'
 import ProjectOverview from './ProjectOverview'
 import ProjectCollaborators from './ProjectCollaborators'
 import GeneLists from './GeneLists'
@@ -95,7 +101,7 @@ const ProjectPageUI = (props) => {
   const headerStatus = { title: 'Analysis Statuses', data: props.analysisStatusCounts }
   const exportUrls = [
     { name: 'Families', data: props.familyExportConfig },
-    { name: 'Individuals', url: `/api/project/${props.project.projectGuid}/export_project_individuals?include_phenotypes=1` },
+    { name: 'Individuals', data: props.individualsExportConfig },
   ]
 
   return (
@@ -142,12 +148,14 @@ ProjectPageUI.propTypes = {
   project: PropTypes.object.isRequired,
   analysisStatusCounts: PropTypes.array,
   familyExportConfig: PropTypes.object,
+  individualsExportConfig: PropTypes.object,
 }
 
 const mapStateToProps = state => ({
   project: getProject(state),
   analysisStatusCounts: getAnalysisStatusCounts(state),
   familyExportConfig: getFamiliesExportConfig(state),
+  individualsExportConfig: getIndividualsExportConfig(state),
 })
 
 export { ProjectPageUI as ProjectPageUIComponent }
