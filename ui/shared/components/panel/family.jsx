@@ -1,7 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Grid, Header } from 'semantic-ui-react'
+import { Grid, Header, Popup } from 'semantic-ui-react'
 import styled from 'styled-components'
 
 import { updateFamily } from 'redux/rootReducer'
@@ -9,8 +9,14 @@ import { getProjectsByGuid } from 'redux/selectors'
 import VariantTagTypeBar from '../graph/VariantTagTypeBar'
 import PedigreeImagePanel from './view-pedigree-image/PedigreeImagePanel'
 import TextFieldView from './view-fields/TextFieldView'
+import Sample from './sample'
+import { ColoredIcon } from '../StyledComponents'
 import { VerticalSpacer } from '../Spacers'
 import {
+  FAMILY_ANALYSIS_STATUS_OPTIONS,
+  FAMILY_FIELD_ANALYSIS_STATUS,
+  FAMILY_FIELD_ANALYSED_BY,
+  FAMILY_FIELD_FIRST_SAMPLE,
   FAMILY_FIELD_RENDER_LOOKUP,
 } from '../../utils/constants'
 
@@ -27,6 +33,25 @@ const InlineHeader = styled(({ inline, ...props }) => <Header {...props} />)`
 const NoWrap = styled.div`
   white-space: nowrap;
 `
+
+const familyFieldRenderProps = {
+  [FAMILY_FIELD_ANALYSIS_STATUS]: {
+    tagOptions: FAMILY_ANALYSIS_STATUS_OPTIONS,
+    tagAnnotation: (value, compact) => (compact ?
+      <Popup trigger={<ColoredIcon name="stop" color={value.color} />} content={value.text} position="top center" /> :
+      <ColoredIcon name="stop" color={value.color} />
+    ),
+  },
+  [FAMILY_FIELD_ANALYSED_BY]: {
+    addConfirm: 'Are you sure you want to add that you analysed this family?',
+    fieldDisplay: (analysedByList, compact) => <AnalysedBy analysedByList={analysedByList} compact={compact} />,
+  },
+  [FAMILY_FIELD_FIRST_SAMPLE]: {
+    showEmptyValues: true,
+    fieldDisplay: (loadedSample, compact) => <Sample loadedSample={loadedSample} hoverDetails={compact} />,
+  },
+}
+
 
 const formatAnalysedByList = analysedByList =>
   analysedByList.map(analysedBy => `${analysedBy.user.display_name} (${analysedBy.date_saved})`).join(', ')
@@ -94,7 +119,7 @@ const Family = ({ project, family, fields = [], showSearchLinks, showVariantTags
       onSubmit: submitFunc,
       modalTitle: `${renderDetails.name} for Family ${family.displayName}`,
       compact,
-      ...(renderDetails.props || {}),
+      ...(familyFieldRenderProps[field.id] || {}),
     })
   }
 

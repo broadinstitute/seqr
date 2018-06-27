@@ -1,11 +1,5 @@
-import React from 'react'
-import { Popup } from 'semantic-ui-react'
-
 import BaseFieldView from '../components/panel/view-fields/BaseFieldView'
 import OptionFieldView from '../components/panel/view-fields/OptionFieldView'
-import { AnalysedBy } from '../components/panel/family'
-import Sample from '../components/panel/sample'
-import { ColoredIcon } from '../components/StyledComponents'
 
 // SAMPLES
 export const DATASET_TYPE_READ_ALIGNMENTS = 'ALIGN'
@@ -54,34 +48,13 @@ export const FAMILY_FIELD_FIRST_SAMPLE = 'firstSample'
 
 export const FAMILY_FIELD_RENDER_LOOKUP = {
   [FAMILY_FIELD_DESCRIPTION]: { name: 'Family Description' },
-  [FAMILY_FIELD_ANALYSIS_STATUS]: {
-    name: 'Analysis Status',
-    component: OptionFieldView,
-    props: {
-      tagOptions: FAMILY_ANALYSIS_STATUS_OPTIONS,
-      tagAnnotation: (value, compact) => (compact ?
-        <Popup trigger={<ColoredIcon name="stop" color={value.color} />} content={value.text} position="top center" /> :
-        <ColoredIcon name="stop" color={value.color} />
-      ),
-    },
-  },
+  [FAMILY_FIELD_ANALYSIS_STATUS]: { name: 'Analysis Status', component: OptionFieldView },
   [FAMILY_FIELD_ANALYSED_BY]: {
     name: 'Analysed By',
     component: BaseFieldView,
     submitArgs: { familyField: 'analysed_by' },
-    props: {
-      addConfirm: 'Are you sure you want to add that you analysed this family?',
-      fieldDisplay: (analysedByList, compact) => <AnalysedBy analysedByList={analysedByList} compact={compact} />,
-    },
   },
-  [FAMILY_FIELD_FIRST_SAMPLE]: {
-    name: 'Data Loaded?',
-    component: BaseFieldView,
-    props: {
-      showEmptyValues: true,
-      fieldDisplay: (loadedSample, compact) => <Sample loadedSample={loadedSample} hoverDetails={compact} />,
-    },
-  },
+  [FAMILY_FIELD_FIRST_SAMPLE]: { name: 'Data Loaded?', component: BaseFieldView },
   [FAMILY_FIELD_ANALYSIS_NOTES]: { name: 'Analysis Notes' },
   [FAMILY_FIELD_ANALYSIS_SUMMARY]: { name: 'Analysis Summary' },
   [FAMILY_FIELD_INTERNAL_NOTES]: { name: 'Internal Notes', internal: true },
