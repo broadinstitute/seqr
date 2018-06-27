@@ -4,31 +4,6 @@ from __future__ import unicode_literals
 
 from django.db import migrations, models
 
-
-def transfer_info_from_dataset_to_sample_fields(apps, schema_editor):
-    # since Django doesn't currently support creating new records inside a RunPython migration.
-    # for cases where a sample is attached to multiple datasets (for example both VARIANTS and read alignments),
-    # use the existing Sample record to store metadata from the newest VARIANTS Dataset, and use
-    # update_projects_in_new_schema to create the additional Sample records for read alignments.
-    Dataset = apps.get_model('seqr', 'Dataset')
-    Sample = apps.get_model('seqr', 'Sample')
-
-    print("\nTransferring metadata from {0} Dataset records to {1} Sample records".format(
-        Dataset.objects.filter(analysis_type="VARIANTS").count(),
-        Sample.objects.count(),
-        ))
-
-    for sample in Sample.objects.all():
-        dataset = sample.dataset_set.filter(analysis_type="VARIANTS").order_by('-loaded_date', '-pk').first()
-        if dataset:
-            sample.dataset_type = dataset.analysis_type
-            sample.elasticsearch_index = dataset.dataset_id
-            sample.dataset_file_path = dataset.source_file_path
-            sample.sample_status = "loaded" if dataset.is_loaded else None
-            sample.loaded_date = dataset.loaded_date
-            sample.save()
-
-
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -76,8 +51,6 @@ class Migration(migrations.Migration):
             name='sample_type',
             field=models.CharField(blank=True, choices=[(b'WES', b'Exome'), (b'WGS', b'Whole Genome'), (b'RNA', b'RNA'), (b'ARRAY', b'ARRAY')], max_length=20, null=True),
         ),
-
-        migrations.RunPython(transfer_info_from_dataset_to_sample_fields),
 
         migrations.RemoveField(
             model_name='dataset',
