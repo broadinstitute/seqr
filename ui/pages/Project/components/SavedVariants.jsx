@@ -177,7 +177,7 @@ class SavedVariants extends React.Component {
               <Dropdown
                 inline
                 options={tagOptions}
-                value={tag || this.props.tableState.categoryFilter || ALL_FILTER}
+                value={tag || variantGuid ? null : (this.props.tableState.categoryFilter || ALL_FILTER)}
                 onChange={this.navigateToTag}
               />
               &nbsp;variants {!allShown && `(${this.props.totalVariantsCount} total)`}
