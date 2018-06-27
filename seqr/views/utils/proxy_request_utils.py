@@ -56,7 +56,7 @@ def proxy_request(request, url, host=None, scheme=None, method=None, session=Non
     scheme = scheme if scheme is not None else request.scheme
     auth = HTTPBasicAuth(*auth_tuple) if auth_tuple is not None else None
 
-    headers = headers if headers is None else _convert_django_META_to_http_headers(request.META)
+    headers = headers if headers is not None else _convert_django_META_to_http_headers(request.META)
     headers['Host'] = host if host is not None else headers.get('Host')
     if filter_request_headers:
         headers = {k: v for k, v in headers.items() if k.lower() not in EXCLUDE_HTTP_REQUEST_HEADERS}
