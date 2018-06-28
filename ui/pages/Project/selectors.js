@@ -165,10 +165,22 @@ export const getSavedVariantExportConfig = createSelector(
 )
 
 // Family table selectors
-export const getFamiliesTableState = state => state.familyTableState
-export const getFamiliesFilter = state => state.familyTableState.familiesFilter || SHOW_ALL
-export const getFamiliesSortOrder = state => state.familyTableState.familiesSortOrder || SORT_BY_FAMILY_NAME
-export const getFamiliesSortDirection = state => state.familyTableState.familiesSortDirection || 1
+export const getFamiliesTableState = createSelector(
+  (state, ownProps) => state[`${(ownProps || {}).tableName || 'family'}TableState`],
+  tableState => tableState,
+)
+export const getFamiliesFilter = createSelector(
+  getFamiliesTableState,
+  familyTableState => familyTableState.familiesFilter || SHOW_ALL,
+)
+export const getFamiliesSortOrder = createSelector(
+  getFamiliesTableState,
+  familyTableState => familyTableState.familiesSortOrder || SORT_BY_FAMILY_NAME,
+)
+export const getFamiliesSortDirection = createSelector(
+  getFamiliesTableState,
+  familyTableState => familyTableState.familiesSortDirection || 1,
+)
 
 /**
  * function that returns an array of family guids that pass the currently-selected

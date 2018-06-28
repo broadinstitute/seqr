@@ -131,7 +131,7 @@ TableHeaderRow.propTypes = {
 const mapStateToProps = (state, ownProps) => ({
   visibleFamiliesCount: getVisibleFamilies(state, ownProps).length,
   totalFamiliesCount: Object.keys(getProjectFamiliesByGuid(state)).length,
-  familiesTableState: getFamiliesTableState(state),
+  familiesTableState: getFamiliesTableState(state, ownProps),
 })
 
 const mapDispatchToProps = {

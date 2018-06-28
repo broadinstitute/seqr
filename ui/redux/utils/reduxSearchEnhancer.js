@@ -1,4 +1,5 @@
 import { reduxSearch, SearchApi, createSearchAction, getSearchSelectors } from 'redux-search'
+import { createSelectorCreator, defaultMemoize } from 'reselect'
 
 const searchApi = new SearchApi()
 
@@ -32,6 +33,16 @@ export const indexAndSearch = resourceName => searchText => (dispatch, getState)
   dispatch(createSearchAction(resourceName)(searchText))
 }
 
-export const getSearchResults = resourceName => getSearchSelectors({ resourceName, resourceSelector }).result
+// redux-search result selector always returns new array objects, but as long as the arrays have the same ordered values
+// reselect should not update the cached value
+const createSortedArraySelector = createSelectorCreator(
+  defaultMemoize,
+  (arr1, arr2) => arr1.join(',') === arr2.join(','),
+)
+
+export const getSearchResults = (resourceName) => {
+  const { result } = getSearchSelectors({ resourceName, resourceSelector })
+  return createSortedArraySelector(result, results => results)
+}
 
 export default reduxSearch({ resourceIndexes, searchApi })

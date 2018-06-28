@@ -78,14 +78,19 @@ FamilyTableRow.propTypes = {
   showDetails: PropTypes.bool,
 }
 
-const FamilyTable = ({ visibleFamilies, loading, headerStatus, showInternalFilters, exportUrls, noDetailFields, ...props }) =>
+const FamilyTable = ({ visibleFamilies, loading, headerStatus, showInternalFilters, exportUrls, noDetailFields, tableName, ...props }) =>
   <div>
     <ExportContainer>
       <ExportTableButton downloads={exportUrls} />
       <HorizontalSpacer width={45} />
     </ExportContainer>
     <Table attached="top">
-      <TableHeaderRow headerStatus={headerStatus} showInternalFilters={showInternalFilters} fields={noDetailFields} />
+      <TableHeaderRow
+        headerStatus={headerStatus}
+        showInternalFilters={showInternalFilters}
+        fields={noDetailFields}
+        tableName={tableName}
+      />
     </Table>
     <Table celled striped padded fixed attached="bottom">
       <Table.Body>
@@ -93,7 +98,7 @@ const FamilyTable = ({ visibleFamilies, loading, headerStatus, showInternalFilte
         {!loading && (visibleFamilies.length > 0 ?
           visibleFamilies.map(family =>
             <FamilyTableRow key={family.familyGuid} family={family} noDetailFields={noDetailFields} {...props} />,
-          ) : <EmptyTableRow />)
+          ) : <EmptyTableRow tableName={tableName} />)
         }
       </Table.Body>
       <Table.Footer><Table.Row><Table.HeaderCell /></Table.Row></Table.Footer>
@@ -113,6 +118,7 @@ FamilyTable.propTypes = {
   showSearchLinks: PropTypes.bool,
   showVariantTags: PropTypes.bool,
   noDetailFields: PropTypes.array,
+  tableName: PropTypes.string,
 }
 
 const mapStateToProps = (state, ownProps) => ({
