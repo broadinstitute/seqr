@@ -5,7 +5,7 @@ import { loadingReducer, createSingleObjectReducer, createObjectsByIdReducer, cr
 import { REQUEST_PROJECTS, RECEIVE_DATA } from 'redux/rootReducer'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 import { getProject, getProjectFamiliesByGuid } from 'pages/Project/selectors'
-import { SHOW_ALL, SORT_BY_FAMILY_NAME, SORT_BY_FAMILY_GUID } from './constants'
+import { SHOW_ALL, SHOW_IN_REVIEW, SORT_BY_FAMILY_NAME, SORT_BY_FAMILY_ADDED_DATE, SORT_BY_FAMILY_GUID } from './constants'
 
 // action creators and reducers in one file as suggested by https://github.com/erikras/ducks-modular-redux
 
@@ -147,6 +147,11 @@ export const reducers = {
     familiesFilter: SHOW_ALL,
     familiesSortOrder: SORT_BY_FAMILY_NAME,
     familiesSortDirection: 1,
+  }, false),
+  caseReviewTableState: createSingleObjectReducer(UPDATE_FAMILY_TABLE_STATE, {
+    familiesFilter: SHOW_IN_REVIEW,
+    familiesSortOrder: SORT_BY_FAMILY_ADDED_DATE,
+    familiesSortDirection: 0,
   }, false),
   savedVariantTableState: createSingleObjectReducer(UPDATE_SAVED_VARIANT_TABLE_STATE, {
     hideExcluded: false,

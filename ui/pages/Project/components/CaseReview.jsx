@@ -13,19 +13,14 @@ import {
 import { getProject, getCaseReviewStatusCounts } from '../selectors'
 import FamilyTable from './FamilyTable/FamilyTable'
 
-const DETAIL_FIELDS = [
+const FIELDS = [
   { id: FAMILY_FIELD_DESCRIPTION },
   { id: FAMILY_FIELD_ANALYSED_BY },
   { id: FAMILY_FIELD_ANALYSIS_NOTES },
   { id: FAMILY_FIELD_ANALYSIS_SUMMARY },
-]
-
-const NO_DETAIL_FIELDS = [
   { id: FAMILY_FIELD_INTERNAL_NOTES, canEdit: true },
   { id: FAMILY_FIELD_INTERNAL_SUMMARY, canEdit: true },
 ]
-
-const ALL_FIELDS = DETAIL_FIELDS.concat(NO_DETAIL_FIELDS)
 
 const CaseReviewTable = (props) => {
   const headerStatus = { title: 'Individual Statuses', data: props.caseReviewStatusCounts }
@@ -38,10 +33,11 @@ const CaseReviewTable = (props) => {
       <FamilyTable
         showInternalFilters
         editCaseReview
+        showDetails
+        tableName="caseReview"
         headerStatus={headerStatus}
         exportUrls={exportUrls}
-        detailFields={ALL_FIELDS}
-        noDetailFields={NO_DETAIL_FIELDS}
+        detailFields={FIELDS}
       />
     </div>
   )

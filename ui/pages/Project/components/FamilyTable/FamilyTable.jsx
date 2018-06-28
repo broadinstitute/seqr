@@ -52,7 +52,7 @@ class FamilyTableRow extends React.PureComponent {
             showVariantTags={showVariantTags}
             fields={this.state.showDetails ? detailFields : noDetailFields}
             compact={!this.state.showDetails}
-            annotation={<ToggleIcon rotated={this.state.showDetails ? undefined : 'counterclockwise'} onClick={this.toggle} />}
+            annotation={detailFields && noDetailFields && <ToggleIcon rotated={this.state.showDetails ? undefined : 'counterclockwise'} onClick={this.toggle} />}
           />
           {this.state.showDetails && family.individuals.map(individual => (
             <IndividualRow
