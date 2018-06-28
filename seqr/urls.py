@@ -38,10 +38,6 @@ from seqr.views.apis.saved_variant_api import \
     update_variant_note_handler, \
     delete_variant_note_handler
 
-from seqr.views.pages.case_review_page import \
-    export_case_review_families_handler, \
-    export_case_review_individuals_handler
-
 from seqr.views.pages.dashboard_page import \
     dashboard_page_data, \
     export_projects_table_handler
@@ -87,8 +83,6 @@ api_endpoints = {
 
     'dashboard': dashboard_page_data,
     'dashboard/export_projects_table': export_projects_table_handler,
-    'project/(?P<project_guid>[^/]+)/export_case_review_families': export_case_review_families_handler,
-    'project/(?P<project_guid>[^/]+)/export_case_review_individuals': export_case_review_individuals_handler,
 
     'project/(?P<project_guid>[^/]+)/details': project_page_data,
     'project/(?P<project_guid>[^/]+)/export_project_individuals': export_project_individuals_handler,

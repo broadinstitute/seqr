@@ -61,6 +61,35 @@ export const FAMILY_FIELD_RENDER_LOOKUP = {
   [FAMILY_FIELD_INTERNAL_SUMMARY]: { name: 'Internal Summary', internal: true },
 }
 
+// INDIVIDUAL FIELDS
+
+export const SEX_OPTIONS = [
+  { value: 'M', label: 'Male' },
+  { value: 'F', label: 'Female' },
+  { value: 'U', label: '?' },
+]
+
+export const SEX_LOOKUP = SEX_OPTIONS.reduce(
+  (acc, opt) => ({
+    ...acc,
+    ...{ [opt.value]: opt.label === '?' ? 'Unknown' : opt.label },
+  }), {},
+)
+
+export const AFFECTED_OPTIONS = [
+  { value: 'A', label: 'Affected' },
+  { value: 'N', label: 'Unaffected' },
+  { value: 'U', label: '?' },
+]
+
+export const AFFECTED_LOOKUP = AFFECTED_OPTIONS.reduce(
+  (acc, opt) => ({
+    ...acc,
+    ...{ [opt.value]: opt.label === '?' ? 'Unknown' : opt.label },
+  }), {},
+)
+
+
 // CLINVAR
 
 export const CLINSIG_SEVERITY = {

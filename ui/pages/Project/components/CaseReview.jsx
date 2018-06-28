@@ -10,7 +10,7 @@ import {
   FAMILY_FIELD_INTERNAL_NOTES,
   FAMILY_FIELD_INTERNAL_SUMMARY,
 } from 'shared/utils/constants'
-import { getProject, getCaseReviewStatusCounts } from '../selectors'
+import { getCaseReviewStatusCounts, getFamiliesExportConfig, getIndividualsExportConfig } from '../selectors'
 import FamilyTable from './FamilyTable/FamilyTable'
 
 const FIELDS = [
@@ -22,11 +22,13 @@ const FIELDS = [
   { id: FAMILY_FIELD_INTERNAL_SUMMARY, canEdit: true },
 ]
 
+const tableName = 'Case Review'
+
 const CaseReviewTable = (props) => {
   const headerStatus = { title: 'Individual Statuses', data: props.caseReviewStatusCounts }
   const exportUrls = [
-    { name: 'Families', url: `/api/project/${props.project.projectGuid}/export_case_review_families` },
-    { name: 'Individuals', url: `/api/project/${props.project.projectGuid}/export_case_review_individuals` },
+    { name: 'Families', data: props.familyExportConfig },
+    { name: 'Individuals', data: props.individualsExportConfig },
   ]
   return (
     <div>
@@ -34,7 +36,7 @@ const CaseReviewTable = (props) => {
         showInternalFilters
         editCaseReview
         showDetails
-        tableName="caseReview"
+        tableName={tableName}
         headerStatus={headerStatus}
         exportUrls={exportUrls}
         detailFields={FIELDS}
@@ -47,13 +49,15 @@ const CaseReviewTable = (props) => {
 export { CaseReviewTable as CaseReviewTableComponent }
 
 CaseReviewTable.propTypes = {
-  project: PropTypes.object.isRequired,
   caseReviewStatusCounts: PropTypes.array,
+  familyExportConfig: PropTypes.object,
+  individualsExportConfig: PropTypes.object,
 }
 
 const mapStateToProps = state => ({
-  project: getProject(state),
   caseReviewStatusCounts: getCaseReviewStatusCounts(state),
+  familyExportConfig: getFamiliesExportConfig(state, { tableName, internal: true }),
+  individualsExportConfig: getIndividualsExportConfig(state, { tableName, internal: true }),
 })
 
 export default connect(mapStateToProps)(CaseReviewTable)

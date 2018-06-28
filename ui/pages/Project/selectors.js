@@ -3,6 +3,7 @@ import { createSelector } from 'reselect'
 
 import { getSearchResults } from 'redux/utils/reduxSearchEnhancer'
 import { FAMILY_ANALYSIS_STATUS_OPTIONS } from 'shared/utils/constants'
+import { toCamelcase, toSnakecase } from 'shared/utils/stringUtils'
 
 import {
   getProjectsByGuid, getFamiliesByGuid, getIndividualsByGuid, getSamplesByGuid, getUser,
@@ -15,7 +16,9 @@ import {
   FAMILY_FILTER_OPTIONS,
   FAMILY_SORT_OPTIONS,
   FAMILY_EXPORT_DATA,
+  INTERNAL_FAMILY_EXPORT_DATA,
   INDIVIDUAL_EXPORT_DATA,
+  INTERNAL_INDIVIDUAL_EXPORT_DATA,
   SORT_BY_FAMILY_GUID,
   VARIANT_SORT_OPTONS,
   VARIANT_EXPORT_DATA,
@@ -166,7 +169,7 @@ export const getSavedVariantExportConfig = createSelector(
 
 // Family table selectors
 export const getFamiliesTableState = createSelector(
-  (state, ownProps) => state[`${(ownProps || {}).tableName || 'family'}TableState`],
+  (state, ownProps) => state[`${toCamelcase((ownProps || {}).tableName) || 'family'}TableState`],
   tableState => tableState,
 )
 export const getFamiliesFilter = createSelector(
@@ -259,34 +262,39 @@ export const getVisibleSortedFamiliesWithIndividuals = createSelector(
   },
 )
 
+export const getVisibleSortedIndividuals = createSelector(
+  getVisibleSortedFamiliesWithIndividuals,
+  families => families.reduce((acc, family) =>
+    [...acc, ...family.individuals.map(individual => ({ ...individual, familyId: family.familyId }))], [],
+  ),
+)
+
+export const getEntityExportConfig = (project, rawData, tableName, fileName, fields) => ({
+  filename: `${project.name.replace(' ', '_').toLowerCase()}_${tableName ? `${toSnakecase(tableName)}_` : ''}${fileName}`,
+  rawData,
+  headers: fields.map(config => config.header),
+  processRow: family => fields.map((config) => {
+    const val = family[config.field]
+    return config.format ? config.format(val) : val
+  }),
+})
+
 export const getFamiliesExportConfig = createSelector(
   getProject,
   getVisibleSortedFamiliesWithIndividuals,
-  (project, families) => ({
-    filename: `${project.name.replace(' ', '_').toLowerCase()}_families`,
-    rawData: families,
-    headers: FAMILY_EXPORT_DATA.map(config => config.header),
-    processRow: family => FAMILY_EXPORT_DATA.map((config) => {
-      const val = family[config.field]
-      return config.format ? config.format(val) : val
-    }),
-  }),
+  (state, ownProps) => (ownProps || {}).tableName,
+  () => 'families',
+  (state, ownProps) => ((ownProps || {}).internal ? FAMILY_EXPORT_DATA.concat(INTERNAL_FAMILY_EXPORT_DATA) : FAMILY_EXPORT_DATA),
+  getEntityExportConfig,
 )
 
 export const getIndividualsExportConfig = createSelector(
   getProject,
-  getVisibleSortedFamiliesWithIndividuals,
-  (project, families) => ({
-    filename: `${project.name.replace(' ', '_').toLowerCase()}_individuals`,
-    rawData: families.reduce((acc, family) =>
-      [...acc, ...family.individuals.map(individual => ({ ...individual, familyId: family.familyId }))], [],
-    ),
-    headers: INDIVIDUAL_EXPORT_DATA.map(config => config.header),
-    processRow: individual => INDIVIDUAL_EXPORT_DATA.map((config) => {
-      const val = individual[config.field]
-      return config.format ? config.format(val) : val
-    }),
-  }),
+  getVisibleSortedIndividuals,
+  (state, ownProps) => (ownProps || {}).tableName,
+  () => 'individuals',
+  (state, ownProps) => ((ownProps || {}).internal ? INDIVIDUAL_EXPORT_DATA.concat(INTERNAL_INDIVIDUAL_EXPORT_DATA) : INDIVIDUAL_EXPORT_DATA),
+  getEntityExportConfig,
 )
 
 export const getCaseReviewStatusCounts = createSelector(

@@ -5,6 +5,8 @@ import PropTypes from 'prop-types'
 
 import { Icon, Popup } from 'semantic-ui-react'
 
+import { SEX_LOOKUP, AFFECTED_LOOKUP } from 'shared/utils/constants'
+
 const iconStyle = { fontSize: '13px !important' }
 const rotate45deg = {
   msTransform: 'rotate(45deg)', /* IE 9 */
@@ -36,18 +38,6 @@ const ICON_LOOKUP = {
   UU: { icon: 'help' },
 }
 
-const SEX_LOOKUP = {
-  M: 'Male',
-  F: 'Female',
-  U: 'Unknown',
-}
-
-const STATUS_LOOKUP = {
-  A: 'Affected',
-  N: 'Not Affected',
-  U: 'Unknown',
-}
-
 const PedigreeIcon = (props) => {
   const iconProps = ICON_LOOKUP[`${props.sex}${props.affected}`]
   return <Popup
@@ -55,7 +45,7 @@ const PedigreeIcon = (props) => {
     content={
       <div>
         <b>Sex:</b> {SEX_LOOKUP[props.sex] || 'INVALID'} <br />
-        <b>Status:</b> {STATUS_LOOKUP[props.affected] || 'INVALID'}
+        <b>Status:</b> {AFFECTED_LOOKUP[props.affected] || 'INVALID'}
         {props.popupContent}
       </div>
     }

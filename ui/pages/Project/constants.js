@@ -19,6 +19,8 @@ import {
   FAMILY_ANALYSIS_STATUS_OPTIONS,
   SAMPLE_STATUS_LOADED,
   DATASET_TYPE_VARIANT_CALLS,
+  SEX_LOOKUP,
+  AFFECTED_LOOKUP,
 } from 'shared/utils/constants'
 
 export const CASE_REVIEW_STATUS_NOT_IN_REVIEW = 'N'
@@ -376,15 +378,10 @@ export const FAMILY_EXPORT_DATA = [
   { header: 'Analysis Notes', field: 'analysisNotes', format: stripMarkdown },
 ]
 
-const SEX_LOOKUP = {
-  M: 'Male',
-  F: 'Female',
-}
-
-const AFFECTED_LOOKUP = {
-  A: 'Affected',
-  N: 'Unaffected',
-}
+export const INTERNAL_FAMILY_EXPORT_DATA = [
+  { header: 'Internal Case Review Summary', field: 'internalCaseReviewSummary', format: stripMarkdown },
+  { header: 'Internal Case Review Notes', field: 'internalCaseReviewNotes', format: stripMarkdown },
+]
 
 export const INDIVIDUAL_EXPORT_DATA = [
   { header: 'Family ID', field: 'familyId' },
@@ -412,6 +409,13 @@ export const INDIVIDUAL_EXPORT_DATA = [
         ''
     ),
   },
+]
+
+export const INTERNAL_INDIVIDUAL_EXPORT_DATA = [
+  { header: 'Case Review Status', field: 'caseReviewStatus', format: status => CASE_REVIEW_STATUS_OPT_LOOKUP[status].name },
+  { header: 'Case Review Status Last Modified', field: 'caseReviewStatusLastModifiedDate' },
+  { header: 'Case Review Status Last Modified By', field: 'caseReviewStatusLastModifiedBy' },
+  { header: 'Case Review Discussion', field: 'caseReviewDiscussion', format: stripMarkdown },
 ]
 
 export const SORT_BY_FAMILY_GUID = 'FAMILY_GUID'

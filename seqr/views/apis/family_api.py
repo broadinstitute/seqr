@@ -10,9 +10,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.individual_api import delete_individuals
-from seqr.utils.model_sync_utils import convert_html_to_plain_text  # TODO should be markdown not html
 
-from seqr.views.utils.export_table_utils import export_table
 from seqr.views.utils.json_to_orm_utils import update_family_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_family
@@ -182,80 +180,3 @@ def _deprecated_update_original_family_field(project, family, field_name, value)
     elif field_name == "postDiscoveryOmimNumber":
         base_family.post_discovery_omim_number = value
     base_family.save()
-
-
-def export_families(
-        filename_prefix,
-        families,
-        file_format,
-        include_project_name=False,
-        include_internal_case_review_summary=False,
-        include_internal_case_review_notes=False,
-):
-    """Export Families table.
-
-    Args:
-        filename_prefix (string): Filename wihtout
-        families (list): List of Django Family objects to include in the table
-        file_format (string): "xls" or "tsv"
-
-    Returns:
-        Django HttpResponse object with the table data as an attachment.
-    """
-    header = []
-
-    if include_project_name:
-        header.append('Project')
-
-    header.extend([
-        'Family ID',
-        'Display Name',
-        'Created Date',
-        'Description',
-        'Analysis Status',
-        'Analysis Summary',
-        'Analysis Notes',
-    ])
-
-    if include_internal_case_review_summary:
-        header.append('Internal Case Review Summary')
-    if include_internal_case_review_notes:
-        header.append('Internal Case Review Notes')
-
-    rows = []
-    analysis_status_lookup = dict(Family.ANALYSIS_STATUS_CHOICES)
-    for family in families:
-        row = []
-        if include_project_name:
-            row.append(family.project.name or family.project.project_id)
-
-        row.extend([
-            family.family_id,
-            family.display_name,
-            family.created_date,
-            family.description,
-            analysis_status_lookup.get(family.analysis_status, family.analysis_status),
-            convert_html_to_plain_text(
-                family.analysis_summary,
-                remove_line_breaks=(file_format == 'tsv')),
-            convert_html_to_plain_text(
-                family.analysis_notes,
-                remove_line_breaks=(file_format == 'tsv')),
-        ])
-
-        if include_internal_case_review_summary:
-            row.append(
-                convert_html_to_plain_text(
-                    family.internal_case_review_summary,
-                    remove_line_breaks=(file_format == 'tsv')),
-            )
-        if include_internal_case_review_notes:
-            row.append(
-                convert_html_to_plain_text(
-                    family.internal_case_review_notes,
-                    remove_line_breaks=(file_format == 'tsv')),
-            )
-
-        rows.append(row)
-
-    return export_table(filename_prefix, header, rows, file_format)
