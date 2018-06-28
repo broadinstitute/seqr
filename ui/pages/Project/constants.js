@@ -248,7 +248,10 @@ export const FAMILY_FILTER_OPTIONS = [
     value: SHOW_IN_REVIEW,
     category: 'Analysis Status:',
     name: 'In Review',
-    createFilter: caseReviewStatusFilter(CASE_REVIEW_STATUS_IN_REVIEW),
+    createFilter: individualsByGuid => family =>
+      family.individualGuids.map(individualGuid => individualsByGuid[individualGuid]).every(
+        individual => individual.caseReviewStatus === CASE_REVIEW_STATUS_IN_REVIEW,
+      ),
   },
   {
     value: SHOW_UNCERTAIN,
