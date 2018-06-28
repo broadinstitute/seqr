@@ -852,7 +852,7 @@ function addAdditionalContactName(){
 /**
  * Listens and updates the MME submission with regards to how much variant data to share
  */
-function limitSharingOfVariantData(divId,singlePatientGenotypeInfo){
+function limitSharingOfVariantData(divId,singlePatientGenotypeInfoId){
 	var lockedIcon='<a href="javascript:limitSharingOfVariantData('+"'"+divId+ "'" +');">&nbsp&nbsp<i class="fas fa-lock fa-lg" aria-hidden="true"></i></a>';
 	var unlockedIcon='<a href="javascript:limitSharingOfVariantData('+"'"+divId+ "'" +');">&nbsp&nbsp<i class="fas fa-lock-open fa-lg" aria-hidden="true"></i></a>';
 	var limit_sharing_of_variant_level_data = JSON.parse(sessionStorage.limit_sharing_of_variant_level_data);
@@ -861,13 +861,13 @@ function limitSharingOfVariantData(divId,singlePatientGenotypeInfo){
 		$('#'+divId).empty();
 		$('#'+divId).append(lockedIcon);	
 		$('#'+divId).removeClass('open').addClass('closed');
-		limit_sharing_of_variant_level_data[singlePatientGenotypeInfo]='restrict';
+		limit_sharing_of_variant_level_data[singlePatientGenotypeInfoId]='restrict';
 	}
 	else{
 		$('#'+divId).empty();
 		$('#'+divId).append(unlockedIcon);
 		$('#'+divId).removeClass('closed').addClass('open');
-		limit_sharing_of_variant_level_data[singlePatientGenotypeInfo]='share';
+		limit_sharing_of_variant_level_data[singlePatientGenotypeInfoId]='share';
 	}
 	
 	//serialize back
@@ -1207,7 +1207,8 @@ function showMMECandidates(result){
 		 		html += '<tr>';
 				
 		 		//using k as a genotype ID of sorts for later comparison
-		 		var singlePatientGenotypeInfo = k.toString();
+		 		var singlePatientGenotypeInfoId = k.toString();
+		 		var singlePatientGenotypeInfo = singlePatientGenotypeInfoId;
 		 		
 		 		html += '<td><p>'  +  patient['genomicFeatures'][k]['gene']['id']   + '</p></td>';
 		 		singlePatientGenotypeInfo += ',' + patient['genomicFeatures'][k]['gene']['id'];
@@ -1229,7 +1230,7 @@ function showMMECandidates(result){
 		 		
 		 		var limitSharingDivId='limit-variant-sharing-' + k.toString();
 		 		limit_sharing_of_variant_level_data[k.toString()]='share';
-		 		html += '<td id="' + limitSharingDivId + '" class="open"><a href="javascript:limitSharingOfVariantData('+"'"+limitSharingDivId+ "'" + ",'"+singlePatientGenotypeInfo+ "'" +');">&nbsp&nbsp<i class="fas fa-lock-open fa-lg" aria-hidden="true"></i></a></td>';
+		 		html += '<td id="' + limitSharingDivId + '" class="open"><a href="javascript:limitSharingOfVariantData('+"'"+limitSharingDivId+ "'" + ",'"+singlePatientGenotypeInfoId+ "'" +');">&nbsp&nbsp<i class="fas fa-lock-open fa-lg" aria-hidden="true"></i></a></td>';
 		 		
 		 		singlePatientGenotypeInfo += ',' + patient['genomicFeatures'][k]['variant']['referenceName'];
 		 		singlePatientGenotypeInfo += ',' + patient['genomicFeatures'][k]['variant']['start'] ;
