@@ -67,7 +67,7 @@ class IndividualRow extends React.Component
       s.sampleStatus === SAMPLE_STATUS_LOADED,
     )
     loadedSamples = orderBy(loadedSamples, [s => s.loadedDate], 'desc')
-    // only show first and latest datasets
+    // only show first and latest samples
     loadedSamples.splice(1, loadedSamples.length - 2)
 
     const sampleDetails = loadedSamples.map((sample, i) =>

@@ -10,7 +10,6 @@ import os
 import tempfile
 
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import MultipleObjectsReturned
 from django.views.decorators.csrf import csrf_exempt
 
 from seqr.model_utils import get_or_create_seqr_model, update_seqr_model, delete_seqr_model
@@ -19,7 +18,6 @@ from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.pedigree_image_api import update_pedigree_images
 from seqr.views.apis.phenotips_api import create_patient, set_patient_hpo_terms, delete_patient, \
     PhenotipsException
-from seqr.utils.model_sync_utils import convert_html_to_plain_text  # TODO should be markdown not html
 from seqr.views.utils.export_table_utils import export_table
 from seqr.views.utils.json_to_orm_utils import update_individual_from_json
 from seqr.views.utils.json_utils import create_json_response
@@ -27,10 +25,6 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_individual, _get_js
 from seqr.views.utils.pedigree_info_utils import parse_pedigree_table, validate_fam_file_records, JsonConstants
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_permissions
 
-from xbrowse_server.base.models import \
-    Project as BaseProject, \
-    Family as BaseFamily, \
-    Individual as BaseIndividual
 
 logger = logging.getLogger(__name__)
 
@@ -544,7 +538,7 @@ def export_individuals(
             i.maternal_id,
             _SEX_TO_EXPORTED_VALUE.get(i.sex),
             __AFFECTED_TO_EXPORTED_VALUE.get(i.affected),
-            convert_html_to_plain_text(i.notes),
+            i.notes,  # TODO should strip markdown (or be moved to client-side export)
         ])
 
         if include_display_name:
