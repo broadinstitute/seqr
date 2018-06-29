@@ -2,13 +2,13 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { connect } from 'react-redux'
-import { Grid } from 'semantic-ui-react'
 import orderBy from 'lodash/orderBy'
 
 import PedigreeIcon from 'shared/components/icons/PedigreeIcon'
 import TextFieldView from 'shared/components/panel/view-fields/TextFieldView'
 import PhenotipsDataPanel from 'shared/components/panel/view-phenotips-info/PhenotipsDataPanel'
 import Sample from 'shared/components/panel/sample'
+import { FamilyLayout } from 'shared/components/panel/family'
 import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
 
 import { updateIndividual } from 'redux/rootReducer'
@@ -76,99 +76,111 @@ class IndividualRow extends React.Component
       </div>,
     )
 
-    const individualRow = (
-      <Grid stackable>
-        <Grid.Row>
-          <Grid.Column width={3}>
-            <span>
-              <div>
-                <PedigreeIcon sex={sex} affected={affected} />
-                &nbsp;
-                {displayName || individualId}
-              </div>
-              <div>
-                {
-                  (!family.pedigreeImage && ((paternalId && paternalId !== '.') || (maternalId && maternalId !== '.'))) ? (
-                    <Detail>
-                      child of &nbsp;
-                      <i>{(paternalId && maternalId) ? `${paternalId} and ${maternalId}` : (paternalId || maternalId) }</i>
-                      <br />
-                    </Detail>
-                  ) : null
-                }
-                <Detail>
-                  ADDED {new Date(createdDate).toLocaleDateString().toUpperCase()}
-                </Detail>
-              </div>
-            </span>
-          </Grid.Column>
-          <Grid.Column width={10}>
-            {
-              (editCaseReview ||
-              (individual.caseReviewStatus && individual.caseReviewStatus !== CASE_REVIEW_STATUS_NOT_IN_REVIEW) ||
-              (individual.caseReviewStatus === CASE_REVIEW_STATUS_MORE_INFO_NEEDED)) ?
-                <div>
-                  {!editCaseReview &&
-                    <span>
-                      <b>Case Review - Status:</b>
-                      <HorizontalSpacer width={15} />
-                      <ColoredSpan color={caseReviewStatusOpt ? caseReviewStatusOpt.color : 'black'}>
-                        <b>{caseReviewStatusOpt ? caseReviewStatusOpt.name : individual.caseReviewStatus}</b>
-                      </ColoredSpan>
-                    </span>
-                  }
-                  {!editCaseReview && individual.caseReviewStatus === CASE_REVIEW_STATUS_MORE_INFO_NEEDED && <br />}
-                  <TextFieldView
-                    isVisible={
-                      individual.caseReviewStatus === CASE_REVIEW_STATUS_MORE_INFO_NEEDED
-                      || (editCaseReview && individual.caseReviewDiscussion) || false
-                    }
-                    fieldName={editCaseReview ? 'Case Review Discussion' : 'Discussion'}
-                    field="caseReviewDiscussion"
-                    idField="individualGuid"
-                    initialValues={individual}
-                    modalTitle={`Case Review Discussion for Individual ${individual.individualId}`}
-                    onSubmit={this.props.updateIndividual}
-                  />
-                  <VerticalSpacer height={10} />
-                </div>
-                : null
+    const leftContent =
+      <div>
+        <div>
+          <PedigreeIcon sex={sex} affected={affected} />
+          &nbsp;
+          {displayName || individualId}
+        </div>
+        <div>
+          {
+            (!family.pedigreeImage && ((paternalId && paternalId !== '.') || (maternalId && maternalId !== '.'))) ? (
+              <Detail>
+                child of &nbsp;
+                <i>{(paternalId && maternalId) ? `${paternalId} and ${maternalId}` : (paternalId || maternalId) }</i>
+                <br />
+              </Detail>
+            ) : null
+          }
+          <Detail>
+            ADDED {new Date(createdDate).toLocaleDateString().toUpperCase()}
+          </Detail>
+        </div>
+      </div>
+
+    const rightContent = editCaseReview ?
+      <CaseReviewDropdownContainer>
+        <CaseReviewStatusDropdown individual={individual} />
+        {
+          individual.caseReviewStatusLastModifiedDate ? (
+            <Detail>
+              CHANGED ON {new Date(individual.caseReviewStatusLastModifiedDate).toLocaleDateString()}
+              { individual.caseReviewStatusLastModifiedBy && ` BY ${individual.caseReviewStatusLastModifiedBy}` }
+            </Detail>
+          ) : null
+        }
+      </CaseReviewDropdownContainer> : sampleDetails
+
+    let fields = []
+    if (editCaseReview ||
+      (individual.caseReviewStatus && individual.caseReviewStatus !== CASE_REVIEW_STATUS_NOT_IN_REVIEW) ||
+      (individual.caseReviewStatus === CASE_REVIEW_STATUS_MORE_INFO_NEEDED)) {
+      fields.push({
+        content: (
+          <div key="case review">
+            {!editCaseReview &&
+              <span>
+                <b>Case Review - Status:</b>
+                <HorizontalSpacer width={15} />
+                <ColoredSpan color={caseReviewStatusOpt ? caseReviewStatusOpt.color : 'black'}>
+                  <b>{caseReviewStatusOpt ? caseReviewStatusOpt.name : individual.caseReviewStatus}</b>
+                </ColoredSpan>
+              </span>
             }
+            {!editCaseReview && individual.caseReviewStatus === CASE_REVIEW_STATUS_MORE_INFO_NEEDED && <br />}
             <TextFieldView
-              isEditable={(user.is_staff || project.canEdit) && !editCaseReview}
-              fieldName="Individual Notes"
-              field="notes"
+              isVisible={
+                individual.caseReviewStatus === CASE_REVIEW_STATUS_MORE_INFO_NEEDED
+                || (editCaseReview && individual.caseReviewDiscussion) || false
+              }
+              fieldName={editCaseReview ? 'Case Review Discussion' : 'Discussion'}
+              field="caseReviewDiscussion"
               idField="individualGuid"
               initialValues={individual}
-              modalTitle={`Notes for Individual ${individual.individualId}`}
+              modalTitle={`Case Review Discussion for Individual ${individual.individualId}`}
               onSubmit={this.props.updateIndividual}
             />
-            <PhenotipsDataPanel
-              individual={individual}
-              showDetails
-              showEditPhenotipsLink={project.canEdit && !editCaseReview}
-            />
-          </Grid.Column>
-          <Grid.Column width={3}>
-            {
-              editCaseReview ?
-                <CaseReviewDropdownContainer>
-                  <CaseReviewStatusDropdown individual={individual} />
-                  {
-                    individual.caseReviewStatusLastModifiedDate ? (
-                      <Detail>
-                        CHANGED ON {new Date(individual.caseReviewStatusLastModifiedDate).toLocaleDateString()}
-                        { individual.caseReviewStatusLastModifiedBy && ` BY ${individual.caseReviewStatusLastModifiedBy}` }
-                      </Detail>
-                    ) : null
-                  }
-                </CaseReviewDropdownContainer> : sampleDetails
-            }
-          </Grid.Column>
-        </Grid.Row>
-      </Grid>)
+            <VerticalSpacer height={10} />
+          </div>
+        ),
+      })
+    }
+    fields = fields.concat([
+      {
+        content: (
+          <TextFieldView
+            key="notes"
+            isEditable={(user.is_staff || project.canEdit) && !editCaseReview}
+            fieldName="Individual Notes"
+            field="notes"
+            idField="individualGuid"
+            initialValues={individual}
+            modalTitle={`Notes for Individual ${individual.individualId}`}
+            onSubmit={this.props.updateIndividual}
+          />
+        ),
+      },
+      {
+        content: (
+          <PhenotipsDataPanel
+            key="phenotips"
+            individual={individual}
+            showDetails
+            showEditPhenotipsLink={project.canEdit && !editCaseReview}
+          />
+        ),
+      },
+    ])
 
-    return individualRow
+    return (
+      <FamilyLayout
+        fields={fields}
+        fieldDisplay={field => field.content}
+        leftContent={leftContent}
+        rightContent={rightContent}
+      />
+    )
   }
 }
 

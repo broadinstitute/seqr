@@ -5,15 +5,14 @@ import { Table, Icon } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 import { withRouter } from 'react-router'
 
-import Family from 'shared/components/panel/family'
 import ExportTableButton from 'shared/components/buttons/export-table/ExportTableButton'
 import TableLoading from 'shared/components/table/TableLoading'
 import { HorizontalSpacer } from 'shared/components/Spacers'
 
 import { getVisibleSortedFamiliesWithIndividuals, getProjectDetailsIsLoading } from '../../selectors'
+import { FamilyDetail } from '../FamilyPage'
 import TableHeaderRow from './header/TableHeaderRow'
 import EmptyTableRow from './EmptyTableRow'
-import IndividualRow from './IndividualRow'
 
 
 const ExportContainer = styled.span`
@@ -45,23 +44,18 @@ class FamilyTableRow extends React.PureComponent {
     return (
       <Table.Row>
         <Table.Cell>
-          <Family
+          <FamilyDetail
             key={family.familyGuid}
             family={family}
+            showFamilyPageLink
             showSearchLinks={this.state.showDetails && showSearchLinks}
             showVariantTags={showVariantTags}
             fields={this.state.showDetails ? detailFields : noDetailFields}
             compact={!this.state.showDetails}
             annotation={detailFields && noDetailFields && <ToggleIcon rotated={this.state.showDetails ? undefined : 'counterclockwise'} onClick={this.toggle} />}
+            individuals={this.state.showDetails && family.individuals}
+            editCaseReview={editCaseReview}
           />
-          {this.state.showDetails && family.individuals.map(individual => (
-            <IndividualRow
-              key={individual.individualGuid}
-              family={family}
-              individual={individual}
-              editCaseReview={editCaseReview}
-            />),
-          )}
         </Table.Cell>
       </Table.Row>
     )

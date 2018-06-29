@@ -11,9 +11,8 @@ import {
   FAMILY_FIELD_DESCRIPTION,
   FAMILY_FIELD_ANALYSIS_STATUS,
   FAMILY_FIELD_ANALYSED_BY,
-  FAMILY_FIELD_ANALYSIS_NOTES,
-  FAMILY_FIELD_ANALYSIS_SUMMARY,
   FAMILY_FIELD_FIRST_SAMPLE,
+  FAMILY_DETAIL_FIELDS,
 } from 'shared/utils/constants'
 import {
   getProject,
@@ -82,14 +81,6 @@ const mapSectionStateToProps = state => ({
 
 const ProjectSection = connect(mapSectionStateToProps)(ProjectSectionComponent)
 
-const DETAIL_FIELDS = [
-  { id: FAMILY_FIELD_DESCRIPTION, canEdit: true },
-  { id: FAMILY_FIELD_ANALYSIS_STATUS, canEdit: true },
-  { id: FAMILY_FIELD_ANALYSED_BY, canEdit: true },
-  { id: FAMILY_FIELD_ANALYSIS_NOTES, canEdit: true },
-  { id: FAMILY_FIELD_ANALYSIS_SUMMARY, canEdit: true },
-]
-
 const NO_DETAIL_FIELDS = [
   { id: FAMILY_FIELD_ANALYSIS_STATUS },
   { id: FAMILY_FIELD_ANALYSED_BY, colWidth: 2 },
@@ -135,7 +126,7 @@ const ProjectPageUI = (props) => {
             exportUrls={exportUrls}
             showSearchLinks
             showVariantTags
-            detailFields={DETAIL_FIELDS}
+            detailFields={FAMILY_DETAIL_FIELDS}
             noDetailFields={NO_DETAIL_FIELDS}
           />
         </Grid.Column>

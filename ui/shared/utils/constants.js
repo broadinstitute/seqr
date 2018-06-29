@@ -61,6 +61,14 @@ export const FAMILY_FIELD_RENDER_LOOKUP = {
   [FAMILY_FIELD_INTERNAL_SUMMARY]: { name: 'Internal Summary', internal: true },
 }
 
+export const FAMILY_DETAIL_FIELDS = [
+  { id: FAMILY_FIELD_DESCRIPTION, canEdit: true },
+  { id: FAMILY_FIELD_ANALYSIS_STATUS, canEdit: true },
+  { id: FAMILY_FIELD_ANALYSED_BY, canEdit: true },
+  { id: FAMILY_FIELD_ANALYSIS_NOTES, canEdit: true },
+  { id: FAMILY_FIELD_ANALYSIS_SUMMARY, canEdit: true },
+]
+
 // INDIVIDUAL FIELDS
 
 export const SEX_OPTIONS = [

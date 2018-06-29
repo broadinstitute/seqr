@@ -2,6 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Grid, Header, Popup } from 'semantic-ui-react'
+import { Link } from 'react-router-dom'
 import styled from 'styled-components'
 
 import { updateFamily } from 'redux/rootReducer'
@@ -103,7 +104,14 @@ FamilyLayout.propTypes = {
   rightContent: PropTypes.node,
 }
 
-const Family = ({ project, family, fields = [], showSearchLinks, showVariantTags, compact, useFullWidth, disablePedigreeZoom, annotation, updateFamily: dispatchUpdateFamily }) => {
+const Family = (
+  { project, family, fields = [], showSearchLinks, showVariantTags, compact, useFullWidth, disablePedigreeZoom,
+    showFamilyPageLink, annotation, updateFamily: dispatchUpdateFamily,
+  }) => {
+  if (!family) {
+    return <div>Family Not Found</div>
+  }
+
   const familyField = (field) => {
     const renderDetails = FAMILY_FIELD_RENDER_LOOKUP[field.id]
     const submitFunc = renderDetails.submitArgs ?
@@ -124,7 +132,15 @@ const Family = ({ project, family, fields = [], showSearchLinks, showVariantTags
   }
 
   const leftContent = [
-    <InlineHeader key="name" inline={compact} size="small" content={family.displayName} />,
+    <InlineHeader
+      key="name"
+      inline={compact}
+      size="small"
+      content={showFamilyPageLink ?
+        <Link to={`/project/${project.projectGuid}/family_page/${family.familyGuid}`}>{family.displayName}</Link> :
+        family.displayName
+      }
+    />,
     <PedigreeImagePanel key="pedigree" family={family} disablePedigreeZoom={disablePedigreeZoom} compact={compact} />,
   ]
 
@@ -182,6 +198,7 @@ Family.propTypes = {
   useFullWidth: PropTypes.bool,
   disablePedigreeZoom: PropTypes.bool,
   compact: PropTypes.bool,
+  showFamilyPageLink: PropTypes.bool,
   updateFamily: PropTypes.func,
   annotation: PropTypes.node,
 }
