@@ -2,7 +2,6 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Grid, Header, Popup } from 'semantic-ui-react'
-import { Link } from 'react-router-dom'
 import styled from 'styled-components'
 
 import { updateFamily } from 'redux/rootReducer'
@@ -129,20 +128,17 @@ const Family = ({ project, family, fields = [], showSearchLinks, showVariantTags
     <PedigreeImagePanel key="pedigree" family={family} disablePedigreeZoom={disablePedigreeZoom} compact={compact} />,
   ]
 
-  const discoveryTags = project.discoveryTags.filter(tag => tag.familyGuid === family.familyGuid)
+  const discoveryGenes = project.discoveryTags.filter(tag => tag.familyGuid === family.familyGuid).reduce(
+    (acc, tag) => [...acc, ...Object.values(tag.extras.gene_names || {})], [],
+  )
 
   const rightContent = (showSearchLinks || showVariantTags) ? [
     showVariantTags ?
       <div key="variants">
         <b>Saved Variants:</b> <VariantTagTypeBar height={15} project={project} familyGuid={family.familyGuid} />
-        {discoveryTags.length > 0 &&
+        {discoveryGenes.length > 0 &&
           <span>
-            <b>Discovery Genes:</b>
-            {discoveryTags.map(tag =>
-              <Link key={tag.variantId} to={`/project/${project.projectGuid}/saved_variants/variant/${tag.variantId}`}>
-                &nbsp;{Object.values(tag.extras.gene_names)[0]}
-              </Link>,
-            )}
+            <b>Discovery Genes:</b> {[...new Set(discoveryGenes)].join(', ')}
           </span>
         }
       </div> : null,
