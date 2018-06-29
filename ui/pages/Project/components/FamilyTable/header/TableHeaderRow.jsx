@@ -3,7 +3,6 @@ import { Table, Popup, Icon } from 'semantic-ui-react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { connect } from 'react-redux'
-import { withRouter } from 'react-router'
 
 import { HorizontalSpacer } from 'shared/components/Spacers'
 import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
@@ -30,7 +29,10 @@ const SpacedDropdown = styled(Dropdown)`
 `
 
 
-const TableHeaderRow = ({ headerStatus, showInternalFilters, visibleFamiliesCount, totalFamiliesCount, fields, familiesTableState, updateFamiliesTable: dispatchUpdateFamiliesTable }) => {
+const TableHeaderRow = (
+  { headerStatus, showInternalFilters, visibleFamiliesCount, totalFamiliesCount, fields, tableName, familiesTableState,
+    updateFamiliesTable: dispatchUpdateFamiliesTable,
+  }) => {
   const filterFields = [
     {
       name: 'familiesSortOrder',
@@ -57,6 +59,7 @@ const TableHeaderRow = ({ headerStatus, showInternalFilters, visibleFamiliesCoun
       options: FAMILY_FILTER_OPTIONS.filter((f) => { return showInternalFilters ? !f.internalOmit : !f.internalOnly }),
     },
   ]
+
   return (
     <Table.Header fullWidth>
       <Table.Row>
@@ -82,7 +85,7 @@ const TableHeaderRow = ({ headerStatus, showInternalFilters, visibleFamiliesCoun
         <Table.HeaderCell collapsing textAlign="right">
           <ReduxFormWrapper
             onSubmit={dispatchUpdateFamiliesTable}
-            form="editFamiliesTable"
+            form={`edit${tableName}FamiliesTable`}
             initialValues={familiesTableState}
             closeOnSuccess={false}
             submitOnChange
@@ -126,6 +129,7 @@ TableHeaderRow.propTypes = {
   familiesTableState: PropTypes.object,
   updateFamiliesTable: PropTypes.func,
   fields: PropTypes.array,
+  tableName: PropTypes.string,
 }
 
 const mapStateToProps = (state, ownProps) => ({
@@ -134,11 +138,14 @@ const mapStateToProps = (state, ownProps) => ({
   familiesTableState: getFamiliesTableState(state, ownProps),
 })
 
-const mapDispatchToProps = {
-  updateFamiliesTable,
+const mapDispatchToProps = (dispatch, ownProps) => {
+  return {
+    updateFamiliesTable: (updates) => {
+      dispatch(updateFamiliesTable(updates, ownProps.tableName))
+    },
+  }
 }
-
 
 export { TableHeaderRow as TableHeaderRowComponent }
 
-export default withRouter(connect(mapStateToProps, mapDispatchToProps)(TableHeaderRow))
+export default connect(mapStateToProps, mapDispatchToProps)(TableHeaderRow)

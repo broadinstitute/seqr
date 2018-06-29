@@ -10,6 +10,7 @@ import {
   FAMILY_FIELD_INTERNAL_NOTES,
   FAMILY_FIELD_INTERNAL_SUMMARY,
 } from 'shared/utils/constants'
+import { CASE_REVIEW_TABLE_NAME } from '../constants'
 import { getCaseReviewStatusCounts, getFamiliesExportConfig, getIndividualsExportConfig } from '../selectors'
 import FamilyTable from './FamilyTable/FamilyTable'
 
@@ -21,8 +22,6 @@ const FIELDS = [
   { id: FAMILY_FIELD_INTERNAL_NOTES, canEdit: true },
   { id: FAMILY_FIELD_INTERNAL_SUMMARY, canEdit: true },
 ]
-
-const tableName = 'Case Review'
 
 const CaseReviewTable = (props) => {
   const headerStatus = { title: 'Individual Statuses', data: props.caseReviewStatusCounts }
@@ -36,7 +35,7 @@ const CaseReviewTable = (props) => {
         showInternalFilters
         editCaseReview
         showDetails
-        tableName={tableName}
+        tableName={CASE_REVIEW_TABLE_NAME}
         headerStatus={headerStatus}
         exportUrls={exportUrls}
         detailFields={FIELDS}
@@ -56,8 +55,8 @@ CaseReviewTable.propTypes = {
 
 const mapStateToProps = state => ({
   caseReviewStatusCounts: getCaseReviewStatusCounts(state),
-  familyExportConfig: getFamiliesExportConfig(state, { tableName, internal: true }),
-  individualsExportConfig: getIndividualsExportConfig(state, { tableName, internal: true }),
+  familyExportConfig: getFamiliesExportConfig(state, { tableName: CASE_REVIEW_TABLE_NAME, internal: true }),
+  individualsExportConfig: getIndividualsExportConfig(state, { tableName: CASE_REVIEW_TABLE_NAME, internal: true }),
 })
 
 export default connect(mapStateToProps)(CaseReviewTable)

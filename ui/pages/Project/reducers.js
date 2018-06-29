@@ -5,11 +5,14 @@ import { loadingReducer, createSingleObjectReducer, createObjectsByIdReducer, cr
 import { REQUEST_PROJECTS, RECEIVE_DATA } from 'redux/rootReducer'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 import { getProject, getProjectFamiliesByGuid } from 'pages/Project/selectors'
-import { SHOW_ALL, SHOW_IN_REVIEW, SORT_BY_FAMILY_NAME, SORT_BY_FAMILY_ADDED_DATE, SORT_BY_FAMILY_GUID } from './constants'
+import {
+  SHOW_ALL, SHOW_IN_REVIEW, SORT_BY_FAMILY_NAME, SORT_BY_FAMILY_ADDED_DATE, SORT_BY_FAMILY_GUID, CASE_REVIEW_TABLE_NAME,
+} from './constants'
 
 // action creators and reducers in one file as suggested by https://github.com/erikras/ducks-modular-redux
 
 const UPDATE_FAMILY_TABLE_STATE = 'UPDATE_FAMILY_TABLE_STATE'
+const UPDATE_CASE_REVIEW_TABLE_STATE = 'UPDATE_CASE_REVIEW_TABLE_STATE'
 const UPDATE_SAVED_VARIANT_TABLE_STATE = 'UPDATE_VARIANT_STATE'
 const UPDATE_CURRENT_PROJECT = 'UPDATE_CURRENT_PROJECT'
 const REQUEST_PROJECT_DETAILS = 'REQUEST_PROJECT_DETAILS'
@@ -132,7 +135,9 @@ export const updateIndividuals = (values) => {
 }
 
 // Table actions
-export const updateFamiliesTable = updates => ({ type: UPDATE_FAMILY_TABLE_STATE, updates })
+export const updateFamiliesTable = (updates, tableName) => (
+  { type: tableName === CASE_REVIEW_TABLE_NAME ? UPDATE_CASE_REVIEW_TABLE_STATE : UPDATE_FAMILY_TABLE_STATE, updates }
+)
 export const updateSavedVariantTable = updates => ({ type: UPDATE_SAVED_VARIANT_TABLE_STATE, updates })
 
 // reducers
@@ -148,7 +153,7 @@ export const reducers = {
     familiesSortOrder: SORT_BY_FAMILY_NAME,
     familiesSortDirection: 1,
   }, false),
-  caseReviewTableState: createSingleObjectReducer(UPDATE_FAMILY_TABLE_STATE, {
+  caseReviewTableState: createSingleObjectReducer(UPDATE_CASE_REVIEW_TABLE_STATE, {
     familiesFilter: SHOW_IN_REVIEW,
     familiesSortOrder: SORT_BY_FAMILY_ADDED_DATE,
     familiesSortDirection: 1,

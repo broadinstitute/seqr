@@ -23,6 +23,8 @@ import {
   AFFECTED_LOOKUP,
 } from 'shared/utils/constants'
 
+export const CASE_REVIEW_TABLE_NAME = 'Case Review'
+
 export const CASE_REVIEW_STATUS_NOT_IN_REVIEW = 'N'
 export const CASE_REVIEW_STATUS_IN_REVIEW = 'I'
 export const CASE_REVIEW_STATUS_UNCERTAIN = 'U'
