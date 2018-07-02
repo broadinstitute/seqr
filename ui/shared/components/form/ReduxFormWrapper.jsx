@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { connect } from 'react-redux'
 import { Field, FieldArray, reduxForm, getFormSyncErrors, getFormSyncWarnings } from 'redux-form'
-import { Form, Message } from 'semantic-ui-react'
+import { Form, Message, Icon, Popup } from 'semantic-ui-react'
 import flatten from 'lodash/flatten'
 
 import { closeModal, setModalConfirm } from 'redux/utils/modalReducer'
@@ -119,12 +119,15 @@ class ReduxFormWrapper extends React.Component {
     const errorMessages = this.props.error || flatten(Object.values(this.props.validationErrors))
 
     const fieldComponents = this.props.renderChildren ? React.createElement(this.props.renderChildren) :
-      this.props.fields.map(({ component, name, isArrayField, key, ...fieldProps }) => {
+      this.props.fields.map(({ component, name, isArrayField, key, label, labelHelp, ...fieldProps }) => {
         const baseProps = { key: key || name, name }
         const singleFieldProps = {
           component: renderField,
           fieldComponent: component,
           submitForm: this.props.submitOnChange ? this.props.onSubmit : null,
+          label: labelHelp ?
+            <label> {label} <Popup trigger={<Icon name="question circle outline" />} content={labelHelp} size="small" position="top center" /></label> //eslint-disable-line jsx-a11y/label-has-for
+            : label,
           ...fieldProps,
         }
         return isArrayField ?

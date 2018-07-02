@@ -131,6 +131,23 @@ export const updateIndividuals = (values) => {
   }
 }
 
+export const addDataset = (values) => {
+  return (dispatch, getState) => {
+    return new HttpRequestHelper(`/api/project/${getState().currentProjectGuid}/add_dataset`,
+      (responseJson) => {
+        dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+      },
+      (e) => {
+        if (e.body && e.body.errors) {
+          throw new SubmissionError({ _error: e.body.errors })
+        } else {
+          throw new SubmissionError({ _error: [e.message] })
+        }
+      },
+    ).post(values)
+  }
+}
+
 // Family table actions
 
 export const setCurrentPage = currentPage => ({ type: UPDATE_FAMILY_TABLE_STATE, updates: { currentPage } })

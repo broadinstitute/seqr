@@ -5,6 +5,7 @@ import sortBy from 'lodash/sortBy'
 import { Grid } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 import EditFamiliesAndIndividualsButton from 'shared/components/buttons/EditFamiliesAndIndividualsButton'
+import EditDatasetsButton from 'shared/components/buttons/EditDatasetsButton'
 
 import { getProject, getProjectFamiliesByGuid, getProjectIndividualsByGuid } from 'pages/Project/selectors'
 
@@ -17,19 +18,6 @@ const FAMILY_SIZE_LABELS = {
   4: plural => ` quad${plural ? 's' : ''}`,
   5: plural => ` ${plural ? 'families' : 'family'} with 5+ individuals`,
 }
-
-/*
-const SAMPLE_TYPE_LABELS = {
-  WES: 'Exome',
-  WGS: 'WGS',
-  RNA: 'RNA-seq',
-}
-
-const DATASET_TYPE_LABELS = {
-  VARIANTS: 'callset',
-  SV: 'SV callset',
-}
-*/
 
 const ProjectOverview = (props) => {
   const familySizeHistogram = Object.values(props.familiesByGuid)
@@ -51,8 +39,8 @@ const ProjectOverview = (props) => {
                 {familySizeHistogram[size]} {FAMILY_SIZE_LABELS[size](familySizeHistogram[size] > 1)}
               </div>)
           }
-          {props.project.canEdit ? <span><br /><EditFamiliesAndIndividualsButton /></span> : null }<br />
         </div>
+        {props.project.canEdit ? <div><br /><EditFamiliesAndIndividualsButton /> | <EditDatasetsButton /></div> : null }
       </Grid.Column>
     </Grid>
   )

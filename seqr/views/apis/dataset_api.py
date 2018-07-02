@@ -53,6 +53,7 @@ def add_dataset_handler(request, project_guid):
     dataset_type = request_json['datasetType']
     elasticsearch_index = request_json['elasticsearchIndex']
     dataset_path = request_json.get('datasetPath')
+    dataset_name = request_json.get('datasetName')
 
     ignore_extra_samples_in_callset = request_json.get('ignoreExtraSamplesInCallset')
     sample_ids_to_individual_ids_path = request_json.get('sampleIdsToIndividualIdsPath')
@@ -68,6 +69,7 @@ def add_dataset_handler(request, project_guid):
             elasticsearch_index=elasticsearch_index,
             sample_type=sample_type,
             dataset_path=dataset_path,
+            dataset_name=dataset_name,
             max_edit_distance=0,
             ignore_extra_samples_in_callset=ignore_extra_samples_in_callset,
             sample_ids_to_individual_ids_path=sample_ids_to_individual_ids_path,
@@ -88,4 +90,5 @@ def add_dataset_handler(request, project_guid):
     if errors:
         return create_json_response({'errors': errors}, status=400)
 
+    # TODO should return updated samples
     return create_json_response({'info': info})

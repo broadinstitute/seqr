@@ -16,6 +16,7 @@ def add_variant_calls_dataset(
     elasticsearch_index,
     sample_type,
     dataset_path=None,
+    dataset_name=None,
     max_edit_distance=0,
     sample_ids_to_individual_ids_path=None,
     ignore_extra_samples_in_callset=False):
@@ -81,6 +82,8 @@ def add_variant_calls_dataset(
         sample.elasticsearch_index = elasticsearch_index
         if dataset_path:
             sample.dataset_file_path = dataset_path
+        if dataset_name:
+            sample.dataset_name = dataset_name
         if sample.sample_status != Sample.SAMPLE_STATUS_LOADED:
             not_loaded_samples.append(sample_id)
             sample.sample_status = Sample.SAMPLE_STATUS_LOADED
@@ -179,6 +182,7 @@ def _validate_vcf(vcf_path):
     sample_ids = header_fields[9:]
 
     return [], sample_ids
+
 
 # TODO for real?
 def _remap_sample_ids(sample_ids_to_individual_ids_path):
