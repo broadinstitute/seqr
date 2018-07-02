@@ -1366,7 +1366,10 @@ function showDataToBeSubmitted(){
 			html += '<td><p>'  +  genotypes_to_submit[k]['alternateBases']   + '</p></td>';
 			html += '<td><p>'  +  genotypes_to_submit[k]['zygosity']   + '</p></td>';
 			
-			var sharePreference={'variant':variants_to_limit_sharing[genotypes_to_submit[k]['genotypeId']]};
+			var sharePreference=true;
+			if (variants_to_limit_sharing[genotypes_to_submit[k]['genotypeId']] != 'share'){
+				sharePreference=false;
+			}
 			var lockedIcon='&nbsp&nbsp<i class="fas fa-lock fa-lg" aria-hidden="true"></i>';
 			var unlockedIcon='&nbsp&nbsp<i class="fas fa-lock-open fa-lg" aria-hidden="true"></i>';
 			if ('share' == variants_to_limit_sharing[genotypes_to_submit[k]['genotypeId']]){
