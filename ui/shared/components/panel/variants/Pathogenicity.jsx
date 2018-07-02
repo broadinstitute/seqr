@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import { Grid, Label } from 'semantic-ui-react'
 
 import { CLINSIG_SEVERITY } from '../../../utils/constants'
-import { titlecase } from '../../../utils/stringUtils'
+import { snakecaseToTitlecase } from '../../../utils/stringUtils'
 import { HorizontalSpacer } from '../../Spacers'
 
 
@@ -53,15 +53,19 @@ const Pathogenicity = ({ variant }) => {
 
   return (
     <Grid.Column width={16}>
-      <b>ClinVar:<HorizontalSpacer width={5} /></b>
-      {variant.clinvar.clinsig ? variant.clinvar.clinsig.split('/').map(clinsig =>
-        <PathogenicityLink
-          key={clinsig}
-          clinsig={clinsig}
-          href={`http://www.ncbi.nlm.nih.gov/clinvar/variation/${variant.clinvar.variantId}`}
-          formatName={titlecase}
-        />,
-      ) : <PathogenicityLabel clinsig="Not In Clinvar" />}
+      {variant.clinvar.clinsig &&
+        <span>
+          <b>ClinVar:<HorizontalSpacer width={5} /></b>
+          {variant.clinvar.clinsig.split('/').map(clinsig =>
+            <PathogenicityLink
+              key={clinsig}
+              clinsig={clinsig}
+              href={`http://www.ncbi.nlm.nih.gov/clinvar/variation/${variant.clinvar.variantId}`}
+              formatName={snakecaseToTitlecase}
+            />,
+          )}
+        </span>
+      }
       {variant.hgmd.class &&
         <span>
           <HorizontalSpacer width={5} />

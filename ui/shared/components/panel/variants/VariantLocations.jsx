@@ -30,7 +30,7 @@ const ucscBrowserLink = (variant, genomeVersion) => {
 const VariantLocations = ({ variant }) =>
   <div>
     <LargeText>
-      <a href={ucscBrowserLink(variant)} target="_blank"><b>chr{variant.chrom}:{variant.pos}</b></a>
+      <a href={ucscBrowserLink(variant)} target="_blank"><b>{variant.chrom}:{variant.pos}</b></a>
       <HorizontalSpacer width={10} />
       <BreakWord>{variant.ref}</BreakWord>
       <Icon name="angle right" />

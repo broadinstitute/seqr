@@ -288,7 +288,6 @@ export const STATE1 = {
     },
   },
   samplesByGuid: {},
-  datasetsByGuid: {},
   project: {
     createdDate: '2016-05-16T05:37:08.634Z',
     deprecatedLastAccessedDate: '2017-03-14T15:15:42.580Z',
@@ -416,7 +415,6 @@ export const STATE_WITH_2_FAMILIES = {
     },
   },
   samplesByGuid: {},
-  datasetsByGuid: {},
   currentProjectGuid: 'R0237_1000_genomes_demo',
   projectsByGuid: {
     R0237_1000_genomes_demo: {

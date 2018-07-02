@@ -1,5 +1,7 @@
 import logging
 import numpy as np
+from django.utils import timezone
+
 from seqr.models import Individual, Sample
 
 logger = logging.getLogger(__name__)
@@ -37,7 +39,8 @@ def match_sample_ids_to_sample_records(
     remaining_sample_ids = set(sample_ids) - set(sample_id_to_sample_record.keys())
     if len(remaining_sample_ids) > 0:
         already_matched_individual_ids = {
-            sample.individual.individual_id for sample in sample_id_to_sample_record.values()}
+            sample.individual.individual_id for sample in sample_id_to_sample_record.values()
+        }
 
         remaining_individuals_dict = {
             i.individual_id: i for i in Individual.objects.filter(family__project=project)
@@ -55,6 +58,7 @@ def match_sample_ids_to_sample_records(
         logger.info(str(len(sample_id_to_individual_record)) + " matched individual ids")
         remaining_sample_ids = remaining_sample_ids - set(sample_id_to_individual_record.keys())
 
+        # find approximately-matching individual ids
         if len(remaining_sample_ids) > 0:
             sample_id_to_approximately_matching_individual_records = _find_approximate_match_individual_records(
                 remaining_sample_ids, remaining_individuals_dict, max_edit_distance)
@@ -62,10 +66,16 @@ def match_sample_ids_to_sample_records(
             logger.info(str(len(sample_id_to_approximately_matching_individual_records)) + " approximately matched individual ids")
             sample_id_to_individual_record.update(sample_id_to_approximately_matching_individual_records)
 
+        # create new Sample records for Individual records that matches
         if create_sample_records:
             for sample_id, individual in sample_id_to_individual_record.items():
                 new_sample = Sample.objects.create(
-                    sample_id=sample_id, sample_type=sample_type, individual=individual)
+                    sample_id=sample_id,
+                    sample_type=sample_type,
+                    individual=individual,
+                    sample_status = Sample.SAMPLE_STATUS_LOADED,
+                    loaded_date = timezone.now(),
+                )
                 sample_id_to_sample_record[sample_id] = new_sample
 
     return sample_id_to_sample_record

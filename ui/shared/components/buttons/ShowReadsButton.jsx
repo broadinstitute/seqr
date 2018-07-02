@@ -4,12 +4,13 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Icon } from 'semantic-ui-react'
 
-import { getProjectSamples } from 'pages/Project/selectors'
-import { getIndividualsByGuid, getDatasetsByGuid } from 'redux/selectors'
+import { getProjectSamplesByGuid } from 'pages/Project/selectors'
+import { getIndividualsByGuid } from 'redux/selectors'
 import Modal from '../modal/Modal'
 import PedigreeIcon from '../icons/PedigreeIcon'
 import IGV from '../graph/IGV'
 import ButtonLink from './ButtonLink'
+import { DATASET_TYPE_READ_ALIGNMENTS } from '../../utils/constants'
 
 const CRAM_TRACK_OPTIONS = {
   sourceType: 'pysam',
@@ -21,32 +22,22 @@ const BAM_TRACK_OPTIONS = {
   indexed: true,
 }
 
-const ShowReadsButton = ({ locus, familyGuid, samples, individualsByGuid, datasetsByGuid }) => {
+const ShowReadsButton = ({ locus, familyGuid, samplesByGuid, individualsByGuid }) => {
 
-  const igvTracks = samples.map((sample) => {
+  const igvTracks = Object.values(samplesByGuid).filter(
+    sample => sample.loadedDate && sample.datasetType === DATASET_TYPE_READ_ALIGNMENTS,
+  ).map((sample) => {
     const individual = individualsByGuid[sample.individualGuid]
     if (individual.familyGuid !== familyGuid) {
       return null
     }
 
-    const datasets = sample.datasetGuids.map(
-      datasetGuid => datasetsByGuid[datasetGuid],
-    ).filter(
-      dataset => dataset.isLoaded && dataset.analysisType === 'ALIGN',
-    )
-    if (datasets.length > 1) {
-      console.log(`Error: found ${datasets.length} alignment datasets for ${sample.individualGuid}`)
-    } else if (datasets.length < 1) {
-      return null
-    }
-    const { sourceFilePath } = datasets[0]
-
-    const trackOptions = sourceFilePath.endsWith('.cram') ? CRAM_TRACK_OPTIONS : BAM_TRACK_OPTIONS
+    const trackOptions = sample.datasetFilePath.endsWith('.cram') ? CRAM_TRACK_OPTIONS : BAM_TRACK_OPTIONS
     const trackName = ReactDOMServer.renderToString(
       <span><PedigreeIcon sex={individual.sex} affected={individual.affected} />{individual.individualId}</span>,
     )
     return {
-      url: `/api/project/${sample.projectGuid}/igv_track/${encodeURIComponent(sourceFilePath)}`,
+      url: `/api/project/${sample.projectGuid}/igv_track/${encodeURIComponent(sample.datasetFilePath)}`,
       name: trackName,
       type: 'bam',
       alignmentShading: 'strand',
@@ -92,15 +83,13 @@ const ShowReadsButton = ({ locus, familyGuid, samples, individualsByGuid, datase
 ShowReadsButton.propTypes = {
   locus: PropTypes.string,
   familyGuid: PropTypes.string,
-  samples: PropTypes.array,
+  samplesByGuid: PropTypes.object,
   individualsByGuid: PropTypes.object,
-  datasetsByGuid: PropTypes.object,
 }
 
 const mapStateToProps = state => ({
-  samples: getProjectSamples(state),
+  samplesByGuid: getProjectSamplesByGuid(state),
   individualsByGuid: getIndividualsByGuid(state),
-  datasetsByGuid: getDatasetsByGuid(state),
 })
 
 export default connect(mapStateToProps)(ShowReadsButton)

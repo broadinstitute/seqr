@@ -11,7 +11,6 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404
 from django.http import HttpResponse, HttpResponseBadRequest, Http404
 from django.core.exceptions import PermissionDenied, ObjectDoesNotExist
-
 from settings import LOGIN_URL
 from xbrowse.analysis_modules.combine_mendelian_families import get_variants_by_family_for_gene
 from xbrowse_server.analysis.diagnostic_search import get_gene_diangostic_info
@@ -37,12 +36,11 @@ from xbrowse_server import server_utils
 from . import basicauth
 from xbrowse_server import user_controls
 from django.utils import timezone
-
 from xbrowse_server.phenotips.reporting_utilities import phenotype_entry_metric_for_individual
 from xbrowse_server.base.models import ANALYSIS_STATUS_CHOICES
 from xbrowse_server.matchmaker.utilities import get_all_clinical_data_for_family
 from xbrowse_server.matchmaker.utilities import is_a_valid_patient_structure
-from xbrowse_server.matchmaker.utilities import generate_slack_notification_for_incoming_match
+from xbrowse_server.matchmaker.utilities import generate_notification_for_incoming_match
 from xbrowse_server.matchmaker.utilities import generate_slack_notification_for_seqr_match
 from xbrowse_server.matchmaker.utilities import find_latest_family_member_submissions
 from xbrowse_server.matchmaker.utilities import convert_matchbox_id_to_seqr_id
@@ -53,6 +51,7 @@ from xbrowse_server.matchmaker.utilities import extract_hpo_id_list_from_mme_pat
 import requests
 from django.contrib.admin.views.decorators import staff_member_required
 import pymongo
+
 
 logger = logging.getLogger()
 
@@ -1669,7 +1668,7 @@ def match(request):
                           data=query_patient_data,
                           headers=mme_headers)
         if r.status_code==200:
-            generate_slack_notification_for_incoming_match(r,request,query_patient_data)
+            generate_notification_for_incoming_match(r,request,query_patient_data)
         resp = HttpResponse(r.text)
         resp.status_code=r.status_code
         for k,v in r.headers.iteritems():

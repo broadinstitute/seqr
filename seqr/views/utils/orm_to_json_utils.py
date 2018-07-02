@@ -8,7 +8,7 @@ import os
 from django.db.models import Model
 from django.db.models.fields.files import ImageFieldFile
 
-from seqr.models import CAN_EDIT, Project, Family, Individual, Sample, Dataset, SavedVariant, VariantTag, \
+from seqr.models import CAN_EDIT, Project, Family, Individual, Sample, SavedVariant, VariantTag, \
     VariantFunctionalData, VariantNote, GeneNote
 from seqr.utils.xpos_utils import get_chrom_pos
 from seqr.views.utils.json_utils import _to_camel_case
@@ -212,28 +212,6 @@ def _get_json_for_sample(sample):
         'projectGuid': sample_dict.get('individual_family_project_guid') or sample_dict['project_guid'],
         'individualGuid': sample_dict['individual_guid'],
         'sampleGuid': result.pop('guid'),
-    })
-    return result
-
-
-def _get_json_for_dataset(dataset, add_sample_type_field=True):
-    """Returns a JSON representation of the given Dataset.
-
-    Args:
-        dataset (object): dictionary or django model for the Dataset.
-    Returns:
-        dict: json object
-    """
-
-    fields = _get_record_fields(Dataset, 'dataset')
-    dataset_dict = _record_to_dict(dataset, fields, nested_fields=[('project', 'guid')])
-
-    result = _get_json_for_record(dataset_dict, fields)
-    if add_sample_type_field:
-        result['sampleType'] = dataset_dict['sample_sample_type']
-    result.update({
-        'projectGuid': dataset_dict['project_guid'],
-        'datasetGuid': result.pop('guid'),
     })
     return result
 

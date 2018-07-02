@@ -4,7 +4,7 @@ import { connect } from 'react-redux'
 
 import EditRecordsForm from 'shared/components/form/EditRecordsForm'
 import { updateFamilies } from 'pages/Project/reducers'
-import { getProjectFamilies } from 'pages/Project/selectors'
+import { getProjectFamiliesByGuid } from 'pages/Project/selectors'
 
 const FAMILY_FIELDS = [
   {
@@ -25,13 +25,13 @@ const EditFamiliesForm = props =>
   <EditRecordsForm
     formName="editFamilies"
     modalName={props.modalName}
-    records={props.families}
+    records={Object.values(props.familiesByGuid)}
     fields={FAMILY_FIELDS}
     onSubmit={({ records, ...values }) => props.updateFamilies({ families: records, ...values })}
   />
 
 EditFamiliesForm.propTypes = {
-  families: PropTypes.array.isRequired,
+  familiesByGuid: PropTypes.array.isRequired,
   updateFamilies: PropTypes.func.isRequired,
   modalName: PropTypes.string,
 }
@@ -39,7 +39,7 @@ EditFamiliesForm.propTypes = {
 export { EditFamiliesForm as EditFamiliesFormComponent }
 
 const mapStateToProps = state => ({
-  families: getProjectFamilies(state),
+  familiesByGuid: getProjectFamiliesByGuid(state),
 })
 
 const mapDispatchToProps = {

@@ -7,7 +7,7 @@ import { connect } from 'react-redux'
 import { Field } from 'redux-form'
 
 import { updateIndividuals } from 'pages/Project/reducers'
-import { getProjectIndividualsWithFamily } from 'pages/Project/selectors'
+import { getProjectFamiliesByGuid, getProjectIndividualsByGuid } from 'pages/Project/selectors'
 import EditRecordsForm from '../EditRecordsForm'
 
 
@@ -41,7 +41,8 @@ const RadioGroup = (props) => {
 const EditIndividualsForm = (props) => {
   let currFamilyGuid
   let currActive = false
-  const sortedIndividuals = props.individuals.sort((i1, i2) => i1.family.familyId - i2.family.familyId)
+  const sortedIndividuals = Object.values(props.individualsByGuid).sort(
+    (i1, i2) => props.familiesByGuid[i1.familyGuid].familyId - props.familiesByGuid[i2.familyGuid].familyId)
   const familyActiveMap = sortedIndividuals.reduce((acc, ind) => {
     if (ind.familyGuid !== currFamilyGuid) {
       currFamilyGuid = ind.familyGuid
@@ -100,7 +101,8 @@ const EditIndividualsForm = (props) => {
 }
 
 EditIndividualsForm.propTypes = {
-  individuals: PropTypes.array.isRequired,
+  individualsByGuid: PropTypes.object.isRequired,
+  familiesByGuid: PropTypes.object.isRequired,
   updateIndividuals: PropTypes.func.isRequired,
   modalName: PropTypes.string,
 }
@@ -108,7 +110,8 @@ EditIndividualsForm.propTypes = {
 export { EditIndividualsForm as EditIndividualsFormComponent }
 
 const mapStateToProps = state => ({
-  individuals: getProjectIndividualsWithFamily(state),
+  individualsByGuid: getProjectIndividualsByGuid(state),
+  familiesByGuid: getProjectFamiliesByGuid(state),
 })
 
 const mapDispatchToProps = {

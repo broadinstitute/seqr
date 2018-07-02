@@ -19,8 +19,9 @@ def get_local_file_stats(file_path):
         md5=None,
     )
 
-def copy_local_file(source_file_path, dest_file_path):
-    if not os.path.exists(source_file_path):
-        raise ValueError("%(source_file_path)s not found" % locals())
 
-    run("cp -r %(source_file_path)s %(dest_file_path)s" % locals())
+def copy_local_file(dataset_file_path, dest_file_path):
+    if not os.path.exists(dataset_file_path):
+        raise ValueError("%(dataset_file_path)s not found" % locals())
+
+    run("cp -r %(dataset_file_path)s %(dest_file_path)s" % locals())

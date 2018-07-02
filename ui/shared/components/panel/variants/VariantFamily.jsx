@@ -177,6 +177,7 @@ const VariantFamily = ({ variant, project, family, individualsByGuid }) => {
           <PedigreeIcon
             sex={individual.sex}
             affected={individual.affected}
+            label={<small>{individual.displayName || individual.individualId}</small>}
             popupContent={
               hasPhenotipsDetails(individual.phenotipsData) ?
                 <PhenotipsDataPanel
@@ -186,7 +187,6 @@ const VariantFamily = ({ variant, project, family, individualsByGuid }) => {
                 /> : null
             }
           />
-          <small>{individual.displayName || individual.individualId}</small>
           <br />
           <Genotype variant={variant} individual={individual} />
         </IndividualCell>,

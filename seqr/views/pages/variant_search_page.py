@@ -3,12 +3,11 @@ import logging
 
 from django.db import connection
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import PermissionDenied
 
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.utils.json_utils import render_with_initial_json, create_json_response
-from seqr.views.utils.orm_to_json_utils import _get_json_for_user, _get_json_for_project, _get_json_for_family, _get_json_for_dataset
-from seqr.models import Project, CAN_VIEW, Sample, Dataset, Family
+from seqr.views.utils.orm_to_json_utils import _get_json_for_user, _get_json_for_project, _get_json_for_family
+from seqr.models import Project, CAN_VIEW, Sample, Family
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, get_projects_user_can_view, \
     check_permissions
 
@@ -75,7 +74,7 @@ def variant_search_page_data(request, project_guid, family_guid):
         family_guids=family_guids,
         individual_guids=None,
         sample_types=None,
-        analysis_types=None,
+        dataset_types=None,
         only_loaded_datasets=True
     )
 
@@ -106,7 +105,7 @@ def variant_search_page_data(request, project_guid, family_guid):
 
 
 _SAMPLE_TYPES = set([sample_type[0] for sample_type in Sample.SAMPLE_TYPE_CHOICES])
-_ANALYSIS_TYPES = set([analysis_type[0] for analysis_type in Dataset.ANALYSIS_TYPE_CHOICES])
+_DATASET_TYPES = set([dataset_type[0] for dataset_type in Sample.DATASET_TYPE_CHOICES])
 
 
 def _retrieve_datasets(
@@ -114,7 +113,7 @@ def _retrieve_datasets(
     family_guids=None,
     individual_guids=None,
     sample_types=None,
-    analysis_types=None,
+    dataset_types=None,
     only_loaded_datasets=True,
 ):
     """Retrieves information on datasets that match all of the given critera.
@@ -126,8 +125,8 @@ def _retrieve_datasets(
         individual_guids (list): (optional) only consider datasets that have samples for these individuals
         sample_types (list): (optional) only consider datasets that have samples of these types (eg. "WES", "WGS", "RNA", etc.)
             See models.Sample.SAMPLE_TYPE_CHOICES for the full list of possible values.
-        analysis_types (list): (optional) only consider datasets with this analysis type (eg. "SV", "VARIANT_CALLS", etc.)
-            See models.Dataset.ANALYSIS_TYPE_CHOICES for the full list of possible values.
+        dataset_types (list): (optional) only consider datasets with this analysis type (eg. "SV", "VARIANT_CALLS", etc.)
+            See models.Dataset.DATASET_TYPE_CHOICES for the full list of possible values.
         only_loaded_datasets (bool): only return loaded datasets
     Returns:
         2-tuple with dictionaries: (families_by_guid, individuals_by_guid)
@@ -157,13 +156,13 @@ def _retrieve_datasets(
         WHERE_clause += "s.sample_type IN (" + ", ".join(["%s"]*len(sample_types)) + ")"
         WHERE_clause_args.extend( list(sample_types) )
 
-    if analysis_types is not None:
-        unexpected_analysis_types = set(analysis_types) - set(_ANALYSIS_TYPES)
-        if len(unexpected_analysis_types) > 0:
-            raise ValueError("Invalid analysis_type(s): %s" % (unexpected_analysis_types,))
+    if dataset_types is not None:
+        unexpected_dataset_types = set(dataset_types) - set(_DATASET_TYPES)
+        if len(unexpected_dataset_types) > 0:
+            raise ValueError("Invalid dataset_type(s): %s" % (unexpected_dataset_types,))
         WHERE_clause += " AND "
-        WHERE_clause += "d.analysis_type IN (" + ", ".join(["%s"]*len(analysis_types)) + ")"
-        WHERE_clause_args.extend(list(analysis_types))
+        WHERE_clause += "d.dataset_type IN (" + ", ".join(["%s"]*len(dataset_types)) + ")"
+        WHERE_clause_args.extend(list(dataset_types))
 
     if only_loaded_datasets:
         WHERE_clause += " AND d.is_loaded=TRUE "
@@ -180,18 +179,13 @@ def _retrieve_datasets(
           --- s.guid AS sample_guid,
           s.sample_type AS sample_type,
           --- s.sample_id AS sample_id,
-          d.guid AS dataset_guid,
-          d.dataset_id AS dataset_id,
-          d.dataset_location AS dataset_location,
-          d.analysis_type AS dataset_analysis_type,
-          d.is_loaded AS dataset_is_loaded,
-          d.loaded_date AS dataset_loaded_date
+          s.dataset_type AS dataset_dataset_type,
+          s.is_loaded AS dataset_is_loaded,
+          s.loaded_date AS dataset_loaded_date
         FROM seqr_project AS p
           JOIN seqr_family AS f ON f.project_id=p.id
           JOIN seqr_individual AS i ON i.family_id=f.id
           JOIN seqr_sample AS s ON s.individual_id=i.id
-          JOIN seqr_dataset_samples AS ds ON ds.sample_id=s.id
-          JOIN seqr_dataset AS d ON d.id=ds.dataset_id
         WHERE %s
     """.strip() % WHERE_clause
 
