@@ -11,4 +11,4 @@ export const toCamelcase = s => (s || '').split(' ').map(
 ).join('')
 
 export const stripMarkdown = s =>
-  ReactDOMServer.renderToStaticMarkup(<MarkdownRenderer markdown={s || ''} />).replace(/(<([^>]+)>)/ig, '')
+  ReactDOMServer.renderToStaticMarkup(<MarkdownRenderer markdown={s || ''} />).replace(/(<([^>]+)>)/ig, '').trim()

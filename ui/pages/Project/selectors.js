@@ -219,12 +219,11 @@ export const getVisibleFamilies = createSelector(
  */
 export const getVisibleFamiliesInSortedOrder = createSelector(
   getVisibleFamilies,
-  getProjectFamiliesByGuid,
   getProjectIndividualsByGuid,
   getProjectSamplesByGuid,
   getFamiliesSortOrder,
   getFamiliesSortDirection,
-  (visibleFamilies, familiesByGuid, individualsByGuid, samplesByGuid, familiesSortOrder, familiesSortDirection) => {
+  (visibleFamilies, individualsByGuid, samplesByGuid, familiesSortOrder, familiesSortDirection) => {
     if (!familiesSortOrder || !FAMILY_SORT_LOOKUP[familiesSortOrder]) {
       return visibleFamilies
     }

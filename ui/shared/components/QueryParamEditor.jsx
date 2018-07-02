@@ -16,4 +16,5 @@ const QueryParamEditor = ({ queryParam, history, location, children }) => {
   return React.cloneElement(children, { updateQueryParam, currentQueryParam: params[queryParam] })
 }
 
+export { QueryParamEditor as QueryParamEditorComponent }
 export default withRouter(QueryParamEditor)
