@@ -1,6 +1,6 @@
 import logging
 import elasticsearch_dsl
-
+from elasticsearch import NotFoundError, TransportError
 from django.utils import timezone
 
 from seqr.models import Sample
@@ -11,15 +11,17 @@ from seqr.views.apis.samples_api import match_sample_ids_to_sample_records
 logger = logging.getLogger(__name__)
 
 
-def add_variant_calls_dataset(
+def add_dataset(
     project,
     elasticsearch_index,
     sample_type,
+    dataset_type,
     dataset_path=None,
     dataset_name=None,
     max_edit_distance=0,
     sample_ids_to_individual_ids_path=None,
-    ignore_extra_samples_in_callset=False):
+    ignore_extra_samples_in_callset=False
+):
 
     """Validates the given dataset.
 
@@ -35,25 +37,45 @@ def add_variant_calls_dataset(
     Return:
         (errors, info) tuple
     """
-    dataset_type = Sample.DATASET_TYPE_VARIANT_CALLS
-    info = []
 
-    errors = _validate_inputs(
-        dataset_type=dataset_type, sample_type=sample_type, dataset_path=dataset_path
-    )
-    if errors:
-        return errors, info
+    _validate_inputs(dataset_type=dataset_type, sample_type=sample_type, dataset_path=dataset_path)
+
+    if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
+        _add_variant_calls_dataset(
+            project=project,
+            elasticsearch_index=elasticsearch_index,
+            sample_type=sample_type,
+            dataset_path=dataset_path,
+            dataset_name=dataset_name,
+            max_edit_distance=max_edit_distance,
+            ignore_extra_samples_in_callset=ignore_extra_samples_in_callset,
+            sample_ids_to_individual_ids_path=sample_ids_to_individual_ids_path,
+        )
+    elif dataset_type == Sample.DATASET_TYPE_READ_ALIGNMENTS:
+        _add_read_alignment_dataset(
+            project,
+            sample_type,
+            dataset_path,
+            max_edit_distance=max_edit_distance,
+            elasticsearch_index=elasticsearch_index,
+            ignore_extra_samples_in_callset=ignore_extra_samples_in_callset,
+        )
+
+
+def _add_variant_calls_dataset(
+    project,
+    elasticsearch_index,
+    sample_type,
+    dataset_path=None,
+    dataset_name=None,
+    max_edit_distance=0,
+    sample_ids_to_individual_ids_path=None,
+    ignore_extra_samples_in_callset=False
+):
+
+    dataset_type = Sample.DATASET_TYPE_VARIANT_CALLS
 
     all_samples = _get_elasticsearch_index_samples(elasticsearch_index)
-
-    # validate VCF sample ids if specified
-    if dataset_path:
-        errors, all_vcf_sample_ids = _validate_vcf(dataset_path)
-        missing_vcf_samples = set(all_vcf_sample_ids) - set(all_samples)
-        if all_vcf_sample_ids and len(missing_vcf_samples) > 0:
-            errors.append('Samples in the VCF are missing from the elasticsearch index: {}'.format(', '.join(missing_vcf_samples)))
-        if errors:
-            return errors, info
 
     if sample_ids_to_individual_ids_path:
         all_samples = _remap_sample_ids(sample_ids_to_individual_ids_path)
@@ -69,13 +91,12 @@ def add_variant_calls_dataset(
 
     unmatched_samples = set(all_samples) - set(matched_sample_id_to_sample_record.keys())
     if not ignore_extra_samples_in_callset and len(unmatched_samples) > 0:
-        errors.append("Matches not found for ES sample ids: " +
-            ", ".join(set(all_samples) - set(matched_sample_id_to_sample_record.keys())) +
-            ". Select the 'Ignore extra samples in callset' checkbox to ignore this.")
+        raise Exception("Matches not found for ES sample ids: {}. Select the 'Ignore extra samples in callset' checkbox to ignore this.".format(
+            ", ".join(set(all_samples) - set(matched_sample_id_to_sample_record.keys()))
+        ))
 
     if len(matched_sample_id_to_sample_record) == 0:
-        errors.append("None of the individuals or samples in the project matched the {} sample id(s) in the elasticsearch index".format(len(all_samples)))
-        return errors, info
+        raise Exception("None of the individuals or samples in the project matched the {} sample id(s) in the elasticsearch index".format(len(all_samples)))
 
     not_loaded_samples = []
     for sample_id, sample in matched_sample_id_to_sample_record.items():
@@ -90,78 +111,64 @@ def add_variant_calls_dataset(
             sample.loaded_date = timezone.now()
         sample.save()
 
-    if len(not_loaded_samples) + len(created_samples) == 0:
-        info.append("All {} samples in this index have already been loaded".format(len(matched_sample_id_to_sample_record)))
-    else:
-        info.append("The following sample records were set as loaded: {}".format(', '.join(not_loaded_samples)))
-    if len(created_samples) > 0:
-        info.append("The following sample records were created: {}".format(', '.join(created_samples)))
 
-    return errors, info
-
-
-def add_read_alignment_dataset(*args, **kwargs):
-    errors = []
-    info = []
+def _add_read_alignment_dataset(*args, **kwargs):
     dataset_type = Sample.DATASET_TYPE_READ_ALIGNMENTS
 
     # TODO
-
-    return errors, info
 
 
 def _get_elasticsearch_index_samples(elasticsearch_index):
     sample_field_suffix = '_num_alt'
 
-    index = elasticsearch_dsl.Index('{}*'.format(elasticsearch_index), using=es_client())
-    field_mapping = index.get_field_mapping(fields=['*{}'.format(sample_field_suffix)], doc_type=[VARIANT_DOC_TYPE])
+    index = elasticsearch_dsl.Index('{}'.format(elasticsearch_index), using=es_client())
+    try:
+        field_mapping = index.get_field_mapping(fields=['*{}'.format(sample_field_suffix)], doc_type=[VARIANT_DOC_TYPE])
+    except NotFoundError:
+        raise Exception('Index "{}" not found'.format(elasticsearch_index))
+    except TransportError as e:
+        raise Exception(e.error)
 
-    samples = set()
-    for index in field_mapping.values():
-        samples.update([key.rstrip(sample_field_suffix) for key in index['mappings'].get(VARIANT_DOC_TYPE, {}).keys()])
-    return samples
+    variant_field_mapping = field_mapping.get(elasticsearch_index, {}).get('mappings', {}).get(VARIANT_DOC_TYPE)
+    if not variant_field_mapping:
+        raise Exception('No sample fields found for index "{}"'.format(elasticsearch_index))
+
+    return [key.rstrip(sample_field_suffix) for key in field_mapping[elasticsearch_index]['mappings'].get(VARIANT_DOC_TYPE, {}).keys()]
 
 
 def _validate_inputs(dataset_type, sample_type, dataset_path):
-    errors = []
-
     # basic sample type checks
     if sample_type not in {choice[0] for choice in Sample.SAMPLE_TYPE_CHOICES}:
-        errors.append("Sample type not supported: {}".format(sample_type))
+        raise Exception("Sample type not supported: {}".format(sample_type))
 
     if dataset_path:
-        # basic file path checks
-        if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
-            if not dataset_path.endswith(".vcf.gz") and not dataset_path.endswith(".vds"):
-                errors.append("Variant call dataset path must end with .vcf.gz or .vds")
-        elif dataset_type == Sample.DATASET_TYPE_READ_ALIGNMENTS:
-            if not any([dataset_path.endswith(suffix) for suffix in ('.txt', '.tsv', '.xls', '.xlsx')]):
-                errors.append("BAM / CRAM table must have a .txt or .xls extension")
-        else:
-            errors.append("Dataset type not supported: {}".format(dataset_type))
-
         # check that dataset file exists if specified
         try:
             dataset_file = does_file_exist(dataset_path)
             if dataset_file is None:
-                errors.append("Unable to access {}".format(dataset_path))
+                raise Exception('"{}" not found'.format(dataset_path))
             # check that dataset_path is accessible
             dataset_file_stats = get_file_stats(dataset_path)
             if dataset_file_stats is None:
-                errors.append("Unable to access {}".format(dataset_path))
+                raise Exception('Unable to access "{}"'.format(dataset_path))
         except Exception as e:
-            errors.append("Dataset path error: " + str(e))
+            raise Exception("Dataset path error: " + str(e))
 
-    return errors
+        # datatset_type-specific checks
+        if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
+            if not dataset_path.endswith(".vcf.gz") and not dataset_path.endswith(".vds"):
+                raise Exception("Variant call dataset path must end with .vcf.gz or .vds")
+            _validate_vcf(dataset_path)
+
+        elif dataset_type == Sample.DATASET_TYPE_READ_ALIGNMENTS:
+            if not any([dataset_path.endswith(suffix) for suffix in ('.txt', '.tsv', '.xls', '.xlsx')]):
+                raise Exception("BAM / CRAM table must have a .txt or .xls extension")
+
+        else:
+            raise Exception("Dataset type not supported: {}".format(dataset_type))
 
 
 def _validate_vcf(vcf_path):
-    if not vcf_path or not isinstance(vcf_path, basestring):
-        return ["Invalid vcf_path arg: {}".format(vcf_path)], []
-
-    if not does_file_exist(vcf_path):
-        return ["{} not found".format(vcf_path)], []
-
     header_line = None
     for line in file_iter(vcf_path):
         if line.startswith("#CHROM"):
@@ -173,15 +180,13 @@ def _validate_vcf(vcf_path):
             break
 
     if not header_line:
-        return ["Unexpected VCF header. #CHROM not found before line: " + line], []
+        raise Exception("Unexpected VCF header. #CHROM not found before line: {}".format(line))
 
-    # TODO if annotating using gcloud, check whether dataproc has access to file
-
-    # TODO check header, sample_type, genome_version
     header_fields = header_line.strip().split('\t')
     sample_ids = header_fields[9:]
 
-    return [], sample_ids
+    if not sample_ids:
+        raise Exception('No samples found in VCF "{}"'.format(vcf_path))
 
 
 # TODO for real?

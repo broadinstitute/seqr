@@ -7,7 +7,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 from seqr.models import CAN_EDIT, Sample
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
-from seqr.views.utils.dataset_utils import add_variant_calls_dataset, add_read_alignment_dataset
+from seqr.views.utils.dataset_utils import add_dataset
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions
 
@@ -63,32 +63,20 @@ def add_dataset_handler(request, project_guid):
             'errors': ["Sample ids to individual ids mapping - not yet supported"],
         }, status=400)
 
-    if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
-        errors, info = add_variant_calls_dataset(
+    try:
+        add_dataset(
             project=project,
             elasticsearch_index=elasticsearch_index,
             sample_type=sample_type,
+            dataset_type=dataset_type,
             dataset_path=dataset_path,
             dataset_name=dataset_name,
             max_edit_distance=0,
             ignore_extra_samples_in_callset=ignore_extra_samples_in_callset,
             sample_ids_to_individual_ids_path=sample_ids_to_individual_ids_path,
         )
-    elif dataset_type == Sample.DATASET_TYPE_READ_ALIGNMENTS:
-        # TODO
-        errors, info = add_read_alignment_dataset(
-            project,
-            sample_type,
-            dataset_path,
-            max_edit_distance=0,
-            elasticsearch_index=elasticsearch_index,
-            ignore_extra_samples_in_callset=ignore_extra_samples_in_callset,
-        )
-    else:
-        errors = ["Dataset type not supported: {}".format(dataset_type)]
-
-    if errors:
-        return create_json_response({'errors': errors}, status=400)
+    except Exception as e:
+        return create_json_response({'errors': [e.message or str(e)]}, status=400)
 
     # TODO should return updated samples
-    return create_json_response({'info': info})
+    return create_json_response({})
