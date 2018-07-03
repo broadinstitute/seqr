@@ -38,7 +38,10 @@ def add_dataset(
         (errors, info) tuple
     """
 
-    _validate_inputs(dataset_type=dataset_type, sample_type=sample_type, dataset_path=dataset_path)
+    _validate_inputs(
+        dataset_type=dataset_type, sample_type=sample_type, dataset_path=dataset_path, project=project,
+        elasticsearch_index=elasticsearch_index
+    )
 
     if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
         return _add_variant_calls_dataset(
@@ -139,7 +142,7 @@ def _get_elasticsearch_index_samples(elasticsearch_index):
     return samples
 
 
-def _validate_inputs(dataset_type, sample_type, dataset_path):
+def _validate_inputs(dataset_type, sample_type, dataset_path, project, elasticsearch_index):
     # basic sample type checks
     if sample_type not in {choice[0] for choice in Sample.SAMPLE_TYPE_CHOICES}:
         raise Exception("Sample type not supported: {}".format(sample_type))
@@ -169,6 +172,20 @@ def _validate_inputs(dataset_type, sample_type, dataset_path):
 
         else:
             raise Exception("Dataset type not supported: {}".format(dataset_type))
+
+    parsed_es_index = elasticsearch_index.lower().split('__')
+    if parsed_es_index[0] != project.guid.lower() and parsed_es_index[0] != project.name.lower():
+        raise Exception('Index "{0}" is not associated with project "{1}"'.format(elasticsearch_index, project.name))
+    if len(parsed_es_index) > 1:
+        if sample_type.lower() not in parsed_es_index:
+            raise Exception('Index "{0}" is not associated with sample type "{1}"'.format(elasticsearch_index, sample_type))
+        genome_version = next((s for s in parsed_es_index if s.startswith('grch')), '').lstrip('grch')
+        if genome_version and genome_version != project.genome_version:
+            raise Exception(
+                'Index "{0}" has genome version {1} but this project uses version {2}'.format(
+                    elasticsearch_index, genome_version, project.genome_version
+                )
+            )
 
 
 def _validate_vcf(vcf_path):

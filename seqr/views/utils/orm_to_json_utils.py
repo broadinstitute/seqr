@@ -232,7 +232,7 @@ def _get_json_for_sample(sample, project_guid=None):
         dict: json object
     """
 
-    return _get_json_for_samples([sample], project_guid=project_guid)[0]
+    return get_json_for_samples([sample], project_guid=project_guid)[0]
 
 
 def get_json_for_saved_variant(saved_variant, add_tags=False):
