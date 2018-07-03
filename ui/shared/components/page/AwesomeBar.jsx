@@ -65,8 +65,10 @@ class AwesomeBar extends React.Component
     />
   }
 
-  handleHttpSuccess = (response) => {
-    this.setState({ isLoading: false, results: response.matches })
+  handleHttpSuccess = (response, urlParams) => {
+    if (urlParams.q === this.state.value) {
+      this.setState({ isLoading: false, results: response.matches })
+    }
   }
 
   handleHttpError = (response) => {
