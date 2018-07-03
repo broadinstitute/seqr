@@ -9,7 +9,7 @@ from seqr.models import Project as SeqrProject, Family as SeqrFamily, Individual
     VariantTagType as SeqrVariantTagType, VariantTag as SeqrVariantTag, VariantNote as SeqrVariantNote, \
     VariantFunctionalData as SeqrVariantFunctionalData, LocusList as SeqrLocusList, LocusListGene as SeqrLocusListGene, \
     GeneNote as SeqrGeneNote
-from seqr.utils.model_sync_utils import get_or_create_saved_variant
+from seqr.utils.model_sync_utils import get_or_create_saved_variant, convert_html_to_plain_text
 
 
 XBROWSE_TO_SEQR_CLASS_MAPPING = {
@@ -106,6 +106,9 @@ XBROWSE_TO_SEQR_ADDITIONAL_ENTITIES_MAPPING = {
     }
 }
 
+HTML_TO_RICH_TEXT_MAPPING = {
+    "Family": {"analysis_notes", "analysis_summary"},
+}
 
 def _update_model(model_obj, **kwargs):
     for field, value in kwargs.items():
@@ -214,6 +217,7 @@ def _convert_xbrowse_kwargs_to_seqr_kwargs(xbrowse_model, include_all=False, **k
     # rename fields
     xbrowse_class_name = type(xbrowse_model).__name__
     field_mapping = XBROWSE_TO_SEQR_FIELD_MAPPING[xbrowse_class_name]
+    html_field_mapping = HTML_TO_RICH_TEXT_MAPPING.get(xbrowse_class_name, {})
     if include_all:
         field_mapping = {k: v for k, v in field_mapping.items() if v != _DELETED_FIELD}
 
@@ -231,6 +235,8 @@ def _convert_xbrowse_kwargs_to_seqr_kwargs(xbrowse_model, include_all=False, **k
             else:
                 logging.info("ERROR: unable to find equivalent seqr model for %s: %s" % (key, value))
                 del seqr_kwargs[key]
+        elif key in html_field_mapping:
+            seqr_kwargs[key] = convert_html_to_plain_text(value)
 
     return seqr_kwargs
 

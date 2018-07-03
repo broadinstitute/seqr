@@ -1406,6 +1406,7 @@ class AnalysedBy(models.Model):
             'user': {
                 'username': self.user.username,
                 'display_name': str(self.user.profile),
+                'is_staff': self.user.is_staff,
             },
             'date_saved': pretty.date(self.date_saved),
         }

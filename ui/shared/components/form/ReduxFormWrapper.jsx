@@ -13,6 +13,10 @@ import RequestStatus from './RequestStatus'
 const StyledForm = styled(({ hasSubmitButton, ...props }) => <Form {...props} />)`
   min-height: inherit;
   padding-bottom: ${props => props.hasSubmitButton && '40px'};
+  
+  .field.inline {
+    display: inline;
+  }
 `
 
 const MessagePanel = styled(Message)`

@@ -10,7 +10,7 @@ from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 from django.db.models import Q
 from guardian.shortcuts import assign_perm
 
-from seqr.utils.model_sync_utils import get_or_create_saved_variant
+from seqr.utils.model_sync_utils import get_or_create_saved_variant, convert_html_to_plain_text
 from seqr.views.apis import phenotips_api
 from seqr.views.apis.phenotips_api import _update_individual_phenotips_data
 from xbrowse_server.base.models import \
@@ -376,7 +376,7 @@ def look_up_vcf_loaded_date(vcf_path):
     return loaded_date
 
 
-def update_model_field(model, field_name, new_value):
+def update_model_field(model, field_name, new_value, strip_html=False):
     """Updates the given field if the new value is different from it's current value.
     Args:
         model: django ORM model
@@ -386,13 +386,15 @@ def update_model_field(model, field_name, new_value):
     if not hasattr(model, field_name):
         raise ValueError("model %s doesn't have the field %s" % (model, field_name))
 
+    if strip_html:
+        new_value = convert_html_to_plain_text(new_value)
     if getattr(model, field_name) != new_value:
         if DEBUG and field_name != 'phenotips_data':
             i = raw_input("Should %s.%s = %s\n instead of \n%s \n in %s ? [Y\n]" % (model.__class__.__name__.encode('utf-8'), field_name.encode('utf-8'), unicode(new_value).encode('utf-8'), getattr(model, field_name), str(model)))
             if i.lower() != "y":
                 print("ok, skipping.")
                 return
-            
+
         setattr(model, field_name, new_value)
         if field_name != 'phenotips_data':
             print("Setting %s.%s = %s" % (model.__class__.__name__.encode('utf-8'), field_name.encode('utf-8'), unicode(new_value).encode('utf-8')))
@@ -508,8 +510,8 @@ def transfer_family(source_family, new_project):
     update_model_field(new_family, 'display_name', source_family.family_name or source_family.family_id)
     update_model_field(new_family, 'description', source_family.short_description)
     update_model_field(new_family, 'pedigree_image', source_family.pedigree_image)
-    update_model_field(new_family, 'analysis_notes', source_family.about_family_content)
-    update_model_field(new_family, 'analysis_summary', source_family.analysis_summary_content)
+    update_model_field(new_family, 'analysis_notes', source_family.about_family_content, strip_html=True)
+    update_model_field(new_family, 'analysis_summary', source_family.analysis_summary_content, strip_html=True)
     update_model_field(new_family, 'causal_inheritance_mode', source_family.causal_inheritance_mode)
     update_model_field(new_family, 'analysis_status', source_family.analysis_status)
     update_model_field(new_family, 'coded_phenotype', source_family.coded_phenotype)

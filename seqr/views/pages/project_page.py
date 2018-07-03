@@ -11,14 +11,15 @@ from django.contrib.auth.decorators import login_required
 from django.db import connection
 from django.db.models import Q, Count
 
-from seqr.models import Family, Individual, _slugify, CAN_VIEW, LocusList, \
+from seqr.models import Individual, _slugify, CAN_VIEW, LocusList, \
     LocusListGene, LocusListInterval, VariantTagType, VariantTag, VariantFunctionalData
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
-from seqr.views.apis.family_api import export_families
 from seqr.views.apis.individual_api import export_individuals
 from seqr.views.utils.family_info_utils import retrieve_multi_family_analysed_by
 from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.orm_to_json_utils import _get_json_for_project, _get_json_for_sample, _get_json_for_families, _get_json_for_individuals
+from seqr.views.utils.orm_to_json_utils import \
+    _get_json_for_project, _get_json_for_sample, _get_json_for_families, _get_json_for_individuals, \
+    get_json_for_saved_variant
 
 
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions
@@ -92,6 +93,7 @@ def _retrieve_families(cursor, project_guid, user):
           f.id AS family_id,
           f.guid AS family_guid,
           f.family_id AS family_family_id,
+          f.created_date AS family_created_date,
           f.display_name AS family_display_name,
           f.description AS family_description,
           f.analysis_notes AS family_analysis_notes,
@@ -254,9 +256,17 @@ def _get_json_for_locus_lists(project):
 
 def _get_json_for_variant_tag_types(project):
     project_variant_tags = []
+    discovery_tags = []
     tag_counts_by_type_and_family = VariantTag.objects.filter(saved_variant__project=project).values('saved_variant__family__guid', 'variant_tag_type__name').annotate(count=Count('*'))
     for variant_tag_type in VariantTagType.objects.filter(Q(project=project) | Q(project__isnull=True)):
         current_tag_type_counts = [counts for counts in tag_counts_by_type_and_family if counts['variant_tag_type__name'] == variant_tag_type.name]
+        num_tags = sum(count['count'] for count in current_tag_type_counts)
+        if variant_tag_type.category == 'CMG Discovery Tags' and num_tags > 0:
+            for tag in VariantTag.objects.filter(saved_variant__project=project, variant_tag_type=variant_tag_type).select_related('saved_variant'):
+                tag_data = get_json_for_saved_variant(tag.saved_variant)
+                tag_data.update(json.loads(tag.saved_variant.saved_variant_json or '{}'))
+                discovery_tags.append(tag_data)
+
         project_variant_tags.append({
             'variantTagTypeGuid': variant_tag_type.guid,
             'name': variant_tag_type.name,
@@ -265,7 +275,7 @@ def _get_json_for_variant_tag_types(project):
             'color': variant_tag_type.color,
             'order': variant_tag_type.order,
             'is_built_in': variant_tag_type.is_built_in,
-            'numTags': sum(count['count'] for count in current_tag_type_counts),
+            'numTags': num_tags,
             'numTagsPerFamily': {count['saved_variant__family__guid']: count['count'] for count in current_tag_type_counts},
         })
 
@@ -282,6 +292,7 @@ def _get_json_for_variant_tag_types(project):
     return {
         'variantTagTypes': sorted(project_variant_tags, key=lambda variant_tag_type: variant_tag_type['order']),
         'variantFunctionalTagTypes': project_functional_tags,
+        'discoveryTags': discovery_tags,
     }
 
 
@@ -297,25 +308,6 @@ def _get_json_for_reference_populations(project):
 
     return result
 """
-
-
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
-def export_project_families_handler(request, project_guid):
-    """Export project Families table.
-
-    Args:
-        project_guid (string): GUID of the project for which to export family data
-    """
-    format = request.GET.get('file_format', 'tsv')
-
-    project = get_project_and_check_permissions(project_guid, request.user)
-
-    # get all families in this project
-    families = Family.objects.filter(project=project).order_by('family_id')
-
-    filename_prefix = "%s_families" % _slugify(project.name)
-
-    return export_families(filename_prefix, families, format, include_internal_case_review_summary=False, include_internal_case_review_notes=False)
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)

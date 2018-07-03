@@ -10,37 +10,35 @@ import {
   FAMILY_FIELD_INTERNAL_NOTES,
   FAMILY_FIELD_INTERNAL_SUMMARY,
 } from 'shared/utils/constants'
-import { getShowDetails, getProject, getCaseReviewStatusCounts } from '../selectors'
+import { CASE_REVIEW_TABLE_NAME } from '../constants'
+import { getCaseReviewStatusCounts, getFamiliesExportConfig, getIndividualsExportConfig } from '../selectors'
 import FamilyTable from './FamilyTable/FamilyTable'
 
-const DETAIL_FIELDS = [
+const FIELDS = [
   { id: FAMILY_FIELD_DESCRIPTION },
   { id: FAMILY_FIELD_ANALYSED_BY },
   { id: FAMILY_FIELD_ANALYSIS_NOTES },
   { id: FAMILY_FIELD_ANALYSIS_SUMMARY },
-]
-
-const NO_DETAIL_FIELDS = [
   { id: FAMILY_FIELD_INTERNAL_NOTES, canEdit: true },
   { id: FAMILY_FIELD_INTERNAL_SUMMARY, canEdit: true },
 ]
 
-const ALL_FIELDS = DETAIL_FIELDS.concat(NO_DETAIL_FIELDS)
-
 const CaseReviewTable = (props) => {
   const headerStatus = { title: 'Individual Statuses', data: props.caseReviewStatusCounts }
   const exportUrls = [
-    { name: 'Families', url: `/api/project/${props.project.projectGuid}/export_case_review_families` },
-    { name: 'Individuals', url: `/api/project/${props.project.projectGuid}/export_case_review_individuals` },
+    { name: 'Families', data: props.familyExportConfig },
+    { name: 'Individuals', data: props.individualsExportConfig },
   ]
   return (
     <div>
       <FamilyTable
         showInternalFilters
         editCaseReview
+        showDetails
+        tableName={CASE_REVIEW_TABLE_NAME}
         headerStatus={headerStatus}
         exportUrls={exportUrls}
-        fields={props.showDetails ? ALL_FIELDS : NO_DETAIL_FIELDS}
+        detailFields={FIELDS}
       />
     </div>
   )
@@ -50,15 +48,15 @@ const CaseReviewTable = (props) => {
 export { CaseReviewTable as CaseReviewTableComponent }
 
 CaseReviewTable.propTypes = {
-  project: PropTypes.object.isRequired,
   caseReviewStatusCounts: PropTypes.array,
-  showDetails: PropTypes.bool,
+  familyExportConfig: PropTypes.object,
+  individualsExportConfig: PropTypes.object,
 }
 
 const mapStateToProps = state => ({
-  project: getProject(state),
   caseReviewStatusCounts: getCaseReviewStatusCounts(state),
-  showDetails: getShowDetails(state),
+  familyExportConfig: getFamiliesExportConfig(state, { tableName: CASE_REVIEW_TABLE_NAME, internal: true }),
+  individualsExportConfig: getIndividualsExportConfig(state, { tableName: CASE_REVIEW_TABLE_NAME, internal: true }),
 })
 
 export default connect(mapStateToProps)(CaseReviewTable)

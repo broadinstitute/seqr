@@ -26,8 +26,8 @@ EmptyTableRow.propTypes = {
   familiesFilter: PropTypes.string.isRequired,
 }
 
-const mapStateToProps = state => ({
-  familiesFilter: getFamiliesFilter(state),
+const mapStateToProps = (state, ownProps) => ({
+  familiesFilter: getFamiliesFilter(state, ownProps),
 })
 
 export default connect(mapStateToProps)(EmptyTableRow)

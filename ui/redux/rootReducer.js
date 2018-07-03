@@ -1,5 +1,6 @@
 import { combineReducers } from 'redux'
 import { reducer as formReducer, SubmissionError } from 'redux-form'
+import { reducer as searchReducer } from 'redux-search'
 
 import { reducers as dashboardReducers } from 'pages/Dashboard/reducers'
 import { reducers as projectReducers } from 'pages/Project/reducers'
@@ -183,6 +184,7 @@ const rootReducer = combineReducers(Object.assign({
   variantLoading: loadingReducer(REQUEST_VARIANT, RECEIVE_SAVED_VARIANTS),
   user: zeroActionsReducer,
   form: formReducer,
+  search: searchReducer,
 }, modalReducers, dashboardReducers, projectReducers))
 
 export default rootReducer
