@@ -5,7 +5,7 @@ from pprint import pformat
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 
-from seqr.models import CAN_EDIT, Sample
+from seqr.models import CAN_EDIT
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.utils.dataset_utils import add_dataset
 from seqr.views.utils.json_utils import create_json_response
@@ -58,6 +58,7 @@ def add_dataset_handler(request, project_guid):
     ignore_extra_samples_in_callset = request_json.get('ignoreExtraSamplesInCallset')
     sample_ids_to_individual_ids_path = request_json.get('sampleIdsToIndividualIdsPath')
 
+    # TODO
     if sample_ids_to_individual_ids_path:
         return create_json_response({
             'errors': ["Sample ids to individual ids mapping - not yet supported"],

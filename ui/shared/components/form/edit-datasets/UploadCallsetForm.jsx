@@ -2,15 +2,9 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { addDataset } from 'pages/Project/reducers'
+import { SAMPLE_TYPE_OPTIONS, DATASET_TYPE_VARIANT_CALLS } from '../../../utils/constants'
 import ReduxFormWrapper from '../ReduxFormWrapper'
 import { Select, BooleanCheckbox } from '../Inputs'
-
-// TODO constants
-const SAMPLE_TYPES = [
-  { key: 'WES', value: 'WES', text: 'Exome' },
-  { key: 'WGS', value: 'WGS', text: 'Genome' },
-  { key: 'RNA', value: 'RNA', text: 'RNA-seq' },
-]
 
 
 const FIELDS = [
@@ -25,7 +19,7 @@ const FIELDS = [
     label: 'Sample Type*',
     labelHelp: 'Biological sample type',
     component: Select,
-    options: SAMPLE_TYPES,
+    options: SAMPLE_TYPE_OPTIONS,
     validate: value => (value ? undefined : 'Specify the Sample Type'),
   },
   { name: 'datasetName', label: 'Name', labelHelp: 'Callset name' },
@@ -58,7 +52,7 @@ const FIELDS = [
   },
 ]
 
-const INITIAL_DATA = { datasetType: 'VARIANTS' }
+const INITIAL_DATA = { datasetType: DATASET_TYPE_VARIANT_CALLS }
 
 const UploadCallsetForm = ({ modalName, addDataset: dispatchAddDataset }) =>
   <ReduxFormWrapper
