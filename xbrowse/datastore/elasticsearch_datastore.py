@@ -93,27 +93,6 @@ def _add_index_fields_to_variant(variant_dict, annotation=None):
         variant_dict['db_gene_ids'] = annotation['gene_ids']
 
 
-def add_disease_genes_to_variants(gene_list_map, variants):
-    """
-    Take a list of variants and annotate them with disease genes
-    """
-    error_counter = 0
-    by_gene = gene_list_map
-    for variant in variants:
-        gene_lists = []
-        try:
-            for gene_id in variant.coding_gene_ids:
-                for g in by_gene[gene_id]:
-                    gene_lists.append(g.name)
-            variant.set_extra('disease_genes', gene_lists)
-        except Exception as e:
-            exc_type, exc_obj, exc_tb = sys.exc_info()
-            error_counter += 1
-            if error_counter > 10:
-                break
-
-
-
 class ElasticsearchDatastore(datastore.Datastore):
 
     def __init__(self, annotator):
@@ -672,12 +651,12 @@ class ElasticsearchDatastore(datastore.Datastore):
                 genes = {}
                 for gene_id in result["coding_gene_ids"]:
                     if gene_id:
-                        genes[gene_id] = reference.get_gene_summary(gene_id)
+                        genes[gene_id] = reference.get_gene_summary(gene_id) or {}
 
                 if not genes:
                     for gene_id in result["gene_ids"]:
                         if gene_id:
-                            genes[gene_id] = reference.get_gene_summary(gene_id)
+                            genes[gene_id] = reference.get_gene_summary(gene_id) or {}
 
                 #if not genes:
                 #    genes =  {vep_anno["gene_id"]: {"symbol": vep_anno["gene_symbol"]} for vep_anno in vep_annotation}
@@ -687,19 +666,6 @@ class ElasticsearchDatastore(datastore.Datastore):
                 exc_type, exc_obj, exc_tb = sys.exc_info()
                 logger.warn("WARNING: got unexpected error in add_gene_names_to_variants: %s : line %s" % (e, exc_tb.tb_lineno))
 
-            #add_disease_genes_to_variants(gene_list_map, [variant])
-            #add_gene_databases_to_variants([variant])
-            #add_gene_info_to_variants([variant])
-            #add_notes_to_variants_family(family, [variant])
-            #if family_id:
-            #    family = Family.objects.get(project__project_id=project_id, family_id=family_id)
-            #    try:
-            #        notes = list(VariantNote.objects.filter(family=family, xpos=variant.xpos, ref=variant.ref, alt=variant.alt).order_by('-date_saved'))
-            #        variant.set_extra('family_notes', [n.toJSON() for n in notes])
-            #        tags = list(VariantTag.objects.filter(family=family, xpos=variant.xpos, ref=variant.ref, alt=variant.alt))
-            #        variant.set_extra('family_tags', [t.toJSON() for t in tags])
-            #    except Exception, e:
-            #        print("WARNING: got unexpected error in add_notes_to_variants_family for family %s %s" % (family, e))
             variant_results.append(result)
 
         logger.info("Finished returning the %s variants: %s seconds" % (response.hits.total, time.time() - start))
@@ -737,15 +703,7 @@ class ElasticsearchDatastore(datastore.Datastore):
         chrom, pos = get_chr_pos(xpos)
 
         variant_id = "%s-%s-%s-%s" % (chrom, pos, ref, alt)
-
-        #cache_key = (project_id, family_id, xpos, ref, alt)
-        cached_results = None #self._redis_client and self._redis_client.get(cache_key)
-        if cached_results is not None:
-            results = [Variant.fromJSON(v) if v else None for v in json.loads(cached_results)]
-        else:
-            results = list(self.get_elasticsearch_variants(project_id, family_id=family_id, variant_id_filter=[variant_id], user=user, include_all_consequences=True))
-            #if self._redis_client:
-            #    self._redis_client.set(cache_key, json.dumps([r.toJSON() if r else None for r in results]))
+        results = list(self.get_elasticsearch_variants(project_id, family_id=family_id, variant_id_filter=[variant_id], user=user, include_all_consequences=True))
 
         if not results:
             return None
@@ -769,24 +727,17 @@ class ElasticsearchDatastore(datastore.Datastore):
             chrom, pos = get_chr_pos(xpos)
             variant_ids.append("%s-%s-%s-%s" % (chrom, pos, ref, alt))
 
-        #cache_key = (project_id, family_id, tuple(xpos_ref_alt_tuples))
-        cached_results = None #self._redis_client and self._redis_client.get(cache_key)
-        if cached_results is not None:
-            results = [Variant.fromJSON(v) if v else None for v in json.loads(cached_results)]
-        else:
-            results = self.get_elasticsearch_variants(project_id, family_id=family_id, variant_id_filter=variant_ids, user=user)
-            # make sure all variants in xpos_ref_alt_tuples were retrieved and are in the same order.
-            # Return None for tuples that weren't found in ES.
-            results_by_xpos_ref_alt = {}
-            for r in results:
-                results_by_xpos_ref_alt[(r.xpos, r.ref, r.alt)] = r
 
-            # create a list that's the same length as the input list of xpos_ref_alt_tuples, putting None for
-            # xpos-ref-alt's that weren't found in the elasticsearch index
-            results = [results_by_xpos_ref_alt.get(t) for t in xpos_ref_alt_tuples]
+        results = self.get_elasticsearch_variants(project_id, family_id=family_id, variant_id_filter=variant_ids, user=user)
+        # make sure all variants in xpos_ref_alt_tuples were retrieved and are in the same order.
+        # Return None for tuples that weren't found in ES.
+        results_by_xpos_ref_alt = {}
+        for r in results:
+            results_by_xpos_ref_alt[(r.xpos, r.ref, r.alt)] = r
 
-            #if self._redis_client:
-            #    self._redis_client.set(cache_key, json.dumps([r.toJSON() if r else None for r in results]))
+        # create a list that's the same length as the input list of xpos_ref_alt_tuples, putting None for
+        # xpos-ref-alt's that weren't found in the elasticsearch index
+        results = [results_by_xpos_ref_alt.get(t) for t in xpos_ref_alt_tuples]
 
         return results
 

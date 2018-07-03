@@ -43,6 +43,17 @@ const PageHeader = ({ user, project, familiesByGuid, match }) => {
       breadcrumb: false,
       originalPages: [{ name: 'Project', path: '' }, { name: 'Families', path: 'families' }],
     },
+    family_page: {
+      breadcrumb: false,
+      breadcrumbIdParsers: [
+        (breadcrumbId) => {
+          const { familyId } = familiesByGuid[breadcrumbId] || {}
+          originalPageLink = `family/${familyId}`
+          return { content: `Family: ${familyId || breadcrumbId}`, link: match.url }
+        },
+      ],
+      originalPages: [{ name: 'Family' }],
+    },
     saved_variants: {
       breadcrumbIdParsers: [
         (breadcrumbId) => {

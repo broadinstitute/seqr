@@ -11,10 +11,16 @@ import {
   FAMILY_FIELD_DESCRIPTION,
   FAMILY_FIELD_ANALYSIS_STATUS,
   FAMILY_FIELD_ANALYSED_BY,
-  FAMILY_FIELD_ANALYSIS_NOTES,
-  FAMILY_FIELD_ANALYSIS_SUMMARY,
+  FAMILY_FIELD_FIRST_SAMPLE,
+  FAMILY_DETAIL_FIELDS,
 } from 'shared/utils/constants'
-import { getProject, getProjectDetailsIsLoading, getShowDetails, getAnalysisStatusCounts } from '../selectors'
+import {
+  getProject,
+  getProjectDetailsIsLoading,
+  getAnalysisStatusCounts,
+  getFamiliesExportConfig,
+  getIndividualsExportConfig,
+} from '../selectors'
 import ProjectOverview from './ProjectOverview'
 import ProjectCollaborators from './ProjectCollaborators'
 import GeneLists from './GeneLists'
@@ -75,24 +81,20 @@ const mapSectionStateToProps = state => ({
 
 const ProjectSection = connect(mapSectionStateToProps)(ProjectSectionComponent)
 
-const DETAIL_FIELDS = [
-  { id: FAMILY_FIELD_DESCRIPTION, canEdit: true },
-  { id: FAMILY_FIELD_ANALYSIS_STATUS, canEdit: true },
-  { id: FAMILY_FIELD_ANALYSED_BY, canEdit: true },
-  { id: FAMILY_FIELD_ANALYSIS_NOTES, canEdit: true },
-  { id: FAMILY_FIELD_ANALYSIS_SUMMARY, canEdit: true },
-]
-
 const NO_DETAIL_FIELDS = [
-  { id: FAMILY_FIELD_ANALYSIS_STATUS, canEdit: true },
+  { id: FAMILY_FIELD_ANALYSIS_STATUS },
+  { id: FAMILY_FIELD_ANALYSED_BY, colWidth: 2 },
+  { id: FAMILY_FIELD_FIRST_SAMPLE },
+  { id: FAMILY_FIELD_DESCRIPTION, colWidth: 6 },
 ]
 
 const ProjectPageUI = (props) => {
   const headerStatus = { title: 'Analysis Statuses', data: props.analysisStatusCounts }
   const exportUrls = [
-    { name: 'Families', url: `/api/project/${props.project.projectGuid}/export_project_families` },
-    { name: 'Individuals', url: `/api/project/${props.project.projectGuid}/export_project_individuals?include_phenotypes=1` },
+    { name: 'Families', data: props.familyExportConfig },
+    { name: 'Individuals', data: props.individualsExportConfig },
   ]
+
   return (
     <Grid stackable>
       <Grid.Row>
@@ -123,7 +125,9 @@ const ProjectPageUI = (props) => {
             headerStatus={headerStatus}
             exportUrls={exportUrls}
             showSearchLinks
-            fields={props.showDetails ? DETAIL_FIELDS : NO_DETAIL_FIELDS}
+            showVariantTags
+            detailFields={FAMILY_DETAIL_FIELDS}
+            noDetailFields={NO_DETAIL_FIELDS}
           />
         </Grid.Column>
       </Grid.Row>
@@ -134,13 +138,15 @@ const ProjectPageUI = (props) => {
 ProjectPageUI.propTypes = {
   project: PropTypes.object.isRequired,
   analysisStatusCounts: PropTypes.array,
-  showDetails: PropTypes.bool,
+  familyExportConfig: PropTypes.object,
+  individualsExportConfig: PropTypes.object,
 }
 
 const mapStateToProps = state => ({
   project: getProject(state),
   analysisStatusCounts: getAnalysisStatusCounts(state),
-  showDetails: getShowDetails(state),
+  familyExportConfig: getFamiliesExportConfig(state),
+  individualsExportConfig: getIndividualsExportConfig(state),
 })
 
 export { ProjectPageUI as ProjectPageUIComponent }

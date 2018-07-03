@@ -447,14 +447,14 @@ def _update_individual_phenotips_data(individual, patient_json):
         hpo_id = feature['id']
         try:
             feature['category'] = HumanPhenotypeOntology.objects.get(hpo_id=hpo_id).category_id
-        except ObjectDoesNotExist as e:
+        except ObjectDoesNotExist:
             logger.error("ERROR: PhenoTips HPO id %s not found in seqr HumanPhenotypeOntology table." % hpo_id)
 
     update_seqr_model(
         individual,
-        phenotips_data = json.dumps(patient_json),
-        phenotips_patient_id = patient_json['id'],        # phenotips internal id
-        phenotips_eid = patient_json.get('external_id'))  # phenotips external id
+        phenotips_data=json.dumps(patient_json),
+        phenotips_patient_id=patient_json['id'],        # phenotips internal id
+        phenotips_eid=patient_json.get('external_id'))  # phenotips external id
 
 
 def _get_phenotips_uname_and_pwd_for_project(phenotips_user_id, read_only=False):

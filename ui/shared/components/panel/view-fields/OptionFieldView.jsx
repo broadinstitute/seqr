@@ -4,25 +4,16 @@ import PropTypes from 'prop-types'
 import { Select } from '../../form/Inputs'
 import BaseFieldView from './BaseFieldView'
 
-const OptionFieldView = ({ field, tagOptions, fieldDisplay, tagAnnotation, formFieldProps = {}, additionalEditFields = [], ...props }) => {
+const OptionFieldView = ({ field, tagOptions, fieldDisplay, tagAnnotation, compact, formFieldProps = {}, additionalEditFields = [], ...props }) => {
 
-  let currCategory = null
-  const tagSelectOptions = tagOptions.reduce((acc, tag) => {
-    if (tag.category !== currCategory) {
-      currCategory = tag.category
-      if (tag.category) {
-        acc.push({ text: tag.category, disabled: true })
-      }
-    }
-    acc.push({ value: tag.value || tag.name, text: tag.name, color: tag.color })
-    return acc
-  }, [])
+  const tagSelectOptions = tagOptions.map(({ value, name, ...tag }) => ({ value: value || name, text: name, ...tag }))
 
   const fields = [
     ...additionalEditFields,
     {
       name: field,
       options: tagSelectOptions,
+      includeCategories: true,
       component: Select,
       ...formFieldProps,
     },
@@ -32,10 +23,11 @@ const OptionFieldView = ({ field, tagOptions, fieldDisplay, tagAnnotation, formF
     <BaseFieldView
       formFields={fields}
       field={field}
+      compact={compact}
       fieldDisplay={fieldDisplay || ((value) => {
         const valueConfig = tagSelectOptions.find(option => option.value === value)
-        const annotation = tagAnnotation ? tagAnnotation(valueConfig) : null
-        return <span>{annotation}{valueConfig.text}</span>
+        const annotation = tagAnnotation ? tagAnnotation(valueConfig, compact) : null
+        return <span>{annotation}{compact && annotation ? '' : valueConfig.text}</span>
       })}
       {...props}
     />
@@ -50,6 +42,7 @@ OptionFieldView.propTypes = {
   additionalEditFields: PropTypes.array,
   formFieldProps: PropTypes.object,
   fieldDisplay: PropTypes.func,
+  compact: PropTypes.bool,
 }
 
 export default OptionFieldView
