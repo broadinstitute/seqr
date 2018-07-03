@@ -41,7 +41,7 @@ def add_dataset(
     _validate_inputs(dataset_type=dataset_type, sample_type=sample_type, dataset_path=dataset_path)
 
     if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
-        _add_variant_calls_dataset(
+        return _add_variant_calls_dataset(
             project=project,
             elasticsearch_index=elasticsearch_index,
             sample_type=sample_type,
@@ -52,7 +52,7 @@ def add_dataset(
             sample_ids_to_individual_ids_path=sample_ids_to_individual_ids_path,
         )
     elif dataset_type == Sample.DATASET_TYPE_READ_ALIGNMENTS:
-        _add_read_alignment_dataset(
+        return _add_read_alignment_dataset(
             project,
             sample_type,
             dataset_path,
@@ -80,18 +80,19 @@ def _add_variant_calls_dataset(
     if sample_ids_to_individual_ids_path:
         all_samples = _remap_sample_ids(sample_ids_to_individual_ids_path)
 
-    matched_sample_id_to_sample_record, created_samples = match_sample_ids_to_sample_records(
+    matched_sample_id_to_sample_record, created_sample_ids = match_sample_ids_to_sample_records(
         project=project,
         sample_ids=all_samples,
         sample_type=sample_type,
         dataset_type=dataset_type,
+        elasticsearch_index=elasticsearch_index,
         max_edit_distance=max_edit_distance,
         create_sample_records=True,
     )
 
     unmatched_samples = set(all_samples) - set(matched_sample_id_to_sample_record.keys())
     if not ignore_extra_samples_in_callset and len(unmatched_samples) > 0:
-        raise Exception("Matches not found for ES sample ids: {}. Select the 'Ignore extra samples in callset' checkbox to ignore this.".format(
+        raise Exception('Matches not found for ES sample ids: {}. Select the "Ignore extra samples in callset" checkbox to ignore this.'.format(
             ", ".join(set(all_samples) - set(matched_sample_id_to_sample_record.keys()))
         ))
 
@@ -100,7 +101,6 @@ def _add_variant_calls_dataset(
 
     not_loaded_samples = []
     for sample_id, sample in matched_sample_id_to_sample_record.items():
-        sample.elasticsearch_index = elasticsearch_index
         if dataset_path:
             sample.dataset_file_path = dataset_path
         if dataset_name:
@@ -110,6 +110,8 @@ def _add_variant_calls_dataset(
             sample.sample_status = Sample.SAMPLE_STATUS_LOADED
             sample.loaded_date = timezone.now()
         sample.save()
+
+    return matched_sample_id_to_sample_record.values(), created_sample_ids
 
 
 def _add_read_alignment_dataset(*args, **kwargs):
@@ -121,7 +123,7 @@ def _add_read_alignment_dataset(*args, **kwargs):
 def _get_elasticsearch_index_samples(elasticsearch_index):
     sample_field_suffix = '_num_alt'
 
-    index = elasticsearch_dsl.Index('{}'.format(elasticsearch_index), using=es_client())
+    index = elasticsearch_dsl.Index('{}*'.format(elasticsearch_index), using=es_client())
     try:
         field_mapping = index.get_field_mapping(fields=['*{}'.format(sample_field_suffix)], doc_type=[VARIANT_DOC_TYPE])
     except NotFoundError:
@@ -129,11 +131,12 @@ def _get_elasticsearch_index_samples(elasticsearch_index):
     except TransportError as e:
         raise Exception(e.error)
 
-    variant_field_mapping = field_mapping.get(elasticsearch_index, {}).get('mappings', {}).get(VARIANT_DOC_TYPE)
-    if not variant_field_mapping:
+    samples = set()
+    for index in field_mapping.values():
+        samples.update([key.rstrip(sample_field_suffix) for key in index.get('mappings', {}).get(VARIANT_DOC_TYPE, {}).keys()])
+    if not samples:
         raise Exception('No sample fields found for index "{}"'.format(elasticsearch_index))
-
-    return [key.rstrip(sample_field_suffix) for key in field_mapping[elasticsearch_index]['mappings'].get(VARIANT_DOC_TYPE, {}).keys()]
+    return samples
 
 
 def _validate_inputs(dataset_type, sample_type, dataset_path):

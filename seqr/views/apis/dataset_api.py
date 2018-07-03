@@ -5,10 +5,11 @@ from pprint import pformat
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 
-from seqr.models import CAN_EDIT
+from seqr.models import Individual, CAN_EDIT
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.utils.dataset_utils import add_dataset
 from seqr.views.utils.json_utils import create_json_response
+from seqr.views.utils.orm_to_json_utils import get_json_for_samples
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions
 
 logger = logging.getLogger(__name__)
@@ -65,7 +66,7 @@ def add_dataset_handler(request, project_guid):
         }, status=400)
 
     try:
-        add_dataset(
+        updated_samples, created_sample_ids = add_dataset(
             project=project,
             elasticsearch_index=elasticsearch_index,
             sample_type=sample_type,
@@ -76,8 +77,16 @@ def add_dataset_handler(request, project_guid):
             ignore_extra_samples_in_callset=ignore_extra_samples_in_callset,
             sample_ids_to_individual_ids_path=sample_ids_to_individual_ids_path,
         )
+        updated_sample_json = get_json_for_samples(updated_samples, project_guid=project_guid)
+        response = {
+            'samplesByGuid': {s['sampleGuid']: s for s in updated_sample_json}
+        }
+        updated_individuals = {s['individualGuid'] for s in updated_sample_json if s['sampleId'] in created_sample_ids}
+        if updated_individuals:
+            individuals = Individual.objects.filter(guid__in=updated_individuals).prefetch_related('sample_set').only('guid')
+            response['individualsByGuid'] = {
+                ind.guid: {'sampleGuids': [s.guid for s in ind.sample_set.only('guid').all()]} for ind in individuals
+            }
+        return create_json_response(response)
     except Exception as e:
         return create_json_response({'errors': [e.message or str(e)]}, status=400)
-
-    # TODO should return updated samples
-    return create_json_response({})

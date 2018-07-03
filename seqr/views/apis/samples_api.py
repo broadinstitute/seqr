@@ -1,6 +1,7 @@
 import logging
 import numpy as np
 from django.utils import timezone
+from django.db.models.query_utils import Q
 
 from seqr.models import Individual, Sample
 
@@ -12,6 +13,7 @@ def match_sample_ids_to_sample_records(
         sample_ids,
         sample_type,
         dataset_type,
+        elasticsearch_index,
         max_edit_distance=0,
         create_sample_records=False):
     """Goes through the given list of sample_ids and finds existing Sample records of the given
@@ -34,11 +36,11 @@ def match_sample_ids_to_sample_records(
             newly-created ones)
     """
 
-    sample_id_to_sample_record = find_matching_sample_records(project, sample_ids, sample_type, dataset_type)
+    sample_id_to_sample_record = find_matching_sample_records(project, sample_ids, sample_type, dataset_type, elasticsearch_index)
     logger.info(str(len(sample_id_to_sample_record)) + " exact sample record matches")
 
     remaining_sample_ids = set(sample_ids) - set(sample_id_to_sample_record.keys())
-    created_samples = []
+    created_sample_ids = []
     if len(remaining_sample_ids) > 0:
         already_matched_individual_ids = {
             sample.individual.individual_id for sample in sample_id_to_sample_record.values()
@@ -70,22 +72,23 @@ def match_sample_ids_to_sample_records(
 
         # create new Sample records for Individual records that matches
         if create_sample_records:
-            created_samples = sample_id_to_individual_record.keys()
+            created_sample_ids = sample_id_to_individual_record.keys()
             for sample_id, individual in sample_id_to_individual_record.items():
                 new_sample = Sample.objects.create(
                     sample_id=sample_id,
                     sample_type=sample_type,
                     dataset_type=dataset_type,
+                    elasticsearch_index=elasticsearch_index,
                     individual=individual,
                     sample_status=Sample.SAMPLE_STATUS_LOADED,
                     loaded_date=timezone.now(),
                 )
                 sample_id_to_sample_record[sample_id] = new_sample
 
-    return sample_id_to_sample_record, created_samples
+    return sample_id_to_sample_record, created_sample_ids
 
 
-def find_matching_sample_records(project, sample_ids, sample_type, dataset_type):
+def find_matching_sample_records(project, sample_ids, sample_type, dataset_type, elasticsearch_index):
     """Find and return Samples of the given sample_type whose sample ids are in sample_ids list
 
     Args:
@@ -101,11 +104,13 @@ def find_matching_sample_records(project, sample_ids, sample_type, dataset_type)
         return {}
 
     sample_id_to_sample_record = {}
-    for sample in Sample.objects.select_related('individual').filter(
+    for sample in Sample.objects.select_related('individual').filter(Q(
         individual__family__project=project,
         sample_type=sample_type,
         dataset_type=dataset_type,
-        sample_id__in=sample_ids):
+        sample_id__in=sample_ids),
+        Q(elasticsearch_index=elasticsearch_index) | Q(elasticsearch_index__isnull=True)
+    ):
 
         sample_id_to_sample_record[sample.sample_id] = sample
 
