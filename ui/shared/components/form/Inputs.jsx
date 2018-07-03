@@ -31,14 +31,29 @@ const styledOption = (option) => {
     text: option.text || option.name || option.value,
     label: option.color ? { empty: true, circular: true, style: labelStyle(option.color) } : null,
     color: option.color,
+    disabled: option.disabled,
   }
 }
 
-export const Dropdown = props =>
+const processOptions = (options, includeCategories) => {
+  let currCategory = null
+  return options.reduce((acc, option) => {
+    if (includeCategories && option.category !== currCategory) {
+      currCategory = option.category
+      if (option.category) {
+        acc.push({ text: option.category, disabled: true })
+      }
+    }
+    acc.push(option)
+    return acc
+  }, []).map(styledOption)
+}
+
+export const Dropdown = ({ options, includeCategories, ...props }) =>
   <BaseSemanticInput
     {...props}
     inputType="Dropdown"
-    options={props.options.map(styledOption)}
+    options={processOptions(options, includeCategories)}
     noResultsMessage={null}
     tabIndex="0"
   />
@@ -46,6 +61,7 @@ export const Dropdown = props =>
 
 Dropdown.propTypes = {
   options: PropTypes.array,
+  includeCategories: PropTypes.bool,
 }
 
 export const Select = props =>

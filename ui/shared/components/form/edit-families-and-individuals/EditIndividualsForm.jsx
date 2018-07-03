@@ -8,20 +8,8 @@ import { Field } from 'redux-form'
 
 import { updateIndividuals } from 'pages/Project/reducers'
 import { getProjectFamiliesByGuid, getProjectIndividualsByGuid } from 'pages/Project/selectors'
+import { SEX_OPTIONS, AFFECTED_OPTIONS } from 'shared/utils/constants'
 import EditRecordsForm from '../EditRecordsForm'
-
-
-const sexOptions = [
-  { value: 'M', label: 'Male' },
-  { value: 'F', label: 'Female' },
-  { value: 'U', label: '?' },
-]
-
-const affectedOptions = [
-  { value: 'A', label: 'Affected' },
-  { value: 'N', label: 'Unaffected' },
-  { value: 'U', label: '?' },
-]
 
 const RadioField = styled(Field)`
   margin: 0 7px;
@@ -75,13 +63,13 @@ const EditIndividualsForm = (props) => {
     {
       header: 'Sex',
       field: 'sex',
-      fieldProps: { component: RadioGroup, options: sexOptions },
+      fieldProps: { component: RadioGroup, options: SEX_OPTIONS },
       cellProps: { collapsing: true },
     },
     {
       header: 'Affected Status',
       field: 'affected',
-      fieldProps: { component: RadioGroup, options: affectedOptions },
+      fieldProps: { component: RadioGroup, options: AFFECTED_OPTIONS },
       cellProps: { collapsing: true, style: { paddingRight: '30px' } },
     },
   ]

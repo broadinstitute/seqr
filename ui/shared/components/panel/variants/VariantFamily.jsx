@@ -9,6 +9,7 @@ import { getFamiliesByGuid, getIndividualsByGuid } from 'redux/selectors'
 import { getProject } from 'pages/Project/selectors'
 import {
   FAMILY_FIELD_DESCRIPTION,
+  FAMILY_FIELD_ANALYSIS_STATUS,
   FAMILY_FIELD_ANALYSIS_NOTES,
   FAMILY_FIELD_ANALYSIS_SUMMARY,
   FAMILY_FIELD_INTERNAL_NOTES,
@@ -16,6 +17,7 @@ import {
 } from 'shared/utils/constants'
 import PedigreeIcon from '../../icons/PedigreeIcon'
 import { HorizontalSpacer } from '../../Spacers'
+import PopupWithModal from '../../PopupWithModal'
 import Family from '../family'
 import PhenotipsDataPanel, { hasPhenotipsDetails } from '../view-phenotips-info/PhenotipsDataPanel'
 
@@ -39,9 +41,10 @@ const Allele = styled.span`
 `
 
 const FAMILY_FIELDS = [
-  { id: FAMILY_FIELD_DESCRIPTION },
-  { id: FAMILY_FIELD_ANALYSIS_NOTES },
-  { id: FAMILY_FIELD_ANALYSIS_SUMMARY },
+  { id: FAMILY_FIELD_DESCRIPTION, canEdit: true },
+  { id: FAMILY_FIELD_ANALYSIS_STATUS, canEdit: true },
+  { id: FAMILY_FIELD_ANALYSIS_NOTES, canEdit: true },
+  { id: FAMILY_FIELD_ANALYSIS_SUMMARY, canEdit: true },
   { id: FAMILY_FIELD_INTERNAL_NOTES },
   { id: FAMILY_FIELD_INTERNAL_SUMMARY },
 ]
@@ -159,7 +162,7 @@ const VariantFamily = ({ variant, project, family, individualsByGuid }) => {
       <IndividualCell>
         <Header size="small">
           Family<HorizontalSpacer width={5} />
-          <Popup
+          <PopupWithModal
             hoverable
             wide="very"
             position="top left"

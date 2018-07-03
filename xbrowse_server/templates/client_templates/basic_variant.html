@@ -188,20 +188,20 @@
                                 </span><br/>
                             <% } %>
                         </div>
+                        <% if (gene.disease_db_pheotypes && gene.disease_db_pheotypes.length > 0) { %>
+                            <span class="label label-default">IN OMIM</span><br/>
+                        <% } %>
+                        <% if (gene.disease_gene_lists && gene.disease_gene_lists.length > 0 ) { %>
+                            <% _.each(gene.disease_gene_lists, function (gene_list_name) { %>
+                                <span class="label label-danger icon-popover"
+                                      title="Gene List"
+                                      data-content="<%= gene_list_name %>">
+                                    GENE LIST: <%= gene_list_name.substring(0,6) %> <%= gene_list_name.length > 6 ? '..' : '' %>
+                                </span><br/>
+                            <% }); %>
+                        <% } %>
                     </div>
                 <% }); %>
-                <% if (variant.extras.in_disease_gene_db) { %>
-                <span class="label label-default">IN OMIM</span><br/>
-                <% } %>
-                <% if (variant.extras.disease_genes && variant.extras.disease_genes.length > 0 ) { %>
-                    <% _.each(variant.extras.disease_genes, function (gene_list_name) { %>
-                        <span class="label label-danger icon-popover"
-                              title="Gene List"
-                              data-content="<%= gene_list_name %>">
-                            GENE LIST: <%= gene_list_name.substring(0,6) %> <%= gene_list_name.length > 6 ? '..' : '' %>
-                        </span><br/>
-                    <% }); %>
-                <% } %>
             </div>
         <% } %>
         <div class="cell location">

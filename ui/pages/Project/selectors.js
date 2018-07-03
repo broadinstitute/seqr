@@ -1,9 +1,13 @@
 import orderBy from 'lodash/orderBy'
 import { createSelector } from 'reselect'
 
+import { getSearchResults } from 'redux/utils/reduxSearchEnhancer'
 import { FAMILY_ANALYSIS_STATUS_OPTIONS } from 'shared/utils/constants'
+import { toCamelcase, toSnakecase } from 'shared/utils/stringUtils'
 
-import { getProjectsByGuid, getFamiliesByGuid, getIndividualsByGuid, getSamplesByGuid } from 'redux/selectors'
+import {
+  getProjectsByGuid, getFamiliesByGuid, getIndividualsByGuid, getSamplesByGuid, getUser,
+} from 'redux/selectors'
 
 import {
   SHOW_ALL,
@@ -11,10 +15,15 @@ import {
   CASE_REVIEW_STATUS_OPTIONS,
   FAMILY_FILTER_OPTIONS,
   FAMILY_SORT_OPTIONS,
+  FAMILY_EXPORT_DATA,
+  INTERNAL_FAMILY_EXPORT_DATA,
+  INDIVIDUAL_EXPORT_DATA,
+  INTERNAL_INDIVIDUAL_EXPORT_DATA,
   SORT_BY_FAMILY_GUID,
   VARIANT_SORT_OPTONS,
   VARIANT_EXPORT_DATA,
   VARIANT_GENOTYPE_EXPORT_DATA,
+  familySamplesLoaded,
 } from './constants'
 
 
@@ -159,13 +168,22 @@ export const getSavedVariantExportConfig = createSelector(
 )
 
 // Family table selectors
-export const getProjectTableState = state => state.familyTableState
-export const getProjectTablePage = state => state.familyTableState.currentPage || 1
-export const getProjectTableRecordsPerPage = state => state.familyTableState.recordsPerPage || 200
-export const getFamiliesFilter = state => state.familyTableState.familiesFilter || SHOW_ALL
-export const getFamiliesSortOrder = state => state.familyTableState.familiesSortOrder || SORT_BY_FAMILY_NAME
-export const getFamiliesSortDirection = state => state.familyTableState.familiesSortDirection || 1
-export const getShowDetails = state => (state.familyTableState.showDetails !== undefined ? state.familyTableState.showDetails : true)
+export const getFamiliesTableState = createSelector(
+  (state, ownProps) => state[`${toCamelcase((ownProps || {}).tableName) || 'family'}TableState`],
+  tableState => tableState,
+)
+export const getFamiliesFilter = createSelector(
+  getFamiliesTableState,
+  familyTableState => familyTableState.familiesFilter || SHOW_ALL,
+)
+export const getFamiliesSortOrder = createSelector(
+  getFamiliesTableState,
+  familyTableState => familyTableState.familiesSortOrder || SORT_BY_FAMILY_NAME,
+)
+export const getFamiliesSortDirection = createSelector(
+  getFamiliesTableState,
+  familyTableState => familyTableState.familiesSortDirection || 1,
+)
 
 /**
  * function that returns an array of family guids that pass the currently-selected
@@ -173,48 +191,22 @@ export const getShowDetails = state => (state.familyTableState.showDetails !== u
  *
  * @param state {object} global Redux state
  */
-export const getFilteredFamilies = createSelector(
+export const getVisibleFamilies = createSelector(
   getProjectFamiliesByGuid,
   getProjectIndividualsByGuid,
+  getProjectSamplesByGuid,
+  getUser,
   getFamiliesFilter,
-  (familiesByGuid, individualsByGuid, familiesFilter) => {
-    const families = Object.values(familiesByGuid)
+  getSearchResults('familiesByGuid'),
+  (familiesByGuid, individualsByGuid, samplesByGuid, user, familiesFilter, familySearchResults) => {
+    const searchedFamilies = familySearchResults.map(family => familiesByGuid[family]).filter(family => family)
+
     if (!familiesFilter || !FAMILY_FILTER_LOOKUP[familiesFilter]) {
-      return families
+      return searchedFamilies
     }
 
-    const individuals = Object.values(individualsByGuid)
-    const familyFilter = FAMILY_FILTER_LOOKUP[familiesFilter](families, individuals)
-    return families.filter(familyFilter)
-  },
-)
-
-/**
- * function that returns the total number of pages to show.
- *
- * @param state {object} global Redux state
- */
-export const getTotalPageCount = createSelector(
-  getFilteredFamilies,
-  getProjectTableRecordsPerPage,
-  (filteredFamilies, recordsPerPage) => {
-    return Math.max(1, Math.ceil(filteredFamilies.length / recordsPerPage))
-  },
-)
-
-/**
- * function that returns an array of currently-visible familyGuids based on the selected page.
- *
- * @param state {object} global Redux state
- */
-export const getVisibleFamilies = createSelector(
-  getFilteredFamilies,
-  getProjectTablePage,
-  getProjectTableRecordsPerPage,
-  getTotalPageCount,
-  (filteredFamilies, currentPage, recordsPerPage, totalPageCount) => {
-    const page = Math.min(currentPage, totalPageCount) - 1
-    return filteredFamilies.slice(page * recordsPerPage, (page + 1) * recordsPerPage)
+    const familyFilter = FAMILY_FILTER_LOOKUP[familiesFilter](individualsByGuid, samplesByGuid, user)
+    return searchedFamilies.filter(familyFilter)
   },
 )
 
@@ -227,17 +219,16 @@ export const getVisibleFamilies = createSelector(
  */
 export const getVisibleFamiliesInSortedOrder = createSelector(
   getVisibleFamilies,
-  getProjectFamiliesByGuid,
   getProjectIndividualsByGuid,
   getProjectSamplesByGuid,
   getFamiliesSortOrder,
   getFamiliesSortDirection,
-  (visibleFamilies, familiesByGuid, individualsByGuid, samplesByGuid, familiesSortOrder, familiesSortDirection) => {
+  (visibleFamilies, individualsByGuid, samplesByGuid, familiesSortOrder, familiesSortDirection) => {
     if (!familiesSortOrder || !FAMILY_SORT_LOOKUP[familiesSortOrder]) {
       return visibleFamilies
     }
 
-    const getSortKey = FAMILY_SORT_LOOKUP[familiesSortOrder](familiesByGuid, individualsByGuid, samplesByGuid)
+    const getSortKey = FAMILY_SORT_LOOKUP[familiesSortOrder](individualsByGuid, samplesByGuid)
 
     return orderBy(visibleFamilies, [getSortKey], [familiesSortDirection > 0 ? 'asc' : 'desc'])
   },
@@ -252,15 +243,57 @@ export const getVisibleFamiliesInSortedOrder = createSelector(
 export const getVisibleSortedFamiliesWithIndividuals = createSelector(
   getVisibleFamiliesInSortedOrder,
   getProjectIndividualsByGuid,
-  (visibleFamilies, individualsByGuid) => {
+  getProjectSamplesByGuid,
+  (visibleFamilies, individualsByGuid, samplesByGuid) => {
     const AFFECTED_STATUS_ORDER = { A: 1, N: 2, U: 3 }
     const getIndivSortKey = individual => AFFECTED_STATUS_ORDER[individual.affected] || 0
 
     return visibleFamilies.map((family) => {
       const familyIndividuals = orderBy(family.individualGuids.map(individualGuid => individualsByGuid[individualGuid]), [getIndivSortKey])
-      return Object.assign(family, { individuals: familyIndividuals })
+
+      const familySamples = familySamplesLoaded(family, individualsByGuid, samplesByGuid)
+
+      return Object.assign(family, {
+        individuals: familyIndividuals,
+        firstSample: familySamples.length > 0 ? familySamples[0] : null,
+      })
     })
   },
+)
+
+export const getVisibleSortedIndividuals = createSelector(
+  getVisibleSortedFamiliesWithIndividuals,
+  families => families.reduce((acc, family) =>
+    [...acc, ...family.individuals.map(individual => ({ ...individual, familyId: family.familyId }))], [],
+  ),
+)
+
+export const getEntityExportConfig = (project, rawData, tableName, fileName, fields) => ({
+  filename: `${project.name.replace(' ', '_').toLowerCase()}_${tableName ? `${toSnakecase(tableName)}_` : ''}${fileName}`,
+  rawData,
+  headers: fields.map(config => config.header),
+  processRow: family => fields.map((config) => {
+    const val = family[config.field]
+    return config.format ? config.format(val) : val
+  }),
+})
+
+export const getFamiliesExportConfig = createSelector(
+  getProject,
+  getVisibleSortedFamiliesWithIndividuals,
+  (state, ownProps) => (ownProps || {}).tableName,
+  () => 'families',
+  (state, ownProps) => ((ownProps || {}).internal ? FAMILY_EXPORT_DATA.concat(INTERNAL_FAMILY_EXPORT_DATA) : FAMILY_EXPORT_DATA),
+  getEntityExportConfig,
+)
+
+export const getIndividualsExportConfig = createSelector(
+  getProject,
+  getVisibleSortedIndividuals,
+  (state, ownProps) => (ownProps || {}).tableName,
+  () => 'individuals',
+  (state, ownProps) => ((ownProps || {}).internal ? INDIVIDUAL_EXPORT_DATA.concat(INTERNAL_INDIVIDUAL_EXPORT_DATA) : INDIVIDUAL_EXPORT_DATA),
+  getEntityExportConfig,
 )
 
 export const getCaseReviewStatusCounts = createSelector(

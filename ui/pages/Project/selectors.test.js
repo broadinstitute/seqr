@@ -8,7 +8,12 @@ import { getVisibleFamilies, getVisibleFamiliesInSortedOrder, getVisibleSortedFa
 import { STATE_WITH_2_FAMILIES } from './fixtures'
 
 test('getVisibleFamilies', () => {
-  const visibleFamilies = getVisibleFamilies(STATE_WITH_2_FAMILIES)
+
+  const visibleFamilies = getVisibleFamilies.resultFunc(
+    STATE_WITH_2_FAMILIES.familiesByGuid, STATE_WITH_2_FAMILIES.individualsByGuid, STATE_WITH_2_FAMILIES.samplesByGuid,
+    STATE_WITH_2_FAMILIES.user, STATE_WITH_2_FAMILIES.familyTableState.familiesFilter,
+    Object.keys(STATE_WITH_2_FAMILIES.familiesByGuid)
+  )
 
   expect(visibleFamilies.length).toEqual(2)
   expect(visibleFamilies[0].familyGuid).toEqual('F011652_1')
@@ -16,7 +21,10 @@ test('getVisibleFamilies', () => {
 })
 
 test('getVisibleFamiliesInSortedOrder', () => {
-  const visibleFamiliesSorted = getVisibleFamiliesInSortedOrder(STATE_WITH_2_FAMILIES)
+  const visibleFamiliesSorted = getVisibleFamiliesInSortedOrder.resultFunc(
+    Object.values(STATE_WITH_2_FAMILIES.familiesByGuid), STATE_WITH_2_FAMILIES.individualsByGuid,
+    STATE_WITH_2_FAMILIES.samplesByGuid, STATE_WITH_2_FAMILIES.familyTableState.familiesSortOrder,
+    STATE_WITH_2_FAMILIES.familyTableState.familiesSortDirection)
 
   expect(visibleFamiliesSorted.length).toEqual(2)
   expect(visibleFamiliesSorted[0].familyGuid).toEqual('F011652_2')
@@ -24,10 +32,15 @@ test('getVisibleFamiliesInSortedOrder', () => {
 })
 
 test('getVisibleSortedFamiliesWithIndividuals', () => {
-  const visibleSortedFamiliesWithIndividuals = getVisibleSortedFamiliesWithIndividuals(STATE_WITH_2_FAMILIES)
+  const visibleSortedFamiliesWithIndividuals = getVisibleSortedFamiliesWithIndividuals.resultFunc(
+    Object.values(STATE_WITH_2_FAMILIES.familiesByGuid), STATE_WITH_2_FAMILIES.individualsByGuid,
+    STATE_WITH_2_FAMILIES.samplesByGuid,
+  )
   expect(visibleSortedFamiliesWithIndividuals.length).toEqual(2)
   expect(visibleSortedFamiliesWithIndividuals[0].individuals.length).toEqual(3)
   expect(visibleSortedFamiliesWithIndividuals[1].individuals.length).toEqual(3)
+  expect(visibleSortedFamiliesWithIndividuals[0].firstSample).toEqual(null)
+  expect(visibleSortedFamiliesWithIndividuals[1].firstSample.sampleGuid).toEqual('S2310656_wal_mc16200_mc16203')
 })
 
 test('getCaseReviewStatusCounts', () => {
