@@ -57,13 +57,7 @@ def add_dataset_handler(request, project_guid):
     dataset_name = request_json.get('datasetName')
 
     ignore_extra_samples_in_callset = request_json.get('ignoreExtraSamplesInCallset')
-    sample_ids_to_individual_ids_path = request_json.get('sampleIdsToIndividualIdsPath')
-
-    # TODO
-    if sample_ids_to_individual_ids_path:
-        return create_json_response({
-            'errors': ["Sample ids to individual ids mapping - not yet supported"],
-        }, status=400)
+    sample_ids_to_individual_ids_file_id = request_json.get('sampleIdsToIndividualIds', {}).get('uploadedFileId')
 
     try:
         updated_samples, created_sample_ids = add_dataset(
@@ -75,7 +69,7 @@ def add_dataset_handler(request, project_guid):
             dataset_name=dataset_name,
             max_edit_distance=0,
             ignore_extra_samples_in_callset=ignore_extra_samples_in_callset,
-            sample_ids_to_individual_ids_path=sample_ids_to_individual_ids_path,
+            sample_ids_to_individual_ids_file_id=sample_ids_to_individual_ids_file_id,
         )
         updated_sample_json = get_json_for_samples(updated_samples, project_guid=project_guid)
         response = {

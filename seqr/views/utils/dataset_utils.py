@@ -6,6 +6,7 @@ from django.utils import timezone
 from seqr.models import Sample
 from seqr.utils.es_utils import es_client, VARIANT_DOC_TYPE
 from seqr.utils.file_utils import does_file_exist, file_iter, get_file_stats
+from seqr.views.utils.file_utils import load_uploaded_file
 from seqr.views.apis.samples_api import match_sample_ids_to_sample_records
 
 logger = logging.getLogger(__name__)
@@ -19,7 +20,7 @@ def add_dataset(
     dataset_path=None,
     dataset_name=None,
     max_edit_distance=0,
-    sample_ids_to_individual_ids_path=None,
+    sample_ids_to_individual_ids_file_id=None,
     ignore_extra_samples_in_callset=False
 ):
 
@@ -52,7 +53,7 @@ def add_dataset(
             dataset_name=dataset_name,
             max_edit_distance=max_edit_distance,
             ignore_extra_samples_in_callset=ignore_extra_samples_in_callset,
-            sample_ids_to_individual_ids_path=sample_ids_to_individual_ids_path,
+            sample_ids_to_individual_ids_file_id=sample_ids_to_individual_ids_file_id,
         )
     elif dataset_type == Sample.DATASET_TYPE_READ_ALIGNMENTS:
         return _add_read_alignment_dataset(
@@ -61,7 +62,7 @@ def add_dataset(
             dataset_path,
             max_edit_distance=max_edit_distance,
             elasticsearch_index=elasticsearch_index,
-            ignore_extra_samples_in_callset=ignore_extra_samples_in_callset,
+            sample_ids_to_individual_ids_file_id=sample_ids_to_individual_ids_file_id,
         )
 
 
@@ -72,7 +73,7 @@ def _add_variant_calls_dataset(
     dataset_path=None,
     dataset_name=None,
     max_edit_distance=0,
-    sample_ids_to_individual_ids_path=None,
+    sample_ids_to_individual_ids_file_id=None,
     ignore_extra_samples_in_callset=False
 ):
 
@@ -80,8 +81,7 @@ def _add_variant_calls_dataset(
 
     all_samples = _get_elasticsearch_index_samples(elasticsearch_index)
 
-    if sample_ids_to_individual_ids_path:
-        all_samples = _remap_sample_ids(sample_ids_to_individual_ids_path)
+    sample_individual_mapping = _remap_sample_ids(sample_ids_to_individual_ids_file_id)
 
     matched_sample_id_to_sample_record, created_sample_ids = match_sample_ids_to_sample_records(
         project=project,
@@ -91,11 +91,12 @@ def _add_variant_calls_dataset(
         elasticsearch_index=elasticsearch_index,
         max_edit_distance=max_edit_distance,
         create_sample_records=True,
+        sample_individual_mapping=sample_individual_mapping,
     )
 
     unmatched_samples = set(all_samples) - set(matched_sample_id_to_sample_record.keys())
     if not ignore_extra_samples_in_callset and len(unmatched_samples) > 0:
-        raise Exception('Matches not found for ES sample ids: {}. Select the "Ignore extra samples in callset" checkbox to ignore this.'.format(
+        raise Exception('Matches not found for ES sample ids: {}. Uploading a mapping file for these samples, or select the "Ignore extra samples in callset" checkbox to ignore.'.format(
             ", ".join(set(all_samples) - set(matched_sample_id_to_sample_record.keys()))
         ))
 
@@ -174,7 +175,7 @@ def _validate_inputs(dataset_type, sample_type, dataset_path, project, elasticse
             raise Exception("Dataset type not supported: {}".format(dataset_type))
 
     parsed_es_index = elasticsearch_index.lower().split('__')
-    if parsed_es_index[0] != project.guid.lower() and parsed_es_index[0] != project.name.lower():
+    if parsed_es_index[0] not in [project.guid.lower(), project.name.lower(), project.deprecated_project_id.lower()]:
         raise Exception('Index "{0}" is not associated with project "{1}"'.format(elasticsearch_index, project.name))
     if len(parsed_es_index) > 1:
         if sample_type.lower() not in parsed_es_index:
@@ -209,24 +210,13 @@ def _validate_vcf(vcf_path):
         raise Exception('No samples found in VCF "{}"'.format(vcf_path))
 
 
-# TODO for real?
-def _remap_sample_ids(sample_ids_to_individual_ids_path):
-    if not does_file_exist(sample_ids_to_individual_ids_path):
-        return ["File not found: " + sample_ids_to_individual_ids_path]
+def _remap_sample_ids(sample_ids_to_individual_ids_file_id):
+    if not sample_ids_to_individual_ids_file_id:
+        return {}
 
     id_mapping = {}
-    for line in file_iter(sample_ids_to_individual_ids_path):
-        fields = line.strip().split("\t")
-        if len(fields) != 2:
-            raise ValueError("Must contain 2 columns: " + str(fields))
-        id_mapping[fields[0]] = fields[1]
-
-    remapped_sample_ids = []
-    for sample_id in sample_ids_to_individual_ids_path:
-        if sample_id in id_mapping:
-            remapped_sample_ids.append(id_mapping[sample_id])
-            logger.info("Remapped %s to %s" % (sample_id, id_mapping[sample_id]))
-        else:
-            remapped_sample_ids.append(sample_id)
-            logger.info("No sample id mapping for %s" % sample_id)
-    return remapped_sample_ids
+    for line in load_uploaded_file(sample_ids_to_individual_ids_file_id):
+        if len(line) != 2:
+            raise ValueError("Must contain 2 columns: " + ', '.join(line))
+        id_mapping[line[0]] = line[1]
+    return id_mapping

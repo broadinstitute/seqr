@@ -4,6 +4,7 @@ import { connect } from 'react-redux'
 import { addDataset } from 'pages/Project/reducers'
 import { SAMPLE_TYPE_OPTIONS, DATASET_TYPE_VARIANT_CALLS } from '../../../utils/constants'
 import ReduxFormWrapper from '../ReduxFormWrapper'
+import FileUploadField from '../XHRUploaderField'
 import { Select, BooleanCheckbox } from '../Inputs'
 
 
@@ -36,19 +37,18 @@ const FIELDS = [
     labelHelp: 'If the callset contains sample ids that don\'t match individuals in this project, ignore them instead of reporting an error.',
   },
   {
-    name: 'sampleIdsToIndividualIdsPath',
-    label: 'Sample ID To Individual ID Mapping',
-    labelHelp: (
-      <div>
-        Path of file that maps VCF Sample Ids to their corresponding seqr Individual Ids. <br />
+    name: 'sampleIdsToIndividualIds',
+    component: FileUploadField,
+    clearTimeOut: 0,
+    dropzoneLabel: (
+      <span style={{ marginLeft: '-5em', whiteSpace: 'nowrap' }}>
+        Upload a file that maps VCF Sample Ids to their corresponding Seqr Individual Ids<br />
         <br />
-        <b>File Format:</b><br />
-        Tab-separated text file (.tsv) or Excel spreadsheet (.xls)<br />
-        <b>Column 1:</b> Sample ID <br />
-        <b>Column 2:</b> Individual ID <br />
-      </div>
+        <b>File Format:</b> Tab-separated text file (.tsv) or Excel spreadsheet (.xls)<br />
+        <b>Column 1:</b> Sample ID, <b>Column 2:</b> Individual ID <br />
+      </span>
     ),
-    placeholder: 'gs:// Google bucket path or server filesystem path',
+    auto: true,
   },
 ]
 

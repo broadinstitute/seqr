@@ -15,7 +15,9 @@ def match_sample_ids_to_sample_records(
         dataset_type,
         elasticsearch_index,
         max_edit_distance=0,
-        create_sample_records=False):
+        create_sample_records=False,
+        sample_individual_mapping=None,
+    ):
     """Goes through the given list of sample_ids and finds existing Sample records of the given
     sample_type with ids from the list. For sample_ids that aren't found to have existing Sample
     records, it looks for Individual records that have an individual_id that either exactly or
@@ -36,6 +38,16 @@ def match_sample_ids_to_sample_records(
             newly-created ones)
     """
 
+    # remapped_sample_ids = []
+    # for sample_id in existing_smaple_ids:
+    #     if sample_id in id_mapping:
+    #         remapped_sample_ids.append(id_mapping[sample_id])
+    #         logger.info("Remapped %s to %s" % (sample_id, id_mapping[sample_id]))
+    #     else:
+    #         remapped_sample_ids.append(sample_id)
+    #         logger.info("No sample id mapping for %s" % sample_id)
+    # return remapped_sample_ids
+
     sample_id_to_sample_record = find_matching_sample_records(project, sample_ids, sample_type, dataset_type, elasticsearch_index)
     logger.info(str(len(sample_id_to_sample_record)) + " exact sample record matches")
 
@@ -47,17 +59,21 @@ def match_sample_ids_to_sample_records(
         }
 
         remaining_individuals_dict = {
-            i.individual_id: i for i in Individual.objects.filter(family__project=project)
-            if i.individual_id not in already_matched_individual_ids
+            i.individual_id: i for i in
+            Individual.objects.filter(family__project=project).exclude(individual_id__in=already_matched_individual_ids)
         }
 
         # find Individual records with exactly-matching individual_ids
         sample_id_to_individual_record = {}
         for sample_id in remaining_sample_ids:
-            if sample_id not in remaining_individuals_dict:
+            individual_id = sample_id
+            if sample_individual_mapping and sample_id in sample_individual_mapping:
+                individual_id = sample_individual_mapping[sample_id]
+
+            if individual_id not in remaining_individuals_dict:
                 continue
-            sample_id_to_individual_record[sample_id] = remaining_individuals_dict[sample_id]
-            del remaining_individuals_dict[sample_id]
+            sample_id_to_individual_record[sample_id] = remaining_individuals_dict[individual_id]
+            del remaining_individuals_dict[individual_id]
 
         logger.info(str(len(sample_id_to_individual_record)) + " matched individual ids")
         remaining_sample_ids = remaining_sample_ids - set(sample_id_to_individual_record.keys())
