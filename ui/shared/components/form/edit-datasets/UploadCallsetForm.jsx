@@ -37,12 +37,12 @@ const FIELDS = [
     labelHelp: 'If the callset contains sample ids that don\'t match individuals in this project, ignore them instead of reporting an error.',
   },
   {
-    name: 'sampleIdsToIndividualIds',
+    name: 'mappingFile',
     component: FileUploadField,
     clearTimeOut: 0,
     dropzoneLabel: (
       <span style={{ marginLeft: '-5em', whiteSpace: 'nowrap' }}>
-        Upload a file that maps VCF Sample Ids to their corresponding Seqr Individual Ids<br />
+        Upload an optional file that maps VCF Sample Ids to their corresponding Seqr Individual Ids<br />
         <br />
         <b>File Format:</b> Tab-separated text file (.tsv) or Excel spreadsheet (.xls)<br />
         <b>Column 1:</b> Sample ID, <b>Column 2:</b> Individual ID <br />

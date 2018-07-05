@@ -14,13 +14,13 @@ logger = logging.getLogger(__name__)
 
 def add_dataset(
     project,
-    elasticsearch_index,
     sample_type,
     dataset_type,
+    elasticsearch_index=None,
     dataset_path=None,
     dataset_name=None,
     max_edit_distance=0,
-    sample_ids_to_individual_ids_file_id=None,
+    mapping_file_id=None,
     ignore_extra_samples_in_callset=False
 ):
 
@@ -41,51 +41,80 @@ def add_dataset(
 
     _validate_inputs(
         dataset_type=dataset_type, sample_type=sample_type, dataset_path=dataset_path, project=project,
-        elasticsearch_index=elasticsearch_index
+        elasticsearch_index=elasticsearch_index, mapping_file_id=mapping_file_id
     )
 
+    update_kwargs = {
+        'project': project,
+        'sample_type': sample_type,
+        'dataset_type': dataset_type,
+        'elasticsearch_index': elasticsearch_index,
+        'dataset_name': dataset_name,
+        'max_edit_distance': max_edit_distance,
+        'ignore_extra_samples_in_callset': ignore_extra_samples_in_callset,
+    }
+
     if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
-        return _add_variant_calls_dataset(
-            project=project,
-            elasticsearch_index=elasticsearch_index,
-            sample_type=sample_type,
-            dataset_path=dataset_path,
-            dataset_name=dataset_name,
-            max_edit_distance=max_edit_distance,
-            ignore_extra_samples_in_callset=ignore_extra_samples_in_callset,
-            sample_ids_to_individual_ids_file_id=sample_ids_to_individual_ids_file_id,
+        update_kwargs.update(
+            **_update_variant_calls_dataset_kwargs(elasticsearch_index, dataset_path, mapping_file_id)
         )
     elif dataset_type == Sample.DATASET_TYPE_READ_ALIGNMENTS:
-        return _add_read_alignment_dataset(
-            project,
-            sample_type,
-            dataset_path,
-            max_edit_distance=max_edit_distance,
-            elasticsearch_index=elasticsearch_index,
-            sample_ids_to_individual_ids_file_id=sample_ids_to_individual_ids_file_id,
+        update_kwargs.update(
+            **_update_read_alignmen_dataset_kwargs(mapping_file_id)
         )
+        
+    return _update_samples_for_dataset(**update_kwargs)
 
 
-def _add_variant_calls_dataset(
+def _update_variant_calls_dataset_kwargs(elasticsearch_index, dataset_path, mapping_file_id):
+    all_samples = _get_elasticsearch_index_samples(elasticsearch_index)
+    return {
+        'sample_ids': all_samples,
+        'sample_individual_mapping': _load_mapping_file(mapping_file_id),
+        'sample_dataset_path_mapping': {sample_id: dataset_path for sample_id in all_samples},
+        'missing_sample_exception_template': 'Matches not found for ES sample ids: {unmatched_samples}. Uploading a mapping file for these samples, or select the "Ignore extra samples in callset" checkbox to ignore.'
+    }
+
+
+def _update_read_alignmen_dataset_kwargs(mapping_file_id):
+    sample_individual_mapping = {}
+    sample_dataset_path_mapping = {}
+    errors = []
+    for individual_id, dataset_path in _load_mapping_file(mapping_file_id).items():
+        if not (dataset_path.endswith(".bam") or dataset_path.endswith(".cram")):
+            raise Exception('BAM / CRAM file "{}" must have a .bam or .cram extension'.format(dataset_path))
+        _validate_dataset_path(dataset_path)
+        sample_id = dataset_path.split('/')[-1].split('.')[0]
+        sample_individual_mapping[sample_id] = individual_id
+        sample_dataset_path_mapping[sample_id] = dataset_path
+
+    if errors:
+        raise Exception(', '.join(errors))
+
+    return {
+        'sample_ids': sample_individual_mapping.keys(),
+        'sample_individual_mapping': sample_individual_mapping,
+        'sample_dataset_path_mapping': sample_dataset_path_mapping,
+        'missing_sample_exception_template': 'The following Individual IDs do not exist: {unmatched_samples}'
+    }
+
+
+def _update_samples_for_dataset(
     project,
-    elasticsearch_index,
+    sample_ids,
     sample_type,
-    dataset_path=None,
+    dataset_type,
+    elasticsearch_index=None,
     dataset_name=None,
     max_edit_distance=0,
-    sample_ids_to_individual_ids_file_id=None,
-    ignore_extra_samples_in_callset=False
+    sample_individual_mapping=None,
+    sample_dataset_path_mapping=None,
+    ignore_extra_samples_in_callset=False,
+    missing_sample_exception_template='Missing samples: {unmatched_samples}',
 ):
-
-    dataset_type = Sample.DATASET_TYPE_VARIANT_CALLS
-
-    all_samples = _get_elasticsearch_index_samples(elasticsearch_index)
-
-    sample_individual_mapping = _remap_sample_ids(sample_ids_to_individual_ids_file_id)
-
     matched_sample_id_to_sample_record, created_sample_ids = match_sample_ids_to_sample_records(
         project=project,
-        sample_ids=all_samples,
+        sample_ids=sample_ids,
         sample_type=sample_type,
         dataset_type=dataset_type,
         elasticsearch_index=elasticsearch_index,
@@ -94,19 +123,19 @@ def _add_variant_calls_dataset(
         sample_individual_mapping=sample_individual_mapping,
     )
 
-    unmatched_samples = set(all_samples) - set(matched_sample_id_to_sample_record.keys())
+    unmatched_samples = set(sample_ids) - set(matched_sample_id_to_sample_record.keys())
     if not ignore_extra_samples_in_callset and len(unmatched_samples) > 0:
-        raise Exception('Matches not found for ES sample ids: {}. Uploading a mapping file for these samples, or select the "Ignore extra samples in callset" checkbox to ignore.'.format(
-            ", ".join(set(all_samples) - set(matched_sample_id_to_sample_record.keys()))
-        ))
+        raise Exception(missing_sample_exception_template.format(unmatched_samples=", ".join(unmatched_samples)))
 
-    if len(matched_sample_id_to_sample_record) == 0:
-        raise Exception("None of the individuals or samples in the project matched the {} sample id(s) in the elasticsearch index".format(len(all_samples)))
+    if ignore_extra_samples_in_callset and len(matched_sample_id_to_sample_record) == 0:
+        raise Exception("None of the individuals or samples in the project matched the {} expected sample id(s)".format(
+            len(sample_ids)
+        ))
 
     not_loaded_samples = []
     for sample_id, sample in matched_sample_id_to_sample_record.items():
-        if dataset_path:
-            sample.dataset_file_path = dataset_path
+        if sample_dataset_path_mapping and sample_dataset_path_mapping.get(sample_id):
+            sample.dataset_file_path = sample_dataset_path_mapping[sample_id]
         if dataset_name:
             sample.dataset_name = dataset_name
         if sample.sample_status != Sample.SAMPLE_STATUS_LOADED:
@@ -116,12 +145,6 @@ def _add_variant_calls_dataset(
         sample.save()
 
     return matched_sample_id_to_sample_record.values(), created_sample_ids
-
-
-def _add_read_alignment_dataset(*args, **kwargs):
-    dataset_type = Sample.DATASET_TYPE_READ_ALIGNMENTS
-
-    # TODO
 
 
 def _get_elasticsearch_index_samples(elasticsearch_index):
@@ -143,50 +166,57 @@ def _get_elasticsearch_index_samples(elasticsearch_index):
     return samples
 
 
-def _validate_inputs(dataset_type, sample_type, dataset_path, project, elasticsearch_index):
+def _validate_inputs(dataset_type, sample_type, dataset_path, project, elasticsearch_index, mapping_file_id):
     # basic sample type checks
     if sample_type not in {choice[0] for choice in Sample.SAMPLE_TYPE_CHOICES}:
         raise Exception("Sample type not supported: {}".format(sample_type))
 
-    if dataset_path:
-        # check that dataset file exists if specified
-        try:
-            dataset_file = does_file_exist(dataset_path)
-            if dataset_file is None:
-                raise Exception('"{}" not found'.format(dataset_path))
-            # check that dataset_path is accessible
-            dataset_file_stats = get_file_stats(dataset_path)
-            if dataset_file_stats is None:
-                raise Exception('Unable to access "{}"'.format(dataset_path))
-        except Exception as e:
-            raise Exception("Dataset path error: " + str(e))
+    # datatset_type-specific checks
+    if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
+        _validate_varaint_call_inputs(sample_type, dataset_path, project, elasticsearch_index)
 
-        # datatset_type-specific checks
-        if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
-            if not dataset_path.endswith(".vcf.gz") and not dataset_path.endswith(".vds"):
-                raise Exception("Variant call dataset path must end with .vcf.gz or .vds")
-            _validate_vcf(dataset_path)
+    elif dataset_type == Sample.DATASET_TYPE_READ_ALIGNMENTS:
+        if not mapping_file_id:
+            raise Exception('Mapping file is required')
+    else:
+        raise Exception("Dataset type not supported: {}".format(dataset_type))
 
-        elif dataset_type == Sample.DATASET_TYPE_READ_ALIGNMENTS:
-            if not any([dataset_path.endswith(suffix) for suffix in ('.txt', '.tsv', '.xls', '.xlsx')]):
-                raise Exception("BAM / CRAM table must have a .txt or .xls extension")
 
-        else:
-            raise Exception("Dataset type not supported: {}".format(dataset_type))
-
+def _validate_varaint_call_inputs(sample_type, dataset_path, project, elasticsearch_index):
+    if not elasticsearch_index:
+        raise Exception('Elasticsearch index is required')
     parsed_es_index = elasticsearch_index.lower().split('__')
     if parsed_es_index[0] not in [project.guid.lower(), project.name.lower(), project.deprecated_project_id.lower()]:
         raise Exception('Index "{0}" is not associated with project "{1}"'.format(elasticsearch_index, project.name))
     if len(parsed_es_index) > 1:
         if sample_type.lower() not in parsed_es_index:
-            raise Exception('Index "{0}" is not associated with sample type "{1}"'.format(elasticsearch_index, sample_type))
+            raise Exception('Index "{0}" is not associated with sample type "{1}"'.format(
+                elasticsearch_index, sample_type
+            ))
         genome_version = next((s for s in parsed_es_index if s.startswith('grch')), '').lstrip('grch')
         if genome_version and genome_version != project.genome_version:
-            raise Exception(
-                'Index "{0}" has genome version {1} but this project uses version {2}'.format(
-                    elasticsearch_index, genome_version, project.genome_version
-                )
-            )
+            raise Exception('Index "{0}" has genome version {1} but this project uses version {2}'.format(
+                elasticsearch_index, genome_version, project.genome_version
+            ))
+
+    if dataset_path:
+        if not dataset_path.endswith(".vcf.gz") and not dataset_path.endswith(".vds"):
+            raise Exception("Variant call dataset path must end with .vcf.gz or .vds")
+        _validate_dataset_path(dataset_path)
+        _validate_vcf(dataset_path)
+
+
+def _validate_dataset_path(dataset_path):
+    try:
+        dataset_file = does_file_exist(dataset_path)
+        if dataset_file is None:
+            raise Exception('"{}" not found'.format(dataset_path))
+        # check that dataset_path is accessible
+        dataset_file_stats = get_file_stats(dataset_path)
+        if dataset_file_stats is None:
+            raise Exception('Unable to access "{}"'.format(dataset_path))
+    except Exception as e:
+        raise Exception("Dataset path error: " + str(e))
 
 
 def _validate_vcf(vcf_path):
@@ -210,12 +240,12 @@ def _validate_vcf(vcf_path):
         raise Exception('No samples found in VCF "{}"'.format(vcf_path))
 
 
-def _remap_sample_ids(sample_ids_to_individual_ids_file_id):
-    if not sample_ids_to_individual_ids_file_id:
+def _load_mapping_file(mapping_file_id):
+    if not mapping_file_id:
         return {}
 
     id_mapping = {}
-    for line in load_uploaded_file(sample_ids_to_individual_ids_file_id):
+    for line in load_uploaded_file(mapping_file_id):
         if len(line) != 2:
             raise ValueError("Must contain 2 columns: " + ', '.join(line))
         id_mapping[line[0]] = line[1]

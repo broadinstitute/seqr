@@ -12,11 +12,11 @@ const MODAL_NAME = 'Datasets'
 const PANES = [
   {
     menuItem: 'Upload New Callset',
-    pane: <Tab.Pane key={1}><UploadCallsetForm modalName={MODAL_NAME} /></Tab.Pane>,
+    render: () => <Tab.Pane key={1}><UploadCallsetForm modalName={MODAL_NAME} /></Tab.Pane>,
   },
   {
     menuItem: 'Add BAM/CRAM Paths',
-    pane: <Tab.Pane key={2}><AddBamPathsForm modalName={MODAL_NAME} /></Tab.Pane>,
+    render: () => <Tab.Pane key={2}><AddBamPathsForm modalName={MODAL_NAME} /></Tab.Pane>,
   },
 ]
 
@@ -27,9 +27,6 @@ export default () => (
     size="small"
     trigger={<ButtonLink>Edit Datasets</ButtonLink>}
   >
-    <Tab
-      renderActiveOnly={false}
-      panes={PANES}
-    />
+    <Tab panes={PANES} />
   </Modal>
 )

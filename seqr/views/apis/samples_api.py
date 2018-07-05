@@ -13,7 +13,7 @@ def match_sample_ids_to_sample_records(
         sample_ids,
         sample_type,
         dataset_type,
-        elasticsearch_index,
+        elasticsearch_index=None,
         max_edit_distance=0,
         create_sample_records=False,
         sample_individual_mapping=None,
@@ -48,7 +48,9 @@ def match_sample_ids_to_sample_records(
     #         logger.info("No sample id mapping for %s" % sample_id)
     # return remapped_sample_ids
 
-    sample_id_to_sample_record = find_matching_sample_records(project, sample_ids, sample_type, dataset_type, elasticsearch_index)
+    sample_id_to_sample_record = find_matching_sample_records(
+        project, sample_ids, sample_type, dataset_type, elasticsearch_index
+    )
     logger.info(str(len(sample_id_to_sample_record)) + " exact sample record matches")
 
     remaining_sample_ids = set(sample_ids) - set(sample_id_to_sample_record.keys())
@@ -120,14 +122,15 @@ def find_matching_sample_records(project, sample_ids, sample_type, dataset_type,
         return {}
 
     sample_id_to_sample_record = {}
-    for sample in Sample.objects.select_related('individual').filter(Q(
+    sample_query = Sample.objects.select_related('individual').filter(
         individual__family__project=project,
         sample_type=sample_type,
         dataset_type=dataset_type,
-        sample_id__in=sample_ids),
-        Q(elasticsearch_index=elasticsearch_index) | Q(elasticsearch_index__isnull=True)
-    ):
-
+        sample_id__in=sample_ids
+    )
+    if elasticsearch_index:
+        sample_query = sample_query.filter(Q(elasticsearch_index=elasticsearch_index) | Q(elasticsearch_index__isnull=True))
+    for sample in sample_query:
         sample_id_to_sample_record[sample.sample_id] = sample
 
     return sample_id_to_sample_record

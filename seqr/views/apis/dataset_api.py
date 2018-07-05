@@ -45,31 +45,31 @@ def add_dataset_handler(request, project_guid):
 
     logger.info("add_dataset_handler: received %s" % pformat(request_json))
 
-    required_fields = ['sampleType', 'datasetType', 'elasticsearchIndex']
+    required_fields = ['sampleType', 'datasetType']
     if any(field not in request_json for field in required_fields):
         raise ValueError(
             "request must contain fields: {}".format(', '.join(required_fields)))
 
     sample_type = request_json['sampleType']
     dataset_type = request_json['datasetType']
-    elasticsearch_index = request_json['elasticsearchIndex']
+    elasticsearch_index = request_json.get('elasticsearchIndex')
     dataset_path = request_json.get('datasetPath')
     dataset_name = request_json.get('datasetName')
 
     ignore_extra_samples_in_callset = request_json.get('ignoreExtraSamplesInCallset')
-    sample_ids_to_individual_ids_file_id = request_json.get('sampleIdsToIndividualIds', {}).get('uploadedFileId')
+    mapping_file_id = request_json.get('mappingFile', {}).get('uploadedFileId')
 
     try:
         updated_samples, created_sample_ids = add_dataset(
             project=project,
-            elasticsearch_index=elasticsearch_index,
             sample_type=sample_type,
             dataset_type=dataset_type,
+            elasticsearch_index=elasticsearch_index,
             dataset_path=dataset_path,
             dataset_name=dataset_name,
             max_edit_distance=0,
             ignore_extra_samples_in_callset=ignore_extra_samples_in_callset,
-            sample_ids_to_individual_ids_file_id=sample_ids_to_individual_ids_file_id,
+            mapping_file_id=mapping_file_id,
         )
         updated_sample_json = get_json_for_samples(updated_samples, project_guid=project_guid)
         response = {
