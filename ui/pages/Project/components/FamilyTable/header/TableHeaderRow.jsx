@@ -31,7 +31,7 @@ const SpacedDropdown = styled(Dropdown)`
 
 const TableHeaderRow = (
   { headerStatus, showInternalFilters, visibleFamiliesCount, totalFamiliesCount, fields, tableName, familiesTableState,
-    updateFamiliesTable: dispatchUpdateFamiliesTable,
+    updateFamiliesTable: dispatchUpdateFamiliesTable, showVariantTags,
   }) => {
   const filterFields = [
     {
@@ -113,6 +113,7 @@ const TableHeaderRow = (
               offset
               fields={fields}
               fieldDisplay={field => FAMILY_FIELD_RENDER_LOOKUP[field.id].name}
+              rightContent={showVariantTags ? 'Saved Variants' : null}
             />
           </Table.HeaderCell>
         </Table.Row>
@@ -130,6 +131,7 @@ TableHeaderRow.propTypes = {
   updateFamiliesTable: PropTypes.func,
   fields: PropTypes.array,
   tableName: PropTypes.string,
+  showVariantTags: PropTypes.bool,
 }
 
 const mapStateToProps = (state, ownProps) => ({
