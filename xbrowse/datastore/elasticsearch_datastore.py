@@ -123,16 +123,18 @@ class ElasticsearchDatastore(datastore.Datastore):
         from xbrowse_server.base.models import Individual
         from xbrowse_server.mall import get_reference
 
-        cache_key = json.dumps([
+        cache_key = "%s___%s___%s" % (
             project_id,
             family_id,
-            variant_filter.toJSON() if variant_filter else None,
-            genotype_filter,
-            quality_filter,
-            variant_id_filter,
-            indivs_to_consider,
-            include_all_consequences,
-        ])
+            json.dumps([
+                variant_filter.toJSON() if variant_filter else None,
+                genotype_filter,
+                quality_filter,
+                variant_id_filter,
+                indivs_to_consider,
+                include_all_consequences,
+            ])
+        )
 
         cached_results = self._redis_client and self._redis_client.get(cache_key)
         if cached_results is not None:
@@ -642,20 +644,23 @@ class ElasticsearchDatastore(datastore.Datastore):
 
             # add gene info
             gene_names = {}
+            gene_consequences = {}
             if vep_annotation is not None:
                 gene_names = {vep_anno["gene_id"]: vep_anno.get("gene_symbol") for vep_anno in vep_annotation if vep_anno.get("gene_symbol")}
-
+                gene_consequences = {vep_anno["gene_id"]: vep_anno.get("major_consequence") for vep_anno in vep_annotation if vep_anno.get("major_consequence")}
             result["extras"]["gene_names"] = gene_names
 
             try:
                 genes = {}
                 for gene_id in result["coding_gene_ids"]:
-                    if gene_id:
+                    # temporarily post-filter gene_ids to exclude upstream/downstream gene consequences until elasticsearch datasets are reloaded
+                    if gene_id and (not gene_consequences.get(gene_id) or gene_consequences.get(gene_id) not in {"upstream_gene_variant", "downstream_gene_variant"}):
                         genes[gene_id] = reference.get_gene_summary(gene_id) or {}
 
                 if not genes:
                     for gene_id in result["gene_ids"]:
-                        if gene_id:
+                        # temporarily post-filter gene_ids to exclude upstream/downstream gene consequences until elasticsearch datasets are reloaded
+                        if gene_id and (not gene_consequences.get(gene_id) or gene_consequences.get(gene_id) not in {"upstream_gene_variant", "downstream_gene_variant"}):
                             genes[gene_id] = reference.get_gene_summary(gene_id) or {}
 
                 #if not genes:
