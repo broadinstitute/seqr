@@ -136,7 +136,7 @@ def _get_json_for_family(family, user=None, add_individual_guids_field=False, ad
     return _get_json_for_families([family], user, add_individual_guids_field, add_analysed_by_field)[0]
 
 
-def _get_json_for_individuals(individuals, user=None, project_guid=None):
+def _get_json_for_individuals(individuals, user=None, project_guid=None, add_sample_guids_field=False):
     """Returns a JSON representation for the given list of Individuals.
 
     Args:
@@ -177,11 +177,13 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None):
             'caseReviewStatusLastModifiedBy': _get_case_review_status_modified_by(result.get('caseReviewStatusLastModifiedBy')),
             'phenotipsData': _load_phenotips_data(result['phenotipsData'])
         })
+        if add_sample_guids_field:
+            result['sampleGuids'] = [s.guid for s in individual.sample_set.all()]
         results.append(result)
     return results
 
 
-def _get_json_for_individual(individual, user=None):
+def _get_json_for_individual(individual, user=None, add_sample_guids_field=False):
     """Returns a JSON representation of the given Individual.
 
     Args:
@@ -190,7 +192,7 @@ def _get_json_for_individual(individual, user=None):
     Returns:
         dict: json object
     """
-    return _get_json_for_individuals([individual], user)[0]
+    return _get_json_for_individuals([individual], user, add_sample_guids_field=add_sample_guids_field)[0]
 
 
 def _get_json_for_sample(sample):

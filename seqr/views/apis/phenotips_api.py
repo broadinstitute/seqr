@@ -98,7 +98,7 @@ def get_patient_data(project, individual):
     Raises:
         PhenotipsException: if unable to retrieve data from PhenoTips
     """
-    url = '/rest/patients/{0}'.format(individual.phenotips_patient_id)
+    url = _phenotips_patient_url(individual)
 
     auth_tuple = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id)
     return _make_api_call('GET', url, auth_tuple=auth_tuple, verbose=False)
@@ -117,7 +117,7 @@ def update_patient_data(project, individual, patient_json):
     if not patient_json:
         raise ValueError("patient_json arg is empty")
 
-    url = '/rest/patients/{0}'.format(individual.phenotips_patient_id)
+    url = _phenotips_patient_url(individual)
     patient_json_string = json.dumps(patient_json)
 
     auth_tuple = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=False)
@@ -136,10 +136,17 @@ def delete_patient(project, individual):
         PhenotipsException: if api call fails
     """
 
-    url = '/rest/patients/{0}'.format(individual.phenotips_patient_id)
+    url = _phenotips_patient_url(individual)
 
     auth_tuple = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=False)
     return _make_api_call('DELETE', url, auth_tuple=auth_tuple, expected_status_code=204)
+
+
+def _phenotips_patient_url(individual):
+    if individual.phenotips_patient_id:
+        return '/rest/patients/{0}'.format(individual.phenotips_patient_id)
+    else:
+        return '/rest/patients/eid/{0}'.format(individual.guid)
 
 
 def update_patient_field_value(project, individual, field_name, field_value):
