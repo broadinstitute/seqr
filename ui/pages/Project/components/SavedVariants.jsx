@@ -122,9 +122,9 @@ class SavedVariants extends React.Component {
 
     const familyId = familyGuid && familyGuid.split(/_(.+)/)[1]
     const exports = [{
-      name: `${tag || toSnakecase(this.props.tableState.categoryFilter)} Variants ${familyId ? `in Family ${familyId}` : ''}`,
+      name: `${tag || toSnakecase(this.props.tableState.categoryFilter || 'all')} Variants ${familyId ? `in Family ${familyId}` : ''}`,
       data: {
-        filename: `saved_${tag || this.props.tableState.categoryFilter}_variants_${this.props.project.name}${familyId ? `_family_${familyId}` : ''}`.replace(/ /g, '-').toLowerCase(),
+        filename: `saved_${tag || this.props.tableState.categoryFilter || 'all'}_variants_${this.props.project.name}${familyId ? `_family_${familyId}` : ''}`.replace(/ /g, '-').toLowerCase(),
         ...this.props.variantExportConfig,
       },
     }]
@@ -160,8 +160,13 @@ class SavedVariants extends React.Component {
     ]
 
     const allShown = this.props.variantsToDisplay.length === this.props.totalVariantsCount
-    const shownSummary = allShown ? 'all' :
-      `${this.props.variantsToDisplay.length > 0 ? this.props.firstRecordIndex + 1 : 0}-${this.props.firstRecordIndex + this.props.variantsToDisplay.length} of`
+    let shownSummary
+    if (allShown) {
+      shownSummary = this.props.variantsToDisplay.length > 0 ? 'all' : ''
+    }
+    else {
+      shownSummary = `${this.props.variantsToDisplay.length > 0 ? this.props.firstRecordIndex + 1 : 0}-${this.props.firstRecordIndex + this.props.variantsToDisplay.length} of`
+    }
     return (
       <Grid>
         <Grid.Row>
@@ -177,7 +182,7 @@ class SavedVariants extends React.Component {
               <Dropdown
                 inline
                 options={tagOptions}
-                value={tag || variantGuid ? null : (this.props.tableState.categoryFilter || ALL_FILTER)}
+                value={tag || (variantGuid ? null : (this.props.tableState.categoryFilter || ALL_FILTER))}
                 onChange={this.navigateToTag}
               />
               &nbsp;variants {!allShown && `(${this.props.totalVariantsCount} total)`}

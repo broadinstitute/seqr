@@ -72,7 +72,7 @@ FamilyTableRow.propTypes = {
   showDetails: PropTypes.bool,
 }
 
-const FamilyTable = ({ visibleFamilies, loading, headerStatus, showInternalFilters, exportUrls, noDetailFields, tableName, ...props }) =>
+const FamilyTable = ({ visibleFamilies, loading, headerStatus, showInternalFilters, exportUrls, noDetailFields, tableName, showVariantTags, ...props }) =>
   <div>
     <ExportContainer>
       <ExportTableButton downloads={exportUrls} />
@@ -84,6 +84,7 @@ const FamilyTable = ({ visibleFamilies, loading, headerStatus, showInternalFilte
         showInternalFilters={showInternalFilters}
         fields={noDetailFields}
         tableName={tableName}
+        showVariantTags={showVariantTags}
       />
     </Table>
     <Table celled striped padded fixed attached="bottom">
@@ -91,7 +92,13 @@ const FamilyTable = ({ visibleFamilies, loading, headerStatus, showInternalFilte
         {loading && <TableLoading />}
         {!loading && (visibleFamilies.length > 0 ?
           visibleFamilies.map(family =>
-            <FamilyTableRow key={family.familyGuid} family={family} noDetailFields={noDetailFields} {...props} />,
+            <FamilyTableRow
+              key={family.familyGuid}
+              family={family}
+              noDetailFields={noDetailFields}
+              showVariantTags={showVariantTags}
+              {...props}
+            />,
           ) : <EmptyTableRow tableName={tableName} />)
         }
       </Table.Body>
