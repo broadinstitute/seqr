@@ -292,7 +292,7 @@ def save_individuals_table_handler(request, project_guid, upload_file_id):
 
     # edit individuals
     individuals_by_guid = {
-        individual.guid: _get_json_for_individual(individual, request.user) for individual in updated_individuals
+        individual.guid: _get_json_for_individual(individual, request.user, add_sample_guids_field=True) for individual in updated_individuals
     }
 
     families_by_guid = {
