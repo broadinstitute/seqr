@@ -73,8 +73,8 @@ def project_home(request, project_id):
         'auth_level': auth_level,
         'can_edit': project.can_edit(request.user),
         'is_manager': project.can_admin(request.user),
-        'has_gene_search':
-            get_project_datastore(project).project_collection_is_loaded(project)
+        'has_gene_search': get_project_datastore(project).project_collection_is_loaded(project),
+        'new_page_url': '/project/{}/project_page'.format(project.seqr_project.guid) if project.seqr_project else None,
     })
 
 
@@ -577,9 +577,19 @@ def variants_with_tag(request, project_id, tag=None):
         family_ids = {variant.extras['family_id'] for variant in variants}
         families = get_filtered_families(filters={'project': project, 'family_id__in': family_ids}, fields=['family_id'])
 
+        new_page_url = None
+        if project.seqr_project:
+            new_page_url = '/project/{}/saved_variants'.format(project.seqr_project.guid)
+            if requested_family_id:
+                family = project.seqr_project.family_set.get(family_id=requested_family_id)
+                new_page_url += '/family/{}'.format(family.guid)
+            if tag:
+                new_page_url += '/{}'.format(tag)
+
         return render(request, 'project/saved_variants.html', {
             'project': project,
             'tag': tag,
+            'new_page_url': new_page_url,
             'variants_json': json.dumps([v.toJSON() for v in variants]),
             'families_json': json.dumps({family.family_id: {
                 'project_id': project.project_id,

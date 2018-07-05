@@ -24,7 +24,6 @@ urlpatterns = [
     # Public
     #
     url(r'^landingpage$', xbrowse_server.base.views.landing_page, name='landing_page'),
-    url(r'^$', xbrowse_server.base.views.home, name='home'),
     url(r'^projects$', xbrowse_server.base.views.home, name='home'),
     url(r'^about$', xbrowse_server.base.views.about, name='about'),
 
@@ -49,7 +48,6 @@ urlpatterns = [
     url(r'^project/(?P<project_id>[\w.|-]+)/individuals$', xbrowse_server.base.views.project_individuals, name='project_individuals'),
     url(r'^project/(?P<project_id>[\w.|-]+)/saved-variants', xbrowse_server.base.views.project_views.variants_with_tag, name='saved_variants'),
     url(r'^project/(?P<project_id>[\w.|-]+)/variants/(?P<tag>[^/]+)$', xbrowse_server.base.views.project_views.variants_with_tag, name='variants_with_tag'),
-    url(r'^project/(?P<project_id>[\w.|-]+)/causal-variants$', xbrowse_server.base.views.project_views.causal_variants, name='causal_variants'),
 
     url(r'^project/(?P<project_id>[\w.|-]+)/settings$', xbrowse_server.base.views.project_settings, name='project_settings'),
     url(r'^project/(?P<project_id>[\w.|-]+)/project_gene_list_settings', xbrowse_server.base.views.project_gene_list_settings, name='project_gene_list_settings'),
@@ -102,7 +100,6 @@ urlpatterns = [
     url(r'^project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w.|-]+)/edit$', xbrowse_server.base.views.edit_family, name='edit_family'),
     url(r'^project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w.|-]+)/delete$', xbrowse_server.base.views.family_views.delete, name='delete_family'),
     url(r'^project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w.|-]+)/coverage$', xbrowse_server.base.views.family_views.family_coverage, name='family_coverage'),
-    url(r'^project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w.|-]+)/saved-variants$', xbrowse_server.base.views.family_views.saved_variants, name='saved_family_variants'),
     url(r'^project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w.|-]+)/diagnostic-search', xbrowse_server.base.views.family_views.diagnostic_search, name='diagnostic_search'),
     url(r'^project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w.|-]+)/gene$', xbrowse_server.base.views.family_views.family_gene_lookup, name='family_gene_lookup'),
     url(r'^project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w.|-]+)/cause$', xbrowse_server.base.views.family_views.edit_family_cause, name='edit_family_cause'),

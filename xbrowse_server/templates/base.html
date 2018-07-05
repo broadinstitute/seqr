@@ -52,7 +52,7 @@
                 <div class="row">
                     {% if user.is_authenticated %}
                         <div class="col-sm-4" id="logo-container">
-                            <a href="/"><i>seqr</i></a>
+                            <a href="/projects"><i>seqr</i></a>
                         </div>
                         <div class="col-sm-3" id="headerbar-right-links"></div>
                         <div class="col-sm-5" id="headerbar-right-links">
@@ -76,6 +76,11 @@
                         <div class="message">{{ message }}</div>
                     {% endfor %}
                 </div>
+            </div>
+        {% endif %}
+        {% if new_page_url %}
+            <div class="alert alert-danger centered" role="alert" style="margin-bottom: 0;border-radius: 0;">
+                This page is deprecated. Click <a class="alert-link" href="{{ new_page_url }}">here</a> for the latest version
             </div>
         {% endif %}
 
