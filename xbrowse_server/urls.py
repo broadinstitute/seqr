@@ -24,10 +24,7 @@ urlpatterns = [
     # Public
     #
     url(r'^landingpage$', xbrowse_server.base.views.landing_page, name='landing_page'),
-    url(r'^projects$', xbrowse_server.base.views.home, name='home'),
-    url(r'^about$', xbrowse_server.base.views.about, name='about'),
-
-#     url(r'^testemail$', xbrowse_server.base.views.project_views name='testemail'),
+    url(r'^projects$', xbrowse_server.base.views.home, name='home'),  # DEPRECATED
 
     #
     # Account
@@ -42,17 +39,16 @@ urlpatterns = [
     #
     # Project
     #
-    url(r'^project/(?P<project_id>[\w.|-]+)/?$', xbrowse_server.base.views.project_home, name='project_home'),
+    url(r'^project/(?P<project_id>[\w.|-]+)/?$', xbrowse_server.base.views.project_home, name='project_home'),  # DEPRECATED
     url(r'^project/(?P<project_id>[\w.|-]+)/manage$', xbrowse_server.base.views.project_views.manage_project, name='manage_project'),
 
-    url(r'^project/(?P<project_id>[\w.|-]+)/individuals$', xbrowse_server.base.views.project_individuals, name='project_individuals'),
-    url(r'^project/(?P<project_id>[\w.|-]+)/saved-variants', xbrowse_server.base.views.project_views.variants_with_tag, name='saved_variants'),
-    url(r'^project/(?P<project_id>[\w.|-]+)/variants/(?P<tag>[^/]+)$', xbrowse_server.base.views.project_views.variants_with_tag, name='variants_with_tag'),
+    url(r'^project/(?P<project_id>[\w.|-]+)/individuals$', xbrowse_server.base.views.project_individuals, name='project_individuals'),  # DEPRECATED
+    url(r'^project/(?P<project_id>[\w.|-]+)/saved-variants', xbrowse_server.base.views.project_views.variants_with_tag, name='saved_variants'),  # DEPRECATED
+    url(r'^project/(?P<project_id>[\w.|-]+)/variants/(?P<tag>[^/]+)$', xbrowse_server.base.views.project_views.variants_with_tag, name='variants_with_tag'),  # DEPRECATED
 
-    url(r'^project/(?P<project_id>[\w.|-]+)/settings$', xbrowse_server.base.views.project_settings, name='project_settings'),
+    url(r'^project/(?P<project_id>[\w.|-]+)/settings$', xbrowse_server.base.views.project_settings, name='project_settings'),  # DEPRECATED
     url(r'^project/(?P<project_id>[\w.|-]+)/project_gene_list_settings', xbrowse_server.base.views.project_gene_list_settings, name='project_gene_list_settings'),
     url(r'^project/(?P<project_id>[\w.|-]+)/collaborators', xbrowse_server.base.views.project_collaborators, name='project_collaborators'),
-    url(r'^project/(?P<project_id>[\w.|-]+)/settings/reference-populations$', xbrowse_server.base.views.edit_project_refpops, name='edit_project_refpops'),
     url(r'^project/(?P<project_id>[\w.|-]+)/settings/add-collaborator$', xbrowse_server.base.views.add_collaborator, name='add_collaborator'),
     url(r'^project/(?P<project_id>[\w.|-]+)/settings/add-gene-list', xbrowse_server.base.views.add_gene_list, name='add_gene_list'),
     url(r'^project/(?P<project_id>[\w.|-]+)/gene-list/(?P<gene_list_slug>[\w|-]+)$', xbrowse_server.base.views.project_gene_list, name='project_gene_list'),
@@ -60,45 +56,35 @@ urlpatterns = [
     url(r'^project/(?P<project_id>[\w.|-]+)/gene-list/(?P<gene_list_slug>[\w|-]+)/remove', xbrowse_server.base.views.remove_gene_list, name='project_remove_gene_list'),
     url(r'^project/(?P<project_id>[\w.|-]+)/settings/remove-gene-list', xbrowse_server.base.views.remove_gene_list, name='remove_gene_list'),
 
-    url(r'^project/(?P<project_id>[\w.|-]+)/edit-individuals$', xbrowse_server.base.views.edit_individuals, name='edit_individuals'),
-    url(r'^project/(?P<project_id>[\w.|-]+)/save-all-individuals', xbrowse_server.base.views.save_all_individuals, name='save_all_individuals'),
-    url(r'^project/(?P<project_id>[\w.|-]+)/save-one-individual', xbrowse_server.base.views.save_one_individual, name='save_one_individual'),
-    url(r'^project/(?P<project_id>[\w.|-]+)/update-project-from-fam', xbrowse_server.base.views.update_project_from_fam, name='update_project_from_fam'),
-    url(r'^project/(?P<project_id>[\w.|-]+)/delete-individuals', xbrowse_server.base.views.delete_individuals, name='delete_individuals'),
-    url(r'^project/(?P<project_id>[\w.|-]+)/add-phenotype', xbrowse_server.base.views.add_phenotype, name='add_phenotype'),
-    url(r'^project/(?P<project_id>[\w.|-]+)/add-individuals', xbrowse_server.base.views.add_individuals, name='add_individuals'),
+    url(r'^project/(?P<project_id>[\w.|-]+)/edit-individuals$', xbrowse_server.base.views.edit_individuals, name='edit_individuals'),  # DEPRECATED
+    url(r'^project/(?P<project_id>[\w.|-]+)/save-all-individuals', xbrowse_server.base.views.save_all_individuals, name='save_all_individuals'),  # DEPRECATED
+    url(r'^project/(?P<project_id>[\w.|-]+)/save-one-individual', xbrowse_server.base.views.save_one_individual, name='save_one_individual'),  # DEPRECATED
+    url(r'^project/(?P<project_id>[\w.|-]+)/update-project-from-fam', xbrowse_server.base.views.update_project_from_fam, name='update_project_from_fam'),  # DEPRECATED
+    url(r'^project/(?P<project_id>[\w.|-]+)/delete-individuals', xbrowse_server.base.views.delete_individuals, name='delete_individuals'),  # DEPRECATED
+    url(r'^project/(?P<project_id>[\w.|-]+)/add-phenotype', xbrowse_server.base.views.add_phenotype, name='add_phenotype'),  # DEPRECATED
+    url(r'^project/(?P<project_id>[\w.|-]+)/add-individuals', xbrowse_server.base.views.add_individuals, name='add_individuals'),  # DEPRECATED
 
-    url(r'^project/(?P<project_id>[\w.|-]+)/edit-basic-info$', xbrowse_server.base.views.project_views.edit_basic_info, name='edit_basic_info'),
+    url(r'^project/(?P<project_id>[\w.|-]+)/edit-basic-info$', xbrowse_server.base.views.project_views.edit_basic_info, name='edit_basic_info'),  # DEPRECATED
     url(r'^project/(?P<project_id>[\w.|-]+)/add-collaborator$', xbrowse_server.base.views.project_views.add_collaborator, name='add_collaborator'),
     url(r'^project/(?P<project_id>[\w.|-]+)/add-collaborator-confirm$', xbrowse_server.base.views.project_views.add_collaborator_confirm, name='add_collaborator_confirm'),
     url(r'^project/(?P<project_id>[\w.|-]+)/collaborator/(?P<username>[\w|-]+)/edit$', xbrowse_server.base.views.project_views.edit_collaborator, name='edit_collaborator'),
     url(r'^project/(?P<project_id>[\w.|-]+)/collaborator/(?P<username>[\w|-]+)/delete$', xbrowse_server.base.views.project_views.delete_collaborator, name='delete_collaborator'),
-    url(r'^project/(?P<project_id>[\w.|-]+)/add-tag', xbrowse_server.base.views.project_views.add_tag, name='add_tag'),
 
     url(r'^project/(?P<project_id>[\w.|-]+)/gene/?(?P<gene_id>\w+)?$', xbrowse_server.base.views.project_views.gene_quicklook, name='project_gene_quicklook'),
-    url(r'^project/(?P<project_id>[\w.|-]+)/edit-tag/(?P<tag_name>[^/]+)/tag-title/(?P<tag_title>[^/]*)',    xbrowse_server.base.views.project_views.edit_tag, name='edit_tag'),
-    url(r'^project/(?P<project_id>[\w.|-]+)/delete-tag/(?P<tag_name>[^/]+)/tag-title/(?P<tag_title>[^/]*)', xbrowse_server.base.views.project_views.delete_tag, name='delete_tag'),
-
-
-    #
-    # Individual views
-    #
-    url(r'^project/(?P<project_id>[\w.|-]+)/individual/(?P<indiv_id>[\w.|-]+)/?$', xbrowse_server.base.views.individual_views.individual_home, name='individual_home'),
 
     #
     # IGV.js views
     #
-    url(r'^project/(?P<project_id>[\w.|-]+)/igv-track/(?P<igv_track_name>.+)$', xbrowse_server.base.views.igv_views.fetch_igv_track, name='fetch_igv_track'),
+    url(r'^project/(?P<project_id>[\w.|-]+)/igv-track/(?P<igv_track_name>.+)$', xbrowse_server.base.views.igv_views.fetch_igv_track, name='fetch_igv_track'),  # DEPRECATED
 
     #
     # Family views
     #
-    url(r'^project/(?P<project_id>[\w.|-]+)/families$', xbrowse_server.base.views.family_views.families, name='families'),
-    url(r'^project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w.|-]+)/?$', xbrowse_server.base.views.family_home, name='family_home'),
+    url(r'^project/(?P<project_id>[\w.|-]+)/families$', xbrowse_server.base.views.family_views.families, name='families'),  # DEPRECATED
+    url(r'^project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w.|-]+)/?$', xbrowse_server.base.views.family_home, name='family_home'),  # DEPRECATED
     url(r'^project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w.|-]+)/mendelian-variant-search', xbrowse_server.base.views.mendelian_variant_search, name='mendelian_variant_search'),
-    url(r'^project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w.|-]+)/variant', xbrowse_server.base.views.family_views.family_variant_view, name='family_variant_view'),
-    url(r'^project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w.|-]+)/edit$', xbrowse_server.base.views.edit_family, name='edit_family'),
-    url(r'^project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w.|-]+)/delete$', xbrowse_server.base.views.family_views.delete, name='delete_family'),
+    url(r'^project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w.|-]+)/edit$', xbrowse_server.base.views.edit_family, name='edit_family'),  # DEPRECATED
+    url(r'^project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w.|-]+)/delete$', xbrowse_server.base.views.family_views.delete, name='delete_family'),  # DEPRECATED
     url(r'^project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w.|-]+)/coverage$', xbrowse_server.base.views.family_views.family_coverage, name='family_coverage'),
     url(r'^project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w.|-]+)/diagnostic-search', xbrowse_server.base.views.family_views.diagnostic_search, name='diagnostic_search'),
     url(r'^project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w.|-]+)/gene$', xbrowse_server.base.views.family_views.family_gene_lookup, name='family_gene_lookup'),
@@ -146,35 +132,8 @@ urlpatterns = [
 
     url(r'^errorlog$', xbrowse_server.base.views.account_views.errorlog, name='errorlog'),
 
-    url(r'^gene$', xbrowse_server.base.views.reference_views.gene_search, name='gene_search'),
-    url(r'^gene/(?P<gene_str>[\S]+)/?$', xbrowse_server.base.views.reference_views.gene_info, name='gene_info'),
-
-    #
-    # # To proxy Phenotips static resources (a bit of a hack to offload authentication and user management
-    # # to xBrowse)
-    # url(r'^bin/get',xbrowse_server.phenotips.views.proxy_post, name='proxy_post'),
-    # url(r'^resources', xbrowse_server.phenotips.views.proxy_get, name='proxy_get'),
-    # url(r'^rest/wikis/xwiki/spaces/data/pages/WebHome/objects',xbrowse_server.phenotips.views.proxy_get, name='proxy_get'),
-    # url(r'^rest/wikis/xwiki/spaces/data/pages', xbrowse_server.phenotips.views.proxy_post, name='proxy_post'),
-    # url(r'^rest', xbrowse_server.phenotips.views.proxy_get, name='proxy_get'),
-    # url(r'^bin/data',xbrowse_server.phenotips.views.proxy_get, name='proxy_get'),
-    # url(r'^webjars',xbrowse_server.phenotips.views.proxy_get, name='proxy_get'),
-    # url(r'^bin/webjars',xbrowse_server.phenotips.views.proxy_get, name='proxy_get'),
-    # url(r'^bin/skin', xbrowse_server.phenotips.views.proxy_get, name='proxy_get'),
-    # url(r'^bin/jsx', xbrowse_server.phenotips.views.proxy_get, name='proxy_get'),
-    # url(r'^bin/ssx', xbrowse_server.phenotips.views.proxy_get, name='proxy_get'),
-    # url(r'^bin/lock', xbrowse_server.phenotips.views.proxy_get, name='proxy_get'),
-    # url(r'^bin/download', xbrowse_server.phenotips.views.proxy_get, name='proxy_get'),
-    # url(r'^bin/cancel', xbrowse_server.phenotips.views.proxy_get, name='proxy_get'),
-    # url(r'^bin/rollback', xbrowse_server.phenotips.views.proxy_get, name='proxy_get'),
-    # url(r'^bin/preview', xbrowse_server.phenotips.views.proxy_post, name='proxy_post'),
-    # url(r'^bin/edit', xbrowse_server.phenotips.views.proxy_get, name='proxy_get'),
-    # url(r'^bin/PhenoTips', xbrowse_server.phenotips.views.proxy_post, name='proxy_post'),
-    # url(r'^bin/objectadd', xbrowse_server.phenotips.views.proxy_post, name='proxy_post'),
-    # url(r'^bin/objectremove', xbrowse_server.phenotips.views.proxy_post, name='proxy_post'),
-    # url(r'^bin/XWiki', xbrowse_server.phenotips.views.proxy_get, name='proxy_get'),
-    # url(r'^bin', xbrowse_server.phenotips.views.proxy_get, name='proxy_get'),
-
+    url(r'^gene$', xbrowse_server.base.views.reference_views.gene_search, name='gene_search'),  # DEPRECATED
+    url(r'^gene/(?P<gene_str>[\S]+)/?$', xbrowse_server.base.views.reference_views.gene_info, name='gene_info'),  # DEPRECATED
 
     #
     # Reporting pages

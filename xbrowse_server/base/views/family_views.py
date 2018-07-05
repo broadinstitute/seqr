@@ -204,6 +204,8 @@ def edit_family(request, project_id, family_id):
         'error': error,
         'form': form,
         'analysis_statuses': ANALYSIS_STATUS_CHOICES,
+        'new_page_url': '/project/{0}/family_page/{1}'.format(
+            family.seqr_family.project.guid, family.seqr_family.guid) if family.seqr_family else None,
     })
 
 

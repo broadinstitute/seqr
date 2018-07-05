@@ -101,6 +101,7 @@ def project_settings(request, project_id):
     return render(request, 'project/project_settings.html', {
         'project': project,
         'is_manager': project.can_admin(request.user),
+        'new_page_url': '/project/{}/project_page'.format(project.seqr_project.guid) if project.seqr_project else None,
     })
 
 
@@ -274,6 +275,7 @@ def project_individuals(request, project_id):
         'project': project,
         'is_staff': 'true' if request.user.is_staff else 'false',
         'individuals_json': json.dumps(individuals_json),
+        'new_page_url': '/project/{}/project_page'.format(project.seqr_project.guid) if project.seqr_project else None,
     })
 
 
@@ -290,6 +292,7 @@ def edit_individuals(request, project_id):
     return render(request, 'edit_individuals.html', {
         'individuals_json': json.dumps(individuals_json),
         'project': project,
+        'new_page_url': '/project/{}/project_page'.format(project.seqr_project.guid) if project.seqr_project else None,
     })
 
 
@@ -1016,6 +1019,7 @@ def edit_basic_info(request, project_id):
     return render(request, 'project/edit_basic_info.html', {
         'project': project,
         'form': form,
+        'new_page_url': '/project/{}/project_page'.format(project.seqr_project.guid) if project.seqr_project else None,
     })
 
 

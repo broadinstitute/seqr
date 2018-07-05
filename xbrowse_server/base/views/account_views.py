@@ -47,11 +47,6 @@ def home(request):
     })
 
 
-@login_required
-def about(request): 
-    return render(request, 'about.html')
-
-
 @log_request('login')
 def login_view(request):
 
