@@ -62,7 +62,7 @@ def add_dataset(
         update_kwargs.update(
             **_update_read_alignmen_dataset_kwargs(mapping_file_id)
         )
-        
+
     return _update_samples_for_dataset(**update_kwargs)
 
 
