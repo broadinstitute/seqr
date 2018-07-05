@@ -123,16 +123,18 @@ class ElasticsearchDatastore(datastore.Datastore):
         from xbrowse_server.base.models import Individual
         from xbrowse_server.mall import get_reference
 
-        cache_key = json.dumps([
+        cache_key = "%s___%s___%s" % (
             project_id,
             family_id,
-            variant_filter.toJSON() if variant_filter else None,
-            genotype_filter,
-            quality_filter,
-            variant_id_filter,
-            indivs_to_consider,
-            include_all_consequences,
-        ])
+            json.dumps([
+                variant_filter.toJSON() if variant_filter else None,
+                genotype_filter,
+                quality_filter,
+                variant_id_filter,
+                indivs_to_consider,
+                include_all_consequences,
+            ])
+        )
 
         cached_results = self._redis_client and self._redis_client.get(cache_key)
         if cached_results is not None:
