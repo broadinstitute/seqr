@@ -7,14 +7,14 @@
     <tr>
       <th> </th>
       <th width="80%">email</th>
-      <th class="nowrap">username</th>
-      <th class="nowrap" data-s-type="date">date joined</th>
-      <th class="nowrap" data-s-type="date">last login</th>
-      <th class="nowrap">name</th>
-      <th class="nowrap">staff</th>
-      <th class="nowrap">superuser</th>
-      <th class="nowrap">id</th>
-      <th class="nowrap">login as</th>
+      <th>username</th>
+      <th data-s-type="date">date joined</th>
+      <th data-s-type="date">last login</th>
+      <th>name</th>
+      <th>staff</th>
+      <th>superuser</th>
+      <th>id</th>
+      <th>login as</th>
     </tr>
     </thead>
     {% for user in users %}
@@ -36,6 +36,15 @@
         </td>
       </tr>
     {% endfor %}
-  </table>
+  </table> 
+  <script>
+    window.dataTable = $('#dataTable').DataTable({
+      paging: false,
+      order: [[ 1, 'asc' ]],
+      buttons: [
+        'csv', 'excel', 'pdf'
+      ],
+    });
+  </script>
 
 {% endblock %}

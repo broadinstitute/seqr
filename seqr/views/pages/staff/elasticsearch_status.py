@@ -14,14 +14,13 @@ import elasticsearch
 
 from seqr.models import Sample
 from settings import LOGIN_URL
-from pprint import pprint
 
 logger = logging.getLogger(__name__)
 
 OPERATIONS_LOG = "index_operations_log"
 
 @staff_member_required(login_url=LOGIN_URL)
-def elasticsearch_status(request):
+def elasticsearch_status_page(request):
     client = elasticsearch.Elasticsearch(host=settings.ELASTICSEARCH_SERVICE_HOSTNAME)
 
     # get index snapshots

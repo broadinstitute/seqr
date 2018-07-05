@@ -54,10 +54,11 @@ from seqr.views.apis.gene_api import \
 
 from seqr.views.pages.staff.staff_pages import \
     staff_dashboard, \
+    seqr_stats_page, \
     users_page
 
 from seqr.views.pages.staff.discovery_sheet import discovery_sheet
-from seqr.views.pages.staff.elasticsearch_status import elasticsearch_status
+from seqr.views.pages.staff.elasticsearch_status import elasticsearch_status_page
 
 from seqr.views.apis.awesomebar_api import awesomebar_autocomplete_handler
 from seqr.views.apis.auth_api import login_required_error, API_LOGIN_REQUIRED_URL
@@ -67,7 +68,7 @@ from seqr.views.apis.project_categories_api import update_project_categories_han
 from seqr.views.apis.variant_search_api import query_variants_handler
 
 react_app_pages = [
-    'dashboard',
+    'dashboard/?',
     'project/(?P<project_guid>[^/]+)/.*',
     'gene_info/.*'
 ]
@@ -153,9 +154,10 @@ urlpatterns += [
 # other staff-only endpoints
 urlpatterns += [
     url("^staff/?$", staff_dashboard, name="staff_dashboard"),
-    url("^staff/users/?", users_page, name="users_page"),
+    url("^staff/seqr_stats/?", seqr_stats_page, name="seqr_stats"),
     url("^staff/discovery_sheet/?(?P<project_guid>[^/]+)?/?", discovery_sheet, name="discovery_sheet"),
-    url("^staff/elasticsearch_status", elasticsearch_status, name="elasticsearch_status"),
+    url("^staff/elasticsearch_status", elasticsearch_status_page, name="elasticsearch_status"),
+    url("^staff/users/?", users_page, name="users_page"),
 ]
 
 urlpatterns += [
