@@ -2,6 +2,11 @@
 
 {% block dataTable %}
 
+<style>
+  td {
+    white-space: nowrap !important;
+  }
+</style>
 <br />
 <br />
 <b>Elasticsearch Host:</b><br />
@@ -9,7 +14,7 @@
 <br />
 
 <b>Disk status:</b>
-<table id="diskStatusDataTable" class="display">
+<table id="diskUsageDataTable" class="display">
     <thead>
         <tr>
             <th>Node name</th>
@@ -59,7 +64,23 @@
         </tr>
     {% endfor %}
 </table>
+<script>
+  $(document).ready(function() {
+    $('#diskUsageDataTable').DataTable({
+      order: [[ 3, 'asc' ]],
+      pageLength: 50,
+    });
 
+    $('#dataTable').DataTable({
+      paging: false,
+      order: [[ 7, 'desc' ]],
+      buttons: [
+        'csv', 'excel', 'pdf'
+      ],
+    });
+
+  });
+</script>
 <br />
 <br />
 {% endblock %}

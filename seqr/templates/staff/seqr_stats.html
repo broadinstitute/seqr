@@ -1,0 +1,21 @@
+{% extends "staff/table_layout.html" %}
+
+{% block dataTable %}
+
+<style>
+    td:first-child {
+        text-align: right;
+        padding: 3px 10px;
+    }
+</style>
+<table>
+<tr><td>{{ families_count }}</td><td>families</td></tr>
+<tr><td>{{ individuals_count }}</td><td>individuals</td></tr>
+
+<tr><td>{{ sample_counts.WES }}</td><td>exome samples</td></tr>
+<tr><td>{{ sample_counts.WGS }}</td><td>genome samples</td></tr>
+</table>
+
+<br />
+NOTE: counts are based on the total number of unique family/individual/sample ids
+{% endblock %}
