@@ -19,7 +19,11 @@ const PageHeaderRow = styled(Grid.Row)`
 `
 
 const BreadcrumbContainer = styled.div`
-  margin: 50px 0px 35px 0px;
+  margin: 50px 0px 25px 0px;
+  
+  .section {
+    margin-bottom: 10px !important;
+  }
   
   a.active {
     color: #111 !important;

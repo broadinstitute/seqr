@@ -24,13 +24,9 @@ const VariantTags = ({ project }) =>
       {
         project.variantTagTypes && project.variantTagTypes.filter(variantTagType => variantTagType.numTags > 0).map(variantTagType => (
           <TableRow key={variantTagType.variantTagTypeGuid}>
-            {
-              // style={{ display: 'inline-block', minWidth: '35px', textAlign: 'right', fontSize: '11pt', paddingRight: '10px' }}>
-
-            }
             <TableCell collapsing>
-              <b>{variantTagType.numTags} </b>
               <ColoredIcon name="square" size="small" color={variantTagType.color} />
+              <b>{variantTagType.numTags} </b>
             </TableCell>
             <TableCell>
               <Link to={`/project/${project.projectGuid}/saved_variants/${variantTagType.name}`}>{variantTagType.name}</Link>
