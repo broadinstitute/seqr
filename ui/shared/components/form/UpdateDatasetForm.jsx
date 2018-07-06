@@ -10,11 +10,14 @@ import FileUploadField from './XHRUploaderField'
 import { BooleanCheckbox, Select } from './Inputs'
 
 const DropzoneLabel = styled.span`
-  span:first-child {
-    margin-left: -5em;
-    white-space: nowrap;
-  }
+  text-align: left;
+  display: inline-block;
+  margin-left: -5em;
+  margin-right: -5em;
 `
+
+const UPLOADER_STYLE = { textAlign: 'left' }
+
 
 export const ES_INDEX_FIELD = {
   name: 'elasticsearchIndex',
@@ -50,9 +53,11 @@ export const mappingFileField = ({ required, dropzoneLabelMessage, column1Label,
   clearTimeOut: 0,
   auto: true,
   required,
+  uploaderStyle: UPLOADER_STYLE,
   dropzoneLabel: (
     <DropzoneLabel>
-      <span>{dropzoneLabelMessage}</span> <br />
+      {dropzoneLabelMessage}
+      <br />
       <br />
       <b>File Format:</b> Tab-separated file (.tsv) or Excel spreadsheet (.xls)<br />
       <b>Column 1:</b> {column1Label}<br />

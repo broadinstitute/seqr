@@ -32,6 +32,13 @@ __AFFECTED_TO_EXPORTED_VALUE = dict(Individual.AFFECTED_STATUS_LOOKUP)
 __AFFECTED_TO_EXPORTED_VALUE['U'] = ''
 
 
+class ErrorsWarningsException(Exception):
+    def __init__(self, errors, warnings=None):
+        Exception.__init__(self, str(errors))
+        self.errors = errors
+        self.warnings = warnings
+
+
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def update_individual_handler(request, individual_guid):
@@ -231,14 +238,15 @@ def receive_individuals_table_handler(request, project_guid):
     def parse_file(filename, stream):
         pedigree_records, errors, warnings = parse_pedigree_table(filename, stream, user=request.user, project=project)
         if errors:
-            raise Exception({'errors': errors, 'warnings': warnings})
+            raise ErrorsWarningsException(errors, warnings)
         return pedigree_records
 
     try:
         uploaded_file_id, filename, json_records = save_uploaded_file(request, parse_file)
+    except ErrorsWarningsException as e:
+        return create_json_response({'errors': e.errors, 'warnings': e.warnings}, status=400, reason=e.errors)
     except Exception as e:
-        error_json = {'errors': [e.args[0]]} if isinstance(e.args[0], basestring) else e.args[0]
-        return create_json_response(error_json, status=400, reason=error_json.get('errors'))
+        return create_json_response({'errors': [e.message or str(e)], 'warnings': []}, status=400, reason=e.message or str(e))
 
     # send back some stats
     num_families = len(set(r['familyId'] for r in json_records))

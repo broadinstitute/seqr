@@ -56,48 +56,37 @@ def add_dataset(
     }
 
     if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
-        update_kwargs.update(
-            **_update_variant_calls_dataset_kwargs(elasticsearch_index, dataset_path, mapping_file_id)
-        )
+        all_samples = _get_elasticsearch_index_samples(elasticsearch_index)
+        update_kwargs.update({
+            'sample_ids': all_samples,
+            'sample_id_to_individual_id_mapping': _load_mapping_file(mapping_file_id),
+            'sample_dataset_path_mapping': {sample_id: dataset_path for sample_id in all_samples},
+            'missing_sample_exception_template': 'Matches not found for ES sample ids: {unmatched_samples}. Uploading a mapping file for these samples, or select the "Ignore extra samples in callset" checkbox to ignore.'
+        })
+
     elif dataset_type == Sample.DATASET_TYPE_READ_ALIGNMENTS:
-        update_kwargs.update(
-            **_update_read_alignmen_dataset_kwargs(mapping_file_id)
-        )
+        sample_id_to_individual_id_mapping = {}
+        sample_dataset_path_mapping = {}
+        errors = []
+        for individual_id, dataset_path in _load_mapping_file(mapping_file_id).items():
+            if not (dataset_path.endswith(".bam") or dataset_path.endswith(".cram")):
+                raise Exception('BAM / CRAM file "{}" must have a .bam or .cram extension'.format(dataset_path))
+            _validate_dataset_path(dataset_path)
+            sample_id = dataset_path.split('/')[-1].split('.')[0]
+            sample_id_to_individual_id_mapping[sample_id] = individual_id
+            sample_dataset_path_mapping[sample_id] = dataset_path
+
+        if errors:
+            raise Exception(', '.join(errors))
+
+        update_kwargs.update({
+            'sample_ids': sample_id_to_individual_id_mapping.keys(),
+            'sample_id_to_individual_id_mapping': sample_id_to_individual_id_mapping,
+            'sample_dataset_path_mapping': sample_dataset_path_mapping,
+            'missing_sample_exception_template': 'The following Individual IDs do not exist: {unmatched_samples}'
+        })
 
     return _update_samples_for_dataset(**update_kwargs)
-
-
-def _update_variant_calls_dataset_kwargs(elasticsearch_index, dataset_path, mapping_file_id):
-    all_samples = _get_elasticsearch_index_samples(elasticsearch_index)
-    return {
-        'sample_ids': all_samples,
-        'sample_id_to_individual_id_mapping': _load_mapping_file(mapping_file_id),
-        'sample_dataset_path_mapping': {sample_id: dataset_path for sample_id in all_samples},
-        'missing_sample_exception_template': 'Matches not found for ES sample ids: {unmatched_samples}. Uploading a mapping file for these samples, or select the "Ignore extra samples in callset" checkbox to ignore.'
-    }
-
-
-def _update_read_alignmen_dataset_kwargs(mapping_file_id):
-    sample_id_to_individual_id_mapping = {}
-    sample_dataset_path_mapping = {}
-    errors = []
-    for individual_id, dataset_path in _load_mapping_file(mapping_file_id).items():
-        if not (dataset_path.endswith(".bam") or dataset_path.endswith(".cram")):
-            raise Exception('BAM / CRAM file "{}" must have a .bam or .cram extension'.format(dataset_path))
-        _validate_dataset_path(dataset_path)
-        sample_id = dataset_path.split('/')[-1].split('.')[0]
-        sample_id_to_individual_id_mapping[sample_id] = individual_id
-        sample_dataset_path_mapping[sample_id] = dataset_path
-
-    if errors:
-        raise Exception(', '.join(errors))
-
-    return {
-        'sample_ids': sample_id_to_individual_id_mapping.keys(),
-        'sample_id_to_individual_id_mapping': sample_id_to_individual_id_mapping,
-        'sample_dataset_path_mapping': sample_dataset_path_mapping,
-        'missing_sample_exception_template': 'The following Individual IDs do not exist: {unmatched_samples}'
-    }
 
 
 def _update_samples_for_dataset(
@@ -161,7 +150,7 @@ def _get_elasticsearch_index_samples(elasticsearch_index):
 
     samples = set()
     for index in field_mapping.values():
-        samples.update([key.rstrip(sample_field_suffix) for key in index.get('mappings', {}).get(VARIANT_DOC_TYPE, {}).keys()])
+        samples.update([key.split(sample_field_suffix)[0] for key in index.get('mappings', {}).get(VARIANT_DOC_TYPE, {}).keys()])
     if not samples:
         raise Exception('No sample fields found for index "{}"'.format(elasticsearch_index))
     return samples
@@ -174,7 +163,7 @@ def _validate_inputs(dataset_type, sample_type, dataset_path, project, elasticse
 
     # datatset_type-specific checks
     if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
-        _validate_varaint_call_inputs(sample_type, dataset_path, project, elasticsearch_index)
+        validate_variant_call_inputs(sample_type, dataset_path, project, elasticsearch_index)
 
     elif dataset_type == Sample.DATASET_TYPE_READ_ALIGNMENTS:
         if not mapping_file_id:
@@ -183,7 +172,7 @@ def _validate_inputs(dataset_type, sample_type, dataset_path, project, elasticse
         raise Exception("Dataset type not supported: {}".format(dataset_type))
 
 
-def _validate_varaint_call_inputs(sample_type, dataset_path, project, elasticsearch_index):
+def validate_variant_call_inputs(sample_type, dataset_path, project, elasticsearch_index):
     if not elasticsearch_index:
         raise Exception('Elasticsearch index is required')
     parsed_es_index = elasticsearch_index.lower().split('__')
