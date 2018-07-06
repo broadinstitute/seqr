@@ -693,7 +693,7 @@ class LocusList(ModelWithGUID):
     class Meta:
         permissions = _SEQR_OBJECT_PERMISSIONS
 
-        json_fields = ['guid', 'created_date', 'name', 'description', 'is_public']
+        json_fields = ['guid', 'created_by', 'created_date', 'last_modified_date', 'name', 'description', 'is_public']
 
 
 class LocusListGene(ModelWithGUID):

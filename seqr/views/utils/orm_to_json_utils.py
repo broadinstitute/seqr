@@ -37,7 +37,10 @@ def _get_record_fields(model_class, model_type, user=None):
 
 
 def _get_json_for_record(record, fields):
-    return {_to_camel_case(field[0]): record.get(field[1]) for field in fields}
+    json = {_to_camel_case(field[0]): record.get(field[1]) for field in fields}
+    if json.get('createdBy'):
+        json['createdBy'] = json['createdBy'].get_full_name() or json['createdBy'].email
+    return json
 
 
 def _get_json_for_user(user):
@@ -263,13 +266,11 @@ def get_json_for_variant_tag(tag):
     ])
 
     result = _get_json_for_record(tag_dict, fields)
-    created_by = result.pop('createdBy')
     result.update({
         'tagGuid': result.pop('guid'),
         'name': tag_dict['variant_tag_type_name'],
         'category': tag_dict['variant_tag_type_category'],
         'color': tag_dict['variant_tag_type_color'],
-        'createdBy': (created_by.get_full_name() or created_by.email) if created_by else None,
     })
     return result
 
@@ -288,13 +289,11 @@ def get_json_for_variant_functional_data(tag):
     result = _get_json_for_record(tag_dict, fields)
 
     display_data = json.loads(tag.get_functional_data_tag_display())
-    created_by = result.pop('createdBy')
     result.update({
         'tagGuid': result.pop('guid'),
         'name': result.pop('functionalDataTag'),
         'metadataTitle': display_data.get('metadata_title'),
         'color': display_data['color'],
-        'createdBy': (created_by.get_full_name() or created_by.email) if created_by else None,
     })
     return result
 
@@ -312,10 +311,8 @@ def get_json_for_variant_note(note):
     note_dict = _record_to_dict(note, fields)
     result = _get_json_for_record(note_dict, fields)
 
-    created_by = result.pop('createdBy')
     result.update({
         'noteGuid': result.pop('guid'),
-        'createdBy': (created_by.get_full_name() or created_by.email) if created_by else None,
     })
     return result
 
@@ -333,11 +330,9 @@ def get_json_for_gene_note(note, user):
     note_dict = _record_to_dict(note, fields)
     result = _get_json_for_record(note_dict, fields)
 
-    created_by = result.pop('createdBy')
     result.update({
         'noteGuid': result.pop('guid'),
-        'createdBy': (created_by.get_full_name() or created_by.email) if created_by else None,
-        'editable': user.is_staff or user == created_by,
+        'editable': user.is_staff or user == note.created_by,
     })
     return result
 
