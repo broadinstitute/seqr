@@ -67,6 +67,7 @@ from seqr.views.apis.project_categories_api import update_project_categories_han
 from seqr.views.apis.variant_search_api import query_variants_handler
 
 react_app_pages = [
+    r'^$',
     'dashboard',
     'project/(?P<project_guid>[^/]+)/.*',
     'gene_info/.*'

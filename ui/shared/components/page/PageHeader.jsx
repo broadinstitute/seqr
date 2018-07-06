@@ -163,7 +163,7 @@ const PageHeader = ({ user, project, familiesByGuid, match }) => {
             key={page.name || match.params.breadcrumb}
             href={`/project/${project.deprecatedProjectId}/${originalPageLink || page.path}`}
           >
-            Original {page.name || breadcrumb} Page<br />
+            Deprecated {page.name || breadcrumb} Page<br />
           </a>,
         )}
         <br />
