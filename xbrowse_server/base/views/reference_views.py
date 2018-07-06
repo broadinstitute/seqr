@@ -14,6 +14,7 @@ from xbrowse_server.api.utils import add_notes_to_genes
 @log_request('gene_search')
 def gene_search(request):
     return render(request, 'gene_search.html', {
+        'new_page_url': '/gene_info',
     })
 
 
@@ -30,5 +31,6 @@ def gene_info(request, gene_str):
     return render(request, 'gene_info.html', {
         'gene_json': gene_json,
         'gene_symbol': gene['symbol'],
+        'new_page_url': '/gene_info/{}'.format(gene_str),
     })
 

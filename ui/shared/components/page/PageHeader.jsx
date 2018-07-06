@@ -19,7 +19,11 @@ const PageHeaderRow = styled(Grid.Row)`
 `
 
 const BreadcrumbContainer = styled.div`
-  margin: 50px 0px 35px 0px;
+  margin: 50px 0px 25px 0px;
+  
+  .section {
+    margin-bottom: 10px !important;
+  }
   
   a.active {
     color: #111 !important;
@@ -159,7 +163,7 @@ const PageHeader = ({ user, project, familiesByGuid, match }) => {
             key={page.name || match.params.breadcrumb}
             href={`/project/${project.deprecatedProjectId}/${originalPageLink || page.path}`}
           >
-            Original {page.name || breadcrumb} Page<br />
+            Deprecated {page.name || breadcrumb} Page<br />
           </a>,
         )}
         <br />

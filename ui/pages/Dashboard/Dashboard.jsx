@@ -10,7 +10,7 @@ const Dashboard = () => {
     <div>
       <DocumentTitle title="seqr: home" />
       <div style={{ textAlign: 'center', fontSize: '16px', fontWeight: 400, fontStyle: 'italic' }}>
-         Welcome to the new seqr dashboard. The previous version can be found <a href="/projects">here</a>.
+         Welcome to the new seqr dashboard. The deprecated previous version can be found <a href="/projects">here</a>.
       </div>
       <Divider />
       <ProjectsTable />

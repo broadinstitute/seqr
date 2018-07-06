@@ -151,7 +151,7 @@ const Family = (
   const rightContent = (showSearchLinks || showVariantTags) ? [
     showVariantTags ?
       <div key="variants">
-        <b>Saved Variants:</b> <VariantTagTypeBar height={15} project={project} familyGuid={family.familyGuid} />
+        <VariantTagTypeBar height={15} project={project} familyGuid={family.familyGuid} sectionLinks={false} />
         {discoveryGenes.length > 0 &&
           <span>
             <b>Discovery Genes:</b> {[...new Set(discoveryGenes)].join(', ')}

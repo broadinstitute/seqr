@@ -54,7 +54,7 @@ MetadataField.propTypes = {
 }
 
 
-const TagFieldView = ({ initialValues, field, tagOptions, popup, tagAnnotation, editMetadata, hiddenTags = [], ...props }) => {
+const TagFieldView = ({ initialValues, field, tagOptions, popup, tagAnnotation, editMetadata, ...props }) => {
   const fieldValues = initialValues[field]
 
   tagOptions = tagOptions.map((tag, i) => {
@@ -63,7 +63,6 @@ const TagFieldView = ({ initialValues, field, tagOptions, popup, tagAnnotation, 
   const tagOptionsMap = tagOptions.reduce((acc, tag) => {
     return { [tag.name]: tag, ...acc }
   }, {})
-  tagOptions = tagOptions.filter(tag => !hiddenTags.includes(tag.name))
 
   const mappedValues = {
     ...initialValues,
@@ -95,7 +94,7 @@ const TagFieldView = ({ initialValues, field, tagOptions, popup, tagAnnotation, 
     modalStyle={MODAL_STYLE}
     fieldDisplay={displayFieldValues =>
       <span>
-        {displayFieldValues.filter(tag => !hiddenTags.includes(tag.name)).map((tag) => {
+        {displayFieldValues.map((tag) => {
           const label = <ColoredLabel size="small" color={tag.color} horizontal content={tag.name || tag.text} />
           return (
             <span key={tag.name}>
@@ -120,7 +119,6 @@ TagFieldView.propTypes = {
   editMetadata: PropTypes.bool,
   popup: PropTypes.func,
   tagAnnotation: PropTypes.func,
-  hiddenTags: PropTypes.array,
 }
 
 export default TagFieldView

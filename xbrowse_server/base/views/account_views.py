@@ -42,13 +42,9 @@ def home(request):
 
     return render(request, 'home.html', {
         'user': request.user,
-        'projects': projects, 
+        'projects': projects,
+        'new_page_url': '/dashboard',
     })
-
-
-@login_required
-def about(request): 
-    return render(request, 'about.html')
 
 
 @log_request('login')

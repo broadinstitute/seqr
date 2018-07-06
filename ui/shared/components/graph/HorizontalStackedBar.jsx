@@ -49,10 +49,15 @@ class HorizontalStackedBar extends React.Component {
     noDataMessage: PropTypes.string,
     showAllPopupCategories: PropTypes.bool,
     showPercent: PropTypes.bool,
+    showTotal: PropTypes.bool,
+    sectionLinks: PropTypes.bool,
   }
 
   render() {
-    const { title, data, width, height, linkPath, showAllPopupCategories, minPercent = 1, noDataMessage = 'No Data', showPercent = true } = this.props
+    const {
+      title, data, width, height, linkPath, sectionLinks, showAllPopupCategories, minPercent = 1,
+      noDataMessage = 'No Data', showPercent = true, showTotal = true,
+    } = this.props
     const total = data.reduce((acc, d) => acc + d.count, 0)
 
     if (total === 0) {
@@ -91,7 +96,7 @@ class HorizontalStackedBar extends React.Component {
           trigger={
             <NoWrap>
               {dataWithPercents.filter(d => d.percent >= minPercent).map(d =>
-                <BarSection key={d.name} to={linkPath && `${linkPath}/${d.name}`} color={d.color} percent={d.percent} />,
+                <BarSection key={d.name} to={(sectionLinks && linkPath) ? `${linkPath}/${d.name}` : linkPath} color={d.color} percent={d.percent} />,
               )}
             </NoWrap>
           }
@@ -111,11 +116,13 @@ class HorizontalStackedBar extends React.Component {
                       </TableRow>
                     ))
                   }
-                  <TableRow>
-                    <TableCell textAlign="right"><b>{total}</b></TableCell>
-                    <TableCell><b>Total</b></TableCell>
-                    <TableCell />
-                  </TableRow>
+                  {showTotal &&
+                    <TableRow>
+                      <TableCell textAlign="right"><b>{total}</b></TableCell>
+                      <TableCell><b>Total</b></TableCell>
+                      <TableCell />
+                    </TableRow>
+                  }
                 </Table.Body>
               </Table>
             </div>

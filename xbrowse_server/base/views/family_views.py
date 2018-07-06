@@ -95,6 +95,7 @@ def families(request, project_id):
         'analysis_statuses':  json.dumps(dict(ANALYSIS_STATUS_CHOICES)),
         'is_manager': 'true' if project.can_admin(request.user) else 'false',
         'is_staff': 'true' if request.user.is_staff else 'false',
+        'new_page_url': '/project/{}/project_page'.format(project.seqr_project.guid) if project.seqr_project else None,
     })
 
 
@@ -140,7 +141,9 @@ def family_home(request, project_id, family_id):
             'saved_variants': FamilySearchFlag.objects.filter(family=family).order_by('-date_saved'),
             'analysis_status_desc_and_icon': analysis_status_desc_and_icon,
             'analysis_status_json': analysis_status_json,
-            'exported_to_matchmaker':exported_to_matchmaker
+            'exported_to_matchmaker':exported_to_matchmaker,
+            'new_page_url': '/project/{0}/family_page/{1}'.format(
+                family.seqr_family.project.guid, family.seqr_family.guid) if family.seqr_family else None,
         })
 
 
@@ -201,6 +204,8 @@ def edit_family(request, project_id, family_id):
         'error': error,
         'form': form,
         'analysis_statuses': ANALYSIS_STATUS_CHOICES,
+        'new_page_url': '/project/{0}/family_page/{1}'.format(
+            family.seqr_family.project.guid, family.seqr_family.guid) if family.seqr_family else None,
     })
 
 
@@ -242,6 +247,8 @@ def saved_variants(request, project_id, family_id):
         'project': project,
         'family': family,
         'variants_json': json.dumps([v.toJSON() for v in variants]),
+        'new_page_url': '/project/{0}/family_page/{1}'.format(
+                family.seqr_family.project.guid, family.seqr_family.guid) if family.seqr_family else None,
     })
 
 

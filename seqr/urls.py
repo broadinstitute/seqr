@@ -68,6 +68,7 @@ from seqr.views.apis.variant_search_api import query_variants_handler
 from seqr.views.utils.file_utils import save_temp_file
 
 react_app_pages = [
+    r'^$',
     'dashboard',
     'project/(?P<project_guid>[^/]+)/.*',
     'gene_info/.*'
