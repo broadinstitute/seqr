@@ -6,5 +6,7 @@ export const getIndividualsByGuid = state => state.individualsByGuid
 export const getSamplesByGuid = state => state.samplesByGuid
 export const getGenesById = state => state.genesById
 export const getGenesIsLoading = state => state.genesLoading.isLoading
+export const getLocusListsByGuid = state => state.locusListsByGuid
+export const getLocusListsIsLoading = state => state.locusListsLoading.isLoading
 export const getVariantIsLoading = state => state.variantLoading.isLoading
 export const getUser = state => state.user

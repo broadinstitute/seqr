@@ -9,7 +9,7 @@ from django.db.models import Model
 from django.db.models.fields.files import ImageFieldFile
 
 from seqr.models import CAN_EDIT, Project, Family, Individual, Sample, SavedVariant, VariantTag, \
-    VariantFunctionalData, VariantNote, GeneNote
+    VariantFunctionalData, VariantNote, GeneNote, LocusList
 from seqr.utils.xpos_utils import get_chrom_pos
 from seqr.views.utils.json_utils import _to_camel_case
 from family_info_utils import retrieve_family_analysed_by
@@ -340,3 +340,28 @@ def get_json_for_gene_note(note, user):
         'editable': user.is_staff or user == created_by,
     })
     return result
+
+
+def get_json_for_locus_lists(locus_lists):
+    """Returns a JSON representation of the given Family.
+
+    Args:
+        locus_lists (array): array of LocusList django models.
+    Returns:
+        array: json objects
+    """
+
+    fields = _get_record_fields(LocusList, 'locus_list')
+    results = []
+    for locus_list in locus_lists:
+        locus_list_dict = _record_to_dict(locus_list, fields)
+        result = _get_json_for_record(locus_list_dict, fields)
+        result.update({
+            'locusListGuid': result.pop('guid'),
+            'numEntries': locus_list.locuslistgene_set.count() + locus_list.locuslistinterval_set.count(),
+        })
+        results.append(result)
+
+    return results
+
+

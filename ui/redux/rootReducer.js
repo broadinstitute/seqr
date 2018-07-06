@@ -19,6 +19,8 @@ const RECEIVE_SAVED_VARIANTS = 'RECEIVE_SAVED_VARIANTS'
 const REQUEST_VARIANT = 'REQUEST_VARIANT'
 const REQUEST_GENES = 'REQUEST_GENES'
 const RECEIVE_GENES = 'RECEIVE_GENES'
+const REQUEST_GENE_LISTS = 'REQUEST_GENE_LISTS'
+const RECEIVE_GENE_LISTS = 'RECEIVE_GENE_LISTS'
 
 // action creators
 export const fetchProjects = () => {
@@ -103,6 +105,26 @@ export const loadGene = (geneId) => {
   }
 }
 
+export const loadLocusLists = (locusListId) => {
+  return (dispatch, getState) => {
+    if (!locusListId || !getState().locusListsByGuid[locusListId]) {
+      dispatch({ type: REQUEST_GENE_LISTS })
+      let url = '/api/locus_lists'
+      if (locusListId) {
+        url = `${url}/${locusListId}`
+      }
+      new HttpRequestHelper(url,
+        (responseJson) => {
+          dispatch({ type: RECEIVE_GENE_LISTS, updatesById: responseJson })
+        },
+        (e) => {
+          dispatch({ type: RECEIVE_GENE_LISTS, error: e.message, updatesById: {} })
+        },
+      ).get()
+    }
+  }
+}
+
 export const loadVariantTranscripts = (variantId) => {
   return (dispatch, getState) => {
     const variant = getState().projectSavedVariants[variantId]
@@ -181,6 +203,8 @@ const rootReducer = combineReducers(Object.assign({
   samplesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'samplesByGuid'),
   genesById: createObjectsByIdReducer(RECEIVE_GENES),
   genesLoading: loadingReducer(REQUEST_GENES, RECEIVE_GENES),
+  locusListsByGuid: createObjectsByIdReducer(RECEIVE_GENE_LISTS),
+  locusListsLoading: loadingReducer(REQUEST_GENE_LISTS, RECEIVE_GENE_LISTS),
   variantLoading: loadingReducer(REQUEST_VARIANT, RECEIVE_SAVED_VARIANTS),
   user: zeroActionsReducer,
   form: formReducer,

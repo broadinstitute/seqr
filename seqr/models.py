@@ -693,6 +693,8 @@ class LocusList(ModelWithGUID):
     class Meta:
         permissions = _SEQR_OBJECT_PERMISSIONS
 
+        json_fields = ['guid', 'created_date', 'name', 'description', 'is_public']
+
 
 class LocusListGene(ModelWithGUID):
     locus_list = models.ForeignKey('LocusList', on_delete=models.CASCADE)
