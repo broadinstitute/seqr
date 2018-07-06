@@ -4,7 +4,7 @@ MAINTAINER MacArthur Lab
 
 # install commmon utilities
 RUN apt-get update \
-    && apt-get install -y apt-utils wget curl xterm vim emacs nano less git htop bzip2 \
+    && apt-get install -y apt-utils wget curl xterm vim emacs nano less git htop bzip2 --fix-missing \
     && TERM=xterm
 
 
@@ -67,11 +67,11 @@ RUN wget -N https://raw.githubusercontent.com/macarthur-lab/seqr/master/requirem
     && pip install --upgrade -r requirements.txt
 
 # install UI depedencies
-#COPY shared/install_npm_packages.sh .
-#RUN wget -N https://raw.githubusercontent.com/macarthur-lab/seqr/master/ui/package.json \
-#   && alias node=nodejs
-#   && ./install_npm_packages.sh \
-#   && npm install -g npm-check-updates
+COPY shared/install_npm_packages.sh .
+RUN wget -N https://raw.githubusercontent.com/macarthur-lab/seqr/master/ui/package.json \
+   && alias node=nodejs
+   && ./install_npm_packages.sh \
+   && npm install -g npm-check-updates
 
 ARG SEQR_SERVICE_PORT
 ENV SEQR_SERVICE_PORT=$SEQR_SERVICE_PORT
