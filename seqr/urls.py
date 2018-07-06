@@ -72,7 +72,7 @@ react_app_pages = [
     'dashboard',
     'project/(?P<project_guid>[^/]+)/.*',
     'gene_info/.*',
-    'gene_lists',
+    'gene_lists/.*',
 ]
 
 # NOTE: the actual url will be this with an '/api' prefix

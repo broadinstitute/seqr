@@ -53,6 +53,7 @@ const ENTITY_DETAILS = {
   } : null),
   gene_lists: () => ({
     entityTitle: 'Gene Lists',
+    entityLink: '/gene_lists',
     description: 'This page shows all of the gene lists that are available in your account',
     originalPageLink: 'gene-lists',
   }),
@@ -65,7 +66,7 @@ const PageHeader = ({ user, project, familiesByGuid, match }) => {
   if (!entityConfig) {
     return null
   }
-  const { entityTitle, title, description, entityGuidLink, entityLinks, originalPageLink } = entityConfig
+  const { entityTitle, title, description, entityLink, entityGuidLink, entityLinks, originalPageLink } = entityConfig
 
   let originalPageLinkPath
   const BREADCRUMBS = {
@@ -119,11 +120,11 @@ const PageHeader = ({ user, project, familiesByGuid, match }) => {
   } = BREADCRUMBS[breadcrumb] || {}
 
   let breadcrumbSections = [
-    { content: entityTitle },
+    { content: entityTitle, link: entityLink },
   ]
   if (entityGuid) {
     breadcrumbSections.push(
-      { content: title, link: `/${entity}/${entityGuid}${entityGuidLink ? `/${entityGuidLink}` : ''}` },
+      { content: title || entityGuid, link: `/${entity}/${entityGuid}${entityGuidLink ? `/${entityGuidLink}` : ''}` },
     )
   }
   if (breadcrumb && breadcrumbText !== false) {
@@ -181,7 +182,7 @@ const PageHeader = ({ user, project, familiesByGuid, match }) => {
         <br />
         {originalPageLinkPath !== false && originalPages.map(page =>
           <a
-            key={page.name || breadcrumb}
+            key={page.name || breadcrumb || entity}
             href={`/${originalPageLink}/${originalPageLinkPath || page.path}`}
           >
             Deprecated {page.name || breadcrumbText || entityTitle} Page<br />
