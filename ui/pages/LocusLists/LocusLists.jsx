@@ -1,6 +1,5 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import DocumentTitle from 'react-document-title'
 import { connect } from 'react-redux'
 
 import { loadLocusLists } from 'redux/rootReducer'
@@ -10,7 +9,6 @@ import DataLoader from 'shared/components/DataLoader'
 
 const LocusLists = ({ locusLists, loading, load }) =>
   <DataLoader content={locusLists} loading={loading} load={load}>
-    <DocumentTitle title="seqr: Locus Lists" />
     <div>{JSON.stringify(locusLists)}</div>
   </DataLoader>
 
