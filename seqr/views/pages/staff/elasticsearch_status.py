@@ -12,7 +12,7 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.shortcuts import render
 
 from seqr.models import Sample
-from seqr.utils.es_utils import es_client
+from seqr.utils.es_utils import get_es_client
 from settings import LOGIN_URL
 
 logger = logging.getLogger(__name__)
@@ -21,7 +21,7 @@ OPERATIONS_LOG = "index_operations_log"
 
 @staff_member_required(login_url=LOGIN_URL)
 def elasticsearch_status(request):
-    client = es_client()
+    client = get_es_client()
 
     # get index snapshots
     response = requests.get("http://{0}:{1}/_snapshot/{2}/_all".format(

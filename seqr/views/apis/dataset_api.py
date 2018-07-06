@@ -18,19 +18,22 @@ logger = logging.getLogger(__name__)
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def add_dataset_handler(request, project_guid):
-    """Update project metadata - including one or more of these fields: name, description
+    """Create or update samples for the given dataset
 
     Args:
+        request: Django request object
         project_guid (string): GUID of the project that should be updated
 
     HTTP POST
         Request body - should contain the following json structure:
         {
-            'form' : {
-                'sampleType':  <"WGS", "WES", or "RNA">
-                'datasetType': <"VARIANTS", or "ALIGN">
-                'genomeVersion': <"GRCH37", or "GRCH38">
-            }
+            'sampleType':  <"WGS", "WES", or "RNA"> (required)
+            'datasetType': <"VARIANTS", or "ALIGN"> (required)
+            'elasticsearchIndex': <String>
+            'datasetPath': <String>
+            'datasetName': <String>
+            'ignoreExtraSamplesInCallset': <Boolean>
+            'mappingFile': { 'uploadedFileId': <Id for temporary uploaded file> }
         }
 
         Response body - will contain the following structure:

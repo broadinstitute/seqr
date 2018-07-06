@@ -4,7 +4,7 @@ from elasticsearch import NotFoundError, TransportError
 from django.utils import timezone
 
 from seqr.models import Sample
-from seqr.utils.es_utils import es_client, VARIANT_DOC_TYPE
+from seqr.utils.es_utils import get_es_client, VARIANT_DOC_TYPE
 from seqr.utils.file_utils import does_file_exist, file_iter, get_file_stats
 from seqr.views.utils.file_utils import load_uploaded_file
 from seqr.views.apis.samples_api import match_sample_ids_to_sample_records
@@ -24,19 +24,20 @@ def add_dataset(
     ignore_extra_samples_in_callset=False
 ):
 
-    """Validates the given dataset.
+    """Validates the given dataset and updates/ creates the corresponding Samples
 
     Args:
         project (object):
         sample_type (string):
         dataset_type (string):
-        genome_version (string):
+        dataset_name (string):
         dataset_path (string):
         max_edit_distance (int):
         elasticsearch_index (string):
+        mapping_file_id (string):
         ignore_extra_samples_in_callset (bool):
     Return:
-        (errors, info) tuple
+        (updated_sample_models, created_sample_ids) tuple
     """
 
     _validate_inputs(
@@ -70,14 +71,14 @@ def _update_variant_calls_dataset_kwargs(elasticsearch_index, dataset_path, mapp
     all_samples = _get_elasticsearch_index_samples(elasticsearch_index)
     return {
         'sample_ids': all_samples,
-        'sample_individual_mapping': _load_mapping_file(mapping_file_id),
+        'sample_id_to_individual_id_mapping': _load_mapping_file(mapping_file_id),
         'sample_dataset_path_mapping': {sample_id: dataset_path for sample_id in all_samples},
         'missing_sample_exception_template': 'Matches not found for ES sample ids: {unmatched_samples}. Uploading a mapping file for these samples, or select the "Ignore extra samples in callset" checkbox to ignore.'
     }
 
 
 def _update_read_alignmen_dataset_kwargs(mapping_file_id):
-    sample_individual_mapping = {}
+    sample_id_to_individual_id_mapping = {}
     sample_dataset_path_mapping = {}
     errors = []
     for individual_id, dataset_path in _load_mapping_file(mapping_file_id).items():
@@ -85,15 +86,15 @@ def _update_read_alignmen_dataset_kwargs(mapping_file_id):
             raise Exception('BAM / CRAM file "{}" must have a .bam or .cram extension'.format(dataset_path))
         _validate_dataset_path(dataset_path)
         sample_id = dataset_path.split('/')[-1].split('.')[0]
-        sample_individual_mapping[sample_id] = individual_id
+        sample_id_to_individual_id_mapping[sample_id] = individual_id
         sample_dataset_path_mapping[sample_id] = dataset_path
 
     if errors:
         raise Exception(', '.join(errors))
 
     return {
-        'sample_ids': sample_individual_mapping.keys(),
-        'sample_individual_mapping': sample_individual_mapping,
+        'sample_ids': sample_id_to_individual_id_mapping.keys(),
+        'sample_id_to_individual_id_mapping': sample_id_to_individual_id_mapping,
         'sample_dataset_path_mapping': sample_dataset_path_mapping,
         'missing_sample_exception_template': 'The following Individual IDs do not exist: {unmatched_samples}'
     }
@@ -107,7 +108,7 @@ def _update_samples_for_dataset(
     elasticsearch_index=None,
     dataset_name=None,
     max_edit_distance=0,
-    sample_individual_mapping=None,
+    sample_id_to_individual_id_mapping=None,
     sample_dataset_path_mapping=None,
     ignore_extra_samples_in_callset=False,
     missing_sample_exception_template='Missing samples: {unmatched_samples}',
@@ -120,7 +121,7 @@ def _update_samples_for_dataset(
         elasticsearch_index=elasticsearch_index,
         max_edit_distance=max_edit_distance,
         create_sample_records=True,
-        sample_individual_mapping=sample_individual_mapping,
+        sample_id_to_individual_id_mapping=sample_id_to_individual_id_mapping,
     )
 
     unmatched_samples = set(sample_ids) - set(matched_sample_id_to_sample_record.keys())
@@ -150,7 +151,7 @@ def _update_samples_for_dataset(
 def _get_elasticsearch_index_samples(elasticsearch_index):
     sample_field_suffix = '_num_alt'
 
-    index = elasticsearch_dsl.Index('{}*'.format(elasticsearch_index), using=es_client())
+    index = elasticsearch_dsl.Index('{}*'.format(elasticsearch_index), using=get_es_client())
     try:
         field_mapping = index.get_field_mapping(fields=['*{}'.format(sample_field_suffix)], doc_type=[VARIANT_DOC_TYPE])
     except NotFoundError:

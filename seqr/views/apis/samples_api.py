@@ -16,37 +16,32 @@ def match_sample_ids_to_sample_records(
         elasticsearch_index=None,
         max_edit_distance=0,
         create_sample_records=False,
-        sample_individual_mapping=None,
+        sample_id_to_individual_id_mapping=None,
     ):
     """Goes through the given list of sample_ids and finds existing Sample records of the given
-    sample_type with ids from the list. For sample_ids that aren't found to have existing Sample
+    sample_type and dataset_type with ids from the list. For sample_ids that aren't found to have existing Sample
     records, it looks for Individual records that have an individual_id that either exactly or
-    approximately equals one of the sample_ids in the list and optionally creates new Sample
-    records for these.
+    approximately equals one of the sample_ids in the list or is contained in the optional
+    sample_id_to_individual_id_mapping and optionally creates new Sample records for these.
 
     Args:
         project (object): Django ORM project model
         sample_ids (list): a list of sample ids for which to find matching Sample records
         sample_type (string): one of the Sample.SAMPLE_TYPE_* constants
+        dataset_type (string): one of the Sample.DATASET_TYPE_* constants
+        elasticsearch_index (string): an optional string specifying the index where the dataset is loaded
         max_edit_distance (int): max permitted edit distance for approximate matches
         create_sample_records (bool): whether to create new Sample records for sample_ids that
             don't match existing Sample records, but do match individual_id's of existing
             Individual records.
+        sample_id_to_individual_id_mapping (object): Mapping between sample ids and their corresponding individual ids
 
     Returns:
-        dict: sample_id_to_sample_record containing the matching Sample records (including any
+        tuple:
+            [0] dict: sample_id_to_sample_record containing the matching Sample records (including any
             newly-created ones)
+            [1] array: array of the sample_ids of any samples that were created
     """
-
-    # remapped_sample_ids = []
-    # for sample_id in existing_smaple_ids:
-    #     if sample_id in id_mapping:
-    #         remapped_sample_ids.append(id_mapping[sample_id])
-    #         logger.info("Remapped %s to %s" % (sample_id, id_mapping[sample_id]))
-    #     else:
-    #         remapped_sample_ids.append(sample_id)
-    #         logger.info("No sample id mapping for %s" % sample_id)
-    # return remapped_sample_ids
 
     sample_id_to_sample_record = find_matching_sample_records(
         project, sample_ids, sample_type, dataset_type, elasticsearch_index
@@ -69,8 +64,8 @@ def match_sample_ids_to_sample_records(
         sample_id_to_individual_record = {}
         for sample_id in remaining_sample_ids:
             individual_id = sample_id
-            if sample_individual_mapping and sample_id in sample_individual_mapping:
-                individual_id = sample_individual_mapping[sample_id]
+            if sample_id_to_individual_id_mapping and sample_id in sample_id_to_individual_id_mapping:
+                individual_id = sample_id_to_individual_id_mapping[sample_id]
 
             if individual_id not in remaining_individuals_dict:
                 continue
@@ -107,12 +102,15 @@ def match_sample_ids_to_sample_records(
 
 
 def find_matching_sample_records(project, sample_ids, sample_type, dataset_type, elasticsearch_index):
-    """Find and return Samples of the given sample_type whose sample ids are in sample_ids list
+    """Find and return Samples of the given sample_type and dataset_type whose sample ids are in sample_ids list.
+    If elasticsearch_index is provided, will only match samples with the same index or with no index set
 
     Args:
         project (object): Django ORM project model
         sample_ids (list): a list of sample ids for which to find matching Sample records
         sample_type (string): one of the Sample.SAMPLE_TYPE_* constants
+        dataset_type (string): one of the Sample.DATASET_TYPE_* constants
+        elasticsearch_index (string): an optional string specifying the index where the dataset is loaded
 
     Returns:
         dict: sample_id_to_sample_record containing the matching Sample records
