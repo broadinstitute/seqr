@@ -4,7 +4,8 @@ MAINTAINER MacArthur Lab
 
 # install commmon utilities
 RUN apt-get update \
-    && apt-get install -y apt-utils wget curl xterm vim emacs nano less git htop bzip2 --fix-missing
+    && apt-get install -y apt-utils wget curl xterm vim emacs nano less git htop bzip2 --fix-missing \
+    && TERM=xterm
 
 
 # install dependencies of generate_pedigree_images command which generates static images using HaploPainter.pl
@@ -13,6 +14,11 @@ RUN apt-get install -y perl build-essential libcairo2-dev libgtk2.0-dev libglib2
 RUN wget https://raw.github.com/miyagawa/cpanminus/master/cpanm -O /usr/bin/cpanm \
     && chmod +x /usr/bin/cpanm \
     && cpanm --notest Cairo DBI Gtk2 Tk Sort::Naturally
+
+# install dev dependencies for react, javascript development. These are not needed at runtime.
+RUN apt-get update \
+    && curl -sL https://deb.nodesource.com/setup_7.x | bash - \
+    && apt-get install -y nodejs
 
 # install utilities for accessing the database, debugging, etc.
 RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 0C49F3730359A14518585931BC711F9BA15703C6 \
@@ -72,6 +78,13 @@ RUN pip install --upgrade pip gunicorn \
     && pip install --upgrade -r requirements.txt
 
 COPY shared/config/*.py /seqr_settings/
+
+# install UI depedencies to allow ui builds on the dev server
+COPY shared/install_npm_packages.sh .
+RUN wget -N https://raw.githubusercontent.com/macarthur-lab/seqr/master/ui/package.json \
+   && alias node=nodejs
+   && ./install_npm_packages.sh \
+   && npm install -g npm-check-updates
 
 ARG SEQR_SERVICE_PORT
 ENV SEQR_SERVICE_PORT=$SEQR_SERVICE_PORT
