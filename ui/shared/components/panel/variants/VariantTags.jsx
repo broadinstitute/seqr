@@ -175,7 +175,6 @@ const VariantTags = ({ variant, project, updateVariantNote: dispatchUpdateVarian
           fieldName="Tags"
           variant={variant}
           tagOptions={project.variantTagTypes}
-          hiddenTags={SHORTCUT_TAGS}
           onSubmit={dispatchUpdateVariantTags}
         />
         <HorizontalSpacer width={5} />
