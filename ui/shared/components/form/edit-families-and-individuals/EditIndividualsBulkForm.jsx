@@ -37,6 +37,7 @@ const TableCell = styled(Table.Cell)`
 `
 
 const FORM_NAME = 'bulkUploadIndividuals'
+const FILE_FIELD_NAME = 'uploadedFile'
 const UPLOADER_STYLE = { maxWidth: '700px', margin: 'auto' }
 
 const BaseBulkContent = props =>
@@ -153,6 +154,8 @@ const BaseBulkContent = props =>
       dropzoneLabel="Click here to upload a table, or drag-drop it into this box"
       url={`/api/project/${props.project.projectGuid}/upload_individuals_table`}
       auto
+      required
+      name={FILE_FIELD_NAME}
       uploaderStyle={UPLOADER_STYLE}
     />
     <br />
@@ -173,7 +176,7 @@ const EditIndividualsBulkForm = props =>
     form={FORM_NAME}
     modalName={props.modalName}
     submitButtonText="Apply"
-    onSubmit={values => props.updateIndividuals(values.uploadedFile)}
+    onSubmit={values => props.updateIndividuals(values[FILE_FIELD_NAME])}
     confirmCloseIfNotSaved
     closeOnSuccess
     showErrorPanel

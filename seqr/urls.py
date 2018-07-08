@@ -65,6 +65,7 @@ from seqr.views.apis.igv_api import fetch_igv_track
 from seqr.views.apis.project_api import create_project_handler, update_project_handler, delete_project_handler
 from seqr.views.apis.project_categories_api import update_project_categories_handler
 from seqr.views.apis.variant_search_api import query_variants_handler
+from seqr.views.utils.file_utils import save_temp_file
 
 react_app_pages = [
     r'^$',
@@ -121,6 +122,8 @@ api_endpoints = {
     'gene_info/(?P<gene_id>[^/]+)/note/(?P<note_guid>[^/]+)/delete': delete_gene_note_handler,
 
     'awesomebar': awesomebar_autocomplete_handler,
+
+    'upload_temp_file': save_temp_file,
 
 }
 

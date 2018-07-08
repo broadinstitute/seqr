@@ -1,49 +1,76 @@
 import React from 'react'
-import PropTypes from 'prop-types'
-import { connect } from 'react-redux'
 import { Tab } from 'semantic-ui-react'
 
-import { closeModal } from 'redux/utils/modalReducer'
+import { DATASET_TYPE_VARIANT_CALLS, DATASET_TYPE_READ_ALIGNMENTS } from '../../utils/constants'
 import Modal from '../modal/Modal'
-import UploadCallsetForm from '../form/edit-datasets/UploadCallsetForm'
-import AddBamPathsForm from '../form/edit-datasets/AddBamPathsForm'
+import UpdateDatasetForm, {
+  ES_INDEX_FIELD, DATASET_NAME_FIELD, DATASET_PATH_FIELD, IGNORE_EXTRAS_FIELD, SAMPLE_TYPE_FIELD, mappingFileField,
+} from '../form/UpdateDatasetForm'
 import ButtonLink from './ButtonLink'
 
 
 const MODAL_NAME = 'Datasets'
 
-const EditDatasetsButton = (props) => {
-  const panes = [
-    {
-      menuItem: 'Upload New Callset',
-      pane: <Tab.Pane key={1}><UploadCallsetForm handleClose={props.handleClose} /></Tab.Pane>,
-    },
-    {
-      menuItem: 'Add BAM/CRAM Paths',
-      pane: <Tab.Pane key={2}><AddBamPathsForm handleClose={props.handleClose} /></Tab.Pane>,
-    },
-  ]
-  return (
-    <Modal
-      modalName={MODAL_NAME}
-      title="Datasets"
-      size="small"
-      trigger={<ButtonLink>Edit Datasets</ButtonLink>}
-    >
-      <Tab
-        renderActiveOnly={false}
-        panes={panes}
-      />
-    </Modal>
-  )
-}
+const UPLOAD_CALLSET_FIELDS = [
+  ES_INDEX_FIELD,
+  SAMPLE_TYPE_FIELD,
+  DATASET_NAME_FIELD,
+  DATASET_PATH_FIELD,
+  IGNORE_EXTRAS_FIELD,
+  mappingFileField({
+    required: false,
+    dropzoneLabelMessage: 'Upload an optional file that maps VCF Sample Ids to their corresponding Seqr Individual Ids',
+    column1Label: 'Sample ID',
+    column2Label: 'Individual ID',
+  }),
+]
 
-EditDatasetsButton.propTypes = {
-  handleClose: PropTypes.func,
-}
+const UPLOAD_ALIGNMENT_FIELDS = [
+  SAMPLE_TYPE_FIELD,
+  mappingFileField({
+    required: true,
+    dropzoneLabelMessage: 'Upload a file that maps that maps seqr Individual Ids to their BAM or CRAM file path',
+    column1Label: 'Individual ID',
+    column2Label: 'gs:// Google bucket path or server filesystem path of the BAM or CRAM file for this Individual',
+  }),
+]
 
-const mapDispatchToProps = {
-  handleClose: () => closeModal(MODAL_NAME),
-}
+const PANES = [
+  {
+    menuItem: 'Upload New Callset',
+    render: () =>
+      <Tab.Pane key={1}>
+        <UpdateDatasetForm
+          modalName={MODAL_NAME}
+          formName="uploadCallset"
+          datasetType={DATASET_TYPE_VARIANT_CALLS}
+          formFields={UPLOAD_CALLSET_FIELDS}
+          submitButtonText="Upload"
+        />
+      </Tab.Pane>,
+  },
+  {
+    menuItem: 'Add BAM/CRAM Paths',
+    render: () =>
+      <Tab.Pane key={2}>
+        <UpdateDatasetForm
+          modalName={MODAL_NAME}
+          formName="addAlignment"
+          datasetType={DATASET_TYPE_READ_ALIGNMENTS}
+          formFields={UPLOAD_ALIGNMENT_FIELDS}
+          submitButtonText="Add"
+        />
+      </Tab.Pane>,
+  },
+]
 
-export default connect(null, mapDispatchToProps)(EditDatasetsButton)
+export default () => (
+  <Modal
+    modalName={MODAL_NAME}
+    title="Datasets"
+    size="small"
+    trigger={<ButtonLink>Edit Datasets</ButtonLink>}
+  >
+    <Tab panes={PANES} />
+  </Modal>
+)
