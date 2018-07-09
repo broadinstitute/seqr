@@ -57,7 +57,7 @@ const textWithLinks = (text) => {
         for (const title of Object.keys(linkMap)) { // eslint-disable-line no-restricted-syntax
           if (str && str.startsWith(`${title}:`)) {
             const id = str.replace(`${title}:`, '')
-            return <span key={i}>{title}: <a href={`${linkMap[title]}${id}`} target="_blank">{id}</a></span>
+            return <span key={i}>{title}: <a href={`${linkMap[title]}${id}`} target="_blank" rel="noopener noreferrer">{id}</a></span>
           }
         }
         if (str && str.startsWith('DISEASE:') && str.endsWith('[')) {
@@ -124,7 +124,7 @@ const GeneDetailContent = ({ gene, showTitle, updateGeneNote: dispatchUpdateGene
         <div>
           {gene.phenotype_info.mim_phenotypes.map(phenotype =>
             <span key={phenotype.description}>{phenotype.mim_id ?
-              <a target="_blank" href={`http://www.omim.org/entry/${phenotype.mim_id}`}>
+              <a href={`http://www.omim.org/entry/${phenotype.mim_id}`} target="_blank" rel="noopener noreferrer">
                 {phenotype.description}
               </a>
               : phenotype.description}
@@ -139,7 +139,7 @@ const GeneDetailContent = ({ gene, showTitle, updateGeneNote: dispatchUpdateGene
       title: 'ORPHANET',
       content: gene.phenotype_info.orphanet_phenotypes.map(phenotype =>
         <div key={phenotype.orphanet_id}>
-          <a target="_blank" href={`http://www.orpha.net/consor/cgi-bin/Disease_Search.php?lng=EN&data_id=20460&Disease_Disease_Search_diseaseGroup=${phenotype.orphanet_id}`}>
+          <a href={`http://www.orpha.net/consor/cgi-bin/Disease_Search.php?lng=EN&data_id=20460&Disease_Disease_Search_diseaseGroup=${phenotype.orphanet_id}`} target="_blank" rel="noopener noreferrer">
             {phenotype.description}
           </a>
         </div>,
@@ -163,7 +163,7 @@ const GeneDetailContent = ({ gene, showTitle, updateGeneNote: dispatchUpdateGene
       {linkDetails.map(linkConfig =>
         <Popup
           key={linkConfig.title}
-          trigger={<a target="_blank" href={linkConfig.link}><b>{linkConfig.title}</b><HorizontalSpacer width={20} /></a>}
+          trigger={<a href={linkConfig.link}><b>{linkConfig.title}</b><HorizontalSpacer width={20} target="_blank" rel="noopener noreferrer" /></a>}
           content={linkConfig.description}
         />,
       )}

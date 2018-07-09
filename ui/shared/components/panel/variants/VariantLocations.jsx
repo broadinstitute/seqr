@@ -30,7 +30,7 @@ const ucscBrowserLink = (variant, genomeVersion) => {
 const VariantLocations = ({ variant }) =>
   <div>
     <LargeText>
-      <a href={ucscBrowserLink(variant)} target="_blank"><b>{variant.chrom}:{variant.pos}</b></a>
+      <a href={ucscBrowserLink(variant)} target="_blank" rel="noopener noreferrer"><b>{variant.chrom}:{variant.pos}</b></a>
       <HorizontalSpacer width={10} />
       <BreakWord>{variant.ref}</BreakWord>
       <Icon name="angle right" />
@@ -39,7 +39,7 @@ const VariantLocations = ({ variant }) =>
 
     {variant.annotation && variant.annotation.rsid &&
       <div>
-        <a href={`http://www.ncbi.nlm.nih.gov/SNP/snp_ref.cgi?searchType=adhoc_search&type=rs&rs=${variant.annotation.rsid}`} target="_blank" >
+        <a href={`http://www.ncbi.nlm.nih.gov/SNP/snp_ref.cgi?searchType=adhoc_search&type=rs&rs=${variant.annotation.rsid}`} target="_blank" rel="noopener noreferrer">
           {variant.annotation.rsid}
         </a>
       </div>
@@ -48,7 +48,7 @@ const VariantLocations = ({ variant }) =>
       variant.liftedOverPos ?
         <div>
           hg19:<HorizontalSpacer width={5} />
-          <a href={ucscBrowserLink(variant, '37')} target="_blank">
+          <a href={ucscBrowserLink(variant, '37')} target="_blank" rel="noopener noreferrer">
             chr{variant.liftedOverChrom}:{variant.liftedOverPos}
           </a>
         </div>
