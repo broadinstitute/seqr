@@ -28,7 +28,7 @@ def download_remote_file(url, to_dir=tempfile.gettempdir()):
     if os.path.isfile(local_file_path) and os.path.getsize(local_file_path) == remote_file_size:
         return local_file_path
 
-    logger.info("Downloading {} to local_file_path".format(url, local_file_path))
+    logger.info("Downloading {} to {}".format(url, local_file_path))
 
     os.system("wget %s -O %s" % (url, local_file_path))
 
