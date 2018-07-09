@@ -62,7 +62,7 @@ from seqr.views.pages.staff.elasticsearch_status import elasticsearch_status
 from seqr.views.apis.awesomebar_api import awesomebar_autocomplete_handler
 from seqr.views.apis.auth_api import login_required_error, API_LOGIN_REQUIRED_URL
 from seqr.views.apis.igv_api import fetch_igv_track
-from seqr.views.apis.locus_list_api import locus_lists
+from seqr.views.apis.locus_list_api import locus_lists, locus_list_info
 from seqr.views.apis.project_api import create_project_handler, update_project_handler, delete_project_handler
 from seqr.views.apis.project_categories_api import update_project_categories_handler
 from seqr.views.apis.variant_search_api import query_variants_handler
@@ -124,6 +124,7 @@ api_endpoints = {
     'gene_info/(?P<gene_id>[^/]+)/note/(?P<note_guid>[^/]+)/delete': delete_gene_note_handler,
 
     'locus_lists': locus_lists,
+    'locus_lists/(?P<locus_list_guid>[^/]+)': locus_list_info,
 
     'awesomebar': awesomebar_autocomplete_handler,
 

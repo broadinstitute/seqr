@@ -356,8 +356,8 @@ def get_json_for_gene_note(note, user):
     return result
 
 
-def get_json_for_locus_lists(locus_lists):
-    """Returns a JSON representation of the given Family.
+def get_json_for_locus_lists(locus_lists, include_genes=False):
+    """Returns a JSON representation of the given LocusLists.
 
     Args:
         locus_lists (array): array of LocusList django models.
@@ -370,12 +370,26 @@ def get_json_for_locus_lists(locus_lists):
     for locus_list in locus_lists:
         locus_list_dict = _record_to_dict(locus_list, fields)
         result = _get_json_for_record(locus_list_dict, fields)
+        gene_set = locus_list.locuslistgene_set
+        if include_genes:
+            result['geneIds'] = [gene.gene_id for gene in gene_set.all()]
         result.update({
             'locusListGuid': result.pop('guid'),
-            'numEntries': locus_list.locuslistgene_set.count() + locus_list.locuslistinterval_set.count(),
+            'numEntries': gene_set.count() + locus_list.locuslistinterval_set.count(),
         })
         results.append(result)
 
     return results
+
+
+def get_json_for_locus_list(locus_list):
+    """Returns a JSON representation of the given LocusList.
+
+    Args:
+        locus_list (object): LocusList django model.
+    Returns:
+        dict: json object
+    """
+    return get_json_for_locus_lists([locus_list], include_genes=True)[0]
 
 

@@ -159,7 +159,7 @@ const GeneDetailContent = ({ gene, updateGeneNote: dispatchUpdateGeneNote }) => 
   ]
   return (
     <div>
-      {linkDetails.map(linkConfig =>
+      {linkDetails.filter(linkConfig => linkConfig).map(linkConfig =>
         <Popup
           key={linkConfig.title}
           trigger={<a target="_blank" href={linkConfig.link}><b>{linkConfig.title}</b><HorizontalSpacer width={20} /></a>}

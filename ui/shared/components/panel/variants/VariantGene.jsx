@@ -6,9 +6,7 @@ import { Label, Popup, List } from 'semantic-ui-react'
 
 import { getProject } from 'pages/Project/selectors'
 import { HorizontalSpacer } from '../../Spacers'
-import Modal from '../../modal/Modal'
-import ButtonLink from '../../buttons/ButtonLink'
-import GeneDetail from '../genes/GeneDetail'
+import ShowGeneModal from '../../buttons/ShowGeneModal'
 
 const CONSTRAINED_GENE_RANK_THRESHOLD = 1000
 
@@ -53,14 +51,7 @@ GeneLabel.propTypes = {
 
 const VariantGene = ({ gene, project }) =>
   <div>
-    <Modal
-      trigger={<ButtonLink fontWeight="bold" fontSize="1.5em">{gene.symbol}</ButtonLink>}
-      title={gene.symbol}
-      modalName={`gene-${gene.geneId}`}
-      size="fullscreen"
-    >
-      <GeneDetail geneId={gene.geneId} />
-    </Modal>
+    <ShowGeneModal gene={gene} fontWeight="bold" fontSize="1.5em" />
     <HorizontalSpacer width={10} />
     <GeneLinks>
       <a href={`http://gnomad-beta.broadinstitute.org/gene/${gene.symbol}`} target="_blank">gnomAD</a>

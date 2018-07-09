@@ -20,6 +20,7 @@ const REQUEST_VARIANT = 'REQUEST_VARIANT'
 const REQUEST_GENES = 'REQUEST_GENES'
 const RECEIVE_GENES = 'RECEIVE_GENES'
 const REQUEST_GENE_LISTS = 'REQUEST_GENE_LISTS'
+const REQUEST_GENE_LIST = 'REQUEST_GENE_LIST'
 const RECEIVE_GENE_LISTS = 'RECEIVE_GENE_LISTS'
 
 // action creators
@@ -91,7 +92,8 @@ export const updateIndividual = (values) => {
 
 export const loadGene = (geneId) => {
   return (dispatch, getState) => {
-    if (!getState().genesById[geneId]) {
+    const gene = getState().genesById[geneId]
+    if (!gene || !gene.notes || !gene.expression) {
       dispatch({ type: REQUEST_GENES })
       new HttpRequestHelper(`/api/gene_info/${geneId}`,
         (responseJson) => {
@@ -107,14 +109,16 @@ export const loadGene = (geneId) => {
 
 export const loadLocusLists = (locusListId) => {
   return (dispatch, getState) => {
-    if (!locusListId || !getState().locusListsByGuid[locusListId]) {
-      dispatch({ type: REQUEST_GENE_LISTS })
+    const locusList = getState().locusListsByGuid[locusListId]
+    if (!locusListId || !locusList || !locusList.geneIds) {
+      dispatch({ type: locusListId ? REQUEST_GENE_LIST : REQUEST_GENE_LISTS })
       let url = '/api/locus_lists'
       if (locusListId) {
         url = `${url}/${locusListId}`
       }
       new HttpRequestHelper(url,
         (responseJson) => {
+          dispatch({ type: RECEIVE_GENES, updatesById: responseJson.genesById || {} })
           dispatch({ type: RECEIVE_GENE_LISTS, updatesById: responseJson })
         },
         (e) => {
@@ -203,8 +207,9 @@ const rootReducer = combineReducers(Object.assign({
   samplesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'samplesByGuid'),
   genesById: createObjectsByIdReducer(RECEIVE_GENES),
   genesLoading: loadingReducer(REQUEST_GENES, RECEIVE_GENES),
-  locusListsByGuid: createObjectsByIdReducer(RECEIVE_GENE_LISTS),
+  locusListsByGuid: createObjectsByIdReducer(RECEIVE_GENE_LISTS, 'locusListsByGuid'),
   locusListsLoading: loadingReducer(REQUEST_GENE_LISTS, RECEIVE_GENE_LISTS),
+  locusListLoading: loadingReducer(REQUEST_GENE_LIST, RECEIVE_GENE_LISTS),
   variantLoading: loadingReducer(REQUEST_VARIANT, RECEIVE_SAVED_VARIANTS),
   user: zeroActionsReducer,
   form: formReducer,
