@@ -58,14 +58,13 @@ from seqr.views.pages.staff.staff_pages import \
     users_page
 
 from seqr.views.pages.staff.discovery_sheet import discovery_sheet
-from seqr.views.pages.staff.elasticsearch_status import elasticsearch_status_page
+from seqr.views.pages.staff.elasticsearch_status import elasticsearch_status
 
 from seqr.views.apis.awesomebar_api import awesomebar_autocomplete_handler
 from seqr.views.apis.auth_api import login_required_error, API_LOGIN_REQUIRED_URL
 from seqr.views.apis.igv_api import fetch_igv_track
 from seqr.views.apis.project_api import create_project_handler, update_project_handler, delete_project_handler
 from seqr.views.apis.project_categories_api import update_project_categories_handler
-from seqr.views.apis.variant_search_api import query_variants_handler
 from seqr.views.utils.file_utils import save_temp_file
 
 react_app_pages = [
@@ -96,7 +95,6 @@ api_endpoints = {
     'project/(?P<project_guid>[^/]+)/update_project_categories': update_project_categories_handler,
 
     'project/(?P<project_guid>[^/]+)/saved_variants/(?P<variant_guid>[^/]+)?': saved_variant_data,
-    'project/(?P<project_guid>[^/]+)/query_variants': query_variants_handler,
 
     'project/(?P<project_guid>[^/]+)/edit_families': edit_families_handler,
     'project/(?P<project_guid>[^/]+)/delete_families': delete_families_handler,
@@ -160,7 +158,7 @@ urlpatterns += [
     url("^staff/?$", staff_dashboard, name="staff_dashboard"),
     url("^staff/seqr_stats/?", seqr_stats_page, name="seqr_stats"),
     url("^staff/discovery_sheet/?(?P<project_guid>[^/]+)?/?", discovery_sheet, name="discovery_sheet"),
-    url("^staff/elasticsearch_status", elasticsearch_status_page, name="elasticsearch_status"),
+    url("^staff/elasticsearch_status", elasticsearch_status, name="elasticsearch_status"),
     url("^staff/users/?", users_page, name="users_page"),
 ]
 
