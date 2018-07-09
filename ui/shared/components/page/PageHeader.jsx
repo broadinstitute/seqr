@@ -6,7 +6,7 @@ import styled from 'styled-components'
 import { Grid, Breadcrumb } from 'semantic-ui-react'
 import { NavLink } from 'react-router-dom'
 
-import { getUser, getFamiliesByGuid } from 'redux/selectors'
+import { getUser, getFamiliesByGuid, getGenesById, getLocusListsByGuid } from 'redux/selectors'
 import { getProject } from 'pages/Project/selectors'
 import EditProjectButton from '../buttons/EditProjectButton'
 import { snakecaseToTitlecase } from '../../utils/stringUtils'
@@ -38,8 +38,8 @@ const NavLinkNoActive = styled(NavLink)`
 `
 
 const ENTITY_DETAILS = {
-  project: (user, project) => (project ? {
-    entityTitle: 'Project',
+  dashboard: () => false,
+  project: (entityGuid, user, project) => (project ? {
     title: project.name,
     description: project.description,
     entityGuidLink: 'project_page',
@@ -51,22 +51,29 @@ const ENTITY_DETAILS = {
         <NavLinkNoActive key="case_review" to={`/project/${project.projectGuid}/case_review`}>Case Review<br /></NavLinkNoActive> : null,
     ],
   } : null),
-  gene_lists: () => ({
-    entityTitle: 'Gene Lists',
-    entityLink: '/gene_lists',
-    description: 'This page shows all of the gene lists that are available in your account',
-    originalPageLink: 'gene-lists',
+  gene_lists: (entityGuid, user, project, genesById, locusListsByGuid) => (
+    (entityGuid && !locusListsByGuid[entityGuid]) ? false : {
+      title: entityGuid && locusListsByGuid[entityGuid].name,
+      entityLink: '/gene_lists',
+      description: !entityGuid && 'This page shows all of the gene lists that are available in your account',
+      originalPageLink: entityGuid ? `gene-lists/${locusListsByGuid[entityGuid].name.toLowerCase().replace(/ /g, '-')}` : 'gene-lists',
+    }
+  ),
+  gene_info: (entityGuid, user, project, genesById) => ({
+    title: entityGuid && (genesById[entityGuid] ? genesById[entityGuid].symbol : entityGuid),
+    entityLink: '/gene_info',
+    originalPageLink: `gene/${entityGuid || ''}`,
   }),
 }
 
-const PageHeader = ({ user, project, familiesByGuid, match }) => {
+const PageHeader = ({ user, project, familiesByGuid, genesById, locusListsByGuid, match }) => {
 
   const { entity, entityGuid, breadcrumb, breadcrumbId } = match.params
-  const entityConfig = ENTITY_DETAILS[entity] && ENTITY_DETAILS[entity](user, project)
+  const entityConfig = ENTITY_DETAILS[entity] ? ENTITY_DETAILS[entity](entityGuid, user, project, genesById, locusListsByGuid) : {}
   if (!entityConfig) {
     return null
   }
-  const { entityTitle, title, description, entityLink, entityGuidLink, entityLinks, originalPageLink } = entityConfig
+  const { title, description, entityLink, entityGuidLink, entityLinks, originalPageLink } = entityConfig
 
   let originalPageLinkPath
   const BREADCRUMBS = {
@@ -120,7 +127,7 @@ const PageHeader = ({ user, project, familiesByGuid, match }) => {
   } = BREADCRUMBS[breadcrumb] || {}
 
   let breadcrumbSections = [
-    { content: entityTitle, link: entityLink },
+    { content: snakecaseToTitlecase(entity), link: entityLink },
   ]
   if (entityGuid) {
     breadcrumbSections.push(
@@ -161,7 +168,7 @@ const PageHeader = ({ user, project, familiesByGuid, match }) => {
   )
   return (
     <PageHeaderRow>
-      <DocumentTitle key="title" title={`${breadcrumb || 'seqr'}: ${title || entityTitle}`} />
+      <DocumentTitle key="title" title={`${breadcrumb || 'seqr'}: ${title || snakecaseToTitlecase(entity)}`} />
       <Grid.Column width={1} />
       <Grid.Column width={11}>
         <BreadcrumbContainer>
@@ -180,14 +187,15 @@ const PageHeader = ({ user, project, familiesByGuid, match }) => {
       <Grid.Column width={3}>
         {entityLinks && <b>{entityLinks}</b>}
         <br />
-        {originalPageLinkPath !== false && originalPages.map(page =>
-          <a
-            key={page.name || breadcrumb || entity}
-            href={`/${originalPageLink}/${originalPageLinkPath || page.path}`}
-          >
-            Deprecated {page.name || breadcrumbText || entityTitle} Page<br />
-          </a>,
-        )}
+        {originalPageLink && originalPageLinkPath !== false && originalPages.map((page) => {
+          const linkTitle = page.name || breadcrumbText || snakecaseToTitlecase(entity)
+          const linkPath = originalPageLinkPath || page.path
+          return (
+            <a key={linkTitle} href={`/${originalPageLink}${linkPath ? '/' : ''}${linkPath}`}>
+              Deprecated {linkTitle} Page <br />
+            </a>
+          )
+        })}
         <br />
       </Grid.Column>
       <Grid.Column width={1} />
@@ -200,12 +208,16 @@ PageHeader.propTypes = {
   project: PropTypes.object,
   familiesByGuid: PropTypes.object,
   match: PropTypes.object,
+  genesById: PropTypes.object,
+  locusListsByGuid: PropTypes.object,
 }
 
 const mapStateToProps = state => ({
   user: getUser(state),
   project: getProject(state),
   familiesByGuid: getFamiliesByGuid(state),
+  genesById: getGenesById(state),
+  locusListsByGuid: getLocusListsByGuid(state),
 })
 
 export default connect(mapStateToProps, null, null, { pure: false })(PageHeader)

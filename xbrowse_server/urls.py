@@ -132,7 +132,7 @@ urlpatterns = [
 
     url(r'^errorlog$', xbrowse_server.base.views.account_views.errorlog, name='errorlog'),
 
-    url(r'^gene$', xbrowse_server.base.views.reference_views.gene_search, name='gene_search'),  # DEPRECATED
+    url(r'^gene/?$', xbrowse_server.base.views.reference_views.gene_search, name='gene_search'),  # DEPRECATED
     url(r'^gene/(?P<gene_str>[\S]+)/?$', xbrowse_server.base.views.reference_views.gene_info, name='gene_info'),  # DEPRECATED
 
     #

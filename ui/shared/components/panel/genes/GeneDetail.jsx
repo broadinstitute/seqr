@@ -4,7 +4,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { connect } from 'react-redux'
-import { Grid, Header, Popup } from 'semantic-ui-react'
+import { Grid, Popup } from 'semantic-ui-react'
 
 import { loadGene, updateGeneNote } from 'redux/rootReducer'
 import { getGenesIsLoading, getGenesById } from 'redux/selectors'
@@ -73,7 +73,7 @@ const textWithLinks = (text) => {
   )
 }
 
-const GeneDetailContent = ({ gene, showTitle, updateGeneNote: dispatchUpdateGeneNote }) => {
+const GeneDetailContent = ({ gene, updateGeneNote: dispatchUpdateGeneNote }) => {
   const basicDetails = [
     { title: 'Symbol', content: gene.symbol },
     { title: 'Ensembl ID', content: gene.gene_id },
@@ -159,7 +159,6 @@ const GeneDetailContent = ({ gene, showTitle, updateGeneNote: dispatchUpdateGene
   ]
   return (
     <div>
-      {showTitle && <Header size="huge" dividing>{gene.symbol}</Header>}
       {linkDetails.map(linkConfig =>
         <Popup
           key={linkConfig.title}
@@ -217,12 +216,11 @@ const GeneDetailContent = ({ gene, showTitle, updateGeneNote: dispatchUpdateGene
 GeneDetailContent.propTypes = {
   gene: PropTypes.object,
   updateGeneNote: PropTypes.func.isRequired,
-  showTitle: PropTypes.bool,
 }
 
-const GeneDetail = ({ geneId, gene, loading, loadGene: dispatchLoadGene, updateGeneNote: dispatchUpdateGeneNote, showTitle = true }) =>
+const GeneDetail = ({ geneId, gene, loading, loadGene: dispatchLoadGene, updateGeneNote: dispatchUpdateGeneNote }) =>
   <DataLoader contentId={geneId} content={gene} loading={loading} load={dispatchLoadGene}>
-    <GeneDetailContent gene={gene} updateGeneNote={dispatchUpdateGeneNote} showTitle={showTitle} />
+    <GeneDetailContent gene={gene} updateGeneNote={dispatchUpdateGeneNote} />
   </DataLoader>
 
 GeneDetail.propTypes = {
@@ -231,7 +229,6 @@ GeneDetail.propTypes = {
   loading: PropTypes.bool.isRequired,
   loadGene: PropTypes.func.isRequired,
   updateGeneNote: PropTypes.func.isRequired,
-  showTitle: PropTypes.bool,
 }
 
 const mapDispatchToProps = {
