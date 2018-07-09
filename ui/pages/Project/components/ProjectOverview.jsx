@@ -1,15 +1,19 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import sortBy from 'lodash/sortBy'
-
+import styled from 'styled-components'
 import { Grid } from 'semantic-ui-react'
 import { connect } from 'react-redux'
-import ShowIfStaff from 'shared/components/ShowIfStaff'
-import { getProject } from 'redux/rootReducer'
-import EditDatasetsButton from 'shared/components/buttons/EditDatasetsButton'
-import EditFamiliesAndIndividualsButton from 'shared/components/buttons/EditFamiliesAndIndividualsButton'
-import { getProjectFamilies, getProjectIndividuals, getProjectDatasets } from '../utils/selectors'
 
+import EditFamiliesAndIndividualsButton from 'shared/components/buttons/EditFamiliesAndIndividualsButton'
+import EditDatasetsButton from 'shared/components/buttons/EditDatasetsButton'
+import { SAMPLE_TYPE_LOOKUP, DATASET_TYPE_VARIANT_CALLS, SAMPLE_STATUS_LOADED } from 'shared/utils/constants'
+import { getProject, getProjectFamiliesByGuid, getProjectIndividualsByGuid, getProjectSamplesByGuid } from '../selectors'
+
+
+const DetailContent = styled.div`
+ padding: 5px 0px 0px 20px;
+`
 
 const FAMILY_SIZE_LABELS = {
   0: plural => ` ${plural ? 'families' : 'family'} with no individuals`,
@@ -20,66 +24,58 @@ const FAMILY_SIZE_LABELS = {
   5: plural => ` ${plural ? 'families' : 'family'} with 5+ individuals`,
 }
 
-const SAMPLE_TYPE_LABELS = {
-  WES: 'Exome',
-  WGS: 'WGS',
-  RNA: 'RNA-seq',
-}
 
-const ANALYSIS_TYPE_LABELS = {
-  VARIANTS: 'callset',
-  SV: 'SV callset',
-}
-
-const ProjectOverview = (props) => {
-  const familySizeHistogram = props.families
+const ProjectOverview = ({ project, familiesByGuid, individualsByGuid, samplesByGuid }) => {
+  const familySizeHistogram = Object.values(familiesByGuid)
     .map(family => Math.min(family.individualGuids.length, 5))
     .reduce((acc, familySize) => (
       { ...acc, [familySize]: (acc[familySize] || 0) + 1 }
     ), {})
 
+  const loadedProjectSamples = Object.values(samplesByGuid).filter(sample =>
+    sample.datasetType === DATASET_TYPE_VARIANT_CALLS && sample.sampleStatus === SAMPLE_STATUS_LOADED,
+  ).reduce((acc, sample) => {
+    const loadedDate = new Date(sample.loadedDate).toLocaleDateString()
+    const sampleTypeByDate = acc[sample.sampleType] || {}
+    return { ...acc, [sample.sampleType]: { ...sampleTypeByDate, [loadedDate]: (sampleTypeByDate[loadedDate] || 0) + 1 } }
+  }, {})
+
   return (
     <Grid>
-      <Grid.Column>
-        {/* families */}
-        <div>
-          {props.families.length} Families, {props.individuals.length} Individuals
-        </div>
-        <div style={{ padding: '5px 0px 0px 20px' }}>
-          {
-            sortBy(Object.keys(familySizeHistogram)).map(size =>
-              <div key={size}>
-                {familySizeHistogram[size]} {FAMILY_SIZE_LABELS[size](familySizeHistogram[size] > 1)}
-              </div>)
-          }
-          {props.project.canEdit ? <span><br /><EditFamiliesAndIndividualsButton /></span> : null }<br />
-        </div>
-        <div>
-          <br />
-          Datasets:
-          <div style={{ padding: '5px 0px 0px 20px' }}>
+      <Grid.Row>
+        <Grid.Column width={5}>
+          {Object.keys(familiesByGuid).length} Families, {Object.keys(individualsByGuid).length} Individuals
+          <DetailContent>
             {
-              props.datasets.length > 0 ?
-                Object.keys(SAMPLE_TYPE_LABELS).map(currentSampleType => (
+              sortBy(Object.keys(familySizeHistogram)).map(size =>
+                <div key={size}>
+                  {familySizeHistogram[size]} {FAMILY_SIZE_LABELS[size](familySizeHistogram[size] > 1)}
+                </div>)
+            }
+            {project.canEdit ? <span><br /><EditFamiliesAndIndividualsButton /></span> : null }<br />
+          </DetailContent>
+        </Grid.Column>
+        <Grid.Column width={11}>
+          Datasets:
+          <DetailContent>
+            {
+              Object.keys(loadedProjectSamples).length > 0 ?
+                Object.keys(loadedProjectSamples).map(currentSampleType => (
                   <div key={currentSampleType}>
                     {
-                      props.datasets.filter(dataset =>
-                        dataset.analysisType === 'VARIANTS' && dataset.isLoaded && dataset.sampleType === currentSampleType,
-                      ).slice(0, 1).map(dataset =>
-                        <div key={dataset.datasetGuid}>
-                          {SAMPLE_TYPE_LABELS[dataset.sampleType]} {ANALYSIS_TYPE_LABELS[dataset.analysisType]} - {dataset.sampleGuids.length}  samples
-                          {dataset.isLoaded ? ` loaded on ${dataset.loadedDate.slice(0, 10)}` : ' not yet loaded'}
+                      Object.keys(loadedProjectSamples[currentSampleType]).map(loadedDate =>
+                        <div key={loadedDate}>
+                          {SAMPLE_TYPE_LOOKUP[currentSampleType].text} callset - {loadedProjectSamples[currentSampleType][loadedDate]} samples loaded on {loadedDate}
                         </div>,
                       )
                     }
                   </div>
                 )) : <div>No Datasets Loaded</div>
             }
-            <ShowIfStaff><span><br /><EditDatasetsButton /></span></ShowIfStaff><br />
-          </div>
-        </div>
-        {/* console.log('hpoTerms', props.hpoTermHistogram) */}
-      </Grid.Column>
+            {project.canEdit ? <span><br /><EditDatasetsButton /></span> : null }<br />
+          </DetailContent>
+        </Grid.Column>
+      </Grid.Row>
     </Grid>
   )
 }
@@ -87,16 +83,16 @@ const ProjectOverview = (props) => {
 
 ProjectOverview.propTypes = {
   project: PropTypes.object,
-  families: PropTypes.array.isRequired,
-  individuals: PropTypes.array.isRequired,
-  datasets: PropTypes.array,
+  familiesByGuid: PropTypes.object.isRequired,
+  individualsByGuid: PropTypes.object.isRequired,
+  samplesByGuid: PropTypes.object.isRequired,
 }
 
 const mapStateToProps = state => ({
   project: getProject(state),
-  families: getProjectFamilies(state),
-  individuals: getProjectIndividuals(state),
-  datasets: getProjectDatasets(state),
+  familiesByGuid: getProjectFamiliesByGuid(state),
+  individualsByGuid: getProjectIndividualsByGuid(state),
+  samplesByGuid: getProjectSamplesByGuid(state),
 })
 
 

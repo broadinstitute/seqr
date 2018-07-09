@@ -1,7 +1,7 @@
 from abc import abstractmethod
 import os
 import uuid
-
+import json
 
 from django.contrib.auth.models import User, Group
 from django.db import models
@@ -49,6 +49,9 @@ class ModelWithGUID(models.Model):
     class Meta:
         abstract = True
 
+        json_fields = []
+        internal_json_fields = []
+
     @abstractmethod
     def _compute_guid(self):
         """Returns a human-readable label (aka. slug) for this object with only alphanumeric
@@ -70,8 +73,9 @@ class ModelWithGUID(models.Model):
         being_created = not self.pk
         if being_created and not self.created_date:
             self.created_date = timezone.now()
-        else:
-            self.last_modified_date = timezone.now()
+
+        # Allows for overriding last_modified_date during save. Should only be used for migrations
+        self.last_modified_date = kwargs.pop('last_modified_date', timezone.now())
 
         super(ModelWithGUID, self).save(*args, **kwargs)
 
@@ -93,6 +97,8 @@ class Project(ModelWithGUID):
     owners_group = models.ForeignKey(Group, related_name='+', on_delete=models.PROTECT)
     can_edit_group = models.ForeignKey(Group, related_name='+', on_delete=models.PROTECT)
     can_view_group = models.ForeignKey(Group, related_name='+', on_delete=models.PROTECT)
+
+    genome_version = models.CharField(max_length=5, choices=GENOME_VERSION_CHOICES, default=GENOME_VERSION_GRCh37)
 
     #primary_investigator = models.ForeignKey(User, null=True, blank=True, related_name='+')
     is_phenotips_enabled = models.BooleanField(default=False)
@@ -163,8 +169,9 @@ class Project(ModelWithGUID):
         permissions = _SEQR_OBJECT_PERMISSIONS
 
         json_fields = [
-            'name', 'description', 'created_date', 'last_modified_date', 'is_phenotips_enabled', 'phenotips_user_id',
-            'deprecated_project_id', 'deprecated_last_accessed_date', 'is_mme_enabled', 'mme_primary_data_owner', 'guid'
+            'name', 'description', 'created_date', 'last_modified_date', 'genome_version', 'is_phenotips_enabled',
+            'phenotips_user_id', 'deprecated_project_id', 'deprecated_last_accessed_date',
+            'is_mme_enabled', 'mme_primary_data_owner', 'guid'
         ]
 
 
@@ -252,7 +259,7 @@ class Family(ModelWithGUID):
 
         json_fields = [
             'guid', 'id', 'family_id', 'display_name', 'description', 'analysis_notes', 'analysis_summary',
-            'causal_inheritance_mode', 'analysis_status', 'pedigree_image',
+            'causal_inheritance_mode', 'analysis_status', 'pedigree_image', 'created_date',
         ]
         internal_json_fields = [
             'internal_analysis_status', 'internal_case_review_notes', 'internal_case_review_summary'
@@ -323,7 +330,7 @@ class Individual(ModelWithGUID):
         return self.individual_id.strip()
 
     def _compute_guid(self):
-        return 'I%06d_%s' % (self.id, _slugify(str(self)))
+        return 'I%07d_%s' % (self.id, _slugify(str(self)))
 
     class Meta:
         unique_together = ('family', 'individual_id')
@@ -362,7 +369,11 @@ class ProjectLastAccessedDate(models.Model):
 
 
 class Sample(ModelWithGUID):
-    """Represents a single biological sample.
+    """This model represents a single data type (eg. Read Alignments, Variant Calls, or SV Calls) that's generated from
+    a single biological sample (eg. WES, WGS, RNA, Array).
+
+    It stores metadata on both the dataset (fields: dataset_type, dataset_file_path, loaded_date, etc.) and the
+    underlying sample (fields: sample_type)
 
     A sample can have be used to generate multiple types of analysis results, depending on the
     sample type. For example, an exome, genome or rna sample can be used to generate an aligned bam,
@@ -373,13 +384,6 @@ class Sample(ModelWithGUID):
     if versioning is needed for analysis results, it'll be necessary to create a separate table
     for each analysis type, where records have a many(analysis-versions)-to-one(sample) relationship with this table.
     """
-
-    SAMPLE_STATUS_CHOICES = (
-        ('S', 'In Sequencing'),
-        ('I', 'Interim'),    # needs additional sequencing to reach expected (95x) coverage
-        ('C', 'Complete'),   # sample sequencing complete and achieved expected coverage
-        ('A', 'Abandoned'),  # sample failed sequencing
-    )
 
     SAMPLE_TYPE_WES = 'WES'
     SAMPLE_TYPE_WGS = 'WGS'
@@ -393,115 +397,68 @@ class Sample(ModelWithGUID):
         # ('ILLUMINA_INFINIUM_250K', ),
     )
 
-    sample_type = models.CharField(max_length=3, choices=SAMPLE_TYPE_CHOICES)
+    DATASET_TYPE_READ_ALIGNMENTS = 'ALIGN'
+    DATASET_TYPE_VARIANT_CALLS = 'VARIANTS'
+    DATASET_TYPE_SV_CALLS = 'SV'
+    DATASET_TYPE_BREAKPOINTS = 'BREAK'
+    DATASET_TYPE_SPLICE_JUNCTIONS = 'SPLICE'
+    DATASET_TYPE_ASE = 'ASE'
+    DATASET_TYPE_CHOICES = (
+        (DATASET_TYPE_READ_ALIGNMENTS, 'Alignment'),
+        (DATASET_TYPE_VARIANT_CALLS, 'Variant Calls'),
+        (DATASET_TYPE_SV_CALLS, 'SV Calls'),
+        (DATASET_TYPE_BREAKPOINTS, 'Breakpoints'),
+        (DATASET_TYPE_SPLICE_JUNCTIONS, 'Splice Junction Calls'),
+        (DATASET_TYPE_ASE, 'Allele Specific Expression'),
+    )
+
+    SAMPLE_STATUS_IN_SEQUENCING = 'seq'
+    SAMPLE_STATUS_COMPLETED_SEQUENCING = 'seq_done'
+    SAMPLE_STATUS_SEQUENCING_FAILED = 'seq_fail_1'
+    SAMPLE_STATUS_LOADING = 'loading'
+    SAMPLE_STATUS_LOADED = 'loaded'
+
+    SAMPLE_STATUS_CHOICES = (
+        (SAMPLE_STATUS_IN_SEQUENCING, 'In Sequencing'),
+        (SAMPLE_STATUS_COMPLETED_SEQUENCING, 'Completed Sequencing'),
+        (SAMPLE_STATUS_SEQUENCING_FAILED, 'Failed Sequencing - Abandoned'),
+        (SAMPLE_STATUS_LOADING, 'Loading'),
+        (SAMPLE_STATUS_LOADED, 'Loaded'),
+    )
 
     individual = models.ForeignKey('Individual', on_delete=models.PROTECT, null=True)
 
-    # This sample_id should be used for looking up this sample in the underlying dataset (for
-    # example, for variant callsets, it should be the VCF sample id). It is not a ForeignKey
-    # into another table.
+    sample_type = models.CharField(max_length=20, choices=SAMPLE_TYPE_CHOICES, null=True, blank=True)
+    dataset_type = models.CharField(max_length=20, choices=DATASET_TYPE_CHOICES, null=True, blank=True)
+
+    # The sample's id in the underlying dataset (eg. the VCF Id for variant callsets).
     sample_id = models.TextField(db_index=True)
 
-    # biological sample status
-    sample_status = models.CharField(max_length=1, choices=SAMPLE_STATUS_CHOICES, default='S')
+    # only set for data stored in elasticsearch
+    elasticsearch_index = models.TextField(null=True, blank=True, db_index=True)
+
+    # source file
+    dataset_name = models.TextField(null=True, blank=True)  # optional name to display instead of filename
+    dataset_file_path = models.TextField(db_index=True, null=True, blank=True)
+
+    # sample status
+    sample_status = models.CharField(max_length=20, choices=SAMPLE_STATUS_CHOICES, null=True, blank=True, db_index=True)
+    loaded_date = models.DateTimeField(null=True, blank=True)
 
     #funding_source = models.CharField(max_length=20, null=True)
-
-    is_external_data = models.BooleanField(default=False)
-
-
-    #sample_batch = models.ForeignKey('SampleBatch', on_delete=models.PROTECT, null=True)
-
-    # reference back to xbrowse base_project is a temporary work-around to support merging of
-    # different projects into one - including those that contain different types of callsets
-    # such as exome and genome
-    deprecated_base_project = models.ForeignKey('base.Project', null=True, on_delete=models.SET_NULL)
+    #is_external_data = models.BooleanField(default=False)
 
     def __unicode__(self):
         return self.sample_id.strip()
 
     def _compute_guid(self):
-        return 'S%06d_%s' % (self.id, _slugify(str(self)))
+        return 'S%010d_%s' % (self.id, _slugify(str(self)))
 
     class Meta:
-       # unique_together = ('sample_batch', 'sample_id')
        json_fields = [
-           'guid', 'created_date', 'sample_type', 'sample_id', 'sample_status',
+           'guid', 'created_date', 'sample_type', 'dataset_type', 'sample_id', 'elasticsearch_index',
+           'dataset_name', 'dataset_file_path', 'sample_status', 'loaded_date',
        ]
-
-
-class Dataset(ModelWithGUID):
-    """Dataset represents a single analysis type and result file"""
-
-    ANALYSIS_TYPE_ALIGNMENT = 'ALIGN'
-    ANALYSIS_TYPE_VARIANT_CALLS = 'VARIANTS'
-    ANALYSIS_TYPE_SV = 'SV'
-    ANALYSIS_TYPE_BREAKPOINTS = 'BREAK'
-    ANALYSIS_TYPE_SPLICE_JUNCTIONS = 'SPLICE'
-    ANALYSIS_TYPE_ASE = 'ASE'
-    ANALYSIS_TYPE_CHOICES = (
-        (ANALYSIS_TYPE_ALIGNMENT, 'Alignment'),
-        (ANALYSIS_TYPE_VARIANT_CALLS, 'Variant Calls'),
-        (ANALYSIS_TYPE_SV, 'SV Calls'),
-        (ANALYSIS_TYPE_BREAKPOINTS, 'Breakpoints'),
-        (ANALYSIS_TYPE_SPLICE_JUNCTIONS, 'Splice Junction Calls'),
-        (ANALYSIS_TYPE_ASE, 'Allele Specific Expression'),
-    )
-
-    DATASET_STATUS_QUEUED = 'Q'
-    DATASET_STATUS_LOADING = 'G'
-    DATASET_STATUS_LOADED = 'L'
-    DATASET_STATUS_FAILED = 'F'
-    DATASET_STATUS_CHOICES = (
-        (DATASET_STATUS_QUEUED, 'Queued'),
-        (DATASET_STATUS_LOADING, 'Loading'),
-        (DATASET_STATUS_LOADED, 'Loaded'),
-        (DATASET_STATUS_FAILED, 'Failed'),
-    )
-
-    name = models.TextField(null=True, blank=True)
-    description = models.TextField(null=True, blank=True)
-    status = models.CharField(null=True, blank=True, db_index=True, max_length=1, choices=DATASET_STATUS_CHOICES)
-
-    genome_version = models.CharField(max_length=5, choices=GENOME_VERSION_CHOICES, default=GENOME_VERSION_GRCh37)
-
-    # When a dataset is copied from source_file_path to an internal seqr database or directory,
-    # the dataset_id should be the pointer used to query this data. Although global uniqueness
-    # is not enforced, the dataset_id value should avoid collisions, and should be derived only from
-    # properties of the dataset itself (eg. creation date, size, or md5) so that if a dataset
-    # is added a second time, it would be assigned the same dataset id as before.
-    # This will allow datasets to be processed and loaded only once, but shared between projects if
-    # needed by using the same dataset_id in the Dataset records of different projects.
-    dataset_id = models.TextField(null=True, blank=True, db_index=True)   # elasticsearch index
-
-    dataset_location = models.TextField(null=True, blank=True, db_index=True)
-
-    analysis_type = models.CharField(max_length=10, choices=ANALYSIS_TYPE_CHOICES)
-
-    source_file_path = models.TextField(db_index=True)
-
-    is_loaded = models.BooleanField(default=False)
-    loaded_date = models.DateTimeField(null=True, blank=True)
-
-    samples = models.ManyToManyField('Sample')
-
-    # for convenience, add a pointer to the project that this dataset and samples belong to
-    project = models.ForeignKey('Project', null=True, on_delete=models.CASCADE)
-
-    #tool = models.TextField(null=True, blank=True)
-    #tool_version = models.TextField(null=True, blank=True)
-
-    def __unicode__(self):
-        return self.guid
-
-    def _compute_guid(self):
-        filename = os.path.basename(self.source_file_path).split(".")[0]
-        return 'D%06d_%s_%s' % (self.id, self.analysis_type[0:3], filename)
-
-    class Meta:
-        json_fields = [
-            'guid', 'created_date', 'analysis_type', 'is_loaded', 'loaded_date', 'source_file_path',
-        ]
 
 
 # TODO AliasFields work for lookups, but save/update doesn't work?
@@ -526,6 +483,34 @@ class AliasField(models.Field):
 #        return 'D%05d_%s' % (self.id, _slugify(str(self)))
 
 
+class SavedVariant(ModelWithGUID):
+    xpos_start = models.BigIntegerField()
+    xpos_end = models.BigIntegerField(null=True)
+    xpos = AliasField(db_column="xpos_start")
+    ref = models.TextField()
+    alt = models.TextField()
+
+    # Cache genotypes and annotations for the variant as gene id and consequence - in case the dataset gets deleted, etc.
+    saved_variant_json = models.TextField(null=True, blank=True)
+
+    project = models.ForeignKey('Project')
+    family = models.ForeignKey('Family', null=True, blank=True, on_delete=models.SET_NULL)
+
+    def __unicode__(self):
+        chrom, pos = get_chrom_pos(self.xpos_start)
+        return "%s:%s-%s:%s" % (chrom, pos, self.project.guid, self.family.guid if self.family else '')
+
+    def _compute_guid(self):
+        return 'SV%07d_%s' % (self.id, _slugify(str(self)))
+
+    class Meta:
+        index_together = ('xpos_start', 'ref', 'alt', 'project')
+
+        unique_together = ('xpos_start', 'xpos_end', 'ref', 'alt', 'project', 'family')
+
+        json_fields = ['guid', 'xpos', 'ref', 'alt']
+
+
 class VariantTagType(ModelWithGUID):
     """
     Previous color choices:
@@ -541,7 +526,7 @@ class VariantTagType(ModelWithGUID):
         '#8F754F',
         '#383838',
     """
-    project = models.ForeignKey('Project', on_delete=models.CASCADE)
+    project = models.ForeignKey('Project', null=True, on_delete=models.CASCADE)
 
     name = models.TextField()
     category = models.TextField(null=True, blank=True)
@@ -561,69 +546,134 @@ class VariantTagType(ModelWithGUID):
 
 
 class VariantTag(ModelWithGUID):
+    saved_variant = models.ForeignKey('SavedVariant', on_delete=models.CASCADE, null=True)
     variant_tag_type = models.ForeignKey('VariantTagType', on_delete=models.CASCADE)
 
-    genome_version = models.CharField(max_length=5, choices=GENOME_VERSION_CHOICES, default=GENOME_VERSION_GRCh37)
-    xpos_start = models.BigIntegerField()
-    xpos_end = models.BigIntegerField(null=True)
-    xpos = AliasField(db_column="xpos_start")
-    ref = models.TextField()
-    alt = models.TextField()
-
-    lifted_over_genome_version = models.CharField(max_length=5, null=True, blank=True, choices=GENOME_VERSION_CHOICES)
-    lifted_over_xpos_start = models.BigIntegerField(null=True)
-    lifted_over_xpos = AliasField(db_column="lifted_over_xpos_start")
-
-    # Cache genotypes and annotations for the variant as gene id and consequence - in case the dataset gets deleted, etc.
-    saved_variant_json = models.TextField(null=True, blank=True)
-
     # context in which a variant tag was saved
-    family = models.ForeignKey('Family', null=True, blank=True, on_delete=models.SET_NULL)
     search_parameters = models.TextField(null=True, blank=True)  # aka. search url
 
     def __unicode__(self):
-        chrom, pos = get_chrom_pos(self.xpos_start)
-        return "%s:%s: %s" % (chrom, pos, self.variant_tag_type.name)
+        return "%s:%s" % (str(self.saved_variant), self.variant_tag_type.name)
 
     def _compute_guid(self):
         return 'VT%07d_%s' % (self.id, _slugify(str(self)))
 
     class Meta:
-        index_together = ('xpos_start', 'ref', 'alt', 'genome_version')
+        unique_together = ('variant_tag_type', 'saved_variant')
 
-        unique_together = ('variant_tag_type', 'genome_version', 'xpos_start', 'xpos_end', 'ref', 'alt', 'family')
+        json_fields = ['guid', 'search_parameters', 'last_modified_date', 'created_by']
 
 
 class VariantNote(ModelWithGUID):
-    project = models.ForeignKey('Project', null=True, on_delete=models.SET_NULL)
-
+    saved_variant = models.ForeignKey('SavedVariant', on_delete=models.CASCADE, null=True)
     note = models.TextField(null=True, blank=True)
     submit_to_clinvar = models.BooleanField(default=False)
 
-    genome_version = models.CharField(max_length=5, choices=GENOME_VERSION_CHOICES, default=GENOME_VERSION_GRCh37)
-    xpos_start = models.BigIntegerField()
-    xpos_end = models.BigIntegerField(null=True)
-    xpos = AliasField(db_column="xpos_start")
-    ref = models.TextField()
-    alt = models.TextField()
-
-    lifted_over_genome_version = models.CharField(max_length=5, null=True, blank=True, choices=GENOME_VERSION_CHOICES)
-    lifted_over_xpos_start = models.BigIntegerField(null=True)
-    lifted_over_xpos = AliasField(db_column="lifted_over_xpos_start")
-
-    # Cache genotypes and annotations for the variant as gene id and consequence - in case the dataset gets deleted, etc.
-    saved_variant_json = models.TextField(null=True, blank=True)
-
-    # these are for context - if note was saved for a family or an individual
-    family = models.ForeignKey('Family', null=True, blank=True, on_delete=models.SET_NULL)
+    # these are for context
     search_parameters = models.TextField(null=True, blank=True)  # aka. search url
 
     def __unicode__(self):
-        chrom, pos = get_chrom_pos(self.xpos_start)
-        return "%s:%s: %s" % (chrom, pos, (self.note or "")[:20])
+        return "%s:%s" % (str(self.saved_variant), (self.note or "")[:20])
 
     def _compute_guid(self):
-        return 'VT%07d_%s' % (self.id, _slugify(str(self)))
+        return 'VN%07d_%s' % (self.id, _slugify(str(self)))
+
+    class Meta:
+        json_fields = ['guid', 'note', 'submit_to_clinvar', 'last_modified_date', 'created_by']
+
+
+class VariantFunctionalData(ModelWithGUID):
+    FUNCTIONAL_DATA_CHOICES = (
+        ('Functional Data', (
+            ('Biochemical Function', json.dumps({
+                'description': 'Gene product performs a biochemical function shared with other known genes in the disease of interest, or consistent with the phenotype.',
+                'color': '#311B92',
+            })),
+            ('Protein Interaction', json.dumps({
+                'description': 'Gene product interacts with proteins previously implicated (genetically or biochemically) in the disease of interest.',
+                'color': '#4A148C',
+            })),
+            ('Expression', json.dumps({
+                'description': 'Gene is expressed in tissues relevant to the disease of interest and/or is altered in expression in patients who have the disease.',
+                'color': '#7C4DFF',
+            })),
+            ('Patient Cells', json.dumps({
+                'description': 'Gene and/or gene product function is demonstrably altered in patients carrying candidate mutations.',
+                'color': '#B388FF',
+            })),
+            ('Non-patient cells', json.dumps({
+                'description': 'Gene and/or gene product function is demonstrably altered in human cell culture models carrying candidate mutations.',
+                'color': '#9575CD',
+            })),
+            ('Animal Model', json.dumps({
+                'description': 'Non-human animal models with a similarly disrupted copy of the affected gene show a phenotype consistent with human disease state.',
+                'color': '#AA00FF',
+            })),
+            ('Non-human cell culture model', json.dumps({
+                'description': 'Non-human cell-culture models with a similarly disrupted copy of the affected gene show a phenotype consistent with human disease state.',
+                'color': '#BA68C8',
+            })),
+            ('Rescue', json.dumps({
+                'description': 'The cellular phenotype in patient-derived cells or engineered equivalents can be rescued by addition of the wild-type gene product.',
+                'color': '#663399',
+            })),
+        )),
+        ('Functional Scores', (
+            ('Genome-wide Linkage', json.dumps({
+                'metadata_title': 'LOD Score',
+                'description': 'Max LOD score used in analysis to restrict where you looked for causal variants; provide best score available, whether it be a cumulative LOD score across multiple families or just the best family\'s LOD score.',
+                'color': '#880E4F',
+            })),
+            ('Bonferroni corrected p-value', json.dumps({
+                'metadata_title': 'P-value',
+                'description': 'Bonferroni-corrected p-value for gene if association testing/burden testing/etc was used to identify the gene.',
+                'color': '#E91E63',
+            })),
+            ('Kindreds w/ Overlapping SV & Similar Phenotype', json.dumps({
+                'metadata_title': '#',
+                'description': 'Number of kindreds (1+) previously reported/in databases as having structural variant overlapping the gene and a similar phenotype.',
+                'color': '#FF5252',
+            })),
+        )),
+        ('Additional Kindreds (Literature, MME)', (
+             ('Additional Unrelated Kindreds w/ Causal Variants in Gene', json.dumps({
+                'metadata_title': '# additional families',
+                'description': 'Number of additional kindreds with causal variants in this gene (Any other kindreds from collaborators, MME, literature etc). Do not count your family in this total.',
+                'color': '#D84315',
+             })),
+         )),
+    )
+
+    saved_variant = models.ForeignKey('SavedVariant', on_delete=models.CASCADE, null=True)
+    functional_data_tag = models.TextField(choices=FUNCTIONAL_DATA_CHOICES)
+    metadata = models.TextField(null=True)
+
+    search_parameters = models.TextField(null=True, blank=True)
+
+    def __unicode__(self):
+        return "%s:%s" % (str(self.saved_variant), self.functional_data_tag)
+
+    def _compute_guid(self):
+        return 'VFD%07d_%s' % (self.id, _slugify(str(self)))
+
+    class Meta:
+        unique_together = ('functional_data_tag', 'saved_variant')
+
+        json_fields = ['guid', 'functional_data_tag', 'metadata', 'last_modified_date', 'created_by']
+
+
+class GeneNote(ModelWithGUID):
+    note = models.TextField(default="", blank=True)
+    gene_id = models.CharField(max_length=20)  # ensembl ID
+
+    def __unicode__(self):
+        return "%s:%s" % (self.gene_id, (self.note or "")[:20])
+
+    def _compute_guid(self):
+        return 'GN%07d_%s' % (self.id, _slugify(str(self)))
+
+    class Meta:
+        json_fields = ['guid', 'note', 'gene_id', 'last_modified_date', 'created_by']
 
 
 class LocusList(ModelWithGUID):

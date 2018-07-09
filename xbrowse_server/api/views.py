@@ -11,7 +11,6 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404
 from django.http import HttpResponse, HttpResponseBadRequest, Http404
 from django.core.exceptions import PermissionDenied, ObjectDoesNotExist
-
 from settings import LOGIN_URL
 from xbrowse.analysis_modules.combine_mendelian_families import get_variants_by_family_for_gene
 from xbrowse_server.analysis.diagnostic_search import get_gene_diangostic_info
@@ -37,12 +36,11 @@ from xbrowse_server import server_utils
 from . import basicauth
 from xbrowse_server import user_controls
 from django.utils import timezone
-
 from xbrowse_server.phenotips.reporting_utilities import phenotype_entry_metric_for_individual
 from xbrowse_server.base.models import ANALYSIS_STATUS_CHOICES
 from xbrowse_server.matchmaker.utilities import get_all_clinical_data_for_family
 from xbrowse_server.matchmaker.utilities import is_a_valid_patient_structure
-from xbrowse_server.matchmaker.utilities import generate_slack_notification_for_incoming_match
+from xbrowse_server.matchmaker.utilities import generate_notification_for_incoming_match
 from xbrowse_server.matchmaker.utilities import generate_slack_notification_for_seqr_match
 from xbrowse_server.matchmaker.utilities import find_latest_family_member_submissions
 from xbrowse_server.matchmaker.utilities import convert_matchbox_id_to_seqr_id
@@ -53,6 +51,7 @@ from xbrowse_server.matchmaker.utilities import extract_hpo_id_list_from_mme_pat
 import requests
 from django.contrib.admin.views.decorators import staff_member_required
 import pymongo
+
 
 logger = logging.getLogger()
 
@@ -720,7 +719,8 @@ def add_or_edit_functional_data(request):
     tag_ids = set()
     for tag_data in form.cleaned_data['tags']:
         # retrieve tags
-        tag, created = VariantFunctionalData.objects.get_or_create(
+        tag, created = get_or_create_xbrowse_model(
+            VariantFunctionalData,
             functional_data_tag=tag_data['tag'],
             family=family,
             xpos=form.cleaned_data['xpos'],
@@ -737,11 +737,12 @@ def add_or_edit_functional_data(request):
             continue
 
         # this a new/changed tag, so update who saved it and when
-        tag.metadata = tag_data.get('metadata')
-        tag.user = request.user
-        tag.date_saved = timezone.now()
-        tag.search_url = form.cleaned_data['search_url']
-        tag.save()
+        update_xbrowse_model(
+            tag,
+            metadata=tag_data.get('metadata'),
+            user=request.user,
+            date_saved=timezone.now(),
+            search_url=form.cleaned_data['search_url'])
 
     # delete the tags that are no longer checked.
 
@@ -753,7 +754,7 @@ def add_or_edit_functional_data(request):
     ).exclude(id__in=tag_ids)
     for variant_tag in variant_tags_to_delete:
         project_tag_events[variant_tag.functional_data_tag] = "delete_variant_functional_data"
-    variant_tags_to_delete.delete()
+        delete_xbrowse_model(variant_tag)
 
     # add the extra info after updating the tag info in the database, so that the new tag info is added to the variant JSON
     variant = get_datastore(project).get_single_variant(
@@ -816,7 +817,7 @@ def delete_gene_note(request, note_id):
     if not note.can_edit(request.user):
         raise PermissionDenied
 
-    note.delete()
+    delete_xbrowse_model(note)
 
     return JSONResponse({
         'is_error': False,
@@ -848,14 +849,17 @@ def add_or_edit_gene_note(request):
         if not note.can_edit(request.user):
             raise PermissionDenied
 
-        note.note = form.cleaned_data['note_text']
-        note.user = request.user
-        note.date_saved = timezone.now()
-        note.save()
+        update_xbrowse_model(
+            note,
+            note=form.cleaned_data['note_text'],
+            user=request.user,
+            date_saved=timezone.now(),
+        )
     else:
         event_type = "add_variant_note"
 
-        note = GeneNote.objects.create(
+        note = create_xbrowse_model(
+            GeneNote,
             user=request.user,
             gene_id=form.cleaned_data['gene_id'],
             note=form.cleaned_data['note_text'],
@@ -1664,7 +1668,7 @@ def match(request):
                           data=query_patient_data,
                           headers=mme_headers)
         if r.status_code==200:
-            generate_slack_notification_for_incoming_match(r,request,query_patient_data)
+            generate_notification_for_incoming_match(r,request,query_patient_data)
         resp = HttpResponse(r.text)
         resp.status_code=r.status_code
         for k,v in r.headers.iteritems():

@@ -1,11 +1,10 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
+import { Link } from 'react-router-dom'
+import { Popup, Icon, Table } from 'semantic-ui-react'
 
-import { Popup, Icon } from 'semantic-ui-react'
-import { connect } from 'react-redux'
-import { getProject } from 'redux/rootReducer'
-import ColoredIcon from 'shared/components/icons/ColoredIcon'
+import { ColoredIcon } from 'shared/components/StyledComponents'
 
 const HelpIcon = styled(Icon)`
   cursor: pointer;
@@ -13,40 +12,43 @@ const HelpIcon = styled(Icon)`
   margin-left: 15px;
 `
 
-const VariantTags = props => (
-  <div key="content" style={{ display: 'block', padding: '0px 0px 10px 0px' }}>
-    {
-      props.project.variantTagTypes && props.project.variantTagTypes.map(variantTagType => (
-        <div key={variantTagType.variantTagTypeGuid} style={{ whitespace: 'nowrap' }}>
-          {
-            <span style={{ display: 'inline-block', minWidth: '35px', textAlign: 'right', fontSize: '11pt', paddingRight: '10px' }}>
-              {variantTagType.numTags > 0 && <span style={{ fontWeight: 'bold' }}>{variantTagType.numTags}</span>}
-            </span>
-          }
-          <ColoredIcon name="square" size="small" color={variantTagType.color} />
-          <a href={`/project/${props.project.deprecatedProjectId}/variants/${variantTagType.name}`}>{variantTagType.name}</a>
-          {
-            variantTagType.description &&
-            <Popup
-              position="right center"
-              trigger={<HelpIcon name="help circle outline" />}
-              content={variantTagType.description}
-              size="small"
-            />
-          }
-        </div>),
-      )
-    }
-  </div>
-)
+const TableRow = styled(Table.Row)`
+  padding: 0px !important;`
+
+const TableCell = styled(Table.Cell)`
+  padding: 0 0 0 10px !important;`
+
+const VariantTags = ({ project }) =>
+  <Table basic="very" compact="very">
+    <Table.Body>
+      {
+        project.variantTagTypes && project.variantTagTypes.filter(variantTagType => variantTagType.numTags > 0).map(variantTagType => (
+          <TableRow key={variantTagType.variantTagTypeGuid}>
+            <TableCell collapsing>
+              <ColoredIcon name="square" size="small" color={variantTagType.color} />
+              <b>{variantTagType.numTags} </b>
+            </TableCell>
+            <TableCell>
+              <Link to={`/project/${project.projectGuid}/saved_variants/${variantTagType.name}`}>{variantTagType.name}</Link>
+              {
+                variantTagType.description &&
+                <Popup
+                  position="right center"
+                  trigger={<HelpIcon name="help circle outline" />}
+                  content={variantTagType.description}
+                  size="small"
+                />
+              }
+            </TableCell>
+          </TableRow>),
+        )
+      }
+    </Table.Body>
+  </Table>
 
 
 VariantTags.propTypes = {
   project: PropTypes.object.isRequired,
 }
 
-const mapStateToProps = state => ({
-  project: getProject(state),
-})
-
-export default connect(mapStateToProps)(VariantTags)
+export default VariantTags

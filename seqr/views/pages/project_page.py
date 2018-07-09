@@ -4,20 +4,22 @@ APIs used by the project page
 
 import itertools
 import logging
+import json
 
 from guardian.shortcuts import get_objects_for_group
 from django.contrib.auth.decorators import login_required
 from django.db import connection
+from django.db.models import Q, Count
 
-from seqr.models import Family, Individual, _slugify, CAN_VIEW, LocusList, \
-    LocusListGene, LocusListInterval, VariantTagType, VariantTag
+from seqr.models import Individual, _slugify, CAN_VIEW, LocusList, \
+    LocusListGene, LocusListInterval, VariantTagType, VariantTag, VariantFunctionalData
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
-from seqr.views.apis.family_api import export_families
 from seqr.views.apis.individual_api import export_individuals
 from seqr.views.utils.family_info_utils import retrieve_multi_family_analysed_by
 from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.orm_to_json_utils import _get_json_for_project, _get_json_for_sample,\
-    _get_json_for_dataset, _get_json_for_families, _get_json_for_individuals
+from seqr.views.utils.orm_to_json_utils import \
+    _get_json_for_project, _get_json_for_sample, _get_json_for_families, _get_json_for_individuals, \
+    get_json_for_saved_variant
 
 
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions
@@ -37,7 +39,6 @@ def project_page_data(request, project_guid):
          'familiesByGuid': {..},
          'individualsByGuid': {..},
          'samplesByGuid': {..},
-         'datasetsByGuid': {..},
        }
 
     Args:
@@ -48,17 +49,17 @@ def project_page_data(request, project_guid):
     cursor = connection.cursor()
 
     families_by_guid = _retrieve_families(cursor, project.guid, request.user)
-    individuals_by_guid = _retrieve_individuals(cursor, project.guid, request.user)
+    individuals_by_guid = _retrieve_individuals(project.guid, request.user)
     for individual_guid, individual in individuals_by_guid.items():
         families_by_guid[individual['familyGuid']]['individualGuids'].add(individual_guid)
-    samples_by_guid, datasets_by_guid = _retrieve_samples(cursor, project.guid, individuals_by_guid)
+    samples_by_guid = _retrieve_samples(cursor, project.guid, individuals_by_guid)
 
     cursor.close()
 
     project_json = _get_json_for_project(project, request.user)
     project_json['collaborators'] = _get_json_for_collaborator_list(project)
     project_json['locusLists'] = _get_json_for_locus_lists(project)
-    project_json['variantTagTypes'] = _get_json_for_variant_tag_types(project)
+    project_json.update(_get_json_for_variant_tag_types(project))
     #project_json['referencePopulations'] = _get_json_for_reference_populations(project)
 
     # gene search will be deprecated once the new database is online.
@@ -70,7 +71,6 @@ def project_page_data(request, project_guid):
         'familiesByGuid': families_by_guid,
         'individualsByGuid': individuals_by_guid,
         'samplesByGuid': samples_by_guid,
-        'datasetsByGuid': datasets_by_guid,
     }
 
     return create_json_response(json_response)
@@ -82,6 +82,7 @@ def _retrieve_families(cursor, project_guid, user):
     Args:
         cursor: connected database cursor that can be used to execute SQL queries.
         project_guid (string): project_guid
+        user (Model): for checking permissions to view certain fields
     Returns:
         dictionary: families_by_guid
     """
@@ -92,6 +93,7 @@ def _retrieve_families(cursor, project_guid, user):
           f.id AS family_id,
           f.guid AS family_guid,
           f.family_id AS family_family_id,
+          f.created_date AS family_created_date,
           f.display_name AS family_display_name,
           f.description AS family_description,
           f.analysis_notes AS family_analysis_notes,
@@ -124,47 +126,22 @@ def _retrieve_families(cursor, project_guid, user):
     return families_by_guid
 
 
-def _retrieve_individuals(cursor, project_guid, user):
+def _retrieve_individuals(project_guid, user):
     """Retrieves individual-level metadata for the given project.
 
     Args:
-        cursor: connected database cursor that can be used to execute SQL queries.
         project_guid (string): project_guid
     Returns:
         dictionary: individuals_by_guid
     """
-    individuals_query = """
-        SELECT DISTINCT
-          p.guid AS project_guid,
-          f.guid AS family_guid,
-          i.guid AS individual_guid,
-          i.individual_id AS individual_individual_id,
-          i.display_name AS individual_display_name,
-          i.paternal_id AS individual_paternal_id,
-          i.maternal_id AS individual_maternal_id,
-          i.sex AS individual_sex,
-          i.affected AS individual_affected,
-          i.notes as individual_notes,
-          i.case_review_status AS individual_case_review_status,
-          i.case_review_status_last_modified_date AS individual_case_review_status_last_modified_date,
-          i.case_review_status_last_modified_by_id AS individual_case_review_status_last_modified_by,
-          i.case_review_discussion AS individual_case_review_discussion,
-          i.phenotips_patient_id AS individual_phenotips_patient_id,
-          i.phenotips_data AS individual_phenotips_data,
-          i.created_date AS individual_created_date,
-          i.last_modified_date AS individual_last_modified_date
 
-        FROM seqr_individual AS i
-          JOIN seqr_family AS f ON i.family_id=f.id
-          JOIN seqr_project AS p ON f.project_id=p.id
-        WHERE p.guid=%s
-    """.strip()
+    fields = Individual._meta.json_fields + Individual._meta.internal_json_fields + \
+             ['family__guid', 'case_review_status_last_modified_by__email']
+    individual_models = Individual.objects.filter(family__project__guid=project_guid)\
+        .select_related('family', 'case_review_status_last_modified_by').only(*fields)
 
-    cursor.execute(individuals_query, [project_guid])
+    individuals = _get_json_for_individuals(individual_models, user=user, project_guid=project_guid)
 
-    columns = [col[0] for col in cursor.description]
-
-    individuals = _get_json_for_individuals([dict(zip(columns, row)) for row in cursor.fetchall()], user)
     individuals_by_guid = {}
     for i in individuals:
         i['sampleGuids'] = set()
@@ -175,70 +152,56 @@ def _retrieve_individuals(cursor, project_guid, user):
 
 
 def _retrieve_samples(cursor, project_guid, individuals_by_guid):
-    """Retrieves sample-batch- and sample-level metadata for the given project.
+    """Retrieves sample metadata for the given project.
 
         Args:
             cursor: connected database cursor that can be used to execute SQL queries.
             project_guid (string): project_guid
+            individuals_by_guid (dict): maps each individual_guid to a dictionary with individual info.
+                This method adds a "sampleGuids" list to each of these dictionaries.
         Returns:
             2-tuple with dictionaries: (samples_by_guid, sample_batches_by_guid)
         """
 
     # use raw SQL since the Django ORM doesn't have a good way to express these types of queries.
-    dataset_query = """
+    sample_query = """
         SELECT
           p.guid AS project_guid,
-          d.guid AS dataset_guid,
-          d.created_date AS dataset_created_date,
-          d.analysis_type AS dataset_analysis_type,
-          d.is_loaded AS dataset_is_loaded,
-          d.loaded_date AS dataset_loaded_date,
-          d.source_file_path AS dataset_source_file_path,
-
+          i.guid AS individual_guid,
           s.guid AS sample_guid,
-          s.created_date AS sample_sample_created_date,
+          s.created_date AS sample_created_date,
           s.sample_type AS sample_sample_type,
+          s.dataset_type AS sample_dataset_type,
           s.sample_id AS sample_sample_id,
+          s.elasticsearch_index AS sample_elasticsearch_index,
+          s.dataset_file_path AS sample_dataset_file_path,
           s.sample_status AS sample_sample_status,
-
-          i.guid AS individual_guid
-
-        FROM seqr_dataset AS d
-          JOIN seqr_dataset_samples as ds ON ds.dataset_id=d.id
-          JOIN seqr_sample AS s ON ds.sample_id=s.id
+          s.loaded_date AS sample_loaded_date
+        FROM seqr_sample AS s
           JOIN seqr_individual AS i ON s.individual_id=i.id
           JOIN seqr_family AS f ON i.family_id=f.id
           JOIN seqr_project AS p ON f.project_id=p.id
         WHERE p.guid=%s
     """.strip()
 
-    cursor.execute(dataset_query, [project_guid])
+    cursor.execute(sample_query, [project_guid])
 
     columns = [col[0] for col in cursor.description]
 
     samples_by_guid = {}
-    datasets_by_guid = {}
     for row in cursor.fetchall():
         record = dict(zip(columns, row))
-
-        individual_guid = record['individual_guid']
-        dataset_guid = record['dataset_guid']
-        if dataset_guid not in datasets_by_guid:
-            datasets_by_guid[dataset_guid] = _get_json_for_dataset(record)
-            datasets_by_guid[dataset_guid]['sampleGuids'] = set()
 
         sample_guid = record['sample_guid']
         if sample_guid not in samples_by_guid:
             samples_by_guid[sample_guid] = _get_json_for_sample(record)
-            samples_by_guid[sample_guid]['datasetGuids'] = set()
 
-        samples_by_guid[sample_guid]['individualGuid'] = individual_guid
-        samples_by_guid[sample_guid]['datasetGuids'].add(dataset_guid)
-
-        datasets_by_guid[dataset_guid]['sampleGuids'].add(sample_guid)
+        individual_guid = record['individual_guid']
         individuals_by_guid[individual_guid]['sampleGuids'].add(sample_guid)
 
-    return samples_by_guid, datasets_by_guid
+        samples_by_guid[sample_guid]['individualGuid'] = individual_guid
+
+    return samples_by_guid
 
 
 def _get_json_for_collaborator_list(project):
@@ -292,10 +255,19 @@ def _get_json_for_locus_lists(project):
 
 
 def _get_json_for_variant_tag_types(project):
-    result = []
+    project_variant_tags = []
+    discovery_tags = []
+    tag_counts_by_type_and_family = VariantTag.objects.filter(saved_variant__project=project).values('saved_variant__family__guid', 'variant_tag_type__name').annotate(count=Count('*'))
+    for variant_tag_type in VariantTagType.objects.filter(Q(project=project) | Q(project__isnull=True)):
+        current_tag_type_counts = [counts for counts in tag_counts_by_type_and_family if counts['variant_tag_type__name'] == variant_tag_type.name]
+        num_tags = sum(count['count'] for count in current_tag_type_counts)
+        if variant_tag_type.category == 'CMG Discovery Tags' and num_tags > 0:
+            for tag in VariantTag.objects.filter(saved_variant__project=project, variant_tag_type=variant_tag_type).select_related('saved_variant'):
+                tag_data = get_json_for_saved_variant(tag.saved_variant)
+                tag_data.update(json.loads(tag.saved_variant.saved_variant_json or '{}'))
+                discovery_tags.append(tag_data)
 
-    for variant_tag_type in VariantTagType.objects.filter(project=project):
-        result.append({
+        project_variant_tags.append({
             'variantTagTypeGuid': variant_tag_type.guid,
             'name': variant_tag_type.name,
             'category': variant_tag_type.category,
@@ -303,10 +275,25 @@ def _get_json_for_variant_tag_types(project):
             'color': variant_tag_type.color,
             'order': variant_tag_type.order,
             'is_built_in': variant_tag_type.is_built_in,
-            'numTags': VariantTag.objects.filter(variant_tag_type=variant_tag_type).count(),
+            'numTags': num_tags,
+            'numTagsPerFamily': {count['saved_variant__family__guid']: count['count'] for count in current_tag_type_counts},
         })
 
-    return sorted(result, key=lambda variant_tag_type: variant_tag_type['order'])
+    project_functional_tags = []
+    for category, tags in VariantFunctionalData.FUNCTIONAL_DATA_CHOICES:
+        project_functional_tags += [{
+            'category': category,
+            'name': name,
+            'metadataTitle': json.loads(tag_json).get('metadata_title'),
+            'color': json.loads(tag_json)['color'],
+            'description': json.loads(tag_json).get('description'),
+        } for name, tag_json in tags]
+
+    return {
+        'variantTagTypes': sorted(project_variant_tags, key=lambda variant_tag_type: variant_tag_type['order']),
+        'variantFunctionalTagTypes': project_functional_tags,
+        'discoveryTags': discovery_tags,
+    }
 
 
 """
@@ -321,25 +308,6 @@ def _get_json_for_reference_populations(project):
 
     return result
 """
-
-
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
-def export_project_families_handler(request, project_guid):
-    """Export project Families table.
-
-    Args:
-        project_guid (string): GUID of the project for which to export family data
-    """
-    format = request.GET.get('file_format', 'tsv')
-
-    project = get_project_and_check_permissions(project_guid, request.user)
-
-    # get all families in this project
-    families = Family.objects.filter(project=project).order_by('family_id')
-
-    filename_prefix = "%s_families" % _slugify(project.name)
-
-    return export_families(filename_prefix, families, format, include_internal_case_review_summary=False, include_internal_case_review_notes=False)
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)

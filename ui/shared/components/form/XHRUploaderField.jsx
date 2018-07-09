@@ -132,12 +132,13 @@ class UploaderFieldComponent extends React.PureComponent {
 
   render() {
     const { input, uploaderProps } = this.props
-    const { uploaderStyle, ...uploaderComponentProps } = uploaderProps
+    const { uploaderStyle, url = '/api/upload_temp_file', ...uploaderComponentProps } = uploaderProps
     return ([
       <div key="uploader" style={uploaderStyle}>
         <XHRUploaderWithEvents
           onUploadFinished={this.onFinished}
           initialState={input.value ? input.value.uploaderState : null}
+          url={url}
           {...uploaderComponentProps}
           maxFiles={1}
         />
@@ -157,11 +158,18 @@ const hasUploadedFile = value => (value && value.uploadedFileId ? undefined : 'F
 const validate = value => hasErrors(value) || hasUploadedFile(value)
 const warn = value => value && value.warnings && (value.warnings.length ? value.warnings : undefined)
 
-export default props =>
+const UploaderFormField = ({ name, required, ...props }) =>
   <Field
-    name="uploadedFile"
-    validate={validate}
+    name={name}
+    validate={required ? validate : hasErrors}
     warn={warn}
     uploaderProps={props}
     component={UploaderFieldComponent}
   />
+
+UploaderFormField.propTypes = {
+  name: PropTypes.string.isRequired,
+  required: PropTypes.bool,
+}
+
+export default UploaderFormField

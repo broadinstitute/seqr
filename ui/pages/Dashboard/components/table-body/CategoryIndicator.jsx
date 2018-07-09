@@ -4,10 +4,9 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import randomMC from 'random-material-color'
 
-import { getProjectCategoriesByGuid } from 'redux/rootReducer'
-import ColoredIcon from 'shared/components/icons/ColoredIcon'
+import { ColoredIcon } from 'shared/components/StyledComponents'
+import { getProjectCategoriesByGuid } from 'redux/selectors'
 import EditProjectCategoriesModal from './EditProjectCategoriesModal'
-
 
 class CategoryIndicator extends React.Component {
 

@@ -4,7 +4,7 @@ import styled from 'styled-components'
 import { Popup, Icon } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 
-import { getProject } from 'redux/rootReducer'
+import { getProject } from '../selectors'
 
 const ItemContainer = styled.div`
   padding: 2px 0px;

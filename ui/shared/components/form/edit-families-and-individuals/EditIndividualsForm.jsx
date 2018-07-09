@@ -6,22 +6,10 @@ import styled from 'styled-components'
 import { connect } from 'react-redux'
 import { Field } from 'redux-form'
 
-import { updateIndividuals } from 'redux/rootReducer'
-import { getProjectIndividualsWithFamily } from 'pages/Project/utils/selectors'
+import { updateIndividuals } from 'pages/Project/reducers'
+import { getProjectFamiliesByGuid, getProjectIndividualsByGuid } from 'pages/Project/selectors'
+import { SEX_OPTIONS, AFFECTED_OPTIONS } from 'shared/utils/constants'
 import EditRecordsForm from '../EditRecordsForm'
-
-
-const sexOptions = [
-  { value: 'M', label: 'Male' },
-  { value: 'F', label: 'Female' },
-  { value: 'U', label: '?' },
-]
-
-const affectedOptions = [
-  { value: 'A', label: 'Affected' },
-  { value: 'N', label: 'Unaffected' },
-  { value: 'U', label: '?' },
-]
 
 const RadioField = styled(Field)`
   margin: 0 7px;
@@ -41,7 +29,9 @@ const RadioGroup = (props) => {
 const EditIndividualsForm = (props) => {
   let currFamilyGuid
   let currActive = false
-  const sortedIndividuals = props.individuals.sort((i1, i2) => i1.family.familyId - i2.family.familyId)
+  const sortedIndividuals = Object.values(props.individualsByGuid).map(
+    individual => ({ ...individual, family: props.familiesByGuid[individual.familyGuid] }),
+  ).sort((i1, i2) => i1.family.familyId - i2.family.familyId)
   const familyActiveMap = sortedIndividuals.reduce((acc, ind) => {
     if (ind.familyGuid !== currFamilyGuid) {
       currFamilyGuid = ind.familyGuid
@@ -74,13 +64,13 @@ const EditIndividualsForm = (props) => {
     {
       header: 'Sex',
       field: 'sex',
-      fieldProps: { component: RadioGroup, options: sexOptions },
+      fieldProps: { component: RadioGroup, options: SEX_OPTIONS },
       cellProps: { collapsing: true },
     },
     {
       header: 'Affected Status',
       field: 'affected',
-      fieldProps: { component: RadioGroup, options: affectedOptions },
+      fieldProps: { component: RadioGroup, options: AFFECTED_OPTIONS },
       cellProps: { collapsing: true, style: { paddingRight: '30px' } },
     },
   ]
@@ -100,7 +90,8 @@ const EditIndividualsForm = (props) => {
 }
 
 EditIndividualsForm.propTypes = {
-  individuals: PropTypes.array.isRequired,
+  individualsByGuid: PropTypes.object.isRequired,
+  familiesByGuid: PropTypes.object.isRequired,
   updateIndividuals: PropTypes.func.isRequired,
   modalName: PropTypes.string,
 }
@@ -108,7 +99,8 @@ EditIndividualsForm.propTypes = {
 export { EditIndividualsForm as EditIndividualsFormComponent }
 
 const mapStateToProps = state => ({
-  individuals: getProjectIndividualsWithFamily(state),
+  individualsByGuid: getProjectIndividualsByGuid(state),
+  familiesByGuid: getProjectFamiliesByGuid(state),
 })
 
 const mapDispatchToProps = {

@@ -7,16 +7,18 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { Grid } from 'semantic-ui-react'
+import { Route } from 'react-router-dom'
 
 import Header from './Header'
 import PageHeader from './PageHeader'
 import Footer from './Footer'
 
 const LayoutContainer = styled.div`
-  height: calc(100% - 46px);
+  height: calc(100% - 32px);
 `
 
 const ContentGrid = styled(Grid)`
+  padding-top: 15px !important;
   min-height: calc(100% - 46px);
 `
 
@@ -24,7 +26,7 @@ const BaseLayout = ({ children }) =>
   <LayoutContainer>
     <Header />
     <ContentGrid>
-      <PageHeader />
+      <Route path="/project/:projectGuid/:breadcrumb/:breadcrumbId*" component={PageHeader} />
       <Grid.Row>
         <Grid.Column width={1} />
         <Grid.Column width={14}>

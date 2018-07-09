@@ -55,15 +55,15 @@ User.profile = property(lambda u: UserProfile.objects.get_or_create(user=u)[0])
 class VCFFile(models.Model):
 
     DATASET_TYPE_VARIANT_CALLS = 'VARIANTS'
-    DATASET_TYPE_SV = 'SV'
-    #DATASET_TYPE_ALIGNMENT = 'ALIGN'
+    DATASET_TYPE_SV_CALLS = 'SV'
+    #DATASET_TYPE_READ_ALIGNMENTS = 'ALIGN'
     #DATASET_TYPE_BREAKPOINTS = 'BREAK'
     #DATASET_TYPE_SPLICE_JUNCTIONS = 'SPLICE'
     #DATASET_TYPE_ASE = 'ASE'
     DATASET_TYPE_CHOICES = (
         (DATASET_TYPE_VARIANT_CALLS, 'Variant Calls'),
-        (DATASET_TYPE_SV, 'SV Calls'),
-        #(DATASET_TYPE_ALIGNMENT, 'Alignment'),
+        (DATASET_TYPE_SV_CALLS, 'SV Calls'),
+        #(DATASET_TYPE_READ_ALIGNMENTS, 'Alignment'),
         #(DATASET_TYPE_BREAKPOINTS, 'Breakpoints'),
         #(DATASET_TYPE_SPLICE_JUNCTIONS, 'Splice Junction Calls'),
         #(DATASET_TYPE_ASE, 'Allele Specific Expression'),
@@ -1299,6 +1299,8 @@ class VariantFunctionalData(models.Model):
 
     search_url = models.TextField(null=True)
 
+    seqr_variant_functional_data = models.ForeignKey('seqr.VariantFunctionalData', null=True, blank=True, on_delete=models.SET_NULL)  # simplifies migration to new seqr.models sche
+
     def __str__(self):
         chrom, pos = genomeloc.get_chr_pos(self.xpos)
         return "%s-%s-%s-%s:%s" % (chrom, pos, self.ref, self.alt, self.functional_data_tag)
@@ -1404,6 +1406,7 @@ class AnalysedBy(models.Model):
             'user': {
                 'username': self.user.username,
                 'display_name': str(self.user.profile),
+                'is_staff': self.user.is_staff,
             },
             'date_saved': pretty.date(self.date_saved),
         }

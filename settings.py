@@ -31,7 +31,6 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 # Application definition
-
 INSTALLED_APPS = [
     'hijack',
     'compat',
@@ -73,6 +72,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'seqr.utils.middleware.JsonErrorMiddleware',
 ]
 
 # django-hijack plugin
@@ -86,7 +86,7 @@ CORS_ORIGIN_WHITELIST = (
 CORS_ALLOW_CREDENTIALS = True
 
 # django-debug-toolbar settings
-ENABLE_DJANGO_DEBUG_TOOLBAR = True
+ENABLE_DJANGO_DEBUG_TOOLBAR = False
 if ENABLE_DJANGO_DEBUG_TOOLBAR:
     MIDDLEWARE = ['debug_toolbar.middleware.DebugToolbarMiddleware'] + MIDDLEWARE
     INSTALLED_APPS = ['debug_toolbar'] + INSTALLED_APPS
@@ -219,7 +219,6 @@ AUTHENTICATION_BACKENDS = (
     'guardian.backends.ObjectPermissionBackend',
 )
 
-
 # ===========================================================
 # ===========================================================
 # legacy settings that need to be reviewed
@@ -317,7 +316,7 @@ ANNOTATION_BATCH_SIZE = 25000
 CONSTRUCTION_TEMPLATE = None
 CLINVAR_TSV = "/dev/null"
 
-VARIANT_QUERY_RESULTS_LIMIT = 5000
+VARIANT_QUERY_RESULTS_LIMIT = 2500
 
 UPLOADED_PEDIGREE_FILE_RECIPIENTS = []
 # READ_VIZ
@@ -362,6 +361,9 @@ PHENOTIPS_UPLOAD_EXTERNAL_PHENOTYPE_URL="http://"+PHENOTIPS_SERVICE_HOSTNAME+":"
 PROJECTS_WITHOUT_PHENOTIPS = []
 
 
+REDIS_SERVICE_HOSTNAME = os.environ.get('REDIS_SERVICE_HOST')
+
+
 #-----------------Matchmaker constants-----------------
 
 #########################################################
@@ -384,6 +386,7 @@ MME_NODE_ACCEPT_HEADER='application/vnd.ga4gh.matchmaker.v1.0+json'
 MME_CONTENT_TYPE_HEADER='application/vnd.ga4gh.matchmaker.v1.0+json'
 MATCHBOX_SERVICE_HOSTNAME = os.environ.get('MATCHBOX_SERVICE_HOSTNAME', 'localhost')
 MME_SERVER_HOST='http://%s:9020' % MATCHBOX_SERVICE_HOSTNAME
+ENABLE_MME_MATCH_EMAIL_NOTIFICATIONS=True
 #adds a patient to MME
 MME_ADD_INDIVIDUAL_URL = MME_SERVER_HOST + '/patient/add'
 #deletes a patient from MME

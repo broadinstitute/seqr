@@ -2,7 +2,7 @@ import React from 'react'
 import { shallow, configure } from 'enzyme'
 import Adapter from 'enzyme-adapter-react-16'
 import { FamilyTableComponent } from './FamilyTable'
-import { getVisibleFamiliesInSortedOrder } from '../../utils/selectors'
+import { getVisibleFamiliesInSortedOrder } from '../../selectors'
 
 import { STATE1 } from '../../fixtures'
 
@@ -15,7 +15,7 @@ test('shallow-render without crashing', () => {
    */
 
   const props = {
-    visibleFamilies: getVisibleFamiliesInSortedOrder(STATE1),
+    visibleFamilies: Object.values(STATE1.familiesByGuid),
   }
 
   shallow(<FamilyTableComponent {...props} />)

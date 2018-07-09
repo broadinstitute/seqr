@@ -2,12 +2,14 @@ import gzip
 import os
 
 import itertools
-
+import json
 import ensembl_parsing_utils
 import gene_expression
 import pandas
 import pymongo
+import redis
 import requests
+import settings
 from xbrowse import genomeloc
 from xbrowse.parsers.gtf import get_data_from_gencode_gtf
 from xbrowse.reference.clinvar import parse_clinvar_vcf
@@ -40,6 +42,11 @@ class Reference(object):
         self._gene_symbols_r = None
         self._gene_ids = None
         self._gene_summaries = None
+
+        self._redis_client = None
+        if settings.REDIS_SERVICE_HOSTNAME:
+            self._redis_client = redis.StrictRedis(host=settings.REDIS_SERVICE_HOSTNAME)
+
 
     def get_ensembl_db_proxy(self):
         if self._ensembl_db_proxy is None:
@@ -388,10 +395,20 @@ class Reference(object):
         #     'xstop': {'$gte': region_start},
         # })]
 
-
     def get_gene_summary(self, gene_id):
+        redis_key = 'Reference__get_gene_summary__'+str(gene_id)
+        if self._redis_client:
+            gene_summary_string = self._redis_client.get(redis_key)
+            if gene_summary_string is not None:
+                gene_summary = json.loads(gene_summary_string)
+
         self._ensure_cache('gene_summaries')
-        return self._gene_summaries.get(gene_id, "")
+        gene_summary = self._gene_summaries.get(gene_id, {})
+
+        if self._redis_client:
+            self._redis_client.set(redis_key, json.dumps(gene_summary))
+
+        return gene_summary
 
     def get_gene_symbols(self):
         """

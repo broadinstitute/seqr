@@ -1,34 +1,19 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import { connect } from 'react-redux'
 
 import VerticalArrowToggle from 'shared/components/toggles/VerticalArrowToggle'
-import { getFamiliesSortDirection, updateFamiliesSortDirection } from '../../../reducers'
-
 
 const SortDirectionToggle = ({
-  sortDirection,
-  updateSortDirection,
+  value,
+  onChange,
 }) => <VerticalArrowToggle
-  onClick={() => updateSortDirection(-1 * sortDirection)}
-  isPointingDown={sortDirection === 1}
+  onClick={() => onChange(-1 * value)}
+  isPointingDown={value === 1}
 />
 
-
-export { SortDirectionToggle as SortDirectionToggleComponent }
-
 SortDirectionToggle.propTypes = {
-  sortDirection: PropTypes.number.isRequired,
-  updateSortDirection: PropTypes.func.isRequired,
+  value: PropTypes.number.isRequired,
+  onChange: PropTypes.func.isRequired,
 }
 
-
-const mapStateToProps = state => ({
-  sortDirection: getFamiliesSortDirection(state),
-})
-
-const mapDispatchToProps = {
-  updateSortDirection: updateFamiliesSortDirection,
-}
-
-export default connect(mapStateToProps, mapDispatchToProps)(SortDirectionToggle)
+export default SortDirectionToggle

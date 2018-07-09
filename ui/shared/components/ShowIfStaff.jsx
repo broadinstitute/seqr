@@ -1,6 +1,6 @@
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { getUser } from 'redux/rootReducer'
+import { getUser } from 'redux/selectors'
 
 
 const ShowIfStaff = props => (

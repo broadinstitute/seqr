@@ -1,7 +1,7 @@
 import React from 'react'
 import { shallow, configure } from 'enzyme'
 import Adapter from 'enzyme-adapter-react-16'
-import { getProject } from 'redux/rootReducer'
+import { getProject } from '../selectors'
 import { CaseReviewTableComponent } from './CaseReview'
 
 import { STATE_WITH_2_FAMILIES } from '../fixtures'

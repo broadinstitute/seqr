@@ -34,7 +34,6 @@ from seqr.models import \
     VariantTag as SeqrVariantTag, \
     VariantNote as SeqrVariantNote, \
     Sample as SeqrSample, \
-    Dataset as SeqrDataset, \
     LocusList, \
     CAN_EDIT, CAN_VIEW, ModelWithGUID
 
@@ -83,10 +82,7 @@ class Command(BaseCommand):
 
             # transfer Project data
             project = Project.objects.get(project_id=seqr_project.deprecated_project_id)
-            for dataset in seqr_project.dataset_set.all():
-                if dataset.analysis_type == "VARIANTS":
-                    project.genome_version = dataset.genome_version
-
+            project.genome_version = seqr_project.genome_version
             project.project_name = seqr_project.name
             project.created_by = seqr_project.created_by
 
@@ -118,23 +114,17 @@ class Command(BaseCommand):
 
                 for seqr_individual in seqr_family.individual_set.all():
                     individual = Individual.objects.get(family=family, indiv_id=seqr_individual.individual_id)
-                    #print("Individual: " + seqr_individual.guid)
                     individual.case_review_status_last_modified_date = seqr_individual.case_review_status_last_modified_date
                     individual.case_review_status_last_modified_by = seqr_individual.case_review_status_last_modified_by
                     individual.case_review_discussion = seqr_individual.case_review_discussion
                     individual.phenotips_patient_id = seqr_individual.phenotips_patient_id
                     individual.save()
-                    logging.info("%s has %s samples" % (seqr_individual, len(seqr_individual.sample_set.all())))
-                    for sample in seqr_individual.sample_set.all():
-                        logging.info("    %s has %s datasets" % (sample, len(sample.dataset_set.all())))
-                        for dataset in sample.dataset_set.all():
-                            if dataset.analysis_type != "VARIANTS" or not dataset.is_loaded:
-                                continue
-
-                            for vcf_file in individual.vcf_files.all():
-                                vcf_file.project = project
-                                vcf_file.sample_type = sample.sample_type
-                                vcf_file.elasticsearch_index = dataset.dataset_id
-                                vcf_file.loaded_date = dataset.loaded_date
-                                vcf_file.save()
+                    #logging.info("%s has %s samples" % (seqr_individual, len(seqr_individual.sample_set.all())))
+                    #sample = seqr_individual.sample_set.filter(dataset_type="VARIANTS", sample_status="loaded").first()
+                    #for vcf_file in individual.vcf_files.filter(dataset_type="VARIANTS"):
+                    #    vcf_file.project = project
+                    #    vcf_file.sample_type = sample.sample_type
+                    #    vcf_file.elasticsearch_index = sample.elasticsearch_index
+                    #    vcf_file.loaded_date = sample.loaded_date
+                    #    vcf_file.save()
 

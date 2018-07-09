@@ -1,84 +1,153 @@
 import React from 'react'
-import { Grid, Table } from 'semantic-ui-react'
+import { Table, Popup, Icon } from 'semantic-ui-react'
 import PropTypes from 'prop-types'
+import styled from 'styled-components'
 import { connect } from 'react-redux'
 
 import { HorizontalSpacer } from 'shared/components/Spacers'
 import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
+import { FamilyLayout } from 'shared/components/panel/family'
+import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
+import { Dropdown } from 'shared/components/form/Inputs'
 
-import { getProjectTablePage, getProjectTableRecordsPerPage } from '../../../reducers'
-import { getProjectFamilies, getVisibleFamilies } from '../../../utils/selectors'
+import { FAMILY_FIELD_RENDER_LOOKUP } from 'shared/utils/constants'
 
-import FamiliesFilterDropdown from './FilterDropdown'
-import FamiliesSortOrderDropdown from './SortOrderDropdown'
+import { getProjectFamiliesByGuid, getVisibleFamilies, getFamiliesTableState } from '../../../selectors'
+import { updateFamiliesTable } from '../../../reducers'
+import { FAMILY_FILTER_OPTIONS, FAMILY_SORT_OPTIONS } from '../../../constants'
+
+import FamiliesFilterSearchBox from './FilterSearchBox'
 import SortDirectionToggle from './SortDirectionToggle'
-import ShowDetailsToggle from './ShowDetailsToggle'
+
+const RegularFontHeaderCell = styled(Table.HeaderCell)`
+  font-weight: normal !important;
+`
+
+const SpacedDropdown = styled(Dropdown)`
+  padding-left: 10px;
+  padding-right: 5px;
+`
 
 
-const TableHeaderRow = ({ headerStatus, showInternalFilters, visibleFamiliesCount, totalFamiliesCount, currentPage, recordsPerPage }) =>
-  <Table.Header fullWidth>
-    <Table.Row>
-      <Table.HeaderCell>
-        <Grid stackable>
-          <Grid.Column width={6}>
-            <span style={{ fontWeight: 'normal' }}>
-              Showing &nbsp;
-              {
-                visibleFamiliesCount !== totalFamiliesCount ?
-                  <span><b>{((currentPage - 1) * recordsPerPage) + 1}-{((currentPage - 1) * recordsPerPage) + visibleFamiliesCount}</b> out of <b>{totalFamiliesCount}</b></span>
-                  : <span>all <b>{totalFamiliesCount}</b></span>
-              }
-              &nbsp; families
-            </span>
-            <FamiliesFilterDropdown showInternalFilters={showInternalFilters} />
-          </Grid.Column>
-          <Grid.Column width={3}>
-            <div style={{ whitespace: 'nowrap' }}>
-              <FamiliesSortOrderDropdown />
-              <HorizontalSpacer width={5} />
-              <SortDirectionToggle />
-            </div>
-          </Grid.Column>
-          <Grid.Column width={3}>
-            <ShowDetailsToggle />
-          </Grid.Column>
-          <Grid.Column width={4}>
-            {headerStatus &&
-              <span style={{ float: 'right' }}>
-                {headerStatus.title}:
-                <HorizontalSpacer width={10} />
-                <HorizontalStackedBar
-                  width={100}
-                  height={10}
-                  title={headerStatus.title}
-                  data={headerStatus.data}
-                />
-              </span>
-            }
-          </Grid.Column>
+const TableHeaderRow = (
+  { headerStatus, showInternalFilters, visibleFamiliesCount, totalFamiliesCount, fields, tableName, familiesTableState,
+    updateFamiliesTable: dispatchUpdateFamiliesTable, showVariantTags,
+  }) => {
+  const filterFields = [
+    {
+      name: 'familiesSortOrder',
+      component: SpacedDropdown,
+      inline: true,
+      fluid: false,
+      selection: true,
+      label: 'Sort By:',
+      options: FAMILY_SORT_OPTIONS,
+    },
+    {
+      name: 'familiesSortDirection',
+      component: SortDirectionToggle,
+    },
+    {
+      name: 'familiesFilter',
+      component: SpacedDropdown,
+      inline: true,
+      fluid: false,
+      selection: true,
+      search: true,
+      includeCategories: true,
+      label: 'Filter:',
+      options: FAMILY_FILTER_OPTIONS.filter((f) => { return showInternalFilters ? !f.internalOmit : !f.internalOnly }),
+    },
+  ]
 
-        </Grid>
-      </Table.HeaderCell>
-    </Table.Row>
-  </Table.Header>
+  return (
+    <Table.Header fullWidth>
+      <Table.Row>
+        <RegularFontHeaderCell>
+          Showing &nbsp;
+          {
+            visibleFamiliesCount !== totalFamiliesCount ?
+              <span><b>{visibleFamiliesCount}</b> out of <b>{totalFamiliesCount}</b></span>
+              : <span>all <b>{totalFamiliesCount}</b></span>
+          }
+          &nbsp; families
+        </RegularFontHeaderCell>
+        <Table.HeaderCell collapsing textAlign="right">
+          <Popup
+            content="Filter families by searching on family name or individual phenotypes"
+            position="top center"
+            trigger={<a><Icon name="info circle" link /></a>}
+          />
+          Search:
+          <HorizontalSpacer width={10} />
+          <FamiliesFilterSearchBox />
+        </Table.HeaderCell>
+        <Table.HeaderCell collapsing textAlign="right">
+          <ReduxFormWrapper
+            onSubmit={dispatchUpdateFamiliesTable}
+            form={`edit${tableName}FamiliesTable`}
+            initialValues={familiesTableState}
+            closeOnSuccess={false}
+            submitOnChange
+            fields={filterFields}
+          />
+        </Table.HeaderCell>
+        {headerStatus &&
+          <Table.HeaderCell collapsing textAlign="right">
+            {headerStatus.title}:
+            <HorizontalSpacer width={10} />
+            <HorizontalStackedBar
+              width={100}
+              height={14}
+              title={headerStatus.title}
+              data={headerStatus.data}
+            />
+          </Table.HeaderCell>
+        }
+      </Table.Row>
+      {fields &&
+        <Table.Row>
+          <Table.HeaderCell colSpan={5} textAlign="left">
+            <FamilyLayout
+              compact
+              offset
+              fields={fields}
+              fieldDisplay={field => FAMILY_FIELD_RENDER_LOOKUP[field.id].name}
+              rightContent={showVariantTags ? 'Saved Variants' : null}
+            />
+          </Table.HeaderCell>
+        </Table.Row>
+      }
+    </Table.Header>
+  )
+}
 
 TableHeaderRow.propTypes = {
   headerStatus: PropTypes.object,
   showInternalFilters: PropTypes.bool,
   visibleFamiliesCount: PropTypes.number,
   totalFamiliesCount: PropTypes.number,
-  currentPage: PropTypes.number,
-  recordsPerPage: PropTypes.number,
+  familiesTableState: PropTypes.object,
+  updateFamiliesTable: PropTypes.func,
+  fields: PropTypes.array,
+  tableName: PropTypes.string,
+  showVariantTags: PropTypes.bool,
 }
 
-const mapStateToProps = state => ({
-  currentPage: getProjectTablePage(state),
-  recordsPerPage: getProjectTableRecordsPerPage(state),
-  visibleFamiliesCount: getVisibleFamilies(state).length,
-  totalFamiliesCount: getProjectFamilies(state).length,
+const mapStateToProps = (state, ownProps) => ({
+  visibleFamiliesCount: getVisibleFamilies(state, ownProps).length,
+  totalFamiliesCount: Object.keys(getProjectFamiliesByGuid(state)).length,
+  familiesTableState: getFamiliesTableState(state, ownProps),
 })
 
+const mapDispatchToProps = (dispatch, ownProps) => {
+  return {
+    updateFamiliesTable: (updates) => {
+      dispatch(updateFamiliesTable(updates, ownProps.tableName))
+    },
+  }
+}
 
 export { TableHeaderRow as TableHeaderRowComponent }
 
-export default connect(mapStateToProps)(TableHeaderRow)
+export default connect(mapStateToProps, mapDispatchToProps)(TableHeaderRow)

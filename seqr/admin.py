@@ -1,19 +1,20 @@
 from django.contrib import admin
-from seqr.models import Project, Family, Individual, Sample, Dataset, \
-    LocusList, LocusListGene, LocusListInterval, VariantNote, VariantTag, VariantTagType
+from seqr.models import Project, Family, Individual, Sample, LocusList, LocusListGene, LocusListInterval, VariantNote, \
+    VariantTag, VariantTagType, VariantFunctionalData, SavedVariant
 
 for model_class in [
     Project,
     Family,
     Individual,
     Sample,
-    Dataset,
     LocusList,
     LocusListGene,
     LocusListInterval,
     VariantNote,
     VariantTag,
-    VariantTagType
+    VariantTagType,
+    VariantFunctionalData,
+    SavedVariant,
 ]:
 
     @admin.register(model_class)

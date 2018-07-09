@@ -2,7 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { Popup } from 'semantic-ui-react'
 
-import ColoredIcon from 'shared/components/icons/ColoredIcon'
+import { ColoredIcon } from 'shared/components/StyledComponents'
 
 
 class RequestStatus extends React.Component {

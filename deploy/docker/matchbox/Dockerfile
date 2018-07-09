@@ -1,20 +1,14 @@
 FROM openjdk:8-jdk
 
 RUN apt-get update \
- && apt-get install -y wget \
- && apt-get install -y git \
- && apt-get install -y maven \
- && apt-get install -y python \
- && apt-get install -y gcc  \
- && apt-get install -y python-dev \
- && apt-get install -y python-setuptools \
+ && apt-get install -y wget git maven python gcc python-dev python-setuptools --fix-missing \
  && /usr/bin/easy_install -U pip \
  && /usr/local/bin/pip install crcmod 
 
 MAINTAINER MacArthur Lab
 
-ADD settings.xml /root/.m2/settings.xml
-ADD entrypoint.sh  /root/bin/entrypoint.sh
+COPY settings.xml /root/.m2/settings.xml
+COPY entrypoint.sh  /root/bin/entrypoint.sh
 
 env MVN=mvn
 
@@ -116,7 +110,6 @@ ARG MATCHBOX_SERVICE_PORT
 ENV MATCHBOX_SERVICE_PORT=$MATCHBOX_SERVICE_PORT
 
 EXPOSE $MATCHBOX_SERVICE_PORT
-
 
 
 CMD ["/root/bin/entrypoint.sh"]

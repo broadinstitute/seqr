@@ -5,6 +5,8 @@ import PropTypes from 'prop-types'
 
 import { Icon, Popup } from 'semantic-ui-react'
 
+import { SEX_LOOKUP, AFFECTED_LOOKUP } from 'shared/utils/constants'
+
 const iconStyle = { fontSize: '13px !important' }
 const rotate45deg = {
   msTransform: 'rotate(45deg)', /* IE 9 */
@@ -16,40 +18,50 @@ const rotate45deg = {
 
 const ICON_LOOKUP = {
 
-  MA: <Popup trigger={<Icon style={iconStyle} name="square" />} content="affected male" size="small" />,
-  MN: <Popup trigger={<Icon style={iconStyle} name="square outline" />} content="unaffected male" size="small" />,
-  MU: <Popup
-    trigger={
+  MA: { icon: 'square' },
+  MN: { icon: 'square outline' },
+  MU: {
+    iconGroup: (
       <Icon.Group>
         <Icon style={iconStyle} name="square outline" />
-        <Icon style={iconStyle} name="question" />
+        <Icon size="small" name="question" />
       </Icon.Group>
-    }
-    content="male with unknown affected status"
-    size="small"
-  />,
+    ),
+  },
 
-  FA: <Popup trigger={<Icon style={iconStyle} name="circle" />} content="affected female" size="small" />,
-  FN: <Popup trigger={<Icon style={iconStyle} name="circle thin" />} content="unaffected female" size="small" />,
-  FU: <Popup trigger={<Icon style={iconStyle} name="question circle outline" />} content="female with unknown affected status" size="small" />,
+  FA: { icon: 'circle' },
+  FN: { icon: 'circle thin' },
+  FU: { icon: 'question circle outline' },
 
-  UA: <Popup trigger={<Icon style={rotate45deg} name="square" />} content="affected inidividual with unknown sex" size="small" />,
-  UN: <Popup trigger={<span style={rotate45deg} name="square outline" />} content="unaffected inidividual with unknown sex" size="small" />,
-  UU: <Popup trigger={<Icon style={iconStyle} name="help" />} content="sex and affected status are unknown" size="small" />,
+  UA: { icon: 'square', rotated: true },
+  UN: { icon: 'square outline', rotated: true },
+  UU: { icon: 'help' },
 }
 
-const PedigreeIcon = props =>
-  ICON_LOOKUP[`${props.sex}${props.affected}`] ||
-  <Popup
-    trigger={<Icon style={iconStyle} name="warning sign" />}
-    content={<div>ERROR: Unexpected value for affected status {`("${props.affected}")`} or sex {`("${props.sex}")`} </div>}
+const PedigreeIcon = (props) => {
+  const iconProps = ICON_LOOKUP[`${props.sex}${props.affected}`]
+  return <Popup
+    trigger={iconProps.iconGroup || <span><Icon style={iconProps.rotate ? rotate45deg : iconStyle} name={iconProps.icon || 'warning sign'} />{props.label}</span>}
+    content={
+      <div>
+        <b>Sex:</b> {SEX_LOOKUP[props.sex] || 'INVALID'} <br />
+        <b>Status:</b> {AFFECTED_LOOKUP[props.affected] || 'INVALID'}
+        {props.popupContent}
+      </div>
+    }
     size="small"
+    wide="very"
+    position="top center"
+    hoverable
   />
+}
 
 
 PedigreeIcon.propTypes = {
   sex: PropTypes.string.isRequired,
   affected: PropTypes.string.isRequired,
+  popupContent: PropTypes.node,
+  label: PropTypes.any,
 }
 
 export default PedigreeIcon

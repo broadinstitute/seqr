@@ -4,11 +4,13 @@ import logging
 import sys
 import urllib
 
+from django.db import connection
 from django.core.exceptions import PermissionDenied
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse
+from django.urls.base import reverse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
@@ -71,8 +73,8 @@ def project_home(request, project_id):
         'auth_level': auth_level,
         'can_edit': project.can_edit(request.user),
         'is_manager': project.can_admin(request.user),
-        'has_gene_search':
-            get_project_datastore(project).project_collection_is_loaded(project)
+        'has_gene_search': get_project_datastore(project).project_collection_is_loaded(project),
+        'new_page_url': '/project/{}/project_page'.format(project.seqr_project.guid) if project.seqr_project else None,
     })
 
 
@@ -99,6 +101,7 @@ def project_settings(request, project_id):
     return render(request, 'project/project_settings.html', {
         'project': project,
         'is_manager': project.can_admin(request.user),
+        'new_page_url': '/project/{}/project_page'.format(project.seqr_project.guid) if project.seqr_project else None,
     })
 
 
@@ -211,12 +214,68 @@ def project_individuals(request, project_id):
     if not project.can_view(request.user):
         raise PermissionDenied
 
-    _individuals = json_displays.individual_list(project.get_individuals())
+    cursor = connection.cursor()
+
+    loaded_vcfs_subquery = """
+      SELECT 
+        COUNT(*) 
+      FROM base_vcffile AS v 
+        JOIN base_individual_vcf_files AS vi ON v.id=vi.vcffile_id
+      WHERE vi.individual_id=i.id AND v.loaded_date IS NOT NULL
+    """
+
+    individuals_query = """
+        SELECT DISTINCT
+          f.family_id AS family_id,
+          i.indiv_id AS indiv_id,
+          i.nickname AS nickname,
+          i.maternal_id AS maternal_id,
+          i.paternal_id AS paternal_id,
+          i.gender AS gender,
+          i.affected AS affected,
+          i.case_review_status AS case_review_status,
+          f.family_name AS family_name,
+          ({loaded_vcfs_subquery}) AS has_variant_data,
+          i.bam_file_path IS NOT NULL AS has_read_data
+        FROM base_individual AS i
+          JOIN base_family AS f ON i.family_id=f.id
+        WHERE f.project_id=%s
+    """.strip().format(**locals())
+
+    cursor.execute(individuals_query, [project.id])
+
+    columns = [col[0] for col in cursor.description]
+    individual_rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
+
+    print(sorted(individual_rows)[0])
+
+    #print("=====")
+    #individuals_json = json_displays.individual_list(project.get_individuals())
+
+    #print(sorted(individuals_json)[0])
+
+    individuals_json = []
+    for indiv in individual_rows:
+        individuals_json.append({
+            'indiv_id': indiv["indiv_id"],
+            'nickname': indiv["nickname"],
+            'family_id': indiv["family_id"],
+            'family_url': reverse('family_home', args=(project_id, indiv["family_id"])),
+            'maternal_id': indiv["maternal_id"],
+            'paternal_id': indiv["paternal_id"],
+            'gender': indiv["gender"],
+            'affected_status': indiv["affected"],
+            'in_case_review': indiv["case_review_status"] == "I" and (not indiv["has_variant_data"]),
+            'case_review_status': indiv["case_review_status"],
+            'has_variant_data': indiv["has_variant_data"],
+            'has_read_data': indiv["has_read_data"],
+        })
 
     return render(request, 'individual/individuals.html', {
         'project': project,
         'is_staff': 'true' if request.user.is_staff else 'false',
-        'individuals_json': json.dumps(_individuals),
+        'individuals_json': json.dumps(individuals_json),
+        'new_page_url': '/project/{}/project_page'.format(project.seqr_project.guid) if project.seqr_project else None,
     })
 
 
@@ -233,6 +292,7 @@ def edit_individuals(request, project_id):
     return render(request, 'edit_individuals.html', {
         'individuals_json': json.dumps(individuals_json),
         'project': project,
+        'new_page_url': '/project/{}/project_page'.format(project.seqr_project.guid) if project.seqr_project else None,
     })
 
 
@@ -443,7 +503,7 @@ def variants_with_tag(request, project_id, tag=None):
         tag = urllib.unquote(tag)
         variants = get_variants_by_tag(project, tag, family_id=requested_family_id)
     else:
-        variants = get_all_saved_variants_for_project(project, family_id=requested_family_id)
+        variants = get_all_saved_variants_for_project(project, family_id=requested_family_id, user=request.user)
     add_extra_info_to_variants_project(get_reference(), project, variants, add_family_tags=True, add_populations=True)
     variants.sort(key=lambda var: var.xpos)
 
@@ -520,9 +580,19 @@ def variants_with_tag(request, project_id, tag=None):
         family_ids = {variant.extras['family_id'] for variant in variants}
         families = get_filtered_families(filters={'project': project, 'family_id__in': family_ids}, fields=['family_id'])
 
+        new_page_url = None
+        if project.seqr_project:
+            new_page_url = '/project/{}/saved_variants'.format(project.seqr_project.guid)
+            if requested_family_id:
+                family = project.seqr_project.family_set.get(family_id=requested_family_id)
+                new_page_url += '/family/{}'.format(family.guid)
+            if tag:
+                new_page_url += '/{}'.format(tag)
+
         return render(request, 'project/saved_variants.html', {
             'project': project,
             'tag': tag,
+            'new_page_url': new_page_url,
             'variants_json': json.dumps([v.toJSON() for v in variants]),
             'families_json': json.dumps({family.family_id: {
                 'project_id': project.project_id,
@@ -949,6 +1019,7 @@ def edit_basic_info(request, project_id):
     return render(request, 'project/edit_basic_info.html', {
         'project': project,
         'form': form,
+        'new_page_url': '/project/{}/project_page'.format(project.seqr_project.guid) if project.seqr_project else None,
     })
 
 

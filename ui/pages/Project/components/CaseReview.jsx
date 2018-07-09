@@ -1,46 +1,44 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import DocumentTitle from 'react-document-title'
 import { connect } from 'react-redux'
 
-import { getProject } from 'redux/rootReducer'
-
-import { getCaseReviewStatusCounts } from '../utils/selectors'
-import { getShowDetails } from '../reducers'
-import FamilyTable from './FamilyTable/FamilyTable'
 import {
-  DESCRIPTION, ANALYSED_BY, ANALYSIS_NOTES, ANALYSIS_SUMMARY, INTERNAL_NOTES, INTERNAL_SUMMARY,
-} from './FamilyTable/FamilyRow'
+  FAMILY_FIELD_DESCRIPTION,
+  FAMILY_FIELD_ANALYSED_BY,
+  FAMILY_FIELD_ANALYSIS_NOTES,
+  FAMILY_FIELD_ANALYSIS_SUMMARY,
+  FAMILY_FIELD_INTERNAL_NOTES,
+  FAMILY_FIELD_INTERNAL_SUMMARY,
+} from 'shared/utils/constants'
+import { CASE_REVIEW_TABLE_NAME } from '../constants'
+import { getCaseReviewStatusCounts, getFamiliesExportConfig, getIndividualsExportConfig } from '../selectors'
+import FamilyTable from './FamilyTable/FamilyTable'
 
-const DETAIL_FIELDS = [
-  { id: DESCRIPTION },
-  { id: ANALYSED_BY },
-  { id: ANALYSIS_NOTES },
-  { id: ANALYSIS_SUMMARY },
+const FIELDS = [
+  { id: FAMILY_FIELD_DESCRIPTION },
+  { id: FAMILY_FIELD_ANALYSED_BY },
+  { id: FAMILY_FIELD_ANALYSIS_NOTES },
+  { id: FAMILY_FIELD_ANALYSIS_SUMMARY },
+  { id: FAMILY_FIELD_INTERNAL_NOTES, canEdit: true },
+  { id: FAMILY_FIELD_INTERNAL_SUMMARY, canEdit: true },
 ]
-
-const NO_DETAIL_FIELDS = [
-  { id: INTERNAL_NOTES, canEdit: true },
-  { id: INTERNAL_SUMMARY, canEdit: true },
-]
-
-const ALL_FIELDS = DETAIL_FIELDS.concat(NO_DETAIL_FIELDS)
 
 const CaseReviewTable = (props) => {
   const headerStatus = { title: 'Individual Statuses', data: props.caseReviewStatusCounts }
   const exportUrls = [
-    { name: 'Families', url: `/api/project/${props.project.projectGuid}/export_case_review_families` },
-    { name: 'Individuals', url: `/api/project/${props.project.projectGuid}/export_case_review_individuals` },
+    { name: 'Families', data: props.familyExportConfig },
+    { name: 'Individuals', data: props.individualsExportConfig },
   ]
   return (
     <div>
-      <DocumentTitle title={`Case Review: ${props.project.name}`} />
       <FamilyTable
         showInternalFilters
         editCaseReview
+        showDetails
+        tableName={CASE_REVIEW_TABLE_NAME}
         headerStatus={headerStatus}
         exportUrls={exportUrls}
-        fields={props.showDetails ? ALL_FIELDS : NO_DETAIL_FIELDS}
+        detailFields={FIELDS}
       />
     </div>
   )
@@ -50,15 +48,15 @@ const CaseReviewTable = (props) => {
 export { CaseReviewTable as CaseReviewTableComponent }
 
 CaseReviewTable.propTypes = {
-  project: PropTypes.object.isRequired,
   caseReviewStatusCounts: PropTypes.array,
-  showDetails: PropTypes.bool,
+  familyExportConfig: PropTypes.object,
+  individualsExportConfig: PropTypes.object,
 }
 
 const mapStateToProps = state => ({
-  project: getProject(state),
   caseReviewStatusCounts: getCaseReviewStatusCounts(state),
-  showDetails: getShowDetails(state),
+  familyExportConfig: getFamiliesExportConfig(state, { tableName: CASE_REVIEW_TABLE_NAME, internal: true }),
+  individualsExportConfig: getIndividualsExportConfig(state, { tableName: CASE_REVIEW_TABLE_NAME, internal: true }),
 })
 
 export default connect(mapStateToProps)(CaseReviewTable)

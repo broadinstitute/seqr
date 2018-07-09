@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { connect } from 'react-redux'
 import { Table } from 'semantic-ui-react'
-import { getFamiliesFilter } from '../../reducers'
+import { getFamiliesFilter } from '../../selectors'
 import { SHOW_ALL } from '../../constants'
 
 const EmptyCell = styled(Table.Cell)`
@@ -26,8 +26,8 @@ EmptyTableRow.propTypes = {
   familiesFilter: PropTypes.string.isRequired,
 }
 
-const mapStateToProps = state => ({
-  familiesFilter: getFamiliesFilter(state),
+const mapStateToProps = (state, ownProps) => ({
+  familiesFilter: getFamiliesFilter(state, ownProps),
 })
 
 export default connect(mapStateToProps)(EmptyTableRow)

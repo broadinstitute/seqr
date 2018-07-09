@@ -40,7 +40,8 @@
             <th>index</th>
             <th># records</th>
             <th>size</th>
-            <th width="30%">created date</th>
+            <th>created date</th>
+            <th>file path</th>
         </tr>
     </thead>
 
@@ -48,12 +49,13 @@
         <tr>
             <td />
             <td><a href="/project/{{ index.project_guid }}/project_page">{{ index.project_id }}</a></td>
-            <td>{{ index.analysis_type }}</td>
+            <td>{{ index.sample_type }}</td>
             <td>{{ index.genome_version }}</td>
             <td>{{ index.index }}</td>
             <td>{{ index.docs_count }}</td>
             <td>{{ index.store_size }}</td>
             <td>{{ index.creation_date_string }}</td>
+            <td>{{ index.dataset_file_path }}</td>
         </tr>
     {% endfor %}
 </table>

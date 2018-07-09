@@ -4,7 +4,7 @@ import styled from 'styled-components'
 import { connect } from 'react-redux'
 import { Icon, Table } from 'semantic-ui-react'
 
-import { getUser } from 'redux/rootReducer'
+import { getUser } from 'redux/selectors'
 import EditProjectModal from 'shared/components/modal/EditProjectModal'
 import ButtonLink from 'shared/components/buttons/ButtonLink'
 

@@ -9,7 +9,7 @@ from pprint import pprint
 from django.core.management.base import BaseCommand
 from django.db.models.query_utils import Q
 
-from seqr.models import Dataset, Project, Family, Individual, Sample
+from seqr.models import Project, Family, Individual, Sample
 
 logger = logging.getLogger(__name__)
 

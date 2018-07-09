@@ -5,7 +5,7 @@ import { Table } from 'semantic-ui-react'
 import styled from 'styled-components'
 
 import SortableColumnHeader from './SortableColumnHeader'
-import { getUser } from '../../../../redux/rootReducer'
+import { getUser } from '../../../../redux/selectors'
 
 import {
   SORT_BY_PROJECT_NAME,

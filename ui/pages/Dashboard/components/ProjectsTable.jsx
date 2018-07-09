@@ -14,7 +14,8 @@ import ProjectTableHeader from './table-header/ProjectTableHeader'
 import ProjectTableRow from './table-body/ProjectTableRow'
 import ProjectTableFooter from './table-footer/ProjectTableFooter'
 
-import { getProjectsIsLoading, fetchProjects } from '../../../redux/rootReducer'
+import { fetchProjects } from '../../../redux/rootReducer'
+import { getProjectsIsLoading } from '../../../redux/selectors'
 import { getVisibleProjectsInSortedOrder } from '../utils/visibleProjectsSelector'
 
 
@@ -62,7 +63,7 @@ class ProjectsTable extends React.Component
         <HorizontalSpacer width={30} />
         <FilterSelector />
         <RightAligned>
-          <ExportTableButton urls={PROJECT_EXPORT_URLS} />
+          <ExportTableButton downloads={PROJECT_EXPORT_URLS} />
           <HorizontalSpacer width={45} />
         </RightAligned>
         <Table striped stackable>

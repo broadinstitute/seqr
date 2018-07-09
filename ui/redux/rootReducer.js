@@ -1,10 +1,11 @@
 import { combineReducers } from 'redux'
 import { reducer as formReducer, SubmissionError } from 'redux-form'
+import { reducer as searchReducer } from 'redux-search'
 
 import { reducers as dashboardReducers } from 'pages/Dashboard/reducers'
 import { reducers as projectReducers } from 'pages/Project/reducers'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
-import { createObjectsByIdReducer, loadingReducer, zeroActionsReducer, createSingleValueReducer } from './utils/reducerFactories'
+import { createObjectsByIdReducer, loadingReducer, zeroActionsReducer } from './utils/reducerFactories'
 import modalReducers from './utils/modalReducer'
 
 /**
@@ -12,11 +13,12 @@ import modalReducers from './utils/modalReducer'
  */
 
 // actions
-const RECEIVE_DATA = 'RECEIVE_DATA'
-const REQUEST_PROJECTS = 'REQUEST_PROJECTS'
-const REQUEST_PROJECT_DETAILS = 'REQUEST_PROJECT_DETAILS'
-const UPDATE_CURRENT_PROJECT = 'UPDATE_CURRENT_PROJECT'
-
+export const RECEIVE_DATA = 'RECEIVE_DATA'
+export const REQUEST_PROJECTS = 'REQUEST_PROJECTS'
+const RECEIVE_SAVED_VARIANTS = 'RECEIVE_SAVED_VARIANTS'
+const REQUEST_VARIANT = 'REQUEST_VARIANT'
+const REQUEST_GENES = 'REQUEST_GENES'
+const RECEIVE_GENES = 'RECEIVE_GENES'
 
 // action creators
 export const fetchProjects = () => {
@@ -31,33 +33,6 @@ export const fetchProjects = () => {
   }
 }
 
-export const loadProject = (projectGuid) => {
-  return (dispatch, getState) => {
-    dispatch({ type: UPDATE_CURRENT_PROJECT, newValue: projectGuid })
-
-    const currentProject = getState().projectsByGuid[projectGuid]
-    if (!currentProject || !currentProject.detailsLoaded) {
-      dispatch({ type: REQUEST_PROJECT_DETAILS })
-      if (!currentProject) {
-        dispatch({ type: REQUEST_PROJECTS })
-      }
-      new HttpRequestHelper(`/api/project/${projectGuid}/details`,
-        (responseJson) => {
-          dispatch({ type: RECEIVE_DATA, updatesById: { projectsByGuid: { [projectGuid]: responseJson.project }, ...responseJson } })
-        },
-        (e) => {
-          dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
-        },
-      ).get()
-    }
-  }
-}
-
-export const unloadProject = () => {
-  return (dispatch) => {
-    dispatch({ type: UPDATE_CURRENT_PROJECT, newValue: null })
-  }
-}
 
 /**
  * POSTS a request to update the specified project and dispatches the appropriate events when the request finishes
@@ -85,46 +60,23 @@ export const updateProject = (values) => {
   }
 }
 
-export const updateFamilies = (values) => {
-  return (dispatch, getState) => {
-    const action = values.delete ? 'delete' : 'edit'
-    return new HttpRequestHelper(`/api/project/${getState().currentProjectGuid}/${action}_families`,
+export const updateFamily = (values) => {
+  return (dispatch) => {
+    const familyField = values.familyField ? `_${values.familyField}` : ''
+    return new HttpRequestHelper(`/api/family/${values.familyGuid}/update${familyField}`,
       (responseJson) => {
-        dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
-      },
-      (e) => { throw new SubmissionError({ _error: [e.message] }) },
-    ).post(values)
-  }
-}
-
-export const updateIndividuals = (values) => {
-  return (dispatch, getState) => {
-    let action = 'edit_individuals'
-    if (values.uploadedFileId) {
-      action = `save_individuals_table/${values.uploadedFileId}`
-    } else if (values.delete) {
-      action = 'delete_individuals'
-    }
-
-    return new HttpRequestHelper(`/api/project/${getState().currentProjectGuid}/${action}`,
-      (responseJson) => {
-        dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+        dispatch({ type: RECEIVE_DATA, updatesById: { familiesByGuid: responseJson } })
       },
       (e) => {
-        if (e.body && e.body.errors) {
-          throw new SubmissionError({ _error: e.body.errors })
-          // e.body.warnings.forEach((err) => { throw new SubmissionError({ _warning: err }) })
-        } else {
-          throw new SubmissionError({ _error: [e.message] })
-        }
+        throw new SubmissionError({ _error: [e.message] })
       },
     ).post(values)
   }
 }
 
-export const updateIndividual = (individualGuid, values) => {
+export const updateIndividual = (values) => {
   return (dispatch) => {
-    return new HttpRequestHelper(`/api/individual/${individualGuid}/update`,
+    return new HttpRequestHelper(`/api/individual/${values.individualGuid}/update`,
       (responseJson) => {
         dispatch({ type: RECEIVE_DATA, updatesById: { individualsByGuid: responseJson } })
       },
@@ -135,33 +87,104 @@ export const updateIndividual = (individualGuid, values) => {
   }
 }
 
+export const loadGene = (geneId) => {
+  return (dispatch, getState) => {
+    if (!getState().genesById[geneId]) {
+      dispatch({ type: REQUEST_GENES })
+      new HttpRequestHelper(`/api/gene_info/${geneId}`,
+        (responseJson) => {
+          dispatch({ type: RECEIVE_GENES, updatesById: responseJson })
+        },
+        (e) => {
+          dispatch({ type: RECEIVE_GENES, error: e.message, updatesById: {} })
+        },
+      ).get()
+    }
+  }
+}
+
+export const loadVariantTranscripts = (variantId) => {
+  return (dispatch, getState) => {
+    const variant = getState().projectSavedVariants[variantId]
+    if (!(variant && variant.transcripts)) {
+      dispatch({ type: REQUEST_VARIANT })
+      new HttpRequestHelper(`/api/saved_variant/${variantId}/transcripts`,
+        (responseJson) => {
+          dispatch({ type: RECEIVE_SAVED_VARIANTS, updatesById: responseJson })
+        },
+        (e) => {
+          dispatch({ type: RECEIVE_SAVED_VARIANTS, error: e.message, updatesById: {} })
+        },
+      ).get()
+    }
+  }
+}
+
+export const updateGeneNote = (values) => {
+  return (dispatch) => {
+    let urlPath = `/api/gene_info/${values.geneId || values.gene_id}/note`
+    let action = 'create'
+    if (values.noteGuid) {
+      urlPath = `${urlPath}/${values.noteGuid}`
+      action = values.delete ? 'delete' : 'update'
+    }
+
+    return new HttpRequestHelper(`${urlPath}/${action}`,
+      (responseJson) => {
+        dispatch({ type: RECEIVE_GENES, updatesById: responseJson })
+      },
+      (e) => {
+        throw new SubmissionError({ _error: [e.message] })
+      },
+    ).post(values)
+  }
+}
+
+export const updateVariantNote = (values) => {
+  return (dispatch) => {
+    let urlPath = `/api/saved_variant/${values.variantId}/note`
+    let action = 'create'
+    if (values.noteGuid) {
+      urlPath = `${urlPath}/${values.noteGuid}`
+      action = values.delete ? 'delete' : 'update'
+    }
+
+    return new HttpRequestHelper(`${urlPath}/${action}`,
+      (responseJson) => {
+        dispatch({ type: RECEIVE_SAVED_VARIANTS, updatesById: responseJson })
+      },
+      (e) => { throw new SubmissionError({ _error: [e.message] }) },
+    ).post(values)
+  }
+}
+
+export const updateVariantTags = (values) => {
+  return (dispatch) => {
+    return new HttpRequestHelper(`/api/saved_variant/${values.variantId}/update_tags`,
+      (responseJson) => {
+        dispatch({ type: RECEIVE_SAVED_VARIANTS, updatesById: responseJson })
+      },
+      (e) => {
+        throw new SubmissionError({ _error: [e.message] })
+      },
+    ).post(values)
+  }
+}
 
 // root reducer
 const rootReducer = combineReducers(Object.assign({
   projectCategoriesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'projectCategoriesByGuid'),
   projectsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'projectsByGuid'),
   projectsLoading: loadingReducer(REQUEST_PROJECTS, RECEIVE_DATA),
-  currentProjectGuid: createSingleValueReducer(UPDATE_CURRENT_PROJECT, null),
-  projectDetailsLoading: loadingReducer(REQUEST_PROJECT_DETAILS, RECEIVE_DATA),
   familiesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'familiesByGuid'),
   individualsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'individualsByGuid'),
-  datasetsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'datasetsByGuid'),
   samplesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'samplesByGuid'),
+  genesById: createObjectsByIdReducer(RECEIVE_GENES),
+  genesLoading: loadingReducer(REQUEST_GENES, RECEIVE_GENES),
+  variantLoading: loadingReducer(REQUEST_VARIANT, RECEIVE_SAVED_VARIANTS),
   user: zeroActionsReducer,
   form: formReducer,
+  search: searchReducer,
 }, modalReducers, dashboardReducers, projectReducers))
 
 export default rootReducer
-
-// basic selectors
-export const getProjectsIsLoading = state => state.projectsLoading.isLoading
-export const getProjectsByGuid = state => state.projectsByGuid
-export const getProjectCategoriesByGuid = state => state.projectCategoriesByGuid
-export const getFamiliesByGuid = state => state.familiesByGuid
-export const getIndividualsByGuid = state => state.individualsByGuid
-export const getSamplesByGuid = state => state.samplesByGuid
-export const getDatsetsByGuid = state => state.datasetsByGuid
-export const getProjectGuid = state => state.currentProjectGuid
-export const getProject = state => state.projectsByGuid[state.currentProjectGuid]
-export const getProjectDetailsIsLoading = state => state.projectDetailsLoading.isLoading
-export const getUser = state => state.user

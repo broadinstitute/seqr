@@ -1,7 +1,8 @@
 import React from 'react'
 import { shallow, configure } from 'enzyme'
 import Adapter from 'enzyme-adapter-react-16'
-import { getUser, getProject } from 'redux/rootReducer'
+import { getUser } from 'redux/selectors'
+import { getProject } from '../selectors'
 import { ProjectPageUIComponent } from './ProjectPageUI'
 
 
