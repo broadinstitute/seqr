@@ -17,7 +17,7 @@ RUN wget https://raw.github.com/miyagawa/cpanminus/master/cpanm -O /usr/bin/cpan
 
 # install dev dependencies for react, javascript development. These are not needed at runtime.
 RUN apt-get update \
-    && curl -sL https://deb.nodesource.com/setup_7.x | bash - \
+    && curl -sL https://deb.nodesource.com/setup_8.x | bash - \
     && apt-get install -y nodejs
 
 # install utilities for accessing the database, debugging, etc.
