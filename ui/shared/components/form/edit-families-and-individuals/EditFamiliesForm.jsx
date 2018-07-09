@@ -31,7 +31,7 @@ const EditFamiliesForm = props =>
   />
 
 EditFamiliesForm.propTypes = {
-  familiesByGuid: PropTypes.array.isRequired,
+  familiesByGuid: PropTypes.object.isRequired,
   updateFamilies: PropTypes.func.isRequired,
   modalName: PropTypes.string,
 }

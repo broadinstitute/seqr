@@ -2,10 +2,28 @@ import BaseFieldView from '../components/panel/view-fields/BaseFieldView'
 import OptionFieldView from '../components/panel/view-fields/OptionFieldView'
 
 // SAMPLES
+
 export const DATASET_TYPE_READ_ALIGNMENTS = 'ALIGN'
 export const DATASET_TYPE_VARIANT_CALLS = 'VARIANTS'
 
 export const SAMPLE_STATUS_LOADED = 'loaded'
+
+export const SAMPLE_TYPE_EXOME = 'WES'
+export const SAMPLE_TYPE_GENOME = 'WGS'
+export const SAMPLE_TYPE_RNA = 'RNA'
+
+export const SAMPLE_TYPE_OPTIONS = [
+  { value: SAMPLE_TYPE_EXOME, text: 'Exome' },
+  { value: SAMPLE_TYPE_GENOME, text: 'Genome' },
+  { value: SAMPLE_TYPE_RNA, text: 'RNA-seq' },
+]
+
+export const SAMPLE_TYPE_LOOKUP = SAMPLE_TYPE_OPTIONS.reduce(
+  (acc, opt) => ({
+    ...acc,
+    ...{ [opt.value]: opt },
+  }), {},
+)
 
 // ANALYSIS STATUS
 

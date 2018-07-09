@@ -198,7 +198,37 @@ def _get_json_for_individual(individual, user=None, add_sample_guids_field=False
     return _get_json_for_individuals([individual], user, add_sample_guids_field=add_sample_guids_field)[0]
 
 
-def _get_json_for_sample(sample):
+def get_json_for_samples(samples, project_guid=None):
+    """Returns a JSON representation of the given list of Samples.
+
+    Args:
+        samples (array): array of dictionary or django model for the Samples.
+    Returns:
+        array: array of json objects
+    """
+
+    fields = _get_record_fields(Sample, 'sample')
+    nested_fields = [('individual', 'guid')]
+    if not project_guid:
+        nested_fields.append(('individual', 'family', 'project', 'guid'))
+
+    results = []
+    for sample in samples:
+        sample_dict = _record_to_dict(
+            sample, fields, nested_fields=nested_fields
+        )
+
+        result = _get_json_for_record(sample_dict, fields)
+        result.update({
+            'projectGuid': project_guid or sample_dict.get('individual_family_project_guid') or sample_dict['project_guid'],
+            'individualGuid': sample_dict['individual_guid'],
+            'sampleGuid': result.pop('guid'),
+        })
+        results.append(result)
+    return results
+
+
+def _get_json_for_sample(sample, project_guid=None):
     """Returns a JSON representation of the given Sample.
 
     Args:
@@ -207,18 +237,7 @@ def _get_json_for_sample(sample):
         dict: json object
     """
 
-    fields = _get_record_fields(Sample, 'sample')
-    sample_dict = _record_to_dict(
-        sample, fields, nested_fields=[('individual', 'family', 'project', 'guid'), ('individual', 'guid')]
-    )
-
-    result = _get_json_for_record(sample_dict, fields)
-    result.update({
-        'projectGuid': sample_dict.get('individual_family_project_guid') or sample_dict['project_guid'],
-        'individualGuid': sample_dict['individual_guid'],
-        'sampleGuid': result.pop('guid'),
-    })
-    return result
+    return get_json_for_samples([sample], project_guid=project_guid)[0]
 
 
 def get_json_for_saved_variant(saved_variant, add_tags=False):

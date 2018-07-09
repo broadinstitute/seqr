@@ -29,8 +29,9 @@ const RadioGroup = (props) => {
 const EditIndividualsForm = (props) => {
   let currFamilyGuid
   let currActive = false
-  const sortedIndividuals = Object.values(props.individualsByGuid).sort(
-    (i1, i2) => props.familiesByGuid[i1.familyGuid].familyId - props.familiesByGuid[i2.familyGuid].familyId)
+  const sortedIndividuals = Object.values(props.individualsByGuid).map(
+    individual => ({ ...individual, family: props.familiesByGuid[individual.familyGuid] }),
+  ).sort((i1, i2) => i1.family.familyId - i2.family.familyId)
   const familyActiveMap = sortedIndividuals.reduce((acc, ind) => {
     if (ind.familyGuid !== currFamilyGuid) {
       currFamilyGuid = ind.familyGuid

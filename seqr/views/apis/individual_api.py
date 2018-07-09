@@ -2,12 +2,8 @@
 APIs for retrieving, updating, creating, and deleting Individual records
 """
 
-import gzip
-import hashlib
 import json
 import logging
-import os
-import tempfile
 
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
@@ -19,6 +15,7 @@ from seqr.views.apis.pedigree_image_api import update_pedigree_images
 from seqr.views.apis.phenotips_api import create_patient, set_patient_hpo_terms, delete_patient, \
     PhenotipsException
 from seqr.views.utils.export_table_utils import export_table
+from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file
 from seqr.views.utils.json_to_orm_utils import update_individual_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_individual, _get_json_for_family
@@ -33,6 +30,13 @@ _SEX_TO_EXPORTED_VALUE['U'] = ''
 
 __AFFECTED_TO_EXPORTED_VALUE = dict(Individual.AFFECTED_STATUS_LOOKUP)
 __AFFECTED_TO_EXPORTED_VALUE['U'] = ''
+
+
+class ErrorsWarningsException(Exception):
+    def __init__(self, errors, warnings=None):
+        Exception.__init__(self, str(errors))
+        self.errors = errors
+        self.warnings = warnings
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -215,17 +219,6 @@ def delete_individuals_handler(request, project_guid):
     })
 
 
-def _compute_serialized_file_path(uploadedFileId):
-    """Compute local file path, and make sure the directory exists"""
-
-    upload_directory = os.path.join(tempfile.gettempdir(), 'temp_uploads')
-    if not os.path.isdir(upload_directory):
-        logger.info("Creating directory: " + upload_directory)
-        os.makedirs(upload_directory)
-
-    return os.path.join(upload_directory, "temp_upload_%(uploadedFileId)s.json.gz" % locals())
-
-
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def receive_individuals_table_handler(request, project_guid):
@@ -242,29 +235,18 @@ def receive_individuals_table_handler(request, project_guid):
 
     project = get_project_and_check_permissions(project_guid, request.user)
 
-    if len(request.FILES) != 1:
-        error = "Received %s files instead of 1" % len(request.FILES)
-        return create_json_response({'errors': error}, status=400, reason=error)
+    def parse_file(filename, stream):
+        pedigree_records, errors, warnings = parse_pedigree_table(filename, stream, user=request.user, project=project)
+        if errors:
+            raise ErrorsWarningsException(errors, warnings)
+        return pedigree_records
 
-    # parse file
-    stream = request.FILES.values()[0]
-    filename = stream._name
-    #file_size = stream._size
-    #content_type = stream.content_type
-    #content_type_extra = stream.content_type_extra
-    #for chunk in value.chunks():
-    #   destination.write(chunk)
-
-    json_records, errors, warnings = parse_pedigree_table(filename, stream, user=request.user, project=project)
-
-    if errors:
-        return create_json_response({'errors': errors, 'warnings': warnings}, status=400, reason=errors)
-
-    # save json to temporary file
-    uploadedFileId = hashlib.md5(str(json_records)).hexdigest()
-    serialized_file_path = _compute_serialized_file_path(uploadedFileId)
-    with gzip.open(serialized_file_path, "w") as f:
-        json.dump(json_records, f)
+    try:
+        uploaded_file_id, filename, json_records = save_uploaded_file(request, parse_file)
+    except ErrorsWarningsException as e:
+        return create_json_response({'errors': e.errors, 'warnings': e.warnings}, status=400, reason=e.errors)
+    except Exception as e:
+        return create_json_response({'errors': [e.message or str(e)], 'warnings': []}, status=400, reason=e.message or str(e))
 
     # send back some stats
     num_families = len(set(r['familyId'] for r in json_records))
@@ -281,15 +263,17 @@ def receive_individuals_table_handler(request, project_guid):
             family__project=project)))
 
     info = [
-        "%(num_families)s families, %(num_individuals)s individuals parsed from %(filename)s" % locals(),
+        "{num_families} families, {num_individuals} individuals parsed from {filename}".format(
+            num_families=num_families, num_individuals=num_individuals, filename=filename
+        ),
         "%d new families, %d new individuals will be added to the project" % (num_families_to_create, num_individuals_to_create),
         "%d existing individuals will be updated" % (num_individuals - num_individuals_to_create),
     ]
 
     response = {
-        'uploadedFileId': uploadedFileId,
-        'errors': errors,
-        'warnings': warnings,
+        'uploadedFileId': uploaded_file_id,
+        'errors': [],
+        'warnings': [],
         'info': info,
     }
     logger.info(response)
@@ -308,15 +292,11 @@ def save_individuals_table_handler(request, project_guid, upload_file_id):
     """
     project = get_project_and_check_permissions(project_guid, request.user)
 
-    serialized_file_path = _compute_serialized_file_path(upload_file_id)
-    with gzip.open(serialized_file_path) as f:
-        json_records = json.load(f)
+    json_records = load_uploaded_file(upload_file_id)
 
     updated_families, updated_individuals = add_or_update_individuals_and_families(
         project, individual_records=json_records, user=request.user
     )
-
-    os.remove(serialized_file_path)
 
     # edit individuals
     individuals_by_guid = {
