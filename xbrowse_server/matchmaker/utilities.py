@@ -210,7 +210,7 @@ def generate_notification_for_incoming_match(response_from_matchbox,incoming_req
                 seqr_url=settings.SEQR_HOSTNAME_FOR_SLACK_POST + '/' + seqr_id_map['project_id'] + '/family/' +  seqr_id_map['family_id']
                 result = 'seqr ID %s from project %s in family %s inserted into matchbox on %s, with seqr link %s ' % (seqr_id_map['seqr_id'],seqr_id_map['project_id'],seqr_id_map['family_id'],seqr_id_map['insertion_date'].strftime('%d, %b %Y'),seqr_url )
                 match_results.append(result)
-            settings.MME_EXTERNAL_MATCH_REQUEST_LOG.insert({
+                settings.MME_EXTERNAL_MATCH_REQUEST_LOG.insert({
                                                         'seqr_id':seqr_id_map['seqr_id'],
                                                         'project_id':seqr_id_map['project_id'],
                                                         'family_id': seqr_id_map['family_id'],
