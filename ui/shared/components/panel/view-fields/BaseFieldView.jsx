@@ -94,7 +94,7 @@ const BaseFieldView = (props) => {
 }
 
 BaseFieldView.propTypes = {
-  fieldDisplay: PropTypes.func.isRequired,
+  fieldDisplay: PropTypes.func,
   formFields: PropTypes.array,
   isVisible: PropTypes.any,
   isPrivate: PropTypes.bool,
@@ -116,6 +116,10 @@ BaseFieldView.propTypes = {
   showEmptyValues: PropTypes.bool,
   user: PropTypes.object,
   modalStyle: PropTypes.object,
+}
+
+BaseFieldView.defaultProps = {
+  fieldDisplay: val => val,
 }
 
 const mapStateToProps = state => ({

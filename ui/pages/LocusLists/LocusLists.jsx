@@ -1,6 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
+import { Route, Switch } from 'react-router-dom'
 import { Container, Accordion, Header, Icon } from 'semantic-ui-react'
 
 import { loadLocusLists } from 'redux/rootReducer'
@@ -8,6 +9,7 @@ import { getLocusListsByGuid, getLocusListsIsLoading } from 'redux/selectors'
 import DataLoader from 'shared/components/DataLoader'
 import { VerticalSpacer } from 'shared/components/Spacers'
 import LocusListTable from './components/LocusListTable'
+import LocusListDetail from './components/LocusListDetail'
 
 const ACTIVE_PANELS = [0, 1]
 
@@ -42,19 +44,26 @@ PanelHeader.propTypes = {
   title: PropTypes.string,
 }
 
-const LocusLists = ({ locusListsByGuid, loading, load }) =>
+const LocusLists = ({ match, locusListsByGuid, loading, load }) =>
   <DataLoader content={locusListsByGuid} loading={loading} load={load}>
     <Container>
-      <Accordion
-        defaultActiveIndex={ACTIVE_PANELS}
-        exclusive={false}
-        fluid
-        panels={PANELS}
-      />
+      <Switch>
+        <Route path={`${match.url}/:locusListGuid`} component={LocusListDetail} />
+        <Route
+          path={`${match.url}`}
+          component={() => <Accordion
+            defaultActiveIndex={ACTIVE_PANELS}
+            exclusive={false}
+            fluid
+            panels={PANELS}
+          />}
+        />
+      </Switch>
     </Container>
   </DataLoader>
 
 LocusLists.propTypes = {
+  match: PropTypes.object,
   locusListsByGuid: PropTypes.object,
   loading: PropTypes.bool.isRequired,
   load: PropTypes.func.isRequired,

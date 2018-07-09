@@ -70,11 +70,11 @@ class SortableTable extends React.PureComponent {
       <StyledSortableTable sortable {...tableProps}>
         <Table.Header>
           <Table.Row>
-            {columns.map(({ name, format, ...columnProps }) =>
+            {columns.map(({ field, format, ...columnProps }) =>
               <Table.HeaderCell
-                key={name}
-                sorted={column === name ? direction : null}
-                onClick={this.handleSort(name)}
+                key={field}
+                sorted={column === field ? direction : null}
+                onClick={this.handleSort(field)}
                 {...columnProps}
               />,
             )}
@@ -83,10 +83,10 @@ class SortableTable extends React.PureComponent {
         <Table.Body>
           {sortedData.map(row => (
             <Table.Row key={row[idField]}>
-              {columns.map(({ name, format }) =>
+              {columns.map(({ field, format }) =>
                 <Table.Cell
-                  key={name}
-                  content={format ? format(row) : row[name]}
+                  key={field}
+                  content={format ? format(row) : row[field]}
                 />,
               )}
             </Table.Row>
