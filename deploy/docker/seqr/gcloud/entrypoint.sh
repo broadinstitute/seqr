@@ -54,7 +54,7 @@ echo 'SHELL=/bin/bash
 0 0 * * * python /mounted-bucket/settings_backups/run_settings_backup.py >& /var/log/cron.log
 0 0 * * * python /seqr/manage.py update_projects_in_new_schema -w /seqr/wgs_projects.txt 2>&1 >> /var/log/cron.log
 0 0 * * * python /seqr/manage.py transfer_gene_lists 2>&1 >> /var/log/cron.log
-0 */4 * * * python /mounted-bucket/database_backups/run_postgres_database_backup.py 2>&1 >> /var/log/cron.log
+0 */4 * * * source /root/.bashrc; python /mounted-bucket/database_backups/run_postgres_database_backup.py 2>&1 >> /var/log/cron.log
 ' | crontab -
 
 env > /etc/environment  # this is necessary for crontab commands to run with the right env. vars.
