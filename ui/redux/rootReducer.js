@@ -197,6 +197,30 @@ export const updateVariantTags = (values) => {
   }
 }
 
+export const updateLocusList = (values) => {
+  // TODO
+  return (dispatch) => {
+    console.log(values)
+    // let urlPath = `/api/gene_info/${values.geneId || values.gene_id}/note`
+    let urlPath = '/foo'
+    let action = 'create'
+    if (values.noteGuid) {
+      urlPath = `${urlPath}/${values.noteGuid}`
+      action = values.delete ? 'delete' : 'update'
+    }
+
+    return new HttpRequestHelper(`${urlPath}/${action}`,
+      (responseJson) => {
+        dispatch({ type: RECEIVE_GENES, updatesById: responseJson })
+      },
+      (e) => {
+        throw new SubmissionError({ _error: [e.message] })
+      },
+    ).post(values)
+  }
+}
+
+
 // root reducer
 const rootReducer = combineReducers(Object.assign({
   projectCategoriesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'projectCategoriesByGuid'),

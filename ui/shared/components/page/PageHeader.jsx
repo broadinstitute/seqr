@@ -9,6 +9,7 @@ import { NavLink } from 'react-router-dom'
 import { getUser, getFamiliesByGuid, getGenesById, getLocusListsByGuid } from 'redux/selectors'
 import { getProject } from 'pages/Project/selectors'
 import EditProjectButton from '../buttons/EditProjectButton'
+import CreateLocusListButton from '../buttons/CreateLocusListButton'
 import { snakecaseToTitlecase } from '../../utils/stringUtils'
 
 
@@ -50,6 +51,7 @@ const ENTITY_DETAILS = {
       user.is_staff ?
         <NavLinkNoActive key="case_review" to={`/project/${project.projectGuid}/case_review`}>Case Review<br /></NavLinkNoActive> : null,
     ],
+    button: <EditProjectButton />,
   } : null),
   gene_lists: (entityGuid, user, project, genesById, locusListsByGuid) => (
     (entityGuid && !locusListsByGuid[entityGuid]) ? false : {
@@ -57,6 +59,7 @@ const ENTITY_DETAILS = {
       entityLink: '/gene_lists',
       description: !entityGuid && 'This page shows all of the gene lists that are available in your account',
       originalPageLink: entityGuid ? `gene-lists/${locusListsByGuid[entityGuid].name.toLowerCase().replace(/ /g, '-')}` : 'gene-lists',
+      button: <CreateLocusListButton />,
     }
   ),
   gene_info: (entityGuid, user, project, genesById) => ({
@@ -73,7 +76,7 @@ const PageHeader = ({ user, project, familiesByGuid, genesById, locusListsByGuid
   if (!entityConfig) {
     return null
   }
-  const { title, description, entityLink, entityGuidLink, entityLinks, originalPageLink } = entityConfig
+  const { title, description, entityLink, entityGuidLink, entityLinks, originalPageLink, button } = entityConfig
 
   let originalPageLinkPath
   const BREADCRUMBS = {
@@ -182,7 +185,7 @@ const PageHeader = ({ user, project, familiesByGuid, genesById, locusListsByGuid
             {description}
           </div>
         }
-        {project && <EditProjectButton />}
+        {button}
       </Grid.Column>
       <Grid.Column width={3}>
         {entityLinks && <b>{entityLinks}</b>}

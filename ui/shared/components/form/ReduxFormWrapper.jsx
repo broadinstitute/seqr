@@ -25,6 +25,7 @@ const MessagePanel = styled(Message)`
 
 export const validators = {
   required: value => (value ? undefined : 'Required'),
+  requiredBoolean: value => ((value === true || value === false) ? undefined : 'Required'),
 }
 
 const renderField = (props) => {

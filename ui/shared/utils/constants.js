@@ -1,5 +1,8 @@
 import BaseFieldView from '../components/panel/view-fields/BaseFieldView'
 import OptionFieldView from '../components/panel/view-fields/OptionFieldView'
+import { Select } from '../components/form/Inputs'
+import { validators } from '../components/form/ReduxFormWrapper'
+
 
 // SAMPLES
 
@@ -137,3 +140,43 @@ export const CLINSIG_SEVERITY = {
   DFP: 0,
   DP: 0,
 }
+
+
+// LOCUS LISTS
+
+export const LOCUS_LIST_FIELDS = [
+  {
+    name: 'name',
+    label: 'List Name',
+    labelHelp: 'A descriptive name for this gene list',
+    validate: validators.required,
+    width: 3,
+    isEditable: true,
+  },
+  {
+    name: 'isPublic',
+    label: 'Public List',
+    labelHelp: 'Should other seqr users be able to use this gene list?',
+    options: [{ value: true, text: 'Yes' }, { value: false, text: 'No' }],
+    component: Select,
+    validate: validators.requiredBoolean,
+    fieldDisplay: isPublic => (isPublic ? 'Yes' : 'No'),
+    width: 2,
+    isEditable: true,
+  },
+  { name: 'numEntries', label: 'Genes', width: 1 },
+  {
+    name: 'description',
+    label: 'Description',
+    labelHelp: 'Some background on how this list is curated',
+    width: 9,
+    isEditable: true,
+  },
+  {
+    name: 'lastModifiedDate',
+    label: 'Last Updated',
+    width: 3,
+    fieldDisplay: lastModifiedDate => new Date(lastModifiedDate).toLocaleString('en-US', { year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric' }),
+  },
+  { name: 'createdBy', label: 'Curator', width: 3 },
+]
