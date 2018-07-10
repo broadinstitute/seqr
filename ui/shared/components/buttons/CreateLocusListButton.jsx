@@ -6,11 +6,11 @@ import { updateLocusList } from 'redux/rootReducer'
 import ReduxFormWrapper from '../form/ReduxFormWrapper'
 import Modal from '../modal/Modal'
 import ButtonLink from './ButtonLink'
-import { LOCUS_LIST_FIELDS } from '../../utils/constants'
+import { LOCUS_LIST_FIELDS, LOCUS_LIST_GENE_FIELD } from '../../utils/constants'
 
 const ID = 'createLocusList'
 
-const FIELDS = LOCUS_LIST_FIELDS.filter(field => field.isEditable).map(
+const FIELDS = LOCUS_LIST_FIELDS.concat([LOCUS_LIST_GENE_FIELD]).filter(field => field.isEditable).map(
   ({ isEditable, width, fieldDisplay, ...fieldProps }) => fieldProps,
 )
 

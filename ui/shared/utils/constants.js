@@ -1,3 +1,5 @@
+import { Form } from 'semantic-ui-react'
+
 import BaseFieldView from '../components/panel/view-fields/BaseFieldView'
 import OptionFieldView from '../components/panel/view-fields/OptionFieldView'
 import { Select } from '../components/form/Inputs'
@@ -180,3 +182,17 @@ export const LOCUS_LIST_FIELDS = [
   },
   { name: 'createdBy', label: 'Curator', width: 3 },
 ]
+
+export const LOCUS_LIST_GENE_FIELD = {
+  name: 'genes',
+  label: 'Genes',
+  fieldDisplay: () => null,
+  isEditable: true,
+  component: Form.TextArea,
+  rows: 12,
+  validate: value => ((value && value.filter(gene => gene.symbol).length > 0) ? undefined : 'Required'),
+  format: value => (value || []).map(gene => gene.symbol).join(', '),
+  normalize: (value, previousValue) => value.split(',').map(geneSymbol =>
+    ((previousValue || []).find(prevGene => prevGene.symbol === geneSymbol.trim()) || { symbol: geneSymbol.trim() }),
+  ),
+}

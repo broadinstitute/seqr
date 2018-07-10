@@ -11,16 +11,20 @@ import ShowGeneModal from 'shared/components/buttons/ShowGeneModal'
 import ExportTableButton from 'shared/components/buttons/export-table/ExportTableButton'
 import { compareObjects } from 'shared/utils/sortUtils'
 import { toSnakecase } from 'shared/utils/stringUtils'
-import { LOCUS_LIST_FIELDS } from 'shared/utils/constants'
+import { LOCUS_LIST_FIELDS, LOCUS_LIST_GENE_FIELD } from 'shared/utils/constants'
 
-const FIELDS = LOCUS_LIST_FIELDS.map(({ isEditable, width, fieldDisplay, ...fieldProps }) => ({
+const getFieldProps = ({ isEditable, width, fieldDisplay, ...fieldProps }) => ({
   field: fieldProps.name,
   fieldName: fieldProps.label,
   formFields: [fieldProps],
   width,
   fieldDisplay,
   isEditable,
-}))
+})
+
+const FIELDS = LOCUS_LIST_FIELDS.map(getFieldProps)
+
+const GENE_FIELD = getFieldProps(LOCUS_LIST_GENE_FIELD)
 
 const LocusListDetail = ({ locusList, load, loading, genesById, onSubmit, match }) => {
   const genes = (locusList.geneIds || []).map(geneId => genesById[geneId]).sort(compareObjects('symbol'))
@@ -32,25 +36,35 @@ const LocusListDetail = ({ locusList, load, loading, genesById, onSubmit, match 
       processRow: gene => ([gene.geneId, gene.symbol]),
     },
   }]
+  const baseFieldProps = {
+    idField: 'locusListGuid',
+    initialValues: { genes, ...locusList },
+    showEmptyValues: true,
+    isEditable: locusList.canEdit,
+    onSubmit,
+  }
   return (
     <div>
       <Grid>
         {FIELDS.map(({ isEditable, width, ...fieldProps }) =>
           <Grid.Column key={fieldProps.field} width={Math.max(width, 2)}>
             <BaseFieldView
-              idField="locusListGuid"
-              initialValues={locusList}
-              showEmptyValues
-              isEditable={locusList.canEdit && isEditable}
-              onSubmit={onSubmit}
-              modalTitle={`Edit ${fieldProps.fieldName} for ${locusList.name}`}
               {...fieldProps}
+              {...baseFieldProps}
+              isEditable={baseFieldProps.isEditable && isEditable}
+              modalTitle={`Edit ${fieldProps.fieldName} for ${locusList.name}`}
             />
           </Grid.Column>,
         )}
       </Grid>
       <Header size="medium" dividing>
-        Genes <ExportTableButton downloads={geneExportDownloads} buttonText="Download" float="right" fontWeight="300" fontSize=".75em" />
+        <BaseFieldView
+          {...GENE_FIELD}
+          {...baseFieldProps}
+          compact
+          modalTitle={`Edit Genes for ${locusList.name}`}
+        />
+        <ExportTableButton downloads={geneExportDownloads} buttonText="Download" float="right" fontWeight="300" fontSize=".75em" />
       </Header>
       <DataLoader contentId={match.params.locusListGuid} content={locusList.geneIds} loading={loading} load={load}>
         <Grid columns={12} divided="vertically">
