@@ -7,9 +7,9 @@ from django.views.decorators.csrf import csrf_exempt
 
 from seqr.models import LocusList
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
+from seqr.views.utils.gene_utils import get_genes
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_locus_lists, get_json_for_locus_list
-from xbrowse_server.mall import get_reference
 
 
 logger = logging.getLogger(__name__)
@@ -35,5 +35,5 @@ def locus_list_info(request, locus_list_guid):
     locus_list_json = get_json_for_locus_list(locus_list)
     return create_json_response({
         'locusListsByGuid': {locus_list_guid: locus_list_json},
-        'genesById': get_reference().get_genes(locus_list_json['geneIds'])
+        'genesById': get_genes(locus_list_json['geneIds'])
     })

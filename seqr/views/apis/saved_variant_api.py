@@ -8,6 +8,7 @@ from django.views.decorators.csrf import csrf_exempt
 from seqr.models import SavedVariant, VariantTagType, VariantTag, VariantNote, VariantFunctionalData, CAN_EDIT, CAN_VIEW
 from seqr.model_utils import create_seqr_model, delete_seqr_model, find_matching_xbrowse_model
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
+from seqr.views.utils.gene_utils import parse_gene_constraints
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variant, get_json_for_variant_tag, \
@@ -275,18 +276,7 @@ def _variant_details(variant_json, user):
             'class': extras.get('hgmd_class') if user.is_staff else None,
         },
         'genes': [{
-            'constraints': {
-                'lof': {
-                    'constraint': gene.get('lof_constraint'),
-                    'rank': gene.get('lof_constraint_rank') and gene['lof_constraint_rank'][0],
-                    'totalGenes': gene.get('lof_constraint_rank') and gene['lof_constraint_rank'][1],
-                },
-                'missense': {
-                    'constraint': gene.get('missense_constraint'),
-                    'rank': gene.get('missense_constraint_rank') and gene['missense_constraint_rank'][0],
-                    'totalGenes': gene.get('missense_constraint_rank') and gene['missense_constraint_rank'][1],
-                },
-            },
+            'constraints': parse_gene_constraints(gene),
             'diseaseGeneLists': gene.get('disease_gene_lists', []),
             'geneId': gene_id,
             'diseaseDbPheotypes': gene.get('disease_db_pheotypes', []),

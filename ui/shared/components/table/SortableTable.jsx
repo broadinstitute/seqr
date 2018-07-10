@@ -3,6 +3,8 @@ import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { Table } from 'semantic-ui-react'
 
+import { compareObjects } from '../../utils/sortUtils'
+
 const StyledSortableTable = styled(Table)`
   &.ui.basic.sortable.table thead th {
     background: transparent;
@@ -10,21 +12,6 @@ const StyledSortableTable = styled(Table)`
     overflow: initial;
   }
 `
-
-const compareObjects = field => (a, b) => {
-  let valA = a[field]
-  let valB = b[field]
-  if (typeof valA === 'string') { valA = valA.toLowerCase() }
-  if (typeof valB === 'string') { valB = valB.toLowerCase() }
-
-  if (valA < valB) {
-    return -1
-  }
-  else if (valA > valB) {
-    return 1
-  }
-  return 0
-}
 
 class SortableTable extends React.PureComponent {
 
