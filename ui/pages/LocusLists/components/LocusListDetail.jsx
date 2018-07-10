@@ -8,14 +8,22 @@ import { getLocusListsByGuid, getLocusListIsLoading, getGenesById } from 'redux/
 import DataLoader from 'shared/components/DataLoader'
 import BaseFieldView from 'shared/components/panel/view-fields/BaseFieldView'
 import ShowGeneModal from 'shared/components/buttons/ShowGeneModal'
-// import ExportTableButton from 'shared/components/buttons/export-table/ExportTableButton'
-// <ExportTableButton downloads={[]} />
+import ExportTableButton from 'shared/components/buttons/export-table/ExportTableButton'
 import { compareObjects } from 'shared/utils/sortUtils'
+import { toSnakecase } from 'shared/utils/stringUtils'
 
 import { PUBLIC_FIELDS } from '../constants'
 
 const LocusListDetail = ({ locusList, load, loading, genesById, match }) => {
   const genes = (locusList.geneIds || []).map(geneId => genesById[geneId]).sort(compareObjects('symbol'))
+  const geneExportDownloads = [{
+    name: 'Genes',
+    data: {
+      filename: toSnakecase(locusList.name),
+      rawData: genes,
+      processRow: gene => ([gene.geneId, gene.symbol]),
+    },
+  }]
   return (
     <div>
       {PUBLIC_FIELDS.map(({ field, fieldName, fieldDisplay }) =>
@@ -33,7 +41,9 @@ const LocusListDetail = ({ locusList, load, loading, genesById, match }) => {
           />
         </div>,
       )}
-      <Header size="medium" dividing>Genes</Header>
+      <Header size="medium" dividing>
+        Genes <ExportTableButton downloads={geneExportDownloads} buttonText="Download" float="right" fontWeight="300" fontSize=".75em" />
+      </Header>
       <DataLoader contentId={match.params.locusListGuid} content={locusList.geneIds} loading={loading} load={load}>
         <Grid columns={12} divided="vertically">
           {genes.map(gene =>
