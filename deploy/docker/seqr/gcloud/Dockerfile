@@ -81,7 +81,7 @@ COPY shared/config/*.py /seqr_settings/
 
 # install UI depedencies to allow ui builds on the dev server
 COPY shared/install_npm_packages.sh .
-RUN wget -N https://raw.githubusercontent.com/macarthur-lab/seqr/master/ui/package.json \
+RUN wget -N https://raw.githubusercontent.com/macarthur-lab/seqr/dev/ui/package.json \
    && alias node=nodejs \
    && ./install_npm_packages.sh
 
