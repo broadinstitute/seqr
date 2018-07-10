@@ -6,7 +6,7 @@ import { Header, Grid } from 'semantic-ui-react'
 import { loadLocusLists } from 'redux/rootReducer'
 import { getLocusListsByGuid, getLocusListIsLoading, getGenesById } from 'redux/selectors'
 import DataLoader from 'shared/components/DataLoader'
-import BaseFieldView from 'shared/components/panel/view-fields/BaseFieldView'
+import TextFieldView from 'shared/components/panel/view-fields/TextFieldView'
 import ShowGeneModal from 'shared/components/buttons/ShowGeneModal'
 import ExportTableButton from 'shared/components/buttons/export-table/ExportTableButton'
 import { compareObjects } from 'shared/utils/sortUtils'
@@ -26,21 +26,25 @@ const LocusListDetail = ({ locusList, load, loading, genesById, match }) => {
   }]
   return (
     <div>
-      {PUBLIC_FIELDS.map(({ field, fieldName, fieldDisplay }) =>
-        <div key={field}>
-          <BaseFieldView
-            field={field}
-            fieldName={fieldName}
-            fieldDisplay={fieldDisplay}
-            idField="locusListGuid"
-            initialValues={locusList}
-            compact
-            // isEditable: project.canEdit && field.canEdit,
-            // onSubmit: submitFunc,
-            // modalTitle: `${renderDetails.name} for Family ${family.displayName}`,
-          />
-        </div>,
-      )}
+      <Grid>
+        {PUBLIC_FIELDS.map(({ field, fieldName, format, width, isEditable, component, ...fieldProps }) =>
+          <Grid.Column key={field} width={Math.max(width, 2)}>
+            {
+              React.createElement(component || TextFieldView, {
+                field,
+                fieldName,
+                idField: 'locusListGuid',
+                initialValues: locusList,
+                showEmptyValues: true,
+                isEditable: locusList.canEdit && isEditable,
+                onSubmit: console.log,
+                modalTitle: `Edit ${fieldName} for ${locusList.name}`,
+                ...fieldProps,
+              })
+            }
+          </Grid.Column>,
+        )}
+      </Grid>
       <Header size="medium" dividing>
         Genes <ExportTableButton downloads={geneExportDownloads} buttonText="Download" float="right" fontWeight="300" fontSize=".75em" />
       </Header>

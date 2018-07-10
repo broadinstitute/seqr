@@ -356,7 +356,7 @@ def get_json_for_gene_note(note, user):
     return result
 
 
-def get_json_for_locus_lists(locus_lists, include_genes=False):
+def get_json_for_locus_lists(locus_lists, user, include_genes=False):
     """Returns a JSON representation of the given LocusLists.
 
     Args:
@@ -376,13 +376,14 @@ def get_json_for_locus_lists(locus_lists, include_genes=False):
         result.update({
             'locusListGuid': result.pop('guid'),
             'numEntries': gene_set.count() + locus_list.locuslistinterval_set.count(),
+            'canEdit': user == locus_list.created_by,
         })
         results.append(result)
 
     return results
 
 
-def get_json_for_locus_list(locus_list):
+def get_json_for_locus_list(locus_list, user):
     """Returns a JSON representation of the given LocusList.
 
     Args:
@@ -390,6 +391,6 @@ def get_json_for_locus_list(locus_list):
     Returns:
         dict: json object
     """
-    return get_json_for_locus_lists([locus_list], include_genes=True)[0]
+    return get_json_for_locus_lists([locus_list], user, include_genes=True)[0]
 
 

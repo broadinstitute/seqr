@@ -23,8 +23,6 @@ const FieldValue = styled.div`
   display: ${props => ((props.fieldName && !props.compact) ? 'block' : 'inline-block')};
 `
 
-const hasValue = val => val && (!Object.getOwnPropertyNames(val).includes('length') || val.length > 0)
-
 const BaseFieldView = (props) => {
   if (props.isVisible !== undefined && !props.isVisible) {
     return null
@@ -33,7 +31,8 @@ const BaseFieldView = (props) => {
     return null
   }
   const fieldValue = props.initialValues[props.field]
-  if (!props.isEditable && !hasValue(fieldValue) && !props.showEmptyValues) {
+  const hasValue = (fieldValue && (!Object.getOwnPropertyNames(fieldValue).includes('length') || fieldValue.length > 0)) || props.showEmptyValues
+  if (!props.isEditable && !hasValue) {
     return null
   }
   const modalId = props.isEditable ? `edit-${props.initialValues[props.idField] || 'new'}-${props.field}` : null
@@ -78,13 +77,13 @@ const BaseFieldView = (props) => {
     <span style={props.style || {}}>
       {props.isPrivate && <StaffOnlyIcon />}
       {props.fieldName && [
-        <b key="name">{props.fieldName}{hasValue(fieldValue) && ':'}<HorizontalSpacer width={10} /></b>,
+        <b key="name">{props.fieldName}{hasValue ? ':' : null}<HorizontalSpacer width={10} /></b>,
         ...buttons,
         props.compact && (buttons.some(b => b) ? <HorizontalSpacer width={10} key="hs" /> : null),
         !props.compact && <br key="br" />,
       ]}
       {
-        (props.showEmptyValues || hasValue(fieldValue)) && !props.hideValue &&
+        hasValue && !props.hideValue &&
         <FieldValue compact={props.compact} fieldName={props.fieldName}>
           {props.fieldDisplay(fieldValue, props.compact)}
         </FieldValue>
