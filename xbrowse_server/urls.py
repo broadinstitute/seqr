@@ -81,7 +81,7 @@ urlpatterns = [
     # Family views
     #
     url(r'^project/(?P<project_id>[\w.|-]+)/families$', xbrowse_server.base.views.family_views.families, name='families'),  # DEPRECATED
-    url(r'^project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w.|-]+)/?$', xbrowse_server.base.views.family_home, name='family_home'),  # DEPRECATED
+    url(r'^project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w.|-]+)/?$', xbrowse_server.base.views.family_home, name='family_home'),
     url(r'^project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w.|-]+)/mendelian-variant-search', xbrowse_server.base.views.mendelian_variant_search, name='mendelian_variant_search'),
     url(r'^project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w.|-]+)/edit$', xbrowse_server.base.views.edit_family, name='edit_family'),  # DEPRECATED
     url(r'^project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w.|-]+)/delete$', xbrowse_server.base.views.family_views.delete, name='delete_family'),  # DEPRECATED

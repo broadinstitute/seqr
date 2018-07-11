@@ -128,9 +128,9 @@ const Annotations = ({ variant }) => {
         </div>
       }
       <div>
-        <a target="_blank" href={`https://www.google.com/search?q=${mainTranscript.symbol}+${variations.join('+')}`}>google</a>
+        <a href={`https://www.google.com/search?q=${mainTranscript.symbol}+${variations.join('+')}`} target="_blank" rel="noopener noreferrer">google</a>
         <HorizontalSpacer width={5} />|<HorizontalSpacer width={5} />
-        <a target="_blank" href={`https://www.ncbi.nlm.nih.gov/pubmed?term=${mainTranscript.symbol} AND ( ${variations.join(' OR ')})`}>pubmed</a>
+        <a href={`https://www.ncbi.nlm.nih.gov/pubmed?term=${mainTranscript.symbol} AND ( ${variations.join(' OR ')})`} target="_blank" rel="noopener noreferrer">pubmed</a>
       </div>
     </div>
   )

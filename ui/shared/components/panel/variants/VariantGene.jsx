@@ -54,9 +54,9 @@ const VariantGene = ({ gene, project }) =>
     <ShowGeneModal gene={gene} fontWeight="bold" fontSize="1.5em" />
     <HorizontalSpacer width={10} />
     <GeneLinks>
-      <a href={`http://gnomad-beta.broadinstitute.org/gene/${gene.symbol}`} target="_blank">gnomAD</a>
+      <a href={`http://gnomad-beta.broadinstitute.org/gene/${gene.symbol}`} target="_blank" rel="noopener noreferrer">gnomAD</a>
       <HorizontalSpacer width={5} />|<HorizontalSpacer width={5} />
-      <a href={`/project/${project.deprecatedProjectId}/gene/${gene.geneId}`} target="_blank">Gene Search</a><br />
+      <a href={`/project/${project.deprecatedProjectId}/gene/${gene.geneId}`} target="_blank" rel="noopener noreferrer">Gene Search</a><br />
     </GeneLinks>
     <div>
       {gene.diseaseDbPheotypes.length > 0 &&
