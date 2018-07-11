@@ -22,8 +22,8 @@ FIELDS[0].format = locusList => <Link to={`/gene_lists/${locusList.locusListGuid
 export const PRIVATE_FIELDS = FIELDS.slice(0, FIELDS.length - 1).concat([{
   name: '',
   format: locusList => ([
-    <UpdateLocusListButton key="edit" size="small" locusList={locusList} />,
-    <DeleteLocusListButton key="delete" iconOnly size="small" locusList={locusList} />,
+    <UpdateLocusListButton key="edit" locusList={locusList} />,
+    <DeleteLocusListButton key="delete" iconOnly locusList={locusList} />,
   ]),
   width: 3,
 }])

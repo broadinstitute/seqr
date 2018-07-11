@@ -24,6 +24,29 @@ const REQUEST_GENE_LIST = 'REQUEST_GENE_LIST'
 const RECEIVE_GENE_LISTS = 'RECEIVE_GENE_LISTS'
 
 // action creators
+
+// A helper action that handles create, update and delete requests
+const updateEntity = (values, receiveDataAction, urlPath, idField, actionSuffix, secondaryReceiveAction) => {
+  return (dispatch) => {
+    let action = 'create'
+    if (values[idField]) {
+      urlPath = `${urlPath}/${values[idField]}`
+      action = values.delete ? 'delete' : 'update'
+    }
+
+    return new HttpRequestHelper(`${urlPath}/${action}${actionSuffix || ''}`,
+      (responseJson) => {
+        if (secondaryReceiveAction) { dispatch(secondaryReceiveAction(responseJson)) }
+        dispatch({ type: receiveDataAction, updatesById: responseJson })
+      },
+      (e) => {
+        throw new SubmissionError({ _error: [e.message] })
+      },
+    ).post(values)
+  }
+}
+
+
 export const fetchProjects = () => {
   return (dispatch) => {
     dispatch({ type: REQUEST_PROJECTS })
@@ -46,21 +69,8 @@ export const fetchProjects = () => {
  * projectField: A specific field to update (e.g. "categories"). Should be used for fields which have special server-side logic for updating
  */
 export const updateProject = (values) => {
-  return (dispatch) => {
-    const urlPath = values.projectGuid ? `/api/project/${values.projectGuid}` : '/api/project'
-    const projectField = values.projectField ? `_${values.projectField}` : ''
-    let action = 'create'
-    if (values.projectGuid) {
-      action = values.delete ? 'delete' : 'update'
-    }
-
-    return new HttpRequestHelper(`${urlPath}/${action}_project${projectField}`,
-      (responseJson) => {
-        dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
-      },
-      (e) => { throw new SubmissionError({ _error: [e.message] }) },
-    ).post(values)
-  }
+  const actionSuffix = values.projectField ? `_project_${values.projectField}` : '_project'
+  return updateEntity(values, RECEIVE_DATA, '/api/project', 'projectGuid', actionSuffix)
 }
 
 export const updateFamily = (values) => {
@@ -147,41 +157,11 @@ export const loadVariantTranscripts = (variantId) => {
 }
 
 export const updateGeneNote = (values) => {
-  return (dispatch) => {
-    let urlPath = `/api/gene_info/${values.geneId || values.gene_id}/note`
-    let action = 'create'
-    if (values.noteGuid) {
-      urlPath = `${urlPath}/${values.noteGuid}`
-      action = values.delete ? 'delete' : 'update'
-    }
-
-    return new HttpRequestHelper(`${urlPath}/${action}`,
-      (responseJson) => {
-        dispatch({ type: RECEIVE_GENES, updatesById: responseJson })
-      },
-      (e) => {
-        throw new SubmissionError({ _error: [e.message] })
-      },
-    ).post(values)
-  }
+  return updateEntity(values, RECEIVE_GENES, `/api/gene_info/${values.geneId || values.gene_id}/note`, 'noteGuid')
 }
 
 export const updateVariantNote = (values) => {
-  return (dispatch) => {
-    let urlPath = `/api/saved_variant/${values.variantId}/note`
-    let action = 'create'
-    if (values.noteGuid) {
-      urlPath = `${urlPath}/${values.noteGuid}`
-      action = values.delete ? 'delete' : 'update'
-    }
-
-    return new HttpRequestHelper(`${urlPath}/${action}`,
-      (responseJson) => {
-        dispatch({ type: RECEIVE_SAVED_VARIANTS, updatesById: responseJson })
-      },
-      (e) => { throw new SubmissionError({ _error: [e.message] }) },
-    ).post(values)
-  }
+  return updateEntity(values, RECEIVE_SAVED_VARIANTS, `/api/saved_variant/${values.variantId}/note`, 'noteGuid')
 }
 
 export const updateVariantTags = (values) => {
@@ -198,26 +178,7 @@ export const updateVariantTags = (values) => {
 }
 
 export const updateLocusList = (values) => {
-  // TODO
-  return (dispatch) => {
-    console.log(values)
-    // let urlPath = `/api/gene_info/${values.geneId || values.gene_id}/note`
-    let urlPath = '/foo'
-    let action = 'create'
-    if (values.noteGuid) {
-      urlPath = `${urlPath}/${values.noteGuid}`
-      action = values.delete ? 'delete' : 'update'
-    }
-
-    return new HttpRequestHelper(`${urlPath}/${action}`,
-      (responseJson) => {
-        dispatch({ type: RECEIVE_GENES, updatesById: responseJson })
-      },
-      (e) => {
-        throw new SubmissionError({ _error: [e.message] })
-      },
-    ).post(values)
-  }
+  return updateEntity(values, RECEIVE_GENE_LISTS, '/api/locus_lists', 'locusListGuid', null, responseJson => ({ type: RECEIVE_GENES, updatesById: responseJson.genesById || {} }))
 }
 
 
