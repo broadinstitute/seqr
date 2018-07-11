@@ -9,7 +9,7 @@ import { NavLink } from 'react-router-dom'
 import { getUser, getFamiliesByGuid, getGenesById, getLocusListsByGuid } from 'redux/selectors'
 import { getProject } from 'pages/Project/selectors'
 import EditProjectButton from '../buttons/EditProjectButton'
-import CreateLocusListButton from '../buttons/CreateLocusListButton'
+import { CreateLocusListButton, DeleteLocusListButton } from '../buttons/LocusListButtons'
 import { snakecaseToTitlecase } from '../../utils/stringUtils'
 
 
@@ -59,7 +59,7 @@ const ENTITY_DETAILS = {
       entityLink: '/gene_lists',
       description: !entityGuid && 'This page shows all of the gene lists that are available in your account',
       originalPageLink: entityGuid ? `gene-lists/${locusListsByGuid[entityGuid].name.toLowerCase().replace(/ /g, '-')}` : 'gene-lists',
-      button: <CreateLocusListButton />,
+      button: entityGuid ? <DeleteLocusListButton locusList={locusListsByGuid[entityGuid]} /> : <CreateLocusListButton />,
     }
   ),
   gene_info: (entityGuid, user, project, genesById) => ({

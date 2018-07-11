@@ -8,6 +8,7 @@ import { getUser } from 'redux/selectors'
 import StaffOnlyIcon from '../../icons/StaffOnlyIcon'
 import DispatchRequestButton from '../../buttons/DispatchRequestButton'
 import ButtonLink from '../../buttons/ButtonLink'
+import DeleteButton from '../../buttons/DeleteButton'
 import ReduxFormWrapper from '../../form/ReduxFormWrapper'
 import Modal from '../../modal/Modal'
 import { HorizontalSpacer } from '../../Spacers'
@@ -64,10 +65,10 @@ const BaseFieldView = (props) => {
       />
     ))
   const deleteButton = props.isDeletable && (
-    <DispatchRequestButton
+    <DeleteButton
       key="delete"
-      buttonContent={<Icon link size="small" name="trash" />}
-      onSubmit={() => props.onSubmit({ ...props.initialValues, delete: true })}
+      initialValues={props.initialValues}
+      onSubmit={props.onSubmit}
       confirmDialog={props.deleteConfirm}
     />
   )

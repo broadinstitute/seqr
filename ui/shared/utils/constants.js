@@ -186,6 +186,7 @@ export const LOCUS_LIST_FIELDS = [
 export const LOCUS_LIST_GENE_FIELD = {
   name: 'genes',
   label: 'Genes',
+  labelHelp: 'A comma-separated list of genes. Any invalid genes will be skipped',
   fieldDisplay: () => null,
   isEditable: true,
   component: Form.TextArea,
