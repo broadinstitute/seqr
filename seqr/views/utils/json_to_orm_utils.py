@@ -43,7 +43,7 @@ def update_model_from_json(model_obj, json, user=None, verbose=False, allow_unkn
 
     for json_key, value in json.items():
         orm_key = _to_snake_case(json_key)
-        if orm_key in (immutable_keys or []):
+        if orm_key in (immutable_keys or ['created_by', 'last_modified_date']):
             if allow_unknown_keys:
                 continue
             raise ValueError('Cannot edit field {}'.format(orm_key))

@@ -17,6 +17,11 @@ def get_genes(gene_ids):
     return {geneId: _gene_json(gene) for geneId, gene in genes.items()}
 
 
+def get_gene_symbols_to_gene_ids(gene_symbols):
+    reference = get_reference()
+    return {symbol: reference.get_gene_id_from_symbol(symbol) for symbol in gene_symbols}
+
+
 def parse_gene_constraints(gene):
     gene_tags = gene.get('tags', gene)
     return {

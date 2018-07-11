@@ -57,13 +57,19 @@ from seqr.views.pages.staff.staff_pages import \
     seqr_stats_page, \
     users_page
 
+from seqr.views.apis.locus_list_api import \
+    locus_lists, \
+    locus_list_info, \
+    create_locus_list_handler, \
+    update_locus_list_handler, \
+    delete_locus_list_handler
+
 from seqr.views.pages.staff.discovery_sheet import discovery_sheet
 from seqr.views.pages.staff.elasticsearch_status import elasticsearch_status
 
 from seqr.views.apis.awesomebar_api import awesomebar_autocomplete_handler
 from seqr.views.apis.auth_api import login_required_error, API_LOGIN_REQUIRED_URL
 from seqr.views.apis.igv_api import fetch_igv_track
-from seqr.views.apis.locus_list_api import locus_lists, locus_list_info
 from seqr.views.apis.project_api import create_project_handler, update_project_handler, delete_project_handler
 from seqr.views.apis.project_categories_api import update_project_categories_handler
 from seqr.views.utils.file_utils import save_temp_file
@@ -124,6 +130,9 @@ api_endpoints = {
 
     'locus_lists': locus_lists,
     'locus_lists/(?P<locus_list_guid>[^/]+)': locus_list_info,
+    'locus_lists/create': create_locus_list_handler,
+    'locus_lists/(?P<locus_list_guid>[^/]+)/update': update_locus_list_handler,
+    'locus_lists/(?P<locus_list_guid>[^/]+)/delete': delete_locus_list_handler,
 
     'awesomebar': awesomebar_autocomplete_handler,
 

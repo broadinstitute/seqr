@@ -16,7 +16,7 @@ const FIELDS = LOCUS_LIST_FIELDS.concat([LOCUS_LIST_GENE_FIELD]).filter(field =>
 
 const UpdateLocusList = ({ locusList, size, onSubmit }) =>
   <UpdateButton
-    modalTitle={`${locusList ? `Edit "${locusList.name}"` : 'Create A New'} Gene List`}
+    modalTitle="Edit Gene List"
     modalId={`editLocusList-${locusList.locusListGuid}`}
     onSubmit={onSubmit}
     initialValues={locusList}

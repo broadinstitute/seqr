@@ -66,9 +66,11 @@ SEQR_TO_XBROWSE_FIELD_MAPPING = {
     },
     "LocusList": {
         "created_by": "owner",
+        "last_modified_by": "last_updated",
     },
     "LocusListGene": {
         "locus_list": "gene_list",
+        "created_by": _DELETED_FIELD,
     },
     "GeneNote": {
         "created_by": "user",
@@ -180,6 +182,7 @@ def find_matching_xbrowse_model(seqr_model):
                 (Q(seqr_locus_list__isnull=True) &
                  Q(name=seqr_model.name) &
                  Q(description=seqr_model.description) &
+                 Q(owner=seqr_model.created_by) &
                  Q(is_public=seqr_model.is_public)))
         elif seqr_class_name == "LocusListGene":
             return BaseGeneListItem.objects.get(
@@ -210,6 +213,9 @@ def convert_seqr_kwargs_to_xbrowse_kwargs(seqr_model, **kwargs):
     if seqr_class_name == "Individual" and "family" in xbrowse_kwargs:
         xbrowse_kwargs["project"] = getattr(seqr_model, "family").project
 
+    if seqr_class_name == "LocusList" and 'name' in xbrowse_kwargs:
+        xbrowse_kwargs['slug'] = xbrowse_kwargs['name'].replace(' ', '-').lower()
+
     # handle foreign keys
     for key, value in xbrowse_kwargs.items():
         if _is_seqr_model(value):
@@ -229,8 +235,9 @@ def convert_seqr_kwargs_to_xbrowse_kwargs(seqr_model, **kwargs):
 
     # Explicitly add timestamps
     xbrowse_model_class = SEQR_TO_XBROWSE_CLASS_MAPPING.get(seqr_class_name)
-    if xbrowse_model_class and hasattr(xbrowse_model_class, 'date_saved') and 'date_saved' not in xbrowse_kwargs:
-        xbrowse_kwargs['date_saved'] = timezone.now()
+    for timestamp_key in ['date_saved', 'last_updated']:
+        if xbrowse_model_class and hasattr(xbrowse_model_class, timestamp_key) and timestamp_key not in xbrowse_kwargs:
+            xbrowse_kwargs[timestamp_key] = timezone.now()
 
     return xbrowse_kwargs
 

@@ -1,3 +1,4 @@
+import json
 import logging
 
 from django.core.exceptions import PermissionDenied
@@ -5,10 +6,12 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.views.decorators.csrf import csrf_exempt
 
-from seqr.models import LocusList
+from seqr.models import LocusList, LocusListGene
+from seqr.model_utils import create_seqr_model, delete_seqr_model
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
-from seqr.views.utils.gene_utils import get_genes
+from seqr.views.utils.gene_utils import get_genes, get_gene_symbols_to_gene_ids
 from seqr.views.utils.json_utils import create_json_response
+from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_locus_lists, get_json_for_locus_list
 
 
@@ -38,3 +41,77 @@ def locus_list_info(request, locus_list_guid):
         'locusListsByGuid': {locus_list_guid: locus_list_json},
         'genesById': get_genes(locus_list_json['geneIds'])
     })
+
+
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@csrf_exempt
+def create_locus_list_handler(request):
+    request_json = json.loads(request.body)
+
+    name = request_json.get('name')
+    if not name:
+        return create_json_response({}, status=400, reason="'Name' is required")
+
+    requested_genes = request_json.get('genes') or []
+    gene_symbols_to_ids = get_gene_symbols_to_gene_ids([gene.get('symbol') for gene in requested_genes])
+    invalid_gene_symbols = [symbol for symbol, gene_id in gene_symbols_to_ids.items() if not gene_id]
+    genes = get_genes([gene_id for gene_id in gene_symbols_to_ids.values() if gene_id])
+    if not genes:
+        return create_json_response({'invalidGeneSymbols': invalid_gene_symbols}, status=400, reason="Genes are required")
+
+    locus_list = create_seqr_model(
+        LocusList,
+        name=name,
+        description=request_json.get('description') or '',
+        is_public=request_json.get('isPublic') or False,
+        created_by=request.user,
+    )
+
+    for gene_id in genes.keys():
+        create_seqr_model(
+            LocusListGene,
+            locus_list=locus_list,
+            gene_id=gene_id,
+            created_by=request.user,
+        )
+
+    return create_json_response({
+        'locusListsByGuid': {locus_list.guid: get_json_for_locus_list(locus_list, request.user)},
+        'genesById': genes,
+        'invalidGeneSymbols': invalid_gene_symbols,
+    })
+
+
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@csrf_exempt
+def update_locus_list_handler(request, locus_list_guid):
+    locus_list = LocusList.objects.get(guid=locus_list_guid)
+    if not locus_list.created_by == request.user:
+        raise PermissionDenied('User does not have permission to edit locus list {}'.format(locus_list.name))
+
+    request_json = json.loads(request.body)
+    update_model_from_json(locus_list, request_json, allow_unknown_keys=True)
+
+    requested_genes = request_json.get('genes') or []
+    gene_symbols_to_ids = get_gene_symbols_to_gene_ids([gene.get('symbol') for gene in requested_genes if not gene.get('geneId')])
+    invalid_gene_symbols = [symbol for symbol, gene_id in gene_symbols_to_ids.items() if not gene_id]
+    genes = get_genes([gene_id for gene_id in gene_symbols_to_ids.values() if gene_id])
+
+    # TODO actually create and delete relevant gene items
+
+    return create_json_response({
+        'locusListsByGuid': {locus_list.guid: get_json_for_locus_list(locus_list, request.user)},
+        'genesById': genes,
+        'invalidGeneSymbols': invalid_gene_symbols,
+    })
+
+
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@csrf_exempt
+def delete_locus_list_handler(request, locus_list_guid):
+    locus_list = LocusList.objects.get(guid=locus_list_guid)
+    if not locus_list.created_by == request.user:
+        raise PermissionDenied('User does not have permission to delete locus list {}'.format(locus_list.name))
+
+    delete_seqr_model(locus_list)
+    return create_json_response({'locusListsByGuid': {locus_list_guid: None}})
