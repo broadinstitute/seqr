@@ -7,16 +7,10 @@ import { Icon } from 'semantic-ui-react'
 import { getUser } from 'redux/selectors'
 import StaffOnlyIcon from '../../icons/StaffOnlyIcon'
 import DispatchRequestButton from '../../buttons/DispatchRequestButton'
-import ButtonLink from '../../buttons/ButtonLink'
 import DeleteButton from '../../buttons/DeleteButton'
-import ReduxFormWrapper from '../../form/ReduxFormWrapper'
-import Modal from '../../modal/Modal'
+import UpdateButton from '../../buttons/UpdateButton'
 import { HorizontalSpacer } from '../../Spacers'
 
-const EditLabel = styled.span`
-  font-size: .9em;
-  padding-right: 5px;
-`
 const FieldValue = styled.div`
   padding-bottom: ${props => (props.compact ? 0 : '15px')}; 
   padding-left: ${props => (props.compact ? 0 : '22px')};
@@ -39,23 +33,18 @@ const BaseFieldView = (props) => {
   const modalId = props.isEditable ? `edit-${props.initialValues[props.idField] || 'new'}-${props.field}` : null
 
   const editButton = props.isEditable && (props.formFields ?
-    <Modal key="edit" title={props.modalTitle} modalName={modalId} trigger={
-      <ButtonLink>
-        {props.editLabel && <EditLabel>{props.editLabel}</EditLabel>}
-        <Icon link size="small" name={props.editIconName || 'write'} />
-      </ButtonLink>
-    }
-    >
-      <div style={props.modalStyle}>
-        <ReduxFormWrapper
-          onSubmit={props.onSubmit}
-          form={modalId}
-          initialValues={props.initialValues}
-          fields={props.formFields}
-          confirmCloseIfNotSaved
-        />
-      </div>
-    </Modal>
+    <UpdateButton
+      key="edit"
+      modalTitle={props.modalTitle}
+      modalId={modalId}
+      buttonText={props.editLabel}
+      editIconName={props.editIconName}
+      onSubmit={props.onSubmit}
+      initialValues={props.initialValues}
+      formFields={props.formFields}
+      modalStyle={props.modalStyle}
+      size="small"
+    />
     : (
       <DispatchRequestButton
         key="edit"
@@ -70,6 +59,7 @@ const BaseFieldView = (props) => {
       initialValues={props.initialValues}
       onSubmit={props.onSubmit}
       confirmDialog={props.deleteConfirm}
+      size="small"
     />
   )
   const buttons = [editButton, deleteButton]

@@ -1,13 +1,12 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import { Icon } from 'semantic-ui-react'
 
 import DispatchRequestButton from './DispatchRequestButton'
+import { IconButtonContent } from './UpdateButton'
 
-
-const DeleteButton = ({ initialValues, onSubmit, confirmDialog, buttonText }) =>
+const DeleteButton = ({ initialValues, onSubmit, confirmDialog, buttonText, size }) =>
   <DispatchRequestButton
-    buttonContent={<span><Icon link size={buttonText ? null : 'small'} name="trash" />{buttonText}</span>}
+    buttonContent={<IconButtonContent editIconName="trash" buttonText={buttonText} size={size} />}
     onSubmit={() => onSubmit({ ...initialValues, delete: true })}
     confirmDialog={confirmDialog}
   />
@@ -17,6 +16,7 @@ DeleteButton.propTypes = {
   confirmDialog: PropTypes.string,
   initialValues: PropTypes.object,
   buttonText: PropTypes.string,
+  size: PropTypes.string,
 }
 
 export default DeleteButton

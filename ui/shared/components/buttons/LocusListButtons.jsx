@@ -3,9 +3,8 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 
 import { updateLocusList } from 'redux/rootReducer'
-import ReduxFormWrapper from '../form/ReduxFormWrapper'
-import Modal from '../modal/Modal'
-import ButtonLink from './ButtonLink'
+
+import UpdateButton from './UpdateButton'
 import DeleteButton from './DeleteButton'
 import { LOCUS_LIST_FIELDS, LOCUS_LIST_GENE_FIELD } from '../../utils/constants'
 
@@ -16,14 +15,15 @@ const FIELDS = LOCUS_LIST_FIELDS.concat([LOCUS_LIST_GENE_FIELD]).filter(field =>
 )
 
 const CreateLocusList = ({ onSubmit }) =>
-  <Modal title="Create a New Gene List" modalName={ID} trigger={<ButtonLink>Create New Gene List</ButtonLink>}>
-    <ReduxFormWrapper
-      onSubmit={onSubmit}
-      form={ID}
-      fields={FIELDS}
-      confirmCloseIfNotSaved
-    />
-  </Modal>
+  <UpdateButton
+    modalTitle="Create a New Gene List"
+    modalId={ID}
+    buttonText="Create New Gene List"
+    editIconName="plus"
+    onSubmit={onSubmit}
+    // initialValues={props.initialValues}
+    formFields={FIELDS}
+  />
 
 CreateLocusList.propTypes = {
   onSubmit: PropTypes.func,
