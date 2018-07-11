@@ -3,15 +3,14 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Header, Grid } from 'semantic-ui-react'
 
-import { loadLocusLists, updateLocusList } from 'redux/rootReducer'
-import { getLocusListsByGuid, getLocusListIsLoading, getGenesById } from 'redux/selectors'
-import DataLoader from 'shared/components/DataLoader'
+import { updateLocusList } from 'redux/rootReducer'
+import { getLocusListsByGuid } from 'redux/selectors'
 import BaseFieldView from 'shared/components/panel/view-fields/BaseFieldView'
 import ShowGeneModal from 'shared/components/buttons/ShowGeneModal'
 import ExportTableButton from 'shared/components/buttons/export-table/ExportTableButton'
-import { compareObjects } from 'shared/utils/sortUtils'
 import { toSnakecase } from 'shared/utils/stringUtils'
 import { LOCUS_LIST_FIELDS, LOCUS_LIST_GENE_FIELD } from 'shared/utils/constants'
+import LocusListGeneLoader from './LocusListGeneLoader'
 
 const getFieldProps = ({ isEditable, width, fieldDisplay, ...fieldProps }) => ({
   field: fieldProps.name,
@@ -26,76 +25,82 @@ const FIELDS = LOCUS_LIST_FIELDS.map(getFieldProps)
 
 const GENE_FIELD = getFieldProps(LOCUS_LIST_GENE_FIELD)
 
-const LocusListDetail = ({ locusList, load, loading, genesById, onSubmit, match }) => {
-  const genes = (locusList.geneIds || []).map(geneId => genesById[geneId]).sort(compareObjects('symbol'))
+
+const GeneDetails = ({ locusList, onSubmit }) => {
   const geneExportDownloads = [{
     name: 'Genes',
     data: {
       filename: toSnakecase(locusList.name),
-      rawData: genes,
+      rawData: locusList.genes,
       processRow: gene => ([gene.geneId, gene.symbol]),
     },
   }]
-  const baseFieldProps = {
-    idField: 'locusListGuid',
-    initialValues: { genes, ...locusList },
-    showEmptyValues: true,
-    isEditable: locusList.canEdit,
-    onSubmit,
-  }
   return (
     <div>
-      <Grid>
-        {FIELDS.map(({ isEditable, width, ...fieldProps }) =>
-          <Grid.Column key={fieldProps.field} width={Math.max(width, 2)}>
-            <BaseFieldView
-              {...fieldProps}
-              {...baseFieldProps}
-              isEditable={baseFieldProps.isEditable && isEditable}
-              modalTitle={`Edit ${fieldProps.fieldName} for ${locusList.name}`}
-            />
-          </Grid.Column>,
-        )}
-      </Grid>
       <Header size="medium" dividing>
         <BaseFieldView
           {...GENE_FIELD}
-          {...baseFieldProps}
+          idField="locusListGuid"
+          initialValues={locusList}
+          onSubmit={onSubmit}
+          isEditable={locusList.canEdit}
           compact
           modalTitle={`Edit Genes for ${locusList.name}`}
         />
         <ExportTableButton downloads={geneExportDownloads} buttonText="Download" float="right" fontWeight="300" fontSize=".75em" />
       </Header>
-      <DataLoader contentId={match.params.locusListGuid} content={locusList.geneIds} loading={loading} load={load}>
-        <Grid columns={12} divided="vertically">
-          {genes.map(gene =>
-            <Grid.Column key={gene.geneId}><ShowGeneModal gene={gene} /></Grid.Column>,
-          )}
-        </Grid>
-      </DataLoader>
-      <Header size="medium" dividing>Intervals</Header>
-      {/* TODO */}
+      <Grid columns={12} divided="vertically">
+        {(locusList.genes || []).map(gene =>
+          <Grid.Column key={gene.geneId}><ShowGeneModal gene={gene} /></Grid.Column>,
+        )}
+      </Grid>
     </div>
   )
 }
 
+GeneDetails.propTypes = {
+  locusList: PropTypes.object,
+  onSubmit: PropTypes.func,
+  locusListGuid: PropTypes.string,
+  genes: PropTypes.array,
+}
+
+
+const LocusListDetail = ({ locusList, onSubmit, match }) =>
+  <div>
+    <Grid>
+      {FIELDS.map(({ isEditable, width, ...fieldProps }) =>
+        <Grid.Column key={fieldProps.field} width={Math.max(width, 2)}>
+          <BaseFieldView
+            {...fieldProps}
+            idField="locusListGuid"
+            initialValues={locusList}
+            onSubmit={onSubmit}
+            isEditable={locusList.canEdit && isEditable}
+            modalTitle={`Edit ${fieldProps.fieldName} for ${locusList.name}`}
+            showEmptyValues
+          />
+        </Grid.Column>,
+      )}
+    </Grid>
+    <LocusListGeneLoader locusListGuid={match.params.locusListGuid} locusList={locusList}>
+      <GeneDetails locusList={locusList} onSubmit={onSubmit} />
+    </LocusListGeneLoader>
+    <Header size="medium" dividing>Intervals</Header>
+    {/* TODO */}
+  </div>
+
 LocusListDetail.propTypes = {
   locusList: PropTypes.object,
-  load: PropTypes.func,
-  loading: PropTypes.bool,
   onSubmit: PropTypes.func,
-  genesById: PropTypes.object,
   match: PropTypes.object,
 }
 
 const mapStateToProps = (state, ownProps) => ({
   locusList: getLocusListsByGuid(state)[ownProps.match.params.locusListGuid] || {},
-  loading: getLocusListIsLoading(state),
-  genesById: getGenesById(state),
 })
 
 const mapDispatchToProps = {
-  load: loadLocusLists,
   onSubmit: updateLocusList,
 }
 

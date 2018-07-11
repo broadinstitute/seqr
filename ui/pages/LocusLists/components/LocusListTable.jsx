@@ -4,8 +4,8 @@ import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
 
 import { getLocusListsByGuid } from 'redux/selectors'
+import { UpdateLocusListButton, DeleteLocusListButton } from 'shared/components/buttons/LocusListButtons'
 import SortableTable from 'shared/components/table/SortableTable'
-
 import { LOCUS_LIST_FIELDS } from 'shared/utils/constants'
 
 const FIELDS = LOCUS_LIST_FIELDS.filter(field => field.name !== 'isPublic').map(
@@ -19,7 +19,14 @@ const FIELDS = LOCUS_LIST_FIELDS.filter(field => field.name !== 'isPublic').map(
 
 FIELDS[0].format = locusList => <Link to={`/gene_lists/${locusList.locusListGuid}`}>{locusList.name}</Link>
 
-export const PRIVATE_FIELDS = FIELDS.slice(0, FIELDS.length - 1).concat([{ name: '', content: '', width: 3 }])
+export const PRIVATE_FIELDS = FIELDS.slice(0, FIELDS.length - 1).concat([{
+  name: '',
+  format: locusList => ([
+    <UpdateLocusListButton key="edit" size="small" locusList={locusList} />,
+    <DeleteLocusListButton key="delete" iconOnly size="small" locusList={locusList} />,
+  ]),
+  width: 3,
+}])
 
 const LocusListTable = ({ locusListsByGuid, showPublic }) =>
   <SortableTable

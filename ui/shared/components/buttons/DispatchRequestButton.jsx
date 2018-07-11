@@ -3,6 +3,7 @@ import PropTypes from 'prop-types'
 import { Confirm } from 'semantic-ui-react'
 
 import RequestStatus from '../form/RequestStatus'
+import ButtonLink from './ButtonLink'
 
 
 class DispatchRequestButton extends React.Component {
@@ -16,7 +17,7 @@ class DispatchRequestButton extends React.Component {
     onSubmit: PropTypes.func.isRequired,
 
     /** Optional confirm dialog to show before submitting the request */
-    confirmDialog: PropTypes.string,
+    confirmDialog: PropTypes.oneOfType([PropTypes.string, PropTypes.node]),
 
     /** child componenets */
     children: PropTypes.node,
@@ -39,9 +40,7 @@ class DispatchRequestButton extends React.Component {
       <span>
         {this.props.children ?
           React.cloneElement(this.props.children, { onChange: this.handleButtonClick }) :
-          <a role="button" onClick={this.handleButtonClick} tabIndex="0">
-            {this.props.buttonContent}
-          </a>
+          <ButtonLink onClick={this.handleButtonClick}>{this.props.buttonContent}</ButtonLink>
         }
         <RequestStatus status={this.state.requestStatus} errorMessage={this.state.requestErrorMessage} />
         <Confirm

@@ -24,13 +24,13 @@ IconButtonContent.propTypes = {
   size: PropTypes.string,
 }
 
-const UpdateButton = ({ onSubmit, initialValues, formFields, modalTitle, modalId, buttonText, editIconName, size, modalStyle }) =>
+const UpdateButton = ({ onSubmit, initialValues, formFields, modalTitle, modalId, buttonText, editIconName, size, formContainer = <div /> }) =>
   <Modal
     title={modalTitle}
     modalName={modalId}
     trigger={<ButtonLink><IconButtonContent buttonText={buttonText} editIconName={editIconName} size={size} /></ButtonLink>}
   >
-    <div style={modalStyle}>
+    {React.cloneElement(formContainer, { children: (
       <ReduxFormWrapper
         onSubmit={onSubmit}
         form={modalId}
@@ -38,7 +38,7 @@ const UpdateButton = ({ onSubmit, initialValues, formFields, modalTitle, modalId
         fields={formFields}
         confirmCloseIfNotSaved
       />
-    </div>
+    ) }) }
   </Modal>
 
 UpdateButton.propTypes = {
@@ -49,7 +49,7 @@ UpdateButton.propTypes = {
   initialValues: PropTypes.object,
   buttonText: PropTypes.string,
   editIconName: PropTypes.string,
-  modalStyle: PropTypes.object,
+  formContainer: PropTypes.node,
   size: PropTypes.string,
 }
 

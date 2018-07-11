@@ -4,24 +4,41 @@ import { connect } from 'react-redux'
 
 import { updateLocusList } from 'redux/rootReducer'
 
+import LocusListGeneLoader from 'pages/LocusLists/components/LocusListGeneLoader'
 import UpdateButton from './UpdateButton'
 import DeleteButton from './DeleteButton'
 import { LOCUS_LIST_FIELDS, LOCUS_LIST_GENE_FIELD } from '../../utils/constants'
 
-const ID = 'createLocusList'
 
 const FIELDS = LOCUS_LIST_FIELDS.concat([LOCUS_LIST_GENE_FIELD]).filter(field => field.isEditable).map(
   ({ isEditable, width, fieldDisplay, ...fieldProps }) => fieldProps,
 )
 
+const UpdateLocusList = ({ locusList, size, onSubmit }) =>
+  <UpdateButton
+    modalTitle={`${locusList ? `Edit "${locusList.name}"` : 'Create A New'} Gene List`}
+    modalId={`editLocusList-${locusList.locusListGuid}`}
+    onSubmit={onSubmit}
+    initialValues={locusList}
+    formFields={FIELDS}
+    formContainer={<LocusListGeneLoader locusList={locusList} />}
+    size={size}
+  />
+
+
+UpdateLocusList.propTypes = {
+  onSubmit: PropTypes.func,
+  locusList: PropTypes.object,
+  size: PropTypes.string,
+}
+
 const CreateLocusList = ({ onSubmit }) =>
   <UpdateButton
     modalTitle="Create a New Gene List"
-    modalId={ID}
+    modalId="createLocusList"
     buttonText="Create New Gene List"
     editIconName="plus"
     onSubmit={onSubmit}
-    // initialValues={props.initialValues}
     formFields={FIELDS}
   />
 
@@ -29,17 +46,20 @@ CreateLocusList.propTypes = {
   onSubmit: PropTypes.func,
 }
 
-const DeleteLocusList = ({ locusList, onSubmit }) =>
+const DeleteLocusList = ({ locusList, onSubmit, size, iconOnly }) =>
   <DeleteButton
     initialValues={locusList}
     onSubmit={onSubmit}
     confirmDialog={<div className="content">Are you sure you want to delete <b>{locusList.name}</b></div>}
-    buttonText="Delete Gene List"
+    buttonText={iconOnly ? null : 'Delete Gene List'}
+    size={size}
   />
 
 DeleteLocusList.propTypes = {
   onSubmit: PropTypes.func,
   locusList: PropTypes.object,
+  iconOnly: PropTypes.bool,
+  size: PropTypes.string,
 }
 
 const mapDispatchToProps = {
@@ -47,5 +67,6 @@ const mapDispatchToProps = {
 }
 
 export const CreateLocusListButton = connect(null, mapDispatchToProps)(CreateLocusList)
+export const UpdateLocusListButton = connect(null, mapDispatchToProps)(UpdateLocusList)
 export const DeleteLocusListButton = connect(null, mapDispatchToProps)(DeleteLocusList)
 

@@ -42,7 +42,7 @@ const BaseFieldView = (props) => {
       onSubmit={props.onSubmit}
       initialValues={props.initialValues}
       formFields={props.formFields}
-      modalStyle={props.modalStyle}
+      formContainer={<div style={props.modalStyle} />}
       size="small"
     />
     : (
