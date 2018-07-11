@@ -142,8 +142,9 @@ def family_home(request, project_id, family_id):
             'analysis_status_desc_and_icon': analysis_status_desc_and_icon,
             'analysis_status_json': analysis_status_json,
             'exported_to_matchmaker':exported_to_matchmaker,
-            'new_page_url': '/project/{0}/family_page/{1}'.format(
-                family.seqr_family.project.guid, family.seqr_family.guid) if family.seqr_family else None,
+            #  TODO add matchmaker integration info to new page before depracating
+            # 'new_page_url': '/project/{0}/family_page/{1}'.format(
+            #     family.seqr_family.project.guid, family.seqr_family.guid) if family.seqr_family else None,
         })
 
 
