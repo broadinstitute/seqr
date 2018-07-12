@@ -69,7 +69,7 @@ RUN wget -N https://raw.githubusercontent.com/macarthur-lab/seqr/master/requirem
 # install UI depedencies
 COPY shared/install_npm_packages.sh .
 RUN wget -N https://raw.githubusercontent.com/macarthur-lab/seqr/master/ui/package.json \
-   && alias node=nodejs
+   && alias node=nodejs \
    && ./install_npm_packages.sh \
    && npm install -g npm-check-updates
 

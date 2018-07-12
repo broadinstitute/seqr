@@ -80,10 +80,11 @@ RUN pip install --upgrade pip gunicorn \
 COPY shared/config/*.py /seqr_settings/
 
 # install UI depedencies to allow ui builds on the dev server
-COPY shared/install_npm_packages.sh .
-RUN wget -N https://raw.githubusercontent.com/macarthur-lab/seqr/master/ui/package.json \
-   && alias node=nodejs \
-   && ./install_npm_packages.sh
+#COPY shared/install_npm_packages.sh .
+#RUN wget -N https://raw.githubusercontent.com/macarthur-lab/seqr/dev/ui/package.json \
+#   && alias node=nodejs \
+#   && ./install_npm_packages.sh \
+#   && npm install -g npm-check-updates
 
 ARG SEQR_SERVICE_PORT
 ENV SEQR_SERVICE_PORT=$SEQR_SERVICE_PORT
