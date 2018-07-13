@@ -19,7 +19,7 @@ from seqr.models import Project as SeqrProject, Family as SeqrFamily, Individual
 from django.contrib.auth.models import User
 from xbrowse_server.base.models import UserProfile
 from xbrowse_server.base.models import Project as BaseProject, Family as BaseFamily, Individual as BaseIndividual, \
-    VariantTag as BaseVariantTag, ProjectTag as BaseProjectTag
+    VariantTag as BaseVariantTag, ProjectTag as BaseProjectTag, VCFFile
 from xbrowse_server.gene_lists.models import GeneList
 
 annotator = datastore = None
@@ -83,6 +83,7 @@ user_ns = {
     'BaseUser': User,
     'UserProfile': UserProfile,
     'GeneList': GeneList,
+    'VCFFile': VCFFile,
 }
 
 import IPython
