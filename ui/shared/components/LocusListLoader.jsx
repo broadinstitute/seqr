@@ -3,12 +3,24 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 
 import { loadLocusLists } from 'redux/rootReducer'
-import { getLocusListIsLoading, getGenesById } from 'redux/selectors'
-import DataLoader from 'shared/components/DataLoader'
-import { compareObjects } from 'shared/utils/sortUtils'
+import { getLocusListIsLoading, getLocusListsByGuid, getGenesById } from 'redux/selectors'
+import DataLoader from './DataLoader'
+import { compareObjects } from '../utils/sortUtils'
+
+const BaseLocusListsLoader = ({ locusListsByGuid, loading, load, children }) =>
+  <DataLoader content={locusListsByGuid} loading={loading} load={load}>
+    {children}
+  </DataLoader>
+
+BaseLocusListsLoader.propTypes = {
+  load: PropTypes.func,
+  loading: PropTypes.bool,
+  locusListsByGuid: PropTypes.object,
+  children: PropTypes.node,
+}
 
 
-const LocusListGeneLoader = ({ locusListGuid, locusList, genesById, loading, load, children }) => {
+const BaseLocusListGeneLoader = ({ locusListGuid, locusList, genesById, loading, load, children }) => {
   locusList.genes = (locusList.geneIds || []).map(geneId => genesById[geneId]).sort(compareObjects('symbol'))
   return (
     <DataLoader contentId={locusListGuid || locusList.locusListGuid} content={locusList.geneIds} loading={loading} load={load}>
@@ -17,7 +29,7 @@ const LocusListGeneLoader = ({ locusListGuid, locusList, genesById, loading, loa
   )
 }
 
-LocusListGeneLoader.propTypes = {
+BaseLocusListGeneLoader.propTypes = {
   locusList: PropTypes.object,
   load: PropTypes.func,
   loading: PropTypes.bool,
@@ -29,6 +41,7 @@ LocusListGeneLoader.propTypes = {
 const mapStateToProps = state => ({
   loading: getLocusListIsLoading(state),
   genesById: getGenesById(state),
+  locusListsByGuid: getLocusListsByGuid(state),
 })
 
 const mapDispatchToProps = (dispatch, ownProps) => {
@@ -39,4 +52,5 @@ const mapDispatchToProps = (dispatch, ownProps) => {
   }
 }
 
-export default connect(mapStateToProps, mapDispatchToProps)(LocusListGeneLoader)
+export const LocusListsLoader = connect(mapStateToProps, mapDispatchToProps)(BaseLocusListsLoader)
+export const LocusListGeneLoader = connect(mapStateToProps, mapDispatchToProps)(BaseLocusListGeneLoader)

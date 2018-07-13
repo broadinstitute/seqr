@@ -12,6 +12,8 @@ const StyledSortableTable = styled(Table)`
     overflow: initial;
   }
 `
+const ASCENDING = 'ascending'
+const DESCENDING = 'descending'
 
 class SortableTable extends React.PureComponent {
 
@@ -26,32 +28,34 @@ class SortableTable extends React.PureComponent {
     super(props)
 
     this.state = {
-      sortedData: props.defaultSortColumn ? props.data.sort(compareObjects(props.defaultSortColumn)) : props.data,
       column: props.defaultSortColumn,
       direction: 'ascending',
     }
   }
 
   handleSort = clickedColumn => () => {
-    const { column, direction, sortedData } = this.state
+    const { column, direction } = this.state
 
     if (column !== clickedColumn) {
       this.setState({
         column: clickedColumn,
-        sortedData: sortedData.sort(compareObjects(clickedColumn)),
-        direction: 'ascending',
+        direction: ASCENDING,
       })
     } else {
       this.setState({
-        sortedData: sortedData.reverse(),
-        direction: direction === 'ascending' ? 'descending' : 'ascending',
+        direction: direction === ASCENDING ? DESCENDING : ASCENDING,
       })
     }
   }
 
   render() {
     const { data, defaultSortColumn, idField, columns, ...tableProps } = this.props
-    const { column, direction, sortedData } = this.state
+    const { column, direction } = this.state
+
+    let sortedData = data.sort(compareObjects(column))
+    if (direction === DESCENDING) {
+      sortedData = sortedData.reverse()
+    }
 
     return (
       <StyledSortableTable sortable {...tableProps}>

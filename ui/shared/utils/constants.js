@@ -146,6 +146,10 @@ export const CLINSIG_SEVERITY = {
 
 // LOCUS LISTS
 
+export const LOCUS_LIST_IS_PUBLIC_FIELD_NAME = 'isPublic'
+export const LOCUS_LIST_LAST_MODIFIED_FIELD_NAME = 'lastModifiedDate'
+export const LOCUS_LIST_CURATOR_FIELD_NAME = 'createdBy'
+
 export const LOCUS_LIST_FIELDS = [
   {
     name: 'name',
@@ -156,7 +160,7 @@ export const LOCUS_LIST_FIELDS = [
     isEditable: true,
   },
   {
-    name: 'isPublic',
+    name: LOCUS_LIST_IS_PUBLIC_FIELD_NAME,
     label: 'Public List',
     labelHelp: 'Should other seqr users be able to use this gene list?',
     options: [{ value: true, text: 'Yes' }, { value: false, text: 'No' }],
@@ -175,12 +179,12 @@ export const LOCUS_LIST_FIELDS = [
     isEditable: true,
   },
   {
-    name: 'lastModifiedDate',
+    name: LOCUS_LIST_LAST_MODIFIED_FIELD_NAME,
     label: 'Last Updated',
     width: 3,
     fieldDisplay: lastModifiedDate => new Date(lastModifiedDate).toLocaleString('en-US', { year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric' }),
   },
-  { name: 'createdBy', label: 'Curator', width: 3 },
+  { name: LOCUS_LIST_CURATOR_FIELD_NAME, label: 'Curator', width: 3 },
 ]
 
 export const LOCUS_LIST_GENE_FIELD = {

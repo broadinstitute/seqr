@@ -10,7 +10,7 @@ import ShowGeneModal from '../../buttons/ShowGeneModal'
 import ExportTableButton from '../../buttons/export-table/ExportTableButton'
 import { toSnakecase } from '../../../utils/stringUtils'
 import { LOCUS_LIST_GENE_FIELD } from '../../../utils/constants'
-import LocusListGeneLoader from './LocusListGeneLoader'
+import { LocusListGeneLoader } from '../../LocusListLoader'
 
 const getFieldProps = ({ isEditable, width, fieldDisplay, ...fieldProps }) => ({
   field: fieldProps.name,

@@ -4,7 +4,7 @@ import { connect } from 'react-redux'
 
 import { updateLocusList } from 'redux/rootReducer'
 
-import LocusListGeneLoader from '../panel/genes/LocusListGeneLoader'
+import { LocusListGeneLoader } from '../LocusListLoader'
 import UpdateButton from './UpdateButton'
 import DeleteButton from './DeleteButton'
 import { LOCUS_LIST_FIELDS, LOCUS_LIST_GENE_FIELD } from '../../utils/constants'

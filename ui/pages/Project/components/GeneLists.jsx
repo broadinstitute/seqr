@@ -4,10 +4,16 @@ import styled from 'styled-components'
 import { Popup, Icon } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 
+import { LocusListsLoader } from 'shared/components/LocusListLoader'
 import LocusListGeneDetail from 'shared/components/panel/genes/LocusListGeneDetail'
+import LocusListTables from 'shared/components/table/LocusListTables'
+import { CreateLocusListButton } from 'shared/components/buttons/LocusListButtons'
 import ButtonLink from 'shared/components/buttons/ButtonLink'
 import Modal from 'shared/components/modal/Modal'
-import { HorizontalSpacer } from 'shared/components/Spacers'
+import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
+import {
+  LOCUS_LIST_IS_PUBLIC_FIELD_NAME, LOCUS_LIST_LAST_MODIFIED_FIELD_NAME, LOCUS_LIST_CURATOR_FIELD_NAME,
+} from 'shared/utils/constants'
 import { getProject } from '../selectors'
 
 const ItemContainer = styled.div`
@@ -20,6 +26,12 @@ const HelpIcon = styled(Icon)`
   margin-left: 10px;
 `
 
+const OMIT_LOCUS_LIST_FIELDS = [
+  LOCUS_LIST_IS_PUBLIC_FIELD_NAME,
+  LOCUS_LIST_LAST_MODIFIED_FIELD_NAME,
+  LOCUS_LIST_CURATOR_FIELD_NAME,
+]
+
 const GeneLists = props => (
   <div>
     {
@@ -30,7 +42,7 @@ const GeneLists = props => (
           <HorizontalSpacer width={10} />
           <Modal
             title={`${locusList.name} Gene List`}
-            modalName={`${locusList.name}-genes`}
+            modalName={`${props.project.projectGuid}-${locusList.name}-genes`}
             trigger={<i><ButtonLink>{`${locusList.numEntries} entries`}</ButtonLink></i>}
             size="large"
           >
@@ -47,6 +59,20 @@ const GeneLists = props => (
           }
         </ItemContainer>),
       )
+    }
+    <VerticalSpacer height={15} />
+    {props.project.canEdit &&
+      <Modal
+        title="Add Gene List"
+        modalName={`${props.project.projectGuid}-add-gene-list`}
+        trigger={<ButtonLink>Add Gene List</ButtonLink>}
+        size="large"
+      >
+        Add an existing Gene List to {props.project.name} or <CreateLocusListButton />
+        <LocusListsLoader>
+          <LocusListTables isEditable={false} showLinks={false} omitFields={OMIT_LOCUS_LIST_FIELDS} />
+        </LocusListsLoader>
+      </Modal>
     }
   </div>
 )
