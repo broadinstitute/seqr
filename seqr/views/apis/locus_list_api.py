@@ -17,6 +17,8 @@ from seqr.views.utils.orm_to_json_utils import get_json_for_locus_lists, get_jso
 
 logger = logging.getLogger(__name__)
 
+# TODO gene intervals
+
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
@@ -93,15 +95,25 @@ def update_locus_list_handler(request, locus_list_guid):
     update_model_from_json(locus_list, request_json, allow_unknown_keys=True)
 
     requested_genes = request_json.get('genes') or []
+    existing_gene_ids = [gene.get('geneId') for gene in requested_genes if gene.get('geneId')]
     gene_symbols_to_ids = get_gene_symbols_to_gene_ids([gene.get('symbol') for gene in requested_genes if not gene.get('geneId')])
     invalid_gene_symbols = [symbol for symbol, gene_id in gene_symbols_to_ids.items() if not gene_id]
-    genes = get_genes([gene_id for gene_id in gene_symbols_to_ids.values() if gene_id])
+    new_gene_ids = [gene_id for gene_id in gene_symbols_to_ids.values() if gene_id]
 
-    # TODO actually create and delete relevant gene items
+    for locus_list_gene in locus_list.locuslistgene_set.exclude(gene_id__in=existing_gene_ids):
+        delete_seqr_model(locus_list_gene)
+
+    for gene_id in new_gene_ids:
+        create_seqr_model(
+            LocusListGene,
+            locus_list=locus_list,
+            gene_id=gene_id,
+            created_by=request.user,
+        )
 
     return create_json_response({
         'locusListsByGuid': {locus_list.guid: get_json_for_locus_list(locus_list, request.user)},
-        'genesById': genes,
+        'genesById': get_genes(new_gene_ids),
         'invalidGeneSymbols': invalid_gene_symbols,
     })
 

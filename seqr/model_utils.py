@@ -187,7 +187,7 @@ def find_matching_xbrowse_model(seqr_model):
         elif seqr_class_name == "LocusListGene":
             return BaseGeneListItem.objects.get(
                 gene_list=find_matching_xbrowse_model(seqr_model.locus_list),
-                description=seqr_model.description,
+                description=seqr_model.description or '',
                 gene_id=seqr_model.gene_id)
         elif seqr_class_name == "GeneNote":
             return BaseGeneNote.objects.get(
