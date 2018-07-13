@@ -4,11 +4,12 @@ import styled from 'styled-components'
 import { Popup, Icon, Button, Divider } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 
-import { setModalConfirm } from 'redux/utils/modalReducer'
+import { setModalConfirm, closeModal } from 'redux/utils/modalReducer'
 import { LocusListsLoader } from 'shared/components/LocusListLoader'
 import LocusListGeneDetail from 'shared/components/panel/genes/LocusListGeneDetail'
 import LocusListTables from 'shared/components/table/LocusListTables'
 import { CreateLocusListButton } from 'shared/components/buttons/LocusListButtons'
+import DispatchRequestButton from 'shared/components/buttons/DispatchRequestButton'
 import ButtonLink from 'shared/components/buttons/ButtonLink'
 import Modal from 'shared/components/modal/Modal'
 import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
@@ -40,6 +41,7 @@ class BaseAddLocusListModal extends React.PureComponent {
     project: PropTypes.object,
     updateLocusLists: PropTypes.func,
     setModalConfirm: PropTypes.func,
+    closeModal: PropTypes.func,
   }
 
   constructor(props) {
@@ -65,9 +67,14 @@ class BaseAddLocusListModal extends React.PureComponent {
   }
 
   submit = () => {
-    this.props.updateLocusLists({
+    return this.props.updateLocusLists({
       locusListGuids: Object.keys(this.state.selected).filter(locusListGuid => this.state.selected[locusListGuid]),
     })
+  }
+
+  closeModal = () => {
+    this.props.setModalConfirm(this.modalName, null)
+    this.props.closeModal(this.modalName)
   }
 
   render() {
@@ -87,7 +94,9 @@ class BaseAddLocusListModal extends React.PureComponent {
             selectRows={this.selectList}
           />
           <Divider />
-          <Button content="Submit" primary onClick={this.submit} />
+          <DispatchRequestButton onSubmit={this.submit} onSuccess={this.closeModal}>
+            <Button content="Submit" primary />
+          </DispatchRequestButton>
         </LocusListsLoader>
       </Modal>
     )
@@ -95,7 +104,7 @@ class BaseAddLocusListModal extends React.PureComponent {
 }
 
 const mapDispatchToProps = {
-  setModalConfirm, updateLocusLists,
+  setModalConfirm, closeModal, updateLocusLists,
 }
 
 const AddLocusListModal = connect(null, mapDispatchToProps)(BaseAddLocusListModal)

@@ -22,6 +22,8 @@ class DispatchRequestButton extends React.Component {
     /** child componenets */
     children: PropTypes.node,
 
+    /** Optional callback when request succeeds **/
+    onSuccess: PropTypes.func,
   }
 
   constructor(props) {
@@ -39,7 +41,7 @@ class DispatchRequestButton extends React.Component {
     return (
       <span>
         {this.props.children ?
-          React.cloneElement(this.props.children, { onChange: this.handleButtonClick }) :
+          React.cloneElement(this.props.children, { onChange: this.handleButtonClick, onClick: this.handleButtonClick }) :
           <ButtonLink onClick={this.handleButtonClick}>{this.props.buttonContent}</ButtonLink>
         }
         <RequestStatus status={this.state.requestStatus} errorMessage={this.state.requestErrorMessage} />
@@ -77,6 +79,9 @@ class DispatchRequestButton extends React.Component {
 
   handleRequestSuccess = () => {
     this.setState({ requestStatus: RequestStatus.SUCCEEDED })
+    if (this.props.onSuccess) {
+      this.props.onSuccess()
+    }
   }
 
   handleRequestError = (error) => {

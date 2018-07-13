@@ -62,7 +62,9 @@ from seqr.views.apis.locus_list_api import \
     locus_list_info, \
     create_locus_list_handler, \
     update_locus_list_handler, \
-    delete_locus_list_handler
+    delete_locus_list_handler, \
+    add_project_locus_lists, \
+    delete_project_locus_lists
 
 from seqr.views.pages.staff.discovery_sheet import discovery_sheet
 from seqr.views.pages.staff.elasticsearch_status import elasticsearch_status
@@ -133,6 +135,8 @@ api_endpoints = {
     'locus_lists/create': create_locus_list_handler,
     'locus_lists/(?P<locus_list_guid>[^/]+)/update': update_locus_list_handler,
     'locus_lists/(?P<locus_list_guid>[^/]+)/delete': delete_locus_list_handler,
+    'project/(?P<project_guid>[^/]+)/add_locus_lists': add_project_locus_lists,
+    'project/(?P<project_guid>[^/]+)/delete_locus_lists': delete_project_locus_lists,
 
     'awesomebar': awesomebar_autocomplete_handler,
 

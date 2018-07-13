@@ -153,10 +153,11 @@ export const addDataset = (values) => {
 
 export const updateLocusLists = (values) => {
   return (dispatch, getState) => {
+    const projectGuid = getState().currentProjectGuid
     const action = values.delete ? 'delete' : 'add'
-    return new HttpRequestHelper(`/api/project/${getState().currentProjectGuid}/${action}_locus_lists`,
+    return new HttpRequestHelper(`/api/project/${projectGuid}/${action}_locus_lists`,
       (responseJson) => {
-        dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+        dispatch({ type: RECEIVE_DATA, updatesById: { projectsByGuid: { [projectGuid]: responseJson } } })
       },
       (e) => { throw new SubmissionError({ _error: [e.message] }) },
     ).post(values)

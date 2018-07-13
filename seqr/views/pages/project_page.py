@@ -6,19 +6,18 @@ import itertools
 import logging
 import json
 
-from guardian.shortcuts import get_objects_for_group
 from django.contrib.auth.decorators import login_required
 from django.db import connection
 from django.db.models import Q, Count
 
-from seqr.models import Individual, _slugify, CAN_VIEW, LocusList, VariantTagType, VariantTag, VariantFunctionalData
+from seqr.models import Individual, _slugify, VariantTagType, VariantTag, VariantFunctionalData
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.individual_api import export_individuals
+from seqr.views.apis.locus_list_api import get_sorted_project_locus_lists
 from seqr.views.utils.family_info_utils import retrieve_multi_family_analysed_by
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import \
-    _get_json_for_project, _get_json_for_sample, _get_json_for_families, _get_json_for_individuals, \
-    get_json_for_saved_variant, get_json_for_locus_lists
+    _get_json_for_project, _get_json_for_sample, _get_json_for_families, _get_json_for_individuals, get_json_for_saved_variant
 
 
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions
@@ -57,7 +56,7 @@ def project_page_data(request, project_guid):
 
     project_json = _get_json_for_project(project, request.user)
     project_json['collaborators'] = _get_json_for_collaborator_list(project)
-    project_json['locusLists'] = _get_sorted_locus_lists(project, request.user)
+    project_json['locusLists'] = get_sorted_project_locus_lists(project, request.user)
     project_json.update(_get_json_for_variant_tag_types(project))
     #project_json['referencePopulations'] = _get_json_for_reference_populations(project)
 
@@ -235,11 +234,6 @@ def _get_json_for_collaborator_list(project):
         )
 
     return sorted(collaborator_list, key=lambda collaborator: (collaborator['lastName'], collaborator['displayName']))
-
-
-def _get_sorted_locus_lists(project, user):
-    result = get_json_for_locus_lists(get_objects_for_group(project.can_view_group, CAN_VIEW, LocusList), user)
-    return sorted(result, key=lambda locus_list: locus_list['createdDate'])
 
 
 def _get_json_for_variant_tag_types(project):
