@@ -277,6 +277,7 @@ class Command(BaseCommand):
                 if indiv.guid not in updated_seqr_individual_guids:
                     print("Deleting SeqrIndividual: %s" % indiv)
                     counters["deleted SeqrIndividuals"] += 1
+                    indiv.sample_set.all().delete()
                     indiv.delete()
 
             # delete families that are in SeqrFamily table, but not in BaseProject table
