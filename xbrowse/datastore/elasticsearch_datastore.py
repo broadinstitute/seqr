@@ -159,7 +159,7 @@ class ElasticsearchDatastore(datastore.Datastore):
 
         try:
             if self.liftover_grch38_to_grch37 is None:
-                self.liftover_grch38_to_grch37 = None # LiftOver('hg38', 'hg19')
+                self.liftover_grch38_to_grch37 = LiftOver('hg38', 'hg19')
 
             if self.liftover_grch37_to_grch38 is None:
                 self.liftover_grch37_to_grch38 = None # LiftOver('hg19', 'hg38')
