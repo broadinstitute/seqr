@@ -406,7 +406,7 @@ def transfer_project(source_project):
 
     # create project
     try:
-        new_project, created = SeqrProject.objects.get_or_create(
+        new_project, created = safe_get_or_create(SeqrProject,
             deprecated_project_id=source_project.project_id.strip(),
         )
     except MultipleObjectsReturned as e:
@@ -415,9 +415,8 @@ def transfer_project(source_project):
     if created:
         print("Created SeqrProject", new_project)
 
-    if source_project.seqr_project != new_project:
-        source_project.seqr_project = new_project
-        source_project.save()
+    source_project.seqr_project = new_project
+    source_project.save()
 
     update_model_field(new_project, 'guid', new_project._compute_guid()[:ModelWithGUID.MAX_GUID_SIZE])
     update_model_field(new_project, 'name', (source_project.project_name or source_project.project_id).strip())
@@ -495,17 +494,30 @@ def transfer_project(source_project):
     return new_project, created
 
 
+def safe_get_or_create(model_class, delete_extra_instances=False, **kwargs):
+    matching_objects = list(model_class.objects.filter(**kwargs).order_by('pk'))
+    if len(matching_objects) > 1:
+        if delete_extra_instances:
+            for matching_obj in matching_objects[1:]:
+                print("--- Deleting duplicate instances: " + str(matching_obj.__dict__))
+                matching_obj.delete()
+            print("--- Kept only: " + str(matching_objects[0].__dict__))
+
+        return matching_objects[0], False  # keep the oldest object
+
+    return model_class.objects.get_or_create(**kwargs)
+
+
 def transfer_family(source_family, new_project):
     """Transfers the given family and returns the new family"""
     #new_project.created_date.microsecond = random.randint(0, 10**6 - 1)
 
-    new_family, created = SeqrFamily.objects.get_or_create(project=new_project, family_id=source_family.family_id)
+    new_family, created = safe_get_or_create(SeqrFamily, project=new_project, family_id=source_family.family_id)
     if created:
         print("Created SeqrFamily", new_family)
 
-    if source_family.seqr_family != new_family:
-        source_family.seqr_family = new_family
-        source_family.save()
+    source_family.seqr_family = new_family
+    source_family.save()
 
     update_model_field(new_family, 'display_name', source_family.family_name or source_family.family_id)
     update_model_field(new_family, 'description', source_family.short_description)
@@ -525,13 +537,12 @@ def transfer_family(source_family, new_project):
 def transfer_individual(source_individual, new_family, new_project, connect_to_phenotips):
     """Transfers the given Individual and returns the new Individual"""
 
-    new_individual, created = SeqrIndividual.objects.get_or_create(family=new_family, individual_id=source_individual.indiv_id)
+    new_individual, created = safe_get_or_create(SeqrIndividual, family=new_family, individual_id=source_individual.indiv_id)
     if created:
         print("Created SeqrSample", new_individual)
 
-    if source_individual.seqr_individual != new_individual:
-        source_individual.seqr_individual = new_individual
-        source_individual.save()
+    source_individual.seqr_individual = new_individual
+    source_individual.save()
 
     # get rid of '.' to signify 'unknown'
     if source_individual.paternal_id == "." or source_individual.maternal_id == "." or source_individual.gender == "." or source_individual.affected == ".":
@@ -613,7 +624,7 @@ def get_or_create_sample(
         loaded_date):
     """Creates and returns a new Sample based on the provided models."""
 
-    new_sample, created = SeqrSample.objects.get_or_create(
+    new_sample, created = safe_get_or_create(SeqrSample, delete_extra_instances=True,
         sample_type=sample_type,
         individual=new_individual,
         sample_id=(source_individual.vcf_id or source_individual.indiv_id).strip(),
@@ -647,7 +658,7 @@ def get_or_create_variant_tag_type(source_variant_tag_type, new_project):
             source_variant_tag_type.seqr_variant_tag_type = None
 
     except ObjectDoesNotExist:
-        new_variant_tag_type, created = SeqrVariantTagType.objects.get_or_create(
+        new_variant_tag_type, created = safe_get_or_create(SeqrVariantTagType,
             project=new_project,
             name=source_variant_tag_type.tag,
         )
@@ -677,16 +688,15 @@ def get_or_create_variant_tag(source_variant_tag, new_project, new_family, new_v
         project=new_project
     )
 
-    new_variant_tag, created = SeqrVariantTag.objects.get_or_create(
+    new_variant_tag, created = safe_get_or_create(SeqrVariantTag, delete_extra_instances=True,
         saved_variant=new_saved_variant,
         variant_tag_type=new_variant_tag_type,
     )
     if created:
         print("=== created variant tag: " + str(new_variant_tag))
 
-    if source_variant_tag.seqr_variant_tag != new_variant_tag:
-        source_variant_tag.seqr_variant_tag = new_variant_tag
-        source_variant_tag.save()
+    source_variant_tag.seqr_variant_tag = new_variant_tag
+    source_variant_tag.save()
 
     new_variant_tag.search_parameters = source_variant_tag.search_url
     new_variant_tag.created_by = source_variant_tag.user
@@ -704,16 +714,15 @@ def get_or_create_variant_functional_data(source_variant_functional_data, new_pr
         project=new_project
     )
 
-    new_variant_functional_data, created = SeqrVariantFunctionalData.objects.get_or_create(
+    new_variant_functional_data, created = safe_get_or_create(SeqrVariantFunctionalData, delete_extra_instances=True,
         saved_variant=new_saved_variant,
         functional_data_tag=source_variant_functional_data.functional_data_tag,
     )
     if created:
         print("=== created variant functional data: " + str(new_variant_functional_data))
 
-    if source_variant_functional_data.seqr_variant_functional_data != new_variant_functional_data:
-        source_variant_functional_data.seqr_variant_functional_data = new_variant_functional_data
-        source_variant_functional_data.save()
+    source_variant_functional_data.seqr_variant_functional_data = new_variant_functional_data
+    source_variant_functional_data.save()
 
     new_variant_functional_data.search_parameters = source_variant_functional_data.search_url
     new_variant_functional_data.created_by = source_variant_functional_data.user
@@ -732,7 +741,7 @@ def get_or_create_variant_note(source_variant_note, new_project, new_family):
         project=new_project
     )
 
-    new_variant_note, created = SeqrVariantNote.objects.get_or_create(
+    new_variant_note, created = safe_get_or_create(SeqrVariantNote, delete_extra_instances=True,
         created_by=source_variant_note.user,
         saved_variant=new_saved_variant,
         note=source_variant_note.note,
@@ -741,9 +750,8 @@ def get_or_create_variant_note(source_variant_note, new_project, new_family):
     if created:
         print("=== created variant note: " + str(new_variant_note))
 
-    if source_variant_note.seqr_variant_note != new_variant_note:
-        source_variant_note.seqr_variant_note = new_variant_note
-        source_variant_note.save()
+    source_variant_note.seqr_variant_note = new_variant_note
+    source_variant_note.save()
 
     new_variant_note.search_parameters = source_variant_note.search_url
     new_variant_note.submit_to_clinvar = source_variant_note.submit_to_clinvar or False
