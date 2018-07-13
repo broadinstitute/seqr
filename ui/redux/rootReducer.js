@@ -117,7 +117,7 @@ export const loadGene = (geneId) => {
   }
 }
 
-export const loadLocusLists = (locusListId) => {
+export const loadLocusLists = (locusListId, projectGuid) => {
   return (dispatch, getState) => {
     const locusList = getState().locusListsByGuid[locusListId]
     if (!locusListId || !locusList || !locusList.geneIds) {
@@ -126,6 +126,7 @@ export const loadLocusLists = (locusListId) => {
       if (locusListId) {
         url = `${url}/${locusListId}`
       }
+      const queryParams = projectGuid ? { projectGuid } : {}
       new HttpRequestHelper(url,
         (responseJson) => {
           dispatch({ type: RECEIVE_GENES, updatesById: responseJson.genesById || {} })
@@ -134,7 +135,7 @@ export const loadLocusLists = (locusListId) => {
         (e) => {
           dispatch({ type: RECEIVE_GENE_LISTS, error: e.message, updatesById: {} })
         },
-      ).get()
+      ).get(queryParams)
     }
   }
 }

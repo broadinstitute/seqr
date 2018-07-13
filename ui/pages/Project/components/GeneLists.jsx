@@ -4,6 +4,10 @@ import styled from 'styled-components'
 import { Popup, Icon } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 
+import LocusListGeneDetail from 'shared/components/panel/genes/LocusListGeneDetail'
+import ButtonLink from 'shared/components/buttons/ButtonLink'
+import Modal from 'shared/components/modal/Modal'
+import { HorizontalSpacer } from 'shared/components/Spacers'
 import { getProject } from '../selectors'
 
 const ItemContainer = styled.div`
@@ -23,13 +27,15 @@ const GeneLists = props => (
       props.project.locusLists.map(locusList => (
         <ItemContainer key={locusList.locusListGuid}>
           {locusList.name}
-          <span style={{ paddingLeft: '10px' }}>
-            <i>
-              <a href={`/project/${props.project.deprecatedProjectId}/project_gene_list_settings`}>
-                {`${locusList.numEntries} entries`}
-              </a>
-            </i>
-          </span>
+          <HorizontalSpacer width={10} />
+          <Modal
+            title={`${locusList.name} Gene List`}
+            modalName={`${locusList.name}-genes`}
+            trigger={<i><ButtonLink>{`${locusList.numEntries} entries`}</ButtonLink></i>}
+            size="large"
+          >
+            <LocusListGeneDetail locusListGuid={locusList.locusListGuid} projectGuid={props.project.projectGuid} />
+          </Modal>
           {
             locusList.description &&
             <Popup

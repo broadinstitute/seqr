@@ -2,7 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 
-import { loadLocusLists, updateLocusList } from 'redux/rootReducer'
+import { loadLocusLists } from 'redux/rootReducer'
 import { getLocusListIsLoading, getGenesById } from 'redux/selectors'
 import DataLoader from 'shared/components/DataLoader'
 import { compareObjects } from 'shared/utils/sortUtils'
@@ -31,9 +31,12 @@ const mapStateToProps = state => ({
   genesById: getGenesById(state),
 })
 
-const mapDispatchToProps = {
-  load: loadLocusLists,
-  onSubmit: updateLocusList,
+const mapDispatchToProps = (dispatch, ownProps) => {
+  return {
+    load: (locusListGuid) => {
+      dispatch(loadLocusLists(locusListGuid, ownProps.projectGuid))
+    },
+  }
 }
 
 export default connect(mapStateToProps, mapDispatchToProps)(LocusListGeneLoader)
