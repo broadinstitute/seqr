@@ -657,16 +657,22 @@ class ElasticsearchDatastore(datastore.Datastore):
 
             try:
                 genes = {}
+                filtered_coding_gene_ids = []  # without genes that are annotated as upstream/downstream of the variant
                 for gene_id in result["coding_gene_ids"]:
                     # temporarily post-filter gene_ids to exclude upstream/downstream gene consequences until elasticsearch datasets are reloaded
                     if gene_id and (not gene_consequences.get(gene_id) or gene_consequences.get(gene_id) not in {"upstream_gene_variant", "downstream_gene_variant"}):
                         genes[gene_id] = reference.get_gene_summary(gene_id) or {}
+                        filtered_coding_gene_ids.append(gene_id)
+                result["coding_gene_ids"] = filtered_coding_gene_ids
 
                 if not genes:
+                    filtered_gene_ids = []  # without genes that are annotated as upstream/downstream of the variant
                     for gene_id in result["gene_ids"]:
                         # temporarily post-filter gene_ids to exclude upstream/downstream gene consequences until elasticsearch datasets are reloaded
                         if gene_id and (not gene_consequences.get(gene_id) or gene_consequences.get(gene_id) not in {"upstream_gene_variant", "downstream_gene_variant"}):
                             genes[gene_id] = reference.get_gene_summary(gene_id) or {}
+                            filtered_gene_ids.append(gene_id)
+                    result["coding_gene_ids"] = filtered_gene_ids
 
                 #if not genes:
                 #    genes =  {vep_anno["gene_id"]: {"symbol": vep_anno["gene_symbol"]} for vep_anno in vep_annotation}

@@ -68,14 +68,14 @@ const VariantGene = ({ gene, project }) =>
       <a href={`/project/${project.deprecatedProjectId}/gene/${gene.geneId}`} target="_blank" rel="noopener noreferrer">Gene Search</a><br />
     </GeneLinks>
     <div>
-      {gene.diseaseDbPheotypes.length > 0 &&
+      {gene.diseaseDbPhenotypes.length > 0 &&
         <GeneLabel
           color="orange"
           label="IN OMIM"
           popupHeader="Disease Phenotypes"
           popupContent={
             <List>
-              {gene.diseaseDbPheotypes.map(pheotype =>
+              {gene.diseaseDbPhenotypes.map(pheotype =>
                 <ListItemLink
                   key={pheotype.description}
                   content={pheotype.description}
