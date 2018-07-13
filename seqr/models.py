@@ -2,6 +2,7 @@ from abc import abstractmethod
 import os
 import uuid
 import json
+import random
 
 from django.contrib.auth.models import User, Group
 from django.db import models
@@ -71,15 +72,22 @@ class ModelWithGUID(models.Model):
         """Create a GUID at object creation time."""
 
         being_created = not self.pk
-        if being_created and not self.created_date:
-            self.created_date = timezone.now()
+        current_time = timezone.now()
 
-        # Allows for overriding last_modified_date during save. Should only be used for migrations
-        self.last_modified_date = kwargs.pop('last_modified_date', timezone.now())
+        # allows for overriding last_modified_date during save, but this should only be used for migrations
+        self.last_modified_date = kwargs.pop('last_modified_date', current_time)
 
-        super(ModelWithGUID, self).save(*args, **kwargs)
+        if not being_created:
+            super(ModelWithGUID, self).save(*args, **kwargs)
+        else:
+            # do an initial save to generate the self.pk id which is then used when computing self._compute_guid()
+            # Temporarily set guid to a randint to avoid a brief window when guid="". Otherwise guid uniqueness errors
+            # can occur if 2 objects are being created simultaneously and both attempt to save without setting guid.
+            temp_guid = str(random.randint(10**10, 10**11))
+            self.guid = kwargs.pop('guid', temp_guid)
+            self.created_date = current_time
+            super(ModelWithGUID, self).save(*args, **kwargs)
 
-        if being_created:
             self.guid = self._compute_guid()[:ModelWithGUID.MAX_GUID_SIZE]
             super(ModelWithGUID, self).save()
 
