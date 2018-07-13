@@ -151,6 +151,18 @@ export const addDataset = (values) => {
   }
 }
 
+export const updateLocusLists = (values) => {
+  return (dispatch, getState) => {
+    const action = values.delete ? 'delete' : 'add'
+    return new HttpRequestHelper(`/api/project/${getState().currentProjectGuid}/${action}_locus_lists`,
+      (responseJson) => {
+        dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+      },
+      (e) => { throw new SubmissionError({ _error: [e.message] }) },
+    ).post(values)
+  }
+}
+
 // Table actions
 export const updateFamiliesTable = (updates, tableName) => (
   { type: tableName === CASE_REVIEW_TABLE_NAME ? UPDATE_CASE_REVIEW_TABLE_STATE : UPDATE_FAMILY_TABLE_STATE, updates }
