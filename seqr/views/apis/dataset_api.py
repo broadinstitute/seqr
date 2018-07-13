@@ -3,7 +3,6 @@ import logging
 from pprint import pformat
 
 from django.contrib.auth.decorators import login_required
-from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
 from seqr.models import Individual, CAN_EDIT
