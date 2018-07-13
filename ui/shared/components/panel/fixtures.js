@@ -481,7 +481,7 @@ export const VARIANT = {
         lof: { constraint: 0.0671997116609769, rank: 8248, totalGenes: 18225 },
         missense: { constraint: -0.7885573790993861, rank: 15052, totalGenes: 18225 },
       },
-      diseaseDbPheotypes: [],
+      diseaseDbPhenotypes: [],
       diseaseGeneLists: [],
       geneId: "ENSG00000228198",
       symbol: "OR2M3",

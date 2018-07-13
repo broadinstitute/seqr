@@ -141,7 +141,7 @@ def add_gene_databases_to_variants(variants):
             # TODO: should be part of reference cache
             if gene and 'phenotype_info' in gene and (len(gene['phenotype_info']['orphanet_phenotypes']) or len(gene['phenotype_info']['mim_phenotypes'])):
                 variant.set_extra('in_disease_gene_db', True)
-                variant.extras['genes'][gene_id]['disease_db_pheotypes'] = gene['phenotype_info']['orphanet_phenotypes'] + gene['phenotype_info']['mim_phenotypes']
+                variant.extras['genes'][gene_id]['disease_db_phenotypes'] = gene['phenotype_info']['orphanet_phenotypes'] + gene['phenotype_info']['mim_phenotypes']
 
 
 def add_gene_names_to_variants(reference, variants):
