@@ -268,7 +268,8 @@ def _variant_details(variant_json, user):
         },
         'clinvar': {
             'clinsig': extras.get('clinvar_clinsig'),
-            'variantId': extras.get('clinvar_variant_id'),
+            #'variantId': extras.get('clinvar_variant_id'),
+            'alleleId': extras.get('clinvar_allele_id'),
         },
         'hgmd': {
             'accession': extras.get('hgmd_accession'),
@@ -289,7 +290,7 @@ def _variant_details(variant_json, user):
             },
             'diseaseGeneLists': gene.get('disease_gene_lists', []),
             'geneId': gene_id,
-            'diseaseDbPheotypes': gene.get('disease_db_pheotypes', []),
+            'diseaseDbPhenotypes': gene.get('disease_db_phenotypes', []),
             'symbol': gene.get('symbol') or extras.get('gene_names', {}).get(gene_id),
         } for gene_id, gene in extras.get('genes', {}).items()],
         'genotypes': {
