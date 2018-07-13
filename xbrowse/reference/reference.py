@@ -5,6 +5,7 @@ import itertools
 import json
 import ensembl_parsing_utils
 import gene_expression
+import logging
 import pandas
 import pymongo
 import redis
@@ -18,6 +19,7 @@ from xbrowse.utils import get_progressbar
 
 from .utils import get_coding_regions_from_gene_structure, get_coding_size_from_gene_structure
 
+logger = logging.getLogger(__name__)
 
 class Reference(object):
     """
@@ -45,7 +47,12 @@ class Reference(object):
 
         self._redis_client = None
         if settings.REDIS_SERVICE_HOSTNAME:
-            self._redis_client = redis.StrictRedis(host=settings.REDIS_SERVICE_HOSTNAME)
+            try:
+                self._redis_client = redis.StrictRedis(host=settings.REDIS_SERVICE_HOSTNAME, socket_connect_timeout=3)
+                self._redis_client.ping()
+            except redis.exceptions.TimeoutError as e:
+                logger.warn("Unable to connect to redis: " + str(e))
+                self._redis_client = None
 
 
     def get_ensembl_db_proxy(self):
