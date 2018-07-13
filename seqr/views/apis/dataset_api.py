@@ -3,6 +3,7 @@ import logging
 from pprint import pformat
 
 from django.contrib.auth.decorators import login_required
+from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
 from seqr.models import Individual, CAN_EDIT
@@ -11,6 +12,8 @@ from seqr.views.utils.dataset_utils import add_dataset
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_samples
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions
+
+from xbrowse_server.base.models import VCFFile, Project as BaseProject
 
 logger = logging.getLogger(__name__)
 
@@ -74,6 +77,21 @@ def add_dataset_handler(request, project_guid):
             ignore_extra_samples_in_callset=ignore_extra_samples_in_callset,
             mapping_file_id=mapping_file_id,
         )
+
+        # update VCFFile records
+        if updated_samples:
+            base_project = BaseProject.objects.get(seqr_project=project)
+            vcf_file, created = VCFFile.objects.get_or_create(
+                project=base_project,
+                dataset_path=dataset_path,
+                dataset_type=dataset_type,
+                sample_type=sample_type,
+                elasticsearch_index=elasticsearch_index,
+                loaded_date=iter(updated_samples).next().loaded_date,
+            )
+            if created:
+                logger.info("Created vcf file: " + str(vcf_file.__dict__))
+
         updated_sample_json = get_json_for_samples(updated_samples, project_guid=project_guid)
         response = {
             'samplesByGuid': {s['sampleGuid']: s for s in updated_sample_json}
