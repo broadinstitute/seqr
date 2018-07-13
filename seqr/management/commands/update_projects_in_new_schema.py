@@ -56,7 +56,6 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('--reset-all-models', help='This flag causes all records to be cleared from the seqr schema\'s Project, Family, and Individual models before transferring data', action='store_true')
         parser.add_argument('--dont-connect-to-phenotips', help='dont retrieve phenotips internal id and latest data', action='store_true')
-        parser.add_argument('-w', '--wgs-projects', help='text file that lists WGS project-ids - one per line')
         parser.add_argument('project_id', nargs="*", help='Project(s) to transfer. If not specified, defaults to all projects.')
 
     def handle(self, *args, **options):
@@ -96,10 +95,6 @@ class Command(BaseCommand):
             logging.info("Processing all %s projects" % len(projects))
             project_ids_to_process = [p.project_id for p in projects]
 
-        wgs_project_ids = {}
-        if options['wgs_projects']:
-            with open(options['wgs_projects']) as f:
-                wgs_project_ids = {line.strip().lower() for line in f if len(line.strip()) > 0}
 
         updated_seqr_project_guids = set()
         updated_seqr_family_guids = set()
@@ -109,19 +104,6 @@ class Command(BaseCommand):
             counters['source_projects'] += 1
 
             print("Project: " + source_project.project_id)
-
-            # compute sample_type for this project
-            project_names = ("%s|%s" % (source_project.project_id, source_project.project_name)).lower()
-            if "wgs" in project_names or "genome" in source_project.project_id.lower() or source_project.project_id.lower() in wgs_project_ids:
-                sample_type = SeqrSample.SAMPLE_TYPE_WGS
-                counters['wgs_projects'] += 1
-            elif "rna-seq" in project_names:
-                sample_type = SeqrSample.SAMPLE_TYPE_RNA
-                counters['rna_projects'] += 1
-            else:
-                sample_type = SeqrSample.SAMPLE_TYPE_WES
-                counters['wes_projects'] += 1
-
 
             # transfer Project data
             new_project, project_created = transfer_project(source_project)
@@ -179,7 +161,7 @@ class Command(BaseCommand):
 
                             create_sample_records(sample_type_i, source_individual_i, new_project, new_individual, counters)
                     else:
-                        create_sample_records(sample_type, source_individual, new_project, new_individual, counters)
+                        create_sample_records(source_individual, new_project, new_individual, counters)
                         #combined_families_info.update({from_project_datatype: {'project_id': from_project.project_id, 'family_id': from_f.family_id}})
 
             # TODO family groups, cohorts
@@ -336,13 +318,13 @@ class Command(BaseCommand):
                 logger.info("  %s: %s" % (k, v))
 
 
-def create_sample_records(sample_type, source_individual, new_project, new_individual, counters):
+def create_sample_records(source_individual, new_project, new_individual, counters):
     loaded_vcf_files = source_individual.vcf_files.filter(dataset_type=VCFFile.DATASET_TYPE_VARIANT_CALLS, loaded_date__isnull=False)
     for loaded_vcf_file in loaded_vcf_files:
         new_sample, sample_created = get_or_create_sample(
             source_individual,
             new_individual,
-            sample_type=sample_type,
+            sample_type=loaded_vcf_file.sample_type,
             dataset_type=SeqrSample.DATASET_TYPE_VARIANT_CALLS,
             elasticsearch_index=loaded_vcf_file.elasticsearch_index,
             dataset_file_path=loaded_vcf_file.file_path,
@@ -358,7 +340,7 @@ def create_sample_records(sample_type, source_individual, new_project, new_indiv
             new_sample, sample_created = get_or_create_sample(
                 source_individual,
                 new_individual,
-                sample_type=sample_type,
+                sample_type=loaded_vcf_file.sample_type,
                 dataset_type=SeqrSample.DATASET_TYPE_READ_ALIGNMENTS,
                 elasticsearch_index=None,
                 dataset_file_path=source_individual.bam_file_path,
