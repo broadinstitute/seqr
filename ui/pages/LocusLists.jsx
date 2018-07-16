@@ -1,12 +1,15 @@
 import React from 'react'
 import PropTypes from 'prop-types'
+import { Route, Switch } from 'react-router-dom'
 import { connect } from 'react-redux'
-import { Header, Grid } from 'semantic-ui-react'
+import { Container, Header, Grid } from 'semantic-ui-react'
 
 import { updateLocusList } from 'redux/rootReducer'
 import { getLocusListsByGuid } from 'redux/selectors'
 import LocusListGeneDetail from 'shared/components/panel/genes/LocusListGeneDetail'
 import BaseFieldView from 'shared/components/panel/view-fields/BaseFieldView'
+import { LocusListsLoader } from 'shared/components/LocusListLoader'
+import LocusListTables from 'shared/components/table/LocusListTables'
 import { LOCUS_LIST_FIELDS } from 'shared/utils/constants'
 
 const getFieldProps = ({ isEditable, width, fieldDisplay, ...fieldProps }) => ({
@@ -21,7 +24,7 @@ const getFieldProps = ({ isEditable, width, fieldDisplay, ...fieldProps }) => ({
 const FIELDS = LOCUS_LIST_FIELDS.map(getFieldProps)
 
 
-const LocusListDetail = ({ locusList, onSubmit, match }) =>
+const BaseLocusListDetail = ({ locusList, onSubmit, match }) =>
   <div>
     <Grid>
       {FIELDS.map(({ isEditable, width, ...fieldProps }) =>
@@ -43,7 +46,7 @@ const LocusListDetail = ({ locusList, onSubmit, match }) =>
     {/* TODO */}
   </div>
 
-LocusListDetail.propTypes = {
+BaseLocusListDetail.propTypes = {
   locusList: PropTypes.object,
   onSubmit: PropTypes.func,
   match: PropTypes.object,
@@ -57,4 +60,21 @@ const mapDispatchToProps = {
   onSubmit: updateLocusList,
 }
 
-export default connect(mapStateToProps, mapDispatchToProps)(LocusListDetail)
+const LocusListDetail = connect(mapStateToProps, mapDispatchToProps)(BaseLocusListDetail)
+
+
+const LocusLists = ({ match }) =>
+  <LocusListsLoader>
+    <Container>
+      <Switch>
+        <Route path={`${match.url}/:locusListGuid`} component={LocusListDetail} />
+        <Route path={`${match.url}`} component={LocusListTables} />
+      </Switch>
+    </Container>
+  </LocusListsLoader>
+
+LocusLists.propTypes = {
+  match: PropTypes.object,
+}
+
+export default LocusLists

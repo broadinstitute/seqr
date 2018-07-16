@@ -10,7 +10,7 @@ import GeneDetail from 'shared/components/panel/genes/GeneDetail'
 import Dashboard from 'pages/Dashboard/Dashboard'
 import Project from 'pages/Project/Project'
 import GeneInfoSearch from 'pages/GeneInfoSearch'
-import LocusLists from 'pages/LocusLists/LocusLists'
+import LocusLists from 'pages/LocusLists'
 import rootReducer from 'redux/rootReducer'
 import { configureStore } from 'redux/utils/configureStore'
 
