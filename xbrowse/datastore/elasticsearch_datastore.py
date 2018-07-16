@@ -649,30 +649,20 @@ class ElasticsearchDatastore(datastore.Datastore):
 
             # add gene info
             gene_names = {}
-            gene_consequences = {}
             if vep_annotation is not None:
                 gene_names = {vep_anno["gene_id"]: vep_anno.get("gene_symbol") for vep_anno in vep_annotation if vep_anno.get("gene_symbol")}
-                gene_consequences = {vep_anno["gene_id"]: vep_anno.get("major_consequence") for vep_anno in vep_annotation if vep_anno.get("major_consequence")}
             result["extras"]["gene_names"] = gene_names
 
             try:
                 genes = {}
-                filtered_coding_gene_ids = []  # without genes that are annotated as upstream/downstream of the variant
                 for gene_id in result["coding_gene_ids"]:
-                    # temporarily post-filter gene_ids to exclude upstream/downstream gene consequences until elasticsearch datasets are reloaded
-                    if gene_id and (not gene_consequences.get(gene_id) or gene_consequences.get(gene_id) not in {"upstream_gene_variant", "downstream_gene_variant"}):
+                    if gene_id:
                         genes[gene_id] = reference.get_gene_summary(gene_id) or {}
-                        filtered_coding_gene_ids.append(gene_id)
-                result["coding_gene_ids"] = filtered_coding_gene_ids
 
                 if not genes:
-                    filtered_gene_ids = []  # without genes that are annotated as upstream/downstream of the variant
                     for gene_id in result["gene_ids"]:
-                        # temporarily post-filter gene_ids to exclude upstream/downstream gene consequences until elasticsearch datasets are reloaded
-                        if gene_id and (not gene_consequences.get(gene_id) or gene_consequences.get(gene_id) not in {"upstream_gene_variant", "downstream_gene_variant"}):
+                        if gene_id:
                             genes[gene_id] = reference.get_gene_summary(gene_id) or {}
-                            filtered_gene_ids.append(gene_id)
-                    result["coding_gene_ids"] = filtered_gene_ids
 
                 #if not genes:
                 #    genes =  {vep_anno["gene_id"]: {"symbol": vep_anno["gene_symbol"]} for vep_anno in vep_annotation}
