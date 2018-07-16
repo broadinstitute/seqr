@@ -23,6 +23,7 @@ const UpdateLocusList = ({ locusList, size, onSubmit }) =>
     formFields={FIELDS}
     formContainer={<LocusListGeneLoader locusList={locusList} />}
     size={size}
+    showErrorPanel
   />
 
 
@@ -40,6 +41,7 @@ const CreateLocusList = ({ onSubmit }) =>
     editIconName="plus"
     onSubmit={onSubmit}
     formFields={FIELDS}
+    showErrorPanel
   />
 
 CreateLocusList.propTypes = {

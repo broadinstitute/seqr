@@ -43,6 +43,7 @@ const BaseFieldView = (props) => {
       initialValues={props.initialValues}
       formFields={props.formFields}
       formContainer={<div style={props.modalStyle} />}
+      showErrorPanel={props.showErrorPanel}
       size="small"
     />
     : (
@@ -106,6 +107,7 @@ BaseFieldView.propTypes = {
   showEmptyValues: PropTypes.bool,
   user: PropTypes.object,
   modalStyle: PropTypes.object,
+  showErrorPanel: PropTypes.bool,
 }
 
 BaseFieldView.defaultProps = {

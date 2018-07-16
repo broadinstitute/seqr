@@ -44,6 +44,7 @@ const LocusListGeneDetail = ({ locusList, onSubmit }) => {
           isEditable={locusList.canEdit}
           compact
           modalTitle={`Edit Genes for ${locusList.name}`}
+          showErrorPanel
         />
         <ExportTableButton downloads={geneExportDownloads} buttonText="Download" float="right" fontWeight="300" fontSize=".75em" />
       </Header>

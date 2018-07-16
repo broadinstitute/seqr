@@ -25,7 +25,7 @@ const REQUEST_GENE_LIST = 'REQUEST_GENE_LIST'
 // action creators
 
 // A helper action that handles create, update and delete requests
-const updateEntity = (values, receiveDataAction, urlPath, idField, actionSuffix, secondaryReceiveAction) => {
+const updateEntity = (values, receiveDataAction, urlPath, idField, actionSuffix) => {
   return (dispatch) => {
     let action = 'create'
     if (values[idField]) {
@@ -35,7 +35,6 @@ const updateEntity = (values, receiveDataAction, urlPath, idField, actionSuffix,
 
     return new HttpRequestHelper(`${urlPath}/${action}${actionSuffix || ''}`,
       (responseJson) => {
-        if (secondaryReceiveAction) { dispatch(secondaryReceiveAction(responseJson)) }
         dispatch({ type: receiveDataAction, updatesById: responseJson })
       },
       (e) => {
@@ -178,7 +177,29 @@ export const updateVariantTags = (values) => {
 }
 
 export const updateLocusList = (values) => {
-  return updateEntity(values, RECEIVE_DATA, '/api/locus_lists', 'locusListGuid', null, responseJson => ({ type: RECEIVE_GENES, updatesById: responseJson.genesById || {} }))
+  return (dispatch) => {
+    let action = 'create'
+    if (values.locusListGuid) {
+      action = `${values.locusListGuid}/${values.delete ? 'delete' : 'update'}`
+    }
+
+    return new HttpRequestHelper(`/api/locus_lists/${action}`,
+      (responseJson) => {
+        dispatch({ type: RECEIVE_GENES, updatesById: responseJson.genesById || {} })
+        dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+        if (responseJson.invalidGeneSymbols && responseJson.invalidGeneSymbols.length > 0) {
+          const err = new Error()
+          err.warnings = [
+            'The following genes are not valid. All other changes were made successfully.',
+          ].concat(responseJson.invalidGeneSymbols)
+          throw err
+        }
+      },
+      (e) => {
+        throw new SubmissionError({ _error: e.warnings ? e.warnings.map(warning => ({ warning })) : [e.message] })
+      },
+    ).post(values)
+  }
 }
 
 

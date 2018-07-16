@@ -85,8 +85,11 @@ def create_locus_list_handler(request):
             created_by=request.user,
         )
 
+    locus_list_json = get_json_for_locus_list(locus_list, request.user)
+    locus_list_json['geneIds'] = genes.keys()
+
     return create_json_response({
-        'locusListsByGuid': {locus_list.guid: get_json_for_locus_list(locus_list, request.user)},
+        'locusListsByGuid': {locus_list.guid: locus_list_json},
         'genesById': genes,
         'invalidGeneSymbols': invalid_gene_symbols,
     })

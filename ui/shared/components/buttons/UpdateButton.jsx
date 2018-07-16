@@ -24,7 +24,7 @@ IconButtonContent.propTypes = {
   size: PropTypes.string,
 }
 
-const UpdateButton = ({ onSubmit, initialValues, formFields, modalTitle, modalId, buttonText, editIconName, size, formContainer = <div /> }) =>
+const UpdateButton = ({ onSubmit, initialValues, formFields, modalTitle, modalId, buttonText, editIconName, size, showErrorPanel, formContainer = <div /> }) =>
   <Modal
     title={modalTitle}
     modalName={modalId}
@@ -36,6 +36,7 @@ const UpdateButton = ({ onSubmit, initialValues, formFields, modalTitle, modalId
         form={modalId}
         initialValues={initialValues}
         fields={formFields}
+        showErrorPanel={showErrorPanel}
         confirmCloseIfNotSaved
       />
     ) }) }
@@ -50,6 +51,7 @@ UpdateButton.propTypes = {
   buttonText: PropTypes.string,
   editIconName: PropTypes.string,
   formContainer: PropTypes.node,
+  showErrorPanel: PropTypes.bool,
   size: PropTypes.string,
 }
 
