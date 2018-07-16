@@ -56,9 +56,9 @@ def project_page_data(request, project_guid):
 
     project_json = _get_json_for_project(project, request.user)
     project_json['collaborators'] = _get_json_for_collaborator_list(project)
-    project_json['locusLists'] = get_sorted_project_locus_lists(project, request.user)
     project_json.update(_get_json_for_variant_tag_types(project))
-    #project_json['referencePopulations'] = _get_json_for_reference_populations(project)
+    locus_lists = get_sorted_project_locus_lists(project, request.user)
+    project_json['locusListGuids'] = [locus_list['locusListGuid'] for locus_list in locus_lists]
 
     # gene search will be deprecated once the new database is online.
     project_json['hasGeneSearch'] = _has_gene_search(project)
@@ -69,6 +69,7 @@ def project_page_data(request, project_guid):
         'familiesByGuid': families_by_guid,
         'individualsByGuid': individuals_by_guid,
         'samplesByGuid': samples_by_guid,
+        'locusListsByGuid': {locus_list['locusListGuid']: locus_list for locus_list in locus_lists}
     }
 
     return create_json_response(json_response)

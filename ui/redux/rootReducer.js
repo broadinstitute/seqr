@@ -21,7 +21,6 @@ const REQUEST_GENES = 'REQUEST_GENES'
 const RECEIVE_GENES = 'RECEIVE_GENES'
 const REQUEST_GENE_LISTS = 'REQUEST_GENE_LISTS'
 const REQUEST_GENE_LIST = 'REQUEST_GENE_LIST'
-const RECEIVE_GENE_LISTS = 'RECEIVE_GENE_LISTS'
 
 // action creators
 
@@ -130,10 +129,10 @@ export const loadLocusLists = (locusListId, projectGuid) => {
       new HttpRequestHelper(url,
         (responseJson) => {
           dispatch({ type: RECEIVE_GENES, updatesById: responseJson.genesById || {} })
-          dispatch({ type: RECEIVE_GENE_LISTS, updatesById: responseJson })
+          dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
         },
         (e) => {
-          dispatch({ type: RECEIVE_GENE_LISTS, error: e.message, updatesById: {} })
+          dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
         },
       ).get(queryParams)
     }
@@ -179,7 +178,7 @@ export const updateVariantTags = (values) => {
 }
 
 export const updateLocusList = (values) => {
-  return updateEntity(values, RECEIVE_GENE_LISTS, '/api/locus_lists', 'locusListGuid', null, responseJson => ({ type: RECEIVE_GENES, updatesById: responseJson.genesById || {} }))
+  return updateEntity(values, RECEIVE_DATA, '/api/locus_lists', 'locusListGuid', null, responseJson => ({ type: RECEIVE_GENES, updatesById: responseJson.genesById || {} }))
 }
 
 
@@ -193,9 +192,9 @@ const rootReducer = combineReducers(Object.assign({
   samplesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'samplesByGuid'),
   genesById: createObjectsByIdReducer(RECEIVE_GENES),
   genesLoading: loadingReducer(REQUEST_GENES, RECEIVE_GENES),
-  locusListsByGuid: createObjectsByIdReducer(RECEIVE_GENE_LISTS, 'locusListsByGuid'),
-  locusListsLoading: loadingReducer(REQUEST_GENE_LISTS, RECEIVE_GENE_LISTS),
-  locusListLoading: loadingReducer(REQUEST_GENE_LIST, RECEIVE_GENE_LISTS),
+  locusListsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'locusListsByGuid'),
+  locusListsLoading: loadingReducer(REQUEST_GENE_LISTS, RECEIVE_DATA),
+  locusListLoading: loadingReducer(REQUEST_GENE_LIST, RECEIVE_DATA),
   variantLoading: loadingReducer(REQUEST_VARIANT, RECEIVE_SAVED_VARIANTS),
   user: zeroActionsReducer,
   form: formReducer,

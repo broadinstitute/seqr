@@ -4,6 +4,7 @@ import styled from 'styled-components'
 import { Popup, Icon, Button, Divider } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 
+import { getLocusListsByGuid } from 'redux/selectors'
 import { setModalConfirm, closeModal } from 'redux/utils/modalReducer'
 import { LocusListsLoader } from 'shared/components/LocusListLoader'
 import LocusListGeneDetail from 'shared/components/panel/genes/LocusListGeneDetail'
@@ -125,14 +126,14 @@ class GeneLists extends React.PureComponent {
   }
 
   render() {
-    const { project } = this.props
+    const { project, locusListsByGuid } = this.props
     return (
       <div>
-        {project.locusLists && project.locusLists.map(locusList =>
+        {project.locusListGuids.map(locusListGuid =>
           <LocusListItem
-            key={locusList.locusListGuid}
+            key={locusListGuid}
             project={project}
-            locusList={locusList}
+            locusList={locusListsByGuid[locusListGuid]}
             onSubmit={this.props.updateLocusLists}
           />,
         )}
@@ -150,7 +151,7 @@ class GeneLists extends React.PureComponent {
                 isEditable={false}
                 showLinks={false}
                 omitFields={OMIT_LOCUS_LIST_FIELDS}
-                omitLocusLists={project.locusLists.map(locusList => locusList.locusListGuid)}
+                omitLocusLists={project.locusListGuids}
                 selectRows={this.selectList}
               />
               <Divider />
@@ -167,10 +168,12 @@ class GeneLists extends React.PureComponent {
 
 GeneLists.propTypes = {
   project: PropTypes.object.isRequired,
+  locusListsByGuid: PropTypes.object.isRequired,
 }
 
 const mapStateToProps = state => ({
   project: getProject(state),
+  locusListsByGuid: getLocusListsByGuid(state),
 })
 
 const mapDispatchToProps = {

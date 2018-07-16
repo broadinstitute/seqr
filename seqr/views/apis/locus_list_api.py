@@ -147,7 +147,7 @@ def add_project_locus_lists(request, project_guid):
         assign_perm(user_or_group=project.can_view_group, perm=CAN_VIEW, obj=locus_list)
 
     return create_json_response({
-        'locusLists': get_sorted_project_locus_lists(project, request.user),
+        'locusListGuids': [locus_list['locusListGuid'] for locus_list in get_sorted_project_locus_lists(project, request.user)],
     })
 
 
@@ -161,7 +161,7 @@ def delete_project_locus_lists(request, project_guid):
         remove_perm(user_or_group=project.can_view_group, perm=CAN_VIEW, obj=locus_list)
 
     return create_json_response({
-        'locusLists': get_sorted_project_locus_lists(project, request.user),
+        'locusListGuids': [locus_list['locusListGuid'] for locus_list in get_sorted_project_locus_lists(project, request.user)],
     })
 
 
