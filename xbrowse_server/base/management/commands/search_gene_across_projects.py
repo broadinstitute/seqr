@@ -120,7 +120,7 @@ class Command(BaseCommand):
             indiv_cache = {}
             for gene_or_variant_id in gene_or_variant_ids:
                 chrom_pos_match = re.match("([0-9XY]{1,2})-([0-9]{1,9})", gene_or_variant_id)
-                chrom_pos_ref_alt_match = re.match("([0-9XY]{1,2})-([0-9]{1,9})-([ACTG])-([ACTG])", gene_or_variant_id)
+                chrom_pos_ref_alt_match = re.match("([0-9XY]{1,2})-([0-9]{1,9})-([ACTG]+)-([ACTG]+)", gene_or_variant_id)
 
                 if chrom_pos_match or chrom_pos_ref_alt_match:
                     chrom = chrom_pos_match.group(1)

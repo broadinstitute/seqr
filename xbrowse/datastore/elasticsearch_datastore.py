@@ -105,7 +105,12 @@ class ElasticsearchDatastore(datastore.Datastore):
 
         self._redis_client = None
         if settings.REDIS_SERVICE_HOSTNAME:
-            self._redis_client = redis.StrictRedis(host=settings.REDIS_SERVICE_HOSTNAME)
+            try:
+                self._redis_client = redis.StrictRedis(host=settings.REDIS_SERVICE_HOSTNAME, socket_connect_timeout=3)
+                self._redis_client.ping()
+            except redis.exceptions.TimeoutError as e:
+                logger.warn("Unable to connect to redis: " + str(e))
+                self._redis_client = None
             
     def get_elasticsearch_variants(
             self,
@@ -159,7 +164,7 @@ class ElasticsearchDatastore(datastore.Datastore):
 
         try:
             if self.liftover_grch38_to_grch37 is None:
-                self.liftover_grch38_to_grch37 = None # LiftOver('hg38', 'hg19')
+                self.liftover_grch38_to_grch37 = LiftOver('hg38', 'hg19')
 
             if self.liftover_grch37_to_grch38 is None:
                 self.liftover_grch37_to_grch38 = None # LiftOver('hg19', 'hg38')
