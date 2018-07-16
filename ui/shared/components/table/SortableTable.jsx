@@ -55,6 +55,7 @@ class SortableTable extends React.PureComponent {
   }
 
   allSelected = () => (
+    this.props.data.length > 0 &&
     Object.keys(this.state.selected).length === this.props.data.length &&
     Object.values(this.state.selected).every(isSelected => isSelected)
   )

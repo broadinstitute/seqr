@@ -8,9 +8,10 @@ import { setModalConfirm, closeModal } from 'redux/utils/modalReducer'
 import { LocusListsLoader } from 'shared/components/LocusListLoader'
 import LocusListGeneDetail from 'shared/components/panel/genes/LocusListGeneDetail'
 import LocusListTables from 'shared/components/table/LocusListTables'
-import { CreateLocusListButton } from 'shared/components/buttons/LocusListButtons'
+import { CreateLocusListButton, UpdateLocusListButton } from 'shared/components/buttons/LocusListButtons'
 import DispatchRequestButton from 'shared/components/buttons/DispatchRequestButton'
 import ButtonLink from 'shared/components/buttons/ButtonLink'
+import DeleteButton from 'shared/components/buttons/DeleteButton'
 import Modal from 'shared/components/modal/Modal'
 import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
 import {
@@ -21,7 +22,7 @@ import { updateLocusLists } from '../reducers'
 
 const ItemContainer = styled.div`
   padding: 2px 0px;
-  whitespace: nowrap;
+  white-space: nowrap;
 `
 const HelpIcon = styled(Icon)`
   cursor: pointer;
@@ -35,7 +36,53 @@ const OMIT_LOCUS_LIST_FIELDS = [
   LOCUS_LIST_CURATOR_FIELD_NAME,
 ]
 
-class BaseAddLocusListModal extends React.PureComponent {
+const LocusListItem = ({ project, locusList, onSubmit }) => {
+  const submitValues = { locusListGuids: [locusList.locusListGuid] }
+  return (
+    <ItemContainer key={locusList.locusListGuid}>
+      {locusList.name}
+      <HorizontalSpacer width={10} />
+      <Modal
+        title={`${locusList.name} Gene List`}
+        modalName={`${project.projectGuid}-${locusList.name}-genes`}
+        trigger={<i><ButtonLink>{`${locusList.numEntries} entries`}</ButtonLink></i>}
+        size="large"
+      >
+        <LocusListGeneDetail locusListGuid={locusList.locusListGuid} projectGuid={project.projectGuid} />
+      </Modal>
+      {
+        locusList.description &&
+        <Popup
+          position="right center"
+          trigger={<HelpIcon name="help circle outline" />}
+          content={locusList.description}
+          size="small"
+        />
+      }
+      <HorizontalSpacer width={5} />
+      {locusList.canEdit && <UpdateLocusListButton locusList={locusList} />}
+      {project.canEdit &&
+        <DeleteButton
+          initialValues={submitValues}
+          onSubmit={onSubmit}
+          confirmDialog={
+            <div className="content">
+              Are you sure you want to remove <b>{locusList.name}</b> from this project
+            </div>
+          }
+        />
+      }
+    </ItemContainer>
+  )
+}
+
+LocusListItem.propTypes = {
+  project: PropTypes.object.isRequired,
+  locusList: PropTypes.object.isRequired,
+  onSubmit: PropTypes.func.isRequired,
+}
+
+class GeneLists extends React.PureComponent {
 
   static propTypes = {
     project: PropTypes.object,
@@ -78,70 +125,45 @@ class BaseAddLocusListModal extends React.PureComponent {
   }
 
   render() {
+    const { project } = this.props
     return (
-      <Modal
-        title="Add Gene Lists"
-        modalName={this.modalName}
-        trigger={<ButtonLink>Add Gene List <Icon name="plus" /></ButtonLink>}
-        size="large"
-      >
-        <LocusListsLoader>
-          Add an existing Gene List to {this.props.project.name} or <CreateLocusListButton />
-          <LocusListTables
-            isEditable={false}
-            showLinks={false}
-            omitFields={OMIT_LOCUS_LIST_FIELDS}
-            selectRows={this.selectList}
-          />
-          <Divider />
-          <DispatchRequestButton onSubmit={this.submit} onSuccess={this.closeModal}>
-            <Button content="Submit" primary />
-          </DispatchRequestButton>
-        </LocusListsLoader>
-      </Modal>
+      <div>
+        {project.locusLists && project.locusLists.map(locusList =>
+          <LocusListItem
+            key={locusList.locusListGuid}
+            project={project}
+            locusList={locusList}
+            onSubmit={this.props.updateLocusLists}
+          />,
+        )}
+        <VerticalSpacer height={15} />
+        {project.canEdit &&
+          <Modal
+            title="Add Gene Lists"
+            modalName={this.modalName}
+            trigger={<ButtonLink>Add Gene List <Icon name="plus" /></ButtonLink>}
+            size="large"
+          >
+            <LocusListsLoader>
+              Add an existing Gene List to {project.name} or <CreateLocusListButton />
+              <LocusListTables
+                isEditable={false}
+                showLinks={false}
+                omitFields={OMIT_LOCUS_LIST_FIELDS}
+                omitLocusLists={project.locusLists.map(locusList => locusList.locusListGuid)}
+                selectRows={this.selectList}
+              />
+              <Divider />
+              <DispatchRequestButton onSubmit={this.submit} onSuccess={this.closeModal}>
+                <Button content="Submit" primary />
+              </DispatchRequestButton>
+            </LocusListsLoader>
+          </Modal>
+        }
+      </div>
     )
   }
 }
-
-const mapDispatchToProps = {
-  setModalConfirm, closeModal, updateLocusLists,
-}
-
-const AddLocusListModal = connect(null, mapDispatchToProps)(BaseAddLocusListModal)
-
-const GeneLists = props => (
-  <div>
-    {
-      props.project.locusLists &&
-      props.project.locusLists.map(locusList => (
-        <ItemContainer key={locusList.locusListGuid}>
-          {locusList.name}
-          <HorizontalSpacer width={10} />
-          <Modal
-            title={`${locusList.name} Gene List`}
-            modalName={`${props.project.projectGuid}-${locusList.name}-genes`}
-            trigger={<i><ButtonLink>{`${locusList.numEntries} entries`}</ButtonLink></i>}
-            size="large"
-          >
-            <LocusListGeneDetail locusListGuid={locusList.locusListGuid} projectGuid={props.project.projectGuid} />
-          </Modal>
-          {
-            locusList.description &&
-            <Popup
-              position="right center"
-              trigger={<HelpIcon name="help circle outline" />}
-              content={locusList.description}
-              size="small"
-            />
-          }
-        </ItemContainer>),
-      )
-    }
-    <VerticalSpacer height={15} />
-    {props.project.canEdit && <AddLocusListModal project={props.project} />}
-  </div>
-)
-
 
 GeneLists.propTypes = {
   project: PropTypes.object.isRequired,
@@ -151,4 +173,8 @@ const mapStateToProps = state => ({
   project: getProject(state),
 })
 
-export default connect(mapStateToProps)(GeneLists)
+const mapDispatchToProps = {
+  setModalConfirm, closeModal, updateLocusLists,
+}
+
+export default connect(mapStateToProps, mapDispatchToProps)(GeneLists)

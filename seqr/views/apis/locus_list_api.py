@@ -5,7 +5,7 @@ from django.core.exceptions import PermissionDenied
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.views.decorators.csrf import csrf_exempt
-from guardian.shortcuts import get_group_perms, assign_perm, get_objects_for_group
+from guardian.shortcuts import get_group_perms, assign_perm, remove_perm, get_objects_for_group
 
 
 from seqr.models import LocusList, LocusListGene, CAN_VIEW, CAN_EDIT
@@ -154,7 +154,15 @@ def add_project_locus_lists(request, project_guid):
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def delete_project_locus_lists(request, project_guid):
-    pass
+    project = get_project_and_check_permissions(project_guid, request.user, CAN_EDIT)
+    request_json = json.loads(request.body)
+    locus_lists = LocusList.objects.filter(guid__in=request_json['locusListGuids'])
+    for locus_list in locus_lists:
+        remove_perm(user_or_group=project.can_view_group, perm=CAN_VIEW, obj=locus_list)
+
+    return create_json_response({
+        'locusLists': get_sorted_project_locus_lists(project, request.user),
+    })
 
 
 def get_sorted_project_locus_lists(project, user):

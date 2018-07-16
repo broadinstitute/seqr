@@ -17,7 +17,7 @@ const FIELDS = LOCUS_LIST_FIELDS.map(
   }),
 )
 
-const LocusListTable = ({ locusListsByGuid, showPublic, isEditable, showLinks, omitFields, selectRows }) => {
+const LocusListTable = ({ locusListsByGuid, showPublic, isEditable, showLinks, omitFields, omitLocusLists, selectRows }) => {
   let fields = FIELDS.filter(field => !omitFields.includes(field.name))
   if (showLinks) {
     fields[0].format = locusList => <Link to={`/gene_lists/${locusList.locusListGuid}`}>{locusList.name}</Link>
@@ -32,6 +32,10 @@ const LocusListTable = ({ locusListsByGuid, showPublic, isEditable, showLinks, o
       width: 3,
     }])
   }
+  let data = Object.values(locusListsByGuid).filter(locusList => locusList.isPublic === showPublic)
+  if (omitLocusLists) {
+    data = data.filter(locusList => !omitLocusLists.includes(locusList.locusListGuid))
+  }
   return (
     <SortableTable
       basic="very"
@@ -40,7 +44,7 @@ const LocusListTable = ({ locusListsByGuid, showPublic, isEditable, showLinks, o
       defaultSortColumn="name"
       columns={fields}
       selectRows={selectRows}
-      data={Object.values(locusListsByGuid).filter(locusList => locusList.isPublic === showPublic)}
+      data={data}
     />
   )
 }
@@ -52,6 +56,7 @@ LocusListTable.propTypes = {
   showLinks: PropTypes.bool,
   selectRows: PropTypes.func,
   omitFields: PropTypes.array,
+  omitLocusLists: PropTypes.array,
 }
 
 LocusListTable.defaultProps = {
