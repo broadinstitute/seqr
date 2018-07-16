@@ -136,7 +136,7 @@ def _get_json_for_family(family, user=None, add_individual_guids_field=False, ad
     return _get_json_for_families([family], user, add_individual_guids_field, add_analysed_by_field)[0]
 
 
-def _get_json_for_individuals(individuals, user=None, project_guid=None, add_sample_guids_field=False):
+def _get_json_for_individuals(individuals, user=None, project_guid=None, family_guid=None, add_sample_guids_field=False):
     """Returns a JSON representation for the given list of Individuals.
 
     Args:
@@ -161,7 +161,9 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, add_sam
     fields = _get_record_fields(Individual, 'individual', user)
 
     results = []
-    nested_fields = [('family', 'guid')]
+    nested_fields = []
+    if not family_guid:
+        nested_fields.append(('family', 'guid'))
     if not project_guid:
         nested_fields.append(('family', 'project', 'guid'))
     for individual in individuals:
@@ -172,7 +174,7 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, add_sam
         result = _get_json_for_record(individual_dict, fields)
         result.update({
             'projectGuid': project_guid or individual_dict.get('family_project_guid') or individual_dict['project_guid'],
-            'familyGuid': individual_dict['family_guid'],
+            'familyGuid': family_guid or individual_dict['family_guid'],
             'individualGuid': result.pop('guid'),
             'caseReviewStatusLastModifiedBy': _get_case_review_status_modified_by(result.get('caseReviewStatusLastModifiedBy')),
             'phenotipsData': _load_phenotips_data(result['phenotipsData'])

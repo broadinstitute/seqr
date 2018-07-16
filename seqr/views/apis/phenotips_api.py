@@ -62,29 +62,20 @@ def create_patient(project, individual):
     Raises:
         PhenotipsException: if unable to create patient record
     """
-    url = '/bin/PhenoTips/OpenPatientRecord?create=true&eid={patient_eid}'.format(patient_eid=individual.guid)
 
+    url = '/rest/patients'
+    headers = {"Content-Type": "application/json"}
+    data = json.dumps({'external_id': individual.guid})
     auth_tuple = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id)
-    _make_api_call('GET', url, auth_tuple=auth_tuple, verbose=False, parse_json_resonse=False)
 
-    #data = {}
-    #if patient_json is not None:
-    #    data = json.dumps(patient_json)
+    response_items = _make_api_call('POST', url, auth_tuple=auth_tuple, http_headers=headers, data=data, expected_status_code=201, parse_response_items=True)
+    patient_id = response_items['Location'].split('/')[-1]
 
-    #auth_tuple = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id)
-    #_make_api_call('POST', url, data=data, auth_tuple=auth_tuple, verbose=False, parse_json_resonse=False)
-
-    patient_data = get_patient_data(project, individual)
-    patient_id = patient_data['id']
-
-    username, _ = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id)
-    response = add_user_to_patient(username, patient_id, allow_edit=True)
-    logger.info("Added PhenoTips user {username} to {patient_id}: {response}".format(username=username, patient_id=patient_id, response=response))
     username_read_only, _ = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=True)
     add_user_to_patient(username_read_only, patient_id, allow_edit=False)
-    logger.info("Added PhenoTips user {username} to {patient_id}: {response}".format(username=username_read_only, patient_id=patient_id, response=response))
+    logger.info("Added PhenoTips user {username} to {patient_id}".format(username=username_read_only, patient_id=patient_id))
 
-    return patient_data
+    return patient_id
 
 
 def get_patient_data(project, individual):
@@ -240,13 +231,14 @@ def add_user_to_patient(username, patient_id, allow_edit=True):
     }
 
     url = '/bin/get/PhenoTips/PatientAccessRightsManagement?outputSyntax=plain'
-    return _make_api_call(
+    _make_api_call(
         'POST',
         url,
         http_headers=headers,
         data=data,
         auth_tuple=(settings.PHENOTIPS_ADMIN_UNAME, settings.PHENOTIPS_ADMIN_PWD),
-        expected_status_code=204
+        expected_status_code=204,
+        parse_json_resonse=False,
     )
 
 
@@ -374,6 +366,7 @@ def _make_api_call(
         auth_tuple=None,
         expected_status_code=200,
         parse_json_resonse=True,
+        parse_response_items=False,
         verbose=False):
     """Utility method for making an API call and then parsing & returning the json response.
 
@@ -401,6 +394,8 @@ def _make_api_call(
 
     if parse_json_resonse:
         if not response.content:
+            if parse_response_items:
+                return dict(response.items())
             return {}
 
         try:
