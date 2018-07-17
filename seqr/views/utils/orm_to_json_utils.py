@@ -9,7 +9,7 @@ from django.db.models import Model
 from django.db.models.fields.files import ImageFieldFile
 
 from seqr.models import CAN_EDIT, Project, Family, Individual, Sample, SavedVariant, VariantTag, \
-    VariantFunctionalData, VariantNote, GeneNote, LocusList
+    VariantFunctionalData, VariantNote, GeneNote, LocusList, LocusListInterval
 from seqr.utils.xpos_utils import get_chrom_pos
 from seqr.views.utils.json_utils import _to_camel_case
 from family_info_utils import retrieve_family_analysed_by
@@ -371,11 +371,15 @@ def get_json_for_locus_lists(locus_lists, user, include_genes=False):
         locus_list_dict = _record_to_dict(locus_list, fields)
         result = _get_json_for_record(locus_list_dict, fields)
         gene_set = locus_list.locuslistgene_set
+        interval_set = locus_list.locuslistinterval_set
         if include_genes:
-            result['geneIds'] = [gene.gene_id for gene in gene_set.all()]
+            result.update({
+                'geneIds': [gene.gene_id for gene in gene_set.all()],
+                'intervals': get_json_for_locus_list_intervals(interval_set.all()),
+            })
         result.update({
             'locusListGuid': result.pop('guid'),
-            'numEntries': gene_set.count() + locus_list.locuslistinterval_set.count(),
+            'numEntries': gene_set.count() + interval_set.count(),
             'canEdit': user == locus_list.created_by,
         })
         results.append(result)
@@ -392,5 +396,27 @@ def get_json_for_locus_list(locus_list, user):
         dict: json object
     """
     return get_json_for_locus_lists([locus_list], user, include_genes=True)[0]
+
+
+def get_json_for_locus_list_intervals(locus_list_intervals):
+    """Returns a JSON representation of the given LocusLists.
+
+    Args:
+        locus_list_intervals (array): array of LocusListInterval django models.
+    Returns:
+        array: json objects
+    """
+
+    fields = _get_record_fields(LocusListInterval, 'locus_list_interval')
+    results = []
+    for locus_list_interval in locus_list_intervals:
+        locus_list_interval_dict = _record_to_dict(locus_list_interval, fields)
+        result = _get_json_for_record(locus_list_interval_dict, fields)
+        result.update({
+            'locusListIntervalGuid': result.pop('guid'),
+        })
+        results.append(result)
+
+    return results
 
 

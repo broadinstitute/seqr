@@ -2,7 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { Route, Switch } from 'react-router-dom'
 import { connect } from 'react-redux'
-import { Container, Header, Grid } from 'semantic-ui-react'
+import { Container, Grid } from 'semantic-ui-react'
 
 import { updateLocusList } from 'redux/rootReducer'
 import { getLocusListsByGuid } from 'redux/selectors'
@@ -42,8 +42,6 @@ const BaseLocusListDetail = ({ locusList, onSubmit, match }) =>
       )}
     </Grid>
     <LocusListGeneDetail locusListGuid={match.params.locusListGuid} locusList={locusList} />
-    <Header size="medium" dividing>Intervals</Header>
-    {/* TODO */}
   </div>
 
 BaseLocusListDetail.propTypes = {

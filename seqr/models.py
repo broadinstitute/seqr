@@ -740,6 +740,8 @@ class LocusListInterval(ModelWithGUID):
     class Meta:
         unique_together = ('locus_list', 'genome_version', 'chrom', 'start', 'end')
 
+        json_fields = ['guid', 'genome_version', 'chrom', 'start', 'end']
+
 
 """
 class FamilyGroup(ModelWithGUID):

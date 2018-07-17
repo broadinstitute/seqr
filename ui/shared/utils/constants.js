@@ -3,6 +3,7 @@ import { Form } from 'semantic-ui-react'
 import BaseFieldView from '../components/panel/view-fields/BaseFieldView'
 import OptionFieldView from '../components/panel/view-fields/OptionFieldView'
 import { Select } from '../components/form/Inputs'
+import LocusIntervalField from '../components/form/LocusIntervalField'
 import { validators } from '../components/form/ReduxFormWrapper'
 
 
@@ -195,9 +196,19 @@ export const LOCUS_LIST_GENE_FIELD = {
   isEditable: true,
   component: Form.TextArea,
   rows: 12,
-  validate: value => ((value && value.filter(gene => gene.symbol).length > 0) ? undefined : 'Required'),
   format: value => (value || []).map(gene => gene.symbol).join(', '),
   normalize: (value, previousValue) => value.split(',').map(geneSymbol =>
     ((previousValue || []).find(prevGene => prevGene.symbol === geneSymbol.trim()) || { symbol: geneSymbol.trim() }),
   ),
+}
+
+export const LOCUS_LIST_INTERVAL_FIELD = {
+  name: 'intervals',
+  label: 'Intervals',
+  fieldDisplay: () => null,
+  isEditable: true,
+  isArrayField: true,
+  addArrayElement: { label: 'Add Interval', newValue: { genomeVersion: '37' } },
+  validate: value => ((value && value.chrom && value.start && value.end) ? undefined : 'Chrom, start, and end are all required'),
+  component: LocusIntervalField,
 }

@@ -9,7 +9,7 @@ import BaseFieldView from '../view-fields/BaseFieldView'
 import ShowGeneModal from '../../buttons/ShowGeneModal'
 import ExportTableButton from '../../buttons/export-table/ExportTableButton'
 import { toSnakecase } from '../../../utils/stringUtils'
-import { LOCUS_LIST_GENE_FIELD } from '../../../utils/constants'
+import { LOCUS_LIST_GENE_FIELD, LOCUS_LIST_INTERVAL_FIELD } from '../../../utils/constants'
 import { LocusListGeneLoader } from '../../LocusListLoader'
 
 const getFieldProps = ({ isEditable, width, fieldDisplay, ...fieldProps }) => ({
@@ -22,6 +22,7 @@ const getFieldProps = ({ isEditable, width, fieldDisplay, ...fieldProps }) => ({
 })
 
 const GENE_FIELD = getFieldProps(LOCUS_LIST_GENE_FIELD)
+const INTERVAL_FIELD = getFieldProps(LOCUS_LIST_INTERVAL_FIELD)
 
 
 const LocusListGeneDetail = ({ locusList, onSubmit }) => {
@@ -33,24 +34,31 @@ const LocusListGeneDetail = ({ locusList, onSubmit }) => {
       processRow: gene => ([gene.geneId, gene.symbol]),
     },
   }]
+  const fieldProps = {
+    idField: 'locusListGuid',
+    initialValues: locusList,
+    onSubmit,
+    isEditable: locusList.canEdit,
+    compact: true,
+    showErrorPanel: true,
+  }
   return (
     <div>
       <Header size="medium" dividing>
-        <BaseFieldView
-          {...GENE_FIELD}
-          idField="locusListGuid"
-          initialValues={locusList}
-          onSubmit={onSubmit}
-          isEditable={locusList.canEdit}
-          compact
-          modalTitle={`Edit Genes for ${locusList.name}`}
-          showErrorPanel
-        />
+        <BaseFieldView {...GENE_FIELD} {...fieldProps} modalTitle={`Edit Genes for "${locusList.name}"`} />
         <ExportTableButton downloads={geneExportDownloads} buttonText="Download" float="right" fontWeight="300" fontSize=".75em" />
       </Header>
       <Grid columns={12} divided="vertically">
         {(locusList.genes || []).map(gene =>
           <Grid.Column key={gene.geneId}><ShowGeneModal gene={gene} /></Grid.Column>,
+        )}
+      </Grid>
+      <Header size="medium" dividing>
+        <BaseFieldView {...INTERVAL_FIELD} {...fieldProps} modalTitle={`Edit Intervals for "${locusList.name}"`} />
+      </Header>
+      <Grid columns={8} divided="vertically">
+        {(locusList.intervals || []).map(interval =>
+          <Grid.Column key={interval.locusListIntervalGuid}>chr{interval.chrom}:{interval.start}-{interval.end}</Grid.Column>,
         )}
       </Grid>
     </div>

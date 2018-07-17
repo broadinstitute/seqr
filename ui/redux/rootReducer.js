@@ -187,11 +187,11 @@ export const updateLocusList = (values) => {
       (responseJson) => {
         dispatch({ type: RECEIVE_GENES, updatesById: responseJson.genesById || {} })
         dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
-        if (responseJson.invalidGeneSymbols && responseJson.invalidGeneSymbols.length > 0) {
+        if (responseJson.invalidLocusListItems && responseJson.invalidLocusListItems.length > 0) {
           const err = new Error()
           err.warnings = [
-            'The following genes are not valid. All other changes were made successfully.',
-          ].concat(responseJson.invalidGeneSymbols)
+            'The following genes/ intervals are not valid. All other changes were made successfully.',
+          ].concat(responseJson.invalidLocusListItems)
           throw err
         }
       },

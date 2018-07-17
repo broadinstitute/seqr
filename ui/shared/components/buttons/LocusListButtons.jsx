@@ -7,12 +7,12 @@ import { updateLocusList } from 'redux/rootReducer'
 import { LocusListGeneLoader } from '../LocusListLoader'
 import UpdateButton from './UpdateButton'
 import DeleteButton from './DeleteButton'
-import { LOCUS_LIST_FIELDS, LOCUS_LIST_GENE_FIELD } from '../../utils/constants'
+import { LOCUS_LIST_FIELDS, LOCUS_LIST_GENE_FIELD, LOCUS_LIST_INTERVAL_FIELD } from '../../utils/constants'
 
 
-const FIELDS = LOCUS_LIST_FIELDS.concat([LOCUS_LIST_GENE_FIELD]).filter(field => field.isEditable).map(
-  ({ isEditable, width, fieldDisplay, ...fieldProps }) => fieldProps,
-)
+const FIELDS = LOCUS_LIST_FIELDS.concat(
+  [LOCUS_LIST_GENE_FIELD, LOCUS_LIST_INTERVAL_FIELD],
+).filter(field => field.isEditable).map(({ isEditable, width, fieldDisplay, ...fieldProps }) => fieldProps)
 
 const UpdateLocusList = ({ locusList, size, onSubmit }) =>
   <UpdateButton
