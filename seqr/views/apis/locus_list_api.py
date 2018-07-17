@@ -18,10 +18,7 @@ from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_locus_lists, get_json_for_locus_list, get_json_for_locus_list_intervals
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions
 
-
 logger = logging.getLogger(__name__)
-
-# TODO gene intervals
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)

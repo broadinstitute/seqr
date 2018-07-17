@@ -7,9 +7,9 @@ import { connect } from 'react-redux'
 import { getLocusListsByGuid } from 'redux/selectors'
 import { setModalConfirm, closeModal } from 'redux/utils/modalReducer'
 import { LocusListsLoader } from 'shared/components/LocusListLoader'
-import LocusListGeneDetail from 'shared/components/panel/genes/LocusListGeneDetail'
+import LocusListDetail from 'shared/components/panel/genes/LocusListDetail'
 import LocusListTables from 'shared/components/table/LocusListTables'
-import { CreateLocusListButton, UpdateLocusListButton } from 'shared/components/buttons/LocusListButtons'
+import { CreateLocusListButton } from 'shared/components/buttons/LocusListButtons'
 import DispatchRequestButton from 'shared/components/buttons/DispatchRequestButton'
 import ButtonLink from 'shared/components/buttons/ButtonLink'
 import DeleteButton from 'shared/components/buttons/DeleteButton'
@@ -41,27 +41,22 @@ const LocusListItem = ({ project, locusList, onSubmit }) => {
   const submitValues = { locusListGuids: [locusList.locusListGuid] }
   return (
     <ItemContainer key={locusList.locusListGuid}>
-      {locusList.name}
-      <HorizontalSpacer width={10} />
       <Modal
         title={`${locusList.name} Gene List`}
         modalName={`${project.projectGuid}-${locusList.name}-genes`}
-        trigger={<i><ButtonLink>{`${locusList.numEntries} entries`}</ButtonLink></i>}
+        trigger={<ButtonLink>{locusList.name}</ButtonLink>}
         size="large"
       >
-        <LocusListGeneDetail locusListGuid={locusList.locusListGuid} projectGuid={project.projectGuid} />
+        <LocusListDetail locusListGuid={locusList.locusListGuid} projectGuid={project.projectGuid} />
       </Modal>
-      {
-        locusList.description &&
-        <Popup
-          position="right center"
-          trigger={<HelpIcon name="help circle outline" />}
-          content={locusList.description}
-          size="small"
-        />
-      }
       <HorizontalSpacer width={5} />
-      {locusList.canEdit && <UpdateLocusListButton locusList={locusList} />}
+      <Popup
+        position="right center"
+        trigger={<HelpIcon name="help circle outline" />}
+        content={<div><b>{locusList.numEntries} Genes</b><br /><i>{locusList.description}</i></div>}
+        size="small"
+      />
+      <HorizontalSpacer width={5} />
       {project.canEdit &&
         <DeleteButton
           initialValues={submitValues}
