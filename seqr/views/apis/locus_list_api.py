@@ -124,9 +124,9 @@ def update_locus_list_handler(request, locus_list_guid):
         )
 
     # Update intervals
-    new_intervals, invalid_intervals, existing_interval_ids = _parse_requested_intervals(request_json)
+    new_intervals, invalid_intervals, existing_intervals = _parse_requested_intervals(request_json)
 
-    locus_list.locuslistinterval_set.exclude(guid__in=existing_interval_ids).delete()
+    locus_list.locuslistinterval_set.exclude(guid__in=existing_intervals.keys()).delete()
     for interval in new_intervals:
         LocusListInterval.objects.create(
             locus_list=locus_list,
@@ -135,6 +135,13 @@ def update_locus_list_handler(request, locus_list_guid):
             start=interval['start'],
             end=interval['end'],
         )
+    for interval in existing_intervals.values():
+        interval_model = LocusListInterval.objects.get(guid=interval['locusListIntervalGuid'])
+        interval_model.genome_version = interval.get('genomeVersion')
+        interval_model.chrom = interval['chrom']
+        interval_model.start = interval['start']
+        interval_model.end = interval['end']
+        interval_model.save()
 
     locus_list_json = get_json_for_locus_list(locus_list, request.user)
     locus_list_json['geneIds'] = new_genes.keys() + existing_gene_ids
@@ -186,8 +193,12 @@ def delete_project_locus_lists(request, project_guid):
     })
 
 
+def get_project_locus_list_models(project):
+    return get_objects_for_group(project.can_view_group, CAN_VIEW, LocusList)
+
+
 def get_sorted_project_locus_lists(project, user):
-    result = get_json_for_locus_lists(get_objects_for_group(project.can_view_group, CAN_VIEW, LocusList), user)
+    result = get_json_for_locus_lists(get_project_locus_list_models(project), user)
     return sorted(result, key=lambda locus_list: locus_list['name'])
 
 
@@ -202,12 +213,12 @@ def _parse_requested_genes(request_json):
 
 def _parse_requested_intervals(request_json):
     requested_intervals = request_json.get('intervals') or []
-    existing_interval_ids = []
+    existing_intervals = {}
     invalid_intervals = []
     new_intervals = []
     for interval in requested_intervals:
         if interval.get('locusListIntervalGuid'):
-            existing_interval_ids.append(interval.get('locusListIntervalGuid'))
+            existing_intervals[interval.get('locusListIntervalGuid')] = interval
         else:
             try:
                 interval['start'] = int(interval['start'])
@@ -221,4 +232,4 @@ def _parse_requested_intervals(request_json):
                     chrom=interval.get('chrom', '?'), start=interval.get('start', '?'), end=interval.get('end', '?')
                 ))
 
-    return new_intervals, invalid_intervals, existing_interval_ids
+    return new_intervals, invalid_intervals, existing_intervals

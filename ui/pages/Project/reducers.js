@@ -20,6 +20,8 @@ const RECEIVE_PROJECT_DETAILS = 'RECEIVE_PROJECT_DETAILS'
 const REQUEST_SAVED_VARIANTS = 'REQUEST_SAVED_VARIANTS'
 const RECEIVE_SAVED_VARIANTS = 'RECEIVE_SAVED_VARIANTS'
 const RECEIVE_SAVED_VARIANT_FAMILIES = 'RECEIVE_SAVED_VARIANT_FAMILIES'
+const RECEIVE_GENES = 'RECEIVE_GENES'
+
 
 // Data actions
 
@@ -70,6 +72,7 @@ export const loadProjectVariants = (familyGuid, variantGuid) => {
     dispatch({ type: REQUEST_SAVED_VARIANTS })
     new HttpRequestHelper(url,
       (responseJson) => {
+        dispatch({ type: RECEIVE_GENES, updatesById: responseJson.genesById })
         dispatch({ type: RECEIVE_SAVED_VARIANTS, updatesById: responseJson.savedVariants })
         if (expectedFamilyGuids) {
           dispatch({

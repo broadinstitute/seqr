@@ -22,7 +22,7 @@ def get_gene_symbols_to_gene_ids(gene_symbols):
     return {symbol: reference.get_gene_id_from_symbol(symbol) for symbol in gene_symbols}
 
 
-def parse_gene_constraints(gene):
+def _parse_gene_constraints(gene):
     gene_tags = gene.get('tags', gene)
     return {
        'lof': {
@@ -39,7 +39,7 @@ def parse_gene_constraints(gene):
 
 
 def _gene_json(gene):
-    gene['constraints'] = parse_gene_constraints(gene)
+    gene['constraints'] = _parse_gene_constraints(gene)
     gene = {_to_camel_case(k): v for k, v in gene.items()}
     gene['phenotypeInfo'] = {_to_camel_case(k): v for k, v in gene.get('phenotypeInfo', {}).items()}
     return gene
