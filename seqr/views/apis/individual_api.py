@@ -12,8 +12,7 @@ from seqr.model_utils import get_or_create_seqr_model, update_seqr_model, delete
 from seqr.models import Sample, Individual, Family, CAN_EDIT
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.pedigree_image_api import update_pedigree_images
-from seqr.views.apis.phenotips_api import create_patient, set_patient_hpo_terms, delete_patient, \
-    PhenotipsException
+from seqr.views.apis.phenotips_api import set_patient_hpo_terms, delete_patient, PhenotipsException
 from seqr.views.utils.export_table_utils import export_table
 from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file
 from seqr.views.utils.json_to_orm_utils import update_individual_from_json
@@ -355,19 +354,10 @@ def add_or_update_individuals_and_families(project, individual_records, user=Non
         record['family'] = family
         record.pop('familyId', None)
 
-        # apply additional json fields which don't directly map to Individual model fields
-        record['phenotipsEid'] = individual.guid  # use guid instead of indiv_id to avoid collisions
-
         if created:
-            # create new PhenoTips patient record
-            patient_id = create_patient(project, individual)
             record.update({
-                'phenotipsPatientId': patient_id,
                 'caseReviewStatus': 'I',
             })
-
-            logger.info("Created PhenoTips record with patient id %s and external id %s" % (
-                str(patient_id), str(individual.guid)))
 
         if not (individual.display_name or record.get('displayName')):
             record['displayName'] = individual.individual_id or record.get('individualId')

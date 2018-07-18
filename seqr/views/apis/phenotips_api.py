@@ -53,7 +53,7 @@ DO_NOT_PROXY_URL_KEYWORDS = [
 ]
 
 
-def create_patient(project, individual):
+def _create_patient_if_missing(project, individual):
     """Create a new PhenoTips patient record with the given patient id.
 
     Args:
@@ -62,6 +62,8 @@ def create_patient(project, individual):
     Raises:
         PhenotipsException: if unable to create patient record
     """
+    if individual.phenotips_patient_id:
+        return
 
     url = '/rest/patients'
     headers = {"Content-Type": "application/json"}
@@ -70,17 +72,17 @@ def create_patient(project, individual):
 
     response_items = _make_api_call('POST', url, auth_tuple=auth_tuple, http_headers=headers, data=data, expected_status_code=201, parse_json_resonse=False)
     patient_id = response_items['Location'].split('/')[-1]
+    logger.info("Created PhenoTips record with patient id {patient_id} and external id {external_id}".format(patient_id=patient_id, external_id=individual.guid))
 
     username_read_only, _ = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=True)
-    add_user_to_patient(username_read_only, patient_id, allow_edit=False)
+    _add_user_to_patient(username_read_only, patient_id, allow_edit=False)
     logger.info("Added PhenoTips user {username} to {patient_id}".format(username=username_read_only, patient_id=patient_id))
 
-    return patient_id
+    update_seqr_model(individual, phenotips_patient_id=patient_id, phenotips_eid=individual.guid)
 
 
-def get_patient_data(project, individual):
+def _get_patient_data(project, individual):
     """Retrieves patient data from PhenoTips and returns a json obj.
-
     Args:
         project (Model): seqr Project - used to retrieve PhenoTips credentials
         individual (Model): seqr Individual
@@ -95,9 +97,8 @@ def get_patient_data(project, individual):
     return _make_api_call('GET', url, auth_tuple=auth_tuple, verbose=False)
 
 
-def update_patient_data(project, individual, patient_json):
+def _update_patient_data(project, individual, patient_json):
     """Updates patient data in PhenoTips to the values in patient_json.
-
     Args:
         project (Model): seqr Project - used to retrieve PhenoTips credentials
         individual (Model): seqr Individual
@@ -126,24 +127,22 @@ def delete_patient(project, individual):
     Raises:
         PhenotipsException: if api call fails
     """
-
-    url = _phenotips_patient_url(individual)
-
-    auth_tuple = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=False)
-    return _make_api_call('DELETE', url, auth_tuple=auth_tuple, expected_status_code=204)
+    if individual.phenotips_patient_id or individual.phenotips_eid:
+        url = _phenotips_patient_url(individual)
+        auth_tuple = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=False)
+        return _make_api_call('DELETE', url, auth_tuple=auth_tuple, expected_status_code=204)
 
 
 def _phenotips_patient_url(individual):
     if individual.phenotips_patient_id:
         return '/rest/patients/{0}'.format(individual.phenotips_patient_id)
     else:
-        return '/rest/patients/eid/{0}'.format(individual.guid)
+        return '/rest/patients/eid/{0}'.format(individual.phenotips_eid)
 
 
-def update_patient_field_value(project, individual, field_name, field_value):
+def _update_patient_field_value(project, individual, field_name, field_value):
     """ Utility method for updating one field in the patient record, while keeping other fields
     the same. For field descriptions, see https://phenotips.org/DevGuide/JSONExport1.3
-
     Args:
         project (Model): seqr Project - used to retrieve PhenoTips credentials
         individual (Model): seqr Individual
@@ -177,15 +176,14 @@ def update_patient_field_value(project, individual, field_name, field_value):
     ]):
         raise ValueError("Unexpected field_name: %s" % (field_name, ))
 
-    patient_json = get_patient_data(project, individual)
+    patient_json = _get_patient_data(project, individual)
     patient_json[field_name] = field_value
 
-    update_patient_data(project, individual, patient_json)
+    _update_patient_data(project, individual, patient_json)
 
 
 def set_patient_hpo_terms(project, individual, hpo_terms_present=[], hpo_terms_absent=[], final_diagnosis_mim_ids=[]):
     """Utility method for specifying a list of HPO IDs for a patient.
-
     Args:
         project (Model): seqr Project - used to retrieve PhenoTips credentials
         individual (Model): seqr Individual
@@ -195,11 +193,12 @@ def set_patient_hpo_terms(project, individual, hpo_terms_present=[], hpo_terms_a
     Raises:
         PhenotipsException: if api call fails
     """
+    _create_patient_if_missing(project, individual)
 
     if hpo_terms_present or hpo_terms_absent:
         features_value = [{"id": hpo_term, "observed": "yes", "type": "phenotype"} for hpo_term in hpo_terms_present]
         features_value += [{"id": hpo_term, "observed": "no", "type": "phenotype"} for hpo_term in hpo_terms_absent]
-        update_patient_field_value(project, individual, "features", features_value)
+        _update_patient_field_value(project, individual, "features", features_value)
 
     if final_diagnosis_mim_ids:
         omim_disorders = []
@@ -207,14 +206,13 @@ def set_patient_hpo_terms(project, individual, hpo_terms_present=[], hpo_terms_a
             if int(mim_id) < 100000:
                 raise ValueError("Invalid final_diagnosis_mim_id: %s. Expected a 6-digit number." % str(mim_id))
             omim_disorders.append({'id': 'MIM:%s' % mim_id})
-        update_patient_field_value(project, individual, "disorders", omim_disorders)
+        _update_patient_field_value(project, individual, "disorders", omim_disorders)
 
-    patient_json = get_patient_data(project, individual)
+    patient_json = _get_patient_data(project, individual)
     _update_individual_phenotips_data(individual, patient_json)
 
 
-
-def add_user_to_patient(username, patient_id, allow_edit=True):
+def _add_user_to_patient(username, patient_id, allow_edit=True):
     """Grant a PhenoTips user access to the given patient.
 
     Args:
@@ -280,47 +278,59 @@ def create_phenotips_user(username, password):
 
 @login_required
 @csrf_exempt
-def phenotips_pdf_handler(request, project_guid, patient_id):
+def _phenotips_view_handler(request, project_guid, individual_guid, url_template, permission_level=CAN_VIEW):
     """Requests the PhenoTips PDF for the given patient_id, and forwards PhenoTips' response to the client.
 
     Args:
         request: Django HTTP request object
         project_guid (string): project GUID for the seqr project containing this individual
-        patient_id (string): PhenoTips internal patient id
+        individual_guid (string): individual GUID for the seqr individual corresponding to the desired patient
     """
 
-    url = "/bin/export/data/{patient_id}?format=pdf&pdfcover=0&pdftoc=0&pdftemplate=PhenoTips.PatientSheetCode".format(patient_id=patient_id)
     project = Project.objects.get(guid=project_guid)
-
     check_permissions(project, request.user, CAN_VIEW)
 
-    auth_tuple = _get_phenotips_username_and_password(request.user, project, permissions_level=CAN_VIEW)
+    individual = Individual.objects.get(guid=individual_guid)
+    _create_patient_if_missing(project, individual)
+
+    # query string forwarding needed for PedigreeEditor button
+    query_string = request.META["QUERY_STRING"]
+    url = url_template.format(patient_id=individual.phenotips_patient_id, query_string=query_string)
+
+    auth_tuple = _get_phenotips_username_and_password(request.user, project, permissions_level=permission_level)
 
     return proxy_request(request, url, headers={}, auth_tuple=auth_tuple, host=settings.PHENOTIPS_SERVER)
 
 
 @login_required
 @csrf_exempt
-def phenotips_edit_handler(request, project_guid, patient_id):
+def phenotips_pdf_handler(request, project_guid, individual_guid):
+    """Requests the PhenoTips PDF for the given patient_id, and forwards PhenoTips' response to the client.
+
+    Args:
+        request: Django HTTP request object
+        project_guid (string): project GUID for the seqr project containing this individual
+        individual_guid (string): individual GUID for the seqr individual corresponding to the desired patient
+    """
+    url_template = "/bin/export/data/{patient_id}?format=pdf&pdfcover=0&pdftoc=0&pdftemplate=PhenoTips.PatientSheetCode"
+
+    return _phenotips_view_handler(request, project_guid, individual_guid, url_template)
+
+
+@login_required
+@csrf_exempt
+def phenotips_edit_handler(request, project_guid, individual_guid):
     """Request the PhenoTips Edit page for the given patient_id, and forwards PhenoTips' response to the client.
 
     Args:
         request: Django HTTP request object
         project_guid (string): project GUID for the seqr project containing this individual
-        patient_id (string): PhenoTips internal patient id
+        individual_guid (string): individual GUID for the seqr individual corresponding to the desired patient
     """
 
-    # query string forwarding needed for PedigreeEditor button
-    query_string = request.META["QUERY_STRING"]
-    url = "/bin/edit/data/{patient_id}?{query_string}".format(patient_id=patient_id, query_string=query_string)
+    url_template = "/bin/edit/data/{patient_id}?{query_string}"
 
-    project = Project.objects.get(guid=project_guid)
-
-    check_permissions(project, request.user, CAN_EDIT)
-
-    auth_tuple = _get_phenotips_username_and_password(request.user, project, permissions_level=CAN_EDIT)
-
-    return proxy_request(request, url, headers={}, auth_tuple=auth_tuple, host=settings.PHENOTIPS_SERVER)
+    return _phenotips_view_handler(request, project_guid, individual_guid, url_template, permission_level=CAN_EDIT)
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)

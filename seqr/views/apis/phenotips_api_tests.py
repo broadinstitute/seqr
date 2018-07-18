@@ -13,7 +13,7 @@ class PhenotipsAPITest(TestCase):
 
     @mock.patch('seqr.views.apis.phenotips_api.proxy_request', create_proxy_request_stub())
     def test_phenotips_edit(self):
-        url = reverse(phenotips_edit_handler, args=['R0001_1kg', 'P0000001'])
+        url = reverse(phenotips_edit_handler, args=['R0001_1kg', 'I000001_na19675'])
         _check_login(self, url)
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({'some_json': 'test'}))
@@ -21,7 +21,7 @@ class PhenotipsAPITest(TestCase):
 
     @mock.patch('seqr.views.apis.phenotips_api.proxy_request', create_proxy_request_stub())
     def test_phenotips_pdf(self):
-        url = reverse(phenotips_pdf_handler, args=['R0001_1kg', 'P0000001'])
+        url = reverse(phenotips_pdf_handler, args=['R0001_1kg', 'I000001_na19675'])
         _check_login(self, url)
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({'some_json': 'test'}))
