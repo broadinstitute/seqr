@@ -53,7 +53,7 @@ const clinvarUrl = (clinvar) => {
 }
 
 const Pathogenicity = ({ variant }) => {
-  if (!variant.clinvar.variantId && !variant.hgmd.class) {
+  if (!variant.clinvar.variantId && !variant.clinvar.alleleId && !variant.hgmd.class) {
     return null
   }
 
