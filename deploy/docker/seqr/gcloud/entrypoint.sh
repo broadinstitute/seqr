@@ -24,6 +24,7 @@ fi
 cd /seqr
 
 git pull
+git checkout $SEQR_GIT_BRANCH
 pip install --upgrade -r requirements.txt  # double-check that requirements are up-to-date
 python -u manage.py makemigrations
 python -u manage.py migrate
@@ -32,18 +33,28 @@ python -u manage.py collectstatic --no-input
 
 # launch django dev server in background
 cd /seqr_settings
-gunicorn -w 4 -c gunicorn_config.py wsgi:application |& stdbuf -o0 grep -v curl |& tee /var/log/gunicorn.log &
+gunicorn -w 32 -c gunicorn_config.py wsgi:application |& stdbuf -o0 grep -v curl |& tee /var/log/gunicorn.log &
 
 # allow pg_dump and other postgres command-line tools to run without having to enter a password
 echo "*:*:*:*:$POSTGRES_PASSWORD" > ~/.pgpass
 chmod 600 ~/.pgpass
+
+# check if a settings backup exists
+LATEST_SETTINGS_BACKUP=$(ls -tr1 /mounted-bucket/settings_backups/seqr_${DEPLOYMENT_TYPE}_settings* | tail -n 1)
+if [[ -e "$LATEST_SETTINGS_BACKUP" ]]; then
+    echo Restoring $LATEST_SETTINGS_BACKUP
+
+    # restore latest settings backup
+    tar -C / -xzf $LATEST_SETTINGS_BACKUP
+fi
+
 
 # set up cron database backups
 echo 'SHELL=/bin/bash
 0 0 * * * python /mounted-bucket/settings_backups/run_settings_backup.py >& /var/log/cron.log
 0 0 * * * python /seqr/manage.py update_projects_in_new_schema -w /seqr/wgs_projects.txt 2>&1 >> /var/log/cron.log
 0 0 * * * python /seqr/manage.py transfer_gene_lists 2>&1 >> /var/log/cron.log
-0 */4 * * * python /mounted-bucket/database_backups/run_postgres_database_backup.py 2>&1 >> /var/log/cron.log
+0 */4 * * * source /root/.bashrc; python /mounted-bucket/database_backups/run_postgres_database_backup.py 2>&1 >> /var/log/cron.log
 ' | crontab -
 
 env > /etc/environment  # this is necessary for crontab commands to run with the right env. vars.

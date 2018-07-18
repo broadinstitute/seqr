@@ -2,33 +2,26 @@
 APIs for retrieving, updating, creating, and deleting Individual records
 """
 
-import gzip
-import hashlib
 import json
 import logging
-import os
-import tempfile
 
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import MultipleObjectsReturned
 from django.views.decorators.csrf import csrf_exempt
 
+from seqr.model_utils import get_or_create_seqr_model, update_seqr_model, delete_seqr_model
 from seqr.models import Sample, Individual, Family, CAN_EDIT
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.pedigree_image_api import update_pedigree_images
 from seqr.views.apis.phenotips_api import create_patient, set_patient_hpo_terms, delete_patient, \
     PhenotipsException
-from seqr.views.utils.export_table_utils import _convert_html_to_plain_text, export_table
+from seqr.views.utils.export_table_utils import export_table
+from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file
 from seqr.views.utils.json_to_orm_utils import update_individual_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_individual, _get_json_for_family
-from seqr.views.utils.pedigree_info_utils import parse_pedigree_table, validate_fam_file_records
+from seqr.views.utils.pedigree_info_utils import parse_pedigree_table, validate_fam_file_records, JsonConstants
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_permissions
 
-from xbrowse_server.base.models import \
-    Project as BaseProject, \
-    Family as BaseFamily, \
-    Individual as BaseIndividual
 
 logger = logging.getLogger(__name__)
 
@@ -39,15 +32,21 @@ __AFFECTED_TO_EXPORTED_VALUE = dict(Individual.AFFECTED_STATUS_LOOKUP)
 __AFFECTED_TO_EXPORTED_VALUE['U'] = ''
 
 
+class ErrorsWarningsException(Exception):
+    def __init__(self, errors, warnings=None):
+        Exception.__init__(self, str(errors))
+        self.errors = errors
+        self.warnings = warnings
+
+
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
-def update_individual_field_handler(request, individual_guid, field_name):
+def update_individual_handler(request, individual_guid):
     """Updates a single field in an Individual record.
 
     Args:
         request (object): Django HTTP Request object.
         individual_guid (string): GUID of the Individual.
-        field_name (string): Name of the field to update (eg. "maternalId").
 
     Request:
         body should be a json dictionary like: { 'value': xxx }
@@ -71,11 +70,8 @@ def update_individual_field_handler(request, individual_guid, field_name):
     check_permissions(project, request.user, CAN_EDIT)
 
     request_json = json.loads(request.body)
-    if "value" not in request_json:
-        raise ValueError("Request is missing 'value' key: %s" % (request.body,))
 
-    individual_json = {field_name: request_json['value']}
-    update_individual_from_json(individual, individual_json)
+    update_individual_from_json(individual, request_json, user=request.user, allow_unknown_keys=True)
 
     return create_json_response({
         individual.guid: _get_json_for_individual(individual, request.user)
@@ -92,17 +88,15 @@ def edit_individuals_handler(request, project_guid):
         project_guid (string): GUID of project that contains these individuals.
 
     Request:
-        body should be a json dictionary that contains a 'modifiedIndividuals' dictionary that
-        includes the individuals to update, mapped to the specific fields that should be updated
-        for each individual - for example:
+        body should be a json dictionary that contains a 'individuals' list that includes the individuals to update,
+         represented by dictionaries of their guid and fields to update -
+        for example:
             {
-                'form': {
-                    'modifiedIndividuals': {
-                        <individualGuid1>: { 'paternalId': <paternalId>, 'affected': 'A' },
-                        <individualGuid2>: { 'sex': 'U' },
-                        ...
-                    }
-                }
+                'individuals': [
+                    { 'individualGuid': <individualGuid1>, 'paternalId': <paternalId>, 'affected': 'A' },
+                    { 'individualGuid': <individualGuid1>, 'sex': 'U' },
+                    ...
+                [
             }
 
     Response:
@@ -118,42 +112,49 @@ def edit_individuals_handler(request, project_guid):
 
     request_json = json.loads(request.body)
 
-    if 'form' not in request_json:
+    modified_individuals_list = request_json.get('individuals')
+    if modified_individuals_list is None:
         return create_json_response(
-            {}, status=400, reason="Invalid request: 'form' key not specified")
+            {}, status=200, reason="'individuals' not specified")
 
-    form_data = request_json['form']
+    update_individuals = {ind['individualGuid']: ind for ind in modified_individuals_list}
+    update_individual_models = {ind.guid: ind for ind in Individual.objects.filter(guid__in=update_individuals.keys())}
 
-    modified_individuals_by_guid = form_data.get('modifiedIndividuals')
-    if modified_individuals_by_guid is None:
-        return create_json_response(
-            {}, status=400, reason="'modifiedIndividuals' not specified")
+    modified_family_ids = {ind['family']['familyId'] for ind in modified_individuals_list}
+    modified_family_ids.update({ind.family.family_id for ind in update_individual_models.values()})
+    related_individuals = Individual.objects.filter(
+        family__family_id__in=modified_family_ids, family__project=project).exclude(guid__in=update_individuals.keys())
+    # can't use _get_json_for_individual because validation needs familyId, not familyGuid
+    related_individuals_json = [{
+        'individualId': ind.individual_id,
+        'familyId': ind.family.family_id,
+        'sex': ind.sex,
+        'maternalId': ind.maternal_id,
+        'paternalId': ind.paternal_id,
+    } for ind in related_individuals]
+    individuals_list = modified_individuals_list + related_individuals_json
 
-    # edit individuals
-    modified_individuals_list = list(modified_individuals_by_guid.values())
-
-    # TODO more validation
-    errors, warnings = validate_fam_file_records(modified_individuals_list)
+    # TODO more validation?
+    errors, warnings = validate_fam_file_records(individuals_list, fail_on_warnings=True)
     if errors:
-        return create_json_response({'errors': errors, 'warnings': warnings})
+        return create_json_response({'errors': errors, 'warnings': warnings}, status=400, reason='Invalid updates')
 
     updated_families, updated_individuals = add_or_update_individuals_and_families(
-        project, modified_individuals_list)
+        project, modified_individuals_list, user=request.user
+    )
 
     individuals_by_guid = {
         individual.guid: _get_json_for_individual(individual, request.user) for individual in updated_individuals
     }
-
     families_by_guid = {
-        family.guid: _get_json_for_family(family, request.user, add_individual_guids_field=True) for family in updated_families
-    }  # families whose list of individuals may have changed
-
-    updated_individuals_by_guid = {
-        'individualsByGuid': individuals_by_guid,
-        'familiesByGuid': families_by_guid,
+        family.guid: _get_json_for_family(family, request.user, add_individual_guids_field=True)
+        for family in updated_families
     }
 
-    return create_json_response(updated_individuals_by_guid)
+    return create_json_response({
+        'individualsByGuid': individuals_by_guid,
+        'familiesByGuid': families_by_guid,
+    })
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -191,19 +192,14 @@ def delete_individuals_handler(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user, CAN_EDIT)
 
     request_json = json.loads(request.body)
-
-    if 'form' not in request_json:
+    individuals_list = request_json.get('individuals')
+    if individuals_list is None:
         return create_json_response(
-            {}, status=400, reason="Invalid request: 'form' not in request_json")
+            {}, status=400, reason="Invalid request: 'individuals' not in request_json")
 
     logger.info("delete_individuals_handler %s", request_json)
 
-    form_data = request_json['form']
-
-    individual_guids_to_delete = form_data.get('recordIdsToDelete')
-    if individual_guids_to_delete is None:
-        return create_json_response(
-            {}, status=400, reason="'individualGuidsToDelete' not specified")
+    individual_guids_to_delete = [ind['individualGuid'] for ind in individuals_list]
 
     # delete the individuals
     families_with_deleted_individuals = delete_individuals(project, individual_guids_to_delete)
@@ -223,17 +219,6 @@ def delete_individuals_handler(request, project_guid):
     })
 
 
-def _compute_serialized_file_path(uploadedFileId):
-    """Compute local file path, and make sure the directory exists"""
-
-    upload_directory = os.path.join(tempfile.gettempdir(), 'temp_uploads')
-    if not os.path.isdir(upload_directory):
-        logger.info("Creating directory: " + upload_directory)
-        os.makedirs(upload_directory)
-
-    return os.path.join(upload_directory, "temp_upload_%(uploadedFileId)s.json.gz" % locals())
-
-
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def receive_individuals_table_handler(request, project_guid):
@@ -250,30 +235,18 @@ def receive_individuals_table_handler(request, project_guid):
 
     project = get_project_and_check_permissions(project_guid, request.user)
 
-    if len(request.FILES) != 1:
-        return create_json_response({
-            'errors': ["Received %s files instead of 1" % len(request.FILES)]
-        })
+    def parse_file(filename, stream):
+        pedigree_records, errors, warnings = parse_pedigree_table(filename, stream, user=request.user, project=project)
+        if errors:
+            raise ErrorsWarningsException(errors, warnings)
+        return pedigree_records
 
-    # parse file
-    stream = request.FILES.values()[0]
-    filename = stream._name
-    #file_size = stream._size
-    #content_type = stream.content_type
-    #content_type_extra = stream.content_type_extra
-    #for chunk in value.chunks():
-    #   destination.write(chunk)
-
-    json_records, errors, warnings = parse_pedigree_table(filename, stream)
-
-    if errors:
-        return create_json_response({'errors': errors, 'warnings': warnings})
-
-    # save json to temporary file
-    uploadedFileId = hashlib.md5(str(json_records)).hexdigest()
-    serialized_file_path = _compute_serialized_file_path(uploadedFileId)
-    with gzip.open(serialized_file_path, "w") as f:
-        json.dump(json_records, f)
+    try:
+        uploaded_file_id, filename, json_records = save_uploaded_file(request, parse_file)
+    except ErrorsWarningsException as e:
+        return create_json_response({'errors': e.errors, 'warnings': e.warnings}, status=400, reason=e.errors)
+    except Exception as e:
+        return create_json_response({'errors': [e.message or str(e)], 'warnings': []}, status=400, reason=e.message or str(e))
 
     # send back some stats
     num_families = len(set(r['familyId'] for r in json_records))
@@ -290,15 +263,17 @@ def receive_individuals_table_handler(request, project_guid):
             family__project=project)))
 
     info = [
-        "%(num_families)s families, %(num_individuals)s inidividuals parsed from %(filename)s" % locals(),
+        "{num_families} families, {num_individuals} individuals parsed from {filename}".format(
+            num_families=num_families, num_individuals=num_individuals, filename=filename
+        ),
         "%d new families, %d new individuals will be added to the project" % (num_families_to_create, num_individuals_to_create),
         "%d existing individuals will be updated" % (num_individuals - num_individuals_to_create),
     ]
 
     response = {
-        'uploadedFileId': uploadedFileId,
-        'errors': errors,
-        'warnings': warnings,
+        'uploadedFileId': uploaded_file_id,
+        'errors': [],
+        'warnings': [],
         'info': info,
     }
     logger.info(response)
@@ -317,17 +292,15 @@ def save_individuals_table_handler(request, project_guid, upload_file_id):
     """
     project = get_project_and_check_permissions(project_guid, request.user)
 
-    serialized_file_path = _compute_serialized_file_path(upload_file_id)
-    with gzip.open(serialized_file_path) as f:
-        json_records = json.load(f)
+    json_records = load_uploaded_file(upload_file_id)
 
-    updated_families, updated_individuals = add_or_update_individuals_and_families(project, individual_records=json_records)
-
-    os.remove(serialized_file_path)
+    updated_families, updated_individuals = add_or_update_individuals_and_families(
+        project, individual_records=json_records, user=request.user
+    )
 
     # edit individuals
     individuals_by_guid = {
-        individual.guid: _get_json_for_individual(individual, request.user) for individual in updated_individuals
+        individual.guid: _get_json_for_individual(individual, request.user, add_sample_guids_field=True) for individual in updated_individuals
     }
 
     families_by_guid = {
@@ -342,7 +315,7 @@ def save_individuals_table_handler(request, project_guid, upload_file_id):
     return create_json_response(updated_families_and_individuals_by_guid)
 
 
-def add_or_update_individuals_and_families(project, individual_records):
+def add_or_update_individuals_and_families(project, individual_records, user=None):
     """Add or update individual and family records in the given project.
 
     Args:
@@ -356,26 +329,31 @@ def add_or_update_individuals_and_families(project, individual_records):
     families = {}
     updated_individuals = []
     for i, record in enumerate(individual_records):
-        if 'familyId' not in record:
+        # family id will be in different places in the json depending on whether it comes from a flat uploaded file or from the nested individual object
+        family_id = record.get('familyId') or record.get('family', {}).get('familyId')
+        if not family_id:
             raise ValueError("record #%s doesn't contain a 'familyId' key: %s" % (i, record))
-        if 'individualId' not in record:
+
+        if 'individualId' not in record and 'individualGuid' not in record:
             raise ValueError("record #%s doesn't contain an 'individualId' key: %s" % (i, record))
 
-        family, created = Family.objects.get_or_create(
-            project=project,
-            family_id=record['familyId'])
+        family, created = get_or_create_seqr_model(Family, project=project, family_id=family_id)
 
         if created:
             logger.info("Created family: %s", family)
             if not family.display_name:
-                family.display_name = family.family_id
-                family.save()
+                update_seqr_model(family, display_name = family.family_id)
 
-        individual, created = Individual.objects.get_or_create(
-            family=family,
-            individual_id=record['individualId'])
+        # uploaded files do not have unique guid's so fall back to a combination of family and individualId
+        if record.get('individualGuid'):
+            individual_filters = {'guid': record['individualGuid']}
+        else:
+            individual_filters = {'family': family, 'individual_id': record['individualId']}
 
-        update_individual_from_json(individual, record, allow_unknown_keys=True)
+        individual, created = get_or_create_seqr_model(Individual, **individual_filters)
+        record['family'] = family
+        record.pop('familyId', None)
+        update_individual_from_json(individual, record, allow_unknown_keys=True, user=user)
 
         updated_individuals.append(individual)
 
@@ -384,24 +362,28 @@ def add_or_update_individuals_and_families(project, individual_records):
 
         if created:
             # create new PhenoTips patient record
-            patient_record = create_patient(project, individual.phenotips_eid)
-            individual.phenotips_patient_id = patient_record['id']
-            individual.case_review_status = 'I'
+            patient_record = create_patient(project, individual)
+            update_seqr_model(
+                individual,
+                phenotips_patient_id=patient_record['id'],
+                case_review_status='I'
+            )
 
             logger.info("Created PhenoTips record with patient id %s and external id %s" % (
                 str(individual.phenotips_patient_id), str(individual.phenotips_eid)))
 
-        if record.get('hpoTerms'):
+        if record.get(JsonConstants.HPO_TERMS_PRESENT_COLUMN) or record.get(JsonConstants.FINAL_DIAGNOSIS_OMIM_COLUMN):
             # update phenotips hpo ids
-            logger.info("Setting PhenoTips HPO Terms to: %s" % (record.get('hpoTerms'),))
-            set_patient_hpo_terms(project, individual.phenotips_eid, record.get('hpoTerms'), is_external_id=True)
+            logger.info("Setting PhenoTips HPO Terms to: %s" % (record.get(JsonConstants.HPO_TERMS_PRESENT_COLUMN),))
+            set_patient_hpo_terms(
+                project,
+                individual,
+                hpo_terms_present=record.get(JsonConstants.HPO_TERMS_PRESENT_COLUMN, []),
+                hpo_terms_absent=record.get(JsonConstants.HPO_TERMS_ABSENT_COLUMN, []),
+                final_diagnosis_mim_ids=record.get(JsonConstants.FINAL_DIAGNOSIS_OMIM_COLUMN, []))
 
         if not individual.display_name:
-            individual.display_name = individual.individual_id
-
-        individual.save()
-
-        _deprecated_update_original_individual_data(project, individual)
+            update_seqr_model(individual, display_name=individual.individual_id)
 
         families[family.family_id] = family
 
@@ -411,42 +393,6 @@ def add_or_update_individuals_and_families(project, individual_records):
     update_pedigree_images(updated_families)
 
     return updated_families, updated_individuals
-
-
-def _deprecated_update_original_individual_data(project, individual):
-    base_project = BaseProject.objects.filter(project_id=project.deprecated_project_id)
-    base_project = base_project[0]
-
-    try:
-        created = False
-        base_family, created = BaseFamily.objects.get_or_create(project=base_project, family_id=individual.family.family_id)
-    except MultipleObjectsReturned:
-        raise ValueError("Multiple families in %s have id: %s " % (base_project.project_id, individual.family.family_id))
-
-    if created:
-        logger.info("Created xbrowse family: %s" % (base_family,))
-
-    try:
-        base_individual, created = BaseIndividual.objects.get_or_create(project=base_project, family=base_family, indiv_id=individual.individual_id)
-    except MultipleObjectsReturned:
-        raise ValueError("Multiple individuals in %s have id: %s " % (base_project.project_id, individual.individual_id))
-
-    if created:
-        logger.info("Created xbrowse individual: %s" % (base_individual,))
-
-    base_individual.created_date = individual.created_date
-    base_individual.maternal_id = individual.maternal_id or ''
-    base_individual.paternal_id = individual.paternal_id or ''
-    base_individual.gender = individual.sex
-    base_individual.affected = individual.affected
-    base_individual.nickname = individual.display_name
-    base_individual.case_review_status = individual.case_review_status
-
-    if created or not base_individual.phenotips_id:
-        base_individual.phenotips_id = individual.phenotips_eid
-
-    base_individual.phenotips_data = individual.phenotips_data
-    base_individual.save()
 
 
 def delete_individuals(project, individual_guids):
@@ -476,34 +422,21 @@ def delete_individuals(project, individual_guids):
 
         # delete phenotips records
         try:
-            delete_patient(project, individual.phenotips_eid, is_external_id=True)
+            delete_patient(project, individual)
         except (PhenotipsException, ValueError) as e:
             logger.error("Error: couldn't delete patient from phenotips: %s %s",
                          individual.phenotips_eid,
                          individual)
 
         # delete Individual
-        individual.delete()
+        delete_seqr_model(individual)
 
-        _deprecated_delete_individual(project, individual)
 
     update_pedigree_images(families.values())
 
     families_with_deleted_individuals = list(families.values())
 
     return families_with_deleted_individuals
-
-
-def _deprecated_delete_individual(project, individual):
-    base_projects = BaseProject.objects.filter(project_id=project.deprecated_project_id)
-    base_project = base_projects[0]
-
-    base_individuals = BaseIndividual.objects.filter(
-        project=base_project,
-        family__family_id=individual.family.family_id,
-        indiv_id=individual.individual_id)
-    base_individual = base_individuals[0]
-    base_individual.delete()
 
 
 def export_individuals(
@@ -585,7 +518,7 @@ def export_individuals(
             i.maternal_id,
             _SEX_TO_EXPORTED_VALUE.get(i.sex),
             __AFFECTED_TO_EXPORTED_VALUE.get(i.affected),
-            _convert_html_to_plain_text(i.notes),
+            i.notes,  # TODO should strip markdown (or be moved to client-side export)
         ])
 
         if include_display_name:

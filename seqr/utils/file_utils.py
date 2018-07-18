@@ -40,13 +40,13 @@ def get_file_stats(file_path):
         raise ValueError("This type of file path is not supported: %(file_path)" % locals())
 
 
-def copy_file(source_file_path, dest_file_path):
-    if is_local_file_path(source_file_path) and is_local_file_path(dest_file_path):
-         return copy_local_file(source_file_path, dest_file_path)
-    elif is_google_bucket_file_path(source_file_path) or is_google_bucket_file_path(dest_file_path):
-        return copy_google_bucket_file(source_file_path, dest_file_path)
+def copy_file(dataset_file_path, dest_file_path):
+    if is_local_file_path(dataset_file_path) and is_local_file_path(dest_file_path):
+         return copy_local_file(dataset_file_path, dest_file_path)
+    elif is_google_bucket_file_path(dataset_file_path) or is_google_bucket_file_path(dest_file_path):
+        return copy_google_bucket_file(dataset_file_path, dest_file_path)
     else:
-        raise ValueError("Copying from %(source_file_path)s to %(dest_file_path)s is not supported." % locals())
+        raise ValueError("Copying from %(dataset_file_path)s to %(dest_file_path)s is not supported." % locals())
 
 
 def _get_file_ctime(file_path):

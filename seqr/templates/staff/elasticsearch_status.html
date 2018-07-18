@@ -2,53 +2,85 @@
 
 {% block dataTable %}
 
+<style>
+  td {
+    white-space: nowrap !important;
+  }
+</style>
 <br />
 <br />
-<h3>Elasticsearch</h3><br />
+<b>Elasticsearch Host:</b><br />
+{{ elasticsearch_host }} <br />
 <br />
-Hostname: {{ hostname }}
+
+<b>Disk status:</b>
+<table id="diskUsageDataTable" class="display">
+    <thead>
+        <tr>
+            <th>Node name</th>
+            <th>Disk available</th>
+            <th>Disk used</th>
+            <th>Disk percentage used</th>
+        </tr>
+    </thead>
+   {% for disk in disk_stats %}
+        <tr>
+            <td>{{ disk.node_name }}</td>
+            <td>{{ disk.disk_available }}</td>
+            <td>{{ disk.disk_used }}</td>
+            <td>{{ disk.disk_percent_used }}</td>
+        </tr>
+    {% endfor %}
+</table>
+
 <br />
 <b>Loaded Indices:</b>
 <table id="dataTable" class="display">
     <thead>
         <tr>
             <th />
-            <th>status</th>
-            <th width="50%">name</th>
+            <th>project</th>
+            <th>data type</th>
+            <th>genome version</th>
+            <th>index</th>
             <th># records</th>
             <th>size</th>
-            <th width="30%">created date</th>
+            <th>created date</th>
+            <th>file path</th>
         </tr>
     </thead>
 
     {% for index in indices %}
         <tr>
             <td />
-            <td>{{ index.health }}</td>
+            <td><a href="/project/{{ index.project_guid }}/project_page">{{ index.project_id }}</a></td>
+            <td>{{ index.sample_type }}</td>
+            <td>{{ index.genome_version }}</td>
             <td>{{ index.index }}</td>
             <td>{{ index.docs_count }}</td>
             <td>{{ index.store_size }}</td>
             <td>{{ index.creation_date_string }}</td>
+            <td>{{ index.dataset_file_path }}</td>
         </tr>
     {% endfor %}
 </table>
+<script>
+  $(document).ready(function() {
+    $('#diskUsageDataTable').DataTable({
+      order: [[ 3, 'asc' ]],
+      pageLength: 50,
+    });
 
-<br />
-Snapshots:<br />
-<br />
-<table id="dataTable2" class="display">
-    <thead>
-    <tr>
-        <th />
-        <th>snapshots</th>
-    </tr>
-    </thead>
+    $('#dataTable').DataTable({
+      paging: false,
+      order: [[ 7, 'desc' ]],
+      buttons: [
+        'csv', 'excel', 'pdf'
+      ],
+    });
 
-    {% for snapshot in snapshots %}
-    <tr>
-        <td />
-        <td>{{ snapshot }}</td>
-    </tr>
-    {% endfor %}
-</table>
+  });
+</script>
+<br />
+<br />
 {% endblock %}

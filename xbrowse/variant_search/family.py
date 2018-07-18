@@ -33,7 +33,8 @@ def get_variants(
         genotype_filter=None,
         variant_filter=None,
         quality_filter=None,
-        indivs_to_consider=None):
+        indivs_to_consider=None,
+        user=None):
     """
     Gets family variants that pass the optional filters
     Can be called directly, but most often proxied by direct methods below
@@ -46,6 +47,7 @@ def get_variants(
         variant_filter=variant_filter,
         quality_filter=quality_filter,
         indivs_to_consider=indivs_to_consider,
+        user=user,
     ):
         if quality_filter is None:
             yield variant
@@ -68,7 +70,7 @@ def get_variants(
 
 
 
-def get_homozygous_recessive_variants(datastore, reference, family, variant_filter=None, quality_filter=None):
+def get_homozygous_recessive_variants(datastore, reference, family, variant_filter=None, quality_filter=None, user=None):
     """
     Returns variants that follow homozygous recessive inheritance in family
     """
@@ -80,11 +82,12 @@ def get_homozygous_recessive_variants(datastore, reference, family, variant_filt
         variant_filter=variant_filter,
         quality_filter=quality_filter,
         indivs_to_consider=family.indiv_id_list(),
+        user=user,
     ):
         yield variant
 
 
-def get_de_novo_variants(datastore, reference, family, variant_filter=None, quality_filter=None):
+def get_de_novo_variants(datastore, reference, family, variant_filter=None, quality_filter=None, user=None):
     """
     Returns variants that follow de-novo inheritance in family
     """
@@ -95,25 +98,26 @@ def get_de_novo_variants(datastore, reference, family, variant_filter=None, qual
             genotype_filter=de_novo_filter,
             variant_filter=variant_filter,
             quality_filter=quality_filter,
-            indivs_to_consider=family.indiv_id_list()):
+            indivs_to_consider=family.indiv_id_list(),
+            user=user):
         yield variant
 
 
-def get_dominant_variants(datastore, reference, family, variant_filter=None, quality_filter=None):
+def get_dominant_variants(datastore, reference, family, variant_filter=None, quality_filter=None, user=None):
     """
     Returns variants that follow dominant inheritance in family
     """
     dominant_filter = inheritance.get_dominant_filter(family)
-    for variant in get_variants(datastore, family, genotype_filter=dominant_filter, variant_filter=variant_filter, quality_filter=quality_filter, indivs_to_consider=family.indiv_id_list()):
+    for variant in get_variants(datastore, family, genotype_filter=dominant_filter, variant_filter=variant_filter, quality_filter=quality_filter, indivs_to_consider=family.indiv_id_list(), user=user):
         yield variant
 
 
-def get_x_linked_variants(datastore, reference, family, variant_filter=None, quality_filter=None):
+def get_x_linked_variants(datastore, reference, family, variant_filter=None, quality_filter=None, user=None):
     """
     Variants that follow x linked inheritance in a family
     """
     x_linked_filter = inheritance.get_x_linked_filter(family)
-    for variant in get_variants(datastore, family, genotype_filter=x_linked_filter, variant_filter=variant_filter, quality_filter=quality_filter, indivs_to_consider=family.indiv_id_list()):
+    for variant in get_variants(datastore, family, genotype_filter=x_linked_filter, variant_filter=variant_filter, quality_filter=quality_filter, indivs_to_consider=family.indiv_id_list(), user=user):
         if variant.chr and 'x' in variant.chr.lower():
             yield variant
 
@@ -140,7 +144,7 @@ def is_family_compound_het_for_combo(combo, family):
     return valid
 
 
-def get_compound_het_genes(datastore, reference, family, variant_filter=None, quality_filter=None):
+def get_compound_het_genes(datastore, reference, family, variant_filter=None, quality_filter=None, user=None):
     """
     Gene-based inheritance; genes with variants that follow compound het inheritance in a family
     Note that compound het implies two variants, so we look at all variant pairs
@@ -153,7 +157,7 @@ def get_compound_het_genes(datastore, reference, family, variant_filter=None, qu
         if individual.affected_status == 'affected':
             initial_filter[indiv_id] = 'ref_alt'
 
-    het_variants = get_variants(datastore, family, initial_filter, variant_filter, quality_filter, indivs_to_consider=family.indiv_id_list())
+    het_variants = get_variants(datastore, family, initial_filter, variant_filter, quality_filter, indivs_to_consider=family.indiv_id_list(), user=user)
     for gene_name, raw_variants in stream_utils.variant_stream_to_gene_stream(het_variants, reference):
 
         variants = search_utils.filter_gene_variants_by_variant_filter(raw_variants, gene_name, variant_filter)
@@ -175,7 +179,7 @@ def get_compound_het_genes(datastore, reference, family, variant_filter=None, qu
             yield (gene_name, variants_to_return.values())
 
 
-def get_recessive_genes(datastore, reference, family, variant_filter=None, quality_filter=None):
+def get_recessive_genes(datastore, reference, family, variant_filter=None, quality_filter=None, user=None):
     """
     Combination of homozygous recessive, x-linked, and compound het inheritances
     Gene-based, but genes are unique and variants within them unique too
@@ -183,13 +187,13 @@ def get_recessive_genes(datastore, reference, family, variant_filter=None, quali
     #sys.stderr.write("     getting recessive genes for family: %s %s" % (family.project_id, family.family_id))
 
     # combine hom rec and x linked into single variant stream, then gene stream
-    hom_rec_variants = get_homozygous_recessive_variants(datastore, reference, family, variant_filter, quality_filter)
-    x_linked_variants = get_x_linked_variants(datastore, reference, family, variant_filter, quality_filter)
+    hom_rec_variants = get_homozygous_recessive_variants(datastore, reference, family, variant_filter, quality_filter, user=user)
+    x_linked_variants = get_x_linked_variants(datastore, reference, family, variant_filter, quality_filter, user=user)
     single_variants = stream_utils.combine_variant_streams([hom_rec_variants, x_linked_variants])
     single_variants_by_gene = stream_utils.variant_stream_to_gene_stream(single_variants, reference)
 
     # combine with compound het genes
-    compound_het_genes = get_compound_het_genes(datastore, reference, family, variant_filter, quality_filter)
+    compound_het_genes = get_compound_het_genes(datastore, reference, family, variant_filter, quality_filter, user=user)
     genes_with_duplicates = stream_utils.combine_gene_streams([single_variants_by_gene, compound_het_genes], reference)
 
     # return uniqified
@@ -207,20 +211,20 @@ INHERITANCE_FUNCTIONS = {
 }
 
 
-def get_variants_with_inheritance_mode(mall, family, inheritance_mode, variant_filter=None, quality_filter=None):
+def get_variants_with_inheritance_mode(mall, family, inheritance_mode, variant_filter=None, quality_filter=None, user=None):
     """
     Get variants in a family with inheritance_mode, using the functions in VARIANT_INHERITANCE_FUNCTIONS
     """
 
     if inheritance_modes.INHERITANCE_DEFAULTS_MAP[inheritance_mode]['datatype'] == 'variants':
-        for variant in INHERITANCE_FUNCTIONS[inheritance_mode](mall.variant_store, mall.reference, family, variant_filter=variant_filter, quality_filter=quality_filter):
+        for variant in INHERITANCE_FUNCTIONS[inheritance_mode](mall.variant_store, mall.reference, family, variant_filter=variant_filter, quality_filter=quality_filter, user=user):
             yield variant
     else:
-        for variant in stream_utils.gene_stream_to_variant_stream(INHERITANCE_FUNCTIONS[inheritance_mode](mall.variant_store, mall.reference, family, variant_filter=variant_filter, quality_filter=quality_filter), mall.reference):
+        for variant in stream_utils.gene_stream_to_variant_stream(INHERITANCE_FUNCTIONS[inheritance_mode](mall.variant_store, mall.reference, family, variant_filter=variant_filter, quality_filter=quality_filter, user=user), mall.reference):
             yield variant
 
 
-def get_genes(db, reference, family, burden_filter=None, variant_filter=None, quality_filter=None):
+def get_genes(db, reference, family, burden_filter=None, variant_filter=None, quality_filter=None, user=None):
     """
     Get gene stream for a family that meets the burden filter above
     Burden filters are analagous to genotype filters, but for gene burden:
@@ -231,7 +235,7 @@ def get_genes(db, reference, family, burden_filter=None, variant_filter=None, qu
     TODO: this is really slow right now, we need to optimize
     """
     indivs_to_consider = burden_filter.keys() if burden_filter else []
-    variant_stream = get_variants(db, family, variant_filter=variant_filter, quality_filter=quality_filter)
+    variant_stream = get_variants(db, family, variant_filter=variant_filter, quality_filter=quality_filter, user=user)
     for gene_id, variant_list in stream_utils.variant_stream_to_gene_stream(variant_stream, reference):
         quality_filtered_variant_list = [v for v in variant_list if passes_quality_filter(v, quality_filter, indivs_to_consider)]
         if len(quality_filtered_variant_list) == 0:
@@ -271,12 +275,14 @@ def get_variants_allele_count(
         family,
         allele_count_filter,
         variant_filter=None,
-        quality_filter=None):
+        quality_filter=None,
+        user=None,
+    ):
     """
     This is a horrible hack to allow allele count-based searches in a family
     This needs to be refactored back into get_variants, but I'm not sure how to resolve the genotype quality stuff
     """
-    for variant in datastore.get_variants(family.project_id, family.family_id, variant_filter=variant_filter, quality_filter=quality_filter):
+    for variant in datastore.get_variants(family.project_id, family.family_id, variant_filter=variant_filter, quality_filter=quality_filter, user=user):
         filter_genotypes_for_quality(variant, quality_filter)
         if passes_allele_count_filter(variant, allele_count_filter, family.affected_status_map()):
             yield variant

@@ -5,14 +5,14 @@ from django.test import TestCase
 from django.urls.base import reverse
 
 from seqr.models import Project
-from seqr.views.apis.project_api import create_project_handler, update_project_handler, delete_project_handler
-from seqr.views.utils.test_utils import _check_login, create_send_requests_to_phenotips_stub
+from seqr.views.apis.project_api import create_project_handler, delete_project_handler
+from seqr.views.utils.test_utils import _check_login, create_proxy_request_stub
 
 
 class ProjectAPITest(TestCase):
     fixtures = ['users', '1kg_project']
 
-    @mock.patch('seqr.views.apis.phenotips_api._send_request_to_phenotips', create_send_requests_to_phenotips_stub(201))
+    @mock.patch('seqr.views.apis.phenotips_api.proxy_request', create_proxy_request_stub(201))
     def test_create_update_and_delete_project(self):
         create_project_url = reverse(create_project_handler)
         _check_login(self, create_project_url)

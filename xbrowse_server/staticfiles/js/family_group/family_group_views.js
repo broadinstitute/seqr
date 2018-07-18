@@ -46,7 +46,7 @@ var AddFamilyGroupView = Backbone.View.extend({
                 name: that.$('#id_name').val(),
                 description: that.$('#id_description').val(),
             };
-            $.post(URL_PREFIX+'project/'+that.project_spec.project_id+'/add-family-group-submit',
+            $.post('/project/'+that.project_spec.project_id+'/add-family-group-submit',
                 postdata,
                 function(data) {
                     if (data.is_error == false) {

@@ -10,7 +10,6 @@ xbrowse_reference_data_dir = os.path.join(xbrowse_install_dir, 'data/reference_d
 DEBUG = True
 #COMPRESS_ENABLED = False
 BASE_URL = '/'
-URL_PREFIX = '/'
 
 GENERATED_FILES_DIR = os.path.join(xbrowse_install_dir, 'generated_files')
 
@@ -42,8 +41,11 @@ DATABASES = {
 #"""
 
 ALLOWED_HOSTS = ['*']
-
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+ENABLE_MME_MATCH_EMAIL_NOTIFICATIONS=True
+EMAIL_BACKEND = 'anymail.backends.postmark.EmailBackend'
+ANYMAIL = {
+            'POSTMARK_SERVER_TOKEN': 'token'
+            }
 
 
 #

@@ -1,20 +1,15 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`shallow-render without crashing 1`] = `
-<Search
+<AwesomeBar__AwesomebarSearch
   category={true}
-  fluid={true}
-  icon="search"
-  input="text"
   loading={false}
   minCharacters={1}
-  noResultsMessage="No results found."
   onResultSelect={[Function]}
   onSearchChange={[Function]}
   placeholder="Search project, family, gene name, etc."
   results={Object {}}
   selectFirstResult={true}
-  showNoResults={true}
   value=""
 />
 `;

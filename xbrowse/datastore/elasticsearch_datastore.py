@@ -2,18 +2,21 @@
 import copy
 import json
 import logging
+import redis
 import sys
 
-from xbrowse.core.constants import GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38, ANNOTATION_GROUPS_MAP
+from xbrowse.core.constants import GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38, ANNOTATION_GROUPS_MAP, \
+    ANNOTATION_GROUPS_MAP_INTERNAL
 from xbrowse.core.genomeloc import get_chr_pos
 import settings
+import time
 
 from xbrowse import genomeloc
 from xbrowse.core.variant_filters import VariantFilter
 from xbrowse import Variant
 
 import datastore
-from pprint import pprint, pformat
+from pprint import pformat
 
 import elasticsearch
 import elasticsearch_dsl
@@ -90,41 +93,58 @@ def _add_index_fields_to_variant(variant_dict, annotation=None):
         variant_dict['db_gene_ids'] = annotation['gene_ids']
 
 
-def add_disease_genes_to_variants(gene_list_map, variants):
-    """
-    Take a list of variants and annotate them with disease genes
-    """
-    error_counter = 0
-    by_gene = gene_list_map
-    for variant in variants:
-        gene_lists = []
-        try:
-            for gene_id in variant.coding_gene_ids:
-                for g in by_gene[gene_id]:
-                    gene_lists.append(g.name)
-            variant.set_extra('disease_genes', gene_lists)
-        except Exception as e:
-            exc_type, exc_obj, exc_tb = sys.exc_info()
-            error_counter += 1
-            if error_counter > 10:
-                break
-
-
-
 class ElasticsearchDatastore(datastore.Datastore):
 
     def __init__(self, annotator):
         self.liftover_grch38_to_grch37 = None
         self.liftover_grch37_to_grch38 = None
 
-        self._results_cache = {}
         self._annotator = annotator
 
         self._es_client = elasticsearch.Elasticsearch(host=settings.ELASTICSEARCH_SERVICE_HOSTNAME)
 
-    def get_elasticsearch_variants(self, project_id, family_id=None, variant_filter=None, genotype_filter=None, variant_id_filter=None, quality_filter=None, indivs_to_consider=None, elasticsearch_index=None):
+        self._redis_client = None
+        if settings.REDIS_SERVICE_HOSTNAME:
+            try:
+                self._redis_client = redis.StrictRedis(host=settings.REDIS_SERVICE_HOSTNAME, socket_connect_timeout=3)
+                self._redis_client.ping()
+            except redis.exceptions.TimeoutError as e:
+                logger.warn("Unable to connect to redis: " + str(e))
+                self._redis_client = None
+            
+    def get_elasticsearch_variants(
+            self,
+            project_id,
+            family_id=None,
+            variant_filter=None,
+            genotype_filter=None,
+            variant_id_filter=None,
+            quality_filter=None,
+            indivs_to_consider=None,
+            include_all_consequences=False,
+            user=None,
+            max_results_limit=settings.VARIANT_QUERY_RESULTS_LIMIT,
+        ):
         from xbrowse_server.base.models import Individual
         from xbrowse_server.mall import get_reference
+
+        cache_key = "%s___%s___%s" % (
+            project_id,
+            family_id,
+            json.dumps([
+                variant_filter.toJSON() if variant_filter else None,
+                genotype_filter,
+                quality_filter,
+                variant_id_filter,
+                indivs_to_consider,
+                include_all_consequences,
+            ])
+        )
+
+        cached_results = self._redis_client and self._redis_client.get(cache_key)
+        if cached_results is not None:
+            variant_results = json.loads(cached_results)
+            return [Variant.fromJSON(variant_json) for variant_json in variant_results]
 
         if indivs_to_consider is None:
             if genotype_filter:
@@ -133,9 +153,9 @@ class ElasticsearchDatastore(datastore.Datastore):
                 indivs_to_consider = []
 
         if family_id is not None:
-            family_individual_ids = [i.indiv_id for i in Individual.objects.filter(family__family_id=family_id)]
+            family_individual_ids = [i.indiv_id for i in Individual.objects.filter(family__family_id=family_id).only("indiv_id")]
         else:
-            family_individual_ids = [i.indiv_id for i in Individual.objects.filter(family__project__project_id=project_id)]
+            family_individual_ids = [i.indiv_id for i in Individual.objects.filter(family__project__project_id=project_id).only("indiv_id")]
 
         from xbrowse_server.base.models import Project, Family
         from pyliftover import LiftOver
@@ -143,32 +163,46 @@ class ElasticsearchDatastore(datastore.Datastore):
         query_json = self._make_db_query(genotype_filter, variant_filter)
 
         try:
-            if self.liftover_grch38_to_grch37 is None or self.liftover_grch37_to_grch38 is None:
+            if self.liftover_grch38_to_grch37 is None:
                 self.liftover_grch38_to_grch37 = LiftOver('hg38', 'hg19')
-                self.liftover_grch37_to_grch38 = LiftOver('hg19', 'hg38')
+
+            if self.liftover_grch37_to_grch38 is None:
+                self.liftover_grch37_to_grch38 = None # LiftOver('hg19', 'hg38')
         except Exception as e:
             logger.info("WARNING: Unable to set up liftover. Is there a working internet connection? " + str(e))
 
         if family_id is None:
             project = Project.objects.get(project_id=project_id)
             elasticsearch_index = project.get_elasticsearch_index()
+            logger.info("Searching in project elasticsearch index: " + str(elasticsearch_index))
         else:
             family = Family.objects.get(project__project_id=project_id, family_id=family_id)
             elasticsearch_index = family.get_elasticsearch_index()
             project = family.project
+            logger.info("Searching in family elasticsearch index: " + str(elasticsearch_index))
 
-        if family_id is not None:
+        if family_id is not None and len(family_individual_ids) > 0:
             # figure out which index to use
             # TODO add caching
-            indiv_id = _encode_name(family_individual_ids[0])
-
+            matching_indices = []
             mapping = self._es_client.indices.get_mapping(str(elasticsearch_index)+"*")
-            for index_name, index_mapping in mapping.items():
-                if indiv_id+"_num_alt" in index_mapping["mappings"]["variant"]["properties"]:
-                    elasticsearch_index = index_name
-                    break
+
+            if family_individual_ids:
+                indiv_id = _encode_name(family_individual_ids[0])
+                for index_name, index_mapping in mapping.items():
+                    if indiv_id+"_num_alt" in index_mapping["mappings"]["variant"]["properties"]:
+                        matching_indices.append(index_name)
+
+            if not matching_indices:
+                if not family_individual_ids:
+                    logger.error("no individuals found for family %s" % (family_id))
+                elif not mapping:
+                    logger.error("no es mapping found for found with prefix %s" % (elasticsearch_index))
+                else:
+                    logger.error("%s not found in %s:\n%s" % (indiv_id, elasticsearch_index, pformat(index_mapping["mappings"]["variant"]["properties"])))
             else:
-                logger.error("%s not found in %s" % (indiv_id, elasticsearch_index))
+                logger.info("matching indices: " + str(elasticsearch_index))
+                elasticsearch_index = ",".join(matching_indices)
 
         s = elasticsearch_dsl.Search(using=self._es_client, index=str(elasticsearch_index)+"*") #",".join(indices))
 
@@ -181,6 +215,18 @@ class ElasticsearchDatastore(datastore.Datastore):
                 else:
                     variant_id_filter_term |= q_obj
             s = s.filter(variant_id_filter_term)
+
+        if indivs_to_consider:
+            atleast_one_nonref_genotype_filter = None
+            for sample_id in indivs_to_consider:
+                encoded_sample_id = _encode_name(sample_id)
+                q = Q('range', **{encoded_sample_id+"_num_alt": {'gte': 1}})
+                if atleast_one_nonref_genotype_filter is None:
+                    atleast_one_nonref_genotype_filter = q
+                else:
+                    atleast_one_nonref_genotype_filter |= q
+
+            s = s.filter(atleast_one_nonref_genotype_filter)
 
         if quality_filter is not None and indivs_to_consider:
             #'vcf_filter': u'pass', u'min_ab': 17, u'min_gq': 46
@@ -206,38 +252,61 @@ class ElasticsearchDatastore(datastore.Datastore):
                     #logger.info("### ADDED FILTER: " + str(~Q('exists', field='filters')))
 
         # parse variant query
+        annotation_groups_map = ANNOTATION_GROUPS_MAP_INTERNAL if user and user.is_staff else ANNOTATION_GROUPS_MAP
+
         for key, value in query_json.items():
             if key == 'db_tags':
                 so_annotations = query_json.get('db_tags', {}).get('$in', [])
 
                 # handle clinvar filters
                 selected_so_annotations_set = set(so_annotations)
-                all_clinvar_filters_set = set(ANNOTATION_GROUPS_MAP["clinvar"]["children"])
+
+                all_clinvar_filters_set = set(annotation_groups_map.get("clinvar", {}).get("children", []))
                 selected_clinvar_filters_set = all_clinvar_filters_set & selected_so_annotations_set
-                vep_consequences = list(selected_so_annotations_set - selected_clinvar_filters_set)
+
+                all_hgmd_filters_set = set(annotation_groups_map.get("hgmd", {}).get("children", []))
+                selected_hgmd_filters_set = all_hgmd_filters_set & selected_so_annotations_set
+
+                vep_consequences = list(selected_so_annotations_set - selected_clinvar_filters_set - selected_hgmd_filters_set)
                 consequences_filter = Q("terms", transcriptConsequenceTerms=vep_consequences)
+
                 if selected_clinvar_filters_set:
                     clinvar_clinical_significance_terms = set()
                     for clinvar_filter in selected_clinvar_filters_set:
                         # translate selected filters to the corresponding clinvar clinical consequence terms
                         if clinvar_filter == "pathogenic":
-                            clinvar_clinical_significance_terms.update(["Pathogenic", "Pathogenic/Likely pathogenic"])
+                            clinvar_clinical_significance_terms.update(["Pathogenic", "Pathogenic/Likely_pathogenic"])
                         elif clinvar_filter == "likely_pathogenic":
-                            clinvar_clinical_significance_terms.update(["Likely pathogenic", "Pathogenic/Likely pathogenic"])
+                            clinvar_clinical_significance_terms.update(["Likely_pathogenic", "Pathogenic/Likely_pathogenic"])
                         elif clinvar_filter == "benign":
-                            clinvar_clinical_significance_terms.update(["Benign", "Benign/Likely benign"])
+                            clinvar_clinical_significance_terms.update(["Benign", "Benign/Likely_benign"])
                         elif clinvar_filter == "likely_benign":
-                            clinvar_clinical_significance_terms.update(["Likely benign", "Benign/Likely benign"])
+                            clinvar_clinical_significance_terms.update(["Likely_benign", "Benign/Likely_benign"])
                         elif clinvar_filter == "vus_or_conflicting":
                             clinvar_clinical_significance_terms.update([
-                                "Conflicting interpretations of pathogenicity",
-                                "Uncertain significance",
-                                "not provided",
+                                "Conflicting_interpretations_of_pathogenicity",
+                                "Uncertain_significance",
+                                "not_provided",
                                 "other"])
                         else:
                             raise ValueError("Unexpected clinvar filter: " + str(clinvar_filter))
 
                     consequences_filter = consequences_filter | Q("terms", clinvar_clinical_significance=list(clinvar_clinical_significance_terms))
+
+                if selected_hgmd_filters_set:
+                    hgmd_class = set()
+                    for hgmd_filter in selected_hgmd_filters_set:
+                        # translate selected filters to the corresponding hgmd clinical consequence terms
+                        if hgmd_filter == "disease_causing":
+                            hgmd_class.update(["DM"])
+                        elif hgmd_filter == "likely_disease_causing":
+                            hgmd_class.update(["DM?"])
+                        elif hgmd_filter == "hgmd_other":
+                            hgmd_class.update(["DP", "DFP", "FP", "FTV"])
+                        else:
+                            raise ValueError("Unexpected hgmd filter: " + str(hgmd_filter))
+
+                    consequences_filter = consequences_filter | Q("terms", hgmd_class=list(hgmd_class))
 
                 if 'intergenic_variant' in vep_consequences:
                     # for many intergenic variants VEP doesn't add any annotations, so if user selected 'intergenic_variant', also match variants where transcriptConsequenceTerms is emtpy
@@ -302,22 +371,15 @@ class ElasticsearchDatastore(datastore.Datastore):
 
                 #logger.info("==> xpos range: " + str({"xpos": xpos_filter_setting}))
 
-
             af_key_map = {
                 "db_freqs.AF": "AF",
-                "db_freqs.1kg_wgs_phase3": "g1k_AF",
-                "db_freqs.1kg_wgs_phase3_popmax": "g1k_POPMAX_AF",
-                "db_freqs.exac_v3": "exac_AF",
-                "db_freqs.exac_v3_popmax": "exac_AF_POPMAX",
+                "db_freqs.1kg_wgs_phase3": "g1k_POPMAX_AF",
+                "db_freqs.exac_v3": "exac_AF_POPMAX",
                 "db_freqs.topmed": "topmed_AF",
-                "db_freqs.gnomad_exomes": "gnomad_exomes_AF",
-                "db_freqs.gnomad_exomes_popmax": "gnomad_exomes_AF_POPMAX",
-                "db_freqs.gnomad_genomes": "gnomad_genomes_AF",
-                "db_freqs.gnomad_genomes_popmax": "gnomad_genomes_AF_POPMAX",
-                "db_freqs.gnomad-exomes2": "gnomad_exomes_AF",
-                "db_freqs.gnomad-exomes2_popmax": "gnomad_exomes_AF_POPMAX",
-                "db_freqs.gnomad-genomes2": "gnomad_genomes_AF",
-                "db_freqs.gnomad-genomes2_popmax": "gnomad_genomes_AF_POPMAX",
+                "db_freqs.gnomad_exomes": "gnomad_exomes_AF_POPMAX",
+                "db_freqs.gnomad_genomes": "gnomad_genomes_AF_POPMAX",
+                "db_freqs.gnomad-exomes2": "gnomad_exomes_AF_POPMAX",
+                "db_freqs.gnomad-genomes2": "gnomad_genomes_AF_POPMAX",
             }
 
             if key in af_key_map:
@@ -326,30 +388,81 @@ class ElasticsearchDatastore(datastore.Datastore):
                 s = s.filter(Q('range', **{filter_key: af_filter_setting}) | ~Q('exists', field=filter_key))
                 #logger.info("==> %s: %s" % (filter_key, af_filter_setting))
 
-            s.sort("xpos")
+            ac_key_map = {
+                "db_acs.AF": "AC",
+                "db_acs.1kg_wgs_phase3": "g1k_AC",
+                "db_acs.exac_v3": "exac_AC",
+                "db_acs.topmed": "topmed_AC",
+                "db_acs.gnomad_exomes": "gnomad_exomes_AC",
+                "db_acs.gnomad_genomes": "gnomad_genomes_AC",
+                "db_acs.gnomad-exomes2": "gnomad_exomes_AC",
+                "db_acs.gnomad-genomes2": "gnomad_genomes_AC",
+            }
+
+            if key in ac_key_map:
+                filter_key = ac_key_map[key]
+                ac_filter_setting = {k.replace("$", ""): v for k, v in value.items()}
+                s = s.filter(Q('range', **{filter_key: ac_filter_setting}) | ~Q('exists', field=filter_key))
+
+            hemi_key_map = {
+                "db_hemi.exac_v3": "exac_AC_Hemi",
+                "db_hemi.gnomad_exomes": "gnomad_exomes_Hemi",
+                "db_hemi.gnomad_genomes": "gnomad_genomes_Hemi",
+                "db_hemi.gnomad-exomes2": "gnomad_exomes_Hemi",
+                "db_hemi.gnomad-genomes2": "gnomad_genomes_Hemi",
+            }
+
+            if key in hemi_key_map:
+                filter_key = hemi_key_map[key]
+                hemi_filter_setting = {k.replace("$", ""): v for k, v in value.items()}
+                s = s.filter(Q('range', **{filter_key: hemi_filter_setting}) | ~Q('exists', field=filter_key))
+
+            hom_key_map = {
+                "db_hom.exac_v3": "exac_AC_Hom",
+                "db_hom.gnomad_exomes": "gnomad_exomes_Hom",
+                "db_hom.gnomad_genomes": "gnomad_genomes_Hom",
+                "db_hom.gnomad-exomes2": "gnomad_exomes_Hom",
+                "db_hom.gnomad-genomes2": "gnomad_genomes_Hom",
+            }
+
+            if key in hom_key_map:
+                filter_key = hom_key_map[key]
+                hom_filter_setting = {k.replace("$", ""): v for k, v in value.items()}
+                s = s.filter(Q('range', **{filter_key: hom_filter_setting}) | ~Q('exists', field=filter_key))
+
+            #s = s.sort("xpos")
 
         #logger.info("=====")
         #logger.info("FULL QUERY OBJ: " + pformat(s.__dict__))
         #logger.info("FILTERS: " + pformat(s.to_dict()))
-        logger.info("=====")
-        logger.info("Hits: ")
-        # https://elasticsearch-py.readthedocs.io/en/master/helpers.html#elasticsearch.helpers.scan
 
+        # https://elasticsearch-py.readthedocs.io/en/master/helpers.html#elasticsearch.helpers.scan
+        start = time.time()
+
+        s = s.params(size=max_results_limit + 1)
+        #if not include_all_consequences:
+        #    s = s.source(exclude=["sortedTranscriptConsequences"])
         response = s.execute()
-        logger.info("TOTAL: " + str(response.hits.total))
-        if response.hits.total > settings.VARIANT_QUERY_RESULTS_LIMIT+15000:
-            raise Exception("this search exceeded the variant result size limit. Please set additional filters and try again.")
+        logger.info("=====")
+
+        logger.info("TOTAL: %s. Query took %s seconds" % (response.hits.total, time.time() - start))
+
+        if response.hits.total > max_results_limit + 1:
+            raise Exception("This search matched too many variants. Please set additional filters and try again.")
 
         #print(pformat(response.to_dict()))
 
         project = Project.objects.get(project_id=project_id)
-        gene_list_map = project.get_gene_list_map()
+
+        #gene_list_map = project.get_gene_list_map()
 
         reference = get_reference()
 
+        #for i, hit in enumerate(response.hits):
+        variant_results = []
         for i, hit in enumerate(s.scan()):  # preserve_order=True
             #logger.info("HIT %s: %s %s %s" % (i, hit["variantId"], hit["geneIds"], pformat(hit.__dict__)))
-            #print("HIT %s: %s" % (i, pformat(hit.__dict__)))
+            #print("HIT %s: %s" % (i, pformat(hit.to_dict())))
             filters = ",".join(hit["filters"] or []) if "filters" in hit else ""
             genotypes = {}
             all_num_alt = []
@@ -372,12 +485,12 @@ class ElasticsearchDatastore(datastore.Datastore):
                     raise ValueError("Invalid num_alt: " + str(num_alt))
 
                 genotypes[individual_id] = {
-                    'ab': hit["%s_ab" % encoded_individual_id] if ("%s_ab" % encoded_individual_id) in hit else '',
+                    'ab': hit["%s_ab" % encoded_individual_id] if ("%s_ab" % encoded_individual_id) in hit else None,
                     'alleles': map(str, alleles),
                     'extras': {
-                        'ad': hit["%s_ab" % encoded_individual_id]  if ("%s_ad" % encoded_individual_id) in hit else '',
-                        'dp': hit["%s_dp" % encoded_individual_id]  if ("%s_dp" % encoded_individual_id) in hit else '',
-                        'pl': '',
+                        'ad': hit["%s_ab" % encoded_individual_id] if ("%s_ad" % encoded_individual_id) in hit else None,
+                        'dp': hit["%s_dp" % encoded_individual_id] if ("%s_dp" % encoded_individual_id) in hit else None,
+                        #'pl': '',
                     },
                     'filter': filters or "pass",
                     'gq': hit["%s_gq" % encoded_individual_id] if ("%s_gq" % encoded_individual_id in hit and hit["%s_gq" % encoded_individual_id] is not None) else '',
@@ -389,7 +502,7 @@ class ElasticsearchDatastore(datastore.Datastore):
                 #print("Filtered all_num_alt <= 0 - Result %s: GRCh38: %s:%s,  cadd: %s  %s - %s" % (i, hit["contig"], hit["start"], hit["cadd_PHRED"] if "cadd_PHRED" in hit else "", hit["transcriptConsequenceTerms"], all_num_alt))
                 continue
 
-            vep_annotation = json.loads(str(hit['sortedTranscriptConsequences']))
+            vep_annotation = json.loads(str(hit['sortedTranscriptConsequences'])) if 'sortedTranscriptConsequences' in hit else None
 
             if project.genome_version == GENOME_VERSION_GRCh37:
                 grch38_coord = None
@@ -398,7 +511,7 @@ class ElasticsearchDatastore(datastore.Datastore):
                     if grch38_coord and grch38_coord[0]:
                         grch38_coord = "%s-%s-%s-%s "% (grch38_coord[0][0], grch38_coord[0][1], hit["ref"], hit["alt"])
                     else:
-                        grch38_coord = ""
+                        grch38_coord = None
             else:
                 grch38_coord = hit["variantId"]
 
@@ -409,7 +522,7 @@ class ElasticsearchDatastore(datastore.Datastore):
                     if grch37_coord and grch37_coord[0]:
                         grch37_coord = "%s-%s-%s-%s "% (grch37_coord[0][0], grch37_coord[0][1], hit["ref"], hit["alt"])
                     else:
-                        grch37_coord = ""
+                        grch37_coord = None
             else:
                 grch37_coord = hit["variantId"]
 
@@ -428,7 +541,7 @@ class ElasticsearchDatastore(datastore.Datastore):
                     'cadd_phred': hit["cadd_PHRED"] if "cadd_PHRED" in hit else None,
                     'dann_score': hit["dbnsfp_DANN_score"] if "dbnsfp_DANN_score" in hit else None,
                     'revel_score': hit["dbnsfp_REVEL_score"] if "dbnsfp_REVEL_score" in hit else None,
-                    'eigen_phred': hit["dbnsfp_Eigen_phred"] if "dbnsfp_Eigen_phred" in hit else None,
+                    'eigen_phred': hit["eigen_Eigen_phred"] if "eigen_Eigen_phred" in hit else (hit["dbnsfp_Eigen_phred"] if "dbnsfp_Eigen_phred" in hit else None),
                     'mpc_score': hit["mpc_MPC"] if "mpc_MPC" in hit else None,
 
                     'annotation_tags': list(hit["transcriptConsequenceTerms"] or []) if "transcriptConsequenceTerms" in hit else None,
@@ -437,6 +550,7 @@ class ElasticsearchDatastore(datastore.Datastore):
                     'vep_annotation': vep_annotation,
                     'vep_group': str(hit['mainTranscript_major_consequence'] or ""),
                     'vep_consequence': str(hit['mainTranscript_major_consequence'] or ""),
+                    'main_transcript': {k.replace('mainTranscript_', ''): hit[k] for k in dir(hit) if k.startswith('mainTranscript_')},
                     'worst_vep_annotation_index': 0,
                     'worst_vep_index_per_gene': {str(hit['mainTranscript_gene_id']): 0},
                 },
@@ -448,31 +562,43 @@ class ElasticsearchDatastore(datastore.Datastore):
                     'gnomad_genome_coverage': float(hit["gnomad_genome_coverage"] or -1) if "gnomad_genome_coverage" in hit else -1,
                 },
                 'pop_counts': {
-                    'AC': int(hit['AC'] or 0) if 'AC' in hit else 0,
-                    'AN': int(hit['AN'] or 0) if 'AN' in hit else 0,
-                    '1kg_AC': int(hit['g1k_AC'] or 0) if 'g1k_AC' in hit else 0,
-                    'exac_v3_AC': int(hit["exac_AC_Adj"] or 0) if "exac_Adj_AC" in hit else 0,
-                    'exac_v3_Hom': int(hit["exac_AC_Hom"] or 0) if "exac_AC_Hom" in hit else 0,
-                    'exac_v3_Hemi': int(hit["exac_AC_Hemi"] or 0) if "exac_AC_Hemi" in hit else 0,
-                    'gnomad_exomes_AC': int(hit["gnomad_exomes_AC"] or 0) if "gnomad_exomes_AC" in hit else 0,
-                    'gnomad_exomes_Hom': int(hit["gnomad_exomes_Hom"] or 0) if "gnomad_exomes_Hom" in hit else 0,
-                    'gnomad_exomes_Hemi': int(hit["gnomad_exomes_Hemi"] or 0) if "gnomad_exomes_Hemi" in hit else 0,
-                    'gnomad_genomes_AC': int(hit["gnomad_genomes_AC"] or 0) if "gnomad_genomes_AC" in hit else 0,
-                    'gnomad_genomes_Hom': int(hit["gnomad_genomes_Hom"] or 0) if "gnomad_genomes_Hom" in hit else 0,
-                    'gnomad_genomes_Hemi': int(hit["gnomad_genomes_Hemi"] or 0) if "gnomad_genomes_Hemi" in hit else 0,
-                    'topmed_AC': float(hit["topmed_AC"] or 0) if "topmed_AC" in hit else 0,
+                    'AC': int(hit['AC'] or 0) if 'AC' in hit else None,
+                    'AN': int(hit['AN'] or 0) if 'AN' in hit else None,
+
+                    '1kg_AC': int(hit['g1k_AC'] or 0) if 'g1k_AC' in hit else None,
+                    '1kg_AN': int(hit['g1k_AN'] or 0) if 'g1k_AN' in hit else None,
+
+                    'exac_v3_AC': int(hit["exac_AC_Adj"] or 0) if "exac_Adj_AC" in hit else None,
+                    'exac_v3_Het': int(hit["exac_AC_Het"] or 0) if "exac_AC_Het" in hit else None,
+                    'exac_v3_Hom': int(hit["exac_AC_Hom"] or 0) if "exac_AC_Hom" in hit else None,
+                    'exac_v3_Hemi': int(hit["exac_AC_Hemi"] or 0) if "exac_AC_Hemi" in hit else None,
+
+                    'gnomad_exomes_AC': int(hit["gnomad_exomes_AC"] or 0) if "gnomad_exomes_AC" in hit else None,
+                    'gnomad_exomes_Hom': int(hit["gnomad_exomes_Hom"] or 0) if "gnomad_exomes_Hom" in hit else None,
+                    'gnomad_exomes_Hemi': int(hit["gnomad_exomes_Hemi"] or 0) if "gnomad_exomes_Hemi" in hit else None,
+                    'gnomad_exomes_AN': int(hit["gnomad_exomes_AN"] or 0) if "gnomad_exomes_AN" in hit else None,
+
+                    'gnomad_genomes_AC': int(hit["gnomad_genomes_AC"] or 0) if "gnomad_genomes_AC" in hit else None,
+                    'gnomad_genomes_Hom': int(hit["gnomad_genomes_Hom"] or 0) if "gnomad_genomes_Hom" in hit else None,
+                    'gnomad_genomes_Hemi': int(hit["gnomad_genomes_Hemi"] or 0) if "gnomad_genomes_Hemi" in hit else None,
+                    'gnomad_genomes_AN': int(hit["gnomad_genomes_AN"] or 0) if "gnomad_genomes_AN" in hit else None,
+
+                    'topmed_AC': float(hit["topmed_AC"] or 0) if "topmed_AC" in hit else None,
+                    'topmed_Het': float(hit["topmed_Het"] or 0) if "topmed_Het" in hit else None,
+                    'topmed_Hom': float(hit["topmed_Hom"] or 0) if "topmed_Hom" in hit else None,
+                    'topmed_AN': float(hit["topmed_AN"] or 0) if "topmed_AN" in hit else None,
                 },
                 'db_freqs': {
-                    'AF': float(hit["AF"] or 0.0) if "AF" in hit else 0.0,
-                    '1kg_wgs_AF': float(hit["g1k_AF"] or 0.0) if "g1k_AF" in hit else 0.0,
-                    '1kg_wgs_popmax_AF': float(hit["g1k_POPMAX_AF"] or 0.0) if "g1k_POPMAX_AF" in hit else 0.0,
-                    'exac_v3_AF': float(hit["exac_AF"] or 0.0) if "exac_AF" in hit else (hit["exac_AC_Adj"]/float(hit["exac_AN_Adj"]) if "exac_AC_Adj" in hit and "exac_AN_Adj"in hit and int(hit["exac_AN_Adj"] or 0) > 0 else 0.0),
-                    'exac_v3_popmax_AF': float(hit["exac_AF_POPMAX"] or 0.0) if "exac_AF_POPMAX" in hit else 0.0,
-                    'gnomad_exomes_AF': float(hit["gnomad_exomes_AF"] or 0.0) if "gnomad_exomes_AF" in hit else 0.0,
-                    'gnomad_exomes_popmax_AF': float(hit["gnomad_exomes_AF_POPMAX"] or 0.0) if "gnomad_exomes_AF_POPMAX" in hit else 0.0,
-                    'gnomad_genomes_AF': float(hit["gnomad_genomes_AF"] or 0.0) if "gnomad_genomes_AF" in hit else 0.0,
-                    'gnomad_genomes_popmax_AF': float(hit["gnomad_genomes_AF_POPMAX"] or 0.0) if "gnomad_genomes_AF_POPMAX" in hit else 0.0,
-                    'topmed_AF': float(hit["topmed_AF"] or 0.0) if "topmed_AF" in hit else 0.0,
+                    'AF': float(hit["AF"] or 0.0) if "AF" in hit else None,
+                    '1kg_wgs_AF': float(hit["g1k_AF"] or 0.0) if "g1k_AF" in hit else None,
+                    '1kg_wgs_popmax_AF': float(hit["g1k_POPMAX_AF"] or 0.0) if "g1k_POPMAX_AF" in hit else None,
+                    'exac_v3_AF': float(hit["exac_AF"] or 0.0) if "exac_AF" in hit else (hit["exac_AC_Adj"]/float(hit["exac_AN_Adj"]) if "exac_AC_Adj" in hit and "exac_AN_Adj"in hit and int(hit["exac_AN_Adj"] or 0) > 0 else None),
+                    'exac_v3_popmax_AF': float(hit["exac_AF_POPMAX"] or 0.0) if "exac_AF_POPMAX" in hit else None,
+                    'gnomad_exomes_AF': float(hit["gnomad_exomes_AF"] or 0.0) if "gnomad_exomes_AF" in hit else None,
+                    'gnomad_exomes_popmax_AF': float(hit["gnomad_exomes_AF_POPMAX"] or 0.0) if "gnomad_exomes_AF_POPMAX" in hit else None,
+                    'gnomad_genomes_AF': float(hit["gnomad_genomes_AF"] or 0.0) if "gnomad_genomes_AF" in hit else None,
+                    'gnomad_genomes_popmax_AF': float(hit["gnomad_genomes_AF_POPMAX"] or 0.0) if "gnomad_genomes_AF_POPMAX" in hit else None,
+                    'topmed_AF': float(hit["topmed_AF"] or 0.0) if "topmed_AF" in hit else None,
                 },
                 #'popmax_populations': {
                 #    'exac_popmax': hit["exac_POPMAX"] or None,
@@ -482,14 +608,17 @@ class ElasticsearchDatastore(datastore.Datastore):
                 'db_gene_ids': list((hit["geneIds"] or []) if "geneIds" in hit else []),
                 'db_tags': str(hit["transcriptConsequenceTerms"] or "") if "transcriptConsequenceTerms" in hit else None,
                 'extras': {
-                    'clinvar_variant_id': hit['clinvar_variation_id'] if 'clinvar_variation_id' in hit else None,
+                    'clinvar_variant_id': hit['clinvar_variation_id'] if 'clinvar_variation_id' in hit and hit['clinvar_variation_id'] else None,
+                    'clinvar_allele_id': hit['clinvar_allele_id'] if 'clinvar_allele_id' in hit and hit['clinvar_allele_id'] else None,
                     'clinvar_clinsig': hit['clinvar_clinical_significance'].lower() if ('clinvar_clinical_significance' in hit) and hit['clinvar_clinical_significance'] else None,
-
+                    'hgmd_class': hit['hgmd_class'] if 'hgmd_class' in hit and user and user.is_staff else None,
+                    'hgmd_accession': hit['hgmd_accession'] if 'hgmd_accession' in hit else None,
                     'genome_version': project.genome_version,
                     'grch37_coords': grch37_coord,
                     'grch38_coords': grch38_coord,
                     'alt_allele_pos': 0,
-                    'orig_alt_alleles': map(str, [a.split("-")[-1] for a in hit["originalAltAlleles"]]) if "originalAltAlleles" in hit else []},
+                    'orig_alt_alleles': map(str, [a.split("-")[-1] for a in hit["originalAltAlleles"]]) if "originalAltAlleles" in hit else None
+                },
                 'genotypes': genotypes,
                 'pos': long(hit['start']),
                 'pos_end': str(hit['end']),
@@ -504,6 +633,10 @@ class ElasticsearchDatastore(datastore.Datastore):
             result["annotation"]["pop_counts"] = result["pop_counts"]
             result["annotation"]["db"] = "elasticsearch"
 
+            result["extras"]["svlen"] = hit["SVLEN"] if "SVLEN" in hit else None
+            result["extras"]["svtype"] = hit["SVTYPE"] if "SVTYPE" in hit else None
+
+
             logger.info("Result %s: GRCh37: %s GRCh38: %s:,  cadd: %s  %s - gene ids: %s, coding gene_ids: %s" % (
                 i, grch37_coord, grch38_coord,
                 hit["cadd_PHRED"] if "cadd_PHRED" in hit else "",
@@ -511,59 +644,54 @@ class ElasticsearchDatastore(datastore.Datastore):
                 result["gene_ids"],
                 result["coding_gene_ids"]))
 
-            variant = Variant.fromJSON(result)
-            variant.set_extra('project_id', project_id)
-            variant.set_extra('family_id', family_id)
+            result["extras"]["project_id"] = project_id
+            result["extras"]["family_id"] = family_id
 
             # add gene info
             gene_names = {}
             if vep_annotation is not None:
                 gene_names = {vep_anno["gene_id"]: vep_anno.get("gene_symbol") for vep_anno in vep_annotation if vep_anno.get("gene_symbol")}
-            variant.set_extra('gene_names', gene_names)
+            result["extras"]["gene_names"] = gene_names
 
             try:
                 genes = {}
-                for gene_id in variant.coding_gene_ids:
+                for gene_id in result["coding_gene_ids"]:
                     if gene_id:
-                        genes[gene_id] = reference.get_gene_summary(gene_id)
+                        genes[gene_id] = reference.get_gene_summary(gene_id) or {}
 
                 if not genes:
-                    for gene_id in variant.gene_ids:
+                    for gene_id in result["gene_ids"]:
                         if gene_id:
-                            genes[gene_id] = reference.get_gene_summary(gene_id)
+                            genes[gene_id] = reference.get_gene_summary(gene_id) or {}
 
                 #if not genes:
                 #    genes =  {vep_anno["gene_id"]: {"symbol": vep_anno["gene_symbol"]} for vep_anno in vep_annotation}
 
-                variant.set_extra('genes', genes)
+                result["extras"]["genes"] = genes
             except Exception as e:
                 exc_type, exc_obj, exc_tb = sys.exc_info()
                 logger.warn("WARNING: got unexpected error in add_gene_names_to_variants: %s : line %s" % (e, exc_tb.tb_lineno))
 
+            variant_results.append(result)
 
-            #add_disease_genes_to_variants(gene_list_map, [variant])
-            #add_gene_databases_to_variants([variant])
-            #add_gene_info_to_variants([variant])
-            #add_notes_to_variants_family(family, [variant])
-            #if family_id:
-            #    family = Family.objects.get(project__project_id=project_id, family_id=family_id)
-            #    try:
-            #        notes = list(VariantNote.objects.filter(family=family, xpos=variant.xpos, ref=variant.ref, alt=variant.alt).order_by('-date_saved'))
-            #        variant.set_extra('family_notes', [n.toJSON() for n in notes])
-            #        tags = list(VariantTag.objects.filter(family=family, xpos=variant.xpos, ref=variant.ref, alt=variant.alt))
-            #        variant.set_extra('family_tags', [t.toJSON() for t in tags])
-            #    except Exception, e:
-            #        print("WARNING: got unexpected error in add_notes_to_variants_family for family %s %s" % (family, e))
-            yield variant
+        logger.info("Finished returning the %s variants: %s seconds" % (response.hits.total, time.time() - start))
 
-    def get_variants(self, project_id, family_id, genotype_filter=None, variant_filter=None, quality_filter=None, indivs_to_consider=None):
-        for i, variant in enumerate(self.get_elasticsearch_variants(
+        if self._redis_client:
+            self._redis_client.set(cache_key, json.dumps(variant_results))
+
+        return [Variant.fromJSON(variant_json) for variant_json in variant_results]
+
+    def get_variants(self, project_id, family_id, genotype_filter=None, variant_filter=None, quality_filter=None, indivs_to_consider=None, user=None):
+        for variant in self.get_elasticsearch_variants(
                 project_id,
                 family_id,
                 variant_filter=variant_filter,
                 genotype_filter=genotype_filter,
                 quality_filter=quality_filter,
-                indivs_to_consider=indivs_to_consider)):
+                indivs_to_consider=indivs_to_consider,
+                user=user,
+        ):
+
             yield variant
 
     def get_variants_in_gene(self, project_id, family_id, gene_id, genotype_filter=None, variant_filter=None):
@@ -574,20 +702,14 @@ class ElasticsearchDatastore(datastore.Datastore):
             modified_variant_filter = copy.deepcopy(variant_filter)
         modified_variant_filter.add_gene(gene_id)
 
-        #db_query = self._make_db_query(genotype_filter, modified_variant_filter)
+        #db_query = self._make_db_query(genotype_filter, modified_variant_filter, user=None)
         raise ValueError("Not Implemented")
 
-    def get_single_variant(self, project_id, family_id, xpos, ref, alt):
+    def get_single_variant(self, project_id, family_id, xpos, ref, alt, user=None):
         chrom, pos = get_chr_pos(xpos)
 
         variant_id = "%s-%s-%s-%s" % (chrom, pos, ref, alt)
-
-        cache_key = (project_id, family_id, xpos, ref, alt)
-        if cache_key in self._results_cache:
-            results = self._results_cache[cache_key]
-        else:
-            results = list(self.get_elasticsearch_variants(project_id, family_id=family_id, variant_id_filter=[variant_id]))
-            self._results_cache[cache_key] = results
+        results = list(self.get_elasticsearch_variants(project_id, family_id=family_id, variant_id_filter=[variant_id], user=user, include_all_consequences=True))
 
         if not results:
             return None
@@ -600,7 +722,7 @@ class ElasticsearchDatastore(datastore.Datastore):
 
         return variant
 
-    def get_multiple_variants(self, project_id, family_id, xpos_ref_alt_tuples):
+    def get_multiple_variants(self, project_id, family_id, xpos_ref_alt_tuples, user=None):
         """
         Get one or more specific variants in a family
         Variant should be identifiable by xpos, ref, and alt
@@ -611,19 +733,17 @@ class ElasticsearchDatastore(datastore.Datastore):
             chrom, pos = get_chr_pos(xpos)
             variant_ids.append("%s-%s-%s-%s" % (chrom, pos, ref, alt))
 
-        cache_key = (project_id, family_id, tuple(xpos_ref_alt_tuples))
-        if cache_key in self._results_cache:
-            results = self._results_cache[cache_key]
-        else:
-            results = list(self.get_elasticsearch_variants(project_id, family_id=family_id, variant_id_filter=variant_ids))
-            # make sure all variants in xpos_ref_alt_tuples were retrieved and are in the same order.
-            # Return None for tuples that weren't found in ES.
-            results_by_xpos_ref_alt = {}
-            for r in results:
-                results_by_xpos_ref_alt[(r.xpos, r.ref, r.alt)] = r
-            results = [results_by_xpos_ref_alt.get(t) for t in xpos_ref_alt_tuples]
 
-            self._results_cache[cache_key] = results
+        results = self.get_elasticsearch_variants(project_id, family_id=family_id, variant_id_filter=variant_ids, user=user)
+        # make sure all variants in xpos_ref_alt_tuples were retrieved and are in the same order.
+        # Return None for tuples that weren't found in ES.
+        results_by_xpos_ref_alt = {}
+        for r in results:
+            results_by_xpos_ref_alt[(r.xpos, r.ref, r.alt)] = r
+
+        # create a list that's the same length as the input list of xpos_ref_alt_tuples, putting None for
+        # xpos-ref-alt's that weren't found in the elasticsearch index
+        results = [results_by_xpos_ref_alt.get(t) for t in xpos_ref_alt_tuples]
 
         return results
 
@@ -635,7 +755,7 @@ class ElasticsearchDatastore(datastore.Datastore):
 
         raise ValueError("Not implemented")
 
-    def get_project_variants_in_gene(self, project_id, gene_id, variant_filter=None):
+    def get_project_variants_in_gene(self, project_id, gene_id, variant_filter=None, user=None):
 
         if variant_filter is None:
             modified_variant_filter = VariantFilter()
@@ -643,7 +763,7 @@ class ElasticsearchDatastore(datastore.Datastore):
             modified_variant_filter = copy.deepcopy(variant_filter)
         modified_variant_filter.add_gene(gene_id)
 
-        variants = [variant for variant in self.get_elasticsearch_variants(project_id, variant_filter=modified_variant_filter)]
+        variants = [variant for variant in self.get_elasticsearch_variants(project_id, variant_filter=modified_variant_filter, user=user, max_results_limit=9999)]
         return variants
 
     def _make_db_query(self, genotype_filter=None, variant_filter=None):
@@ -660,7 +780,7 @@ class ElasticsearchDatastore(datastore.Datastore):
             _add_genotype_filter_to_variant_query(db_query, genotype_filter)
 
         if variant_filter:
-            #logger.info(pformat(variant_filter.toJSON()))
+            logger.info(pformat(variant_filter.toJSON()))
 
             if variant_filter.locations:
                 location_ranges = []
@@ -689,6 +809,13 @@ class ElasticsearchDatastore(datastore.Datastore):
                 for population, freq in variant_filter.ref_freqs:
                     #if population in self._annotator.reference_population_slugs:
                     db_query['db_freqs.' + population] = {'$lte': freq}
+            if variant_filter.ref_acs:
+                for population, ac in variant_filter.ref_acs:
+                    db_query['db_acs.' + population] = {'$lte': ac}
+            if variant_filter.ref_hom_hemi:
+                for population, count in variant_filter.ref_hom_hemi:
+                    db_query['db_hemi.' + population] = {'$lte': count}
+                    db_query['db_hom.' + population] = {'$lte': count}
 
         return db_query
 

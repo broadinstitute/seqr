@@ -7,8 +7,9 @@ import RequestStatus from '../form/RequestStatus'
 
 
 const ContainerDiv = styled.div`
-  margin: 20px 0px 15px 10px;
-  text-align: right;
+  position: absolute;
+  bottom: 0;
+  right: 0;
 `
 
 const StyledButton = styled(Button)`
@@ -20,7 +21,7 @@ const StyledRequestStatus = styled(RequestStatus)`
   padding: 0px 5px;
 `
 
-class ButtonPanel extends React.Component {
+class ButtonPanel extends React.PureComponent {
 
   static propTypes = {
     cancelButtonText: PropTypes.string,
@@ -34,10 +35,10 @@ class ButtonPanel extends React.Component {
   render() {
     return (
       <ContainerDiv>
-        <StyledButton onClick={this.props.handleClose}>
+        <StyledButton tabIndex={0} onClick={this.props.handleClose} type="button">
           {this.props.cancelButtonText || 'Cancel'}
         </StyledButton>
-        <StyledButton onClick={this.props.handleSave} type="submit" color="vk">
+        <StyledButton tabIndex={0} onClick={this.props.handleSave} type="submit" color="blue">
           {this.props.submitButtonText || 'Submit'}
         </StyledButton>
         <StyledRequestStatus status={this.props.saveStatus} errorMessage={this.props.saveErrorMessage} />

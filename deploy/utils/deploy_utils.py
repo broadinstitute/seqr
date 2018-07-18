@@ -92,6 +92,9 @@ def deploy(deployment_target, components, output_dir=None, other_settings={}):
     if "postgres" in components:
         deploy_postgres(settings)
 
+    if "redis" in components:
+        deploy_redis(settings)
+
     if "phenotips" in components:
         deploy_phenotips(settings)
 
@@ -298,6 +301,21 @@ def deploy_postgres(settings):
     )
 
     _deploy_pod("postgres", settings, wait_until_pod_is_ready=True)
+
+
+def deploy_redis(settings):
+    print_separator("redis")
+
+    if settings["DELETE_BEFORE_DEPLOY"]:
+        delete_pod("redis", settings)
+
+    docker_build(
+        "redis",
+        settings,
+        ["--build-arg REDIS_SERVICE_PORT=%s" % settings["REDIS_SERVICE_PORT"]],
+    )
+
+    _deploy_pod("redis", settings, wait_until_pod_is_ready=True)
 
 
 def deploy_elasticsearch(settings):
@@ -553,9 +571,8 @@ def deploy_init_cluster(settings):
 
 
 def deploy_config_map(settings):
+        # write out a ConfigMap file
     configmap_file_path = os.path.join(settings["DEPLOYMENT_TEMP_DIR"], "deploy/kubernetes/all-settings.properties")
-
-    # render ConfigMap
     with open(configmap_file_path, "w") as f:
         for key, value in settings.items():
             if value is None:
@@ -616,6 +633,10 @@ def deploy_secrets(settings):
             "kubectl create secret generic gcloud-client-secrets",
             "--from-file deploy/secrets/shared/gcloud/client_secrets.json",
             "--from-file deploy/secrets/shared/gcloud/boto",
+        ]))
+    else:
+        run(" ".join([
+            "kubectl create secret generic gcloud-client-secrets"   # create an empty set of client secrets
         ]))
 
 
@@ -685,7 +706,7 @@ def create_vpc(gcloud_project, network_name):
         #"gcloud compute networks create seqr-project-custom-vpc --project=%(GCLOUD_PROJECT)s --mode=custom"
         "gcloud compute networks create %(network_name)s",
         "--project=%(gcloud_project)s",
-        "--mode=auto"
+        "--subnet-mode=auto"
     ]) % locals(), errors_to_ignore=["already exists"])
 
     # add recommended firewall rules to enable ssh, etc.

@@ -1,6 +1,8 @@
 import json
 
 #from django.contrib.sites.models import Site
+import copy
+
 from django.conf import settings
 
 from xbrowse import constants
@@ -29,13 +31,24 @@ DICTIONARY = {
     'gene_reference': constants.GENE_REFERENCE,
 }
 
+DICTIONARY_INTERNAL = copy.deepcopy(DICTIONARY)
+DICTIONARY_INTERNAL['annotation_reference'] = constants.ANNOTATION_REFERENCE_INTERNAL
+
+custom_processor_result = {
+    'BASE_URL':  settings.BASE_URL,
+    'CONSTRUCTION_TEMPLATE':  settings.CONSTRUCTION_TEMPLATE,
+    'DICTIONARY_JSON': json.dumps(DICTIONARY),
+    #'CURRENT_URL':  Site.objects.get_current().domain,
+}
+
+
+custom_processor_result_internal = copy.deepcopy(DICTIONARY)
+custom_processor_result_internal['DICTIONARY_JSON'] = json.dumps(DICTIONARY_INTERNAL)
+
 
 def custom_processor(request):
 
-    return {
-        'BASE_URL':  settings.BASE_URL,
-        'CONSTRUCTION_TEMPLATE':  settings.CONSTRUCTION_TEMPLATE,
-        'URL_PREFIX':  settings.URL_PREFIX,
-        #'CURRENT_URL':  Site.objects.get_current().domain,
-        'DICTIONARY_JSON': json.dumps(DICTIONARY),
-    }
+    if request.user.is_staff:
+        return custom_processor_result_internal
+    else:
+       return custom_processor_result

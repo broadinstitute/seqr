@@ -32,7 +32,7 @@ class CombineMendelianFamiliesSpec():
         return spec
 
 
-def get_families_by_gene(mall, family_group, inheritance_mode, variant_filter=None, quality_filter=None):
+def get_families_by_gene(mall, family_group, inheritance_mode, variant_filter=None, quality_filter=None, user=None):
 
     families_by_gene = defaultdict(set)
 
@@ -42,7 +42,8 @@ def get_families_by_gene(mall, family_group, inheritance_mode, variant_filter=No
                 family,
                 inheritance_mode,
                 variant_filter,
-                quality_filter
+                quality_filter,
+                user=user,
         ):
             for gene_id in variant.gene_ids:
                 families_by_gene[gene_id].add((family.project_id, family.family_id))
@@ -51,7 +52,7 @@ def get_families_by_gene(mall, family_group, inheritance_mode, variant_filter=No
         yield gene_id, sorted(list(family_set))
 
 
-def get_variants_by_family_for_gene(mall, family_list, inheritance_mode, gene_id, variant_filter=None, quality_filter=None):
+def get_variants_by_family_for_gene(mall, family_list, inheritance_mode, gene_id, variant_filter=None, quality_filter=None, user=None):
 
     if variant_filter is None:
         variant_filter = VariantFilter()
@@ -65,7 +66,8 @@ def get_variants_by_family_for_gene(mall, family_list, inheritance_mode, gene_id
             family,
             inheritance_mode,
             variant_filter,
-            quality_filter
+            quality_filter,
+            user=user,
         ))
         by_family[family_t] = variants
 

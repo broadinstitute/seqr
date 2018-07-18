@@ -1,54 +1,42 @@
-/* eslint-disable react/no-unused-prop-types */
-
 import React from 'react'
 import PropTypes from 'prop-types'
 import MarkdownRenderer from 'react-markdown-renderer'
-import StaffOnlyIcon from 'shared/components/icons/StaffOnlyIcon'
-import EditTextButton from 'shared/components/buttons/edit-text/EditTextButton'
-import { HorizontalSpacer } from 'shared/components/Spacers'
+
+import RichTextEditor from '../../form/RichTextEditor'
+import { HorizontalSpacer } from '../../Spacers'
+import BaseFieldView from './BaseFieldView'
+
+const MARKDOWN_OPTIONS = { breaks: true }
+const INLINE_STYLE = { display: 'inline-block' }
 
 const TextFieldView = (props) => {
-  if (props.isVisible !== undefined && !props.isVisible) {
-    return null
-  }
-  if (!props.isEditable && !props.initialText) {
-    return null
-  }
-
-  return (
-    <span>
-      {props.isPrivate && <StaffOnlyIcon />}
-      {props.fieldName && (
-        props.initialText ? <b>{props.fieldName}:</b> : <b>{props.fieldName}</b>
-      )}
-      <HorizontalSpacer width={20} />
-      {props.isEditable &&
-        <EditTextButton
-          initialText={props.initialText}
-          modalTitle={props.textEditorTitle}
-          modalSubmitUrl={props.textEditorSubmitUrl}
-          modalId={props.textEditorId}
-        />
-      }
-      <br />
-      {
-        props.initialText &&
-        <div style={{ padding: '0px 0px 15px 22px' }}>
-          <MarkdownRenderer markdown={props.initialText} options={{ breaks: true }} />
-        </div>
-      }
-    </span>)
+  const { textPopup, textAnnotation, additionalEditFields = [], ...baseProps } = props
+  const fields = [{ name: props.field, component: RichTextEditor }, ...additionalEditFields]
+  return <BaseFieldView
+    fieldDisplay={(initialText) => {
+      const style = props.textAnnotation ? INLINE_STYLE : {}
+      const markdown = <MarkdownRenderer
+        markdown={initialText || ''}
+        options={MARKDOWN_OPTIONS}
+        style={style}
+      />
+      return (
+        <span>
+          {textPopup ? textPopup(markdown) : markdown}
+          {textAnnotation && <span><HorizontalSpacer width={10} />{textAnnotation}</span>}
+        </span>
+      ) }
+    }
+    formFields={fields}
+    {...baseProps}
+  />
 }
 
 TextFieldView.propTypes = {
-  isVisible: PropTypes.any,
-  isPrivate: PropTypes.bool,
-  isEditable: PropTypes.bool,
-  textEditorId: PropTypes.string,
-  textEditorSubmitUrl: PropTypes.string,
-  textEditorTitle: PropTypes.string,
-  fieldName: PropTypes.string.isRequired,
-  initialText: PropTypes.string,
+  additionalEditFields: PropTypes.array,
+  field: PropTypes.string.isRequired,
+  textAnnotation: PropTypes.node,
+  textPopup: PropTypes.func,
 }
 
 export default TextFieldView

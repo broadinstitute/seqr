@@ -40,7 +40,7 @@ export class HttpRequestHelper {
       credentials: 'include',
     })
 
-    this.handlePromise(p, urlParams)
+    return this.handlePromise(p, urlParams)
   }
 
   /**
@@ -72,7 +72,13 @@ export class HttpRequestHelper {
       // decided against auto-redirect to login form (in case user has unsaved text)
       if (!response.ok) {
         console.log('ERROR: ', response.statusText, response.status, response)
-        throw new Error(`${response.statusText.toLowerCase()} (${response.status})`)
+        // throw new Error(`${response.statusText.toLowerCase()} (${response.status})`)
+        return response.json().then((responseJson) => {
+          const message = responseJson.message || `${response.statusText.toLowerCase()} (${response.status})`
+          const err = new Error(message)
+          err.body = responseJson
+          throw err
+        })
       }
       return response.json()
     })

@@ -1,3 +1,5 @@
+from collections import defaultdict
+from django.db.models.query_utils import Q
 from django.shortcuts import get_object_or_404
 from django.conf import settings
 from django.http import Http404
@@ -116,12 +118,16 @@ def add_disease_genes_to_variants(project, variants):
     Take a list of variants and annotate them with disease genes
     """
     by_gene = project.get_gene_list_map()
+    gene_lists_map = defaultdict(set)
     for variant in variants:
         gene_lists = []
         for gene_id in variant.coding_gene_ids:
             for g in by_gene[gene_id]:
                 gene_lists.append(g.name)
+                gene_lists_map[gene_id].add(g.name)
         variant.set_extra('disease_genes', gene_lists)
+        for gene_id in variant.extras['genes'].keys():
+            variant.extras['genes'][gene_id]['disease_gene_lists'] = list(gene_lists_map.get(gene_id, []))
 
 
 def add_gene_databases_to_variants(variants):
@@ -135,6 +141,7 @@ def add_gene_databases_to_variants(variants):
             # TODO: should be part of reference cache
             if gene and 'phenotype_info' in gene and (len(gene['phenotype_info']['orphanet_phenotypes']) or len(gene['phenotype_info']['mim_phenotypes'])):
                 variant.set_extra('in_disease_gene_db', True)
+                variant.extras['genes'][gene_id]['disease_db_phenotypes'] = gene['phenotype_info']['orphanet_phenotypes'] + gene['phenotype_info']['mim_phenotypes']
 
 
 def add_gene_names_to_variants(reference, variants):
@@ -167,21 +174,22 @@ def add_gene_names_to_variants(reference, variants):
 
 def add_family_tags_to_variants(project, variants):
     for variant in variants:
-        notes = list(VariantNote.objects.filter(
-            project=project, xpos=variant.xpos, ref=variant.ref, alt=variant.alt,
-            family__family_id=variant.extras['family_id'],
-        ).order_by('-date_saved').select_related('user__userprofile').only(*VariantNote.VARIANT_JSON_FIELDS))
+        notes_query = Q(project=project) & Q(xpos=variant.xpos) & Q(ref=variant.ref) & Q(alt=variant.alt)
+        if variant.extras.get('family_id'):
+            notes_query &= Q(family__family_id=variant.extras['family_id'])
+        notes = list(VariantNote.objects.filter(notes_query).order_by('-date_saved').select_related('user__userprofile').only(*VariantNote.VARIANT_JSON_FIELDS))
         variant.set_extra('family_notes', [n.to_variant_json() for n in notes])
 
-        tags = list(VariantTag.objects.filter(
-            project_tag__project=project, xpos=variant.xpos, ref=variant.ref, alt=variant.alt,
-            family__family_id=variant.extras['family_id'],
-        ).select_related('user__userprofile').select_related('project_tag').only(*VariantTag.VARIANT_JSON_FIELDS))
+        variant_tag_query = Q(project_tag__project=project) & Q(xpos=variant.xpos) & Q(ref=variant.ref) & Q(alt=variant.alt)
+        if variant.extras.get('family_id'):
+            variant_tag_query &= Q(family__family_id=variant.extras['family_id'])
+        tags = list(VariantTag.objects.filter(variant_tag_query).select_related('user__userprofile').select_related('project_tag').only(*VariantTag.VARIANT_JSON_FIELDS))
         variant.set_extra('family_tags', [t.to_variant_json() for t in tags])
 
-        functional_data = list(VariantFunctionalData.objects.filter(
-            family__family_id=variant.extras['family_id'], xpos=variant.xpos, ref=variant.ref, alt=variant.alt
-        ).select_related('user__userprofile').only(*VariantFunctionalData.VARIANT_FUNCTIONAL_DATA_JSON_FIELDS))
+        functional_data_query = Q(family__project=project) & Q(xpos=variant.xpos) & Q(ref=variant.ref) & Q(alt=variant.alt)
+        if variant.extras.get('family_id'):
+            functional_data_query &= Q(family__family_id=variant.extras['family_id'])
+        functional_data = list(VariantFunctionalData.objects.filter(functional_data_query).select_related('user__userprofile').only(*VariantFunctionalData.VARIANT_FUNCTIONAL_DATA_JSON_FIELDS))
         variant.set_extra('family_functional_data', [t.to_variant_json() for t in functional_data])
 
 
@@ -227,21 +235,22 @@ def add_extra_info_to_variants_project(reference, project, variants, add_family_
     - disease annotations
     - coding_gene_ids
     """
+    if not project.has_elasticsearch_index() or any(v for v in variants if v.get_extra('created_variant')):
+        add_gene_names_to_variants(reference, variants)
+        add_gene_info_to_variants(variants)
+        add_clinical_info_to_variants(variants)
+        if add_populations:
+            populations = set(
+                settings.ANNOTATOR_REFERENCE_POPULATION_SLUGS + project.private_reference_population_slugs())
+            missing_pop_variants = [v for v in variants if
+                                    v.annotation and not populations.issubset(v.annotation['freqs'])]
+            add_populations_to_variants(missing_pop_variants, settings.ANNOTATOR_REFERENCE_POPULATION_SLUGS)
+            add_custom_populations_to_variants(missing_pop_variants, project.private_reference_population_slugs())
+
     add_disease_genes_to_variants(project, variants)
     add_gene_databases_to_variants(variants)
     if add_family_tags:
         add_family_tags_to_variants(project, variants)
-    if project.has_elasticsearch_index():
-        return
-
-    add_gene_names_to_variants(reference, variants)
-    add_gene_info_to_variants(variants)
-    add_clinical_info_to_variants(variants)
-    if add_populations:
-        populations = set(settings.ANNOTATOR_REFERENCE_POPULATION_SLUGS + project.private_reference_population_slugs())
-        missing_pop_variants = [v for v in variants if v.annotation and not populations.issubset(v.annotation['freqs'])]
-        add_populations_to_variants(missing_pop_variants, settings.ANNOTATOR_REFERENCE_POPULATION_SLUGS)
-        add_custom_populations_to_variants(missing_pop_variants, project.private_reference_population_slugs())
 
 
 def add_notes_to_genes(genes, user):
@@ -330,7 +339,7 @@ def calculate_cohort_gene_search(cohort, search_spec):
     return genes
 
 
-def calculate_mendelian_variant_search(search_spec, family):
+def calculate_mendelian_variant_search(search_spec, family, user=None):
     xfamily = family.xfamily()
     project = family.project
     variants = None
@@ -341,6 +350,7 @@ def calculate_mendelian_variant_search(search_spec, family):
             search_spec.inheritance_mode,
             variant_filter=search_spec.variant_filter,
             quality_filter=search_spec.quality_filter,
+            user=user,
         ))
 
     elif search_spec.search_mode == 'custom_inheritance':
@@ -350,6 +360,7 @@ def calculate_mendelian_variant_search(search_spec, family):
             genotype_filter=search_spec.genotype_inheritance_filter,
             variant_filter=search_spec.variant_filter,
             quality_filter=search_spec.quality_filter,
+            user=user,
         ))
 
     elif search_spec.search_mode == 'gene_burden':
@@ -360,6 +371,7 @@ def calculate_mendelian_variant_search(search_spec, family):
             burden_filter=search_spec.gene_burden_filter,
             variant_filter=search_spec.variant_filter,
             quality_filter=search_spec.quality_filter,
+            user=user,
         )
 
         variants = list(stream_utils.gene_stream_to_variant_stream(gene_stream, get_reference()))
@@ -371,6 +383,7 @@ def calculate_mendelian_variant_search(search_spec, family):
             search_spec.allele_count_filter,
             variant_filter=search_spec.variant_filter,
             quality_filter=search_spec.quality_filter,
+            user=user,
         ))
 
     elif search_spec.search_mode == 'all_variants':
@@ -380,6 +393,7 @@ def calculate_mendelian_variant_search(search_spec, family):
             variant_filter=search_spec.variant_filter,
             quality_filter=search_spec.quality_filter,
             indivs_to_consider=xfamily.indiv_id_list(),
+            user=user,
         ))
 
     for variant in variants:
@@ -388,7 +402,7 @@ def calculate_mendelian_variant_search(search_spec, family):
     return variants
 
 
-def calculate_combine_mendelian_families(family_group, search_spec):
+def calculate_combine_mendelian_families(family_group, search_spec, user=None):
     """
     Calculate search results from the params in search_spec
     Should be called after cache is checked - this does all the computation
@@ -403,6 +417,7 @@ def calculate_combine_mendelian_families(family_group, search_spec):
         search_spec.inheritance_mode,
         search_spec.variant_filter,
         search_spec.quality_filter,
+        user=user,
     ):
 
         xgene = get_reference().get_gene(gene_id)

@@ -31,7 +31,6 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 # Application definition
-
 INSTALLED_APPS = [
     'hijack',
     'compat',
@@ -73,6 +72,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'seqr.utils.middleware.JsonErrorMiddleware',
 ]
 
 # django-hijack plugin
@@ -86,7 +86,7 @@ CORS_ORIGIN_WHITELIST = (
 CORS_ALLOW_CREDENTIALS = True
 
 # django-debug-toolbar settings
-ENABLE_DJANGO_DEBUG_TOOLBAR = True
+ENABLE_DJANGO_DEBUG_TOOLBAR = False
 if ENABLE_DJANGO_DEBUG_TOOLBAR:
     MIDDLEWARE = ['debug_toolbar.middleware.DebugToolbarMiddleware'] + MIDDLEWARE
     INSTALLED_APPS = ['debug_toolbar'] + INSTALLED_APPS
@@ -108,6 +108,9 @@ if ENABLE_DJANGO_DEBUG_TOOLBAR:
         'debug_toolbar.panels.logging.LoggingPanel',
         'debug_toolbar.panels.redirects.RedirectsPanel',
     ]
+    DEBUG_TOOLBAR_CONFIG = {
+        'RESULTS_CACHE_SIZE': 100,
+    }
 
 
 # Internationalization
@@ -216,7 +219,6 @@ AUTHENTICATION_BACKENDS = (
     'guardian.backends.ObjectPermissionBackend',
 )
 
-
 # ===========================================================
 # ===========================================================
 # legacy settings that need to be reviewed
@@ -314,8 +316,9 @@ ANNOTATION_BATCH_SIZE = 25000
 CONSTRUCTION_TEMPLATE = None
 CLINVAR_TSV = "/dev/null"
 
-VARIANT_QUERY_RESULTS_LIMIT = 5000
+VARIANT_QUERY_RESULTS_LIMIT = 2500
 
+UPLOADED_PEDIGREE_FILE_RECIPIENTS = []
 # READ_VIZ
 
 # The base directory where subdirectories contain bams to be shown
@@ -341,7 +344,7 @@ READ_VIZ_USERNAME=None   # used to authenticate to remote HTTP bam server
 READ_VIZ_PASSWD=None
 
 
-PHENOTIPS_PORT=os.environ.get('PHENOTIPS_SERVICE_PORT', 9010)
+PHENOTIPS_PORT=os.environ.get('PHENOTIPS_SERVICE_PORT', 8080)
 PHENOTIPS_SERVICE_HOSTNAME = os.environ.get('PHENOTIPS_SERVICE_HOSTNAME', 'localhost')
 PHENOTIPS_SERVER = "%s:%s" % (PHENOTIPS_SERVICE_HOSTNAME, PHENOTIPS_PORT)
 PHENOPTIPS_BASE_URL='http://%s:%s' % (os.environ.get('PHENOTIPS_SERVICE_HOSTNAME', 'localhost'), PHENOTIPS_PORT)
@@ -356,6 +359,9 @@ PHENOTIPS_UPLOAD_EXTERNAL_PHENOTYPE_URL="http://"+PHENOTIPS_SERVICE_HOSTNAME+":"
 # when set to None, this *disables* the PhenoTips interface for all projects. If set to a list of project ids, it will
 # enable the PhenoTips interface for *all* projects except those in the list.
 PROJECTS_WITHOUT_PHENOTIPS = []
+
+
+REDIS_SERVICE_HOSTNAME = os.environ.get('REDIS_SERVICE_HOST')
 
 
 #-----------------Matchmaker constants-----------------
@@ -380,6 +386,7 @@ MME_NODE_ACCEPT_HEADER='application/vnd.ga4gh.matchmaker.v1.0+json'
 MME_CONTENT_TYPE_HEADER='application/vnd.ga4gh.matchmaker.v1.0+json'
 MATCHBOX_SERVICE_HOSTNAME = os.environ.get('MATCHBOX_SERVICE_HOSTNAME', 'localhost')
 MME_SERVER_HOST='http://%s:9020' % MATCHBOX_SERVICE_HOSTNAME
+ENABLE_MME_MATCH_EMAIL_NOTIFICATIONS=True
 #adds a patient to MME
 MME_ADD_INDIVIDUAL_URL = MME_SERVER_HOST + '/patient/add'
 #deletes a patient from MME
@@ -416,14 +423,12 @@ STATICFILES_DIRS = (
 
 
 ANNOTATOR_REFERENCE_POPULATIONS_IN_ELASTICSEARCH = [
-    {"slug": "1kg_wgs_phase3", "name": "1000G v3"},
-    {"slug": "1kg_wgs_phase3_popmax", "name": "1000G v3 popmax"},
-    {"slug": "exac_v3", "name": "ExAC v0.3"},
-    {"slug": "exac_v3_popmax", "name": "ExAC v0.3 popmax"},
-    {"slug": "gnomad-genomes2", "name": "gnomAD 15k genomes"},
-    {"slug": "gnomad-exomes2", "name": "gnomAD 123k exomes"},
-    {"slug": "topmed", "name": "TOPMed"},
-    {"slug": "AF", "name": "This Callset"},
+    {"slug": "1kg_wgs_phase3", "name": "1000G v3", "has_hom_hemi": False, "full_name": "1000 Genomes Samples", "description": "Filter out variants that have a higher allele count (AC) in the 1000 Genomes Phase 3 release (5/2/2013), or a higher allele frequency (popmax AF) in any one of these five subpopulations defined for 1000 Genomes Phase 3: AFR, AMR, EAS, EUR, SAS"},
+    {"slug": "exac_v3", "name": "ExAC v0.3", "has_hom_hemi": True, "full_name": "ExAC", "description": "Filter out variants that have a higher allele count (AC) or homozygous/hemizygous count (H/H) in ExAC, or a higher allele frequency (popmax AF) in any one of these six subpopulations defined for ExAC: AFR, AMR, EAS, FIN, NFE, SAS"},
+    {"slug": "gnomad-genomes2", "name": "gnomAD 15k genomes", "has_hom_hemi": True, "description": "Filter out variants that have a higher allele count (AC) or homozygous/hemizygous count (H/H) among gnomAD genomes, or a higher allele frequency (popmax AF) in any one of these six subpopulations defined for gnomAD genomes: AFR, AMR, EAS, FIN, NFE, ASJ"},
+    {"slug": "gnomad-exomes2", "name": "gnomAD 123k exomes", "has_hom_hemi": True, "description": "Filter out variants that have a higher allele count (AC) or homozygous/hemizygous count (H/H) among gnomAD genomes, or a higher allele frequency (popmax AF) in any one of these seven subpopulations defined for gnomAD genomes: AFR, AMR, EAS, FIN, NFE, ASJ, SAS"},
+    {"slug": "topmed", "name": "TOPMed", "has_hom_hemi": False, "description": "Filter out variants that have a higher allele count (AC), or a higher allele frequency (AF) in TOPMed"},
+    {"slug": "AF", "name": "This Callset", "has_hom_hemi": False, "description": ""},
 ]
 
 ANNOTATOR_REFERENCE_POPULATIONS = ANNOTATOR_SETTINGS.reference_populations

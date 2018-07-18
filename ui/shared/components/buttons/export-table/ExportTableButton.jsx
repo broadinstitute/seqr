@@ -2,44 +2,90 @@
 
 import React from 'react'
 import PropTypes from 'prop-types'
+import styled from 'styled-components'
 
 import { Table, Icon, Popup } from 'semantic-ui-react'
+
+import ButtonLink from '../ButtonLink'
+
+const NameCell = styled(Table.Cell)`
+ height: 20px;
+ padding: 3px;
+`
+
+const LinkCell = styled(Table.Cell)`
+  padding: 3px 3px 3px 20px;
+  width: 80px;
+ verticalAlign: middle;
+`
+
+const EXT_CONFIG = {
+  tsv: {
+    dataType: 'tab-separated-values',
+    delimiter: '\t',
+  },
+  xls: {
+    imageName: 'excel',
+    dataType: 'csv',
+    delimiter: ',',
+    dataExt: 'csv',
+  },
+}
+
+const FileLink = ({ url, data, ext }) => {
+  const extConfig = EXT_CONFIG[ext]
+  const linkContent =
+    <span><img alt={ext} src={`/static/images/table_${extConfig.imageName || ext}.png`} /> &nbsp; .{ext}</span>
+
+  if (data) {
+    let content = data.rawData.map(row => data.processRow(row).map(item => `"${item || ''}"`).join(extConfig.delimiter)).join('\n')
+    if (data.headers) {
+      content = `${data.headers.join(extConfig.delimiter)}\n${content}`
+    }
+    const href = `data:text/${extConfig.dataType},${encodeURIComponent(content)}`
+    return <a href={href} download={`${data.filename}.${extConfig.dataExt || ext}`}>{linkContent}</a>
+  }
+
+  if (!url.includes('?')) {
+    url += '?'
+  }
+  if (!url.endsWith('?')) {
+    url += '&'
+  }
+  return <a href={`${url}file_format=${ext}`}>{linkContent}</a>
+}
+
+FileLink.propTypes = {
+  ext: PropTypes.string.isRequired,
+  url: PropTypes.string,
+  data: PropTypes.object,
+}
 
 const ExportTableButton = props =>
   <Popup
     trigger={
-      <a href="#download">
+      <ButtonLink>
         <Icon name="download" />Download Table
-      </a>
+      </ButtonLink>
     }
     content={
       <Table className="noBorder">
         <Table.Body className="noBorder">
           {
-            props.urls.map(({ name, url }) => {
-              if (!url.includes('?')) {
-                url += '?'
-              }
-              if (!url.endsWith('?')) {
-                url += '&'
-              }
+            props.downloads.map(({ name, url, data }) => {
               return [
                 <Table.Row key={1} className="noBorder">
-                  <Table.Cell colSpan="2" className="noBorder" style={{ height: '20px', padding: '3px' }}>
+                  <NameCell colSpan="2" className="noBorder">
                     <b>{name}:</b>
-                  </Table.Cell>
+                  </NameCell>
                 </Table.Row>,
                 <Table.Row key={2} className="noBorder">
-                  <Table.Cell className="noBorder" style={{ padding: '3px 3px 3px 20px', width: '80px', verticalAlign: 'middle' }}>
-                    <a href={`${url}file_format=xls`}>
-                      <img alt="xls" src="/static/images/table_excel.png" /> &nbsp; .xls
-                    </a>
-                  </Table.Cell>
-                  <Table.Cell className="noBorder" style={{ padding: '3px 3px 3px 10px', width: '80px', verticalAlign: 'middle' }}>
-                    <a href={`${url}file_format=tsv`}>
-                      <img alt="tsv" src="/static/images/table_tsv.png" /> &nbsp; .tsv
-                    </a><br />
-                  </Table.Cell>
+                  <LinkCell className="noBorder">
+                    <FileLink url={url} data={data} ext="xls" />
+                  </LinkCell>
+                  <LinkCell className="noBorder">
+                    <FileLink url={url} data={data} ext="tsv" /><br />
+                  </LinkCell>
                 </Table.Row>,
               ]
             })
@@ -57,7 +103,7 @@ ExportTableButton.propTypes = {
    * An array of urls with names:
    *  [{ name: 'table1', url: '/table1-export'},  { name: 'table2', url: '/table2-export' }]
    */
-  urls: PropTypes.array.isRequired,
+  downloads: PropTypes.array.isRequired,
 }
 
 export default ExportTableButton

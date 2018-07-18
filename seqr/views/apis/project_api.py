@@ -5,19 +5,19 @@ APIs for updating project metadata, as well as creating or deleting projects
 import json
 import logging
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import PermissionDenied
 from django.views.decorators.csrf import csrf_exempt
 
-from seqr.models import Project, Family, Individual, Sample, Dataset, _slugify, CAN_EDIT, IS_OWNER
+from seqr.model_utils import update_seqr_model, delete_seqr_model
+from seqr.models import Project, Family, Individual, Sample, _slugify, CAN_EDIT, IS_OWNER
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.phenotips_api import create_phenotips_user, _get_phenotips_uname_and_pwd_for_project
-from seqr.views.apis.variant_tag_api import _add_default_variant_tag_types
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_project
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_permissions
 
 from xbrowse_server.base.models import Project as BaseProject, Family as BaseFamily, Individual as BaseIndividual, \
-    ReferencePopulation
+    ReferencePopulation, ProjectTag
+
 
 logger = logging.getLogger(__name__)
 
@@ -91,14 +91,10 @@ def update_project_handler(request, project_guid):
     request_json = json.loads(request.body)
 
     if 'name' in request_json:
-        project.name = request_json.get('name')
-        project.save()
-    if 'description' in request_json:
-        project.description = request_json.get('description')
-        project.save()
+        update_seqr_model(project, name=request_json.get('name'))
 
-    # keep new seqr.Project model in sync with existing xbrowse_server.base.models - TODO remove this code after transition to new schema is finished
-    _deprecated_update_original_project(project)
+    if 'description' in request_json:
+        update_seqr_model(project, description=request_json.get('description'))
 
     return create_json_response({
         'projectsByGuid': {
@@ -152,8 +148,6 @@ def create_project(name, description=None, user=None):
 
         _enable_phenotips_for_project(project)
 
-    _add_default_variant_tag_types(project)
-
     # TODO: add custom populations
 
     return project
@@ -166,13 +160,13 @@ def delete_project(project):
         project (object): Django ORM model for the project to delete
     """
 
-    _deprecated_delete_original_project(project)
-
-    Dataset.objects.filter(project=project).delete()
     Sample.objects.filter(individual__family__project=project).delete()
-    Individual.objects.filter(family__project=project).delete()
-    Family.objects.filter(project=project).delete()
-    project.delete()
+    for individual in Individual.objects.filter(family__project=project):
+        delete_seqr_model(individual)
+    for family in Family.objects.filter(project=project):
+        delete_seqr_model(family)
+
+    delete_seqr_model(project)
 
     # TODO delete PhenoTips, etc. and other objects under this project
 
@@ -223,32 +217,4 @@ def _deprecated_create_original_project(project):
             logger.error("Unable to add reference population %s: %s" % (reference_population_id, e))
             
     return base_project
-
-
-def _deprecated_update_original_project(project):
-    """DEPRECATED - update project in original xbrowse schema to keep things in sync.
-    Args:
-        project (object): new-style seqr project model
-    """
-
-    base_project = BaseProject.objects.filter(project_id=project.deprecated_project_id)
-    if base_project:
-        base_project = base_project[0]
-        base_project.project_name = project.name
-        base_project.description = project.description
-        base_project.save()
-
-
-def _deprecated_delete_original_project(project):
-    """DEPRECATED - delete project in original xbrowse schema to keep things in sync.
-    Args:
-        project (object): new-style seqr project model
-    """
-
-    for base_project in BaseProject.objects.filter(project_id=project.deprecated_project_id):
-        BaseIndividual.objects.filter(family__project=base_project).delete()
-        BaseFamily.objects.filter(project=base_project).delete()
-        base_project.delete()
-
-
 

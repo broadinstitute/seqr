@@ -4,8 +4,6 @@ DEPLOYMENT_TYPE: 'dev'
 
 DOCKER_IMAGE_PREFIX: 'local/seqr'
 
-USE_EXTERNAL_POSTGRES_DB: false
-
 POSTGRES_DBPATH:  '/data/postgres'
 MONGO_DBPATH:  '/data/mongo'
 ELASTICSEARCH_DBPATH:  '/data/elasticsearch'

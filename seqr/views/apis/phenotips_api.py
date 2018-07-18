@@ -20,27 +20,24 @@ https://phenotips.org/DevGuide/PermissionsRESTfulAPI
 
 import json
 import logging
-#import pickle
 import re
 import requests
-from requests.auth import HTTPBasicAuth
 
 import settings
 
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 from django.http import HttpResponse
-from django.core.exceptions import PermissionDenied, ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist
 
 from reference_data.models import HumanPhenotypeOntology
+from seqr.model_utils import update_seqr_model
 from seqr.models import Project, CAN_EDIT, CAN_VIEW, Individual
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.utils.permissions_utils import check_permissions
+from seqr.views.utils.proxy_request_utils import proxy_request
 
 logger = logging.getLogger(__name__)
-
-
-DEBUG = False
 
 PHENOTIPS_QUICK_SAVE_URL_REGEX = "/bin/preview/data/(P[0-9]{1,20})"
 
@@ -56,21 +53,19 @@ DO_NOT_PROXY_URL_KEYWORDS = [
 ]
 
 
-def create_patient(project, patient_eid, patient_json=None):
+def create_patient(project, individual):
     """Create a new PhenoTips patient record with the given patient id.
 
     Args:
-        project (Model): PhenoTips permissions will be set to only allow access from this seqr project.
-        patient_eid (string): external id (eg. "NA12878") to use for the patient. Must be globally unique across all PhenoTips patients.
-        patient_json (dict): optional - phenotips patient record like the object returned by get_patient_data(..).
+        project (Model): seqr Project - used to retrieve PhenoTips credentials
+        individual (Model): seqr Individual
     Raises:
         PhenotipsException: if unable to create patient record
     """
-    url = '/bin/PhenoTips/OpenPatientRecord?create=true&eid=%(patient_eid)s' % locals()
+    url = '/bin/PhenoTips/OpenPatientRecord?create=true&eid={patient_eid}'.format(patient_eid=individual.guid)
+
     auth_tuple = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id)
     _make_api_call('GET', url, auth_tuple=auth_tuple, verbose=False, parse_json_resonse=False)
-
-    #url = '/rest/patients/eid/%(patient_eid)s' % locals()
 
     #data = {}
     #if patient_json is not None:
@@ -79,88 +74,90 @@ def create_patient(project, patient_eid, patient_json=None):
     #auth_tuple = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id)
     #_make_api_call('POST', url, data=data, auth_tuple=auth_tuple, verbose=False, parse_json_resonse=False)
 
-    patient_data = get_patient_data(project, patient_eid, is_external_id=True)
+    patient_data = get_patient_data(project, individual)
     patient_id = patient_data['id']
 
     username, _ = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id)
     response = add_user_to_patient(username, patient_id, allow_edit=True)
-    logger.info("Added PhenoTips user %(username)s to %(patient_id)s: %(response)s" % locals())
+    logger.info("Added PhenoTips user {username} to {patient_id}: {response}".format(username=username, patient_id=patient_id, response=response))
     username_read_only, _ = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=True)
     add_user_to_patient(username_read_only, patient_id, allow_edit=False)
-    logger.info("Added PhenoTips user %(username)s to %(patient_id)s: %(response)s" % locals())
+    logger.info("Added PhenoTips user {username} to {patient_id}: {response}".format(username=username_read_only, patient_id=patient_id, response=response))
 
     return patient_data
 
 
-def get_patient_data(project, patient_id, is_external_id=False):
+def get_patient_data(project, individual):
     """Retrieves patient data from PhenoTips and returns a json obj.
 
     Args:
-        project (Model): used to retrieve PhenoTips credentials
-        patient_id (string): PhenoTips patient id (either internal eg. "P000001" or external eg. "NA12878")
-        is_external_id (bool): whether the provided id is an external id
+        project (Model): seqr Project - used to retrieve PhenoTips credentials
+        individual (Model): seqr Individual
     Returns:
         dict: json dictionary containing all PhenoTips information for this patient
     Raises:
         PhenotipsException: if unable to retrieve data from PhenoTips
     """
-
-    if is_external_id:  url = '/rest/patients/eid/%(patient_id)s' % locals()
-    else:               url = '/rest/patients/%(patient_id)s' % locals()
+    url = _phenotips_patient_url(individual)
 
     auth_tuple = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id)
     return _make_api_call('GET', url, auth_tuple=auth_tuple, verbose=False)
 
 
-def update_patient_data(project, patient_id, patient_json, is_external_id=False):
+def update_patient_data(project, individual, patient_json):
     """Updates patient data in PhenoTips to the values in patient_json.
 
     Args:
-        project (Model): used to retrieve PhenoTips credentials
-        patient_id (string): PhenoTips patient id (either internal eg. "P000001" or external eg. "NA12878")
+        project (Model): seqr Project - used to retrieve PhenoTips credentials
+        individual (Model): seqr Individual
         patient_json (dict): phenotips patient record like the object returned by get_patient_data(..).
-        is_external_id (bool): whether the provided id is an external id
     Raises:
         PhenotipsException: if api call fails
     """
     if not patient_json:
         raise ValueError("patient_json arg is empty")
 
-    if is_external_id:  url = '/rest/patients/eid/%(patient_id)s' % locals()
-    else:               url = '/rest/patients/%(patient_id)s' % locals()
+    url = _phenotips_patient_url(individual)
+    patient_json_string = json.dumps(patient_json)
 
     auth_tuple = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=False)
-    return _make_api_call('PUT', url, data=json.dumps(patient_json), auth_tuple=auth_tuple, expected_status_code=204)
+    result = _make_api_call('PUT', url, data=patient_json_string, auth_tuple=auth_tuple, expected_status_code=204)
+
+    return result
 
 
-def delete_patient(project, patient_id, is_external_id=False):
+def delete_patient(project, individual):
     """Deletes patient from PhenoTips for the given patient_id.
 
     Args:
-        project (Model): used to retrieve PhenoTips credentials
-        patient_id (string): PhenoTips patient id (either internal eg. "P000001" or external eg. "NA12878")
-        is_external_id (bool): whether the provided id is an external id
+        project (Model): seqr Project - used to retrieve PhenoTips credentials
+        individual (Model): seqr Individual
     Raises:
         PhenotipsException: if api call fails
     """
 
-    if is_external_id:  url = '/rest/patients/eid/%(patient_id)s' % locals()
-    else:               url = '/rest/patients/%(patient_id)s' % locals()
+    url = _phenotips_patient_url(individual)
 
     auth_tuple = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=False)
     return _make_api_call('DELETE', url, auth_tuple=auth_tuple, expected_status_code=204)
 
 
-def update_patient_field_value(project, patient_id, field_name, field_value, is_external_id=False):
+def _phenotips_patient_url(individual):
+    if individual.phenotips_patient_id:
+        return '/rest/patients/{0}'.format(individual.phenotips_patient_id)
+    else:
+        return '/rest/patients/eid/{0}'.format(individual.guid)
+
+
+def update_patient_field_value(project, individual, field_name, field_value):
     """ Utility method for updating one field in the patient record, while keeping other fields
     the same. For field descriptions, see https://phenotips.org/DevGuide/JSONExport1.3
 
     Args:
-        project (Model): used to retrieve PhenoTips credentials
-        patient_id (string): PhenoTips patient id (either internal eg. "P000001" or external eg. "NA12878")
+        project (Model): seqr Project - used to retrieve PhenoTips credentials
+        individual (Model): seqr Individual
         field_name (string): PhenoTips patient field name (eg. "family_history").
         field_value (string or dict): PhenoTips HPO terms.
-        is_external_id (bool): whether the provided patient id is an external id
     Raises:
         PhenotipsException: if api call fails
     """
@@ -172,6 +169,7 @@ def update_patient_field_value(project, patient_id, field_name, field_value, is_
         "date_of_death",
         "disorders",
         "ethnicity",
+        "external_id",
         "family_history",
         "features",
         "genes",
@@ -188,28 +186,41 @@ def update_patient_field_value(project, patient_id, field_name, field_value, is_
     ]):
         raise ValueError("Unexpected field_name: %s" % (field_name, ))
 
-    patient_json = get_patient_data(project, patient_id, is_external_id=is_external_id)
-
+    patient_json = get_patient_data(project, individual)
     patient_json[field_name] = field_value
 
-    update_patient_data(project, patient_id, patient_json, is_external_id=is_external_id)
+    update_patient_data(project, individual, patient_json)
 
 
-def set_patient_hpo_terms(project, patient_id, hpo_terms, is_external_id=False):
+def set_patient_hpo_terms(project, individual, hpo_terms_present=[], hpo_terms_absent=[], final_diagnosis_mim_ids=[]):
     """Utility method for specifying a list of HPO IDs for a patient.
 
     Args:
-        project (Model): used to retrieve PhenoTips credentials
-        patient_id (string): PhenoTips patient id (either internal eg. "P000001" or external eg. "NA12878")
-        hpo_terms (list): list of HPO ID strings (eg. ["HP:00012345", "HP:0012346", ...])
-        is_external_id (bool): whether the provided id is an external id
+        project (Model): seqr Project - used to retrieve PhenoTips credentials
+        individual (Model): seqr Individual
+        hpo_terms_present (list): list of HPO IDs for phenotypes present in this patient (eg. ["HP:00012345", "HP:0012346", ...])
+        hpo_terms_absent (list): list of HPO IDs for phenotypes not present in this patient (eg. ["HP:00012345", "HP:0012346", ...])
+        final_diagnosis_mim_ids (int): one or more MIM Ids (eg. [105650, ..])
     Raises:
         PhenotipsException: if api call fails
     """
-    field_name = "features"
-    field_value = [{"id": hpo_term} for hpo_term in hpo_terms]
 
-    update_patient_field_value(project, patient_id, field_name, field_value, is_external_id=is_external_id)
+    if hpo_terms_present or hpo_terms_absent:
+        features_value = [{"id": hpo_term, "observed": "yes", "type": "phenotype"} for hpo_term in hpo_terms_present]
+        features_value += [{"id": hpo_term, "observed": "no", "type": "phenotype"} for hpo_term in hpo_terms_absent]
+        update_patient_field_value(project, individual, "features", features_value)
+
+    if final_diagnosis_mim_ids:
+        omim_disorders = []
+        for mim_id in final_diagnosis_mim_ids:
+            if int(mim_id) < 100000:
+                raise ValueError("Invalid final_diagnosis_mim_id: %s. Expected a 6-digit number." % str(mim_id))
+            omim_disorders.append({'id': 'MIM:%s' % mim_id})
+        update_patient_field_value(project, individual, "disorders", omim_disorders)
+
+    patient_json = get_patient_data(project, individual)
+    _update_individual_phenotips_data(individual, patient_json)
+
 
 
 def add_user_to_patient(username, patient_id, allow_edit=True):
@@ -219,7 +230,7 @@ def add_user_to_patient(username, patient_id, allow_edit=True):
         username (string): PhenoTips username to grant access to.
         patient_id (string): PhenoTips internal patient id.
     """
-    headers = { "Content-Type": "application/x-www-form-urlencoded" }
+    headers = {"Content-Type": "application/x-www-form-urlencoded"}
     data = {
         'collaborator': 'XWiki.' + str(username),
         'patient': patient_id,
@@ -245,7 +256,7 @@ def create_phenotips_user(username, password):
     headers = { "Content-Type": "application/x-www-form-urlencoded" }
     data = { 'parent': 'XWiki.XWikiUsers' }
 
-    url = '/rest/wikis/xwiki/spaces/XWiki/pages/%(username)s' % locals()
+    url = '/rest/wikis/xwiki/spaces/XWiki/pages/{username}'.format(username=username)
     _make_api_call(
         'PUT',
         url,
@@ -264,7 +275,7 @@ def create_phenotips_user(username, password):
         #'property#email': email_address,
     }
 
-    url = '/rest/wikis/xwiki/spaces/XWiki/pages/%(username)s/objects' % locals()
+    url = '/rest/wikis/xwiki/spaces/XWiki/pages/{username}/objects'.format(username=username)
     return _make_api_call(
         'POST',
         url,
@@ -286,15 +297,14 @@ def phenotips_pdf_handler(request, project_guid, patient_id):
         patient_id (string): PhenoTips internal patient id
     """
 
-    url = "/bin/export/data/%(patient_id)s?format=pdf&pdfcover=0&pdftoc=0&pdftemplate=PhenoTips.PatientSheetCode" % locals()
+    url = "/bin/export/data/{patient_id}?format=pdf&pdfcover=0&pdftoc=0&pdftemplate=PhenoTips.PatientSheetCode".format(patient_id=patient_id)
     project = Project.objects.get(guid=project_guid)
 
     check_permissions(project, request.user, CAN_VIEW)
 
     auth_tuple = _get_phenotips_username_and_password(request.user, project, permissions_level=CAN_VIEW)
 
-    return _send_request_to_phenotips('GET', url, scheme=request.scheme, auth_tuple=auth_tuple)
-
+    return proxy_request(request, url, headers={}, auth_tuple=auth_tuple, host=settings.PHENOTIPS_SERVER)
 
 
 @login_required
@@ -310,7 +320,7 @@ def phenotips_edit_handler(request, project_guid, patient_id):
 
     # query string forwarding needed for PedigreeEditor button
     query_string = request.META["QUERY_STRING"]
-    url = "/bin/edit/data/%(patient_id)s?%(query_string)s" % locals()
+    url = "/bin/edit/data/{patient_id}?{query_string}".format(patient_id=patient_id, query_string=query_string)
 
     project = Project.objects.get(guid=project_guid)
 
@@ -318,13 +328,7 @@ def phenotips_edit_handler(request, project_guid, patient_id):
 
     auth_tuple = _get_phenotips_username_and_password(request.user, project, permissions_level=CAN_EDIT)
 
-    #if 'current_phenotips_session' not in request.session:
-    #    phenotips_session = requests.Session()
-    #    request.session['current_phenotips_session'] = pickle.dumps(phenotips_session)
-    #else:
-    #    phenotips_session = pickle.loads(request.session['current_phenotips_session'])
-
-    return _send_request_to_phenotips('GET', url, scheme=request.scheme, auth_tuple=auth_tuple) #, session=phenotips_session)
+    return proxy_request(request, url, headers={}, auth_tuple=auth_tuple, host=settings.PHENOTIPS_SERVER)
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -337,10 +341,6 @@ def proxy_to_phenotips_handler(request):
         logger.warn("Blocked proxy url: " + str(url))
         return HttpResponse(status=204)
     logger.info("Proxying url: " + str(url))
-
-    # forward the request to PhenoTips, and then the PhenoTips response back to seqr
-    http_headers = _convert_django_META_to_http_headers(request.META)
-    http_headers = {key: value for key, value in http_headers.items() if key.lower() not in HTTP_REQUEST_HEADERS_TO_NOT_PROXY}
 
     #if 'current_phenotips_session' not in request.session:
     #    phenotips_session = requests.Session()
@@ -355,19 +355,13 @@ def proxy_to_phenotips_handler(request):
     for key, value in request.COOKIES.items():
         phenotips_session.cookies.set(key, value)
 
-    http_response = _send_request_to_phenotips(
-        request.method,
-        url,
-        scheme=request.scheme,
-        http_headers=http_headers,
-        data=request.body,
-        session=phenotips_session,
-    )
+    http_response = proxy_request(request, url, data=request.body, session=phenotips_session,
+                                  host=settings.PHENOTIPS_SERVER, filter_request_headers=True)
 
     # if this is the 'Quick Save' request, also save a copy of phenotips data in the seqr SQL db.
     match = re.match(PHENOTIPS_QUICK_SAVE_URL_REGEX, url)
     if match:
-        _handle_phenotips_save_request(patient_id=match.group(1), http_headers=http_headers)
+        _handle_phenotips_save_request(request, patient_id=match.group(1))
 
     return http_response
 
@@ -375,7 +369,7 @@ def proxy_to_phenotips_handler(request):
 def _make_api_call(
         method,
         url,
-        http_headers=None,
+        http_headers={},
         data=None,
         auth_tuple=None,
         expected_status_code=200,
@@ -396,7 +390,8 @@ def _make_api_call(
     """
 
     try:
-        response = _send_request_to_phenotips(method, url, http_headers=http_headers, data=data, auth_tuple=auth_tuple, verbose=verbose)
+        response = proxy_request(None, url, headers=http_headers, method=method, scheme='http', data=data,
+                                 auth_tuple=auth_tuple, host=settings.PHENOTIPS_SERVER, verbose=verbose)
     except requests.exceptions.RequestException as e:
         raise PhenotipsException(e.message)
     if (isinstance(expected_status_code, int) and response.status_code != expected_status_code) or (
@@ -415,96 +410,14 @@ def _make_api_call(
             raise PhenotipsException("Unable to parse response for %s:\n%s" % (url, e))
 
 
-def _send_request_to_phenotips(method, url, scheme="http", http_headers=None, data=None, auth_tuple=None, session=None, verbose=False):
-    """Send an HTTP request to a PhenoTips server.
-    (see PhenoTips API docs: https://phenotips.org/DevGuide/RESTfulAPI)
-
-    Args:
-        method (string): 'GET' or 'POST'
-        url (string): url path, starting with '/' (eg. '/bin/edit/data/P0000001')
-        scheme: request scheme (typically "http" or "https")
-        http_headers: (dict): HTTP headers to send
-        data (bytes): body of a POST request
-        auth_tuple: ("username", "password") pair
-
-    Returns:
-        HttpResponse from the PhenoTips server.
-    """
-
-    if http_headers:
-        http_headers['Host'] = settings.PHENOTIPS_SERVER
-
-    r = requests
-    if session is not None:
-        r = session
-    else:
-        r = requests.Session()
-
-    if method == "GET":
-        method_impl = r.get
-    elif method == "POST":
-        method_impl = r.post
-    elif method == "PUT":
-        method_impl = r.put
-    elif method == "HEAD":
-        method_impl = r.head
-    elif method == "DELETE":
-        method_impl = r.delete
-    else:
-        raise ValueError("Unexpected HTTP method: %s. %s" % (method, url))
-
-    auth = HTTPBasicAuth(*auth_tuple) if auth_tuple is not None else None
-
-    if not url.startswith("http"):
-        if not url.startswith("/"):
-            raise ValueError("%s url doesn't start with /" % url)
-
-        url = "%s://%s%s" % (scheme, settings.PHENOTIPS_SERVER, url)
-
-    if verbose or DEBUG:
-        logger.info("Sending %(method)s request to %(url)s" % locals())
-        if http_headers:
-            logger.info("  headers:")
-            for key, value in sorted(http_headers.items(), key=lambda i: i[0]):
-                logger.info("---> %(key)s: %(value)s" % locals())
-        if data:
-            logger.info("  data: %(data)s" % locals())
-        if auth:
-            logger.info("  auth: %(auth_tuple)s" % locals())
-
-    response = method_impl(url, headers=http_headers, data=data, auth=auth)
-
-    http_response = HttpResponse(
-        status=response.status_code,
-        content=response.content,
-        reason=response.reason,
-        charset=response.encoding
-    )
-    if verbose or DEBUG:
-        from requests_toolbelt.utils import dump
-        data = dump.dump_all(response)
-        logger.info("===> dump - phenotips_api:\n" + str(data))
-
-
-        logger.info("  response: <Response: %s> %s" % (response.status_code, response.reason))
-        logger.info("  response-headers:")
-        for key, value in sorted(response.headers.items(), key=lambda i: i[0]):
-            logger.info("<--- %(key)s: %(value)s" % locals())
-
-    for header_key, header_value in response.headers.items():
-        if header_key.lower() not in HTTP_RESPONSE_HEADERS_TO_NOT_PROXY:
-            http_response[header_key] = header_value
-
-    return http_response
-
-
-def _handle_phenotips_save_request(patient_id, http_headers):
+def _handle_phenotips_save_request(request, patient_id):
     """Update the seqr SQL database record for this patient with the just-saved phenotype data."""
 
     url = '/rest/patients/%s' % patient_id
 
-    http_headers = {key: value for key, value in http_headers.items() if key == 'Cookie'}
-    response = _send_request_to_phenotips('GET', url, http_headers=http_headers)
+    cookie_header = request.META.get('HTTP_COOKIE')
+    http_headers = {'Cookie': cookie_header} if cookie_header else {}
+    response = proxy_request(request, url, headers=http_headers, method='GET', scheme='http', host=settings.PHENOTIPS_SERVER)
     if response.status_code != 200:
         logger.error("ERROR: unable to retrieve patient json. %s %s %s" % (
             url, response.status_code, response.reason_phrase))
@@ -541,13 +454,14 @@ def _update_individual_phenotips_data(individual, patient_json):
         hpo_id = feature['id']
         try:
             feature['category'] = HumanPhenotypeOntology.objects.get(hpo_id=hpo_id).category_id
-        except ObjectDoesNotExist as e:
+        except ObjectDoesNotExist:
             logger.error("ERROR: PhenoTips HPO id %s not found in seqr HumanPhenotypeOntology table." % hpo_id)
 
-    individual.phenotips_data = json.dumps(patient_json)
-    individual.phenotips_patient_id = patient_json['id']  # phenotips internal id
-    individual.phenotips_eid = patient_json.get('external_id')  # phenotips external id
-    individual.save()
+    update_seqr_model(
+        individual,
+        phenotips_data=json.dumps(patient_json),
+        phenotips_patient_id=patient_json['id'],        # phenotips internal id
+        phenotips_eid=patient_json.get('external_id'))  # phenotips external id
 
 
 def _get_phenotips_uname_and_pwd_for_project(phenotips_user_id, read_only=False):
@@ -585,39 +499,5 @@ def _get_phenotips_username_and_password(user, project, permissions_level):
     return auth_tuple
 
 
-def _convert_django_META_to_http_headers(meta_dict):
-    """Converts django request.META dictionary into a dictionary of HTTP headers"""
-    def convert_key(key):
-        key = key.replace("HTTP_", "")
-        tokens = key.split("_")
-        capitalized_tokens = map(lambda x: x.capitalize(), tokens)
-        return "-".join(capitalized_tokens)
-
-    http_headers = {
-        convert_key(key): str(value)
-        for key, value in meta_dict.items()
-        if key.startswith("HTTP_") or (key in ('CONTENT_LENGTH', 'CONTENT_TYPE') and value)
-    }
-
-    return http_headers
-
-
 class PhenotipsException(Exception):
     pass
-
-HTTP_REQUEST_HEADERS_TO_NOT_PROXY = { k.lower() for k in [
-    'Connection',
-    'X-Real-Ip',
-    'X-Forwarded-Host',
-]}
-
-HTTP_RESPONSE_HEADERS_TO_NOT_PROXY = { k.lower() for k in [
-    'Connection',
-    'Keep-Alive',
-    'Proxy-Authenticate',
-    'Proxy-Authorization',
-    'TE',
-    'Trailers',
-    'Transfer-Encoding',
-    'Upgrade',
-]}

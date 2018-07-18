@@ -1,5 +1,8 @@
 from collections import Counter, OrderedDict
 import json
+import os
+from django.urls.base import reverse
+
 import settings
 
 from django.utils import timezone
@@ -8,6 +11,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.core.exceptions import ObjectDoesNotExist
+from django.db import connection
 
 from xbrowse_server.base.model_utils import update_xbrowse_model
 from xbrowse_server.gene_lists.models import GeneList
@@ -38,14 +42,60 @@ def families(request, project_id):
     if not project.can_view(request.user):
         raise PermissionDenied
 
-    families_json = json_displays.family_list(project.get_families())
-    
+    cursor = connection.cursor()
+
+    loaded_vcfs_subquery = """
+      SELECT 
+        COUNT(*) 
+      FROM base_vcffile AS v 
+        JOIN base_individual_vcf_files AS vi ON v.id=vi.vcffile_id
+        JOIN base_individual AS i2 ON i2.id=vi.individual_id
+      WHERE i2.family_id=f.id AND v.loaded_date IS NOT NULL
+    """
+
+    families_query = """
+        SELECT DISTINCT
+          f.family_id AS family_id,
+          f.family_name AS family_name,
+          COUNT(*) AS num_individuals,
+          f.short_description AS short_description,
+          f.analysis_status AS analysis_status,
+          ({loaded_vcfs_subquery}) AS is_loaded,
+          f.pedigree_image AS pedigree_image_url
+        FROM base_family AS f
+          JOIN base_individual AS i ON i.family_id=f.id
+        WHERE f.project_id=%s
+        GROUP BY f.id
+    """.strip().format(**locals())
+
+    cursor.execute(families_query, [project.id])
+
+    columns = [col[0] for col in cursor.description]
+    family_rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
+
+    families_json = []
+    for family in family_rows:
+        families_json.append({
+            'url': reverse('family_home', args=(project.project_id, family["family_id"])),
+            'family_id': family["family_id"],
+            'family_name': family["family_name"],
+            'data_status': "loaded" if family["is_loaded"] else "not_loaded",
+            'project_id': project.project_id,
+            'num_individuals': family["num_individuals"],
+            'short_description': family["short_description"],
+            'analysis_status': {
+                "status": family["analysis_status"],
+            },
+            'pedigree_image_url': os.path.join("/media/", family["pedigree_image_url"]) if family.get('pedigree_image_url') else None,
+        })
+
     return render(request, 'family/families.html', {
         'project': project,
         'families_json': json.dumps(families_json),
         'analysis_statuses':  json.dumps(dict(ANALYSIS_STATUS_CHOICES)),
         'is_manager': 'true' if project.can_admin(request.user) else 'false',
         'is_staff': 'true' if request.user.is_staff else 'false',
+        'new_page_url': '/project/{}/project_page'.format(project.seqr_project.guid) if project.seqr_project else None,
     })
 
 
@@ -91,7 +141,9 @@ def family_home(request, project_id, family_id):
             'saved_variants': FamilySearchFlag.objects.filter(family=family).order_by('-date_saved'),
             'analysis_status_desc_and_icon': analysis_status_desc_and_icon,
             'analysis_status_json': analysis_status_json,
-            'exported_to_matchmaker':exported_to_matchmaker
+            'exported_to_matchmaker':exported_to_matchmaker,
+            'new_page_url': '/project/{0}/family_page/{1}'.format(
+                family.seqr_family.project.guid, family.seqr_family.guid) if family.seqr_family else None,
         })
 
 
@@ -119,7 +171,7 @@ def edit_family(request, project_id, family_id):
 
             if family.analysis_status != form.cleaned_data['analysis_status']:
                 if family.analysis_status not in ('Q', 'I'):
-                    settings.EVENTS_COLLECTION.insert({
+                    if not settings.DEBUG: settings.EVENTS_COLLECTION.insert({
                             'event_type': 'family_analysis_status_changed', 'project_id': project_id, 'family_id': family_id, 'date': timezone.now(), 
                             'username': request.user.username, 'email': request.user.email,
                             'from': family.analysis_status, 'to': form.cleaned_data['analysis_status'] })
@@ -152,6 +204,8 @@ def edit_family(request, project_id, family_id):
         'error': error,
         'form': form,
         'analysis_statuses': ANALYSIS_STATUS_CHOICES,
+        'new_page_url': '/project/{0}/family_page/{1}'.format(
+            family.seqr_family.project.guid, family.seqr_family.guid) if family.seqr_family else None,
     })
 
 
@@ -193,6 +247,8 @@ def saved_variants(request, project_id, family_id):
         'project': project,
         'family': family,
         'variants_json': json.dumps([v.toJSON() for v in variants]),
+        'new_page_url': '/project/{0}/family_page/{1}'.format(
+                family.seqr_family.project.guid, family.seqr_family.guid) if family.seqr_family else None,
     })
 
 

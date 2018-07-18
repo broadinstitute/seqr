@@ -30,17 +30,14 @@ def _get_matching_projects(user, query):
     Returns:
         Sorted list of matches where each match is a dictionary of strings
     """
-    project_permissions_check = Q()
-    if not user.is_staff:
-        projects_can_view = [p.id for p in get_objects_for_user(user, CAN_VIEW, Project)]
-        project_permissions_check = Q(id__in=projects_can_view)
+    project_filter = Q(deprecated_project_id__icontains=query) | Q(name__icontains=query)
+    if not user.is_superuser:
+        if user.is_staff:
+            project_filter &= Q(can_view_group__user=user) | Q(disable_staff_access=False)
+        else:
+            project_filter &= Q(can_view_group__user=user)
 
-    matching_projects = Project.objects.filter(
-        project_permissions_check & (
-            Q(deprecated_project_id__icontains=query) |
-            Q(name__icontains=query)
-        )  # Q(description__icontains=query) | Q(project_category__icontains=query)
-    ).distinct()
+    matching_projects = Project.objects.filter(project_filter).distinct()
 
     projects_result = []
     for p in matching_projects[:MAX_RESULTS_PER_CATEGORY]:
@@ -66,14 +63,14 @@ def _get_matching_families(user, query):
     Returns:
         Sorted list of matches where each match is a dictionary of strings
     """
-    family_permissions_check = Q()
-    if not user.is_staff:
-        projects_can_view = [p.id for p in get_objects_for_user(user, CAN_VIEW, Project)]
-        family_permissions_check = Q(project__id__in=projects_can_view)
+    family_filter = Q(family_id__icontains=query) | Q(display_name__icontains=query)
+    if not user.is_superuser:
+        if user.is_staff:
+            family_filter &= Q(project__can_view_group__user=user) | Q(project__disable_staff_access=False)
+        else:
+            family_filter &= Q(project__can_view_group__user=user)
 
-    matching_families = Family.objects.select_related('project').filter(
-        family_permissions_check & (Q(family_id__icontains=query) | Q(display_name__icontains=query))
-    ).distinct()
+    matching_families = Family.objects.select_related('project').filter(family_filter).distinct()
 
     families_result = []
     for f in matching_families[:MAX_RESULTS_PER_CATEGORY]:
@@ -99,14 +96,14 @@ def _get_matching_individuals(user, query):
     Returns:
         Sorted list of matches where each match is a dictionary of strings
     """
-    individual_permissions_check = Q()
-    if not user.is_staff:
-        projects_can_view = [p.id for p in get_objects_for_user(user, CAN_VIEW, Project)]
-        individual_permissions_check = Q(family__project__id__in=projects_can_view)
+    individual_filter = Q(individual_id__icontains=query) | Q(display_name__icontains=query)
+    if not user.is_superuser:
+        if user.is_staff:
+            individual_filter &= Q(family__project__can_view_group__user=user) | Q(family__project__disable_staff_access=False)
+        else:
+            individual_filter &= Q(family__project__can_view_group__user=user)
 
-    matching_individuals = Individual.objects.select_related('family__project').filter(
-        individual_permissions_check & (Q(individual_id__icontains=query) | Q(display_name__icontains=query))
-    ).distinct()
+    matching_individuals = Individual.objects.select_related('family__project').filter(individual_filter).distinct()
 
     individuals_result = []
     for i in matching_individuals[:MAX_RESULTS_PER_CATEGORY]:
@@ -147,7 +144,7 @@ def _get_matching_genes(user, query):
             'key': g.gene_id,
             'title': title,
             'description': '('+description+')' if description else '',
-            'href': '/gene/'+g.gene_id,
+            'href': '/gene_info/'+g.gene_id,
         })
 
     return result
@@ -162,21 +159,23 @@ def awesomebar_autocomplete_handler(request):
     if query is None:
         raise ValueError("missing ?q=<prefix> url arg")
 
+    categories = request.GET.get('categories', '').split(',')
+
     results = collections.OrderedDict()
     if len(query) > 0:
-        projects = _get_matching_projects(request.user, query)
+        projects = _get_matching_projects(request.user, query) if 'projects' in categories else None
         if projects:
             results['projects'] = {'name': 'Projects', 'results': projects}
 
-        families = _get_matching_families(request.user, query)
+        families = _get_matching_families(request.user, query) if 'families' in categories else None
         if families:
             results['families'] = {'name': 'Families', 'results': families}
 
-        individuals = _get_matching_individuals(request.user, query)
+        individuals = _get_matching_individuals(request.user, query) if 'individuals' in categories else None
         if individuals:
             results['individuals'] = {'name': 'Individuals', 'results': individuals}
 
-        genes = _get_matching_genes(request.user, query)
+        genes = _get_matching_genes(request.user, query) if 'genes' in categories else None
         if genes:
             results['genes'] = {'name': 'Genes', 'results': genes}
 

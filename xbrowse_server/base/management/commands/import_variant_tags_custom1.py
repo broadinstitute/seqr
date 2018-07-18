@@ -135,7 +135,7 @@ def add_initial_omim(row):
                 if omim_number not in patient_data.get('disorders', [{}])[0].get('id', ''):
                     patient_data['disorders'] = [{ 'id': 'MIM:'+omim_number }]
                     print("updating disorder to %s in %s: %s" % (omim_number, individual, "") )#pformat(patient_data)))
-                    update_patient_data(seqr_project, individual.phenotips_id, patient_data, is_external_id=True)
+                    update_patient_data(seqr_project, individual, patient_data)
             except Exception as e:
                 print("Couldn't access phenotips for %s %s: %s" % (family.project, individual, e))
 

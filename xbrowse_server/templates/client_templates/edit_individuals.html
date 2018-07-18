@@ -151,7 +151,7 @@
             This page will refresh after the file is uploaded, so make sure your other changes are saved.
         </p>
 
-        <form class="form" enctype="multipart/form-data" action="<%= URL_PREFIX %>project/<%= project_id %>/update-project-from-fam" method="post">
+        <form class="form" enctype="multipart/form-data" action="/project/<%= project_id %>/update-project-from-fam" method="post">
             <input type="file" name="fam_file" id="id_fam_file" />
             <button type="submit" class="btn btn-primary">Upload</button>
         </form>
@@ -185,7 +185,7 @@
             <% } %>
         </ul>
 
-        <form class="form" action="<%= URL_PREFIX %>project/<%= project_id %>/delete-individuals" method="post">
+        <form class="form" action="/project/<%= project_id %>/delete-individuals" method="post">
             <input type="hidden" name="to_delete" value="<%= to_delete.join('|') %>" />
             <button type="submit" class="btn btn-primary">Delete</button>
         </form>

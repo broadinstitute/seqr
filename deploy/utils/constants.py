@@ -21,6 +21,7 @@ DEPLOYABLE_COMPONENTS = [
     "nginx",
     "phenotips",
     "postgres",
+    "redis",
     "seqr",
     "pipeline-runner",
 ]
@@ -52,8 +53,9 @@ COMPONENT_PORTS = {
     "elasticsearch": [9200],
     "es-client":     [9200],
     "es-master":     [9020],
-    "es-data":     [9020],
+    "es-data":       [9020],
 
+    "redis":         [6379],
     "kibana":        [5601],
 
     "matchbox":  [9020],

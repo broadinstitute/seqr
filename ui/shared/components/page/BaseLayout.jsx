@@ -7,31 +7,26 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { Grid } from 'semantic-ui-react'
-import { connect } from 'react-redux'
-import { getUser } from 'redux/utils/commonDataActionsAndSelectors'
+import { Route } from 'react-router-dom'
 
 import Header from './Header'
+import PageHeader from './PageHeader'
 import Footer from './Footer'
 
-const PageHeaderRow = styled(Grid.Row)`
-  padding: 9px;
-  background-color: #F7F7F7;
-  max-height: 200px;
-  border-bottom: 1px solid #EEEEEE;
+const LayoutContainer = styled.div`
+  height: calc(100% - 32px);
 `
 
-const BaseLayout = ({ user, pageHeader, children }) =>
-  <div style={{ height: 'calc(100% - 46px)' }}>
-    <Header user={user} />
-    <Grid style={{ minHeight: 'calc(100% - 46px)' }}>
-      {pageHeader &&
-      <PageHeaderRow>
-        <Grid.Column width={1} />
-        <Grid.Column width={14} style={{ padding: '0' }}>
-          {pageHeader}
-        </Grid.Column>
-        <Grid.Column width={1} />
-      </PageHeaderRow>}
+const ContentGrid = styled(Grid)`
+  padding-top: 15px !important;
+  min-height: calc(100% - 46px);
+`
+
+const BaseLayout = ({ children }) =>
+  <LayoutContainer>
+    <Header />
+    <ContentGrid>
+      <Route path="/project/:projectGuid/:breadcrumb/:breadcrumbId*" component={PageHeader} />
       <Grid.Row>
         <Grid.Column width={1} />
         <Grid.Column width={14}>
@@ -39,22 +34,14 @@ const BaseLayout = ({ user, pageHeader, children }) =>
         </Grid.Column>
         <Grid.Column width={1} />
       </Grid.Row>
-    </Grid>
+    </ContentGrid>
     <Footer />
-  </div>
+  </LayoutContainer>
 
 export { BaseLayout as BaseLayoutComponent }
 
 BaseLayout.propTypes = {
-  user: PropTypes.object.isRequired,
-  pageHeader: PropTypes.node, // optional page header
   children: PropTypes.node,
 }
 
-
-// wrap top-level component so that redux state is passed in as props
-const mapStateToProps = state => ({
-  user: getUser(state),
-})
-
-export default connect(mapStateToProps)(BaseLayout)
+export default BaseLayout

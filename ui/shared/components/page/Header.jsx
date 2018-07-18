@@ -1,44 +1,40 @@
 import React from 'react'
 import PropTypes from 'prop-types'
+import styled from 'styled-components'
 
-import { Grid } from 'semantic-ui-react'
-import { computeDashboardUrl } from 'shared/utils/urlUtils'
-import { HorizontalSpacer } from 'shared/components/Spacers'
+import { Menu, Header } from 'semantic-ui-react'
+import { connect } from 'react-redux'
+import { Link } from 'react-router-dom'
+
+import { getUser } from 'redux/selectors'
 
 import AwesomeBar from './AwesomeBar'
 
+const HeaderMenu = styled(Menu)`
+  padding-left: 100px;
+  padding-right: 100px;
+`
 
-const Header = ({ user }) =>
-  <Grid stackable style={{
-    backgroundColor: '#000',
-    borderStyle: 'solid',
-    borderWidth: '0 0 0.15em 0',
-    borderColor: '#888',
-    paddingTop: '12px' }}
-  >
-    <Grid.Row style={{ padding: '9px' }}>
-      <Grid.Column width={1} />
-      <Grid.Column width={1} style={{ padding: '6px 5px 0px 10px', verticalAlign: 'bottom' }}>
-        <a href={computeDashboardUrl()}>
-          <span style={{ color: 'white', fontWeight: 500, fontSize: '16px', fontFamily: 'sans-serif', fontStyle: 'italic' }}>seqr</span>
-        </a>
-      </Grid.Column>
-      <Grid.Column width={9} style={{ padding: '0' }}>
-        <AwesomeBar />
-      </Grid.Column>
-      <Grid.Column width={4} style={{ padding: '6px 0px 0px 0px', color: 'white', textAlign: 'right', whiteSpace: 'nowrap' }}>
-        Logged in as <b>{user ? (user.email || user.username) : null}</b>
-        <HorizontalSpacer width={30} />
-        <a href="/logout">
-          <span>Log out</span>
-        </a>
-      </Grid.Column>
-      <Grid.Column width={1} />
-    </Grid.Row>
-  </Grid>
+const PageHeader = ({ user }) =>
+  <HeaderMenu borderless inverted attached>
+    <Menu.Item as={Link} to="/dashboard"><Header size="medium" inverted>seqr</Header></Menu.Item>
+    <Menu.Item as={Link} to="/gene_info" content="Gene Info" />
+    <Menu.Item fitted="vertically"><AwesomeBar newWindow inputwidth="350px" /></Menu.Item>
+    <Menu.Item position="right">
+      <p>Logged in as &nbsp; <b>{user ? (user.email || user.username) : null}</b></p>
+    </Menu.Item>
+    <Menu.Item as="a" href="/logout">Log out</Menu.Item>
+  </HeaderMenu>
 
-Header.propTypes = {
+PageHeader.propTypes = {
   user: PropTypes.object.isRequired,
 }
 
-export default Header
+// wrap top-level component so that redux state is passed in as props
+const mapStateToProps = state => ({
+  user: getUser(state),
+})
+
+export { PageHeader as PageHeaderComponent }
+
+export default connect(mapStateToProps)(PageHeader)

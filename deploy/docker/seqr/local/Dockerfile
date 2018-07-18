@@ -4,7 +4,7 @@ MAINTAINER MacArthur Lab
 
 # install commmon utilities
 RUN apt-get update \
-    && apt-get install -y apt-utils wget curl xterm vim emacs nano less git bzip2 \
+    && apt-get install -y apt-utils wget curl xterm vim emacs nano less git htop bzip2 --fix-missing \
     && TERM=xterm
 
 
@@ -17,7 +17,7 @@ RUN wget https://raw.github.com/miyagawa/cpanminus/master/cpanm -O /usr/bin/cpan
 
 # install dev dependencies for react, javascript development. These are not needed at runtime.
 RUN apt-get update \
-    && curl -sL https://deb.nodesource.com/setup_7.x | bash - \
+    && curl -sL https://deb.nodesource.com/setup_8.x | bash - \
     && apt-get install -y nodejs
 
 # install utilities for accessing the database, debugging, etc.
@@ -34,6 +34,9 @@ RUN echo 'deb http://apt.postgresql.org/pub/repos/apt/ jessie-pgdg main' >> /etc
 RUN apt-get install -y python-dev \
     && wget https://bootstrap.pypa.io/get-pip.py \
     && python get-pip.py
+
+RUN apt-get install -y redis-tools
+
 
 # install gsutil from https://cloud.google.com/storage/docs/gsutil_install#linux
 ENV TERM=xterm
@@ -64,11 +67,11 @@ RUN wget -N https://raw.githubusercontent.com/macarthur-lab/seqr/master/requirem
     && pip install --upgrade -r requirements.txt
 
 # install UI depedencies
-#COPY shared/install_npm_packages.sh .
-#RUN wget -N https://raw.githubusercontent.com/macarthur-lab/seqr/master/ui/package.json \
-#   && alias node=nodejs
-#   && ./install_npm_packages.sh \
-#   && npm install -g npm-check-updates
+COPY shared/install_npm_packages.sh .
+RUN wget -N https://raw.githubusercontent.com/macarthur-lab/seqr/master/ui/package.json \
+   && alias node=nodejs \
+   && ./install_npm_packages.sh \
+   && npm install -g npm-check-updates
 
 ARG SEQR_SERVICE_PORT
 ENV SEQR_SERVICE_PORT=$SEQR_SERVICE_PORT

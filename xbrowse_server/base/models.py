@@ -7,6 +7,7 @@ import logging
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.db import models
+from django.db.models.query_utils import Q
 from django.utils import timezone
 from pretty_times import pretty
 from xbrowse import genomeloc
@@ -54,15 +55,15 @@ User.profile = property(lambda u: UserProfile.objects.get_or_create(user=u)[0])
 class VCFFile(models.Model):
 
     DATASET_TYPE_VARIANT_CALLS = 'VARIANTS'
-    DATASET_TYPE_SV = 'SV'
-    #DATASET_TYPE_ALIGNMENT = 'ALIGN'
+    DATASET_TYPE_SV_CALLS = 'SV'
+    #DATASET_TYPE_READ_ALIGNMENTS = 'ALIGN'
     #DATASET_TYPE_BREAKPOINTS = 'BREAK'
     #DATASET_TYPE_SPLICE_JUNCTIONS = 'SPLICE'
     #DATASET_TYPE_ASE = 'ASE'
     DATASET_TYPE_CHOICES = (
         (DATASET_TYPE_VARIANT_CALLS, 'Variant Calls'),
-        (DATASET_TYPE_SV, 'SV Calls'),
-        #(DATASET_TYPE_ALIGNMENT, 'Alignment'),
+        (DATASET_TYPE_SV_CALLS, 'SV Calls'),
+        #(DATASET_TYPE_READ_ALIGNMENTS, 'Alignment'),
         #(DATASET_TYPE_BREAKPOINTS, 'Breakpoints'),
         #(DATASET_TYPE_SPLICE_JUNCTIONS, 'Splice Junction Calls'),
         #(DATASET_TYPE_ASE, 'Allele Specific Expression'),
@@ -176,6 +177,8 @@ class Project(models.Model):
 
     default_control_cohort = models.CharField(max_length=100, default="", blank=True)
 
+    disable_staff_access = models.BooleanField(default=False)
+
     # users
     collaborators = models.ManyToManyField(User, blank=True, through='ProjectCollaborator')
     is_public = models.BooleanField(default=False)
@@ -187,27 +190,36 @@ class Project(models.Model):
     def __unicode__(self):
         return self.project_name if self.project_name != "" else self.project_id
 
-    # Authx
+    def is_collaborator(self, user, collaborator_type=None):
+        """Returns True if user is a collaborator on this project and (optionally) has the given collaborator_type.
+
+        Args:
+            user (Model): Django User model instance
+            collaborator_type (string): specific collaborator type (eg. "manager"). If specified, this method will only
+                return True if the User is listed as this specific collaborator type on this project. If None, it will
+                return True for a User if they are listed as any type of collaborator.
+        """
+        criteria = Q(project=self) & Q(user=user)
+        if collaborator_type is not None:
+            criteria &= Q(collaborator_type=collaborator_type)
+
+        return ProjectCollaborator.objects.filter(criteria).exists()
+
     def can_view(self, user):
 
         if self.is_public:
             return True
-        elif user.is_staff:
-            return True
-        else:
-            return ProjectCollaborator.objects.filter(project=self, user=user).exists()
+
+        is_collaborator = self.is_collaborator(user)
+        return (user.is_staff and not self.disable_staff_access) or user.is_superuser or is_collaborator
 
     def can_edit(self, user):
-        if user.is_staff:
-            return True
-        else:
-            return ProjectCollaborator.objects.filter(project=self, user=user).exists()
+        is_collaborator = self.is_collaborator(user)
+        return (user.is_staff and not self.disable_staff_access) or user.is_superuser or is_collaborator
 
     def can_admin(self, user):
-        if user.is_staff or user.is_superuser:
-            return True
-        else:
-            return ProjectCollaborator.objects.filter(project=self, user=user, collaborator_type="manager").exists()
+        is_manager = self.is_collaborator(user, collaborator_type="manager")
+        return (user.is_staff and not self.disable_staff_access) or user.is_superuser or is_manager
 
     def set_as_manager(self, user):
         collab = ProjectCollaborator.objects.get_or_create(user=user, project=self)[0]
@@ -420,10 +432,10 @@ class Project(models.Model):
             return None
 
     def has_elasticsearch_index(self):
-        if hasattr(self, 'datastore_type'):
-            return self.datastore_type == 'es'
-        else:
-            return self.get_elasticsearch_index() is not None
+        #if hasattr(self, 'datastore_type'):
+        #    return self.datastore_type == 'es'
+        #else:
+        return self.get_elasticsearch_index() is not None
 
 
 class ProjectGeneList(models.Model):
@@ -691,11 +703,11 @@ class Family(models.Model):
         return self.project.get_variant_tags(family=self)
 
     def get_elasticsearch_index(self):
-        for vcf_file in self.get_vcf_files():
-            if vcf_file.elasticsearch_index is not None:
-                return vcf_file.elasticsearch_index
-
-        return None
+        vcf_file = self.project.vcffile_set.order_by('-pk').exclude(elasticsearch_index=None).only('elasticsearch_index').first()
+        if vcf_file:
+            return vcf_file.elasticsearch_index
+        else:
+            return None
 
 
 class FamilyImageSlide(models.Model):
@@ -821,15 +833,6 @@ CASE_REVIEW_STATUS_CHOICES = (
     ('DP', 'Declined to Participate'),
 )
 
-CASE_REVIEW_STATUS_ACCEPTED_FOR_OPTIONS = (
-    ('A', 'Array'),   # allow multiple-select. No selection = Platform Uncertain
-    ('E', 'Exome'),
-    ('G', 'Genome'),
-    ('R', 'RNA-seq'),
-    ('S', 'Store DNA'),
-    ('P', 'Reprocess'),
-)
-
 
 class Individual(models.Model):
     # metadata tags
@@ -850,7 +853,6 @@ class Individual(models.Model):
     other_notes = models.TextField(default="", blank=True, null=True)
 
     case_review_status = models.CharField(max_length=2, choices=CASE_REVIEW_STATUS_CHOICES, blank=True, null=True, default='')
-    case_review_status_accepted_for = models.CharField(max_length=10, null=True, blank=True)
     case_review_status_last_modified_date = models.DateTimeField(null=True, blank=True, db_index=True)
     case_review_status_last_modified_by = models.ForeignKey(User, null=True, blank=True, related_name='+', on_delete=models.SET_NULL)
     case_review_discussion = models.TextField(null=True, blank=True)
@@ -1297,6 +1299,8 @@ class VariantFunctionalData(models.Model):
 
     search_url = models.TextField(null=True)
 
+    seqr_variant_functional_data = models.ForeignKey('seqr.VariantFunctionalData', null=True, blank=True, on_delete=models.SET_NULL)  # simplifies migration to new seqr.models sche
+
     def __str__(self):
         chrom, pos = genomeloc.get_chr_pos(self.xpos)
         return "%s-%s-%s-%s:%s" % (chrom, pos, self.ref, self.alt, self.functional_data_tag)
@@ -1402,6 +1406,7 @@ class AnalysedBy(models.Model):
             'user': {
                 'username': self.user.username,
                 'display_name': str(self.user.profile),
+                'is_staff': self.user.is_staff,
             },
             'date_saved': pretty.date(self.date_saved),
         }

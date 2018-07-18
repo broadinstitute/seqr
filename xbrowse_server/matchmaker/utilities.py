@@ -17,6 +17,8 @@ from tqdm import tqdm
 from reference_data.models import HumanPhenotypeOntology
 import logging
 from django.core.exceptions import ObjectDoesNotExist
+from django.template.loader import render_to_string
+from django.core.mail import send_mail
 
 logger = logging.getLogger()
 
@@ -174,7 +176,7 @@ def is_a_valid_patient_structure(patient_struct):
     return submission_validity
 
 
-def generate_slack_notification_for_incoming_match(response_from_matchbox,incoming_request,incoming_external_request_patient):
+def generate_notification_for_incoming_match(response_from_matchbox,incoming_request,incoming_external_request_patient):
     """
     Generate a SLACK notifcation to say that a VALID match request came in and the following
     results were sent back. If Slack is not supported, a message is not sent, but details persisted.
@@ -188,11 +190,10 @@ def generate_slack_notification_for_incoming_match(response_from_matchbox,incomi
     incoming_patient_as_json = json.loads(incoming_external_request_patient.strip())
     
     institution = incoming_patient_as_json['patient']['contact'].get('institution','(institution name not given)')
-    message = 'Hey folks, this match request came in from ' + institution  + ' today (' + time.strftime('%d, %b %Y')  + ').' 
-    message += ' Their contact URL was: ' + incoming_patient_as_json['patient']['contact'].get('href','(invalid URL!') + '. '
+    incoming_query_genes=[]
+    incoming_query_phenotypes=extract_hpo_id_list_from_mme_patient_struct(incoming_patient_as_json)
     if len(results_from_matchbox) > 0:
         if incoming_patient_as_json['patient'].has_key('genomicFeatures'):
-            message += 'The following gene(s), '
             for i,genotype in enumerate(incoming_patient_as_json['patient']['genomicFeatures']):
                 gene_id = genotype['gene']['id']
                 #try to find the gene symbol and add to notification
@@ -200,28 +201,15 @@ def generate_slack_notification_for_incoming_match(response_from_matchbox,incomi
                 if gene_id != "" and 'ENS'==gene_id[0:3]:
                     gene = get_reference().get_gene(gene_id)
                     gene_symbol = gene.get('symbol','(sorry, HGNC symbol not found)')
-                    
-                message += gene_id
-                if 'ENS'==gene_id[0:3]:
-                    message += " ("
-                    message += gene_symbol
-                    message += ")"
-                if i<len(incoming_patient_as_json['patient']['genomicFeatures'])-1:
-                    message += ', '
-                    
-            message += ' came-in with this request.\n\n'
-        
-        message += '*We found matches to these genes in matchbox! The matches are*,\n '
+                incoming_query_genes.append(gene_symbol)
+        match_results=[]
         for result in results_from_matchbox:
             seqr_id_maps = settings.SEQR_ID_TO_MME_ID_MAP.find({"submitted_data.patient.id":result['patient']['id']}).sort('insertion_date',-1).limit(1)
             for seqr_id_map in seqr_id_maps:
-                message += ' seqr ID ' + seqr_id_map['seqr_id'] 
-                message += ' from project ' +    seqr_id_map['project_id'] 
-                message += ' in family ' +  seqr_id_map['family_id'] 
-                message += ', inserted into matchbox on ' + seqr_id_map['insertion_date'].strftime('%d, %b %Y')
-                message += '. '
-                message += settings.SEQR_HOSTNAME_FOR_SLACK_POST + '/' + seqr_id_map['project_id'] + '/family/' +  seqr_id_map['family_id']
-                message += '\n\n'
+                seqr_project = get_object_or_404(Project, project_id=seqr_id_map['project_id']).seqr_project
+                seqr_url=settings.SEQR_HOSTNAME_FOR_SLACK_POST + '/' + seqr_id_map['project_id'] + '/family/' +  seqr_id_map['family_id']
+                result = 'seqr ID %s from project %s in family %s inserted into matchbox on %s, with seqr link %s ' % (seqr_id_map['seqr_id'],seqr_id_map['project_id'],seqr_id_map['family_id'],seqr_id_map['insertion_date'].strftime('%d, %b %Y'),seqr_url )
+                match_results.append(result)
             settings.MME_EXTERNAL_MATCH_REQUEST_LOG.insert({
                                                         'seqr_id':seqr_id_map['seqr_id'],
                                                         'project_id':seqr_id_map['project_id'],
@@ -230,13 +218,36 @@ def generate_slack_notification_for_incoming_match(response_from_matchbox,incomi
                                                         'host_name':incoming_request.get_host(),
                                                         'query_patient':incoming_patient_as_json
                                                         }) 
-        message += 'These matches were sent back today (' + time.strftime('%d, %b %Y')  + ').'
+        message_content = render_to_string(
+                'emails/mme_returned_match_result_message.txt',
+                {'query_institution': institution,
+                 'number_of_results': len(results_from_matchbox),
+                 'incoming_query_contact_genes':','.join(incoming_query_genes),
+                 'incoming_query_contact_phenotypes':', '.join([key + '(' + incoming_query_phenotypes[key]['name'] +')' for key in incoming_query_phenotypes]),
+                 'incoming_query_contact_url':incoming_patient_as_json['patient']['contact'].get('href','(sorry I was not able to read the information given for URL'),
+                 'incoming_query_contact_name':incoming_patient_as_json['patient']['contact'].get('name','(sorry I was not able to read the information given for name'),
+                 'match_results':match_results,
+                 'email_addresses_alert_sent_to':','.join([i for i in seqr_project.mme_contact_url.replace('mailto:','').split(',')]),
+                 },
+            )
+        if settings.ENABLE_MME_MATCH_EMAIL_NOTIFICATIONS:
+            send_mail('match found by matchbox, the Matchmaker Exchange @Broad', 
+                      message_content, 
+                      settings.FROM_EMAIL, 
+                      #commenting for now for advanced testing, and swapping in with admin alerts
+                      #[i for i in seqr_project.mme_contact_url.replace('mailto:','').split(',')],
+                      [admin[1] for admin in settings.ADMINS],
+                      fail_silently=False)
         if settings.SLACK_TOKEN is not None:
-            post_in_slack(message,settings.MME_SLACK_MATCH_NOTIFICATION_CHANNEL)
+            post_in_slack(message_content,settings.MME_SLACK_MATCH_NOTIFICATION_CHANNEL)
     else:
+        message = 'Dear collaborators, \n\nThis match request came in from ' + institution  + ' today (' + time.strftime('%d, %b %Y')  + ').' 
+        message += ' The contact information given was: ' + incoming_patient_as_json['patient']['contact'].get('href','(sorry the information given was invalid') + '. \n\n'
         message += " We didn't find any individuals in matchbox that matched that query well, *so no results were sent back*. "
         if settings.SLACK_TOKEN is not None:
             post_in_slack(message,settings.MME_SLACK_EVENT_NOTIFICATION_CHANNEL)        
+    
+    
     
     
 def generate_slack_notification_for_seqr_match(response_from_matchbox,project_id,seqr_id):

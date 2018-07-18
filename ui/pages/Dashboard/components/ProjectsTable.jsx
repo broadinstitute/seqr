@@ -1,29 +1,39 @@
 import React from 'react'
 import PropTypes from 'prop-types'
+import styled from 'styled-components'
 
 import { connect } from 'react-redux'
-import { Table, Loader } from 'semantic-ui-react'
+import { Table, Header } from 'semantic-ui-react'
 
 import { HorizontalSpacer } from 'shared/components/Spacers'
 import ExportTableButton from 'shared/components/buttons/export-table/ExportTableButton'
+import TableLoading from 'shared/components/table/TableLoading'
 
 import FilterSelector from './table-header/FilterSelector'
 import ProjectTableHeader from './table-header/ProjectTableHeader'
 import ProjectTableRow from './table-body/ProjectTableRow'
 import ProjectTableFooter from './table-footer/ProjectTableFooter'
 
-import { getProjectsIsLoading, fetchProjects } from '../../../redux/rootReducer'
+import { fetchProjects } from '../../../redux/rootReducer'
+import { getProjectsIsLoading } from '../../../redux/selectors'
 import { getVisibleProjectsInSortedOrder } from '../utils/visibleProjectsSelector'
 
-const TABLE_LOADING_ROW = (
-  <Table.Row>
-    <Table.Cell colSpan="12"><Loader inline="centered" active /></Table.Cell>
-  </Table.Row>)
+
+const InlineHeader = styled(Header)`
+  display: inline-block;
+  margin: 0 !important;
+`
+
+const RightAligned = styled.span`
+  float: right;
+`
+
+const PROJECT_EXPORT_URLS = [{ name: 'Projects', url: '/api/dashboard/export_projects_table' }]
 
 const TABLE_IS_EMPTY_ROW = (
   <Table.Row>
     <Table.Cell />
-    <Table.Cell style={{ padding: '10px' }}>0 projects found</Table.Cell>
+    <Table.Cell>0 projects found</Table.Cell>
   </Table.Row>)
 
 class ProjectsTable extends React.Component
@@ -34,12 +44,10 @@ class ProjectsTable extends React.Component
     fetchProjects: PropTypes.func.isRequired,
   }
 
-  // TODO download should be done via redux, not with hardcoded url
-
   render() {
     let tableContent
     if (this.props.loading) {
-      tableContent = TABLE_LOADING_ROW
+      tableContent = <TableLoading />
     } else if (this.props.visibleProjects.length > 0) {
       tableContent = this.props.visibleProjects.map(project => (
         <ProjectTableRow key={project.projectGuid} project={project} />
@@ -50,22 +58,20 @@ class ProjectsTable extends React.Component
 
     return (
       <div>
-        <div style={{ marginLeft: '10px' }}>
-          <span style={{ fontSize: '12pt', fontWeight: '600' }}>
-            Projects:
-          </span>
-          <HorizontalSpacer width={30} />
-          <FilterSelector />
-          <div style={{ float: 'right', padding: '0px 45px 10px 0px' }}>
-            <ExportTableButton urls={[{ name: 'Projects', url: '/api/dashboard/export_projects_table' }]} />
-          </div>
-        </div>
-        <Table striped stackable style={{ width: '100%' }}>
+        <HorizontalSpacer width={10} />
+        <InlineHeader size="medium" content="Projects:" />
+        <HorizontalSpacer width={30} />
+        <FilterSelector />
+        <RightAligned>
+          <ExportTableButton downloads={PROJECT_EXPORT_URLS} />
+          <HorizontalSpacer width={45} />
+        </RightAligned>
+        <Table striped stackable>
           <ProjectTableHeader />
           <Table.Body>
             {tableContent}
-            <ProjectTableFooter />
           </Table.Body>
+          <ProjectTableFooter />
         </Table>
       </div>)
   }

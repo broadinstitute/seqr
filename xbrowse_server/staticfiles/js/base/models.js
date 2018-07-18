@@ -1,5 +1,11 @@
 window.Variant = Backbone.Model.extend({
+    url: function() {
+        return `/api/family/variant-annotation?project_id=${this.get('extras').project_id}&family_id=${this.get('extras').family_id}&alt=${this.get('alt')}&ref=${this.get('ref')}&xpos=${this.get('xpos')}`
+    },
 
+    parse: function(response) {
+        return response.variant
+    }
 });
 
 window.VariantSet = Backbone.Collection.extend({
@@ -11,7 +17,7 @@ window.VariantSet = Backbone.Collection.extend({
 window.Gene = Backbone.Model.extend({
 
     idAttribute: 'gene_id',
-    urlRoot: URL_PREFIX + 'api/gene-info',
+    urlRoot: '/api/gene-info',
 
 });
 

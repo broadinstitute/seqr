@@ -1,14 +1,38 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-
+import styled from 'styled-components'
+import { withRouter } from 'react-router-dom'
 import { Search } from 'semantic-ui-react'
 
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
-import { connect } from 'react-redux'
+
+const AwesomebarSearch = styled(Search)`
+  width: 100%;
+
+  .ui.icon.input {
+    max-width: 100%;
+    width: ${props => props.inputwidth || '100%'};
+  }
+  
+  .results {
+    min-width: ${props => props.inputwidth || '100%'};
+    width: fit-content !important;
+  }
+`
 
 class AwesomeBar extends React.Component
 {
-  static propTypes = {}
+  static propTypes = {
+    categories: PropTypes.array,
+    newWindow: PropTypes.bool,
+    placeholder: PropTypes.string,
+    history: PropTypes.object,
+    inputwidth: PropTypes.string,
+  }
+
+  static defaultProps = {
+    categories: ['projects', 'families', 'individuals', 'genes'],
+  }
 
   constructor(props) {
     super(props)
@@ -27,22 +51,24 @@ class AwesomeBar extends React.Component
   }
 
   render() {
-    return <Search
-      fluid
+    return <AwesomebarSearch
       category
       selectFirstResult
+      inputwidth={this.props.inputwidth}
       loading={this.state.isLoading}
       onResultSelect={this.handleResultSelect}
       onSearchChange={this.handleSearchChange}
       results={this.state.results}
       value={this.state.value}
       minCharacters={1}
-      placeholder="Search project, family, gene name, etc."
+      placeholder={this.props.placeholder || 'Search project, family, gene name, etc.'}
     />
   }
 
-  handleHttpSuccess = (response) => {
-    this.setState({ isLoading: false, results: response.matches })
+  handleHttpSuccess = (response, urlParams) => {
+    if (urlParams.q === this.state.value) {
+      this.setState({ isLoading: false, results: response.matches })
+    }
   }
 
   handleHttpError = (response) => {
@@ -58,28 +84,23 @@ class AwesomeBar extends React.Component
     this.setState({ isLoading: true, value: obj.value })
     this.httpRequestHelper.get({
       q: obj.value,
-      proj: this.props.reduxState && this.props.reduxState.project ? this.props.reduxState.project.projectGuid : null,
+      categories: this.props.categories || '',
     })
   }
 
   handleResultSelect = (e, obj) => {
     e.preventDefault()
     this.setState({ value: obj.result.title })
-    window.open(obj.result.href, '_blank')
+    if (this.props.newWindow) {
+      window.open(obj.result.href, '_blank')
+    } else {
+      this.props.history.push(obj.result.href)
+    }
   }
-}
-
-AwesomeBar.propTypes = {
-  reduxState: PropTypes.object,
 }
 
 export { AwesomeBar as AwesomeBarComponent }
 
 
-// wrap top-level component so that redux state is passed in as props
-const mapStateToProps = state => ({
-  reduxState: state,
-})
-
-export default connect(mapStateToProps)(AwesomeBar)
+export default withRouter(AwesomeBar)
 

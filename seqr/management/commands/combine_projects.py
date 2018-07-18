@@ -25,7 +25,6 @@ from seqr.models import \
     VariantTag as SeqrVariantTag, \
     VariantNote as SeqrVariantNote, \
     Sample as SeqrSample, \
-    Dataset as SeqrDataset, \
     LocusList, \
     CAN_EDIT, \
     CAN_VIEW, \
@@ -226,7 +225,6 @@ class Command(BaseCommand):
                 to_i.other_notes = choose_one(to_i, 'other_notes', from_i.other_notes, to_i.other_notes)
 
                 to_i.case_review_status = choose_one(to_i, 'case_review_status', from_i.case_review_status, to_i.case_review_status)
-                to_i.case_review_status_accepted_for = choose_one(to_i, 'case_review_status_accepted_for', from_i.case_review_status_accepted_for, to_i.case_review_status_accepted_for)
 
                 to_i.phenotips_id = choose_one(to_i, 'phenotips_id', from_i.phenotips_id, to_i.phenotips_id)
                 to_i.phenotips_data = choose_one(to_i, 'phenotips_data', from_i.phenotips_data, to_i.phenotips_data)
@@ -289,7 +287,7 @@ class Command(BaseCommand):
                 to_project.phenotips_user_id = to_project.project_id
                 try:
                     json_obj = json.loads(i.phenotips_data)
-                    update_patient_data(to_project, i.phenotips_id, patient_json=json_obj, is_external_id=True)
+                    update_patient_data(to_project, i, patient_json=json_obj)
                 except Exception as e:
                     logger.error("%s - error while updating phenotips for %s: %s", e, i.phenotips_id, json_obj)
 
