@@ -60,7 +60,7 @@ def create_locus_list_handler(request):
     if not name:
         return create_json_response({}, status=400, reason="'Name' is required")
 
-    new_genes, invalid_gene_symbols, existing_gene_ids = _parse_requested_genes(request_json)
+    new_genes, invalid_gene_symbols, _ = _parse_requested_genes(request_json)
     if not new_genes:
         return create_json_response({'invalidLocusListItems': invalid_gene_symbols}, status=400, reason="Genes are required")
 
@@ -80,7 +80,7 @@ def create_locus_list_handler(request):
             created_by=request.user,
         )
 
-    new_intervals, invalid_intervals, existing_interval_ids = _parse_requested_intervals(request_json)
+    new_intervals, invalid_intervals, _ = _parse_requested_intervals(request_json)
 
     for interval in new_intervals:
         LocusListInterval.objects.create(

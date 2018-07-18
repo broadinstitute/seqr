@@ -69,4 +69,5 @@ const mapStateToProps = state => ({
   locusListsByGuid: getLocusListsByGuid(state),
 })
 
+export { LocusListTable as LocusListTableComponent }
 export default connect(mapStateToProps)(LocusListTable)

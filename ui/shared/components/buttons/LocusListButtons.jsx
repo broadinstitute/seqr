@@ -68,6 +68,8 @@ const mapDispatchToProps = {
   onSubmit: updateLocusList,
 }
 
+export { CreateLocusList, UpdateLocusList, DeleteLocusList }
+
 export const CreateLocusListButton = connect(null, mapDispatchToProps)(CreateLocusList)
 export const UpdateLocusListButton = connect(null, mapDispatchToProps)(UpdateLocusList)
 export const DeleteLocusListButton = connect(null, mapDispatchToProps)(DeleteLocusList)
