@@ -62,7 +62,7 @@ def _create_patient_if_missing(project, individual):
     Raises:
         PhenotipsException: if unable to create patient record
     """
-    if individual.phenotips_patient_id:
+    if _phenotips_patient_exists(individual):
         return
 
     url = '/rest/patients'
@@ -127,7 +127,7 @@ def delete_patient(project, individual):
     Raises:
         PhenotipsException: if api call fails
     """
-    if individual.phenotips_patient_id or individual.phenotips_eid:
+    if _phenotips_patient_exists(individual):
         url = _phenotips_patient_url(individual)
         auth_tuple = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=False)
         return _make_api_call('DELETE', url, auth_tuple=auth_tuple, expected_status_code=204)
@@ -138,6 +138,10 @@ def _phenotips_patient_url(individual):
         return '/rest/patients/{0}'.format(individual.phenotips_patient_id)
     else:
         return '/rest/patients/eid/{0}'.format(individual.phenotips_eid)
+
+
+def _phenotips_patient_exists(individual):
+    return individual.phenotips_patient_id or individual.phenotips_eid
 
 
 def _update_patient_field_value(project, individual, field_name, field_value):
