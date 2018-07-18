@@ -48,7 +48,7 @@ PathogenicityLink.propTypes = {
 
 const clinvarUrl = (clinvar) => {
   const baseUrl = 'http://www.ncbi.nlm.nih.gov/clinvar'
-  const variantPath = clinvar.variantId ? `/variation/${clinvar.variantId}` : `?term=${clinvar.alleleId}[alleleid]`
+  const variantPath = clinvar.alleleId ? `?term=${clinvar.alleleId}[alleleid]` : `/variation/${clinvar.variantId}`
   return baseUrl + variantPath
 }
 
