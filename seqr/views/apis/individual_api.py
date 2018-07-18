@@ -7,7 +7,6 @@ import logging
 
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
-from django.db.models import prefetch_related_objects
 
 from seqr.model_utils import get_or_create_seqr_model, update_seqr_model, delete_seqr_model
 from seqr.models import Sample, Individual, Family, CAN_EDIT
@@ -16,7 +15,6 @@ from seqr.views.apis.pedigree_image_api import update_pedigree_images
 from seqr.views.apis.phenotips_api import create_patient, set_patient_hpo_terms, delete_patient, \
     PhenotipsException
 from seqr.views.utils.export_table_utils import export_table
-from seqr.views.utils.family_info_utils import retrieve_multi_family_analysed_by
 from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file
 from seqr.views.utils.json_to_orm_utils import update_individual_from_json
 from seqr.views.utils.json_utils import create_json_response
@@ -301,18 +299,10 @@ def save_individuals_table_handler(request, project_guid, upload_file_id):
     )
 
     # edit individuals
-    prefetch_related_objects(updated_individuals, 'sample_set')
     individuals = _get_json_for_individuals(updated_individuals, request.user, add_sample_guids_field=True)
     individuals_by_guid = {individual['individualGuid']: individual for individual in individuals}
-
-    prefetch_related_objects(updated_families, 'individual_set')
-    families = _get_json_for_families(updated_families, request.user, add_analysed_by_field=False, add_individual_guids_field=True)
-    analysed_by = retrieve_multi_family_analysed_by(families)
-    families_by_guid = {}
-    for family in families:
-        family_guid = family['familyGuid']
-        family['analysedBy'] = analysed_by[family_guid]
-        families_by_guid[family_guid] = family
+    families = _get_json_for_families(updated_families, request.user, add_individual_guids_field=True)
+    families_by_guid = {family['familyGuid']: family for family in families}
 
     updated_families_and_individuals_by_guid = {
         'individualsByGuid': individuals_by_guid,

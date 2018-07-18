@@ -19,10 +19,10 @@ def retrieve_family_analysed_by(family_raw_id):
 
 
 def retrieve_multi_family_analysed_by(families):
-    family_guid_map = {family.pop('id'): family['familyGuid'] for family in families}
-    family_id_map = {family.id: family.seqr_family_id for family in BaseFamily.objects.filter(seqr_family_id__in=family_guid_map.keys())}
+    seqr_family_ids = [family['family_id'] for family in families]
+    family_id_map = {family.id: family.seqr_family_id for family in BaseFamily.objects.filter(seqr_family_id__in=seqr_family_ids)}
     analysed_by = defaultdict(list)
     for ab in BaseAnalysedBy.objects.filter(family_id__in=family_id_map.keys()):
-        analysed_by[family_guid_map[family_id_map[ab.family_id]]].append(ab.toJSON())
+        analysed_by[family_id_map[ab.family_id]].append(ab.toJSON())
     return analysed_by
 

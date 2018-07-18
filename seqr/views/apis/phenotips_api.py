@@ -68,7 +68,7 @@ def create_patient(project, individual):
     data = json.dumps({'external_id': individual.guid})
     auth_tuple = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id)
 
-    response_items = _make_api_call('POST', url, auth_tuple=auth_tuple, http_headers=headers, data=data, expected_status_code=201, parse_response_items=True)
+    response_items = _make_api_call('POST', url, auth_tuple=auth_tuple, http_headers=headers, data=data, expected_status_code=201, parse_json_resonse=False)
     patient_id = response_items['Location'].split('/')[-1]
 
     username_read_only, _ = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=True)
@@ -366,7 +366,6 @@ def _make_api_call(
         auth_tuple=None,
         expected_status_code=200,
         parse_json_resonse=True,
-        parse_response_items=False,
         verbose=False):
     """Utility method for making an API call and then parsing & returning the json response.
 
@@ -394,8 +393,6 @@ def _make_api_call(
 
     if parse_json_resonse:
         if not response.content:
-            if parse_response_items:
-                return dict(response.items())
             return {}
 
         try:
@@ -403,6 +400,8 @@ def _make_api_call(
         except ValueError as e:
             logger.error("Unable to parse PhenoTips response for %s request to %s" % (method, url))
             raise PhenotipsException("Unable to parse response for %s:\n%s" % (url, e))
+    else:
+        return dict(response.items())
 
 
 def _handle_phenotips_save_request(request, patient_id):
