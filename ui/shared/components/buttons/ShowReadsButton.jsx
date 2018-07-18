@@ -24,13 +24,19 @@ const BAM_TRACK_OPTIONS = {
 
 const ShowReadsButton = ({ locus, familyGuid, samplesByGuid, individualsByGuid }) => {
 
-  const igvTracks = Object.values(samplesByGuid).filter(
-    sample => sample.loadedDate && sample.datasetType === DATASET_TYPE_READ_ALIGNMENTS,
-  ).map((sample) => {
-    const individual = individualsByGuid[sample.individualGuid]
-    if (individual.familyGuid !== familyGuid) {
-      return null
+  const latestSamplesForIndividuals = Object.values(samplesByGuid).filter(sample => (
+    sample.loadedDate &&
+    sample.datasetType === DATASET_TYPE_READ_ALIGNMENTS &&
+    individualsByGuid[sample.individualGuid].familyGuid === familyGuid
+  )).reduce((acc, sample) => {
+    if (!acc[sample.individualGuid] || acc[sample.individualGuid].loadedDate < sample.loadedDate) {
+      acc[sample.individualGuid] = sample
     }
+    return acc
+  }, {})
+
+  const igvTracks = Object.values(latestSamplesForIndividuals).map((sample) => {
+    const individual = individualsByGuid[sample.individualGuid]
 
     const trackOptions = sample.datasetFilePath.endsWith('.cram') ? CRAM_TRACK_OPTIONS : BAM_TRACK_OPTIONS
     const trackName = ReactDOMServer.renderToString(
