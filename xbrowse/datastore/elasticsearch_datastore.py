@@ -109,7 +109,7 @@ class ElasticsearchDatastore(datastore.Datastore):
                 self._redis_client = redis.StrictRedis(host=settings.REDIS_SERVICE_HOSTNAME, socket_connect_timeout=3)
                 self._redis_client.ping()
             except redis.exceptions.TimeoutError as e:
-                logger.warn("Unable to connect to redis: " + str(e))
+                logger.warn("Unable to connect to redis host: {}".format(settings.REDIS_SERVICE_HOSTNAME) + str(e))
                 self._redis_client = None
             
     def get_elasticsearch_variants(
@@ -128,7 +128,7 @@ class ElasticsearchDatastore(datastore.Datastore):
         from xbrowse_server.base.models import Individual
         from xbrowse_server.mall import get_reference
 
-        cache_key = "%s___%s___%s" % (
+        cache_key = "Variants___%s___%s___%s" % (
             project_id,
             family_id,
             json.dumps([
