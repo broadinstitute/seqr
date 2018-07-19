@@ -16,7 +16,7 @@ from django.core.files import File
 
 from seqr.model_utils import update_seqr_model
 from seqr.models import Individual
-from seqr.views.utils.orm_to_json_utils import _get_json_for_individual
+from seqr.views.utils.orm_to_json_utils import _get_json_for_individuals
 from settings import BASE_DIR
 
 from xbrowse_server.base.models import Family as BaseFamily
@@ -24,7 +24,7 @@ from xbrowse_server.base.models import Family as BaseFamily
 logger = logging.getLogger(__name__)
 
 
-def update_pedigree_images(families):
+def update_pedigree_images(families, project_guid=None):
     """Regenerate pedigree image for one or more families
 
     Args:
@@ -32,10 +32,10 @@ def update_pedigree_images(families):
     """
 
     for family in families:
-        update_pedigree_image(family)
+        update_pedigree_image(family, project_guid=project_guid)
 
 
-def update_pedigree_image(family):
+def update_pedigree_image(family, project_guid=None):
     """Uses HaploPainter to (re)generate the pedigree image for the given family.
 
     Args:
@@ -50,11 +50,10 @@ def update_pedigree_image(family):
         return
 
     # convert individuals to json
-    individual_records = {}
-    for i in individuals:
-        individual_records[i.individual_id] = _get_json_for_individual(i)
-        individual_records[i.individual_id]['familyId'] = i.family.family_id
-
+    individual_records = {
+        individual['individualGuid']: individual for individual in
+        _get_json_for_individuals(individuals, project_guid=project_guid, family_guid=family.guid)
+    }
 
     # compute a map of parent ids to list of children
     parent_ids_to_children_map = collections.defaultdict(list)
@@ -105,7 +104,7 @@ def update_pedigree_image(family):
 
         # columns: family, individual id, paternal id, maternal id, sex, affected
         for i in individual_records.values():
-            row = [i[key] for key in ['familyId', 'individualId', 'paternalId', 'maternalId', 'sex', 'affected']]
+            row = [family_id] + [i[key] for key in ['individualId', 'paternalId', 'maternalId', 'sex', 'affected']]
             fam_file.write("\t".join(row).encode('UTF-8'))
             fam_file.write("\n")
         fam_file.flush()

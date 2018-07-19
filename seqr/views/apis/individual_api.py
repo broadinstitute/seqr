@@ -12,13 +12,12 @@ from seqr.model_utils import get_or_create_seqr_model, update_seqr_model, delete
 from seqr.models import Sample, Individual, Family, CAN_EDIT
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.pedigree_image_api import update_pedigree_images
-from seqr.views.apis.phenotips_api import create_patient, set_patient_hpo_terms, delete_patient, \
-    PhenotipsException
+from seqr.views.apis.phenotips_api import set_patient_hpo_terms, delete_patient, PhenotipsException
 from seqr.views.utils.export_table_utils import export_table
 from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file
 from seqr.views.utils.json_to_orm_utils import update_individual_from_json
 from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.orm_to_json_utils import _get_json_for_individual, _get_json_for_family
+from seqr.views.utils.orm_to_json_utils import _get_json_for_individual, _get_json_for_individuals, _get_json_for_family, _get_json_for_families
 from seqr.views.utils.pedigree_info_utils import parse_pedigree_table, validate_fam_file_records, JsonConstants
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_permissions
 
@@ -299,13 +298,10 @@ def save_individuals_table_handler(request, project_guid, upload_file_id):
     )
 
     # edit individuals
-    individuals_by_guid = {
-        individual.guid: _get_json_for_individual(individual, request.user, add_sample_guids_field=True) for individual in updated_individuals
-    }
-
-    families_by_guid = {
-        family.guid: _get_json_for_family(family, request.user, add_individual_guids_field=True) for family in updated_families
-    }  # families whose list of individuals may have changed
+    individuals = _get_json_for_individuals(updated_individuals, request.user, add_sample_guids_field=True)
+    individuals_by_guid = {individual['individualGuid']: individual for individual in individuals}
+    families = _get_json_for_families(updated_families, request.user, add_individual_guids_field=True)
+    families_by_guid = {family['familyGuid']: family for family in families}
 
     updated_families_and_individuals_by_guid = {
         'individualsByGuid': individuals_by_guid,
@@ -337,12 +333,16 @@ def add_or_update_individuals_and_families(project, individual_records, user=Non
         if 'individualId' not in record and 'individualGuid' not in record:
             raise ValueError("record #%s doesn't contain an 'individualId' key: %s" % (i, record))
 
-        family, created = get_or_create_seqr_model(Family, project=project, family_id=family_id)
+        family = families.get(family_id)
+        if family:
+            created = False
+        else:
+            family, created = get_or_create_seqr_model(Family, project=project, family_id=family_id)
 
         if created:
             logger.info("Created family: %s", family)
             if not family.display_name:
-                update_seqr_model(family, display_name = family.family_id)
+                update_seqr_model(family, display_name=family.family_id)
 
         # uploaded files do not have unique guid's so fall back to a combination of family and individualId
         if record.get('individualGuid'):
@@ -353,24 +353,16 @@ def add_or_update_individuals_and_families(project, individual_records, user=Non
         individual, created = get_or_create_seqr_model(Individual, **individual_filters)
         record['family'] = family
         record.pop('familyId', None)
-        update_individual_from_json(individual, record, allow_unknown_keys=True, user=user)
-
-        updated_individuals.append(individual)
-
-        # apply additional json fields which don't directly map to Individual model fields
-        individual.phenotips_eid = individual.guid  # use guid instead of indiv_id to avoid collisions
 
         if created:
-            # create new PhenoTips patient record
-            patient_record = create_patient(project, individual)
-            update_seqr_model(
-                individual,
-                phenotips_patient_id=patient_record['id'],
-                case_review_status='I'
-            )
+            record.update({
+                'caseReviewStatus': 'I',
+            })
 
-            logger.info("Created PhenoTips record with patient id %s and external id %s" % (
-                str(individual.phenotips_patient_id), str(individual.phenotips_eid)))
+        if not (individual.display_name or record.get('displayName')):
+            record['displayName'] = individual.individual_id or record.get('individualId')
+
+        update_individual_from_json(individual, record, allow_unknown_keys=True, user=user)
 
         if record.get(JsonConstants.HPO_TERMS_PRESENT_COLUMN) or record.get(JsonConstants.FINAL_DIAGNOSIS_OMIM_COLUMN):
             # update phenotips hpo ids
@@ -382,15 +374,13 @@ def add_or_update_individuals_and_families(project, individual_records, user=Non
                 hpo_terms_absent=record.get(JsonConstants.HPO_TERMS_ABSENT_COLUMN, []),
                 final_diagnosis_mim_ids=record.get(JsonConstants.FINAL_DIAGNOSIS_OMIM_COLUMN, []))
 
-        if not individual.display_name:
-            update_seqr_model(individual, display_name=individual.individual_id)
-
+        updated_individuals.append(individual)
         families[family.family_id] = family
 
     updated_families = list(families.values())
 
     # update pedigree images
-    update_pedigree_images(updated_families)
+    update_pedigree_images(updated_families, project_guid=project.guid)
 
     return updated_families, updated_individuals
 

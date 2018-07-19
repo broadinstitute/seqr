@@ -106,8 +106,8 @@ api_endpoints = {
     'project/(?P<project_guid>[^/]+)/add_dataset': add_dataset_handler,
 
     'project/(?P<project_guid>[^/]+)/igv_track/(?P<igv_track_path>.+)': fetch_igv_track,
-    'project/(?P<project_guid>[^/]+)/patient/(?P<patient_id>[^/]+)/phenotips_pdf': phenotips_pdf_handler,
-    'project/(?P<project_guid>[^/]+)/patient/(?P<patient_id>[^/]+)/phenotips_edit': phenotips_edit_handler,
+    'project/(?P<project_guid>[^/]+)/individual/(?P<individual_guid>[\w.|-]+)/phenotips_pdf': phenotips_pdf_handler,
+    'project/(?P<project_guid>[^/]+)/individual/(?P<individual_guid>[\w.|-]+)/phenotips_edit': phenotips_edit_handler,
 
     'saved_variant/(?P<variant_guid>[^/]+)/transcripts': saved_variant_transcripts,
     'saved_variant/(?P<variant_guid>[^/]+)/update_tags': update_variant_tags_handler,
