@@ -158,7 +158,7 @@ class ElasticsearchDatastore(datastore.Datastore):
             family_individual_ids = [i.indiv_id for i in Individual.objects.filter(family__project__project_id=project_id).only("indiv_id")]
 
         from xbrowse_server.base.models import Project, Family
-        from pyliftover import LiftOver
+        from pyliftover.liftover import LiftOver
 
         query_json = self._make_db_query(genotype_filter, variant_filter)
 
