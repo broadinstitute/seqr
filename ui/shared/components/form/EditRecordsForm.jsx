@@ -101,7 +101,7 @@ class EditRecordsForm extends React.Component
 
   formContent = () => {
     return (
-      <div>
+      <div style={{ marginBottom: this.props.records.length > ROWS_PER_PAGE ? '50px' : '0px' }}>
         <Table basic="very" compact="very">
           <Table.Header>
             <Table.Row>
