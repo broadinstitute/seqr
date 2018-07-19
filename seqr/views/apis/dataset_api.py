@@ -108,7 +108,7 @@ def add_dataset_handler(request, project_guid):
                 if family.analysis_status == Family.ANALYSIS_STATUS_WAITING_FOR_DATA:
                     update_seqr_model(family, analysis_status=Family.ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS)
 
-            base_individuals = BaseIndividual.objects.filter(seqr_individual__guid__in=updated_individuals).prefetch_related('vcf_files').only('guid')
+            base_individuals = BaseIndividual.objects.filter(seqr_individual__guid__in=updated_individuals).prefetch_related('vcf_files').only('id')
             for ind in base_individuals:
                 ind.vcf_files.add(vcf_file)
 
