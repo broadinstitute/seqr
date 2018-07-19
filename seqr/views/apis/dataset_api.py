@@ -87,17 +87,27 @@ def add_dataset_handler(request, project_guid):
         # update VCFFile records
         if updated_samples:
             base_project = BaseProject.objects.get(seqr_project=project)
-            vcf_file, created = VCFFile.objects.get_or_create(
+
+            vcf_file = VCFFile.objects.filter(
                 project=base_project,
                 dataset_type=dataset_type,
                 sample_type=sample_type,
-                elasticsearch_index=elasticsearch_index,
-            )
+                elasticsearch_index=elasticsearch_index).order_by('-pk').first()
+
+            if not vcf_file:
+                vcf_file = VCFFile.objects.create(
+                    project=base_project,
+                    dataset_type=dataset_type,
+                    sample_type=sample_type,
+                    elasticsearch_index=elasticsearch_index,
+                )
+                logger.info("Created vcf file: " + str(vcf_file.__dict__))
+                
             vcf_file.file_path = dataset_path or "{}.vcf.gz".format(elasticsearch_index)  # legacy VCFFile model requires non-empty vcf path
             vcf_file.loaded_date = iter(updated_samples).next().loaded_date,
             vcf_file.save()
-            if created:
-                logger.info("Created vcf file: " + str(vcf_file.__dict__))
+
+
 
             for indiv in [s.individual for s in updated_samples]:
                 for base_indiv in BaseIndividual.objects.filter(seqr_individual=indiv).only('id'):
