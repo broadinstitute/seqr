@@ -12,7 +12,7 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_samples
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions
 
-from xbrowse_server.base.models import VCFFile, Project as BaseProject
+from xbrowse_server.base.models import VCFFile, Project as BaseProject, Individual as BaseIndividual
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +82,7 @@ def add_dataset_handler(request, project_guid):
             base_project = BaseProject.objects.get(seqr_project=project)
             vcf_file, created = VCFFile.objects.get_or_create(
                 project=base_project,
-                dataset_path=dataset_path,
+                file_path=dataset_path,
                 dataset_type=dataset_type,
                 sample_type=sample_type,
                 elasticsearch_index=elasticsearch_index,
@@ -101,6 +101,12 @@ def add_dataset_handler(request, project_guid):
             response['individualsByGuid'] = {
                 ind.guid: {'sampleGuids': [s.guid for s in ind.sample_set.only('guid').all()]} for ind in individuals
             }
+
+            base_individuals = BaseIndividual.objects.filter(seqr_individual__guid__in=updated_individuals).prefetch_related('vcf_files').only('guid')
+            logger.info("Adding VCF to individuals: " + str(base_individuals))
+            for ind in base_individuals:
+                ind.vcf_files.add(vcf_file)
+
         return create_json_response(response)
     except Exception as e:
         return create_json_response({'errors': [e.message or str(e)]}, status=400)
