@@ -1,6 +1,7 @@
 import json
 import logging
 from pprint import pformat
+import traceback
 
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
@@ -102,17 +103,14 @@ def add_dataset_handler(request, project_guid):
                     elasticsearch_index=elasticsearch_index,
                 )
                 logger.info("Created vcf file: " + str(vcf_file.__dict__))
-                
+
             vcf_file.file_path = dataset_path or "{}.vcf.gz".format(elasticsearch_index)  # legacy VCFFile model requires non-empty vcf path
             vcf_file.loaded_date = iter(updated_samples).next().loaded_date,
             vcf_file.save()
 
-
-
             for indiv in [s.individual for s in updated_samples]:
                 for base_indiv in BaseIndividual.objects.filter(seqr_individual=indiv).only('id'):
                     base_indiv.vcf_files.add(vcf_file)
-
 
         updated_sample_json = get_json_for_samples(updated_samples, project_guid=project_guid)
         response = {
@@ -130,7 +128,7 @@ def add_dataset_handler(request, project_guid):
                 if family.analysis_status == Family.ANALYSIS_STATUS_WAITING_FOR_DATA:
                     update_seqr_model(family, analysis_status=Family.ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS)
 
-
         return create_json_response(response)
     except Exception as e:
+        traceback.print_exc()
         return create_json_response({'errors': [e.message or str(e)]}, status=400)
