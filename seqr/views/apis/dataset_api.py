@@ -82,7 +82,7 @@ def add_dataset_handler(request, project_guid):
             base_project = BaseProject.objects.get(seqr_project=project)
             vcf_file, created = VCFFile.objects.get_or_create(
                 project=base_project,
-                file_path=dataset_path,
+                file_path=dataset_path or "{}.vcf.gz".format(elasticsearch_index),  # legacy VCFFile model requires non-empty vcf path
                 dataset_type=dataset_type,
                 sample_type=sample_type,
                 elasticsearch_index=elasticsearch_index,
@@ -102,10 +102,14 @@ def add_dataset_handler(request, project_guid):
                 ind.guid: {'sampleGuids': [s.guid for s in ind.sample_set.only('guid').all()]} for ind in individuals
             }
 
-            base_individuals = BaseIndividual.objects.filter(seqr_individual__guid__in=updated_individuals).prefetch_related('vcf_files').only('guid')
+            base_individuals = BaseIndividual.objects.filter(seqr_individual__guid__in=updated_individuals).prefetch_related('vcf_files').prefetch_related('family').only('guid')
             logger.info("Adding VCF to individuals: " + str(base_individuals))
             for ind in base_individuals:
                 ind.vcf_files.add(vcf_file)
+                family = ind.family
+                if family.analysis_status == "Q":
+                    family.analysis_status = "I"
+                    family.save()
 
         return create_json_response(response)
     except Exception as e:
