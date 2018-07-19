@@ -852,7 +852,7 @@ class Individual(models.Model):
     nickname = models.CharField(max_length=140, default="", blank=True)
     other_notes = models.TextField(default="", blank=True, null=True)
 
-    case_review_status = models.CharField(max_length=2, choices=CASE_REVIEW_STATUS_CHOICES, blank=True, null=True, default='')
+    case_review_status = models.CharField(max_length=2, choices=CASE_REVIEW_STATUS_CHOICES, default='I')
     case_review_status_last_modified_date = models.DateTimeField(null=True, blank=True, db_index=True)
     case_review_status_last_modified_by = models.ForeignKey(User, null=True, blank=True, related_name='+', on_delete=models.SET_NULL)
     case_review_discussion = models.TextField(null=True, blank=True)
