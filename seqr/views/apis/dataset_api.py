@@ -59,8 +59,14 @@ def add_dataset_handler(request, project_guid):
     sample_type = request_json['sampleType']
     dataset_type = request_json['datasetType']
     elasticsearch_index = request_json.get('elasticsearchIndex')
+    if elasticsearch_index:
+        elasticsearch_index = elasticsearch_index.strip()
     dataset_path = request_json.get('datasetPath')
+    if dataset_path:
+        dataset_path = dataset_path.strip()
     dataset_name = request_json.get('datasetName')
+    if dataset_name:
+        dataset_name = dataset_name.strip()
 
     ignore_extra_samples_in_callset = request_json.get('ignoreExtraSamplesInCallset')
     mapping_file_id = request_json.get('mappingFile', {}).get('uploadedFileId')
