@@ -3,7 +3,6 @@
 
 import json
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import PermissionDenied
 from django.views.decorators.csrf import csrf_exempt
 
 from seqr.models import Project, ProjectCategory, CAN_EDIT

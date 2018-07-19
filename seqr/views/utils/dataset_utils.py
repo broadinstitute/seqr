@@ -176,8 +176,6 @@ def validate_variant_call_inputs(sample_type, dataset_path, project, elasticsear
     if not elasticsearch_index:
         raise Exception('Elasticsearch index is required')
     parsed_es_index = elasticsearch_index.lower().split('__')
-    if parsed_es_index[0] not in [project.guid.lower(), project.name.lower(), project.deprecated_project_id.lower()]:
-        raise Exception('Index "{0}" is not associated with project "{1}"'.format(elasticsearch_index, project.name))
     if len(parsed_es_index) > 1:
         if sample_type.lower() not in parsed_es_index:
             raise Exception('Index "{0}" is not associated with sample type "{1}"'.format(
@@ -192,8 +190,10 @@ def validate_variant_call_inputs(sample_type, dataset_path, project, elasticsear
     if dataset_path:
         if not dataset_path.endswith(".vcf.gz") and not dataset_path.endswith(".vds"):
             raise Exception("Variant call dataset path must end with .vcf.gz or .vds")
-        _validate_dataset_path(dataset_path)
-        _validate_vcf(dataset_path)
+
+        # TODO need to fix credentials
+        #_validate_dataset_path(dataset_path)
+        #_validate_vcf(dataset_path)
 
 
 def _validate_dataset_path(dataset_path):

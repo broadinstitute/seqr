@@ -51,7 +51,7 @@ class Reference(object):
                 self._redis_client = redis.StrictRedis(host=settings.REDIS_SERVICE_HOSTNAME, socket_connect_timeout=3)
                 self._redis_client.ping()
             except redis.exceptions.TimeoutError as e:
-                logger.warn("Unable to connect to redis: " + str(e))
+                logger.warn("Unable to connect to redis host: {}".format(settings.REDIS_SERVICE_HOSTNAME) + str(e))
                 self._redis_client = None
 
 
