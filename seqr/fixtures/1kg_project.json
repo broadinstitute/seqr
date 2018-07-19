@@ -1216,5 +1216,102 @@
         "metadata": "2",
         "search_parameters": ""
     }
+},
+{
+    "model": "seqr.locuslist",
+    "pk": 1,
+    "fields": {
+        "guid": "LL00049_pid_genes_autosomal_do",
+        "created_date": "2017-02-07T12:55:30.700Z",
+        "created_by": null,
+        "last_modified_date": "2018-05-01T00:02:38.733Z",
+        "name": "PID genes - Autosomal dominant",
+        "description": "Autosomal dominant inheritance PID genes",
+        "is_public": true
+    }
+},
+{
+    "model": "seqr.locuslist",
+    "pk": 2,
+    "fields": {
+        "guid": "LL00005_retina_proteome",
+        "created_date": "2017-02-07 07:55:06.032034-05",
+        "created_by": 10,
+        "last_modified_date": "2018-05-01T00:02:38.733Z",
+        "name": "Retina proteome",
+        "description": "",
+        "is_public": false
+    }
+},
+{
+  "model": "seqr.locuslistgene",
+  "pk": 11,
+  "fields": {
+    "guid": "LLG0000011_nmd_nclensg00000171",
+    "created_date": "2018-04-28T00:03:25.341Z",
+    "created_by": null,
+    "last_modified_date": "2018-04-28T00:03:25.341Z",
+    "locus_list": 1,
+    "gene_id": "ENSG00000171714",
+    "description": ""
+  }
+},
+{
+  "model": "seqr.locuslistgene",
+  "pk": 12,
+  "fields": {
+    "guid": "LLG0000012_nmd_nclensg00000169",
+    "created_date": "2018-04-28T00:03:25.347Z",
+    "created_by": null,
+    "last_modified_date": "2018-04-28T00:03:25.347Z",
+    "locus_list": 1,
+    "gene_id": "ENSG00000169083",
+    "description": ""
+  }
+},
+{
+  "model": "seqr.locuslistgene",
+  "pk": 13,
+  "fields": {
+    "guid": "LLG0000013_nmd_nclensg00000196",
+    "created_date": "2018-04-28T00:03:25.353Z",
+    "created_by": null,
+    "last_modified_date": "2018-04-28T00:03:25.353Z",
+    "locus_list": 1,
+    "gene_id": "ENSG00000196296",
+    "description": ""
+  }
+},
+{
+  "model": "seqr.locuslistinterval",
+  "pk": 12,
+  "fields": {
+    "guid": "LLI0000012_test_list_edit4545_",
+    "created_date": "2018-07-17T21:13:10.688Z",
+    "created_by": null,
+    "last_modified_date": "2018-07-18T14:57:35.302Z",
+    "locus_list": 1,
+    "genome_version": "37",
+    "chrom": "1",
+    "start": 248367200,
+    "end": 248367300,
+    "description": null
+  }
+},
+{
+  "model": "seqr.locuslistinterval",
+  "pk": 13,
+  "fields": {
+    "guid": "LLI0000013_a_new_list325_3000",
+    "created_date": "2018-07-17T21:16:12.224Z",
+    "created_by": null,
+    "last_modified_date": "2018-07-17T21:16:12.224Z",
+    "locus_list": 1,
+    "genome_version": "38",
+    "chrom": "3",
+    "start": 25,
+    "end": 3000,
+    "description": null
+  }
 }
 ]

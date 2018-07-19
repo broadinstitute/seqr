@@ -61,8 +61,9 @@ def create_locus_list_handler(request):
         return create_json_response({}, status=400, reason="'Name' is required")
 
     new_genes, invalid_gene_symbols, _ = _parse_requested_genes(request_json)
-    if not new_genes:
-        return create_json_response({'invalidLocusListItems': invalid_gene_symbols}, status=400, reason="Genes are required")
+    new_intervals, invalid_intervals, _ = _parse_requested_intervals(request_json)
+    if not (new_genes or new_intervals):
+        return create_json_response({'invalidLocusListItems': invalid_gene_symbols + invalid_intervals}, status=400, reason="Genes are required")
 
     locus_list = create_seqr_model(
         LocusList,
@@ -79,8 +80,6 @@ def create_locus_list_handler(request):
             gene_id=gene_id,
             created_by=request.user,
         )
-
-    new_intervals, invalid_intervals, _ = _parse_requested_intervals(request_json)
 
     for interval in new_intervals:
         LocusListInterval.objects.create(
