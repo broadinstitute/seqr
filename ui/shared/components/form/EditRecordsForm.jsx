@@ -8,6 +8,8 @@ import get from 'lodash/get'
 
 import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
 
+const ROWS_PER_PAGE = 12
+
 /* eslint-disable no-unused-expressions */
 injectGlobal`
   
@@ -42,7 +44,10 @@ const TableHeaderCell = styled(Table.HeaderCell)`
   padding-bottom: 8px;
 `
 
-const ROWS_PER_PAGE = 12
+const FormContentContainer = styled.div`
+  marginBottom: ${props => (props.records.length > ROWS_PER_PAGE ? '50px' : '0px')};
+`
+
 
 class EditRecordsForm extends React.Component
 {
@@ -101,7 +106,7 @@ class EditRecordsForm extends React.Component
 
   formContent = () => {
     return (
-      <div style={{ marginBottom: this.props.records.length > ROWS_PER_PAGE ? '50px' : '0px' }}>
+      <FormContentContainer>
         <Table basic="very" compact="very">
           <Table.Header>
             <Table.Row>
@@ -135,7 +140,7 @@ class EditRecordsForm extends React.Component
             />
           </div>
         }
-      </div>
+      </FormContentContainer>
     )
   }
 
