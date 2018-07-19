@@ -15,8 +15,7 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_project
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_permissions
 
-from xbrowse_server.base.models import Project as BaseProject, Family as BaseFamily, Individual as BaseIndividual, \
-    ReferencePopulation, ProjectTag
+from xbrowse_server.base.models import Project as BaseProject, ReferencePopulation
 
 
 logger = logging.getLogger(__name__)
