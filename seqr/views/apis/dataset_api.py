@@ -105,7 +105,7 @@ def add_dataset_handler(request, project_guid):
                 logger.info("Created vcf file: " + str(vcf_file.__dict__))
 
             vcf_file.file_path = dataset_path or "{}.vcf.gz".format(elasticsearch_index)  # legacy VCFFile model requires non-empty vcf path
-            vcf_file.loaded_date = iter(updated_samples).next().loaded_date,
+            vcf_file.loaded_date = iter(updated_samples).next().loaded_date
             vcf_file.save()
 
             for indiv in [s.individual for s in updated_samples]:
