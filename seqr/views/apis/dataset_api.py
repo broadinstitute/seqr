@@ -89,14 +89,20 @@ def add_dataset_handler(request, project_guid):
             base_project = BaseProject.objects.get(seqr_project=project)
             vcf_file, created = VCFFile.objects.get_or_create(
                 project=base_project,
-                file_path=dataset_path or "{}.vcf.gz".format(elasticsearch_index),  # legacy VCFFile model requires non-empty vcf path
                 dataset_type=dataset_type,
                 sample_type=sample_type,
                 elasticsearch_index=elasticsearch_index,
-                loaded_date=iter(updated_samples).next().loaded_date,
             )
+            vcf_file.file_path = dataset_path or "{}.vcf.gz".format(elasticsearch_index)  # legacy VCFFile model requires non-empty vcf path
+            vcf_file.loaded_date = iter(updated_samples).next().loaded_date,
+            vcf_file.save()
             if created:
                 logger.info("Created vcf file: " + str(vcf_file.__dict__))
+
+            for indiv in [s.individual for s in updated_samples]:
+                for base_indiv in BaseIndividual.objects.filter(seqr_individual=indiv).only('id'):
+                    base_indiv.vcf_files.add(vcf_file)
+
 
         updated_sample_json = get_json_for_samples(updated_samples, project_guid=project_guid)
         response = {
@@ -114,9 +120,6 @@ def add_dataset_handler(request, project_guid):
                 if family.analysis_status == Family.ANALYSIS_STATUS_WAITING_FOR_DATA:
                     update_seqr_model(family, analysis_status=Family.ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS)
 
-            base_individuals = BaseIndividual.objects.filter(seqr_individual__guid__in=updated_individuals).prefetch_related('vcf_files').only('id')
-            for ind in base_individuals:
-                ind.vcf_files.add(vcf_file)
 
         return create_json_response(response)
     except Exception as e:
