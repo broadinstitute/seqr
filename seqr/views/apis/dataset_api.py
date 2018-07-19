@@ -5,7 +5,8 @@ from pprint import pformat
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 
-from seqr.models import Individual, CAN_EDIT
+from seqr.model_utils import update_seqr_model
+from seqr.models import Individual, CAN_EDIT, Family
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.utils.dataset_utils import add_dataset
 from seqr.views.utils.json_utils import create_json_response
@@ -97,19 +98,19 @@ def add_dataset_handler(request, project_guid):
         }
         updated_individuals = {s['individualGuid'] for s in updated_sample_json if s['sampleId'] in created_sample_ids}
         if updated_individuals:
-            individuals = Individual.objects.filter(guid__in=updated_individuals).prefetch_related('sample_set').only('guid')
+            individuals = Individual.objects.filter(guid__in=updated_individuals).prefetch_related('sample_set', 'family').only('guid')
             response['individualsByGuid'] = {
                 ind.guid: {'sampleGuids': [s.guid for s in ind.sample_set.only('guid').all()]} for ind in individuals
             }
 
-            base_individuals = BaseIndividual.objects.filter(seqr_individual__guid__in=updated_individuals).prefetch_related('vcf_files').prefetch_related('family').only('guid')
-            logger.info("Adding VCF to individuals: " + str(base_individuals))
+            for ind in individuals:
+                family = ind.family
+                if family.analysis_status == Family.ANALYSIS_STATUS_WAITING_FOR_DATA:
+                    update_seqr_model(family, analysis_status=Family.ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS)
+
+            base_individuals = BaseIndividual.objects.filter(seqr_individual__guid__in=updated_individuals).prefetch_related('vcf_files').only('guid')
             for ind in base_individuals:
                 ind.vcf_files.add(vcf_file)
-                family = ind.family
-                if family.analysis_status == "Q":
-                    family.analysis_status = "I"
-                    family.save()
 
         return create_json_response(response)
     except Exception as e:
