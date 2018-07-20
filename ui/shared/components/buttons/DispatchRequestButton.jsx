@@ -83,7 +83,7 @@ class DispatchRequestButton extends React.Component {
   handleRequestError = (error) => {
     //if deleteRequestStatus === RequestStatus.NONE, the status indicator has already been reset
     if (this.state.requestStatus !== RequestStatus.NONE) {
-      this.setState({ requestStatus: RequestStatus.ERROR, requestErrorMessage: error.errors._error[0] || error.message }) //eslint-disable-line no-underscore-dangle
+      this.setState({ requestStatus: RequestStatus.ERROR, requestErrorMessage: ((error.errors || {})._error || [])[0] || error.message }) //eslint-disable-line no-underscore-dangle
     }
   }
 
