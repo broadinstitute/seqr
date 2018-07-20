@@ -45,7 +45,7 @@ const TableHeaderCell = styled(Table.HeaderCell)`
 `
 
 const FormContentContainer = styled.div`
-  marginBottom: ${props => (props.records.length > ROWS_PER_PAGE ? '50px' : '0px')};
+  marginBottom: ${props => (props.records && props.records.length > ROWS_PER_PAGE ? '50px' : '0px')};
 `
 
 
