@@ -475,18 +475,7 @@ export const VARIANT = {
     { color: "#880E4F", dateSaved: "2018-05-24T15:34:01.365Z", metadata: "2", metadataTitle: "LOD Score",
       name: "Genome-wide Linkage", user: "hsnow@broadinstitute.org" },
   ],
-  genes: [
-    {
-      constraints: {
-        lof: { constraint: 0.0671997116609769, rank: 8248, totalGenes: 18225 },
-        missense: { constraint: -0.7885573790993861, rank: 15052, totalGenes: 18225 },
-      },
-      diseaseDbPhenotypes: [],
-      diseaseGeneLists: [],
-      geneId: "ENSG00000228198",
-      symbol: "OR2M3",
-    }
-  ],
+  geneIds: ['ENSG00000228198'],
   genomeVersion: "37",
   genotypes: {
     NA19675: {
@@ -549,3 +538,26 @@ export const VARIANT = {
   variantId: "SV0000002_1248367227_r0390_100",
   xpos: 1248367227,
   }
+
+export const GENE = {
+  constraints: {
+    lof: { constraint: 0.0671997116609769, rank: 8248, totalGenes: 18225 },
+    missense: { constraint: -0.7885573790993861, rank: 15052, totalGenes: 18225 },
+  },
+  phenotypeInfo: { mimPhenotypes: [], orphanetPhenotypes: [] },
+  locusLists: [],
+  geneId: "ENSG00000228198",
+  symbol: "OR2M3",
+}
+
+export const LOCUS_LIST = {
+  canEdit: false,
+  createdBy: "cjmoran@mgh.harvard.edu",
+  createdDate: "2017-11-03T00:01:51.912Z",
+  description: "",
+  isPublic: true,
+  lastModifiedDate: "2018-05-02T00:01:24.013Z",
+  locusListGuid: "LL00132_2017_monogenic_ibd_gen",
+  name: "2017 Monogenic IBD Gene List",
+  numEntries: 60
+}

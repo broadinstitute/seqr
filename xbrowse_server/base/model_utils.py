@@ -194,10 +194,13 @@ def find_matching_seqr_model(xbrowse_model):
                 is_public=xbrowse_model.is_public,
                 owner=xbrowse_model.created_by)
         elif xbrowse_class_name == "GeneListItem":
+            description_q = Q(description=xbrowse_model.description)
+            if xbrowse_model.description == '':
+                description_q = (Q(description=xbrowse_model.description) | Q(description__isnull=True))
             return SeqrLocusListGene.objects.get(
-                locus_list=xbrowse_model.gene_list.seqr_locus_list or find_matching_seqr_model(xbrowse_model.gene_list),
-                description=xbrowse_model.description,
-                gene_id=xbrowse_model.gene_id)
+                Q(locus_list=xbrowse_model.gene_list.seqr_locus_list or find_matching_seqr_model(xbrowse_model.gene_list)),
+                Q(gene_id=xbrowse_model.gene_id),
+                description_q)
         elif xbrowse_class_name == "GeneNote":
             return SeqrGeneNote.objects.get(
                 note=xbrowse_model.note,

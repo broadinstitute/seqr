@@ -5,6 +5,7 @@ import { Icon } from 'semantic-ui-react'
 
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
 import ShowReadsButton from '../../buttons/ShowReadsButton'
+import { LocusListLabels } from './VariantGene'
 
 
 const BreakWord = styled.span`
@@ -55,8 +56,9 @@ const VariantLocations = ({ variant }) =>
         : <div>hg19: liftover failed</div>
       )
     }
-
-    <VerticalSpacer height={10} />
+    <VerticalSpacer height={5} />
+    <LocusListLabels locusLists={variant.locusLists} />
+    <VerticalSpacer height={5} />
     <ShowReadsButton familyGuid={variant.familyGuid} locus={locus(variant, 100)} />
   </div>
 

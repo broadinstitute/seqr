@@ -117,6 +117,7 @@ def project_gene_list_settings(request, project_id):
     return render(request, 'project/project_gene_list_settings.html', {
         'project': project,
         'is_manager': project.can_admin(request.user),
+        'new_page_url': '/project/{}/project_page'.format(project.seqr_project.guid) if project.seqr_project else None,
     })
 
 
@@ -184,6 +185,7 @@ def add_gene_list(request, project_id):
         'my_lists': GeneList.objects.filter(owner=request.user),
         'public_lists': public_lists,
         'error': error,
+        'new_page_url': '/project/{}/project_page'.format(project.seqr_project.guid) if project.seqr_project else None,
     })
 
 
@@ -204,6 +206,7 @@ def remove_gene_list(request, project_id, gene_list_slug):
     return render(request, 'project/remove_gene_list.html', {
         'project': project,
         'gene_list': gene_list,
+        'new_page_url': '/project/{}/project_page'.format(project.seqr_project.guid) if project.seqr_project else None,
     })
 
 
@@ -1171,6 +1174,7 @@ def project_gene_list(request, project_id, gene_list_slug):
         'project': project,
         'gene_list': gene_list,
         'genes': gene_list.get_genes(),
+        'new_page_url': '/project/{}/project_page'.format(project.seqr_project.guid) if project.seqr_project else None,
     })
 
 

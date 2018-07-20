@@ -1,5 +1,11 @@
+import { Form } from 'semantic-ui-react'
+
 import BaseFieldView from '../components/panel/view-fields/BaseFieldView'
 import OptionFieldView from '../components/panel/view-fields/OptionFieldView'
+import { Select } from '../components/form/Inputs'
+import LocusIntervalField from '../components/form/LocusIntervalField'
+import { validators } from '../components/form/ReduxFormWrapper'
+
 
 // SAMPLES
 
@@ -136,4 +142,73 @@ export const CLINSIG_SEVERITY = {
   FP: 0,
   DFP: 0,
   DP: 0,
+}
+
+
+// LOCUS LISTS
+
+export const LOCUS_LIST_IS_PUBLIC_FIELD_NAME = 'isPublic'
+export const LOCUS_LIST_LAST_MODIFIED_FIELD_NAME = 'lastModifiedDate'
+export const LOCUS_LIST_CURATOR_FIELD_NAME = 'createdBy'
+
+export const LOCUS_LIST_FIELDS = [
+  {
+    name: 'name',
+    label: 'List Name',
+    labelHelp: 'A descriptive name for this gene list',
+    validate: validators.required,
+    width: 3,
+    isEditable: true,
+  },
+  {
+    name: LOCUS_LIST_IS_PUBLIC_FIELD_NAME,
+    label: 'Public List',
+    labelHelp: 'Should other seqr users be able to use this gene list?',
+    options: [{ value: true, text: 'Yes' }, { value: false, text: 'No' }],
+    component: Select,
+    validate: validators.requiredBoolean,
+    fieldDisplay: isPublic => (isPublic ? 'Yes' : 'No'),
+    width: 2,
+    isEditable: true,
+  },
+  { name: 'numEntries', label: 'Genes', width: 1 },
+  {
+    name: 'description',
+    label: 'Description',
+    labelHelp: 'Some background on how this list is curated',
+    width: 9,
+    isEditable: true,
+  },
+  {
+    name: LOCUS_LIST_LAST_MODIFIED_FIELD_NAME,
+    label: 'Last Updated',
+    width: 3,
+    fieldDisplay: lastModifiedDate => new Date(lastModifiedDate).toLocaleString('en-US', { year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric' }),
+  },
+  { name: LOCUS_LIST_CURATOR_FIELD_NAME, label: 'Curator', width: 3 },
+]
+
+export const LOCUS_LIST_GENE_FIELD = {
+  name: 'genes',
+  label: 'Genes',
+  labelHelp: 'A comma-separated list of genes. Any invalid genes will be skipped',
+  fieldDisplay: () => null,
+  isEditable: true,
+  component: Form.TextArea,
+  rows: 12,
+  format: value => (value || []).map(gene => gene.symbol).join(', '),
+  normalize: (value, previousValue) => value.split(',').map(geneSymbol =>
+    ((previousValue || []).find(prevGene => prevGene.symbol === geneSymbol.trim()) || { symbol: geneSymbol.trim() }),
+  ),
+}
+
+export const LOCUS_LIST_INTERVAL_FIELD = {
+  name: 'intervals',
+  label: 'Intervals',
+  fieldDisplay: () => null,
+  isEditable: true,
+  isArrayField: true,
+  addArrayElement: { label: 'Add Interval', newValue: { genomeVersion: '37' } },
+  validate: value => ((value && value.chrom && value.start && value.end) ? undefined : 'Chrom, start, and end are all required'),
+  component: LocusIntervalField,
 }

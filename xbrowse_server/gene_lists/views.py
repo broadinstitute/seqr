@@ -19,6 +19,7 @@ def home(request):
     return render(request, 'gene_lists/home.html', {
         'user_lists': user_lists,
         'public_lists': public_lists,
+        'new_page_url': '/gene_lists',
     })
 
 
@@ -47,6 +48,7 @@ def add(request):
 
     return render(request, 'gene_lists/add.html', {
         'form': form,
+        'new_page_url': '/gene_lists',
     })
 
 
@@ -66,6 +68,7 @@ def gene_list(request, slug):
     return render(request, 'gene_lists/gene_list.html', {
         'gene_list': _gene_list,
         'genes': _gene_list.get_genes(),
+        'new_page_url': '/gene_lists/{}'.format(_gene_list.seqr_locus_list.guid) if _gene_list.seqr_locus_list else None,
     })
 
 
@@ -106,6 +109,7 @@ def edit(request, slug):
     return render(request, 'gene_lists/edit.html', {
         'form': form,
         'gene_list': gene_list,
+        'new_page_url': '/gene_lists/{}'.format(gene_list.seqr_locus_list.guid) if gene_list.seqr_locus_list else None,
     })
 
 
@@ -125,6 +129,7 @@ def delete(request, slug):
 
     return render(request, 'gene_lists/delete.html', {
         'gene_list': _gene_list,
+        'new_page_url': '/gene_lists/{}'.format(_gene_list.seqr_locus_list.guid) if _gene_list.seqr_locus_list else None,
     })
 
 

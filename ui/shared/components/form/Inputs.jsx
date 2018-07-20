@@ -13,7 +13,7 @@ class BaseSemanticInput extends React.Component {
   }
 
   handleChange = (e, data) => {
-    this.props.onChange(data.value || data)
+    this.props.onChange(data.value === undefined ? data : data.value)
   }
 
   render() {
