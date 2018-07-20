@@ -5,12 +5,15 @@ APIs used by the project page
 import itertools
 import logging
 import json
+from collections import defaultdict
 
 from guardian.shortcuts import get_objects_for_group
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
 from django.db import connection
 from django.db.models import Q, Count
 
+from settings import SEQR_ID_TO_MME_ID_MAP
 from seqr.models import Individual, _slugify, CAN_VIEW, LocusList, \
     LocusListGene, LocusListInterval, VariantTagType, VariantTag, VariantFunctionalData
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
@@ -70,6 +73,7 @@ def project_page_data(request, project_guid):
         'familiesByGuid': families_by_guid,
         'individualsByGuid': individuals_by_guid,
         'samplesByGuid': samples_by_guid,
+        'matchmakerSubmissions': {project.guid: _project_matchmaker_submissions(project)}
     }
 
     return create_json_response(json_response)
@@ -345,3 +349,17 @@ def _has_gene_search(project):
     """
     base_project = BaseProject.objects.get(project_id=project.deprecated_project_id)
     return get_project_datastore(base_project).project_collection_is_loaded(base_project)
+
+
+def _project_matchmaker_submissions(project):
+    submissions_by_family_individual = defaultdict(lambda: defaultdict(list))
+    for submission in SEQR_ID_TO_MME_ID_MAP.find({'project_id': project.deprecated_project_id}):
+        submission_json = {'insertionDate': submission['insertion_date']}
+        if submission.get('deletion'):
+            deleted_by = User.objects.filter(username=submission['deletion']['by']).first()
+            submission_json['deletion'] = {
+                'date': submission['deletion']['date'],
+                'by': (deleted_by.get_full_name() or deleted_by.email) if deleted_by else submission['deletion']['by'],
+            }
+        submissions_by_family_individual[submission['family_id']][submission['seqr_id']].append(submission_json)
+    return submissions_by_family_individual

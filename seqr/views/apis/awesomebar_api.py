@@ -79,7 +79,7 @@ def _get_matching_families(user, query):
             'key': f.guid,
             'title': title[:MAX_STRING_LENGTH],
             'description': ('(%s)' % f.project.name) if f.project else '',
-            'href': '/project/'+f.project.deprecated_project_id+'/family/'+f.family_id,
+            'href': '/project/'+f.project.guid+'/family_page/'+f.guid,
         })
 
     families_result.sort(key=lambda f: len(f.get('title', '')))
@@ -113,7 +113,7 @@ def _get_matching_individuals(user, query):
             'key': i.guid,
             'title': title[:MAX_STRING_LENGTH],
             'description': ('(%s : family %s)' % (f.project.name, f.display_name)) if f.project else '',
-            'href': '/project/'+f.project.deprecated_project_id+'/family/'+f.family_id,
+            'href': '/project/'+f.project.guid+'/family_page/'+f.guid,
         })
 
     individuals_result.sort(key=lambda i: len(i.get('title', '')))

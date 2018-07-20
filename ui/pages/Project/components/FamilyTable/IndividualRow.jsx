@@ -2,6 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { connect } from 'react-redux'
+import { Label, Popup } from 'semantic-ui-react'
 import orderBy from 'lodash/orderBy'
 
 import PedigreeIcon from 'shared/components/icons/PedigreeIcon'
@@ -12,7 +13,7 @@ import { FamilyLayout } from 'shared/components/panel/family'
 import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
 
 import { updateIndividual } from 'redux/rootReducer'
-import { getUser } from 'redux/selectors'
+import { getUser, getMatchmakerSubmissions } from 'redux/selectors'
 import { getProject, getProjectSamplesByGuid } from 'pages/Project/selectors'
 import { SAMPLE_STATUS_LOADED, DATASET_TYPE_VARIANT_CALLS } from 'shared/utils/constants'
 import {
@@ -41,6 +42,65 @@ const CaseReviewDropdownContainer = styled.div`
   width: 220px;
 `
 
+const SpacedLabel = styled(Label)`
+  margin-top: 5px !important;
+`
+
+const CaseReviewStatus = ({ individual }) =>
+  <CaseReviewDropdownContainer>
+    <CaseReviewStatusDropdown individual={individual} />
+    {
+      individual.caseReviewStatusLastModifiedDate ? (
+        <Detail>
+          CHANGED ON {new Date(individual.caseReviewStatusLastModifiedDate).toLocaleDateString()}
+          { individual.caseReviewStatusLastModifiedBy && ` BY ${individual.caseReviewStatusLastModifiedBy}` }
+        </Detail>
+      ) : null
+    }
+  </CaseReviewDropdownContainer>
+
+CaseReviewStatus.propTypes = {
+  individual: PropTypes.object.isRequired,
+}
+
+const DataDetails = ({ loadedSamples, matchmakerSubmissions }) =>
+  <div>
+    {loadedSamples.map((sample, i) =>
+      <div key={sample.sampleGuid}>
+        <Sample loadedSample={sample} isOutdated={i !== 0} />
+      </div>,
+    )}
+    {matchmakerSubmissions && matchmakerSubmissions.map(submission => (
+      submission.deletion ? (
+        <Popup
+          key={submission.insertionDate}
+          flowing
+          trigger={
+            <SpacedLabel color="red" size="small">
+              Removed from MME: {new Date(submission.deletion.date).toLocaleDateString()}
+            </SpacedLabel>
+          }
+          content={
+            <div>
+              <b>Removed By: </b>{submission.deletion.by}<br />
+              <b>Originally Submitted: </b>{new Date(submission.insertionDate).toLocaleDateString()}
+            </div>
+          }
+        />
+      ) : (
+        <SpacedLabel key={submission.insertionDate} color="violet" size="small">
+          Submitted to MME: {new Date(submission.insertionDate).toLocaleDateString()}
+          {/* TODO delete button? */}
+        </SpacedLabel>
+      )
+    ))}
+  </div>
+
+DataDetails.propTypes = {
+  matchmakerSubmissions: PropTypes.array,
+  loadedSamples: PropTypes.array,
+}
+
 class IndividualRow extends React.Component
 {
   static propTypes = {
@@ -49,12 +109,13 @@ class IndividualRow extends React.Component
     family: PropTypes.object.isRequired,
     individual: PropTypes.object.isRequired,
     samplesByGuid: PropTypes.object.isRequired,
+    matchmakerSubmissions: PropTypes.array,
     updateIndividual: PropTypes.func,
     editCaseReview: PropTypes.bool,
   }
 
   render() {
-    const { user, project, family, individual, editCaseReview } = this.props
+    const { user, project, family, individual, editCaseReview, matchmakerSubmissions } = this.props
 
     const { individualId, displayName, paternalId, maternalId, sex, affected, createdDate } = individual
 
@@ -69,12 +130,6 @@ class IndividualRow extends React.Component
     loadedSamples = orderBy(loadedSamples, [s => s.loadedDate], 'desc')
     // only show first and latest samples
     loadedSamples.splice(1, loadedSamples.length - 2)
-
-    const sampleDetails = loadedSamples.map((sample, i) =>
-      <div key={sample.sampleGuid}>
-        <Sample loadedSample={sample} isOutdated={i !== 0} />
-      </div>,
-    )
 
     const leftContent =
       <div>
@@ -100,17 +155,8 @@ class IndividualRow extends React.Component
       </div>
 
     const rightContent = editCaseReview ?
-      <CaseReviewDropdownContainer>
-        <CaseReviewStatusDropdown individual={individual} />
-        {
-          individual.caseReviewStatusLastModifiedDate ? (
-            <Detail>
-              CHANGED ON {new Date(individual.caseReviewStatusLastModifiedDate).toLocaleDateString()}
-              { individual.caseReviewStatusLastModifiedBy && ` BY ${individual.caseReviewStatusLastModifiedBy}` }
-            </Detail>
-          ) : null
-        }
-      </CaseReviewDropdownContainer> : sampleDetails
+      <CaseReviewStatus individual={individual} /> :
+      <DataDetails loadedSamples={loadedSamples} matchmakerSubmissions={matchmakerSubmissions} />
 
     let fields = []
     if (editCaseReview ||
@@ -186,10 +232,11 @@ class IndividualRow extends React.Component
 
 export { IndividualRow as IndividualRowComponent }
 
-const mapStateToProps = state => ({
+const mapStateToProps = (state, ownProps) => ({
   user: getUser(state),
   project: getProject(state),
   samplesByGuid: getProjectSamplesByGuid(state),
+  matchmakerSubmissions: ((getMatchmakerSubmissions(state)[ownProps.family.projectGuid] || {})[ownProps.family.familyId] || {})[ownProps.individual.individualId],
 })
 
 const mapDispatchToProps = {
