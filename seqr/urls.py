@@ -59,6 +59,8 @@ from seqr.views.pages.staff.staff_pages import \
 
 from seqr.views.pages.staff.discovery_sheet import discovery_sheet
 from seqr.views.pages.staff.elasticsearch_status import elasticsearch_status
+from seqr.views.pages.staff.komp_export import komp_export
+
 
 from seqr.views.apis.awesomebar_api import awesomebar_autocomplete_handler
 from seqr.views.apis.auth_api import login_required_error, API_LOGIN_REQUIRED_URL
@@ -159,6 +161,7 @@ urlpatterns += [
     url("^staff/seqr_stats/?", seqr_stats_page, name="seqr_stats"),
     url("^staff/discovery_sheet/?(?P<project_guid>[^/]+)?/?", discovery_sheet, name="discovery_sheet"),
     url("^staff/elasticsearch_status", elasticsearch_status, name="elasticsearch_status"),
+    url("^staff/komp_export", komp_export, name="komp_export"),
     url("^staff/users/?", users_page, name="users_page"),
 ]
 
