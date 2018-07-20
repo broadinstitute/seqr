@@ -13,10 +13,9 @@ from django.http.response import HttpResponse
 from django.http import Http404
 from django.views.decorators.csrf import csrf_exempt
 from xbrowse_server.phenotips.utilities import do_authenticated_call_to_phenotips
-from xbrowse_server.phenotips.utilities import convert_external_id_to_internal_id
+from xbrowse_server.phenotips.utilities import get_phenotips_internal_id
 from xbrowse_server.phenotips.utilities import get_uname_pwd_for_project
 from xbrowse_server.phenotips.utilities import get_auth_level
-from xbrowse_server.phenotips.utilities import do_authenticated_PUT
 from xbrowse_server.phenotips.utilities import validate_phenotips_upload
 from xbrowse_server.phenotips.utilities import get_phenotypes_entered_for_individual
 from xbrowse_server.phenotips.utilities import merge_phenotype_data
@@ -50,8 +49,7 @@ def fetch_phenotips_edit_page(request, eid):
             # adding project id and patient_id to session for later use in proxying
             project_id = request.GET['project']
             request.session['current_project_id'] = project_id
-            admin_uname, admin_pwd = get_uname_pwd_for_project(project_id)
-            patient_id = convert_external_id_to_internal_id(eid, admin_uname, admin_pwd)
+            patient_id = get_phenotips_internal_id(eid, project_id)
             request.session['current_patient_id'] = patient_id
             auth_level = get_auth_level(project_id, request.user)
             if auth_level == 'unauthorized':
@@ -130,7 +128,7 @@ def fetch_phenotips_pdf_page(request, eid):
         current_user = request.user
         project_id = request.GET['project']
         uname, pwd = get_uname_pwd_for_project(project_id, read_only=True)
-        patient_id = convert_external_id_to_internal_id(eid, uname, pwd)
+        patient_id = get_phenotips_internal_id(eid, project_id)
         auth_level = get_auth_level(project_id, request.user)
         if auth_level == 'unauthorized':
             raise PermissionDenied
