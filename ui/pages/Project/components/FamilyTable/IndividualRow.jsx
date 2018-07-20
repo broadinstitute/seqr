@@ -75,7 +75,7 @@ const DataDetails = ({ loadedSamples, matchmakerSubmissions, deleteMmePatient })
     {matchmakerSubmissions && matchmakerSubmissions.map(submission => (
       submission.deletion ? (
         <Popup
-          key={submission.insertionDate}
+          key={submission.submissionDate}
           flowing
           trigger={
             <SpacedLabel color="red" size="small">
@@ -85,14 +85,14 @@ const DataDetails = ({ loadedSamples, matchmakerSubmissions, deleteMmePatient })
           content={
             <div>
               <b>Removed By: </b>{submission.deletion.by}<br />
-              <b>Originally Submitted: </b>{new Date(submission.insertionDate).toLocaleDateString()}
+              <b>Originally Submitted: </b>{new Date(submission.submissionDate).toLocaleDateString()}
             </div>
           }
         />
       ) : (
-        <div key={submission.insertionDate}>
+        <div key={submission.submissionDate}>
           <SpacedLabel color="violet" size="small">
-            Submitted to MME: {new Date(submission.insertionDate).toLocaleDateString()}
+            Submitted to MME: {new Date(submission.submissionDate).toLocaleDateString()}
           </SpacedLabel>
           <DispatchRequestButton
             buttonContent={<Icon name="trash" />}
@@ -246,7 +246,7 @@ const mapStateToProps = (state, ownProps) => ({
   user: getUser(state),
   project: getProject(state),
   samplesByGuid: getProjectSamplesByGuid(state),
-  matchmakerSubmissions: ((getMatchmakerSubmissions(state)[ownProps.family.projectGuid] || {})[ownProps.family.familyId] || {})[ownProps.individual.individualId],
+  matchmakerSubmissions: (getMatchmakerSubmissions(state)[ownProps.family.projectGuid][ownProps.family.familyId] || {})[ownProps.individual.individualId],
 })
 
 

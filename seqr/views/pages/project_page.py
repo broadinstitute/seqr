@@ -72,7 +72,7 @@ def project_page_data(request, project_guid):
         'individualsByGuid': individuals_by_guid,
         'samplesByGuid': samples_by_guid,
         'locusListsByGuid': {locus_list['locusListGuid']: locus_list for locus_list in locus_lists},
-        'matchmakerSubmissions': {project.guid: _project_matchmaker_submissions(project)},
+        'matchmakerSubmissions': {project.guid: _project_matchmaker_submissions(project)}
     }
 
     return create_json_response(json_response)
@@ -337,7 +337,7 @@ def _has_gene_search(project):
 def _project_matchmaker_submissions(project):
     submissions_by_family_individual = defaultdict(lambda: defaultdict(list))
     for submission in SEQR_ID_TO_MME_ID_MAP.find({'project_id': project.deprecated_project_id}):
-        submission_json = {'insertionDate': submission['insertion_date']}
+        submission_json = {'submissionDate': submission['insertion_date']}
         if submission.get('deletion'):
             deleted_by = User.objects.filter(username=submission['deletion']['by']).first()
             submission_json['deletion'] = {
