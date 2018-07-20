@@ -278,6 +278,7 @@ def _variant_details(variant_json, user):
         'clinvar': {
             'clinsig': extras.get('clinvar_clinsig'),
             'variantId': extras.get('clinvar_variant_id'),
+            'alleleId': extras.get('clinvar_allele_id'),
         },
         'hgmd': {
             'accession': extras.get('hgmd_accession'),

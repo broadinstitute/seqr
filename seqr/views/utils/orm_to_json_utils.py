@@ -5,14 +5,14 @@ Utility functions for converting Django ORM object to JSON
 import json
 import logging
 import os
-from django.db.models import Model
+from django.db.models import Model, prefetch_related_objects
 from django.db.models.fields.files import ImageFieldFile
 
 from seqr.models import CAN_EDIT, Project, Family, Individual, Sample, SavedVariant, VariantTag, \
     VariantFunctionalData, VariantNote, GeneNote, LocusList, LocusListInterval
 from seqr.utils.xpos_utils import get_chrom_pos
 from seqr.views.utils.json_utils import _to_camel_case
-from family_info_utils import retrieve_family_analysed_by
+from family_info_utils import retrieve_multi_family_analysed_by
 logger = logging.getLogger(__name__)
 
 
@@ -84,7 +84,7 @@ def _get_json_for_project(project, user, add_project_category_guids_field=True):
     return result
 
 
-def _get_json_for_families(families, user=None, add_individual_guids_field=False, add_analysed_by_field=True):
+def _get_json_for_families(families, user=None, add_individual_guids_field=False):
     """Returns a JSON representation of the given Family.
 
     Args:
@@ -103,17 +103,20 @@ def _get_json_for_families(families, user=None, add_individual_guids_field=False
                 pedigree_image = None
         return os.path.join("/media/", pedigree_image) if pedigree_image else None
 
+    if add_individual_guids_field:
+        prefetch_related_objects(families, 'individual_set')
+
     fields = _get_record_fields(Family, 'family', user)
+    family_dicts = [(family, _record_to_dict(family, fields, nested_fields=[('project', 'guid')])) for family in families]
+
+    analysed_by = retrieve_multi_family_analysed_by([family_dict for (family, family_dict) in family_dicts])
     results = []
-    for family in families:
-        family_dict = _record_to_dict(family, fields, nested_fields=[('project', 'guid')])
+    for (family, family_dict) in family_dicts:
         result = _get_json_for_record(family_dict, fields)
-        if add_analysed_by_field:
-            family_pk = result.pop('id')
-            result['analysedBy'] = retrieve_family_analysed_by(family_pk)
         result.update({
             'projectGuid': family_dict['project_guid'],
             'familyGuid': result.pop('guid'),
+            'analysedBy': analysed_by[result.pop('id')],
         })
         pedigree_image = _get_pedigree_image_url(result.pop('pedigreeImage'))
         if pedigree_image:
@@ -125,7 +128,7 @@ def _get_json_for_families(families, user=None, add_individual_guids_field=False
     return results
 
 
-def _get_json_for_family(family, user=None, add_individual_guids_field=False, add_analysed_by_field=True):
+def _get_json_for_family(family, user=None, add_individual_guids_field=False):
     """Returns a JSON representation of the given Family.
 
     Args:
@@ -136,15 +139,18 @@ def _get_json_for_family(family, user=None, add_individual_guids_field=False, ad
         dict: json object
     """
 
-    return _get_json_for_families([family], user, add_individual_guids_field, add_analysed_by_field)[0]
+    return _get_json_for_families([family], user, add_individual_guids_field)[0]
 
 
-def _get_json_for_individuals(individuals, user=None, project_guid=None, add_sample_guids_field=False):
+def _get_json_for_individuals(individuals, user=None, project_guid=None, family_guid=None, add_sample_guids_field=False):
     """Returns a JSON representation for the given list of Individuals.
 
     Args:
         individuals (array): array of dictionaries or django models for the individual.
         user (object): Django User object for determining whether to include restricted/internal-only fields
+        project_guid (boolean): An optional field to use as the projectGuid instead of querying the DB
+        family_guid (boolean): An optional field to use as the familyGuid instead of querying the DB
+        add_sample_guids_field (boolean): A flag to indicate weather sample ids should be added
     Returns:
         array: array of json objects
     """
@@ -164,9 +170,15 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, add_sam
     fields = _get_record_fields(Individual, 'individual', user)
 
     results = []
-    nested_fields = [('family', 'guid')]
+    nested_fields = []
+    if not family_guid:
+        nested_fields.append(('family', 'guid'))
     if not project_guid:
         nested_fields.append(('family', 'project', 'guid'))
+
+    if add_sample_guids_field:
+        prefetch_related_objects(individuals, 'sample_set')
+
     for individual in individuals:
         individual_dict = _record_to_dict(
             individual, fields, nested_fields=nested_fields
@@ -175,7 +187,7 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, add_sam
         result = _get_json_for_record(individual_dict, fields)
         result.update({
             'projectGuid': project_guid or individual_dict.get('family_project_guid') or individual_dict['project_guid'],
-            'familyGuid': individual_dict['family_guid'],
+            'familyGuid': family_guid or individual_dict['family_guid'],
             'individualGuid': result.pop('guid'),
             'caseReviewStatusLastModifiedBy': _get_case_review_status_modified_by(result.get('caseReviewStatusLastModifiedBy')),
             'phenotipsData': _load_phenotips_data(result['phenotipsData'])

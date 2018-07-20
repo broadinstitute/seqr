@@ -46,8 +46,14 @@ PathogenicityLink.propTypes = {
 }
 
 
+const clinvarUrl = (clinvar) => {
+  const baseUrl = 'http://www.ncbi.nlm.nih.gov/clinvar'
+  const variantPath = clinvar.alleleId ? `?term=${clinvar.alleleId}[alleleid]` : `/variation/${clinvar.variantId}`
+  return baseUrl + variantPath
+}
+
 const Pathogenicity = ({ variant }) => {
-  if (!variant.clinvar.variantId && !variant.hgmd.class) {
+  if (!variant.clinvar.variantId && !variant.clinvar.alleleId && !variant.hgmd.class) {
     return null
   }
 
@@ -60,7 +66,7 @@ const Pathogenicity = ({ variant }) => {
             <PathogenicityLink
               key={clinsig}
               clinsig={clinsig}
-              href={`http://www.ncbi.nlm.nih.gov/clinvar/variation/${variant.clinvar.variantId}`}
+              href={clinvarUrl(variant.clinvar)}
               formatName={snakecaseToTitlecase}
             />,
           )}

@@ -109,7 +109,7 @@ class ElasticsearchDatastore(datastore.Datastore):
                 self._redis_client = redis.StrictRedis(host=settings.REDIS_SERVICE_HOSTNAME, socket_connect_timeout=3)
                 self._redis_client.ping()
             except redis.exceptions.TimeoutError as e:
-                logger.warn("Unable to connect to redis: " + str(e))
+                logger.warn("Unable to connect to redis host: {}".format(settings.REDIS_SERVICE_HOSTNAME) + str(e))
                 self._redis_client = None
             
     def get_elasticsearch_variants(
@@ -128,7 +128,7 @@ class ElasticsearchDatastore(datastore.Datastore):
         from xbrowse_server.base.models import Individual
         from xbrowse_server.mall import get_reference
 
-        cache_key = "%s___%s___%s" % (
+        cache_key = "Variants___%s___%s___%s" % (
             project_id,
             family_id,
             json.dumps([
@@ -158,7 +158,7 @@ class ElasticsearchDatastore(datastore.Datastore):
             family_individual_ids = [i.indiv_id for i in Individual.objects.filter(family__project__project_id=project_id).only("indiv_id")]
 
         from xbrowse_server.base.models import Project, Family
-        from pyliftover import LiftOver
+        from pyliftover.liftover import LiftOver
 
         query_json = self._make_db_query(genotype_filter, variant_filter)
 
@@ -649,23 +649,19 @@ class ElasticsearchDatastore(datastore.Datastore):
 
             # add gene info
             gene_names = {}
-            gene_consequences = {}
             if vep_annotation is not None:
                 gene_names = {vep_anno["gene_id"]: vep_anno.get("gene_symbol") for vep_anno in vep_annotation if vep_anno.get("gene_symbol")}
-                gene_consequences = {vep_anno["gene_id"]: vep_anno.get("major_consequence") for vep_anno in vep_annotation if vep_anno.get("major_consequence")}
             result["extras"]["gene_names"] = gene_names
 
             try:
                 genes = {}
                 for gene_id in result["coding_gene_ids"]:
-                    # temporarily post-filter gene_ids to exclude upstream/downstream gene consequences until elasticsearch datasets are reloaded
-                    if gene_id and (not gene_consequences.get(gene_id) or gene_consequences.get(gene_id) not in {"upstream_gene_variant", "downstream_gene_variant"}):
+                    if gene_id:
                         genes[gene_id] = reference.get_gene_summary(gene_id) or {}
 
                 if not genes:
                     for gene_id in result["gene_ids"]:
-                        # temporarily post-filter gene_ids to exclude upstream/downstream gene consequences until elasticsearch datasets are reloaded
-                        if gene_id and (not gene_consequences.get(gene_id) or gene_consequences.get(gene_id) not in {"upstream_gene_variant", "downstream_gene_variant"}):
+                        if gene_id:
                             genes[gene_id] = reference.get_gene_summary(gene_id) or {}
 
                 #if not genes:

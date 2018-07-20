@@ -9,7 +9,7 @@ from seqr.models import GeneNote
 from seqr.model_utils import create_seqr_model, delete_seqr_model
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.utils.gene_utils import get_gene
-from seqr.views.utils.json_to_orm_utils import update_gene_note_from_json
+from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_gene_note
 
@@ -50,7 +50,7 @@ def update_gene_note_handler(request, gene_id, note_guid):
         raise PermissionDenied("User does not have permission to edit this note")
 
     request_json = json.loads(request.body)
-    update_gene_note_from_json(note, request_json, allow_unknown_keys=True)
+    update_model_from_json(note, request_json, allow_unknown_keys=True)
 
     return create_json_response({gene_id: {
         'notes': _get_gene_notes(gene_id, request.user)

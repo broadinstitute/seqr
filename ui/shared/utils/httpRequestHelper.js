@@ -80,7 +80,11 @@ export class HttpRequestHelper {
           throw err
         })
       }
-      return response.json()
+      try {
+        return response.json()
+      } catch (exception) {
+        throw response.body
+      }
     })
       .then((responseJson) => {
         if (this.debug) {

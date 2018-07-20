@@ -344,24 +344,28 @@ READ_VIZ_USERNAME=None   # used to authenticate to remote HTTP bam server
 READ_VIZ_PASSWD=None
 
 
-PHENOTIPS_PORT=os.environ.get('PHENOTIPS_SERVICE_PORT', 8080)
+KIBANA_SERVICE_HOSTNAME = os.environ.get('KIBANA_SERVICE_HOSTNAME', 'localhost')
+KIBANA_PORT = os.environ.get('KIBANA_PORT', 5601)
+KIBANA_SERVER = "%s:%s" % (KIBANA_SERVICE_HOSTNAME, KIBANA_PORT)
+
+PHENOTIPS_PORT = os.environ.get('PHENOTIPS_SERVICE_PORT', 8080)
 PHENOTIPS_SERVICE_HOSTNAME = os.environ.get('PHENOTIPS_SERVICE_HOSTNAME', 'localhost')
 PHENOTIPS_SERVER = "%s:%s" % (PHENOTIPS_SERVICE_HOSTNAME, PHENOTIPS_PORT)
-PHENOPTIPS_BASE_URL='http://%s:%s' % (os.environ.get('PHENOTIPS_SERVICE_HOSTNAME', 'localhost'), PHENOTIPS_PORT)
-PHENOPTIPS_ALERT_CONTACT='harindra@broadinstitute.org'
+PHENOPTIPS_BASE_URL = 'http://%s:%s' % (os.environ.get('PHENOTIPS_SERVICE_HOSTNAME', 'localhost'), PHENOTIPS_PORT)
+PHENOPTIPS_ALERT_CONTACT = 'harindra@broadinstitute.org'
 _client = MongoClient(MONGO_SERVICE_HOSTNAME, 27017)
 _db = _client['phenotips_edit_audit']
 PHENOTIPS_EDIT_AUDIT = _db['phenotips_audit_record']
-PHENOTIPS_ADMIN_UNAME='Admin'
-PHENOTIPS_ADMIN_PWD='admin'
-PHENOTIPS_UPLOAD_EXTERNAL_PHENOTYPE_URL="http://"+PHENOTIPS_SERVICE_HOSTNAME+":"+str(PHENOTIPS_PORT)+"/rest/patients/eid"
+PHENOTIPS_ADMIN_UNAME = 'Admin'
+PHENOTIPS_ADMIN_PWD = 'admin'
+PHENOTIPS_UPLOAD_EXTERNAL_PHENOTYPE_URL = "http://"+PHENOTIPS_SERVICE_HOSTNAME+":"+str(PHENOTIPS_PORT)+"/rest/patients/eid"
 
 # when set to None, this *disables* the PhenoTips interface for all projects. If set to a list of project ids, it will
 # enable the PhenoTips interface for *all* projects except those in the list.
 PROJECTS_WITHOUT_PHENOTIPS = []
 
 
-REDIS_SERVICE_HOSTNAME = os.environ.get('REDIS_SERVICE_HOST')
+REDIS_SERVICE_HOSTNAME = os.environ.get('REDIS_SERVICE_HOSTNAME')
 
 
 #-----------------Matchmaker constants-----------------

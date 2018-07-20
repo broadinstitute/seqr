@@ -12,7 +12,6 @@ from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_family
 from seqr.models import Family
-from xbrowse_server.base.models import Family as BaseFamily
 
 
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)

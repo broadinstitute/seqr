@@ -322,7 +322,7 @@ class Individual(ModelWithGUID):
 
     notes = models.TextField(blank=True, null=True)
 
-    case_review_status = models.CharField(max_length=2, choices=CASE_REVIEW_STATUS_CHOICES, null=True, blank=True)
+    case_review_status = models.CharField(max_length=2, choices=CASE_REVIEW_STATUS_CHOICES, default=CASE_REVIEW_STATUS_IN_REVIEW)
     case_review_status_last_modified_date = models.DateTimeField(null=True, blank=True, db_index=True)
     case_review_status_last_modified_by = models.ForeignKey(User, null=True, blank=True, related_name='+', on_delete=models.SET_NULL)
     case_review_discussion = models.TextField(null=True, blank=True)

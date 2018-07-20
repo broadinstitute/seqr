@@ -14,7 +14,6 @@ from seqr.models import Individual, _slugify, VariantTagType, VariantTag, Varian
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.individual_api import export_individuals
 from seqr.views.apis.locus_list_api import get_sorted_project_locus_lists
-from seqr.views.utils.family_info_utils import retrieve_multi_family_analysed_by
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import \
     _get_json_for_project, _get_json_for_sample, _get_json_for_families, _get_json_for_individuals, get_json_for_saved_variant
@@ -112,14 +111,12 @@ def _retrieve_families(cursor, project_guid, user):
 
     columns = [col[0] for col in cursor.description]
     family_rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
-    families = _get_json_for_families(family_rows, user, add_analysed_by_field=False)
+    families = _get_json_for_families(family_rows, user)
 
-    analysed_by = retrieve_multi_family_analysed_by(families)
     families_by_guid = {}
     for family in families:
         family_guid = family['familyGuid']
         family['individualGuids'] = set()
-        family['analysedBy'] = analysed_by[family_guid]
         families_by_guid[family_guid] = family
 
     return families_by_guid
