@@ -7,7 +7,7 @@ import { connect } from 'react-redux'
 import { getLocusListsByGuid } from 'redux/selectors'
 import { setModalConfirm, closeModal } from 'redux/utils/modalReducer'
 import { LocusListsLoader } from 'shared/components/LocusListLoader'
-import LocusListDetail from 'shared/components/panel/genes/LocusListDetail'
+import LocusListDetailPanel from 'shared/components/panel/genes/LocusListDetail'
 import LocusListTables from 'shared/components/table/LocusListTables'
 import { CreateLocusListButton } from 'shared/components/buttons/LocusListButtons'
 import DispatchRequestButton from 'shared/components/buttons/DispatchRequestButton'
@@ -47,7 +47,7 @@ const LocusListItem = ({ project, locusList, onSubmit }) => {
         trigger={<ButtonLink>{locusList.name}</ButtonLink>}
         size="large"
       >
-        <LocusListDetail locusListGuid={locusList.locusListGuid} projectGuid={project.projectGuid} />
+        <LocusListDetailPanel locusListGuid={locusList.locusListGuid} projectGuid={project.projectGuid} />
       </Modal>
       <HorizontalSpacer width={5} />
       <Popup

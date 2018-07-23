@@ -9,6 +9,7 @@ from xbrowse_server.base.models import Project as BaseProject, Family as BaseFam
     ProjectTag as BaseProjectTag, VariantTag as BaseVariantTag, VariantNote as BaseVariantNote, \
     VariantFunctionalData as BaseVariantFunctionalData, GeneNote as BaseGeneNote
 from xbrowse_server.gene_lists.models import GeneList as BaseGeneList, GeneListItem as BaseGeneListItem
+from xbrowse.utils import slugify
 
 SEQR_TO_XBROWSE_CLASS_MAPPING = {
     "Project": BaseProject,
@@ -214,7 +215,7 @@ def convert_seqr_kwargs_to_xbrowse_kwargs(seqr_model, **kwargs):
         xbrowse_kwargs["project"] = getattr(seqr_model, "family").project
 
     if seqr_class_name == "LocusList" and 'name' in xbrowse_kwargs:
-        xbrowse_kwargs['slug'] = xbrowse_kwargs['name'].replace(' ', '-').lower()
+        xbrowse_kwargs['slug'] = slugify(xbrowse_kwargs['name'])
 
     # handle foreign keys
     for key, value in xbrowse_kwargs.items():
