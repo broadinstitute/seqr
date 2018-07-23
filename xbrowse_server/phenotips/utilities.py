@@ -2,6 +2,7 @@ import fnmatch
 import logging
 import os
 import requests
+import json
 
 from django.conf import settings
 from django.shortcuts import get_object_or_404
@@ -21,18 +22,35 @@ def create_patient_record(external_id, project_id, patient_details=None):
       By convention username and password are project_id,project_idproject_id
       Authentication is protected by access to machine/localhost
     """
-    uri = settings.PHENOPTIPS_BASE_URL + '/bin/PhenoTips/OpenPatientRecord?create=true&eid=' + external_id
-    if patient_details is not None:
-        uri += '&gender=' + patient_details['gender']
-    uname, pwd = get_uname_pwd_for_project(project_id)
-    result, curr_session = do_authenticated_call_to_phenotips(uri, uname, pwd)
-    if result is not None and result.status_code == 200:
+    try:
+        _create_patient_record_handler(external_id, project_id, patient_details=patient_details)
         print 'successfully created or updated patient', external_id
-        patient_id = convert_external_id_to_internal_id(external_id, uname, pwd)
+    except Exception as e:
+        print e
+
+
+def _create_patient_record_handler(external_id, project_id, patient_details=None):
+    """
+    Make a patient record:
+
+      Create a patient record in phenotips.
+      By convention username and password are project_id,project_idproject_id
+      Authentication is protected by access to machine/localhost
+    """
+    uname, pwd = get_uname_pwd_for_project(project_id)
+    url = settings.PHENOPTIPS_BASE_URL + '/rest/patients'
+    headers = {"Content-Type": "application/json"}
+    data = {'external_id': external_id}
+    if patient_details:
+        data.update(patient_details)
+    result = do_authenticated_POST(uname, pwd, url, json.dumps(data), headers)
+    if result is not None and result.status_code == 201:
+        patient_id = result.headers['Location'].split('/')[-1]
         collaborator_username, collab_pwd = get_uname_pwd_for_project(project_id, read_only=True)
         add_read_only_user_to_phenotips_patient(collaborator_username, patient_id)
+        return patient_id
     else:
-        print 'error creating patient', external_id, ':', result
+        raise Exception('error creating patient {}: {}'.format(external_id, result))
 
 
 def do_authenticated_call_to_phenotips(url, uname, pwd, curr_session=None):
@@ -51,21 +69,21 @@ def do_authenticated_call_to_phenotips(url, uname, pwd, curr_session=None):
 class PatientNotFoundError(StandardError):
     pass
 
-def convert_external_id_to_internal_id(external_id, project_phenotips_uname, project_phenotips_pwd):
+
+def get_phenotips_internal_id(external_id, project_id, patient_details=None):
     """
     To help process a translation of external id (eg. seqr ID) to internal id (eg. the PhenoTips P00123 id)
     """
 
     url = os.path.join(settings.PHENOPTIPS_BASE_URL, 'rest/patients/eid/' + str(external_id))
-    result, curr_session = do_authenticated_call_to_phenotips(url, project_phenotips_uname, project_phenotips_pwd)
+    uname, pwd = get_uname_pwd_for_project(project_id)
+    result, curr_session = do_authenticated_call_to_phenotips(url, uname, pwd)
     if result.status_code == 404:
-        raise PatientNotFoundError(("Failed to convert %s to internal id (HTTP response code: %s). "
-                                    "Please check that the project and individual were previously created in Phenotips.") % (
-                external_id, result.status_code))
+        return _create_patient_record_handler(external_id, project_id, patient_details=patient_details)
     elif result.status_code != 200:
         raise Exception(("Failed to convert %s to internal id for unknown reasons (HTTP response code: %s, %s)") % (
                 external_id, result.status_code, result.reason))
-    
+
     as_json = result.json()
     return as_json['id']
 
@@ -182,6 +200,7 @@ def do_authenticated_POST(uname, pwd, url, data, headers):
     """
     try:
         request = requests.post(url, data=data, auth=(uname, pwd), headers=headers)
+        return request
     except Exception as e:
         print 'error in do_authenticated_POST:', e,
         raise
@@ -261,15 +280,8 @@ def add_individuals_to_phenotips(project_id, individual_ids=None):
 
         assert indiv.gender in ['M', 'F', 'U'], "Unexpected value for gender in %s : %s " % (indiv, indiv.gender)
 
-        uname, pwd = get_uname_pwd_for_project(project_id)
-
-        # check whether the patient already exists
-        try:
-            patient_id = convert_external_id_to_internal_id(indiv.phenotips_id, uname, pwd)
-            print("%s: %s already exists in phenotips. Skipping... " % (project_id, indiv.phenotips_id))
-        except PatientNotFoundError as e:
-            print("%s: Creating phenotips patient for phenotips_id: %s " % (project_id, indiv.phenotips_id))
-            create_patient_record(indiv.phenotips_id, project_id, patient_details={'gender': indiv.gender})
+        # check whether the patient already exists and create them if not
+        get_phenotips_internal_id(indiv.phenotips_id, project_id, patient_details={'gender': indiv.gender})
 
 
 def add_individuals_with_details_to_phenotips(individual_details, project_id):

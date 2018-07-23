@@ -65,7 +65,7 @@ const taggedByPopup = (tag, title) => trigger =>
     content={
       <div>
         {tag.createdBy || 'unknown user'}
-        {tag.lastModifiedDate && <span>on {new Date(tag.lastModifiedDate).toLocaleDateString()}</span>}
+        {tag.lastModifiedDate && <span>&nbsp; on {new Date(tag.lastModifiedDate).toLocaleDateString()}</span>}
         {tag.metadata && <div>{tag.metadataTitle ? <span><b>{tag.metadataTitle}:</b> {tag.metadata}</span> : <i>{tag.metadata}</i>}</div>}
         {tag.searchParameters && <div><a href={tag.searchParameters} target="_blank" rel="noopener noreferrer">Re-run search</a></div>}
       </div>
