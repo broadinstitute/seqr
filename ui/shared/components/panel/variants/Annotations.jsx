@@ -1,21 +1,52 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import { Popup, Label } from 'semantic-ui-react'
+import { Popup, Label, Icon } from 'semantic-ui-react'
 
-import { HorizontalSpacer } from '../../Spacers'
+import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
 import Modal from '../../modal/Modal'
 import ButtonLink from '../../buttons/ButtonLink'
 import Transcripts from './Transcripts'
 
 
-const ProteinSequenceContainer = styled.span`
+const SequenceContainer = styled.span`
   word-break: break-all;
-  color: black;
+  color: ${props => props.color || 'inherit'};
 `
 
+const LargeText = styled.div`
+  font-size: 1.2em;
+`
+
+export const getLocus = (variant, rangeSize) =>
+  `chr${variant.chrom}:${variant.pos - rangeSize}-${variant.pos + rangeSize}`
+
+const ucscBrowserLink = (variant, genomeVersion) => {
+  /* eslint-disable space-infix-ops */
+  genomeVersion = genomeVersion || variant.genomeVersion
+  genomeVersion = genomeVersion === '37' ? '19' : genomeVersion
+  const highlight = `hg${genomeVersion}.chr${variant.chrom}:${variant.pos}-${variant.pos + (variant.ref.length-1)}`
+  const position = getLocus(variant, 10)
+  return `http://genome.ucsc.edu/cgi-bin/hgTracks?db=hg${genomeVersion}&highlight=${highlight}&position=${position}`
+}
+
+const MAX_SEQUENCE_LENGTH = 30
+const SEQUENCE_POPUP_STYLE = { wordBreak: 'break-all' }
+
+const Sequence = ({ sequence, ...props }) =>
+  <SequenceContainer {...props}>
+    {sequence.length > MAX_SEQUENCE_LENGTH ?
+      <Popup trigger={<span>{`${sequence.substring(0, MAX_SEQUENCE_LENGTH)}...`}</span>} content={sequence} style={SEQUENCE_POPUP_STYLE} /> :
+      sequence
+    }
+  </SequenceContainer>
+
+Sequence.propTypes = {
+  sequence: PropTypes.string.isRequired,
+}
+
 export const ProteinSequence = ({ hgvs }) =>
-  <ProteinSequenceContainer>{hgvs.split(':').pop()}</ProteinSequenceContainer>
+  <Sequence color="black" sequence={hgvs.split(':').pop()} />
 
 ProteinSequence.propTypes = {
   hgvs: PropTypes.string.isRequired,
@@ -80,10 +111,8 @@ const annotationVariations = (mainTranscript, variant) => {
 }
 
 const Annotations = ({ variant }) => {
-  const { mainTranscript, vepGroup } = variant.annotation
-  if (!mainTranscript) {
-    return null
-  }
+  const { vepGroup, rsid } = variant.annotation
+  const mainTranscript = variant.annotation.mainTranscript || {}
 
   const variations = annotationVariations(mainTranscript, variant)
   const lofDetails = (mainTranscript.lof === 'LC' || mainTranscript.lofFlags === 'NAGNAG_SITE') ? [
@@ -127,11 +156,44 @@ const Annotations = ({ variant }) => {
           <b>HGVS.P</b><HorizontalSpacer width={5} /><ProteinSequence hgvs={mainTranscript.hgvsp} />
         </div>
       }
-      <div>
-        <a href={`https://www.google.com/search?q=${mainTranscript.symbol}+${variations.join('+')}`} target="_blank" rel="noopener noreferrer">google</a>
-        <HorizontalSpacer width={5} />|<HorizontalSpacer width={5} />
-        <a href={`https://www.ncbi.nlm.nih.gov/pubmed?term=${mainTranscript.symbol} AND ( ${variations.join(' OR ')})`} target="_blank" rel="noopener noreferrer">pubmed</a>
-      </div>
+      { Object.keys(mainTranscript).length > 0 && <VerticalSpacer height={10} />}
+      <LargeText>
+        <a href={ucscBrowserLink(variant)} target="_blank" rel="noopener noreferrer"><b>{variant.chrom}:{variant.pos}</b></a>
+        <HorizontalSpacer width={10} />
+        <Sequence sequence={variant.ref} />
+        <Icon name="angle right" />
+        <Sequence sequence={variant.alt} />
+      </LargeText>
+      {rsid &&
+        <div>
+          <a href={`http://www.ncbi.nlm.nih.gov/SNP/snp_ref.cgi?searchType=adhoc_search&type=rs&rs=${rsid}`} target="_blank" rel="noopener noreferrer">
+            {rsid}
+          </a>
+        </div>
+      }
+      {variant.liftedOverGenomeVersion === '37' && (
+        variant.liftedOverPos ?
+          <div>
+            hg19:<HorizontalSpacer width={5} />
+            <a href={ucscBrowserLink(variant, '37')} target="_blank" rel="noopener noreferrer">
+              chr{variant.liftedOverChrom}:{variant.liftedOverPos}
+            </a>
+          </div>
+          : <div>hg19: liftover failed</div>
+        )
+      }
+      {mainTranscript.symbol &&
+        <div>
+          <VerticalSpacer height={5} />
+          <a href={`https://www.google.com/search?q=${mainTranscript.symbol}+${variations.join('+')}`} target="_blank" rel="noopener noreferrer">
+            google
+          </a>
+          <HorizontalSpacer width={5} />|<HorizontalSpacer width={5} />
+          <a href={`https://www.ncbi.nlm.nih.gov/pubmed?term=${mainTranscript.symbol} AND ( ${variations.join(' OR ')})`} target="_blank" rel="noopener noreferrer">
+            pubmed
+          </a>
+        </div>
+      }
     </div>
   )
 }

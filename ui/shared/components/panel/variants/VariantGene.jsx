@@ -13,11 +13,11 @@ import GeneDetail from '../genes/GeneDetail'
 const CONSTRAINED_GENE_RANK_THRESHOLD = 1000
 
 const GeneLabelContent = styled(Label).attrs({
-  size: 'small',
+  size: 'mini',
   color: props => props.color || 'grey',
   content: props => props.label,
 })`
-   margin: 0px 10px 10px 0px !important;
+   margin: 0px .5em .8em 0px !important;
 `
 
 const GeneLinks = styled.div`

@@ -1,5 +1,6 @@
 import React from 'react'
 import PropTypes from 'prop-types'
+import styled from 'styled-components'
 import { Icon } from 'semantic-ui-react'
 
 
@@ -12,6 +13,12 @@ const SEVERITY_MAP = {
   tolerated: 'green',
   polymorphism: 'green',
 }
+
+const PredictionValue = styled.span`
+  font-weight: bolder;
+  color: grey;
+  text-transform: uppercase;
+`
 
 const Prediction = ({ field, annotation, dangerThreshold, warningThreshold }) => {
   let value = annotation[field]
@@ -34,7 +41,7 @@ const Prediction = ({ field, annotation, dangerThreshold, warningThreshold }) =>
     value = value.replace('_', ' ')
   }
 
-  return <div><Icon name="circle" size="small" color={color} /><b>{field.replace('_', ' ').toUpperCase()} </b>{value}</div>
+  return <div><Icon name="circle" size="small" color={color} />{field.replace('_', ' ').toUpperCase()} <PredictionValue>{value}</PredictionValue></div>
 }
 
 Prediction.propTypes = {

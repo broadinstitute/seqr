@@ -1,6 +1,6 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import { Grid, Label } from 'semantic-ui-react'
+import { Label } from 'semantic-ui-react'
 
 import { CLINSIG_SEVERITY } from '../../../utils/constants'
 import { snakecaseToTitlecase } from '../../../utils/stringUtils'
@@ -58,7 +58,7 @@ const Pathogenicity = ({ variant }) => {
   }
 
   return (
-    <Grid.Column width={16}>
+    <span>
       {variant.clinvar.clinsig &&
         <span>
           <b>ClinVar:<HorizontalSpacer width={5} /></b>
@@ -83,7 +83,7 @@ const Pathogenicity = ({ variant }) => {
           />
         </span>
       }
-    </Grid.Column>
+    </span>
   )
 }
 
