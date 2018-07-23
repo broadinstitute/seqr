@@ -47,7 +47,7 @@ const LocusListItem = ({ project, locusList, onSubmit }) => {
         trigger={<ButtonLink>{locusList.name}</ButtonLink>}
         size="large"
       >
-        <LocusListDetailPanel locusListGuid={locusList.locusListGuid} projectGuid={project.projectGuid} />
+        <LocusListDetailPanel locusListGuid={locusList.locusListGuid} />
       </Modal>
       <HorizontalSpacer width={5} />
       <Popup

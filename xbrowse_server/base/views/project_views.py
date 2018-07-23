@@ -16,6 +16,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.contrib import messages
+from guardian.shortcuts import assign_perm, remove_perm
 from xbrowse_server.base.model_utils import update_xbrowse_model, delete_xbrowse_model, get_or_create_xbrowse_model, \
     create_xbrowse_model
 from xbrowse_server.mall import get_project_datastore
@@ -28,6 +29,7 @@ from xbrowse_server import server_utils
 from xbrowse_server.base.utils import get_collaborators_for_user, get_filtered_families, get_loaded_projects_for_user
 from xbrowse_server.gene_lists.models import GeneList
 from xbrowse_server.base.models import ProjectGeneList
+from xbrowse_server.base.model_utils import find_matching_seqr_model
 from xbrowse_server.base.lookups import get_all_saved_variants_for_project, get_variants_by_tag, get_causal_variants_for_project
 from xbrowse_server.api.utils import add_extra_info_to_variants_project
 from xbrowse_server.base import forms as base_forms
@@ -39,7 +41,7 @@ from xbrowse_server.mall import get_reference
 from xbrowse_server import mall
 from xbrowse_server.gene_lists.views import download_response as gene_list_download_response
 from xbrowse_server.decorators import log_request
-from seqr.models import Project as SeqrProject
+from seqr.models import Project as SeqrProject, CAN_VIEW
 
 
 log = logging.getLogger('xbrowse_server')
@@ -174,6 +176,9 @@ def add_gene_list(request, project_id):
                 break
 
             ProjectGeneList.objects.get_or_create(project=project, gene_list=genelist)
+            if project.seqr_project:
+                seqr_locus_list = find_matching_seqr_model(genelist)
+                assign_perm(user_or_group=project.seqr_project.can_view_group, perm=CAN_VIEW, obj=seqr_locus_list)
 
         if not error:
             return redirect('project_gene_list_settings', project_id=project_id)
@@ -201,6 +206,9 @@ def remove_gene_list(request, project_id, gene_list_slug):
 
     if request.method == 'POST':
         ProjectGeneList.objects.filter(project=project, gene_list=gene_list).delete()
+        if project.seqr_project:
+            seqr_locus_list = find_matching_seqr_model(gene_list)
+            remove_perm(user_or_group=project.seqr_project.can_view_group, perm=CAN_VIEW, obj=seqr_locus_list)
         return redirect('project_gene_list_settings', project.project_id)
 
     return render(request, 'project/remove_gene_list.html', {

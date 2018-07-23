@@ -44,12 +44,8 @@ const mapStateToProps = state => ({
   locusListsByGuid: getLocusListsByGuid(state),
 })
 
-const mapDispatchToProps = (dispatch, ownProps) => {
-  return {
-    load: (locusListGuid) => {
-      dispatch(loadLocusLists(locusListGuid, ownProps.projectGuid))
-    },
-  }
+const mapDispatchToProps = {
+  load: loadLocusLists,
 }
 
 export const LocusListsLoader = connect(mapStateToProps, mapDispatchToProps)(BaseLocusListsLoader)

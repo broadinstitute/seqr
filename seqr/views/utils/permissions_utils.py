@@ -31,10 +31,18 @@ def get_project_and_check_permissions(project_guid, user, permission_level=CAN_V
 
 
 def check_permissions(project, user, permission_level=CAN_VIEW):
-    if user.has_perm(permission_level, project) or user.is_superuser or (user.is_staff and not project.disable_staff_access):
+    check_object_permissions(
+        project, user, permission_level=permission_level,
+        check_permission=lambda project, user: user.is_staff and not project.disable_staff_access
+    )
+
+
+def check_object_permissions(obj, user, permission_level=CAN_VIEW, check_permission=None):
+    if user.has_perm(permission_level, obj) or user.is_superuser or (check_permission and check_permission(obj, user)):
         pass
     else:
-        raise PermissionDenied("%(user)s does not have %(permission_level)s permissions for %(project)s" % locals())
+        raise PermissionDenied("{user} does not have {permission_level} permissions for {object}".format(
+            user=user, object=obj, permission_level=permission_level))
 
 
 def get_projects_user_can_view(user):

@@ -112,8 +112,8 @@ LocusListDetail.propTypes = {
 }
 
 
-const LoadedLocusListDetail = ({ locusListGuid, locusList, projectGuid, onSubmit }) =>
-  <LocusListGeneLoader locusListGuid={locusListGuid} locusList={locusList} projectGuid={projectGuid}>
+const LoadedLocusListDetail = ({ locusListGuid, locusList, onSubmit }) =>
+  <LocusListGeneLoader locusListGuid={locusListGuid} locusList={locusList}>
     <LocusListDetail locusList={locusList} onSubmit={onSubmit} />
   </LocusListGeneLoader>
 
@@ -121,7 +121,6 @@ LoadedLocusListDetail.propTypes = {
   locusListGuid: PropTypes.string.isRequired,
   locusList: PropTypes.object,
   onSubmit: PropTypes.func,
-  projectGuid: PropTypes.string,
 }
 
 const mapStateToProps = (state, ownProps) => ({
