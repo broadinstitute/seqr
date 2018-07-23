@@ -11,7 +11,7 @@ import uuid
 import settings
 
 import requests.exceptions
-from xbrowse_server.phenotips.utilities import get_uname_pwd_for_project, convert_external_id_to_internal_id
+from xbrowse_server.phenotips.utilities import get_uname_pwd_for_project, get_phenotips_internal_id
 
 
 def generate_guid(apps, schema_editor):
@@ -32,8 +32,7 @@ def generate_guid(apps, schema_editor):
                 ok_to_use_new_guid = True
             else:
                 try:
-                    admin_uname, admin_pwd = get_uname_pwd_for_project(indiv.project.project_id)
-                    patient_id = convert_external_id_to_internal_id(indiv.indiv_id, admin_uname, admin_pwd)
+                    patient_id = get_phenotips_internal_id(indiv.indiv_id, indiv.project.project_id)
                     ok_to_use_new_guid = False  # patient is in phenotips, so can't use new id
                     print("Reusuing original id: " + str(indiv.indiv_id))
                 except django.db.utils.IntegrityError:
