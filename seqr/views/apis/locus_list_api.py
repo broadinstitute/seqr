@@ -1,11 +1,10 @@
 import json
 import logging
 
-from django.core.exceptions import PermissionDenied
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.views.decorators.csrf import csrf_exempt
-from guardian.shortcuts import get_group_perms, assign_perm, remove_perm, get_objects_for_group
+from guardian.shortcuts import assign_perm, remove_perm, get_objects_for_group
 
 
 from seqr.models import LocusList, LocusListGene, LocusListInterval, IS_OWNER, CAN_VIEW, CAN_EDIT
