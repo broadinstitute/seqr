@@ -154,7 +154,7 @@ const GeneDetailContent = ({ gene, showTitle, updateGeneNote: dispatchUpdateGene
     { title: 'NCBI Gene', link: `http://www.ncbi.nlm.nih.gov/gene/?term=${gene.symbol}`, description: 'NCBI\'s gene information resource' },
     { title: 'GTEx Portal', link: `http://www.gtexportal.org/home/gene/${gene.gene_id}`, description: 'Reference of public data for this gene' },
     { title: 'Monarch', link: `http://monarchinitiative.org/search/${gene.gene_id}`, description: 'Cross-species gene and phenotype resource' },
-    { title: 'Decipher', link: `https://decipher.sanger.ac.uk/gene/${gene.symbol}`, description: 'DatabasE of genomiC varIation and Phenotype in Humans using Ensembl Resources' },
+    { title: 'Decipher', link: `https://decipher.sanger.ac.uk/gene/${gene.symbol}#overview/protein-info`, description: 'DatabasE of genomiC varIation and Phenotype in Humans using Ensembl Resources' },
     { title: 'UniProt', link: `http://www.uniprot.org/uniprot/?random=true&query=gene:${gene.symbol}+AND+reviewed:yes+AND+organism:9606`, description: 'Protein sequence and functional information' },
   ]
   return (
@@ -163,7 +163,7 @@ const GeneDetailContent = ({ gene, showTitle, updateGeneNote: dispatchUpdateGene
       {linkDetails.map(linkConfig =>
         <Popup
           key={linkConfig.title}
-          trigger={<a href={linkConfig.link}><b>{linkConfig.title}</b><HorizontalSpacer width={20} target="_blank" rel="noopener noreferrer" /></a>}
+          trigger={<a href={linkConfig.link} target="_blank" rel="noopener noreferrer"><b>{linkConfig.title}</b><HorizontalSpacer width={20} /></a>}
           content={linkConfig.description}
         />,
       )}

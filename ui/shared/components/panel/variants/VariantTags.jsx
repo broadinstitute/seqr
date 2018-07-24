@@ -22,27 +22,22 @@ const ShortcutToggleContainer = styled.div`
 
 const TagContainer = styled.div`
   display: flex;
-`
-
-const FitContent = styled.div`
-   width: fit-content;
-   margin-right: 5px;
-`
-
-const TagSection = styled.div`
-  display: inline-block;
-  padding-bottom: 5px;
-  white-space: nowrap;
-  vertical-align: top;
+  flex-wrap: wrap;
   
-  a {
-    vertical-align: text-bottom;
+  > div {
+    padding-bottom: 5px;
   }
+`
+
+const NoteContainer = styled.div`
+  color: black;
+  white-space: normal;
+  display: inline-block;
 `
 
 const NOTE_STYLES = {
   Edit: { display: 'flex' },
-  Add: { verticalAlign: 'middle' },
+  Add: {},
 }
 
 const SHORTCUT_TAGS = ['Review', 'Excluded']
@@ -166,47 +161,47 @@ VariantNoteField.propTypes = {
 
 const VariantTags = ({ variant, project, updateVariantNote: dispatchUpdateVariantNote, updateVariantTags: dispatchUpdateVariantTags }) =>
   <TagContainer>
-    <FitContent>
-      <TagSection>
-        <b>Tags:<HorizontalSpacer width={10} /></b>
-        <ShortcutTags variant={variant} dispatchUpdateVariantTags={dispatchUpdateVariantTags} />
+    <div>
+      <b>Tags:<HorizontalSpacer width={10} /></b>
+      <ShortcutTags variant={variant} dispatchUpdateVariantTags={dispatchUpdateVariantTags} />
+      <VariantTagField
+        field="tags"
+        fieldName="Tags"
+        variant={variant}
+        tagOptions={project.variantTagTypes}
+        onSubmit={dispatchUpdateVariantTags}
+      />
+      <HorizontalSpacer width={5} />
+    </div>
+    {variant.tags.some(tag => tag.category === 'CMG Discovery Tags') &&
+      <div>
+        <b>Fxnl Data:<HorizontalSpacer width={5} /></b>
         <VariantTagField
-          field="tags"
-          fieldName="Tags"
+          field="functionalData"
+          fieldName="Fxnl Data"
           variant={variant}
-          tagOptions={project.variantTagTypes}
+          tagOptions={project.variantFunctionalTagTypes}
+          editMetadata
           onSubmit={dispatchUpdateVariantTags}
         />
         <HorizontalSpacer width={5} />
-      </TagSection>
-      {variant.tags.some(tag => tag.category === 'CMG Discovery Tags') &&
-        <TagSection>
-          <b>Fxnl Data:<HorizontalSpacer width={5} /></b>
-          <VariantTagField
-            field="functionalData"
-            fieldName="Fxnl Data"
-            variant={variant}
-            tagOptions={project.variantFunctionalTagTypes}
-            editMetadata
-            onSubmit={dispatchUpdateVariantTags}
-          />
-          <HorizontalSpacer width={5} />
-        </TagSection>
-      }
-    </FitContent>
-    <FitContent><b>Notes:</b></FitContent>
+      </div>
+    }
     <div>
-      {variant.notes.map(note =>
-        <VariantNoteField
-          key={note.noteGuid}
-          note={note}
-          variant={variant}
-          isDeletable
-          compact
-          action="Edit"
-          onSubmit={dispatchUpdateVariantNote}
-        />,
-      )}
+      <b>Notes:<HorizontalSpacer width={5} /></b>
+      <NoteContainer>
+        {variant.notes.map(note =>
+          <VariantNoteField
+            key={note.noteGuid}
+            note={note}
+            variant={variant}
+            isDeletable
+            compact
+            action="Edit"
+            onSubmit={dispatchUpdateVariantNote}
+          />,
+        )}
+      </NoteContainer>
       <VariantNoteField
         variant={variant}
         editIconName="plus"

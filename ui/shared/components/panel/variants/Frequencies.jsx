@@ -1,54 +1,70 @@
 import React from 'react'
 import PropTypes from 'prop-types'
+import styled from 'styled-components'
 import { Popup } from 'semantic-ui-react'
 
 import { HorizontalSpacer } from '../../Spacers'
 
-const FreqLink = ({ url, value, variant, genomeVersion, precision }) => {
+const FreqValue = styled.span`
+  font-weight: bolder;
+  color: ${props => (props.hasLink ? 'inherit' : 'grey')};
+`
+
+const FreqLink = ({ url, value, variant, genomeVersion }) => {
   let { chrom, pos } = variant
   if (variant.liftedOverGenomeVersion === genomeVersion) {
     chrom = variant.liftedOverChrom
     pos = variant.liftedOverPos
   }
 
+  const isRegion = parseInt(value, 10) <= 0
   let coords
-  if (value <= 0) {
+  if (isRegion) {
     coords = `${chrom}-${parseInt(pos, 10) - 100}-${parseInt(pos, 10) + 100}`
   } else {
     coords = `${chrom}-${pos}-${variant.ref}-${variant.alt}`
   }
 
   return (
-    <a href={`http://${url}/${value > 0 ? 'variant' : 'region'}/${coords}`} target="_blank" rel="noopener noreferrer">
-      {value > 0 ? value.toPrecision(precision || 2) : '0.0'}
+    <a href={`http://${url}/${isRegion ? 'region' : 'variant'}/${coords}`} target="_blank" rel="noopener noreferrer">
+      <FreqValue hasLink>{value}</FreqValue>
     </a>
   )
 }
 
 FreqLink.propTypes = {
   url: PropTypes.string.isRequired,
-  value: PropTypes.number,
+  value: PropTypes.string,
   variant: PropTypes.object.isRequired,
   genomeVersion: PropTypes.string.isRequired,
-  precision: PropTypes.number,
 }
 
-const FreqSummary = ({ field, variant, precision }) => {
+const FreqSummary = ({ field, fieldTitle, variant, url, hasLink, showAC, genomeVersion = '37', precision = 2 }) => {
   const { freqs, popCounts } = variant.annotation
   if (freqs[field] === null) {
     return null
   }
-  const url = `${field.split('_')[0]}.broadinstitute.org`
+  const value = freqs[field] > 0 ? freqs[field].toPrecision(precision) : '0.0'
   return (
     <div>
-      <b>{field.replace('_', ' ').toUpperCase()}</b><HorizontalSpacer width={5} />
-      <FreqLink url={url} value={freqs[field]} variant={variant} genomeVersion="37" precision={precision} />
-      {popCounts[`${field}_hom`] !== null &&
+      {fieldTitle || field.replace('_', ' ').toUpperCase()}<HorizontalSpacer width={5} />
+      {hasLink ?
+        <FreqLink
+          url={url || `${field.split('_')[0]}.broadinstitute.org`}
+          value={value}
+          variant={variant}
+          genomeVersion={genomeVersion}
+        /> :
+        <FreqValue>{value}</FreqValue>
+      }
+      {popCounts[`${field}_hom`] !== null && popCounts[`${field}_hom`] !== undefined &&
         <span><HorizontalSpacer width={5} />Hom={popCounts[`${field}_hom`]}</span>
       }
-      {popCounts[`${field}_hemi`] !== null && variant.chrom.endsWith('X') &&
+      {popCounts[`${field}_hemi`] !== null && popCounts[`${field}_hemi`] !== undefined &&
+        variant.chrom.endsWith('X') &&
         <span><HorizontalSpacer width={5} />Hemi={popCounts[`${field}_hemi`]}</span>
       }
+      {showAC && popCounts.AC !== null && <span><HorizontalSpacer width={5} />AC={popCounts.AC} out of {popCounts.AN}</span>}
     </div>
   )
 }
@@ -57,41 +73,35 @@ FreqSummary.propTypes = {
   field: PropTypes.string.isRequired,
   variant: PropTypes.object.isRequired,
   precision: PropTypes.number,
+  fieldTitle: PropTypes.string,
+  url: PropTypes.string,
+  hasLink: PropTypes.bool,
+  showAC: PropTypes.bool,
+  genomeVersion: PropTypes.string,
 }
 
 const Frequencies = ({ variant }) => {
   if (!variant.annotation.freqs) {
     return null
   }
-  const { freqs, popCounts } = variant.annotation
+  const { popCounts } = variant.annotation
 
   const freqContent = (
     <div>
-      {freqs.AF !== null &&
-        <div>
-          <b>THIS CALLSET</b><HorizontalSpacer width={5} />{freqs.AF.toPrecision(2)}<HorizontalSpacer width={5} />
-          {popCounts.AC !== null && <span>AC={popCounts.AC} out of {popCounts.AN}</span>}
-        </div>
-      }
-      <div>
-        <b>1KG WGS</b><HorizontalSpacer width={5} />
-        {freqs.g1k.toPrecision(2)}
-      </div>
-      <FreqSummary field="exac" variant={variant} />
-      <FreqSummary field="gnomad_exomes" variant={variant} />
-      <FreqSummary field="gnomad_genomes" variant={variant} precision={3} />
-      {freqs.topmedAF !== null &&
-        <div>
-          <b>TOPMED</b><HorizontalSpacer width={5} />
-          <FreqLink
-            url="bravo.sph.umich.edu/freeze5/hg38"
-            value={freqs.topmedAF}
-            variant={variant}
-            genomeVersion="38"
-            precision={3}
-          />
-        </div>
-      }
+      <FreqSummary field="AF" fieldTitle="THIS CALLSET" variant={variant} showAC />
+      <FreqSummary field="g1k" fieldTitle="1KG WGS" variant={variant} />
+      <FreqSummary field="exac" variant={variant} hasLink />
+      <FreqSummary field="gnomad_exomes" variant={variant} hasLink />
+      <FreqSummary field="gnomad_genomes" variant={variant} precision={3} hasLink />
+      <FreqSummary
+        field="topmedAF"
+        fieldTitle="TOPMED"
+        variant={variant}
+        genomeVersion="38"
+        precision={3}
+        url="bravo.sph.umich.edu/freeze5/hg38"
+        hasLink
+      />
     </div>
   )
 

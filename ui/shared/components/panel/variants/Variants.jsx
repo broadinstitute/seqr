@@ -6,13 +6,13 @@ import { NavLink } from 'react-router-dom'
 
 import { CLINSIG_SEVERITY } from 'shared/utils/constants'
 import VariantTags from './VariantTags'
-import VariantLocations from './VariantLocations'
 import Annotations from './Annotations'
 import Pathogenicity from './Pathogenicity'
 import Predictions from './Predictions'
 import Frequencies from './Frequencies'
 import VariantGene from './VariantGene'
 import VariantFamily from './VariantFamily'
+import VariantIndividuals from './VariantIndividuals'
 
 
 const VariantRow = styled(Grid.Row)`
@@ -59,21 +59,21 @@ const Variants = ({ variants, projectGuid }) =>
             </NavLink>
           </VariantLinkContainer>
         }
-        <Pathogenicity variant={variant} />
+        <Grid.Column width={16}>
+          <VariantFamily variant={variant} />
+          <Pathogenicity variant={variant} />
+        </Grid.Column>
         <Grid.Column width={16}>
           <VariantTags variant={variant} />
         </Grid.Column>
-        {variant.genes.length > 0 &&
-          <Grid.Column>
-            {variant.genes.map(gene => <VariantGene key={gene.geneId} gene={gene} />)}
-          </Grid.Column>
-        }
-        <Grid.Column><VariantLocations variant={variant} /></Grid.Column>
+        <Grid.Column>
+          {variant.genes.map(gene => <VariantGene key={gene.geneId} gene={gene} />)}
+        </Grid.Column>
         <Grid.Column><Annotations variant={variant} /></Grid.Column>
         <Grid.Column><Predictions annotation={variant.annotation} /></Grid.Column>
         <Grid.Column><Frequencies variant={variant} /></Grid.Column>
         <Grid.Column width={16}>
-          <VariantFamily variant={variant} />
+          <VariantIndividuals variant={variant} />
         </Grid.Column>
       </VariantRow>,
     )}
