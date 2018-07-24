@@ -81,9 +81,9 @@ const LocusListDetail = ({ locusList, onSubmit }) => {
         <ExportTableButton downloads={geneExportDownloads} buttonText="Download" float="right" fontWeight="300" fontSize=".75em" />
       </Header>
       <Grid columns={12} divided="vertically">
-        {(locusList.genes || []).map(gene =>
+        {(locusList.genes && locusList.genes.length) ? locusList.genes.map(gene =>
           <Grid.Column key={gene.geneId}><ShowGeneModal gene={gene} /></Grid.Column>,
-        )}
+        ) : <Grid.Column width={16}><i>This list has no genes</i></Grid.Column>}
       </Grid>
       <Header size="medium" dividing>
         <BaseFieldView
@@ -95,10 +95,10 @@ const LocusListDetail = ({ locusList, onSubmit }) => {
         />
         <ExportTableButton downloads={intervalExportDownloads} buttonText="Download" float="right" fontWeight="300" fontSize=".75em" />
       </Header>
-      <Grid columns={8} divided="vertically">
-        {(locusList.intervals || []).map(interval =>
+      <Grid columns={6} divided="vertically">
+        {(locusList.intervals && locusList.intervals.length) ? locusList.intervals.map(interval =>
           <Grid.Column key={interval.locusListIntervalGuid}>chr{interval.chrom}:{interval.start}-{interval.end}</Grid.Column>,
-        )}
+        ) : <Grid.Column width={16}><i>This list has no intervals</i></Grid.Column>}
       </Grid>
     </div>
   )
@@ -112,8 +112,8 @@ LocusListDetail.propTypes = {
 }
 
 
-const LoadedLocusListDetail = ({ locusListGuid, locusList, projectGuid, onSubmit }) =>
-  <LocusListGeneLoader locusListGuid={locusListGuid} locusList={locusList} projectGuid={projectGuid}>
+const LoadedLocusListDetail = ({ locusListGuid, locusList, onSubmit }) =>
+  <LocusListGeneLoader locusListGuid={locusListGuid} locusList={locusList}>
     <LocusListDetail locusList={locusList} onSubmit={onSubmit} />
   </LocusListGeneLoader>
 
@@ -121,7 +121,6 @@ LoadedLocusListDetail.propTypes = {
   locusListGuid: PropTypes.string.isRequired,
   locusList: PropTypes.object,
   onSubmit: PropTypes.func,
-  projectGuid: PropTypes.string,
 }
 
 const mapStateToProps = (state, ownProps) => ({

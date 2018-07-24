@@ -10,6 +10,7 @@ from seqr.models import Project as SeqrProject, Family as SeqrFamily, Individual
     VariantFunctionalData as SeqrVariantFunctionalData, LocusList as SeqrLocusList, LocusListGene as SeqrLocusListGene, \
     GeneNote as SeqrGeneNote
 from seqr.utils.model_sync_utils import get_or_create_saved_variant, convert_html_to_plain_text
+from seqr.views.apis.locus_list_api import add_locus_list_user_permissions
 
 
 XBROWSE_TO_SEQR_CLASS_MAPPING = {
@@ -286,6 +287,8 @@ def _create_seqr_model(xbrowse_model, **kwargs):
         if hasattr(xbrowse_model, xbrowse_model_foreign_key_name):
             setattr(xbrowse_model, xbrowse_model_foreign_key_name, seqr_model)
             xbrowse_model.save()
+        if xbrowse_model_class_name == "GeneList":
+            add_locus_list_user_permissions(seqr_model)
         return seqr_model
 
     except Exception as e:

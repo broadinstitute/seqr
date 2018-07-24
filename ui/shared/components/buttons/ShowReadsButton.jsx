@@ -11,6 +11,7 @@ import PedigreeIcon from '../icons/PedigreeIcon'
 import IGV from '../graph/IGV'
 import ButtonLink from './ButtonLink'
 import { DATASET_TYPE_READ_ALIGNMENTS } from '../../utils/constants'
+import { getLocus } from '../panel/variants/Annotations'
 
 const CRAM_TRACK_OPTIONS = {
   sourceType: 'pysam',
@@ -22,7 +23,9 @@ const BAM_TRACK_OPTIONS = {
   indexed: true,
 }
 
-const ShowReadsButton = ({ locus, familyGuid, samplesByGuid, individualsByGuid }) => {
+const ShowReadsButton = ({ variant, familyGuid, samplesByGuid, individualsByGuid }) => {
+
+  const locus = getLocus(variant, 100)
 
   const latestSamplesForIndividuals = Object.values(samplesByGuid).filter(sample => (
     sample.loadedDate &&
@@ -87,7 +90,7 @@ const ShowReadsButton = ({ locus, familyGuid, samplesByGuid, individualsByGuid }
 }
 
 ShowReadsButton.propTypes = {
-  locus: PropTypes.string,
+  variant: PropTypes.object,
   familyGuid: PropTypes.string,
   samplesByGuid: PropTypes.object,
   individualsByGuid: PropTypes.object,

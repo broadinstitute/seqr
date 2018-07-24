@@ -56,7 +56,12 @@ const InlineFormColumn = styled(Grid.Column)`
   }
   
   .field.inline {
-    padding-left: 20px;
+    padding-right: 30px;
+    font-size: 1.1em;
+    
+    label {
+      font-size: 1.1em !important;
+    }
   }
 `
 

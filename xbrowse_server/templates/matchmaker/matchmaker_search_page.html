@@ -12,6 +12,9 @@
 <!--  tables -->
 <script src="https://cdn.datatables.net/1.10.10/js/jquery.dataTables.min.js"></script>
 <link rel="stylesheet" href="https://cdn.datatables.net/1.10.10/css/jquery.dataTables.min.css"/>
+<!--  font awesome -->
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.0.13/css/all.css" integrity="sha384-DNOHZ68U8hZfKXOrtjWvjxusGo9WQnrNx2sqG0tfsghAvtVlRW3tvkXWZh58N9jp" crossorigin="anonymous">
+
 <script>
 $(document).ready(
 		function(){
@@ -32,6 +35,7 @@ $(document).ready(
 </script>
 Project: <a id="projectIdA" href=""><span id="projId"></span></a>
 Family: <a id="familyIdA" href=""><span id="familyId"></span></a>
+
 {% endblock %}
 {% block innercontent %}
 {% include 'javascript.html' %}
@@ -340,6 +344,12 @@ input[typ="text"] .match-comments{
 
 .phenotype-observed-no{
 	color: red;
+}
+
+.submissionCandidateTable-variant-column {
+  min-width: 200px;
+  width: 200px;
+  max-width: 200px;
 }
 
 
@@ -703,6 +713,11 @@ function getGoBackMessageHtml(){
 	return html;
 }
 
+
+function showLimitMsg(){
+	console.log('boo');
+}
+
 $('body').on('click', 'input.host_contacted_us', 
 		function(i) {
 			var matchId = $(this)[0]['id'];
@@ -819,6 +834,7 @@ $('body').on('click', 'input.selected_phenotype_features',
 });
 
 
+
 /**
  * Listens and updates when MME reciept contact name change requests happen
  */
@@ -837,6 +853,32 @@ function addAdditionalContactName(){
 	html += '&nbsp&nbsp<button type="button" class="btn btn-primary" onclick="updateWithNewContactName(' + "'add-new-contact-name-textarea'," + "'add-new-contact-name-container'," + "'contact-name','" + localContact +"'"+ ');" id="save-new-contact-btn">save</button>';
 	html += '</div>'; 
 	$('#contact-name-container').append(html);
+}
+
+/**
+ * Listens and updates the MME submission with regards to how much variant data to share
+ */
+function limitSharingOfVariantData(divId,singlePatientGenotypeInfoId){
+	var lockedIcon='<a href="javascript:limitSharingOfVariantData('+"'"+divId+ "'" +');">&nbsp&nbsp<i class="fas fa-lock fa-lg" aria-hidden="true"></i></a>';
+	var unlockedIcon='<a href="javascript:limitSharingOfVariantData('+"'"+divId+ "'" +');">&nbsp&nbsp<i class="fas fa-lock-open fa-lg" aria-hidden="true"></i></a>';
+	var limit_sharing_of_variant_level_data = JSON.parse(sessionStorage.limit_sharing_of_variant_level_data);
+
+	if ($('#'+divId).hasClass('open')){
+		$('#'+divId).empty();
+		$('#'+divId).append(lockedIcon);	
+		$('#'+divId).removeClass('open').addClass('closed');
+		limit_sharing_of_variant_level_data[singlePatientGenotypeInfoId]='restrict';
+	}
+	else{
+		$('#'+divId).empty();
+		$('#'+divId).append(unlockedIcon);
+		$('#'+divId).removeClass('closed').addClass('open');
+		limit_sharing_of_variant_level_data[singlePatientGenotypeInfoId]='share';
+	}
+	
+	//serialize back
+	sessionStorage.limit_sharing_of_variant_level_data = JSON.stringify(limit_sharing_of_variant_level_data);
+	return;
 }
 
 /**
@@ -1049,6 +1091,7 @@ function updateMatchResultStateEvent(newMatchResultState,matchId,projectId, indi
  */
 function startORUpdateASubmitionToMME(){
 	sessionStorage.genotypes_to_submit  = JSON.stringify([]); //list of genotypes to submit to MME
+	sessionStorage.limit_sharing_of_variant_level_data = JSON.stringify({}); //don't share variant info with matches
 	sessionStorage.phenotypes_to_submit = JSON.stringify([]); //list of phenotypes to submit to MME
 	sessionStorage.patient = {}; 							  //patient data back from server
 
@@ -1109,6 +1152,8 @@ function showMMECandidates(result){
  	sessionStorage.patient = JSON.stringify(patient);
  	var idMap = result['id_map'];
  	
+ 	limit_sharing_of_variant_level_data = JSON.parse(sessionStorage.limit_sharing_of_variant_level_data);
+ 	
  	//-------------------------------------------Phenotype info
  	if (patient['features'].length>0){
 	 	html += '<table id="showMMECandidatesPhenotypeTable" class="table table-hover">';
@@ -1153,6 +1198,7 @@ function showMMECandidates(result){
 	 	html += '<th>Gene symbol</th>';
 	 	html += '<th>Assembly</th>';
 	 	html += '<th>Variant</th>';
+	 	html += '<th></th>';
 	 	html += '<th>Zygosity</th>';
 	 	html += '<th><i>seqr</i> Tag name</th>';
 	 	html += '<th>Submit</th>';	
@@ -1167,7 +1213,8 @@ function showMMECandidates(result){
 		 		html += '<tr>';
 				
 		 		//using k as a genotype ID of sorts for later comparison
-		 		var singlePatientGenotypeInfo = k.toString();
+		 		var singlePatientGenotypeInfoId = k.toString();
+		 		var singlePatientGenotypeInfo = singlePatientGenotypeInfoId;
 		 		
 		 		html += '<td><p>'  +  patient['genomicFeatures'][k]['gene']['id']   + '</p></td>';
 		 		singlePatientGenotypeInfo += ',' + patient['genomicFeatures'][k]['gene']['id'];
@@ -1179,7 +1226,7 @@ function showMMECandidates(result){
 		 		singlePatientGenotypeInfo += ',' + patient['genomicFeatures'][k]['variant']['assembly'];
 		 		
 		 		////variant field
-		 		html += '<td><p>';
+		 		html += '<td class="submissionCandidateTable-variant-column"><p>';
 		 		html += 'chr' + patient['genomicFeatures'][k]['variant']['referenceName'] + ":";
 		 		html += patient['genomicFeatures'][k]['variant']['start'];
 		 		html += '&nbsp' + patient['genomicFeatures'][k]['variant']['referenceBases'];
@@ -1187,11 +1234,15 @@ function showMMECandidates(result){
 		 		html += patient['genomicFeatures'][k]['variant']['alternateBases'];
 		 		html += '</p></td>';
 		 		
+		 		var limitSharingDivId='limit-variant-sharing-' + k.toString();
+		 		limit_sharing_of_variant_level_data[k.toString()]='share';
+		 		html += '<td id="' + limitSharingDivId + '" class="open"><a href="javascript:limitSharingOfVariantData('+"'"+limitSharingDivId+ "'" + ",'"+singlePatientGenotypeInfoId+ "'" +');">&nbsp&nbsp<i class="fas fa-lock-open fa-lg" aria-hidden="true"></i></a></td>';
+		 		
 		 		singlePatientGenotypeInfo += ',' + patient['genomicFeatures'][k]['variant']['referenceName'];
 		 		singlePatientGenotypeInfo += ',' + patient['genomicFeatures'][k]['variant']['start'] ;
 		 		singlePatientGenotypeInfo += ',' + patient['genomicFeatures'][k]['variant']['end'];
-		 		singlePatientGenotypeInfo += ','+patient['genomicFeatures'][k]['variant']['referenceBases'];
-		 		singlePatientGenotypeInfo += ','+ patient['genomicFeatures'][k]['variant']['alternateBases'];
+		 		singlePatientGenotypeInfo += ',' + patient['genomicFeatures'][k]['variant']['referenceBases'];
+		 		singlePatientGenotypeInfo += ',' + patient['genomicFeatures'][k]['variant']['alternateBases'];
 		 		
 		 		html += '<td><p>'  +  patient['genomicFeatures'][k]['zygosity'].toString()   + '</p></td>';
 		 		singlePatientGenotypeInfo += ','+ patient['genomicFeatures'][k]['zygosity'].toString();
@@ -1212,12 +1263,10 @@ function showMMECandidates(result){
 	 	$('#genotypeSubmissionCandidateInfo').empty();
 	 	$('#genotypeSubmissionCandidateInfo').append(html);
  	}
- 	
- 	
- 	$(function () {
- 		  $('[data-toggle="tooltip"]').tooltip();
- 	});
  	$('#submissionCandidatesContainer').show();
+ 	
+ 	//serialize back
+ 	sessionStorage.limit_sharing_of_variant_level_data = JSON.stringify(limit_sharing_of_variant_level_data);
  }
 
  /**
@@ -1241,7 +1290,8 @@ function isValidHpoTerm(term){
  */
 function showDataToBeSubmitted(){
 	var patient = JSON.parse(sessionStorage.patient);
-	var genotypes_to_submit = JSON.parse(sessionStorage.genotypes_to_submit);	
+	var genotypes_to_submit = JSON.parse(sessionStorage.genotypes_to_submit);
+	var variants_to_limit_sharing = JSON.parse(sessionStorage.limit_sharing_of_variant_level_data);
 	var phenotypes_to_submit = {};
 	var temp=JSON.parse(sessionStorage.phenotypes_to_submit);
 	for (var i in temp){
@@ -1307,6 +1357,7 @@ function showDataToBeSubmitted(){
 	html += '<td>Reference bases</td>';
 	html += '<td>Alternate bases</td>';
 	html += '<td>Zygosity</td>';
+	html += '<td></td>';
 	html += '</tr></thead><tbody>'
 	//-----------let's also put this info into a structure we can use to submit to MME (genotypes)
 	structToBeSubmitted['genomicFeatures']=[];
@@ -1320,6 +1371,19 @@ function showDataToBeSubmitted(){
 			html += '<td><p>'  +  genotypes_to_submit[k]['referenceBases']   + '</p></td>';
 			html += '<td><p>'  +  genotypes_to_submit[k]['alternateBases']   + '</p></td>';
 			html += '<td><p>'  +  genotypes_to_submit[k]['zygosity']   + '</p></td>';
+			
+			var sharePreference=true;
+			if (variants_to_limit_sharing[genotypes_to_submit[k]['genotypeId']] != 'share'){
+				sharePreference=false;
+			}
+			var lockedIcon='&nbsp&nbsp<i class="fas fa-lock fa-lg" aria-hidden="true"></i>';
+			var unlockedIcon='&nbsp&nbsp<i class="fas fa-lock-open fa-lg" aria-hidden="true"></i>';
+			if ('share' == variants_to_limit_sharing[genotypes_to_submit[k]['genotypeId']]){
+				html += '<td class="limit-variant-sharing">' + unlockedIcon + '</td>';
+			}
+			else{
+				html += '<td class="limit-variant-sharing">' + lockedIcon + '</td>';
+			}
 			html += '</tr>';
 			
 			structToBeSubmitted['genomicFeatures'].push({
@@ -1333,6 +1397,7 @@ function showDataToBeSubmitted(){
 															"referenceBases":genotypes_to_submit[k]['referenceBases'],
 															"referenceName":genotypes_to_submit[k]['referenceName'],
 															"start":genotypes_to_submit[k]['variantStart'],
+															'_share':sharePreference
 														},
 														"zygosity":genotypes_to_submit[k]['zygosity'] 
 														});
@@ -1345,6 +1410,9 @@ function showDataToBeSubmitted(){
 	
 	//store this for later use in submission event
 	sessionStorage.structToBeSubmitted = JSON.stringify(structToBeSubmitted);
+	
+	//var limit_sharing_of_variant_level_data = JSON.parse(sessionStorage.limit_sharing_of_variant_level_data);
+	console.log(limit_sharing_of_variant_level_data);
 
 	$('#dataToBeSubmittedReceipt').empty();
 	$('#dataToBeSubmittedReceipt').append(html);

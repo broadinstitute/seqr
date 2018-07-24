@@ -35,7 +35,10 @@ class LocusListAPITest(TransactionTestCase):
              'canEdit', 'name'}
         )
 
-    def test_locus_list_info(self):
+    @mock.patch('seqr.views.utils.gene_utils.get_reference')
+    def test_locus_list_info(self, mock_reference):
+        mock_reference.return_value.get_genes.side_effect = lambda gene_ids: {gene_id: {} for gene_id in gene_ids}
+
         url = reverse(locus_list_info, args=[LOCUS_LIST_GUID])
         _check_login(self, url)
 
@@ -54,7 +57,11 @@ class LocusListAPITest(TransactionTestCase):
         )
         self.assertSetEqual(set(locus_list['geneIds']), set(response_json['genesById'].keys()))
 
-    def test_create_update_and_delete_locus_lust(self):
+    @mock.patch('seqr.views.utils.gene_utils.get_reference')
+    def test_create_update_and_delete_locus_lust(self, mock_reference):
+        mock_reference.return_value.get_genes.side_effect = lambda gene_ids: {gene_id: {} for gene_id in gene_ids}
+        mock_reference.return_value.get_gene_id_from_symbol.side_effect = lambda symbol: symbol if symbol != 'foo' else None
+
         create_locus_list_url = reverse(create_locus_list_handler)
         _check_login(self, create_locus_list_url)
 
