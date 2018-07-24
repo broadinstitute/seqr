@@ -335,14 +335,20 @@ def _has_gene_search(project):
 
 
 def _project_matchmaker_submissions(project):
-    submissions_by_family_individual = defaultdict(lambda: defaultdict(list))
+    submissions_by_individual = {}
     for submission in SEQR_ID_TO_MME_ID_MAP.find({'project_id': project.deprecated_project_id}):
-        submission_json = {'submissionDate': submission['insertion_date']}
-        if submission.get('deletion'):
-            deleted_by = User.objects.filter(username=submission['deletion']['by']).first()
-            submission_json['deletion'] = {
-                'date': submission['deletion']['date'],
-                'by': (deleted_by.get_full_name() or deleted_by.email) if deleted_by else submission['deletion']['by'],
+        individual_submission = submissions_by_individual.get(submission['seqr_id'])
+        if not individual_submission or individual_submission['submissionDate'] < submission['insertion_date']:
+            individual_submission = {
+                'submissionDate': submission['insertion_date'],
+                'familyId': submission['family_id'],
+                'individualId': submission['seqr_id'],
             }
-        submissions_by_family_individual[submission['family_id']][submission['seqr_id']].append(submission_json)
-    return submissions_by_family_individual
+            if submission.get('deletion'):
+                deleted_by = User.objects.filter(username=submission['deletion']['by']).first()
+                individual_submission['deletion'] = {
+                    'date': submission['deletion']['date'],
+                    'by': (deleted_by.get_full_name() or deleted_by.email) if deleted_by else submission['deletion']['by'],
+                }
+        submissions_by_individual[submission['seqr_id']] = individual_submission
+    return submissions_by_individual

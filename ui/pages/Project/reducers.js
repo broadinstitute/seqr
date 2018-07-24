@@ -2,7 +2,7 @@ import { combineReducers } from 'redux'
 import { SubmissionError } from 'redux-form'
 
 import { loadingReducer, createSingleObjectReducer, createObjectsByIdReducer, createSingleValueReducer } from 'redux/utils/reducerFactories'
-import { REQUEST_PROJECTS, RECEIVE_DATA } from 'redux/rootReducer'
+import { REQUEST_PROJECTS } from 'redux/rootReducer'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 import { getProject, getProjectFamiliesByGuid } from 'pages/Project/selectors'
 import {
@@ -10,7 +10,7 @@ import {
 } from './constants'
 
 // action creators and reducers in one file as suggested by https://github.com/erikras/ducks-modular-redux
-
+const RECEIVE_DATA = 'RECEIVE_DATA'
 const UPDATE_FAMILY_TABLE_STATE = 'UPDATE_FAMILY_TABLE_STATE'
 const UPDATE_CASE_REVIEW_TABLE_STATE = 'UPDATE_CASE_REVIEW_TABLE_STATE'
 const UPDATE_SAVED_VARIANT_TABLE_STATE = 'UPDATE_VARIANT_STATE'
@@ -22,7 +22,6 @@ const RECEIVE_SAVED_VARIANTS = 'RECEIVE_SAVED_VARIANTS'
 const RECEIVE_SAVED_VARIANT_FAMILIES = 'RECEIVE_SAVED_VARIANT_FAMILIES'
 const RECEIVE_GENES = 'RECEIVE_GENES'
 const REQUEST_MME_MATCHES = 'REQUEST_MME_MATCHES'
-const RECEIVE_MME_MATCHES = 'RECEIVE_MME_MATCHES'
 
 
 // Data actions
@@ -173,14 +172,22 @@ export const loadMmeMatches = (individualId) => {
   return (dispatch, getState) => {
     const state = getState()
     const currentProject = state.projectsByGuid[state.currentProjectGuid]
-    if (!(state.matchmakerMatches[currentProject.projectGuid] || {})[individualId]) {
+    const individualSubmission = state.matchmakerSubmissions[currentProject.projectGuid][individualId]
+    if (!individualSubmission || !individualSubmission.match) {
       dispatch({ type: REQUEST_MME_MATCHES })
       new HttpRequestHelper(`/api/matchmaker/match_internally_and_externally/project/${currentProject.deprecatedProjectId}/individual/${individualId}`,
         (responseJson) => {
-          dispatch({ type: RECEIVE_MME_MATCHES, updatesById: { [currentProject.projectGuid]: { [individualId]: responseJson } } })
+          dispatch({
+            type: RECEIVE_DATA,
+            updatesById: {
+              matchmakerSubmissions: {
+                [currentProject.projectGuid]: { [individualId]: { ...individualSubmission, match: responseJson } },
+              },
+            },
+          })
         },
         (e) => {
-          dispatch({ type: RECEIVE_MME_MATCHES, error: e.message, updatesById: {} })
+          dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
         },
       ).get()
     }
@@ -213,8 +220,7 @@ export const reducers = {
   projectSavedVariants: createObjectsByIdReducer(RECEIVE_SAVED_VARIANTS),
   projectSavedVariantsLoading: loadingReducer(REQUEST_SAVED_VARIANTS, RECEIVE_SAVED_VARIANTS),
   projectSavedVariantFamilies: createSingleObjectReducer(RECEIVE_SAVED_VARIANT_FAMILIES),
-  matchmakerMatches: createObjectsByIdReducer(RECEIVE_MME_MATCHES),
-  matchmakerMatchesLoading: loadingReducer(REQUEST_MME_MATCHES, RECEIVE_MME_MATCHES),
+  matchmakerMatchesLoading: loadingReducer(REQUEST_MME_MATCHES, RECEIVE_DATA),
   familyTableState: createSingleObjectReducer(UPDATE_FAMILY_TABLE_STATE, {
     familiesFilter: SHOW_ALL,
     familiesSortOrder: SORT_BY_FAMILY_NAME,

@@ -65,34 +65,34 @@ CaseReviewStatus.propTypes = {
   individual: PropTypes.object.isRequired,
 }
 
-const DataDetails = ({ loadedSamples, matchmakerSubmissions, deleteMmePatient }) =>
+const DataDetails = ({ loadedSamples, matchmakerSubmission, deleteMmePatient }) =>
   <div>
     {loadedSamples.map((sample, i) =>
       <div key={sample.sampleGuid}>
         <Sample loadedSample={sample} isOutdated={i !== 0} />
       </div>,
     )}
-    {matchmakerSubmissions && matchmakerSubmissions.map(submission => (
-      submission.deletion ? (
+    {matchmakerSubmission && (
+      matchmakerSubmission.deletion ? (
         <Popup
-          key={submission.submissionDate}
+          key={matchmakerSubmission.submissionDate}
           flowing
           trigger={
             <SpacedLabel color="red" size="small">
-              Removed from MME: {new Date(submission.deletion.date).toLocaleDateString()}
+              Removed from MME: {new Date(matchmakerSubmission.deletion.date).toLocaleDateString()}
             </SpacedLabel>
           }
           content={
             <div>
-              <b>Removed By: </b>{submission.deletion.by}<br />
-              <b>Originally Submitted: </b>{new Date(submission.submissionDate).toLocaleDateString()}
+              <b>Removed By: </b>{matchmakerSubmission.deletion.by}<br />
+              <b>Originally Submitted: </b>{new Date(matchmakerSubmission.submissionDate).toLocaleDateString()}
             </div>
           }
         />
       ) : (
-        <div key={submission.submissionDate}>
+        <div key={matchmakerSubmission.submissionDate}>
           <SpacedLabel color="violet" size="small">
-            Submitted to MME: {new Date(submission.submissionDate).toLocaleDateString()}
+            Submitted to MME: {new Date(matchmakerSubmission.submissionDate).toLocaleDateString()}
           </SpacedLabel>
           <DispatchRequestButton
             buttonContent={<Icon name="trash" />}
@@ -101,11 +101,12 @@ const DataDetails = ({ loadedSamples, matchmakerSubmissions, deleteMmePatient })
           />
         </div>
       )
-    ))}
+    )
+  }
   </div>
 
 DataDetails.propTypes = {
-  matchmakerSubmissions: PropTypes.array,
+  matchmakerSubmission: PropTypes.object,
   loadedSamples: PropTypes.array,
   deleteMmePatient: PropTypes.func,
 }
@@ -118,14 +119,14 @@ class IndividualRow extends React.Component
     family: PropTypes.object.isRequired,
     individual: PropTypes.object.isRequired,
     samplesByGuid: PropTypes.object.isRequired,
-    matchmakerSubmissions: PropTypes.array,
+    matchmakerSubmission: PropTypes.object,
     updateIndividual: PropTypes.func,
     deleteMmePatient: PropTypes.func,
     editCaseReview: PropTypes.bool,
   }
 
   render() {
-    const { user, project, family, individual, editCaseReview, matchmakerSubmissions, deleteMmePatient } = this.props
+    const { user, project, family, individual, editCaseReview, matchmakerSubmission, deleteMmePatient } = this.props
 
     const { individualId, displayName, paternalId, maternalId, sex, affected, createdDate } = individual
 
@@ -166,7 +167,7 @@ class IndividualRow extends React.Component
 
     const rightContent = editCaseReview ?
       <CaseReviewStatus individual={individual} /> :
-      <DataDetails loadedSamples={loadedSamples} matchmakerSubmissions={matchmakerSubmissions} deleteMmePatient={deleteMmePatient} />
+      <DataDetails loadedSamples={loadedSamples} matchmakerSubmission={matchmakerSubmission} deleteMmePatient={deleteMmePatient} />
 
     let fields = []
     if (editCaseReview ||
@@ -246,7 +247,7 @@ const mapStateToProps = (state, ownProps) => ({
   user: getUser(state),
   project: getProject(state),
   samplesByGuid: getProjectSamplesByGuid(state),
-  matchmakerSubmissions: (getMatchmakerSubmissions(state)[ownProps.family.projectGuid][ownProps.family.familyId] || {})[ownProps.individual.individualId],
+  matchmakerSubmission: getMatchmakerSubmissions(state)[ownProps.family.projectGuid][ownProps.individual.individualId],
 })
 
 

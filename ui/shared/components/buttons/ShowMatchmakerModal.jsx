@@ -7,7 +7,6 @@ import { loadGenes } from 'redux/rootReducer'
 import {
   getProjectsByGuid,
   getMatchmakerSubmissions,
-  getMatchmakerMatches,
   getMatchmakerMatchesLoading,
   getGenesById,
   getGenesIsLoading,
@@ -127,18 +126,20 @@ const matchmakerMatchesMapDispatchToProps = {
 const MatchmakerMatches = connect(matchmakerMatchesMapStateToProps, matchmakerMatchesMapDispatchToProps)(BaseMatchmakerMatches)
 
 
-const ShowMatchmakerModal = ({ project, family, loading, load, matchmakerSubmissions, matchmakerMatches }) =>
+const ShowMatchmakerModal = ({ project, family, loading, load, matchmakerSubmissions }) =>
   <Modal
     trigger={<ButtonLink>Match Maker Exchange</ButtonLink>}
     title={`${family.displayName}: Match Maker Exchange`}
     modalName={`mme-${family.familyGuid}`}
     size="large"
   >
-    {matchmakerSubmissions ? Object.keys(matchmakerSubmissions).map(individualId =>
-      <div key={individualId}>
-        <Header size="medium" disabled content={individualId} dividing />
-        <DataLoader contentId={individualId} content={matchmakerMatches[individualId]} loading={loading} load={load}>
-          <MatchmakerMatches matches={matchmakerMatches[individualId]} project={project} family={family} />
+    {matchmakerSubmissions ? Object.values(matchmakerSubmissions).filter(
+      submission => submission.familyId === family.familyId,
+    ).map(submission =>
+      <div key={submission.individualId}>
+        <Header size="medium" disabled content={submission.individualId} dividing />
+        <DataLoader contentId={submission.individualId} content={submission.match} loading={loading} load={load}>
+          <MatchmakerMatches matches={submission.match} project={project} family={family} />
         </DataLoader>
       </div>,
     ) : (
@@ -157,7 +158,6 @@ const ShowMatchmakerModal = ({ project, family, loading, load, matchmakerSubmiss
 
 ShowMatchmakerModal.propTypes = {
   matchmakerSubmissions: PropTypes.object,
-  matchmakerMatches: PropTypes.object,
   project: PropTypes.object,
   family: PropTypes.object,
   loading: PropTypes.bool,
@@ -166,8 +166,7 @@ ShowMatchmakerModal.propTypes = {
 
 const mapStateToProps = (state, ownProps) => ({
   project: getProjectsByGuid(state)[ownProps.family.projectGuid],
-  matchmakerSubmissions: getMatchmakerSubmissions(state)[ownProps.family.projectGuid][ownProps.family.familyId],
-  matchmakerMatches: getMatchmakerMatches(state)[ownProps.family.projectGuid] || {},
+  matchmakerSubmissions: getMatchmakerSubmissions(state)[ownProps.family.projectGuid],
   loading: getMatchmakerMatchesLoading(state),
 })
 
