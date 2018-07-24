@@ -342,6 +342,12 @@ input[typ="text"] .match-comments{
 	color: red;
 }
 
+.submissionCandidateTable-variant-column {
+  min-width: 200px;
+  width: 200px;
+  max-width: 200px;
+}
+
 
 </style>
 <script>
@@ -1179,7 +1185,7 @@ function showMMECandidates(result){
 		 		singlePatientGenotypeInfo += ',' + patient['genomicFeatures'][k]['variant']['assembly'];
 		 		
 		 		////variant field
-		 		html += '<td><p>';
+		 		html += '<td class="submissionCandidateTable-variant-column"><p>';
 		 		html += 'chr' + patient['genomicFeatures'][k]['variant']['referenceName'] + ":";
 		 		html += patient['genomicFeatures'][k]['variant']['start'];
 		 		html += '&nbsp' + patient['genomicFeatures'][k]['variant']['referenceBases'];

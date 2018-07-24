@@ -91,7 +91,8 @@ def get_all_clinical_data_for_family(project_id,family_id,indiv_id):
             gene_symbol=""
             if gene_id != "":
                 gene = get_reference().get_gene(gene_id)
-                gene_symbol = gene['symbol']
+                if gene:
+                    gene_symbol = gene['symbol']
 
             genomic_feature['auxiliary']={
                                           "tag_name":variant['tag_name'],
