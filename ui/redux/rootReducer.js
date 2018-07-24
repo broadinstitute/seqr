@@ -117,6 +117,23 @@ export const loadGene = (geneId) => {
   }
 }
 
+export const loadGenes = (geneIds) => {
+  return (dispatch, getState) => {
+    const state = getState()
+    if ([...geneIds].some(geneId => !state.genesById[geneId])) {
+      dispatch({ type: REQUEST_GENES })
+      new HttpRequestHelper('/api/genes_info',
+        (responseJson) => {
+          dispatch({ type: RECEIVE_GENES, updatesById: responseJson })
+        },
+        (e) => {
+          dispatch({ type: RECEIVE_GENES, error: e.message, updatesById: {} })
+        },
+      ).get({ geneIds: [...geneIds] })
+    }
+  }
+}
+
 export const loadLocusLists = (locusListId, projectGuid) => {
   return (dispatch, getState) => {
     const locusList = getState().locusListsByGuid[locusListId]

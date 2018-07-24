@@ -8,7 +8,7 @@ import styled from 'styled-components'
 import { updateFamily } from 'redux/rootReducer'
 import { getProjectsByGuid } from 'redux/selectors'
 import VariantTagTypeBar from '../graph/VariantTagTypeBar'
-import MatchmakerModal from '../modal/MatchmakerModal'
+import ShowMatchmakerModal from '../buttons/ShowMatchmakerModal'
 import PedigreeImagePanel from './view-pedigree-image/PedigreeImagePanel'
 import TextFieldView from './view-fields/TextFieldView'
 import Sample from './sample'
@@ -168,7 +168,7 @@ const Family = (
           <Icon name="search" /> Variant Search
         </a>
         <VerticalSpacer height={10} />
-        {project.isMmeEnabled && <MatchmakerModal family={family} />}
+        {project.isMmeEnabled && <ShowMatchmakerModal family={family} />}
       </div> : null,
   ] : null
 

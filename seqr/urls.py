@@ -48,6 +48,7 @@ from seqr.views.pages.project_page import \
 
 from seqr.views.apis.gene_api import \
     gene_info, \
+    genes_info, \
     create_gene_note_handler, \
     update_gene_note_handler, \
     delete_gene_note_handler
@@ -127,6 +128,7 @@ api_endpoints = {
     'saved_variant/(?P<variant_guid>[^/]+)/note/(?P<note_guid>[^/]+)/update': update_variant_note_handler,
     'saved_variant/(?P<variant_guid>[^/]+)/note/(?P<note_guid>[^/]+)/delete': delete_variant_note_handler,
 
+    'genes_info': genes_info,
     'gene_info/(?P<gene_id>[^/]+)': gene_info,
     'gene_info/(?P<gene_id>[^/]+)/note/create': create_gene_note_handler,
     'gene_info/(?P<gene_id>[^/]+)/note/(?P<note_guid>[^/]+)/update': update_gene_note_handler,

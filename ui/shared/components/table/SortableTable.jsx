@@ -112,9 +112,10 @@ class SortableTable extends React.PureComponent {
           {sortedData.map(row => (
             <Table.Row key={row[idField]} onClick={this.handleSelect(row[idField])} active={selected[row[idField]]}>
               {selectRows && <Table.Cell content={<Checkbox checked={selected[row[idField]]} />} />}
-              {columns.map(({ name, format }) =>
+              {columns.map(({ name, format, ...columnProps }) =>
                 <Table.Cell
                   key={name}
+                  {...columnProps}
                   content={format ? format(row) : row[name]}
                 />,
               )}
