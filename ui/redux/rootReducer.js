@@ -21,8 +21,7 @@ const REQUEST_GENES = 'REQUEST_GENES'
 const RECEIVE_GENES = 'RECEIVE_GENES'
 const REQUEST_GENE_LISTS = 'REQUEST_GENE_LISTS'
 const REQUEST_GENE_LIST = 'REQUEST_GENE_LIST'
-const REQUEST_MME_MATCHES = 'REQUEST_MME_MATCHES'
-const RECEIVE_MME_MATCHES = 'RECEIVE_MME_MATCHES'
+
 
 // action creators
 
@@ -174,25 +173,6 @@ export const loadVariantTranscripts = (variantId) => {
   }
 }
 
-
-export const loadMmeMatches = (individualId, family) => {
-  return (dispatch, getState) => {
-    const state = getState()
-    if (!(state.matchmakerMatches[family.projectGuid] || {})[individualId]) {
-      dispatch({ type: REQUEST_MME_MATCHES })
-      const { deprecatedProjectId } = state.projectsByGuid[family.projectGuid]
-      new HttpRequestHelper(`/api/matchmaker/match_internally_and_externally/project/${deprecatedProjectId}/individual/${individualId}`,
-        (responseJson) => {
-          dispatch({ type: RECEIVE_MME_MATCHES, updatesById: { [family.projectGuid]: { [individualId]: responseJson } } })
-        },
-        (e) => {
-          dispatch({ type: RECEIVE_MME_MATCHES, error: e.message, updatesById: {} })
-        },
-      ).get()
-    }
-  }
-}
-
 export const updateGeneNote = (values) => {
   return updateEntity(values, RECEIVE_GENES, `/api/gene_info/${values.geneId || values.gene_id}/note`, 'noteGuid')
 }
@@ -250,8 +230,6 @@ const rootReducer = combineReducers(Object.assign({
   individualsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'individualsByGuid'),
   samplesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'samplesByGuid'),
   matchmakerSubmissions: createObjectsByIdReducer(RECEIVE_DATA, 'matchmakerSubmissions'),
-  matchmakerMatches: createObjectsByIdReducer(RECEIVE_MME_MATCHES),
-  matchmakerMatchesLoading: loadingReducer(REQUEST_MME_MATCHES, RECEIVE_MME_MATCHES),
   genesById: createObjectsByIdReducer(RECEIVE_GENES),
   genesLoading: loadingReducer(REQUEST_GENES, RECEIVE_GENES),
   locusListsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'locusListsByGuid'),

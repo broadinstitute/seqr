@@ -21,6 +21,8 @@ const REQUEST_SAVED_VARIANTS = 'REQUEST_SAVED_VARIANTS'
 const RECEIVE_SAVED_VARIANTS = 'RECEIVE_SAVED_VARIANTS'
 const RECEIVE_SAVED_VARIANT_FAMILIES = 'RECEIVE_SAVED_VARIANT_FAMILIES'
 const RECEIVE_GENES = 'RECEIVE_GENES'
+const REQUEST_MME_MATCHES = 'REQUEST_MME_MATCHES'
+const RECEIVE_MME_MATCHES = 'RECEIVE_MME_MATCHES'
 
 
 // Data actions
@@ -167,6 +169,24 @@ export const updateLocusLists = (values) => {
   }
 }
 
+export const loadMmeMatches = (individualId) => {
+  return (dispatch, getState) => {
+    const state = getState()
+    const currentProject = state.projectsByGuid[state.currentProjectGuid]
+    if (!(state.matchmakerMatches[currentProject.projectGuid] || {})[individualId]) {
+      dispatch({ type: REQUEST_MME_MATCHES })
+      new HttpRequestHelper(`/api/matchmaker/match_internally_and_externally/project/${currentProject.deprecatedProjectId}/individual/${individualId}`,
+        (responseJson) => {
+          dispatch({ type: RECEIVE_MME_MATCHES, updatesById: { [currentProject.projectGuid]: { [individualId]: responseJson } } })
+        },
+        (e) => {
+          dispatch({ type: RECEIVE_MME_MATCHES, error: e.message, updatesById: {} })
+        },
+      ).get()
+    }
+  }
+}
+
 export const deleteMmePatient = (individual) => {
   return (dispatch, getState) => {
     const state = getState()
@@ -193,6 +213,8 @@ export const reducers = {
   projectSavedVariants: createObjectsByIdReducer(RECEIVE_SAVED_VARIANTS),
   projectSavedVariantsLoading: loadingReducer(REQUEST_SAVED_VARIANTS, RECEIVE_SAVED_VARIANTS),
   projectSavedVariantFamilies: createSingleObjectReducer(RECEIVE_SAVED_VARIANT_FAMILIES),
+  matchmakerMatches: createObjectsByIdReducer(RECEIVE_MME_MATCHES),
+  matchmakerMatchesLoading: loadingReducer(REQUEST_MME_MATCHES, RECEIVE_MME_MATCHES),
   familyTableState: createSingleObjectReducer(UPDATE_FAMILY_TABLE_STATE, {
     familiesFilter: SHOW_ALL,
     familiesSortOrder: SORT_BY_FAMILY_NAME,

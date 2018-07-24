@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Header, Icon, List } from 'semantic-ui-react'
 
-import { loadMmeMatches, loadGenes } from 'redux/rootReducer'
+import { loadGenes } from 'redux/rootReducer'
 import {
   getProjectsByGuid,
   getMatchmakerSubmissions,
@@ -12,6 +12,7 @@ import {
   getGenesById,
   getGenesIsLoading,
 } from 'redux/selectors'
+import { loadMmeMatches } from 'pages/Project/reducers'
 import Modal from '../modal/Modal'
 import SortableTable from '../table/SortableTable'
 import DataLoader from '../DataLoader'
@@ -22,7 +23,7 @@ const MME_FIELDS = [
   {
     name: 'contacted',
     width: 2,
-    content: 'In Contact',
+    content: 'Contacted',
     textAlign: 'center',
     verticalAlign: 'top',
     format: val => <Icon name={val.contacted ? 'check' : 'x'} color={val.contacted ? 'green' : 'red'} />,
@@ -170,12 +171,8 @@ const mapStateToProps = (state, ownProps) => ({
   loading: getMatchmakerMatchesLoading(state),
 })
 
-const mapDispatchToProps = (dispatch, ownProps) => {
-  return {
-    load: (individualId) => {
-      return dispatch(loadMmeMatches(individualId, ownProps.family))
-    },
-  }
+const mapDispatchToProps = {
+  load: loadMmeMatches,
 }
 
 export default connect(mapStateToProps, mapDispatchToProps)(ShowMatchmakerModal)
