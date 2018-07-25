@@ -22,6 +22,7 @@ const RECEIVE_SAVED_VARIANTS = 'RECEIVE_SAVED_VARIANTS'
 const RECEIVE_SAVED_VARIANT_FAMILIES = 'RECEIVE_SAVED_VARIANT_FAMILIES'
 const RECEIVE_GENES = 'RECEIVE_GENES'
 const REQUEST_MME_MATCHES = 'REQUEST_MME_MATCHES'
+const REQUEST_MONARCH_MATCHES = 'REQUEST_MONARCH_MATCHES'
 
 
 // Data actions
@@ -168,20 +169,24 @@ export const updateLocusLists = (values) => {
   }
 }
 
-export const loadMmeMatches = (individualId) => {
+export const loadMmeMatches = (submission, matchSource) => {
   return (dispatch, getState) => {
     const state = getState()
     const currentProject = state.projectsByGuid[state.currentProjectGuid]
-    const individualSubmission = state.matchmakerSubmissions[currentProject.projectGuid][individualId]
-    if (!individualSubmission || !individualSubmission.match) {
-      dispatch({ type: REQUEST_MME_MATCHES })
-      new HttpRequestHelper(`/api/matchmaker/match_internally_and_externally/project/${currentProject.deprecatedProjectId}/individual/${individualId}`,
+    const individualSubmission = state.matchmakerSubmissions[currentProject.projectGuid][submission.individualId]
+    const matchKey = `${matchSource || 'mme'}Match`
+    if (!individualSubmission || !individualSubmission[matchKey]) {
+      dispatch({ type: matchSource === 'monarch' ? REQUEST_MONARCH_MATCHES : REQUEST_MME_MATCHES })
+      const searchPath = matchSource === 'monarch' ? 'match_in_open_mme_sources' : 'match_internally_and_externally'
+      new HttpRequestHelper(`/api/matchmaker/${searchPath}/project/${currentProject.deprecatedProjectId}/individual/${submission.individualId}`,
         (responseJson) => {
           dispatch({
             type: RECEIVE_DATA,
             updatesById: {
               matchmakerSubmissions: {
-                [currentProject.projectGuid]: { [individualId]: { ...individualSubmission, match: responseJson } },
+                [currentProject.projectGuid]: {
+                  [submission.individualId]: { ...individualSubmission, [matchKey]: responseJson },
+                },
               },
             },
           })
@@ -189,7 +194,7 @@ export const loadMmeMatches = (individualId) => {
         (e) => {
           dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
         },
-      ).get()
+      ).postForm({ patient_data: submission.submittedData })
     }
   }
 }
@@ -221,6 +226,7 @@ export const reducers = {
   projectSavedVariantsLoading: loadingReducer(REQUEST_SAVED_VARIANTS, RECEIVE_SAVED_VARIANTS),
   projectSavedVariantFamilies: createSingleObjectReducer(RECEIVE_SAVED_VARIANT_FAMILIES),
   matchmakerMatchesLoading: loadingReducer(REQUEST_MME_MATCHES, RECEIVE_DATA),
+  monarchMatchesLoading: loadingReducer(REQUEST_MONARCH_MATCHES, RECEIVE_DATA),
   familyTableState: createSingleObjectReducer(UPDATE_FAMILY_TABLE_STATE, {
     familiesFilter: SHOW_ALL,
     familiesSortOrder: SORT_BY_FAMILY_NAME,

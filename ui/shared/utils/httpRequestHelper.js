@@ -60,6 +60,22 @@ export class HttpRequestHelper {
     return this.handlePromise(promise, jsonBody)
   }
 
+  postForm = (jsonBody = {}) => {
+    if (this.debug) {
+      console.log(`${this.url} httpHelper - request: `, jsonBody)
+    }
+    const formData = Object.keys(jsonBody).reduce(
+      (data, formKey) => { data.append(formKey, JSON.stringify(jsonBody[formKey])); return data }, new FormData(),
+    )
+    const promise = fetch(this.url, {
+      method: 'POST',
+      credentials: 'include',
+      body: formData,
+    })
+
+    return this.handlePromise(promise, jsonBody)
+  }
+
 
   /**
    * Shared code to process the Promise object returned by fetch(..)

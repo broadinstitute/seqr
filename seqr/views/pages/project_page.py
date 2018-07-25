@@ -341,8 +341,10 @@ def _project_matchmaker_submissions(project):
         if not individual_submission or individual_submission['submissionDate'] < submission['insertion_date']:
             individual_submission = {
                 'submissionDate': submission['insertion_date'],
+                'projectId': submission['project_id'],
                 'familyId': submission['family_id'],
                 'individualId': submission['seqr_id'],
+                'submittedData': submission['submitted_data'],
             }
             if submission.get('deletion'):
                 deleted_by = User.objects.filter(username=submission['deletion']['by']).first()
