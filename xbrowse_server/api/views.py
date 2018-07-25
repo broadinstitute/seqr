@@ -458,12 +458,7 @@ def add_family_analysed_by(request, data=None):
     if not family.project.can_edit(request.user):
         raise PermissionDenied
 
-    analysed_by = AnalysedBy(
-        user=request.user,
-        family=family,
-        date_saved=timezone.now(),
-    )
-    analysed_by.save()
+    analysed_by = create_xbrowse_model(AnalysedBy, user=request.user, family=family, date_saved=timezone.now())
 
     return JSONResponse({
         'is_error': False,

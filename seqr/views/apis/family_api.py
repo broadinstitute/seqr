@@ -14,11 +14,11 @@ from seqr.views.apis.individual_api import delete_individuals
 from seqr.views.utils.json_to_orm_utils import update_family_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_family
-from seqr.models import Family, CAN_EDIT, Individual
+from seqr.models import Family, FamilyAnalysedBy, CAN_EDIT, Individual
+from seqr.model_utils import create_seqr_model
 from seqr.views.utils.permissions_utils import check_permissions, get_project_and_check_permissions
 
 from xbrowse_server.base.models import Family as BaseFamily
-from xbrowse_server.api.views import add_family_analysed_by
 
 logger = logging.getLogger(__name__)
 
@@ -154,11 +154,9 @@ def update_family_analysed_by(request, family_guid):
     """
 
     family = Family.objects.get(guid=family_guid)
+    check_permissions(family.project, request.user, CAN_EDIT)
 
-    add_family_analysed_by(request, data={
-        'family_id': family.family_id,
-        'project_id': family.project.deprecated_project_id
-    })
+    create_seqr_model(FamilyAnalysedBy, family=family, created_by=request.user)
 
     return create_json_response({
         family.guid: _get_json_for_family(family, request.user)
