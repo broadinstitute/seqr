@@ -1,7 +1,7 @@
-# Creates a PhenoTips instance that's configured to use a postgres database running on localhost.
+# Creates a PhenoTips instance that's configured to use postgres as the database.
 #
 # DEPENDENCIES:
-#     A postgres database running on localhost, that contains an empty database named 'xwiki', owned by the 'postgres' user.
+#     A postgres database that contains an empty database named 'xwiki', owned by user also named 'xwiki'.
 #
 # NOTE:
 #     This Dockerfile is based on https://github.com/meatcar/docker-phenotips/blob/master/Dockerfile
@@ -12,8 +12,8 @@ FROM java:8
 MAINTAINER MacArthur Lab
 
 #ENV PT_VERSION="1.2.6"
-#ENV PT_VERSION="1.3.4"
-ENV PT_VERSION="1.4-milestone-3"
+ENV PT_VERSION="1.3.7"
+#ENV PT_VERSION="1.4-milestone-1"
 
 # dev utilities
 RUN apt-get update && apt-get install -y curl xterm vim emacs nano less htop bzip2 --fix-missing

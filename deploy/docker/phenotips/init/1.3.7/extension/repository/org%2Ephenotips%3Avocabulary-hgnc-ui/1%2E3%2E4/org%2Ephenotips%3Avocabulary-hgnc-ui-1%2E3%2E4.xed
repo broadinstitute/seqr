@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?><extension>
+<id>org.phenotips:vocabulary-hgnc-ui</id>
+<version>1.3.7</version>
+<type>xar</type>
+<name>HUGO Gene Nomenclature Committee (GeneNames) integration</name>
+<summary>PhenoTips is a software tool providing an easy-to-use Web interface and standardized database back-end for collecting clinical symptoms and physical findings observed in patients with genetic disorders.</summary>
+<website>http://phenotips.org/phenotips-components/vocabularies/vocabulary-hgnc/vocabulary-hgnc-ui/</website>
+<features>
+<feature>org.phenotips:ontology-hgnc-access-ui</feature>
+</features>
+<licenses>
+<license>
+<name>AGPL 3.0</name>
+</license>
+</licenses>
+<dependencies>
+<dependency>
+<id>org.phenotips:vocabulary-hgnc-api</id>
+<version>1.3.7</version>
+</dependency>
+<dependency>
+<id>org.xwiki.platform:xwiki-platform-rendering-macro-velocity</id>
+<version>7.1.4</version>
+</dependency>
+<dependency>
+<id>org.xwiki.rendering:xwiki-rendering-macro-html</id>
+<version>7.1.4</version>
+</dependency>
+</dependencies>
+<properties>
+<installed.installed type="boolean">true</installed.installed>
+<installed.namespaces type="strinkeygmap">
+<wiki:xwiki type="strinkeygmap">
+<date type="date">1506749143281</date>
+<installed.namespaces.dependency type="boolean">true</installed.namespaces.dependency>
+</wiki:xwiki>
+</installed.namespaces>
+</properties>
+</extension>

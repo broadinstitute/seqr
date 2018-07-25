@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<org.xwiki.extension.distribution.internal.job.FarmDistributionJobStatus>
+  <progress>
+    <listenerName>org.xwiki.job.internal.DefaultJobProgress_1606600969</listenerName>
+    <rootStep>
+      <message>
+        <marker class="org.xwiki.logging.marker.TranslationMarker">
+          <name>xwiki.translation</name>
+          <translationKey>job.progress</translationKey>
+        </marker>
+        <message>Progress with name [{}]</message>
+        <argumentArray>
+          <null/>
+        </argumentArray>
+      </message>
+      <index>0</index>
+      <offset>1.0</offset>
+      <maximumChildren>5</maximumChildren>
+      <childSize>0.2</childSize>
+      <children>
+        <org.xwiki.job.internal.DefaultJobProgressStep>
+          <index>0</index>
+          <offset>1.0</offset>
+          <maximumChildren>-1</maximumChildren>
+          <childSize>0.0</childSize>
+          <finished>true</finished>
+          <levelFinished>true</levelFinished>
+          <startTime>70558144748933</startTime>
+          <elapsedTime>2028357</elapsedTime>
+        </org.xwiki.job.internal.DefaultJobProgressStep>
+        <org.xwiki.job.internal.DefaultJobProgressStep>
+          <index>1</index>
+          <offset>1.0</offset>
+          <maximumChildren>-1</maximumChildren>
+          <childSize>0.0</childSize>
+          <finished>true</finished>
+          <levelFinished>true</levelFinished>
+          <startTime>70558146782087</startTime>
+          <elapsedTime>9394</elapsedTime>
+        </org.xwiki.job.internal.DefaultJobProgressStep>
+        <org.xwiki.job.internal.DefaultJobProgressStep>
+          <index>2</index>
+          <offset>1.0</offset>
+          <maximumChildren>-1</maximumChildren>
+          <childSize>0.0</childSize>
+          <finished>true</finished>
+          <levelFinished>true</levelFinished>
+          <startTime>70558146795179</startTime>
+          <elapsedTime>8195</elapsedTime>
+        </org.xwiki.job.internal.DefaultJobProgressStep>
+        <org.xwiki.job.internal.DefaultJobProgressStep>
+          <index>3</index>
+          <offset>1.0</offset>
+          <maximumChildren>-1</maximumChildren>
+          <childSize>0.0</childSize>
+          <finished>true</finished>
+          <levelFinished>true</levelFinished>
+          <startTime>70558146806972</startTime>
+          <elapsedTime>7895</elapsedTime>
+        </org.xwiki.job.internal.DefaultJobProgressStep>
+        <org.xwiki.job.internal.DefaultJobProgressStep>
+          <index>4</index>
+          <offset>1.0</offset>
+          <maximumChildren>-1</maximumChildren>
+          <childSize>0.0</childSize>
+          <finished>true</finished>
+          <levelFinished>true</levelFinished>
+          <startTime>70558146818365</startTime>
+          <elapsedTime>12592</elapsedTime>
+        </org.xwiki.job.internal.DefaultJobProgressStep>
+      </children>
+      <finished>true</finished>
+      <levelFinished>true</levelFinished>
+      <startTime>70558144748933</startTime>
+      <elapsedTime>2236029</elapsedTime>
+    </rootStep>
+    <currentStep reference="../rootStep"/>
+  </progress>
+  <logs serialization="custom">
+    <unserializable-parents/>
+    <java.util.concurrent.ConcurrentLinkedQueue>
+      <default/>
+      <org.xwiki.logging.event.BeginLogEvent>
+        <marker class="org.xwiki.logging.marker.BeginTranslationMarker">
+          <name>job.log.beginWithId</name>
+          <references class="linked-hash-set">
+            <org.slf4j.helpers.BasicMarker>
+              <name>xwiki.begin</name>
+            </org.slf4j.helpers.BasicMarker>
+          </references>
+          <translationKey>job.log.beginWithId</translationKey>
+        </marker>
+        <message>Starting job of type [{}] with identifier [{}]</message>
+        <argumentArray>
+          <string>distribution</string>
+          <list>
+            <string>distribution</string>
+          </list>
+        </argumentArray>
+        <level>INFO</level>
+        <timeStamp>1508028401142</timeStamp>
+      </org.xwiki.logging.event.BeginLogEvent>
+      <org.xwiki.logging.event.EndLogEvent>
+        <marker class="org.xwiki.logging.marker.EndTranslationMarker">
+          <name>job.log.endWithId</name>
+          <references class="linked-hash-set">
+            <org.slf4j.helpers.BasicMarker>
+              <name>xwiki.end</name>
+            </org.slf4j.helpers.BasicMarker>
+          </references>
+          <translationKey>job.log.endWithId</translationKey>
+        </marker>
+        <message>Finished job of type [{}] with identifier [{}]</message>
+        <argumentArray>
+          <string>distribution</string>
+          <list>
+            <string>distribution</string>
+          </list>
+        </argumentArray>
+        <level>INFO</level>
+        <timeStamp>1508028401144</timeStamp>
+      </org.xwiki.logging.event.EndLogEvent>
+      <null/>
+    </java.util.concurrent.ConcurrentLinkedQueue>
+  </logs>
+  <state>FINISHED</state>
+  <request class="org.xwiki.extension.distribution.internal.job.DistributionRequest">
+    <id>
+      <string>distribution</string>
+    </id>
+    <properties>
+      <entry>
+        <string>wiki</string>
+        <string>xwiki</string>
+      </entry>
+      <entry>
+        <string>user.reference</string>
+        <org.xwiki.model.reference.DocumentReference>
+          <name>Admin</name>
+          <parent class="org.xwiki.model.reference.SpaceReference">
+            <name>XWiki</name>
+            <parent class="org.xwiki.model.reference.WikiReference">
+              <name>xwiki</name>
+              <type>WIKI</type>
+            </parent>
+            <type>SPACE</type>
+          </parent>
+          <type>DOCUMENT</type>
+        </org.xwiki.model.reference.DocumentReference>
+      </entry>
+    </properties>
+    <verbose>true</verbose>
+  </request>
+  <startDate>2017-10-15 00:46:41.142 UTC</startDate>
+  <endDate>2017-10-15 00:46:41.144 UTC</endDate>
+  <isolated>true</isolated>
+  <distributionExtension>
+    <id>org.phenotips:phenotips-war</id>
+    <version class="org.xwiki.extension.version.internal.DefaultVersion" serialization="custom">
+      <org.xwiki.extension.version.internal.DefaultVersion>
+        <string>1.3.7</string>
+      </org.xwiki.extension.version.internal.DefaultVersion>
+    </version>
+  </distributionExtension>
+  <distributionExtensionUi>
+    <id>org.phenotips:phenotips-ui</id>
+    <version class="org.xwiki.extension.version.internal.DefaultVersion" reference="../../distributionExtension/version"/>
+  </distributionExtensionUi>
+  <stepList>
+    <org.xwiki.extension.distribution.internal.job.step.WelcomeDistributionStep>
+      <stepId>welcome</stepId>
+      <state>COMPLETED</state>
+    </org.xwiki.extension.distribution.internal.job.step.WelcomeDistributionStep>
+    <org.xwiki.extension.distribution.internal.job.step.DefaultUIDistributionStep>
+      <stepId>extension.defaultui</stepId>
+      <state>COMPLETED</state>
+    </org.xwiki.extension.distribution.internal.job.step.DefaultUIDistributionStep>
+    <org.xwiki.extension.distribution.internal.job.step.WikisFlavorDistributionStep>
+      <stepId>extension.flavor.wikis</stepId>
+      <state>COMPLETED</state>
+    </org.xwiki.extension.distribution.internal.job.step.WikisFlavorDistributionStep>
+    <org.xwiki.extension.distribution.internal.job.step.OutdatedExtensionsDistributionStep>
+      <stepId>extension.outdatedextensions</stepId>
+      <state>COMPLETED</state>
+    </org.xwiki.extension.distribution.internal.job.step.OutdatedExtensionsDistributionStep>
+    <org.xwiki.extension.distribution.internal.job.step.ReportDistributionStep>
+      <stepId>report</stepId>
+      <state>COMPLETED</state>
+    </org.xwiki.extension.distribution.internal.job.step.ReportDistributionStep>
+  </stepList>
+  <currentStateIndex>4</currentStateIndex>
+</org.xwiki.extension.distribution.internal.job.FarmDistributionJobStatus>
