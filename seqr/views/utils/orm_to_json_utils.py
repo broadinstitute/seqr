@@ -81,13 +81,14 @@ def _get_json_for_project(project, user, add_project_category_guids_field=True):
     return result
 
 
-def _get_json_for_families(families, user=None, add_individual_guids_field=False):
+def _get_json_for_families(families, user=None, add_individual_guids_field=False, project_guid=None):
     """Returns a JSON representation of the given Family.
 
     Args:
         families (array): array of dictionaries or django models representing the family.
         user (object): Django User object for determining whether to include restricted/internal-only fields
         add_individual_guids_field (bool): whether to add an 'individualGuids' field. NOTE: this will require a database query.
+        project_guid (boolean): An optional field to use as the projectGuid instead of querying the DB
     Returns:
         array: json objects
     """
@@ -104,14 +105,15 @@ def _get_json_for_families(families, user=None, add_individual_guids_field=False
         prefetch_related_objects(families, 'individual_set')
 
     fields = _get_record_fields(Family, 'family', user)
-    family_dicts = [(family, _record_to_dict(family, fields, nested_fields=[('project', 'guid')])) for family in families]
+    nested_fields = [] if project_guid else [('project', 'guid')]
+    family_dicts = [(family, _record_to_dict(family, fields, nested_fields=nested_fields)) for family in families]
 
     analysed_by = retrieve_multi_family_analysed_by([family_dict for (family, family_dict) in family_dicts])
     results = []
     for (family, family_dict) in family_dicts:
         result = _get_json_for_record(family_dict, fields)
         result.update({
-            'projectGuid': family_dict['project_guid'],
+            'projectGuid': project_guid or family_dict['project_guid'],
             'familyGuid': result.pop('guid'),
             'analysedBy': analysed_by[result.pop('id')],
         })

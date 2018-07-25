@@ -19,6 +19,7 @@ import {
   FAMILY_FIELD_ANALYSED_BY,
   FAMILY_FIELD_FIRST_SAMPLE,
   FAMILY_FIELD_RENDER_LOOKUP,
+  FAMILY_FIELD_OMIM_NUMBER,
 } from '../../utils/constants'
 
 const FamilyGrid = styled(({ annotation, offset, ...props }) => <Grid {...props} />)`
@@ -50,6 +51,10 @@ const familyFieldRenderProps = {
   [FAMILY_FIELD_FIRST_SAMPLE]: {
     showEmptyValues: true,
     fieldDisplay: (loadedSample, compact) => <Sample loadedSample={loadedSample} hoverDetails={compact} />,
+  },
+  [FAMILY_FIELD_OMIM_NUMBER]: {
+    fieldDisplay: value => <a target="_blank" href={`https://www.omim.org/entry/${value}`}>{value}</a>,
+    formFields: [{ name: FAMILY_FIELD_OMIM_NUMBER }],
   },
 }
 
