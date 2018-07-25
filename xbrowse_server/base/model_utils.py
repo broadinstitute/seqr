@@ -8,7 +8,7 @@ from django.db.models import Q
 from seqr.models import Project as SeqrProject, Family as SeqrFamily, Individual as SeqrIndividual, \
     VariantTagType as SeqrVariantTagType, VariantTag as SeqrVariantTag, VariantNote as SeqrVariantNote, \
     VariantFunctionalData as SeqrVariantFunctionalData, LocusList as SeqrLocusList, LocusListGene as SeqrLocusListGene, \
-    GeneNote as SeqrGeneNote
+    GeneNote as SeqrGeneNote, FamilyAnalysedBy as SeqrAnalysedBy
 from seqr.utils.model_sync_utils import get_or_create_saved_variant, convert_html_to_plain_text
 
 
@@ -23,6 +23,7 @@ XBROWSE_TO_SEQR_CLASS_MAPPING = {
     "GeneList": SeqrLocusList,
     "GeneListItem": SeqrLocusListGene,
     "GeneNote": SeqrGeneNote,
+    "AnalysedBy": SeqrAnalysedBy,
 }
 
 _DELETED_FIELD = "__DELETED__"
@@ -89,6 +90,10 @@ XBROWSE_TO_SEQR_FIELD_MAPPING = {
         "gene_list": "locus_list",
     },
     "GeneNote": {
+        "user": "created_by",
+        "date_saved": _DELETED_FIELD,
+    },
+    "AnalysedBy": {
         "user": "created_by",
         "date_saved": _DELETED_FIELD,
     },
@@ -203,6 +208,8 @@ def find_matching_seqr_model(xbrowse_model):
                 note=xbrowse_model.note,
                 gene_id=xbrowse_model.gene_id,
             )
+        elif xbrowse_class_name == "AnalysedBy":
+            return xbrowse_model.seqr_family_analysed_by
 
     except ObjectDoesNotExist:
         pass
