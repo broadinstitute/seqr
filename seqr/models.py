@@ -275,6 +275,19 @@ class Family(ModelWithGUID):
         ]
 
 
+class FamilyAnalysedBy(ModelWithGUID):
+    family = models.ForeignKey(Family)
+
+    def __unicode__(self):
+        return '{}_{}'.format(self.family.guid, self.created_by)
+
+    def _compute_guid(self):
+        return 'FAB%06d_%s' % (self.id, _slugify(str(self)))
+
+    class Meta:
+        json_fields = ['last_modified_date', 'created_by']
+
+
 class Individual(ModelWithGUID):
     SEX_CHOICES = (
         ('M', 'Male'),
