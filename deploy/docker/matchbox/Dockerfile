@@ -46,7 +46,7 @@ RUN wget https://storage.googleapis.com/pub/gsutil.tar.gz \
 #----now get the data and untar it
 
 WORKDIR data
-RUN /root/gsutils_dir/gsutil/gsutil -m -o GSUtil:parallel_composite_upload_threshold=150M cp gs://seqr-reference-data/1711_phenotype.tar.gz data.local.tar.gz \
+RUN /root/gsutils_dir/gsutil/gsutil -m -o GSUtil:parallel_composite_upload_threshold=150M cp gs://seqr-reference-data/1807_phenotype.tar.gz data.local.tar.gz \
  && tar -xzf data.local.tar.gz \
  && rm data.local.tar.gz \
  && pwd \
@@ -73,7 +73,7 @@ RUN cp -rf $MATCHBOX_CONFIG_DIR . \
 #                                           #
 #############################################
 env EXOMISER_DATA_DIR=/Exomiser/matchbox/data
-env EXOMISER_PHENOTYPE_DATA_VERSION=1711
+env EXOMISER_PHENOTYPE_DATA_VERSION=1807
 
 
 #############################################
