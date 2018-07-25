@@ -1456,7 +1456,6 @@ def match_internally_and_externally(request,project_id,indiv_id):
     
     patient_data = request.POST.get("patient_data")
     if patient_data is None:
-        import pdb; pdb.set_trace()
         r = HttpResponse("wasn't able to parse patient data field in POST!",status=400)
         return r
     
@@ -1482,9 +1481,6 @@ def match_internally_and_externally(request,project_id,indiv_id):
     results['local_results']={"result":internal_result.json(), 
                               "status_code":internal_result.status_code
                               }
-    results['local_results']["result"]['results'] = []
-    results['local_results']['status_code'] = 200
-
     #then externally (unless turned off)
     if settings.SEARCH_IN_EXTERNAL_MME_NODES:
         extnl_result = requests.post(url=settings.MME_EXTERNAL_MATCH_URL,
@@ -1497,179 +1493,6 @@ def match_internally_and_externally(request,project_id,indiv_id):
         for ext_res in extnl_result.json().get('results',[]):
             extract_hpo_id_list_from_mme_patient_struct(ext_res,hpo_map)
             ids[ext_res['patient']['id']] = ext_res
-        results['external_results']["result"]['results'] = [
-            {"score": {"patient": 1.0}, "patient": {"species": "NCBITaxon:9606", "genomicFeatures": [
-                {"gene": {"id": "ENSG00000055163"},
-                 "variant": {"start": 156746776, "end": 156746777, "assembly": "GRCh37", "referenceName": "5"}}],
-                                                    "contact": {"href": "mailto:genematcher@genedx.com",
-                                                                "institution": "GeneDx", "name": "Kyle Retterer"},
-                                                    "id": "1622", "label": "5674"}}, {"score": {"patient": 1.0},
-                                                                                      "patient": {
-                                                                                          "species": "NCBITaxon:9606",
-                                                                                          "genomicFeatures": [{"gene": {
-                                                                                              "id": "ENSG00000055163"},
-                                                                                              "variant": {
-                                                                                                  "start": 156817677,
-                                                                                                  "end": 156817678,
-                                                                                                  "assembly": "GRCh37",
-                                                                                                  "referenceName": "5"}}],
-                                                                                          "contact": {
-                                                                                              "href": "mailto:genematcher@genedx.com",
-                                                                                              "institution": "GeneDx",
-                                                                                              "name": "Kyle Retterer"},
-                                                                                          "id": "7071",
-                                                                                          "label": "16531"}},
-            {"score": {"patient": 1.0}, "patient": {"species": "NCBITaxon:9606", "genomicFeatures": [
-                {"gene": {"id": "ENSG00000055163"},
-                 "variant": {"start": 156753248, "end": 156753249, "assembly": "GRCh37", "referenceName": "5"}}],
-                                                    "contact": {"href": "mailto:genematcher@genedx.com",
-                                                                "institution": "GeneDx", "name": "Kyle Retterer"},
-                                                    "id": "7440", "label": "17547"}}, {"score": {"patient": 1.0},
-                                                                                       "patient": {
-                                                                                           "species": "NCBITaxon:9606",
-                                                                                           "genomicFeatures": [
-                                                                                               {"gene": {
-                                                                                                   "id": "ENSG00000055163"}}],
-                                                                                           "contact": {
-                                                                                               "href": "mailto:shiatt@hudsonalpha.org",
-                                                                                               "institution": "HudsonAlpha Institute for Biotechnology",
-                                                                                               "name": "Susan Hiatt"},
-                                                                                           "id": "8881",
-                                                                                           "label": "PGEN_batch02"}},
-            {"score": {"patient": 1.0}, "patient": {"species": "NCBITaxon:9606", "genomicFeatures": [
-                {"gene": {"id": "ENSG00000055163"},
-                 "variant": {"start": 156721843, "end": 156721844, "assembly": "GRCh37", "referenceName": "5"}}],
-                                                    "contact": {"href": "mailto:genematcher@genedx.com",
-                                                                "institution": "GeneDx", "name": "Kyle Retterer"},
-                                                    "id": "8897", "label": "20183"}}, {"score": {"patient": 1.0},
-                                                                                       "patient": {
-                                                                                           "species": "NCBITaxon:9606",
-                                                                                           "genomicFeatures": [
-                                                                                               {"gene": {
-                                                                                                   "id": "ENSG00000055163"},
-                                                                                                   "variant": {
-                                                                                                       "start": 156746789,
-                                                                                                       "end": 156746790,
-                                                                                                       "assembly": "GRCh37",
-                                                                                                       "referenceName": "5"}}],
-                                                                                           "contact": {
-                                                                                               "href": "mailto:genematcher@genedx.com",
-                                                                                               "institution": "GeneDx",
-                                                                                               "name": "Kyle Retterer"},
-                                                                                           "id": "12414",
-                                                                                           "label": "25708"}},
-            {"score": {"patient": 1.0}, "patient": {"species": "NCBITaxon:9606", "genomicFeatures": [
-                {"gene": {"id": "ENSG00000055163"},
-                 "variant": {"start": 156746899, "end": 156746900, "assembly": "GRCh37", "referenceName": "5"}}],
-                                                    "contact": {"href": "mailto:genematcher@genedx.com",
-                                                                "institution": "GeneDx", "name": "Kyle Retterer"},
-                                                    "id": "13371", "label": "27881"}}, {"score": {"patient": 1.0},
-                                                                                        "patient": {
-                                                                                            "species": "NCBITaxon:9606",
-                                                                                            "genomicFeatures": [
-                                                                                                {"gene": {
-                                                                                                    "id": "ENSG00000055163"}}],
-                                                                                            "contact": {
-                                                                                                "href": "mailto:zweier@medgen.uzh.ch",
-                                                                                                "institution": "Institute of Medical Genetics, University of Zurich",
-                                                                                                "name": "Markus Zweier"},
-                                                                                            "id": "15602",
-                                                                                            "label": "ABE10"}},
-            {"score": {"patient": 1.0}, "patient": {"species": "NCBITaxon:9606", "genomicFeatures": [
-                {"gene": {"id": "ENSG00000055163"},
-                 "variant": {"start": 156817545, "end": 156817546, "assembly": "GRCh37", "referenceName": "5"}}],
-                                                    "contact": {"href": "mailto:genematcher@genedx.com",
-                                                                "institution": "GeneDx", "name": "Kyle Retterer"},
-                                                    "id": "16823", "label": "33227"}}, {"score": {"patient": 1.0},
-                                                                                        "patient": {
-                                                                                            "species": "NCBITaxon:9606",
-                                                                                            "genomicFeatures": [
-                                                                                                {"gene": {
-                                                                                                    "id": "ENSG00000055163"}}],
-                                                                                            "contact": {
-                                                                                                "href": "mailto:GeneMatcher@ambrygen.com",
-                                                                                                "institution": "Ambry Genetics",
-                                                                                                "name": "Zoe Powis"},
-                                                                                            "id": "17394",
-                                                                                            "label": "CYFIP2_1"}},
-            {"score": {"patient": 1.0},
-             "patient": {"species": "NCBITaxon:9606", "genomicFeatures": [{"gene": {"id": "ENSG00000055163"}}],
-                         "contact": {"href": "mailto:GeneMatcher@ambrygen.com", "institution": "Ambry Genetics",
-                                     "name": "Zoe Powis"}, "id": "19586", "label": "CYFIP2_1"}},
-            {"score": {"patient": 1.0}, "patient": {"species": "NCBITaxon:9606", "genomicFeatures": [
-                {"gene": {"id": "ENSG00000055163"},
-                 "variant": {"start": 156746776, "end": 156746777, "assembly": "GRCh37", "referenceName": "5"}}],
-                                                    "contact": {"href": "mailto:genematcher@genedx.com",
-                                                                "institution": "GeneDx", "name": "Kyle Retterer"},
-                                                    "id": "21030", "label": "39708"}}, {"score": {"patient": 1.0},
-                                                                                        "patient": {
-                                                                                            "species": "NCBITaxon:9606",
-                                                                                            "genomicFeatures": [
-                                                                                                {"gene": {
-                                                                                                    "id": "ENSG00000055163"},
-                                                                                                    "variant": {
-                                                                                                        "start": 156736775,
-                                                                                                        "end": 156736776,
-                                                                                                        "assembly": "GRCh37",
-                                                                                                        "referenceName": "5"}}],
-                                                                                            "contact": {
-                                                                                                "href": "mailto:genematcher@genedx.com",
-                                                                                                "institution": "GeneDx",
-                                                                                                "name": "Kyle Retterer"},
-                                                                                            "id": "21165",
-                                                                                            "label": "40238"}},
-            {"score": {"patient": 1.0}, "patient": {"species": "NCBITaxon:9606", "genomicFeatures": [
-                {"gene": {"id": "ENSG00000055163"},
-                 "variant": {"start": 156766072, "end": 156766073, "assembly": "GRCh37", "referenceName": "5"}}],
-                                                    "contact": {"href": "mailto:genematcher@genedx.com",
-                                                                "institution": "GeneDx", "name": "Kyle Retterer"},
-                                                    "id": "22038", "label": "40998"}}, {"score": {"patient": 1.0},
-                                                                                        "patient": {
-                                                                                            "species": "NCBITaxon:9606",
-                                                                                            "genomicFeatures": [
-                                                                                                {"gene": {
-                                                                                                    "id": "ENSG00000055163"},
-                                                                                                    "variant": {
-                                                                                                        "start": 156727759,
-                                                                                                        "end": 156727760,
-                                                                                                        "assembly": "GRCh37",
-                                                                                                        "referenceName": "5"}}],
-                                                                                            "contact": {
-                                                                                                "href": "mailto:genematcher@genedx.com",
-                                                                                                "institution": "GeneDx",
-                                                                                                "name": "Kyle Retterer"},
-                                                                                            "id": "22496",
-                                                                                            "label": "43201"}},
-            {"score": {"patient": 1.0},
-             "patient": {"species": "NCBITaxon:9606", "genomicFeatures": [{"gene": {"id": "ENSG00000055163"}}],
-                         "contact": {"href": "mailto:Farrah.Rajabi@childrens.harvard.edu",
-                                     "institution": "Boston Children's Hospital", "name": "Farrah Rajabi"},
-                         "id": "23397",
-                         "label": "CYFIP2"}}, {"score": {"patient": 1.0}, "patient": {"species": "NCBITaxon:9606",
-                                                                                      "genomicFeatures": [{"gene": {
-                                                                                          "id": "ENSG00000055163"}}],
-                                                                                      "contact": {
-                                                                                          "href": "mailto:gaetan.lesca@chu-lyon.fr",
-                                                                                          "institution": "Lyon University Hospital",
-                                                                                          "name": "Gaetan Lesca"},
-                                                                                      "id": "25216",
-                                                                                      "label": "15A2747"}},
-            {"score": {"patient": 1.0},
-             "patient": {"species": "NCBITaxon:9606", "genomicFeatures": [{"gene": {"id": "ENSG00000055163"}}],
-                         "contact": {"href": "mailto:nanpang@csu.edu.cn",
-                                     "institution": "Xiangya Hospital, Central South University", "name": "Nan Pang"},
-                         "id": "25237", "label": "EIEE Xiangya cohort I gene list3"}}, {"score": {"patient": 1.0},
-                                                                                        "patient": {
-                                                                                            "species": "NCBITaxon:9606",
-                                                                                            "genomicFeatures": [
-                                                                                                {"gene": {
-                                                                                                    "id": "ENSG00000055163"},
-                                                                                                    "variant": {
-                                                                                                        "start": 156753266,
-                                                                                                        "end": 156753267,
-                                                                                                        "assembly": "GRCh37",
-                                                                                                        "referenceName": "5"}}]}}]
-        results['external_results']['status_code'] = 200
        
     result_analysis_state={}
     for id in ids.keys():
@@ -1701,57 +1524,7 @@ def match_internally_and_externally(request,project_id,indiv_id):
     seqr_id = convert_matchbox_id_to_seqr_id(json.loads(patient_data)['patient']['id'])
     if settings.SLACK_TOKEN is not None:
         generate_slack_notification_for_seqr_match(results,project_id,seqr_id) 
-    result_analysis_state = {"P0003478": {"deemed_irrelevant": False, "flag_for_analysis": False, "host_contacted_us": False,
-                      "id_of_indiv_searched_with": "HK081-001", "seen_on": "2018-05-03 12:07:56.564744+00:00",
-                      "we_contacted_host": False, "comments": "", "username_of_last_event_initiator": "qazt8WPnC5",
-                      "content_of_result": {"score": {"patient": 0.5}, "patient": {
-                          "genomicFeatures": [{"gene": {"id": "COG4"}}, {"gene": {"id": "RYR3"}}],
-                          "contact": {"href": "mailto:vanderbiltudn@hms.harvard.edu,matchmaker@phenomecentral.org",
-                                      "name": "Vanderbilt UDN Clinical Site"}, "id": "P0003478",
-                          "features": [{"observed": "no", "id": "HP:0011436"}, {"observed": "yes", "id": "HP:0000375"},
-                                       {"observed": "yes", "id": "HP:0009843"}, {"observed": "yes", "id": "HP:0002186"},
-                                       {"observed": "yes", "id": "HP:0008619"}, {"observed": "yes", "id": "HP:0001776"},
-                                       {"observed": "yes", "id": "HP:0003561"}, {"observed": "yes", "id": "HP:0000592"},
-                                       {"observed": "yes", "id": "HP:0008445"}, {"observed": "yes", "id": "HP:0007911"},
-                                       {"observed": "no", "id": "HP:0001558"}, {"observed": "yes", "id": "HP:0004458"},
-                                       {"observed": "yes", "id": "HP:0011379"}, {"observed": "yes", "id": "HP:0011383"},
-                                       {"observed": "yes", "id": "HP:0001263"}, {"observed": "yes", "id": "HP:0001510"},
-                                       {"observed": "yes", "id": "HP:0000824"}, {"observed": "no", "id": "HP:0012188"},
-                                       {"observed": "no", "id": "HP:0010519"}, {"observed": "yes", "id": "HP:0030369"},
-                                       {"observed": "yes", "id": "HP:0001511"}, {"observed": "yes", "id": "HP:0007971"},
-                                       {"observed": "no", "id": "HP:0009800"}, {"observed": "no", "id": "HP:0030244"},
-                                       {"observed": "no", "id": "HP:0008071"}, {"observed": "no", "id": "HP:0100622"},
-                                       {"observed": "no", "id": "HP:0011438"}, {"observed": "no", "id": "HP:0011408"},
-                                       {"observed": "no", "id": "HP:0001998"}, {"observed": "no", "id": "HP:0002643"},
-                                       {"observed": "no", "id": "HP:0040187"}, {"observed": "no", "id": "HP:0001562"},
-                                       {"observed": "no", "id": "HP:0001561"}, {"observed": "yes", "id": "HP:0002033"},
-                                       {"observed": "yes", "id": "HP:0001622"}, {"observed": "no", "id": "HP:0006579"},
-                                       {"observed": "yes", "id": "HP:0011220"}, {"observed": "yes", "id": "HP:0001043"},
-                                       {"observed": "yes", "id": "HP:0004482"}, {"observed": "yes", "id": "HP:0008846"},
-                                       {"observed": "yes", "id": "HP:0009882"}, {"observed": "yes", "id": "HP:0004322"},
-                                       {"observed": "yes", "id": "HP:0001518"}, {"observed": "yes", "id": "HP:0011098"},
-                                       {"observed": "yes", "id": "HP:0001762"},
-                                       {"observed": "no", "id": "HP:0100603"}]}}, "seqr_project_id": "CMG_Estonia_WES",
-                      "content_of_indiv_searched_with": {"patient": {"features": [], "label": "HK081-001",
-                                                                     "genomicFeatures": [{"variant": {
-                                                                         "assembly": "GRCh37", "start": 34032188,
-                                                                         "alternateBases": "G", "referenceName": "15",
-                                                                         "end": 34032188, "referenceBases": "C"},
-                                                                                          "gene": {
-                                                                                              "id": "ENSG00000198838"},
-                                                                                          "zygosity": 1}, {"variant": {
-                                                                         "assembly": "GRCh37", "start": 34034596,
-                                                                         "alternateBases": "A", "referenceName": "15",
-                                                                         "end": 34034596, "referenceBases": "T"},
-                                                                                                           "gene": {
-                                                                                                               "id": "ENSG00000198838"},
-                                                                                                           "zygosity": 1}],
-                                                                     "contact": {
-                                                                         "href": "mailto:katrin.ounap@kliinikum.ee,matchmaker@broadinstitute.org",
-                                                                         "name": "Katrin Ounap",
-                                                                         "institution": "Broad Center for Mendelian Genomics"},
-                                                                     "species": "NCBITaxon:9606", "id": "HK081-001"}},
-                      "result_id": "P0003478"},"22496": {"deemed_irrelevant": False, "flag_for_analysis": False, "host_contacted_us": False, "id_of_indiv_searched_with": "HK077-001", "seen_on": "2018-03-14 15:13:15.633956+00:00", "we_contacted_host": False, "comments": "", "username_of_last_event_initiator": "hhXPeEcnND", "content_of_result": {"score": {"patient": 1.0}, "patient": {"genomicFeatures": [{"gene": {"id": "ENSG00000055163"}, "variant": {"assembly": "GRCh37", "start": 156727759, "end": 156727759, "referenceName": "5"}}], "label": "43201", "contact": {"href": "mailto:genematcher@genedx.com", "institution": "GeneDx", "name": "Kyle Retterer"}, "species": "NCBITaxon:9606", "id": "22496"}}, "seqr_project_id": "CMG_Estonia_WES", "content_of_indiv_searched_with": {"patient": {"features": [], "label": "HK077-001", "genomicFeatures": [{"variant": {"assembly": "GRCh37", "start": 156752581, "alternateBases": "G", "referenceName": "5", "end": 156752581, "referenceBases": "C"}, "gene": {"id": "ENSG00000055163"}, "zygosity": 1}], "contact": {"href": "mailto:matchmaker@broadinstitute.org,katrin.ounap@kliinikum.ee", "name": "Samantha Baxter (data owner: Katrin Ounap)", "institution": "Broad Center for Mendelian Genomics"}, "species": "NCBITaxon:9606", "id": "HK077-001"}}, "result_id": "22496"}, "1622": {"deemed_irrelevant": False, "flag_for_analysis": False, "host_contacted_us": False, "id_of_indiv_searched_with": "HK077-001", "seen_on": "2017-10-30 14:02:31.880479+00:00", "we_contacted_host": False, "comments": "", "username_of_last_event_initiator": "qazt8WPnC5", "content_of_result": {"score": {"patient": 1.0}, "patient": {"genomicFeatures": [{"gene": {"id": "ENSG00000055163"}, "variant": {"assembly": "GRCh37", "start": 156746776, "end": 156746776, "referenceName": "5"}}], "label": "5674", "contact": {"href": "mailto:genematcher@genedx.com", "institution": "GeneDx"}, "species": "NCBITaxon:9606", "id": "1622"}}, "seqr_project_id": "CMG_Estonia_WES", "content_of_indiv_searched_with": {"patient": {"features": [], "label": "HK077-001", "genomicFeatures": [{"variant": {"assembly": "GRCh37", "start": 156752581, "alternateBases": "G", "referenceName": "5", "end": 156752581, "referenceBases": "C"}, "gene": {"id": "ENSG00000055163"}, "zygosity": 1}], "contact": {"href": "mailto:matchmaker@broadinstitute.org,katrin.ounap@kliinikum.ee", "name": "Samantha Baxter (data owner: Katrin Ounap)", "institution": "Broad Center for Mendelian Genomics"}, "species": "NCBITaxon:9606", "id": "HK077-001"}}, "result_id": "1622"}, "15602": {"deemed_irrelevant": False, "flag_for_analysis": False, "host_contacted_us": True, "id_of_indiv_searched_with": "HK077-001", "seen_on": "2017-10-30 14:02:31.882616+00:00", "we_contacted_host": False, "comments": "Katrin to email", "username_of_last_event_initiator": "qazt8WPnC5", "content_of_result": {"score": {"patient": 1.0}, "patient": {"genomicFeatures": [{"gene": {"id": "ENSG00000055163"}}], "label": "ABE10", "contact": {"href": "mailto:zweier@medgen.uzh.ch", "institution": "Institute of Medical Genetics, University of Zurich", "name": "Markus Zweier"}, "id": "15602", "species": "NCBITaxon:9606"}}, "seqr_project_id": "CMG_Estonia_WES", "content_of_indiv_searched_with": {"patient": {"features": [], "label": "HK077-001", "genomicFeatures": [{"variant": {"assembly": "GRCh37", "start": 156752581, "alternateBases": "G", "referenceName": "5", "end": 156752581, "referenceBases": "C"}, "gene": {"id": "ENSG00000055163"}, "zygosity": 1}], "contact": {"href": "mailto:matchmaker@broadinstitute.org,katrin.ounap@kliinikum.ee", "name": "Samantha Baxter (data owner: Katrin Ounap)", "institution": "Broad Center for Mendelian Genomics"}, "species": "NCBITaxon:9606", "id": "HK077-001"}}, "result_id": "15602"}, "7440": {"deemed_irrelevant": False, "flag_for_analysis": False, "host_contacted_us": False, "id_of_indiv_searched_with": "HK077-001", "seen_on": "2017-10-30 14:02:31.884281+00:00", "we_contacted_host": False, "comments": "", "username_of_last_event_initiator": "qazt8WPnC5", "content_of_result": {"score": {"patient": 1.0}, "patient": {"genomicFeatures": [{"gene": {"id": "ENSG00000055163"}, "variant": {"assembly": "GRCh37", "start": 156753248, "end": 156753248, "referenceName": "5"}}], "label": "17547", "contact": {"href": "mailto:genematcher@genedx.com", "institution": "GeneDx"}, "species": "NCBITaxon:9606", "id": "7440"}}, "seqr_project_id": "CMG_Estonia_WES", "content_of_indiv_searched_with": {"patient": {"features": [], "label": "HK077-001", "genomicFeatures": [{"variant": {"assembly": "GRCh37", "start": 156752581, "alternateBases": "G", "referenceName": "5", "end": 156752581, "referenceBases": "C"}, "gene": {"id": "ENSG00000055163"}, "zygosity": 1}], "contact": {"href": "mailto:matchmaker@broadinstitute.org,katrin.ounap@kliinikum.ee", "name": "Samantha Baxter (data owner: Katrin Ounap)", "institution": "Broad Center for Mendelian Genomics"}, "species": "NCBITaxon:9606", "id": "HK077-001"}}, "result_id": "7440"}, "8897": {"deemed_irrelevant": False, "flag_for_analysis": False, "host_contacted_us": False, "id_of_indiv_searched_with": "HK077-001", "seen_on": "2017-10-30 14:02:31.885736+00:00", "we_contacted_host": False, "comments": "", "username_of_last_event_initiator": "qazt8WPnC5", "content_of_result": {"score": {"patient": 1.0}, "patient": {"genomicFeatures": [{"gene": {"id": "ENSG00000055163"}, "variant": {"assembly": "GRCh37", "start": 156721843, "end": 156721843, "referenceName": "5"}}], "label": "20183", "contact": {"href": "mailto:genematcher@genedx.com", "institution": "GeneDx"}, "species": "NCBITaxon:9606", "id": "8897"}}, "seqr_project_id": "CMG_Estonia_WES", "content_of_indiv_searched_with": {"patient": {"features": [], "label": "HK077-001", "genomicFeatures": [{"variant": {"assembly": "GRCh37", "start": 156752581, "alternateBases": "G", "referenceName": "5", "end": 156752581, "referenceBases": "C"}, "gene": {"id": "ENSG00000055163"}, "zygosity": 1}], "contact": {"href": "mailto:matchmaker@broadinstitute.org,katrin.ounap@kliinikum.ee", "name": "Samantha Baxter (data owner: Katrin Ounap)", "institution": "Broad Center for Mendelian Genomics"}, "species": "NCBITaxon:9606", "id": "HK077-001"}}, "result_id": "8897"}, "12414": {"deemed_irrelevant": False, "flag_for_analysis": False, "host_contacted_us": False, "id_of_indiv_searched_with": "HK077-001", "seen_on": "2017-10-30 14:02:31.887216+00:00", "we_contacted_host": False, "comments": "", "username_of_last_event_initiator": "qazt8WPnC5", "content_of_result": {"score": {"patient": 1.0}, "patient": {"genomicFeatures": [{"gene": {"id": "ENSG00000055163"}, "variant": {"assembly": "GRCh37", "start": 156746789, "end": 156746789, "referenceName": "5"}}], "label": "25708", "contact": {"href": "mailto:genematcher@genedx.com", "institution": "GeneDx"}, "species": "NCBITaxon:9606", "id": "12414"}}, "seqr_project_id": "CMG_Estonia_WES", "content_of_indiv_searched_with": {"patient": {"features": [], "label": "HK077-001", "genomicFeatures": [{"variant": {"assembly": "GRCh37", "start": 156752581, "alternateBases": "G", "referenceName": "5", "end": 156752581, "referenceBases": "C"}, "gene": {"id": "ENSG00000055163"}, "zygosity": 1}], "contact": {"href": "mailto:matchmaker@broadinstitute.org,katrin.ounap@kliinikum.ee", "name": "Samantha Baxter (data owner: Katrin Ounap)", "institution": "Broad Center for Mendelian Genomics"}, "species": "NCBITaxon:9606", "id": "HK077-001"}}, "result_id": "12414"}, "8881": {"deemed_irrelevant": False, "flag_for_analysis": False, "host_contacted_us": True, "id_of_indiv_searched_with": "HK077-001", "seen_on": "2017-10-30 14:02:31.888863+00:00", "we_contacted_host": False, "comments": "Katrin to email", "username_of_last_event_initiator": "qazt8WPnC5", "content_of_result": {"score": {"patient": 1.0}, "patient": {"genomicFeatures": [{"gene": {"id": "ENSG00000055163"}}], "label": "PGEN_batch02", "contact": {"href": "mailto:shiatt@hudsonalpha.org", "institution": "HudsonAlpha Institute for Biotechnology", "name": "Susan Hiatt"}, "id": "8881", "species": "NCBITaxon:9606"}}, "seqr_project_id": "CMG_Estonia_WES", "content_of_indiv_searched_with": {"patient": {"features": [], "label": "HK077-001", "genomicFeatures": [{"variant": {"assembly": "GRCh37", "start": 156752581, "alternateBases": "G", "referenceName": "5", "end": 156752581, "referenceBases": "C"}, "gene": {"id": "ENSG00000055163"}, "zygosity": 1}], "contact": {"href": "mailto:matchmaker@broadinstitute.org,katrin.ounap@kliinikum.ee", "name": "Samantha Baxter (data owner: Katrin Ounap)", "institution": "Broad Center for Mendelian Genomics"}, "species": "NCBITaxon:9606", "id": "HK077-001"}}, "result_id": "8881"}, "22038": {"deemed_irrelevant": False, "flag_for_analysis": False, "host_contacted_us": False, "id_of_indiv_searched_with": "HK077-001", "seen_on": "2018-03-14 15:13:15.657890+00:00", "we_contacted_host": False, "comments": "", "username_of_last_event_initiator": "hhXPeEcnND", "content_of_result": {"score": {"patient": 1.0}, "patient": {"genomicFeatures": [{"gene": {"id": "ENSG00000055163"}, "variant": {"assembly": "GRCh37", "start": 156766072, "end": 156766072, "referenceName": "5"}}], "label": "40998", "contact": {"href": "mailto:genematcher@genedx.com", "institution": "GeneDx", "name": "Kyle Retterer"}, "species": "NCBITaxon:9606", "id": "22038"}}, "seqr_project_id": "CMG_Estonia_WES", "content_of_indiv_searched_with": {"patient": {"features": [], "label": "HK077-001", "genomicFeatures": [{"variant": {"assembly": "GRCh37", "start": 156752581, "alternateBases": "G", "referenceName": "5", "end": 156752581, "referenceBases": "C"}, "gene": {"id": "ENSG00000055163"}, "zygosity": 1}], "contact": {"href": "mailto:matchmaker@broadinstitute.org,katrin.ounap@kliinikum.ee", "name": "Samantha Baxter (data owner: Katrin Ounap)", "institution": "Broad Center for Mendelian Genomics"}, "species": "NCBITaxon:9606", "id": "HK077-001"}}, "result_id": "22038"}, "25329": {"deemed_irrelevant": False, "flag_for_analysis": False, "host_contacted_us": False, "id_of_indiv_searched_with": "HK077-001", "seen_on": "2018-06-26 12:25:58.252905+00:00", "we_contacted_host": False, "comments": "", "username_of_last_event_initiator": "qazt8WPnC5", "content_of_result": {"score": {"patient": 1.0}, "patient": {"genomicFeatures": [{"gene": {"id": "ENSG00000055163"}, "variant": {"assembly": "GRCh37", "start": 156753266, "end": 156753267, "referenceName": "5"}}], "label": "49241", "contact": {"href": "mailto:genematcher@genedx.com", "institution": "GeneDx", "name": "Kyle Retterer"}, "species": "NCBITaxon:9606", "id": "25329"}}, "seqr_project_id": "CMG_Estonia_WES", "content_of_indiv_searched_with": {"patient": {"features": [], "label": "HK077-001", "genomicFeatures": [{"variant": {"assembly": "GRCh37", "start": 156752581, "alternateBases": "G", "referenceName": "5", "end": 156752581, "referenceBases": "C"}, "gene": {"id": "ENSG00000055163"}, "zygosity": 1}], "contact": {"href": "mailto:matchmaker@broadinstitute.org,katrin.ounap@kliinikum.ee", "name": "Samantha Baxter (data owner: Katrin Ounap)", "institution": "Broad Center for Mendelian Genomics"}, "species": "NCBITaxon:9606", "id": "HK077-001"}}, "result_id": "25329"}, "25216": {"deemed_irrelevant": False, "flag_for_analysis": False, "host_contacted_us": False, "id_of_indiv_searched_with": "HK077-001", "seen_on": "2018-06-08 01:27:51.753138+00:00", "we_contacted_host": False, "comments": "", "username_of_last_event_initiator": "qazt8WPnC5", "content_of_result": {"score": {"patient": 1.0}, "patient": {"genomicFeatures": [{"gene": {"id": "ENSG00000055163"}}], "label": "15A2747", "contact": {"href": "mailto:gaetan.lesca@chu-lyon.fr", "institution": "Lyon University Hospital", "name": "Gaetan Lesca"}, "species": "NCBITaxon:9606", "id": "25216"}}, "seqr_project_id": "CMG_Estonia_WES", "content_of_indiv_searched_with": {"patient": {"features": [], "label": "HK077-001", "genomicFeatures": [{"variant": {"assembly": "GRCh37", "start": 156752581, "alternateBases": "G", "referenceName": "5", "end": 156752581, "referenceBases": "C"}, "gene": {"id": "ENSG00000055163"}, "zygosity": 1}], "contact": {"href": "mailto:matchmaker@broadinstitute.org,katrin.ounap@kliinikum.ee", "name": "Samantha Baxter (data owner: Katrin Ounap)", "institution": "Broad Center for Mendelian Genomics"}, "species": "NCBITaxon:9606", "id": "HK077-001"}}, "result_id": "25216"}, "25237": {"deemed_irrelevant": False, "flag_for_analysis": False, "host_contacted_us": False, "id_of_indiv_searched_with": "HK077-001", "seen_on": "2018-06-08 01:27:51.785684+00:00", "we_contacted_host": False, "comments": "", "username_of_last_event_initiator": "qazt8WPnC5", "content_of_result": {"score": {"patient": 1.0}, "patient": {"genomicFeatures": [{"gene": {"id": "ENSG00000055163"}}], "label": "EIEE Xiangya cohort I gene list3", "contact": {"href": "mailto:nanpang@csu.edu.cn", "institution": "Xiangya Hospital, Central South University", "name": "Nan Pang"}, "species": "NCBITaxon:9606", "id": "25237"}}, "seqr_project_id": "CMG_Estonia_WES", "content_of_indiv_searched_with": {"patient": {"features": [], "label": "HK077-001", "genomicFeatures": [{"variant": {"assembly": "GRCh37", "start": 156752581, "alternateBases": "G", "referenceName": "5", "end": 156752581, "referenceBases": "C"}, "gene": {"id": "ENSG00000055163"}, "zygosity": 1}], "contact": {"href": "mailto:matchmaker@broadinstitute.org,katrin.ounap@kliinikum.ee", "name": "Samantha Baxter (data owner: Katrin Ounap)", "institution": "Broad Center for Mendelian Genomics"}, "species": "NCBITaxon:9606", "id": "HK077-001"}}, "result_id": "25237"}, "21165": {"deemed_irrelevant": False, "flag_for_analysis": False, "host_contacted_us": False, "id_of_indiv_searched_with": "HK077-001", "seen_on": "2018-01-26 16:38:13.695741+00:00", "we_contacted_host": False, "comments": "", "username_of_last_event_initiator": "VFMqPA4jNu", "content_of_result": {"score": {"patient": 1.0}, "patient": {"genomicFeatures": [{"gene": {"id": "ENSG00000055163"}, "variant": {"assembly": "GRCh37", "start": 156736775, "end": 156736775, "referenceName": "5"}}], "label": "40238", "contact": {"href": "mailto:genematcher@genedx.com", "institution": "GeneDx", "name": "Kyle Retterer"}, "species": "NCBITaxon:9606", "id": "21165"}}, "seqr_project_id": "CMG_Estonia_WES", "content_of_indiv_searched_with": {"patient": {"features": [], "label": "HK077-001", "genomicFeatures": [{"variant": {"assembly": "GRCh37", "start": 156752581, "alternateBases": "G", "referenceName": "5", "end": 156752581, "referenceBases": "C"}, "gene": {"id": "ENSG00000055163"}, "zygosity": 1}], "contact": {"href": "mailto:matchmaker@broadinstitute.org,katrin.ounap@kliinikum.ee", "name": "Samantha Baxter (data owner: Katrin Ounap)", "institution": "Broad Center for Mendelian Genomics"}, "species": "NCBITaxon:9606", "id": "HK077-001"}}, "result_id": "21165"}, "13371": {"deemed_irrelevant": False, "flag_for_analysis": False, "host_contacted_us": False, "id_of_indiv_searched_with": "HK077-001", "seen_on": "2017-10-30 14:02:31.894881+00:00", "we_contacted_host": False, "comments": "", "username_of_last_event_initiator": "qazt8WPnC5", "content_of_result": {"score": {"patient": 1.0}, "patient": {"genomicFeatures": [{"gene": {"id": "ENSG00000055163"}, "variant": {"assembly": "GRCh37", "start": 156746899, "end": 156746899, "referenceName": "5"}}], "label": "27881", "contact": {"href": "mailto:genematcher@genedx.com", "institution": "GeneDx"}, "species": "NCBITaxon:9606", "id": "13371"}}, "seqr_project_id": "CMG_Estonia_WES", "content_of_indiv_searched_with": {"patient": {"features": [], "label": "HK077-001", "genomicFeatures": [{"variant": {"assembly": "GRCh37", "start": 156752581, "alternateBases": "G", "referenceName": "5", "end": 156752581, "referenceBases": "C"}, "gene": {"id": "ENSG00000055163"}, "zygosity": 1}], "contact": {"href": "mailto:matchmaker@broadinstitute.org,katrin.ounap@kliinikum.ee", "name": "Samantha Baxter (data owner: Katrin Ounap)", "institution": "Broad Center for Mendelian Genomics"}, "species": "NCBITaxon:9606", "id": "HK077-001"}}, "result_id": "13371"}, "19586": {"deemed_irrelevant": False, "flag_for_analysis": False, "host_contacted_us": False, "id_of_indiv_searched_with": "HK077-001", "seen_on": "2017-12-07 13:21:48.778096+00:00", "we_contacted_host": False, "comments": "", "username_of_last_event_initiator": "qazt8WPnC5", "content_of_result": {"score": {"patient": 1.0}, "patient": {"genomicFeatures": [{"gene": {"id": "ENSG00000055163"}}], "label": "CYFIP2_1", "contact": {"href": "mailto:GeneMatcher@ambrygen.com", "institution": "Ambry Genetics", "name": "Zoe Powis"}, "species": "NCBITaxon:9606", "id": "19586"}}, "seqr_project_id": "CMG_Estonia_WES", "content_of_indiv_searched_with": {"patient": {"features": [], "label": "HK077-001", "genomicFeatures": [{"variant": {"assembly": "GRCh37", "start": 156752581, "alternateBases": "G", "referenceName": "5", "end": 156752581, "referenceBases": "C"}, "gene": {"id": "ENSG00000055163"}, "zygosity": 1}], "contact": {"href": "mailto:matchmaker@broadinstitute.org,katrin.ounap@kliinikum.ee", "name": "Samantha Baxter (data owner: Katrin Ounap)", "institution": "Broad Center for Mendelian Genomics"}, "species": "NCBITaxon:9606", "id": "HK077-001"}}, "result_id": "19586"}, "7071": {"deemed_irrelevant": False, "flag_for_analysis": False, "host_contacted_us": False, "id_of_indiv_searched_with": "HK077-001", "seen_on": "2017-10-30 14:02:31.891853+00:00", "we_contacted_host": False, "comments": "", "username_of_last_event_initiator": "qazt8WPnC5", "content_of_result": {"score": {"patient": 1.0}, "patient": {"genomicFeatures": [{"gene": {"id": "ENSG00000055163"}, "variant": {"assembly": "GRCh37", "start": 156817677, "end": 156817677, "referenceName": "5"}}], "label": "16531", "contact": {"href": "mailto:genematcher@genedx.com", "institution": "GeneDx"}, "species": "NCBITaxon:9606", "id": "7071"}}, "seqr_project_id": "CMG_Estonia_WES", "content_of_indiv_searched_with": {"patient": {"features": [], "label": "HK077-001", "genomicFeatures": [{"variant": {"assembly": "GRCh37", "start": 156752581, "alternateBases": "G", "referenceName": "5", "end": 156752581, "referenceBases": "C"}, "gene": {"id": "ENSG00000055163"}, "zygosity": 1}], "contact": {"href": "mailto:matchmaker@broadinstitute.org,katrin.ounap@kliinikum.ee", "name": "Samantha Baxter (data owner: Katrin Ounap)", "institution": "Broad Center for Mendelian Genomics"}, "species": "NCBITaxon:9606", "id": "HK077-001"}}, "result_id": "7071"}, "16823": {"deemed_irrelevant": False, "flag_for_analysis": False, "host_contacted_us": False, "id_of_indiv_searched_with": "HK077-001", "seen_on": "2017-10-30 14:02:31.890323+00:00", "we_contacted_host": False, "comments": "", "username_of_last_event_initiator": "qazt8WPnC5", "content_of_result": {"score": {"patient": 1.0}, "patient": {"genomicFeatures": [{"gene": {"id": "ENSG00000055163"}, "variant": {"assembly": "GRCh37", "start": 156817545, "end": 156817545, "referenceName": "5"}}], "label": "33227", "contact": {"href": "mailto:genematcher@genedx.com", "institution": "GeneDx"}, "species": "NCBITaxon:9606", "id": "16823"}}, "seqr_project_id": "CMG_Estonia_WES", "content_of_indiv_searched_with": {"patient": {"features": [], "label": "HK077-001", "genomicFeatures": [{"variant": {"assembly": "GRCh37", "start": 156752581, "alternateBases": "G", "referenceName": "5", "end": 156752581, "referenceBases": "C"}, "gene": {"id": "ENSG00000055163"}, "zygosity": 1}], "contact": {"href": "mailto:matchmaker@broadinstitute.org,katrin.ounap@kliinikum.ee", "name": "Samantha Baxter (data owner: Katrin Ounap)", "institution": "Broad Center for Mendelian Genomics"}, "species": "NCBITaxon:9606", "id": "HK077-001"}}, "result_id": "16823"}, "17394": {"deemed_irrelevant": False, "flag_for_analysis": False, "host_contacted_us": True, "id_of_indiv_searched_with": "HK077-001", "seen_on": "2017-10-30 14:02:31.893349+00:00", "we_contacted_host": False, "comments": "Katrin to email", "username_of_last_event_initiator": "qazt8WPnC5", "content_of_result": {"score": {"patient": 1.0}, "patient": {"genomicFeatures": [{"gene": {"id": "ENSG00000055163"}}], "contact": {"href": "mailto:GeneMatcher@ambrygen.com", "institution": "Ambry Genetics", "name": "Zoe Powis"}, "species": "NCBITaxon:9606", "id": "17394", "label": "CYFIP2_1"}}, "seqr_project_id": "CMG_Estonia_WES", "content_of_indiv_searched_with": {"patient": {"features": [], "species": "NCBITaxon:9606", "genomicFeatures": [{"zygosity": 1, "gene": {"id": "ENSG00000055163"}, "variant": {"end": 156752581, "start": 156752581, "alternateBases": "G", "referenceName": "5", "assembly": "GRCh37", "referenceBases": "C"}}], "contact": {"href": "mailto:matchmaker@broadinstitute.org,katrin.ounap@kliinikum.ee", "name": "Samantha Baxter (data owner: Katrin Ounap)", "institution": "Broad Center for Mendelian Genomics"}, "label": "HK077-001", "id": "HK077-001"}}, "result_id": "17394"}, "21030": {"deemed_irrelevant": False, "flag_for_analysis": False, "host_contacted_us": False, "id_of_indiv_searched_with": "HK077-001", "seen_on": "2018-01-24 16:06:50.187056+00:00", "we_contacted_host": False, "comments": "", "username_of_last_event_initiator": "H35tpMqnJ6", "content_of_result": {"score": {"patient": 1.0}, "patient": {"genomicFeatures": [{"gene": {"id": "ENSG00000055163"}, "variant": {"assembly": "GRCh37", "start": 156746776, "end": 156746776, "referenceName": "5"}}], "label": "39708", "contact": {"href": "mailto:genematcher@genedx.com", "institution": "GeneDx", "name": "Kyle Retterer"}, "species": "NCBITaxon:9606", "id": "21030"}}, "seqr_project_id": "CMG_Estonia_WES", "content_of_indiv_searched_with": {"patient": {"features": [], "label": "HK077-001", "genomicFeatures": [{"variant": {"assembly": "GRCh37", "start": 156752581, "alternateBases": "G", "referenceName": "5", "end": 156752581, "referenceBases": "C"}, "gene": {"id": "ENSG00000055163"}, "zygosity": 1}], "contact": {"href": "mailto:matchmaker@broadinstitute.org,katrin.ounap@kliinikum.ee", "name": "Samantha Baxter (data owner: Katrin Ounap)", "institution": "Broad Center for Mendelian Genomics"}, "species": "NCBITaxon:9606", "id": "HK077-001"}}, "result_id": "21030"}, "23397": {"deemed_irrelevant": False, "flag_for_analysis": False, "host_contacted_us": False, "id_of_indiv_searched_with": "HK077-001", "seen_on": "2018-04-05 13:51:09.629934+00:00", "we_contacted_host": False, "comments": "", "username_of_last_event_initiator": "qazt8WPnC5", "content_of_result": {"score": {"patient": 1.0}, "patient": {"genomicFeatures": [{"gene": {"id": "ENSG00000055163"}}], "label": "CYFIP2", "contact": {"href": "mailto:Farrah.Rajabi@childrens.harvard.edu", "institution": "Boston Children's Hospital", "name": "Farrah Rajabi"}, "species": "NCBITaxon:9606", "id": "23397"}}, "seqr_project_id": "CMG_Estonia_WES", "content_of_indiv_searched_with": {"patient": {"features": [], "label": "HK077-001", "genomicFeatures": [{"variant": {"assembly": "GRCh37", "start": 156752581, "alternateBases": "G", "referenceName": "5", "end": 156752581, "referenceBases": "C"}, "gene": {"id": "ENSG00000055163"}, "zygosity": 1}], "contact": {"href": "mailto:matchmaker@broadinstitute.org,katrin.ounap@kliinikum.ee", "name": "Samantha Baxter (data owner: Katrin Ounap)", "institution": "Broad Center for Mendelian Genomics"}, "species": "NCBITaxon:9606", "id": "HK077-001"}}, "result_id": "23397"}}
+    
     return JSONResponse({
                          "match_results":results,
                          "result_analysis_state":result_analysis_state,
@@ -2099,19 +1872,19 @@ def match_state_update(request,project_id,match_id,indiv_id):
     try:
         if state_type == 'flag_for_analysis':
             persisted_result_det['flag_for_analysis']=False
-            if state == "True":
+            if state == "true":
                 persisted_result_det['flag_for_analysis']=True
         if state_type == 'deemed_irrelevant':
             persisted_result_det['deemed_irrelevant']=False
-            if state == "True":
+            if state == "true":
                 persisted_result_det['deemed_irrelevant']=True
         if state_type == 'we_contacted_host':
             persisted_result_det['we_contacted_host']=False   
-            if state == "True":
+            if state == "true":
                 persisted_result_det['we_contacted_host']=True
         if state_type == 'host_contacted_us':
             persisted_result_det['host_contacted_us']=False
-            if state == "True":
+            if state == "true":
                 persisted_result_det['host_contacted_us']=True   
         persisted_result_det["username_of_last_event_initiator"]=request.user.username
         del persisted_result_det['_id']  

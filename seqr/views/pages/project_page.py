@@ -72,7 +72,7 @@ def project_page_data(request, project_guid):
         'individualsByGuid': individuals_by_guid,
         'samplesByGuid': samples_by_guid,
         'locusListsByGuid': {locus_list['locusListGuid']: locus_list for locus_list in locus_lists},
-        'matchmakerSubmissions': {project.guid: _project_matchmaker_submissions(project)}
+        'matchmakerSubmissions': {project.guid: _project_matchmaker_submissions(project)},
     }
 
     return create_json_response(json_response)
