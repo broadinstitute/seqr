@@ -100,9 +100,9 @@ def _get_json_for_families(families, user=None, add_individual_guids_field=False
                 pedigree_image = None
         return os.path.join("/media/", pedigree_image) if pedigree_image else None
 
+    prefetch_related_objects(families, 'familyanalysedby_set')
     if add_individual_guids_field:
         prefetch_related_objects(families, 'individual_set')
-        prefetch_related_objects(families, 'familyanalysedby_set')
 
     fields = _get_record_fields(Family, 'family', user)
     nested_fields = [] if project_guid else [('project', 'guid')]
