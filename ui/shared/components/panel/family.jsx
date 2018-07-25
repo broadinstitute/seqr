@@ -60,16 +60,20 @@ const familyFieldRenderProps = {
 
 
 const formatAnalysedByList = analysedByList =>
-  analysedByList.map(analysedBy => `${analysedBy.user.display_name} (${analysedBy.date_saved})`).join(', ')
+  analysedByList.map(analysedBy =>
+    `${analysedBy.createdBy.displayName || analysedBy.createdBy.email} (${new Date(analysedBy.lastModifiedDate).toLocaleDateString()})`,
+  ).join(', ')
 
 export const AnalysedBy = ({ analysedByList, compact }) => {
   if (compact) {
-    return [...analysedByList.reduce((acc, analysedBy) => acc.add(analysedBy.user.display_name), new Set())].map(
+    return [...analysedByList.reduce(
+      (acc, analysedBy) => acc.add(analysedBy.createdBy.displayName || analysedBy.createdBy.email), new Set(),
+    )].map(
       analysedByUser => <NoWrap key={analysedByUser}>{analysedByUser}</NoWrap>,
     )
   }
-  const staffUsers = analysedByList.filter(analysedBy => analysedBy.user.is_staff)
-  const externalUsers = analysedByList.filter(analysedBy => !analysedBy.user.is_staff)
+  const staffUsers = analysedByList.filter(analysedBy => analysedBy.createdBy.isStaff)
+  const externalUsers = analysedByList.filter(analysedBy => !analysedBy.createdBy.isStaff)
   return [
     staffUsers.length > 0 ? <div key="staff"><b>CMG Analysts:</b> {formatAnalysedByList(staffUsers)}</div> : null,
     externalUsers.length > 0 ? <div key="ext"><b>External Collaborators:</b> {formatAnalysedByList(externalUsers)}</div> : null,

@@ -164,7 +164,7 @@ export const FAMILY_FILTER_OPTIONS = [
     name: 'Analysed By Me',
     internalOmit: true,
     createFilter: (individualsByGuid, samplesByGuid, user) => family =>
-      family.analysedBy.map(analysedBy => analysedBy.user.username).includes(user.username),
+      family.analysedBy.map(analysedBy => analysedBy.createdBy.email).includes(user.email),
   },
   {
     value: SHOW_NOT_ANALYSED_BY_ME,
@@ -172,7 +172,7 @@ export const FAMILY_FILTER_OPTIONS = [
     name: 'Not Analysed By Me',
     internalOmit: true,
     createFilter: (individualsByGuid, samplesByGuid, user) => family =>
-      !family.analysedBy.map(analysedBy => analysedBy.user.username).includes(user.username),
+      !family.analysedBy.map(analysedBy => analysedBy.createdBy.email).includes(user.email),
   },
   {
     value: SHOW_ANALYSED_BY_CMG,
@@ -180,7 +180,7 @@ export const FAMILY_FILTER_OPTIONS = [
     name: 'Analysed By CMG',
     internalOmit: true,
     createFilter: () => family =>
-      family.analysedBy.some(analysedBy => analysedBy.user.is_staff),
+      family.analysedBy.some(analysedBy => analysedBy.createdBy.isStaff),
   },
   {
     value: SHOW_NOT_ANALYSED_BY_CMG,
@@ -188,7 +188,7 @@ export const FAMILY_FILTER_OPTIONS = [
     name: 'Not Analysed By CMG',
     internalOmit: true,
     createFilter: () => family =>
-      family.analysedBy.every(analysedBy => !analysedBy.user.is_staff),
+      family.analysedBy.every(analysedBy => !analysedBy.createdBy.isStaff),
   },
   {
     value: SHOW_ANALYSED,

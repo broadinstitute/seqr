@@ -12,7 +12,6 @@ from seqr.models import CAN_EDIT, Project, Family, Individual, Sample, SavedVari
     VariantFunctionalData, VariantNote, GeneNote
 from seqr.utils.xpos_utils import get_chrom_pos
 from seqr.views.utils.json_utils import _to_camel_case
-from family_info_utils import retrieve_multi_family_analysed_by
 logger = logging.getLogger(__name__)
 
 
@@ -103,19 +102,22 @@ def _get_json_for_families(families, user=None, add_individual_guids_field=False
 
     if add_individual_guids_field:
         prefetch_related_objects(families, 'individual_set')
+        prefetch_related_objects(families, 'familyanalysedby_set')
 
     fields = _get_record_fields(Family, 'family', user)
     nested_fields = [] if project_guid else [('project', 'guid')]
     family_dicts = [(family, _record_to_dict(family, fields, nested_fields=nested_fields)) for family in families]
 
-    analysed_by = retrieve_multi_family_analysed_by([family_dict for (family, family_dict) in family_dicts])
     results = []
     for (family, family_dict) in family_dicts:
         result = _get_json_for_record(family_dict, fields)
         result.update({
             'projectGuid': project_guid or family_dict['project_guid'],
             'familyGuid': result.pop('guid'),
-            'analysedBy': analysed_by[result.pop('id')],
+            'analysedBy': [{
+                'createdBy': {'fullName': ab.created_by.get_full_name(), 'email': ab.created_by.email, 'isStaff': ab.created_by.is_staff},
+                'lastModifiedDate': ab.last_modified_date,
+            } for ab in family.familyanalysedby_set.all()],
         })
         pedigree_image = _get_pedigree_image_url(result.pop('pedigreeImage'))
         if pedigree_image:
