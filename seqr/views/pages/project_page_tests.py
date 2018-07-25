@@ -5,6 +5,18 @@ from django.urls.base import reverse
 from seqr.views.pages.project_page import project_page_data, export_project_individuals_handler
 from seqr.views.utils.test_utils import _check_login
 
+MME_INDIVIDUAL_ID = 'IND_012'
+
+
+def find_mme_matches(search):
+    return [{
+        'insertion_date': '2018-07-01',
+        'project_id': search['project_id'],
+        'family_id': search.get('family_id'),
+        'seqr_id': MME_INDIVIDUAL_ID,
+        'submitted_data': {},
+    }]
+
 
 def _has_gene_search(project):
     return True
@@ -17,6 +29,7 @@ def get_objects_for_group(can_view_group, permission, object_cls):
 class ProjectPageTest(TestCase):
     fixtures = ['users', '1kg_project']
 
+    @mock.patch('seqr.views.pages.project_page.SEQR_ID_TO_MME_ID_MAP.find', find_mme_matches)
     @mock.patch('seqr.views.pages.project_page._has_gene_search', _has_gene_search)
     @mock.patch('seqr.views.apis.locus_list_api.get_objects_for_group', get_objects_for_group)
     def test_project_page_data(self):
@@ -29,7 +42,7 @@ class ProjectPageTest(TestCase):
         response_json = response.json()
         self.assertSetEqual(
             set(response_json.keys()),
-            {'project', 'familiesByGuid', 'individualsByGuid', 'samplesByGuid', 'locusListsByGuid'}
+            {'project', 'familiesByGuid', 'individualsByGuid', 'samplesByGuid', 'locusListsByGuid', 'matchmakerSubmissions'}
         )
         self.assertSetEqual(
             set(response_json['project'].keys()),
@@ -61,6 +74,11 @@ class ProjectPageTest(TestCase):
             set(response_json['locusListsByGuid'].values()[0].keys()),
             {'locusListGuid', 'description', 'lastModifiedDate', 'numEntries', 'isPublic', 'createdBy', 'createdDate',
              'canEdit', 'name'}
+        )
+        self.assertSetEqual(set(response_json['matchmakerSubmissions'].values()[0].keys()), {MME_INDIVIDUAL_ID})
+        self.assertSetEqual(
+            set(response_json['matchmakerSubmissions'].values()[0][MME_INDIVIDUAL_ID].keys()),
+            {'submissionDate', 'projectId', 'familyId', 'individualId', 'submittedData'}
         )
 
     @mock.patch('seqr.views.pages.project_page._has_gene_search', _has_gene_search)

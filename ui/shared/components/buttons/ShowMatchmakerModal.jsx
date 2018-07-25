@@ -232,4 +232,5 @@ const mapDispatchToProps = (dispatch) => {
   }
 }
 
+export { ShowMatchmakerModal as ShowMatchmakerModalComponent }
 export default connect(mapStateToProps, mapDispatchToProps)(ShowMatchmakerModal)
