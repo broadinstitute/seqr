@@ -6,7 +6,7 @@ import { Link } from 'react-router-dom'
 import { getLocusListsByGuid } from 'redux/selectors'
 import { UpdateLocusListButton, DeleteLocusListButton } from '../buttons/LocusListButtons'
 import SortableTable from './SortableTable'
-import { LOCUS_LIST_FIELDS, LOCUS_LIST_IS_PUBLIC_FIELD_NAME } from '../../utils/constants'
+import { LOCUS_LIST_FIELDS, LOCUS_LIST_IS_PUBLIC_FIELD_NAME, LOCUS_LIST_CURATOR_FIELD_NAME } from '../../utils/constants'
 
 const FIELDS = LOCUS_LIST_FIELDS.map(
   ({ name, label, fieldDisplay, width }) => ({
@@ -18,21 +18,27 @@ const FIELDS = LOCUS_LIST_FIELDS.map(
 )
 
 const LocusListTable = ({ locusListsByGuid, showPublic, isEditable, showLinks, omitFields, omitLocusLists, selectRows }) => {
+  if (showPublic) {
+    omitFields = [LOCUS_LIST_IS_PUBLIC_FIELD_NAME].concat(omitFields)
+  } else {
+    omitFields = [LOCUS_LIST_CURATOR_FIELD_NAME].concat(omitFields)
+  }
   let fields = FIELDS.filter(field => !omitFields.includes(field.name))
   if (showLinks) {
     fields[0].format = locusList => <Link to={`/gene_lists/${locusList.locusListGuid}`}>{locusList.name}</Link>
   }
   if (!showPublic && isEditable) {
-    fields = fields.slice(0, fields.length - 1).concat([{
+    fields = fields.concat([{
       name: '',
       format: locusList => ([
         <UpdateLocusListButton key="edit" locusList={locusList} />,
         <DeleteLocusListButton key="delete" iconOnly locusList={locusList} />,
       ]),
-      width: 3,
+      width: 1,
     }])
   }
-  let data = Object.values(locusListsByGuid).filter(locusList => locusList.isPublic === showPublic)
+
+  let data = Object.values(locusListsByGuid).filter(locusList => (showPublic ? locusList.isPublic : locusList.canEdit))
   if (omitLocusLists) {
     data = data.filter(locusList => !omitLocusLists.includes(locusList.locusListGuid))
   }
@@ -62,7 +68,7 @@ LocusListTable.propTypes = {
 LocusListTable.defaultProps = {
   isEditable: true,
   showLinks: true,
-  omitFields: [LOCUS_LIST_IS_PUBLIC_FIELD_NAME],
+  omitFields: [],
 }
 
 const mapStateToProps = state => ({

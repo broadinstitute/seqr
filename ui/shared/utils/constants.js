@@ -1,8 +1,9 @@
-import { Form } from 'semantic-ui-react'
+import React from 'react'
+import { Form, Icon } from 'semantic-ui-react'
 
 import BaseFieldView from '../components/panel/view-fields/BaseFieldView'
 import OptionFieldView from '../components/panel/view-fields/OptionFieldView'
-import { Select } from '../components/form/Inputs'
+import { BooleanRadio } from '../components/form/Inputs'
 import LocusIntervalField from '../components/form/LocusIntervalField'
 import { validators } from '../components/form/ReduxFormWrapper'
 
@@ -166,17 +167,6 @@ export const LOCUS_LIST_FIELDS = [
     width: 3,
     isEditable: true,
   },
-  {
-    name: LOCUS_LIST_IS_PUBLIC_FIELD_NAME,
-    label: 'Public List',
-    labelHelp: 'Should other seqr users be able to use this gene list?',
-    options: [{ value: true, text: 'Yes' }, { value: false, text: 'No' }],
-    component: Select,
-    validate: validators.requiredBoolean,
-    fieldDisplay: isPublic => (isPublic ? 'Yes' : 'No'),
-    width: 2,
-    isEditable: true,
-  },
   { name: 'numEntries', label: 'Genes', width: 1 },
   {
     name: 'description',
@@ -190,6 +180,16 @@ export const LOCUS_LIST_FIELDS = [
     label: 'Last Updated',
     width: 3,
     fieldDisplay: lastModifiedDate => new Date(lastModifiedDate).toLocaleString('en-US', { year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric' }),
+  },
+  {
+    name: LOCUS_LIST_IS_PUBLIC_FIELD_NAME,
+    label: 'Public List',
+    labelHelp: 'Should other seqr users be able to use this gene list?',
+    component: BooleanRadio,
+    validate: validators.requiredBoolean,
+    fieldDisplay: isPublic => (isPublic && <Icon name="check" />),
+    width: 2,
+    isEditable: true,
   },
   { name: LOCUS_LIST_CURATOR_FIELD_NAME, label: 'Curator', width: 3 },
 ]
