@@ -463,20 +463,6 @@ def deploy_init_cluster(settings):
     print_separator("init-cluster")
 
     # initialize the VM
-    if settings["DEPLOY_TO"] == "minikube":
-        #run("minikube delete", ignore_all_errors=True)
-        run("minikube start --disk-size=%(MINIKUBE_DISK_SIZE)s --memory %(MINIKUBE_MEMORY)s --cpus %(MINIKUBE_NUM_CPUS)s --vm-driver=%(MINIKUBE_VM_DRIVER)s" % settings)
-
-        # set VM settings required for elasticsearch
-        run("minikube ssh 'sudo /sbin/sysctl -w vm.max_map_count=262144'")
-
-    elif settings["DEPLOY_TO"] == "kube-solo":
-        run("corectl ssh %(node_name)s \"sudo /sbin/sysctl -w vm.max_map_count=262144\"" % locals())
-
-    node_name = get_node_name()
-    if not node_name:
-        raise Exception("Unable to retrieve node name. Was the cluster created successfully?")
-
     if settings["DEPLOY_TO_PREFIX"] == "gcloud":
         run("gcloud config set project %(GCLOUD_PROJECT)s" % settings)
 
@@ -552,17 +538,45 @@ def deploy_init_cluster(settings):
                     "--size %("+label.upper().replace("-", "_")+"_DISK_SIZE)s",
                     "%(CLUSTER_NAME)s-"+label+"-disk",
                 ]) % settings, verbose=True, errors_to_ignore=["already exists"])
+
     elif settings["DEPLOY_TO"] == "kube-solo":
         run("mkdir -p %(POSTGRES_DBPATH)s" % settings)
         run("mkdir -p %(MONGO_DBPATH)s" % settings)
         run("mkdir -p %(ELASTICSEARCH_DBPATH)s" % settings)
-    elif settings["DEPLOY_TO"] == "minikube":
 
+        # set VM settings required for elasticsearch
+        run("corectl ssh %(node_name)s \"sudo /sbin/sysctl -w vm.max_map_count=262144\"" % locals())
+
+    elif settings["DEPLOY_TO"] == "minikube":
+        run("mkdir -p %(LOCAL_DATA_DIR)s" % settings)
+        run("mkdir -p %(POSTGRES_DBPATH)s" % settings)
+        run("mkdir -p %(MONGO_DBPATH)s" % settings)
+        run("mkdir -p %(ELASTICSEARCH_DBPATH)s" % settings)
+
+        # start minikube
+        #run("minikube delete", ignore_all_errors=True)
+        try:
+            status = run("minikube status")
+        except Exception as e:
+            logger.info("minikube status: %s" % str(e))
+
+            logger.info("starting minikube: ")
+            run("minikube start --disk-size=%(MINIKUBE_DISK_SIZE)s --memory %(MINIKUBE_MEMORY)s --cpus %(MINIKUBE_NUM_CPUS)s --vm-driver=%(MINIKUBE_VM_DRIVER)s" % settings)
 
         # fix time sync issues on MacOSX which could interfere with token auth (https://github.com/kubernetes/minikube/issues/1378)
         run("minikube ssh -- docker run -i --rm --privileged --pid=host debian nsenter -t 1 -m -u -n -i date -u $(date -u +%m%d%H%M%Y)")
+
+        # set VM settings required for elasticsearch
+        run("minikube ssh 'sudo /sbin/sysctl -w vm.max_map_count=262144'")
+
     else:
         raise ValueError("Unexpected DEPLOY_TO_PREFIX: %(DEPLOY_TO_PREFIX)s" % settings)
+
+
+    node_name = get_node_name()
+    if not node_name:
+        raise Exception("Unable to retrieve node name. Was the cluster created successfully?")
+
 
     # print cluster info
     run("kubectl cluster-info", verbose=True)

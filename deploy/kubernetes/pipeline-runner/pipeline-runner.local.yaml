@@ -27,12 +27,9 @@ spec:
         deployment: {{ DEPLOY_TO }}
     spec:
       volumes:
-      - name: seqr-code
-        hostPath:
-          path: {{ BASE_DIR }}
       - name: data-dir
         hostPath:
-          path: /data
+          path: {{ LOCAL_DATA_DIR }}
       containers:
       - name: pipeline-runner-pod
         image: {{ DOCKER_IMAGE_PREFIX }}/pipeline-runner:{{ TIMESTAMP }}
@@ -41,8 +38,6 @@ spec:
           protocol: TCP
         imagePullPolicy: IfNotPresent
         volumeMounts:
-        - name: seqr-code
-          mountPath: /seqr
         - name: data-dir
           mountPath: /data
         envFrom:

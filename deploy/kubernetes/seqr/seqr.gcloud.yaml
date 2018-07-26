@@ -27,12 +27,6 @@ spec:
         deployment: {{ DEPLOY_TO }}
     spec:
       volumes:
-      - name: seqr-code
-        hostPath:
-          path: {{ BASE_DIR }}
-      - name: data-dir
-        hostPath:
-          path: /data
       - name: gcloud-client-secrets-volume
         secret:
           secretName: gcloud-client-secrets
