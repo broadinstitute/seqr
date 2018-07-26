@@ -417,25 +417,25 @@ def deploy_seqr(settings):
         if seqr_pod_name:
             _wait_until_pod_is_running("seqr", deployment_target=deployment_target)
 
-            run_in_pod(seqr_pod_name, "/usr/local/bin/stop_server.sh" % locals(), verbose=True)
+            run_in_pod(seqr_pod_name, "/usr/local/bin/stop_server.sh", verbose=True)
 
     if reset_db:
-        run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'drop database seqrdb'" % locals(),
+        run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'drop database seqrdb'",
             errors_to_ignore=["does not exist"],
             verbose=True,
         )
 
     if restore_seqr_db_from_backup:
-        run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'drop database seqrdb'" % locals(),
+        run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'drop database seqrdb'",
             errors_to_ignore=["does not exist"],
             verbose=True,
         )
-        run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'create database seqrdb'" % locals(), verbose=True)
+        run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'create database seqrdb'", verbose=True)
         run("kubectl cp '%(restore_seqr_db_from_backup)s' %(postgres_pod_name)s:/root/$(basename %(restore_seqr_db_from_backup)s)" % locals(), verbose=True)
         run_in_pod(postgres_pod_name, "/root/restore_database_backup.sh postgres seqrdb /root/$(basename %(restore_seqr_db_from_backup)s)" % locals(), verbose=True)
         run_in_pod(postgres_pod_name, "rm /root/$(basename %(restore_seqr_db_from_backup)s)" % locals(), verbose=True)
     else:
-        run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'create database seqrdb'" % locals(),
+        run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'create database seqrdb'",
             errors_to_ignore=["already exists"],
             verbose=True,
         )
@@ -458,11 +458,21 @@ def deploy_pipeline_runner(settings):
 
 
 def deploy_init_cluster(settings):
-    """Provisions a GKE cluster, persistant disks, and any other prerequisites for deployment."""
+    """Provisions a GKE cluster, persistent disks, and any other prerequisites for deployment."""
 
     print_separator("init-cluster")
 
     # initialize the VM
+    if settings["DEPLOY_TO"] == "minikube":
+        #run("minikube delete", ignore_all_errors=True)
+        run("minikube start --disk-size=%(MINIKUBE_DISK_SIZE)s --memory %(MINIKUBE_MEMORY)s --cpus %(MINIKUBE_NUM_CPUS)s --vm-driver=%(MINIKUBE_VM_DRIVER)s" % settings)
+
+        # set VM settings required for elasticsearch
+        run("minikube ssh 'sudo /sbin/sysctl -w vm.max_map_count=262144'")
+
+    elif settings["DEPLOY_TO"] == "kube-solo":
+        run("corectl ssh %(node_name)s \"sudo /sbin/sysctl -w vm.max_map_count=262144\"" % locals())
+
     node_name = get_node_name()
     if not node_name:
         raise Exception("Unable to retrieve node name. Was the cluster created successfully?")
@@ -547,24 +557,12 @@ def deploy_init_cluster(settings):
         run("mkdir -p %(MONGO_DBPATH)s" % settings)
         run("mkdir -p %(ELASTICSEARCH_DBPATH)s" % settings)
     elif settings["DEPLOY_TO"] == "minikube":
+
+
         # fix time sync issues on MacOSX which could interfere with token auth (https://github.com/kubernetes/minikube/issues/1378)
         run("minikube ssh -- docker run -i --rm --privileged --pid=host debian nsenter -t 1 -m -u -n -i date -u $(date -u +%m%d%H%M%Y)")
     else:
         raise ValueError("Unexpected DEPLOY_TO_PREFIX: %(DEPLOY_TO_PREFIX)s" % settings)
-
-
-    # set VM settings required for elasticsearch
-    if settings["DEPLOY_TO"] == "minikube":
-        run("minikube ssh 'sudo /sbin/sysctl -w vm.max_map_count=262144'" % locals())
-    elif settings["DEPLOY_TO"] == "kube-solo":
-        run("corectl ssh %(node_name)s \"sudo /sbin/sysctl -w vm.max_map_count=262144\"" % locals())
-
-    #else:
-    #    run(" ".join([
-    #        "gcloud compute ssh "+node_name,
-    #        "--zone %(GCLOUD_ZONE)s",
-    #        "--command \"sudo /sbin/sysctl -w vm.max_map_count=262144\""
-    #    ]) % settings)
 
     # print cluster info
     run("kubectl cluster-info", verbose=True)

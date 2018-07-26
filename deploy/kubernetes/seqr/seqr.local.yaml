@@ -49,8 +49,8 @@ spec:
             add:
               - SYS_ADMIN
         volumeMounts:
-        - name: seqr-code
-          mountPath: /seqr
+#        - name: seqr-code
+#          mountPath: /seqr
         - name: data-dir
           mountPath: /data
         - name: gcloud-client-secrets-volume
@@ -58,7 +58,7 @@ spec:
           readOnly: true
         resources:
           requests:
-            memory: "3Gi"
+            memory: "1.5Gi"
             cpu: "1"
           limits:
             memory: "8Gi"
