@@ -118,7 +118,7 @@ export const loadGene = (geneId) => {
 export const loadLocusLists = (locusListId) => {
   return (dispatch, getState) => {
     const locusList = getState().locusListsByGuid[locusListId]
-    if (!locusListId || !locusList || !locusList.geneIds) {
+    if (!locusListId || !locusList || !locusList.items) {
       dispatch({ type: locusListId ? REQUEST_GENE_LIST : REQUEST_GENE_LISTS })
       let url = '/api/locus_lists'
       if (locusListId) {
@@ -130,7 +130,8 @@ export const loadLocusLists = (locusListId) => {
           dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
         },
         (e) => {
-          dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
+          const updates = locusListId ? { locusListsByGuid: { [locusListId]: { items: [] } } } : {}
+          dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: updates })
         },
       ).get()
     }

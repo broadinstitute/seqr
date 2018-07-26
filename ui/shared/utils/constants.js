@@ -1,5 +1,4 @@
-import React from 'react'
-import { Form, Icon } from 'semantic-ui-react'
+import { Form } from 'semantic-ui-react'
 
 import BaseFieldView from '../components/panel/view-fields/BaseFieldView'
 import OptionFieldView from '../components/panel/view-fields/OptionFieldView'
@@ -167,7 +166,7 @@ export const LOCUS_LIST_FIELDS = [
     width: 3,
     isEditable: true,
   },
-  { name: 'numEntries', label: 'Genes', width: 1 },
+  { name: 'numEntries', label: 'Entries', width: 1 },
   {
     name: 'description',
     label: 'Description',
@@ -181,31 +180,39 @@ export const LOCUS_LIST_FIELDS = [
     width: 3,
     fieldDisplay: lastModifiedDate => new Date(lastModifiedDate).toLocaleString('en-US', { year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric' }),
   },
+  { name: LOCUS_LIST_CURATOR_FIELD_NAME, label: 'Curator', width: 3 },
   {
     name: LOCUS_LIST_IS_PUBLIC_FIELD_NAME,
     label: 'Public List',
     labelHelp: 'Should other seqr users be able to use this gene list?',
     component: BooleanRadio,
-    validate: validators.requiredBoolean,
-    fieldDisplay: isPublic => (isPublic && <Icon name="check" />),
+    fieldDisplay: isPublic => (isPublic ? 'Yes' : 'No'),
     width: 2,
     isEditable: true,
   },
-  { name: LOCUS_LIST_CURATOR_FIELD_NAME, label: 'Curator', width: 3 },
 ]
 
-export const LOCUS_LIST_GENE_FIELD = {
-  name: 'genes',
-  label: 'Genes',
-  labelHelp: 'A comma-separated list of genes. Any invalid genes will be skipped',
+const parseInterval = (intervalString) => {
+  const match = intervalString.match(/([^\s-]*):(\d*)-(\d*)/)
+  return match ? { chrom: match[1], start: match[2], end: match[3] } : null
+}
+
+export const LOCUS_LIST_ITEMS_FIELD = {
+  name: 'parsedItems',
+  label: 'Genes/ Intervals',
+  labelHelp: 'A comma-separated list of genes and intervals. Intervals should be in the form <chrom>:<start>-<end>',
   fieldDisplay: () => null,
   isEditable: true,
   component: Form.TextArea,
   rows: 12,
-  format: value => (value || []).map(gene => gene.symbol).join(', '),
-  normalize: (value, previousValue) => value.split(',').map(geneSymbol =>
-    ((previousValue || []).find(prevGene => prevGene.symbol === geneSymbol.trim()) || { symbol: geneSymbol.trim() }),
-  ),
+  format: value => (value || {}).display,
+  normalize: (value, previousValue) => ({
+    display: value,
+    items: value.split(',').map(itemName =>
+      ((previousValue || {}).itemMap || {})[itemName.trim()] || parseInterval(itemName) || { symbol: itemName.trim() },
+    ),
+    itemMap: (previousValue || {}).itemMap || {},
+  }),
 }
 
 export const LOCUS_LIST_INTERVAL_FIELD = {

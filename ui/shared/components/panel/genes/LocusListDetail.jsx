@@ -10,8 +10,8 @@ import BaseFieldView from '../view-fields/BaseFieldView'
 import ShowGeneModal from '../../buttons/ShowGeneModal'
 import ExportTableButton from '../../buttons/export-table/ExportTableButton'
 import { toSnakecase } from '../../../utils/stringUtils'
-import { LOCUS_LIST_FIELDS, LOCUS_LIST_GENE_FIELD, LOCUS_LIST_INTERVAL_FIELD } from '../../../utils/constants'
-import { LocusListGeneLoader } from '../../LocusListLoader'
+import { LOCUS_LIST_FIELDS, LOCUS_LIST_ITEMS_FIELD } from '../../../utils/constants'
+import { LocusListItemsLoader } from '../../LocusListLoader'
 
 const getFieldProps = ({ isEditable, width, fieldDisplay, ...fieldProps }) => ({
   field: fieldProps.name,
@@ -23,32 +23,33 @@ const getFieldProps = ({ isEditable, width, fieldDisplay, ...fieldProps }) => ({
 })
 
 const FIELDS = LOCUS_LIST_FIELDS.map(getFieldProps)
-const GENE_FIELD = getFieldProps(LOCUS_LIST_GENE_FIELD)
-const INTERVAL_FIELD = getFieldProps(LOCUS_LIST_INTERVAL_FIELD)
+const ITEMS_FIELD = getFieldProps(LOCUS_LIST_ITEMS_FIELD)
 
 const CompactColumn = styled(Grid.Column)`
   padding-bottom: 0 !important;
 `
 
 const LocusListDetail = ({ locusList, onSubmit }) => {
-  const geneExportDownloads = [{
-    name: 'Genes',
-    data: {
-      headers: ['Gene ID', 'Symbol'],
-      filename: `${toSnakecase(locusList.name)}_genes`,
-      rawData: locusList.genes,
-      processRow: gene => ([gene.geneId, gene.symbol]),
+  const itemExportDownloads = [
+    {
+      name: 'Genes',
+      data: {
+        headers: ['Gene ID', 'Symbol'],
+        filename: `${toSnakecase(locusList.name)}_genes`,
+        rawData: locusList.parsedItems.items.filter(item => item.geneId),
+        processRow: gene => ([gene.geneId, gene.symbol]),
+      },
     },
-  }]
-  const intervalExportDownloads = [{
-    name: 'Intervals',
-    data: {
-      headers: ['Chromosome', 'Start', 'End', 'Genome Version'],
-      filename: `${toSnakecase(locusList.name)}_intervals`,
-      rawData: locusList.intervals,
-      processRow: interval => ([interval.chrom, interval.start, interval.end, interval.genomeVersion]),
+    {
+      name: 'Intervals',
+      data: {
+        headers: ['Chromosome', 'Start', 'End', 'Genome Version'],
+        filename: `${toSnakecase(locusList.name)}_intervals`,
+        rawData: locusList.parsedItems.items.filter(item => item.chrom),
+        processRow: interval => ([interval.chrom, interval.start, interval.end, interval.genomeVersion]),
+      },
     },
-  }]
+  ]
   const sharedFieldProps = {
     idField: 'locusListGuid',
     initialValues: locusList,
@@ -72,33 +73,24 @@ const LocusListDetail = ({ locusList, onSubmit }) => {
       </Grid>
       <Header size="medium" dividing>
         <BaseFieldView
-          {...GENE_FIELD}
+          {...ITEMS_FIELD}
           {...sharedFieldProps}
-          modalTitle={`Edit Genes for "${locusList.name}"`}
+          modalTitle={`Edit Genes and Intervals for "${locusList.name}"`}
           compact
           showErrorPanel
         />
-        <ExportTableButton downloads={geneExportDownloads} buttonText="Download" float="right" fontWeight="300" fontSize=".75em" />
+        <ExportTableButton downloads={itemExportDownloads} buttonText="Download" float="right" fontWeight="300" fontSize=".75em" />
       </Header>
-      <Grid columns={12} divided="vertically">
-        {(locusList.genes && locusList.genes.length) ? locusList.genes.map(gene =>
-          <Grid.Column key={gene.geneId}><ShowGeneModal gene={gene} /></Grid.Column>,
-        ) : <Grid.Column width={16}><i>This list has no genes</i></Grid.Column>}
-      </Grid>
-      <Header size="medium" dividing>
-        <BaseFieldView
-          {...INTERVAL_FIELD}
-          {...sharedFieldProps}
-          modalTitle={`Edit Intervals for "${locusList.name}"`}
-          compact
-          showErrorPanel
-        />
-        <ExportTableButton downloads={intervalExportDownloads} buttonText="Download" float="right" fontWeight="300" fontSize=".75em" />
-      </Header>
-      <Grid columns={6} divided="vertically">
-        {(locusList.intervals && locusList.intervals.length) ? locusList.intervals.map(interval =>
-          <Grid.Column key={interval.locusListIntervalGuid}>chr{interval.chrom}:{interval.start}-{interval.end}</Grid.Column>,
-        ) : <Grid.Column width={16}><i>This list has no intervals</i></Grid.Column>}
+      <Grid columns={8}>
+        {(Object.keys(locusList.parsedItems.itemMap).length) ?
+          Object.keys(locusList.parsedItems.itemMap).sort().map(itemDisplay =>
+            <Grid.Column key={itemDisplay}>
+              {locusList.parsedItems.itemMap[itemDisplay].geneId ?
+                <ShowGeneModal gene={locusList.parsedItems.itemMap[itemDisplay]} /> : itemDisplay
+              }
+            </Grid.Column>,
+          ) : <Grid.Column width={16}><i>This list has no entries</i></Grid.Column>
+        }
       </Grid>
     </div>
   )
@@ -108,14 +100,13 @@ LocusListDetail.propTypes = {
   locusList: PropTypes.object,
   onSubmit: PropTypes.func,
   locusListGuid: PropTypes.string,
-  genes: PropTypes.array,
 }
 
 
 const LoadedLocusListDetail = ({ locusListGuid, locusList, onSubmit }) =>
-  <LocusListGeneLoader locusListGuid={locusListGuid} locusList={locusList}>
+  <LocusListItemsLoader locusListGuid={locusListGuid} locusList={locusList}>
     <LocusListDetail locusList={locusList} onSubmit={onSubmit} />
-  </LocusListGeneLoader>
+  </LocusListItemsLoader>
 
 LoadedLocusListDetail.propTypes = {
   locusListGuid: PropTypes.string.isRequired,

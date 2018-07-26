@@ -390,8 +390,8 @@ def get_json_for_locus_lists(locus_lists, user, include_genes=False):
         interval_set = locus_list.locuslistinterval_set
         if include_genes:
             result.update({
-                'geneIds': [gene.gene_id for gene in gene_set.all()],
-                'intervals': get_json_for_locus_list_intervals(interval_set.all()),
+                'items': [{'geneId': gene.gene_id} for gene in gene_set.all()] +
+                         get_json_for_locus_list_intervals(interval_set.all())
             })
         result.update({
             'locusListGuid': result.pop('guid'),
