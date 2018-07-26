@@ -63,15 +63,25 @@ RUN curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s
 ARG DISABLE_CACHE=1
 
 # install seqr dependencies. wget from github becasue local drive isn't mounted yet.
-RUN wget -N https://raw.githubusercontent.com/macarthur-lab/seqr/master/requirements.txt \
+#RUN wget -N https://raw.githubusercontent.com/macarthur-lab/seqr/master/requirements.txt \
+#    && pip install --upgrade -r requirements.txt
+
+RUN git clone -q https://github.com/macarthur-lab/seqr  # && cd seqr && git checkout bw2_loading_using_hail
+
+WORKDIR /seqr
+
+# install seqr dependencies
+RUN pip install --upgrade pip gunicorn \
     && pip install --upgrade -r requirements.txt
 
+COPY shared/config/*.py /seqr_settings/
+
 # install UI depedencies
-COPY shared/install_npm_packages.sh .
-RUN wget -N https://raw.githubusercontent.com/macarthur-lab/seqr/master/ui/package.json \
-   && alias node=nodejs \
-   && ./install_npm_packages.sh \
-   && npm install -g npm-check-updates
+#COPY shared/install_npm_packages.sh .
+#RUN wget -N https://raw.githubusercontent.com/macarthur-lab/seqr/master/ui/package.json \
+#   && alias node=nodejs \
+#   && ./install_npm_packages.sh \
+#   && npm install -g npm-check-updates
 
 ARG SEQR_SERVICE_PORT
 ENV SEQR_SERVICE_PORT=$SEQR_SERVICE_PORT
