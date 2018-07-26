@@ -221,7 +221,7 @@ def convert_seqr_kwargs_to_xbrowse_kwargs(seqr_model, **kwargs):
         xbrowse_kwargs["project"] = getattr(seqr_model, "family").project
 
     if seqr_class_name == "LocusList" and 'name' in xbrowse_kwargs:
-        xbrowse_kwargs['slug'] = slugify(xbrowse_kwargs['name'])
+        xbrowse_kwargs['slug'] = seqr_model.guid
 
     # handle foreign keys
     for key, value in xbrowse_kwargs.items():
