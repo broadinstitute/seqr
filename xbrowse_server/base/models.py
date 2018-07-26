@@ -1401,6 +1401,8 @@ class AnalysedBy(models.Model):
     date_saved = models.DateTimeField()
     family = models.ForeignKey(Family)
 
+    seqr_family_analysed_by = models.ForeignKey('seqr.FamilyAnalysedBy', null=True, blank=True, on_delete=models.SET_NULL)  # simplifies migration to new seqr.models schema
+
     def toJSON(self):
         return {
             'user': {

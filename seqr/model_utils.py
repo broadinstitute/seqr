@@ -7,7 +7,7 @@ from django.utils import timezone
 from seqr.views.utils.json_utils import _to_snake_case
 from xbrowse_server.base.models import Project as BaseProject, Family as BaseFamily, Individual as BaseIndividual, \
     ProjectTag as BaseProjectTag, VariantTag as BaseVariantTag, VariantNote as BaseVariantNote, \
-    VariantFunctionalData as BaseVariantFunctionalData, GeneNote as BaseGeneNote
+    VariantFunctionalData as BaseVariantFunctionalData, GeneNote as BaseGeneNote, AnalysedBy as BaseAnalysedBy
 from xbrowse_server.gene_lists.models import GeneList as BaseGeneList, GeneListItem as BaseGeneListItem
 from xbrowse.utils import slugify
 
@@ -22,6 +22,7 @@ SEQR_TO_XBROWSE_CLASS_MAPPING = {
     "LocusList": BaseGeneList,
     "LocusListGene": BaseGeneListItem,
     "GeneNote": BaseGeneNote,
+    "FamilyAnalysedBy": BaseAnalysedBy,
 }
 
 _DELETED_FIELD = "__DELETED__"
@@ -74,6 +75,9 @@ SEQR_TO_XBROWSE_FIELD_MAPPING = {
         "created_by": _DELETED_FIELD,
     },
     "GeneNote": {
+        "created_by": "user",
+    },
+    "FamilyAnalysedBy": {
         "created_by": "user",
     },
 }
@@ -195,6 +199,8 @@ def find_matching_xbrowse_model(seqr_model):
                 note=seqr_model.note,
                 gene_id=seqr_model.gene_id,
             )
+        elif seqr_class_name == "FamilyAnalysedBy":
+            return BaseAnalysedBy.objects.get(seqr_family_analysed_by=seqr_model)
     except Exception as e:
         logging.error("ERROR: when looking up xbrowse model for seqr %s model: %s" % (seqr_model, e))
         #traceback.print_exc()

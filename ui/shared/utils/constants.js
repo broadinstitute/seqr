@@ -69,6 +69,8 @@ export const FAMILY_FIELD_ANALYSIS_SUMMARY = 'analysisSummary'
 export const FAMILY_FIELD_INTERNAL_NOTES = 'internalCaseReviewNotes'
 export const FAMILY_FIELD_INTERNAL_SUMMARY = 'internalCaseReviewSummary'
 export const FAMILY_FIELD_FIRST_SAMPLE = 'firstSample'
+export const FAMILY_FIELD_CODED_PHENOTYPE = 'codedPhenotype'
+export const FAMILY_FIELD_OMIM_NUMBER = 'postDiscoveryOmimNumber'
 
 export const FAMILY_FIELD_RENDER_LOOKUP = {
   [FAMILY_FIELD_DESCRIPTION]: { name: 'Family Description' },
@@ -79,8 +81,10 @@ export const FAMILY_FIELD_RENDER_LOOKUP = {
     submitArgs: { familyField: 'analysed_by' },
   },
   [FAMILY_FIELD_FIRST_SAMPLE]: { name: 'Data Loaded?', component: BaseFieldView },
-  [FAMILY_FIELD_ANALYSIS_NOTES]: { name: 'Analysis Notes' },
+  [FAMILY_FIELD_ANALYSIS_NOTES]: { name: 'Notes' },
   [FAMILY_FIELD_ANALYSIS_SUMMARY]: { name: 'Analysis Summary' },
+  [FAMILY_FIELD_CODED_PHENOTYPE]: { name: 'Coded Phenotype' },
+  [FAMILY_FIELD_OMIM_NUMBER]: { name: 'Post-discovery OMIM #', component: BaseFieldView },
   [FAMILY_FIELD_INTERNAL_NOTES]: { name: 'Internal Notes', internal: true },
   [FAMILY_FIELD_INTERNAL_SUMMARY]: { name: 'Internal Summary', internal: true },
 }
@@ -91,6 +95,8 @@ export const FAMILY_DETAIL_FIELDS = [
   { id: FAMILY_FIELD_ANALYSED_BY, canEdit: true },
   { id: FAMILY_FIELD_ANALYSIS_NOTES, canEdit: true },
   { id: FAMILY_FIELD_ANALYSIS_SUMMARY, canEdit: true },
+  { id: FAMILY_FIELD_CODED_PHENOTYPE, canEdit: true },
+  { id: FAMILY_FIELD_OMIM_NUMBER, canEdit: true },
 ]
 
 // INDIVIDUAL FIELDS
