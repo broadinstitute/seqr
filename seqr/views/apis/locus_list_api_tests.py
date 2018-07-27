@@ -53,9 +53,12 @@ class LocusListAPITest(TransactionTestCase):
         self.assertSetEqual(
             set(locus_list.keys()),
             {'locusListGuid', 'description', 'lastModifiedDate', 'numEntries', 'isPublic', 'createdBy', 'createdDate',
-             'canEdit', 'name', 'geneIds', 'intervals'}
+             'canEdit', 'name', 'items'}
         )
-        self.assertSetEqual(set(locus_list['geneIds']), set(response_json['genesById'].keys()))
+        self.assertSetEqual(
+            {item['geneId'] for item in locus_list['items'] if item.get('geneId')},
+            set(response_json['genesById'].keys())
+        )
 
     @mock.patch('seqr.views.utils.gene_utils.get_reference')
     def test_create_update_and_delete_locus_lust(self, mock_reference):
@@ -68,23 +71,25 @@ class LocusListAPITest(TransactionTestCase):
         # send invalid requests to create locus_list
         response = self.client.post(create_locus_list_url, content_type='application/json', data=json.dumps({}))
         self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.reason_phrase, '"Name" is required')
 
         response = self.client.post(create_locus_list_url, content_type='application/json', data=json.dumps({
-            'name': 'new_locus_list', 'isPublic': True, 'genes': [{'symbol': 'foo'}],
-            'intervals': [{'chrom': '100', 'start': '1', 'end': '1'}]
+            'name': 'new_locus_list', 'isPublic': True, 'parsedItems': {'items': [
+                {'symbol': 'TTN'}, {'symbol': 'foo'}, {'chrom': '100', 'start': '1', 'end': '1'},
+                {'chrom': '2', 'start': '1234', 'end': '5678', 'genomeVersion': '37'},
+            ]},
         }))
         self.assertEqual(response.status_code, 400)
-        self.assertListEqual(response.json()['invalidLocusListItems'], ['foo', 'chr100:1-1'])
+        self.assertEqual(response.reason_phrase, 'This list contains invalid genes/ intervals. Update them, or select the "Ignore invalid genes and intervals" checkbox to ignore.')
+        self.assertListEqual(response.json()['invalidLocusListItems'], ['chr100:1-1', 'foo'])
 
         # send valid request to create locus_list
         response = self.client.post(create_locus_list_url, content_type='application/json', data=json.dumps({
-            'name': 'new_locus_list', 'isPublic': True, 'genes': [{'symbol': 'TTN'}, {'symbol': 'foo'}],
-            'intervals': [
-                {'chrom': '100', 'start': '1', 'end': '1'},
-                {'chrom': '2', 'start': '1234', 'end': '5678', 'genomeVersion': '37'}
-            ]
+            'name': 'new_locus_list', 'isPublic': True, 'ignoreInvalidItems': True, 'parsedItems': {'items': [
+                {'symbol': 'TTN'}, {'symbol': 'foo'}, {'chrom': '100', 'start': '1', 'end': '1'},
+                {'chrom': '2', 'start': '1234', 'end': '5678', 'genomeVersion': '37'},
+            ]},
         }))
-
         self.assertEqual(response.status_code, 200)
         new_locus_list_response = response.json()
         self.assertEqual(len(new_locus_list_response['locusListsByGuid']), 1)
@@ -92,15 +97,21 @@ class LocusListAPITest(TransactionTestCase):
         self.assertEqual(new_locus_list['name'], 'new_locus_list')
         self.assertEqual(new_locus_list['isPublic'], True)
 
-        self.assertSetEqual(set(new_locus_list['geneIds']), set(new_locus_list_response['genesById'].keys()))
-        self.assertListEqual(
-            new_locus_list['intervals'],
-            [{'chrom': '2', 'start': 1234, 'end': 5678, 'genomeVersion': '37', 'locusListIntervalGuid': mock.ANY}]
+        self.assertSetEqual(
+            {item['geneId'] for item in new_locus_list['items'] if item.get('geneId')},
+            set(new_locus_list_response['genesById'].keys())
         )
-        self.assertListEqual(new_locus_list_response['invalidLocusListItems'], ['foo', 'chr100:1-1'])
+        self.assertListEqual(
+            new_locus_list['items'],
+            [
+                {'geneId': 'TTN'},
+                {'chrom': '2', 'start': 1234, 'end': 5678, 'genomeVersion': '37', 'locusListIntervalGuid': mock.ANY}
+            ]
+        )
+        self.assertListEqual(new_locus_list_response['invalidLocusListItems'], ['chr100:1-1', 'foo'])
 
         guid = new_locus_list['locusListGuid']
-        gene_id = new_locus_list['geneIds'][0]
+        gene_id = new_locus_list['items'][0]['geneId']
         new_locus_list_model = LocusList.objects.filter(guid=guid).first()
         self.assertIsNotNone(new_locus_list_model)
         self.assertEqual(new_locus_list_model.name, new_locus_list['name'])
@@ -116,8 +127,8 @@ class LocusListAPITest(TransactionTestCase):
         # update the locus_list
         update_locus_list_url = reverse(update_locus_list_handler, args=[guid])
         response = self.client.post(update_locus_list_url, content_type='application/json',  data=json.dumps(
-            {'name': 'updated_locus_list', 'isPublic': False, 'intervals': [],
-             'genes': [{'symbol': 'TTN', 'geneId': gene_id}, {'symbol': 'G6PC'}]}))
+            {'name': 'updated_locus_list', 'isPublic': False,
+             'parsedItems': {'items': [{'symbol': 'TTN', 'geneId': gene_id}, {'symbol': 'G6PC'}]}}))
 
         self.assertEqual(response.status_code, 200)
         updated_locus_list_response = response.json()
@@ -128,8 +139,7 @@ class LocusListAPITest(TransactionTestCase):
 
         self.assertEqual(len(updated_locus_list_response['genesById']), 1)
         new_gene_id = updated_locus_list_response['genesById'].keys()[0]
-        self.assertSetEqual(set(updated_locus_list['geneIds']), {new_gene_id, gene_id})
-        self.assertListEqual(updated_locus_list['intervals'], [])
+        self.assertSetEqual({item['geneId'] for item in updated_locus_list['items']}, {new_gene_id, gene_id})
 
         updated_locus_list_model = LocusList.objects.filter(guid=guid).first()
         self.assertIsNotNone(updated_locus_list_model)

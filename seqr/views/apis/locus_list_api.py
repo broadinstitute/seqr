@@ -52,20 +52,14 @@ def locus_list_info(request, locus_list_guid):
 def create_locus_list_handler(request):
     request_json = json.loads(request.body)
 
-    name = request_json.get('name')
-    if not name:
-        return create_json_response({}, status=400, reason="'Name' is required")
+    if not request_json.get('name'):
+        return create_json_response({}, status=400, reason='"Name" is required')
 
-    locus_list = create_seqr_model(
-        LocusList,
-        name=name,
-        description=request_json.get('description') or '',
-        is_public=request_json.get('isPublic') or False,
-        created_by=request.user,
-    )
+    locus_list, new_genes, invalid_items, error = _update_locus_list(None, request_json, request.user)
+    if error:
+        return create_json_response({'invalidLocusListItems': invalid_items}, status=400, reason=error)
+
     add_locus_list_user_permissions(locus_list)
-
-    new_genes, invalid_items = _update_requested_items(locus_list, request_json, request.user)
 
     return create_json_response({
         'locusListsByGuid': {locus_list.guid: get_json_for_locus_list(locus_list, request.user)},
@@ -82,10 +76,7 @@ def update_locus_list_handler(request, locus_list_guid):
 
     request_json = json.loads(request.body)
 
-    # Update list metadata
-    update_model_from_json(locus_list, request_json, allow_unknown_keys=True)
-
-    new_genes, invalid_items, error = _update_requested_items(locus_list, request_json, request.user)
+    locus_list, new_genes, invalid_items, error = _update_locus_list(locus_list, request_json, request.user)
     if error:
         return create_json_response({'invalidLocusListItems': invalid_items}, status=400, reason=error)
 
@@ -159,7 +150,7 @@ def add_locus_list_user_permissions(locus_list):
     assign_perm(user_or_group=locus_list.created_by, perm=CAN_VIEW, obj=locus_list)
 
 
-def _update_requested_items(locus_list, request_json, user):
+def _update_locus_list(locus_list, request_json, user):
     requested_items = (request_json.get('parsedItems') or {}).get('items') or []
 
     existing_gene_ids = set()
@@ -191,7 +182,19 @@ def _update_requested_items(locus_list, request_json, user):
     invalid_items += [symbol for symbol, gene_id in gene_symbols_to_ids.items() if not gene_id]
 
     if invalid_items and not request_json.get('ignoreInvalidItems'):
-        return None, invalid_items, 'This list contains invalid genes/ intervals. Update them, or select the "Ignore invalid genes and intervals" checkbox to ignore.'
+        return None, None, invalid_items, 'This list contains invalid genes/ intervals. Update them, or select the "Ignore invalid genes and intervals" checkbox to ignore.'
+
+    # Create or update list metadata
+    if locus_list:
+        update_model_from_json(locus_list, request_json, allow_unknown_keys=True)
+    else:
+        locus_list = create_seqr_model(
+            LocusList,
+            name=request_json['name'],
+            description=request_json.get('description') or '',
+            is_public=request_json.get('isPublic') or False,
+            created_by=user,
+        )
 
     # Update genes
     new_genes = get_genes([gene_id for gene_id in gene_symbols_to_ids.values() if gene_id])
@@ -216,4 +219,4 @@ def _update_requested_items(locus_list, request_json, user):
             end=interval['end'],
         )
 
-    return new_genes, invalid_items, None
+    return locus_list, new_genes, invalid_items, None

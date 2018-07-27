@@ -3,7 +3,6 @@ import { Form } from 'semantic-ui-react'
 import BaseFieldView from '../components/panel/view-fields/BaseFieldView'
 import OptionFieldView from '../components/panel/view-fields/OptionFieldView'
 import { BooleanCheckbox, BooleanRadio } from '../components/form/Inputs'
-import { validators } from '../components/form/ReduxFormWrapper'
 
 
 // SAMPLES
@@ -161,7 +160,7 @@ export const LOCUS_LIST_FIELDS = [
     name: 'name',
     label: 'List Name',
     labelHelp: 'A descriptive name for this gene list',
-    validate: validators.required,
+    validate: value => (value ? undefined : 'Name is required'),
     width: 3,
     isEditable: true,
   },
@@ -204,10 +203,11 @@ export const LOCUS_LIST_ITEMS_FIELD = {
   isEditable: true,
   component: Form.TextArea,
   rows: 12,
+  validate: value => (((value || {}).items || []).length ? undefined : 'Genes and/or intervals are required'),
   format: value => (value || {}).display,
   normalize: (value, previousValue) => ({
     display: value,
-    items: value.split(',').map(itemName =>
+    items: value.split(',').filter(itemName => itemName.trim()).map(itemName =>
       ((previousValue || {}).itemMap || {})[itemName.trim()] || parseInterval(itemName) || { symbol: itemName.trim() },
     ),
     itemMap: (previousValue || {}).itemMap || {},
