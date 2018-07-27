@@ -12,7 +12,7 @@ from django.db import connection
 from django.db.models import Q, Count
 
 from settings import SEQR_ID_TO_MME_ID_MAP
-from seqr.models import Individual, _slugify, VariantTagType, VariantTag, VariantFunctionalData
+from seqr.models import Family, Individual, _slugify, VariantTagType, VariantTag, VariantFunctionalData
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.individual_api import export_individuals
 from seqr.views.apis.locus_list_api import get_sorted_project_locus_lists
@@ -87,34 +87,10 @@ def _retrieve_families(cursor, project_guid, user):
     Returns:
         dictionary: families_by_guid
     """
+    fields = Family._meta.json_fields + Family._meta.internal_json_fields
+    family_models = Family.objects.filter(project__guid=project_guid).only(*fields)
 
-    families_query = """
-        SELECT DISTINCT
-          p.guid AS project_guid,
-          f.id AS family_id,
-          f.guid AS family_guid,
-          f.family_id AS family_family_id,
-          f.created_date AS family_created_date,
-          f.display_name AS family_display_name,
-          f.description AS family_description,
-          f.analysis_notes AS family_analysis_notes,
-          f.analysis_summary AS family_analysis_summary,
-          f.pedigree_image AS family_pedigree_image,
-          f.analysis_status AS family_analysis_status,
-          f.causal_inheritance_mode AS family_causal_inheritance_mode,
-          f.internal_analysis_status AS family_internal_analysis_status,
-          f.internal_case_review_notes AS family_internal_case_review_notes,
-          f.internal_case_review_summary AS family_internal_case_review_summary
-        FROM seqr_project AS p
-          JOIN seqr_family AS f ON f.project_id=p.id
-        WHERE p.guid=%s
-    """.strip()
-
-    cursor.execute(families_query, [project_guid])
-
-    columns = [col[0] for col in cursor.description]
-    family_rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
-    families = _get_json_for_families(family_rows, user)
+    families = _get_json_for_families(family_models, user, project_guid=project_guid)
 
     families_by_guid = {}
     for family in families:

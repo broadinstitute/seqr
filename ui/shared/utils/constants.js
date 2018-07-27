@@ -2,9 +2,7 @@ import { Form } from 'semantic-ui-react'
 
 import BaseFieldView from '../components/panel/view-fields/BaseFieldView'
 import OptionFieldView from '../components/panel/view-fields/OptionFieldView'
-import { Select } from '../components/form/Inputs'
-import LocusIntervalField from '../components/form/LocusIntervalField'
-import { validators } from '../components/form/ReduxFormWrapper'
+import { BooleanCheckbox, BooleanRadio } from '../components/form/Inputs'
 
 
 // SAMPLES
@@ -69,6 +67,8 @@ export const FAMILY_FIELD_ANALYSIS_SUMMARY = 'analysisSummary'
 export const FAMILY_FIELD_INTERNAL_NOTES = 'internalCaseReviewNotes'
 export const FAMILY_FIELD_INTERNAL_SUMMARY = 'internalCaseReviewSummary'
 export const FAMILY_FIELD_FIRST_SAMPLE = 'firstSample'
+export const FAMILY_FIELD_CODED_PHENOTYPE = 'codedPhenotype'
+export const FAMILY_FIELD_OMIM_NUMBER = 'postDiscoveryOmimNumber'
 
 export const FAMILY_FIELD_RENDER_LOOKUP = {
   [FAMILY_FIELD_DESCRIPTION]: { name: 'Family Description' },
@@ -79,8 +79,10 @@ export const FAMILY_FIELD_RENDER_LOOKUP = {
     submitArgs: { familyField: 'analysed_by' },
   },
   [FAMILY_FIELD_FIRST_SAMPLE]: { name: 'Data Loaded?', component: BaseFieldView },
-  [FAMILY_FIELD_ANALYSIS_NOTES]: { name: 'Analysis Notes' },
+  [FAMILY_FIELD_ANALYSIS_NOTES]: { name: 'Notes' },
   [FAMILY_FIELD_ANALYSIS_SUMMARY]: { name: 'Analysis Summary' },
+  [FAMILY_FIELD_CODED_PHENOTYPE]: { name: 'Coded Phenotype' },
+  [FAMILY_FIELD_OMIM_NUMBER]: { name: 'Post-discovery OMIM #', component: BaseFieldView },
   [FAMILY_FIELD_INTERNAL_NOTES]: { name: 'Internal Notes', internal: true },
   [FAMILY_FIELD_INTERNAL_SUMMARY]: { name: 'Internal Summary', internal: true },
 }
@@ -91,6 +93,8 @@ export const FAMILY_DETAIL_FIELDS = [
   { id: FAMILY_FIELD_ANALYSED_BY, canEdit: true },
   { id: FAMILY_FIELD_ANALYSIS_NOTES, canEdit: true },
   { id: FAMILY_FIELD_ANALYSIS_SUMMARY, canEdit: true },
+  { id: FAMILY_FIELD_CODED_PHENOTYPE, canEdit: true },
+  { id: FAMILY_FIELD_OMIM_NUMBER, canEdit: true },
 ]
 
 // INDIVIDUAL FIELDS
@@ -156,22 +160,11 @@ export const LOCUS_LIST_FIELDS = [
     name: 'name',
     label: 'List Name',
     labelHelp: 'A descriptive name for this gene list',
-    validate: validators.required,
+    validate: value => (value ? undefined : 'Name is required'),
     width: 3,
     isEditable: true,
   },
-  {
-    name: LOCUS_LIST_IS_PUBLIC_FIELD_NAME,
-    label: 'Public List',
-    labelHelp: 'Should other seqr users be able to use this gene list?',
-    options: [{ value: true, text: 'Yes' }, { value: false, text: 'No' }],
-    component: Select,
-    validate: validators.requiredBoolean,
-    fieldDisplay: isPublic => (isPublic ? 'Yes' : 'No'),
-    width: 2,
-    isEditable: true,
-  },
-  { name: 'numEntries', label: 'Genes', width: 1 },
+  { name: 'numEntries', label: 'Entries', width: 1 },
   {
     name: 'description',
     label: 'Description',
@@ -186,29 +179,42 @@ export const LOCUS_LIST_FIELDS = [
     fieldDisplay: lastModifiedDate => new Date(lastModifiedDate).toLocaleString('en-US', { year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric' }),
   },
   { name: LOCUS_LIST_CURATOR_FIELD_NAME, label: 'Curator', width: 3 },
+  {
+    name: LOCUS_LIST_IS_PUBLIC_FIELD_NAME,
+    label: 'Public List',
+    labelHelp: 'Should other seqr users be able to use this gene list?',
+    component: BooleanRadio,
+    fieldDisplay: isPublic => (isPublic ? 'Yes' : 'No'),
+    width: 2,
+    isEditable: true,
+  },
 ]
 
-export const LOCUS_LIST_GENE_FIELD = {
-  name: 'genes',
-  label: 'Genes',
-  labelHelp: 'A comma-separated list of genes. Any invalid genes will be skipped',
+const parseInterval = (intervalString) => {
+  const match = intervalString.match(/([^\s-]*):(\d*)-(\d*)/)
+  return match ? { chrom: match[1], start: match[2], end: match[3] } : null
+}
+
+export const LOCUS_LIST_ITEMS_FIELD = {
+  name: 'parsedItems',
+  label: 'Genes/ Intervals',
+  labelHelp: 'A comma-separated list of genes and intervals. Intervals should be in the form <chrom>:<start>-<end>',
   fieldDisplay: () => null,
   isEditable: true,
   component: Form.TextArea,
   rows: 12,
-  format: value => (value || []).map(gene => gene.symbol).join(', '),
-  normalize: (value, previousValue) => value.split(',').map(geneSymbol =>
-    ((previousValue || []).find(prevGene => prevGene.symbol === geneSymbol.trim()) || { symbol: geneSymbol.trim() }),
-  ),
-}
-
-export const LOCUS_LIST_INTERVAL_FIELD = {
-  name: 'intervals',
-  label: 'Intervals',
-  fieldDisplay: () => null,
-  isEditable: true,
-  isArrayField: true,
-  addArrayElement: { label: 'Add Interval', newValue: { genomeVersion: '37' } },
-  validate: value => ((value && value.chrom && value.start && value.end) ? undefined : 'Chrom, start, and end are all required'),
-  component: LocusIntervalField,
+  validate: value => (((value || {}).items || []).length ? undefined : 'Genes and/or intervals are required'),
+  format: value => (value || {}).display,
+  normalize: (value, previousValue) => ({
+    display: value,
+    items: value.split(',').filter(itemName => itemName.trim()).map(itemName =>
+      ((previousValue || {}).itemMap || {})[itemName.trim()] || parseInterval(itemName) || { symbol: itemName.trim() },
+    ),
+    itemMap: (previousValue || {}).itemMap || {},
+  }),
+  additionalFormFields: [{
+    name: 'ignoreInvalidItems',
+    component: BooleanCheckbox,
+    label: 'Ignore invalid genes and intervals',
+  }],
 }

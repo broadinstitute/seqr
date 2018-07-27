@@ -12,7 +12,6 @@ from seqr.models import CAN_EDIT, Project, Family, Individual, Sample, SavedVari
     VariantFunctionalData, VariantNote, GeneNote, LocusList, LocusListInterval
 from seqr.utils.xpos_utils import get_chrom_pos
 from seqr.views.utils.json_utils import _to_camel_case
-from family_info_utils import retrieve_multi_family_analysed_by
 logger = logging.getLogger(__name__)
 
 
@@ -84,13 +83,14 @@ def _get_json_for_project(project, user, add_project_category_guids_field=True):
     return result
 
 
-def _get_json_for_families(families, user=None, add_individual_guids_field=False):
+def _get_json_for_families(families, user=None, add_individual_guids_field=False, project_guid=None):
     """Returns a JSON representation of the given Family.
 
     Args:
         families (array): array of dictionaries or django models representing the family.
         user (object): Django User object for determining whether to include restricted/internal-only fields
         add_individual_guids_field (bool): whether to add an 'individualGuids' field. NOTE: this will require a database query.
+        project_guid (boolean): An optional field to use as the projectGuid instead of querying the DB
     Returns:
         array: json objects
     """
@@ -103,20 +103,24 @@ def _get_json_for_families(families, user=None, add_individual_guids_field=False
                 pedigree_image = None
         return os.path.join("/media/", pedigree_image) if pedigree_image else None
 
+    prefetch_related_objects(families, 'familyanalysedby_set')
     if add_individual_guids_field:
         prefetch_related_objects(families, 'individual_set')
 
     fields = _get_record_fields(Family, 'family', user)
-    family_dicts = [(family, _record_to_dict(family, fields, nested_fields=[('project', 'guid')])) for family in families]
+    nested_fields = [] if project_guid else [('project', 'guid')]
+    family_dicts = [(family, _record_to_dict(family, fields, nested_fields=nested_fields)) for family in families]
 
-    analysed_by = retrieve_multi_family_analysed_by([family_dict for (family, family_dict) in family_dicts])
     results = []
     for (family, family_dict) in family_dicts:
         result = _get_json_for_record(family_dict, fields)
         result.update({
-            'projectGuid': family_dict['project_guid'],
+            'projectGuid': project_guid or family_dict['project_guid'],
             'familyGuid': result.pop('guid'),
-            'analysedBy': analysed_by[result.pop('id')],
+            'analysedBy': [{
+                'createdBy': {'fullName': ab.created_by.get_full_name(), 'email': ab.created_by.email, 'isStaff': ab.created_by.is_staff},
+                'lastModifiedDate': ab.last_modified_date,
+            } for ab in family.familyanalysedby_set.all()],
         })
         pedigree_image = _get_pedigree_image_url(result.pop('pedigreeImage'))
         if pedigree_image:
@@ -386,8 +390,8 @@ def get_json_for_locus_lists(locus_lists, user, include_genes=False):
         interval_set = locus_list.locuslistinterval_set
         if include_genes:
             result.update({
-                'geneIds': [gene.gene_id for gene in gene_set.all()],
-                'intervals': get_json_for_locus_list_intervals(interval_set.all()),
+                'items': [{'geneId': gene.gene_id} for gene in gene_set.all()] +
+                         get_json_for_locus_list_intervals(interval_set.all())
             })
         result.update({
             'locusListGuid': result.pop('guid'),

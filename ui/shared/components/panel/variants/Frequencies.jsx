@@ -6,8 +6,7 @@ import { Popup } from 'semantic-ui-react'
 import { HorizontalSpacer } from '../../Spacers'
 
 const FreqValue = styled.span`
-  font-weight: bolder;
-  color: ${props => (props.hasLink ? 'inherit' : 'grey')};
+  color: grey;
 `
 
 const FreqLink = ({ url, value, variant, genomeVersion }) => {
@@ -27,7 +26,7 @@ const FreqLink = ({ url, value, variant, genomeVersion }) => {
 
   return (
     <a href={`http://${url}/${isRegion ? 'region' : 'variant'}/${coords}`} target="_blank" rel="noopener noreferrer">
-      <FreqValue hasLink>{value}</FreqValue>
+      {value}
     </a>
   )
 }
@@ -45,26 +44,37 @@ const FreqSummary = ({ field, fieldTitle, variant, url, hasLink, showAC, genomeV
     return null
   }
   const value = freqs[field] > 0 ? freqs[field].toPrecision(precision) : '0.0'
+
+  const popCountDetails = [{ popField: `${field}_hom`, title: 'Hom' }]
+  if (variant.chrom.endsWith('X')) {
+    popCountDetails.push({ popField: `${field}_hemi`, title: 'Hemi' })
+  }
+  if (showAC) {
+    popCountDetails.push({ popField: 'AC', denominatorField: 'AN' })
+  }
+
   return (
     <div>
       {fieldTitle || field.replace('_', ' ').toUpperCase()}<HorizontalSpacer width={5} />
-      {hasLink ?
-        <FreqLink
-          url={url || `${field.split('_')[0]}.broadinstitute.org`}
-          value={value}
-          variant={variant}
-          genomeVersion={genomeVersion}
-        /> :
-        <FreqValue>{value}</FreqValue>
-      }
-      {popCounts[`${field}_hom`] !== null && popCounts[`${field}_hom`] !== undefined &&
-        <span><HorizontalSpacer width={5} />Hom={popCounts[`${field}_hom`]}</span>
-      }
-      {popCounts[`${field}_hemi`] !== null && popCounts[`${field}_hemi`] !== undefined &&
-        variant.chrom.endsWith('X') &&
-        <span><HorizontalSpacer width={5} />Hemi={popCounts[`${field}_hemi`]}</span>
-      }
-      {showAC && popCounts.AC !== null && <span><HorizontalSpacer width={5} />AC={popCounts.AC} out of {popCounts.AN}</span>}
+      <FreqValue>
+        <b>
+          {hasLink ?
+            <FreqLink
+              url={url || `${field.split('_')[0]}.broadinstitute.org`}
+              value={value}
+              variant={variant}
+              genomeVersion={genomeVersion}
+            /> : value
+          }
+        </b>
+        {popCountDetails.map(({ popField, denominatorField, title }) =>
+          popCounts[popField] !== null && popCounts[popField] !== undefined &&
+          <span key={popField}>
+            <HorizontalSpacer width={5} />
+            {title || popField}={popCounts[popField]} {denominatorField && `out of ${popCounts[denominatorField]}`}
+          </span>,
+        )}
+      </FreqValue>
     </div>
   )
 }

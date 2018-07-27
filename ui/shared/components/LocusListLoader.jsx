@@ -5,7 +5,6 @@ import { connect } from 'react-redux'
 import { loadLocusLists } from 'redux/rootReducer'
 import { getLocusListIsLoading, getLocusListsByGuid, getGenesById } from 'redux/selectors'
 import DataLoader from './DataLoader'
-import { compareObjects } from '../utils/sortUtils'
 
 const BaseLocusListsLoader = ({ locusListsByGuid, loading, load, children }) =>
   <DataLoader content={locusListsByGuid} loading={loading} load={load}>
@@ -20,16 +19,27 @@ BaseLocusListsLoader.propTypes = {
 }
 
 
-const BaseLocusListGeneLoader = ({ locusListGuid, locusList, genesById, loading, load, children }) => {
-  locusList.genes = (locusList.geneIds || []).map(geneId => genesById[geneId]).sort(compareObjects('symbol'))
+const BaseLocusListItemsLoader = ({ locusListGuid, locusList, genesById, loading, load, children }) => {
+  const itemMap = (locusList.items || []).reduce((acc, item) => {
+    if (item.geneId) {
+      const gene = genesById[item.geneId]
+      return { ...acc, [gene.symbol]: gene }
+    }
+    return { ...acc, [`chr${item.chrom}:${item.start}-${item.end}`]: item }
+  }, {})
+  locusList.parsedItems = {
+    display: Object.keys(itemMap).sort().join(', '),
+    itemMap,
+    items: Object.values(itemMap),
+  }
   return (
-    <DataLoader contentId={locusListGuid || locusList.locusListGuid} content={locusList.geneIds} loading={loading} load={load}>
+    <DataLoader contentId={locusListGuid || locusList.locusListGuid} content={locusList.items} loading={loading} load={load}>
       {children}
     </DataLoader>
   )
 }
 
-BaseLocusListGeneLoader.propTypes = {
+BaseLocusListItemsLoader.propTypes = {
   locusList: PropTypes.object,
   load: PropTypes.func,
   loading: PropTypes.bool,
@@ -49,4 +59,4 @@ const mapDispatchToProps = {
 }
 
 export const LocusListsLoader = connect(mapStateToProps, mapDispatchToProps)(BaseLocusListsLoader)
-export const LocusListGeneLoader = connect(mapStateToProps, mapDispatchToProps)(BaseLocusListGeneLoader)
+export const LocusListItemsLoader = connect(mapStateToProps, mapDispatchToProps)(BaseLocusListItemsLoader)

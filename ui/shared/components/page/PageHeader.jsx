@@ -58,7 +58,7 @@ const ENTITY_DETAILS = {
       title: entityGuid && locusListsByGuid[entityGuid].name,
       entityLink: '/gene_lists',
       description: !entityGuid && 'This page shows all of the gene lists that are available in your account',
-      originalPageLink: entityGuid ? `gene-lists/${locusListsByGuid[entityGuid].name.toLowerCase().replace(/ /g, '-')}` : 'gene-lists',
+      originalPageLink: entityGuid ? `gene-lists/${entityGuid}?guid=true` : 'gene-lists',
       button: entityGuid ? <DeleteLocusListButton locusList={locusListsByGuid[entityGuid]} /> : <CreateLocusListButton />,
     }
   ),

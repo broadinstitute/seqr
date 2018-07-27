@@ -559,5 +559,6 @@ export const LOCUS_LIST = {
   lastModifiedDate: "2018-05-02T00:01:24.013Z",
   locusListGuid: "LL00132_2017_monogenic_ibd_gen",
   name: "2017 Monogenic IBD Gene List",
-  numEntries: 60
+  numEntries: 60,
+  parsedItems: { items:  [{ geneId: 'ENSG00000164458' }], itemMap: { 'TTN': { geneId: 'ENSG00000164458', symbol: 'TTN' } } }
 }

@@ -266,12 +266,26 @@ class Family(ModelWithGUID):
         unique_together = ('project', 'family_id')
 
         json_fields = [
-            'guid', 'id', 'family_id', 'display_name', 'description', 'analysis_notes', 'analysis_summary',
-            'causal_inheritance_mode', 'analysis_status', 'pedigree_image', 'created_date',
+            'guid', 'family_id', 'display_name', 'description', 'analysis_notes', 'analysis_summary',
+            'causal_inheritance_mode', 'analysis_status', 'pedigree_image', 'created_date', 'coded_phenotype',
+            'post_discovery_omim_number'
         ]
         internal_json_fields = [
             'internal_analysis_status', 'internal_case_review_notes', 'internal_case_review_summary'
         ]
+
+
+class FamilyAnalysedBy(ModelWithGUID):
+    family = models.ForeignKey(Family)
+
+    def __unicode__(self):
+        return '{}_{}'.format(self.family.guid, self.created_by)
+
+    def _compute_guid(self):
+        return 'FAB%06d_%s' % (self.id, _slugify(str(self)))
+
+    class Meta:
+        json_fields = ['last_modified_date', 'created_by']
 
 
 class Individual(ModelWithGUID):

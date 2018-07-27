@@ -20,6 +20,7 @@ import {
   FAMILY_FIELD_ANALYSED_BY,
   FAMILY_FIELD_FIRST_SAMPLE,
   FAMILY_FIELD_RENDER_LOOKUP,
+  FAMILY_FIELD_OMIM_NUMBER,
 } from '../../utils/constants'
 
 const FamilyGrid = styled(({ annotation, offset, ...props }) => <Grid {...props} />)`
@@ -52,20 +53,28 @@ const familyFieldRenderProps = {
     showEmptyValues: true,
     fieldDisplay: (loadedSample, compact) => <Sample loadedSample={loadedSample} hoverDetails={compact} />,
   },
+  [FAMILY_FIELD_OMIM_NUMBER]: {
+    fieldDisplay: value => <a target="_blank" href={`https://www.omim.org/entry/${value}`} rel="noopener noreferrer">{value}</a>,
+    formFields: [{ name: FAMILY_FIELD_OMIM_NUMBER }],
+  },
 }
 
 
 const formatAnalysedByList = analysedByList =>
-  analysedByList.map(analysedBy => `${analysedBy.user.display_name} (${analysedBy.date_saved})`).join(', ')
+  analysedByList.map(analysedBy =>
+    `${analysedBy.createdBy.displayName || analysedBy.createdBy.email} (${new Date(analysedBy.lastModifiedDate).toLocaleDateString()})`,
+  ).join(', ')
 
 export const AnalysedBy = ({ analysedByList, compact }) => {
   if (compact) {
-    return [...analysedByList.reduce((acc, analysedBy) => acc.add(analysedBy.user.display_name), new Set())].map(
+    return [...analysedByList.reduce(
+      (acc, analysedBy) => acc.add(analysedBy.createdBy.displayName || analysedBy.createdBy.email), new Set(),
+    )].map(
       analysedByUser => <NoWrap key={analysedByUser}>{analysedByUser}</NoWrap>,
     )
   }
-  const staffUsers = analysedByList.filter(analysedBy => analysedBy.user.is_staff)
-  const externalUsers = analysedByList.filter(analysedBy => !analysedBy.user.is_staff)
+  const staffUsers = analysedByList.filter(analysedBy => analysedBy.createdBy.isStaff)
+  const externalUsers = analysedByList.filter(analysedBy => !analysedBy.createdBy.isStaff)
   return [
     staffUsers.length > 0 ? <div key="staff"><b>CMG Analysts:</b> {formatAnalysedByList(staffUsers)}</div> : null,
     externalUsers.length > 0 ? <div key="ext"><b>External Collaborators:</b> {formatAnalysedByList(externalUsers)}</div> : null,

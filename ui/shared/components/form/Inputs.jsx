@@ -140,6 +140,38 @@ StringValueCheckboxGroup.propTypes = {
   onChange: PropTypes.func,
 }
 
+export const BooleanRadio = (props) => {
+  const { value, labels = {}, label, onChange, ...baseProps } = props
+  return (
+    <InlineFormGroup>
+      {label}
+      <BaseSemanticInput
+        {...baseProps}
+        inputType="Radio"
+        checked={!!value}
+        inline
+        label={labels.true || 'Yes'}
+        onChange={data => onChange(data.checked)}
+      />
+      <BaseSemanticInput
+        {...baseProps}
+        inputType="Radio"
+        checked={!value}
+        inline
+        label={labels.false || 'No'}
+        onChange={data => onChange(!data.checked)}
+      />
+    </InlineFormGroup>
+  )
+}
+
+BooleanRadio.propTypes = {
+  value: PropTypes.any,
+  labels: PropTypes.object,
+  label: PropTypes.node,
+  onChange: PropTypes.func,
+}
+
 export const BooleanCheckbox = (props) => {
   const { value, onChange, ...baseProps } = props
   return <BaseSemanticInput

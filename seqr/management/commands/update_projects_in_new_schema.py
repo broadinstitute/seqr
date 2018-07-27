@@ -21,7 +21,7 @@ from xbrowse_server.base.models import \
     ProjectTag, \
     VariantTag, \
     VariantFunctionalData, \
-    ProjectCollaborator, VCFFile
+    ProjectCollaborator, VCFFile, AnalysedBy
 
 from seqr.models import \
     Project as SeqrProject, \
@@ -33,6 +33,7 @@ from seqr.models import \
     VariantFunctionalData as SeqrVariantFunctionalData, \
     Sample as SeqrSample, \
     LocusList, \
+    FamilyAnalysedBy as SeqrAnalysedBy, \
     CAN_VIEW, ModelWithGUID
 
 from xbrowse_server.mall import get_datastore, get_annotator
@@ -163,6 +164,11 @@ class Command(BaseCommand):
                     else:
                         create_sample_records(source_individual, new_project, new_individual, counters)
                         #combined_families_info.update({from_project_datatype: {'project_id': from_project.project_id, 'family_id': from_f.family_id}})
+
+                for source_analysed_by in AnalysedBy.objects.filter(family=source_family):
+                    new_analysed_by, analysed_by_created = transfer_analysed_by(source_analysed_by, new_family)
+
+                    if analysed_by_created: counters['analysed_by_created'] += 1
 
             # TODO family groups, cohorts
             for source_variant_tag_type in ProjectTag.objects.filter(project=source_project).order_by('order'):
@@ -576,6 +582,22 @@ def transfer_individual(source_individual, new_family, new_project, connect_to_p
     return new_individual, created, phenotips_data_retrieved
 
 
+def transfer_analysed_by(source_analysed_by, new_family):
+    created = False
+    if not source_analysed_by.seqr_family_analysed_by:
+        new_analysed_by = SeqrAnalysedBy.objects.create(
+            family=new_family,
+            created_by=source_analysed_by.user,
+        )
+        new_analysed_by.save(last_modified_date=source_analysed_by.date_saved)
+
+        source_analysed_by.seqr_family_analysed_by = new_analysed_by
+        source_analysed_by.save()
+        created = True
+
+    return source_analysed_by.seqr_family_analysed_by, created
+
+
 def _retrieve_and_update_individual_phenotips_data(project, individual):
     """Retrieve and update the phenotips_data and phenotips_patient_id fields for the given Individual
 
@@ -584,7 +606,7 @@ def _retrieve_and_update_individual_phenotips_data(project, individual):
         individual (Model): Individual model
     """
     try:
-        latest_phenotips_json = phenotips_api.get_patient_data(
+        latest_phenotips_json = phenotips_api._get_patient_data(
             project,
             individual,
         )

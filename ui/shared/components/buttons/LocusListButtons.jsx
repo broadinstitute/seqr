@@ -4,15 +4,16 @@ import { connect } from 'react-redux'
 
 import { updateLocusList } from 'redux/rootReducer'
 
-import { LocusListGeneLoader } from '../LocusListLoader'
+import { LocusListItemsLoader } from '../LocusListLoader'
 import UpdateButton from './UpdateButton'
 import DeleteButton from './DeleteButton'
-import { LOCUS_LIST_FIELDS, LOCUS_LIST_GENE_FIELD, LOCUS_LIST_INTERVAL_FIELD } from '../../utils/constants'
+import { LOCUS_LIST_FIELDS, LOCUS_LIST_ITEMS_FIELD } from '../../utils/constants'
 
 
-const FIELDS = LOCUS_LIST_FIELDS.concat(
-  [LOCUS_LIST_GENE_FIELD, LOCUS_LIST_INTERVAL_FIELD],
-).filter(field => field.isEditable).map(({ isEditable, width, fieldDisplay, ...fieldProps }) => fieldProps)
+const FIELDS = LOCUS_LIST_FIELDS.concat([LOCUS_LIST_ITEMS_FIELD]).filter(field => field.isEditable).reduce(
+  (acc, { isEditable, width, fieldDisplay, additionalFormFields, ...fieldProps }) =>
+    [...acc, fieldProps, ...(additionalFormFields || [])], [],
+)
 
 const UpdateLocusList = ({ locusList, size, onSubmit }) =>
   <UpdateButton
@@ -21,7 +22,7 @@ const UpdateLocusList = ({ locusList, size, onSubmit }) =>
     onSubmit={onSubmit}
     initialValues={locusList}
     formFields={FIELDS}
-    formContainer={<LocusListGeneLoader locusList={locusList} />}
+    formContainer={<LocusListItemsLoader locusList={locusList} />}
     size={size}
     showErrorPanel
   />

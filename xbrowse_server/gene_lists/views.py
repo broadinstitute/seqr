@@ -55,7 +55,12 @@ def add(request):
 
 @login_required
 def gene_list(request, slug):
-    _gene_list = get_object_or_404(GeneList, slug=slug)
+    if request.GET.get('guid'):
+        lookup_kwargs = {'seqr_locus_list__guid': slug}
+    else:
+        lookup_kwargs = {'slug': slug}
+
+    _gene_list = get_object_or_404(GeneList, **lookup_kwargs)
 
     authorized = False
     if _gene_list.is_public:

@@ -135,7 +135,7 @@ export const loadGenes = (geneIds) => {
 export const loadLocusLists = (locusListId) => {
   return (dispatch, getState) => {
     const locusList = getState().locusListsByGuid[locusListId]
-    if (!locusListId || !locusList || !locusList.geneIds) {
+    if (!locusListId || !locusList || !locusList.items) {
       dispatch({ type: locusListId ? REQUEST_GENE_LIST : REQUEST_GENE_LISTS })
       let url = '/api/locus_lists'
       if (locusListId) {
@@ -147,7 +147,8 @@ export const loadLocusLists = (locusListId) => {
           dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
         },
         (e) => {
-          dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
+          const updates = locusListId ? { locusListsByGuid: { [locusListId]: { items: [] } } } : {}
+          dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: updates })
         },
       ).get()
     }
@@ -204,15 +205,23 @@ export const updateLocusList = (values) => {
         dispatch({ type: RECEIVE_GENES, updatesById: responseJson.genesById || {} })
         dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
         if (responseJson.invalidLocusListItems && responseJson.invalidLocusListItems.length > 0) {
-          const err = new Error()
-          err.warnings = [
-            'The following genes/ intervals are not valid. All other changes were made successfully.',
-          ].concat(responseJson.invalidLocusListItems)
+          const err = new Error('This list contains invalid genes/ intervals. All other changes were made successfully.')
+          err.body = { ...responseJson, warning: true }
           throw err
         }
       },
       (e) => {
-        throw new SubmissionError({ _error: e.warnings ? e.warnings.map(warning => ({ warning })) : [e.message] })
+        let errors = [e.message.replace('(400)', '')]
+        const invalidItemsError = e.body && e.body.invalidLocusListItems && `Invalid genes/ intervals: ${e.body.invalidLocusListItems.join(', ')}`
+        if (invalidItemsError) {
+          errors.push(invalidItemsError)
+          if (e.body.warning) {
+            errors = errors.map(warning => ({ warning }))
+          }
+        }
+        throw new SubmissionError({
+          _error: errors,
+        })
       },
     ).post(values)
   }
