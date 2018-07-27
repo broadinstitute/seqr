@@ -30,12 +30,19 @@ const Allele = styled.span`
 `
 
 const PAR_REGIONS = {
-  37: [[60001, 2699521], [154931044, 155260561]],
-  38: [[10001, 2781480], [155701383, 156030896]],
+  37: {
+    X: [[60001, 2699521], [154931044, 155260561]],
+    Y: [[10001, 2649521], [59034050, 59363567]],
+  },
+  38: {
+    X: [[10001, 2781480], [155701383, 156030896]],
+    Y: [[10001, 2781480], [56887903, 57217416]],
+  },
 }
 
-const isHemiVariant = variant =>
-  variant.chrom === 'X' && PAR_REGIONS[variant.genomeVersion].every(region => !(region[0] < variant.pos < region[1]))
+const isHemiVariant = (variant, individual) =>
+  individual.sex === 'M' && (variant.chrom === 'X' || variant.chrom === 'Y') &&
+  PAR_REGIONS[variant.genomeVersion][variant.chrom].every(region => !(region[0] < variant.pos < region[1]))
 
 const Alleles = ({ alleles, variant, individual }) => {
   alleles = alleles.map((allele) => {
@@ -47,7 +54,7 @@ const Alleles = ({ alleles, variant, individual }) => {
   })
 
   let hemiError = null
-  if (individual.sex === 'M' && isHemiVariant(variant)) {
+  if (isHemiVariant(variant, individual)) {
     if (alleles[0].text !== alleles[1].text) {
       hemiError = <Popup content="WARNING: Heterozygous Male" trigger={<Icon name="warning sign" color="red" />} />
     } else {
