@@ -9,7 +9,6 @@ from xbrowse_server.base.models import Project as BaseProject, Family as BaseFam
     ProjectTag as BaseProjectTag, VariantTag as BaseVariantTag, VariantNote as BaseVariantNote, \
     VariantFunctionalData as BaseVariantFunctionalData, GeneNote as BaseGeneNote, AnalysedBy as BaseAnalysedBy
 from xbrowse_server.gene_lists.models import GeneList as BaseGeneList, GeneListItem as BaseGeneListItem
-from xbrowse.utils import slugify
 
 SEQR_TO_XBROWSE_CLASS_MAPPING = {
     "Project": BaseProject,
