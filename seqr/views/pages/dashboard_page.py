@@ -225,7 +225,7 @@ def _add_sample_type_counts(cursor, projects_by_guid):
         SELECT
           p.guid AS project_guid,
           s.sample_type AS sample_type,
-          COUNT(*) AS num_samples
+          COUNT(distinct s.individual_id) AS num_samples
         FROM seqr_sample AS s
           JOIN seqr_individual AS i ON s.individual_id=i.id
           JOIN seqr_family AS f ON i.family_id=f.id
