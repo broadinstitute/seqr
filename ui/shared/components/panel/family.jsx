@@ -53,7 +53,7 @@ const familyFieldRenderProps = {
     fieldDisplay: (loadedSample, compact) => <Sample loadedSample={loadedSample} hoverDetails={compact} />,
   },
   [FAMILY_FIELD_OMIM_NUMBER]: {
-    fieldDisplay: value => <a target="_blank" href={`https://www.omim.org/entry/${value}`}>{value}</a>,
+    fieldDisplay: value => <a target="_blank" href={`https://www.omim.org/entry/${value}`} rel="noopener noreferrer">{value}</a>,
     formFields: [{ name: FAMILY_FIELD_OMIM_NUMBER }],
   },
 }
