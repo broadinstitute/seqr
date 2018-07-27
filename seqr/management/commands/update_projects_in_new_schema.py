@@ -606,7 +606,7 @@ def _retrieve_and_update_individual_phenotips_data(project, individual):
         individual (Model): Individual model
     """
     try:
-        latest_phenotips_json = phenotips_api.get_patient_data(
+        latest_phenotips_json = phenotips_api._get_patient_data(
             project,
             individual,
         )
