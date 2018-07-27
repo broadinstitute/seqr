@@ -146,8 +146,6 @@ class ReduxFormWrapper extends React.Component {
     } else if (this.props.submitFailed) {
       saveStatus = RequestStatus.ERROR
     }
-    const saveErrorMessage = this.props.submitFailed ?
-      (this.props.error && this.props.error.join('; ')) || (this.props.invalid ? 'Invalid input' : 'Unknown') : null
 
     // redux-form does not support throwing submission warnings so this is a work around
     const submissionWarnings = this.props.warning || (this.props.error && this.props.error.map(error => error.warning).filter(warning => warning))
@@ -155,6 +153,11 @@ class ReduxFormWrapper extends React.Component {
 
     const warningMessages = (submissionWarnings && submissionWarnings.length > 0) ? submissionWarnings : flatten(Object.values(this.props.validationWarnings))
     const errorMessages = (submissionErrors && submissionErrors.length > 0) ? submissionErrors : flatten(Object.values(this.props.validationErrors))
+
+    const saveErrorMessage = this.props.submitFailed ?
+      (errorMessages && errorMessages.length > 0 && errorMessages.join('; ')) ||
+      (warningMessages && warningMessages.length > 0 && warningMessages.join('; ')) ||
+      (this.props.invalid ? 'Invalid input' : 'Unknown') : null
 
     const fieldComponents = this.props.renderChildren ? React.createElement(this.props.renderChildren) : configuredFields(this.props)
 

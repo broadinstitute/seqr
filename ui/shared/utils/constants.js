@@ -2,8 +2,7 @@ import { Form } from 'semantic-ui-react'
 
 import BaseFieldView from '../components/panel/view-fields/BaseFieldView'
 import OptionFieldView from '../components/panel/view-fields/OptionFieldView'
-import { BooleanRadio } from '../components/form/Inputs'
-import LocusIntervalField from '../components/form/LocusIntervalField'
+import { BooleanCheckbox, BooleanRadio } from '../components/form/Inputs'
 import { validators } from '../components/form/ReduxFormWrapper'
 
 
@@ -213,15 +212,9 @@ export const LOCUS_LIST_ITEMS_FIELD = {
     ),
     itemMap: (previousValue || {}).itemMap || {},
   }),
-}
-
-export const LOCUS_LIST_INTERVAL_FIELD = {
-  name: 'intervals',
-  label: 'Intervals',
-  fieldDisplay: () => null,
-  isEditable: true,
-  isArrayField: true,
-  addArrayElement: { label: 'Add Interval', newValue: { genomeVersion: '37' } },
-  validate: value => ((value && value.chrom && value.start && value.end) ? undefined : 'Chrom, start, and end are all required'),
-  component: LocusIntervalField,
+  additionalFormFields: [{
+    name: 'ignoreInvalidItems',
+    component: BooleanCheckbox,
+    label: 'Ignore invalid genes and intervals',
+  }],
 }

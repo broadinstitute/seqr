@@ -85,7 +85,9 @@ def update_locus_list_handler(request, locus_list_guid):
     # Update list metadata
     update_model_from_json(locus_list, request_json, allow_unknown_keys=True)
 
-    new_genes, invalid_items = _update_requested_items(locus_list, request_json, request.user)
+    new_genes, invalid_items, error = _update_requested_items(locus_list, request_json, request.user)
+    if error:
+        return create_json_response({'invalidLocusListItems': invalid_items}, status=400, reason=error)
 
     locus_list_json = get_json_for_locus_list(locus_list, request.user)
 
@@ -185,9 +187,13 @@ def _update_requested_items(locus_list, request_json, user):
                     chrom=item.get('chrom', '?'), start=item.get('start', '?'), end=item.get('end', '?')
                 ))
 
-    # Update genes
     gene_symbols_to_ids = get_gene_symbols_to_gene_ids(new_gene_symbols)
     invalid_items += [symbol for symbol, gene_id in gene_symbols_to_ids.items() if not gene_id]
+
+    if invalid_items and not request_json.get('ignoreInvalidItems'):
+        return None, invalid_items, 'This list contains invalid genes/ intervals. Update them, or select the "Ignore invalid genes and intervals" checkbox to ignore.'
+
+    # Update genes
     new_genes = get_genes([gene_id for gene_id in gene_symbols_to_ids.values() if gene_id])
     for locus_list_gene in locus_list.locuslistgene_set.exclude(gene_id__in=existing_gene_ids):
         delete_seqr_model(locus_list_gene)
@@ -210,4 +216,4 @@ def _update_requested_items(locus_list, request_json, user):
             end=interval['end'],
         )
 
-    return new_genes, invalid_items
+    return new_genes, invalid_items, None

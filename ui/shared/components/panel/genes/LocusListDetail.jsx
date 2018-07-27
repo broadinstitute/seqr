@@ -13,10 +13,10 @@ import { toSnakecase } from '../../../utils/stringUtils'
 import { LOCUS_LIST_FIELDS, LOCUS_LIST_ITEMS_FIELD } from '../../../utils/constants'
 import { LocusListItemsLoader } from '../../LocusListLoader'
 
-const getFieldProps = ({ isEditable, width, fieldDisplay, ...fieldProps }) => ({
+const getFieldProps = ({ isEditable, width, fieldDisplay, additionalFormFields, ...fieldProps }) => ({
   field: fieldProps.name,
   fieldName: fieldProps.label,
-  formFields: [fieldProps],
+  formFields: [fieldProps, ...(additionalFormFields || [])],
   width,
   fieldDisplay,
   isEditable,
