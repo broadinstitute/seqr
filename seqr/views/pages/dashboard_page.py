@@ -219,8 +219,6 @@ def _add_sample_type_counts(cursor, projects_by_guid):
     if len(projects_by_guid) == 0:
         return {}
 
-    projects_WHERE_clause = _to_WHERE_clause([guid for guid in projects_by_guid])
-
     sample_type_counts_query = """
         SELECT
           p.guid AS project_guid,
@@ -230,9 +228,15 @@ def _add_sample_type_counts(cursor, projects_by_guid):
           JOIN seqr_individual AS i ON s.individual_id=i.id
           JOIN seqr_family AS f ON i.family_id=f.id
           JOIN seqr_project AS p ON f.project_id=p.id
-        %(projects_WHERE_clause)s
+        {projects_WHERE_clause}
+        AND dataset_type='{variant_dataset_type}'
+        AND sample_status='{loaded_sample_status}'
         GROUP BY p.guid, s.sample_type
-    """.strip() % locals()
+    """.strip().format(
+        projects_WHERE_clause=_to_WHERE_clause([guid for guid in projects_by_guid]),
+        variant_dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
+        loaded_sample_status=Sample.SAMPLE_STATUS_LOADED,
+    )
 
     cursor.execute(sample_type_counts_query)
 
