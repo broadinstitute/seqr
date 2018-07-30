@@ -12,7 +12,7 @@ from guardian.shortcuts import assign_perm
 
 from seqr.utils.model_sync_utils import get_or_create_saved_variant, convert_html_to_plain_text
 from seqr.views.apis import phenotips_api
-from seqr.views.apis.phenotips_api import _update_individual_phenotips_data
+from seqr.views.apis.phenotips_api import _update_individual_phenotips_data, sync_phenotips_data
 from xbrowse_server.base.models import \
     Project, \
     Family, \
@@ -557,10 +557,13 @@ def transfer_individual(source_individual, new_family, new_project, connect_to_p
     update_model_field(new_individual, 'phenotips_data',  source_individual.phenotips_data)
 
     # transfer PhenoTips data
-    phenotips_data_retrieved = False
     if connect_to_phenotips and new_project.is_phenotips_enabled:
-        _retrieve_and_update_individual_phenotips_data(new_project, new_individual)
-        phenotips_data_retrieved = True
+        try:
+            phenotips_data_retrieved = False
+            sync_phenotips_data(new_project, new_individual)
+            phenotips_data_retrieved = True
+        except phenotips_api.PhenotipsException as e:
+            print("Couldn't retrieve latest data from phenotips for %s: %s" % (new_individual, e))
 
     # transfer MME data
     if new_project.is_mme_enabled:
@@ -596,26 +599,6 @@ def transfer_analysed_by(source_analysed_by, new_family):
         created = True
 
     return source_analysed_by.seqr_family_analysed_by, created
-
-
-def _retrieve_and_update_individual_phenotips_data(project, individual):
-    """Retrieve and update the phenotips_data and phenotips_patient_id fields for the given Individual
-
-    Args:
-        project (Model): Project model
-        individual (Model): Individual model
-    """
-    try:
-        latest_phenotips_json = phenotips_api._get_patient_data(
-            project,
-            individual,
-        )
-
-    except phenotips_api.PhenotipsException as e:
-        print("Couldn't retrieve latest data from phenotips for %s: %s" % (individual, e))
-        return
-
-    _update_individual_phenotips_data(individual, latest_phenotips_json)
 
 
 def get_or_create_sample(
