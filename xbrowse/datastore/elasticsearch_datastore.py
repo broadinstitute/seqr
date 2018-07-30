@@ -543,7 +543,7 @@ class ElasticsearchDatastore(datastore.Datastore):
                     'revel_score': hit["dbnsfp_REVEL_score"] if "dbnsfp_REVEL_score" in hit else None,
                     'eigen_phred': hit["eigen_Eigen_phred"] if "eigen_Eigen_phred" in hit else (hit["dbnsfp_Eigen_phred"] if "dbnsfp_Eigen_phred" in hit else None),
                     'mpc_score': hit["mpc_MPC"] if "mpc_MPC" in hit else None,
-
+                    'primate_ai_score': hit["primate_ai_score"] if "primate_ai_score" in hit else None,
                     'annotation_tags': list(hit["transcriptConsequenceTerms"] or []) if "transcriptConsequenceTerms" in hit else None,
                     'coding_gene_ids': list(hit['codingGeneIds'] or []),
                     'gene_ids': list(hit['geneIds'] or []),
@@ -595,9 +595,9 @@ class ElasticsearchDatastore(datastore.Datastore):
                     'exac_v3_AF': float(hit["exac_AF"] or 0.0) if "exac_AF" in hit else (hit["exac_AC_Adj"]/float(hit["exac_AN_Adj"]) if "exac_AC_Adj" in hit and "exac_AN_Adj"in hit and int(hit["exac_AN_Adj"] or 0) > 0 else None),
                     'exac_v3_popmax_AF': float(hit["exac_AF_POPMAX"] or 0.0) if "exac_AF_POPMAX" in hit else None,
                     'gnomad_exomes_AF': float(hit["gnomad_exomes_AF"] or 0.0) if "gnomad_exomes_AF" in hit else None,
-                    'gnomad_exomes_popmax_AF': float(hit["gnomad_exomes_AF_POPMAX"] or 0.0) if "gnomad_exomes_AF_POPMAX" in hit else None,
+                    'gnomad_exomes_popmax_AF': float(hit["gnomad_exomes_AF_POPMAX_OR_GLOBAL"] or 0.0) if "gnomad_exomes_AF_POPMAX_OR_GLOBAL" in hit else (float(hit["gnomad_exomes_AF_POPMAX"] or 0.0) if "gnomad_exomes_AF_POPMAX" in hit else None),
                     'gnomad_genomes_AF': float(hit["gnomad_genomes_AF"] or 0.0) if "gnomad_genomes_AF" in hit else None,
-                    'gnomad_genomes_popmax_AF': float(hit["gnomad_genomes_AF_POPMAX"] or 0.0) if "gnomad_genomes_AF_POPMAX" in hit else None,
+                    'gnomad_genomes_popmax_AF': float(hit["gnomad_genomes_AF_POPMAX_OR_GLOBAL"] or 0.0) if "gnomad_genomes_AF_POPMAX_OR_GLOBAL" in hit else (float(hit["gnomad_genomes_AF_POPMAX"] or 0.0) if "gnomad_genomes_AF_POPMAX" in hit else None),
                     'topmed_AF': float(hit["topmed_AF"] or 0.0) if "topmed_AF" in hit else None,
                 },
                 #'popmax_populations': {
@@ -611,6 +611,7 @@ class ElasticsearchDatastore(datastore.Datastore):
                     'clinvar_variant_id': hit['clinvar_variation_id'] if 'clinvar_variation_id' in hit and hit['clinvar_variation_id'] else None,
                     'clinvar_allele_id': hit['clinvar_allele_id'] if 'clinvar_allele_id' in hit and hit['clinvar_allele_id'] else None,
                     'clinvar_clinsig': hit['clinvar_clinical_significance'].lower() if ('clinvar_clinical_significance' in hit) and hit['clinvar_clinical_significance'] else None,
+                    'clinvar_gold_stars': hit['clinvar_gold_stars'] if 'clinvar_gold_stars' in hit and hit['clinvar_gold_stars'] else None,
                     'hgmd_class': hit['hgmd_class'] if 'hgmd_class' in hit and user and user.is_staff else None,
                     'hgmd_accession': hit['hgmd_accession'] if 'hgmd_accession' in hit else None,
                     'genome_version': project.genome_version,

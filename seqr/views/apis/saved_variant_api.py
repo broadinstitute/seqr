@@ -250,6 +250,7 @@ def _variant_details(variant_json, user):
                 'gnomad_genomes_hom': annotation.get('pop_counts', {}).get('gnomad_genomes_Hom'),
                 'gnomad_genomes_hemi': annotation.get('pop_counts', {}).get('gnomad_genomes_Hemi'),
             },
+            'primate_ai_score': annotation.get('primate_ai_score'),
             'revel_score': annotation.get('revel_score'),
             'rsid': annotation.get('rsid'),
             'sift': annotation.get('sift'),
@@ -270,6 +271,7 @@ def _variant_details(variant_json, user):
             'clinsig': extras.get('clinvar_clinsig'),
             'variantId': extras.get('clinvar_variant_id'),
             'alleleId': extras.get('clinvar_allele_id'),
+            'goldStars': extras.get('clinvar_gold_stars'),
         },
         'hgmd': {
             'accession': extras.get('hgmd_accession'),
