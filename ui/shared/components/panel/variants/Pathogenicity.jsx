@@ -1,6 +1,6 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import { Label } from 'semantic-ui-react'
+import { Label, Rating } from 'semantic-ui-react'
 
 import { CLINSIG_SEVERITY } from '../../../utils/constants'
 import { snakecaseToTitlecase } from '../../../utils/stringUtils'
@@ -70,6 +70,9 @@ const Pathogenicity = ({ variant }) => {
               formatName={snakecaseToTitlecase}
             />,
           )}
+          {variant.clinvar.gold_stars != null &&
+            <Rating icon="star" defaultRating={variant.clinvar.gold_stars} maxRating={4} />
+          }
         </span>
       }
       {variant.hgmd.class &&
