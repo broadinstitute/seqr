@@ -420,6 +420,14 @@ export const INTERNAL_INDIVIDUAL_EXPORT_DATA = [
   { header: 'Case Review Discussion', field: 'caseReviewDiscussion', format: stripMarkdown },
 ]
 
+export const SAMPLE_EXPORT_DATA = [
+  { header: 'Family ID', field: 'familyId' },
+  { header: 'Individual ID', field: 'individualId' },
+  { header: 'Sample ID', field: 'sampleId' },
+  { header: 'Loaded Date', field: 'loadedDate' },
+  { header: 'Sample Type', field: 'sampleType' },
+]
+
 export const SORT_BY_FAMILY_GUID = 'FAMILY_GUID'
 export const SORT_BY_XPOS = 'XPOS'
 export const SORT_BY_PATHOGENICITY = 'PATHOGENICITY'
