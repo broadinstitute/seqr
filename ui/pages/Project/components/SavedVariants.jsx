@@ -176,7 +176,7 @@ class SavedVariants extends React.Component {
       <Grid>
         <Grid.Row>
           <Grid.Column width={16}>
-            <VariantTagTypeBar height={30} project={this.props.project} familyGuid={familyGuid} />
+            <VariantTagTypeBar height={30} project={this.props.project} familyGuid={familyGuid} hideExcluded={this.props.tableState.hideExcluded} />
           </Grid.Column>
         </Grid.Row>
         {!this.props.loading &&

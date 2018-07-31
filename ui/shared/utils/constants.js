@@ -143,3 +143,5 @@ export const CLINSIG_SEVERITY = {
   DFP: 0,
   DP: 0,
 }
+
+export const EXCLUDED_TAG_NAME = 'Excluded'
