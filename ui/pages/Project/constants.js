@@ -315,6 +315,13 @@ export const FAMILY_FILTER_OPTIONS = [
   },
 ]
 
+export const FAMILY_FILTER_LOOKUP = FAMILY_FILTER_OPTIONS.reduce(
+  (acc, opt) => ({
+    ...acc,
+    [opt.value]: opt,
+  }), {},
+)
+
 
 export const SORT_BY_FAMILY_NAME = 'FAMILY_NAME'
 export const SORT_BY_FAMILY_ADDED_DATE = 'FAMILY_ADDED_DATE'
@@ -431,6 +438,14 @@ export const INTERNAL_INDIVIDUAL_EXPORT_DATA = [
   { header: 'Case Review Status Last Modified', field: 'caseReviewStatusLastModifiedDate' },
   { header: 'Case Review Status Last Modified By', field: 'caseReviewStatusLastModifiedBy' },
   { header: 'Case Review Discussion', field: 'caseReviewDiscussion', format: stripMarkdown },
+]
+
+export const SAMPLE_EXPORT_DATA = [
+  { header: 'Family ID', field: 'familyId' },
+  { header: 'Individual ID', field: 'individualId' },
+  { header: 'Sample ID', field: 'sampleId' },
+  { header: 'Loaded Date', field: 'loadedDate' },
+  { header: 'Sample Type', field: 'sampleType' },
 ]
 
 export const SORT_BY_FAMILY_GUID = 'FAMILY_GUID'
