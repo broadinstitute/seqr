@@ -3,7 +3,7 @@ from xbrowse_server.base.models import Project as BaseProject, Family as BaseFam
     VariantTag as BaseVariantTag, ProjectTag
 from xbrowse_server.base.model_utils import update_xbrowse_model, find_matching_seqr_model, get_or_create_xbrowse_model
 from seqr.views.apis.phenotips_api import _get_phenotips_uname_and_pwd_for_project, _add_user_to_patient, \
-    sync_phenotips_data, phenotips_patient_exists
+    phenotips_patient_exists, _get_patient_data
 
 
 class Command(BaseCommand):
@@ -25,8 +25,15 @@ class Command(BaseCommand):
             # Update individuals in phenotips
             for individual in f.individual_set.all():
                 if phenotips_patient_exists(individual.seqr_individual):
-                    sync_phenotips_data(to_project.seqr_project, individual.seqr_individual)
+                    # make sure phenotips_patient_id is up to date
+                    data_json = _get_patient_data(
+                        to_project.seqr_project,
+                        individual.seqr_individual,
+                    )
 
+                    individual.seqr_individual.phenotips_patient_id = data_json["id"]
+
+                    # update permissions
                     phenotips_readonly_username, _ = _get_phenotips_uname_and_pwd_for_project(to_project.seqr_project.phenotips_user_id, read_only=True)
                     _add_user_to_patient(phenotips_readonly_username, individual.seqr_individual.phenotips_patient_id, allow_edit=False)
 

@@ -511,26 +511,5 @@ def _get_phenotips_username_and_password(user, project, permissions_level):
     return auth_tuple
 
 
-def sync_phenotips_data(project, individual):
-    """Retrieve and update the phenotips_data and phenotips_patient_id fields for the given Individual
-
-    Args:
-        project (Model): Project model
-        individual (Model): Individual model
-    """
-
-    if not phenotips_patient_exists(individual):
-        return False
-
-    data_json = _get_patient_data(
-        project,
-        individual,
-    )
-
-    _update_individual_phenotips_data(individual, data_json)
-
-    return True
-
-
 class PhenotipsException(Exception):
     pass

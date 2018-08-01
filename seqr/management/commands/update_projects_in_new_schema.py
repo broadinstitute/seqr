@@ -12,7 +12,7 @@ from guardian.shortcuts import assign_perm
 
 from seqr.utils.model_sync_utils import get_or_create_saved_variant, convert_html_to_plain_text
 from seqr.views.apis import phenotips_api
-from seqr.views.apis.phenotips_api import _update_individual_phenotips_data, sync_phenotips_data
+from seqr.views.apis.phenotips_api import phenotips_patient_exists, _get_patient_data, _update_individual_phenotips_data
 from xbrowse_server.base.models import \
     Project, \
     Family, \
@@ -556,11 +556,17 @@ def transfer_individual(source_individual, new_family, new_project, connect_to_p
     update_model_field(new_individual, 'phenotips_eid',  source_individual.phenotips_id)
     update_model_field(new_individual, 'phenotips_data',  source_individual.phenotips_data)
 
-    # transfer PhenoTips data
+    # update PhenoTips data
     if connect_to_phenotips and new_project.is_phenotips_enabled:
         try:
             phenotips_data_retrieved = False
-            sync_phenotips_data(new_project, new_individual)
+            data_json = _get_patient_data(
+                new_project,
+                new_individual,
+            )
+
+            _update_individual_phenotips_data(new_individual, data_json)
+
             phenotips_data_retrieved = True
         except phenotips_api.PhenotipsException as e:
             print("Couldn't retrieve latest data from phenotips for %s: %s" % (new_individual, e))
