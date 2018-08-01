@@ -44,15 +44,34 @@ const FILTER_FIELDS = [
     label: 'Hide Review Only',
     labelHelp: 'Remove all variants tagged with only the "Review" tag from the results',
   },
+  {
+    name: 'recordsPerPage',
+    component: DropdownInput,
+    inline: true,
+    selection: false,
+    fluid: false,
+    label: 'Variants Per Page:',
+    options: [{ value: 10 }, { value: 25 }, { value: 50 }, { value: 100 }],
+  },
 ]
 
-const InlineFormColumn = styled(Grid.Column)`
+const InlineFormRow = styled(Grid.Row)`
+  font-size: 1.1em;
+  
   .ui.form {
     display: inline-block;
   }
   
   .field.inline {
     padding-right: 25px;
+    
+    label {
+      font-size: 1.1em !important;
+    }
+  }
+  
+  .pagination {
+    margin-top: 10px !important;
   }
 `
 
@@ -177,8 +196,8 @@ class SavedVariants extends React.Component {
           </Grid.Column>
         </Grid.Row>
         {!this.props.loading &&
-          <Grid.Row>
-            <Grid.Column width={8}>
+          <InlineFormRow>
+            <Grid.Column width={5}>
               Showing {shownSummary} {this.props.filteredVariants.length}
               &nbsp;&nbsp;
               <Dropdown
@@ -188,17 +207,9 @@ class SavedVariants extends React.Component {
                 onChange={this.navigateToTag}
               />
               &nbsp;variants {!allShown && `(${this.props.totalVariantsCount} total)`}
-              <HorizontalSpacer width={20} />
-              {this.props.totalPages > 1 &&
-                <Pagination
-                  activePage={this.props.tableState.currentPage || 1}
-                  totalPages={this.props.totalPages}
-                  onPageChange={this.props.updateSavedVariantPage}
-                  size="mini"
-                />
-              }
+
             </Grid.Column>
-            <InlineFormColumn width={8} floated="right" textAlign="right">
+            <Grid.Column width={11} floated="right" textAlign="right">
               {!variantGuid &&
                 <ReduxFormWrapper
                   onSubmit={this.props.updateSavedVariantTable}
@@ -211,8 +222,17 @@ class SavedVariants extends React.Component {
               }
               <HorizontalSpacer width={10} />
               <ExportTableButton downloads={exports} />
-            </InlineFormColumn>
-          </Grid.Row>
+              {this.props.totalPages > 1 &&
+                <Pagination
+                  activePage={this.props.tableState.currentPage || 1}
+                  totalPages={this.props.totalPages}
+                  onPageChange={this.props.updateSavedVariantPage}
+                  size="mini"
+                  siblingRange={0}
+                />
+              }
+            </Grid.Column>
+          </InlineFormRow>
         }
         <Grid.Row>
           <Grid.Column width={16}>
