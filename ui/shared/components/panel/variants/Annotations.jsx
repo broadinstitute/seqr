@@ -8,6 +8,7 @@ import Modal from '../../modal/Modal'
 import ButtonLink from '../../buttons/ButtonLink'
 import Transcripts from './Transcripts'
 import { LocusListLabels } from './VariantGene'
+import { GENOME_VERSION_37 } from '../../../utils/constants'
 
 
 const SequenceContainer = styled.span`
@@ -25,7 +26,7 @@ export const getLocus = (variant, rangeSize) =>
 const ucscBrowserLink = (variant, genomeVersion) => {
   /* eslint-disable space-infix-ops */
   genomeVersion = genomeVersion || variant.genomeVersion
-  genomeVersion = genomeVersion === '37' ? '19' : genomeVersion
+  genomeVersion = genomeVersion === GENOME_VERSION_37 ? '19' : genomeVersion
   const highlight = `hg${genomeVersion}.chr${variant.chrom}:${variant.pos}-${variant.pos + (variant.ref.length-1)}`
   const position = getLocus(variant, 10)
   return `http://genome.ucsc.edu/cgi-bin/hgTracks?db=hg${genomeVersion}&highlight=${highlight}&position=${position}`
@@ -172,11 +173,11 @@ const Annotations = ({ variant }) => {
           </a>
         </div>
       }
-      {variant.liftedOverGenomeVersion === '37' && (
+      {variant.liftedOverGenomeVersion === GENOME_VERSION_37 && (
         variant.liftedOverPos ?
           <div>
             hg19:<HorizontalSpacer width={5} />
-            <a href={ucscBrowserLink(variant, '37')} target="_blank" rel="noopener noreferrer">
+            <a href={ucscBrowserLink(variant, GENOME_VERSION_37)} target="_blank" rel="noopener noreferrer">
               chr{variant.liftedOverChrom}:{variant.liftedOverPos}
             </a>
           </div>
