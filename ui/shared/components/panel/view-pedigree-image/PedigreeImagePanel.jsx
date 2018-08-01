@@ -32,7 +32,7 @@ const PedigreeImagePanel = (props) => {
       }
     >
       <img src={props.family.pedigreeImage} alt="pedigree" style={{ maxHeight: '250px', maxWidth: '400px' }} /><br />
-      <a href={props.family.pedigreeImage} target="_blank" rel="noopener noreferrer">
+      <a href={props.family.pedigreeImage} target="_blank">
         <Icon name="zoom" /> Original Size
       </a>
     </Modal>

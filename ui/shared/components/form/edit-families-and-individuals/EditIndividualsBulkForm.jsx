@@ -68,7 +68,7 @@ const BaseBulkContent = props =>
           </TableRow>
           <TableRow>
             <TableCell>
-              <BoldText>Text</BoldText> (<a href="https://en.wikipedia.org/wiki/Tab-separated_values" target="_blank" rel="noopener noreferrer">.tsv</a> / <a href="https://www.cog-genomics.org/plink2/formats#fam" target="_blank" rel="noopener noreferrer">.fam</a>)
+              <BoldText>Text</BoldText> (<a href="https://en.wikipedia.org/wiki/Tab-separated_values" target="_blank">.tsv</a> / <a href="https://www.cog-genomics.org/plink2/formats#fam" target="_blank">.fam</a>)
             </TableCell>
             <TableCell>
               download template: &nbsp;

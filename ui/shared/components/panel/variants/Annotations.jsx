@@ -159,7 +159,7 @@ const Annotations = ({ variant }) => {
       }
       { Object.keys(mainTranscript).length > 0 && <VerticalSpacer height={10} />}
       <LargeText>
-        <a href={ucscBrowserLink(variant)} target="_blank" rel="noopener noreferrer"><b>{variant.chrom}:{variant.pos}</b></a>
+        <a href={ucscBrowserLink(variant)} target="_blank"><b>{variant.chrom}:{variant.pos}</b></a>
         <HorizontalSpacer width={10} />
         <Sequence sequence={variant.ref} />
         <Icon name="angle right" />
@@ -167,7 +167,7 @@ const Annotations = ({ variant }) => {
       </LargeText>
       {rsid &&
         <div>
-          <a href={`http://www.ncbi.nlm.nih.gov/SNP/snp_ref.cgi?searchType=adhoc_search&type=rs&rs=${rsid}`} target="_blank" rel="noopener noreferrer">
+          <a href={`http://www.ncbi.nlm.nih.gov/SNP/snp_ref.cgi?searchType=adhoc_search&type=rs&rs=${rsid}`} target="_blank">
             {rsid}
           </a>
         </div>
@@ -176,7 +176,7 @@ const Annotations = ({ variant }) => {
         variant.liftedOverPos ?
           <div>
             hg19:<HorizontalSpacer width={5} />
-            <a href={ucscBrowserLink(variant, '37')} target="_blank" rel="noopener noreferrer">
+            <a href={ucscBrowserLink(variant, '37')} target="_blank">
               chr{variant.liftedOverChrom}:{variant.liftedOverPos}
             </a>
           </div>
@@ -188,11 +188,11 @@ const Annotations = ({ variant }) => {
       <VerticalSpacer height={5} />
       {mainTranscript.symbol &&
         <div>
-          <a href={`https://www.google.com/search?q=${mainTranscript.symbol}+${variations.join('+')}`} target="_blank" rel="noopener noreferrer">
+          <a href={`https://www.google.com/search?q=${mainTranscript.symbol}+${variations.join('+')}`} target="_blank">
             google
           </a>
           <HorizontalSpacer width={5} />|<HorizontalSpacer width={5} />
-          <a href={`https://www.ncbi.nlm.nih.gov/pubmed?term=${mainTranscript.symbol} AND ( ${variations.join(' OR ')})`} target="_blank" rel="noopener noreferrer">
+          <a href={`https://www.ncbi.nlm.nih.gov/pubmed?term=${mainTranscript.symbol} AND ( ${variations.join(' OR ')})`} target="_blank">
             pubmed
           </a>
         </div>
