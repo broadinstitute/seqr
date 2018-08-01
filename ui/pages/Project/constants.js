@@ -315,6 +315,13 @@ export const FAMILY_FILTER_OPTIONS = [
   },
 ]
 
+export const FAMILY_FILTER_LOOKUP = FAMILY_FILTER_OPTIONS.reduce(
+  (acc, opt) => ({
+    ...acc,
+    [opt.value]: opt,
+  }), {},
+)
+
 
 export const SORT_BY_FAMILY_NAME = 'FAMILY_NAME'
 export const SORT_BY_FAMILY_ADDED_DATE = 'FAMILY_ADDED_DATE'

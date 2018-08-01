@@ -13,7 +13,7 @@ import {
   SHOW_ALL,
   SORT_BY_FAMILY_NAME,
   CASE_REVIEW_STATUS_OPTIONS,
-  FAMILY_FILTER_OPTIONS,
+  FAMILY_FILTER_LOOKUP,
   FAMILY_SORT_OPTIONS,
   FAMILY_EXPORT_DATA,
   INTERNAL_FAMILY_EXPORT_DATA,
@@ -26,14 +26,6 @@ import {
   VARIANT_GENOTYPE_EXPORT_DATA,
   familySamplesLoaded,
 } from './constants'
-
-
-const FAMILY_FILTER_LOOKUP = FAMILY_FILTER_OPTIONS.reduce(
-  (acc, opt) => ({
-    ...acc,
-    [opt.value]: opt.createFilter,
-  }), {},
-)
 
 const FAMILY_SORT_LOOKUP = FAMILY_SORT_OPTIONS.reduce(
   (acc, opt) => ({
@@ -206,7 +198,7 @@ export const getVisibleFamilies = createSelector(
       return searchedFamilies
     }
 
-    const familyFilter = FAMILY_FILTER_LOOKUP[familiesFilter](individualsByGuid, samplesByGuid, user)
+    const familyFilter = FAMILY_FILTER_LOOKUP[familiesFilter].createFilter(individualsByGuid, samplesByGuid, user)
     return searchedFamilies.filter(familyFilter)
   },
 )
