@@ -766,24 +766,6 @@
 },
 {
     "model": "seqr.sample",
-    "pk": 130,
-    "fields": {
-        "guid": "S000130_na19678",
-        "created_date": "2017-02-05T06:42:55.397Z",
-        "created_by": null,
-        "last_modified_date": "2017-03-13T09:07:49.774Z",
-        
-        "sample_id": "NA19678",
-        "sample_type": "WES",
-        "sample_status": "loaded",
-        "individual": 2,
-        "dataset_type": "VARIANTS",
-        "dataset_file_path": "1kg.vcf.gz",
-        "loaded_date": "2017-02-05T06:42:55.397Z"
-    }
-},
-{
-    "model": "seqr.sample",
     "pk": 131,
     "fields": {
         "guid": "S000131_na19679",
