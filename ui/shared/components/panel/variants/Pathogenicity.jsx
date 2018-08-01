@@ -36,7 +36,7 @@ PathogenicityLabel.propTypes = {
 
 
 const PathogenicityLink = ({ href, ...labelProps }) =>
-  <a href={href} target="_blank" rel="noopener noreferrer">
+  <a href={href} target="_blank">
     <PathogenicityLabel {...labelProps} />
     <HorizontalSpacer width={5} />
   </a>
