@@ -177,6 +177,7 @@ export const reducers = {
   }, false),
   savedVariantTableState: createSingleObjectReducer(UPDATE_SAVED_VARIANT_TABLE_STATE, {
     hideExcluded: false,
+    hideReviewOnly: false,
     categoryFilter: SHOW_ALL,
     sortOrder: SORT_BY_FAMILY_GUID,
     currentPage: 1,

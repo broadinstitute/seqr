@@ -145,3 +145,5 @@ export const CLINSIG_SEVERITY = {
 }
 
 export const EXCLUDED_TAG_NAME = 'Excluded'
+export const REVIEW_TAG_NAME = 'Review'
+
