@@ -53,7 +53,7 @@ class LocusListAPITest(TransactionTestCase):
         self.assertSetEqual(
             set(locus_list.keys()),
             {'locusListGuid', 'description', 'lastModifiedDate', 'numEntries', 'isPublic', 'createdBy', 'createdDate',
-             'canEdit', 'name', 'items'}
+             'canEdit', 'name', 'items', 'intervalGenomeVersion'}
         )
         self.assertSetEqual(
             {item['geneId'] for item in locus_list['items'] if item.get('geneId')},

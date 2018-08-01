@@ -7,6 +7,7 @@ from django.views.decorators.csrf import csrf_exempt
 from guardian.shortcuts import assign_perm, remove_perm, get_objects_for_group
 
 
+from reference_data.models import GENOME_VERSION_GRCh37
 from seqr.models import LocusList, LocusListGene, LocusListInterval, IS_OWNER, CAN_VIEW, CAN_EDIT
 from seqr.model_utils import create_seqr_model, delete_seqr_model, find_matching_xbrowse_model
 from seqr.utils.xpos_utils import get_xpos
@@ -210,13 +211,17 @@ def _update_locus_list(locus_list, request_json, user):
         )
 
     # Update intervals
+    genome_version = request_json.get('intervalGenomeVersion') or GENOME_VERSION_GRCh37
     locus_list.locuslistinterval_set.exclude(guid__in=existing_interval_guids).delete()
+    for existing_interval in locus_list.locuslistinterval_set.all():
+        update_model_from_json(existing_interval, {'genomeVersion': genome_version})
     for interval in new_intervals:
         LocusListInterval.objects.create(
             locus_list=locus_list,
             chrom=interval['chrom'].lstrip('chr'),
             start=interval['start'],
             end=interval['end'],
+            genome_version=genome_version,
         )
 
     return locus_list, new_genes, invalid_items, None

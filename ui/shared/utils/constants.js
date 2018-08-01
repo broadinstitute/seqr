@@ -2,7 +2,7 @@ import { Form } from 'semantic-ui-react'
 
 import BaseFieldView from '../components/panel/view-fields/BaseFieldView'
 import OptionFieldView from '../components/panel/view-fields/OptionFieldView'
-import { BooleanCheckbox, BooleanRadio } from '../components/form/Inputs'
+import { BooleanCheckbox, BooleanRadio, Select } from '../components/form/Inputs'
 
 
 // SAMPLES
@@ -155,6 +155,12 @@ export const LOCUS_LIST_IS_PUBLIC_FIELD_NAME = 'isPublic'
 export const LOCUS_LIST_LAST_MODIFIED_FIELD_NAME = 'lastModifiedDate'
 export const LOCUS_LIST_CURATOR_FIELD_NAME = 'createdBy'
 
+export const GENOME_VERSION_37 = '37'
+export const GENOME_VERSION_OPTIONS = [
+  { value: GENOME_VERSION_37, text: 'GRCh37' },
+  { value: '38', text: 'GRCh38' },
+]
+
 export const LOCUS_LIST_FIELDS = [
   {
     name: 'name',
@@ -212,9 +218,19 @@ export const LOCUS_LIST_ITEMS_FIELD = {
     ),
     itemMap: (previousValue || {}).itemMap || {},
   }),
-  additionalFormFields: [{
-    name: 'ignoreInvalidItems',
-    component: BooleanCheckbox,
-    label: 'Ignore invalid genes and intervals',
-  }],
+  additionalFormFields: [
+    {
+      name: 'intervalGenomeVersion',
+      component: Select,
+      options: GENOME_VERSION_OPTIONS,
+      label: 'Genome Version',
+    },
+    {
+      name: 'ignoreInvalidItems',
+      component: BooleanCheckbox,
+      label: 'Ignore invalid genes and intervals',
+    },
+  ],
 }
+
+export const EXCLUDED_TAG_NAME = 'Excluded'
