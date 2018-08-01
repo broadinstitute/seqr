@@ -2,7 +2,7 @@ import orderBy from 'lodash/orderBy'
 import { createSelector } from 'reselect'
 
 import { getSearchResults } from 'redux/utils/reduxSearchEnhancer'
-import { FAMILY_ANALYSIS_STATUS_OPTIONS, EXCLUDED_TAG_NAME } from 'shared/utils/constants'
+import { FAMILY_ANALYSIS_STATUS_OPTIONS, EXCLUDED_TAG_NAME, REVIEW_TAG_NAME } from 'shared/utils/constants'
 import { toCamelcase, toSnakecase } from 'shared/utils/stringUtils'
 
 import {
@@ -78,6 +78,7 @@ export const getSavedVariantTableState = state => state.savedVariantTableState
 export const getSavedVariantCategoryFilter = state => state.savedVariantTableState.categoryFilter || SHOW_ALL
 export const getSavedVariantSortOrder = state => state.savedVariantTableState.sortOrder || SORT_BY_FAMILY_GUID
 export const getSavedVariantHideExcluded = state => state.savedVariantTableState.hideExcluded
+export const getSavedVariantHideReviewOnly = state => state.savedVariantTableState.hideReviewOnly
 export const getSavedVariantCurrentPage = state => state.savedVariantTableState.currentPage || 1
 export const getSavedVariantRecordsPerPage = state => state.savedVariantTableState.recordsPerPage || 25
 
@@ -107,10 +108,14 @@ export const getFilteredProjectSavedVariants = createSelector(
   getProjectSavedVariants,
   getSavedVariantCategoryFilter,
   getSavedVariantHideExcluded,
-  (projectSavedVariants, categoryFilter, hideExcluded) => {
+  getSavedVariantHideReviewOnly,
+  (projectSavedVariants, categoryFilter, hideExcluded, hideReviewOnly) => {
     let variantsToShow = projectSavedVariants
     if (hideExcluded) {
       variantsToShow = variantsToShow.filter(variant => variant.tags.every(t => t.name !== EXCLUDED_TAG_NAME))
+    }
+    if (hideReviewOnly) {
+      variantsToShow = variantsToShow.filter(variant => variant.tags.length !== 1 || variant.tags[0].name !== REVIEW_TAG_NAME)
     }
     if (categoryFilter !== SHOW_ALL) {
       variantsToShow = variantsToShow.filter(variant => variant.tags.some(t => t.category === categoryFilter))

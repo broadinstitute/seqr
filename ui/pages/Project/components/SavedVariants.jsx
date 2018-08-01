@@ -3,7 +3,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Loader, Grid, Pagination, Dropdown, Popup, Icon } from 'semantic-ui-react'
+import { Loader, Grid, Pagination, Dropdown } from 'semantic-ui-react'
 import { Link } from 'react-router-dom'
 import styled from 'styled-components'
 
@@ -37,16 +37,14 @@ const FILTER_FIELDS = [
   {
     name: 'hideExcluded',
     component: InlineToggle,
-    label: (
-      <label>
-        Hide Excluded &nbsp;
-        <Popup
-          content="Remove all variants tagged with the ''Excluded'' tag from the results"
-          position="top center"
-          trigger={<a><Icon name="info circle" link /></a>}
-        />
-      </label>
-    ),
+    label: 'Hide Excluded',
+    labelHelp: 'Remove all variants tagged with the "Excluded" tag from the results',
+  },
+  {
+    name: 'hideReviewOnly',
+    component: InlineToggle,
+    label: 'Hide Review Only',
+    labelHelp: 'Remove all variants tagged with only the "Review" tag from the results',
   },
 ]
 
@@ -56,12 +54,7 @@ const InlineFormColumn = styled(Grid.Column)`
   }
   
   .field.inline {
-    padding-right: 30px;
-    font-size: 1.1em;
-    
-    label {
-      font-size: 1.1em !important;
-    }
+    padding-right: 25px;
   }
 `
 
@@ -176,7 +169,13 @@ class SavedVariants extends React.Component {
       <Grid>
         <Grid.Row>
           <Grid.Column width={16}>
-            <VariantTagTypeBar height={30} project={this.props.project} familyGuid={familyGuid} hideExcluded={this.props.tableState.hideExcluded} />
+            <VariantTagTypeBar
+              height={30}
+              project={this.props.project}
+              familyGuid={familyGuid}
+              hideExcluded={this.props.tableState.hideExcluded}
+              hideReviewOnly={this.props.tableState.hideReviewOnly}
+            />
           </Grid.Column>
         </Grid.Row>
         {!this.props.loading &&
