@@ -303,7 +303,6 @@ class Individual(ModelWithGUID):
 
     CASE_REVIEW_STATUS_IN_REVIEW = "I"
     CASE_REVIEW_STATUS_CHOICES = (
-        ('N', 'Not In Review'),
         ('I', 'In Review'),
         ('U', 'Uncertain'),
         ('A', 'Accepted'),
@@ -311,9 +310,6 @@ class Individual(ModelWithGUID):
         ('Q', 'More Info Needed'),
         ('P', 'Pending Results and Records'),
         ('W', 'Waitlist'),
-        ('WD', 'Withdrew'),
-        ('IE', 'Ineligible'),
-        ('DP', 'Declined to Participate'),
     )
 
     SEX_LOOKUP = dict(SEX_CHOICES)
