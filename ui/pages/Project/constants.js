@@ -320,6 +320,7 @@ export const SORT_BY_FAMILY_NAME = 'FAMILY_NAME'
 export const SORT_BY_FAMILY_ADDED_DATE = 'FAMILY_ADDED_DATE'
 export const SORT_BY_DATA_LOADED_DATE = 'DATA_LOADED_DATE'
 export const SORT_BY_DATA_FIRST_LOADED_DATE = 'DATA_FIRST_LOADED_DATE'
+export const SORT_BY_REVIEW_STATUS_CHANGED_DATE = 'REVIEW_STATUS_CHANGED_DATE'
 export const SORT_BY_ANALYSIS_STATUS = 'SORT_BY_ANALYSIS_STATUS'
 
 export const FAMILY_SORT_OPTIONS = [
@@ -361,6 +362,18 @@ export const FAMILY_SORT_OPTIONS = [
     name: 'Analysis Status',
     createSortKeyGetter: () => family =>
       FAMILY_ANALYSIS_STATUS_OPTIONS.map(status => status.value).indexOf(family.analysisStatus),
+  },
+  {
+    value: SORT_BY_REVIEW_STATUS_CHANGED_DATE,
+    name: 'Date Review Status Changed',
+    createSortKeyGetter: individualsByGuid => family =>
+      family.individualGuids.map(individualGuid => individualsByGuid[individualGuid]).reduce(
+        (acc, individual) => {
+          const indivCaseReviewStatusLastModifiedDate = individual.caseReviewStatusLastModifiedDate || '2000-01-01T01:00:00.000Z'
+          return indivCaseReviewStatusLastModifiedDate > acc ? indivCaseReviewStatusLastModifiedDate : acc
+        },
+        '2000-01-01T01:00:00.000Z',
+      ),
   },
 ]
 

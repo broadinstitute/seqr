@@ -2,7 +2,7 @@ import orderBy from 'lodash/orderBy'
 import { createSelector } from 'reselect'
 
 import { getSearchResults } from 'redux/utils/reduxSearchEnhancer'
-import { FAMILY_ANALYSIS_STATUS_OPTIONS } from 'shared/utils/constants'
+import { FAMILY_ANALYSIS_STATUS_OPTIONS, EXCLUDED_TAG_NAME } from 'shared/utils/constants'
 import { toCamelcase, toSnakecase } from 'shared/utils/stringUtils'
 
 import {
@@ -118,7 +118,7 @@ export const getFilteredProjectSavedVariants = createSelector(
   (projectSavedVariants, categoryFilter, hideExcluded) => {
     let variantsToShow = projectSavedVariants
     if (hideExcluded) {
-      variantsToShow = variantsToShow.filter(variant => variant.tags.every(t => t.name !== 'Excluded'))
+      variantsToShow = variantsToShow.filter(variant => variant.tags.every(t => t.name !== EXCLUDED_TAG_NAME))
     }
     if (categoryFilter !== SHOW_ALL) {
       variantsToShow = variantsToShow.filter(variant => variant.tags.some(t => t.category === categoryFilter))
