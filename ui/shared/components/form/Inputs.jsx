@@ -32,6 +32,7 @@ const styledOption = (option) => {
     label: option.color ? { empty: true, circular: true, style: labelStyle(option.color) } : null,
     color: option.color,
     disabled: option.disabled,
+    description: option.description,
   }
 }
 

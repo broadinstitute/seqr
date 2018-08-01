@@ -90,12 +90,12 @@ export const FamilyLayout = ({ leftContent, rightContent, annotation, offset, fi
     {annotation}
     <FamilyGrid annotation={annotation} offset={offset}>
       <Grid.Row>
-        <Grid.Column width={(useFullWidth && !rightContent) ? 6 : 3}>
+        <Grid.Column width={3}>
           {leftContent}
         </Grid.Column>
         {compact ? fields.map(field =>
           <Grid.Column width={field.colWidth || 1} key={field.id}>{fieldDisplay(field)}</Grid.Column>,
-        ) : <Grid.Column width={10}>{fields.map(field => fieldDisplay(field))}</Grid.Column>
+        ) : <Grid.Column width={(useFullWidth && !rightContent) ? 13 : 10}>{fields.map(field => fieldDisplay(field))}</Grid.Column>
         }
         {rightContent && <Grid.Column width={3}>{rightContent}</Grid.Column>}
       </Grid.Row>

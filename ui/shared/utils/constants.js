@@ -218,3 +218,5 @@ export const LOCUS_LIST_ITEMS_FIELD = {
     label: 'Ignore invalid genes and intervals',
   }],
 }
+
+export const EXCLUDED_TAG_NAME = 'Excluded'

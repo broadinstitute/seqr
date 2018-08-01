@@ -35,13 +35,16 @@ const InlineHeader = styled(Header)`
   margin-bottom: 0 !important;
 `
 
+const FAMILY_POPUP_STYLE = { maxWidth: '1200px' }
+
 const VariantFamily = ({ project, family }) =>
   <InlineHeader size="small">
     Family<HorizontalSpacer width={5} />
     <PopupWithModal
       hoverable
-      wide="very"
-      position="top left"
+      style={FAMILY_POPUP_STYLE}
+      position="right center"
+      keepInViewPort
       trigger={
         <Link to={`/project/${project.projectGuid}/family_page/${family.familyGuid}`}>
           {family.displayName}
