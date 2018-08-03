@@ -26,7 +26,7 @@ class Command(BaseCommand):
             analysis_group = _create_seqr_model(
                 source_group,
                 name=source_group.name,
-                description=source_group.name,
+                description=source_group.description,
                 project=source_group.project,
             )
 

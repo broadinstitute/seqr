@@ -6,7 +6,7 @@ import { FAMILY_ANALYSIS_STATUS_OPTIONS, EXCLUDED_TAG_NAME, REVIEW_TAG_NAME } fr
 import { toCamelcase, toSnakecase } from 'shared/utils/stringUtils'
 
 import {
-  getProjectsByGuid, getFamiliesByGuid, getIndividualsByGuid, getSamplesByGuid, getUser,
+  getProjectsByGuid, getFamiliesByGuid, getIndividualsByGuid, getSamplesByGuid, getUser, getAnalysisGroupsByGuid,
 } from 'redux/selectors'
 
 import {
@@ -65,6 +65,7 @@ const groupEntitiesByProjectGuid = entities => Object.entries(entities).reduce((
 export const getFamiliesGroupedByProjectGuid = createSelector(getFamiliesByGuid, groupEntitiesByProjectGuid)
 export const getIndividualsGroupedByProjectGuid = createSelector(getIndividualsByGuid, groupEntitiesByProjectGuid)
 export const getSamplesGroupedByProjectGuid = createSelector(getSamplesByGuid, groupEntitiesByProjectGuid)
+export const getAnalysisGroupsGroupedByProjectGuid = createSelector(getAnalysisGroupsByGuid, groupEntitiesByProjectGuid)
 
 
 const selectEntitiesForProjectGuid = (entitiesGroupedByProjectGuid, projectGuid) => entitiesGroupedByProjectGuid[projectGuid] || {}
@@ -72,6 +73,8 @@ const selectEntitiesForProjectGuid = (entitiesGroupedByProjectGuid, projectGuid)
 export const getProjectFamiliesByGuid = createSelector(getFamiliesGroupedByProjectGuid, getProjectGuid, selectEntitiesForProjectGuid)
 export const getProjectIndividualsByGuid = createSelector(getIndividualsGroupedByProjectGuid, getProjectGuid, selectEntitiesForProjectGuid)
 export const getProjectSamplesByGuid = createSelector(getSamplesGroupedByProjectGuid, getProjectGuid, selectEntitiesForProjectGuid)
+export const getProjectAnalysisGroupsByGuid = createSelector(getAnalysisGroupsGroupedByProjectGuid, getProjectGuid, selectEntitiesForProjectGuid)
+
 
 // Saved variant selectors
 export const getSavedVariantTableState = state => state.savedVariantTableState

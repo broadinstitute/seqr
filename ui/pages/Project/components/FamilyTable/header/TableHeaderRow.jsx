@@ -28,6 +28,20 @@ const SpacedDropdown = styled(Dropdown)`
   padding-right: 5px;
 `
 
+export const TableHeaderDetail = ({ fields, offset, showVariantTags }) =>
+  <FamilyLayout
+    compact
+    offset={offset}
+    fields={fields}
+    fieldDisplay={field => FAMILY_FIELD_RENDER_LOOKUP[field.id].name}
+    rightContent={showVariantTags ? 'Saved Variants' : null}
+  />
+
+TableHeaderDetail.propTypes = {
+  offset: PropTypes.bool,
+  fields: PropTypes.array,
+  showVariantTags: PropTypes.bool,
+}
 
 const TableHeaderRow = (
   { headerStatus, showInternalFilters, visibleFamiliesCount, totalFamiliesCount, fields, tableName, familiesTableState,
@@ -108,13 +122,7 @@ const TableHeaderRow = (
       {fields &&
         <Table.Row>
           <Table.HeaderCell colSpan={5} textAlign="left">
-            <FamilyLayout
-              compact
-              offset
-              fields={fields}
-              fieldDisplay={field => FAMILY_FIELD_RENDER_LOOKUP[field.id].name}
-              rightContent={showVariantTags ? 'Saved Variants' : null}
-            />
+            <TableHeaderDetail fields={fields} showVariantTags={showVariantTags} offset />
           </Table.HeaderCell>
         </Table.Row>
       }

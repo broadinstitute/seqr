@@ -2,13 +2,31 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import sortBy from 'lodash/sortBy'
 import styled from 'styled-components'
-import { Grid } from 'semantic-ui-react'
+import { Grid, Table } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 
 import EditFamiliesAndIndividualsButton from 'shared/components/buttons/EditFamiliesAndIndividualsButton'
 import EditDatasetsButton from 'shared/components/buttons/EditDatasetsButton'
-import { SAMPLE_TYPE_LOOKUP, DATASET_TYPE_VARIANT_CALLS, SAMPLE_STATUS_LOADED } from 'shared/utils/constants'
-import { getProject, getProjectFamiliesByGuid, getProjectIndividualsByGuid, getProjectSamplesByGuid } from '../selectors'
+import ButtonLink from 'shared/components/buttons/ButtonLink'
+import Modal from 'shared/components/modal/Modal'
+import Family from 'shared/components/panel/family'
+import {
+  SAMPLE_TYPE_LOOKUP,
+  DATASET_TYPE_VARIANT_CALLS,
+  SAMPLE_STATUS_LOADED,
+  FAMILY_FIELD_ANALYSIS_STATUS,
+  FAMILY_FIELD_FIRST_SAMPLE,
+  FAMILY_FIELD_DESCRIPTION,
+} from 'shared/utils/constants'
+import { compareObjects } from 'shared/utils/sortUtils'
+import {
+  getProject,
+  getProjectFamiliesByGuid,
+  getProjectIndividualsByGuid,
+  getProjectSamplesByGuid,
+  getProjectAnalysisGroupsByGuid,
+} from '../selectors'
+import { TableHeaderDetail } from './FamilyTable/header/TableHeaderRow'
 
 
 const DetailContent = styled.div`
@@ -24,8 +42,14 @@ const FAMILY_SIZE_LABELS = {
   5: plural => ` ${plural ? 'families' : 'family'} with 5+ individuals`,
 }
 
+const FAMILY_FIELDS = [
+  { id: FAMILY_FIELD_ANALYSIS_STATUS, colWidth: 2 },
+  { id: FAMILY_FIELD_FIRST_SAMPLE, colWidth: 2 },
+  { id: FAMILY_FIELD_DESCRIPTION, colWidth: 9 },
+]
 
-const ProjectOverview = ({ project, familiesByGuid, individualsByGuid, samplesByGuid }) => {
+
+const ProjectOverview = ({ project, familiesByGuid, individualsByGuid, samplesByGuid, analysisGroupsByGuid }) => {
   const familySizeHistogram = Object.values(familiesByGuid)
     .map(family => Math.min(family.individualGuids.length, 5))
     .reduce((acc, familySize) => (
@@ -55,7 +79,50 @@ const ProjectOverview = ({ project, familiesByGuid, individualsByGuid, samplesBy
             {project.canEdit ? <span><br /><EditFamiliesAndIndividualsButton /></span> : null }<br />
           </DetailContent>
         </Grid.Column>
-        <Grid.Column width={11}>
+        <Grid.Column width={5}>
+          {Object.keys(analysisGroupsByGuid).length} Analysis Groups
+          <DetailContent>
+            {
+              Object.values(analysisGroupsByGuid).sort(compareObjects('name')).map(analysisGroup =>
+                <div key={analysisGroup.name}>
+                  {analysisGroup.name}:&nbsp;&nbsp;
+                  <Modal
+                    trigger={<ButtonLink>{analysisGroup.familyGuids.length} families</ButtonLink>}
+                    modalName={`${analysisGroup.analysisGroupGuid}-families`}
+                    title={`Analysis Group: ${analysisGroup.name}`}
+                    size="large"
+                  >
+                    <i>{analysisGroup.description}</i>
+                    <Table celled striped padded fixed>
+                      <Table.Header fullWidth>
+                        <Table.Row>
+                          <Table.HeaderCell>
+                            <TableHeaderDetail fields={FAMILY_FIELDS} />
+                          </Table.HeaderCell>
+                        </Table.Row>
+                      </Table.Header>
+                      <Table.Body>
+                        {analysisGroup.familyGuids.map(familyGuid =>
+                          <Table.Row key={familyGuid}>
+                            <Table.Cell>
+                              <Family
+                                key={familyGuid}
+                                family={familiesByGuid[familyGuid]}
+                                fields={FAMILY_FIELDS}
+                                compact
+                              />
+                            </Table.Cell>
+                          </Table.Row>,
+                        )}
+                      </Table.Body>
+                    </Table>
+                  </Modal>
+                </div>)
+            }
+            {project.canEdit ? <span><br /><EditFamiliesAndIndividualsButton /></span> : null }<br />
+          </DetailContent>
+        </Grid.Column>
+        <Grid.Column width={6}>
           Datasets:
           <DetailContent>
             {
@@ -86,6 +153,7 @@ ProjectOverview.propTypes = {
   familiesByGuid: PropTypes.object.isRequired,
   individualsByGuid: PropTypes.object.isRequired,
   samplesByGuid: PropTypes.object.isRequired,
+  analysisGroupsByGuid: PropTypes.object.isRequired,
 }
 
 const mapStateToProps = state => ({
@@ -93,6 +161,7 @@ const mapStateToProps = state => ({
   familiesByGuid: getProjectFamiliesByGuid(state),
   individualsByGuid: getProjectIndividualsByGuid(state),
   samplesByGuid: getProjectSamplesByGuid(state),
+  analysisGroupsByGuid: getProjectAnalysisGroupsByGuid(state),
 })
 
 
