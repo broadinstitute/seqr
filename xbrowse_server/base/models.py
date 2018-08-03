@@ -1174,6 +1174,9 @@ class FamilyGroup(models.Model):
     project = models.ForeignKey(Project)
     families = models.ManyToManyField(Family)
 
+    seqr_analysis_group = models.ForeignKey('seqr.AnalysisGroup', null=True, blank=True, on_delete=models.SET_NULL)  # simplifies migration to new seqr.models schema
+
+
     def __unicode__(self):
         return self.name
 

@@ -8,7 +8,7 @@ from django.db.models import Q
 from seqr.models import Project as SeqrProject, Family as SeqrFamily, Individual as SeqrIndividual, \
     VariantTagType as SeqrVariantTagType, VariantTag as SeqrVariantTag, VariantNote as SeqrVariantNote, \
     VariantFunctionalData as SeqrVariantFunctionalData, LocusList as SeqrLocusList, LocusListGene as SeqrLocusListGene, \
-    GeneNote as SeqrGeneNote, FamilyAnalysedBy as SeqrAnalysedBy
+    GeneNote as SeqrGeneNote, FamilyAnalysedBy as SeqrAnalysedBy, AnalysisGroup as SeqrAnalysisGroup
 from seqr.utils.model_sync_utils import get_or_create_saved_variant, convert_html_to_plain_text
 
 
@@ -24,6 +24,7 @@ XBROWSE_TO_SEQR_CLASS_MAPPING = {
     "GeneListItem": SeqrLocusListGene,
     "GeneNote": SeqrGeneNote,
     "AnalysedBy": SeqrAnalysedBy,
+    "FamilyGroup": SeqrAnalysisGroup,
 }
 
 _DELETED_FIELD = "__DELETED__"
@@ -96,6 +97,9 @@ XBROWSE_TO_SEQR_FIELD_MAPPING = {
     "AnalysedBy": {
         "user": "created_by",
         "date_saved": _DELETED_FIELD,
+    },
+    "FamilyGroup": {
+        "slug": _DELETED_FIELD,
     },
 }
 
@@ -210,6 +214,11 @@ def find_matching_seqr_model(xbrowse_model):
             )
         elif xbrowse_class_name == "AnalysedBy":
             return xbrowse_model.seqr_family_analysed_by
+        elif xbrowse_class_name == "FamilyGroup":
+            return xbrowse_model.seqr_analysis_group or SeqrAnalysisGroup.objects.get(
+                project__deprecated_project_id=xbrowse_model.project.project_id,
+                name=xbrowse_model.name
+            )
 
     except ObjectDoesNotExist:
         pass

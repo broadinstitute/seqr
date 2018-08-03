@@ -12,13 +12,13 @@ from django.db import connection
 from django.db.models import Q, Count
 
 from seqr.models import Family, Individual, _slugify, CAN_VIEW, LocusList, \
-    LocusListGene, LocusListInterval, VariantTagType, VariantTag, VariantFunctionalData
+    LocusListGene, LocusListInterval, VariantTagType, VariantTag, VariantFunctionalData, AnalysisGroup
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.individual_api import export_individuals
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import \
     _get_json_for_project, _get_json_for_sample, _get_json_for_families, _get_json_for_individuals, \
-    get_json_for_saved_variant
+    get_json_for_saved_variant, get_json_for_analysis_groups
 
 
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions
@@ -52,6 +52,7 @@ def project_page_data(request, project_guid):
     for individual_guid, individual in individuals_by_guid.items():
         families_by_guid[individual['familyGuid']]['individualGuids'].add(individual_guid)
     samples_by_guid = _retrieve_samples(cursor, project.guid, individuals_by_guid)
+    analysis_groups_by_guid = _retrieve_analysis_groups(project)
 
     cursor.close()
 
@@ -70,6 +71,7 @@ def project_page_data(request, project_guid):
         'familiesByGuid': families_by_guid,
         'individualsByGuid': individuals_by_guid,
         'samplesByGuid': samples_by_guid,
+        'analysisGroupsByGuid': analysis_groups_by_guid,
     }
 
     return create_json_response(json_response)
@@ -175,6 +177,12 @@ def _retrieve_samples(cursor, project_guid, individuals_by_guid):
         samples_by_guid[sample_guid]['individualGuid'] = individual_guid
 
     return samples_by_guid
+
+
+def _retrieve_analysis_groups(project):
+    group_models = AnalysisGroup.objects.filter(project=project)
+    groups = get_json_for_analysis_groups(group_models, project_guid=project.guid)
+    return {group['analysisGroupGuid']: group for group in groups}
 
 
 def _get_json_for_collaborator_list(project):

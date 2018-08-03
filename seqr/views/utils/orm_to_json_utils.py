@@ -9,7 +9,7 @@ from django.db.models import Model, prefetch_related_objects
 from django.db.models.fields.files import ImageFieldFile
 
 from seqr.models import CAN_EDIT, Project, Family, Individual, Sample, SavedVariant, VariantTag, \
-    VariantFunctionalData, VariantNote, GeneNote
+    VariantFunctionalData, VariantNote, GeneNote, AnalysisGroup
 from seqr.utils.xpos_utils import get_chrom_pos
 from seqr.views.utils.json_utils import _to_camel_case
 logger = logging.getLogger(__name__)
@@ -251,6 +251,36 @@ def _get_json_for_sample(sample, project_guid=None):
     """
 
     return get_json_for_samples([sample], project_guid=project_guid)[0]
+
+
+def get_json_for_analysis_groups(analysis_groups, project_guid=None):
+    """Returns a JSON representation of the given list of Samples.
+
+    Args:
+        samples (array): array of dictionary or django model for the Samples.
+    Returns:
+        array: array of json objects
+    """
+
+    fields = _get_record_fields(AnalysisGroup, 'analysis_group')
+    nested_fields = []
+    if not project_guid:
+        nested_fields.append(('project', 'guid'))
+
+    results = []
+    for group in analysis_groups:
+        record_dict = _record_to_dict(
+            group, fields, nested_fields=nested_fields
+        )
+
+        result = _get_json_for_record(record_dict, fields)
+        result.update({
+            'analysisGroupGuid': result.pop('guid'),
+            'projectGuid': project_guid or record_dict.get('project_guid'),
+            'familyGuids': [f.guid for f in group.families.only('guid').all()]
+        })
+        results.append(result)
+    return results
 
 
 def get_json_for_saved_variant(saved_variant, add_tags=False):
