@@ -62,7 +62,7 @@ class LocusListAPITest(TransactionTestCase):
 
     @mock.patch('seqr.views.utils.gene_utils.get_reference')
     def test_create_update_and_delete_locus_lust(self, mock_reference):
-        mock_reference.return_value.get_genes.side_effect = lambda gene_ids: {gene_id: {} for gene_id in gene_ids}
+        mock_reference.return_value.get_genes.side_effect = lambda gene_ids: {gene_id: {'geneId': gene_id} for gene_id in gene_ids}
         mock_reference.return_value.get_gene_id_from_symbol.side_effect = lambda symbol: symbol if symbol != 'foo' else None
 
         create_locus_list_url = reverse(create_locus_list_handler)

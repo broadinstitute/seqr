@@ -14,7 +14,7 @@ def get_gene(gene_id):
 def get_genes(gene_ids):
     reference = get_reference()
     genes = reference.get_genes(gene_ids)
-    return {geneId: _gene_json(gene) for geneId, gene in genes.items()}
+    return {geneId: _gene_json(gene) if gene else None for geneId, gene in genes.items()}
 
 
 def get_gene_symbols_to_gene_ids(gene_symbols):

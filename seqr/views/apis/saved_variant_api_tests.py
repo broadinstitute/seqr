@@ -18,7 +18,7 @@ class ProjectAPITest(TransactionTestCase):
 
     @mock.patch('seqr.views.utils.gene_utils.get_reference')
     def test_saved_variant_data(self, mock_reference):
-        mock_reference.return_value.get_genes.side_effect = lambda gene_ids: {gene_id: {} for gene_id in gene_ids}
+        mock_reference.return_value.get_genes.side_effect = lambda gene_ids: {gene_id: {'geneId': gene_id} for gene_id in gene_ids}
 
         url = reverse(saved_variant_data, args=['R0001_1kg'])
         _check_login(self, url)

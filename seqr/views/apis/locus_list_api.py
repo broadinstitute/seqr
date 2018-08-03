@@ -156,14 +156,18 @@ def _update_locus_list(locus_list, request_json, user):
 
     existing_gene_ids = set()
     new_gene_symbols = set()
+    new_gene_ids = set()
     existing_interval_guids = set()
     new_intervals = []
     invalid_items = []
     for item in requested_items:
-        if item.get('geneId'):
-            existing_gene_ids.add(item.get('geneId'))
-        elif item.get('locusListIntervalGuid'):
+        if item.get('locusListIntervalGuid'):
             existing_interval_guids.add(item.get('locusListIntervalGuid'))
+        elif item.get('geneId'):
+            if item.get('symbol'):
+                existing_gene_ids.add(item.get('geneId'))
+            else:
+                new_gene_ids.add(item.get('geneId'))
         elif item.get('symbol'):
             new_gene_symbols.add(item.get('symbol'))
         else:
@@ -181,6 +185,9 @@ def _update_locus_list(locus_list, request_json, user):
 
     gene_symbols_to_ids = get_gene_symbols_to_gene_ids(new_gene_symbols)
     invalid_items += [symbol for symbol, gene_id in gene_symbols_to_ids.items() if not gene_id]
+    new_genes = get_genes([gene_id for gene_id in gene_symbols_to_ids.values() if gene_id] + list(new_gene_ids))
+    invalid_items += [gene_id for gene_id, gene in new_genes.items() if not gene]
+    new_genes = {gene_id: gene for gene_id, gene in new_genes.items() if gene}
 
     if invalid_items and not request_json.get('ignoreInvalidItems'):
         return None, None, invalid_items, 'This list contains invalid genes/ intervals. Update them, or select the "Ignore invalid genes and intervals" checkbox to ignore.'
@@ -198,7 +205,6 @@ def _update_locus_list(locus_list, request_json, user):
         )
 
     # Update genes
-    new_genes = get_genes([gene_id for gene_id in gene_symbols_to_ids.values() if gene_id])
     for locus_list_gene in locus_list.locuslistgene_set.exclude(gene_id__in=existing_gene_ids):
         delete_seqr_model(locus_list_gene)
 
