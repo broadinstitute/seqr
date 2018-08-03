@@ -2,7 +2,7 @@ import { Form } from 'semantic-ui-react'
 
 import BaseFieldView from '../components/panel/view-fields/BaseFieldView'
 import OptionFieldView from '../components/panel/view-fields/OptionFieldView'
-import { BooleanCheckbox, BooleanRadio, Select } from '../components/form/Inputs'
+import { BooleanCheckbox, RadioGroup } from '../components/form/Inputs'
 
 
 // SAMPLES
@@ -189,7 +189,8 @@ export const LOCUS_LIST_FIELDS = [
     name: LOCUS_LIST_IS_PUBLIC_FIELD_NAME,
     label: 'Public List',
     labelHelp: 'Should other seqr users be able to use this gene list?',
-    component: BooleanRadio,
+    component: RadioGroup,
+    options: [{ value: true, text: 'Yes' }, { value: false, text: 'No' }],
     fieldDisplay: isPublic => (isPublic ? 'Yes' : 'No'),
     width: 2,
     isEditable: true,
@@ -204,7 +205,7 @@ const parseInterval = (intervalString) => {
 export const LOCUS_LIST_ITEMS_FIELD = {
   name: 'parsedItems',
   label: 'Genes/ Intervals',
-  labelHelp: 'A comma-separated list of genes and intervals. Intervals should be in the form <chrom>:<start>-<end>',
+  labelHelp: 'A list of genes and intervals. Can be separated by commas or whitespace. Intervals should be in the form <chrom>:<start>-<end>',
   fieldDisplay: () => null,
   isEditable: true,
   component: Form.TextArea,
@@ -213,17 +214,23 @@ export const LOCUS_LIST_ITEMS_FIELD = {
   format: value => (value || {}).display,
   normalize: (value, previousValue) => ({
     display: value,
-    items: value.split(',').filter(itemName => itemName.trim()).map(itemName =>
-      ((previousValue || {}).itemMap || {})[itemName.trim()] || parseInterval(itemName) || { symbol: itemName.trim() },
+    items: value.split(/[\s|,]/).filter(itemName => itemName.trim()).map(itemName =>
+      ((previousValue || {}).itemMap || {})[itemName.trim()] || parseInterval(itemName) ||
+      (itemName.trim().toUpperCase().startsWith('ENSG') ? { geneId: itemName.trim().toUpperCase() } : { symbol: itemName.trim() }),
     ),
     itemMap: (previousValue || {}).itemMap || {},
   }),
   additionalFormFields: [
     {
       name: 'intervalGenomeVersion',
-      component: Select,
+      component: RadioGroup,
       options: GENOME_VERSION_OPTIONS,
       label: 'Genome Version',
+      labelHelp: 'The genome version associated with intervals. Only required if the list contains intervals',
+      validate: (value, allValues) => (
+        (value || ((allValues.parsedItems || {}).items || []).every(item => item.symbol || item.geneId)) ? undefined :
+          'Genome version is required for lists with intervals'
+      ),
     },
     {
       name: 'ignoreInvalidItems',
