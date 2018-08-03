@@ -25,7 +25,6 @@ import {
 
 export const CASE_REVIEW_TABLE_NAME = 'Case Review'
 
-export const CASE_REVIEW_STATUS_NOT_IN_REVIEW = 'N'
 export const CASE_REVIEW_STATUS_IN_REVIEW = 'I'
 export const CASE_REVIEW_STATUS_UNCERTAIN = 'U'
 export const CASE_REVIEW_STATUS_ACCEPTED = 'A'
@@ -33,9 +32,6 @@ export const CASE_REVIEW_STATUS_NOT_ACCEPTED = 'R'
 export const CASE_REVIEW_STATUS_MORE_INFO_NEEDED = 'Q'
 export const CASE_REVIEW_STATUS_PENDING_RESULTS_AND_RECORDS = 'P'
 export const CASE_REVIEW_STATUS_WAITLIST = 'W'
-export const CASE_REVIEW_STATUS_WITHDREW = 'WD'
-export const CASE_REVIEW_STATUS_INELIGIBLE = 'IE'
-export const CASE_REVIEW_STATUS_DECLINED_TO_PARTICIPATE = 'DP'
 
 export const CASE_REVIEW_STATUS_OPTIONS = [
   { value: CASE_REVIEW_STATUS_IN_REVIEW,                   name: 'In Review',             color: '#2196F3' },
@@ -44,11 +40,7 @@ export const CASE_REVIEW_STATUS_OPTIONS = [
   { value: CASE_REVIEW_STATUS_NOT_ACCEPTED,                name: 'Not Accepted',          color: '#4f5cb3' },  //#C5CAE9
   { value: CASE_REVIEW_STATUS_MORE_INFO_NEEDED,            name: 'More Info Needed',      color: '#F44336' },  //#673AB7
   { value: CASE_REVIEW_STATUS_PENDING_RESULTS_AND_RECORDS, name: 'Pending Results and Records', color: '#996699' },
-  { value: CASE_REVIEW_STATUS_NOT_IN_REVIEW,               name: 'Not In Review',         color: '#118833' },
   { value: CASE_REVIEW_STATUS_WAITLIST,                    name: 'Waitlist',              color: '#990099' },
-  { value: CASE_REVIEW_STATUS_WITHDREW,                    name: 'Withdrew',              color: '#999999' },
-  { value: CASE_REVIEW_STATUS_INELIGIBLE,                  name: 'Ineligible',            color: '#111111' },
-  { value: CASE_REVIEW_STATUS_DECLINED_TO_PARTICIPATE,     name: 'Declined To Participate', color: '#FF8800' },
 ]
 
 export const CASE_REVIEW_STATUS_OPT_LOOKUP = CASE_REVIEW_STATUS_OPTIONS.reduce(
@@ -272,13 +264,6 @@ export const FAMILY_FILTER_OPTIONS = [
     createFilter: caseReviewStatusFilter(CASE_REVIEW_STATUS_MORE_INFO_NEEDED),
   },
   {
-    value: SHOW_NOT_IN_REVIEW,
-    category: 'Analysis Status:',
-    name: 'Not In Review',
-    internalOnly: true,
-    createFilter: caseReviewStatusFilter(CASE_REVIEW_STATUS_NOT_IN_REVIEW),
-  },
-  {
     value: SHOW_PENDING_RESULTS_AND_RECORDS,
     category: 'Analysis Status:',
     name: 'Pending Results and Records',
@@ -291,27 +276,6 @@ export const FAMILY_FILTER_OPTIONS = [
     name: 'Waitlist',
     internalOnly: true,
     createFilter: caseReviewStatusFilter(CASE_REVIEW_STATUS_WAITLIST),
-  },
-  {
-    value: SHOW_WITHDREW,
-    category: 'Analysis Status:',
-    name: 'Withdrew',
-    internalOnly: true,
-    createFilter: caseReviewStatusFilter(CASE_REVIEW_STATUS_WITHDREW),
-  },
-  {
-    value: SHOW_INELIGIBLE,
-    category: 'Analysis Status:',
-    name: 'Ineligible',
-    internalOnly: true,
-    createFilter: caseReviewStatusFilter(CASE_REVIEW_STATUS_INELIGIBLE),
-  },
-  {
-    value: SHOW_DECLINED_TO_PARTICIPATE,
-    category: 'Analysis Status:',
-    name: 'Declined to Participate',
-    internalOnly: true,
-    createFilter: caseReviewStatusFilter(CASE_REVIEW_STATUS_DECLINED_TO_PARTICIPATE),
   },
 ]
 

@@ -234,3 +234,5 @@ export const LOCUS_LIST_ITEMS_FIELD = {
 }
 
 export const EXCLUDED_TAG_NAME = 'Excluded'
+export const REVIEW_TAG_NAME = 'Review'
+
