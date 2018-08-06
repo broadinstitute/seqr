@@ -187,23 +187,14 @@ export const updateLocusList = (values) => {
       (responseJson) => {
         dispatch({ type: RECEIVE_GENES, updatesById: responseJson.genesById || {} })
         dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
-        if (responseJson.invalidLocusListItems && responseJson.invalidLocusListItems.length > 0) {
-          const err = new Error('This list contains invalid genes/ intervals. All other changes were made successfully.')
-          err.body = { ...responseJson, warning: true }
-          throw err
-        }
       },
       (e) => {
-        let errors = [e.message.replace('(400)', '')]
-        const invalidItemsError = e.body && e.body.invalidLocusListItems && `Invalid genes/ intervals: ${e.body.invalidLocusListItems.join(', ')}`
-        if (invalidItemsError) {
-          errors.push(invalidItemsError)
-          if (e.body.warning) {
-            errors = errors.map(warning => ({ warning }))
-          }
+        let error = e.message.replace('(400)', '')
+        if (e.body && e.body.invalidLocusListItems) {
+          error = `${error} Invalid genes/ intervals: ${e.body.invalidLocusListItems.join(', ')}`
         }
         throw new SubmissionError({
-          _error: errors,
+          _error: [error],
         })
       },
     ).post(values)
