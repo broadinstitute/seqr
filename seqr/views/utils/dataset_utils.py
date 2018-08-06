@@ -128,6 +128,8 @@ def _update_samples_for_dataset(
             sample.dataset_file_path = sample_dataset_path_mapping[sample_id]
         if dataset_name:
             sample.dataset_name = dataset_name
+        if elasticsearch_index:
+            sample.elasticsearch_index = elasticsearch_index
         if sample.sample_status != Sample.SAMPLE_STATUS_LOADED:
             not_loaded_samples.append(sample_id)
             sample.sample_status = Sample.SAMPLE_STATUS_LOADED
