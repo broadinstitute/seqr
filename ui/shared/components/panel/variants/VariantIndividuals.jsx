@@ -2,7 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { connect } from 'react-redux'
-import { Popup, Label } from 'semantic-ui-react'
+import { Popup, Label, Icon } from 'semantic-ui-react'
 
 import { getIndividualsByGuid } from 'redux/selectors'
 import ShowReadsButton from '../../buttons/ShowReadsButton'
@@ -29,6 +29,21 @@ const Allele = styled.span`
   font-style: ${(props) => { return props.isRef ? 'inherit' : 'italic' }};
 `
 
+const PAR_REGIONS = {
+  37: {
+    X: [[60001, 2699521], [154931044, 155260561]],
+    Y: [[10001, 2649521], [59034050, 59363567]],
+  },
+  38: {
+    X: [[10001, 2781480], [155701383, 156030896]],
+    Y: [[10001, 2781480], [56887903, 57217416]],
+  },
+}
+
+const isHemiVariant = (variant, individual) =>
+  individual.sex === 'M' && (variant.chrom === 'X' || variant.chrom === 'Y') &&
+  PAR_REGIONS[variant.genomeVersion][variant.chrom].every(region => !(region[0] < variant.pos < region[1]))
+
 const Alleles = ({ alleles, variant, individual }) => {
   alleles = alleles.map((allele) => {
     let alleleText = allele.substring(0, 3)
@@ -37,16 +52,18 @@ const Alleles = ({ alleles, variant, individual }) => {
     }
     return { text: alleleText, isRef: allele === variant.ref }
   })
-  if (variant.chrom === 'X' && individual.sex === 'M') {
+
+  let hemiError = null
+  if (isHemiVariant(variant, individual)) {
     if (alleles[0].text !== alleles[1].text) {
-      console.log(`Invalid genotype for male ${individual.individualId}: multiple alleles found on the X chromosome`)
-      alleles = [{ text: '?' }, { text: '?' }]
+      hemiError = <Popup content="WARNING: Heterozygous Male" trigger={<Icon name="warning sign" color="red" />} />
     } else {
       alleles[1] = { text: '-' }
     }
   }
   return (
     <span>
+      {hemiError}
       <Allele isRef={alleles[0].isRef}>{alleles[0].text}</Allele>/<Allele isRef={alleles[1].isRef}>{alleles[1].text}</Allele>
     </span>
   )
