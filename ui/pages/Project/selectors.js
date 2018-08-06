@@ -2,7 +2,7 @@ import orderBy from 'lodash/orderBy'
 import { createSelector } from 'reselect'
 
 import { getSearchResults } from 'redux/utils/reduxSearchEnhancer'
-import { FAMILY_ANALYSIS_STATUS_OPTIONS } from 'shared/utils/constants'
+import { FAMILY_ANALYSIS_STATUS_OPTIONS, EXCLUDED_TAG_NAME, REVIEW_TAG_NAME } from 'shared/utils/constants'
 import { toCamelcase, toSnakecase } from 'shared/utils/stringUtils'
 
 import {
@@ -13,26 +13,19 @@ import {
   SHOW_ALL,
   SORT_BY_FAMILY_NAME,
   CASE_REVIEW_STATUS_OPTIONS,
-  FAMILY_FILTER_OPTIONS,
+  FAMILY_FILTER_LOOKUP,
   FAMILY_SORT_OPTIONS,
   FAMILY_EXPORT_DATA,
   INTERNAL_FAMILY_EXPORT_DATA,
   INDIVIDUAL_EXPORT_DATA,
   INTERNAL_INDIVIDUAL_EXPORT_DATA,
+  SAMPLE_EXPORT_DATA,
   SORT_BY_FAMILY_GUID,
   VARIANT_SORT_OPTONS,
   VARIANT_EXPORT_DATA,
   VARIANT_GENOTYPE_EXPORT_DATA,
   familySamplesLoaded,
 } from './constants'
-
-
-const FAMILY_FILTER_LOOKUP = FAMILY_FILTER_OPTIONS.reduce(
-  (acc, opt) => ({
-    ...acc,
-    [opt.value]: opt.createFilter,
-  }), {},
-)
 
 const FAMILY_SORT_LOOKUP = FAMILY_SORT_OPTIONS.reduce(
   (acc, opt) => ({
@@ -85,6 +78,7 @@ export const getSavedVariantTableState = state => state.savedVariantTableState
 export const getSavedVariantCategoryFilter = state => state.savedVariantTableState.categoryFilter || SHOW_ALL
 export const getSavedVariantSortOrder = state => state.savedVariantTableState.sortOrder || SORT_BY_FAMILY_GUID
 export const getSavedVariantHideExcluded = state => state.savedVariantTableState.hideExcluded
+export const getSavedVariantHideReviewOnly = state => state.savedVariantTableState.hideReviewOnly
 export const getSavedVariantCurrentPage = state => state.savedVariantTableState.currentPage || 1
 export const getSavedVariantRecordsPerPage = state => state.savedVariantTableState.recordsPerPage || 25
 
@@ -114,10 +108,14 @@ export const getFilteredProjectSavedVariants = createSelector(
   getProjectSavedVariants,
   getSavedVariantCategoryFilter,
   getSavedVariantHideExcluded,
-  (projectSavedVariants, categoryFilter, hideExcluded) => {
+  getSavedVariantHideReviewOnly,
+  (projectSavedVariants, categoryFilter, hideExcluded, hideReviewOnly) => {
     let variantsToShow = projectSavedVariants
     if (hideExcluded) {
-      variantsToShow = variantsToShow.filter(variant => variant.tags.every(t => t.name !== 'Excluded'))
+      variantsToShow = variantsToShow.filter(variant => variant.tags.every(t => t.name !== EXCLUDED_TAG_NAME))
+    }
+    if (hideReviewOnly) {
+      variantsToShow = variantsToShow.filter(variant => variant.tags.length !== 1 || variant.tags[0].name !== REVIEW_TAG_NAME)
     }
     if (categoryFilter !== SHOW_ALL) {
       variantsToShow = variantsToShow.filter(variant => variant.tags.some(t => t.category === categoryFilter))
@@ -205,7 +203,7 @@ export const getVisibleFamilies = createSelector(
       return searchedFamilies
     }
 
-    const familyFilter = FAMILY_FILTER_LOOKUP[familiesFilter](individualsByGuid, samplesByGuid, user)
+    const familyFilter = FAMILY_FILTER_LOOKUP[familiesFilter].createFilter(individualsByGuid, samplesByGuid, user)
     return searchedFamilies.filter(familyFilter)
   },
 )
@@ -262,10 +260,21 @@ export const getVisibleSortedFamiliesWithIndividuals = createSelector(
 )
 
 export const getVisibleSortedIndividuals = createSelector(
-  getVisibleSortedFamiliesWithIndividuals,
+  getVisibleFamiliesInSortedOrder,
   families => families.reduce((acc, family) =>
     [...acc, ...family.individuals.map(individual => ({ ...individual, familyId: family.familyId }))], [],
   ),
+)
+
+export const getVisibleSamples = createSelector(
+  getVisibleFamiliesInSortedOrder,
+  getProjectIndividualsByGuid,
+  getProjectSamplesByGuid,
+  (visibleFamilies, individualsByGuid, samplesByGuid) =>
+    visibleFamilies.reduce((acc, family) =>
+      [...acc, ...familySamplesLoaded(family, individualsByGuid, samplesByGuid).map(sample => (
+        { ...sample, familyId: family.familyId, individualId: individualsByGuid[sample.individualGuid].individualId }
+      ))], []),
 )
 
 export const getEntityExportConfig = (project, rawData, tableName, fileName, fields) => ({
@@ -293,6 +302,15 @@ export const getIndividualsExportConfig = createSelector(
   (state, ownProps) => (ownProps || {}).tableName,
   () => 'individuals',
   (state, ownProps) => ((ownProps || {}).internal ? INDIVIDUAL_EXPORT_DATA.concat(INTERNAL_INDIVIDUAL_EXPORT_DATA) : INDIVIDUAL_EXPORT_DATA),
+  getEntityExportConfig,
+)
+
+export const getSamplesExportConfig = createSelector(
+  getProject,
+  getVisibleSamples,
+  (state, ownProps) => (ownProps || {}).tableName,
+  () => 'samples',
+  () => SAMPLE_EXPORT_DATA,
   getEntityExportConfig,
 )
 
