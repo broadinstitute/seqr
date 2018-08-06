@@ -359,7 +359,7 @@ export const FAMILY_EXPORT_DATA = [
     field: 'analysisStatus',
     format: status => (FAMILY_ANALYSIS_STATUS_OPTIONS.find(option => option.value === status) || {}).name,
   },
-  { header: 'Analysed By', field: 'analysedBy', format: analysedBy => analysedBy.map(o => o.user.display_name).join(',') },
+  { header: 'Analysed By', field: 'analysedBy', format: analysedBy => analysedBy.map(o => o.createdBy.fullName || o.createdBy.email).join(',') },
   { header: 'Analysis Summary', field: 'analysisSummary', format: stripMarkdown },
   { header: 'Analysis Notes', field: 'analysisNotes', format: stripMarkdown },
 ]
