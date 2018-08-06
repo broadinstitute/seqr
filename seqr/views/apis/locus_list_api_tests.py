@@ -108,7 +108,6 @@ class LocusListAPITest(TransactionTestCase):
                 {'chrom': '2', 'start': 1234, 'end': 5678, 'genomeVersion': '37', 'locusListIntervalGuid': mock.ANY}
             ]
         )
-        self.assertListEqual(new_locus_list_response['invalidLocusListItems'], ['chr100:1-1', 'foo'])
 
         guid = new_locus_list['locusListGuid']
         gene_id = new_locus_list['items'][0]['geneId']
