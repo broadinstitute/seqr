@@ -63,7 +63,7 @@ const TableHeaderRow = (
   return (
     <Table.Header fullWidth>
       <Table.Row>
-        <RegularFontHeaderCell>
+        <RegularFontHeaderCell width={2}>
           Showing &nbsp;
           {
             visibleFamiliesCount !== totalFamiliesCount ?
@@ -72,7 +72,7 @@ const TableHeaderRow = (
           }
           &nbsp; families
         </RegularFontHeaderCell>
-        <Table.HeaderCell collapsing textAlign="right">
+        <Table.HeaderCell width={14} textAlign="right">
           <Popup
             content="Filter families by searching on family name or individual phenotypes"
             position="top center"
@@ -81,33 +81,30 @@ const TableHeaderRow = (
           Search:
           <HorizontalSpacer width={10} />
           <FamiliesFilterSearchBox />
-        </Table.HeaderCell>
-        <Table.HeaderCell collapsing textAlign="right">
+          <HorizontalSpacer width={20} />
           <ReduxFormWrapper
             onSubmit={dispatchUpdateFamiliesTable}
             form={`edit${tableName}FamiliesTable`}
             initialValues={familiesTableState}
             closeOnSuccess={false}
             submitOnChange
+            inline
             fields={filterFields}
           />
+          <HorizontalSpacer width={20} />
+          {headerStatus.title}:
+          <HorizontalSpacer width={10} />
+          <HorizontalStackedBar
+            width={100}
+            height={14}
+            title={headerStatus.title}
+            data={headerStatus.data}
+          />
         </Table.HeaderCell>
-        {headerStatus &&
-          <Table.HeaderCell collapsing textAlign="right">
-            {headerStatus.title}:
-            <HorizontalSpacer width={10} />
-            <HorizontalStackedBar
-              width={100}
-              height={14}
-              title={headerStatus.title}
-              data={headerStatus.data}
-            />
-          </Table.HeaderCell>
-        }
       </Table.Row>
       {fields &&
         <Table.Row>
-          <Table.HeaderCell colSpan={5} textAlign="left">
+          <Table.HeaderCell colSpan={2} textAlign="left">
             <FamilyLayout
               compact
               offset

@@ -83,7 +83,7 @@ const FamilyTable = ({ visibleFamilies, loading, headerStatus, showInternalFilte
       <ExportTableButton downloads={exportUrls} />
       <HorizontalSpacer width={45} />
     </ExportContainer>
-    <Table attached="top">
+    <Table padded fixed attached="top">
       <TableHeaderRow
         headerStatus={headerStatus}
         showInternalFilters={showInternalFilters}
