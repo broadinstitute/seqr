@@ -6,7 +6,7 @@ from django.db.models import Q
 from django.views.decorators.csrf import csrf_exempt
 
 from seqr.models import SavedVariant, VariantTagType, VariantTag, VariantNote, VariantFunctionalData,\
-    LocusListInterval, LocusListGene, CAN_EDIT, CAN_VIEW
+    LocusListInterval, LocusListGene, CAN_VIEW
 from seqr.model_utils import create_seqr_model, delete_seqr_model, find_matching_xbrowse_model
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.locus_list_api import get_project_locus_list_models
@@ -78,7 +78,7 @@ def saved_variant_transcripts(request, variant_guid):
 @csrf_exempt
 def create_variant_note_handler(request, variant_guid):
     saved_variant = SavedVariant.objects.get(guid=variant_guid)
-    check_permissions(saved_variant.project, request.user, CAN_EDIT)
+    check_permissions(saved_variant.project, request.user, CAN_VIEW)
 
     request_json = json.loads(request.body)
     create_seqr_model(
@@ -99,7 +99,7 @@ def create_variant_note_handler(request, variant_guid):
 @csrf_exempt
 def update_variant_note_handler(request, variant_guid, note_guid):
     saved_variant = SavedVariant.objects.get(guid=variant_guid)
-    check_permissions(saved_variant.project, request.user, CAN_EDIT)
+    check_permissions(saved_variant.project, request.user, CAN_VIEW)
     note = VariantNote.objects.get(guid=note_guid, saved_variant=saved_variant)
 
     request_json = json.loads(request.body)
@@ -114,7 +114,7 @@ def update_variant_note_handler(request, variant_guid, note_guid):
 @csrf_exempt
 def delete_variant_note_handler(request, variant_guid, note_guid):
     saved_variant = SavedVariant.objects.get(guid=variant_guid)
-    check_permissions(saved_variant.project, request.user, CAN_EDIT)
+    check_permissions(saved_variant.project, request.user, CAN_VIEW)
     note = VariantNote.objects.get(guid=note_guid, saved_variant=saved_variant)
     delete_seqr_model(note)
     return create_json_response({variant_guid: {
@@ -126,7 +126,7 @@ def delete_variant_note_handler(request, variant_guid, note_guid):
 @csrf_exempt
 def update_variant_tags_handler(request, variant_guid):
     saved_variant = SavedVariant.objects.get(guid=variant_guid)
-    check_permissions(saved_variant.project, request.user, CAN_EDIT)
+    check_permissions(saved_variant.project, request.user, CAN_VIEW)
 
     request_json = json.loads(request.body)
     updated_tags = request_json.get('tags', [])
