@@ -13,8 +13,9 @@ import ButtonLink from '../buttons/ButtonLink'
 import ButtonPanel from './ButtonPanel'
 import RequestStatus from './RequestStatus'
 
-const StyledForm = styled(({ hasSubmitButton, ...props }) => <Form {...props} />)`
+const StyledForm = styled(({ hasSubmitButton, inline, ...props }) => <Form {...props} />)`
   min-height: inherit;
+  display: ${props => (props.inline ? 'inline-block' : 'block')};
   padding-bottom: ${props => props.hasSubmitButton && '40px'};
   
   .field.inline {
@@ -110,6 +111,9 @@ class ReduxFormWrapper extends React.Component {
     /* form size (see https://react.semantic-ui.com/collections/form#form-example-size) */
     size: PropTypes.string,
 
+    /* Whether form should be rendered inline instead of the default block display */
+    inline: PropTypes.bool,
+
     /* Array of objects representing the fields to show in the form. */
     /* Each field must have a name and a component, and can have any additional props accepted by redux-form's Field */
     fields: PropTypes.arrayOf(PropTypes.object), //eslint-disable-line react/no-unused-prop-types
@@ -162,7 +166,7 @@ class ReduxFormWrapper extends React.Component {
     const fieldComponents = this.props.renderChildren ? React.createElement(this.props.renderChildren) : configuredFields(this.props)
 
     return (
-      <StyledForm onSubmit={this.props.handleSubmit} size={this.props.size} loading={this.props.submitting} hasSubmitButton={!this.props.submitOnChange}>
+      <StyledForm onSubmit={this.props.handleSubmit} size={this.props.size} loading={this.props.submitting} hasSubmitButton={!this.props.submitOnChange} inline={this.props.inline}>
         {fieldComponents}
         {this.props.showErrorPanel && this.props.submitFailed && [
           warningMessages && warningMessages.length > 0 ? <MessagePanel key="w" warning visible list={warningMessages} /> : null,
