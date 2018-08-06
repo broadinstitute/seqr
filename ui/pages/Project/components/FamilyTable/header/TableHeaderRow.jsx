@@ -120,14 +120,14 @@ const TableHeaderRow = (
 }
 
 TableHeaderRow.propTypes = {
-  headerStatus: PropTypes.object,
+  headerStatus: PropTypes.object.isRequired,
   showInternalFilters: PropTypes.bool,
-  visibleFamiliesCount: PropTypes.number,
-  totalFamiliesCount: PropTypes.number,
-  familiesTableState: PropTypes.object,
-  updateFamiliesTable: PropTypes.func,
+  visibleFamiliesCount: PropTypes.number.isRequired,
+  totalFamiliesCount: PropTypes.number.isRequired,
+  familiesTableState: PropTypes.object.isRequired,
+  updateFamiliesTable: PropTypes.func.isRequired,
   fields: PropTypes.array,
-  tableName: PropTypes.string,
+  tableName: PropTypes.string.isRequired,
   showVariantTags: PropTypes.bool,
 }
 

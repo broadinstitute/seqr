@@ -6,5 +6,5 @@ import { TableHeaderRowComponent } from './TableHeaderRow'
 configure({ adapter: new Adapter() })
 
 test('shallow-render without crashing', () => {
-  shallow(<TableHeaderRowComponent />)
+  shallow(<TableHeaderRowComponent headerStatus={{ title: 'Analysis Statuses', data: {} }} />)
 })
