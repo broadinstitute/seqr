@@ -9,7 +9,8 @@ from seqr.models import Project as SeqrProject, Family as SeqrFamily, Individual
     VariantTagType as SeqrVariantTagType, VariantTag as SeqrVariantTag, VariantNote as SeqrVariantNote, \
     VariantFunctionalData as SeqrVariantFunctionalData, LocusList as SeqrLocusList, LocusListGene as SeqrLocusListGene, \
     GeneNote as SeqrGeneNote, FamilyAnalysedBy as SeqrAnalysedBy
-from seqr.utils.model_sync_utils import get_or_create_saved_variant, convert_html_to_plain_text
+from seqr.utils.model_sync_utils import convert_html_to_plain_text
+from seqr.views.utils.variant_utils import get_or_create_saved_variant
 from seqr.views.apis.locus_list_api import add_locus_list_user_permissions
 
 
