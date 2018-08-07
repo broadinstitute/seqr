@@ -21,14 +21,25 @@
                             %>
                                 <i style="color:<%= color %>"><%= clinsig %></i>
                             <% }); %>
+
+                            <% if(variant.extras.clinvar_gold_stars !== undefined) { %>
+                                &nbsp; &nbsp;
+                                <% for(var i=0; i < 4; i+= 1) { %>
+                                    <% if(i < variant.extras.clinvar_gold_stars) { %>
+                                        <i class="icon-star" style="color: #FFB70A"></i>
+                                    <% } else { %>
+                                        <i class="icon-star" style="color: #BBBBBB"></i>
+                                    <% } %>
+                                <% } %>
+                            <% } %>
                         </span>
                     </a>
                 </div>
             <% } %>
             <% if(variant.extras && variant.extras.hgmd_class) {
-                if(variant.extras.clinvar_clinsig) {
-                    print(', ');
-                }
+                if(variant.extras.clinvar_clinsig) { %>
+                   &nbsp; &nbsp;
+                <% }
                 var hgmd_color = utils.getHGMDClassColor(variant.extras.hgmd_class);
                 var hgmd_label = utils.getHGMDClassName(variant.extras.hgmd_class); %>
                 <div style="display: inline-block;">
@@ -366,7 +377,18 @@
                     <% } else { %>
                         <i class="fa fa-circle greencircle"></i>
                     <% } %>
-                    <span>MPC SCORE</span> <%= parseFloat(variant.annotation.mpc_score).toPrecision(2) %> <br/>
+                    <span>MPC SCORE</span> <%= parseFloat(variant.annotation.primate_ai_score).toPrecision(2) %> <br/>
+                <% } %>
+                <% if (variant.annotation.primate_ai_score) {
+                    var primate_ai_score = parseFloat(variant.annotation.primate_ai_score)
+                    if( primate_ai_score >= 0.7 ) { %>
+                        <i class="fa fa-circle redcircle"></i>
+                    <% } else if( primate_ai_score >= 0.5 ) { %>
+                        <i class="fa fa-circle yellowcircle"></i>
+                    <% } else { %>
+                        <i class="fa fa-circle greencircle"></i>
+                    <% } %>
+                    <span>PRIMATE AI</span> <%= parseFloat(variant.annotation.primate_ai_score).toPrecision(2) %> <br/>
                 <% } %>
             <% } %>
         </div>

@@ -1,7 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import { Icon } from 'semantic-ui-react'
+import { Icon, Transition } from 'semantic-ui-react'
 
 
 const SEVERITY_MAP = {
@@ -20,7 +20,12 @@ const PredictionValue = styled.span`
   text-transform: uppercase;
 `
 
-const Prediction = ({ field, annotation, dangerThreshold, warningThreshold }) => {
+const LinkButton = styled.span.attrs({ role: 'button', tabIndex: '0' })`
+  cursor: pointer;
+  padding-left: 20px;
+`
+
+const Prediction = ({ field, annotation, dangerThreshold, warningThreshold, name }) => {
   let value = annotation[field]
   if (!value) {
     return null
@@ -38,10 +43,20 @@ const Prediction = ({ field, annotation, dangerThreshold, warningThreshold }) =>
     }
   } else {
     color = SEVERITY_MAP[value]
-    value = value.replace('_', ' ')
+    if (value) {
+      value = `${value}`.replace('_', ' ')
+    }
   }
 
-  return <div><Icon name="circle" size="small" color={color} />{field.replace('_', ' ').toUpperCase()} <PredictionValue>{value}</PredictionValue></div>
+  if (!name) {
+    name = field.replace(/_/g, ' ').toUpperCase()
+  }
+
+  return (
+    <div>
+      <Icon name="circle" size="small" color={color} /> {name}
+      <PredictionValue> {value}</PredictionValue>
+    </div>)
 }
 
 Prediction.propTypes = {
@@ -49,28 +64,51 @@ Prediction.propTypes = {
   annotation: PropTypes.object,
   dangerThreshold: PropTypes.number,
   warningThreshold: PropTypes.number,
+  name: PropTypes.string,
 }
 
 
-const Predictions = ({ annotation }) => {
-  return annotation ?
-    <div>
-      <Prediction field="polyphen" annotation={annotation} />
-      <Prediction field="sift" annotation={annotation} />
-      <Prediction field="mut_taster" annotation={annotation} />
-      <Prediction field="fathmm" annotation={annotation} />
-      <Prediction field="cadd_phred" annotation={annotation} dangerThreshold={20} warningThreshold={10} />
-      <Prediction field="dann_score" annotation={annotation} dangerThreshold={0.96} warningThreshold={0.93} />
-      <Prediction field="revel_score" annotation={annotation} dangerThreshold={0.75} warningThreshold={0.5} />
-      <Prediction field="eigen_phred" annotation={annotation} dangerThreshold={1} warningThreshold={2} />
-      <Prediction field="mpc_score" annotation={annotation} dangerThreshold={2} warningThreshold={1} />
-      <Prediction field="primate_ai_score" annotation={annotation} dangerThreshold={0.7} warningThreshold={0.5} />
-    </div>
-    : null
+export default class Predictions extends React.Component {
+  static propTypes = {
+    annotation: PropTypes.object,
+  }
+
+  constructor(props) {
+    super(props)
+
+    this.state = { showMore: false }
+  }
+
+  render() {
+    const { annotation } = this.props
+
+    return annotation ?
+      <div>
+        <Prediction field="cadd_phred" annotation={annotation} dangerThreshold={20} warningThreshold={10} name="CADD" />
+        <Prediction field="dann_score" annotation={annotation} dangerThreshold={0.96} warningThreshold={0.93} name="DANN" />
+        <Prediction field="revel_score" annotation={annotation} dangerThreshold={0.75} warningThreshold={0.5} name="REVEL" />
+        <Prediction field="eigen_phred" annotation={annotation} dangerThreshold={1} warningThreshold={2}name="EIGEN" />
+        <Prediction field="mpc_score" annotation={annotation} dangerThreshold={2} warningThreshold={1} name="MPC" />
+        <Prediction field="primate_ai_score" annotation={annotation} dangerThreshold={0.7} warningThreshold={0.5} name="PMT AI" />
+        <Transition.Group animation="fade down" duration="500">
+          {
+            this.state.showMore ?
+              <div>
+                <Prediction field="polyphen" annotation={annotation} />
+                <Prediction field="sift" annotation={annotation} />
+                <Prediction field="mut_taster" annotation={annotation} />
+                <Prediction field="fathmm" annotation={annotation} />
+                <Prediction field="metasvm" annotation={annotation} />
+                <Prediction field="gerp_rs" annotation={annotation} />
+                <Prediction field="phastcons100vert" annotation={annotation} />
+                <LinkButton onClick={() => this.setState({ showMore: false })}>Hide</LinkButton>
+              </div>
+            :
+              <LinkButton onClick={() => this.setState({ showMore: true })}>More..</LinkButton>
+            }
+        </Transition.Group>
+      </div>
+      : null
+  }
 }
 
-Predictions.propTypes = {
-  annotation: PropTypes.object,
-}
-
-export default Predictions

@@ -72,6 +72,14 @@ muttaster_map = {
     '': None
 }
 
+metasvm_map = {
+    'D': 'damaging',
+    'T': 'tolerated',
+    '.': None,
+    '': None
+}
+
+
 def _add_genotype_filter_to_variant_query(db_query, genotype_filter):
     """
     Add conditions to db_query from the genotype filter
@@ -534,9 +542,10 @@ class ElasticsearchDatastore(datastore.Datastore):
                     'muttaster': muttaster_map.get(hit["dbnsfp_MutationTaster_pred"].split(';')[0]) if "dbnsfp_MutationTaster_pred" in hit and hit["dbnsfp_MutationTaster_pred"] else None,
                     'polyphen': polyphen_map.get(hit["dbnsfp_Polyphen2_HVAR_pred"].split(';')[0]) if "dbnsfp_Polyphen2_HVAR_pred" in hit and hit["dbnsfp_Polyphen2_HVAR_pred"] else None,
                     'sift': sift_map.get(hit["dbnsfp_SIFT_pred"].split(';')[0]) if "dbnsfp_SIFT_pred" in hit and hit["dbnsfp_SIFT_pred"] else None,
+                    'metasvm': metasvm_map.get(hit["dbnsfp_MetaSVM_pred"].split(';')[0]) if "dbnsfp_MetaSVM_pred" in hit and hit["dbnsfp_MetaSVM_pred"] else None,
 
-                    'GERP_RS': hit["dbnsfp_GERP_RS"] if "dbnsfp_GERP_RS" in hit else None,
-                    'phastCons100way_vertebrate': hit["dbnsfp_phastCons100way_vertebrate"] if "dbnsfp_phastCons100way_vertebrate" in hit else None,
+                    'GERP_RS': float(hit["dbnsfp_GERP_RS"]) if "dbnsfp_GERP_RS" in hit and hit["dbnsfp_GERP_RS"] else None,
+                    'phastCons100way_vertebrate': float(hit["dbnsfp_phastCons100way_vertebrate"]) if "dbnsfp_phastCons100way_vertebrate" in hit and hit["dbnsfp_phastCons100way_vertebrate"] else None,
 
                     'cadd_phred': hit["cadd_PHRED"] if "cadd_PHRED" in hit else None,
                     'dann_score': hit["dbnsfp_DANN_score"] if "dbnsfp_DANN_score" in hit else None,
@@ -565,13 +574,14 @@ class ElasticsearchDatastore(datastore.Datastore):
                     'AC': int(hit['AC'] or 0) if 'AC' in hit else None,
                     'AN': int(hit['AN'] or 0) if 'AN' in hit else None,
 
-                    '1kg_AC': int(hit['g1k_AC'] or 0) if 'g1k_AC' in hit else None,
-                    '1kg_AN': int(hit['g1k_AN'] or 0) if 'g1k_AN' in hit else None,
+                    'g1kAC': int(hit['g1k_AC'] or 0) if 'g1k_AC' in hit else None,
+                    'g1kAN': int(hit['g1k_AN'] or 0) if 'g1k_AN' in hit else None,
 
-                    'exac_v3_AC': int(hit["exac_AC_Adj"] or 0) if "exac_Adj_AC" in hit else None,
+                    'exac_v3_AC': int(hit["exac_AC_Adj"] or 0) if "exac_AC_Adj" in hit else None,
                     'exac_v3_Het': int(hit["exac_AC_Het"] or 0) if "exac_AC_Het" in hit else None,
                     'exac_v3_Hom': int(hit["exac_AC_Hom"] or 0) if "exac_AC_Hom" in hit else None,
                     'exac_v3_Hemi': int(hit["exac_AC_Hemi"] or 0) if "exac_AC_Hemi" in hit else None,
+                    'exac_v3_AN': int(hit["exac_AN_Adj"] or 0) if "exac_AN_Adj" in hit else None,
 
                     'gnomad_exomes_AC': int(hit["gnomad_exomes_AC"] or 0) if "gnomad_exomes_AC" in hit else None,
                     'gnomad_exomes_Hom': int(hit["gnomad_exomes_Hom"] or 0) if "gnomad_exomes_Hom" in hit else None,
@@ -638,10 +648,8 @@ class ElasticsearchDatastore(datastore.Datastore):
             result["extras"]["svtype"] = hit["SVTYPE"] if "SVTYPE" in hit else None
 
 
-            logger.info("Result %s: GRCh37: %s GRCh38: %s:,  cadd: %s  %s - gene ids: %s, coding gene_ids: %s" % (
+            logger.info("Result %s: GRCh37: %s GRCh38: %s - gene ids: %s, coding gene_ids: %s" % (
                 i, grch37_coord, grch38_coord,
-                hit["cadd_PHRED"] if "cadd_PHRED" in hit else "",
-                hit["transcriptConsequenceTerms"],
                 result["gene_ids"],
                 result["coding_gene_ids"]))
 

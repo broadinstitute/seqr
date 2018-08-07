@@ -1,11 +1,22 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import { Label, Rating } from 'semantic-ui-react'
+import styled from 'styled-components'
+import { Label, Icon } from 'semantic-ui-react'
 
 import { CLINSIG_SEVERITY } from '../../../utils/constants'
 import { snakecaseToTitlecase } from '../../../utils/stringUtils'
 import { HorizontalSpacer } from '../../Spacers'
 
+
+const GrayStarIcon = styled(Icon).attrs({ name: 'star' })`
+  color: #D5D5D5;
+  margin: 0em 0.3em 0em 0em !important;
+`
+
+const FilledInStarIcon = styled(Icon).attrs({ name: 'star' })`
+  color: #FFB70A;
+  margin: 0em 0.3em 0em 0em !important;
+`
 
 const CLINSIG_COLOR = {
   1: 'red',
@@ -24,16 +35,20 @@ const HGMD_CLASS_NAMES = {
 const hgmdName = hgmdClass => HGMD_CLASS_NAMES[hgmdClass]
 
 
-const PathogenicityLabel = ({ clinsig, formatName }) =>
-  <Label color={CLINSIG_COLOR[CLINSIG_SEVERITY[clinsig]] || 'grey'} size="medium" horizontal basic>
+const PathogenicityLabel = ({ clinsig, formatName, goldStars }) =>
+  <Label color={CLINSIG_COLOR[CLINSIG_SEVERITY[clinsig.toLowerCase()]] || 'grey'} size="medium" horizontal basic>
     {formatName ? formatName(clinsig) : clinsig}
+    {(goldStars != null) && [
+      <HorizontalSpacer key={-1} width={10} />,
+      [0, 1, 2, 3].map(i => (i < goldStars ? <FilledInStarIcon key={i} /> : <GrayStarIcon key={i} />)),
+    ]}
   </Label>
 
 PathogenicityLabel.propTypes = {
   clinsig: PropTypes.string.isRequired,
   formatName: PropTypes.func,
+  goldStars: PropTypes.number,
 }
-
 
 const PathogenicityLink = ({ href, ...labelProps }) =>
   <a href={href} target="_blank" rel="noopener noreferrer">
@@ -62,17 +77,13 @@ const Pathogenicity = ({ variant }) => {
       {variant.clinvar.clinsig &&
         <span>
           <b>ClinVar:<HorizontalSpacer width={5} /></b>
-          {variant.clinvar.clinsig.split('/').map(clinsig =>
-            <PathogenicityLink
-              key={clinsig}
-              clinsig={clinsig}
-              href={clinvarUrl(variant.clinvar)}
-              formatName={snakecaseToTitlecase}
-            />,
-          )}
-          {variant.clinvar.gold_stars != null &&
-            <Rating icon="star" defaultRating={variant.clinvar.gold_stars} maxRating={4} />
-          }
+          <PathogenicityLink
+            key={variant.clinvar.clinsig}
+            clinsig={variant.clinvar.clinsig}
+            href={clinvarUrl(variant.clinvar)}
+            formatName={snakecaseToTitlecase}
+            goldStars={variant.clinvar.goldStars}
+          />
         </span>
       }
       {variant.hgmd.class &&

@@ -130,9 +130,11 @@ export const CLINSIG_SEVERITY = {
   'risk factor': 0,
   risk_factor: 0,
   'likely pathogenic': 1,
+  'pathogenic/likely_pathogenic': 1,
   likely_pathogenic: 1,
   benign: -1,
   'likely benign': -1,
+  'benign/likely_benign': -1,
   likely_benign: -1,
   protective: -1,
   // hgmd

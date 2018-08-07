@@ -44,7 +44,7 @@ const VariantLinkContainer = styled.div`
 const NO_DISPLAY = { display: 'none' }
 
 const Variants = ({ variants, projectGuid }) =>
-  <Grid divided="vertically" columns="equal">
+  <Grid stackable divided="vertically" columns="equal">
     {variants.map(variant =>
       <VariantRow key={variant.variantId} severity={CLINSIG_SEVERITY[(variant.clinvar.clinsig || '').split('/')[0]]}>
         {projectGuid &&

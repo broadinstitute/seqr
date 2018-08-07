@@ -1,3 +1,5 @@
+/* eslint-disable react/no-array-index-key */
+
 import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
@@ -125,7 +127,7 @@ const VariantGene = ({ gene, project }) =>
           label={`${geneListName.substring(0, 10)}${geneListName.length > 6 ? ' ..' : ''}`}
           color="teal"
           popupHeader="Gene Lists"
-          popupContent={gene.diseaseGeneLists.map(geneList => <div>{geneList}</div>)}
+          popupContent={gene.diseaseGeneLists.map((geneList, i) => <div key={i}>{geneList}</div>)}
         />,
       )}
     </div>
