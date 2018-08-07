@@ -191,6 +191,8 @@ def passes_variant_filter(variant, variant_filter):
 
     if variant_filter.ref_freqs:
         for population, freq in variant_filter.ref_freqs:
+            if population == 'topmed':
+                continue
             try:
                 if variant.annotation['freqs'][population] > freq:
                     return False, 'max_af'
