@@ -12,6 +12,7 @@ docs/Makefile
 
 *.pyc
 *.DS_Store
+.ipynb_checkpoints
 
 deploy/kubernetes/deployments
 deploy/secrets/gcloud*
