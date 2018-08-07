@@ -18,7 +18,7 @@ const FreqLink = ({ url, value, variant, genomeVersion }) => {
     pos = variant.liftedOverPos
   }
 
-  const isRegion = parseInt(value, 10) <= 0
+  const isRegion = parseFloat(value, 10) <= 0
   let coords
   if (isRegion) {
     coords = `${chrom}-${parseInt(pos, 10) - 100}-${parseInt(pos, 10) + 100}`
