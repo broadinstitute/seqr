@@ -40,6 +40,7 @@ def saved_variant_data(request, project_guid, variant_guid=None):
         variant = get_json_for_saved_variant(saved_variant, add_tags=True)
         if variant['tags'] or variant['notes']:
             variant_json = json.loads(saved_variant.saved_variant_json or '{}')
+            logger.info(variant_json)
             variant.update(_variant_details(variant_json, request.user))
             variants[variant['variantId']] = variant
 
@@ -234,17 +235,28 @@ def _variant_details(variant_json, user):
                     'freqs', {}).get('gnomad_genomes_AF', 0)) if is_es_variant else annotation.get('freqs', {}).get(
                     'gnomad-gnomad-genomes2_popmax', annotation.get('freqs', {}).get('gnomad-genomes2', None)),
             },
+            'gerp_rs': annotation.get('GERP_RS'),
+            'phastcons100vert': annotation.get('phastCons100way_vertebrate'),
+
             'mpc_score': annotation.get('mpc_score'),
+            'metasvm': annotation.get('metasvm'),
             'mut_taster': annotation.get('muttaster'),
             'polyphen': annotation.get('polyphen'),
             'popCounts': {
                 'AC': annotation.get('pop_counts', {}).get('AC'),
                 'AN': annotation.get('pop_counts', {}).get('AN'),
+                'g1kAC': annotation.get('pop_counts', {}).get('g1kAC'),
+                'g1kAN': annotation.get('pop_counts', {}).get('g1kAN'),
                 'topmedAC': annotation.get('pop_counts', {}).get('topmed_AC'),
+                'topmedAN': annotation.get('pop_counts', {}).get('topmed_AN'),
                 'gnomadExomesAC': annotation.get('pop_counts', {}).get('gnomad_exomes_AC'),
+                'gnomadExomesAN': annotation.get('pop_counts', {}).get('gnomad_exomes_AN'),
                 'gnomadGenomesAC': annotation.get('pop_counts', {}).get('gnomad_genomes_AC'),
+                'gnomadGenomesAN': annotation.get('pop_counts', {}).get('gnomad_genomes_AN'),
+                'exacAC': annotation.get('pop_counts', {}).get('exac_v3_AC'),
                 'exac_hom': annotation.get('pop_counts', {}).get('exac_v3_Hom'),
                 'exac_hemi': annotation.get('pop_counts', {}).get('exac_v3_Hemi'),
+                'exacAN': annotation.get('pop_counts', {}).get('exac_v3_AN'),
                 'gnomad_exomes_hom': annotation.get('pop_counts', {}).get('gnomad_exomes_Hom'),
                 'gnomad_exomes_hemi': annotation.get('pop_counts', {}).get('gnomad_exomes_Hemi'),
                 'gnomad_genomes_hom': annotation.get('pop_counts', {}).get('gnomad_genomes_Hom'),
