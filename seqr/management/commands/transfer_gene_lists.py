@@ -6,6 +6,7 @@ from django.core.management.base import BaseCommand
 from guardian.shortcuts import assign_perm
 
 from xbrowse_server.gene_lists.models import GeneList
+from xbrowse_server.base.models import ProjectGeneList
 from seqr.models import IS_OWNER, CAN_EDIT, CAN_VIEW, LocusList, LocusListGene
 
 logger = logging.getLogger(__name__)
@@ -43,8 +44,8 @@ class Command(BaseCommand):
                 created_by=source_list.owner,
                 name=source_list.name or source_list.slug,
                 is_public=source_list.is_public,
+                description=source_list.description,
             )
-            destination_list.description=source_list.description
             destination_list.last_modified_date = source_list.last_updated
             destination_list.last_modified_by = source_list.owner
             destination_list.save()
@@ -59,20 +60,27 @@ class Command(BaseCommand):
             for source_item in source_list.genelistitem_set.all():
                 counters['genes processed'] += 1
 
-                _, created = LocusListGene.objects.get_or_create(
-                    created_by=source_list.owner,
+                locus_list_gene, created = LocusListGene.objects.get_or_create(
                     locus_list=destination_list,
                     gene_id=source_item.gene_id.upper(),
-                    description=source_item.description,
                 )
                 if created:
                     counters['LocusListEntry\'s created'] += 1
+                    locus_list_gene.created_by = source_list.owner
+                    locus_list_gene.description = source_item.description
+                    locus_list_gene.save()
 
             # set LocusList permissions
             if source_list.owner is not None:
                 assign_perm(user_or_group=source_list.owner, perm=IS_OWNER, obj=destination_list)
                 assign_perm(user_or_group=source_list.owner, perm=CAN_EDIT, obj=destination_list)
                 assign_perm(user_or_group=source_list.owner, perm=CAN_VIEW, obj=destination_list)
+
+            for source_project_list in ProjectGeneList.objects.filter(gene_list=source_list):
+                project = source_project_list.project.seqr_project
+                if project:
+                    counters['LocusList Project permission\'s created'] += 1
+                    assign_perm(user_or_group=project.can_view_group, perm=CAN_VIEW, obj=destination_list)
 
         logger.info("Done")
         logger.info("Stats: ")

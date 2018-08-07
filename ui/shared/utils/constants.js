@@ -1,5 +1,9 @@
+import { Form } from 'semantic-ui-react'
+
 import BaseFieldView from '../components/panel/view-fields/BaseFieldView'
 import OptionFieldView from '../components/panel/view-fields/OptionFieldView'
+import { BooleanCheckbox, RadioGroup } from '../components/form/Inputs'
+
 
 // SAMPLES
 
@@ -142,6 +146,98 @@ export const CLINSIG_SEVERITY = {
   FP: 0,
   DFP: 0,
   DP: 0,
+}
+
+
+// LOCUS LISTS
+
+export const LOCUS_LIST_IS_PUBLIC_FIELD_NAME = 'isPublic'
+export const LOCUS_LIST_LAST_MODIFIED_FIELD_NAME = 'lastModifiedDate'
+export const LOCUS_LIST_CURATOR_FIELD_NAME = 'createdBy'
+
+export const GENOME_VERSION_37 = '37'
+export const GENOME_VERSION_OPTIONS = [
+  { value: GENOME_VERSION_37, text: 'GRCh37' },
+  { value: '38', text: 'GRCh38' },
+]
+
+export const LOCUS_LIST_FIELDS = [
+  {
+    name: 'name',
+    label: 'List Name',
+    labelHelp: 'A descriptive name for this gene list',
+    validate: value => (value ? undefined : 'Name is required'),
+    width: 3,
+    isEditable: true,
+  },
+  { name: 'numEntries', label: 'Entries', width: 1 },
+  {
+    name: 'description',
+    label: 'Description',
+    labelHelp: 'Some background on how this list is curated',
+    width: 9,
+    isEditable: true,
+  },
+  {
+    name: LOCUS_LIST_LAST_MODIFIED_FIELD_NAME,
+    label: 'Last Updated',
+    width: 3,
+    fieldDisplay: lastModifiedDate => new Date(lastModifiedDate).toLocaleString('en-US', { year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric' }),
+  },
+  { name: LOCUS_LIST_CURATOR_FIELD_NAME, label: 'Curator', width: 3 },
+  {
+    name: LOCUS_LIST_IS_PUBLIC_FIELD_NAME,
+    label: 'Public List',
+    labelHelp: 'Should other seqr users be able to use this gene list?',
+    component: RadioGroup,
+    options: [{ value: true, text: 'Yes' }, { value: false, text: 'No' }],
+    fieldDisplay: isPublic => (isPublic ? 'Yes' : 'No'),
+    width: 2,
+    isEditable: true,
+  },
+]
+
+const parseInterval = (intervalString) => {
+  const match = intervalString.match(/([^\s-]*):(\d*)-(\d*)/)
+  return match ? { chrom: match[1], start: match[2], end: match[3] } : null
+}
+
+export const LOCUS_LIST_ITEMS_FIELD = {
+  name: 'parsedItems',
+  label: 'Genes/ Intervals',
+  labelHelp: 'A list of genes and intervals. Can be separated by commas or whitespace. Intervals should be in the form <chrom>:<start>-<end>',
+  fieldDisplay: () => null,
+  isEditable: true,
+  component: Form.TextArea,
+  rows: 12,
+  validate: value => (((value || {}).items || []).length ? undefined : 'Genes and/or intervals are required'),
+  format: value => (value || {}).display,
+  normalize: (value, previousValue) => ({
+    display: value,
+    items: value.split(/[\s|,]/).filter(itemName => itemName.trim()).map(itemName =>
+      ((previousValue || {}).itemMap || {})[itemName.trim()] || parseInterval(itemName) ||
+      (itemName.trim().toUpperCase().startsWith('ENSG') ? { geneId: itemName.trim().toUpperCase() } : { symbol: itemName.trim() }),
+    ),
+    itemMap: (previousValue || {}).itemMap || {},
+  }),
+  additionalFormFields: [
+    {
+      name: 'intervalGenomeVersion',
+      component: RadioGroup,
+      options: GENOME_VERSION_OPTIONS,
+      label: 'Genome Version',
+      labelHelp: 'The genome version associated with intervals. Only required if the list contains intervals',
+      validate: (value, allValues) => (
+        (value || ((allValues.parsedItems || {}).items || []).every(item => item.symbol || item.geneId)) ? undefined :
+          'Genome version is required for lists with intervals'
+      ),
+    },
+    {
+      name: 'ignoreInvalidItems',
+      component: BooleanCheckbox,
+      label: 'Ignore invalid genes and intervals',
+    },
+  ],
 }
 
 export const EXCLUDED_TAG_NAME = 'Excluded'

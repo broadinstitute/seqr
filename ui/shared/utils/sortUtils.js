@@ -36,5 +36,6 @@ export const compareObjects = field => (a, b) => {
   let valB = b[field]
   if (typeof valA === 'string') { valA = valA.toLowerCase() }
   if (typeof valB === 'string') { valB = valB.toLowerCase() }
+
   return genericComparator(valA, valB)
 }

@@ -6,7 +6,7 @@ import { FAMILY_ANALYSIS_STATUS_OPTIONS, EXCLUDED_TAG_NAME, REVIEW_TAG_NAME } fr
 import { toCamelcase, toSnakecase } from 'shared/utils/stringUtils'
 
 import {
-  getProjectsByGuid, getFamiliesByGuid, getIndividualsByGuid, getSamplesByGuid, getUser, getAnalysisGroupsByGuid,
+  getProjectsByGuid, getFamiliesByGuid, getIndividualsByGuid, getSamplesByGuid, getGenesById, getUser, getAnalysisGroupsByGuid,
 } from 'redux/selectors'
 
 import {
@@ -131,10 +131,11 @@ export const getVisibleSortedProjectSavedVariants = createSelector(
   getFilteredProjectSavedVariants,
   getSavedVariantSortOrder,
   getSavedVariantVisibleIndices,
-  (filteredSavedVariants, sortOrder, visibleIndices) => {
+  getGenesById,
+  (filteredSavedVariants, sortOrder, visibleIndices, genesById) => {
     // Always secondary sort on xpos
     filteredSavedVariants.sort((a, b) => {
-      return VARIANT_SORT_LOOKUP[sortOrder](a, b) || a.xpos - b.xpos
+      return VARIANT_SORT_LOOKUP[sortOrder](a, b, genesById) || a.xpos - b.xpos
     })
     return filteredSavedVariants.slice(...visibleIndices)
   },

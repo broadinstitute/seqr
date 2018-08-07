@@ -10,6 +10,7 @@ from seqr.models import Project as SeqrProject, Family as SeqrFamily, Individual
     VariantFunctionalData as SeqrVariantFunctionalData, LocusList as SeqrLocusList, LocusListGene as SeqrLocusListGene, \
     GeneNote as SeqrGeneNote, FamilyAnalysedBy as SeqrAnalysedBy, AnalysisGroup as SeqrAnalysisGroup
 from seqr.utils.model_sync_utils import get_or_create_saved_variant, convert_html_to_plain_text
+from seqr.views.apis.locus_list_api import add_locus_list_user_permissions
 
 
 XBROWSE_TO_SEQR_CLASS_MAPPING = {
@@ -203,10 +204,13 @@ def find_matching_seqr_model(xbrowse_model):
                 is_public=xbrowse_model.is_public,
                 owner=xbrowse_model.created_by)
         elif xbrowse_class_name == "GeneListItem":
+            description_q = Q(description=xbrowse_model.description)
+            if xbrowse_model.description == '':
+                description_q = (Q(description=xbrowse_model.description) | Q(description__isnull=True))
             return SeqrLocusListGene.objects.get(
-                locus_list=xbrowse_model.gene_list.seqr_locus_list or find_matching_seqr_model(xbrowse_model.gene_list),
-                description=xbrowse_model.description,
-                gene_id=xbrowse_model.gene_id)
+                Q(locus_list=xbrowse_model.gene_list.seqr_locus_list or find_matching_seqr_model(xbrowse_model.gene_list)),
+                Q(gene_id=xbrowse_model.gene_id),
+                description_q)
         elif xbrowse_class_name == "GeneNote":
             return SeqrGeneNote.objects.get(
                 note=xbrowse_model.note,
@@ -299,6 +303,8 @@ def _create_seqr_model(xbrowse_model, **kwargs):
         if hasattr(xbrowse_model, xbrowse_model_foreign_key_name):
             setattr(xbrowse_model, xbrowse_model_foreign_key_name, seqr_model)
             xbrowse_model.save()
+        if xbrowse_model_class_name == "GeneList":
+            add_locus_list_user_permissions(seqr_model)
         return seqr_model
 
     except Exception as e:

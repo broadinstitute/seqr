@@ -67,7 +67,7 @@ const Variants = ({ variants, projectGuid }) =>
           <VariantTags variant={variant} />
         </Grid.Column>
         <Grid.Column>
-          {variant.genes.map(gene => <VariantGene key={gene.geneId} gene={gene} />)}
+          {variant.geneIds.map(geneId => <VariantGene key={geneId} geneId={geneId} />)}
         </Grid.Column>
         <Grid.Column><Annotations variant={variant} /></Grid.Column>
         <Grid.Column><Predictions annotation={variant.annotation} /></Grid.Column>

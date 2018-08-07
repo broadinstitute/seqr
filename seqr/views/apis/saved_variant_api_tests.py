@@ -16,7 +16,10 @@ VARIANT_GUID = 'SV0000001_2103343353_r0390_100'
 class ProjectAPITest(TransactionTestCase):
     fixtures = ['users', '1kg_project']
 
-    def test_saved_variant_data(self):
+    @mock.patch('seqr.views.utils.gene_utils.get_reference')
+    def test_saved_variant_data(self, mock_reference):
+        mock_reference.return_value.get_genes.side_effect = lambda gene_ids: {gene_id: {'geneId': gene_id} for gene_id in gene_ids}
+
         url = reverse(saved_variant_data, args=['R0001_1kg'])
         _check_login(self, url)
 
@@ -31,7 +34,7 @@ class ProjectAPITest(TransactionTestCase):
             set(variant.keys()),
             {'variantId', 'xpos', 'ref', 'alt', 'chrom', 'pos', 'genomeVersion', 'liftedOverGenomeVersion',
              'liftedOverChrom', 'liftedOverPos', 'familyGuid', 'tags', 'functionalData', 'notes', 'clinvar',
-             'origAltAlleles', 'genes', 'genotypes', 'hgmd', 'annotation', 'transcripts'}
+             'origAltAlleles', 'geneIds', 'genotypes', 'hgmd', 'annotation', 'transcripts', 'locusLists'}
         )
 
         # filter by family
