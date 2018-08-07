@@ -26,19 +26,21 @@ class Command(BaseCommand):
             for individual in f.individual_set.all():
                 if phenotips_patient_exists(individual.seqr_individual):
                     # make sure phenotips_patient_id is up to date
+                    seqr_individual = individual.seqr_individual
                     data_json = _get_patient_data(
                         to_project.seqr_project,
-                        individual.seqr_individual,
+                        seqr_individual,
                     )
 
-                    individual.seqr_individual.phenotips_patient_id = data_json["id"]
+                    seqr_individual.phenotips_patient_id = data_json["id"]
+                    seqr_individual.save()
 
                     # update permissions
                     phenotips_readonly_username, _ = _get_phenotips_uname_and_pwd_for_project(to_project.seqr_project.phenotips_user_id, read_only=True)
-                    _add_user_to_patient(phenotips_readonly_username, individual.seqr_individual.phenotips_patient_id, allow_edit=False)
+                    _add_user_to_patient(phenotips_readonly_username, seqr_individual.phenotips_patient_id, allow_edit=False)
 
                     phenotips_readwrite_username, _ = _get_phenotips_uname_and_pwd_for_project(to_project.seqr_project.phenotips_user_id, read_only=False)
-                    _add_user_to_patient(phenotips_readwrite_username, individual.seqr_individual.phenotips_patient_id, allow_edit=True)
+                    _add_user_to_patient(phenotips_readwrite_username, seqr_individual.phenotips_patient_id, allow_edit=True)
 
             # Update variant tags/ notes
             saved_variants = set()
