@@ -46,9 +46,8 @@ class Command(BaseCommand):
                 is_public=source_list.is_public,
                 description=source_list.description,
             )
-            destination_list.last_modified_date = source_list.last_updated
             destination_list.last_modified_by = source_list.owner
-            destination_list.save()
+            destination_list.save(last_modified_date=source_list.last_updated)
 
             source_list.seqr_locus_list = destination_list
             source_list.save()

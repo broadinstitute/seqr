@@ -24,6 +24,7 @@ metadata:
   name: nginx-config
 data:
   hsts: "true"
+  client-max-body-size: "8192m"
 
 ---
 kind: ReplicationController

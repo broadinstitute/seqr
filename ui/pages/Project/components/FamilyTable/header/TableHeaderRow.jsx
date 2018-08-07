@@ -23,6 +23,12 @@ const RegularFontHeaderCell = styled(Table.HeaderCell)`
   font-weight: normal !important;
 `
 
+
+// Allows dropdowns to be visible inside table cell
+const OverflowHeaderCell = styled(Table.HeaderCell)`
+  overflow: visible !important;
+`
+
 const SpacedDropdown = styled(Dropdown)`
   padding-left: 10px;
   padding-right: 5px;
@@ -87,7 +93,7 @@ const TableHeaderRow = (
           }
           &nbsp; families
         </RegularFontHeaderCell>
-        <Table.HeaderCell width={14} textAlign="right">
+        <OverflowHeaderCell width={14} textAlign="right">
           <Popup
             content="Filter families by searching on family name or individual phenotypes"
             position="top center"
@@ -115,7 +121,7 @@ const TableHeaderRow = (
             title={headerStatus.title}
             data={headerStatus.data}
           />
-        </Table.HeaderCell>
+        </OverflowHeaderCell>
       </Table.Row>
       {fields &&
         <Table.Row>
