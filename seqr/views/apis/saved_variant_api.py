@@ -43,7 +43,6 @@ def saved_variant_data(request, project_guid, variant_guid=None):
         variant = get_json_for_saved_variant(saved_variant, add_tags=True)
         if variant['tags'] or variant['notes']:
             variant_json = json.loads(saved_variant.saved_variant_json or '{}')
-            logger.info(variant_json)
             variant.update(_variant_details(variant_json, request.user))
             variants[variant['variantId']] = variant
 
