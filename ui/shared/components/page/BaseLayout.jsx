@@ -27,7 +27,7 @@ const BaseLayout = ({ children }) =>
   <LayoutContainer>
     <Header />
     <ContentGrid>
-      <Route path="/project/:projectGuid/:breadcrumb/:breadcrumbId*" component={PageHeader} />
+      <Route path="/:entity/:entityGuid?/:breadcrumb?/:breadcrumbId*" component={PageHeader} />
       <Grid.Row>
         <Grid.Column width={1} />
         <Grid.Column width={14}>

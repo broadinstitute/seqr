@@ -359,7 +359,7 @@ export const FAMILY_EXPORT_DATA = [
     field: 'analysisStatus',
     format: status => (FAMILY_ANALYSIS_STATUS_OPTIONS.find(option => option.value === status) || {}).name,
   },
-  { header: 'Analysed By', field: 'analysedBy', format: analysedBy => analysedBy.map(o => o.user.display_name).join(',') },
+  { header: 'Analysed By', field: 'analysedBy', format: analysedBy => analysedBy.map(o => o.createdBy.fullName || o.createdBy.email).join(',') },
   { header: 'Analysis Summary', field: 'analysisSummary', format: stripMarkdown },
   { header: 'Analysis Notes', field: 'analysisNotes', format: stripMarkdown },
 ]
@@ -433,7 +433,12 @@ export const VARIANT_SORT_OPTONS = [
   { value: SORT_BY_FAMILY_GUID, text: 'Family', comparator: (a, b) => a.familyGuid.localeCompare(b.familyGuid) },
   { value: SORT_BY_XPOS, text: 'Position', comparator: (a, b) => a.xpos - b.xpos },
   { value: SORT_BY_PATHOGENICITY, text: 'Pathogenicity', comparator: (a, b) => clinsigSeverity(b) - clinsigSeverity(a) },
-  { value: SORT_BY_IN_OMIM, text: 'In OMIM', comparator: (a, b) => b.genes.some(gene => gene.diseaseDbPhenotypes.length > 0) - a.genes.some(gene => gene.diseaseDbPhenotypes.length > 0) },
+  {
+    value: SORT_BY_IN_OMIM,
+    text: 'In OMIM',
+    comparator: (a, b, genesById) =>
+      b.geneIds.some(geneId => genesById[geneId].phenotypeInfo.mimPhenotypes.length > 0) - a.geneIds.some(geneId => genesById[geneId].phenotypeInfo.mimPhenotypes.length > 0),
+  },
 ]
 
 export const VARIANT_EXPORT_DATA = [

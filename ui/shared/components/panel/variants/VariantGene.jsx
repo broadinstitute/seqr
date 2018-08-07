@@ -1,5 +1,3 @@
-/* eslint-disable react/no-array-index-key */
-
 import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
@@ -7,10 +5,9 @@ import { connect } from 'react-redux'
 import { Label, Popup, List } from 'semantic-ui-react'
 
 import { getProject } from 'pages/Project/selectors'
+import { getGenesById } from 'redux/selectors'
 import { HorizontalSpacer } from '../../Spacers'
-import Modal from '../../modal/Modal'
-import ButtonLink from '../../buttons/ButtonLink'
-import GeneDetail from '../genes/GeneDetail'
+import ShowGeneModal from '../../buttons/ShowGeneModal'
 
 const CONSTRAINED_GENE_RANK_THRESHOLD = 1000
 
@@ -52,17 +49,26 @@ GeneLabel.propTypes = {
   popupContent: PropTypes.oneOfType([PropTypes.string, PropTypes.node]),
 }
 
+export const LocusListLabels = ({ locusLists }) =>
+  <div>
+    {locusLists.map(geneListName =>
+      <GeneLabel
+        key={geneListName}
+        label={`${geneListName.substring(0, 10)}${geneListName.length > 10 ? ' ...' : ''}`}
+        color="teal"
+        popupHeader="Gene Lists"
+        popupContent={locusLists.map(geneList => <div key={geneList}>{geneList}</div>)}
+      />,
+    )}
+  </div>
+
+LocusListLabels.propTypes = {
+  locusLists: PropTypes.array.isRequired,
+}
 
 const VariantGene = ({ gene, project }) =>
   <div>
-    <Modal
-      trigger={<ButtonLink fontWeight="bold" fontSize="1.5em">{gene.symbol}</ButtonLink>}
-      title={gene.symbol}
-      modalName={`gene-${gene.geneId}`}
-      size="fullscreen"
-    >
-      <GeneDetail geneId={gene.geneId} showTitle={false} />
-    </Modal>
+    <ShowGeneModal gene={gene} fontWeight="bold" fontSize="1.5em" />
     <HorizontalSpacer width={10} />
     <GeneLinks>
       <a href={`http://gnomad-beta.broadinstitute.org/gene/${gene.symbol}`} target="_blank" rel="noopener noreferrer">gnomAD</a>
@@ -70,19 +76,38 @@ const VariantGene = ({ gene, project }) =>
       <a href={`/project/${project.deprecatedProjectId}/gene/${gene.geneId}`} target="_blank" rel="noopener noreferrer">Gene Search</a><br />
     </GeneLinks>
     <div>
-      {gene.diseaseDbPhenotypes.length > 0 &&
+      {gene.phenotypeInfo.mimPhenotypes.length > 0 &&
         <GeneLabel
           color="orange"
           label="IN OMIM"
           popupHeader="Disease Phenotypes"
           popupContent={
             <List>
-              {gene.diseaseDbPhenotypes.map(pheotype =>
+              {gene.phenotypeInfo.mimPhenotypes.map(phenotype =>
                 <ListItemLink
-                  key={pheotype.description}
-                  content={pheotype.description}
+                  key={phenotype.description}
+                  content={phenotype.description}
                   target="_blank"
-                  href={`https://www.omim.org/entry/${pheotype.mim_id}`}
+                  href={`https://www.omim.org/entry/${phenotype.mim_id}`}
+                />,
+              )}
+            </List>
+          }
+        />
+      }
+      {gene.phenotypeInfo.orphanetPhenotypes.length > 0 &&
+        <GeneLabel
+          color="orange"
+          label="ORPHANET"
+          popupHeader="Orphanet Phenotypes"
+          popupContent={
+            <List>
+              {gene.phenotypeInfo.orphanetPhenotypes.map(phenotype =>
+                <ListItemLink
+                  key={phenotype.description}
+                  content={phenotype.description}
+                  target="_blank"
+                  href={`http://www.orpha.net/consor/cgi-bin/Disease_Search.php?lng=EN&data_id=20460&Disease_Disease_Search_diseaseGroup=${phenotype.orphanet_id}`}
                 />,
               )}
             </List>
@@ -120,17 +145,7 @@ const VariantGene = ({ gene, project }) =>
         />
       }
     </div>
-    <div>
-      {gene.diseaseGeneLists.map(geneListName =>
-        <GeneLabel
-          key={geneListName}
-          label={`${geneListName.substring(0, 10)}${geneListName.length > 6 ? ' ..' : ''}`}
-          color="teal"
-          popupHeader="Gene Lists"
-          popupContent={gene.diseaseGeneLists.map((geneList, i) => <div key={i}>{geneList}</div>)}
-        />,
-      )}
-    </div>
+    <LocusListLabels locusLists={gene.locusLists} />
   </div>
 
 VariantGene.propTypes = {
@@ -138,8 +153,9 @@ VariantGene.propTypes = {
   project: PropTypes.object,
 }
 
-const mapStateToProps = state => ({
+const mapStateToProps = (state, ownProps) => ({
   project: getProject(state),
+  gene: getGenesById(state)[ownProps.geneId],
 })
 
 export default connect(mapStateToProps)(VariantGene)

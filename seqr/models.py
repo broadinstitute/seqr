@@ -710,6 +710,9 @@ class LocusList(ModelWithGUID):
 
     class Meta:
         permissions = _SEQR_OBJECT_PERMISSIONS
+        unique_together = ('name', 'description', 'is_public', 'created_by')
+
+        json_fields = ['guid', 'created_by', 'created_date', 'last_modified_date', 'name', 'description', 'is_public']
 
 
 class LocusListGene(ModelWithGUID):
@@ -747,6 +750,8 @@ class LocusListInterval(ModelWithGUID):
 
     class Meta:
         unique_together = ('locus_list', 'genome_version', 'chrom', 'start', 'end')
+
+        json_fields = ['guid', 'genome_version', 'chrom', 'start', 'end']
 
 
 """

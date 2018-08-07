@@ -115,7 +115,7 @@ const ProjectPageUI = (props) => {
             <ProjectCollaborators />
           </ProjectSection>
           <VerticalSpacer height={30} />
-          <ProjectSection label="Gene Lists" editPath="project_gene_list_settings">
+          <ProjectSection label="Gene Lists">
             <GeneLists />
           </ProjectSection>
         </Grid.Column>
