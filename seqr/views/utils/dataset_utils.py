@@ -125,6 +125,7 @@ def _update_samples_for_dataset(
 
     not_loaded_samples = []
     update_json = {}
+    loaded_date = timezone.now()
     if dataset_name:
         update_json['dataset_name'] = dataset_name
     if elasticsearch_index:
@@ -136,7 +137,7 @@ def _update_samples_for_dataset(
         if sample.sample_status != Sample.SAMPLE_STATUS_LOADED:
             not_loaded_samples.append(sample_id)
             sample_update_json['sample_status'] = Sample.SAMPLE_STATUS_LOADED
-            sample_update_json['loaded_date'] = timezone.now()
+            sample_update_json['loaded_date'] = loaded_date
         sample_update_json.update(update_json)
         update_model_from_json(sample, sample_update_json)
 
