@@ -20,6 +20,7 @@ const LayoutContainer = styled.div`
 const ContentGrid = styled(Grid)`
   padding-top: 15px !important;
   min-height: calc(100% - 46px);
+  align-content: flex-start;
 `
 
 const BaseLayout = ({ children }) =>
