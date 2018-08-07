@@ -136,7 +136,7 @@ TableHeaderRow.propTypes = {
   familiesTableState: PropTypes.object.isRequired,
   updateFamiliesTable: PropTypes.func.isRequired,
   fields: PropTypes.array,
-  tableName: PropTypes.string.isRequired,
+  tableName: PropTypes.string,
   showVariantTags: PropTypes.bool,
 }
 
