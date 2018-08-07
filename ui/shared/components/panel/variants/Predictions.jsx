@@ -67,6 +67,9 @@ Prediction.propTypes = {
   name: PropTypes.string,
 }
 
+const MORE_PREDICTORS = [
+  'polyphen', 'sift', 'mut_taster', 'fathmm', 'metasvm', 'gerp_rs', 'phastcons100vert',
+]
 
 export default class Predictions extends React.Component {
   static propTypes = {
@@ -94,17 +97,14 @@ export default class Predictions extends React.Component {
           {
             this.state.showMore ?
               <div>
-                <Prediction field="polyphen" annotation={annotation} />
-                <Prediction field="sift" annotation={annotation} />
-                <Prediction field="mut_taster" annotation={annotation} />
-                <Prediction field="fathmm" annotation={annotation} />
-                <Prediction field="metasvm" annotation={annotation} />
-                <Prediction field="gerp_rs" annotation={annotation} />
-                <Prediction field="phastcons100vert" annotation={annotation} />
-                <LinkButton onClick={() => this.setState({ showMore: false })}>Hide</LinkButton>
+                {
+                  MORE_PREDICTORS.map(field => <Prediction key={field} field={field} annotation={annotation} />)
+                }
+                <LinkButton onClick={() => this.setState({ showMore: false })}>hide</LinkButton>
               </div>
             :
-              <LinkButton onClick={() => this.setState({ showMore: true })}>More..</LinkButton>
+              MORE_PREDICTORS.some(field => annotation[field] != null) &&
+              <LinkButton onClick={() => this.setState({ showMore: true })}>show more..</LinkButton>
             }
         </Transition.Group>
       </div>
