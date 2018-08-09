@@ -10,3 +10,8 @@ export const ColoredLabel = styled(({ color, ...props }) => <Label {...props} />
   background-color: ${props => props.color} !important;
   color: white !important;
 `
+
+export const HelpIcon = styled(Icon).attrs({ name: 'help circle outline', color: 'grey' })`
+  cursor: pointer;
+  margin-left: 5px !important;
+`

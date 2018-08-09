@@ -90,6 +90,7 @@ const FamilyTable = ({ visibleFamilies, loading, headerStatus, showInternalFilte
         fields={noDetailFields}
         tableName={tableName}
         showVariantTags={showVariantTags}
+        analysisGroupGuid={props.match.params.analysisGroupGuid}
       />
     </Table>
     <Table celled striped padded fixed attached="bottom">
@@ -125,6 +126,7 @@ FamilyTable.propTypes = {
   showVariantTags: PropTypes.bool,
   noDetailFields: PropTypes.array,
   tableName: PropTypes.string,
+  match: PropTypes.object,
 }
 
 const mapStateToProps = (state, ownProps) => ({

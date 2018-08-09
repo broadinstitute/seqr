@@ -4,8 +4,7 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Icon } from 'semantic-ui-react'
 
-import { getProjectSamplesByGuid } from 'pages/Project/selectors'
-import { getIndividualsByGuid } from 'redux/selectors'
+import { getIndividualsByGuid, getSamplesByGuid } from 'redux/selectors'
 import Modal from '../modal/Modal'
 import PedigreeIcon from '../icons/PedigreeIcon'
 import IGV from '../graph/IGV'
@@ -97,7 +96,7 @@ ShowReadsButton.propTypes = {
 }
 
 const mapStateToProps = state => ({
-  samplesByGuid: getProjectSamplesByGuid(state),
+  samplesByGuid: getSamplesByGuid(state),
   individualsByGuid: getIndividualsByGuid(state),
 })
 

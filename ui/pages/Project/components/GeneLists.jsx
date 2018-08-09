@@ -14,7 +14,8 @@ import DispatchRequestButton from 'shared/components/buttons/DispatchRequestButt
 import ButtonLink from 'shared/components/buttons/ButtonLink'
 import DeleteButton from 'shared/components/buttons/DeleteButton'
 import Modal from 'shared/components/modal/Modal'
-import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
+import { VerticalSpacer } from 'shared/components/Spacers'
+import { HelpIcon } from 'shared/components/StyledComponents'
 import {
   LOCUS_LIST_IS_PUBLIC_FIELD_NAME, LOCUS_LIST_LAST_MODIFIED_FIELD_NAME, LOCUS_LIST_CURATOR_FIELD_NAME,
 } from 'shared/utils/constants'
@@ -24,11 +25,6 @@ import { updateLocusLists } from '../reducers'
 const ItemContainer = styled.div`
   padding: 2px 0px;
   white-space: nowrap;
-`
-const HelpIcon = styled(Icon)`
-  cursor: pointer;
-  color: #555555; 
-  margin-left: 10px;
 `
 
 const OMIT_LOCUS_LIST_FIELDS = [
@@ -49,14 +45,12 @@ const LocusListItem = ({ project, locusList, onSubmit }) => {
       >
         <LocusListDetailPanel locusListGuid={locusList.locusListGuid} />
       </Modal>
-      <HorizontalSpacer width={5} />
       <Popup
         position="right center"
-        trigger={<HelpIcon name="help circle outline" />}
+        trigger={<HelpIcon />}
         content={<div><b>{locusList.numEntries} Genes</b><br /><i>{locusList.description}</i></div>}
         size="small"
       />
-      <HorizontalSpacer width={5} />
       {project.canEdit &&
         <DeleteButton
           initialValues={submitValues}

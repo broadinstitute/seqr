@@ -102,7 +102,7 @@ const ProjectPageUI = (props) => {
       <Grid.Row>
         <Grid.Column width={12}>
           <ProjectSection label="Overview">
-            <ProjectOverview />
+            <ProjectOverview analysisGroupGuid={props.match.params.analysisGroupGuid} />
           </ProjectSection>
           <ProjectSection label="Variant Tags" linkPath="saved_variants" linkText="View All">
             <VariantTagTypeBar project={props.project} height={30} showAllPopupCategories />
@@ -143,14 +143,15 @@ ProjectPageUI.propTypes = {
   familyExportConfig: PropTypes.object,
   individualsExportConfig: PropTypes.object,
   samplesExportConfig: PropTypes.object,
+  match: PropTypes.object,
 }
 
-const mapStateToProps = state => ({
+const mapStateToProps = (state, ownProps) => ({
   project: getProject(state),
-  analysisStatusCounts: getAnalysisStatusCounts(state),
-  familyExportConfig: getFamiliesExportConfig(state),
-  individualsExportConfig: getIndividualsExportConfig(state),
-  samplesExportConfig: getSamplesExportConfig(state),
+  analysisStatusCounts: getAnalysisStatusCounts(state, ownProps),
+  familyExportConfig: getFamiliesExportConfig(state, ownProps),
+  individualsExportConfig: getIndividualsExportConfig(state, ownProps),
+  samplesExportConfig: getSamplesExportConfig(state, ownProps),
 })
 
 export { ProjectPageUI as ProjectPageUIComponent }
