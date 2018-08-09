@@ -7,6 +7,7 @@ from seqr.models import Sample
 from seqr.utils.es_utils import get_es_client, VARIANT_DOC_TYPE
 from seqr.utils.file_utils import does_file_exist, file_iter, get_file_stats
 from seqr.views.utils.file_utils import load_uploaded_file
+from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.apis.samples_api import match_sample_ids_to_sample_records
 
 logger = logging.getLogger(__name__)
@@ -123,16 +124,22 @@ def _update_samples_for_dataset(
         ))
 
     not_loaded_samples = []
+    update_json = {}
+    loaded_date = timezone.now()
+    if dataset_name:
+        update_json['dataset_name'] = dataset_name
+    if elasticsearch_index:
+        update_json['elasticsearch_index'] = elasticsearch_index
     for sample_id, sample in matched_sample_id_to_sample_record.items():
+        sample_update_json = {}
         if sample_dataset_path_mapping and sample_dataset_path_mapping.get(sample_id):
-            sample.dataset_file_path = sample_dataset_path_mapping[sample_id]
-        if dataset_name:
-            sample.dataset_name = dataset_name
+            sample_update_json['dataset_file_path'] = sample_dataset_path_mapping[sample_id]
         if sample.sample_status != Sample.SAMPLE_STATUS_LOADED:
             not_loaded_samples.append(sample_id)
-            sample.sample_status = Sample.SAMPLE_STATUS_LOADED
-            sample.loaded_date = timezone.now()
-        sample.save()
+            sample_update_json['sample_status'] = Sample.SAMPLE_STATUS_LOADED
+            sample_update_json['loaded_date'] = loaded_date
+        sample_update_json.update(update_json)
+        update_model_from_json(sample, sample_update_json)
 
     return matched_sample_id_to_sample_record.values(), created_sample_ids
 
