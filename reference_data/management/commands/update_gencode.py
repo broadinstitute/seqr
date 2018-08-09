@@ -1,124 +1,93 @@
 import collections
 import gzip
 import logging
-import os
-from datetime import datetime
 from tqdm import tqdm
 
 from django.core.management.base import BaseCommand
 
-from reference_data.models import GENOME_VERSION_GRCh37
-from reference_data.models import GencodeRelease, GencodeGene, GencodeTranscript
+from reference_data.management.commands.file_utils import download_remote_file
+from reference_data.models import GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38
+from reference_data.models import GencodeGene, GencodeTranscript
 
 logger = logging.getLogger(__name__)
 
 
-RELEASE_NUMBER = 19
-RELEASE_DATE = datetime(2013, 12, 1)
-GENOME_VERSION = GENOME_VERSION_GRCh37
+# from https://www.gencodegenes.org/releases/current.html
+GENCODE_GTF_FILES = {
+    GENOME_VERSION_GRCh38: "ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_28/gencode.v28.annotation.gtf.gz",
+    GENOME_VERSION_GRCh37: "ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_28/GRCh37_mapping/gencode.v28lift37.annotation.gtf.gz",
+}
 
 
 class Command(BaseCommand):
 
     def add_arguments(self, parser):
-        parser.add_argument('gencode_file', nargs='?')
+        pass
 
     def handle(self, *args, **options):
-        gencode_file_path = options.get('gencode_file')
 
-        # load gencode file
-        if not (gencode_file_path and os.path.isfile(gencode_file_path)):
-            url = 'ftp://ftp.sanger.ac.uk/pub/gencode/Gencode_human/release_19/gencode.v19.annotation.gtf.gz'
-            logger.info("Downloading %s" % url)
+        for genome_version, gencode_gtf_url in GENCODE_GTF_FILES.items():
+            counters = collections.defaultdict(int)
 
-            #response = urllib2.urlopen(url)
-            #buf = StringIO(response.read())
-            #gencode_file = gzip.GzipFile(fileobj=buf)
-            os.system("wget %s -O %s" % (url, gencode_file_path))
+            local_file_path = download_remote_file(gencode_gtf_url)
+            logger.info("Parsing " + local_file_path)
+            gene_dicts = []
+            transcript_dicts = []
+            for gencode_record_dict in parse_gencode_file(gzip.open(local_file_path)):
+                counters['total_records'] += 1
+                counters['%s_records' % gencode_record_dict['feature_type']] += 1
 
-        gencode_file = gzip.open(gencode_file_path)
+                gencode_record_dict['genome_version'] = genome_version
+                if gencode_record_dict['feature_type'] == 'gene':
+                    gene_dicts.append({
+                        k: v for k, v in gencode_record_dict.items() if k in GencodeGene._meta.json_fields
+                    })
 
-        # get or create GencodeRelease record
-        gencode_release, created = GencodeRelease.objects.get_or_create(
-            release_number=RELEASE_NUMBER, release_date=RELEASE_DATE, genome_version=GENOME_VERSION)
-        if created:
-            logger.info("Created new gencode release record: %s" % gencode_release)
-        else:
-            logger.info("Re-loading %s" % gencode_release)
+                elif gencode_record_dict['feature_type'] == 'transcript':
+                    transcript_dicts.append({
+                        k: v for k, v in gencode_record_dict.items() if k in GencodeTranscript._meta.json_fields
+                    })
 
-        GencodeGene.objects.all().delete()
-        GencodeTranscript.objects.all().delete()
+                elif gencode_record_dict['feature_type'] == 'exon':
+                    pass  # TODO save exons?
 
-        gene_id_to_gene = {g.gene_id: g for g in GencodeGene.objects.all()}
-
-        previously_inserted_gene_ids = set(gene_id_to_gene.keys())
-        previously_inserted_transcript_ids = {t.transcript_id for t in GencodeTranscript.objects.all()}
-
-        # parse gencode file
-        counters = collections.defaultdict(int)
-        for record in parse_gencode_file(gencode_file):
-            counters['total_records'] += 1
-            counters['%s_records' % record['feature_type']] += 1
-            if record['feature_type'] == 'gene':
-                if record['gene_id'] in previously_inserted_gene_ids:
-                    continue
-
-                gene_record = {
-                    k: v for k, v in record.items() if k in (
-                        'chrom', 'start', 'end', 'source', 'strand', 'gene_id',
-                        'gene_type', 'gene_status', 'gene_name', 'level', 'protein_id'
-                    )
-                }
-
-                gene_record['gencode_release'] = gencode_release
-
-                counters['inserted_genes'] += 1
+            gene_records = []
+            gene_id_to_gene = {}
+            for gene_dict in tqdm(gene_dicts, unit=" gene records"):
                 try:
-                    gene_obj = GencodeGene.objects.create(**gene_record)
-                    gene_id_to_gene[record['gene_id']] = gene_obj
+                    gene_record = GencodeGene(**gene_dict)
                 except Exception as e:
-                    logger.error(str(e) + " "+ str(gene_record))
+                    logger.error(str(e) + " " + str(gene_dict))
+                else:
+                    gene_id_to_gene[gene_dict['gene_id']] = gene_record
+                    gene_records.append(gene_record)
 
-            elif record['feature_type'] == 'transcript':
-                if record['transcript_id'] in previously_inserted_transcript_ids:
-                    continue
 
-                transcript_record = {
-                    k: v for k, v in record.items() if k in (
-                        'chrom', 'start', 'end', 'source', 'strand', 'gene_id',
-                        'transcript_id', 'transcript_status', 'transcript_name',
-                        'transcript_support_level'
-                    )
-                }
+            logger.info("Creating {} gene records..".format(len(gene_records)))
+            GencodeGene.objects.filter(genome_version=genome_version).delete()
+            GencodeGene.objects.bulk_create((gr for gr in tqdm(gene_records)))
 
-                counters['inserted_transcripts'] += 1
-
-                # NOTE: this code assumes the gencode file puts gene record before it's transcripts
-                transcript_record['gencode_release'] = gencode_release
-                transcript_record['gene'] = gene_id_to_gene[transcript_record['gene_id']]
-
-                del transcript_record['gene_id']
+            transcript_records = []
+            for transcript_dict in tqdm(transcript_dicts, unit=" transcript records"):
+                transcript_dict['gene'] = gene_id_to_gene[transcript_dict['gene_id']]
+                del transcript_dict['gene_id']
 
                 try:
-                    GencodeTranscript.objects.create(**transcript_record)
+                    transcript_record = GencodeTranscript(**transcript_dict)
                 except Exception as e:
-                    logger.error(str(e) + " "+ str(gene_record))
+                    logger.error(str(e) + " " + str(transcript_record))
+                else:
+                    transcript_records.append(transcript_record)
 
-            elif record['feature_type'] == 'exon':
-                pass # TODO save exons
+            logger.info("Creating {} transcript records..".format(len(transcript_records)))
+            GencodeTranscript.objects.filter(genome_version=genome_version).delete()
+            GencodeTranscript.objects.bulk_create(transcript_records)
 
-        logger.info("Done")
-        logger.info("Stats: ")
-        for k, v in counters.items():
-            logger.info("  %s: %s" % (k, v))
+            logger.info("Done")
 
-
-            #with transaction.atomic():
-            #    GencodeGenes.objects.all().delete()
-
-            #    GencodeGenes.objects.bulk_create(
-            #        GencodeGenes(**record) for record in tqdm(records, unit=" records"),
-            #    )
+            logger.info("Stats: ")
+            for k, v in counters.items():
+                logger.info("  %s: %s" % (k, v))
 
 
 def parse_gencode_file(gencode_file):
@@ -153,27 +122,33 @@ def parse_gencode_file(gencode_file):
         #     57820 gene
         #       114 Selenocysteine
 
-        if record['feature_type'] not in ('gene', 'transcript', 'exon'):
+        if record['feature_type'] not in ('gene', 'transcript'): #, 'exon'):
             continue
 
-        # parse info field
-        info_fields = [x.strip().split() for x in record['info'].split(';') if x != '']
-        info_fields = {k: v.strip('"') for k, v in info_fields}
-        info_fields['gene_id'] = info_fields['gene_id'].split('.')[0]
-        info_fields['transcript_id'] = info_fields['transcript_id'].split('.')[0]
-        if 'exon_id' in info_fields:
-            info_fields['exon_id'] = info_fields['exon_id'].split('.')[0]
+        def remove_version_suffix(feature_id):
+            return feature_id.split('.')[0]   # converts id like "ENST00012345.3" to "ENST00012345"
 
-        # add info field keys, values to record
-        record.update(info_fields)
+        try:
+            # parse info field
+            info_fields = [x.strip().split() for x in record['info'].split(';') if x != '']
+            info_fields = {k: v.strip('"') for k, v in info_fields}
+            info_fields['gene_id'] = remove_version_suffix(info_fields['gene_id'])
+            if 'transcript_id' in info_fields:
+                info_fields['transcript_id'] = remove_version_suffix(info_fields['transcript_id'])
+            if 'exon_id' in info_fields:
+                info_fields['exon_id'] = remove_version_suffix(info_fields['exon_id'])
 
-        # modify some of the fields
-        record['chrom'] = record['chrom'][3:4].upper()
-        record['start'] = int(record['start'])
-        record['end'] = int(record['end'])
-        record['source'] = record['source'][0].upper()
-        record['gene_status'] = record['gene_status'][0].upper()
-        record['transcript_status'] = record['transcript_status'][0].upper()
+            # add info field keys, values to record
+            record.update(info_fields)
+
+            # modify some of the fields
+            record['chrom'] = record['chrom'][3:4].upper()
+            record['start'] = int(record['start'])
+            record['end'] = int(record['end'])
+            record['source'] = record['source'][0].upper()
+        except Exception as e:
+            logger.info("Error: {} when parsing record {}: ".format(str(e), record))
+            continue
 
         del record['info']
 

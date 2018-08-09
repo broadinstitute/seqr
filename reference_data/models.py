@@ -1,4 +1,9 @@
 from django.db import models
+from django.db.models import options
+
+#  Allow adding the custom json_fields and internal_json_fields to the model Meta
+# (from https://stackoverflow.com/questions/1088431/adding-attributes-into-django-models-meta-class)
+options.DEFAULT_NAMES = options.DEFAULT_NAMES + ('json_fields', 'internal_json_fields',)
 
 GENOME_VERSION_GRCh37 = "37"
 GENOME_VERSION_GRCh38 = "38"
@@ -57,24 +62,6 @@ class HumanPhenotypeOntology(models.Model):
     comment = models.TextField(null=True, blank=True)
 
 
-class GencodeRelease(models.Model):
-    release_number = models.IntegerField()  # eg. 25
-    release_date = models.DateTimeField()
-    genome_version = models.CharField(max_length=3, choices=GENOME_VERSION_CHOICES)
-
-    def __unicode__(self):
-        return "gencode_v%s (released: %s)" % (self.release_number, str(self.release_date)[:10])
-
-    class Meta:
-        unique_together = ('release_number', 'release_date', 'genome_version')
-
-
-GENCODE_STATUS_CHOICES = (
-    ("K", "KNOWN"),
-    ("N", "NOVEL"),
-    ("P", "PUTATIVE"),
-)
-
 GENCODE_SOURCE_CHOICES = (
     ('H', 'HAVANA'),
     ('E', 'ENSEMBL'),
@@ -85,7 +72,7 @@ class GencodeGene(models.Model):
     """Human gene models from https://www.gencodegenes.org/releases/
     http://www.gencodegenes.org/gencodeformat.html
     """
-    gencode_release = models.ForeignKey(GencodeRelease, on_delete=models.PROTECT)
+    genome_version = models.CharField(max_length=3, choices=GENOME_VERSION_CHOICES)
     chrom = models.CharField(max_length=1)
     start = models.IntegerField()
     end = models.IntegerField()
@@ -94,20 +81,23 @@ class GencodeGene(models.Model):
     strand = models.CharField(max_length=1)
 
     gene_id = models.CharField(max_length=20, db_index=True)         # without the version suffix
-    gene_type = models.CharField(max_length=30, db_index=True)
-    gene_status = models.CharField(max_length=1, choices=GENCODE_STATUS_CHOICES)
-    gene_name = models.CharField(max_length=30, db_index=True)
+    gene_type = models.CharField(max_length=100, db_index=True)
+    gene_name = models.CharField(max_length=100, db_index=True)
 
     level = models.IntegerField()
 
     protein_id = models.CharField(max_length=20, null=True)
 
     class Meta:
-        unique_together = ('gencode_release', 'chrom', 'start', 'end', 'gene_id')
+        unique_together = ('genome_version', 'gene_id', 'chrom', 'start', 'end')
+        json_fields = [
+            'genome_version', 'chrom', 'start', 'end', 'source', 'strand', 'gene_id',
+            'gene_type', 'gene_name', 'level', 'protein_id'
+        ]
 
 
 class GencodeTranscript(models.Model):
-    gencode_release = models.ForeignKey(GencodeRelease, on_delete=models.PROTECT)
+    genome_version = models.CharField(max_length=3, choices=GENOME_VERSION_CHOICES)
     gene = models.ForeignKey(GencodeGene, on_delete=models.CASCADE)
 
     chrom = models.CharField(max_length=1)
@@ -118,14 +108,14 @@ class GencodeTranscript(models.Model):
     strand = models.CharField(max_length=1)
 
     transcript_id = models.CharField(max_length=20, db_index=True)  # without the version suffix
-    transcript_status = models.CharField(max_length=1, choices=GENCODE_STATUS_CHOICES)
     transcript_name = models.CharField(max_length=30, db_index=True)
 
-    transcript_support_level = models.IntegerField(null=True)
+    transcript_support_level = models.CharField(max_length=2, null=True)
 
     class Meta:
-        unique_together = ('gencode_release', 'chrom', 'start', 'end', 'transcript_id')
-
+        unique_together = ('genome_version', 'transcript_id', 'chrom', 'start', 'end')
+        json_fields = ('genome_version', 'chrom', 'start', 'end', 'source', 'strand', 'gene_id',
+                       'transcript_id', 'transcript_name', 'transcript_support_level')
 
 class OMIM(models.Model):
     MAP_METHOD_CHOICES = (
