@@ -21,6 +21,7 @@ import {
   getFamiliesExportConfig,
   getIndividualsExportConfig,
   getSamplesExportConfig,
+  getProjectAnalysisGroupsByGuid,
 } from '../selectors'
 import ProjectOverview from './ProjectOverview'
 import ProjectCollaborators from './ProjectCollaborators'
@@ -105,9 +106,14 @@ const ProjectPageUI = (props) => {
             <ProjectOverview analysisGroupGuid={props.match.params.analysisGroupGuid} />
           </ProjectSection>
           <ProjectSection label="Variant Tags" linkPath="saved_variants" linkText="View All">
-            <VariantTagTypeBar project={props.project} height={30} showAllPopupCategories />
+            <VariantTagTypeBar
+              project={props.project}
+              familyGuids={props.analysisGroup && props.analysisGroup.familyGuids}
+              height={30}
+              showAllPopupCategorie
+            />
             <VerticalSpacer height={10} />
-            <VariantTags project={props.project} />
+            <VariantTags project={props.project} familyGuids={props.analysisGroup && props.analysisGroup.familyGuids} />
           </ProjectSection>
         </Grid.Column>
         <Grid.Column width={4}>
@@ -139,6 +145,7 @@ const ProjectPageUI = (props) => {
 
 ProjectPageUI.propTypes = {
   project: PropTypes.object.isRequired,
+  analysisGroup: PropTypes.object,
   analysisStatusCounts: PropTypes.array,
   familyExportConfig: PropTypes.object,
   individualsExportConfig: PropTypes.object,
@@ -148,6 +155,7 @@ ProjectPageUI.propTypes = {
 
 const mapStateToProps = (state, ownProps) => ({
   project: getProject(state),
+  analysisGroup: getProjectAnalysisGroupsByGuid(state)[ownProps.match.params.analysisGroupGuid],
   analysisStatusCounts: getAnalysisStatusCounts(state, ownProps),
   familyExportConfig: getFamiliesExportConfig(state, ownProps),
   individualsExportConfig: getIndividualsExportConfig(state, ownProps),
