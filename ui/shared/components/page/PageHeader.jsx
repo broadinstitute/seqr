@@ -102,8 +102,13 @@ const PageHeader = ({ user, project, familiesByGuid, genesById, locusListsByGuid
       breadcrumbIdParsers: [
         (breadcrumbIdSection) => {
           const { analysisGroupGuid, name, description: groupDescription } = analysisGroupsByGuid[breadcrumbIdSection] || {}
-          originalPageLinkPath = `family-group/${analysisGroupGuid}?guid=true`
+          originalPageLinkPath = `family-group/guid/${analysisGroupGuid}/`
           description = groupDescription
+          entityLinks.unshift(
+            <a key="group-search" href={`/project/${project.deprecatedProjectId}/family-group/guid/${analysisGroupGuid}/combine-mendelian-families`}>
+              <br />Analysis Group Search
+            </a>,
+          )
           return { content: `Analysis Group: ${name || breadcrumbIdSection}`, link: match.url }
         },
       ],

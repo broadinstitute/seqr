@@ -20,6 +20,13 @@ from xbrowse_server.mall import get_reference
 from xbrowse_server import mall
 
 
+def redirect_family_group_guid(request, project_id, family_group_guid, path):
+    family_group = get_object_or_404(FamilyGroup, seqr_analysis_group__guid=family_group_guid)
+    return redirect('/project/{project_id}/family-group/{family_group_slug}{path}'.format(
+        project_id=project_id, family_group_slug=family_group.slug, path='/{}'.format(path) if path else ''
+    ))
+
+
 @login_required
 @log_request('family_groups')
 def family_groups(request, project_id):
@@ -32,6 +39,7 @@ def family_groups(request, project_id):
     return render(request, 'family_group/family_groups.html', {
         'project': project,
         'family_groups': _family_groups,
+        'new_page_url': '/project/{}/project_page'.format(project.seqr_project.guid) if project.seqr_project else None,
     })
 
 @login_required
@@ -46,6 +54,7 @@ def add_family_group(request, project_id):
     return render(request, 'family_group/add_family_group.html', {
         'project': project,
         'families_json': json.dumps(families_json),
+        'new_page_url': '/project/{}/project_page'.format(project.seqr_project.guid) if project.seqr_project else None,
     })
 
 
@@ -89,18 +98,14 @@ def family_group_home(request, project_id, family_group_slug):
     if not project.can_view(request.user):
         raise PermissionDenied
 
-    if request.GET.get('guid'):
-        lookup_key = 'seqr_analysis_group__guid'
-    else:
-        lookup_key = 'slug'
-
-    family_group = get_object_or_404(FamilyGroup, **{'project': project, lookup_key: family_group_slug})
+    family_group = get_object_or_404(FamilyGroup, project=project, slug=family_group_slug)
 
     return render(request, 'family_group/family_group_home.html', {
         'project': project,
         'family_group': family_group,
         'families_json': json.dumps(json_displays.family_list(family_group.get_families())),
         'analysis_statuses':  json.dumps(dict(ANALYSIS_STATUS_CHOICES)),
+        'new_page_url': '/project/{}/analysis_group/{}'.format(project.seqr_project.guid, family_group.seqr_analysis_group.guid) if project.seqr_project and family_group.seqr_analysis_group else None,
     })
 
 
@@ -132,6 +137,7 @@ def family_group_edit(request, project_id, family_group_slug):
         'project': project,
         'family_group': family_group,
         'form': form,
+        'new_page_url': '/project/{}/analysis_group/{}'.format(project.seqr_project.guid, family_group.seqr_analysis_group.guid) if project.seqr_project and family_group.seqr_analysis_group else None,
     })
 
 
@@ -150,6 +156,7 @@ def delete(request, project_id, family_group_slug):
     return render(request, 'family_group/delete.html', {
         'project': project,
         'family_group': family_group,
+        'new_page_url': '/project/{}/analysis_group/{}'.format(project.seqr_project.guid, family_group.seqr_analysis_group.guid) if project.seqr_project and family_group.seqr_analysis_group else None,
     })
 
 
@@ -168,30 +175,3 @@ def combine_mendelian_families(request, project_id, family_group_slug):
         'family_group': family_group,
         'family_group_json': json.dumps(family_group.toJSON()),
     })
-
-
-@login_required
-@log_request('family_group_gene')
-def family_group_gene(request, project_id, family_group_slug, gene_id):
-
-    project = get_object_or_404(Project, project_id=project_id)
-    family_group = get_object_or_404(FamilyGroup, project=project, slug=family_group_slug)
-    if not project.can_view(request.user):
-        raise PermissionDenied
-
-    gene_id = get_gene_id_from_str(gene_id, get_reference())
-    gene = get_reference().get_gene(gene_id)
-
-    varfilter = get_default_variant_filter('all_coding', mall.get_annotator().reference_population_slugs)
-    variants_by_family = family_group_analysis.get_variants_in_gene(family_group, gene_id, variant_filter=varfilter)
-
-    return render(request, 'family_group/family_group_gene.html', {
-        'project': project,
-        'family_group': family_group,
-        'family_group_json': json.dumps(family_group.toJSON()),
-        'gene_json': json.dumps(gene),
-        'gene': gene,
-        'variants_by_family_json': json.dumps(variants_by_family),
-    })
-
-

@@ -107,14 +107,15 @@ urlpatterns = [
     #
     # Family group views
     #
-    url(r'^project/(?P<project_id>[\w.|-]+)/family-groups$', xbrowse_server.base.views.family_group_views.family_groups, name='family_groups'),
-    url(r'^project/(?P<project_id>[\w.|-]+)/add-family-group$', xbrowse_server.base.views.family_group_views.add_family_group, name='add_family_group'),
-    url(r'^project/(?P<project_id>[\w.|-]+)/add-family-group-submit$', xbrowse_server.base.views.family_group_views.add_family_group_submit, name='add_family_group_submit'),
-    url(r'^project/(?P<project_id>[\w.|-]+)/family-group/(?P<family_group_slug>[\w.|-]+)$', xbrowse_server.base.views.family_group_views.family_group_home, name='family_group_home'),
-    url(r'^project/(?P<project_id>[\w.|-]+)/family-group/(?P<family_group_slug>[\w.|-]+)/edit$', xbrowse_server.base.views.family_group_views.family_group_edit, name='family_group_edit'),
-    url(r'^project/(?P<project_id>[\w.|-]+)/family-group/(?P<family_group_slug>[\w.|-]+)/delete$', xbrowse_server.base.views.family_group_views.delete, name='family_group_delete'),
+
+    url(r'^project/(?P<project_id>[\w.|-]+)/family-group/guid/(?P<family_group_guid>[\w.|-]+)/(?P<path>[\w.|-]+)?$', xbrowse_server.base.views.family_group_views.redirect_family_group_guid),  # DEPRECATED
+    url(r'^project/(?P<project_id>[\w.|-]+)/family-groups$', xbrowse_server.base.views.family_group_views.family_groups, name='family_groups'),  # DEPRECATED
+    url(r'^project/(?P<project_id>[\w.|-]+)/add-family-group$', xbrowse_server.base.views.family_group_views.add_family_group, name='add_family_group'),  # DEPRECATED
+    url(r'^project/(?P<project_id>[\w.|-]+)/add-family-group-submit$', xbrowse_server.base.views.family_group_views.add_family_group_submit, name='add_family_group_submit'),  # DEPRECATED
+    url(r'^project/(?P<project_id>[\w.|-]+)/family-group/(?P<family_group_slug>[\w.|-]+)$', xbrowse_server.base.views.family_group_views.family_group_home, name='family_group_home'),  # DEPRECATED
+    url(r'^project/(?P<project_id>[\w.|-]+)/family-group/(?P<family_group_slug>[\w.|-]+)/edit$', xbrowse_server.base.views.family_group_views.family_group_edit, name='family_group_edit'),  # DEPRECATED
+    url(r'^project/(?P<project_id>[\w.|-]+)/family-group/(?P<family_group_slug>[\w.|-]+)/delete$', xbrowse_server.base.views.family_group_views.delete, name='family_group_delete'),  # DEPRECATED
     url(r'^project/(?P<project_id>[\w.|-]+)/family-group/(?P<family_group_slug>[\w.|-]+)/combine-mendelian-families$', xbrowse_server.base.views.family_group_views.combine_mendelian_families, name='combine_mendelian_families'),
-    url(r'^project/(?P<project_id>[\w.|-]+)/family-group/(?P<family_group_slug>[\w.|-]+)/gene/(?P<gene_id>[\w|-]+)$', xbrowse_server.base.views.family_group_views.family_group_gene, name='family_group_gene'),
 
     url(r'', include('seqr.urls')),
     url(r'^api/', include('xbrowse_server.api.urls')),
