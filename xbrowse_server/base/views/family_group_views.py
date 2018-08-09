@@ -86,9 +86,15 @@ def add_family_group_submit(request, project_id):
 def family_group_home(request, project_id, family_group_slug):
 
     project = get_object_or_404(Project, project_id=project_id)
-    family_group = get_object_or_404(FamilyGroup, project=project, slug=family_group_slug)
     if not project.can_view(request.user):
         raise PermissionDenied
+
+    if request.GET.get('guid'):
+        lookup_key = 'seqr_analysis_group__guid'
+    else:
+        lookup_key = 'slug'
+
+    family_group = get_object_or_404(FamilyGroup, **{'project': project, lookup_key: family_group_slug})
 
     return render(request, 'family_group/family_group_home.html', {
         'project': project,

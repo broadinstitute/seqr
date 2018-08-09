@@ -6,7 +6,7 @@ import styled from 'styled-components'
 import { Grid, Breadcrumb } from 'semantic-ui-react'
 import { NavLink } from 'react-router-dom'
 
-import { getUser, getFamiliesByGuid, getGenesById, getLocusListsByGuid } from 'redux/selectors'
+import { getUser, getFamiliesByGuid, getGenesById, getLocusListsByGuid, getAnalysisGroupsByGuid } from 'redux/selectors'
 import { getProject } from 'pages/Project/selectors'
 import EditProjectButton from '../buttons/EditProjectButton'
 import { CreateLocusListButton, DeleteLocusListButton } from '../buttons/LocusListButtons'
@@ -69,14 +69,15 @@ const ENTITY_DETAILS = {
   }),
 }
 
-const PageHeader = ({ user, project, familiesByGuid, genesById, locusListsByGuid, match }) => {
+const PageHeader = ({ user, project, familiesByGuid, genesById, locusListsByGuid, analysisGroupsByGuid, match }) => {
 
   const { entity, entityGuid, breadcrumb, breadcrumbId } = match.params
   const entityConfig = ENTITY_DETAILS[entity] ? ENTITY_DETAILS[entity](entityGuid, user, project, genesById, locusListsByGuid) : {}
   if (!entityConfig) {
     return null
   }
-  const { title, description, entityLink, entityGuidLink, entityLinks, originalPageLink, button } = entityConfig
+  const { title, entityLink, entityGuidLink, entityLinks, originalPageLink, button } = entityConfig
+  let { description } = entityConfig
 
   let originalPageLinkPath
   const BREADCRUMBS = {
@@ -88,12 +89,25 @@ const PageHeader = ({ user, project, familiesByGuid, genesById, locusListsByGuid
       breadcrumbText: false,
       breadcrumbIdParsers: [
         (breadcrumbIdSection) => {
-          const { familyId } = familiesByGuid[breadcrumbIdSection] || {}
+          const { familyId, description: familyDescription } = familiesByGuid[breadcrumbIdSection] || {}
           originalPageLinkPath = `family/${familyId}`
+          description = familyDescription
           return { content: `Family: ${familyId || breadcrumbIdSection}`, link: match.url }
         },
       ],
       originalPages: [{ name: 'Family' }],
+    },
+    analysis_group: {
+      breadcrumbText: false,
+      breadcrumbIdParsers: [
+        (breadcrumbIdSection) => {
+          const { analysisGroupGuid, name, description: groupDescription } = analysisGroupsByGuid[breadcrumbIdSection] || {}
+          originalPageLinkPath = `family-group/${analysisGroupGuid}?guid=true`
+          description = groupDescription
+          return { content: `Analysis Group: ${name || breadcrumbIdSection}`, link: match.url }
+        },
+      ],
+      originalPages: [{ name: 'Analysis Group' }],
     },
     saved_variants: {
       breadcrumbIdParsers: [
@@ -213,6 +227,7 @@ PageHeader.propTypes = {
   match: PropTypes.object,
   genesById: PropTypes.object,
   locusListsByGuid: PropTypes.object,
+  analysisGroupsByGuid: PropTypes.object,
 }
 
 const mapStateToProps = state => ({
@@ -221,6 +236,7 @@ const mapStateToProps = state => ({
   familiesByGuid: getFamiliesByGuid(state),
   genesById: getGenesById(state),
   locusListsByGuid: getLocusListsByGuid(state),
+  analysisGroupsByGuid: getAnalysisGroupsByGuid(state),
 })
 
 export default connect(mapStateToProps, null, null, { pure: false })(PageHeader)
