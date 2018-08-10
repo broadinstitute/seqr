@@ -15,7 +15,7 @@ class Command(BaseCommand):
     help = "Loads all reference data"
 
     def add_arguments(self, parser):
-        parser.add_argument('--omim-key', help="OMIM key provided with registration at http://www.omim.org", required=True)
+        parser.add_argument('--omim-key', help="OMIM key provided with registration at http://data.omim.org/downloads", required=True)
         parser.add_argument('--skip-gencode', help="Don't reload gencode", action="store_true")
         parser.add_argument('--skip-dbnsfp-gene', help="Don't reload the dbNSFP_gene table", action="store_true")
         parser.add_argument('--skip-gene-constraint', help="Don't reload gene constraint", action="store_true")
