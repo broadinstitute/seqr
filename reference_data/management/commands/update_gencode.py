@@ -2,13 +2,12 @@ import collections
 import gzip
 import logging
 import os
-
-from django.db.utils import DataError
 from tqdm import tqdm
 
 from django.core.management.base import BaseCommand, CommandError
+from django.db.utils import DataError
 
-from reference_data.management.commands.utils.download_utils import download_file_to
+from reference_data.management.commands.utils.download_utils import download_file
 from reference_data.models import GeneInfo, TranscriptInfo, GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38
 
 logger = logging.getLogger(__name__)
@@ -18,6 +17,7 @@ GENCODE_LIFT37_GTF_URL = "ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_huma
 
 
 class Command(BaseCommand):
+    help = "Loads the GRCh37 and/or GRCh38 versions of the Gencode GTF from a particular Gencode release"
 
     def add_arguments(self, parser):
         parser.add_argument('--reset', help="First drop any existing records from GeneInfo and TranscriptInfo", action="store_true")
@@ -26,39 +26,59 @@ class Command(BaseCommand):
         parser.add_argument('genome_version', nargs="?", help="gencode GTF file genome version", choices=[GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38])
 
     def handle(self, *args, **options):
-        gencode_release = options['gencode_release']
-        gencode_file_path = options.get('gencode_gtf_path')
-        genome_version = options.get('genome_version')
+
+        update_gencode(
+            gencode_release=options['gencode_release'],
+            gencode_file_path=options.get('gencode_gtf_path'),
+            genome_version=options.get('genome_version'),
+            reset=options['reset'])
 
 
-        if gencode_file_path and genome_version:
-            gencode_file_paths = {genome_version: gencode_file_path}
-        elif gencode_file_path and not genome_version:
-            raise CommandError("The genome version must also be specified after the gencode GTF file path")
+def update_gencode(gencode_release, gencode_file_path=None, genome_version=None, reset=False):
+    """Update GeneInfo and TranscriptInfo tables.
+
+    Args:
+        gencode_release (int): the gencode release to load (eg. 25)
+        gencode_file_path (str): optional local file path of gencode GTF file. If not provided, it will be downloaded.
+        genome_version (str): '37' or '38'. Required only if gencode_file_path is specified.
+        reset (bool): If True, all records will be deleted from GeneInfo and TranscriptInfo before loading the new data.
+            Setting this to False can be useful to sequentially load more than one gencode release so that data in the
+            tables represents the union of multiple gencode releases.
+    """
+    if gencode_file_path and genome_version and os.path.isfile(gencode_file_path):
+        if gencode_release == 19 and genome_version != GENOME_VERSION_GRCh37:
+            raise CommandError("Invalid genome_version: {}. gencode v19 only has a GRCh37 version".format(genome_version))
+        elif gencode_release <= 22 and genome_version != GENOME_VERSION_GRCh38:
+            raise CommandError("Invalid genome_version: {}. gencode v20, v21, v22 only have a GRCh38 version".format(genome_version))
+        elif (genome_version == GENOME_VERSION_GRCh38) ^ ("lift" in gencode_file_path.lower()):
+            raise CommandError("Invalid genome_version for file: {}. gencode v23 and up must have 'lift' in the filename or genome_version arg must be GRCh38".format(gencode_file_path))
+
+        gencode_file_paths = {genome_version: gencode_file_path}
+    elif gencode_file_path and not genome_version:
+        raise CommandError("The genome version must also be specified after the gencode GTF file path")
+    else:
+        if gencode_release == 19:
+            urls = [('37', GENCODE_GTF_URL.format(gencode_release=gencode_release))]
+        elif gencode_release <= 22:
+            urls = [('38', GENCODE_GTF_URL.format(gencode_release=gencode_release))]
         else:
-            if gencode_release == 19:
-                urls = [('37', GENCODE_GTF_URL.format(gencode_release=gencode_release))]
-            elif gencode_release <= 22:
-                urls = [('38', GENCODE_GTF_URL.format(gencode_release=gencode_release))]
-            else:
-                urls = [
-                    ('37', GENCODE_LIFT37_GTF_URL.format(gencode_release=gencode_release)),
-                    ('38', GENCODE_GTF_URL.format(gencode_release=gencode_release)),
-                ]
-            gencode_file_paths = {}
-            for genome_version, url in urls:
-                local_filename = os.path.basename(url)
-                download_file_to(url, local_filename)
-                gencode_file_paths.update({genome_version: local_filename})
+            urls = [
+                ('37', GENCODE_LIFT37_GTF_URL.format(gencode_release=gencode_release)),
+                ('38', GENCODE_GTF_URL.format(gencode_release=gencode_release)),
+            ]
+        gencode_file_paths = {}
+        for genome_version, url in urls:
+            local_filename = download_file(url)
+            gencode_file_paths.update({genome_version: local_filename})
 
-        if options["reset"]:
-            logger.info("Dropping the {} existing GeneInfo entries".format(GeneInfo.objects.count()))
-            GeneInfo.objects.all().delete()
-            logger.info("Dropping the {} existing TranscriptInfo entries".format(TranscriptInfo.objects.count()))
-            TranscriptInfo.objects.all().delete()
+    if reset:
+        logger.info("Dropping the {} existing TranscriptInfo entries".format(TranscriptInfo.objects.count()))
+        TranscriptInfo.objects.all().delete()
+        logger.info("Dropping the {} existing GeneInfo entries".format(GeneInfo.objects.count()))
+        GeneInfo.objects.all().delete()
 
-        for genome_version, gencode_file_path in gencode_file_paths.items():
-            load_gencode_gtf_file(gencode_file_path, genome_version, gencode_release)
+    for genome_version, gencode_file_path in gencode_file_paths.items():
+        load_gencode_gtf_file(gencode_file_path, genome_version, gencode_release)
 
 
 def load_gencode_gtf_file(gencode_file_path, genome_version, gencode_release):
@@ -73,7 +93,7 @@ def load_gencode_gtf_file(gencode_file_path, genome_version, gencode_release):
     gene_id_to_gene_info = {g.gene_id: g for g in GeneInfo.objects.all().only('gene_id')}
     transcript_id_to_transcript_info = {t.transcript_id: t for t in TranscriptInfo.objects.all().only('transcript_id')}
 
-    logger.info("Loading {}".format(gencode_file_path))
+    logger.info("Loading {}  (genome version: {})".format(gencode_file_path, genome_version))
     with gzip.open(gencode_file_path) as gencode_file:
 
         counters = collections.defaultdict(int)
@@ -85,14 +105,15 @@ def load_gencode_gtf_file(gencode_file_path, genome_version, gencode_release):
             if record['feature_type'] == 'gene':
                 record = {
                     "gene_id": record["gene_id"],
-                    "gencode_release": int(gencode_release),
+                    "gene_symbol": record["gene_name"],
+
                     "chrom_grch{}".format(genome_version): record["chrom"],
                     "start_grch{}".format(genome_version): record["start"],
                     "end_grch{}".format(genome_version): record["end"],
                     "strand_grch{}".format(genome_version): record["strand"],
 
                     "gencode_gene_type": record["gene_type"],
-                    "gencode_gene_name": record["gene_name"],
+                    "gencode_release": int(gencode_release),
                 }
 
                 gene_info = gene_id_to_gene_info.get(record['gene_id'])
@@ -155,17 +176,17 @@ def _update_coding_region_sizes(transcript_id_to_transcript_info, transcript_id_
         transcript_id_to_cds_size (dict): for coding transcripts, maps ENST transcript IDs to their coding region size.
         genome_version (str): "37" or "38"
     """
-    field_name = "coding_region_size_grch{}".format(genome_version)
+    coding_region_size_field_name = "coding_region_size_grch{}".format(genome_version)
 
-    logger.info("Updating {}".format(field_name))
+    logger.info("Updating {}".format(coding_region_size_field_name))
     for transcript_id, coding_region_size in tqdm(transcript_id_to_cds_size.items(), unit=" transcripts"):
         transcript_info = transcript_id_to_transcript_info[transcript_id]
-        setattr(transcript_info, field_name, coding_region_size)
+        setattr(transcript_info, coding_region_size_field_name, coding_region_size)
         transcript_info.save()
 
         gene_info = transcript_info.gene
-        if coding_region_size > gene_info.gencode_coding_region_size:
-            setattr(gene_info, field_name, coding_region_size)
+        if coding_region_size > getattr(gene_info, coding_region_size_field_name):
+            setattr(gene_info, coding_region_size_field_name, coding_region_size)
             gene_info.save()
 
 

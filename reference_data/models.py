@@ -9,7 +9,8 @@ GENOME_VERSION_CHOICES = [
 ]
 
 
-# HPO categories are direct children of HP:0000118 "Phenotypic abnormality".  See http://compbio.charite.de/hpoweb/showterm?id=HP:0000118
+# HPO categories are direct children of HP:0000118 "Phenotypic abnormality".
+# See http://compbio.charite.de/hpoweb/showterm?id=HP:0000118
 HPO_CATEGORY_NAMES = {
     'HP:0000478': 'Eye',
     'HP:0025142': 'Constitutional Symptom',
@@ -63,9 +64,8 @@ class GeneInfo(models.Model):
     """
 
     # gencode fields
-    gene_id = models.CharField(max_length=20, db_index=True, unique=True)         # without the version suffix (eg. "ENSG0000012345")
-
-    gencode_release = models.IntegerField(null=True, blank=True)  # eg. 25 - the (newest) gencode release from which this gene was loaded
+    gene_id = models.CharField(max_length=20, db_index=True, unique=True)   # without the version suffix (eg. "ENSG0000012345")
+    gene_symbol = models.TextField(null=True, blank=True)
 
     chrom_grch37 = models.CharField(max_length=2, null=True, blank=True)
     start_grch37 = models.IntegerField(null=True, blank=True)
@@ -79,25 +79,76 @@ class GeneInfo(models.Model):
     strand_grch38 = models.CharField(max_length=1, null=True, blank=True)
     coding_region_size_grch38 = models.IntegerField(default=0)  # number of protein-coding base-pairs in this gene (= 0 for non-coding genes)
 
+    # gencode-specific fields, although models could hypothetically come from refseq or other places
     gencode_gene_type = models.TextField(null=True, blank=True)
-    gencode_gene_name = models.TextField(null=True, blank=True)
+    gencode_release = models.IntegerField(null=True, blank=True)
 
 
+class TranscriptInfo(models.Model):
+    gene = models.ForeignKey(GeneInfo, on_delete=models.CASCADE)
 
-    # OMIM fields
-    mim_number = models.IntegerField(null=True, blank=True)  # Example: 601365
-    omim_version = models.DateTimeField(null=True, blank=True)  # date omim was downloaded
-    omim_gene_description = models.TextField(null=True, blank=True)  # Example: "Dishevelled 1 (homologous to Drosophila dsh)"
-    omim_comments = models.TextField(null=True, blank=True)  # Example: "associated with rs10492972"
-    omim_phenotypes = models.TextField(null=True, blank=True)  # Example: '{ "phenotype_inheritance": "Autosomal dominant", "phenotype_mim_number": "616331", "phenotype_description": "Robinow syndrome, autosomal dominant 2", "phenotype_map_method": 2}'
+    transcript_id = models.CharField(max_length=20, db_index=True, unique=True)  # without the version suffix
+    #protein_id = models.CharField(max_length=20, null=True)
 
-    # dbNSFPv3.5a_gene fields
+    chrom_grch37 = models.CharField(max_length=2, null=True, blank=True)
+    start_grch37 = models.IntegerField(null=True, blank=True)
+    end_grch37 = models.IntegerField(null=True, blank=True)
+    strand_grch37 = models.CharField(max_length=1, null=True, blank=True)
+    coding_region_size_grch37 = models.IntegerField(default=0)  # number of protein-coding bases (= 0 for non-coding genes)
+
+    chrom_grch38 = models.CharField(max_length=2, null=True, blank=True)
+    start_grch38 = models.IntegerField(null=True, blank=True)
+    end_grch38 = models.IntegerField(null=True, blank=True)
+    strand_grch38 = models.CharField(max_length=1, null=True, blank=True)
+    coding_region_size_grch38 = models.IntegerField(default=0)  # number of protein-coding bases (= 0 for non-coding genes)
+
+
+# based on # ftp://ftp.broadinstitute.org/pub/ExAC_release/release0.3.1/functional_gene_constraint/fordist_cleaned_exac_r03_march16_z_pli_rec_null_data.txt
+class GeneConstraint(models.Model):
+    gene = models.ForeignKey(GeneInfo, on_delete=models.CASCADE)
+
+    mis_z = models.FloatField()
+    mis_z_rank = models.IntegerField()
+    pLI = models.FloatField()
+    pLI_rank = models.IntegerField()
+
+    #pRec = models.FloatField()
+
+
+class OMIM(models.Model):
+    MAP_METHOD_CHOICES = (
+        ('1', 'the disorder is placed on the map based on its association with a gene, but the underlying defect is not known.'),
+        ('2', 'the disorder has been placed on the map by linkage; no mutation has been found.'),
+        ('3', 'the molecular basis for the disorder is known; a mutation has been found in the gene.'),
+        ('4', 'a contiguous gene deletion or duplication syndrome, multiple genes are deleted or duplicated causing the phenotype.'),
+    )
+
+    gene = models.ForeignKey(GeneInfo, on_delete=models.CASCADE)
+
+    mim_number = models.IntegerField()  # Example: 601365
+    gene_description = models.TextField(null=True, blank=True)  # Example: "Dishevelled 1 (homologous to Drosophila dsh)"
+    comments = models.TextField(null=True, blank=True)  # Example: "associated with rs10492972"
+    phenotype_inheritance = models.TextField(null=True, blank=True)  # Example: "Autosomal dominant"
+    phenotype_mim_number = models.IntegerField(null=True, blank=True)  # Example: 616331
+    phenotype_description = models.TextField(null=True, blank=True)  # Example: "Robinow syndrome, autosomal dominant 2"
+    phenotype_map_method  = models.CharField(max_length=1, choices=MAP_METHOD_CHOICES)  # Example: 2
+
+    class Meta:
+        # ('mim_number', 'phenotype_mim_number') is not unique - for example ('124020', '609535')
+        unique_together = ('mim_number', 'phenotype_mim_number', 'phenotype_description')
+
+
+# based on dbNSFPv3.5a_gene fields
+class dbNSFPGene(models.Model):
+    gene = models.ForeignKey(GeneInfo, on_delete=models.CASCADE)
+
     function_desc = models.TextField(null=True, blank=True)
     disease_desc = models.TextField(null=True, blank=True)
     uniprot_acc = models.TextField(null=True, blank=True)
     uniprot_id = models.TextField(null=True, blank=True)
     entrez_gene_id = models.TextField(null=True, blank=True)
     ccds_id = models.TextField(null=True, blank=True)
+    refseq_id = models.TextField(null=True, blank=True)
     ucsc_id = models.TextField(null=True, blank=True)
     pathway_uniprot = models.TextField(null=True, blank=True)
     pathway_biocarta_short = models.TextField(null=True, blank=True)  #  Short name of the Pathway(s) the gene belongs to (from BioCarta)
@@ -123,32 +174,3 @@ class GeneInfo(models.Model):
     zebrafish_structure = models.TextField(null=True, blank=True)   # Affected structure of the homolog zebrafish gene from ZFIN
     zebrafish_phenotype_quality = models.TextField(null=True, blank=True)   # Phenotype description for the homolog zebrafish gene from ZFIN
     zebrafish_phenotype_tag = models.TextField(null=True, blank=True)   # Phenotype tag for the homolog zebrafish gene from ZFIN
-
-    # gene constraint fields
-    missense_z = models.FloatField(null=True, blank=True)
-    pLI = models.FloatField(null=True, blank=True)
-    pRec = models.FloatField(null=True, blank=True)
-
-
-class TranscriptInfo(models.Model):
-    gene = models.ForeignKey(GeneInfo, on_delete=models.CASCADE)
-    transcript_id = models.CharField(max_length=20, db_index=True, unique=True)  # without the version suffix
-    #protein_id = models.CharField(max_length=20, null=True)
-
-
-
-    chrom_grch37 = models.CharField(max_length=2, null=True, blank=True)
-    start_grch37 = models.IntegerField(null=True, blank=True)
-    end_grch37 = models.IntegerField(null=True, blank=True)
-    strand_grch37 = models.CharField(max_length=1, null=True, blank=True)
-    coding_region_size_grch37 = models.IntegerField(default=0)  # number of protein-coding bases (= 0 for non-coding genes)
-
-    chrom_grch38 = models.CharField(max_length=2, null=True, blank=True)
-    start_grch38 = models.IntegerField(null=True, blank=True)
-    end_grch38 = models.IntegerField(null=True, blank=True)
-    strand_grch38 = models.CharField(max_length=1, null=True, blank=True)
-    coding_region_size_grch38 = models.IntegerField(default=0)  # number of protein-coding bases (= 0 for non-coding genes)
-
-# Constraint, pLI
-# GTEx
-
