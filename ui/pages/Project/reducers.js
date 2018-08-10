@@ -2,7 +2,7 @@ import { combineReducers } from 'redux'
 import { SubmissionError } from 'redux-form'
 
 import { loadingReducer, createSingleObjectReducer, createObjectsByIdReducer, createSingleValueReducer } from 'redux/utils/reducerFactories'
-import { REQUEST_PROJECTS, RECEIVE_DATA } from 'redux/rootReducer'
+import { REQUEST_PROJECTS, RECEIVE_DATA, updateEntity } from 'redux/rootReducer'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 import { getProject, getProjectFamiliesByGuid } from 'pages/Project/selectors'
 import {
@@ -165,6 +165,10 @@ export const updateLocusLists = (values) => {
       (e) => { throw new SubmissionError({ _error: [e.message] }) },
     ).post(values)
   }
+}
+
+export const updateAnalysisGroup = (values) => {
+  return updateEntity(values, RECEIVE_DATA, `/api/project/${values.projectGuid}/analysis_group`, 'analysisGroupGuid')
 }
 
 // Table actions

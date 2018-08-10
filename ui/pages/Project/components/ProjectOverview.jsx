@@ -22,6 +22,7 @@ import {
   getProjectAnalysisGroupSamplesByGuid,
   getProjectAnalysisGroupsByGuid,
 } from '../selectors'
+import { UpdateAnalysisGroupButton, DeleteAnalysisGroupButton } from './AnalysisGroupButtons'
 
 const DetailContent = styled.div`
  padding: 5px 0px 0px 20px;
@@ -82,10 +83,10 @@ const ProjectOverview = ({ project, analysisGroup, familiesByGuid, individualsBy
                       content={<div><b>{ag.familyGuids.length} Families</b><br /><i>{ag.description}</i></div>}
                       size="small"
                     />
-                    {/* TODO edit/ remove */}
+                    <DeleteAnalysisGroupButton analysisGroup={ag} iconOnly />
                   </div>)
               }
-              {project.canEdit ? <span><br /><EditFamiliesAndIndividualsButton /></span> : null}<br />
+              {project.canEdit ? <span><br /><UpdateAnalysisGroupButton /></span> : null}<br />
             </DetailContent>
           </Grid.Column>
         }

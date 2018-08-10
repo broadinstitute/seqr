@@ -90,11 +90,7 @@ class GeneLists extends React.PureComponent {
     this.modalName = `${props.project.projectGuid}-add-gene-list`
   }
 
-  selectList = (locusListGuids, selected) => {
-    const updatedSelected = {
-      ...this.state.selected,
-      ...locusListGuids.reduce((acc, locusListGuid) => ({ ...acc, [locusListGuid]: selected }), {}),
-    }
+  selectList = (updatedSelected) => {
     this.setState({ selected: updatedSelected })
     this.props.setModalConfirm(
       this.modalName,
@@ -142,6 +138,7 @@ class GeneLists extends React.PureComponent {
                 omitFields={OMIT_LOCUS_LIST_FIELDS}
                 omitLocusLists={project.locusListGuids}
                 selectRows={this.selectList}
+                selectedRows={this.state.selected}
               />
               <Divider />
               <DispatchRequestButton onSubmit={this.submit} onSuccess={this.closeModal}>

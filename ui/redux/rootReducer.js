@@ -25,7 +25,7 @@ const REQUEST_GENE_LIST = 'REQUEST_GENE_LIST'
 // action creators
 
 // A helper action that handles create, update and delete requests
-const updateEntity = (values, receiveDataAction, urlPath, idField, actionSuffix) => {
+export const updateEntity = (values, receiveDataAction, urlPath, idField, actionSuffix) => {
   return (dispatch) => {
     let action = 'create'
     if (values[idField]) {

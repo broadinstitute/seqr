@@ -27,6 +27,7 @@ class SortableTable extends React.PureComponent {
     idField: PropTypes.string,
     defaultSortColumn: PropTypes.string,
     selectRows: PropTypes.func,
+    selectedRows: PropTypes.object,
   }
 
   constructor(props) {
@@ -35,7 +36,6 @@ class SortableTable extends React.PureComponent {
     this.state = {
       column: props.defaultSortColumn,
       direction: 'ascending',
-      selected: {},
     }
   }
 
@@ -56,10 +56,10 @@ class SortableTable extends React.PureComponent {
 
   allSelected = () => (
     this.props.data.length > 0 &&
-    Object.keys(this.state.selected).length === this.props.data.length &&
-    Object.values(this.state.selected).every(isSelected => isSelected)
+    Object.keys(this.props.selectedRows).length === this.props.data.length &&
+    Object.values(this.props.selectedRows).every(isSelected => isSelected)
   )
-  someSelected = () => Object.values(this.state.selected).includes(true) && Object.values(this.state.selected).includes(false)
+  someSelected = () => Object.values(this.props.selectedRows).includes(true) && Object.values(this.props.selectedRows).includes(false)
 
   selectAll = () => {
     if (!this.props.selectRows) {
@@ -68,8 +68,7 @@ class SortableTable extends React.PureComponent {
 
     const rowIds = this.props.data.map(row => row[this.props.idField])
     const allSelected = !this.allSelected()
-    this.props.selectRows(rowIds, allSelected)
-    this.setState({ selected: rowIds.reduce((acc, rowId) => ({ ...acc, [rowId]: allSelected }), {}) })
+    this.props.selectRows(rowIds.reduce((acc, rowId) => ({ ...acc, [rowId]: allSelected }), {}))
   }
 
   handleSelect = rowId => () => {
@@ -77,14 +76,12 @@ class SortableTable extends React.PureComponent {
       return
     }
 
-    const selected = !this.state.selected[rowId]
-    this.props.selectRows([rowId], selected)
-    this.setState({ selected: { ...this.state.selected, [rowId]: selected } })
+    this.props.selectRows({ ...this.props.selectedRows, [rowId]: !this.props.selectedRows[rowId] })
   }
 
   render() {
-    const { data, defaultSortColumn, idField, columns, selectRows, ...tableProps } = this.props
-    const { column, direction, selected } = this.state
+    const { data, defaultSortColumn, idField, columns, selectRows, selectedRows = {}, ...tableProps } = this.props
+    const { column, direction } = this.state
 
     let sortedData = data.sort(compareObjects(column))
     if (direction === DESCENDING) {
@@ -96,7 +93,7 @@ class SortableTable extends React.PureComponent {
         <Table.Header>
           <Table.Row>
             {selectRows &&
-              <Table.HeaderCell collapsing content={<Checkbox checked={this.allSelected()} indeterminate={this.someSelected()} onClick={this.selectAll} />} />
+              <Table.HeaderCell width={1} content={<Checkbox checked={this.allSelected()} indeterminate={this.someSelected()} onClick={this.selectAll} />} />
             }
             {columns.map(({ name, format, ...columnProps }) =>
               <Table.HeaderCell
@@ -110,8 +107,8 @@ class SortableTable extends React.PureComponent {
         </Table.Header>
         <Table.Body>
           {sortedData.map(row => (
-            <Table.Row key={row[idField]} onClick={this.handleSelect(row[idField])} active={selected[row[idField]]}>
-              {selectRows && <Table.Cell content={<Checkbox checked={selected[row[idField]]} />} />}
+            <Table.Row key={row[idField]} onClick={this.handleSelect(row[idField])} active={selectedRows[row[idField]]}>
+              {selectRows && <Table.Cell content={<Checkbox checked={selectedRows[row[idField]]} />} />}
               {columns.map(({ name, format }) =>
                 <Table.Cell
                   key={name}
@@ -127,3 +124,19 @@ class SortableTable extends React.PureComponent {
 }
 
 export default SortableTable
+
+const EMPTY_OBJECT = {}
+export const SelectableTableFormInput = ({ value, onChange, error, ...props }) =>
+  <SortableTable
+    basic="very"
+    fixed
+    selectRows={onChange}
+    selectedRows={value || EMPTY_OBJECT}
+    {...props}
+  />
+
+SelectableTableFormInput.propTypes = {
+  value: PropTypes.any,
+  onChange: PropTypes.func,
+  error: PropTypes.bool,
+}
