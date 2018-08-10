@@ -2,14 +2,13 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import DocumentTitle from 'react-document-title'
 import { connect } from 'react-redux'
+import { Route, Switch, NavLink } from 'react-router-dom'
 import styled from 'styled-components'
 import { Grid, Breadcrumb } from 'semantic-ui-react'
-import { NavLink } from 'react-router-dom'
 
-import { getUser, getFamiliesByGuid, getGenesById, getLocusListsByGuid, getAnalysisGroupsByGuid } from 'redux/selectors'
-import { getProject } from 'pages/Project/selectors'
-import EditProjectButton from '../buttons/EditProjectButton'
-import { CreateLocusListButton, DeleteLocusListButton } from '../buttons/LocusListButtons'
+import ProjectPageHeader from 'pages/Project/components/PageHeader'
+import { LocusListPageHeader } from 'pages/LocusLists'
+import { getGenesById } from 'redux/selectors'
 import { snakecaseToTitlecase } from '../../utils/stringUtils'
 
 
@@ -32,145 +31,35 @@ const BreadcrumbContainer = styled.div`
     cursor: auto !important;
   }
 `
-const NavLinkNoActive = styled(NavLink)`
-  &.active {
-    display: none;
-  }
-`
 
-const ENTITY_DETAILS = {
-  dashboard: () => false,
-  project: (entityGuid, user, project) => (project ? {
-    title: project.name,
-    description: project.description,
-    entityGuidLink: 'project_page',
-    originalPageLink: `project/${project.deprecatedProjectId}`,
-    entityLinks: [
-      project.hasGeneSearch ?
-        <a key="gene" href={`/project/${project.deprecatedProjectId}/gene`}><br />Gene Search<br /></a> : null,
-      user.is_staff ?
-        <NavLinkNoActive key="case_review" to={`/project/${project.projectGuid}/case_review`}>Case Review<br /></NavLinkNoActive> : null,
-    ],
-    button: <EditProjectButton />,
-  } : null),
-  gene_lists: (entityGuid, user, project, genesById, locusListsByGuid) => (
-    (entityGuid && !locusListsByGuid[entityGuid]) ? false : {
-      title: entityGuid && locusListsByGuid[entityGuid].name,
-      entityLink: '/gene_lists',
-      description: !entityGuid && 'This page shows all of the gene lists that are available in your account',
-      originalPageLink: entityGuid ? `gene-lists/${entityGuid}?guid=true` : 'gene-lists',
-      button: entityGuid ? <DeleteLocusListButton locusList={locusListsByGuid[entityGuid]} /> : <CreateLocusListButton />,
-    }
-  ),
-  gene_info: (entityGuid, user, project, genesById) => ({
-    title: entityGuid && (genesById[entityGuid] ? genesById[entityGuid].symbol : entityGuid),
-    entityLink: '/gene_info',
-    originalPageLink: `gene/${entityGuid || ''}`,
-  }),
-}
-
-const PageHeader = ({ user, project, familiesByGuid, genesById, locusListsByGuid, analysisGroupsByGuid, match }) => {
-
-  const { entity, entityGuid, breadcrumb, breadcrumbId } = match.params
-  const entityConfig = ENTITY_DETAILS[entity] ? ENTITY_DETAILS[entity](entityGuid, user, project, genesById, locusListsByGuid) : {}
-  if (!entityConfig) {
-    return null
-  }
-  const { title, entityLink, entityGuidLink, entityLinks, originalPageLink, button } = entityConfig
-  let { description } = entityConfig
-
-  let originalPageLinkPath
-  const BREADCRUMBS = {
-    project_page: {
-      breadcrumbText: false,
-      originalPages: [{ name: 'Project', path: '' }, { name: 'Families', path: 'families' }],
-    },
-    family_page: {
-      breadcrumbText: false,
-      breadcrumbIdParsers: [
-        (breadcrumbIdSection) => {
-          const { familyId, description: familyDescription } = familiesByGuid[breadcrumbIdSection] || {}
-          originalPageLinkPath = `family/${familyId}`
-          description = familyDescription
-          return { content: `Family: ${familyId || breadcrumbIdSection}`, link: match.url }
-        },
-      ],
-      originalPages: [{ name: 'Family' }],
-    },
-    analysis_group: {
-      breadcrumbText: false,
-      breadcrumbIdParsers: [
-        (breadcrumbIdSection) => {
-          const { analysisGroupGuid, name, description: groupDescription } = analysisGroupsByGuid[breadcrumbIdSection] || {}
-          originalPageLinkPath = `family-group/guid/${analysisGroupGuid}/`
-          description = groupDescription
-          entityLinks.unshift(
-            <a key="group-search" href={`/project/${project.deprecatedProjectId}/family-group/guid/${analysisGroupGuid}/combine-mendelian-families`}>
-              <br />Analysis Group Search
-            </a>,
-          )
-          return { content: `Analysis Group: ${name || breadcrumbIdSection}`, link: match.url }
-        },
-      ],
-      originalPages: [{ name: 'Analysis Group' }],
-    },
-    saved_variants: {
-      breadcrumbIdParsers: [
-        (breadcrumbIdSection) => {
-          if (breadcrumbIdSection === 'family' || breadcrumbIdSection === 'variant') { return { content: null } }
-          originalPageLinkPath = `variants/${breadcrumbIdSection}`
-          return null
-        },
-        (breadcrumbIdSection) => {
-          if (breadcrumbIdSection.startsWith('SV')) {
-            originalPageLinkPath = false
-            return { content: 'Variant', link: match.url }
-          }
-          const { familyId } = familiesByGuid[breadcrumbIdSection] || {}
-          originalPageLinkPath = `saved-variants?family=${familyId}`
-          return {
-            content: `Family: ${familyId || breadcrumbIdSection}`,
-            link: `/project/${project.projectGuid}/saved_variants/family/${breadcrumbIdSection}`,
-          }
-        },
-        (breadcrumbIdSection) => {
-          originalPageLinkPath = `variants/${breadcrumbIdSection}?${originalPageLinkPath.split('?')[1]}`
-          return null
-        },
-      ],
-      originalPages: [{ path: 'saved-variants' }],
-    },
-  }
-
-  const {
-    breadcrumbText = snakecaseToTitlecase(breadcrumb),
-    breadcrumbIdParsers = [],
-    originalPages = [{ path: '' }],
-  } = BREADCRUMBS[breadcrumb] || {}
-
+export const PageHeaderLayout = ({
+  entity, entityGuid, breadcrumb, breadcrumbId, breadcrumbIdSections, title, header, entityLinkPath, entityGuidLinkPath,
+  entityLinks, originalPages = [], originalPagePath = '', button, description,
+}) => {
   let breadcrumbSections = [
-    { content: snakecaseToTitlecase(entity), link: entityLink },
+    { content: snakecaseToTitlecase(entity), link: entityLinkPath === undefined ? `/${entity}` : entityLinkPath },
   ]
   if (entityGuid) {
     breadcrumbSections.push(
-      { content: title || entityGuid, link: `/${entity}/${entityGuid}${entityGuidLink ? `/${entityGuidLink}` : ''}` },
+      { content: title || entityGuid, link: `/${entity}/${entityGuid}${entityGuidLinkPath ? `/${entityGuidLinkPath}` : ''}` },
     )
   }
-  if (breadcrumb && breadcrumbText !== false) {
+  if (breadcrumbIdSections) {
+    breadcrumbSections = breadcrumbSections.concat(breadcrumbIdSections)
+  } else if (breadcrumb) {
     breadcrumbSections.push({
-      content: breadcrumbText,
+      content: snakecaseToTitlecase(breadcrumb),
       link: `/${entity}/${entityGuid}/${breadcrumb}`,
     })
-  }
-  if (breadcrumbId) {
-    const breadcrumbIds = breadcrumbId.split('/')
-    breadcrumbSections = breadcrumbSections.concat(breadcrumbIds.map((breadcrumbIdSection, i) => {
-      const defaultIdBreadcrumb = {
-        content: breadcrumbIdSection,
-        link: `/${entity}/${entityGuid}/${breadcrumb}/${breadcrumbIds.slice(0, i + 1).join('/')}`,
-      }
-      return breadcrumbIdParsers[i] ? breadcrumbIdParsers[i](breadcrumbIdSection) || defaultIdBreadcrumb : defaultIdBreadcrumb
-    }))
+    if (breadcrumbId) {
+      const breadcrumbIds = breadcrumbId.split('/')
+      breadcrumbSections = breadcrumbSections.concat(breadcrumbIds.map((breadcrumbIdSection, i) => (
+        {
+          content: breadcrumbIdSection,
+          link: `/${entity}/${entityGuid}/${breadcrumb}/${breadcrumbIds.slice(0, i + 1).join('/')}`,
+        }
+      )))
+    }
   }
 
   const breadcrumbs = breadcrumbSections.reduce(
@@ -190,7 +79,7 @@ const PageHeader = ({ user, project, familiesByGuid, genesById, locusListsByGuid
   )
   return (
     <PageHeaderRow>
-      <DocumentTitle key="title" title={`${breadcrumb || 'seqr'}: ${title || snakecaseToTitlecase(entity)}`} />
+      <DocumentTitle key="title" title={header || `${breadcrumb || 'seqr'}: ${title || snakecaseToTitlecase(entity)}`} />
       <Grid.Column width={1} />
       <Grid.Column width={11}>
         <BreadcrumbContainer>
@@ -207,13 +96,18 @@ const PageHeader = ({ user, project, familiesByGuid, genesById, locusListsByGuid
         {button}
       </Grid.Column>
       <Grid.Column width={3}>
-        {entityLinks && <b>{entityLinks}</b>}
+        {entityLinks &&
+          <b><br />
+            {entityLinks.map(({ text, href, ...linkProps }) =>
+              <div key={text}>{href ? <a href={href}>{text}</a> : <NavLink {...linkProps}>{text}</NavLink>}</div>,
+            )}
+          </b>
+        }
         <br />
-        {originalPageLink && originalPageLinkPath !== false && originalPages.map((page) => {
-          const linkTitle = page.name || breadcrumbText || snakecaseToTitlecase(entity)
-          const linkPath = originalPageLinkPath || page.path
+        {originalPages.map((page) => {
+          const linkTitle = page.name || snakecaseToTitlecase(entity)
           return (
-            <a key={linkTitle} href={`/${originalPageLink}${linkPath ? '/' : ''}${linkPath}`}>
+            <a key={linkTitle} href={`/${originalPagePath}${originalPagePath ? '/' : ''}${page.path}`}>
               Deprecated {linkTitle} Page <br />
             </a>
           )
@@ -225,24 +119,52 @@ const PageHeader = ({ user, project, familiesByGuid, genesById, locusListsByGuid
   )
 }
 
-PageHeader.propTypes = {
-  user: PropTypes.object,
-  project: PropTypes.object,
-  familiesByGuid: PropTypes.object,
-  match: PropTypes.object,
-  genesById: PropTypes.object,
-  locusListsByGuid: PropTypes.object,
-  analysisGroupsByGuid: PropTypes.object,
+PageHeaderLayout.propTypes = {
+  entity: PropTypes.string.isRequired,
+  entityGuid: PropTypes.string,
+  breadcrumb: PropTypes.string,
+  breadcrumbId: PropTypes.string,
+  breadcrumbIdSections: PropTypes.array,
+  title: PropTypes.string,
+  header: PropTypes.string,
+  entityLinkPath: PropTypes.string,
+  entityGuidLinkPath: PropTypes.string,
+  entityLinks: PropTypes.array,
+  originalPages: PropTypes.array,
+  originalPagePath: PropTypes.string,
+  button: PropTypes.node,
+  description: PropTypes.string,
 }
 
-const mapStateToProps = state => ({
-  user: getUser(state),
-  project: getProject(state),
-  familiesByGuid: getFamiliesByGuid(state),
-  genesById: getGenesById(state),
-  locusListsByGuid: getLocusListsByGuid(state),
-  analysisGroupsByGuid: getAnalysisGroupsByGuid(state),
+
+const originalGenePage = geneId => [{ path: geneId || '' }]
+
+const BaseGenePageHeader = ({ gene, match }) =>
+  <PageHeaderLayout
+    entity="gene_info"
+    entityGuid={match.params.geneId}
+    title={match.params.geneId && (gene ? gene.symbol : match.params.geneId)}
+    originalPagePath="gene"
+    originalPages={originalGenePage(match.params.geneId)}
+  />
+
+BaseGenePageHeader.propTypes = {
+  gene: PropTypes.object,
+  match: PropTypes.object,
+}
+
+const mapStateToProps = (state, ownProps) => ({
+  gene: getGenesById(state)[ownProps.match.params.geneId],
 })
 
-export default connect(mapStateToProps, null, null, { pure: false })(PageHeader)
+export const GenePageHeader = connect(mapStateToProps)(BaseGenePageHeader)
 
+export default () =>
+  <Switch>
+    <Route path="/dashboard" component={() => null} />
+    <Route path="/project/:projectGuid/saved_variants/:variantPage?/:breadcrumbId?/:tag?" component={({ match }) => <ProjectPageHeader match={match} breadcrumb="saved_variants" />} />
+    <Route path="/project/:projectGuid/:breadcrumb/:breadcrumbId*" component={ProjectPageHeader} />
+    <Route path="/gene_lists/:locusListGuid?" component={LocusListPageHeader} />
+    <Route path="/gene_info/:geneId?" component={GenePageHeader} />
+    <Route path="/:entity/:entityGuid?/:breadcrumb?/:breadcrumbId*" component={({ match }) => <PageHeaderLayout {...match.params} />} />
+  </Switch>
