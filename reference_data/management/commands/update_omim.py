@@ -98,7 +98,10 @@ def update_omim(omim_key=None, genemap2_file_path=None):
         raise CommandError("Must provide --omim-key or genemap2.txt file path")
 
     logger.info("Parsing genemap2 file")
-    genemap2_records = [r for r in parse_genemap2_table(tqdm(genemap2_file, unit=" lines"))]
+    try:
+        genemap2_records = [r for r in parse_genemap2_table(tqdm(genemap2_file, unit=" lines"))]
+    except Exception as e:
+        raise CommandError("Unable to parse {}: {}".format(genemap2_file, e))
 
     logger.info("Deleting {} existing OMIM records".format(Omim.objects.count()))
     Omim.objects.all().delete()
@@ -156,7 +159,7 @@ def parse_genemap2_table(omim_genemap2_file_iter):
         elif line.startswith('This account is inactive'):
             raise Exception(line)
         elif header_fields is None:
-            raise ValueError("Header row not found in genemap2 file before line {}: {}".foramt(i, line))
+            raise ValueError("Header row not found in genemap2 file before line {}: {}".format(i, line))
 
         fields = line.rstrip('\r\n').split('\t')
         if len(fields) != len(header_fields):
