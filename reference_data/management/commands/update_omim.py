@@ -1,4 +1,3 @@
-
 """
 This script retrieves OMIM data from omim.org and parses/converts relevant fields into a tsv table.
 
@@ -49,7 +48,9 @@ import os
 import re
 from tqdm import tqdm
 
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
+
+from reference_data.management.commands.utils.download_utils import download_file
 from reference_data.models import GeneInfo, Omim
 
 logger = logging.getLogger(__name__)
