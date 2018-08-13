@@ -33,10 +33,21 @@ class Command(BaseCommand):
         if not options["skip_dbnsfp_gene"]:
             update_dbnsfp_gene()
         if not options["skip_gene_constraint"]:
-            update_gene_constraint()
+            try:
+                update_gene_constraint()
+            except Exception as e:
+                logger.error("unable to update gene constraint: {}".format(e))
+
         if not options["skip_omim"]:
             if not options["omim_key"]:
                 raise CommandError("Please provide --omim-key or use --skip-omim")
-            update_omim(omim_key=options["omim_key"])
+            try:
+                update_omim(omim_key=options["omim_key"])
+            except Exception as e:
+                logger.error("unable to update omim: {}".format(e))
+
         if not options["skip_hpo"]:
-            update_hpo()
+            try:
+                update_hpo()
+            except Exception as e:
+                logger.error("unable to update human phenotype ontology: {}".format(e))
