@@ -66,7 +66,7 @@ ARG DISABLE_CACHE=1
 #RUN wget -N https://raw.githubusercontent.com/macarthur-lab/seqr/master/requirements.txt \
 #    && pip install --upgrade -r requirements.txt
 
-RUN git clone -q https://github.com/macarthur-lab/seqr  # && cd seqr && git checkout bw2_loading_using_hail
+RUN git clone -q https://github.com/macarthur-lab/seqr
 
 WORKDIR /seqr
 

@@ -9,7 +9,9 @@ alias gs='gsutil'
 #gsutil config
 #gcloud init
 
-export SPARK_HOME=/usr/local/spark-2.0.2-bin-hadoop2.7
+export PATH=/usr/local/spark-2.0.2-bin-hadoop2.7/bin/spark-submit:$PATH
+
 export HAIL_HOME=/hail
+export SPARK_HOME=/usr/local/spark-2.0.2-bin-hadoop2.7
 export PYTHONPATH="$PYTHONPATH:$HAIL_HOME/python:$SPARK_HOME/python:$(echo $SPARK_HOME/python/lib/py4j*-src.zip)"
 export SPARK_CLASSPATH=$HAIL_HOME/build/libs/hail-all-spark.jar

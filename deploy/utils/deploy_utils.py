@@ -14,7 +14,6 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 
-
 def deploy(deployment_target, components, output_dir=None, other_settings={}):
     """Deploy all seqr components to a kubernetes cluster.
     Args:
@@ -549,9 +548,9 @@ def deploy_init_cluster(settings):
 
     elif settings["DEPLOY_TO"] == "minikube":
         run("mkdir -p %(LOCAL_DATA_DIR)s" % settings)
-        run("mkdir -p %(POSTGRES_DBPATH)s" % settings)
-        run("mkdir -p %(MONGO_DBPATH)s" % settings)
-        run("mkdir -p %(ELASTICSEARCH_DBPATH)s" % settings)
+        run("mkdir -p %(LOCAL_DATA_DIR)s/postgres" % settings)
+        run("mkdir -p %(LOCAL_DATA_DIR)s/elasticsearch" % settings)
+        run("mkdir -p %(LOCAL_DATA_DIR)s/mongo" % settings)
 
         # start minikube
         #run("minikube delete", ignore_all_errors=True)
@@ -561,6 +560,7 @@ def deploy_init_cluster(settings):
             logger.info("minikube status: %s" % str(e))
 
             logger.info("starting minikube: ")
+            # --mount-string %(LOCAL_DATA_DIR)s:%(MINIKUBE_DATA_DIR)s --mount
             run("minikube start --disk-size=%(MINIKUBE_DISK_SIZE)s --memory %(MINIKUBE_MEMORY)s --cpus %(MINIKUBE_NUM_CPUS)s --vm-driver=%(MINIKUBE_VM_DRIVER)s" % settings)
 
         # fix time sync issues on MacOSX which could interfere with token auth (https://github.com/kubernetes/minikube/issues/1378)
@@ -645,6 +645,7 @@ def deploy_secrets(settings):
             "kubectl create secret generic gcloud-client-secrets",
             "--from-file deploy/secrets/shared/gcloud/client_secrets.json",
             "--from-file deploy/secrets/shared/gcloud/boto",
+            "--from-file deploy/secrets/shared/gcloud/service-account-key.json",
         ]))
     else:
         run(" ".join([

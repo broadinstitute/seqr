@@ -30,6 +30,9 @@ spec:
       - name: data-dir
         hostPath:
           path: {{ LOCAL_DATA_DIR }}
+      - name: gcloud-client-secrets-volume
+        secret:
+          secretName: gcloud-client-secrets
       containers:
       - name: pipeline-runner-pod
         image: {{ DOCKER_IMAGE_PREFIX }}/pipeline-runner:{{ TIMESTAMP }}
@@ -40,6 +43,9 @@ spec:
         volumeMounts:
         - name: data-dir
           mountPath: /data
+        - name: gcloud-client-secrets-volume
+          mountPath: /.config
+          readOnly: true
         envFrom:
           - configMapRef:
               name: all-settings

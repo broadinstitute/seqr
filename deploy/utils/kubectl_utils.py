@@ -73,7 +73,7 @@ def get_pod_status(pod_name, deployment_target=None, print_status=True, status_t
 def get_pod_name(pod_name, deployment_target=None, pod_number=0):
     labels = {"name": pod_name}
     if deployment_target:
-        labels["deployment"] = deployment_target.replace("-v2", "") #.replace("-loading", "")
+        labels["deployment"] = deployment_target
 
     return _get_resource_info(
         labels=labels,
@@ -107,12 +107,16 @@ def get_node_name():
     )
 
 
-def run_in_pod(pod_name, command, deployment_target=None, errors_to_ignore=None, verbose=False, is_interactive=False):
+def run_in_pod(pod_name, command, deployment_target=None, errors_to_ignore=None, print_command=True, verbose=False, is_interactive=False):
     """Runs a kubernetes command to execute an arbitrary linux command string on the given pod.
 
     Args:
-        pod_name (string): keyword to use for looking up a kubernetes pod (eg. 'phenotips' or 'nginx')
-        command (string): the command to execute.
+        pod_name (str): keyword to use for looking up a kubernetes pod (eg. 'phenotips' or 'nginx')
+        command (str): the command to execute
+        deployment_target (str):
+        errors_to_ignore (list):
+        print_command (bool):
+        verbose (bool):
         is_interactive (bool): whether the command expects input from the user
     """
 
@@ -124,4 +128,4 @@ def run_in_pod(pod_name, command, deployment_target=None, errors_to_ignore=None,
         full_pod_name = pod_name
 
     it_arg = "-it" if is_interactive else ""
-    run("kubectl exec %(it_arg)s %(full_pod_name)s -- %(command)s" % locals(), errors_to_ignore=errors_to_ignore, verbose=verbose, is_interactive=is_interactive)
+    run("kubectl exec %(it_arg)s %(full_pod_name)s -- %(command)s" % locals(), errors_to_ignore=errors_to_ignore, print_command=print_command, verbose=verbose, is_interactive=is_interactive)

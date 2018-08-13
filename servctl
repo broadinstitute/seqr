@@ -4,6 +4,7 @@ import argparse
 import logging
 import os
 import sys
+from getpass import getpass
 
 from deploy.utils.constants import DEPLOYMENT_TARGETS, DEPLOYABLE_COMPONENTS, \
     COMPONENT_GROUP_NAMES, resolve_component_groups
@@ -91,7 +92,7 @@ for command in [COPY_TO_POD_COMMAND, COPY_FROM_POD_COMMAND]:
 
     if command == COPY_TO_POD_COMMAND:
         sp.add_argument("source_path", help="source file path")
-        sp.add_argument("dest_path", nargs="?", help="destination file path", default="~")
+        sp.add_argument("dest_path", nargs="?", help="destination file path", default="/root")
     elif command == COPY_FROM_POD_COMMAND:
         sp.add_argument("source_path", help="source file path")
         sp.add_argument("dest_path", nargs="?", help="destination file path", default=".")
@@ -197,7 +198,7 @@ if args.command in [DEPLOY_COMMAND, DEPLOY_ALL_COMMAND, DEPLOY_AND_LOAD_COMMAND]
         other_settings["RESTORE_PHENOTIPS_DB_FROM_BACKUP"] = args.restore_phenotips_db_from_backup
         other_settings["RESTORE_SEQR_DB_FROM_BACKUP"] = args.restore_seqr_db_from_backup
 
-
+    email = password = None
     if args.command == DEPLOY_COMMAND:
         deployable_components = resolve_component_groups(args.deployment_target, args.components)
 
@@ -222,36 +223,48 @@ if args.command in [DEPLOY_COMMAND, DEPLOY_ALL_COMMAND, DEPLOY_AND_LOAD_COMMAND]
             ]
 
         deployable_components += [
-            "mongo",
+            "mongo",  # deprecated - will be going away soon
             "postgres",
+            "elasticsearch",
+            "kibana",
             "redis",
             "phenotips",
             "seqr",
-            #"pipeline-runner",
+            "pipeline-runner",
         ]
+
+        print("\nOptionally enter an email and password for the django/seqr superuser account. After seqr is deployed, "
+              "you will be able to login to seqr with this account. Leave blank to skip.")
+
+        email = raw_input("(optional) seqr superuser email: ")
+        if email:
+            password = getpass("seqr superuser password (hidden when typed): ")
 
     deploy(args.deployment_target, components=deployable_components, other_settings=other_settings)
 
+    if email:
+        create_user(email, password)
+
     if args.command == DEPLOY_AND_LOAD_COMMAND:
-        #create_user()
         load_reference_data(args.deployment_target)
         load_example_project(args.deployment_target)
         load_allele_frequencies(args.deployment_target)
 
     if args.command in [DEPLOY_ALL_COMMAND, DEPLOY_AND_LOAD_COMMAND]:
-        components = ["seqr"]
-    else:
-        components = deployable_components
+        components_to_tail = ["seqr"]
 
-    component_port_pairs = get_component_port_pairs(components)
+    else:
+        components_to_tail = deployable_components
+
+    component_port_pairs = get_component_port_pairs(components_to_tail)
     if component_port_pairs:
         logger.info("=============")
-        components = [pair[0] for pair in component_port_pairs]
-        logger.info("tail %s logs ..." % components)
+        print_los_for_components = [pair[0] for pair in component_port_pairs]
+        logger.info("tail %s logs ..." % components_to_tail)
         os.system("sleep 10")
 
         procs1 = port_forward(component_port_pairs, deployment_target=args.deployment_target, wait=False, open_browser=True)
-        procs2 = print_log(components, deployment_target=args.deployment_target, enable_stream_log=True, wait=False)
+        procs2 = print_log(components_to_tail, deployment_target=args.deployment_target, enable_stream_log=True, wait=False)
         wait_for(procs1 + procs2)
 
 elif args.command == LOAD_COMMAND:
@@ -303,7 +316,7 @@ elif args.command == SET_ENVIRONMENT_COMMAND:
     set_environment(args.deployment_target)
 
 elif args.command == CREATE_USER_COMMAND:
-    create_user(args.deployment_target)
+    create_user()
 
 elif args.command == STATUS_COMMAND:
     show_status()
