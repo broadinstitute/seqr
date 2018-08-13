@@ -324,7 +324,8 @@ def _saved_variant_genes(variants):
         gene_ids.update(variant['geneIds'])
     genes = get_genes(gene_ids)
     for gene in genes.values():
-        gene['locusLists'] = []
+        if gene:
+            gene['locusLists'] = []
     return genes
 
 
