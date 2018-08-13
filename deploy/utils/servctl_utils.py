@@ -407,17 +407,3 @@ def delete_all(deployment_target):
 
         run('docker kill $(docker ps -q)', errors_to_ignore=["requires at least 1 arg"])
         run('docker rmi -f $(docker images -q)', errors_to_ignore=["requires at least 1 arg"])
-
-
-def create_user(email=None, password=None):
-    """Creates a seqr superuser
-
-    Args:
-        email (string): if provided, user will be created non-interactively
-        password (string): if provided, user will be created non-interactively
-    """
-
-    if not email:
-        run_in_pod("seqr", "python -u manage.py createsuperuser" % locals(), is_interactive=True)
-    else:
-        run_in_pod("seqr", """echo "from django.contrib.auth.models import User; if not User.objects.filter(email='%(email)s'): User.objects.create_superuser('%(email)s', '%(email)s', '%(password)s')" | python manage.py shell""" % locals(), print_command=False)

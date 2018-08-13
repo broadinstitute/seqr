@@ -10,10 +10,10 @@ from deploy.utils.constants import DEPLOYMENT_TARGETS, DEPLOYABLE_COMPONENTS, \
     COMPONENT_GROUP_NAMES, resolve_component_groups
 from deploy.utils.deploy_utils import deploy
 from deploy.utils.kubectl_utils import run_in_pod, get_pod_name
-from deploy.utils.loading_utils import load_example_project, load_allele_frequencies, \
-    load_reference_data, load_project
+from deploy.utils.loading_utils import load_example_project, \
+    load_reference_data, load_project, create_user
 from deploy.utils.servctl_utils import print_log, port_forward, \
-    create_user, show_dashboard, show_status, wait_for, troubleshoot_component, \
+    show_dashboard, show_status, wait_for, troubleshoot_component, \
     delete_component, reset_database, delete_all, get_component_port_pairs, \
     check_kubernetes_context, set_environment
 from seqr.utils.shell_utils import run
@@ -59,7 +59,7 @@ sp.add_argument("-v", "--vcf", help="Url or google cloud bucket path (eg. gs://)
                 default="https://storage.googleapis.com/seqr-public/test-projects/1kg-exomes/1kg.vep.vcf.gz")
 sp.add_argument("-p", "--ped", help="Url or google cloud bucket path (eg. gs://) of pedigree file",
                 default="https://storage.googleapis.com/seqr-public/test-projects/1kg-exomes/1kg.ped")
-sp.add_argument("data", choices=['reference-data', 'allele-frequencies', 'example-project', 'mongo'])
+sp.add_argument("data", choices=['reference-data', 'example-project', 'project'])
 sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS, help="which kubernetes cluster to load the data to")
 
 ## LOG_COMMAND
@@ -248,7 +248,6 @@ if args.command in [DEPLOY_COMMAND, DEPLOY_ALL_COMMAND, DEPLOY_AND_LOAD_COMMAND]
     if args.command == DEPLOY_AND_LOAD_COMMAND:
         load_reference_data(args.deployment_target)
         load_example_project(args.deployment_target)
-        load_allele_frequencies(args.deployment_target)
 
     if args.command in [DEPLOY_ALL_COMMAND, DEPLOY_AND_LOAD_COMMAND]:
         components_to_tail = ["seqr"]
@@ -270,8 +269,6 @@ if args.command in [DEPLOY_COMMAND, DEPLOY_ALL_COMMAND, DEPLOY_AND_LOAD_COMMAND]
 elif args.command == LOAD_COMMAND:
     if args.data == "reference-data":
         load_reference_data(args.deployment_target, genome_version=args.genome_version)
-    elif args.data == "allele-frequencies":
-        load_allele_frequencies(args.deployment_target, genome_version=args.genome_version)
     elif args.data == "example-project":
         load_example_project(args.deployment_target, genome_version=args.genome_version)
     elif args.data == "mongo":
@@ -316,7 +313,7 @@ elif args.command == SET_ENVIRONMENT_COMMAND:
     set_environment(args.deployment_target)
 
 elif args.command == CREATE_USER_COMMAND:
-    create_user()
+    create_user(args.deployment_target)
 
 elif args.command == STATUS_COMMAND:
     show_status()
