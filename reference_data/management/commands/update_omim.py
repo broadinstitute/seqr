@@ -49,11 +49,8 @@ import os
 import re
 from tqdm import tqdm
 
-from django.core.management.base import BaseCommand, CommandError
-
-from reference_data.management.commands.utils.download_utils import download_file
-
-from reference_data.models import GeneInfo, OMIM
+from django.core.management.base import BaseCommand
+from reference_data.models import GeneInfo, Omim
 
 logger = logging.getLogger(__name__)
 
@@ -102,8 +99,8 @@ def update_omim(omim_key=None, genemap2_file_path=None):
     logger.info("Parsing genemap2 file")
     genemap2_records = [r for r in parse_genemap2_table(tqdm(genemap2_file, unit=" lines"))]
 
-    logger.info("Deleting {} existing OMIM records".format(OMIM.objects.count()))
-    OMIM.objects.all().delete()
+    logger.info("Deleting {} existing OMIM records".format(Omim.objects.count()))
+    Omim.objects.all().delete()
 
     logger.info("Creating {} OMIM gene-phenotype association records".format(len(genemap2_records)))
     gene_symbol_to_gene_id = collections.defaultdict(set)  # lookup for symbols that have a 1-to-1 mapping to ENSG ids in gencode
@@ -133,11 +130,11 @@ def update_omim(omim_key=None, genemap2_file_path=None):
         del omim_record["gene_symbol"]
 
         omim_record['gene'] = gene
-        OMIM.objects.create(**omim_record)
+        Omim.objects.create(**omim_record)
 
     logger.info("Done")
     logger.info("Loaded {} OMIM records from {}. Skipped {} records with unrecognized gene id".format(
-        OMIM.objects.count(), genemap2_file_path, skip_counter))
+        Omim.objects.count(), genemap2_file_path, skip_counter))
 
 
 class ParsingError(Exception):

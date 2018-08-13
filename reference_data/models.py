@@ -115,7 +115,7 @@ class GeneConstraint(models.Model):
     #pRec = models.FloatField()
 
 
-class OMIM(models.Model):
+class Omim(models.Model):
     MAP_METHOD_CHOICES = (
         ('1', 'the disorder is placed on the map based on its association with a gene, but the underlying defect is not known.'),
         ('2', 'the disorder has been placed on the map by linkage; no mutation has been found.'),

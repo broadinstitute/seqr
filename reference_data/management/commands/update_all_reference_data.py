@@ -1,6 +1,5 @@
 import logging
-import os
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 
 from reference_data.management.commands.update_human_phenotype_ontology import update_hpo
 from reference_data.management.commands.update_dbnsfp_gene import update_dbnsfp_gene
@@ -15,13 +14,14 @@ class Command(BaseCommand):
     help = "Loads all reference data"
 
     def add_arguments(self, parser):
-        parser.add_argument('--omim-key', help="OMIM key provided with registration at http://data.omim.org/downloads", required=True)
+        omim_options = parser.add_mutually_exclusive_group(required=True)
+        omim_options.add_argument('--omim-key', help="OMIM key provided with registration at http://data.omim.org/downloads")
+        omim_options.add_argument('--skip-omim', help="Don't reload gene constraint", action="store_true")
+
         parser.add_argument('--skip-gencode', help="Don't reload gencode", action="store_true")
         parser.add_argument('--skip-dbnsfp-gene', help="Don't reload the dbNSFP_gene table", action="store_true")
         parser.add_argument('--skip-gene-constraint', help="Don't reload gene constraint", action="store_true")
-        parser.add_argument('--skip-omim', help="Don't reload gene constraint", action="store_true")
         parser.add_argument('--skip-hpo', help="Don't reload human phenotype ontology", action="store_true")
-
 
     def handle(self, *args, **options):
         if not options["skip_gencode"]:
@@ -35,6 +35,8 @@ class Command(BaseCommand):
         if not options["skip_gene_constraint"]:
             update_gene_constraint()
         if not options["skip_omim"]:
+            if not options["omim_key"]:
+                raise CommandError("Please provide --omim-key or use --skip-omim")
             update_omim(omim_key=options["omim_key"])
         if not options["skip_hpo"]:
             update_hpo()
