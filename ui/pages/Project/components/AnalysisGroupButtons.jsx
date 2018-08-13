@@ -43,7 +43,7 @@ const FORM_FIELDS = [
   },
 ]
 
-const UpdateAnalysisGroup = ({ project, analysisGroup, onSubmit, projectFamiliesByGuid }) => {
+export const UpdateAnalysisGroup = ({ project, analysisGroup, onSubmit, projectFamiliesByGuid }) => {
   if (!project.canEdit) {
     return null
   }
@@ -73,7 +73,7 @@ UpdateAnalysisGroup.propTypes = {
 }
 
 
-const DeleteAnalysisGroup = ({ project, analysisGroup, onSubmit, size, iconOnly, history }) => (
+export const DeleteAnalysisGroup = ({ project, analysisGroup, onSubmit, size, iconOnly, history }) => (
   project.canEdit ? <DeleteButton
     initialValues={analysisGroup}
     onSubmit={onSubmit}

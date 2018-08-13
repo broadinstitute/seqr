@@ -51,7 +51,9 @@ def update_analysis_group_handler(request, project_guid, analysis_group_guid=Non
         )
 
     analysis_group.families.set(families)
-    find_matching_xbrowse_model(analysis_group).families.set(BaseFamily.objects.filter(seqr_family__in=families))
+    base_family_group = find_matching_xbrowse_model(analysis_group)
+    if base_family_group:
+        base_family_group.families.set(BaseFamily.objects.filter(seqr_family__in=families))
 
     return create_json_response({
         'analysisGroupsByGuid': {

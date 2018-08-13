@@ -67,7 +67,7 @@ const PAGE_CONFIGS = {
 }
 
 
-const PageHeader = ({ user, project, family, analysisGroup, breadcrumb, match }) => {
+export const PageHeader = ({ user, project, family, analysisGroup, breadcrumb, match }) => {
 
   if (!project) {
     return null

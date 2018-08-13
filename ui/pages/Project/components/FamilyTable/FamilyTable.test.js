@@ -16,6 +16,7 @@ test('shallow-render without crashing', () => {
 
   const props = {
     visibleFamilies: Object.values(STATE1.familiesByGuid),
+    match: { params: {} },
   }
 
   shallow(<FamilyTableComponent {...props} />)

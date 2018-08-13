@@ -29,7 +29,7 @@ class ProjectPageTest(TestCase):
         response_json = response.json()
         self.assertSetEqual(
             set(response_json.keys()),
-            {'project', 'familiesByGuid', 'individualsByGuid', 'samplesByGuid', 'locusListsByGuid'}
+            {'project', 'familiesByGuid', 'individualsByGuid', 'samplesByGuid', 'locusListsByGuid', 'analysisGroupsByGuid'}
         )
         self.assertSetEqual(
             set(response_json['project'].keys()),
@@ -61,6 +61,10 @@ class ProjectPageTest(TestCase):
             set(response_json['locusListsByGuid'].values()[0].keys()),
             {'locusListGuid', 'description', 'lastModifiedDate', 'numEntries', 'isPublic', 'createdBy', 'createdDate',
              'canEdit', 'name'}
+        )
+        self.assertSetEqual(
+            set(response_json['analysisGroupsByGuid'].values()[0].keys()),
+            {'analysisGroupGuid', 'description', 'name', 'projectGuid', 'familyGuids'}
         )
 
     @mock.patch('seqr.views.pages.project_page._has_gene_search', _has_gene_search)

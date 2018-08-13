@@ -1,3 +1,4 @@
+from copy import deepcopy
 from django.contrib import admin
 from seqr.models import Project, Family, Individual, Sample, LocusList, LocusListGene, LocusListInterval, VariantNote, \
     VariantTag, VariantTagType, VariantFunctionalData, SavedVariant, GeneNote, AnalysisGroup, ProjectCategory, \
@@ -27,7 +28,7 @@ for model_class in [
         search_fields = [field.name for field in model_class._meta.get_fields() if field.name in set([
             'guid', 'name', 'display_name', 'deprecated_project_id', 'family_id', 'individual_id', 'description'
         ])]
-        list_display = model_class._meta.json_fields if hasattr(model_class._meta, 'json_fields') else search_fields
+        list_display = deepcopy(model_class._meta.json_fields if hasattr(model_class._meta, 'json_fields') else search_fields)
         if hasattr(model_class._meta, 'internal_json_fields'):
             list_display = model_class._meta.internal_json_fields + list_display
         if 'created_date' not in list_display:

@@ -3,7 +3,7 @@
 import orderBy from 'lodash/orderBy'
 import { getVisibleFamilies, getVisibleFamiliesInSortedOrder, getVisibleSortedFamiliesWithIndividuals,
   getCaseReviewStatusCounts, getProjectSavedVariants, getFilteredProjectSavedVariants,
-  getVisibleSortedProjectSavedVariants } from './selectors'
+  getVisibleSortedProjectSavedVariants, getProjectAnalysisGroupFamiliesByGuid } from './selectors'
 
 import { STATE_WITH_2_FAMILIES } from './fixtures'
 
@@ -101,4 +101,14 @@ test('getVisibleSortedProjectSavedVariants', () => {
   )
   expect(savedVariants.length).toEqual(1)
   expect(savedVariants[0].variantId).toEqual('SV0000002_1248367227_r0390_100')
+})
+
+test('getProjectAnalysisGroupFamiliesByGuid', () => {
+
+  const families = getProjectAnalysisGroupFamiliesByGuid.resultFunc(
+    STATE_WITH_2_FAMILIES.familiesByGuid, STATE_WITH_2_FAMILIES.analysisGroupsByGuid, 'AG0000183_test_group',
+  )
+
+  expect(Object.keys(families)).toEqual(['F011652_1'])
+  expect(families.F011652_1.familyId).toEqual('1')
 })
