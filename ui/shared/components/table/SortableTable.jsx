@@ -4,12 +4,20 @@ import styled from 'styled-components'
 import { Table, Checkbox } from 'semantic-ui-react'
 
 import { compareObjects } from '../../utils/sortUtils'
+import TableLoading from './TableLoading'
 
 const StyledSortableTable = styled(Table)`
-  &.ui.basic.sortable.table thead th {
-    background: transparent;
+  &.ui.sortable.table thead th {
     border-left: none;
     overflow: initial;
+    
+    &.sorted {
+      background: #F9FAFB;
+    }
+  }
+  
+  &.ui.basic.sortable.table thead th {
+    background: transparent !important;
   }
   
   &.ui.selectable tr:hover {
@@ -27,6 +35,9 @@ class SortableTable extends React.PureComponent {
     idField: PropTypes.string,
     defaultSortColumn: PropTypes.string,
     selectRows: PropTypes.func,
+    loading: PropTypes.bool,
+    emptyContent: PropTypes.node,
+    footer: PropTypes.node,
   }
 
   constructor(props) {
@@ -83,12 +94,32 @@ class SortableTable extends React.PureComponent {
   }
 
   render() {
-    const { data, defaultSortColumn, idField, columns, selectRows, ...tableProps } = this.props
+    const { data, defaultSortColumn, idField, columns, selectRows, loading, emptyContent, footer, ...tableProps } = this.props
     const { column, direction, selected } = this.state
 
     let sortedData = data.sort(compareObjects(column))
     if (direction === DESCENDING) {
       sortedData = sortedData.reverse()
+    }
+
+    let tableContent
+    if (loading) {
+      tableContent = <TableLoading numCols={columns.length} />
+    } else if (emptyContent && data.length === 0) {
+      tableContent = <Table.Row><Table.Cell colSpan={columns.length}>{emptyContent}</Table.Cell></Table.Row>
+    } else {
+      tableContent = sortedData.map(row => (
+        <Table.Row key={row[idField]} onClick={this.handleSelect(row[idField])} active={selected[row[idField]]}>
+          {selectRows && <Table.Cell content={<Checkbox checked={selected[row[idField]]} />} />}
+          {columns.map(({ name, format, textAlign }) =>
+            <Table.Cell
+              key={name}
+              content={format ? format(row) : row[name]}
+              textAlign={textAlign}
+            />,
+          )}
+        </Table.Row>
+      ))
     }
 
     return (
@@ -109,18 +140,15 @@ class SortableTable extends React.PureComponent {
           </Table.Row>
         </Table.Header>
         <Table.Body>
-          {sortedData.map(row => (
-            <Table.Row key={row[idField]} onClick={this.handleSelect(row[idField])} active={selected[row[idField]]}>
-              {selectRows && <Table.Cell content={<Checkbox checked={selected[row[idField]]} />} />}
-              {columns.map(({ name, format }) =>
-                <Table.Cell
-                  key={name}
-                  content={format ? format(row) : row[name]}
-                />,
-              )}
-            </Table.Row>
-          ))}
+          {tableContent}
         </Table.Body>
+        {footer &&
+          <Table.Footer>
+            <Table.Row>
+              <Table.HeaderCell colSpan={columns.length} content={footer} />
+            </Table.Row>
+          </Table.Footer>
+        }
       </StyledSortableTable>
     )
   }

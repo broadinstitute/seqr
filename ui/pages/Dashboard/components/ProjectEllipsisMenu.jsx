@@ -52,7 +52,7 @@ const ProjectEllipsisMenu = (props) => {
               field="description"
               updateProject={props.updateProject}
             />,
-            <EditProjectCategoriesModal key={3} trigger={<Dropdown.Item>Edit Categories</Dropdown.Item>} project={props.project} />,
+            <EditProjectCategoriesModal key={3} trigger={<Dropdown.Item>Edit Categories</Dropdown.Item>} triggerName="ellipsesMenu" project={props.project} />,
 
             <Dropdown.Divider key={4} />,
 
