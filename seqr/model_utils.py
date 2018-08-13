@@ -81,6 +81,9 @@ SEQR_TO_XBROWSE_FIELD_MAPPING = {
     "FamilyAnalysedBy": {
         "created_by": "user",
     },
+    "AnalysisGroup": {
+        "created_by": _DELETED_FIELD,
+    },
 }
 
 FLATTENED_MODEL_FIELDS = {

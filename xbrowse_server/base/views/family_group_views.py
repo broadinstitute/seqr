@@ -7,17 +7,14 @@ from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.urls import reverse
 
-from xbrowse.utils import get_gene_id_from_str
 from xbrowse_server.base import forms as base_forms
 from xbrowse_server import server_utils
 from xbrowse_server import json_displays
 from xbrowse_server.base.forms import AddFamilyGroupForm
 from xbrowse_server.base.models import Project, FamilyGroup, ANALYSIS_STATUS_CHOICES
+from xbrowse_server.base.model_utils import update_xbrowse_model, get_or_create_xbrowse_model, delete_xbrowse_model, \
+    find_matching_seqr_model
 from xbrowse_server.decorators import log_request
-from xbrowse_server.analysis import family_group as family_group_analysis
-from xbrowse.core.variant_filters import get_default_variant_filter
-from xbrowse_server.mall import get_reference
-from xbrowse_server import mall
 
 
 def redirect_family_group_guid(request, project_id, family_group_guid, path):
@@ -71,16 +68,17 @@ def add_family_group_submit(request, project_id):
     form = AddFamilyGroupForm(project, request.POST)
     if form.is_valid():
         # todo: move to sample_anagement
-        family_group, created = FamilyGroup.objects.get_or_create(
+        family_group, created = get_or_create_xbrowse_model(
+            FamilyGroup,
             project=project,
             slug=form.cleaned_data['family_group_slug'],
         )
-        family_group.name=form.cleaned_data['name']
-        family_group.description=form.cleaned_data['description']
-        family_group.save()
-        
+        update_xbrowse_model(family_group, name=form.cleaned_data['name'], description=form.cleaned_data['description'])
+
+        seqr_analysis_group = find_matching_seqr_model(family_group)
         for family in form.cleaned_data['families']:
             family_group.families.add(family)
+            seqr_analysis_group.families.add(find_matching_seqr_model(family))
     else:
         error = server_utils.form_error_string(form)
 
@@ -121,10 +119,12 @@ def family_group_edit(request, project_id, family_group_slug):
     if request.method == 'POST':
         form = base_forms.EditFamilyGroupForm(project, request.POST)
         if form.is_valid():
-            family_group.name = form.cleaned_data['name']
-            family_group.description = form.cleaned_data['description']
-            family_group.slug = form.cleaned_data['slug']
-            family_group.save()
+            update_xbrowse_model(
+                family_group,
+                name=form.cleaned_data['name'],
+                description=form.cleaned_data['description'],
+                slug=form.cleaned_data['slug']
+            )
             return redirect('family_group_home', project.project_id, family_group.slug)
 
     else:
@@ -150,7 +150,7 @@ def delete(request, project_id, family_group_slug):
     family_group = get_object_or_404(FamilyGroup, project=project, slug=family_group_slug)
     if request.method == 'POST':
         if request.POST.get('confirm') == 'yes':
-            family_group.delete()
+            delete_xbrowse_model(family_group)
             return redirect('family_groups', project_id)
 
     return render(request, 'family_group/delete.html', {
@@ -158,7 +158,6 @@ def delete(request, project_id, family_group_slug):
         'family_group': family_group,
         'new_page_url': '/project/{}/analysis_group/{}'.format(project.seqr_project.guid, family_group.seqr_analysis_group.guid) if project.seqr_project and family_group.seqr_analysis_group else None,
     })
-
 
 
 @login_required

@@ -168,7 +168,7 @@ export const updateLocusLists = (values) => {
 }
 
 export const updateAnalysisGroup = (values) => {
-  return updateEntity(values, RECEIVE_DATA, `/api/project/${values.projectGuid}/analysis_group`, 'analysisGroupGuid')
+  return updateEntity(values, RECEIVE_DATA, `/api/project/${values.projectGuid}/analysis_groups`, 'analysisGroupGuid')
 }
 
 // Table actions

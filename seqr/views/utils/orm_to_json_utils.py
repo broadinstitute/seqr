@@ -152,7 +152,7 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, family_
     Args:
         individuals (array): array of dictionaries or django models for the individual.
         user (object): Django User object for determining whether to include restricted/internal-only fields
-        project_guid (boolean): An optional field to use as the projectGuid instead of querying the DB
+        project_guid (string): An optional field to use as the projectGuid instead of querying the DB
         family_guid (boolean): An optional field to use as the familyGuid instead of querying the DB
         add_sample_guids_field (boolean): A flag to indicate weather sample ids should be added
     Returns:
@@ -257,10 +257,11 @@ def _get_json_for_sample(sample, project_guid=None):
 
 
 def get_json_for_analysis_groups(analysis_groups, project_guid=None):
-    """Returns a JSON representation of the given list of Samples.
+    """Returns a JSON representation of the given list of AnalysisGroups.
 
     Args:
-        samples (array): array of dictionary or django model for the Samples.
+        analysis_groups (array): array of dictionary or django model for the AnalysisGroups.
+        project_guid (string): An optional field to use as the projectGuid instead of querying the DB
     Returns:
         array: array of json objects
     """
@@ -285,6 +286,18 @@ def get_json_for_analysis_groups(analysis_groups, project_guid=None):
         results.append(result)
     return results
 
+
+def get_json_for_analysis_group(analysis_group, project_guid=None):
+    """Returns a JSON representation of the given AnalysisGroup.
+
+    Args:
+        analysis_group (object): dictionary or django model for the AnalysisGroup.
+        project_guid (string): An optional field to use as the projectGuid instead of querying the DB
+    Returns:
+        dict: json object
+    """
+
+    return get_json_for_analysis_groups([analysis_group], project_guid=project_guid)[0]
 
 def get_json_for_saved_variant(saved_variant, add_tags=False):
     """Returns a JSON representation of the given variant.
