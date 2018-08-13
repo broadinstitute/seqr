@@ -25,6 +25,8 @@ const LinkButton = styled.span.attrs({ role: 'button', tabIndex: '0' })`
   padding-left: 20px;
 `
 
+const NUM_TO_SHOW_ABOVE_THE_FOLD = 6 // how many predictors to show immediately
+
 const Prediction = ({ field, annotation, dangerThreshold, warningThreshold, name }) => {
   let value = annotation[field]
   if (!value) {
@@ -67,8 +69,20 @@ Prediction.propTypes = {
   name: PropTypes.string,
 }
 
-const MORE_PREDICTORS = [
-  'polyphen', 'sift', 'mut_taster', 'fathmm', 'metasvm', 'gerp_rs', 'phastcons100vert',
+const PREDICTOR_FIELDS = [
+  { field: 'cadd_phred', name: 'CADD', warningThreshold: 10, dangerThreshold: 20 },
+  { field: 'dann_score', name: 'DANN', warningThreshold: 0.93, dangerThreshold: 0.96 },
+  { field: 'revel_score', name: 'REVEL', warningThreshold: 0.5, dangerThreshold: 0.75 },
+  { field: 'eigen_phred', name: 'EIGEN', warningThreshold: 1, dangerThreshold: 2 },
+  { field: 'mpc_score', name: 'MPC', warningThreshold: 1, dangerThreshold: 2 },
+  { field: 'primate_ai_score', name: 'PMT AI', warningThreshold: 0.5, dangerThreshold: 0.7 },
+  { field: 'polyphen' },
+  { field: 'sift' },
+  { field: 'mut_taster' },
+  { field: 'fathmm' },
+  { field: 'metasvm' },
+  { field: 'gerp_rs' },
+  { field: 'phastcons100vert' },
 ]
 
 export default class Predictions extends React.Component {
@@ -85,30 +99,39 @@ export default class Predictions extends React.Component {
   render() {
     const { annotation } = this.props
 
-    return annotation ?
+    if (!annotation) {
+      return null
+    }
+
+    const predictorFields = PREDICTOR_FIELDS.filter(predictorField => annotation[predictorField.field] != null)
+    const predictorFieldsAboveTheFold = predictorFields.slice(0, NUM_TO_SHOW_ABOVE_THE_FOLD)
+    const morePredictorFields = predictorFields.slice(NUM_TO_SHOW_ABOVE_THE_FOLD)
+    return (
       <div>
-        <Prediction field="cadd_phred" annotation={annotation} dangerThreshold={20} warningThreshold={10} name="CADD" />
-        <Prediction field="dann_score" annotation={annotation} dangerThreshold={0.96} warningThreshold={0.93} name="DANN" />
-        <Prediction field="revel_score" annotation={annotation} dangerThreshold={0.75} warningThreshold={0.5} name="REVEL" />
-        <Prediction field="eigen_phred" annotation={annotation} dangerThreshold={1} warningThreshold={2}name="EIGEN" />
-        <Prediction field="mpc_score" annotation={annotation} dangerThreshold={2} warningThreshold={1} name="MPC" />
-        <Prediction field="primate_ai_score" annotation={annotation} dangerThreshold={0.7} warningThreshold={0.5} name="PMT AI" />
-        <Transition.Group animation="fade down" duration="500">
-          {
-            this.state.showMore ?
-              <div>
-                {
-                  MORE_PREDICTORS.map(field => <Prediction key={field} field={field} annotation={annotation} />)
-                }
-                <LinkButton onClick={() => this.setState({ showMore: false })}>hide</LinkButton>
-              </div>
-            :
-              MORE_PREDICTORS.some(field => annotation[field] != null) &&
-              <LinkButton onClick={() => this.setState({ showMore: true })}>show more..</LinkButton>
-            }
-        </Transition.Group>
+        {
+          predictorFieldsAboveTheFold.map(predictorField =>
+            <Prediction key={predictorField.field} annotation={annotation} {...predictorField} />)
+        }
+        {
+          morePredictorFields ?
+            <Transition.Group animation="fade down" duration="500">
+              {
+                this.state.showMore ?
+                  <div>
+                    {
+                      morePredictorFields.map(predictorField => <Prediction key={predictorField.field} field={predictorField.field} annotation={annotation} />)
+                    }
+                    <LinkButton onClick={() => this.setState({ showMore: false })}>hide</LinkButton>
+                  </div>
+                :
+                  morePredictorFields.some(predictorField => annotation[predictorField.field] != null) &&
+                  <LinkButton onClick={() => this.setState({ showMore: true })}>show more...</LinkButton>
+              }
+            </Transition.Group>
+          : null
+        }
       </div>
-      : null
+    )
   }
 }
 
