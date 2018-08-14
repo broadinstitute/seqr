@@ -131,8 +131,8 @@ def _get_matching_genes(user, query):
        Sorted list of matches where each match is a dictionary of strings
     """
     result = []
-    matching_genes = GeneInfo.objects.filter(Q(gene_id__icontains=query) | Q(gene_name__icontains=query)).only(
-        'gene_id', 'gene_name').order_by(Length('gene_name').asc()).distinct()
+    matching_genes = GeneInfo.objects.filter(Q(gene_id__icontains=query) | Q(gene_symbol__icontains=query)).only(
+        'gene_id', 'gene_symbol').order_by(Length('gene_symbol').asc()).distinct()
     for g in matching_genes[:MAX_RESULTS_PER_CATEGORY]:
         if query.lower() in g.gene_id.lower():
             title = g.gene_id
