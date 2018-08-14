@@ -7,10 +7,10 @@ import { connect } from 'react-redux'
 import { Form } from 'semantic-ui-react'
 
 import { getProjectCategoriesByGuid } from 'redux/selectors'
-import { getProjectFilter, updateFilter } from '../../reducers'
+import { getProjectFilter, updateFilter } from '../reducers'
 import {
   SHOW_ALL,
-} from '../../constants'
+} from '../constants'
 
 const FilterContainer = styled.span`
   display: inline-block;

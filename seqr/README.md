@@ -42,7 +42,7 @@ overall design to current needs. As part of this update we will transition from 
 the updated database schema in *models.py* as well as the url endpoints for any new or refactored APIs)
 2. the top-level /ui directory contains all files for the new react.js-based UI
 3. the top-level /reference_data directory is another new Django app that contains refactored 
-django commands and scripts for loading reference datasets such as OMIM, clinvar, HPO, gencode, etc. 
+django commands and scripts for loading reference datasets such as Omim, clinvar, HPO, gencode, etc. 
 
 
 **Backing Up, Restoring Existing Data**
