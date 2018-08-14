@@ -4,7 +4,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { connect } from 'react-redux'
-import { Grid, Header, Popup } from 'semantic-ui-react'
+import { Grid, Popup } from 'semantic-ui-react'
 
 import { loadGene, updateGeneNote } from 'redux/rootReducer'
 import { getGenesIsLoading, getGenesById } from 'redux/selectors'
@@ -73,22 +73,22 @@ const textWithLinks = (text) => {
   )
 }
 
-const GeneDetailContent = ({ gene, showTitle, updateGeneNote: dispatchUpdateGeneNote }) => {
+const GeneDetailContent = ({ gene, updateGeneNote: dispatchUpdateGeneNote }) => {
   const basicDetails = [
     { title: 'Symbol', content: gene.symbol },
-    { title: 'Ensembl ID', content: gene.gene_id },
-    { title: 'Description', content: textWithLinks(gene.function_desc) },
+    { title: 'Ensembl ID', content: gene.geneId },
+    { title: 'Description', content: textWithLinks(gene.functionDesc) },
     { title: 'Coordinates', content: `chr${gene.chrom}:${gene.start}-${gene.stop}` },
-    { title: 'Gene Type', content: gene.gene_type },
+    { title: 'Gene Type', content: gene.geneType },
   ]
   const statDetails = [
-    { title: 'Coding Size', content: (gene.coding_size / 1000).toPrecision(2) },
+    { title: 'Coding Size', content: (gene.codingSize / 1000).toPrecision(2) },
     {
       title: 'Missense Constraint',
-      content: gene.tags.missense_constraint ?
+      content: gene.constraints.missense.constraint ?
         <div>
-          z-score: {gene.tags.missense_constraint.toPrecision(4)} (ranked {gene.tags.missense_constraint_rank[0]}
-          most constrained out of {gene.tags.missense_constraint_rank[1]} genes under study). <br />
+          z-score: {gene.constraints.missense.constraint.toPrecision(4)} (ranked {gene.constraints.missense.rank}
+          most constrained out of {gene.constraints.missense.totalGenes} genes under study). <br />
           <i style={{ color: 'gray' }}>
             NOTE: Missense contraint is a measure of the degree to which the number of missense variants found
             in this gene in ExAC v0.3 is higher or lower than expected according to the statistical model
@@ -106,10 +106,10 @@ const GeneDetailContent = ({ gene, showTitle, updateGeneNote: dispatchUpdateGene
     },
     {
       title: 'LoF Constraint',
-      content: gene.tags.lof_constraint ?
+      content: gene.constraints.lof.constraint ?
         <div>
-          pLI-score: {gene.tags.lof_constraint.toPrecision(4)} (ranked {gene.tags.lof_constraint_rank[0]} most
-          intolerant of LoF mutations out of {gene.tags.lof_constraint_rank[1]} genes under study). <br />
+          pLI-score: {gene.constraints.lof.constraint.toPrecision(4)} (ranked {gene.constraints.lof.rank} most
+          intolerant of LoF mutations out of {gene.constraints.lof.totalGenes} genes under study). <br />
           <i style={{ color: 'gray' }}>
             NOTE: This metric is based on the amount of expected variation observed in the ExAC data and is a
             measure of how likely the gene is to be intolerant of loss-of-function mutations.
@@ -120,9 +120,9 @@ const GeneDetailContent = ({ gene, showTitle, updateGeneNote: dispatchUpdateGene
   const associationDetails = [
     {
       title: 'OMIM',
-      content: (gene.phenotype_info && gene.phenotype_info.has_mendelian_phenotype) ?
+      content: gene.phenotypeInfo.hasMendelianPhenotype ?
         <div>
-          {gene.phenotype_info.mim_phenotypes.map(phenotype =>
+          {gene.phenotypeInfo.mimPhenotypes.map(phenotype =>
             <span key={phenotype.description}>{phenotype.mim_id ?
               <a href={`http://www.omim.org/entry/${phenotype.mim_id}`} target="_blank" rel="noopener noreferrer">
                 {phenotype.description}
@@ -131,13 +131,13 @@ const GeneDetailContent = ({ gene, showTitle, updateGeneNote: dispatchUpdateGene
               <br />
             </span>,
           )}
-          {textWithLinks(gene.disease_desc)}
+          {textWithLinks(gene.diseaseDesc)}
         </div>
         : <em>No disease associations</em>,
     },
-    gene.phenotype_info.orphanet_phenotypes.length > 0 ? {
+    gene.phenotypeInfo.orphanetPhenotypes.length > 0 ? {
       title: 'ORPHANET',
-      content: gene.phenotype_info.orphanet_phenotypes.map(phenotype =>
+      content: gene.phenotypeInfo.orphanetPhenotypes.map(phenotype =>
         <div key={phenotype.orphanet_id}>
           <a href={`http://www.orpha.net/consor/cgi-bin/Disease_Search.php?lng=EN&data_id=20460&Disease_Disease_Search_diseaseGroup=${phenotype.orphanet_id}`} target="_blank" rel="noopener noreferrer">
             {phenotype.description}
@@ -147,20 +147,19 @@ const GeneDetailContent = ({ gene, showTitle, updateGeneNote: dispatchUpdateGene
     } : null,
   ]
   const linkDetails = [
-    gene.phenotype_info.mim_id ? { title: 'OMIM', link: `http://www.omim.org/entry/${gene.phenotype_info.mim_id}`, description: 'Database of Mendelian phenotypes' } : null,
+    gene.phenotypeInfo.mimId ? { title: 'OMIM', link: `http://www.omim.org/entry/${gene.phenotypeInfo.mimId}`, description: 'Database of Mendelian phenotypes' } : null,
     { title: 'PubMed', link: `http://www.ncbi.nlm.nih.gov/pubmed/?term=${gene.symbol}`, description: `Search PubMed for ${gene.symbol}` },
     { title: 'GeneCards', link: `http://www.genecards.org/cgi-bin/carddisp.pl?gene=${gene.symbol}`, description: 'Reference of public data for this gene' },
-    { title: 'Protein Atlas', link: `http://www.proteinatlas.org/${gene.gene_id}/tissue`, description: 'Detailed protein and transcript expression' },
+    { title: 'Protein Atlas', link: `http://www.proteinatlas.org/${gene.geneId}/tissue`, description: 'Detailed protein and transcript expression' },
     { title: 'NCBI Gene', link: `http://www.ncbi.nlm.nih.gov/gene/?term=${gene.symbol}`, description: 'NCBI\'s gene information resource' },
-    { title: 'GTEx Portal', link: `http://www.gtexportal.org/home/gene/${gene.gene_id}`, description: 'Reference of public data for this gene' },
-    { title: 'Monarch', link: `http://monarchinitiative.org/search/${gene.gene_id}`, description: 'Cross-species gene and phenotype resource' },
+    { title: 'GTEx Portal', link: `http://www.gtexportal.org/home/gene/${gene.geneId}`, description: 'Reference of public data for this gene' },
+    { title: 'Monarch', link: `http://monarchinitiative.org/search/${gene.geneId}`, description: 'Cross-species gene and phenotype resource' },
     { title: 'Decipher', link: `https://decipher.sanger.ac.uk/gene/${gene.symbol}#overview/protein-info`, description: 'DatabasE of genomiC varIation and Phenotype in Humans using Ensembl Resources' },
     { title: 'UniProt', link: `http://www.uniprot.org/uniprot/?random=true&query=gene:${gene.symbol}+AND+reviewed:yes+AND+organism:9606`, description: 'Protein sequence and functional information' },
   ]
   return (
     <div>
-      {showTitle && <Header size="huge" dividing>{gene.symbol}</Header>}
-      {linkDetails.map(linkConfig =>
+      {linkDetails.filter(linkConfig => linkConfig).map(linkConfig =>
         <Popup
           key={linkConfig.title}
           trigger={<a href={linkConfig.link} target="_blank" rel="noopener noreferrer"><b>{linkConfig.title}</b><HorizontalSpacer width={20} /></a>}
@@ -178,7 +177,7 @@ const GeneDetailContent = ({ gene, showTitle, updateGeneNote: dispatchUpdateGene
         Information saved here will be shared across seqr. Please consider using this space to share gene-specific
         information you learn while researching candidates.
       </p>
-      {gene.notes.map(geneNote =>
+      {gene.notes && gene.notes.map(geneNote =>
         <TextFieldView
           key={geneNote.noteGuid}
           initialValues={geneNote}
@@ -197,7 +196,7 @@ const GeneDetailContent = ({ gene, showTitle, updateGeneNote: dispatchUpdateGene
         isEditable
         editLabel="Add Note"
         field="note"
-        idField="gene_id"
+        idField="geneId"
         modalTitle="Add Gene Note"
         initialValues={gene}
         onSubmit={dispatchUpdateGeneNote}
@@ -217,12 +216,11 @@ const GeneDetailContent = ({ gene, showTitle, updateGeneNote: dispatchUpdateGene
 GeneDetailContent.propTypes = {
   gene: PropTypes.object,
   updateGeneNote: PropTypes.func.isRequired,
-  showTitle: PropTypes.bool,
 }
 
-const GeneDetail = ({ geneId, gene, loading, loadGene: dispatchLoadGene, updateGeneNote: dispatchUpdateGeneNote, showTitle = true }) =>
+const GeneDetail = ({ geneId, gene, loading, loadGene: dispatchLoadGene, updateGeneNote: dispatchUpdateGeneNote }) =>
   <DataLoader contentId={geneId} content={gene} loading={loading} load={dispatchLoadGene}>
-    <GeneDetailContent gene={gene} updateGeneNote={dispatchUpdateGeneNote} showTitle={showTitle} />
+    <GeneDetailContent gene={gene} updateGeneNote={dispatchUpdateGeneNote} />
   </DataLoader>
 
 GeneDetail.propTypes = {
@@ -231,7 +229,6 @@ GeneDetail.propTypes = {
   loading: PropTypes.bool.isRequired,
   loadGene: PropTypes.func.isRequired,
   updateGeneNote: PropTypes.func.isRequired,
-  showTitle: PropTypes.bool,
 }
 
 const mapDispatchToProps = {

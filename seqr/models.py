@@ -303,7 +303,6 @@ class Individual(ModelWithGUID):
 
     CASE_REVIEW_STATUS_IN_REVIEW = "I"
     CASE_REVIEW_STATUS_CHOICES = (
-        ('N', 'Not In Review'),
         ('I', 'In Review'),
         ('U', 'Uncertain'),
         ('A', 'Accepted'),
@@ -311,9 +310,6 @@ class Individual(ModelWithGUID):
         ('Q', 'More Info Needed'),
         ('P', 'Pending Results and Records'),
         ('W', 'Waitlist'),
-        ('WD', 'Withdrew'),
-        ('IE', 'Ineligible'),
-        ('DP', 'Declined to Participate'),
     )
 
     SEX_LOOKUP = dict(SEX_CHOICES)
@@ -714,6 +710,9 @@ class LocusList(ModelWithGUID):
 
     class Meta:
         permissions = _SEQR_OBJECT_PERMISSIONS
+        unique_together = ('name', 'description', 'is_public', 'created_by')
+
+        json_fields = ['guid', 'created_by', 'created_date', 'last_modified_date', 'name', 'description', 'is_public']
 
 
 class LocusListGene(ModelWithGUID):
@@ -751,6 +750,8 @@ class LocusListInterval(ModelWithGUID):
 
     class Meta:
         unique_together = ('locus_list', 'genome_version', 'chrom', 'start', 'end')
+
+        json_fields = ['guid', 'genome_version', 'chrom', 'start', 'end']
 
 
 """

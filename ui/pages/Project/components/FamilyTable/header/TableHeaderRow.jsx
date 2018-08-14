@@ -23,6 +23,12 @@ const RegularFontHeaderCell = styled(Table.HeaderCell)`
   font-weight: normal !important;
 `
 
+
+// Allows dropdowns to be visible inside table cell
+const OverflowHeaderCell = styled(Table.HeaderCell)`
+  overflow: visible !important;
+`
+
 const SpacedDropdown = styled(Dropdown)`
   padding-left: 10px;
   padding-right: 5px;
@@ -63,7 +69,7 @@ const TableHeaderRow = (
   return (
     <Table.Header fullWidth>
       <Table.Row>
-        <RegularFontHeaderCell>
+        <RegularFontHeaderCell width={2}>
           Showing &nbsp;
           {
             visibleFamiliesCount !== totalFamiliesCount ?
@@ -72,7 +78,7 @@ const TableHeaderRow = (
           }
           &nbsp; families
         </RegularFontHeaderCell>
-        <Table.HeaderCell collapsing textAlign="right">
+        <OverflowHeaderCell width={14} textAlign="right">
           <Popup
             content="Filter families by searching on family name or individual phenotypes"
             position="top center"
@@ -81,33 +87,30 @@ const TableHeaderRow = (
           Search:
           <HorizontalSpacer width={10} />
           <FamiliesFilterSearchBox />
-        </Table.HeaderCell>
-        <Table.HeaderCell collapsing textAlign="right">
+          <HorizontalSpacer width={20} />
           <ReduxFormWrapper
             onSubmit={dispatchUpdateFamiliesTable}
             form={`edit${tableName}FamiliesTable`}
             initialValues={familiesTableState}
             closeOnSuccess={false}
             submitOnChange
+            inline
             fields={filterFields}
           />
-        </Table.HeaderCell>
-        {headerStatus &&
-          <Table.HeaderCell collapsing textAlign="right">
-            {headerStatus.title}:
-            <HorizontalSpacer width={10} />
-            <HorizontalStackedBar
-              width={100}
-              height={14}
-              title={headerStatus.title}
-              data={headerStatus.data}
-            />
-          </Table.HeaderCell>
-        }
+          <HorizontalSpacer width={20} />
+          {headerStatus.title}:
+          <HorizontalSpacer width={10} />
+          <HorizontalStackedBar
+            width={100}
+            height={14}
+            title={headerStatus.title}
+            data={headerStatus.data}
+          />
+        </OverflowHeaderCell>
       </Table.Row>
       {fields &&
         <Table.Row>
-          <Table.HeaderCell colSpan={5} textAlign="left">
+          <Table.HeaderCell colSpan={2} textAlign="left">
             <FamilyLayout
               compact
               offset
@@ -123,12 +126,12 @@ const TableHeaderRow = (
 }
 
 TableHeaderRow.propTypes = {
-  headerStatus: PropTypes.object,
+  headerStatus: PropTypes.object.isRequired,
   showInternalFilters: PropTypes.bool,
-  visibleFamiliesCount: PropTypes.number,
-  totalFamiliesCount: PropTypes.number,
-  familiesTableState: PropTypes.object,
-  updateFamiliesTable: PropTypes.func,
+  visibleFamiliesCount: PropTypes.number.isRequired,
+  totalFamiliesCount: PropTypes.number.isRequired,
+  familiesTableState: PropTypes.object.isRequired,
+  updateFamiliesTable: PropTypes.func.isRequired,
   fields: PropTypes.array,
   tableName: PropTypes.string,
   showVariantTags: PropTypes.bool,

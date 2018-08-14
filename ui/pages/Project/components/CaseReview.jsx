@@ -15,9 +15,9 @@ import { getCaseReviewStatusCounts, getFamiliesExportConfig, getIndividualsExpor
 import FamilyTable from './FamilyTable/FamilyTable'
 
 const FIELDS = [
-  { id: FAMILY_FIELD_DESCRIPTION },
+  { id: FAMILY_FIELD_DESCRIPTION, canEdit: true },
   { id: FAMILY_FIELD_ANALYSED_BY },
-  { id: FAMILY_FIELD_ANALYSIS_NOTES },
+  { id: FAMILY_FIELD_ANALYSIS_NOTES, canEdit: true },
   { id: FAMILY_FIELD_ANALYSIS_SUMMARY },
   { id: FAMILY_FIELD_INTERNAL_NOTES, canEdit: true },
   { id: FAMILY_FIELD_INTERNAL_SUMMARY, canEdit: true },

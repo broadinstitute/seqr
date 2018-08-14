@@ -35,23 +35,21 @@ def update_pedigree_images(families, project_guid=None):
         update_pedigree_image(family, project_guid=project_guid)
 
 
-def update_pedigree_image(family, project_guid=None):
+def _get_parsed_individuals(family, project_guid=None):
     """Uses HaploPainter to (re)generate the pedigree image for the given family.
 
     Args:
          family (object): seqr Family model.
     """
-    family_id = family.family_id
-
     individuals = Individual.objects.filter(family=family)
 
     if len(individuals) < 2:
         update_seqr_model(family, pedigree_image=None)
-        return
+        return None
 
     # convert individuals to json
     individual_records = {
-        individual['individualGuid']: individual for individual in
+        individual['individualId']: individual for individual in
         _get_json_for_individuals(individuals, project_guid=project_guid, family_guid=family.guid)
     }
 
@@ -74,7 +72,6 @@ def update_pedigree_image(family, project_guid=None):
             if not parent_id or parent_id not in individual_records:
                 placeholder_parent_id = 'placeholder_%s'% _random_string(10)
                 placeholder_parent_json = {
-                    'familyId': family_id,
                     'individualId': placeholder_parent_id,  # fake indiv id
                     'paternalId': '',
                     'maternalId': '',
@@ -90,16 +87,32 @@ def update_pedigree_image(family, project_guid=None):
     # convert to FAM file values
     SEX_TO_FAM_FILE_VALUE = {"M": "1", "F": "2", "U": "0"}
     AFFECTED_STATUS_TO_FAM_FILE_VALUE = {"A": "2", "N": "1", "U": "0", "INVISIBLE": "9"}   # HaploPainter1.043.pl has been modified to hide individuals with affected-status='9'
-    for individual_json in individual_records.values():
-        if not individual_json['paternalId']:
-            individual_json['paternalId'] = '0'
-        if not individual_json['maternalId']:
-            individual_json['maternalId'] = '0'
-        individual_json['sex'] = SEX_TO_FAM_FILE_VALUE[individual_json['sex']]
-        individual_json['affected'] = AFFECTED_STATUS_TO_FAM_FILE_VALUE[individual_json['affected']]
+
+    return {
+        individual_id: {
+            'individualId': individual_id,
+            'paternalId': individual_json['paternalId'] or '0',
+            'maternalId': individual_json['maternalId'] or '0',
+            'sex': SEX_TO_FAM_FILE_VALUE[individual_json['sex']],
+            'affected': AFFECTED_STATUS_TO_FAM_FILE_VALUE[individual_json['affected']],
+        } for individual_id, individual_json in individual_records.items()
+    }
+
+
+def update_pedigree_image(family, project_guid=None):
+    """Uses HaploPainter to (re)generate the pedigree image for the given family.
+
+    Args:
+         family (object): seqr Family model.
+    """
+
+    individual_records = _get_parsed_individuals(family, project_guid)
+    if not individual_records:
+        return
 
     # run HaploPainter to generate the pedigree image
     png_file_path = os.path.join(tempfile.gettempdir(), "pedigree_image_%s.png" % _random_string(10))
+    family_id = family.family_id
     with tempfile.NamedTemporaryFile('w', suffix=".fam", delete=True) as fam_file:
 
         # columns: family, individual id, paternal id, maternal id, sex, affected

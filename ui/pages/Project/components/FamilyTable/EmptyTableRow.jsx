@@ -4,7 +4,7 @@ import styled from 'styled-components'
 import { connect } from 'react-redux'
 import { Table } from 'semantic-ui-react'
 import { getFamiliesFilter } from '../../selectors'
-import { SHOW_ALL } from '../../constants'
+import { FAMILY_FILTER_LOOKUP, SHOW_ALL } from '../../constants'
 
 const EmptyCell = styled(Table.Cell)`
   padding: 10px 0px 10px 15px;
@@ -16,7 +16,7 @@ const EmptyTableRow = ({ familiesFilter }) =>
   <Table.Row>
     <EmptyCell>
       0 families
-      { familiesFilter !== SHOW_ALL ? ' in this category' : ' in this project' }
+      { familiesFilter !== SHOW_ALL ? ` with filter "${FAMILY_FILTER_LOOKUP[familiesFilter].name}"` : ' in this project' }
     </EmptyCell>
   </Table.Row>
 

@@ -20,6 +20,8 @@ const RECEIVE_PROJECT_DETAILS = 'RECEIVE_PROJECT_DETAILS'
 const REQUEST_SAVED_VARIANTS = 'REQUEST_SAVED_VARIANTS'
 const RECEIVE_SAVED_VARIANTS = 'RECEIVE_SAVED_VARIANTS'
 const RECEIVE_SAVED_VARIANT_FAMILIES = 'RECEIVE_SAVED_VARIANT_FAMILIES'
+const RECEIVE_GENES = 'RECEIVE_GENES'
+
 
 // Data actions
 
@@ -70,6 +72,7 @@ export const loadProjectVariants = (familyGuid, variantGuid) => {
     dispatch({ type: REQUEST_SAVED_VARIANTS })
     new HttpRequestHelper(url,
       (responseJson) => {
+        dispatch({ type: RECEIVE_GENES, updatesById: responseJson.genesById })
         dispatch({ type: RECEIVE_SAVED_VARIANTS, updatesById: responseJson.savedVariants })
         if (expectedFamilyGuids) {
           dispatch({
@@ -151,6 +154,19 @@ export const addDataset = (values) => {
   }
 }
 
+export const updateLocusLists = (values) => {
+  return (dispatch, getState) => {
+    const projectGuid = getState().currentProjectGuid
+    const action = values.delete ? 'delete' : 'add'
+    return new HttpRequestHelper(`/api/project/${projectGuid}/${action}_locus_lists`,
+      (responseJson) => {
+        dispatch({ type: RECEIVE_DATA, updatesById: { projectsByGuid: { [projectGuid]: responseJson } } })
+      },
+      (e) => { throw new SubmissionError({ _error: [e.message] }) },
+    ).post(values)
+  }
+}
+
 // Table actions
 export const updateFamiliesTable = (updates, tableName) => (
   { type: tableName === CASE_REVIEW_TABLE_NAME ? UPDATE_CASE_REVIEW_TABLE_STATE : UPDATE_FAMILY_TABLE_STATE, updates }
@@ -177,6 +193,7 @@ export const reducers = {
   }, false),
   savedVariantTableState: createSingleObjectReducer(UPDATE_SAVED_VARIANT_TABLE_STATE, {
     hideExcluded: false,
+    hideReviewOnly: false,
     categoryFilter: SHOW_ALL,
     sortOrder: SORT_BY_FAMILY_GUID,
     currentPage: 1,

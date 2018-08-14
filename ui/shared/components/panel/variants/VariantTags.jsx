@@ -12,6 +12,12 @@ import { InlineToggle, BooleanCheckbox } from '../../form/Inputs'
 import TagFieldView from '../view-fields/TagFieldView'
 import TextFieldView from '../view-fields/TextFieldView'
 
+const TagTitle = styled.span`
+  font-weight: bolder;
+  margin-right: 5px;
+  vertical-align: top;
+`
+
 const ShortcutToggleContainer = styled.div`
   display: inline-block;
   
@@ -20,25 +26,16 @@ const ShortcutToggleContainer = styled.div`
   }
 `
 
-const TagContainer = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  
-  > div {
-    padding-bottom: 5px;
-  }
-`
-
 const NoteContainer = styled.div`
   color: black;
   white-space: normal;
   display: inline-block;
+  max-width: calc(100% - 50px);
+  
+  > span {
+    display: flex;
+  }
 `
-
-const NOTE_STYLES = {
-  Edit: { display: 'flex' },
-  Add: {},
-}
 
 const SHORTCUT_TAGS = ['Review', 'Excluded']
 
@@ -144,7 +141,6 @@ const VariantNoteField = ({ action, note, variant, ...props }) => {
     field="note"
     modalTitle={`${action} Variant Note`}
     additionalEditFields={VARIANT_NOTE_FIELDS}
-    style={NOTE_STYLES[action]}
     initialValues={values}
     idField={note ? 'noteGuid' : 'variantId'}
     deleteConfirm="Are you sure you want to delete this note?"
@@ -160,9 +156,10 @@ VariantNoteField.propTypes = {
 }
 
 const VariantTags = ({ variant, project, updateVariantNote: dispatchUpdateVariantNote, updateVariantTags: dispatchUpdateVariantTags }) =>
-  <TagContainer>
+  <div>
     <div>
-      <b>Tags:<HorizontalSpacer width={10} /></b>
+      <TagTitle>Tags:</TagTitle>
+      <HorizontalSpacer width={5} />
       <ShortcutTags variant={variant} dispatchUpdateVariantTags={dispatchUpdateVariantTags} />
       <VariantTagField
         field="tags"
@@ -172,23 +169,23 @@ const VariantTags = ({ variant, project, updateVariantNote: dispatchUpdateVarian
         onSubmit={dispatchUpdateVariantTags}
       />
       <HorizontalSpacer width={5} />
+      {variant.tags.some(tag => tag.category === 'CMG Discovery Tags') &&
+        <span>
+          <TagTitle>Fxnl Data:</TagTitle>
+          <VariantTagField
+            field="functionalData"
+            fieldName="Fxnl Data"
+            variant={variant}
+            tagOptions={project.variantFunctionalTagTypes}
+            editMetadata
+            onSubmit={dispatchUpdateVariantTags}
+          />
+          <HorizontalSpacer width={5} />
+        </span>
+      }
     </div>
-    {variant.tags.some(tag => tag.category === 'CMG Discovery Tags') &&
-      <div>
-        <b>Fxnl Data:<HorizontalSpacer width={5} /></b>
-        <VariantTagField
-          field="functionalData"
-          fieldName="Fxnl Data"
-          variant={variant}
-          tagOptions={project.variantFunctionalTagTypes}
-          editMetadata
-          onSubmit={dispatchUpdateVariantTags}
-        />
-        <HorizontalSpacer width={5} />
-      </div>
-    }
     <div>
-      <b>Notes:<HorizontalSpacer width={5} /></b>
+      <TagTitle>Notes:</TagTitle>
       <NoteContainer>
         {variant.notes.map(note =>
           <VariantNoteField
@@ -201,16 +198,16 @@ const VariantTags = ({ variant, project, updateVariantNote: dispatchUpdateVarian
             onSubmit={dispatchUpdateVariantNote}
           />,
         )}
+        <VariantNoteField
+          variant={variant}
+          editIconName="plus"
+          editLabel="Add Note"
+          action="Add"
+          onSubmit={dispatchUpdateVariantNote}
+        />
       </NoteContainer>
-      <VariantNoteField
-        variant={variant}
-        editIconName="plus"
-        editLabel="Add Note"
-        action="Add"
-        onSubmit={dispatchUpdateVariantNote}
-      />
     </div>
-  </TagContainer>
+  </div>
 
 VariantTags.propTypes = {
   variant: PropTypes.object,

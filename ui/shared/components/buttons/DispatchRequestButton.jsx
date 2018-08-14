@@ -3,6 +3,7 @@ import PropTypes from 'prop-types'
 import { Confirm } from 'semantic-ui-react'
 
 import RequestStatus from '../form/RequestStatus'
+import ButtonLink from './ButtonLink'
 
 
 class DispatchRequestButton extends React.Component {
@@ -16,11 +17,13 @@ class DispatchRequestButton extends React.Component {
     onSubmit: PropTypes.func.isRequired,
 
     /** Optional confirm dialog to show before submitting the request */
-    confirmDialog: PropTypes.string,
+    confirmDialog: PropTypes.oneOfType([PropTypes.string, PropTypes.node]),
 
     /** child componenets */
     children: PropTypes.node,
 
+    /** Optional callback when request succeeds **/
+    onSuccess: PropTypes.func,
   }
 
   constructor(props) {
@@ -38,10 +41,8 @@ class DispatchRequestButton extends React.Component {
     return (
       <span>
         {this.props.children ?
-          React.cloneElement(this.props.children, { onChange: this.handleButtonClick }) :
-          <a role="button" onClick={this.handleButtonClick} tabIndex="0">
-            {this.props.buttonContent}
-          </a>
+          React.cloneElement(this.props.children, { onChange: this.handleButtonClick, onClick: this.handleButtonClick }) :
+          <ButtonLink onClick={this.handleButtonClick}>{this.props.buttonContent}</ButtonLink>
         }
         <RequestStatus status={this.state.requestStatus} errorMessage={this.state.requestErrorMessage} />
         <Confirm
@@ -78,6 +79,9 @@ class DispatchRequestButton extends React.Component {
 
   handleRequestSuccess = () => {
     this.setState({ requestStatus: RequestStatus.SUCCEEDED })
+    if (this.props.onSuccess) {
+      this.props.onSuccess()
+    }
   }
 
   handleRequestError = (error) => {

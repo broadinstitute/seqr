@@ -19,6 +19,7 @@ const PageHeader = ({ user }) =>
   <HeaderMenu borderless inverted attached>
     <Menu.Item as={Link} to="/dashboard"><Header size="medium" inverted>seqr</Header></Menu.Item>
     <Menu.Item as={Link} to="/gene_info" content="Gene Info" />
+    <Menu.Item as={Link} to="/gene_lists" content="Gene Lists" />
     <Menu.Item fitted="vertically"><AwesomeBar newWindow inputwidth="350px" /></Menu.Item>
     <Menu.Item position="right">
       <p>Logged in as &nbsp; <b>{user ? (user.email || user.username) : null}</b></p>

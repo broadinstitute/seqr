@@ -1,5 +1,6 @@
 import React from 'react'
 import styled from 'styled-components'
+import DocumentTitle from 'react-document-title'
 import { Grid, Segment, Header } from 'semantic-ui-react'
 
 import AwesomeBar from 'shared/components/page/AwesomeBar'
@@ -13,6 +14,7 @@ const SEARCH_CATEGORIES = ['genes']
 
 const GeneInfoSearch = () =>
   <ContentGrid>
+    <DocumentTitle title="seqr: Gene Info" />
     <Grid.Row>
       <Grid.Column width={5} />
       <Grid.Column width={6}>

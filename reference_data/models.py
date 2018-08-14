@@ -9,7 +9,8 @@ GENOME_VERSION_CHOICES = [
 ]
 
 
-# HPO categories are direct children of HP:0000118 "Phenotypic abnormality".  See http://compbio.charite.de/hpoweb/showterm?id=HP:0000118
+# HPO categories are direct children of HP:0000118 "Phenotypic abnormality".
+# See http://compbio.charite.de/hpoweb/showterm?id=HP:0000118
 HPO_CATEGORY_NAMES = {
     'HP:0000478': 'Eye',
     'HP:0025142': 'Constitutional Symptom',
@@ -57,77 +58,64 @@ class HumanPhenotypeOntology(models.Model):
     comment = models.TextField(null=True, blank=True)
 
 
-class GencodeRelease(models.Model):
-    release_number = models.IntegerField()  # eg. 25
-    release_date = models.DateTimeField()
-    genome_version = models.CharField(max_length=3, choices=GENOME_VERSION_CHOICES)
-
-    def __unicode__(self):
-        return "gencode_v%s (released: %s)" % (self.release_number, str(self.release_date)[:10])
-
-    class Meta:
-        unique_together = ('release_number', 'release_date', 'genome_version')
-
-
-GENCODE_STATUS_CHOICES = (
-    ("K", "KNOWN"),
-    ("N", "NOVEL"),
-    ("P", "PUTATIVE"),
-)
-
-GENCODE_SOURCE_CHOICES = (
-    ('H', 'HAVANA'),
-    ('E', 'ENSEMBL'),
-)
-
-
-class GencodeGene(models.Model):
+class GeneInfo(models.Model):
     """Human gene models from https://www.gencodegenes.org/releases/
     http://www.gencodegenes.org/gencodeformat.html
     """
-    gencode_release = models.ForeignKey(GencodeRelease, on_delete=models.PROTECT)
-    chrom = models.CharField(max_length=1)
-    start = models.IntegerField()
-    end = models.IntegerField()
 
-    source = models.CharField(max_length=1, choices=GENCODE_SOURCE_CHOICES)
-    strand = models.CharField(max_length=1)
+    # gencode fields
+    gene_id = models.CharField(max_length=20, db_index=True, unique=True)   # without the version suffix (eg. "ENSG0000012345")
+    gene_symbol = models.TextField(null=True, blank=True)
 
-    gene_id = models.CharField(max_length=20, db_index=True)         # without the version suffix
-    gene_type = models.CharField(max_length=30, db_index=True)
-    gene_status = models.CharField(max_length=1, choices=GENCODE_STATUS_CHOICES)
-    gene_name = models.CharField(max_length=30, db_index=True)
+    chrom_grch37 = models.CharField(max_length=2, null=True, blank=True)
+    start_grch37 = models.IntegerField(null=True, blank=True)
+    end_grch37 = models.IntegerField(null=True, blank=True)
+    strand_grch37 = models.CharField(max_length=1, null=True, blank=True)
+    coding_region_size_grch37 = models.IntegerField(default=0)  # number of protein-coding base-pairs in this gene (= 0 for non-coding genes)
 
-    level = models.IntegerField()
+    chrom_grch38 = models.CharField(max_length=2, null=True, blank=True)
+    start_grch38 = models.IntegerField(null=True, blank=True)
+    end_grch38 = models.IntegerField(null=True, blank=True)
+    strand_grch38 = models.CharField(max_length=1, null=True, blank=True)
+    coding_region_size_grch38 = models.IntegerField(default=0)  # number of protein-coding base-pairs in this gene (= 0 for non-coding genes)
 
-    protein_id = models.CharField(max_length=20, null=True)
-
-    class Meta:
-        unique_together = ('gencode_release', 'chrom', 'start', 'end', 'gene_id')
-
-
-class GencodeTranscript(models.Model):
-    gencode_release = models.ForeignKey(GencodeRelease, on_delete=models.PROTECT)
-    gene = models.ForeignKey(GencodeGene, on_delete=models.CASCADE)
-
-    chrom = models.CharField(max_length=1)
-    start = models.IntegerField()
-    end = models.IntegerField()
-
-    source = models.CharField(max_length=1, choices=GENCODE_SOURCE_CHOICES)
-    strand = models.CharField(max_length=1)
-
-    transcript_id = models.CharField(max_length=20, db_index=True)  # without the version suffix
-    transcript_status = models.CharField(max_length=1, choices=GENCODE_STATUS_CHOICES)
-    transcript_name = models.CharField(max_length=30, db_index=True)
-
-    transcript_support_level = models.IntegerField(null=True)
-
-    class Meta:
-        unique_together = ('gencode_release', 'chrom', 'start', 'end', 'transcript_id')
+    # gencode-specific fields, although models could hypothetically come from refseq or other places
+    gencode_gene_type = models.TextField(null=True, blank=True)
+    gencode_release = models.IntegerField(null=True, blank=True)
 
 
-class OMIM(models.Model):
+class TranscriptInfo(models.Model):
+    gene = models.ForeignKey(GeneInfo, on_delete=models.CASCADE)
+
+    transcript_id = models.CharField(max_length=20, db_index=True, unique=True)  # without the version suffix
+    #protein_id = models.CharField(max_length=20, null=True)
+
+    chrom_grch37 = models.CharField(max_length=2, null=True, blank=True)
+    start_grch37 = models.IntegerField(null=True, blank=True)
+    end_grch37 = models.IntegerField(null=True, blank=True)
+    strand_grch37 = models.CharField(max_length=1, null=True, blank=True)
+    coding_region_size_grch37 = models.IntegerField(default=0)  # number of protein-coding bases (= 0 for non-coding genes)
+
+    chrom_grch38 = models.CharField(max_length=2, null=True, blank=True)
+    start_grch38 = models.IntegerField(null=True, blank=True)
+    end_grch38 = models.IntegerField(null=True, blank=True)
+    strand_grch38 = models.CharField(max_length=1, null=True, blank=True)
+    coding_region_size_grch38 = models.IntegerField(default=0)  # number of protein-coding bases (= 0 for non-coding genes)
+
+
+# based on # ftp://ftp.broadinstitute.org/pub/ExAC_release/release0.3.1/functional_gene_constraint/fordist_cleaned_exac_r03_march16_z_pli_rec_null_data.txt
+class GeneConstraint(models.Model):
+    gene = models.ForeignKey(GeneInfo, on_delete=models.CASCADE)
+
+    mis_z = models.FloatField()
+    mis_z_rank = models.IntegerField()
+    pLI = models.FloatField()
+    pLI_rank = models.IntegerField()
+
+    #pRec = models.FloatField()
+
+
+class Omim(models.Model):
     MAP_METHOD_CHOICES = (
         ('1', 'the disorder is placed on the map based on its association with a gene, but the underlying defect is not known.'),
         ('2', 'the disorder has been placed on the map by linkage; no mutation has been found.'),
@@ -135,11 +123,10 @@ class OMIM(models.Model):
         ('4', 'a contiguous gene deletion or duplication syndrome, multiple genes are deleted or duplicated causing the phenotype.'),
     )
 
-    date_downloaded = models.DateTimeField(auto_now_add=True)
-    mim_number = models.IntegerField()  #  Example: 601365
-    gene_id = models.CharField(max_length=20, db_index=True)  # Example: "ENSG00000107404"
-    gene_symbol = models.CharField(null=True, blank=True, max_length=20)  # Example: "DVL1"
-    gene_description = models.TextField(null=True, blank=True, max_length=20)  # Example: "Dishevelled 1 (homologous to Drosophila dsh)"
+    gene = models.ForeignKey(GeneInfo, on_delete=models.CASCADE)
+
+    mim_number = models.IntegerField()  # Example: 601365
+    gene_description = models.TextField(null=True, blank=True)  # Example: "Dishevelled 1 (homologous to Drosophila dsh)"
     comments = models.TextField(null=True, blank=True)  # Example: "associated with rs10492972"
     phenotype_inheritance = models.TextField(null=True, blank=True)  # Example: "Autosomal dominant"
     phenotype_mim_number = models.IntegerField(null=True, blank=True)  # Example: 616331
@@ -148,48 +135,42 @@ class OMIM(models.Model):
 
     class Meta:
         # ('mim_number', 'phenotype_mim_number') is not unique - for example ('124020', '609535')
-        unique_together = ('mim_number', 'phenotype_description')
+        unique_together = ('mim_number', 'phenotype_mim_number', 'phenotype_description')
 
 
+# based on dbNSFPv3.5a_gene fields
 class dbNSFPGene(models.Model):
-    gene_id = models.CharField(max_length=20, db_index=True)  # Example: "ENSG00000107404"
+    gene = models.ForeignKey(GeneInfo, on_delete=models.CASCADE)
+
     function_desc = models.TextField(null=True, blank=True)
     disease_desc = models.TextField(null=True, blank=True)
-
-
-class Clinvar(models.Model):
-    release_date = models.DateTimeField()
-    genome_version = models.CharField(max_length=3, choices=GENOME_VERSION_CHOICES)
-
-    chrom = models.CharField(max_length=1)
-    pos = models.IntegerField()
-    ref = models.TextField(null=True, blank=True)
-    alt = models.TextField(null=True, blank=True)
-
-    measureset_type = models.TextField(null=True, blank=True)
-    measureset_id = models.TextField(null=True, blank=True)
-    rcv = models.TextField(null=True, blank=True)
-    allele_id = models.TextField(null=True, blank=True)
-    symbol = models.TextField(null=True, blank=True)
-    hgvs_c = models.TextField(null=True, blank=True)
-    hgvs_p = models.TextField(null=True, blank=True)
-    molecular_consequence = models.TextField(null=True, blank=True)
-    clinical_significance = models.TextField(null=True, blank=True)
-    pathogenic = models.BooleanField()
-    benign = models.BooleanField()
-    conflicted = models.BooleanField()
-    review_status = models.TextField(null=True, blank=True)
-    gold_stars = models.IntegerField()
-    all_submitters = models.TextField(null=True, blank=True)
-    all_traits = models.TextField(null=True, blank=True)
-    all_pmids = models.TextField(null=True, blank=True)
-    inheritance_modes = models.TextField(null=True, blank=True)
-    age_of_onset = models.TextField(null=True, blank=True)
-    prevalence = models.TextField(null=True, blank=True)
-    disease_mechanism = models.TextField(null=True, blank=True)
-    origin = models.TextField(null=True, blank=True)
-    xrefs = models.TextField(null=True, blank=True)
-
-# Constraint, pLI
-# GTEx
-
+    uniprot_acc = models.TextField(null=True, blank=True)
+    uniprot_id = models.TextField(null=True, blank=True)
+    entrez_gene_id = models.TextField(null=True, blank=True)
+    ccds_id = models.TextField(null=True, blank=True)
+    refseq_id = models.TextField(null=True, blank=True)
+    ucsc_id = models.TextField(null=True, blank=True)
+    pathway_uniprot = models.TextField(null=True, blank=True)
+    pathway_biocarta_short = models.TextField(null=True, blank=True)  #  Short name of the Pathway(s) the gene belongs to (from BioCarta)
+    pathway_biocarta_full = models.TextField(null=True, blank=True)    #  Full name(s) of the Pathway(s) the gene belongs to (from BioCarta)
+    pathway_consensus_path_db = models.TextField(null=True, blank=True)   # Pathway(s) the gene belongs to (from ConsensusPathDB)
+    pathway_kegg_id = models.TextField(null=True, blank=True)           # ID(s) of the Pathway(s) the gene belongs to (from KEGG)
+    pathway_kegg_full = models.TextField(null=True, blank=True)         # Full name(s) of the Pathway(s) the gene belongs to (from KEGG)
+    function_desc = models.TextField(null=True, blank=True)  # Function description of the gene (from Uniprot)
+    disease_desc = models.TextField(null=True, blank=True)    # Disease(s) the gene caused or associated with (from Uniprot)
+    trait_association_gwas = models.TextField(null=True, blank=True) # Trait(s) the gene associated with (from GWAS catalog)
+    go_biological_process = models.TextField(null=True, blank=True)   # GO terms for biological process
+    go_cellular_component = models.TextField(null=True, blank=True)   # GO terms for cellular component
+    go_molecular_function = models.TextField(null=True, blank=True)   # GO terms for molecular function
+    tissue_specificity = models.TextField(null=True, blank=True)   # Tissue specificity description from Uniprot
+    expression_egenetics = models.TextField(null=True, blank=True)   # Tissues/organs the gene expressed in (egenetics data from BioMart)
+    expression_gnf_atlas = models.TextField(null=True, blank=True)   # Tissues/organs the gene expressed in (GNF/Atlas data from BioMart)
+    rvis_exac = models.TextField(null=True, blank=True)
+    ghis = models.TextField(null=True, blank=True)
+    essential_gene = models.TextField(null=True, blank=True)   # Essential ("E") or Non-essential phenotype-changing ("N") based on Mouse Genome Informatics database. from doi:10.1371/journal.pgen.1003484
+    mgi_mouse_gene = models.TextField(null=True, blank=True)   # Homolog mouse gene name from MGI
+    mgi_mouse_phenotype = models.TextField(null=True, blank=True)   # Phenotype description for the homolog mouse gene from MGI
+    zebrafish_gene = models.TextField(null=True, blank=True)   # Homolog zebrafish gene name from ZFIN
+    zebrafish_structure = models.TextField(null=True, blank=True)   # Affected structure of the homolog zebrafish gene from ZFIN
+    zebrafish_phenotype_quality = models.TextField(null=True, blank=True)   # Phenotype description for the homolog zebrafish gene from ZFIN
+    zebrafish_phenotype_tag = models.TextField(null=True, blank=True)   # Phenotype tag for the homolog zebrafish gene from ZFIN

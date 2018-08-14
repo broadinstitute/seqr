@@ -57,6 +57,15 @@ from seqr.views.pages.staff.staff_pages import \
     seqr_stats_page, \
     users_page
 
+from seqr.views.apis.locus_list_api import \
+    locus_lists, \
+    locus_list_info, \
+    create_locus_list_handler, \
+    update_locus_list_handler, \
+    delete_locus_list_handler, \
+    add_project_locus_lists, \
+    delete_project_locus_lists
+
 from seqr.views.pages.staff.discovery_sheet import discovery_sheet
 from seqr.views.pages.staff.elasticsearch_status import elasticsearch_status
 from seqr.views.pages.staff.komp_export import komp_export
@@ -73,7 +82,8 @@ react_app_pages = [
     r'^$',
     'dashboard',
     'project/(?P<project_guid>[^/]+)/.*',
-    'gene_info/.*'
+    'gene_info/.*',
+    'gene_lists/.*',
 ]
 
 # NOTE: the actual url will be this with an '/api' prefix
@@ -121,6 +131,14 @@ api_endpoints = {
     'gene_info/(?P<gene_id>[^/]+)/note/create': create_gene_note_handler,
     'gene_info/(?P<gene_id>[^/]+)/note/(?P<note_guid>[^/]+)/update': update_gene_note_handler,
     'gene_info/(?P<gene_id>[^/]+)/note/(?P<note_guid>[^/]+)/delete': delete_gene_note_handler,
+
+    'locus_lists': locus_lists,
+    'locus_lists/(?P<locus_list_guid>[^/]+)': locus_list_info,
+    'locus_lists/create': create_locus_list_handler,
+    'locus_lists/(?P<locus_list_guid>[^/]+)/update': update_locus_list_handler,
+    'locus_lists/(?P<locus_list_guid>[^/]+)/delete': delete_locus_list_handler,
+    'project/(?P<project_guid>[^/]+)/add_locus_lists': add_project_locus_lists,
+    'project/(?P<project_guid>[^/]+)/delete_locus_lists': delete_project_locus_lists,
 
     'awesomebar': awesomebar_autocomplete_handler,
 

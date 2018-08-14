@@ -25,6 +25,11 @@ const ToggleIcon = styled(Icon).attrs({ size: 'large', link: true, name: 'dropdo
   z-index: 1;
 `
 
+// Allows dropdowns to be visible inside table cell
+const OverflowCell = styled(Table.Cell)`
+  overflow: visible !important;
+`
+
 class FamilyTableRow extends React.PureComponent {
 
   constructor(props) {
@@ -43,7 +48,7 @@ class FamilyTableRow extends React.PureComponent {
     const { family, editCaseReview, showSearchLinks, showVariantTags, detailFields, noDetailFields } = this.props
     return (
       <Table.Row>
-        <Table.Cell>
+        <OverflowCell>
           <FamilyDetail
             key={family.familyGuid}
             family={family}
@@ -56,7 +61,7 @@ class FamilyTableRow extends React.PureComponent {
             individuals={this.state.showDetails && family.individuals}
             editCaseReview={editCaseReview}
           />
-        </Table.Cell>
+        </OverflowCell>
       </Table.Row>
     )
   }
@@ -78,7 +83,7 @@ const FamilyTable = ({ visibleFamilies, loading, headerStatus, showInternalFilte
       <ExportTableButton downloads={exportUrls} />
       <HorizontalSpacer width={45} />
     </ExportContainer>
-    <Table attached="top">
+    <Table padded fixed attached="top">
       <TableHeaderRow
         headerStatus={headerStatus}
         showInternalFilters={showInternalFilters}

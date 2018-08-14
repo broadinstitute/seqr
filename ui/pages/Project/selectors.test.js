@@ -47,7 +47,7 @@ test('getCaseReviewStatusCounts', () => {
   const caseReviewStatusCounts = getCaseReviewStatusCounts(STATE_WITH_2_FAMILIES)
   const caseReviewStatusCountsSorted = orderBy(caseReviewStatusCounts, [obj => obj.count], 'desc')
 
-  expect(caseReviewStatusCountsSorted.length).toEqual(11)
+  expect(caseReviewStatusCountsSorted.length).toEqual(7)
 
   expect(caseReviewStatusCountsSorted[0]).toHaveProperty('name', 'In Review')
   expect(caseReviewStatusCountsSorted[0]).toHaveProperty('value', 'I')

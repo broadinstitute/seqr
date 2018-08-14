@@ -62,7 +62,7 @@ def login_view(request):
             if next and '.wsgi' not in next:
                 return redirect(next)
             else: 
-                return redirect('home')
+                return redirect('/')
 
     else: 
         form = LoginForm()

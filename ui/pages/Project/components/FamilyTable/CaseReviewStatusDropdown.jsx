@@ -19,6 +19,10 @@ const StatusContainer = styled.span`
   display: inline-block;
   whitespace: nowrap;
   min-width: 220px;
+  
+  .ui.selection.active.dropdown .menu {
+    max-height: none;
+  }
 `
 
 const STATUS_FORM_FIELDS = [{

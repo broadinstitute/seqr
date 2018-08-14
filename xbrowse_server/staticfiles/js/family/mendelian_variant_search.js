@@ -194,9 +194,7 @@ var MendelianVariantSearchResultsView = Backbone.View.extend({
         this.sort_direction = Cookies.get('sortd') || 1;
         this.sort_column = Cookies.get('sortc') || "genomic_position";
 
-        if(!(this.sort_column == "genomic_position" && this.sort_direction == 1)) {
-            this.update_sort_order();
-        }
+        this.update_sort_order();
 
         var that = this;
         _.defer(function() {

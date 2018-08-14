@@ -61,18 +61,18 @@ FileLink.propTypes = {
   data: PropTypes.object,
 }
 
-const ExportTableButton = props =>
+const ExportTableButton = ({ downloads, buttonText, ...buttonProps }) =>
   <Popup
     trigger={
-      <ButtonLink>
-        <Icon name="download" />Download Table
+      <ButtonLink {...buttonProps}>
+        <Icon name="download" />{buttonText || 'Download Table'}
       </ButtonLink>
     }
     content={
       <Table className="noBorder">
         <Table.Body className="noBorder">
           {
-            props.downloads.map(({ name, url, data }) => {
+            downloads.map(({ name, url, data }) => {
               return [
                 <Table.Row key={1} className="noBorder">
                   <NameCell colSpan="2" className="noBorder">
@@ -104,6 +104,7 @@ ExportTableButton.propTypes = {
    *  [{ name: 'table1', url: '/table1-export'},  { name: 'table2', url: '/table2-export' }]
    */
   downloads: PropTypes.array.isRequired,
+  buttonText: PropTypes.string,
 }
 
 export default ExportTableButton

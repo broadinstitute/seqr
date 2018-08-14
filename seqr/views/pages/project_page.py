@@ -6,19 +6,17 @@ import itertools
 import logging
 import json
 
-from guardian.shortcuts import get_objects_for_group
 from django.contrib.auth.decorators import login_required
 from django.db import connection
 from django.db.models import Q, Count
 
-from seqr.models import Family, Individual, _slugify, CAN_VIEW, LocusList, \
-    LocusListGene, LocusListInterval, VariantTagType, VariantTag, VariantFunctionalData
+from seqr.models import Family, Individual, _slugify, VariantTagType, VariantTag, VariantFunctionalData
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.individual_api import export_individuals
+from seqr.views.apis.locus_list_api import get_sorted_project_locus_lists
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import \
-    _get_json_for_project, _get_json_for_sample, _get_json_for_families, _get_json_for_individuals, \
-    get_json_for_saved_variant
+    _get_json_for_project, _get_json_for_sample, _get_json_for_families, _get_json_for_individuals, get_json_for_saved_variant
 
 
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions
@@ -57,9 +55,9 @@ def project_page_data(request, project_guid):
 
     project_json = _get_json_for_project(project, request.user)
     project_json['collaborators'] = _get_json_for_collaborator_list(project)
-    project_json['locusLists'] = _get_json_for_locus_lists(project)
     project_json.update(_get_json_for_variant_tag_types(project))
-    #project_json['referencePopulations'] = _get_json_for_reference_populations(project)
+    locus_lists = get_sorted_project_locus_lists(project, request.user)
+    project_json['locusListGuids'] = [locus_list['locusListGuid'] for locus_list in locus_lists]
 
     # gene search will be deprecated once the new database is online.
     project_json['hasGeneSearch'] = _has_gene_search(project)
@@ -70,6 +68,7 @@ def project_page_data(request, project_guid):
         'familiesByGuid': families_by_guid,
         'individualsByGuid': individuals_by_guid,
         'samplesByGuid': samples_by_guid,
+        'locusListsByGuid': {locus_list['locusListGuid']: locus_list for locus_list in locus_lists}
     }
 
     return create_json_response(json_response)
@@ -209,22 +208,6 @@ def _get_json_for_collaborator_list(project):
         )
 
     return sorted(collaborator_list, key=lambda collaborator: (collaborator['lastName'], collaborator['displayName']))
-
-
-def _get_json_for_locus_lists(project):
-    result = []
-
-    for locus_list in get_objects_for_group(project.can_view_group, CAN_VIEW, LocusList):
-        result.append({
-            'locusListGuid': locus_list.guid,
-            'createdDate': locus_list.created_date,
-            'name': locus_list.name,
-            'deprecatedGeneListId': _slugify(locus_list.name),
-            'description': locus_list.description,
-            'numEntries': LocusListGene.objects.filter(locus_list=locus_list).count() + LocusListInterval.objects.filter(locus_list=locus_list).count(),
-        })
-
-    return sorted(result, key=lambda locus_list: locus_list['createdDate'])
 
 
 def _get_json_for_variant_tag_types(project):

@@ -6,7 +6,7 @@ import BaseFieldView from './BaseFieldView'
 
 const OptionFieldView = ({ field, tagOptions, fieldDisplay, tagAnnotation, compact, formFieldProps = {}, additionalEditFields = [], ...props }) => {
 
-  const tagSelectOptions = tagOptions.map(({ value, name, ...tag }) => ({ value: value || name, text: name, ...tag }))
+  const tagSelectOptions = tagOptions.map(({ name, ...tag }) => ({ value: name, text: name, ...tag }))
 
   const fields = [
     ...additionalEditFields,
@@ -25,7 +25,7 @@ const OptionFieldView = ({ field, tagOptions, fieldDisplay, tagAnnotation, compa
       field={field}
       compact={compact}
       fieldDisplay={fieldDisplay || ((value) => {
-        const valueConfig = tagSelectOptions.find(option => option.value === value)
+        const valueConfig = tagSelectOptions.find(option => option.value === value) || {}
         const annotation = tagAnnotation ? tagAnnotation(valueConfig, compact) : null
         return <span>{annotation}{compact && annotation ? '' : valueConfig.text}</span>
       })}

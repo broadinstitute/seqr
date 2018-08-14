@@ -37,7 +37,7 @@ const TableCell = styled(Table.Cell)`
   padding: .2em .6em !important;`
 
 
-class HorizontalStackedBar extends React.Component {
+class HorizontalStackedBar extends React.PureComponent {
 
   static propTypes = {
     title: PropTypes.string.isRequired,

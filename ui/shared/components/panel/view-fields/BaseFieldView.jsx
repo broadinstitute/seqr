@@ -7,23 +7,16 @@ import { Icon } from 'semantic-ui-react'
 import { getUser } from 'redux/selectors'
 import StaffOnlyIcon from '../../icons/StaffOnlyIcon'
 import DispatchRequestButton from '../../buttons/DispatchRequestButton'
-import ButtonLink from '../../buttons/ButtonLink'
-import ReduxFormWrapper from '../../form/ReduxFormWrapper'
-import Modal from '../../modal/Modal'
+import DeleteButton from '../../buttons/DeleteButton'
+import UpdateButton from '../../buttons/UpdateButton'
 import { HorizontalSpacer } from '../../Spacers'
 
-const EditLabel = styled.span`
-  font-size: .9em;
-  padding-right: 5px;
-`
 const FieldValue = styled.div`
   padding-bottom: ${props => (props.compact ? 0 : '15px')}; 
   padding-left: ${props => (props.compact ? 0 : '22px')};
   padding-right: ${props => (props.fieldName ? '20px' : '5px')};
   display: ${props => ((props.fieldName && !props.compact) ? 'block' : 'inline-block')};
 `
-
-const hasValue = val => val && (!Object.getOwnPropertyNames(val).includes('length') || val.length > 0)
 
 const BaseFieldView = (props) => {
   if (props.isVisible !== undefined && !props.isVisible) {
@@ -33,29 +26,26 @@ const BaseFieldView = (props) => {
     return null
   }
   const fieldValue = props.initialValues[props.field]
-  if (!props.isEditable && !hasValue(fieldValue) && !props.showEmptyValues) {
+  const hasValue = (fieldValue && (!Object.getOwnPropertyNames(fieldValue).includes('length') || fieldValue.length > 0)) || props.showEmptyValues
+  if (!props.isEditable && !hasValue) {
     return null
   }
   const modalId = props.isEditable ? `edit-${props.initialValues[props.idField] || 'new'}-${props.field}` : null
 
   const editButton = props.isEditable && (props.formFields ?
-    <Modal key="edit" title={props.modalTitle} modalName={modalId} trigger={
-      <ButtonLink>
-        {props.editLabel && <EditLabel>{props.editLabel}</EditLabel>}
-        <Icon link size="small" name={props.editIconName || 'write'} />
-      </ButtonLink>
-    }
-    >
-      <div style={props.modalStyle}>
-        <ReduxFormWrapper
-          onSubmit={props.onSubmit}
-          form={modalId}
-          initialValues={props.initialValues}
-          fields={props.formFields}
-          confirmCloseIfNotSaved
-        />
-      </div>
-    </Modal>
+    <UpdateButton
+      key="edit"
+      modalTitle={props.modalTitle}
+      modalId={modalId}
+      buttonText={props.editLabel}
+      editIconName={props.editIconName}
+      onSubmit={props.onSubmit}
+      initialValues={props.initialValues}
+      formFields={props.formFields}
+      formContainer={<div style={props.modalStyle} />}
+      showErrorPanel={props.showErrorPanel}
+      size="small"
+    />
     : (
       <DispatchRequestButton
         key="edit"
@@ -65,11 +55,12 @@ const BaseFieldView = (props) => {
       />
     ))
   const deleteButton = props.isDeletable && (
-    <DispatchRequestButton
+    <DeleteButton
       key="delete"
-      buttonContent={<Icon link size="small" name="trash" />}
-      onSubmit={() => props.onSubmit({ ...props.initialValues, delete: true })}
+      initialValues={props.initialValues}
+      onSubmit={props.onSubmit}
       confirmDialog={props.deleteConfirm}
+      size="small"
     />
   )
   const buttons = [editButton, deleteButton]
@@ -78,13 +69,13 @@ const BaseFieldView = (props) => {
     <span style={props.style || {}}>
       {props.isPrivate && <StaffOnlyIcon />}
       {props.fieldName && [
-        <b key="name">{props.fieldName}{hasValue(fieldValue) && ':'}<HorizontalSpacer width={10} /></b>,
+        <b key="name">{props.fieldName}{hasValue ? ':' : null}<HorizontalSpacer width={10} /></b>,
         ...buttons,
         props.compact && (buttons.some(b => b) ? <HorizontalSpacer width={10} key="hs" /> : null),
         !props.compact && <br key="br" />,
       ]}
       {
-        (props.showEmptyValues || hasValue(fieldValue)) && !props.hideValue &&
+        hasValue && !props.hideValue &&
         <FieldValue compact={props.compact} fieldName={props.fieldName}>
           {props.fieldDisplay(fieldValue, props.compact)}
         </FieldValue>
@@ -94,7 +85,7 @@ const BaseFieldView = (props) => {
 }
 
 BaseFieldView.propTypes = {
-  fieldDisplay: PropTypes.func.isRequired,
+  fieldDisplay: PropTypes.func,
   formFields: PropTypes.array,
   isVisible: PropTypes.any,
   isPrivate: PropTypes.bool,
@@ -116,6 +107,11 @@ BaseFieldView.propTypes = {
   showEmptyValues: PropTypes.bool,
   user: PropTypes.object,
   modalStyle: PropTypes.object,
+  showErrorPanel: PropTypes.bool,
+}
+
+BaseFieldView.defaultProps = {
+  fieldDisplay: val => val,
 }
 
 const mapStateToProps = state => ({

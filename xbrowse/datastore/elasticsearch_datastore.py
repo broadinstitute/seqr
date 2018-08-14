@@ -497,11 +497,6 @@ class ElasticsearchDatastore(datastore.Datastore):
                     'num_alt': num_alt,
                 }
 
-            if all([num_alt <= 0 for num_alt in all_num_alt]):
-                #logger.info("Filtered out due to genotype: " + str(genotypes))
-                #print("Filtered all_num_alt <= 0 - Result %s: GRCh38: %s:%s,  cadd: %s  %s - %s" % (i, hit["contig"], hit["start"], hit["cadd_PHRED"] if "cadd_PHRED" in hit else "", hit["transcriptConsequenceTerms"], all_num_alt))
-                continue
-
             vep_annotation = json.loads(str(hit['sortedTranscriptConsequences'])) if 'sortedTranscriptConsequences' in hit else None
 
             if project.genome_version == GENOME_VERSION_GRCh37:

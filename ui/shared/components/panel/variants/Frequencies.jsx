@@ -4,6 +4,8 @@ import styled from 'styled-components'
 import { Popup } from 'semantic-ui-react'
 
 import { HorizontalSpacer } from '../../Spacers'
+import { GENOME_VERSION_37 } from '../../../utils/constants'
+
 
 const FreqValue = styled.span`
   color: grey;
@@ -16,7 +18,7 @@ const FreqLink = ({ url, value, variant, genomeVersion }) => {
     pos = variant.liftedOverPos
   }
 
-  const isRegion = parseInt(value, 10) <= 0
+  const isRegion = parseFloat(value, 10) <= 0
   let coords
   if (isRegion) {
     coords = `${chrom}-${parseInt(pos, 10) - 100}-${parseInt(pos, 10) + 100}`
@@ -38,7 +40,7 @@ FreqLink.propTypes = {
   genomeVersion: PropTypes.string.isRequired,
 }
 
-const FreqSummary = ({ field, fieldTitle, variant, url, hasLink, showAC, genomeVersion = '37', precision = 2 }) => {
+const FreqSummary = ({ field, fieldTitle, variant, url, hasLink, showAC, genomeVersion = GENOME_VERSION_37, precision = 2 }) => {
   const { freqs, popCounts } = variant.annotation
   if (freqs[field] === null) {
     return null
