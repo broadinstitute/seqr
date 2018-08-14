@@ -71,7 +71,7 @@ const ProjectOverview = ({ project, analysisGroup, familiesByGuid, individualsBy
         </Grid.Column>
         {!analysisGroup &&
           <Grid.Column width={5}>
-            {Object.keys(analysisGroupsByGuid).length} Analysis Groups
+            Analysis Groups:
             <DetailContent>
               {
                 Object.values(analysisGroupsByGuid).sort(compareObjects('name')).map(ag =>
