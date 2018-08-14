@@ -76,6 +76,7 @@ from seqr.views.apis.auth_api import login_required_error, API_LOGIN_REQUIRED_UR
 from seqr.views.apis.igv_api import fetch_igv_track
 from seqr.views.apis.project_api import create_project_handler, update_project_handler, delete_project_handler
 from seqr.views.apis.project_categories_api import update_project_categories_handler
+from seqr.views.apis.variant_search_api import query_variants_handler
 from seqr.views.utils.file_utils import save_temp_file
 
 react_app_pages = [
@@ -139,6 +140,8 @@ api_endpoints = {
     'locus_lists/(?P<locus_list_guid>[^/]+)/delete': delete_locus_list_handler,
     'project/(?P<project_guid>[^/]+)/add_locus_lists': add_project_locus_lists,
     'project/(?P<project_guid>[^/]+)/delete_locus_lists': delete_project_locus_lists,
+
+    'search': query_variants_handler,
 
     'awesomebar': awesomebar_autocomplete_handler,
 

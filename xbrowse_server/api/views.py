@@ -133,6 +133,7 @@ def mendelian_variant_search_spec(request):
 
     search_hash = request.GET.get('search_hash')
     search_spec_dict, variants = cache_utils.get_cached_results(project.project_id, search_hash)
+    import pdb; pdb.set_trace()
     search_spec = MendelianVariantSearchSpec.fromJSON(search_spec_dict)
     if variants is None:
         variants = api_utils.calculate_mendelian_variant_search(search_spec, family, user=request.user)

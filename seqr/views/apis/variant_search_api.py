@@ -1,120 +1,69 @@
-import json
-import requests
-
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 
-from seqr.models import Project, CAN_VIEW, Sample
+from seqr.models import Family, SavedVariant
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
+from seqr.views.apis.saved_variant_api import _variant_details
 from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.permissions_utils import check_permissions
+from seqr.views.utils.orm_to_json_utils import \
+    get_json_for_variant_tag, get_json_for_variant_functional_data, get_json_for_variant_note
+from seqr.views.utils.permissions_utils import get_project_and_check_permissions
+from seqr.model_utils import find_matching_xbrowse_model
+
+
+
+from xbrowse_server.api.utils import add_extra_info_to_variants_project
+from xbrowse_server.api import utils as api_utils
+from xbrowse_server.mall import get_reference
+from xbrowse_server.search_cache import utils as cache_utils
+from xbrowse import Variant
+from xbrowse.analysis_modules.mendelian_variant_search import MendelianVariantSearchSpec
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
-def query_variants_handler(request, project_guid):
+def query_variants_handler(request):
     """Search variants.
-
-    Args:
-        project_guid (string): GUID of the project to query
-
-
-    HTTP POST
-        Reqeust body:
-            {
-                filters:
-                {
-                    project_guids:
-                    {
-                        project_guid1
-                        {
-                            family_guids: {
-                                family_guid1
-                                family_guid2
-                                {
-
-                                },
-                            },
-
-                            dataset_guids:
-                            {
-                                WES, WGS, CNV, RNA_splice datasets
-                            },
-                        },
-
-                        project_guid2
-                        {
-                            # empty means query all families in project
-                            # empty dataset means query all datasets
-                        },
-                    },
-                }
-
-                projection: "by_family" | "by_variant" | "by_gene"  (1 row per..)
-
-
-
-
-            }
-        Response body: will be json with the delete projectGuid mapped to the special 'DELETE' keyword:
-            {
-                'projectsByGuid':  { <projectGuid1> : ... }
-            }
-
     """
 
-    # if project not specified, search all projects the user has access to
-    project = Project.objects.get(guid=project_guid)
+    # TODO this is only mendelian variant search, should be others and not require project/ family
+    project = get_project_and_check_permissions(request.GET.get('projectGuid'), request.user)
+    base_project = find_matching_xbrowse_model(project)
+    family = Family.objects.get(guid=request.GET.get('familyGuid'))
 
-    # Query Params:
-    #    list of individuals and how to filter on their genotype, allele balance, etc.
-    #    list of datasets
-    #    intervals
-    #
+    search_hash = request.GET.get('searchHash')
+    search_spec_dict, variants = cache_utils.get_cached_results(base_project.project_id, search_hash)
+    search_spec = MendelianVariantSearchSpec.fromJSON(search_spec_dict)
+    if variants is None:
+        variants = api_utils.calculate_mendelian_variant_search(search_spec, family, user=request.user)
+    else:
+        variants = [Variant.fromJSON(v) for v in variants]
+        for variant in variants:
+            variant.set_extra('family_id', family.family_id)
 
-    # query1: are there any family ids that are invalid, or that the user doesn't have permissions to access?
+    add_extra_info_to_variants_project(get_reference(), base_project, variants, add_populations=True)
 
-    # query2: are there families that dont' have data?
-
-    # get all elasticsearch datasets being queried (or include them in the query
-
-
-    # for each family being queried, get affected status of individuals
-    #
-
-    check_permissions(project, request.user, CAN_VIEW)
-
-    # for the families being searched, look up available samples and datasets to query
-
-    # create elasticsearch filters
-
-
-    request_json = json.loads(request.body)
-
-
-    #if 'form' not in request_json:
-    #    return create_json_response({}, status=400, reason="Invalid request: 'form' not in request_json")
-
-
-    results = requests.post('http://localhost:6060/', json={
-        "page": 1,
-        "limit": 100,
-        "genotype_filters": {
-            "1877nih": {"num_alt": 1},
-            "22067nih": {"num_alt": 2},
-        }
-    })
-
-
-    print(results.status_code)
-
-    results = json.loads(results.text)
-
-    # TODO delete Family, Individual, and other objects under this project
     return create_json_response({
-        'variants': results,
+        'variants': [_parsed_variant_json(v.toJSON(), request.user, project, family) for v in variants],
     })
 
+
+def _parsed_variant_json(variant_json, user, project, family):
+    saved_variant = SavedVariant.objects.filter(
+        xpos_start=variant_json['xpos'], ref=variant_json['ref'], alt=variant_json['alt'], project=project, family=family
+    ).first()
+    parsed_json = _variant_details(variant_json, user)
+    parsed_json.update({field: variant_json[field] for field in ['xpos', 'ref', 'alt', 'pos']})
+    parsed_json.update({
+        'familyGuid': family.guid,
+        'chrom': variant_json['chr'],
+        'tags': [get_json_for_variant_tag(tag) for tag in saved_variant.varianttag_set.all()] if saved_variant else [],
+        'functionalData': [
+            get_json_for_variant_functional_data(tag) for tag in saved_variant.variantfunctionaldata_set.all()
+        ] if saved_variant else [],
+        'notes': [get_json_for_variant_note(tag) for tag in saved_variant.variantnote_set.all()] if saved_variant else [],
+    })
+    return parsed_json
 
 
 def _add_variant_filters(es):
