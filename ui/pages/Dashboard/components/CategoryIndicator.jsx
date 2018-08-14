@@ -52,7 +52,7 @@ class CategoryIndicator extends React.Component {
       }
     }
 
-    return <EditProjectCategoriesModal project={this.props.project} trigger={StarButton} popup={popup} />
+    return <EditProjectCategoriesModal project={this.props.project} trigger={StarButton} popup={popup} triggerName="categoryIndicator" />
   }
 }
 
