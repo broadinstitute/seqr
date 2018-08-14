@@ -44,10 +44,11 @@ def saved_variant_data(request, project_guid, variant_guid=None):
         if variant['tags'] or variant['notes']:
             variant_json = json.loads(saved_variant.saved_variant_json or '{}')
             variant.update(_variant_details(variant_json, request.user))
+            variant['projectGuid'] = [project_guid]
             variants[variant['variantId']] = variant
 
-    genes = _saved_variant_genes(variants)
-    _add_locus_lists(project, variants, genes)
+    genes = _saved_variant_genes(variants.values())
+    _add_locus_lists(project, variants.values(), genes)
 
     return create_json_response({
         'savedVariants': variants,
@@ -320,7 +321,7 @@ def _variant_details(variant_json, user):
 
 def _saved_variant_genes(variants):
     gene_ids = set()
-    for variant in variants.values():
+    for variant in variants:
         gene_ids.update(variant['geneIds'])
     genes = get_genes(gene_ids)
     for gene in genes.values():
@@ -336,7 +337,7 @@ def _add_locus_lists(project, variants, genes):
     for interval in LocusListInterval.objects.filter(locus_list__in=locus_lists):
         locus_list_intervals_by_chrom[interval.chrom].append(interval)
     if locus_list_intervals_by_chrom:
-        for variant in variants.values():
+        for variant in variants:
             for interval in locus_list_intervals_by_chrom[variant['chrom']]:
                 pos = variant['pos'] if variant['genomeVersion'] == interval.genome_version else variant['liftedOverPos']
                 if pos and interval.start <= int(pos) <= interval.end:

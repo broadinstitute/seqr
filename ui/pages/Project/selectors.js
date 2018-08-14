@@ -6,7 +6,8 @@ import { FAMILY_ANALYSIS_STATUS_OPTIONS, EXCLUDED_TAG_NAME, REVIEW_TAG_NAME } fr
 import { toCamelcase, toSnakecase } from 'shared/utils/stringUtils'
 
 import {
-  getProjectsByGuid, getFamiliesByGuid, getIndividualsByGuid, getSamplesByGuid, getGenesById, getUser, getAnalysisGroupsByGuid,
+  getProjectsByGuid, getFamiliesByGuid, getIndividualsByGuid, getSamplesByGuid, getGenesById, getUser,
+  getAnalysisGroupsByGuid, getSavedVariantsByGuid,
 } from 'redux/selectors'
 
 import {
@@ -63,10 +64,12 @@ const groupEntitiesByProjectGuid = entities => Object.entries(entities).reduce((
 }, {})
 const getFamiliesGroupedByProjectGuid = createSelector(getFamiliesByGuid, groupEntitiesByProjectGuid)
 const getAnalysisGroupsGroupedByProjectGuid = createSelector(getAnalysisGroupsByGuid, groupEntitiesByProjectGuid)
+const getSavedVariantsGroupedByProjectGuid = createSelector(getSavedVariantsByGuid, groupEntitiesByProjectGuid)
 
 const selectEntitiesForProjectGuid = (entitiesGroupedByProjectGuid, projectGuid) => entitiesGroupedByProjectGuid[projectGuid] || {}
 export const getProjectFamiliesByGuid = createSelector(getFamiliesGroupedByProjectGuid, getProjectGuid, selectEntitiesForProjectGuid)
 export const getProjectAnalysisGroupsByGuid = createSelector(getAnalysisGroupsGroupedByProjectGuid, getProjectGuid, selectEntitiesForProjectGuid)
+export const getProjectSavedVariantsByGuid = createSelector(getSavedVariantsGroupedByProjectGuid, getProjectGuid, selectEntitiesForProjectGuid)
 
 
 export const getProjectAnalysisGroupFamiliesByGuid = createSelector(
@@ -118,7 +121,7 @@ export const getSavedVariantCurrentPage = state => state.savedVariantTableState.
 export const getSavedVariantRecordsPerPage = state => state.savedVariantTableState.recordsPerPage || 25
 
 export const getProjectSavedVariants = createSelector(
-  state => state.projectSavedVariants,
+  getProjectSavedVariantsByGuid,
   (state, props) => props.match.params,
   (projectSavedVariants, { tag, familyGuid, variantGuid }) => {
     let variants = Object.values(projectSavedVariants)

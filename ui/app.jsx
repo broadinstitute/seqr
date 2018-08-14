@@ -9,6 +9,7 @@ import BaseLayout from 'shared/components/page/BaseLayout'
 import GeneDetail from 'shared/components/panel/genes/GeneDetail'
 import Dashboard from 'pages/Dashboard/Dashboard'
 import Project from 'pages/Project/Project'
+import VariantSearch from 'pages/Search/VariantSearch'
 import GeneInfoSearch from 'pages/GeneInfoSearch'
 import LocusLists from 'pages/LocusLists'
 import rootReducer from 'redux/rootReducer'
@@ -27,6 +28,7 @@ ReactDOM.render(
             <Route exact path="/" component={Dashboard} />
             <Route path="/dashboard" component={Dashboard} />
             <Route path="/project/:projectGuid" component={Project} />
+            <Route path="/variant_search" component={VariantSearch} />
             <Route path="/gene_info/:geneId" component={({ match }) => <GeneDetail geneId={match.params.geneId} />} />
             <Route path="/gene_info" component={GeneInfoSearch} />
             <Route path="/gene_lists" component={LocusLists} />

@@ -5,7 +5,7 @@ import { reducer as searchReducer } from 'redux-search'
 import { reducers as dashboardReducers } from 'pages/Dashboard/reducers'
 import { reducers as projectReducers } from 'pages/Project/reducers'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
-import { createObjectsByIdReducer, loadingReducer, zeroActionsReducer } from './utils/reducerFactories'
+import { createObjectsByIdReducer, loadingReducer, zeroActionsReducer, createSingleValueReducer } from './utils/reducerFactories'
 import modalReducers from './utils/modalReducer'
 
 /**
@@ -15,6 +15,8 @@ import modalReducers from './utils/modalReducer'
 // actions
 export const RECEIVE_DATA = 'RECEIVE_DATA'
 export const REQUEST_PROJECTS = 'REQUEST_PROJECTS'
+const REQUEST_SEARCHED_VARIANTS = 'REQUEST_SEARCHED_VARIANTS'
+const RECEIVE_SEARCHED_VARIANTS = 'RECEIVE_SEARCHED_VARIANTS'
 const RECEIVE_SAVED_VARIANTS = 'RECEIVE_SAVED_VARIANTS'
 const REQUEST_VARIANT = 'REQUEST_VARIANT'
 const REQUEST_GENES = 'REQUEST_GENES'
@@ -138,6 +140,22 @@ export const loadLocusLists = (locusListId) => {
   }
 }
 
+export const loadSearchedVariants = (search) => {
+  return (dispatch) => {
+    dispatch({ type: REQUEST_SEARCHED_VARIANTS })
+    new HttpRequestHelper('/api/search',
+      (responseJson) => {
+        dispatch({ type: RECEIVE_GENES, updatesById: responseJson.genesById })
+        dispatch({ type: RECEIVE_SAVED_VARIANTS, updatesById: responseJson.savedVariants })
+        dispatch({ type: RECEIVE_SEARCHED_VARIANTS, newValue: responseJson.searchedVariants })
+      },
+      (e) => {
+        dispatch({ type: RECEIVE_SEARCHED_VARIANTS, error: e.message, newValue: [] })
+      },
+    ).get(search)
+  }
+}
+
 export const loadVariantTranscripts = (variantId) => {
   return (dispatch, getState) => {
     const variant = getState().projectSavedVariants[variantId]
@@ -216,6 +234,9 @@ const rootReducer = combineReducers(Object.assign({
   locusListsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'locusListsByGuid'),
   locusListsLoading: loadingReducer(REQUEST_GENE_LISTS, RECEIVE_DATA),
   locusListLoading: loadingReducer(REQUEST_GENE_LIST, RECEIVE_DATA),
+  savedVariants: createObjectsByIdReducer(RECEIVE_SAVED_VARIANTS),
+  searchedVariants: createSingleValueReducer(RECEIVE_SEARCHED_VARIANTS, []),
+  searchedVariantsLoading: loadingReducer(REQUEST_SEARCHED_VARIANTS, RECEIVE_SEARCHED_VARIANTS),
   variantLoading: loadingReducer(REQUEST_VARIANT, RECEIVE_SAVED_VARIANTS),
   user: zeroActionsReducer,
   form: formReducer,

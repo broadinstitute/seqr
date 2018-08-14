@@ -86,6 +86,7 @@ react_app_pages = [
     'project/(?P<project_guid>[^/]+)/.*',
     'gene_info/.*',
     'gene_lists/.*',
+    'variant_search/.*'
 ]
 
 # NOTE: the actual url will be this with an '/api' prefix

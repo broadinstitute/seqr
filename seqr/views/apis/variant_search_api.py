@@ -3,7 +3,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 from seqr.models import Family, SavedVariant
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
-from seqr.views.apis.saved_variant_api import _variant_details
+from seqr.views.apis.saved_variant_api import _variant_details, _saved_variant_genes, _add_locus_lists
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import \
     get_json_for_variant_tag, get_json_for_variant_functional_data, get_json_for_variant_note
@@ -43,27 +43,44 @@ def query_variants_handler(request):
 
     add_extra_info_to_variants_project(get_reference(), base_project, variants, add_populations=True)
 
+    parsed_variants = [_parsed_variant_json(v.toJSON(), request.user) for v in variants]
+    genes = _saved_variant_genes(parsed_variants)
+    _add_locus_lists(project, parsed_variants, genes)
+    _add_saved_variants(parsed_variants, project, family)
+
     return create_json_response({
-        'variants': [_parsed_variant_json(v.toJSON(), request.user, project, family) for v in variants],
+        'searchedVariants': [{'variantId': v['variantId']} if v['variantId'] else v for v in parsed_variants],
+        'savedVariants': {variant['variantId']: variant for variant in parsed_variants if variant['variantId']},
+        'genesById': genes,
     })
 
 
-def _parsed_variant_json(variant_json, user, project, family):
-    saved_variant = SavedVariant.objects.filter(
-        xpos_start=variant_json['xpos'], ref=variant_json['ref'], alt=variant_json['alt'], project=project, family=family
-    ).first()
+def _parsed_variant_json(variant_json, user):
     parsed_json = _variant_details(variant_json, user)
     parsed_json.update({field: variant_json[field] for field in ['xpos', 'ref', 'alt', 'pos']})
-    parsed_json.update({
-        'familyGuid': family.guid,
-        'chrom': variant_json['chr'],
-        'tags': [get_json_for_variant_tag(tag) for tag in saved_variant.varianttag_set.all()] if saved_variant else [],
-        'functionalData': [
-            get_json_for_variant_functional_data(tag) for tag in saved_variant.variantfunctionaldata_set.all()
-        ] if saved_variant else [],
-        'notes': [get_json_for_variant_note(tag) for tag in saved_variant.variantnote_set.all()] if saved_variant else [],
-    })
+    parsed_json['chrom'] = variant_json['chr']
     return parsed_json
+
+
+def _add_saved_variants(variants, project, family):
+    for variant in variants:
+        saved_variant = SavedVariant.objects.filter(
+            xpos_start=variant['xpos'], ref=variant['ref'], alt=variant['alt'], project=project, family=family
+        ).first()
+        variant.update({
+            'variantId': saved_variant.guid if saved_variant else None,
+            'projectGuid': project.guid,
+            'familyGuid': family.guid,
+            'tags': [
+                get_json_for_variant_tag(tag) for tag in saved_variant.varianttag_set.all()
+            ] if saved_variant else [],
+            'functionalData': [
+                get_json_for_variant_functional_data(tag) for tag in saved_variant.variantfunctionaldata_set.all()
+            ] if saved_variant else [],
+            'notes': [
+                get_json_for_variant_note(tag) for tag in saved_variant.variantnote_set.all()
+            ] if saved_variant else [],
+        })
 
 
 def _add_variant_filters(es):

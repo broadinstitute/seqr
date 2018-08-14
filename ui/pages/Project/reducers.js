@@ -1,7 +1,7 @@
 import { combineReducers } from 'redux'
 import { SubmissionError } from 'redux-form'
 
-import { loadingReducer, createSingleObjectReducer, createObjectsByIdReducer, createSingleValueReducer } from 'redux/utils/reducerFactories'
+import { loadingReducer, createSingleObjectReducer, createSingleValueReducer } from 'redux/utils/reducerFactories'
 import { REQUEST_PROJECTS, RECEIVE_DATA, updateEntity } from 'redux/rootReducer'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 import { getProject, getProjectFamiliesByGuid } from 'pages/Project/selectors'
@@ -91,10 +91,10 @@ export const loadProjectVariants = (familyGuid, variantGuid) => {
 export const unloadProject = () => {
   return (dispatch, getState) => {
     const state = getState()
-    const variantsToDelete = Object.keys(state.projectSavedVariants).reduce((acc, o) => ({ ...acc, [o]: null }), {})
+    const variantsToDelete = Object.keys(state.savedVariants).reduce((acc, o) => ({ ...acc, [o]: null }), {})
     const variantFamiliesToDelete = Object.keys(state.projectSavedVariantFamilies).reduce((acc, o) => ({ ...acc, [o]: false }), {})
     dispatch({ type: UPDATE_CURRENT_PROJECT, newValue: null })
-    dispatch({ type: REQUEST_SAVED_VARIANTS, updatesById: variantsToDelete })
+    dispatch({ type: RECEIVE_SAVED_VARIANTS, updatesById: variantsToDelete })
     dispatch({ type: RECEIVE_SAVED_VARIANT_FAMILIES, updates: variantFamiliesToDelete })
   }
 }
@@ -182,7 +182,6 @@ export const updateSavedVariantTable = updates => ({ type: UPDATE_SAVED_VARIANT_
 export const reducers = {
   currentProjectGuid: createSingleValueReducer(UPDATE_CURRENT_PROJECT, null),
   projectDetailsLoading: loadingReducer(REQUEST_PROJECT_DETAILS, RECEIVE_PROJECT_DETAILS),
-  projectSavedVariants: createObjectsByIdReducer(RECEIVE_SAVED_VARIANTS),
   projectSavedVariantsLoading: loadingReducer(REQUEST_SAVED_VARIANTS, RECEIVE_SAVED_VARIANTS),
   projectSavedVariantFamilies: createSingleObjectReducer(RECEIVE_SAVED_VARIANT_FAMILIES),
   familyTableState: createSingleObjectReducer(UPDATE_FAMILY_TABLE_STATE, {
