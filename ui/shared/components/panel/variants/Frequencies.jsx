@@ -98,7 +98,7 @@ const Frequencies = ({ variant }) => {
     return null
   }
   const { popCounts } = variant.annotation
-  
+
   const freqContent = (
     <div>
       <FreqSummary field="AF" fieldTitle="THIS CALLSET" variant={variant} showAC />
