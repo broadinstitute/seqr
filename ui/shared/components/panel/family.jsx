@@ -50,10 +50,11 @@ const familyFieldRenderProps = {
   },
   [FAMILY_FIELD_FIRST_SAMPLE]: {
     showEmptyValues: true,
-    fieldDisplay: (loadedSample, compact) => <Sample loadedSample={loadedSample} hoverDetails={compact} />,
+    fieldDisplay: (loadedSample, compact) =>
+      <Sample loadedSample={loadedSample} hoverDetails={compact ? 'first loaded' : null} />,
   },
   [FAMILY_FIELD_OMIM_NUMBER]: {
-    fieldDisplay: value => <a target="_blank" href={`https://www.omim.org/entry/${value}`}>{value}</a>,
+    fieldDisplay: value => <a target="_blank" href={`https://www.omim.org/entry/${value}`} rel="noopener noreferrer">{value}</a>,
     formFields: [{ name: FAMILY_FIELD_OMIM_NUMBER }],
   },
 }
@@ -90,12 +91,12 @@ export const FamilyLayout = ({ leftContent, rightContent, annotation, offset, fi
     {annotation}
     <FamilyGrid annotation={annotation} offset={offset}>
       <Grid.Row>
-        <Grid.Column width={(useFullWidth && !rightContent) ? 6 : 3}>
+        <Grid.Column width={3}>
           {leftContent}
         </Grid.Column>
         {compact ? fields.map(field =>
           <Grid.Column width={field.colWidth || 1} key={field.id}>{fieldDisplay(field)}</Grid.Column>,
-        ) : <Grid.Column width={10}>{fields.map(field => fieldDisplay(field))}</Grid.Column>
+        ) : <Grid.Column width={(useFullWidth && !rightContent) ? 13 : 10}>{fields.map(field => fieldDisplay(field))}</Grid.Column>
         }
         {rightContent && <Grid.Column width={3}>{rightContent}</Grid.Column>}
       </Grid.Row>

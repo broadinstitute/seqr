@@ -19,6 +19,7 @@ def home(request):
     return render(request, 'gene_lists/home.html', {
         'user_lists': user_lists,
         'public_lists': public_lists,
+        'new_page_url': '/gene_lists',
     })
 
 
@@ -47,13 +48,19 @@ def add(request):
 
     return render(request, 'gene_lists/add.html', {
         'form': form,
+        'new_page_url': '/gene_lists',
     })
 
 
 
 @login_required
 def gene_list(request, slug):
-    _gene_list = get_object_or_404(GeneList, slug=slug)
+    if request.GET.get('guid'):
+        lookup_kwargs = {'seqr_locus_list__guid': slug}
+    else:
+        lookup_kwargs = {'slug': slug}
+
+    _gene_list = get_object_or_404(GeneList, **lookup_kwargs)
 
     authorized = False
     if _gene_list.is_public:
@@ -66,6 +73,7 @@ def gene_list(request, slug):
     return render(request, 'gene_lists/gene_list.html', {
         'gene_list': _gene_list,
         'genes': _gene_list.get_genes(),
+        'new_page_url': '/gene_lists/{}'.format(_gene_list.seqr_locus_list.guid) if _gene_list.seqr_locus_list else None,
     })
 
 
@@ -106,6 +114,7 @@ def edit(request, slug):
     return render(request, 'gene_lists/edit.html', {
         'form': form,
         'gene_list': gene_list,
+        'new_page_url': '/gene_lists/{}'.format(gene_list.seqr_locus_list.guid) if gene_list.seqr_locus_list else None,
     })
 
 
@@ -125,6 +134,7 @@ def delete(request, slug):
 
     return render(request, 'gene_lists/delete.html', {
         'gene_list': _gene_list,
+        'new_page_url': '/gene_lists/{}'.format(_gene_list.seqr_locus_list.guid) if _gene_list.seqr_locus_list else None,
     })
 
 

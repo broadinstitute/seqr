@@ -25,7 +25,6 @@ import {
 
 export const CASE_REVIEW_TABLE_NAME = 'Case Review'
 
-export const CASE_REVIEW_STATUS_NOT_IN_REVIEW = 'N'
 export const CASE_REVIEW_STATUS_IN_REVIEW = 'I'
 export const CASE_REVIEW_STATUS_UNCERTAIN = 'U'
 export const CASE_REVIEW_STATUS_ACCEPTED = 'A'
@@ -33,9 +32,6 @@ export const CASE_REVIEW_STATUS_NOT_ACCEPTED = 'R'
 export const CASE_REVIEW_STATUS_MORE_INFO_NEEDED = 'Q'
 export const CASE_REVIEW_STATUS_PENDING_RESULTS_AND_RECORDS = 'P'
 export const CASE_REVIEW_STATUS_WAITLIST = 'W'
-export const CASE_REVIEW_STATUS_WITHDREW = 'WD'
-export const CASE_REVIEW_STATUS_INELIGIBLE = 'IE'
-export const CASE_REVIEW_STATUS_DECLINED_TO_PARTICIPATE = 'DP'
 
 export const CASE_REVIEW_STATUS_OPTIONS = [
   { value: CASE_REVIEW_STATUS_IN_REVIEW,                   name: 'In Review',             color: '#2196F3' },
@@ -44,11 +40,7 @@ export const CASE_REVIEW_STATUS_OPTIONS = [
   { value: CASE_REVIEW_STATUS_NOT_ACCEPTED,                name: 'Not Accepted',          color: '#4f5cb3' },  //#C5CAE9
   { value: CASE_REVIEW_STATUS_MORE_INFO_NEEDED,            name: 'More Info Needed',      color: '#F44336' },  //#673AB7
   { value: CASE_REVIEW_STATUS_PENDING_RESULTS_AND_RECORDS, name: 'Pending Results and Records', color: '#996699' },
-  { value: CASE_REVIEW_STATUS_NOT_IN_REVIEW,               name: 'Not In Review',         color: '#118833' },
   { value: CASE_REVIEW_STATUS_WAITLIST,                    name: 'Waitlist',              color: '#990099' },
-  { value: CASE_REVIEW_STATUS_WITHDREW,                    name: 'Withdrew',              color: '#999999' },
-  { value: CASE_REVIEW_STATUS_INELIGIBLE,                  name: 'Ineligible',            color: '#111111' },
-  { value: CASE_REVIEW_STATUS_DECLINED_TO_PARTICIPATE,     name: 'Declined To Participate', color: '#FF8800' },
 ]
 
 export const CASE_REVIEW_STATUS_OPT_LOOKUP = CASE_REVIEW_STATUS_OPTIONS.reduce(
@@ -272,13 +264,6 @@ export const FAMILY_FILTER_OPTIONS = [
     createFilter: caseReviewStatusFilter(CASE_REVIEW_STATUS_MORE_INFO_NEEDED),
   },
   {
-    value: SHOW_NOT_IN_REVIEW,
-    category: 'Analysis Status:',
-    name: 'Not In Review',
-    internalOnly: true,
-    createFilter: caseReviewStatusFilter(CASE_REVIEW_STATUS_NOT_IN_REVIEW),
-  },
-  {
     value: SHOW_PENDING_RESULTS_AND_RECORDS,
     category: 'Analysis Status:',
     name: 'Pending Results and Records',
@@ -292,34 +277,21 @@ export const FAMILY_FILTER_OPTIONS = [
     internalOnly: true,
     createFilter: caseReviewStatusFilter(CASE_REVIEW_STATUS_WAITLIST),
   },
-  {
-    value: SHOW_WITHDREW,
-    category: 'Analysis Status:',
-    name: 'Withdrew',
-    internalOnly: true,
-    createFilter: caseReviewStatusFilter(CASE_REVIEW_STATUS_WITHDREW),
-  },
-  {
-    value: SHOW_INELIGIBLE,
-    category: 'Analysis Status:',
-    name: 'Ineligible',
-    internalOnly: true,
-    createFilter: caseReviewStatusFilter(CASE_REVIEW_STATUS_INELIGIBLE),
-  },
-  {
-    value: SHOW_DECLINED_TO_PARTICIPATE,
-    category: 'Analysis Status:',
-    name: 'Declined to Participate',
-    internalOnly: true,
-    createFilter: caseReviewStatusFilter(CASE_REVIEW_STATUS_DECLINED_TO_PARTICIPATE),
-  },
 ]
+
+export const FAMILY_FILTER_LOOKUP = FAMILY_FILTER_OPTIONS.reduce(
+  (acc, opt) => ({
+    ...acc,
+    [opt.value]: opt,
+  }), {},
+)
 
 
 export const SORT_BY_FAMILY_NAME = 'FAMILY_NAME'
 export const SORT_BY_FAMILY_ADDED_DATE = 'FAMILY_ADDED_DATE'
 export const SORT_BY_DATA_LOADED_DATE = 'DATA_LOADED_DATE'
 export const SORT_BY_DATA_FIRST_LOADED_DATE = 'DATA_FIRST_LOADED_DATE'
+export const SORT_BY_REVIEW_STATUS_CHANGED_DATE = 'REVIEW_STATUS_CHANGED_DATE'
 export const SORT_BY_ANALYSIS_STATUS = 'SORT_BY_ANALYSIS_STATUS'
 
 export const FAMILY_SORT_OPTIONS = [
@@ -362,6 +334,18 @@ export const FAMILY_SORT_OPTIONS = [
     createSortKeyGetter: () => family =>
       FAMILY_ANALYSIS_STATUS_OPTIONS.map(status => status.value).indexOf(family.analysisStatus),
   },
+  {
+    value: SORT_BY_REVIEW_STATUS_CHANGED_DATE,
+    name: 'Date Review Status Changed',
+    createSortKeyGetter: individualsByGuid => family =>
+      family.individualGuids.map(individualGuid => individualsByGuid[individualGuid]).reduce(
+        (acc, individual) => {
+          const indivCaseReviewStatusLastModifiedDate = individual.caseReviewStatusLastModifiedDate || '2000-01-01T01:00:00.000Z'
+          return indivCaseReviewStatusLastModifiedDate > acc ? indivCaseReviewStatusLastModifiedDate : acc
+        },
+        '2000-01-01T01:00:00.000Z',
+      ),
+  },
 ]
 
 export const FAMILY_EXPORT_DATA = [
@@ -375,7 +359,7 @@ export const FAMILY_EXPORT_DATA = [
     field: 'analysisStatus',
     format: status => (FAMILY_ANALYSIS_STATUS_OPTIONS.find(option => option.value === status) || {}).name,
   },
-  { header: 'Analysed By', field: 'analysedBy', format: analysedBy => analysedBy.map(o => o.user.display_name).join(',') },
+  { header: 'Analysed By', field: 'analysedBy', format: analysedBy => analysedBy.map(o => o.createdBy.fullName || o.createdBy.email).join(',') },
   { header: 'Analysis Summary', field: 'analysisSummary', format: stripMarkdown },
   { header: 'Analysis Notes', field: 'analysisNotes', format: stripMarkdown },
 ]
@@ -420,6 +404,14 @@ export const INTERNAL_INDIVIDUAL_EXPORT_DATA = [
   { header: 'Case Review Discussion', field: 'caseReviewDiscussion', format: stripMarkdown },
 ]
 
+export const SAMPLE_EXPORT_DATA = [
+  { header: 'Family ID', field: 'familyId' },
+  { header: 'Individual ID', field: 'individualId' },
+  { header: 'Sample ID', field: 'sampleId' },
+  { header: 'Loaded Date', field: 'loadedDate' },
+  { header: 'Sample Type', field: 'sampleType' },
+]
+
 export const SORT_BY_FAMILY_GUID = 'FAMILY_GUID'
 export const SORT_BY_XPOS = 'XPOS'
 export const SORT_BY_PATHOGENICITY = 'PATHOGENICITY'
@@ -441,7 +433,12 @@ export const VARIANT_SORT_OPTONS = [
   { value: SORT_BY_FAMILY_GUID, text: 'Family', comparator: (a, b) => a.familyGuid.localeCompare(b.familyGuid) },
   { value: SORT_BY_XPOS, text: 'Position', comparator: (a, b) => a.xpos - b.xpos },
   { value: SORT_BY_PATHOGENICITY, text: 'Pathogenicity', comparator: (a, b) => clinsigSeverity(b) - clinsigSeverity(a) },
-  { value: SORT_BY_IN_OMIM, text: 'In OMIM', comparator: (a, b) => b.genes.some(gene => gene.diseaseDbPhenotypes.length > 0) - a.genes.some(gene => gene.diseaseDbPhenotypes.length > 0) },
+  {
+    value: SORT_BY_IN_OMIM,
+    text: 'In OMIM',
+    comparator: (a, b, genesById) =>
+      b.geneIds.some(geneId => genesById[geneId].phenotypeInfo.mimPhenotypes.length > 0) - a.geneIds.some(geneId => genesById[geneId].phenotypeInfo.mimPhenotypes.length > 0),
+  },
 ]
 
 export const VARIANT_EXPORT_DATA = [

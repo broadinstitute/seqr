@@ -10,7 +10,8 @@ from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 from django.db.models import Q
 from guardian.shortcuts import assign_perm
 
-from seqr.utils.model_sync_utils import get_or_create_saved_variant, convert_html_to_plain_text
+from seqr.utils.model_sync_utils import convert_html_to_plain_text
+from seqr.views.utils.variant_utils import get_or_create_saved_variant
 from seqr.views.apis import phenotips_api
 from seqr.views.apis.phenotips_api import _update_individual_phenotips_data
 from xbrowse_server.base.models import \
@@ -606,7 +607,7 @@ def _retrieve_and_update_individual_phenotips_data(project, individual):
         individual (Model): Individual model
     """
     try:
-        latest_phenotips_json = phenotips_api.get_patient_data(
+        latest_phenotips_json = phenotips_api._get_patient_data(
             project,
             individual,
         )

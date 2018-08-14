@@ -1,3 +1,5 @@
+/* eslint-disable jsx-a11y/label-has-for */
+
 import React, { createElement } from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
@@ -7,11 +9,13 @@ import { Form, Message, Icon, Popup } from 'semantic-ui-react'
 import flatten from 'lodash/flatten'
 
 import { closeModal, setModalConfirm } from 'redux/utils/modalReducer'
+import ButtonLink from '../buttons/ButtonLink'
 import ButtonPanel from './ButtonPanel'
 import RequestStatus from './RequestStatus'
 
-const StyledForm = styled(({ hasSubmitButton, ...props }) => <Form {...props} />)`
+const StyledForm = styled(({ hasSubmitButton, inline, ...props }) => <Form {...props} />)`
   min-height: inherit;
+  display: ${props => (props.inline ? 'inline-block' : 'block')};
   padding-bottom: ${props => props.hasSubmitButton && '40px'};
   
   .field.inline {
@@ -25,6 +29,7 @@ const MessagePanel = styled(Message)`
 
 export const validators = {
   required: value => (value ? undefined : 'Required'),
+  requiredBoolean: value => ((value === true || value === false) ? undefined : 'Required'),
 }
 
 const renderField = (props) => {
@@ -44,18 +49,44 @@ renderField.propTypes = {
   submitForm: PropTypes.func,
 }
 
+export const configuredFields = props =>
+  props.fields.map(({ component, name, isArrayField, addArrayElement, key, label, labelHelp, ...fieldProps }) => {
+    const baseProps = {
+      key: key || name,
+      name,
+    }
+    const singleFieldProps = {
+      component: renderField,
+      fieldComponent: component,
+      submitForm: props.submitOnChange ? props.onSubmit : null,
+      label: labelHelp ?
+        <label> {label} <Popup trigger={<Icon name="question circle outline" />} content={labelHelp} size="small" position="top center" /></label>
+        : label,
+      ...fieldProps,
+    }
+    return isArrayField ?
+      <FieldArray {...baseProps} component={({ fields }) =>
+        <div className="field">
+          <label>{label}</label>
+          {fields.map((fieldPath, i) => <Field key={fieldPath} name={fieldPath} {...singleFieldProps} removeField={() => fields.remove(i)} />)}
+          {addArrayElement && <ButtonLink onClick={() => fields.push(addArrayElement.newValue)}><Icon link name="plus" />{addArrayElement.label}</ButtonLink>}
+        </div>}
+      /> :
+      <Field {...baseProps} {...singleFieldProps} />
+  })
+
 class ReduxFormWrapper extends React.Component {
 
   static propTypes = {
     /* A unique string identifier for the form */
-    form: PropTypes.string.isRequired,
+    form: PropTypes.string.isRequired, //eslint-disable-line react/no-unused-prop-types
 
     /* A unique string identifier for the parent modal. Defaults to the "form" identifier */
-    modalName: PropTypes.string,
+    modalName: PropTypes.string, //eslint-disable-line react/no-unused-prop-types
 
     /* A callback when a valid form is submitted. Will be passed all the form data */
     /* Note that this is different from handleSubmit, which is a redux-form supplied handler that should never be overridden */
-    onSubmit: PropTypes.func.isRequired,
+    onSubmit: PropTypes.func.isRequired, //eslint-disable-line react/no-unused-prop-types
 
     /* A callback for when the cancel button is selected */
     handleClose: PropTypes.func.isRequired,
@@ -80,9 +111,12 @@ class ReduxFormWrapper extends React.Component {
     /* form size (see https://react.semantic-ui.com/collections/form#form-example-size) */
     size: PropTypes.string,
 
+    /* Whether form should be rendered inline instead of the default block display */
+    inline: PropTypes.bool,
+
     /* Array of objects representing the fields to show in the form. */
     /* Each field must have a name and a component, and can have any additional props accepted by redux-form's Field */
-    fields: PropTypes.arrayOf(PropTypes.object),
+    fields: PropTypes.arrayOf(PropTypes.object), //eslint-disable-line react/no-unused-prop-types
 
     /* React child component class. Mutually exclusive with fields */
     renderChildren: PropTypes.func,
@@ -116,35 +150,25 @@ class ReduxFormWrapper extends React.Component {
     } else if (this.props.submitFailed) {
       saveStatus = RequestStatus.ERROR
     }
+
+    // redux-form does not support throwing submission warnings so this is a work around
+    const submissionWarnings = this.props.warning || (this.props.error && this.props.error.map(error => error.warning).filter(warning => warning))
+    const submissionErrors = this.props.error && this.props.error.filter(error => !error.warning)
+
+    const warningMessages = (submissionWarnings && submissionWarnings.length > 0) ? submissionWarnings : flatten(Object.values(this.props.validationWarnings))
+    const errorMessages = (submissionErrors && submissionErrors.length > 0) ? submissionErrors : flatten(Object.values(this.props.validationErrors))
+
     const saveErrorMessage = this.props.submitFailed ?
-      (this.props.error && this.props.error.join('; ')) || (this.props.invalid ? 'Invalid input' : 'Unknown') : null
+      (errorMessages && errorMessages.length > 0 && errorMessages.join('; ')) ||
+      (warningMessages && warningMessages.length > 0 && warningMessages.join('; ')) ||
+      (this.props.invalid ? 'Invalid input' : 'Unknown') : null
 
-    const warningMessages = this.props.warning || flatten(Object.values(this.props.validationWarnings))
-    const errorMessages = this.props.error || flatten(Object.values(this.props.validationErrors))
-
-    const fieldComponents = this.props.renderChildren ? React.createElement(this.props.renderChildren) :
-      this.props.fields.map(({ component, name, isArrayField, key, label, labelHelp, ...fieldProps }) => {
-        const baseProps = { key: key || name, name }
-        const singleFieldProps = {
-          component: renderField,
-          fieldComponent: component,
-          submitForm: this.props.submitOnChange ? this.props.onSubmit : null,
-          label: labelHelp ?
-            <label> {label} <Popup trigger={<Icon name="question circle outline" />} content={labelHelp} size="small" position="top center" /></label> //eslint-disable-line jsx-a11y/label-has-for
-            : label,
-          ...fieldProps,
-        }
-        return isArrayField ?
-          <FieldArray {...baseProps} component={({ fields }) =>
-            fields.map(fieldPath => <Field key={fieldPath} name={fieldPath} {...singleFieldProps} />)}
-          /> :
-          <Field {...baseProps} {...singleFieldProps} />
-      })
+    const fieldComponents = this.props.renderChildren ? React.createElement(this.props.renderChildren) : configuredFields(this.props)
 
     return (
-      <StyledForm onSubmit={this.props.handleSubmit} size={this.props.size} loading={this.props.submitting} hasSubmitButton={!this.props.submitOnChange}>
+      <StyledForm onSubmit={this.props.handleSubmit} size={this.props.size} loading={this.props.submitting} hasSubmitButton={!this.props.submitOnChange} inline={this.props.inline}>
         {fieldComponents}
-        {this.props.showErrorPanel && (this.props.dirty || this.props.submitFailed) && [
+        {this.props.showErrorPanel && this.props.submitFailed && [
           warningMessages && warningMessages.length > 0 ? <MessagePanel key="w" warning visible list={warningMessages} /> : null,
           errorMessages && errorMessages.length > 0 ? <MessagePanel key="e" error visible list={errorMessages} /> : null,
         ]}

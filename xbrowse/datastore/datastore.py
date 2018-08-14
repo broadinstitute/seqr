@@ -102,3 +102,8 @@ class Datastore(object):
         }
         """
         raise NotImplementedError
+
+    def bust_project_cache(self, project_id):
+        if hasattr(self, '_redis_client') and self._redis_client:
+            for key in self._redis_client.scan_iter("Variants___{}*".format(project_id)):
+                self._redis_client.delete(key)

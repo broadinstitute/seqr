@@ -12,13 +12,13 @@ from seqr.views.utils.test_utils import _check_login
 
 GENE_ID = 'ENSG00000155657'
 
-MOCK_GENE = {'geneId': GENE_ID, 'geneName': 'TTN'}
+MOCK_GENE = {'gene_id': GENE_ID, 'gene_name': 'TTN'}
 
 
 class GeneAPITest(TransactionTestCase):
     fixtures = ['users']
 
-    @mock.patch('seqr.views.apis.gene_api.get_reference')
+    @mock.patch('seqr.views.utils.gene_utils.get_reference')
     def test_gene_info(self, mock_reference):
         mock_reference.return_value.get_gene.return_value = deepcopy(MOCK_GENE)
         mock_reference.return_value.get_tissue_expression_display_values.return_value = []
@@ -30,7 +30,12 @@ class GeneAPITest(TransactionTestCase):
         self.assertEqual(response.status_code, 200)
 
         gene = response.json()[GENE_ID]
-        self.assertDictEqual(gene,  dict(expression=[], notes=[], **MOCK_GENE))
+        self.assertDictEqual(gene, {
+            'geneId': GENE_ID, 'geneName': 'TTN', 'phenotypeInfo': {}, 'expression': [], 'notes': [], 'constraints': {
+                'lof': {'constraint': None, 'rank': None, 'totalGenes': None},
+                'missense': {'constraint': None, 'rank': None, 'totalGenes': None},
+            }
+        })
 
     def test_create_update_and_delete_gene_note(self):
         create_gene_note_url = reverse(create_gene_note_handler, args=[GENE_ID])

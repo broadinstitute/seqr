@@ -2,11 +2,11 @@ import os
 from django.core.management.base import BaseCommand
 from collections import defaultdict, namedtuple
 from tqdm import tqdm
-from xbrowse_server.base.models import Project, VariantTag, ProjectTag
+from xbrowse_server.base.models import VariantTag
 from xbrowse_server.mall import get_datastore, get_reference
 from xbrowse_server.gene_lists.models import GeneList
 
-from reference_data.models import OMIM
+from reference_data.models import Omim
 
 class Command(BaseCommand):
     """Command to print out basic stats on some or all projects. Optionally takes a list of project_ids. """
@@ -85,7 +85,7 @@ class Command(BaseCommand):
                         projs_filtered.append(proj)
                         prefixes.add(prefix)
 
-                omim_records = OMIM.objects.filter(gene_id=key.gene_id)
+                omim_records = Omim.objects.filter(gene_id=key.gene_id)
                 if omim_records:
                     in_omim = ', '.join(['https://www.omim.org/entry/%s' % omim_number for omim_number in set(omim_record.mim_number for omim_record in omim_records)])
                 else:

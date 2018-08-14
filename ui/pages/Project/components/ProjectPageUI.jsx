@@ -20,6 +20,7 @@ import {
   getAnalysisStatusCounts,
   getFamiliesExportConfig,
   getIndividualsExportConfig,
+  getSamplesExportConfig,
 } from '../selectors'
 import ProjectOverview from './ProjectOverview'
 import ProjectCollaborators from './ProjectCollaborators'
@@ -93,6 +94,7 @@ const ProjectPageUI = (props) => {
   const exportUrls = [
     { name: 'Families', data: props.familyExportConfig },
     { name: 'Individuals', data: props.individualsExportConfig },
+    { name: 'Samples', data: props.samplesExportConfig },
   ]
 
   return (
@@ -113,7 +115,7 @@ const ProjectPageUI = (props) => {
             <ProjectCollaborators />
           </ProjectSection>
           <VerticalSpacer height={30} />
-          <ProjectSection label="Gene Lists" editPath="project_gene_list_settings">
+          <ProjectSection label="Gene Lists">
             <GeneLists />
           </ProjectSection>
         </Grid.Column>
@@ -140,6 +142,7 @@ ProjectPageUI.propTypes = {
   analysisStatusCounts: PropTypes.array,
   familyExportConfig: PropTypes.object,
   individualsExportConfig: PropTypes.object,
+  samplesExportConfig: PropTypes.object,
 }
 
 const mapStateToProps = state => ({
@@ -147,6 +150,7 @@ const mapStateToProps = state => ({
   analysisStatusCounts: getAnalysisStatusCounts(state),
   familyExportConfig: getFamiliesExportConfig(state),
   individualsExportConfig: getIndividualsExportConfig(state),
+  samplesExportConfig: getSamplesExportConfig(state),
 })
 
 export { ProjectPageUI as ProjectPageUIComponent }

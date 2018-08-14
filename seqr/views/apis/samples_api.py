@@ -127,7 +127,10 @@ def find_matching_sample_records(project, sample_ids, sample_type, dataset_type,
         sample_id__in=sample_ids
     )
     if elasticsearch_index:
-        sample_query = sample_query.filter(Q(elasticsearch_index=elasticsearch_index) | Q(elasticsearch_index__isnull=True))
+        sample_query = sample_query.filter(
+            Q(elasticsearch_index=elasticsearch_index) |
+            (Q(elasticsearch_index__isnull=True) & ~Q(sample_status=Sample.SAMPLE_STATUS_LOADED))
+        )
     for sample in sample_query:
         sample_id_to_sample_record[sample.sample_id] = sample
 

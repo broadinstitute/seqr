@@ -12,7 +12,7 @@ from guardian.shortcuts import get_objects_for_user
 
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.utils.json_utils import create_json_response
-from reference_data.models import GencodeGene
+from reference_data.models import GeneInfo
 from seqr.models import Project, Family, Individual, CAN_VIEW
 
 logger = logging.getLogger(__name__)
@@ -131,7 +131,8 @@ def _get_matching_genes(user, query):
        Sorted list of matches where each match is a dictionary of strings
     """
     result = []
-    matching_genes = GencodeGene.objects.filter(Q(gene_id__icontains=query) | Q(gene_name__icontains=query)).order_by(Length('gene_name').asc()).distinct()
+    matching_genes = GeneInfo.objects.filter(Q(gene_id__icontains=query) | Q(gene_name__icontains=query)).only(
+        'gene_id', 'gene_name').order_by(Length('gene_name').asc()).distinct()
     for g in matching_genes[:MAX_RESULTS_PER_CATEGORY]:
         if query.lower() in g.gene_id.lower():
             title = g.gene_id

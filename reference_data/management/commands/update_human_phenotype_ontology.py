@@ -1,13 +1,63 @@
 import logging
-import requests
+import os
 from tqdm import tqdm
 
 from django.db import transaction
 from django.core.management.base import BaseCommand
 
+from reference_data.management.commands.utils.download_utils import download_file
 from reference_data.models import HumanPhenotypeOntology
 
 logger = logging.getLogger(__name__)
+
+
+HP_OBO_URL = 'http://purl.obolibrary.org/obo/hp.obo'
+
+
+class Command(BaseCommand):
+    help = "Downloads the latest hp.obo release and update the HumanPhenotypeOntology table"
+
+    def add_arguments(self, parser):
+        parser.add_argument('hpo_file_path', help="optional hp.obo file path. If not specified, the file will be downloaded.", nargs='?')
+
+    def handle(self, *args, **options):
+        update_hpo(hpo_file_path=options["hpo_file_path"])
+
+
+def update_hpo(hpo_file_path=None):
+    """
+    Args:
+        hpo_file_path (str): optional local hp.obo file path. If not specified, or the path doesn't exist, the file
+            will be downloaded.
+    """
+
+    if not hpo_file_path or not os.path.isfile(hpo_file_path):
+        hpo_file_path = download_file(url=HP_OBO_URL)
+
+    with open(hpo_file_path) as f:
+        print("Parsing {}".format(HP_OBO_URL))
+        hpo_id_to_record = parse_obo_file(f)
+
+    # for each hpo id, find its top level category
+    for hpo_id in hpo_id_to_record.keys():
+        hpo_id_to_record[hpo_id]['category_id'] = get_category_id(hpo_id_to_record, hpo_id)
+
+    # save to database
+    records_in_category = [
+        record for record in hpo_id_to_record.values() if record['category_id'] is not None
+    ]
+
+    logger.info("Deleting HumanPhenotypeOntology table with %s records and creating new table with %s records" % (
+        HumanPhenotypeOntology.objects.all().count(),
+        len(records_in_category)))
+
+    with transaction.atomic():
+        HumanPhenotypeOntology.objects.all().delete()
+
+        HumanPhenotypeOntology.objects.bulk_create(
+            HumanPhenotypeOntology(**record) for record in tqdm(records_in_category, unit=" records"))
+
+    logger.info("Done")
 
 
 def parse_obo_file(file_iterator):
@@ -66,41 +116,3 @@ def get_category_id(hpo_id_to_record, hpo_id):
 
     return hpo_id
 
-
-class Command(BaseCommand):
-    """Command to download the latest hp.obo release and update the HumanPhenotypeOntology table."""
-
-    def add_arguments(self, parser):
-        parser.add_argument('args', nargs='*')
-
-    def handle(self, *args, **options):
-
-        url = 'http://purl.obolibrary.org/obo/hp.obo'
-        print("Parsing %s" % url)
-        response = requests.get(url)
-        obo_file_iterator = response.content.split("\n")
-
-        hpo_id_to_record = parse_obo_file(obo_file_iterator)
-
-        # for each hpo id, find its top level category
-        for hpo_id in hpo_id_to_record.keys():
-            hpo_id_to_record[hpo_id]['category_id'] = get_category_id(hpo_id_to_record, hpo_id)
-
-        # save to database
-        records_in_category = [
-            record for record in hpo_id_to_record.values() if record['category_id'] is not None
-        ]
-
-        logger.info("Deleting table with %s records and creating new table with %s records" % (
-            HumanPhenotypeOntology.objects.all().count(),
-            len(records_in_category))
-        )
-
-        with transaction.atomic():
-            HumanPhenotypeOntology.objects.all().delete()
-
-            HumanPhenotypeOntology.objects.bulk_create(
-                HumanPhenotypeOntology(**record) for record in tqdm(records_in_category, unit=" records"),
-            )
-
-        logger.info("Done")

@@ -13,8 +13,11 @@ from seqr.views.utils.dataset_utils import add_dataset
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_samples
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions
+from seqr.views.utils.variant_utils import update_project_saved_variant_json
 
 from xbrowse_server.base.models import VCFFile, Project as BaseProject, Individual as BaseIndividual
+from xbrowse_server.mall import get_datastore
+from xbrowse_server.search_cache.utils import clear_project_results_cache
 
 logger = logging.getLogger(__name__)
 
@@ -89,6 +92,9 @@ def add_dataset_handler(request, project_guid):
         if updated_samples:
             base_project = BaseProject.objects.get(seqr_project=project)
 
+            get_datastore(base_project).bust_project_cache(base_project.project_id)
+            clear_project_results_cache(base_project.project_id)
+
             vcf_file = VCFFile.objects.filter(
                 project=base_project,
                 dataset_type=dataset_type,
@@ -111,6 +117,11 @@ def add_dataset_handler(request, project_guid):
             for indiv in [s.individual for s in updated_samples]:
                 for base_indiv in BaseIndividual.objects.filter(seqr_individual=indiv).only('id'):
                     base_indiv.vcf_files.add(vcf_file)
+
+            try:
+                update_project_saved_variant_json(project)
+            except Exception as e:
+                logger.error('Error updating saved variant json: {}'.format(e))
 
         updated_sample_json = get_json_for_samples(updated_samples, project_guid=project_guid)
         response = {

@@ -13,7 +13,7 @@ class BaseSemanticInput extends React.Component {
   }
 
   handleChange = (e, data) => {
-    this.props.onChange(data.value || data)
+    this.props.onChange(data.value === undefined ? data : data.value)
   }
 
   render() {
@@ -32,6 +32,7 @@ const styledOption = (option) => {
     label: option.color ? { empty: true, circular: true, style: labelStyle(option.color) } : null,
     color: option.color,
     disabled: option.disabled,
+    description: option.description,
   }
 }
 
@@ -138,6 +139,38 @@ StringValueCheckboxGroup.propTypes = {
   value: PropTypes.any,
   options: PropTypes.array,
   onChange: PropTypes.func,
+}
+
+
+export const RadioGroup = (props) => {
+  const { value, options, label, onChange, ...baseProps } = props
+  return (
+    <InlineFormGroup>
+      {label}
+      {options.map(option =>
+        <BaseSemanticInput
+          {...baseProps}
+          key={option.value}
+          inline
+          inputType="Radio"
+          checked={value === option.value}
+          label={option.text}
+          onChange={({ checked }) => {
+            if (checked) {
+              onChange(option.value)
+            }
+          }}
+        />,
+      )}
+    </InlineFormGroup>
+  )
+}
+
+RadioGroup.propTypes = {
+  value: PropTypes.any,
+  options: PropTypes.array,
+  onChange: PropTypes.func,
+  label: PropTypes.node,
 }
 
 export const BooleanCheckbox = (props) => {

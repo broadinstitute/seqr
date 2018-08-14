@@ -5,9 +5,12 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.views.decorators.csrf import csrf_exempt
 
-from seqr.models import SavedVariant, VariantTagType, VariantTag, VariantNote, VariantFunctionalData, CAN_EDIT, CAN_VIEW
+from seqr.models import SavedVariant, VariantTagType, VariantTag, VariantNote, VariantFunctionalData,\
+    LocusListInterval, LocusListGene, CAN_VIEW
 from seqr.model_utils import create_seqr_model, delete_seqr_model, find_matching_xbrowse_model
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
+from seqr.views.apis.locus_list_api import get_project_locus_list_models
+from seqr.views.utils.gene_utils import get_genes
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variant, get_json_for_variant_tag, \
@@ -43,7 +46,13 @@ def saved_variant_data(request, project_guid, variant_guid=None):
             variant.update(_variant_details(variant_json, request.user))
             variants[variant['variantId']] = variant
 
-    return create_json_response({'savedVariants': variants})
+    genes = _saved_variant_genes(variants)
+    _add_locus_lists(project, variants, genes)
+
+    return create_json_response({
+        'savedVariants': variants,
+        'genesById': genes,
+    })
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -69,7 +78,7 @@ def saved_variant_transcripts(request, variant_guid):
 @csrf_exempt
 def create_variant_note_handler(request, variant_guid):
     saved_variant = SavedVariant.objects.get(guid=variant_guid)
-    check_permissions(saved_variant.project, request.user, CAN_EDIT)
+    check_permissions(saved_variant.project, request.user, CAN_VIEW)
 
     request_json = json.loads(request.body)
     create_seqr_model(
@@ -90,7 +99,7 @@ def create_variant_note_handler(request, variant_guid):
 @csrf_exempt
 def update_variant_note_handler(request, variant_guid, note_guid):
     saved_variant = SavedVariant.objects.get(guid=variant_guid)
-    check_permissions(saved_variant.project, request.user, CAN_EDIT)
+    check_permissions(saved_variant.project, request.user, CAN_VIEW)
     note = VariantNote.objects.get(guid=note_guid, saved_variant=saved_variant)
 
     request_json = json.loads(request.body)
@@ -105,7 +114,7 @@ def update_variant_note_handler(request, variant_guid, note_guid):
 @csrf_exempt
 def delete_variant_note_handler(request, variant_guid, note_guid):
     saved_variant = SavedVariant.objects.get(guid=variant_guid)
-    check_permissions(saved_variant.project, request.user, CAN_EDIT)
+    check_permissions(saved_variant.project, request.user, CAN_VIEW)
     note = VariantNote.objects.get(guid=note_guid, saved_variant=saved_variant)
     delete_seqr_model(note)
     return create_json_response({variant_guid: {
@@ -117,7 +126,7 @@ def delete_variant_note_handler(request, variant_guid, note_guid):
 @csrf_exempt
 def update_variant_tags_handler(request, variant_guid):
     saved_variant = SavedVariant.objects.get(guid=variant_guid)
-    check_permissions(saved_variant.project, request.user, CAN_EDIT)
+    check_permissions(saved_variant.project, request.user, CAN_VIEW)
 
     request_json = json.loads(request.body)
     updated_tags = request_json.get('tags', [])
@@ -275,24 +284,7 @@ def _variant_details(variant_json, user):
             'accession': extras.get('hgmd_accession'),
             'class': extras.get('hgmd_class') if user.is_staff else None,
         },
-        'genes': [{
-            'constraints': {
-                'lof': {
-                    'constraint': gene.get('lof_constraint'),
-                    'rank': gene.get('lof_constraint_rank') and gene['lof_constraint_rank'][0],
-                    'totalGenes': gene.get('lof_constraint_rank') and gene['lof_constraint_rank'][1],
-                },
-                'missense': {
-                    'constraint': gene.get('missense_constraint'),
-                    'rank': gene.get('missense_constraint_rank') and gene['missense_constraint_rank'][0],
-                    'totalGenes': gene.get('missense_constraint_rank') and gene['missense_constraint_rank'][1],
-                },
-            },
-            'diseaseGeneLists': gene.get('disease_gene_lists', []),
-            'geneId': gene_id,
-            'diseaseDbPhenotypes': gene.get('disease_db_phenotypes', []),
-            'symbol': gene.get('symbol') or extras.get('gene_names', {}).get(gene_id),
-        } for gene_id, gene in extras.get('genes', {}).items()],
+        'geneIds': extras.get('genes', {}).keys(),
         'genotypes': {
             individual_id: {
                 'ab': genotype.get('ab'),
@@ -320,6 +312,34 @@ def _variant_details(variant_json, user):
         'liftedOverGenomeVersion': lifted_over_genome_version,
         'liftedOverChrom': lifted_over_chrom,
         'liftedOverPos': lifted_over_pos,
+        'locusLists': [],
         'origAltAlleles': extras.get('orig_alt_alleles', []),
         'transcripts': _variant_transcripts(annotation) if annotation.get('vep_annotation') else None,
     }
+
+
+def _saved_variant_genes(variants):
+    gene_ids = set()
+    for variant in variants.values():
+        gene_ids.update(variant['geneIds'])
+    genes = get_genes(gene_ids)
+    for gene in genes.values():
+        gene['locusLists'] = []
+    return genes
+
+
+def _add_locus_lists(project, variants, genes):
+    locus_lists = get_project_locus_list_models(project)
+
+    locus_list_intervals_by_chrom = defaultdict(list)
+    for interval in LocusListInterval.objects.filter(locus_list__in=locus_lists):
+        locus_list_intervals_by_chrom[interval.chrom].append(interval)
+    if locus_list_intervals_by_chrom:
+        for variant in variants.values():
+            for interval in locus_list_intervals_by_chrom[variant['chrom']]:
+                pos = variant['pos'] if variant['genomeVersion'] == interval.genome_version else variant['liftedOverPos']
+                if pos and interval.start <= int(pos) <= interval.end:
+                    variant['locusLists'].append(interval.locus_list.name)
+
+    for locus_list_gene in LocusListGene.objects.filter(locus_list__in=locus_lists, gene_id__in=genes.keys()):
+        genes[locus_list_gene.gene_id]['locusLists'].append(locus_list_gene.locus_list.name)
