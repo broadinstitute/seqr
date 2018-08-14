@@ -30,10 +30,6 @@ class AwesomeBar extends React.Component
     inputwidth: PropTypes.string,
   }
 
-  static defaultProps = {
-    categories: ['projects', 'families', 'individuals', 'genes'],
-  }
-
   constructor(props) {
     super(props)
 
@@ -82,10 +78,11 @@ class AwesomeBar extends React.Component
 
   handleSearchChange = (e, obj) => {
     this.setState({ isLoading: true, value: obj.value })
-    this.httpRequestHelper.get({
-      q: obj.value,
-      categories: this.props.categories || '',
-    })
+    const query = { q: obj.value }
+    if (this.props.categories) {
+      query.categories = this.props.categories
+    }
+    this.httpRequestHelper.get(query)
   }
 
   handleResultSelect = (e, obj) => {
