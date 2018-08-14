@@ -1,7 +1,7 @@
 FROM openjdk:8-jdk
 
-# hail doesn't yet support elasticsearch v6.3.2
-ENV ELASTICSEARCH_VERSION="5.4.3"
+#ENV ELASTICSEARCH_VERSION="5.4.3"
+ENV ELASTICSEARCH_VERSION="6.3.2"
 
 # install commmon utilities
 RUN apt-get update \
