@@ -87,9 +87,7 @@ class SortableTable extends React.PureComponent {
       return
     }
 
-    const selected = !this.state.selected[rowId]
-    this.props.selectRows([rowId], selected)
-    this.setState({ selected: { ...this.state.selected, [rowId]: selected } })
+    this.props.selectRows({ ...this.props.selectedRows, [rowId]: !this.props.selectedRows[rowId] })
   }
 
   render() {

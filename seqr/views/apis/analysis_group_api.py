@@ -1,6 +1,7 @@
 import json
 import logging
 from django.contrib.auth.decorators import login_required
+from django.db import IntegrityError
 from django.views.decorators.csrf import csrf_exempt
 
 from seqr.models import AnalysisGroup, Family, CAN_EDIT
@@ -42,13 +43,19 @@ def update_analysis_group_handler(request, project_guid, analysis_group_guid=Non
         analysis_group = AnalysisGroup.objects.get(guid=analysis_group_guid, project=project)
         update_model_from_json(analysis_group, request_json, allow_unknown_keys=True)
     else:
-        analysis_group = create_seqr_model(
-            AnalysisGroup,
-            project=project,
-            name=request_json['name'],
-            description=request_json.get('description'),
-            created_by=request.user,
-        )
+        try:
+            analysis_group = create_seqr_model(
+                AnalysisGroup,
+                project=project,
+                name=request_json['name'],
+                description=request_json.get('description'),
+                created_by=request.user,
+            )
+        except IntegrityError:
+            return create_json_response(
+                {}, status=400, reason='An analysis group named "{name}" already exists for project "{project}"'.format(
+                    name=request_json['name'], project=project.name
+                ))
 
     analysis_group.families.set(families)
     base_family_group = find_matching_xbrowse_model(analysis_group)
