@@ -22,7 +22,7 @@ def get_or_create_saved_variant(xpos=None, ref=None, alt=None, family=None, proj
     )
     if not saved_variant.saved_variant_json:
         try:
-            saved_variants_json = _retrieve_saved_variants_json(project, [(xpos, ref, alt, family.family_id)])
+            saved_variants_json = _retrieve_saved_variants_json(project, [(xpos, ref, alt, family.family_id)], create_if_missing=True)
             if len(saved_variants_json):
                 _update_saved_variant_json(saved_variant, saved_variants_json[0])
         except Exception as e:
@@ -43,12 +43,14 @@ def update_project_saved_variant_json(project):
     return variants_json
 
 
-def _retrieve_saved_variants_json(project, variant_tuples):
+def _retrieve_saved_variants_json(project, variant_tuples, create_if_missing=False):
     project_id = project.deprecated_project_id
     xbrowse_project = BaseProject.objects.get(project_id=project_id)
     user = User.objects.filter(is_staff=True).first()  # HGMD annotations are only returned for staff users
 
     variants = get_variants_from_variant_tuples(xbrowse_project, variant_tuples, user=user)
+    if not create_if_missing:
+        variants = [var for var in variants if not var.get_extra('created_variant')]
     add_extra_info_to_variants_project(get_reference(), xbrowse_project, variants, add_populations=True)
     return [variant.toJSON() for variant in variants]
 

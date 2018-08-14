@@ -4,9 +4,8 @@ import { connect } from 'react-redux'
 import { Route, Switch } from 'react-router-dom'
 import { Loader, Header } from 'semantic-ui-react'
 
-import { getProjectsIsLoading } from 'redux/selectors'
 import { loadProject, unloadProject } from './reducers'
-import { getProject } from './selectors'
+import { getProject, getProjectDetailsIsLoading } from './selectors'
 import ProjectPageUI from './components/ProjectPageUI'
 import CaseReview from './components/CaseReview'
 import FamilyPage from './components/FamilyPage'
@@ -37,7 +36,7 @@ class Project extends React.Component
   }
 
   render() {
-    if (this.props.project) {
+    if (this.props.project && this.props.project.detailsLoaded) {
       return (
         <Switch>
           <Route path={`${this.props.match.url}/project_page`} component={ProjectPageUI} />
@@ -62,7 +61,7 @@ const mapDispatchToProps = {
 
 const mapStateToProps = state => ({
   project: getProject(state),
-  loading: getProjectsIsLoading(state),
+  loading: getProjectDetailsIsLoading(state),
 })
 
 export default connect(mapStateToProps, mapDispatchToProps)(Project)

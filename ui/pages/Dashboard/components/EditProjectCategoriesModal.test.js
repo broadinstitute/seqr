@@ -4,7 +4,7 @@ import Adapter from 'enzyme-adapter-react-16'
 import { EditProjectCategoriesModalComponent } from './EditProjectCategoriesModal'
 import { getProjectsByGuid, getProjectCategoriesByGuid } from 'redux/selectors'
 
-import { STATE1, PROJECT_GUID } from '../../fixtures'
+import { STATE1, PROJECT_GUID } from '../fixtures'
 
 configure({ adapter: new Adapter() })
 

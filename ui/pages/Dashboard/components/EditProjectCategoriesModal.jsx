@@ -14,7 +14,7 @@ const EditProjectCategoriesModal = (props) => {
   const categories = Object.values(props.projectCategoriesByGuid).map((projectCategory) => {
     return { value: projectCategory.guid, text: projectCategory.name }
   })
-  const formName = `editProjectCategories-${props.project.projectGuid}`
+  const formName = `editProjectCategories-${props.project.projectGuid}-${props.triggerName}`
   const fields = [
     {
       name: 'categories',
@@ -49,6 +49,7 @@ EditProjectCategoriesModal.propTypes = {
   projectCategoriesByGuid: PropTypes.object,
   updateProject: PropTypes.func,
   popup: PropTypes.object,
+  triggerName: PropTypes.string,
 }
 
 const mapStateToProps = state => ({
