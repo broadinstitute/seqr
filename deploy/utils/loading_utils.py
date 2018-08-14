@@ -116,4 +116,5 @@ def create_user(deployment_target, email=None, password=None):
     if not email:
         run_in_pod("seqr", "python -u manage.py createsuperuser" % locals(), is_interactive=True)
     else:
-        run_in_pod("seqr", """echo "from django.contrib.auth.models import User; User.objects.create_superuser('%(email)s', '%(email)s', '%(password)s')" | python manage.py shell""" % locals(), print_command=False)
+        run_in_pod("seqr", """echo "from django.contrib.auth.models import User; User.objects.create_superuser('%(email)s', '%(email)s', '%(password)s')" | python manage.py shell""" % locals(),
+                   print_command=False, errors_to_ignore=["already exists"])

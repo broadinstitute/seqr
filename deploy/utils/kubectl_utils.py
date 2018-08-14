@@ -114,7 +114,9 @@ def run_in_pod(pod_name, command, deployment_target=None, errors_to_ignore=None,
         pod_name (str): keyword to use for looking up a kubernetes pod (eg. 'phenotips' or 'nginx')
         command (str): the command to execute
         deployment_target (str):
-        errors_to_ignore (list):
+        errors_to_ignore (list): if the command's return code isn't in ok_return_codes, but its
+            output contains one of the strings in this list, the bad return code will be ignored,
+            and this function will return None. Otherwise, it raises a RuntimeException.
         print_command (bool):
         verbose (bool):
         is_interactive (bool): whether the command expects input from the user
