@@ -43,7 +43,7 @@ const FORM_FIELDS = [
   },
 ]
 
-export const UpdateAnalysisGroup = ({ project, analysisGroup, onSubmit, projectFamiliesByGuid }) => {
+export const UpdateAnalysisGroup = ({ project, analysisGroup, onSubmit, projectFamiliesByGuid, iconOnly }) => {
   if (!project.canEdit) {
     return null
   }
@@ -57,7 +57,7 @@ export const UpdateAnalysisGroup = ({ project, analysisGroup, onSubmit, projectF
 
   return <UpdateButton
     modalTitle={title}
-    buttonText={title}
+    buttonText={iconOnly ? null : title}
     onSubmit={onSubmit}
     formFields={fields}
     showErrorPanel
@@ -68,6 +68,7 @@ export const UpdateAnalysisGroup = ({ project, analysisGroup, onSubmit, projectF
 UpdateAnalysisGroup.propTypes = {
   project: PropTypes.object,
   analysisGroup: PropTypes.object,
+  iconOnly: PropTypes.bool,
   projectFamiliesByGuid: PropTypes.object,
   onSubmit: PropTypes.func,
 }

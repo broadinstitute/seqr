@@ -83,6 +83,7 @@ const ProjectOverview = ({ project, analysisGroup, familiesByGuid, individualsBy
                       content={<div><b>{ag.familyGuids.length} Families</b><br /><i>{ag.description}</i></div>}
                       size="small"
                     />
+                    <UpdateAnalysisGroupButton analysisGroup={ag} iconOnly />
                     <DeleteAnalysisGroupButton analysisGroup={ag} iconOnly />
                   </div>)
               }

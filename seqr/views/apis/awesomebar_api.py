@@ -26,6 +26,12 @@ def _get_matching_objects(user, query, object_cls, filter_fields, get_title, get
     Args:
         user: Django user
         query: String typed into the awesomebar
+        object_cls: Django model class of the object
+        filter_fields: Array of field names to match the query against
+        get_title: Function to get the title from an object
+        get_href: Function to get the href from an object
+        get_description: Optional function to get the description from an object
+        project_field: Optional string defining the relationship between the object and parent project
     Returns:
         Sorted list of matches where each match is a dictionary of strings
     """
