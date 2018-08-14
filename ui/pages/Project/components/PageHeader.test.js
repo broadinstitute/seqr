@@ -3,7 +3,7 @@ import { shallow, configure } from 'enzyme'
 import Adapter from 'enzyme-adapter-react-16'
 import { getUser } from 'redux/selectors'
 import { getProject } from '../selectors'
-import { ProjectPageUIComponent } from './ProjectPageUI'
+import { PageHeader } from './PageHeader'
 
 
 import { STATE_WITH_2_FAMILIES } from '../fixtures'
@@ -18,8 +18,8 @@ test('shallow-render without crashing', () => {
   const props = {
     user: getUser(STATE_WITH_2_FAMILIES),
     project: getProject(STATE_WITH_2_FAMILIES),
-    match: { params: {} },
+    match: { params: { breadcrumb: 'a_page' } },
   }
 
-  shallow(<ProjectPageUIComponent {...props} />)
+  shallow(<PageHeader {...props} />)
 })

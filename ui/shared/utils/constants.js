@@ -59,6 +59,7 @@ export const FAMILY_ANALYSIS_STATUS_OPTIONS = [
 
 // FAMILY FIELDS
 
+export const FAMILY_DISPLAY_NAME = 'displayName'
 export const FAMILY_FIELD_DESCRIPTION = 'description'
 export const FAMILY_FIELD_ANALYSIS_STATUS = 'analysisStatus'
 export const FAMILY_FIELD_ANALYSED_BY = 'analysedBy'
@@ -69,6 +70,7 @@ export const FAMILY_FIELD_INTERNAL_SUMMARY = 'internalCaseReviewSummary'
 export const FAMILY_FIELD_FIRST_SAMPLE = 'firstSample'
 export const FAMILY_FIELD_CODED_PHENOTYPE = 'codedPhenotype'
 export const FAMILY_FIELD_OMIM_NUMBER = 'postDiscoveryOmimNumber'
+export const FAMILY_FIELD_PEDIGREE = 'pedigreeImage'
 
 export const FAMILY_FIELD_RENDER_LOOKUP = {
   [FAMILY_FIELD_DESCRIPTION]: { name: 'Family Description' },
