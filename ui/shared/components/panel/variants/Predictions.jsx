@@ -1,8 +1,8 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
+import ButtonLink from 'shared/components/buttons/ButtonLink'
 import { Icon, Transition } from 'semantic-ui-react'
-
 
 const SEVERITY_MAP = {
   damaging: 'red',
@@ -20,8 +20,7 @@ const PredictionValue = styled.span`
   text-transform: uppercase;
 `
 
-const LinkButton = styled.span.attrs({ role: 'button', tabIndex: '0' })`
-  cursor: pointer;
+const StyledButtonLink = styled(ButtonLink)`
   padding-left: 20px;
 `
 
@@ -45,13 +44,11 @@ const Prediction = ({ field, annotation, dangerThreshold, warningThreshold, name
     }
   } else {
     color = SEVERITY_MAP[value]
-    if (value) {
-      value = `${value}`.replace('_', ' ')
-    }
+    value = `${value}`.replace('_', ' ')
   }
 
   if (!name) {
-    name = field.replace(/_/g, ' ').toUpperCase()
+    name = field.replace('_', ' ').toUpperCase()
   }
 
   return (
@@ -121,11 +118,11 @@ export default class Predictions extends React.Component {
                     {
                       morePredictorFields.map(predictorField => <Prediction key={predictorField.field} field={predictorField.field} annotation={annotation} />)
                     }
-                    <LinkButton onClick={() => this.setState({ showMore: false })}>hide</LinkButton>
+                    <StyledButtonLink onClick={() => this.setState({ showMore: false })}>hide</StyledButtonLink>
                   </div>
                 :
                   morePredictorFields.some(predictorField => annotation[predictorField.field] != null) &&
-                  <LinkButton onClick={() => this.setState({ showMore: true })}>show more...</LinkButton>
+                  <StyledButtonLink onClick={() => this.setState({ showMore: true })}>show more...</StyledButtonLink>
               }
             </Transition.Group>
           : null

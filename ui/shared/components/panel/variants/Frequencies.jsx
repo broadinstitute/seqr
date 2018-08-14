@@ -121,12 +121,30 @@ const Frequencies = ({ variant }) => {
         header="Allele Counts"
         content={
           <div>
-            <div>this callset:<HorizontalSpacer width={10} />{popCounts.AC} out of {popCounts.AN || '?'}</div>
-            <div>1kg WGS:<HorizontalSpacer width={10} />{popCounts.g1kAC} out of {popCounts.g1kAN || '?'}</div>
-            <div>ExAC:<HorizontalSpacer width={10} />{popCounts.exacAC} out of {popCounts.exacAN || '?'}</div>
-            <div>gnomAD exomes:<HorizontalSpacer width={10} />{popCounts.gnomadExomesAC} out of {popCounts.gnomadExomesAN || '?'}</div>
-            <div>gnomAD genomes:<HorizontalSpacer width={10} />{popCounts.gnomadGenomesAC} out of {popCounts.gnomadGenomesAN || '?'}</div>
-            <div>TopMed:<HorizontalSpacer width={10} />{popCounts.topmedAC} out of {popCounts.topmedAN || '?'}</div>
+            {
+              popCounts.AC != null && popCounts.AN != null &&
+              <div>this callset:<HorizontalSpacer width={10} />{popCounts.AC} out of {popCounts.AN}</div>
+            }
+            {
+              popCounts.g1kAC != null && popCounts.g1kAN != null &&
+              <div>1kg WGS:<HorizontalSpacer width={10} />{popCounts.g1kAC} out of {popCounts.g1kAN}</div>
+            }
+            {
+              popCounts.exacAC != null && popCounts.exacAN != null &&
+              <div>ExAC:<HorizontalSpacer width={10} />{popCounts.exacAC} out of {popCounts.exacAN}</div>
+            }
+            {
+              popCounts.gnomadExomesAC != null && popCounts.gnomadExomesAN != null &&
+              <div>gnomAD exomes:<HorizontalSpacer width={10} />{popCounts.gnomadExomesAC} out of {popCounts.gnomadExomesAN}</div>
+            }
+            {
+              popCounts.gnomadGenomesAC != null && popCounts.gnomadGenomesAN != null &&
+              <div>gnomAD genomes:<HorizontalSpacer width={10} />{popCounts.gnomadGenomesAC} out of {popCounts.gnomadGenomesAN}</div>
+            }
+            {
+              popCounts.topmedAC != null && popCounts.topmedAN != null &&
+              <div>TopMed:<HorizontalSpacer width={10} />{popCounts.topmedAC} out of {popCounts.topmedAN}</div>
+            }
           </div>
         }
       />
