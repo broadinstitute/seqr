@@ -136,9 +136,9 @@ def _get_matching_genes(user, query):
     for g in matching_genes[:MAX_RESULTS_PER_CATEGORY]:
         if query.lower() in g.gene_id.lower():
             title = g.gene_id
-            description = g.gene_name
+            description = g.gene_symbol
         else:
-            title = g.gene_name
+            title = g.gene_symbol
             description = g.gene_id
 
         result.append({
