@@ -81,7 +81,7 @@ RUN ln -s /vep/ensembl-tools-release-85/scripts/variant_effect_predictor /vep/va
     && chmod a+rx /vep/run_hail_vep85_GRCh37_vcf.sh \
     && chmod a+rx /vep/run_hail_vep85_GRCh38_vcf.sh
 
-# run VEP on the 1-variant VCF to create fasta.index file -- caution do not make fasta.index file writeable afterwards!
+# run VEP on the 1-variant VCF to create fasta.index file
 RUN gsutil cp gs://hail-common/vep/vep/1var.vcf /vep  \
     && /vep/run_hail_vep85_GRCh37_vcf.sh /vep/1var.vcf \
     && /vep/run_hail_vep85_GRCh38_vcf.sh /vep/1var.vcf

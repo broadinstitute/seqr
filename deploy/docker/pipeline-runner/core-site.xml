@@ -7,6 +7,6 @@
     </property>
     <property>
         <name>google.cloud.auth.service.account.json.keyfile</name>
-        <value>/.secrets/service-account-key.json</value>
+        <value>/.config/service-account-key.json</value>
     </property>
 </configuration>

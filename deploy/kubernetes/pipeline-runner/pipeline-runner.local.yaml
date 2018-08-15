@@ -65,6 +65,11 @@ spec:
             secretKeyRef:
               name: postgres-secrets
               key: postgres.password
+        - name: OMIM_KEY
+          valueFrom:
+            secretKeyRef:
+              name: seqr-secrets
+              key: omim_key
         - name: GCLOUD_PROJECT      #  TODO use ConfigMap envFrom: (waiting for https://github.com/kubernetes/minikube/issues/2295)
           value: "{{ GCLOUD_PROJECT }}"
         - name: GCLOUD_ZONE
