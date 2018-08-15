@@ -28,7 +28,7 @@ const AnnotationLabel = styled.small`
 `
 
 const Transcripts = ({ variant, loading, loadVariantTranscripts: dispatchLoadVariantTranscripts }) =>
-  <DataLoader contentId={variant.variantId} content={variant.transcripts} loading={loading} load={dispatchLoadVariantTranscripts}>
+  <DataLoader contentId={variant.variantGuid} content={variant.transcripts} loading={loading} load={dispatchLoadVariantTranscripts}>
     {variant.transcripts && variant.genes.map(gene =>
       <div key={gene.geneId}>
         <Header size="large" attached="top" content={gene.symbol} subheader={`Gene Id: ${gene.geneId}`} />

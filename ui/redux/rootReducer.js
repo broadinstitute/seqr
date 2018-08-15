@@ -145,8 +145,9 @@ export const loadSearchedVariants = (search) => {
     dispatch({ type: REQUEST_SEARCHED_VARIANTS })
     new HttpRequestHelper('/api/search',
       (responseJson) => {
+        dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
         dispatch({ type: RECEIVE_GENES, updatesById: responseJson.genesById })
-        dispatch({ type: RECEIVE_SAVED_VARIANTS, updatesById: responseJson.savedVariants })
+        dispatch({ type: RECEIVE_SAVED_VARIANTS, updatesById: responseJson.savedVariantsByGuid })
         dispatch({ type: RECEIVE_SEARCHED_VARIANTS, newValue: responseJson.searchedVariants })
       },
       (e) => {
@@ -234,7 +235,7 @@ const rootReducer = combineReducers(Object.assign({
   locusListsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'locusListsByGuid'),
   locusListsLoading: loadingReducer(REQUEST_GENE_LISTS, RECEIVE_DATA),
   locusListLoading: loadingReducer(REQUEST_GENE_LIST, RECEIVE_DATA),
-  savedVariants: createObjectsByIdReducer(RECEIVE_SAVED_VARIANTS),
+  savedVariantsByGuid: createObjectsByIdReducer(RECEIVE_SAVED_VARIANTS),
   searchedVariants: createSingleValueReducer(RECEIVE_SEARCHED_VARIANTS, []),
   searchedVariantsLoading: loadingReducer(REQUEST_SEARCHED_VARIANTS, RECEIVE_SEARCHED_VARIANTS),
   variantLoading: loadingReducer(REQUEST_VARIANT, RECEIVE_SAVED_VARIANTS),

@@ -5,7 +5,7 @@ export const getFamiliesByGuid = state => state.familiesByGuid
 export const getIndividualsByGuid = state => state.individualsByGuid
 export const getSamplesByGuid = state => state.samplesByGuid
 export const getAnalysisGroupsByGuid = state => state.analysisGroupsByGuid
-export const getSavedVariantsByGuid = state => state.savedVariants
+export const getSavedVariantsByGuid = state => state.savedVariantsByGuid
 export const getSearchedVariants = state => state.searchedVariants
 export const getSearchedVariantsIsLoading = state => state.searchedVariantsLoading.isLoading
 export const getGenesById = state => state.genesById

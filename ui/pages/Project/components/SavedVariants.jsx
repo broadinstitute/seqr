@@ -237,7 +237,7 @@ class SavedVariants extends React.Component {
         <Grid.Row>
           <Grid.Column width={16}>
             {this.props.loading ? <Loader inline="centered" active /> :
-            <Variants variants={this.props.variantsToDisplay} projectGuid={this.props.project.projectGuid} />}
+            <Variants variants={this.props.variantsToDisplay} />}
           </Grid.Column>
         </Grid.Row>
       </Grid>

@@ -58,7 +58,7 @@ export const loadProjectVariants = (familyGuid, variantGuid) => {
     // Do not load if already loaded
     let expectedFamilyGuids
     if (variantGuid) {
-      if (state.projectSavedVariants[variantGuid]) {
+      if (state.savedVariantsByGuid[variantGuid]) {
         return
       }
       url = `${url}/${variantGuid}`
@@ -73,7 +73,7 @@ export const loadProjectVariants = (familyGuid, variantGuid) => {
     new HttpRequestHelper(url,
       (responseJson) => {
         dispatch({ type: RECEIVE_GENES, updatesById: responseJson.genesById })
-        dispatch({ type: RECEIVE_SAVED_VARIANTS, updatesById: responseJson.savedVariants })
+        dispatch({ type: RECEIVE_SAVED_VARIANTS, updatesById: responseJson.savedVariantsByGuid })
         if (expectedFamilyGuids) {
           dispatch({
             type: RECEIVE_SAVED_VARIANT_FAMILIES,
@@ -91,7 +91,7 @@ export const loadProjectVariants = (familyGuid, variantGuid) => {
 export const unloadProject = () => {
   return (dispatch, getState) => {
     const state = getState()
-    const variantsToDelete = Object.keys(state.savedVariants).reduce((acc, o) => ({ ...acc, [o]: null }), {})
+    const variantsToDelete = Object.keys(state.savedVariantsByGuid).reduce((acc, o) => ({ ...acc, [o]: null }), {})
     const variantFamiliesToDelete = Object.keys(state.projectSavedVariantFamilies).reduce((acc, o) => ({ ...acc, [o]: false }), {})
     dispatch({ type: UPDATE_CURRENT_PROJECT, newValue: null })
     dispatch({ type: RECEIVE_SAVED_VARIANTS, updatesById: variantsToDelete })

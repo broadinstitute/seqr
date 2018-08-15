@@ -132,7 +132,7 @@ def _get_json_for_families(families, user=None, add_individual_guids_field=False
     return results
 
 
-def _get_json_for_family(family, user=None, add_individual_guids_field=False):
+def _get_json_for_family(family, user=None, add_individual_guids_field=False, project_guid=None):
     """Returns a JSON representation of the given Family.
 
     Args:
@@ -143,7 +143,7 @@ def _get_json_for_family(family, user=None, add_individual_guids_field=False):
         dict: json object
     """
 
-    return _get_json_for_families([family], user, add_individual_guids_field)[0]
+    return _get_json_for_families([family], user, add_individual_guids_field, project_guid)[0]
 
 
 def _get_json_for_individuals(individuals, user=None, project_guid=None, family_guid=None, add_sample_guids_field=False):
@@ -299,7 +299,8 @@ def get_json_for_analysis_group(analysis_group, project_guid=None):
 
     return get_json_for_analysis_groups([analysis_group], project_guid=project_guid)[0]
 
-def get_json_for_saved_variant(saved_variant, add_tags=False):
+
+def get_json_for_saved_variant(saved_variant, add_tags=False, project_guid=None):
     """Returns a JSON representation of the given variant.
 
     Args:
@@ -309,13 +310,19 @@ def get_json_for_saved_variant(saved_variant, add_tags=False):
     """
 
     fields = _get_record_fields(SavedVariant, 'variant')
-    saved_variant_dict = _record_to_dict(saved_variant, fields, nested_fields=[('family', 'guid')])
+    nested_fields = [('family', 'guid')]
+    if not project_guid:
+        nested_fields.append(('project', 'guid'))
+    saved_variant_dict = _record_to_dict(saved_variant, fields, nested_fields=nested_fields)
 
     result = _get_json_for_record(saved_variant_dict, fields)
 
     chrom, pos = get_chrom_pos(result['xpos'])
+    guid = result.pop('guid')
     result.update({
-        'variantId': result.pop('guid'),
+        'variantId': guid,
+        'variantGuid': guid,
+        'projectGuid': project_guid or saved_variant_dict['project_guid'],
         'familyGuid': saved_variant_dict['family_guid'],
         'chrom': chrom,
         'pos': pos,

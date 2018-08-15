@@ -43,13 +43,13 @@ const VariantLinkContainer = styled.div`
 
 const NO_DISPLAY = { display: 'none' }
 
-const Variants = ({ variants, projectGuid }) =>
+const Variants = ({ variants }) =>
   <Grid divided="vertically" columns="equal">
     {variants.map(variant =>
       <VariantRow key={variant.variantId} severity={CLINSIG_SEVERITY[(variant.clinvar.clinsig || '').split('/')[0]]}>
-        {projectGuid &&
+        {variant.variantGuid &&
           <VariantLinkContainer>
-            <NavLink to={`/project/${projectGuid}/saved_variants/variant/${variant.variantId}`} activeStyle={NO_DISPLAY}>
+            <NavLink to={`/project/${variant.projectGuid}/saved_variants/variant/${variant.variantGuid}`} activeStyle={NO_DISPLAY}>
               <Popup
                 trigger={<Icon name="linkify" link />}
                 content="Go to the page for this individual variant. Note: There is no additional information on this page, it is intended for sharing specific variants."
@@ -81,7 +81,6 @@ const Variants = ({ variants, projectGuid }) =>
 
 Variants.propTypes = {
   variants: PropTypes.array,
-  projectGuid: PropTypes.string,
 }
 
 export default Variants

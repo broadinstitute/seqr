@@ -228,7 +228,7 @@ def _get_json_for_variant_tag_types(project):
         num_tags = sum(count['count'] for count in current_tag_type_counts)
         if variant_tag_type.category == 'CMG Discovery Tags' and num_tags > 0:
             for tag in VariantTag.objects.filter(saved_variant__project=project, variant_tag_type=variant_tag_type).select_related('saved_variant'):
-                tag_data = get_json_for_saved_variant(tag.saved_variant)
+                tag_data = get_json_for_saved_variant(tag.saved_variant, project_guid=project.guid)
                 tag_data.update(json.loads(tag.saved_variant.saved_variant_json or '{}'))
                 discovery_tags.append(tag_data)
 

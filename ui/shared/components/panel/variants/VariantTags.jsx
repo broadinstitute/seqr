@@ -5,7 +5,7 @@ import { Popup } from 'semantic-ui-react'
 import styled from 'styled-components'
 
 import { updateVariantNote, updateVariantTags } from 'redux/rootReducer'
-import { getProject } from 'pages/Project/selectors'
+import { getProjectsByGuid } from 'redux/selectors'
 import { HorizontalSpacer } from '../../Spacers'
 import ReduxFormWrapper from '../../form/ReduxFormWrapper'
 import { InlineToggle, BooleanCheckbox } from '../../form/Inputs'
@@ -216,8 +216,8 @@ VariantTags.propTypes = {
   updateVariantTags: PropTypes.func,
 }
 
-const mapStateToProps = state => ({
-  project: getProject(state),
+const mapStateToProps = (state, ownProps) => ({
+  project: getProjectsByGuid(state)[ownProps.variant.projectGuid],
 })
 
 const mapDispatchToProps = {

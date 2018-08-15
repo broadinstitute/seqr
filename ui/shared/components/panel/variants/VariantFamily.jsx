@@ -6,7 +6,6 @@ import { Link } from 'react-router-dom'
 import { Header } from 'semantic-ui-react'
 
 import { getFamiliesByGuid } from 'redux/selectors'
-import { getProject } from 'pages/Project/selectors'
 import {
   FAMILY_FIELD_DESCRIPTION,
   FAMILY_FIELD_ANALYSIS_STATUS,
@@ -37,7 +36,7 @@ const InlineHeader = styled(Header)`
 
 const FAMILY_POPUP_STYLE = { maxWidth: '1200px' }
 
-const VariantFamily = ({ project, family }) =>
+const VariantFamily = ({ family }) =>
   <InlineHeader size="small">
     Family<HorizontalSpacer width={5} />
     <PopupWithModal
@@ -46,7 +45,7 @@ const VariantFamily = ({ project, family }) =>
       position="right center"
       keepInViewPort
       trigger={
-        <Link to={`/project/${project.projectGuid}/family_page/${family.familyGuid}`}>
+        <Link to={`/project/${family.projectGuid}/family_page/${family.familyGuid}`}>
           {family.displayName}
         </Link>
       }
@@ -55,12 +54,10 @@ const VariantFamily = ({ project, family }) =>
   </InlineHeader>
 
 VariantFamily.propTypes = {
-  project: PropTypes.object,
   family: PropTypes.object,
 }
 
 const mapStateToProps = (state, ownProps) => ({
-  project: getProject(state),
   family: getFamiliesByGuid(state)[ownProps.variant.familyGuid],
 })
 

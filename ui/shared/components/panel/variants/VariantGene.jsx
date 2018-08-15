@@ -72,8 +72,13 @@ const VariantGene = ({ gene, project }) =>
     <HorizontalSpacer width={10} />
     <GeneLinks>
       <a href={`http://gnomad-beta.broadinstitute.org/gene/${gene.symbol}`} target="_blank" rel="noopener noreferrer">gnomAD</a>
-      <HorizontalSpacer width={5} />|<HorizontalSpacer width={5} />
-      <a href={`/project/${project.deprecatedProjectId}/gene/${gene.geneId}`} target="_blank" rel="noopener noreferrer">Gene Search</a><br />
+      {/* TODO have gene search link for new gene search including on search page */}
+      {project &&
+        <span>
+          <HorizontalSpacer width={5} />|<HorizontalSpacer width={5} />
+          <a href={`/project/${project.deprecatedProjectId}/gene/${gene.geneId}`} target="_blank" rel="noopener noreferrer">Gene Search</a><br />
+        </span>
+      }
     </GeneLinks>
     <div>
       {gene.phenotypeInfo.mimPhenotypes.length > 0 &&

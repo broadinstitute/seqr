@@ -40,18 +40,18 @@ def saved_variant_data(request, project_guid, variant_guid=None):
         if variant_query.count() < 1:
             return create_json_response({}, status=404, reason='Variant {} not found'.format(variant_guid))
     for saved_variant in variant_query:
-        variant = get_json_for_saved_variant(saved_variant, add_tags=True)
+        variant = get_json_for_saved_variant(saved_variant, add_tags=True, project_guid=project_guid)
         if variant['tags'] or variant['notes']:
             variant_json = json.loads(saved_variant.saved_variant_json or '{}')
             variant.update(_variant_details(variant_json, request.user))
             variant['projectGuid'] = [project_guid]
-            variants[variant['variantId']] = variant
+            variants[variant['variantGuid']] = variant
 
     genes = _saved_variant_genes(variants.values())
     _add_locus_lists(project, variants.values(), genes)
 
     return create_json_response({
-        'savedVariants': variants,
+        'savedVariantsByGuid': variants,
         'genesById': genes,
     })
 

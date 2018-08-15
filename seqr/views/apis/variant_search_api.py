@@ -1,12 +1,14 @@
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 
-from seqr.models import Family, SavedVariant
+from seqr.models import Family, Individual, SavedVariant
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.saved_variant_api import _variant_details, _saved_variant_genes, _add_locus_lists
+from seqr.views.pages.project_page import _get_json_for_variant_tag_types
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import \
-    get_json_for_variant_tag, get_json_for_variant_functional_data, get_json_for_variant_note
+    get_json_for_variant_tag, get_json_for_variant_functional_data, get_json_for_variant_note, _get_json_for_family, \
+    _get_json_for_project, _get_json_for_individuals
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions
 from seqr.model_utils import find_matching_xbrowse_model
 
@@ -48,10 +50,21 @@ def query_variants_handler(request):
     _add_locus_lists(project, parsed_variants, genes)
     _add_saved_variants(parsed_variants, project, family)
 
+    project_json = _get_json_for_project(project, request.user)
+    project_json.update(_get_json_for_variant_tag_types(project))
+    family_json = _get_json_for_family(family, user=request.user, project_guid=project.guid, add_individual_guids_field=True)
+    individuals = Individual.objects.filter(guid__in=family_json['individualGuids'])
+    individuals_json = _get_json_for_individuals(
+        individuals, user=request.user, project_guid=project.guid, family_guid=family.guid
+    )
+
     return create_json_response({
-        'searchedVariants': [{'variantId': v['variantId']} if v['variantId'] else v for v in parsed_variants],
-        'savedVariants': {variant['variantId']: variant for variant in parsed_variants if variant['variantId']},
+        'searchedVariants': [{'variantGuid': v['variantGuid']} if v['variantGuid'] else v for v in parsed_variants],
+        'savedVariantsByGuid': {variant['variantGuid']: variant for variant in parsed_variants if variant['variantGuid']},
         'genesById': genes,
+        'projectsByGuid': {project.guid: project_json},
+        'familiesByGuid': {family.guid: family_json},
+        'individualsByGuid': {i['individualGuid']: i for i in individuals_json}
     })
 
 
@@ -68,7 +81,8 @@ def _add_saved_variants(variants, project, family):
             xpos_start=variant['xpos'], ref=variant['ref'], alt=variant['alt'], project=project, family=family
         ).first()
         variant.update({
-            'variantId': saved_variant.guid if saved_variant else None,
+            'variantId': '{}-{}-{}'.format(variant['xpos'], variant['ref'], variant['alt']),  # TODO may not be unique in non-family speific searches
+            'variantGuid': saved_variant.guid if saved_variant else None,
             'projectGuid': project.guid,
             'familyGuid': family.guid,
             'tags': [

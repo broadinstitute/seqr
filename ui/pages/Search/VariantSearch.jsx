@@ -4,13 +4,15 @@ import queryString from 'query-string'
 import { connect } from 'react-redux'
 
 import { loadSearchedVariants } from 'redux/rootReducer'
-import { getSearchedVariants } from 'redux/selectors'
+import { getSearchedVariants, getSavedVariantsByGuid } from 'redux/selectors'
+import Variants from 'shared/components/panel/variants/Variants'
 
 
-class VariantSearch extends React.Component {
+class VariantSearch extends React.PureComponent {
   static propTypes = {
     loadSearchedVariants: PropTypes.func.isRequired,
     searchedVariants: PropTypes.array,
+    savedVariantsByGuid: PropTypes.object,
     location: PropTypes.object,
   }
 
@@ -22,18 +24,18 @@ class VariantSearch extends React.Component {
   }
 
   render() {
+    const variants = this.props.searchedVariants.map(
+      variant => (variant.variantGuid ? this.props.savedVariantsByGuid[variant.variantGuid] : variant),
+    )
     return (
-      <div>
-        {this.props.searchedVariants.map(variant =>
-          <div key={variant.variantId || `${variant.xpos}-${variant.ref}-${variant.alt}`}>{JSON.stringify(variant)}</div>,
-        )}
-      </div>
+      <Variants variants={variants} />
     )
   }
 }
 
 const mapStateToProps = state => ({
   searchedVariants: getSearchedVariants(state),
+  savedVariantsByGuid: getSavedVariantsByGuid(state),
 })
 
 const mapDispatchToProps = {
