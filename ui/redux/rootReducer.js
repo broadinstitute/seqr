@@ -157,19 +157,23 @@ export const loadSearchedVariants = (search) => {
   }
 }
 
-export const loadVariantTranscripts = (variantId) => {
-  return (dispatch, getState) => {
-    const variant = getState().projectSavedVariants[variantId]
+export const loadVariantTranscripts = (variant) => {
+  return (dispatch) => {
     if (!(variant && variant.transcripts)) {
       dispatch({ type: REQUEST_VARIANT })
-      new HttpRequestHelper(`/api/saved_variant/${variantId}/transcripts`,
+      const variantQuery = Object.keys(variant).reduce((acc, k) => (
+        (typeof variant[k] === 'string' || typeof variant[k] === 'number') ? { [k]: variant[k], ...acc } : acc
+      ), {})
+      new HttpRequestHelper('/api/search/transcripts',
         (responseJson) => {
-          dispatch({ type: RECEIVE_SAVED_VARIANTS, updatesById: responseJson })
+          variant.transcripts = responseJson.transcripts
+          const updates = variant.variantGuid ? { [variant.variantGuid]: responseJson } : {}
+          dispatch({ type: RECEIVE_SAVED_VARIANTS, updatesById: updates })
         },
         (e) => {
           dispatch({ type: RECEIVE_SAVED_VARIANTS, error: e.message, updatesById: {} })
         },
-      ).get()
+      ).get(variantQuery)
     }
   }
 }

@@ -1,3 +1,4 @@
+from collections import defaultdict
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 
@@ -9,14 +10,13 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import \
     get_json_for_variant_tag, get_json_for_variant_functional_data, get_json_for_variant_note, _get_json_for_family, \
     _get_json_for_project, _get_json_for_individuals
-from seqr.views.utils.permissions_utils import get_project_and_check_permissions
+from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_permissions
 from seqr.model_utils import find_matching_xbrowse_model
-
 
 
 from xbrowse_server.api.utils import add_extra_info_to_variants_project
 from xbrowse_server.api import utils as api_utils
-from xbrowse_server.mall import get_reference
+from xbrowse_server.mall import get_reference, get_datastore
 from xbrowse_server.search_cache import utils as cache_utils
 from xbrowse import Variant
 from xbrowse.analysis_modules.mendelian_variant_search import MendelianVariantSearchSpec
@@ -68,11 +68,47 @@ def query_variants_handler(request):
     })
 
 
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@csrf_exempt
+def variant_transcripts(request):
+    project = get_project_and_check_permissions(request.GET.get('projectGuid'), request.user)
+    family = Family.objects.get(guid=request.GET.get('familyGuid'))
+
+    base_project = find_matching_xbrowse_model(project)
+    loaded_variant = get_datastore(base_project).get_single_variant(
+        base_project.project_id,
+        family.family_id,
+        int(request.GET.get('xpos')),
+        request.GET.get('ref'),
+        request.GET.get('alt'),
+    )
+
+    return create_json_response({'transcripts': _parsed_variant_transcripts(loaded_variant.annotation)})
+
+
 def _parsed_variant_json(variant_json, user):
     parsed_json = _variant_details(variant_json, user)
     parsed_json.update({field: variant_json[field] for field in ['xpos', 'ref', 'alt', 'pos']})
     parsed_json['chrom'] = variant_json['chr']
     return parsed_json
+
+
+def _parsed_variant_transcripts(annotation):
+    transcripts = defaultdict(list)
+    for i, vep_a in enumerate(annotation['vep_annotation']):
+        transcripts[vep_a.get('gene', vep_a.get('gene_id'))].append({
+            'transcriptId': vep_a.get('feature') or vep_a.get('transcript_id'),
+            'isChosenTranscript': i == annotation.get('worst_vep_annotation_index'),
+            'aminoAcids': vep_a.get('amino_acids'),
+            'canonical': vep_a.get('canonical'),
+            'cdnaPosition': vep_a.get('cdna_position') or vep_a.get('cdna_start'),
+            'cdsPosition': vep_a.get('cds_position'),
+            'codons': vep_a.get('codons'),
+            'consequence': vep_a.get('consequence') or vep_a.get('major_consequence'),
+            'hgvsc': vep_a.get('hgvsc'),
+            'hgvsp': vep_a.get('hgvsp'),
+        })
+    return transcripts
 
 
 def _add_saved_variants(variants, project, family):
