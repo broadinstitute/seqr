@@ -9,7 +9,7 @@ alias gs='gsutil'
 #gsutil config
 #gcloud init
 
-export PATH=/usr/local/spark-2.0.2-bin-hadoop2.7/bin/spark-submit:$PATH
+export PATH=/usr/local/spark-2.0.2-bin-hadoop2.7/bin:$PATH
 
 export HAIL_HOME=/hail
 export SPARK_HOME=/usr/local/spark-2.0.2-bin-hadoop2.7
