@@ -30,7 +30,7 @@ def proxy_request(request, url, host=None, scheme=None, method=None, session=Non
         url (string): either a full url or a path relative to 'host'
         host (string): hostname or ip address of target server
         scheme (string): "http" or "https", etc.
-        method (string): HTTP request method. Currently suppots "GET", "POST", "PUT", "HEAD", "DELETE"
+        method (string): HTTP request method. Currently supports "GET", "POST", "PUT", "HEAD", "DELETE"
         session (object): requests library Session object
         headers (dict): a dictionary of HTTP request headers to submit instead of the headers in request.META
         auth_tuple (2-tuple): ("username", "password") tuple for basic auth

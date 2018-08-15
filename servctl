@@ -4,15 +4,16 @@ import argparse
 import logging
 import os
 import sys
+from getpass import getpass
 
 from deploy.utils.constants import DEPLOYMENT_TARGETS, DEPLOYABLE_COMPONENTS, \
     COMPONENT_GROUP_NAMES, resolve_component_groups
 from deploy.utils.deploy_utils import deploy
 from deploy.utils.kubectl_utils import run_in_pod, get_pod_name
-from deploy.utils.loading_utils import load_example_project, load_allele_frequencies, \
-    load_reference_data, load_project
+from deploy.utils.loading_utils import load_example_project, \
+    load_project, create_user, update_reference_data
 from deploy.utils.servctl_utils import print_log, port_forward, \
-    create_user, show_dashboard, show_status, wait_for, troubleshoot_component, \
+    show_dashboard, show_status, wait_for, troubleshoot_component, \
     delete_component, reset_database, delete_all, get_component_port_pairs, \
     check_kubernetes_context, set_environment
 from seqr.utils.shell_utils import run
@@ -25,8 +26,9 @@ SET_ENVIRONMENT_COMMAND = 'set-env'
 STATUS_COMMAND = 'status'
 DEPLOY_COMMAND = 'deploy'
 DEPLOY_ALL_COMMAND = 'deploy-all'
-LOAD_COMMAND = 'load'
-DEPLOY_AND_LOAD_COMMAND = 'deploy-all-and-load'
+UPDATE_REFERENCE_DATA_COMMAND = 'update-reference-data'
+LOAD_EXAMPLE_PROJECT_COMMAND = 'load-example-project'
+LOAD_DATASET_COMMAND = 'load-dataset'
 LOG_COMMAND = 'logs'
 TROUBLESHOOT_COMMAND = 'troubleshoot'
 PORT_FORWARD_COMMAND = 'port-forward'
@@ -34,7 +36,7 @@ PORT_FORWARD_AND_LOG_COMMAND = 'connect-to'
 COPY_TO_POD_COMMAND = 'copy-to'
 COPY_FROM_POD_COMMAND = 'copy-from'
 SHELL_COMMAND = 'shell'
-DASHBOARD_COMMAND ='dashboard'
+DASHBOARD_COMMAND = 'dashboard'
 DELETE_COMMAND = 'delete'
 DELETE_ALL_COMMAND = 'delete-all'
 RESET_COMMAND = 'reset-database'
@@ -50,16 +52,27 @@ COMPONENT_ARG_CHOICES = DEPLOYABLE_COMPONENTS + COMPONENT_GROUP_NAMES
 sp = subparsers.add_parser(SET_ENVIRONMENT_COMMAND, description="Set terminal environment for a particular deployment target (eg. 'minikube', 'gcloud-dev', etc.)")
 sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS, help="kubernetes cluster")
 
-## LOAD_COMMAND
-sp = subparsers.add_parser(LOAD_COMMAND, description="Load reference or example datasets to initialize seqr.")
+## LOAD_DATASET_COMMAND
+sp = subparsers.add_parser(LOAD_DATASET_COMMAND, description="Load new dataset into a new or existing project in seqr.")
 sp.add_argument("-g", "--genome-version", help="Genome version 37 or 38", choices=["37", "38"], required=True)
-sp.add_argument("-i", "--project-id", help="Project ID", default="1kg")
+sp.add_argument("-i", "--project-id", help="Project ID")
+sp.add_argument("-s", "--sample-type", help="Sample type (eg. WES, WGS, etc.)", choices=["WES", "WGS", "RNA"])
+sp.add_argument("-d", "--dataset-type", help="Dataset type (eg. VARIANTS, SV, etc.)", choices=["VARIANTS", "SV"])
+
 sp.add_argument("-v", "--vcf", help="Url or google cloud bucket path (eg. gs://) of VEP-annotated VCF to load",
                 default="https://storage.googleapis.com/seqr-public/test-projects/1kg-exomes/1kg.vep.vcf.gz")
 sp.add_argument("-p", "--ped", help="Url or google cloud bucket path (eg. gs://) of pedigree file",
                 default="https://storage.googleapis.com/seqr-public/test-projects/1kg-exomes/1kg.ped")
-sp.add_argument("data", choices=['reference-data', 'allele-frequencies', 'example-project', 'mongo'])
 sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS, help="which kubernetes cluster to load the data to")
+
+# LOAD_EXAMPLE_PROJECT_COMMAND
+sp = subparsers.add_parser(LOAD_EXAMPLE_PROJECT_COMMAND, description="Load a demo project with an example dataset")
+sp.add_argument("-g", "--genome-version", help="Genome version 37 or 38", choices=["37", "38"], default="37")
+sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS, help="kubernetes cluster")
+
+# UPDATE_REFERENCE_DATA_COMMAND
+sp = subparsers.add_parser(UPDATE_REFERENCE_DATA_COMMAND, description="Load or update gene-level and other reference data (eg. gencode, omim, HPO, etc.)")
+sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS, help="kubernetes cluster")
 
 ## LOG_COMMAND
 sp = subparsers.add_parser(LOG_COMMAND, description="Show logs for one or more components")
@@ -91,7 +104,7 @@ for command in [COPY_TO_POD_COMMAND, COPY_FROM_POD_COMMAND]:
 
     if command == COPY_TO_POD_COMMAND:
         sp.add_argument("source_path", help="source file path")
-        sp.add_argument("dest_path", nargs="?", help="destination file path", default="~")
+        sp.add_argument("dest_path", nargs="?", help="destination file path", default="/root")
     elif command == COPY_FROM_POD_COMMAND:
         sp.add_argument("source_path", help="source file path")
         sp.add_argument("dest_path", nargs="?", help="destination file path", default=".")
@@ -127,16 +140,16 @@ sp = subparsers.add_parser(RESET_COMMAND, description="Delete all data from the 
 sp.add_argument('database', nargs="+", choices=["seqrdb", "phenotipsdb", "mongodb"])
 sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS, help="kubernetes cluster")
 
-## DEPLOY_COMMAND, DEPLOY_ALL_COMMAND
+
 def check_restore_db(filename):
     if not os.path.isfile(filename):
         p.error("File doesn't exist: %s" % filename)
     return os.path.abspath(filename)
 
+
 for command_name in [DEPLOY_COMMAND, DEPLOY_ALL_COMMAND]:
     sp = subparsers.add_parser(command_name, description="Deploy one or more components")
     sp.add_argument("-o", "--output-dir", help="output directory for deployment files and logs")
-    #sp.add_argument("-s", "--update-secrets", action="store_true",help="if deploying phenotips or seqr, clear and re-initialize the phenotips xwiki database")
     sp.add_argument("-b", "--build-docker-image", action="store_true", help="use 'docker build --no-cache' to rebuild docker image from the beginning without using cache")
     sp.add_argument("-d", "--delete-before-deploy", action="store_true", help="use 'kubectl delete' and then 'kubectl create' to deploy component(s) instead of just 'kubectl update'")
     sp.add_argument("-f", "--force", dest="build_docker_image_and_reset_db", action="store_true", help="Same as -b and -d together - reset the db and rebuild the docker image.")
@@ -156,18 +169,12 @@ for command_name in [DEPLOY_COMMAND, DEPLOY_ALL_COMMAND]:
     sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS, help="which kubernetes cluster to deploy to")
 
 
-## DEPLOY_AND_LOAD_COMMAND
-sp = subparsers.add_parser(DEPLOY_AND_LOAD_COMMAND, description="End-to-end deployment - deploys all seqr components and loads reference data + an example project")
-sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS, help="which kubernetes cluster to deploy to")
-
-
 args = p.parse_args()
 
 # process command-line args
 if args.deployment_target and args.command != SET_ENVIRONMENT_COMMAND:
     commands_that_call_init_cluster = set([
         DEPLOY_ALL_COMMAND,
-        DEPLOY_AND_LOAD_COMMAND,
     ])
 
     commands_that_dont_modify_kubernetes_state = set([
@@ -185,8 +192,8 @@ if args.deployment_target and args.command != SET_ENVIRONMENT_COMMAND:
 other_settings = {}
 other_settings["BASE_DIR"] = os.path.abspath(os.path.dirname(__file__))
 
-if args.command in [DEPLOY_COMMAND, DEPLOY_ALL_COMMAND, DEPLOY_AND_LOAD_COMMAND]:
-    if args.command == DEPLOY_AND_LOAD_COMMAND:
+if args.command in [DEPLOY_COMMAND, DEPLOY_ALL_COMMAND]:
+    if args.command == DEPLOY_ALL_COMMAND:
         other_settings['RESET_DB'] = True
         other_settings["DELETE_BEFORE_DEPLOY"] = True
         other_settings['BUILD_DOCKER_IMAGE'] = True
@@ -197,11 +204,11 @@ if args.command in [DEPLOY_COMMAND, DEPLOY_ALL_COMMAND, DEPLOY_AND_LOAD_COMMAND]
         other_settings["RESTORE_PHENOTIPS_DB_FROM_BACKUP"] = args.restore_phenotips_db_from_backup
         other_settings["RESTORE_SEQR_DB_FROM_BACKUP"] = args.restore_seqr_db_from_backup
 
-
+    email = password = None
     if args.command == DEPLOY_COMMAND:
         deployable_components = resolve_component_groups(args.deployment_target, args.components)
 
-    elif args.command in [DEPLOY_ALL_COMMAND, DEPLOY_AND_LOAD_COMMAND]:
+    elif args.command == DEPLOY_ALL_COMMAND:
         deployable_components = [
             "init-cluster",
             "secrets",
@@ -222,49 +229,62 @@ if args.command in [DEPLOY_COMMAND, DEPLOY_ALL_COMMAND, DEPLOY_AND_LOAD_COMMAND]
             ]
 
         deployable_components += [
-            "mongo",
+            "mongo",  # deprecated - will be going away soon
             "postgres",
+            "elasticsearch",
+            "kibana",
             "redis",
             "phenotips",
             "seqr",
-            #"pipeline-runner",
+            "pipeline-runner",
         ]
+
+        print("\nOptionally enter an email and password for the django/seqr superuser account. After seqr is deployed, "
+              "you will be able to login to seqr with this account. Leave blank to skip.")
+
+        email = raw_input("(optional) seqr superuser email: ")
+        if email:
+            password = getpass("seqr superuser password (hidden when typed): ")
 
     deploy(args.deployment_target, components=deployable_components, other_settings=other_settings)
 
-    if args.command == DEPLOY_AND_LOAD_COMMAND:
-        #create_user()
-        load_reference_data(args.deployment_target)
+    if email:
+        create_user(args.deployment_target, email, password)
+
+    if args.command == DEPLOY_ALL_COMMAND:
+        update_reference_data(args.deployment_target)
         load_example_project(args.deployment_target)
-        load_allele_frequencies(args.deployment_target)
 
-    if args.command in [DEPLOY_ALL_COMMAND, DEPLOY_AND_LOAD_COMMAND]:
-        components = ["seqr"]
+        components_to_tail = ["seqr"]
     else:
-        components = deployable_components
+        components_to_tail = deployable_components
 
-    component_port_pairs = get_component_port_pairs(components)
+    component_port_pairs = get_component_port_pairs(components_to_tail)
     if component_port_pairs:
         logger.info("=============")
-        components = [pair[0] for pair in component_port_pairs]
-        logger.info("tail %s logs ..." % components)
+        print_los_for_components = [pair[0] for pair in component_port_pairs]
+        logger.info("tail %s logs ..." % components_to_tail)
         os.system("sleep 10")
 
         procs1 = port_forward(component_port_pairs, deployment_target=args.deployment_target, wait=False, open_browser=True)
-        procs2 = print_log(components, deployment_target=args.deployment_target, enable_stream_log=True, wait=False)
+        procs2 = print_log(components_to_tail, deployment_target=args.deployment_target, enable_stream_log=True, wait=False)
         wait_for(procs1 + procs2)
 
-elif args.command == LOAD_COMMAND:
-    if args.data == "reference-data":
-        load_reference_data(args.deployment_target, genome_version=args.genome_version)
-    elif args.data == "allele-frequencies":
-        load_allele_frequencies(args.deployment_target, genome_version=args.genome_version)
-    elif args.data == "example-project":
-        load_example_project(args.deployment_target, genome_version=args.genome_version)
-    elif args.data == "mongo":
-        load_project(args.deployment_target, project_id=args.project_id, genome_version=args.genome_version, vcf=args.vcf, ped=args.ped)
-    else:
-        raise ValueError("Unexpected value for 'data': %s" % args.data)
+elif args.command == UPDATE_REFERENCE_DATA_COMMAND:
+    update_reference_data(args.deployment_target)
+
+elif args.command == LOAD_EXAMPLE_PROJECT_COMMAND:
+    load_example_project(args.deployment_target, genome_version=args.genome_version)
+
+elif args.command == LOAD_DATASET_COMMAND:
+    load_project(
+        args.deployment_target,
+        project_id=args.project_id,
+        genome_version=args.genome_version,
+        sample_type=args.sample_type,
+        dataset_type=args.dataset_type,
+        vcf=args.vcf,
+        ped=args.ped)
 
 elif args.command == LOG_COMMAND:
     components = resolve_component_groups(args.deployment_target, args.components)
