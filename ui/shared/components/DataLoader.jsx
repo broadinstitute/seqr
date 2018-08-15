@@ -8,7 +8,7 @@ const Error404 = () => (<Header size="huge" textAlign="center">Error 404: Not Fo
 class DataLoader extends React.Component
 {
   static propTypes = {
-    contentId: PropTypes.string,
+    contentId: PropTypes.any,
     content: PropTypes.any,
     loading: PropTypes.bool.isRequired,
     load: PropTypes.func.isRequired,
