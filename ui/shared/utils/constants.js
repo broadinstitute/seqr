@@ -2,7 +2,7 @@ import { Form } from 'semantic-ui-react'
 
 import BaseFieldView from '../components/panel/view-fields/BaseFieldView'
 import OptionFieldView from '../components/panel/view-fields/OptionFieldView'
-import { BooleanCheckbox, RadioGroup } from '../components/form/Inputs'
+import { BooleanCheckbox, RadioGroup, Dropdown, InlineToggle } from '../components/form/Inputs'
 
 
 // SAMPLES
@@ -245,3 +245,117 @@ export const LOCUS_LIST_ITEMS_FIELD = {
 export const EXCLUDED_TAG_NAME = 'Excluded'
 export const REVIEW_TAG_NAME = 'Review'
 
+
+export const SORT_BY_FAMILY_GUID = 'FAMILY_GUID'
+export const SORT_BY_XPOS = 'XPOS'
+export const SORT_BY_PATHOGENICITY = 'PATHOGENICITY'
+export const SORT_BY_IN_OMIM = 'IN_OMIM'
+
+const clinsigSeverity = (variant) => {
+  const clinvarSignificance = variant.clinvar.clinsig && variant.clinvar.clinsig.split('/')[0]
+  const hgmdSignificance = variant.hgmd.class
+  if (!clinvarSignificance && !hgmdSignificance) return -10
+  let clinvarSeverity = 0.1
+  if (clinvarSignificance) {
+    clinvarSeverity = clinvarSignificance in CLINSIG_SEVERITY ? CLINSIG_SEVERITY[clinvarSignificance] + 1 : 0.5
+  }
+  const hgmdSeverity = hgmdSignificance in CLINSIG_SEVERITY ? CLINSIG_SEVERITY[hgmdSignificance] + 0.5 : 0
+  return clinvarSeverity + hgmdSeverity
+}
+
+export const VARIANT_SORT_OPTONS = [
+  { value: SORT_BY_FAMILY_GUID, text: 'Family', comparator: (a, b) => a.familyGuid.localeCompare(b.familyGuid) },
+  { value: SORT_BY_XPOS, text: 'Position', comparator: (a, b) => a.xpos - b.xpos },
+  { value: SORT_BY_PATHOGENICITY, text: 'Pathogenicity', comparator: (a, b) => clinsigSeverity(b) - clinsigSeverity(a) },
+  {
+    value: SORT_BY_IN_OMIM,
+    text: 'In OMIM',
+    comparator: (a, b, genesById) =>
+      b.geneIds.some(geneId => genesById[geneId].phenotypeInfo.mimPhenotypes.length > 0) - a.geneIds.some(geneId => genesById[geneId].phenotypeInfo.mimPhenotypes.length > 0),
+  },
+]
+
+export const VARIANT_SORT_LOOKUP = VARIANT_SORT_OPTONS.reduce(
+  (acc, opt) => ({
+    ...acc,
+    [opt.value]: opt.comparator,
+  }), {},
+)
+
+export const VARIANT_SORT_FIELD = {
+  name: 'sortOrder',
+  component: Dropdown,
+  inline: true,
+  selection: false,
+  fluid: false,
+  label: 'Sort By:',
+  options: VARIANT_SORT_OPTONS,
+}
+export const VARIANT_HIDE_EXCLUDED_FIELD = {
+  name: 'hideExcluded',
+  component: InlineToggle,
+  label: 'Hide Excluded',
+  labelHelp: 'Remove all variants tagged with the "Excluded" tag from the results',
+}
+export const VARIANT_HIDE_REVIEW_FIELD = {
+  name: 'hideReviewOnly',
+  component: InlineToggle,
+  label: 'Hide Review Only',
+  labelHelp: 'Remove all variants tagged with only the "Review" tag from the results',
+}
+export const VARIANT_PER_PAGE_FIELD = {
+  name: 'recordsPerPage',
+  component: Dropdown,
+  inline: true,
+  selection: false,
+  fluid: false,
+  label: 'Variants Per Page:',
+  options: [{ value: 10 }, { value: 25 }, { value: 50 }, { value: 100 }],
+}
+
+
+export const VARIANT_EXPORT_DATA = [
+  { header: 'chrom' },
+  { header: 'pos' },
+  { header: 'ref' },
+  { header: 'alt' },
+  { header: 'tags', getVal: variant => variant.tags.map(tag => tag.name).join('|') },
+  { header: 'notes', getVal: variant => variant.notes.map(note => `${note.user}: ${note.note}`).join('|') },
+  { header: 'family', getVal: variant => variant.familyGuid.split(/_(.+)/)[1] },
+  { header: 'gene', getVal: variant => variant.annotation.mainTranscript.symbol },
+  { header: 'consequence', getVal: variant => variant.annotation.vepConsequence },
+  { header: '1kg_freq', getVal: variant => variant.annotation.freqs.g1k },
+  { header: 'exac_freq', getVal: variant => variant.annotation.freqs.exac },
+  { header: 'sift', getVal: variant => variant.annotation.sift },
+  { header: 'polyphen', getVal: variant => variant.annotation.polyphen },
+  { header: 'hgvsc', getVal: variant => variant.annotation.mainTranscript.hgvsc },
+  { header: 'hgvsp', getVal: variant => variant.annotation.mainTranscript.hgvsp },
+]
+
+export const VARIANT_GENOTYPE_EXPORT_DATA = [
+  { header: 'sample_id', getVal: (genotype, individualId) => individualId },
+  { header: 'genotype', getVal: genotype => (genotype.alleles.length ? genotype.alleles.join('/') : './.') },
+  { header: 'filter' },
+  { header: 'ad' },
+  { header: 'dp' },
+  { header: 'gq' },
+  { header: 'ab' },
+]
+
+export const getVariantsExportData = (variants) => {
+  const maxGenotypes = Math.max(...variants.map(variant => Object.keys(variant.genotypes).length), 0)
+  return {
+    rawData: variants,
+    headers: [...Array(maxGenotypes).keys()].reduce(
+      (acc, i) => [...acc, ...VARIANT_GENOTYPE_EXPORT_DATA.map(config => `${config.header}_${i + 1}`)],
+      VARIANT_EXPORT_DATA.map(config => config.header),
+    ),
+    processRow: variant => Object.keys(variant.genotypes).reduce(
+      (acc, individualId) => [...acc, ...VARIANT_GENOTYPE_EXPORT_DATA.map((config) => {
+        const genotype = variant.genotypes[individualId]
+        return config.getVal ? config.getVal(genotype, individualId) : genotype[config.header]
+      })],
+      VARIANT_EXPORT_DATA.map(config => (config.getVal ? config.getVal(variant) : variant[config.header])),
+    ),
+  }
+}

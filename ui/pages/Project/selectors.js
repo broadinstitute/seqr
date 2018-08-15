@@ -2,7 +2,14 @@ import orderBy from 'lodash/orderBy'
 import { createSelector } from 'reselect'
 
 import { getSearchResults } from 'redux/utils/reduxSearchEnhancer'
-import { FAMILY_ANALYSIS_STATUS_OPTIONS, EXCLUDED_TAG_NAME, REVIEW_TAG_NAME } from 'shared/utils/constants'
+import {
+  FAMILY_ANALYSIS_STATUS_OPTIONS,
+  EXCLUDED_TAG_NAME,
+  REVIEW_TAG_NAME,
+  SORT_BY_FAMILY_GUID,
+  VARIANT_SORT_LOOKUP,
+  getVariantsExportData,
+} from 'shared/utils/constants'
 import { toCamelcase, toSnakecase } from 'shared/utils/stringUtils'
 
 import {
@@ -21,10 +28,6 @@ import {
   INDIVIDUAL_EXPORT_DATA,
   INTERNAL_INDIVIDUAL_EXPORT_DATA,
   SAMPLE_EXPORT_DATA,
-  SORT_BY_FAMILY_GUID,
-  VARIANT_SORT_OPTONS,
-  VARIANT_EXPORT_DATA,
-  VARIANT_GENOTYPE_EXPORT_DATA,
   familySamplesLoaded,
 } from './constants'
 
@@ -32,13 +35,6 @@ const FAMILY_SORT_LOOKUP = FAMILY_SORT_OPTIONS.reduce(
   (acc, opt) => ({
     ...acc,
     [opt.value]: opt.createSortKeyGetter,
-  }), {},
-)
-
-const VARIANT_SORT_LOOKUP = VARIANT_SORT_OPTONS.reduce(
-  (acc, opt) => ({
-    ...acc,
-    [opt.value]: opt.comparator,
   }), {},
 )
 
@@ -185,23 +181,7 @@ export const getSavedVariantTotalPages = createSelector(
 
 export const getSavedVariantExportConfig = createSelector(
   getFilteredProjectSavedVariants,
-  (filteredSavedVariants) => {
-    const maxGenotypes = Math.max(...filteredSavedVariants.map(variant => Object.keys(variant.genotypes).length), 0)
-    return {
-      rawData: filteredSavedVariants,
-      headers: [...Array(maxGenotypes).keys()].reduce(
-        (acc, i) => [...acc, ...VARIANT_GENOTYPE_EXPORT_DATA.map(config => `${config.header}_${i + 1}`)],
-        VARIANT_EXPORT_DATA.map(config => config.header),
-      ),
-      processRow: variant => Object.keys(variant.genotypes).reduce(
-        (acc, individualId) => [...acc, ...VARIANT_GENOTYPE_EXPORT_DATA.map((config) => {
-          const genotype = variant.genotypes[individualId]
-          return config.getVal ? config.getVal(genotype, individualId) : genotype[config.header]
-        })],
-        VARIANT_EXPORT_DATA.map(config => (config.getVal ? config.getVal(variant) : variant[config.header])),
-      ),
-    }
-  },
+  getVariantsExportData,
 )
 
 // Family table selectors

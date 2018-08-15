@@ -15,7 +15,6 @@ import {
   FAMILY_STATUS_REVIEWED_PURSUING_CANDIDATES,
   FAMILY_STATUS_REVIEWED_NO_CLEAR_CANDIDATE,
   FAMILY_STATUS_ANALYSIS_IN_PROGRESS,
-  CLINSIG_SEVERITY,
   FAMILY_ANALYSIS_STATUS_OPTIONS,
   SAMPLE_STATUS_LOADED,
   DATASET_TYPE_VARIANT_CALLS,
@@ -410,61 +409,4 @@ export const SAMPLE_EXPORT_DATA = [
   { header: 'Sample ID', field: 'sampleId' },
   { header: 'Loaded Date', field: 'loadedDate' },
   { header: 'Sample Type', field: 'sampleType' },
-]
-
-export const SORT_BY_FAMILY_GUID = 'FAMILY_GUID'
-export const SORT_BY_XPOS = 'XPOS'
-export const SORT_BY_PATHOGENICITY = 'PATHOGENICITY'
-export const SORT_BY_IN_OMIM = 'IN_OMIM'
-
-const clinsigSeverity = (variant) => {
-  const clinvarSignificance = variant.clinvar.clinsig && variant.clinvar.clinsig.split('/')[0]
-  const hgmdSignificance = variant.hgmd.class
-  if (!clinvarSignificance && !hgmdSignificance) return -10
-  let clinvarSeverity = 0.1
-  if (clinvarSignificance) {
-    clinvarSeverity = clinvarSignificance in CLINSIG_SEVERITY ? CLINSIG_SEVERITY[clinvarSignificance] + 1 : 0.5
-  }
-  const hgmdSeverity = hgmdSignificance in CLINSIG_SEVERITY ? CLINSIG_SEVERITY[hgmdSignificance] + 0.5 : 0
-  return clinvarSeverity + hgmdSeverity
-}
-
-export const VARIANT_SORT_OPTONS = [
-  { value: SORT_BY_FAMILY_GUID, text: 'Family', comparator: (a, b) => a.familyGuid.localeCompare(b.familyGuid) },
-  { value: SORT_BY_XPOS, text: 'Position', comparator: (a, b) => a.xpos - b.xpos },
-  { value: SORT_BY_PATHOGENICITY, text: 'Pathogenicity', comparator: (a, b) => clinsigSeverity(b) - clinsigSeverity(a) },
-  {
-    value: SORT_BY_IN_OMIM,
-    text: 'In OMIM',
-    comparator: (a, b, genesById) =>
-      b.geneIds.some(geneId => genesById[geneId].phenotypeInfo.mimPhenotypes.length > 0) - a.geneIds.some(geneId => genesById[geneId].phenotypeInfo.mimPhenotypes.length > 0),
-  },
-]
-
-export const VARIANT_EXPORT_DATA = [
-  { header: 'chrom' },
-  { header: 'pos' },
-  { header: 'ref' },
-  { header: 'alt' },
-  { header: 'tags', getVal: variant => variant.tags.map(tag => tag.name).join('|') },
-  { header: 'notes', getVal: variant => variant.notes.map(note => `${note.user}: ${note.note}`).join('|') },
-  { header: 'family', getVal: variant => variant.familyGuid.split(/_(.+)/)[1] },
-  { header: 'gene', getVal: variant => variant.annotation.mainTranscript.symbol },
-  { header: 'consequence', getVal: variant => variant.annotation.vepConsequence },
-  { header: '1kg_freq', getVal: variant => variant.annotation.freqs.g1k },
-  { header: 'exac_freq', getVal: variant => variant.annotation.freqs.exac },
-  { header: 'sift', getVal: variant => variant.annotation.sift },
-  { header: 'polyphen', getVal: variant => variant.annotation.polyphen },
-  { header: 'hgvsc', getVal: variant => variant.annotation.mainTranscript.hgvsc },
-  { header: 'hgvsp', getVal: variant => variant.annotation.mainTranscript.hgvsp },
-]
-
-export const VARIANT_GENOTYPE_EXPORT_DATA = [
-  { header: 'sample_id', getVal: (genotype, individualId) => individualId },
-  { header: 'genotype', getVal: genotype => (genotype.alleles.length ? genotype.alleles.join('/') : './.') },
-  { header: 'filter' },
-  { header: 'ad' },
-  { header: 'dp' },
-  { header: 'gq' },
-  { header: 'ab' },
 ]

@@ -20,6 +20,7 @@ const StyledForm = styled(({ hasSubmitButton, inline, ...props }) => <Form {...p
   
   .field.inline {
     display: inline;
+    padding-right: 1em;
   }
 `
 
