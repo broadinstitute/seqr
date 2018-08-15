@@ -63,8 +63,8 @@ RUN apt-get remove -y perl \
     && gsutil -m cp -r gs://hail-common/vep/perl-JSON/*  /root/perl5/perlbrew/perls/perl-5.20.3/lib/site_perl/5.20.3/x86_64-linux/   \
     && gsutil -m cp -r gs://hail-common/vep/perl-SQLITE/*  /root/perl5/perlbrew/perls/perl-5.20.3/lib/site_perl/5.20.3/x86_64-linux/
 
-RUN apt-get install -y cpanminus \
-    && cpanm --notest CGI DBI JSON
+RUN curl -L https://cpanmin.us | perl - App::cpanminus \
+    && cpanm --notest install CGI DBI JSON
 
 COPY vep-gcloud-grch37.properties /vep
 COPY vep-gcloud-grch38.properties /vep
