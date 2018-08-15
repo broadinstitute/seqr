@@ -3,7 +3,6 @@ import os
 
 from deploy.utils.kubectl_utils import get_pod_name, run_in_pod
 from deploy.utils.servctl_utils import check_kubernetes_context
-from seqr.models import Sample
 
 logger = logging.getLogger(__name__)
 
@@ -94,8 +93,8 @@ def load_example_project(deployment_target, genome_version="37"):
         deployment_target,
         project_id=project_id,
         genome_version=genome_version,
-        sample_type=Sample.SAMPLE_TYPE_WES,
-        dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
+        sample_type="WES",
+        dataset_type="VARIANTS",
         vcf=vcf,
         ped=ped)
 

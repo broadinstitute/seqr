@@ -16,7 +16,6 @@ from deploy.utils.servctl_utils import print_log, port_forward, \
     show_dashboard, show_status, wait_for, troubleshoot_component, \
     delete_component, reset_database, delete_all, get_component_port_pairs, \
     check_kubernetes_context, set_environment
-from seqr.models import Sample
 from seqr.utils.shell_utils import run
 
 logging.basicConfig(stream=sys.stdout, format='%(asctime)s %(levelname)-8s %(message)s', level=logging.INFO)
@@ -57,8 +56,8 @@ sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS, help="kubernete
 sp = subparsers.add_parser(LOAD_DATASET_COMMAND, description="Load new dataset into a new or existing project in seqr.")
 sp.add_argument("-g", "--genome-version", help="Genome version 37 or 38", choices=["37", "38"], required=True)
 sp.add_argument("-i", "--project-id", help="Project ID")
-sp.add_argument("-s", "--sample-type", help="Sample type (eg. WES, WGS, etc.)", choices=[s[0] for s in Sample.SAMPLE_TYPE_CHOICES])
-sp.add_argument("-d", "--dataset-type", help="Dataset type (eg. VARIANTS, SV, etc.)", choices=[s[0] for s in Sample.DATASET_TYPE_CHOICES])
+sp.add_argument("-s", "--sample-type", help="Sample type (eg. WES, WGS, etc.)", choices=["WES", "WGS", "RNA"])
+sp.add_argument("-d", "--dataset-type", help="Dataset type (eg. VARIANTS, SV, etc.)", choices=["VARIANTS", "SV"])
 
 sp.add_argument("-v", "--vcf", help="Url or google cloud bucket path (eg. gs://) of VEP-annotated VCF to load",
                 default="https://storage.googleapis.com/seqr-public/test-projects/1kg-exomes/1kg.vep.vcf.gz")
