@@ -82,7 +82,7 @@ const PREDICTOR_FIELDS = [
   { field: 'phastcons100vert' },
 ]
 
-export default class Predictions extends React.Component {
+export default class Predictions extends React.PureComponent {
   static propTypes = {
     annotation: PropTypes.object,
   }
@@ -91,6 +91,10 @@ export default class Predictions extends React.Component {
     super(props)
 
     this.state = { showMore: false }
+  }
+
+  toggleShowMore = () => {
+    this.setState({ showMore: !this.state.showMore })
   }
 
   render() {
@@ -118,11 +122,11 @@ export default class Predictions extends React.Component {
                     {
                       morePredictorFields.map(predictorField => <Prediction key={predictorField.field} field={predictorField.field} annotation={annotation} />)
                     }
-                    <StyledButtonLink onClick={() => this.setState({ showMore: false })}>hide</StyledButtonLink>
+                    <StyledButtonLink onClick={this.toggleShowMore}>hide</StyledButtonLink>
                   </div>
                 :
                   morePredictorFields.some(predictorField => annotation[predictorField.field] != null) &&
-                  <StyledButtonLink onClick={() => this.setState({ showMore: true })}>show more...</StyledButtonLink>
+                  <StyledButtonLink onClick={this.toggleShowMore}>show more...</StyledButtonLink>
               }
             </Transition.Group>
           : null

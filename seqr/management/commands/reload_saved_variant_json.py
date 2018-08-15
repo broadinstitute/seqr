@@ -12,7 +12,6 @@ class Command(BaseCommand):
     help = 'Transfer projects to the new seqr schema'
 
     def add_arguments(self, parser):
-        parser.add_argument('--reset', help='Reset saved variants.', action="store_true")
         parser.add_argument('projects', nargs="*", help='Project(s) to transfer. If not specified, defaults to all projects.')
 
     def handle(self, *args, **options):
