@@ -2,14 +2,27 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import sortBy from 'lodash/sortBy'
 import styled from 'styled-components'
-import { Grid } from 'semantic-ui-react'
+import { Link } from 'react-router-dom'
+import { Grid, Popup } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 
 import EditFamiliesAndIndividualsButton from 'shared/components/buttons/EditFamiliesAndIndividualsButton'
 import EditDatasetsButton from 'shared/components/buttons/EditDatasetsButton'
-import { SAMPLE_TYPE_LOOKUP, DATASET_TYPE_VARIANT_CALLS, SAMPLE_STATUS_LOADED } from 'shared/utils/constants'
-import { getProject, getProjectFamiliesByGuid, getProjectIndividualsByGuid, getProjectSamplesByGuid } from '../selectors'
-
+import { HelpIcon } from 'shared/components/StyledComponents'
+import {
+  SAMPLE_TYPE_LOOKUP,
+  DATASET_TYPE_VARIANT_CALLS,
+  SAMPLE_STATUS_LOADED,
+} from 'shared/utils/constants'
+import { compareObjects } from 'shared/utils/sortUtils'
+import {
+  getProject,
+  getProjectAnalysisGroupFamiliesByGuid,
+  getProjectAnalysisGroupIndividualsByGuid,
+  getProjectAnalysisGroupSamplesByGuid,
+  getProjectAnalysisGroupsByGuid,
+} from '../selectors'
+import { UpdateAnalysisGroupButton, DeleteAnalysisGroupButton } from './AnalysisGroupButtons'
 
 const DetailContent = styled.div`
  padding: 5px 0px 0px 20px;
@@ -24,8 +37,9 @@ const FAMILY_SIZE_LABELS = {
   5: plural => ` ${plural ? 'families' : 'family'} with 5+ individuals`,
 }
 
+// TODO section edit buttons
 
-const ProjectOverview = ({ project, familiesByGuid, individualsByGuid, samplesByGuid }) => {
+const ProjectOverview = ({ project, analysisGroup, familiesByGuid, individualsByGuid, samplesByGuid, analysisGroupsByGuid }) => {
   const familySizeHistogram = Object.values(familiesByGuid)
     .map(family => Math.min(family.individualGuids.length, 5))
     .reduce((acc, familySize) => (
@@ -55,7 +69,29 @@ const ProjectOverview = ({ project, familiesByGuid, individualsByGuid, samplesBy
             {project.canEdit ? <span><br /><EditFamiliesAndIndividualsButton /></span> : null }<br />
           </DetailContent>
         </Grid.Column>
-        <Grid.Column width={11}>
+        {!analysisGroup &&
+          <Grid.Column width={5}>
+            Analysis Groups:
+            <DetailContent>
+              {
+                Object.values(analysisGroupsByGuid).sort(compareObjects('name')).map(ag =>
+                  <div key={ag.name}>
+                    <Link to={`/project/${project.projectGuid}/analysis_group/${ag.analysisGroupGuid}`}>{ag.name}</Link>
+                    <Popup
+                      position="right center"
+                      trigger={<HelpIcon />}
+                      content={<div><b>{ag.familyGuids.length} Families</b><br /><i>{ag.description}</i></div>}
+                      size="small"
+                    />
+                    <UpdateAnalysisGroupButton analysisGroup={ag} iconOnly />
+                    <DeleteAnalysisGroupButton analysisGroup={ag} iconOnly />
+                  </div>)
+              }
+              {project.canEdit ? <span><br /><UpdateAnalysisGroupButton /></span> : null}<br />
+            </DetailContent>
+          </Grid.Column>
+        }
+        <Grid.Column width={analysisGroup ? 11 : 6}>
           Datasets:
           <DetailContent>
             {
@@ -83,18 +119,21 @@ const ProjectOverview = ({ project, familiesByGuid, individualsByGuid, samplesBy
 
 ProjectOverview.propTypes = {
   project: PropTypes.object,
+  analysisGroup: PropTypes.object,
   familiesByGuid: PropTypes.object.isRequired,
   individualsByGuid: PropTypes.object.isRequired,
   samplesByGuid: PropTypes.object.isRequired,
+  analysisGroupsByGuid: PropTypes.object.isRequired,
 }
 
-const mapStateToProps = state => ({
+const mapStateToProps = (state, ownProps) => ({
   project: getProject(state),
-  familiesByGuid: getProjectFamiliesByGuid(state),
-  individualsByGuid: getProjectIndividualsByGuid(state),
-  samplesByGuid: getProjectSamplesByGuid(state),
+  analysisGroup: getProjectAnalysisGroupsByGuid(state)[ownProps.analysisGroupGuid],
+  familiesByGuid: getProjectAnalysisGroupFamiliesByGuid(state, ownProps),
+  individualsByGuid: getProjectAnalysisGroupIndividualsByGuid(state, ownProps),
+  samplesByGuid: getProjectAnalysisGroupSamplesByGuid(state, ownProps),
+  analysisGroupsByGuid: getProjectAnalysisGroupsByGuid(state),
 })
-
 
 export { ProjectOverview as ProjectOverviewComponent }
 

@@ -62,16 +62,14 @@ RUN curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s
 # DISABLE_CACHE work-around to force git pull on every docker build, based on https://github.com/docker/docker/issues/1996
 ARG DISABLE_CACHE=1
 
-# install seqr dependencies. wget from github becasue local drive isn't mounted yet.
-RUN wget -N https://raw.githubusercontent.com/macarthur-lab/seqr/master/requirements.txt \
-    && pip install --upgrade -r requirements.txt
+RUN git clone -q https://github.com/macarthur-lab/seqr
 
-# install UI depedencies
-COPY shared/install_npm_packages.sh .
-RUN wget -N https://raw.githubusercontent.com/macarthur-lab/seqr/master/ui/package.json \
-   && alias node=nodejs \
-   && ./install_npm_packages.sh \
-   && npm install -g npm-check-updates
+WORKDIR /seqr
+
+# install seqr dependencies
+RUN ./install_dependencies.sh
+
+COPY shared/config/*.py /seqr_settings/
 
 ARG SEQR_SERVICE_PORT
 ENV SEQR_SERVICE_PORT=$SEQR_SERVICE_PORT

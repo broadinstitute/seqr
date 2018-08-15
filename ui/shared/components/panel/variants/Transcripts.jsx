@@ -5,7 +5,7 @@ import { connect } from 'react-redux'
 import { Label, Header, Table, Segment } from 'semantic-ui-react'
 
 import { loadVariantTranscripts } from 'redux/rootReducer'
-import { getVariantIsLoading } from 'redux/selectors'
+import { getVariantIsLoading, getGenesById } from 'redux/selectors'
 import { VerticalSpacer } from '../../Spacers'
 import DataLoader from '../../DataLoader'
 import { ProteinSequence } from './Annotations'
@@ -27,15 +27,15 @@ const AnnotationLabel = styled.small`
   padding-right: 10px;
 `
 
-const Transcripts = ({ variant, loading, loadVariantTranscripts: dispatchLoadVariantTranscripts }) =>
+const Transcripts = ({ variant, loading, loadVariantTranscripts: dispatchLoadVariantTranscripts, genesById }) =>
   <DataLoader contentId={variant.variantId} content={variant.transcripts} loading={loading} load={dispatchLoadVariantTranscripts}>
-    {variant.transcripts && variant.genes.map(gene =>
-      <div key={gene.geneId}>
-        <Header size="large" attached="top" content={gene.symbol} subheader={`Gene Id: ${gene.geneId}`} />
+    {variant.transcripts && variant.geneIds.map(geneId =>
+      <div key={geneId}>
+        <Header size="large" attached="top" content={genesById[geneId].symbol} subheader={`Gene Id: ${geneId}`} />
         <Segment attached="bottom">
           <Table basic="very">
             <Table.Body>
-              {variant.transcripts[gene.geneId].map(transcript =>
+              {variant.transcripts[geneId].map(transcript =>
                 <Table.Row key={transcript.transcriptId}>
                   <Table.Cell width={3}>
                     <TranscriptLink
@@ -91,6 +91,7 @@ Transcripts.propTypes = {
   variant: PropTypes.object.isRequired,
   loading: PropTypes.bool.isRequired,
   loadVariantTranscripts: PropTypes.func.isRequired,
+  genesById: PropTypes.object.isRequired,
 }
 
 
@@ -100,6 +101,7 @@ const mapDispatchToProps = {
 
 const mapStateToProps = state => ({
   loading: getVariantIsLoading(state),
+  genesById: getGenesById(state),
 })
 
 export default connect(mapStateToProps, mapDispatchToProps)(Transcripts)

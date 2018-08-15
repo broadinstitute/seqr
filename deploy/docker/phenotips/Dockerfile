@@ -19,26 +19,27 @@ ENV PT_VERSION="1.2.6"
 RUN apt-get update && apt-get install -y curl xterm vim emacs nano less htop bzip2 --fix-missing
 RUN apt-get update && apt-get install -y postgresql postgresql-client --fix-missing
 
+# download and install
 RUN wget https://nexus.phenotips.org/nexus/content/repositories/releases/org/phenotips/phenotips-standalone/${PT_VERSION}/phenotips-standalone-${PT_VERSION}.zip
-#COPY phenotips-standalone-${PT_VERSION}.zip .
 RUN unzip phenotips-standalone-${PT_VERSION}.zip \
     && rm phenotips-standalone-${PT_VERSION}.zip
 
 WORKDIR /phenotips-standalone-${PT_VERSION}
 
+# install postgres driver
 RUN wget https://jdbc.postgresql.org/download/postgresql-42.1.4.jar -O ./webapps/phenotips/WEB-INF/lib/postgresql-42.1.4.jar
 
-# just use the default xwiki for now - when using postgres JDBC connection url, setting xwiki.db=xwiki in xwiki.cfg
-# causes errors (http://lists.xwiki.org/pipermail/users/2011-May/019918.html)
+# config
 COPY config/${PT_VERSION}/xwiki.cfg ./webapps/phenotips/WEB-INF/xwiki.cfg
 COPY config/${PT_VERSION}/hibernate.cfg.xml ./webapps/phenotips/WEB-INF/hibernate.cfg.xml
 
-# NOTE: init/extension directory and init_phenotips_db.sql were exported from a
-#   a newly-installed PhenoTips instance after it was manually initialized through the UI.
+# by default, installing phenotips requires manual interation with a web UI at the end for it to set up the final
+#   phenotips UI. To fully automate the installation, we did these manual steps and then saved the resulting
+#   init/${PT_VERSION}/extension directory + the postgres database contents to init/${PT_VERSION}/init_phenotips_db.sql
 #
-#   Copying the extension directory like this, and later loading init_phenotips_db.sql into
-#   'xwiki' (eg. by running psql -U postgres xwiki -f init_phenotips_db.sql ) allows these
-#   initialization steps to be skipped.
+#   Then, for a new install, if we copy init/${PT_VERSION}/extension into the installation directory, and restore
+#   init_phenotips_db.sql, it causes phenotips to skip the final UI installation wizard and go directly to a fully
+#   initialized state.
 RUN rm -rf data/extension data/jobs
 COPY init/${PT_VERSION}/extension ./data/extension
 COPY init/${PT_VERSION}/jobs ./data/jobs
