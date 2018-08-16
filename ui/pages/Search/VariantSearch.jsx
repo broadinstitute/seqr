@@ -54,7 +54,7 @@ const VariantSearch = ({
             fields={FIELDS}
           />
           <HorizontalSpacer width={10} />
-          <ExportTableButton downloads={searchedVariantExportConfig} />
+          <ExportTableButton downloads={searchedVariantExportConfig} buttonText="Download" />
         </Grid.Column>
       </Grid.Row>
       <Grid.Row>
