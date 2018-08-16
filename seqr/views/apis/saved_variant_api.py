@@ -43,7 +43,6 @@ def saved_variant_data(request, project_guid, variant_guid=None):
         if variant['tags'] or variant['notes']:
             variant_json = json.loads(saved_variant.saved_variant_json or '{}')
             variant.update(_variant_details(variant_json, request.user))
-            variant['projectGuid'] = [project_guid]
             variants[variant['variantGuid']] = variant
 
     genes = _saved_variant_genes(variants.values())
