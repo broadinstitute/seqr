@@ -5,11 +5,11 @@ import Modal from '../modal/Modal'
 import GeneDetail from '../panel/genes/GeneDetail'
 import ButtonLink from './ButtonLink'
 
-const ShowGeneModal = ({ gene, ...linkProps }) =>
+const ShowGeneModal = ({ gene, triggerId, ...linkProps }) =>
   <Modal
     trigger={<ButtonLink {...linkProps}>{gene.symbol}</ButtonLink>}
     title={gene.symbol}
-    modalName={`gene-${gene.geneId}`}
+    modalName={`gene-${gene.geneId}-${triggerId}`}
     size="fullscreen"
   >
     <GeneDetail geneId={gene.geneId} />
@@ -17,6 +17,7 @@ const ShowGeneModal = ({ gene, ...linkProps }) =>
 
 ShowGeneModal.propTypes = {
   gene: PropTypes.object,
+  triggerId: PropTypes.string,
 }
 
 export default ShowGeneModal

@@ -242,14 +242,70 @@ export const LOCUS_LIST_ITEMS_FIELD = {
   ],
 }
 
+const PROTEIN_CONSEQUENCE_ORDER = [
+  'transcript_ablation',
+  'splice_donor_variant',
+  'splice_acceptor_variant',
+  'stop_gained',
+  'frameshift_variant',
+  'stop_lost',
+  'initiator_codon_variant',
+  'start_lost',
+  'inframe_insertion',
+  'inframe_deletion',
+  'transcript_amplification',
+  'protein_altering_variant',
+  'missense_variant',
+  'splice_region_variant',
+  'incomplete_terminal_codon_variant',
+  'synonymous_variant',
+  'stop_retained_variant',
+  'coding_sequence_variant',
+  'mature_miRNA_variant',
+  '5_prime_UTR_variant',
+  '3_prime_UTR_variant',
+  'intron_variant',
+  'NMD_transcript_variant',
+  'non_coding_exon_variant',
+  'non_coding_transcript_exon_variant',
+  'nc_transcript_variant',
+  'non_coding_transcript_variant',
+  'upstream_gene_variant',
+  'downstream_gene_variant',
+  'TFBS_ablation',
+  'TFBS_amplification',
+  'TF_binding_site_variant',
+  'regulatory_region_variant',
+  'regulatory_region_ablation',
+  'regulatory_region_amplification',
+  'feature_elongation',
+  'feature_truncation',
+  'intergenic_variant',
+]
+
+export const PROTEIN_CONSEQUENCE_ORDER_LOOKUP = PROTEIN_CONSEQUENCE_ORDER.reduce(
+  (acc, consequence, i) => ({
+    ...acc,
+    ...{ [consequence]: i },
+  }), {},
+)
+
 export const EXCLUDED_TAG_NAME = 'Excluded'
 export const REVIEW_TAG_NAME = 'Review'
+export const DISCOVERY_TAG_CATEGORY = 'CMG Discovery Tags'
 
 
 export const SORT_BY_FAMILY_GUID = 'FAMILY_GUID'
 export const SORT_BY_XPOS = 'XPOS'
 export const SORT_BY_PATHOGENICITY = 'PATHOGENICITY'
 export const SORT_BY_IN_OMIM = 'IN_OMIM'
+export const SORT_BY_PROTEIN_CONSQ = 'PROTEIN_CONSEQUENCE'
+export const SORT_BY_EXAC = 'EXAC'
+export const SORT_BY_1KG = '1KG'
+export const SORT_BY_IN_GENE_LIST = 'IN_GENE_LIST'
+export const SORT_BY_TAGS = 'TAGS'
+export const SORT_BY_CONSTRAINT = 'CONSTRAINT'
+
 
 const clinsigSeverity = (variant) => {
   const clinvarSignificance = variant.clinvar.clinsig && variant.clinvar.clinsig.split('/')[0]
@@ -263,16 +319,51 @@ const clinsigSeverity = (variant) => {
   return clinvarSeverity + hgmdSeverity
 }
 
+
 export const VARIANT_SORT_OPTONS = [
   { value: SORT_BY_FAMILY_GUID, text: 'Family', comparator: (a, b) => a.familyGuid.localeCompare(b.familyGuid) },
   { value: SORT_BY_XPOS, text: 'Position', comparator: (a, b) => a.xpos - b.xpos },
+  {
+    value: SORT_BY_PROTEIN_CONSQ,
+    text: 'Protein Consequence',
+    comparator: (a, b) =>
+      PROTEIN_CONSEQUENCE_ORDER_LOOKUP[b.annotation.vepConsequence] - PROTEIN_CONSEQUENCE_ORDER_LOOKUP[a.annotation.vepConsequence],
+  },
+  { value: SORT_BY_EXAC, text: 'ExAC Frequency', comparator: (a, b) => a.annotation.freqs.exac - b.annotation.freqs.exac },
+  { value: SORT_BY_1KG, text: '1kg  Frequency', comparator: (a, b) => a.annotation.freqs.g1k - b.annotation.freqs.g1k },
   { value: SORT_BY_PATHOGENICITY, text: 'Pathogenicity', comparator: (a, b) => clinsigSeverity(b) - clinsigSeverity(a) },
+  {
+    value: SORT_BY_CONSTRAINT,
+    text: 'Constraint',
+    comparator: (a, b, genesById) =>
+      Math.min(...a.geneIds.reduce((acc, geneId) =>
+        [...acc, ...Object.values(genesById[geneId].constraints).map(constraint => constraint.rank).filter(rank => rank)],
+      [])) -
+      Math.min(...b.geneIds.reduce((acc, geneId) =>
+        [...acc, ...Object.values(genesById[geneId].constraints).map(constraint => constraint.rank).filter(rank => rank)],
+      [])),
+  },
   {
     value: SORT_BY_IN_OMIM,
     text: 'In OMIM',
     comparator: (a, b, genesById) =>
       b.geneIds.some(geneId => genesById[geneId].phenotypeInfo.mimPhenotypes.length > 0) - a.geneIds.some(geneId => genesById[geneId].phenotypeInfo.mimPhenotypes.length > 0),
   },
+  {
+    value: SORT_BY_IN_GENE_LIST,
+    text: 'In Gene List',
+    comparator: (a, b, genesById) =>
+      b.geneIds.reduce((acc, geneId) => acc + genesById[geneId].locusLists.length, b.locusLists.length) -
+      a.geneIds.reduce((acc, geneId) => acc + genesById[geneId].locusLists.length, a.locusLists.length),
+  },
+  {
+    value: SORT_BY_TAGS,
+    text: 'Tags & Notes',
+    comparator: (a, b) =>
+      b.tags.reduce((acc, tag) => (tag.category === DISCOVERY_TAG_CATEGORY ? acc + 3 : acc + 2), b.notes.length) -
+      a.tags.reduce((acc, tag) => (tag.category === DISCOVERY_TAG_CATEGORY ? acc + 3 : acc + 2), a.notes.length),
+  },
+
 ]
 
 export const VARIANT_SORT_LOOKUP = VARIANT_SORT_OPTONS.reduce(

@@ -3,7 +3,7 @@ import { combineReducers } from 'redux'
 import { loadingReducer, createSingleObjectReducer, createSingleValueReducer } from 'redux/utils/reducerFactories'
 import { RECEIVE_DATA, RECEIVE_SAVED_VARIANTS, RECEIVE_GENES } from 'redux/rootReducer'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
-import { SORT_BY_FAMILY_GUID } from 'shared/utils/constants'
+import { SORT_BY_XPOS } from 'shared/utils/constants'
 
 // action creators and reducers in one file as suggested by https://github.com/erikras/ducks-modular-redux
 
@@ -39,7 +39,7 @@ export const reducers = {
   searchedVariantsLoading: loadingReducer(REQUEST_SEARCHED_VARIANTS, RECEIVE_SEARCHED_VARIANTS),
   variantSearchDisplay: createSingleObjectReducer(UPDATE_SEARCHED_VARIANT_DISPLAY, {
     hideExcluded: false,
-    sortOrder: SORT_BY_FAMILY_GUID,
+    sortOrder: SORT_BY_XPOS,
   }, false),
 }
 
