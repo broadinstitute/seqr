@@ -16,7 +16,7 @@ RUN apt-get install -y python-dev \
 # install ipython/jupyter notebooks
 RUN pip install --upgrade jupyter
 
-# install gsutil and other gcloud utils
+# install gcloud utils
 RUN CLOUDSDK_CORE_DISABLE_PROMPTS=1 \
     && curl https://sdk.cloud.google.com | bash \
     && apt-get install -y gcc python-dev python-setuptools libffi-dev libssl-dev \
