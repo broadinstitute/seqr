@@ -98,6 +98,9 @@ class ReduxFormWrapper extends React.Component {
     /* Whether or not to show a confirm message before canceling if there are unsaved changes */
     confirmCloseIfNotSaved: PropTypes.bool,
 
+    /* Whether or not the form is rendered outside a modal */
+    noModal: PropTypes.bool,
+
     showErrorPanel: PropTypes.bool,
     cancelButtonText: PropTypes.string,
     submitButtonText: PropTypes.string,
@@ -184,7 +187,7 @@ class ReduxFormWrapper extends React.Component {
               submitButtonText={this.props.submitButtonText}
               saveStatus={saveStatus}
               saveErrorMessage={saveErrorMessage}
-              handleClose={this.handleUnconfirmedClose}
+              handleClose={this.props.noModal ? null : this.handleUnconfirmedClose}
             />
         }
       </StyledForm>
@@ -223,7 +226,7 @@ class ReduxFormWrapper extends React.Component {
   }
 
   componentWillUpdate(nextProps) {
-    if (nextProps.submitSucceeded && nextProps.closeOnSuccess) {
+    if (nextProps.submitSucceeded && nextProps.closeOnSuccess && !nextProps.noModal) {
       this.props.handleClose(true)
     } else if (this.props.confirmCloseIfNotSaved) {
       if (nextProps.dirty && !this.props.dirty) {
