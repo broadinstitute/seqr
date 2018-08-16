@@ -1,3 +1,4 @@
+import json
 from collections import defaultdict
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
@@ -10,15 +11,13 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import \
     get_json_for_variant_tag, get_json_for_variant_functional_data, get_json_for_variant_note, _get_json_for_family, \
     _get_json_for_project, _get_json_for_individuals
-from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_permissions
+from seqr.views.utils.permissions_utils import get_project_and_check_permissions
 from seqr.model_utils import find_matching_xbrowse_model
 
 
 from xbrowse_server.api.utils import add_extra_info_to_variants_project
 from xbrowse_server.api import utils as api_utils
 from xbrowse_server.mall import get_reference, get_datastore
-from xbrowse_server.search_cache import utils as cache_utils
-from xbrowse import Variant
 from xbrowse.analysis_modules.mendelian_variant_search import MendelianVariantSearchSpec
 
 
@@ -30,20 +29,26 @@ def query_variants_handler(request):
 
     # TODO this is only mendelian variant search, should be others and not require project/ family
     project = get_project_and_check_permissions(request.GET.get('projectGuid'), request.user)
-    base_project = find_matching_xbrowse_model(project)
     family = Family.objects.get(guid=request.GET.get('familyGuid'))
 
-    search_hash = request.GET.get('searchHash')
-    search_spec_dict, variants = cache_utils.get_cached_results(base_project.project_id, search_hash)
-    search_spec = MendelianVariantSearchSpec.fromJSON(search_spec_dict)
-    if variants is None:
-        variants = api_utils.calculate_mendelian_variant_search(search_spec, family, user=request.user)
-    else:
-        variants = [Variant.fromJSON(v) for v in variants]
-        for variant in variants:
-            variant.set_extra('family_id', family.family_id)
+    variant_filter = {}
+    if request.GET.get('freqs'):
+        variant_filter['ref_freqs'] = [[k, v] for k, v in json.loads(request.GET.get('freqs')).items()]
+    if request.GET.get('freqs'):
+        variant_filter['so_annotations'] = json.loads(request.GET.get('annotations'))
+    search_spec = MendelianVariantSearchSpec.fromJSON({
+        'family_id': family.family_id,
+        'search_mode': request.GET.get('searchMode'),
+        'inheritance_mode': request.GET.get('inheritance'),
+        'genotype_inheritance_filter': json.loads(request.GET.get('genotypeInheritanceFilter', '{}')),
+        'gene_burden_filter': json.loads(request.GET.get('genotypeInheritanceFilter', '{}')),
+        'variant_filter': variant_filter,
+        'quality_filter': json.loads(request.GET.get('qualityFilter', '{}')),
+        'allele_count_filter': json.loads(request.GET.get('alleleCountFilter', '{}')),
+    })
 
-    add_extra_info_to_variants_project(get_reference(), base_project, variants, add_populations=True)
+    variants = api_utils.calculate_mendelian_variant_search(search_spec, find_matching_xbrowse_model(family), user=request.user)
+    add_extra_info_to_variants_project(get_reference(), find_matching_xbrowse_model(project), variants, add_populations=True)
 
     parsed_variants = [_parsed_variant_json(v.toJSON(), request.user) for v in variants]
     genes = _saved_variant_genes(parsed_variants)
