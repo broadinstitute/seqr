@@ -1,7 +1,7 @@
 import logging
 from django.core.management.base import BaseCommand
+from django.db.models.query_utils import Q
 from tqdm import tqdm
-
 from seqr.models import Project
 from seqr.views.utils.variant_utils import update_project_saved_variant_json
 
@@ -19,7 +19,7 @@ class Command(BaseCommand):
         projects_to_process = options['projects']
 
         if projects_to_process:
-            projects = Project.objects.filter(name__in=projects_to_process)
+            projects = Project.objects.filter(Q(name__in=projects_to_process) | Q(guid__in=projects_to_process))
             logging.info("Processing %s projects" % len(projects))
         else:
             projects = Project.objects.filter(deprecated_project_id__isnull=False)
@@ -29,7 +29,6 @@ class Command(BaseCommand):
         error = {}
         for project in tqdm(projects, unit=" projects"):
             logger.info("Project: " + project.name)
-
             try:
                 variants_json = update_project_saved_variant_json(project)
                 success[project.name] = len(variants_json)
