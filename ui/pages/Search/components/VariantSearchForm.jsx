@@ -1,7 +1,8 @@
 import React from 'react'
 import PropTypes from 'prop-types'
+import styled from 'styled-components'
 import { Field } from 'redux-form'
-import { Form } from 'semantic-ui-react'
+import { Form, Accordion, Header } from 'semantic-ui-react'
 
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 
@@ -127,6 +128,12 @@ const OPTIONS = [...CLINVAR_ANNOTATION_GROUPS, ...HGMD_ANNOTATION_GROUPS, ...VEP
   [],
 )
 
+const ToggleHeader = styled(Header).attrs({ size: 'medium' })`
+  display: inline-block;
+  margin-top: 1em !important;
+  margin-bottom: 0.5em !important;
+`
+
 const FormSelect = props =>
   <Form.Select value={props.input.value} {...props} onChange={(e, fieldProps) => fieldProps.input.onChange(fieldProps.value)} />
 
@@ -134,22 +141,45 @@ FormSelect.propTypes = {
   input: PropTypes.object,
 }
 
-const VariantSearchForm = () =>
-  <div>
-    <Form.Group widths="equal">
-      <Field component={Form.Input} name="searchMode" label="Search Mode" />
-      <Field component={Form.Input} name="inheritance" label="Inheritance" />
-      <Field component={Form.Input} name="qualityFilter.min_ab" label="Min AB" />
-    </Form.Group>
-    <Field
-      component={FormSelect}
-      name="annotations"
-      label="Annotation"
-      options={OPTIONS}
-      multiple
-      format={val => val.split(',')}
-      parse={val => val.join(',')}
-    />
-  </div>
+const QualityFilter = ({ input }) =>
+  <Form.Input onChange={(e, data) => input.onChange({ ...input.value, min_ab: data.value })} value={input.value.min_ab} label="Min AB" />
+
+QualityFilter.propTypes = {
+  input: PropTypes.object,
+}
+
+const PANEL_DETAILS = [
+  {
+    name: 'annotations',
+    title: 'Variant Annotations',
+    component: FormSelect,
+    label: 'Annotation',
+    options: OPTIONS,
+    multiple: true,
+    format: val => val.split(','),
+    parse: val => val.join(','),
+  },
+  {
+    name: 'qualityFilter',
+    title: 'Call Quality',
+    component: QualityFilter,
+    format: val => JSON.parse(val),
+    parse: val => JSON.stringify(val),
+  },
+]
+
+const PANELS = PANEL_DETAILS.map(({ name, title, ...fieldProps }) => ({
+  key: name,
+  title: {
+    key: title,
+    content: <ToggleHeader content={title} />,
+  },
+  content: {
+    key: name,
+    content: <Field name={name} {...fieldProps} />,
+  },
+}))
+
+const VariantSearchForm = () => <Accordion styled fluid defaultActiveIndex={1} panels={PANELS} />
 
 export default VariantSearchForm

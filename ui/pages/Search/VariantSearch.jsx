@@ -7,19 +7,13 @@ import { QueryParamsEditor } from 'shared/components/QueryParamEditor'
 import VariantSearchForm from './components/VariantSearchForm'
 import VariantSearchResults from './components/VariantSearchResults'
 
-const JSON_PARAMS = ['freqs', 'qualityFilter']
-
-const jsonParsedQuery = query =>
-  Object.entries(query).reduce((acc, [key, val]) => (
-    { ...acc, [key]: (JSON_PARAMS.includes(key) ? JSON.parse(val) : val) }
-  ), {})
 
 const VariantSearch = ({ queryParams, updateQueryParams }) =>
   <Grid>
     <Grid.Row>
       <Grid.Column width={16}>
         <ReduxFormWrapper
-          initialValues={jsonParsedQuery(queryParams)}
+          initialValues={queryParams}
           onSubmit={updateQueryParams}
           form="variantSearch"
           submitButtonText="Search"
