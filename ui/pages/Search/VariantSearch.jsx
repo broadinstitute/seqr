@@ -7,7 +7,7 @@ import { QueryParamsEditor } from 'shared/components/QueryParamEditor'
 import VariantSearchForm from './components/VariantSearchForm'
 import VariantSearchResults from './components/VariantSearchResults'
 
-const JSON_PARAMS = ['freqs', 'annotations', 'qualityFilter']
+const JSON_PARAMS = ['freqs', 'qualityFilter']
 
 const jsonParsedQuery = query =>
   Object.entries(query).reduce((acc, [key, val]) => (

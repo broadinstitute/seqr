@@ -35,7 +35,7 @@ def query_variants_handler(request):
     if request.GET.get('freqs'):
         variant_filter['ref_freqs'] = [[k, v] for k, v in json.loads(request.GET.get('freqs')).items()]
     if request.GET.get('freqs'):
-        variant_filter['so_annotations'] = json.loads(request.GET.get('annotations'))
+        variant_filter['so_annotations'] = request.GET.get('annotations').split(',')
     search_spec = MendelianVariantSearchSpec.fromJSON({
         'family_id': family.family_id,
         'search_mode': request.GET.get('searchMode'),

@@ -5,7 +5,7 @@ import queryString from 'query-string'
 export const QueryParamsEditor = ({ history, location, children }) => {
   let params = queryString.parse(location.search)
   const updateQueryParams = (values) => {
-    params = Object.entries(values).reduce((acc, param, val) => (val ? { ...acc, [param]: val } : acc))
+    params = Object.entries(values).reduce((acc, [param, val]) => (val ? { ...acc, [param]: val } : acc), {})
     history.push({ ...location, search: `?${queryString.stringify(params)}` })
   }
 
