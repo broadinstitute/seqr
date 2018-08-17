@@ -8,14 +8,13 @@ import { snakecaseToTitlecase } from '../../../utils/stringUtils'
 import { HorizontalSpacer } from '../../Spacers'
 
 
-const GrayStarIcon = styled(Icon).attrs({ name: 'star' })`
-  color: #D5D5D5;
-  margin: 0em 0.3em 0em 0em !important;
+const StarsContainer = styled.span`
+  margin-left: 10px;
 `
 
-const YellowStarIcon = styled(Icon).attrs({ name: 'star' })`
-  color: #FFB70A;
-  margin: 0em 0.3em 0em 0em !important;
+const StarIcon = styled(Icon).attrs({ name: 'star' })`
+  color: ${props => (props.goldstar ? '#FFB70A' : '#D5D5D5')};
+  margin: 0em 0.2em 0em 0em !important;
 `
 
 const CLINSIG_COLOR = {
@@ -34,16 +33,20 @@ const HGMD_CLASS_NAMES = {
 }
 const hgmdName = hgmdClass => HGMD_CLASS_NAMES[hgmdClass]
 
+const ClinvarStars = ({ goldStars }) => goldStars != null &&
+  <StarsContainer>
+    {Array.from(Array(4).keys()).map(i => (i < goldStars ? <StarIcon key={i} goldstar="yes" /> : <StarIcon key={i} />))}
+  </StarsContainer>
+
+ClinvarStars.propTypes = {
+  goldStars: PropTypes.number,
+}
+
 
 const PathogenicityLabel = ({ clinsig, formatName, goldStars }) =>
   <Label color={CLINSIG_COLOR[CLINSIG_SEVERITY[clinsig.toLowerCase()]] || 'grey'} size="medium" horizontal basic>
     {formatName ? formatName(clinsig) : clinsig}
-    {(goldStars != null) && [
-      <HorizontalSpacer key={-1} width={10} />,
-      [0, 1, 2, 3].map(i => (i < goldStars ?
-        <YellowStarIcon key={i} /> :
-        <GrayStarIcon key={i} />)),
-    ]}
+    <ClinvarStars goldStars={goldStars} />
   </Label>
 
 PathogenicityLabel.propTypes = {
