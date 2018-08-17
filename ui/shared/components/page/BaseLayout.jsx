@@ -7,7 +7,6 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { Grid } from 'semantic-ui-react'
-import { Route } from 'react-router-dom'
 
 import Header from './Header'
 import PageHeader from './PageHeader'
@@ -26,7 +25,7 @@ const BaseLayout = ({ children }) =>
   <LayoutContainer>
     <Header />
     <ContentGrid>
-      <Route path="/:entity/:entityGuid?/:breadcrumb?/:breadcrumbId*" component={PageHeader} />
+      <PageHeader />
       <Grid.Row>
         <Grid.Column width={1} />
         <Grid.Column width={14}>

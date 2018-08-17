@@ -439,6 +439,16 @@ export const STATE_WITH_2_FAMILIES = {
       sampleType: "WES",
     },
   },
+  analysisGroupsByGuid: {
+    AG0000183_test_group: {
+      analysisGroupGuid: "AG0000183_test_group",
+      createdDate: "2018-08-09T18:53:24.207Z",
+      description: "",
+      familyGuids: ["F011652_1"],
+      name: "Test Group",
+      projectGuid: "R0237_1000_genomes_demo",
+    },
+  },
   currentProjectGuid: 'R0237_1000_genomes_demo',
   projectsByGuid: {
     R0237_1000_genomes_demo: {

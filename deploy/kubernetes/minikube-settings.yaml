@@ -4,9 +4,21 @@ DEPLOYMENT_TYPE: 'dev'
 
 DOCKER_IMAGE_PREFIX: 'local/seqr'
 
+# LOCAL_DATA_DIR will be mounted into the minikube VM as $MINIKUBE_DATA_DIR
+# NOTE: this can't be a directory underneath your home directory since those are mounted by default to the /Users
+# dir inside mnikube
+LOCAL_DATA_DIR: '/minikube/data'
+
+# paths inside the minikube VM
+MINIKUBE_DATA_DIR: '/data'
 POSTGRES_DBPATH:  '/data/postgres'
 MONGO_DBPATH:  '/data/mongo'
 ELASTICSEARCH_DBPATH:  '/data/elasticsearch'
+
+MINIKUBE_DISK_SIZE: 100g
+MINIKUBE_MEMORY: 9000
+MINIKUBE_NUM_CPUS: 8
+MINIKUBE_VM_DRIVER: xhyve   # will upgrade to hyperkit once local mounts are fixed (https://github.com/kubernetes/minikube/issues/2481)
 
 ELASTICSEARCH_JVM_MEMORY: 8g
 
@@ -16,3 +28,4 @@ CLOUD_PROVIDER: 'local'
 # settings for making it easy to access gcloud resources from local pods
 GCLOUD_PROJECT: ''
 GCLOUD_ZONE: ''
+
