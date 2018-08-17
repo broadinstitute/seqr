@@ -12,6 +12,7 @@ docs/Makefile
 
 *.pyc
 *.DS_Store
+.ipynb_checkpoints
 
 deploy/secrets/gcloud*
 deploy/secrets/minikube*
