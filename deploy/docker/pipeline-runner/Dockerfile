@@ -109,6 +109,11 @@ RUN cd / \
 RUN cd / && git clone https://github.com/macarthur-lab/seqr.git
 RUN cd / && git clone https://github.com/macarthur-lab/hail-elasticsearch-pipelines.git
 
+RUN mkdir -p /seqr/data/reference_data \
+    && cd /seqr/data/reference_data \
+    && wget https://storage.googleapis.com/seqr-reference-data/seqr-resource-bundle.tar.gz \
+    && tar xzf seqr-resource-bundle.tar.gz
+
 WORKDIR /seqr
 
 # install seqr dependencies

@@ -23,6 +23,10 @@ echo HAIL_HOME: HAIL_HOME
 cd /seqr
 
 pip install --upgrade -r requirements.txt
+
+git checkout dev
+python -u manage.py load_resources
+
 python -u manage.py makemigrations
 python -u manage.py migrate
 python -u manage.py check
