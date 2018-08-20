@@ -65,6 +65,7 @@ CONTROL_COHORTS = [
     },
 ]
 
+UPLOADED_PEDIGREE_FILE_RECIPIENTS = []
 
 COVERAGE_DB = _conn['xbrowse_coverage']
 
