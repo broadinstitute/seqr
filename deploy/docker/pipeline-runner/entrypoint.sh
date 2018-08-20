@@ -25,6 +25,7 @@ cd /seqr
 pip install --upgrade -r requirements.txt
 
 git checkout dev
+git pull
 python -u manage.py load_resources
 
 python -u manage.py makemigrations
