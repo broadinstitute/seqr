@@ -4,6 +4,8 @@ import React, { createElement } from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { Form } from 'semantic-ui-react'
+import Slider from 'react-rangeslider'
+import 'react-rangeslider/lib/index.css'
 
 class BaseSemanticInput extends React.Component {
 
@@ -107,6 +109,7 @@ export class Multiselect extends React.PureComponent {
 
 const InlineFormGroup = styled(Form.Group).attrs({ inline: true })`
   flex-wrap: wrap;
+  margin: ${props => props.margin || '0em 0em 1em'} !important;
 `
 
 export const StringValueCheckboxGroup = (props) => {
@@ -143,9 +146,9 @@ StringValueCheckboxGroup.propTypes = {
 
 
 export const RadioGroup = (props) => {
-  const { value, options, label, onChange, ...baseProps } = props
+  const { value, options, label, onChange, margin, ...baseProps } = props
   return (
-    <InlineFormGroup>
+    <InlineFormGroup margin={margin}>
       {label}
       {options.map(option =>
         <BaseSemanticInput
@@ -171,6 +174,7 @@ RadioGroup.propTypes = {
   options: PropTypes.array,
   onChange: PropTypes.func,
   label: PropTypes.node,
+  margin: PropTypes.string,
 }
 
 export const BooleanCheckbox = (props) => {
@@ -210,5 +214,30 @@ export const InlineToggle = styled(BooleanCheckbox).attrs({ toggle: true, inline
   
   .ui.toggle.checkbox input:not(:checked) ~ label:after {
     right: 2em !important;
+  }
+`
+
+export const LabeledSlider = styled(Slider).attrs({
+  handleLabel: props => `${props.value}`,
+  labels: props => ({ [props.min]: props.min, [props.max]: props.max }),
+  tooltip: false,
+})`
+  .rangeslider__fill {
+    background-color: grey !important;
+  }
+
+  .rangeslider__handle {
+    .rangeslider__handle-label {
+      text-align: center;
+      margin-top: .25em;
+    }
+    
+    &:after {
+      display: none;
+    }
+  }
+  
+  .rangeslider__labels .rangeslider__label-item {
+    top: -10px;
   }
 `

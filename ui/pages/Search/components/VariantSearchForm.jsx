@@ -2,8 +2,9 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { Field } from 'redux-form'
-import { Form, Accordion, Header } from 'semantic-ui-react'
+import { Form, Accordion, Header, Container } from 'semantic-ui-react'
 
+import { RadioGroup, LabeledSlider } from 'shared/components/form/Inputs'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 
 
@@ -128,6 +129,30 @@ const OPTIONS = [...CLINVAR_ANNOTATION_GROUPS, ...HGMD_ANNOTATION_GROUPS, ...VEP
   [],
 )
 
+const QUALITY_FILTER_FIELDS = [
+  {
+    field: 'vcf_filter',
+    label: 'Filter Value',
+    control: RadioGroup,
+    options: [{ value: '', text: 'Show All Variants' }, { value: 'pass', text: 'Pass Variants Only' }],
+    margin: '1em 0em 0em',
+  },
+  {
+    field: 'min_gq',
+    label: 'Genotype Quality',
+    control: LabeledSlider,
+    min: 0,
+    max: 100,
+  },
+  {
+    field: 'min_ab',
+    label: 'Allele Balance',
+    control: LabeledSlider,
+    min: 0,
+    max: 50,
+  },
+]
+
 const ToggleHeader = styled(Header).attrs({ size: 'medium' })`
   display: inline-block;
   margin-top: 1em !important;
@@ -141,8 +166,18 @@ FormSelect.propTypes = {
   input: PropTypes.object,
 }
 
+
 const QualityFilter = ({ input }) =>
-  <Form.Input onChange={(e, data) => input.onChange({ ...input.value, min_ab: data.value })} value={input.value.min_ab} label="Min AB" />
+  <Form.Group widths="equal">
+    {QUALITY_FILTER_FIELDS.map(({ field, ...fieldProps }) =>
+      <Form.Field
+        key={field}
+        value={input.value[field]}
+        onChange={value => input.onChange({ ...input.value, [field]: value })}
+        {...fieldProps}
+      />,
+    )}
+  </Form.Group>
 
 QualityFilter.propTypes = {
   input: PropTypes.object,
@@ -176,7 +211,7 @@ const PANELS = PANEL_DETAILS.map(({ name, title, ...fieldProps }) => ({
   },
   content: {
     key: name,
-    content: <Field name={name} {...fieldProps} />,
+    content: <Container content={<Field name={name} {...fieldProps} />} />,
   },
 }))
 

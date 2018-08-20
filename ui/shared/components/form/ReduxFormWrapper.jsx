@@ -16,7 +16,7 @@ import RequestStatus from './RequestStatus'
 const StyledForm = styled(({ hasSubmitButton, inline, ...props }) => <Form {...props} />)`
   min-height: inherit;
   display: ${props => (props.inline ? 'inline-block' : 'block')};
-  padding-bottom: ${props => props.hasSubmitButton && '40px'};
+  padding-bottom: ${props => props.hasSubmitButton && '50px'};
   
   .field.inline {
     display: inline;
