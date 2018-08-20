@@ -1,9 +1,10 @@
 from django.core.management.base import BaseCommand
 
 from seqr.models import Sample as SeqrSample
+from seqr.management.commands.update_projects_in_new_schema import create_sample_records
 from xbrowse_server.base.models import Project as BaseProject, Family as BaseFamily, Individual as BaseIndividual, \
     VCFFile
-from xbrowse_server.base.model_utils import get_or_create_xbrowse_model, update_xbrowse_model
+from xbrowse_server.base.model_utils import get_or_create_xbrowse_model, update_xbrowse_model, _update_model
 
 from collections import defaultdict
 """
@@ -26,6 +27,13 @@ INDIVIDUAL_FIELDS = [
     'case_review_status_last_modified_by',
     'case_review_discussion',
     'phenotips_data',
+]
+
+INDIVIDUAL_DATA_FIELDS = [
+    'bam_file_path',
+    'cnv_bed_file',
+    'coverage_file',
+    'exome_depth_file'
 ]
 
 SHARED_SAMPLE_FIELDS = [
@@ -61,7 +69,7 @@ class Command(BaseCommand):
         print('Transferring individuals from {} to {}:'.format(from_project.project_name, to_project.project_name))
 
         missing_family_individual_counts = defaultdict(int)
-        missing_individual_sample_counts = defaultdict(int)
+        missing_individual_sample_counts = {}
         created_vcf_count = 0
         for family in to_families:
             for from_individual in from_families_map[family.family_id]['individuals']:
@@ -76,6 +84,10 @@ class Command(BaseCommand):
                         to_individual,
                         **{field: getattr(from_individual, field) for field in INDIVIDUAL_FIELDS}
                     )
+                _update_model(
+                    to_individual,
+                    **{field: getattr(from_individual, field) for field in INDIVIDUAL_DATA_FIELDS}
+                )
                 missing_family_individual_counts[family] += (1 if individual_created else 0)
 
                 for from_vcf_file in from_individual.vcf_files.all():
@@ -87,12 +99,9 @@ class Command(BaseCommand):
                         created_vcf_count += 1
                     to_individual.vcf_files.add(to_vcf_file)
 
-                for from_sample in from_individual.seqr_individual.sample_set.all():
-                    to_sample, sample_created = SeqrSample.objects.get_or_create(
-                        individual=to_individual.seqr_individual,
-                        **{field: getattr(from_sample, field) for field in SAMPLE_FIELDS}
-                    )
-                    missing_individual_sample_counts[to_individual] += (1 if sample_created else 0)
+                counters = {'samples_created': 0}
+                create_sample_records(to_individual, None, to_individual.seqr_individual, counters)
+                missing_individual_sample_counts[to_individual] = counters['samples_created']
 
         missing_individual_counts = defaultdict(int)
         updated_families = set()
