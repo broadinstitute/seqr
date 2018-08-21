@@ -1,7 +1,12 @@
 FROM redis:4.0.9
 
-# utilities
-RUN apt-get update && apt-get install -y lsof xterm vim emacs nano less --fix-missing
+MAINTAINER MacArthur Lab
+
+# install commmon utilities
+RUN apt-get update && apt-get install -y --fix-missing \
+    curl \
+    less \
+    wget
 
 COPY bashrc /root/.bashrc
 
