@@ -1,4 +1,4 @@
-FROM openjdk:8-jdk
+FROM perl:5.20
 
 MAINTAINER MacArthur Lab
 
@@ -18,6 +18,16 @@ RUN apt-get update && apt-get install -y --fix-missing \
     vim \
     wget \
     xterm
+
+# install jdk-8
+RUN echo deb http://ppa.launchpad.net/webupd8team/java/ubuntu trusty main >> /etc/apt/sources.list.d/java-8-debian.list
+RUN echo deb-src http://ppa.launchpad.net/webupd8team/java/ubuntu trusty main >> /etc/apt/sources.list.d/java-8-debian.list
+RUN echo debconf shared/accepted-oracle-license-v1-1 select true | debconf-set-selections
+RUN echo debconf shared/accepted-oracle-license-v1-1 seen true | debconf-set-selections
+
+RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys EEA14886 \
+    && apt-get update \
+    && apt-get install -y oracle-java8-installer
 
 # install python and gcloud utils
 RUN apt-get install -y python-dev \
@@ -40,7 +50,7 @@ RUN curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s
     && chmod +x ./kubectl \
     && mv ./kubectl /usr/local/bin/kubectl
 
-# download VEP - steps taken from gs://hail-common/vep/vep/GRCh37/vep85-GRCh37-init.sh and gs://hail-common/vep/vep/GRCh38/vep85-GRCh38-init.sh
+# download VEP - steps based on gs://hail-common/vep/vep/GRCh37/vep85-GRCh37-init.sh and gs://hail-common/vep/vep/GRCh38/vep85-GRCh38-init.sh
 RUN gsutil cp gs://hail-common/vep/htslib/* /usr/bin/ \
     && gsutil cp gs://hail-common/vep/samtools /usr/bin/ \
     && chmod a+rx  /usr/bin/tabix /usr/bin/bgzip /usr/bin/htsfile /usr/bin/samtools
@@ -56,7 +66,6 @@ RUN mkdir -p /vep/homo_sapiens /vep/loftee_data_grch37 /vep/loftee_data_grch38 \
 
 # install perl dependencies of generate_pedigree_images command which generates static images using HaploPainter.pl
 RUN apt-get update && apt-get install -y \
-    perl \
     build-essential \
     libcairo2-dev \
     libglib2.0-bin \
@@ -104,26 +113,7 @@ RUN wget https://storage.googleapis.com/hadoop-lib/gcs/gcs-connector-latest-hado
 #    && wget http://hgdownload.cse.ucsc.edu/goldenPath/hg38/bigZips/hg38.fa.gz \
 #    && wget http://hgdownload.cse.ucsc.edu/goldenPath/hg19/liftOver/hg19ToHg38.over.chain.gz
 
-# install perl v5.20  (hail/VEP doesn't currently work with newer versions of perl)
-#RUN apt-get update && apt-get install -y \
-#        perlbrew \
-#        patch \
-#    && perlbrew init \
-#    && perlbrew install -j 5 --notest perl-5.20.3 \
-#    && perlbrew switch perl-5.20.3 \
-#    && perlbrew install-cpanm
-
-#RUN gsutil -m cp -r gs://hail-common/vep/perl-JSON/*  /root/perl5/perlbrew/perls/perl-5.20.3/lib/site_perl/5.20.3/x86_64-linux/   \
-#    && gsutil -m cp -r gs://hail-common/vep/perl-SQLITE/*  /root/perl5/perlbrew/perls/perl-5.20.3/lib/site_perl/5.20.3/x86_64-linux/
-
-# install perl VEP dependencies
-#RUN /root/perl5/perlbrew/bin/cpanm  -v --installdeps --with-recommends --notest \
-RUN /usr/bin/cpanm --installdeps --with-recommends --notest \
-    DBI \
-    Set::IntervalTree \
-    JSON \
-    CGI
-
+# install more VEP dependencies
 COPY vep-gcloud-grch37.properties /vep
 COPY vep-gcloud-grch38.properties /vep
 
@@ -132,11 +122,6 @@ RUN ln -s /vep/ensembl-tools-release-85/scripts/variant_effect_predictor /vep/va
     && gsutil cp gs://hail-common/vep/vep/GRCh38/run_hail_vep85_GRCh38_vcf.sh /vep/run_hail_vep85_GRCh38_vcf.sh  \
     && chmod a+rx /vep/run_hail_vep85_GRCh37_vcf.sh \
     && chmod a+rx /vep/run_hail_vep85_GRCh38_vcf.sh
-
-# run VEP on the 1-variant VCF to create fasta.index file
-RUN gsutil cp gs://hail-common/vep/vep/1var.vcf /vep  \
-    && /vep/run_hail_vep85_GRCh37_vcf.sh /vep/1var.vcf \
-    && /vep/run_hail_vep85_GRCh38_vcf.sh /vep/1var.vcf
 
 WORKDIR /
 
@@ -158,6 +143,20 @@ RUN wget -N https://raw.githubusercontent.com/macarthur-lab/seqr/master/requirem
 
 
 COPY shared/config/*.py /seqr_settings/
+
+# install more VEP dependencies
+RUN /usr/bin/cpanm --installdeps --with-recommends --notest \
+    DBI \
+    Set::IntervalTree \
+    PerlIO::gzip
+
+RUN /usr/bin/cpanm --notest CGI
+RUN /usr/bin/cpanm --notest JSON
+
+# run VEP on the 1-variant VCF to create fasta.index file
+RUN gsutil cp gs://hail-common/vep/vep/1var.vcf /vep  \
+    && /vep/run_hail_vep85_GRCh37_vcf.sh /vep/1var.vcf \
+    && /vep/run_hail_vep85_GRCh38_vcf.sh /vep/1var.vcf
 
 ENV TERM=xterm
 ENV PYTHONPATH="$PYTHONPATH:/seqr:/seqr_settings:/hail-elasticsearch-pipelines"
