@@ -2,7 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { Field } from 'redux-form'
-import { Form, Accordion, Header, Container } from 'semantic-ui-react'
+import { Form, Accordion, Header, Segment } from 'semantic-ui-react'
 
 import { RadioGroup, LabeledSlider } from 'shared/components/form/Inputs'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
@@ -153,11 +153,70 @@ const QUALITY_FILTER_FIELDS = [
   },
 ]
 
-const ToggleHeader = styled(Header).attrs({ size: 'medium' })`
-  display: inline-block;
-  margin-top: 1em !important;
-  margin-bottom: 0.5em !important;
+const QUALITY_FILTER_OPTIONS = [
+  {
+    text: 'High Quality',
+    value: {
+      vcf_filter: 'pass',
+      min_gq: 20,
+      min_ab: 25,
+    },
+  },
+  {
+    text: 'All Passing Variants',
+    value: {
+      vcf_filter: 'pass',
+      min_gq: 0,
+      min_ab: 0,
+    },
+  },
+  {
+    text: 'All Variants',
+    value: {
+      vcf_filter: '',
+      min_gq: 0,
+      min_ab: 0,
+    },
+  },
+].map(({ value, ...option }) => ({ ...option, value: JSON.stringify(value) }))
+
+const ToggleHeader = styled(Header).attrs({ size: 'huge', block: true })`
+  .dropdown.icon {
+    vertical-align: middle !important;
+  }
+
+  .content {
+    display: inline-block !important;
+    width: calc(100% - 2em);
+    
+    span {
+      vertical-align: middle;
+      vertical-align: -webkit-baseline-middle;
+    }
+    
+    .field {
+      float: right;
+      font-size: 0.75em;
+      
+      .dropdown.icon {
+        margin: -0.75em !important;
+        transform: rotate(90deg) !important;
+      }
+    }
+  }
 `
+
+const ToggleHeaderContent = ({ name, headerInput, title }) =>
+  <Header.Content>
+    <span>{title}</span>
+    {headerInput && <Field name={name} component={headerInput} />}
+  </Header.Content>
+
+ToggleHeaderContent.propTypes = {
+  title: PropTypes.string.isRequired,
+  name: PropTypes.string,
+  headerInput: PropTypes.func,
+}
 
 const FormSelect = props =>
   <Form.Select value={props.input.value} {...props} onChange={(e, fieldProps) => fieldProps.input.onChange(fieldProps.value)} />
@@ -183,6 +242,17 @@ QualityFilter.propTypes = {
   input: PropTypes.object,
 }
 
+const QualityFilterHeader = ({ input }) =>
+  <Form.Select
+    value={input.value}
+    options={QUALITY_FILTER_OPTIONS}
+    onChange={(e, { value }) => input.onChange(value)}
+  />
+
+QualityFilterHeader.propTypes = {
+  input: PropTypes.object,
+}
+
 const PANEL_DETAILS = [
   {
     name: 'annotations',
@@ -197,24 +267,31 @@ const PANEL_DETAILS = [
   {
     name: 'qualityFilter',
     title: 'Call Quality',
+    headerInput: QualityFilterHeader,
     component: QualityFilter,
     format: val => JSON.parse(val),
     parse: val => JSON.stringify(val),
   },
 ]
 
-const PANELS = PANEL_DETAILS.map(({ name, title, ...fieldProps }) => ({
+
+const PANELS = PANEL_DETAILS.map(({ name, title, headerInput, ...fieldProps }, i) => ({
   key: name,
   title: {
-    key: title,
-    content: <ToggleHeader content={title} />,
+    key: `${name}-title`,
+    as: ToggleHeader,
+    attached: i === 0 ? 'top' : true,
+    content: <ToggleHeaderContent title={title} name={name} headerInput={headerInput} />,
   },
   content: {
     key: name,
-    content: <Container content={<Field name={name} {...fieldProps} />} />,
+    as: Segment,
+    attached: i === PANEL_DETAILS.length - 1 ? 'bottom' : true,
+    padded: 'very',
+    content: <Field name={name} {...fieldProps} />,
   },
 }))
 
-const VariantSearchForm = () => <Accordion styled fluid defaultActiveIndex={1} panels={PANELS} />
+const VariantSearchForm = () => <Accordion fluid defaultActiveIndex={1} panels={PANELS} />
 
 export default VariantSearchForm
