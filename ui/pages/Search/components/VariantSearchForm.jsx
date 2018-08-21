@@ -4,6 +4,7 @@ import styled from 'styled-components'
 import { Field } from 'redux-form'
 import { Form, Accordion, Header, Segment } from 'semantic-ui-react'
 
+import { fieldLabel } from 'shared/components/form/ReduxFormWrapper'
 import { RadioGroup, LabeledSlider } from 'shared/components/form/Inputs'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 
@@ -133,6 +134,7 @@ const QUALITY_FILTER_FIELDS = [
   {
     field: 'vcf_filter',
     label: 'Filter Value',
+    labelHelp: 'Either show only variants that PASSed variant quality filters applied when the dataset was processed (typically VQSR or Hard Filters), or show all variants',
     control: RadioGroup,
     options: [{ value: '', text: 'Show All Variants' }, { value: 'pass', text: 'Pass Variants Only' }],
     margin: '1em 0em 0em',
@@ -140,6 +142,7 @@ const QUALITY_FILTER_FIELDS = [
   {
     field: 'min_gq',
     label: 'Genotype Quality',
+    labelHelp: 'Genotype Quality (GQ) is a statistical measure of confidence in the genotype call (eg. hom. or het) based on the read data',
     control: LabeledSlider,
     min: 0,
     max: 100,
@@ -147,6 +150,7 @@ const QUALITY_FILTER_FIELDS = [
   {
     field: 'min_ab',
     label: 'Allele Balance',
+    labelHelp: 'The allele balance represents the percentage of reads that support the alt allele out of the total number of sequencing reads overlapping a variant. Use this filter to set a minimum percentage for the allele balance in heterozygous individuals.',
     control: LabeledSlider,
     min: 0,
     max: 50,
@@ -228,11 +232,12 @@ FormSelect.propTypes = {
 
 const QualityFilter = ({ input }) =>
   <Form.Group widths="equal">
-    {QUALITY_FILTER_FIELDS.map(({ field, ...fieldProps }) =>
+    {QUALITY_FILTER_FIELDS.map(({ field, label, labelHelp, ...fieldProps }) =>
       <Form.Field
         key={field}
         value={input.value[field]}
         onChange={value => input.onChange({ ...input.value, [field]: value })}
+        label={fieldLabel(label, labelHelp)}
         {...fieldProps}
       />,
     )}
@@ -269,8 +274,6 @@ const PANEL_DETAILS = [
     title: 'Call Quality',
     headerInput: QualityFilterHeader,
     component: QualityFilter,
-    format: val => JSON.parse(val),
-    parse: val => JSON.stringify(val),
   },
 ]
 
@@ -288,7 +291,7 @@ const PANELS = PANEL_DETAILS.map(({ name, title, headerInput, ...fieldProps }, i
     as: Segment,
     attached: i === PANEL_DETAILS.length - 1 ? 'bottom' : true,
     padded: 'very',
-    content: <Field name={name} {...fieldProps} />,
+    content: <Field name={name} format={val => JSON.parse(val)} parse={val => JSON.stringify(val)} {...fieldProps} />,
   },
 }))
 
