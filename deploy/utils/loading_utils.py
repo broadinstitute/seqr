@@ -24,8 +24,6 @@ def load_project(deployment_target, project_id, genome_version, sample_type, dat
 
     pod_name = get_pod_name('pipeline-runner', deployment_target=deployment_target)
     if not pod_name:
-        pod_name = get_pod_name('seqr', deployment_target=deployment_target)
-    if not pod_name:
         raise ValueError("No 'pipeline-runner' or 'seqr' pods found. Is the kubectl environment configured in this terminal? and have either of these pods been deployed?" % locals())
 
     if not project_id:
@@ -35,25 +33,31 @@ def load_project(deployment_target, project_id, genome_version, sample_type, dat
     if not ped:
         raise ValueError("ped not specified")
 
-    vcf_filename = os.path.basename(vcf)
-    ped_filename = os.path.basename(ped)
+    if vcf.startswith("http"):
+        run_in_pod(pod_name, "wget -N %(vcf)s" % locals())
+        vcf = os.path.basename(vcf)
 
-    run_in_pod(pod_name, "wget -N %(vcf)s" % locals())
-    run_in_pod(pod_name, "wget -N %(ped)s" % locals())
+    if ped.startswith("http"):
+        run_in_pod(pod_name, "wget -N %(ped)s" % locals())
+        ped = os.path.basename(ped)
+    elif ped.startswith("gs:"):
+        run_in_pod(pod_name, "gsutil cp %(ped)s ." % locals())
+        ped = os.path.basename(ped)
 
+    """
     run_in_pod(pod_name, "python2.7 -u manage.py add_project '%(project_id)s' '%(project_id)s'" % locals(), verbose=True)
-    run_in_pod(pod_name, "python2.7 -u manage.py add_individuals_to_project '%(project_id)s' --ped '%(ped_filename)s'" % locals(), verbose=True)
+    run_in_pod(pod_name, "python2.7 -u manage.py add_individuals_to_project '%(project_id)s' --ped '%(ped)s'" % locals(), verbose=True)
 
-    run_in_pod(pod_name, "python2.7 -u manage.py add_vcf_to_project --clear '%(project_id)s' '%(vcf_filename)s'" % locals(), verbose=True)
+    run_in_pod(pod_name, "python2.7 -u manage.py add_vcf_to_project --clear '%(project_id)s' '%(vcf)s'" % locals(), verbose=True)
     run_in_pod(pod_name, "python2.7 -u manage.py add_project_to_phenotips '%(project_id)s' '%(project_id)s'" % locals(), verbose=True)
-    run_in_pod(pod_name, "python2.7 -u manage.py add_individuals_to_phenotips '%(project_id)s' --ped '%(ped_filename)s'" % locals(), verbose=True)
+    run_in_pod(pod_name, "python2.7 -u manage.py add_individuals_to_phenotips '%(project_id)s' --ped '%(ped)s'" % locals(), verbose=True)
+    """
     run_in_pod(pod_name, "python2.7 -u manage.py generate_pedigree_images -f '%(project_id)s'" % locals(), verbose=True)
     run_in_pod(pod_name, "python2.7 -u manage.py add_default_tags '%(project_id)s'" % locals(), verbose=True)
 
-    run_in_pod(pod_name, """
-        cd /hail-elasticsearch-pipelines/; \
-        python2.7 ./gcloud_dataproc/submit.py \
-            --run-locally hail_scripts/v01/load_dataset_to_es.py \
+    run_in_pod(pod_name, """python2.7 /hail-elasticsearch-pipelines/gcloud_dataproc/submit.py \
+            --run-locally /hail-elasticsearch-pipelines/hail_scripts/v01/load_dataset_to_es.py \
+            --hail-home '$HAIL_HOME' \
             --genome-version %(genome_version)s \
             --project-guid %(project_id)s \
             --sample-type %(sample_type)s \
@@ -61,7 +65,7 @@ def load_project(deployment_target, project_id, genome_version, sample_type, dat
             --host elasticsearch \
             --vep-block-size 30 \
             %(vcf)s
-        """ % locals(), verbose=True)
+    """ % locals(), verbose=True)
 
 
 def load_example_project(deployment_target, genome_version="37"):
@@ -86,8 +90,8 @@ def load_example_project(deployment_target, genome_version="37"):
         raise ValueError("Unexpected genome_version: %s" % (genome_version,))
 
     project_id = "1kg"
-    vcf = "https://storage.googleapis.com/seqr-public/test-projects/1kg-exomes/%(vcf_filename)s" % locals()
-    ped = "https://storage.googleapis.com/seqr-public/test-projects/1kg-exomes/1kg.ped"
+    vcf = "https://storage.googleapis.com/seqr-reference-data/test-projects/%(vcf_filename)s" % locals()
+    ped = "https://storage.googleapis.com/seqr-reference-data/test-projects/1kg.ped"
 
     load_project(
         deployment_target,
@@ -110,11 +114,18 @@ def update_reference_data(deployment_target):
 
     pod_name = get_pod_name('pipeline-runner', deployment_target=deployment_target)
     if not pod_name:
-        pod_name = get_pod_name('seqr', deployment_target=deployment_target)
-    if not pod_name:
         raise ValueError("No 'pipeline-runner' or 'seqr' pods found. Is the kubectl environment configured in this terminal? and have either of these pods been deployed?" % locals())
 
-    run_in_pod(pod_name, "python2.7 -u manage.py update_all_reference_data --omim-key '$OMIM_KEY'" % locals(), verbose=True, print_command=True)
+    #run_in_pod(pod_name, "python2.7 -u manage.py update_all_reference_data --omim-key '$OMIM_KEY'" % locals(), verbose=True, print_command=True)
+
+    run_in_pod(pod_name, "mkdir -p /seqr/data/reference_data")
+    run_in_pod(pod_name, "wget https://storage.googleapis.com/seqr-reference-data/seqr-resource-bundle.tar.gz -O /seqr/data/reference_data/seqr-resource-bundle.tar.gz")
+    run_in_pod(pod_name, "tar xzf /seqr/data/reference_data/seqr-resource-bundle.tar.gz -C /seqr/data/reference_data", verbose=True)
+    run_in_pod(pod_name, "rm /seqr/data/reference_data/seqr-resource-bundle.tar.gz")
+
+    run_in_pod(pod_name, "git checkout dev")
+    run_in_pod(pod_name, "git pull")
+    run_in_pod(pod_name, "python -u manage.py load_resources", verbose=True)
 
 
 def create_user(deployment_target, email=None, password=None):
