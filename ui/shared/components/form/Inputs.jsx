@@ -218,8 +218,8 @@ export const InlineToggle = styled(BooleanCheckbox).attrs({ toggle: true, inline
 `
 
 export const LabeledSlider = styled(Slider).attrs({
-  handleLabel: props => `${props.value}`,
-  labels: props => ({ [props.min]: props.min, [props.max]: props.max }),
+  handleLabel: props => `${props.valueLabel || props.value}`,
+  labels: props => ({ [props.min]: props.minLabel || props.min, [props.max]: props.maxLabel || props.max }),
   tooltip: false,
 })`
   .rangeslider__fill {
@@ -229,7 +229,8 @@ export const LabeledSlider = styled(Slider).attrs({
   .rangeslider__handle {
     .rangeslider__handle-label {
       text-align: center;
-      margin-top: .25em;
+      margin-top: .35em;
+      font-size: .9em;
     }
     
     &:after {
@@ -241,3 +242,23 @@ export const LabeledSlider = styled(Slider).attrs({
     top: -10px;
   }
 `
+
+export const StepSlider = ({ steps, stepLabels, value, onChange, ...props }) =>
+  <LabeledSlider
+    {...props}
+    min={0}
+    minLabel={stepLabels[steps[0]] || steps[0]}
+    max={steps.length - 1}
+    maxLabel={stepLabels[steps.length - 1] || steps[steps.length - 1]}
+    value={steps.indexOf(value)}
+    valueLabel={stepLabels[value] || value}
+    onChange={val => onChange(steps[val])}
+  />
+
+
+StepSlider.propTypes = {
+  value: PropTypes.any,
+  steps: PropTypes.array,
+  stepLabels: PropTypes.object,
+  onChange: PropTypes.func,
+}

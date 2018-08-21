@@ -5,7 +5,7 @@ import { Field } from 'redux-form'
 import { Form, Accordion, Header, Segment } from 'semantic-ui-react'
 
 import { fieldLabel } from 'shared/components/form/ReduxFormWrapper'
-import { RadioGroup, LabeledSlider } from 'shared/components/form/Inputs'
+import { RadioGroup, LabeledSlider, StepSlider } from 'shared/components/form/Inputs'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 
 
@@ -184,6 +184,45 @@ const QUALITY_FILTER_OPTIONS = [
   },
 ].map(({ value, ...option }) => ({ ...option, value: JSON.stringify(value) }))
 
+const FREQUENCIES = [
+  {
+    field: '1kg_wgs_phase3',
+    label: '1000 Genomes v3',
+    homHemi: false,
+    labelHelp: 'Filter by allele count (AC) in the 1000 Genomes Phase 3 release (5/2/2013), or by allele frequency (popmax AF) in any one of these five subpopulations defined for 1000 Genomes Phase 3: AFR, AMR, EAS, EUR, SAS',
+  },
+  {
+    field: 'exac_v3',
+    label: 'ExAC v0.3',
+    homHemi: true,
+    labelHelp: 'Filter by allele count (AC) or homozygous/hemizygous count (H/H) in ExAC, or by allele frequency (popmax AF) in any one of these six subpopulations defined for ExAC: AFR, AMR, EAS, FIN, NFE, SAS',
+  },
+  {
+    field: 'gnomad-genomes2',
+    label: 'gnomAD 15k genomes',
+    homHemi: true,
+    labelHelp: 'Filter by allele count (AC) or homozygous/hemizygous count (H/H) among gnomAD genomes, or by allele frequency (popmax AF) in any one of these six subpopulations defined for gnomAD genomes: AFR, AMR, EAS, FIN, NFE, ASJ',
+  },
+  {
+    field: 'gnomad-exomes2',
+    label: 'gnomAD 123k exomes',
+    homHemi: true,
+    labelHelp: 'Filter by allele count (AC) or homozygous/hemizygous count (H/H) among gnomAD exomes, or by allele frequency (popmax AF) in any one of these seven subpopulations defined for gnomAD genomes: AFR, AMR, EAS, FIN, NFE, ASJ, SAS',
+  },
+  {
+    field: 'topmed',
+    label: 'TOPMed',
+    homHemi: false,
+    labelHelp: 'Filter by allele count (AC) or allele frequency (AF) in TOPMed',
+  },
+  {
+    field: 'AF',
+    label: 'This Callset',
+    homHemi: false,
+    labelHelp: 'Filter by allele count (AC) or by allele frequency (AF) among the samples in this family plus the rest of the samples that were joint-called as part of variant calling for this project.',
+  },
+]
+
 const ToggleHeader = styled(Header).attrs({ size: 'huge', block: true })`
   .dropdown.icon {
     vertical-align: middle !important;
@@ -258,6 +297,47 @@ QualityFilterHeader.propTypes = {
   input: PropTypes.object,
 }
 
+const AF_STEPS = [
+  0,
+  0.0001,
+  0.0005,
+  0.001,
+  0.005,
+  0.01,
+  0.02,
+  0.03,
+  0.04,
+  0.05,
+  0.1,
+  1,
+]
+
+const AF_STEP_LABELS = {
+  0.0001: '1e-4',
+  0.0005: '5e-4',
+  0.001: '1e-3',
+  0.005: '5e-3',
+}
+
+const FrequencyFilter = ({ input }) =>
+  <Form.Group widths="equal">
+    {FREQUENCIES.map(({ field, label, labelHelp }) =>
+      <Form.Field
+        key={field}
+        value={input.value[field]}
+        onChange={value => input.onChange({ ...input.value, [field]: value })}
+        label={fieldLabel(label, labelHelp)}
+        control={StepSlider}
+        steps={AF_STEPS}
+        stepLabels={AF_STEP_LABELS}
+      />,
+    )}
+  </Form.Group>
+
+FrequencyFilter.propTypes = {
+  input: PropTypes.object,
+}
+
 const PANEL_DETAILS = [
   {
     name: 'annotations',
@@ -268,6 +348,12 @@ const PANEL_DETAILS = [
     multiple: true,
     format: val => val.split(','),
     parse: val => val.join(','),
+  },
+  {
+    name: 'freqs',
+    title: 'Frequency',
+    headerInput: null,
+    component: FrequencyFilter,
   },
   {
     name: 'qualityFilter',
