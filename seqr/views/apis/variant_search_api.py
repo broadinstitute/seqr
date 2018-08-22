@@ -33,8 +33,11 @@ def query_variants_handler(request):
 
     variant_filter = {}
     if request.GET.get('freqs'):
-        variant_filter['ref_freqs'] = [[k, v] for k, v in json.loads(request.GET.get('freqs')).items()]
-    if request.GET.get('freqs'):
+        freqs = json.loads(request.GET.get('freqs'))
+        variant_filter['ref_freqs'] = [[k, v['af']] for k, v in freqs.items() if v.get('af') is not None]
+        variant_filter['ref_acs'] = [[k, v['ac']] for k, v in freqs.items() if v.get('ac') is not None and not v.get('af')]
+        variant_filter['ref_hom_hemi'] = [[k, v['hh']] for k, v in freqs.items() if v.get('hh') is not None]
+    if request.GET.get('annotations'):
         variant_filter['so_annotations'] = request.GET.get('annotations').split(',')
     search_spec = MendelianVariantSearchSpec.fromJSON({
         'family_id': family.family_id,

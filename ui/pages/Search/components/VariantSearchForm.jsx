@@ -4,8 +4,9 @@ import styled from 'styled-components'
 import { Field } from 'redux-form'
 import { Form, Accordion, Header, Segment } from 'semantic-ui-react'
 
+import { VerticalSpacer } from 'shared/components/Spacers'
 import { fieldLabel } from 'shared/components/form/ReduxFormWrapper'
-import { RadioGroup, LabeledSlider, StepSlider } from 'shared/components/form/Inputs'
+import { RadioGroup, LabeledSlider, StepSlider, IntegerInput } from 'shared/components/form/Inputs'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 
 
@@ -137,7 +138,8 @@ const QUALITY_FILTER_FIELDS = [
     labelHelp: 'Either show only variants that PASSed variant quality filters applied when the dataset was processed (typically VQSR or Hard Filters), or show all variants',
     control: RadioGroup,
     options: [{ value: '', text: 'Show All Variants' }, { value: 'pass', text: 'Pass Variants Only' }],
-    margin: '1em 0em 0em',
+    margin: '1em 2em',
+    widths: 'equal',
   },
   {
     field: 'min_gq',
@@ -319,22 +321,62 @@ const AF_STEP_LABELS = {
   0.005: '5e-3',
 }
 
-const FrequencyFilter = ({ input }) =>
-  <Form.Group widths="equal">
-    {FREQUENCIES.map(({ field, label, labelHelp }) =>
-      <Form.Field
-        key={field}
-        value={input.value[field]}
-        onChange={value => input.onChange({ ...input.value, [field]: value })}
-        label={fieldLabel(label, labelHelp)}
-        control={StepSlider}
-        steps={AF_STEPS}
-        stepLabels={AF_STEP_LABELS}
-      />,
-    )}
-  </Form.Group>
+const FrequencyFilter = ({ value, onChange, homHemi }) =>
+  <div>
+    <StepSlider
+      value={value.af}
+      onChange={val => onChange({ ...value, af: val, ac: null })}
+      steps={AF_STEPS}
+      stepLabels={AF_STEP_LABELS}
+    />
+    <VerticalSpacer height={15} />
+    <Form.Group inline>
+      <IntegerInput
+        label="AC"
+        value={value.ac}
+        min={0}
+        max={100}
+        width={8}
+        onChange={val => onChange({ ...value, af: null, ac: val })}
+      />
+      {homHemi &&
+        <IntegerInput
+          label="H/H"
+          value={value.hh}
+          min={0}
+          max={100}
+          width={8}
+          onChange={val => onChange({ ...value, hh: val })}
+        />
+      }
+    </Form.Group>
+  </div>
 
 FrequencyFilter.propTypes = {
+  value: PropTypes.object,
+  onChange: PropTypes.func,
+  homHemi: PropTypes.bool,
+}
+
+const FrequencyFilters = ({ input }) =>
+  <div>
+    <i>Filter by allele frequency (popmax AF where available) or by allele count (AC). In applicable populations, also filter by homozygous/hemizygous count (H/H).</i>
+    <VerticalSpacer height={20} />
+    <Form.Group widths="equal">
+      {FREQUENCIES.map(({ field, label, labelHelp, ...fieldProps }) =>
+        <Form.Field
+          key={field}
+          value={input.value[field]}
+          onChange={value => input.onChange({ ...input.value, [field]: value })}
+          label={fieldLabel(label, labelHelp)}
+          control={FrequencyFilter}
+          {...fieldProps}
+        />,
+      )}
+    </Form.Group>
+  </div>
+
+FrequencyFilters.propTypes = {
   input: PropTypes.object,
 }
 
@@ -353,7 +395,7 @@ const PANEL_DETAILS = [
     name: 'freqs',
     title: 'Frequency',
     headerInput: null,
-    component: FrequencyFilter,
+    component: FrequencyFilters,
   },
   {
     name: 'qualityFilter',
@@ -376,7 +418,8 @@ const PANELS = PANEL_DETAILS.map(({ name, title, headerInput, ...fieldProps }, i
     key: name,
     as: Segment,
     attached: i === PANEL_DETAILS.length - 1 ? 'bottom' : true,
-    padded: 'very',
+    padded: true,
+    textAlign: 'center',
     content: <Field name={name} format={val => JSON.parse(val)} parse={val => JSON.stringify(val)} {...fieldProps} />,
   },
 }))

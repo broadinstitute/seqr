@@ -24,6 +24,34 @@ class BaseSemanticInput extends React.Component {
   }
 }
 
+
+export const IntegerInput = ({ onChange, min, max, value, ...props }) =>
+  <BaseSemanticInput
+    {...props}
+    value={Number.isInteger(value) ? value : ''}
+    inputType="Input"
+    type="number"
+    min={min}
+    max={max}
+    onChange={(stringVal) => {
+      if (stringVal === '') {
+        onChange(null)
+      }
+      const val = parseInt(stringVal, 10)
+      if ((min === undefined || val >= min) && (max === undefined || val <= max)) {
+        onChange(val)
+      }
+    }}
+  />
+
+IntegerInput.propTypes = {
+  onChange: PropTypes.func,
+  value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+  min: PropTypes.number,
+  max: PropTypes.number,
+}
+
+
 const labelStyle = (color) => { return color ? { color: 'white', backgroundColor: color } : {} }
 
 const styledOption = (option) => {
@@ -108,7 +136,7 @@ export class Multiselect extends React.PureComponent {
 }
 
 const InlineFormGroup = styled(Form.Group).attrs({ inline: true })`
-  flex-wrap: wrap;
+  flex-wrap: ${props => (props.widths ? 'inherit' : 'wrap')};
   margin: ${props => props.margin || '0em 0em 1em'} !important;
 `
 
@@ -146,9 +174,9 @@ StringValueCheckboxGroup.propTypes = {
 
 
 export const RadioGroup = (props) => {
-  const { value, options, label, onChange, margin, ...baseProps } = props
+  const { value, options, label, onChange, margin, widths, ...baseProps } = props
   return (
-    <InlineFormGroup margin={margin}>
+    <InlineFormGroup margin={margin} widths={widths}>
       {label}
       {options.map(option =>
         <BaseSemanticInput
@@ -175,6 +203,7 @@ RadioGroup.propTypes = {
   onChange: PropTypes.func,
   label: PropTypes.node,
   margin: PropTypes.string,
+  widths: PropTypes.string,
 }
 
 export const BooleanCheckbox = (props) => {
@@ -218,7 +247,7 @@ export const InlineToggle = styled(BooleanCheckbox).attrs({ toggle: true, inline
 `
 
 export const LabeledSlider = styled(Slider).attrs({
-  handleLabel: props => `${props.valueLabel || props.value}`,
+  handleLabel: props => `${props.valueLabel !== undefined ? props.valueLabel : props.value}`,
   labels: props => ({ [props.min]: props.minLabel || props.min, [props.max]: props.maxLabel || props.max }),
   tooltip: false,
 })`
@@ -251,7 +280,7 @@ export const StepSlider = ({ steps, stepLabels, value, onChange, ...props }) =>
     max={steps.length - 1}
     maxLabel={stepLabels[steps.length - 1] || steps[steps.length - 1]}
     value={steps.indexOf(value)}
-    valueLabel={stepLabels[value] || value}
+    valueLabel={steps.indexOf(value) >= 0 ? (stepLabels[value] || value) : ''}
     onChange={val => onChange(steps[val])}
   />
 
