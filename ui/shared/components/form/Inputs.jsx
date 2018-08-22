@@ -251,14 +251,18 @@ export const LabeledSlider = styled(Slider).attrs({
   labels: props => ({ [props.min]: props.minLabel || props.min, [props.max]: props.maxLabel || props.max }),
   tooltip: false,
 })`
+  width: 100%;
+
   .rangeslider__fill {
     background-color: grey !important;
   }
 
   .rangeslider__handle {
+    z-index: 1;
+    
     .rangeslider__handle-label {
       text-align: center;
-      margin-top: .35em;
+      margin-top: .3em;
       font-size: .9em;
     }
     
@@ -268,7 +272,7 @@ export const LabeledSlider = styled(Slider).attrs({
   }
   
   .rangeslider__labels .rangeslider__label-item {
-    top: -10px;
+    top: -0.8em;
   }
 `
 

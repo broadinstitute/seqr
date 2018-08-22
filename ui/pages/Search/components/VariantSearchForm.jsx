@@ -2,7 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { Field } from 'redux-form'
-import { Form, Accordion, Header, Segment } from 'semantic-ui-react'
+import { Form, Accordion, Header, Segment, Grid } from 'semantic-ui-react'
 
 import { VerticalSpacer } from 'shared/components/Spacers'
 import { fieldLabel } from 'shared/components/form/ReduxFormWrapper'
@@ -225,6 +225,8 @@ const FREQUENCIES = [
   },
 ]
 
+const FREQUENCY_FIELDS = FREQUENCIES.map(({ field }) => field)
+
 const ToggleHeader = styled(Header).attrs({ size: 'huge', block: true })`
   .dropdown.icon {
     vertical-align: middle !important;
@@ -233,28 +235,44 @@ const ToggleHeader = styled(Header).attrs({ size: 'huge', block: true })`
   .content {
     display: inline-block !important;
     width: calc(100% - 2em);
-    
-    span {
-      vertical-align: middle;
-      vertical-align: -webkit-baseline-middle;
-    }
-    
-    .field {
-      float: right;
-      font-size: 0.75em;
+  }
+`
+
+const ToggleHeaderFieldColumn = styled(Grid.Column)`
+  font-size: 0.75em;
       
-      .dropdown.icon {
-        margin: -0.75em !important;
-        transform: rotate(90deg) !important;
-      }
+  .fields {
+    margin: 0 !important;
+  }
+      
+  .dropdown.icon {
+    margin: -0.75em !important;
+    transform: rotate(90deg) !important;
+  }
+      
+  .rangeslider {
+    margin: 1.2em;
+    font-weight: 300;
+    font-size: .9em;
+    
+    .rangeslider__labels {
+      font-size: .5em;
     }
   }
 `
 
 const ToggleHeaderContent = ({ name, headerInput, title }) =>
   <Header.Content>
-    <span>{title}</span>
-    {headerInput && <Field name={name} component={headerInput} />}
+    <Grid>
+      <Grid.Row>
+        <Grid.Column width={8} verticalAlign="middle">{title}</Grid.Column>
+        {headerInput &&
+          <ToggleHeaderFieldColumn width={headerInput.size} floated="right" onClick={e => e.stopPropagation()}>
+            <Field name={name} component={headerInput.component} format={val => JSON.parse(val)} parse={val => JSON.stringify(val)} />
+          </ToggleHeaderFieldColumn>
+        }
+      </Grid.Row>
+    </Grid>
   </Header.Content>
 
 ToggleHeaderContent.propTypes = {
@@ -290,9 +308,10 @@ QualityFilter.propTypes = {
 
 const QualityFilterHeader = ({ input }) =>
   <Form.Select
-    value={input.value}
+    value={JSON.stringify(input.value)}
     options={QUALITY_FILTER_OPTIONS}
-    onChange={(e, { value }) => input.onChange(value)}
+    onChange={(e, { value }) => input.onChange(JSON.parse(value))}
+    width={8}
   />
 
 QualityFilterHeader.propTypes = {
@@ -321,41 +340,69 @@ const AF_STEP_LABELS = {
   0.005: '5e-3',
 }
 
-const FrequencyFilter = ({ value, onChange, homHemi }) =>
-  <div>
-    <StepSlider
+const FrequencyIntegerInput = ({ label, value, field, nullField, inlineSlider, onChange }) =>
+  <IntegerInput
+    label={label}
+    value={value[field]}
+    min={0}
+    max={100}
+    width={inlineSlider ? 4 : 8}
+    onChange={(val) => {
+      const updateFields = { [field]: val }
+      if (nullField) {
+        updateFields[nullField] = null
+      }
+      onChange({ ...value, ...updateFields })
+    }}
+  />
+
+FrequencyIntegerInput.propTypes = {
+  value: PropTypes.object,
+  field: PropTypes.string,
+  nullField: PropTypes.string,
+  label: PropTypes.string,
+  inlineSlider: PropTypes.bool,
+  onChange: PropTypes.func,
+}
+
+const FrequencyFilter = ({ value, onChange, homHemi, inlineSlider }) => {
+  const afSlider = (
+    <Form.Field
+      control={StepSlider}
       value={value.af}
       onChange={val => onChange({ ...value, af: val, ac: null })}
       steps={AF_STEPS}
       stepLabels={AF_STEP_LABELS}
+      width={inlineSlider && 8}
+      label={inlineSlider && 'AF'}
     />
-    <VerticalSpacer height={15} />
-    <Form.Group inline>
-      <IntegerInput
-        label="AC"
-        value={value.ac}
-        min={0}
-        max={100}
-        width={8}
-        onChange={val => onChange({ ...value, af: null, ac: val })}
-      />
-      {homHemi &&
-        <IntegerInput
-          label="H/H"
-          value={value.hh}
-          min={0}
-          max={100}
-          width={8}
-          onChange={val => onChange({ ...value, hh: val })}
+  )
+  return (
+    <span>
+      {!inlineSlider && <div>{afSlider} <VerticalSpacer height={15} /></div>}
+      <Form.Group inline>
+        {inlineSlider && afSlider}
+        <FrequencyIntegerInput
+          label="AC"
+          field="ac"
+          nullField="af"
+          value={value}
+          inlineSlider={inlineSlider}
+          onChange={onChange}
         />
-      }
-    </Form.Group>
-  </div>
+        {homHemi &&
+          <FrequencyIntegerInput label="H/H" field="hh" value={value} inlineSlider={inlineSlider} onChange={onChange} />
+        }
+      </Form.Group>
+    </span>
+  )
+}
 
 FrequencyFilter.propTypes = {
   value: PropTypes.object,
   onChange: PropTypes.func,
   homHemi: PropTypes.bool,
+  inlineSlider: PropTypes.bool,
 }
 
 const FrequencyFilters = ({ input }) =>
@@ -380,6 +427,23 @@ FrequencyFilters.propTypes = {
   input: PropTypes.object,
 }
 
+const FrequencyFilterHeader = ({ input }) =>
+  <FrequencyFilter
+    value={Object.values(input.value).reduce((acc, value) => ({
+      af: value.af === acc.af ? value.af : null,
+      ac: value.ac === acc.ac ? value.ac : null,
+      hh: value.hh === acc.hh ? value.hh : null,
+    }), Object.values(input.value)[0])}
+    onChange={value => input.onChange(FREQUENCY_FIELDS.reduce((acc, field) => ({ ...acc, [field]: value }), {}))}
+    homHemi
+    inlineSlider
+  />
+
+FrequencyFilterHeader.propTypes = {
+  input: PropTypes.object,
+}
+
+
 const PANEL_DETAILS = [
   {
     name: 'annotations',
@@ -394,13 +458,13 @@ const PANEL_DETAILS = [
   {
     name: 'freqs',
     title: 'Frequency',
-    headerInput: null,
+    headerInput: { size: 6, component: FrequencyFilterHeader },
     component: FrequencyFilters,
   },
   {
     name: 'qualityFilter',
     title: 'Call Quality',
-    headerInput: QualityFilterHeader,
+    headerInput: { size: 3, component: QualityFilterHeader },
     component: QualityFilter,
   },
 ]
