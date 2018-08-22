@@ -1,35 +1,41 @@
-# Creates a PhenoTips instance that's configured to use a postgres database running on localhost.
-#
-# DEPENDENCIES:
-#     A postgres database running on localhost, that contains an empty database named 'xwiki', owned by the 'postgres' user.
-#
-# NOTE:
-#     This Dockerfile is based on https://github.com/meatcar/docker-phenotips/blob/master/Dockerfile
-#
+# Creates a PhenoTips instance that's configured to use a postgres database.
+# This Dockerfile is based on https://github.com/meatcar/docker-phenotips/blob/master/Dockerfile
 
 FROM java:8
 
 MAINTAINER MacArthur Lab
 
+# PhenoTips version to install
 ENV PT_VERSION="1.2.6"
 #ENV PT_VERSION="1.3.4"
 #ENV PT_VERSION="1.4-milestone-1"
 
-# dev utilities
-RUN apt-get update && apt-get install -y curl xterm vim emacs nano less htop bzip2 --fix-missing
-RUN apt-get update && apt-get install -y postgresql postgresql-client --fix-missing
+# install common utilities
+RUN apt-get update && apt-get install -y --fix-missing \
+    curl \
+    emacs \
+    nano \
+    less \
+    htop \
+    vim \
+    wget
 
-# download and install
-RUN wget https://nexus.phenotips.org/nexus/content/repositories/releases/org/phenotips/phenotips-standalone/${PT_VERSION}/phenotips-standalone-${PT_VERSION}.zip
-RUN unzip phenotips-standalone-${PT_VERSION}.zip \
+# install postgres client
+RUN apt-get update && apt-get install -y \
+    postgresql \
+    postgresql-client
+
+# download and install phenotips
+RUN wget https://nexus.phenotips.org/nexus/content/repositories/releases/org/phenotips/phenotips-standalone/${PT_VERSION}/phenotips-standalone-${PT_VERSION}.zip \
+    && unzip phenotips-standalone-${PT_VERSION}.zip \
     && rm phenotips-standalone-${PT_VERSION}.zip
 
 WORKDIR /phenotips-standalone-${PT_VERSION}
 
-# install postgres driver
+# install postgres driver into phenotips
 RUN wget https://jdbc.postgresql.org/download/postgresql-42.1.4.jar -O ./webapps/phenotips/WEB-INF/lib/postgresql-42.1.4.jar
 
-# config
+# update phenotips config
 COPY config/${PT_VERSION}/xwiki.cfg ./webapps/phenotips/WEB-INF/xwiki.cfg
 COPY config/${PT_VERSION}/hibernate.cfg.xml ./webapps/phenotips/WEB-INF/hibernate.cfg.xml
 

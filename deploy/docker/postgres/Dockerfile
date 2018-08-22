@@ -2,8 +2,11 @@ FROM postgres:9.6.2
 
 MAINTAINER MacArthur Lab
 
-# utilities
-RUN apt-get update && apt-get install -y lsof xterm vim emacs nano less --fix-missing
+# install commmon utilities
+RUN apt-get update && apt-get install -y --fix-missing \
+    curl \
+    less \
+    wget
 
 COPY bashrc /root/.bashrc
 

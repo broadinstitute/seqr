@@ -1,10 +1,14 @@
 FROM openjdk:8-jdk
 
+MAINTAINER MacArthur Lab
+
 ENV ELASTICSEARCH_VERSION="6.3.2"
 
 # install commmon utilities
-RUN apt-get update \
-    && apt-get install -y lsof apt-utils wget curl xterm vim emacs nano less --fix-missing
+RUN apt-get update && apt-get install -y --fix-missing \
+    curl \
+    less \
+    wget
 
 # create 'elasticsearch' user
 RUN useradd -ms /bin/bash elasticsearch
