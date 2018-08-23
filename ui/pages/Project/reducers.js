@@ -48,7 +48,7 @@ export const loadProject = (projectGuid) => {
   }
 }
 
-export const loadProjectVariants = (familyGuid, variantGuid) => {
+export const loadProjectVariants = (familyGuids, variantGuid) => {
   return (dispatch, getState) => {
     const state = getState()
     const project = getProject(state)
@@ -63,7 +63,7 @@ export const loadProjectVariants = (familyGuid, variantGuid) => {
       }
       url = `${url}/${variantGuid}`
     } else {
-      expectedFamilyGuids = familyGuid ? [familyGuid] : Object.keys(getProjectFamiliesByGuid(state))
+      expectedFamilyGuids = familyGuids || Object.keys(getProjectFamiliesByGuid(state))
       if (expectedFamilyGuids.length > 0 && expectedFamilyGuids.every(family => state.projectSavedVariantFamilies[family])) {
         return
       }
@@ -84,7 +84,7 @@ export const loadProjectVariants = (familyGuid, variantGuid) => {
       (e) => {
         dispatch({ type: RECEIVE_SAVED_VARIANTS, error: e.message, updatesById: {} })
       },
-    ).get(familyGuid ? { family: familyGuid } : {})
+    ).get(familyGuids ? { families: familyGuids.join(',') } : {})
   }
 }
 

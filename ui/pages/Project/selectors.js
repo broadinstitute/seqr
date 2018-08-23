@@ -120,10 +120,14 @@ export const getSavedVariantRecordsPerPage = state => state.savedVariantTableSta
 export const getProjectSavedVariants = createSelector(
   state => state.projectSavedVariants,
   (state, props) => props.match.params,
-  (projectSavedVariants, { tag, familyGuid, variantGuid }) => {
+  getAnalysisGroupsByGuid,
+  (projectSavedVariants, { tag, familyGuid, analysisGroupGuid, variantGuid }, analysisGroupsByGuid) => {
     let variants = Object.values(projectSavedVariants)
     if (variantGuid) {
       return variants.filter(o => o.variantId === variantGuid)
+    }
+    if (analysisGroupGuid && analysisGroupsByGuid[analysisGroupGuid]) {
+      variants = variants.filter(o => analysisGroupsByGuid[analysisGroupGuid].familyGuids.includes(o.familyGuid))
     }
     if (familyGuid) {
       variants = variants.filter(o => o.familyGuid === familyGuid)
@@ -144,7 +148,8 @@ export const getFilteredProjectSavedVariants = createSelector(
   getSavedVariantCategoryFilter,
   getSavedVariantHideExcluded,
   getSavedVariantHideReviewOnly,
-  (projectSavedVariants, categoryFilter, hideExcluded, hideReviewOnly) => {
+  (state, props) => props.match.params.tag,
+  (projectSavedVariants, categoryFilter, hideExcluded, hideReviewOnly, tag) => {
     let variantsToShow = projectSavedVariants
     if (hideExcluded) {
       variantsToShow = variantsToShow.filter(variant => variant.tags.every(t => t.name !== EXCLUDED_TAG_NAME))
@@ -152,7 +157,7 @@ export const getFilteredProjectSavedVariants = createSelector(
     if (hideReviewOnly) {
       variantsToShow = variantsToShow.filter(variant => variant.tags.length !== 1 || variant.tags[0].name !== REVIEW_TAG_NAME)
     }
-    if (categoryFilter !== SHOW_ALL) {
+    if (!tag && categoryFilter !== SHOW_ALL) {
       variantsToShow = variantsToShow.filter(variant => variant.tags.some(t => t.category === categoryFilter))
     }
     return variantsToShow

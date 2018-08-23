@@ -38,7 +38,7 @@ const PAGE_CONFIGS = {
       </span>
     ),
   }),
-  saved_variants: (match, project, family) => {
+  saved_variants: (match, project, family, analysisGroup) => {
     const { variantPage, tag } = match.params
     const path = `/project/${project.projectGuid}/saved_variants`
     let originalPagePath = 'saved-variants'
@@ -53,6 +53,14 @@ const PAGE_CONFIGS = {
         originalPagePath = `variants/${tag}?family=${family.familyId}`
       } else {
         originalPagePath = `saved-variants?family=${family.familyId}`
+      }
+    } else if (variantPage === 'analysis_group') {
+      breadcrumbIdSections.push({ content: `Analysis Group: ${analysisGroup.name}`, link: `${path}/analysis_group/${analysisGroup.analysisGroupGuid}` })
+      if (tag) {
+        breadcrumbIdSections.push({ content: tag, link: `${path}/analysis_group/${analysisGroup.analysisGroupGuid}/${tag}` })
+        originalPagePath = `variants/${tag}`
+      } else {
+        originalPagePath = 'saved-variants'
       }
     } else if (variantPage) {
       originalPagePath = `variants/${variantPage}`
