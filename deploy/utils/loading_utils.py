@@ -53,15 +53,14 @@ def load_project(deployment_target, project_id, genome_version, sample_type, dat
     run_in_pod(pod_name, "python2.7 -u -m manage generate_pedigree_images -f '%(project_id)s'" % locals(), verbose=True)
     run_in_pod(pod_name, "python2.7 -u -m manage add_default_tags '%(project_id)s'" % locals(), verbose=True)
 
-    run_in_pod(pod_name, """python2.7 /hail-elasticsearch-pipelines/gcloud_dataproc/submit.py --run-locally \
-            /hail-elasticsearch-pipelines/hail_scripts/v01/load_dataset_to_es.py \
-            --hail-home '$HAIL_HOME' \
-            --spark-home 'SPARK_HOME' \
+    run_in_pod(pod_name, """/hail-elasticsearch-pipelines/run_hail_locally.sh \
+        hail_scripts/v01/load_dataset_to_es.py \
             --genome-version %(genome_version)s \
             --project-guid %(project_id)s \
             --sample-type %(sample_type)s \
             --dataset-type %(dataset_type)s \
-            --host elasticsearch \
+            --skip-validation \
+            --exclude-hgmd \
             --vep-block-size 30 \
             %(vcf)s
     """ % locals(), verbose=True)

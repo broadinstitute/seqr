@@ -167,6 +167,7 @@ COPY shared/config/*.py /seqr_settings/
 COPY shared/bin/*.sh /usr/local/bin/
 COPY shared/bashrc /root/.bashrc
 
+COPY run_hail_locally.sh /hail-elasticsearch-pipelines
 COPY bashrc_custom /root/.bashrc_custom
 COPY entrypoint.sh /
 
