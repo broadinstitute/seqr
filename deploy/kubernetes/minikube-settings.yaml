@@ -16,7 +16,7 @@ MONGO_DBPATH:  '/data/mongo'
 ELASTICSEARCH_DBPATH:  '/data/elasticsearch'
 
 MINIKUBE_DISK_SIZE: 200g
-MINIKUBE_MEMORY: 9000
+MINIKUBE_MEMORY: 12000
 MINIKUBE_NUM_CPUS: 8
 MINIKUBE_VM_DRIVER: xhyve   # will upgrade to hyperkit once local mounts are fixed (https://github.com/kubernetes/minikube/issues/2481)
 
