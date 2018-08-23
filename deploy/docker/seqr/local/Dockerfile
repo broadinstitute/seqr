@@ -63,7 +63,6 @@ RUN echo 'deb http://apt.postgresql.org/pub/repos/apt/ jessie-pgdg main' >> /etc
 RUN apt-get update && apt-get install -y \
     redis-tools
 
-
 # install gcloud tools
 RUN CLOUDSDK_CORE_DISABLE_PROMPTS=1 \
     && curl https://sdk.cloud.google.com | bash \

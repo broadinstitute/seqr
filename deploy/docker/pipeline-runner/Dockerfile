@@ -83,8 +83,8 @@ RUN wget https://raw.github.com/miyagawa/cpanminus/master/cpanm -O /usr/bin/cpan
         Sort::Naturally
 
 # install database clients for debugging
-RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 9DA31620334BD75D9DCB49F368818C72E52529D4 \
-    && echo "deb http://repo.mongodb.org/apt/debian stretch/mongodb-org/4.0 main" | tee /etc/apt/sources.list.d/mongodb-org-4.0.list \
+RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 0C49F3730359A14518585931BC711F9BA15703C6 \
+    && echo "deb http://repo.mongodb.org/apt/debian jessie/mongodb-org/3.4 main" | tee /etc/apt/sources.list.d/mongodb-org-3.4.list \
     && apt-get update && apt-get install -y \
         mongodb-org-tools \
         mongodb-org-shell
@@ -93,7 +93,7 @@ RUN apt-get update && apt-get install -y \
     postgresql-client \
     redis-tools
 
-# install hail
+# install google storage connector which allows hail to access vds in google buckets without downloading them first
 RUN cd /usr/local \
     && wget -nv https://archive.apache.org/dist/spark/spark-2.0.2/spark-2.0.2-bin-hadoop2.7.tgz \
     && tar xzf /usr/local/spark-2.0.2-bin-hadoop2.7.tgz
@@ -113,22 +113,16 @@ RUN wget https://storage.googleapis.com/hadoop-lib/gcs/gcs-connector-latest-hado
 #    && wget http://hgdownload.cse.ucsc.edu/goldenPath/hg38/bigZips/hg38.fa.gz \
 #    && wget http://hgdownload.cse.ucsc.edu/goldenPath/hg19/liftOver/hg19ToHg38.over.chain.gz
 
-# install more VEP dependencies
-COPY vep-gcloud-grch37.properties /vep
-COPY vep-gcloud-grch38.properties /vep
-
-RUN ln -s /vep/ensembl-tools-release-85/scripts/variant_effect_predictor /vep/variant_effect_predictor \
-    && gsutil cp gs://hail-common/vep/vep/GRCh37/run_hail_vep85_GRCh37_vcf.sh /vep/run_hail_vep85_GRCh37_vcf.sh  \
-    && gsutil cp gs://hail-common/vep/vep/GRCh38/run_hail_vep85_GRCh38_vcf.sh /vep/run_hail_vep85_GRCh38_vcf.sh  \
-    && chmod a+rx /vep/run_hail_vep85_GRCh37_vcf.sh \
-    && chmod a+rx /vep/run_hail_vep85_GRCh38_vcf.sh
-
 WORKDIR /
 
 # install hail, seqr, hail-elasticsearch-pipelines
-RUN git clone --branch 0.1 https://github.com/broadinstitute/hail.git \
-    && cd /hail \
-    && ./gradlew -Dspark.version=2.0.2 shadowJar archiveZip
+RUN mkdir -p /hail/build/libs /hail/build/distributions \
+    && gsutil cp gs://seqr-hail/hail-jar/hail-0.1-es-6.2.4-with-strip-chr-prefix.zip /hail/build/distributions/hail-python.zip \
+    && gsutil cp gs://seqr-hail/hail-jar/hail-0.1-es-6.2.4-with-strip-chr-prefix.jar /hail/build/libs/hail-all-spark.jar
+
+#   git clone --branch 0.1 https://github.com/broadinstitute/hail.git \
+#    && cd /hail \
+#    && ./gradlew -Dspark.version=2.0.2 shadowJar archiveZip
 
 RUN git clone https://github.com/macarthur-lab/seqr.git
 
@@ -145,11 +139,18 @@ RUN wget -N https://raw.githubusercontent.com/macarthur-lab/seqr/master/requirem
 COPY shared/config/*.py /seqr_settings/
 
 # install more VEP dependencies
-RUN /usr/bin/cpanm --installdeps --with-recommends --notest \
-    DBI \
-    Set::IntervalTree \
-    PerlIO::gzip
+COPY vep-gcloud-grch38.properties /vep
+COPY vep-gcloud-grch37.properties /vep
 
+RUN ln -s /vep/ensembl-tools-release-85/scripts/variant_effect_predictor /vep/variant_effect_predictor \
+    && gsutil cp gs://hail-common/vep/vep/GRCh37/run_hail_vep85_GRCh37_vcf.sh /vep/run_hail_vep85_GRCh37_vcf.sh  \
+    && gsutil cp gs://hail-common/vep/vep/GRCh38/run_hail_vep85_GRCh38_vcf.sh /vep/run_hail_vep85_GRCh38_vcf.sh  \
+    && chmod a+rx /vep/run_hail_vep85_GRCh37_vcf.sh \
+    && chmod a+rx /vep/run_hail_vep85_GRCh38_vcf.sh
+
+RUN /usr/bin/cpanm --notest Set::IntervalTree
+RUN /usr/bin/cpanm --notest PerlIO::gzip
+RUN /usr/bin/cpanm --notest DBI
 RUN /usr/bin/cpanm --notest CGI
 RUN /usr/bin/cpanm --notest JSON
 
@@ -171,6 +172,6 @@ COPY entrypoint.sh /
 
 COPY core-site.xml /usr/local/spark-2.0.2-bin-hadoop2.7/conf/
 
-WORKDIR /seqr
+WORKDIR /hail-elasticsearch-pipelines
 
 CMD [ "/entrypoint.sh" ]
