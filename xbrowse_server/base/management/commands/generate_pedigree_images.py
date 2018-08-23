@@ -153,7 +153,7 @@ class Command(BaseCommand):
                         f.write("\t".join([field for field in fields]) + "\n")
                     
                 haplopainter_path = os.path.dirname(__file__) + '/HaploPainter1.043.pl'
-                run("/usr/bin/perl %(haplopainter_path)s -b -pedfile %(family_id)s.ped -outformat png -family %(family_id)s -outfile %(family_id)s.png" % locals() )
+                run("perl %(haplopainter_path)s -b -pedfile %(family_id)s.ped -outformat png -family %(family_id)s -outfile %(family_id)s.png" % locals() )
 
                 if not os.path.isfile(family_id+'.png'):
                     for i in individuals_in_family:
