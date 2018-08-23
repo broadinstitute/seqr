@@ -175,15 +175,12 @@ class SavedVariants extends React.Component {
     ]
 
     const allShown = this.props.variantsToDisplay.length === this.props.totalVariantsCount
-    let shownSummary
-    if (allShown) {
-      shownSummary = this.props.variantsToDisplay.length > 0 ? 'all' : ''
-    }
-    else {
+    let shownSummary = ''
+    if (!allShown) {
       shownSummary = `${this.props.variantsToDisplay.length > 0 ? this.props.firstRecordIndex + 1 : 0}-${this.props.firstRecordIndex + this.props.variantsToDisplay.length} of`
     }
     return (
-      <Grid>
+      <Grid stackable>
         <Grid.Row>
           <Grid.Column width={16}>
             <VariantTagTypeBar

@@ -407,14 +407,3 @@ def delete_all(deployment_target):
 
         run('docker kill $(docker ps -q)', errors_to_ignore=["requires at least 1 arg"])
         run('docker rmi -f $(docker images -q)', errors_to_ignore=["requires at least 1 arg"])
-
-
-
-def create_user(deployment_target):
-    """Creates a seqr superuser
-
-    Args:
-        deployment_target (string): "minikube", "gcloud-dev", etc. See constants.DEPLOYMENT_TARGETS.
-    """
-
-    run_in_pod("seqr", "python -u manage.py createsuperuser" % locals(), is_interactive=True)

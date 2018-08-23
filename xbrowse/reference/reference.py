@@ -73,7 +73,7 @@ class Reference(object):
         return self._ensembl_rest_proxy
 
     def load(self):
-        self._load_clinvar()
+        #self._load_clinvar()
         self._load_genes()
         self._load_additional_gene_info()
         self._load_tags()

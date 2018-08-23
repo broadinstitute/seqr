@@ -22,8 +22,10 @@ class Command(BaseCommand):
 
         for f in families:
             print("==> Moving {}".format(f))
-            # Update individuals in phenotips
             for individual in f.individual_set.all():
+                individual.project = to_project
+                individual.save()
+                # Update individuals in phenotips
                 if phenotips_patient_exists(individual.seqr_individual):
                     # make sure phenotips_patient_id is up to date
                     seqr_individual = individual.seqr_individual

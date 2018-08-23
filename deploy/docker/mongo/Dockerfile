@@ -1,6 +1,11 @@
 FROM mongo:3.6.2
 
-# utilities
-RUN apt-get update && apt-get install -y lsof xterm vim emacs nano less --fix-missing
+MAINTAINER MacArthur Lab
+
+# install common utilities
+RUN apt-get update && apt-get install -y --fix-missing \
+    curl \
+    less \
+    wget
 
 COPY bashrc /root/.bashrc
