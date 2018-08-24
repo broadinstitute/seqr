@@ -2,11 +2,12 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Loader, Grid, Pagination, Dropdown } from 'semantic-ui-react'
-import { Link } from 'react-router-dom'
+import { Route, Switch, Link } from 'react-router-dom'
 import styled from 'styled-components'
 
+import { getAnalysisGroupsByGuid } from 'redux/selectors'
 import ExportTableButton from 'shared/components/buttons/export-table/ExportTableButton'
-import VariantTagTypeBar from 'shared/components/graph/VariantTagTypeBar'
+import VariantTagTypeBar, { getSavedVariantsLinkPath } from 'shared/components/graph/VariantTagTypeBar'
 import Variants from 'shared/components/panel/variants/Variants'
 import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
 import { HorizontalSpacer } from 'shared/components/Spacers'
@@ -53,12 +54,13 @@ const LabelLink = styled(Link)`
   }
 `
 
-class SavedVariants extends React.Component {
+class BaseSavedVariants extends React.Component {
 
   static propTypes = {
     match: PropTypes.object,
     history: PropTypes.object,
     project: PropTypes.object,
+    analysisGroup: PropTypes.object,
     loading: PropTypes.bool,
     variantsToDisplay: PropTypes.array,
     totalVariantsCount: PropTypes.number,
@@ -75,7 +77,7 @@ class SavedVariants extends React.Component {
   constructor(props) {
     super(props)
 
-    props.loadProjectVariants(props.match.params.familyGuid, props.match.params.variantGuid)
+    this.loadVariants(props)
 
     this.categoryOptions = [...new Set(
       this.props.project.variantTagTypes.map(type => type.category).filter(category => category),
@@ -83,33 +85,48 @@ class SavedVariants extends React.Component {
   }
 
   componentWillReceiveProps(nextProps) {
-    const { familyGuid: nextFamilyGuid, variantGuid: nextVariantGuid, tag: nextTag } = nextProps.match.params
-    const { familyGuid, variantGuid, tag } = this.props.match.params
-    if (nextFamilyGuid !== familyGuid || nextVariantGuid !== variantGuid) {
-      this.props.loadProjectVariants(nextFamilyGuid, nextVariantGuid)
+    const {
+      familyGuid: nextFamilyGuid, analysisGroupGuid: nextAnalysisGroupGuid, variantGuid: nextVariantGuid, tag: nextTag,
+    } = nextProps.match.params
+    const { familyGuid, variantGuid, analysisGroupGuid, tag } = this.props.match.params
+    if (nextFamilyGuid !== familyGuid || nextAnalysisGroupGuid !== analysisGroupGuid || nextVariantGuid !== variantGuid) {
+      this.loadVariants(nextProps)
       this.props.updateSavedVariantTable() // resets the page
     } else if (nextTag !== tag) {
       this.props.updateSavedVariantTable() // resets the page
     }
   }
 
+  loadVariants = ({ match, analysisGroup }) => {
+    const { familyGuid, variantGuid } = match.params
+    const familyGuids = familyGuid ? [familyGuid] : (analysisGroup || {}).familyGuids
+    this.props.loadProjectVariants(familyGuids, variantGuid)
+  }
+
+
   navigateToTag = (e, data) => {
     const { familyGuid } = this.props.match.params
     const isCategory = this.categoryOptions.includes(data.value)
-    const urlPath = `/project/${this.props.project.projectGuid}/saved_variants/${familyGuid ? `family/${familyGuid}/` : ''}`
-    const tag = data.value === ALL_FILTER ? '' : data.value
+    const urlPath = getSavedVariantsLinkPath({
+      project: this.props.project,
+      analysisGroup: this.props.analysisGroup,
+      tag: !isCategory && data.value !== ALL_FILTER && data.value,
+      familyGuid,
+    })
     this.props.updateSavedVariantTable({ categoryFilter: isCategory ? data.value : null })
-    this.props.history.push(`${urlPath}${isCategory ? '' : tag}`)
+    this.props.history.push(urlPath)
   }
 
   render() {
     const { familyGuid, variantGuid, tag } = this.props.match.params
 
     const familyId = familyGuid && familyGuid.split(/_(.+)/)[1]
+    const analsisGroupName = (this.props.analysisGroup || {}).name
+    const tagName = tag || this.props.tableState.categoryFilter || 'All'
     const exports = [{
-      name: `${tag || toSnakecase(this.props.tableState.categoryFilter || 'all')} Variants ${familyId ? `in Family ${familyId}` : ''}`,
+      name: `${tagName} Variants${familyId ? ` in Family ${familyId}` : ''}${analsisGroupName ? ` in Analysis Group ${analsisGroupName}` : ''}`,
       data: {
-        filename: `saved_${tag || this.props.tableState.categoryFilter || 'all'}_variants_${this.props.project.name}${familyId ? `_family_${familyId}` : ''}`.replace(/ /g, '-').toLowerCase(),
+        filename: toSnakecase(`saved_${tagName}_variants_${this.props.project.name}${familyId ? `_family_${familyId}` : ''}${analsisGroupName ? `_analysis_group_${analsisGroupName}` : ''}`),
         ...this.props.variantExportConfig,
       },
     }]
@@ -119,7 +136,13 @@ class SavedVariants extends React.Component {
       {
         value: ALL_FILTER,
         text: 'All Saved',
-        content: <LabelLink to={`/project/${this.props.project.projectGuid}/saved_variants/${familyGuid ? `family/${familyGuid}/` : ''}`}>All Saved</LabelLink>,
+        content: (
+          <LabelLink
+            to={getSavedVariantsLinkPath({ project: this.props.project, analysisGroup: this.props.analysisGroup, familyGuid })}
+          >
+            All Saved
+          </LabelLink>
+        ),
         key: 'all',
       },
       ...this.props.project.variantTagTypes.reduce((acc, vtt) => {
@@ -136,7 +159,6 @@ class SavedVariants extends React.Component {
         acc.push({
           value: vtt.name,
           text: vtt.name,
-          // content: <LabelLink to={`/project/${this.props.project.projectGuid}/saved_variants/${familyGuid ? `family/${familyGuid}/` : ''}${vtt.name}`}>{vtt.name}</LabelLink>,
           key: vtt.name,
           label: { empty: true, circular: true, style: { backgroundColor: vtt.color } },
         })
@@ -156,6 +178,7 @@ class SavedVariants extends React.Component {
             <VariantTagTypeBar
               height={30}
               project={this.props.project}
+              analysisGroup={this.props.analysisGroup}
               familyGuid={familyGuid}
               hideExcluded={this.props.tableState.hideExcluded}
               hideReviewOnly={this.props.tableState.hideReviewOnly}
@@ -223,6 +246,7 @@ const mapStateToProps = (state, ownProps) => ({
   firstRecordIndex: getSavedVariantVisibleIndices(state, ownProps)[0],
   totalPages: getSavedVariantTotalPages(state, ownProps),
   variantExportConfig: getSavedVariantExportConfig(state, ownProps),
+  analysisGroup: getAnalysisGroupsByGuid(state)[ownProps.match.params.analysisGroupGuid],
 })
 
 const mapDispatchToProps = {
@@ -231,5 +255,18 @@ const mapDispatchToProps = {
   updateSavedVariantPage: (e, data) => updateSavedVariantTable({ currentPage: data.activePage }),
 }
 
-export default connect(mapStateToProps, mapDispatchToProps)(SavedVariants)
+const SavedVariants = connect(mapStateToProps, mapDispatchToProps)(BaseSavedVariants)
 
+const RoutedSavedVariants = ({ match }) =>
+  <Switch>
+    <Route path={`${match.url}/variant/:variantGuid`} component={SavedVariants} />
+    <Route path={`${match.url}/family/:familyGuid/:tag?`} component={SavedVariants} />
+    <Route path={`${match.url}/analysis_group/:analysisGroupGuid/:tag?`} component={SavedVariants} />
+    <Route path={`${match.url}/:tag?`} component={SavedVariants} />
+  </Switch>
+
+RoutedSavedVariants.propTypes = {
+  match: PropTypes.object,
+}
+
+export default RoutedSavedVariants

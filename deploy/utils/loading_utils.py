@@ -44,26 +44,25 @@ def load_project(deployment_target, project_id, genome_version, sample_type, dat
         run_in_pod(pod_name, "gsutil cp %(ped)s ." % locals())
         ped = os.path.basename(ped)
 
-    """
-    run_in_pod(pod_name, "python2.7 -u manage.py add_project '%(project_id)s' '%(project_id)s'" % locals(), verbose=True)
-    run_in_pod(pod_name, "python2.7 -u manage.py add_individuals_to_project '%(project_id)s' --ped '%(ped)s'" % locals(), verbose=True)
+    run_in_pod(pod_name, "python2.7 -u -m manage add_project '%(project_id)s' '%(project_id)s'" % locals(), verbose=True)
+    run_in_pod(pod_name, "python2.7 -u -m manage add_individuals_to_project '%(project_id)s' --ped '%(ped)s'" % locals(), verbose=True)
 
-    run_in_pod(pod_name, "python2.7 -u manage.py add_vcf_to_project --clear '%(project_id)s' '%(vcf)s'" % locals(), verbose=True)
-    run_in_pod(pod_name, "python2.7 -u manage.py add_project_to_phenotips '%(project_id)s' '%(project_id)s'" % locals(), verbose=True)
-    run_in_pod(pod_name, "python2.7 -u manage.py add_individuals_to_phenotips '%(project_id)s' --ped '%(ped)s'" % locals(), verbose=True)
-    """
-    run_in_pod(pod_name, "python2.7 -u manage.py generate_pedigree_images -f '%(project_id)s'" % locals(), verbose=True)
-    run_in_pod(pod_name, "python2.7 -u manage.py add_default_tags '%(project_id)s'" % locals(), verbose=True)
+    run_in_pod(pod_name, "python2.7 -u -m manage add_vcf_to_project --clear '%(project_id)s' '%(vcf)s'" % locals(), verbose=True)
+    run_in_pod(pod_name, "python2.7 -u -m manage add_project_to_phenotips '%(project_id)s' '%(project_id)s'" % locals(), verbose=True)
+    run_in_pod(pod_name, "python2.7 -u -m manage add_individuals_to_phenotips '%(project_id)s' --ped '%(ped)s'" % locals(), verbose=True)
+    run_in_pod(pod_name, "python2.7 -u -m manage generate_pedigree_images -f '%(project_id)s'" % locals(), verbose=True)
+    run_in_pod(pod_name, "python2.7 -u -m manage add_default_tags '%(project_id)s'" % locals(), verbose=True)
 
-    run_in_pod(pod_name, """python2.7 /hail-elasticsearch-pipelines/gcloud_dataproc/submit.py \
-            --run-locally /hail-elasticsearch-pipelines/hail_scripts/v01/load_dataset_to_es.py \
-            --hail-home '$HAIL_HOME' \
+    run_in_pod(pod_name, """/hail-elasticsearch-pipelines/run_hail_locally.sh \
+        hail_scripts/v01/load_dataset_to_es.py \
             --genome-version %(genome_version)s \
             --project-guid %(project_id)s \
             --sample-type %(sample_type)s \
             --dataset-type %(dataset_type)s \
-            --host elasticsearch \
+            --skip-validation \
+            --exclude-hgmd \
             --vep-block-size 30 \
+            --es-block-size 50 \
             %(vcf)s
     """ % locals(), verbose=True)
 
@@ -112,9 +111,9 @@ def update_reference_data(deployment_target):
 
     check_kubernetes_context(deployment_target)
 
-    pod_name = get_pod_name('pipeline-runner', deployment_target=deployment_target)
+    pod_name = get_pod_name('seqr', deployment_target=deployment_target)
     if not pod_name:
-        raise ValueError("No 'pipeline-runner' or 'seqr' pods found. Is the kubectl environment configured in this terminal? and have either of these pods been deployed?" % locals())
+        raise ValueError("No 'seqr' pods found. Is the kubectl environment configured in this terminal? and have either of these pods been deployed?" % locals())
 
     #run_in_pod(pod_name, "python2.7 -u manage.py update_all_reference_data --omim-key '$OMIM_KEY'" % locals(), verbose=True, print_command=True)
 

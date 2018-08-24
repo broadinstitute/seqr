@@ -108,12 +108,12 @@ const ProjectPageUI = (props) => {
           <ProjectSection label="Variant Tags" linkPath="saved_variants" linkText="View All">
             <VariantTagTypeBar
               project={props.project}
-              familyGuids={props.analysisGroup && props.analysisGroup.familyGuids}
+              analysisGroup={props.analysisGroup}
               height={30}
               showAllPopupCategorie
             />
             <VerticalSpacer height={10} />
-            <VariantTags project={props.project} familyGuids={props.analysisGroup && props.analysisGroup.familyGuids} />
+            <VariantTags project={props.project} analysisGroup={props.analysisGroup} />
           </ProjectSection>
         </Grid.Column>
         <Grid.Column width={4}>

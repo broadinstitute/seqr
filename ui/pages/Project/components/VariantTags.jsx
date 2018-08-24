@@ -4,7 +4,7 @@ import styled from 'styled-components'
 import { Link } from 'react-router-dom'
 import { Popup, Table } from 'semantic-ui-react'
 
-import { getVariantTagTypeCount } from 'shared/components/graph/VariantTagTypeBar'
+import { getVariantTagTypeCount, getSavedVariantsLinkPath } from 'shared/components/graph/VariantTagTypeBar'
 import { ColoredIcon, HelpIcon } from 'shared/components/StyledComponents'
 
 const TableRow = styled(Table.Row)`
@@ -13,12 +13,12 @@ const TableRow = styled(Table.Row)`
 const TableCell = styled(Table.Cell)`
   padding: 0 0 0 10px !important;`
 
-const VariantTags = ({ project, familyGuids }) =>
+const VariantTags = ({ project, analysisGroup }) =>
   <Table basic="very" compact="very">
     <Table.Body>
       {
         project.variantTagTypes && project.variantTagTypes.map(variantTagType => (
-          { count: getVariantTagTypeCount(variantTagType, familyGuids), ...variantTagType }
+          { count: getVariantTagTypeCount(variantTagType, (analysisGroup || {}).familyGuids), ...variantTagType }
         )).filter(variantTagType => variantTagType.count > 0).map(variantTagType => (
           <TableRow key={variantTagType.variantTagTypeGuid}>
             <TableCell collapsing>
@@ -26,7 +26,9 @@ const VariantTags = ({ project, familyGuids }) =>
               <b>{variantTagType.count} </b>
             </TableCell>
             <TableCell>
-              <Link to={`/project/${project.projectGuid}/saved_variants/${variantTagType.name}`}>{variantTagType.name}</Link>
+              <Link to={getSavedVariantsLinkPath({ project, analysisGroup, tag: variantTagType.name })}>
+                {variantTagType.name}
+              </Link>
               {
                 variantTagType.description &&
                 <Popup
@@ -46,7 +48,7 @@ const VariantTags = ({ project, familyGuids }) =>
 
 VariantTags.propTypes = {
   project: PropTypes.object.isRequired,
-  familyGuids: PropTypes.array,
+  analysisGroup: PropTypes.object,
 }
 
 export default VariantTags
