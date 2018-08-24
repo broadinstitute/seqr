@@ -17,6 +17,8 @@ seqr consists of the following components or micro-services:
 - matchbox - a service that encapsulates communication with the Match Maker Exchange.
 - nginx - http server used as the main gateway between seqr and the internet.
 - elasticsearch - NoSQL database alternative to mongo that currently supports loading large callsets using a Spark-based [hail](http://hail.is) pipeline.
+- redis - in-memory cache for optimizing requests
+- pipeline-runner - (optional) container for running hail and VEP to annotate and load datasets on a small local deployment where a separate on-prem spark cluster is not available. 
 - kibana - (optional) dashboard and visual interface for elasticsearch.
 
 
@@ -24,8 +26,8 @@ seqr consists of the following components or micro-services:
 
 [Kubernetes-based Installation Instructions](https://github.com/macarthur-lab/seqr/blob/master/deploy/kubernetes) - The [Kubernetes](https://kubernetes.io/)-based installation allows for fully scripted deployment of all seqr components. It supports local installation on any operating system using a virtualized environment ([minikube](https://github.com/kubernetes/minikube)) as well as cloud deployment on Google, AWS, and other clouds.  
 
-[Manual Installation Instructions](https://github.com/macarthur-lab/seqr/tree/master/deploy/mac_osx) - walks through the steps to install all seqr components on MacOSX.  
-
 [Data pre-processing and loading pipelines](https://github.com/macarthur-lab/hail-elasticsearch-pipelines) - [hail](http://hail.is) pipelines for pre-processing and loading datasets into an elasticsearch datastore.  
+
+[Manual Installation Instructions](https://github.com/macarthur-lab/seqr/tree/master/deploy/mac_osx) - older instructions for  installing seqr components on MacOSX.  
   
 **Please Note:** seqr is still under active development, and undergoing refactoring. We suggest you contact us if you want to build on this repo.
