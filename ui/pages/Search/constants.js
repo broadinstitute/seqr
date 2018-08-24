@@ -117,37 +117,37 @@ export const VEP_ANNOTATION_GROUPS = [
 
 export const FREQUENCIES = [
   {
-    field: '1kg_wgs_phase3',
+    name: '1kg_wgs_phase3',
     label: '1000 Genomes v3',
     homHemi: false,
     labelHelp: 'Filter by allele count (AC) in the 1000 Genomes Phase 3 release (5/2/2013), or by allele frequency (popmax AF) in any one of these five subpopulations defined for 1000 Genomes Phase 3: AFR, AMR, EAS, EUR, SAS',
   },
   {
-    field: 'exac_v3',
+    name: 'exac_v3',
     label: 'ExAC v0.3',
     homHemi: true,
     labelHelp: 'Filter by allele count (AC) or homozygous/hemizygous count (H/H) in ExAC, or by allele frequency (popmax AF) in any one of these six subpopulations defined for ExAC: AFR, AMR, EAS, FIN, NFE, SAS',
   },
   {
-    field: 'gnomad-genomes2',
+    name: 'gnomad-genomes2',
     label: 'gnomAD 15k genomes',
     homHemi: true,
     labelHelp: 'Filter by allele count (AC) or homozygous/hemizygous count (H/H) among gnomAD genomes, or by allele frequency (popmax AF) in any one of these six subpopulations defined for gnomAD genomes: AFR, AMR, EAS, FIN, NFE, ASJ',
   },
   {
-    field: 'gnomad-exomes2',
+    name: 'gnomad-exomes2',
     label: 'gnomAD 123k exomes',
     homHemi: true,
     labelHelp: 'Filter by allele count (AC) or homozygous/hemizygous count (H/H) among gnomAD exomes, or by allele frequency (popmax AF) in any one of these seven subpopulations defined for gnomAD genomes: AFR, AMR, EAS, FIN, NFE, ASJ, SAS',
   },
   {
-    field: 'topmed',
+    name: 'topmed',
     label: 'TOPMed',
     homHemi: false,
     labelHelp: 'Filter by allele count (AC) or allele frequency (AF) in TOPMed',
   },
   {
-    field: 'AF',
+    name: 'AF',
     label: 'This Callset',
     homHemi: false,
     labelHelp: 'Filter by allele count (AC) or by allele frequency (AF) among the samples in this family plus the rest of the samples that were joint-called as part of variant calling for this project.',
@@ -156,7 +156,7 @@ export const FREQUENCIES = [
 
 export const QUALITY_FILTER_FIELDS = [
   {
-    field: 'vcf_filter',
+    name: 'vcf_filter',
     label: 'Filter Value',
     labelHelp: 'Either show only variants that PASSed variant quality filters applied when the dataset was processed (typically VQSR or Hard Filters), or show all variants',
     control: RadioGroup,
@@ -165,14 +165,14 @@ export const QUALITY_FILTER_FIELDS = [
     widths: 'equal',
   },
   {
-    field: 'min_gq',
+    name: 'min_gq',
     label: 'Genotype Quality',
     labelHelp: 'Genotype Quality (GQ) is a statistical measure of confidence in the genotype call (eg. hom. or het) based on the read data',
     min: 0,
     max: 100,
   },
   {
-    field: 'min_ab',
+    name: 'min_ab',
     label: 'Allele Balance',
     labelHelp: 'The allele balance represents the percentage of reads that support the alt allele out of the total number of sequencing reads overlapping a variant. Use this filter to set a minimum percentage for the allele balance in heterozygous individuals.',
     min: 0,

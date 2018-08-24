@@ -34,7 +34,7 @@ export const validators = {
 }
 
 const renderField = (props) => {
-  const { fieldComponent = Form.Input, meta: { touched, invalid }, submitForm, input, ...additionalProps } = props
+  const { fieldComponent = Form.Field, meta: { touched, invalid }, submitForm, input, ...additionalProps } = props
   const { onChange, ...additionalInput } = input
   const onChangeSubmit = submitForm ? (data) => {
     onChange(data)
@@ -50,12 +50,6 @@ renderField.propTypes = {
   submitForm: PropTypes.func,
 }
 
-export const fieldLabel = (label, labelHelp) => (
-  labelHelp ?
-    <label> {label} <Popup trigger={<Icon name="question circle outline" />} content={labelHelp} size="small" position="top center" /></label>
-    : label
-)
-
 export const configuredFields = props =>
   props.fields.map(({ component, name, isArrayField, addArrayElement, key, label, labelHelp, ...fieldProps }) => {
     const baseProps = {
@@ -66,7 +60,9 @@ export const configuredFields = props =>
       component: renderField,
       fieldComponent: component,
       submitForm: props.submitOnChange ? props.onSubmit : null,
-      label: fieldLabel(label, labelHelp),
+      label: labelHelp ?
+        <label> {label} <Popup trigger={<Icon name="question circle outline" />} content={labelHelp} size="small" position="top center" /></label>
+        : label,
       ...fieldProps,
     }
     return isArrayField ?

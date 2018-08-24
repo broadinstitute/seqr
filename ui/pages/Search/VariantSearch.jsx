@@ -7,14 +7,24 @@ import { QueryParamsEditor } from 'shared/components/QueryParamEditor'
 import VariantSearchForm from './components/VariantSearchForm'
 import VariantSearchResults from './components/VariantSearchResults'
 
+// TODO get rid of JSON encoding when using POST
+const JSON_FILEDS = new Set(['freqs', 'qualityFilter'])
+const parsedQueryParams = queryParams => Object.entries(queryParams).reduce(
+  (acc, [key, val]) => ({ ...acc, [key]: JSON_FILEDS.has(key) ? JSON.parse(val) : val }), {},
+)
+
+const onSubmit = updateQueryParams => queryParams =>
+  updateQueryParams(Object.entries(queryParams).reduce(
+    (acc, [key, val]) => ({ ...acc, [key]: JSON_FILEDS.has(key) ? JSON.stringify(val) : val }), {},
+  ))
 
 const VariantSearch = ({ queryParams, updateQueryParams }) =>
   <Grid>
     <Grid.Row>
       <Grid.Column width={16}>
         <ReduxFormWrapper
-          initialValues={queryParams}
-          onSubmit={updateQueryParams}
+          initialValues={parsedQueryParams(queryParams)}
+          onSubmit={onSubmit(updateQueryParams)}
           form="variantSearch"
           submitButtonText="Search"
           noModal
