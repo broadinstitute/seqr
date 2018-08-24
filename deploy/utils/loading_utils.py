@@ -62,6 +62,7 @@ def load_project(deployment_target, project_id, genome_version, sample_type, dat
             --skip-validation \
             --exclude-hgmd \
             --vep-block-size 30 \
+            --es-block-size 50 \
             %(vcf)s
     """ % locals(), verbose=True)
 
