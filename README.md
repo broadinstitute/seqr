@@ -16,9 +16,9 @@ seqr consists of the following components or micro-services:
 - mongo - NoSQL database used to store variant callsets and reference data.
 - matchbox - a service that encapsulates communication with the Match Maker Exchange.
 - nginx - http server used as the main gateway between seqr and the internet.
-- elasticsearch - NoSQL database alternative to mongo that currently supports loading large callsets using a Spark-based [hail](http://hail.is) pipeline.
-- redis - in-memory cache used to speed up the django application layer.
 - pipeline-runner - (optional) container for running hail and VEP to annotate and load datasets on a small local deployment where a separate on-prem spark cluster is not available. 
+- redis - in-memory cache used to speed up the django application layer.
+- elasticsearch - NoSQL database alternative to mongo that currently supports loading large callsets using a Spark-based [hail](http://hail.is) pipeline.
 - kibana - (optional) dashboard and visual interface for elasticsearch.
 
 
