@@ -43,9 +43,7 @@ class Project extends React.Component
           <Route path={`${this.props.match.url}/case_review`} component={CaseReview} />
           <Route path={`${this.props.match.url}/analysis_group/:analysisGroupGuid`} component={ProjectPageUI} />
           <Route path={`${this.props.match.url}/family_page/:familyGuid`} component={FamilyPage} />
-          <Route path={`${this.props.match.url}/saved_variants/variant/:variantGuid`} component={SavedVariants} />
-          <Route path={`${this.props.match.url}/saved_variants/family/:familyGuid/:tag?`} component={SavedVariants} />
-          <Route path={`${this.props.match.url}/saved_variants/:tag?`} component={SavedVariants} />
+          <Route path={`${this.props.match.url}/saved_variants`} component={SavedVariants} />
           <Route component={() => <Error404 />} />
         </Switch>
       )

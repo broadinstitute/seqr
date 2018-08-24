@@ -5,6 +5,7 @@ import { connect } from 'react-redux'
 
 import UpdateButton from 'shared/components/buttons/UpdateButton'
 import DeleteButton from 'shared/components/buttons/DeleteButton'
+import FileUploadField from 'shared/components/form/XHRUploaderField'
 import PedigreeImagePanel from 'shared/components/panel/view-pedigree-image/PedigreeImagePanel'
 import { SelectableTableFormInput } from 'shared/components/table/SortableTable'
 import {
@@ -28,18 +29,62 @@ const FAMILY_FIELDS = [
   { name: FAMILY_FIELD_DESCRIPTION, width: 9, content: 'Description' },
 ]
 
+
+const FamilySelectorField = ({ value, onChange, families }) =>
+  <div>
+    <FileUploadField
+      name="uploadedFamilyIds"
+      normalize={(newValue, previousValue) => {
+       if (newValue.errors) {
+          return { ...newValue, info: newValue.errors, errors: [] }
+        }
+        if (newValue.parsedData && newValue.uploadedFileId !== (previousValue || {}).uploadedFileId) {
+          const familyIdMap = families.reduce((acc, family) => ({ ...acc, [family.familyId]: family.familyGuid }), {})
+          const familyGuids = newValue.parsedData.map(row => familyIdMap[row[0]]).filter(familyGuid => familyGuid)
+          const info = [`Uploaded ${familyGuids.length} families`]
+          if (newValue.parsedData.length !== familyGuids.length) {
+            const missingFamilies = newValue.parsedData.filter(row => !familyIdMap[row[0]]).map(row => row[0])
+            info.push(`Unable to find families with the following IDs: ${missingFamilies.join(', ')}`)
+          }
+          return { ...newValue, familyGuids, info }
+        }
+        return newValue
+      }}
+      onChange={(e, newValue) => {
+        if (newValue.familyGuids) {
+          onChange([...new Set([...value, ...newValue.familyGuids])])
+        }
+      }}
+      clearTimeOut={0}
+      auto
+      returnParsedData
+      dropzoneLabel="Drag-drop or click here to upload a list of family IDs"
+    />
+    <SelectableTableFormInput
+      idField="familyGuid"
+      defaultSortColumn={FAMILY_DISPLAY_NAME}
+      columns={FAMILY_FIELDS}
+      data={families}
+      value={value.reduce((acc, key) => ({ ...acc, [key]: true }), {})}
+      onChange={newValue => onChange(Object.keys(newValue).filter(key => newValue[key]))}
+    />
+  </div>
+
+FamilySelectorField.propTypes = {
+  value: PropTypes.array,
+  families: PropTypes.array.isRequired,
+  onChange: PropTypes.func,
+}
+
+
 const FORM_FIELDS = [
   { name: 'name', label: 'Name', validate: value => (value ? undefined : 'Name is required') },
   { name: 'description', label: 'Description' },
   {
     name: 'familyGuids',
-    component: SelectableTableFormInput,
-    idField: 'familyGuid',
-    defaultSortColumn: FAMILY_DISPLAY_NAME,
-    columns: FAMILY_FIELDS,
+    component: FamilySelectorField,
     validate: value => ((value && value.length) ? undefined : 'Families are required'),
-    normalize: (value, previousValue) => (value instanceof Object ? Object.keys(value).filter(key => value[key]) : previousValue),
-    format: value => (value || []).reduce((acc, key) => ({ ...acc, [key]: true }), {}),
+    format: value => value || [],
   },
 ]
 
@@ -53,7 +98,7 @@ export const UpdateAnalysisGroup = ({ project, analysisGroup, onSubmit, projectF
     { modalId: `createAnalysisGroup-${project.projectGuid}`, initialValues: { projectGuid: project.projectGuid }, editIconName: 'plus' }
 
   const fields = [...FORM_FIELDS]
-  fields[2].data = Object.values(projectFamiliesByGuid)
+  fields[2].families = Object.values(projectFamiliesByGuid)
 
   return <UpdateButton
     modalTitle={title}

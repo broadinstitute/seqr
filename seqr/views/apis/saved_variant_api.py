@@ -33,8 +33,8 @@ def saved_variant_data(request, project_guid, variant_guid=None):
         .prefetch_related('varianttag_set', 'varianttag_set__created_by', 'varianttag_set__variant_tag_type',
                           'variantfunctionaldata_set', 'variantfunctionaldata_set__created_by', 'variantnote_set',
                           'variantnote_set__created_by')
-    if request.GET.get('family'):
-        variant_query = variant_query.filter(family__guid=request.GET.get('family'))
+    if request.GET.get('families'):
+        variant_query = variant_query.filter(family__guid__in=request.GET.get('families').split(','))
     if variant_guid:
         variant_query = variant_query.filter(guid=variant_guid)
         if variant_query.count() < 1:
