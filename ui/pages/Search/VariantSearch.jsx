@@ -8,7 +8,7 @@ import VariantSearchForm from './components/VariantSearchForm'
 import VariantSearchResults from './components/VariantSearchResults'
 
 // TODO get rid of JSON encoding when using POST
-const JSON_FILEDS = new Set(['freqs', 'qualityFilter'])
+const JSON_FILEDS = new Set(['freqs', 'qualityFilter', 'annotations'])
 const parsedQueryParams = queryParams => Object.entries(queryParams).reduce(
   (acc, [key, val]) => ({ ...acc, [key]: JSON_FILEDS.has(key) ? JSON.parse(val) : val }), {},
 )

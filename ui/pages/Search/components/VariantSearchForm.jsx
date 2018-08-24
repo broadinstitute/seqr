@@ -6,24 +6,15 @@ import { Form, Accordion, Header, Segment, Grid } from 'semantic-ui-react'
 
 import { VerticalSpacer } from 'shared/components/Spacers'
 import { configuredFields } from 'shared/components/form/ReduxFormWrapper'
-import { Select, LabeledSlider } from 'shared/components/form/Inputs'
-import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
+import { Select, LabeledSlider, CheckboxGroup } from 'shared/components/form/Inputs'
 import FrequencyFilter from './filters/FrequencyFilter'
 import {
   FREQUENCIES,
-  CLINVAR_ANNOTATION_GROUPS,
-  HGMD_ANNOTATION_GROUPS,
-  VEP_ANNOTATION_GROUPS,
+  ANNOTATION_GROUPS,
   QUALITY_FILTER_FIELDS,
   QUALITY_FILTER_OPTIONS,
 } from '../constants'
 
-
-const OPTIONS = [...CLINVAR_ANNOTATION_GROUPS, ...HGMD_ANNOTATION_GROUPS, ...VEP_ANNOTATION_GROUPS].reduce(
-  (acc, { name, children }) =>
-    [...acc, ...children.map(child => ({ category: name, value: child, text: snakecaseToTitlecase(child) }))],
-  [],
-)
 
 const ToggleHeader = styled(Header).attrs({ size: 'huge', block: true })`
   .dropdown.icon {
@@ -41,6 +32,10 @@ const ToggleHeaderFieldColumn = styled(Grid.Column)`
       
   .fields {
     margin: 0 !important;
+    
+    &.inline .field:last-child {
+      padding-right: 0 !important;
+    }
   }
       
   .dropdown.icon {
@@ -67,18 +62,15 @@ FormSelect.propTypes = {
 }
 
 const PANEL_DETAILS = [
-  // {
-  //   name: 'annotations',
-  //   headerProps: { title: 'Variant Annotations' },
-  //   fieldProps: {
-  //     component: FormSelect,
-  //     label: 'Annotation',
-  //     options: OPTIONS,
-  //     multiple: true,
-  //     format: val => val.split(','),
-  //     parse: val => val.join(','),
-  //   },
-  // },
+  {
+    name: 'annotations',
+    title: 'Annotations',
+    fields: ANNOTATION_GROUPS,
+    fieldProps: {
+      component: CheckboxGroup,
+      format: val => val || [],
+    },
+  },
   {
     name: 'freqs',
     title: 'Frequency',

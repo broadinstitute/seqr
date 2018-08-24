@@ -3,7 +3,7 @@
 import React, { createElement } from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import { Form } from 'semantic-ui-react'
+import { Form, List } from 'semantic-ui-react'
 import Slider from 'react-rangeslider'
 import 'react-rangeslider/lib/index.css'
 
@@ -139,6 +139,66 @@ const InlineFormGroup = styled(Form.Group).attrs({ inline: true })`
   flex-wrap: ${props => (props.widths ? 'inherit' : 'wrap')};
   margin: ${props => props.margin || '0em 0em 1em'} !important;
 `
+
+const AlignedList = styled(List)`
+  text-align: left;
+`
+
+export const CheckboxGroup = (props) => {
+  const { value, options, label, onChange, ...baseProps } = props
+  return (
+    <Form.Field>
+      <AlignedList>
+        <List.Item>
+          <List.Header>
+            <BaseSemanticInput
+              {...baseProps}
+              inputType="Checkbox"
+              checked={value.length === options.length}
+              indeterminate={value.length > 0 && value.length < options.length}
+              label={label}
+              onChange={({ checked }) => {
+                if (checked) {
+                  onChange(options.map(option => option.value))
+                } else {
+                  onChange([])
+                }
+              }}
+            />
+          </List.Header>
+          <List.List>
+            {options.map(option =>
+              <List.Item key={option.value}>
+                <BaseSemanticInput
+                  {...baseProps}
+                  inputType="Checkbox"
+                  checked={value.includes(option.value)}
+                  label={option.text}
+                  onChange={({ checked }) => {
+                    if (checked) {
+                      onChange([...value, option.value])
+                    } else {
+                      onChange(value.filter(val => val !== option.value))
+                    }
+                  }}
+                />
+              </List.Item>,
+            )}
+          </List.List>
+        </List.Item>
+      </AlignedList>
+    </Form.Field>
+  )
+}
+
+CheckboxGroup.propTypes = {
+  value: PropTypes.any,
+  options: PropTypes.array,
+  onChange: PropTypes.func,
+  label: PropTypes.node,
+  horizontalGrouped: PropTypes.bool,
+}
+
 
 export const StringValueCheckboxGroup = (props) => {
   const { value = '', options, onChange, ...baseProps } = props

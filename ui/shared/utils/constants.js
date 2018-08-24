@@ -244,53 +244,272 @@ export const LOCUS_LIST_ITEMS_FIELD = {
   ],
 }
 
-const PROTEIN_CONSEQUENCE_ORDER = [
-  'transcript_ablation',
-  'splice_donor_variant',
-  'splice_acceptor_variant',
-  'stop_gained',
-  'frameshift_variant',
-  'stop_lost',
-  'initiator_codon_variant',
-  'start_lost',
-  'inframe_insertion',
-  'inframe_deletion',
-  'transcript_amplification',
-  'protein_altering_variant',
-  'missense_variant',
-  'splice_region_variant',
-  'incomplete_terminal_codon_variant',
-  'synonymous_variant',
-  'stop_retained_variant',
-  'coding_sequence_variant',
-  'mature_miRNA_variant',
-  '5_prime_UTR_variant',
-  '3_prime_UTR_variant',
-  'intron_variant',
-  'NMD_transcript_variant',
-  'non_coding_exon_variant',
-  'non_coding_transcript_exon_variant',
-  'nc_transcript_variant',
-  'non_coding_transcript_variant',
-  'upstream_gene_variant',
-  'downstream_gene_variant',
-  'TFBS_ablation',
-  'TFBS_amplification',
-  'TF_binding_site_variant',
-  'regulatory_region_variant',
-  'regulatory_region_ablation',
-  'regulatory_region_amplification',
-  'feature_elongation',
-  'feature_truncation',
-  'intergenic_variant',
+export const VEP_GROUP_NONSENSE = 'nonsense'
+export const VEP_GROUP_ESSENTIAL_SPLICE_SITE = 'essential_splice_site'
+export const VEP_GROUP_EXTENDED_SPLICE_SITE = 'extended_splice_site'
+export const VEP_GROUP_MISSENSE = 'missense'
+export const VEP_GROUP_FRAMESHIFT = 'frameshift'
+export const VEP_GROUP_INFRAME = 'inframe'
+export const VEP_GROUP_SYNONYMOUS = 'synonymous'
+export const VEP_GROUP_OTHER = 'other'
+
+
+const ORDERED_VEP_CONSEQUENCES = [
+  {
+    description: 'A feature ablation whereby the deleted region includes a transcript feature',
+    label: 'Transcript ablation',
+    name: 'transcript_ablation',
+    so: 'SO:0001893',
+  },
+  {
+    description: "A splice variant that changes the 2 base region at the 5' end of an intron",
+    label: 'Splice donor variant',
+    name: 'splice_donor_variant',
+    group: VEP_GROUP_ESSENTIAL_SPLICE_SITE,
+    so: 'SO:0001575',
+  },
+  {
+    description: "A splice variant that changes the 2 base region at the 3' end of an intron",
+    label: 'Splice acceptor variant',
+    name: 'splice_acceptor_variant',
+    group: VEP_GROUP_ESSENTIAL_SPLICE_SITE,
+    so: 'SO:0001574',
+  },
+  {
+    description: 'A sequence variant whereby at least one base of a codon is changed, resulting in a premature stop codon, leading to a shortened transcript',
+    label: 'Stop gained',
+    name: 'stop_gained',
+    group: VEP_GROUP_NONSENSE,
+    so: 'SO:0001587',
+  },
+  {
+    description: 'A sequence variant which causes a disruption of the translational reading frame, because the number of nucleotides inserted or deleted is not a multiple of three',
+    label: 'Frameshift',
+    name: 'frameshift_variant',
+    group: VEP_GROUP_FRAMESHIFT,
+    so: 'SO:0001589',
+  },
+  {
+    description: 'A sequence variant where at least one base of the terminator codon (stop) is changed, resulting in an elongated transcript',
+    label: 'Stop lost',
+    name: 'stop_lost',
+    group: VEP_GROUP_MISSENSE,
+    so: 'SO:0001578',
+  },
+  {
+    description: 'A codon variant that changes at least one base of the first codon of a transcript',
+    label: 'Initiator codon',
+    name: 'initiator_codon_variant',
+    group: VEP_GROUP_MISSENSE,
+    so: 'SO:0001582',
+  },
+  {
+    description: 'A codon variant that changes at least one base of the canonical start codon.',
+    label: 'Start lost',
+    name: 'start_lost',
+    group: VEP_GROUP_MISSENSE,
+    so: 'SO:0002012',
+  },
+  {
+    description: 'An inframe non synonymous variant that inserts bases into in the coding sequence',
+    label: 'In frame insertion',
+    name: 'inframe_insertion',
+    group: VEP_GROUP_INFRAME,
+    so: 'SO:0001821',
+  },
+  {
+    description: 'An inframe non synonymous variant that deletes bases from the coding sequence',
+    label: 'In frame deletion',
+    name: 'inframe_deletion',
+    group: VEP_GROUP_INFRAME,
+    so: 'SO:0001822',
+  },
+  {
+    description: 'A feature amplification of a region containing a transcript',
+    label: 'Transcript amplification',
+    name: 'transcript_amplification',
+    so: 'SO:0001889',
+  },
+  {
+    description: 'A sequence_variant which is predicted to change the protein encoded in the coding sequence',
+    label: 'Protein Altering',
+    name: 'protein_altering_variant',
+    group: VEP_GROUP_MISSENSE,
+    so: 'SO:0001818',
+  },
+  {
+    description: 'A sequence variant, where the change may be longer than 3 bases, and at least one base of a codon is changed resulting in a codon that encodes for a different amino acid',
+    label: 'Missense',
+    name: 'missense_variant',
+    group: VEP_GROUP_MISSENSE,
+    so: 'SO:0001583',
+  },
+  {
+    description: 'A sequence variant in which a change has occurred within the region of the splice site, either within 1-3 bases of the exon or 3-8 bases of the intron',
+    label: 'Splice region',
+    name: 'splice_region_variant',
+    group: VEP_GROUP_EXTENDED_SPLICE_SITE,
+    so: 'SO:0001630',
+  },
+  {
+    description: 'A sequence variant where at least one base of the final codon of an incompletely annotated transcript is changed',
+    label: 'Incomplete terminal codon variant',
+    name: 'incomplete_terminal_codon_variant',
+    so: 'SO:0001626',
+  },
+  {
+    description: 'A sequence variant where there is no resulting change to the encoded amino acid',
+    label: 'Synonymous',
+    name: 'synonymous_variant',
+    group: VEP_GROUP_SYNONYMOUS,
+    so: 'SO:0001819',
+  },
+  {
+    description: 'A sequence variant where at least one base in the terminator codon is changed, but the terminator remains',
+    label: 'Stop retained',
+    name: 'stop_retained_variant',
+    group: VEP_GROUP_SYNONYMOUS,
+    so: 'SO:0001567',
+  },
+  {
+    description: 'A sequence variant that changes the coding sequence',
+    label: 'coding_sequence_variant',
+    name: 'coding_sequence_variant',
+    so: 'SO:0001580',
+  },
+  {
+    description: 'A transcript variant located with the sequence of the mature miRNA',
+    label: 'mature_miRNA_variant',
+    name: 'mature_miRNA_variant',
+    so: 'SO:0001620',
+  },
+  {
+    description: "A UTR variant of the 5' UTR",
+    label: '5_prime_UTR_variant',
+    name: '5_prime_UTR_variant',
+    so: 'SO:0001623',
+  },
+  {
+    description: "A UTR variant of the 3' UTR",
+    label: '3_prime_UTR_variant',
+    name: '3_prime_UTR_variant',
+    so: 'SO:0001624',
+  },
+  {
+    description: 'A transcript variant occurring within an intron',
+    label: 'intron_variant',
+    name: 'intron_variant',
+    so: 'SO:0001627',
+  },
+  {
+    description: 'A variant in a transcript that is the target of NMD',
+    label: 'NMD_transcript_variant',
+    name: 'NMD_transcript_variant',
+    so: 'SO:0001621',
+  },
+  //2 kinds of 'non_coding_transcript_exon_variant' label due to name change in Ensembl v77
+  {
+    description: 'A sequence variant that changes non-coding exon sequence',
+    label: 'non_coding_exon_variant',
+    name: 'non_coding_exon_variant',
+    so: 'SO:0001792',
+  },
+  {
+    description: 'A sequence variant that changes non-coding exon sequence',
+    label: 'non_coding_transcript_exon_variant',
+    name: 'non_coding_transcript_exon_variant',
+    so: 'SO:0001792',
+  },
+  // 2 kinds of 'nc_transcript_variant' label due to name change in Ensembl v77
+  {
+    description: 'A transcript variant of a non coding RNA',
+    label: 'nc_transcript_variant',
+    name: 'nc_transcript_variant',
+    so: 'SO:0001619',
+  },
+  {
+    description: 'A transcript variant of a non coding RNA',
+    label: 'non_coding_transcript_variant',
+    name: 'non_coding_transcript_variant',
+    so: 'SO:0001619',
+  },
+  {
+    description: "A sequence variant located 5' of a gene",
+    label: 'upstream_gene_variant',
+    name: 'upstream_gene_variant',
+    so: 'SO:0001631',
+  },
+  {
+    description: "A sequence variant located 3' of a gene",
+    label: 'downstream_gene_variant',
+    name: 'downstream_gene_variant',
+    so: 'SO:0001632',
+  },
+  {
+    description: 'A feature ablation whereby the deleted region includes a transcription factor binding site',
+    label: 'TFBS_ablation',
+    name: 'TFBS_ablation',
+    so: 'SO:0001895',
+  },
+  {
+    description: 'A feature amplification of a region containing a transcription factor binding site',
+    label: 'TFBS_amplification',
+    name: 'TFBS_amplification',
+    so: 'SO:0001892',
+  },
+  {
+    description: 'In regulatory region annotated by Ensembl',
+    label: 'TF_binding_site_variant',
+    name: 'TF_binding_site_variant',
+    so: 'SO:0001782',
+  },
+  {
+    description: 'A sequence variant located within a regulatory region',
+    label: 'regulatory_region_variant',
+    name: 'regulatory_region_variant',
+    so: 'SO:0001566',
+  },
+  {
+    description: 'A feature ablation whereby the deleted region includes a regulatory region',
+    label: 'regulatory_region_ablation',
+    name: 'regulatory_region_ablation',
+    so: 'SO:0001894',
+  },
+  {
+    description: 'A feature amplification of a region containing a regulatory region',
+    label: 'regulatory_region_amplification',
+    name: 'regulatory_region_amplification',
+    so: 'SO:0001891',
+  },
+  {
+    description: 'A sequence variant that causes the extension of a genomic feature, with regard to the reference sequence',
+    label: 'feature_elongation',
+    name: 'feature_elongation',
+    so: 'SO:0001907',
+  },
+  {
+    description: 'A sequence variant that causes the reduction of a genomic feature, with regard to the reference sequence',
+    label: 'feature_truncation',
+    name: 'feature_truncation',
+    so: 'SO:0001906',
+  },
+  {
+    description: 'A sequence variant located in the intergenic region, between genes',
+    label: 'intergenic_variant',
+    name: 'intergenic_variant',
+    so: 'SO:0001628',
+  },
 ]
 
-export const PROTEIN_CONSEQUENCE_ORDER_LOOKUP = PROTEIN_CONSEQUENCE_ORDER.reduce(
-  (acc, consequence, i) => ({
-    ...acc,
-    ...{ [consequence]: i },
-  }), {},
-)
+export const GROUPED_VEP_CONSEQUENCES = ORDERED_VEP_CONSEQUENCES.reduce((acc, consequence) => {
+  const group = consequence.group || VEP_GROUP_OTHER
+  acc[group] = [...(acc[group] || []), consequence]
+  return acc
+}, {})
+
+export const PROTEIN_CONSEQUENCE_ORDER_LOOKUP = ORDERED_VEP_CONSEQUENCES.reduce((acc, consequence, i) =>
+  ({ ...acc, [consequence.name]: i }),
+{})
 
 export const EXCLUDED_TAG_NAME = 'Excluded'
 export const REVIEW_TAG_NAME = 'Review'
