@@ -13,8 +13,8 @@ import { FamilyLayout } from 'shared/components/panel/family'
 import { ColoredIcon } from 'shared/components/StyledComponents'
 
 import { updateIndividual } from 'redux/rootReducer'
-import { getUser } from 'redux/selectors'
-import { getProject, getProjectSamplesByGuid } from 'pages/Project/selectors'
+import { getSamplesByGuid } from 'redux/selectors'
+import { getProject } from 'pages/Project/selectors'
 import { SAMPLE_STATUS_LOADED, DATASET_TYPE_VARIANT_CALLS } from 'shared/utils/constants'
 import { CASE_REVIEW_STATUS_MORE_INFO_NEEDED, CASE_REVIEW_STATUS_OPTIONS } from '../../constants'
 
@@ -37,7 +37,6 @@ const CaseReviewDropdownContainer = styled.div`
 class IndividualRow extends React.Component
 {
   static propTypes = {
-    user: PropTypes.object.isRequired,
     project: PropTypes.object.isRequired,
     family: PropTypes.object.isRequired,
     individual: PropTypes.object.isRequired,
@@ -47,7 +46,7 @@ class IndividualRow extends React.Component
   }
 
   render() {
-    const { user, project, family, individual, editCaseReview } = this.props
+    const { project, family, individual, editCaseReview } = this.props
 
     const { individualId, displayName, paternalId, maternalId, sex, affected, createdDate } = individual
 
@@ -137,7 +136,7 @@ class IndividualRow extends React.Component
         content: (
           <TextFieldView
             key="notes"
-            isEditable={(user.is_staff || project.canEdit) && !editCaseReview}
+            isEditable={project.canEdit}
             fieldName="Individual Notes"
             field="notes"
             idField="individualGuid"
@@ -153,7 +152,7 @@ class IndividualRow extends React.Component
             key="phenotips"
             individual={individual}
             showDetails
-            showEditPhenotipsLink={project.canEdit && !editCaseReview}
+            showEditPhenotipsLink={project.canEdit}
           />
         ),
       },
@@ -173,9 +172,8 @@ class IndividualRow extends React.Component
 export { IndividualRow as IndividualRowComponent }
 
 const mapStateToProps = state => ({
-  user: getUser(state),
   project: getProject(state),
-  samplesByGuid: getProjectSamplesByGuid(state),
+  samplesByGuid: getSamplesByGuid(state),
 })
 
 const mapDispatchToProps = {

@@ -21,7 +21,8 @@ const FreqLink = ({ url, value, variant, genomeVersion }) => {
   const isRegion = parseFloat(value, 10) <= 0
   let coords
   if (isRegion) {
-    coords = `${chrom}-${parseInt(pos, 10) - 100}-${parseInt(pos, 10) + 100}`
+    const posInt = parseInt(pos, 10)
+    coords = `${chrom}-${posInt - 100}-${posInt + 100}`
   } else {
     coords = `${chrom}-${pos}-${variant.ref}-${variant.alt}`
   }
@@ -105,14 +106,8 @@ const Frequencies = ({ variant }) => {
       <FreqSummary field="exac" variant={variant} hasLink />
       <FreqSummary field="gnomad_exomes" variant={variant} hasLink />
       <FreqSummary field="gnomad_genomes" variant={variant} precision={3} hasLink />
-      <FreqSummary
-        field="topmedAF"
-        fieldTitle="TOPMED"
-        variant={variant}
-        genomeVersion="38"
-        precision={3}
+      <FreqSummary field="topmedAF" fieldTitle="TOPMED" variant={variant} genomeVersion="38" precision={3} hasLink
         url="bravo.sph.umich.edu/freeze5/hg38"
-        hasLink
       />
     </div>
   )
@@ -126,10 +121,30 @@ const Frequencies = ({ variant }) => {
         header="Allele Counts"
         content={
           <div>
-            <div>This callset:<HorizontalSpacer width={10} /><b>{popCounts.AC}</b></div>
-            <div>Gnomad exomes:<HorizontalSpacer width={10} /><b>{popCounts.gnomadExomesAC}</b></div>
-            <div>Gnomad genomes:<HorizontalSpacer width={10} /><b>{popCounts.gnomadGenomesAC}</b></div>
-            <div>Topmed:<HorizontalSpacer width={10} /><b>{popCounts.topmedAC}</b></div>
+            {
+              popCounts.AC != null && popCounts.AN != null &&
+              <div>this callset:<HorizontalSpacer width={10} />{popCounts.AC} out of {popCounts.AN}</div>
+            }
+            {
+              popCounts.g1kAC != null && popCounts.g1kAN != null &&
+              <div>1kg WGS:<HorizontalSpacer width={10} />{popCounts.g1kAC} out of {popCounts.g1kAN}</div>
+            }
+            {
+              popCounts.exacAC != null && popCounts.exacAN != null &&
+              <div>ExAC:<HorizontalSpacer width={10} />{popCounts.exacAC} out of {popCounts.exacAN}</div>
+            }
+            {
+              popCounts.gnomadExomesAC != null && popCounts.gnomadExomesAN != null &&
+              <div>gnomAD exomes:<HorizontalSpacer width={10} />{popCounts.gnomadExomesAC} out of {popCounts.gnomadExomesAN}</div>
+            }
+            {
+              popCounts.gnomadGenomesAC != null && popCounts.gnomadGenomesAN != null &&
+              <div>gnomAD genomes:<HorizontalSpacer width={10} />{popCounts.gnomadGenomesAC} out of {popCounts.gnomadGenomesAN}</div>
+            }
+            {
+              popCounts.topmedAC != null && popCounts.topmedAN != null &&
+              <div>TopMed:<HorizontalSpacer width={10} />{popCounts.topmedAC} out of {popCounts.topmedAN}</div>
+            }
           </div>
         }
       />

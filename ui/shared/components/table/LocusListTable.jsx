@@ -17,7 +17,7 @@ const FIELDS = LOCUS_LIST_FIELDS.map(
   }),
 )
 
-const LocusListTable = ({ locusListsByGuid, showPublic, isEditable, showLinks, omitFields, omitLocusLists, selectRows }) => {
+const LocusListTable = ({ locusListsByGuid, showPublic, isEditable, showLinks, omitFields, omitLocusLists, selectRows, selectedRows }) => {
   if (showPublic) {
     omitFields = [LOCUS_LIST_IS_PUBLIC_FIELD_NAME].concat(omitFields)
   } else {
@@ -50,6 +50,7 @@ const LocusListTable = ({ locusListsByGuid, showPublic, isEditable, showLinks, o
       defaultSortColumn="name"
       columns={fields}
       selectRows={selectRows}
+      selectedRows={selectedRows}
       data={data}
     />
   )
@@ -63,6 +64,7 @@ LocusListTable.propTypes = {
   selectRows: PropTypes.func,
   omitFields: PropTypes.array,
   omitLocusLists: PropTypes.array,
+  selectedRows: PropTypes.object,
 }
 
 LocusListTable.defaultProps = {

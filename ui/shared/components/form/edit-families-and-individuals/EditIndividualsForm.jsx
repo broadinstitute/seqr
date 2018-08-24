@@ -7,7 +7,7 @@ import { connect } from 'react-redux'
 import { Field } from 'redux-form'
 
 import { updateIndividuals } from 'pages/Project/reducers'
-import { getProjectFamiliesByGuid, getProjectIndividualsByGuid } from 'pages/Project/selectors'
+import { getProjectAnalysisGroupFamiliesByGuid, getProjectAnalysisGroupIndividualsByGuid } from 'pages/Project/selectors'
 import { SEX_OPTIONS, AFFECTED_OPTIONS } from 'shared/utils/constants'
 import EditRecordsForm from '../EditRecordsForm'
 
@@ -98,9 +98,9 @@ EditIndividualsForm.propTypes = {
 
 export { EditIndividualsForm as EditIndividualsFormComponent }
 
-const mapStateToProps = state => ({
-  individualsByGuid: getProjectIndividualsByGuid(state),
-  familiesByGuid: getProjectFamiliesByGuid(state),
+const mapStateToProps = (state, ownProps) => ({
+  individualsByGuid: getProjectAnalysisGroupIndividualsByGuid(state, ownProps),
+  familiesByGuid: getProjectAnalysisGroupFamiliesByGuid(state, ownProps),
 })
 
 const mapDispatchToProps = {

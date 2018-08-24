@@ -45,6 +45,13 @@ def get_cached_results(project_id, search_hash):
     return doc['search_spec'], doc.get('results')
 
 
+def clear_project_results_cache(project_id):
+    """
+    Remove all search results for the given project
+    """
+    settings.UTILS_DB.search_cache.update({'project_id': project_id}, {'$unset': {'results': 1}}, multi=True)
+
+
 def clear_results_cache():
     """
     Remove all search results

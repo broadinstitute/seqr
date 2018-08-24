@@ -50,7 +50,8 @@ const familyFieldRenderProps = {
   },
   [FAMILY_FIELD_FIRST_SAMPLE]: {
     showEmptyValues: true,
-    fieldDisplay: (loadedSample, compact) => <Sample loadedSample={loadedSample} hoverDetails={compact} />,
+    fieldDisplay: (loadedSample, compact) =>
+      <Sample loadedSample={loadedSample} hoverDetails={compact ? 'first loaded' : null} />,
   },
   [FAMILY_FIELD_OMIM_NUMBER]: {
     fieldDisplay: value => <a target="_blank" href={`https://www.omim.org/entry/${value}`} rel="noopener noreferrer">{value}</a>,

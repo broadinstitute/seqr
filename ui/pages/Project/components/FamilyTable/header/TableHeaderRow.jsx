@@ -12,7 +12,7 @@ import { Dropdown } from 'shared/components/form/Inputs'
 
 import { FAMILY_FIELD_RENDER_LOOKUP } from 'shared/utils/constants'
 
-import { getProjectFamiliesByGuid, getVisibleFamilies, getFamiliesTableState } from '../../../selectors'
+import { getProjectAnalysisGroupFamiliesByGuid, getVisibleFamilies, getFamiliesTableState } from '../../../selectors'
 import { updateFamiliesTable } from '../../../reducers'
 import { FAMILY_FILTER_OPTIONS, FAMILY_SORT_OPTIONS } from '../../../constants'
 
@@ -34,6 +34,21 @@ const SpacedDropdown = styled(Dropdown)`
   padding-right: 5px;
 `
 
+export const TableHeaderDetail = ({ fields, offset, showVariantTags }) =>
+  <FamilyLayout
+    compact
+    offset={offset}
+    fields={fields}
+    fieldDisplay={field => FAMILY_FIELD_RENDER_LOOKUP[field.id].name}
+    rightContent={showVariantTags ? 'Saved Variants' : null}
+  />
+
+
+TableHeaderDetail.propTypes = {
+  offset: PropTypes.bool,
+  fields: PropTypes.array,
+  showVariantTags: PropTypes.bool,
+}
 
 const TableHeaderRow = (
   { headerStatus, showInternalFilters, visibleFamiliesCount, totalFamiliesCount, fields, tableName, familiesTableState,
@@ -111,13 +126,7 @@ const TableHeaderRow = (
       {fields &&
         <Table.Row>
           <Table.HeaderCell colSpan={2} textAlign="left">
-            <FamilyLayout
-              compact
-              offset
-              fields={fields}
-              fieldDisplay={field => FAMILY_FIELD_RENDER_LOOKUP[field.id].name}
-              rightContent={showVariantTags ? 'Saved Variants' : null}
-            />
+            <TableHeaderDetail fields={fields} showVariantTags={showVariantTags} offset />
           </Table.HeaderCell>
         </Table.Row>
       }
@@ -139,7 +148,7 @@ TableHeaderRow.propTypes = {
 
 const mapStateToProps = (state, ownProps) => ({
   visibleFamiliesCount: getVisibleFamilies(state, ownProps).length,
-  totalFamiliesCount: Object.keys(getProjectFamiliesByGuid(state)).length,
+  totalFamiliesCount: Object.keys(getProjectAnalysisGroupFamiliesByGuid(state, ownProps)).length,
   familiesTableState: getFamiliesTableState(state, ownProps),
 })
 

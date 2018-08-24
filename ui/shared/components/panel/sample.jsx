@@ -31,7 +31,7 @@ const Sample = ({ loadedSample, isOutdated, hoverDetails }) =>
       </span>
     }
     content={loadedSample ?
-      `data was${isOutdated ? ' previously' : ''} loaded${hoverDetails ? ` on ${new Date(loadedSample.loadedDate).toLocaleDateString()}` : ''}` :
+      `data was${isOutdated ? ' previously ' : ''} ${hoverDetails ? `${hoverDetails} on ${new Date(loadedSample.loadedDate).toLocaleDateString()}` : 'loaded'}` :
       'no data available'
     }
     position="left center"
@@ -40,7 +40,7 @@ const Sample = ({ loadedSample, isOutdated, hoverDetails }) =>
 Sample.propTypes = {
   loadedSample: PropTypes.object,
   isOutdated: PropTypes.bool,
-  hoverDetails: PropTypes.bool,
+  hoverDetails: PropTypes.string,
 }
 
 export default Sample

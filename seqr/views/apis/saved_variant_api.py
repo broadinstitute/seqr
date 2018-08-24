@@ -33,8 +33,8 @@ def saved_variant_data(request, project_guid, variant_guid=None):
         .prefetch_related('varianttag_set', 'varianttag_set__created_by', 'varianttag_set__variant_tag_type',
                           'variantfunctionaldata_set', 'variantfunctionaldata_set__created_by', 'variantnote_set',
                           'variantnote_set__created_by')
-    if request.GET.get('family'):
-        variant_query = variant_query.filter(family__guid=request.GET.get('family'))
+    if request.GET.get('families'):
+        variant_query = variant_query.filter(family__guid__in=request.GET.get('families').split(','))
     if variant_guid:
         variant_query = variant_query.filter(guid=variant_guid)
         if variant_query.count() < 1:
@@ -243,22 +243,34 @@ def _variant_details(variant_json, user):
                     'freqs', {}).get('gnomad_genomes_AF', 0)) if is_es_variant else annotation.get('freqs', {}).get(
                     'gnomad-gnomad-genomes2_popmax', annotation.get('freqs', {}).get('gnomad-genomes2', None)),
             },
+            'gerp_rs': annotation.get('GERP_RS'),
+            'phastcons100vert': annotation.get('phastCons100way_vertebrate'),
+
             'mpc_score': annotation.get('mpc_score'),
+            'metasvm': annotation.get('metasvm'),
             'mut_taster': annotation.get('muttaster'),
             'polyphen': annotation.get('polyphen'),
             'popCounts': {
                 'AC': annotation.get('pop_counts', {}).get('AC'),
                 'AN': annotation.get('pop_counts', {}).get('AN'),
+                'g1kAC': annotation.get('pop_counts', {}).get('g1kAC'),
+                'g1kAN': annotation.get('pop_counts', {}).get('g1kAN'),
                 'topmedAC': annotation.get('pop_counts', {}).get('topmed_AC'),
+                'topmedAN': annotation.get('pop_counts', {}).get('topmed_AN'),
                 'gnomadExomesAC': annotation.get('pop_counts', {}).get('gnomad_exomes_AC'),
+                'gnomadExomesAN': annotation.get('pop_counts', {}).get('gnomad_exomes_AN'),
                 'gnomadGenomesAC': annotation.get('pop_counts', {}).get('gnomad_genomes_AC'),
+                'gnomadGenomesAN': annotation.get('pop_counts', {}).get('gnomad_genomes_AN'),
+                'exacAC': annotation.get('pop_counts', {}).get('exac_v3_AC'),
                 'exac_hom': annotation.get('pop_counts', {}).get('exac_v3_Hom'),
                 'exac_hemi': annotation.get('pop_counts', {}).get('exac_v3_Hemi'),
+                'exacAN': annotation.get('pop_counts', {}).get('exac_v3_AN'),
                 'gnomad_exomes_hom': annotation.get('pop_counts', {}).get('gnomad_exomes_Hom'),
                 'gnomad_exomes_hemi': annotation.get('pop_counts', {}).get('gnomad_exomes_Hemi'),
                 'gnomad_genomes_hom': annotation.get('pop_counts', {}).get('gnomad_genomes_Hom'),
                 'gnomad_genomes_hemi': annotation.get('pop_counts', {}).get('gnomad_genomes_Hemi'),
             },
+            'primate_ai_score': annotation.get('primate_ai_score'),
             'revel_score': annotation.get('revel_score'),
             'rsid': annotation.get('rsid'),
             'sift': annotation.get('sift'),
@@ -279,6 +291,7 @@ def _variant_details(variant_json, user):
             'clinsig': extras.get('clinvar_clinsig'),
             'variantId': extras.get('clinvar_variant_id'),
             'alleleId': extras.get('clinvar_allele_id'),
+            'goldStars': extras.get('clinvar_gold_stars'),
         },
         'hgmd': {
             'accession': extras.get('hgmd_accession'),
@@ -324,7 +337,8 @@ def _saved_variant_genes(variants):
         gene_ids.update(variant['geneIds'])
     genes = get_genes(gene_ids)
     for gene in genes.values():
-        gene['locusLists'] = []
+        if gene:
+            gene['locusLists'] = []
     return genes
 
 
