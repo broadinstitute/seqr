@@ -61,8 +61,10 @@ def load_project(deployment_target, project_id, genome_version, sample_type, dat
             --dataset-type %(dataset_type)s \
             --skip-validation \
             --exclude-hgmd \
-            --vep-block-size 30 \
-            --es-block-size 50 \
+            --vep-block-size 10 \
+            --es-block-size 10 \
+            --num-shards 1 \
+            --max-samples-per-index 99 \
             %(vcf)s
     """ % locals(), verbose=True)
 
