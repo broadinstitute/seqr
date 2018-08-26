@@ -7,10 +7,7 @@ logger = logging.getLogger(__name__)
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-ADMINS = (
-    ('Ben Weisburd', 'weisburd@broadinstitute.org'),
-    ('Harindra Arachchi', 'harindra@broadinstitute.org'),
-)
+ADMINS = ()
 
 MANAGERS = ADMINS
 
@@ -48,7 +45,7 @@ INSTALLED_APPS = [
     'breakpoint_search',
     #'structural_variants',
     'crispy_forms',
-    # Other django plugins to try from https://djangopackages.org/
+    # Other potentially useful django plugins
     #   django-extensions  (https://django-extensions.readthedocs.io/en/latest/installation_instructions.html)
     #   django-admin-tools
     #   django-model-utils
@@ -60,7 +57,6 @@ INSTALLED_APPS = [
     #   django-constance
     #   django-configurations
     #   django-threadedcomments, django-contrib-comments    # create Comment class based on this (https://django-contrib-comments.readthedocs.io/en/latest/quickstart.html)
-
 ]
 
 MIDDLEWARE = [
@@ -177,29 +173,11 @@ ELASTICSEARCH_SERVICE_HOSTNAME = os.environ.get('ELASTICSEARCH_SERVICE_HOSTNAME'
 ELASTICSEARCH_PORT = os.environ.get('ELASTICSEARCH_SERVICE_PORT', "9200")
 ELASTICSEARCH_SERVER = "%s:%s" % (ELASTICSEARCH_SERVICE_HOSTNAME, ELASTICSEARCH_PORT)
 
-CLOUD_PROVIDER_LOCAL = "local"
-CLOUD_PROVIDER_GOOGLE = "google"
-CLOUD_PROVIDERS = set([CLOUD_PROVIDER_LOCAL, CLOUD_PROVIDER_GOOGLE])
-CLOUD_PROVIDER = os.environ.get('CLOUD_PROVIDER', CLOUD_PROVIDER_LOCAL)
-assert CLOUD_PROVIDER in CLOUD_PROVIDERS, "Invalid cloud provider name: %(CLOUD_PROVIDER)s" % locals()
-
 DEPLOYMENT_TYPE_DEV = "dev"
 DEPLOYMENT_TYPE_PROD = "prod"
 DEPLOYMENT_TYPES = set([DEPLOYMENT_TYPE_DEV, DEPLOYMENT_TYPE_PROD])
 DEPLOYMENT_TYPE = os.environ.get("DEPLOYMENT_TYPE", DEPLOYMENT_TYPE_DEV)
 assert DEPLOYMENT_TYPE in DEPLOYMENT_TYPES, "Invalid deployment type: %(DEPLOYMENT_TYPE)s" % locals()
-
-USE_GCLOUD_DATAPROC = (CLOUD_PROVIDER == CLOUD_PROVIDER_GOOGLE) and os.environ.get('USE_GCLOUD_DATAPROC', False)
-if CLOUD_PROVIDER == CLOUD_PROVIDER_GOOGLE:
-    PROJECT_DATA_DIR = "gs://seqr-datasets/"
-    REFERENCE_DATA_DIR = "gs://seqr-reference-data/"
-else:
-    PROJECT_DATA_DIR = "/data/projects/"
-    REFERENCE_DATA_DIR = "/data/reference-data/"
-
-GCLOUD_PROJECT = os.environ.get("GCLOUD_PROJECT") or "seqr-project"
-GCLOUD_ZONE = os.environ.get("GCLOUD_ZONE") or "us-central1-b"
-
 
 # set the secret key
 if os.path.isfile("/etc/django_secret_key"):
@@ -223,11 +201,7 @@ AUTHENTICATION_BACKENDS = (
 # ===========================================================
 # legacy settings that need to be reviewed
 
-import csv
-import gzip
-from collections import defaultdict
 from pymongo import MongoClient
-import pymongo
 
 STATICFILES_FINDERS = (
     'django.contrib.staticfiles.finders.FileSystemFinder',
@@ -299,8 +273,6 @@ UTILS_DB = MongoClient(MONGO_SERVICE_HOSTNAME, 27017)['xbrowse_server_utils']
 
 FROM_EMAIL = "\"seqr\" <seqr@broadinstitute.org>"
 
-XBROWSE_VERSION = 0.1
-
 DOCS_DIR = os.path.dirname(os.path.realpath(__file__)) + '/xbrowse_server/user_docs/'
 
 SHELL_PLUS_POST_IMPORTS = (
@@ -310,11 +282,8 @@ SHELL_PLUS_POST_IMPORTS = (
 
 FAMILY_LOAD_BATCH_SIZE = 25000
 
-ANNOTATION_BATCH_SIZE = 25000
-
 # defaults for optional local settings
 CONSTRUCTION_TEMPLATE = None
-CLINVAR_TSV = "/dev/null"
 
 VARIANT_QUERY_RESULTS_LIMIT = 2500
 
@@ -446,10 +415,6 @@ LOGIN_URL = '/login'
 
 LOGOUT_URL = '/logout'
 
-# If supported by the browser, using the HttpOnly flag
-# when generating a cookie helps mitigate the risk of client side script accessing the protected cookie. If a browser that supports HttpOnly
-# detects a cookie containing the HttpOnly flag, and client side script code attempts to read the cookie, the browser returns an empty
-# string as the result. This causes the attack to fail by preventing the malicious (usually XSS) code from sending the data to an attacker's website.
 SESSION_COOKIE_HTTPONLY = True
 CSRF_COOKIE_HTTPONLY = True
 # SESSION_EXPIRE_AT_BROWSER_CLOSE=True
@@ -466,8 +431,6 @@ if len(sys.argv) >= 2 and sys.argv[1] == 'test':
         'PORT': '',
     }
 
-
-logger.info("Starting seqr...")
 logger.info("MONGO_SERVICE_HOSTNAME: " + MONGO_SERVICE_HOSTNAME)
 logger.info("PHENOTIPS_SERVICE_HOSTNAME: " + PHENOTIPS_SERVICE_HOSTNAME)
 logger.info("MATCHBOX_SERVICE_HOSTNAME: " + MATCHBOX_SERVICE_HOSTNAME)
