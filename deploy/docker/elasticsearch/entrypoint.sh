@@ -12,7 +12,7 @@ mkdir -p /logs
 chown elasticsearch /elasticsearch-data /logs
 
 
-export ES_JAVA_OPTS="-Xms3g -Xmx3g"
+export ES_JAVA_OPTS="-Xms3900m -Xmx3900m"
 
 su elasticsearch -c "/usr/local/elasticsearch-${ELASTICSEARCH_VERSION}/bin/elasticsearch \
     -E network.host=0.0.0.0 \

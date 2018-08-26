@@ -93,15 +93,6 @@ RUN apt-get update && apt-get install -y \
     postgresql-client \
     redis-tools
 
-# install google storage connector which allows hail to access vds in google buckets without downloading them first
-RUN cd /usr/local \
-    && wget -nv https://archive.apache.org/dist/spark/spark-2.0.2/spark-2.0.2-bin-hadoop2.7.tgz \
-    && tar xzf /usr/local/spark-2.0.2-bin-hadoop2.7.tgz
-
-RUN pip install decorator==4.2.1    # fix http://discuss.hail.is/t/importerror-cannot-import-name-getargspec/468
-
-RUN wget https://storage.googleapis.com/hadoop-lib/gcs/gcs-connector-latest-hadoop2.jar -O /usr/local/spark-2.0.2-bin-hadoop2.7/jars/gcs-connector-latest-hadoop2.jar
-
 # install picard
 #RUN mkdir /picard \
 #    && cd /picard \
@@ -112,31 +103,6 @@ RUN wget https://storage.googleapis.com/hadoop-lib/gcs/gcs-connector-latest-hado
 #    && cd /reference-data \
 #    && wget http://hgdownload.cse.ucsc.edu/goldenPath/hg38/bigZips/hg38.fa.gz \
 #    && wget http://hgdownload.cse.ucsc.edu/goldenPath/hg19/liftOver/hg19ToHg38.over.chain.gz
-
-WORKDIR /
-
-# install hail, seqr, hail-elasticsearch-pipelines
-RUN mkdir -p /hail/build/libs /hail/build/distributions \
-    && gsutil cp gs://seqr-hail/hail-jar/hail-0.1-es-6.2.4-with-strip-chr-prefix.zip /hail/build/distributions/hail-python.zip \
-    && gsutil cp gs://seqr-hail/hail-jar/hail-0.1-es-6.2.4-with-strip-chr-prefix.jar /hail/build/libs/hail-all-spark.jar
-
-#   git clone --branch 0.1 https://github.com/broadinstitute/hail.git \
-#    && cd /hail \
-#    && ./gradlew -Dspark.version=2.0.2 shadowJar archiveZip
-
-RUN git clone https://github.com/macarthur-lab/seqr.git
-
-RUN git clone https://github.com/macarthur-lab/hail-elasticsearch-pipelines.git
-
-WORKDIR /seqr
-
-# install seqr dependencies
-RUN wget -N https://raw.githubusercontent.com/macarthur-lab/seqr/master/requirements.txt \
-    && pip install --upgrade -r requirements.txt \
-    && pip install --upgrade pip jupyter
-
-
-COPY shared/config/*.py /seqr_settings/
 
 # install more VEP dependencies
 COPY vep-gcloud-grch38.properties /vep
@@ -158,6 +124,43 @@ RUN /usr/bin/cpanm --notest JSON
 RUN gsutil cp gs://hail-common/vep/vep/1var.vcf /vep  \
     && /vep/run_hail_vep85_GRCh37_vcf.sh /vep/1var.vcf \
     && /vep/run_hail_vep85_GRCh38_vcf.sh /vep/1var.vcf
+
+WORKDIR /
+
+# install google storage connector which allows hail to access vds in google buckets without downloading them first
+RUN cd /usr/local \
+    && wget -nv https://archive.apache.org/dist/spark/spark-2.0.2/spark-2.0.2-bin-hadoop2.7.tgz \
+    && tar xzf /usr/local/spark-2.0.2-bin-hadoop2.7.tgz
+
+RUN pip install decorator==4.2.1    # fix http://discuss.hail.is/t/importerror-cannot-import-name-getargspec/468
+
+RUN wget https://storage.googleapis.com/hadoop-lib/gcs/gcs-connector-latest-hadoop2.jar -O /usr/local/spark-2.0.2-bin-hadoop2.7/jars/gcs-connector-latest-hadoop2.jar
+
+
+# install hail, seqr, hail-elasticsearch-pipelines
+RUN mkdir -p /hail/build/libs /hail/build/distributions \
+    && gsutil cp gs://seqr-hail/hail-jar/hail-0.1-es-6.2.4-with-strip-chr-prefix.zip /hail/build/distributions/hail-python.zip \
+    && gsutil cp gs://seqr-hail/hail-jar/hail-0.1-es-6.2.4-with-strip-chr-prefix.jar /hail/build/libs/hail-all-spark.jar
+
+#   git clone --branch 0.1 https://github.com/broadinstitute/hail.git \
+#    && cd /hail \
+#    && ./gradlew -Dspark.version=2.0.2 shadowJar archiveZip
+
+#ARG DISABLE_CACHE=1
+
+RUN git clone https://github.com/macarthur-lab/seqr.git
+
+RUN git clone https://github.com/macarthur-lab/hail-elasticsearch-pipelines.git
+
+WORKDIR /seqr
+
+# install seqr dependencies
+RUN wget -N https://raw.githubusercontent.com/macarthur-lab/seqr/master/requirements.txt \
+    && pip install --upgrade -r requirements.txt \
+    && pip install --upgrade pip jupyter
+
+
+COPY shared/config/*.py /seqr_settings/
 
 ENV TERM=xterm
 ENV PYTHONPATH="$PYTHONPATH:/seqr:/seqr_settings:/hail-elasticsearch-pipelines"
