@@ -117,8 +117,8 @@ COPY shared/gitconfig /root/.gitconfig
 COPY shared/config/*.py /seqr_settings/
 COPY shared/bashrc /root/.bashrc
 
-COPY local/bashrc_custom /root/.bashrc_custom
-COPY local/entrypoint.sh /
+COPY minikube/bashrc_custom /root/.bashrc_custom
+COPY minikube/entrypoint.sh /
 
 WORKDIR /seqr
 

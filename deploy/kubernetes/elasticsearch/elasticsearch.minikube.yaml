@@ -6,11 +6,9 @@ metadata:
     name: elasticsearch
     deployment: {{ DEPLOY_TO }}
 spec:
-  type: NodePort
   ports:
   - name: elasticsearch
     port: {{ ELASTICSEARCH_SERVICE_PORT }}
-    nodePort: {{ ELASTICSEARCH_SERVICE_NODE_PORT }}
   selector:
     name: elasticsearch
 ---

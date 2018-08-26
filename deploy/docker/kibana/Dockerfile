@@ -4,12 +4,6 @@ MAINTAINER MacArthur Lab
 
 ENV KIBANA_VERSION="6.3.2"
 
-# install commmon utilities
-RUN apt-get update && apt-get install -y --fix-missing \
-    curl \
-    less \
-    wget
-
 # create user 'kibana'
 RUN useradd -ms /bin/bash kibana
 

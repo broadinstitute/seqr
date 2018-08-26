@@ -37,11 +37,6 @@ spec:
           limits:
             memory: "25Gi"
             cpu: "1"
-#        readinessProbe:
-#          exec:
-#            command:
-#            - cat
-#            - /tmp/ready
       restartPolicy: Always
       dnsPolicy: ClusterFirst
       affinity:

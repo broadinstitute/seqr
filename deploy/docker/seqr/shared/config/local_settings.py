@@ -83,4 +83,7 @@ READ_VIZ_CRAM_PATH = 'broad-seqr:5000'
 READ_VIZ_USERNAME = "xbrowse-bams"
 READ_VIZ_PASSWD = "xbrowse-bams"
 
-
+ADMINS = [
+    ('Ben Weisburd', 'weisburd@broadinstitute.org'),
+    ('Hana Snow', 'hsnow@broadinstitute.org'),
+]

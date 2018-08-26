@@ -12,7 +12,7 @@ gcloud config set project $GCLOUD_PROJECT
 gcloud config set compute/zone $GCLOUD_ZONE
 
 if [ -e "/.config/client_secrets.json" ]; then
-    # init gcloud
+    # authenticate to google cloud using service account
     cp /usr/share/zoneinfo/US/Eastern /etc/localtime
     gcloud config set project $GCLOUD_PROJECT
     gcloud config set compute/zone $GCLOUD_ZONE
@@ -31,7 +31,7 @@ python -u manage.py migrate
 python -u manage.py check
 python -u manage.py collectstatic --no-input
 
-# launch django dev server in background
+# launch django server in background
 cd /seqr_settings
 gunicorn -w 32 -c gunicorn_config.py wsgi:application |& stdbuf -o0 grep -v curl |& tee /var/log/gunicorn.log &
 
@@ -47,7 +47,6 @@ if [[ -e "$LATEST_SETTINGS_BACKUP" ]]; then
     # restore latest settings backup
     tar -C / -xzf $LATEST_SETTINGS_BACKUP
 fi
-
 
 # set up cron database backups
 echo 'SHELL=/bin/bash

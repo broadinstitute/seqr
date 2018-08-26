@@ -79,10 +79,6 @@ def load_example_project(deployment_target, genome_version="37"):
 
     check_kubernetes_context(deployment_target)
 
-    pod_name = get_pod_name('seqr', deployment_target=deployment_target)
-    if not pod_name:
-        raise ValueError("No 'seqr' pods found. Is the kubectl environment configured in this terminal? and has this type of pod been deployed?" % locals())
-
     if genome_version == "37":
         vcf_filename = "1kg.vep.vcf.gz"
     elif genome_version == "38":

@@ -17,7 +17,7 @@ logger.setLevel(logging.INFO)
 def deploy(deployment_target, components, output_dir=None, other_settings={}):
     """Deploy all seqr components to a kubernetes cluster.
     Args:
-        deployment_target (string): one of the DEPLOYMENT_TARGETs  (eg. "local", or "gcloud")
+        deployment_target (string): one of the DEPLOYMENT_TARGETs  (eg. "minikube", or "gcloud")
         components (list): A list of components to be deployed from constants.DEPLOYABLE_COMPONENTS
             (eg. "postgres", "phenotips").
         output_dir (string): path of directory where to put deployment logs and rendered config files
@@ -62,7 +62,6 @@ def deploy(deployment_target, components, output_dir=None, other_settings={}):
 
         render(input_base_dir, file_path, settings, output_base_dir)
 
-
     # deploy
     if "init-cluster" in components:
         deploy_init_cluster(settings)
@@ -76,11 +75,11 @@ def deploy(deployment_target, components, output_dir=None, other_settings={}):
                               "initializing. Retrying...") % locals())
                 time.sleep(5)
 
+    if "settings" in components:
+        deploy_config_map(settings)
+
     if "secrets" in components:
         deploy_secrets(settings)
-
-    #if "init-elasticsearch-cluster" in components:
-    #    pass
 
     if "cockpit" in components:
         deploy_cockpit(settings)
@@ -103,8 +102,17 @@ def deploy(deployment_target, components, output_dir=None, other_settings={}):
     if "seqr" in components:
         deploy_seqr(settings)
 
+    if "external-mongo-connector" in components:
+        deploy_external_connector(settings, "mongo")
+
+    if "external-elasticsearch-connector" in components:
+        deploy_external_connector(settings, "elasticsearch")
+
     if "elasticsearch" in components:
         deploy_elasticsearch(settings)
+
+    if "kibana" in components:
+        deploy_kibana(settings)
 
     if "es-client" in components:
         deploy_elasticsearch_sharded("es-client", settings)
@@ -117,9 +125,6 @@ def deploy(deployment_target, components, output_dir=None, other_settings={}):
 
     if "es-kibana" in components:
         deploy_elasticsearch_sharded("kibana", settings)
-
-    if "kibana" in components:
-        deploy_kibana(settings)
 
     if "nginx" in components:
         deploy_nginx(settings)
@@ -354,7 +359,7 @@ def deploy_cockpit(settings):
         delete_pod("cockpit", settings, custom_yaml_filename="cockpit.yaml")
         #"kubectl delete -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/cockpit/cockpit.yaml" % settings,
 
-    if settings["DEPLOY_TO"] in ["minikube", "kube-solo"]:
+    if settings["DEPLOY_TO"] == "minikube":
         # disable username/password prompt - https://github.com/cockpit-project/cockpit/pull/6921
         run(" ".join([
             "kubectl create clusterrolebinding anon-cluster-admin-binding",
@@ -389,6 +394,14 @@ def deploy_nginx(settings):
 
     _wait_until_pod_is_running("nginx", deployment_target=settings["DEPLOY_TO"])
 
+
+def deploy_external_connector(settings, connector_name):
+    if connector_name not in ["mongo", "elasticsearch"]:
+        raise ValueError("Invalid connector name: %s" % connector_name)
+
+    print_separator("external-%s-connector" % connector_name)
+    run(("kubectl delete -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/external-connectors/" % settings) + "external-%(connector_name)s.yaml" % locals(), errors_to_ignore=["not found"])
+    run(("kubectl create -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/external-connectors/" % settings) + "external-%(connector_name)s.yaml" % locals())
 
 def deploy_seqr(settings):
     print_separator("seqr")
@@ -538,14 +551,6 @@ def deploy_init_cluster(settings):
                     "%(CLUSTER_NAME)s-"+label+"-disk",
                 ]) % settings, verbose=True, errors_to_ignore=["already exists"])
 
-    elif settings["DEPLOY_TO"] == "kube-solo":
-        run("mkdir -p %(POSTGRES_DBPATH)s" % settings)
-        run("mkdir -p %(MONGO_DBPATH)s" % settings)
-        run("mkdir -p %(ELASTICSEARCH_DBPATH)s" % settings)
-
-        # set VM settings required for elasticsearch
-        run("corectl ssh %(node_name)s \"sudo /sbin/sysctl -w vm.max_map_count=262144\"" % locals())
-
     elif settings["DEPLOY_TO"] == "minikube":
         run("mkdir -p %(LOCAL_DATA_DIR)s" % settings)
         run("mkdir -p %(LOCAL_DATA_DIR)s/postgres" % settings)
@@ -560,13 +565,13 @@ def deploy_init_cluster(settings):
             logger.info("minikube status: %s" % str(e))
 
             logger.info("starting minikube: ")
-            # --mount-string %(LOCAL_DATA_DIR)s:%(MINIKUBE_DATA_DIR)s --mount
             run("minikube start --disk-size=%(MINIKUBE_DISK_SIZE)s --memory %(MINIKUBE_MEMORY)s --cpus %(MINIKUBE_NUM_CPUS)s --vm-driver=%(MINIKUBE_VM_DRIVER)s" % settings)
+            # --mount-string %(LOCAL_DATA_DIR)s:%(MINIKUBE_DATA_DIR)s --mount
 
-        # fix time sync issues on MacOSX which could interfere with token auth (https://github.com/kubernetes/minikube/issues/1378)
+        # this fixes time sync issues on MacOSX which could interfere with token auth (https://github.com/kubernetes/minikube/issues/1378)
         run("minikube ssh -- docker run -i --rm --privileged --pid=host debian nsenter -t 1 -m -u -n -i date -u $(date -u +%m%d%H%M%Y)")
 
-        # set VM settings required for elasticsearch
+        # set VM max_map_count to the value required for elasticsearch
         run("minikube ssh 'sudo /sbin/sysctl -w vm.max_map_count=262144'")
 
     else:
@@ -583,7 +588,7 @@ def deploy_init_cluster(settings):
 
 
 def deploy_config_map(settings):
-        # write out a ConfigMap file
+    # write out a ConfigMap file
     configmap_file_path = os.path.join(settings["DEPLOYMENT_TEMP_DIR"], "deploy/kubernetes/all-settings.properties")
     with open(configmap_file_path, "w") as f:
         for key, value in settings.items():

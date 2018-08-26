@@ -15,10 +15,6 @@ CLUSTER_NUM_NODES: 12
 CLUSTER_EXTERNAL_IP: ''
 CLUSTER_HOSTNAME: ''
 
-CLOUD_PROVIDER: 'google'
-USE_GCLOUD_DATAPROC: yes
-
-
 #   n1-highmem-2	 2	 13GB	 $60.50
 #   n1-highmem-4	 4	 26GB	$121.00
 #   n1-highmem-8	 8	 52GB	$242.00

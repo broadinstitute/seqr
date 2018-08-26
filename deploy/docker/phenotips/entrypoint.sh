@@ -17,10 +17,5 @@ PGPASSWORD=xwiki psql --host postgres --port 5432 -U xwiki xwiki -f /init_phenot
 #   export START_OPTS="$START_OPTS -Xdebug -Xnoagent -Djava.compiler=NONE -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=5005"
 #fi
 
-# start PhenoTips in the background
-./start.sh &
-
-touch /tmp/ready
-
-sleep 1000000000000
-
+# start PhenoTips
+./start.sh
