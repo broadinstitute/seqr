@@ -16,6 +16,7 @@ from deploy.utils.servctl_utils import print_log, port_forward, \
     show_dashboard, show_status, wait_for, troubleshoot_component, \
     delete_component, reset_database, delete_all, get_component_port_pairs, \
     check_kubernetes_context, set_environment
+from seqr.utils.network_utils import get_ip_address
 from seqr.utils.shell_utils import run
 
 logging.basicConfig(stream=sys.stdout, format='%(asctime)s %(levelname)-8s %(message)s', level=logging.INFO)
@@ -211,6 +212,7 @@ if args.command in [DEPLOY_COMMAND, DEPLOY_ALL_COMMAND]:
     elif args.command == DEPLOY_ALL_COMMAND:
         deployable_components = [
             "init-cluster",
+            "settings",
             "secrets",
 
             #"init-elasticsearch-cluster",
@@ -222,7 +224,11 @@ if args.command in [DEPLOY_COMMAND, DEPLOY_ALL_COMMAND]:
             #"es-data",
         ]
 
-        if args.deployment_target not in ["minikube", "kube-solo"]:
+        if args.deployment_target == "minikube":
+            deployable_components += [
+                "cockpit",
+            ]
+        else:
             deployable_components += [
                 "matchbox",
                 "nginx",
@@ -230,8 +236,10 @@ if args.command in [DEPLOY_COMMAND, DEPLOY_ALL_COMMAND]:
 
         deployable_components += [
             "mongo",  # deprecated - will be going away soon
+            #"external-mongo-connector",
             "postgres",
-            "elasticsearch",
+            #"elasticsearch",
+            "external-elasticsearch-connector",
             "kibana",
             "redis",
             "phenotips",
