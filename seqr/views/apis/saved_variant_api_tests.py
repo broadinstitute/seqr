@@ -38,7 +38,7 @@ class ProjectAPITest(TransactionTestCase):
         )
 
         # filter by family
-        response = self.client.get('{}?family=F000002_2'.format(url))
+        response = self.client.get('{}?families=F000002_2'.format(url))
         self.assertEqual(response.status_code, 200)
 
         self.assertSetEqual(set(response.json()['savedVariants'].keys()), {'SV0000002_1248367227_r0390_100'})

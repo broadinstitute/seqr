@@ -42,7 +42,7 @@ class ProjectPageTest(TestCase):
         response_json = response.json()
         self.assertSetEqual(
             set(response_json.keys()),
-            {'project', 'familiesByGuid', 'individualsByGuid', 'samplesByGuid', 'locusListsByGuid', 'matchmakerSubmissions'}
+            {'project', 'familiesByGuid', 'individualsByGuid', 'samplesByGuid', 'locusListsByGuid', 'analysisGroupsByGuid', 'matchmakerSubmissions'}
         )
         self.assertSetEqual(
             set(response_json['project'].keys()),
@@ -74,6 +74,10 @@ class ProjectPageTest(TestCase):
             set(response_json['locusListsByGuid'].values()[0].keys()),
             {'locusListGuid', 'description', 'lastModifiedDate', 'numEntries', 'isPublic', 'createdBy', 'createdDate',
              'canEdit', 'name'}
+        )
+        self.assertSetEqual(
+            set(response_json['analysisGroupsByGuid'].values()[0].keys()),
+            {'analysisGroupGuid', 'description', 'name', 'projectGuid', 'familyGuids'}
         )
         self.assertSetEqual(set(response_json['matchmakerSubmissions'].values()[0].keys()), {MME_INDIVIDUAL_ID})
         self.assertSetEqual(

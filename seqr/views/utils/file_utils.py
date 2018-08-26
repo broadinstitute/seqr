@@ -25,10 +25,13 @@ def save_temp_file(request):
     except Exception as e:
         return create_json_response({'errors': [e.message]}, status=400)
 
-    return create_json_response({
-        'uploadedFileId': uploaded_file_id,
-        'info': ['Parsed {num_rows} rows from {filename}'.format(num_rows=len(json_records), filename=filename)],
-    })
+    response = {'uploadedFileId': uploaded_file_id}
+    if request.GET.get('parsedData'):
+        response['parsedData'] = json_records
+    else:
+        response['info'] = ['Parsed {num_rows} rows from {filename}'.format(num_rows=len(json_records), filename=filename)]
+
+    return create_json_response(response)
 
 
 def _parse_file(filename, stream):
@@ -38,9 +41,16 @@ def _parse_file(filename, stream):
     elif filename.endswith('.xls') or filename.endswith('.xlsx'):
         wb = xlrd.open_workbook(file_contents=stream.read())
         ws = wb.sheet_by_index(0)
-        return [[ws.cell(rowx=i, colx=j).value for j in range(ws.ncols)] for i in iter(range(ws.nrows))]
+        return [[_parse_excel_string_cell(ws.cell(rowx=i, colx=j)) for j in range(ws.ncols)] for i in iter(range(ws.nrows))]
 
     raise ValueError("Unexpected file type: {}".format(filename))
+
+
+def _parse_excel_string_cell(cell):
+    cell_value = cell.value
+    if cell.ctype == 2 and int(cell_value) == cell_value:
+        cell_value = '{:.0f}'.format(cell_value)
+    return cell_value
 
 
 def _compute_serialized_file_path(uploaded_file_id):

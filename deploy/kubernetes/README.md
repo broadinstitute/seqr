@@ -5,13 +5,15 @@ Overview
 
 seqr consists of the following components or micro-services:
 - seqr - the main client-server application - javascript + react.js on the client-side, python + django on the server-side.
-- postgres - SQL database used by seqr and phenotips to store metadata and small reference datasets (eg. OMIM, clinvar).
-- [phenotips](https://phenotips.org/) - tool for entering structured phenotype information using the HPO ontology.
-- mongo - NoSQL database used to store large variant datasets and reference data. This is being phased out in favor of elasticsearch.
-- [matchbox](https://github.com/macarthur-lab/matchbox) - a service that encapsulates communication with the Match Maker Exchange
+- postgres - SQL database used by seqr and phenotips to store project metadata and user-generated content such as variant notes, etc.
+- phenotips - 3rd-party web-based tool for entering structured phenotype information.
+- mongo - NoSQL database used to store variant callsets and reference data.
+- matchbox - a service that encapsulates communication with the Match Maker Exchange.
 - nginx - http server used as the main gateway between seqr and the internet.
-- elasticsearch - NoSQL database that's replacing mongo for storing reference data and variant callsets.
-- kibana - (optional) user-friendly visual interface to elasticsearch.
+- pipeline-runner - (optional) container for running hail and VEP to annotate and load datasets on a small local deployment where a separate on-prem spark cluster is not available. 
+- redis - in-memory cache used to speed up the django application layer.
+- elasticsearch - NoSQL database alternative to mongo that currently supports loading large callsets using a Spark-based [hail](http://hail.is) pipeline.
+- kibana - (optional) dashboard and visual interface for elasticsearch.
 
 
 
@@ -44,12 +46,6 @@ Create Kubernetes Cluster
   
 2. [Install kubectl](https://kubernetes.io/docs/tasks/kubectl/install/) 
 
-3. Start a local minikube kubernetes cluster:
-    
-    ```
-    ./deploy/start_minikube.sh
-    ```
- 
 
 **Cloud-based instance**
 
@@ -67,16 +63,17 @@ Deploy and Manage Seqr
 
 To deploy all seqr components to your Kubernetes environment:
 
-    ./servctl deploy-all minikube
+     ./servctl deploy-all minikube
    
-The `./servctl` script provides subcommands for deploying and interacting with seqr components, and
- performing other common development and troubleshooting operations. 
+The `./servctl` script provides sub-commands for deploying and interacting with seqr components. 
  
  Run `./servctl -h` to see all available subcommands. The most commonly used ones are:
 
+    *** {component-name} is one of:  init-cluster, secrets, nginx, phenotips, postgres, seqr, etc. 
+    *** {deployment-target}  is one of:  minikube, gcloud-dev, or gcloud-prod 
+
       deploy-all  {deployment-target}                       # end-to-end deployment - deploys all seqr components 
-      deploy-all-and-load  {deployment-target}              # end-to-end deployment - deploys all seqr components and loads reference data + an example project
-      deploy {component-name} {deployment-target}           # deploy one or more components
+      deploy {component-name} {deployment-target}           # deploy some specific component(s)
       
       status {deployment-target}                            # print status of all kubernetes and docker subsystems
       set-env {deployment-target}                           # deploy one or more components
@@ -92,14 +89,11 @@ The `./servctl` script provides subcommands for deploying and interacting with s
       
       delete {component-name} {deployment-target}           # undeploys the component
       
-    *** {component-name}  should be one of these:  init-cluster, secrets, nginx, phenotips, postgres, seqr, etc. 
-    *** {deployment-target}  should be one of these:  minikube, gcloud-dev, or gcloud-prod 
-
 
 Adjust Settings
 ---------------
 
-The seqr installation steps above should produce a working instance with default settings. You will likely also want to configure settings and secrets in the files below. After any changes, you will need to re-deploy those components for the chagnes to take effect:
+The seqr installation steps above should produce a working instance with default settings. You will also want to configure settings and secrets (sensitive info like keys, usernames, password) in the files below. After any changes, you will need to re-deploy those components for the chagnes to take effect:
 
     deploy/kubernetes/*-settings.yaml - these files contain non-secret settings for each type of deployment, and are intended to  be only non-secret settings that vary across different deployments.  
 

@@ -1,9 +1,9 @@
 import logging
 from django.core.management.base import BaseCommand
+from django.db.models.query_utils import Q
 from tqdm import tqdm
-
-from seqr.models import Project, SavedVariant
-from seqr.utils.model_sync_utils import retrieve_saved_variants_json, update_saved_variant_json
+from seqr.models import Project
+from seqr.views.utils.variant_utils import update_project_saved_variant_json
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +19,7 @@ class Command(BaseCommand):
         projects_to_process = options['projects']
 
         if projects_to_process:
-            projects = Project.objects.filter(name__in=projects_to_process)
+            projects = Project.objects.filter(Q(name__in=projects_to_process) | Q(guid__in=projects_to_process))
             logging.info("Processing %s projects" % len(projects))
         else:
             projects = Project.objects.filter(deprecated_project_id__isnull=False)
@@ -29,22 +29,13 @@ class Command(BaseCommand):
         error = {}
         for project in tqdm(projects, unit=" projects"):
             logger.info("Project: " + project.name)
-
-            saved_variants = SavedVariant.objects.filter(project=project, family__isnull=False).select_related('family')
-            saved_variants_map = {(v.xpos_start, v.ref, v.alt, v.family.family_id): v for v in saved_variants}
-
             try:
-                variants_json = retrieve_saved_variants_json(project, saved_variants_map.keys())
+                variants_json = update_project_saved_variant_json(project)
+                success[project.name] = len(variants_json)
+                logger.info('Updated {0} variants for project {1}'.format(len(variants_json), project.name))
             except Exception as e:
                 logger.error('Error in project {0}: {1}'.format(project.name, e))
                 error[project.name] = e
-                continue
-
-            for var in variants_json:
-                saved_variant = saved_variants_map[(var['xpos'], var['ref'], var['alt'], var['extras']['family_id'])]
-                update_saved_variant_json(saved_variant, var)
-            success[project.name] = len(variants_json)
-            logger.info('Updated {0} variants for project {1}'.format(len(variants_json), project.name))
 
         logger.info("Done")
         logger.info("Summary: ")

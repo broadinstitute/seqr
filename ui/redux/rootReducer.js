@@ -25,7 +25,7 @@ const REQUEST_GENE_LIST = 'REQUEST_GENE_LIST'
 // action creators
 
 // A helper action that handles create, update and delete requests
-const updateEntity = (values, receiveDataAction, urlPath, idField, actionSuffix) => {
+export const updateEntity = (values, receiveDataAction, urlPath, idField, actionSuffix) => {
   return (dispatch) => {
     let action = 'create'
     if (values[idField]) {
@@ -227,6 +227,7 @@ const rootReducer = combineReducers(Object.assign({
   familiesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'familiesByGuid'),
   individualsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'individualsByGuid'),
   samplesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'samplesByGuid'),
+  analysisGroupsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'analysisGroupsByGuid'),
   matchmakerSubmissions: createObjectsByIdReducer(RECEIVE_DATA, 'matchmakerSubmissions'),
   genesById: createObjectsByIdReducer(RECEIVE_GENES),
   genesLoading: loadingReducer(REQUEST_GENES, RECEIVE_GENES),

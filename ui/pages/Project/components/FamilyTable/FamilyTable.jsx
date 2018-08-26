@@ -83,13 +83,14 @@ const FamilyTable = ({ visibleFamilies, loading, headerStatus, showInternalFilte
       <ExportTableButton downloads={exportUrls} />
       <HorizontalSpacer width={45} />
     </ExportContainer>
-    <Table attached="top">
+    <Table padded fixed attached="top">
       <TableHeaderRow
         headerStatus={headerStatus}
         showInternalFilters={showInternalFilters}
         fields={noDetailFields}
         tableName={tableName}
         showVariantTags={showVariantTags}
+        analysisGroupGuid={props.match.params.analysisGroupGuid}
       />
     </Table>
     <Table celled striped padded fixed attached="bottom">
@@ -125,6 +126,7 @@ FamilyTable.propTypes = {
   showVariantTags: PropTypes.bool,
   noDetailFields: PropTypes.array,
   tableName: PropTypes.string,
+  match: PropTypes.object,
 }
 
 const mapStateToProps = (state, ownProps) => ({

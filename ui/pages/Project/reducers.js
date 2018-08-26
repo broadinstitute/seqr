@@ -2,7 +2,7 @@ import { combineReducers } from 'redux'
 import { SubmissionError } from 'redux-form'
 
 import { loadingReducer, createSingleObjectReducer, createObjectsByIdReducer, createSingleValueReducer } from 'redux/utils/reducerFactories'
-import { REQUEST_PROJECTS } from 'redux/rootReducer'
+import { REQUEST_PROJECTS, RECEIVE_DATA, updateEntity } from 'redux/rootReducer'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 import { getProject, getProjectFamiliesByGuid } from 'pages/Project/selectors'
 import {
@@ -10,7 +10,7 @@ import {
 } from './constants'
 
 // action creators and reducers in one file as suggested by https://github.com/erikras/ducks-modular-redux
-const RECEIVE_DATA = 'RECEIVE_DATA'
+
 const UPDATE_FAMILY_TABLE_STATE = 'UPDATE_FAMILY_TABLE_STATE'
 const UPDATE_CASE_REVIEW_TABLE_STATE = 'UPDATE_CASE_REVIEW_TABLE_STATE'
 const UPDATE_SAVED_VARIANT_TABLE_STATE = 'UPDATE_VARIANT_STATE'
@@ -50,7 +50,7 @@ export const loadProject = (projectGuid) => {
   }
 }
 
-export const loadProjectVariants = (familyGuid, variantGuid) => {
+export const loadProjectVariants = (familyGuids, variantGuid) => {
   return (dispatch, getState) => {
     const state = getState()
     const project = getProject(state)
@@ -65,7 +65,7 @@ export const loadProjectVariants = (familyGuid, variantGuid) => {
       }
       url = `${url}/${variantGuid}`
     } else {
-      expectedFamilyGuids = familyGuid ? [familyGuid] : Object.keys(getProjectFamiliesByGuid(state))
+      expectedFamilyGuids = familyGuids || Object.keys(getProjectFamiliesByGuid(state))
       if (expectedFamilyGuids.length > 0 && expectedFamilyGuids.every(family => state.projectSavedVariantFamilies[family])) {
         return
       }
@@ -86,7 +86,7 @@ export const loadProjectVariants = (familyGuid, variantGuid) => {
       (e) => {
         dispatch({ type: RECEIVE_SAVED_VARIANTS, error: e.message, updatesById: {} })
       },
-    ).get(familyGuid ? { family: familyGuid } : {})
+    ).get(familyGuids ? { families: familyGuids.join(',') } : {})
   }
 }
 
@@ -167,6 +167,10 @@ export const updateLocusLists = (values) => {
       (e) => { throw new SubmissionError({ _error: [e.message] }) },
     ).post(values)
   }
+}
+
+export const updateAnalysisGroup = (values) => {
+  return updateEntity(values, RECEIVE_DATA, `/api/project/${values.projectGuid}/analysis_groups`, 'analysisGroupGuid')
 }
 
 export const loadMmeMatches = (submission, matchSource) => {

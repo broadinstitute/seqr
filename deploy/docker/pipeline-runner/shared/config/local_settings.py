@@ -65,6 +65,8 @@ CONTROL_COHORTS = [
     },
 ]
 
+UPLOADED_PEDIGREE_FILE_RECIPIENTS = []
+
 COVERAGE_DB = _conn['coverage']
 
 PROJECT_DATASTORE_DB = _conn['proj_store']
@@ -75,6 +77,5 @@ CUSTOM_POPULATIONS_DB = _conn['xcustom_refpops']
 
 READ_VIZ_BAM_PATH = os.path.join(reference_data_dir, "bams")
 
-CLINVAR_TSV  = os.path.join(reference_data_dir, "clinvar.tsv")
 
 

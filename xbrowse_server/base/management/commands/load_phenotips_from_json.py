@@ -42,17 +42,17 @@ class Command(BaseCommand):
     """
     def add_arguments(self, parser):
         parser.add_argument('-t', '--test', help="Used to test parsing. Does actually change anything in seqr.", action="store_true")
+        parser.add_argument('--patient-id-mapping', nargs="?", help="text file that contains 2 columns: the 'Patient ID' value that's in the phenotips json and the corresponding seqr `Individual id`.")
         parser.add_argument('project_id', help="seqr project id")
         parser.add_argument('file_name', nargs="+", help="one or more file paths for json files that were exported from Phenotips using the 'Export Json' UI")
-        parser.add_argument('patient_id_to_indiv_id_mapping', nargs="?", help="text file that maps the 'Patient ID' value that's in the phenotips json to the corresponding seqr individual id.")
 
     def handle(self, *args, **options):
         project_id = options['project_id']
         file_names = options['file_name']
-        patient_id_to_indiv_id_mapping_file_path = options.get('patient_id_to_indiv_id_mapping')
+        patient_id_mapping = options.get('patient_id_mapping')
         
-        if patient_id_to_indiv_id_mapping_file_path:
-            with open(patient_id_to_indiv_id_mapping_file_path) as patient_id_to_indiv_id_mapping:
+        if patient_id_mapping:
+            with open(patient_id_mapping) as patient_id_to_indiv_id_mapping:
                 rows = patient_id_to_indiv_id_mapping.read().strip().split("\n")
 
                 patient_id_to_indiv_id_mapping = {}
@@ -63,7 +63,7 @@ class Command(BaseCommand):
                            "%s row %s contains %s columns. Expected 2 columns. "
                            "Column 1 = the phenotips patient id and "
                            "Column 2 = the seqr individual id") % (
-                                patient_id_to_indiv_id_mapping_file_path, i, len(fields)))
+                            patient_id_mapping, i, len(fields)))
                     patient_id_to_indiv_id_mapping[fields[0]] = fields[1]
         else:
             patient_id_to_indiv_id_mapping = {}
@@ -81,7 +81,8 @@ class Command(BaseCommand):
             patient_id_to_indiv_id_mapping (dict): a mapping file that specifies the link between a seqr ID and external ID
             project_id (string): the project that this individual belongs to
             is_test_only (bool): if True, phenotips records won't be modified.
-        """                    
+        """
+        print("Processing {}".format(file_name))
         with open(file_name) as json_file:
             patient_json = json.load(json_file)
 
@@ -91,10 +92,7 @@ class Command(BaseCommand):
                     self.process_single_patient_json_file(patient, patient_id_to_indiv_id_mapping, project_id, is_test_only=is_test_only)
             else:
                 self.process_single_patient_json_file(patient_json, patient_id_to_indiv_id_mapping, project_id, is_test_only=is_test_only)
-        
-        
-        
-        
+
     def process_single_patient_json_file(self, patient_json, patient_id_to_indiv_id_mapping, project_id, is_test_only=False):
         """
         Process a single patient JSON file that was exported from a PhenoTips instance
