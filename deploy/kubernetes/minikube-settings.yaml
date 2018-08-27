@@ -1,3 +1,14 @@
+MINIKUBE_DISK_SIZE: 100g
+MINIKUBE_MEMORY: 12000
+MINIKUBE_NUM_CPUS: 8
+MINIKUBE_VM_DRIVER: hyperkit   # NOTE: local mounts not working yet (https://github.com/kubernetes/minikube/issues/2481)
+
+ELASTICSEARCH_SERVICE_EXTERNAL_IP: {{ HOST_MACHINE_IP }}
+ELASTICSEARCH_SERVICE_EXTERNAL_PORT: 9200
+
+MONGO_SERVICE_EXTERNAL_IP: {{ HOST_MACHINE_IP }}
+MONGO_SERVICE_EXTERNAL_PORT: 27017
+
 DEPLOY_TO: 'minikube'
 DEPLOY_TO_PREFIX: 'minikube'
 DEPLOYMENT_TYPE: 'dev'
@@ -7,6 +18,7 @@ DOCKER_IMAGE_PREFIX: 'minikube/seqr'
 # LOCAL_DATA_DIR will be mounted into the minikube VM as $MINIKUBE_DATA_DIR
 # NOTE: this can't be a directory underneath your home directory since those are mounted by default to the /Users
 # dir inside mnikube
+# NOTE: mounts are currently broken on MacOS (https://github.com/kubernetes/minikube/issues/2481)
 LOCAL_DATA_DIR: '/minikube/data'
 
 # paths inside the minikube VM
@@ -15,25 +27,12 @@ POSTGRES_DBPATH:  '/data/postgres'
 MONGO_DBPATH:  '/data/mongo'
 ELASTICSEARCH_DBPATH:  '/data/elasticsearch'
 
-MINIKUBE_DISK_SIZE: 100g
-MINIKUBE_MEMORY: 12000
-MINIKUBE_NUM_CPUS: 8
-MINIKUBE_VM_DRIVER: hyperkit   # NOTE: local mounts not working yet (https://github.com/kubernetes/minikube/issues/2481)
-
 CLUSTER_NAME: 'minikube'
 
 # settings for making it easy to access gcloud resources from local pods
-GCLOUD_PROJECT: ''
-GCLOUD_ZONE: ''
-
-ELASTICSEARCH_SERVICE_EXTERNAL_IP: {{ HOST_MACHINE_IP }}
-ELASTICSEARCH_SERVICE_EXTERNAL_PORT: 9200
-
-MONGO_SERVICE_EXTERNAL_IP: {{ HOST_MACHINE_IP }}
-MONGO_SERVICE_EXTERNAL_PORT: 27017
+GCLOUD_PROJECT: 'seqr-project'
+GCLOUD_ZONE: 'us-central1-b'
 
 SEQR_SERVICE_NODE_PORT: 30003   # node port range starts at 30000
 
-SEQR_GIT_BRANCH: 'dev'
-
-
+SEQR_GIT_BRANCH: 'more_local_install_updates'

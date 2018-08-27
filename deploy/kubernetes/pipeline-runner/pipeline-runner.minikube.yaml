@@ -29,7 +29,7 @@ spec:
       volumes:
       - name: data-dir
         hostPath:
-          path: {{ LOCAL_DATA_DIR }}
+          path: {{ MINIKUBE_DATA_DIR }}
       - name: gcloud-client-secrets-volume
         secret:
           secretName: gcloud-client-secrets
