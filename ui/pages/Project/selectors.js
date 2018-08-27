@@ -40,7 +40,6 @@ const FAMILY_SORT_LOOKUP = FAMILY_SORT_OPTIONS.reduce(
 
 // project data selectors
 
-export const getProjectDetailsIsLoading = state => state.projectDetailsLoading.isLoading
 export const getProjectSavedVariantsIsLoading = state => state.projectSavedVariantsLoading.isLoading
 export const getProjectGuid = state => state.currentProjectGuid
 

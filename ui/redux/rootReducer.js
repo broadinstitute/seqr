@@ -16,6 +16,7 @@ import modalReducers from './utils/modalReducer'
 // actions
 export const RECEIVE_DATA = 'RECEIVE_DATA'
 export const REQUEST_PROJECTS = 'REQUEST_PROJECTS'
+const REQUEST_PROJECT_DETAILS = 'REQUEST_PROJECT_DETAILS'
 const REQUEST_VARIANT = 'REQUEST_VARIANT'
 const REQUEST_GENES = 'REQUEST_GENES'
 const REQUEST_GENE_LISTS = 'REQUEST_GENE_LISTS'
@@ -53,6 +54,27 @@ export const fetchProjects = () => {
       },
       e => dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} }),
     ).get()
+  }
+}
+
+
+export const loadProject = (projectGuid) => {
+  return (dispatch, getState) => {
+    const project = getState().projectsByGuid[projectGuid]
+    if (!project || !project.detailsLoaded) {
+      dispatch({ type: REQUEST_PROJECT_DETAILS })
+      if (!project) {
+        dispatch({ type: REQUEST_PROJECTS })
+      }
+      new HttpRequestHelper(`/api/project/${projectGuid}/details`,
+        (responseJson) => {
+          dispatch({ type: RECEIVE_DATA, updatesById: { projectsByGuid: { [projectGuid]: responseJson.project }, ...responseJson } })
+        },
+        (e) => {
+          dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
+        },
+      ).get()
+    }
   }
 }
 
@@ -208,6 +230,7 @@ const rootReducer = combineReducers(Object.assign({
   projectCategoriesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'projectCategoriesByGuid'),
   projectsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'projectsByGuid'),
   projectsLoading: loadingReducer(REQUEST_PROJECTS, RECEIVE_DATA),
+  projectDetailsLoading: loadingReducer(REQUEST_PROJECT_DETAILS, RECEIVE_DATA),
   familiesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'familiesByGuid'),
   individualsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'individualsByGuid'),
   samplesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'samplesByGuid'),

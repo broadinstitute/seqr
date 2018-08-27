@@ -2,7 +2,7 @@ import { combineReducers } from 'redux'
 import { SubmissionError } from 'redux-form'
 
 import { loadingReducer, createSingleObjectReducer, createSingleValueReducer } from 'redux/utils/reducerFactories'
-import { REQUEST_PROJECTS, updateEntity } from 'redux/rootReducer'
+import { updateEntity, loadProject } from 'redux/rootReducer'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 import { SORT_BY_FAMILY_GUID } from 'shared/utils/constants'
 import { getProject, getProjectFamiliesByGuid } from 'pages/Project/selectors'
@@ -17,34 +17,16 @@ const UPDATE_FAMILY_TABLE_STATE = 'UPDATE_FAMILY_TABLE_STATE'
 const UPDATE_CASE_REVIEW_TABLE_STATE = 'UPDATE_CASE_REVIEW_TABLE_STATE'
 const UPDATE_SAVED_VARIANT_TABLE_STATE = 'UPDATE_VARIANT_STATE'
 const UPDATE_CURRENT_PROJECT = 'UPDATE_CURRENT_PROJECT'
-const REQUEST_PROJECT_DETAILS = 'REQUEST_PROJECT_DETAILS'
-const RECEIVE_PROJECT_DETAILS = 'RECEIVE_PROJECT_DETAILS'
 const REQUEST_SAVED_VARIANTS = 'REQUEST_SAVED_VARIANTS'
 const RECEIVE_SAVED_VARIANT_FAMILIES = 'RECEIVE_SAVED_VARIANT_FAMILIES'
 
 
 // Data actions
 
-export const loadProject = (projectGuid) => {
-  return (dispatch, getState) => {
+export const loadCurrentProject = (projectGuid) => {
+  return (dispatch) => {
     dispatch({ type: UPDATE_CURRENT_PROJECT, newValue: projectGuid })
-
-    const currentProject = getState().projectsByGuid[projectGuid]
-    if (!currentProject || !currentProject.detailsLoaded) {
-      dispatch({ type: REQUEST_PROJECT_DETAILS })
-      if (!currentProject) {
-        dispatch({ type: REQUEST_PROJECTS })
-      }
-      new HttpRequestHelper(`/api/project/${projectGuid}/details`,
-        (responseJson) => {
-          dispatch({ type: RECEIVE_PROJECT_DETAILS })
-          dispatch({ type: RECEIVE_DATA, updatesById: { projectsByGuid: { [projectGuid]: responseJson.project }, ...responseJson } })
-        },
-        (e) => {
-          dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
-        },
-      ).get()
-    }
+    dispatch(loadProject(projectGuid))
   }
 }
 
@@ -180,7 +162,6 @@ export const updateSavedVariantTable = updates => ({ type: UPDATE_SAVED_VARIANT_
 
 export const reducers = {
   currentProjectGuid: createSingleValueReducer(UPDATE_CURRENT_PROJECT, null),
-  projectDetailsLoading: loadingReducer(REQUEST_PROJECT_DETAILS, RECEIVE_PROJECT_DETAILS),
   projectSavedVariantsLoading: loadingReducer(REQUEST_SAVED_VARIANTS, RECEIVE_DATA),
   projectSavedVariantFamilies: createSingleObjectReducer(RECEIVE_SAVED_VARIANT_FAMILIES),
   familyTableState: createSingleObjectReducer(UPDATE_FAMILY_TABLE_STATE, {

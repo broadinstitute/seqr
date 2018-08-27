@@ -58,21 +58,10 @@ def query_variants_handler(request):
     _add_locus_lists(project, parsed_variants, genes)
     _add_saved_variants(parsed_variants, project, family)
 
-    project_json = _get_json_for_project(project, request.user)
-    project_json.update(_get_json_for_variant_tag_types(project))
-    family_json = _get_json_for_family(family, user=request.user, project_guid=project.guid, add_individual_guids_field=True)
-    individuals = Individual.objects.filter(guid__in=family_json['individualGuids'])
-    individuals_json = _get_json_for_individuals(
-        individuals, user=request.user, project_guid=project.guid, family_guid=family.guid
-    )
-
     return create_json_response({
         'searchedVariants': [{'variantGuid': v['variantGuid']} if v['variantGuid'] else v for v in parsed_variants],
         'savedVariantsByGuid': {variant['variantGuid']: variant for variant in parsed_variants if variant['variantGuid']},
         'genesById': genes,
-        'projectsByGuid': {project.guid: project_json},
-        'familiesByGuid': {family.guid: family_json},
-        'individualsByGuid': {i['individualGuid']: i for i in individuals_json}
     })
 
 

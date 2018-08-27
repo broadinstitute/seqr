@@ -15,9 +15,9 @@ const UPDATE_SEARCHED_VARIANT_DISPLAY = 'UPDATE_SEARCHED_VARIANT_DISPLAY'
 
 export const loadSearchedVariants = (search) => {
   return (dispatch) => {
-    // if (search) {
-    //   return
-    // }
+    if (search) {
+      return
+    }
     dispatch({ type: REQUEST_SEARCHED_VARIANTS })
     new HttpRequestHelper('/api/search',
       (responseJson) => {
