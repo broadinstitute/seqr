@@ -558,11 +558,12 @@ def deploy_init_cluster(settings):
         #run("mkdir -p %(LOCAL_DATA_DIR)s/elasticsearch" % settings)
         #run("mkdir -p %(LOCAL_DATA_DIR)s/mongo" % settings)
 
-        # start minikube
-        #run("minikube delete", ignore_all_errors=True)
+        # start minikube if it's not running already
         try:
             status = run("minikube status")
         except Exception as e:
+            run("minikube stop", ignore_all_errors=True)
+            #run("minikube delete", ignore_all_errors=True)
             logger.info("minikube status: %s" % str(e))
             logger.info("starting minikube: ")
             if sys.platform.startswith('darwin'):
@@ -574,8 +575,11 @@ def deploy_init_cluster(settings):
                 # --mount-string %(LOCAL_DATA_DIR)s:%(MINIKUBE_DATA_DIR)s --mount
 
             elif sys.platform.startswith('linux'):
-                run("minikube start --vm-driver=none")  # run directly on the linux machine, without a hypervizor layer
-
+                #run("sudo minikube stop", ignore_all_errors=True)
+                #run("sudo minikube delete", ignore_all_errors=True)
+                #run("sudo minikube start --vm-driver=none")  # run directly on the linux machine, without a hypervizor layer
+                logger.info("Please run 'sudo minikube start --vm-driver=none' first and make sure 'minikube status' shows that minikube is running")
+                sys.exit(0)
             else:
                 logger.warn("We don't test minikube on operating system: %s" % sys.platform)
                 run("minikube start "
