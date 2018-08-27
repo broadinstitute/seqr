@@ -5,7 +5,7 @@ env
 set -x
 
 #/usr/local/elasticsearch-6.0.0/bin/elasticsearch-keystore create
-#/usr/local/elasticsearch-6.0.0/bin/elasticsearch-keystore add-file gcs.client.default.credentials_file /.config/client_secrets.json
+#/usr/local/elasticsearch-6.0.0/bin/elasticsearch-keystore add-file gcs.client.default.credentials_file /.config/service-account-key.json
 
 
 mkdir -p /logs

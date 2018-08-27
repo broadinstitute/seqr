@@ -552,10 +552,10 @@ def deploy_init_cluster(settings):
                 ]) % settings, verbose=True, errors_to_ignore=["already exists"])
 
     elif settings["DEPLOY_TO"] == "minikube":
-        run("mkdir -p %(LOCAL_DATA_DIR)s" % settings)
-        run("mkdir -p %(LOCAL_DATA_DIR)s/postgres" % settings)
-        run("mkdir -p %(LOCAL_DATA_DIR)s/elasticsearch" % settings)
-        run("mkdir -p %(LOCAL_DATA_DIR)s/mongo" % settings)
+        #run("mkdir -p %(LOCAL_DATA_DIR)s" % settings)
+        #run("mkdir -p %(LOCAL_DATA_DIR)s/postgres" % settings)
+        #run("mkdir -p %(LOCAL_DATA_DIR)s/elasticsearch" % settings)
+        #run("mkdir -p %(LOCAL_DATA_DIR)s/mongo" % settings)
 
         # start minikube
         #run("minikube delete", ignore_all_errors=True)
@@ -645,12 +645,11 @@ def deploy_secrets(settings):
         "--from-file deploy/secrets/%(DEPLOY_TO)s/matchbox/config.xml",
     ]) % settings)
 
-    if os.path.isfile("deploy/secrets/shared/gcloud/client_secrets.json"):
+    if os.path.isfile("deploy/secrets/shared/gcloud/service-account-key.json"):
         run(" ".join([
             "kubectl create secret generic gcloud-client-secrets",
-            "--from-file deploy/secrets/shared/gcloud/client_secrets.json",
-            "--from-file deploy/secrets/shared/gcloud/boto",
             "--from-file deploy/secrets/shared/gcloud/service-account-key.json",
+            "--from-file deploy/secrets/shared/gcloud/boto",
         ]))
     else:
         run(" ".join([
