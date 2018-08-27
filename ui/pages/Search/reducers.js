@@ -1,7 +1,7 @@
 import { combineReducers } from 'redux'
 
 import { loadingReducer, createSingleObjectReducer, createSingleValueReducer } from 'redux/utils/reducerFactories'
-import { RECEIVE_DATA, RECEIVE_SAVED_VARIANTS, RECEIVE_GENES } from 'redux/rootReducer'
+import { RECEIVE_DATA } from 'redux/rootReducer'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 import { SORT_BY_XPOS } from 'shared/utils/constants'
 
@@ -15,15 +15,13 @@ const UPDATE_SEARCHED_VARIANT_DISPLAY = 'UPDATE_SEARCHED_VARIANT_DISPLAY'
 
 export const loadSearchedVariants = (search) => {
   return (dispatch) => {
-    if (search) {
-      return
-    }
+    // if (search) {
+    //   return
+    // }
     dispatch({ type: REQUEST_SEARCHED_VARIANTS })
     new HttpRequestHelper('/api/search',
       (responseJson) => {
         dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
-        dispatch({ type: RECEIVE_GENES, updatesById: responseJson.genesById })
-        dispatch({ type: RECEIVE_SAVED_VARIANTS, updatesById: responseJson.savedVariantsByGuid })
         dispatch({ type: RECEIVE_SEARCHED_VARIANTS, newValue: responseJson.searchedVariants })
       },
       (e) => {

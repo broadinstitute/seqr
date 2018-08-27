@@ -70,9 +70,9 @@ def create_variant_note_handler(request, variant_guid):
         created_by=request.user,
     )
 
-    return create_json_response({variant_guid: {
+    return create_json_response({'savedVariantsByGuid': {variant_guid: {
         'notes': [get_json_for_variant_note(tag) for tag in saved_variant.variantnote_set.all()]
-    }})
+    }}})
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -85,9 +85,9 @@ def update_variant_note_handler(request, variant_guid, note_guid):
     request_json = json.loads(request.body)
     update_model_from_json(note, request_json, allow_unknown_keys=True)
 
-    return create_json_response({variant_guid: {
+    return create_json_response({'savedVariantsByGuid': {variant_guid: {
         'notes': [get_json_for_variant_note(tag) for tag in saved_variant.variantnote_set.all()]
-    }})
+    }}})
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -97,9 +97,9 @@ def delete_variant_note_handler(request, variant_guid, note_guid):
     check_permissions(saved_variant.project, request.user, CAN_VIEW)
     note = VariantNote.objects.get(guid=note_guid, saved_variant=saved_variant)
     delete_seqr_model(note)
-    return create_json_response({variant_guid: {
+    return create_json_response({'savedVariantsByGuid': {variant_guid: {
         'notes': [get_json_for_variant_note(tag) for tag in saved_variant.variantnote_set.all()]
-    }})
+    }}})
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -158,12 +158,12 @@ def update_variant_tags_handler(request, variant_guid):
                 created_by=request.user,
             )
 
-    return create_json_response({
+    return create_json_response({'savedVariantsByGuid': {
         variant_guid: {
             'tags': [get_json_for_variant_tag(tag) for tag in saved_variant.varianttag_set.all()],
             'functionalData': [get_json_for_variant_functional_data(tag) for tag in saved_variant.variantfunctionaldata_set.all()]
         }
-    })
+    }})
 
 
 # TODO once variant search is rewritten saved_variant_json shouldn't need any postprocessing

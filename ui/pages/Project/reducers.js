@@ -2,7 +2,7 @@ import { combineReducers } from 'redux'
 import { SubmissionError } from 'redux-form'
 
 import { loadingReducer, createSingleObjectReducer, createSingleValueReducer } from 'redux/utils/reducerFactories'
-import { REQUEST_PROJECTS, RECEIVE_DATA, updateEntity } from 'redux/rootReducer'
+import { REQUEST_PROJECTS, updateEntity } from 'redux/rootReducer'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 import { SORT_BY_FAMILY_GUID } from 'shared/utils/constants'
 import { getProject, getProjectFamiliesByGuid } from 'pages/Project/selectors'
@@ -12,6 +12,7 @@ import {
 
 // action creators and reducers in one file as suggested by https://github.com/erikras/ducks-modular-redux
 
+const RECEIVE_DATA = 'RECEIVE_DATA'
 const UPDATE_FAMILY_TABLE_STATE = 'UPDATE_FAMILY_TABLE_STATE'
 const UPDATE_CASE_REVIEW_TABLE_STATE = 'UPDATE_CASE_REVIEW_TABLE_STATE'
 const UPDATE_SAVED_VARIANT_TABLE_STATE = 'UPDATE_VARIANT_STATE'
@@ -19,9 +20,7 @@ const UPDATE_CURRENT_PROJECT = 'UPDATE_CURRENT_PROJECT'
 const REQUEST_PROJECT_DETAILS = 'REQUEST_PROJECT_DETAILS'
 const RECEIVE_PROJECT_DETAILS = 'RECEIVE_PROJECT_DETAILS'
 const REQUEST_SAVED_VARIANTS = 'REQUEST_SAVED_VARIANTS'
-const RECEIVE_SAVED_VARIANTS = 'RECEIVE_SAVED_VARIANTS'
 const RECEIVE_SAVED_VARIANT_FAMILIES = 'RECEIVE_SAVED_VARIANT_FAMILIES'
-const RECEIVE_GENES = 'RECEIVE_GENES'
 
 
 // Data actions
@@ -73,8 +72,7 @@ export const loadProjectVariants = (familyGuids, variantGuid) => {
     dispatch({ type: REQUEST_SAVED_VARIANTS })
     new HttpRequestHelper(url,
       (responseJson) => {
-        dispatch({ type: RECEIVE_GENES, updatesById: responseJson.genesById })
-        dispatch({ type: RECEIVE_SAVED_VARIANTS, updatesById: responseJson.savedVariantsByGuid })
+        dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
         if (expectedFamilyGuids) {
           dispatch({
             type: RECEIVE_SAVED_VARIANT_FAMILIES,
@@ -83,7 +81,7 @@ export const loadProjectVariants = (familyGuids, variantGuid) => {
         }
       },
       (e) => {
-        dispatch({ type: RECEIVE_SAVED_VARIANTS, error: e.message, updatesById: {} })
+        dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
       },
     ).get(familyGuids ? { families: familyGuids.join(',') } : {})
   }
@@ -95,7 +93,7 @@ export const unloadProject = () => {
     const variantsToDelete = Object.keys(state.savedVariantsByGuid).reduce((acc, o) => ({ ...acc, [o]: null }), {})
     const variantFamiliesToDelete = Object.keys(state.projectSavedVariantFamilies).reduce((acc, o) => ({ ...acc, [o]: false }), {})
     dispatch({ type: UPDATE_CURRENT_PROJECT, newValue: null })
-    dispatch({ type: RECEIVE_SAVED_VARIANTS, updatesById: variantsToDelete })
+    dispatch({ type: RECEIVE_DATA, updatesById: { savedVariantsByGuid: variantsToDelete } })
     dispatch({ type: RECEIVE_SAVED_VARIANT_FAMILIES, updates: variantFamiliesToDelete })
   }
 }
@@ -183,7 +181,7 @@ export const updateSavedVariantTable = updates => ({ type: UPDATE_SAVED_VARIANT_
 export const reducers = {
   currentProjectGuid: createSingleValueReducer(UPDATE_CURRENT_PROJECT, null),
   projectDetailsLoading: loadingReducer(REQUEST_PROJECT_DETAILS, RECEIVE_PROJECT_DETAILS),
-  projectSavedVariantsLoading: loadingReducer(REQUEST_SAVED_VARIANTS, RECEIVE_SAVED_VARIANTS),
+  projectSavedVariantsLoading: loadingReducer(REQUEST_SAVED_VARIANTS, RECEIVE_DATA),
   projectSavedVariantFamilies: createSingleObjectReducer(RECEIVE_SAVED_VARIANT_FAMILIES),
   familyTableState: createSingleObjectReducer(UPDATE_FAMILY_TABLE_STATE, {
     familiesFilter: SHOW_ALL,

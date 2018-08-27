@@ -23,7 +23,7 @@ def gene_info(request, gene_id):
     gene = get_gene(gene_id)
     gene['notes'] = _get_gene_notes(gene_id, request.user)
 
-    return create_json_response({gene_id: gene})
+    return create_json_response({'genesById': {gene_id: gene}})
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -37,9 +37,9 @@ def create_gene_note_handler(request, gene_id):
         created_by=request.user,
     )
 
-    return create_json_response({gene_id: {
+    return create_json_response({'genesById': {gene_id: {
         'notes': _get_gene_notes(gene_id, request.user)
-    }})
+    }}})
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -52,9 +52,9 @@ def update_gene_note_handler(request, gene_id, note_guid):
     request_json = json.loads(request.body)
     update_model_from_json(note, request_json, allow_unknown_keys=True)
 
-    return create_json_response({gene_id: {
+    return create_json_response({'genesById': {gene_id: {
         'notes': _get_gene_notes(gene_id, request.user)
-    }})
+    }}})
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -65,9 +65,9 @@ def delete_gene_note_handler(request, gene_id, note_guid):
         raise PermissionDenied("User does not have permission to delete this note")
 
     delete_seqr_model(note)
-    return create_json_response({gene_id: {
+    return create_json_response({'genesById': {gene_id: {
         'notes': _get_gene_notes(gene_id, request.user)
-    }})
+    }}})
 
 
 def _get_gene_notes(gene_id, user):
