@@ -7,9 +7,11 @@ import logging
 import json
 
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
 from django.db import connection
 from django.db.models import Q, Count
 
+from settings import SEQR_ID_TO_MME_ID_MAP
 from seqr.models import Family, Individual, _slugify, VariantTagType, VariantTag, VariantFunctionalData, AnalysisGroup
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.individual_api import export_individuals
@@ -72,6 +74,7 @@ def project_page_data(request, project_guid):
         'samplesByGuid': samples_by_guid,
         'locusListsByGuid': {locus_list['locusListGuid']: locus_list for locus_list in locus_lists},
         'analysisGroupsByGuid': analysis_groups_by_guid,
+        'matchmakerSubmissions': {project.guid: _project_matchmaker_submissions(project)},
     }
 
     return create_json_response(json_response)
@@ -313,3 +316,25 @@ def _has_gene_search(project):
     """
     base_project = BaseProject.objects.get(project_id=project.deprecated_project_id)
     return get_project_datastore(base_project).project_collection_is_loaded(base_project)
+
+
+def _project_matchmaker_submissions(project):
+    submissions_by_individual = {}
+    for submission in SEQR_ID_TO_MME_ID_MAP.find({'project_id': project.deprecated_project_id}):
+        individual_submission = submissions_by_individual.get(submission['seqr_id'])
+        if not individual_submission or individual_submission['submissionDate'] < submission['insertion_date']:
+            individual_submission = {
+                'submissionDate': submission['insertion_date'],
+                'projectId': submission['project_id'],
+                'familyId': submission['family_id'],
+                'individualId': submission['seqr_id'],
+                'submittedData': submission['submitted_data'],
+            }
+            if submission.get('deletion'):
+                deleted_by = User.objects.filter(username=submission['deletion']['by']).first()
+                individual_submission['deletion'] = {
+                    'date': submission['deletion']['date'],
+                    'by': (deleted_by.get_full_name() or deleted_by.email) if deleted_by else submission['deletion']['by'],
+                }
+        submissions_by_individual[submission['seqr_id']] = individual_submission
+    return submissions_by_individual

@@ -2,7 +2,7 @@ import { combineReducers } from 'redux'
 import { SubmissionError } from 'redux-form'
 
 import { loadingReducer, createSingleObjectReducer, createObjectsByIdReducer, createSingleValueReducer } from 'redux/utils/reducerFactories'
-import { REQUEST_PROJECTS, RECEIVE_DATA, updateEntity } from 'redux/rootReducer'
+import { REQUEST_PROJECTS, updateEntity } from 'redux/rootReducer'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 import { getProject, getProjectFamiliesByGuid } from 'pages/Project/selectors'
 import {
@@ -10,7 +10,7 @@ import {
 } from './constants'
 
 // action creators and reducers in one file as suggested by https://github.com/erikras/ducks-modular-redux
-
+const RECEIVE_DATA = 'RECEIVE_DATA'
 const UPDATE_FAMILY_TABLE_STATE = 'UPDATE_FAMILY_TABLE_STATE'
 const UPDATE_CASE_REVIEW_TABLE_STATE = 'UPDATE_CASE_REVIEW_TABLE_STATE'
 const UPDATE_SAVED_VARIANT_TABLE_STATE = 'UPDATE_VARIANT_STATE'
@@ -21,6 +21,8 @@ const REQUEST_SAVED_VARIANTS = 'REQUEST_SAVED_VARIANTS'
 const RECEIVE_SAVED_VARIANTS = 'RECEIVE_SAVED_VARIANTS'
 const RECEIVE_SAVED_VARIANT_FAMILIES = 'RECEIVE_SAVED_VARIANT_FAMILIES'
 const RECEIVE_GENES = 'RECEIVE_GENES'
+const REQUEST_MME_MATCHES = 'REQUEST_MME_MATCHES'
+const REQUEST_MONARCH_MATCHES = 'REQUEST_MONARCH_MATCHES'
 
 
 // Data actions
@@ -171,6 +173,48 @@ export const updateAnalysisGroup = (values) => {
   return updateEntity(values, RECEIVE_DATA, `/api/project/${values.projectGuid}/analysis_groups`, 'analysisGroupGuid')
 }
 
+export const loadMmeMatches = (submission, matchSource) => {
+  return (dispatch, getState) => {
+    const state = getState()
+    const currentProject = state.projectsByGuid[state.currentProjectGuid]
+    const individualSubmission = state.matchmakerSubmissions[currentProject.projectGuid][submission.individualId]
+    const matchKey = `${matchSource || 'mme'}Match`
+    if (!individualSubmission || !individualSubmission[matchKey]) {
+      dispatch({ type: matchSource === 'monarch' ? REQUEST_MONARCH_MATCHES : REQUEST_MME_MATCHES })
+      const searchPath = matchSource === 'monarch' ? 'match_in_open_mme_sources' : 'match_internally_and_externally'
+      new HttpRequestHelper(`/api/matchmaker/${searchPath}/project/${currentProject.deprecatedProjectId}/individual/${submission.individualId}`,
+        (responseJson) => {
+          dispatch({
+            type: RECEIVE_DATA,
+            updatesById: {
+              matchmakerSubmissions: {
+                [currentProject.projectGuid]: {
+                  [submission.individualId]: { ...individualSubmission, [matchKey]: responseJson },
+                },
+              },
+            },
+          })
+        },
+        (e) => {
+          dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
+        },
+      ).postForm({ patient_data: submission.submittedData })
+    }
+  }
+}
+
+export const deleteMmePatient = (individual) => {
+  return (dispatch, getState) => {
+    const state = getState()
+    const currentProject = state.projectsByGuid[state.currentProjectGuid]
+    return new HttpRequestHelper(
+      `/api/matchmaker/project/${currentProject.deprecatedProjectId}/individual/${individual.individualId}/delete`,
+      () => {},
+      (e) => { throw e },
+    ).get()
+  }
+}
+
 // Table actions
 export const updateFamiliesTable = (updates, tableName) => (
   { type: tableName === CASE_REVIEW_TABLE_NAME ? UPDATE_CASE_REVIEW_TABLE_STATE : UPDATE_FAMILY_TABLE_STATE, updates }
@@ -185,6 +229,8 @@ export const reducers = {
   projectSavedVariants: createObjectsByIdReducer(RECEIVE_SAVED_VARIANTS),
   projectSavedVariantsLoading: loadingReducer(REQUEST_SAVED_VARIANTS, RECEIVE_SAVED_VARIANTS),
   projectSavedVariantFamilies: createSingleObjectReducer(RECEIVE_SAVED_VARIANT_FAMILIES),
+  matchmakerMatchesLoading: loadingReducer(REQUEST_MME_MATCHES, RECEIVE_DATA),
+  monarchMatchesLoading: loadingReducer(REQUEST_MONARCH_MATCHES, RECEIVE_DATA),
   familyTableState: createSingleObjectReducer(UPDATE_FAMILY_TABLE_STATE, {
     familiesFilter: SHOW_ALL,
     familiesSortOrder: SORT_BY_FAMILY_NAME,
