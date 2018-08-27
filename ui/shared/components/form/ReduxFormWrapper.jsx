@@ -34,7 +34,7 @@ export const validators = {
 }
 
 const renderField = (props) => {
-  const { fieldComponent = Form.Field, meta: { touched, invalid }, submitForm, input, ...additionalProps } = props
+  const { fieldComponent = Form.Input, meta: { touched, invalid }, submitForm, input, ...additionalProps } = props
   const { onChange, ...additionalInput } = input
   const onChangeSubmit = submitForm ? (data) => {
     onChange(data)
