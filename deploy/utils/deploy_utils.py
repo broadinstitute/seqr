@@ -567,7 +567,7 @@ def deploy_init_cluster(settings):
             logger.info("starting minikube: ")
             if sys.platform.startswith('darwin'):
                 run("minikube start "
-                    "--vm-driver=hyperkit "
+                    "--vm-driver=xhyve "  # haven't switched to hyperkit yet because xhyve seems to work better  
                     "--disk-size=%(MINIKUBE_DISK_SIZE)s "
                     "--memory %(MINIKUBE_MEMORY)s "
                     "--cpus %(MINIKUBE_NUM_CPUS)s " % settings)
