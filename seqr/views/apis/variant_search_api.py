@@ -3,14 +3,14 @@ from collections import defaultdict
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 
-from seqr.models import Family, Individual, SavedVariant
+from seqr.models import Family, SavedVariant
+from seqr.utils.xpos_utils import get_xpos
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.saved_variant_api import _variant_details, _saved_variant_genes, _add_locus_lists
-from seqr.views.pages.project_page import _get_json_for_variant_tag_types
+from seqr.views.utils.gene_utils import parse_locus_list_items
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import \
-    get_json_for_variant_tag, get_json_for_variant_functional_data, get_json_for_variant_note, _get_json_for_family, \
-    _get_json_for_project, _get_json_for_individuals
+    get_json_for_variant_tag, get_json_for_variant_functional_data, get_json_for_variant_note
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions
 from seqr.model_utils import find_matching_xbrowse_model
 
@@ -39,6 +39,15 @@ def query_variants_handler(request):
         variant_filter['ref_hom_hemi'] = [[k, v['hh']] for k, v in freqs.items() if v.get('hh') is not None]
     if request.GET.get('annotations'):
         variant_filter['so_annotations'] = [ann for annotations in json.loads(request.GET.get('annotations')).values() for ann in annotations]
+    if request.GET.get('locus'):
+        locus_json = json.loads(request.GET.get('locus'))
+        genes, intervals, invalid_items = parse_locus_list_items(locus_json, all_new=True)
+        if invalid_items:
+            error = 'Invalid genes/intervals: {}'.format(', '.join(invalid_items))
+            return create_json_response({'error': error}, status=400, reason=error)
+        variant_filter['genes'] = genes.keys()
+        variant_filter['locations'] = [(get_xpos(i['chrom'], i['start']), get_xpos(i['chrom'], i['end'])) for i in intervals]
+        variant_filter['exclude_genes'] = locus_json.get('exclude', False)
     search_spec = MendelianVariantSearchSpec.fromJSON({
         'family_id': family.family_id,
         'search_mode': request.GET.get('searchMode'),
