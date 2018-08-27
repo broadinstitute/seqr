@@ -2,6 +2,7 @@ import glob
 import logging
 import os
 import time
+import sys
 
 
 from deploy.utils.kubectl_utils import get_pod_status, get_pod_name, \
@@ -563,10 +564,25 @@ def deploy_init_cluster(settings):
             status = run("minikube status")
         except Exception as e:
             logger.info("minikube status: %s" % str(e))
-
             logger.info("starting minikube: ")
-            run("minikube start --disk-size=%(MINIKUBE_DISK_SIZE)s --memory %(MINIKUBE_MEMORY)s --cpus %(MINIKUBE_NUM_CPUS)s --vm-driver=%(MINIKUBE_VM_DRIVER)s" % settings)
-            # --mount-string %(LOCAL_DATA_DIR)s:%(MINIKUBE_DATA_DIR)s --mount
+            if sys.platform.startswith('darwin'):
+                run("minikube start "
+                    "--vm-driver=hyperkit "
+                    "--disk-size=%(MINIKUBE_DISK_SIZE)s "
+                    "--memory %(MINIKUBE_MEMORY)s "
+                    "--cpus %(MINIKUBE_NUM_CPUS)s " % settings)
+                # --mount-string %(LOCAL_DATA_DIR)s:%(MINIKUBE_DATA_DIR)s --mount
+
+            elif sys.platform.startswith('linux'):
+                run("minikube start --vm-driver=none")  # run directly on the linux machine, without a hypervizor layer
+
+            else:
+                logger.warn("We don't test minikube on operating system: %s" % sys.platform)
+                run("minikube start "
+                    "--vm-driver=virtualbox "
+                    "--disk-size=%(MINIKUBE_DISK_SIZE)s "
+                    "--memory %(MINIKUBE_MEMORY)s "
+                    "--cpus %(MINIKUBE_NUM_CPUS)s " % settings)
 
         # this fixes time sync issues on MacOSX which could interfere with token auth (https://github.com/kubernetes/minikube/issues/1378)
         run("minikube ssh -- docker run -i --rm --privileged --pid=host debian nsenter -t 1 -m -u -n -i date -u $(date -u +%m%d%H%M%Y)")
@@ -576,7 +592,6 @@ def deploy_init_cluster(settings):
 
     else:
         raise ValueError("Unexpected DEPLOY_TO_PREFIX: %(DEPLOY_TO_PREFIX)s" % settings)
-
 
     node_name = get_node_name()
     if not node_name:

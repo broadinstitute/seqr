@@ -16,7 +16,6 @@ from deploy.utils.servctl_utils import print_log, port_forward, \
     show_dashboard, show_status, wait_for, troubleshoot_component, \
     delete_component, reset_database, delete_all, get_component_port_pairs, \
     check_kubernetes_context, set_environment
-from seqr.utils.network_utils import get_ip_address
 from seqr.utils.shell_utils import run
 
 logging.basicConfig(stream=sys.stdout, format='%(asctime)s %(levelname)-8s %(message)s', level=logging.INFO)
