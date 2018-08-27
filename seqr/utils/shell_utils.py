@@ -22,7 +22,7 @@ def run_in_background(command, print_command=True, env={}):
     if print_command:
         logger.info("==> %(command)s" % locals())
 
-    p = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=full_env, bufsize=1)
+    p = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=full_env, bufsize=1, universal_newlines=True)
 
     return p
 
@@ -64,7 +64,7 @@ def run(command,
         return None
 
     # pipe output to log
-    p = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=full_env, bufsize=1)
+    p = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=full_env, bufsize=1, universal_newlines=True)
     log_buffer = StringIO.StringIO()
     for line in iter(p.stdout.readline, ''):
         log_buffer.write(line)
