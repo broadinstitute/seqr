@@ -74,8 +74,6 @@ spec:
           value: "{{ GCLOUD_PROJECT }}"
         - name: GCLOUD_ZONE
           value: "{{ GCLOUD_ZONE }}"
-        - name: HOST_MACHINE_IP
-          value: "{{ HOST_MACHINE_IP }}"
         - name: MATCHBOX_SERVICE_HOSTNAME
           value: "{{ MATCHBOX_SERVICE_HOSTNAME }}"
         - name: POSTGRES_SERVICE_HOSTNAME

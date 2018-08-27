@@ -8,7 +8,6 @@ metadata:
 spec:
   type: NodePort
   ports:
-  - name: kibana
     port: {{ SEQR_SERVICE_PORT }}
     nodePort: {{ SEQR_SERVICE_NODE_PORT }}
   selector:
