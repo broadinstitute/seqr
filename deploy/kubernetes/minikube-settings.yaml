@@ -1,0 +1,33 @@
+ELASTICSEARCH_SERVICE_EXTERNAL_IP: {{ HOST_MACHINE_IP }}
+ELASTICSEARCH_SERVICE_EXTERNAL_PORT: 9200
+
+MONGO_SERVICE_EXTERNAL_IP: {{ HOST_MACHINE_IP }}
+MONGO_SERVICE_EXTERNAL_PORT: 27017
+
+# these MINIKUBE_* settings are only applicable on macosx since on linux minikube is started with
+#  'minikube start --vm-driver none' so components run directly on the node, without a virtual layer like virtualbox
+MINIKUBE_DISK_SIZE: 100g
+MINIKUBE_MEMORY: 12000
+MINIKUBE_NUM_CPUS: 8
+
+DEPLOY_TO: 'minikube'
+DEPLOY_TO_PREFIX: 'minikube'
+DEPLOYMENT_TYPE: 'dev'
+
+DOCKER_IMAGE_PREFIX: 'minikube/seqr'
+
+# paths inside the minikube VM
+MINIKUBE_DATA_DIR: '~/data'
+POSTGRES_DBPATH:  '~/data/postgres'
+MONGO_DBPATH:  '~/data/mongo'
+ELASTICSEARCH_DBPATH:  '~/data/elasticsearch'
+
+CLUSTER_NAME: 'minikube'
+
+# settings for making it easy to access gcloud resources from local pods
+GCLOUD_PROJECT: 'seqr-project'
+GCLOUD_ZONE: 'us-central1-b'
+
+SEQR_SERVICE_NODE_PORT: 30003   # node port range starts at 30000
+
+SEQR_GIT_BRANCH: 'master'
