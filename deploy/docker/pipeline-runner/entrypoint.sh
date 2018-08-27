@@ -16,19 +16,27 @@ echo HAIL_HOME: HAIL_HOME
 
 
 # init gcloud
-#gcloud config set project $GCLOUD_PROJECT
-#gcloud config set compute/zone $GCLOUD_ZONE
+gcloud config set project $GCLOUD_PROJECT
+gcloud config set compute/zone $GCLOUD_ZONE
+
+if [ -e "/.config/client_secrets.json" ]; then
+    # authenticate to google cloud using service account
+    cp /usr/share/zoneinfo/US/Eastern /etc/localtime
+    gcloud auth activate-service-account --key-file /.config/client_secrets.json
+    cp /.config/boto /root/.boto
+fi
 
 # launch django dev server in background
 cd /seqr
 
-pip install --upgrade -r requirements.txt
-
+git pull
+git checkout $SEQR_GIT_BRANCH
+pip install --upgrade -r requirements.txt  # doublecheck that requirements are up-to-date
 python -u manage.py makemigrations
 python -u manage.py migrate
 python -u manage.py check
 
-# launch django dev server in background
+# launch django server in background
 cd /seqr_settings
 
 #python manage.py runserver 0.0.0.0:8000 &

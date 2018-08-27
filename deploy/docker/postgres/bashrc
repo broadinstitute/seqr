@@ -19,5 +19,3 @@ export TERM=xterm
 # directories
 alias data='cd /var/lib/postgresql/data/'
 alias logs='cd /var/lib/postgresql/data/pg_log/'
-
-resize

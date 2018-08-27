@@ -5,6 +5,7 @@ set -x
 env
 
 echo SHELL: $SHELL
+echo PATH: $PATH
 echo PYTHONPATH: $PYTHONPATH
 
 # init gcloud
@@ -14,8 +15,6 @@ gcloud config set compute/zone $GCLOUD_ZONE
 if [ -e "/.config/client_secrets.json" ]; then
     # authenticate to google cloud using service account
     cp /usr/share/zoneinfo/US/Eastern /etc/localtime
-    gcloud config set project $GCLOUD_PROJECT
-    gcloud config set compute/zone $GCLOUD_ZONE
     gcloud auth activate-service-account --key-file /.config/client_secrets.json
     cp /.config/boto /root/.boto
 fi
@@ -25,7 +24,7 @@ cd /seqr
 
 git pull
 git checkout $SEQR_GIT_BRANCH
-pip install --upgrade -r requirements.txt  # double-check that requirements are up-to-date
+pip install --upgrade -r requirements.txt  # doublecheck that requirements are up-to-date
 python -u manage.py makemigrations
 python -u manage.py migrate
 python -u manage.py check
