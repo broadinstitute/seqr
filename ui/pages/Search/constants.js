@@ -8,87 +8,106 @@ import {
   VEP_GROUP_FRAMESHIFT,
   VEP_GROUP_INFRAME,
   VEP_GROUP_SYNONYMOUS,
-  VEP_GROUP_OTHER,
   GROUPED_VEP_CONSEQUENCES,
 } from 'shared/utils/constants'
 
-
-const CLINVAR_ANNOTATION_GROUPS = [
+export const CLINVAR_GROUP = 'clinvar'
+const CLIVAR_PATH = 'pathogenic'
+const CLINVAR_LIKELY_PATH = 'likely_pathogenic'
+const CLINVAR_OPTIONS = [
   {
-    label: 'In Clinvar',
-    name: 'clinvar',
-    options: [
-      {
-        description: 'Clinvar pathogenic variant',
-        text: 'Pathogenic (P)',
-        value: 'pathogenic',
-      },
-      {
-        description: 'Clinvar likely pathogenic variant',
-        text: 'Likely Pathogenic (LP)',
-        value: 'likely_pathogenic',
-      },
-      {
-        description: 'Clinvar variant of uncertain significance or variant with conflicting interpretations',
-        text: 'VUS or Conflicting',
-        value: 'vus_or_conflicting',
-      },
-      {
-        description: 'Clinvar likely benign variant',
-        text: 'Likely Benign (LB)',
-        value: 'likely_benign',
-      },
-      {
-        description: 'Clinvar benign variant',
-        text: 'Benign (B)',
-        value: 'benign',
-      },
-    ],
+    text: 'Pathogenic (P)',
+    value: CLIVAR_PATH,
+  },
+  {
+    text: 'Likely Pathogenic (LP)',
+    value: CLINVAR_LIKELY_PATH,
+  },
+  {
+    description: 'Clinvar variant of uncertain significance or variant with conflicting interpretations',
+    text: 'VUS or Conflicting',
+    value: 'vus_or_conflicting',
+  },
+  {
+    text: 'Likely Benign (LB)',
+    value: 'likely_benign',
+  },
+  {
+    text: 'Benign (B)',
+    value: 'benign',
   },
 ]
 
-const HGMD_ANNOTATION_GROUPS = [
+export const HGMD_GROUP = 'hgmd'
+const HGMD_OPTIONS = [ // see https://portal.biobase-international.com/hgmd/pro/global.php#cats
   {
-    label: 'In HGMD',
-    name: 'hgmd',
-    options: [ // see https://portal.biobase-international.com/hgmd/pro/global.php#cats
-      {
-        description: 'HGMD: Pathological mutation reported to be disease causing in the corresponding report (i.e. all other HGMD data).',
-        text: 'Disease Causing (DM)',
-        value: 'disease_causing',
-      },
-      {
-        description: 'HGMD: Likely pathological mutation reported to be disease causing in the corresponding report, but where the author has indicated that there may be some degree of doubt, or subsequent evidence has come to light in the literature, calling the deleterious nature of the variant into question.',
-        text: 'Likely Disease Causing (DM?)',
-        value: 'likely_disease_causing',
-      },
-      {
-        description: 'HGMD: All other classifications present in HGMD (including: Disease-associated polymorphism (DP), Disease-associated polymorphism with additional supporting functional evidence (DFP), In vitro/laboratory or in vivo functional polymorphism (FP), Frameshift or truncating variant (FTV)',
-        text: 'Other (DP, DFP, FP, FTV)',
-        value: 'hgmd_other',
-      },
-    ],
+    description: 'Pathological mutation reported to be disease causing in the corresponding report (i.e. all other HGMD data).',
+    text: 'Disease Causing (DM)',
+    value: 'disease_causing',
+  },
+  {
+    description: 'Likely pathological mutation reported to be disease causing in the corresponding report, but where the author has indicated that there may be some degree of doubt, or subsequent evidence has come to light in the literature, calling the deleterious nature of the variant into question.',
+    text: 'Likely Disease Causing (DM?)',
+    value: 'likely_disease_causing',
+  },
+  {
+    description: 'All other classifications present in HGMD (including: Disease-associated polymorphism (DP), Disease-associated polymorphism with additional supporting functional evidence (DFP), In vitro/laboratory or in vivo functional polymorphism (FP), Frameshift or truncating variant (FTV)',
+    text: 'Other (DP, DFP, FP, FTV)',
+    value: 'hgmd_other',
   },
 ]
 
-const VEP_GROUP_LABELS = { [VEP_GROUP_INFRAME]: 'In Frame' }
+const GROUP_LABELS = { [VEP_GROUP_INFRAME]: 'In Frame', [CLINVAR_GROUP]: 'In Clinvar', [HGMD_GROUP]: 'In HGMD' }
 
-const VEP_ANNOTATION_GROUPS = [
-  VEP_GROUP_NONSENSE,
-  VEP_GROUP_ESSENTIAL_SPLICE_SITE,
-  VEP_GROUP_EXTENDED_SPLICE_SITE,
-  VEP_GROUP_MISSENSE,
-  VEP_GROUP_FRAMESHIFT,
-  VEP_GROUP_INFRAME,
-  VEP_GROUP_SYNONYMOUS,
-  VEP_GROUP_OTHER,
-].map(group => ({
-  name: group,
-  label: VEP_GROUP_LABELS[group] || snakecaseToTitlecase(group),
-  options: GROUPED_VEP_CONSEQUENCES[group].map(consequence => ({ value: consequence.name, text: consequence.label })),
+export const ANNOTATION_GROUPS = Object.entries({
+  [CLINVAR_GROUP]: CLINVAR_OPTIONS,
+  [HGMD_GROUP]: HGMD_OPTIONS,
+  ...GROUPED_VEP_CONSEQUENCES,
+}).map(([name, options]) => ({
+  name, options, groupLabel: GROUP_LABELS[name] || snakecaseToTitlecase(name),
 }))
 
-export const ANNOTATION_GROUPS = [...CLINVAR_ANNOTATION_GROUPS, ...HGMD_ANNOTATION_GROUPS, ...VEP_ANNOTATION_GROUPS]
+export const ANNOTATION_FILTER_OPTIONS = [
+  {
+    text: 'High Impact',
+    vepGroups: [
+      VEP_GROUP_NONSENSE,
+      VEP_GROUP_ESSENTIAL_SPLICE_SITE,
+      VEP_GROUP_FRAMESHIFT,
+    ],
+  },
+  {
+    text: 'Moderate to High Impact',
+    vepGroups: [
+      VEP_GROUP_NONSENSE,
+      VEP_GROUP_ESSENTIAL_SPLICE_SITE,
+      VEP_GROUP_FRAMESHIFT,
+      VEP_GROUP_MISSENSE,
+      VEP_GROUP_INFRAME,
+    ],
+  },
+  {
+    text: 'All rare coding variants',
+    vepGroups: [
+      VEP_GROUP_NONSENSE,
+      VEP_GROUP_ESSENTIAL_SPLICE_SITE,
+      VEP_GROUP_FRAMESHIFT,
+      VEP_GROUP_MISSENSE,
+      VEP_GROUP_INFRAME,
+      VEP_GROUP_SYNONYMOUS,
+      VEP_GROUP_EXTENDED_SPLICE_SITE,
+    ],
+  },
+].map(({ vepGroups, ...option }) => ({
+  ...option,
+  value: {
+    [CLINVAR_GROUP]: [CLIVAR_PATH, CLINVAR_LIKELY_PATH],
+    ...vepGroups.reduce((acc, group) => (
+      { ...acc, [group]: GROUPED_VEP_CONSEQUENCES[group].map(({ value }) => value) }
+    ), {}),
+  },
+}))
+
 
 export const FREQUENCIES = [
   {
@@ -180,4 +199,4 @@ export const QUALITY_FILTER_OPTIONS = [
       min_ab: 0,
     },
   },
-].map(({ value, ...option }) => ({ ...option, value: JSON.stringify(value) }))
+]

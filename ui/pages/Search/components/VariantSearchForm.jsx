@@ -8,9 +8,11 @@ import { VerticalSpacer } from 'shared/components/Spacers'
 import { configuredFields } from 'shared/components/form/ReduxFormWrapper'
 import { Select, LabeledSlider, CheckboxGroup } from 'shared/components/form/Inputs'
 import FrequencyFilter from './filters/FrequencyFilter'
+import annotationsFilterLayout from './filters/AnnotationsFilterLayout'
 import {
   FREQUENCIES,
   ANNOTATION_GROUPS,
+  ANNOTATION_FILTER_OPTIONS,
   QUALITY_FILTER_FIELDS,
   QUALITY_FILTER_OPTIONS,
 } from '../constants'
@@ -54,37 +56,44 @@ const ToggleHeaderFieldColumn = styled(Grid.Column)`
   }
 `
 
-const FormSelect = props =>
-  <Form.Select {...props} onChange={(e, fieldProps) => fieldProps.onChange(fieldProps.value)} />
+const JsonSelectProps = options => ({
+  component: Select,
+  format: JSON.stringify,
+  parse: JSON.parse,
+  options: options.map(({ value, ...option }) => ({ ...option, value: JSON.stringify(value) })),
+})
 
-FormSelect.propTypes = {
-  input: PropTypes.object,
-}
 
 const PANEL_DETAILS = [
   {
     name: 'annotations',
-    title: 'Annotations',
+    headerProps: {
+      title: 'Annotations',
+      inputProps: JsonSelectProps(ANNOTATION_FILTER_OPTIONS),
+    },
     fields: ANNOTATION_GROUPS,
     fieldProps: {
-      component: CheckboxGroup,
+      control: CheckboxGroup,
       format: val => val || [],
     },
+    fieldLayout: annotationsFilterLayout,
   },
   {
     name: 'freqs',
-    title: 'Frequency',
-    headerInputSize: 6,
-    headerInputProps: {
-      component: FrequencyFilter,
-      format: values => Object.values(values).reduce((acc, value) => ({
-        af: value.af === acc.af ? value.af : null,
-        ac: value.ac === acc.ac ? value.ac : null,
-        hh: value.hh === acc.hh ? value.hh : null,
-      }), Object.values(values)[0]),
-      parse: value => FREQUENCIES.reduce((acc, { name }) => ({ ...acc, [name]: value }), {}),
-      homHemi: true,
-      inlineSlider: true,
+    headerProps: {
+      title: 'Frequency',
+      inputSize: 6,
+      inputProps: {
+        component: FrequencyFilter,
+        format: values => Object.values(values).reduce((acc, value) => ({
+          af: value.af === acc.af ? value.af : null,
+          ac: value.ac === acc.ac ? value.ac : null,
+          hh: value.hh === acc.hh ? value.hh : null,
+        }), Object.values(values)[0]),
+        parse: value => FREQUENCIES.reduce((acc, { name }) => ({ ...acc, [name]: value }), {}),
+        homHemi: true,
+        inlineSlider: true,
+      },
     },
     fields: FREQUENCIES,
     fieldProps: { control: FrequencyFilter },
@@ -92,32 +101,62 @@ const PANEL_DETAILS = [
   },
   {
     name: 'qualityFilter',
-    title: 'Call Quality',
-    headerInputProps: { component: Select, format: JSON.stringify, parse: JSON.parse, options: QUALITY_FILTER_OPTIONS },
+    headerProps: {
+      title: 'Call Quality',
+      inputProps: JsonSelectProps(QUALITY_FILTER_OPTIONS),
+    },
     fields: QUALITY_FILTER_FIELDS,
     fieldProps: { control: LabeledSlider },
   },
 ]
 
 
-const PANELS = PANEL_DETAILS.map(({ name, fields, fieldProps, helpText, title, headerInputProps, headerInputSize }, i) => ({
+const HeaderContent = ({ name, title, inputSize, inputProps }) =>
+  <Grid>
+    <Grid.Row>
+      <Grid.Column width={8} verticalAlign="middle">{title}</Grid.Column>
+      {inputProps &&
+        <ToggleHeaderFieldColumn width={inputSize || 3} floated="right" onClick={e => e.stopPropagation()}>
+          {configuredFields({ fields: [{ ...inputProps, name }] })}
+        </ToggleHeaderFieldColumn>
+      }
+    </Grid.Row>
+  </Grid>
+
+HeaderContent.propTypes = {
+  title: PropTypes.string.isRequired,
+  name: PropTypes.string,
+  inputSize: PropTypes.number,
+  inputProps: PropTypes.object,
+}
+
+
+const PanelContent = ({ name, fields, fieldProps, helpText, fieldLayout }) => {
+  const fieldComponents = configuredFields({ fields: fields.map(field => ({ ...(fieldProps || {}), ...field })) })
+  return (
+    <FormSection name={name}>
+      {helpText && <i>{helpText} <VerticalSpacer height={20} /></i>}
+      {fieldLayout ? fieldLayout(fieldComponents) : <Form.Group widths="equal">{fieldComponents}</Form.Group>}
+    </FormSection>
+  )
+}
+
+PanelContent.propTypes = {
+  fields: PropTypes.array.isRequired,
+  name: PropTypes.string.isRequired,
+  fieldProps: PropTypes.object,
+  helpText: PropTypes.string,
+  fieldLayout: PropTypes.func,
+}
+
+
+const PANELS = PANEL_DETAILS.map(({ name, headerProps, ...panelContentProps }, i) => ({
   key: name,
   title: {
     key: `${name}-title`,
     as: ToggleHeader,
     attached: i === 0 ? 'top' : true,
-    content: (
-      <Grid>
-        <Grid.Row>
-          <Grid.Column width={8} verticalAlign="middle">{title}</Grid.Column>
-          {headerInputProps &&
-            <ToggleHeaderFieldColumn width={headerInputSize || 3} floated="right" onClick={e => e.stopPropagation()}>
-              {configuredFields({ fields: [{ ...headerInputProps, name }] })}
-            </ToggleHeaderFieldColumn>
-          }
-        </Grid.Row>
-      </Grid>
-    ),
+    content: <HeaderContent name={name} {...headerProps} />,
   },
   content: {
     key: name,
@@ -125,14 +164,7 @@ const PANELS = PANEL_DETAILS.map(({ name, fields, fieldProps, helpText, title, h
     attached: i === PANEL_DETAILS.length - 1 ? 'bottom' : true,
     padded: true,
     textAlign: 'center',
-    content: (
-      <FormSection name={name}>
-        { helpText && <i>{helpText} <VerticalSpacer height={20} /></i>}
-        <Form.Group widths="equal">
-          {configuredFields({ fields: fields.map(field => ({ ...(fieldProps || {}), ...field })) })}
-        </Form.Group>
-      </FormSection>
-    ),
+    content: <PanelContent name={name} {...panelContentProps} />,
   },
 }))
 

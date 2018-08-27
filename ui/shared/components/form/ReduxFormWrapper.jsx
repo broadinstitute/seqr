@@ -50,6 +50,12 @@ renderField.propTypes = {
   submitForm: PropTypes.func,
 }
 
+export const helpLabel = (label, labelHelp) => (
+  labelHelp ?
+    <label> {label} <Popup trigger={<Icon name="question circle outline" />} content={labelHelp} size="small" position="top center" /></label>
+    : label
+)
+
 export const configuredFields = props =>
   props.fields.map(({ component, name, isArrayField, addArrayElement, key, label, labelHelp, ...fieldProps }) => {
     const baseProps = {
@@ -60,9 +66,7 @@ export const configuredFields = props =>
       component: renderField,
       fieldComponent: component,
       submitForm: props.submitOnChange ? props.onSubmit : null,
-      label: labelHelp ?
-        <label> {label} <Popup trigger={<Icon name="question circle outline" />} content={labelHelp} size="small" position="top center" /></label>
-        : label,
+      label: helpLabel(label, labelHelp),
       ...fieldProps,
     }
     return isArrayField ?
