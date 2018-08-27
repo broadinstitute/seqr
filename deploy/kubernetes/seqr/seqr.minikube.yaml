@@ -8,7 +8,7 @@ metadata:
 spec:
   type: NodePort
   ports:
-    port: {{ SEQR_SERVICE_PORT }}
+  - port: {{ SEQR_SERVICE_PORT }}
     nodePort: {{ SEQR_SERVICE_NODE_PORT }}
   selector:
     name: seqr
@@ -34,7 +34,7 @@ spec:
       #    path: {{ BASE_DIR }}
       - name: data-dir
         hostPath:
-          path: {{ LOCAL_DATA_DIR }}
+          path: {{ MINIKUBE_DATA_DIR }}
       - name: gcloud-client-secrets-volume
         secret:
           secretName: gcloud-client-secrets
