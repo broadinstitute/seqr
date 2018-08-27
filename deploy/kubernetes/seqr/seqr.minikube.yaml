@@ -58,13 +58,6 @@ spec:
         - name: gcloud-client-secrets-volume
           mountPath: /.config
           readOnly: true
-        resources:
-          requests:
-            memory: "1.5Gi"
-            cpu: "1"
-          limits:
-            memory: "8Gi"
-            cpu: "5"
         envFrom:
           - configMapRef:
               name: all-settings
