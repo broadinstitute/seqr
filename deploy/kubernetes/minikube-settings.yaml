@@ -17,10 +17,10 @@ DEPLOYMENT_TYPE: 'dev'
 DOCKER_IMAGE_PREFIX: 'minikube/seqr'
 
 # paths inside the minikube VM
-MINIKUBE_DATA_DIR: '~/data'
-POSTGRES_DBPATH:  '~/data/postgres'
-MONGO_DBPATH:  '~/data/mongo'
-ELASTICSEARCH_DBPATH:  '~/data/elasticsearch'
+MINIKUBE_DATA_DIR: '/data'
+POSTGRES_DBPATH:  '/data/postgres'
+MONGO_DBPATH:  '/data/mongo'
+ELASTICSEARCH_DBPATH:  '/data/elasticsearch'
 
 CLUSTER_NAME: 'minikube'
 
@@ -30,4 +30,4 @@ GCLOUD_ZONE: 'us-central1-b'
 
 SEQR_SERVICE_NODE_PORT: 30003   # node port range starts at 30000
 
-SEQR_GIT_BRANCH: 'master'
+SEQR_GIT_BRANCH: 'dev'
