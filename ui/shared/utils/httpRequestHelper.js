@@ -60,6 +60,9 @@ export class HttpRequestHelper {
     return this.handlePromise(promise, jsonBody)
   }
 
+  // Supports legacy endpoints that expect the body of the request to be in Django's request "POST" object instead of
+  // in the "json" field. Should only be used to support legacy xbrowse endpoints, all new development should use
+  // JSON for post bodys
   postForm = (jsonBody = {}) => {
     if (this.debug) {
       console.log(`${this.url} httpHelper - request: `, jsonBody)

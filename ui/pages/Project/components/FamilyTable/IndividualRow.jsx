@@ -17,7 +17,7 @@ import { ColoredIcon } from 'shared/components/StyledComponents'
 import { updateIndividual } from 'redux/rootReducer'
 import { getSamplesByGuid, getMatchmakerSubmissions } from 'redux/selectors'
 import { getProject } from 'pages/Project/selectors'
-import { deleteMmePatient as dispatchDeleteMmePatient } from 'pages/Project/reducers'
+import { deleteMmePatient } from 'pages/Project/reducers'
 import { SAMPLE_STATUS_LOADED, DATASET_TYPE_VARIANT_CALLS } from 'shared/utils/constants'
 import { CASE_REVIEW_STATUS_MORE_INFO_NEEDED, CASE_REVIEW_STATUS_OPTIONS } from '../../constants'
 
@@ -58,7 +58,7 @@ CaseReviewStatus.propTypes = {
   individual: PropTypes.object.isRequired,
 }
 
-const DataDetails = ({ loadedSamples, matchmakerSubmission, deleteMmePatient }) =>
+const DataDetails = ({ loadedSamples, matchmakerSubmission, deleteIndividualMmePatient }) =>
   <div>
     {loadedSamples.map((sample, i) =>
       <div key={sample.sampleGuid}>
@@ -90,7 +90,7 @@ const DataDetails = ({ loadedSamples, matchmakerSubmission, deleteMmePatient }) 
           <DispatchRequestButton
             buttonContent={<Icon name="trash" />}
             confirmDialog="Are you sure you want to remove the patient from MatchMaker Exchange?"
-            onSubmit={deleteMmePatient}
+            onSubmit={deleteIndividualMmePatient}
           />
         </div>
       )
@@ -101,7 +101,7 @@ const DataDetails = ({ loadedSamples, matchmakerSubmission, deleteMmePatient }) 
 DataDetails.propTypes = {
   matchmakerSubmission: PropTypes.object,
   loadedSamples: PropTypes.array,
-  deleteMmePatient: PropTypes.func,
+  deleteIndividualMmePatient: PropTypes.func,
 }
 
 class IndividualRow extends React.Component
@@ -113,12 +113,12 @@ class IndividualRow extends React.Component
     samplesByGuid: PropTypes.object.isRequired,
     matchmakerSubmission: PropTypes.object,
     updateIndividual: PropTypes.func,
-    deleteMmePatient: PropTypes.func,
+    deleteIndividualMmePatient: PropTypes.func,
     editCaseReview: PropTypes.bool,
   }
 
   render() {
-    const { project, family, individual, editCaseReview, matchmakerSubmission, deleteMmePatient } = this.props
+    const { project, family, individual, editCaseReview, matchmakerSubmission, deleteIndividualMmePatient } = this.props
 
     const { individualId, displayName, paternalId, maternalId, sex, affected, createdDate } = individual
 
@@ -157,7 +157,7 @@ class IndividualRow extends React.Component
 
     const rightContent = editCaseReview ?
       <CaseReviewStatus individual={individual} /> :
-      <DataDetails loadedSamples={loadedSamples} matchmakerSubmission={matchmakerSubmission} deleteMmePatient={deleteMmePatient} />
+      <DataDetails loadedSamples={loadedSamples} matchmakerSubmission={matchmakerSubmission} deleteIndividualMmePatient={deleteIndividualMmePatient} />
 
     const fields = [
       {
@@ -240,8 +240,8 @@ const mapDispatchToProps = (dispatch, ownProps) => {
     updateIndividual: (values) => {
       return dispatch(updateIndividual(values))
     },
-    deleteMmePatient: () => {
-      return dispatch(dispatchDeleteMmePatient(ownProps.individual))
+    deleteIndividualMmePatient: () => {
+      return dispatch(deleteMmePatient(ownProps.individual))
     },
   }
 }

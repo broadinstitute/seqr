@@ -99,7 +99,7 @@ const BaseMatches = ({ matchKey, submission, genesById, loading, load }) => {
 
   const geneIds = new Set()
   const matchResults = Object.values(submission[matchKey].match_results).filter(
-    resultSummary => resultSummary.status_code === 200,
+    resultSummary => parseInt(resultSummary.status_code, 10) === 200,
   ).reduce((acc, resultSummary) => [...acc, ...resultSummary.result.results], [])
     .filter(result => result.patient.id)
     .map((result) => {
