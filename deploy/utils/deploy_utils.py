@@ -404,6 +404,7 @@ def deploy_external_connector(settings, connector_name):
     run(("kubectl delete -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/external-connectors/" % settings) + "external-%(connector_name)s.yaml" % locals(), errors_to_ignore=["not found"])
     run(("kubectl create -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/external-connectors/" % settings) + "external-%(connector_name)s.yaml" % locals())
 
+
 def deploy_seqr(settings):
     print_separator("seqr")
 
@@ -465,6 +466,9 @@ def deploy_pipeline_runner(settings):
     docker_build(
         "pipeline-runner",
         settings,
+        [
+            "-f deploy/docker/%(COMPONENT_LABEL)s/%(DEPLOY_TO_PREFIX)s/Dockerfile",
+        ]
     )
 
     _deploy_pod("pipeline-runner", settings, wait_until_pod_is_running=True)
@@ -568,7 +572,7 @@ def deploy_init_cluster(settings):
             logger.info("starting minikube: ")
             if sys.platform.startswith('darwin'):
                 run("minikube start "
-                    "--vm-driver=xhyve "  # haven't switched to hyperkit yet because xhyve seems to work better  
+                    "--vm-driver=xhyve "  # haven't switched to hyperkit yet because it still has issues like https://bunnyyiu.github.io/2018-07-16-minikube-reboot/   
                     "--disk-size=%(MINIKUBE_DISK_SIZE)s "
                     "--memory %(MINIKUBE_MEMORY)s "
                     "--cpus %(MINIKUBE_NUM_CPUS)s " % settings)

@@ -7,7 +7,7 @@ from deploy.utils.servctl_utils import check_kubernetes_context
 logger = logging.getLogger(__name__)
 
 
-def load_project(deployment_target, project_id, genome_version, sample_type, dataset_type, vcf, ped):
+def load_new_project(deployment_target, project_name, genome_version, sample_type, dataset_type, vcf, ped):
     """Load example project
 
     Args:
@@ -22,20 +22,16 @@ def load_project(deployment_target, project_id, genome_version, sample_type, dat
 
     check_kubernetes_context(deployment_target)
 
-    pod_name = get_pod_name('pipeline-runner', deployment_target=deployment_target)
+    pod_name = get_pod_name('seqr', deployment_target=deployment_target)
     if not pod_name:
         raise ValueError("No 'pipeline-runner' or 'seqr' pods found. Is the kubectl environment configured in this terminal? and have either of these pods been deployed?" % locals())
 
-    if not project_id:
+    if not project_name:
         raise ValueError("project_id not specified")
     if not vcf:
         raise ValueError("vcf not specified")
     if not ped:
         raise ValueError("ped not specified")
-
-    if vcf.startswith("http"):
-        run_in_pod(pod_name, "wget -N %(vcf)s" % locals())
-        vcf = os.path.basename(vcf)
 
     if ped.startswith("http"):
         run_in_pod(pod_name, "wget -N %(ped)s" % locals())
@@ -44,14 +40,13 @@ def load_project(deployment_target, project_id, genome_version, sample_type, dat
         run_in_pod(pod_name, "gsutil cp %(ped)s ." % locals())
         ped = os.path.basename(ped)
 
-    run_in_pod(pod_name, "python2.7 -u -m manage add_project '%(project_id)s' '%(project_id)s'" % locals(), verbose=True)
-    run_in_pod(pod_name, "python2.7 -u -m manage add_individuals_to_project '%(project_id)s' --ped '%(ped)s'" % locals(), verbose=True)
+    # TODO call APIs instead?
+    run_in_pod(pod_name, "python2.7 -u -m manage create_project -p '%(ped)s' '%(project_name)s'" % locals(), verbose=True)
 
-    run_in_pod(pod_name, "python2.7 -u -m manage add_vcf_to_project --clear '%(project_id)s' '%(vcf)s'" % locals(), verbose=True)
-    run_in_pod(pod_name, "python2.7 -u -m manage add_project_to_phenotips '%(project_id)s' '%(project_id)s'" % locals(), verbose=True)
-    run_in_pod(pod_name, "python2.7 -u -m manage add_individuals_to_phenotips '%(project_id)s' --ped '%(ped)s'" % locals(), verbose=True)
-    run_in_pod(pod_name, "python2.7 -u -m manage generate_pedigree_images -f '%(project_id)s'" % locals(), verbose=True)
-    run_in_pod(pod_name, "python2.7 -u -m manage add_default_tags '%(project_id)s'" % locals(), verbose=True)
+    pod_name = get_pod_name('pipeline-runner', deployment_target=deployment_target)
+    if vcf.startswith("http"):
+        run_in_pod(pod_name, "wget -N %(vcf)s" % locals())
+        vcf = os.path.basename(vcf)
 
     run_in_pod(pod_name, """/hail-elasticsearch-pipelines/run_hail_locally.sh \
         hail_scripts/v01/load_dataset_to_es.py \
@@ -90,7 +85,7 @@ def load_example_project(deployment_target, genome_version="37"):
     vcf = "https://storage.googleapis.com/seqr-reference-data/test-projects/%(vcf_filename)s" % locals()
     ped = "https://storage.googleapis.com/seqr-reference-data/test-projects/1kg.ped"
 
-    load_project(
+    load_new_project(
         deployment_target,
         project_id=project_id,
         genome_version=genome_version,

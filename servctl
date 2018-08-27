@@ -11,7 +11,7 @@ from deploy.utils.constants import DEPLOYMENT_TARGETS, DEPLOYABLE_COMPONENTS, \
 from deploy.utils.deploy_utils import deploy
 from deploy.utils.kubectl_utils import run_in_pod, get_pod_name
 from deploy.utils.loading_utils import load_example_project, \
-    load_project, create_user, update_reference_data
+    load_new_project, create_user, update_reference_data
 from deploy.utils.servctl_utils import print_log, port_forward, \
     show_dashboard, show_status, wait_for, troubleshoot_component, \
     delete_component, reset_database, delete_all, get_component_port_pairs, \
@@ -284,7 +284,7 @@ elif args.command == LOAD_EXAMPLE_PROJECT_COMMAND:
     load_example_project(args.deployment_target, genome_version=args.genome_version)
 
 elif args.command == LOAD_DATASET_COMMAND:
-    load_project(
+    load_new_project(
         args.deployment_target,
         project_id=args.project_id,
         genome_version=args.genome_version,

@@ -26,21 +26,6 @@ if [ -e "/.config/service-account-key.json" ]; then
     cp /.config/boto /root/.boto
 fi
 
-# launch django dev server in background
-cd /seqr
-
-git pull
-git checkout $SEQR_GIT_BRANCH
-pip install --upgrade -r requirements.txt  # doublecheck that requirements are up-to-date
-python -u manage.py makemigrations
-python -u manage.py migrate
-python -u manage.py check
-
-# launch django server in background
-cd /seqr_settings
-
-#python manage.py runserver 0.0.0.0:8000 &
-
 # launch jupyter notebook in background
 mkdir /ipython_notebooks
 cd /ipython_notebooks

@@ -19,7 +19,7 @@ RUN apt-get update && apt-get install -y --fix-missing \
     wget \
     xterm
 
-# install jdk-8
+# install jdk-8 for running hail locally
 RUN echo deb http://ppa.launchpad.net/webupd8team/java/ubuntu trusty main >> /etc/apt/sources.list.d/java-8-debian.list
 RUN echo deb-src http://ppa.launchpad.net/webupd8team/java/ubuntu trusty main >> /etc/apt/sources.list.d/java-8-debian.list
 RUN echo debconf shared/accepted-oracle-license-v1-1 select true | debconf-set-selections
@@ -50,7 +50,18 @@ RUN curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s
     && chmod +x ./kubectl \
     && mv ./kubectl /usr/local/bin/kubectl
 
-# download VEP - steps based on gs://hail-common/vep/vep/GRCh37/vep85-GRCh37-init.sh and gs://hail-common/vep/vep/GRCh38/vep85-GRCh38-init.sh
+# install picard
+#RUN mkdir /picard \
+#    && cd /picard \
+#    && wget https://github.com/broadinstitute/picard/releases/download/2.15.0/picard.jar
+
+# download LiftoverChain files
+#RUN mkdir -p /reference-data \
+#    && cd /reference-data \
+#    && wget http://hgdownload.cse.ucsc.edu/goldenPath/hg38/bigZips/hg38.fa.gz \
+#    && wget http://hgdownload.cse.ucsc.edu/goldenPath/hg19/liftOver/hg19ToHg38.over.chain.gz
+
+# download and install VEP - steps based on gs://hail-common/vep/vep/GRCh37/vep85-GRCh37-init.sh and gs://hail-common/vep/vep/GRCh38/vep85-GRCh38-init.sh
 RUN gsutil cp gs://hail-common/vep/htslib/* /usr/bin/ \
     && gsutil cp gs://hail-common/vep/samtools /usr/bin/ \
     && chmod a+rx  /usr/bin/tabix /usr/bin/bgzip /usr/bin/htsfile /usr/bin/samtools
@@ -64,49 +75,8 @@ RUN mkdir -p /vep/homo_sapiens /vep/loftee_data_grch37 /vep/loftee_data_grch38 \
     && gsutil -m cp -r gs://hail-common/vep/vep/homo_sapiens/85_GRCh37 /vep/homo_sapiens/ \
     && gsutil -m cp -r gs://hail-common/vep/vep/homo_sapiens/85_GRCh38 /vep/homo_sapiens/
 
-# install perl dependencies of generate_pedigree_images command which generates static images using HaploPainter.pl
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    libcairo2-dev \
-    libglib2.0-bin \
-    libglib2.0-0 \
-    libgtk2.0-dev \
-    libpango1.0-dev
-
-RUN wget https://raw.github.com/miyagawa/cpanminus/master/cpanm -O /usr/bin/cpanm \
-    && chmod +x /usr/bin/cpanm \
-    && cpanm --notest \
-        Cairo \
-        DBI \
-        Gtk2 \
-        Tk \
-        Sort::Naturally
-
-# install database clients for debugging
-RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 0C49F3730359A14518585931BC711F9BA15703C6 \
-    && echo "deb http://repo.mongodb.org/apt/debian jessie/mongodb-org/3.4 main" | tee /etc/apt/sources.list.d/mongodb-org-3.4.list \
-    && apt-get update && apt-get install -y \
-        mongodb-org-tools \
-        mongodb-org-shell
-
-RUN apt-get update && apt-get install -y \
-    postgresql-client \
-    redis-tools
-
-# install picard
-#RUN mkdir /picard \
-#    && cd /picard \
-#    && wget https://github.com/broadinstitute/picard/releases/download/2.15.0/picard.jar
-
-# download LiftoverChain files
-#RUN mkdir -p /reference-data \
-#    && cd /reference-data \
-#    && wget http://hgdownload.cse.ucsc.edu/goldenPath/hg38/bigZips/hg38.fa.gz \
-#    && wget http://hgdownload.cse.ucsc.edu/goldenPath/hg19/liftOver/hg19ToHg38.over.chain.gz
-
-# install more VEP dependencies
-COPY vep-gcloud-grch38.properties /vep
-COPY vep-gcloud-grch37.properties /vep
+COPY minikube/vep-gcloud-grch38.properties /vep
+COPY minikube/vep-gcloud-grch37.properties /vep
 
 RUN ln -s /vep/ensembl-tools-release-85/scripts/variant_effect_predictor /vep/variant_effect_predictor \
     && gsutil cp gs://hail-common/vep/vep/GRCh37/run_hail_vep85_GRCh37_vcf.sh /vep/run_hail_vep85_GRCh37_vcf.sh  \
@@ -114,6 +84,7 @@ RUN ln -s /vep/ensembl-tools-release-85/scripts/variant_effect_predictor /vep/va
     && chmod a+rx /vep/run_hail_vep85_GRCh37_vcf.sh \
     && chmod a+rx /vep/run_hail_vep85_GRCh38_vcf.sh
 
+RUN wget https://raw.github.com/miyagawa/cpanminus/master/cpanm -O /usr/bin/cpanm && chmod +x /usr/bin/cpanm
 RUN /usr/bin/cpanm --notest Set::IntervalTree
 RUN /usr/bin/cpanm --notest PerlIO::gzip
 RUN /usr/bin/cpanm --notest DBI
@@ -125,8 +96,6 @@ RUN gsutil cp gs://hail-common/vep/vep/1var.vcf /vep  \
     && /vep/run_hail_vep85_GRCh37_vcf.sh /vep/1var.vcf \
     && /vep/run_hail_vep85_GRCh38_vcf.sh /vep/1var.vcf
 
-WORKDIR /
-
 # install google storage connector which allows hail to access vds in google buckets without downloading them first
 RUN cd /usr/local \
     && wget -nv https://archive.apache.org/dist/spark/spark-2.0.2/spark-2.0.2-bin-hadoop2.7.tgz \
@@ -136,8 +105,7 @@ RUN pip install decorator==4.2.1    # fix http://discuss.hail.is/t/importerror-c
 
 RUN wget https://storage.googleapis.com/hadoop-lib/gcs/gcs-connector-latest-hadoop2.jar -O /usr/local/spark-2.0.2-bin-hadoop2.7/jars/gcs-connector-latest-hadoop2.jar
 
-
-# install hail, seqr, hail-elasticsearch-pipelines
+# install hail
 RUN mkdir -p /hail/build/libs /hail/build/distributions \
     && gsutil cp gs://seqr-hail/hail-jar/hail-0.1-es-6.2.4-with-strip-chr-prefix.zip /hail/build/distributions/hail-python.zip \
     && gsutil cp gs://seqr-hail/hail-jar/hail-0.1-es-6.2.4-with-strip-chr-prefix.jar /hail/build/libs/hail-all-spark.jar
@@ -146,35 +114,26 @@ RUN mkdir -p /hail/build/libs /hail/build/distributions \
 #    && cd /hail \
 #    && ./gradlew -Dspark.version=2.0.2 shadowJar archiveZip
 
-#ARG DISABLE_CACHE=1
+WORKDIR /
 
-RUN git clone https://github.com/macarthur-lab/seqr.git
-
+# install hail-elasticsearch-pipelines
 RUN git clone https://github.com/macarthur-lab/hail-elasticsearch-pipelines.git
 
-WORKDIR /seqr
 
-# install seqr dependencies
-RUN wget -N https://raw.githubusercontent.com/macarthur-lab/seqr/master/requirements.txt \
-    && pip install --upgrade -r requirements.txt \
-    && pip install --upgrade pip jupyter
-
-
-COPY shared/config/*.py /seqr_settings/
+# install jupyter
+RUN pip install --upgrade pip jupyter
 
 ENV TERM=xterm
 ENV PYTHONPATH="$PYTHONPATH:/seqr:/seqr_settings:/hail-elasticsearch-pipelines"
 
 COPY shared/gitconfig /root/.gitconfig
-COPY shared/config/*.py /seqr_settings/
-COPY shared/bin/*.sh /usr/local/bin/
 COPY shared/bashrc /root/.bashrc
 
-COPY run_hail_locally.sh /hail-elasticsearch-pipelines
-COPY bashrc_custom /root/.bashrc_custom
-COPY entrypoint.sh /
+COPY shared/bashrc_custom /root/.bashrc_custom
+COPY minikube/run_hail_locally.sh /hail-elasticsearch-pipelines
+COPY minikube/entrypoint.sh /
 
-COPY core-site.xml /usr/local/spark-2.0.2-bin-hadoop2.7/conf/
+COPY minikube/core-site.xml /usr/local/spark-2.0.2-bin-hadoop2.7/conf/
 
 WORKDIR /hail-elasticsearch-pipelines
 

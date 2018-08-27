@@ -14,4 +14,5 @@ export PATH=/usr/local/spark-2.0.2-bin-hadoop2.7/bin:$PATH
 export HAIL_HOME=/hail
 export SPARK_HOME=/usr/local/spark-2.0.2-bin-hadoop2.7
 export PYTHONPATH="$PYTHONPATH:$HAIL_HOME/python:$SPARK_HOME/python:$(echo $SPARK_HOME/python/lib/py4j*-src.zip)"
+export PYTHONPATH="$PYTHONPATH:/hail/build/distributions/hail-python.zip"
 export SPARK_CLASSPATH=$HAIL_HOME/build/libs/hail-all-spark.jar

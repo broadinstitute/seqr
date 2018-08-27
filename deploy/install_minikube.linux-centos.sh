@@ -4,6 +4,7 @@ export GIT_BRANCH=more_local_install_updates
 
 ## retrieve seqr zip
 curl -Lo seqr.zip https://github.com/macarthur-lab/seqr/archive/${GIT_BRANCH}.zip
+sudo yum install -y unzip
 unzip -o -d seqr seqr.zip
 
 ## install seqr install depencies
@@ -12,13 +13,15 @@ sudo python get-pip.py
 
 sudo pip install -r seqr/*/deploy/dev-requirements.txt
 
-cd seqr/${GIT_BRANCH}
-
 
 ## install docker and start docker service
+sudo sysctl net.ipv4.ip_forward=1   # fix for https://stackoverflow.com/questions/41453263/docker-networking-disabled-warning-ipv4-forwarding-is-disabled-networking-wil
+sudo systemctl restart network
+
 sudo yum install -y yum-utils   device-mapper-persistent-data   lvm2
 sudo yum-config-manager     --add-repo     https://download.docker.com/linux/centos/docker-ce.repo
 sudo yum install -y docker-ce
+sudo usermod -a -G docker $USER
 sudo systemctl enable docker.service
 sudo systemctl start docker.service
 

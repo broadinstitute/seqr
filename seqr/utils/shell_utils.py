@@ -2,6 +2,7 @@ import logging
 import os
 import StringIO
 import subprocess
+import sys
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +70,8 @@ def run(command,
     for line in iter(p.stdout.readline, ''):
         log_buffer.write(line)
         if verbose:
-            logger.info(line.strip('\n'))
+            sys.stdout.write(line)
+            sys.stdout.flush()
 
     p.wait()
 

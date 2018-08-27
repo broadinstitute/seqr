@@ -50,26 +50,6 @@ spec:
           - configMapRef:
               name: all-settings
         env:
-        - name: DJANGO_KEY
-          valueFrom:
-            secretKeyRef:
-              name: seqr-secrets
-              key: django_key
-        - name: POSTGRES_USERNAME
-          valueFrom:
-            secretKeyRef:
-              name: postgres-secrets
-              key: postgres.username
-        - name: POSTGRES_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: postgres-secrets
-              key: postgres.password
-        - name: OMIM_KEY
-          valueFrom:
-            secretKeyRef:
-              name: seqr-secrets
-              key: omim_key
         - name: POSTMARK_SERVER_TOKEN
           valueFrom:
             secretKeyRef:
