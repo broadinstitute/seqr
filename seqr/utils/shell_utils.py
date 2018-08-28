@@ -23,7 +23,7 @@ def run_in_background(command, print_command=True, env={}):
     if print_command:
         logger.info("==> %(command)s" % locals())
 
-    p = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=full_env, bufsize=1, universal_newlines=True)
+    p = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=full_env, bufsize=1)
 
     return p
 
@@ -65,14 +65,17 @@ def run(command,
         return None
 
     # pipe output to log
-    p = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=full_env, bufsize=1, universal_newlines=True)
+    p = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=full_env, bufsize=1)
     log_buffer = StringIO.StringIO()
-    for line in iter(p.stdout.readline, ''):
-        log_buffer.write(line)
-        if verbose:
-            sys.stdout.write(line)
-            sys.stdout.flush()
-
+    while True:
+        out = p.stdout.read(1)
+        if out == '' and p.poll() is not None:
+            break
+        if out != '':
+            log_buffer.write(out)
+            if verbose:
+                sys.stdout.write(out)
+                sys.stdout.flush()
     p.wait()
 
     output = log_buffer.getvalue()

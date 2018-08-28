@@ -4,12 +4,7 @@ set -x
 
 env
 
-source ~/.bashrc_custom
-
-echo SHELL: $SHELL
-echo PATH: $PATH
-echo PYTHONPATH: $PYTHONPATH
-echo
+source ~/.bashrc
 
 # init gcloud
 gcloud config set project $GCLOUD_PROJECT

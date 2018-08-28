@@ -15,7 +15,6 @@ RUN apt-get update && apt-get install -y --fix-missing \
     htop \
     less \
     nano \
-    vim \
     wget \
     xterm
 
@@ -129,11 +128,10 @@ ENV PYTHONPATH="$PYTHONPATH:/seqr:/seqr_settings:/hail-elasticsearch-pipelines"
 COPY shared/gitconfig /root/.gitconfig
 COPY shared/bashrc /root/.bashrc
 
-COPY shared/bashrc_custom /root/.bashrc_custom
 COPY minikube/run_hail_locally.sh /hail-elasticsearch-pipelines
+COPY minikube/core-site.xml /usr/local/spark-2.0.2-bin-hadoop2.7/conf/
 COPY minikube/entrypoint.sh /
 
-COPY minikube/core-site.xml /usr/local/spark-2.0.2-bin-hadoop2.7/conf/
 
 WORKDIR /hail-elasticsearch-pipelines
 

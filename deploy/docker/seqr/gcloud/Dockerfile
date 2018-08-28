@@ -12,11 +12,11 @@ RUN apt-get update && apt-get install -y --fix-missing \
     htop \
     less \
     nano \
-    vim \
     wget \
     xterm
 
-# userapt-get install -y python-dev \
+# install python
+RUN apt-get install -y python-dev \
     && wget https://bootstrap.pypa.io/get-pip.py \
     && python get-pip.py \
     && pip install --upgrade pip setuptools

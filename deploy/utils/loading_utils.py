@@ -87,7 +87,7 @@ def load_example_project(deployment_target, genome_version="37"):
 
     load_new_project(
         deployment_target,
-        project_id=project_id,
+        project_name=project_id,
         genome_version=genome_version,
         sample_type="WES",
         dataset_type="VARIANTS",

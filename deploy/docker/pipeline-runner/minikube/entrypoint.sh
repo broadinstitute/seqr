@@ -4,16 +4,7 @@ set -x
 
 env
 
-source ~/.bashrc_custom
-
-echo SHELL: $SHELL
-echo PATH: $PATH
-echo PYTHONPATH: $PYTHONPATH
-echo
-echo SPARK_HOME: $SPARK_HOME
-echo SPARK_CLASSPATH: $SPARK_CLASSPATH
-echo HAIL_HOME: HAIL_HOME
-
+source ~/.bashrc
 
 # init gcloud
 gcloud config set project $GCLOUD_PROJECT

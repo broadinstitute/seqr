@@ -286,7 +286,7 @@ elif args.command == LOAD_EXAMPLE_PROJECT_COMMAND:
 elif args.command == LOAD_DATASET_COMMAND:
     load_new_project(
         args.deployment_target,
-        project_id=args.project_id,
+        project_name=args.project_id,
         genome_version=args.genome_version,
         sample_type=args.sample_type,
         dataset_type=args.dataset_type,

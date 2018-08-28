@@ -12,7 +12,6 @@ RUN apt-get update && apt-get install -y --fix-missing \
     htop \
     less \
     nano \
-    vim \
     wget \
     xterm
 

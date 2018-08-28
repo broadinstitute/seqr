@@ -7,15 +7,12 @@ MAINTAINER MacArthur Lab
 RUN apt-get update && apt-get install -y --fix-missing \
     apt-utils \
     bzip2 \
-    cmake \
     curl \
     emacs \
-    g++ \
     git \
     htop \
     less \
     nano \
-    vim \
     wget \
     xterm
 
@@ -70,8 +67,6 @@ ENV PYTHONPATH="$PYTHONPATH:/seqr:/seqr_settings:/hail-elasticsearch-pipelines"
 
 COPY shared/gitconfig /root/.gitconfig
 COPY shared/bashrc /root/.bashrc
-
-COPY shared/bashrc_custom /root/.bashrc_custom
 COPY gcloud/entrypoint.sh /
 
 
