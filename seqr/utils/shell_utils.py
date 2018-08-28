@@ -66,16 +66,24 @@ def run(command,
 
     # pipe output to log
     p = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=full_env, bufsize=1)
+    line_buffer = StringIO.StringIO()
     log_buffer = StringIO.StringIO()
     while True:
         out = p.stdout.read(1)
         if out == '' and p.poll() is not None:
             break
         if out != '':
+            line_buffer.write(out)
             log_buffer.write(out)
             if verbose:
-                sys.stdout.write(out)
-                sys.stdout.flush()
+                line = line_buffer.getvalue()
+                if line.endswith('\n'):
+                    logger.info(line.rstrip('\n'))
+                    line_buffer.truncate(0)
+                elif line.endswith('\r'):
+                    sys.stdout.write(line)
+                    sys.stdout.flush()
+                    line_buffer.truncate(0)
     p.wait()
 
     output = log_buffer.getvalue()
