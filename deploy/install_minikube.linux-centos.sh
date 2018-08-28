@@ -19,7 +19,9 @@ sudo pip install -r seqr/*/deploy/dev-requirements.txt
 echo ==== Install and start docker service =====
 
 sudo sysctl net.ipv4.ip_forward=1   # fix for https://stackoverflow.com/questions/41453263/docker-networking-disabled-warning-ipv4-forwarding-is-disabled-networking-wil
-sudo systemctl restart network
+sudo sysctl net.bridge.bridge-nf-call-iptables=1
+#sudo systemctl restart network
+sudo sysctl -p
 
 sudo yum install -y yum-utils   device-mapper-persistent-data   lvm2
 sudo yum-config-manager     --add-repo     https://download.docker.com/linux/centos/docker-ce.repo
