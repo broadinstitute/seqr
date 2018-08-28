@@ -216,7 +216,8 @@ export const LOCUS_LIST_ITEMS_FIELD = {
   rows: 12,
   validate: value => (((value || {}).items || []).length ? undefined : 'Genes and/or intervals are required'),
   format: value => (value || {}).display,
-  normalize: (value, previousValue) => ({
+  normalize: (value, previousValue) => ((value && value.items) ? value : {
+    ...(previousValue || {}),
     display: value,
     items: value.split(/[\s|,]/).filter(itemName => itemName.trim()).map(itemName =>
       ((previousValue || {}).itemMap || {})[itemName.trim()] || parseInterval(itemName) ||

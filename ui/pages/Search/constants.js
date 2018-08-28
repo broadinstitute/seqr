@@ -1,4 +1,4 @@
-import { RadioGroup } from 'shared/components/form/Inputs'
+import { RadioGroup, BooleanCheckbox } from 'shared/components/form/Inputs'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 import {
   VEP_GROUP_NONSENSE,
@@ -9,7 +9,9 @@ import {
   VEP_GROUP_INFRAME,
   VEP_GROUP_SYNONYMOUS,
   GROUPED_VEP_CONSEQUENCES,
+  LOCUS_LIST_ITEMS_FIELD,
 } from 'shared/utils/constants'
+import { LoadedLocusListField } from './components/filters/LocationFilter'
 
 export const CLINVAR_GROUP = 'clinvar'
 const CLIVAR_PATH = 'pathogenic'
@@ -146,6 +148,27 @@ export const FREQUENCIES = [
     homHemi: false,
     labelHelp: 'Filter by allele count (AC) or by allele frequency (AF) among the samples in this family plus the rest of the samples that were joint-called as part of variant calling for this project.',
   },
+]
+
+export const LOCATION_FIELDS = [
+  { width: 2, name: '  ', control: null },
+  {
+    name: LOCUS_LIST_ITEMS_FIELD.name,
+    label: LOCUS_LIST_ITEMS_FIELD.label,
+    component: LoadedLocusListField,
+    normalize: LOCUS_LIST_ITEMS_FIELD.normalize,
+    format: val => val || {},
+    rows: 8,
+    width: 11,
+  },
+  {
+    name: 'excludeLocations',
+    component: BooleanCheckbox,
+    label: 'Exclude locations',
+    labelHelp: 'Search for variants not in the specified genes/ intervals',
+    width: 3,
+  },
+  { width: 2, name: ' ', control: null },
 ]
 
 export const QUALITY_FILTER_FIELDS = [

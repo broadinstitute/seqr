@@ -47,7 +47,7 @@ def query_variants_handler(request):
             return create_json_response({'error': error}, status=400, reason=error)
         variant_filter['genes'] = genes.keys()
         variant_filter['locations'] = [(get_xpos(i['chrom'], i['start']), get_xpos(i['chrom'], i['end'])) for i in intervals]
-        variant_filter['exclude_genes'] = locus_json.get('exclude', False)
+        variant_filter['exclude_genes'] = locus_json.get('excludeLocations', False)
     search_spec = MendelianVariantSearchSpec.fromJSON({
         'family_id': family.family_id,
         'search_mode': request.GET.get('searchMode'),

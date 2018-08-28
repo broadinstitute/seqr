@@ -153,24 +153,39 @@ export const loadGenes = (geneIds) => {
   }
 }
 
-export const loadLocusLists = (locusListId) => {
+export const loadLocusLists = () => {
+  return (dispatch) => {
+    dispatch({ type: REQUEST_GENE_LISTS })
+    new HttpRequestHelper('/api/locus_lists',
+      (responseJson) => {
+        dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+      },
+      (e) => {
+        dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
+      },
+    ).get()
+  }
+}
+
+export const loadLocusListItems = (locusListId, onSuccess) => {
   return (dispatch, getState) => {
     const locusList = getState().locusListsByGuid[locusListId]
-    if (!locusListId || !locusList || !locusList.items) {
-      dispatch({ type: locusListId ? REQUEST_GENE_LIST : REQUEST_GENE_LISTS })
-      let url = '/api/locus_lists'
-      if (locusListId) {
-        url = `${url}/${locusListId}`
-      }
-      new HttpRequestHelper(url,
+    if (locusListId && !(locusList && locusList.items)) {
+      dispatch({ type: REQUEST_GENE_LIST })
+      new HttpRequestHelper(`/api/locus_lists/${locusListId}`,
         (responseJson) => {
+          if (onSuccess) {
+            onSuccess(responseJson)
+          }
           dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
         },
         (e) => {
-          const updates = locusListId ? { locusListsByGuid: { [locusListId]: { items: [] } } } : {}
+          const updates = { locusListsByGuid: { [locusListId]: { items: [] } } }
           dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: updates })
         },
       ).get()
+    } else if (onSuccess) {
+      onSuccess(getState())
     }
   }
 }

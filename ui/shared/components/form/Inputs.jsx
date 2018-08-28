@@ -9,7 +9,7 @@ import 'react-rangeslider/lib/index.css'
 
 import { helpLabel } from './ReduxFormWrapper'
 
-class BaseSemanticInput extends React.Component {
+export class BaseSemanticInput extends React.Component {
 
   static propTypes = {
     onChange: PropTypes.func,
@@ -304,7 +304,7 @@ export const InlineToggle = styled(BooleanCheckbox).attrs({ toggle: true, inline
 `
 
 export const LabeledSlider = styled(Slider).attrs({
-  handleLabel: props => `${props.valueLabel !== undefined ? props.valueLabel : props.value}`,
+  handleLabel: props => `${props.valueLabel !== undefined ? props.valueLabel : (props.value || '')}`,
   labels: props => ({ [props.min]: props.minLabel || props.min, [props.max]: props.maxLabel || props.max }),
   tooltip: false,
 })`

@@ -2,7 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 
-import { loadLocusLists } from 'redux/rootReducer'
+import { loadLocusLists, loadLocusListItems } from 'redux/rootReducer'
 import { getLocusListIsLoading, getLocusListsByGuid, getGenesById } from 'redux/selectors'
 import DataLoader from './DataLoader'
 
@@ -18,22 +18,28 @@ BaseLocusListsLoader.propTypes = {
   children: PropTypes.node,
 }
 
-
-const BaseLocusListItemsLoader = ({ locusListGuid, locusList, genesById, loading, load, children }) => {
+export const parseLocusListItems = (locusList, genesById) => {
   const itemMap = (locusList.items || []).reduce((acc, item) => {
     if (item.geneId) {
       const gene = genesById[item.geneId]
-      return { ...acc, [gene.symbol]: gene }
+      // TODO edge case with invalid geneIds due to data load mismatch, fix by using reference data models for genes instead of old mongo data
+      return { ...acc, [gene ? gene.symbol : item.geneId]: gene || item }
     }
     return { ...acc, [`chr${item.chrom}:${item.start}-${item.end}`]: item }
   }, {})
-  locusList.parsedItems = {
+  return {
+    locusListGuid: locusList.locusListGuid,
     display: Object.keys(itemMap).sort().join(', '),
     itemMap,
     items: Object.values(itemMap),
   }
+}
+
+
+const BaseLocusListItemsLoader = ({ locusListGuid, locusList, genesById, loading, loadItems, children }) => {
+  locusList.parsedItems = parseLocusListItems(locusList, genesById)
   return (
-    <DataLoader contentId={locusListGuid || locusList.locusListGuid} content={locusList.items} loading={loading} load={load}>
+    <DataLoader contentId={locusListGuid || locusList.locusListGuid} content={locusList.items} loading={loading} load={loadItems}>
       {children}
     </DataLoader>
   )
@@ -41,7 +47,7 @@ const BaseLocusListItemsLoader = ({ locusListGuid, locusList, genesById, loading
 
 BaseLocusListItemsLoader.propTypes = {
   locusList: PropTypes.object,
-  load: PropTypes.func,
+  loadItems: PropTypes.func,
   loading: PropTypes.bool,
   locusListGuid: PropTypes.string,
   genesById: PropTypes.object,
@@ -56,6 +62,7 @@ const mapStateToProps = state => ({
 
 const mapDispatchToProps = {
   load: loadLocusLists,
+  loadItems: loadLocusListItems,
 }
 
 export const LocusListsLoader = connect(mapStateToProps, mapDispatchToProps)(BaseLocusListsLoader)
