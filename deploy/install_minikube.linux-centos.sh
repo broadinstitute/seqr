@@ -84,6 +84,5 @@ echo '
 
 curl -L http://artifacts.elastic.co/downloads/elasticsearch/${ELASTICSEARCH_VERSION}.tar.gz -o ${ELASTICSEARCH_VERSION}.tar.gz
 tar xzf ${ELASTICSEARCH_VERSION}.tar.gz
-cd ${ELASTICSEARCH_VERSION}
 
-ES_JAVA_OPTS="-Xms3900m -Xmx3900m" ./bin/elasticsearch -E network.host=0.0.0.0
+ES_JAVA_OPTS="-Xms3900m -Xmx3900m" ./${ELASTICSEARCH_VERSION}/bin/elasticsearch -E network.host=0.0.0.0
