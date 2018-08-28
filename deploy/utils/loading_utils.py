@@ -27,7 +27,7 @@ def load_new_project(deployment_target, project_name, genome_version, sample_typ
         raise ValueError("No 'pipeline-runner' or 'seqr' pods found. Is the kubectl environment configured in this terminal? and have either of these pods been deployed?" % locals())
 
     if not project_name:
-        raise ValueError("project_id not specified")
+        raise ValueError("project_name not specified")
     if not vcf:
         raise ValueError("vcf not specified")
     if not ped:
@@ -51,7 +51,7 @@ def load_new_project(deployment_target, project_name, genome_version, sample_typ
     run_in_pod(pod_name, """/hail-elasticsearch-pipelines/run_hail_locally.sh \
         hail_scripts/v01/load_dataset_to_es.py \
             --genome-version %(genome_version)s \
-            --project-guid %(project_id)s \
+            --project-guid %(project_name)s \
             --sample-type %(sample_type)s \
             --dataset-type %(dataset_type)s \
             --skip-validation \
