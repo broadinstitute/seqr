@@ -46,6 +46,7 @@
     "react/jsx-filename-extension": [ 1, { "extensions": [".js", ".jsx"]} ],
     "react/require-default-props": 0,
     "react/jsx-max-props-per-line": 0,
+    "react/jsx-no-target-blank": 0,
     "spaced-comment": 0,
 
     "jsx-a11y/iframe-has-title": 0,

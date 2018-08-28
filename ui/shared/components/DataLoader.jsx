@@ -11,7 +11,8 @@ class DataLoader extends React.Component
     contentId: PropTypes.any,
     content: PropTypes.any,
     loading: PropTypes.bool.isRequired,
-    load: PropTypes.func.isRequired,
+    load: PropTypes.func,
+    hideError: PropTypes.bool,
     errorMessage: PropTypes.string,
     children: PropTypes.node,
   }
@@ -19,11 +20,13 @@ class DataLoader extends React.Component
   constructor(props) {
     super(props)
 
-    props.load(props.contentId)
+    if (props.load) {
+      props.load(props.contentId)
+    }
   }
 
   render() {
-    const { loading, content, errorMessage, children } = this.props
+    const { loading, content, errorMessage, children, hideError } = this.props
     if (loading) {
       // Loader needs to be in an extra Dimmer to properly show up if it is in a modal (https://github.com/Semantic-Org/Semantic-UI-React/issues/879)
       return <Dimmer inverted active><Loader content="Loading" /></Dimmer>
@@ -34,7 +37,10 @@ class DataLoader extends React.Component
     else if (content) {
       return children
     }
-    return <Error404 />
+    else if (!hideError) {
+      return <Error404 />
+    }
+    return null
   }
 }
 
