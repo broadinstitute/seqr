@@ -73,17 +73,16 @@ def run(command,
         if out == '' and p.poll() is not None:
             break
         if out != '':
-            line_buffer.write(out)
             log_buffer.write(out)
             if verbose:
-                line = line_buffer.getvalue()
-                if line.endswith('\n'):
-                    logger.info(line.rstrip('\n'))
-                    line_buffer.truncate(0)
-                elif line.endswith('\r'):
-                    sys.stdout.write(line)
+                line_buffer.write(out)
+                if out.endswith('\n'):
+                    logger.info(line_buffer.getvalue().rstrip('\n'))
+                    line_buffer = StringIO.StringIO()
+                elif out.endswith('\r'):
+                    sys.stdout.write(line_buffer.getvalue())
                     sys.stdout.flush()
-                    line_buffer.truncate(0)
+                    line_buffer = StringIO.StringIO()
     p.wait()
 
     output = log_buffer.getvalue()
