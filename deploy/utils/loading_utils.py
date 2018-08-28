@@ -81,13 +81,13 @@ def load_example_project(deployment_target, genome_version="37"):
     else:
         raise ValueError("Unexpected genome_version: %s" % (genome_version,))
 
-    project_id = "1kg"
+    project_name = "1kg"
     vcf = "https://storage.googleapis.com/seqr-reference-data/test-projects/%(vcf_filename)s" % locals()
     ped = "https://storage.googleapis.com/seqr-reference-data/test-projects/1kg.ped"
 
     load_new_project(
         deployment_target,
-        project_name=project_id,
+        project_name=project_name,
         genome_version=genome_version,
         sample_type="WES",
         dataset_type="VARIANTS",
@@ -133,5 +133,8 @@ def create_user(deployment_target, email=None, password=None):
     if not email:
         run_in_pod("seqr", "python -u manage.py createsuperuser" % locals(), is_interactive=True)
     else:
-        run_in_pod("seqr", """echo "from django.contrib.auth.models import User; User.objects.create_superuser('%(email)s', '%(email)s', '%(password)s')" | python manage.py shell""" % locals(),
-                   print_command=False, errors_to_ignore=["already exists"])
+        logger.info("Creating user %(email)s" % locals())
+        run_in_pod("seqr",
+            """echo "from django.contrib.auth.models import User; User.objects.create_superuser('%(email)s', '%(email)s', '%(password)s')" \| python manage.py shell""" % locals(),
+            print_command=False,
+            errors_to_ignore=["already exists"])
