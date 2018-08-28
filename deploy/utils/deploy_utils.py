@@ -1,6 +1,8 @@
 import glob
 import logging
+import multiprocessing
 import os
+import psutil
 import time
 import sys
 
@@ -568,14 +570,20 @@ def deploy_init_cluster(settings):
         except Exception as e:
             run("minikube stop", ignore_all_errors=True)
             #run("minikube delete", ignore_all_errors=True)
+
+            if "MINIKUBE_MEMORY" not in settings:
+                settings["MINIKUBE_MEMORY"] = str((psutil.virtual_memory().total - 4*10**9) / 10**6)  # leave 4Gb overhead
+            if "MINIKUBE_NUM_CPUS" not in settings:
+                settings["MINIKUBE_NUM_CPUS"] = multiprocessing.cpu_count()  # use all CPUs on machine
+
             logger.info("minikube status: %s" % str(e))
             logger.info("starting minikube: ")
             if sys.platform.startswith('darwin'):
                 run("minikube start "
                     "--vm-driver=xhyve "  # haven't switched to hyperkit yet because it still has issues like https://bunnyyiu.github.io/2018-07-16-minikube-reboot/   
                     "--disk-size=%(MINIKUBE_DISK_SIZE)s "
-                    "--memory %(MINIKUBE_MEMORY)s "
-                    "--cpus %(MINIKUBE_NUM_CPUS)s " % settings)
+                    "--memory=%(MINIKUBE_MEMORY)s "
+                    "--cpus=%(MINIKUBE_NUM_CPUS)s " % settings)
                 # --mount-string %(LOCAL_DATA_DIR)s:%(MINIKUBE_DATA_DIR)s --mount
 
             elif sys.platform.startswith('linux'):
@@ -589,8 +597,8 @@ def deploy_init_cluster(settings):
                 run("minikube start "
                     "--vm-driver=virtualbox "
                     "--disk-size=%(MINIKUBE_DISK_SIZE)s "
-                    "--memory %(MINIKUBE_MEMORY)s "
-                    "--cpus %(MINIKUBE_NUM_CPUS)s " % settings)
+                    "--memory=%(MINIKUBE_MEMORY)s "
+                    "--cpus=%(MINIKUBE_NUM_CPUS)s " % settings)
 
         # this fixes time sync issues on MacOSX which could interfere with token auth (https://github.com/kubernetes/minikube/issues/1378)
         run("minikube ssh -- docker run -i --rm --privileged --pid=host debian nsenter -t 1 -m -u -n -i date -u $(date -u +%m%d%H%M%Y)")

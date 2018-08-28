@@ -1,6 +1,6 @@
 import logging
 import os
-
+import psutil
 from deploy.utils.kubectl_utils import get_pod_name, run_in_pod
 from deploy.utils.servctl_utils import check_kubernetes_context
 
@@ -48,7 +48,11 @@ def load_new_project(deployment_target, project_name, genome_version, sample_typ
         run_in_pod(pod_name, "wget -N %(vcf)s" % locals())
         vcf = os.path.basename(vcf)
 
+    total_memory = psutil.virtual_memory().total - 6*10**9  # leave 6Gb for other processes
+    memory_to_use = "%sG" % (total_memory / 2 / 10**9)  # divide available memory evenly between spark driver & executor
     run_in_pod(pod_name, """/hail-elasticsearch-pipelines/run_hail_locally.sh \
+        --driver-memory %(memory_to_use)s \
+        --executor-memory %(memory_to_use)s \
         hail_scripts/v01/load_dataset_to_es.py \
             --genome-version %(genome_version)s \
             --project-guid %(project_name)s \

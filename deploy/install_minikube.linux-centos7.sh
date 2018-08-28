@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-export SEQR_BRANCH=more_local_install_updates
+export SEQR_BRANCH=master
 
 echo ==== Download deployment scripts =====
 
@@ -8,7 +8,7 @@ curl -Lo seqr.zip https://github.com/macarthur-lab/seqr/archive/${SEQR_BRANCH}.z
 sudo yum install -y unzip
 unzip -o -d seqr seqr.zip
 
-echo ==== Install python depencies =====
+echo ==== Install python dependencies =====
 
 curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
 sudo python get-pip.py

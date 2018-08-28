@@ -1,6 +1,7 @@
 # dev dependencies
 mock                             # mock objects for unit tests
 pip                              # make sure the latest version of pip is installed
+psutil                           # library for process and system monitoring
 sphinx                           # doc generator
 #selenium
 

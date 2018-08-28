@@ -4,11 +4,9 @@ ELASTICSEARCH_SERVICE_EXTERNAL_PORT: 9200
 MONGO_SERVICE_EXTERNAL_IP: {{ HOST_MACHINE_IP }}
 MONGO_SERVICE_EXTERNAL_PORT: 27017
 
-# these MINIKUBE_* settings are only applicable on macosx since on linux minikube is started with
-#  'minikube start --vm-driver none' so components run directly on the node, without a virtual layer like virtualbox
 MINIKUBE_DISK_SIZE: 100g
-MINIKUBE_MEMORY: 12000
-MINIKUBE_NUM_CPUS: 8
+# MINIKUBE_MEMORY: 12000, MINIKUBE_NUM_CPUS: 8  <-- these can optionally be set here to over-ride defaults
+
 
 DEPLOY_TO: 'minikube'
 DEPLOY_TO_PREFIX: 'minikube'
