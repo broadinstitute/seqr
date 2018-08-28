@@ -47,27 +47,54 @@ creating on-prem kubernetes clusters. A list of these other options is here: htt
 
 ##### Local deployment - using MiniKube - MacOS laptop
 
-TODO
+Prereqs: [homebrew](http://brew.sh/) package manager, python2.7, `sudo` root access 
+
+The following command downloads seqr deployment scripts and then, using `brew` where possible, installs  
+- python dependencies
+- hypervisor
+- kubectl 
+- minikube
+- java1.8
+- elasticsearch
+
+Run this command in the directory you want to contain the elasticsearch installation (as well as seqr installation scripts)  
+```
+curl -L 'http://raw.githubusercontent.com/macarthur-lab/seqr/master/deploy/install_minikube.linux-centos.sh' -o install_minikube.linux-centos.sh && chmod 777 install_minikube.linux-centos.sh  && source install_minikube.linux-centos.sh
+```
+
 
 ##### Local deployment - using MiniKube - CentOS / RedHat server
 
-Requirements: python2.7, root access using `sudo` 
+Prereqs: python2.7, `sudo` root access
+
+The following command downloads seqr deployment scripts and then, using `yum` where possible, installs 
+- python dependencies
+- docker 
+- kubectl 
+- minikube
+- java1.8
+- elasticsearch
+
+Run it in the directory you want to contain the elasticsearch installation (as well as seqr scripts)
 ```
 curl -L 'http://raw.githubusercontent.com/macarthur-lab/seqr/master/deploy/install_minikube.linux-centos.sh' -o install_minikube.linux-centos.sh && chmod 777 install_minikube.linux-centos.sh  && source install_minikube.linux-centos.sh
 ```
 
 ##### Cloud deployment - Google Container Engine (GKE) 
 
-TODO
-  
+Prereqs: python2.7, `sudo` root access
 
-#### Step 2: Adjust seqr options
+The following command downloads seqr deployment scripts and then installs
+
+- gcloud tools
+- kubectl
+- 
+Install [gcloud tools, [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/) 
+
+#### Step 2: Adjust seqr settings
 
 
-#### Step 3: Install elasticsearch
-
-
-#### Step 4: Install all other components
+#### Step 4: Deploy seqr components
 
 The ./servctl wrapper has a "deploy-all" sub-command that runs a sequence of docker and kubectl commands to build docker images for all components and deploy 
 them to the Kuberenes cluster. At the end it also loads reference data and an example dataset. You can expect it to take many hours. 
