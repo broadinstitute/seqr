@@ -15,7 +15,7 @@ class Command(BaseCommand):
     help ="Loads the dbNSFP_gene table (see https://sites.google.com/site/jpopgen/dbNSFP)"
 
     def add_arguments(self, parser):
-        parser.add_argument('dbnsfp_gene_table', help="The dbNSFP gene table. Currently it's only available as part "
+        parser.add_argument('--dbnsfp_gene_table', help="The dbNSFP gene table. Currently it's only available as part "
             "of the much larger dbNSFPv3.5a.zip download from https://sites.google.com/site/jpopgen/dbNSFP")
 
     def handle(self, *args, **options):
@@ -50,11 +50,12 @@ def update_dbnsfp_gene(dbnsfp_gene_table_path=None):
         for line in tqdm(f, unit=' genes'):
             counters['total'] += 1
             fields = line.rstrip('\r\n').split('\t')
+            fields = [field if field != '.' else '' for field in fields]
 
             fields = dict(zip(header, fields))
 
             gene_id = fields['Ensembl_gene']
-            if gene_id == ".":
+            if not gene_id:
                 continue
 
             gene = gene_id_to_gene_info.get(gene_id)

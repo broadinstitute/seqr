@@ -23,7 +23,7 @@ const BaseLocusListItemsLoader = ({ locusListGuid, locusList, genesById, loading
   const itemMap = (locusList.items || []).reduce((acc, item) => {
     if (item.geneId) {
       const gene = genesById[item.geneId]
-      return { ...acc, [gene.symbol]: gene }
+      return { ...acc, [gene.geneSymbol]: gene }
     }
     return { ...acc, [`chr${item.chrom}:${item.start}-${item.end}`]: item }
   }, {})

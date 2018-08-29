@@ -1,45 +1,17 @@
-from seqr.views.utils.json_utils import _to_camel_case
-from xbrowse_server.mall import get_reference
-
-# TODO create new reference data handler for seqr
+from reference_data.models import GeneInfo
+from seqr.views.utils.orm_to_json_utils import get_json_for_genes, get_json_for_gene
 
 
 def get_gene(gene_id):
-    reference = get_reference()
-    gene = reference.get_gene(gene_id)
-    gene['expression'] = reference.get_tissue_expression_display_values(gene_id)
-    return _gene_json(gene)
+    gene = GeneInfo.objects.get(gene_id=gene_id)
+    return get_json_for_gene(gene, add_expression=True)
 
 
 def get_genes(gene_ids):
-    reference = get_reference()
-    genes = reference.get_genes(gene_ids)
-    return {geneId: _gene_json(gene) if gene else None for geneId, gene in genes.items()}
+    genes = GeneInfo.objects.filter(gene_id__in=gene_ids)
+    return {gene['geneId']: gene for gene in get_json_for_genes(genes)}
 
 
 def get_gene_symbols_to_gene_ids(gene_symbols):
-    reference = get_reference()
-    return {symbol: reference.get_gene_id_from_symbol(symbol) for symbol in gene_symbols}
-
-
-def _parse_gene_constraints(gene):
-    gene_tags = gene.get('tags', gene)
-    return {
-       'lof': {
-           'constraint': gene_tags.get('lof_constraint'),
-           'rank': gene_tags.get('lof_constraint_rank') and gene_tags['lof_constraint_rank'][0],
-           'totalGenes': gene_tags.get('lof_constraint_rank') and gene_tags['lof_constraint_rank'][1],
-       },
-       'missense': {
-           'constraint': gene_tags.get('missense_constraint'),
-           'rank': gene_tags.get('missense_constraint_rank') and gene_tags['missense_constraint_rank'][0],
-           'totalGenes': gene_tags.get('missense_constraint_rank') and gene_tags['missense_constraint_rank'][1],
-       },
-   }
-
-
-def _gene_json(gene):
-    gene['constraints'] = _parse_gene_constraints(gene)
-    gene = {_to_camel_case(k): v for k, v in gene.items()}
-    gene['phenotypeInfo'] = {_to_camel_case(k): v for k, v in gene.get('phenotypeInfo', {}).items()}
-    return gene
+    genes = GeneInfo.objects.filter(gene_symbol__in=gene_symbols)
+    return {gene.symbol: gene.gene_id for gene in genes}

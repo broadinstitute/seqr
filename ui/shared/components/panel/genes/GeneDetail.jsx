@@ -74,21 +74,23 @@ const textWithLinks = (text) => {
 }
 
 const GeneDetailContent = ({ gene, updateGeneNote: dispatchUpdateGeneNote }) => {
+  const grch37Coords = gene.startGrch37 && `chr${gene.chromGrch37}:${gene.startGrch37}-${gene.endGrch37}`
+  const grch38Coords = gene.startGrch38 && `chr${gene.chromGrch38}:${gene.startGrch38}-${gene.endGrch38}`
   const basicDetails = [
-    { title: 'Symbol', content: gene.symbol },
+    { title: 'Symbol', content: gene.geneSymbol },
     { title: 'Ensembl ID', content: gene.geneId },
     { title: 'Description', content: textWithLinks(gene.functionDesc) },
-    { title: 'Coordinates', content: `chr${gene.chrom}:${gene.start}-${gene.stop}` },
-    { title: 'Gene Type', content: gene.geneType },
+    { title: 'Coordinates', content: grch38Coords ? `${grch38Coords} (hg19: ${grch37Coords || 'liftover failed'})` : grch37Coords },
+    { title: 'Gene Type', content: gene.gencodeGeneType },
   ]
   const statDetails = [
-    { title: 'Coding Size', content: (gene.codingSize / 1000).toPrecision(2) },
+    { title: 'Coding Size', content: ((gene.codingRegionSizeGrch38 || gene.codingRegionSizeGrch37) / 1000).toPrecision(2) },
     {
       title: 'Missense Constraint',
-      content: gene.constraints.missense.constraint ?
+      content: gene.constraints.misZ ?
         <div>
-          z-score: {gene.constraints.missense.constraint.toPrecision(4)} (ranked {gene.constraints.missense.rank}
-          most constrained out of {gene.constraints.missense.totalGenes} genes under study). <br />
+          z-score: {gene.constraints.misZ.toPrecision(4)} (ranked {gene.constraints.misZRank} most
+          constrained out of {gene.constraints.totalGenes} genes under study). <br />
           <i style={{ color: 'gray' }}>
             NOTE: Missense contraint is a measure of the degree to which the number of missense variants found
             in this gene in ExAC v0.3 is higher or lower than expected according to the statistical model
@@ -106,10 +108,10 @@ const GeneDetailContent = ({ gene, updateGeneNote: dispatchUpdateGeneNote }) => 
     },
     {
       title: 'LoF Constraint',
-      content: gene.constraints.lof.constraint ?
+      content: gene.constraints.pli ?
         <div>
-          pLI-score: {gene.constraints.lof.constraint.toPrecision(4)} (ranked {gene.constraints.lof.rank} most
-          intolerant of LoF mutations out of {gene.constraints.lof.totalGenes} genes under study). <br />
+          pli-score: {gene.constraints.pli.toPrecision(4)} (ranked {gene.constraints.pliRank} most
+          intolerant of LoF mutations out of {gene.constraints.totalGenes} genes under study). <br />
           <i style={{ color: 'gray' }}>
             NOTE: This metric is based on the amount of expected variation observed in the ExAC data and is a
             measure of how likely the gene is to be intolerant of loss-of-function mutations.
@@ -120,42 +122,37 @@ const GeneDetailContent = ({ gene, updateGeneNote: dispatchUpdateGeneNote }) => 
   const associationDetails = [
     {
       title: 'OMIM',
-      content: gene.phenotypeInfo.hasMendelianPhenotype ?
+      content: gene.omimPhenotypes.length > 0 ?
         <div>
-          {gene.phenotypeInfo.mimPhenotypes.map(phenotype =>
-            <span key={phenotype.description}>{phenotype.mim_id ?
-              <a href={`http://www.omim.org/entry/${phenotype.mim_id}`} target="_blank">
-                {phenotype.description}
+          {gene.omimPhenotypes.map(phenotype =>
+            <span key={phenotype.phenotypeDescription}>{phenotype.phenotypeMimNumber ?
+              <a href={`http://www.omim.org/entry/${phenotype.phenotypeMimNumber}`} target="_blank">
+                {phenotype.phenotypeDescription}
               </a>
-              : phenotype.description}
+              : phenotype.phenotypeDescription}
               <br />
             </span>,
           )}
-          {textWithLinks(gene.diseaseDesc)}
         </div>
         : <em>No disease associations</em>,
     },
-    gene.phenotypeInfo.orphanetPhenotypes.length > 0 ? {
-      title: 'ORPHANET',
-      content: gene.phenotypeInfo.orphanetPhenotypes.map(phenotype =>
-        <div key={phenotype.orphanet_id}>
-          <a href={`http://www.orpha.net/consor/cgi-bin/Disease_Search.php?lng=EN&data_id=20460&Disease_Disease_Search_diseaseGroup=${phenotype.orphanet_id}`} target="_blank">
-            {phenotype.description}
-          </a>
-        </div>,
-      ),
-    } : null,
   ]
+  if (gene.diseaseDesc) {
+    associationDetails.push({
+      title: 'Details',
+      content: textWithLinks(gene.diseaseDesc),
+    })
+  }
   const linkDetails = [
-    gene.phenotypeInfo.mimId ? { title: 'OMIM', link: `http://www.omim.org/entry/${gene.phenotypeInfo.mimId}`, description: 'Database of Mendelian phenotypes' } : null,
-    { title: 'PubMed', link: `http://www.ncbi.nlm.nih.gov/pubmed/?term=${gene.symbol}`, description: `Search PubMed for ${gene.symbol}` },
-    { title: 'GeneCards', link: `http://www.genecards.org/cgi-bin/carddisp.pl?gene=${gene.symbol}`, description: 'Reference of public data for this gene' },
+    gene.omimPhenotypes.length > 0 ? { title: 'OMIM', link: `http://www.omim.org/entry/${gene.omimPhenotypes[0].mimNumber}`, description: 'Database of Mendelian phenotypes' } : null,
+    { title: 'PubMed', link: `http://www.ncbi.nlm.nih.gov/pubmed/?term=${gene.geneSymbol}`, description: `Search PubMed for ${gene.geneSymbol}` },
+    { title: 'GeneCards', link: `http://www.genecards.org/cgi-bin/carddisp.pl?gene=${gene.geneSymbol}`, description: 'Reference of public data for this gene' },
     { title: 'Protein Atlas', link: `http://www.proteinatlas.org/${gene.geneId}/tissue`, description: 'Detailed protein and transcript expression' },
-    { title: 'NCBI Gene', link: `http://www.ncbi.nlm.nih.gov/gene/?term=${gene.symbol}`, description: 'NCBI\'s gene information resource' },
+    { title: 'NCBI Gene', link: `http://www.ncbi.nlm.nih.gov/gene/?term=${gene.geneSymbol}`, description: 'NCBI\'s gene information resource' },
     { title: 'GTEx Portal', link: `http://www.gtexportal.org/home/gene/${gene.geneId}`, description: 'Reference of public data for this gene' },
     { title: 'Monarch', link: `http://monarchinitiative.org/search/${gene.geneId}`, description: 'Cross-species gene and phenotype resource' },
-    { title: 'Decipher', link: `https://decipher.sanger.ac.uk/gene/${gene.symbol}#overview/protein-info`, description: 'DatabasE of genomiC varIation and Phenotype in Humans using Ensembl Resources' },
-    { title: 'UniProt', link: `http://www.uniprot.org/uniprot/?random=true&query=gene:${gene.symbol}+AND+reviewed:yes+AND+organism:9606`, description: 'Protein sequence and functional information' },
+    { title: 'Decipher', link: `https://decipher.sanger.ac.uk/gene/${gene.geneSymbol}#overview/protein-info`, description: 'DatabasE of genomiC varIation and Phenotype in Humans using Ensembl Resources' },
+    { title: 'UniProt', link: `http://www.uniprot.org/uniprot/?random=true&query=gene:${gene.geneSymbol}+AND+reviewed:yes+AND+organism:9606`, description: 'Protein sequence and functional information' },
   ]
   return (
     <div>

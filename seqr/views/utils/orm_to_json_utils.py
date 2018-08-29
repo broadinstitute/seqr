@@ -8,6 +8,7 @@ import os
 from django.db.models import prefetch_related_objects
 from django.db.models.fields.files import ImageFieldFile
 
+from reference_data.models import GeneConstraint
 from seqr.models import CAN_EDIT, Sample
 from seqr.utils.xpos_utils import get_chrom_pos
 from seqr.views.utils.json_utils import _to_camel_case
@@ -405,3 +406,45 @@ def get_json_for_locus_list(locus_list, user):
         dict: json object
     """
     return _get_json_for_model(locus_list, get_json_for_models=get_json_for_locus_lists, user=user, include_genes=True)
+
+
+def get_json_for_genes(genes, add_expression=False, add_notes=False, add_locus_lists=False):
+    """Returns a JSON representation of the given list of GeneInfo.
+
+    Args:
+        genes (array): array of django models for the GeneInfo.
+    Returns:
+        array: array of json objects
+    """
+    total_gene_constraints = GeneConstraint.objects.count()
+
+    def _add_total_constraint_count(result, *args):
+        result['totalGenes'] = total_gene_constraints
+
+    def _process_result(result, gene):
+        dbnsfp = gene.dbnsfpgene_set.first()
+        constraint = gene.geneconstraint_set.order_by('-mis_z').first()
+        if dbnsfp:
+            result.update(_get_json_for_model(dbnsfp))
+        result.update({
+            'omimPhenotypes': _get_json_for_models(gene.omim_set.all()),
+            'constraints': _get_json_for_model(constraint, process_result=_add_total_constraint_count) if constraint else {},
+        })
+
+    prefetch_related_objects(genes, 'dbnsfpgene_set')
+    prefetch_related_objects(genes, 'omim_set')
+    prefetch_related_objects(genes, 'geneconstraint_set')
+
+    return _get_json_for_models(genes, process_result=_process_result)
+
+
+def get_json_for_gene(gene, **kwargs):
+    """Returns a JSON representation of the given GeneInfo.
+
+    Args:
+        gene (object): Django model for the GeneInfo.
+    Returns:
+        dict: json object
+    """
+
+    return _get_json_for_model(gene, get_json_for_models=get_json_for_genes, **kwargs)
