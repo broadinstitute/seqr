@@ -1,10 +1,10 @@
 from django.contrib.auth.models import User
 from django.test import TestCase
 from seqr.models import Project, Family, Individual, Sample, SavedVariant, VariantTag, VariantFunctionalData, \
-    VariantNote
+    VariantNote, LocusList
 from seqr.views.utils.orm_to_json_utils import _get_json_for_user, _get_json_for_project, _get_json_for_family, \
     _get_json_for_individual, _get_json_for_sample, get_json_for_saved_variant, get_json_for_variant_tag, \
-    get_json_for_variant_functional_data, get_json_for_variant_note
+    get_json_for_variant_functional_data, get_json_for_variant_note, get_json_for_locus_list
 
 
 class JSONUtilsTest(TestCase):
@@ -34,7 +34,8 @@ class JSONUtilsTest(TestCase):
 
     def test_json_for_family(self):
         family = Family.objects.first()
-        json = _get_json_for_family(family)
+        user = User.objects.filter(is_staff=False).first()
+        json = _get_json_for_family(family, user)
 
         family_fields = {
             'projectGuid', 'familyGuid', 'analysedBy', 'pedigreeImage', 'familyId', 'displayName', 'description',
@@ -52,7 +53,8 @@ class JSONUtilsTest(TestCase):
 
     def test_json_for_individual(self):
         individual = Individual.objects.first()
-        json = _get_json_for_individual(individual)
+        user = User.objects.filter(is_staff=False).first()
+        json = _get_json_for_individual(individual, user)
 
         individual_fields = {
             'projectGuid', 'familyGuid', 'individualGuid', 'caseReviewStatusLastModifiedBy', 'phenotipsData',
@@ -115,5 +117,16 @@ class JSONUtilsTest(TestCase):
 
         fields = {
              'noteGuid', 'note', 'submitToClinvar', 'lastModifiedDate', 'createdBy'
+        }
+        self.assertSetEqual(set(json.keys()), fields)
+
+    def test_json_for_locus_list(self):
+        locus_list = LocusList.objects.first()
+        user = User.objects.filter().first()
+        json = get_json_for_locus_list(locus_list, user)
+
+        fields = {
+            'locusListGuid', 'description', 'lastModifiedDate', 'numEntries', 'isPublic', 'createdBy', 'createdDate',
+             'canEdit', 'name', 'items', 'intervalGenomeVersion'
         }
         self.assertSetEqual(set(json.keys()), fields)
