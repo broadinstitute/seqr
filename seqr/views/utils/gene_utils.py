@@ -18,4 +18,4 @@ def get_genes(gene_ids):
 
 def get_gene_symbols_to_gene_ids(gene_symbols):
     genes = GeneInfo.objects.filter(gene_symbol__in=gene_symbols)
-    return {gene.symbol: gene.gene_id for gene in genes}
+    return {gene.gene_symbol: gene.gene_id for gene in genes}

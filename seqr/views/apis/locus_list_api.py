@@ -195,7 +195,7 @@ def _parse_list_items(request_json):
                 ))
 
     gene_symbols_to_ids = get_gene_symbols_to_gene_ids(new_gene_symbols)
-    invalid_items += [symbol for symbol, gene_id in gene_symbols_to_ids.items() if not gene_id]
+    invalid_items += [symbol for symbol in new_gene_symbols if not gene_symbols_to_ids.get(symbol)]
     new_genes = get_genes([gene_id for gene_id in gene_symbols_to_ids.values() if gene_id] + list(new_gene_ids))
     invalid_items += [gene_id for gene_id, gene in new_genes.items() if not gene]
     new_genes = {gene_id: gene for gene_id, gene in new_genes.items() if gene}
