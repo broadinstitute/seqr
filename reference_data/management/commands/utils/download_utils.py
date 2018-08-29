@@ -1,12 +1,9 @@
 import logging
 import os
-import re
-import subprocess
+import requests
 import tempfile
 from tqdm import tqdm
 import urllib
-
-from django.core.validators import URLValidator
 
 logger = logging.getLogger(__name__)
 
@@ -41,10 +38,11 @@ def download_file(url, to_dir=tempfile.gettempdir(), verbose=True):
 
 
 def get_remote_file_size(url):
-    URLValidator()(url)  # make sure it's a valid url, to avoid security issues with shell execution
-    curl_output = subprocess.check_output("curl -s --head '{}'".format(url), shell=True)
-    match = re.search("Content-Length:[ ](\d+)", curl_output)
-    if match:
-        return int(match.group(1))
+    if url.startswith("http"):
+        response = requests.head(url)
+        return int(response.headers.get('Content-Length', '0'))
+    elif url.startswith("ftp"):
+        return 0  # file size not yet implemented for FTP
+    else:
+        raise ValueError("Invalid url: {}".format(url))
 
-    return None

@@ -13,6 +13,7 @@ import yaml
 from deploy.utils.constants import COMPONENT_PORTS, COMPONENTS_TO_OPEN_IN_BROWSER
 from deploy.utils.kubectl_utils import get_pod_name, get_service_name, \
     run_in_pod, get_pod_status, get_node_name
+from seqr.utils.network_utils import get_ip_address
 from seqr.utils.shell_utils import run, wait_for, run_in_background
 
 logging.basicConfig(format='%(asctime)s %(levelname)-8s %(message)s')
@@ -32,7 +33,7 @@ def get_component_port_pairs(components=[]):
     if not components:
         components = list(COMPONENT_PORTS.keys())
 
-    return [(component, port) for component in components for port in COMPONENT_PORTS[component]]
+    return [(component, port) for component in components for port in COMPONENT_PORTS.get(component, [])]
 
 
 def load_settings(settings_file_paths, settings=None, secrets=False):
@@ -113,6 +114,7 @@ def retrieve_settings(deployment_target):
 
     settings['HOME'] = os.path.expanduser("~")
     settings['TIMESTAMP'] = time.strftime("%Y%m%d_%H%M%S")
+    settings["HOST_MACHINE_IP"] = get_ip_address()
 
     load_settings([
         "deploy/kubernetes/shared-settings.yaml",
@@ -141,9 +143,8 @@ def check_kubernetes_context(deployment_target, set_if_different=False):
         return
 
     context_is_different = False
-    if deployment_target in ["minikube", "kube-solo"]:
-        if (deployment_target == "minikube" and kubectl_current_context != "minikube") or (
-            deployment_target == "kube-solo" and kubectl_current_context != "kube-solo"):
+    if deployment_target == "minikube":
+        if (deployment_target == "minikube" and kubectl_current_context != "minikube"):
             logger.error((
                  "'%(cmd)s' returned '%(kubectl_current_context)s'. For %(deployment_target)s deployment, this is "
                  "expected to be '%(deployment_target)s'. Please configure your shell environment "
@@ -253,8 +254,6 @@ def set_environment(deployment_target):
         run("gcloud container clusters get-credentials --zone=%(GCLOUD_ZONE)s %(CLUSTER_NAME)s" % settings, print_command=True)
     elif deployment_target == "minikube":
         run("kubectl config use-context minikube", print_command=True)
-    elif deployment_target == "kube-solo":
-        os.environ["KUBECONFIG"] = os.path.expanduser("~/kube-solo/kube/kubeconfig")
     else:
         raise ValueError("Unexpected deployment_target value: %s" % (deployment_target,))
 

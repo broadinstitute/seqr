@@ -5,29 +5,226 @@ seqr
 
 seqr is a web-based analysis tool for rare disease genomics.
 
-This repository contains the code that underlies the [Broad seqr instance](http://seqr.broadinstitute.org), as well as other seqr deployments.
+This repository contains the code that underlies the [Broad seqr instance](http://seqr.broadinstitute.org) as well as other seqr deployments.
 
 ## Overview
 
-seqr consists of the following components or micro-services:
+seqr consists of the following components:
 - seqr - the main client-server application - javascript + react.js on the client-side, python + django on the server-side.
 - postgres - SQL database used by seqr and phenotips to store project metadata and user-generated content such as variant notes, etc.
 - phenotips - 3rd-party web-based tool for entering structured phenotype information.
-- mongo - NoSQL database used to store variant callsets and reference data.
 - matchbox - a service that encapsulates communication with the Match Maker Exchange.
 - nginx - http server used as the main gateway between seqr and the internet.
-- pipeline-runner - (optional) container for running hail and VEP to annotate and load datasets on a small local deployment where a separate on-prem spark cluster is not available. 
-- redis - in-memory cache used to speed up the django application layer.
-- elasticsearch - NoSQL database alternative to mongo that currently supports loading large callsets using a Spark-based [hail](http://hail.is) pipeline.
+- pipeline-runner - container for running hail pipelines to annotate and load new datasets. 
+- redis - in-memory cache used to speed up request handling.
+- elasticsearch - NoSQL database used to store variant callsets.
 - kibana - (optional) dashboard and visual interface for elasticsearch.
+- mongo - legacy NoSQL database originally used for variant callsets and still used now to store some reference data and logs.
 
 
 ## Installation
 
-[Kubernetes-based Installation Instructions](https://github.com/macarthur-lab/seqr/blob/master/deploy/kubernetes) - The [Kubernetes](https://kubernetes.io/)-based installation allows for fully scripted deployment of all seqr components. It supports local installation on any operating system using a virtualized environment ([minikube](https://github.com/kubernetes/minikube)) as well as cloud deployment on Google, AWS, and other clouds.  
+To install the above components, we rely on Docker images and Kubernetes. 
+Users that are very familiar with these components may opt to install them directly on their host system 
+(and we also use this approach for local development). In most cases though, we recommend the added complexity 
+of the docker/kubernetes approach because:  1) deployment is automated and avoids manual steps as much as possible. 
+This makes it more reproducable and allows more confident experimentation with hardware and cluster configurations. 
+Also the Docker files serve as both code and documentation for how to install components. 2) as seqr evolves, it's easier to roll out new components or re-arrange existing components if they outgrow existing hardware. 3) the components are isolated from operating system and environment differences across different on-prem and cloud infrastructures.
 
-[Data pre-processing and loading pipelines](https://github.com/macarthur-lab/hail-elasticsearch-pipelines) - [hail](http://hail.is) pipelines for pre-processing and loading datasets into an elasticsearch datastore.  
 
-[Manual Installation Instructions](https://github.com/macarthur-lab/seqr/tree/master/deploy/mac_osx) - older instructions for  installing seqr components on MacOSX.  
+#### Step 1: Create kubernetes cluster and elasticsearch instance  
+
+Here we will create a kubernetes cluster that will host all seqr components except elasticsearch, 
+and also stand up an elasticsearch database outside kubernetes. 
+We use this configuration because, although it's reasonable to deploy elasticsearch to docker/kubernetes, this can complicate some key dev-ops steps 
+like backup/snapshotting, loading data from spark, and increasing disk space when needed. 
+
+The instructions below for setting up kubernetes on MacOS and Linux (specifically CentOS7) use [MiniKube](https://kubernetes.io/docs/setup/minikube/) 
+to create a self-contained kubernetes cluster on a single machine. There are also instructions for Google Cloud Container Engine (GKE). 
+Many other cloud providers also have native support for Kubernetes, and other tools besides MiniKube are under development for 
+creating on-prem kubernetes clusters. A list of these other options is here: https://kubernetes.io/docs/setup/pick-right-solution/).
+ 
+
+##### Local deployment - using MiniKube - MacOS laptop
+
+Prereqs: [homebrew](http://brew.sh/) package manager, python2.7, `sudo` root access 
+
+The following command downloads seqr deployment scripts and then, using `brew` where possible, installs  
+- python dependencies
+- hypervisor
+- kubectl 
+- minikube
+- java1.8
+- elasticsearch
+
+Run this command in the directory you want to contain the elasticsearch installation (as well as seqr installation scripts)  
+```
+curl -L 'http://raw.githubusercontent.com/macarthur-lab/seqr/master/deploy/install_minikube.macos.sh' -o install_minikube.macos.sh && chmod 777 install_minikube.macos.sh  && source install_minikube.macos.sh
+```
+
+
+##### Local deployment - using MiniKube - CentOS / RedHat server
+
+Prereqs: python2.7, `sudo` root access
+
+The following command downloads seqr deployment scripts and then, using `yum` where possible, installs 
+- python dependencies
+- docker 
+- kubectl 
+- minikube
+- java1.8
+- elasticsearch
+
+Run it in the directory you want to contain the elasticsearch installation (as well as seqr scripts)
+```
+curl -L 'http://raw.githubusercontent.com/macarthur-lab/seqr/master/deploy/install_minikube.linux-centos7.sh' -o install_minikube.linux-centos7.sh && chmod 777 install_minikube.linux-centos7.sh  && source install_minikube.linux-centos7.sh
+```
+
+##### Cloud deployment - Google Container Engine (GKE) 
+
+Download or clone a local copy of this github repository. 
+
+Install these tools:
+- [docker](https://store.docker.com/search?type=edition&offering=community) 
+- [gcloud tools](https://cloud.google.com/sdk/install)
+- [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/)
+
+Make sure you have a google account that's configured to use Google Compute Engine (GCE) and 
+is set up to create a private Kubernetes Engine (GKE) cluster as described here: 
+https://cloud.google.com/kubernetes-engine/docs/how-to/creating-a-cluster
+
+Run these commands to point gcloud and kubectl tools to your GCE project:
+```
+export KUBECONFIG=~/.kube/config   # used by kubectl
+
+gcloud config set core/project <your gcloud project name>
+gcloud config set compute/zone <your compute zone>
+``` 
+
+Create linux VM(s) to host elasticsearch in this google project.
+The VM(s) should be on the default private network which will later also contain the GKE cluster nodes.   
+Install and launch elasticsearch (commands for this can be found in deploy/install. 
+
+
+#### Step 2: Adjust seqr deployment settings
+
+The following files contain adjustable settings:
+
+* `deploy/kubernetes/*-settings.yaml` - you will want to edit the specific to your deployment target (for example `minikube-settings.yaml`).  
+* `deploy/secrets/shared/*` - directories that contain keys, passwords and other sensitive info that shouldn't be shared publicly.
+     You will want to edit:
+  * *gcloud/service-account-key.json* - allows gcloud and kubectl to access google cloud resources in your project from within pods. We provide a placeholder key which can access public resources.
+  * *nginx/tls.cert* and *nginx/tls.key* - ssh keys that allow https access and avoid web browser "insecure website" warnings. https connections are critical for encrypting seqr logins, so you will want to order your own keys before making your seqr instance visible over the internet.    
+  * *seqr/postmark_server_token* - seqr uses this to send outgoing emails via postmark.com mail service
+  * *seqr/omim_key* - api key for downloading the latest omim files. We provide a placeholder key, but you'll want to use your own.
+  * *matchbox/nodes.json* - contains the list of all nodes that matchbox can connect to on the MME network, along with the authentication token for each node.  
+
+
+#### Step 3: Deploy seqr components
+
+The `./servctl` wrapper script launches `gcloud`, `kubectl`, `docker` and other command line tools to perform common operations 
+like initializing the kubernetes cluster, deploying components, checking status, looking at logs, etc.    
+
+For step 3, `./servctl` has a "deploy-all" subcommand that runs the sequence of commands to deploy all components, load reference data, and create an example seqr project. 
+ 
+```
+./servctl deploy-all {target}    # here {target} is one of `minikube`, `gcloud-dev` or `gcloud-prod`  
+``` 
+
+It will takes many hours to run.
+
+
+## Update / Migration of older xBrowse Instance
+
+[Update/Migration Instructions](https://github.com/macarthur-lab/seqr/blob/master/deploy/MIGRATE.md) - instructions for updating an existing xBrowse instance 
+
+
+## Deploy and manage seqr components
+
+   
+The `./servctl` wrapper script provides sub-commands for deploying and interacting with seqr components running on kubernetes. 
+ 
+ Run `./servctl -h` to see all available subcommands. The most commonly used ones are:
+
+    *** {component-name} is one of:  init-cluster, secrets, nginx, phenotips, postgres, seqr, etc. 
+    *** {deployment-target}  is one of:  minikube, gcloud-dev, or gcloud-prod 
+
+      deploy-all  {deployment-target}                       # end-to-end deployment - deploys all seqr components 
+      deploy {component-name} {deployment-target}           # deploy some specific component(s)
+      
+      status {deployment-target}                            # print status of all kubernetes and docker subsystems
+      set-env {deployment-target}                           # deploy one or more components
+      dashboard {deployment-target}                         # open the kubernetes dasbhoard in a browser
+      
+      shell {component-name} {deployment-target}            # open a bash shell inside one of the component containers
+      logs {component-name} {deployment-target}             # show logs for one or more components
+      troubleshoot {component-name} {deployment-target}     # print more detailed info that may be useful for discovering why a component is failing during pod initialization
+      connect-to {component-name} {deployment-target}       # shows logs, and also sets up a proxy so that the server running inside this component can be accessed from http://localhost:<port> 
+      
+      copy-to {component-name} {deployment-target} {local-path}           # copy a local file to one of the pods
+      copy-from {component-name} {deployment-target} {path} {local-path}  # copy a file from one of the pods to a local directory
+      
+      delete {component-name} {deployment-target}           # undeploys the component
+      
+    
+## Data loading pipelines
+
+seqr uses [hail](http://hail.is)-based pipelines to annotate datasets with VEP and other reference data and then load them into elasticsearch. 
+These pipelines can be run locally on a single machine or on-prem spark cluster, or on a cloud-based spark cluster such as Google Dataproc.
+We are working on integrating these pipelines so that they are launched and managed by seqr under the hood. 
+For now, they must be run manually, as shown in the examples below. 
+
+The code for these pipelines is in [Data annotation and loading pipelines](https://github.com/macarthur-lab/hail-elasticsearch-pipelines) 
+and is automatically installed in the `pipeline-runner` component which is deployed as part of standard seqr deployment.  
+
+Example using minikube:
+```
+# after you've deployed seqr to minikube, open a shell within the pipeline-runner pod
+./servctl shell pipeline-runner minikube
+ 
+export SEQR_PROJECT_GUID=R003_seqr_project3  # guid of existing seqr project
+export VCF_PATH=/data/my-exome-dataset.vcf.gz   # local or google cloud bucket VCF path 
+
+/hail-elasticsearch-pipelines/run_hail_locally.sh \
+        --driver-memory 5G \
+        --executor-memory 5G \
+        hail_scripts/v01/load_dataset_to_es.py \
+            --genome-version 37 \
+            --project-guid $SEQR_PROJECT_GUID \
+            --sample-type WES \
+            --dataset-type VARIANTS \
+            --exclude-hgmd \
+            --vep-block-size 10 \
+            --es-block-size 10 \
+            --num-shards 1 \
+            --max-samples-per-index 99 \
+            $VCF_PATH
+
+# after the pipeline completes successfully, you can link the new elasticsearch index to the seqr project by using the 'Edit Datasets' dialog on the project page.
+```
+
+Example with seqr deployed to google cloud GKE, and using Google Dataproc to run the pipeline:
+``` 
+# these commands should be run locally on your laptop  
+git clone git@github.com:macarthur-lab/hail-elasticsearch-pipelines.git
   
-**Please Note:** seqr is still under active development, and undergoing refactoring. We suggest you contact us if you want to build on this repo.
+cd hail-elasticsearch-pipelines 
+export IP=56.4.0.3   # IP address of elasticsearch instance running on google cloud on the project-default network so that it's visible to dataproc nodes, but not to the public internet. 
+export SEQR_PROJECT_GUID=R003_seqr_project3  # guid of existing seqr project
+export GS_VCF_PATH=gs://seqr-datasets/GRCh38/my-new-dataset.vcf.gz   # VCF path on cloud storage
+  
+# this will create a new dataproc cluster and submit the pipeline to it 
+python gcloud_dataproc/load_GRCh38_dataset.py --host $IP --project-guid SEQR_PROJECT_GUID --sample-type WGS --dataset-type VARIANTS $GS_VCF_PATH --es-block-size 50  
+  
+# after the pipeline completes successfully, you can link the new elasticsearch index to the seqr project by using the 'Edit Datasets' dialog on the project page. 
+```
+
+
+   
+## Kubernetes Resources
+
+
+- Official Kuberentes User Guide:  https://kubernetes.io/docs/user-guide/
+- 15 Kubernetes Features in 15 Minutes: https://www.youtube.com/watch?v=o85VR90RGNQ
+- Kubernetes: Up and Running: https://www.safaribooksonline.com/library/view/kubernetes-up-and/9781491935668/
+- The Children's Illustrated Guide to Kubernetes: https://deis.com/blog/2016/kubernetes-illustrated-guide/

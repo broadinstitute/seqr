@@ -19,6 +19,7 @@ if [ -e "/.config/service-account-key.json" ]; then
     cp /.config/boto /root/.boto
 fi
 
+
 # launch django dev server in background
 cd /seqr
 
@@ -32,32 +33,14 @@ python -u manage.py collectstatic --no-input
 
 # launch django server in background
 cd /seqr_settings
-gunicorn -w 32 -c gunicorn_config.py wsgi:application |& stdbuf -o0 grep -v curl |& tee /var/log/gunicorn.log &
+gunicorn -w 4 -c gunicorn_config.py wsgi:application |& stdbuf -o0 grep -v curl |& tee /var/log/gunicorn.log &
+
+#python manage.py runserver 0.0.0.0:8000 &
 
 # allow pg_dump and other postgres command-line tools to run without having to enter a password
 echo "*:*:*:*:$POSTGRES_PASSWORD" > ~/.pgpass
 chmod 600 ~/.pgpass
 
-# check if a settings backup exists
-LATEST_SETTINGS_BACKUP=$(ls -tr1 /mounted-bucket/settings_backups/seqr_${DEPLOYMENT_TYPE}_settings* | tail -n 1)
-if [[ -e "$LATEST_SETTINGS_BACKUP" ]]; then
-    echo Restoring $LATEST_SETTINGS_BACKUP
-
-    # restore latest settings backup
-    tar -C / -xzf $LATEST_SETTINGS_BACKUP
-fi
-
-# set up cron database backups
-echo 'SHELL=/bin/bash
-0 0 * * * python /mounted-bucket/settings_backups/run_settings_backup.py >& /var/log/cron.log
-0 0 * * * python /seqr/manage.py update_projects_in_new_schema -w /seqr/wgs_projects.txt 2>&1 >> /var/log/cron.log
-0 0 * * * python /seqr/manage.py transfer_gene_lists 2>&1 >> /var/log/cron.log
-0 */4 * * * source /root/.bashrc; python /mounted-bucket/database_backups/run_postgres_database_backup.py 2>&1 >> /var/log/cron.log
-' | crontab -
-
-env > /etc/environment  # this is necessary for crontab commands to run with the right env. vars.
-
-/etc/init.d/cron start
 
 # sleep to keep image running even if gunicorn is killed / restarted
 sleep 1000000000000

@@ -203,7 +203,7 @@ def _deprecated_create_original_project(project):
         logger.info("Created base project %s" % base_project)
 
     base_project.project_name = project.name
-    base_project.description = project.description
+    base_project.description = project.description or ""
     base_project.seqr_project = project
     base_project.save()
 

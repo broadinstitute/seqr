@@ -6,11 +6,9 @@ metadata:
     name: kibana
     deployment: {{ DEPLOY_TO }}
 spec:
-  type: NodePort
   ports:
   - name: kibana
     port: {{ KIBANA_SERVICE_PORT }}
-    nodePort: {{ KIBANA_SERVICE_NODE_PORT }}
   selector:
     name: kibana
 ---

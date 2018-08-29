@@ -1,5 +1,15 @@
+** DEPRECATED **
+------------------------------------------------- 
+
+Please use the kubernetes-based installation instead. 
+
+
+
 seqr: MacOSX Installation
-====================================
+-------------------------
+
+
+
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->

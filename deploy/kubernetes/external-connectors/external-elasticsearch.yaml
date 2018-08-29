@@ -1,0 +1,19 @@
+# Service that connects to an elasticsearch instance that's running directly on the host machine (in the case of minikube)
+# or generally somewhere else outside this kubernetes cluster
+kind: Service
+apiVersion: v1
+metadata:
+  name: elasticsearch
+spec:
+  ports:
+    - port: {{ ELASTICSEARCH_SERVICE_EXTERNAL_PORT }}
+---
+kind: Endpoints
+apiVersion: v1
+metadata:
+  name: elasticsearch
+subsets:
+  - addresses:
+      - ip: {{ ELASTICSEARCH_SERVICE_EXTERNAL_IP }}
+    ports:
+      - port:  {{ ELASTICSEARCH_SERVICE_EXTERNAL_PORT }}

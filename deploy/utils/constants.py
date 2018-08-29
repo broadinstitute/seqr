@@ -1,23 +1,25 @@
-DEPLOYMENT_TARGETS = ["minikube", "kube-solo", "gcloud-dev", "gcloud-prod", "gcloud-prod-elasticsearch"]
+DEPLOYMENT_TARGETS = ["minikube", "gcloud-dev", "gcloud-prod", "gcloud-prod-elasticsearch"]
 
 DEPLOYABLE_COMPONENTS = [
     "init-cluster",
-    #"init-elasticsearch-cluster",
+    "settings",
     "secrets",
 
     "cockpit",
 
-    "elasticsearch",  # a single elasticsearch instance
+    "external-mongo-connector",
+    "external-elasticsearch-connector",
 
-    "es-client",
+    "mongo",
+    "elasticsearch",  # a single elasticsearch instance
+    "kibana",
+
+    "es-client",  # pieces of the sharded elasticsearch deployment based on https://github.com/pires/kubernetes-elasticsearch-cluster
     "es-master",
     "es-data",
     "es-kibana",
 
-    "kibana",
-
     "matchbox",
-    "mongo",
     "nginx",
     "phenotips",
     "postgres",
@@ -44,27 +46,24 @@ COMPONENT_GROUP_NAMES = list(_get_component_group_to_component_name_mapping().ke
 
 
 COMPONENT_PORTS = {
-    "init-cluster": [],
-    #"init-elasticsearch-cluster": [],
-    "secrets": [],
+    "cockpit":         [9090],
 
-    "cockpit":   [9090],
+    "mongo":           [27017],
+    "elasticsearch":   [9200],
+    "kibana":          [5601],
 
-    "elasticsearch": [9200],
-    "es-client":     [9200],
-    "es-master":     [9020],
-    "es-data":       [9020],
+    "es-client":       [9200],
+    "es-master":       [9020],
+    "es-data":         [9020],
 
-    "redis":         [6379],
-    "kibana":        [5601],
+    "redis":           [6379],
 
-    "matchbox":  [9020],
-    "mongo":     [27017],
-    "phenotips": [8080],
-    "postgres":  [5432],
-    "seqr":      [8000],
+    "matchbox":        [9020],
+    "phenotips":       [8080],
+    "postgres":        [5432],
+    "seqr":            [8000],
     "pipeline-runner": [30005],
-    "nginx":     [80, 443],
+    "nginx":           [80, 443],
 }
 
 COMPONENTS_TO_OPEN_IN_BROWSER = set([
