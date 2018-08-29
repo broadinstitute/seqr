@@ -64,11 +64,6 @@ spec:
           - configMapRef:
               name: all-settings
         env:
-        - name: DJANGO_KEY
-          valueFrom:
-            secretKeyRef:
-              name: seqr-secrets
-              key: django_key
         - name: POSTGRES_USERNAME
           valueFrom:
             secretKeyRef:
