@@ -1,4 +1,17 @@
-SEQR_VERSION: 0.1
+#####################################################
+####### SETTINGS THAT MAY NEED TO BE MODIFIED #######
+
+MONGO_DISK_SIZE: '200Gb'      # used when creating the GKE cluster on gcloud deployments
+POSTGRES_DISK_SIZE: '200Gb'   # used when creating the GKE cluster on gcloud deployments
+ELASTICSEARCH_DISK_SIZE: 200  # used when creating the GKE cluster on gcloud deployments
+
+NUM_NODES_PER_NODE_POOL: 4    # used when creating nodes for gcloud deployments
+
+SEQR_POD_MOUNTED_BUCKET: seqr-mounted-bucket   # name of the private google bucket (for example: gs://seqr-mounted-bucket) mounted into the seqr pod and used for easily saving postgres backups, etc.
+
+###########################################################
+####### SETTINGS THAT SHOULDN'T NEED TO BE MODIFIED #######
+
 
 DEPLOYMENT_TEMP_DIR: '/tmp'
 
@@ -23,8 +36,3 @@ PIPELINE_RUNNER_SERVICE_PORT: 30005
 
 SEQR_UI_DEV_PORT: 3000
 
-MONGO_DISK_SIZE: '200Gb'
-POSTGRES_DISK_SIZE: '200Gb'
-ELASTICSEARCH_DISK_SIZE: 200
-
-NUM_NODES_PER_NODE_POOL: 4

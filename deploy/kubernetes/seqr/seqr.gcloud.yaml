@@ -49,7 +49,7 @@ spec:
         lifecycle:
           postStart:
             exec:
-              command: ["gcsfuse", "-o", "nonempty", "seqr-mounted-bucket", "/mounted-bucket"]
+              command: ["gcsfuse", "-o", "nonempty", {{ SEQR_POD_MOUNTED_BUCKET }}, "/mounted-bucket"]
           preStop:
             exec:
               command: ["fusermount", "-u", "/mounted-bucket"]
