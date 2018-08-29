@@ -25,9 +25,11 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         if not options["skip_gencode"]:
-            # download v19 and then v28 because there are 1000+ gene and transcript ids in v19 that
+            # download v19 and then v27 and then v28 because there are 1000+ gene and transcript ids in v19 that
             # gencode retired by the time of v28, but that are used in the gene constraint table and other datasets
+            # and also ~100 genes and transcripts taht were retired between v27 and v28
             update_gencode(19, reset=True)
+            update_gencode(27)
             update_gencode(28)
 
         if not options["skip_dbnsfp_gene"]:
