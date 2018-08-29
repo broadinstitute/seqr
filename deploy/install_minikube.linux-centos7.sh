@@ -5,7 +5,7 @@ export SEQR_BRANCH=master
 echo ==== Download deployment scripts =====
 
 curl -Lo seqr.zip https://github.com/macarthur-lab/seqr/archive/${SEQR_BRANCH}.zip
-sudo yum install -y unzip
+sudo yum install -y unzip python-devel
 unzip -o -d seqr seqr.zip
 
 echo ==== Install python dependencies =====
