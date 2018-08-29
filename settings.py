@@ -1,5 +1,7 @@
 import logging
 import os
+import random
+import string
 import sys
 
 logger = logging.getLogger(__name__)
@@ -180,11 +182,17 @@ DEPLOYMENT_TYPE = os.environ.get("DEPLOYMENT_TYPE", DEPLOYMENT_TYPE_DEV)
 assert DEPLOYMENT_TYPE in DEPLOYMENT_TYPES, "Invalid deployment type: %(DEPLOYMENT_TYPE)s" % locals()
 
 # set the secret key
-if os.path.isfile("/etc/django_secret_key"):
-    with open("/etc/django_secret_key") as f:
-        SECRET_KEY = f.read().strip()
-else:
-    SECRET_KEY = os.environ.get("DJANGO_KEY", "-placeholder-key-")
+SECRET_FILE = os.path.join(os.path.dirname(__file__), 'django_key')
+try:
+    SECRET_KEY = open(SECRET_FILE).read().strip()
+except IOError:
+    try:
+        SECRET_KEY = ''.join(random.SystemRandom().choice(string.printable) for i in range(50))
+        with open(SECRET_FILE, 'w') as f:
+            f.write(SECRET_KEY)
+    except IOError as e:
+        logger.warn('Unable to generate {}: {}'.format(os.path.abspath(SECRET_FILE), e))
+        SECRET_KEY = os.environ.get("DJANGO_KEY", "-placeholder-key-")
 
 if DEPLOYMENT_TYPE == DEPLOYMENT_TYPE_PROD:
     SESSION_COOKIE_SECURE = True
