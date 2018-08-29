@@ -22,9 +22,9 @@ seqr consists of the following components:
 - mongo - legacy NoSQL database originally used for variant callsets and still used now to store some reference data and logs.
 
 
-## Installation
+## Install
 
-To install the components, we rely on Docker images and Kubernetes. 
+To install seqr components, we rely on Docker images and Kubernetes. 
 Users that are very familiar with these components may opt to install them directly on their host system 
 (and we also use this approach for local development). In most cases though, we recommend the added complexity 
 of the docker/kubernetes approach because:  1) deployment is automated and avoids manual steps as much as possible. 
