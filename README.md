@@ -131,7 +131,7 @@ It will takes many hours to run.
 
 ## Update / Migrate an older xBrowse Instance
 
-[Update/Migration Instructions](https://github.com/macarthur-lab/seqr/blob/master/deploy/MIGRATE.md) instructions. 
+[Update/Migration Instructions](https://github.com/macarthur-lab/seqr/blob/master/deploy/MIGRATE.md) 
 
 
 ## Deploy and manage seqr components
