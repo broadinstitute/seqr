@@ -20,7 +20,7 @@ const Footer = () =>
           If you have questions or feedback, &nbsp;
           <a
             href="https://mail.google.com/mail/?view=cm&amp;fs=1&amp;tf=1&amp;to=seqr@broadinstitute.org"
-            rel="noopener noreferrer" target="_blank"
+            target="_blank"
           >
             Contact Us
           </a>

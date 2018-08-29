@@ -115,6 +115,23 @@ export const loadGene = (geneId) => {
   }
 }
 
+export const loadGenes = (geneIds) => {
+  return (dispatch, getState) => {
+    const state = getState()
+    if ([...geneIds].some(geneId => !state.genesById[geneId])) {
+      dispatch({ type: REQUEST_GENES })
+      new HttpRequestHelper('/api/genes_info',
+        (responseJson) => {
+          dispatch({ type: RECEIVE_GENES, updatesById: responseJson })
+        },
+        (e) => {
+          dispatch({ type: RECEIVE_GENES, error: e.message, updatesById: {} })
+        },
+      ).get({ geneIds: [...geneIds] })
+    }
+  }
+}
+
 export const loadLocusLists = (locusListId) => {
   return (dispatch, getState) => {
     const locusList = getState().locusListsByGuid[locusListId]
@@ -211,6 +228,7 @@ const rootReducer = combineReducers(Object.assign({
   individualsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'individualsByGuid'),
   samplesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'samplesByGuid'),
   analysisGroupsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'analysisGroupsByGuid'),
+  matchmakerSubmissions: createObjectsByIdReducer(RECEIVE_DATA, 'matchmakerSubmissions'),
   genesById: createObjectsByIdReducer(RECEIVE_GENES),
   genesLoading: loadingReducer(REQUEST_GENES, RECEIVE_GENES),
   locusListsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'locusListsByGuid'),

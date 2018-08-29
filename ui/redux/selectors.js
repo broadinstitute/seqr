@@ -5,6 +5,9 @@ export const getFamiliesByGuid = state => state.familiesByGuid
 export const getIndividualsByGuid = state => state.individualsByGuid
 export const getSamplesByGuid = state => state.samplesByGuid
 export const getAnalysisGroupsByGuid = state => state.analysisGroupsByGuid
+export const getMatchmakerSubmissions = state => state.matchmakerSubmissions
+export const getMatchmakerMatchesLoading = state => state.matchmakerMatchesLoading.isLoading
+export const getMonarchMatchesLoading = state => state.monarchMatchesLoading.isLoading
 export const getGenesById = state => state.genesById
 export const getGenesIsLoading = state => state.genesLoading.isLoading
 export const getLocusListsByGuid = state => state.locusListsByGuid

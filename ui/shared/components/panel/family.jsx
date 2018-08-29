@@ -1,13 +1,14 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Grid, Header, Popup } from 'semantic-ui-react'
+import { Grid, Header, Popup, Icon } from 'semantic-ui-react'
 import { Link } from 'react-router-dom'
 import styled from 'styled-components'
 
 import { updateFamily } from 'redux/rootReducer'
 import { getProjectsByGuid } from 'redux/selectors'
 import VariantTagTypeBar from '../graph/VariantTagTypeBar'
+import ShowMatchmakerModal from '../buttons/ShowMatchmakerModal'
 import PedigreeImagePanel from './view-pedigree-image/PedigreeImagePanel'
 import TextFieldView from './view-fields/TextFieldView'
 import Sample from './sample'
@@ -54,7 +55,7 @@ const familyFieldRenderProps = {
       <Sample loadedSample={loadedSample} hoverDetails={compact ? 'first loaded' : null} />,
   },
   [FAMILY_FIELD_OMIM_NUMBER]: {
-    fieldDisplay: value => <a target="_blank" href={`https://www.omim.org/entry/${value}`} rel="noopener noreferrer">{value}</a>,
+    fieldDisplay: value => <a target="_blank" href={`https://www.omim.org/entry/${value}`}>{value}</a>,
     formFields: [{ name: FAMILY_FIELD_OMIM_NUMBER }],
   },
 }
@@ -174,15 +175,10 @@ const Family = (
         <a href={`/project/${project.deprecatedProjectId}/family/${family.familyId}`}>Original Family Page</a>
         <VerticalSpacer height={10} />
         <a href={`/project/${project.deprecatedProjectId}/family/${family.familyId}/mendelian-variant-search`}>
-          <annotation name="search" /> Variant Search
+          <Icon name="search" /> Variant Search
         </a>
         <VerticalSpacer height={10} />
-        {
-          project.isMmeEnabled &&
-          <a href={`/matchmaker/search/project/${project.deprecatedProjectId}/family/${family.familyId}`}>
-            <annotation name="search" /> Match Maker Exchange
-          </a>
-        }
+        {project.isMmeEnabled && <ShowMatchmakerModal family={family} />}
       </div> : null,
   ] : null
 

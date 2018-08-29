@@ -57,7 +57,7 @@ const textWithLinks = (text) => {
         for (const title of Object.keys(linkMap)) { // eslint-disable-line no-restricted-syntax
           if (str && str.startsWith(`${title}:`)) {
             const id = str.replace(`${title}:`, '')
-            return <span key={i}>{title}: <a href={`${linkMap[title]}${id}`} target="_blank" rel="noopener noreferrer">{id}</a></span>
+            return <span key={i}>{title}: <a href={`${linkMap[title]}${id}`} target="_blank">{id}</a></span>
           }
         }
         if (str && str.startsWith('DISEASE:') && str.endsWith('[')) {
@@ -93,12 +93,12 @@ const GeneDetailContent = ({ gene, updateGeneNote: dispatchUpdateGeneNote }) => 
             NOTE: Missense contraint is a measure of the degree to which the number of missense variants found
             in this gene in ExAC v0.3 is higher or lower than expected according to the statistical model
             described in [
-            <a href="http://www.nature.com/ng/journal/v46/n9/abs/ng.3050.html" target="_blank" rel="noopener noreferrer">
+            <a href="http://www.nature.com/ng/journal/v46/n9/abs/ng.3050.html" target="_blank">
               K. Samocha 2014
             </a>]. In general this metric is most useful for genes that act via a dominant mechanism, and where
             a large proportion of the protein is heavily functionally constrained. For more details see
             this
-            <a href="ftp://ftp.broadinstitute.org/pub/ExAC_release/release0.3/functional_gene_constraint/README_forweb_cleaned_exac_r03_2015_03_16_z_data.txt" target="_blank" rel="noopener noreferrer">
+            <a href="ftp://ftp.broadinstitute.org/pub/ExAC_release/release0.3/functional_gene_constraint/README_forweb_cleaned_exac_r03_2015_03_16_z_data.txt" target="_blank">
               {' README'}
             </a>.
           </i>
@@ -124,7 +124,7 @@ const GeneDetailContent = ({ gene, updateGeneNote: dispatchUpdateGeneNote }) => 
         <div>
           {gene.phenotypeInfo.mimPhenotypes.map(phenotype =>
             <span key={phenotype.description}>{phenotype.mim_id ?
-              <a href={`http://www.omim.org/entry/${phenotype.mim_id}`} target="_blank" rel="noopener noreferrer">
+              <a href={`http://www.omim.org/entry/${phenotype.mim_id}`} target="_blank">
                 {phenotype.description}
               </a>
               : phenotype.description}
@@ -139,7 +139,7 @@ const GeneDetailContent = ({ gene, updateGeneNote: dispatchUpdateGeneNote }) => 
       title: 'ORPHANET',
       content: gene.phenotypeInfo.orphanetPhenotypes.map(phenotype =>
         <div key={phenotype.orphanet_id}>
-          <a href={`http://www.orpha.net/consor/cgi-bin/Disease_Search.php?lng=EN&data_id=20460&Disease_Disease_Search_diseaseGroup=${phenotype.orphanet_id}`} target="_blank" rel="noopener noreferrer">
+          <a href={`http://www.orpha.net/consor/cgi-bin/Disease_Search.php?lng=EN&data_id=20460&Disease_Disease_Search_diseaseGroup=${phenotype.orphanet_id}`} target="_blank">
             {phenotype.description}
           </a>
         </div>,
@@ -162,7 +162,7 @@ const GeneDetailContent = ({ gene, updateGeneNote: dispatchUpdateGeneNote }) => 
       {linkDetails.filter(linkConfig => linkConfig).map(linkConfig =>
         <Popup
           key={linkConfig.title}
-          trigger={<a href={linkConfig.link} target="_blank" rel="noopener noreferrer"><b>{linkConfig.title}</b><HorizontalSpacer width={20} /></a>}
+          trigger={<a href={linkConfig.link} target="_blank"><b>{linkConfig.title}</b><HorizontalSpacer width={20} /></a>}
           content={linkConfig.description}
         />,
       )}
