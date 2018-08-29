@@ -103,11 +103,12 @@ Once the VM(s) are ready, install and launch elasticsearch on them - using simil
 
 #### Step 2: Adjust seqr deployment settings
 
-The following files contain settings that you may want to adjust before proceeding to step 3:
+Optionally edit high-level deployment settings before proceeding to step 3:
 
-* `deploy/kubernetes/minikube-settings.yaml` - you will want to edit the specific to your deployment target (for example `minikube-settings.yaml`).
-* `deploy/secrets/shared/shared-settings.yaml` - directories that contain keys, passwords and other sensitive info that shouldn't be shared publicly.
-     You will want to edit:
+* `deploy/kubernetes/minikube-settings.yaml` - if deploying to minikube, this contains high-level settings like MINIKUBE_DISK_SIZE.
+* `deploy/kubernetes/gcloud-prod-settings.yaml` - if deploying a production instance to google kubernetes engine, this contains high-level settings like the number of nodes to create, disk sizes, etc.
+* `deploy/secrets/shared/*` - directories that contain keys, passwords and other sensitive info that shouldn't be shared publicly.
+     You may eventually want to edit:
   * *gcloud/service-account-key.json* - allows gcloud and kubectl to access google cloud resources in your project from within pods. We provide a placeholder key which can access public resources.
   * *nginx/tls.cert* and *nginx/tls.key* - ssh keys that allow https access and avoid web browser "insecure website" warnings. https connections are critical for encrypting seqr logins, so you will want to order your own keys before making your seqr instance visible over the internet.
   * *seqr/postmark_server_token* - seqr uses this to send outgoing emails via postmark.com mail service
@@ -117,15 +118,25 @@ The following files contain settings that you may want to adjust before proceedi
 
 #### Step 3: Deploy seqr components
 
-The `./servctl` wrapper script provides a convenient way to run common operations like initializing the kubernetes cluster, deploying components, checking status, looking at logs, etc. It works by running `gcloud`, `kubectl`, `docker` and other command line tools.
+The `./servctl` wrapper script provides a convenient way to run common operations like initializing the kubernetes cluster, deploying components, checking status, looking at logs, etc. 
+It works by running `gcloud`, `kubectl`, `docker` and other command line tools.
 
 For step 3, `./servctl` has a "deploy-all" subcommand that runs the sequence of commands to deploy all components, load reference data, and create an example seqr project.
 
+If you completed step 1, you can do 
 ```
-./servctl deploy-all {target}    # here {target} is one of `minikube`, `gcloud-dev` or `gcloud-prod`
+cd seqr/seqr-*/
+source ./venv/bin/activate
+./servctl deploy-all minikube   # here `minikube` can also be replaced with `gcloud-dev` or `gcloud-prod` to deploy to the cloud.
 ```
 
-It will takes many hours to run.
+This will takes many hours before it finishes deploying everything and loading the example project.
+
+Once it's done with the deployment steps, you should be able to access seqr by opening your browser to:
+
+```
+open http://$(minikube ip):30003   # here, port 30003 is based on the value of $SEQR_SERVICE_NODE_PORT 
+```
 
 
 ## Update / Migrate an older xBrowse Instance
