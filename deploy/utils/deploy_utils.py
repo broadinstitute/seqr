@@ -651,7 +651,6 @@ def deploy_secrets(settings):
 
     run(" ".join([
         "kubectl create secret generic seqr-secrets",
-        "--from-file deploy/secrets/%(DEPLOY_TO)s/seqr/django_key",
         "--from-file deploy/secrets/%(DEPLOY_TO)s/seqr/omim_key",
         "--from-file deploy/secrets/%(DEPLOY_TO)s/seqr/postmark_server_token",
         "--from-file deploy/secrets/%(DEPLOY_TO)s/seqr/mme_node_admin_token",
