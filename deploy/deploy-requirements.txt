@@ -1,4 +1,3 @@
-# dev dependencies
 pip                              # make sure the latest version of pip is installed
 mock                             # mock objects for unit tests
 psutil                           # library for process and system monitoring

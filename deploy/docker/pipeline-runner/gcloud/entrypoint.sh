@@ -7,8 +7,13 @@ env
 source ~/.bashrc
 
 # init gcloud
-gcloud config set project $GCLOUD_PROJECT
-gcloud config set compute/zone $GCLOUD_ZONE
+if [ $GCLOUD_PROJECT ]; then
+    gcloud config set project $GCLOUD_PROJECT
+fi
+
+if [ $GCLOUD_ZONE ]; then
+    gcloud config set compute/zone $GCLOUD_ZONE
+fi
 
 if [ -e "/.config/service-account-key.json" ]; then
     # authenticate to google cloud using service account
