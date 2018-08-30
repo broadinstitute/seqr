@@ -6,6 +6,7 @@ import json
 import logging
 import os
 from collections import defaultdict
+from copy import copy
 from django.db.models import prefetch_related_objects
 from django.db.models.fields.files import ImageFieldFile
 
@@ -21,7 +22,7 @@ def _get_json_for_models(models, nested_fields=None, user=None, process_result=N
         return []
 
     model_class = type(models[0])
-    fields = model_class._meta.json_fields
+    fields = copy(model_class._meta.json_fields)
     if user and user.is_staff:
         fields += getattr(model_class._meta, 'internal_json_fields', [])
 
