@@ -87,6 +87,15 @@ def deploy(deployment_target, components, output_dir=None, other_settings={}):
     if "cockpit" in components:
         deploy_cockpit(settings)
 
+    if "external-mongo-connector" in components:
+        deploy_external_connector(settings, "mongo")
+
+    if "external-elasticsearch-connector" in components:
+        deploy_external_connector(settings, "elasticsearch")
+
+    if "elasticsearch" in components:
+        deploy_elasticsearch(settings)
+
     if "mongo" in components:
         deploy_mongo(settings)
 
@@ -104,15 +113,6 @@ def deploy(deployment_target, components, output_dir=None, other_settings={}):
 
     if "seqr" in components:
         deploy_seqr(settings)
-
-    if "external-mongo-connector" in components:
-        deploy_external_connector(settings, "mongo")
-
-    if "external-elasticsearch-connector" in components:
-        deploy_external_connector(settings, "elasticsearch")
-
-    if "elasticsearch" in components:
-        deploy_elasticsearch(settings)
 
     if "kibana" in components:
         deploy_kibana(settings)
@@ -499,7 +499,7 @@ def deploy_init_cluster(settings):
             #"--network %(GCLOUD_PROJECT)s-auto-vpc",
             #"--local-ssd-count 1",
             "--scopes", "https://www.googleapis.com/auth/devstorage.read_write"
-        ]) % settings, verbose=False, errors_to_ignore=["already exists"])
+        ]) % settings, verbose=False, errors_to_ignore=["Already exists"])
 
         # create cluster nodes - breaking them up into node pools of several machines each.
         # This way, the cluster can be scaled up and down when needed using the technique in
