@@ -36,11 +36,13 @@ def update_project_saved_variant_json(project):
 
     variants_json = _retrieve_saved_variants_json(project, saved_variants_map.keys())
 
+    updated_saved_variant_guids = []
     for var in variants_json:
         saved_variant = saved_variants_map[(var['xpos'], var['ref'], var['alt'], var['extras']['family_id'])]
         _update_saved_variant_json(saved_variant, var)
+        updated_saved_variant_guids.append(saved_variant.guid)
 
-    return variants_json
+    return updated_saved_variant_guids
 
 
 def _retrieve_saved_variants_json(project, variant_tuples, create_if_missing=False):

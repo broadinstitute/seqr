@@ -30,9 +30,9 @@ class Command(BaseCommand):
         for project in tqdm(projects, unit=" projects"):
             logger.info("Project: " + project.name)
             try:
-                variants_json = update_project_saved_variant_json(project)
-                success[project.name] = len(variants_json)
-                logger.info('Updated {0} variants for project {1}'.format(len(variants_json), project.name))
+                updated_saved_variant_guids = update_project_saved_variant_json(project)
+                success[project.name] = len(updated_saved_variant_guids)
+                logger.info('Updated {0} variants for project {1}'.format(len(updated_saved_variant_guids), project.name))
             except Exception as e:
                 logger.error('Error in project {0}: {1}'.format(project.name, e))
                 error[project.name] = e
