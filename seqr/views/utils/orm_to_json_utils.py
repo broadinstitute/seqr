@@ -18,6 +18,18 @@ logger = logging.getLogger(__name__)
 
 
 def _get_json_for_models(models, nested_fields=None, user=None, process_result=None, guid_key=None):
+    """Returns an array JSON representations of the given models.
+
+    Args:
+        models (array): Array of django models
+        user (object): Django User object for determining whether to include restricted/internal-only fields
+        nested_fields (array): Optional array of fields to get from the model that are nested on related objects
+        process_result (lambda): Optional function to post-process a given model json
+        guid_key (string): Optional key to use for the model's guid
+    Returns:
+        array: json objects
+    """
+
     if not models:
         return []
 
@@ -50,6 +62,14 @@ def _get_json_for_models(models, nested_fields=None, user=None, process_result=N
 
 
 def _get_json_for_model(model, get_json_for_models=_get_json_for_models, **kwargs):
+    """Helper function to return a JSON representations of the given model.
+
+    Args:
+        model (object): Django models
+        get_json_for_models (lambda): Function used to determine the json for an array of the given model
+    Returns:
+        object: json object
+    """
     return get_json_for_models([model], **kwargs)[0]
 
 

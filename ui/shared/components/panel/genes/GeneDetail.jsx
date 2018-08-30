@@ -110,7 +110,7 @@ const GeneDetailContent = ({ gene, updateGeneNote: dispatchUpdateGeneNote }) => 
       title: 'LoF Constraint',
       content: gene.constraints.pli ?
         <div>
-          pli-score: {gene.constraints.pli.toPrecision(4)} (ranked {gene.constraints.pliRank} most
+          pLI-score: {gene.constraints.pli.toPrecision(4)} (ranked {gene.constraints.pliRank} most
           intolerant of LoF mutations out of {gene.constraints.totalGenes} genes under study). <br />
           <i style={{ color: 'gray' }}>
             NOTE: This metric is based on the amount of expected variation observed in the ExAC data and is a
