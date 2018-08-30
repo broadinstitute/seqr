@@ -1,5 +1,5 @@
 import json
-
+import mock
 from django.test import TransactionTestCase
 from django.urls.base import reverse
 
@@ -14,7 +14,10 @@ GENE_ID = 'ENSG00000223972'
 class GeneAPITest(TransactionTestCase):
     fixtures = ['users', 'reference_data']
 
-    def test_gene_info(self):
+    @mock.patch('seqr.views.utils.gene_utils.get_reference')
+    def test_gene_info(self, mock_reference):
+        mock_reference.return_value.get_tissue_expression_display_values.return_value = []
+
         url = reverse(gene_info, args=[GENE_ID])
         _check_login(self, url)
 
