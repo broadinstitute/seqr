@@ -5,16 +5,17 @@ export SEQR_BRANCH=master
 echo ==== Download deployment scripts =====
 
 curl -Lo seqr.zip https://github.com/macarthur-lab/seqr/archive/${SEQR_BRANCH}.zip
-sudo yum install -y unzip
+sudo yum install -y unzip python-devel
 unzip -o -d seqr seqr.zip
 
 echo ==== Install python dependencies =====
 
-curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
-sudo python get-pip.py
+curl -Lo virtualenv-16.0.0.tar.gz https://pypi.python.org/packages/source/v/virtualenv/virtualenv-16.0.0.tar.gz
+tar xzf virtualenv-16.0.0.tar.gz
+python virtualenv-16.0.0/virtualenv.py --python=python2.7 venv
+source venv/bin/activate
 
-sudo pip install -r seqr/*/deploy/dev-requirements.txt
-
+pip install -r deploy/deploy-requirements.txtsudo pip install -r seqr/seqr-${SEQR_BRANCH}/deploy/deploy-requirements.txt
 
 echo ==== Install and start docker service =====
 
@@ -74,15 +75,23 @@ echo ==== Install java 1.8 =====
 sudo yum install -y java-1.8.0-openjdk.x86_64
 
 
-echo ==== Install and start elasticsearch =====
+echo ==== Adjust system settings for elasticsearch =====
 
-ELASTICSEARCH_VERSION=elasticsearch-6.4.0
+echo '
+vm.max_map_count=262144
+' | sudo tee -a /etc/sysctl.conf
+
 sudo sysctl -w vm.max_map_count=262144   # avoid elasticsearch error: "max virtual memory areas vm.max_map_count [65530] is too low, increase to at least [262144]"
 
 echo '
 * hard	 nofile	65536
 * soft	 nofile	65536
 ' | sudo tee -a /etc/security/limits.conf  # avoid elasticsearch error: "max file descriptors [4096] for elasticsearch process is too low, increase to at least [65536]"
+
+
+echo ==== Install and start elasticsearch =====
+
+ELASTICSEARCH_VERSION=elasticsearch-6.4.0
 
 curl -L http://artifacts.elastic.co/downloads/elasticsearch/${ELASTICSEARCH_VERSION}.tar.gz -o ${ELASTICSEARCH_VERSION}.tar.gz
 tar xzf ${ELASTICSEARCH_VERSION}.tar.gz
