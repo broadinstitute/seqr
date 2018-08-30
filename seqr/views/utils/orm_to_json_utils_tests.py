@@ -35,7 +35,7 @@ class JSONUtilsTest(TestCase):
 
     def test_json_for_family(self):
         family = Family.objects.first()
-        json = _get_json_for_family(family, user=None)
+        json = _get_json_for_family(family)
 
         family_fields = {
             'projectGuid', 'familyGuid', 'analysedBy', 'pedigreeImage', 'familyId', 'displayName', 'description',
@@ -53,7 +53,7 @@ class JSONUtilsTest(TestCase):
 
     def test_json_for_individual(self):
         individual = Individual.objects.first()
-        json = _get_json_for_individual(individual, user=None)
+        json = _get_json_for_individual(individual)
 
         individual_fields = {
             'projectGuid', 'familyGuid', 'individualGuid', 'caseReviewStatusLastModifiedBy', 'phenotipsData',

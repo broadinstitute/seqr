@@ -149,7 +149,7 @@ def _get_json_for_families(families, user=None, add_individual_guids_field=False
     return _get_json_for_models(families, nested_fields=nested_fields, user=user, process_result=_process_result)
 
 
-def _get_json_for_family(family, user, **kwargs):
+def _get_json_for_family(family, user=None, **kwargs):
     """Returns a JSON representation of the given Family.
 
     Args:
@@ -207,7 +207,7 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, family_
     return _get_json_for_models(individuals, nested_fields=nested_fields, user=user, process_result=_process_result)
 
 
-def _get_json_for_individual(individual, user, **kwargs):
+def _get_json_for_individual(individual, user=None, **kwargs):
     """Returns a JSON representation of the given Individual.
 
     Args:
