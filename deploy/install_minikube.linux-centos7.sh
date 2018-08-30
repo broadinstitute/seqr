@@ -75,15 +75,23 @@ echo ==== Install java 1.8 =====
 sudo yum install -y java-1.8.0-openjdk.x86_64
 
 
-echo ==== Install and start elasticsearch =====
+echo ==== Adjust system settings for elasticsearch =====
 
-ELASTICSEARCH_VERSION=elasticsearch-6.4.0
+echo '
+vm.max_map_count=262144
+' | sudo tee -a /etc/sysctl.conf
+
 sudo sysctl -w vm.max_map_count=262144   # avoid elasticsearch error: "max virtual memory areas vm.max_map_count [65530] is too low, increase to at least [262144]"
 
 echo '
 * hard	 nofile	65536
 * soft	 nofile	65536
 ' | sudo tee -a /etc/security/limits.conf  # avoid elasticsearch error: "max file descriptors [4096] for elasticsearch process is too low, increase to at least [65536]"
+
+
+echo ==== Install and start elasticsearch =====
+
+ELASTICSEARCH_VERSION=elasticsearch-6.4.0
 
 curl -L http://artifacts.elastic.co/downloads/elasticsearch/${ELASTICSEARCH_VERSION}.tar.gz -o ${ELASTICSEARCH_VERSION}.tar.gz
 tar xzf ${ELASTICSEARCH_VERSION}.tar.gz
