@@ -1,18 +1,19 @@
 #####################################################
 ####### SETTINGS THAT MAY NEED TO BE MODIFIED #######
 
-ELASTICSEARCH_SERVICE_EXTERNAL_IP: {{ HOST_MACHINE_IP }}  # works if elasticsearch is running on the same machine as minikube and the external-elasticsearch-connector is deployed on your minikube cluster
+ELASTICSEARCH_SERVICE_EXTERNAL_IP: {{ HOST_MACHINE_IP }}  # default assumes elasticsearch is running on the same machine as minikube
 ELASTICSEARCH_SERVICE_EXTERNAL_PORT: 9200
 
 SEQR_SERVICE_NODE_PORT: 30003   # after deployment, seqr will be accessible at http://$(minikube ip):$SEQR_SERVICE_NODE_PORT . Node port range starts at 30000
 
-MINIKUBE_DISK_SIZE: 100g
+MINIKUBE_DISK_SIZE: 100g        # how much disk space minikube can consume
 # MINIKUBE_MEMORY: 12000, MINIKUBE_NUM_CPUS: 8  <-- these can optionally be set here to over-ride defaults
 
-GCLOUD_PROJECT: 'seqr-project'  # used for accessing gcloud resources from locally-deployed pods in minikube
-GCLOUD_ZONE: 'us-central1-b'    # used for accessing gcloud resources from locally-deployed pods in minikube
-
 SEQR_GIT_BRANCH: 'master'       # the seqr pod will run this seqr code branch
+
+# (optional) GCLOUD_PROJECT and GCLOUD_ZONE values are used to preconfigure gcloud command-line tools within pods to point to this project.
+GCLOUD_PROJECT: 'seqr-project'
+GCLOUD_ZONE: 'us-central1-b'
 
 
 ###########################################################
