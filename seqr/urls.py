@@ -22,7 +22,7 @@ from seqr.views.apis.individual_api import \
     save_individuals_table_handler
 
 from seqr.views.apis.phenotips_api import \
-    proxy_to_phenotips_handler, \
+    proxy_to_phenotips, \
     phenotips_pdf_handler, \
     phenotips_edit_handler
 
@@ -56,7 +56,7 @@ from seqr.views.apis.gene_api import \
 from seqr.views.pages.staff.staff_pages import \
     staff_dashboard, \
     seqr_stats_page, \
-    users_page
+    users_page, proxy_to_kibana, kibana_page
 
 from seqr.views.apis.locus_list_api import \
     locus_lists, \
@@ -155,14 +155,13 @@ api_endpoints = {
 
 urlpatterns = []
 
-# phenotips urls
 phenotips_urls = '^(?:%s)' % ('|'.join([
     'ssx', 'skin', 'skins', 'get', 'lock', 'preview', 'download', 'export',
     'XWiki', 'cancel', 'resources', 'rollback', 'rest', 'webjars', 'bin', 'jsx'
 ]))
 
 urlpatterns += [
-    url(phenotips_urls, proxy_to_phenotips_handler, name='proxy_to_phenotips'),
+    url(phenotips_urls, proxy_to_phenotips, name='proxy_to_phenotips'),
 ]
 
 # core react page templates
@@ -180,6 +179,16 @@ urlpatterns += [
 #urlpatterns += [
 #   url("^api/v1/%(url_endpoint)s$" % locals(), handler_function) for url_endpoint, handler_function in api_endpoints.items()]
 
+kibana_urls = '^(?:%s)' % ('|'.join([
+    "app", "bundles", "elasticsearch", "plugins", "ui", "api/apm", "api/console", "api/index_management", "api/index_patterns",
+    "api/kibana", "api/monitoring", "api/reporting", "api/saved_objects", "api/telemetry", "api/timelion", "api/xpack",
+]))
+
+urlpatterns += [
+    url(kibana_urls, proxy_to_kibana, name='proxy_to_kibana'),
+]
+
+
 # other staff-only endpoints
 urlpatterns += [
     url("^staff/?$", staff_dashboard, name="staff_dashboard"),
@@ -188,6 +197,7 @@ urlpatterns += [
     url("^staff/elasticsearch_status", elasticsearch_status, name="elasticsearch_status"),
     url("^staff/komp_export", komp_export, name="komp_export"),
     url("^staff/users/?", users_page, name="users_page"),
+    url("^staff/kibana/?", kibana_page, name="kibana_page"),
 ]
 
 urlpatterns += [

@@ -4,9 +4,11 @@ from collections import defaultdict
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.models import User
 from django.shortcuts import render
+from django.views.decorators.csrf import csrf_exempt
 
 from seqr.models import Sample, Family, Individual
-from settings import LOGIN_URL
+from seqr.views.utils.proxy_request_utils import proxy_request
+from settings import LOGIN_URL, KIBANA_SERVER
 
 logger = logging.getLogger(__name__)
 
@@ -43,3 +45,13 @@ def users_page(request):
     return render(request, "staff/users_table.html", {
         'users': User.objects.all().order_by('email')
     })
+
+@staff_member_required(login_url=LOGIN_URL)
+def kibana_page(request):
+
+    return render(request, "staff/kibana_page.html")
+
+@staff_member_required(login_url=LOGIN_URL)
+@csrf_exempt
+def proxy_to_kibana(request):
+    return proxy_request(request, host=KIBANA_SERVER, url=request.get_full_path(), data=request.body, stream=True)
