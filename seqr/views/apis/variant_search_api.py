@@ -48,15 +48,26 @@ def query_variants_handler(request):
         variant_filter['genes'] = genes.keys()
         variant_filter['locations'] = [(get_xpos(i['chrom'], i['start']), get_xpos(i['chrom'], i['end'])) for i in intervals]
         variant_filter['exclude_genes'] = locus_json.get('excludeLocations', False)
+
+    # TODO
+    search_mode = 'all_variants'
+    inheritance_mode = request.GET.get('inheritance')
+    if inheritance_mode == 'custom':
+        if request.GET.get('alleleCountFilter'):
+            search_mode = 'allele_count'
+        else:
+            search_mode = 'custom_inheritance'
+    elif inheritance_mode:
+        search_mode = 'standard_inheritance'
+
     search_spec = MendelianVariantSearchSpec.fromJSON({
         'family_id': family.family_id,
-        'search_mode': request.GET.get('searchMode'),
-        'inheritance_mode': request.GET.get('inheritance'),
+        'search_mode': search_mode,
+        'inheritance_mode': inheritance_mode,
         'genotype_inheritance_filter': json.loads(request.GET.get('genotypeInheritanceFilter', '{}')),
-        'gene_burden_filter': json.loads(request.GET.get('genotypeInheritanceFilter', '{}')),
+        'allele_count_filter': json.loads(request.GET.get('alleleCountFilter', '{}')),
         'variant_filter': variant_filter,
         'quality_filter': json.loads(request.GET.get('qualityFilter', '{}')),
-        'allele_count_filter': json.loads(request.GET.get('alleleCountFilter', '{}')),
     })
 
     variants = api_utils.calculate_mendelian_variant_search(search_spec, find_matching_xbrowse_model(family), user=request.user)

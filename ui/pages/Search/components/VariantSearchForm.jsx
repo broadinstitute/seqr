@@ -11,7 +11,11 @@ import { LOCUS_LIST_ITEMS_FIELD } from 'shared/utils/constants'
 import FrequencyFilter from './filters/FrequencyFilter'
 import annotationsFilterLayout from './filters/AnnotationsFilterLayout'
 import { LocusListSelector } from './filters/LocationFilter'
+import CustomInheritanceFilter from './filters/CustomInheritanceFilter'
 import {
+  INHERITANCE_FILTER_OPTIONS,
+  ANY_INHERITANCE_FILTER,
+  NUM_ALT_OPTIONS,
   FREQUENCIES,
   ANNOTATION_GROUPS,
   ANNOTATION_FILTER_OPTIONS,
@@ -72,6 +76,33 @@ const JsonSelectProps = options => ({
 
 
 const PANEL_DETAILS = [
+  {
+    name: 'inheritance',
+    headerProps: {
+      title: 'Inheritance',
+      inputProps: {
+        ...JsonSelectProps(INHERITANCE_FILTER_OPTIONS.map(({ description, ...option }) => option)),
+        format: val => JSON.stringify(val || ANY_INHERITANCE_FILTER),
+        // TODO normalize so affected/unaffected and inheritance mode are always correct
+      },
+    },
+    fields: [
+      { name: 'filter.affected', label: 'Affected Allele Counts' },
+      { name: 'filter.unaffected', label: 'Unaffected Allele Counts' },
+      {
+        name: 'filter',
+        label: 'Custom Allele Counts',
+        width: 8,
+        control: CustomInheritanceFilter,
+      },
+    ],
+    fieldProps: {
+      control: Select,
+      options: NUM_ALT_OPTIONS,
+      width: 4,
+    },
+    helpText: <span>Filter by the mode of inheritance. Choose from the built-in search methods (described <a>here</a>) or specify custom alternate allele counts</span>,
+  },
   {
     name: 'annotations',
     headerProps: {
@@ -163,7 +194,7 @@ PanelContent.propTypes = {
   fields: PropTypes.array.isRequired,
   name: PropTypes.string.isRequired,
   fieldProps: PropTypes.object,
-  helpText: PropTypes.string,
+  helpText: PropTypes.node,
   fieldLayout: PropTypes.func,
 }
 
@@ -186,6 +217,6 @@ const PANELS = PANEL_DETAILS.map(({ name, headerProps, ...panelContentProps }, i
   },
 }))
 
-const VariantSearchForm = () => <Accordion fluid defaultActiveIndex={2} panels={PANELS} />
+const VariantSearchForm = () => <Accordion fluid defaultActiveIndex={0} panels={PANELS} />
 
 export default VariantSearchForm

@@ -13,6 +13,106 @@ import {
 } from 'shared/utils/constants'
 import { LoadedLocusListField } from './components/filters/LocationFilter'
 
+const REF_REF = 'ref_ref'
+const HAS_REF = 'has_ref'
+const REF_ALT = 'ref_alt'
+const HAS_ALT = 'has_alt'
+const ALT_ALT = 'alt_alt'
+export const NUM_ALT_OPTIONS = [
+  {
+    text: '0',
+    value: REF_REF,
+    description: 'Two ref alleles',
+  },
+  {
+    text: '0-1',
+    value: HAS_REF,
+    description: 'At least one ref allele',
+  },
+  {
+    text: '1',
+    value: REF_ALT,
+    description: 'One ref allele and one alt allele',
+  },
+  {
+    text: '1-2',
+    value: HAS_ALT,
+    description: 'At least one alt allele',
+  },
+  {
+    text: '2',
+    value: ALT_ALT,
+    description: 'Two alt alleles',
+  },
+]
+export const ANY_INHERITANCE_FILTER = { mode: null, filter: null }
+export const INHERITANCE_FILTER_OPTIONS = [
+  {
+    value: ANY_INHERITANCE_FILTER,
+    text: 'Any',
+  },
+  {
+    value: { mode: 'recessive' },
+    text: 'Recessive',
+    description: 'This method identifies genes with any evidence of recessive variation. It is the union of all variants returned by the homozygous recessive, x-linked recessive, and compound heterozygous methods.',
+  },
+  {
+    value: {
+      mode: 'homozygous_recessive',
+      filter: {
+        affected: ALT_ALT,
+        unaffected: HAS_REF,
+      },
+    },
+    text: 'Homozygous Recessive',
+    description: 'Finds variants where all affected individuals are Alt / Alt and each of their parents Heterozygous.',
+  },
+
+  {
+    value: {
+      mode: 'x_linked_recessive',
+      filter: {
+        affected: ALT_ALT,
+        mother: REF_ALT,
+        father: REF_REF,
+        otherUnaffected: HAS_REF,
+      },
+    },
+    text: 'X-Linked Recessive',
+    description: "Recessive inheritance on the X Chromosome. This is similar to the homozygous recessive search, but a proband's father must be homozygous reference. (This is how hemizygous genotypes are called by current variant calling methods.)",
+  },
+  // TODO compound het
+  // {
+  //   value: 'compound_het',
+  //   text: 'Compound Heterozygous',
+  //   description: 'Affected individual(s) have two heterozygous mutations in the same gene on opposite haplotypes. Unaffected individuals cannot have the same combination of alleles as affected individuals, or be homozygous alternate for any of the variants. If parents are not present, this method only searches for pairs of heterozygous variants; they may not be on different haplotypes.',
+  // },
+  // TODO do we need separate dominant and de novo options?
+  // {
+  //   value: {
+  //     mode: 'dominant',
+  //     filter: {
+  //       affected: HAS_ALT,
+  //       unaffected: REF_REF,
+  //     },
+  //   },
+  //   text: 'Dominant',
+  //   description: 'Finds variants where all affected indivs are heterozygous and all unaffected are homozygous reference.',
+  // },
+  {
+    value: {
+      mode: 'de_novo',
+      filter: {
+        affected: HAS_ALT,
+        unaffected: REF_REF,
+      },
+    },
+    text: 'De Novo/ Dominant',
+    description: 'Finds variants where all affected indivs have at least one alternate allele and all unaffected are homozygous reference.',
+    // description: 'Variants that fit a de novo pattern. This method currently returns the same results as dominant, although cases can be homozygous alternate.',
+  },
+]
+
 export const CLINVAR_GROUP = 'clinvar'
 const CLIVAR_PATH = 'pathogenic'
 const CLINVAR_LIKELY_PATH = 'likely_pathogenic'
