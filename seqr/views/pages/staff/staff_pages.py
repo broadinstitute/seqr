@@ -3,8 +3,10 @@ import logging
 from collections import defaultdict
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.models import User
+from django.http.response import HttpResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
+from requests.exceptions import ConnectionError
 
 from seqr.models import Sample, Family, Individual
 from seqr.views.utils.proxy_request_utils import proxy_request
@@ -54,4 +56,12 @@ def kibana_page(request):
 @staff_member_required(login_url=LOGIN_URL)
 @csrf_exempt
 def proxy_to_kibana(request):
-    return proxy_request(request, host=KIBANA_SERVER, url=request.get_full_path(), data=request.body, stream=True)
+    try:
+
+        return proxy_request(request, host=KIBANA_SERVER, url=request.get_full_path(), data=request.body, stream=True)
+        # use stream=True because kibana returns gziped responses, and this prevents the requests module from
+        # automatically unziping them
+    except ConnectionError as e:
+        logger.error(e)
+
+        return HttpResponse("Error: Unable to connect to Kibana")
