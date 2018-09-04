@@ -8,6 +8,7 @@ import { getFamiliesByGuid, getIndividualsByGuid } from 'redux/selectors'
 import { Select } from 'shared/components/form/Inputs'
 import PedigreeIcon from 'shared/components/icons/PedigreeIcon'
 import PedigreeImagePanel from 'shared/components/panel/view-pedigree-image/PedigreeImagePanel'
+import { AFFECTED, UNAFFECTED } from 'shared/utils/constants'
 import { NUM_ALT_OPTIONS } from '../../constants'
 
 
@@ -20,31 +21,38 @@ const CustomInheritanceFilter = ({ value, onChange, familyGuid, familiesByGuid, 
   const family = familiesByGuid[familyGuid]
   const individuals = family.individualGuids.map(individualGuid => individualsByGuid[individualGuid])
 
-  const individualValues = value.individuals || individuals.reduce((acc, individual) => ({
-    ...acc,
-    [individual.individualId]: individual.affected === 'A' ? value.affected : (value.unaffected || value.otherUnaffected),
-  }), {})
-  if (!value.individuals && (value.mother || value.father)) {
-    // Handle default values for parents of affected individuals
+  const parentGenotypes = {}
+  if (value.mother || value.father) {
     individuals.forEach((individual) => {
-      if (individual.affected === 'A') {
-        individualValues[individual.maternalId] = value.mother
-        individualValues[individual.paternalId] = value.father
+      if (individual.affected === AFFECTED) {
+        parentGenotypes[individual.maternalId] = value.mother
+        parentGenotypes[individual.paternalId] = value.father
       }
     })
   }
 
+  const individualValuesByStatus = individuals.reduce((acc, ind) => ({
+    ...acc,
+    [ind.affected]: {
+      ...acc[ind.affected],
+      [ind.individualId]:
+        (value[ind.affected] || {}).genotype || ((value[ind.affected] || {}).individuals || {})[ind.individualId],
+    },
+  }), {})
+
+  individualValuesByStatus[UNAFFECTED] = Object.entries(individualValuesByStatus[UNAFFECTED]).reduce(
+    (acc, [individualId, val]) => (
+      { ...acc, [individualId]: parentGenotypes[individualId] || val || value.otherUnaffected }
+    ), {},
+  )
+
   const handleChange = individual => (val) => {
-    const acForStatus = individuals.filter(
-      ind => ind.individualId !== individual.individualId && individual.affected === ind.affected,
-    ).reduce(
-      (ac, ind) => (individualValues[ind.individualId] !== ac ? null : ac), val,
-    )
-    onChange({
-      ...value,
-      [individual.affected === 'A' ? 'affected' : 'unaffected']: acForStatus,
-      individuals: { ...individualValues, [individual.individualId]: val },
-    })
+    individualValuesByStatus[individual.affected][individual.individualId] = val
+    onChange(Object.entries(individualValuesByStatus).reduce((acc, [affected, indivs]) => ({
+      ...acc,
+      [affected]: Object.values(indivs).every(ac => ac === Object.values(indivs)[0]) ?
+        { genotype: Object.values(indivs)[0] } : { individuals: indivs },
+    }), {}))
   }
 
   return (
@@ -61,7 +69,7 @@ const CustomInheritanceFilter = ({ value, onChange, familyGuid, familiesByGuid, 
             <Table.Cell>
               <Form.Field
                 {...NUM_ALT_SELECT_PROPS}
-                value={individualValues[individual.individualId]}
+                value={individualValuesByStatus[individual.affected][individual.individualId]}
                 onChange={handleChange(individual)}
               />
             </Table.Cell>

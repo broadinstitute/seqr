@@ -10,6 +10,8 @@ import {
   VEP_GROUP_SYNONYMOUS,
   GROUPED_VEP_CONSEQUENCES,
   LOCUS_LIST_ITEMS_FIELD,
+  AFFECTED,
+  UNAFFECTED,
 } from 'shared/utils/constants'
 import { LoadedLocusListField } from './components/filters/LocationFilter'
 
@@ -45,14 +47,14 @@ export const NUM_ALT_OPTIONS = [
     description: 'Two alt alleles',
   },
 ]
-export const ANY_INHERITANCE_FILTER = { mode: null, filter: null }
+export const ANY_INHERITANCE_FILTER = { mode: null, filter: {} }
 export const INHERITANCE_FILTER_OPTIONS = [
   {
     value: ANY_INHERITANCE_FILTER,
     text: 'Any',
   },
   {
-    value: { mode: 'recessive' },
+    value: { mode: 'recessive', filter: {} },
     text: 'Recessive',
     description: 'This method identifies genes with any evidence of recessive variation. It is the union of all variants returned by the homozygous recessive, x-linked recessive, and compound heterozygous methods.',
   },
@@ -60,8 +62,8 @@ export const INHERITANCE_FILTER_OPTIONS = [
     value: {
       mode: 'homozygous_recessive',
       filter: {
-        affected: ALT_ALT,
-        unaffected: HAS_REF,
+        [AFFECTED]: { genotype: ALT_ALT },
+        [UNAFFECTED]: { genotype: HAS_REF },
       },
     },
     text: 'Homozygous Recessive',
@@ -72,7 +74,7 @@ export const INHERITANCE_FILTER_OPTIONS = [
     value: {
       mode: 'x_linked_recessive',
       filter: {
-        affected: ALT_ALT,
+        [AFFECTED]: { genotype: ALT_ALT },
         mother: REF_ALT,
         father: REF_REF,
         otherUnaffected: HAS_REF,
@@ -103,8 +105,8 @@ export const INHERITANCE_FILTER_OPTIONS = [
     value: {
       mode: 'de_novo',
       filter: {
-        affected: HAS_ALT,
-        unaffected: REF_REF,
+        [AFFECTED]: { genotype: HAS_ALT },
+        [UNAFFECTED]: { genotype: REF_REF },
       },
     },
     text: 'De Novo/ Dominant',

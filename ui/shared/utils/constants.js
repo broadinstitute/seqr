@@ -114,10 +114,13 @@ export const SEX_LOOKUP = SEX_OPTIONS.reduce(
   }), {},
 )
 
+export const AFFECTED = 'A'
+export const UNAFFECTED = 'N'
+export const UNKNOWN_AFFECTED = 'U'
 export const AFFECTED_OPTIONS = [
-  { value: 'A', label: 'Affected' },
-  { value: 'N', label: 'Unaffected' },
-  { value: 'U', label: '?' },
+  { value: AFFECTED, label: 'Affected' },
+  { value: UNAFFECTED, label: 'Unaffected' },
+  { value: UNKNOWN_AFFECTED, label: '?' },
 ]
 
 export const AFFECTED_LOOKUP = AFFECTED_OPTIONS.reduce(

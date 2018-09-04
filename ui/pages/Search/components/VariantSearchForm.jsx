@@ -7,7 +7,7 @@ import { Form, Accordion, Header, Segment, Grid } from 'semantic-ui-react'
 import { VerticalSpacer } from 'shared/components/Spacers'
 import { configuredFields } from 'shared/components/form/ReduxFormWrapper'
 import { Select, LabeledSlider, CheckboxGroup } from 'shared/components/form/Inputs'
-import { LOCUS_LIST_ITEMS_FIELD } from 'shared/utils/constants'
+import { LOCUS_LIST_ITEMS_FIELD, AFFECTED, UNAFFECTED } from 'shared/utils/constants'
 import FrequencyFilter from './filters/FrequencyFilter'
 import annotationsFilterLayout from './filters/AnnotationsFilterLayout'
 import { LocusListSelector } from './filters/LocationFilter'
@@ -87,8 +87,8 @@ const PANEL_DETAILS = [
       },
     },
     fields: [
-      { name: 'filter.affected', label: 'Affected Allele Counts' },
-      { name: 'filter.unaffected', label: 'Unaffected Allele Counts' },
+      { name: `filter.${AFFECTED}.genotype`, label: 'Affected Allele Counts' },
+      { name: `filter.${UNAFFECTED}.genotype`, label: 'Unaffected Allele Counts' },
       {
         name: 'filter',
         label: 'Custom Allele Counts',
