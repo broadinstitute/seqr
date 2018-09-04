@@ -233,7 +233,7 @@ const mapDispatchToProps = {
 }
 
 const mapStateToProps = (state, ownProps) => ({
-  gene: getGenesById(state)[ownProps.geneId],
+  gene: getGenesById(state)[ownProps.geneId] || {},
   loading: getGenesIsLoading(state),
 })
 
