@@ -46,7 +46,7 @@ const VariantSearchResults = ({
     load={load}
     errorMessage={errorMessage}
   >
-    {Object.keys(search).length > 0 &&
+    {search.search &&
       <LargeRow>
         <Grid.Column width={5}>
           Found <b>{totalVariantsCount}</b> variants

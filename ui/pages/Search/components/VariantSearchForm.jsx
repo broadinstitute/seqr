@@ -76,92 +76,80 @@ const JsonSelectProps = options => ({
   options: options.map(({ value, ...option }) => ({ ...option, value: JSON.stringify(value) })),
 })
 
-const PANEL_DETAILS = [
-  {
-    name: 'inheritance',
-    headerProps: {
-      title: 'Inheritance',
-      inputProps: {
-        component: Select,
-        options: INHERITANCE_FILTER_OPTIONS,
-        format: val => ((val || {}).filter ? INHERITANCE_MODE_LOOKUP[JSON.stringify(val.filter)] : ALL_INHERITANCE_FILTER),
-        normalize: val => (val === ALL_INHERITANCE_FILTER ? null : { filter: INHERITANCE_LOOKUP[val].filter, mode: val }),
-      },
+const INHERITANCE_PANEL = {
+  name: 'inheritance',
+  headerProps: {
+    title: 'Inheritance',
+    inputProps: {
+      component: Select,
+      options: INHERITANCE_FILTER_OPTIONS,
+      format: val => ((val || {}).filter ? INHERITANCE_MODE_LOOKUP[JSON.stringify(val.filter)] : ALL_INHERITANCE_FILTER),
+      normalize: val => (val === ALL_INHERITANCE_FILTER ? null : { filter: INHERITANCE_LOOKUP[val].filter, mode: val }),
     },
-    fields: [
-      { name: `filter.${AFFECTED}.genotype`, label: 'Affected Allele Counts' },
-      { name: `filter.${UNAFFECTED}.genotype`, label: 'Unaffected Allele Counts' },
-      {
-        name: 'filter',
-        label: 'Custom Allele Counts',
-        width: 8,
-        control: CustomInheritanceFilter,
-        format: val => val || {},
-      },
-    ],
-    fieldProps: {
-      control: Select,
-      options: NUM_ALT_OPTIONS,
-      width: 4,
-    },
-    helpText: <span>Filter by the mode of inheritance. Choose from the built-in search methods (described <a>here</a>) or specify custom alternate allele counts</span>,
   },
-  {
-    name: 'annotations',
-    headerProps: {
-      title: 'Annotations',
-      inputProps: JsonSelectProps(ANNOTATION_FILTER_OPTIONS),
+  fields: [
+    { name: `filter.${AFFECTED}.genotype`, label: 'Affected Allele Counts' },
+    { name: `filter.${UNAFFECTED}.genotype`, label: 'Unaffected Allele Counts' },
+    {
+      name: 'filter',
+      label: 'Custom Allele Counts',
+      width: 8,
+      control: CustomInheritanceFilter,
+      format: val => val || {},
     },
-    fields: ANNOTATION_GROUPS,
-    fieldProps: {
-      control: CheckboxGroup,
-      format: val => val || [],
-    },
-    fieldLayout: annotationsFilterLayout,
-  },
-  {
-    name: 'freqs',
-    headerProps: {
-      title: 'Frequency',
-      inputSize: 6,
-      inputProps: {
-        component: FrequencyFilter,
-        format: values => (values ? Object.values(values).reduce((acc, value) => ({
-          af: value.af === acc.af ? value.af : null,
-          ac: value.ac === acc.ac ? value.ac : null,
-          hh: value.hh === acc.hh ? value.hh : null,
-        }), Object.values(values)[0]) : {}),
-        parse: value => FREQUENCIES.reduce((acc, { name }) => ({ ...acc, [name]: value }), {}),
-        homHemi: true,
-        inlineSlider: true,
-      },
-    },
-    fields: FREQUENCIES,
-    fieldProps: { control: FrequencyFilter, format: val => val || {} },
-    helpText: 'Filter by allele frequency (popmax AF where available) or by allele count (AC). In applicable populations, also filter by homozygous/hemizygous count (H/H).',
-  },
-  {
-    name: 'locus',
-    headerProps: {
-      title: 'Location',
-      name: `locus.${LOCUS_LIST_ITEMS_FIELD.name}`,
-      inputSize: 5,
-      inputProps: { component: LocusListSelector, format: val => val || {} },
-    },
-    fields: LOCATION_FIELDS,
-    helpText: 'Filter by variant location. Entries can be either gene symbols (e.g. CFTR) or intervals in the form <chrom>:<start>-<end>. Entries can be separated by commas or whitespace.',
-  },
-  {
-    name: 'qualityFilter',
-    headerProps: {
-      title: 'Call Quality',
-      inputProps: JsonSelectProps(QUALITY_FILTER_OPTIONS),
-    },
-    fields: QUALITY_FILTER_FIELDS,
-    fieldProps: { control: LabeledSlider, format: val => val || null },
-  },
-]
+  ],
+  fieldProps: { control: Select, options: NUM_ALT_OPTIONS, width: 4 },
+  helpText: <span>Filter by the mode of inheritance. Choose from the built-in search methods (described <a>here</a>) or specify custom alternate allele counts</span>,
+}
 
+const ANNOTATION_PANEL = {
+  name: 'annotations',
+  headerProps: { title: 'Annotations', inputProps: JsonSelectProps(ANNOTATION_FILTER_OPTIONS) },
+  fields: ANNOTATION_GROUPS,
+  fieldProps: { control: CheckboxGroup, format: val => val || [] },
+  fieldLayout: annotationsFilterLayout,
+}
+
+const FREQUENCY_PANEL = {
+  name: 'freqs',
+  headerProps: {
+    title: 'Frequency',
+    inputSize: 6,
+    inputProps: {
+      component: FrequencyFilter,
+      format: values => (values ? Object.values(values).reduce((acc, value) => ({
+        af: value.af === acc.af ? value.af : null,
+        ac: value.ac === acc.ac ? value.ac : null,
+        hh: value.hh === acc.hh ? value.hh : null,
+      }), Object.values(values)[0]) : {}),
+      parse: value => FREQUENCIES.reduce((acc, { name }) => ({ ...acc, [name]: value }), {}),
+      homHemi: true,
+      inlineSlider: true,
+    },
+  },
+  fields: FREQUENCIES,
+  fieldProps: { control: FrequencyFilter, format: val => val || {} },
+  helpText: 'Filter by allele frequency (popmax AF where available) or by allele count (AC). In applicable populations, also filter by homozygous/hemizygous count (H/H).',
+}
+
+const LOCATION_PANEL = {
+  name: 'locus',
+  headerProps: {
+    title: 'Location',
+    name: `locus.${LOCUS_LIST_ITEMS_FIELD.name}`,
+    inputSize: 5,
+    inputProps: { component: LocusListSelector, format: val => val || {} },
+  },
+  fields: LOCATION_FIELDS,
+  helpText: 'Filter by variant location. Entries can be either gene symbols (e.g. CFTR) or intervals in the form <chrom>:<start>-<end>. Entries can be separated by commas or whitespace.',
+}
+
+const QUALITY_PANEL = {
+  name: 'qualityFilter',
+  headerProps: { title: 'Call Quality', inputProps: JsonSelectProps(QUALITY_FILTER_OPTIONS) },
+  fields: QUALITY_FILTER_FIELDS,
+  fieldProps: { control: LabeledSlider, format: val => val || null },
+}
 
 const HeaderContent = ({ name, title, inputSize, inputProps }) =>
   <Grid>
@@ -201,7 +189,7 @@ PanelContent.propTypes = {
   fieldLayout: PropTypes.func,
 }
 
-
+const PANEL_DETAILS = [INHERITANCE_PANEL, ANNOTATION_PANEL, FREQUENCY_PANEL, LOCATION_PANEL, QUALITY_PANEL]
 const PANELS = PANEL_DETAILS.map(({ name, headerProps, ...panelContentProps }, i) => ({
   key: name,
   title: {
@@ -220,6 +208,5 @@ const PANELS = PANEL_DETAILS.map(({ name, headerProps, ...panelContentProps }, i
   },
 }))
 
-const VariantSearchForm = () => <Accordion fluid defaultActiveIndex={0} panels={PANELS} />
 
-export default VariantSearchForm
+export default () => <Accordion fluid panels={PANELS} />
