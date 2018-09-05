@@ -2,7 +2,7 @@ import logging
 from django.core.management.base import BaseCommand
 from django.db.models.query_utils import Q
 from tqdm import tqdm
-from seqr.models import Project, Family
+from seqr.models import Project
 from seqr.views.utils.variant_utils import update_project_saved_variant_json
 
 logger = logging.getLogger(__name__)
