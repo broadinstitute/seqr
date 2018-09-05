@@ -3,7 +3,7 @@ from collections import defaultdict
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 
-from seqr.models import Family, SavedVariant
+from seqr.models import Family, Individual, SavedVariant
 from seqr.utils.xpos_utils import get_xpos
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.saved_variant_api import _variant_details, _saved_variant_genes, _add_locus_lists
@@ -14,11 +14,20 @@ from seqr.views.utils.orm_to_json_utils import \
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions
 from seqr.model_utils import find_matching_xbrowse_model
 
-
 from xbrowse_server.api.utils import add_extra_info_to_variants_project
 from xbrowse_server.api import utils as api_utils
 from xbrowse_server.mall import get_reference, get_datastore
 from xbrowse.analysis_modules.mendelian_variant_search import MendelianVariantSearchSpec
+
+GENOTYPE_AC_LOOKUP = {
+    'ref_ref': [0, 0],
+    'has_ref': [0, 1],
+    'ref_alt': [1, 1],
+    'has_alt': [1, 2],
+    'alt_alt': [2, 2],
+}
+AFFECTED = Individual.AFFECTED_STATUS_AFFECTED
+UNAFFECTED = Individual.AFFECTED_STATUS_UNAFFECTED
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -49,14 +58,29 @@ def query_variants_handler(request):
         variant_filter['locations'] = [(get_xpos(i['chrom'], i['start']), get_xpos(i['chrom'], i['end'])) for i in intervals]
         variant_filter['exclude_genes'] = locus_json.get('excludeLocations', False)
 
-    # TODO
+    inheritance = json.loads(request.GET.get('inheritance', '{}'))
+    inheritance_mode = inheritance.get('mode')
     search_mode = 'all_variants'
-    inheritance_mode = request.GET.get('inheritance')
-    if inheritance_mode == 'custom':
-        if request.GET.get('alleleCountFilter'):
+    genotype_inheritance_filter = {}
+    allele_count_filter = {}
+    if inheritance.get('filter') and inheritance['filter'].get(AFFECTED) and inheritance['filter'].get(UNAFFECTED):
+        inheritance_mode = 'custom'
+        if inheritance['filter'][AFFECTED].get('genotype') and inheritance['filter'][UNAFFECTED].get('genotype'):
             search_mode = 'allele_count'
+            allele_count_filter = {
+                'affected_gte': GENOTYPE_AC_LOOKUP[inheritance['filter'][AFFECTED]['genotype']][0],
+                'affected_lte': GENOTYPE_AC_LOOKUP[inheritance['filter'][AFFECTED]['genotype']][1],
+                'unaffected_gte': GENOTYPE_AC_LOOKUP[inheritance['filter'][UNAFFECTED]['genotype']][0],
+                'unaffected_lte': GENOTYPE_AC_LOOKUP[inheritance['filter'][UNAFFECTED]['genotype']][1],
+            }
         else:
             search_mode = 'custom_inheritance'
+            for affected_status, filters in inheritance['filter'].items():
+                if filters.get('individuals'):
+                    genotype_inheritance_filter.update(filters['individuals'])
+                else:
+                    for individual in Individual.objects.filter(family=family, affected=affected_status).only('individual_id'):
+                        genotype_inheritance_filter[individual.individual_id] = filters['genotype']
     elif inheritance_mode:
         search_mode = 'standard_inheritance'
 
@@ -64,8 +88,8 @@ def query_variants_handler(request):
         'family_id': family.family_id,
         'search_mode': search_mode,
         'inheritance_mode': inheritance_mode,
-        'genotype_inheritance_filter': json.loads(request.GET.get('genotypeInheritanceFilter', '{}')),
-        'allele_count_filter': json.loads(request.GET.get('alleleCountFilter', '{}')),
+        'genotype_inheritance_filter': genotype_inheritance_filter,
+        'allele_count_filter': allele_count_filter,
         'variant_filter': variant_filter,
         'quality_filter': json.loads(request.GET.get('qualityFilter', '{}')),
     })
@@ -148,56 +172,3 @@ def _add_saved_variants(variants, project, family):
                 get_json_for_variant_note(tag) for tag in saved_variant.variantnote_set.all()
             ] if saved_variant else [],
         })
-
-
-def _add_variant_filters(es):
-    """
-           self.variant_types = kwargs.get('variant_types')
-        self.so_annotations = kwargs.get('so_annotations')  # todo: rename (and refactor)
-        self.annotations = kwargs.get('annotations', {})
-        self.ref_freqs = kwargs.get('ref_freqs')
-        self.locations = kwargs.get('locations')
-        self.genes = kwargs.get('genes')
-        self.exclude_genes = kwargs.get('exclude_genes')
-    :param es:
-    :return:
-    """
-
-def _add_genotype_filters(es):
-    pass
-
-
-"""
-Current search API:
-    project_id:rare_genomes_project
-    family_id:RGP_23
-    search_mode:custom_inheritance
-    variant_filter:{
-        "so_annotations":["stop_gained","splice_donor_variant","splice_acceptor_variant","stop_lost","initiator_codon_variant","start_lost","missense_variant","protein_altering_variant","frameshift_variant","inframe_insertion","inframe_deletion"],
-        "ref_freqs":[["1kg_wgs_phase3",0.0005],["1kg_wgs_phase3_popmax",0.001],["exac_v3",0.001],["exac_v3_popmax",0.0005],["gnomad_exomes",0.0005],["gnomad_exomes_popmax",0.0005],["gnomad_genomes",0.001],["gnomad_genomes_popmax",0.0005],["topmed",0.01]],
-        "annotations":{},
-    },
-    quality_filter:{"min_gq":0,"min_ab":0},
-    genotype_filter:{"RGP_23_1":"ref_alt","RGP_23_2":"alt_alt","RGP_23_3":"has_alt"},
-
-
-"""
-
-"""
-individuals:
-    - projects, projectGroups
-    - families, familyGroups
-
-datasets:
-    - WES_variants, WGS_variants, WES_CNVs, WGS_CNVs
-
-loci:
-    - genes, transcripts, ranges, geneLists
-
-allele info:
-    - VEP annotation, consequence, clinvar
-
-genotypes:
-    - inheritance mode =>
-    - allele balance, GQ, DP
-"""

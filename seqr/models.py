@@ -295,10 +295,13 @@ class Individual(ModelWithGUID):
         ('U', 'Unknown'),
     )
 
+    AFFECTED_STATUS_AFFECTED = 'A'
+    AFFECTED_STATUS_UNAFFECTED = 'N'
+    AFFECTED_STATUS_UNKNOWN = 'U'
     AFFECTED_STATUS_CHOICES = (
-        ('A', 'Affected'),
-        ('N', 'Unaffected'),
-        ('U', 'Unknown'),
+        (AFFECTED_STATUS_AFFECTED, 'Affected'),
+        (AFFECTED_STATUS_UNAFFECTED, 'Unaffected'),
+        (AFFECTED_STATUS_UNKNOWN, 'Unknown'),
     )
 
     CASE_REVIEW_STATUS_IN_REVIEW = "I"
@@ -326,7 +329,7 @@ class Individual(ModelWithGUID):
     # add ForeignKeys for mother Individual & father Individual?
 
     sex = models.CharField(max_length=1, choices=SEX_CHOICES, default='U')
-    affected = models.CharField(max_length=1, choices=AFFECTED_STATUS_CHOICES, default='U')
+    affected = models.CharField(max_length=1, choices=AFFECTED_STATUS_CHOICES, default=AFFECTED_STATUS_UNKNOWN)
 
     display_name = models.TextField(default="", blank=True)
 
