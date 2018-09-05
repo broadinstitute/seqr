@@ -14,7 +14,9 @@ import { LocusListSelector } from './filters/LocationFilter'
 import CustomInheritanceFilter from './filters/CustomInheritanceFilter'
 import {
   INHERITANCE_FILTER_OPTIONS,
-  ANY_INHERITANCE_FILTER,
+  INHERITANCE_LOOKUP,
+  INHERITANCE_MODE_LOOKUP,
+  ALL_INHERITANCE_FILTER,
   NUM_ALT_OPTIONS,
   FREQUENCIES,
   ANNOTATION_GROUPS,
@@ -74,16 +76,16 @@ const JsonSelectProps = options => ({
   options: options.map(({ value, ...option }) => ({ ...option, value: JSON.stringify(value) })),
 })
 
-
 const PANEL_DETAILS = [
   {
     name: 'inheritance',
     headerProps: {
       title: 'Inheritance',
       inputProps: {
-        ...JsonSelectProps(INHERITANCE_FILTER_OPTIONS.map(({ description, ...option }) => option)),
-        format: val => JSON.stringify(val || ANY_INHERITANCE_FILTER),
-        // TODO normalize so affected/unaffected and inheritance mode are always correct
+        component: Select,
+        options: INHERITANCE_FILTER_OPTIONS,
+        format: val => ((val || {}).filter ? INHERITANCE_MODE_LOOKUP[JSON.stringify(val.filter)] : ALL_INHERITANCE_FILTER),
+        normalize: val => (val === ALL_INHERITANCE_FILTER ? null : { filter: INHERITANCE_LOOKUP[val].filter, mode: val }),
       },
     },
     fields: [
@@ -94,6 +96,7 @@ const PANEL_DETAILS = [
         label: 'Custom Allele Counts',
         width: 8,
         control: CustomInheritanceFilter,
+        format: val => val || {},
       },
     ],
     fieldProps: {
