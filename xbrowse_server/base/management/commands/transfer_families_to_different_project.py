@@ -46,7 +46,7 @@ class Command(BaseCommand):
 
                 # Update individuals samples/ VCFs
                 for from_vcf_file in individual.vcf_files.all():
-                    to_vcf_file, vcf_created = VCFFile.objects.get_or_create(
+                    to_vcf_file, _ = VCFFile.objects.get_or_create(
                         project=to_project,
                         elasticsearch_index=from_vcf_file.elasticsearch_index,
                         file_path=from_vcf_file.file_path,
