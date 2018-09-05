@@ -42,7 +42,7 @@ const CustomInheritanceFilter = ({ value, onChange, familyGuid, familiesByGuid, 
 
   individualValuesByStatus[UNAFFECTED] = Object.entries(individualValuesByStatus[UNAFFECTED]).reduce(
     (acc, [individualId, val]) => (
-      { ...acc, [individualId]: parentGenotypes[individualId] || val || value.otherUnaffected }
+      { ...acc, [individualId]: val || parentGenotypes[individualId] || value.otherUnaffected }
     ), {},
   )
 
