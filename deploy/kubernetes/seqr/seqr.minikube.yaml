@@ -2,6 +2,7 @@ kind: Service
 apiVersion: v1
 metadata:
   name: seqr
+  namespace: {{ DEPLOY_TO }}
   labels:
     name: seqr
     deployment: {{ DEPLOY_TO }}
@@ -17,6 +18,7 @@ kind: Deployment
 apiVersion: extensions/v1beta1
 metadata:
   name: seqr
+  namespace: {{ DEPLOY_TO }}
   labels:
     name: seqr
     deployment: {{ DEPLOY_TO }}

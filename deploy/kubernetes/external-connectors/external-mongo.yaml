@@ -4,6 +4,7 @@ kind: Service
 apiVersion: v1
 metadata:
   name: mongo
+  namespace: {{ DEPLOY_TO }}
 spec:
   ports:
     - port: {{ MONGO_SERVICE_EXTERNAL_PORT }}
@@ -12,6 +13,7 @@ kind: Endpoints
 apiVersion: v1
 metadata:
   name: mongo
+  namespace: {{ DEPLOY_TO }}
 subsets:
   - addresses:
       - ip: {{ MONGO_SERVICE_EXTERNAL_IP }}

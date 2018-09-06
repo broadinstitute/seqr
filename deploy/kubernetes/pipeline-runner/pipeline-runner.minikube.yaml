@@ -4,6 +4,7 @@ metadata:
   name: pipeline-runner
   labels:
     name: pipeline-runner
+    namespace: {{ DEPLOY_TO }}
     deployment: {{ DEPLOY_TO }}
 spec:
   ports:
@@ -15,6 +16,7 @@ kind: Deployment
 apiVersion: extensions/v1beta1
 metadata:
   name: pipeline-runner
+  namespace: {{ DEPLOY_TO }}
   labels:
     name: pipeline-runner
     deployment: {{ DEPLOY_TO }}

@@ -10,8 +10,7 @@ from deploy.utils.constants import DEPLOYMENT_TARGETS, DEPLOYABLE_COMPONENTS, \
     COMPONENT_GROUP_NAMES, resolve_component_groups
 from deploy.utils.deploy_utils import deploy
 from deploy.utils.kubectl_utils import run_in_pod, get_pod_name
-from deploy.utils.loading_utils import load_example_project, \
-    load_new_project, create_user, update_reference_data
+from deploy.utils.loading_utils import load_example_project, create_user, update_reference_data, load_dataset
 from deploy.utils.servctl_utils import print_log, port_forward, \
     show_dashboard, show_status, wait_for, troubleshoot_component, \
     delete_component, reset_database, delete_all, get_component_port_pairs, \
@@ -55,14 +54,24 @@ sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS, help="kubernete
 ## LOAD_DATASET_COMMAND
 sp = subparsers.add_parser(LOAD_DATASET_COMMAND, description="Load new dataset into a new or existing project in seqr.")
 sp.add_argument("-g", "--genome-version", help="Genome version 37 or 38", choices=["37", "38"], required=True)
-sp.add_argument("-i", "--project-id", help="Project ID")
-sp.add_argument("-s", "--sample-type", help="Sample type (eg. WES, WGS, etc.)", choices=["WES", "WGS", "RNA"])
-sp.add_argument("-d", "--dataset-type", help="Dataset type (eg. VARIANTS, SV, etc.)", choices=["VARIANTS", "SV"])
+sp.add_argument("--project-guid", help="seqr project id", required=True)
+sp.add_argument("--sample-type", help="Sample type", choices=["WES", "WGS", "RNA"], required=True)
+sp.add_argument("--dataset-type", help="Dataset type", choices=["VARIANTS", "SV"], required=True)
+sp.add_argument('--remap-sample-ids', help="File path containing 2 tab-separated columns: current sample id and desired sample id")
+sp.add_argument('--subset-samples', help="File path containing ids for samples to keep; if used with --remap-sample-ids, ids are the desired ids (post remapping)")
+sp.add_argument("--ignore-extra-sample-ids-in-tables", action="store_true")
+sp.add_argument("--ignore-extra-sample-ids-in-vds", action="store_true")
 
-sp.add_argument("-v", "--vcf", help="Url or google cloud bucket path (eg. gs://) of VEP-annotated VCF to load",
-                default="gs://seqr-reference-data/test-projects/1kg.vep.vcf.gz")
-sp.add_argument("-p", "--ped", help="Url or google cloud bucket path (eg. gs://) of pedigree file",
-                default="https://storage.googleapis.com/seqr-reference-data/test-projects/1kg.ped")
+sp.add_argument("--fam-file", help=".fam file used to check VDS sample IDs and assign samples to indices with a max of "
+    "'num_samples' per index, but making sure that samples from the same family don't end up in different indices. "
+    "If used with --remap-sample-ids, contains IDs of samples after remapping")
+sp.add_argument("--start-with-step", help="Which pipeline step to start with.", type=int, default=0, choices=[0, 1, 2, 3, 4])
+sp.add_argument("--stop-after-step", help="Pipeline will exit after this stesp.", type=int, default=1000, choices=[0, 1, 2, 3, 4])
+sp.add_argument("--output-vds", help="(optional) Output vds filename prefix (eg. test-vds)")
+
+sp.add_argument("--vep-block-size", help="Block size to use for VEP", default=200, type=int)
+sp.add_argument("--es-block-size", help="Block size to use when exporting to elasticsearch", default=1000, type=int)
+sp.add_argument("--vcf", help="Local path or google cloud bucket path (eg. gs://) of VCF to load", required=True)
 sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS, help="which kubernetes cluster to load the data to")
 
 # LOAD_EXAMPLE_PROJECT_COMMAND
@@ -226,16 +235,16 @@ if args.command in [DEPLOY_COMMAND, DEPLOY_ALL_COMMAND]:
         if args.deployment_target == "minikube":
             deployable_components += [
                 "cockpit",
+                "mongo",  # deprecated
             ]
         else:
             deployable_components += [
+                "external-mongo-connector",
                 "matchbox",
                 "nginx",
             ]
 
         deployable_components += [
-            "mongo",  # deprecated - will be going away soon
-            #"external-mongo-connector",
             "postgres",
             #"elasticsearch",
             "external-elasticsearch-connector",
@@ -284,14 +293,23 @@ elif args.command == LOAD_EXAMPLE_PROJECT_COMMAND:
     load_example_project(args.deployment_target, genome_version=args.genome_version)
 
 elif args.command == LOAD_DATASET_COMMAND:
-    load_new_project(
+    load_dataset(
         args.deployment_target,
-        project_name=args.project_id,
-        genome_version=args.genome_version,
-        sample_type=args.sample_type,
-        dataset_type=args.dataset_type,
-        vcf=args.vcf,
-        ped=args.ped)
+        args.project_guid,
+        args.genome_version,
+        args.sample_type,
+        args.dataset_type,
+        args.vcf,
+        remap_sample_ids=args.remap_sample_ids,
+        subset_samples=args.subset_samples,
+        ignore_extra_sample_ids_in_tables=args.ignore_extra_sample_ids_in_tables,
+        ignore_extra_sample_ids_in_vds=args.ignore_extra_sample_ids_in_vds,
+        fam_file=args.fam_file,
+        start_with_step=args.start_with_step,
+        stop_with_step=args.stop_with_step,
+        output_vds=args.output_vds,
+        vep_block_size=args.vep_block_size,
+        es_block_size=args.es_block_size)
 
 elif args.command == LOG_COMMAND:
     components = resolve_component_groups(args.deployment_target, args.components)

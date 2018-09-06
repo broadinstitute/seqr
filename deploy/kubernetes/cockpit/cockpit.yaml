@@ -2,6 +2,7 @@ kind: Service
 apiVersion: v1
 metadata:
   name: cockpit
+  namespace: {{ DEPLOY_TO }}
   labels:
     name: cockpit
     deployment: {{ DEPLOY_TO }}
@@ -18,6 +19,7 @@ kind: ReplicationController
 apiVersion: v1
 metadata:
   name: cockpit
+  namespace: {{ DEPLOY_TO }}
   labels:
     name: cockpit
     deployment: {{ DEPLOY_TO }}

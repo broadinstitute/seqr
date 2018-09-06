@@ -2,6 +2,7 @@ apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
   name: es-client
+  namespace: {{ DEPLOY_TO }}
   labels:
     name: es-client
     deployment: {{ DEPLOY_TO }}

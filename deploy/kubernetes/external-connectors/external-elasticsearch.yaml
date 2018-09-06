@@ -4,6 +4,7 @@ kind: Service
 apiVersion: v1
 metadata:
   name: elasticsearch
+  namespace: {{ DEPLOY_TO }}
 spec:
   ports:
     - port: {{ ELASTICSEARCH_SERVICE_EXTERNAL_PORT }}
@@ -12,6 +13,7 @@ kind: Endpoints
 apiVersion: v1
 metadata:
   name: elasticsearch
+  namespace: {{ DEPLOY_TO }}
 subsets:
   - addresses:
       - ip: {{ ELASTICSEARCH_SERVICE_EXTERNAL_IP }}

@@ -102,8 +102,12 @@ def render(input_base_dir, relative_file_path, settings, output_base_dir):
     if not os.path.isdir(output_dir_path):
         os.makedirs(output_dir_path)
 
-    with open(output_file_path, 'w') as ostream:
-        ostream.write(rendered_string)
+    try:
+        with open(output_file_path, 'w') as ostream:
+            ostream.write(rendered_string)
+    except Exception as e:
+        logger.error("Couldn't write out %s" % relative_file_path)
+        raise
 
     #os.chmod(output_file_path, 0x777)
     logger.info("-- wrote out %s" % output_file_path)
@@ -257,6 +261,8 @@ def set_environment(deployment_target):
     else:
         raise ValueError("Unexpected deployment_target value: %s" % (deployment_target,))
 
+    run("kubectl config set-context $(kubectl config current-context) --namespace=%(deployment_target)s" % locals())
+
 
 def port_forward(component_port_pairs=[], deployment_target=None, wait=True, open_browser=False, use_kubectl_proxy=False):
     """Executes kubectl command to forward traffic between localhost and the given pod.
@@ -332,7 +338,7 @@ def delete_component(component, deployment_target=None):
     elif component == "es-data":
         run("kubectl delete StatefulSet es-data", errors_to_ignore=["not found"])
     elif component == "nginx":
-        run("kubectl delete rc nginx-ingress-rc", errors_to_ignore=["not found"])
+        run("kubectl delete rc nginx", errors_to_ignore=["not found"])
 
     run("kubectl delete deployments %(component)s" % locals(), errors_to_ignore=["not found"])
     run("kubectl delete services %(component)s" % locals(), errors_to_ignore=["not found"])
@@ -395,8 +401,8 @@ def delete_all(deployment_target):
         run("gcloud container clusters delete --project %(GCLOUD_PROJECT)s --zone %(GCLOUD_ZONE)s --no-async %(CLUSTER_NAME)s" % settings, is_interactive=True)
 
         run("gcloud compute disks delete --zone %(GCLOUD_ZONE)s %(CLUSTER_NAME)s-postgres-disk" % settings, is_interactive=True)
-        run("gcloud compute disks delete --zone %(GCLOUD_ZONE)s %(CLUSTER_NAME)s-mongo-disk" % settings, is_interactive=True)
-        run("gcloud compute disks delete --zone %(GCLOUD_ZONE)s %(CLUSTER_NAME)s-elasticsearch-disk" % settings, is_interactive=True)
+        #run("gcloud compute disks delete --zone %(GCLOUD_ZONE)s %(CLUSTER_NAME)s-mongo-disk" % settings, is_interactive=True)
+        #run("gcloud compute disks delete --zone %(GCLOUD_ZONE)s %(CLUSTER_NAME)s-elasticsearch-disk" % settings, is_interactive=True)
     else:
         run('kubectl delete deployments --all')
         run('kubectl delete replicationcontrollers --all')

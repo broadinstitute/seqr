@@ -66,7 +66,6 @@ RUN gsutil cp gs://hail-common/vep/htslib/* /usr/bin/ \
     && chmod a+rx  /usr/bin/tabix /usr/bin/bgzip /usr/bin/htsfile /usr/bin/samtools
 
 RUN mkdir -p /vep/homo_sapiens /vep/loftee_data_grch37 /vep/loftee_data_grch38 \
-    && gsutil -m cp -r gs://hail-common/vep/vep/loftee /vep  \
     && gsutil -m cp -r gs://hail-common/vep/vep/ensembl-tools-release-85 /vep  \
     && gsutil -m cp -r gs://hail-common/vep/vep/GRCh37/loftee_data /vep/loftee_data_grch37  \
     && gsutil -m cp -r gs://hail-common/vep/vep/GRCh38/loftee_data /vep/loftee_data_grch38  \
@@ -77,6 +76,9 @@ RUN mkdir -p /vep/homo_sapiens /vep/loftee_data_grch37 /vep/loftee_data_grch38 \
 COPY minikube/vep-gcloud-grch38.properties /vep
 COPY minikube/vep-gcloud-grch37.properties /vep
 
+# snapshot of LoFTEE code - copied from gs://gnomad-resources/loftee-beta/
+COPY shared/loftee /vep
+
 RUN ln -s /vep/ensembl-tools-release-85/scripts/variant_effect_predictor /vep/variant_effect_predictor \
     && gsutil cp gs://hail-common/vep/vep/GRCh37/run_hail_vep85_GRCh37_vcf.sh /vep/run_hail_vep85_GRCh37_vcf.sh  \
     && gsutil cp gs://hail-common/vep/vep/GRCh38/run_hail_vep85_GRCh38_vcf.sh /vep/run_hail_vep85_GRCh38_vcf.sh  \
@@ -84,12 +86,15 @@ RUN ln -s /vep/ensembl-tools-release-85/scripts/variant_effect_predictor /vep/va
     && chmod a+rx /vep/run_hail_vep85_GRCh38_vcf.sh
 
 RUN wget https://raw.github.com/miyagawa/cpanminus/master/cpanm -O /usr/bin/cpanm && chmod +x /usr/bin/cpanm
+# VEP dependencies
 RUN /usr/bin/cpanm --notest Set::IntervalTree
 RUN /usr/bin/cpanm --notest PerlIO::gzip
 RUN /usr/bin/cpanm --notest DBI
 RUN /usr/bin/cpanm --notest CGI
 RUN /usr/bin/cpanm --notest JSON
+# LoFTEE dependencies
 RUN /usr/bin/cpanm --notest DBD::SQLite
+RUN /usr/bin/cpanm --notest  List::MoreUtils
 
 # run VEP on the 1-variant VCF to create fasta.index file
 RUN gsutil cp gs://hail-common/vep/vep/1var.vcf /vep  \
@@ -128,8 +133,8 @@ ENV PYTHONPATH="$PYTHONPATH:/seqr:/seqr_settings:/hail-elasticsearch-pipelines"
 
 COPY shared/gitconfig /root/.gitconfig
 COPY shared/bashrc /root/.bashrc
-
-COPY minikube/run_hail_locally.sh /hail-elasticsearch-pipelines
+COPY shared/run_hail_locally.sh /hail-elasticsearch-pipelines
+COPY shared/run_hail_on_dataproc.sh /hail-elasticsearch-pipelines
 COPY minikube/core-site.xml /usr/local/spark-2.0.2-bin-hadoop2.7/conf/
 COPY minikube/entrypoint.sh /
 

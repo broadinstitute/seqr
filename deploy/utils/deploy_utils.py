@@ -244,11 +244,7 @@ def deploy_phenotips(settings):
         "psql -U postgres postgres -c 'grant all privileges on database xwiki to xwiki'" % locals(),
     )
 
-    docker_build(
-        "phenotips",
-        settings,
-        ["--build-arg PHENOTIPS_SERVICE_PORT=%s" % phenotips_service_port],
-    )
+    docker_build("phenotips", settings, ["--build-arg PHENOTIPS_SERVICE_PORT=%s" % phenotips_service_port])
 
     _deploy_pod("phenotips", settings, wait_until_pod_is_ready=True)
 
@@ -287,11 +283,7 @@ def deploy_matchbox(settings):
     if settings["DELETE_BEFORE_DEPLOY"]:
         delete_pod("matchbox", settings)
 
-    docker_build(
-        "matchbox",
-        settings,
-        ["--build-arg MATCHBOX_SERVICE_PORT=%s" % settings["MATCHBOX_SERVICE_PORT"]],
-    )
+    docker_build("matchbox", settings, ["--build-arg MATCHBOX_SERVICE_PORT=%s" % settings["MATCHBOX_SERVICE_PORT"]])
 
     _deploy_pod("matchbox", settings, wait_until_pod_is_ready=True)
 
@@ -302,10 +294,7 @@ def deploy_postgres(settings):
     if settings["DELETE_BEFORE_DEPLOY"]:
         delete_pod("postgres", settings)
 
-    docker_build(
-        "postgres",
-        settings,
-    )
+    docker_build("postgres", settings)
 
     _deploy_pod("postgres", settings, wait_until_pod_is_ready=True)
 
@@ -316,11 +305,7 @@ def deploy_redis(settings):
     if settings["DELETE_BEFORE_DEPLOY"]:
         delete_pod("redis", settings)
 
-    docker_build(
-        "redis",
-        settings,
-        ["--build-arg REDIS_SERVICE_PORT=%s" % settings["REDIS_SERVICE_PORT"]],
-    )
+    docker_build("redis", settings, ["--build-arg REDIS_SERVICE_PORT=%s" % settings["REDIS_SERVICE_PORT"]])
 
     _deploy_pod("redis", settings, wait_until_pod_is_ready=True)
 
@@ -331,11 +316,7 @@ def deploy_elasticsearch(settings):
     if settings["DELETE_BEFORE_DEPLOY"]:
         delete_pod("elasticsearch", settings)
 
-    docker_build(
-        "elasticsearch",
-        settings,
-        ["--build-arg ELASTICSEARCH_SERVICE_PORT=%s" % settings["ELASTICSEARCH_SERVICE_PORT"]],
-    )
+    docker_build("elasticsearch", settings, ["--build-arg ELASTICSEARCH_SERVICE_PORT=%s" % settings["ELASTICSEARCH_SERVICE_PORT"]])
 
     _deploy_pod("elasticsearch", settings, wait_until_pod_is_ready=True)
 
@@ -346,11 +327,7 @@ def deploy_kibana(settings):
     if settings["DELETE_BEFORE_DEPLOY"]:
         delete_pod("kibana", settings)
 
-    docker_build(
-        "kibana",
-        settings,
-        ["--build-arg KIBANA_SERVICE_PORT=%s" % settings["KIBANA_SERVICE_PORT"]],
-    )
+    docker_build("kibana", settings, ["--build-arg KIBANA_SERVICE_PORT=%s" % settings["KIBANA_SERVICE_PORT"]])
 
     _deploy_pod("kibana", settings, wait_until_pod_is_ready=True)
 
@@ -379,21 +356,16 @@ def deploy_cockpit(settings):
 def deploy_nginx(settings):
     print_separator("nginx")
 
-    run("kubectl delete -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/nginx/nginx-ingress.%(DEPLOY_TO_PREFIX)s.yaml" % settings,
-        errors_to_ignore=["\"nginx\" not found"],
-    )
-    run("kubectl create -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/nginx/nginx-ingress.%(DEPLOY_TO_PREFIX)s.yaml" % settings)
-
-    run("kubectl delete -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/nginx/nginx-controller.yaml" % settings,
-        errors_to_ignore=["\"nginx\" not found"],
-    )
-    run("kubectl create -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/nginx/nginx-controller.yaml" % settings)
-
-    if settings["DEPLOY_TO_PREFIX"] == "gcloud":
-        run("kubectl delete -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/nginx/nginx-service.%(DEPLOY_TO_PREFIX)s.yaml" % settings,
-            errors_to_ignore=["\"nginx\" not found"],
+    run("kubectl delete -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/nginx/nginx-config.yaml" % settings,
+        errors_to_ignore=["not found"],
         )
-        run("kubectl create -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/nginx/nginx-service.%(DEPLOY_TO_PREFIX)s.yaml" % settings)
+    run("kubectl create -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/nginx/nginx-config.yaml" % settings)
+
+
+    run("kubectl delete -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/nginx/nginx.%(DEPLOY_TO_PREFIX)s.yaml" % settings,
+        errors_to_ignore=["not found"],
+    )
+    run("kubectl create -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/nginx/nginx.%(DEPLOY_TO_PREFIX)s.yaml" % settings)
 
     _wait_until_pod_is_running("nginx", deployment_target=settings["DEPLOY_TO"])
 
@@ -465,13 +437,7 @@ def deploy_pipeline_runner(settings):
     if settings["DELETE_BEFORE_DEPLOY"]:
         delete_pod("pipeline-runner", settings)
 
-    docker_build(
-        "pipeline-runner",
-        settings,
-        [
-            "-f deploy/docker/%(COMPONENT_LABEL)s/%(DEPLOY_TO_PREFIX)s/Dockerfile",
-        ]
-    )
+    docker_build("pipeline-runner", settings, [ "-f deploy/docker/%(COMPONENT_LABEL)s/%(DEPLOY_TO_PREFIX)s/Dockerfile" ])
 
     _deploy_pod("pipeline-runner", settings, wait_until_pod_is_running=True)
 
@@ -511,7 +477,7 @@ def deploy_init_cluster(settings):
         while num_nodes_remaining_to_create > 0:
             i += 1
             run(" ".join([
-                "gcloud beta container node-pools create %(CLUSTER_NAME)s-"+str(i),
+                "gcloud container node-pools create %(CLUSTER_NAME)s-"+str(i),
                 "--cluster %(CLUSTER_NAME)s",
                 "--project %(GCLOUD_PROJECT)s",
                 "--zone %(GCLOUD_ZONE)s",
@@ -568,9 +534,7 @@ def deploy_init_cluster(settings):
         try:
             status = run("minikube status")
         except Exception as e:
-            run("minikube stop", ignore_all_errors=True)
             #run("minikube delete", ignore_all_errors=True)
-
             if "MINIKUBE_MEMORY" not in settings:
                 settings["MINIKUBE_MEMORY"] = str((psutil.virtual_memory().total - 4*10**9) / 10**6)  # leave 4Gb overhead
             if "MINIKUBE_NUM_CPUS" not in settings:
@@ -579,6 +543,7 @@ def deploy_init_cluster(settings):
             logger.info("minikube status: %s" % str(e))
             logger.info("starting minikube: ")
             if sys.platform.startswith('darwin'):
+                run("minikube stop", ignore_all_errors=True)
                 run("minikube start "
                     "--vm-driver=xhyve "  # haven't switched to hyperkit yet because it still has issues like https://bunnyyiu.github.io/2018-07-16-minikube-reboot/   
                     "--disk-size=%(MINIKUBE_DISK_SIZE)s "
@@ -590,7 +555,7 @@ def deploy_init_cluster(settings):
                 #run("sudo minikube stop", ignore_all_errors=True)
                 #run("sudo minikube delete", ignore_all_errors=True)
                 #run("sudo minikube start --vm-driver=none")  # run directly on the linux machine, without a hypervizor layer
-                logger.info("Please run 'sudo minikube start --vm-driver=none' first and make sure 'minikube status' shows that minikube is running")
+                logger.info("Please run 'sudo minikube start --vm-driver=none --apiserver-ips 127.0.0.1 --apiserver-name localhost' first and make sure 'minikube status' shows that minikube is running")
                 sys.exit(0)
             else:
                 logger.warn("We don't test minikube on operating system: %s" % sys.platform)
@@ -628,7 +593,8 @@ def deploy_config_map(settings):
 
             f.write('%s=%s\n' % (key, value))
 
-    # deploy ConfigMap file so that settings key/values can be added as environment variables in each of the pods
+    run("kubectl create -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/namespace.yaml" % settings, errors_to_ignore=["already exists"])
+
     run("kubectl delete configmap all-settings", errors_to_ignore=["not found"])
     run("kubectl create configmap all-settings --from-file=%(configmap_file_path)s" % locals())
     run("kubectl get configmaps all-settings -o yaml")
@@ -640,51 +606,51 @@ def deploy_secrets(settings):
     print_separator("secrets")
 
     # deploy secrets
-    for secret in [
+    for secret_label in [
         "seqr-secrets",
         "postgres-secrets",
         "nginx-secrets",
         "matchbox-secrets",
         "gcloud-client-secrets"
     ]:
-        run("kubectl delete secret " + secret, verbose=False, errors_to_ignore=["not found"])
+        run("kubectl delete secret %(secret_label)s" % locals(), verbose=False, errors_to_ignore=["not found"])
 
     run(" ".join([
         "kubectl create secret generic seqr-secrets",
-        "--from-file deploy/secrets/%(DEPLOY_TO)s/seqr/omim_key",
-        "--from-file deploy/secrets/%(DEPLOY_TO)s/seqr/postmark_server_token",
-        "--from-file deploy/secrets/%(DEPLOY_TO)s/seqr/mme_node_admin_token",
-    ]) % settings)
+        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/seqr/omim_key",
+        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/seqr/postmark_server_token",
+        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/seqr/mme_node_admin_token",
+    ]) % settings, errors_to_ignore=["already exists"])
 
     run(" ".join([
         "kubectl create secret generic postgres-secrets",
-        "--from-file deploy/secrets/%(DEPLOY_TO)s/postgres/postgres.username",
-        "--from-file deploy/secrets/%(DEPLOY_TO)s/postgres/postgres.password",
-    ]) % settings)
+        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/postgres/postgres.username",
+        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/postgres/postgres.password",
+    ]) % settings, errors_to_ignore=["already exists"])
 
     run(" ".join([
         "kubectl create secret generic nginx-secrets",
-        "--from-file deploy/secrets/%(DEPLOY_TO)s/nginx/tls.key",
-        "--from-file deploy/secrets/%(DEPLOY_TO)s/nginx/tls.crt",
-    ]) % settings)
+        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/nginx-%(DEPLOY_TO)s/tls.key",
+        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/nginx-%(DEPLOY_TO)s/tls.crt",
+    ]) % settings, errors_to_ignore=["already exists"])
 
     run(" ".join([
         "kubectl create secret generic matchbox-secrets",
-        "--from-file deploy/secrets/%(DEPLOY_TO)s/matchbox/nodes.json",
-        "--from-file deploy/secrets/%(DEPLOY_TO)s/matchbox/application.properties",
-        "--from-file deploy/secrets/%(DEPLOY_TO)s/matchbox/config.xml",
-    ]) % settings)
+        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/matchbox/nodes.json",
+        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/matchbox/application.properties",
+        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/matchbox/config.xml",
+    ]) % settings, errors_to_ignore=["already exists"])
 
     if os.path.isfile("deploy/secrets/shared/gcloud/service-account-key.json"):
         run(" ".join([
             "kubectl create secret generic gcloud-client-secrets",
             "--from-file deploy/secrets/shared/gcloud/service-account-key.json",
             "--from-file deploy/secrets/shared/gcloud/boto",
-        ]))
+        ]) % settings, errors_to_ignore=["already exists"])
     else:
         run(" ".join([
             "kubectl create secret generic gcloud-client-secrets"   # create an empty set of client secrets
-        ]))
+        ]), errors_to_ignore=["already exists"])
 
 
 def deploy_elasticsearch_sharded(component, settings):

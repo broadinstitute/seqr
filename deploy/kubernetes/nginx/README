@@ -1,0 +1,5 @@
+There are 2 popular options for kubernetes nginx deployments. One is maintained by Nginx Inc, and one by the Kubernetes
+community. Both are free and well-maintained.
+Here we use the Nginx Inc one because it's known to prioritise stability rather than adding many experimental features.
+
+See https://github.com/nginxinc/kubernetes-ingress/blob/v1.3.0/docs/installation.md for installation docs.

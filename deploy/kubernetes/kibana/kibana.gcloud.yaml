@@ -2,6 +2,7 @@ kind: Service
 apiVersion: v1
 metadata:
   name: kibana
+  namespace: {{ DEPLOY_TO }}
   labels:
     name: kibana
     deployment: {{ DEPLOY_TO }}
@@ -16,6 +17,7 @@ kind: Deployment
 apiVersion: extensions/v1beta1
 metadata:
   name: kibana
+  namespace: {{ DEPLOY_TO }}
   labels:
     name: kibana
     deployment: {{ DEPLOY_TO }}

@@ -67,6 +67,7 @@ ENV PYTHONPATH="$PYTHONPATH:/seqr:/seqr_settings:/hail-elasticsearch-pipelines"
 
 COPY shared/gitconfig /root/.gitconfig
 COPY shared/bashrc /root/.bashrc
+COPY shared/run_hail_on_dataproc.sh /hail-elasticsearch-pipelines
 COPY gcloud/entrypoint.sh /
 
 
