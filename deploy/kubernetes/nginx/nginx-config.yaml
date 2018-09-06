@@ -2,6 +2,8 @@
 #   https://github.com/nginxinc/kubernetes-ingress/blob/v1.3.0/examples/customization/nginx-config.yaml
 #   https://github.com/nginxinc/kubernetes-ingress/blob/v1.3.0/docs/installation.md
 
+# to apply this config map, run ./servctl deploy -d nginx <target>
+
 kind: ConfigMap
 apiVersion: v1
 metadata:

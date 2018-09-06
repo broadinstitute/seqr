@@ -1,31 +1,12 @@
-kind: Ingress
-apiVersion: extensions/v1beta1
-metadata:
-  name: nginx
-  namespace: {{ DEPLOY_TO }}
-  annotations:
-    kubernetes.io/ingress.class: nginx
-spec:
-  tls:
-    - hosts:
-      - {{ CLUSTER_HOSTNAME }}
-      secretName: nginx-secrets
-  rules:
-    - host: {{ CLUSTER_HOSTNAME }}
-      http:
-        paths:
-        - backend:
-            serviceName: seqr
-            servicePort: {{ SEQR_SERVICE_PORT }}
-          path: /
----
 kind: Service
 apiVersion: v1
 metadata:
   name: nginx-service
   namespace: {{ DEPLOY_TO }}
+  labels:
+    name: nginx
+    deployment: {{ DEPLOY_TO }}
 spec:
-  externalTrafficPolicy: Local
   type: LoadBalancer
   loadBalancerIP: {{ CLUSTER_EXTERNAL_IP }}  # static IP pre-allocated.
   ports:
@@ -38,27 +19,30 @@ spec:
     protocol: TCP
     name: https
   selector:
-    app: nginx-ingress
+    app: nginx
 ---
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  name: nginx-ingress
+  name: nginx
   namespace: {{ DEPLOY_TO }}
+  labels:
+    name: nginx
+    deployment: {{ DEPLOY_TO }}
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: nginx-ingress
+      app: nginx
   template:
     metadata:
       labels:
-        app: nginx-ingress
+        app: nginx
     spec:
       containers:
       - image: nginx/nginx-ingress:1.3.0
-        imagePullPolicy: Always
-        name: nginx-ingress
+        imagePullPolicy: IfNotPresent
+        name: nginx
         ports:
         - name: http
           containerPort: 80
@@ -75,8 +59,8 @@ spec:
               fieldPath: metadata.name
         args:
           - -nginx-configmaps={{ DEPLOY_TO }}/nginx-config
-          - -default-server-tls-secret={{ DEPLOY_TO }}/default-server-secret
+          - -default-server-tls-secret={{ DEPLOY_TO }}/nginx-secrets
          #- -v=3 # Enables extensive logging. Useful for troubleshooting.
          #- -report-ingress-status
-         #- -external-service=nginx-ingress
+         #- -external-service=nginx
          #- -enable-leader-election
