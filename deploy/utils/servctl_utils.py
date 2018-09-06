@@ -203,7 +203,7 @@ def show_dashboard():
     p.wait()
 
 
-def print_log(components, deployment_target, enable_stream_log, wait=True):
+def print_log(components, deployment_target, enable_stream_log, previous=False, wait=True):
     """Executes kubernetes command to print logs for the given pod.
 
     Args:
@@ -212,6 +212,8 @@ def print_log(components, deployment_target, enable_stream_log, wait=True):
         deployment_target (string): "local", "gcloud-dev", etc. See constants.DEPLOYMENT_TARGETS.
         enable_stream_log (bool): whether to continuously stream the log instead of just printing
             the log up to now.
+        previous (bool): Prints logs from a previous instance of the container. This is useful for debugging pods that
+            don't start or immediately enter crash-loop.
         wait (bool): If False, this method will return without waiting for the log streaming process
             to finish printing all logs.
 
@@ -219,16 +221,18 @@ def print_log(components, deployment_target, enable_stream_log, wait=True):
         (list): Popen process objects for the kubectl port-forward processes.
     """
     stream_arg = "-f" if enable_stream_log else ""
+    previous_flag = "--previous" if previous else ""
 
     procs = []
     for component_label in components:
 
-        while get_pod_status(component_label, deployment_target) != "Running":
-            time.sleep(5)
+        if not previous:
+            while get_pod_status(component_label, deployment_target) != "Running":
+                time.sleep(5)
 
         pod_name = get_pod_name(component_label, deployment_target=deployment_target)
 
-        p = run_in_background("kubectl logs %(stream_arg)s %(pod_name)s" % locals())
+        p = run_in_background("kubectl logs %(stream_arg)s %(previous_flag)s %(pod_name)s" % locals(), print_command=True)
         def print_command_log():
             for line in iter(p.stdout.readline, ''):
                 logger.info(line.strip('\n'))
