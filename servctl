@@ -85,7 +85,9 @@ sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS, help="kubernete
 
 ## LOG_COMMAND
 sp = subparsers.add_parser(LOG_COMMAND, description="Show logs for one or more components")
-sp.add_argument("-f", "--stream-log", action="store_true", help="stream the log")
+sp.add_argument("-f", "--stream-log", action="store_true", help="continue printing new logs - similar to tail -f")
+sp.add_argument("--previous", action="store_true", help="Prints logs from a previous instance of the container. "
+    "This is useful for debugging pods that don't start or immediately enter crash-loop.")
 sp.add_argument("components", nargs="+", help="show log", choices=COMPONENT_ARG_CHOICES)
 sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS, help="kubernetes cluster")
 
@@ -313,7 +315,7 @@ elif args.command == LOAD_DATASET_COMMAND:
 
 elif args.command == LOG_COMMAND:
     components = resolve_component_groups(args.deployment_target, args.components)
-    print_log(components, args.deployment_target, args.stream_log)
+    print_log(components, args.deployment_target, args.stream_log, previous=args.previous)
 
 elif args.command == PORT_FORWARD_COMMAND:
     component_port_pairs = get_component_port_pairs(resolve_component_groups(args.deployment_target, args.components))
