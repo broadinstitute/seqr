@@ -6,6 +6,7 @@ import { VARIANT_SORT_LOOKUP, EXCLUDED_TAG_NAME, getVariantsExportData } from 's
 export const getSearchedVariants = state => state.searchedVariants
 export const getSearchedVariantsIsLoading = state => state.searchedVariantsLoading.isLoading
 export const getSearchedVariantsErrorMessage = state => state.searchedVariantsLoading.errorMessage
+export const getSearchesByHash = state => state.searchesByHash
 export const getVariantSearchDisplay = state => state.variantSearchDisplay
 
 export const getTotalVariantsCount = createSelector(

@@ -2,6 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Grid } from 'semantic-ui-react'
+import hash from 'object-hash'
 
 import { loadProject } from 'redux/rootReducer'
 import { getProjectDetailsIsLoading, getProjectsByGuid } from 'redux/selectors'
@@ -11,47 +12,42 @@ import { QueryParamsEditor } from 'shared/components/QueryParamEditor'
 import VariantSearchForm from './components/VariantSearchForm'
 import VariantSearchResults from './components/VariantSearchResults'
 import { loadSearchedVariants } from './reducers'
+import { getSearchesByHash } from './selectors'
 
 
-// TODO get rid of JSON encoding when using POST
-const JSON_FILEDS = new Set(['freqs', 'qualityFilter', 'annotations', 'locus', 'inheritance'])
-const parsedQueryParams = queryParams => Object.entries(queryParams).reduce(
-  (acc, [key, val]) => ({ ...acc, [key]: JSON_FILEDS.has(key) ? JSON.parse(val) : val }), {},
-)
+const BaseVariantSearch = ({ queryParams, updateQueryParams, searchParams, project, loading, load, search }) => {
 
-const onSubmit = (updateQueryParams, search) => (queryParams) => {
-  const searchParams = {
-    search: true,
-    ...Object.entries(queryParams).reduce(
-      (acc, [key, val]) => ({ ...acc, [key]: JSON_FILEDS.has(key) ? JSON.stringify(val) : val }), {},
-    ),
+  const onSubmit = (updatedSearchParams) => {
+    const searchHash = hash.MD5(updatedSearchParams)
+    search(searchHash, updatedSearchParams)
+    updateQueryParams({ ...queryParams, search: searchHash })
   }
-  search(searchParams)
-  updateQueryParams(searchParams)
-}
 
-const BaseVariantSearch = ({ queryParams, updateQueryParams, project, loading, load, search }) =>
-  <DataLoader contentId={queryParams.projectGuid} content={project} loading={loading} load={load}>
-    <Grid>
-      <Grid.Row>
-        <Grid.Column width={16}>
-          <ReduxFormWrapper
-            initialValues={parsedQueryParams(queryParams)}
-            onSubmit={onSubmit(updateQueryParams, search)}
-            form="variantSearch"
-            submitButtonText="Search"
-            noModal
-            renderChildren={VariantSearchForm}
-          />
-        </Grid.Column>
-      </Grid.Row>
-      <VariantSearchResults search={queryParams} />
-    </Grid>
-  </DataLoader>
+  return (
+    <DataLoader contentId={(searchParams || queryParams).projectGuid} content={project} loading={loading} load={load}>
+      <Grid>
+        <Grid.Row>
+          <Grid.Column width={16}>
+            <ReduxFormWrapper
+              initialValues={searchParams || queryParams}
+              onSubmit={onSubmit}
+              form="variantSearch"
+              submitButtonText="Search"
+              noModal
+              renderChildren={VariantSearchForm}
+            />
+          </Grid.Column>
+        </Grid.Row>
+        <VariantSearchResults search={queryParams} />
+      </Grid>
+    </DataLoader>
+  )
+}
 
 BaseVariantSearch.propTypes = {
   queryParams: PropTypes.object,
   updateQueryParams: PropTypes.func,
+  searchParams: PropTypes.object,
   project: PropTypes.object,
   loading: PropTypes.bool,
   load: PropTypes.func,
@@ -60,6 +56,7 @@ BaseVariantSearch.propTypes = {
 
 const mapStateToProps = (state, ownProps) => ({
   project: getProjectsByGuid(state)[ownProps.queryParams.projectGuid],
+  searchParams: getSearchesByHash(state)[ownProps.queryParams.search],
   loading: getProjectDetailsIsLoading(state),
 })
 

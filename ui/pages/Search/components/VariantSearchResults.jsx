@@ -40,7 +40,7 @@ const VariantSearchResults = ({
   onSubmit, totalVariantsCount,
 }) =>
   <DataLoader
-    contentId={search}
+    contentId={search.search}
     content={searchedVariants}
     loading={loading}
     load={load}

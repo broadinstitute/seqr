@@ -11,7 +11,7 @@ class CustomModal extends React.Component
   static propTypes = {
     trigger: PropTypes.node,
     popup: PropTypes.object,
-    title: PropTypes.string.isRequired,
+    title: PropTypes.string,
     modalName: PropTypes.string.isRequired,
     handleClose: PropTypes.func,
     size: PropTypes.oneOf(['small', 'large', 'fullscreen']),

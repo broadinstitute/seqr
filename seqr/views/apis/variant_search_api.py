@@ -35,21 +35,23 @@ UNAFFECTED = Individual.AFFECTED_STATUS_UNAFFECTED
 def query_variants_handler(request):
     """Search variants.
     """
+    # TODO caching
+    search = json.loads(request.body)
 
     # TODO this is only mendelian variant search, should be others and not require project/ family
-    project = get_project_and_check_permissions(request.GET.get('projectGuid'), request.user)
-    family = Family.objects.get(guid=request.GET.get('familyGuid'))
+    project = get_project_and_check_permissions(search.get('projectGuid'), request.user)
+    family = Family.objects.get(guid=search.get('familyGuid'))
 
     variant_filter = {}
-    if request.GET.get('freqs'):
-        freqs = json.loads(request.GET.get('freqs'))
+    if search.get('freqs'):
+        freqs = search.get('freqs')
         variant_filter['ref_freqs'] = [[k, v['af']] for k, v in freqs.items() if v.get('af') is not None]
         variant_filter['ref_acs'] = [[k, v['ac']] for k, v in freqs.items() if v.get('ac') is not None and not v.get('af')]
         variant_filter['ref_hom_hemi'] = [[k, v['hh']] for k, v in freqs.items() if v.get('hh') is not None]
-    if request.GET.get('annotations'):
-        variant_filter['so_annotations'] = [ann for annotations in json.loads(request.GET.get('annotations')).values() for ann in annotations]
-    if request.GET.get('locus'):
-        locus_json = json.loads(request.GET.get('locus'))
+    if search.get('annotations'):
+        variant_filter['so_annotations'] = [ann for annotations in search.get('annotations').values() for ann in annotations]
+    if search.get('locus'):
+        locus_json = search.get('locus')
         genes, intervals, invalid_items = parse_locus_list_items(locus_json, all_new=True)
         if invalid_items:
             error = 'Invalid genes/intervals: {}'.format(', '.join(invalid_items))
@@ -58,7 +60,7 @@ def query_variants_handler(request):
         variant_filter['locations'] = [(get_xpos(i['chrom'], i['start']), get_xpos(i['chrom'], i['end'])) for i in intervals]
         variant_filter['exclude_genes'] = locus_json.get('excludeLocations', False)
 
-    inheritance = json.loads(request.GET.get('inheritance', '{}'))
+    inheritance = search.get('inheritance', {})
     inheritance_mode = inheritance.get('mode')
     search_mode = 'all_variants'
     genotype_inheritance_filter = {}
@@ -91,7 +93,7 @@ def query_variants_handler(request):
         'genotype_inheritance_filter': genotype_inheritance_filter,
         'allele_count_filter': allele_count_filter,
         'variant_filter': variant_filter,
-        'quality_filter': json.loads(request.GET.get('qualityFilter', '{}')),
+        'quality_filter': search.get('qualityFilter', {}),
     })
 
     variants = api_utils.calculate_mendelian_variant_search(search_spec, find_matching_xbrowse_model(family), user=request.user)
@@ -106,6 +108,7 @@ def query_variants_handler(request):
         'searchedVariants': [{'variantGuid': v['variantGuid']} if v['variantGuid'] else v for v in parsed_variants],
         'savedVariantsByGuid': {variant['variantGuid']: variant for variant in parsed_variants if variant['variantGuid']},
         'genesById': genes,
+        'search': search,
     })
 
 
