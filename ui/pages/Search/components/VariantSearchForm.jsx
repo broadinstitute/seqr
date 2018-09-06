@@ -2,11 +2,13 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { FormSection } from 'redux-form'
-import { Form, Accordion, Header, Segment, Grid } from 'semantic-ui-react'
+import { Form, Accordion, Header, Segment, Grid, List } from 'semantic-ui-react'
 
 import { VerticalSpacer } from 'shared/components/Spacers'
+import ButtonLink from 'shared/components/buttons/ButtonLink'
 import { configuredFields } from 'shared/components/form/ReduxFormWrapper'
 import { Select, LabeledSlider, CheckboxGroup } from 'shared/components/form/Inputs'
+import Modal from 'shared/components/modal/Modal'
 import { LOCUS_LIST_ITEMS_FIELD, AFFECTED, UNAFFECTED } from 'shared/utils/constants'
 import FrequencyFilter from './filters/FrequencyFilter'
 import annotationsFilterLayout from './filters/AnnotationsFilterLayout'
@@ -99,7 +101,28 @@ const INHERITANCE_PANEL = {
     },
   ],
   fieldProps: { control: Select, options: NUM_ALT_OPTIONS, width: 4 },
-  helpText: <span>Filter by the mode of inheritance. Choose from the built-in search methods (described <a>here</a>) or specify custom alternate allele counts</span>,
+  helpText: (
+    <span>
+      Filter by the mode of inheritance. Choose from the built-in search methods (described
+      <Modal trigger={<ButtonLink> here</ButtonLink>} title="Inheritance Searching" modalName="inheritanceModes">
+        <i>seqr</i> implements the following set of standard Mendelian inheritance methods to identify variants that
+        segregate with a phenotype in a family
+        {INHERITANCE_FILTER_OPTIONS.filter(({ value }) => value !== ALL_INHERITANCE_FILTER).map(({ text, value }) =>
+          <Header key={value} content={text} subheader={INHERITANCE_LOOKUP[value].description} />,
+        )}
+
+        <Header size="small" content="Notes on inheritance searching:" />
+        <List bulleted>
+          <List.Item>
+            These methods rely on the affected status of individuals. Individuals with an Unknown phenotype will
+            not be taken into consideration for genotype filters
+          </List.Item>
+          <List.Item>All methods assume complete penetrance</List.Item>
+          <List.Item>seqr assumes unphased genotypes</List.Item>
+        </List>
+      </Modal>) or specify custom alternate allele counts
+    </span>
+  ),
 }
 
 const ANNOTATION_PANEL = {
