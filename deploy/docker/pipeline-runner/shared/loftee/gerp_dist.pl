@@ -50,20 +50,21 @@ sub get_gerp_weighted_dist {
                 $start = ($strand == 1) ? $current_exon->start : $current_exon->end;
             }
             $end = $stop_codon_pos;
-            $wd = get_interval_gerp($chr, $start, $end, $gerp_db);
+            #$wd = get_interval_gerp($chr, $start, $end, $gerp_db);
         } elsif ($in_affected_exon) {
             $start = $pos;
             $end = ($strand == 1) ? $current_exon->{end} : $current_exon->{start};
-            $wd = get_interval_gerp($chr, $start, $end, $gerp_db);
+            #$wd = get_interval_gerp($chr, $start, $end, $gerp_db);
         } else {
             my $exon_num = $i + 1;
-            $wd = get_exon_gerp($transcript_id, $exon_num, $cons_db);
+            #$wd = get_exon_gerp($transcript_id, $exon_num, $cons_db);
             $start = $current_exon->start;
             $end = $current_exon->end;
         }
-        $weighted_dist = $weighted_dist + $wd;
+        #$weighted_dist = $weighted_dist + $wd;
         $dist = $dist + (abs ($end - $start));
     }
+    $weighted_dist = $dist
     return ($weighted_dist, $dist);
 }
 

@@ -24,7 +24,7 @@ package LoF;
 
 # code for [5,3]UTR_SPLICE and END_TRUNC filters
 require "utr_splice.pl";
-#require "gerp_dist.pl";
+require "gerp_dist.pl";
 
 # code for splicing predictions
 require "de_novo_donor.pl";
@@ -125,9 +125,9 @@ sub new {
         }
     }
     # parameters for GERP-based filters
-    #$self->{tabix_path} = 'tabix' if !defined($self->{tabix_path});
-    #$self->{gerp_database} = 'false';
-    #$self->{gerp_file} = '/vep/loftee/GERP_scores.final.sorted.txt.gz' if !defined($self->{gerp_file});
+    $self->{tabix_path} = 'tabix' if !defined($self->{tabix_path});
+    $self->{gerp_database} = 'false';
+    $self->{gerp_file} = '';  #'/vep/loftee/GERP_scores.final.sorted.txt.gz' if !defined($self->{gerp_file});
     if (defined($self->{gerp_file})) {
         if ($self->{gerp_file} eq 'mysql') {
             my $db_info = "DBI:mysql:mysql_read_default_group=loftee;mysql_read_default_file=~/.my.cnf";
@@ -247,10 +247,10 @@ sub run {
         # using distance from stop codon weighted by GERP
         #my $slice = $vf->feature_Slice();
         #$lof_position = $slice->start if $lof_position < 0;
-        #my ($gerp_dist, $dist) = get_gerp_weighted_dist($tv->transcript, $lof_position, $self->{gerp_database}, $self->{conservation_database});
+        my ($gerp_dist, $dist) = get_gerp_weighted_dist($tv->transcript, $lof_position, $self->{gerp_database}, $self->{conservation_database});
         #push(@info, 'GERP_DIST:' . $gerp_dist);
-        #push(@info, 'BP_DIST:' . $dist);
-        #push(@info, 'PERCENTILE:' . $lof_percentile);
+        push(@info, 'BP_DIST:' . $dist);
+        push(@info, 'PERCENTILE:' . $lof_percentile);
 
         my $last_exon_length = get_last_exon_coding_length($tv);
         my $d = $dist - $last_exon_length;

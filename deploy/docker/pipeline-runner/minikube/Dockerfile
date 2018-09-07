@@ -77,7 +77,7 @@ COPY minikube/vep-gcloud-grch38.properties /vep
 COPY minikube/vep-gcloud-grch37.properties /vep
 
 # snapshot of LoFTEE code - copied from gs://gnomad-resources/loftee-beta/
-COPY shared/loftee /vep
+COPY shared/loftee /vep/loftee
 
 RUN ln -s /vep/ensembl-tools-release-85/scripts/variant_effect_predictor /vep/variant_effect_predictor \
     && gsutil cp gs://hail-common/vep/vep/GRCh37/run_hail_vep85_GRCh37_vcf.sh /vep/run_hail_vep85_GRCh37_vcf.sh  \
