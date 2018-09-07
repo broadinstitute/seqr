@@ -2,7 +2,7 @@ kind: Service
 apiVersion: v1
 metadata:
   name: matchbox
-  namespace: {{ DEPLOY_TO }}
+  namespace: {{ NAMESPACE }}
 spec:
   ports:
   - port: {{ MATCHBOX_SERVICE_PORT }}
@@ -12,7 +12,7 @@ kind: Deployment
 apiVersion: extensions/v1beta1
 metadata:
   name: matchbox
-  namespace: {{ DEPLOY_TO }}
+  namespace: {{ NAMESPACE }}
 spec:
   replicas: 1
   template:

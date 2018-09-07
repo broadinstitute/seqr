@@ -253,9 +253,9 @@ def set_environment(deployment_target):
     Args:
         deployment_target (string): "minikube", "gcloud-dev", etc. See constants.DEPLOYMENT_TARGETS.
     """
-    if deployment_target.startswith("gcloud"):
-        settings = retrieve_settings(deployment_target)
 
+    settings = retrieve_settings(deployment_target)
+    if deployment_target.startswith("gcloud"):
         os.environ["KUBECONFIG"] = os.path.expanduser("~/.kube/config")
         run("gcloud config set core/project %(GCLOUD_PROJECT)s" % settings, print_command=True)
         run("gcloud config set compute/zone %(GCLOUD_ZONE)s" % settings, print_command=True)
@@ -265,7 +265,7 @@ def set_environment(deployment_target):
     else:
         raise ValueError("Unexpected deployment_target value: %s" % (deployment_target,))
 
-    run("kubectl config set-context $(kubectl config current-context) --namespace=%(deployment_target)s" % locals())
+    run("kubectl config set-context $(kubectl config current-context) --namespace=%(NAMESPACE)s" % settings)
 
 
 def port_forward(component_port_pairs=[], deployment_target=None, wait=True, open_browser=False, use_kubectl_proxy=False):

@@ -2,7 +2,7 @@ kind: Service
 apiVersion: v1
 metadata:
   name: mongo
-  namespace: {{ DEPLOY_TO }}
+  namespace: {{ NAMESPACE }}
   labels:
     name: mongo
     deployment: {{ DEPLOY_TO }}
@@ -16,7 +16,7 @@ kind: Deployment
 apiVersion: extensions/v1beta1
 metadata:
   name: mongo
-  namespace: {{ DEPLOY_TO }}
+  namespace: {{ NAMESPACE }}
 spec:
   replicas: 1
   template:

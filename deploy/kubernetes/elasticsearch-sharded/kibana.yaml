@@ -2,7 +2,7 @@ apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
   name: kibana
-  namespace: {{ DEPLOY_TO }}
+  namespace: {{ NAMESPACE }}
   labels:
     component: kibana
     name: kibana

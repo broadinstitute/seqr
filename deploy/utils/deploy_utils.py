@@ -10,7 +10,7 @@ import sys
 from deploy.utils.kubectl_utils import get_pod_status, get_pod_name, \
     run_in_pod, get_node_name, POD_READY_STATUS, POD_RUNNING_STATUS
 from seqr.utils.shell_utils import run
-from deploy.utils.servctl_utils import render, check_kubernetes_context, retrieve_settings
+from deploy.utils.servctl_utils import render, check_kubernetes_context, retrieve_settings, set_environment
 
 logging.basicConfig(format='%(asctime)s %(levelname)-8s %(message)s')
 logger = logging.getLogger()
@@ -65,7 +65,7 @@ def deploy(deployment_target, components, output_dir=None, other_settings={}):
 
         render(input_base_dir, file_path, settings, output_base_dir)
 
-    # deploy
+    # init cluster
     if "init-cluster" in components:
         deploy_init_cluster(settings)
 
@@ -78,6 +78,10 @@ def deploy(deployment_target, components, output_dir=None, other_settings={}):
                               "initializing. Retrying...") % locals())
                 time.sleep(5)
 
+    # make sure namespace exists
+    create_namespace(settings)
+
+    # deploy components
     if "settings" in components:
         deploy_config_map(settings)
 
@@ -356,16 +360,13 @@ def deploy_cockpit(settings):
 def deploy_nginx(settings):
     print_separator("nginx")
 
-    run("kubectl delete -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/nginx/nginx-config.yaml" % settings,
-        errors_to_ignore=["not found"],
-        )
-    run("kubectl create -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/nginx/nginx-config.yaml" % settings)
+    run("kubectl delete clusterrolebinding cluster-admin-binding", errors_to_ignore=["not found"])
+    run("kubectl create clusterrolebinding cluster-admin-binding --clusterrole cluster-admin --user $(gcloud config get-value account) --namespace=%(NAMESPACE)s" % settings)
 
-
-    run("kubectl delete -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/nginx/nginx.%(DEPLOY_TO_PREFIX)s.yaml" % settings,
-        errors_to_ignore=["not found"],
-    )
+    run("kubectl delete -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/nginx/nginx.%(DEPLOY_TO_PREFIX)s.yaml" % settings, errors_to_ignore=["not found"])
     run("kubectl create -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/nginx/nginx.%(DEPLOY_TO_PREFIX)s.yaml" % settings)
+
+    #run("kubectl delete clusterrolebinding cluster-admin-binding", errors_to_ignore=["not found"])
 
     _wait_until_pod_is_running("nginx", deployment_target=settings["DEPLOY_TO"])
 
@@ -496,7 +497,9 @@ def deploy_init_cluster(settings):
             "--zone %(GCLOUD_ZONE)s",
         ]) % settings)
 
-        # create elasticsearch disks
+        set_environment(settings["DEPLOY_TO"])
+
+        # create elasticsearch disks storage class
         run(" ".join([
             "kubectl apply -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch/ssd-storage-class.yaml" % settings,
         ]))
@@ -578,6 +581,7 @@ def deploy_init_cluster(settings):
     if not node_name:
         raise Exception("Unable to retrieve node name. Was the cluster created successfully?")
 
+    create_namespace(settings)
 
     # print cluster info
     run("kubectl cluster-info", verbose=True)
@@ -593,7 +597,7 @@ def deploy_config_map(settings):
 
             f.write('%s=%s\n' % (key, value))
 
-    run("kubectl create -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/namespace.yaml" % settings, errors_to_ignore=["already exists"])
+    create_namespace(settings)
 
     run("kubectl delete configmap all-settings", errors_to_ignore=["not found"])
     run("kubectl create configmap all-settings --from-file=%(configmap_file_path)s" % locals())
@@ -605,6 +609,8 @@ def deploy_secrets(settings):
 
     print_separator("secrets")
 
+    create_namespace(settings)
+
     # deploy secrets
     for secret_label in [
         "seqr-secrets",
@@ -614,6 +620,9 @@ def deploy_secrets(settings):
         "gcloud-client-secrets"
     ]:
         run("kubectl delete secret %(secret_label)s" % locals(), verbose=False, errors_to_ignore=["not found"])
+
+    # make sure the
+    run("kubectl create -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/namespace.yaml" % settings, errors_to_ignore=["already exists"])
 
     run(" ".join([
         "kubectl create secret generic seqr-secrets",
@@ -740,3 +749,5 @@ def create_vpc(gcloud_project, network_name):
     ]) % locals(), errors_to_ignore=["already exists"])
 
 
+def create_namespace(settings):
+    run("kubectl create -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/namespace.yaml" % settings, errors_to_ignore=["already exists"])

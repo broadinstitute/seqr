@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: elasticsearch
-  namespace: {{ DEPLOY_TO }}
+  namespace: {{ NAMESPACE }}
   labels:
     component: elasticsearch
     role: client

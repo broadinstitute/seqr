@@ -64,7 +64,7 @@ sub get_gerp_weighted_dist {
         #$weighted_dist = $weighted_dist + $wd;
         $dist = $dist + (abs ($end - $start));
     }
-    $weighted_dist = $dist
+    $weighted_dist = $dist;
     return ($weighted_dist, $dist);
 }
 

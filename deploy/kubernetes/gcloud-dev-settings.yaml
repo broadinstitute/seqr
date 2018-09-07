@@ -22,6 +22,8 @@ SEQR_GIT_BRANCH: 'dev'
 ###########################################################
 ####### SETTINGS THAT SHOULDN'T NEED TO BE MODIFIED #######
 
+NAMESPACE: gcloud-dev
+
 DOCKER_IMAGE_PREFIX: 'gcr.io/seqr-project'
 
 DEPLOY_TO: 'gcloud-dev'
