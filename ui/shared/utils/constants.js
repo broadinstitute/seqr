@@ -532,9 +532,9 @@ export const SORT_BY_TAGS = 'TAGS'
 export const SORT_BY_CONSTRAINT = 'CONSTRAINT'
 
 
-const clinsigSeverity = (variant) => {
+const clinsigSeverity = (variant, user) => {
   const clinvarSignificance = variant.clinvar.clinsig && variant.clinvar.clinsig.split('/')[0]
-  const hgmdSignificance = variant.hgmd.class
+  const hgmdSignificance = user.is_staff && variant.hgmd.class
   if (!clinvarSignificance && !hgmdSignificance) return -10
   let clinvarSeverity = 0.1
   if (clinvarSignificance) {
@@ -554,9 +554,9 @@ export const VARIANT_SORT_OPTONS = [
     comparator: (a, b) =>
       VEP_CONSEQUENCE_ORDER_LOOKUP[b.annotation.vepConsequence] - VEP_CONSEQUENCE_ORDER_LOOKUP[a.annotation.vepConsequence],
   },
-  { value: SORT_BY_EXAC, text: 'ExAC Frequency', comparator: (a, b) => a.annotation.freqs.exac - b.annotation.freqs.exac },
-  { value: SORT_BY_1KG, text: '1kg  Frequency', comparator: (a, b) => a.annotation.freqs.g1k - b.annotation.freqs.g1k },
-  { value: SORT_BY_PATHOGENICITY, text: 'Pathogenicity', comparator: (a, b) => clinsigSeverity(b) - clinsigSeverity(a) },
+  { value: SORT_BY_EXAC, text: 'ExAC Frequency', comparator: (a, b) => a.populations.exac.af - b.populations.exac.af },
+  { value: SORT_BY_1KG, text: '1kg  Frequency', comparator: (a, b) => a.populations.g1k.af - b.populations.g1k.af },
+  { value: SORT_BY_PATHOGENICITY, text: 'Pathogenicity', comparator: (a, b, geneId, user) => clinsigSeverity(b, user) - clinsigSeverity(a, user) },
   {
     value: SORT_BY_CONSTRAINT,
     text: 'Constraint',
@@ -640,11 +640,11 @@ export const VARIANT_EXPORT_DATA = [
   { header: 'tags', getVal: variant => variant.tags.map(tag => tag.name).join('|') },
   { header: 'notes', getVal: variant => variant.notes.map(note => `${note.createdBy}: ${note.note}`).join('|') },
   { header: 'worst_consequence', getVal: variant => variant.annotation.vepConsequence },
-  { header: '1kg_freq', getVal: variant => variant.annotation.freqs.g1k },
-  { header: 'exac_freq', getVal: variant => variant.annotation.freqs.exac },
-  { header: 'gnomad_genomes_freq', getVal: variant => variant.annotation.freqs.gnomad_genomes },
-  { header: 'gnomad_exomes_freq', getVal: variant => variant.annotation.freqs.gnomad_exomes_freq },
-  { header: 'topmed_freq', getVal: variant => variant.annotation.freqs.topmedAF },
+  { header: '1kg_freq', getVal: variant => variant.populations.g1k.af },
+  { header: 'exac_freq', getVal: variant => variant.populations.exac.af },
+  { header: 'gnomad_genomes_freq', getVal: variant => variant.populations.gnomad_genomes.af },
+  { header: 'gnomad_exomes_freq', getVal: variant => variant.populations.gnomad_exomes.af },
+  { header: 'topmed_freq', getVal: variant => variant.populations.topmed.af },
   { header: 'sift', getVal: variant => variant.annotation.sift },
   { header: 'polyphen', getVal: variant => variant.annotation.polyphen },
   { header: 'muttaster', getVal: variant => variant.annotation.mut_taster },

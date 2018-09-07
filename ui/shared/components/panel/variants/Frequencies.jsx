@@ -42,14 +42,15 @@ FreqLink.propTypes = {
 }
 
 const FreqSummary = ({ field, fieldTitle, variant, url, hasLink, showAC, genomeVersion = GENOME_VERSION_37, precision = 2 }) => {
-  const { freqs, popCounts } = variant.annotation
-  if (freqs[field] === null) {
+  const { populations, chrom } = variant
+  const population = populations[field]
+  if (population.af === null) {
     return null
   }
-  const value = freqs[field] > 0 ? freqs[field].toPrecision(precision) : '0.0'
+  const value = population.af > 0 ? population.af.toPrecision(precision) : '0.0'
 
   const popCountDetails = [{ popField: `${field}_hom`, title: 'Hom' }]
-  if (variant.chrom.endsWith('X')) {
+  if (chrom.endsWith('X')) {
     popCountDetails.push({ popField: `${field}_hemi`, title: 'Hemi' })
   }
   if (showAC) {
@@ -58,7 +59,7 @@ const FreqSummary = ({ field, fieldTitle, variant, url, hasLink, showAC, genomeV
 
   return (
     <div>
-      {fieldTitle || field.replace('_', ' ').toUpperCase()}<HorizontalSpacer width={5} />
+      {fieldTitle}<HorizontalSpacer width={5} />
       <FreqValue>
         <b>
           {hasLink ?
@@ -70,13 +71,15 @@ const FreqSummary = ({ field, fieldTitle, variant, url, hasLink, showAC, genomeV
             /> : value
           }
         </b>
-        {popCountDetails.map(({ popField, denominatorField, title }) =>
-          popCounts[popField] !== null && popCounts[popField] !== undefined &&
-          <span key={popField}>
-            <HorizontalSpacer width={5} />
-            {title || popField}={popCounts[popField]} {denominatorField && `out of ${popCounts[denominatorField]}`}
-          </span>,
-        )}
+        {population.hom !== null && population.hom !== undefined &&
+          <span><HorizontalSpacer width={5} />Hom={population.hom}</span>
+        }
+        {chrom.endsWith('X') && population.hemi !== null && population.hemi !== undefined &&
+          <span><HorizontalSpacer width={5} />Hemi={population.hemi}</span>
+        }
+        {showAC && population.ac !== null && population.ac !== undefined &&
+          <span><HorizontalSpacer width={5} />AC={population.ac} out of {population.an}</span>
+        }
       </FreqValue>
     </div>
   )
@@ -93,27 +96,27 @@ FreqSummary.propTypes = {
   genomeVersion: PropTypes.string,
 }
 
-const Frequencies = ({ variant }) => {
-  if (!variant.annotation.freqs) {
-    return null
-  }
-  const { popCounts } = variant.annotation
+const POPULATIONS = [
+  { field: 'callset', fieldTitle: 'This Callset', showAC: true },
+  { field: 'g1k', fieldTitle: '1kg WGS' },
+  { field: 'exac', fieldTitle: 'ExAC', hasLink: true },
+  { field: 'gnomad_exomes', fieldTitle: 'gnomAD exomes', hasLink: true },
+  { field: 'gnomad_genomes', fieldTitle: 'gnomAD genomes', hasLink: true, precision: 3 },
+  { field: 'topmed', fieldTitle: 'TopMed', hasLink: true, precision: 3, url: 'bravo.sph.umich.edu/freeze5/hg38' },
+]
 
+const Frequencies = ({ variant }) => {
+  const { populations } = variant
   const freqContent = (
     <div>
-      <FreqSummary field="AF" fieldTitle="THIS CALLSET" variant={variant} showAC />
-      <FreqSummary field="g1k" fieldTitle="1KG WGS" variant={variant} />
-      <FreqSummary field="exac" variant={variant} hasLink />
-      <FreqSummary field="gnomad_exomes" variant={variant} hasLink />
-      <FreqSummary field="gnomad_genomes" variant={variant} precision={3} hasLink />
-      <FreqSummary field="topmedAF" fieldTitle="TOPMED" variant={variant} genomeVersion="38" precision={3} hasLink
-        url="bravo.sph.umich.edu/freeze5/hg38"
-      />
+      {POPULATIONS.map(pop =>
+        <FreqSummary key={pop.field} variant={variant} {...pop} />,
+      )}
     </div>
   )
 
   return (
-    popCounts.AC || popCounts.gnomadExomesAC || popCounts.gnomadGenomesAC || popCounts.topmedAC ?
+    Object.values(populations).some(pop => pop.ac) ?
       <Popup
         position="top center"
         flowing
@@ -121,30 +124,11 @@ const Frequencies = ({ variant }) => {
         header="Allele Counts"
         content={
           <div>
-            {
-              popCounts.AC != null && popCounts.AN != null &&
-              <div>this callset:<HorizontalSpacer width={10} />{popCounts.AC} out of {popCounts.AN}</div>
-            }
-            {
-              popCounts.g1kAC != null && popCounts.g1kAN != null &&
-              <div>1kg WGS:<HorizontalSpacer width={10} />{popCounts.g1kAC} out of {popCounts.g1kAN}</div>
-            }
-            {
-              popCounts.exacAC != null && popCounts.exacAN != null &&
-              <div>ExAC:<HorizontalSpacer width={10} />{popCounts.exacAC} out of {popCounts.exacAN}</div>
-            }
-            {
-              popCounts.gnomadExomesAC != null && popCounts.gnomadExomesAN != null &&
-              <div>gnomAD exomes:<HorizontalSpacer width={10} />{popCounts.gnomadExomesAC} out of {popCounts.gnomadExomesAN}</div>
-            }
-            {
-              popCounts.gnomadGenomesAC != null && popCounts.gnomadGenomesAN != null &&
-              <div>gnomAD genomes:<HorizontalSpacer width={10} />{popCounts.gnomadGenomesAC} out of {popCounts.gnomadGenomesAN}</div>
-            }
-            {
-              popCounts.topmedAC != null && popCounts.topmedAN != null &&
-              <div>TopMed:<HorizontalSpacer width={10} />{popCounts.topmedAC} out of {popCounts.topmedAN}</div>
-            }
+            {POPULATIONS.filter(
+              pop => populations[pop.field].ac !== null || populations[pop.field].an !== null,
+            ).map(pop =>
+              <div key={pop.field}>{pop.fieldTitle}: {populations[pop.field].ac} out of {populations[pop.field].an}</div>,
+            )}
           </div>
         }
       />

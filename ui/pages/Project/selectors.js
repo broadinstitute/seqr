@@ -167,10 +167,11 @@ export const getVisibleSortedProjectSavedVariants = createSelector(
   getSavedVariantSortOrder,
   getSavedVariantVisibleIndices,
   getGenesById,
-  (filteredSavedVariants, sortOrder, visibleIndices, genesById) => {
+  getUser,
+  (filteredSavedVariants, sortOrder, visibleIndices, genesById, user) => {
     // Always secondary sort on xpos
     filteredSavedVariants.sort((a, b) => {
-      return VARIANT_SORT_LOOKUP[sortOrder](a, b, genesById) || a.xpos - b.xpos
+      return VARIANT_SORT_LOOKUP[sortOrder](a, b, genesById, user) || a.xpos - b.xpos
     })
     return filteredSavedVariants.slice(...visibleIndices)
   },

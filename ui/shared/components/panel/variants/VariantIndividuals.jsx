@@ -77,7 +77,7 @@ Alleles.propTypes = {
 
 
 const Genotype = ({ variant, individual }) => {
-  const genotype = variant.genotypes && variant.genotypes[individual.individualId]
+  const genotype = variant.genotypes && variant.genotypes[individual.individualGuid]
   if (!genotype) {
     return null
   }
@@ -93,7 +93,7 @@ const Genotype = ({ variant, individual }) => {
     { title: 'Read Depth', value: genotype.dp },
     { title: 'Genotype Quality', value: genotype.gq },
     { title: 'Allelic Balance', value: genotype.ab && genotype.ab.toPrecision(2) },
-    { title: 'Filter', value: genotype.filter, shouldHide: genotype.filter === 'pass' },
+    { title: 'Filter', value: variant.genotypeFilters },
     { title: 'Phred Likelihoods', value: genotype.pl },
   ]
   return [
@@ -107,7 +107,7 @@ const Genotype = ({ variant, individual }) => {
             <Alleles alleles={genotype.alleles} variant={variant} individual={individual} />
             <VerticalSpacer width={5} />
             {genotype.gq || '-'}, {genotype.ab ? genotype.ab.toPrecision(2) : '-'}
-            {genotype.filter && genotype.filter !== 'pass' && <small><br />{genotype.filter}</small>}
+            {variant.genotypeFilters && <small><br />{variant.genotypeFilters}</small>}
           </span>
         }
         content={
@@ -118,7 +118,8 @@ const Genotype = ({ variant, individual }) => {
         }
       />
       : <b key="no-call">NO CALL</b>,
-    genotype.cnvs.cn !== null ?
+    // TODO cnvs fields are not in ES, either add them or get rid of this code
+    (genotype.cnvs && genotype.cnvs.cn !== null) ?
       <Popup
         key="cnvs"
         position="top center"

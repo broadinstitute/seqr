@@ -1,8 +1,10 @@
 import React from 'react'
 import PropTypes from 'prop-types'
+import { connect } from 'react-redux'
 import styled from 'styled-components'
 import { Label, Icon } from 'semantic-ui-react'
 
+import { getUser } from 'redux/selectors'
 import { CLINSIG_SEVERITY } from '../../../utils/constants'
 import { snakecaseToTitlecase } from '../../../utils/stringUtils'
 import { HorizontalSpacer } from '../../Spacers'
@@ -72,8 +74,8 @@ const clinvarUrl = (clinvar) => {
   return baseUrl + variantPath
 }
 
-const Pathogenicity = ({ variant }) => {
-  if (!variant.clinvar.variantId && !variant.clinvar.alleleId && !variant.hgmd.class) {
+const Pathogenicity = ({ variant, user }) => {
+  if (!variant.clinvar.variantId && !variant.clinvar.alleleId && !(user.is_staff && variant.hgmd.class)) {
     return null
   }
 
@@ -91,7 +93,7 @@ const Pathogenicity = ({ variant }) => {
           />
         </span>
       }
-      {variant.hgmd.class &&
+      {user.is_staff && variant.hgmd.class &&
         <span>
           <HorizontalSpacer width={5} />
           <b>HGMD:<HorizontalSpacer width={5} /></b>
@@ -108,7 +110,12 @@ const Pathogenicity = ({ variant }) => {
 
 Pathogenicity.propTypes = {
   variant: PropTypes.object,
+  user: PropTypes.object,
 }
 
 
-export default Pathogenicity
+const mapStateToProps = state => ({
+  user: getUser(state),
+})
+
+export default connect(mapStateToProps)(Pathogenicity)

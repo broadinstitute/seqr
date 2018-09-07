@@ -113,8 +113,7 @@ const annotationVariations = (mainTranscript, variant) => {
 }
 
 const Annotations = ({ variant }) => {
-  const { vepGroup, rsid } = variant.annotation
-  const mainTranscript = variant.annotation.mainTranscript || {}
+  const { vepConsequence, mainTranscript } = variant.annotation
 
   const variations = annotationVariations(mainTranscript, variant)
   const lofDetails = (mainTranscript.lof === 'LC' || mainTranscript.lofFlags === 'NAGNAG_SITE') ? [
@@ -129,12 +128,12 @@ const Annotations = ({ variant }) => {
 
   return (
     <div>
-      { vepGroup &&
+      { vepConsequence &&
         <Modal
           modalName={`${variant.variantId}-annotations`}
           title="Transcripts"
           size="large"
-          trigger={<ButtonLink>{vepGroup.replace(/_/g, ' ')}</ButtonLink>}
+          trigger={<ButtonLink>{vepConsequence.replace(/_/g, ' ')}</ButtonLink>}
         >
           <Transcripts variant={variant} />
         </Modal>
@@ -166,13 +165,6 @@ const Annotations = ({ variant }) => {
         <Icon name="angle right" />
         <Sequence sequence={variant.alt} />
       </LargeText>
-      {rsid &&
-        <div>
-          <a href={`http://www.ncbi.nlm.nih.gov/SNP/snp_ref.cgi?searchType=adhoc_search&type=rs&rs=${rsid}`} target="_blank">
-            {rsid}
-          </a>
-        </div>
-      }
       {variant.liftedOverGenomeVersion === GENOME_VERSION_37 && (
         variant.liftedOverPos ?
           <div>

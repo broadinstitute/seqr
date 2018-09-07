@@ -432,7 +432,7 @@ def _parse_es_hit(raw_hit, samples_by_id, liftover_grch38_to_grch37, field_names
             'class': hit.get('hgmd_class'),
         },
         'geneIds': list(hit.get('codingGeneIds') or []) or list(hit.get('geneIds') or []),
-        'genotypeFilters': ','.join(hit['filters'] or []) or 'pass',
+        'genotypeFilters': ','.join(hit['filters'] or []),
         'genotypes': genotypes,
         'genomeVersion': genome_version,
         'liftedOverGenomeVersion': lifted_over_genome_version,
@@ -462,14 +462,14 @@ def _parse_es_hit(raw_hit, samples_by_id, liftover_grch38_to_grch37, field_names
                 'hom':  _int_if_has_key(hit, ['exac_AC_Hom']),
                 'hemi': _int_if_has_key(hit, ['exac_AC_Hemi']),
             },
-            'gnomadExomes': {
+            'gnomad_exomes': {
                 'af': _float_if_has_key(hit, ['gnomad_exomes_AF_POPMAX_OR_GLOBAL', 'gnomad_exomes_AF_POPMAX', 'gnomad_exomes_AF']),
                 'ac': _int_if_has_key(hit, ['gnomad_exomes_AC']),
                 'an': _int_if_has_key(hit, ['gnomad_exomes_AN']),
                 'hom': _int_if_has_key(hit, ['gnomad_exomes_Hom']),
                 'hemi': _int_if_has_key(hit, ['gnomad_exomes_Hemi']),
             },
-            'gnomadGenomes': {
+            'gnomad_genomes': {
                 'af': _float_if_has_key(hit, ['gnomad_genomes_AF_POPMAX_OR_GLOBAL', 'gnomad_genomes_AF_POPMAX', 'gnomad_genomes_AF']),
                 'ac': _int_if_has_key(hit, ['gnomad_genomes_AC']),
                 'an': _int_if_has_key(hit, ['gnomad_genomes_AN']),

@@ -1,6 +1,6 @@
 import { createSelector } from 'reselect'
 
-import { getSavedVariantsByGuid, getGenesById } from 'redux/selectors'
+import { getSavedVariantsByGuid, getGenesById, getUser } from 'redux/selectors'
 import { VARIANT_SORT_LOOKUP, EXCLUDED_TAG_NAME, getVariantsExportData } from 'shared/utils/constants'
 
 export const getSearchedVariants = state => state.searchedVariants
@@ -19,7 +19,8 @@ export const getSortedFilteredSearchedVariants = createSelector(
   getSavedVariantsByGuid,
   getVariantSearchDisplay,
   getGenesById,
-  (searchedVariants, savedVariantsByGuid, variantSearchDisplay, genesById) => {
+  getUser,
+  (searchedVariants, savedVariantsByGuid, variantSearchDisplay, genesById, user) => {
     let variants = searchedVariants.map(variant =>
       (variant.variantGuid ? savedVariantsByGuid[variant.variantGuid] : variant),
     )
@@ -31,7 +32,7 @@ export const getSortedFilteredSearchedVariants = createSelector(
     }
 
     variants.sort((a, b) => {
-      return VARIANT_SORT_LOOKUP[variantSearchDisplay.sortOrder](a, b, genesById) || a.xpos - b.xpos
+      return VARIANT_SORT_LOOKUP[variantSearchDisplay.sortOrder](a, b, genesById, user) || a.xpos - b.xpos
     })
     return variants
   },
