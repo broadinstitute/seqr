@@ -207,25 +207,25 @@ export const ANNOTATION_FILTER_OPTIONS = [
 
 export const FREQUENCIES = [
   {
-    name: '1kg_wgs_phase3',
+    name: 'g1k',
     label: '1000 Genomes v3',
     homHemi: false,
     labelHelp: 'Filter by allele count (AC) in the 1000 Genomes Phase 3 release (5/2/2013), or by allele frequency (popmax AF) in any one of these five subpopulations defined for 1000 Genomes Phase 3: AFR, AMR, EAS, EUR, SAS',
   },
   {
-    name: 'exac_v3',
+    name: 'exac',
     label: 'ExAC v0.3',
     homHemi: true,
     labelHelp: 'Filter by allele count (AC) or homozygous/hemizygous count (H/H) in ExAC, or by allele frequency (popmax AF) in any one of these six subpopulations defined for ExAC: AFR, AMR, EAS, FIN, NFE, SAS',
   },
   {
-    name: 'gnomad-genomes2',
+    name: 'gnomad_genomes',
     label: 'gnomAD 15k genomes',
     homHemi: true,
     labelHelp: 'Filter by allele count (AC) or homozygous/hemizygous count (H/H) among gnomAD genomes, or by allele frequency (popmax AF) in any one of these six subpopulations defined for gnomAD genomes: AFR, AMR, EAS, FIN, NFE, ASJ',
   },
   {
-    name: 'gnomad-exomes2',
+    name: 'gnomad_exomes',
     label: 'gnomAD 123k exomes',
     homHemi: true,
     labelHelp: 'Filter by allele count (AC) or homozygous/hemizygous count (H/H) among gnomAD exomes, or by allele frequency (popmax AF) in any one of these seven subpopulations defined for gnomAD genomes: AFR, AMR, EAS, FIN, NFE, ASJ, SAS',
@@ -237,7 +237,7 @@ export const FREQUENCIES = [
     labelHelp: 'Filter by allele count (AC) or allele frequency (AF) in TOPMed',
   },
   {
-    name: 'AF',
+    name: 'callset',
     label: 'This Callset',
     homHemi: false,
     labelHelp: 'Filter by allele count (AC) or by allele frequency (AF) among the samples in this family plus the rest of the samples that were joint-called as part of variant calling for this project.',

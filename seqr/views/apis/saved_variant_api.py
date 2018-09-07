@@ -179,7 +179,14 @@ def _variant_details(variant_json, user):
     coords = extras.get(coords_field).split('-') if extras.get(coords_field) else []
     lifted_over_chrom = coords[0].lstrip('chr') if len(coords) > 0 else ''
     lifted_over_pos = coords[1] if len(coords) > 1 else ''
-
+    # TODO vepGroup == vepConsequence
+    # TODO annotation.rsid does not exist
+    # TODO move HGMD filtering to client
+    # TODO better locus list adding
+    # TODO clean up popCounts/freqs to use populations and clean up remaining fields in annotation
+    # TODO genotype cnvs do not exist
+    # TODO genotype.filters => genotypeFilters
+    # TODO genotypes by guid
     return {
         'annotation': {
             'cadd_phred': annotation.get('cadd_phred'),
@@ -304,6 +311,8 @@ def _saved_variant_genes(variants):
 
 def _add_locus_lists(project, variants, genes):
     locus_lists = get_project_locus_list_models(project)
+    for variant in variants:
+        variant['locusLists'] = []
 
     locus_list_intervals_by_chrom = defaultdict(list)
     for interval in LocusListInterval.objects.filter(locus_list__in=locus_lists):
