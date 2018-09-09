@@ -20,6 +20,8 @@ def load_dataset(deployment_target, project_name, genome_version, sample_type, d
 
         total_memory = psutil.virtual_memory().total - 6*10**9  # leave 6Gb for other processes
         memory_to_use = "%sG" % (total_memory / 2 / 10**9)  # divide available memory evenly between spark driver & executor
+        cpus_to_use = max(1, psutil.cpu_count() / 2)
+        # --num-executors %(cpus_to_use)s \
         load_command = """/hail-elasticsearch-pipelines/run_hail_locally.sh \
             --driver-memory %(memory_to_use)s \
             --executor-memory %(memory_to_use)s \

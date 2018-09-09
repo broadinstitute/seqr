@@ -497,12 +497,10 @@ def deploy_init_cluster(settings):
             "--zone %(GCLOUD_ZONE)s",
         ]) % settings)
 
-        set_environment(settings["DEPLOY_TO"])
-
         # create elasticsearch disks storage class
-        run(" ".join([
-            "kubectl apply -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch/ssd-storage-class.yaml" % settings,
-        ]))
+        #run(" ".join([
+        #    "kubectl apply -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch/ssd-storage-class.yaml" % settings,
+        #]))
 
         #run(" ".join([
         #    "gcloud compute disks create %(CLUSTER_NAME)s-elasticsearch-disk-0  --type=pd-ssd --zone=us-central1-b --size=%(ELASTICSEARCH_DISK_SIZE)sGi" % settings,
@@ -580,6 +578,8 @@ def deploy_init_cluster(settings):
     node_name = get_node_name()
     if not node_name:
         raise Exception("Unable to retrieve node name. Was the cluster created successfully?")
+
+    set_environment(settings["DEPLOY_TO"])
 
     create_namespace(settings)
 
@@ -751,3 +751,6 @@ def create_vpc(gcloud_project, network_name):
 
 def create_namespace(settings):
     run("kubectl create -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/namespace.yaml" % settings, errors_to_ignore=["already exists"])
+
+    # switch kubectl to use the new namespace
+    run("kubectl config set-context $(kubectl config current-context) --namespace=%(NAMESPACE)s" % settings)
