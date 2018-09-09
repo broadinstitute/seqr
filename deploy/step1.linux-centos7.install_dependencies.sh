@@ -41,7 +41,7 @@ set +x
 echo ==== Install kubectl and minikube =====
 set -x
 
-# crictl is required for starting minikube with --kubernetes-version=v1.11.0
+# crictl is required for starting minikube with --kubernetes-version=v1.11
 CRICTL_VERSION="v1.11.1"
 wget https://github.com/kubernetes-sigs/cri-tools/releases/download/$CRICTL_VERSION/crictl-$CRICTL_VERSION-linux-amd64.tar.gz
 sudo tar zxvf crictl-$CRICTL_VERSION-linux-amd64.tar.gz -C /usr/local/bin
@@ -65,14 +65,19 @@ export MINIKUBE_HOME=$HOME
 export KUBECONFIG=$HOME/.kube/config
 
 #sudo -E minikube start --vm-driver=none --apiserver-ips=127.0.0.1 --apiserver-name=localhost  # based on https://github.com/kubernetes/minikube/issues/2575
-sudo -E minikube start --vm-driver=none --kubernetes-version=v1.11.2
+sudo -E minikube start --vm-driver=none --kubernetes-version=v1.11.3
 
 sudo chown -R $USER $HOME/.kube
 sudo chgrp -R $USER $HOME/.kube
 sudo chown -R $USER $HOME/.minikube
 sudo chgrp -R $USER $HOME/.minikube
 
+sudo minikube addons enable coredns
+sudo minikube addons disable kube-dns
+
 #sudo minikube stop
+#sudo -E minikube start --vm-driver=none --kubernetes-version=v1.11.3
+
 
 echo ==== Adjust system settings for elasticsearch =====
 set -x
