@@ -1,4 +1,5 @@
 use strict;
+use experimental 'smartmatch';
 use List::Util qw[min max];
 
 # origin of scan occurs at the original GT/AG, unless the original GT/AG is disrupted, 

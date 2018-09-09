@@ -1,4 +1,5 @@
 use strict;
+use experimental 'smartmatch';
 use List::Util qw[min max];
 
 # variant splice site is assumed to occur at the same AG or GT used by the wild-type splice site

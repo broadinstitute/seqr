@@ -16,5 +16,5 @@ perl /vep/variant_effect_predictor/variant_effect_predictor.pl \
   --fasta /vep/homo_sapiens/85_GRCh37/Homo_sapiens.GRCh37.75.dna.primary_assembly.fa \
   --minimal \
   --assembly GRCh37 \
-  --plugin LoF,human_ancestor_fa:/vep/loftee_data_grch37/human_ancestor.fa.gz,filter_position:0.05,min_intron_size:15,conservation_file:/vep/loftee_data_grch37/phylocsf.sql \
+  --plugin LoF,human_ancestor_fa:/vep/loftee_data_grch37/human_ancestor.fa.gz,filter_position:0.05,min_intron_size:15 \
   -o STDOUT

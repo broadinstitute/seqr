@@ -114,7 +114,7 @@ sub new {
     $self->{donor_svm} = get_svm_info(catdir($self->{loftee_path}, 'splice_data/de_novo_donor_SVM')); # returns a hash reference
 
     # parameters for PHYLOCSF-based filters
-    $self->{conservation_file} = 'false' if !defined($self->{conservation_file});
+    $self->{conservation_file} = 'false';  # if !defined($self->{conservation_file});
     $self->{conservation_database} = 'false';
     if ($self->{conservation_file} ne 'false') {
         if ($self->{conservation_file} eq 'mysql') {
