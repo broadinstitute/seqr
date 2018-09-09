@@ -26,7 +26,8 @@ RUN echo debconf shared/accepted-oracle-license-v1-1 seen true | debconf-set-sel
 
 RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys EEA14886 \
     && apt-get update \
-    && apt-get install -y oracle-java8-installer
+    && apt-get install -y oracle-java8-installer \
+    && apt-get install -y oracle-java8-set-default
 
 # install python and gcloud utils
 RUN apt-get install -y python-dev \
@@ -67,6 +68,7 @@ RUN mkdir -p /hail/build/libs /hail/build/distributions \
 #    && cd /hail \
 #    && ./gradlew -Dspark.version=2.0.2 shadowJar archiveZip
 
+
 # install picard
 #RUN mkdir /picard \
 #    && cd /picard \
@@ -105,7 +107,8 @@ RUN /usr/bin/cpanm --notest DBD::SQLite
 RUN /usr/bin/cpanm --notest  List::MoreUtils
 
 # snapshot of LoFTEE code - copied from gs://gnomad-resources/loftee-beta/
-COPY shared/loftee /vep/loftee
+RUN gsutil -m cp -r gs://hail-common/vep/vep/loftee /vep
+#COPY shared/loftee /vep/loftee
 
 COPY minikube/vep-gcloud-grch38.properties /vep
 COPY minikube/vep-gcloud-grch37.properties /vep
