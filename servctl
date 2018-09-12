@@ -215,7 +215,7 @@ if args.command in [DEPLOY_COMMAND, DEPLOY_ALL_COMMAND]:
         other_settings["RESTORE_PHENOTIPS_DB_FROM_BACKUP"] = args.restore_phenotips_db_from_backup
         other_settings["RESTORE_SEQR_DB_FROM_BACKUP"] = args.restore_seqr_db_from_backup
 
-    email = password = None
+    #email = password = None
     if args.command == DEPLOY_COMMAND:
         deployable_components = resolve_component_groups(args.deployment_target, args.components)
 
@@ -257,17 +257,17 @@ if args.command in [DEPLOY_COMMAND, DEPLOY_ALL_COMMAND]:
             "pipeline-runner",
         ]
 
-        print("\nOptionally enter an email and password for the django/seqr superuser account. After seqr is deployed, "
-              "you will be able to login to seqr with this account. Leave blank to skip.")
+        #print("\nOptionally enter an email and password for the django/seqr superuser account. After seqr is deployed, "
+        #      "you will be able to login to seqr with this account. Leave blank to skip.")
 
-        email = raw_input("(optional) seqr superuser email: ")
-        if email:
-            password = getpass("seqr superuser password (hidden when typed): ")
+        #email = raw_input("(optional) seqr superuser email: ")
+        #if email:
+        #    password = getpass("seqr superuser password (hidden when typed): ")
 
     deploy(args.deployment_target, components=deployable_components, other_settings=other_settings)
 
-    if email:
-        create_user(args.deployment_target, email, password)
+    #if email:
+    #    create_user(args.deployment_target, email, password)
 
     if args.command == DEPLOY_ALL_COMMAND:
         update_reference_data(args.deployment_target)
