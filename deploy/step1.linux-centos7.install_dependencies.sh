@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+# install general dependencies
 sudo yum install -y unzip \
     gcc \
     wget \
@@ -24,12 +25,11 @@ sudo yum install -y \
 sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
 sudo yum install -y docker-ce
 
+sudo systemctl enable docker.service
+sudo systemctl start docker.service
+
 if groups $USER | grep &>/dev/null '\bdocker\b'; then
-    echo Starting docker service.
-
-    sudo systemctl enable docker.service
-    sudo systemctl start docker.service
-
+    echo User already in docker group.
 else
     sudo usermod -a -G docker $USER
 
@@ -44,14 +44,14 @@ set -x
 # crictl is required for starting minikube with --kubernetes-version=v1.11
 CRICTL_VERSION="v1.11.1"
 wget https://github.com/kubernetes-sigs/cri-tools/releases/download/$CRICTL_VERSION/crictl-$CRICTL_VERSION-linux-amd64.tar.gz
-sudo tar zxvf crictl-$CRICTL_VERSION-linux-amd64.tar.gz -C /usr/local/bin
+sudo tar zxvf crictl-$CRICTL_VERSION-linux-amd64.tar.gz -C /usr/bin
 rm -f crictl-$CRICTL_VERSION-linux-amd64.tar.gz
 
 ## command from https://kubernetes.io/docs/tasks/tools/install-kubectl/
 curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl && chmod +x kubectl && sudo cp kubectl /usr/bin/ && rm kubectl
 
 ## command from https://github.com/kubernetes/minikube/releases
-curl -Lo minikube https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64 && chmod +x minikube && sudo cp minikube /usr/local/bin/ && rm minikube
+curl -Lo minikube https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64 && chmod +x minikube && sudo cp minikube /usr/bin/ && rm minikube
 
 sudo rm -rf /etc/kubernetes/  # clean up any previously installed instance
 sudo yum install -y socat  # needed for port forwarding when --vm-driver=none (see https://github.com/kubernetes/minikube/issues/2575)
@@ -65,18 +65,52 @@ export MINIKUBE_HOME=$HOME
 export KUBECONFIG=$HOME/.kube/config
 
 #sudo -E minikube start --vm-driver=none --apiserver-ips=127.0.0.1 --apiserver-name=localhost  # based on https://github.com/kubernetes/minikube/issues/2575
-sudo -E minikube start --vm-driver=none --kubernetes-version=v1.11.3
 
+echo 'sudo -E minikube start --vm-driver=none --kubernetes-version=v1.11.3
 sudo chown -R $USER $HOME/.kube
 sudo chgrp -R $USER $HOME/.kube
 sudo chown -R $USER $HOME/.minikube
-sudo chgrp -R $USER $HOME/.minikube
+sudo chgrp -R $USER $HOME/.minikube' > start_minikube.sh
+
+chmod 777 start_minikube.sh
+./start_minikube.sh
 
 sudo minikube addons enable coredns
 sudo minikube addons disable kube-dns
 
-#sudo minikube stop
-#sudo -E minikube start --vm-driver=none --kubernetes-version=v1.11.3
+echo 'sudo minikube stop' > stop_minikube.sh
+chmod 777 stop_minikube.sh
+
+
+# There are DNS issues like https://github.com/kubernetes/minikube/issues/2027 on Unbuntu (and probably other systems)
+# when running with --vm-driver=none which result in DNS lookups not working inside pods for external web addresses.
+# This work-around corrects this by setting the upstream DNS server to google's server (8.8.8.8) which is known to work.
+echo 'kind: ConfigMap
+apiVersion: v1
+data:
+  Corefile: |
+    .:53 {
+        errors
+        health
+        kubernetes cluster.local in-addr.arpa ip6.arpa {
+           pods insecure
+           upstream
+           fallthrough in-addr.arpa ip6.arpa
+        }
+        prometheus :9153
+        proxy . 8.8.8.8
+        cache 30
+        reload
+    }
+metadata:
+  creationTimestamp: 2018-09-09T18:24:22Z
+  name: coredns
+  namespace: kube-system
+  resourceVersion: "198"
+  selfLink: /api/v1/namespaces/kube-system/configmaps/coredns' > coredns-config.yaml
+
+kubectl delete -f coredns-config.yaml
+kubectl create -f coredns-config.yaml
 
 
 echo ==== Adjust system settings for elasticsearch =====
