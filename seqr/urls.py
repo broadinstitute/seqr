@@ -182,6 +182,7 @@ urlpatterns += [
 kibana_urls = '^(?:%s)' % ('|'.join([
     "app", "bundles", "elasticsearch", "plugins", "ui", "api/apm", "api/console", "api/index_management", "api/index_patterns",
     "api/kibana", "api/monitoring", "api/reporting", "api/saved_objects", "api/telemetry", "api/timelion", "api/xpack",
+    "es_admin",
 ]))
 
 urlpatterns += [
