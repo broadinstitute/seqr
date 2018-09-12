@@ -63,8 +63,9 @@ def get_display_fields_for_variant(mall, project, variant, indiv_id_list=None):
     for ref_population_slug in project.get_reference_population_slugs():
         freq_value = variant.annotation['freqs'].get(ref_population_slug)
         if freq_value is None:
-            freq_value = variant.annotation['freqs'].get(AF_KEY_MAP[ref_population_slug])
-        fields.append(freq_value)
+            freq_value = variant.annotation['freqs'].get(AF_KEY_MAP.get(ref_population_slug))
+        if freq_value is not None:
+            fields.append(freq_value)
     for field_key in ['polyphen', 'sift', 'muttaster', 'fathmm']:
         fields.append(variant.annotation.get(field_key, ''))
     if indiv_id_list is None:
