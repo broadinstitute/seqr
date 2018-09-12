@@ -348,7 +348,8 @@ def _parse_es_hit(raw_hit, samples_by_id, liftover_grch38_to_grch37, field_names
     matched_sample_ids = [sample_id for sample_id in samples_by_id.keys() if any(k for k in hit.keys() if k.startswith(sample_id))]
     genotypes = {}
     for sample_id in matched_sample_ids:
-        num_alt = int(hit.get('{}_num_alt'.format(sample_id)) or -1)
+        num_alt_key = '{}_num_alt'.format(sample_id)
+        num_alt = int(hit[num_alt_key]) if hit.get(num_alt_key) is not None else -1
 
         # TODO don't pass down alleles, have UI do this
         if num_alt == 0:
