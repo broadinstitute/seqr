@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 from xbrowse_server.base.models import Project as BaseProject, Family as BaseFamily, VariantNote as BaseVariantNote, \
-    VariantTag as BaseVariantTag, ProjectTag
+    VariantTag as BaseVariantTag, ProjectTag, VCFFile
 from xbrowse_server.base.model_utils import update_xbrowse_model, find_matching_seqr_model, get_or_create_xbrowse_model
 from seqr.views.apis.phenotips_api import _get_phenotips_uname_and_pwd_for_project, _add_user_to_patient, \
     phenotips_patient_exists, _get_patient_data
@@ -43,6 +43,19 @@ class Command(BaseCommand):
 
                     phenotips_readwrite_username, _ = _get_phenotips_uname_and_pwd_for_project(to_project.seqr_project.phenotips_user_id, read_only=False)
                     _add_user_to_patient(phenotips_readwrite_username, seqr_individual.phenotips_patient_id, allow_edit=True)
+
+                # Update individuals samples/ VCFs
+                for from_vcf_file in individual.vcf_files.all():
+                    to_vcf_file, _ = VCFFile.objects.get_or_create(
+                        project=to_project,
+                        elasticsearch_index=from_vcf_file.elasticsearch_index,
+                        file_path=from_vcf_file.file_path,
+                        dataset_type=from_vcf_file.dataset_type,
+                        sample_type=from_vcf_file.sample_type,
+                        loaded_date=from_vcf_file.loaded_date,
+                    )
+                    individual.vcf_files.add(to_vcf_file)
+                    individual.vcf_files.remove(from_vcf_file)
 
             # Update variant tags/ notes
             saved_variants = set()
