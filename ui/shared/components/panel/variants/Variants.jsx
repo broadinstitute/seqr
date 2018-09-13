@@ -46,7 +46,7 @@ const NO_DISPLAY = { display: 'none' }
 const Variants = ({ variants }) =>
   <Grid stackable divided="vertically" columns="equal">
     {variants.map(variant =>
-      <VariantRow key={variant.variantId} severity={CLINSIG_SEVERITY[(variant.clinvar.clinsig || '').split('/')[0]]}>
+      <VariantRow key={variant.variantId} severity={CLINSIG_SEVERITY[(variant.clinvar.clinicalSignificance || '').toLowerCase()]}>
         {variant.variantGuid &&
           <VariantLinkContainer>
             <NavLink to={`/project/${variant.projectGuid}/saved_variants/variant/${variant.variantGuid}`} activeStyle={NO_DISPLAY}>

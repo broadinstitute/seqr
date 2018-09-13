@@ -10,6 +10,7 @@ from reference_data.models import GENOME_VERSION_GRCh38
 from seqr.models import Sample, Individual
 from seqr.utils.xpos_utils import get_xpos
 from seqr.views.utils.gene_utils import parse_locus_list_items
+from seqr.views.utils.json_utils import _to_camel_case
 
 logger = logging.getLogger(__name__)
 
@@ -19,24 +20,6 @@ VARIANT_DOC_TYPE = 'variant'
 
 def get_es_client():
     return elasticsearch.Elasticsearch(host=settings.ELASTICSEARCH_SERVICE_HOSTNAME)
-
-
-VARIANT_FIELDS = [
-    'xpos', 'ref', 'alt', 'cadd_PHRED', 'dbnsfp_DANN_score', 'eigen_Eigen_phred', 'dbnsfp_Eigen_phred',
-    'dbnsfp_FATHMM_pred', 'dbnsfp_GERP_RS', 'dbnsfp_phastCons100way_vertebrate', 'mpc_MPC', 'dbnsfp_MetaSVM_pred',
-    'dbnsfp_MutationTaster_pred', 'dbnsfp_Polyphen2_HVAR_pred', 'primate_ai_score', 'dbnsfp_REVEL_score',
-    'dbnsfp_SIFT_pred', 'mainTranscript_major_consequence', 'mainTranscript_gene_symbol', 'mainTranscript_symbol',
-    'mainTranscript_lof', 'mainTranscript_lof_flags', 'mainTranscript_lof_filter', 'mainTranscript_hgvsc',
-    'mainTranscript_hgvsp', 'mainTranscript_amino_acids', 'mainTranscript_protein_position', 'contig',
-    'clinvar_clinical_significance', 'clinvar_variation_id', 'clinvar_allele_id', 'clinvar_gold_stars',
-    'hgmd_accession', 'hgmd_class', 'codingGeneIds', 'geneIds', 'filters', 'originalAltAlleles', 'AF', 'AC', 'AN',
-    'topmed_AF', 'topmed_AC', 'topmed_AN', 'g1k_POPMAX_AF', 'g1k_AF', 'g1k_AC', 'g1k_AN', 'exac_AF_POPMAX', 'exac_AF',
-    'exac_AC_Adj', 'exac_AN_Adj', 'exac_AC_Hom', 'exac_AC_Hemi', 'gnomad_exomes_AF_POPMAX_OR_GLOBAL',
-    'gnomad_exomes_AF_POPMAX', 'gnomad_exomes_AF', 'gnomad_exomes_AC', 'gnomad_exomes_AN', 'gnomad_exomes_Hom',
-    'gnomad_exomes_Hemi', 'gnomad_genomes_AF_POPMAX_OR_GLOBAL', 'gnomad_genomes_AF_POPMAX', 'gnomad_genomes_AF',
-    'gnomad_genomes_AC', 'gnomad_genomes_AN', 'gnomad_genomes_Hom', 'gnomad_genomes_Hemi', 'start',
-]
-GENOTYPE_FIELDS = ['ab', 'ad', 'dp', 'gq', 'pl', 'num_alt']
 
 
 def get_es_variants(search_model, individuals):
@@ -96,10 +79,7 @@ def get_es_variants(search_model, individuals):
         es_search = es_search.filter(_genotype_filter(search['inheritance'], individuals, samples_by_id))
 
     # Only return relevant fields
-    field_names = []
-    for sample_id in samples_by_id.keys():
-        field_names += ['{}_{}'.format(sample_id, field) for field in GENOTYPE_FIELDS]
-    field_names += VARIANT_FIELDS
+    field_names = _get_query_field_names(samples_by_id)
     es_search = es_search.source(field_names)
 
     # TODO sort and pagination
@@ -173,7 +153,6 @@ CLINVAR_SIGNFICANCE_MAP = {
     ],
 }
 
-
 HGMD_CLASS_MAP = {
     'disease_causing': ['DM'],
     'likely_disease_causing': ['DM?'],
@@ -207,12 +186,26 @@ def _annotations_filter(annotations):
     return consequences_filter
 
 
-POP_AF_SUFFIX = {
-    'g1k': 'POPMAX_AF',
-    'topmed': 'AF',
-}
-POP_HH_SUFFIX = {
-    'exac': 'AC_',
+POPULATIONS = {
+    'callset': {
+        'AF': 'AF',
+        'AC': 'AC',
+        'AN': 'AN',
+    },
+    'topmed': {
+        'no_popmax': True,
+    },
+    'g1k': {
+        'AF': 'g1k_POPMAX_AF',
+    },
+    'exac': {
+        'AC': 'exac_AC_Adj',
+        'AN': 'exac_AN_Adj',
+        'Hom': 'exac_AC_Hom',
+        'Hemi': 'exac_AC_Hemi',
+    },
+    'gnomad_exomes': {},
+    'gnomad_genomes': {},
 }
 
 
@@ -221,21 +214,21 @@ def _pop_freq_filter(filter_key, value):
 
 
 def _frequency_filter(frequencies):
-    q = None
+    q = Q()
     for pop, freqs in frequencies.items():
+        pop_config = POPULATIONS[pop]
         if freqs.get('af'):
-            filter_key = 'AF' if pop == 'callset' else '{}_{}'.format(pop, POP_AF_SUFFIX.get(pop, 'AF_POPMAX'))
-            freq_q = _pop_freq_filter(filter_key, freqs['af'])
-            q = freq_q & q if q else freq_q
+            filter_key = pop_config.get('AF') or '{}_{}'.format(pop, 'AF' if pop_config.get('no_popmax') else 'AF_POPMAX')
+            q &= _pop_freq_filter(filter_key, freqs['af'])
         elif freqs.get('ac'):
-            filter_key = 'AC' if pop == 'callset' else '{}_AC'.format(pop)
-            freq_q = _pop_freq_filter(filter_key, freqs['ac'])
-            q = freq_q & q if q else freq_q
+            filter_key = pop_config.get('AC') or '{}_AC'.format(pop)
+            q &= _pop_freq_filter(filter_key, freqs['ac'])
 
         if freqs.get('hh'):
-            freq_q = _pop_freq_filter('{}_{}Hom'.format(pop, POP_HH_SUFFIX.get(pop, '')), freqs['hh'])
-            freq_q &= _pop_freq_filter('{}_{}Hemi'.format(pop, POP_HH_SUFFIX.get(pop, '')), freqs['hh'])
-            q = freq_q & q if q else freq_q
+            hom_filter_key = pop_config.get('Hom') or '{}_Hom'.format(pop)
+            hemi_filter_key = pop_config.get('Hemi') or '{}_Hemi'.format(pop)
+            q &= _pop_freq_filter(hom_filter_key, freqs['hh'])
+            q &= _pop_freq_filter(hemi_filter_key, freqs['hh'])
     return q
 
 
@@ -321,6 +314,41 @@ def _build_or_filter(op, filters):
     return q
 
 
+CLINVAR_FIELDS = ['clinical_significance', 'variation_id', 'allele_id', 'gold_stars']
+HGMD_FIELDS = ['accession', 'class']
+VARIANT_FIELDS = [
+    'xpos', 'ref', 'alt', 'cadd_PHRED', 'dbnsfp_DANN_score', 'eigen_Eigen_phred', 'dbnsfp_Eigen_phred',
+    'dbnsfp_FATHMM_pred', 'dbnsfp_GERP_RS', 'dbnsfp_phastCons100way_vertebrate', 'mpc_MPC', 'dbnsfp_MetaSVM_pred',
+    'dbnsfp_MutationTaster_pred', 'dbnsfp_Polyphen2_HVAR_pred', 'primate_ai_score', 'dbnsfp_REVEL_score',
+    'dbnsfp_SIFT_pred', 'mainTranscript_major_consequence', 'mainTranscript_gene_symbol', 'mainTranscript_symbol',
+    'mainTranscript_lof', 'mainTranscript_lof_flags', 'mainTranscript_lof_filter', 'mainTranscript_hgvsc',
+    'mainTranscript_hgvsp', 'mainTranscript_amino_acids', 'mainTranscript_protein_position', 'contig',
+    'codingGeneIds', 'geneIds', 'filters', 'originalAltAlleles', 'start', 'variantId',
+]
+GENOTYPE_FIELDS = ['ab', 'ad', 'dp', 'gq', 'pl', 'num_alt']
+POPULATION_FIELDS = {
+    'AF': {'fields': ['AF_POPMAX_OR_GLOBAL', 'AF_POPMAX'], 'format_value': float},
+    'AC': {},
+    'AN': {},
+    'Hom': {},
+    'Hemi': {},
+}
+
+
+def _get_query_field_names(samples_by_id):
+    field_names = ['clinvar_{}'.format(field) for field in CLINVAR_FIELDS] + \
+                  ['hgmd_{}'.format(field) for field in HGMD_FIELDS] + VARIANT_FIELDS
+    for population, pop_config in POPULATIONS.items():
+        for field, field_config in POPULATION_FIELDS.items():
+            if pop_config.get(field):
+                field_names.append(pop_config.get(field))
+            field_names.append('{}_{}'.format(population, field))
+            field_names += ['{}_{}'.format(population, custom_field) for custom_field in field_config.get('fields', [])]
+    for sample_id in samples_by_id.keys():
+        field_names += ['{}_{}'.format(sample_id, field) for field in GENOTYPE_FIELDS]
+    return field_names
+
+
 POLYPHEN_MAP = {
     'D': 'probably_damaging',
     'P': 'possibly_damaging',
@@ -404,8 +432,21 @@ def _parse_es_hit(raw_hit, samples_by_id, liftover_grch38_to_grch37, field_names
                 lifted_over_chrom = grch37_coord[0][0].lstrip('chr')
                 lifted_over_pos = grch37_coord[0][1]
 
+    populations = {
+        population: {
+            field.lower(): _value_if_has_key(
+                hit,
+                [pop_config.get(field)] +
+                ['{}_{}'.format(population, custom_field) for custom_field in field_config.get('fields', [])] +
+                ['{}_{}'.format(population, field)],
+                format_value=field_config.get('format_value', int)
+            )
+            for field, field_config in POPULATION_FIELDS.items()
+        } for population, pop_config in POPULATIONS.items()
+    }
+
     return {
-        'variantId': '{}-{}-{}'.format(hit['xpos'], hit['ref'], hit['alt']),
+        'variantId': hit['variantId'],
         'projectGuid': project.guid,
         'familyGuid': family.guid,
         'alt': hit['alt'],
@@ -414,8 +455,8 @@ def _parse_es_hit(raw_hit, samples_by_id, liftover_grch38_to_grch37, field_names
             'dann_score': hit.get('dbnsfp_DANN_score'),
             'eigen_phred': hit.get('eigen_Eigen_phred', hit.get('dbnsfp_Eigen_phred')),
             'fathmm': FATHMM_MAP.get((hit.get('dbnsfp_FATHMM_pred') or '').split(';')[0]),
-            'gerp_rs': _float_if_has_key(hit, ['dbnsfp_GERP_RS']),
-            'phastcons100vert': _float_if_has_key(hit, ['dbnsfp_phastCons100way_vertebrate']),
+            'gerp_rs': _value_if_has_key(hit, ['dbnsfp_GERP_RS'], format_value=float),
+            'phastcons100vert': _value_if_has_key(hit, ['dbnsfp_phastCons100way_vertebrate'], format_value=float),
             'mpc_score': hit.get('mpc_MPC'),
             'metasvm': METASVM_MAP.get((hit.get('dbnsfp_MetaSVM_pred') or '').split(';')[0]),
             'mut_taster': MUTTASTER_MAP.get((hit.get('dbnsfp_MutationTaster_pred') or '').split(';')[0]),
@@ -436,16 +477,8 @@ def _parse_es_hit(raw_hit, samples_by_id, liftover_grch38_to_grch37, field_names
             },
         },
         'chrom': hit['contig'],
-        'clinvar': {
-            'clinsig': (hit.get('clinvar_clinical_significance') or '').lower(),
-            'variantId': hit.get('clinvar_variation_id'),
-            'alleleId': hit.get('clinvar_allele_id'),
-            'goldStars': hit.get('clinvar_gold_stars'),
-        },
-        'hgmd': {
-            'accession': hit.get('hgmd_accession'),
-            'class': hit.get('hgmd_class'),
-        },
+        'clinvar': {_to_camel_case(field): hit.get('clinvar_{}'.format(field)) for field in CLINVAR_FIELDS},
+        'hgmd': {_to_camel_case(field): hit.get('hgmd_{}'.format(field)) for field in HGMD_FIELDS},
         'geneIds': list(hit.get('codingGeneIds') or []) or list(hit.get('geneIds') or []),
         'genotypeFilters': ','.join(hit['filters'] or []),
         'genotypes': genotypes,
@@ -454,61 +487,17 @@ def _parse_es_hit(raw_hit, samples_by_id, liftover_grch38_to_grch37, field_names
         'liftedOverChrom': lifted_over_chrom,
         'liftedOverPos': lifted_over_pos,
         'origAltAlleles':  [a.split('-')[-1] for a in hit.get('originalAltAlleles', [])],
-        'populations': {
-            'callset': {
-                'af': _float_if_has_key(hit, ['AF']),
-                'ac': _int_if_has_key(hit, ['AC']),
-                'an': _int_if_has_key(hit, ['AN']),
-            },
-            'topmed': {
-                'af': _float_if_has_key(hit, ['topmed_AF']),
-                'ac': _int_if_has_key(hit, ['topmed_AC']),
-                'an': _int_if_has_key(hit, ['topmed_AN']),
-            },
-            'g1k': {
-                'af': _float_if_has_key(hit, ['g1k_POPMAX_AF', 'g1k_AF']),
-                'ac': _int_if_has_key(hit, ['g1k_AC']),
-                'an': _int_if_has_key(hit, ['g1k_AN']),
-            },
-            'exac': {
-                'af': _float_if_has_key(hit, ['exac_AF_POPMAX', 'exac_AF']),
-                'ac': _int_if_has_key(hit, ['exac_AC_Adj']),
-                'an': _int_if_has_key(hit, ['exac_AN_Adj']),
-                'hom':  _int_if_has_key(hit, ['exac_AC_Hom']),
-                'hemi': _int_if_has_key(hit, ['exac_AC_Hemi']),
-            },
-            'gnomad_exomes': {
-                'af': _float_if_has_key(hit, ['gnomad_exomes_AF_POPMAX_OR_GLOBAL', 'gnomad_exomes_AF_POPMAX', 'gnomad_exomes_AF']),
-                'ac': _int_if_has_key(hit, ['gnomad_exomes_AC']),
-                'an': _int_if_has_key(hit, ['gnomad_exomes_AN']),
-                'hom': _int_if_has_key(hit, ['gnomad_exomes_Hom']),
-                'hemi': _int_if_has_key(hit, ['gnomad_exomes_Hemi']),
-            },
-            'gnomad_genomes': {
-                'af': _float_if_has_key(hit, ['gnomad_genomes_AF_POPMAX_OR_GLOBAL', 'gnomad_genomes_AF_POPMAX', 'gnomad_genomes_AF']),
-                'ac': _int_if_has_key(hit, ['gnomad_genomes_AC']),
-                'an': _int_if_has_key(hit, ['gnomad_genomes_AN']),
-                'hom': _int_if_has_key(hit, ['gnomad_genomes_Hom']),
-                'hemi': _int_if_has_key(hit, ['gnomad_genomes_Hemi']),
-            },
-        },
+        'populations': populations,
         'pos': long(hit['start']),
         'ref': hit['ref'],
         'xpos': long(hit['xpos']),
     }
 
 
-def _float_if_has_key(hit, keys):
+def _value_if_has_key(hit, keys, format_value=None):
     for key in keys:
         if key in hit:
-            return float(hit[key] or 0.0)
-    return None
-
-
-def _int_if_has_key(hit, keys):
-    for key in keys:
-        if key in hit:
-            return int(hit[key] or 0)
+            return format_value(hit[key] or 0) if format_value else hit[key]
     return None
 
 

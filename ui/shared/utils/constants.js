@@ -533,7 +533,7 @@ export const SORT_BY_CONSTRAINT = 'CONSTRAINT'
 
 
 const clinsigSeverity = (variant, user) => {
-  const clinvarSignificance = variant.clinvar.clinsig && variant.clinvar.clinsig.split('/')[0]
+  const clinvarSignificance = variant.clinvar.clinicalSignificance && variant.clinvar.clinicalSignificance.split('/')[0]
   const hgmdSignificance = user.is_staff && variant.hgmd.class
   if (!clinvarSignificance && !hgmdSignificance) return -10
   let clinvarSeverity = 0.1
