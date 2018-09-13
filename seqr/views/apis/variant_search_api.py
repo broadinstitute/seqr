@@ -4,7 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.views.decorators.csrf import csrf_exempt
 
-from seqr.models import Family, Individual, SavedVariant
+from seqr.models import Family, Individual, SavedVariant, VariantSearch
 from seqr.utils.es_utils import get_es_variants
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.saved_variant_api import _saved_variant_genes, _add_locus_lists
@@ -29,18 +29,25 @@ UNAFFECTED = Individual.AFFECTED_STATUS_UNAFFECTED
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
-def query_variants_handler(request):
+def query_variants_handler(request, search_hash):
     """Search variants.
     """
-    # TODO caching
-    search = json.loads(request.body)
+
+    search_model = VariantSearch.objects.filter(search_hash=search_hash).first()
+    if not search_model:
+        search = json.loads(request.body)
+        if not search:
+            return create_json_response({}, status=400, reason='Invalid search hash: {}'.format(search_hash))
+        search_model = VariantSearch.objects.create(search_hash=search_hash, search=request.body)
+    else:
+        search = json.loads(search_model.search)
 
     # TODO this is only mendelian variant search, should be others and not require project/ family
     project = get_project_and_check_permissions(search.get('projectGuid'), request.user)
     family = Family.objects.get(guid=search.get('familyGuid'))
     individuals = family.individual_set.all()
 
-    variants = get_es_variants(search, individuals)
+    variants = get_es_variants(search_model, individuals)
 
     genes = _saved_variant_genes(variants)
     # TODO add locus lists on the client side (?)

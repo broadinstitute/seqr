@@ -128,7 +128,7 @@ api_endpoints = {
     'project/(?P<project_guid>[^/]+)/analysis_groups/(?P<analysis_group_guid>[^/]+)/update': update_analysis_group_handler,
     'project/(?P<project_guid>[^/]+)/analysis_groups/(?P<analysis_group_guid>[^/]+)/delete': delete_analysis_group_handler,
 
-    'search': query_variants_handler,
+    'search/(?P<search_hash>[^/]+)': query_variants_handler,
     'search/transcripts': variant_transcripts,
 
     'saved_variant/(?P<variant_guid>[^/]+)/update_tags': update_variant_tags_handler,

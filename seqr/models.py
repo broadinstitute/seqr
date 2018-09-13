@@ -1,5 +1,4 @@
 from abc import abstractmethod
-import os
 import uuid
 import json
 import random
@@ -12,8 +11,8 @@ from django.utils.text import slugify as __slugify
 
 from guardian.shortcuts import assign_perm
 
-from seqr.utils.xpos_utils import get_chrom_pos, get_xpos
-from reference_data.models import GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38, GENOME_VERSION_CHOICES
+from seqr.utils.xpos_utils import get_chrom_pos
+from reference_data.models import GENOME_VERSION_GRCh37, GENOME_VERSION_CHOICES
 from django.conf import settings
 
 #  Allow adding the custom json_fields and internal_json_fields to the model Meta
@@ -571,6 +570,8 @@ class VariantTag(ModelWithGUID):
     variant_tag_type = models.ForeignKey('VariantTagType', on_delete=models.CASCADE)
 
     # context in which a variant tag was saved
+    variant_search = models.ForeignKey('VariantSearch', null=True, on_delete=models.SET_NULL)
+    #  TODO deprecate and migrate to variant_search
     search_parameters = models.TextField(null=True, blank=True)  # aka. search url
 
     def __unicode__(self):
@@ -775,3 +776,10 @@ class AnalysisGroup(ModelWithGUID):
 
         json_fields = ['guid', 'name', 'description']
 
+
+class VariantSearch(models.Model):
+    search_hash = models.CharField(max_length=50, db_index=True, unique=True)
+    search = models.TextField()
+    es_index = models.TextField(null=True)
+    results = models.TextField(null=True)
+    total_results = models.IntegerField(null=True)

@@ -15,13 +15,12 @@ const UPDATE_HASHED_SEARCHES = 'UPDATE_HASHED_SEARCHES'
 // actions
 
 export const loadSearchedVariants = (searchHash, search) => {
-  return (dispatch, getState) => {
-    search = search || getState().searchesByHash[searchHash] // TODO once caching do not use this defaulting
-    if (!search) {
+  return (dispatch) => {
+    if (!searchHash) {
       return
     }
     dispatch({ type: REQUEST_SEARCHED_VARIANTS })
-    new HttpRequestHelper('/api/search',
+    new HttpRequestHelper(`/api/search/${searchHash}`,
       (responseJson) => {
         dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
         dispatch({ type: RECEIVE_SEARCHED_VARIANTS, newValue: responseJson.searchedVariants })

@@ -39,7 +39,12 @@ VARIANT_FIELDS = [
 GENOTYPE_FIELDS = ['ab', 'ad', 'dp', 'gq', 'pl', 'num_alt']
 
 
-def get_es_variants(search, individuals):
+def get_es_variants(search_model, individuals):
+    if search_model.results:
+        return json.loads(search_model.results)
+
+    search = json.loads(search_model.search)
+
     genes, intervals, invalid_items = parse_locus_list_items(search.get('locus', {}), all_new=True)
     if invalid_items:
         raise Exception('Invalid genes/intervals: {}'.format(', '.join(invalid_items)))
@@ -108,6 +113,11 @@ def get_es_variants(search, individuals):
     logger.info('Total hits: {} ({} seconds)'.format(response.hits.total, response.took/100.0))
 
     variant_results = [_parse_es_hit(hit, samples_by_id, liftover_grch38_to_grch37, field_names) for hit in response]
+
+    search_model.es_index = elasticsearch_index
+    search_model.results = json.dumps(variant_results)
+    search_model.total_results = response.hits.total
+    search_model.save()
 
     return variant_results
 
