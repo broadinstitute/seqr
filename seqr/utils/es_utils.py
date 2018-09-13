@@ -1,8 +1,9 @@
+from django.db.models import Max
 import elasticsearch
 from elasticsearch_dsl import Search, Q
+import json
 import logging
 from pyliftover.liftover import LiftOver
-import time
 
 import settings
 from reference_data.models import GENOME_VERSION_GRCh38
@@ -48,9 +49,14 @@ def get_es_variants(search, individuals):
         dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
         sample_status=Sample.SAMPLE_STATUS_LOADED,
         elasticsearch_index__isnull=False,
-    ).only('elasticsearch_index', 'sample_id')
+    )
+    sample_individual_max_loaded_date = {
+        agg['individual__guid']: agg['max_loaded_date'] for agg in
+        samples.values('individual__guid').annotate(max_loaded_date=Max('loaded_date'))
+    }
+    samples = [s for s in samples if s.loaded_date == sample_individual_max_loaded_date[s.individual.guid]]
 
-    elasticsearch_index = ','.join({'{}*'.format(s.elasticsearch_index) for s in samples})
+    elasticsearch_index = ','.join({s.elasticsearch_index for s in samples})
     logger.info('Searching in elasticsearch index: {}'.format(elasticsearch_index))
 
     samples_by_id = {_encode_name(sample.sample_id): sample for sample in samples}
@@ -92,20 +98,16 @@ def get_es_variants(search, individuals):
     es_search = es_search.source(field_names)
 
     # TODO sort and pagination
-    # s = s.sort('xpos')
-    es_search = es_search.params(size=500 + 1)
-    logger.info(es_search.to_dict())
-
-    start = time.time()
+    es_search = es_search.sort('xpos')
+    es_search = es_search[0:100]
+    logger.info(json.dumps(es_search.to_dict()))
 
     response = es_search.execute()
 
     logger.info('=====')
-    logger.info('TOTAL: {}. Query took {}ms'.format(response.hits.total, response.took))
+    logger.info('Total hits: {} ({} seconds)'.format(response.hits.total, response.took/100.0))
 
-    variant_results = [_parse_es_hit(hit, samples_by_id, liftover_grch38_to_grch37, field_names) for hit in es_search.scan()]
-
-    logger.info('Finished returning the {} variants: {} seconds'.format(response.hits.total, time.time() - start))
+    variant_results = [_parse_es_hit(hit, samples_by_id, liftover_grch38_to_grch37, field_names) for hit in response]
 
     return variant_results
 
@@ -119,7 +121,7 @@ def _quality_filter(quality_filter, sample_ids):
     if quality_filter.get('vcf_filter') is not None:
         q = ~Q('exists', field='filters')
 
-    min_ab = quality_filter['min_ab'] / 100.0 if quality_filter.get('min_ab') else None
+    min_ab = quality_filter['min_ab'] / 1000.0 if quality_filter.get('min_ab') else None
     min_gq = quality_filter.get('min_gq')
     for sample_id in sample_ids:
         if min_ab is not None:
@@ -229,63 +231,65 @@ def _frequency_filter(frequencies):
 
 AFFECTED = Individual.AFFECTED_STATUS_AFFECTED
 UNAFFECTED = Individual.AFFECTED_STATUS_UNAFFECTED
-RECESSIVE = 'recessive'
-X_LINKED_RECESSIVE = 'x_linked_recessive'
-INHERITANCE_FILTERS = {
-    X_LINKED_RECESSIVE: {
-        AFFECTED: {'genotype': 'alt_alt'},
-        UNAFFECTED: {'genotype': 'has_ref'},
-    },
-    'homozygous_recessive': {
-        AFFECTED: {'genotype': 'alt_alt'},
-        UNAFFECTED: {'genotype': 'has_ref'},
-    },
-    'de_novo': {
-        AFFECTED: {'genotype': 'has_alt'},
-        UNAFFECTED: {'genotype': 'ref_ref'},
-    },
-}
+ALT_ALT = 'alt_alt'
+REF_REF = 'ref_ref'
+REF_ALT = 'ref_alt'
+HAS_ALT = 'has_alt'
+HAS_REF = 'has_ref'
+
 GENOTYPE_QUERY_MAP = {
-    'ref_ref': 0,
-    'ref_alt': 1,
-    'alt_alt': 2,
-    'has_alt': {'gte': 1},
-    'has_ref': {'gte': 0, 'lte': 1},
+    REF_REF: 0,
+    REF_ALT: 1,
+    ALT_ALT: 2,
+    HAS_ALT: {'gte': 1},
+    HAS_REF: {'gte': 0, 'lte': 1},
 }
 RANGE_FIELDS = {k for k, v in GENOTYPE_QUERY_MAP.items() if type(v) != int}
+
+RECESSIVE = 'recessive'
+X_LINKED_RECESSIVE = 'x_linked_recessive'
+RECESSIVE_FILTER = {
+    AFFECTED: {'genotype': ALT_ALT},
+    UNAFFECTED: {'genotype': HAS_REF},
+}
+INHERITANCE_FILTERS = {
+    X_LINKED_RECESSIVE: RECESSIVE_FILTER,
+    RECESSIVE: RECESSIVE_FILTER,
+    'homozygous_recessive': RECESSIVE_FILTER,
+    'de_novo': {
+        AFFECTED: {'genotype': HAS_ALT},
+        UNAFFECTED: {'genotype': REF_REF},
+    },
+}
 
 
 def _genotype_filter(inheritance, individuals, samples_by_id):
     inheritance_mode = inheritance.get('mode')
     inheritance_filter = inheritance.get('filter') or {}
     parent_x_linked_num_alt = {}
+    q = Q()
 
     if inheritance_mode:
         if inheritance_filter.get(AFFECTED) and inheritance_filter.get(UNAFFECTED):
             inheritance_mode = None
-        elif INHERITANCE_FILTERS.get(inheritance_mode):
+        if INHERITANCE_FILTERS.get(inheritance_mode):
             inheritance_filter = INHERITANCE_FILTERS[inheritance_mode]
-        elif inheritance_mode in {X_LINKED_RECESSIVE, RECESSIVE}:
+        if inheritance_mode == X_LINKED_RECESSIVE:
+            q &= Q('match', contig='X')
             for individual in individuals:
                 if individual.affected == AFFECTED:
                     parent_x_linked_num_alt.update({
-                        individual.maternal_id: GENOTYPE_QUERY_MAP['ref_alt'],
-                        individual.paternal_id: GENOTYPE_QUERY_MAP['ref_ref'],
+                        individual.maternal_id: GENOTYPE_QUERY_MAP[REF_ALT],
+                        individual.paternal_id: GENOTYPE_QUERY_MAP[REF_REF],
                     })
         # TODO compound het
 
-    q = Q()
     for sample_id, sample in samples_by_id.items():
         genotype = None
         filter_for_status = inheritance_filter.get(sample.individual.affected, {})
 
         if sample.individual.affected == UNAFFECTED and parent_x_linked_num_alt.get(sample.individual.individual_id):
-            x_linked_num_alt = parent_x_linked_num_alt[sample.individual.individual_id]
-            x_linked_q = Q('term', **{'{}_num_alt'.format(sample_id): x_linked_num_alt}) & Q('match', contig='X')
-            if inheritance_mode == RECESSIVE:
-                q &= Q(x_linked_q | Q('range', **{'{}_num_alt'.format(sample_id): GENOTYPE_QUERY_MAP['has_ref']}))
-            else:
-                q &= x_linked_q
+            q &= Q('term', **{'{}_num_alt'.format(sample_id): parent_x_linked_num_alt[sample.individual.individual_id]})
         elif filter_for_status.get('individuals'):
             if filter_for_status['individuals'].get(sample.individual.individual_id):
                 genotype = filter_for_status['individuals'][sample.individual.individual_id]
