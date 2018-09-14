@@ -69,22 +69,22 @@ const annotationVariations = (mainTranscript, variant) => {
   if (mainTranscript.hgvsc) {
     const hgvsc = mainTranscript.hgvsc.split(':')[1].replace('c.', '')
     variations.push(
-      `${mainTranscript.symbol}:c.${hgvsc}`, //TTN:c.78674T>C
+      `${mainTranscript.geneSymbol}:c.${hgvsc}`, //TTN:c.78674T>C
       `c.${hgvsc}`, //c.1282C>T
       hgvsc, //1282C>T
       hgvsc.replace('>', '->'), //1282C->T
       hgvsc.replace('>', '-->'), //1282C-->T
       (`c.${hgvsc}`).replace('>', '/'), //c.1282C/T
       hgvsc.replace('>', '/'), //1282C/T
-      `${mainTranscript.symbol}:${hgvsc}`, //TTN:78674T>C
+      `${mainTranscript.geneSymbol}:${hgvsc}`, //TTN:78674T>C
     )
   }
 
   if (mainTranscript.hgvsp) {
     const hgvsp = mainTranscript.hgvsp.split(':')[1].replace('p.', '')
     variations.push(
-      `${mainTranscript.symbol}:p.${hgvsp}`, //TTN:p.Ile26225Thr
-      `${mainTranscript.symbol}:${hgvsp}`, //TTN:Ile26225Thr
+      `${mainTranscript.geneSymbol}:p.${hgvsp}`, //TTN:p.Ile26225Thr
+      `${mainTranscript.geneSymbol}:${hgvsp}`, //TTN:Ile26225Thr
     )
   }
 
@@ -113,7 +113,7 @@ const annotationVariations = (mainTranscript, variant) => {
 }
 
 const Annotations = ({ variant }) => {
-  const { vepConsequence, mainTranscript } = variant.annotation
+  const { mainTranscript } = variant
 
   const variations = annotationVariations(mainTranscript, variant)
   const lofDetails = (mainTranscript.lof === 'LC' || mainTranscript.lofFlags === 'NAGNAG_SITE') ? [
@@ -128,12 +128,12 @@ const Annotations = ({ variant }) => {
 
   return (
     <div>
-      { vepConsequence &&
+      { mainTranscript.majorConsequence &&
         <Modal
           modalName={`${variant.variantId}-annotations`}
           title="Transcripts"
           size="large"
-          trigger={<ButtonLink>{vepConsequence.replace(/_/g, ' ')}</ButtonLink>}
+          trigger={<ButtonLink>{mainTranscript.majorConsequence.replace(/_/g, ' ')}</ButtonLink>}
         >
           <Transcripts variant={variant} />
         </Modal>
@@ -179,13 +179,13 @@ const Annotations = ({ variant }) => {
       <VerticalSpacer height={5} />
       <LocusListLabels locusLists={variant.locusLists} />
       <VerticalSpacer height={5} />
-      {mainTranscript.symbol &&
+      {mainTranscript.geneSymbol &&
         <div>
-          <a href={`https://www.google.com/search?q=${mainTranscript.symbol}+${variations.join('+')}`} target="_blank">
+          <a href={`https://www.google.com/search?q=${mainTranscript.geneSymbol}+${variations.join('+')}`} target="_blank">
             google
           </a>
           <HorizontalSpacer width={5} />|<HorizontalSpacer width={5} />
-          <a href={`https://www.ncbi.nlm.nih.gov/pubmed?term=${mainTranscript.symbol} AND ( ${variations.join(' OR ')})`} target="_blank">
+          <a href={`https://www.ncbi.nlm.nih.gov/pubmed?term=${mainTranscript.geneSymbol} AND ( ${variations.join(' OR ')})`} target="_blank">
             pubmed
           </a>
         </div>

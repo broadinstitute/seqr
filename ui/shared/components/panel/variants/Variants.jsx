@@ -70,7 +70,7 @@ const Variants = ({ variants }) =>
           {variant.geneIds.map(geneId => <VariantGene key={geneId} geneId={geneId} variantId={variant.variantId} />)}
         </Grid.Column>
         <Grid.Column><Annotations variant={variant} /></Grid.Column>
-        <Grid.Column><Predictions annotation={variant.annotation} /></Grid.Column>
+        <Grid.Column><Predictions predictions={variant.predictions} /></Grid.Column>
         <Grid.Column><Frequencies variant={variant} /></Grid.Column>
         <Grid.Column width={16}>
           <VariantIndividuals variant={variant} />

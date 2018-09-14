@@ -23,8 +23,8 @@ def get_es_client():
 
 
 def get_es_variants(search_model, individuals):
-    if search_model.results:
-        return json.loads(search_model.results)
+    # if search_model.results:
+    #     return json.loads(search_model.results)
 
     search = json.loads(search_model.search)
 
@@ -316,17 +316,30 @@ def _build_or_filter(op, filters):
 
 CLINVAR_FIELDS = ['clinical_significance', 'variation_id', 'allele_id', 'gold_stars']
 HGMD_FIELDS = ['accession', 'class']
+TRANSCRIPT_FIELDS = [
+    'gene_symbol', 'lof', 'lof_flags', 'lof_filter', 'hgvsc', 'hgvsp', 'amino_acids', 'protein_position',
+    'major_consequence',
+]
 VARIANT_FIELDS = [
-    'xpos', 'ref', 'alt', 'cadd_PHRED', 'dbnsfp_DANN_score', 'eigen_Eigen_phred', 'dbnsfp_Eigen_phred',
-    'dbnsfp_FATHMM_pred', 'dbnsfp_GERP_RS', 'dbnsfp_phastCons100way_vertebrate', 'mpc_MPC', 'dbnsfp_MetaSVM_pred',
-    'dbnsfp_MutationTaster_pred', 'dbnsfp_Polyphen2_HVAR_pred', 'primate_ai_score', 'dbnsfp_REVEL_score',
-    'dbnsfp_SIFT_pred', 'mainTranscript_major_consequence', 'mainTranscript_gene_symbol', 'mainTranscript_symbol',
-    'mainTranscript_lof', 'mainTranscript_lof_flags', 'mainTranscript_lof_filter', 'mainTranscript_hgvsc',
-    'mainTranscript_hgvsp', 'mainTranscript_amino_acids', 'mainTranscript_protein_position', 'contig',
-    'codingGeneIds', 'geneIds', 'filters', 'originalAltAlleles', 'start', 'variantId',
+    'xpos', 'ref', 'alt', 'contig', 'codingGeneIds', 'geneIds', 'filters', 'originalAltAlleles', 'start', 'variantId',
 ]
 GENOTYPE_FIELDS = ['ab', 'ad', 'dp', 'gq', 'pl', 'num_alt']
-POPULATION_FIELDS = {
+PREDICTION_FIELD_MAP = {
+    'cadd': 'cadd_PHRED',
+    'dann': 'dbnsfp_DANN_score',
+    'eigen': 'eigen_Eigen_phred',
+    'fathmm': 'dbnsfp_FATHMM_pred',
+    'gerp_rs': 'dbnsfp_GERP_RS',
+    'mpc': 'mpc_MPC',
+    'metasvm': 'dbnsfp_MetaSVM_pred',
+    'mut_taster': 'dbnsfp_MutationTaster_pred',
+    'phastcons_100_vert': 'dbnsfp_phastCons100way_vertebrate',
+    'polyphen': 'dbnsfp_Polyphen2_HVAR_pred',
+    'primate_ai': 'primate_ai_score',
+    'revel': 'dbnsfp_REVEL_score',
+    'sift': 'dbnsfp_SIFT_pred',
+}
+POPULATION_FIELD_CONFIGS = {
     'AF': {'fields': ['AF_POPMAX_OR_GLOBAL', 'AF_POPMAX'], 'format_value': float},
     'AC': {},
     'AN': {},
@@ -334,12 +347,19 @@ POPULATION_FIELDS = {
     'Hemi': {},
 }
 
+NESTED_FIELDS = {
+    'clinvar': CLINVAR_FIELDS,
+    'hgmd': HGMD_FIELDS,
+    'mainTranscript': TRANSCRIPT_FIELDS
+}
+
 
 def _get_query_field_names(samples_by_id):
-    field_names = ['clinvar_{}'.format(field) for field in CLINVAR_FIELDS] + \
-                  ['hgmd_{}'.format(field) for field in HGMD_FIELDS] + VARIANT_FIELDS
+    field_names = VARIANT_FIELDS + PREDICTION_FIELD_MAP.values()
+    for field_name, fields in NESTED_FIELDS.items():
+        field_names += ['{}_{}'.format(field_name, field) for field in fields]
     for population, pop_config in POPULATIONS.items():
-        for field, field_config in POPULATION_FIELDS.items():
+        for field, field_config in POPULATION_FIELD_CONFIGS.items():
             if pop_config.get(field):
                 field_names.append(pop_config.get(field))
             field_names.append('{}_{}'.format(population, field))
@@ -347,41 +367,6 @@ def _get_query_field_names(samples_by_id):
     for sample_id in samples_by_id.keys():
         field_names += ['{}_{}'.format(sample_id, field) for field in GENOTYPE_FIELDS]
     return field_names
-
-
-POLYPHEN_MAP = {
-    'D': 'probably_damaging',
-    'P': 'possibly_damaging',
-    'B': 'benign',
-    '.': None,
-    '': None
-}
-SIFT_MAP = {
-    'D': 'damaging',
-    'T': 'tolerated',
-    '.': None,
-    '': None
-}
-FATHMM_MAP = {
-    'D': 'damaging',
-    'T': 'tolerated',
-    '.': None,
-    '': None
-}
-MUTTASTER_MAP = {
-    'A': 'disease_causing',
-    'D': 'disease_causing',
-    'N': 'polymorphism',
-    'P': 'polymorphism',
-    '.': None,
-    '': None
-}
-METASVM_MAP = {
-    'D': 'damaging',
-    'T': 'tolerated',
-    '.': None,
-    '': None
-}
 
 
 def _parse_es_hit(raw_hit, samples_by_id, liftover_grch38_to_grch37, field_names):
@@ -441,44 +426,16 @@ def _parse_es_hit(raw_hit, samples_by_id, liftover_grch38_to_grch37, field_names
                 ['{}_{}'.format(population, field)],
                 format_value=field_config.get('format_value', int)
             )
-            for field, field_config in POPULATION_FIELDS.items()
+            for field, field_config in POPULATION_FIELD_CONFIGS.items()
         } for population, pop_config in POPULATIONS.items()
     }
 
-    return {
+    result = {
         'variantId': hit['variantId'],
         'projectGuid': project.guid,
         'familyGuid': family.guid,
         'alt': hit['alt'],
-        'annotation': {
-            'cadd_phred': hit.get('cadd_PHRED'),
-            'dann_score': hit.get('dbnsfp_DANN_score'),
-            'eigen_phred': hit.get('eigen_Eigen_phred', hit.get('dbnsfp_Eigen_phred')),
-            'fathmm': FATHMM_MAP.get((hit.get('dbnsfp_FATHMM_pred') or '').split(';')[0]),
-            'gerp_rs': _value_if_has_key(hit, ['dbnsfp_GERP_RS'], format_value=float),
-            'phastcons100vert': _value_if_has_key(hit, ['dbnsfp_phastCons100way_vertebrate'], format_value=float),
-            'mpc_score': hit.get('mpc_MPC'),
-            'metasvm': METASVM_MAP.get((hit.get('dbnsfp_MetaSVM_pred') or '').split(';')[0]),
-            'mut_taster': MUTTASTER_MAP.get((hit.get('dbnsfp_MutationTaster_pred') or '').split(';')[0]),
-            'polyphen': POLYPHEN_MAP.get((hit.get('dbnsfp_Polyphen2_HVAR_pred') or '').split(';')[0]),
-            'primate_ai_score': hit.get('primate_ai_score'),
-            'revel_score': hit.get('dbnsfp_REVEL_score'),
-            'sift': SIFT_MAP.get((hit.get('dbnsfp_SIFT_pred') or '').split(';')[0]),
-            'vepConsequence': hit.get('mainTranscript_major_consequence', ''),
-            'mainTranscript': {
-                'symbol': hit.get('mainTranscript_gene_symbol') or hit.get('mainTranscript_symbol'),
-                'lof': hit.get('mainTranscript_lof'),
-                'lofFlags': hit.get('mainTranscript_lof_flags'),
-                'lofFilter': hit.get('mainTranscript_lof_filter'),
-                'hgvsc': hit.get('mainTranscript_hgvsc'),
-                'hgvsp': hit.get('mainTranscript_hgvsp'),
-                'aminoAcids': hit.get('mainTranscript_amino_acids'),
-                'proteinPosition': hit.get('mainTranscript_protein_position'),
-            },
-        },
         'chrom': hit['contig'],
-        'clinvar': {_to_camel_case(field): hit.get('clinvar_{}'.format(field)) for field in CLINVAR_FIELDS},
-        'hgmd': {_to_camel_case(field): hit.get('hgmd_{}'.format(field)) for field in HGMD_FIELDS},
         'geneIds': list(hit.get('codingGeneIds') or []) or list(hit.get('geneIds') or []),
         'genotypeFilters': ','.join(hit['filters'] or []),
         'genotypes': genotypes,
@@ -489,9 +446,17 @@ def _parse_es_hit(raw_hit, samples_by_id, liftover_grch38_to_grch37, field_names
         'origAltAlleles':  [a.split('-')[-1] for a in hit.get('originalAltAlleles', [])],
         'populations': populations,
         'pos': long(hit['start']),
+        'predictions': {response_field: hit.get(es_field) for response_field, es_field in PREDICTION_FIELD_MAP.items()},
         'ref': hit['ref'],
         'xpos': long(hit['xpos']),
     }
+    for field_name, fields in NESTED_FIELDS.items():
+        result.update(_get_nested_fields(hit, field_name, fields))
+    return result
+
+
+def _get_nested_fields(hit, field_name, fields):
+    return {field_name: {_to_camel_case(field): hit.get('{}_{}'.format(field_name, field)) for field in fields}}
 
 
 def _value_if_has_key(hit, keys, format_value=None):
