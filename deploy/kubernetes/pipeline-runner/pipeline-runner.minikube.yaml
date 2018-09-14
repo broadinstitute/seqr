@@ -37,7 +37,7 @@ spec:
           secretName: gcloud-client-secrets
       containers:
       - name: pipeline-runner-pod
-        image: {{ DOCKER_IMAGE_PREFIX }}/pipeline-runner:{{ TIMESTAMP }}
+        image: {{ DOCKER_IMAGE_PREFIX }}/pipeline-runner:{{ DOCKER_IMAGE_TIMESTAMP }}
         ports:
         - containerPort: {{ PIPELINE_RUNNER_SERVICE_PORT }}
           protocol: TCP

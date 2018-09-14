@@ -31,7 +31,7 @@ spec:
           path: {{ POSTGRES_DBPATH }}
       containers:
       - name: postgres-pod
-        image: {{ DOCKER_IMAGE_PREFIX }}/postgres:{{ TIMESTAMP }}
+        image: {{ DOCKER_IMAGE_PREFIX }}/postgres:{{ DOCKER_IMAGE_TIMESTAMP }}
         env:
         - name: POSTGRES_USER
           valueFrom:

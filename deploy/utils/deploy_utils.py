@@ -175,6 +175,10 @@ def _deploy_pod(component_label, settings, wait_until_pod_is_running=True, wait_
 
 
 def docker_build(component_label, settings, custom_build_args=[]):
+    #if not settings["BUILD_DOCKER_IMAGE"]:
+    #    logger.info("Skipping docker build step. Use --build-docker-image to build a new image (and --force to build from the beginning)")
+    #    return
+
     settings = dict(settings)  # make a copy before modifying
     settings["COMPONENT_LABEL"] = component_label
 
@@ -185,7 +189,7 @@ def docker_build(component_label, settings, custom_build_args=[]):
     run(init_env_command + " ".join([
             "docker build"
         ] + custom_build_args + [
-            "--no-cache" if settings["BUILD_DOCKER_IMAGE"] else "",
+            "--no-cache" if settings["FORCE_BUILD_DOCKER_IMAGE"] else "",
             "-t %(DOCKER_IMAGE_PREFIX)s/%(COMPONENT_LABEL)s",
             "deploy/docker/%(COMPONENT_LABEL)s/",
     ]) % settings, verbose=True)
@@ -193,11 +197,11 @@ def docker_build(component_label, settings, custom_build_args=[]):
     run(init_env_command + " ".join([
         "docker tag",
             "%(DOCKER_IMAGE_PREFIX)s/%(COMPONENT_LABEL)s",
-            "%(DOCKER_IMAGE_PREFIX)s/%(COMPONENT_LABEL)s:%(TIMESTAMP)s",
+            "%(DOCKER_IMAGE_PREFIX)s/%(COMPONENT_LABEL)s:%(DOCKER_IMAGE_TIMESTAMP)s",
     ]) % settings)
 
     if settings.get("DEPLOY_TO_PREFIX") == "gcloud":
-        run("gcloud docker -- push %(DOCKER_IMAGE_PREFIX)s/%(COMPONENT_LABEL)s:%(TIMESTAMP)s" % settings, verbose=True)
+        run("gcloud docker -- push %(DOCKER_IMAGE_PREFIX)s/%(COMPONENT_LABEL)s:%(DOCKER_IMAGE_TIMESTAMP)s" % settings, verbose=True)
 
 
 def deploy_mongo(settings):
@@ -360,15 +364,11 @@ def deploy_cockpit(settings):
 def deploy_nginx(settings):
     print_separator("nginx")
 
-    run("kubectl delete clusterrolebinding cluster-admin-binding", errors_to_ignore=["not found"])
-    run("kubectl create clusterrolebinding cluster-admin-binding --clusterrole cluster-admin --user $(gcloud config get-value account) --namespace=%(NAMESPACE)s" % settings)
+    run("kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/master/deploy/mandatory.yaml" % locals())
 
-    run("kubectl delete -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/nginx/nginx.%(DEPLOY_TO_PREFIX)s.yaml" % settings, errors_to_ignore=["not found"])
-    run("kubectl create -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/nginx/nginx.%(DEPLOY_TO_PREFIX)s.yaml" % settings)
-
-    #run("kubectl delete clusterrolebinding cluster-admin-binding", errors_to_ignore=["not found"])
-
-    _wait_until_pod_is_running("nginx", deployment_target=settings["DEPLOY_TO"])
+    if settings["DELETE_BEFORE_DEPLOY"]:
+        run("kubectl delete -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/nginx/nginx.yaml" % settings, errors_to_ignore=["not found"])
+    run("kubectl apply -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/nginx/nginx.yaml" % settings)
 
 
 def deploy_external_connector(settings, connector_name):
@@ -376,8 +376,8 @@ def deploy_external_connector(settings, connector_name):
         raise ValueError("Invalid connector name: %s" % connector_name)
 
     print_separator("external-%s-connector" % connector_name)
-    run(("kubectl delete -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/external-connectors/" % settings) + "external-%(connector_name)s.yaml" % locals(), errors_to_ignore=["not found"])
-    run(("kubectl create -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/external-connectors/" % settings) + "external-%(connector_name)s.yaml" % locals())
+
+    run(("kubectl apply -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/external-connectors/" % settings) + "external-%(connector_name)s.yaml" % locals())
 
 
 def deploy_seqr(settings):
@@ -546,7 +546,7 @@ def deploy_init_cluster(settings):
             if sys.platform.startswith('darwin'):
                 run("minikube stop", ignore_all_errors=True)
                 run("minikube start "
-                    "--vm-driver=xhyve "  # haven't switched to hyperkit yet because it still has issues like https://bunnyyiu.github.io/2018-07-16-minikube-reboot/   
+                    "--vm-driver=xhyve "  # haven't switched to hyperkit yet because it still has issues like https://bunnyyiu.github.io/2018-07-16-minikube-reboot/
                     "--disk-size=%(MINIKUBE_DISK_SIZE)s "
                     "--memory=%(MINIKUBE_MEMORY)s "
                     "--cpus=%(MINIKUBE_NUM_CPUS)s " % settings)
@@ -697,7 +697,7 @@ def deploy_elasticsearch_sharded(component, settings):
             run("kubectl delete -f " + config_file % settings, errors_to_ignore=["not found"])
 
     for config_file in config_files:
-        run("kubectl apply -f " + config_file % settings, errors_to_ignore=["already exists"])
+        run("kubectl apply -f " + config_file % settings)
 
     if component in set(["es-client", "es-master", "es-data", "es-kibana"]):
         # wait until all replicas are running

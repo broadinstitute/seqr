@@ -2,9 +2,9 @@ kind: Service
 apiVersion: v1
 metadata:
   name: phenotips
+  namespace: {{ NAMESPACE }}
   labels:
     name: phenotips
-    namespace: {{ NAMESPACE }}
     deployment: {{ DEPLOY_TO }}
 spec:
   ports:
@@ -30,7 +30,7 @@ spec:
     spec:
       containers:
       - name: phenotips-pod
-        image: {{ DOCKER_IMAGE_PREFIX }}/phenotips:{{ TIMESTAMP }}
+        image: {{ DOCKER_IMAGE_PREFIX }}/phenotips:{{ DOCKER_IMAGE_TIMESTAMP }}
         ports:
         - containerPort: {{ PHENOTIPS_SERVICE_PORT }}
           protocol: TCP

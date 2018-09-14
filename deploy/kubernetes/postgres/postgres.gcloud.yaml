@@ -33,7 +33,7 @@ spec:
           fsType: ext4
       containers:
       - name: postgres-pod
-        image: {{ DOCKER_IMAGE_PREFIX }}/postgres:{{ TIMESTAMP }}
+        image: {{ DOCKER_IMAGE_PREFIX }}/postgres:{{ DOCKER_IMAGE_TIMESTAMP }}
         resources:
           requests:
             memory: "0.25Gi"

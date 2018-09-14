@@ -116,9 +116,10 @@ def render(input_base_dir, relative_file_path, settings, output_base_dir):
 def retrieve_settings(deployment_target):
     settings = collections.OrderedDict()
 
-    settings['HOME'] = os.path.expanduser("~")
-    settings['TIMESTAMP'] = time.strftime("%Y%m%d_%H%M%S")
+    settings["HOME"] = os.path.expanduser("~")
+    settings["TIMESTAMP"] = time.strftime("%Y%m%d_%H%M%S")
     settings["HOST_MACHINE_IP"] = get_ip_address()
+    settings["DOCKER_IMAGE_TIMESTAMP"] = "%s_%s" % (deployment_target, settings["TIMESTAMP"])
 
     load_settings([
         "deploy/kubernetes/shared-settings.yaml",
@@ -342,7 +343,7 @@ def delete_component(component, deployment_target=None):
     elif component == "es-data":
         run("kubectl delete StatefulSet es-data", errors_to_ignore=["not found"])
     elif component == "nginx":
-        run("kubectl delete rc nginx", errors_to_ignore=["not found"])
+        run("kubectl delete -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/master/deploy/mandatory.yaml")
 
     run("kubectl delete deployments %(component)s" % locals(), errors_to_ignore=["not found"])
     run("kubectl delete services %(component)s" % locals(), errors_to_ignore=["not found"])

@@ -33,7 +33,7 @@ spec:
           fsType: ext4
       containers:
       - name: mongo-pod
-        image: {{ DOCKER_IMAGE_PREFIX }}/mongo:{{ TIMESTAMP }}
+        image: {{ DOCKER_IMAGE_PREFIX }}/mongo:{{ DOCKER_IMAGE_TIMESTAMP }}
         ports:
         - containerPort: {{ MONGO_SERVICE_PORT }}
           protocol: TCP

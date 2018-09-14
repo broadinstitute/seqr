@@ -39,7 +39,7 @@ spec:
           privileged: true
       containers:
       - name: elasticsearch-pod
-        image: {{ DOCKER_IMAGE_PREFIX }}/elasticsearch:{{ TIMESTAMP }}
+        image: {{ DOCKER_IMAGE_PREFIX }}/elasticsearch:{{ DOCKER_IMAGE_TIMESTAMP }}
         ports:
         - containerPort: {{ ELASTICSEARCH_SERVICE_PORT }}
           protocol: TCP

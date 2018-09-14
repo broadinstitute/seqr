@@ -31,7 +31,7 @@ spec:
     spec:
       containers:
       - name: kibana-pod
-        image: {{ DOCKER_IMAGE_PREFIX }}/kibana:{{ TIMESTAMP }}
+        image: {{ DOCKER_IMAGE_PREFIX }}/kibana:{{ DOCKER_IMAGE_TIMESTAMP }}
         ports:
         - containerPort: {{ KIBANA_SERVICE_PORT }}
           protocol: TCP
