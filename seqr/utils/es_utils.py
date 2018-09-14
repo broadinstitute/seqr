@@ -320,24 +320,38 @@ TRANSCRIPT_FIELDS = [
     'gene_symbol', 'lof', 'lof_flags', 'lof_filter', 'hgvsc', 'hgvsp', 'amino_acids', 'protein_position',
     'major_consequence',
 ]
-VARIANT_FIELDS = [
-    'xpos', 'ref', 'alt', 'contig', 'codingGeneIds', 'geneIds', 'filters', 'originalAltAlleles', 'start', 'variantId',
-]
+NESTED_FIELDS = {
+    'clinvar': CLINVAR_FIELDS,
+    'hgmd': HGMD_FIELDS,
+    'mainTranscript': TRANSCRIPT_FIELDS
+}
+
 GENOTYPE_FIELDS = ['ab', 'ad', 'dp', 'gq', 'pl', 'num_alt']
-PREDICTION_FIELD_MAP = {
-    'cadd': 'cadd_PHRED',
-    'dann': 'dbnsfp_DANN_score',
-    'eigen': 'eigen_Eigen_phred',
-    'fathmm': 'dbnsfp_FATHMM_pred',
-    'gerp_rs': 'dbnsfp_GERP_RS',
-    'mpc': 'mpc_MPC',
-    'metasvm': 'dbnsfp_MetaSVM_pred',
-    'mut_taster': 'dbnsfp_MutationTaster_pred',
-    'phastcons_100_vert': 'dbnsfp_phastCons100way_vertebrate',
-    'polyphen': 'dbnsfp_Polyphen2_HVAR_pred',
-    'primate_ai': 'primate_ai_score',
-    'revel': 'dbnsfp_REVEL_score',
-    'sift': 'dbnsfp_SIFT_pred',
+CORE_FIELDS_CONFIG = {
+    'variantId': {},
+    'alt': {},
+    'contig': {'response_key': 'chrom'},
+    'start': {'response_key': 'pos', 'format_value': long},
+    'codingGeneIds': {'response_key': 'geneIds', 'format_value': list, 'default_value': []},
+    'filters': {'response_key': 'genotypeFilters', 'format_value': lambda filters: ','.join(filters), 'default_value': []},
+    'origAltAlleles': {'format_value': lambda alleles: [a.split('-')[-1] for a in alleles], 'default_value': []},
+    'ref': {},
+    'xpos': {'response_key': 'xpos', 'format_value': long},
+}
+PREDICTION_FIELDS_CONFIG = {
+    'cadd_PHRED': {'response_key': 'cadd'},
+    'dbnsfp_DANN_score': {},
+    'eigen_Eigen_phred': {},
+    'dbnsfp_FATHMM_pred': {},
+    'dbnsfp_GERP_RS': {'response_key': 'gerp_rs'},
+    'mpc_MPC': {},
+    'dbnsfp_MetaSVM_pred': {},
+    'dbnsfp_MutationTaster_pred': {'response_key': 'mut_taster'},
+    'dbnsfp_phastCons100way_vertebrate': {'response_key': 'phastcons_100_vert'},
+    'dbnsfp_Polyphen2_HVAR_pred': {'response_key': 'polyphen'},
+    'primate_ai_score': {'response_key': 'primate_ai'},
+    'dbnsfp_REVEL_score': {},
+    'dbnsfp_SIFT_pred': {},
 }
 POPULATION_FIELD_CONFIGS = {
     'AF': {'fields': ['AF_POPMAX_OR_GLOBAL', 'AF_POPMAX'], 'format_value': float},
@@ -347,15 +361,9 @@ POPULATION_FIELD_CONFIGS = {
     'Hemi': {},
 }
 
-NESTED_FIELDS = {
-    'clinvar': CLINVAR_FIELDS,
-    'hgmd': HGMD_FIELDS,
-    'mainTranscript': TRANSCRIPT_FIELDS
-}
-
 
 def _get_query_field_names(samples_by_id):
-    field_names = VARIANT_FIELDS + PREDICTION_FIELD_MAP.values()
+    field_names = CORE_FIELDS_CONFIG.keys() + PREDICTION_FIELDS_CONFIG.keys()
     for field_name, fields in NESTED_FIELDS.items():
         field_names += ['{}_{}'.format(field_name, field) for field in fields]
     for population, pop_config in POPULATIONS.items():
@@ -424,34 +432,36 @@ def _parse_es_hit(raw_hit, samples_by_id, liftover_grch38_to_grch37, field_names
                 [pop_config.get(field)] +
                 ['{}_{}'.format(population, custom_field) for custom_field in field_config.get('fields', [])] +
                 ['{}_{}'.format(population, field)],
-                format_value=field_config.get('format_value', int)
+                format_value=field_config.get('format_value', int),
+                default_value=0,
+                no_key_default=False,
             )
             for field, field_config in POPULATION_FIELD_CONFIGS.items()
         } for population, pop_config in POPULATIONS.items()
     }
 
+    predictions = {
+        field_config.get('response_key', field.split('_')[1].lower()): hit.get(field)
+        for field, field_config in PREDICTION_FIELDS_CONFIG.items()
+    }
+
     result = {
-        'variantId': hit['variantId'],
+        field_config.get('response_key', field): _value_if_has_key(hit, [field], **field_config)
+        for field, field_config in CORE_FIELDS_CONFIG.items()
+    }
+    for field_name, fields in NESTED_FIELDS.items():
+        result.update(_get_nested_fields(hit, field_name, fields))
+    result.update({
         'projectGuid': project.guid,
         'familyGuid': family.guid,
-        'alt': hit['alt'],
-        'chrom': hit['contig'],
-        'geneIds': list(hit.get('codingGeneIds') or []) or list(hit.get('geneIds') or []),
-        'genotypeFilters': ','.join(hit['filters'] or []),
         'genotypes': genotypes,
         'genomeVersion': genome_version,
         'liftedOverGenomeVersion': lifted_over_genome_version,
         'liftedOverChrom': lifted_over_chrom,
         'liftedOverPos': lifted_over_pos,
-        'origAltAlleles':  [a.split('-')[-1] for a in hit.get('originalAltAlleles', [])],
         'populations': populations,
-        'pos': long(hit['start']),
-        'predictions': {response_field: hit.get(es_field) for response_field, es_field in PREDICTION_FIELD_MAP.items()},
-        'ref': hit['ref'],
-        'xpos': long(hit['xpos']),
-    }
-    for field_name, fields in NESTED_FIELDS.items():
-        result.update(_get_nested_fields(hit, field_name, fields))
+        'predictions': predictions,
+    })
     return result
 
 
@@ -459,11 +469,11 @@ def _get_nested_fields(hit, field_name, fields):
     return {field_name: {_to_camel_case(field): hit.get('{}_{}'.format(field_name, field)) for field in fields}}
 
 
-def _value_if_has_key(hit, keys, format_value=None):
+def _value_if_has_key(hit, keys, format_value=None, default_value=None, no_key_default=True, **kwargs):
     for key in keys:
         if key in hit:
-            return format_value(hit[key] or 0) if format_value else hit[key]
-    return None
+            return format_value(hit[key] or default_value) if format_value else hit[key]
+    return default_value if no_key_default else None
 
 
 # make encoded values as human-readable as possible
