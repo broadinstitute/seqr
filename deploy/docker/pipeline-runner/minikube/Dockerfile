@@ -108,7 +108,6 @@ RUN /usr/bin/cpanm --notest  List::MoreUtils
 
 # snapshot of LoFTEE code - copied from gs://gnomad-resources/loftee-beta/
 RUN gsutil -m cp -r gs://hail-common/vep/vep/loftee /vep
-#COPY shared/loftee /vep/loftee
 
 COPY minikube/vep-gcloud-grch38.properties /vep
 COPY minikube/vep-gcloud-grch37.properties /vep
@@ -123,9 +122,12 @@ RUN /vep/run_hail_vep85_GRCh37_vcf.sh /vep/1var.vcf \
 
 WORKDIR /
 
+ARG DISABLE_CACHE=1
+
 # install hail-elasticsearch-pipelines
 RUN git clone https://github.com/macarthur-lab/hail-elasticsearch-pipelines.git
 
+RUN cp -r /hail-elasticsearch-pipelines/loftee /vep
 
 # install jupyter
 RUN pip install --upgrade pip jupyter
