@@ -22,11 +22,9 @@ const IndividualCell = styled.div`
   }
 `
 
-const Allele = styled.span`
+const AlleleContainer = styled.span`
   color: black;
   font-size: 1.2em;
-  font-weight: ${(props) => { return props.isRef ? 'inherit' : 'bolder' }};
-  font-style: ${(props) => { return props.isRef ? 'inherit' : 'italic' }};
 `
 
 const PAR_REGIONS = {
@@ -44,33 +42,34 @@ const isHemiVariant = (variant, individual) =>
   individual.sex === 'M' && (variant.chrom === 'X' || variant.chrom === 'Y') &&
   PAR_REGIONS[variant.genomeVersion][variant.chrom].every(region => !(region[0] < variant.pos < region[1]))
 
-const Alleles = ({ alleles, variant, individual }) => {
-  alleles = alleles.map((allele) => {
-    let alleleText = allele.substring(0, 3)
-    if (allele.length > 3) {
-      alleleText += '..'
-    }
-    return { text: alleleText, isRef: allele === variant.ref }
-  })
-
-  let hemiError = null
-  if (isHemiVariant(variant, individual)) {
-    if (alleles[0].text !== alleles[1].text) {
-      hemiError = <Popup content="WARNING: Heterozygous Male" trigger={<Icon name="warning sign" color="red" />} />
-    } else {
-      alleles[1] = { text: '-' }
-    }
+const Allele = ({ isAlt, variant }) => {
+  const allele = isAlt ? variant.alt : variant.ref
+  let alleleText = allele.substring(0, 3)
+  if (allele.length > 3) {
+    alleleText += '...'
   }
+
+  return isAlt ? <b><i>{alleleText}</i></b> : alleleText
+}
+
+Allele.propTypes = {
+  isAlt: PropTypes.bool,
+  variant: PropTypes.object,
+}
+
+
+const Alleles = ({ numAlt, variant, individual }) => {
+  const isHemi = isHemiVariant(variant, individual)
   return (
-    <span>
-      {hemiError}
-      <Allele isRef={alleles[0].isRef}>{alleles[0].text}</Allele>/<Allele isRef={alleles[1].isRef}>{alleles[1].text}</Allele>
-    </span>
+    <AlleleContainer>
+      {isHemi ? <Popup content="WARNING: Heterozygous Male" trigger={<Icon name="warning sign" color="red" />} /> : null}
+      <Allele isAlt={numAlt > 1} variant={variant} />/{isHemi ? '-' : <Allele isAlt={numAlt > 0} variant={variant} />}
+    </AlleleContainer>
   )
 }
 
 Alleles.propTypes = {
-  alleles: PropTypes.array,
+  numAlt: PropTypes.number,
   variant: PropTypes.object,
   individual: PropTypes.object,
 }
@@ -97,14 +96,14 @@ const Genotype = ({ variant, individual }) => {
     { title: 'Phred Likelihoods', value: genotype.pl },
   ]
   return [
-    genotype.alleles.length > 0 && genotype.numAlt !== -1 ?
+    genotype.numAlt >= 0 ?
       <Popup
         key="alleles"
         position="top center"
         flowing
         trigger={
           <span>
-            <Alleles alleles={genotype.alleles} variant={variant} individual={individual} />
+            <Alleles numAlt={genotype.numAlt} variant={variant} individual={individual} />
             <VerticalSpacer width={5} />
             {genotype.gq || '-'}, {genotype.ab ? genotype.ab.toPrecision(2) : '-'}
             {variant.genotypeFilters && <small><br />{variant.genotypeFilters}</small>}
@@ -118,7 +117,7 @@ const Genotype = ({ variant, individual }) => {
         }
       />
       : <b key="no-call">NO CALL</b>,
-    // TODO cnvs fields are not in ES, either add them or get rid of this code
+    // TODO currently not returned from ES
     (genotype.cnvs && genotype.cnvs.cn !== null) ?
       <Popup
         key="cnvs"
@@ -164,7 +163,8 @@ const VariantIndividuals = ({ variant, individualsByGuid }) => {
               hasPhenotipsDetails(individual.phenotipsData) ?
                 <PhenotipsDataPanel
                   individual={individual}
-                  showDetails showEditPhenotipsLink={false}
+                  showDetails
+                  showEditPhenotipsLink={false}
                   showViewPhenotipsLink={false}
                 /> : null
             }

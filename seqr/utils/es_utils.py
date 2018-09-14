@@ -89,7 +89,6 @@ def get_es_variants(search_model, individuals):
 
     response = es_search.execute()
 
-    logger.info('=====')
     logger.info('Total hits: {} ({} seconds)'.format(response.hits.total, response.took/100.0))
 
     variant_results = [_parse_es_hit(hit, samples_by_id, liftover_grch38_to_grch37, field_names) for hit in response]
@@ -321,12 +320,13 @@ TRANSCRIPT_FIELDS = [
     'major_consequence',
 ]
 NESTED_FIELDS = {
-    'clinvar': CLINVAR_FIELDS,
-    'hgmd': HGMD_FIELDS,
-    'mainTranscript': TRANSCRIPT_FIELDS
+    field_name: {field: {} for field in fields} for field_name, fields in {
+        'clinvar': CLINVAR_FIELDS,
+        'hgmd': HGMD_FIELDS,
+        'mainTranscript': TRANSCRIPT_FIELDS
+    }.items()
 }
 
-GENOTYPE_FIELDS = ['ab', 'ad', 'dp', 'gq', 'pl', 'num_alt']
 CORE_FIELDS_CONFIG = {
     'variantId': {},
     'alt': {},
@@ -336,7 +336,7 @@ CORE_FIELDS_CONFIG = {
     'filters': {'response_key': 'genotypeFilters', 'format_value': lambda filters: ','.join(filters), 'default_value': []},
     'origAltAlleles': {'format_value': lambda alleles: [a.split('-')[-1] for a in alleles], 'default_value': []},
     'ref': {},
-    'xpos': {'response_key': 'xpos', 'format_value': long},
+    'xpos': {'format_value': long},
 }
 PREDICTION_FIELDS_CONFIG = {
     'cadd_PHRED': {'response_key': 'cadd'},
@@ -353,19 +353,33 @@ PREDICTION_FIELDS_CONFIG = {
     'dbnsfp_REVEL_score': {},
     'dbnsfp_SIFT_pred': {},
 }
-POPULATION_FIELD_CONFIGS = {
+GENOTYPE_FIELDS_CONFIG = {
+    'ab': {},
+    'ad': {},
+    'dp': {},
+    'gq': {},
+    'pl': {},
+    'num_alt': {'format_value': int, 'default_value': -1},
+}
+
+DEFAULT_POP_FIELD_CONFIG = {
+    'format_value': int,
+    'default_value': 0,
+    'no_key_use_default': False,
+}
+POPULATION_FIELD_CONFIGS = {k: dict(DEFAULT_POP_FIELD_CONFIG, **v) for k, v in {
     'AF': {'fields': ['AF_POPMAX_OR_GLOBAL', 'AF_POPMAX'], 'format_value': float},
     'AC': {},
     'AN': {},
     'Hom': {},
     'Hemi': {},
-}
+}.items()}
 
 
 def _get_query_field_names(samples_by_id):
     field_names = CORE_FIELDS_CONFIG.keys() + PREDICTION_FIELDS_CONFIG.keys()
     for field_name, fields in NESTED_FIELDS.items():
-        field_names += ['{}_{}'.format(field_name, field) for field in fields]
+        field_names += ['{}_{}'.format(field_name, field) for field in fields.keys()]
     for population, pop_config in POPULATIONS.items():
         for field, field_config in POPULATION_FIELD_CONFIGS.items():
             if pop_config.get(field):
@@ -373,7 +387,7 @@ def _get_query_field_names(samples_by_id):
             field_names.append('{}_{}'.format(population, field))
             field_names += ['{}_{}'.format(population, custom_field) for custom_field in field_config.get('fields', [])]
     for sample_id in samples_by_id.keys():
-        field_names += ['{}_{}'.format(sample_id, field) for field in GENOTYPE_FIELDS]
+        field_names += ['{}_{}'.format(sample_id, field) for field in GENOTYPE_FIELDS_CONFIG.keys()]
     return field_names
 
 
@@ -381,32 +395,10 @@ def _parse_es_hit(raw_hit, samples_by_id, liftover_grch38_to_grch37, field_names
     hit = {k: raw_hit[k] for k in field_names if k in raw_hit}
 
     matched_sample_ids = [sample_id for sample_id in samples_by_id.keys() if any(k for k in hit.keys() if k.startswith(sample_id))]
-    genotypes = {}
-    for sample_id in matched_sample_ids:
-        num_alt_key = '{}_num_alt'.format(sample_id)
-        num_alt = int(hit[num_alt_key]) if hit.get(num_alt_key) is not None else -1
-
-        # TODO don't pass down alleles, have UI do this
-        if num_alt == 0:
-            alleles = [hit['ref'], hit['ref']]
-        elif num_alt == 1:
-            alleles = [hit['ref'], hit['alt']]
-        elif num_alt == 2:
-            alleles = [hit['alt'], hit['alt']]
-        elif num_alt == -1:
-            alleles = []
-        else:
-            raise ValueError('Invalid num_alt: ' + str(num_alt))
-
-        genotypes[samples_by_id[sample_id].individual.guid] = {
-            'ab': hit.get('{}_ab'.format(sample_id)),
-            'ad': hit.get('{}_ad'.format(sample_id)),
-            'alleles': alleles,
-            'dp': hit.get('{}_dp'.format(sample_id)),
-            'gq': hit.get('{}_gq'.format(sample_id)) or '',
-            'numAlt': num_alt,
-            'pl': hit.get('{}_pl'.format(sample_id)),
-        }
+    genotypes = {
+        samples_by_id[sample_id].individual.guid: _get_field_values(hit, GENOTYPE_FIELDS_CONFIG, lookup_field_prefix=sample_id)
+        for sample_id in matched_sample_ids
+    }
 
     # TODO better handling for multi-family/ project searches
     family = samples_by_id[matched_sample_ids[0]].individual.family
@@ -426,31 +418,19 @@ def _parse_es_hit(raw_hit, samples_by_id, liftover_grch38_to_grch37, field_names
                 lifted_over_pos = grch37_coord[0][1]
 
     populations = {
-        population: {
-            field.lower(): _value_if_has_key(
-                hit,
-                [pop_config.get(field)] +
-                ['{}_{}'.format(population, custom_field) for custom_field in field_config.get('fields', [])] +
-                ['{}_{}'.format(population, field)],
-                format_value=field_config.get('format_value', int),
-                default_value=0,
-                no_key_default=False,
-            )
-            for field, field_config in POPULATION_FIELD_CONFIGS.items()
-        } for population, pop_config in POPULATIONS.items()
+        population: _get_field_values(
+            hit, POPULATION_FIELD_CONFIGS, format_response_key=lambda key: key.lower(), lookup_field_prefix=population,
+            get_addl_fields=lambda field, field_config:
+                [pop_config.get(field)] + ['{}_{}'.format(population, custom_field) for custom_field in field_config.get('fields', [])],
+        )
+        for population, pop_config in POPULATIONS.items()
     }
 
-    predictions = {
-        field_config.get('response_key', field.split('_')[1].lower()): hit.get(field)
-        for field, field_config in PREDICTION_FIELDS_CONFIG.items()
-    }
-
-    result = {
-        field_config.get('response_key', field): _value_if_has_key(hit, [field], **field_config)
-        for field, field_config in CORE_FIELDS_CONFIG.items()
-    }
-    for field_name, fields in NESTED_FIELDS.items():
-        result.update(_get_nested_fields(hit, field_name, fields))
+    result = _get_field_values(hit, CORE_FIELDS_CONFIG, format_response_key=str)
+    result.update({
+        field_name: _get_field_values(hit, fields, lookup_field_prefix=field_name)
+        for field_name, fields in NESTED_FIELDS.items()
+    })
     result.update({
         'projectGuid': project.guid,
         'familyGuid': family.guid,
@@ -460,20 +440,30 @@ def _parse_es_hit(raw_hit, samples_by_id, liftover_grch38_to_grch37, field_names
         'liftedOverChrom': lifted_over_chrom,
         'liftedOverPos': lifted_over_pos,
         'populations': populations,
-        'predictions': predictions,
+        'predictions': _get_field_values(
+            hit, PREDICTION_FIELDS_CONFIG, format_response_key=lambda key: key.split('_')[1].lower()
+        ),
     })
     return result
 
 
-def _get_nested_fields(hit, field_name, fields):
-    return {field_name: {_to_camel_case(field): hit.get('{}_{}'.format(field_name, field)) for field in fields}}
+def _get_field_values(hit, field_configs, format_response_key=_to_camel_case, get_addl_fields=None, lookup_field_prefix=''):
+    return {
+        field_config.get('response_key', format_response_key(field)): _value_if_has_key(
+            hit,
+            (get_addl_fields(field, field_config) if get_addl_fields else []) +
+            ['{}_{}'.format(lookup_field_prefix, field) if lookup_field_prefix else field],
+            **field_config
+        )
+        for field, field_config in field_configs.items()
+    }
 
 
-def _value_if_has_key(hit, keys, format_value=None, default_value=None, no_key_default=True, **kwargs):
+def _value_if_has_key(hit, keys, format_value=None, default_value=None, no_key_use_default=True, **kwargs):
     for key in keys:
         if key in hit:
-            return format_value(hit[key] or default_value) if format_value else hit[key]
-    return default_value if no_key_default else None
+            return format_value(default_value if hit[key] is None else hit[key]) if format_value else hit[key]
+    return default_value if no_key_use_default else None
 
 
 # make encoded values as human-readable as possible

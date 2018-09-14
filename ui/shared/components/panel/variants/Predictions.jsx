@@ -66,7 +66,7 @@ const Prediction = ({ field, value, color }) =>
 Prediction.propTypes = {
   field: PropTypes.string.isRequired,
   value: PropTypes.any.isRequired,
-  color: PropTypes.string.isRequired,
+  color: PropTypes.string,
 }
 
 const PREDICTOR_FIELDS = [
