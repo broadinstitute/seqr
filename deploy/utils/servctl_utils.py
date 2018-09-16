@@ -119,7 +119,6 @@ def retrieve_settings(deployment_target):
     settings["HOME"] = os.path.expanduser("~")
     settings["TIMESTAMP"] = time.strftime("%Y%m%d_%H%M%S")
     settings["HOST_MACHINE_IP"] = get_ip_address()
-    settings["DOCKER_IMAGE_TIMESTAMP"] = "%s_%s" % (deployment_target, settings["TIMESTAMP"])
 
     load_settings([
         "deploy/kubernetes/shared-settings.yaml",

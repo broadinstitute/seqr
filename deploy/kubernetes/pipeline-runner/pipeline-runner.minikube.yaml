@@ -37,11 +37,11 @@ spec:
           secretName: gcloud-client-secrets
       containers:
       - name: pipeline-runner-pod
-        image: {{ DOCKER_IMAGE_PREFIX }}/pipeline-runner:{{ DOCKER_IMAGE_TIMESTAMP }}
         ports:
         - containerPort: {{ PIPELINE_RUNNER_SERVICE_PORT }}
           protocol: TCP
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: {{ IMAGE_PULL_POLICY }}
+        image: {{ DOCKER_IMAGE_PREFIX }}/pipeline-runner-for-minikube{{ DOCKER_IMAGE_TAG }}
         volumeMounts:
         - name: data-dir
           mountPath: /data

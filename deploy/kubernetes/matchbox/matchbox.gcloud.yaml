@@ -28,11 +28,11 @@ spec:
           secretName: matchbox-secrets
       containers:
       - name: matchbox-pod
-        image: {{ DOCKER_IMAGE_PREFIX }}/matchbox:{{ DOCKER_IMAGE_TIMESTAMP }}
         ports:
         - containerPort: {{ MATCHBOX_SERVICE_PORT }}
           protocol: TCP
-        imagePullPolicy: Always
+        imagePullPolicy: {{ IMAGE_PULL_POLICY }}
+        image: {{ DOCKER_IMAGE_PREFIX }}/matchbox{{ DOCKER_IMAGE_TAG }}
         securityContext:
           privileged: true
           capabilities:

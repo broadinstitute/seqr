@@ -31,7 +31,11 @@ spec:
           path: {{ POSTGRES_DBPATH }}
       containers:
       - name: postgres-pod
-        image: {{ DOCKER_IMAGE_PREFIX }}/postgres:{{ DOCKER_IMAGE_TIMESTAMP }}
+        ports:
+        - containerPort: {{ POSTGRES_SERVICE_PORT }}
+          protocol: TCP
+        imagePullPolicy: {{ IMAGE_PULL_POLICY }}
+        image: {{ DOCKER_IMAGE_PREFIX }}/postgres{{ DOCKER_IMAGE_TAG }}
         env:
         - name: POSTGRES_USER
           valueFrom:
@@ -43,10 +47,6 @@ spec:
             secretKeyRef:
               name: postgres-secrets
               key: postgres.password
-        ports:
-        - containerPort: {{ POSTGRES_SERVICE_PORT }}
-          protocol: TCP
-        imagePullPolicy: IfNotPresent
         readinessProbe:
           exec:
             command:

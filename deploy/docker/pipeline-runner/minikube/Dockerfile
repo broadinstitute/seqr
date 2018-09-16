@@ -109,15 +109,14 @@ RUN /usr/bin/cpanm --notest JSON
 RUN /usr/bin/cpanm --notest DBD::SQLite
 RUN /usr/bin/cpanm --notest  List::MoreUtils
 
+# install hail-elasticsearch-pipelines
+RUN git clone https://github.com/macarthur-lab/hail-elasticsearch-pipelines.git /hail-elasticsearch-pipelines
 RUN cp -r /hail-elasticsearch-pipelines/loftee /vep
 
 COPY minikube/vep-gcloud-grch38.properties /vep
 COPY minikube/vep-gcloud-grch37.properties /vep
 COPY shared/run_hail_vep85_GRCh37_vcf.sh /vep/run_hail_vep85_GRCh37_vcf.sh
 COPY shared/run_hail_vep85_GRCh38_vcf.sh /vep/run_hail_vep85_GRCh38_vcf.sh
-
-# install hail-elasticsearch-pipelines
-RUN git clone https://github.com/macarthur-lab/hail-elasticsearch-pipelines.git /hail-elasticsearch-pipelines
 
 # run VEP on the 1-variant VCF to create fasta.index file
 COPY shared/1var.vcf /vep/1var.vcf

@@ -31,11 +31,11 @@ spec:
     spec:
       containers:
       - name: kibana-pod
-        image: {{ DOCKER_IMAGE_PREFIX }}/kibana:{{ DOCKER_IMAGE_TIMESTAMP }}
         ports:
         - containerPort: {{ KIBANA_SERVICE_PORT }}
           protocol: TCP
-        imagePullPolicy: Always
+        imagePullPolicy: {{ IMAGE_PULL_POLICY }}
+        image: {{ DOCKER_IMAGE_PREFIX }}/kibana{{ DOCKER_IMAGE_TAG }}
         resources:
           requests:
             memory: "1Gi"

@@ -36,11 +36,11 @@ spec:
           secretName: gcloud-client-secrets
       containers:
       - name: seqr-pod
-        image: {{ DOCKER_IMAGE_PREFIX }}/seqr:{{ DOCKER_IMAGE_TIMESTAMP }}
         ports:
         - containerPort: {{ SEQR_SERVICE_PORT }}
           protocol: TCP
-        imagePullPolicy: Always
+        imagePullPolicy: {{ IMAGE_PULL_POLICY }}
+        image: {{ DOCKER_IMAGE_PREFIX }}/seqr{{ DOCKER_IMAGE_TAG }}
         securityContext:
           privileged: true
           capabilities:

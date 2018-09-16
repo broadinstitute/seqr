@@ -36,9 +36,26 @@ def deploy(deployment_target, components, output_dir=None, other_settings={}):
     settings = retrieve_settings(deployment_target)
     settings.update(other_settings)
 
+    # adjust docker image settings
+    if settings["BUILD_DOCKER_IMAGE"] and deployment_target == "minikube":
+        # to use images built using the minikube docker daemon, minikube only supports imagePullPolicy = "IfNotPresent"
+        # https://github.com/kubernetes/minikube/issues/1395#issuecomment-296581721
+        # https://kubernetes.io/docs/setup/minikube/
+        settings["IMAGE_PULL_POLICY"] = "IfNotPresent"
+
+    if other_settings.get("DOCKER_IMAGE_TAG"):
+        settings["DOCKER_IMAGE_TAG"] = ":"+other_settings["DOCKER_IMAGE_TAG"]
+    elif other_settings["BUILD_DOCKER_IMAGE"]:
+        settings["DOCKER_IMAGE_TAG"] = ":"+settings["TIMESTAMP"]
+    else:
+        settings["DOCKER_IMAGE_TAG"] = ":latest"
+
+    logger.info("==> Using docker image tag: %(DOCKER_IMAGE_TAG)s" % settings)
+
     # configure deployment dir
-    timestamp = time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime())
-    settings["DEPLOYMENT_TEMP_DIR"] = os.path.join(settings["DEPLOYMENT_TEMP_DIR"], "deployments/%(timestamp)s_%(deployment_target)s" % locals())
+    settings["DEPLOYMENT_TEMP_DIR"] = os.path.join(
+        settings["DEPLOYMENT_TEMP_DIR"],
+        "deployments/%(TIMESTAMP)s_%(DEPLOY_TO)s" % settings)
 
     # configure logging output
     log_dir = os.path.join(settings["DEPLOYMENT_TEMP_DIR"], "logs")
@@ -174,34 +191,32 @@ def _deploy_pod(component_label, settings, wait_until_pod_is_running=True, wait_
         _wait_until_pod_is_ready(component_label, deployment_target=settings["DEPLOY_TO"])
 
 
-def docker_build(component_label, settings, custom_build_args=[]):
-    #if not settings["BUILD_DOCKER_IMAGE"]:
-    #    logger.info("Skipping docker build step. Use --build-docker-image to build a new image (and --force to build from the beginning)")
-    #    return
+def docker_build(component_label, settings, custom_build_args=(), docker_image_name_suffix=""):
+    params = dict(settings)   # make a copy before modifying
+    params["COMPONENT_LABEL"] = component_label
+    params["DOCKER_IMAGE_NAME_SUFFIX"] = docker_image_name_suffix
+    params["DOCKER_IMAGE_NAME"] = "%(DOCKER_IMAGE_PREFIX)s/%(COMPONENT_LABEL)s%(DOCKER_IMAGE_NAME_SUFFIX)s" % params
 
-    settings = dict(settings)  # make a copy before modifying
-    settings["COMPONENT_LABEL"] = component_label
+    if not settings["BUILD_DOCKER_IMAGE"]:
+        logger.info("Skipping docker build step. Use --build-docker-image to build a new image (and --force to build from the beginning)")
+    else:
+        docker_build_command = ""
+        if settings["DEPLOY_TO"] == "minikube":
+            docker_build_command += "eval $(minikube docker-env); "
 
-    init_env_command = ""
-    if settings["DEPLOY_TO"] == "minikube":
-        init_env_command = "eval $(minikube docker-env); "
+        docker_build_command += "docker build deploy/docker/%(COMPONENT_LABEL)s/ "
+        docker_build_command += (" ".join(custom_build_args) + " ") % params
+        if settings["FORCE_BUILD_DOCKER_IMAGE"]:
+            docker_build_command += "--no-cache "
+        docker_build_command += "-t %(DOCKER_IMAGE_NAME)s " % params
+        docker_build_command += "-t %(DOCKER_IMAGE_NAME)s:latest " % params
+        docker_build_command += "-t %(DOCKER_IMAGE_NAME)s%(DOCKER_IMAGE_TAG)s " % params
 
-    run(init_env_command + " ".join([
-            "docker build"
-        ] + custom_build_args + [
-            "--no-cache" if settings["FORCE_BUILD_DOCKER_IMAGE"] else "",
-            "-t %(DOCKER_IMAGE_PREFIX)s/%(COMPONENT_LABEL)s",
-            "deploy/docker/%(COMPONENT_LABEL)s/",
-    ]) % settings, verbose=True)
+        run(docker_build_command % params, verbose=True)
 
-    run(init_env_command + " ".join([
-        "docker tag",
-            "%(DOCKER_IMAGE_PREFIX)s/%(COMPONENT_LABEL)s",
-            "%(DOCKER_IMAGE_PREFIX)s/%(COMPONENT_LABEL)s:%(DOCKER_IMAGE_TIMESTAMP)s",
-    ]) % settings)
-
-    if settings.get("DEPLOY_TO_PREFIX") == "gcloud":
-        run("gcloud docker -- push %(DOCKER_IMAGE_PREFIX)s/%(COMPONENT_LABEL)s:%(DOCKER_IMAGE_TIMESTAMP)s" % settings, verbose=True)
+    if settings["PUSH_TO_REGISTRY"]:
+        # based on https://cloud.google.com/container-registry/docs/pushing-and-pulling
+        run("docker push %(DOCKER_IMAGE_NAME)s%(DOCKER_IMAGE_TAG)s" % params, verbose=True)
 
 
 def deploy_mongo(settings):
@@ -383,15 +398,19 @@ def deploy_external_connector(settings, connector_name):
 def deploy_seqr(settings):
     print_separator("seqr")
 
-    docker_build(
-        "seqr",
-        settings,
-        [
-            "--build-arg SEQR_SERVICE_PORT=%s" % settings["SEQR_SERVICE_PORT"],
-            "--build-arg SEQR_UI_DEV_PORT=%s" % settings["SEQR_UI_DEV_PORT"],
-            "-f deploy/docker/%(COMPONENT_LABEL)s/%(DEPLOY_TO_PREFIX)s/Dockerfile"
-        ],
-    )
+    if settings["BUILD_DOCKER_IMAGE"]:
+        seqr_git_hash = run("git log -1 --pretty=%h").strip()
+
+        docker_build("seqr",
+            settings,
+            [
+                "--build-arg SEQR_SERVICE_PORT=%s" % settings["SEQR_SERVICE_PORT"],
+                "--build-arg SEQR_UI_DEV_PORT=%s" % settings["SEQR_UI_DEV_PORT"],
+                "-f deploy/docker/seqr/%s/Dockerfile" % settings["DEPLOY_TO_PREFIX"],
+                "-t %(DOCKER_IMAGE_NAME)s:" + seqr_git_hash,
+            ],
+            docker_image_name_suffix="-for-minikube" if settings["DEPLOY_TO"] == "minikube" else "",
+        )
 
     restore_seqr_db_from_backup = settings.get("RESTORE_SEQR_DB_FROM_BACKUP")
     reset_db = settings.get("RESET_DB")
@@ -438,7 +457,11 @@ def deploy_pipeline_runner(settings):
     if settings["DELETE_BEFORE_DEPLOY"]:
         delete_pod("pipeline-runner", settings)
 
-    docker_build("pipeline-runner", settings, [ "-f deploy/docker/%(COMPONENT_LABEL)s/%(DEPLOY_TO_PREFIX)s/Dockerfile" ])
+    docker_build("pipeline-runner",
+        settings,
+        [ "-f deploy/docker/%(COMPONENT_LABEL)s/%(DEPLOY_TO_PREFIX)s/Dockerfile" ],
+        docker_image_name_suffix="-for-minikube" if settings["DEPLOY_TO"] == "minikube" else "",
+    )
 
     _deploy_pod("pipeline-runner", settings, wait_until_pod_is_running=True)
 
@@ -511,7 +534,7 @@ def deploy_init_cluster(settings):
         #]))
 
 
-        # if cluster was already created previously, update it's size to match CLUSTER_NUM_NODES
+        # if cluster was already created previously, update its size to match CLUSTER_NUM_NODES
         #run(" ".join([
         #    "gcloud container clusters resize %(CLUSTER_NAME)s --size %(CLUSTER_NUM_NODES)s" % settings,
         #]), is_interactive=True)
@@ -526,11 +549,6 @@ def deploy_init_cluster(settings):
                 ]) % settings, verbose=True, errors_to_ignore=["already exists"])
 
     elif settings["DEPLOY_TO"] == "minikube":
-        #run("mkdir -p %(LOCAL_DATA_DIR)s" % settings)
-        #run("mkdir -p %(LOCAL_DATA_DIR)s/postgres" % settings)
-        #run("mkdir -p %(LOCAL_DATA_DIR)s/elasticsearch" % settings)
-        #run("mkdir -p %(LOCAL_DATA_DIR)s/mongo" % settings)
-
         # start minikube if it's not running already
         try:
             status = run("minikube status")
@@ -553,10 +571,7 @@ def deploy_init_cluster(settings):
                 # --mount-string %(LOCAL_DATA_DIR)s:%(MINIKUBE_DATA_DIR)s --mount
 
             elif sys.platform.startswith('linux'):
-                #run("sudo minikube stop", ignore_all_errors=True)
-                #run("sudo minikube delete", ignore_all_errors=True)
-                #run("sudo minikube start --vm-driver=none")  # run directly on the linux machine, without a hypervizor layer
-                logger.info("Please run 'sudo minikube start --vm-driver=none --apiserver-ips 127.0.0.1 --apiserver-name localhost' first and make sure 'minikube status' shows that minikube is running")
+                logger.info("Please run 'sudo minikube start --vm-driver=none' first and make sure 'minikube status' shows that minikube is running")
                 sys.exit(0)
             else:
                 logger.warn("We don't test minikube on operating system: %s" % sys.platform)
@@ -565,6 +580,8 @@ def deploy_init_cluster(settings):
                     "--disk-size=%(MINIKUBE_DISK_SIZE)s "
                     "--memory=%(MINIKUBE_MEMORY)s "
                     "--cpus=%(MINIKUBE_NUM_CPUS)s " % settings)
+
+        run("gcloud auth configure-docker --quiet")
 
         # this fixes time sync issues on MacOSX which could interfere with token auth (https://github.com/kubernetes/minikube/issues/1378)
         run("minikube ssh -- docker run -i --rm --privileged --pid=host debian nsenter -t 1 -m -u -n -i date -u $(date -u +%m%d%H%M%Y)")

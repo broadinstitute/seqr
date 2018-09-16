@@ -2,9 +2,9 @@ kind: Service
 apiVersion: v1
 metadata:
   name: elasticsearch
+  namespace: {{ NAMESPACE }}
   labels:
     name: elasticsearch
-    namespace: {{ NAMESPACE }}
     deployment: {{ DEPLOY_TO }}
 spec:
   ports:
@@ -33,17 +33,17 @@ spec:
       initContainers:
       - name: init-sysctl
         image: busybox
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: {{ IMAGE_PULL_POLICY }}
         command: ["sysctl", "-w", "vm.max_map_count=262144"]
         securityContext:
           privileged: true
       containers:
       - name: elasticsearch-pod
-        image: {{ DOCKER_IMAGE_PREFIX }}/elasticsearch:{{ DOCKER_IMAGE_TIMESTAMP }}
         ports:
         - containerPort: {{ ELASTICSEARCH_SERVICE_PORT }}
           protocol: TCP
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: {{ IMAGE_PULL_POLICY }}
+        image: {{ DOCKER_IMAGE_PREFIX }}/elasticsearch{{ DOCKER_IMAGE_TAG }}
         volumeMounts:
         - name: elasticsearch-dbpath
           mountPath: /elasticsearch-data

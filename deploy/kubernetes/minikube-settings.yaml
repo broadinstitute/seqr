@@ -25,8 +25,6 @@ DEPLOY_TO: 'minikube'
 DEPLOY_TO_PREFIX: 'minikube'
 DEPLOYMENT_TYPE: 'dev'
 
-DOCKER_IMAGE_PREFIX: 'minikube/seqr'
-
 # paths inside the minikube VM
 MINIKUBE_DATA_DIR: '/data'
 POSTGRES_DBPATH:  '/data/postgres'

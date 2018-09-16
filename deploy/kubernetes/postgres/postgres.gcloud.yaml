@@ -33,7 +33,11 @@ spec:
           fsType: ext4
       containers:
       - name: postgres-pod
-        image: {{ DOCKER_IMAGE_PREFIX }}/postgres:{{ DOCKER_IMAGE_TIMESTAMP }}
+        ports:
+        - containerPort: {{ POSTGRES_SERVICE_PORT }}
+          protocol: TCP
+        imagePullPolicy: {{ IMAGE_PULL_POLICY }}
+        image: {{ DOCKER_IMAGE_PREFIX }}/postgres{{ DOCKER_IMAGE_TAG }}
         resources:
           requests:
             memory: "0.25Gi"
@@ -52,10 +56,6 @@ spec:
             secretKeyRef:
               name: postgres-secrets
               key: postgres.password
-        ports:
-        - containerPort: {{ POSTGRES_SERVICE_PORT }}
-          protocol: TCP
-        imagePullPolicy: Always
         readinessProbe:
           exec:
             command:

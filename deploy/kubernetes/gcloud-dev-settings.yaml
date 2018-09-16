@@ -26,8 +26,6 @@ SEQR_GIT_BRANCH: 'dev'
 
 NAMESPACE: gcloud-dev
 
-DOCKER_IMAGE_PREFIX: 'gcr.io/seqr-project'
-
 DEPLOY_TO: 'gcloud-dev'
 DEPLOY_TO_PREFIX: 'gcloud'
 DEPLOYMENT_TYPE: 'dev'
