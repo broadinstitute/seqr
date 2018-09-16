@@ -17,14 +17,14 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 
-def deploy(deployment_target, components, output_dir=None, other_settings={}):
+def deploy(deployment_target, components, output_dir=None, runtime_settings={}):
     """Deploy all seqr components to a kubernetes cluster.
     Args:
         deployment_target (string): one of the DEPLOYMENT_TARGETs  (eg. "minikube", or "gcloud")
         components (list): A list of components to be deployed from constants.DEPLOYABLE_COMPONENTS
             (eg. "postgres", "phenotips").
         output_dir (string): path of directory where to put deployment logs and rendered config files
-        other_settings (dict): a dictionary of other key-value pairs for use during deployment
+        runtime_settings (dict): a dictionary of other key-value pairs that override settings file(s) values.
     """
     if not components:
         raise ValueError("components list is empty")
@@ -34,7 +34,7 @@ def deploy(deployment_target, components, output_dir=None, other_settings={}):
 
     # parse settings files
     settings = retrieve_settings(deployment_target)
-    settings.update(other_settings)
+    settings.update(runtime_settings)
 
     # adjust docker image settings
     if settings["BUILD_DOCKER_IMAGE"] and deployment_target == "minikube":
@@ -43,10 +43,10 @@ def deploy(deployment_target, components, output_dir=None, other_settings={}):
         # https://kubernetes.io/docs/setup/minikube/
         settings["IMAGE_PULL_POLICY"] = "IfNotPresent"
 
-    if other_settings.get("DOCKER_IMAGE_TAG"):
-        settings["DOCKER_IMAGE_TAG"] = ":"+other_settings["DOCKER_IMAGE_TAG"]
-    elif other_settings["BUILD_DOCKER_IMAGE"]:
-        settings["DOCKER_IMAGE_TAG"] = ":"+settings["TIMESTAMP"]
+    if runtime_settings.get("DOCKER_IMAGE_TAG"):
+        settings["DOCKER_IMAGE_TAG"] = ":" + runtime_settings["DOCKER_IMAGE_TAG"]
+    elif runtime_settings["BUILD_DOCKER_IMAGE"]:
+        settings["DOCKER_IMAGE_TAG"] = ":" + settings["TIMESTAMP"]
     else:
         settings["DOCKER_IMAGE_TAG"] = ":latest"
 
@@ -77,7 +77,7 @@ def deploy(deployment_target, components, output_dir=None, other_settings={}):
     for file_path in glob.glob("deploy/kubernetes/*.yaml") + glob.glob("deploy/kubernetes/*/*.yaml"):
         file_path = file_path.replace('deploy/kubernetes/', '')
 
-        input_base_dir = os.path.join(other_settings["BASE_DIR"], 'deploy/kubernetes')
+        input_base_dir = os.path.join(runtime_settings["BASE_DIR"], 'deploy/kubernetes')
         output_base_dir = os.path.join(settings["DEPLOYMENT_TEMP_DIR"], 'deploy/kubernetes')
 
         render(input_base_dir, file_path, settings, output_base_dir)
@@ -207,12 +207,13 @@ def docker_build(component_label, settings, custom_build_args=(), docker_image_n
     else:
         docker_build_command = docker_command_prefix
         docker_build_command += "docker build deploy/docker/%(COMPONENT_LABEL)s/ "
-        docker_build_command += (" ".join(custom_build_args) + " ") % params
+        docker_build_command += (" ".join(custom_build_args) + " ")
         if settings["FORCE_BUILD_DOCKER_IMAGE"]:
             docker_build_command += "--no-cache "
-        docker_build_command += "-t %(DOCKER_IMAGE_NAME)s " % params
-        docker_build_command += "-t %(DOCKER_IMAGE_NAME)s:latest " % params
-        docker_build_command += "-t %(DOCKER_IMAGE_NAME)s%(DOCKER_IMAGE_TAG)s " % params
+
+        docker_build_command += "-t %(DOCKER_IMAGE_NAME)s "
+        docker_build_command += "-t %(DOCKER_IMAGE_NAME)s:latest "
+        docker_build_command += "-t %(DOCKER_IMAGE_NAME)s%(DOCKER_IMAGE_TAG)s "
 
         run(docker_build_command % params, verbose=True)
 
@@ -221,7 +222,7 @@ def docker_build(component_label, settings, custom_build_args=(), docker_image_n
         docker_push_command = docker_command_prefix
         docker_push_command += "docker push %(DOCKER_IMAGE_NAME)s%(DOCKER_IMAGE_TAG)s" % params
         run(docker_push_command, verbose=True)
-
+        logger.info("==> Finished uploading image: %(DOCKER_IMAGE_NAME)s%(DOCKER_IMAGE_TAG)s" % params)
 
 def deploy_mongo(settings):
     print_separator("mongo")
