@@ -6,7 +6,8 @@ sudo apt-get install -y unzip \
     gcc \
     wget \
     python-dev \
-    openjdk-11-jdk
+    openjdk-11-jdk \
+    git
 
 set +x
 echo ==== Install and start docker service =====

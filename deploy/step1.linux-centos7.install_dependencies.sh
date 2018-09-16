@@ -5,7 +5,8 @@ sudo yum install -y unzip \
     gcc \
     wget \
     python-devel \
-    java-1.8.0-openjdk.x86_64
+    java-1.8.0-openjdk.x86_64 \
+    git
 
 set +x
 echo ==== Install and start docker service =====
