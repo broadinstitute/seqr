@@ -64,23 +64,21 @@ export CHANGE_MINIKUBE_NONE_USER=true
 export MINIKUBE_HOME=$HOME
 export KUBECONFIG=$HOME/.kube/config
 
-#sudo -E minikube start --vm-driver=none --apiserver-ips=127.0.0.1 --apiserver-name=localhost  # based on https://github.com/kubernetes/minikube/issues/2575
+echo 'sudo minikube stop' > stop_minikube.sh
+chmod 777 stop_minikube.sh
 
 echo 'sudo -E minikube start --vm-driver=none --kubernetes-version=v1.11.3
 sudo chown -R $USER $HOME/.kube
 sudo chgrp -R $USER $HOME/.kube
 sudo chown -R $USER $HOME/.minikube
-sudo chgrp -R $USER $HOME/.minikube' > start_minikube.sh
+sudo chgrp -R $USER $HOME/.minikube
+' > start_minikube.sh
 
 chmod 777 start_minikube.sh
 ./start_minikube.sh
 
 sudo minikube addons enable coredns
 sudo minikube addons disable kube-dns
-
-echo 'sudo minikube stop' > stop_minikube.sh
-chmod 777 stop_minikube.sh
-
 
 # There are DNS issues like https://github.com/kubernetes/minikube/issues/2027 on Unbuntu (and probably other systems)
 # when running with --vm-driver=none which result in DNS lookups not working inside pods for external web addresses.
