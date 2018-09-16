@@ -253,24 +253,27 @@ def deploy_phenotips(settings):
     elif settings["DELETE_BEFORE_DEPLOY"]:
         delete_pod("phenotips", settings)
 
-    run_in_pod("postgres",
-        "psql -U postgres postgres -c \"create role xwiki with CREATEDB LOGIN PASSWORD 'xwiki'\"" % locals(),
-        verbose=True,
-        errors_to_ignore=["already exists"],
-        deployment_target=deployment_target,
-    )
+    # init postgres
+    if not settings["ONLY_PUSH_TO_REGISTRY"]:
+        run_in_pod("postgres",
+            "psql -U postgres postgres -c \"create role xwiki with CREATEDB LOGIN PASSWORD 'xwiki'\"" % locals(),
+            verbose=True,
+            errors_to_ignore=["already exists"],
+            deployment_target=deployment_target,
+        )
 
-    run_in_pod("postgres",
-        "psql -U xwiki postgres -c 'create database xwiki'" % locals(),
-        verbose=True,
-        errors_to_ignore=["already exists"],
-        deployment_target=deployment_target,
-    )
+        run_in_pod("postgres",
+            "psql -U xwiki postgres -c 'create database xwiki'" % locals(),
+            verbose=True,
+            errors_to_ignore=["already exists"],
+            deployment_target=deployment_target,
+        )
 
-    run_in_pod("postgres",
-        "psql -U postgres postgres -c 'grant all privileges on database xwiki to xwiki'" % locals(),
-    )
+        run_in_pod("postgres",
+            "psql -U postgres postgres -c 'grant all privileges on database xwiki to xwiki'" % locals(),
+        )
 
+    # build container
     docker_build("phenotips", settings, ["--build-arg PHENOTIPS_SERVICE_PORT=%s" % phenotips_service_port])
 
     if settings["ONLY_PUSH_TO_REGISTRY"]:
