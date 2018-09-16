@@ -44,13 +44,13 @@ echo "*:*:*:*:$POSTGRES_PASSWORD" > ~/.pgpass
 chmod 600 ~/.pgpass
 
 # check if a settings backup exists
-LATEST_SETTINGS_BACKUP=$(ls -tr1 /mounted-bucket/settings_backups/seqr_${DEPLOYMENT_TYPE}_settings* | tail -n 1)
-if [[ -e "$LATEST_SETTINGS_BACKUP" ]]; then
-    echo Restoring $LATEST_SETTINGS_BACKUP
+#LATEST_SETTINGS_BACKUP=$(ls -tr1 /mounted-bucket/settings_backups/seqr_${DEPLOYMENT_TYPE}_settings* | tail -n 1)
+#if [[ -e "$LATEST_SETTINGS_BACKUP" ]]; then
+#    echo Restoring $LATEST_SETTINGS_BACKUP
 
-    # restore latest settings backup
-    tar -C / -xzf $LATEST_SETTINGS_BACKUP
-fi
+#    # restore latest settings backup
+#    tar -C / -xzf $LATEST_SETTINGS_BACKUP
+#fi
 
 # set up cron database backups
 echo 'SHELL=/bin/bash
