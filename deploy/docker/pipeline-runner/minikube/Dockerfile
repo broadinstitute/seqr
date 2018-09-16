@@ -64,6 +64,9 @@ RUN mkdir -p /hail/build/libs /hail/build/distributions \
     && gsutil cp gs://seqr-hail/hail-jar/hail-0.1-es-6.2.4-with-strip-chr-prefix.zip /hail/build/distributions/hail-python.zip \
     && gsutil cp gs://seqr-hail/hail-jar/hail-0.1-es-6.2.4-with-strip-chr-prefix.jar /hail/build/libs/hail-all-spark.jar
 
+# install jupyter
+RUN pip install --upgrade pip jupyter
+
 #   git clone --branch 0.1 https://github.com/broadinstitute/hail.git \
 #    && cd /hail \
 #    && ./gradlew -Dspark.version=2.0.2 shadowJar archiveZip
@@ -106,31 +109,21 @@ RUN /usr/bin/cpanm --notest JSON
 RUN /usr/bin/cpanm --notest DBD::SQLite
 RUN /usr/bin/cpanm --notest  List::MoreUtils
 
-# snapshot of LoFTEE code - copied from gs://gnomad-resources/loftee-beta/
-RUN gsutil -m cp -r gs://hail-common/vep/vep/loftee /vep
+RUN cp -r /hail-elasticsearch-pipelines/loftee /vep
 
 COPY minikube/vep-gcloud-grch38.properties /vep
 COPY minikube/vep-gcloud-grch37.properties /vep
 COPY shared/run_hail_vep85_GRCh37_vcf.sh /vep/run_hail_vep85_GRCh37_vcf.sh
 COPY shared/run_hail_vep85_GRCh38_vcf.sh /vep/run_hail_vep85_GRCh38_vcf.sh
 
+# install hail-elasticsearch-pipelines
+RUN git clone https://github.com/macarthur-lab/hail-elasticsearch-pipelines.git /hail-elasticsearch-pipelines
+
 # run VEP on the 1-variant VCF to create fasta.index file
 COPY shared/1var.vcf /vep/1var.vcf
 RUN /vep/run_hail_vep85_GRCh37_vcf.sh /vep/1var.vcf \
  && /vep/run_hail_vep85_GRCh38_vcf.sh /vep/1var.vcf
 
-
-WORKDIR /
-
-ARG DISABLE_CACHE=1
-
-# install hail-elasticsearch-pipelines
-RUN git clone https://github.com/macarthur-lab/hail-elasticsearch-pipelines.git
-
-RUN cp -r /hail-elasticsearch-pipelines/loftee /vep
-
-# install jupyter
-RUN pip install --upgrade pip jupyter
 
 ENV TERM=xterm
 ENV PYTHONPATH="$PYTHONPATH:/seqr:/seqr_settings:/hail-elasticsearch-pipelines"
