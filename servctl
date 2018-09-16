@@ -163,7 +163,8 @@ for command_name in [DEPLOY_COMMAND, DEPLOY_ALL_COMMAND]:
     sp.add_argument("-d", "--delete-before-deploy", action="store_true", help="run 'kubectl delete' on component(s) before deploying them")
     sp.add_argument("-b", "--build-docker-image", action="store_true", help="build the docker image for each component before deploying it. ")
     sp.add_argument("-f", "--force", action="store_true", help="same as -b and -d together. Also, forces docker image to be rebuilt from the beginning with --no-cache.")
-    sp.add_argument("-p", "--push-to-registry", action="store_true", help="push local docker image to a docker registry. The destination registry is determined by the "
+    g = sp.add_mutually_exclusive_group()
+    g.add_argument("-p", "--push-to-registry", action="store_true", help="push local docker image to a docker registry. The destination registry is determined by the "
         "DOCKER_IMAGE_PREFIX value in shared-settings.yaml. "
         "When deploying to minikube, specifying -b and not -p will build the docker image using minikube's docker instance. This will allow the image "
         "to be reused in local minikube deployments as long as this minikube instance exists. "
@@ -171,6 +172,7 @@ for command_name in [DEPLOY_COMMAND, DEPLOY_ALL_COMMAND]:
         "if this minikube instance is destroyed and recreated."
         "When deploying to gcloud-dev or gcloud-prod, -p is necessary to make an image available because google container engine clusters "
         "can only use images from the google container registry and/or public registries like dockerhub.")
+    g.add_argument("--only-push-to-registry", action="store_true", help="push local docker image to a docker registry and then stop, without deploying the component(s) to kubernetes.")
     sp.add_argument("-t", "--docker-image-tag", help="deploy docker image(s) with this tag. If -b also used, the built docker images will be tagged with this.")
     sp.add_argument("--reset-db", action="store_true", help="if deploying phenotips or seqr, delete and re-initialize their postgres databases")
     sp.add_argument("--restore-seqr-db-from-backup",
@@ -218,7 +220,8 @@ if args.command in [DEPLOY_COMMAND, DEPLOY_ALL_COMMAND]:
     other_settings["BUILD_DOCKER_IMAGE"] = True if args.build_docker_image or args.force else None
     other_settings["RESTORE_PHENOTIPS_DB_FROM_BACKUP"] = args.restore_phenotips_db_from_backup
     other_settings["RESTORE_SEQR_DB_FROM_BACKUP"] = args.restore_seqr_db_from_backup
-    other_settings["PUSH_TO_REGISTRY"] = bool(args.push_to_registry)
+    other_settings["PUSH_TO_REGISTRY"] = bool(args.push_to_registry) or bool(args.only_push_to_registry)
+    other_settings["ONLY_PUSH_TO_REGISTRY"] = bool(args.only_push_to_registry)
     other_settings["DOCKER_IMAGE_TAG"] = args.docker_image_tag
     other_settings["RESET_DB"] = bool(args.reset_db)
 

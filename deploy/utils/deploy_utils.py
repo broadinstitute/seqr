@@ -179,6 +179,9 @@ def _wait_until_pod_is_ready(component_label, deployment_target):
 
 
 def _deploy_pod(component_label, settings, wait_until_pod_is_running=True, wait_until_pod_is_ready=False):
+    if settings["ONLY_PUSH_TO_REGISTRY"]:
+        return
+
     run(" ".join([
         "kubectl apply",
         "-f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/"+component_label+"/"+component_label+".%(DEPLOY_TO_PREFIX)s.yaml"
@@ -269,6 +272,9 @@ def deploy_phenotips(settings):
     )
 
     docker_build("phenotips", settings, ["--build-arg PHENOTIPS_SERVICE_PORT=%s" % phenotips_service_port])
+
+    if settings["ONLY_PUSH_TO_REGISTRY"]:
+        return
 
     _deploy_pod("phenotips", settings, wait_until_pod_is_ready=True)
 
@@ -391,6 +397,9 @@ def deploy_external_connector(settings, connector_name):
     if connector_name not in ["mongo", "elasticsearch"]:
         raise ValueError("Invalid connector name: %s" % connector_name)
 
+    if settings["ONLY_PUSH_TO_REGISTRY"]:
+        return
+
     print_separator("external-%s-connector" % connector_name)
 
     run(("kubectl apply -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/external-connectors/" % settings) + "external-%(connector_name)s.yaml" % locals())
@@ -412,6 +421,9 @@ def deploy_seqr(settings):
             ],
             docker_image_name_suffix="-for-minikube" if settings["DEPLOY_TO"] == "minikube" else "",
         )
+
+    if settings["ONLY_PUSH_TO_REGISTRY"]:
+        return
 
     restore_seqr_db_from_backup = settings.get("RESTORE_SEQR_DB_FROM_BACKUP")
     reset_db = settings.get("RESET_DB")
@@ -606,6 +618,9 @@ def deploy_init_cluster(settings):
 
 
 def deploy_config_map(settings):
+    if settings["ONLY_PUSH_TO_REGISTRY"]:
+        return
+
     # write out a ConfigMap file
     configmap_file_path = os.path.join(settings["DEPLOYMENT_TEMP_DIR"], "deploy/kubernetes/all-settings.properties")
     with open(configmap_file_path, "w") as f:
@@ -624,6 +639,9 @@ def deploy_config_map(settings):
 
 def deploy_secrets(settings):
     """Deploys or updates k8s secrets."""
+
+    if settings["ONLY_PUSH_TO_REGISTRY"]:
+        return
 
     print_separator("secrets")
 
@@ -681,6 +699,9 @@ def deploy_secrets(settings):
 
 
 def deploy_elasticsearch_sharded(component, settings):
+    if settings["ONLY_PUSH_TO_REGISTRY"]:
+        return
+
     print_separator(component)
 
     if component == "es-master":
