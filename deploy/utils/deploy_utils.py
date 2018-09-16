@@ -412,7 +412,8 @@ def deploy_seqr(settings):
     print_separator("seqr")
 
     if settings["BUILD_DOCKER_IMAGE"]:
-        seqr_git_hash = run("git log -1 --pretty=%h").strip()
+        seqr_git_hash = run("git log -1 --pretty=%h", errors_to_ignore=["Not a git repository"])
+        seqr_git_hash = (":" + seqr_git_hash.strip()) if seqr_git_hash is not None else ""
 
         docker_build("seqr",
             settings,
@@ -420,7 +421,7 @@ def deploy_seqr(settings):
                 "--build-arg SEQR_SERVICE_PORT=%s" % settings["SEQR_SERVICE_PORT"],
                 "--build-arg SEQR_UI_DEV_PORT=%s" % settings["SEQR_UI_DEV_PORT"],
                 "-f deploy/docker/seqr/%s/Dockerfile" % settings["DEPLOY_TO_PREFIX"],
-                "-t %(DOCKER_IMAGE_NAME)s:" + seqr_git_hash,
+                "-t %(DOCKER_IMAGE_NAME)s" + seqr_git_hash,
             ],
             docker_image_name_suffix="-for-minikube" if settings["DEPLOY_TO"] == "minikube" else "",
         )

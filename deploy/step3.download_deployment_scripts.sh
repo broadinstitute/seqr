@@ -3,13 +3,11 @@
 echo ==== download seqr deployment code, install python dependencies =====
 set -x
 
-export SEQR_BRANCH=master
+export SEQR_BRANCH=linux-install-improvements
 
-curl -Lo seqr.zip https://github.com/macarthur-lab/seqr/archive/${SEQR_BRANCH}.zip
-unzip -o -d . seqr.zip
-rm seqr.zip
-
-cd seqr-${SEQR_BRANCH}/
+git clone https://github.com/macarthur-lab/seqr.git
+cd seqr/
+git checkout $SEQR_BRANCH
 
 curl -Lo virtualenv-16.0.0.tar.gz https://pypi.python.org/packages/source/v/virtualenv/virtualenv-16.0.0.tar.gz
 tar xzf virtualenv-16.0.0.tar.gz
