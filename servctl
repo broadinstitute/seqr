@@ -214,7 +214,7 @@ runtime_settings = {}
 runtime_settings["BASE_DIR"] = os.path.abspath(os.path.dirname(__file__))
 
 if args.command in [DEPLOY_COMMAND, DEPLOY_ALL_COMMAND]:
-    # transfer args to other_settings
+    # transfer args to runtime_settings
     runtime_settings['FORCE_BUILD_DOCKER_IMAGE'] = bool(args.force)
     runtime_settings["DELETE_BEFORE_DEPLOY"] = True if args.delete_before_deploy or args.force else None
     runtime_settings["BUILD_DOCKER_IMAGE"] = True if args.build_docker_image or args.force else None
@@ -275,7 +275,7 @@ if args.command in [DEPLOY_COMMAND, DEPLOY_ALL_COMMAND]:
         #if email:
         #    password = getpass("seqr superuser password (hidden when typed): ")
 
-    deploy(args.deployment_target, components=deployable_components, other_settings=runtime_settings)
+    deploy(args.deployment_target, components=deployable_components, runtime_settings=runtime_settings)
 
     #if email:
     #    create_user(args.deployment_target, email, password)
