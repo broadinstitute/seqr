@@ -117,8 +117,8 @@ set -x
 if (( $(sysctl -b vm.max_map_count) < 262144 )); then
 
     echo '
-    vm.max_map_count=262144
-    ' | sudo tee -a /etc/sysctl.conf
+vm.max_map_count=262144
+' | sudo tee -a /etc/sysctl.conf
 
     sudo sysctl -w vm.max_map_count=262144   # avoid elasticsearch error: "max virtual memory areas vm.max_map_count [65530] is too low, increase to at least [262144]"
 
