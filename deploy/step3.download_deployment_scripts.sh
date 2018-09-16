@@ -20,3 +20,5 @@ pip install -r deploy/deploy-requirements.txt
 
 echo "source venv/bin/activate" > activate_virtualenv.sh
 chmod 666 activate_virtualenv.sh  # this script must be sourced rather than executed
+
+set +x

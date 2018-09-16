@@ -16,8 +16,8 @@ minikube status
 
 set +x
 echo ==== deploy all seqr components =====
-set -x
 
 source venv/bin/activate
 
 ./servctl deploy-all minikube
+
