@@ -109,6 +109,9 @@ RUN /usr/bin/cpanm --notest JSON
 RUN /usr/bin/cpanm --notest DBD::SQLite
 RUN /usr/bin/cpanm --notest  List::MoreUtils
 
+# DISABLE_CACHE work-around to force git pull on every docker build, based on https://github.com/docker/docker/issues/1996
+ARG DISABLE_CACHE=1
+
 # install hail-elasticsearch-pipelines
 RUN git clone https://github.com/macarthur-lab/hail-elasticsearch-pipelines.git /hail-elasticsearch-pipelines
 RUN cp -r /hail-elasticsearch-pipelines/loftee /vep

@@ -85,10 +85,11 @@ RUN curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s
     && mv ./kubectl /usr/local/bin/kubectl
 
 
-# update seqr repo
+
 # DISABLE_CACHE work-around to force git pull on every docker build, based on https://github.com/docker/docker/issues/1996
 ARG DISABLE_CACHE=1
 
+# update seqr repo
 RUN git clone -q https://github.com/macarthur-lab/seqr
 
 WORKDIR /seqr
