@@ -51,16 +51,10 @@ RUN curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s
 #    && wget http://hgdownload.cse.ucsc.edu/goldenPath/hg38/bigZips/hg38.fa.gz \
 #    && wget http://hgdownload.cse.ucsc.edu/goldenPath/hg19/liftOver/hg19ToHg38.over.chain.gz
 
-WORKDIR /
-
-
 # install hail-elasticsearch-pipelines
 
-RUN git clone https://github.com/macarthur-lab/hail-elasticsearch-pipelines.git
+RUN git clone https://github.com/macarthur-lab/hail-elasticsearch-pipelines.git /hail-elasticsearch-pipelines
 
-
-# install jupyter
-RUN pip install --upgrade pip jupyter
 
 ENV TERM=xterm
 ENV PYTHONPATH="$PYTHONPATH:/seqr:/seqr_settings:/hail-elasticsearch-pipelines"
