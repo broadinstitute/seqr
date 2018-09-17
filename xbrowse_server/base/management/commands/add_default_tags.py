@@ -1,8 +1,7 @@
 import sys
 from django.core.management.base import BaseCommand
 
-from xbrowse_server.base.model_utils import get_or_create_xbrowse_model, update_xbrowse_model
-from xbrowse_server.base.models import Project, ProjectTag, Family 
+from xbrowse_server.base.models import Project, ProjectTag
 
 
 class Command(BaseCommand):
@@ -41,7 +40,10 @@ class Command(BaseCommand):
 
             get_or_create_project_tag(project, order=10.3, category="Collaboration", original_names=[], tag_name="Send for Sanger validation", description="Send for Sanger validation", color='#f1af5f')
             get_or_create_project_tag(project, order=10.31, category="Collaboration", original_names=[], tag_name="Sanger validated", description="Confirmed by Sanger sequencing", color='#b2df8a')
-            get_or_create_project_tag(project, order=10.32, category="Collaboration", original_names=[], tag_name="Sanger did not validate", description="Sanger did not validate", color='#823a3a')
+            get_or_create_project_tag(project, order=10.32, category="Collaboration", original_names=["Sanger did not validate"], tag_name="Sanger did not confirm", description="Sanger did not validate", color='#823a3a')
+
+            get_or_create_project_tag(project, order=10.41, category="Collaboration", tag_name="Confident AR one hit", description="To mark a variant/gene where one disease causing variant has been identified in a KNOWN disease gene that is consistent with the patient's phenotype - but a second variant is needed. These families may be candidates for WGS or other approaches.", color='#764080')
+            get_or_create_project_tag(project, order=10.42, category="Collaboration", tag_name="Analyst high priority", description="To mark a variant that is viewed by the analyst as a likely disease-causing variant but further review is needed by a clinician and/or collaborator. These tags should be transitioned to more appropriate tags prior to progress reporting.", color='#e46b2e')
 
             get_or_create_project_tag(project, order=10.5, category="Collaboration", tag_name="Excluded", description="To mark a variant and/or gene you previously reviewed but do not think it contributing to the phenotype in this case. To help other members of your team (and yourself), please consider also adding a note with details of why you reprioritized this variant.", color='#555555')
 
@@ -95,14 +97,13 @@ def get_or_create_project_tag(project, order, category, tag_name, description, c
             project_tag = tags[0]
 
     if project_tag is None:
-        project_tag, created = get_or_create_xbrowse_model(ProjectTag, project=project, tag=tag_name)
+        project_tag, created = ProjectTag.objects.get_or_create(project=project, tag=tag_name)
         if created:
             print("Created new tag: %s :  %s" % (project, tag_name))
 
-    update_xbrowse_model(
-        project_tag,
-        order=order,
-        category=category,
-        tag=tag_name,
-        title=description,
-        color=color)
+    project_tag.order = order
+    project_tag.category = category
+    project_tag.tag = tag_name
+    project_tag.title = description
+    project_tag.color = color
+    project_tag.save()
