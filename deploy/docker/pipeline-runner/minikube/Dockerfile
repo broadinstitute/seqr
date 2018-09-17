@@ -114,15 +114,20 @@ ARG DISABLE_CACHE=1
 
 # install hail-elasticsearch-pipelines
 RUN git clone https://github.com/macarthur-lab/hail-elasticsearch-pipelines.git /hail-elasticsearch-pipelines
-RUN cp -r /hail-elasticsearch-pipelines/loftee /vep
+RUN cp -r /hail-elasticsearch-pipelines/loftee /vep \
+    && cp /hail-elasticsearch-pipelines/gcloud_dataproc/vep_init/vep-gcloud-grch38.properties /vep/vep-gcloud-grch38.properties \
+    && cp /hail-elasticsearch-pipelines/gcloud_dataproc/vep_init/vep-gcloud-grch37.properties /vep/vep-gcloud-grch37.properties \
+    && cp /hail-elasticsearch-pipelines/gcloud_dataproc/vep_init/run_hail_vep85_GRCh37_vcf.sh /vep/run_hail_vep85_GRCh37_vcf.sh \
+    && cp /hail-elasticsearch-pipelines/gcloud_dataproc/vep_init/run_hail_vep85_GRCh38_vcf.sh /vep/run_hail_vep85_GRCh38_vcf.sh \
+    && cp /hail-elasticsearch-pipelines/gcloud_dataproc/vep_init/1var.vcf /vep/1var.vcf
 
-COPY minikube/vep-gcloud-grch38.properties /vep
-COPY minikube/vep-gcloud-grch37.properties /vep
-COPY shared/run_hail_vep85_GRCh37_vcf.sh /vep/run_hail_vep85_GRCh37_vcf.sh
-COPY shared/run_hail_vep85_GRCh38_vcf.sh /vep/run_hail_vep85_GRCh38_vcf.sh
+#COPY minikube/vep-gcloud-grch38.properties /vep/vep-gcloud-grch38.properties
+#COPY minikube/vep-gcloud-grch37.properties /vep/vep-gcloud-grch37.properties
+#COPY shared/run_hail_vep85_GRCh37_vcf.sh /vep/run_hail_vep85_GRCh37_vcf.sh
+#COPY shared/run_hail_vep85_GRCh38_vcf.sh /vep/run_hail_vep85_GRCh38_vcf.sh
+#COPY shared/1var.vcf /vep/1var.vcf
 
 # run VEP on the 1-variant VCF to create fasta.index file
-COPY shared/1var.vcf /vep/1var.vcf
 RUN /vep/run_hail_vep85_GRCh37_vcf.sh /vep/1var.vcf \
  && /vep/run_hail_vep85_GRCh38_vcf.sh /vep/1var.vcf
 
