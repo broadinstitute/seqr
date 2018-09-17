@@ -7,7 +7,7 @@ from deploy.utils.servctl_utils import check_kubernetes_context
 logger = logging.getLogger(__name__)
 
 
-def load_dataset(deployment_target, project_name, genome_version, sample_type, dataset_type, vcf, **kwargs):
+def load_dataset(deployment_target, project_name, genome_version, sample_type, dataset_type, vcf, memory_to_use=None, cpu_limit=None, **kwargs):
     pod_name = get_pod_name('pipeline-runner', deployment_target=deployment_target)
 
     additional_load_command_args = "  ".join("--%s '%s'" % (key.lower().replace("_", "-"), value) for key, value in kwargs.items() if value is not None)
@@ -19,13 +19,13 @@ def load_dataset(deployment_target, project_name, genome_version, sample_type, d
             vcf = os.path.basename(vcf)
 
         total_memory = psutil.virtual_memory().total - 6*10**9  # leave 6Gb for other processes
-        memory_to_use = "%sG" % (total_memory / 2 / 10**9)  # divide available memory evenly between spark driver & executor
-        cpus_to_use = max(1, psutil.cpu_count() / 2)
-        # --num-executors %(cpus_to_use)s \
+        memory_to_use = "%sG" % (total_memory / 2 / 10**9) if memory_to_use is None else memory_to_use # divide available memory evenly between spark driver & executor
+        cpu_limit = max(1, psutil.cpu_count() / 2) if cpu_limit is None else cpu_limit
         load_command = """/hail-elasticsearch-pipelines/run_hail_locally.sh \
             --driver-memory %(memory_to_use)s \
             --executor-memory %(memory_to_use)s \
             hail_scripts/v01/load_dataset_to_es.py \
+                --cpu-limit %(cpu_limit)s \
                 --genome-version %(genome_version)s \
                 --project-guid %(project_name)s \
                 --sample-type %(sample_type)s \
@@ -54,7 +54,7 @@ def load_dataset(deployment_target, project_name, genome_version, sample_type, d
     run_in_pod(pod_name, load_command, verbose=True)
 
 
-def load_example_project(deployment_target, genome_version="37"):
+def load_example_project(deployment_target, genome_version="37", cpu_limit=None):
     """Load example project
 
     Args:
@@ -89,6 +89,7 @@ def load_example_project(deployment_target, genome_version="37"):
         genome_version=genome_version,
         sample_type="WES",
         dataset_type="VARIANTS",
+        cpu_limit=cpu_limit,
         vcf="https://storage.googleapis.com/seqr-reference-data/test-projects/%(vcf_filename)s" % locals())
 
 
