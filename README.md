@@ -21,7 +21,7 @@ seqr consists of the following components:
 - kibana - dashboard and visual interface for elasticsearch.
 - mongo - legacy NoSQL database originally used for variant callsets and still used now to store some reference data and logs.
 
-These comopnents can be deployed on local or cloud-based hardware.
+These components can be deployed on local or cloud-based hardware.
 A laptop with 4 CPUs and 16G RAM may be sufficient for looking at small datasets.
 The seqr production instance (seqr.broadinstitute.org) currently uses two n1-highmem-4 (4 vCPUs, 26 GB memory) servers on google cloud + separate instances for the elasticsearch database.
 The pipeline for loading new datasets uses Spark to parallelelize VEP and other annotation steps. This pipeline can run on the same machine 
@@ -31,10 +31,11 @@ that's hosting other seqr components, but a separate Spark cluster will make the
 ## Install
 
 Whether installing seqr on a laptop, on-prem, or cloud VMs, we use Docker images and Kubernetes to automate the deployment steps and isolate them from the operating system.
-Users that are very familiar with the individual seqr components may want to install them directly on host systems. This provides more control, but requires more work up front. 
-If you decide to go this route, the [Dockerfiles](https://github.com/macarthur-lab/seqr/tree/master/deploy/docker) can be useful as a list the steps for installing each component.  
-In most cases, we recommend the docker/kubernetes approach because:  1) deployment avoids manual steps as much as possible 2) as seqr evolves, it's easier to roll out new components or move around existing components if they outgrow existing hardware.   
-The instructions below cover local and cloud-based deployments with docker/kubernetes.
+Users that are very familiar with the components that make up seqr may want to install them directly on host systems. This provides maximum control, but requires more work up front. 
+If you decide to go this route, the [Dockerfiles](https://github.com/macarthur-lab/seqr/tree/master/deploy/docker) can be useful as a list of steps for installing each component.  
+In most cases, we recommend the docker/kubernetes approach because:  1) it automates deployment as much as possible 2) as seqr evolves, this makes it easier to roll out new 
+components or move around existing components if they outgrow existing hardware.   
+The instructions below cover local deployments using Minikube, but are also relevant for cloud-based deployments.
 
 #### Step 1: Install Kubernetes
 
@@ -42,11 +43,9 @@ Local and on-prem installations can use [MiniKube](https://kubernetes.io/docs/se
 For deploying to the cloud, we use Google Cloud Container Engine (GKE), but many other cloud providers also have native kubernetes support.
 A list of other options can be found at: https://kubernetes.io/docs/setup/pick-right-solution/
 
-##### MiniKube
-
 Prereqs: `python2.7`, `sudo` root access. MacOS also requires [homebrew](http://brew.sh/) package manager. 
 
-Run this command to install `gcc`, `java1.8`, `minikube`, `kubectl` and dependencies (using `brew`, `yum` or `apt-get`):
+Run the following command to install `gcc`, `java1.8`, `minikube`, `kubectl` and dependencies (using `brew`, `yum` or `apt-get`):
 
 ###### MacOS
 ```
@@ -67,14 +66,14 @@ SCRIPT=step1.linux-ubuntu18.install_dependencies.sh && curl -L 'http://raw.githu
 
 #### Step 2: Install and start elasticsearch
 
-Run this script to start an elasticsearch instance in the current directory. 
+Run this script to start an elasticsearch instance in the current directory: 
 ```
 SCRIPT=step2.install_and_start_elasticsearch.sh && curl -L 'http://raw.githubusercontent.com/macarthur-lab/seqr/master/deploy/$SCRIPT' -o $SCRIPT && chmod 777 $SCRIPT && source $SCRIPT
 ```
 
 #### Step 3: Download seqr deployment scripts
 
-Open a new terminal and run this script to download seqr deployment scripts.
+In a new terminal, run this script to download seqr deployment scripts:
 ```
 SCRIPT=step3.download_deployment_scripts.sh && curl -L 'http://raw.githubusercontent.com/macarthur-lab/seqr/master/deploy/$SCRIPT' -o $SCRIPT && chmod 777 $SCRIPT && source $SCRIPT
 ```
@@ -96,7 +95,7 @@ Optionally edit deployment settings before proceeding to step 4:
 SCRIPT=step4.install_seqr_on_minikube.sh && curl -L 'http://raw.githubusercontent.com/macarthur-lab/seqr/master/deploy/$SCRIPT' -o $SCRIPT && chmod 777 $SCRIPT && source $SCRIPT
 ```
 
-This should run for several hours to deploy all components and load an example project.
+This may run for several hours to deploy all components and load reference data.
 
 Once it's done with the deployment steps, you can create a super-user account by running:
  
