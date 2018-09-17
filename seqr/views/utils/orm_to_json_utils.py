@@ -457,7 +457,7 @@ def get_json_for_locus_list(locus_list, user):
     return _get_json_for_model(locus_list, get_json_for_models=get_json_for_locus_lists, user=user, include_genes=True)
 
 
-def get_json_for_genes(genes, user=None, add_notes=False):
+def get_json_for_genes(genes, user=None, add_notes=False, add_expression=False):
     """Returns a JSON representation of the given list of GeneInfo.
 
     Args:
@@ -479,6 +479,9 @@ def get_json_for_genes(genes, user=None, add_notes=False):
             result.update(_get_json_for_model(dbnsfp))
         if add_notes:
             result['notes'] = gene_notes_json.get(result['geneId'], [])
+        if add_expression:
+            expression = gene.geneexpression_set.first()  # TODO confirm no duplicates
+            result['expression'] = expression.expression_values if expression else {}
         result.update({
             'omimPhenotypes': _get_json_for_models(gene.omim_set.all()),
             'constraints': _get_json_for_model(constraint, process_result=_add_total_constraint_count) if constraint else {},
@@ -487,6 +490,8 @@ def get_json_for_genes(genes, user=None, add_notes=False):
     prefetch_related_objects(genes, 'dbnsfpgene_set')
     prefetch_related_objects(genes, 'omim_set')
     prefetch_related_objects(genes, 'geneconstraint_set')
+    if add_expression:
+        prefetch_related_objects(genes, 'geneexpression_set')
 
     return _get_json_for_models(genes, process_result=_process_result)
 

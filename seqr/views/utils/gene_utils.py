@@ -1,13 +1,10 @@
 from reference_data.models import GeneInfo
 from seqr.views.utils.orm_to_json_utils import get_json_for_genes, get_json_for_gene
-from xbrowse_server.mall import get_reference
 
 
 def get_gene(gene_id, user):
     gene = GeneInfo.objects.get(gene_id=gene_id)
-    gene_json = get_json_for_gene(gene, user=user, add_notes=True)
-    # TODO load expression data into postgres reference_data
-    gene_json['expression'] = get_reference().get_tissue_expression_display_values(gene_id)
+    gene_json = get_json_for_gene(gene, user=user, add_notes=True, add_expression=True)
     return gene_json
 
 
@@ -17,5 +14,5 @@ def get_genes(gene_ids):
 
 
 def get_gene_symbols_to_gene_ids(gene_symbols):
-    genes = GeneInfo.objects.filter(gene_symbol__in=gene_symbols)
+    genes = GeneInfo.objects.filter(gene_symbol__in=gene_symbols).only('gene_symbol', 'gene_id')
     return {gene.gene_symbol: gene.gene_id for gene in genes}
