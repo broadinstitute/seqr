@@ -161,7 +161,7 @@ class ElasticsearchDatastore(datastore.Datastore):
                 indivs_to_consider = []
 
         if family_id is not None:
-            family_individual_ids = [i.indiv_id for i in Individual.objects.filter(family__family_id=family_id).only("indiv_id")]
+            family_individual_ids = [i.indiv_id for i in Individual.objects.filter(family__family_id=family_id, family__project__project_id=project_id).only("indiv_id")]
         else:
             family_individual_ids = [i.indiv_id for i in Individual.objects.filter(family__project__project_id=project_id).only("indiv_id")]
 

@@ -56,7 +56,7 @@ spec:
         resources:
           requests:
             memory: "8Gi"
-            cpu: "1"
+            cpu: "0.5"
           limits:
             memory: "20Gi"
             cpu: "8"
@@ -105,6 +105,8 @@ spec:
           value: "{{ PHENOTIPS_SERVICE_HOSTNAME }}"
         - name: ELASTICSEARCH_SERVICE_HOSTNAME
           value: "{{ ELASTICSEARCH_SERVICE_HOSTNAME }}"
+        - name: KIBANA_SERVICE_HOSTNAME
+          value: "{{ KIBANA_SERVICE_HOSTNAME }}"
         - name: REDIS_SERVICE_HOSTNAME
           value: "{{ REDIS_SERVICE_HOSTNAME }}"
         - name: SEQR_SERVICE_PORT

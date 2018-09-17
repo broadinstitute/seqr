@@ -89,6 +89,7 @@ RUN /usr/bin/cpanm --notest PerlIO::gzip
 RUN /usr/bin/cpanm --notest DBI
 RUN /usr/bin/cpanm --notest CGI
 RUN /usr/bin/cpanm --notest JSON
+RUN /usr/bin/cpanm --notest DBD::SQLite
 
 # run VEP on the 1-variant VCF to create fasta.index file
 RUN gsutil cp gs://hail-common/vep/vep/1var.vcf /vep  \

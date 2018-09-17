@@ -119,9 +119,14 @@ def update_reference_data(deployment_target):
     run_in_pod(pod_name, "tar xzf /seqr/data/reference_data/seqr-resource-bundle.tar.gz -C /seqr/data/reference_data", verbose=True)
     run_in_pod(pod_name, "rm /seqr/data/reference_data/seqr-resource-bundle.tar.gz")
 
+    # load legacy resources
     run_in_pod(pod_name, "git checkout dev")
     run_in_pod(pod_name, "git pull")
     run_in_pod(pod_name, "python -u manage.py load_resources", verbose=True)
+
+    run_in_pod(pod_name, "mkdir -p /seqr/data/reference_data/omim")
+    run_in_pod(pod_name, "cp /tmp/genemap2.txt /seqr/data/reference_data/omim/")
+    run_in_pod(pod_name, "python -u manage.py load_omim", verbose=True)
 
 
 def create_user(deployment_target, email=None, password=None):

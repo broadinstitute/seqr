@@ -126,6 +126,18 @@ class GeneConstraint(models.Model):
         json_fields = ['mis_z', 'mis_z_rank', 'pLI', 'pLI_rank']
 
 
+class GeneExpression(models.Model):
+    GTEX_TISSUE_TYPES = {
+        'adipose_tissue', 'adrenal_gland', 'whole_blood', 'cells_-_ebv-transformed_lymphocytes',
+        'blood_vessel', 'brain', 'breast',  'colon', 'esophagus', 'heart', 'liver', 'kidney', 'lung', 'muscle',
+        'nerve', 'pancreas', 'ovary', 'pituitary', 'prostate', 'salivary_gland', 'cells_-_transformed_fibroblasts',
+        'skin', 'small_intestine', 'spleen', 'stomach', 'testis', 'thyroid', 'uterus', 'vagina'
+    }  # 'bladder', 'cells_-_leukemia_cell_line_(cml)', 'cervix_uteri', 'fallopian_tube' - excluded because too few samples or not relevant
+
+    gene = models.ForeignKey(GeneInfo, on_delete=models.CASCADE)
+    expression_values = models.TextField(null=True, blank=True)
+
+
 class Omim(models.Model):
     MAP_METHOD_CHOICES = (
         ('1', 'the disorder is placed on the map based on its association with a gene, but the underlying defect is not known.'),

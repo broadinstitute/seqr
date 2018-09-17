@@ -3,10 +3,10 @@ This directory contains seqr pages that are built with React.js, Redux, and Sema
 
 **Dependencies**
 
-1. install `node` and `npm` 
+1. install `node` and `npm`
 2. install javascript dependencies, run:
 ```
-npm install 
+npm install
 ```
 
 **Build**
@@ -59,7 +59,7 @@ The production build can be committed to github and deployed to the production s
 On the production server, run:
 
 ```
-python manage.py collectstatic 
+python manage.py collectstatic
 ```
 to copy the compiled html, js and other files to the Django static web directory so that Django will serve them as static files.
 
@@ -67,5 +67,5 @@ to copy the compiled html, js and other files to the Django static web directory
 ---
 
 NOTE: The build configuration was initially created with `create-react-app` and then "ejected".
-Although the configuration has been customized, it's similar enough to the original to allow 
-comparison and copying of changes from the latest `create-react-app` releases. 
+Although the configuration has been customized, it's similar enough to the original to allow
+comparison and copying of changes from the latest `create-react-app` releases.
