@@ -36,12 +36,3 @@ echo ==== Install java 1.8 =====
 brew tap caskroom/versions
 brew cask install java8
 
-echo ==== Install and start elasticsearch =====
-
-ELASTICSEARCH_VERSION=elasticsearch-6.4.0
-
-curl -L http://artifacts.elastic.co/downloads/elasticsearch/${ELASTICSEARCH_VERSION}.tar.gz -o ${ELASTICSEARCH_VERSION}.tar.gz
-tar xzf ${ELASTICSEARCH_VERSION}.tar.gz
-
-ES_JAVA_OPTS="-Xms3900m -Xmx3900m" ./${ELASTICSEARCH_VERSION}/bin/elasticsearch -E network.host=0.0.0.0
-
