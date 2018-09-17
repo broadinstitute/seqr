@@ -58,4 +58,4 @@ class Command(BaseCommand):
             try:
                 update_gtex()
             except Exception as e:
-                logger.error("unable to update human phenotype ontology: {}".format(e))
+                logger.error("unable to update gtex: {}".format(e))
