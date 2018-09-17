@@ -22,7 +22,7 @@ def get_es_client():
     return elasticsearch.Elasticsearch(host=settings.ELASTICSEARCH_SERVICE_HOSTNAME)
 
 
-def get_es_variants(search_model, individuals):
+def get_es_variants(search_model, individuals, user=None):
     # if search_model.results:
     #     return json.loads(search_model.results)
 
@@ -78,13 +78,14 @@ def get_es_variants(search_model, individuals):
     if search.get('inheritance'):
         es_search = es_search.filter(_genotype_filter(search['inheritance'], individuals, samples_by_id))
 
+    # TODO sort and pagination
+    es_search = es_search.sort(*_get_sort(search.get('sort'), user))
+    es_search = es_search[0:100]
+
     # Only return relevant fields
     field_names = _get_query_field_names(samples_by_id)
     es_search = es_search.source(field_names)
 
-    # TODO sort and pagination
-    es_search = es_search.sort('xpos')
-    es_search = es_search[0:100]
     logger.info(json.dumps(es_search.to_dict()))
 
     response = es_search.execute()
@@ -192,7 +193,7 @@ POPULATIONS = {
         'AN': 'AN',
     },
     'topmed': {
-        'no_popmax': True,
+        'use_default_field_suffix': True,
     },
     'g1k': {
         'AF': 'g1k_POPMAX_AF',
@@ -206,6 +207,22 @@ POPULATIONS = {
     'gnomad_exomes': {},
     'gnomad_genomes': {},
 }
+POPULATION_FIELD_CONFIGS = {
+    'AF': {'fields': ['AF_POPMAX_OR_GLOBAL', 'AF_POPMAX'], 'format_value': float},
+    'AC': {},
+    'AN': {},
+    'Hom': {},
+    'Hemi': {},
+}
+
+
+def _get_pop_freq_key(population, freq_field):
+    pop_config = POPULATIONS[population]
+    field_config = POPULATION_FIELD_CONFIGS[freq_field]
+    freq_suffix = freq_field
+    if field_config.get('fields') and not pop_config.get('use_default_field_suffix'):
+        freq_suffix = field_config['fields'][-1]
+    pop_config.get(freq_field) or '{}_{}'.format(population, freq_suffix)
 
 
 def _pop_freq_filter(filter_key, value):
@@ -215,19 +232,14 @@ def _pop_freq_filter(filter_key, value):
 def _frequency_filter(frequencies):
     q = Q()
     for pop, freqs in frequencies.items():
-        pop_config = POPULATIONS[pop]
         if freqs.get('af'):
-            filter_key = pop_config.get('AF') or '{}_{}'.format(pop, 'AF' if pop_config.get('no_popmax') else 'AF_POPMAX')
-            q &= _pop_freq_filter(filter_key, freqs['af'])
+            q &= _pop_freq_filter(_get_pop_freq_key(pop, 'AF'), freqs['af'])
         elif freqs.get('ac'):
-            filter_key = pop_config.get('AC') or '{}_AC'.format(pop)
-            q &= _pop_freq_filter(filter_key, freqs['ac'])
+            q &= _pop_freq_filter(_get_pop_freq_key(pop, 'AC'), freqs['ac'])
 
         if freqs.get('hh'):
-            hom_filter_key = pop_config.get('Hom') or '{}_Hom'.format(pop)
-            hemi_filter_key = pop_config.get('Hemi') or '{}_Hemi'.format(pop)
-            q &= _pop_freq_filter(hom_filter_key, freqs['hh'])
-            q &= _pop_freq_filter(hemi_filter_key, freqs['hh'])
+            q &= _pop_freq_filter(_get_pop_freq_key(pop, 'Hom'), freqs['hh'])
+            q &= _pop_freq_filter(_get_pop_freq_key(pop, 'Hemi'), freqs['hh'])
     return q
 
 
@@ -313,6 +325,58 @@ def _build_or_filter(op, filters):
     return q
 
 
+PATHOGENICTY_SORT_KEY = 'PATHOGENICITY'
+PATHOGENICTY_HGMD_SORT_KEY = 'PATHOGENICITY_HGMD'
+SORT_FIELDS = {
+    'FAMILY_GUID': '',
+    'XPOS': 'xpos',
+    PATHOGENICTY_SORT_KEY: {
+        '_script': {
+            'type': 'number',
+            'script': {
+               'source': """
+                    if (doc['clinvar_clinical_significance'].empty ) {
+                        return 2;
+                    }
+                    String clinsig = doc['clinvar_clinical_significance'].value;
+                    if (clinsig.indexOf('Pathogenic') >= 0 || clinsig.indexOf('Likely_pathogenic') >= 0) {
+                        return 0;
+                    } else if (clinsig.indexOf('Benign') >= 0 || clinsig.indexOf('Likely_benign') >= 0) {
+                        return 3;
+                    }
+                    return 1;
+               """
+            }
+        }
+    },
+    PATHOGENICTY_HGMD_SORT_KEY: {
+        '_script': {
+            'type': 'number',
+            'script': {
+               'source': "!doc['hgmd_class'].empty && doc['hgmd_class'].value == 'DM') ? 0 : 1"
+            }
+        }
+    },
+    'IN_OMIM': '',
+    'PROTEIN_CONSEQUENCE': 'mainTranscript_major_consequence_rank',
+    'EXAC': _get_pop_freq_key('exac', 'AF'),
+    '1KG': _get_pop_freq_key('g1k', 'AF'),
+    'CONSTRAINT': [],
+}
+
+
+def _get_sort(sort_key, user):
+    sorts = []
+    sort = SORT_FIELDS.get(sort_key)
+    if sort:
+        sorts.append(sort)
+    if sort_key == PATHOGENICTY_SORT_KEY and user and user.is_staff:
+        sorts.append(SORT_FIELDS[PATHOGENICTY_HGMD_SORT_KEY])
+    if 'xpos' not in sorts:
+        sorts.append('xpos')
+    return sorts
+
+
 CLINVAR_FIELDS = ['clinical_significance', 'variation_id', 'allele_id', 'gold_stars']
 HGMD_FIELDS = ['accession', 'class']
 TRANSCRIPT_FIELDS = [
@@ -367,13 +431,7 @@ DEFAULT_POP_FIELD_CONFIG = {
     'default_value': 0,
     'no_key_use_default': False,
 }
-POPULATION_FIELD_CONFIGS = {k: dict(DEFAULT_POP_FIELD_CONFIG, **v) for k, v in {
-    'AF': {'fields': ['AF_POPMAX_OR_GLOBAL', 'AF_POPMAX'], 'format_value': float},
-    'AC': {},
-    'AN': {},
-    'Hom': {},
-    'Hemi': {},
-}.items()}
+POPULATION_RESPONSE_FIELD_CONFIGS = {k: dict(DEFAULT_POP_FIELD_CONFIG, **v) for k, v in POPULATION_FIELD_CONFIGS.items()}
 
 
 def _get_query_field_names(samples_by_id):
@@ -381,7 +439,7 @@ def _get_query_field_names(samples_by_id):
     for field_name, fields in NESTED_FIELDS.items():
         field_names += ['{}_{}'.format(field_name, field) for field in fields.keys()]
     for population, pop_config in POPULATIONS.items():
-        for field, field_config in POPULATION_FIELD_CONFIGS.items():
+        for field, field_config in POPULATION_RESPONSE_FIELD_CONFIGS.items():
             if pop_config.get(field):
                 field_names.append(pop_config.get(field))
             field_names.append('{}_{}'.format(population, field))

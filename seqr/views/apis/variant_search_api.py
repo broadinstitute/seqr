@@ -47,7 +47,7 @@ def query_variants_handler(request, search_hash):
     family = Family.objects.get(guid=search.get('familyGuid'))
     individuals = family.individual_set.all()
 
-    variants = get_es_variants(search_model, individuals)
+    variants = get_es_variants(search_model, individuals, user=request.user)
 
     genes = _saved_variant_genes(variants)
     # TODO add locus lists on the client side (?)

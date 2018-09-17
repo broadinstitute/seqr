@@ -527,8 +527,6 @@ export const SORT_BY_IN_OMIM = 'IN_OMIM'
 export const SORT_BY_PROTEIN_CONSQ = 'PROTEIN_CONSEQUENCE'
 export const SORT_BY_EXAC = 'EXAC'
 export const SORT_BY_1KG = '1KG'
-export const SORT_BY_IN_GENE_LIST = 'IN_GENE_LIST'
-export const SORT_BY_TAGS = 'TAGS'
 export const SORT_BY_CONSTRAINT = 'CONSTRAINT'
 
 
@@ -574,21 +572,6 @@ export const VARIANT_SORT_OPTONS = [
     comparator: (a, b, genesById) =>
       b.geneIds.some(geneId => genesById[geneId].phenotypeInfo.mimPhenotypes.length > 0) - a.geneIds.some(geneId => genesById[geneId].phenotypeInfo.mimPhenotypes.length > 0),
   },
-  {
-    value: SORT_BY_IN_GENE_LIST,
-    text: 'In Gene List',
-    comparator: (a, b, genesById) =>
-      b.geneIds.reduce((acc, geneId) => acc + genesById[geneId].locusLists.length, b.locusLists.length) -
-      a.geneIds.reduce((acc, geneId) => acc + genesById[geneId].locusLists.length, a.locusLists.length),
-  },
-  {
-    value: SORT_BY_TAGS,
-    text: 'Tags & Notes',
-    comparator: (a, b) =>
-      b.tags.reduce((acc, tag) => (tag.category === DISCOVERY_TAG_CATEGORY ? acc + 3 : acc + 2), b.notes.length) -
-      a.tags.reduce((acc, tag) => (tag.category === DISCOVERY_TAG_CATEGORY ? acc + 3 : acc + 2), a.notes.length),
-  },
-
 ]
 
 export const VARIANT_SORT_LOOKUP = VARIANT_SORT_OPTONS.reduce(
