@@ -202,6 +202,12 @@ def docker_build(component_label, settings, custom_build_args=(), docker_image_n
 
     docker_command_prefix = "eval $(minikube docker-env); " if settings["DEPLOY_TO"] == "minikube" else ""
 
+    docker_tags = set([
+        "",
+        ":latest",
+        "%(DOCKER_IMAGE_TAG)s" % params,
+    ])
+
     if not settings["BUILD_DOCKER_IMAGE"]:
         logger.info("Skipping docker build step. Use --build-docker-image to build a new image (and --force to build from the beginning)")
     else:
@@ -211,18 +217,19 @@ def docker_build(component_label, settings, custom_build_args=(), docker_image_n
         if settings["FORCE_BUILD_DOCKER_IMAGE"]:
             docker_build_command += "--no-cache "
 
-        docker_build_command += "-t %(DOCKER_IMAGE_NAME)s "
-        docker_build_command += "-t %(DOCKER_IMAGE_NAME)s:latest "
-        docker_build_command += "-t %(DOCKER_IMAGE_NAME)s%(DOCKER_IMAGE_TAG)s "
+        for tag in docker_tags:
+            docker_build_command += "-t %(tag)s " % locals()
 
         run(docker_build_command % params, verbose=True)
 
     if settings["PUSH_TO_REGISTRY"]:
-        # based on https://cloud.google.com/container-registry/docs/pushing-and-pulling
-        docker_push_command = docker_command_prefix
-        docker_push_command += "docker push %(DOCKER_IMAGE_NAME)s%(DOCKER_IMAGE_TAG)s" % params
-        run(docker_push_command, verbose=True)
-        logger.info("==> Finished uploading image: %(DOCKER_IMAGE_NAME)s%(DOCKER_IMAGE_TAG)s" % params)
+        for tag in docker_tags:
+            docker_image_name_with_tag = params["DOCKER_IMAGE_NAME"] + tag
+            docker_push_command = docker_command_prefix
+            docker_push_command += "docker push %s" % docker_image_name_with_tag
+            run(docker_push_command, verbose=True)
+            logger.info("==> Finished uploading image: %s", docker_image_name_with_tag)
+
 
 def deploy_mongo(settings):
     print_separator("mongo")
