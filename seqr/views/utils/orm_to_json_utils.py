@@ -480,7 +480,7 @@ def get_json_for_genes(genes, user=None, add_notes=False, add_expression=False):
         if add_notes:
             result['notes'] = gene_notes_json.get(result['geneId'], [])
         if add_expression:
-            result['expression'] = gene.geneexpression.expression_values if gene.geneexpression else {}
+            result['expression'] = gene.geneexpression.expression_values if hasattr(gene, 'geneexpression') else None
         result.update({
             'omimPhenotypes': _get_json_for_models(gene.omim_set.all()),
             'constraints': _get_json_for_model(constraint, process_result=_add_total_constraint_count) if constraint else {},
