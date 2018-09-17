@@ -218,7 +218,8 @@ def docker_build(component_label, settings, custom_build_args=(), docker_image_n
             docker_build_command += "--no-cache "
 
         for tag in docker_tags:
-            docker_build_command += "-t %(tag)s " % locals()
+            docker_image_name_with_tag = params["DOCKER_IMAGE_NAME"] + tag
+            docker_build_command += "-t %(docker_image_name_with_tag)s " % locals()
 
         run(docker_build_command % params, verbose=True)
 
@@ -226,9 +227,9 @@ def docker_build(component_label, settings, custom_build_args=(), docker_image_n
         for tag in docker_tags:
             docker_image_name_with_tag = params["DOCKER_IMAGE_NAME"] + tag
             docker_push_command = docker_command_prefix
-            docker_push_command += "docker push %s" % docker_image_name_with_tag
+            docker_push_command += "docker push %(docker_image_name_with_tag)s" % locals()
             run(docker_push_command, verbose=True)
-            logger.info("==> Finished uploading image: %s", docker_image_name_with_tag)
+            logger.info("==> Finished uploading image: %(docker_image_name_with_tag)s" % locals())
 
 
 def deploy_mongo(settings):
