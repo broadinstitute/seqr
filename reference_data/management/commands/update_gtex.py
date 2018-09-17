@@ -95,7 +95,8 @@ def get_tissue_expression_values_by_gene(expression_file_name, samples_file_name
 
             yield (gene_id, _get_expressions(line, tissues_by_column))
 
-def _get_tissue_type_map(self, samples_file):
+
+def _get_tissue_type_map(samples_file):
     """
     Returns map of sample id -> tissue type
     """
@@ -122,7 +123,8 @@ def _get_tissue_type_map(self, samples_file):
 
     return tissue_type_map
 
-def _get_tissues_by_column(self, header_line, tissue_type_map):
+
+def _get_tissues_by_column(header_line, tissue_type_map):
     """
     Return a list of tissue types for each sample in header
     (len is # fields - 2, as first two fields ID the gene)
@@ -135,7 +137,8 @@ def _get_tissues_by_column(self, header_line, tissue_type_map):
         tissue_types[i] = tissue_type_map.get(header_fields[i+2])
     return tissue_types
 
-def _get_expressions(self, line, tissues_by_column):
+
+def _get_expressions(line, tissues_by_column):
     """
     Make an expression map from a data line in the expression file
     """
