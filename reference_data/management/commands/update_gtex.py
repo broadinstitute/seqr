@@ -116,10 +116,11 @@ def _get_tissue_type_map(samples_file):
                 tissue_slug = tissue_detailed_slug
 
             if tissue_slug not in set(GeneExpression.GTEX_TISSUE_TYPES):
-                print("Skipping tissue '%s' - line #%s" % (tissue_slug, i))
                 continue
 
-            tissue_type_map[fields[0]] = tissue_slug
+            tissue_type_map[sample_id] = tissue_slug
+
+    logger.info("Parsed %s tissues", len(set(tissue_type_map.values())))
 
     return tissue_type_map
 
