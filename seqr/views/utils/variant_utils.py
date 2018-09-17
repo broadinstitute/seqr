@@ -30,8 +30,10 @@ def get_or_create_saved_variant(xpos=None, ref=None, alt=None, family=None, proj
     return saved_variant
 
 
-def update_project_saved_variant_json(project):
+def update_project_saved_variant_json(project, family_id=None):
     saved_variants = SavedVariant.objects.filter(project=project, family__isnull=False).select_related('family')
+    if family_id:
+        saved_variants = saved_variants.filter(family__family_id=family_id)
     saved_variants_map = {(v.xpos_start, v.ref, v.alt, v.family.family_id): v for v in saved_variants}
 
     variants_json = _retrieve_saved_variants_json(project, saved_variants_map.keys())

@@ -1457,7 +1457,7 @@ def match_internally_and_externally(request,project_id,indiv_id):
     #find details on HPO terms and start aggregating in a map to send back with reply
     hpo_map={}
     extract_hpo_id_list_from_mme_patient_struct(json.loads(patient_data),hpo_map)
-    
+
     headers={
        'X-Auth-Token': settings.MME_NODE_ADMIN_TOKEN,
        'Accept': settings.MME_NODE_ACCEPT_HEADER,
@@ -1491,13 +1491,12 @@ def match_internally_and_externally(request,project_id,indiv_id):
        
     result_analysis_state={}
     for id in ids.keys():
-        persisted_result_dets = settings.MME_SEARCH_RESULT_ANALYSIS_STATE.find({"result_id":id,
+        persisted_result_det = settings.MME_SEARCH_RESULT_ANALYSIS_STATE.find_one({"result_id":id,
                                                                                 "seqr_project_id":project_id,
                                                                                 "id_of_indiv_searched_with":indiv_id})
-        if persisted_result_dets.count()>0:
-            for persisted_result_det in persisted_result_dets:
-                del persisted_result_det['_id']
-                result_analysis_state[id]=persisted_result_det
+        if persisted_result_det:
+            del persisted_result_det['_id']
+            result_analysis_state[id]=persisted_result_det
         else:
             record={
                     "id_of_indiv_searched_with":indiv_id,
@@ -1882,7 +1881,7 @@ def match_state_update(request,project_id,match_id,indiv_id):
             if state == "true":
                 persisted_result_det['host_contacted_us']=True   
         persisted_result_det["username_of_last_event_initiator"]=request.user.username
-        del persisted_result_det['_id']  
+        del persisted_result_det['_id']
         settings.MME_SEARCH_RESULT_ANALYSIS_STATE.update({'_id':mongo_id},{"$set": persisted_result_det}, upsert=False,manipulate=False)
     except:
         raise
