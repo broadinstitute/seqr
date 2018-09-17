@@ -5,41 +5,90 @@ Utility functions for converting Django ORM object to JSON
 import json
 import logging
 import os
-from django.db.models import Model, prefetch_related_objects
+from collections import defaultdict
+from copy import copy
+from django.db.models import prefetch_related_objects
 from django.db.models.fields.files import ImageFieldFile
 
-from seqr.models import CAN_EDIT, Project, Family, Individual, Sample, SavedVariant, VariantTag, \
-    VariantFunctionalData, VariantNote, GeneNote, LocusList, LocusListInterval, AnalysisGroup
+from reference_data.models import GeneConstraint
+from seqr.models import CAN_EDIT, Sample, GeneNote
 from seqr.utils.xpos_utils import get_chrom_pos
 from seqr.views.utils.json_utils import _to_camel_case
 logger = logging.getLogger(__name__)
 
 
-def _record_to_dict(record, fields, nested_fields=None):
-    if isinstance(record, Model):
-        model = record
-        record = {field[1]: getattr(model, field[0]) for field in fields}
-        for nested_field in (nested_fields or []):
-            field_value = model
-            for field in nested_field:
-                field_value = getattr(field_value, field) if field_value else None
-            record['_'.join(nested_field)] = field_value
-    return record
+def _get_json_for_models(models, nested_fields=None, user=None, process_result=None, guid_key=None):
+    """Returns an array JSON representations of the given models.
 
+    Args:
+        models (array): Array of django models
+        user (object): Django User object for determining whether to include restricted/internal-only fields
+        nested_fields (array): Optional array of fields to get from the model that are nested on related objects
+        process_result (lambda): Optional function to post-process a given model json
+        guid_key (string): Optional key to use for the model's guid
+    Returns:
+        array: json objects
+    """
 
-def _get_record_fields(model_class, model_type, user=None):
-    fields = [(field, '{}_{}'.format(model_type, field)) for field in model_class._meta.json_fields]
+    if not models:
+        return []
+
+    model_class = type(models[0])
+    fields = copy(model_class._meta.json_fields)
     if user and user.is_staff:
-        internal_fields = getattr(model_class._meta, 'internal_json_fields', [])
-        fields += [(field, '{}_{}'.format(model_type, field)) for field in internal_fields]
-    return fields
+        fields += getattr(model_class._meta, 'internal_json_fields', [])
+
+    results = []
+    for model in models:
+        result = {_to_camel_case(field): getattr(model, field) for field in fields}
+        for nested_field in (nested_fields or []):
+            field_value = nested_field.get('value')
+            if not field_value:
+                field_value = model
+                for field in nested_field['fields']:
+                    field_value = getattr(field_value, field) if field_value else None
+            result[nested_field.get('key', _to_camel_case('_'.join(nested_field['fields'])))] = field_value
+
+        if result.get('guid'):
+            guid_key = guid_key or '{}{}Guid'.format(model_class.__name__[0].lower(), model_class.__name__[1:])
+            result[guid_key] = result.pop('guid')
+        if result.get('createdBy'):
+            result['createdBy'] = result['createdBy'].get_full_name() or result['createdBy'].email
+        if process_result:
+            process_result(result, model)
+        results.append(result)
+
+    return results
 
 
-def _get_json_for_record(record, fields):
-    json = {_to_camel_case(field[0]): record.get(field[1]) for field in fields}
-    if json.get('createdBy'):
-        json['createdBy'] = json['createdBy'].get_full_name() or json['createdBy'].email
-    return json
+def _get_json_for_model(model, get_json_for_models=_get_json_for_models, **kwargs):
+    """Helper function to return a JSON representations of the given model.
+
+    Args:
+        model (object): Django models
+        get_json_for_models (lambda): Function used to determine the json for an array of the given model
+    Returns:
+        object: json object
+    """
+    return get_json_for_models([model], **kwargs)[0]
+
+
+def get_json_for_sample_dict(sample_dict):
+    """Returns a JSON representation of the given Sample dictionary.
+
+        Args:
+            sample (object): dictionary representation for the Sample.
+        Returns:
+            dict: json object
+        """
+    result = {_to_camel_case(field): sample_dict.get('sample_{}'.format(field)) for field in Sample._meta.json_fields}
+
+    result.update({
+        'projectGuid': sample_dict['project_guid'],
+        'individualGuid': sample_dict['individual_guid'],
+        'sampleGuid': result.pop('guid'),
+    })
+    return result
 
 
 def _get_json_for_user(user):
@@ -67,27 +116,25 @@ def _get_json_for_project(project, user, add_project_category_guids_field=True):
     """Returns JSON representation of the given Project.
 
     Args:
-        project (object): dictionary or django model for the project
+        project (object): Django model for the project
         user (object): Django User object for determining whether to include restricted/internal-only fields
     Returns:
         dict: json object
     """
-    fields = _get_record_fields(Project, 'project')
-    project_dict = _record_to_dict(project, fields)
-    result = _get_json_for_record(project_dict, fields)
-    result.update({
-        'projectGuid': result.pop('guid'),
-        'projectCategoryGuids': [c.guid for c in project.projectcategory_set.all()] if add_project_category_guids_field else [],
-        'canEdit': user.is_staff or user.has_perm(CAN_EDIT, project),
-    })
-    return result
+    def _process_result(result, *args):
+        result.update({
+            'projectCategoryGuids': [c.guid for c in project.projectcategory_set.all()] if add_project_category_guids_field else [],
+            'canEdit': user.is_staff or user.has_perm(CAN_EDIT, project),
+        })
+
+    return _get_json_for_model(project, user=user, process_result=_process_result)
 
 
 def _get_json_for_families(families, user=None, add_individual_guids_field=False, project_guid=None):
     """Returns a JSON representation of the given Family.
 
     Args:
-        families (array): array of dictionaries or django models representing the family.
+        families (array): array of django models representing the family.
         user (object): Django User object for determining whether to include restricted/internal-only fields
         add_individual_guids_field (bool): whether to add an 'individualGuids' field. NOTE: this will require a database query.
         project_guid (boolean): An optional field to use as the projectGuid instead of querying the DB
@@ -103,54 +150,45 @@ def _get_json_for_families(families, user=None, add_individual_guids_field=False
                 pedigree_image = None
         return os.path.join("/media/", pedigree_image) if pedigree_image else None
 
-    prefetch_related_objects(families, 'familyanalysedby_set')
-    if add_individual_guids_field:
-        prefetch_related_objects(families, 'individual_set')
-
-    fields = _get_record_fields(Family, 'family', user)
-    nested_fields = [] if project_guid else [('project', 'guid')]
-    family_dicts = [(family, _record_to_dict(family, fields, nested_fields=nested_fields)) for family in families]
-
-    results = []
-    for (family, family_dict) in family_dicts:
-        result = _get_json_for_record(family_dict, fields)
-        result.update({
-            'projectGuid': project_guid or family_dict['project_guid'],
-            'familyGuid': result.pop('guid'),
-            'analysedBy': [{
-                'createdBy': {'fullName': ab.created_by.get_full_name(), 'email': ab.created_by.email, 'isStaff': ab.created_by.is_staff},
-                'lastModifiedDate': ab.last_modified_date,
-            } for ab in family.familyanalysedby_set.all()],
-        })
+    def _process_result(result, family):
+        result['analysedBy'] = [{
+            'createdBy': {'fullName': ab.created_by.get_full_name(), 'email': ab.created_by.email, 'isStaff': ab.created_by.is_staff},
+            'lastModifiedDate': ab.last_modified_date,
+        } for ab in family.familyanalysedby_set.all()]
         pedigree_image = _get_pedigree_image_url(result.pop('pedigreeImage'))
         if pedigree_image:
             result['pedigreeImage'] = pedigree_image
         if add_individual_guids_field:
             result['individualGuids'] = [i.guid for i in family.individual_set.all()]
-        results.append(result)
 
-    return results
+    prefetch_related_objects(families, 'familyanalysedby_set')
+    if add_individual_guids_field:
+        prefetch_related_objects(families, 'individual_set')
+
+    nested_fields = [{'fields': ('project', 'guid'), 'value': project_guid}]
+
+    return _get_json_for_models(families, nested_fields=nested_fields, user=user, process_result=_process_result)
 
 
-def _get_json_for_family(family, user=None, add_individual_guids_field=False):
+def _get_json_for_family(family, user=None, **kwargs):
     """Returns a JSON representation of the given Family.
 
     Args:
-        family (object): dictionary or django model representing the family.
+        family (object): Django model representing the family.
         user (object): Django User object for determining whether to include restricted/internal-only fields
         add_individual_guids_field (bool): whether to add an 'individualGuids' field. NOTE: this will require a database query.
     Returns:
         dict: json object
     """
 
-    return _get_json_for_families([family], user, add_individual_guids_field)[0]
+    return _get_json_for_model(family, get_json_for_models=_get_json_for_families, user=user, **kwargs)
 
 
 def _get_json_for_individuals(individuals, user=None, project_guid=None, family_guid=None, add_sample_guids_field=False):
     """Returns a JSON representation for the given list of Individuals.
 
     Args:
-        individuals (array): array of dictionaries or django models for the individual.
+        individuals (array): array of django models for the individual.
         user (object): Django User object for determining whether to include restricted/internal-only fields
         project_guid (string): An optional field to use as the projectGuid instead of querying the DB
         family_guid (boolean): An optional field to use as the familyGuid instead of querying the DB
@@ -171,152 +209,113 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, family_
                 logger.error("Couldn't parse phenotips: {}".format(e))
         return phenotips_json
 
-    fields = _get_record_fields(Individual, 'individual', user)
-
-    results = []
-    nested_fields = []
-    if not family_guid:
-        nested_fields.append(('family', 'guid'))
-    if not project_guid:
-        nested_fields.append(('family', 'project', 'guid'))
-
-    if add_sample_guids_field:
-        prefetch_related_objects(individuals, 'sample_set')
-
-    for individual in individuals:
-        individual_dict = _record_to_dict(
-            individual, fields, nested_fields=nested_fields
-        )
-
-        result = _get_json_for_record(individual_dict, fields)
+    def _process_result(result, individual):
         result.update({
-            'projectGuid': project_guid or individual_dict.get('family_project_guid') or individual_dict['project_guid'],
-            'familyGuid': family_guid or individual_dict['family_guid'],
-            'individualGuid': result.pop('guid'),
             'caseReviewStatusLastModifiedBy': _get_case_review_status_modified_by(result.get('caseReviewStatusLastModifiedBy')),
             'phenotipsData': _load_phenotips_data(result['phenotipsData'])
         })
         if add_sample_guids_field:
             result['sampleGuids'] = [s.guid for s in individual.sample_set.all()]
-        results.append(result)
-    return results
+
+    nested_fields = [
+        {'fields': ('family', 'guid'), 'value': family_guid},
+        {'fields': ('family', 'project', 'guid'), 'key': 'projectGuid', 'value': project_guid},
+    ]
+
+    if add_sample_guids_field:
+        prefetch_related_objects(individuals, 'sample_set')
+
+    return _get_json_for_models(individuals, nested_fields=nested_fields, user=user, process_result=_process_result)
 
 
-def _get_json_for_individual(individual, user=None, add_sample_guids_field=False):
+def _get_json_for_individual(individual, user=None, **kwargs):
     """Returns a JSON representation of the given Individual.
 
     Args:
-        individual (object): dictionary or django model for the individual.
+        individual (object): Django model for the individual.
         user (object): Django User object for determining whether to include restricted/internal-only fields
     Returns:
         dict: json object
     """
-    return _get_json_for_individuals([individual], user, add_sample_guids_field=add_sample_guids_field)[0]
+    return _get_json_for_model(individual, get_json_for_models=_get_json_for_individuals, user=user, **kwargs)
 
 
 def get_json_for_samples(samples, project_guid=None):
     """Returns a JSON representation of the given list of Samples.
 
     Args:
-        samples (array): array of dictionary or django model for the Samples.
+        samples (array): array of django models for the Samples.
     Returns:
         array: array of json objects
     """
 
-    fields = _get_record_fields(Sample, 'sample')
-    nested_fields = [('individual', 'guid')]
-    if not project_guid:
-        nested_fields.append(('individual', 'family', 'project', 'guid'))
+    nested_fields = [
+        {'fields': ('individual', 'guid')},
+        {'fields': ('individual', 'family', 'project', 'guid'), 'key': 'projectGuid', 'value': project_guid},
+    ]
 
-    results = []
-    for sample in samples:
-        sample_dict = _record_to_dict(
-            sample, fields, nested_fields=nested_fields
-        )
-
-        result = _get_json_for_record(sample_dict, fields)
-        result.update({
-            'projectGuid': project_guid or sample_dict.get('individual_family_project_guid') or sample_dict['project_guid'],
-            'individualGuid': sample_dict['individual_guid'],
-            'sampleGuid': result.pop('guid'),
-        })
-        results.append(result)
-    return results
+    return _get_json_for_models(samples, nested_fields=nested_fields)
 
 
-def _get_json_for_sample(sample, project_guid=None):
+def _get_json_for_sample(sample, **kwargs):
     """Returns a JSON representation of the given Sample.
 
     Args:
-        sample (object): dictionary or django model for the Sample.
+        sample (object): Django model for the Sample.
     Returns:
         dict: json object
     """
 
-    return get_json_for_samples([sample], project_guid=project_guid)[0]
+    return _get_json_for_model(sample, get_json_for_models=get_json_for_samples, **kwargs)
 
 
 def get_json_for_analysis_groups(analysis_groups, project_guid=None):
     """Returns a JSON representation of the given list of AnalysisGroups.
 
     Args:
-        analysis_groups (array): array of dictionary or django model for the AnalysisGroups.
+        analysis_groups (array): array of django models for the AnalysisGroups.
         project_guid (string): An optional field to use as the projectGuid instead of querying the DB
     Returns:
         array: array of json objects
     """
 
-    fields = _get_record_fields(AnalysisGroup, 'analysis_group')
-    nested_fields = []
-    if not project_guid:
-        nested_fields.append(('project', 'guid'))
-
-    results = []
-    for group in analysis_groups:
-        record_dict = _record_to_dict(
-            group, fields, nested_fields=nested_fields
-        )
-
-        result = _get_json_for_record(record_dict, fields)
+    def _process_result(result, group):
         result.update({
-            'analysisGroupGuid': result.pop('guid'),
-            'projectGuid': project_guid or record_dict.get('project_guid'),
             'familyGuids': [f.guid for f in group.families.only('guid').all()]
         })
-        results.append(result)
-    return results
+
+    prefetch_related_objects(analysis_groups, 'families')
+
+    nested_fields = [{'fields': ('project', 'guid'), 'value': project_guid}]
+
+    return _get_json_for_models(analysis_groups, nested_fields=nested_fields, process_result=_process_result)
 
 
-def get_json_for_analysis_group(analysis_group, project_guid=None):
+def get_json_for_analysis_group(analysis_group, **kwargs):
     """Returns a JSON representation of the given AnalysisGroup.
 
     Args:
-        analysis_group (object): dictionary or django model for the AnalysisGroup.
+        analysis_group (object): Django model for the AnalysisGroup.
         project_guid (string): An optional field to use as the projectGuid instead of querying the DB
     Returns:
         dict: json object
     """
+    return _get_json_for_model(analysis_group, get_json_for_models=get_json_for_analysis_groups, **kwargs)
 
-    return get_json_for_analysis_groups([analysis_group], project_guid=project_guid)[0]
 
 def get_json_for_saved_variant(saved_variant, add_tags=False):
     """Returns a JSON representation of the given variant.
 
     Args:
-        saved_variant (object): dictionary or django model for the SavedVariant.
+        saved_variant (object): Django model for the SavedVariant.
     Returns:
         dict: json object
     """
 
-    fields = _get_record_fields(SavedVariant, 'variant')
-    saved_variant_dict = _record_to_dict(saved_variant, fields, nested_fields=[('family', 'guid')])
-
-    result = _get_json_for_record(saved_variant_dict, fields)
+    result = _get_json_for_model(saved_variant, nested_fields=[{'fields': ('family', 'guid')}], guid_key='variantId')
 
     chrom, pos = get_chrom_pos(result['xpos'])
     result.update({
-        'variantId': result.pop('guid'),
-        'familyGuid': saved_variant_dict['family_guid'],
         'chrom': chrom,
         'pos': pos,
     })
@@ -333,42 +332,28 @@ def get_json_for_variant_tag(tag):
     """Returns a JSON representation of the given variant tag.
 
     Args:
-        tag (object): dictionary or django model for the VarianTag.
+        tag (object): Django model for the VariantTag.
     Returns:
         dict: json object
     """
 
-    fields = _get_record_fields(VariantTag, 'tag')
-    tag_dict = _record_to_dict(tag, fields, nested_fields=[
-        ('variant_tag_type', 'name'),  ('variant_tag_type', 'category'),  ('variant_tag_type', 'color')
-    ])
-
-    result = _get_json_for_record(tag_dict, fields)
-    result.update({
-        'tagGuid': result.pop('guid'),
-        'name': tag_dict['variant_tag_type_name'],
-        'category': tag_dict['variant_tag_type_category'],
-        'color': tag_dict['variant_tag_type_color'],
-    })
-    return result
+    nested_fields = [{'fields': ('variant_tag_type', field), 'key': field} for field in ['name', 'category', 'color']]
+    return _get_json_for_model(tag, nested_fields=nested_fields, guid_key='tagGuid')
 
 
 def get_json_for_variant_functional_data(tag):
     """Returns a JSON representation of the given variant tag.
 
     Args:
-        tag (object): dictionary or django model for the VariantFunctionalData.
+        tag (object): Django model for the VariantFunctionalData.
     Returns:
         dict: json object
     """
 
-    fields = _get_record_fields(VariantFunctionalData, 'tag')
-    tag_dict = _record_to_dict(tag, fields)
-    result = _get_json_for_record(tag_dict, fields)
+    result = _get_json_for_model(tag, guid_key='tagGuid')
 
     display_data = json.loads(tag.get_functional_data_tag_display())
     result.update({
-        'tagGuid': result.pop('guid'),
         'name': result.pop('functionalDataTag'),
         'metadataTitle': display_data.get('metadata_title'),
         'color': display_data['color'],
@@ -380,39 +365,55 @@ def get_json_for_variant_note(note):
     """Returns a JSON representation of the given variant note.
 
     Args:
-        note (object): dictionary or django model for the VariantNote.
+        note (object): Django model for the VariantNote.
     Returns:
         dict: json object
     """
 
-    fields = _get_record_fields(VariantNote, 'note')
-    note_dict = _record_to_dict(note, fields)
-    result = _get_json_for_record(note_dict, fields)
+    return _get_json_for_model(note, guid_key='noteGuid')
 
-    result.update({
-        'noteGuid': result.pop('guid'),
-    })
-    return result
+
+def get_json_for_gene_notes(notes, user):
+    """Returns a JSON representation of the given gene note.
+
+    Args:
+        note (object): Django model for the GeneNote.
+    Returns:
+        dict: json object
+    """
+
+    def _process_result(result, note):
+        result.update({
+            'editable': user.is_staff or user == note.created_by,
+        })
+
+    return _get_json_for_models(notes, user=user, guid_key='noteGuid', process_result=_process_result)
 
 
 def get_json_for_gene_note(note, user):
     """Returns a JSON representation of the given gene note.
 
     Args:
-        note (object): dictionary or django model for the GeneNote.
+        note (object): Django model for the GeneNote.
     Returns:
         dict: json object
     """
 
-    fields = _get_record_fields(GeneNote, 'note')
-    note_dict = _record_to_dict(note, fields)
-    result = _get_json_for_record(note_dict, fields)
+    return _get_json_for_model(note, user=user, get_json_for_models=get_json_for_gene_notes)
 
-    result.update({
-        'noteGuid': result.pop('guid'),
-        'editable': user.is_staff or user == note.created_by,
-    })
-    return result
+
+def get_json_for_gene_notes_by_gene_id(gene_ids, user):
+    """Returns a JSON representation of the gene notes for the given gene ids.
+
+    Args:
+        note (object): Django model for the GeneNote.
+    Returns:
+        dict: json object
+    """
+    notes_by_gene_id = defaultdict(list)
+    for note in get_json_for_gene_notes(GeneNote.objects.filter(gene_id__in=gene_ids), user):
+        notes_by_gene_id[note['geneId']].append(note)
+    return notes_by_gene_id
 
 
 def get_json_for_locus_lists(locus_lists, user, include_genes=False):
@@ -424,28 +425,25 @@ def get_json_for_locus_lists(locus_lists, user, include_genes=False):
         array: json objects
     """
 
-    fields = _get_record_fields(LocusList, 'locus_list')
-    results = []
-    for locus_list in locus_lists:
-        locus_list_dict = _record_to_dict(locus_list, fields)
-        result = _get_json_for_record(locus_list_dict, fields)
+    def _process_result(result, locus_list):
         gene_set = locus_list.locuslistgene_set
         interval_set = locus_list.locuslistinterval_set
         if include_genes:
-            intervals = get_json_for_locus_list_intervals(interval_set.all())
+            intervals = _get_json_for_models(interval_set.all())
             genome_versions = {interval['genomeVersion'] for interval in intervals}
             result.update({
                 'items': [{'geneId': gene.gene_id} for gene in gene_set.all()] + intervals,
                 'intervalGenomeVersion': genome_versions.pop() if len(genome_versions) == 1 else None,
             })
         result.update({
-            'locusListGuid': result.pop('guid'),
             'numEntries': gene_set.count() + interval_set.count(),
             'canEdit': user == locus_list.created_by,
         })
-        results.append(result)
 
-    return results
+    if include_genes:
+        prefetch_related_objects(locus_lists, 'locuslistinterval_set')
+
+    return _get_json_for_models(locus_lists, user=user, process_result=_process_result)
 
 
 def get_json_for_locus_list(locus_list, user):
@@ -456,28 +454,52 @@ def get_json_for_locus_list(locus_list, user):
     Returns:
         dict: json object
     """
-    return get_json_for_locus_lists([locus_list], user, include_genes=True)[0]
+    return _get_json_for_model(locus_list, get_json_for_models=get_json_for_locus_lists, user=user, include_genes=True)
 
 
-def get_json_for_locus_list_intervals(locus_list_intervals):
-    """Returns a JSON representation of the given LocusLists.
+def get_json_for_genes(genes, user=None, add_notes=False, add_expression=False):
+    """Returns a JSON representation of the given list of GeneInfo.
 
     Args:
-        locus_list_intervals (array): array of LocusListInterval django models.
+        genes (array): array of django models for the GeneInfo.
     Returns:
-        array: json objects
+        array: array of json objects
+    """
+    total_gene_constraints = GeneConstraint.objects.count()
+    if add_notes:
+        gene_notes_json = get_json_for_gene_notes_by_gene_id([gene.gene_id for gene in genes], user)
+
+    def _add_total_constraint_count(result, *args):
+        result['totalGenes'] = total_gene_constraints
+
+    def _process_result(result, gene):
+        dbnsfp = gene.dbnsfpgene_set.first()
+        constraint = gene.geneconstraint_set.order_by('-mis_z').first()
+        if dbnsfp:
+            result.update(_get_json_for_model(dbnsfp))
+        if add_notes:
+            result['notes'] = gene_notes_json.get(result['geneId'], [])
+        if add_expression:
+            result['expression'] = gene.geneexpression.expression_values if hasattr(gene, 'geneexpression') else None
+        result.update({
+            'omimPhenotypes': _get_json_for_models(gene.omim_set.all()),
+            'constraints': _get_json_for_model(constraint, process_result=_add_total_constraint_count) if constraint else {},
+        })
+
+    prefetch_related_objects(genes, 'dbnsfpgene_set')
+    prefetch_related_objects(genes, 'omim_set')
+    prefetch_related_objects(genes, 'geneconstraint_set')
+
+    return _get_json_for_models(genes, process_result=_process_result)
+
+
+def get_json_for_gene(gene, **kwargs):
+    """Returns a JSON representation of the given GeneInfo.
+
+    Args:
+        gene (object): Django model for the GeneInfo.
+    Returns:
+        dict: json object
     """
 
-    fields = _get_record_fields(LocusListInterval, 'locus_list_interval')
-    results = []
-    for locus_list_interval in locus_list_intervals:
-        locus_list_interval_dict = _record_to_dict(locus_list_interval, fields)
-        result = _get_json_for_record(locus_list_interval_dict, fields)
-        result.update({
-            'locusListIntervalGuid': result.pop('guid'),
-        })
-        results.append(result)
-
-    return results
-
-
+    return _get_json_for_model(gene, get_json_for_models=get_json_for_genes, **kwargs)
