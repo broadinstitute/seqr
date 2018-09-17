@@ -480,8 +480,7 @@ def get_json_for_genes(genes, user=None, add_notes=False, add_expression=False):
         if add_notes:
             result['notes'] = gene_notes_json.get(result['geneId'], [])
         if add_expression:
-            expression = gene.geneexpression_set.first()  # TODO confirm no duplicates
-            result['expression'] = expression.expression_values if expression else {}
+            result['expression'] = gene.geneexpression.expression_values if gene.geneexpression else {}
         result.update({
             'omimPhenotypes': _get_json_for_models(gene.omim_set.all()),
             'constraints': _get_json_for_model(constraint, process_result=_add_total_constraint_count) if constraint else {},
@@ -490,8 +489,6 @@ def get_json_for_genes(genes, user=None, add_notes=False, add_expression=False):
     prefetch_related_objects(genes, 'dbnsfpgene_set')
     prefetch_related_objects(genes, 'omim_set')
     prefetch_related_objects(genes, 'geneconstraint_set')
-    if add_expression:
-        prefetch_related_objects(genes, 'geneexpression_set')
 
     return _get_json_for_models(genes, process_result=_process_result)
 

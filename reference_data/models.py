@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.postgres import fields as postgres_fields
 
 #  Allow adding the custom json_fields and internal_json_fields to the model Meta
 # (from https://stackoverflow.com/questions/1088431/adding-attributes-into-django-models-meta-class)
@@ -134,8 +135,8 @@ class GeneExpression(models.Model):
         'skin', 'small_intestine', 'spleen', 'stomach', 'testis', 'thyroid', 'uterus', 'vagina'
     }  # 'bladder', 'cells_-_leukemia_cell_line_(cml)', 'cervix_uteri', 'fallopian_tube' - excluded because too few samples or not relevant
 
-    gene = models.ForeignKey(GeneInfo, on_delete=models.CASCADE)
-    expression_values = models.TextField(null=True, blank=True)
+    gene = models.OneToOneField(GeneInfo, on_delete=models.CASCADE)
+    expression_values = postgres_fields.JSONField(null=True)
 
 
 class Omim(models.Model):

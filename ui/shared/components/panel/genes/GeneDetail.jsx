@@ -74,6 +74,9 @@ const textWithLinks = (text) => {
 }
 
 const GeneDetailContent = ({ gene, updateGeneNote: dispatchUpdateGeneNote }) => {
+  if (!gene) {
+    return null
+  }
   const grch37Coords = gene.startGrch37 && `chr${gene.chromGrch37}:${gene.startGrch37}-${gene.endGrch37}`
   const grch38Coords = gene.startGrch38 && `chr${gene.chromGrch38}:${gene.startGrch38}-${gene.endGrch38}`
   const basicDetails = [
@@ -233,7 +236,7 @@ const mapDispatchToProps = {
 }
 
 const mapStateToProps = (state, ownProps) => ({
-  gene: getGenesById(state)[ownProps.geneId] || {},
+  gene: getGenesById(state)[ownProps.geneId],
   loading: getGenesIsLoading(state),
 })
 
