@@ -19,7 +19,7 @@ class Command(BaseCommand):
             default=os.path.join('resource_bundle', os.path.basename(GENE_CONSTRAINT_SCORES_URL)))
 
     def handle(self, *args, **options):
-        update_gene_constraint()
+        update_gene_constraint(gene_constraint_path=options.get('gene_constraint_path'))
 
 
 def update_gene_constraint(gene_constraint_path=None):

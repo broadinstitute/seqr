@@ -196,10 +196,13 @@ class ElasticsearchDatastore(datastore.Datastore):
             mapping = self._es_client.indices.get_mapping(str(elasticsearch_index)+"*")
 
             if family_individual_ids:
-                indiv_id = _encode_name(family_individual_ids[0])
-                for index_name, index_mapping in mapping.items():
-                    if indiv_id+"_num_alt" in index_mapping["mappings"]["variant"]["properties"]:
-                        matching_indices.append(index_name)
+                for raw_indiv_id in family_individual_ids:
+                    indiv_id = _encode_name(raw_indiv_id)
+                    for index_name, index_mapping in mapping.items():
+                        if indiv_id+"_num_alt" in index_mapping["mappings"]["variant"]["properties"]:
+                            matching_indices.append(index_name)
+                    if len(matching_indices) > 0:
+                        break
 
             if not matching_indices:
                 if not family_individual_ids:
