@@ -22,26 +22,22 @@ seqr consists of the following components:
 - mongo - legacy NoSQL database originally used for variant callsets and still used now to store some reference data and logs.
 
 These components can be deployed on local or cloud-based hardware.
-A laptop with 4 CPUs and 16G RAM may be sufficient for looking at small datasets.
-The seqr production instance (seqr.broadinstitute.org) currently uses two n1-highmem-4 (4 vCPUs, 26 GB memory) servers on google cloud + separate instances for the elasticsearch database.
-The pipeline for loading new datasets uses Spark to parallelelize VEP and other annotation steps. This pipeline can run on the same machine 
-that's hosting other seqr components, but a separate Spark cluster will make the loading process faster.
+A laptop with 4 CPUs and 16G RAM may be sufficient for small datasets.
+The seqr [production instance](http://seqr.broadinstitute.org) currently uses two n1-highmem-4 (4 vCPUs, 26 GB memory) servers on google cloud + separate servers for the elasticsearch database.
+The pipeline for loading new datasets uses Spark to parallelelize VEP and other annotation steps. This pipeline can run on the same machine that's hosting seqr components, but a separate Spark cluster will make the loading process faster.
 
 
 ## Install
 
-Whether installing seqr on a laptop, on-prem, or cloud VMs, we use Docker images and Kubernetes to automate the deployment steps and isolate them from the operating system.
-Users that are very familiar with the components that make up seqr may want to install them directly on host systems. This provides maximum control, but requires more work up front. 
-If you decide to go this route, the [Dockerfiles](https://github.com/macarthur-lab/seqr/tree/master/deploy/docker) can be useful as a list of steps for installing each component.  
-In most cases, we recommend the docker/kubernetes approach because:  1) it automates deployment as much as possible 2) as seqr evolves, this makes it easier to roll out new 
-components or move around existing components if they outgrow existing hardware.   
-The instructions below cover local deployments using Minikube, but are also relevant for cloud-based deployments.
+Whether installing seqr on a laptop, on-prem, or on cloud VMs, we use Docker images and Kubernetes to automate the deployment steps and isolate them from the host systems.
+Users that are very familiar with components that make up seqr may want to install them directly on host systems without using Kubernetes. This provides maximum control, but requires more work for installation and maintenance. 
+If you do decide to go this route, the [Dockerfiles](https://github.com/macarthur-lab/seqr/tree/master/deploy/docker) can be useful as a list of steps for installing each component.  
+In most cases, we recommend the docker/kubernetes approach because:  1) it automates deployment as much as possible 2) as seqr evolves, it makes it easier to roll out new components or move around existing components if they outgrow existing hardware.   
+The instructions below cover local deployments using Minikube, but are also directly applicable to cloud-based deployments which replace Minikube with a managed Kubernetes cluster like Google Container Engine. A full list of kubernetes deployment options can be found at: https://kubernetes.io/docs/setup/pick-right-solution/.
 
 #### Step 1: Install Kubernetes
 
 Local and on-prem installations can use [MiniKube](https://kubernetes.io/docs/setup/minikube/) to create a self-contained kubernetes cluster on a single machine. 
-For deploying to the cloud, we use Google Cloud Container Engine (GKE), but many other cloud providers also have native kubernetes support.
-A list of other options can be found at: https://kubernetes.io/docs/setup/pick-right-solution/
 
 Prereqs: `python2.7`, `sudo` root access. MacOS also requires [homebrew](http://brew.sh/) package manager. 
 
