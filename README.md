@@ -48,7 +48,7 @@ Run the following command to install `gcc`, `java1.8`, `minikube`, `kubectl` and
 SCRIPT=step1.macos.install_dependencies.sh && curl -L 'http://raw.githubusercontent.com/macarthur-lab/seqr/master/deploy/$SCRIPT' -o $SCRIPT && chmod 777 $SCRIPT && source $SCRIPT
 ```
 
-###### CentOS7 / RedHat server
+###### CentOS7 / RedHat
 
 ```
 SCRIPT=step1.linux-centos7.install_dependencies.sh && curl -L 'http://raw.githubusercontent.com/macarthur-lab/seqr/master/deploy/$SCRIPT' -o $SCRIPT && chmod 777 $SCRIPT && source $SCRIPT
