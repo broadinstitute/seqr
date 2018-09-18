@@ -19,7 +19,7 @@ export const loadSearchedVariants = (searchHash, search) => {
     if (!searchHash) {
       return
     }
-    const sort = (search || {}).sort || getState().variantSearchDisplay.sort || SORT_BY_XPOS
+    const sort = ((search || {}).sort || getState().variantSearchDisplay.sort || SORT_BY_XPOS).toLowerCase()
 
     dispatch({ type: REQUEST_SEARCHED_VARIANTS })
     new HttpRequestHelper(`/api/search/${searchHash}?sort=${sort}`,

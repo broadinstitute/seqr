@@ -363,7 +363,7 @@ SORT_FIELDS = {
     }],
     'in_omim': [],
     'protein_consequence': ['mainTranscript_major_consequence_rank'],
-    'ecxac': [{_get_pop_freq_key('exac', 'AF'): {'missing': '_first'}}],
+    'exac': [{_get_pop_freq_key('exac', 'AF'): {'missing': '_first'}}],
     '1kg': [{_get_pop_freq_key('g1k', 'AF'): {'missing': '_first'}}],
     'constraint': [],
     XPOS_SORT_KEY: ['xpos'],
