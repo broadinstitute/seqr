@@ -1,3 +1,4 @@
+from collections import defaultdict
 from django.db.models import Max
 import elasticsearch
 from elasticsearch_dsl import Search, Q
@@ -79,7 +80,7 @@ def get_es_variants(search_model, individuals, user=None):
         es_search = es_search.filter(_genotype_filter(search['inheritance'], individuals, samples_by_id))
 
     # TODO sort and pagination
-    es_search = es_search.sort(*_get_sort(search.get('sort'), user))
+    es_search = es_search.sort(*_get_sort(search.get('sort'), samples_by_id, user))
     es_search = es_search[0:100]
 
     # Only return relevant fields
@@ -327,9 +328,30 @@ def _build_or_filter(op, filters):
 
 PATHOGENICTY_SORT_KEY = 'PATHOGENICITY'
 PATHOGENICTY_HGMD_SORT_KEY = 'PATHOGENICITY_HGMD'
+FAMILY_SORT_KEY = 'FAMILY_GUID'
 SORT_FIELDS = {
-    'FAMILY_GUID': '',
-    'XPOS': 'xpos',
+    FAMILY_SORT_KEY: {
+        '_script': {
+            'type': 'string',
+            'script': {
+                'params': {
+                    'family_samples': {}
+                },
+                'source': """
+                    ArrayList families = new ArrayList(params.family_samples.keySet());
+                    families.sort((a, b) -> a.compareTo(b));
+                    for (family in families) {
+                        for (sample in params.family_samples[family]) {
+                            if(doc.containsKey(sample+"_num_alt") && doc[sample+"_num_alt"].value >= 0) {
+                                return family;
+                            }
+                        }
+                    }
+                    return "zz";
+                """
+            }
+        }
+    },
     PATHOGENICTY_SORT_KEY: {
         '_script': {
             'type': 'number',
@@ -362,16 +384,22 @@ SORT_FIELDS = {
     'EXAC': _get_pop_freq_key('exac', 'AF'),
     '1KG': _get_pop_freq_key('g1k', 'AF'),
     'CONSTRAINT': [],
+    'XPOS': 'xpos',
 }
 
 
-def _get_sort(sort_key, user):
+def _get_sort(sort_key, samples_by_id, user):
     sorts = []
     sort = SORT_FIELDS.get(sort_key)
     if sort:
         sorts.append(sort)
     if sort_key == PATHOGENICTY_SORT_KEY and user and user.is_staff:
         sorts.append(SORT_FIELDS[PATHOGENICTY_HGMD_SORT_KEY])
+    elif sort_key == FAMILY_SORT_KEY:
+        family_samples = defaultdict(list)
+        for sample_id, sample in samples_by_id.items():
+            family_samples[sample.individual.family.guid].append(sample_id)
+        sorts[0]['_script']['script']['params']['family_samples'] = family_samples
     if 'xpos' not in sorts:
         sorts.append('xpos')
     return sorts
