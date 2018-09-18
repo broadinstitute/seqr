@@ -31,7 +31,7 @@ const Transcripts = ({ variant, loading, loadVariantTranscripts: dispatchLoadVar
   <DataLoader contentId={variant.variantId} content={variant.transcripts} loading={loading} load={dispatchLoadVariantTranscripts}>
     {variant.transcripts && variant.geneIds.map(geneId =>
       <div key={geneId}>
-        <Header size="large" attached="top" content={genesById[geneId].symbol} subheader={`Gene Id: ${geneId}`} />
+        <Header size="large" attached="top" content={genesById[geneId].geneSymbol} subheader={`Gene Id: ${geneId}`} />
         <Segment attached="bottom">
           <Table basic="very">
             <Table.Body>

@@ -37,7 +37,6 @@ const FAMILY_SIZE_LABELS = {
   5: plural => ` ${plural ? 'families' : 'family'} with 5+ individuals`,
 }
 
-// TODO section edit buttons
 
 const ProjectOverview = ({ project, analysisGroup, familiesByGuid, individualsByGuid, samplesByGuid, analysisGroupsByGuid }) => {
   const familySizeHistogram = Object.values(familiesByGuid)
@@ -50,8 +49,8 @@ const ProjectOverview = ({ project, analysisGroup, familiesByGuid, individualsBy
     sample.datasetType === DATASET_TYPE_VARIANT_CALLS && sample.sampleStatus === SAMPLE_STATUS_LOADED,
   ).reduce((acc, sample) => {
     const loadedDate = new Date(sample.loadedDate).toLocaleDateString()
-    const sampleTypeByDate = acc[sample.sampleType] || {}
-    return { ...acc, [sample.sampleType]: { ...sampleTypeByDate, [loadedDate]: (sampleTypeByDate[loadedDate] || 0) + 1 } }
+    const currentDateSamplesByType = acc[loadedDate] || {}
+    return { ...acc, [loadedDate]: { ...currentDateSamplesByType, [sample.sampleType]: (currentDateSamplesByType[sample.sampleType] || 0) + 1 } }
   }, {})
 
   return (
@@ -96,12 +95,12 @@ const ProjectOverview = ({ project, analysisGroup, familiesByGuid, individualsBy
           <DetailContent>
             {
               Object.keys(loadedProjectSamples).length > 0 ?
-                Object.keys(loadedProjectSamples).map(currentSampleType => (
-                  <div key={currentSampleType}>
+                Object.keys(loadedProjectSamples).sort().map(loadedDate => (
+                  <div key={loadedDate}>
                     {
-                      Object.keys(loadedProjectSamples[currentSampleType]).map(loadedDate =>
-                        <div key={loadedDate}>
-                          {SAMPLE_TYPE_LOOKUP[currentSampleType].text} callset - {loadedProjectSamples[currentSampleType][loadedDate]} samples loaded on {loadedDate}
+                      Object.keys(loadedProjectSamples[loadedDate]).map(currentSampleType =>
+                        <div key={currentSampleType}>
+                          {SAMPLE_TYPE_LOOKUP[currentSampleType].text} callset - {loadedProjectSamples[loadedDate][currentSampleType]} samples loaded on {loadedDate}
                         </div>,
                       )
                     }

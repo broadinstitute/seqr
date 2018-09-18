@@ -71,76 +71,55 @@ const VariantGene = ({ gene, project }) =>
     <ShowGeneModal gene={gene} fontWeight="bold" fontSize="1.5em" />
     <HorizontalSpacer width={10} />
     <GeneLinks>
-      <a href={`http://gnomad-beta.broadinstitute.org/gene/${gene.symbol}`} target="_blank">gnomAD</a>
+      <a href={`http://gnomad-beta.broadinstitute.org/gene/${gene.geneSymbol}`} target="_blank">gnomAD</a>
       <HorizontalSpacer width={5} />|<HorizontalSpacer width={5} />
       <a href={`/project/${project.deprecatedProjectId}/gene/${gene.geneId}`} target="_blank">Gene Search</a><br />
     </GeneLinks>
     <div>
-      {gene.phenotypeInfo.mimPhenotypes.length > 0 &&
+      {gene.omimPhenotypes.length > 0 &&
         <GeneLabel
           color="orange"
           label="IN OMIM"
           popupHeader="Disease Phenotypes"
           popupContent={
             <List>
-              {gene.phenotypeInfo.mimPhenotypes.map(phenotype =>
+              {gene.omimPhenotypes.map(phenotype =>
                 <ListItemLink
-                  key={phenotype.description}
-                  content={phenotype.description}
+                  key={phenotype.phenotypeDescription}
+                  content={phenotype.phenotypeDescription}
                   target="_blank"
-                  href={`https://www.omim.org/entry/${phenotype.mim_id}`}
+                  href={`https://www.omim.org/entry/${phenotype.phenotypeMimNumber}`}
                 />,
               )}
             </List>
           }
         />
       }
-      {gene.phenotypeInfo.orphanetPhenotypes.length > 0 &&
-        <GeneLabel
-          color="orange"
-          label="ORPHANET"
-          popupHeader="Orphanet Phenotypes"
-          popupContent={
-            <List>
-              {gene.phenotypeInfo.orphanetPhenotypes.map(phenotype =>
-                <ListItemLink
-                  key={phenotype.description}
-                  content={phenotype.description}
-                  target="_blank"
-                  href={`http://www.orpha.net/consor/cgi-bin/Disease_Search.php?lng=EN&data_id=20460&Disease_Disease_Search_diseaseGroup=${phenotype.orphanet_id}`}
-                />,
-              )}
-            </List>
-          }
-        />
-      }
-      {((gene.constraints.missense.constraint && gene.constraints.missense.constraint > 3) ||
-        (gene.constraints.missense.rank && gene.constraints.missense.rank < CONSTRAINED_GENE_RANK_THRESHOLD)) &&
+      {((gene.constraints.misZ && gene.constraints.misZ > 3) ||
+        (gene.constraints.misZRank && gene.constraints.misZRank < CONSTRAINED_GENE_RANK_THRESHOLD)) &&
         <GeneLabel
           color="red"
           label="MISSENSE CONSTR"
           popupHeader="Missense Constraint"
-          popupContent={`This gene ranks ${gene.constraints.missense.rank} most constrained out of
-            ${gene.constraints.missense.totalGenes} genes under study in terms of missense constraint (z-score:
-            ${gene.constraints.missense.constraint && gene.constraints.missense.constraint.toPrecision(4)}). Missense
-            contraint is a measure of the degree to which the number of missense variants found in this gene in ExAC v0.3
-            is higher or lower than expected according to the statistical model described in [K. Samocha 2014]. In general
-            this metric is most useful for genes that act via a dominant mechanism, and where a large proportion of the
-            protein is heavily functionally constrained.`
+          popupContent={`This gene ranks ${gene.constraints.misZRank} most constrained out of
+            ${gene.constraints.totalGenes} genes under study in terms of missense constraint (z-score:
+            ${gene.constraints.misZ.toPrecision(4)}). Missense contraint is a measure of the degree to which the number
+            of missense variants found in this gene in ExAC v0.3 is higher or lower than expected according to the
+            statistical model described in [K. Samocha 2014]. In general this metric is most useful for genes that act
+            via a dominant mechanism, and where a large proportion of the protein is heavily functionally constrained.`
           }
         />
       }
-      {((gene.constraints.lof.constraint && gene.constraints.lof.constraint > 0.9) ||
-        (gene.constraints.lof.rank && gene.constraints.lof.rank < CONSTRAINED_GENE_RANK_THRESHOLD)) &&
+      {((gene.constraints.pli && gene.constraints.pli > 0.9) ||
+        (gene.constraints.pliRank && gene.constraints.pliRank < CONSTRAINED_GENE_RANK_THRESHOLD)) &&
         <GeneLabel
           color="red"
           label="LOF CONSTR"
           popupHeader="Loss of Function Constraint"
-          popupContent={`This gene ranks as ${gene.constraints.lof.rank} most intolerant of LoF mutations out of
-           ${gene.constraints.lof.totalGenes} genes under study (pLI: ${gene.constraints.lof.constraint &&
-            gene.constraints.lof.constraint.toPrecision(4)}). This metric is based on the amount of expected
-           variation observed in the ExAC data and is a measure of how likely the gene is to be intolerant of
-           loss-of-function mutations`
+          popupContent={`This gene ranks as ${gene.constraints.pliRank} most intolerant of LoF mutations out of
+           ${gene.constraints.totalGenes} genes under study (pli: ${gene.constraints.pli.toPrecision(4)}).
+           This metric is based on the amount of expected variation observed in the ExAC data and is a measure of how
+           likely the gene is to be intolerant of loss-of-function mutations`
           }
         />
       }

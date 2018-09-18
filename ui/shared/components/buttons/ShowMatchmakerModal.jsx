@@ -116,7 +116,7 @@ const BaseMatches = ({ matchKey, submission, genesById, loading, load }) => {
             if (!gene) {
               geneIds.add(geneId)
             } else {
-              geneId = gene.symbol
+              geneId = gene.geneSymbol
             }
           }
           return geneId

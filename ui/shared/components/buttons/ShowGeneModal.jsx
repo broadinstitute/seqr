@@ -7,8 +7,8 @@ import ButtonLink from './ButtonLink'
 
 const ShowGeneModal = ({ gene, ...linkProps }) =>
   <Modal
-    trigger={<ButtonLink {...linkProps}>{gene.symbol}</ButtonLink>}
-    title={gene.symbol}
+    trigger={<ButtonLink {...linkProps}>{gene.geneSymbol}</ButtonLink>}
+    title={gene.geneSymbol}
     modalName={`gene-${gene.geneId}`}
     size="fullscreen"
   >

@@ -16,7 +16,7 @@ PROJECT_GUID = 'R0001_1kg'
 
 
 class LocusListAPITest(TransactionTestCase):
-    fixtures = ['users', '1kg_project']
+    fixtures = ['users', '1kg_project', 'reference_data']
 
     def test_locus_lists(self):
         url = reverse(locus_lists)
@@ -35,10 +35,7 @@ class LocusListAPITest(TransactionTestCase):
              'canEdit', 'name'}
         )
 
-    @mock.patch('seqr.views.utils.gene_utils.get_reference')
-    def test_locus_list_info(self, mock_reference):
-        mock_reference.return_value.get_genes.side_effect = lambda gene_ids: {gene_id: {} for gene_id in gene_ids}
-
+    def test_locus_list_info(self):
         url = reverse(locus_list_info, args=[LOCUS_LIST_GUID])
         _check_login(self, url)
 
@@ -60,11 +57,7 @@ class LocusListAPITest(TransactionTestCase):
             set(response_json['genesById'].keys())
         )
 
-    @mock.patch('seqr.views.utils.gene_utils.get_reference')
-    def test_create_update_and_delete_locus_lust(self, mock_reference):
-        mock_reference.return_value.get_genes.side_effect = lambda gene_ids: {gene_id: {'geneId': gene_id} for gene_id in gene_ids}
-        mock_reference.return_value.get_gene_id_from_symbol.side_effect = lambda symbol: symbol if symbol != 'foo' else None
-
+    def test_create_update_and_delete_locus_list(self):
         create_locus_list_url = reverse(create_locus_list_handler)
         _check_login(self, create_locus_list_url)
 
@@ -75,7 +68,7 @@ class LocusListAPITest(TransactionTestCase):
 
         response = self.client.post(create_locus_list_url, content_type='application/json', data=json.dumps({
             'name': 'new_locus_list', 'isPublic': True, 'parsedItems': {'items': [
-                {'symbol': 'TTN'}, {'symbol': 'foo'}, {'chrom': '100', 'start': '1', 'end': '1'},
+                {'symbol': 'DDX11L1'}, {'symbol': 'foo'}, {'chrom': '100', 'start': '1', 'end': '1'},
                 {'chrom': '2', 'start': '1234', 'end': '5678', 'genomeVersion': '37'},
             ]},
         }))
@@ -86,7 +79,7 @@ class LocusListAPITest(TransactionTestCase):
         # send valid request to create locus_list
         response = self.client.post(create_locus_list_url, content_type='application/json', data=json.dumps({
             'name': 'new_locus_list', 'isPublic': True, 'ignoreInvalidItems': True, 'parsedItems': {'items': [
-                {'symbol': 'TTN'}, {'symbol': 'foo'}, {'chrom': '100', 'start': '1', 'end': '1'},
+                {'symbol': 'DDX11L1'}, {'symbol': 'foo'}, {'chrom': '100', 'start': '1', 'end': '1'},
                 {'chrom': '2', 'start': '1234', 'end': '5678', 'genomeVersion': '37'},
             ]},
         }))
@@ -104,7 +97,7 @@ class LocusListAPITest(TransactionTestCase):
         self.assertListEqual(
             new_locus_list['items'],
             [
-                {'geneId': 'TTN'},
+                {'geneId': 'ENSG00000223972'},
                 {'chrom': '2', 'start': 1234, 'end': 5678, 'genomeVersion': '37', 'locusListIntervalGuid': mock.ANY}
             ]
         )
@@ -127,7 +120,7 @@ class LocusListAPITest(TransactionTestCase):
         update_locus_list_url = reverse(update_locus_list_handler, args=[guid])
         response = self.client.post(update_locus_list_url, content_type='application/json',  data=json.dumps(
             {'name': 'updated_locus_list', 'isPublic': False,
-             'parsedItems': {'items': [{'symbol': 'TTN', 'geneId': gene_id}, {'symbol': 'G6PC'}]}}))
+             'parsedItems': {'items': [{'symbol': 'DDX11L1', 'geneId': gene_id}, {'symbol': 'FAM138A'}]}}))
 
         self.assertEqual(response.status_code, 200)
         updated_locus_list_response = response.json()

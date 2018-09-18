@@ -143,7 +143,7 @@ const BaseGenePageHeader = ({ gene, match }) =>
   <PageHeaderLayout
     entity="gene_info"
     entityGuid={match.params.geneId}
-    title={match.params.geneId && (gene ? gene.symbol : match.params.geneId)}
+    title={match.params.geneId && (gene ? gene.geneSymbol : match.params.geneId)}
     originalPagePath="gene"
     originalPages={originalGenePage(match.params.geneId)}
   />

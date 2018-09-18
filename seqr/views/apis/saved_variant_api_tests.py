@@ -6,7 +6,7 @@ from django.urls.base import reverse
 
 from seqr.models import VariantNote, VariantTag, VariantFunctionalData
 from seqr.views.apis.saved_variant_api import saved_variant_data, saved_variant_transcripts, create_variant_note_handler, \
-    update_variant_note_handler, delete_variant_note_handler, update_variant_tags_handler
+    update_variant_note_handler, delete_variant_note_handler, update_variant_tags_handler, update_saved_variant_json
 from seqr.views.utils.test_utils import _check_login
 
 
@@ -16,10 +16,7 @@ VARIANT_GUID = 'SV0000001_2103343353_r0390_100'
 class ProjectAPITest(TransactionTestCase):
     fixtures = ['users', '1kg_project']
 
-    @mock.patch('seqr.views.utils.gene_utils.get_reference')
-    def test_saved_variant_data(self, mock_reference):
-        mock_reference.return_value.get_genes.side_effect = lambda gene_ids: {gene_id: {'geneId': gene_id} for gene_id in gene_ids}
-
+    def test_saved_variant_data(self):
         url = reverse(saved_variant_data, args=['R0001_1kg'])
         _check_login(self, url)
 
@@ -146,4 +143,18 @@ class ProjectAPITest(TransactionTestCase):
         self.assertListEqual(["Biochemical Function", "Bonferroni corrected p-value"], [vt.functional_data_tag for vt in variant_functional_data])
         self.assertListEqual(["An updated note", "0.05"], [vt.metadata for vt in variant_functional_data])
 
+    @mock.patch('seqr.views.utils.variant_utils._retrieve_saved_variants_json')
+    def test_update_saved_variant_json(self, mock_retrieve_variants):
+        mock_retrieve_variants.side_effect = lambda project, variant_tuples: \
+            [{'xpos': var[0], 'ref': var[1], 'alt': var[2], 'extras': {'family_id': var[3]}} for var in variant_tuples]
 
+        url = reverse(update_saved_variant_json, args=['R0001_1kg'])
+        _check_login(self, url)
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+
+        self.assertSetEqual(
+            set(response.json().keys()),
+            {'SV0000002_1248367227_r0390_100', 'SV0000001_2103343353_r0390_100', 'SV0000003_2246859832_r0390_100'}
+        )

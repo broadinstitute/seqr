@@ -1,14 +1,15 @@
 from django.contrib.auth.models import User
 from django.test import TestCase
+from reference_data.models import GeneInfo
 from seqr.models import Project, Family, Individual, Sample, SavedVariant, VariantTag, VariantFunctionalData, \
-    VariantNote
+    VariantNote, LocusList
 from seqr.views.utils.orm_to_json_utils import _get_json_for_user, _get_json_for_project, _get_json_for_family, \
     _get_json_for_individual, _get_json_for_sample, get_json_for_saved_variant, get_json_for_variant_tag, \
-    get_json_for_variant_functional_data, get_json_for_variant_note
+    get_json_for_variant_functional_data, get_json_for_variant_note, get_json_for_locus_list, get_json_for_gene
 
 
 class JSONUtilsTest(TestCase):
-    fixtures = ['users.json', '1kg_project']
+    fixtures = ['users.json', '1kg_project', 'reference_data']
 
     def test_json_for_user(self):
         for user in User.objects.all():
@@ -116,4 +117,31 @@ class JSONUtilsTest(TestCase):
         fields = {
              'noteGuid', 'note', 'submitToClinvar', 'lastModifiedDate', 'createdBy'
         }
+        self.assertSetEqual(set(json.keys()), fields)
+
+    def test_json_for_locus_list(self):
+        locus_list = LocusList.objects.first()
+        user = User.objects.filter().first()
+        json = get_json_for_locus_list(locus_list, user)
+
+        fields = {
+            'locusListGuid', 'description', 'lastModifiedDate', 'numEntries', 'isPublic', 'createdBy', 'createdDate',
+             'canEdit', 'name', 'items', 'intervalGenomeVersion'
+        }
+        self.assertSetEqual(set(json.keys()), fields)
+
+    def test_json_for_gene(self):
+        gene = GeneInfo.objects.get(id=1)
+        json = get_json_for_gene(gene)
+
+        fields = {
+            'chromGrch37', 'chromGrch38', 'codingRegionSizeGrch37', 'codingRegionSizeGrch38', 'constraints',
+            'diseaseDesc', 'endGrch37', 'endGrch38', 'functionDesc', 'gencodeGeneType', 'geneId', 'geneSymbol',
+            'omimPhenotypes', 'startGrch37', 'startGrch38',
+        }
+        self.assertSetEqual(set(json.keys()), fields)
+
+        user = User.objects.filter().first()
+        json = get_json_for_gene(gene, user=user, add_notes=True)
+        fields.update({'notes'})
         self.assertSetEqual(set(json.keys()), fields)

@@ -321,7 +321,7 @@ READ_VIZ_USERNAME=None   # used to authenticate to remote HTTP bam server
 READ_VIZ_PASSWD=None
 
 
-KIBANA_HOSTNAME = os.environ.get('KIBANA_SERVICE_HOSTNAME', 'localhost')
+KIBANA_HOSTNAME = os.environ.get('KIBANA_SERVICE_HOSTNAME', 'kibana')
 KIBANA_PORT = os.environ.get('KIBANA_SERVICE_PORT', 5601)
 KIBANA_SERVER = "%s:%s" % (KIBANA_HOSTNAME, KIBANA_PORT)
 

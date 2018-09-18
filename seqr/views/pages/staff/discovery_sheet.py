@@ -144,7 +144,7 @@ def generate_rows(project, errors):
     rows = []
 
     loaded_samples = Sample.objects.filter(
-        project=project, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS, sample_status=Sample.SAMPLE_STATUS_LOADED)
+        individual__family__project=project, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS, sample_status=Sample.SAMPLE_STATUS_LOADED)
 
     if not loaded_samples:
         errors.append("No data loaded for project: %s" % project)
