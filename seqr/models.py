@@ -778,8 +778,13 @@ class AnalysisGroup(ModelWithGUID):
 
 
 class VariantSearch(models.Model):
-    search_hash = models.CharField(max_length=50, db_index=True, unique=True)
+    search_hash = models.CharField(max_length=50)
     search = models.TextField()
+    sort = models.CharField(null=True, max_length=50)
     es_index = models.TextField(null=True)
     results = models.TextField(null=True)
     total_results = models.IntegerField(null=True)
+
+    class Meta:
+        unique_together = ('search_hash', 'sort')
+

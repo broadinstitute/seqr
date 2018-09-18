@@ -5,7 +5,7 @@ from django.db.models import Q
 from django.views.decorators.csrf import csrf_exempt
 
 from seqr.models import Family, Individual, SavedVariant, VariantSearch
-from seqr.utils.es_utils import get_es_variants
+from seqr.utils.es_utils import get_es_variants, XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.saved_variant_api import _saved_variant_genes, _add_locus_lists
 from seqr.views.utils.json_utils import create_json_response
@@ -32,22 +32,35 @@ UNAFFECTED = Individual.AFFECTED_STATUS_UNAFFECTED
 def query_variants_handler(request, search_hash):
     """Search variants.
     """
+    sort = request.GET.get('sort') or XPOS_SORT_KEY
+    if sort == PATHOGENICTY_SORT_KEY and request.user.is_staff:
+        sort = PATHOGENICTY_HGMD_SORT_KEY
 
-    search_model = VariantSearch.objects.filter(search_hash=search_hash).first()
-    if not search_model:
-        search = json.loads(request.body)
-        if not search:
+    search_models = VariantSearch.objects.filter(search_hash=search_hash)
+    if not search_models:
+        search_json = request.body
+        if not search_json:
             return create_json_response({}, status=400, reason='Invalid search hash: {}'.format(search_hash))
-        search_model = VariantSearch.objects.create(search_hash=search_hash, search=request.body)
     else:
-        search = json.loads(search_model.search)
+        search_json = search_models[0].search
+    search = json.loads(search_json)
+    search_model = search_models.filter(sort=sort).first()
+    if not search_model:
+        search_model = VariantSearch.objects.create(search_hash=search_hash, sort=sort, search=search_json)
 
     # TODO this is only mendelian variant search, should be others and not require project/ family
     project = get_project_and_check_permissions(search.get('projectGuid'), request.user)
     family = Family.objects.get(guid=search.get('familyGuid'))
     individuals = family.individual_set.all()
 
-    variants = get_es_variants(search_model, individuals, user=request.user)
+    if search_model.results:
+        variants = json.loads(search_model.results)
+    else:
+        variants, total_results, es_index = get_es_variants(search, individuals, sort=sort)
+        search_model.results = json.dumps(variants)
+        search_model.total_results = total_results
+        search_model.es_index = es_index
+        search_model.save()
 
     genes = _saved_variant_genes(variants)
     # TODO add locus lists on the client side (?)

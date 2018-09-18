@@ -223,7 +223,7 @@ export const reducers = {
     hideExcluded: false,
     hideReviewOnly: false,
     categoryFilter: SHOW_ALL,
-    sortOrder: SORT_BY_FAMILY_GUID,
+    sort: SORT_BY_FAMILY_GUID,
     currentPage: 1,
     recordsPerPage: 25,
   }, false),

@@ -9,11 +9,11 @@ import { HorizontalSpacer } from 'shared/components/Spacers'
 import ExportTableButton from 'shared/components/buttons/export-table/ExportTableButton'
 import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
 import Variants from 'shared/components/panel/variants/Variants'
-import { VARIANT_SORT_FIELD, VARIANT_HIDE_EXCLUDED_FIELD } from 'shared/utils/constants'
+import { VARIANT_SORT_FIELD } from 'shared/utils/constants'
 
 import { loadSearchedVariants, updateVariantSearchDisplay } from '../reducers'
 import {
-  getSortedFilteredSearchedVariants,
+  getSearchedVariantsWithSavedVariants,
   getSearchedVariantsIsLoading,
   getSearchedVariantsErrorMessage,
   getTotalVariantsCount,
@@ -32,21 +32,20 @@ const LargeRow = styled(Grid.Row)`
 
 const FIELDS = [
   VARIANT_SORT_FIELD,
-  VARIANT_HIDE_EXCLUDED_FIELD,
 ]
 
 const VariantSearchResults = ({
-  searchedVariants, variantSearchDisplay, searchedVariantExportConfig, search, loading, load, errorMessage,
-  onSubmit, totalVariantsCount,
+  searchedVariants, variantSearchDisplay, searchedVariantExportConfig, queryParams, updateQueryParams,
+  loading, load, errorMessage, onSubmit, totalVariantsCount,
 }) =>
   <DataLoader
-    contentId={search.search}
+    contentId={queryParams.search}
     content={searchedVariants}
     loading={loading}
     load={load}
     errorMessage={errorMessage}
   >
-    {search.search &&
+    {queryParams.search &&
       <LargeRow>
         <Grid.Column width={5}>
           Found <b>{totalVariantsCount}</b> variants
@@ -56,7 +55,10 @@ const VariantSearchResults = ({
         </Grid.Column>
         <Grid.Column width={11} floated="right" textAlign="right">
           <ReduxFormWrapper
-            onSubmit={onSubmit}
+            onSubmit={(updates) => {
+              updateQueryParams({ ...queryParams, ...Object.entries(updates).reduce((acc, [k, v]) => ({ ...acc, [k]: v.toLowerCase() }), {}) })
+              onSubmit(updates)
+            }}
             form="editSearchedVariantsDisplay"
             initialValues={variantSearchDisplay}
             closeOnSuccess={false}
@@ -85,11 +87,12 @@ VariantSearchResults.propTypes = {
   onSubmit: PropTypes.func,
   searchedVariantExportConfig: PropTypes.array,
   totalVariantsCount: PropTypes.number,
-  search: PropTypes.object,
+  queryParams: PropTypes.object,
+  updateQueryParams: PropTypes.func,
 }
 
 const mapStateToProps = state => ({
-  searchedVariants: getSortedFilteredSearchedVariants(state),
+  searchedVariants: getSearchedVariantsWithSavedVariants(state),
   loading: getSearchedVariantsIsLoading(state),
   variantSearchDisplay: getVariantSearchDisplay(state),
   searchedVariantExportConfig: getSearchedVariantExportConfig(state),
@@ -97,9 +100,15 @@ const mapStateToProps = state => ({
   errorMessage: getSearchedVariantsErrorMessage(state),
 })
 
-const mapDispatchToProps = {
-  load: loadSearchedVariants,
-  onSubmit: updateVariantSearchDisplay,
+const mapDispatchToProps = (dispatch, ownProps) => {
+  return {
+    load: (searchHash) => {
+      dispatch(loadSearchedVariants(searchHash, ownProps.queryParams))
+    },
+    onSubmit: (updates) => {
+      dispatch(updateVariantSearchDisplay(updates, ownProps.queryParams.search))
+    },
+  }
 }
 
 export default connect(mapStateToProps, mapDispatchToProps)(VariantSearchResults)

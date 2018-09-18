@@ -38,7 +38,7 @@ const BaseVariantSearch = ({ queryParams, updateQueryParams, searchParams, proje
             />
           </Grid.Column>
         </Grid.Row>
-        <VariantSearchResults search={queryParams} />
+        <VariantSearchResults queryParams={queryParams} updateQueryParams={updateQueryParams} />
       </Grid>
     </DataLoader>
   )

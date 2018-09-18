@@ -23,11 +23,7 @@ def get_es_client():
     return elasticsearch.Elasticsearch(host=settings.ELASTICSEARCH_SERVICE_HOSTNAME)
 
 
-def get_es_variants(search_model, individuals, user=None):
-    # if search_model.results:
-    #     return json.loads(search_model.results)
-
-    search = json.loads(search_model.search)
+def get_es_variants(search, individuals, sort=None):
 
     genes, intervals, invalid_items = parse_locus_list_items(search.get('locus', {}), all_new=True)
     if invalid_items:
@@ -80,7 +76,7 @@ def get_es_variants(search_model, individuals, user=None):
         es_search = es_search.filter(_genotype_filter(search['inheritance'], individuals, samples_by_id))
 
     # TODO sort and pagination
-    es_search = es_search.sort(*_get_sort(search.get('sort'), samples_by_id, user))
+    es_search = es_search.sort(*_get_sort(sort, samples_by_id))
     es_search = es_search[0:100]
 
     # Only return relevant fields
@@ -95,12 +91,7 @@ def get_es_variants(search_model, individuals, user=None):
 
     variant_results = [_parse_es_hit(hit, samples_by_id, liftover_grch38_to_grch37, field_names) for hit in response]
 
-    search_model.es_index = elasticsearch_index
-    search_model.results = json.dumps(variant_results)
-    search_model.total_results = response.hits.total
-    search_model.save()
-
-    return variant_results
+    return variant_results, response.hits.total, elasticsearch_index
 
 
 def _has_genotype_filter(sample_ids):
@@ -223,7 +214,7 @@ def _get_pop_freq_key(population, freq_field):
     freq_suffix = freq_field
     if field_config.get('fields') and not pop_config.get('use_default_field_suffix'):
         freq_suffix = field_config['fields'][-1]
-    pop_config.get(freq_field) or '{}_{}'.format(population, freq_suffix)
+    return pop_config.get(freq_field) or '{}_{}'.format(population, freq_suffix)
 
 
 def _pop_freq_filter(filter_key, value):
@@ -326,80 +317,68 @@ def _build_or_filter(op, filters):
     return q
 
 
-PATHOGENICTY_SORT_KEY = 'PATHOGENICITY'
-PATHOGENICTY_HGMD_SORT_KEY = 'PATHOGENICITY_HGMD'
-FAMILY_SORT_KEY = 'FAMILY_GUID'
+PATHOGENICTY_SORT_KEY = 'pathogenicity'
+PATHOGENICTY_HGMD_SORT_KEY = 'pathogenicity_hgmd'
+FAMILY_SORT_KEY = 'family_guid'
+XPOS_SORT_KEY = 'xpos'
+CLINVAR_SORT = {
+    '_script': {
+        'type': 'number',
+        'script': {
+           'source': """
+                if (doc['clinvar_clinical_significance'].empty ) {
+                    return 2;
+                }
+                String clinsig = doc['clinvar_clinical_significance'].value;
+                if (clinsig.indexOf('Pathogenic') >= 0 || clinsig.indexOf('Likely_pathogenic') >= 0) {
+                    return 0;
+                } else if (clinsig.indexOf('Benign') >= 0 || clinsig.indexOf('Likely_benign') >= 0) {
+                    return 3;
+                }
+                return 1;
+           """
+        }
+    }
+}
 SORT_FIELDS = {
-    FAMILY_SORT_KEY: {
+    FAMILY_SORT_KEY: [{
         '_script': {
             'type': 'string',
             'script': {
                 'params': {
                     'family_samples': {}
                 },
-                'source': """
-                    ArrayList families = new ArrayList(params.family_samples.keySet());
-                    families.sort((a, b) -> a.compareTo(b));
-                    for (family in families) {
-                        for (sample in params.family_samples[family]) {
-                            if(doc.containsKey(sample+"_num_alt") && doc[sample+"_num_alt"].value >= 0) {
-                                return family;
-                            }
-                        }
-                    }
-                    return "zz";
-                """
+                'source': """ArrayList families = new ArrayList(params.family_samples.keySet()); families.sort((a, b) -> a.compareTo(b)); for (family in families) { for (sample in params.family_samples[family]) {if(doc.containsKey(sample+"_num_alt") && doc[sample+"_num_alt"].value >= 0) {return family;}}}return "zz";"""
             }
         }
-    },
-    PATHOGENICTY_SORT_KEY: {
+    }],
+    PATHOGENICTY_SORT_KEY: [CLINVAR_SORT],
+    PATHOGENICTY_HGMD_SORT_KEY: [CLINVAR_SORT, {
         '_script': {
             'type': 'number',
             'script': {
-               'source': """
-                    if (doc['clinvar_clinical_significance'].empty ) {
-                        return 2;
-                    }
-                    String clinsig = doc['clinvar_clinical_significance'].value;
-                    if (clinsig.indexOf('Pathogenic') >= 0 || clinsig.indexOf('Likely_pathogenic') >= 0) {
-                        return 0;
-                    } else if (clinsig.indexOf('Benign') >= 0 || clinsig.indexOf('Likely_benign') >= 0) {
-                        return 3;
-                    }
-                    return 1;
-               """
+               'source': "(!doc['hgmd_class'].empty && doc['hgmd_class'].value == 'DM') ? 0 : 1"
             }
         }
-    },
-    PATHOGENICTY_HGMD_SORT_KEY: {
-        '_script': {
-            'type': 'number',
-            'script': {
-               'source': "!doc['hgmd_class'].empty && doc['hgmd_class'].value == 'DM') ? 0 : 1"
-            }
-        }
-    },
-    'IN_OMIM': '',
-    'PROTEIN_CONSEQUENCE': 'mainTranscript_major_consequence_rank',
-    'EXAC': _get_pop_freq_key('exac', 'AF'),
-    '1KG': _get_pop_freq_key('g1k', 'AF'),
-    'CONSTRAINT': [],
-    'XPOS': 'xpos',
+    }],
+    'in_omim': [],
+    'protein_consequence': ['mainTranscript_major_consequence_rank'],
+    'ecxac': [{_get_pop_freq_key('exac', 'AF'): {'missing': '_first'}}],
+    '1kg': [{_get_pop_freq_key('g1k', 'AF'): {'missing': '_first'}}],
+    'constraint': [],
+    XPOS_SORT_KEY: ['xpos'],
 }
 
 
-def _get_sort(sort_key, samples_by_id, user):
-    sorts = []
-    sort = SORT_FIELDS.get(sort_key)
-    if sort:
-        sorts.append(sort)
-    if sort_key == PATHOGENICTY_SORT_KEY and user and user.is_staff:
-        sorts.append(SORT_FIELDS[PATHOGENICTY_HGMD_SORT_KEY])
-    elif sort_key == FAMILY_SORT_KEY:
+def _get_sort(sort_key, samples_by_id):
+    sorts = SORT_FIELDS.get(sort_key, [])
+
+    if sort_key == FAMILY_SORT_KEY:
         family_samples = defaultdict(list)
         for sample_id, sample in samples_by_id.items():
             family_samples[sample.individual.family.guid].append(sample_id)
         sorts[0]['_script']['script']['params']['family_samples'] = family_samples
+
     if 'xpos' not in sorts:
         sorts.append('xpos')
     return sorts
@@ -505,7 +484,7 @@ def _parse_es_hit(raw_hit, samples_by_id, liftover_grch38_to_grch37, field_names
 
     populations = {
         population: _get_field_values(
-            hit, POPULATION_FIELD_CONFIGS, format_response_key=lambda key: key.lower(), lookup_field_prefix=population,
+            hit, POPULATION_RESPONSE_FIELD_CONFIGS, format_response_key=lambda key: key.lower(), lookup_field_prefix=population,
             get_addl_fields=lambda field, field_config:
                 [pop_config.get(field)] + ['{}_{}'.format(population, custom_field) for custom_field in field_config.get('fields', [])],
         )

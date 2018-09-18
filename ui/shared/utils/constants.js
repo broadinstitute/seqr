@@ -582,7 +582,7 @@ export const VARIANT_SORT_LOOKUP = VARIANT_SORT_OPTONS.reduce(
 )
 
 export const VARIANT_SORT_FIELD = {
-  name: 'sortOrder',
+  name: 'sort',
   component: Dropdown,
   inline: true,
   selection: false,

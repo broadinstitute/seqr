@@ -15,12 +15,14 @@ const UPDATE_HASHED_SEARCHES = 'UPDATE_HASHED_SEARCHES'
 // actions
 
 export const loadSearchedVariants = (searchHash, search) => {
-  return (dispatch) => {
+  return (dispatch, getState) => {
     if (!searchHash) {
       return
     }
+    const sort = (search || {}).sort || getState().variantSearchDisplay.sort || SORT_BY_XPOS
+
     dispatch({ type: REQUEST_SEARCHED_VARIANTS })
-    new HttpRequestHelper(`/api/search/${searchHash}`,
+    new HttpRequestHelper(`/api/search/${searchHash}?sort=${sort}`,
       (responseJson) => {
         dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
         dispatch({ type: RECEIVE_SEARCHED_VARIANTS, newValue: responseJson.searchedVariants })
@@ -33,7 +35,13 @@ export const loadSearchedVariants = (searchHash, search) => {
   }
 }
 
-export const updateVariantSearchDisplay = updates => ({ type: UPDATE_SEARCHED_VARIANT_DISPLAY, updates })
+export const updateVariantSearchDisplay = (updates, searchHash) => {
+  return (dispatch, getState) => {
+    dispatch({ type: UPDATE_SEARCHED_VARIANT_DISPLAY, updates })
+    return loadSearchedVariants(searchHash)(dispatch, getState)
+  }
+}
+
 
 // reducers
 
@@ -42,8 +50,7 @@ export const reducers = {
   searchedVariantsLoading: loadingReducer(REQUEST_SEARCHED_VARIANTS, RECEIVE_SEARCHED_VARIANTS),
   searchesByHash: createObjectsByIdReducer(UPDATE_HASHED_SEARCHES),
   variantSearchDisplay: createSingleObjectReducer(UPDATE_SEARCHED_VARIANT_DISPLAY, {
-    hideExcluded: false,
-    sortOrder: SORT_BY_XPOS,
+    sort: SORT_BY_XPOS,
   }, false),
 }
 
