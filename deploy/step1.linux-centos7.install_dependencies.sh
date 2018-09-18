@@ -126,9 +126,6 @@ vm.max_map_count=262144
     needs_reboot=1
 fi
 
-# apply limit to current session
-sudo prlimit --pid $$ --nofile=65536
-
 if (( $(ulimit -n) < 65536)); then
 
     echo '
@@ -139,6 +136,9 @@ elasticsearch  nofile  65536
 
     needs_reboot=1
 fi
+
+# apply limit to current session
+sudo prlimit --pid $$ --nofile=65536
 
 set +x
 if [ "$needs_reboot" ] ; then

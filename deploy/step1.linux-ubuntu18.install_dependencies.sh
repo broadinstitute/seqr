@@ -133,9 +133,6 @@ vm.max_map_count=262144
     needs_reboot=1
 fi
 
-# apply limit to current session
-sudo prlimit --pid $$ --nofile=65536
-
 if (( $(ulimit -n) < 65536)); then
 
     echo '
@@ -143,6 +140,7 @@ if (( $(ulimit -n) < 65536)); then
 * soft	 nofile	65536
 elasticsearch  nofile  65536
 ' | sudo tee -a /etc/security/limits.conf  # avoid elasticsearch error: "max file descriptors [4096] for elasticsearch process is too low, increase to at least [65536]"
+
 
     echo '
     ==================================================================
@@ -176,6 +174,9 @@ elasticsearch  nofile  65536
 
     needs_reboot=1
 fi
+
+# apply limit to current session
+sudo prlimit --pid $$ --nofile=65536
 
 set +x
 if [ "$needs_reboot" ] ; then
