@@ -91,7 +91,7 @@ Optionally edit deployment settings before proceeding to step 4:
 SCRIPT=step4.install_seqr_on_minikube.sh && curl -L 'http://raw.githubusercontent.com/macarthur-lab/seqr/master/deploy/$SCRIPT' -o $SCRIPT && chmod 777 $SCRIPT && source $SCRIPT
 ```
 
-Once it's done with these deployment steps, you can create a super-user account by running:
+After this finishes, you can create a super-user account by running:
 
 ```
 source ./activate_virtualenv.sh
