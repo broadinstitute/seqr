@@ -45,33 +45,33 @@ Run the following command to install `gcc`, `java1.8`, `minikube`, `kubectl` and
 
 ###### MacOS
 ```
-SCRIPT=step1.macos.install_dependencies.sh && curl -L 'http://raw.githubusercontent.com/macarthur-lab/seqr/master/deploy/$SCRIPT' -o $SCRIPT && chmod 777 $SCRIPT && source $SCRIPT
+SCRIPT=step1.macos.install_dependencies.sh && curl -L http://raw.githubusercontent.com/macarthur-lab/seqr/master/deploy/$SCRIPT -o $SCRIPT && chmod 777 $SCRIPT && source $SCRIPT
 ```
 
 ###### CentOS7 / RedHat
 
 ```
-SCRIPT=step1.linux-centos7.install_dependencies.sh && curl -L 'http://raw.githubusercontent.com/macarthur-lab/seqr/master/deploy/$SCRIPT' -o $SCRIPT && chmod 777 $SCRIPT && source $SCRIPT
+SCRIPT=step1.linux-centos7.install_dependencies.sh && curl -L http://raw.githubusercontent.com/macarthur-lab/seqr/master/deploy/$SCRIPT -o $SCRIPT && chmod 777 $SCRIPT && source $SCRIPT
 ```
 
 ###### Ubuntu 
 
 ```
-SCRIPT=step1.linux-ubuntu18.install_dependencies.sh && curl -L 'http://raw.githubusercontent.com/macarthur-lab/seqr/master/deploy/$SCRIPT' -o $SCRIPT && chmod 777 $SCRIPT && source $SCRIPT
+SCRIPT=step1.linux-ubuntu18.install_dependencies.sh && curl -L http://raw.githubusercontent.com/macarthur-lab/seqr/master/deploy/$SCRIPT -o $SCRIPT && chmod 777 $SCRIPT && source $SCRIPT
 ```
 
 #### Step 2: Install and start elasticsearch
 
 Run this script to start an elasticsearch instance in the current directory: 
 ```
-SCRIPT=step2.install_and_start_elasticsearch.sh && curl -L 'http://raw.githubusercontent.com/macarthur-lab/seqr/master/deploy/$SCRIPT' -o $SCRIPT && chmod 777 $SCRIPT && source $SCRIPT
+SCRIPT=step2.install_and_start_elasticsearch.sh && curl -L http://raw.githubusercontent.com/macarthur-lab/seqr/master/deploy/$SCRIPT -o $SCRIPT && chmod 777 $SCRIPT && source $SCRIPT
 ```
 
 #### Step 3: Download seqr deployment scripts
 
 In a new terminal, run this script to download seqr deployment scripts:
 ```
-SCRIPT=step3.download_deployment_scripts.sh && curl -L 'http://raw.githubusercontent.com/macarthur-lab/seqr/master/deploy/$SCRIPT' -o $SCRIPT && chmod 777 $SCRIPT && source $SCRIPT
+SCRIPT=step3.download_deployment_scripts.sh && curl -L http://raw.githubusercontent.com/macarthur-lab/seqr/master/deploy/$SCRIPT -o $SCRIPT && chmod 777 $SCRIPT && source $SCRIPT
 ```
   
 Optionally edit deployment settings before proceeding to step 4:
@@ -88,7 +88,7 @@ Optionally edit deployment settings before proceeding to step 4:
 #### Step 4: Install seqr on minikube
 
 ```
-SCRIPT=step4.install_seqr_on_minikube.sh && curl -L 'http://raw.githubusercontent.com/macarthur-lab/seqr/master/deploy/$SCRIPT' -o $SCRIPT && chmod 777 $SCRIPT && source $SCRIPT
+SCRIPT=step4.install_seqr_on_minikube.sh && curl -L http://raw.githubusercontent.com/macarthur-lab/seqr/master/deploy/$SCRIPT -o $SCRIPT && chmod 777 $SCRIPT && source $SCRIPT
 ```
 
 After this finishes, you can create a super-user account by running:
