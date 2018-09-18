@@ -285,7 +285,7 @@ if args.command in [DEPLOY_COMMAND, DEPLOY_ALL_COMMAND]:
 
     if not runtime_settings["ONLY_PUSH_TO_REGISTRY"]:
         if args.command == DEPLOY_ALL_COMMAND:
-            update_reference_data(args.deployment_target)
+            #update_reference_data(args.deployment_target)
             #load_example_project(args.deployment_target)
 
             components_to_tail = ["seqr"]

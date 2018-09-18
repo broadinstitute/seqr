@@ -19,5 +19,5 @@ echo ==== deploy all seqr components =====
 
 source venv/bin/activate
 
-./servctl deploy-all minikube
+./servctl deploy-all --restore-seqrdb-from-backup gs://seqr-reference-data/gene_reference_data.gz minikube
 
