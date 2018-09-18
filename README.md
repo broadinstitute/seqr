@@ -91,20 +91,17 @@ Optionally edit deployment settings before proceeding to step 4:
 SCRIPT=step4.install_seqr_on_minikube.sh && curl -L 'http://raw.githubusercontent.com/macarthur-lab/seqr/master/deploy/$SCRIPT' -o $SCRIPT && chmod 777 $SCRIPT && source $SCRIPT
 ```
 
-This may run for several hours to deploy all components and load reference data.
-
-Once it's done with the deployment steps, you can create a super-user account by running:
- 
+Once it's done with these deployment steps, you can create a super-user account by running:
 
 ```
 source ./activate_virtualenv.sh
 ./servctl create-user minikube 
 ```
 
-and open seqr by opening your browser to:
+and then open seqr by opening your browser to `http://$(minikube ip):30003`:
 
 ```
-open http://$(minikube ip):30003   # here, port 30003 is based on the value of $SEQR_SERVICE_NODE_PORT 
+open http://$(minikube ip):30003   
 ```
 
 ## Update / Migrate an older xBrowse Instance
