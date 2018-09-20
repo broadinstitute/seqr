@@ -189,11 +189,12 @@ class ElasticsearchDatastore(datastore.Datastore):
             project = family.project
             logger.info("Searching in family elasticsearch index: " + str(elasticsearch_index))
 
+        mapping = self._es_client.indices.get_mapping(str(elasticsearch_index) + "*")
+        index_fields = {}
         if family_id is not None and len(family_individual_ids) > 0:
             # figure out which index to use
             # TODO add caching
             matching_indices = []
-            mapping = self._es_client.indices.get_mapping(str(elasticsearch_index)+"*")
 
             if family_individual_ids:
                 for raw_indiv_id in family_individual_ids:
@@ -201,6 +202,7 @@ class ElasticsearchDatastore(datastore.Datastore):
                     for index_name, index_mapping in mapping.items():
                         if indiv_id+"_num_alt" in index_mapping["mappings"]["variant"]["properties"]:
                             matching_indices.append(index_name)
+                            index_fields.update(index_mapping)
                     if len(matching_indices) > 0:
                         break
 
@@ -214,6 +216,10 @@ class ElasticsearchDatastore(datastore.Datastore):
             else:
                 logger.info("matching indices: " + str(elasticsearch_index))
                 elasticsearch_index = ",".join(matching_indices)
+                
+        if not index_fields:
+            for index_mapping in mapping.values():
+                index_fields.update(index_mapping["mappings"]["variant"]["properties"])
 
         s = elasticsearch_dsl.Search(using=self._es_client, index=str(elasticsearch_index)+"*") #",".join(indices))
 
@@ -532,6 +538,21 @@ class ElasticsearchDatastore(datastore.Datastore):
             else:
                 grch37_coord = hit["variantId"]
 
+            freq_fields = {
+                'AF': "AF" if "AF" in index_fields else None,
+                '1kg_wgs_AF': "g1k_AF" if "g1k_AF" in index_fields else None,
+                '1kg_wgs_popmax_AF': "g1k_POPMAX_AF" if "g1k_POPMAX_AF" in index_fields else None,
+                'exac_v3_AF': "exac_AF" if "exac_AF" in index_fields else None,
+                'exac_v3_popmax_AF': "exac_AF_POPMAX" if "exac_AF_POPMAX" in index_fields else None,
+                'gnomad_exomes_AF': "gnomad_exomes_AF" if "gnomad_exomes_AF" in index_fields else None,
+                'gnomad_exomes_popmax_AF': "gnomad_exomes_AF_POPMAX_OR_GLOBAL" if "gnomad_exomes_AF_POPMAX_OR_GLOBAL" in index_fields else (
+                     "gnomad_exomes_AF_POPMAX" if "gnomad_exomes_AF_POPMAX" in index_fields else None),
+                'gnomad_genomes_AF': "gnomad_genomes_AF" if "gnomad_genomes_AF" in index_fields else None,
+                'gnomad_genomes_popmax_AF': "gnomad_genomes_AF_POPMAX_OR_GLOBAL" if "gnomad_genomes_AF_POPMAX_OR_GLOBAL" in index_fields else (
+                    "gnomad_genomes_AF_POPMAX" if "gnomad_genomes_AF_POPMAX" in index_fields else None),
+                'topmed_AF': "topmed_AF" if "topmed_AF" in index_fields else None,
+            }
+
             result = {
                 #u'_id': ObjectId('596d2207ff66f729285ca588'),
                 'alt': str(hit["alt"]) if "alt" in hit else None,
@@ -596,18 +617,7 @@ class ElasticsearchDatastore(datastore.Datastore):
                     'topmed_Hom': float(hit["topmed_Hom"] or 0) if "topmed_Hom" in hit else None,
                     'topmed_AN': float(hit["topmed_AN"] or 0) if "topmed_AN" in hit else None,
                 },
-                'db_freqs': {
-                    'AF': float(hit["AF"] or 0.0) if "AF" in hit else None,
-                    '1kg_wgs_AF': float(hit["g1k_AF"] or 0.0) if "g1k_AF" in hit else None,
-                    '1kg_wgs_popmax_AF': float(hit["g1k_POPMAX_AF"] or 0.0) if "g1k_POPMAX_AF" in hit else None,
-                    'exac_v3_AF': float(hit["exac_AF"] or 0.0) if "exac_AF" in hit else (hit["exac_AC_Adj"]/float(hit["exac_AN_Adj"]) if "exac_AC_Adj" in hit and "exac_AN_Adj"in hit and int(hit["exac_AN_Adj"] or 0) > 0 else None),
-                    'exac_v3_popmax_AF': float(hit["exac_AF_POPMAX"] or 0.0) if "exac_AF_POPMAX" in hit else None,
-                    'gnomad_exomes_AF': float(hit["gnomad_exomes_AF"] or 0.0) if "gnomad_exomes_AF" in hit else None,
-                    'gnomad_exomes_popmax_AF': float(hit["gnomad_exomes_AF_POPMAX_OR_GLOBAL"] or 0.0) if "gnomad_exomes_AF_POPMAX_OR_GLOBAL" in hit else (float(hit["gnomad_exomes_AF_POPMAX"] or 0.0) if "gnomad_exomes_AF_POPMAX" in hit else None),
-                    'gnomad_genomes_AF': float(hit["gnomad_genomes_AF"] or 0.0) if "gnomad_genomes_AF" in hit else None,
-                    'gnomad_genomes_popmax_AF': float(hit["gnomad_genomes_AF_POPMAX_OR_GLOBAL"] or 0.0) if "gnomad_genomes_AF_POPMAX_OR_GLOBAL" in hit else (float(hit["gnomad_genomes_AF_POPMAX"] or 0.0) if "gnomad_genomes_AF_POPMAX" in hit else None),
-                    'topmed_AF': float(hit["topmed_AF"] or 0.0) if "topmed_AF" in hit else None,
-                },
+                'db_freqs': {k: float(hit[k] or 0.0) if k in hit else (0.0 if k else None) for k, v in freq_fields.items()},
                 #'popmax_populations': {
                 #    'exac_popmax': hit["exac_POPMAX"] or None,
                 #    'gnomad_exomes_popmax': hit["gnomad_exomes_POPMAX"] or None,
