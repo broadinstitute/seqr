@@ -173,7 +173,7 @@ const ShowMatchmakerModal = ({ project, family, loading, load, monarchLoading, l
     modalName={`mme-${family.familyGuid}`}
     size="large"
   >
-    {matchmakerSubmissions ? Object.values(matchmakerSubmissions).filter(
+    {(matchmakerSubmissions && matchmakerSubmissions.length) ? Object.values(matchmakerSubmissions).filter(
       submission => submission.familyId === family.familyId,
     ).map(submission =>
       <div key={submission.individualId}>
