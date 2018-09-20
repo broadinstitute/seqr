@@ -10,8 +10,7 @@ from deploy.utils.constants import DEPLOYMENT_TARGETS, DEPLOYABLE_COMPONENTS, \
     COMPONENT_GROUP_NAMES, resolve_component_groups
 from deploy.utils.deploy_utils import deploy
 from deploy.utils.kubectl_utils import run_in_pod, get_pod_name
-from deploy.utils.loading_utils import load_example_project, \
-    load_new_project, create_user, update_reference_data
+from deploy.utils.loading_utils import load_example_project, create_user, update_reference_data, load_dataset
 from deploy.utils.servctl_utils import print_log, port_forward, \
     show_dashboard, show_status, wait_for, troubleshoot_component, \
     delete_component, reset_database, delete_all, get_component_port_pairs, \
@@ -55,19 +54,31 @@ sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS, help="kubernete
 ## LOAD_DATASET_COMMAND
 sp = subparsers.add_parser(LOAD_DATASET_COMMAND, description="Load new dataset into a new or existing project in seqr.")
 sp.add_argument("-g", "--genome-version", help="Genome version 37 or 38", choices=["37", "38"], required=True)
-sp.add_argument("-i", "--project-id", help="Project ID")
-sp.add_argument("-s", "--sample-type", help="Sample type (eg. WES, WGS, etc.)", choices=["WES", "WGS", "RNA"])
-sp.add_argument("-d", "--dataset-type", help="Dataset type (eg. VARIANTS, SV, etc.)", choices=["VARIANTS", "SV"])
+sp.add_argument("--project-guid", help="seqr project id", required=True)
+sp.add_argument("--sample-type", help="Sample type", choices=["WES", "WGS", "RNA"], required=True)
+sp.add_argument("--dataset-type", help="Dataset type", choices=["VARIANTS", "SV"], required=True)
+sp.add_argument('--remap-sample-ids', help="File path containing 2 tab-separated columns: current sample id and desired sample id")
+sp.add_argument('--subset-samples', help="File path containing ids for samples to keep; if used with --remap-sample-ids, ids are the desired ids (post remapping)")
+sp.add_argument("--ignore-extra-sample-ids-in-tables", action="store_true")
+sp.add_argument("--ignore-extra-sample-ids-in-vds", action="store_true")
 
-sp.add_argument("-v", "--vcf", help="Url or google cloud bucket path (eg. gs://) of VEP-annotated VCF to load",
-                default="gs://seqr-reference-data/test-projects/1kg.vep.vcf.gz")
-sp.add_argument("-p", "--ped", help="Url or google cloud bucket path (eg. gs://) of pedigree file",
-                default="https://storage.googleapis.com/seqr-reference-data/test-projects/1kg.ped")
+sp.add_argument("--fam-file", help=".fam file used to check VDS sample IDs and assign samples to indices with a max of "
+    "'num_samples' per index, but making sure that samples from the same family don't end up in different indices. "
+    "If used with --remap-sample-ids, contains IDs of samples after remapping")
+sp.add_argument("--start-with-step", help="Which pipeline step to start with.", type=int, default=0, choices=[0, 1, 2, 3, 4])
+sp.add_argument("--stop-after-step", help="Pipeline will exit after this stesp.", type=int, default=1000, choices=[0, 1, 2, 3, 4])
+sp.add_argument("--output-vds", help="(optional) Output vds filename prefix (eg. test-vds)")
+
+sp.add_argument("--vep-block-size", help="Block size to use for VEP", default=200, type=int)
+sp.add_argument("--es-block-size", help="Block size to use when exporting to elasticsearch", default=1000, type=int)
+sp.add_argument("--cpu-limit", help="Max CPUs to use when loading the dataset. Only applies to local deployments.", type=int)
+sp.add_argument("--vcf", help="Local path or google cloud bucket path (eg. gs://) of VCF to load", required=True)
 sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS, help="which kubernetes cluster to load the data to")
 
 # LOAD_EXAMPLE_PROJECT_COMMAND
 sp = subparsers.add_parser(LOAD_EXAMPLE_PROJECT_COMMAND, description="Load a demo project with an example dataset")
 sp.add_argument("-g", "--genome-version", help="Genome version 37 or 38", choices=["37", "38"], default="37")
+sp.add_argument("--cpu-limit", help="Max CPUs to use when loading the dataset. Only applies to local deployments.", type=int)
 sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS, help="kubernetes cluster")
 
 # UPDATE_REFERENCE_DATA_COMMAND
@@ -76,7 +87,9 @@ sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS, help="kubernete
 
 ## LOG_COMMAND
 sp = subparsers.add_parser(LOG_COMMAND, description="Show logs for one or more components")
-sp.add_argument("-f", "--stream-log", action="store_true", help="stream the log")
+sp.add_argument("-f", "--stream-log", action="store_true", help="continue printing new logs - similar to tail -f")
+sp.add_argument("--previous", action="store_true", help="Prints logs from a previous instance of the container. "
+    "This is useful for debugging pods that don't start or immediately enter crash-loop.")
 sp.add_argument("components", nargs="+", help="show log", choices=COMPONENT_ARG_CHOICES)
 sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS, help="kubernetes cluster")
 
@@ -149,11 +162,21 @@ def check_restore_db(filename):
 
 for command_name in [DEPLOY_COMMAND, DEPLOY_ALL_COMMAND]:
     sp = subparsers.add_parser(command_name, description="Deploy one or more components")
-    sp.add_argument("-o", "--output-dir", help="output directory for deployment files and logs")
-    sp.add_argument("-b", "--build-docker-image", action="store_true", help="use 'docker build --no-cache' to rebuild docker image from the beginning without using cache")
-    sp.add_argument("-d", "--delete-before-deploy", action="store_true", help="use 'kubectl delete' and then 'kubectl create' to deploy component(s) instead of just 'kubectl update'")
-    sp.add_argument("-f", "--force", dest="build_docker_image_and_reset_db", action="store_true", help="Same as -b and -d together - reset the db and rebuild the docker image.")
-    sp.add_argument("--reset-db", action="store_true", help="if deploying phenotips or seqr, clear and re-initialize the phenotips xwiki database")
+    sp.add_argument("-d", "--delete-before-deploy", action="store_true", help="run 'kubectl delete' on component(s) before deploying them")
+    sp.add_argument("-b", "--build-docker-image", action="store_true", help="build the docker image for each component before deploying it. ")
+    sp.add_argument("-f", "--force", action="store_true", help="same as -b and -d together. Also, forces docker image to be rebuilt from the beginning with --no-cache.")
+    g = sp.add_mutually_exclusive_group()
+    g.add_argument("-p", "--push-to-registry", action="store_true", help="push local docker image to a docker registry. The destination registry is determined by the "
+        "DOCKER_IMAGE_PREFIX value in shared-settings.yaml. "
+        "When deploying to minikube, specifying -b and not -p will build the docker image using minikube's docker instance. This will allow the image "
+        "to be reused in local minikube deployments as long as this minikube instance exists. "
+        "Adding -p pushes the image to a remote registry, and allows it to be reused by remote minikube installations and in local deploys even "
+        "if this minikube instance is destroyed and recreated."
+        "When deploying to gcloud-dev or gcloud-prod, -p is necessary to make an image available because google container engine clusters "
+        "can only use images from the google container registry and/or public registries like dockerhub.")
+    g.add_argument("--only-push-to-registry", action="store_true", help="push local docker image to a docker registry and then stop, without deploying the component(s) to kubernetes.")
+    sp.add_argument("-t", "--docker-image-tag", help="deploy docker image(s) with this tag. If -b also used, the built docker images will be tagged with this.")
+    sp.add_argument("--reset-db", action="store_true", help="if deploying phenotips or seqr, delete and re-initialize their postgres databases")
     sp.add_argument("--restore-seqr-db-from-backup",
         help="if deploying seqr, this option can be used to specify a SQL database backup from "
             "which to restore the database. This backup file can be generated by running "
@@ -189,22 +212,23 @@ if args.deployment_target and args.command != SET_ENVIRONMENT_COMMAND:
         set_context = (args.command in commands_that_dont_modify_kubernetes_state)
         check_kubernetes_context(args.deployment_target, set_if_different=set_context)
 
-other_settings = {}
-other_settings["BASE_DIR"] = os.path.abspath(os.path.dirname(__file__))
+runtime_settings = {}
+runtime_settings["BASE_DIR"] = os.path.abspath(os.path.dirname(__file__))
 
 if args.command in [DEPLOY_COMMAND, DEPLOY_ALL_COMMAND]:
-    if args.command == DEPLOY_ALL_COMMAND:
-        other_settings['RESET_DB'] = True
-        other_settings["DELETE_BEFORE_DEPLOY"] = True
-        other_settings['BUILD_DOCKER_IMAGE'] = True
-    else:
-        other_settings["RESET_DB"] = args.reset_db
-        other_settings["DELETE_BEFORE_DEPLOY"] = True if args.delete_before_deploy or args.build_docker_image_and_reset_db else None
-        other_settings["BUILD_DOCKER_IMAGE"] = True if args.build_docker_image or args.build_docker_image_and_reset_db else None
-        other_settings["RESTORE_PHENOTIPS_DB_FROM_BACKUP"] = args.restore_phenotips_db_from_backup
-        other_settings["RESTORE_SEQR_DB_FROM_BACKUP"] = args.restore_seqr_db_from_backup
+    # transfer args to runtime_settings
+    runtime_settings['FORCE_BUILD_DOCKER_IMAGE'] = bool(args.force)
+    runtime_settings["DELETE_BEFORE_DEPLOY"] = True if args.delete_before_deploy or args.force else None
+    runtime_settings["BUILD_DOCKER_IMAGE"] = True if args.build_docker_image or args.force else None
+    runtime_settings["RESTORE_PHENOTIPS_DB_FROM_BACKUP"] = args.restore_phenotips_db_from_backup
+    runtime_settings["RESTORE_SEQR_DB_FROM_BACKUP"] = args.restore_seqr_db_from_backup
+    runtime_settings["PUSH_TO_REGISTRY"] = bool(args.push_to_registry) or bool(args.only_push_to_registry)
+    runtime_settings["ONLY_PUSH_TO_REGISTRY"] = bool(args.only_push_to_registry)
+    runtime_settings["DOCKER_IMAGE_TAG"] = args.docker_image_tag
+    runtime_settings["RESET_DB"] = bool(args.reset_db)
 
-    email = password = None
+
+    #email = password = None
     if args.command == DEPLOY_COMMAND:
         deployable_components = resolve_component_groups(args.deployment_target, args.components)
 
@@ -225,17 +249,17 @@ if args.command in [DEPLOY_COMMAND, DEPLOY_ALL_COMMAND]:
 
         if args.deployment_target == "minikube":
             deployable_components += [
-                "cockpit",
+                #"cockpit",
+                "mongo",  # deprecated
             ]
         else:
             deployable_components += [
+                "external-mongo-connector",
                 "matchbox",
                 "nginx",
             ]
 
         deployable_components += [
-            "mongo",  # deprecated - will be going away soon
-            #"external-mongo-connector",
             "postgres",
             #"elasticsearch",
             "external-elasticsearch-connector",
@@ -246,56 +270,66 @@ if args.command in [DEPLOY_COMMAND, DEPLOY_ALL_COMMAND]:
             "pipeline-runner",
         ]
 
-        print("\nOptionally enter an email and password for the django/seqr superuser account. After seqr is deployed, "
-              "you will be able to login to seqr with this account. Leave blank to skip.")
+        #print("\nOptionally enter an email and password for the django/seqr superuser account. After seqr is deployed, "
+        #      "you will be able to login to seqr with this account. Leave blank to skip.")
 
-        email = raw_input("(optional) seqr superuser email: ")
-        if email:
-            password = getpass("seqr superuser password (hidden when typed): ")
+        #email = raw_input("(optional) seqr superuser email: ")
+        #if email:
+        #    password = getpass("seqr superuser password (hidden when typed): ")
 
-    deploy(args.deployment_target, components=deployable_components, other_settings=other_settings)
+    deploy(args.deployment_target, components=deployable_components, runtime_settings=runtime_settings)
 
-    if email:
-        create_user(args.deployment_target, email, password)
+    logger.info("==> Deployed " + ", ".join(deployable_components))
+    #if email:
+    #    create_user(args.deployment_target, email, password)
 
-    if args.command == DEPLOY_ALL_COMMAND:
-        update_reference_data(args.deployment_target)
-        load_example_project(args.deployment_target)
+    if not runtime_settings["ONLY_PUSH_TO_REGISTRY"]:
+        if args.command == DEPLOY_ALL_COMMAND:
+            components_to_tail = ["seqr"]
+        else:
+            components_to_tail = deployable_components
 
-        components_to_tail = ["seqr"]
-    else:
-        components_to_tail = deployable_components
+        component_port_pairs = get_component_port_pairs(components_to_tail)
+        if component_port_pairs:
+            logger.info("=============")
+            print_los_for_components = [pair[0] for pair in component_port_pairs]
+            logger.info("tail %s logs ..." % components_to_tail)
+            os.system("sleep 10")
 
-    component_port_pairs = get_component_port_pairs(components_to_tail)
-    if component_port_pairs:
-        logger.info("=============")
-        print_los_for_components = [pair[0] for pair in component_port_pairs]
-        logger.info("tail %s logs ..." % components_to_tail)
-        os.system("sleep 10")
+            procs1 = port_forward(component_port_pairs, deployment_target=args.deployment_target, wait=False, open_browser=True)
+            procs2 = print_log(components_to_tail, deployment_target=args.deployment_target, enable_stream_log=True, wait=False)
+            wait_for(procs1 + procs2)
 
-        procs1 = port_forward(component_port_pairs, deployment_target=args.deployment_target, wait=False, open_browser=True)
-        procs2 = print_log(components_to_tail, deployment_target=args.deployment_target, enable_stream_log=True, wait=False)
-        wait_for(procs1 + procs2)
-
+    logger.info("==> Done")
 elif args.command == UPDATE_REFERENCE_DATA_COMMAND:
     update_reference_data(args.deployment_target)
 
 elif args.command == LOAD_EXAMPLE_PROJECT_COMMAND:
-    load_example_project(args.deployment_target, genome_version=args.genome_version)
+    load_example_project(args.deployment_target, genome_version=args.genome_version, cpu_limit=args.cpu_limit)
 
 elif args.command == LOAD_DATASET_COMMAND:
-    load_new_project(
+    load_dataset(
         args.deployment_target,
-        project_name=args.project_id,
-        genome_version=args.genome_version,
-        sample_type=args.sample_type,
-        dataset_type=args.dataset_type,
-        vcf=args.vcf,
-        ped=args.ped)
+        args.project_guid,
+        args.genome_version,
+        args.sample_type,
+        args.dataset_type,
+        args.vcf,
+        remap_sample_ids=args.remap_sample_ids,
+        subset_samples=args.subset_samples,
+        ignore_extra_sample_ids_in_tables=args.ignore_extra_sample_ids_in_tables,
+        ignore_extra_sample_ids_in_vds=args.ignore_extra_sample_ids_in_vds,
+        fam_file=args.fam_file,
+        start_with_step=args.start_with_step,
+        stop_with_step=args.stop_with_step,
+        output_vds=args.output_vds,
+        vep_block_size=args.vep_block_size,
+        es_block_size=args.es_block_size,
+        cpu_limit=args.cpu_limit)
 
 elif args.command == LOG_COMMAND:
     components = resolve_component_groups(args.deployment_target, args.components)
-    print_log(components, args.deployment_target, args.stream_log)
+    print_log(components, args.deployment_target, args.stream_log, previous=args.previous)
 
 elif args.command == PORT_FORWARD_COMMAND:
     component_port_pairs = get_component_port_pairs(resolve_component_groups(args.deployment_target, args.components))

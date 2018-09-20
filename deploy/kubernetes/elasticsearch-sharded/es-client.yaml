@@ -2,6 +2,7 @@ apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
   name: es-client
+  namespace: {{ NAMESPACE }}
   labels:
     name: es-client
     deployment: {{ DEPLOY_TO }}
@@ -20,7 +21,7 @@ spec:
       initContainers:
       - name: init-sysctl
         image: busybox
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: {{ IMAGE_PULL_POLICY }}
         command: ["sysctl", "-w", "vm.max_map_count=262144"]
         securityContext:
           privileged: true
@@ -33,7 +34,7 @@ spec:
               - IPC_LOCK
               - SYS_RESOURCE
         image: quay.io/pires/docker-elasticsearch-kubernetes:5.6.3
-        imagePullPolicy: Always
+        imagePullPolicy: {{ IMAGE_PULL_POLICY }}
         env:
         - name: NAMESPACE
           valueFrom:

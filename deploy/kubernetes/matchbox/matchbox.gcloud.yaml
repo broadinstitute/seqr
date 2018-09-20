@@ -2,6 +2,7 @@ kind: Service
 apiVersion: v1
 metadata:
   name: matchbox
+  namespace: {{ NAMESPACE }}
 spec:
   ports:
   - port: {{ MATCHBOX_SERVICE_PORT }}
@@ -12,6 +13,7 @@ kind: Deployment
 apiVersion: extensions/v1beta1
 metadata:
   name: matchbox
+  namespace: {{ NAMESPACE }}
 spec:
   replicas: 1
   template:
@@ -26,11 +28,11 @@ spec:
           secretName: matchbox-secrets
       containers:
       - name: matchbox-pod
-        image: {{ DOCKER_IMAGE_PREFIX }}/matchbox:{{ TIMESTAMP }}
         ports:
         - containerPort: {{ MATCHBOX_SERVICE_PORT }}
           protocol: TCP
-        imagePullPolicy: Always
+        imagePullPolicy: {{ IMAGE_PULL_POLICY }}
+        image: {{ DOCKER_IMAGE_PREFIX }}/matchbox{{ DOCKER_IMAGE_TAG }}
         securityContext:
           privileged: true
           capabilities:

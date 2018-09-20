@@ -23,7 +23,7 @@ SEQR_GIT_BRANCH: 'master'
 ###########################################################
 ####### SETTINGS THAT SHOULDN'T NEED TO BE MODIFIED #######
 
-DOCKER_IMAGE_PREFIX: 'gcr.io/seqr-project'
+NAMESPACE: default
 
 DEPLOY_TO: 'gcloud-prod'
 DEPLOY_TO_PREFIX: 'gcloud'

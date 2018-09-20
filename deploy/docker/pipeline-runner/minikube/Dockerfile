@@ -26,7 +26,8 @@ RUN echo debconf shared/accepted-oracle-license-v1-1 seen true | debconf-set-sel
 
 RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys EEA14886 \
     && apt-get update \
-    && apt-get install -y oracle-java8-installer
+    && apt-get install -y oracle-java8-installer \
+    && apt-get install -y oracle-java8-set-default
 
 # install python and gcloud utils
 RUN apt-get install -y python-dev \
@@ -49,6 +50,28 @@ RUN curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s
     && chmod +x ./kubectl \
     && mv ./kubectl /usr/local/bin/kubectl
 
+# install google storage connector which allows hail to access vds in google buckets without downloading them first
+RUN cd /usr/local \
+    && wget -nv https://archive.apache.org/dist/spark/spark-2.0.2/spark-2.0.2-bin-hadoop2.7.tgz \
+    && tar xzf /usr/local/spark-2.0.2-bin-hadoop2.7.tgz
+
+RUN pip install decorator==4.2.1    # fix http://discuss.hail.is/t/importerror-cannot-import-name-getargspec/468
+
+RUN wget https://storage.googleapis.com/hadoop-lib/gcs/gcs-connector-latest-hadoop2.jar -O /usr/local/spark-2.0.2-bin-hadoop2.7/jars/gcs-connector-latest-hadoop2.jar
+
+# install hail
+RUN mkdir -p /hail/build/libs /hail/build/distributions \
+    && gsutil cp gs://seqr-hail/hail-jar/hail-0.1-es-6.2.4-with-strip-chr-prefix.zip /hail/build/distributions/hail-python.zip \
+    && gsutil cp gs://seqr-hail/hail-jar/hail-0.1-es-6.2.4-with-strip-chr-prefix.jar /hail/build/libs/hail-all-spark.jar
+
+# install jupyter
+RUN pip install --upgrade pip jupyter
+
+#   git clone --branch 0.1 https://github.com/broadinstitute/hail.git \
+#    && cd /hail \
+#    && ./gradlew -Dspark.version=2.0.2 shadowJar archiveZip
+
+
 # install picard
 #RUN mkdir /picard \
 #    && cd /picard \
@@ -66,7 +89,6 @@ RUN gsutil cp gs://hail-common/vep/htslib/* /usr/bin/ \
     && chmod a+rx  /usr/bin/tabix /usr/bin/bgzip /usr/bin/htsfile /usr/bin/samtools
 
 RUN mkdir -p /vep/homo_sapiens /vep/loftee_data_grch37 /vep/loftee_data_grch38 \
-    && gsutil -m cp -r gs://hail-common/vep/vep/loftee /vep  \
     && gsutil -m cp -r gs://hail-common/vep/vep/ensembl-tools-release-85 /vep  \
     && gsutil -m cp -r gs://hail-common/vep/vep/GRCh37/loftee_data /vep/loftee_data_grch37  \
     && gsutil -m cp -r gs://hail-common/vep/vep/GRCh38/loftee_data /vep/loftee_data_grch38  \
@@ -74,62 +96,49 @@ RUN mkdir -p /vep/homo_sapiens /vep/loftee_data_grch37 /vep/loftee_data_grch38 \
     && gsutil -m cp -r gs://hail-common/vep/vep/homo_sapiens/85_GRCh37 /vep/homo_sapiens/ \
     && gsutil -m cp -r gs://hail-common/vep/vep/homo_sapiens/85_GRCh38 /vep/homo_sapiens/
 
-COPY minikube/vep-gcloud-grch38.properties /vep
-COPY minikube/vep-gcloud-grch37.properties /vep
-
-RUN ln -s /vep/ensembl-tools-release-85/scripts/variant_effect_predictor /vep/variant_effect_predictor \
-    && gsutil cp gs://hail-common/vep/vep/GRCh37/run_hail_vep85_GRCh37_vcf.sh /vep/run_hail_vep85_GRCh37_vcf.sh  \
-    && gsutil cp gs://hail-common/vep/vep/GRCh38/run_hail_vep85_GRCh38_vcf.sh /vep/run_hail_vep85_GRCh38_vcf.sh  \
-    && chmod a+rx /vep/run_hail_vep85_GRCh37_vcf.sh \
-    && chmod a+rx /vep/run_hail_vep85_GRCh38_vcf.sh
+RUN ln -s /vep/ensembl-tools-release-85/scripts/variant_effect_predictor /vep/variant_effect_predictor
 
 RUN wget https://raw.github.com/miyagawa/cpanminus/master/cpanm -O /usr/bin/cpanm && chmod +x /usr/bin/cpanm
+# VEP dependencies
 RUN /usr/bin/cpanm --notest Set::IntervalTree
 RUN /usr/bin/cpanm --notest PerlIO::gzip
 RUN /usr/bin/cpanm --notest DBI
 RUN /usr/bin/cpanm --notest CGI
 RUN /usr/bin/cpanm --notest JSON
+# LoFTEE dependencies
 RUN /usr/bin/cpanm --notest DBD::SQLite
+RUN /usr/bin/cpanm --notest  List::MoreUtils
 
-# run VEP on the 1-variant VCF to create fasta.index file
-RUN gsutil cp gs://hail-common/vep/vep/1var.vcf /vep  \
-    && /vep/run_hail_vep85_GRCh37_vcf.sh /vep/1var.vcf \
-    && /vep/run_hail_vep85_GRCh38_vcf.sh /vep/1var.vcf
-
-# install google storage connector which allows hail to access vds in google buckets without downloading them first
-RUN cd /usr/local \
-    && wget -nv https://archive.apache.org/dist/spark/spark-2.0.2/spark-2.0.2-bin-hadoop2.7.tgz \
-    && tar xzf /usr/local/spark-2.0.2-bin-hadoop2.7.tgz
-
-RUN pip install decorator==4.2.1    # fix http://discuss.hail.is/t/importerror-cannot-import-name-getargspec/468
-
-RUN wget https://storage.googleapis.com/hadoop-lib/gcs/gcs-connector-latest-hadoop2.jar -O /usr/local/spark-2.0.2-bin-hadoop2.7/jars/gcs-connector-latest-hadoop2.jar
-
-# install hail
-RUN mkdir -p /hail/build/libs /hail/build/distributions \
-    && gsutil cp gs://seqr-hail/hail-jar/hail-0.1-es-6.2.4-with-strip-chr-prefix.zip /hail/build/distributions/hail-python.zip \
-    && gsutil cp gs://seqr-hail/hail-jar/hail-0.1-es-6.2.4-with-strip-chr-prefix.jar /hail/build/libs/hail-all-spark.jar
-
-#   git clone --branch 0.1 https://github.com/broadinstitute/hail.git \
-#    && cd /hail \
-#    && ./gradlew -Dspark.version=2.0.2 shadowJar archiveZip
-
-WORKDIR /
+# DISABLE_CACHE work-around to force git pull on every docker build, based on https://github.com/docker/docker/issues/1996
+ARG DISABLE_CACHE=1
 
 # install hail-elasticsearch-pipelines
-RUN git clone https://github.com/macarthur-lab/hail-elasticsearch-pipelines.git
+RUN git clone https://github.com/macarthur-lab/hail-elasticsearch-pipelines.git /hail-elasticsearch-pipelines
+RUN cp -r /hail-elasticsearch-pipelines/loftee /vep \
+    && cp /hail-elasticsearch-pipelines/gcloud_dataproc/vep_init/vep-gcloud-grch38.properties /vep/vep-gcloud-grch38.properties \
+    && cp /hail-elasticsearch-pipelines/gcloud_dataproc/vep_init/vep-gcloud-grch37.properties /vep/vep-gcloud-grch37.properties \
+    && cp /hail-elasticsearch-pipelines/gcloud_dataproc/vep_init/run_hail_vep85_GRCh37_vcf.sh /vep/run_hail_vep85_GRCh37_vcf.sh \
+    && cp /hail-elasticsearch-pipelines/gcloud_dataproc/vep_init/run_hail_vep85_GRCh38_vcf.sh /vep/run_hail_vep85_GRCh38_vcf.sh \
+    && cp /hail-elasticsearch-pipelines/gcloud_dataproc/vep_init/1var.vcf /vep/1var.vcf
 
+#COPY minikube/vep-gcloud-grch38.properties /vep/vep-gcloud-grch38.properties
+#COPY minikube/vep-gcloud-grch37.properties /vep/vep-gcloud-grch37.properties
+#COPY shared/run_hail_vep85_GRCh37_vcf.sh /vep/run_hail_vep85_GRCh37_vcf.sh
+#COPY shared/run_hail_vep85_GRCh38_vcf.sh /vep/run_hail_vep85_GRCh38_vcf.sh
+#COPY shared/1var.vcf /vep/1var.vcf
 
-# install jupyter
-RUN pip install --upgrade pip jupyter
+# run VEP on the 1-variant VCF to create fasta.index file
+RUN /vep/run_hail_vep85_GRCh37_vcf.sh /vep/1var.vcf \
+ && /vep/run_hail_vep85_GRCh38_vcf.sh /vep/1var.vcf
+
 
 ENV TERM=xterm
 ENV PYTHONPATH="$PYTHONPATH:/seqr:/seqr_settings:/hail-elasticsearch-pipelines"
 
 COPY shared/gitconfig /root/.gitconfig
 COPY shared/bashrc /root/.bashrc
-
-COPY minikube/run_hail_locally.sh /hail-elasticsearch-pipelines
+COPY shared/run_hail_locally.sh /hail-elasticsearch-pipelines
+COPY shared/run_hail_on_dataproc.sh /hail-elasticsearch-pipelines
 COPY minikube/core-site.xml /usr/local/spark-2.0.2-bin-hadoop2.7/conf/
 COPY minikube/entrypoint.sh /
 

@@ -15,7 +15,5 @@ docs/Makefile
 .ipynb_checkpoints
 
 deploy/secrets/gcloud/*
-deploy/secrets/minikube/*
-deploy/secrets/shared/*
 
 pedigree_images/*

@@ -2,15 +2,18 @@ kind: Service
 apiVersion: v1
 metadata:
   name: matchbox
+  namespace: {{ NAMESPACE }}
 spec:
   ports:
   - port: {{ MATCHBOX_SERVICE_PORT }}
   selector:
     name: matchbox
+---
 kind: Deployment
 apiVersion: extensions/v1beta1
 metadata:
   name: matchbox
+  namespace: {{ NAMESPACE }}
 spec:
   replicas: 1
   template:
@@ -25,11 +28,11 @@ spec:
           secretName: matchbox-secrets
       containers:
       - name: matchbox-pod
-        image: {{ DOCKER_IMAGE_PREFIX }}/matchbox:{{ TIMESTAMP }}
         ports:
         - containerPort: {{ MATCHBOX_SERVICE_PORT }}
           protocol: TCP
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: {{ IMAGE_PULL_POLICY }}
+        image: {{ DOCKER_IMAGE_PREFIX }}/matchbox{{ DOCKER_IMAGE_TAG }}
         securityContext:
           privileged: true
           capabilities:
@@ -43,7 +46,7 @@ spec:
         - name: ALLOW_NO_GENE_IN_COMMON_MATCHES
           value: "false"
         - name: MONGO_SERVICE_HOSTNAME
-          value: "mongo"
+          value: "{{ MONGO_SERVICE_HOSTNAME }}"
         volumeMounts:
         - name: matchbox-secrets-volume
           mountPath: /matchbox_deployment/config

@@ -1,0 +1,54 @@
+#kind: ConfigMap
+#apiVersion: v1
+#metadata:
+#  name: nginx-configuration
+#  namespace: ingress-nginx
+#data:
+#  # full list of config options is here: https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/
+#  client-max-body-size: 8m
+#NOTE: using annotations on the Ingress object instead of a ConfigMap because the Ingress can be in any namespace
+#----
+kind: Service
+apiVersion: v1
+metadata:
+  name: ingress-nginx
+  namespace: ingress-nginx
+  labels:
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/part-of: ingress-nginx
+spec:
+  externalTrafficPolicy: Local
+  type: LoadBalancer
+  loadBalancerIP: {{ CLUSTER_EXTERNAL_IP }}   # static IP pre-allocated.
+  selector:
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/part-of: ingress-nginx
+  ports:
+  - name: http
+    port: 80
+    targetPort: http
+  - name: https
+    port: 443
+    targetPort: https
+---
+# docs on config options: https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/annotations/
+kind: Ingress
+apiVersion: extensions/v1beta1
+metadata:
+  name: ingress-nginx
+  namespace: {{ NAMESPACE }}
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: 8m
+spec:
+  tls:
+    - hosts:
+      - {{ CLUSTER_HOSTNAME }}
+      secretName: nginx-secrets
+  rules:
+    - host: {{ CLUSTER_HOSTNAME }}
+      http:
+        paths:
+        - path: /
+          backend:
+            serviceName: seqr
+            servicePort: {{ SEQR_SERVICE_PORT }}

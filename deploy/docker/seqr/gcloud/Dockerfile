@@ -104,8 +104,6 @@ WORKDIR /seqr
 # install seqr dependencies
 RUN pip install -r requirements.txt
 
-COPY shared/config/*.py /seqr_settings/
-
 ARG SEQR_SERVICE_PORT
 ENV SEQR_SERVICE_PORT=$SEQR_SERVICE_PORT
 
@@ -113,6 +111,8 @@ EXPOSE $SEQR_SERVICE_PORT
 
 ENV PYTHONPATH=/seqr:/seqr_settings
 ENV TERM=xterm
+
+RUN mkdir /seqr_settings
 
 COPY shared/readiness_probe /
 COPY shared/bin/*.sh /usr/local/bin/
