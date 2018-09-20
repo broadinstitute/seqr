@@ -141,36 +141,17 @@ if (( $(ulimit -n) < 65536)); then
 elasticsearch  nofile  65536
 ' | sudo tee -a /etc/security/limits.conf  # avoid elasticsearch error: "max file descriptors [4096] for elasticsearch process is too low, increase to at least [65536]"
 
+    echo '
+DefaultLimitNOFILE=65536
+' | sudo tee -a /etc/systemd/user.conf
 
     echo '
-    ==================================================================
+DefaultLimitNOFILE=65536
+' | sudo tee -a /etc/systemd/system.conf
 
-          MAXIMUM OPEN FILE DESCRIPTORS LIMIT MUST BE RAISED
-
-    ==================================================================
-
-      You may need to follow these steps:
-
-        1. Edit /etc/systemd/user.conf and uncomment (or add) the line:
-
-              DefaultLimitNOFILE=65536
-
-        2. Repeat for /etc/systemd/system.conf
-
-        3. Edit /etc/pam.d/su and uncomment the line:
-
-              session required pam_limits.so
-    '
-
-    read -p "Have you completed these steps? " -n 1 -r
-    echo    # (optional) move to a new line
-    if [[ $REPLY =~ ^[Yy]$ ]]
-    then
-        echo "Proceeding..."
-    else
-        echo "Exiting..."
-        exit
-    fi
+    echo '
+session required pam_limits.so
+' | sudo tee -a /etc/pam.d/su
 
     needs_reboot=1
 fi
