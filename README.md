@@ -5,110 +5,79 @@ seqr
 
 seqr is a web-based analysis tool for rare disease genomics.
 
-This repository contains the code that underlies the [Broad seqr instance](http://seqr.broadinstitute.org) as well as other seqr deployments.
+This repository contains code that underlies the [Broad seqr instance](http://seqr.broadinstitute.org) and other seqr deployments.
 
-## Overview
+## Technical Overview
 
 seqr consists of the following components:
-- seqr - the main client-server application - javascript + react.js on the client-side, python + django on the server-side.
+- seqr - the main client-server application. It consists of javascript + react.js on the client-side, python + django on the server-side.
 - postgres - SQL database used by seqr and phenotips to store project metadata and user-generated content such as variant notes, etc.
-- phenotips - 3rd-party web-based tool for entering structured phenotype information.
+- phenotips - 3rd-party web-based form for entering structured phenotype data.
 - matchbox - a service that encapsulates communication with the Match Maker Exchange.
 - nginx - http server used as the main gateway between seqr and the internet.
 - pipeline-runner - container for running hail pipelines to annotate and load new datasets.
 - redis - in-memory cache used to speed up request handling.
 - elasticsearch - NoSQL database used to store variant callsets.
-- kibana - (optional) dashboard and visual interface for elasticsearch.
+- kibana - dashboard and visual interface for elasticsearch.
 - mongo - legacy NoSQL database originally used for variant callsets and still used now to store some reference data and logs.
+
+These components can be deployed on local or cloud-based hardware.
+A laptop with 4 CPUs and 16G RAM may be sufficient for small datasets.
+The seqr [production instance](http://seqr.broadinstitute.org) currently uses two n1-highmem-4 (4 vCPUs, 26 GB memory) servers on google cloud + separate servers for the elasticsearch database.
+The pipeline for loading new datasets uses Spark to parallelelize VEP and other annotation steps. This pipeline can run on the same machine that's hosting seqr components, but a separate Spark cluster will make the loading process faster.
 
 
 ## Install
 
-To install seqr components, we rely on Docker images and Kubernetes.
-Users that are very familiar with these components may opt to install them directly on their host system
-(and we also use this approach for local development). In most cases though, we recommend the added complexity
-of the docker/kubernetes approach because:  1) deployment is automated and avoids manual steps as much as possible.
-This makes it more reproducable and allows more confident experimentation with hardware and cluster configurations.
-Also the [Dockerfiles](https://github.com/macarthur-lab/seqr/tree/master/deploy/docker) serve as both code and documentation for how to install components. 2) as seqr evolves, it's easier to roll out new components or move around existing components if they outgrow existing hardware. 3) the components are isolated from operating system and environment differences across different on-prem and cloud infrastructures.
+Whether installing seqr on a laptop, on-prem, or on cloud VMs, we use Docker images and Kubernetes to automate the deployment steps and isolate them from the host systems.
+Users that are very familiar with components that make up seqr may want to install them directly on host systems without using Kubernetes. This provides maximum control, but requires more work for installation and maintenance. 
+If you do decide to go this route, the [Dockerfiles](https://github.com/macarthur-lab/seqr/tree/master/deploy/docker) can be useful as a list of steps for installing each component.  
+In most cases, we recommend the docker/kubernetes approach because:  1) it automates deployment as much as possible 2) as seqr evolves, it makes it easier to roll out new components or move around existing components if they outgrow existing hardware.   
+The instructions below cover local deployments using Minikube, but are also directly applicable to cloud-based deployments which replace Minikube with a managed Kubernetes cluster like Google Container Engine. A full list of kubernetes deployment options can be found at: https://kubernetes.io/docs/setup/pick-right-solution/.
 
+#### Step 1: Install Kubernetes
 
-#### Step 1: Create kubernetes cluster and elasticsearch instance
+Local and on-prem installations can use [MiniKube](https://kubernetes.io/docs/setup/minikube/) to create a self-contained kubernetes cluster on a single machine. 
 
-Here we will create a kubernetes cluster that will host seqr components, and stand up a separate elasticsearch database outside kubernetes. We use this configuration because, although it's reasonable to deploy elasticsearch on docker/kubernetes, this can complicate some key dev-ops steps like snapshots, loading data using spark, and increasing disk space when needed.
+Prereqs: `python2.7`, `sudo` root access. MacOS also requires [homebrew](http://brew.sh/) package manager. 
 
-The instructions below for setting up kubernetes on MacOS and Linux (specifically CentOS7) use [MiniKube](https://kubernetes.io/docs/setup/minikube/)
-to create a self-contained kubernetes cluster on a single machine. There are also instructions for Google Cloud Container Engine (GKE). Many other cloud providers besides Google also have native support for Kubernetes, and other tools besides MiniKube are under development for creating on-prem kubernetes clusters. A list of these other options is here: https://kubernetes.io/docs/setup/pick-right-solution/).
+Run the following command to install `gcc`, `java1.8`, `minikube`, `kubectl` and dependencies (using `brew`, `yum` or `apt-get`):
 
-Ok, with that overview out of the way, let's install some components.
-
-##### Local deployment - using MiniKube - MacOS laptop
-
-Prereqs: [homebrew](http://brew.sh/) package manager, python2.7, `sudo` root access
-
-The following command downloads seqr deployment scripts and then, using `brew` where possible, installs
-- python dependencies
-- hypervisor
-- kubectl
-- minikube
-- java1.8
-- elasticsearch
-
-Run this command in the directory you want to contain the elasticsearch installation (as well as seqr installation scripts)
+###### MacOS
 ```
-curl -L 'http://raw.githubusercontent.com/macarthur-lab/seqr/master/deploy/install_minikube.macos.sh' -o install_minikube.macos.sh && chmod 777 install_minikube.macos.sh  && source install_minikube.macos.sh
+SCRIPT=step1.macos.install_dependencies.sh && curl -L http://raw.githubusercontent.com/macarthur-lab/seqr/master/deploy/$SCRIPT -o $SCRIPT && chmod 777 $SCRIPT && source $SCRIPT
 ```
 
-##### Local deployment - using MiniKube - CentOS / RedHat server
+###### CentOS7 / RedHat
 
-Prereqs: python2.7, `sudo` root access
-
-The following command downloads seqr deployment scripts and then, using `yum` where possible, installs
-- python dependencies
-- docker
-- kubectl
-- minikube
-- java1.8
-- elasticsearch
-
-Run it in the directory you want to contain the elasticsearch installation (as well as seqr scripts)
 ```
-curl -L 'http://raw.githubusercontent.com/macarthur-lab/seqr/master/deploy/install_minikube.linux-centos7.sh' -o install_minikube.linux-centos7.sh && chmod 777 install_minikube.linux-centos7.sh  && source install_minikube.linux-centos7.sh
+SCRIPT=step1.linux-centos7.install_dependencies.sh && curl -L http://raw.githubusercontent.com/macarthur-lab/seqr/master/deploy/$SCRIPT -o $SCRIPT && chmod 777 $SCRIPT && source $SCRIPT
 ```
 
-##### Cloud deployment - Google Container Engine (GKE)
+###### Ubuntu 
 
-Download or clone a local copy of this github repository.
-
-Install these tools:
-- [docker](https://store.docker.com/search?type=edition&offering=community)
-- [gcloud tools](https://cloud.google.com/sdk/install)
-- [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/)
-
-Make sure you have a google account that's configured to use Google Compute Engine (GCE) and
-has everything in place for creating a private Kubernetes Engine (GKE) cluster (see details here:
-https://cloud.google.com/kubernetes-engine/docs/how-to/creating-a-cluster)
-
-Now, running these commands in your local shell will point gcloud and kubectl tools to your GCE project:
 ```
-export KUBECONFIG=~/.kube/config   # used by kubectl
-
-gcloud config set core/project <your gcloud project name>
-gcloud config set compute/zone <your compute zone>
+SCRIPT=step1.linux-ubuntu18.install_dependencies.sh && curl -L http://raw.githubusercontent.com/macarthur-lab/seqr/master/deploy/$SCRIPT -o $SCRIPT && chmod 777 $SCRIPT && source $SCRIPT
 ```
 
-Next, in order to setup an elasticsearch instance, create linux VM(s) in your google project.
-The VM(s) should be on the default private network which will later also contain the GKE cluster nodes.
-Once the VM(s) are ready, install and launch elasticsearch on them - using similar commands as those at the bottom of [install_minikube.linux-centos7.sh](https://github.com/macarthur-lab/seqr/blob/master/deploy/install_minikube.linux-centos7.sh).
+#### Step 2: Install and start elasticsearch
 
+Run this script to start an elasticsearch instance in the current directory: 
+```
+SCRIPT=step2.install_and_start_elasticsearch.sh && curl -L http://raw.githubusercontent.com/macarthur-lab/seqr/master/deploy/$SCRIPT -o $SCRIPT && chmod 777 $SCRIPT && source $SCRIPT
+```
 
-#### Step 2: Adjust seqr deployment settings
+#### Step 3: Download seqr deployment scripts
 
-Optionally edit high-level deployment settings before proceeding to step 3:
+In a new terminal, run this script to download seqr deployment scripts:
+```
+SCRIPT=step3.download_deployment_scripts.sh && curl -L http://raw.githubusercontent.com/macarthur-lab/seqr/master/deploy/$SCRIPT -o $SCRIPT && chmod 777 $SCRIPT && source $SCRIPT
+```
+  
+Optionally edit deployment settings before proceeding to step 4:
 
-* `deploy/kubernetes/minikube-settings.yaml` - if deploying to minikube, this contains high-level settings like MINIKUBE_DISK_SIZE.
-* `deploy/kubernetes/gcloud-prod-settings.yaml` - if deploying a production instance to google kubernetes engine, this contains high-level settings like the number of nodes to create, disk sizes, etc.
-* `deploy/secrets/shared/*` - directories that contain keys, passwords and other sensitive info that shouldn't be shared publicly.
-     You may eventually want to edit:
+* *deploy/kubernetes/minikube-settings.yaml* - contains settings like $MINIKUBE_DISK_SIZE.
+* *deploy/secrets/shared/** - directories that contain keys, passwords and other sensitive info that shouldn't be shared publicly. You may at some point want to edit:
   * *gcloud/service-account-key.json* - allows gcloud and kubectl to access google cloud resources in your project from within pods. We provide a placeholder key which can access public resources.
   * *nginx/tls.cert* and *nginx/tls.key* - ssh keys that allow https access and avoid web browser "insecure website" warnings. https connections are critical for encrypting seqr logins, so you will want to order your own keys before making your seqr instance visible over the internet.
   * *seqr/postmark_server_token* - seqr uses this to send outgoing emails via postmark.com mail service
@@ -116,28 +85,24 @@ Optionally edit high-level deployment settings before proceeding to step 3:
   * *matchbox/nodes.json* - contains the list of all nodes that matchbox can connect to on the MME network, along with the authentication token for each node.
 
 
-#### Step 3: Deploy seqr components
-
-The `./servctl` wrapper script provides a convenient way to run common operations like initializing the kubernetes cluster, deploying components, checking status, looking at logs, etc. 
-It works by running `gcloud`, `kubectl`, `docker` and other command line tools.
-
-For step 3, `./servctl` has a "deploy-all" subcommand that runs the sequence of commands to deploy all components, load reference data, and create an example seqr project.
-
-If you completed step 1, you can do 
-```
-cd seqr/seqr-*/
-source ./venv/bin/activate
-./servctl deploy-all minikube   # here `minikube` can also be replaced with `gcloud-dev` or `gcloud-prod` to deploy to the cloud.
-```
-
-This will takes many hours before it finishes deploying everything and loading the example project.
-
-Once it's done with the deployment steps, you should be able to access seqr by opening your browser to:
+#### Step 4: Install seqr on minikube
 
 ```
-open http://$(minikube ip):30003   # here, port 30003 is based on the value of $SEQR_SERVICE_NODE_PORT 
+SCRIPT=step4.install_seqr_on_minikube.sh && curl -L http://raw.githubusercontent.com/macarthur-lab/seqr/master/deploy/$SCRIPT -o $SCRIPT && chmod 777 $SCRIPT && source $SCRIPT
 ```
 
+After this finishes, you can create a super-user account by running:
+
+```
+source ./activate_virtualenv.sh
+./servctl create-user minikube 
+```
+
+and then open seqr by opening your browser to `http://$(minikube ip):30003`:
+
+```
+open http://$(minikube ip):30003   
+```
 
 ## Update / Migrate an older xBrowse Instance
 
@@ -189,7 +154,7 @@ Run `./servctl -h` to see all available subcommands. The most commonly used ones
 ## Data loading pipelines
 
 seqr uses [hail](http://hail.is)-based pipelines to run VEP and add in other reference data before loading them into elasticsearch.
-These pipelines can be run locally on a single machine or on-prem spark cluster, or on a cloud-based spark cluster such as Google Dataproc.
+These pipelines can be run locally on a single machine or on-prem spark cluster, or on a cloud-based spark cluster like Google Dataproc.
 We are working on integrating these pipelines so that they are launched and managed by seqr.
 For now, they must be run manually, as shown in the examples below. The code for these pipelines is in [Data annotation and loading pipelines](https://github.com/macarthur-lab/hail-elasticsearch-pipelines)
 and is automatically installed in the `pipeline-runner` component which is deployed as part of standard seqr deployment.
@@ -235,7 +200,6 @@ python gcloud_dataproc/load_GRCh38_dataset.py --host $IP --project-guid SEQR_PRO
 
 # after the pipeline completes successfully, you can link the new elasticsearch index to the seqr project by using the 'Edit Datasets' dialog on the project page.
 ```
-
 
 
 ## Kubernetes Resources

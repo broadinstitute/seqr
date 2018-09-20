@@ -2,6 +2,7 @@ kind: Service
 apiVersion: v1
 metadata:
   name: seqr
+  namespace: {{ NAMESPACE }}
   labels:
     name: seqr
     deployment: {{ DEPLOY_TO }}
@@ -17,6 +18,7 @@ kind: Deployment
 apiVersion: extensions/v1beta1
 metadata:
   name: seqr
+  namespace: {{ NAMESPACE }}
   labels:
     name: seqr
     deployment: {{ DEPLOY_TO }}
@@ -40,11 +42,11 @@ spec:
           secretName: gcloud-client-secrets
       containers:
       - name: seqr-pod
-        image: {{ DOCKER_IMAGE_PREFIX }}/seqr:{{ TIMESTAMP }}
         ports:
         - containerPort: {{ SEQR_SERVICE_PORT }}
           protocol: TCP
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: {{ IMAGE_PULL_POLICY }}
+        image: {{ DOCKER_IMAGE_PREFIX }}/seqr-for-minikube{{ DOCKER_IMAGE_TAG }}
         securityContext:
           privileged: true
           capabilities:

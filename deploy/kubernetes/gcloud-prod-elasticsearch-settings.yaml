@@ -18,7 +18,7 @@ GCLOUD_ZONE: 'us-central1-b'
 ###########################################################
 ####### SETTINGS THAT SHOULDN'T NEED TO BE MODIFIED #######
 
-DOCKER_IMAGE_PREFIX: 'gcr.io/seqr-project'
+NAMESPACE: default
 
 DEPLOY_TO: 'gcloud-prod-elasticsearch'
 DEPLOY_TO_PREFIX: 'gcloud'

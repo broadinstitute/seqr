@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: kibana
-  namespace: default
+  namespace: {{ NAMESPACE }}
   labels:
     component: kibana
 spec:

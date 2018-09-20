@@ -7,76 +7,74 @@ from deploy.utils.servctl_utils import check_kubernetes_context
 logger = logging.getLogger(__name__)
 
 
-def load_new_project(deployment_target, project_name, genome_version, sample_type, dataset_type, vcf, ped):
+def load_dataset(deployment_target, project_name, genome_version, sample_type, dataset_type, vcf, memory_to_use=None, cpu_limit=None, **kwargs):
+    pod_name = get_pod_name('pipeline-runner', deployment_target=deployment_target)
+
+    additional_load_command_args = "  ".join("--%s '%s'" % (key.lower().replace("_", "-"), value) for key, value in kwargs.items() if value is not None)
+
+    run_locally = deployment_target == "minikube"
+    if run_locally:
+        if vcf.startswith("http"):
+            run_in_pod(pod_name, "wget -N %(vcf)s" % locals())
+            vcf = os.path.basename(vcf)
+
+        total_memory = psutil.virtual_memory().total - 6*10**9  # leave 6Gb for other processes
+        memory_to_use = "%sG" % (total_memory / 2 / 10**9) if memory_to_use is None else memory_to_use # divide available memory evenly between spark driver & executor
+        cpu_limit = max(1, psutil.cpu_count() / 2) if cpu_limit is None else cpu_limit
+        load_command = """/hail-elasticsearch-pipelines/run_hail_locally.sh \
+            --driver-memory %(memory_to_use)s \
+            --executor-memory %(memory_to_use)s \
+            hail_scripts/v01/load_dataset_to_es.py \
+                --cpu-limit %(cpu_limit)s \
+                --genome-version %(genome_version)s \
+                --project-guid %(project_name)s \
+                --sample-type %(sample_type)s \
+                --dataset-type %(dataset_type)s \
+                --skip-validation \
+                --exclude-hgmd \
+                --vep-block-size 10 \
+                --es-block-size 10 \
+                --num-shards 1 \
+                --max-samples-per-index 99 \
+                %(additional_load_command_args)s \
+                %(vcf)s
+        """ % locals()
+
+    else:
+        load_command = """/hail-elasticsearch-pipelines/run_hail_on_dataproc.sh \
+            hail_scripts/v01/load_dataset_to_es.py \
+                --genome-version %(genome_version)s \
+                --project-guid %(project_name)s \
+                --sample-type %(sample_type)s \
+                --dataset-type %(dataset_type)s \
+                %(additional_load_command_args)s \
+                %(vcf)s
+        """ % locals()
+
+    run_in_pod(pod_name, load_command, verbose=True)
+
+
+def load_example_project(deployment_target, genome_version="37", cpu_limit=None):
     """Load example project
 
     Args:
         deployment_target (string):
-        project_id (string): project id
         genome_version (string): reference genome version - either "37" or "38"
-        sample_type (string): "WES", "WGS", etc.
-        dataset_type (string): "VARIANTS", "SV", etc.
-        vcf (string): VCF path
-        ped (string): PED path
     """
+
+    project_name = "1kg"
 
     check_kubernetes_context(deployment_target)
 
     pod_name = get_pod_name('seqr', deployment_target=deployment_target)
     if not pod_name:
-        raise ValueError("No 'pipeline-runner' or 'seqr' pods found. Is the kubectl environment configured in this terminal? and have either of these pods been deployed?" % locals())
+        raise ValueError("No 'seqr' pod found. Is the kubectl environment configured in this terminal? and have either of these pods been deployed?" % locals())
 
-    if not project_name:
-        raise ValueError("project_name not specified")
-    if not vcf:
-        raise ValueError("vcf not specified")
-    if not ped:
-        raise ValueError("ped not specified")
-
-    if ped.startswith("http"):
-        run_in_pod(pod_name, "wget -N %(ped)s" % locals())
-        ped = os.path.basename(ped)
-    elif ped.startswith("gs:"):
-        run_in_pod(pod_name, "gsutil cp %(ped)s ." % locals())
-        ped = os.path.basename(ped)
+    run_in_pod(pod_name, "wget -N https://storage.googleapis.com/seqr-reference-data/test-projects/1kg.ped" % locals())
+    #run_in_pod(pod_name, "gsutil cp %(ped)s ." % locals())
 
     # TODO call APIs instead?
-    run_in_pod(pod_name, "python2.7 -u -m manage create_project -p '%(ped)s' '%(project_name)s'" % locals(), verbose=True)
-
-    pod_name = get_pod_name('pipeline-runner', deployment_target=deployment_target)
-    if vcf.startswith("http"):
-        run_in_pod(pod_name, "wget -N %(vcf)s" % locals())
-        vcf = os.path.basename(vcf)
-
-    total_memory = psutil.virtual_memory().total - 6*10**9  # leave 6Gb for other processes
-    memory_to_use = "%sG" % (total_memory / 2 / 10**9)  # divide available memory evenly between spark driver & executor
-    run_in_pod(pod_name, """/hail-elasticsearch-pipelines/run_hail_locally.sh \
-        --driver-memory %(memory_to_use)s \
-        --executor-memory %(memory_to_use)s \
-        hail_scripts/v01/load_dataset_to_es.py \
-            --genome-version %(genome_version)s \
-            --project-guid %(project_name)s \
-            --sample-type %(sample_type)s \
-            --dataset-type %(dataset_type)s \
-            --skip-validation \
-            --exclude-hgmd \
-            --vep-block-size 10 \
-            --es-block-size 10 \
-            --num-shards 1 \
-            --max-samples-per-index 99 \
-            %(vcf)s
-    """ % locals(), verbose=True)
-
-
-def load_example_project(deployment_target, genome_version="37"):
-    """Load example project
-
-    Args:
-        deployment_target (string):
-        genome_version (string): reference genome version - either "37" or "38"
-    """
-
-    check_kubernetes_context(deployment_target)
+    run_in_pod(pod_name, "python2.7 -u -m manage create_project -p '1kg.ped' '%(project_name)s'" % locals(), verbose=True)
 
     if genome_version == "37":
         vcf_filename = "1kg.vep.vcf.gz"
@@ -85,18 +83,14 @@ def load_example_project(deployment_target, genome_version="37"):
     else:
         raise ValueError("Unexpected genome_version: %s" % (genome_version,))
 
-    project_name = "1kg"
-    vcf = "https://storage.googleapis.com/seqr-reference-data/test-projects/%(vcf_filename)s" % locals()
-    ped = "https://storage.googleapis.com/seqr-reference-data/test-projects/1kg.ped"
-
-    load_new_project(
+    load_dataset(
         deployment_target,
         project_name=project_name,
         genome_version=genome_version,
         sample_type="WES",
         dataset_type="VARIANTS",
-        vcf=vcf,
-        ped=ped)
+        cpu_limit=cpu_limit,
+        vcf="https://storage.googleapis.com/seqr-reference-data/test-projects/%(vcf_filename)s" % locals())
 
 
 def update_reference_data(deployment_target):
@@ -120,8 +114,6 @@ def update_reference_data(deployment_target):
     run_in_pod(pod_name, "rm /seqr/data/reference_data/seqr-resource-bundle.tar.gz")
 
     # load legacy resources
-    run_in_pod(pod_name, "git checkout dev")
-    run_in_pod(pod_name, "git pull")
     run_in_pod(pod_name, "python -u manage.py load_resources", verbose=True)
 
     run_in_pod(pod_name, "mkdir -p /seqr/data/reference_data/omim")
