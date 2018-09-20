@@ -1,5 +1,6 @@
 import json
 
+from django.contrib.postgres.aggregates.general import ArrayAgg
 from django.core import urlresolvers
 from django.db.models import Prefetch
 from django.db.models.query_utils import Q
@@ -67,14 +68,16 @@ def get_loaded_projects_for_user(user, fields=None):
     if fields:
         projects = projects.only(*fields)
 
-    mongo_projects = list(projects.filter(vcffile__elasticsearch_index=None).distinct())
+    projects = projects.annotate(es_indices=ArrayAgg('vcffile__elasticsearch_index'))
+
+    mongo_projects = [pr for pr in projects if all(es_index==None for es_index in pr.es_indices)]
     if mongo_projects:
         loaded_mogo_project_ids = get_mongo_project_datastore().all_loaded_projects()
         mongo_projects = filter(lambda p: p.project_id in loaded_mogo_project_ids, mongo_projects)
         for project in mongo_projects:
             project.datastore_type = 'mongo'
 
-    es_projects = list(projects.exclude(vcffile__elasticsearch_index=None).distinct())
+    es_projects = [pr for pr in projects if any(pr.es_indices)]
     for project in es_projects:
         project.datastore_type = 'es'
 
