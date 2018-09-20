@@ -558,9 +558,9 @@ def transfer_individual(source_individual, new_family, new_project, connect_to_p
     update_model_field(new_individual, 'phenotips_data',  source_individual.phenotips_data)
 
     # update PhenoTips data
+    phenotips_data_retrieved = False
     if connect_to_phenotips and new_project.is_phenotips_enabled:
         try:
-            phenotips_data_retrieved = False
             data_json = _get_patient_data(
                 new_project,
                 new_individual,
