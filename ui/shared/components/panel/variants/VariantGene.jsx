@@ -66,9 +66,9 @@ LocusListLabels.propTypes = {
   locusLists: PropTypes.array.isRequired,
 }
 
-const VariantGene = ({ gene, project }) =>
+const VariantGene = ({ gene, project, variantId }) =>
   <div>
-    <ShowGeneModal gene={gene} fontWeight="bold" fontSize="1.5em" />
+    <ShowGeneModal gene={gene} fontWeight="bold" fontSize="1.5em" modalId={variantId} />
     <HorizontalSpacer width={10} />
     <GeneLinks>
       <a href={`http://gnomad-beta.broadinstitute.org/gene/${gene.geneSymbol}`} target="_blank">gnomAD</a>
@@ -130,6 +130,7 @@ const VariantGene = ({ gene, project }) =>
 VariantGene.propTypes = {
   gene: PropTypes.object,
   project: PropTypes.object,
+  variantId: PropTypes.string.isRequired,
 }
 
 const mapStateToProps = (state, ownProps) => ({
