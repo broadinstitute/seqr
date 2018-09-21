@@ -46,7 +46,7 @@ spec:
         - containerPort: {{ SEQR_SERVICE_PORT }}
           protocol: TCP
         imagePullPolicy: {{ IMAGE_PULL_POLICY }}
-        image: {{ DOCKER_IMAGE_PREFIX }}/seqr-for-minikube{{ DOCKER_IMAGE_TAG }}
+        image: {{ DOCKER_IMAGE_PREFIX }}/seqr{{ DOCKER_IMAGE_TAG }}
         securityContext:
           privileged: true
           capabilities:

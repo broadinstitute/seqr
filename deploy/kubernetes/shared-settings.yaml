@@ -9,6 +9,8 @@ NUM_NODES_PER_NODE_POOL: 4    # used when creating nodes for gcloud deployments
 
 SEQR_POD_MOUNTED_BUCKET: seqr-mounted-bucket   # name of the private google bucket (for example: gs://seqr-mounted-bucket) mounted into the seqr pod and used for easily saving postgres backups, etc.
 
+GUNICORN_WORKER_THREADS: 4    # number of webserver threads
+
 ###########################################################
 ####### SETTINGS THAT SHOULDN'T NEED TO BE MODIFIED #######
 
@@ -37,6 +39,5 @@ REDIS_SERVICE_PORT: 6379
 PIPELINE_RUNNER_SERVICE_PORT: 30005
 
 SEQR_UI_DEV_PORT: 3000
-
 
 

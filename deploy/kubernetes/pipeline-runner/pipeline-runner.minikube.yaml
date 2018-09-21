@@ -41,7 +41,7 @@ spec:
         - containerPort: {{ PIPELINE_RUNNER_SERVICE_PORT }}
           protocol: TCP
         imagePullPolicy: {{ IMAGE_PULL_POLICY }}
-        image: {{ DOCKER_IMAGE_PREFIX }}/pipeline-runner-for-minikube{{ DOCKER_IMAGE_TAG }}
+        image: {{ DOCKER_IMAGE_PREFIX }}/pipeline-runner{{ DOCKER_IMAGE_TAG }}
         volumeMounts:
         - name: data-dir
           mountPath: /data
