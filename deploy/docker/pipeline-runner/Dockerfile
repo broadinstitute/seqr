@@ -139,7 +139,7 @@ COPY config/gitconfig /root/.gitconfig
 COPY bashrc /root/.bashrc
 COPY config/run_hail_locally.sh /hail-elasticsearch-pipelines
 COPY config/run_hail_on_dataproc.sh /hail-elasticsearch-pipelines
-COPY core-site.xml /usr/local/spark-2.0.2-bin-hadoop2.7/conf/
+COPY config/core-site.xml /usr/local/spark-2.0.2-bin-hadoop2.7/conf/
 COPY entrypoint.sh /
 
 
