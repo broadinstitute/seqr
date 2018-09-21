@@ -62,6 +62,14 @@ RUN echo 'deb http://apt.postgresql.org/pub/repos/apt/ jessie-pgdg main' >> /etc
 RUN apt-get update && apt-get install -y \
     redis-tools
 
+# set up mounted bucket for easier backups, etc.
+RUN GCSFUSE_REPO=gcsfuse-$(lsb_release -c -s) \
+    && echo "deb http://packages.cloud.google.com/apt $GCSFUSE_REPO main" | tee /etc/apt/sources.list.d/gcsfuse.list \
+    && curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - \
+    && apt-get update \
+    && apt-get install -y gcsfuse \
+    && mkdir /mounted-bucket
+
 # install gcloud tools
 RUN CLOUDSDK_CORE_DISABLE_PROMPTS=1 \
     && curl https://sdk.cloud.google.com | bash \
@@ -85,7 +93,6 @@ RUN curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s
     && mv ./kubectl /usr/local/bin/kubectl
 
 
-
 # DISABLE_CACHE work-around to force git pull on every docker build, based on https://github.com/docker/docker/issues/1996
 ARG DISABLE_CACHE=1
 
@@ -102,23 +109,18 @@ ENV SEQR_SERVICE_PORT=$SEQR_SERVICE_PORT
 
 EXPOSE $SEQR_SERVICE_PORT
 
-ARG SEQR_UI_DEV_PORT
-ENV SEQR_UI_DEV_PORT=$SEQR_UI_DEV_PORT
-EXPOSE $SEQR_UI_DEV_PORT
-
 ENV PYTHONPATH=/seqr:/seqr_settings
 ENV TERM=xterm
 
 RUN mkdir /seqr_settings
 
-COPY shared/readiness_probe /
-COPY shared/bin/*.sh /usr/local/bin/
-COPY shared/gitconfig /root/.gitconfig
-COPY shared/config/*.py /seqr_settings/
-COPY shared/bashrc /root/.bashrc
+COPY readiness_probe /
+COPY bin/*.sh /usr/local/bin/
+COPY gitconfig /root/.gitconfig
+COPY config/*.py /seqr_settings/
+COPY bashrc /root/.bashrc
 
-COPY minikube/bashrc_custom /root/.bashrc_custom
-COPY minikube/entrypoint.sh /
+COPY entrypoint.sh /
 
 WORKDIR /seqr
 

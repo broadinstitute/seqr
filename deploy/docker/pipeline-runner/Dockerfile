@@ -123,9 +123,9 @@ RUN cp -r /hail-elasticsearch-pipelines/loftee /vep \
 
 #COPY minikube/vep-gcloud-grch38.properties /vep/vep-gcloud-grch38.properties
 #COPY minikube/vep-gcloud-grch37.properties /vep/vep-gcloud-grch37.properties
-#COPY shared/run_hail_vep85_GRCh37_vcf.sh /vep/run_hail_vep85_GRCh37_vcf.sh
-#COPY shared/run_hail_vep85_GRCh38_vcf.sh /vep/run_hail_vep85_GRCh38_vcf.sh
-#COPY shared/1var.vcf /vep/1var.vcf
+#COPY config/run_hail_vep85_GRCh37_vcf.sh /vep/run_hail_vep85_GRCh37_vcf.sh
+#COPY config/run_hail_vep85_GRCh38_vcf.sh /vep/run_hail_vep85_GRCh38_vcf.sh
+#COPY config/1var.vcf /vep/1var.vcf
 
 # run VEP on the 1-variant VCF to create fasta.index file
 RUN /vep/run_hail_vep85_GRCh37_vcf.sh /vep/1var.vcf \
@@ -135,12 +135,12 @@ RUN /vep/run_hail_vep85_GRCh37_vcf.sh /vep/1var.vcf \
 ENV TERM=xterm
 ENV PYTHONPATH="$PYTHONPATH:/seqr:/seqr_settings:/hail-elasticsearch-pipelines"
 
-COPY shared/gitconfig /root/.gitconfig
-COPY shared/bashrc /root/.bashrc
-COPY shared/run_hail_locally.sh /hail-elasticsearch-pipelines
-COPY shared/run_hail_on_dataproc.sh /hail-elasticsearch-pipelines
-COPY minikube/core-site.xml /usr/local/spark-2.0.2-bin-hadoop2.7/conf/
-COPY minikube/entrypoint.sh /
+COPY config/gitconfig /root/.gitconfig
+COPY bashrc /root/.bashrc
+COPY config/run_hail_locally.sh /hail-elasticsearch-pipelines
+COPY config/run_hail_on_dataproc.sh /hail-elasticsearch-pipelines
+COPY config/core-site.xml /usr/local/spark-2.0.2-bin-hadoop2.7/conf/
+COPY entrypoint.sh /
 
 
 WORKDIR /hail-elasticsearch-pipelines

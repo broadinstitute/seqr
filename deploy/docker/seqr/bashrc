@@ -24,4 +24,6 @@ alias mongo='mongo --host ${MONGO_SERVICE_HOSTNAME}'
 
 resize
 
-source /root/.bashrc_custom
+alias gs='gsutil'
+
+
