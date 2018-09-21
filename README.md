@@ -62,14 +62,14 @@ SCRIPT=step1.linux-ubuntu18.install_dependencies.sh && curl -L http://raw.github
 
 #### Step 2: Install and start elasticsearch
 
-Run this script to start an elasticsearch instance in the current directory: 
+Run this command to start an elasticsearch instance in the current directory: 
 ```
 SCRIPT=step2.install_and_start_elasticsearch.sh && curl -L http://raw.githubusercontent.com/macarthur-lab/seqr/master/deploy/$SCRIPT -o $SCRIPT && chmod 777 $SCRIPT && source $SCRIPT
 ```
 
 #### Step 3: Download seqr deployment scripts
 
-In a new terminal, run this script to download seqr deployment scripts:
+In a new terminal, run this command to download seqr deployment scripts:
 ```
 SCRIPT=step3.download_deployment_scripts.sh && curl -L http://raw.githubusercontent.com/macarthur-lab/seqr/master/deploy/$SCRIPT -o $SCRIPT && chmod 777 $SCRIPT && source $SCRIPT
 ```
@@ -87,6 +87,8 @@ Optionally edit deployment settings before proceeding to step 4:
 
 #### Step 4: Install seqr on minikube
 
+Run this command to deploy all seqr components to minikube:
+
 ```
 SCRIPT=step4.install_seqr_on_minikube.sh && curl -L http://raw.githubusercontent.com/macarthur-lab/seqr/master/deploy/$SCRIPT -o $SCRIPT && chmod 777 $SCRIPT && source $SCRIPT
 ```
@@ -98,11 +100,32 @@ source ./activate_virtualenv.sh
 ./servctl create-user minikube 
 ```
 
-and then open seqr by opening your browser to `http://$(minikube ip):30003`:
+Then, to open seqr in your browser, you can do: 
 
 ```
 open http://$(minikube ip):30003   
 ```
+
+assuming you are on MacOS and minikube is running on the same machine as the web browser.
+
+If minikube is running on a remote machine and you want to access seqr over the internet, you will need to first make sure 
+traffic is being forwarded from the remote machine's http port (port 80) to seqr's Node port in minikube (30003). One way to do this is to start 
+an ssh tunnel on the machine that's running minikube:
+
+```
+sudo ssh -v -i ~/.ssh/id_rsa -N -L 0.0.0.0:80:localhost:30003 ${USER}@$(hostname)
+```   
+
+(NOTE: If you're on Ubuntu and this prints `Permission denied (publickey)`, you may need to first do `cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys`)   
+
+
+To load an example project with an exome dataset based from several families, run: 
+```
+./servctl load-example-project --cpu-limit 2 minikube
+```
+
+
+
 
 ## Update / Migrate an older xBrowse Instance
 
