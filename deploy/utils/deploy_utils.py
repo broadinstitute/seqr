@@ -194,11 +194,10 @@ def _deploy_pod(component_label, settings, wait_until_pod_is_running=True, wait_
         _wait_until_pod_is_ready(component_label, deployment_target=settings["DEPLOY_TO"])
 
 
-def docker_build(component_label, settings, custom_build_args=(), docker_image_name_suffix=""):
+def docker_build(component_label, settings, custom_build_args=()):
     params = dict(settings)   # make a copy before modifying
     params["COMPONENT_LABEL"] = component_label
-    params["DOCKER_IMAGE_NAME_SUFFIX"] = docker_image_name_suffix
-    params["DOCKER_IMAGE_NAME"] = "%(DOCKER_IMAGE_PREFIX)s/%(COMPONENT_LABEL)s%(DOCKER_IMAGE_NAME_SUFFIX)s" % params
+    params["DOCKER_IMAGE_NAME"] = "%(DOCKER_IMAGE_PREFIX)s/%(COMPONENT_LABEL)s" % params
 
     docker_command_prefix = "eval $(minikube docker-env); " if settings["DEPLOY_TO"] == "minikube" else ""
 
@@ -432,10 +431,9 @@ def deploy_seqr(settings):
             [
                 "--build-arg SEQR_SERVICE_PORT=%s" % settings["SEQR_SERVICE_PORT"],
                 "--build-arg SEQR_UI_DEV_PORT=%s" % settings["SEQR_UI_DEV_PORT"],
-                "-f deploy/docker/seqr/%s/Dockerfile" % settings["DEPLOY_TO_PREFIX"],
+                "-f deploy/docker/seqr/Dockerfile",
                 "-t %(DOCKER_IMAGE_NAME)s" + seqr_git_hash,
-            ],
-            docker_image_name_suffix="-for-minikube" if settings["DEPLOY_TO"] == "minikube" else "",
+            ]
         )
 
     if settings["ONLY_PUSH_TO_REGISTRY"]:
@@ -486,11 +484,7 @@ def deploy_pipeline_runner(settings):
     if settings["DELETE_BEFORE_DEPLOY"]:
         delete_pod("pipeline-runner", settings)
 
-    docker_build("pipeline-runner",
-        settings,
-        [ "-f deploy/docker/%(COMPONENT_LABEL)s/%(DEPLOY_TO_PREFIX)s/Dockerfile" ],
-        docker_image_name_suffix="-for-minikube" if settings["DEPLOY_TO"] == "minikube" else "",
-    )
+    docker_build("pipeline-runner", settings, [ "-f deploy/docker/%(COMPONENT_LABEL)s/Dockerfile" ])
 
     _deploy_pod("pipeline-runner", settings, wait_until_pod_is_running=True)
 
