@@ -1,0 +1,6 @@
+# isolates secrets and other objects between different environments (minikube, gcloud-dev, gcloud-prod, etc)
+# see: https://kubernetes.io/blog/2015/08/using-kubernetes-namespaces-to-manage/
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ NAMESPACE }}

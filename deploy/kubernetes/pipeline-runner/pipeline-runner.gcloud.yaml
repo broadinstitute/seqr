@@ -4,6 +4,7 @@ metadata:
   name: pipeline-runner
   labels:
     name: pipeline-runner
+    namespace: {{ NAMESPACE }}
     deployment: {{ DEPLOY_TO }}
 spec:
   ports:
@@ -15,6 +16,7 @@ kind: Deployment
 apiVersion: extensions/v1beta1
 metadata:
   name: pipeline-runner
+  namespace: {{ NAMESPACE }}
   labels:
     name: pipeline-runner
     deployment: {{ DEPLOY_TO }}
@@ -32,11 +34,11 @@ spec:
           secretName: gcloud-client-secrets
       containers:
       - name: pipeline-runner-pod
-        image: {{ DOCKER_IMAGE_PREFIX }}/pipeline-runner:{{ TIMESTAMP }}
         ports:
         - containerPort: {{ PIPELINE_RUNNER_SERVICE_PORT }}
           protocol: TCP
-        imagePullPolicy: Always
+        imagePullPolicy: {{ IMAGE_PULL_POLICY }}
+        image: {{ DOCKER_IMAGE_PREFIX }}/pipeline-runner{{ DOCKER_IMAGE_TAG }}
         volumeMounts:
         - name: gcloud-client-secrets-volume
           mountPath: /.config

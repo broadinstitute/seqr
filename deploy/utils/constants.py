@@ -63,7 +63,7 @@ COMPONENT_PORTS = {
     "postgres":        [5432],
     "seqr":            [8000],
     "pipeline-runner": [30005],
-    "nginx":           [80, 443],
+    #"nginx":           [80, 443],
 }
 
 COMPONENTS_TO_OPEN_IN_BROWSER = set([

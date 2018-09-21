@@ -2,12 +2,15 @@ kind: Service
 apiVersion: v1
 metadata:
   name: seqr
+  namespace: {{ NAMESPACE }}
   labels:
     name: seqr
     deployment: {{ DEPLOY_TO }}
 spec:
+  type: NodePort
   ports:
   - port: {{ SEQR_SERVICE_PORT }}
+    nodePort: {{ SEQR_SERVICE_NODE_PORT }}
   selector:
     name: seqr
 ---
@@ -15,6 +18,7 @@ kind: Deployment
 apiVersion: extensions/v1beta1
 metadata:
   name: seqr
+  namespace: {{ NAMESPACE }}
   labels:
     name: seqr
     deployment: {{ DEPLOY_TO }}
@@ -32,11 +36,11 @@ spec:
           secretName: gcloud-client-secrets
       containers:
       - name: seqr-pod
-        image: {{ DOCKER_IMAGE_PREFIX }}/seqr:{{ TIMESTAMP }}
         ports:
         - containerPort: {{ SEQR_SERVICE_PORT }}
           protocol: TCP
-        imagePullPolicy: Always
+        imagePullPolicy: {{ IMAGE_PULL_POLICY }}
+        image: {{ DOCKER_IMAGE_PREFIX }}/seqr{{ DOCKER_IMAGE_TAG }}
         securityContext:
           privileged: true
           capabilities:

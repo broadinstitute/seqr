@@ -2,6 +2,7 @@ kind: Service
 apiVersion: v1
 metadata:
   name: phenotips
+  namespace: {{ NAMESPACE }}
   labels:
     name: phenotips
     deployment: {{ DEPLOY_TO }}
@@ -15,6 +16,7 @@ kind: Deployment
 apiVersion: extensions/v1beta1
 metadata:
   name: phenotips
+  namespace: {{ NAMESPACE }}
   labels:
     name: phenotips
     deployment: {{ DEPLOY_TO }}
@@ -28,11 +30,11 @@ spec:
     spec:
       containers:
       - name: phenotips-pod
-        image: {{ DOCKER_IMAGE_PREFIX }}/phenotips:{{ TIMESTAMP }}
         ports:
         - containerPort: {{ PHENOTIPS_SERVICE_PORT }}
           protocol: TCP
-        imagePullPolicy: Always
+        imagePullPolicy: {{ IMAGE_PULL_POLICY }}
+        image: {{ DOCKER_IMAGE_PREFIX }}/phenotips{{ DOCKER_IMAGE_TAG }}
         resources:
           requests:
             memory: "3Gi"

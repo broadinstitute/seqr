@@ -12,9 +12,10 @@ SEQR_POD_MOUNTED_BUCKET: seqr-mounted-bucket   # name of the private google buck
 ###########################################################
 ####### SETTINGS THAT SHOULDN'T NEED TO BE MODIFIED #######
 
+DOCKER_IMAGE_PREFIX: 'gcr.io/seqr-project'
+IMAGE_PULL_POLICY: 'Always'
 
 DEPLOYMENT_TEMP_DIR: '/tmp'
-
 
 MATCHBOX_SERVICE_HOSTNAME: matchbox
 POSTGRES_SERVICE_HOSTNAME: postgres
@@ -36,4 +37,6 @@ REDIS_SERVICE_PORT: 6379
 PIPELINE_RUNNER_SERVICE_PORT: 30005
 
 SEQR_UI_DEV_PORT: 3000
+
+
 

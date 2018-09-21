@@ -19,11 +19,11 @@ GCLOUD_ZONE: 'us-central1-b'
 ###########################################################
 ####### SETTINGS THAT SHOULDN'T NEED TO BE MODIFIED #######
 
+NAMESPACE: minikube
+
 DEPLOY_TO: 'minikube'
 DEPLOY_TO_PREFIX: 'minikube'
 DEPLOYMENT_TYPE: 'dev'
-
-DOCKER_IMAGE_PREFIX: 'minikube/seqr'
 
 # paths inside the minikube VM
 MINIKUBE_DATA_DIR: '/data'
@@ -32,6 +32,7 @@ MONGO_DBPATH:  '/data/mongo'
 ELASTICSEARCH_DBPATH:  '/data/elasticsearch'
 
 CLUSTER_NAME: 'minikube'
+CLUSTER_EXTERNAL_IP: '0.0.0.0'
 
 MONGO_SERVICE_EXTERNAL_IP: {{ HOST_MACHINE_IP }}  # works if mongo is running on the same machine as minikube and the external-mongo-connector is deployed on your minikube cluster
 MONGO_SERVICE_EXTERNAL_PORT: 27017
