@@ -202,7 +202,7 @@ class ElasticsearchDatastore(datastore.Datastore):
                     for index_name, index_mapping in mapping.items():
                         if indiv_id+"_num_alt" in index_mapping["mappings"]["variant"]["properties"]:
                             matching_indices.append(index_name)
-                            index_fields.update(index_mapping)
+                            index_fields.update(index_mapping["mappings"]["variant"]["properties"])
                     if len(matching_indices) > 0:
                         break
 
@@ -617,7 +617,7 @@ class ElasticsearchDatastore(datastore.Datastore):
                     'topmed_Hom': float(hit["topmed_Hom"] or 0) if "topmed_Hom" in hit else None,
                     'topmed_AN': float(hit["topmed_AN"] or 0) if "topmed_AN" in hit else None,
                 },
-                'db_freqs': {k: float(hit[k] or 0.0) if k in hit else (0.0 if k else None) for k, v in freq_fields.items()},
+                'db_freqs': {k: float(hit[v] or 0.0) if v in hit else (0.0 if v else None) for k, v in freq_fields.items()},
                 #'popmax_populations': {
                 #    'exac_popmax': hit["exac_POPMAX"] or None,
                 #    'gnomad_exomes_popmax': hit["gnomad_exomes_POPMAX"] or None,
