@@ -36,8 +36,7 @@ python -u manage.py check
 python -u manage.py collectstatic --no-input
 
 # launch django server in background
-cd /seqr_settings
-gunicorn -w $GUNICORN_WORKER_THREADS -c gunicorn_config.py wsgi:application |& stdbuf -o0 grep -v curl |& tee /var/log/gunicorn.log &
+/usr/local/bin/start_server.sh
 
 # allow pg_dump and other postgres command-line tools to run without having to enter a password
 echo "*:*:*:*:$POSTGRES_PASSWORD" > ~/.pgpass
@@ -46,10 +45,11 @@ chmod 600 ~/.pgpass
 if [ -e /mounted-bucket/settings_backups/run_settings_backup.py ]; then
     # set up cron database backups
     echo 'SHELL=/bin/bash
-    0 0 * * * python -u /mounted-bucket/settings_backups/run_settings_backup.py >> /var/log/cron.log
-    0 */4 * * * source /root/.bashrc; python /mounted-bucket/database_backups/run_postgres_database_backup.py 2>&1 >> /var/log/cron.log
-    0 0 * * 0 python -u manage.py update_omim --omim-key $OMIM_KEY > /var/log/cron.log
-    ' | crontab -
+0 0 * * * python -u /mounted-bucket/settings_backups/run_settings_backup.py >> /var/log/cron.log
+0 */4 * * * source /root/.bashrc; python /mounted-bucket/database_backups/run_postgres_database_backup.py 2>&1 >> /var/log/cron.log
+0 0 * * 0 python -u manage.py update_omim --omim-key $OMIM_KEY >> /var/log/cron.log
+0 0 * * 0 python -u manage.py update_human_phenotype_ontology >> /var/log/cron.log
+' | crontab -
 
     env > /etc/environment  # this is necessary for crontab commands to run with the right env. vars.
 
