@@ -32,7 +32,7 @@ def load_dataset(deployment_target, project_name, genome_version, sample_type, d
                 --dataset-type %(dataset_type)s \
                 --skip-validation \
                 --exclude-hgmd \
-                --vep-block-size 10 \
+                --vep-block-size 100 \
                 --es-block-size 10 \
                 --num-shards 1 \
                 --max-samples-per-index 99 \
