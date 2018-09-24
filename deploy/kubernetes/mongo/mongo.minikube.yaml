@@ -39,6 +39,13 @@ spec:
         volumeMounts:
         - name: mongo-dbpath
           mountPath: /data/db
+        resources:
+          requests:
+            memory: "0.5Gi"
+            cpu: "0.01"
+          limits:
+            memory: "15Gi"
+            cpu: "5"
 #        readinessProbe:
 #          exec:
 #            command:

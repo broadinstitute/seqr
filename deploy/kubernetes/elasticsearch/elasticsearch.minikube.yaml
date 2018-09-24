@@ -44,6 +44,13 @@ spec:
           protocol: TCP
         imagePullPolicy: {{ IMAGE_PULL_POLICY }}
         image: {{ DOCKER_IMAGE_PREFIX }}/elasticsearch{{ DOCKER_IMAGE_TAG }}
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "0.01"
+          limits:
+            memory: "15Gi"
+            cpu: "2"
         volumeMounts:
         - name: elasticsearch-dbpath
           mountPath: /elasticsearch-data

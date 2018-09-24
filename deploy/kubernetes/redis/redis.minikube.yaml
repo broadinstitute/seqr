@@ -32,10 +32,12 @@ spec:
           protocol: TCP
         imagePullPolicy: {{ IMAGE_PULL_POLICY }}
         image: {{ DOCKER_IMAGE_PREFIX }}/redis{{ DOCKER_IMAGE_TAG }}
-#        readinessProbe:
-#          exec:
-#            command:
-#            - cat
-#            - /tmp/ready
+        resources:
+          requests:
+            memory: "0.25Gi"
+            cpu: "0.01"
+          limits:
+            memory: "2Gi"
+            cpu: "0.5"
       restartPolicy: Always
       dnsPolicy: ClusterFirst

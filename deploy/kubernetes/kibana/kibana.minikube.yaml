@@ -36,6 +36,13 @@ spec:
           protocol: TCP
         imagePullPolicy: {{ IMAGE_PULL_POLICY }}
         image: {{ DOCKER_IMAGE_PREFIX }}/kibana{{ DOCKER_IMAGE_TAG }}
+        resources:
+          requests:
+            memory: "0.2Gi"
+            cpu: "0.01"
+          limits:
+            memory: "1Gi"
+            cpu: "0.5"
         env:
         - name: KIBANA_SERVICE_PORT
           value: "{{ KIBANA_SERVICE_PORT }}"

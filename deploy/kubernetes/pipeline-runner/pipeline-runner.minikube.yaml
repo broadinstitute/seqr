@@ -42,6 +42,13 @@ spec:
           protocol: TCP
         imagePullPolicy: {{ IMAGE_PULL_POLICY }}
         image: {{ DOCKER_IMAGE_PREFIX }}/pipeline-runner{{ DOCKER_IMAGE_TAG }}
+        resources:
+          requests:
+            memory: "0.25Gi"
+            cpu: "0.01"
+          limits:
+            memory: "30Gi"
+            cpu: "8"
         volumeMounts:
         - name: data-dir
           mountPath: /data

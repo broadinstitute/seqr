@@ -36,6 +36,13 @@ spec:
           protocol: TCP
         imagePullPolicy: {{ IMAGE_PULL_POLICY }}
         image: {{ DOCKER_IMAGE_PREFIX }}/postgres{{ DOCKER_IMAGE_TAG }}
+        resources:
+          requests:
+            memory: "0.1Gi"
+            cpu: "0.01"
+          limits:
+            memory: "1Gi"
+            cpu: "2"
         env:
         - name: POSTGRES_USER
           valueFrom:
