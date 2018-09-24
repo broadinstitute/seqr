@@ -8,6 +8,7 @@ import json
 
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import connection
 from django.db.models import Q, Count
 
@@ -312,8 +313,12 @@ def _has_gene_search(project):
     Args:
          project (object): django project
     """
-    base_project = BaseProject.objects.get(project_id=project.deprecated_project_id)
-    return get_project_datastore(base_project).project_collection_is_loaded(base_project)
+    try:
+        base_project = BaseProject.objects.get(seqr_project=project)
+    except ObjectDoesNotExist as e:
+        return False
+
+    return base_project.has_elasticsearch_index() or get_project_datastore(base_project).project_collection_is_loaded(base_project)
 
 
 def _project_matchmaker_submissions(project):

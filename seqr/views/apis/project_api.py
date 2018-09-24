@@ -139,13 +139,12 @@ def create_project(name, description=None, user=None):
         description=description,
     )
 
-    if created:
-        base_project = _deprecated_create_original_project(project)
+    base_project = _deprecated_create_original_project(project)
 
-        project.deprecated_project_id = base_project.project_id
-        project.save()
+    project.deprecated_project_id = base_project.project_id
+    project.save()
 
-        _enable_phenotips_for_project(project)
+    _enable_phenotips_for_project(project)
 
     # TODO: add custom populations
 
