@@ -59,11 +59,6 @@ RUN pip install decorator==4.2.1    # fix http://discuss.hail.is/t/importerror-c
 
 RUN wget https://storage.googleapis.com/hadoop-lib/gcs/gcs-connector-latest-hadoop2.jar -O /usr/local/spark-2.0.2-bin-hadoop2.7/jars/gcs-connector-latest-hadoop2.jar
 
-# install hail
-RUN mkdir -p /hail/build/libs /hail/build/distributions \
-    && gsutil cp gs://seqr-hail/hail-jar/hail-0.1-es-6.2.4-with-strip-chr-prefix.zip /hail/build/distributions/hail-python.zip \
-    && gsutil cp gs://seqr-hail/hail-jar/hail-0.1-es-6.2.4-with-strip-chr-prefix.jar /hail/build/libs/hail-all-spark.jar
-
 # install jupyter
 RUN pip install --upgrade pip jupyter
 
@@ -112,8 +107,10 @@ RUN /usr/bin/cpanm --notest  List::MoreUtils
 # DISABLE_CACHE work-around to force git pull on every docker build, based on https://github.com/docker/docker/issues/1996
 ARG DISABLE_CACHE=1
 
-# install hail-elasticsearch-pipelines
+# clone hail-elasticsearch-pipelines
 RUN git clone https://github.com/macarthur-lab/hail-elasticsearch-pipelines.git /hail-elasticsearch-pipelines
+
+# copy loftee
 RUN cp -r /hail-elasticsearch-pipelines/loftee /vep \
     && cp /hail-elasticsearch-pipelines/gcloud_dataproc/vep_init/vep-gcloud-grch38.properties /vep/vep-gcloud-grch38.properties \
     && cp /hail-elasticsearch-pipelines/gcloud_dataproc/vep_init/vep-gcloud-grch37.properties /vep/vep-gcloud-grch37.properties \
@@ -121,11 +118,11 @@ RUN cp -r /hail-elasticsearch-pipelines/loftee /vep \
     && cp /hail-elasticsearch-pipelines/gcloud_dataproc/vep_init/run_hail_vep85_GRCh38_vcf.sh /vep/run_hail_vep85_GRCh38_vcf.sh \
     && cp /hail-elasticsearch-pipelines/gcloud_dataproc/vep_init/1var.vcf /vep/1var.vcf
 
-#COPY minikube/vep-gcloud-grch38.properties /vep/vep-gcloud-grch38.properties
-#COPY minikube/vep-gcloud-grch37.properties /vep/vep-gcloud-grch37.properties
-#COPY config/run_hail_vep85_GRCh37_vcf.sh /vep/run_hail_vep85_GRCh37_vcf.sh
-#COPY config/run_hail_vep85_GRCh38_vcf.sh /vep/run_hail_vep85_GRCh38_vcf.sh
-#COPY config/1var.vcf /vep/1var.vcf
+# copy hail build
+RUN mkdir -p /hail/build/libs /hail/build/distributions \
+    && cp /hail-elasticsearch-pipelines/hail_builds/v01/hail-9-17-2018-f3e47061.zip /hail/build/distributions/hail-python.zip \
+    && cp /hail-elasticsearch-pipelines/hail_builds/v01/hail-9-17-2018-f3e47061.jar /hail/build/libs/hail-all-spark.jar
+
 
 # run VEP on the 1-variant VCF to create fasta.index file
 RUN /vep/run_hail_vep85_GRCh37_vcf.sh /vep/1var.vcf \
