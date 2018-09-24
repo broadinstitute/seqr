@@ -93,6 +93,8 @@ spec:
           value: "{{ GCLOUD_PROJECT }}"
         - name: GCLOUD_ZONE
           value: "{{ GCLOUD_ZONE }}"
+        - name: GUNICORN_WORKER_THREADS
+          value: "{{ GUNICORN_WORKER_THREADS }}"
         - name: HOST_MACHINE_IP
           value: "{{ HOST_MACHINE_IP }}"
         - name: MATCHBOX_SERVICE_HOSTNAME
