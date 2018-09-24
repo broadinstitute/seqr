@@ -161,14 +161,14 @@ def delete_pod(component_label, settings, async=False, custom_yaml_filename=None
     yaml_filename = custom_yaml_filename or (component_label+".%(DEPLOY_TO_PREFIX)s.yaml")
 
     deployment_target = settings["DEPLOY_TO"]
-    if get_pod_status(component_label, deployment_target) == "Running":
+    if get_pod_status(component_label, deployment_target):
         run(" ".join([
             "kubectl delete",
             "-f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/"+component_label+"/"+yaml_filename,
         ]) % settings, errors_to_ignore=["not found"])
 
     logger.info("waiting for \"%s\" to exit Running status" % component_label)
-    while get_pod_status(component_label, deployment_target) in ["Running", "Terminating"] and not async:
+    while get_pod_status(component_label, deployment_target) and not async:
         time.sleep(5)
 
 
