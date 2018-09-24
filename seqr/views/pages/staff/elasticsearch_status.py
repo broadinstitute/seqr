@@ -29,8 +29,8 @@ def elasticsearch_status(request):
     snapshots = json.loads(response.content)
 
     index_snapshot_states = defaultdict(list)
-    for snapshot in snapshots["snapshots"]:
-        for index_name in snapshot["indices"]:
+    for snapshot in snapshots.get("snapshots", []):
+        for index_name in snapshot.get("indices", []):
             index_snapshot_states[index_name].append(snapshot["state"])
 
     # get indices
