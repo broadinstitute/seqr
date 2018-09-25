@@ -93,10 +93,11 @@ Run this command to deploy all seqr components to minikube:
 SCRIPT=step4.install_seqr_on_minikube.sh && curl -L http://raw.githubusercontent.com/macarthur-lab/seqr/master/deploy/$SCRIPT -o $SCRIPT && chmod 777 $SCRIPT && source $SCRIPT
 ```
 
-After this finishes, you can create a super-user account by running:
+After this finishes, you can create a super-user account by running these commands in the `seqr` subdirectory:
 
 ```
 source ./activate_virtualenv.sh
+  
 ./servctl create-user minikube 
 ```
 
@@ -116,15 +117,30 @@ an ssh tunnel on the machine that's running minikube:
 sudo ssh -v -i ~/.ssh/id_rsa -N -L 0.0.0.0:80:localhost:30003 ${USER}@$(hostname)
 ```   
 
-(NOTE: If you're on Ubuntu and this prints `Permission denied (publickey)`, you may need to first do `cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys`)   
+NOTE: On Ubuntu,  if you encounter `Permission denied (publickey)` errors, you may need to [generate ssh keys](https://help.github.com/enterprise/2.14/user/articles/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent/#generating-a-new-ssh-key) and do `cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys` before starting the tunnel.   
 
+## Creating projects and loading datasets
 
-To load an example project with an exome dataset based from several families, run: 
+To create an example project and load several 1000Genomes trios into it, run: 
 ```
 ./servctl load-example-project --cpu-limit 2 minikube
 ```
 
+A seqr project generally represents a group of users analyzing a given dataset. It encapsulates the variant data, 
+pedigree information, as well as tags and notes for that dataset.  
+To create a project:
+0. login to seqr and click on `+ Create Project` in the bottom right.   
+0. click on the new project, and use the `Edit Families and Individuals` form to upload a pedigree file 
+in [.fam format](https://www.cog-genomics.org/plink2/formats#fam) 
+   
+To annotate and load a new dataset, run: 
+```
+./servctl load-dataset minikube --genome-version 37 --project-guid "project_name" --sample-type WES --dataset-type VARIANTS --cpu-limit 1 --input-vcf ${vcf_path} 
+``` 
 
+where `${vcf_path}` should be replaced with `/local/path/to/your_data.vcf.gz` or `gs://some-google-storage-bucket/path/to/your_data.vcf.gz`.
+
+Once the dataset finishes loading, you can add it to your seqr project by using the `Edit Datasets` form on the Project page. 
 
 
 ## Update / Migrate an older xBrowse Instance
