@@ -121,8 +121,10 @@ NOTE: On Ubuntu,  if you encounter `Permission denied (publickey)` errors, you m
 
 ## Creating projects and loading datasets
 
-To create an example project and load a dataset with several 1000Genomes trios, run: 
+To create an example seqr project and load an exome dataset with some trios and individuals from the 1000 genomes project, run: 
 ```
+source ./activate_virtualenv.sh
+
 ./servctl load-example-project --cpu-limit 1 minikube
 ```
 
@@ -135,6 +137,8 @@ To create a project:
    
 To annotate and load a new dataset, run the `servctl load-dataset` command. For example: 
 ```
+source ./activate_virtualenv.sh
+
 ./servctl load-dataset minikube --genome-version 37 --project-guid "project_name" --sample-type WES --dataset-type VARIANTS --cpu-limit 1 --input-vcf ${vcf_path} 
 ``` 
 
