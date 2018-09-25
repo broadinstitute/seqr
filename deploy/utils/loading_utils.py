@@ -1,7 +1,7 @@
 import logging
 import os
 import psutil
-from deploy.utils.kubectl_utils import get_pod_name, run_in_pod
+from deploy.utils.kubectl_utils import get_pod_name, run_in_pod, run
 from deploy.utils.servctl_utils import check_kubernetes_context
 
 logger = logging.getLogger(__name__)
@@ -10,6 +10,13 @@ logger = logging.getLogger(__name__)
 def load_dataset(deployment_target, project_name, genome_version, sample_type, dataset_type, vcf, memory_to_use=None, cpu_limit=None, **kwargs):
     pod_name = get_pod_name('pipeline-runner', deployment_target=deployment_target)
 
+    if os.path.isfile(vcf):
+        # if local file path, copy file into pod
+        path_in_pod = "/data/{}".format(os.path.basename(vcf))
+        run("kubectl cp '%(vcf)s' '%(pod_name)s:%(path_in_pod)s'" % locals())
+        vcf = path_in_pod
+
+    # run load command
     additional_load_command_args = "  ".join("--%s '%s'" % (key.lower().replace("_", "-"), value) for key, value in kwargs.items() if value is not None)
 
     run_locally = deployment_target == "minikube"
@@ -116,9 +123,6 @@ def update_reference_data(deployment_target):
 
     # load legacy resources
     run_in_pod(pod_name, "python -u manage.py load_resources", verbose=True)
-
-    run_in_pod(pod_name, "mkdir -p /seqr/data/reference_data/omim")
-    run_in_pod(pod_name, "cp /tmp/genemap2.txt /seqr/data/reference_data/omim/")
     run_in_pod(pod_name, "python -u manage.py load_omim", verbose=True)
 
 
