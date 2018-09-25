@@ -324,7 +324,7 @@ elif args.command == LOAD_DATASET_COMMAND:
         ignore_extra_sample_ids_in_vds=args.ignore_extra_sample_ids_in_vds,
         fam_file=args.fam_file,
         start_with_step=args.start_with_step,
-        stop_with_step=args.stop_with_step,
+        stop_with_step=args.stop_after_step,
         output_vds=args.output_vds,
         vep_block_size=args.vep_block_size,
         es_block_size=args.es_block_size,
