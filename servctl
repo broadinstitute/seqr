@@ -66,7 +66,7 @@ sp.add_argument("--fam-file", help=".fam file used to check VDS sample IDs and a
     "'num_samples' per index, but making sure that samples from the same family don't end up in different indices. "
     "If used with --remap-sample-ids, contains IDs of samples after remapping")
 sp.add_argument("--start-with-step", help="Which pipeline step to start with.", type=int, default=0, choices=[0, 1, 2, 3, 4])
-sp.add_argument("--stop-after-step", help="Pipeline will exit after this stesp.", type=int, default=1000, choices=[0, 1, 2, 3, 4])
+sp.add_argument("--stop-after-step", help="Pipeline will exit after this stesp.", type=int, choices=[0, 1, 2, 3, 4])
 sp.add_argument("--output-vds", help="(optional) Output vds filename prefix (eg. test-vds)")
 
 sp.add_argument("--vep-block-size", help="Block size to use for VEP", default=200, type=int)
