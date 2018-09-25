@@ -39,9 +39,9 @@ The instructions below cover local deployments using Minikube, but are also dire
 
 Local and on-prem installations can use [MiniKube](https://kubernetes.io/docs/setup/minikube/) to create a self-contained kubernetes cluster on a single machine. 
 
-Prereqs: `python2.7`, `sudo` root access. MacOS also requires [homebrew](http://brew.sh/) package manager. 
+*Prerequisites:* `python2.7`, `sudo` root access. For MacOS we also need the [homebrew](http://brew.sh/) package manager. 
 
-Run the following command to install `gcc`, `java1.8`, `minikube`, `kubectl` and dependencies (using `brew`, `yum` or `apt-get`):
+Run the following command to install `gcc`, `java1.8`, `minikube`, `kubectl` and their dependencies on the host machine (using `brew`, `yum` or `apt-get`):
 
 ###### MacOS
 ```
