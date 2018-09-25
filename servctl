@@ -72,7 +72,7 @@ sp.add_argument("--output-vds", help="(optional) Output vds filename prefix (eg.
 sp.add_argument("--vep-block-size", help="Block size to use for VEP", default=200, type=int)
 sp.add_argument("--es-block-size", help="Block size to use when exporting to elasticsearch", default=1000, type=int)
 sp.add_argument("--cpu-limit", help="Max CPUs to use when loading the dataset. Only applies to local deployments.", type=int)
-sp.add_argument("--vcf", help="Local path or google cloud bucket path (eg. gs://) of VCF to load", required=True)
+sp.add_argument("--input-vcf", help="Local path or google cloud bucket path (eg. gs://) of VCF to load", required=True)
 sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS, help="which kubernetes cluster to load the data to")
 
 # LOAD_EXAMPLE_PROJECT_COMMAND
@@ -317,7 +317,7 @@ elif args.command == LOAD_DATASET_COMMAND:
         args.genome_version,
         args.sample_type,
         args.dataset_type,
-        args.vcf,
+        args.input_vcf,
         remap_sample_ids=args.remap_sample_ids,
         subset_samples=args.subset_samples,
         ignore_extra_sample_ids_in_tables=args.ignore_extra_sample_ids_in_tables,
