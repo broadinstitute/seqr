@@ -121,26 +121,26 @@ NOTE: On Ubuntu,  if you encounter `Permission denied (publickey)` errors, you m
 
 ## Creating projects and loading datasets
 
-To create an example project and load several 1000Genomes trios into it, run: 
+To create an example project and load a dataset with several 1000Genomes trios, run: 
 ```
-./servctl load-example-project --cpu-limit 2 minikube
+./servctl load-example-project --cpu-limit 1 minikube
 ```
 
-A seqr project generally represents a group of users analyzing a given dataset. It encapsulates the variant data, 
-pedigree information, as well as tags and notes for that dataset.  
+A seqr project allows a group of users to analyze one or more datasets. It encapsulates the variant data, 
+pedigree information, plus any variant tags, notes, etc. that users create during analysis.
+  
 To create a project:
 0. login to seqr and click on `+ Create Project` in the bottom right.   
-0. click on the new project, and use the `Edit Families and Individuals` form to upload a pedigree file 
-in [.fam format](https://www.cog-genomics.org/plink2/formats#fam) 
+0. click on the new project, the click the `Edit Families and Individuals` form to upload a pedigree file in [.fam format](https://www.cog-genomics.org/plink2/formats#fam) 
    
-To annotate and load a new dataset, run: 
+To annotate and load a new dataset, run the `servctl load-dataset` command. For example: 
 ```
 ./servctl load-dataset minikube --genome-version 37 --project-guid "project_name" --sample-type WES --dataset-type VARIANTS --cpu-limit 1 --input-vcf ${vcf_path} 
 ``` 
 
-where `${vcf_path}` should be replaced with `/local/path/to/your_data.vcf.gz` or `gs://some-google-storage-bucket/path/to/your_data.vcf.gz`.
+where `${vcf_path}` is replaced with `/local/path/to/your_data.vcf.gz` or `gs://some-google-storage-bucket/path/to/your_data.vcf.gz`.
 
-Once the dataset finishes loading, you can add it to your seqr project by using the `Edit Datasets` form on the Project page. 
+Once the dataset finishes loading, you can add it to a seqr project using the `Edit Datasets` form on the Project page. 
 
 
 ## Update / Migrate an older xBrowse Instance
