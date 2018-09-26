@@ -21,10 +21,10 @@ def get_gene_symbols_to_gene_ids(gene_symbols):
 
 
 def get_gene_ids_to_gene_symbols(gene_ids=None):
-    filter = {}
+    gene_filter = {}
     if gene_ids:
-        filter['gene_id__in'] = gene_ids
-    genes = GeneInfo.objects.filter(**filter).only('gene_symbol', 'gene_id')
+        gene_filter['gene_id__in'] = gene_ids
+    genes = GeneInfo.objects.filter(**gene_filter).only('gene_symbol', 'gene_id')
     return {gene.gene_id: gene.gene_symbol for gene in genes}
 
 
