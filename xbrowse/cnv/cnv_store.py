@@ -53,7 +53,7 @@ class CNVStore():
                 'nexons': int(row[4]),
                 'xstart': xstart,
                 'xstop': xstop,
-                'genes': self.reference.get_genes_in_region(xstart, xstop),
+                'genes': self.reference.get_genes_in_region(chrom, start, stop),
                 'reads': [int(row[10]), int(row[11])],
                 'read_ratio': float(row[12]),
             }

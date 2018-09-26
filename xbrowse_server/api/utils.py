@@ -301,12 +301,7 @@ def calculate_cohort_gene_search(cohort, search_spec):
         if num_hits < 2:
             continue
 
-        try:
-            start_pos, end_pos = get_reference().get_gene_bounds(gene_id)
-            chr, start = genomeloc.get_chr_pos(start_pos)
-            end = genomeloc.get_chr_pos(end_pos)[1]
-        except KeyError:
-            chr, start, end = None, None, None
+        chr, start, end = get_reference().get_gene_bounds(gene_id)
 
         control_cohort = cohort.project.default_control_cohort if cohort.project.default_control_cohort else settings.DEFAULT_CONTROL_COHORT
         control_comparison = population_controls.control_comparison(
@@ -424,12 +419,7 @@ def calculate_combine_mendelian_families(family_group, search_spec, user=None):
         if xgene is None:
             continue
 
-        try:
-            start_pos, end_pos = get_reference().get_gene_bounds(gene_id)
-            chr, start = genomeloc.get_chr_pos(start_pos)
-            end = genomeloc.get_chr_pos(end_pos)[1]
-        except KeyError:
-            chr, start, end = None, None, None
+        chr, start, end = get_reference().get_gene_bounds(gene_id)
 
         gene = {
             'gene_info': xgene,

@@ -457,7 +457,7 @@ def get_json_for_locus_list(locus_list, user):
     return _get_json_for_model(locus_list, get_json_for_models=get_json_for_locus_lists, user=user, include_genes=True)
 
 
-def get_json_for_genes(genes, user=None, add_notes=False, add_expression=False):
+def get_json_for_genes(genes, user=None, add_dbnsfp=False, add_omim=False, add_constraints=False, add_notes=False, add_expression=False):
     """Returns a JSON representation of the given list of GeneInfo.
 
     Args:
@@ -473,22 +473,26 @@ def get_json_for_genes(genes, user=None, add_notes=False, add_expression=False):
         result['totalGenes'] = total_gene_constraints
 
     def _process_result(result, gene):
-        dbnsfp = gene.dbnsfpgene_set.first()
-        constraint = gene.geneconstraint_set.order_by('-mis_z').first()
-        if dbnsfp:
-            result.update(_get_json_for_model(dbnsfp))
+        if add_dbnsfp:
+            dbnsfp = gene.dbnsfpgene_set.first()
+            if dbnsfp:
+                result.update(_get_json_for_model(dbnsfp))
+        if add_omim:
+            result['omimPhenotypes'] = _get_json_for_models(gene.omim_set.all())
+        if add_constraints:
+            constraint = gene.geneconstraint_set.order_by('-mis_z', '-pLI').first()
+            result['constraints'] = _get_json_for_model(constraint, process_result=_add_total_constraint_count) if constraint else {}
         if add_notes:
             result['notes'] = gene_notes_json.get(result['geneId'], [])
         if add_expression:
             result['expression'] = gene.geneexpression.expression_values if hasattr(gene, 'geneexpression') else None
-        result.update({
-            'omimPhenotypes': _get_json_for_models(gene.omim_set.all()),
-            'constraints': _get_json_for_model(constraint, process_result=_add_total_constraint_count) if constraint else {},
-        })
 
-    prefetch_related_objects(genes, 'dbnsfpgene_set')
-    prefetch_related_objects(genes, 'omim_set')
-    prefetch_related_objects(genes, 'geneconstraint_set')
+    if add_dbnsfp:
+        prefetch_related_objects(genes, 'dbnsfpgene_set')
+    if add_omim:
+        prefetch_related_objects(genes, 'omim_set')
+    if add_constraints:
+        prefetch_related_objects(genes, 'geneconstraint_set')
 
     return _get_json_for_models(genes, process_result=_process_result)
 
