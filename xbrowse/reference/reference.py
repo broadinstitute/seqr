@@ -68,7 +68,8 @@ class Reference(object):
         raise NotImplementedError
 
     def get_gene_bounds(self, gene_id):
-        return self.gene_utils.get_gene_bounds(gene_id)
+        gene = self.gene_utils.get_genes([gene_id]).get(gene_id)
+        return (gene['chromGrch37'], gene['startGrch37'], gene['endGrch37']) if gene else (None, None, None)
 
     def get_gene_symbol(self, gene_id):
         return self.gene_utils.get_gene_ids_to_gene_symbols([gene_id]).get(gene_id)

@@ -135,13 +135,12 @@ class JSONUtilsTest(TestCase):
         json = get_json_for_gene(gene)
 
         fields = {
-            'chromGrch37', 'chromGrch38', 'codingRegionSizeGrch37', 'codingRegionSizeGrch38', 'constraints',
-            'diseaseDesc', 'endGrch37', 'endGrch38', 'functionDesc', 'gencodeGeneType', 'geneId', 'geneSymbol',
-            'omimPhenotypes', 'startGrch37', 'startGrch38',
+            'chromGrch37', 'chromGrch38', 'codingRegionSizeGrch37', 'codingRegionSizeGrch38',  'endGrch37', 'endGrch38',
+            'gencodeGeneType', 'geneId', 'geneSymbol', 'startGrch37', 'startGrch38',
         }
         self.assertSetEqual(set(json.keys()), fields)
 
         user = User.objects.filter().first()
-        json = get_json_for_gene(gene, user=user, add_notes=True)
-        fields.update({'notes'})
+        json = get_json_for_gene(gene, user=user, add_dbnsfp=True, add_omim=True, add_constraints=True, add_notes=True, add_expression=True)
+        fields.update({'constraints', 'diseaseDesc', 'expression', 'functionDesc', 'notes', 'omimPhenotypes'})
         self.assertSetEqual(set(json.keys()), fields)
