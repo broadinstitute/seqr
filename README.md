@@ -32,14 +32,22 @@ The pipeline for loading new datasets uses Spark to parallelelize VEP and other 
 Whether installing seqr on a laptop, on-prem, or on cloud VMs, we use Docker images and Kubernetes to automate the deployment steps and isolate them from the host systems.
 Users that are very familiar with components that make up seqr may want to install them directly on host systems without using Kubernetes. This provides maximum control, but requires more work for installation and maintenance. 
 If you do decide to go this route, the [Dockerfiles](https://github.com/macarthur-lab/seqr/tree/master/deploy/docker) can be useful as a list of steps for installing each component.  
-In most cases, we recommend the docker/kubernetes approach because:  1) it automates deployment as much as possible 2) as seqr evolves, it makes it easier to roll out new components or move around existing components if they outgrow existing hardware.   
-The instructions below cover local deployments using Minikube, but are also directly applicable to cloud-based deployments which replace Minikube with a managed Kubernetes cluster like Google Container Engine. A full list of kubernetes deployment options can be found at: https://kubernetes.io/docs/setup/pick-right-solution/.
+  In most cases, we recommend the docker/kubernetes approach because:  1) it automates deployment as much as possible 2) as seqr evolves, it makes it easier to roll out new components or move around existing components if they outgrow existing hardware.   
 
+The instructions below cover local deployments using Minikube, but are also directly applicable to cloud-based deployments which replace Minikube with a managed Kubernetes cluster like Google Container Engine.
+The Kubernetes project maintains a [complete list of deployment options](https://kubernetes.io/docs/setup/pick-right-solution/).
+
+#### Prerequisites
+ - *Hardware:*  At least **16 Gb RAM**, **2 CPUs**, **15 Gb disk space**  
+
+ - *Software:*  
+     - python2.7    
+     - on MacOS only: [homebrew](http://brew.sh/) package manager  
+     - on Linux only: root access with sudo (because we run minikube without a virtualization layer, using --vm-driver=none)
+    
 #### Step 1: Install Kubernetes
 
 Local and on-prem installations can use [MiniKube](https://kubernetes.io/docs/setup/minikube/) to create a self-contained kubernetes cluster on a single machine. 
-
-*Prerequisites:* `python2.7`, `sudo` root access. For MacOS we also need the [homebrew](http://brew.sh/) package manager. 
 
 Run the following command to install `gcc`, `java1.8`, `minikube`, `kubectl` and their dependencies on the host machine (using `brew`, `yum` or `apt-get`):
 
@@ -87,11 +95,16 @@ Optionally edit deployment settings before proceeding to step 4:
 
 #### Step 4: Install seqr on minikube
 
-Run this command to deploy all seqr components to minikube:
+Run this command to deploy all seqr components to minikube and load reference data:
 
 ```
 SCRIPT=step4.install_seqr_on_minikube.sh && curl -L http://raw.githubusercontent.com/macarthur-lab/seqr/master/deploy/$SCRIPT -o $SCRIPT && chmod 777 $SCRIPT && source $SCRIPT
 ```
+
+This step may run for 1 to 1.5 hours depending on internet speed. 
+
+
+#### Create superuser 
 
 After this finishes, you can create a super-user account by running these commands in the `seqr` subdirectory:
 
@@ -100,6 +113,8 @@ source ./activate_virtualenv.sh
   
 ./servctl create-user minikube 
 ```
+
+#### Open seqr in browser
 
 Then, to open seqr in your browser, you can do: 
 
@@ -119,14 +134,23 @@ sudo ssh -v -i ~/.ssh/id_rsa -N -L 0.0.0.0:80:localhost:30003 ${USER}@$(hostname
 
 NOTE: On Ubuntu,  if you encounter `Permission denied (publickey)` errors, you may need to [generate ssh keys](https://help.github.com/enterprise/2.14/user/articles/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent/#generating-a-new-ssh-key) and do `cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys` before starting the tunnel.   
 
-## Creating projects and loading datasets
 
-To create an example seqr project and load an exome dataset with some trios and individuals from the 1000 genomes project, run: 
+## Load example project
+
+To create an example seqr project and load an exome dataset with 16 individuals from the 1000 genomes project, run: 
+
 ```
 source ./activate_virtualenv.sh
 
 ./servctl load-example-project --cpu-limit 1 minikube
 ```
+
+This can take 16 to 24 hours on a machine with 16 Gb RAM and using 1 CPU for annotation. 
+If more memory is available, raising the `--cpu-limit` will allow multiple instances of VEP to run in parallel (with each VEP instance needing ~4 Gb additional RAM), 
+and parallelize all other steps in the pipeline, with a proportional reduction in runtime.     
+
+
+## Creating projects and loading datasets
 
 A seqr project allows a group of users to analyze one or more datasets. It encapsulates the variant data, 
 pedigree information, plus any variant tags, notes, etc. that users create during analysis.
@@ -147,12 +171,12 @@ where `${vcf_path}` is replaced with `/local/path/to/your_data.vcf.gz` or `gs://
 Once the dataset finishes loading, you can add it to a seqr project using the `Edit Datasets` form on the Project page. 
 
 
-## Update / Migrate an older xBrowse Instance
+## Updating / Migrating an older xBrowse Instance
 
 [Update/Migration Instructions](https://github.com/macarthur-lab/seqr/blob/master/deploy/MIGRATE.md)
 
 
-## Deploy and manage seqr components
+## Deploying and managing seqr components
 
 
 The `./servctl` wrapper script provides sub-commands for deploying and interacting with seqr components running on kubernetes.
@@ -162,7 +186,7 @@ Run `./servctl -h` to see all available subcommands. The most commonly used ones
 ```
   ./servctl
 
-      deploy-all  {deployment-target}                       # end-to-end deployment - deploys all seqr components
+      deploy-all  {deployment-target}                       # end-to-end deployment - deploys all seqr components and loads reference data
       deploy {component-name} {deployment-target}           # deploy some specific component(s)
           --restore-seqr-db-from-backup  <seqr_db_backup_file.sql.gz>   # deploying seqr with this option will also load the given seqrdb backup into postgres
           --restore-phenotips-db-from-backup  <xwiki_db_backup_file.sql.gz>   # deploying seqr with this option will also load the given phenotips xwikidb backup into postgres
