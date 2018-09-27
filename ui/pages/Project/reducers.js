@@ -148,6 +148,8 @@ export const addDataset = (values) => {
     return new HttpRequestHelper(`/api/project/${getState().currentProjectGuid}/add_dataset`,
       (responseJson) => {
         dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+        window.location.href = window.location.href //TODO remove this - reload the page to apply dataset changes
+
         // Clear all loaded variants and update the saved variant json. This should happen asynchronously
         unloadSavedVariants(dispatch, getState)
         new HttpRequestHelper(`/api/project/${getState().currentProjectGuid}/update_saved_variant_json`).get()
