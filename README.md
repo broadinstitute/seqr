@@ -132,7 +132,7 @@ an ssh tunnel on the machine that's running minikube:
 sudo ssh -v -i ~/.ssh/id_rsa -N -L 0.0.0.0:80:localhost:30003 ${USER}@$(hostname)
 ```   
 
-NOTE: On Ubuntu,  if you encounter `Permission denied (publickey)` errors, you may need to [generate ssh keys](https://help.github.com/enterprise/2.14/user/articles/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent/#generating-a-new-ssh-key) and do `cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys` before starting the tunnel.   
+NOTE: If you encounter `Permission denied (publickey)` errors, you may need to [generate ssh keys](https://help.github.com/enterprise/2.14/user/articles/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent/#generating-a-new-ssh-key) and do `cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys` before starting the tunnel.   
 
 
 ## Load example project
