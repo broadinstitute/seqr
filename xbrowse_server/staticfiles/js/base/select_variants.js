@@ -440,7 +440,8 @@ window.SelectVariantsView = Backbone.View.extend({
             var that = this;
             _.each(this.reference_populations, function(pop) {
                 var refFilter = _.find(variantFilter.ref_freqs, function(x) { return x[0] === pop.slug });
-                that.setSlider(pop.slug, refFilter ? refFilter[1] : 0.01);
+                that.setSlider(pop.slug, refFilter ? refFilter[1] : (pop.slug == "AF" && that.project_options.num_individuals < 200 ? 1 : 0.01));
+
             });
         }
 
