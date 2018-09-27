@@ -152,12 +152,11 @@ and parallelize all other steps in the pipeline, with a proportional reduction i
 
 ## Creating projects and loading datasets
 
-A seqr project allows a group of users to analyze one or more datasets. It encapsulates the variant data, 
-pedigree information, plus any variant tags, notes, etc. that users create during analysis.
+A seqr project groups together users that are collaborating on the analysis of one or more datasets. It encapsulates the variant data, pedigree information, and any tags or notes that users create during analysis.
   
-To create a project:
-0. login to seqr and click on `+ Create Project` in the bottom right.   
-0. click on the new project, the click the `Edit Families and Individuals` form to upload a pedigree file in [.fam format](https://www.cog-genomics.org/plink2/formats#fam) 
+To create a new project:  
+1. login to seqr and click on `+ Create Project` in the bottom right.  
+2. click on the new project, the click the `Edit Families and Individuals` form to upload a pedigree file in [.fam format](https://www.cog-genomics.org/plink2/formats#fam)  
    
 To annotate and load a new dataset, run the `servctl load-dataset` command. For example: 
 ```
@@ -225,32 +224,6 @@ These pipelines can be run locally on a single machine or on-prem spark cluster,
 We are working on integrating these pipelines so that they are launched and managed by seqr.
 For now, they must be run manually, as shown in the examples below. The code for these pipelines is in [Data annotation and loading pipelines](https://github.com/macarthur-lab/hail-elasticsearch-pipelines)
 and is automatically installed in the `pipeline-runner` component which is deployed as part of standard seqr deployment.
-
-Example using minikube:
-```
-# after you've deployed seqr to minikube, open a shell within the pipeline-runner pod
-./servctl shell pipeline-runner minikube
-
-export SEQR_PROJECT_GUID=R003_seqr_project3  # guid of existing seqr project
-export VCF_PATH=/data/my-exome-dataset.vcf.gz   # local or google cloud bucket VCF path
-
-/hail-elasticsearch-pipelines/run_hail_locally.sh \
-        --driver-memory 5G \
-        --executor-memory 5G \
-        hail_scripts/v01/load_dataset_to_es.py \
-            --genome-version 37 \
-            --project-guid $SEQR_PROJECT_GUID \
-            --sample-type WES \
-            --dataset-type VARIANTS \
-            --exclude-hgmd \
-            --vep-block-size 10 \
-            --es-block-size 10 \
-            --num-shards 1 \
-            --max-samples-per-index 99 \
-            $VCF_PATH
-
-# after the pipeline completes successfully, you can link the new elasticsearch index to the seqr project by using the 'Edit Datasets' dialog on the project page.
-```
 
 Example with seqr deployed to google cloud GKE, and using Google Dataproc to run the pipeline:
 ```
