@@ -132,7 +132,7 @@ an ssh tunnel on the machine that's running minikube:
 sudo ssh -v -i ~/.ssh/id_rsa -N -L 0.0.0.0:80:localhost:30003 ${USER}@$(hostname)
 ```   
 
-NOTE: On Ubuntu,  if you encounter `Permission denied (publickey)` errors, you may need to [generate ssh keys](https://help.github.com/enterprise/2.14/user/articles/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent/#generating-a-new-ssh-key) and do `cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys` before starting the tunnel.   
+NOTE: If you encounter `Permission denied (publickey)` errors, you may need to [generate ssh keys](https://help.github.com/enterprise/2.14/user/articles/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent/#generating-a-new-ssh-key) and do `cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys` before starting the tunnel.   
 
 
 ## Load example project
@@ -156,16 +156,17 @@ A seqr project groups together users that are collaborating on the analysis of o
   
 To create a new project:  
 1. login to seqr and click on `+ Create Project` in the bottom right.  
-2. click on the new project, the click the `Edit Families and Individuals` form to upload a pedigree file in [.fam format](https://www.cog-genomics.org/plink2/formats#fam)  
+2. click on the new project. Also, note the project GUID in the url `/project/${project_guid}/project_page` - for example `R0003_demo_project1`
+3. click `Edit Families and Individuals` and use the Bulk Upload form to upload a pedigree file in [.fam format](https://www.cog-genomics.org/plink2/formats#fam)  
    
 To annotate and load a new dataset, run the `servctl load-dataset` command. For example: 
 ```
 source ./activate_virtualenv.sh
 
-./servctl load-dataset minikube --genome-version 37 --project-guid "project_name" --sample-type WES --dataset-type VARIANTS --cpu-limit 1 --input-vcf ${vcf_path} 
+./servctl load-dataset minikube --genome-version 37 --project-guid "${project_guid}" --sample-type WES --dataset-type VARIANTS --cpu-limit 1 --input-vcf ${vcf_path} 
 ``` 
 
-where `${vcf_path}` is replaced with `/local/path/to/your_data.vcf.gz` or `gs://some-google-storage-bucket/path/to/your_data.vcf.gz`.
+where `${vcf_path}` is replaced with `/local/path/to/your_data.vcf.gz` or `gs://some-google-storage-bucket/path/to/your_data.vcf.gz`, and `${project_guid}` comes from the project page url.
 
 Once the dataset finishes loading, you can add it to a seqr project using the `Edit Datasets` form on the Project page. 
 
