@@ -431,7 +431,6 @@ def deploy_seqr(settings):
             [
                 "--build-arg SEQR_SERVICE_PORT=%s" % settings["SEQR_SERVICE_PORT"],
                 "--build-arg SEQR_UI_DEV_PORT=%s" % settings["SEQR_UI_DEV_PORT"],
-                "--build-arg DISABLE_CACHE=%s" % settings["TIMESTAMP"],
                 "-f deploy/docker/seqr/Dockerfile",
                 "-t %(DOCKER_IMAGE_NAME)s" + seqr_git_hash,
             ]
@@ -487,7 +486,6 @@ def deploy_pipeline_runner(settings):
 
     docker_build("pipeline-runner", settings, [
         "-f deploy/docker/%(COMPONENT_LABEL)s/Dockerfile",
-        "--build-arg DISABLE_CACHE=%s" % settings["TIMESTAMP"],
     ])
 
     _deploy_pod("pipeline-runner", settings, wait_until_pod_is_running=True)
