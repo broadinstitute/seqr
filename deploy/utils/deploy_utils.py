@@ -130,7 +130,7 @@ def deploy(deployment_target, components, output_dir=None, runtime_settings={}):
         deploy_phenotips(settings)
 
     if "matchbox" in components:
-       deploy_matchbox(settings)
+        deploy_matchbox(settings)
 
     if "seqr" in components:
         deploy_seqr(settings)
