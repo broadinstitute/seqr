@@ -23,4 +23,4 @@ echo ==== deploy all seqr components =====
 source venv/bin/activate
 
 wget https://storage.googleapis.com/seqr-reference-data/gene_reference_data_backup.gz
-./servctl deploy-all --restore-seqr-db-from-backup gene_reference_data_backup.gz minikube
+./servctl deploy-all --restore-seqr-db-from-backup gene_reference_data_backup.gz --docker-image-tag release_20180926 minikube
