@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+VM_DRIVER="${VM_DRIVER:-none}"
+
 # install general dependencies
 sudo apt-get update
 sudo apt-get install -y unzip \
@@ -68,26 +70,6 @@ sudo apt-get install -y socat  # needed for port forwarding when --vm-driver=non
 mkdir -p $HOME/.kube
 touch $HOME/.kube/config
 
-export CHANGE_MINIKUBE_NONE_USER=true
-export MINIKUBE_HOME=$HOME
-export KUBECONFIG=$HOME/.kube/config
-
-echo 'sudo minikube stop' > stop_minikube.sh
-chmod 777 stop_minikube.sh
-
-echo 'sudo -E minikube start --vm-driver=none --kubernetes-version=v1.11.3
-sudo chown -R $USER $HOME/.kube
-sudo chgrp -R $USER $HOME/.kube
-sudo chown -R $USER $HOME/.minikube
-sudo chgrp -R $USER $HOME/.minikube
-' > start_minikube.sh
-
-chmod 777 start_minikube.sh
-./start_minikube.sh
-
-sudo minikube addons enable coredns
-sudo minikube addons disable kube-dns
-
 # There are DNS issues like https://github.com/kubernetes/minikube/issues/2027 on Unbuntu (and probably other systems)
 # when running with --vm-driver=none which result in DNS lookups not working inside pods for external web addresses.
 # This work-around corrects this by setting the upstream DNS server to google's server (8.8.8.8) which is known to work.
@@ -115,8 +97,31 @@ metadata:
   resourceVersion: "198"
   selfLink: /api/v1/namespaces/kube-system/configmaps/coredns' > coredns-config.yaml
 
+
+echo 'sudo minikube stop' > stop_minikube.sh
+chmod 777 stop_minikube.sh
+
+echo '
+export CHANGE_MINIKUBE_NONE_USER=true
+export MINIKUBE_HOME=$HOME
+export KUBECONFIG=$HOME/.kube/config
+
+sudo -E minikube start --kubernetes-version=v1.11.3 --memory=5000 --vm-driver='${VM_DRIVER}'
+sudo chown -R $USER $HOME/.kube
+sudo chgrp -R $USER $HOME/.kube
+sudo chown -R $USER $HOME/.minikube
+sudo chgrp -R $USER $HOME/.minikube
+
+sudo minikube addons enable coredns
+sudo minikube addons disable kube-dns
+
 kubectl delete -f coredns-config.yaml
 kubectl create -f coredns-config.yaml
+
+' > start_minikube.sh
+
+chmod 777 start_minikube.sh
+./start_minikube.sh
 
 
 echo ==== Adjust system settings for elasticsearch =====
