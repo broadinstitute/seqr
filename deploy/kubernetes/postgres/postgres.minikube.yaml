@@ -38,7 +38,7 @@ spec:
         image: {{ DOCKER_IMAGE_PREFIX }}/postgres{{ DOCKER_IMAGE_TAG }}
         resources:
           requests:
-            memory: "0.1Gi"
+            memory: "0.5Gi"
             cpu: "0.01"
           limits:
             memory: "1Gi"
