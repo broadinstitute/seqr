@@ -10,6 +10,12 @@ sudo yum install -y unzip \
     java-1.8.0-openjdk.x86_64 \
     git
 
+# gcloud sdk
+cd $HOME
+wget -N https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-219.0.1-linux-x86_64.tar.gz
+tar xzf google-cloud-sdk-219.0.1-linux-x86_64.tar.gz
+./google-cloud-sdk/install.sh --quiet
+
 set +x
 echo ==== Install and start docker service =====
 set -x
@@ -46,7 +52,7 @@ set -x
 
 # crictl is required for starting minikube with --kubernetes-version=v1.11
 CRICTL_VERSION="v1.11.1"
-wget https://github.com/kubernetes-sigs/cri-tools/releases/download/$CRICTL_VERSION/crictl-$CRICTL_VERSION-linux-amd64.tar.gz
+wget -N https://github.com/kubernetes-sigs/cri-tools/releases/download/$CRICTL_VERSION/crictl-$CRICTL_VERSION-linux-amd64.tar.gz
 sudo tar zxvf crictl-$CRICTL_VERSION-linux-amd64.tar.gz -C /usr/bin
 rm -f crictl-$CRICTL_VERSION-linux-amd64.tar.gz
 
