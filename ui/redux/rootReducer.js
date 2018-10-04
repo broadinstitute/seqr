@@ -162,7 +162,8 @@ export const loadVariantTranscripts = (variantId) => {
       dispatch({ type: REQUEST_VARIANT })
       new HttpRequestHelper(`/api/saved_variant/${variantId}/transcripts`,
         (responseJson) => {
-          dispatch({ type: RECEIVE_SAVED_VARIANTS, updatesById: responseJson })
+          dispatch({ type: RECEIVE_GENES, updatesById: responseJson.genesById })
+          dispatch({ type: RECEIVE_SAVED_VARIANTS, updatesById: responseJson.savedVariants })
         },
         (e) => {
           dispatch({ type: RECEIVE_SAVED_VARIANTS, error: e.message, updatesById: {} })

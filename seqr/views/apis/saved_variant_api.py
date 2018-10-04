@@ -62,17 +62,24 @@ def saved_variant_transcripts(request, variant_guid):
     saved_variant = SavedVariant.objects.get(guid=variant_guid)
     check_permissions(saved_variant.project, request.user, CAN_VIEW)
 
-    # TODO when variant search is rewritten for seqr models use that here
-    base_project = find_matching_xbrowse_model(saved_variant.project)
-    loaded_variant = get_datastore(base_project).get_single_variant(
-        base_project.project_id,
-        saved_variant.family.family_id,
-        saved_variant.xpos,
-        saved_variant.ref,
-        saved_variant.alt,
-    )
+    annotation = json.loads(saved_variant.saved_variant_json or '{}').get('annotation')
+    if not annotation:
+        # TODO when variant search is rewritten for seqr models use that here
+        base_project = find_matching_xbrowse_model(saved_variant.project)
+        loaded_variant = get_datastore(base_project).get_single_variant(
+            base_project.project_id,
+            saved_variant.family.family_id,
+            saved_variant.xpos,
+            saved_variant.ref,
+            saved_variant.alt,
+        )
+        annotation = loaded_variant.annotation
 
-    return create_json_response({variant_guid: {'transcripts': _variant_transcripts(loaded_variant.annotation)}})
+    transcripts = _variant_transcripts(annotation)
+    return create_json_response({
+        'savedVariants': {variant_guid: {'transcripts': transcripts}},
+        'genesById': get_genes(transcripts.keys()),
+    })
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -337,7 +344,6 @@ def _variant_details(variant_json, user):
         'liftedOverPos': lifted_over_pos,
         'locusLists': [],
         'origAltAlleles': extras.get('orig_alt_alleles', []),
-        'transcripts': _variant_transcripts(annotation) if annotation.get('vep_annotation') else None,
     }
 
 
