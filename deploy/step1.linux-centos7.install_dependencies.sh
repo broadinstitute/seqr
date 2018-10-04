@@ -124,7 +124,11 @@ sudo chown -R $USER $HOME/.minikube
 sudo chgrp -R $USER $HOME/.minikube
 
 sudo minikube addons enable coredns
+
+# make sure all kube-dns components are deleted
 sudo minikube addons disable kube-dns
+kubectl delete deployment kube-dns -n=kube-system
+kubectl delete svc kube-dns -n=kube-system
 
 kubectl delete -f '$(pwd)'/coredns-config.yaml
 kubectl create -f '$(pwd)'/coredns-config.yaml
