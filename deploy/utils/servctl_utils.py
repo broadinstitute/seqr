@@ -190,8 +190,8 @@ def show_status():
     run("kubectl describe svc elasticsearch  | grep 'Name:\|Endpoints'", ignore_all_errors=True)
 
     run("kubectl get nodes", ignore_all_errors=True)
-    run("kubectl get services", ignore_all_errors=True)
-    run("kubectl get pods", ignore_all_errors=True)
+    run("kubectl get services --all-namespaces", ignore_all_errors=True)
+    run("kubectl get pods --all-namespaces", ignore_all_errors=True)
     run("kubectl config current-context", ignore_all_errors=True)
 
 
