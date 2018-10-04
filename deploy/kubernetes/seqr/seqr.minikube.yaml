@@ -46,7 +46,7 @@ spec:
         - containerPort: {{ SEQR_SERVICE_PORT }}
           protocol: TCP
         imagePullPolicy: {{ IMAGE_PULL_POLICY }}
-        image: {{ DOCKER_IMAGE_PREFIX }}/seqr-for-minikube{{ DOCKER_IMAGE_TAG }}
+        image: {{ DOCKER_IMAGE_PREFIX }}/seqr{{ DOCKER_IMAGE_TAG }}
         securityContext:
           privileged: true
           capabilities:
@@ -60,6 +60,13 @@ spec:
         - name: gcloud-client-secrets-volume
           mountPath: /.config
           readOnly: true
+        resources:
+          requests:
+            memory: "0.5Gi"
+            cpu: "0.05"
+          limits:
+            memory: "5Gi"
+            cpu: "3"
         envFrom:
           - configMapRef:
               name: all-settings
@@ -93,6 +100,8 @@ spec:
           value: "{{ GCLOUD_PROJECT }}"
         - name: GCLOUD_ZONE
           value: "{{ GCLOUD_ZONE }}"
+        - name: GUNICORN_WORKER_THREADS
+          value: "{{ GUNICORN_WORKER_THREADS }}"
         - name: HOST_MACHINE_IP
           value: "{{ HOST_MACHINE_IP }}"
         - name: MATCHBOX_SERVICE_HOSTNAME

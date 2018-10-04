@@ -350,6 +350,8 @@ class Project(models.Model):
             f['variant_filter'] = f['variant_filter'].toJSON()
         d['default_variant_filters'] = filters
 
+        d['num_individuals'] = self.individual_set.filter(vcf_files__loaded_date__isnull=False).distinct().count()
+
         return json.dumps(d)
 
     def get_phenotypes(self):

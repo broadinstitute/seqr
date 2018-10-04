@@ -37,7 +37,7 @@ def deploy(deployment_target, components, output_dir=None, runtime_settings={}):
     settings.update(runtime_settings)
 
     # adjust docker image settings
-    if settings["BUILD_DOCKER_IMAGE"] and deployment_target == "minikube":
+    if settings["BUILD_DOCKER_IMAGES"] and deployment_target == "minikube":
         # to use images built using the minikube docker daemon, minikube only supports imagePullPolicy = "IfNotPresent"
         # https://github.com/kubernetes/minikube/issues/1395#issuecomment-296581721
         # https://kubernetes.io/docs/setup/minikube/
@@ -45,7 +45,7 @@ def deploy(deployment_target, components, output_dir=None, runtime_settings={}):
 
     if runtime_settings.get("DOCKER_IMAGE_TAG"):
         settings["DOCKER_IMAGE_TAG"] = ":" + runtime_settings["DOCKER_IMAGE_TAG"]
-    elif runtime_settings["BUILD_DOCKER_IMAGE"]:
+    elif runtime_settings["BUILD_DOCKER_IMAGES"]:
         settings["DOCKER_IMAGE_TAG"] = ":" + settings["TIMESTAMP"]
     else:
         settings["DOCKER_IMAGE_TAG"] = ":latest"
@@ -130,7 +130,7 @@ def deploy(deployment_target, components, output_dir=None, runtime_settings={}):
         deploy_phenotips(settings)
 
     if "matchbox" in components:
-       deploy_matchbox(settings)
+        deploy_matchbox(settings)
 
     if "seqr" in components:
         deploy_seqr(settings)
@@ -161,14 +161,14 @@ def delete_pod(component_label, settings, async=False, custom_yaml_filename=None
     yaml_filename = custom_yaml_filename or (component_label+".%(DEPLOY_TO_PREFIX)s.yaml")
 
     deployment_target = settings["DEPLOY_TO"]
-    if get_pod_status(component_label, deployment_target) == "Running":
+    if get_pod_status(component_label, deployment_target):
         run(" ".join([
             "kubectl delete",
             "-f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/"+component_label+"/"+yaml_filename,
         ]) % settings, errors_to_ignore=["not found"])
 
     logger.info("waiting for \"%s\" to exit Running status" % component_label)
-    while get_pod_status(component_label, deployment_target) in ["Running", "Terminating"] and not async:
+    while get_pod_status(component_label, deployment_target) and not async:
         time.sleep(5)
 
 
@@ -194,11 +194,10 @@ def _deploy_pod(component_label, settings, wait_until_pod_is_running=True, wait_
         _wait_until_pod_is_ready(component_label, deployment_target=settings["DEPLOY_TO"])
 
 
-def docker_build(component_label, settings, custom_build_args=(), docker_image_name_suffix=""):
+def docker_build(component_label, settings, custom_build_args=()):
     params = dict(settings)   # make a copy before modifying
     params["COMPONENT_LABEL"] = component_label
-    params["DOCKER_IMAGE_NAME_SUFFIX"] = docker_image_name_suffix
-    params["DOCKER_IMAGE_NAME"] = "%(DOCKER_IMAGE_PREFIX)s/%(COMPONENT_LABEL)s%(DOCKER_IMAGE_NAME_SUFFIX)s" % params
+    params["DOCKER_IMAGE_NAME"] = "%(DOCKER_IMAGE_PREFIX)s/%(COMPONENT_LABEL)s" % params
 
     docker_command_prefix = "eval $(minikube docker-env); " if settings["DEPLOY_TO"] == "minikube" else ""
 
@@ -208,13 +207,13 @@ def docker_build(component_label, settings, custom_build_args=(), docker_image_n
         "%(DOCKER_IMAGE_TAG)s" % params,
     ])
 
-    if not settings["BUILD_DOCKER_IMAGE"]:
+    if not settings["BUILD_DOCKER_IMAGES"]:
         logger.info("Skipping docker build step. Use --build-docker-image to build a new image (and --force to build from the beginning)")
     else:
         docker_build_command = docker_command_prefix
         docker_build_command += "docker build deploy/docker/%(COMPONENT_LABEL)s/ "
         docker_build_command += (" ".join(custom_build_args) + " ")
-        if settings["FORCE_BUILD_DOCKER_IMAGE"]:
+        if settings["FORCE_BUILD_DOCKER_IMAGES"]:
             docker_build_command += "--no-cache "
 
         for tag in docker_tags:
@@ -423,7 +422,7 @@ def deploy_external_connector(settings, connector_name):
 def deploy_seqr(settings):
     print_separator("seqr")
 
-    if settings["BUILD_DOCKER_IMAGE"]:
+    if settings["BUILD_DOCKER_IMAGES"]:
         seqr_git_hash = run("git log -1 --pretty=%h", errors_to_ignore=["Not a git repository"])
         seqr_git_hash = (":" + seqr_git_hash.strip()) if seqr_git_hash is not None else ""
 
@@ -432,10 +431,9 @@ def deploy_seqr(settings):
             [
                 "--build-arg SEQR_SERVICE_PORT=%s" % settings["SEQR_SERVICE_PORT"],
                 "--build-arg SEQR_UI_DEV_PORT=%s" % settings["SEQR_UI_DEV_PORT"],
-                "-f deploy/docker/seqr/%s/Dockerfile" % settings["DEPLOY_TO_PREFIX"],
+                "-f deploy/docker/seqr/Dockerfile",
                 "-t %(DOCKER_IMAGE_NAME)s" + seqr_git_hash,
-            ],
-            docker_image_name_suffix="-for-minikube" if settings["DEPLOY_TO"] == "minikube" else "",
+            ]
         )
 
     if settings["ONLY_PUSH_TO_REGISTRY"]:
@@ -486,11 +484,9 @@ def deploy_pipeline_runner(settings):
     if settings["DELETE_BEFORE_DEPLOY"]:
         delete_pod("pipeline-runner", settings)
 
-    docker_build("pipeline-runner",
-        settings,
-        [ "-f deploy/docker/%(COMPONENT_LABEL)s/%(DEPLOY_TO_PREFIX)s/Dockerfile" ],
-        docker_image_name_suffix="-for-minikube" if settings["DEPLOY_TO"] == "minikube" else "",
-    )
+    docker_build("pipeline-runner", settings, [
+        "-f deploy/docker/%(COMPONENT_LABEL)s/Dockerfile",
+    ])
 
     _deploy_pod("pipeline-runner", settings, wait_until_pod_is_running=True)
 

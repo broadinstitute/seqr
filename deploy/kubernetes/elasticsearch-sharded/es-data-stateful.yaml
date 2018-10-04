@@ -42,7 +42,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
-        - name: "CLUSTER_NAME"
+        - name: CLUSTER_NAME
           value: "myesdb"
         - name: NODE_MASTER
           value: "false"
@@ -50,9 +50,9 @@ spec:
           value: "false"
         - name: HTTP_ENABLE
           value: "true"
-        - name: "ES_JAVA_OPTS"
+        - name: ES_JAVA_OPTS
           value: "-Xms{{ ELASTICSEARCH_JVM_MEMORY }} -Xmx{{ ELASTICSEARCH_JVM_MEMORY }}"
-        - name: "ES_PLUGINS_INSTALL"
+        - name: ES_PLUGINS_INSTALL
           value: "repository-gcs"  # ,mapper-size
         ports:
         - containerPort: 9300

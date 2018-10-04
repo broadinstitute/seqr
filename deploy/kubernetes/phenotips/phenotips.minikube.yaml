@@ -35,6 +35,13 @@ spec:
           protocol: TCP
         imagePullPolicy: {{ IMAGE_PULL_POLICY }}
         image: {{ DOCKER_IMAGE_PREFIX }}/phenotips{{ DOCKER_IMAGE_TAG }}
+        resources:
+          requests:
+            memory: "0.5Gi"
+            cpu: "0.01"
+          limits:
+            memory: "3Gi"
+            cpu: "2"
         env:
         - name: POSTGRES_USERNAME
           valueFrom:

@@ -39,6 +39,13 @@ spec:
           protocol: TCP
         imagePullPolicy: {{ IMAGE_PULL_POLICY }}
         image: {{ DOCKER_IMAGE_PREFIX }}/pipeline-runner{{ DOCKER_IMAGE_TAG }}
+        resources:
+          requests:
+            memory: "0.25Gi"
+            cpu: "0.01"
+          limits:
+            memory: "30Gi"
+            cpu: "8"
         volumeMounts:
         - name: gcloud-client-secrets-volume
           mountPath: /.config
@@ -56,6 +63,8 @@ spec:
           value: "{{ GCLOUD_PROJECT }}"
         - name: GCLOUD_ZONE
           value: "{{ GCLOUD_ZONE }}"
+        - name: HOST_MACHINE_IP
+          value: "{{ HOST_MACHINE_IP }}"
         - name: MATCHBOX_SERVICE_HOSTNAME
           value: "{{ MATCHBOX_SERVICE_HOSTNAME }}"
         - name: POSTGRES_SERVICE_HOSTNAME

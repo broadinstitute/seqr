@@ -38,6 +38,13 @@ spec:
           capabilities:
             add:
               - SYS_ADMIN
+        resources:
+          requests:
+            memory: "0.25Gi"
+            cpu: "0.01"
+          limits:
+            memory: "3Gi"
+            cpu: "2"
         env:
         - name: MONGODB_DATABASE
           value: "mme_primary"
