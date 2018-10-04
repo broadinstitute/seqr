@@ -62,8 +62,8 @@ def saved_variant_transcripts(request, variant_guid):
     saved_variant = SavedVariant.objects.get(guid=variant_guid)
     check_permissions(saved_variant.project, request.user, CAN_VIEW)
 
-    annotation = json.loads(saved_variant.saved_variant_json or '{}').get('annotation')
-    if not annotation:
+    annotation = json.loads(saved_variant.saved_variant_json or '{}').get('annotation', {})
+    if not annotation.get('vep_annotation'):
         # TODO when variant search is rewritten for seqr models use that here
         base_project = find_matching_xbrowse_model(saved_variant.project)
         loaded_variant = get_datastore(base_project).get_single_variant(
@@ -344,6 +344,7 @@ def _variant_details(variant_json, user):
         'liftedOverPos': lifted_over_pos,
         'locusLists': [],
         'origAltAlleles': extras.get('orig_alt_alleles', []),
+        'transcripts': None,
     }
 
 
