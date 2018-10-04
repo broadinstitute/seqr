@@ -73,10 +73,11 @@ class Reference(object):
         return (genomeloc.get_xpos(gene['chromGrch37'], gene['startGrch37']), genomeloc.get_xpos(gene['chromGrch37'], gene['endGrch37'])) if gene else (None, None, None)
 
     def get_gene_symbol(self, gene_id):
-        return self.gene_utils.get_gene_ids_to_gene_symbols([gene_id]).get(gene_id)
+        return self.gene_utils.get_genes([gene_id]).get(gene_id, {}).get('geneSymbol')
 
     def get_gene_id_from_symbol(self, symbol):
-        return self.gene_utils.get_gene_symbols_to_gene_ids([symbol]).get(symbol)
+        gene_ids = self.gene_utils.get_gene_ids_for_gene_symbols([symbol]).get(symbol, [])
+        return gene_ids[0] if len(gene_ids) == 1 else None
 
     def is_valid_gene_id(self, gene_id):
         return bool(self.get_gene_symbol(gene_id))
@@ -157,7 +158,7 @@ class Reference(object):
         """
         Map of gene_id -> gene symbol for all genes
         """
-        return self.gene_utils.get_gene_ids_to_gene_symbols()
+        return {gene_id: gene['geneSymbol'] for gene_id, gene in self.gene_utils.get_genes(None).values()}
 
     def get_ordered_exons(self):
         """
