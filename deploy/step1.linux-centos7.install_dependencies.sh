@@ -94,8 +94,7 @@ metadata:
 echo 'sudo minikube stop' > stop_minikube.sh
 chmod 777 stop_minikube.sh
 
-echo '
-#!/usr/bin/env bash
+echo '#!/usr/bin/env bash
 
 export CHANGE_MINIKUBE_NONE_USER=true
 export MINIKUBE_HOME=$HOME
@@ -121,8 +120,10 @@ sudo chgrp -R $USER $HOME/.minikube
 sudo minikube addons enable coredns
 sudo minikube addons disable kube-dns
 
-kubectl delete -f coredns-config.yaml
-kubectl create -f coredns-config.yaml
+kubectl delete -f '$(pwd)'/coredns-config.yaml
+kubectl create -f '$(pwd)'/coredns-config.yaml
+
+kubectl patch deployment -n=kube-system coredns -p '\''{"spec": {"template": {"spec":{"containers":[{"name":"coredns","resources":{"limits":{"memory":"1Gi"}}}]}}}}'\''
 
 ' > start_minikube.sh
 

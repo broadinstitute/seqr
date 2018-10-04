@@ -61,9 +61,11 @@ spec:
           requests:
             memory: "8Gi"
             cpu: "0.5"
+            ephemeral-storage: "100Mi"
           limits:
             memory: "20Gi"
             cpu: "8"
+            ephemeral-storage: "100Gi"
         envFrom:
           - configMapRef:
               name: all-settings

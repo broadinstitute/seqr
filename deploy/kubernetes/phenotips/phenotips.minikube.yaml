@@ -39,9 +39,11 @@ spec:
           requests:
             memory: "0.5Gi"
             cpu: "0.01"
+            ephemeral-storage: "100Mi"
           limits:
             memory: "3Gi"
             cpu: "2"
+            ephemeral-storage: "100Gi"
         env:
         - name: POSTGRES_USERNAME
           valueFrom:

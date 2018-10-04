@@ -593,7 +593,7 @@ def deploy_init_cluster(settings):
                     "--disk-size=%(MINIKUBE_DISK_SIZE)s "
                     "--memory=%(MINIKUBE_MEMORY)s "
                     "--cpus=%(MINIKUBE_NUM_CPUS)s " % settings)
-                # --mount-string %(LOCAL_DATA_DIR)s:%(MINIKUBE_DATA_DIR)s --mount
+                # --mount-string %(LOCAL_DATA_DIR)s:%(DATA_DIR)s --mount
 
             elif sys.platform.startswith('linux'):
                 logger.info("Please run 'sudo minikube start --vm-driver=none' first and make sure 'minikube status' shows that minikube is running")

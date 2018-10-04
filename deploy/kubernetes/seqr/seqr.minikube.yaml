@@ -36,7 +36,7 @@ spec:
       #    path: {{ BASE_DIR }}
       - name: data-dir
         hostPath:
-          path: {{ MINIKUBE_DATA_DIR }}
+          path: {{ DATA_DIR }}
       - name: gcloud-client-secrets-volume
         secret:
           secretName: gcloud-client-secrets
@@ -64,9 +64,11 @@ spec:
           requests:
             memory: "0.5Gi"
             cpu: "0.05"
+            ephemeral-storage: "100Mi"
           limits:
-            memory: "5Gi"
+            memory: "20Gi"
             cpu: "3"
+            ephemeral-storage: "100Gi"
         envFrom:
           - configMapRef:
               name: all-settings
