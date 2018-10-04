@@ -8,7 +8,7 @@ from django.views.decorators.csrf import csrf_exempt
 from seqr.models import GeneNote
 from seqr.model_utils import create_seqr_model, delete_seqr_model
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
-from seqr.views.utils.gene_utils import get_gene, get_genes
+from seqr.utils.gene_utils import get_gene, get_genes
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_gene_notes_by_gene_id
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 @csrf_exempt
 def genes_info(request):
     gene_ids = request.GET.get('geneIds', '').split(',')
-    return create_json_response(get_genes(gene_ids))
+    return create_json_response(get_genes(gene_ids, add_dbnsfp=True, add_omim=True, add_constraints=True))
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)

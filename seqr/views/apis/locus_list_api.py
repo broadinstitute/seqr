@@ -12,7 +12,7 @@ from seqr.models import LocusList, LocusListGene, LocusListInterval, IS_OWNER, C
 from seqr.model_utils import create_seqr_model, delete_seqr_model, find_matching_xbrowse_model
 from seqr.utils.xpos_utils import get_xpos
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
-from seqr.views.utils.gene_utils import get_genes, get_gene_symbols_to_gene_ids
+from seqr.utils.gene_utils import get_genes, get_gene_ids_for_gene_symbols
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_locus_lists, get_json_for_locus_list
@@ -46,7 +46,7 @@ def locus_list_info(request, locus_list_guid):
     gene_ids = [item['geneId'] for item in locus_list_json['items'] if item.get('geneId')]
     return create_json_response({
         'locusListsByGuid': {locus_list_guid: locus_list_json},
-        'genesById': get_genes(gene_ids)
+        'genesById': get_genes(gene_ids, add_dbnsfp=True, add_omim=True, add_constraints=True)
     })
 
 
@@ -194,9 +194,11 @@ def _parse_list_items(request_json):
                     chrom=item.get('chrom', '?'), start=item.get('start', '?'), end=item.get('end', '?')
                 ))
 
-    gene_symbols_to_ids = get_gene_symbols_to_gene_ids(new_gene_symbols)
+    gene_symbols_to_ids = get_gene_ids_for_gene_symbols(new_gene_symbols)
     invalid_items += [symbol for symbol in new_gene_symbols if not gene_symbols_to_ids.get(symbol)]
-    new_genes = get_genes([gene_id for gene_id in gene_symbols_to_ids.values() if gene_id] + list(new_gene_ids))
+    invalid_items += [symbol for symbol in new_gene_symbols if len(gene_symbols_to_ids.get(symbol, [])) > 1]
+    new_genes = get_genes([gene_ids[0] for gene_ids in gene_symbols_to_ids.values() if len(gene_ids) == 1] + list(new_gene_ids),
+                          add_dbnsfp=True, add_omim=True, add_constraints=True)
     invalid_items += [gene_id for gene_id, gene in new_genes.items() if not gene]
     new_genes = {gene_id: gene for gene_id, gene in new_genes.items() if gene}
     return new_genes, existing_gene_ids, new_intervals, existing_interval_guids, invalid_items

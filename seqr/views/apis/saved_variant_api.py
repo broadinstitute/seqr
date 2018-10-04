@@ -10,7 +10,7 @@ from seqr.models import SavedVariant, VariantTagType, VariantTag, VariantNote, V
 from seqr.model_utils import create_seqr_model, delete_seqr_model, find_matching_xbrowse_model
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.locus_list_api import get_project_locus_list_models
-from seqr.views.utils.gene_utils import get_genes
+from seqr.utils.gene_utils import get_genes
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variant, get_json_for_variant_tag, \
@@ -345,7 +345,7 @@ def _saved_variant_genes(variants):
     gene_ids = set()
     for variant in variants.values():
         gene_ids.update(variant['geneIds'])
-    genes = get_genes(gene_ids)
+    genes = get_genes(gene_ids, add_dbnsfp=True, add_omim=True, add_constraints=True)
     for gene in genes.values():
         if gene:
             gene['locusLists'] = []
