@@ -95,11 +95,24 @@ echo 'sudo minikube stop' > stop_minikube.sh
 chmod 777 stop_minikube.sh
 
 echo '
+#!/usr/bin/env bash
+
 export CHANGE_MINIKUBE_NONE_USER=true
 export MINIKUBE_HOME=$HOME
 export KUBECONFIG=$HOME/.kube/config
 
-sudo -E minikube start --kubernetes-version=v1.11.3 --memory=5000 --vm-driver='${VM_DRIVER}'
+NUM_CPUS=$(python -c "import multiprocessing; print(multiprocessing.cpu_count())")
+DISK_SIZE=50g
+
+set -x
+sudo rm -rf /etc/kubernetes/  # clean up any previously installed instance
+echo Y | sudo minikube stop
+echo Y | sudo minikube delete
+
+sudo -E minikube start --kubernetes-version=v1.11.3 --memory=5000 --vm-driver='${VM_DRIVER}' --cpus=${NUM_CPUS} --disk-size=${DISK_SIZE}
+
+set +x
+
 sudo chown -R $USER $HOME/.kube
 sudo chgrp -R $USER $HOME/.kube
 sudo chown -R $USER $HOME/.minikube
