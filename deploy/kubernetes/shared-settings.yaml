@@ -18,6 +18,8 @@ DOCKER_IMAGE_PREFIX: 'gcr.io/seqr-project'
 IMAGE_PULL_POLICY: 'Always'
 
 DEPLOYMENT_TEMP_DIR: '/tmp'
+DATA_DIR: '/data'
+VEP_DIR: '/vep'
 
 MATCHBOX_SERVICE_HOSTNAME: matchbox
 POSTGRES_SERVICE_HOSTNAME: postgres

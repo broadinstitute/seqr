@@ -34,11 +34,13 @@ spec:
         image: {{ DOCKER_IMAGE_PREFIX }}/redis{{ DOCKER_IMAGE_TAG }}
         resources:
           requests:
-            memory: "3Gi"
-            cpu: "0.25"
+            memory: "0.25Gi"
+            cpu: "0.01"
+            ephemeral-storage: "100Mi"
           limits:
             memory: "25Gi"
             cpu: "1"
+            ephemeral-storage: "100Gi"
       restartPolicy: Always
       dnsPolicy: ClusterFirst
       affinity:

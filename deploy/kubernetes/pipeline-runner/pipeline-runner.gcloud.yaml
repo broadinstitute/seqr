@@ -29,6 +29,12 @@ spec:
         deployment: {{ DEPLOY_TO }}
     spec:
       volumes:
+      - name: data-dir
+        hostPath:
+          path: {{ DATA_DIR }}
+      #- name: vep-dir
+      #  hostPath:
+      #    path: {{ VEP_DIR }}
       - name: gcloud-client-secrets-volume
         secret:
           secretName: gcloud-client-secrets
@@ -43,10 +49,16 @@ spec:
           requests:
             memory: "0.25Gi"
             cpu: "0.01"
+            ephemeral-storage: "100Mi"
           limits:
             memory: "30Gi"
             cpu: "8"
+            ephemeral-storage: "100Gi"
         volumeMounts:
+        - name: data-dir
+          mountPath: /data
+        #- name: vep-dir
+        #  mountPath: /vep
         - name: gcloud-client-secrets-volume
           mountPath: /.config
           readOnly: true

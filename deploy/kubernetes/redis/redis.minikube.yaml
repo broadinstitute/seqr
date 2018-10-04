@@ -36,8 +36,22 @@ spec:
           requests:
             memory: "0.25Gi"
             cpu: "0.01"
+            ephemeral-storage: "100Mi"
           limits:
-            memory: "2Gi"
-            cpu: "0.5"
+            memory: "25Gi"
+            cpu: "1"
+            ephemeral-storage: "100Gi"
       restartPolicy: Always
       dnsPolicy: ClusterFirst
+      affinity:
+        podAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 1.0
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: "name"
+                      operator: In
+                      values:
+                      - seqr
+                topologyKey: "kubernetes.io/hostname"

@@ -79,8 +79,8 @@ RUN pip install --upgrade pip jupyter
 #    && wget http://hgdownload.cse.ucsc.edu/goldenPath/hg19/liftOver/hg19ToHg38.over.chain.gz
 
 # download and install VEP - steps based on gs://hail-common/vep/vep/GRCh37/vep85-GRCh37-init.sh and gs://hail-common/vep/vep/GRCh38/vep85-GRCh38-init.sh
-RUN gsutil cp gs://hail-common/vep/htslib/* /usr/bin/ \
-    && gsutil cp gs://hail-common/vep/samtools /usr/bin/ \
+RUN gsutil -m cp gs://hail-common/vep/htslib/* /usr/bin/ \
+    && gsutil -m cp gs://hail-common/vep/samtools /usr/bin/ \
     && chmod a+rx  /usr/bin/tabix /usr/bin/bgzip /usr/bin/htsfile /usr/bin/samtools
 
 RUN mkdir -p /vep/homo_sapiens /vep/loftee_data_grch37 /vep/loftee_data_grch38 \

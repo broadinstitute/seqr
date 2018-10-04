@@ -26,7 +26,6 @@ DEPLOY_TO_PREFIX: 'minikube'
 DEPLOYMENT_TYPE: 'dev'
 
 # paths inside the minikube VM
-MINIKUBE_DATA_DIR: '/data'
 POSTGRES_DBPATH:  '/data/postgres'
 MONGO_DBPATH:  '/data/mongo'
 ELASTICSEARCH_DBPATH:  '/data/elasticsearch'

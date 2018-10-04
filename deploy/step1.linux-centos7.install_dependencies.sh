@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+VM_DRIVER="${VM_DRIVER:-none}"
+
 # install general dependencies
 sudo yum install -y unzip \
     gcc \
@@ -7,6 +9,12 @@ sudo yum install -y unzip \
     python-devel \
     java-1.8.0-openjdk.x86_64 \
     git
+
+# gcloud sdk
+cd $HOME
+wget -N https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-219.0.1-linux-x86_64.tar.gz
+tar xzf google-cloud-sdk-219.0.1-linux-x86_64.tar.gz
+./google-cloud-sdk/install.sh --quiet
 
 set +x
 echo ==== Install and start docker service =====
@@ -44,7 +52,7 @@ set -x
 
 # crictl is required for starting minikube with --kubernetes-version=v1.11
 CRICTL_VERSION="v1.11.1"
-wget https://github.com/kubernetes-sigs/cri-tools/releases/download/$CRICTL_VERSION/crictl-$CRICTL_VERSION-linux-amd64.tar.gz
+wget -N https://github.com/kubernetes-sigs/cri-tools/releases/download/$CRICTL_VERSION/crictl-$CRICTL_VERSION-linux-amd64.tar.gz
 sudo tar zxvf crictl-$CRICTL_VERSION-linux-amd64.tar.gz -C /usr/bin
 rm -f crictl-$CRICTL_VERSION-linux-amd64.tar.gz
 
@@ -59,27 +67,6 @@ sudo yum install -y socat  # needed for port forwarding when --vm-driver=none (s
 
 mkdir -p $HOME/.kube
 touch $HOME/.kube/config
-
-
-export CHANGE_MINIKUBE_NONE_USER=true
-export MINIKUBE_HOME=$HOME
-export KUBECONFIG=$HOME/.kube/config
-
-echo 'sudo minikube stop' > stop_minikube.sh
-chmod 777 stop_minikube.sh
-
-echo 'sudo -E minikube start --vm-driver=none --kubernetes-version=v1.11.3
-sudo chown -R $USER $HOME/.kube
-sudo chgrp -R $USER $HOME/.kube
-sudo chown -R $USER $HOME/.minikube
-sudo chgrp -R $USER $HOME/.minikube
-' > start_minikube.sh
-
-chmod 777 start_minikube.sh
-./start_minikube.sh
-
-sudo minikube addons enable coredns
-sudo minikube addons disable kube-dns
 
 # There are DNS issues like https://github.com/kubernetes/minikube/issues/2027 on Unbuntu (and probably other systems)
 # when running with --vm-driver=none which result in DNS lookups not working inside pods for external web addresses.
@@ -108,8 +95,50 @@ metadata:
   resourceVersion: "198"
   selfLink: /api/v1/namespaces/kube-system/configmaps/coredns' > coredns-config.yaml
 
-kubectl delete -f coredns-config.yaml
-kubectl create -f coredns-config.yaml
+
+
+echo 'sudo minikube stop' > stop_minikube.sh
+chmod 777 stop_minikube.sh
+
+echo '#!/usr/bin/env bash
+
+export CHANGE_MINIKUBE_NONE_USER=true
+export MINIKUBE_HOME=$HOME
+export KUBECONFIG=$HOME/.kube/config
+
+NUM_CPUS=$(python -c "import multiprocessing; print(multiprocessing.cpu_count())")
+DISK_SIZE=50g
+
+set -x
+sudo rm -rf /etc/kubernetes/  # clean up any previously installed instance
+echo Y | sudo minikube stop
+echo Y | sudo minikube delete
+
+sudo -E minikube start --kubernetes-version=v1.11.3 --memory=5000 --vm-driver='${VM_DRIVER}' --cpus=${NUM_CPUS} --disk-size=${DISK_SIZE}
+
+set +x
+
+sudo chown -R $USER $HOME/.kube
+sudo chgrp -R $USER $HOME/.kube
+sudo chown -R $USER $HOME/.minikube
+sudo chgrp -R $USER $HOME/.minikube
+
+sudo minikube addons enable coredns
+
+# make sure all kube-dns components are deleted
+sudo minikube addons disable kube-dns
+kubectl delete deployment kube-dns -n=kube-system
+kubectl delete svc kube-dns -n=kube-system
+
+kubectl delete -f '$(pwd)'/coredns-config.yaml
+kubectl create -f '$(pwd)'/coredns-config.yaml
+
+kubectl patch deployment -n=kube-system coredns -p '\''{"spec": {"template": {"spec":{"containers":[{"name":"coredns","resources":{"limits":{"memory":"1Gi"}}}]}}}}'\''
+
+' > start_minikube.sh
+
+chmod 777 start_minikube.sh
+./start_minikube.sh
 
 
 echo ==== Adjust system settings for elasticsearch =====
