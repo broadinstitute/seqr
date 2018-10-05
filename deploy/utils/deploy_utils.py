@@ -584,27 +584,32 @@ def deploy_init_cluster(settings):
             if "MINIKUBE_NUM_CPUS" not in settings:
                 settings["MINIKUBE_NUM_CPUS"] = multiprocessing.cpu_count()  # use all CPUs on machine
 
+            minikube_start_command = (
+                "minikube start "
+                "--kubernetes-version=v1.11.3 "
+                "--disk-size=%(MINIKUBE_DISK_SIZE)s "
+                "--memory=%(MINIKUBE_MEMORY)s "
+                "--cpus=%(MINIKUBE_NUM_CPUS)s "
+            ) % settings
+
             logger.info("minikube status: %s" % str(e))
             logger.info("starting minikube: ")
             if sys.platform.startswith('darwin'):
                 run("minikube stop", ignore_all_errors=True)
-                run("minikube start "
-                    "--vm-driver=xhyve "  # haven't switched to hyperkit yet because it still has issues like https://bunnyyiu.github.io/2018-07-16-minikube-reboot/
-                    "--disk-size=%(MINIKUBE_DISK_SIZE)s "
-                    "--memory=%(MINIKUBE_MEMORY)s "
-                    "--cpus=%(MINIKUBE_NUM_CPUS)s " % settings)
-                # --mount-string %(LOCAL_DATA_DIR)s:%(DATA_DIR)s --mount
 
-            elif sys.platform.startswith('linux'):
-                logger.info("Please run 'sudo minikube start --vm-driver=none' first and make sure 'minikube status' shows that minikube is running")
-                sys.exit(0)
+                minikube_start_command += " --vm-driver=xhyve "  # haven't switched to hyperkit yet because it still has issues like https://bunnyyiu.github.io/2018-07-16-minikube-reboot/
+
+                # --mount-string %(LOCAL_DATA_DIR)s:%(DATA_DIR)s --mount
+                run(minikube_start_command)
+
             else:
-                logger.warn("We don't test minikube on operating system: %s" % sys.platform)
-                run("minikube start "
-                    "--vm-driver=virtualbox "
-                    "--disk-size=%(MINIKUBE_DISK_SIZE)s "
-                    "--memory=%(MINIKUBE_MEMORY)s "
-                    "--cpus=%(MINIKUBE_NUM_CPUS)s " % settings)
+                if sys.platform.startswith('linux'):
+                    minikube_start_command += " --vm-driver=none "
+                else:
+                    minikube_start_command += " --vm-driver=virtualbox "
+
+                logger.info("Please run '%s' and then check that 'minikube status' shows minikube is running" % minikube_start_command)
+                sys.exit(0)
 
         run("gcloud auth configure-docker --quiet")
 
