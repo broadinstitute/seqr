@@ -225,7 +225,7 @@ def _variant_transcripts(annotation):
 
 def _variant_details(variant_json, user):
     annotation = variant_json.get('annotation') or {}
-    main_transcript = annotation.get('main_transcript') or (annotation['vep_annotation'][annotation['worst_vep_annotation_index']] if annotation.get('worst_vep_annotation_index') is not None and annotation['vep_annotation'] else None)
+    main_transcript = annotation.get('main_transcript') or (annotation['vep_annotation'][annotation['worst_vep_annotation_index']] if annotation.get('worst_vep_annotation_index') is not None and annotation['vep_annotation'] else {})
     is_es_variant = annotation.get('db') == 'elasticsearch'
 
     extras = variant_json.get('extras') or {}
@@ -293,16 +293,17 @@ def _variant_details(variant_json, user):
             'sift': annotation.get('sift'),
             'vepConsequence': annotation.get('vep_consequence'),
             'vepGroup': annotation.get('vep_group'),
-            'mainTranscript': {
-                'symbol': main_transcript.get('gene_symbol') or main_transcript.get('symbol'),
-                'lof': main_transcript.get('lof'),
-                'lofFlags': main_transcript.get('lof_flags'),
-                'lofFilter': main_transcript.get('lof_filter'),
-                'hgvsc': main_transcript.get('hgvsc'),
-                'hgvsp': main_transcript.get('hgvsp'),
-                'aminoAcids': main_transcript.get('amino_acids'),
-                'proteinPosition': main_transcript.get('protein_position'),
-            } if main_transcript else None,
+        },
+        'mainTranscript': {
+            'geneId': main_transcript.get('gene') or main_transcript.get('gene_id'),
+            'symbol': main_transcript.get('gene_symbol') or main_transcript.get('symbol'),
+            'lof': main_transcript.get('lof'),
+            'lofFlags': main_transcript.get('lof_flags'),
+            'lofFilter': main_transcript.get('lof_filter'),
+            'hgvsc': main_transcript.get('hgvsc'),
+            'hgvsp': main_transcript.get('hgvsp'),
+            'aminoAcids': main_transcript.get('amino_acids'),
+            'proteinPosition': main_transcript.get('protein_position'),
         },
         'clinvar': {
             'clinsig': extras.get('clinvar_clinsig'),
@@ -314,7 +315,6 @@ def _variant_details(variant_json, user):
             'accession': extras.get('hgmd_accession'),
             'class': extras.get('hgmd_class') if user.is_staff else None,
         },
-        'geneIds': extras.get('genes', {}).keys(),
         'genotypes': {
             individual_id: {
                 'ab': genotype.get('ab'),
@@ -349,9 +349,7 @@ def _variant_details(variant_json, user):
 
 
 def _saved_variant_genes(variants):
-    gene_ids = set()
-    for variant in variants.values():
-        gene_ids.update(variant['geneIds'])
+    gene_ids = {variant['mainTranscript']['geneId'] for variant in variants.values()}
     genes = get_genes(gene_ids, add_dbnsfp=True, add_omim=True, add_constraints=True)
     for gene in genes.values():
         if gene:

@@ -114,7 +114,7 @@ const annotationVariations = (mainTranscript, variant) => {
 
 const Annotations = ({ variant }) => {
   const { vepGroup, rsid } = variant.annotation
-  const mainTranscript = variant.annotation.mainTranscript || {}
+  const { mainTranscript } = variant
 
   const variations = annotationVariations(mainTranscript, variant)
   const lofDetails = (mainTranscript.lof === 'LC' || mainTranscript.lofFlags === 'NAGNAG_SITE') ? [
