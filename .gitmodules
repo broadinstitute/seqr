@@ -1,0 +1,3 @@
+[submodule "hail-elasticsearch-pipelines"]
+	path = hail-elasticsearch-pipelines
+	url = https://github.com/macarthur-lab/hail-elasticsearch-pipelines.git
