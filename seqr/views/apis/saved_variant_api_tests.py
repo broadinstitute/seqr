@@ -32,7 +32,7 @@ class ProjectAPITest(TransactionTestCase):
             set(variant.keys()),
             {'variantId', 'xpos', 'ref', 'alt', 'chrom', 'pos', 'genomeVersion', 'liftedOverGenomeVersion',
              'liftedOverChrom', 'liftedOverPos', 'familyGuid', 'tags', 'functionalData', 'notes', 'clinvar',
-             'origAltAlleles', 'geneIds', 'genotypes', 'hgmd', 'annotation', 'transcripts', 'locusLists'}
+             'origAltAlleles', 'mainTranscript', 'genotypes', 'hgmd', 'annotation', 'transcripts', 'locusLists'}
         )
 
         # filter by family
