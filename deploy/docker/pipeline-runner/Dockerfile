@@ -83,16 +83,6 @@ RUN gsutil -m cp gs://hail-common/vep/htslib/* /usr/bin/ \
     && gsutil -m cp gs://hail-common/vep/samtools /usr/bin/ \
     && chmod a+rx  /usr/bin/tabix /usr/bin/bgzip /usr/bin/htsfile /usr/bin/samtools
 
-RUN mkdir -p /vep/homo_sapiens /vep/loftee_data_grch37 /vep/loftee_data_grch38 \
-    && gsutil -m cp -r gs://hail-common/vep/vep/ensembl-tools-release-85 /vep  \
-    && gsutil -m cp -r gs://hail-common/vep/vep/GRCh37/loftee_data /vep/loftee_data_grch37  \
-    && gsutil -m cp -r gs://hail-common/vep/vep/GRCh38/loftee_data /vep/loftee_data_grch38  \
-    && gsutil -m cp -r gs://hail-common/vep/vep/Plugins /vep  \
-    && gsutil -m cp -r gs://hail-common/vep/vep/homo_sapiens/85_GRCh37 /vep/homo_sapiens/ \
-    && gsutil -m cp -r gs://hail-common/vep/vep/homo_sapiens/85_GRCh38 /vep/homo_sapiens/
-
-RUN ln -s /vep/ensembl-tools-release-85/scripts/variant_effect_predictor /vep/variant_effect_predictor
-
 RUN wget https://raw.github.com/miyagawa/cpanminus/master/cpanm -O /usr/bin/cpanm && chmod +x /usr/bin/cpanm
 # VEP dependencies
 RUN /usr/bin/cpanm --notest Set::IntervalTree
@@ -110,24 +100,10 @@ ARG DISABLE_CACHE=1
 # clone hail-elasticsearch-pipelines
 RUN git clone https://github.com/macarthur-lab/hail-elasticsearch-pipelines.git /hail-elasticsearch-pipelines
 
-# copy loftee
-RUN cp -r /hail-elasticsearch-pipelines/loftee /vep \
-    && cp /hail-elasticsearch-pipelines/gcloud_dataproc/vep_init/vep-gcloud-grch38.properties /vep/vep-gcloud-grch38.properties \
-    && cp /hail-elasticsearch-pipelines/gcloud_dataproc/vep_init/vep-gcloud-grch37.properties /vep/vep-gcloud-grch37.properties \
-    && cp /hail-elasticsearch-pipelines/gcloud_dataproc/vep_init/run_hail_vep85_GRCh37_vcf.sh /vep/run_hail_vep85_GRCh37_vcf.sh \
-    && cp /hail-elasticsearch-pipelines/gcloud_dataproc/vep_init/run_hail_vep85_GRCh38_vcf.sh /vep/run_hail_vep85_GRCh38_vcf.sh \
-    && cp /hail-elasticsearch-pipelines/gcloud_dataproc/vep_init/1var.vcf /vep/1var.vcf
-
 # copy hail build
 RUN mkdir -p /hail/build/libs /hail/build/distributions \
     && cp /hail-elasticsearch-pipelines/hail_builds/v01/hail-9-17-2018-f3e47061.zip /hail/build/distributions/hail-python.zip \
     && cp /hail-elasticsearch-pipelines/hail_builds/v01/hail-9-17-2018-f3e47061.jar /hail/build/libs/hail-all-spark.jar
-
-
-# run VEP on the 1-variant VCF to create fasta.index file
-RUN /vep/run_hail_vep85_GRCh37_vcf.sh /vep/1var.vcf \
- && /vep/run_hail_vep85_GRCh38_vcf.sh /vep/1var.vcf
-
 
 ENV TERM=xterm
 ENV PYTHONPATH="$PYTHONPATH:/seqr:/seqr_settings:/hail-elasticsearch-pipelines"

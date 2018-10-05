@@ -31,6 +31,9 @@ spec:
         deployment: {{ DEPLOY_TO }}
     spec:
       volumes:
+      - name: data-dir
+        hostPath:
+          path: /data/seqr
       - name: gcloud-client-secrets-volume
         secret:
           secretName: gcloud-client-secrets
@@ -47,6 +50,8 @@ spec:
             add:
               - SYS_ADMIN
         volumeMounts:
+        - name: data-dir
+          mountPath: /data
         - name: gcloud-client-secrets-volume
           mountPath: /.config
           readOnly: true
@@ -59,8 +64,8 @@ spec:
               command: ["fusermount", "-u", "/mounted-bucket"]
         resources:
           requests:
-            memory: "8Gi"
-            cpu: "0.5"
+            memory: "0.5Gi"
+            cpu: "0.05"
             ephemeral-storage: "100Mi"
           limits:
             memory: "20Gi"

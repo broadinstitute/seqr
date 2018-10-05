@@ -3,7 +3,7 @@
 echo ==== download seqr deployment code, install python dependencies =====
 set -x
 
-export SEQR_BRANCH=master
+export SEQR_BRANCH=ad00480c9cc2c5276ed552ef08e8ba6f36b6220d
 
 git clone https://github.com/macarthur-lab/seqr.git
 cd seqr/

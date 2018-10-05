@@ -31,10 +31,10 @@ spec:
       volumes:
       - name: data-dir
         hostPath:
-          path: {{ DATA_DIR }}
-      #- name: vep-dir
-      #  hostPath:
-      #    path: {{ VEP_DIR }}
+          path: /data/pipeline-runner
+      - name: vep-dir
+        hostPath:
+          path: /data/vep
       - name: gcloud-client-secrets-volume
         secret:
           secretName: gcloud-client-secrets
@@ -57,8 +57,8 @@ spec:
         volumeMounts:
         - name: data-dir
           mountPath: /data
-        #- name: vep-dir
-        #  mountPath: /vep
+        - name: vep-dir
+          mountPath: /vep
         - name: gcloud-client-secrets-volume
           mountPath: /.config
           readOnly: true
