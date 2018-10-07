@@ -10,20 +10,18 @@ logger = logging.getLogger(__name__)
 def load_dataset(deployment_target, project_name, genome_version, sample_type, dataset_type, vcf, memory_to_use=None, cpu_limit=None, **kwargs):
     pod_name = get_pod_name('pipeline-runner', deployment_target=deployment_target)
 
-    if os.path.isfile(vcf):
-        # if local file path, copy file into pod
-        path_in_pod = "/data/{}".format(os.path.basename(vcf))
-        run("kubectl cp '%(vcf)s' '%(pod_name)s:%(path_in_pod)s'" % locals())
-        vcf = path_in_pod
-
     # run load command
     additional_load_command_args = "  ".join("--%s '%s'" % (key.lower().replace("_", "-"), value) for key, value in kwargs.items() if value is not None)
 
     run_locally = deployment_target == "minikube"
     if run_locally:
-        if vcf.startswith("http"):
-            run_in_pod(pod_name, "wget -N %(vcf)s" % locals())
-            vcf = os.path.basename(vcf)
+        vcf_name = os.path.basename(vcf)
+        path_in_pod = "/data/{}".format(vcf_name)
+        if os.path.isfile(vcf):
+            run("kubectl cp '%(vcf)s' '%(pod_name)s:%(path_in_pod)s'" % locals()) # if local file path, copy file into pod
+        elif vcf.startswith("http"):
+            run_in_pod(pod_name, "wget -N %(vcf)s -O %(path_in_pod)s" % locals())
+        vcf = path_in_pod
 
         total_memory = psutil.virtual_memory().total - 6*10**9  # leave 6Gb for other processes
         memory_to_use = "%sG" % (total_memory / 2 / 10**9) if memory_to_use is None else memory_to_use # divide available memory evenly between spark driver & executor
