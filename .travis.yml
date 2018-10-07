@@ -9,9 +9,12 @@ install:
 - ./install_dependencies.sh
 
 script:
-- PYTHONPATH=.:./deploy/docker/seqr/config python -Wonce -u manage.py test -p '*_tests.py' -v 2
+- PYTHONPATH=.:./deploy/docker/seqr/config python -Wonce -u manage.py test -p '*_tests.py' -v 2 reference_data seqr xbrowse
 - cd ui/
 - npm test
+- cd ..
+- cd hail-elasticsearch-pipelines
+- python -m unittest discover -p "*tests.py"
 - cd ..
 
 notifications:
