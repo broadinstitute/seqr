@@ -674,9 +674,6 @@ def deploy_secrets(settings):
     ]:
         run("kubectl delete secret %(secret_label)s" % locals(), verbose=False, errors_to_ignore=["not found"])
 
-    # make sure the
-    run("kubectl create -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/namespace.yaml" % settings, errors_to_ignore=["already exists"])
-
     run(" ".join([
         "kubectl create secret generic seqr-secrets",
         "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/seqr/omim_key",

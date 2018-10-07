@@ -61,7 +61,7 @@ def load_dataset(deployment_target, project_name, genome_version, sample_type, d
     run_in_pod(pod_name, load_command, verbose=True)
 
 
-def load_example_project(deployment_target, genome_version="37", cpu_limit=None):
+def load_example_project(deployment_target, genome_version="37", cpu_limit=None, start_with_step=None):
     """Load example project
 
     Args:
@@ -97,6 +97,7 @@ def load_example_project(deployment_target, genome_version="37", cpu_limit=None)
         sample_type="WES",
         dataset_type="VARIANTS",
         cpu_limit=cpu_limit,
+        start_with_step=start_with_step,
         vcf="https://storage.googleapis.com/seqr-reference-data/test-projects/%(vcf_filename)s" % locals())
 
 
