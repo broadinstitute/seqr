@@ -29,7 +29,7 @@ if [ ! -f /vep/variant_effect_predictor ]; then
     ln -s /vep/ensembl-tools-release-85/scripts/variant_effect_predictor /vep/variant_effect_predictor
 fi
 
-if [ ! -f /vep/variant_effect_predictor ]; then
+if [ ! -f /vep/1var.vcf ]; then
     cp -r /hail-elasticsearch-pipelines/loftee /vep
     cp /hail-elasticsearch-pipelines/gcloud_dataproc/vep_init/vep-gcloud-grch38.properties /vep/vep-gcloud-grch38.properties
     cp /hail-elasticsearch-pipelines/gcloud_dataproc/vep_init/vep-gcloud-grch37.properties /vep/vep-gcloud-grch37.properties
