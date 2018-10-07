@@ -57,7 +57,7 @@ RUN cd /usr/local \
 
 RUN pip install decorator==4.2.1    # fix http://discuss.hail.is/t/importerror-cannot-import-name-getargspec/468
 
-RUN wget https://storage.googleapis.com/hadoop-lib/gcs/gcs-connector-latest-hadoop2.jar -O /usr/local/spark-2.0.2-bin-hadoop2.7/jars/gcs-connector-latest-hadoop2.jar
+RUN wget https://storage.googleapis.com/hadoop-lib/gcs/gcs-connector-hadoop2-latest.jar -O /usr/local/spark-2.0.2-bin-hadoop2.7/jars/gcs-connector-hadoop2-latest.jar
 
 # install jupyter
 RUN pip install --upgrade pip jupyter
