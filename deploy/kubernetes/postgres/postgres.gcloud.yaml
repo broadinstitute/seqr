@@ -25,6 +25,7 @@ spec:
         name: postgres
         deployment: {{ DEPLOY_TO }}
     spec:
+      priorityClassName: high-priority
       volumes:
       - name: postgres-dbpath
         gcePersistentDisk:
@@ -42,11 +43,9 @@ spec:
           requests:
             memory: "0.5Gi"
             cpu: "0.01"
-            ephemeral-storage: "100Mi"
           limits:
             memory: "1Gi"
             cpu: "2"
-            ephemeral-storage: "100Gi"
         env:
         - name: POSTGRES_USER
           valueFrom:

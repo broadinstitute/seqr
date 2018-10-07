@@ -49,11 +49,9 @@ spec:
           requests:
             memory: "0.25Gi"
             cpu: "0.01"
-            ephemeral-storage: "100Mi"
           limits:
             memory: "30Gi"
             cpu: "8"
-            ephemeral-storage: "100Gi"
         volumeMounts:
         - name: data-dir
           mountPath: /data

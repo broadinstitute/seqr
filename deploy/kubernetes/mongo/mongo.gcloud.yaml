@@ -25,6 +25,7 @@ spec:
         name: mongo
         deployment: {{ DEPLOY_TO }}
     spec:
+      priorityClassName: high-priority
       volumes:
       - name: mongo-dbpath
         gcePersistentDisk:
@@ -45,11 +46,9 @@ spec:
           requests:
             memory: "0.5Gi"
             cpu: "0.01"
-            ephemeral-storage: "100Mi"
           limits:
             memory: "20Gi"
             cpu: "5"
-            ephemeral-storage: "100Gi"
 #        readinessProbe:
 #          exec:
 #            command:

@@ -30,6 +30,7 @@ spec:
         name: seqr
         deployment: {{ DEPLOY_TO }}
     spec:
+      priorityClassName: high-priority
       volumes:
       - name: data-dir
         hostPath:
@@ -66,11 +67,9 @@ spec:
           requests:
             memory: "0.5Gi"
             cpu: "0.05"
-            ephemeral-storage: "100Mi"
           limits:
             memory: "20Gi"
             cpu: "8"
-            ephemeral-storage: "100Gi"
         envFrom:
           - configMapRef:
               name: all-settings
