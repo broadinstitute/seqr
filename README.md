@@ -38,7 +38,7 @@ The instructions below cover local deployments using Minikube, but are also dire
 The Kubernetes project maintains a [complete list of deployment options](https://kubernetes.io/docs/setup/pick-right-solution/).
 
 #### Prerequisites
- - *Hardware:*  At least **16 Gb RAM**, **2 CPUs**, **15 Gb disk space**  
+ - *Hardware:*  At least **16 Gb RAM**, **2 CPUs**, **50 Gb disk space**  
 
  - *Software:*  
      - python2.7    
