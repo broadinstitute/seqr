@@ -57,8 +57,6 @@ RUN cd /usr/local \
 
 RUN pip install decorator==4.2.1    # fix http://discuss.hail.is/t/importerror-cannot-import-name-getargspec/468
 
-RUN wget https://storage.googleapis.com/hadoop-lib/gcs/gcs-connector-hadoop2-latest.jar -O /usr/local/spark-2.0.2-bin-hadoop2.7/jars/gcs-connector-hadoop2-latest.jar
-
 # install jupyter
 RUN pip install --upgrade pip jupyter
 
@@ -102,8 +100,9 @@ RUN git clone https://github.com/macarthur-lab/hail-elasticsearch-pipelines.git 
 
 # copy hail build
 RUN mkdir -p /hail/build/libs /hail/build/distributions \
-    && cp /hail-elasticsearch-pipelines/hail_builds/v01/hail-9-17-2018-f3e47061.zip /hail/build/distributions/hail-python.zip \
-    && cp /hail-elasticsearch-pipelines/hail_builds/v01/hail-9-17-2018-f3e47061.jar /hail/build/libs/hail-all-spark.jar
+    && cp /hail-elasticsearch-pipelines/hail_builds/v01/hail-v01-10-8-2018-90c855449.zip /hail/build/distributions/hail-python.zip \
+    && cp /hail-elasticsearch-pipelines/hail_builds/v01/hail-v01-10-8-2018-90c855449.jar /hail/build/libs/hail-all-spark.jar \
+    && cp /hail-elasticsearch-pipelines/hail_builds/v01/gcs-connector-1.6.10-hadoop2.jar /usr/local/spark-2.0.2-bin-hadoop2.7/jars/
 
 ENV TERM=xterm
 ENV PYTHONPATH="$PYTHONPATH:/seqr:/seqr_settings:/hail-elasticsearch-pipelines"
