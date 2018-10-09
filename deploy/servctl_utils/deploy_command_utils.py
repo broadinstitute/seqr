@@ -1,28 +1,89 @@
+import collections
 import glob
 import logging
 import multiprocessing
 import os
+from pprint import pformat
+
 import psutil
 import time
 import sys
 
-
-from deploy.utils.kubectl_utils import get_pod_status, get_pod_name, \
-    run_in_pod, get_node_name, POD_READY_STATUS, POD_RUNNING_STATUS
+from deploy.servctl_utils.other_command_utils import check_kubernetes_context, set_environment
+from hail_elasticsearch_pipelines.kubernetes.kubectl_utils import is_pod_running, get_pod_name, get_node_name, run_in_pod, wait_until_pod_is_running
+from hail_elasticsearch_pipelines.kubernetes.yaml_settings_utils import process_jinja_template, load_settings
 from seqr.utils.shell_utils import run
-from deploy.utils.servctl_utils import render, check_kubernetes_context, retrieve_settings, set_environment
 
 logging.basicConfig(format='%(asctime)s %(levelname)-8s %(message)s')
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 
+DEPLOYMENT_TARGETS = [
+    "minikube",
+    "gcloud-dev",
+    "gcloud-prod",
+    "gcloud-prod-elasticsearch"
+]
+
+
+DEPLOYABLE_COMPONENTS = [
+    "init-cluster",
+    "settings",
+    "secrets",
+
+    "cockpit",
+
+    "external-mongo-connector",
+    "external-elasticsearch-connector",
+
+    "elasticsearch",  # a single elasticsearch instance
+    "mongo",
+    "postgres",
+    "redis",
+    "phenotips",
+    "matchbox",
+    "seqr",
+    "kibana",
+    "nginx",
+    "pipeline-runner",
+
+    # components of a sharded elasticsearch cluster based on https://github.com/pires/kubernetes-elasticsearch-cluster
+    "es-client",
+    "es-master",
+    "es-data",
+    "es-kibana",
+]
+
+
+def _get_component_group_to_component_name_mapping():
+    result = {
+        "elasticsearch-sharded": ["es-master", "es-client", "es-data"],
+    }
+    return result
+
+
+def resolve_component_groups(deployment_target, components_or_groups):
+    component_groups = _get_component_group_to_component_name_mapping()
+
+    return [
+        component
+        for component_or_group in components_or_groups
+        for component in component_groups.get(component_or_group, [component_or_group])
+    ]
+
+
+COMPONENT_GROUP_NAMES = list(_get_component_group_to_component_name_mapping().keys())
+
+
 def deploy(deployment_target, components, output_dir=None, runtime_settings={}):
-    """Deploy all seqr components to a kubernetes cluster.
+    """Deploy one or more components to the kubernetes cluster specified as the deployment_target.
+
     Args:
-        deployment_target (string): one of the DEPLOYMENT_TARGETs  (eg. "minikube", or "gcloud")
-        components (list): A list of components to be deployed from constants.DEPLOYABLE_COMPONENTS
-            (eg. "postgres", "phenotips").
+        deployment_target (string): value from DEPLOYMENT_TARGETS - eg. "minikube", "gcloud-dev", etc.
+            indentifying which cluster to deploy these components to
+        components (list): The list of component names to deploy (eg. "postgres", "phenotips" - each string must be in
+            constants.DEPLOYABLE_COMPONENTS). Order doesn't matter.
         output_dir (string): path of directory where to put deployment logs and rendered config files
         runtime_settings (dict): a dictionary of other key-value pairs that override settings file(s) values.
     """
@@ -33,16 +94,21 @@ def deploy(deployment_target, components, output_dir=None, runtime_settings={}):
         check_kubernetes_context(deployment_target)
 
     # parse settings files
-    settings = retrieve_settings(deployment_target)
+    settings = collections.OrderedDict()
+    load_settings([
+        "deploy/kubernetes/shared-settings.yaml",
+        "deploy/kubernetes/%(deployment_target)s-settings.yaml" % locals(),
+        ], settings)
+
     settings.update(runtime_settings)
 
-    # adjust docker image settings
+    # minikube fix: set IMAGE_PULL_POLICY = "IfNotPresent" if running 'docker build' since it fails for other settings such as 'Always'
+    # https://github.com/kubernetes/minikube/issues/1395#issuecomment-296581721
+    # https://kubernetes.io/docs/setup/minikube/
     if settings["BUILD_DOCKER_IMAGES"] and deployment_target == "minikube":
-        # to use images built using the minikube docker daemon, minikube only supports imagePullPolicy = "IfNotPresent"
-        # https://github.com/kubernetes/minikube/issues/1395#issuecomment-296581721
-        # https://kubernetes.io/docs/setup/minikube/
         settings["IMAGE_PULL_POLICY"] = "IfNotPresent"
 
+    # set docker image tag to use when pulling images (if --build-docker-images wasn't specified) or to add to new images (if it was specified)
     if runtime_settings.get("DOCKER_IMAGE_TAG"):
         settings["DOCKER_IMAGE_TAG"] = ":" + runtime_settings["DOCKER_IMAGE_TAG"]
     elif runtime_settings["BUILD_DOCKER_IMAGES"]:
@@ -57,6 +123,9 @@ def deploy(deployment_target, components, output_dir=None, runtime_settings={}):
         settings["DEPLOYMENT_TEMP_DIR"],
         "deployments/%(TIMESTAMP)s_%(DEPLOY_TO)s" % settings)
 
+    # make sure all keys are upper-case
+    settings = {key.upper(): value for key, value in settings.items()}
+
     # configure logging output
     log_dir = os.path.join(settings["DEPLOYMENT_TEMP_DIR"], "logs")
     if not os.path.isdir(log_dir):
@@ -67,114 +136,45 @@ def deploy(deployment_target, components, output_dir=None, runtime_settings={}):
     logger.addHandler(sh)
     logger.info("Starting log file: %(log_file_path)s" % locals())
 
-    # upper-case settings keys
-    for key, value in settings.items():
-        key = key.upper()
-        settings[key] = value
-        logger.info("%s = %s" % (key, value))
+    logger.info("==> Settings:\n%s" % pformat(settings))
 
-    # render Jinja templates and put results in output directory
-    for file_path in glob.glob("deploy/kubernetes/*.yaml") + glob.glob("deploy/kubernetes/*/*.yaml"):
-        file_path = file_path.replace('deploy/kubernetes/', '')
-
-        input_base_dir = os.path.join(runtime_settings["BASE_DIR"], 'deploy/kubernetes')
-        output_base_dir = os.path.join(settings["DEPLOYMENT_TEMP_DIR"], 'deploy/kubernetes')
-
-        render(input_base_dir, file_path, settings, output_base_dir)
-
-    # init cluster
-    if "init-cluster" in components:
-        deploy_init_cluster(settings)
-
-        for retry_i in range(1, 5):
-            try:
-                deploy_config_map(settings)
-                break
-            except RuntimeError as e:
-                logger.error(("Error when deploying config maps: %(e)s. This sometimes happens when cluster is "
-                              "initializing. Retrying...") % locals())
-                time.sleep(5)
+    # process Jinja templates to replace template variables with values from settings. Write results to temp output directory.
+    input_base_dir = settings["BASE_DIR"]
+    output_base_dir = settings["DEPLOYMENT_TEMP_DIR"]
+    template_file_paths = glob.glob("deploy/kubernetes/*.yaml") + \
+                          glob.glob("deploy/kubernetes/*/*.yaml") + \
+                          glob.glob("hail-elasticsearch-pipelines/hail-elasticsearch-pipelines/kubernetes/elasticsearch-sharded/*.yaml")
+    for file_path in template_file_paths:
+        process_jinja_template(input_base_dir, file_path, settings, output_base_dir)
 
     # make sure namespace exists
-    create_namespace(settings)
+    if "init-cluster" not in components:
+        create_namespace(settings)
 
-    # deploy components
-    if "settings" in components:
-        deploy_config_map(settings)
-
-    if "secrets" in components:
-        deploy_secrets(settings)
-
-    if "cockpit" in components:
-        deploy_cockpit(settings)
-
-    if "external-mongo-connector" in components:
-        deploy_external_connector(settings, "mongo")
-
-    if "external-elasticsearch-connector" in components:
-        deploy_external_connector(settings, "elasticsearch")
-
-    if "elasticsearch" in components:
-        deploy_elasticsearch(settings)
-
-    if "mongo" in components:
-        deploy_mongo(settings)
-
-    if "postgres" in components:
-        deploy_postgres(settings)
-
-    if "redis" in components:
-        deploy_redis(settings)
-
-    if "phenotips" in components:
-        deploy_phenotips(settings)
-
-    if "matchbox" in components:
-        deploy_matchbox(settings)
-
-    if "seqr" in components:
-        deploy_seqr(settings)
-
-    if "kibana" in components:
-        deploy_kibana(settings)
-
-    if "es-client" in components:
-        deploy_elasticsearch_sharded("es-client", settings)
-
-    if "es-master" in components:
-        deploy_elasticsearch_sharded("es-master", settings)
-
-    if "es-data" in components:
-        deploy_elasticsearch_sharded("es-data", settings)
-
-    if "es-kibana" in components:
-        deploy_elasticsearch_sharded("kibana", settings)
-
-    if "nginx" in components:
-        deploy_nginx(settings)
-
-    if "pipeline-runner" in components:
-        deploy_pipeline_runner(settings)
+    # call deploy_* functions for each component in "components" list, in the order that these components are listed in DEPLOYABLE_COMPONENTS
+    for component in DEPLOYABLE_COMPONENTS:
+        if component in components:
+            # only deploy requested components
+            func_name = "deploy_" + component.replace("-", "_")
+            f = globals().get(func_name)
+            if f is not None:
+                f(settings)
+            else:
+                raise ValueError("'deploy_{}' function not found. Is '{}' a valid component name?".format(func_name, component))
 
 
 def delete_pod(component_label, settings, async=False, custom_yaml_filename=None):
     yaml_filename = custom_yaml_filename or (component_label+".%(DEPLOY_TO_PREFIX)s.yaml")
 
     deployment_target = settings["DEPLOY_TO"]
-    if get_pod_status(component_label, deployment_target):
+    if is_pod_running(component_label, deployment_target):
         run(" ".join([
             "kubectl delete",
             "-f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/"+component_label+"/"+yaml_filename,
         ]) % settings, errors_to_ignore=["not found"])
 
     logger.info("waiting for \"%s\" to exit Running status" % component_label)
-    while get_pod_status(component_label, deployment_target) and not async:
-        time.sleep(5)
-
-
-def _wait_until_pod_is_ready(component_label, deployment_target):
-    logger.info("waiting for \"%s\" to complete initialization" % component_label)
-    while get_pod_status(component_label, deployment_target, status_type=POD_READY_STATUS) != "true":
+    while is_pod_running(component_label, deployment_target) and not async:
         time.sleep(5)
 
 
@@ -188,10 +188,10 @@ def _deploy_pod(component_label, settings, wait_until_pod_is_running=True, wait_
     ]) % settings)
 
     if wait_until_pod_is_running:
-        _wait_until_pod_is_running(component_label, deployment_target=settings["DEPLOY_TO"])
+        wait_until_pod_is_running(component_label, deployment_target=settings["DEPLOY_TO"])
 
     if wait_until_pod_is_ready:
-        _wait_until_pod_is_ready(component_label, deployment_target=settings["DEPLOY_TO"])
+        wait_until_pod_is_ready(component_label, deployment_target=settings["DEPLOY_TO"])
 
 
 def docker_build(component_label, settings, custom_build_args=()):
@@ -407,6 +407,14 @@ def deploy_nginx(settings):
     run("kubectl apply -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/nginx/nginx.yaml" % settings)
 
 
+def deploy_external_mongo_connector(settings):
+    deploy_external_connector(settings, "mongo")
+
+
+def deploy_external_elasticsearch_connector(settings):
+    deploy_external_connector(settings, "elasticsearch")
+
+
 def deploy_external_connector(settings, connector_name):
     if connector_name not in ["mongo", "elasticsearch"]:
         raise ValueError("Invalid connector name: %s" % connector_name)
@@ -450,7 +458,7 @@ def deploy_seqr(settings):
     elif reset_db or restore_seqr_db_from_backup:
         seqr_pod_name = get_pod_name('seqr', deployment_target=deployment_target)
         if seqr_pod_name:
-            _wait_until_pod_is_running("seqr", deployment_target=deployment_target)
+            wait_until_pod_is_running("seqr", deployment_target=deployment_target)
 
             run_in_pod(seqr_pod_name, "/usr/local/bin/stop_server.sh", verbose=True)
 
@@ -491,6 +499,132 @@ def deploy_pipeline_runner(settings):
     _deploy_pod("pipeline-runner", settings, wait_until_pod_is_running=True)
 
 
+def _init_cluster_gcloud(settings):
+    run("gcloud config set project %(GCLOUD_PROJECT)s" % settings)
+
+    # create private network so that dataproc jobs can connect to GKE cluster nodes
+    # based on: https://medium.com/@DazWilkin/gkes-cluster-ipv4-cidr-flag-69d25884a558
+    create_vpc(gcloud_project="%(GCLOUD_PROJECT)s" % settings, network_name="%(GCLOUD_PROJECT)s-auto-vpc" % settings)
+
+    # create cluster
+    run(" ".join([
+        "gcloud container clusters create %(CLUSTER_NAME)s",
+        "--project %(GCLOUD_PROJECT)s",
+        "--zone %(GCLOUD_ZONE)s",
+        "--machine-type %(CLUSTER_MACHINE_TYPE)s",
+        "--num-nodes 1",
+        #"--network %(GCLOUD_PROJECT)s-auto-vpc",
+        #"--local-ssd-count 1",
+        "--scopes", "https://www.googleapis.com/auth/devstorage.read_write"
+    ]) % settings, verbose=False, errors_to_ignore=["Already exists"])
+
+    # create cluster nodes - breaking them up into node pools of several machines each.
+    # This way, the cluster can be scaled up and down when needed using the technique in
+    #    https://github.com/mattsolo1/gnomadjs/blob/master/cluster/elasticsearch/Makefile#L23
+    #
+    i = 0
+    num_nodes_remaining_to_create = int(settings["CLUSTER_NUM_NODES"]) - 1
+    num_nodes_per_node_pool = int(settings["NUM_NODES_PER_NODE_POOL"])
+    while num_nodes_remaining_to_create > 0:
+        i += 1
+        run(" ".join([
+            "gcloud container node-pools create %(CLUSTER_NAME)s-"+str(i),
+            "--cluster %(CLUSTER_NAME)s",
+            "--project %(GCLOUD_PROJECT)s",
+            "--zone %(GCLOUD_ZONE)s",
+            "--machine-type %(CLUSTER_MACHINE_TYPE)s",
+            "--num-nodes %s" % min(num_nodes_per_node_pool, num_nodes_remaining_to_create),
+            #"--network %(GCLOUD_PROJECT)s-auto-vpc",
+            #"--local-ssd-count 1",
+            "--scopes", "https://www.googleapis.com/auth/devstorage.read_write"
+        ]) % settings, verbose=False, errors_to_ignore=["already exists"])
+
+        num_nodes_remaining_to_create -= num_nodes_per_node_pool
+
+    run(" ".join([
+        "gcloud container clusters get-credentials %(CLUSTER_NAME)s",
+        "--project %(GCLOUD_PROJECT)s",
+        "--zone %(GCLOUD_ZONE)s",
+    ]) % settings)
+
+    # create elasticsearch disks storage class
+    #run(" ".join([
+    #    "kubectl apply -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch/ssd-storage-class.yaml" % settings,
+    #]))
+
+    #run(" ".join([
+    #    "gcloud compute disks create %(CLUSTER_NAME)s-elasticsearch-disk-0  --type=pd-ssd --zone=us-central1-b --size=%(ELASTICSEARCH_DISK_SIZE)sGi" % settings,
+    #]), errors_to_ignore=["already exists"])
+
+    #run(" ".join([
+    #    "kubectl apply -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch/es-persistent-volume.yaml" % settings,
+    #]))
+
+
+    # if cluster was already created previously, update its size to match CLUSTER_NUM_NODES
+    #run(" ".join([
+    #    "gcloud container clusters resize %(CLUSTER_NAME)s --size %(CLUSTER_NUM_NODES)s" % settings,
+    #]), is_interactive=True)
+
+    # create persistent disks
+    for label in ("postgres",): # "mongo"): # , "elasticsearch-sharded"):  # "elasticsearch"
+        run(" ".join([
+            "gcloud compute disks create",
+            "--zone %(GCLOUD_ZONE)s",
+            "--size %("+label.upper().replace("-", "_")+"_DISK_SIZE)s",
+            "%(CLUSTER_NAME)s-"+label+"-disk",
+            ]) % settings, verbose=True, errors_to_ignore=["already exists"])
+
+
+def _init_cluster_minikube(settings):
+    # start minikube if it's not running already
+    try:
+        status = run("minikube status")
+    except Exception as e:
+        logger.info("minikube status: %s" % str(e))
+
+        #run("minikube delete", ignore_all_errors=True)
+        if "MINIKUBE_MEMORY" not in settings:
+            settings["MINIKUBE_MEMORY"] = str((psutil.virtual_memory().total - 4*10**9) / 10**6)  # leave 4Gb overhead
+        if "MINIKUBE_NUM_CPUS" not in settings:
+            settings["MINIKUBE_NUM_CPUS"] = multiprocessing.cpu_count()  # use all CPUs on machine
+
+        minikube_start_command = (
+             "minikube start "
+             "--kubernetes-version=v1.11.3 "
+             "--disk-size=%(MINIKUBE_DISK_SIZE)s "
+             "--memory=%(MINIKUBE_MEMORY)s "
+             "--cpus=%(MINIKUBE_NUM_CPUS)s "
+         ) % settings
+
+        if not sys.platform.startswith('darwin'):
+            if sys.platform.startswith('linux'):
+                minikube_start_command += " --vm-driver=none "
+            else:
+                minikube_start_command += " --vm-driver=virtualbox "
+
+            logger.info("Please run '%s' and then check that 'minikube status' shows minikube is running" % minikube_start_command)
+            sys.exit(0)
+
+        # MacOSx
+        run("minikube stop", ignore_all_errors=True)
+
+        # haven't switched to hyperkit yet because it still has issues like https://bunnyyiu.github.io/2018-07-16-minikube-reboot/
+        minikube_start_command += " --vm-driver=xhyve "
+
+        # --mount-string %(LOCAL_DATA_DIR)s:%(DATA_DIR)s --mount
+        logger.info("starting minikube: ")
+        run(minikube_start_command)
+
+    run("gcloud auth configure-docker --quiet")
+
+    # this fixes time sync issues on MacOSX which could interfere with token auth (https://github.com/kubernetes/minikube/issues/1378)
+    run("minikube ssh -- docker run -i --rm --privileged --pid=host debian nsenter -t 1 -m -u -n -i date -u $(date -u +%m%d%H%M%Y)")
+
+    # set VM max_map_count to the value required for elasticsearch
+    run("minikube ssh 'sudo /sbin/sysctl -w vm.max_map_count=262144'")
+
+
 def deploy_init_cluster(settings):
     """Provisions a GKE cluster, persistent disks, and any other prerequisites for deployment."""
 
@@ -498,127 +632,9 @@ def deploy_init_cluster(settings):
 
     # initialize the VM
     if settings["DEPLOY_TO_PREFIX"] == "gcloud":
-        run("gcloud config set project %(GCLOUD_PROJECT)s" % settings)
-
-        # create private network so that dataproc jobs can connect to GKE cluster nodes
-        # based on: https://medium.com/@DazWilkin/gkes-cluster-ipv4-cidr-flag-69d25884a558
-        create_vpc(gcloud_project="%(GCLOUD_PROJECT)s" % settings, network_name="%(GCLOUD_PROJECT)s-auto-vpc" % settings)
-
-        # create cluster
-        run(" ".join([
-            "gcloud container clusters create %(CLUSTER_NAME)s",
-            "--project %(GCLOUD_PROJECT)s",
-            "--zone %(GCLOUD_ZONE)s",
-            "--machine-type %(CLUSTER_MACHINE_TYPE)s",
-            "--num-nodes 1",
-            #"--network %(GCLOUD_PROJECT)s-auto-vpc",
-            #"--local-ssd-count 1",
-            "--scopes", "https://www.googleapis.com/auth/devstorage.read_write"
-        ]) % settings, verbose=False, errors_to_ignore=["Already exists"])
-
-        # create cluster nodes - breaking them up into node pools of several machines each.
-        # This way, the cluster can be scaled up and down when needed using the technique in
-        #    https://github.com/mattsolo1/gnomadjs/blob/master/cluster/elasticsearch/Makefile#L23
-        #
-        i = 0
-        num_nodes_remaining_to_create = int(settings["CLUSTER_NUM_NODES"]) - 1
-        num_nodes_per_node_pool = int(settings["NUM_NODES_PER_NODE_POOL"])
-        while num_nodes_remaining_to_create > 0:
-            i += 1
-            run(" ".join([
-                "gcloud container node-pools create %(CLUSTER_NAME)s-"+str(i),
-                "--cluster %(CLUSTER_NAME)s",
-                "--project %(GCLOUD_PROJECT)s",
-                "--zone %(GCLOUD_ZONE)s",
-                "--machine-type %(CLUSTER_MACHINE_TYPE)s",
-                "--num-nodes %s" % min(num_nodes_per_node_pool, num_nodes_remaining_to_create),
-                #"--network %(GCLOUD_PROJECT)s-auto-vpc",
-                #"--local-ssd-count 1",
-                "--scopes", "https://www.googleapis.com/auth/devstorage.read_write"
-            ]) % settings, verbose=False, errors_to_ignore=["already exists"])
-
-            num_nodes_remaining_to_create -= num_nodes_per_node_pool
-
-        run(" ".join([
-            "gcloud container clusters get-credentials %(CLUSTER_NAME)s",
-            "--project %(GCLOUD_PROJECT)s",
-            "--zone %(GCLOUD_ZONE)s",
-        ]) % settings)
-
-        # create elasticsearch disks storage class
-        #run(" ".join([
-        #    "kubectl apply -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch/ssd-storage-class.yaml" % settings,
-        #]))
-
-        #run(" ".join([
-        #    "gcloud compute disks create %(CLUSTER_NAME)s-elasticsearch-disk-0  --type=pd-ssd --zone=us-central1-b --size=%(ELASTICSEARCH_DISK_SIZE)sGi" % settings,
-        #]), errors_to_ignore=["already exists"])
-
-        #run(" ".join([
-        #    "kubectl apply -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch/es-persistent-volume.yaml" % settings,
-        #]))
-
-
-        # if cluster was already created previously, update its size to match CLUSTER_NUM_NODES
-        #run(" ".join([
-        #    "gcloud container clusters resize %(CLUSTER_NAME)s --size %(CLUSTER_NUM_NODES)s" % settings,
-        #]), is_interactive=True)
-
-        # create persistent disks
-        for label in ("postgres",): # "mongo"): # , "elasticsearch-sharded"):  # "elasticsearch"
-            run(" ".join([
-                    "gcloud compute disks create",
-                    "--zone %(GCLOUD_ZONE)s",
-                    "--size %("+label.upper().replace("-", "_")+"_DISK_SIZE)s",
-                    "%(CLUSTER_NAME)s-"+label+"-disk",
-                ]) % settings, verbose=True, errors_to_ignore=["already exists"])
-
+        _init_cluster_gcloud(settings)
     elif settings["DEPLOY_TO"] == "minikube":
-        # start minikube if it's not running already
-        try:
-            status = run("minikube status")
-        except Exception as e:
-            #run("minikube delete", ignore_all_errors=True)
-            if "MINIKUBE_MEMORY" not in settings:
-                settings["MINIKUBE_MEMORY"] = str((psutil.virtual_memory().total - 4*10**9) / 10**6)  # leave 4Gb overhead
-            if "MINIKUBE_NUM_CPUS" not in settings:
-                settings["MINIKUBE_NUM_CPUS"] = multiprocessing.cpu_count()  # use all CPUs on machine
-
-            minikube_start_command = (
-                "minikube start "
-                "--kubernetes-version=v1.11.3 "
-                "--disk-size=%(MINIKUBE_DISK_SIZE)s "
-                "--memory=%(MINIKUBE_MEMORY)s "
-                "--cpus=%(MINIKUBE_NUM_CPUS)s "
-            ) % settings
-
-            logger.info("minikube status: %s" % str(e))
-            logger.info("starting minikube: ")
-            if sys.platform.startswith('darwin'):
-                run("minikube stop", ignore_all_errors=True)
-
-                minikube_start_command += " --vm-driver=xhyve "  # haven't switched to hyperkit yet because it still has issues like https://bunnyyiu.github.io/2018-07-16-minikube-reboot/
-
-                # --mount-string %(LOCAL_DATA_DIR)s:%(DATA_DIR)s --mount
-                run(minikube_start_command)
-
-            else:
-                if sys.platform.startswith('linux'):
-                    minikube_start_command += " --vm-driver=none "
-                else:
-                    minikube_start_command += " --vm-driver=virtualbox "
-
-                logger.info("Please run '%s' and then check that 'minikube status' shows minikube is running" % minikube_start_command)
-                sys.exit(0)
-
-        run("gcloud auth configure-docker --quiet")
-
-        # this fixes time sync issues on MacOSX which could interfere with token auth (https://github.com/kubernetes/minikube/issues/1378)
-        run("minikube ssh -- docker run -i --rm --privileged --pid=host debian nsenter -t 1 -m -u -n -i date -u $(date -u +%m%d%H%M%Y)")
-
-        # set VM max_map_count to the value required for elasticsearch
-        run("minikube ssh 'sudo /sbin/sysctl -w vm.max_map_count=262144'")
-
+        _init_cluster_minikube(settings)
     else:
         raise ValueError("Unexpected DEPLOY_TO_PREFIX: %(DEPLOY_TO_PREFIX)s" % settings)
 
@@ -633,8 +649,19 @@ def deploy_init_cluster(settings):
     # print cluster info
     run("kubectl cluster-info", verbose=True)
 
+    # wait for the cluster to initialize
+    for retry_i in range(1, 5):
+        try:
+            deploy_settings(settings)
+            break
+        except RuntimeError as e:
+            logger.error(("Error when deploying config maps: %(e)s. This sometimes happens when cluster is "
+                          "initializing. Retrying...") % locals())
+            time.sleep(5)
 
-def deploy_config_map(settings):
+
+def deploy_settings(settings):
+    """Deploy settings as a config map"""
     if settings["ONLY_PUSH_TO_REGISTRY"]:
         return
 
@@ -712,7 +739,23 @@ def deploy_secrets(settings):
         ]), errors_to_ignore=["already exists"])
 
 
-def deploy_elasticsearch_sharded(component, settings):
+def deploy_es_client(settings):
+    deploy_elasticsearch_sharded(settings, "es-client")
+
+
+def deploy_es_master(settings):
+    deploy_elasticsearch_sharded(settings, "es-master")
+
+
+def deploy_es_data(settings):
+    deploy_elasticsearch_sharded(settings, "es-data")
+
+
+def deploy_es_kibana(settings):
+    deploy_elasticsearch_sharded(settings, "es-kibana")
+
+
+def deploy_elasticsearch_sharded(settings, component):
     if settings["ONLY_PUSH_TO_REGISTRY"]:
         return
 
@@ -720,23 +763,22 @@ def deploy_elasticsearch_sharded(component, settings):
 
     if component == "es-master":
         config_files = [
-            "%(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch-sharded/es-discovery-svc.yaml",
-            "%(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch-sharded/es-master.yaml",
+            "%(DEPLOYMENT_TEMP_DIR)s/hail-elasticsearch-pipelines/kubernetes/elasticsearch-sharded/es-discovery-svc.yaml",
+            "%(DEPLOYMENT_TEMP_DIR)s/hail-elasticsearch-pipelines/kubernetes/elasticsearch-sharded/es-master.yaml",
         ]
     elif component == "es-client":
         config_files = [
-            "%(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch-sharded/es-svc.yaml",
-            "%(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch-sharded/es-client.yaml",
+            "%(DEPLOYMENT_TEMP_DIR)s/hail-elasticsearch-pipelines/kubernetes/elasticsearch-sharded/es-svc.yaml",
+            "%(DEPLOYMENT_TEMP_DIR)s/hail-elasticsearch-pipelines/kubernetes/elasticsearch-sharded/es-client.yaml",
         ]
     elif component == "es-data":
         config_files = [
-            "%(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch-sharded/es-data-svc.yaml",
-            "%(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch-sharded/es-data-stateful.yaml",
+            "%(DEPLOYMENT_TEMP_DIR)s/hail-elasticsearch-pipelines/kubernetes/elasticsearch-sharded/es-data-svc.yaml",
+            "%(DEPLOYMENT_TEMP_DIR)s/hail-elasticsearch-pipelines/kubernetes/elasticsearch-sharded/es-data-stateful.yaml",
         ]
     elif component == "es-kibana":
         config_files = [
-            "%(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch-sharded/kibana-svc.yaml",
-            "%(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch-sharded/kibana.yaml",
+            "%(DEPLOYMENT_TEMP_DIR)s/hail-elasticsearch-pipelines/kubernetes/elasticsearch-sharded/es-kibana.yaml",
         ]
     elif component == "kibana":
         config_files = [
@@ -756,17 +798,10 @@ def deploy_elasticsearch_sharded(component, settings):
         # wait until all replicas are running
         num_pods = int(settings.get(component.replace("-", "_").upper()+"_NUM_PODS", 1))
         for pod_number_i in range(num_pods):
-            _wait_until_pod_is_running(
-                component, deployment_target=settings["DEPLOY_TO"], pod_number=pod_number_i)
+            wait_until_pod_is_running(component, deployment_target=settings["DEPLOY_TO"], pod_number=pod_number_i)
 
     if component == "es-client":
        run("kubectl describe svc elasticsearch")
-
-
-def _wait_until_pod_is_running(component_label, deployment_target, pod_number=0):
-    logger.info("waiting for \"%(component_label)s\" pod #%(pod_number)s to enter Running state" % locals())
-    while get_pod_status(component_label, deployment_target, status_type=POD_RUNNING_STATUS, pod_number=pod_number) != "Running":
-        time.sleep(5)
 
 
 def print_separator(label):

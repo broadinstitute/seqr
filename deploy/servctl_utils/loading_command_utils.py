@@ -1,13 +1,16 @@
 import logging
 import os
 import psutil
-from deploy.utils.kubectl_utils import get_pod_name, run_in_pod, run
-from deploy.utils.servctl_utils import check_kubernetes_context
+from deploy.servctl_utils.other_command_utils import check_kubernetes_context
+from hail_elasticsearch_pipelines.kubernetes.kubectl_utils import get_pod_name, run_in_pod, run
 
 logger = logging.getLogger(__name__)
 
 
 def load_dataset(deployment_target, project_name, genome_version, sample_type, dataset_type, vcf, memory_to_use=None, cpu_limit=None, **kwargs):
+    """Load dataset into elasticsearch.
+    """
+
     pod_name = get_pod_name('pipeline-runner', deployment_target=deployment_target)
 
     # run load command
@@ -63,7 +66,7 @@ def load_example_project(deployment_target, genome_version="37", cpu_limit=None,
     """Load example project
 
     Args:
-        deployment_target (string):
+        deployment_target (string): value from DEPLOYMENT_TARGETS - eg. "minikube", "gcloud-dev", etc.
         genome_version (string): reference genome version - either "37" or "38"
     """
 
@@ -82,7 +85,7 @@ def load_example_project(deployment_target, genome_version="37", cpu_limit=None,
     run_in_pod(pod_name, "python2.7 -u -m manage create_project -p '1kg.ped' '%(project_name)s'" % locals(), verbose=True)
 
     if genome_version == "37":
-        vcf_filename = "1kg.vep.vcf.gz"
+        vcf_filename = "1kg.vcf.gz"
     elif genome_version == "38":
         vcf_filename = "1kg.liftover.GRCh38.vep.vcf.gz"
     else:
@@ -100,10 +103,10 @@ def load_example_project(deployment_target, genome_version="37", cpu_limit=None,
 
 
 def update_reference_data(deployment_target):
-    """Load older reference data.
+    """DEPRECATED. Load reference data into mongodb.
 
     Args:
-        deployment_target (string):
+        deployment_target (string): value from DEPLOYMENT_TARGETS - eg. "minikube", "gcloud-dev", etc.
     """
 
     check_kubernetes_context(deployment_target)
@@ -124,22 +127,3 @@ def update_reference_data(deployment_target):
     run_in_pod(pod_name, "python -u manage.py load_resources", verbose=True)
     run_in_pod(pod_name, "python -u manage.py load_omim", verbose=True)
 
-
-def create_user(deployment_target, email=None, password=None):
-    """Creates a seqr superuser
-
-    Args:
-        deployment_target (string):
-        email (string): if provided, user will be created non-interactively
-        password (string): if provided, user will be created non-interactively
-    """
-    check_kubernetes_context(deployment_target)
-
-    if not email:
-        run_in_pod("seqr", "python -u manage.py createsuperuser" % locals(), is_interactive=True)
-    else:
-        logger.info("Creating user %(email)s" % locals())
-        run_in_pod("seqr",
-            """echo "from django.contrib.auth.models import User; User.objects.create_superuser('%(email)s', '%(email)s', '%(password)s')" \| python manage.py shell""" % locals(),
-            print_command=False,
-            errors_to_ignore=["already exists"])

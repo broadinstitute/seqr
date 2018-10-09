@@ -1,6 +1,6 @@
 import os
 
-from deploy.utils.constants import REFERENCE_DATA_FILES
+from xbrowse.core.constants import REFERENCE_DATA_FILES
 
 ensembl_rest_host = "beta.rest.ensembl.org"
 ensembl_rest_port = 80

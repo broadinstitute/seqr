@@ -1,24 +1,50 @@
 import collections
 from threading import Thread
 
-import io
-import jinja2
 import logging
 import os
 import subprocess
 import sys
-import time
-import yaml
 
-from deploy.utils.constants import COMPONENT_PORTS, COMPONENTS_TO_OPEN_IN_BROWSER
-from deploy.utils.kubectl_utils import get_pod_name, get_service_name, \
-    run_in_pod, get_pod_status, get_node_name
-from seqr.utils.network_utils import get_ip_address
+from hail_elasticsearch_pipelines.kubernetes.kubectl_utils import get_pod_name, run_in_pod, wait_until_pod_is_running
+from hail_elasticsearch_pipelines.kubernetes.yaml_settings_utils import load_settings
 from seqr.utils.shell_utils import run, wait_for, run_in_background
 
 logging.basicConfig(format='%(asctime)s %(levelname)-8s %(message)s')
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
+
+COMPONENT_PORTS = {
+    "cockpit":         [9090],
+
+    "mongo":           [27017],
+    "elasticsearch":   [9200],
+    "kibana":          [5601],
+
+    "es-client":       [9200],
+    "es-master":       [9020],
+    "es-data":         [9020],
+
+    "redis":           [6379],
+
+    "matchbox":        [9020],
+    "phenotips":       [8080],
+    "postgres":        [5432],
+    "seqr":            [8000],
+    "pipeline-runner": [30005],
+    #"nginx":           [80, 443],
+}
+
+
+COMPONENTS_TO_OPEN_IN_BROWSER = set([
+    "cockpit",
+    "elasticsearch",
+    "kibana",
+    "phenotips",
+    "seqr",
+    "pipeline-runner",  # python notebook
+])
 
 
 def get_component_port_pairs(components=[]):
@@ -36,105 +62,13 @@ def get_component_port_pairs(components=[]):
     return [(component, port) for component in components for port in COMPONENT_PORTS.get(component, [])]
 
 
-def load_settings(settings_file_paths, settings=None, secrets=False):
-    """Reads and parses the yaml settings file(s) and returns a dictionary of settings.
-    These yaml files are treated as jinja templates. If a settings dictionary is also provided
-    as an argument, it will be used as context for jinja template processing.
-
-    Args:
-        settings_file_paths (list): a list of yaml settings file paths to load
-        settings (dict): optional dictionary of settings files
-        secrets (bool): if False, the settings files are assumed to be yaml key-value pairs.
-            if True, the files are parsed as Kubernetes Secrets files with base64-encoded values
-    Return:
-        dict: settings file containing all settings parsed from the given settings file
-    """
-
-    if settings is None:
-        settings = collections.OrderedDict()
-
-    for settings_path in settings_file_paths:
-        with io.open(settings_path, encoding="UTF-8") as settings_file:
-            try:
-                settings_file_contents = settings_file.read()
-                yaml_string = jinja2.Template(settings_file_contents).render(settings)
-            except TypeError as e:
-                raise ValueError('unable to render file: %(e)s' % locals())
-
-            try:
-                loaded_settings = yaml.load(yaml_string)
-            except yaml.parser.ParserError as e:
-                raise ValueError('unable to parse yaml file %(settings_path)s: %(e)s' % locals())
-
-            if not loaded_settings:
-                raise ValueError('yaml file %(settings_path)s appears to be empty' % locals())
-
-            logger.info("Parsed %3d settings from %s" % (len(loaded_settings), settings_path))
-
-            settings.update(loaded_settings)
-
-    return settings
-
-
-def render(input_base_dir, relative_file_path, settings, output_base_dir):
-    """Calls the given render_func to convert the input file + settings dict to a rendered in-memory
-    config which it then writes out to the output directory.
-
-    Args:
-        input_base_dir (string): The base directory for input file paths.
-        relative_file_path (string): template file path relative to base_dir
-        settings (dict): dictionary of key-value pairs for resolving any variables in the config template
-        output_base_dir (string): The rendered config will be written to the file  {output_base_dir}/{relative_file_path}
-    """
-
-    input_file_path = os.path.join(input_base_dir, relative_file_path)
-    with io.open(input_file_path, encoding="UTF-8") as istream:
-        try:
-            rendered_string = jinja2.Template(istream.read()).render(settings)
-        except TypeError as e:
-            raise ValueError('unable to render file: %(e)s' % locals())
-
-    logger.info("Parsed %s" % relative_file_path)
-
-    output_file_path = os.path.join(output_base_dir, relative_file_path)
-    output_dir_path = os.path.dirname(output_file_path)
-
-    if not os.path.isdir(output_dir_path):
-        os.makedirs(output_dir_path)
-
-    try:
-        with open(output_file_path, 'w') as ostream:
-            ostream.write(rendered_string)
-    except Exception as e:
-        logger.error("Couldn't write out %s" % relative_file_path)
-        raise
-
-    #os.chmod(output_file_path, 0x777)
-    logger.info("-- wrote out %s" % output_file_path)
-
-
-def retrieve_settings(deployment_target):
-    settings = collections.OrderedDict()
-
-    settings["HOME"] = os.path.expanduser("~")
-    settings["TIMESTAMP"] = time.strftime("%Y%m%d_%H%M%S")
-    settings["HOST_MACHINE_IP"] = get_ip_address()
-
-    load_settings([
-        "deploy/kubernetes/shared-settings.yaml",
-        "deploy/kubernetes/%(deployment_target)s-settings.yaml" % locals(),
-    ], settings)
-
-    return settings
-
-
 def check_kubernetes_context(deployment_target, set_if_different=False):
     """
     Make sure the environment is configured correctly, so that kubectl and other commands
     are actually aimed at the given deployment target and not some other cluster.
 
     Args:
-        deployment_target (string): "local", "gcloud-dev", etc. See constants.DEPLOYMENT_TARGETS.
+        deployment_target (string): value from DEPLOYMENT_TARGETS - eg. "minikube", "gcloud-dev", etc.
         set_if_different (bool): Update the context if the deployment_target doesn't match the current context.
     Return:
         string: The output of `kubectl config current-context`
@@ -197,7 +131,7 @@ def show_status():
 
 
 def show_dashboard():
-    """Opens the kubernetes dashboard in a new browser window"""
+    """Opens the kubernetes dashboard in a new browser window."""
 
     p = run_in_background('kubectl proxy')
     run('open http://localhost:8001/ui')
@@ -210,7 +144,7 @@ def print_log(components, deployment_target, enable_stream_log, previous=False, 
     Args:
         components (list): one or more kubernetes pod labels (eg. 'phenotips' or 'nginx').
             If more than one is specified, logs will be printed from all components in parallel.
-        deployment_target (string): "local", "gcloud-dev", etc. See constants.DEPLOYMENT_TARGETS.
+        deployment_target (string): value from DEPLOYMENT_TARGETS - eg. "minikube", "gcloud-dev", etc.
         enable_stream_log (bool): whether to continuously stream the log instead of just printing
             the log up to now.
         previous (bool): Prints logs from a previous instance of the container. This is useful for debugging pods that
@@ -228,8 +162,7 @@ def print_log(components, deployment_target, enable_stream_log, previous=False, 
     for component_label in components:
 
         if not previous:
-            while get_pod_status(component_label, deployment_target) != "Running":
-                time.sleep(5)
+            wait_until_pod_is_running(component_label, deployment_target)
 
         pod_name = get_pod_name(component_label, deployment_target=deployment_target)
 
@@ -249,13 +182,18 @@ def print_log(components, deployment_target, enable_stream_log, previous=False, 
 
 
 def set_environment(deployment_target):
-    """Configure the shell environment to point to the given deployment_target.
+    """Configure the shell environment to point to the given deployment_target using 'gcloud config set-context' and other commands.
 
     Args:
-        deployment_target (string): "minikube", "gcloud-dev", etc. See constants.DEPLOYMENT_TARGETS.
+        deployment_target (string): value from DEPLOYMENT_TARGETS - eg. "minikube", "gcloud-dev", etc.
     """
 
-    settings = retrieve_settings(deployment_target)
+    settings = collections.OrderedDict()
+    load_settings([
+        "deploy/kubernetes/shared-settings.yaml",
+        "deploy/kubernetes/%(deployment_target)s-settings.yaml" % locals(),
+        ], settings)
+
     if deployment_target.startswith("gcloud"):
         os.environ["KUBECONFIG"] = os.path.expanduser("~/.kube/config")
         run("gcloud config set core/project %(GCLOUD_PROJECT)s" % settings, print_command=True)
@@ -270,14 +208,14 @@ def set_environment(deployment_target):
 
 
 def port_forward(component_port_pairs=[], deployment_target=None, wait=True, open_browser=False, use_kubectl_proxy=False):
-    """Executes kubectl command to forward traffic between localhost and the given pod.
+    """Executes kubectl command to set up port forwarding between localhost and the given pod.
     While this is running, connecting to localhost:<port> will be the same as connecting to that port
     from the pod's internal network.
 
     Args:
         component_port_pairs (list): 2-tuple(s) containing keyword to use for looking up a kubernetes
             pod, along with the port to forward to that pod (eg. ('mongo', 27017), or ('phenotips', 8080))
-        deployment_target (string): "minikube", "gcloud-dev", etc. See constants.DEPLOYMENT_TARGETS.
+        deployment_target (string): value from DEPLOYMENT_TARGETS - eg. "minikube", "gcloud-dev", etc.
         wait (bool): Whether to block indefinitely as long as the forwarding process is running.
         open_browser (bool): If component_port_pairs includes components that have an http server
             (eg. "seqr" or "phenotips"), then open a web browser window to the forwarded port.
@@ -288,8 +226,7 @@ def port_forward(component_port_pairs=[], deployment_target=None, wait=True, ope
     """
     procs = []
     for component_label, port in component_port_pairs:
-        while get_pod_status(component_label, deployment_target) != "Running":
-            time.sleep(5)
+        wait_until_pod_is_running(component_label, deployment_target)
 
         logger.info("Forwarding port %s for %s" % (port, component_label))
         pod_name = get_pod_name(component_label, deployment_target=deployment_target)
@@ -322,7 +259,7 @@ def troubleshoot_component(component, deployment_target):
 
     Args:
         component (string): component label (eg. "postgres")
-        deployment_target (string): "minikube", "gcloud-dev", etc. See constants.DEPLOYMENT_TARGETS.
+        deployment_target (string): value from DEPLOYMENT_TARGETS - eg. "minikube", "gcloud-dev", etc.
     """
 
     pod_name = get_pod_name(component, deployment_target=deployment_target)
@@ -330,13 +267,40 @@ def troubleshoot_component(component, deployment_target):
     run("kubectl get pods -o yaml %(pod_name)s" % locals(), verbose=True)
 
 
+def copy_files_to_or_from_pod(component, deployment_target, source_path, dest_path, direction=1):
+    """Copy file(s) to or from the given component.
+
+    Args:
+        component (string): component label (eg. "postgres")
+        deployment_target (string): value from DEPLOYMENT_TARGETS - eg. "minikube", "gcloud-dev", etc.
+        source_path (string): source file path. If copying files to the component, it should be a local path. Otherwise, it should be a file path inside the component pod.
+        dest_path (string): destination file path. If copying files from the component, it should be a local path. Otherwise, it should be a file path inside the component pod.
+        direction (int): If > 0 the file will be copied to the pod. If < 0, then it will be copied from the pod.
+    """
+    full_pod_name = get_pod_name(component, deployment_target=deployment_target)
+    if not full_pod_name:
+        raise ValueError("No '%(pod_name)s' pods found. Is the kubectl environment configured in this terminal? and has this type of pod been deployed?" % locals())
+
+    if direction < 0:  # copy from pod
+        source_path = "%s:%s" % (full_pod_name, source_path)
+    elif direction > 0: # copy to pod
+        dest_path = "%s:%s" % (full_pod_name, dest_path)
+
+    run("kubectl cp '%(source_path)s' '%(dest_path)s'" % locals())
+
+
+def open_shell_in_component(component, deployment_target, shell_path='/bin/bash'):
+    """Open a command line shell in the given component"""
+
+    run_in_pod(component, shell_path, deployment_target=deployment_target, is_interactive=True)
+
+
 def delete_component(component, deployment_target=None):
-    """Runs kubectl commands to delete any running deployment, service, or pod objects for the
-    given component(s).
+    """Runs kubectl commands to delete any running deployment, service, or pod objects for the given component(s).
 
     Args:
         component (string): component to delete (eg. 'phenotips' or 'nginx').
-        deployment_target (string): "minikube", "gcloud-dev", etc. See constants.DEPLOYMENT_TARGETS.
+        deployment_target (string): value from DEPLOYMENT_TARGETS - eg. "minikube", "gcloud-dev", etc.
     """
     if component == "cockpit":
         run("kubectl delete rc cockpit", errors_to_ignore=["not found"])
@@ -352,8 +316,9 @@ def delete_component(component, deployment_target=None):
     if pod_name:
         run("kubectl delete pods %(pod_name)s" % locals(), errors_to_ignore=["not found"])
 
-    run("kubectl get services" % locals())
-    run("kubectl get pods" % locals())
+    # print services and pods status
+    run("kubectl get services" % locals(), verbose=True)
+    run("kubectl get pods" % locals(), verbose=True)
 
 
 def reset_database(database=[], deployment_target=None):
@@ -361,7 +326,7 @@ def reset_database(database=[], deployment_target=None):
 
     Args:
         component (list): one more database labels - "seqrdb", "phenotipsdb", "mongodb"
-        deployment_target (string): "local", "gcloud-dev", etc. See constants.DEPLOYMENT_TARGETS.
+        deployment_target (string): value from DEPLOYMENT_TARGETS - eg. "minikube", "gcloud-dev", etc.
     """
     if "seqrdb" in database:
         postgres_pod_name = get_pod_name("postgres", deployment_target=deployment_target)
@@ -392,7 +357,7 @@ def delete_all(deployment_target):
     """Runs kubectl and gcloud commands to delete the given cluster and all objects in it.
 
     Args:
-        deployment_target (string): "minikube", "gcloud-dev", etc. See constants.DEPLOYMENT_TARGETS
+        deployment_target (string): value from DEPLOYMENT_TARGETS - eg. "minikube", "gcloud-dev", etc.
 
     """
     settings = {}
@@ -417,3 +382,23 @@ def delete_all(deployment_target):
 
         run('docker kill $(docker ps -q)', errors_to_ignore=["requires at least 1 arg"])
         run('docker rmi -f $(docker images -q)', errors_to_ignore=["requires at least 1 arg"])
+
+
+def create_user(deployment_target, email=None, password=None):
+    """Creates a seqr superuser.
+
+    Args:
+        deployment_target (string): value from DEPLOYMENT_TARGETS - eg. "minikube", "gcloud-dev", etc.
+        email (string): if provided, user will be created non-interactively
+        password (string): if provided, user will be created non-interactively
+    """
+    check_kubernetes_context(deployment_target)
+
+    if not email:
+        run_in_pod("seqr", "python -u manage.py createsuperuser" % locals(), is_interactive=True)
+    else:
+        logger.info("Creating user %(email)s" % locals())
+        run_in_pod("seqr",
+           """echo "from django.contrib.auth.models import User; User.objects.create_superuser('%(email)s', '%(email)s', '%(password)s')" \| python manage.py shell""" % locals(),
+           print_command=False,
+           errors_to_ignore=["already exists"])
