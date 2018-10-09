@@ -10,7 +10,8 @@ import time
 import sys
 
 from deploy.servctl_utils.other_command_utils import check_kubernetes_context, set_environment
-from hail_elasticsearch_pipelines.kubernetes.kubectl_utils import is_pod_running, get_pod_name, get_node_name, run_in_pod, wait_until_pod_is_running
+from hail_elasticsearch_pipelines.kubernetes.kubectl_utils import is_pod_running, get_pod_name, get_node_name, run_in_pod, \
+    wait_until_pod_is_running as sleep_until_pod_is_running, wait_until_pod_is_ready as sleep_until_pod_is_ready
 from hail_elasticsearch_pipelines.kubernetes.yaml_settings_utils import process_jinja_template, load_settings
 from seqr.utils.shell_utils import run
 
@@ -143,7 +144,7 @@ def deploy(deployment_target, components, output_dir=None, runtime_settings={}):
     output_base_dir = settings["DEPLOYMENT_TEMP_DIR"]
     template_file_paths = glob.glob("deploy/kubernetes/*.yaml") + \
                           glob.glob("deploy/kubernetes/*/*.yaml") + \
-                          glob.glob("hail-elasticsearch-pipelines/hail-elasticsearch-pipelines/kubernetes/elasticsearch-sharded/*.yaml")
+                          glob.glob("hail_elasticsearch_pipelines/kubernetes/elasticsearch-sharded/*.yaml")
     for file_path in template_file_paths:
         process_jinja_template(input_base_dir, file_path, settings, output_base_dir)
 
@@ -188,10 +189,10 @@ def _deploy_pod(component_label, settings, wait_until_pod_is_running=True, wait_
     ]) % settings)
 
     if wait_until_pod_is_running:
-        wait_until_pod_is_running(component_label, deployment_target=settings["DEPLOY_TO"])
+        sleep_until_pod_is_running(component_label, deployment_target=settings["DEPLOY_TO"])
 
     if wait_until_pod_is_ready:
-        wait_until_pod_is_ready(component_label, deployment_target=settings["DEPLOY_TO"])
+        sleep_until_pod_is_ready(component_label, deployment_target=settings["DEPLOY_TO"])
 
 
 def docker_build(component_label, settings, custom_build_args=()):
@@ -458,7 +459,7 @@ def deploy_seqr(settings):
     elif reset_db or restore_seqr_db_from_backup:
         seqr_pod_name = get_pod_name('seqr', deployment_target=deployment_target)
         if seqr_pod_name:
-            wait_until_pod_is_running("seqr", deployment_target=deployment_target)
+            sleep_until_pod_is_running("seqr", deployment_target=deployment_target)
 
             run_in_pod(seqr_pod_name, "/usr/local/bin/stop_server.sh", verbose=True)
 
@@ -798,7 +799,7 @@ def deploy_elasticsearch_sharded(settings, component):
         # wait until all replicas are running
         num_pods = int(settings.get(component.replace("-", "_").upper()+"_NUM_PODS", 1))
         for pod_number_i in range(num_pods):
-            wait_until_pod_is_running(component, deployment_target=settings["DEPLOY_TO"], pod_number=pod_number_i)
+            sleep_until_pod_is_running(component, deployment_target=settings["DEPLOY_TO"], pod_number=pod_number_i)
 
     if component == "es-client":
        run("kubectl describe svc elasticsearch")
