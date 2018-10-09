@@ -13,7 +13,7 @@ script:
 - cd ui/
 - npm test
 - cd ..
-- cd hail-elasticsearch-pipelines
+- cd hail_elasticsearch_pipelines
 - python -m unittest discover -p "*tests.py"
 - cd ..
 
