@@ -11,10 +11,18 @@ sudo yum install -y unzip \
     git
 
 # gcloud sdk
-cd $HOME
-wget -N https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-219.0.1-linux-x86_64.tar.gz
-tar xzf google-cloud-sdk-219.0.1-linux-x86_64.tar.gz
-./google-cloud-sdk/install.sh --quiet
+sudo tee -a /etc/yum.repos.d/google-cloud-sdk.repo << EOM
+[google-cloud-sdk]
+name=Google Cloud SDK
+baseurl=https://packages.cloud.google.com/yum/repos/cloud-sdk-el7-x86_64
+enabled=1
+gpgcheck=1
+repo_gpgcheck=1
+gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg
+       https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+EOM
+
+sudo yum install -y google-cloud-sdk
 
 set +x
 echo ==== Install and start docker service =====
