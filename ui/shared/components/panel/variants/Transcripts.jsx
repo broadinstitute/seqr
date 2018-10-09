@@ -9,6 +9,7 @@ import { getVariantIsLoading, getGenesById } from 'redux/selectors'
 import { VerticalSpacer } from '../../Spacers'
 import DataLoader from '../../DataLoader'
 import { ProteinSequence } from './Annotations'
+import { GENOME_VERSION_37 } from '../../../utils/constants'
 
 
 const TranscriptLink = styled.a`
@@ -40,7 +41,7 @@ const Transcripts = ({ variant, loading, loadVariantTranscripts: dispatchLoadVar
                   <Table.Cell width={3}>
                     <TranscriptLink
                       target="_blank"
-                      href={`http://useast.ensembl.org/Homo_sapiens/Transcript/Summary?t=${transcript.transcriptId}`}
+                      href={`http://${variant.genomeVersion === GENOME_VERSION_37 ? 'grch37' : 'useast'}.ensembl.org/Homo_sapiens/Transcript/Summary?t=${transcript.transcriptId}`}
                       isChosen={transcript.isChosenTranscript}
                     >
                       {transcript.transcriptId}
