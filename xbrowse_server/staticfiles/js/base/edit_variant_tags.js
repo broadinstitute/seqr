@@ -65,8 +65,11 @@ window.EditVariantTagsView = Backbone.View.extend({
             postData.tag_slugs += $(i).data('tag') + '|';
         });
 
+        $('#edit-tags-save').addClass('disabled')
+
         $.get('/api/add-or-edit-variant-tags', postData,
             function(data) {
+                $('#edit-tags-save').removeClass('disabled')
                 if (data.is_error) {
                     alert('Error: ' + data.error);
                 } else {

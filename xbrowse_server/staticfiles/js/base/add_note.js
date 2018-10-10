@@ -57,8 +57,11 @@ var AddOrEditNoteView = Backbone.View.extend({
             note_id: this.note_id,
         }, this.note_metadata());
 
+        $('#add-flag-save').addClass('disabled')
+
         $.get('/api/add-or-edit-' + this.note_type.toLowerCase() + '-note', postData,
             function(data) {
+                $('#add-flag-save').removeClass('disabled')
                 if (data.is_error) {
                     alert(data.error);
                 } else {
