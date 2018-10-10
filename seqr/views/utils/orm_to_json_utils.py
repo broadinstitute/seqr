@@ -10,7 +10,7 @@ from copy import copy
 from django.db.models import prefetch_related_objects
 from django.db.models.fields.files import ImageFieldFile
 
-from reference_data.models import GeneConstraint
+from reference_data.models import GeneConstraint, dbNSFPGene
 from seqr.models import CAN_EDIT, Sample, GeneNote
 from seqr.utils.xpos_utils import get_chrom_pos
 from seqr.views.utils.json_utils import _to_camel_case
@@ -71,6 +71,10 @@ def _get_json_for_model(model, get_json_for_models=_get_json_for_models, **kwarg
         object: json object
     """
     return get_json_for_models([model], **kwargs)[0]
+
+
+def _get_empty_json_for_model(model_class):
+    return {_to_camel_case(field): None for field in model_class._meta.json_fields}
 
 
 def get_json_for_sample_dict(sample_dict):
@@ -477,6 +481,8 @@ def get_json_for_genes(genes, user=None, add_dbnsfp=False, add_omim=False, add_c
             dbnsfp = gene.dbnsfpgene_set.first()
             if dbnsfp:
                 result.update(_get_json_for_model(dbnsfp))
+            else:
+                result.update(_get_empty_json_for_model(dbNSFPGene))
         if add_omim:
             result['omimPhenotypes'] = _get_json_for_models(gene.omim_set.all())
         if add_constraints:
