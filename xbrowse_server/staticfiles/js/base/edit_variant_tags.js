@@ -70,7 +70,7 @@ window.EditVariantTagsView = Backbone.View.extend({
                 if (data.is_error) {
                     alert('Error: ' + data.error);
                 } else {
-                    that.after_finished(data.variant);
+                    that.after_finished(data);
                 }
             }
         );
