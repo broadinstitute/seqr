@@ -4,24 +4,24 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 
 import { updateProject } from 'redux/rootReducer'
-import ReduxFormWrapper, { validators } from '../form/ReduxFormWrapper'
+import ReduxFormWrapper from '../form/ReduxFormWrapper'
 import Modal from './Modal'
+import { PROJECT_FIELDS, GENOME_VERSION_37 } from '../../utils/constants'
+
+const PROJECT_FIELD_LOOKUP = PROJECT_FIELDS.reduce(
+  (acc, field) => ({
+    ...acc,
+    ...{ [field.name]: [field] },
+  }), {},
+)
+
+const DEFAULT_PROJECT = {
+  genomeVersion: GENOME_VERSION_37,
+}
 
 
 const EditProjectModal = (props) => {
   const name = `editProject${props.field || ''}-${props.project ? props.project.projectGuid : 'create'}`
-  let fields = [
-    { name: 'name', label: 'Project Name', placeholder: 'Name', validate: validators.required, autoFocus: true },
-    { name: 'description', label: 'Project Description', placeholder: 'Description' },
-  ]
-  if (props.field) {
-    fields = fields.filter(field => field.name === props.field)
-  }
-  const initialValues = {
-    name: props.project && props.project.name,
-    description: props.project && props.project.description,
-    projectGuid: props.project && props.project.projectGuid,
-  }
   return (
     <Modal
       trigger={props.trigger}
@@ -32,8 +32,8 @@ const EditProjectModal = (props) => {
         onSubmit={props.updateProject}
         form={name}
         submitButtonText="Save"
-        initialValues={initialValues}
-        fields={fields}
+        initialValues={props.project || DEFAULT_PROJECT}
+        fields={props.field ? PROJECT_FIELD_LOOKUP[props.field] : PROJECT_FIELDS}
       />
     </Modal>
   )

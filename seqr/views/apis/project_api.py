@@ -12,6 +12,7 @@ from seqr.models import Project, Family, Individual, Sample, _slugify, CAN_EDIT,
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.phenotips_api import create_phenotips_user, _get_phenotips_uname_and_pwd_for_project
 from seqr.views.utils.json_utils import create_json_response
+from seqr.views.utils.json_to_orm_utils import update_project_from_json
 from seqr.views.utils.orm_to_json_utils import _get_json_for_project
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_permissions
 
@@ -44,11 +45,12 @@ def create_project_handler(request):
         return create_json_response({}, status=400, reason="'Name' cannot be blank")
 
     description = request_json.get('description', '')
+    genome_version = request_json.get('genomeVersion')
 
     #if not created:
     #    return create_json_response({}, status=400, reason="A project named '%(name)s' already exists" % locals())
 
-    project = create_project(name, description=description, user=request.user)
+    project = create_project(name, description=description, genome_version=genome_version, user=request.user)
 
     return create_json_response({
         'projectsByGuid': {
@@ -88,12 +90,7 @@ def update_project_handler(request, project_guid):
     check_permissions(project, request.user, CAN_EDIT)
 
     request_json = json.loads(request.body)
-
-    if 'name' in request_json:
-        update_seqr_model(project, name=request_json.get('name'))
-
-    if 'description' in request_json:
-        update_seqr_model(project, description=request_json.get('description'))
+    update_project_from_json(project, request_json, allow_unknown_keys=True)
 
     return create_json_response({
         'projectsByGuid': {
@@ -122,7 +119,7 @@ def delete_project_handler(request, project_guid):
     })
 
 
-def create_project(name, description=None, user=None):
+def create_project(name, description=None, genome_version=None, user=None):
     """Creates a new project.
 
     Args:
@@ -137,6 +134,7 @@ def create_project(name, description=None, user=None):
         created_by=user,
         name=name,
         description=description,
+        genome_version=genome_version,
     )
 
     base_project = _deprecated_create_original_project(project)
