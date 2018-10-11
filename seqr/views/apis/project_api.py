@@ -138,7 +138,7 @@ def create_project(name, description=None, genome_version=None, user=None):
     if genome_version:
         project_args['genome_version'] = genome_version
 
-    project, created = Project.objects.get_or_create(**project_args)
+    project, _ = Project.objects.get_or_create(**project_args)
 
     base_project = _deprecated_create_original_project(project)
 
