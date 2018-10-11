@@ -130,12 +130,15 @@ def create_project(name, description=None, genome_version=None, user=None):
     if not name:
         raise ValueError("Name not specified: %s" % (name,))
 
-    project, created = Project.objects.get_or_create(
-        created_by=user,
-        name=name,
-        description=description,
-        genome_version=genome_version,
-    )
+    project_args = {
+        'name': name,
+        'description': description,
+        'created_by': user,
+    }
+    if genome_version:
+        project_args['genome_version'] = genome_version
+
+    project, created = Project.objects.get_or_create(**project_args)
 
     base_project = _deprecated_create_original_project(project)
 
