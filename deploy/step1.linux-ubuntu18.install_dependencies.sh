@@ -12,7 +12,6 @@ sudo apt-get install -y unzip \
     git
 
 # gcloud sdk
-cd $HOME
 wget -N https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-219.0.1-linux-x86_64.tar.gz
 tar xzf google-cloud-sdk-219.0.1-linux-x86_64.tar.gz
 ./google-cloud-sdk/install.sh --quiet
@@ -71,7 +70,7 @@ curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/$(cur
 curl -Lo minikube https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64 && chmod +x minikube && sudo cp minikube /usr/bin/ && rm minikube
 
 sudo rm -rf /etc/kubernetes/  # clean up any previously installed instance
-sudo yum install -y socat  # needed for port forwarding when --vm-driver=none (see https://github.com/kubernetes/minikube/issues/2575)
+sudo apt-get install -y socat  # needed for port forwarding when --vm-driver=none (see https://github.com/kubernetes/minikube/issues/2575)
 
 mkdir -p $HOME/.kube
 touch $HOME/.kube/config
