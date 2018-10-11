@@ -12,7 +12,9 @@
 <script type="text/template" id="tpl-annotation-details">
     <% _.each(variant.gene_ids, function(gene_id) {  if(!gene_id) return; %>
         <h3>
-            <strong><%= variant.extras.gene_names[gene_id] %></strong> <br>
+            <a target="_blank" href="/gene/<%= gene_id %>">
+                <strong><%= variant.extras.gene_names[gene_id] %></strong> <br>
+            </a>
             gene id: <%= gene_id %>
         </h3>
         <% _.each(variant.annotation.vep_annotation, function(annotation, i) {
