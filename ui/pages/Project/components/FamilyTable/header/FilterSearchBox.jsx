@@ -20,6 +20,7 @@ class BaseFilterSearchBox extends React.PureComponent {
 
   updateQuery = (e, data) => {
     this.props.updateQueryParam(data.value)
+    this.props.searchFamilies(data.value)
   }
 
 
