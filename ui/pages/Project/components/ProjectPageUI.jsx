@@ -30,7 +30,7 @@ import AnalysisGroups from './AnalysisGroups'
 import { UpdateAnalysisGroupButton } from './AnalysisGroupButtons'
 import Datasets from './Datasets'
 import ProjectCollaborators from './ProjectCollaborators'
-import GeneLists from './GeneLists'
+import { GeneLists, AddGeneListsButton } from './GeneLists'
 import FamilyTable from './FamilyTable/FamilyTable'
 import VariantTags from './VariantTags'
 
@@ -142,8 +142,8 @@ const ProjectPageUI = (props) => {
             <ProjectCollaborators />
           </ProjectSection>
           <VerticalSpacer height={30} />
-          <ProjectSection label="Gene Lists">
-            <GeneLists />
+          <ProjectSection label="Gene Lists" editButton={<AddGeneListsButton project={props.project} />}>
+            <GeneLists project={props.project} />
           </ProjectSection>
         </Grid.Column>
       </Grid.Row>
