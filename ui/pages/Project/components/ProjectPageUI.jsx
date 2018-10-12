@@ -6,8 +6,6 @@ import { Link } from 'react-router-dom'
 
 import SectionHeader from 'shared/components/SectionHeader'
 import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
-import EditDatasetsButton from 'shared/components/buttons/EditDatasetsButton'
-import EditFamiliesAndIndividualsButton from 'shared/components/buttons/EditFamiliesAndIndividualsButton'
 import VariantTagTypeBar from 'shared/components/graph/VariantTagTypeBar'
 import {
   FAMILY_FIELD_DESCRIPTION,
@@ -28,7 +26,6 @@ import {
 import ProjectOverview from './ProjectOverview'
 import AnalysisGroups from './AnalysisGroups'
 import { UpdateAnalysisGroupButton } from './AnalysisGroupButtons'
-import Datasets from './Datasets'
 import ProjectCollaborators from './ProjectCollaborators'
 import { GeneLists, AddGeneListsButton } from './GeneLists'
 import FamilyTable from './FamilyTable/FamilyTable'
@@ -96,7 +93,6 @@ const NO_DETAIL_FIELDS = [
 ]
 
 const ProjectPageUI = (props) => {
-  const headerStatus = { title: 'Analysis Statuses', data: props.analysisStatusCounts }
   const exportUrls = [
     { name: 'Families', data: props.familyExportConfig },
     { name: 'Individuals', data: props.individualsExportConfig },
@@ -107,18 +103,19 @@ const ProjectPageUI = (props) => {
     <Grid stackable>
       <Grid.Row>
         <Grid.Column width={4}>
-          <ProjectSection label="Overview" editButton={<EditFamiliesAndIndividualsButton />}>
-            <ProjectOverview />
-          </ProjectSection>
           {props.match.params.analysisGroupGuid ? null :
           <ProjectSection label="Analysis Groups" editButton={<UpdateAnalysisGroupButton />}>
             <AnalysisGroups />
           </ProjectSection>}
-          <ProjectSection label="Datasets" editButton={<EditDatasetsButton />}>
-            <Datasets />
+          <VerticalSpacer height={10} />
+          <ProjectSection label="Gene Lists" editButton={<AddGeneListsButton project={props.project} />}>
+            <GeneLists project={props.project} />
           </ProjectSection>
         </Grid.Column>
         <Grid.Column width={8}>
+          <ProjectSection label="Overview">
+            <ProjectOverview />
+          </ProjectSection>
           <ProjectSection label="Variant Tags" linkPath="saved_variants" linkText="View All">
             <VariantTagTypeBar
               project={props.project}
@@ -141,17 +138,12 @@ const ProjectPageUI = (props) => {
           >
             <ProjectCollaborators />
           </ProjectSection>
-          <VerticalSpacer height={30} />
-          <ProjectSection label="Gene Lists" editButton={<AddGeneListsButton project={props.project} />}>
-            <GeneLists project={props.project} />
-          </ProjectSection>
         </Grid.Column>
       </Grid.Row>
       <Grid.Row>
         <Grid.Column width={16}>
           <SectionHeader>Families</SectionHeader>
           <FamilyTable
-            headerStatus={headerStatus}
             exportUrls={exportUrls}
             showVariantDetails
             detailFields={FAMILY_DETAIL_FIELDS}
@@ -166,7 +158,6 @@ const ProjectPageUI = (props) => {
 ProjectPageUI.propTypes = {
   project: PropTypes.object.isRequired,
   analysisGroup: PropTypes.object,
-  analysisStatusCounts: PropTypes.array,
   familyExportConfig: PropTypes.object,
   individualsExportConfig: PropTypes.object,
   samplesExportConfig: PropTypes.object,

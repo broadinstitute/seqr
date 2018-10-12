@@ -162,7 +162,7 @@ const Family = (
   const rightContent = showVariantDetails ? [
     <div key="variants">
       <VariantTagTypeBar height={15} width="calc(100% - 2.5em)" project={project} familyGuid={family.familyGuid} sectionLinks={false} />
-      <HorizontalSpacer width={5} />
+      <HorizontalSpacer width={10} />
       <a href={`/project/${project.deprecatedProjectId}/family/${family.familyId}/mendelian-variant-search`}>
         <Icon name="search" />
       </a>

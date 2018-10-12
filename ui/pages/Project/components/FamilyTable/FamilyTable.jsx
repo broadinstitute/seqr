@@ -6,6 +6,7 @@ import { connect } from 'react-redux'
 import { withRouter } from 'react-router'
 
 import ExportTableButton from 'shared/components/buttons/export-table/ExportTableButton'
+import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
 import TableLoading from 'shared/components/table/TableLoading'
 import { HorizontalSpacer } from 'shared/components/Spacers'
 
@@ -78,12 +79,24 @@ FamilyTableRow.propTypes = {
 const FamilyTable = ({ visibleFamilies, loading, headerStatus, showInternalFilters, exportUrls, noDetailFields, tableName, showVariantDetails, ...props }) =>
   <div>
     <ExportContainer>
+      {headerStatus &&
+        <span>
+          {headerStatus.title}:
+          <HorizontalSpacer width={10} />
+          <HorizontalStackedBar
+            width={100}
+            height={14}
+            title={headerStatus.title}
+            data={headerStatus.data}
+          />
+          <HorizontalSpacer width={10} />
+        </span>
+      }
       <ExportTableButton downloads={exportUrls} />
       <HorizontalSpacer width={45} />
     </ExportContainer>
     <Table padded fixed attached="top">
       <TableHeaderRow
-        headerStatus={headerStatus}
         showInternalFilters={showInternalFilters}
         fields={noDetailFields}
         tableName={tableName}
