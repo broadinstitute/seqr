@@ -156,7 +156,7 @@ const Family = (
   ]
 
   const discoveryGenes = project.discoveryTags.filter(tag => tag.familyGuid === family.familyGuid).reduce(
-    (acc, tag) => [...acc, ...Object.values(tag.extras.gene_names || {})], [],
+    (acc, tag) => (tag.mainTranscript.symbol ? [...acc, tag.mainTranscript.symbol] : acc), [],
   )
 
   const rightContent = (showSearchLinks || showVariantTags) ? [

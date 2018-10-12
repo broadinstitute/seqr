@@ -223,7 +223,7 @@ def _variant_transcripts(annotation):
     return transcripts
 
 
-def _variant_details(variant_json, user):
+def _variant_details(variant_json, user=None):
     annotation = variant_json.get('annotation') or {}
     main_transcript = annotation.get('main_transcript') or (annotation['vep_annotation'][annotation['worst_vep_annotation_index']] if annotation.get('worst_vep_annotation_index') is not None and annotation['vep_annotation'] else {})
     is_es_variant = annotation.get('db') == 'elasticsearch'
@@ -313,7 +313,7 @@ def _variant_details(variant_json, user):
         },
         'hgmd': {
             'accession': extras.get('hgmd_accession'),
-            'class': extras.get('hgmd_class') if user.is_staff else None,
+            'class': extras.get('hgmd_class') if (user and user.is_staff) else None,
         },
         'genotypes': {
             individual_id: {

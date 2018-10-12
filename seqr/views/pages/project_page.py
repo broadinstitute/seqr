@@ -17,6 +17,7 @@ from seqr.models import Family, Individual, _slugify, VariantTagType, VariantTag
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.individual_api import export_individuals
 from seqr.views.apis.locus_list_api import get_sorted_project_locus_lists
+from seqr.views.apis.saved_variant_api import _variant_details
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import \
     _get_json_for_project, get_json_for_sample_dict, _get_json_for_families, _get_json_for_individuals,\
@@ -231,7 +232,7 @@ def _get_json_for_variant_tag_types(project):
         if variant_tag_type.category == 'CMG Discovery Tags' and num_tags > 0:
             for tag in VariantTag.objects.filter(saved_variant__project=project, variant_tag_type=variant_tag_type).select_related('saved_variant'):
                 tag_data = get_json_for_saved_variant(tag.saved_variant)
-                tag_data.update(json.loads(tag.saved_variant.saved_variant_json or '{}'))
+                tag_data.update(_variant_details(json.loads(tag.saved_variant.saved_variant_json or '{}')))
                 discovery_tags.append(tag_data)
 
         project_variant_tags.append({
