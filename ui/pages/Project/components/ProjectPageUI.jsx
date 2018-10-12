@@ -6,6 +6,8 @@ import { Link } from 'react-router-dom'
 
 import SectionHeader from 'shared/components/SectionHeader'
 import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
+import EditDatasetsButton from 'shared/components/buttons/EditDatasetsButton'
+import EditFamiliesAndIndividualsButton from 'shared/components/buttons/EditFamiliesAndIndividualsButton'
 import VariantTagTypeBar from 'shared/components/graph/VariantTagTypeBar'
 import {
   FAMILY_FIELD_DESCRIPTION,
@@ -24,6 +26,9 @@ import {
   getProjectAnalysisGroupsByGuid,
 } from '../selectors'
 import ProjectOverview from './ProjectOverview'
+import AnalysisGroups from './AnalysisGroups'
+import { UpdateAnalysisGroupButton } from './AnalysisGroupButtons'
+import Datasets from './Datasets'
 import ProjectCollaborators from './ProjectCollaborators'
 import GeneLists from './GeneLists'
 import FamilyTable from './FamilyTable/FamilyTable'
@@ -54,17 +59,17 @@ What's new:
 
 */
 
-const ProjectSectionComponent = ({ loading, label, children, editPath, linkPath, linkText, project }) => {
+const ProjectSectionComponent = ({ loading, label, children, editButton, linkPath, linkText, project }) => {
   return ([
     <SectionHeader key="header">{label}</SectionHeader>,
     <div key="content">
       {loading ? <Loader key="content" inline active /> : children}
     </div>,
-    editPath && project.canEdit ? (
-      <a key="edit" href={`/project/${project.deprecatedProjectId}/${editPath}`}>
+    editButton && project.canEdit ? (
+      <div key="edit">
         <VerticalSpacer height={15} />
-        {`Edit ${label}`}
-      </a>
+        {editButton}
+      </div>
     ) : null,
     linkText ? (
       <div key="link">
@@ -101,10 +106,19 @@ const ProjectPageUI = (props) => {
   return (
     <Grid stackable>
       <Grid.Row>
-        <Grid.Column width={12}>
-          <ProjectSection label="Overview">
-            <ProjectOverview analysisGroupGuid={props.match.params.analysisGroupGuid} />
+        <Grid.Column width={4}>
+          <ProjectSection label="Overview" editButton={<EditFamiliesAndIndividualsButton />}>
+            <ProjectOverview />
           </ProjectSection>
+          {props.match.params.analysisGroupGuid ? null :
+          <ProjectSection label="Analysis Groups" editButton={<UpdateAnalysisGroupButton />}>
+            <AnalysisGroups />
+          </ProjectSection>}
+          <ProjectSection label="Datasets" editButton={<EditDatasetsButton />}>
+            <Datasets />
+          </ProjectSection>
+        </Grid.Column>
+        <Grid.Column width={8}>
           <ProjectSection label="Variant Tags" linkPath="saved_variants" linkText="View All">
             <VariantTagTypeBar
               project={props.project}
@@ -117,7 +131,14 @@ const ProjectPageUI = (props) => {
           </ProjectSection>
         </Grid.Column>
         <Grid.Column width={4}>
-          <ProjectSection label="Collaborators" editPath="collaborators">
+          <ProjectSection
+            label="Collaborators"
+            editButton={
+              <a key="edit" href={`/project/${props.project.deprecatedProjectId}/collaborators`}>
+                Edit Collaborators
+              </a>
+            }
+          >
             <ProjectCollaborators />
           </ProjectSection>
           <VerticalSpacer height={30} />
