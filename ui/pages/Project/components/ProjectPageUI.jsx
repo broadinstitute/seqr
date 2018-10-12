@@ -123,7 +123,7 @@ const ProjectPageUI = (props) => {
             <VariantTagTypeBar
               project={props.project}
               analysisGroup={props.analysisGroup}
-              height={30}
+              height={20}
               showAllPopupCategorie
             />
             <VerticalSpacer height={10} />
