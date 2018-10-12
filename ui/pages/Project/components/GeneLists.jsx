@@ -14,12 +14,10 @@ import DispatchRequestButton from 'shared/components/buttons/DispatchRequestButt
 import ButtonLink from 'shared/components/buttons/ButtonLink'
 import DeleteButton from 'shared/components/buttons/DeleteButton'
 import Modal from 'shared/components/modal/Modal'
-import { VerticalSpacer } from 'shared/components/Spacers'
 import { HelpIcon } from 'shared/components/StyledComponents'
 import {
   LOCUS_LIST_IS_PUBLIC_FIELD_NAME, LOCUS_LIST_LAST_MODIFIED_FIELD_NAME, LOCUS_LIST_CURATOR_FIELD_NAME,
 } from 'shared/utils/constants'
-import { getProject } from '../selectors'
 import { updateLocusLists } from '../reducers'
 
 const ItemContainer = styled.div`
@@ -33,7 +31,7 @@ const OMIT_LOCUS_LIST_FIELDS = [
   LOCUS_LIST_CURATOR_FIELD_NAME,
 ]
 
-const LocusListItem = ({ project, locusList, onSubmit }) => {
+const LocusListItem = ({ project, locusList, updateLocusLists: onSubmit }) => {
   const submitValues = { locusListGuids: [locusList.locusListGuid] }
   return (
     <ItemContainer key={locusList.locusListGuid}>
@@ -69,10 +67,27 @@ const LocusListItem = ({ project, locusList, onSubmit }) => {
 LocusListItem.propTypes = {
   project: PropTypes.object.isRequired,
   locusList: PropTypes.object.isRequired,
-  onSubmit: PropTypes.func.isRequired,
+  updateLocusLists: PropTypes.func.isRequired,
 }
 
-class GeneLists extends React.PureComponent {
+const mapStateToProps = (state, ownProps) => ({
+  locusList: getLocusListsByGuid(state)[ownProps.locusListGuid],
+})
+
+const mapDispatchToProps = { setModalConfirm, closeModal, updateLocusLists }
+
+const LocusList = connect(mapStateToProps, mapDispatchToProps)(LocusListItem)
+
+export const GeneLists = ({ project }) =>
+  project.locusListGuids.map(locusListGuid =>
+    <LocusList
+      key={locusListGuid}
+      project={project}
+      locusListGuid={locusListGuid}
+    />,
+  )
+
+class AddGeneLists extends React.PureComponent {
 
   static propTypes = {
     project: PropTypes.object,
@@ -111,59 +126,31 @@ class GeneLists extends React.PureComponent {
   }
 
   render() {
-    const { project, locusListsByGuid } = this.props
     return (
-      <div>
-        {project.locusListGuids.map(locusListGuid =>
-          <LocusListItem
-            key={locusListGuid}
-            project={project}
-            locusList={locusListsByGuid[locusListGuid]}
-            onSubmit={this.props.updateLocusLists}
-          />,
-        )}
-        <VerticalSpacer height={15} />
-        {project.canEdit &&
-          <Modal
-            title="Add Gene Lists"
-            modalName={this.modalName}
-            trigger={<ButtonLink>Add Gene List <Icon name="plus" /></ButtonLink>}
-            size="large"
-          >
-            <LocusListsLoader>
-              Add an existing Gene List to {project.name} or <CreateLocusListButton />
-              <LocusListTables
-                isEditable={false}
-                showLinks={false}
-                omitFields={OMIT_LOCUS_LIST_FIELDS}
-                omitLocusLists={project.locusListGuids}
-                selectRows={this.selectList}
-                selectedRows={this.state.selected}
-              />
-              <Divider />
-              <DispatchRequestButton onSubmit={this.submit} onSuccess={this.closeModal}>
-                <Button content="Submit" primary />
-              </DispatchRequestButton>
-            </LocusListsLoader>
-          </Modal>
-        }
-      </div>
+      <Modal
+        title="Add Gene Lists"
+        modalName={this.modalName}
+        trigger={<ButtonLink>Add Gene List <Icon name="plus" /></ButtonLink>}
+        size="large"
+      >
+        <LocusListsLoader>
+          Add an existing Gene List to {this.props.project.name} or <CreateLocusListButton />
+          <LocusListTables
+            isEditable={false}
+            showLinks={false}
+            omitFields={OMIT_LOCUS_LIST_FIELDS}
+            omitLocusLists={this.props.project.locusListGuids}
+            selectRows={this.selectList}
+            selectedRows={this.state.selected}
+          />
+          <Divider />
+          <DispatchRequestButton onSubmit={this.submit} onSuccess={this.closeModal}>
+            <Button content="Submit" primary />
+          </DispatchRequestButton>
+        </LocusListsLoader>
+      </Modal>
     )
   }
 }
 
-GeneLists.propTypes = {
-  project: PropTypes.object.isRequired,
-  locusListsByGuid: PropTypes.object.isRequired,
-}
-
-const mapStateToProps = state => ({
-  project: getProject(state),
-  locusListsByGuid: getLocusListsByGuid(state),
-})
-
-const mapDispatchToProps = {
-  setModalConfirm, closeModal, updateLocusLists,
-}
-
-export default connect(mapStateToProps, mapDispatchToProps)(GeneLists)
+export const AddGeneListsButton = connect(null, mapDispatchToProps)(AddGeneLists)
