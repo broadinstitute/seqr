@@ -28,7 +28,6 @@ class ProjectAPITest(TestCase):
         response = self.client.post(create_project_url, content_type='application/json', data=json.dumps(
             {'name': 'new_project', 'description': 'new project description'}
         ))
-
         self.assertEqual(response.status_code, 200)
 
         # check that project was created

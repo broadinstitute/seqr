@@ -10,7 +10,7 @@ from copy import copy
 from django.db.models import prefetch_related_objects
 from django.db.models.fields.files import ImageFieldFile
 
-from reference_data.models import GeneConstraint
+from reference_data.models import GeneConstraint, dbNSFPGene
 from seqr.models import CAN_EDIT, Sample, GeneNote
 from seqr.utils.xpos_utils import get_chrom_pos
 from seqr.views.utils.json_utils import _to_camel_case
@@ -71,6 +71,10 @@ def _get_json_for_model(model, get_json_for_models=_get_json_for_models, **kwarg
         object: json object
     """
     return get_json_for_models([model], **kwargs)[0]
+
+
+def _get_empty_json_for_model(model_class):
+    return {_to_camel_case(field): None for field in model_class._meta.json_fields}
 
 
 def get_json_for_sample_dict(sample_dict):
@@ -457,7 +461,7 @@ def get_json_for_locus_list(locus_list, user):
     return _get_json_for_model(locus_list, get_json_for_models=get_json_for_locus_lists, user=user, include_genes=True)
 
 
-def get_json_for_genes(genes, user=None, add_notes=False, add_expression=False):
+def get_json_for_genes(genes, user=None, add_dbnsfp=False, add_omim=False, add_constraints=False, add_notes=False, add_expression=False):
     """Returns a JSON representation of the given list of GeneInfo.
 
     Args:
@@ -473,22 +477,28 @@ def get_json_for_genes(genes, user=None, add_notes=False, add_expression=False):
         result['totalGenes'] = total_gene_constraints
 
     def _process_result(result, gene):
-        dbnsfp = gene.dbnsfpgene_set.first()
-        constraint = gene.geneconstraint_set.order_by('-mis_z').first()
-        if dbnsfp:
-            result.update(_get_json_for_model(dbnsfp))
+        if add_dbnsfp:
+            dbnsfp = gene.dbnsfpgene_set.first()
+            if dbnsfp:
+                result.update(_get_json_for_model(dbnsfp))
+            else:
+                result.update(_get_empty_json_for_model(dbNSFPGene))
+        if add_omim:
+            result['omimPhenotypes'] = _get_json_for_models(gene.omim_set.all())
+        if add_constraints:
+            constraint = gene.geneconstraint_set.order_by('-mis_z', '-pLI').first()
+            result['constraints'] = _get_json_for_model(constraint, process_result=_add_total_constraint_count) if constraint else {}
         if add_notes:
             result['notes'] = gene_notes_json.get(result['geneId'], [])
         if add_expression:
             result['expression'] = gene.geneexpression.expression_values if hasattr(gene, 'geneexpression') else None
-        result.update({
-            'omimPhenotypes': _get_json_for_models(gene.omim_set.all()),
-            'constraints': _get_json_for_model(constraint, process_result=_add_total_constraint_count) if constraint else {},
-        })
 
-    prefetch_related_objects(genes, 'dbnsfpgene_set')
-    prefetch_related_objects(genes, 'omim_set')
-    prefetch_related_objects(genes, 'geneconstraint_set')
+    if add_dbnsfp:
+        prefetch_related_objects(genes, 'dbnsfpgene_set')
+    if add_omim:
+        prefetch_related_objects(genes, 'omim_set')
+    if add_constraints:
+        prefetch_related_objects(genes, 'geneconstraint_set')
 
     return _get_json_for_models(genes, process_result=_process_result)
 

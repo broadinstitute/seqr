@@ -71,12 +71,15 @@ window.EditVariantFunctionalDataView = Backbone.View.extend({
             postData.search_url = "";
         }
 
+        $('#edit-tags-save').addClass('disabled')
+
         $.post('/api/add-or-edit-variant-functional-data', JSON.stringify(postData),
             function(data) {
+                $('#edit-tags-save').removeClass('disabled')
                 if (data.is_error) {
                     alert('Error: ' + data.error);
                 } else {
-                    that.after_finished(data.variant);
+                    that.after_finished(data);
                 }
             }
         );

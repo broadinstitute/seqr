@@ -8,7 +8,9 @@ import { loadVariantTranscripts } from 'redux/rootReducer'
 import { getVariantIsLoading, getGenesById } from 'redux/selectors'
 import { VerticalSpacer } from '../../Spacers'
 import DataLoader from '../../DataLoader'
+import ShowGeneModal from '../../buttons/ShowGeneModal'
 import { ProteinSequence } from './Annotations'
+import { GENOME_VERSION_37 } from '../../../utils/constants'
 
 
 const TranscriptLink = styled.a`
@@ -29,18 +31,18 @@ const AnnotationLabel = styled.small`
 
 const Transcripts = ({ variant, loading, loadVariantTranscripts: dispatchLoadVariantTranscripts, genesById }) =>
   <DataLoader contentId={variant.variantId} content={variant.transcripts} loading={loading} load={dispatchLoadVariantTranscripts}>
-    {variant.transcripts && variant.geneIds.map(geneId =>
+    {variant.transcripts && Object.entries(variant.transcripts).map(([geneId, geneTranscripts]) =>
       <div key={geneId}>
-        <Header size="large" attached="top" content={genesById[geneId].geneSymbol} subheader={`Gene Id: ${geneId}`} />
+        <Header size="huge" attached="top" content={<ShowGeneModal gene={genesById[geneId]} modalId="transcripts" />} subheader={`Gene Id: ${geneId}`} />
         <Segment attached="bottom">
           <Table basic="very">
             <Table.Body>
-              {variant.transcripts[geneId].map(transcript =>
+              {geneTranscripts.map(transcript =>
                 <Table.Row key={transcript.transcriptId}>
                   <Table.Cell width={3}>
                     <TranscriptLink
                       target="_blank"
-                      href={`http://useast.ensembl.org/Homo_sapiens/Transcript/Summary?t=${transcript.transcriptId}`}
+                      href={`http://${variant.genomeVersion === GENOME_VERSION_37 ? 'grch37' : 'useast'}.ensembl.org/Homo_sapiens/Transcript/Summary?t=${transcript.transcriptId}`}
                       isChosen={transcript.isChosenTranscript}
                     >
                       {transcript.transcriptId}

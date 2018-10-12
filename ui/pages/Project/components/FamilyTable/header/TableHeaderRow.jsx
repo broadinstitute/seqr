@@ -5,7 +5,6 @@ import styled from 'styled-components'
 import { connect } from 'react-redux'
 
 import { HorizontalSpacer } from 'shared/components/Spacers'
-import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
 import { FamilyLayout } from 'shared/components/panel/family'
 import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
 import { Dropdown } from 'shared/components/form/Inputs'
@@ -34,57 +33,57 @@ const SpacedDropdown = styled(Dropdown)`
   padding-right: 5px;
 `
 
-export const TableHeaderDetail = ({ fields, offset, showVariantTags }) =>
+const FAMILY_FILTER = {
+  name: 'familiesFilter',
+  component: SpacedDropdown,
+  inline: true,
+  fluid: false,
+  selection: true,
+  search: true,
+  includeCategories: true,
+  label: 'Filter:',
+}
+const SORT_FILTER_FIELDS = [
+  {
+    name: 'familiesSortOrder',
+    component: SpacedDropdown,
+    inline: true,
+    fluid: false,
+    selection: true,
+    label: 'Sort By:',
+    options: FAMILY_SORT_OPTIONS,
+  },
+  {
+    name: 'familiesSortDirection',
+    component: SortDirectionToggle,
+  },
+]
+const FILTER_FIELDS = [{ ...FAMILY_FILTER, options: FAMILY_FILTER_OPTIONS.filter(f => !f.internalOnly) }, ...SORT_FILTER_FIELDS]
+const INTERNAL_FILTER_FIELDS = [{ ...FAMILY_FILTER, options: FAMILY_FILTER_OPTIONS.filter(f => !f.internalOmit) }, ...SORT_FILTER_FIELDS]
+
+export const TableHeaderDetail = ({ fields, offset, showVariantDetails }) =>
   <FamilyLayout
     compact
     offset={offset}
     fields={fields}
     fieldDisplay={field => FAMILY_FIELD_RENDER_LOOKUP[field.id].name}
-    rightContent={showVariantTags ? 'Saved Variants' : null}
+    rightContent={showVariantDetails ? 'Saved Variants' : null}
   />
 
 
 TableHeaderDetail.propTypes = {
   offset: PropTypes.bool,
   fields: PropTypes.array,
-  showVariantTags: PropTypes.bool,
+  showVariantDetails: PropTypes.bool,
 }
 
 const TableHeaderRow = (
-  { headerStatus, showInternalFilters, visibleFamiliesCount, totalFamiliesCount, fields, tableName, familiesTableState,
-    updateFamiliesTable: dispatchUpdateFamiliesTable, showVariantTags,
-  }) => {
-  const filterFields = [
-    {
-      name: 'familiesSortOrder',
-      component: SpacedDropdown,
-      inline: true,
-      fluid: false,
-      selection: true,
-      label: 'Sort By:',
-      options: FAMILY_SORT_OPTIONS,
-    },
-    {
-      name: 'familiesSortDirection',
-      component: SortDirectionToggle,
-    },
-    {
-      name: 'familiesFilter',
-      component: SpacedDropdown,
-      inline: true,
-      fluid: false,
-      selection: true,
-      search: true,
-      includeCategories: true,
-      label: 'Filter:',
-      options: FAMILY_FILTER_OPTIONS.filter((f) => { return showInternalFilters ? !f.internalOmit : !f.internalOnly }),
-    },
-  ]
-
-  return (
+  { showInternalFilters, visibleFamiliesCount, totalFamiliesCount, fields, tableName, familiesTableState,
+    updateFamiliesTable: dispatchUpdateFamiliesTable, showVariantDetails,
+  }) =>
     <Table.Header fullWidth>
       <Table.Row>
-        <RegularFontHeaderCell width={2}>
+        <RegularFontHeaderCell width={5}>
           Showing &nbsp;
           {
             visibleFamiliesCount !== totalFamiliesCount ?
@@ -93,7 +92,7 @@ const TableHeaderRow = (
           }
           &nbsp; families
         </RegularFontHeaderCell>
-        <OverflowHeaderCell width={14} textAlign="right">
+        <OverflowHeaderCell width={16} textAlign="right">
           <Popup
             content="Filter families by searching on family name or individual phenotypes"
             position="top center"
@@ -110,32 +109,20 @@ const TableHeaderRow = (
             closeOnSuccess={false}
             submitOnChange
             inline
-            fields={filterFields}
-          />
-          <HorizontalSpacer width={20} />
-          {headerStatus.title}:
-          <HorizontalSpacer width={10} />
-          <HorizontalStackedBar
-            width={100}
-            height={14}
-            title={headerStatus.title}
-            data={headerStatus.data}
+            fields={showInternalFilters ? INTERNAL_FILTER_FIELDS : FILTER_FIELDS}
           />
         </OverflowHeaderCell>
       </Table.Row>
       {fields &&
         <Table.Row>
           <Table.HeaderCell colSpan={2} textAlign="left">
-            <TableHeaderDetail fields={fields} showVariantTags={showVariantTags} offset />
+            <TableHeaderDetail fields={fields} showVariantDetails={showVariantDetails} offset />
           </Table.HeaderCell>
         </Table.Row>
       }
     </Table.Header>
-  )
-}
 
 TableHeaderRow.propTypes = {
-  headerStatus: PropTypes.object.isRequired,
   showInternalFilters: PropTypes.bool,
   visibleFamiliesCount: PropTypes.number.isRequired,
   totalFamiliesCount: PropTypes.number.isRequired,
@@ -143,7 +130,7 @@ TableHeaderRow.propTypes = {
   updateFamiliesTable: PropTypes.func.isRequired,
   fields: PropTypes.array,
   tableName: PropTypes.string,
-  showVariantTags: PropTypes.bool,
+  showVariantDetails: PropTypes.bool,
 }
 
 const mapStateToProps = (state, ownProps) => ({

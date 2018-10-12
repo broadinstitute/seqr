@@ -6,7 +6,7 @@ import { Header, Icon, List, Accordion } from 'semantic-ui-react'
 import { loadGenes } from 'redux/rootReducer'
 import {
   getProjectsByGuid,
-  getMatchmakerSubmissions,
+  getFamilyMatchmakerSubmissions,
   getMatchmakerMatchesLoading,
   getMonarchMatchesLoading,
   getGenesById,
@@ -173,9 +173,7 @@ const ShowMatchmakerModal = ({ project, family, loading, load, monarchLoading, l
     modalName={`mme-${family.familyGuid}`}
     size="large"
   >
-    {(matchmakerSubmissions && matchmakerSubmissions.length) ? Object.values(matchmakerSubmissions).filter(
-      submission => submission.familyId === family.familyId,
-    ).map(submission =>
+    {matchmakerSubmissions.length ? matchmakerSubmissions.map(submission =>
       <div key={submission.individualId}>
         <Header size="medium" disabled content={submission.individualId} dividing />
         <DataLoader contentId={submission} content={submission.mmeMatch} loading={loading} load={load}>
@@ -205,7 +203,7 @@ const ShowMatchmakerModal = ({ project, family, loading, load, monarchLoading, l
   </Modal>
 
 ShowMatchmakerModal.propTypes = {
-  matchmakerSubmissions: PropTypes.object,
+  matchmakerSubmissions: PropTypes.array,
   project: PropTypes.object,
   family: PropTypes.object,
   loading: PropTypes.bool,
@@ -216,7 +214,7 @@ ShowMatchmakerModal.propTypes = {
 
 const mapStateToProps = (state, ownProps) => ({
   project: getProjectsByGuid(state)[ownProps.family.projectGuid],
-  matchmakerSubmissions: getMatchmakerSubmissions(state)[ownProps.family.projectGuid],
+  matchmakerSubmissions: getFamilyMatchmakerSubmissions(state, ownProps),
   loading: getMatchmakerMatchesLoading(state),
   monarchLoading: getMonarchMatchesLoading(state),
 })

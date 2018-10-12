@@ -19,7 +19,7 @@ from xbrowse_server.base.model_utils import update_xbrowse_model, get_or_create_
 from xbrowse_server.base.models import Project, Family, FamilySearchFlag, VariantNote, ProjectTag, VariantTag, GeneNote, \
     AnalysedBy, VariantFunctionalData
 from xbrowse_server.api.utils import get_project_and_family_for_user, get_project_and_cohort_for_user, \
-    add_extra_info_to_variants_project, add_notes_to_genes
+    add_extra_info_to_variants_project, add_notes_to_genes, get_variant_notes, get_variant_tags, get_variant_functional_data
 from xbrowse.variant_search.family import get_variants_with_inheritance_mode
 from xbrowse_server.api import utils as api_utils
 from xbrowse_server.api import forms as api_forms
@@ -502,20 +502,6 @@ def add_or_edit_variant_note(request):
             'error': server_utils.form_error_string(form)
         })
 
-    variant = get_datastore(project).get_single_variant(
-        project.project_id,
-        family.family_id,
-        form.cleaned_data['xpos'],
-        form.cleaned_data['ref'],
-        form.cleaned_data['alt'],
-    )
-
-    if not variant:
-        variant = Variant.fromJSON({
-            'xpos' : form.cleaned_data['xpos'], 'ref': form.cleaned_data['ref'], 'alt': form.cleaned_data['alt'],
-            'genotypes': {}, 'extras': {},
-        })
-
     if 'note_id' in form.cleaned_data and form.cleaned_data['note_id']:
         event_type = "edit_variant_note"
 
@@ -555,7 +541,7 @@ def add_or_edit_variant_note(request):
             date_saved=timezone.now(),
             family=family)
 
-    add_extra_info_to_variants_project(get_reference(), project, [variant], add_family_tags=True, add_populations=True)
+    notes = get_variant_notes(project=project, family_id=request.GET.get('family_id'), **form.cleaned_data)
 
     try:
         if not settings.DEBUG: settings.EVENTS_COLLECTION.insert({
@@ -566,11 +552,8 @@ def add_or_edit_variant_note(request):
             'note': form.cleaned_data['note_text'],
 
             'xpos':form.cleaned_data['xpos'],
-            'pos':variant.pos,
-            'chrom': variant.chr,
             'ref':form.cleaned_data['ref'],
             'alt':form.cleaned_data['alt'],
-            'gene_names': ", ".join(variant.extras['gene_names'].values()),
             'username': request.user.username,
             'email': request.user.email,
         })
@@ -580,7 +563,7 @@ def add_or_edit_variant_note(request):
 
     return JSONResponse({
         'is_error': False,
-        'variant': variant.toJSON(),
+        'notes': notes,
     })
 
 
@@ -602,22 +585,6 @@ def add_or_edit_variant_tags(request):
             'error': server_utils.form_error_string(form)
         }
         return JSONResponse(ret)
-
-    variant = get_datastore(project).get_single_variant(
-            project.project_id,
-            family.family_id,
-            form.cleaned_data['xpos'],
-            form.cleaned_data['ref'],
-            form.cleaned_data['alt'],
-    )
-    if not variant:
-        variant = Variant.fromJSON({
-            'xpos': form.cleaned_data['xpos'],
-            'ref': form.cleaned_data['ref'],
-            'alt': form.cleaned_data['alt'],
-            'genotypes': {},
-            'extras': {'project_id': project.project_id, 'family_id': family.family_id}
-        })
 
     variant_tags_to_delete = {
         variant_tag.id: variant_tag for variant_tag in VariantTag.objects.filter(
@@ -660,8 +627,8 @@ def add_or_edit_variant_tags(request):
         delete_xbrowse_model(variant_tag)
 
 
-    # add the extra info after updating the tag info in the database, so that the new tag info is added to the variant JSON
-    add_extra_info_to_variants_project(get_reference(), project, [variant], add_family_tags=True, add_populations=True)
+    # Get tags after updating the tag info in the database, so that the new tag info is added to the variant JSON
+    tags = get_variant_tags(project=project, family_id=request.GET.get('family_id'), **form.cleaned_data)
 
     # log tag creation
     for project_tag, event_type in project_tag_events.items():
@@ -675,11 +642,8 @@ def add_or_edit_variant_tags(request):
                 'title': project_tag.title,
 
                 'xpos':form.cleaned_data['xpos'],
-                'pos':variant.pos,
-                'chrom': variant.chr,
                 'ref':form.cleaned_data['ref'],
                 'alt':form.cleaned_data['alt'],
-                'gene_names': ", ".join(variant.extras['gene_names'].values()),
                 'username': request.user.username,
                 'email': request.user.email,
                 'search_url': form.cleaned_data.get('search_url'),
@@ -689,7 +653,7 @@ def add_or_edit_variant_tags(request):
 
     return JSONResponse({
         'is_error': False,
-        'variant': variant.toJSON(),
+        'tags': tags,
     })
 
 
@@ -751,23 +715,8 @@ def add_or_edit_functional_data(request):
         project_tag_events[variant_tag.functional_data_tag] = "delete_variant_functional_data"
         delete_xbrowse_model(variant_tag)
 
-    # add the extra info after updating the tag info in the database, so that the new tag info is added to the variant JSON
-    variant = get_datastore(project).get_single_variant(
-        project.project_id,
-        family.family_id,
-        form.cleaned_data['xpos'],
-        form.cleaned_data['ref'],
-        form.cleaned_data['alt'],
-    )
-    if not variant:
-        variant = Variant.fromJSON({
-            'xpos': form.cleaned_data['xpos'],
-            'ref': form.cleaned_data['ref'],
-            'alt': form.cleaned_data['alt'],
-            'genotypes': {},
-            'extras': {'project_id': project.project_id, 'family_id': family.family_id}
-        })
-    add_extra_info_to_variants_project(get_reference(), project, [variant], add_family_tags=True, add_populations=True)
+    # get the tags after updating the tag info in the database, so that the new tag info is added to the variant JSON
+    functional_data = get_variant_functional_data(project=project, family_id=request_data.get('family_id'), **form.cleaned_data)
 
     # log tag creation
     for project_tag, event_type in project_tag_events.items():
@@ -780,11 +729,8 @@ def add_or_edit_functional_data(request):
                 'tag': project_tag,
 
                 'xpos':form.cleaned_data['xpos'],
-                'pos':variant.pos,
-                'chrom': variant.chr,
                 'ref':form.cleaned_data['ref'],
                 'alt':form.cleaned_data['alt'],
-                'gene_names': ", ".join(variant.extras.get('gene_names', {}).values()),
                 'username': request.user.username,
                 'email': request.user.email,
                 'search_url': form.cleaned_data.get('search_url'),
@@ -794,7 +740,7 @@ def add_or_edit_functional_data(request):
 
     return JSONResponse({
         'is_error': False,
-        'variant': variant.toJSON(),
+        'functional_data': functional_data,
     })
 
 

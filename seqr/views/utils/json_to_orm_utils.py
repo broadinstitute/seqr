@@ -7,9 +7,9 @@ from seqr.views.utils.json_utils import _to_snake_case
 logger = logging.getLogger(__name__)
 
 
-def update_project_from_json(project, json, verbose=False):
+def update_project_from_json(project, json, verbose=False, allow_unknown_keys=False):
 
-    update_model_from_json(project, json, verbose=verbose)
+    update_model_from_json(project, json, verbose=verbose, allow_unknown_keys=allow_unknown_keys)
 
 
 def update_family_from_json(family, json, verbose=False, user=None, allow_unknown_keys=False):

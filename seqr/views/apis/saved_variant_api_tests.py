@@ -11,6 +11,7 @@ from seqr.views.utils.test_utils import _check_login
 
 
 VARIANT_GUID = 'SV0000001_2103343353_r0390_100'
+VARIANT_GUID_2 = 'SV0000002_1248367227_r0390_100'
 
 
 class ProjectAPITest(TransactionTestCase):
@@ -31,7 +32,7 @@ class ProjectAPITest(TransactionTestCase):
             set(variant.keys()),
             {'variantId', 'xpos', 'ref', 'alt', 'chrom', 'pos', 'genomeVersion', 'liftedOverGenomeVersion',
              'liftedOverChrom', 'liftedOverPos', 'familyGuid', 'tags', 'functionalData', 'notes', 'clinvar',
-             'origAltAlleles', 'geneIds', 'genotypes', 'hgmd', 'annotation', 'transcripts', 'locusLists'}
+             'origAltAlleles', 'mainTranscript', 'genotypes', 'hgmd', 'annotation', 'transcripts', 'locusLists'}
         )
 
         # filter by family
@@ -54,12 +55,12 @@ class ProjectAPITest(TransactionTestCase):
     @mock.patch('seqr.views.apis.saved_variant_api.get_datastore')
     def test_saved_variant_transcripts(self, mock_datastore, mock_xbrowse_model):
         mock_datastore.get_single_variant.return_value.annotation = {'vep_annotation': []}
-        url = reverse(saved_variant_transcripts, args=[VARIANT_GUID])
+        url = reverse(saved_variant_transcripts, args=[VARIANT_GUID_2])
         _check_login(self, url)
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {VARIANT_GUID: {'transcripts': {}}})
+        self.assertDictEqual(response.json(), {'savedVariants': {VARIANT_GUID_2: {'transcripts': {}}}, 'genesById': {}})
 
         invalid_url = reverse(saved_variant_transcripts, args=['not_a_guid'])
         response = self.client.get(invalid_url)

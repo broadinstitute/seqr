@@ -10,7 +10,7 @@ import { ColoredIcon } from '../StyledComponents'
 
 
 const BarContainer = styled.div.attrs({
-  w: (props) => { return props.width ? `${props.width}px` : '100%' },
+  w: (props) => { return props.width ? `${props.width}${typeof props.width === 'number' ? 'px' : ''}` : '100%' },
   h: (props) => { return props.height ? `${props.height}px` : 'auto' },
   lh: (props) => { return props.height ? `${props.height - 2}px` : 'inherit' },
 })`
@@ -42,7 +42,7 @@ class HorizontalStackedBar extends React.PureComponent {
   static propTypes = {
     title: PropTypes.string.isRequired,
     data: PropTypes.arrayOf(PropTypes.object), //an array of objects with keys: name, count, color, percent
-    width: PropTypes.number,
+    width: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
     height: PropTypes.number,
     linkPath: PropTypes.string,
     minPercent: PropTypes.number,
