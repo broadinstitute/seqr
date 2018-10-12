@@ -34,25 +34,25 @@ const SpacedDropdown = styled(Dropdown)`
   padding-right: 5px;
 `
 
-export const TableHeaderDetail = ({ fields, offset, showVariantTags }) =>
+export const TableHeaderDetail = ({ fields, offset, showVariantDetails }) =>
   <FamilyLayout
     compact
     offset={offset}
     fields={fields}
     fieldDisplay={field => FAMILY_FIELD_RENDER_LOOKUP[field.id].name}
-    rightContent={showVariantTags ? 'Saved Variants' : null}
+    rightContent={showVariantDetails ? 'Saved Variants' : null}
   />
 
 
 TableHeaderDetail.propTypes = {
   offset: PropTypes.bool,
   fields: PropTypes.array,
-  showVariantTags: PropTypes.bool,
+  showVariantDetails: PropTypes.bool,
 }
 
 const TableHeaderRow = (
   { headerStatus, showInternalFilters, visibleFamiliesCount, totalFamiliesCount, fields, tableName, familiesTableState,
-    updateFamiliesTable: dispatchUpdateFamiliesTable, showVariantTags,
+    updateFamiliesTable: dispatchUpdateFamiliesTable, showVariantDetails,
   }) => {
   const filterFields = [
     {
@@ -126,7 +126,7 @@ const TableHeaderRow = (
       {fields &&
         <Table.Row>
           <Table.HeaderCell colSpan={2} textAlign="left">
-            <TableHeaderDetail fields={fields} showVariantTags={showVariantTags} offset />
+            <TableHeaderDetail fields={fields} showVariantDetails={showVariantDetails} offset />
           </Table.HeaderCell>
         </Table.Row>
       }
@@ -143,7 +143,7 @@ TableHeaderRow.propTypes = {
   updateFamiliesTable: PropTypes.func.isRequired,
   fields: PropTypes.array,
   tableName: PropTypes.string,
-  showVariantTags: PropTypes.bool,
+  showVariantDetails: PropTypes.bool,
 }
 
 const mapStateToProps = (state, ownProps) => ({

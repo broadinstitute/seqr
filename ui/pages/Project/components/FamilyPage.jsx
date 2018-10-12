@@ -32,8 +32,7 @@ FamilyDetail.propTypes = {
 const FamilyPage = ({ family, individualsByGuid }) =>
   <FamilyDetail
     family={family}
-    showSearchLinks
-    showVariantTags
+    showVariantDetails
     showDetails
     individuals={family.individualGuids.map(individualGuid => individualsByGuid[individualGuid])}
     fields={FAMILY_DETAIL_FIELDS}

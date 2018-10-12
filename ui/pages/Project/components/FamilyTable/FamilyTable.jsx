@@ -45,7 +45,7 @@ class FamilyTableRow extends React.PureComponent {
   }
 
   render() {
-    const { family, editCaseReview, showSearchLinks, showVariantTags, detailFields, noDetailFields } = this.props
+    const { family, editCaseReview, showVariantDetails, detailFields, noDetailFields } = this.props
     return (
       <Table.Row>
         <OverflowCell>
@@ -53,8 +53,7 @@ class FamilyTableRow extends React.PureComponent {
             key={family.familyGuid}
             family={family}
             showFamilyPageLink
-            showSearchLinks={this.state.showDetails && showSearchLinks}
-            showVariantTags={showVariantTags}
+            showVariantDetails={showVariantDetails}
             fields={this.state.showDetails ? detailFields : noDetailFields}
             compact={!this.state.showDetails}
             annotation={detailFields && noDetailFields && <ToggleIcon rotated={this.state.showDetails ? undefined : 'counterclockwise'} onClick={this.toggle} />}
@@ -72,12 +71,11 @@ FamilyTableRow.propTypes = {
   editCaseReview: PropTypes.bool,
   detailFields: PropTypes.array,
   noDetailFields: PropTypes.array,
-  showSearchLinks: PropTypes.bool,
-  showVariantTags: PropTypes.bool,
+  showVariantDetails: PropTypes.bool,
   showDetails: PropTypes.bool,
 }
 
-const FamilyTable = ({ visibleFamilies, loading, headerStatus, showInternalFilters, exportUrls, noDetailFields, tableName, showVariantTags, ...props }) =>
+const FamilyTable = ({ visibleFamilies, loading, headerStatus, showInternalFilters, exportUrls, noDetailFields, tableName, showVariantDetails, ...props }) =>
   <div>
     <ExportContainer>
       <ExportTableButton downloads={exportUrls} />
@@ -89,7 +87,7 @@ const FamilyTable = ({ visibleFamilies, loading, headerStatus, showInternalFilte
         showInternalFilters={showInternalFilters}
         fields={noDetailFields}
         tableName={tableName}
-        showVariantTags={showVariantTags}
+        showVariantDetails={showVariantDetails}
         analysisGroupGuid={props.match.params.analysisGroupGuid}
       />
     </Table>
@@ -102,7 +100,7 @@ const FamilyTable = ({ visibleFamilies, loading, headerStatus, showInternalFilte
               key={family.familyGuid}
               family={family}
               noDetailFields={noDetailFields}
-              showVariantTags={showVariantTags}
+              showVariantDetails={showVariantDetails}
               {...props}
             />,
           ) : <EmptyTableRow tableName={tableName} />)
@@ -122,8 +120,7 @@ FamilyTable.propTypes = {
   showInternalFilters: PropTypes.bool,
   editCaseReview: PropTypes.bool,
   exportUrls: PropTypes.array,
-  showSearchLinks: PropTypes.bool,
-  showVariantTags: PropTypes.bool,
+  showVariantDetails: PropTypes.bool,
   noDetailFields: PropTypes.array,
   tableName: PropTypes.string,
   match: PropTypes.object,

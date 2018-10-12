@@ -153,8 +153,7 @@ const ProjectPageUI = (props) => {
           <FamilyTable
             headerStatus={headerStatus}
             exportUrls={exportUrls}
-            showSearchLinks
-            showVariantTags
+            showVariantDetails
             detailFields={FAMILY_DETAIL_FIELDS}
             noDetailFields={NO_DETAIL_FIELDS}
           />
