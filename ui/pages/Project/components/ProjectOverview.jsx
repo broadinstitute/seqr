@@ -33,6 +33,18 @@ const FAMILY_SIZE_LABELS = {
   5: plural => ` ${plural ? 'families' : 'family'} with 5+ individuals`,
 }
 
+const DetailSection = ({ title, content, button }) =>
+  <div>
+    <b>{title}</b>
+    <DetailContent>{content}</DetailContent>
+    {button && <div><VerticalSpacer height={15} />{button}</div>}
+  </div>
+
+DetailSection.propTypes = {
+  title: PropTypes.string.isRequired,
+  content: PropTypes.node.isRequired,
+  button: PropTypes.node,
+}
 
 const ProjectOverview = ({ familiesByGuid, individualsByGuid, samplesByGuid, analysisStatusCounts }) => {
   const familySizeHistogram = Object.values(familiesByGuid)
@@ -45,50 +57,47 @@ const ProjectOverview = ({ familiesByGuid, individualsByGuid, samplesByGuid, ana
     sample.datasetType === DATASET_TYPE_VARIANT_CALLS && sample.sampleStatus === SAMPLE_STATUS_LOADED,
   ).reduce((acc, sample) => {
     const loadedDate = new Date(sample.loadedDate).toLocaleDateString()
-    const currentDateSamplesByType = acc[loadedDate] || {}
-    return { ...acc, [loadedDate]: { ...currentDateSamplesByType, [sample.sampleType]: (currentDateSamplesByType[sample.sampleType] || 0) + 1 } }
+    const currentTypeSamplesByDate = acc[sample.sampleType] || {}
+    return { ...acc, [sample.sampleType]: { ...currentTypeSamplesByDate, [loadedDate]: (currentTypeSamplesByDate[loadedDate] || 0) + 1 } }
   }, {})
 
   return (
     <Grid>
       <Grid.Column width={5}>
-        <b>{Object.keys(familiesByGuid).length} Families, {Object.keys(individualsByGuid).length} Individuals</b>
-        <DetailContent>
-          {
+        <DetailSection
+          title={`${Object.keys(familiesByGuid).length} Families, ${Object.keys(individualsByGuid).length} Individuals`}
+          content={
             sortBy(Object.keys(familySizeHistogram)).map(size =>
               <div key={size}>
                 {familySizeHistogram[size]} {FAMILY_SIZE_LABELS[size](familySizeHistogram[size] > 1)}
               </div>)
           }
-        </DetailContent>
-        <VerticalSpacer height={15} />
-        <EditFamiliesAndIndividualsButton />
+          button={<EditFamiliesAndIndividualsButton />}
+        />
       </Grid.Column>
       <Grid.Column width={5}>
-        <b>Datasets</b>
-        <DetailContent>
-          {Object.keys(loadedProjectSamples).length > 0 ?
-            Object.keys(loadedProjectSamples).sort().map(loadedDate => (
-              <div key={loadedDate}>
-                {
-                  Object.keys(loadedProjectSamples[loadedDate]).map(currentSampleType =>
-                    <div key={currentSampleType}>
-                      {SAMPLE_TYPE_LOOKUP[currentSampleType].text} callset - {loadedProjectSamples[loadedDate][currentSampleType]} samples loaded on {loadedDate}
-                    </div>,
-                  )
-                }
-              </div>
-            )) : <div>No Datasets Loaded</div>
-          }
-        </DetailContent>
-        <VerticalSpacer height={15} />
-        <EditDatasetsButton />
+        {Object.keys(loadedProjectSamples).length > 0 ?
+          Object.keys(loadedProjectSamples).sort().map((sampleType, i) => (
+            <DetailSection
+              key={sampleType}
+              title={`${SAMPLE_TYPE_LOOKUP[sampleType].text} Datasets`}
+              content={
+                Object.keys(loadedProjectSamples[sampleType]).sort().map(loadedDate =>
+                  <div key={loadedDate}>
+                    {loadedDate} - {loadedProjectSamples[sampleType][loadedDate]} samples
+                  </div>,
+                )
+              }
+              button={Object.keys(loadedProjectSamples).length === i ? <EditDatasetsButton /> : null}
+            />
+          )) : <DetailSection title="Datasets" content="No Datasets Loaded" button={<EditDatasetsButton />} />
+        }
       </Grid.Column>
       <Grid.Column width={6}>
-        <b>Analysis Status</b>
-        <DetailContent>
-          <HorizontalStackedBar height={20} title="Analysis Statuses" data={analysisStatusCounts} />
-        </DetailContent>
+        <DetailSection
+          title="Analysis Status"
+          content={<HorizontalStackedBar height={20} title="Analysis Statuses" data={analysisStatusCounts} />}
+        />
       </Grid.Column>
     </Grid>
   )
