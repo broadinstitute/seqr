@@ -2,7 +2,6 @@ FROM perl:5.20
 
 MAINTAINER MacArthur Lab
 
-
 # install commmon utilities
 RUN apt-get update && apt-get install -y --fix-missing \
     apt-utils \
@@ -55,12 +54,13 @@ RUN cd /usr/local \
     && wget -nv https://archive.apache.org/dist/spark/spark-2.0.2/spark-2.0.2-bin-hadoop2.7.tgz \
     && tar xzf /usr/local/spark-2.0.2-bin-hadoop2.7.tgz
 
-RUN pip install decorator==4.2.1    # fix http://discuss.hail.is/t/importerror-cannot-import-name-getargspec/468
+# fix http://discuss.hail.is/t/importerror-cannot-import-name-getargspec/468
+RUN pip install decorator==4.2.1
 
 # install jupyter
 RUN pip install --upgrade pip jupyter
 
-#   git clone --branch 0.1 https://github.com/broadinstitute/hail.git \
+#RUN git clone --branch 0.1 https://github.com/broadinstitute/hail.git \
 #    && cd /hail \
 #    && ./gradlew -Dspark.version=2.0.2 shadowJar archiveZip
 
