@@ -1430,7 +1430,7 @@ function addHgncToEnsembl(ensemblId, divToUse){
 	 $.ajax({url: url, 
 		 	dataType:'json',
 		 	success: function(result){
-				var hgncId=result['gene']['gene_name']; 
+				var hgncId=result['gene']['symbol'];
 		 		$('#' + divToUse).append(hgncId + ' (<a onclick="showGeneInfoDisplay(' + "'"+ ensemblId +"'" +');">' + ensemblId + '</a>)<br>') ;
 		 	},
 		 	error: function (jqXHR, textStatus, errorThrown)
