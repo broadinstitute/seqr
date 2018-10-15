@@ -13,6 +13,7 @@ import yaml
 from deploy.utils.constants import COMPONENT_PORTS, COMPONENTS_TO_OPEN_IN_BROWSER
 from deploy.utils.kubectl_utils import get_pod_name, get_service_name, \
     run_in_pod, get_pod_status, get_node_name
+from seqr.utils.network_utils import get_ip_address
 from seqr.utils.shell_utils import run, wait_for, run_in_background
 
 logging.basicConfig(format='%(asctime)s %(levelname)-8s %(message)s')
@@ -32,7 +33,7 @@ def get_component_port_pairs(components=[]):
     if not components:
         components = list(COMPONENT_PORTS.keys())
 
-    return [(component, port) for component in components for port in COMPONENT_PORTS[component]]
+    return [(component, port) for component in components for port in COMPONENT_PORTS.get(component, [])]
 
 
 def load_settings(settings_file_paths, settings=None, secrets=False):
@@ -101,8 +102,12 @@ def render(input_base_dir, relative_file_path, settings, output_base_dir):
     if not os.path.isdir(output_dir_path):
         os.makedirs(output_dir_path)
 
-    with open(output_file_path, 'w') as ostream:
-        ostream.write(rendered_string)
+    try:
+        with open(output_file_path, 'w') as ostream:
+            ostream.write(rendered_string)
+    except Exception as e:
+        logger.error("Couldn't write out %s" % relative_file_path)
+        raise
 
     #os.chmod(output_file_path, 0x777)
     logger.info("-- wrote out %s" % output_file_path)
@@ -111,8 +116,9 @@ def render(input_base_dir, relative_file_path, settings, output_base_dir):
 def retrieve_settings(deployment_target):
     settings = collections.OrderedDict()
 
-    settings['HOME'] = os.path.expanduser("~")
-    settings['TIMESTAMP'] = time.strftime("%Y%m%d_%H%M%S")
+    settings["HOME"] = os.path.expanduser("~")
+    settings["TIMESTAMP"] = time.strftime("%Y%m%d_%H%M%S")
+    settings["HOST_MACHINE_IP"] = get_ip_address()
 
     load_settings([
         "deploy/kubernetes/shared-settings.yaml",
@@ -141,9 +147,8 @@ def check_kubernetes_context(deployment_target, set_if_different=False):
         return
 
     context_is_different = False
-    if deployment_target in ["minikube", "kube-solo"]:
-        if (deployment_target == "minikube" and kubectl_current_context != "minikube") or (
-            deployment_target == "kube-solo" and kubectl_current_context != "kube-solo"):
+    if deployment_target == "minikube":
+        if (deployment_target == "minikube" and kubectl_current_context != "minikube"):
             logger.error((
                  "'%(cmd)s' returned '%(kubectl_current_context)s'. For %(deployment_target)s deployment, this is "
                  "expected to be '%(deployment_target)s'. Please configure your shell environment "
@@ -185,8 +190,9 @@ def show_status():
     run("kubectl describe svc elasticsearch  | grep 'Name:\|Endpoints'", ignore_all_errors=True)
 
     run("kubectl get nodes", ignore_all_errors=True)
-    run("kubectl get services", ignore_all_errors=True)
-    run("kubectl get pods", ignore_all_errors=True)
+    run("kubectl get deployments --all-namespaces", ignore_all_errors=True)
+    run("kubectl get services --all-namespaces", ignore_all_errors=True)
+    run("kubectl get pods --all-namespaces", ignore_all_errors=True)
     run("kubectl config current-context", ignore_all_errors=True)
 
 
@@ -198,7 +204,7 @@ def show_dashboard():
     p.wait()
 
 
-def print_log(components, deployment_target, enable_stream_log, wait=True):
+def print_log(components, deployment_target, enable_stream_log, previous=False, wait=True):
     """Executes kubernetes command to print logs for the given pod.
 
     Args:
@@ -207,6 +213,8 @@ def print_log(components, deployment_target, enable_stream_log, wait=True):
         deployment_target (string): "local", "gcloud-dev", etc. See constants.DEPLOYMENT_TARGETS.
         enable_stream_log (bool): whether to continuously stream the log instead of just printing
             the log up to now.
+        previous (bool): Prints logs from a previous instance of the container. This is useful for debugging pods that
+            don't start or immediately enter crash-loop.
         wait (bool): If False, this method will return without waiting for the log streaming process
             to finish printing all logs.
 
@@ -214,16 +222,18 @@ def print_log(components, deployment_target, enable_stream_log, wait=True):
         (list): Popen process objects for the kubectl port-forward processes.
     """
     stream_arg = "-f" if enable_stream_log else ""
+    previous_flag = "--previous" if previous else ""
 
     procs = []
     for component_label in components:
 
-        while get_pod_status(component_label, deployment_target) != "Running":
-            time.sleep(5)
+        if not previous:
+            while get_pod_status(component_label, deployment_target) != "Running":
+                time.sleep(5)
 
         pod_name = get_pod_name(component_label, deployment_target=deployment_target)
 
-        p = run_in_background("kubectl logs %(stream_arg)s %(pod_name)s" % locals())
+        p = run_in_background("kubectl logs %(stream_arg)s %(previous_flag)s %(pod_name)s" % locals(), print_command=True)
         def print_command_log():
             for line in iter(p.stdout.readline, ''):
                 logger.info(line.strip('\n'))
@@ -244,19 +254,19 @@ def set_environment(deployment_target):
     Args:
         deployment_target (string): "minikube", "gcloud-dev", etc. See constants.DEPLOYMENT_TARGETS.
     """
-    if deployment_target.startswith("gcloud"):
-        settings = retrieve_settings(deployment_target)
 
+    settings = retrieve_settings(deployment_target)
+    if deployment_target.startswith("gcloud"):
         os.environ["KUBECONFIG"] = os.path.expanduser("~/.kube/config")
         run("gcloud config set core/project %(GCLOUD_PROJECT)s" % settings, print_command=True)
         run("gcloud config set compute/zone %(GCLOUD_ZONE)s" % settings, print_command=True)
         run("gcloud container clusters get-credentials --zone=%(GCLOUD_ZONE)s %(CLUSTER_NAME)s" % settings, print_command=True)
     elif deployment_target == "minikube":
         run("kubectl config use-context minikube", print_command=True)
-    elif deployment_target == "kube-solo":
-        os.environ["KUBECONFIG"] = os.path.expanduser("~/kube-solo/kube/kubeconfig")
     else:
         raise ValueError("Unexpected deployment_target value: %s" % (deployment_target,))
+
+    run("kubectl config set-context $(kubectl config current-context) --namespace=%(NAMESPACE)s" % settings)
 
 
 def port_forward(component_port_pairs=[], deployment_target=None, wait=True, open_browser=False, use_kubectl_proxy=False):
@@ -333,7 +343,7 @@ def delete_component(component, deployment_target=None):
     elif component == "es-data":
         run("kubectl delete StatefulSet es-data", errors_to_ignore=["not found"])
     elif component == "nginx":
-        run("kubectl delete rc nginx-ingress-rc", errors_to_ignore=["not found"])
+        run("kubectl delete -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/master/deploy/mandatory.yaml")
 
     run("kubectl delete deployments %(component)s" % locals(), errors_to_ignore=["not found"])
     run("kubectl delete services %(component)s" % locals(), errors_to_ignore=["not found"])
@@ -396,8 +406,8 @@ def delete_all(deployment_target):
         run("gcloud container clusters delete --project %(GCLOUD_PROJECT)s --zone %(GCLOUD_ZONE)s --no-async %(CLUSTER_NAME)s" % settings, is_interactive=True)
 
         run("gcloud compute disks delete --zone %(GCLOUD_ZONE)s %(CLUSTER_NAME)s-postgres-disk" % settings, is_interactive=True)
-        run("gcloud compute disks delete --zone %(GCLOUD_ZONE)s %(CLUSTER_NAME)s-mongo-disk" % settings, is_interactive=True)
-        run("gcloud compute disks delete --zone %(GCLOUD_ZONE)s %(CLUSTER_NAME)s-elasticsearch-disk" % settings, is_interactive=True)
+        #run("gcloud compute disks delete --zone %(GCLOUD_ZONE)s %(CLUSTER_NAME)s-mongo-disk" % settings, is_interactive=True)
+        #run("gcloud compute disks delete --zone %(GCLOUD_ZONE)s %(CLUSTER_NAME)s-elasticsearch-disk" % settings, is_interactive=True)
     else:
         run('kubectl delete deployments --all')
         run('kubectl delete replicationcontrollers --all')

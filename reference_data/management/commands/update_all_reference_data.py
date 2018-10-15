@@ -1,6 +1,7 @@
 import logging
 from django.core.management.base import BaseCommand, CommandError
 
+from reference_data.management.commands.update_gtex import update_gtex
 from reference_data.management.commands.update_human_phenotype_ontology import update_hpo
 from reference_data.management.commands.update_dbnsfp_gene import update_dbnsfp_gene
 from reference_data.management.commands.update_gencode import update_gencode
@@ -22,12 +23,15 @@ class Command(BaseCommand):
         parser.add_argument('--skip-dbnsfp-gene', help="Don't reload the dbNSFP_gene table", action="store_true")
         parser.add_argument('--skip-gene-constraint', help="Don't reload gene constraint", action="store_true")
         parser.add_argument('--skip-hpo', help="Don't reload human phenotype ontology", action="store_true")
+        parser.add_argument('--skip-gtex', help="Don't reload gtex", action="store_true")
 
     def handle(self, *args, **options):
         if not options["skip_gencode"]:
-            # download v19 and then v28 because there are 1000+ gene and transcript ids in v19 that
+            # download v19 and then v27 and then v28 because there are 1000+ gene and transcript ids in v19 that
             # gencode retired by the time of v28, but that are used in the gene constraint table and other datasets
+            # and also ~100 genes and transcripts that were retired between v27 and v28
             update_gencode(19, reset=True)
+            update_gencode(27)
             update_gencode(28)
 
         if not options["skip_dbnsfp_gene"]:
@@ -51,3 +55,9 @@ class Command(BaseCommand):
                 update_hpo()
             except Exception as e:
                 logger.error("unable to update human phenotype ontology: {}".format(e))
+
+        if not options["skip_gtex"]:
+            try:
+                update_gtex()
+            except Exception as e:
+                logger.error("unable to update gtex: {}".format(e))

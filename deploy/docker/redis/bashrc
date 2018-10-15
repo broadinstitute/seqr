@@ -9,5 +9,3 @@ alias less='less -m -g -i--underline-special --SILENT'
 alias more='less'
 
 export TERM=xterm
-
-resize

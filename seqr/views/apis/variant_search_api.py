@@ -91,7 +91,12 @@ def variant_transcripts(request):
         request.GET.get('alt'),
     )
 
-    return create_json_response({'transcripts': _parsed_variant_transcripts(loaded_variant.annotation)})
+    transcripts = _parsed_variant_transcripts(loaded_variant.annotation)
+    return create_json_response({
+        'transcripts': transcripts,
+        'genesById': get_genes(transcripts.keys()),
+    })
+
 
 
 def _parsed_variant_transcripts(annotation):

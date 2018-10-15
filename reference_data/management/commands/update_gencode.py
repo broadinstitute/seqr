@@ -12,8 +12,8 @@ from reference_data.models import GeneInfo, TranscriptInfo, GENOME_VERSION_GRCh3
 
 logger = logging.getLogger(__name__)
 
-GENCODE_GTF_URL = "ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_{gencode_release}/gencode.v{gencode_release}.annotation.gtf.gz"
-GENCODE_LIFT37_GTF_URL = "ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_{gencode_release}/GRCh37_mapping/gencode.v{gencode_release}lift37.annotation.gtf.gz"
+GENCODE_GTF_URL = "http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_{gencode_release}/gencode.v{gencode_release}.annotation.gtf.gz"
+GENCODE_LIFT37_GTF_URL = "http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_{gencode_release}/GRCh37_mapping/gencode.v{gencode_release}lift37.annotation.gtf.gz"
 
 
 class Command(BaseCommand):
@@ -50,7 +50,7 @@ def update_gencode(gencode_release, gencode_gtf_path=None, genome_version=None, 
             raise CommandError("Invalid genome_version: {}. gencode v19 only has a GRCh37 version".format(genome_version))
         elif gencode_release <= 22 and genome_version != GENOME_VERSION_GRCh38:
             raise CommandError("Invalid genome_version: {}. gencode v20, v21, v22 only have a GRCh38 version".format(genome_version))
-        elif (genome_version == GENOME_VERSION_GRCh38) ^ ("lift" in gencode_gtf_path.lower()):
+        elif genome_version != GENOME_VERSION_GRCh38 and "lift" not in gencode_gtf_path.lower():
             raise CommandError("Invalid genome_version for file: {}. gencode v23 and up must have 'lift' in the filename or genome_version arg must be GRCh38".format(gencode_gtf_path))
 
         gencode_gtf_paths = {genome_version: gencode_gtf_path}

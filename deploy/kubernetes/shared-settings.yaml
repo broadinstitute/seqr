@@ -1,32 +1,45 @@
-SEQR_VERSION: 0.1
+#####################################################
+####### SETTINGS THAT MAY NEED TO BE MODIFIED #######
+
+MONGO_DISK_SIZE: '200Gb'      # used when creating the GKE cluster on gcloud deployments
+POSTGRES_DISK_SIZE: '200Gb'   # used when creating the GKE cluster on gcloud deployments
+ELASTICSEARCH_DISK_SIZE: 200  # used when creating the GKE cluster on gcloud deployments
+
+NUM_NODES_PER_NODE_POOL: 4    # used when creating nodes for gcloud deployments
+
+SEQR_POD_MOUNTED_BUCKET: seqr-mounted-bucket   # name of the private google bucket (for example: gs://seqr-mounted-bucket) mounted into the seqr pod and used for easily saving postgres backups, etc.
+
+GUNICORN_WORKER_THREADS: 4    # number of webserver threads
+
+###########################################################
+####### SETTINGS THAT SHOULDN'T NEED TO BE MODIFIED #######
+
+DOCKER_IMAGE_PREFIX: 'gcr.io/seqr-project'
+IMAGE_PULL_POLICY: 'Always'
 
 DEPLOYMENT_TEMP_DIR: '/tmp'
-
+DATA_DIR: '/data'
+VEP_DIR: '/vep'
 
 MATCHBOX_SERVICE_HOSTNAME: matchbox
 POSTGRES_SERVICE_HOSTNAME: postgres
 MONGO_SERVICE_HOSTNAME: mongo
 ELASTICSEARCH_SERVICE_HOSTNAME: elasticsearch
+KIBANA_SERVICE_HOSTNAME: kibana
 PHENOTIPS_SERVICE_HOSTNAME: phenotips
 REDIS_SERVICE_HOSTNAME: redis
-
 
 COCKPIT_SERVICE_PORT: 9090
 MATCHBOX_SERVICE_PORT: 9020
 POSTGRES_SERVICE_PORT: 5432
 MONGO_SERVICE_PORT: 27017
 ELASTICSEARCH_SERVICE_PORT: 9200
-ELASTICSEARCH_SERVICE_NODE_PORT: 30001
 KIBANA_SERVICE_PORT: 5601
-KIBANA_SERVICE_NODE_PORT: 30002
 PHENOTIPS_SERVICE_PORT: 8080
 SEQR_SERVICE_PORT: 8000
-SEQR_UI_DEV_PORT: 3000
 REDIS_SERVICE_PORT: 6379
 PIPELINE_RUNNER_SERVICE_PORT: 30005
 
-MONGO_DISK_SIZE: '200Gb'
-POSTGRES_DISK_SIZE: '200Gb'
-ELASTICSEARCH_DISK_SIZE: 200
+SEQR_UI_DEV_PORT: 3000
 
-NUM_NODES_PER_NODE_POOL: 4
+

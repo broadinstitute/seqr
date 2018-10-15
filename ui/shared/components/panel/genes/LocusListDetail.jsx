@@ -37,7 +37,7 @@ const LocusListDetail = ({ locusList, onSubmit }) => {
         headers: ['Gene ID', 'Symbol'],
         filename: `${toSnakecase(locusList.name)}_genes`,
         rawData: locusList.parsedItems.items.filter(item => item.geneId),
-        processRow: gene => ([gene.geneId, gene.symbol]),
+        processRow: gene => ([gene.geneId, gene.geneSymbol]),
       },
     },
     {

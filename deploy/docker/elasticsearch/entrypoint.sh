@@ -5,7 +5,7 @@ env
 set -x
 
 #/usr/local/elasticsearch-6.0.0/bin/elasticsearch-keystore create
-#/usr/local/elasticsearch-6.0.0/bin/elasticsearch-keystore add-file gcs.client.default.credentials_file /.config/client_secrets.json
+#/usr/local/elasticsearch-6.0.0/bin/elasticsearch-keystore add-file gcs.client.default.credentials_file /.config/service-account-key.json
 
 
 mkdir -p /logs
@@ -18,7 +18,4 @@ su elasticsearch -c "/usr/local/elasticsearch-${ELASTICSEARCH_VERSION}/bin/elast
     -E network.host=0.0.0.0 \
     -E http.port=${ELASTICSEARCH_SERVICE_PORT} \
     -E path.data=/elasticsearch-data \
-    -E path.logs=/logs" &
-
-# sleep indefinitely to prevent container from terminating
-sleep 1000000000000
+    -E path.logs=/logs"

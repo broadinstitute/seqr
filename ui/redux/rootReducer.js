@@ -199,8 +199,12 @@ export const loadVariantTranscripts = (variant) => {
       ), {})
       new HttpRequestHelper('/api/search/transcripts',
         (responseJson) => {
-          variant.transcripts = responseJson.transcripts
-          const updates = variant.variantGuid ? { savedVariantsByGuid: { [variant.variantGuid]: responseJson } } : {}
+          const { transcripts, genesById } = responseJson
+          const updates = { genesById }
+          variant.transcripts = transcripts
+          if (variant.variantGuid) {
+            updates.savedVariantsByGuid = { [variant.variantGuid]: { transcripts } }
+          }
           dispatch({ type: RECEIVE_DATA, updatesById: updates })
         },
         (e) => {

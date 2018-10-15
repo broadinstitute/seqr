@@ -22,8 +22,7 @@ export const parseLocusListItems = (locusList, genesById) => {
   const itemMap = (locusList.items || []).reduce((acc, item) => {
     if (item.geneId) {
       const gene = genesById[item.geneId]
-      // TODO edge case with invalid geneIds due to data load mismatch, fix by using reference data models for genes instead of old mongo data
-      return { ...acc, [gene ? gene.symbol : item.geneId]: gene || item }
+      return { ...acc, [gene.geneSymbol]: gene }
     }
     return { ...acc, [`chr${item.chrom}:${item.start}-${item.end}`]: item }
   }, {})

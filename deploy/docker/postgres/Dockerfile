@@ -2,12 +2,6 @@ FROM postgres:9.6.2
 
 MAINTAINER MacArthur Lab
 
-# install commmon utilities
-RUN apt-get update && apt-get install -y --fix-missing \
-    curl \
-    less \
-    wget
-
 COPY bashrc /root/.bashrc
 
 COPY restore_database_backup.sh /root/restore_database_backup.sh

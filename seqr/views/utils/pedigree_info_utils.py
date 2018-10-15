@@ -9,7 +9,6 @@ import tempfile
 import traceback
 import xlrd
 import xlwt
-from django.core.mail import EmailMessage
 from django.core.mail.message import EmailMultiAlternatives
 from django.utils.html import strip_tags
 
@@ -100,11 +99,11 @@ def parse_rows_from_fam_file(stream):
         elif not line or line.startswith('#'):
             continue
         elif not header:
-            raise ValueError("Header row not found")
+            header = ['family_id', 'individual_id', 'paternal_id', 'maternal_id', 'sex', 'affected']
 
         fields = line.rstrip('\n').split('\t')
         if len(fields) != len(header):
-            raise ValueError("Row %s contains %d columns, while header contains %s: %s" % (i+1, len(fields), len(header), fields))
+            raise ValueError("Row %s contains %d columns: %s, while header contains %s: %s" % (i+1, len(fields), fields, len(header), header))
 
         fields = map(lambda s: s.strip(), fields)
 

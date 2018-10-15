@@ -13,6 +13,27 @@ from seqr.views.utils.pedigree_info_utils import parse_pedigree_table
 logger = logging.getLogger(__name__)
 
 
+def add_individuals_from_pedigree_file(project, pedigree_file_path, validate_only=False):
+    if pedigree_file_path and not os.path.isfile(pedigree_file_path):
+        raise CommandError("Can't open pedigree file: %(pedigree_file)s" % locals())
+
+    # parse the pedigree file if specified
+    input_stream = file_iter(pedigree_file_path)
+    json_records, errors, warnings = parse_pedigree_table(pedigree_file_path, input_stream)
+
+    if errors:
+        for message in errors:
+            logger.error(message)
+        raise CommandError("Unable to parse %(pedigree_file_path)s" % locals())
+
+    if warnings:
+        for message in warnings:
+            logger.warn(message)
+
+    if not validate_only:
+        add_or_update_individuals_and_families(project, json_records)
+
+
 class Command(BaseCommand):
     help = """Adds or updates individuals in a project"""
 
@@ -34,22 +55,4 @@ class Command(BaseCommand):
         except ObjectDoesNotExist:
             raise CommandError("Invalid project id: %(project_guid)s" % locals())
 
-        if pedigree_file_path and not os.path.isfile(pedigree_file_path):
-            raise CommandError("Can't open pedigree file: %(pedigree_file)s" % locals())
-
-        # parse the pedigree file if specified
-        input_stream = file_iter(pedigree_file_path)
-        json_records, errors, warnings = parse_pedigree_table(pedigree_file_path, input_stream)
-
-        if errors:
-            for message in errors:
-                logger.error(message)
-            raise CommandError("Unable to parse %(pedigree_file_path)s" % locals())
-
-        if warnings:
-            for message in warnings:
-                logger.warn(message)
-
-        if not validate_only:
-            add_or_update_individuals_and_families(project, json_records)
-
+        add_individuals_from_pedigree_file(project, pedigree_file_path, validate_only=validate_only)

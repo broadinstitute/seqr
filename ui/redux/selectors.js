@@ -1,3 +1,5 @@
+import { createSelector } from 'reselect'
+
 export const getProjectsIsLoading = state => state.projectsLoading.isLoading
 export const getProjectDetailsIsLoading = state => state.projectDetailsLoading.isLoading
 export const getProjectsByGuid = state => state.projectsByGuid
@@ -17,3 +19,13 @@ export const getLocusListsIsLoading = state => state.locusListsLoading.isLoading
 export const getLocusListIsLoading = state => state.locusListLoading.isLoading
 export const getVariantIsLoading = state => state.variantLoading.isLoading
 export const getUser = state => state.user
+
+export const getFamilyMatchmakerSubmissions = createSelector(
+  getMatchmakerSubmissions,
+  (state, props) => props.family,
+  (matchmakerSubmissions, family) => {
+    return Object.values(matchmakerSubmissions[family.projectGuid] || {}).filter(
+      submission => submission.familyId === family.familyId,
+    )
+  },
+)

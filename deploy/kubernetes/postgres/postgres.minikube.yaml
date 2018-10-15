@@ -1,0 +1,71 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: postgres
+  labels:
+    name: postgres
+    namespace: {{ NAMESPACE }}
+    deployment: {{ DEPLOY_TO }}
+spec:
+  ports:
+  - port: {{ POSTGRES_SERVICE_PORT }}
+  selector:
+    name: postgres
+---
+kind: Deployment
+apiVersion: extensions/v1beta1
+metadata:
+  name: postgres
+  namespace: {{ NAMESPACE }}
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        name: postgres
+        deployment: {{ DEPLOY_TO }}
+    spec:
+      volumes:
+      - name: postgres-dbpath
+        hostPath:
+          path: {{ POSTGRES_DBPATH }}
+      containers:
+      - name: postgres-pod
+        ports:
+        - containerPort: {{ POSTGRES_SERVICE_PORT }}
+          protocol: TCP
+        imagePullPolicy: {{ IMAGE_PULL_POLICY }}
+        image: {{ DOCKER_IMAGE_PREFIX }}/postgres{{ DOCKER_IMAGE_TAG }}
+        resources:
+          requests:
+            memory: "0.5Gi"
+            cpu: "0.01"
+            ephemeral-storage: "100Mi"
+          limits:
+            memory: "1Gi"
+            cpu: "2"
+            ephemeral-storage: "100Gi"
+        env:
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secrets
+              key: postgres.username
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secrets
+              key: postgres.password
+        readinessProbe:
+          exec:
+            command:
+            - /usr/lib/postgresql/9.6/bin/pg_isready
+            - -U
+            - postgres
+            - -d
+            - postgres
+        volumeMounts:
+        - name: postgres-dbpath
+          mountPath: /var/lib/postgresql/data
+      restartPolicy: Always
+      dnsPolicy: ClusterFirst

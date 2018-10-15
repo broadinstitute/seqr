@@ -355,6 +355,10 @@ def create_sample_records(source_individual, new_project, new_individual, counte
                 loaded_date=loaded_vcf_file.loaded_date,
                 sample_status=SeqrSample.SAMPLE_STATUS_LOADED if loaded_vcf_file else None,
             )
+            if sample_created:
+                counters['samples_created'] += 1
+                logger.info("Created alignment sample: " + str(new_sample.json()))
+
 
 def look_up_vcf_loaded_date(vcf_path):
     vcf_record = get_annotator().get_vcf_file_from_annotator(vcf_path)
@@ -558,9 +562,9 @@ def transfer_individual(source_individual, new_family, new_project, connect_to_p
     update_model_field(new_individual, 'phenotips_data',  source_individual.phenotips_data)
 
     # update PhenoTips data
+    phenotips_data_retrieved = False
     if connect_to_phenotips and new_project.is_phenotips_enabled:
         try:
-            phenotips_data_retrieved = False
             data_json = _get_patient_data(
                 new_project,
                 new_individual,

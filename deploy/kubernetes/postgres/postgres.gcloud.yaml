@@ -4,6 +4,7 @@ metadata:
   name: postgres
   labels:
     name: postgres
+    namespace: {{ NAMESPACE }}
     deployment: {{ DEPLOY_TO }}
 spec:
   ports:
@@ -15,6 +16,7 @@ kind: Deployment
 apiVersion: extensions/v1beta1
 metadata:
   name: postgres
+  namespace: {{ NAMESPACE }}
 spec:
   replicas: 1
   template:
@@ -31,14 +33,20 @@ spec:
           fsType: ext4
       containers:
       - name: postgres-pod
-        image: {{ DOCKER_IMAGE_PREFIX }}/postgres:{{ TIMESTAMP }}
+        ports:
+        - containerPort: {{ POSTGRES_SERVICE_PORT }}
+          protocol: TCP
+        imagePullPolicy: {{ IMAGE_PULL_POLICY }}
+        image: {{ DOCKER_IMAGE_PREFIX }}/postgres{{ DOCKER_IMAGE_TAG }}
         resources:
           requests:
-            memory: "0.25Gi"
+            memory: "0.5Gi"
             cpu: "0.25"
+            ephemeral-storage: "100Mi"
           limits:
             memory: "1Gi"
             cpu: "2"
+            ephemeral-storage: "100Gi"
         env:
         - name: POSTGRES_USER
           valueFrom:
@@ -50,10 +58,6 @@ spec:
             secretKeyRef:
               name: postgres-secrets
               key: postgres.password
-        ports:
-        - containerPort: {{ POSTGRES_SERVICE_PORT }}
-          protocol: TCP
-        imagePullPolicy: Always
         readinessProbe:
           exec:
             command:

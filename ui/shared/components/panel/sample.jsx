@@ -12,7 +12,7 @@ const Detail = styled.span`
 
 const iconColor = (loadedSample, isOutdated) => {
   if (!loadedSample) return 'red'
-  return isOutdated ? 'yellow' : 'green'
+  return isOutdated ? 'grey' : 'green'
 }
 
 const Sample = ({ loadedSample, isOutdated, hoverDetails }) =>

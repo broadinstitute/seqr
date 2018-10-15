@@ -17,7 +17,6 @@ RUN apt-get update && apt-get install -y --fix-missing \
     nano \
     less \
     htop \
-    vim \
     wget
 
 # install postgres client

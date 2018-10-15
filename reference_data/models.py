@@ -1,4 +1,9 @@
 from django.db import models
+from django.contrib.postgres import fields as postgres_fields
+
+#  Allow adding the custom json_fields and internal_json_fields to the model Meta
+# (from https://stackoverflow.com/questions/1088431/adding-attributes-into-django-models-meta-class)
+models.options.DEFAULT_NAMES = models.options.DEFAULT_NAMES + ('json_fields',)
 
 GENOME_VERSION_GRCh37 = "37"
 GENOME_VERSION_GRCh38 = "38"
@@ -83,6 +88,12 @@ class GeneInfo(models.Model):
     gencode_gene_type = models.TextField(null=True, blank=True)
     gencode_release = models.IntegerField(null=True, blank=True)
 
+    class Meta:
+        json_fields = [
+            'gene_id', 'gene_symbol', 'chrom_grch37', 'start_grch37', 'end_grch37', 'chrom_grch38', 'start_grch38',
+            'end_grch38', 'gencode_gene_type', 'coding_region_size_grch37', 'coding_region_size_grch38',
+        ]
+
 
 class TranscriptInfo(models.Model):
     gene = models.ForeignKey(GeneInfo, on_delete=models.CASCADE)
@@ -112,7 +123,20 @@ class GeneConstraint(models.Model):
     pLI = models.FloatField()
     pLI_rank = models.IntegerField()
 
-    #pRec = models.FloatField()
+    class Meta:
+        json_fields = ['mis_z', 'mis_z_rank', 'pLI', 'pLI_rank']
+
+
+class GeneExpression(models.Model):
+    GTEX_TISSUE_TYPES = {
+        'adipose_tissue', 'adrenal_gland', 'whole_blood', 'cells_-_ebv-transformed_lymphocytes',
+        'blood_vessel', 'brain', 'breast',  'colon', 'esophagus', 'heart', 'liver', 'kidney', 'lung', 'muscle',
+        'nerve', 'pancreas', 'ovary', 'pituitary', 'prostate', 'salivary_gland', 'cells_-_transformed_fibroblasts',
+        'skin', 'small_intestine', 'spleen', 'stomach', 'testis', 'thyroid', 'uterus', 'vagina'
+    }  # 'bladder', 'cells_-_leukemia_cell_line_(cml)', 'cervix_uteri', 'fallopian_tube' - excluded because too few samples or not relevant
+
+    gene = models.OneToOneField(GeneInfo, on_delete=models.CASCADE)
+    expression_values = postgres_fields.JSONField(null=True)
 
 
 class Omim(models.Model):
@@ -131,11 +155,13 @@ class Omim(models.Model):
     phenotype_inheritance = models.TextField(null=True, blank=True)  # Example: "Autosomal dominant"
     phenotype_mim_number = models.IntegerField(null=True, blank=True)  # Example: 616331
     phenotype_description = models.TextField(null=True, blank=True)  # Example: "Robinow syndrome, autosomal dominant 2"
-    phenotype_map_method  = models.CharField(max_length=1, choices=MAP_METHOD_CHOICES)  # Example: 2
+    phenotype_map_method = models.CharField(max_length=1, choices=MAP_METHOD_CHOICES)  # Example: 2
 
     class Meta:
         # ('mim_number', 'phenotype_mim_number') is not unique - for example ('124020', '609535')
         unique_together = ('mim_number', 'phenotype_mim_number', 'phenotype_description')
+
+        json_fields = ['mim_number', 'phenotype_mim_number', 'phenotype_description']
 
 
 # based on dbNSFPv3.5a_gene fields
@@ -174,3 +200,7 @@ class dbNSFPGene(models.Model):
     zebrafish_structure = models.TextField(null=True, blank=True)   # Affected structure of the homolog zebrafish gene from ZFIN
     zebrafish_phenotype_quality = models.TextField(null=True, blank=True)   # Phenotype description for the homolog zebrafish gene from ZFIN
     zebrafish_phenotype_tag = models.TextField(null=True, blank=True)   # Phenotype tag for the homolog zebrafish gene from ZFIN
+
+    class Meta:
+        json_fields = ['function_desc', 'disease_desc']
+

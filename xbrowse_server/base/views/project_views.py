@@ -881,7 +881,10 @@ def gene_quicklook(request, project_id, gene_id):
                 rare_variant_dict[variant_id] = variant
                 project_variants.append(variant)
             else:
-                rare_variant_dict[variant_id].genotypes.update(variant.genotypes)
+                for indiv_id, genotype in variant.genotypes.items():
+                    existing_genotype = rare_variant_dict[variant_id].genotypes.get(indiv_id)
+                    if not existing_genotype or existing_genotype.num_alt == -1:
+                        rare_variant_dict[variant_id].genotypes[indiv_id] = genotype
 
         rare_variants.extend(project_variants)
 

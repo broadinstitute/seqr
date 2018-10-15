@@ -5,10 +5,7 @@ MAINTAINER MacArthur Lab
 ENV ELASTICSEARCH_VERSION="6.3.2"
 
 # install commmon utilities
-RUN apt-get update && apt-get install -y --fix-missing \
-    curl \
-    less \
-    wget
+RUN apt-get update && apt-get install -y --fix-missing curl less
 
 # create 'elasticsearch' user
 RUN useradd -ms /bin/bash elasticsearch

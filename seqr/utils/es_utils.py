@@ -10,7 +10,7 @@ import settings
 from reference_data.models import GENOME_VERSION_GRCh38
 from seqr.models import Sample, Individual
 from seqr.utils.xpos_utils import get_xpos
-from seqr.views.utils.gene_utils import parse_locus_list_items
+from seqr.utils.gene_utils import parse_locus_list_items
 from seqr.views.utils.json_utils import _to_camel_case
 
 logger = logging.getLogger(__name__)

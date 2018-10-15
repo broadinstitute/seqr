@@ -1,5 +1,6 @@
 import requests
 from requests.auth import HTTPBasicAuth
+from requests_toolbelt.utils import dump
 from django.http import HttpResponse
 import logging
 import urllib3
@@ -16,7 +17,7 @@ EXCLUDE_HTTP_REQUEST_HEADERS = {
 # More info at: http://www.w3.org/Protocols/rfc2616/rfc2616-sec13.html#sec13.5.1
 EXCLUDE_HTTP_RESPONSE_HEADERS = {
     'connection', 'keep-alive', 'proxy-authenticate',
-    'proxy-authorization', 'te', 'trailers', 'transfer-encoding', 'upgrade'
+    'proxy-authorization', 'te', 'trailers', 'transfer-encoding', 'upgrade',
 }
 
 
@@ -28,8 +29,8 @@ def proxy_request(request, url, host=None, scheme=None, method=None, session=Non
     Args:
         request (object): Django request object
         url (string): either a full url or a path relative to 'host'
-        host (string): hostname or ip address of target server
-        scheme (string): "http" or "https", etc.
+        host (string): "hostname:port" or "ip-address:port" of target server
+        scheme (string): "http" or "https"
         method (string): HTTP request method. Currently supports "GET", "POST", "PUT", "HEAD", "DELETE"
         session (object): requests library Session object
         headers (dict): a dictionary of HTTP request headers to submit instead of the headers in request.META
@@ -101,9 +102,9 @@ def proxy_request(request, url, host=None, scheme=None, method=None, session=Non
     )
 
     if verbose:
-        from requests_toolbelt.utils import dump
-        data = dump.dump_all(response)
-        logger.info("===> dump - response_data:\n" + str(data))
+        if not stream:
+            data = dump.dump_all(response)
+            logger.info("===> dump - response_data:\n" + str(data))
 
         logger.info("  response: <Response: %s> %s" % (response.status_code, response.reason))
         logger.info("  response-headers:")

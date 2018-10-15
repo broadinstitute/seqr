@@ -1,0 +1,57 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: mongo
+  namespace: {{ NAMESPACE }}
+  labels:
+    name: mongo
+    deployment: {{ DEPLOY_TO }}
+spec:
+  ports:
+  - port: {{ MONGO_SERVICE_PORT }}
+  selector:
+    name: mongo
+---
+kind: Deployment
+apiVersion: extensions/v1beta1
+metadata:
+  name: mongo
+  namespace: {{ NAMESPACE }}
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        name: mongo
+        deployment: {{ DEPLOY_TO }}
+    spec:
+      volumes:
+      - name: mongo-dbpath
+        hostPath:
+          path: {{ MONGO_DBPATH }}
+      containers:
+      - name: mongo-pod
+        ports:
+        - containerPort: {{ MONGO_SERVICE_PORT }}
+          protocol: TCP
+        imagePullPolicy: {{ IMAGE_PULL_POLICY }}
+        image: {{ DOCKER_IMAGE_PREFIX }}/mongo{{ DOCKER_IMAGE_TAG }}
+        volumeMounts:
+        - name: mongo-dbpath
+          mountPath: /data/db
+        resources:
+          requests:
+            memory: "0.5Gi"
+            cpu: "0.01"
+            ephemeral-storage: "100Mi"
+          limits:
+            memory: "20Gi"
+            cpu: "5"
+            ephemeral-storage: "100Gi"
+#        readinessProbe:
+#          exec:
+#            command:
+#            - cat
+#            - /tmp/ready
+      restartPolicy: Always
+      dnsPolicy: ClusterFirst

@@ -17,5 +17,3 @@ export TERM=xterm
 
 export PGHOST=${POSTGRES_SERVICE_HOSTNAME}
 export PGUSER=postgres
-
-resize

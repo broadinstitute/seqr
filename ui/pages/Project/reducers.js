@@ -70,14 +70,18 @@ export const loadProjectVariants = (familyGuids, variantGuid) => {
   }
 }
 
+const unloadSavedVariants = (dispatch, getState) => {
+  const state = getState()
+  const variantsToDelete = Object.keys(state.projectSavedVariants).reduce((acc, o) => ({ ...acc, [o]: null }), {})
+  const variantFamiliesToDelete = Object.keys(state.projectSavedVariantFamilies).reduce((acc, o) => ({ ...acc, [o]: false }), {})
+  dispatch({ type: RECEIVE_DATA, updatesById: { savedVariantsByGuid: variantsToDelete } })
+  dispatch({ type: RECEIVE_SAVED_VARIANT_FAMILIES, updates: variantFamiliesToDelete })
+}
+
 export const unloadProject = () => {
   return (dispatch, getState) => {
-    const state = getState()
-    const variantsToDelete = Object.keys(state.savedVariantsByGuid).reduce((acc, o) => ({ ...acc, [o]: null }), {})
-    const variantFamiliesToDelete = Object.keys(state.projectSavedVariantFamilies).reduce((acc, o) => ({ ...acc, [o]: false }), {})
     dispatch({ type: UPDATE_CURRENT_PROJECT, newValue: null })
-    dispatch({ type: RECEIVE_DATA, updatesById: { savedVariantsByGuid: variantsToDelete } })
-    dispatch({ type: RECEIVE_SAVED_VARIANT_FAMILIES, updates: variantFamiliesToDelete })
+    unloadSavedVariants(dispatch, getState)
   }
 }
 
@@ -124,6 +128,12 @@ export const addDataset = (values) => {
     return new HttpRequestHelper(`/api/project/${getState().currentProjectGuid}/add_dataset`,
       (responseJson) => {
         dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+
+        // Clear all loaded variants and update the saved variant json. This should happen asynchronously
+        unloadSavedVariants(dispatch, getState)
+        new HttpRequestHelper(`/api/project/${getState().currentProjectGuid}/update_saved_variant_json`).get()
+
+        window.location.href = window.location.href //TODO remove this - reload the page to apply dataset changes
       },
       (e) => {
         if (e.body && e.body.errors) {

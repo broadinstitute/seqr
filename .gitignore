@@ -14,9 +14,7 @@ docs/Makefile
 *.DS_Store
 .ipynb_checkpoints
 
-deploy/secrets/gcloud*
-deploy/secrets/minikube*
-deploy/secrets/kube-solo*
-deploy/secrets/shared*
+deploy/secrets/gcloud*/*
+deploy/secrets/gcloud*/*
 
 pedigree_images/*

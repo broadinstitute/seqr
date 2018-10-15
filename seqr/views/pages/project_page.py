@@ -8,6 +8,7 @@ import json
 
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import connection
 from django.db.models import Q, Count
 
@@ -16,9 +17,10 @@ from seqr.models import Family, Individual, _slugify, VariantTagType, VariantTag
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.individual_api import export_individuals
 from seqr.views.apis.locus_list_api import get_sorted_project_locus_lists
+from seqr.views.apis.saved_variant_api import _variant_details
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import \
-    _get_json_for_project, _get_json_for_sample, _get_json_for_families, _get_json_for_individuals,\
+    _get_json_for_project, get_json_for_sample_dict, _get_json_for_families, _get_json_for_individuals,\
     get_json_for_saved_variant, get_json_for_analysis_groups
 
 
@@ -46,16 +48,12 @@ def project_page_data(request, project_guid):
     """
     project = get_project_and_check_permissions(project_guid, request.user)
 
-    cursor = connection.cursor()
-
-    families_by_guid = _retrieve_families(cursor, project.guid, request.user)
+    families_by_guid = _retrieve_families(project.guid, request.user)
     individuals_by_guid = _retrieve_individuals(project.guid, request.user)
     for individual_guid, individual in individuals_by_guid.items():
         families_by_guid[individual['familyGuid']]['individualGuids'].add(individual_guid)
-    samples_by_guid = _retrieve_samples(cursor, project.guid, individuals_by_guid)
+    samples_by_guid = _retrieve_samples(project.guid, individuals_by_guid)
     analysis_groups_by_guid = _retrieve_analysis_groups(project)
-
-    cursor.close()
 
     project_json = _get_json_for_project(project, request.user)
     project_json['collaborators'] = _get_json_for_collaborator_list(project)
@@ -80,11 +78,10 @@ def project_page_data(request, project_guid):
     return create_json_response(json_response)
 
 
-def _retrieve_families(cursor, project_guid, user):
+def _retrieve_families(project_guid, user):
     """Retrieves family-level metadata for the given project.
 
     Args:
-        cursor: connected database cursor that can be used to execute SQL queries.
         project_guid (string): project_guid
         user (Model): for checking permissions to view certain fields
     Returns:
@@ -129,17 +126,18 @@ def _retrieve_individuals(project_guid, user):
     return individuals_by_guid
 
 
-def _retrieve_samples(cursor, project_guid, individuals_by_guid):
+def _retrieve_samples(project_guid, individuals_by_guid):
     """Retrieves sample metadata for the given project.
 
         Args:
-            cursor: connected database cursor that can be used to execute SQL queries.
             project_guid (string): project_guid
             individuals_by_guid (dict): maps each individual_guid to a dictionary with individual info.
                 This method adds a "sampleGuids" list to each of these dictionaries.
         Returns:
             2-tuple with dictionaries: (samples_by_guid, sample_batches_by_guid)
         """
+    # TODO use ORM  instead of raw query
+    cursor = connection.cursor()
 
     # use raw SQL since the Django ORM doesn't have a good way to express these types of queries.
     sample_query = """
@@ -172,12 +170,14 @@ def _retrieve_samples(cursor, project_guid, individuals_by_guid):
 
         sample_guid = record['sample_guid']
         if sample_guid not in samples_by_guid:
-            samples_by_guid[sample_guid] = _get_json_for_sample(record)
+            samples_by_guid[sample_guid] = get_json_for_sample_dict(record)
 
         individual_guid = record['individual_guid']
         individuals_by_guid[individual_guid]['sampleGuids'].add(sample_guid)
 
         samples_by_guid[sample_guid]['individualGuid'] = individual_guid
+
+    cursor.close()
 
     return samples_by_guid
 
@@ -232,7 +232,7 @@ def _get_json_for_variant_tag_types(project):
         if variant_tag_type.category == 'CMG Discovery Tags' and num_tags > 0:
             for tag in VariantTag.objects.filter(saved_variant__project=project, variant_tag_type=variant_tag_type).select_related('saved_variant'):
                 tag_data = get_json_for_saved_variant(tag.saved_variant, project_guid=project.guid)
-                tag_data.update(json.loads(tag.saved_variant.saved_variant_json or '{}'))
+                tag_data.update(_variant_details(json.loads(tag.saved_variant.saved_variant_json or '{}')))
                 discovery_tags.append(tag_data)
 
         project_variant_tags.append({
@@ -314,8 +314,12 @@ def _has_gene_search(project):
     Args:
          project (object): django project
     """
-    base_project = BaseProject.objects.get(project_id=project.deprecated_project_id)
-    return get_project_datastore(base_project).project_collection_is_loaded(base_project)
+    try:
+        base_project = BaseProject.objects.get(seqr_project=project)
+    except ObjectDoesNotExist as e:
+        return False
+
+    return base_project.has_elasticsearch_index() or get_project_datastore(base_project).project_collection_is_loaded(base_project)
 
 
 def _project_matchmaker_submissions(project):

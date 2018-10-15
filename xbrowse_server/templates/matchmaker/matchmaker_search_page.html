@@ -1314,11 +1314,11 @@ function showDataToBeSubmitted(){
 	html += '<tr><td><p>species</p></td>' + '<td><p>' +patient['species'] + '</p></td></tr>';
 	
 	html += '<tr><td id="additional_contact_name"><p>Contact name</p></td>' + '<td id="contact-name-container"><span id="contact-name">' +patient['contact']['name'] + '</span>&nbsp&nbsp&nbsp&nbsp';
-    html += '<a href="javascript:addAdditionalContactName();"><i class="fa fa-pencil fa-lg" aria-hidden="true"></i></a>';
+    html += '<a href="javascript:addAdditionalContactName();"><i class="fa fa-edit" aria-hidden="true"></i></a>';
     html += '</td></tr>';
 	
 	html += '<tr><td id="additional_contact_email"><p>Contact URL</p></td>' + '<td id="contact-url-container"><span id="contact-url">' +patient['contact']['href'] + '</span>&nbsp&nbsp&nbsp&nbsp';
-	html += '<a href="javascript:addAdditionalContactEmail();"><i class="fa fa-pencil fa-lg" aria-hidden="true"></i></a>';
+	html += '<a href="javascript:addAdditionalContactEmail();"><i class="fa fa-edit" aria-hidden="true"></i></a>';
 	html += '</td></tr>';
 	
 	html += '<tr><td><p>Contact institution</p></td>' + '<td><p>' +patient['contact']['institution'] + '</p></td></tr>';
@@ -1430,7 +1430,7 @@ function addHgncToEnsembl(ensemblId, divToUse){
 	 $.ajax({url: url, 
 		 	dataType:'json',
 		 	success: function(result){
-				var hgncId=result['gene']['gene_name']; 
+				var hgncId=result['gene']['symbol'];
 		 		$('#' + divToUse).append(hgncId + ' (<a onclick="showGeneInfoDisplay(' + "'"+ ensemblId +"'" +');">' + ensemblId + '</a>)<br>') ;
 		 	},
 		 	error: function (jqXHR, textStatus, errorThrown)

@@ -11,7 +11,7 @@ from reference_data.models import GENOME_VERSION_GRCh37
 from seqr.models import LocusList, LocusListGene, LocusListInterval, IS_OWNER, CAN_VIEW, CAN_EDIT
 from seqr.model_utils import create_seqr_model, delete_seqr_model, find_matching_xbrowse_model
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
-from seqr.views.utils.gene_utils import get_genes, parse_locus_list_items
+from seqr.utils.gene_utils import get_genes, parse_locus_list_items
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_locus_lists, get_json_for_locus_list
@@ -45,7 +45,7 @@ def locus_list_info(request, locus_list_guid):
     gene_ids = [item['geneId'] for item in locus_list_json['items'] if item.get('geneId')]
     return create_json_response({
         'locusListsByGuid': {locus_list_guid: locus_list_json},
-        'genesById': get_genes(gene_ids)
+        'genesById': get_genes(gene_ids, add_dbnsfp=True, add_omim=True, add_constraints=True)
     })
 
 

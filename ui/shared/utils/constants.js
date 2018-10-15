@@ -1,8 +1,24 @@
 import { Form } from 'semantic-ui-react'
 
+import { validators } from '../components/form/ReduxFormWrapper'
 import BaseFieldView from '../components/panel/view-fields/BaseFieldView'
 import OptionFieldView from '../components/panel/view-fields/OptionFieldView'
 import { BooleanCheckbox, RadioGroup, Dropdown, InlineToggle } from '../components/form/Inputs'
+
+
+export const GENOME_VERSION_37 = '37'
+export const GENOME_VERSION_OPTIONS = [
+  { value: GENOME_VERSION_37, text: 'GRCh37' },
+  { value: '38', text: 'GRCh38' },
+]
+
+// PROJECT FIELDS
+
+export const PROJECT_FIELDS = [
+  { name: 'name', label: 'Project Name', placeholder: 'Name', validate: validators.required, autoFocus: true },
+  { name: 'description', label: 'Project Description', placeholder: 'Description' },
+  { name: 'genomeVersion', label: 'Genome Version', component: RadioGroup, options: GENOME_VERSION_OPTIONS },
+]
 
 
 // SAMPLES
@@ -161,12 +177,6 @@ export const CLINSIG_SEVERITY = {
 export const LOCUS_LIST_IS_PUBLIC_FIELD_NAME = 'isPublic'
 export const LOCUS_LIST_LAST_MODIFIED_FIELD_NAME = 'lastModifiedDate'
 export const LOCUS_LIST_CURATOR_FIELD_NAME = 'createdBy'
-
-export const GENOME_VERSION_37 = '37'
-export const GENOME_VERSION_OPTIONS = [
-  { value: GENOME_VERSION_37, text: 'GRCh37' },
-  { value: '38', text: 'GRCh38' },
-]
 
 export const LOCUS_LIST_FIELDS = [
   {

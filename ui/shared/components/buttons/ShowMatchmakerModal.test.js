@@ -7,5 +7,5 @@ import { ShowMatchmakerModalComponent } from './ShowMatchmakerModal'
 configure({ adapter: new Adapter() })
 
 test('shallow-render without crashing', () => {
-  shallow(<ShowMatchmakerModalComponent project={STATE1.project} family={Object.values(STATE1.familiesByGuid)[0]} />)
+  shallow(<ShowMatchmakerModalComponent project={STATE1.project} family={Object.values(STATE1.familiesByGuid)[0]} matchmakerSubmissions={[]} />)
 })

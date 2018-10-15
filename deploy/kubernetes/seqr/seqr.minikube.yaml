@@ -1,0 +1,152 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: seqr
+  namespace: {{ NAMESPACE }}
+  labels:
+    name: seqr
+    deployment: {{ DEPLOY_TO }}
+spec:
+  type: NodePort
+  ports:
+  - port: {{ SEQR_SERVICE_PORT }}
+    nodePort: {{ SEQR_SERVICE_NODE_PORT }}
+  selector:
+    name: seqr
+---
+kind: Deployment
+apiVersion: extensions/v1beta1
+metadata:
+  name: seqr
+  namespace: {{ NAMESPACE }}
+  labels:
+    name: seqr
+    deployment: {{ DEPLOY_TO }}
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        name: seqr
+        deployment: {{ DEPLOY_TO }}
+    spec:
+      volumes:
+      #- name: seqr-code
+      #  hostPath:
+      #    path: {{ BASE_DIR }}
+      - name: data-dir
+        hostPath:
+          path: {{ DATA_DIR }}
+      - name: gcloud-client-secrets-volume
+        secret:
+          secretName: gcloud-client-secrets
+      containers:
+      - name: seqr-pod
+        ports:
+        - containerPort: {{ SEQR_SERVICE_PORT }}
+          protocol: TCP
+        imagePullPolicy: {{ IMAGE_PULL_POLICY }}
+        image: {{ DOCKER_IMAGE_PREFIX }}/seqr{{ DOCKER_IMAGE_TAG }}
+        securityContext:
+          privileged: true
+          capabilities:
+            add:
+              - SYS_ADMIN
+        volumeMounts:
+#        - name: seqr-code
+#          mountPath: /seqr
+        - name: data-dir
+          mountPath: /data
+        - name: gcloud-client-secrets-volume
+          mountPath: /.config
+          readOnly: true
+        resources:
+          requests:
+            memory: "0.5Gi"
+            cpu: "0.05"
+            ephemeral-storage: "100Mi"
+          limits:
+            memory: "20Gi"
+            cpu: "3"
+            ephemeral-storage: "100Gi"
+        envFrom:
+          - configMapRef:
+              name: all-settings
+        env:
+        - name: POSTGRES_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secrets
+              key: postgres.username
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secrets
+              key: postgres.password
+        - name: OMIM_KEY
+          valueFrom:
+            secretKeyRef:
+              name: seqr-secrets
+              key: omim_key
+        - name: POSTMARK_SERVER_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: seqr-secrets
+              key: postmark_server_token
+        - name: MME_NODE_ADMIN_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: seqr-secrets
+              key: mme_node_admin_token
+        - name: GCLOUD_PROJECT      #  TODO can delete these and just rely on 'envFrom configMapRef' above once https://github.com/kubernetes/minikube/issues/2295 is fixed
+          value: "{{ GCLOUD_PROJECT }}"
+        - name: GCLOUD_ZONE
+          value: "{{ GCLOUD_ZONE }}"
+        - name: GUNICORN_WORKER_THREADS
+          value: "{{ GUNICORN_WORKER_THREADS }}"
+        - name: HOST_MACHINE_IP
+          value: "{{ HOST_MACHINE_IP }}"
+        - name: MATCHBOX_SERVICE_HOSTNAME
+          value: "{{ MATCHBOX_SERVICE_HOSTNAME }}"
+        - name: POSTGRES_SERVICE_HOSTNAME
+          value: "{{ POSTGRES_SERVICE_HOSTNAME }}"
+        - name: MONGO_SERVICE_HOSTNAME
+          value: "{{ MONGO_SERVICE_HOSTNAME }}"
+        - name: PHENOTIPS_SERVICE_HOSTNAME
+          value: "{{ PHENOTIPS_SERVICE_HOSTNAME }}"
+        - name: ELASTICSEARCH_SERVICE_HOSTNAME
+          value: "{{ ELASTICSEARCH_SERVICE_HOSTNAME }}"
+        - name: KIBANA_SERVICE_HOSTNAME
+          value: "{{ KIBANA_SERVICE_HOSTNAME }}"
+        - name: REDIS_SERVICE_HOSTNAME
+          value: "{{ REDIS_SERVICE_HOSTNAME }}"
+        - name: SEQR_SERVICE_PORT
+          value: "{{ SEQR_SERVICE_PORT }}"
+        - name: PHENOTIPS_SERVICE_PORT
+          value: "{{ PHENOTIPS_SERVICE_PORT }}"
+        - name: POSTGRES_SERVICE_PORT
+          value: "{{ POSTGRES_SERVICE_PORT }}"
+        - name: MATCHBOX_SERVICE_PORT
+          value: "{{ MATCHBOX_SERVICE_PORT }}"
+        - name: ELASTICSEARCH_SERVICE_PORT
+          value: "{{ ELASTICSEARCH_SERVICE_PORT }}"
+        - name: MONGO_SERVICE_PORT
+          value: "{{ MONGO_SERVICE_PORT }}"
+        - name: DEPLOY_TO
+          value: "{{ DEPLOY_TO }}"
+        - name: DEPLOY_TO_PREFIX
+          value: "{{ DEPLOY_TO_PREFIX }}"
+        - name: DEPLOYMENT_TYPE
+          value: "{{ DEPLOYMENT_TYPE }}"
+        - name: CLUSTER_NAME
+          value: "{{ CLUSTER_NAME }}"
+        - name: SEQR_GIT_BRANCH
+          value: "{{ SEQR_GIT_BRANCH }}"
+        readinessProbe:
+          exec:
+            command:
+            - /bin/bash
+            - -c
+            - /readiness_probe
+      restartPolicy: Always
+      dnsPolicy: ClusterFirst

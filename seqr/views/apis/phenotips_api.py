@@ -85,6 +85,13 @@ def _create_patient_if_missing(project, individual):
     return True
 
 
+def _set_phenotips_patient_id_if_missing(project, individual):
+    if individual.phenotips_patient_id:
+        return
+    patient_json = _get_patient_data(project, individual)
+    update_seqr_model(individual, phenotips_patient_id=patient_json['id'])
+
+
 def _get_patient_data(project, individual):
     """Retrieves patient data from PhenoTips and returns a json obj.
     Args:
@@ -300,6 +307,7 @@ def _phenotips_view_handler(request, project_guid, individual_guid, url_template
 
     individual = Individual.objects.get(guid=individual_guid)
     _create_patient_if_missing(project, individual)
+    _set_phenotips_patient_id_if_missing(project, individual)
 
     # query string forwarding needed for PedigreeEditor button
     query_string = request.META["QUERY_STRING"]
@@ -343,7 +351,7 @@ def phenotips_edit_handler(request, project_guid, individual_guid):
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
-def proxy_to_phenotips_handler(request):
+def proxy_to_phenotips(request):
     """This django view accepts GET and POST requests and forwards them to PhenoTips"""
 
     url = request.get_full_path()
@@ -351,12 +359,6 @@ def proxy_to_phenotips_handler(request):
         logger.warn("Blocked proxy url: " + str(url))
         return HttpResponse(status=204)
     logger.info("Proxying url: " + str(url))
-
-    #if 'current_phenotips_session' not in request.session:
-    #    phenotips_session = requests.Session()
-    #    request.session['current_phenotips_session'] = pickle.dumps(phenotips_session)
-    #else:
-    #    phenotips_session = pickle.loads(request.session['current_phenotips_session'])
 
     # Some PhenoTips endpoints that use HTTP redirects lose the phenotips JSESSION auth cookie
     # along the way, and don't proxy correctly. Using a Session object as below to store the cookies
