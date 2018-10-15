@@ -128,8 +128,8 @@ def get_gene_id_from_str(s, reference):
     """
     if reference.is_valid_gene_id(s):
         return s
-    elif reference.get_gene_id_from_symbol(s.lower()):
-        return reference.get_gene_id_from_symbol(s.lower())
+    elif reference.get_gene_id_from_symbol(s.upper()):
+        return reference.get_gene_id_from_symbol(s.upper())
     else:
         return None
 
