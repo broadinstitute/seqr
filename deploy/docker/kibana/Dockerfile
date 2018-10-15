@@ -1,13 +1,20 @@
-FROM openjdk:8-jre-alpine
+FROM alpine:3.8
 
 MAINTAINER MacArthur Lab
+
+# install dependencies and utililties
+RUN apk add --update nodejs shadow bash curl less
+
+# install java
+RUN apk add --no-cache openjdk8
+ENV JAVA_HOME /usr/lib/jvm/java-1.8-openjdk
+ENV PATH $PATH:/usr/lib/jvm/java-1.8-openjdk/jre/bin:/usr/lib/jvm/java-1.8-openjdk/bin
 
 #ENV KIBANA_VERSION="6.3.2"
 ENV KIBANA_VERSION="5.4.3"
 
-# create user 'kibana'
-RUN apk add --update nodejs shadow bash \
-  && useradd -ms /bin/bash kibana
+# create 'kibana' user
+RUN useradd -ms /bin/bash kibana
 
 # download and install kibana
 RUN cd /usr/local \
