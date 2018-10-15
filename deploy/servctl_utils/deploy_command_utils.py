@@ -57,179 +57,171 @@ DEPLOYABLE_COMPONENTS = [
 ]
 
 
-def _get_component_group_to_component_name_mapping():
-    result = {
-        "elasticsearch-sharded": ["es-master", "es-client", "es-data"],
-    }
-    return result
+def deploy_init_cluster(settings):
+    """Provisions a GKE cluster, persistent disks, and any other prerequisites for deployment."""
 
+    print_separator("init-cluster")
 
-def resolve_component_groups(deployment_target, components_or_groups):
-    component_groups = _get_component_group_to_component_name_mapping()
-
-    return [
-        component
-        for component_or_group in components_or_groups
-        for component in component_groups.get(component_or_group, [component_or_group])
-    ]
-
-
-COMPONENT_GROUP_NAMES = list(_get_component_group_to_component_name_mapping().keys())
-
-
-def deploy(deployment_target, components, output_dir=None, runtime_settings={}):
-    """Deploy one or more components to the kubernetes cluster specified as the deployment_target.
-
-    Args:
-        deployment_target (string): value from DEPLOYMENT_TARGETS - eg. "minikube", "gcloud-dev", etc.
-            indentifying which cluster to deploy these components to
-        components (list): The list of component names to deploy (eg. "postgres", "phenotips" - each string must be in
-            constants.DEPLOYABLE_COMPONENTS). Order doesn't matter.
-        output_dir (string): path of directory where to put deployment logs and rendered config files
-        runtime_settings (dict): a dictionary of other key-value pairs that override settings file(s) values.
-    """
-    if not components:
-        raise ValueError("components list is empty")
-
-    if components and "init-cluster" not in components:
-        check_kubernetes_context(deployment_target)
-
-    # parse settings files
-    settings = collections.OrderedDict()
-    load_settings([
-        "deploy/kubernetes/shared-settings.yaml",
-        "deploy/kubernetes/%(deployment_target)s-settings.yaml" % locals(),
-        ], settings)
-
-    settings.update(runtime_settings)
-
-    # minikube fix: set IMAGE_PULL_POLICY = "IfNotPresent" if running 'docker build' since it fails for other settings such as 'Always'
-    # https://github.com/kubernetes/minikube/issues/1395#issuecomment-296581721
-    # https://kubernetes.io/docs/setup/minikube/
-    if settings["BUILD_DOCKER_IMAGES"] and deployment_target == "minikube":
-        settings["IMAGE_PULL_POLICY"] = "IfNotPresent"
-
-    # set docker image tag to use when pulling images (if --build-docker-images wasn't specified) or to add to new images (if it was specified)
-    if runtime_settings.get("DOCKER_IMAGE_TAG"):
-        settings["DOCKER_IMAGE_TAG"] = ":" + runtime_settings["DOCKER_IMAGE_TAG"]
-    elif runtime_settings["BUILD_DOCKER_IMAGES"]:
-        settings["DOCKER_IMAGE_TAG"] = ":" + settings["TIMESTAMP"]
+    # initialize the VM
+    if settings["DEPLOY_TO"] == "minikube":
+        _init_cluster_minikube(settings)
+    elif settings["DEPLOY_TO_PREFIX"] == "gcloud":
+        _init_cluster_gcloud(settings)
     else:
-        settings["DOCKER_IMAGE_TAG"] = ":latest"
+        raise ValueError("Unexpected DEPLOY_TO_PREFIX: %(DEPLOY_TO_PREFIX)s" % settings)
 
-    logger.info("==> Using docker image tag: %(DOCKER_IMAGE_TAG)s" % settings)
+    node_name = get_node_name()
+    if not node_name:
+        raise Exception("Unable to retrieve node name. Was the cluster created successfully?")
 
-    # configure deployment dir
-    settings["DEPLOYMENT_TEMP_DIR"] = os.path.join(
-        settings["DEPLOYMENT_TEMP_DIR"],
-        "deployments/%(TIMESTAMP)s_%(DEPLOY_TO)s" % settings)
+    set_environment(settings["DEPLOY_TO"])
 
-    # make sure all keys are upper-case
-    settings = {key.upper(): value for key, value in settings.items()}
+    create_namespace(settings)
 
-    # configure logging output
-    log_dir = os.path.join(settings["DEPLOYMENT_TEMP_DIR"], "logs")
-    if not os.path.isdir(log_dir):
-        os.makedirs(log_dir)
-    log_file_path = os.path.join(log_dir, "deploy.log")
-    sh = logging.StreamHandler(open(log_file_path, "w"))
-    sh.setLevel(logging.INFO)
-    logger.addHandler(sh)
-    logger.info("Starting log file: %(log_file_path)s" % locals())
+    # print cluster info
+    run("kubectl cluster-info", verbose=True)
 
-    logger.info("==> Settings:\n%s" % pformat(settings))
-
-    # process Jinja templates to replace template variables with values from settings. Write results to temp output directory.
-    input_base_dir = settings["BASE_DIR"]
-    output_base_dir = settings["DEPLOYMENT_TEMP_DIR"]
-    template_file_paths = glob.glob("deploy/kubernetes/*.yaml") + \
-                          glob.glob("deploy/kubernetes/*/*.yaml") + \
-                          glob.glob("hail_elasticsearch_pipelines/kubernetes/elasticsearch-sharded/*.yaml")
-    for file_path in template_file_paths:
-        process_jinja_template(input_base_dir, file_path, settings, output_base_dir)
-
-    # make sure namespace exists
-    if "init-cluster" not in components:
-        create_namespace(settings)
-
-    # call deploy_* functions for each component in "components" list, in the order that these components are listed in DEPLOYABLE_COMPONENTS
-    for component in DEPLOYABLE_COMPONENTS:
-        if component in components:
-            # only deploy requested components
-            func_name = "deploy_" + component.replace("-", "_")
-            f = globals().get(func_name)
-            if f is not None:
-                f(settings)
-            else:
-                raise ValueError("'deploy_{}' function not found. Is '{}' a valid component name?".format(func_name, component))
+    # wait for the cluster to initialize
+    for retry_i in range(1, 5):
+        try:
+            deploy_settings(settings)
+            break
+        except RuntimeError as e:
+            logger.error(("Error when deploying config maps: %(e)s. This sometimes happens when cluster is "
+                          "initializing. Retrying...") % locals())
+            time.sleep(5)
 
 
-def delete_pod(component_label, settings, async=False, custom_yaml_filename=None):
-    yaml_filename = custom_yaml_filename or (component_label+".%(DEPLOY_TO_PREFIX)s.yaml")
-
-    deployment_target = settings["DEPLOY_TO"]
-    if is_pod_running(component_label, deployment_target):
-        run(" ".join([
-            "kubectl delete",
-            "-f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/"+component_label+"/"+yaml_filename,
-        ]) % settings, errors_to_ignore=["not found"])
-
-    logger.info("waiting for \"%s\" to exit Running status" % component_label)
-    while is_pod_running(component_label, deployment_target) and not async:
-        time.sleep(5)
-
-
-def _deploy_pod(component_label, settings, wait_until_pod_is_running=True, wait_until_pod_is_ready=False):
+def deploy_settings(settings):
+    """Deploy settings as a config map"""
     if settings["ONLY_PUSH_TO_REGISTRY"]:
         return
 
+    # write out a ConfigMap file
+    configmap_file_path = os.path.join(settings["DEPLOYMENT_TEMP_DIR"], "deploy/kubernetes/all-settings.properties")
+    with open(configmap_file_path, "w") as f:
+        for key, value in settings.items():
+            if value is None:
+                continue
+
+            f.write('%s=%s\n' % (key, value))
+
+    create_namespace(settings)
+
+    run("kubectl delete configmap all-settings", errors_to_ignore=["not found"])
+    run("kubectl create configmap all-settings --from-file=%(configmap_file_path)s" % locals())
+    run("kubectl get configmaps all-settings -o yaml")
+
+
+def deploy_secrets(settings):
+    """Deploys or updates k8s secrets."""
+
+    if settings["ONLY_PUSH_TO_REGISTRY"]:
+        return
+
+    print_separator("secrets")
+
+    create_namespace(settings)
+
+    # deploy secrets
+    for secret_label in [
+        "seqr-secrets",
+        "postgres-secrets",
+        "nginx-secrets",
+        "matchbox-secrets",
+        "gcloud-client-secrets"
+    ]:
+        run("kubectl delete secret %(secret_label)s" % locals(), verbose=False, errors_to_ignore=["not found"])
+
     run(" ".join([
-        "kubectl apply",
-        "-f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/"+component_label+"/"+component_label+".%(DEPLOY_TO_PREFIX)s.yaml"
-    ]) % settings)
+        "kubectl create secret generic seqr-secrets",
+        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/seqr/omim_key",
+        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/seqr/postmark_server_token",
+        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/seqr/mme_node_admin_token",
+        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/seqr/slack_token",
+    ]) % settings, errors_to_ignore=["already exists"])
 
-    if wait_until_pod_is_running:
-        sleep_until_pod_is_running(component_label, deployment_target=settings["DEPLOY_TO"])
+    run(" ".join([
+        "kubectl create secret generic postgres-secrets",
+        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/postgres/postgres.username",
+        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/postgres/postgres.password",
+    ]) % settings, errors_to_ignore=["already exists"])
 
-    if wait_until_pod_is_ready:
-        sleep_until_pod_is_ready(component_label, deployment_target=settings["DEPLOY_TO"])
+    run(" ".join([
+        "kubectl create secret generic nginx-secrets",
+        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/nginx-%(DEPLOY_TO)s/tls.key",
+        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/nginx-%(DEPLOY_TO)s/tls.crt",
+    ]) % settings, errors_to_ignore=["already exists"])
 
+    run(" ".join([
+        "kubectl create secret generic matchbox-secrets",
+        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/matchbox/nodes.json",
+        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/matchbox/application.properties",
+        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/matchbox/config.xml",
+    ]) % settings, errors_to_ignore=["already exists"])
 
-def docker_build(component_label, settings, custom_build_args=()):
-    params = dict(settings)   # make a copy before modifying
-    params["COMPONENT_LABEL"] = component_label
-    params["DOCKER_IMAGE_NAME"] = "%(DOCKER_IMAGE_PREFIX)s/%(COMPONENT_LABEL)s" % params
-
-    docker_command_prefix = "eval $(minikube docker-env); " if settings["DEPLOY_TO"] == "minikube" else ""
-
-    docker_tags = set([
-        "",
-        ":latest",
-        "%(DOCKER_IMAGE_TAG)s" % params,
-    ])
-
-    if not settings["BUILD_DOCKER_IMAGES"]:
-        logger.info("Skipping docker build step. Use --build-docker-image to build a new image (and --force to build from the beginning)")
+    if os.path.isfile("deploy/secrets/shared/gcloud/service-account-key.json"):
+        run(" ".join([
+            "kubectl create secret generic gcloud-client-secrets",
+            "--from-file deploy/secrets/shared/gcloud/service-account-key.json",
+            "--from-file deploy/secrets/shared/gcloud/boto",
+        ]) % settings, errors_to_ignore=["already exists"])
     else:
-        docker_build_command = docker_command_prefix
-        docker_build_command += "docker build deploy/docker/%(COMPONENT_LABEL)s/ "
-        docker_build_command += (" ".join(custom_build_args) + " ")
-        if settings["FORCE_BUILD_DOCKER_IMAGES"]:
-            docker_build_command += "--no-cache "
+        run(" ".join([
+            "kubectl create secret generic gcloud-client-secrets"   # create an empty set of client secrets
+        ]), errors_to_ignore=["already exists"])
 
-        for tag in docker_tags:
-            docker_image_name_with_tag = params["DOCKER_IMAGE_NAME"] + tag
-            docker_build_command += "-t %(docker_image_name_with_tag)s " % locals()
 
-        run(docker_build_command % params, verbose=True)
+def deploy_cockpit(settings):
+    print_separator("cockpit")
 
-    if settings["PUSH_TO_REGISTRY"]:
-        for tag in docker_tags:
-            docker_image_name_with_tag = params["DOCKER_IMAGE_NAME"] + tag
-            docker_push_command = docker_command_prefix
-            docker_push_command += "docker push %(docker_image_name_with_tag)s" % locals()
-            run(docker_push_command, verbose=True)
-            logger.info("==> Finished uploading image: %(docker_image_name_with_tag)s" % locals())
+    if settings["DELETE_BEFORE_DEPLOY"]:
+        delete_pod("cockpit", settings, custom_yaml_filename="cockpit.yaml")
+        #"kubectl delete -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/cockpit/cockpit.yaml" % settings,
+
+    if settings["DEPLOY_TO"] == "minikube":
+        # disable username/password prompt - https://github.com/cockpit-project/cockpit/pull/6921
+        run(" ".join([
+            "kubectl create clusterrolebinding anon-cluster-admin-binding",
+            "--clusterrole=cluster-admin",
+            "--user=system:anonymous",
+        ]), errors_to_ignore=["already exists"])
+
+    run("kubectl apply -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/cockpit/cockpit.yaml" % settings)
+
+    # print username, password for logging into cockpit
+    run("kubectl config view")
+
+
+def deploy_external_mongo_connector(settings):
+    deploy_external_connector(settings, "mongo")
+
+
+def deploy_external_elasticsearch_connector(settings):
+    deploy_external_connector(settings, "elasticsearch")
+
+
+def deploy_external_connector(settings, connector_name):
+    if connector_name not in ["mongo", "elasticsearch"]:
+        raise ValueError("Invalid connector name: %s" % connector_name)
+
+    if settings["ONLY_PUSH_TO_REGISTRY"]:
+        return
+
+    print_separator("external-%s-connector" % connector_name)
+
+    run(("kubectl apply -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/external-connectors/" % settings) + "external-%(connector_name)s.yaml" % locals())
+
+
+def deploy_elasticsearch(settings):
+    print_separator("elasticsearch")
+
+    if settings["DELETE_BEFORE_DEPLOY"]:
+        delete_pod("elasticsearch", settings)
+
+    docker_build("elasticsearch", settings, ["--build-arg ELASTICSEARCH_SERVICE_PORT=%s" % settings["ELASTICSEARCH_SERVICE_PORT"]])
+
+    deploy_pod("elasticsearch", settings, wait_until_pod_is_ready=True)
 
 
 def deploy_mongo(settings):
@@ -240,7 +232,29 @@ def deploy_mongo(settings):
 
     docker_build("mongo", settings)
 
-    _deploy_pod("mongo", settings, wait_until_pod_is_running=True)
+    deploy_pod("mongo", settings, wait_until_pod_is_running=True)
+
+
+def deploy_postgres(settings):
+    print_separator("postgres")
+
+    if settings["DELETE_BEFORE_DEPLOY"]:
+        delete_pod("postgres", settings)
+
+    docker_build("postgres", settings)
+
+    deploy_pod("postgres", settings, wait_until_pod_is_ready=True)
+
+
+def deploy_redis(settings):
+    print_separator("redis")
+
+    if settings["DELETE_BEFORE_DEPLOY"]:
+        delete_pod("redis", settings)
+
+    docker_build("redis", settings, ["--build-arg REDIS_SERVICE_PORT=%s" % settings["REDIS_SERVICE_PORT"]])
+
+    deploy_pod("redis", settings, wait_until_pod_is_ready=True)
 
 
 def deploy_phenotips(settings):
@@ -288,7 +302,7 @@ def deploy_phenotips(settings):
     if settings["ONLY_PUSH_TO_REGISTRY"]:
         return
 
-    _deploy_pod("phenotips", settings, wait_until_pod_is_ready=True)
+    deploy_pod("phenotips", settings, wait_until_pod_is_ready=True)
 
     for i in range(0, 3):
         # opening the PhenoTips website for the 1st time triggers a final set of initialization
@@ -316,7 +330,7 @@ def deploy_phenotips(settings):
         run_in_pod("postgres", "/root/restore_database_backup.sh  xwiki  xwiki  /root/$(basename %(restore_phenotips_db_from_backup)s)" % locals(), deployment_target=deployment_target, verbose=True)
         run_in_pod("postgres", "rm /root/$(basename %(restore_phenotips_db_from_backup)s)" % locals(), deployment_target=deployment_target, verbose=True)
 
-        _deploy_pod("phenotips", settings, wait_until_pod_is_ready=True)
+        deploy_pod("phenotips", settings, wait_until_pod_is_ready=True)
 
 
 def deploy_matchbox(settings):
@@ -327,105 +341,7 @@ def deploy_matchbox(settings):
 
     docker_build("matchbox", settings, ["--build-arg MATCHBOX_SERVICE_PORT=%s" % settings["MATCHBOX_SERVICE_PORT"]])
 
-    _deploy_pod("matchbox", settings, wait_until_pod_is_ready=True)
-
-
-def deploy_postgres(settings):
-    print_separator("postgres")
-
-    if settings["DELETE_BEFORE_DEPLOY"]:
-        delete_pod("postgres", settings)
-
-    docker_build("postgres", settings)
-
-    _deploy_pod("postgres", settings, wait_until_pod_is_ready=True)
-
-
-def deploy_redis(settings):
-    print_separator("redis")
-
-    if settings["DELETE_BEFORE_DEPLOY"]:
-        delete_pod("redis", settings)
-
-    docker_build("redis", settings, ["--build-arg REDIS_SERVICE_PORT=%s" % settings["REDIS_SERVICE_PORT"]])
-
-    _deploy_pod("redis", settings, wait_until_pod_is_ready=True)
-
-
-def deploy_elasticsearch(settings):
-    print_separator("elasticsearch")
-
-    if settings["DELETE_BEFORE_DEPLOY"]:
-        delete_pod("elasticsearch", settings)
-
-    docker_build("elasticsearch", settings, ["--build-arg ELASTICSEARCH_SERVICE_PORT=%s" % settings["ELASTICSEARCH_SERVICE_PORT"]])
-
-    _deploy_pod("elasticsearch", settings, wait_until_pod_is_ready=True)
-
-
-def deploy_kibana(settings):
-    print_separator("kibana")
-
-    if settings["DELETE_BEFORE_DEPLOY"]:
-        delete_pod("kibana", settings)
-
-    docker_build("kibana", settings, ["--build-arg KIBANA_SERVICE_PORT=%s" % settings["KIBANA_SERVICE_PORT"]])
-
-    _deploy_pod("kibana", settings, wait_until_pod_is_ready=True)
-
-
-def deploy_cockpit(settings):
-    print_separator("cockpit")
-
-    if settings["DELETE_BEFORE_DEPLOY"]:
-        delete_pod("cockpit", settings, custom_yaml_filename="cockpit.yaml")
-        #"kubectl delete -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/cockpit/cockpit.yaml" % settings,
-
-    if settings["DEPLOY_TO"] == "minikube":
-        # disable username/password prompt - https://github.com/cockpit-project/cockpit/pull/6921
-        run(" ".join([
-            "kubectl create clusterrolebinding anon-cluster-admin-binding",
-                "--clusterrole=cluster-admin",
-                "--user=system:anonymous",
-        ]), errors_to_ignore=["already exists"])
-
-    run("kubectl apply -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/cockpit/cockpit.yaml" % settings)
-
-    # print username, password for logging into cockpit
-    run("kubectl config view")
-
-
-def deploy_nginx(settings):
-    if settings["ONLY_PUSH_TO_REGISTRY"]:
-        return
-
-    print_separator("nginx")
-
-    run("kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/master/deploy/mandatory.yaml" % locals())
-
-    if settings["DELETE_BEFORE_DEPLOY"]:
-        run("kubectl delete -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/nginx/nginx.yaml" % settings, errors_to_ignore=["not found"])
-    run("kubectl apply -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/nginx/nginx.yaml" % settings)
-
-
-def deploy_external_mongo_connector(settings):
-    deploy_external_connector(settings, "mongo")
-
-
-def deploy_external_elasticsearch_connector(settings):
-    deploy_external_connector(settings, "elasticsearch")
-
-
-def deploy_external_connector(settings, connector_name):
-    if connector_name not in ["mongo", "elasticsearch"]:
-        raise ValueError("Invalid connector name: %s" % connector_name)
-
-    if settings["ONLY_PUSH_TO_REGISTRY"]:
-        return
-
-    print_separator("external-%s-connector" % connector_name)
-
-    run(("kubectl apply -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/external-connectors/" % settings) + "external-%(connector_name)s.yaml" % locals())
+    deploy_pod("matchbox", settings, wait_until_pod_is_ready=True)
 
 
 def deploy_seqr(settings):
@@ -436,14 +352,14 @@ def deploy_seqr(settings):
         seqr_git_hash = (":" + seqr_git_hash.strip()) if seqr_git_hash is not None else ""
 
         docker_build("seqr",
-            settings,
-            [
-                "--build-arg SEQR_SERVICE_PORT=%s" % settings["SEQR_SERVICE_PORT"],
-                "--build-arg SEQR_UI_DEV_PORT=%s" % settings["SEQR_UI_DEV_PORT"],
-                "-f deploy/docker/seqr/Dockerfile",
-                "-t %(DOCKER_IMAGE_NAME)s" + seqr_git_hash,
-            ]
-        )
+                     settings,
+                     [
+                         "--build-arg SEQR_SERVICE_PORT=%s" % settings["SEQR_SERVICE_PORT"],
+                         "--build-arg SEQR_UI_DEV_PORT=%s" % settings["SEQR_UI_DEV_PORT"],
+                         "-f deploy/docker/seqr/Dockerfile",
+                         "-t %(DOCKER_IMAGE_NAME)s" + seqr_git_hash,
+                         ]
+                     )
 
     if settings["ONLY_PUSH_TO_REGISTRY"]:
         return
@@ -465,26 +381,50 @@ def deploy_seqr(settings):
 
     if reset_db:
         run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'drop database seqrdb'",
-            errors_to_ignore=["does not exist"],
-            verbose=True,
-        )
+                   errors_to_ignore=["does not exist"],
+                   verbose=True,
+                   )
 
     if restore_seqr_db_from_backup:
         run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'drop database seqrdb'",
-            errors_to_ignore=["does not exist"],
-            verbose=True,
-        )
+                   errors_to_ignore=["does not exist"],
+                   verbose=True,
+                   )
         run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'create database seqrdb'", verbose=True)
         run("kubectl cp '%(restore_seqr_db_from_backup)s' %(postgres_pod_name)s:/root/$(basename %(restore_seqr_db_from_backup)s)" % locals(), verbose=True)
         run_in_pod(postgres_pod_name, "/root/restore_database_backup.sh postgres seqrdb /root/$(basename %(restore_seqr_db_from_backup)s)" % locals(), verbose=True)
         run_in_pod(postgres_pod_name, "rm /root/$(basename %(restore_seqr_db_from_backup)s)" % locals(), verbose=True)
     else:
         run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'create database seqrdb'",
-            errors_to_ignore=["already exists"],
-            verbose=True,
-        )
+                   errors_to_ignore=["already exists"],
+                   verbose=True,
+                   )
 
-    _deploy_pod("seqr", settings, wait_until_pod_is_ready=True)
+    deploy_pod("seqr", settings, wait_until_pod_is_ready=True)
+
+
+def deploy_kibana(settings):
+    print_separator("kibana")
+
+    if settings["DELETE_BEFORE_DEPLOY"]:
+        delete_pod("kibana", settings)
+
+    docker_build("kibana", settings, ["--build-arg KIBANA_SERVICE_PORT=%s" % settings["KIBANA_SERVICE_PORT"]])
+
+    deploy_pod("kibana", settings, wait_until_pod_is_ready=True)
+
+
+def deploy_nginx(settings):
+    if settings["ONLY_PUSH_TO_REGISTRY"]:
+        return
+
+    print_separator("nginx")
+
+    run("kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/master/deploy/mandatory.yaml" % locals())
+
+    if settings["DELETE_BEFORE_DEPLOY"]:
+        run("kubectl delete -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/nginx/nginx.yaml" % settings, errors_to_ignore=["not found"])
+    run("kubectl apply -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/nginx/nginx.yaml" % settings)
 
 
 def deploy_pipeline_runner(settings):
@@ -497,10 +437,183 @@ def deploy_pipeline_runner(settings):
         "-f deploy/docker/%(COMPONENT_LABEL)s/Dockerfile",
     ])
 
-    _deploy_pod("pipeline-runner", settings, wait_until_pod_is_running=True)
+    deploy_pod("pipeline-runner", settings, wait_until_pod_is_running=True)
+
+
+def deploy_es_client(settings):
+    deploy_elasticsearch_sharded(settings, "es-client")
+
+
+def deploy_es_master(settings):
+    deploy_elasticsearch_sharded(settings, "es-master")
+
+
+def deploy_es_data(settings):
+    deploy_elasticsearch_sharded(settings, "es-data")
+
+
+def deploy_es_kibana(settings):
+    deploy_elasticsearch_sharded(settings, "es-kibana")
+
+
+def deploy_elasticsearch_sharded(settings, component):
+    if settings["ONLY_PUSH_TO_REGISTRY"]:
+        return
+
+    print_separator(component)
+
+    if component == "es-master":
+        config_files = [
+            "%(DEPLOYMENT_TEMP_DIR)s/hail-elasticsearch-pipelines/kubernetes/elasticsearch-sharded/es-discovery-svc.yaml",
+            "%(DEPLOYMENT_TEMP_DIR)s/hail-elasticsearch-pipelines/kubernetes/elasticsearch-sharded/es-master.yaml",
+        ]
+    elif component == "es-client":
+        config_files = [
+            "%(DEPLOYMENT_TEMP_DIR)s/hail-elasticsearch-pipelines/kubernetes/elasticsearch-sharded/es-svc.yaml",
+            "%(DEPLOYMENT_TEMP_DIR)s/hail-elasticsearch-pipelines/kubernetes/elasticsearch-sharded/es-client.yaml",
+        ]
+    elif component == "es-data":
+        config_files = [
+            "%(DEPLOYMENT_TEMP_DIR)s/hail-elasticsearch-pipelines/kubernetes/elasticsearch-sharded/es-data-svc.yaml",
+            "%(DEPLOYMENT_TEMP_DIR)s/hail-elasticsearch-pipelines/kubernetes/elasticsearch-sharded/es-data-stateful.yaml",
+        ]
+    elif component == "es-kibana":
+        config_files = [
+            "%(DEPLOYMENT_TEMP_DIR)s/hail-elasticsearch-pipelines/kubernetes/elasticsearch-sharded/es-kibana.yaml",
+        ]
+    elif component == "kibana":
+        config_files = [
+            "%(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/kibana/kibana.%(DEPLOY_TO_PREFIX)s.yaml",
+        ]
+    else:
+        raise ValueError("Unexpected component: " + component)
+
+    if settings["DELETE_BEFORE_DEPLOY"]:
+        for config_file in config_files:
+            run("kubectl delete -f " + config_file % settings, errors_to_ignore=["not found"])
+
+    for config_file in config_files:
+        run("kubectl apply -f " + config_file % settings)
+
+    if component in set(["es-client", "es-master", "es-data", "es-kibana"]):
+        # wait until all replicas are running
+        num_pods = int(settings.get(component.replace("-", "_").upper()+"_NUM_PODS", 1))
+        for pod_number_i in range(num_pods):
+            sleep_until_pod_is_running(component, deployment_target=settings["DEPLOY_TO"], pod_number=pod_number_i)
+
+    if component == "es-client":
+       run("kubectl describe svc elasticsearch")
+
+
+def deploy(deployment_target, components, output_dir=None, runtime_settings={}):
+    """Deploy one or more components to the kubernetes cluster specified as the deployment_target.
+
+    Args:
+        deployment_target (string): value from DEPLOYMENT_TARGETS - eg. "minikube", "gcloud-dev", etc.
+            indentifying which cluster to deploy these components to
+        components (list): The list of component names to deploy (eg. "postgres", "phenotips" - each string must be in
+            constants.DEPLOYABLE_COMPONENTS). Order doesn't matter.
+        output_dir (string): path of directory where to put deployment logs and rendered config files
+        runtime_settings (dict): a dictionary of other key-value pairs that override settings file(s) values.
+    """
+    if not components:
+        raise ValueError("components list is empty")
+
+    if components and "init-cluster" not in components:
+        check_kubernetes_context(deployment_target)
+
+    settings = prepare_settings_for_deployment(deployment_target, output_dir, runtime_settings)
+
+    # make sure namespace exists
+    if "init-cluster" not in components:
+        create_namespace(settings)
+
+    # call deploy_* functions for each component in "components" list, in the order that these components are listed in DEPLOYABLE_COMPONENTS
+    for component in DEPLOYABLE_COMPONENTS:
+        if component in components:
+            # only deploy requested components
+            func_name = "deploy_" + component.replace("-", "_")
+            f = globals().get(func_name)
+            if f is not None:
+                f(settings)
+            else:
+                raise ValueError("'deploy_{}' function not found. Is '{}' a valid component name?".format(func_name, component))
+
+
+def prepare_settings_for_deployment(deployment_target, output_dir, runtime_settings):
+    # parse settings files
+    settings = collections.OrderedDict()
+    load_settings([
+        "deploy/kubernetes/shared-settings.yaml",
+        "deploy/kubernetes/%(deployment_target)s-settings.yaml" % locals(),
+        ], settings)
+
+    settings.update(runtime_settings)
+
+    # make sure all keys are upper-case
+    settings = {key.upper(): value for key, value in settings.items()}
+
+    # minikube fix: set IMAGE_PULL_POLICY = "IfNotPresent" if running 'docker build' since it fails for other settings such as 'Always'
+    # https://github.com/kubernetes/minikube/issues/1395#issuecomment-296581721
+    # https://kubernetes.io/docs/setup/minikube/
+    if settings["BUILD_DOCKER_IMAGES"] and deployment_target == "minikube":
+        settings["IMAGE_PULL_POLICY"] = "IfNotPresent"
+
+    # set docker image tag to use when pulling images (if --build-docker-images wasn't specified) or to add to new images (if it was specified)
+    if runtime_settings.get("DOCKER_IMAGE_TAG"):
+        settings["DOCKER_IMAGE_TAG"] = ":" + runtime_settings["DOCKER_IMAGE_TAG"]
+    elif runtime_settings["BUILD_DOCKER_IMAGES"]:
+        settings["DOCKER_IMAGE_TAG"] = ":" + settings["TIMESTAMP"]
+    else:
+        settings["DOCKER_IMAGE_TAG"] = ":latest"
+
+    logger.info("==> Using docker image tag: %(DOCKER_IMAGE_TAG)s" % settings)
+
+    # configure deployment dir
+    settings["DEPLOYMENT_TEMP_DIR"] = os.path.join(
+        settings["DEPLOYMENT_TEMP_DIR"],
+        "deployments/%(TIMESTAMP)s_%(DEPLOY_TO)s" % settings)
+
+    logger.info("==> Settings:\n%s" % pformat(settings))
+
+    # re-configure logging output to write to log
+    log_dir = os.path.join(settings["DEPLOYMENT_TEMP_DIR"], "logs")
+    if not os.path.isdir(log_dir):
+        os.makedirs(log_dir)
+    log_file_path = os.path.join(log_dir, "deploy.log")
+    sh = logging.StreamHandler(open(log_file_path, "w"))
+    sh.setLevel(logging.INFO)
+    logger.addHandler(sh)
+    logger.info("Starting log file: %(log_file_path)s" % locals())
+
+    # process Jinja templates to replace template variables with values from settings. Write results to temp output directory.
+    input_base_dir = settings["BASE_DIR"]
+    output_base_dir = settings["DEPLOYMENT_TEMP_DIR"]
+    template_file_paths = glob.glob("deploy/kubernetes/*.yaml") + \
+                          glob.glob("deploy/kubernetes/*/*.yaml") + \
+                          glob.glob("hail_elasticsearch_pipelines/kubernetes/elasticsearch-sharded/*.yaml")
+    for file_path in template_file_paths:
+        process_jinja_template(input_base_dir, file_path, settings, output_base_dir)
+
+    return settings
+
+def print_separator(label):
+    message = "       DEPLOY %s       " % (label,)
+    logger.info("=" * len(message))
+    logger.info(message)
+    logger.info("=" * len(message) + "\n")
+
+
+def create_namespace(settings):
+    run("kubectl create -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/namespace.yaml" % settings, errors_to_ignore=["already exists"])
+
+    # switch kubectl to use the new namespace
+    run("kubectl config set-context $(kubectl config current-context) --namespace=%(NAMESPACE)s" % settings)
 
 
 def _init_cluster_gcloud(settings):
+    """Starts and configures a kubernetes cluster on Google Container Engine based on parameters in settings"""
+
     run("gcloud config set project %(GCLOUD_PROJECT)s" % settings)
 
     # create private network so that dataproc jobs can connect to GKE cluster nodes
@@ -578,45 +691,52 @@ def _init_cluster_gcloud(settings):
 
 
 def _init_cluster_minikube(settings):
-    # start minikube if it's not running already
+    """Checks that minikube is running. If not, either starts and configures minikube, or prints instructions on how
+    to do this.
+    """
     try:
+        # check that minikube is running
         status = run("minikube status")
     except Exception as e:
         logger.info("minikube status: %s" % str(e))
 
-        #run("minikube delete", ignore_all_errors=True)
         if "MINIKUBE_MEMORY" not in settings:
             settings["MINIKUBE_MEMORY"] = str((psutil.virtual_memory().total - 4*10**9) / 10**6)  # leave 4Gb overhead
         if "MINIKUBE_NUM_CPUS" not in settings:
             settings["MINIKUBE_NUM_CPUS"] = multiprocessing.cpu_count()  # use all CPUs on machine
 
         minikube_start_command = (
-             "minikube start "
-             "--kubernetes-version=v1.11.3 "
-             "--disk-size=%(MINIKUBE_DISK_SIZE)s "
-             "--memory=%(MINIKUBE_MEMORY)s "
-             "--cpus=%(MINIKUBE_NUM_CPUS)s "
-         ) % settings
+                                     "minikube start "
+                                     "--kubernetes-version=v1.11.3 "
+                                     "--disk-size=%(MINIKUBE_DISK_SIZE)s "
+                                     "--memory=%(MINIKUBE_MEMORY)s "
+                                     "--cpus=%(MINIKUBE_NUM_CPUS)s "
+                                 ) % settings
 
-        if not sys.platform.startswith('darwin'):
+        if sys.platform.startswith('darwin'):
+            # MacOSx
+
+            # double-check that there's no minikube instance running
+            run("minikube stop", ignore_all_errors=True)
+            # run("minikube delete", ignore_all_errors=True)
+
+            # haven't switched to hyperkit yet because it still has issues like https://bunnyyiu.github.io/2018-07-16-minikube-reboot/
+            minikube_start_command += " --vm-driver=xhyve "
+            # minikube_start_command +=  " --mount-string %(LOCAL_DATA_DIR)s:%(DATA_DIR)s --mount "
+
+            # start minikube
+            logger.info("starting minikube: ")
+            run(minikube_start_command)
+        else:
             if sys.platform.startswith('linux'):
                 minikube_start_command += " --vm-driver=none "
             else:
                 minikube_start_command += " --vm-driver=virtualbox "
 
             logger.info("Please run '%s' and then check that 'minikube status' shows minikube is running" % minikube_start_command)
-            sys.exit(0)
+            sys.exit(0)  # terminate installation of other components also since minikube isn't running
 
-        # MacOSx
-        run("minikube stop", ignore_all_errors=True)
-
-        # haven't switched to hyperkit yet because it still has issues like https://bunnyyiu.github.io/2018-07-16-minikube-reboot/
-        minikube_start_command += " --vm-driver=xhyve "
-
-        # --mount-string %(LOCAL_DATA_DIR)s:%(DATA_DIR)s --mount
-        logger.info("starting minikube: ")
-        run(minikube_start_command)
-
+    # configure docker command
     run("gcloud auth configure-docker --quiet")
 
     # this fixes time sync issues on MacOSX which could interfere with token auth (https://github.com/kubernetes/minikube/issues/1378)
@@ -626,190 +746,73 @@ def _init_cluster_minikube(settings):
     run("minikube ssh 'sudo /sbin/sysctl -w vm.max_map_count=262144'")
 
 
-def deploy_init_cluster(settings):
-    """Provisions a GKE cluster, persistent disks, and any other prerequisites for deployment."""
+def docker_build(component_label, settings, custom_build_args=()):
+    params = dict(settings)   # make a copy before modifying
+    params["COMPONENT_LABEL"] = component_label
+    params["DOCKER_IMAGE_NAME"] = "%(DOCKER_IMAGE_PREFIX)s/%(COMPONENT_LABEL)s" % params
 
-    print_separator("init-cluster")
+    docker_command_prefix = "eval $(minikube docker-env); " if settings["DEPLOY_TO"] == "minikube" else ""
 
-    # initialize the VM
-    if settings["DEPLOY_TO_PREFIX"] == "gcloud":
-        _init_cluster_gcloud(settings)
-    elif settings["DEPLOY_TO"] == "minikube":
-        _init_cluster_minikube(settings)
+    docker_tags = set([
+        "",
+        ":latest",
+        "%(DOCKER_IMAGE_TAG)s" % params,
+        ])
+
+    if not settings["BUILD_DOCKER_IMAGES"]:
+        logger.info("Skipping docker build step. Use --build-docker-image to build a new image (and --force to build from the beginning)")
     else:
-        raise ValueError("Unexpected DEPLOY_TO_PREFIX: %(DEPLOY_TO_PREFIX)s" % settings)
+        docker_build_command = docker_command_prefix
+        docker_build_command += "docker build deploy/docker/%(COMPONENT_LABEL)s/ "
+        docker_build_command += (" ".join(custom_build_args) + " ")
+        if settings["FORCE_BUILD_DOCKER_IMAGES"]:
+            docker_build_command += "--no-cache "
 
-    node_name = get_node_name()
-    if not node_name:
-        raise Exception("Unable to retrieve node name. Was the cluster created successfully?")
+        for tag in docker_tags:
+            docker_image_name_with_tag = params["DOCKER_IMAGE_NAME"] + tag
+            docker_build_command += "-t %(docker_image_name_with_tag)s " % locals()
 
-    set_environment(settings["DEPLOY_TO"])
+        run(docker_build_command % params, verbose=True)
 
-    create_namespace(settings)
-
-    # print cluster info
-    run("kubectl cluster-info", verbose=True)
-
-    # wait for the cluster to initialize
-    for retry_i in range(1, 5):
-        try:
-            deploy_settings(settings)
-            break
-        except RuntimeError as e:
-            logger.error(("Error when deploying config maps: %(e)s. This sometimes happens when cluster is "
-                          "initializing. Retrying...") % locals())
-            time.sleep(5)
+    if settings["PUSH_TO_REGISTRY"]:
+        for tag in docker_tags:
+            docker_image_name_with_tag = params["DOCKER_IMAGE_NAME"] + tag
+            docker_push_command = docker_command_prefix
+            docker_push_command += "docker push %(docker_image_name_with_tag)s" % locals()
+            run(docker_push_command, verbose=True)
+            logger.info("==> Finished uploading image: %(docker_image_name_with_tag)s" % locals())
 
 
-def deploy_settings(settings):
-    """Deploy settings as a config map"""
+def deploy_pod(component_label, settings, wait_until_pod_is_running=True, wait_until_pod_is_ready=False):
     if settings["ONLY_PUSH_TO_REGISTRY"]:
         return
 
-    # write out a ConfigMap file
-    configmap_file_path = os.path.join(settings["DEPLOYMENT_TEMP_DIR"], "deploy/kubernetes/all-settings.properties")
-    with open(configmap_file_path, "w") as f:
-        for key, value in settings.items():
-            if value is None:
-                continue
-
-            f.write('%s=%s\n' % (key, value))
-
-    create_namespace(settings)
-
-    run("kubectl delete configmap all-settings", errors_to_ignore=["not found"])
-    run("kubectl create configmap all-settings --from-file=%(configmap_file_path)s" % locals())
-    run("kubectl get configmaps all-settings -o yaml")
-
-
-def deploy_secrets(settings):
-    """Deploys or updates k8s secrets."""
-
-    if settings["ONLY_PUSH_TO_REGISTRY"]:
-        return
-
-    print_separator("secrets")
-
-    create_namespace(settings)
-
-    # deploy secrets
-    for secret_label in [
-        "seqr-secrets",
-        "postgres-secrets",
-        "nginx-secrets",
-        "matchbox-secrets",
-        "gcloud-client-secrets"
-    ]:
-        run("kubectl delete secret %(secret_label)s" % locals(), verbose=False, errors_to_ignore=["not found"])
-
     run(" ".join([
-        "kubectl create secret generic seqr-secrets",
-        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/seqr/omim_key",
-        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/seqr/postmark_server_token",
-        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/seqr/mme_node_admin_token",
-    ]) % settings, errors_to_ignore=["already exists"])
+        "kubectl apply",
+        "-f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/"+component_label+"/"+component_label+".%(DEPLOY_TO_PREFIX)s.yaml"
+    ]) % settings)
 
-    run(" ".join([
-        "kubectl create secret generic postgres-secrets",
-        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/postgres/postgres.username",
-        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/postgres/postgres.password",
-    ]) % settings, errors_to_ignore=["already exists"])
+    if wait_until_pod_is_running:
+        sleep_until_pod_is_running(component_label, deployment_target=settings["DEPLOY_TO"])
 
-    run(" ".join([
-        "kubectl create secret generic nginx-secrets",
-        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/nginx-%(DEPLOY_TO)s/tls.key",
-        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/nginx-%(DEPLOY_TO)s/tls.crt",
-    ]) % settings, errors_to_ignore=["already exists"])
+    if wait_until_pod_is_ready:
+        sleep_until_pod_is_ready(component_label, deployment_target=settings["DEPLOY_TO"])
 
-    run(" ".join([
-        "kubectl create secret generic matchbox-secrets",
-        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/matchbox/nodes.json",
-        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/matchbox/application.properties",
-        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/matchbox/config.xml",
-    ]) % settings, errors_to_ignore=["already exists"])
 
-    if os.path.isfile("deploy/secrets/shared/gcloud/service-account-key.json"):
+def delete_pod(component_label, settings, async=False, custom_yaml_filename=None):
+    deployment_target = settings["DEPLOY_TO"]
+
+    yaml_filename = custom_yaml_filename or (component_label+".%(DEPLOY_TO_PREFIX)s.yaml")
+
+    if is_pod_running(component_label, deployment_target):
         run(" ".join([
-            "kubectl create secret generic gcloud-client-secrets",
-            "--from-file deploy/secrets/shared/gcloud/service-account-key.json",
-            "--from-file deploy/secrets/shared/gcloud/boto",
-        ]) % settings, errors_to_ignore=["already exists"])
-    else:
-        run(" ".join([
-            "kubectl create secret generic gcloud-client-secrets"   # create an empty set of client secrets
-        ]), errors_to_ignore=["already exists"])
+            "kubectl delete",
+            "-f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/"+component_label+"/"+yaml_filename,
+            ]) % settings, errors_to_ignore=["not found"])
 
-
-def deploy_es_client(settings):
-    deploy_elasticsearch_sharded(settings, "es-client")
-
-
-def deploy_es_master(settings):
-    deploy_elasticsearch_sharded(settings, "es-master")
-
-
-def deploy_es_data(settings):
-    deploy_elasticsearch_sharded(settings, "es-data")
-
-
-def deploy_es_kibana(settings):
-    deploy_elasticsearch_sharded(settings, "es-kibana")
-
-
-def deploy_elasticsearch_sharded(settings, component):
-    if settings["ONLY_PUSH_TO_REGISTRY"]:
-        return
-
-    print_separator(component)
-
-    if component == "es-master":
-        config_files = [
-            "%(DEPLOYMENT_TEMP_DIR)s/hail-elasticsearch-pipelines/kubernetes/elasticsearch-sharded/es-discovery-svc.yaml",
-            "%(DEPLOYMENT_TEMP_DIR)s/hail-elasticsearch-pipelines/kubernetes/elasticsearch-sharded/es-master.yaml",
-        ]
-    elif component == "es-client":
-        config_files = [
-            "%(DEPLOYMENT_TEMP_DIR)s/hail-elasticsearch-pipelines/kubernetes/elasticsearch-sharded/es-svc.yaml",
-            "%(DEPLOYMENT_TEMP_DIR)s/hail-elasticsearch-pipelines/kubernetes/elasticsearch-sharded/es-client.yaml",
-        ]
-    elif component == "es-data":
-        config_files = [
-            "%(DEPLOYMENT_TEMP_DIR)s/hail-elasticsearch-pipelines/kubernetes/elasticsearch-sharded/es-data-svc.yaml",
-            "%(DEPLOYMENT_TEMP_DIR)s/hail-elasticsearch-pipelines/kubernetes/elasticsearch-sharded/es-data-stateful.yaml",
-        ]
-    elif component == "es-kibana":
-        config_files = [
-            "%(DEPLOYMENT_TEMP_DIR)s/hail-elasticsearch-pipelines/kubernetes/elasticsearch-sharded/es-kibana.yaml",
-        ]
-    elif component == "kibana":
-        config_files = [
-            "%(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/kibana/kibana.%(DEPLOY_TO_PREFIX)s.yaml",
-        ]
-    else:
-        raise ValueError("Unexpected component: " + component)
-
-    if settings["DELETE_BEFORE_DEPLOY"]:
-        for config_file in config_files:
-            run("kubectl delete -f " + config_file % settings, errors_to_ignore=["not found"])
-
-    for config_file in config_files:
-        run("kubectl apply -f " + config_file % settings)
-
-    if component in set(["es-client", "es-master", "es-data", "es-kibana"]):
-        # wait until all replicas are running
-        num_pods = int(settings.get(component.replace("-", "_").upper()+"_NUM_PODS", 1))
-        for pod_number_i in range(num_pods):
-            sleep_until_pod_is_running(component, deployment_target=settings["DEPLOY_TO"], pod_number=pod_number_i)
-
-    if component == "es-client":
-       run("kubectl describe svc elasticsearch")
-
-
-def print_separator(label):
-    message = "       DEPLOY %s       " % (label,)
-    logger.info("=" * len(message))
-    logger.info(message)
-    logger.info("=" * len(message) + "\n")
+    logger.info("waiting for \"%s\" to exit Running status" % component_label)
+    while is_pod_running(component_label, deployment_target) and not async:
+        time.sleep(5)
 
 
 def create_vpc(gcloud_project, network_name):
@@ -838,8 +841,22 @@ def create_vpc(gcloud_project, network_name):
     ]) % locals(), errors_to_ignore=["already exists"])
 
 
-def create_namespace(settings):
-    run("kubectl create -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/namespace.yaml" % settings, errors_to_ignore=["already exists"])
+def _get_component_group_to_component_name_mapping():
+    result = {
+        "elasticsearch-sharded": ["es-master", "es-client", "es-data"],
+    }
+    return result
 
-    # switch kubectl to use the new namespace
-    run("kubectl config set-context $(kubectl config current-context) --namespace=%(NAMESPACE)s" % settings)
+
+def resolve_component_groups(deployment_target, components_or_groups):
+    component_groups = _get_component_group_to_component_name_mapping()
+
+    return [
+        component
+        for component_or_group in components_or_groups
+        for component in component_groups.get(component_or_group, [component_or_group])
+    ]
+
+
+COMPONENT_GROUP_NAMES = list(_get_component_group_to_component_name_mapping().keys())
+
