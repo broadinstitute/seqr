@@ -46,7 +46,7 @@ DetailSection.propTypes = {
   button: PropTypes.node,
 }
 
-const ProjectOverview = ({ familiesByGuid, individualsByGuid, samplesByGuid, analysisStatusCounts }) => {
+const ProjectOverview = ({ project, familiesByGuid, individualsByGuid, samplesByGuid, analysisStatusCounts }) => {
   const familySizeHistogram = Object.values(familiesByGuid)
     .map(family => Math.min(family.individualGuids.length, 5))
     .reduce((acc, familySize) => (
@@ -72,7 +72,7 @@ const ProjectOverview = ({ familiesByGuid, individualsByGuid, samplesByGuid, ana
                 {familySizeHistogram[size]} {FAMILY_SIZE_LABELS[size](familySizeHistogram[size] > 1)}
               </div>)
           }
-          button={<EditFamiliesAndIndividualsButton />}
+          button={project.canEdit ? <EditFamiliesAndIndividualsButton /> : null}
         />
       </Grid.Column>
       <Grid.Column width={5}>
@@ -88,9 +88,9 @@ const ProjectOverview = ({ familiesByGuid, individualsByGuid, samplesByGuid, ana
                   </div>,
                 )
               }
-              button={Object.keys(loadedProjectSamples).length === i ? <EditDatasetsButton /> : null}
+              button={(Object.keys(loadedProjectSamples).length - 1 === i && project.canEdit) ? <EditDatasetsButton /> : null}
             />
-          )) : <DetailSection title="Datasets" content="No Datasets Loaded" button={<EditDatasetsButton />} />
+          )) : <DetailSection title="Datasets" content="No Datasets Loaded" button={project.canEdit ? <EditDatasetsButton /> : null} />
         }
       </Grid.Column>
       <Grid.Column width={6}>
@@ -105,6 +105,7 @@ const ProjectOverview = ({ familiesByGuid, individualsByGuid, samplesByGuid, ana
 
 
 ProjectOverview.propTypes = {
+  project: PropTypes.object.isRequired,
   familiesByGuid: PropTypes.object.isRequired,
   individualsByGuid: PropTypes.object.isRequired,
   samplesByGuid: PropTypes.object.isRequired,
