@@ -114,8 +114,9 @@ const ProjectPageUI = (props) => {
         </Grid.Column>
         <Grid.Column width={8}>
           <ProjectSection label="Overview">
-            <ProjectOverview />
+            <ProjectOverview project={props.project} />
           </ProjectSection>
+          <VerticalSpacer height={10} />
           <ProjectSection label="Variant Tags" linkPath="saved_variants" linkText="View All">
             <VariantTagTypeBar
               project={props.project}

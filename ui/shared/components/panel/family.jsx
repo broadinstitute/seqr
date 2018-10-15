@@ -159,22 +159,24 @@ const Family = (
     (acc, tag) => (tag.mainTranscript.symbol ? [...acc, tag.mainTranscript.symbol] : acc), [],
   )
 
+  const searchLink = `/project/${project.deprecatedProjectId}/family/${family.familyId}/mendelian-variant-search`
+
   const rightContent = showVariantDetails ? [
     <div key="variants">
       <VariantTagTypeBar height={15} width="calc(100% - 2.5em)" project={project} familyGuid={family.familyGuid} sectionLinks={false} />
       <HorizontalSpacer width={10} />
-      <a href={`/project/${project.deprecatedProjectId}/family/${family.familyId}/mendelian-variant-search`}>
-        <Icon name="search" />
-      </a>
+      <a href={searchLink}><Icon name="search" /></a>
       {discoveryGenes.length > 0 &&
         <span>
           <b>Discovery Genes:</b> {[...new Set(discoveryGenes)].join(', ')}
         </span>
       }
     </div>,
-    (project.isMmeEnabled && !compact) ?
+    !compact ?
       <div key="links">
         <VerticalSpacer height={20} />
+        <a href={searchLink}><Icon name="search" /> Variant Search</a>
+        <VerticalSpacer height={10} />
         {project.isMmeEnabled && <ShowMatchmakerModal family={family} />}
       </div> : null,
   ] : null
