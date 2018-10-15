@@ -29,12 +29,6 @@ spec:
         deployment: {{ DEPLOY_TO }}
     spec:
       volumes:
-      - name: data-dir
-        hostPath:
-          path: /data/pipeline-runner
-      - name: vep-dir
-        hostPath:
-          path: /data/vep
       - name: gcloud-client-secrets-volume
         secret:
           secretName: gcloud-client-secrets
@@ -53,10 +47,6 @@ spec:
             memory: "30Gi"
             cpu: "8"
         volumeMounts:
-        - name: data-dir
-          mountPath: /data
-        - name: vep-dir
-          mountPath: /vep
         - name: gcloud-client-secrets-volume
           mountPath: /.config
           readOnly: true
@@ -69,6 +59,11 @@ spec:
             secretKeyRef:
               name: seqr-secrets
               key: postmark_server_token
+        - name: SLACK_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: seqr-secrets
+              key: slack_token
         - name: GCLOUD_PROJECT      #  TODO can delete these and just rely on 'envFrom configMapRef' above once https://github.com/kubernetes/minikube/issues/2295 is fixed
           value: "{{ GCLOUD_PROJECT }}"
         - name: GCLOUD_ZONE

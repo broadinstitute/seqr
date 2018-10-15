@@ -69,6 +69,11 @@ spec:
             secretKeyRef:
               name: seqr-secrets
               key: postmark_server_token
+        - name: SLACK_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: seqr-secrets
+              key: slack_token
         - name: GCLOUD_PROJECT      #  TODO can delete these and just rely on 'envFrom configMapRef' above once https://github.com/kubernetes/minikube/issues/2295 is fixed
           value: "{{ GCLOUD_PROJECT }}"
         - name: GCLOUD_ZONE
