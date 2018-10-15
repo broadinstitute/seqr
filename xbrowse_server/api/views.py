@@ -12,6 +12,7 @@ from django.shortcuts import get_object_or_404
 from django.http import HttpResponse, HttpResponseBadRequest, Http404
 from django.core.exceptions import PermissionDenied, ObjectDoesNotExist
 from settings import LOGIN_URL
+from seqr.utils.gene_utils import get_queried_genes
 from xbrowse.analysis_modules.combine_mendelian_families import get_variants_by_family_for_gene
 from xbrowse_server.analysis.diagnostic_search import get_gene_diangostic_info
 from xbrowse_server.base.model_utils import update_xbrowse_model, get_or_create_xbrowse_model, delete_xbrowse_model, \
@@ -826,28 +827,13 @@ def add_or_edit_gene_note(request):
     })
 
 
-try:
-    GENE_ITEMS = {
-        v.lower(): {
-            'gene_id': k,
-            'symbol': v
-        }
-        for k, v in get_reference().get_gene_symbols().items()
-    }
-except Exception as e:
-    logger.warn("WARNING: get_reference().get_gene_symbols(): %s" % e)
-
-
 def gene_autocomplete(request):
-
     query = request.GET.get('q', '')
-
-    gene_items = [(k, item) for k, item in GENE_ITEMS.items() if k.startswith(query.lower())]
-    gene_items = sorted(gene_items, key=lambda i: len(i[0]))  # sort by name length
+    gene_items = get_queried_genes(query, 20)
     genes = [{
         'value': item['gene_id'],
-        'label': item['symbol'],
-    } for k, item in gene_items[:20]]
+        'label': item['gene_symbol'],
+    } for item in gene_items]
 
     return JSONResponse(genes)
 
