@@ -205,6 +205,9 @@ AUTHENTICATION_BACKENDS = (
     'guardian.backends.ObjectPermissionBackend',
 )
 
+# optional - slack token for sending matchmaker alerts to Slack
+SLACK_TOKEN = os.environ.get("SLACK_TOKEN")
+
 # ===========================================================
 # ===========================================================
 # legacy settings that need to be reviewed
@@ -385,8 +388,6 @@ MME_SLACK_EVENT_NOTIFICATION_CHANNEL='matchmaker_alerts'
 MME_SLACK_MATCH_NOTIFICATION_CHANNEL='matchmaker_matches'
 #This is used in slack post to add a link back to project
 SEQR_HOSTNAME_FOR_SLACK_POST='https://seqr.broadinstitute.org/project'
-#####SLACK integration, assign "None" to this if you do not use slack, otherwise add token here
-SLACK_TOKEN=None
 
 
 PROJECT_IDS_TO_EXCLUDE_FROM_DISCOVERY_SHEET_DOWNLOAD = []
