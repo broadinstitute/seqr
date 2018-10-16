@@ -1,9 +1,14 @@
 #!/usr/bin/env bash
 
-echo "==== Installing mongo using brew ===="
+echo "==== Installing mongo ===="
 set -x
 
-if [ $PLATFORM = "macos" ]; then
+if [ -z "$PLATFORM" ]; then
+
+    echo "PLATFORM environment variable not set. Please run previous install step(s)."
+    exit 1;
+
+elif [ $PLATFORM = "macos" ]; then
 
     brew install mongo
 
@@ -22,7 +27,6 @@ EOM
     sudo yum install -y mongodb-org-4.0.3 mongodb-org-server-4.0.3 mongodb-org-shell-4.0.3 mongodb-org-mongos-4.0.3 mongodb-org-tools-4.0.3
 
     sudo service mongod start
-
 
 elif [ $PLATFORM = "ubuntu" ]; then
 

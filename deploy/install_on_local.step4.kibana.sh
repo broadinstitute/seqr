@@ -5,7 +5,6 @@ VERSION=6.4.0
 echo "==== Install and start kibana ====="
 set -x
 
-
 wget -nv https://artifacts.elastic.co/downloads/kibana/kibana-${VERSION}-linux-x86_64.tar.gz
 tar xzf kibana-${VERSION}-linux-x86_64.tar.gz
 rm kibana-${VERSION}-linux-x86_64.tar.gz

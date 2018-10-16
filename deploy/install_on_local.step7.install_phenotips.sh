@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+echo "==== Installing phenotips ===="
+set -x
+
 export PT_VERSION="1.2.6"
 wget https://nexus.phenotips.org/nexus/content/repositories/releases/org/phenotips/phenotips-standalone/${PT_VERSION}/phenotips-standalone-${PT_VERSION}.zip \
     && unzip phenotips-standalone-${PT_VERSION}.zip \
@@ -23,3 +26,5 @@ psql -U xwiki postgres -c 'create database xwiki'
 psql -U xwiki xwiki -f ${SEQR_DIR}/deploy/docker/phenotips/init/${PT_VERSION}/init_phenotips_db.sql
 
 ./start.sh &
+
+set +x

@@ -1,12 +1,16 @@
 #!/usr/bin/env bash
 
-export PLATFORM=$(python -c "import sys; print(sys.platform)")
+echo "==== Installing seqr ===="
+set -x
 
+if [ -z "$PLATFORM" ]; then
 
-if [ $PLATFORM = "darwin" ]; then
+    echo "PLATFORM environment variable not set. Please run previous install step(s)."
+    exit 1;
 
-    echo "==== Installing seqr dependencies using brew ===="
+elif [ $PLATFORM = "macos" ]; then
 
+    :
 
 elif [ $PLATFORM = "centos" ]; then
 
@@ -60,8 +64,6 @@ elif [ $PLATFORM = "ubuntu" ]; then
         && curl -sL https://deb.nodesource.com/setup_8.x | bash - \
         && apt-get install -y nodejs
 
-
-
 else
     echo "Unexpected operating system: $PLATFORM"
     exit 1;
@@ -73,3 +75,5 @@ pip install -r requirements.txt
 mkdir seqr_settings
 
 cp -r ${SEQR_DIR}/deploy/docker/seqr/config
+
+set +x

@@ -3,10 +3,14 @@
 echo "==== Installing postgres ===="
 set -x
 
-if [ $PLATFORM = "darwin" ]; then
+if [ -z "$PLATFORM" ]; then
+
+    echo "PLATFORM environment variable not set. Please run previous install step(s)."
+    exit 1;
+
+elif [ $PLATFORM = "macos" ]; then
 
     brew install postgres
-
 
 elif [ $PLATFORM = "centos" ]; then
 
@@ -17,7 +21,6 @@ elif [ $PLATFORM = "centos" ]; then
     sudo sed -i s/ident/trust/  /var/lib/pgsql/data/pg_hba.conf
     sudo service postgresql start
 
-
 elif [ $PLATFORM = "ubuntu" ]; then
 
     sudo apt-get install -y postgresql postgresql-contrib postgresql-client
@@ -25,7 +28,6 @@ elif [ $PLATFORM = "ubuntu" ]; then
     sudo sed -i s/peer/trust/ $(find /etc/postgresql -name "pg_hba.conf")
     sudo systemctl enable postgresql.service
     sudo systemctl start postgresql.service
-
 
 else
 
