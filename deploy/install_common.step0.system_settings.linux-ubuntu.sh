@@ -1,17 +1,5 @@
 #!/usr/bin/env bash
 
-
-if [ -z "$SEQR_DIR" ]; then
-
-    export SEQR_DIR=$(pwd)/seqr
-
-    echo '
-    # ---- seqr install -----
-    export SEQR_DIR='${SEQR_DIR}'
-    ' >> ~/.bashrc
-fi
-
-
 set +x
 echo ==== Adjust system settings for elasticsearch =====
 set -x
@@ -54,27 +42,6 @@ fi
 # apply limit to current session
 sudo prlimit --pid $$ --nofile=65536
 
-set +x
-if [ "$needs_reboot" ] ; then
-
-  echo '
-  ==================================================================
-
-  Config changes above will take effect after a reboot.
-
-  ==================================================================
-'
-    read -p "Reboot now? [y/n] " -n 1 -r
-    echo    # (optional) move to a new line
-    if [[ $REPLY =~ ^[Yy]$ ]]
-    then
-        echo "Shutting down..."
-        sudo reboot
-    else
-        echo "Skipping reboot."
-    fi
-fi
-
 
 set +x
 echo ==== Install general dependencies =====
@@ -99,3 +66,46 @@ tar xzf google-cloud-sdk-219.0.1-linux-x86_64.tar.gz
 ./google-cloud-sdk/install.sh --quiet
 
 set +x
+echo ==== Clone the seqr repo =====
+set -x
+
+
+if [ -z "$SEQR_DIR" ]; then
+
+    export SEQR_BRANCH=master
+
+    git clone https://github.com/macarthur-lab/seqr.git
+    cd seqr/
+    git checkout $SEQR_BRANCH
+
+    export SEQR_DIR=$(pwd)
+    echo '
+# ---- seqr install -----
+export SEQR_DIR='${SEQR_DIR}'
+' >> ~/.bashrc
+
+    cd ..
+fi
+
+
+set +x
+if [ "$needs_reboot" ] ; then
+
+  echo '
+  ==================================================================
+
+  Config changes above will take effect after a reboot.
+
+  ==================================================================
+'
+    read -p "Reboot now? [y/n] " -n 1 -r
+    echo    # (optional) move to a new line
+    if [[ $REPLY =~ ^[Yy]$ ]]
+    then
+        echo "Shutting down..."
+        sudo reboot
+    else
+        echo "Skipping reboot."
+    fi
+fi
+
