@@ -1,11 +1,11 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import { Label, Popup, Form } from 'semantic-ui-react'
+import { Popup, Form } from 'semantic-ui-react'
 import { Field } from 'redux-form'
 
 import { HorizontalSpacer } from '../../Spacers'
-import { ColoredLabel } from '../../StyledComponents'
+import { ColoredLabel, ColoredOutlineLabel } from '../../StyledComponents'
 import { Multiselect } from '../../form/Inputs'
 import OptionFieldView from './OptionFieldView'
 
@@ -27,31 +27,28 @@ const LargeMultiselect = styled(Multiselect)`
   }
 `
 
-const MetadataLabel = styled(Label).attrs({ size: 'large', pointing: 'right', basic: true })`
-  color: ${props => props.color} !important;
-  border-color: ${props => props.color} !important;
-      white-space: nowrap;
+const MetadataFormGroup = styled(Form.Group).attrs({ inline: true })`
+  label, .label {
+    white-space: nowrap;
+  }
 `
 
-const FieldLabel = styled.label`
-  white-space: nowrap;
-`
 
 const MetadataField = ({ value, name, error }) => {
-  const label = <MetadataLabel color={value.color} content={value.name} />
+  const label = <ColoredOutlineLabel color={value.color} content={value.name} size="large" pointing="right" basic />
   return (
-    <Form.Group inline>
+    <MetadataFormGroup>
       {value.description ? <Popup trigger={label} content={value.description} /> : label}
       <Field
         name={`${name}.metadata`}
         component={Form.Input}
-        label={<FieldLabel>{value.metadataTitle || 'Notes'}</FieldLabel>}
+        label={value.metadataTitle || 'Notes'}
         maxLength={50}
         error={error}
         width={value.category === NOTES_CATEGORY ? 16 : 4}
         type={value.category !== NOTES_CATEGORY ? 'number' : null}
       />
-    </Form.Group>
+    </MetadataFormGroup>
   )
 }
 

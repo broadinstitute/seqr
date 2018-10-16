@@ -24,8 +24,10 @@ import {
   getProjectAnalysisGroupsByGuid,
 } from '../selectors'
 import ProjectOverview from './ProjectOverview'
+import AnalysisGroups from './AnalysisGroups'
+import { UpdateAnalysisGroupButton } from './AnalysisGroupButtons'
 import ProjectCollaborators from './ProjectCollaborators'
-import GeneLists from './GeneLists'
+import { GeneLists, AddGeneListsButton } from './GeneLists'
 import FamilyTable from './FamilyTable/FamilyTable'
 import VariantTags from './VariantTags'
 
@@ -54,17 +56,17 @@ What's new:
 
 */
 
-const ProjectSectionComponent = ({ loading, label, children, editPath, linkPath, linkText, project }) => {
+const ProjectSectionComponent = ({ loading, label, children, editButton, linkPath, linkText, project }) => {
   return ([
     <SectionHeader key="header">{label}</SectionHeader>,
     <div key="content">
       {loading ? <Loader key="content" inline active /> : children}
     </div>,
-    editPath && project.canEdit ? (
-      <a key="edit" href={`/project/${project.deprecatedProjectId}/${editPath}`}>
+    editButton && project.canEdit ? (
+      <div key="edit">
         <VerticalSpacer height={15} />
-        {`Edit ${label}`}
-      </a>
+        {editButton}
+      </div>
     ) : null,
     linkText ? (
       <div key="link">
@@ -91,7 +93,6 @@ const NO_DETAIL_FIELDS = [
 ]
 
 const ProjectPageUI = (props) => {
-  const headerStatus = { title: 'Analysis Statuses', data: props.analysisStatusCounts }
   const exportUrls = [
     { name: 'Families', data: props.familyExportConfig },
     { name: 'Individuals', data: props.individualsExportConfig },
@@ -101,15 +102,26 @@ const ProjectPageUI = (props) => {
   return (
     <Grid stackable>
       <Grid.Row>
-        <Grid.Column width={12}>
-          <ProjectSection label="Overview">
-            <ProjectOverview analysisGroupGuid={props.match.params.analysisGroupGuid} />
+        <Grid.Column width={4}>
+          {props.match.params.analysisGroupGuid ? null :
+          <ProjectSection label="Analysis Groups" editButton={<UpdateAnalysisGroupButton />}>
+            <AnalysisGroups />
+          </ProjectSection>}
+          <VerticalSpacer height={10} />
+          <ProjectSection label="Gene Lists" editButton={<AddGeneListsButton project={props.project} />}>
+            <GeneLists project={props.project} />
           </ProjectSection>
+        </Grid.Column>
+        <Grid.Column width={8}>
+          <ProjectSection label="Overview">
+            <ProjectOverview project={props.project} analysisGroupGuid={props.match.params.analysisGroupGuid} />
+          </ProjectSection>
+          <VerticalSpacer height={10} />
           <ProjectSection label="Variant Tags" linkPath="saved_variants" linkText="View All">
             <VariantTagTypeBar
               project={props.project}
               analysisGroup={props.analysisGroup}
-              height={30}
+              height={20}
               showAllPopupCategorie
             />
             <VerticalSpacer height={10} />
@@ -117,12 +129,15 @@ const ProjectPageUI = (props) => {
           </ProjectSection>
         </Grid.Column>
         <Grid.Column width={4}>
-          <ProjectSection label="Collaborators" editPath="collaborators">
+          <ProjectSection
+            label="Collaborators"
+            editButton={
+              <a key="edit" href={`/project/${props.project.deprecatedProjectId}/collaborators`}>
+                Edit Collaborators
+              </a>
+            }
+          >
             <ProjectCollaborators />
-          </ProjectSection>
-          <VerticalSpacer height={30} />
-          <ProjectSection label="Gene Lists">
-            <GeneLists />
           </ProjectSection>
         </Grid.Column>
       </Grid.Row>
@@ -130,10 +145,8 @@ const ProjectPageUI = (props) => {
         <Grid.Column width={16}>
           <SectionHeader>Families</SectionHeader>
           <FamilyTable
-            headerStatus={headerStatus}
             exportUrls={exportUrls}
-            showSearchLinks
-            showVariantTags
+            showVariantDetails
             detailFields={FAMILY_DETAIL_FIELDS}
             noDetailFields={NO_DETAIL_FIELDS}
           />
@@ -146,7 +159,6 @@ const ProjectPageUI = (props) => {
 ProjectPageUI.propTypes = {
   project: PropTypes.object.isRequired,
   analysisGroup: PropTypes.object,
-  analysisStatusCounts: PropTypes.array,
   familyExportConfig: PropTypes.object,
   individualsExportConfig: PropTypes.object,
   samplesExportConfig: PropTypes.object,

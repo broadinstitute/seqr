@@ -10,7 +10,7 @@ from seqr.models import SavedVariant, VariantTagType, VariantTag, VariantNote, V
 from seqr.model_utils import create_seqr_model, delete_seqr_model, find_matching_xbrowse_model
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.locus_list_api import get_project_locus_list_models
-from seqr.views.utils.gene_utils import get_genes
+from seqr.utils.gene_utils import get_genes
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variant, get_json_for_variant_tag, \
@@ -62,17 +62,24 @@ def saved_variant_transcripts(request, variant_guid):
     saved_variant = SavedVariant.objects.get(guid=variant_guid)
     check_permissions(saved_variant.project, request.user, CAN_VIEW)
 
-    # TODO when variant search is rewritten for seqr models use that here
-    base_project = find_matching_xbrowse_model(saved_variant.project)
-    loaded_variant = get_datastore(base_project).get_single_variant(
-        base_project.project_id,
-        saved_variant.family.family_id,
-        saved_variant.xpos,
-        saved_variant.ref,
-        saved_variant.alt,
-    )
+    annotation = json.loads(saved_variant.saved_variant_json or '{}').get('annotation', {})
+    if not annotation.get('vep_annotation'):
+        # TODO when variant search is rewritten for seqr models use that here
+        base_project = find_matching_xbrowse_model(saved_variant.project)
+        loaded_variant = get_datastore(base_project).get_single_variant(
+            base_project.project_id,
+            saved_variant.family.family_id,
+            saved_variant.xpos,
+            saved_variant.ref,
+            saved_variant.alt,
+        )
+        annotation = loaded_variant.annotation
 
-    return create_json_response({variant_guid: {'transcripts': _variant_transcripts(loaded_variant.annotation)}})
+    transcripts = _variant_transcripts(annotation)
+    return create_json_response({
+        'savedVariants': {variant_guid: {'transcripts': transcripts}},
+        'genesById': get_genes(transcripts.keys()),
+    })
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -216,9 +223,9 @@ def _variant_transcripts(annotation):
     return transcripts
 
 
-def _variant_details(variant_json, user):
+def _variant_details(variant_json, user=None):
     annotation = variant_json.get('annotation') or {}
-    main_transcript = annotation.get('main_transcript') or (annotation['vep_annotation'][annotation['worst_vep_annotation_index']] if annotation.get('worst_vep_annotation_index') is not None and annotation['vep_annotation'] else None)
+    main_transcript = annotation.get('main_transcript') or (annotation['vep_annotation'][annotation['worst_vep_annotation_index']] if annotation.get('worst_vep_annotation_index') is not None and annotation['vep_annotation'] else {})
     is_es_variant = annotation.get('db') == 'elasticsearch'
 
     extras = variant_json.get('extras') or {}
@@ -286,16 +293,17 @@ def _variant_details(variant_json, user):
             'sift': annotation.get('sift'),
             'vepConsequence': annotation.get('vep_consequence'),
             'vepGroup': annotation.get('vep_group'),
-            'mainTranscript': {
-                'symbol': main_transcript.get('gene_symbol') or main_transcript.get('symbol'),
-                'lof': main_transcript.get('lof'),
-                'lofFlags': main_transcript.get('lof_flags'),
-                'lofFilter': main_transcript.get('lof_filter'),
-                'hgvsc': main_transcript.get('hgvsc'),
-                'hgvsp': main_transcript.get('hgvsp'),
-                'aminoAcids': main_transcript.get('amino_acids'),
-                'proteinPosition': main_transcript.get('protein_position'),
-            } if main_transcript else None,
+        },
+        'mainTranscript': {
+            'geneId': main_transcript.get('gene') or main_transcript.get('gene_id'),
+            'symbol': main_transcript.get('gene_symbol') or main_transcript.get('symbol'),
+            'lof': main_transcript.get('lof'),
+            'lofFlags': main_transcript.get('lof_flags'),
+            'lofFilter': main_transcript.get('lof_filter'),
+            'hgvsc': main_transcript.get('hgvsc'),
+            'hgvsp': main_transcript.get('hgvsp'),
+            'aminoAcids': main_transcript.get('amino_acids'),
+            'proteinPosition': main_transcript.get('protein_position'),
         },
         'clinvar': {
             'clinsig': extras.get('clinvar_clinsig'),
@@ -305,9 +313,8 @@ def _variant_details(variant_json, user):
         },
         'hgmd': {
             'accession': extras.get('hgmd_accession'),
-            'class': extras.get('hgmd_class') if user.is_staff else None,
+            'class': extras.get('hgmd_class') if (user and user.is_staff) else None,
         },
-        'geneIds': extras.get('genes', {}).keys(),
         'genotypes': {
             individual_id: {
                 'ab': genotype.get('ab'),
@@ -337,15 +344,13 @@ def _variant_details(variant_json, user):
         'liftedOverPos': lifted_over_pos,
         'locusLists': [],
         'origAltAlleles': extras.get('orig_alt_alleles', []),
-        'transcripts': _variant_transcripts(annotation) if annotation.get('vep_annotation') else None,
+        'transcripts': None,
     }
 
 
 def _saved_variant_genes(variants):
-    gene_ids = set()
-    for variant in variants.values():
-        gene_ids.update(variant['geneIds'])
-    genes = get_genes(gene_ids)
+    gene_ids = {variant['mainTranscript']['geneId'] for variant in variants.values()}
+    genes = get_genes(gene_ids, add_dbnsfp=True, add_omim=True, add_constraints=True)
     for gene in genes.values():
         if gene:
             gene['locusLists'] = []

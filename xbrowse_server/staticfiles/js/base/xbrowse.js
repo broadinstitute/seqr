@@ -254,8 +254,8 @@ _.extend(HeadBallCoach.prototype, {
             hbc: that,
             family: family,
             variant: variant,
-            after_finished: function(variant) {
-                after_finished(variant);
+            after_finished: function(data) {
+                after_finished(data);
                 that.popModal();
             },
         });
@@ -269,8 +269,8 @@ _.extend(HeadBallCoach.prototype, {
             hbc: that,
             family: family,
             variant: variant,
-            after_finished: function(variant) {
-                after_finished(variant);
+            after_finished: function(data) {
+                after_finished(data);
                 that.popModal();
             },
         });

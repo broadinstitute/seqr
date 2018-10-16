@@ -85,6 +85,13 @@ def _create_patient_if_missing(project, individual):
     return True
 
 
+def _set_phenotips_patient_id_if_missing(project, individual):
+    if individual.phenotips_patient_id:
+        return
+    patient_json = _get_patient_data(project, individual)
+    update_seqr_model(individual, phenotips_patient_id=patient_json['id'])
+
+
 def _get_patient_data(project, individual):
     """Retrieves patient data from PhenoTips and returns a json obj.
     Args:
@@ -300,6 +307,7 @@ def _phenotips_view_handler(request, project_guid, individual_guid, url_template
 
     individual = Individual.objects.get(guid=individual_guid)
     _create_patient_if_missing(project, individual)
+    _set_phenotips_patient_id_if_missing(project, individual)
 
     # query string forwarding needed for PedigreeEditor button
     query_string = request.META["QUERY_STRING"]

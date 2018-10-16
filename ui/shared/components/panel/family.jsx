@@ -13,7 +13,7 @@ import PedigreeImagePanel from './view-pedigree-image/PedigreeImagePanel'
 import TextFieldView from './view-fields/TextFieldView'
 import Sample from './sample'
 import { ColoredIcon } from '../StyledComponents'
-import { VerticalSpacer } from '../Spacers'
+import { VerticalSpacer, HorizontalSpacer } from '../Spacers'
 import {
   FAMILY_ANALYSIS_STATUS_OPTIONS,
   FAMILY_FIELD_ANALYSIS_STATUS,
@@ -116,7 +116,7 @@ FamilyLayout.propTypes = {
 }
 
 const Family = (
-  { project, family, fields = [], showSearchLinks, showVariantTags, compact, useFullWidth, disablePedigreeZoom,
+  { project, family, fields = [], showVariantDetails, compact, useFullWidth, disablePedigreeZoom,
     showFamilyPageLink, annotation, updateFamily: dispatchUpdateFamily,
   }) => {
   if (!family) {
@@ -156,27 +156,26 @@ const Family = (
   ]
 
   const discoveryGenes = project.discoveryTags.filter(tag => tag.familyGuid === family.familyGuid).reduce(
-    (acc, tag) => [...acc, ...Object.values(tag.extras.gene_names || {})], [],
+    (acc, tag) => (tag.mainTranscript.symbol ? [...acc, tag.mainTranscript.symbol] : acc), [],
   )
 
-  const rightContent = (showSearchLinks || showVariantTags) ? [
-    showVariantTags ?
-      <div key="variants">
-        <VariantTagTypeBar height={15} project={project} familyGuid={family.familyGuid} sectionLinks={false} />
-        {discoveryGenes.length > 0 &&
-          <span>
-            <b>Discovery Genes:</b> {[...new Set(discoveryGenes)].join(', ')}
-          </span>
-        }
-      </div> : null,
-    showSearchLinks ?
+  const searchLink = `/project/${project.deprecatedProjectId}/family/${family.familyId}/mendelian-variant-search`
+
+  const rightContent = showVariantDetails ? [
+    <div key="variants">
+      <VariantTagTypeBar height={15} width="calc(100% - 2.5em)" project={project} familyGuid={family.familyGuid} sectionLinks={false} />
+      <HorizontalSpacer width={10} />
+      <a href={searchLink}><Icon name="search" /></a>
+      {discoveryGenes.length > 0 &&
+        <span>
+          <b>Discovery Genes:</b> {[...new Set(discoveryGenes)].join(', ')}
+        </span>
+      }
+    </div>,
+    !compact ?
       <div key="links">
         <VerticalSpacer height={20} />
-        <a href={`/project/${project.deprecatedProjectId}/family/${family.familyId}`}>Original Family Page</a>
-        <VerticalSpacer height={10} />
-        <a href={`/project/${project.deprecatedProjectId}/family/${family.familyId}/mendelian-variant-search`}>
-          <Icon name="search" /> Variant Search
-        </a>
+        <a href={searchLink}><Icon name="search" /> Variant Search</a>
         <VerticalSpacer height={10} />
         {project.isMmeEnabled && <ShowMatchmakerModal family={family} />}
       </div> : null,
@@ -199,8 +198,7 @@ Family.propTypes = {
   project: PropTypes.object.isRequired,
   family: PropTypes.object.isRequired,
   fields: PropTypes.array,
-  showVariantTags: PropTypes.bool,
-  showSearchLinks: PropTypes.bool,
+  showVariantDetails: PropTypes.bool,
   useFullWidth: PropTypes.bool,
   disablePedigreeZoom: PropTypes.bool,
   compact: PropTypes.bool,

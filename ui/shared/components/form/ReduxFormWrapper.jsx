@@ -3,6 +3,7 @@
 import React, { createElement } from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
+import { createSelector } from 'reselect'
 import { connect } from 'react-redux'
 import { Field, FieldArray, reduxForm, getFormSyncErrors, getFormSyncWarnings } from 'redux-form'
 import { Form, Message, Icon, Popup } from 'semantic-ui-react'
@@ -125,12 +126,9 @@ class ReduxFormWrapper extends React.Component {
     submitting: PropTypes.bool,
     submitFailed: PropTypes.bool,
     submitSucceeded: PropTypes.bool,
-    invalid: PropTypes.bool,
     dirty: PropTypes.bool,
-    error: PropTypes.array,
-    validationErrors: PropTypes.object,
-    validationWarnings: PropTypes.object,
-    warning: PropTypes.string,
+    errorMessages: PropTypes.array,
+    warningMessages: PropTypes.array,
     handleSubmit: PropTypes.func,
     setModalConfirm: PropTypes.func,
   }
@@ -151,27 +149,19 @@ class ReduxFormWrapper extends React.Component {
       saveStatus = RequestStatus.ERROR
     }
 
-    // redux-form does not support throwing submission warnings so this is a work around
-    const submissionWarnings = this.props.warning || (this.props.error && this.props.error.map(error => error.warning).filter(warning => warning))
-    const submissionErrors = this.props.error && this.props.error.filter(error => !error.warning)
-
-    const warningMessages = (submissionWarnings && submissionWarnings.length > 0) ? submissionWarnings : flatten(Object.values(this.props.validationWarnings))
-    const errorMessages = (submissionErrors && submissionErrors.length > 0) ? submissionErrors : flatten(Object.values(this.props.validationErrors))
-
-    const saveErrorMessage = this.props.submitFailed ?
-      (errorMessages && errorMessages.length > 0 && errorMessages.join('; ')) ||
-      (warningMessages && warningMessages.length > 0 && warningMessages.join('; ')) ||
-      (this.props.invalid ? 'Invalid input' : 'Unknown') : null
+    const saveErrorMessage =
+      (this.props.errorMessages && this.props.errorMessages.length > 0 && this.props.errorMessages.join('; ')) ||
+      (this.props.warningMessages && this.props.warningMessages.length > 0 && this.props.warningMessages.join('; ')) ||
+      (this.props.submitFailed ? 'Error' : null)
 
     const fieldComponents = this.props.renderChildren ? React.createElement(this.props.renderChildren) : configuredFields(this.props)
 
     return (
       <StyledForm onSubmit={this.props.handleSubmit} size={this.props.size} loading={this.props.submitting} hasSubmitButton={!this.props.submitOnChange} inline={this.props.inline}>
         {fieldComponents}
-        {this.props.showErrorPanel && this.props.submitFailed && [
-          warningMessages && warningMessages.length > 0 ? <MessagePanel key="w" warning visible list={warningMessages} /> : null,
-          errorMessages && errorMessages.length > 0 ? <MessagePanel key="e" error visible list={errorMessages} /> : null,
-        ]}
+        {this.props.showErrorPanel && ['warningMessages', 'errorMessages'].map(messagesKey => (
+          this.props[messagesKey] && this.props[messagesKey].length > 0 ? <MessagePanel key={messagesKey} error visible list={this.props[messagesKey]} /> : null
+        ))}
         {
           this.props.secondarySubmitButton && this.props.onSecondarySubmit &&
           React.cloneElement(this.props.secondarySubmitButton, { onClick: this.props.handleSubmit(values => this.props.onSecondarySubmit(values)) })
@@ -197,16 +187,11 @@ class ReduxFormWrapper extends React.Component {
       'submitSucceeded',
       'submitFailed',
       'closeOnSuccess',
-      'error',
-      'invalid',
       'renderChildren',
       'fields',
       'showErrorPanel',
-      'validationErrors',
-      'validationWarnings',
       'size',
       'submitting',
-      'warning',
       'secondarySubmitButton',
       'submitOnChange',
       'cancelButtonText',
@@ -215,7 +200,16 @@ class ReduxFormWrapper extends React.Component {
       'confirmCloseIfNotSaved',
       'initialValues',
     ]
+    const listUpdateProps = [
+      'errorMessages',
+      'warningMessages',
+    ]
     if (updateProps.some(k => nextProps[k] !== this.props[k])) {
+      return true
+    }
+    if (listUpdateProps.some(k => (
+      (nextProps[k] && this.props[k] && nextProps[k].length === this.props[k].length) ? nextProps[k].some((val, i) => val !== this.props[k][i]) : nextProps[k] !== this.props[k]
+    ))) {
       return true
     }
     return nextState !== this.state
@@ -234,9 +228,39 @@ class ReduxFormWrapper extends React.Component {
   }
 }
 
+const getValidationErrorList = validationErrors =>
+  (validationErrors ? flatten(Object.values(validationErrors)).filter(err => err) : null)
+const getValidationErrors = createSelector(
+  (state, props) => (props.submitFailed ? getFormSyncErrors(props.form)(state) : null),
+  getValidationErrorList,
+)
+const getValidationWarnings = createSelector(
+  (state, props) => (props.submitFailed ? getFormSyncWarnings(props.form)(state) : null),
+  getValidationErrorList,
+)
+
+// redux-form does not support throwing submission warnings so this is a work around
+const getSubmissionWarnings = (state, props) => props.warning || (props.error && props.error.map(error => error.warning).filter(warning => warning))
+const getSubmissionErrors = (state, props) => props.error && props.error.filter(error => !error.warning)
+
+const getErrors = (submissionErrors, validationErrors) =>
+  ((submissionErrors && submissionErrors.length > 0) ? submissionErrors : validationErrors)
+
+const getErrorMessages = createSelector(
+  getSubmissionErrors,
+  getValidationErrors,
+  getErrors,
+)
+const getWarningMessages = createSelector(
+  getSubmissionWarnings,
+  getValidationWarnings,
+  getErrors,
+)
+
+
 const mapStateToProps = (state, ownProps) => ({
-  validationErrors: getFormSyncErrors(ownProps.form)(state),
-  validationWarnings: getFormSyncWarnings(ownProps.form)(state),
+  errorMessages: getErrorMessages(state, ownProps),
+  warningMessages: getWarningMessages(state, ownProps),
 })
 
 const mapDispatchToProps = (dispatch, ownProps) => {

@@ -1,17 +1,15 @@
 """API that generates auto-complete suggestions for the search bar in the header of seqr pages"""
 
-import collections
 import logging
 
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
-from django.db.models.functions import Length
 
 from django.views.decorators.http import require_GET
 
+from seqr.utils.gene_utils import get_queried_genes
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.utils.json_utils import create_json_response, _to_title_case
-from reference_data.models import GeneInfo
 from seqr.models import Project, Family, Individual, AnalysisGroup
 
 logger = logging.getLogger(__name__)
@@ -110,21 +108,19 @@ def _get_matching_genes(user, query):
        Sorted list of matches where each match is a dictionary of strings
     """
     result = []
-    matching_genes = GeneInfo.objects.filter(Q(gene_id__icontains=query) | Q(gene_symbol__icontains=query)).only(
-        'gene_id', 'gene_symbol').order_by(Length('gene_symbol').asc()).distinct()
-    for g in matching_genes[:MAX_RESULTS_PER_CATEGORY]:
-        if query.lower() in g.gene_id.lower():
-            title = g.gene_id
-            description = g.gene_symbol
+    for g in get_queried_genes(query, MAX_RESULTS_PER_CATEGORY):
+        if query.lower() in g['gene_id'].lower():
+            title = g['gene_id']
+            description = g['gene_symbol']
         else:
-            title = g.gene_symbol
-            description = g.gene_id
+            title = g['gene_symbol']
+            description = g['gene_id']
 
         result.append({
-            'key': g.gene_id,
+            'key': g['gene_id'],
             'title': title,
             'description': '('+description+')' if description else '',
-            'href': '/gene_info/'+g.gene_id,
+            'href': '/gene_info/'+g['gene_id'],
         })
 
     return result

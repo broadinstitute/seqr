@@ -87,23 +87,23 @@ window.BasicVariantView = Backbone.View.extend({
         if (a == 'add_note') {
             if (this.context == 'family') {
                 this.hbc.add_or_edit_family_variant_note(that.variant, that.context_obj, function(data) {
-                    that.variant = data.variant;
+                    that.variant.extras.family_notes = data.notes;
                     that.render();
                 }, null);
             }
         }
         else if (a == 'edit_tags') {
             if (this.context == 'family') {
-                this.hbc.edit_family_variant_tags(that.variant, that.context_obj, function(variant) {
-                    that.variant = variant;
+                this.hbc.edit_family_variant_tags(that.variant, that.context_obj, function(data) {
+                    that.variant.extras.family_tags = data.tags;
                     that.render();
                 });
             }
         }
         else if (a == 'edit_functional_data') {
             if (this.context == 'family') {
-                this.hbc.edit_family_functional_data(that.variant, that.context_obj, function(variant) {
-                    that.variant = variant;
+                this.hbc.edit_family_functional_data(that.variant, that.context_obj, function(data) {
+                    that.variant.extras.family_functional_data = data.functional_data;
                     that.render();
                 });
             }
@@ -170,7 +170,7 @@ window.BasicVariantView = Backbone.View.extend({
         var note_id = $(event.currentTarget).attr('data-target');
         var that = this;
         this.hbc.add_or_edit_family_variant_note(that.variant, that.context_obj, function(data) {
-            that.variant = data.variant;
+            that.variant.extras.family_notes = data.notes;
             that.render();
         }, note_id);
     },

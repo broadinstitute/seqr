@@ -461,10 +461,10 @@ export const VARIANT = {
     ],
     vepConsequence: "frameshift_variant",
     vepGroup: "frameshift",
-    worstVepAnnotation: {
-      aminoAcids: "P/X", hgvsc: "ENST00000456743.1:c.862delC", hgvsp: "ENSP00000389625.1:p.Leu288SerfsTer10",
-      lof: "HC", lofFilter: "", lofFlags: "SINGLE_EXON", proteinPosition: "287", symbol: "OR2M3"
-    }
+  },
+  worstVepAnnotation: {
+    aminoAcids: "P/X", hgvsc: "ENST00000456743.1:c.862delC", hgvsp: "ENSP00000389625.1:p.Leu288SerfsTer10", lof: "HC",
+    lofFilter: "", lofFlags: "SINGLE_EXON", proteinPosition: "287", symbol: "OR2M3", geneId: 'ENSG00000228198',
   },
   chrom: "1",
   clinvar: { clinsig: "", variantId: null },
@@ -475,8 +475,7 @@ export const VARIANT = {
     { color: "#880E4F", dateSaved: "2018-05-24T15:34:01.365Z", metadata: "2", metadataTitle: "LOD Score",
       name: "Genome-wide Linkage", user: "hsnow@broadinstitute.org" },
   ],
-  geneIds: ['ENSG00000228198'],
-  genomeVersion: "37",
+  mainTranscript: "37",
   genotypes: {
     NA19675: {
       ab: 1,

@@ -172,25 +172,39 @@ def add_gene_names_to_variants(reference, variants):
         variant.set_extra('genes', genes)
 
 
+def _get_variant_annotations(annot_class, variant=None, project=None, xpos=None, ref=None, alt=None, family_id=None, project_key='project', related_field=None, fields=None, **kwargs):
+    if variant:
+        xpos = variant.xpos
+        ref = variant.ref
+        alt = variant.alt
+        family_id = variant.extras.get('family_id')
+    query = Q(**{project_key: project}) & Q(xpos=xpos) & Q(ref=ref) & Q(alt=alt)
+    if family_id:
+        query &= Q(family__family_id=family_id)
+    annots = annot_class.objects.filter(query).order_by('-date_saved').select_related('user__userprofile')
+    if related_field:
+        annots = annots.select_related(related_field)
+    annots = annots.only(*(fields or annot_class.VARIANT_JSON_FIELDS))
+    return [a.to_variant_json() for a in annots]
+
+
+def get_variant_notes(**kwargs):
+    return _get_variant_annotations(VariantNote, **kwargs)
+
+
+def get_variant_tags(**kwargs):
+    return _get_variant_annotations(VariantTag, project_key='project_tag__project', related_field='project_tag', **kwargs)
+
+
+def get_variant_functional_data(**kwargs):
+    return _get_variant_annotations(VariantFunctionalData, project_key='family__project', fields=VariantFunctionalData.VARIANT_FUNCTIONAL_DATA_JSON_FIELDS, **kwargs)
+
+
 def add_family_tags_to_variants(project, variants):
     for variant in variants:
-        notes_query = Q(project=project) & Q(xpos=variant.xpos) & Q(ref=variant.ref) & Q(alt=variant.alt)
-        if variant.extras.get('family_id'):
-            notes_query &= Q(family__family_id=variant.extras['family_id'])
-        notes = list(VariantNote.objects.filter(notes_query).order_by('-date_saved').select_related('user__userprofile').only(*VariantNote.VARIANT_JSON_FIELDS))
-        variant.set_extra('family_notes', [n.to_variant_json() for n in notes])
-
-        variant_tag_query = Q(project_tag__project=project) & Q(xpos=variant.xpos) & Q(ref=variant.ref) & Q(alt=variant.alt)
-        if variant.extras.get('family_id'):
-            variant_tag_query &= Q(family__family_id=variant.extras['family_id'])
-        tags = list(VariantTag.objects.filter(variant_tag_query).select_related('user__userprofile').select_related('project_tag').only(*VariantTag.VARIANT_JSON_FIELDS))
-        variant.set_extra('family_tags', [t.to_variant_json() for t in tags])
-
-        functional_data_query = Q(family__project=project) & Q(xpos=variant.xpos) & Q(ref=variant.ref) & Q(alt=variant.alt)
-        if variant.extras.get('family_id'):
-            functional_data_query &= Q(family__family_id=variant.extras['family_id'])
-        functional_data = list(VariantFunctionalData.objects.filter(functional_data_query).select_related('user__userprofile').only(*VariantFunctionalData.VARIANT_FUNCTIONAL_DATA_JSON_FIELDS))
-        variant.set_extra('family_functional_data', [t.to_variant_json() for t in functional_data])
+        variant.set_extra('family_notes', get_variant_notes(project=project, variant=variant))
+        variant.set_extra('family_tags', get_variant_tags(project=project, variant=variant))
+        variant.set_extra('family_functional_data', get_variant_functional_data(project=project, variant=variant))
 
 
 def add_gene_info_to_variants(variants):
