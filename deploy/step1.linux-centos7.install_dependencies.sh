@@ -11,7 +11,7 @@ sudo yum install -y unzip \
     git
 
 # gcloud sdk
-sudo tee -a /etc/yum.repos.d/google-cloud-sdk.repo << EOM
+sudo tee /etc/yum.repos.d/google-cloud-sdk.repo << EOM
 [google-cloud-sdk]
 name=Google Cloud SDK
 baseurl=https://packages.cloud.google.com/yum/repos/cloud-sdk-el7-x86_64
