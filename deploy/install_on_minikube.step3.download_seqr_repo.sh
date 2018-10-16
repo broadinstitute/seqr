@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-echo ==== download seqr deployment code, install python dependencies =====
+set +x
+echo ==== download seqr deployment code, install python libs used during deployment =====
 set -x
 
 export SEQR_BRANCH=master

@@ -1,46 +1,26 @@
 #!/usr/bin/env bash
 
+# get --vm-driver value from VM_DRIVER env var. if defined, or use "none" by default
 VM_DRIVER="${VM_DRIVER:-none}"
 
-# install general dependencies
-sudo apt-get update
-sudo apt-get install -y unzip \
-    gcc \
-    wget \
-    python-dev \
-    openjdk-11-jdk \
-    git
-
-# gcloud sdk
-wget -N https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-219.0.1-linux-x86_64.tar.gz
-tar xzf google-cloud-sdk-219.0.1-linux-x86_64.tar.gz
-./google-cloud-sdk/install.sh --quiet
 
 set +x
 echo ==== Install and start docker service =====
 set -x
 
-sudo apt-get remove -y docker docker-engine docker.io  # Remove old versions
+sudo yum remove -y docker docker-engine docker.io  # Remove old versions
 
 sudo sysctl net.ipv4.ip_forward=1   # fix for https://stackoverflow.com/questions/41453263/docker-networking-disabled-warning-ipv4-forwarding-is-disabled-networking-wil
 sudo sysctl net.bridge.bridge-nf-call-iptables=1
 sudo sysctl -p
 
-sudo apt-get install -y \
-    apt-transport-https \
-    ca-certificates \
-    curl \
-    software-properties-common
+sudo yum install -y \
+    yum-utils \
+    device-mapper-persistent-data \
+    lvm2
 
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
-
-sudo add-apt-repository \
-   "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
-   $(lsb_release -cs) \
-   stable"
-
-sudo apt-get update
-sudo apt-get install -y docker-ce
+sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+sudo yum install -y docker-ce
 
 sudo systemctl enable docker.service
 sudo systemctl start docker.service
@@ -52,6 +32,7 @@ else
 
     needs_reboot=1
 fi
+
 
 set +x
 echo ==== Install kubectl and minikube =====
@@ -70,7 +51,7 @@ curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/$(cur
 curl -Lo minikube https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64 && chmod +x minikube && sudo cp minikube /usr/bin/ && rm minikube
 
 sudo rm -rf /etc/kubernetes/  # clean up any previously installed instance
-sudo apt-get install -y socat  # needed for port forwarding when --vm-driver=none (see https://github.com/kubernetes/minikube/issues/2575)
+sudo yum install -y socat  # needed for port forwarding when --vm-driver=none (see https://github.com/kubernetes/minikube/issues/2575)
 
 mkdir -p $HOME/.kube
 touch $HOME/.kube/config
@@ -101,6 +82,7 @@ metadata:
   namespace: kube-system
   resourceVersion: "198"
   selfLink: /api/v1/namespaces/kube-system/configmaps/coredns' > coredns-config.yaml
+
 
 
 echo 'sudo minikube stop' > stop_minikube.sh
@@ -146,64 +128,3 @@ kubectl patch deployment -n=kube-system coredns -p '\''{"spec": {"template": {"s
 chmod 777 start_minikube.sh
 ./start_minikube.sh
 
-
-echo ==== Adjust system settings for elasticsearch =====
-set -x
-
-if (( $(sysctl -b vm.max_map_count) < 262144 )); then
-
-    echo '
-vm.max_map_count=262144
-' | sudo tee -a /etc/sysctl.conf
-
-    sudo sysctl -w vm.max_map_count=262144   # avoid elasticsearch error: "max virtual memory areas vm.max_map_count [65530] is too low, increase to at least [262144]"
-
-    needs_reboot=1
-fi
-
-if (( $(ulimit -n) < 65536)); then
-
-    echo '
-* hard	 nofile	65536
-* soft	 nofile	65536
-elasticsearch  nofile  65536
-' | sudo tee -a /etc/security/limits.conf  # avoid elasticsearch error: "max file descriptors [4096] for elasticsearch process is too low, increase to at least [65536]"
-
-    echo '
-DefaultLimitNOFILE=65536
-' | sudo tee -a /etc/systemd/user.conf
-
-    echo '
-DefaultLimitNOFILE=65536
-' | sudo tee -a /etc/systemd/system.conf
-
-    echo '
-session required pam_limits.so
-' | sudo tee -a /etc/pam.d/su
-
-    needs_reboot=1
-fi
-
-# apply limit to current session
-sudo prlimit --pid $$ --nofile=65536
-
-set +x
-if [ "$needs_reboot" ] ; then
-
-  echo '
-  ==================================================================
-
-  Config changes above will take effect after a reboot.
-
-  ==================================================================
-'
-    read -p "Reboot now? [y/n] " -n 1 -r
-    echo    # (optional) move to a new line
-    if [[ $REPLY =~ ^[Yy]$ ]]
-    then
-        echo "Shutting down..."
-        sudo reboot
-    else
-        echo "Skipping reboot."
-    fi
-fi

@@ -12,13 +12,14 @@ for i in {1..150}; do    # timeout for 5 minutes
   sleep 2
 done
 
-sudo minikube addons disable dashboard  # disable kuberentes dashboard to conserve resources
+sudo minikube addons disable dashboard    # disable kuberentes dashboard to conserve resources
 
 minikube status
 
 
 set +x
 echo ==== deploy all seqr components =====
+
 
 source venv/bin/activate
 
