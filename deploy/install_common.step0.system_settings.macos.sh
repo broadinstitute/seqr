@@ -24,5 +24,9 @@ set +x
 echo ==== Install gcloud sdk =====
 set -x
 
+# based on https://cloud.google.com/sdk/docs/quickstart-macos
+wget -N https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-221.0.0-darwin-x86_64.tar.gz
+tar xzf google-cloud-sdk-221.0.0-darwin-x86_64.tar.gz
+./google-cloud-sdk/install.sh --quiet
 
-# TODO
+set +x

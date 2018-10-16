@@ -60,8 +60,8 @@ EOM
 
 sudo yum install -y google-cloud-sdk
 
-
 set +x
+
 if [ "$needs_reboot" ] ; then
 
   echo '

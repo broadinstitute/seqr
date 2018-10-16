@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 set +x
-echo ==== Clone the seqr repo =====
+echo "==== Clone the seqr repo ====="
 set -x
 
 
@@ -32,3 +32,5 @@ export SEQR_DIR='${SEQR_DIR}'
 
     cd ..
 fi
+
+set +x

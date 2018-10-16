@@ -1,18 +1,14 @@
 #!/usr/bin/env bash
 
-export PLATFORM=$(python -c "import sys; print(sys.platform)")
-
+echo "==== Installing postgres ===="
+set -x
 
 if [ $PLATFORM = "darwin" ]; then
-
-    echo "==== Installing postgres using brew ===="
 
     brew install postgres
 
 
 elif [ $PLATFORM = "centos" ]; then
-
-    echo "==== Installing postgres using yum ===="
 
     sudo yum install -y postgresql postgresql-server postgresql-contrib
 
@@ -24,8 +20,6 @@ elif [ $PLATFORM = "centos" ]; then
 
 elif [ $PLATFORM = "ubuntu" ]; then
 
-    echo "==== Installing postgres using apt-get ===="
-
     sudo apt-get install -y postgresql postgresql-contrib postgresql-client
 
     sudo sed -i s/peer/trust/ $(find /etc/postgresql -name "pg_hba.conf")
@@ -34,6 +28,9 @@ elif [ $PLATFORM = "ubuntu" ]; then
 
 
 else
+
     echo "Unexpected operating system: $PLATFORM"
     exit 1;
 fi;
+
+set +x
