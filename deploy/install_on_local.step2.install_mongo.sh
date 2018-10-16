@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
 
-export PLATFORM=$(python -c "import sys; print(sys.platform)")
-
-
-if [ $PLATFORM = "darwin" ]; then
+if [ $PLATFORM = "macos" ]; then
 
     echo "==== Installing mongo using brew ===="
 

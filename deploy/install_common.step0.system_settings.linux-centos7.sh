@@ -62,29 +62,6 @@ sudo yum install -y google-cloud-sdk
 
 
 set +x
-echo ==== Clone the seqr repo =====
-set -x
-
-
-if [ -z "$SEQR_DIR" ]; then
-
-    export SEQR_BRANCH=master
-
-    git clone https://github.com/macarthur-lab/seqr.git
-    cd seqr/
-    git checkout $SEQR_BRANCH
-
-    export SEQR_DIR=$(pwd)
-    echo '
-# ---- seqr install -----
-export SEQR_DIR='${SEQR_DIR}'
-' >> ~/.bashrc
-
-    cd ..
-fi
-
-
-set +x
 if [ "$needs_reboot" ] ; then
 
   echo '
