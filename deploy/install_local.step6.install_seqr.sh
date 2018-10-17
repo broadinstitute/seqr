@@ -50,7 +50,7 @@ else
     exit 1
 fi;
 
-wget https://raw.github.com/miyagawa/cpanminus/master/cpanm -O cpanm \
+wget -nv https://raw.github.com/miyagawa/cpanminus/master/cpanm -O cpanm \
     && chmod +x ./cpanm \
     && sudo ./cpanm --notest \
         Cairo \

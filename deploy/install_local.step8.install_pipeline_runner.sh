@@ -42,7 +42,7 @@ RUN gsutil -m cp gs://hail-common/vep/htslib/* /usr/bin/ \
     && gsutil -m cp gs://hail-common/vep/samtools /usr/bin/ \
     && chmod a+rx  /usr/bin/tabix /usr/bin/bgzip /usr/bin/htsfile /usr/bin/samtools
 
-RUN wget https://raw.github.com/miyagawa/cpanminus/master/cpanm -O /usr/bin/cpanm && chmod +x /usr/bin/cpanm
+RUN wget -nv https://raw.github.com/miyagawa/cpanminus/master/cpanm -O /usr/bin/cpanm && chmod +x /usr/bin/cpanm
 # VEP dependencies
 RUN /usr/bin/cpanm --notest Set::IntervalTree
 RUN /usr/bin/cpanm --notest PerlIO::gzip

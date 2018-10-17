@@ -106,7 +106,7 @@ else
     exit 1
 fi;
 
-wget https://bootstrap.pypa.io/get-pip.py
+wget -nv https://bootstrap.pypa.io/get-pip.py
 sudo python get-pip.py
 sudo pip install --upgrade pip setuptools
 

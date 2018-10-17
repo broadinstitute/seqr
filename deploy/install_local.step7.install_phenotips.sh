@@ -4,12 +4,12 @@ echo "==== Installing Phenotips ===="
 set -x
 
 export PT_VERSION="1.2.6"
-wget https://nexus.phenotips.org/nexus/content/repositories/releases/org/phenotips/phenotips-standalone/${PT_VERSION}/phenotips-standalone-${PT_VERSION}.zip \
-    && unzip phenotips-standalone-${PT_VERSION}.zip \
+wget -nv https://nexus.phenotips.org/nexus/content/repositories/releases/org/phenotips/phenotips-standalone/${PT_VERSION}/phenotips-standalone-${PT_VERSION}.zip \
+    && unzip -o phenotips-standalone-${PT_VERSION}.zip \
     && rm phenotips-standalone-${PT_VERSION}.zip
 
 cd phenotips-standalone-${PT_VERSION}
-wget https://jdbc.postgresql.org/download/postgresql-42.1.4.jar -O ./webapps/phenotips/WEB-INF/lib/postgresql-42.1.4.jar
+wget -nv https://jdbc.postgresql.org/download/postgresql-42.1.4.jar -O ./webapps/phenotips/WEB-INF/lib/postgresql-42.1.4.jar
 
 cp ${SEQR_DIR}/deploy/docker/phenotips/config/${PT_VERSION}/xwiki.cfg ./webapps/phenotips/WEB-INF/xwiki.cfg
 cp ${SEQR_DIR}/deploy/docker/phenotips/config/${PT_VERSION}/hibernate.cfg.xml ./webapps/phenotips/WEB-INF/hibernate.cfg.xml
