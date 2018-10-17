@@ -114,7 +114,7 @@ export SEQR_PROJECT_GUID=R003_seqr_project3  # guid of existing seqr project
 export GS_VCF_PATH=gs://seqr-datasets/GRCh38/my-new-dataset.vcf.gz   # VCF path on cloud storage
 
 # this will create a new dataproc cluster and submit the pipeline to it
-python gcloud_dataproc/load_GRCh38_dataset.py --host $IP --project-guid SEQR_PROJECT_GUID --sample-type WGS --dataset-type VARIANTS $GS_VCF_PATH --es-block-size 50
+python gcloud_dataproc/load_dataset.py --genome-version GRCh38 --host $IP --project-guid SEQR_PROJECT_GUID --sample-type WGS --dataset-type VARIANTS $GS_VCF_PATH --es-block-size 50
 
 # after the pipeline completes successfully, you can link the new elasticsearch index to the seqr project by using the 'Edit Datasets' dialog on the project page.
 ```
