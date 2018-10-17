@@ -25,8 +25,14 @@ psql -U postgres postgres -c 'grant all privileges on database xwiki to xwiki'
 psql -U xwiki postgres -c 'create database xwiki'
 psql -U xwiki xwiki -f ${SEQR_DIR}/deploy/docker/phenotips/init/${PT_VERSION}/init_phenotips_db.sql
 
-LOG_FILE=phenotips.log
-nohup ./start.sh >& $LOG_FILE &
+echo 'cd '$(pwd)'
+LOG_FILE=$(pwd)/phenotips.log
+(nohup ./start.sh >& ${LOG_FILE}) &
+echo "PhenoTips started in background. See ${LOG_FILE}"
+' | tee start_phenotips.sh
+chmod 777 ./start_phenotips.sh
+
 echo "PhenoTips started in background. See ${LOG_FILE}"
 
+cd ..
 set +x
