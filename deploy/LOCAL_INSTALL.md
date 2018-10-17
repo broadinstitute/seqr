@@ -1,4 +1,4 @@
-The installation scripts are written to work on MacOSX and Linux (CentOS7 or Ubuntu). 
+The installation scripts work on MacOSX and Linux (CentOS7 or Ubuntu). 
 We appreciate modifications that add support for other platforms.  
 
 
