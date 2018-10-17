@@ -19,7 +19,7 @@ Run the following command to adjust system settings and install `gcc`, `java1.8`
 SCRIPT=install_general_dependencies.sh && curl -L http://raw.githubusercontent.com/macarthur-lab/seqr/master/deploy/$SCRIPT -o $SCRIPT && chmod 777 $SCRIPT && source $SCRIPT
 ```
 
-#### Step 1: Install seqr components
+#### Step 2: Install seqr components
 
 To install all components using one script, run
 
