@@ -9,7 +9,7 @@ wget -nv https://artifacts.elastic.co/downloads/kibana/kibana-${VERSION}-linux-x
 tar xzf kibana-${VERSION}-linux-x86_64.tar.gz
 rm kibana-${VERSION}-linux-x86_64.tar.gz
 
-cd kibana-${VERSION}
+cd kibana-${VERSION}-linux-x86_64
 
 echo '
 cd '$(pwd)'
