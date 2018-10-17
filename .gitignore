@@ -18,3 +18,4 @@ deploy/secrets/gcloud*/*
 deploy/secrets/gcloud*/*
 
 pedigree_images/*
+seqr_settings
