@@ -1,9 +1,7 @@
 ## Install
 
-Whether installing seqr on a laptop, on-prem, or on cloud VMs, Docker images and Kubernetes can be used to automate the deployment steps and isolate them from the host systems. 
-
 The instructions below cover local deployments using Minikube, but are also directly applicable to cloud-based deployments which replace Minikube with a managed Kubernetes cluster like Google Container Engine.
-The Kubernetes project maintains a [complete list of deployment options](https://kubernetes.io/docs/setup/pick-right-solution/).
+The Kubernetes project maintains a [complete list of ways to create a Kubernetes cluster](https://kubernetes.io/docs/setup/pick-right-solution/).
 
 #### Prerequisites
  - *Hardware:*  At least **16 Gb RAM**, **2 CPUs**, **50 Gb disk space**  
@@ -18,12 +16,13 @@ The Kubernetes project maintains a [complete list of deployment options](https:/
 
 Local and on-prem installations can use [MiniKube](https://kubernetes.io/docs/setup/minikube/) to create a self-contained kubernetes cluster on a single machine.  
 
-Run the following command to install `gcc`, `java1.8`, `minikube`, `kubectl` and their dependencies on the host machine (using `brew`, `yum` or `apt-get`):
+Run the following command to adjust system settings and install `gcc`, `java1.8`, and other dependencies on the host machine (using `brew`, `yum` or `apt-get`):
 
 ```
 SCRIPT=install_general_dependencies.sh && curl -L http://raw.githubusercontent.com/macarthur-lab/seqr/master/deploy/$SCRIPT -o $SCRIPT && chmod 777 $SCRIPT && source $SCRIPT
 ```
 
+Then, run this to install and start minikube:
 ```
 SCRIPT=install_minikube.step1.install_minikube.sh && curl -L http://raw.githubusercontent.com/macarthur-lab/seqr/master/deploy/$SCRIPT -o $SCRIPT && chmod 777 $SCRIPT && source $SCRIPT
 ```
