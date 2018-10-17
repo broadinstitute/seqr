@@ -5,7 +5,7 @@ source ./install_local.step0.set_env_vars.sh
 
 wget https://raw.githubusercontent.com/macarthur-lab/seqr/deploy_code_hail_elasticsearch_repo_integration/deploy/install_local.step1.clone_seqr_repo.sh
 ./install_local.step1.clone_seqr_repo.sh
-
+chmod 777 ./install_local.step1.clone_seqr_repo.sh
 
 ./seqr/deploy/install_local.step2.install_mongo.sh
 ./seqr/deploy/install_local.step3.install_postgres.sh
