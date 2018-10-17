@@ -13,4 +13,4 @@ cd ${SEQR_DIR}
 ./seqr/deploy/install_local.step5.install_redis.sh
 ./seqr/deploy/install_local.step6.install_seqr.sh
 ./seqr/deploy/install_local.step7.install_phenotips.sh
-./seqr/deploy/install_local.step8.install_pipeline_runner.sh
+#./seqr/deploy/install_local.step8.install_pipeline_runner.sh
