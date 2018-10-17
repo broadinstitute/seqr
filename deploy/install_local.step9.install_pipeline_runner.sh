@@ -4,7 +4,7 @@ echo "==== Installing data loading pipeline ===="
 set -x
 
 if [ -z "$PLATFORM" ]; then
-
+    set +x
     echo "PLATFORM environment variable not set. Please run previous install step(s)."
     exit 1
 
@@ -21,6 +21,7 @@ elif [ $PLATFORM = "ubuntu" ]; then
     :
 
 else
+    set +x
     echo "Unexpected operating system: $PLATFORM"
     exit 1
 fi;
