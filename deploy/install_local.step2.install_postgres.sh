@@ -36,6 +36,7 @@ elif [ $PLATFORM = "ubuntu" ]; then
     sudo sed -i s/peer/trust/ $PG_HBA_PATH
     sudo sed -i s/md5/trust/ $PG_HBA_PATH
 
+    sudo systemctl stop postgresql
     sudo systemctl enable postgresql.service
     sudo systemctl start postgresql.service
 
