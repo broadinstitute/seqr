@@ -2,11 +2,10 @@
 
 
 if [ -z "$SEQR_DIR" ]; then
-    export SEQR_DIR=$(pwd)/seqr
 
-    echo '
-export SEQR_DIR='${SEQR_DIR}'
-' >> ~/.bashrc
+    export SEQR_DIR=$(pwd)/seqr
+    echo 'export SEQR_DIR='${SEQR_DIR} >> ~/.bashrc
+    echo 'export PYTHONPATH='${SEQR_DIR}':'${SEQR_DIR}'/seqr_settings:$PYTHONPATH' >> ~/.bashrc
 
 fi
 
@@ -21,9 +20,6 @@ elif "darwin" in p: print("macos")
 else: print("unknown")
 EOF
 )
-
-    echo '
-export PLATFORM='${PLATFORM}'
-' >> ~/.bashrc
+    echo 'export PLATFORM='${PLATFORM} >> ~/.bashrc
 
 fi
