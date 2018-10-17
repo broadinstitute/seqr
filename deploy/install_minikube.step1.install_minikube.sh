@@ -1,26 +1,82 @@
 #!/usr/bin/env bash
 
-# get --vm-driver value from VM_DRIVER env var. if defined, or use "none" by default
-VM_DRIVER="${VM_DRIVER:-none}"
+if [ -z "$PLATFORM" ]; then
+    echo "PLATFORM environment variable not set. Please run previous install step(s)."
+    exit 1
+
+elif [ $PLATFORM = "macos" ]; then
 
 
-set +x
-echo ==== Install and start docker service =====
-set -x
+    echo ===== Install xhyve hypervisor =====
+    brew install --HEAD xhyve     # from https://github.com/mist64/xhyve
 
-sudo yum remove -y docker docker-engine docker.io  # Remove old versions
 
-sudo sysctl net.ipv4.ip_forward=1   # fix for https://stackoverflow.com/questions/41453263/docker-networking-disabled-warning-ipv4-forwarding-is-disabled-networking-wil
-sudo sysctl net.bridge.bridge-nf-call-iptables=1
-sudo sysctl -p
+    echo ===== Install kubectl =====
+    brew install kubernetes-cli   # from https://kubernetes.io/docs/tasks/tools/install-kubectl/#install-with-homebrew-on-macos
 
-sudo yum install -y \
-    yum-utils \
-    device-mapper-persistent-data \
-    lvm2
 
-sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
-sudo yum install -y docker-ce
+    echo ===== Install minikube =====
+    brew cask install minikube    # from https://github.com/kubernetes/minikube/releases
+
+    exit 0;
+
+elif [ $PLATFORM = "centos" ]; then
+
+
+    set +x
+    echo ==== Install and start docker service =====
+    set -x
+
+    sudo yum install -y socat  # needed for port forwarding when --vm-driver=none (see https://github.com/kubernetes/minikube/issues/2575)
+    sudo yum remove -y docker docker-engine docker.io  # Remove old versions
+
+    sudo sysctl net.ipv4.ip_forward=1   # fix for https://stackoverflow.com/questions/41453263/docker-networking-disabled-warning-ipv4-forwarding-is-disabled-networking-wil
+    sudo sysctl net.bridge.bridge-nf-call-iptables=1
+    sudo sysctl -p
+
+    sudo yum install -y \
+        yum-utils \
+        device-mapper-persistent-data \
+        lvm2
+
+    sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+    sudo yum install -y docker-ce
+
+elif [ $PLATFORM = "ubuntu" ]; then
+
+    set +x
+    echo ==== Install and start docker service =====
+    set -x
+
+    sudo apt-get install -y socat  # needed for port forwarding when --vm-driver=none (see https://github.com/kubernetes/minikube/issues/2575)
+    sudo apt-get remove -y docker docker-engine docker.io  # Remove old versions
+
+    sudo sysctl net.ipv4.ip_forward=1   # fix for https://stackoverflow.com/questions/41453263/docker-networking-disabled-warning-ipv4-forwarding-is-disabled-networking-wil
+    sudo sysctl net.bridge.bridge-nf-call-iptables=1
+    sudo sysctl -p
+
+    sudo apt-get install -y \
+        apt-transport-https \
+        ca-certificates \
+        curl \
+        software-properties-common
+
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+
+    sudo add-apt-repository \
+       "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
+       $(lsb_release -cs) \
+       stable"
+
+    sudo apt-get update
+    sudo apt-get install -y docker-ce
+
+else
+    set +x
+    echo "Unexpected operating system: $PLATFORM"
+    exit 1
+fi;
+
 
 sudo systemctl enable docker.service
 sudo systemctl start docker.service
@@ -51,7 +107,6 @@ curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/$(cur
 curl -Lo minikube https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64 && chmod +x minikube && sudo cp minikube /usr/bin/ && rm minikube
 
 sudo rm -rf /etc/kubernetes/  # clean up any previously installed instance
-sudo yum install -y socat  # needed for port forwarding when --vm-driver=none (see https://github.com/kubernetes/minikube/issues/2575)
 
 mkdir -p $HOME/.kube
 touch $HOME/.kube/config
@@ -128,3 +183,25 @@ kubectl patch deployment -n=kube-system coredns -p '\''{"spec": {"template": {"s
 chmod 777 start_minikube.sh
 ./start_minikube.sh
 
+
+set +x
+
+if [ "$needs_reboot" ] ; then
+
+  echo '
+  ==================================================================
+
+  Config changes above will take effect after a reboot.
+
+  ==================================================================
+'
+    read -p "Reboot now? [y/n] " -n 1 -r
+    echo    # (optional) move to a new line
+    if [[ $REPLY =~ ^[Yy]$ ]]
+    then
+        echo "Shutting down..."
+        sudo reboot
+    else
+        echo "Skipping reboot."
+    fi
+fi

@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
 
+if [ -z "$SEQR_DIR"  ]; then
+    echo "SEQR_DIR environment variable not set. Please run previous install step(s)."
+    exit 1
+fi
+
 set +x
-echo ==== download seqr deployment code, install python libs used during deployment =====
+echo ==== install seqr python dependencies used during deployment =====
 set -x
 
-export SEQR_BRANCH=master
-
-git clone https://github.com/macarthur-lab/seqr.git
-cd seqr/
-git checkout $SEQR_BRANCH
+cd ${SEQR_DIR}
 
 curl -Lo virtualenv-16.0.0.tar.gz https://pypi.python.org/packages/source/v/virtualenv/virtualenv-16.0.0.tar.gz
 tar xzf virtualenv-16.0.0.tar.gz
