@@ -885,11 +885,12 @@ def gene_quicklook(request, project_id, gene_id):
                     existing_genotype = rare_variant_dict[variant_id].genotypes.get(indiv_id)
                     if not existing_genotype or existing_genotype.num_alt == -1:
                         rare_variant_dict[variant_id].genotypes[indiv_id] = genotype
-
+        if project != main_project:
+            add_extra_info_to_variants_project(get_reference(), project, project_variants)
         rare_variants.extend(project_variants)
 
     all_variants = sum([i['variants'] for i in individ_ids_and_variants], rare_variants)
-    add_extra_info_to_variants_project(get_reference(), project, all_variants, add_family_tags=True)
+    add_extra_info_to_variants_project(get_reference(), main_project, all_variants, add_family_tags=True)
     download_csv = request.GET.get('download', '')
     if download_csv:
         response = HttpResponse(content_type='text/csv')
