@@ -13,7 +13,7 @@ We appreciate modifications that add support for other platforms.
 
 #### Step 1: Install dependencies
 
-Run the following command to adjust system settings and install `gcc`, `java1.8`, and other dependencies on the host machine (using `brew`, `yum` or `apt-get`):
+Run the following command to adjust system settings and install `gcc`, `java1.8`, `gcloud sdk`, and other dependencies on the host machine (using `brew`, `yum` or `apt-get`):
 
 ```
 SCRIPT=install_general_dependencies.sh && curl -L http://raw.githubusercontent.com/macarthur-lab/seqr/master/deploy/$SCRIPT -o $SCRIPT && chmod 777 $SCRIPT && source $SCRIPT
