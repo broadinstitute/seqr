@@ -3,8 +3,8 @@
 
 if [ -z "$SEQR_DIR" ]; then
 
-    echo "SEQR_BRANCH environment variable not defined. Please run previous install step(s)."
-
+    echo "$SEQR_DIR environment variable not defined. Please run previous install step(s)."
+    exit 1
 fi
 
 echo "==== Clone the seqr repo ====="

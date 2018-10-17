@@ -6,7 +6,7 @@ set -x
 if [ -z "$PLATFORM" ]; then
 
     echo "PLATFORM environment variable not set. Please run previous install step(s)."
-    exit 1;
+    exit 1
 
 elif [ $PLATFORM = "macos" ]; then
 
@@ -32,7 +32,8 @@ elif [ $PLATFORM = "ubuntu" ]; then
 else
 
     echo "Unexpected operating system: $PLATFORM"
-    exit 1;
+    exit 1
+
 fi;
 
 set +x

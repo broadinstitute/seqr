@@ -6,11 +6,11 @@ set -x
 if [ -z "$PLATFORM" ]; then
 
     echo "PLATFORM environment variable not set. Please run previous install step(s)."
-    exit 1;
+    exit 1
 
 elif [ $PLATFORM = "macos" ]; then
 
-    brew install mongo
+    brew install mongodb
 
 elif [ $PLATFORM = "centos" ]; then
 
@@ -39,8 +39,10 @@ elif [ $PLATFORM = "ubuntu" ]; then
     sudo service mongod start
 
 else
+
     echo "Unexpected operating system: $PLATFORM"
-    exit 1;
+    exit 1
+
 fi;
 
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-echo "==== Installing phenotips ===="
+echo "==== Installing Phenotips ===="
 set -x
 
 export PT_VERSION="1.2.6"
@@ -25,6 +25,8 @@ psql -U postgres postgres -c 'grant all privileges on database xwiki to xwiki'
 psql -U xwiki postgres -c 'create database xwiki'
 psql -U xwiki xwiki -f ${SEQR_DIR}/deploy/docker/phenotips/init/${PT_VERSION}/init_phenotips_db.sql
 
-./start.sh &
+LOG_FILE=phenotips.log
+nohup ./start.sh >& $LOG_FILE &
+echo "PhenoTips started in background. See ${LOG_FILE}"
 
 set +x
