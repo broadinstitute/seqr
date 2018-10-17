@@ -23,18 +23,9 @@ elif [ $PLATFORM = "centos" ]; then
         pango-devel \
         gtk2
 
-    sudo wget https://raw.github.com/miyagawa/cpanminus/master/cpanm -O cpanm \
-        && chmod +x ./cpanm \
-        && ./cpanm --notest \
-            Cairo \
-            DBI \
-            Gtk2 \
-            Tk \
-            Sort::Naturally
-
     sudo apt-get update \
-        && curl -sL https://deb.nodesource.com/setup_8.x | bash - \
-        && apt-get install -y nodejs
+        && curl --silent --location https://rpm.nodesource.com/setup_8.x | sudo bash - \
+        && sudo yum -y install nodejs
 
 elif [ $PLATFORM = "ubuntu" ]; then
 
@@ -48,28 +39,28 @@ elif [ $PLATFORM = "ubuntu" ]; then
         libgtk2.0-dev \
         libpango1.0-dev
 
-    wget https://raw.github.com/miyagawa/cpanminus/master/cpanm -O cpanm \
-        && chmod +x ./cpanm \
-        && ./cpanm --notest \
-            Cairo \
-            DBI \
-            Gtk2 \
-            Tk \
-            Sort::Naturally
-
     sudo apt-get update \
         && curl -sL https://deb.nodesource.com/setup_8.x | bash - \
-        && apt-get install -y \
-            nodejs
+        && sudo apt-get install -y \
+              nodejs
 
 else
     echo "Unexpected operating system: $PLATFORM"
     exit 1
 fi;
 
+wget https://raw.github.com/miyagawa/cpanminus/master/cpanm -O cpanm \
+    && chmod +x ./cpanm \
+    && sudo ./cpanm --notest \
+        Cairo \
+        DBI \
+        Gtk2 \
+        Tk \
+        Sort::Naturally
 
+cd ${SEQR_DIR}/
 mkdir seqr_settings
-cp ${SEQR_DIR}/deploy/docker/seqr/config/*.py seqr_settings/
+cp deploy/docker/seqr/config/*.py seqr_settings/
 
 # install venv
 curl -Lo virtualenv-16.0.0.tar.gz https://pypi.python.org/packages/source/v/virtualenv/virtualenv-16.0.0.tar.gz
@@ -84,6 +75,9 @@ source activate_virtualenv.sh
 
 # install python dependencies
 pip install --upgrade -r requirements.txt
+
+# init seqr db
+psql -U postgres postgres -c "create database seqrdb"
 
 # init django
 python -u manage.py makemigrations
