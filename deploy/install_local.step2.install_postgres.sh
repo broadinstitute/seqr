@@ -20,7 +20,7 @@ elif [ $PLATFORM = "centos" ]; then
     sudo yum install -y postgresql96 postgresql96-server postgresql96-contrib
 
 
-    PG_HBA_PATH=/var/lib/pgsql/data/pg_hba.conf
+    PG_HBA_PATH=$(sudo find /var/lib/pgsql -name "pg_hba.conf")
     sudo sed -i s/peer/trust/  $PG_HBA_PATH
     sudo sed -i s/ident/trust/  $PG_HBA_PATH
 
