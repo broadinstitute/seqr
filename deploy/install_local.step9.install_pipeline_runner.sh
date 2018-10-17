@@ -26,54 +26,16 @@ else
     exit 1
 fi;
 
-
-
-# install commmon utilities
-RUN apt-get update && apt-get install -y --fix-missing \
-    apt-utils \
-    bzip2 \
-    cmake \
-    curl \
-    emacs \
-    g++ \
-    git \
-    htop \
-    less \
-    nano \
-    wget \
-    xterm
-
-
-RUN curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl \
-    && chmod +x ./kubectl \
-    && mv ./kubectl /usr/local/bin/kubectl
-
 # install google storage connector which allows hail to access vds in google buckets without downloading them first
-RUN cd /usr/local \
-    && wget -nv https://archive.apache.org/dist/spark/spark-2.0.2/spark-2.0.2-bin-hadoop2.7.tgz \
-    && tar xzf /usr/local/spark-2.0.2-bin-hadoop2.7.tgz
+cd /usr/local \
+    && sudo wget -nv https://archive.apache.org/dist/spark/spark-2.0.2/spark-2.0.2-bin-hadoop2.7.tgz \
+    && sudo tar xzf /usr/local/spark-2.0.2-bin-hadoop2.7.tgz
 
 # fix http://discuss.hail.is/t/importerror-cannot-import-name-getargspec/468
-RUN pip install decorator==4.2.1
+pip install decorator==4.2.1
 
 # install jupyter
-RUN pip install --upgrade pip jupyter
-
-#RUN git clone --branch 0.1 https://github.com/broadinstitute/hail.git \
-#    && cd /hail \
-#    && ./gradlew -Dspark.version=2.0.2 shadowJar archiveZip
-
-
-# install picard
-#RUN mkdir /picard \
-#    && cd /picard \
-#    && wget https://github.com/broadinstitute/picard/releases/download/2.15.0/picard.jar
-
-# download LiftoverChain files
-#RUN mkdir -p /reference-data \
-#    && cd /reference-data \
-#    && wget http://hgdownload.cse.ucsc.edu/goldenPath/hg38/bigZips/hg38.fa.gz \
-#    && wget http://hgdownload.cse.ucsc.edu/goldenPath/hg19/liftOver/hg19ToHg38.over.chain.gz
+pip install --upgrade pip jupyter
 
 # download and install VEP - steps based on gs://hail-common/vep/vep/GRCh37/vep85-GRCh37-init.sh and gs://hail-common/vep/vep/GRCh38/vep85-GRCh38-init.sh
 RUN gsutil -m cp gs://hail-common/vep/htslib/* /usr/bin/ \
