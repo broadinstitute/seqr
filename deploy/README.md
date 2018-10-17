@@ -1,2 +1,2 @@
-This directory contains scripts for installing minikube on your local machine or server
-and then deploying seqr to it.
+This directory contains scripts for installing seqr components on your laptop or linux server - either directly or 
+using minikube.
