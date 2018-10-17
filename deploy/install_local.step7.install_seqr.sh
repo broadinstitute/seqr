@@ -4,7 +4,7 @@ echo "==== Installing seqr ===="
 set -x
 
 if [ -z "$PLATFORM" ]; then
-
+    set +x
     echo "PLATFORM environment variable not set. Please run previous install step(s)."
     exit 1
 
@@ -45,6 +45,7 @@ elif [ $PLATFORM = "ubuntu" ]; then
               nodejs
 
 else
+    set +x
     echo "Unexpected operating system: $PLATFORM"
     exit 1
 fi;
@@ -92,6 +93,7 @@ LOG_FILE=gunicorn.log
 nohup gunicorn -w '${GUNICORN_WORKER_THREADS}' -c gunicorn_config.py wsgi:application >& ${LOG_FILE} &
 echo "gunicorn started in background. See ${LOG_FILE}"
 ' > start_server.sh
+chmod 777 ./start_server.sh
 
 ./start_server.sh
 
