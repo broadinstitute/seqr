@@ -21,11 +21,6 @@ seqr consists of the following components:
 - kibana - dashboard and visual interface for elasticsearch.
 - mongo - legacy NoSQL database originally used for variant callsets and still used now to store some reference data and logs.
 
-These components can be deployed on local or cloud-based hardware.
-A laptop with 4 CPUs and 16G RAM may be sufficient for small datasets.
-The seqr [production instance](http://seqr.broadinstitute.org) currently uses two n1-highmem-4 (4 vCPUs, 26 GB memory) servers on google cloud + separate servers for the elasticsearch database.
-The pipeline for loading new datasets uses Spark to parallelize VEP and other annotation steps. This pipeline can run on the same machine that's hosting seqr components, but running on a separate Spark cluster will allow much processing and loading speeds proportional to the number of nodes and CPUs .
-
 
 ## Install
 
