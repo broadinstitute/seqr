@@ -180,6 +180,9 @@ git clone https://github.com/macarthur-lab/seqr.git
 cd seqr/
 git checkout $SEQR_BRANCH
 
+cd ..
+
+
 set +x
 
 if [ "$needs_reboot" ] ; then
