@@ -200,6 +200,7 @@ if [ -e "/.config/service-account-key.json" ]; then
     # authenticate to google cloud using service account
     gcloud auth activate-service-account --key-file /.config/service-account-key.json
     cp /.config/boto ~/.boto
+    sudo mv /etc/boto.cfg /etc/boto.cfg.aside  # /etc/boto.cfg causes problems on Ubuntu google cloud VMs
 fi
 
 
