@@ -13,20 +13,26 @@ We appreciate modifications that add support for other platforms.
 
 #### Step 1: Install dependencies
 
-Run the following command to adjust system settings and install `gcc`, `java1.8`, `gcloud sdk`, and other dependencies on the host machine (using `brew`, `yum` or `apt-get`):
+cd to the directory where you want to install seqr, and run: 
 
 ```
-SCRIPT=install_general_dependencies.sh && curl -L http://raw.githubusercontent.com/macarthur-lab/seqr/master/deploy/$SCRIPT -o $SCRIPT && chmod 777 $SCRIPT && source $SCRIPT
-```
+SCRIPT=install_general_dependencies.sh && curl -L http://raw.githubusercontent.com/macarthur-lab/seqr/master/deploy/$SCRIPT -o $SCRIPT && chmod 777 $SCRIPT && ./$SCRIPT
+``` 
+
+This command:
+- clones the seqr repo to the current directory
+- adds `PYTHONPATH`, `PLATFORM` and `SEQR_DIR` env. vars to .bashrc:
+- adjusts system settings such as `vm.max_map_count` to work with elasticsearch
+- uses brew/yum/apt-get to make sure `java1.8`, `gcc`, `git` and other dependencies are installed 
 
 #### Step 2: Install seqr components
 
-To install all components using one script, run
+To install all components using one script, run:
 
 ```
-SCRIPT=install_local.all_steps.sh && curl -L http://raw.githubusercontent.com/macarthur-lab/seqr/master/deploy/$SCRIPT -o $SCRIPT && chmod 777 $SCRIPT && source $SCRIPT
+SCRIPT=install_local.all_steps.sh && curl -L http://raw.githubusercontent.com/macarthur-lab/seqr/master/deploy/$SCRIPT -o $SCRIPT && chmod 777 $SCRIPT && ./$SCRIPT
 ```
-which runs the `install_local.*.sh` scripts in this directory in order.  
+which runs the `install_local.*.sh` scripts in order.  
 
 To install components one at a time, run the `install_local.*.sh` scripts in order: 
 
@@ -36,6 +42,23 @@ SCRIPT=install_local.step2.install_postgres.sh && curl -L http://raw.githubuserc
 SCRIPT=install_local.step3.elasticsearch.sh && curl -L http://raw.githubusercontent.com/macarthur-lab/seqr/master/deploy/$SCRIPT -o $SCRIPT && chmod 777 $SCRIPT && ./$SCRIPT
 SCRIPT=install_local.step4.kibana.sh && curl -L http://raw.githubusercontent.com/macarthur-lab/seqr/master/deploy/$SCRIPT -o $SCRIPT && chmod 777 $SCRIPT && ./$SCRIPT
 SCRIPT=install_local.step5.install_redis.sh && curl -L http://raw.githubusercontent.com/macarthur-lab/seqr/master/deploy/$SCRIPT -o $SCRIPT && chmod 777 $SCRIPT && ./$SCRIPT
-SCRIPT=install_local.step6.install_seqr.sh && curl -L http://raw.githubusercontent.com/macarthur-lab/seqr/master/deploy/$SCRIPT -o $SCRIPT && chmod 777 $SCRIPT && ./$SCRIPT
-SCRIPT=install_local.step7.install_phenotips.sh && curl -L http://raw.githubusercontent.com/macarthur-lab/seqr/master/deploy/$SCRIPT -o $SCRIPT && chmod 777 $SCRIPT && ./$SCRIPT
+SCRIPT=install_local.step6.load_reference_data.sh && curl -L http://raw.githubusercontent.com/macarthur-lab/seqr/master/deploy/$SCRIPT -o $SCRIPT && chmod 777 $SCRIPT && ./$SCRIPT
+SCRIPT=install_local.step8.install_seqr.sh && curl -L http://raw.githubusercontent.com/macarthur-lab/seqr/master/deploy/$SCRIPT -o $SCRIPT && chmod 777 $SCRIPT && ./$SCRIPT
+SCRIPT=install_local.step8.install_phenotips.sh && curl -L http://raw.githubusercontent.com/macarthur-lab/seqr/master/deploy/$SCRIPT -o $SCRIPT && chmod 777 $SCRIPT && ./$SCRIPT
 ```
+
+Once these complete, the seqr gunicorn web server will be running on 0.0.0.0 port 8000. 
+
+
+#### Step 3: Create User, Login to seqr
+
+To create an admin user, run:
+```
+cd ${SEQR_DIR}; python manage.py createsuperuser
+```
+
+To view seqr, open your browser to [http://localhost:8000/login](http://localhost:8000/login).
+
+
+#### Step 5: Load Dataset
+

@@ -37,4 +37,3 @@ set +x
 ./start_phenotips.sh
 
 cd ..
-

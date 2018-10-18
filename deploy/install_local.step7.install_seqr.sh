@@ -70,12 +70,12 @@ python virtualenv-16.0.0/virtualenv.py --python=python2.7 venv
 rm -rf virtualenv-16.0.0*
 
 # activate venv
-echo "source venv/bin/activate" > activate_virtualenv.sh
-chmod 666 activate_virtualenv.sh  # this script must be sourced rather than executed
-source activate_virtualenv.sh
+#echo 'source '${SEQR_DIR}'/venv/bin/activate' > activate_virtualenv.sh
+#chmod 666 activate_virtualenv.sh  # this script must be sourced rather than executed
+#source activate_virtualenv.sh
 
 # install python dependencies
-pip install --upgrade -r requirements.txt
+sudo $(which pip) install --upgrade -r requirements.txt
 
 # init seqr db
 psql -U postgres postgres -c "create database seqrdb"
@@ -89,8 +89,10 @@ python -u manage.py collectstatic --no-input
 GUNICORN_WORKER_THREADS=4
 
 echo 'cd '${SEQR_DIR}'/seqr_settings
+source ../activate_virtualenv.sh
+
 LOG_FILE=$(pwd)/gunicorn.log
-nohup gunicorn -w '${GUNICORN_WORKER_THREADS}' -c gunicorn_config.py wsgi:application >& ${LOG_FILE} &
+nohup gunicorn -w '${GUNICORN_WORKER_THREADS}' -c gunicorn_config.py wsgi:application --bind 0.0.0.0:8000 >& ${LOG_FILE} &
 echo "gunicorn started in background. See ${LOG_FILE}"
 ' > start_server.sh
 chmod 777 ./start_server.sh

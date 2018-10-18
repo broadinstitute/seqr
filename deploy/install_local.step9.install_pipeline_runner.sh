@@ -140,5 +140,4 @@ nohup jupyter notebook --ip=0.0.0.0 --port=30005 --allow-root --NotebookApp.toke
 # sleep to keep image running even if the jupyter notebook is killed / restarted
 sleep 1000000000000
 
-
 set +x
