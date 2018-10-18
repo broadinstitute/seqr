@@ -19,109 +19,47 @@ python -u manage.py load_resources
 python -u manage.py load_omim
 
 set +x
-
 echo
 echo "==== Installing data loading pipeline ===="
 echo
 set -x
 
-if [ -z "$PLATFORM" ]; then
-    set +x
-    echo "PLATFORM environment variable not set. Please run previous install step(s)."
-    exit 1
-
-elif [ $PLATFORM = "macos" ]; then
-
-    :
-
-elif [ $PLATFORM = "centos" ]; then
-
-    :
-
-elif [ $PLATFORM = "ubuntu" ]; then
-
-    :
-
-else
-    set +x
-    echo "Unexpected operating system: $PLATFORM"
-    exit 1
-fi;
-
-
 # install google storage connector which allows hail to access vds in google buckets without downloading them first
-cd /usr/local \
-    && sudo wget -nv https://archive.apache.org/dist/spark/spark-2.0.2/spark-2.0.2-bin-hadoop2.7.tgz \
-    && sudo tar xzf /usr/local/spark-2.0.2-bin-hadoop2.7.tgz
+cd ${SEQR_BIN_DIR} \
+    && wget -nv https://archive.apache.org/dist/spark/spark-2.0.2/spark-2.0.2-bin-hadoop2.7.tgz \
+    && tar xzf spark-2.0.2-bin-hadoop2.7.tgz \
+    && rm spark-2.0.2-bin-hadoop2.7.tgz
 
 # fix http://discuss.hail.is/t/importerror-cannot-import-name-getargspec/468
-pip install decorator==4.2.1
+sudo $(which pip) install decorator==4.2.1
 
 # install jupyter
-pip install --upgrade pip jupyter
+sudo $(which pip) install --upgrade pip jupyter
 
 # download and install VEP - steps based on gs://hail-common/vep/vep/GRCh37/vep85-GRCh37-init.sh and gs://hail-common/vep/vep/GRCh38/vep85-GRCh38-init.sh
-RUN gsutil -m cp gs://hail-common/vep/htslib/* /usr/bin/ \
-    && gsutil -m cp gs://hail-common/vep/samtools /usr/bin/ \
-    && chmod a+rx  /usr/bin/tabix /usr/bin/bgzip /usr/bin/htsfile /usr/bin/samtools
-
-RUN wget -nv https://raw.github.com/miyagawa/cpanminus/master/cpanm -O /usr/bin/cpanm && chmod +x /usr/bin/cpanm
+wget -nv https://raw.github.com/miyagawa/cpanminus/master/cpanm -O cpanm && chmod +x cpanm
 # VEP dependencies
-RUN /usr/bin/cpanm --notest Set::IntervalTree
-RUN /usr/bin/cpanm --notest PerlIO::gzip
-RUN /usr/bin/cpanm --notest DBI
-RUN /usr/bin/cpanm --notest CGI
-RUN /usr/bin/cpanm --notest JSON
+cpanm --notest Set::IntervalTree
+cpanm --notest PerlIO::gzip
+cpanm --notest DBI
+cpanm --notest CGI
+cpanm --notest JSON
 # LoFTEE dependencies
-RUN /usr/bin/cpanm --notest DBD::SQLite
-RUN /usr/bin/cpanm --notest  List::MoreUtils
-
-# DISABLE_CACHE work-around to force git pull on every docker build, based on https://github.com/docker/docker/issues/1996
-ARG DISABLE_CACHE=1
-
-# clone hail-elasticsearch-pipelines
-RUN git clone https://github.com/macarthur-lab/hail-elasticsearch-pipelines.git /hail-elasticsearch-pipelines
+cpanm --notest DBD::SQLite
+cpanm --notest  List::MoreUtils
 
 # copy hail build
-RUN mkdir -p /hail/build/libs /hail/build/distributions \
-    && cp /hail-elasticsearch-pipelines/hail_builds/v01/hail-v01-10-8-2018-90c855449.zip /hail/build/distributions/hail-python.zip \
-    && cp /hail-elasticsearch-pipelines/hail_builds/v01/hail-v01-10-8-2018-90c855449.jar /hail/build/libs/hail-all-spark.jar \
-    && cp /hail-elasticsearch-pipelines/hail_builds/v01/gcs-connector-1.6.10-hadoop2.jar /usr/local/spark-2.0.2-bin-hadoop2.7/jars/
-
-ENV TERM=xterm
-ENV PYTHONPATH="$PYTHONPATH:/seqr:/seqr_settings:/hail-elasticsearch-pipelines"
-
-COPY config/gitconfig /root/.gitconfig
-COPY bashrc /root/.bashrc
-COPY config/run_hail_locally.sh /hail-elasticsearch-pipelines
-COPY config/run_hail_on_dataproc.sh /hail-elasticsearch-pipelines
-COPY config/core-site.xml /usr/local/spark-2.0.2-bin-hadoop2.7/conf/
-COPY entrypoint.sh /
+sudo mkdir -p /hail/build/libs /hail/build/distributions \
+    && sudo chmod -R +x /hail \
+    && cp ${SEQR_DIR}/hail_elasticsearch_pipelines/hail_builds/v01/hail-v01-10-8-2018-90c855449.zip /hail/build/distributions/hail-python.zip \
+    && cp ${SEQR_DIR}/hail_elasticsearch_pipelines/hail_builds/v01/hail-v01-10-8-2018-90c855449.jar /hail/build/libs/hail-all-spark.jar \
+    && cp ${SEQR_DIR}/hail_elasticsearch_pipelines/hail_builds/v01/gcs-connector-1.6.10-hadoop2.jar ${SEQR_BIN_DIR}/spark-2.0.2-bin-hadoop2.7/jars/
 
 
-WORKDIR /hail-elasticsearch-pipelines
+cp ${SEQR_DIR}/deploy/docker/pipeline-runner/config/core-site.xml ${SEQR_BIN_DIR}/spark-2.0.2-bin-hadoop2.7/conf/
 
-CMD [ "/entrypoint.sh" ]
-
-
-#!/usr/bin/env bash
-
-set -x
-
-env
-
-source ~/.bashrc
-
-# init gcloud
-if [ $GCLOUD_PROJECT ]; then
-    gcloud config set project $GCLOUD_PROJECT
-fi
-
-if [ $GCLOUD_ZONE ]; then
-    gcloud config set compute/zone $GCLOUD_ZONE
-fi
-
-mkdir -p /vep/loftee_data_grch37 /vep/loftee_data_grch38 /vep/homo_sapiens
+sudo mkdir -p /vep/loftee_data_grch37 /vep/loftee_data_grch38 /vep/homo_sapiens
+sudo chmod 777 /vep/loftee_data_grch37 /vep/loftee_data_grch38 /vep/homo_sapiens
 
 # copy large data files
 [ ! -d /vep/loftee_data_grch37/loftee_data ] && gsutil -m cp -r gs://hail-common/vep/vep/GRCh37/loftee_data /vep/loftee_data_grch37
@@ -148,20 +86,6 @@ if [ ! -f /vep/1var.vcf ]; then
     /vep/run_hail_vep85_GRCh38_vcf.sh /vep/1var.vcf
 fi
 
-if [ -e "/.config/service-account-key.json" ]; then
-    # authenticate to google cloud using service account
-    cp /usr/share/zoneinfo/US/Eastern /etc/localtime
-    gcloud auth activate-service-account --key-file /.config/service-account-key.json
-    cp /.config/boto /root/.boto
-fi
-
-# launch jupyter notebook in background
-mkdir /ipython_notebooks
-cd /ipython_notebooks
-nohup jupyter notebook --ip=0.0.0.0 --port=30005 --allow-root --NotebookApp.token='' &
-
-# sleep to keep image running even if the jupyter notebook is killed / restarted
-sleep 1000000000000
 
 set +x
 

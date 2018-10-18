@@ -29,8 +29,11 @@ fi
 if [ -z "$SEQR_DIR"  ]; then
 
     export SEQR_DIR=$(pwd)/seqr
+    export SEQR_BIN_DIR=${SEQR_DIR}/../bin
     echo 'export SEQR_DIR='${SEQR_DIR} >> ~/.bashrc
+    echo 'export SEQR_BIN_DIR='${SEQR_BIN_DIR} >> ~/.bashrc
     echo 'export PYTHONPATH='${SEQR_DIR}':'${SEQR_DIR}'/seqr_settings:$PYTHONPATH' >> ~/.bashrc
+    echo 'export PATH='${SEQR_BIN_DIR}':$PATH' >> ~/.bashrc
 
 fi
 
@@ -170,6 +173,7 @@ else
     exit 1
 fi;
 
+
 set +x
 
 echo "==== Clone the seqr repo ====="
@@ -183,6 +187,41 @@ git checkout $SEQR_BRANCH
 cd ..
 
 set +x
+
+echo "===== init gsutil ====="
+
+# Add a generic key for accessing public google cloud storage buckets
+# Using a top-level /.config directory so that config files (like core-site.xml) can be shared with the Docker container
+sudo mkdir /.config/
+sudo chmod 777 /.config/
+cp ${SEQR_DIR}/deploy/secrets/shared/gcloud/* /.config/
+
+if [ -e "/.config/service-account-key.json" ]; then
+    # authenticate to google cloud using service account
+    gcloud auth activate-service-account --key-file /.config/service-account-key.json
+    cp /.config/boto ~/.boto
+fi
+
+
+# check that gsutil works and is able to access gs://hail-common/
+GSUTIL_TEST="gsutil ls gs://hail-common/vep"
+$GSUTIL_TEST
+if [ $? -eq 0 ]; then
+    echo gsutil works
+else
+    echo "$GSUTIL_TEST failed - unable to access public gs://hail-common bucket."
+    echo "Try running 'gcloud init'. "
+    exit 1
+fi
+
+echo "===== init utilities ====="
+# install tabix, bgzip, samtools - which may be needed for VEP and the loading pipeline
+mkdir $SEQR_BIN_DIR
+gsutil -m cp gs://hail-common/vep/htslib/* ${SEQR_BIN_DIR}/ \
+    && gsutil -m cp gs://hail-common/vep/samtools ${SEQR_BIN_DIR}/ \
+    && chmod a+rx  ${SEQR_BIN_DIR}/tabix ${BIN_DIR}/bgzip ${SEQR_BIN_DIR}/htsfile ${SEQR_BIN_DIR}/samtools
+
+
 
 if [ "$needs_reboot" ] ; then
 
