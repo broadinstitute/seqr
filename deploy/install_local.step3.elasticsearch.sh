@@ -2,7 +2,11 @@
 
 VERSION=6.4.0
 
+set +x
+set +x
+echo
 echo "==== Install and start elasticsearch ====="
+echo
 set -x
 
 wget -nv http://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-${VERSION}.tar.gz

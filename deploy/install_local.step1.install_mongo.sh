@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 
+set +x
+echo
 echo "==== Installing mongo ===="
+echo
 set -x
 
 if [ -z "$PLATFORM" ]; then

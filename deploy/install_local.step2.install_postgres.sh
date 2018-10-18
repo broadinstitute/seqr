@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 
+set +x
+set +x
+echo
 echo "==== Installing postgres ===="
+echo
 set -x
 
 if [ -z "$PLATFORM" ]; then

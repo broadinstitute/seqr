@@ -1,6 +1,28 @@
 #!/usr/bin/env bash
 
+set +x
+set +x
+echo
+echo "==== Installing legacy resources ===="
+echo
+
+cd ${SEQR_DIR}
+
+mkdir -p data/reference_data
+
+# install legacy resources
+wget -nv https://storage.googleapis.com/seqr-reference-data/seqr-resource-bundle.tar.gz -O data/reference_data/seqr-resource-bundle.tar.gz
+tar xzf data/reference_data/seqr-resource-bundle.tar.gz -C data/reference_data/
+rm data/reference_data/seqr-resource-bundle.tar.gz
+
+python -u manage.py load_resources
+python -u manage.py load_omim
+
+set +x
+
+echo
 echo "==== Installing data loading pipeline ===="
+echo
 set -x
 
 if [ -z "$PLATFORM" ]; then
@@ -25,6 +47,7 @@ else
     echo "Unexpected operating system: $PLATFORM"
     exit 1
 fi;
+
 
 # install google storage connector which allows hail to access vds in google buckets without downloading them first
 cd /usr/local \
@@ -141,3 +164,4 @@ nohup jupyter notebook --ip=0.0.0.0 --port=30005 --allow-root --NotebookApp.toke
 sleep 1000000000000
 
 set +x
+

@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 
+set +x
+set +x
+echo
 echo "==== Installing Phenotips ===="
+echo
 set -x
 
 export PT_VERSION="1.2.6"

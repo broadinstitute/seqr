@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 
+set +x
+set +x
+echo
 echo "==== Installing redis ===="
+echo
 set -x
 
 wget -nv http://download.redis.io/redis-stable.tar.gz
