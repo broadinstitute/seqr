@@ -115,7 +115,7 @@ else
     exit 1
 fi;
 
-wget -nv https://bootstrap.pypa.io/get-pip.py
+wget -nv https://bootstrap.pypa.io/get-pip.py -O get-pip.py
 sudo python get-pip.py
 sudo pip install --upgrade pip setuptools
 
@@ -157,7 +157,7 @@ elif [ $PLATFORM = "ubuntu" ]; then
     # Create environment variable for correct distribution
     export CLOUD_SDK_REPO="cloud-sdk-$(lsb_release -c -s)"
     # Add the Cloud SDK distribution URI as a package source
-    echo "deb http://packages.cloud.google.com/apt $CLOUD_SDK_REPO main" | sudo tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
+    echo "deb http://packages.cloud.google.com/apt $CLOUD_SDK_REPO main" | sudo tee /etc/apt/sources.list.d/google-cloud-sdk.list
     # Import the Google Cloud Platform public key
     curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
     # Update the package list and install the Cloud SDK
@@ -179,9 +179,7 @@ export SEQR_BRANCH=master
 git clone https://github.com/macarthur-lab/seqr.git
 cd seqr/
 git checkout $SEQR_BRANCH
-
 cd ..
-
 
 set +x
 
