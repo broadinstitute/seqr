@@ -4,8 +4,13 @@ echo "==== Installing redis ===="
 set -x
 
 wget -nv http://download.redis.io/redis-stable.tar.gz
+
 tar xvzf redis-stable.tar.gz
-cd redis-stable
+rm redis-stable.tar.gz
+
+mv redis-stable redis
+cd redis
+
 make
 sudo make install
 
