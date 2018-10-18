@@ -2,6 +2,14 @@
 
 echo ==== Set environment variables =====
 
+if [ -z "$(which python)" ]; then
+    echo
+    echo "'python' command not found. Please install python."
+    echo
+    exit 1
+fi
+
+
 if [ -z "$PLATFORM" ]; then
 
     export PLATFORM=$(python - <<EOF
@@ -16,6 +24,7 @@ EOF
     echo 'export PLATFORM='${PLATFORM} >> ~/.bashrc
 
 fi
+
 
 if [ -z "$SEQR_DIR"  ]; then
 
