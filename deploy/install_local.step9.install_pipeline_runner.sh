@@ -38,6 +38,7 @@ sudo $(which pip) install --upgrade pip jupyter
 
 # download and install VEP - steps based on gs://hail-common/vep/vep/GRCh37/vep85-GRCh37-init.sh and gs://hail-common/vep/vep/GRCh38/vep85-GRCh38-init.sh
 wget -nv https://raw.github.com/miyagawa/cpanminus/master/cpanm -O cpanm && chmod +x cpanm
+sudo chown -R $USER ~/.cpanm/  # make sure the user owns .cpanm 
 # VEP dependencies
 cpanm --notest Set::IntervalTree
 cpanm --notest PerlIO::gzip
@@ -46,7 +47,7 @@ cpanm --notest CGI
 cpanm --notest JSON
 # LoFTEE dependencies
 cpanm --notest DBD::SQLite
-cpanm --notest  List::MoreUtils
+cpanm --notest List::MoreUtils
 
 # copy hail build
 sudo mkdir -p /hail/build/libs /hail/build/distributions \
@@ -59,7 +60,7 @@ sudo mkdir -p /hail/build/libs /hail/build/distributions \
 cp ${SEQR_DIR}/deploy/docker/pipeline-runner/config/core-site.xml ${SEQR_BIN_DIR}/spark-2.0.2-bin-hadoop2.7/conf/
 
 sudo mkdir -p /vep/loftee_data_grch37 /vep/loftee_data_grch38 /vep/homo_sapiens
-sudo chmod 777 /vep/loftee_data_grch37 /vep/loftee_data_grch38 /vep/homo_sapiens
+sudo chmod 777 -R /vep
 
 # copy large data files
 [ ! -d /vep/loftee_data_grch37/loftee_data ] && gsutil -m cp -r gs://hail-common/vep/vep/GRCh37/loftee_data /vep/loftee_data_grch37
