@@ -220,7 +220,7 @@ echo "===== init utilities ====="
 mkdir $SEQR_BIN_DIR
 gsutil -m cp gs://hail-common/vep/htslib/* ${SEQR_BIN_DIR}/ \
     && gsutil -m cp gs://hail-common/vep/samtools ${SEQR_BIN_DIR}/ \
-    && chmod a+rx  ${SEQR_BIN_DIR}/tabix ${BIN_DIR}/bgzip ${SEQR_BIN_DIR}/htsfile ${SEQR_BIN_DIR}/samtools
+    && chmod a+rx  ${SEQR_BIN_DIR}/tabix ${SEQR_BIN_DIR}/bgzip ${SEQR_BIN_DIR}/htsfile ${SEQR_BIN_DIR}/samtools
 
 
 
