@@ -27,8 +27,8 @@ set -x
 # install google storage connector which allows hail to access vds in google buckets without downloading them first
 cd ${SEQR_BIN_DIR} \
     && wget -nv https://archive.apache.org/dist/spark/spark-2.0.2/spark-2.0.2-bin-hadoop2.7.tgz \
-    && tar xzf spark-2.0.2-bin-hadoop2.7.tgz \
-    && rm spark-2.0.2-bin-hadoop2.7.tgz
+    && tar xzf spark-2.0.2-bin-hadoop2.7.tgz
+#    && rm spark-2.0.2-bin-hadoop2.7.tgz
 
 # fix http://discuss.hail.is/t/importerror-cannot-import-name-getargspec/468
 sudo $(which pip) install decorator==4.2.1
