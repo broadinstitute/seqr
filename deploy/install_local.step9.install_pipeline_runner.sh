@@ -38,16 +38,16 @@ sudo $(which pip) install --upgrade pip jupyter
 
 # download and install VEP - steps based on gs://hail-common/vep/vep/GRCh37/vep85-GRCh37-init.sh and gs://hail-common/vep/vep/GRCh38/vep85-GRCh38-init.sh
 wget -nv https://raw.github.com/miyagawa/cpanminus/master/cpanm -O cpanm && chmod +x cpanm
-sudo chown -R $USER ~/.cpanm/  # make sure the user owns .cpanm 
+sudo chown -R $USER ~/.cpanm/  # make sure the user owns .cpanm
 # VEP dependencies
-cpanm --notest Set::IntervalTree
-cpanm --notest PerlIO::gzip
-cpanm --notest DBI
-cpanm --notest CGI
-cpanm --notest JSON
+cpanm --sudo --notest Set::IntervalTree
+cpanm --sudo --notest PerlIO::gzip
+cpanm --sudo --notest DBI
+cpanm --sudo --notest CGI
+cpanm --sudo --notest JSON
 # LoFTEE dependencies
-cpanm --notest DBD::SQLite
-cpanm --notest List::MoreUtils
+cpanm --sudo --notest DBD::SQLite
+cpanm --sudo --notest List::MoreUtils
 
 # copy hail build
 sudo mkdir -p /hail/build/libs /hail/build/distributions \
@@ -63,6 +63,8 @@ sudo mkdir -p /vep/loftee_data_grch37 /vep/loftee_data_grch38 /vep/homo_sapiens
 sudo chmod 777 -R /vep
 
 # copy large data files
+sudo mv /etc/boto.cfg /etc/boto.cfg.aside  # /etc/boto.cfg leads to "ImportError: No module named google_compute_engine" on gcloud Ubuntu VMs, so move it out of the way
+
 [ ! -d /vep/loftee_data_grch37/loftee_data ] && gsutil -m cp -r gs://hail-common/vep/vep/GRCh37/loftee_data /vep/loftee_data_grch37
 [ ! -d /vep/loftee_data_grch38/loftee_data ] && gsutil -m cp -r gs://hail-common/vep/vep/GRCh38/loftee_data /vep/loftee_data_grch38
 [ ! -d /vep/homo_sapiens/85_GRCh37 ] && gsutil -m cp -r gs://hail-common/vep/vep/homo_sapiens/85_GRCh37 /vep/homo_sapiens

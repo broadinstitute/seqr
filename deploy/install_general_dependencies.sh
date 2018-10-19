@@ -181,7 +181,7 @@ set -x
 
 export SEQR_BRANCH=master
 
-git clone https://github.com/macarthur-lab/seqr.git
+git clone --recursive https://github.com/macarthur-lab/seqr.git
 cd seqr/
 git checkout $SEQR_BRANCH
 cd ..
@@ -200,7 +200,7 @@ if [ -e "/.config/service-account-key.json" ]; then
     # authenticate to google cloud using service account
     gcloud auth activate-service-account --key-file /.config/service-account-key.json
     cp /.config/boto ~/.boto
-    sudo mv /etc/boto.cfg /etc/boto.cfg.aside  # /etc/boto.cfg causes problems on Ubuntu google cloud VMs
+    sudo mv /etc/boto.cfg /etc/boto.cfg.aside  # /etc/boto.cfg leads to "ImportError: No module named google_compute_engine" on gcloud Ubuntu VMs, so move it out of the way
 fi
 
 
