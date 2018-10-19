@@ -6,8 +6,6 @@ set +x
 #echo "==== Installing legacy resources ===="
 #echo
 
-cd ${SEQR_DIR}
-
 #mkdir -p data/reference_data
 
 # install legacy resources
@@ -18,17 +16,23 @@ cd ${SEQR_DIR}
 #python -u manage.py load_resources
 #python -u manage.py load_omim
 
+echo "===== Install spark ===="
+
+SPARK_VERSION="spark-2.0.2-bin-hadoop2.7"
+
+cd ${SEQR_BIN_DIR} \
+    && wget -nv https://archive.apache.org/dist/spark/spark-2.0.2/${SPARK_VERSION}.tgz \
+    && tar xzf ${SPARK_VERSION}.tgz
+#    && rm spark-2.0.2-bin-hadoop2.7.tgz
+
+echo 'export SPARK_HOME='${SEQR_BIN_DIR}'/'${SPARK_VERSION} >> ~/.bashrc
+source ~/.bashrc
+
 set +x
 echo
-echo "==== Installing data loading pipeline ===="
+echo "==== Install data loading pipeline ===="
 echo
 set -x
-
-# install google storage connector which allows hail to access vds in google buckets without downloading them first
-cd ${SEQR_BIN_DIR} \
-    && wget -nv https://archive.apache.org/dist/spark/spark-2.0.2/spark-2.0.2-bin-hadoop2.7.tgz \
-    && tar xzf spark-2.0.2-bin-hadoop2.7.tgz
-#    && rm spark-2.0.2-bin-hadoop2.7.tgz
 
 # fix http://discuss.hail.is/t/importerror-cannot-import-name-getargspec/468
 sudo $(which pip) install decorator==4.2.1
@@ -54,7 +58,8 @@ sudo mkdir -p /hail/build/libs /hail/build/distributions \
     && sudo chmod -R +x /hail \
     && cp ${SEQR_DIR}/hail_elasticsearch_pipelines/hail_builds/v01/hail-v01-10-8-2018-90c855449.zip /hail/build/distributions/hail-python.zip \
     && cp ${SEQR_DIR}/hail_elasticsearch_pipelines/hail_builds/v01/hail-v01-10-8-2018-90c855449.jar /hail/build/libs/hail-all-spark.jar \
-    && cp ${SEQR_DIR}/hail_elasticsearch_pipelines/hail_builds/v01/gcs-connector-1.6.10-hadoop2.jar ${SEQR_BIN_DIR}/spark-2.0.2-bin-hadoop2.7/jars/
+    && cp ${SEQR_DIR}/hail_elasticsearch_pipelines/hail_builds/v01/gcs-connector-1.6.10-hadoop2.jar ${SPARK_HOME}/jars/
+# install google storage connector which allows hail to access vds in google buckets without downloading them first
 
 
 cp ${SEQR_DIR}/deploy/docker/pipeline-runner/config/core-site.xml ${SEQR_BIN_DIR}/spark-2.0.2-bin-hadoop2.7/conf/
