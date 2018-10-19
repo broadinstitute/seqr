@@ -192,7 +192,7 @@ echo "===== init gsutil ====="
 
 # Add a generic key for accessing public google cloud storage buckets
 # Using a top-level /.config directory so that config files (like core-site.xml) can be shared with the Docker container
-sudo mkdir /.config/
+sudo mkdir -p /.config/
 sudo chmod 777 /.config/
 cp ${SEQR_DIR}/deploy/secrets/shared/gcloud/* /.config/
 
@@ -217,7 +217,7 @@ fi
 
 echo "===== init utilities ====="
 # install tabix, bgzip, samtools - which may be needed for VEP and the loading pipeline
-mkdir $SEQR_BIN_DIR
+mkdir -p $SEQR_BIN_DIR
 gsutil -m cp gs://hail-common/vep/htslib/* ${SEQR_BIN_DIR}/ \
     && gsutil -m cp gs://hail-common/vep/samtools ${SEQR_BIN_DIR}/ \
     && chmod a+rx  ${SEQR_BIN_DIR}/tabix ${SEQR_BIN_DIR}/bgzip ${SEQR_BIN_DIR}/htsfile ${SEQR_BIN_DIR}/samtools
