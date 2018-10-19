@@ -66,66 +66,68 @@ LocusListLabels.propTypes = {
   locusLists: PropTypes.array.isRequired,
 }
 
-const VariantGene = ({ gene, project, variantId }) =>
-  <div>
-    <ShowGeneModal gene={gene} fontWeight="bold" fontSize="1.5em" modalId={variantId} />
-    <HorizontalSpacer width={10} />
-    <GeneLinks>
-      <a href={`http://gnomad-beta.broadinstitute.org/gene/${gene.geneSymbol}`} target="_blank">gnomAD</a>
-      <HorizontalSpacer width={5} />|<HorizontalSpacer width={5} />
-      <a href={`/project/${project.deprecatedProjectId}/gene/${gene.geneId}`} target="_blank">Gene Search</a><br />
-    </GeneLinks>
+const VariantGene = ({ gene, project, variantId }) => (
+  gene ?
     <div>
-      {gene.omimPhenotypes.length > 0 &&
-        <GeneLabel
-          color="orange"
-          label="IN OMIM"
-          popupHeader="Disease Phenotypes"
-          popupContent={
-            <List>
-              {gene.omimPhenotypes.map(phenotype =>
-                <ListItemLink
-                  key={phenotype.phenotypeDescription}
-                  content={phenotype.phenotypeDescription}
-                  target="_blank"
-                  href={`https://www.omim.org/entry/${phenotype.phenotypeMimNumber}`}
-                />,
-              )}
-            </List>
-          }
-        />
-      }
-      {((gene.constraints.misZ && gene.constraints.misZ > 3) ||
-        (gene.constraints.misZRank && gene.constraints.misZRank < CONSTRAINED_GENE_RANK_THRESHOLD)) &&
-        <GeneLabel
-          color="red"
-          label="MISSENSE CONSTR"
-          popupHeader="Missense Constraint"
-          popupContent={`This gene ranks ${gene.constraints.misZRank} most constrained out of
-            ${gene.constraints.totalGenes} genes under study in terms of missense constraint (z-score:
-            ${gene.constraints.misZ.toPrecision(4)}). Missense contraint is a measure of the degree to which the number
-            of missense variants found in this gene in ExAC v0.3 is higher or lower than expected according to the
-            statistical model described in [K. Samocha 2014]. In general this metric is most useful for genes that act
-            via a dominant mechanism, and where a large proportion of the protein is heavily functionally constrained.`
-          }
-        />
-      }
-      {((gene.constraints.pli && gene.constraints.pli > 0.9) ||
-        (gene.constraints.pliRank && gene.constraints.pliRank < CONSTRAINED_GENE_RANK_THRESHOLD)) &&
-        <GeneLabel
-          color="red"
-          label="LOF CONSTR"
-          popupHeader="Loss of Function Constraint"
-          popupContent={`This gene ranks as ${gene.constraints.pliRank} most intolerant of LoF mutations out of
-           ${gene.constraints.totalGenes} genes under study (pli: ${gene.constraints.pli.toPrecision(4)}).
-           This metric is based on the amount of expected variation observed in the ExAC data and is a measure of how
-           likely the gene is to be intolerant of loss-of-function mutations`
-          }
-        />
-      }
-    </div>
-    <LocusListLabels locusLists={gene.locusLists} />
-  </div>
+      <ShowGeneModal gene={gene} fontWeight="bold" fontSize="1.5em" modalId={variantId} />
+      <HorizontalSpacer width={10} />
+      <GeneLinks>
+        <a href={`http://gnomad-beta.broadinstitute.org/gene/${gene.geneSymbol}`} target="_blank">gnomAD</a>
+        <HorizontalSpacer width={5} />|<HorizontalSpacer width={5} />
+        <a href={`/project/${project.deprecatedProjectId}/gene/${gene.geneId}`} target="_blank">Gene Search</a><br />
+      </GeneLinks>
+      <div>
+        {gene.omimPhenotypes.length > 0 &&
+          <GeneLabel
+            color="orange"
+            label="IN OMIM"
+            popupHeader="Disease Phenotypes"
+            popupContent={
+              <List>
+                {gene.omimPhenotypes.map(phenotype =>
+                  <ListItemLink
+                    key={phenotype.phenotypeDescription}
+                    content={phenotype.phenotypeDescription}
+                    target="_blank"
+                    href={`https://www.omim.org/entry/${phenotype.phenotypeMimNumber}`}
+                  />,
+                )}
+              </List>
+            }
+          />
+        }
+        {((gene.constraints.misZ && gene.constraints.misZ > 3) ||
+          (gene.constraints.misZRank && gene.constraints.misZRank < CONSTRAINED_GENE_RANK_THRESHOLD)) &&
+          <GeneLabel
+            color="red"
+            label="MISSENSE CONSTR"
+            popupHeader="Missense Constraint"
+            popupContent={`This gene ranks ${gene.constraints.misZRank} most constrained out of
+              ${gene.constraints.totalGenes} genes under study in terms of missense constraint (z-score:
+              ${gene.constraints.misZ.toPrecision(4)}). Missense contraint is a measure of the degree to which the number
+              of missense variants found in this gene in ExAC v0.3 is higher or lower than expected according to the
+              statistical model described in [K. Samocha 2014]. In general this metric is most useful for genes that act
+              via a dominant mechanism, and where a large proportion of the protein is heavily functionally constrained.`
+            }
+          />
+        }
+        {((gene.constraints.pli && gene.constraints.pli > 0.9) ||
+          (gene.constraints.pliRank && gene.constraints.pliRank < CONSTRAINED_GENE_RANK_THRESHOLD)) &&
+          <GeneLabel
+            color="red"
+            label="LOF CONSTR"
+            popupHeader="Loss of Function Constraint"
+            popupContent={`This gene ranks as ${gene.constraints.pliRank} most intolerant of LoF mutations out of
+             ${gene.constraints.totalGenes} genes under study (pli: ${gene.constraints.pli.toPrecision(4)}).
+             This metric is based on the amount of expected variation observed in the ExAC data and is a measure of how
+             likely the gene is to be intolerant of loss-of-function mutations`
+            }
+          />
+        }
+      </div>
+      <LocusListLabels locusLists={gene.locusLists} />
+    </div> : null
+)
 
 VariantGene.propTypes = {
   gene: PropTypes.object,
