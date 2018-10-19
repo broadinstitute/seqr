@@ -65,14 +65,14 @@ sudo chmod 777 -R /vep
 # copy large data files
 sudo mv /etc/boto.cfg /etc/boto.cfg.aside  # /etc/boto.cfg leads to "ImportError: No module named google_compute_engine" on gcloud Ubuntu VMs, so move it out of the way
 
-[ ! -d /vep/loftee_data_grch37/loftee_data ] && gsutil -m cp -r gs://hail-common/vep/vep/GRCh37/loftee_data /vep/loftee_data_grch37
-[ ! -d /vep/loftee_data_grch38/loftee_data ] && gsutil -m cp -r gs://hail-common/vep/vep/GRCh38/loftee_data /vep/loftee_data_grch38
-[ ! -d /vep/homo_sapiens/85_GRCh37 ] && gsutil -m cp -r gs://hail-common/vep/vep/homo_sapiens/85_GRCh37 /vep/homo_sapiens
-[ ! -d /vep/homo_sapiens/85_GRCh38 ] && gsutil -m cp -r gs://hail-common/vep/vep/homo_sapiens/85_GRCh38 /vep/homo_sapiens
+[ ! -d /vep/loftee_data_grch37/loftee_data ] && gsutil -m cp -n -r gs://hail-common/vep/vep/GRCh37/loftee_data /vep/loftee_data_grch37
+[ ! -d /vep/loftee_data_grch38/loftee_data ] && gsutil -m cp -n -r gs://hail-common/vep/vep/GRCh38/loftee_data /vep/loftee_data_grch38
+[ ! -d /vep/homo_sapiens/85_GRCh37 ] && gsutil -m cp -n -r gs://hail-common/vep/vep/homo_sapiens/85_GRCh37 /vep/homo_sapiens
+[ ! -d /vep/homo_sapiens/85_GRCh38 ] && gsutil -m cp -n -r gs://hail-common/vep/vep/homo_sapiens/85_GRCh38 /vep/homo_sapiens
 
 if [ ! -f /vep/variant_effect_predictor ]; then
-    gsutil -m cp -r gs://hail-common/vep/vep/ensembl-tools-release-85 /vep
-    gsutil -m cp -r gs://hail-common/vep/vep/Plugins /vep
+    gsutil -m cp -n -r gs://hail-common/vep/vep/ensembl-tools-release-85 /vep
+    gsutil -m cp -n -r gs://hail-common/vep/vep/Plugins /vep
     ln -s /vep/ensembl-tools-release-85/scripts/variant_effect_predictor /vep/variant_effect_predictor
 fi
 
