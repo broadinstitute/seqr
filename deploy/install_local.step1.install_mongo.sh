@@ -50,3 +50,5 @@ fi;
 
 
 set +x
+
+echo Done

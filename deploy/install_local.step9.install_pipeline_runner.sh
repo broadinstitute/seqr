@@ -26,8 +26,8 @@ cd ${SEQR_BIN_DIR} \
     && tar xzf ${SPARK_VERSION}.tgz
 #    && rm spark-2.0.2-bin-hadoop2.7.tgz
 
-echo 'export SPARK_HOME='${SEQR_BIN_DIR}'/'${SPARK_VERSION} >> ~/.bashrc
-source ~/.bashrc
+export SPARK_HOME=${SEQR_BIN_DIR}'/'${SPARK_VERSION}
+echo 'export SPARK_HOME='${SPARK_HOME} >> ~/.bashrc
 
 set +x
 echo
@@ -99,3 +99,5 @@ fi
 
 
 set +x
+
+echo Done

@@ -23,4 +23,6 @@ psql -U $USERNAME postgres -c "DROP DATABASE $DATABASE_NAME"
 psql -U $USERNAME postgres -c "CREATE DATABASE $DATABASE_NAME"
 psql -U $USERNAME $DATABASE_NAME <  <(gunzip -c ${REFERENCE_DATA_BACKUP_FILE})
 
+echo Done
+
 set +x

@@ -13,3 +13,5 @@ do
     source $script
 
 done
+
+echo All install steps completed.

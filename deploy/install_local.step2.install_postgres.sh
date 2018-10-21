@@ -52,3 +52,5 @@ else
 fi;
 
 set +x
+
+echo Done
