@@ -53,19 +53,17 @@ cpanm --sudo --notest JSON
 cpanm --sudo --notest DBD::SQLite
 cpanm --sudo --notest List::MoreUtils
 
-# copy hail build
-sudo mkdir -p /hail/build/libs /hail/build/distributions \
-    && sudo chmod -R +x /hail \
-    && cp ${SEQR_DIR}/hail_elasticsearch_pipelines/hail_builds/v01/hail-v01-10-8-2018-90c855449.zip /hail/build/distributions/hail-python.zip \
-    && cp ${SEQR_DIR}/hail_elasticsearch_pipelines/hail_builds/v01/hail-v01-10-8-2018-90c855449.jar /hail/build/libs/hail-all-spark.jar \
-    && cp ${SEQR_DIR}/hail_elasticsearch_pipelines/hail_builds/v01/gcs-connector-1.6.10-hadoop2.jar ${SPARK_HOME}/jars/
-# install google storage connector which allows hail to access vds in google buckets without downloading them first
-
-
-cp ${SEQR_DIR}/deploy/docker/pipeline-runner/config/core-site.xml ${SEQR_BIN_DIR}/spark-2.0.2-bin-hadoop2.7/conf/
+# install google storage connector which allows hail to access vds's in google buckets without downloading them first
+cp ${SEQR_DIR}/hail_elasticsearch_pipelines/hail_builds/v01/gcs-connector-1.6.10-hadoop2.jar ${SPARK_HOME}/jars/
+cp ${SEQR_DIR}/deploy/docker/pipeline-runner/config/core-site.xml ${SPARK_HOME}/conf/
 
 sudo mkdir -p /vep/loftee_data_grch37 /vep/loftee_data_grch38 /vep/homo_sapiens
 sudo chmod 777 -R /vep
+
+if [ ! -f /usr/local/bin/perl ]
+then
+    sudo ln -s /usr/bin/perl /usr/local/bin/perl
+fi
 
 # copy large data files
 sudo mv /etc/boto.cfg /etc/boto.cfg.aside  # /etc/boto.cfg leads to "ImportError: No module named google_compute_engine" on gcloud Ubuntu VMs, so move it out of the way
@@ -96,4 +94,3 @@ fi
 
 
 set +x
-
