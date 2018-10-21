@@ -223,6 +223,15 @@ gsutil -m cp gs://hail-common/vep/htslib/* ${SEQR_BIN_DIR}/ \
     && chmod a+rx  ${SEQR_BIN_DIR}/tabix ${SEQR_BIN_DIR}/bgzip ${SEQR_BIN_DIR}/htsfile ${SEQR_BIN_DIR}/samtools
 
 
+echo "===== install perl 5.20 ====="
+
+export PERL_VERSION=perl-5.20.3
+curl -L http://install.perlbrew.pl | bash
+~/perl5/perlbrew/bin/perlbrew install --notest $PERL_VERSION
+
+echo 'source ~/perl5/perlbrew/etc/bashrc' >> ~/.bashrc
+
+sudo ln -s ~/perl5/perlbrew/perls/${PERL_VERSION}/bin/perl /usr/local/bin/perl
 
 if [ "$needs_reboot" ] ; then
 
