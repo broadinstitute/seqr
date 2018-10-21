@@ -17,6 +17,7 @@ set +x
 #python -u manage.py load_omim
 
 echo "===== Install spark ===="
+set -x
 
 SPARK_VERSION="spark-2.0.2-bin-hadoop2.7"
 
