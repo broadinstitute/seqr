@@ -5,11 +5,10 @@ if [ -z "$SEQR_DIR"  ]; then
     exit 1
 fi
 
-cd ${SEQR_DIR}/..
-
 for script in $(ls ${SEQR_DIR}/deploy/install_local.step*)
 do
 
+    cd ${SEQR_DIR}/..
     echo Running $script
     source $script
 
