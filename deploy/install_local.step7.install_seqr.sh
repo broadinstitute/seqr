@@ -79,7 +79,7 @@ rm -rf virtualenv-16.0.0*
 #source activate_virtualenv.sh
 
 # install python dependencies
-sudo $(which pip) install --upgrade -r requirements.txt
+sudo $(which pip) install --upgrade --ignore-installed -r requirements.txt
 
 # init seqr db
 psql -U postgres postgres -c "create database seqrdb"

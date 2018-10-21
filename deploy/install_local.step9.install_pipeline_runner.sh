@@ -36,7 +36,7 @@ echo
 set -x
 
 # fix http://discuss.hail.is/t/importerror-cannot-import-name-getargspec/468
-sudo $(which pip) install decorator==4.2.1
+sudo $(which pip) install --ignore-installed decorator==4.2.1
 
 # install jupyter
 sudo $(which pip) install --upgrade pip jupyter
