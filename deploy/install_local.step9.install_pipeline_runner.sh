@@ -88,8 +88,12 @@ if [ ! -f /vep/1var.vcf ]; then
     cp ${SEQR_DIR}/hail_elasticsearch_pipelines/gcloud_dataproc/vep_init/run_hail_vep85_GRCh38_vcf.sh /vep/run_hail_vep85_GRCh38_vcf.sh
     cp ${SEQR_DIR}/hail_elasticsearch_pipelines/gcloud_dataproc/vep_init/1var.vcf /vep/1var.vcf
 
-    # run VEP on the 1-variant VCF to create fasta.index file
+    # (re)create the fasta index VEP uses
+    rm /vep/homo_sapiens/85_GRCh37/Homo_sapiens.GRCh37.75.dna.primary_assembly.fa.index
     /vep/run_hail_vep85_GRCh37_vcf.sh /vep/1var.vcf
+
+    # (re)create the fasta index VEP uses
+    rm /vep/homo_sapiens/85_GRCh38/Homo_sapiens.GRCh38.dna.primary_assembly.fa.index
     /vep/run_hail_vep85_GRCh38_vcf.sh /vep/1var.vcf
 fi
 
