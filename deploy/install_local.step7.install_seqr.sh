@@ -93,7 +93,6 @@ python -u manage.py collectstatic --no-input
 GUNICORN_WORKER_THREADS=4
 
 echo 'cd '${SEQR_DIR}'/seqr_settings
-#source ../activate_virtualenv.sh
 
 LOG_FILE=$(pwd)/gunicorn.log
 nohup gunicorn -w '${GUNICORN_WORKER_THREADS}' -c gunicorn_config.py wsgi:application --bind 0.0.0.0:8000 >& ${LOG_FILE} &
