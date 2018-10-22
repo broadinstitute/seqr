@@ -106,6 +106,7 @@ elif [ $PLATFORM = "centos" ]; then
     sudo yum install -y git gcc make patch
     sudo yum install -y java-1.8.0-openjdk.x86_64
     sudo yum install -y python-devel
+
 elif [ $PLATFORM = "ubuntu" ]; then
     sudo apt-get update
     sudo apt-get install -y unzip wget bzip2     # general utilities
@@ -139,6 +140,9 @@ elif [ $PLATFORM = "macos" ]; then
     rm google-cloud-sdk-221.0.0-darwin-x86_64.tar.gz
     ./google-cloud-sdk/install.sh --quiet
 
+    # make sure crcmod is installed for copying files with gsutil
+    sudo easy_install -U pip
+    sudo pip install -U crcmod
 
 elif [ $PLATFORM = "centos" ]; then
 
@@ -154,6 +158,12 @@ gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg
 EOM
     sudo yum install -y google-cloud-sdk
 
+    # make sure crcmod is installed for copying files with gsutil
+    sudo yum install -y gcc python-devel python-setuptools redhat-rpm-config
+    sudo easy_install -U pip
+    sudo pip uninstall crcmod
+    sudo pip install -U crcmod
+
 elif [ $PLATFORM = "ubuntu" ]; then
 
     # copied from https://cloud.google.com/sdk/docs/quickstart-debian-ubuntu
@@ -166,6 +176,12 @@ elif [ $PLATFORM = "ubuntu" ]; then
     curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
     # Update the package list and install the Cloud SDK
     sudo apt-get update && sudo apt-get install -y google-cloud-sdk
+
+    # make sure crcmod is installed for copying files with gsutil
+    sudo apt-get install gcc python-dev python-setuptools
+    sudo easy_install -U pip
+    sudo pip uninstall crcmod
+    sudo pip install -U crcmod
 
 else
     set +x
