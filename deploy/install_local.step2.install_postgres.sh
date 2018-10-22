@@ -20,7 +20,7 @@ elif [ $PLATFORM = "centos" ]; then
     wget -nv https://download.postgresql.org/pub/repos/yum/9.6/redhat/rhel-7-x86_64/pgdg-centos96-9.6-3.noarch.rpm
     sudo yum install -y pgdg-centos96-9.6-3.noarch.rpm epel-release
 
-    sudo yum update
+    sudo yum update -y
     sudo yum install -y postgresql96 postgresql96-server postgresql96-contrib
     sudo /usr/pgsql-9.6/bin/postgresql96-setup initdb
 
