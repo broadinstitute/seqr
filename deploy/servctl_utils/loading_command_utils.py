@@ -16,14 +16,15 @@ def load_dataset(deployment_target, project_name, genome_version, sample_type, d
     # run load command
     additional_load_command_args = "  ".join("--%s '%s'" % (key.lower().replace("_", "-"), value) for key, value in kwargs.items() if value is not None)
 
-    run_locally = deployment_target == "minikube"
-    if run_locally:
+    if deployment_target == "minikube":
         vcf_name = os.path.basename(vcf)
         path_in_pod = "/data/{}".format(vcf_name)
         if os.path.isfile(vcf):
             run("kubectl cp '%(vcf)s' '%(pod_name)s:%(path_in_pod)s'" % locals()) # if local file path, copy file into pod
         elif vcf.startswith("http"):
             run_in_pod(pod_name, "wget -N %(vcf)s -O %(path_in_pod)s" % locals())
+        elif vcf.startswith("gs:"):
+            run_in_pod(pod_name, "gsutil cp -n %(vcf)s %(path_in_pod)s" % locals())
         vcf = path_in_pod
 
         total_memory = psutil.virtual_memory().total - 6*10**9  # leave 6Gb for other processes

@@ -28,6 +28,7 @@ elif [ $PLATFORM = "centos" ]; then
     sudo sed -i s/peer/trust/  $PG_HBA_PATH
     sudo sed -i s/ident/trust/  $PG_HBA_PATH
 
+    sudo systemctl stop postgresql-9.6   # make sure no postgres instance is running already
     sudo /usr/pgsql-9.6/bin/postgresql96-setup initdb
     sudo systemctl enable postgresql-9.6
     sudo systemctl start postgresql-9.6
