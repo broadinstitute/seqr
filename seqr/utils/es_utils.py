@@ -7,7 +7,7 @@ import logging
 from pyliftover.liftover import LiftOver
 
 import settings
-from reference_data.models import GENOME_VERSION_GRCh38
+from reference_data.models import GENOME_VERSION_GRCh38, Omim
 from seqr.models import Sample, Individual
 from seqr.utils.xpos_utils import get_xpos
 from seqr.utils.gene_utils import parse_locus_list_items
@@ -317,8 +317,16 @@ def _build_or_filter(op, filters):
     return q
 
 
+def _get_family_samples(samples_by_id):
+    family_samples = defaultdict(list)
+    for sample_id, sample in samples_by_id.items():
+        family_samples[sample.individual.family.guid].append(sample_id)
+    return family_samples
+
+
 PATHOGENICTY_SORT_KEY = 'pathogenicity'
 PATHOGENICTY_HGMD_SORT_KEY = 'pathogenicity_hgmd'
+OMIM_SORT_KEY = 'in_omim'
 FAMILY_SORT_KEY = 'family_guid'
 XPOS_SORT_KEY = 'xpos'
 CLINVAR_SORT = {
@@ -346,7 +354,7 @@ SORT_FIELDS = {
             'type': 'string',
             'script': {
                 'params': {
-                    'family_samples': {}
+                    'family_samples': _get_family_samples
                 },
                 'source': """ArrayList families = new ArrayList(params.family_samples.keySet()); families.sort((a, b) -> a.compareTo(b)); for (family in families) { for (sample in params.family_samples[family]) {if(doc.containsKey(sample+"_num_alt") && params._source[sample+\"_num_alt\"] >= 0) {return family;}}}return "zz";"""
             }
@@ -361,7 +369,17 @@ SORT_FIELDS = {
             }
         }
     }],
-    'in_omim': [],
+    OMIM_SORT_KEY: [{
+        '_script': {
+            'type': 'string',
+            'script': {
+                'params': {
+                    'omim_gene_ids': lambda *args: [omim.gene.gene_id for omim in Omim.objects.all().only('gene__gene_id')]
+                },
+                'source': "params.omim_gene_ids.contains(doc['mainTranscript_gene_id'].value) ? 0 : 1"
+            }
+        }
+    }],
     'protein_consequence': ['mainTranscript_major_consequence_rank'],
     'exac': [{_get_pop_freq_key('exac', 'AF'): {'missing': '_first'}}],
     '1kg': [{_get_pop_freq_key('g1k', 'AF'): {'missing': '_first'}}],
@@ -370,14 +388,12 @@ SORT_FIELDS = {
 }
 
 
-def _get_sort(sort_key, samples_by_id):
+def _get_sort(sort_key, *args):
     sorts = SORT_FIELDS.get(sort_key, [])
 
-    if sort_key == FAMILY_SORT_KEY:
-        family_samples = defaultdict(list)
-        for sample_id, sample in samples_by_id.items():
-            family_samples[sample.individual.family.guid].append(sample_id)
-        sorts[0]['_script']['script']['params']['family_samples'] = family_samples
+    if len(sorts) and sorts[0].get('_script', {}).get('script', {}).get('params'):
+        for key, val_func in sorts[0]['_script']['script']['params'].items():
+            sorts[0]['_script']['script']['params'][key] = val_func(*args)
 
     if 'xpos' not in sorts:
         sorts.append('xpos')
