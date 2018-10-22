@@ -348,7 +348,7 @@ SORT_FIELDS = {
                 'params': {
                     'family_samples': {}
                 },
-                'source': """ArrayList families = new ArrayList(params.family_samples.keySet()); families.sort((a, b) -> a.compareTo(b)); for (family in families) { for (sample in params.family_samples[family]) {if(doc.containsKey(sample+"_num_alt") && doc[sample+"_num_alt"].value >= 0) {return family;}}}return "zz";"""
+                'source': """ArrayList families = new ArrayList(params.family_samples.keySet()); families.sort((a, b) -> a.compareTo(b)); for (family in families) { for (sample in params.family_samples[family]) {if(doc.containsKey(sample+"_num_alt") && params._source[sample+\"_num_alt\"] >= 0) {return family;}}}return "zz";"""
             }
         }
     }],
