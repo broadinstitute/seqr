@@ -70,7 +70,13 @@ class Reference(object):
 
     def get_gene_bounds(self, gene_id):
         gene = self.gene_utils.get_genes([gene_id]).get(gene_id)
-        return (genomeloc.get_xpos(gene['chromGrch37'], gene['startGrch37']), genomeloc.get_xpos(gene['chromGrch37'], gene['endGrch37'])) if gene else (None, None, None)
+        if not gene:
+            return (None, None, None)
+        build = 'Grch37' if gene['chromGrch37'] else 'Grch38'
+        chrom = gene['chrom{}'.format(build)]
+        start = gene['start{}'.format(build)]
+        end = gene['end{}'.format(build)]
+        return (genomeloc.get_xpos(chrom, start), genomeloc.get_xpos(chrom, end))
 
     def get_gene_symbol(self, gene_id):
         return self.gene_utils.get_genes([gene_id]).get(gene_id, {}).get('geneSymbol')

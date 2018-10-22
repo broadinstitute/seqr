@@ -2,7 +2,6 @@ FROM perl:5.20
 
 MAINTAINER MacArthur Lab
 
-
 # install commmon utilities
 RUN apt-get update && apt-get install -y --fix-missing \
     apt-utils \
@@ -55,14 +54,13 @@ RUN cd /usr/local \
     && wget -nv https://archive.apache.org/dist/spark/spark-2.0.2/spark-2.0.2-bin-hadoop2.7.tgz \
     && tar xzf /usr/local/spark-2.0.2-bin-hadoop2.7.tgz
 
-RUN pip install decorator==4.2.1    # fix http://discuss.hail.is/t/importerror-cannot-import-name-getargspec/468
-
-RUN wget https://storage.googleapis.com/hadoop-lib/gcs/gcs-connector-latest-hadoop2.jar -O /usr/local/spark-2.0.2-bin-hadoop2.7/jars/gcs-connector-latest-hadoop2.jar
+# fix http://discuss.hail.is/t/importerror-cannot-import-name-getargspec/468
+RUN pip install decorator==4.2.1
 
 # install jupyter
 RUN pip install --upgrade pip jupyter
 
-#   git clone --branch 0.1 https://github.com/broadinstitute/hail.git \
+#RUN git clone --branch 0.1 https://github.com/broadinstitute/hail.git \
 #    && cd /hail \
 #    && ./gradlew -Dspark.version=2.0.2 shadowJar archiveZip
 
@@ -83,16 +81,6 @@ RUN gsutil -m cp gs://hail-common/vep/htslib/* /usr/bin/ \
     && gsutil -m cp gs://hail-common/vep/samtools /usr/bin/ \
     && chmod a+rx  /usr/bin/tabix /usr/bin/bgzip /usr/bin/htsfile /usr/bin/samtools
 
-RUN mkdir -p /vep/homo_sapiens /vep/loftee_data_grch37 /vep/loftee_data_grch38 \
-    && gsutil -m cp -r gs://hail-common/vep/vep/ensembl-tools-release-85 /vep  \
-    && gsutil -m cp -r gs://hail-common/vep/vep/GRCh37/loftee_data /vep/loftee_data_grch37  \
-    && gsutil -m cp -r gs://hail-common/vep/vep/GRCh38/loftee_data /vep/loftee_data_grch38  \
-    && gsutil -m cp -r gs://hail-common/vep/vep/Plugins /vep  \
-    && gsutil -m cp -r gs://hail-common/vep/vep/homo_sapiens/85_GRCh37 /vep/homo_sapiens/ \
-    && gsutil -m cp -r gs://hail-common/vep/vep/homo_sapiens/85_GRCh38 /vep/homo_sapiens/
-
-RUN ln -s /vep/ensembl-tools-release-85/scripts/variant_effect_predictor /vep/variant_effect_predictor
-
 RUN wget https://raw.github.com/miyagawa/cpanminus/master/cpanm -O /usr/bin/cpanm && chmod +x /usr/bin/cpanm
 # VEP dependencies
 RUN /usr/bin/cpanm --notest Set::IntervalTree
@@ -110,24 +98,11 @@ ARG DISABLE_CACHE=1
 # clone hail-elasticsearch-pipelines
 RUN git clone https://github.com/macarthur-lab/hail-elasticsearch-pipelines.git /hail-elasticsearch-pipelines
 
-# copy loftee
-RUN cp -r /hail-elasticsearch-pipelines/loftee /vep \
-    && cp /hail-elasticsearch-pipelines/gcloud_dataproc/vep_init/vep-gcloud-grch38.properties /vep/vep-gcloud-grch38.properties \
-    && cp /hail-elasticsearch-pipelines/gcloud_dataproc/vep_init/vep-gcloud-grch37.properties /vep/vep-gcloud-grch37.properties \
-    && cp /hail-elasticsearch-pipelines/gcloud_dataproc/vep_init/run_hail_vep85_GRCh37_vcf.sh /vep/run_hail_vep85_GRCh37_vcf.sh \
-    && cp /hail-elasticsearch-pipelines/gcloud_dataproc/vep_init/run_hail_vep85_GRCh38_vcf.sh /vep/run_hail_vep85_GRCh38_vcf.sh \
-    && cp /hail-elasticsearch-pipelines/gcloud_dataproc/vep_init/1var.vcf /vep/1var.vcf
-
 # copy hail build
 RUN mkdir -p /hail/build/libs /hail/build/distributions \
-    && cp /hail-elasticsearch-pipelines/hail_builds/v01/hail-9-17-2018-f3e47061.zip /hail/build/distributions/hail-python.zip \
-    && cp /hail-elasticsearch-pipelines/hail_builds/v01/hail-9-17-2018-f3e47061.jar /hail/build/libs/hail-all-spark.jar
-
-
-# run VEP on the 1-variant VCF to create fasta.index file
-RUN /vep/run_hail_vep85_GRCh37_vcf.sh /vep/1var.vcf \
- && /vep/run_hail_vep85_GRCh38_vcf.sh /vep/1var.vcf
-
+    && cp /hail-elasticsearch-pipelines/hail_builds/v01/hail-v01-10-8-2018-90c855449.zip /hail/build/distributions/hail-python.zip \
+    && cp /hail-elasticsearch-pipelines/hail_builds/v01/hail-v01-10-8-2018-90c855449.jar /hail/build/libs/hail-all-spark.jar \
+    && cp /hail-elasticsearch-pipelines/hail_builds/v01/gcs-connector-1.6.10-hadoop2.jar /usr/local/spark-2.0.2-bin-hadoop2.7/jars/
 
 ENV TERM=xterm
 ENV PYTHONPATH="$PYTHONPATH:/seqr:/seqr_settings:/hail-elasticsearch-pipelines"

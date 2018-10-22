@@ -5,7 +5,7 @@ metadata:
     namespace: {{ NAMESPACE }}
 spec:
   capacity:
-    storage: {{ ELASTICSEARCH_DISK_SIZE }}G
+    storage: {{ ELASTICSEARCH_DISK_SIZE }}
   accessModes:
     - ReadWriteOnce
   persistentVolumeReclaimPolicy: Retain

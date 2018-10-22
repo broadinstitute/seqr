@@ -140,8 +140,7 @@ VariantGene.propTypes = {
 
 const mapStateToProps = (state, ownProps) => ({
   project: getProject(state),
-  // TODo take out default when use new reference data
-  gene: getGenesById(state)[ownProps.geneId] || { constraints: { missense: [], lof: {} }, phenotypeInfo: { mimPhenotypes: [], orphanetPhenotypes: [] }, locusLists: [] },
+  gene: getGenesById(state)[ownProps.geneId],
 })
 
 export default connect(mapStateToProps)(VariantGene)

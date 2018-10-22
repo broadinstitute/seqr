@@ -30,13 +30,11 @@ spec:
         name: seqr
         deployment: {{ DEPLOY_TO }}
     spec:
+      priorityClassName: high-priority
       volumes:
-      #- name: seqr-code
-      #  hostPath:
-      #    path: {{ BASE_DIR }}
       - name: data-dir
         hostPath:
-          path: {{ DATA_DIR }}
+          path: /data/seqr
       - name: gcloud-client-secrets-volume
         secret:
           secretName: gcloud-client-secrets
@@ -53,8 +51,6 @@ spec:
             add:
               - SYS_ADMIN
         volumeMounts:
-#        - name: seqr-code
-#          mountPath: /seqr
         - name: data-dir
           mountPath: /data
         - name: gcloud-client-secrets-volume
@@ -64,11 +60,9 @@ spec:
           requests:
             memory: "0.5Gi"
             cpu: "0.05"
-            ephemeral-storage: "100Mi"
           limits:
             memory: "20Gi"
-            cpu: "3"
-            ephemeral-storage: "100Gi"
+            cpu: "8"
         envFrom:
           - configMapRef:
               name: all-settings
@@ -93,6 +87,11 @@ spec:
             secretKeyRef:
               name: seqr-secrets
               key: postmark_server_token
+        - name: SLACK_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: seqr-secrets
+              key: slack_token
         - name: MME_NODE_ADMIN_TOKEN
           valueFrom:
             secretKeyRef:
@@ -150,3 +149,15 @@ spec:
             - /readiness_probe
       restartPolicy: Always
       dnsPolicy: ClusterFirst
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 1.0
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: "name"
+                      operator: In
+                      values:
+                      - seqr
+                topologyKey: "kubernetes.io/hostname"

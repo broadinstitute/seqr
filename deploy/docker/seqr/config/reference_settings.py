@@ -1,6 +1,6 @@
 import os
 
-from deploy.utils.constants import REFERENCE_DATA_FILES
+from xbrowse.core.constants import REFERENCE_DATA_FILES
 
 ensembl_rest_host = "beta.rest.ensembl.org"
 ensembl_rest_port = 80
@@ -13,7 +13,7 @@ db_host = os.environ.get('MONGO_SERVICE_HOSTNAME', 'localhost')
 db_port = 27017
 db_name = 'xbrowse_reference'
 
-install_dir = '/seqr'
+install_dir = os.environ.get("SEQR_DIR", '/seqr')
 reference_data_dir = os.path.join(install_dir, 'data/reference_data')
 
 gencode_gtf_file = os.path.join(reference_data_dir, REFERENCE_DATA_FILES['gencode'])

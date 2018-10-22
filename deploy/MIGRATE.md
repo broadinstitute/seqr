@@ -15,7 +15,7 @@ following these steps:
 3. Run migrations:
 
    ```
-   python2.7 -m manage makemigrations   # this is just a sanity check and shouldn't create any new migrations
+   python2.7 -m manage makemigrations 
    python2.7 -m manage migrate 
    ```
 

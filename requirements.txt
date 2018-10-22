@@ -15,8 +15,8 @@ PyYAML==3.12                     # yaml parsing
 # runtime dependencies
 asciitree                        # used by print_project_tree django command
 beautifulsoup4==4.5.3            # used for html parsing utilites
-Django==1.11                     # core server-side framework
-django-anymail==2.2           # for sending emails using cloud-based mail service providers
+Django==1.11.15                  # core server-side framework
+django-anymail==2.2              # for sending emails using cloud-based mail service providers
 django-debug-toolbar             # https://github.com/jazzband/django-debug-toolbar
 django-debug-toolbar-request-history  # for debugging database queries on async requests.
 django-guardian==1.4.6           # object-level permissions for database records
@@ -31,7 +31,7 @@ ipython                          # used by shell.py
 numpy==1.12.1
 openpyxl==2.4.8                  # library for reading/writing Excel files
 pandas==0.19.2
-psycopg2==2.7.1                  # postgres database access
+psycopg2==2.7.5                  # postgres database access
 pyliftover==0.3                  # GRCh37/GRCh38 liftover
 requests==2.13.0                 # simpler way to make http requests
 requests_toolbelt		         # for troubleshooting requests

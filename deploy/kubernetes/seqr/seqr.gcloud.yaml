@@ -30,6 +30,7 @@ spec:
         name: seqr
         deployment: {{ DEPLOY_TO }}
     spec:
+      priorityClassName: high-priority
       volumes:
       - name: gcloud-client-secrets-volume
         secret:
@@ -59,13 +60,11 @@ spec:
               command: ["fusermount", "-u", "/mounted-bucket"]
         resources:
           requests:
-            memory: "8Gi"
-            cpu: "0.5"
-            ephemeral-storage: "100Mi"
+            memory: "0.5Gi"
+            cpu: "0.05"
           limits:
             memory: "20Gi"
             cpu: "8"
-            ephemeral-storage: "100Gi"
         envFrom:
           - configMapRef:
               name: all-settings
@@ -90,6 +89,11 @@ spec:
             secretKeyRef:
               name: seqr-secrets
               key: postmark_server_token
+        - name: SLACK_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: seqr-secrets
+              key: slack_token
         - name: MME_NODE_ADMIN_TOKEN
           valueFrom:
             secretKeyRef:

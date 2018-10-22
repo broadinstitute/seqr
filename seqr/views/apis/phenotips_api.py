@@ -126,6 +126,7 @@ def _update_patient_data(project, individual, patient_json):
     auth_tuple = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=False)
     result = _make_api_call('PUT', url, data=patient_json_string, auth_tuple=auth_tuple, expected_status_code=204)
 
+    _update_individual_phenotips_data(individual, patient_json)
     return result
 
 
@@ -155,48 +156,6 @@ def phenotips_patient_exists(individual):
     return individual.phenotips_patient_id or individual.phenotips_eid
 
 
-def _update_patient_field_value(project, individual, field_name, field_value):
-    """ Utility method for updating one field in the patient record, while keeping other fields
-    the same. For field descriptions, see https://phenotips.org/DevGuide/JSONExport1.3
-    Args:
-        project (Model): seqr Project - used to retrieve PhenoTips credentials
-        individual (Model): seqr Individual
-        field_name (string): PhenoTips patient field name (eg. "family_history").
-        field_value (string or dict): PhenoTips HPO terms.
-    Raises:
-        PhenotipsException: if api call fails
-    """
-    if field_name not in set([
-        "allergies",
-        "apgar",
-        "clinicalStatus",
-        "date_of_birth",
-        "date_of_death",
-        "disorders",
-        "ethnicity",
-        "external_id",
-        "family_history",
-        "features",
-        "genes",
-        "global_age_of_onset",
-        "global_mode_of_inheritance",
-        "life_status",
-        "nonstandard_features",
-        "notes",
-        "prenatal_perinatal_history",
-        "sex",
-        "solved",
-        "specificity",
-        "variants",
-    ]):
-        raise ValueError("Unexpected field_name: %s" % (field_name, ))
-
-    patient_json = _get_patient_data(project, individual)
-    patient_json[field_name] = field_value
-
-    _update_patient_data(project, individual, patient_json)
-
-
 def set_patient_hpo_terms(project, individual, hpo_terms_present=[], hpo_terms_absent=[], final_diagnosis_mim_ids=[]):
     """Utility method for specifying a list of HPO IDs for a patient.
     Args:
@@ -208,12 +167,17 @@ def set_patient_hpo_terms(project, individual, hpo_terms_present=[], hpo_terms_a
     Raises:
         PhenotipsException: if api call fails
     """
+    if not hpo_terms_present or hpo_terms_absent or final_diagnosis_mim_ids:
+        return
+
     _create_patient_if_missing(project, individual)
+
+    patient_json = _get_patient_data(project, individual)
 
     if hpo_terms_present or hpo_terms_absent:
         features_value = [{"id": hpo_term, "observed": "yes", "type": "phenotype"} for hpo_term in hpo_terms_present]
         features_value += [{"id": hpo_term, "observed": "no", "type": "phenotype"} for hpo_term in hpo_terms_absent]
-        _update_patient_field_value(project, individual, "features", features_value)
+        patient_json["features"] = features_value
 
     if final_diagnosis_mim_ids:
         omim_disorders = []
@@ -221,10 +185,9 @@ def set_patient_hpo_terms(project, individual, hpo_terms_present=[], hpo_terms_a
             if int(mim_id) < 100000:
                 raise ValueError("Invalid final_diagnosis_mim_id: %s. Expected a 6-digit number." % str(mim_id))
             omim_disorders.append({'id': 'MIM:%s' % mim_id})
-        _update_patient_field_value(project, individual, "disorders", omim_disorders)
+        patient_json["disorders"] = omim_disorders
 
-    patient_json = _get_patient_data(project, individual)
-    _update_individual_phenotips_data(individual, patient_json)
+    _update_patient_data(project, individual, patient_json)
 
 
 def _add_user_to_patient(username, patient_id, allow_edit=True):
