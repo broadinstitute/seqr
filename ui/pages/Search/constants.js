@@ -271,7 +271,7 @@ export const QUALITY_FILTER_FIELDS = [
     label: 'Filter Value',
     labelHelp: 'Either show only variants that PASSed variant quality filters applied when the dataset was processed (typically VQSR or Hard Filters), or show all variants',
     control: RadioGroup,
-    options: [{ value: '', text: 'Show All Variants' }, { value: 'pass', text: 'Pass Variants Only' }],
+    options: [{ value: null, text: 'Show All Variants' }, { value: 'pass', text: 'Pass Variants Only' }],
     margin: '1em 2em',
     widths: 'equal',
   },
@@ -311,7 +311,7 @@ export const QUALITY_FILTER_OPTIONS = [
   {
     text: 'All Variants',
     value: {
-      vcf_filter: '',
+      vcf_filter: null,
       min_gq: 0,
       min_ab: 0,
     },

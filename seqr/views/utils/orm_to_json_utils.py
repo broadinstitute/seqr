@@ -307,8 +307,7 @@ def get_json_for_analysis_group(analysis_group, **kwargs):
     return _get_json_for_model(analysis_group, get_json_for_models=get_json_for_analysis_groups, **kwargs)
 
 
-
-def get_json_for_saved_variant(saved_variant, add_tags=False, project_guid=None):
+def get_json_for_saved_variant(saved_variant, add_tags=False, project_guid=None, family_guid=None):
     """Returns a JSON representation of the given variant.
 
     Args:
@@ -317,29 +316,28 @@ def get_json_for_saved_variant(saved_variant, add_tags=False, project_guid=None)
         dict: json object
     """
 
-    nested_fields = [('family', 'guid')]
-    if not project_guid:
-        nested_fields.append(('project', 'guid'))
-
-    result = _get_json_for_model(saved_variant, nested_fields=nested_fields)
-
-    chrom, pos = get_chrom_pos(result['xpos'])
-    guid = result.pop('guid')
-    result.update({
-        'variantId': guid,
-        'variantGuid': guid,
-        'projectGuid': project_guid or result['project_guid'],
-        'familyGuid': result['family_guid'],
-        'chrom': chrom,
-        'pos': pos,
-    })
-    if add_tags:
+    def _process_result(result, variant):
+        chrom, pos = get_chrom_pos(result['xpos'])
         result.update({
-            'tags': [get_json_for_variant_tag(tag) for tag in saved_variant.varianttag_set.all()],
-            'functionalData': [get_json_for_variant_functional_data(tag) for tag in saved_variant.variantfunctionaldata_set.all()],
-            'notes': [get_json_for_variant_note(tag) for tag in saved_variant.variantnote_set.all()],
+            'variantGuid': variant.guid,
+            'chrom': chrom,
+            'pos': pos,
         })
-    return result
+        if add_tags:
+            result.update({
+                'tags': [get_json_for_variant_tag(tag) for tag in saved_variant.varianttag_set.all()],
+                'functionalData': [get_json_for_variant_functional_data(tag) for tag in
+                                   saved_variant.variantfunctionaldata_set.all()],
+                'notes': [get_json_for_variant_note(tag) for tag in saved_variant.variantnote_set.all()],
+            })
+        return result
+
+    nested_fields = [
+        {'fields': ('family', 'guid'), 'value': family_guid},
+        {'fields': ('project', 'guid'), 'value': project_guid},
+    ]
+
+    return _get_json_for_model(saved_variant, nested_fields=nested_fields, guid_key='variantId', process_result=_process_result)
 
 
 def get_json_for_variant_tag(tag):

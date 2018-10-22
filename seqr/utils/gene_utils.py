@@ -17,7 +17,7 @@ def get_gene(gene_id, user):
 
 def get_genes(gene_ids, **kwargs):
     gene_filter = {}
-    if gene_ids:
+    if gene_ids is not None:
         gene_filter['gene_id__in'] = gene_ids
     genes = GeneInfo.objects.filter(**gene_filter)
     return {gene['geneId']: gene for gene in get_json_for_genes(genes, **kwargs)}

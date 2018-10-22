@@ -83,7 +83,7 @@ def get_es_variants(search, individuals, sort=None):
     field_names = _get_query_field_names(samples_by_id)
     es_search = es_search.source(field_names)
 
-    logger.info(json.dumps(es_search.to_dict()))
+    logger.info(json.dumps(es_search.to_dict(), indent=2))
 
     response = es_search.execute()
 
@@ -387,7 +387,7 @@ def _get_sort(sort_key, samples_by_id):
 CLINVAR_FIELDS = ['clinical_significance', 'variation_id', 'allele_id', 'gold_stars']
 HGMD_FIELDS = ['accession', 'class']
 TRANSCRIPT_FIELDS = [
-    'gene_symbol', 'lof', 'lof_flags', 'lof_filter', 'hgvsc', 'hgvsp', 'amino_acids', 'protein_position',
+    'gene_id', 'gene_symbol', 'lof', 'lof_flags', 'lof_filter', 'hgvsc', 'hgvsp', 'amino_acids', 'protein_position',
     'major_consequence',
 ]
 NESTED_FIELDS = {
@@ -403,7 +403,6 @@ CORE_FIELDS_CONFIG = {
     'alt': {},
     'contig': {'response_key': 'chrom'},
     'start': {'response_key': 'pos', 'format_value': long},
-    'codingGeneIds': {'response_key': 'geneIds', 'format_value': list, 'default_value': []},
     'filters': {'response_key': 'genotypeFilters', 'format_value': lambda filters: ','.join(filters), 'default_value': []},
     'origAltAlleles': {'format_value': lambda alleles: [a.split('-')[-1] for a in alleles], 'default_value': []},
     'ref': {},
