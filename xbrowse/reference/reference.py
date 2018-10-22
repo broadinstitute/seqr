@@ -72,15 +72,11 @@ class Reference(object):
         gene = self.gene_utils.get_genes([gene_id]).get(gene_id)
         if not gene:
             return (None, None, None)
-        if not gene['chromGrch37']:
-            # get the build 37 version of this gene
-            gene_ids = self.gene_utils.get_gene_ids_for_gene_symbols([gene['geneSymbol']]).get(gene['geneSymbol'])
-            gene_ids.pop(gene_ids.index(gene_id))
-            if len(gene_ids) == 1:
-                gene = self.gene_utils.get_genes([gene_ids[0]]).get(gene_ids[0])
-            else:
-                raise Exception('Unable to find build 37 gene for {}'.format(gene_id))
-        return (genomeloc.get_xpos(gene['chromGrch37'], gene['startGrch37']), genomeloc.get_xpos(gene['chromGrch37'], gene['endGrch37']))
+        build = 'Grch37' if gene['chromGrch37'] else 'Grch38'
+        chrom = gene['chrom{}'.format(build)]
+        start = gene['start{}'.format(build)]
+        end = gene['end{}'.format(build)]
+        return (genomeloc.get_xpos(chrom, start), genomeloc.get_xpos(chrom, end))
 
     def get_gene_symbol(self, gene_id):
         return self.gene_utils.get_genes([gene_id]).get(gene_id, {}).get('geneSymbol')
