@@ -7,7 +7,7 @@ import logging
 from pyliftover.liftover import LiftOver
 
 import settings
-from reference_data.models import GENOME_VERSION_GRCh38, Omim
+from reference_data.models import GENOME_VERSION_GRCh38, Omim, GeneConstraint
 from seqr.models import Sample, Individual
 from seqr.utils.xpos_utils import get_xpos
 from seqr.utils.gene_utils import parse_locus_list_items
@@ -326,8 +326,6 @@ def _get_family_samples(samples_by_id):
 
 PATHOGENICTY_SORT_KEY = 'pathogenicity'
 PATHOGENICTY_HGMD_SORT_KEY = 'pathogenicity_hgmd'
-OMIM_SORT_KEY = 'in_omim'
-FAMILY_SORT_KEY = 'family_guid'
 XPOS_SORT_KEY = 'xpos'
 CLINVAR_SORT = {
     '_script': {
@@ -349,7 +347,7 @@ CLINVAR_SORT = {
     }
 }
 SORT_FIELDS = {
-    FAMILY_SORT_KEY: [{
+    'family_guid': [{
         '_script': {
             'type': 'string',
             'script': {
@@ -369,9 +367,9 @@ SORT_FIELDS = {
             }
         }
     }],
-    OMIM_SORT_KEY: [{
+    'in_omim': [{
         '_script': {
-            'type': 'string',
+            'type': 'number',
             'script': {
                 'params': {
                     'omim_gene_ids': lambda *args: [omim.gene.gene_id for omim in Omim.objects.all().only('gene__gene_id')]
@@ -383,7 +381,20 @@ SORT_FIELDS = {
     'protein_consequence': ['mainTranscript_major_consequence_rank'],
     'exac': [{_get_pop_freq_key('exac', 'AF'): {'missing': '_first'}}],
     '1kg': [{_get_pop_freq_key('g1k', 'AF'): {'missing': '_first'}}],
-    'constraint': [],
+    'constraint': [{
+        '_script': {
+            'order': 'asc',
+            'type': 'number',
+            'script': {
+                'params': {
+                    'constraint_ranks_by_gene': lambda *args: {
+                        constraint.gene.gene_id: constraint.mis_z_rank + constraint.pLI_rank
+                        for constraint in GeneConstraint.objects.all().only('gene__gene_id', 'mis_z_rank', 'pLI_rank')}
+                },
+                'source': "params.constraint_ranks_by_gene.getOrDefault(doc['mainTranscript_gene_id'].value, 10000000)"
+            }
+        }
+    }],
     XPOS_SORT_KEY: ['xpos'],
 }
 
@@ -395,8 +406,8 @@ def _get_sort(sort_key, *args):
         for key, val_func in sorts[0]['_script']['script']['params'].items():
             sorts[0]['_script']['script']['params'][key] = val_func(*args)
 
-    if 'xpos' not in sorts:
-        sorts.append('xpos')
+    if XPOS_SORT_KEY not in sorts:
+        sorts.append(XPOS_SORT_KEY)
     return sorts
 
 
