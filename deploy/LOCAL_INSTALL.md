@@ -51,16 +51,45 @@ SCRIPT=install_local.step9.install_pipeline_runner.sh && curl -L http://raw.gith
 Once these complete, the seqr gunicorn web server will be running on 0.0.0.0 port 8000. 
 
 
-#### Step 3: Create User, Login to seqr
+#### Step 3: Create admin. user
 
 To create an admin user, run:
 ```
 cd ${SEQR_DIR}; python manage.py createsuperuser
 ```
 
-To view seqr, open your browser to [http://localhost:8000/login](http://localhost:8000/login).
+
+#### Step 4: Create a seqr project
+
+A project in seqr represents a group of collaborators working together on one or more datasets.
+
+1. Open your browser to [http://localhost:8000/login](http://localhost:8000/login)
+2. Login using the account you entered in step 3. 
+3. On the dashboard page, click on "Create Project".  
+4. Click on the new project.
+5. Click on Edit Families & Individuals > Bulk Upload and upload a .fam file with individuals for the project.
 
 
-#### Step 5: Load Dataset
+#### Step 5: Load dataset
 
-*10/18/2018 - testing - this section will be filled in the next several days*
+To VEP-annotate and load a new VCF into Elasticsearch, run: 
+```
+source ~/.bashrc  
+cd ${SEQR_DIR}/hail_elasticsearch_pipelines/  
+  
+GENOME_VERSION="37"        # should be "37" or "38"
+SAMPLE_TYPE="WES"          # can be "WES" or "WGS"
+DATASET_TYPE="VARIANTS"    # can be "VARIANTS" (for GATK VCFs) or "SV" (for Manta VCFs)
+PROJECT_GUID="R001_test"   # should match the ID in the url of the project page 
+INPUT_VCF="test.vcf.gz"    # local path of VCF file
+ 
+python2.7 gcloud_dataproc/submit.py --run-locally hail_scripts/v01/load_dataset_to_es.py  --spark-home $SPARK_HOME --genome-version $GENOME_VERSION --project-guid $PROJECT_GUID --sample-type $SAMPLE_TYPE --dataset-type $DATASET_TYPE --skip-validation  --exclude-hgmd --vep-block-size 100 --es-block-size 10 --num-shards 1 --max-samples-per-index 99  $INPUT_VCF
+```
+
+Now that the dataset is loaded into elasticsearch, it can be added to the project:
+
+1. Go to the projet page
+2. Click on Edit Datasets
+3. Enter the index name that the pipeline printed out when it completed, and submit the form.
+
+After this you can click "Variant Search" for each family, or "Gene Search" to search across families.   
