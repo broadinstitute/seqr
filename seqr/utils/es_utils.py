@@ -23,7 +23,7 @@ def get_es_client():
     return elasticsearch.Elasticsearch(host=settings.ELASTICSEARCH_SERVICE_HOSTNAME)
 
 
-def get_es_variants(search, individuals, sort=None):
+def get_es_variants(search, individuals, sort=None, offset=0, num_results=None):
 
     genes, intervals, invalid_items = parse_locus_list_items(search.get('locus', {}), all_new=True)
     if invalid_items:
@@ -75,9 +75,9 @@ def get_es_variants(search, individuals, sort=None):
     if search.get('inheritance'):
         es_search = es_search.filter(_genotype_filter(search['inheritance'], individuals, samples_by_id))
 
-    # TODO sort and pagination
+    # sort and pagination
     es_search = es_search.sort(*_get_sort(sort, samples_by_id))
-    es_search = es_search[0:100]
+    es_search = es_search[offset: offset + num_results]
 
     # Only return relevant fields
     field_names = _get_query_field_names(samples_by_id)

@@ -19,10 +19,11 @@ export const loadSearchedVariants = (searchHash, search) => {
     if (!searchHash) {
       return
     }
-    const sort = ((search || {}).sort || getState().variantSearchDisplay.sort || SORT_BY_XPOS).toLowerCase()
+    const searchDisplay = search || getState().variantSearchDisplay
+    const sort = (searchDisplay.sort || SORT_BY_XPOS).toLowerCase()
 
     dispatch({ type: REQUEST_SEARCHED_VARIANTS })
-    new HttpRequestHelper(`/api/search/${searchHash}?sort=${sort}`,
+    new HttpRequestHelper(`/api/search/${searchHash}?sort=${sort}&page=${searchDisplay.currentPage || 1}`,
       (responseJson) => {
         dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
         dispatch({ type: RECEIVE_SEARCHED_VARIANTS, newValue: responseJson.searchedVariants })
@@ -51,6 +52,8 @@ export const reducers = {
   searchesByHash: createObjectsByIdReducer(UPDATE_HASHED_SEARCHES),
   variantSearchDisplay: createSingleObjectReducer(UPDATE_SEARCHED_VARIANT_DISPLAY, {
     sort: SORT_BY_XPOS,
+    currentPage: 1,
+    recordsPerPage: 100,
   }, false),
 }
 

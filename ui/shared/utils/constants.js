@@ -3,7 +3,7 @@ import { Form } from 'semantic-ui-react'
 import { validators } from '../components/form/ReduxFormWrapper'
 import BaseFieldView from '../components/panel/view-fields/BaseFieldView'
 import OptionFieldView from '../components/panel/view-fields/OptionFieldView'
-import { BooleanCheckbox, RadioGroup, Dropdown, InlineToggle } from '../components/form/Inputs'
+import { BooleanCheckbox, RadioGroup, Dropdown, InlineToggle, Pagination } from '../components/form/Inputs'
 
 
 export const GENOME_VERSION_37 = '37'
@@ -620,6 +620,14 @@ export const VARIANT_PER_PAGE_FIELD = {
   fluid: false,
   label: 'Variants Per Page:',
   options: [{ value: 10 }, { value: 25 }, { value: 50 }, { value: 100 }],
+}
+export const VARIANT_PAGINATION_FIELD = {
+  name: 'currentPage',
+  component: Pagination,
+  size: 'mini',
+  siblingRange: 0,
+  firstItem: null,
+  lastItem: null,
 }
 
 

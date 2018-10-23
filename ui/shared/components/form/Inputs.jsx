@@ -3,7 +3,7 @@
 import React, { createElement } from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import { Form, List } from 'semantic-ui-react'
+import { Form, List, Pagination as PaginationComponent } from 'semantic-ui-react'
 import Slider from 'react-rangeslider'
 import 'react-rangeslider/lib/index.css'
 
@@ -352,4 +352,17 @@ StepSlider.propTypes = {
   steps: PropTypes.array,
   stepLabels: PropTypes.object,
   onChange: PropTypes.func,
+}
+
+export const Pagination = ({ onChange, value, error, ...props }) =>
+  <PaginationComponent
+    activePage={value}
+    onPageChange={(e, data) => onChange(data.activePage)}
+    {...props}
+  />
+
+Pagination.propTypes = {
+  value: PropTypes.number,
+  onChange: PropTypes.func,
+  error: PropTypes.bool,
 }

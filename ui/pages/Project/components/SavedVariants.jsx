@@ -1,7 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Loader, Grid, Pagination, Dropdown } from 'semantic-ui-react'
+import { Loader, Grid, Dropdown } from 'semantic-ui-react'
 import { Route, Switch, Link } from 'react-router-dom'
 import styled from 'styled-components'
 
@@ -17,6 +17,7 @@ import {
   VARIANT_HIDE_EXCLUDED_FIELD,
   VARIANT_HIDE_REVIEW_FIELD,
   VARIANT_PER_PAGE_FIELD,
+  VARIANT_PAGINATION_FIELD,
 } from 'shared/utils/constants'
 import { loadProjectVariants, updateSavedVariantTable } from '../reducers'
 import {
@@ -71,7 +72,6 @@ class BaseSavedVariants extends React.Component {
     totalPages: PropTypes.number,
     loadProjectVariants: PropTypes.func,
     updateSavedVariantTable: PropTypes.func,
-    updateSavedVariantPage: PropTypes.func,
   }
 
   constructor(props) {
@@ -166,6 +166,9 @@ class BaseSavedVariants extends React.Component {
       }, []),
     ]
 
+    const filterFields = this.props.totalPages > 1 ?
+      [...FILTER_FIELDS, { ...VARIANT_PAGINATION_FIELD, totalPages: this.props.totalPages }] : FILTER_FIELDS
+
     const allShown = this.props.variantsToDisplay.length === this.props.totalVariantsCount
     let shownSummary = ''
     if (!allShown) {
@@ -208,20 +211,11 @@ class BaseSavedVariants extends React.Component {
                   closeOnSuccess={false}
                   submitOnChange
                   inline
-                  fields={FILTER_FIELDS}
+                  fields={filterFields}
                 />
               }
               <HorizontalSpacer width={10} />
               <ExportTableButton downloads={exports} />
-              {this.props.totalPages > 1 &&
-                <Pagination
-                  activePage={this.props.tableState.currentPage || 1}
-                  totalPages={this.props.totalPages}
-                  onPageChange={this.props.updateSavedVariantPage}
-                  size="mini"
-                  siblingRange={0}
-                />
-              }
             </Grid.Column>
           </ControlsRow>
         }
@@ -251,8 +245,7 @@ const mapStateToProps = (state, ownProps) => ({
 
 const mapDispatchToProps = {
   loadProjectVariants,
-  updateSavedVariantTable: updates => updateSavedVariantTable({ ...updates, currentPage: 1 }),
-  updateSavedVariantPage: (e, data) => updateSavedVariantTable({ currentPage: data.activePage }),
+  updateSavedVariantTable,
 }
 
 const SavedVariants = connect(mapStateToProps, mapDispatchToProps)(BaseSavedVariants)

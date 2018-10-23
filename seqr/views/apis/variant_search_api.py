@@ -9,8 +9,7 @@ from seqr.utils.es_utils import get_es_variants, XPOS_SORT_KEY, PATHOGENICTY_SOR
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.saved_variant_api import _saved_variant_genes, _add_locus_lists
 from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.orm_to_json_utils import \
-    get_json_for_variant_tag, get_json_for_variant_functional_data, get_json_for_variant_note
+from seqr.views.utils.orm_to_json_utils import add_additional_json_fields_for_saved_variant
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions
 from seqr.model_utils import find_matching_xbrowse_model
 
@@ -32,6 +31,8 @@ UNAFFECTED = Individual.AFFECTED_STATUS_UNAFFECTED
 def query_variants_handler(request, search_hash):
     """Search variants.
     """
+    page = int(request.GET.get('page') or 1)
+    per_page = int(request.GET.get('per_page') or 100)
     sort = request.GET.get('sort') or XPOS_SORT_KEY
     if sort == PATHOGENICTY_SORT_KEY and request.user.is_staff:
         sort = PATHOGENICTY_HGMD_SORT_KEY
@@ -53,11 +54,15 @@ def query_variants_handler(request, search_hash):
     family = Family.objects.get(guid=search.get('familyGuid'))
     individuals = family.individual_set.all()
 
-    if search_model.results:
-        variants = json.loads(search_model.results)
+    search_results = json.loads(search_model.results or '[]')
+    offset = (page - 1) * per_page
+    if len(search_results) >= page * per_page or (search_model.total_results and len(search_results) == search_model.total_results):
+        variants = search_results[offset:(page * per_page)]
     else:
-        variants, total_results, es_index = get_es_variants(search, individuals, sort=sort)
-        search_model.results = json.dumps(variants)
+        variants, total_results, es_index = get_es_variants(search, individuals, sort=sort, offset=offset, num_results=per_page)
+        # Only save contiguous pages of results
+        if len(search_results) == (page - 1) * per_page:
+            search_model.results = json.dumps(search_results + variants)
         search_model.total_results = total_results
         search_model.es_index = es_index
         search_model.save()
@@ -66,6 +71,7 @@ def query_variants_handler(request, search_hash):
     # TODO add locus lists on the client side (?)
     _add_locus_lists(project, variants, genes)
     searched_variants, saved_variants_by_guid = _get_saved_variants(variants, project, family)
+    search['totalResults'] = search_model.total_results
 
     return create_json_response({
         'searchedVariants': searched_variants,
@@ -133,18 +139,7 @@ def _get_saved_variants(variants, project, family):
         variant_key = '{}-{}-{}'.format(variant['xpos'], variant['ref'], variant['alt'])
         if saved_variants_by_id.get(variant_key):
             saved_variant = saved_variants_by_id[variant_key]
-            variant.update({
-                'variantGuid': saved_variant.guid if saved_variant else None,
-                'tags': [
-                    get_json_for_variant_tag(tag) for tag in saved_variant.varianttag_set.all()
-                ] if saved_variant else [],
-                'functionalData': [
-                    get_json_for_variant_functional_data(tag) for tag in saved_variant.variantfunctionaldata_set.all()
-                ] if saved_variant else [],
-                'notes': [
-                    get_json_for_variant_note(tag) for tag in saved_variant.variantnote_set.all()
-                ] if saved_variant else [],
-            })
+            add_additional_json_fields_for_saved_variant(variant, saved_variant, add_tags=True)
             saved_variants_by_guid[saved_variant.guid] = variant
             searched_variants.append({'variantGuid': saved_variant.guid})
         else:

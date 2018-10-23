@@ -12,7 +12,7 @@ import { QueryParamsEditor } from 'shared/components/QueryParamEditor'
 import VariantSearchForm from './components/VariantSearchForm'
 import VariantSearchResults from './components/VariantSearchResults'
 import { loadSearchedVariants } from './reducers'
-import { getSearchesByHash } from './selectors'
+import { getCurrentSearchParams } from './selectors'
 
 
 const BaseVariantSearch = ({ queryParams, updateQueryParams, searchParams, project, loading, load, search }) => {
@@ -56,7 +56,7 @@ BaseVariantSearch.propTypes = {
 
 const mapStateToProps = (state, ownProps) => ({
   project: getProjectsByGuid(state)[ownProps.queryParams.projectGuid],
-  searchParams: getSearchesByHash(state)[ownProps.queryParams.search],
+  searchParams: getCurrentSearchParams(state, ownProps),
   loading: getProjectDetailsIsLoading(state),
 })
 

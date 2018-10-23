@@ -9,9 +9,15 @@ export const getSearchedVariantsErrorMessage = state => state.searchedVariantsLo
 export const getSearchesByHash = state => state.searchesByHash
 export const getVariantSearchDisplay = state => state.variantSearchDisplay
 
+export const getCurrentSearchParams = createSelector(
+  getSearchesByHash,
+  (state, props) => props.queryParams.search,
+  (searchesByHash, searchHash) => searchesByHash[searchHash],
+)
+
 export const getTotalVariantsCount = createSelector(
-  getSearchedVariants,
-  variants => variants.length,
+  getCurrentSearchParams,
+  searchParams => (searchParams || {}).totalResults,
 )
 
 export const getSearchedVariantsWithSavedVariants = createSelector(

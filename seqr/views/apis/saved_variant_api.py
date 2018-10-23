@@ -190,62 +190,21 @@ def _variant_details(variant_json, user):
     lifted_over_chrom = coords[0].lstrip('chr') if len(coords) > 0 else ''
     lifted_over_pos = coords[1] if len(coords) > 1 else ''
     return {
-        'annotation': {
-            'cadd_phred': annotation.get('cadd_phred'),
-            'dann_score': annotation.get('dann_score'),
-            'eigen_phred': annotation.get('eigen_phred'),
+        'predictions': {
+            'cadd': annotation.get('cadd_phred'),
+            'dann': annotation.get('dann_score'),
+            'eigen': annotation.get('eigen_phred'),
             'fathmm': annotation.get('fathmm'),
-            'freqs': {
-                'AF': annotation.get('freqs', {}).get('AF'),
-                'topmedAF': annotation.get('freqs', {}).get('topmed_AF'),
-                'g1k': annotation.get('freqs', {}).get('1kg_wgs_popmax_AF', annotation.get('freqs', {}).get(
-                    '1kg_wgs_AF', 0)) if is_es_variant else annotation.get('freqs', {}).get(
-                    '1kg_wgs_phase3_popmax', annotation.get('freqs', {}).get('1kg_wgs_phase3', 0)),
-                'exac': annotation.get('freqs', {}).get(
-                    'exac_v3_popmax_AF', annotation.get('freqs', {}).get(
-                        'exac_v3_AF', 0)) if is_es_variant else annotation.get('freqs', {}).get(
-                    'exac_v3_popmax', annotation.get('freqs', {}).get('exac_v3', 0)),
-                'gnomad_exomes': annotation.get('freqs', {}).get(
-                    'gnomad_exomes_popmax_AF', annotation.get('freqs', {}).get(
-                        'gnomad_exomes_AF', 0)) if is_es_variant else annotation.get(
-                    'freqs', {}).get('gnomad-exomes2_popmax', annotation.get('freqs', {}).get('gnomad-exomes2', None)),
-                'gnomad_genomes': annotation.get('freqs', {}).get('gnomad_genomes_popmax_AF', annotation.get(
-                    'freqs', {}).get('gnomad_genomes_AF', 0)) if is_es_variant else annotation.get('freqs', {}).get(
-                    'gnomad-gnomad-genomes2_popmax', annotation.get('freqs', {}).get('gnomad-genomes2', None)),
-            },
             'gerp_rs': annotation.get('GERP_RS'),
-            'phastcons100vert': annotation.get('phastCons100way_vertebrate'),
-
-            'mpc_score': annotation.get('mpc_score'),
+            'phastcons_100_vert': annotation.get('phastCons100way_vertebrate'),
+            'mpc': annotation.get('mpc_score'),
             'metasvm': annotation.get('metasvm'),
             'mut_taster': annotation.get('muttaster'),
             'polyphen': annotation.get('polyphen'),
-            'popCounts': {
-                'AC': annotation.get('pop_counts', {}).get('AC'),
-                'AN': annotation.get('pop_counts', {}).get('AN'),
-                'g1kAC': annotation.get('pop_counts', {}).get('g1kAC'),
-                'g1kAN': annotation.get('pop_counts', {}).get('g1kAN'),
-                'topmedAC': annotation.get('pop_counts', {}).get('topmed_AC'),
-                'topmedAN': annotation.get('pop_counts', {}).get('topmed_AN'),
-                'gnomadExomesAC': annotation.get('pop_counts', {}).get('gnomad_exomes_AC'),
-                'gnomadExomesAN': annotation.get('pop_counts', {}).get('gnomad_exomes_AN'),
-                'gnomadGenomesAC': annotation.get('pop_counts', {}).get('gnomad_genomes_AC'),
-                'gnomadGenomesAN': annotation.get('pop_counts', {}).get('gnomad_genomes_AN'),
-                'exacAC': annotation.get('pop_counts', {}).get('exac_v3_AC'),
-                'exac_hom': annotation.get('pop_counts', {}).get('exac_v3_Hom'),
-                'exac_hemi': annotation.get('pop_counts', {}).get('exac_v3_Hemi'),
-                'exacAN': annotation.get('pop_counts', {}).get('exac_v3_AN'),
-                'gnomad_exomes_hom': annotation.get('pop_counts', {}).get('gnomad_exomes_Hom'),
-                'gnomad_exomes_hemi': annotation.get('pop_counts', {}).get('gnomad_exomes_Hemi'),
-                'gnomad_genomes_hom': annotation.get('pop_counts', {}).get('gnomad_genomes_Hom'),
-                'gnomad_genomes_hemi': annotation.get('pop_counts', {}).get('gnomad_genomes_Hemi'),
-            },
-            'primate_ai_score': annotation.get('primate_ai_score'),
-            'revel_score': annotation.get('revel_score'),
+            'primate_ai': annotation.get('primate_ai_score'),
+            'revel': annotation.get('revel_score'),
             'rsid': annotation.get('rsid'),
             'sift': annotation.get('sift'),
-            'vepConsequence': annotation.get('vep_consequence'),
-            'vepGroup': annotation.get('vep_group'),
         },
         'mainTranscript': {
             'geneId': main_transcript.get('gene') or main_transcript.get('gene_id'),
@@ -296,8 +255,54 @@ def _variant_details(variant_json, user):
         'liftedOverChrom': lifted_over_chrom,
         'liftedOverPos': lifted_over_pos,
         'locusLists': [],
-        'origAltAlleles': extras.get('orig_alt_alleles', []),
-        'transcripts': None,
+        'populations': {
+            'callset': {
+                'af': annotation.get('freqs', {}).get('AF'),
+                'ac': annotation.get('pop_counts', {}).get('AC'),
+                'an': annotation.get('pop_counts', {}).get('AN'),
+            },
+            'topmed': {
+                'af': annotation.get('freqs', {}).get('topmed_AF'),
+                'ac': annotation.get('pop_counts', {}).get('topmed_AC'),
+                'an': annotation.get('pop_counts', {}).get('topmed_AN'),
+            },
+            'g1k': {
+                'af': annotation.get('freqs', {}).get('1kg_wgs_popmax_AF', annotation.get('freqs', {}).get(
+                    '1kg_wgs_AF', 0)) if is_es_variant else annotation.get('freqs', {}).get(
+                    '1kg_wgs_phase3_popmax', annotation.get('freqs', {}).get('1kg_wgs_phase3', 0)),
+                'ac': annotation.get('pop_counts', {}).get('g1kAC'),
+                'an': annotation.get('pop_counts', {}).get('g1kAN'),
+            },
+            'exac': {
+                'af': annotation.get('freqs', {}).get(
+                    'exac_v3_popmax_AF', annotation.get('freqs', {}).get(
+                        'exac_v3_AF', 0)) if is_es_variant else annotation.get('freqs', {}).get(
+                    'exac_v3_popmax', annotation.get('freqs', {}).get('exac_v3', 0)),
+                'ac': annotation.get('pop_counts', {}).get('exac_v3_AC'),
+                'an':  annotation.get('pop_counts', {}).get('exac_v3_AN'),
+                'hom': annotation.get('pop_counts', {}).get('exac_v3_Hom'),
+                'hemi': annotation.get('pop_counts', {}).get('exac_v3_Hemi'),
+            },
+            'gnomad_exomes': {
+                'af': annotation.get('freqs', {}).get(
+                    'gnomad_exomes_popmax_AF', annotation.get('freqs', {}).get(
+                        'gnomad_exomes_AF', 0)) if is_es_variant else annotation.get(
+                    'freqs', {}).get('gnomad-exomes2_popmax', annotation.get('freqs', {}).get('gnomad-exomes2', None)),
+                'ac': annotation.get('pop_counts', {}).get('gnomad_exomes_AC'),
+                'an': annotation.get('pop_counts', {}).get('gnomad_exomes_AN'),
+                'hom': annotation.get('pop_counts', {}).get('gnomad_exomes_Hom'),
+                'hemi': annotation.get('pop_counts', {}).get('gnomad_exomes_Hemi'),
+            },
+            'gnomad_genomes': {
+                'af': annotation.get('freqs', {}).get('gnomad_genomes_popmax_AF', annotation.get(
+                    'freqs', {}).get('gnomad_genomes_AF', 0)) if is_es_variant else annotation.get('freqs', {}).get(
+                    'gnomad-gnomad-genomes2_popmax', annotation.get('freqs', {}).get('gnomad-genomes2', None)),
+                'ac': annotation.get('pop_counts', {}).get('gnomad_genomes_AC'),
+                'an': annotation.get('pop_counts', {}).get('gnomad_genomes_AN'),
+                'hom': annotation.get('pop_counts', {}).get('gnomad_genomes_Hom'),
+                'hemi': annotation.get('pop_counts', {}).get('gnomad_genomes_Hemi'),
+            },
+        },
     }
 
 
