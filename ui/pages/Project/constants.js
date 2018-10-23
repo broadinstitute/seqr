@@ -437,7 +437,7 @@ export const VARIANT_SORT_OPTONS = [
     value: SORT_BY_IN_OMIM,
     text: 'In OMIM',
     comparator: (a, b, genesById) =>
-      b.geneIds.some(geneId => genesById[geneId].omimPhenotypes.length > 0) - a.geneIds.some(geneId => genesById[geneId].omimPhenotypes.length > 0),
+      (genesById[b.mainTranscript.geneId] || { omimPhenotypes: [] }).omimPhenotypes.length - (genesById[a.mainTranscript.geneId] || { omimPhenotypes: [] }).omimPhenotypes.length,
   },
 ]
 
