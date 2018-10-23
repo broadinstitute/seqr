@@ -130,8 +130,9 @@ def _get_saved_variants(variants, project, family):
     saved_variants_by_guid = {}
     searched_variants = []
     for variant in variants:
-        if saved_variants_by_id.get(variant['variantId']):
-            saved_variant = saved_variants_by_id[variant['variantId']]
+        variant_key = '{}-{}-{}'.format(variant['xpos'], variant['ref'], variant['alt'])
+        if saved_variants_by_id.get(variant_key):
+            saved_variant = saved_variants_by_id[variant_key]
             variant.update({
                 'variantGuid': saved_variant.guid if saved_variant else None,
                 'tags': [

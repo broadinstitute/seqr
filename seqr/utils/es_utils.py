@@ -402,7 +402,8 @@ SORT_FIELDS = {
 def _get_sort(sort_key, *args):
     sorts = SORT_FIELDS.get(sort_key, [])
 
-    if len(sorts) and sorts[0].get('_script', {}).get('script', {}).get('params'):
+    # Add parameters to scripts
+    if len(sorts) and isinstance(sorts[0], dict) and sorts[0].get('_script', {}).get('script', {}).get('params'):
         for key, val_func in sorts[0]['_script']['script']['params'].items():
             sorts[0]['_script']['script']['params'][key] = val_func(*args)
 
