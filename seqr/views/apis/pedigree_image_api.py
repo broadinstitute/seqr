@@ -123,7 +123,7 @@ def update_pedigree_image(family, project_guid=None):
         fam_file.flush()
 
         fam_file_path = fam_file.name
-        haplopainter_command = "/usr/bin/perl " + os.path.join(BASE_DIR, "xbrowse_server/base/management/commands/HaploPainter1.043.pl")
+        haplopainter_command = "perl " + os.path.join(BASE_DIR, "xbrowse_server/base/management/commands/HaploPainter1.043.pl")
         haplopainter_command += " -b -outformat png -pedfile %(fam_file_path)s -family %(family_id)s -outfile %(png_file_path)s" % locals()
         os.system(haplopainter_command)
 
