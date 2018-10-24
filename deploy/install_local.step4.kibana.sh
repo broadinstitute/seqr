@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 
 VERSION=6.4.0
+if [ $PLATFORM = "macos" ]; then
+    KIBANA_PLATFORM="darwin"
+else
+    KIBANA_PLATFORM="linux"
+fi
+
 
 set +x
 set +x
@@ -9,11 +15,11 @@ echo "==== Install and start kibana ====="
 echo
 set -x
 
-wget -nv https://artifacts.elastic.co/downloads/kibana/kibana-${VERSION}-linux-x86_64.tar.gz
-tar xzf kibana-${VERSION}-linux-x86_64.tar.gz
-rm kibana-${VERSION}-linux-x86_64.tar.gz
+wget -nv https://artifacts.elastic.co/downloads/kibana/kibana-${VERSION}-${KIBANA_PLATFORM}-x86_64.tar.gz
+tar xzf kibana-${VERSION}-${KIBANA_PLATFORM}-x86_64.tar.gz
+rm kibana-${VERSION}-${KIBANA_PLATFORM}-x86_64.tar.gz
 
-cd kibana-${VERSION}-linux-x86_64
+cd kibana-${VERSION}-${KIBANA_PLATFORM}-x86_64
 
 echo '
 cd '$(pwd)'
