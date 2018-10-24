@@ -67,17 +67,6 @@ cd ${SEQR_DIR}/
 mkdir seqr_settings
 cp deploy/docker/seqr/config/*.py seqr_settings/
 
-# install venv
-#curl -Lo virtualenv-16.0.0.tar.gz https://pypi.python.org/packages/source/v/virtualenv/virtualenv-16.0.0.tar.gz
-#tar xzf virtualenv-16.0.0.tar.gz
-#python virtualenv-16.0.0/virtualenv.py --python=python2.7 venv
-#rm -rf virtualenv-16.0.0*
-
-# activate venv
-#echo 'source '${SEQR_DIR}'/venv/bin/activate' > activate_virtualenv.sh
-#chmod 666 activate_virtualenv.sh  # this script must be sourced rather than executed
-#source activate_virtualenv.sh
-
 # install python dependencies
 sudo $(which pip) install --upgrade --ignore-installed -r requirements.txt
 
