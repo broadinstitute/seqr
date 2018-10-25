@@ -1,8 +1,9 @@
 import { createSelector } from 'reselect'
 
-import { getSavedVariantsByGuid } from 'redux/selectors'
+import { getSavedVariantsByGuid, getProjectsByGuid, getFamiliesByGuid, getLocusListsByGuid } from 'redux/selectors'
 import { getVariantsExportData } from 'shared/utils/constants'
 
+export const getSearchedProjectIsLoading = state => state.searchedProjectLoading.isLoading
 export const getSearchedVariants = state => state.searchedVariants
 export const getSearchedVariantsIsLoading = state => state.searchedVariantsLoading.isLoading
 export const getSearchedVariantsErrorMessage = state => state.searchedVariantsLoading.errorMessage
@@ -38,4 +39,15 @@ export const getSearchedVariantExportConfig = createSelector(
       ...getVariantsExportData(variants),
     },
   }],
+)
+
+export const getSearchedProjectsLocusLists = createSelector(
+  (state, props) => props.familyGuid,
+  getProjectsByGuid,
+  getFamiliesByGuid,
+  getLocusListsByGuid,
+  (familyGuid, projectsByGuid, familiesByGuid, locusListsByGuid) => (
+    projectsByGuid[familiesByGuid[familyGuid]] ?
+      projectsByGuid[familiesByGuid[familyGuid]].locusListGuids.map(locusListGuid => locusListsByGuid[locusListGuid])
+      : []),
 )

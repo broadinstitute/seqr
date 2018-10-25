@@ -109,7 +109,7 @@ class ElasticsearchDatastore(datastore.Datastore):
 
         self._annotator = annotator
 
-        self._es_client = elasticsearch.Elasticsearch(host=settings.ELASTICSEARCH_SERVICE_HOSTNAME)
+        self._es_client = elasticsearch.Elasticsearch(host=settings.ELASTICSEARCH_SERVICE_HOSTNAME, retry_on_timeout=True)
 
         self._redis_client = None
         if settings.REDIS_SERVICE_HOSTNAME:
@@ -477,7 +477,7 @@ class ElasticsearchDatastore(datastore.Datastore):
 
         #for i, hit in enumerate(response.hits):
         variant_results = []
-        for i, hit in enumerate(s.scan()):  # preserve_order=True
+        for i, hit in enumerate(s):  # preserve_order=True
             #logger.info("HIT %s: %s %s %s" % (i, hit["variantId"], hit["geneIds"], pformat(hit.__dict__)))
             #print("HIT %s: %s" % (i, pformat(hit.to_dict())))
             filters = ",".join(hit["filters"] or []) if "filters" in hit else ""

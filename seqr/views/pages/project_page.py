@@ -46,27 +46,32 @@ def project_page_data(request, project_guid):
     Args:
         project_guid (string): GUID of the Project to retrieve data for.
     """
-    project = get_project_and_check_permissions(project_guid, request.user)
 
-    families_by_guid = _retrieve_families(project.guid, request.user)
-    individuals_by_guid = _retrieve_individuals(project.guid, request.user)
+    return create_json_response(get_project_details(project_guid, request.user))
+
+
+def get_project_details(project_guid, user):
+    project = get_project_and_check_permissions(project_guid, user)
+
+    families_by_guid = _retrieve_families(project.guid, user)
+    individuals_by_guid = _retrieve_individuals(project.guid, user)
     for individual_guid, individual in individuals_by_guid.items():
         families_by_guid[individual['familyGuid']]['individualGuids'].add(individual_guid)
     samples_by_guid = _retrieve_samples(project.guid, individuals_by_guid)
     analysis_groups_by_guid = _retrieve_analysis_groups(project)
 
-    project_json = _get_json_for_project(project, request.user)
+    project_json = _get_json_for_project(project, user)
     project_json['collaborators'] = _get_json_for_collaborator_list(project)
     project_json.update(_get_json_for_variant_tag_types(project))
-    locus_lists = get_sorted_project_locus_lists(project, request.user)
+    locus_lists = get_sorted_project_locus_lists(project, user)
     project_json['locusListGuids'] = [locus_list['locusListGuid'] for locus_list in locus_lists]
 
     # gene search will be deprecated once the new database is online.
     project_json['hasGeneSearch'] = _has_gene_search(project)
     project_json['detailsLoaded'] = True
 
-    json_response = {
-        'project': project_json,
+    return {
+        'projectsByGuid': {project_guid: project_json},
         'familiesByGuid': families_by_guid,
         'individualsByGuid': individuals_by_guid,
         'samplesByGuid': samples_by_guid,
@@ -74,8 +79,6 @@ def project_page_data(request, project_guid):
         'analysisGroupsByGuid': analysis_groups_by_guid,
         'matchmakerSubmissions': {project.guid: _project_matchmaker_submissions(project)},
     }
-
-    return create_json_response(json_response)
 
 
 def _retrieve_families(project_guid, user):

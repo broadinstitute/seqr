@@ -20,7 +20,7 @@ VARIANT_DOC_TYPE = 'variant'
 
 
 def get_es_client():
-    return elasticsearch.Elasticsearch(host=settings.ELASTICSEARCH_SERVICE_HOSTNAME)
+    return elasticsearch.Elasticsearch(host=settings.ELASTICSEARCH_SERVICE_HOSTNAME, retry_on_timeout=True)
 
 
 def get_es_variants(search, individuals, sort=None, offset=0, num_results=None):

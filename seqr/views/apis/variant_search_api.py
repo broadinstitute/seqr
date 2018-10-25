@@ -10,7 +10,7 @@ from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.saved_variant_api import _saved_variant_genes, _add_locus_lists
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import add_additional_json_fields_for_saved_variant
-from seqr.views.utils.permissions_utils import get_project_and_check_permissions
+from seqr.views.utils.permissions_utils import check_permissions
 from seqr.model_utils import find_matching_xbrowse_model
 
 from xbrowse_server.mall import get_datastore
@@ -50,8 +50,9 @@ def query_variants_handler(request, search_hash):
         search_model = VariantSearch.objects.create(search_hash=search_hash, sort=sort, search=search_json)
 
     # TODO this is only mendelian variant search, should be others and not require project/ family
-    project = get_project_and_check_permissions(search.get('projectGuid'), request.user)
     family = Family.objects.get(guid=search.get('familyGuid'))
+    project = family.project
+    check_permissions(project, request.user)
     individuals = family.individual_set.all()
 
     search_results = json.loads(search_model.results or '[]')

@@ -46,6 +46,8 @@ from seqr.views.pages.project_page import \
     project_page_data, \
     export_project_individuals_handler
 
+from seqr.views.pages.variant_search_page import variant_search_page_data
+
 from seqr.views.apis.gene_api import \
     gene_info, \
     genes_info, \
@@ -130,6 +132,7 @@ api_endpoints = {
     'project/(?P<project_guid>[^/]+)/analysis_groups/(?P<analysis_group_guid>[^/]+)/delete': delete_analysis_group_handler,
     'project/(?P<project_guid>[^/]+)/update_saved_variant_json': update_saved_variant_json,
 
+    'search/project_details': variant_search_page_data,
     'search/(?P<search_hash>[^/]+)': query_variants_handler,
     'search/transcripts': variant_transcripts,
 

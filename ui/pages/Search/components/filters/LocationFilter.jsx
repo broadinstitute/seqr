@@ -4,28 +4,28 @@ import { connect } from 'react-redux'
 import { formValueSelector } from 'redux-form'
 
 import { loadLocusListItems } from 'redux/rootReducer'
-import { getProjectsByGuid, getLocusListsByGuid, getLocusListIsLoading } from 'redux/selectors'
+import { getLocusListIsLoading } from 'redux/selectors'
 import { Dropdown, BaseSemanticInput } from 'shared/components/form/Inputs'
 import { parseLocusListItems } from 'shared/components/LocusListLoader'
 import DataLoader from 'shared/components/DataLoader'
+import { getSearchedProjectsLocusLists } from '../../selectors'
 
 
-const BaseLocusListSelector = ({ value, projectGuid, projectsByGuid, locusListsByGuid, loadLocusList }) =>
+const BaseLocusListSelector = ({ value, projectLocusLists, loadLocusList }) =>
   <Dropdown
     inline
     selection
     label="Gene List"
     defaultValue={value.locusListGuid}
     onChange={loadLocusList}
-    options={projectsByGuid[projectGuid].locusListGuids.map(locusListGuid => (
-      { text: locusListsByGuid[locusListGuid].name, value: locusListsByGuid[locusListGuid].locusListGuid }
-    ))}
+    options={projectLocusLists.map(locusList => ({ text: locusList.name, value: locusList.locusListGuid }))
+    }
   />
 
 const mapStateToProps = (state, ownProps) => ({
-  projectGuid: formValueSelector(ownProps.meta.form)(state, 'projectGuid'),
-  projectsByGuid: getProjectsByGuid(state),
-  locusListsByGuid: getLocusListsByGuid(state),
+  projectLocusLists: getSearchedProjectsLocusLists(
+    state, { familyGuid: formValueSelector(ownProps.meta.form)(state, 'familyGuid') },
+  ),
 })
 
 const mapDispatchToProps = (dispatch, ownProps) => {
@@ -42,9 +42,7 @@ const mapDispatchToProps = (dispatch, ownProps) => {
 
 BaseLocusListSelector.propTypes = {
   value: PropTypes.object,
-  projectGuid: PropTypes.string,
-  projectsByGuid: PropTypes.object,
-  locusListsByGuid: PropTypes.object,
+  projectLocusLists: PropTypes.array,
   loadLocusList: PropTypes.func,
 }
 

@@ -19,6 +19,9 @@ const NUM_ALT_SELECT_PROPS = {
 
 const CustomInheritanceFilter = ({ value, onChange, familyGuid, familiesByGuid, individualsByGuid }) => {
   const family = familiesByGuid[familyGuid]
+  if (!family) {
+    return null
+  }
   const individuals = family.individualGuids.map(individualGuid => individualsByGuid[individualGuid])
 
   const parentGenotypes = {}
@@ -40,7 +43,7 @@ const CustomInheritanceFilter = ({ value, onChange, familyGuid, familiesByGuid, 
     },
   }), {})
 
-  individualValuesByStatus[UNAFFECTED] = Object.entries(individualValuesByStatus[UNAFFECTED]).reduce(
+  individualValuesByStatus[UNAFFECTED] = Object.entries(individualValuesByStatus[UNAFFECTED] || {}).reduce(
     (acc, [individualId, val]) => (
       { ...acc, [individualId]: val || parentGenotypes[individualId] || value.otherUnaffected }
     ), {},

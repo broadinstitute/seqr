@@ -1,18 +1,36 @@
 import { combineReducers } from 'redux'
 
 import { loadingReducer, createSingleObjectReducer, createSingleValueReducer, createObjectsByIdReducer } from 'redux/utils/reducerFactories'
-import { RECEIVE_DATA } from 'redux/rootReducer'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 import { SORT_BY_XPOS } from 'shared/utils/constants'
 
 // action creators and reducers in one file as suggested by https://github.com/erikras/ducks-modular-redux
 
+const RECEIVE_DATA = 'RECEIVE_DATA'
+const REQUEST_SEARCHED_PROJECTS = 'REQUEST_SEARCHED_PROJECTS'
 const REQUEST_SEARCHED_VARIANTS = 'REQUEST_SEARCHED_VARIANTS'
 const RECEIVE_SEARCHED_VARIANTS = 'RECEIVE_SEARCHED_VARIANTS'
 const UPDATE_SEARCHED_VARIANT_DISPLAY = 'UPDATE_SEARCHED_VARIANT_DISPLAY'
 const UPDATE_HASHED_SEARCHES = 'UPDATE_HASHED_SEARCHES'
 
 // actions
+
+export const loadSearchedProjectDetails = (query) => {
+  return (dispatch, getState) => {
+    // TODO project, analysisGroup
+    if (query.familyGuid && !getState().familiesByGuid[query.familyGuid]) {
+      dispatch({ type: REQUEST_SEARCHED_PROJECTS })
+      new HttpRequestHelper('/api/search/project_details',
+        (responseJson) => {
+          dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+        },
+        (e) => {
+          dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
+        },
+      ).get(query)
+    }
+  }
+}
 
 export const loadSearchedVariants = (searchHash, search) => {
   return (dispatch, getState) => {
@@ -47,6 +65,7 @@ export const updateVariantSearchDisplay = (updates, searchHash) => {
 // reducers
 
 export const reducers = {
+  searchedProjectLoading: loadingReducer(REQUEST_SEARCHED_PROJECTS, RECEIVE_DATA),
   searchedVariants: createSingleValueReducer(RECEIVE_SEARCHED_VARIANTS, []),
   searchedVariantsLoading: loadingReducer(REQUEST_SEARCHED_VARIANTS, RECEIVE_SEARCHED_VARIANTS),
   searchesByHash: createObjectsByIdReducer(UPDATE_HASHED_SEARCHES),

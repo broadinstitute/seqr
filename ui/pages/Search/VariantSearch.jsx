@@ -4,18 +4,17 @@ import { connect } from 'react-redux'
 import { Grid } from 'semantic-ui-react'
 import hash from 'object-hash'
 
-import { loadProject } from 'redux/rootReducer'
-import { getProjectDetailsIsLoading, getProjectsByGuid } from 'redux/selectors'
+import { getFamiliesByGuid } from 'redux/selectors'
 import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
 import DataLoader from 'shared/components/DataLoader'
 import { QueryParamsEditor } from 'shared/components/QueryParamEditor'
 import VariantSearchForm from './components/VariantSearchForm'
 import VariantSearchResults from './components/VariantSearchResults'
-import { loadSearchedVariants } from './reducers'
-import { getCurrentSearchParams } from './selectors'
+import { loadSearchedProjectDetails, loadSearchedVariants } from './reducers'
+import { getSearchedProjectIsLoading, getCurrentSearchParams } from './selectors'
 
 
-const BaseVariantSearch = ({ queryParams, updateQueryParams, searchParams, project, loading, load, search }) => {
+const BaseVariantSearch = ({ queryParams, updateQueryParams, searchParams, family, loading, load, search }) => {
 
   const onSubmit = (updatedSearchParams) => {
     const searchHash = hash.MD5(updatedSearchParams)
@@ -24,7 +23,7 @@ const BaseVariantSearch = ({ queryParams, updateQueryParams, searchParams, proje
   }
 
   return (
-    <DataLoader contentId={(searchParams || queryParams).projectGuid} content={project} loading={loading} load={load}>
+    <DataLoader contentId={queryParams} content={queryParams.familyGuid ? family : true} loading={loading} load={load}>
       <Grid>
         <Grid.Row>
           <Grid.Column width={16}>
@@ -48,20 +47,20 @@ BaseVariantSearch.propTypes = {
   queryParams: PropTypes.object,
   updateQueryParams: PropTypes.func,
   searchParams: PropTypes.object,
-  project: PropTypes.object,
+  family: PropTypes.object,
   loading: PropTypes.bool,
   load: PropTypes.func,
   search: PropTypes.func,
 }
 
 const mapStateToProps = (state, ownProps) => ({
-  project: getProjectsByGuid(state)[ownProps.queryParams.projectGuid],
+  family: getFamiliesByGuid(state)[ownProps.queryParams.familyGuid],
   searchParams: getCurrentSearchParams(state, ownProps),
-  loading: getProjectDetailsIsLoading(state),
+  loading: getSearchedProjectIsLoading(state),
 })
 
 const mapDispatchToProps = {
-  load: loadProject,
+  load: loadSearchedProjectDetails,
   search: loadSearchedVariants,
 }
 

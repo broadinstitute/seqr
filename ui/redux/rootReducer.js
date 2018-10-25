@@ -68,7 +68,7 @@ export const loadProject = (projectGuid) => {
       }
       new HttpRequestHelper(`/api/project/${projectGuid}/details`,
         (responseJson) => {
-          dispatch({ type: RECEIVE_DATA, updatesById: { projectsByGuid: { [projectGuid]: responseJson.project }, ...responseJson } })
+          dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
         },
         (e) => {
           dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
