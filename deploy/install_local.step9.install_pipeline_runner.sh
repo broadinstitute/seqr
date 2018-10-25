@@ -60,7 +60,7 @@ cp ${SEQR_DIR}/deploy/docker/pipeline-runner/config/core-site.xml ${SPARK_HOME}/
 
 mkdir -p ${SEQR_DIR}/vep/loftee_data_grch37 ${SEQR_DIR}/vep/loftee_data_grch38 ${SEQR_DIR}/vep/homo_sapiens
 sudo ln -s ${SEQR_DIR}/vep /vep
-sudo -R chmod 777 /vep
+sudo chmod -R 777 /vep
 
 if [ ! -f /usr/local/bin/perl ]
 then
