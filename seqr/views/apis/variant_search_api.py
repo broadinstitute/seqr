@@ -55,7 +55,6 @@ def query_variants_handler(request, search_hash):
     individuals = family.individual_set.all()
 
     search_results = json.loads(search_model.results or '[]')
-    search_results = []
     offset = (page - 1) * per_page
     if len(search_results) >= page * per_page or (search_model.total_results and len(search_results) == search_model.total_results):
         variants = search_results[offset:(page * per_page)]
