@@ -369,33 +369,39 @@ export const INTERNAL_FAMILY_EXPORT_DATA = [
   { header: 'Internal Case Review Notes', field: 'internalCaseReviewNotes', format: stripMarkdown },
 ]
 
-export const INDIVIDUAL_EXPORT_DATA = [
+export const INDIVIDUAL_CORE_EXPORT_DATA = [
   { header: 'Family ID', field: 'familyId' },
   { header: 'Individual ID', field: 'individualId' },
-  { header: 'Paternal ID', field: 'paternalId' },
-  { header: 'Maternal ID', field: 'maternalId' },
-  { header: 'Sex', field: 'sex', format: sex => SEX_LOOKUP[sex] },
-  { header: 'Affected Status', field: 'affected', format: affected => AFFECTED_LOOKUP[affected] },
-  { header: 'Notes', field: 'notes', format: stripMarkdown  },
+  { header: 'Paternal ID', field: 'paternalId', description: 'Individual ID of the father' },
+  { header: 'Maternal ID', field: 'maternalId', description: 'Individual ID of the mother' },
+  { header: 'Sex', field: 'sex', format: sex => SEX_LOOKUP[sex], description: 'Male or Female, leave blank if unknown' },
+  { header: 'Affected Status', field: 'affected', format: affected => AFFECTED_LOOKUP[affected], description: 'Affected or Unaffected, leave blank if unknown' },
+  { header: 'Notes', field: 'notes', format: stripMarkdown, description: 'free-text notes related to this individual'  },
+]
+
+export const INDIVIDUAL_EXPORT_DATA = INDIVIDUAL_CORE_EXPORT_DATA.concat([
   {
     header: 'HPO Terms (present)',
     field: 'phenotipsData',
     format: phenotipsData => (
       (phenotipsData || {}).features ?
-        phenotipsData.features.filter(feature => feature.observed === 'yes').map(feature => feature.label).join(', ') :
+        phenotipsData.features.filter(feature => feature.observed === 'yes').map(feature => feature.label).join('; ') :
         ''
     ),
+    description: 'comma-separated list of HPO Terms for present phenotypes in this individual',
   },
   {
     header: 'HPO Terms (absent)',
     field: 'phenotipsData',
     format: phenotipsData => (
       (phenotipsData || {}).features ?
-        phenotipsData.features.filter(feature => feature.observed === 'no').map(feature => feature.label).join(', ') :
+        phenotipsData.features.filter(feature => feature.observed === 'no').map(feature => feature.label).join('; ') :
         ''
     ),
+    description: 'comma-separated list of HPO Terms for phenotypes not present in this individual',
   },
-]
+])
+
 
 export const INTERNAL_INDIVIDUAL_EXPORT_DATA = [
   { header: 'Case Review Status', field: 'caseReviewStatus', format: status => CASE_REVIEW_STATUS_OPT_LOOKUP[status].name },

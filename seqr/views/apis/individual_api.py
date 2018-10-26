@@ -364,16 +364,6 @@ def add_or_update_individuals_and_families(project, individual_records, user=Non
 
         update_individual_from_json(individual, record, allow_unknown_keys=True, user=user)
 
-        if record.get(JsonConstants.HPO_TERMS_PRESENT_COLUMN) or record.get(JsonConstants.FINAL_DIAGNOSIS_OMIM_COLUMN):
-            # update phenotips hpo ids
-            logger.info("Setting PhenoTips HPO Terms to: %s" % (record.get(JsonConstants.HPO_TERMS_PRESENT_COLUMN),))
-            set_patient_hpo_terms(
-                project,
-                individual,
-                hpo_terms_present=record.get(JsonConstants.HPO_TERMS_PRESENT_COLUMN, []),
-                hpo_terms_absent=record.get(JsonConstants.HPO_TERMS_ABSENT_COLUMN, []),
-                final_diagnosis_mim_ids=record.get(JsonConstants.FINAL_DIAGNOSIS_OMIM_COLUMN, []))
-
         updated_individuals.append(individual)
         families[family.family_id] = family
 
@@ -383,6 +373,28 @@ def add_or_update_individuals_and_families(project, individual_records, user=Non
     update_pedigree_images(updated_families, project_guid=project.guid)
 
     return updated_families, updated_individuals
+
+
+def update_individual_hpo():
+    if record.get(JsonConstants.HPO_TERMS_PRESENT_COLUMN) or record.get(JsonConstants.FINAL_DIAGNOSIS_OMIM_COLUMN):
+        # update phenotips hpo ids
+        logger.info("Setting PhenoTips HPO Terms to: %s" % (record.get(JsonConstants.HPO_TERMS_PRESENT_COLUMN),))
+        set_patient_hpo_terms(
+            project,
+            individual,
+            hpo_terms_present=record.get(JsonConstants.HPO_TERMS_PRESENT_COLUMN, []),
+            hpo_terms_absent=record.get(JsonConstants.HPO_TERMS_ABSENT_COLUMN, []),
+            final_diagnosis_mim_ids=record.get(JsonConstants.FINAL_DIAGNOSIS_OMIM_COLUMN, []))
+
+        # check HPO ids
+        for column_key, column_label in [
+            (JsonConstants.HPO_TERMS_PRESENT_COLUMN, 'HPO Terms Present'),
+            (JsonConstants.HPO_TERMS_ABSENT_COLUMN, 'HPO Terms Absent')]:
+            if r.get(column_key):
+                for hpo_id in r[column_key]:
+                    if not HumanPhenotypeOntology.objects.filter(hpo_id=hpo_id):
+                        warnings.append(
+                            "Invalid HPO term \"{hpo_id}\" found in the {column_label} column".format(**locals()))
 
 
 def delete_individuals(project, individual_guids):

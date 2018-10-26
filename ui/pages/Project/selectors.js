@@ -18,6 +18,7 @@ import {
   FAMILY_EXPORT_DATA,
   INTERNAL_FAMILY_EXPORT_DATA,
   INDIVIDUAL_EXPORT_DATA,
+  INDIVIDUAL_CORE_EXPORT_DATA,
   INTERNAL_INDIVIDUAL_EXPORT_DATA,
   SAMPLE_EXPORT_DATA,
   SORT_BY_FAMILY_GUID,
@@ -341,8 +342,16 @@ export const getIndividualsExportConfig = createSelector(
   getProject,
   getVisibleSortedIndividuals,
   (state, ownProps) => (ownProps || {}).tableName,
-  () => 'individuals',
-  (state, ownProps) => ((ownProps || {}).internal ? INDIVIDUAL_EXPORT_DATA.concat(INTERNAL_INDIVIDUAL_EXPORT_DATA) : INDIVIDUAL_EXPORT_DATA),
+  (state, ownProps) => (ownProps || {}).fileName || 'individuals',
+  (state, ownProps = {}) => {
+    if (ownProps.internal) {
+      return INDIVIDUAL_EXPORT_DATA.concat(INTERNAL_INDIVIDUAL_EXPORT_DATA)
+    }
+    if (ownProps.omitHpo) {
+      return INDIVIDUAL_CORE_EXPORT_DATA
+    }
+    return INDIVIDUAL_EXPORT_DATA
+  },
   getEntityExportConfig,
 )
 

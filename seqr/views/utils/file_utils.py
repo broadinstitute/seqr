@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 def save_temp_file(request):
 
     try:
-        uploaded_file_id, filename, json_records = save_uploaded_file(request, _parse_file)
+        uploaded_file_id, filename, json_records = save_uploaded_file(request, parse_file)
     except Exception as e:
         return create_json_response({'errors': [e.message]}, status=400)
 
@@ -34,9 +34,12 @@ def save_temp_file(request):
     return create_json_response(response)
 
 
-def _parse_file(filename, stream):
-    if filename.endswith('.tsv'):
-        return [map(lambda s: s.strip(), line.rstrip('\n').split('\t')) for line in stream]
+def parse_file(filename, stream):
+    if filename.endswith('.tsv') or filename.endswith('.fam') or filename.endswith('.ped'):
+        return [map(lambda s: s.strip().strip('"'), line.rstrip('\n').split('\t')) for line in stream]
+
+    elif filename.endswith('.csv'):
+        return [map(lambda s: s.strip().strip('"'), line.rstrip('\n').split(',')) for line in stream]
 
     elif filename.endswith('.xls') or filename.endswith('.xlsx'):
         wb = xlrd.open_workbook(file_contents=stream.read())
@@ -48,7 +51,7 @@ def _parse_file(filename, stream):
 
 def _parse_excel_string_cell(cell):
     cell_value = cell.value
-    if cell.ctype == 2 and int(cell_value) == cell_value:
+    if cell.ctype in (2,3) and int(cell_value) == cell_value:
         cell_value = '{:.0f}'.format(cell_value)
     return cell_value
 

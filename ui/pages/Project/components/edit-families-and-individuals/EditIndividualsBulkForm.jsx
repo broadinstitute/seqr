@@ -3,12 +3,13 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Table } from 'semantic-ui-react'
 import styled from 'styled-components'
-import slugify from 'slugify'
 
+import { FileLink } from 'shared/components/buttons/export-table/ExportTableButton'
 import FileUploadField from 'shared/components/form/XHRUploaderField'
 import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
+import { INDIVIDUAL_CORE_EXPORT_DATA } from '../../constants'
 import { updateIndividuals } from '../../reducers'
-import { getProject } from '../../selectors'
+import { getProject, getIndividualsExportConfig } from '../../selectors'
 
 
 const Container = styled.div`
@@ -39,53 +40,29 @@ const TableCell = styled(Table.Cell)`
 const FORM_NAME = 'bulkUploadIndividuals'
 const FILE_FIELD_NAME = 'uploadedFile'
 const UPLOADER_STYLE = { maxWidth: '700px', margin: 'auto' }
+const UPLOAD_FORMATS = [
+  { name: 'Excel', ext: 'xls' },
+  { name: 'Text', ext: 'tsv', detail: <a href="https://en.wikipedia.org/wiki/Tab-separated_values" target="_blank">.tsv</a> / <a href="https://www.cog-genomics.org/plink2/formats#fam" target="_blank">.fam</a> },
+]
 
-const BaseBulkContent = props =>
+
+const BaseBulkContent = ({ project, individualsExportConfig, blankIndividualsExportConfig }) =>
   <div>
     <Container>
       To bulk-add or edit individuals, upload a table in one of these formats:
       <StyledTable>
         <Table.Body>
-          <TableRow>
-            <TableCell>
-              <BoldText>Excel</BoldText> (.xls)
-            </TableCell>
-            <TableCell>
-              download template: &nbsp;
-              <a
-                download={`individuals_for_${slugify(props.project.name, '_')}_template.xlsx`}
-                href="/static/upload_tables/templates/individuals.xlsx"
-              >
-                blank
-              </a> or &nbsp;
-              <a
-                download={`individuals_template_${slugify(props.project.name, '_')}.xlsx`}
-                href={`/api/project/${props.project.projectGuid}/export_project_individuals?file_format=xls`}
-              >
-                current individuals
-              </a>
-            </TableCell>
-          </TableRow>
-          <TableRow>
-            <TableCell>
-              <BoldText>Text</BoldText> (<a href="https://en.wikipedia.org/wiki/Tab-separated_values" target="_blank">.tsv</a> / <a href="https://www.cog-genomics.org/plink2/formats#fam" target="_blank">.fam</a>)
-            </TableCell>
-            <TableCell>
-              download template: &nbsp;
-              <a
-                download={`individuals_template_${slugify(props.project.name, '_')}.tsv`}
-                href="/static/upload_tables/templates/individuals.tsv"
-              >
-                blank
-              </a> or &nbsp;
-              <a
-                download={`individuals_in_${slugify(props.project.name, '_')}_individuals.tsv`}
-                href={`/api/project/${props.project.projectGuid}/export_project_individuals?file_format=tsv`}
-              >
-                current individuals
-              </a>
-            </TableCell>
-          </TableRow>
+          {UPLOAD_FORMATS.map(({ name, ext, detail }) =>
+            <TableRow key={ext}>
+              <TableCell>
+                <BoldText>{name}</BoldText> ({detail || `.${ext}`})
+              </TableCell>
+              <TableCell>
+                download template: <FileLink data={blankIndividualsExportConfig} ext={ext} linkContent="blank" /> &nbsp;
+                or <FileLink data={individualsExportConfig} ext={ext} linkContent="current individuals" />
+              </TableCell>
+            </TableRow>,
+          )}
         </Table.Body>
       </StyledTable>
 
@@ -95,51 +72,23 @@ const BaseBulkContent = props =>
         <BoldText>Required Columns:</BoldText><br />
         <StyledTable className="noBorder">
           <Table.Body>
-            <TableRow>
-              <TableCell><BoldText>Family ID</BoldText></TableCell>
-              <TableCell />
-            </TableRow>
-            <TableRow>
-              <TableCell><BoldText>Individual ID</BoldText></TableCell>
-              <TableCell />
-            </TableRow>
+            {INDIVIDUAL_CORE_EXPORT_DATA.filter(field => !field.description).map(field =>
+              <TableRow key={field.header}>
+                <TableCell><BoldText>{field.header}</BoldText></TableCell>
+                <TableCell />
+              </TableRow>,
+            )}
           </Table.Body>
         </StyledTable>
         <BoldText>Optional Columns:</BoldText>
         <StyledTable>
           <Table.Body>
-            <TableRow>
-              <TableCell><BoldText>Paternal ID</BoldText></TableCell>
-              <TableCell><i>Individual ID</i> of the father</TableCell>
-            </TableRow>
-            <TableRow>
-              <TableCell><BoldText>Maternal ID</BoldText></TableCell>
-              <TableCell><i>Individual ID</i> of the mother</TableCell>
-            </TableRow>
-            <TableRow>
-              <TableCell><BoldText>Sex</BoldText></TableCell>
-              <TableCell><BoldText>M</BoldText> = Male, <BoldText>F</BoldText> = Female, and leave blank if unknown</TableCell>
-            </TableRow>
-            <TableRow>
-              <TableCell><BoldText>Affected Status</BoldText></TableCell>
-              <TableCell><BoldText>A</BoldText> = Affected, <BoldText>U</BoldText> = Unaffected, and leave blank if unknown</TableCell>
-            </TableRow>
-            <TableRow>
-              <TableCell><BoldText>Notes</BoldText></TableCell>
-              <TableCell>free-text notes related to this individual</TableCell>
-            </TableRow>
-            <TableRow>
-              <TableCell><BoldText>HPO Terms (Present)</BoldText></TableCell>
-              <TableCell>comma-separated list of HPO Terms for <i>present</i> phenotypes in this individual</TableCell>
-            </TableRow>
-            <TableRow>
-              <TableCell><BoldText>HPO Terms (Absent)</BoldText></TableCell>
-              <TableCell>comma-separated list of HPO Terms for phenotypes <i>not present</i> in this individual</TableCell>
-            </TableRow>
-            <TableRow>
-              <TableCell><BoldText>Diagnosis: OMIM Ids</BoldText></TableCell>
-              <TableCell>comma-separated list of MIM ids for disorders diagnosed in this individual</TableCell>
-            </TableRow>
+            {INDIVIDUAL_CORE_EXPORT_DATA.filter(field => field.description).map(field =>
+              <TableRow key={field.header}>
+                <TableCell><BoldText>{field.header}</BoldText></TableCell>
+                <TableCell>{field.description}</TableCell>
+              </TableRow>,
+            )}
           </Table.Body>
         </StyledTable>
       </div>
@@ -152,7 +101,7 @@ const BaseBulkContent = props =>
     <FileUploadField
       clearTimeOut={0}
       dropzoneLabel="Click here to upload a table, or drag-drop it into this box"
-      url={`/api/project/${props.project.projectGuid}/upload_individuals_table`}
+      url={`/api/project/${project.projectGuid}/upload_individuals_table`}
       auto
       required
       name={FILE_FIELD_NAME}
@@ -163,10 +112,14 @@ const BaseBulkContent = props =>
 
 BaseBulkContent.propTypes = {
   project: PropTypes.object,
+  individualsExportConfig: PropTypes.object,
+  blankIndividualsExportConfig: PropTypes.object,
 }
 
 const mapStateToProps = state => ({
   project: getProject(state),
+  individualsExportConfig: getIndividualsExportConfig(state, { omitHpo: true }),
+  blankIndividualsExportConfig: { ...getIndividualsExportConfig(state, { omitHpo: true, fileName: 'template' }), rawData: [] },
 })
 
 const BulkContent = connect(mapStateToProps)(BaseBulkContent)
