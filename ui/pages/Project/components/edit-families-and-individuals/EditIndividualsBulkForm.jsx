@@ -5,10 +5,10 @@ import { Table } from 'semantic-ui-react'
 import styled from 'styled-components'
 import slugify from 'slugify'
 
-import { updateIndividuals } from 'pages/Project/reducers'
-import { getProject } from 'pages/Project/selectors'
-import FileUploadField from '../XHRUploaderField'
-import ReduxFormWrapper from '../ReduxFormWrapper'
+import FileUploadField from 'shared/components/form/XHRUploaderField'
+import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
+import { updateIndividuals } from '../../reducers'
+import { getProject } from '../../selectors'
 
 
 const Container = styled.div`
