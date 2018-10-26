@@ -17,7 +17,7 @@ wget -nv https://jdbc.postgresql.org/download/postgresql-42.1.4.jar -O ./webapps
 
 cp ${SEQR_DIR}/deploy/docker/phenotips/config/${PT_VERSION}/xwiki.cfg ./webapps/phenotips/WEB-INF/xwiki.cfg
 cp ${SEQR_DIR}/deploy/docker/phenotips/config/${PT_VERSION}/hibernate.cfg.xml ./webapps/phenotips/WEB-INF/hibernate.cfg.xml
-sed -i 's/<property.name="connection.url">.*<\/property>/<property name="connection.url">jdbc:postgresql:\/\/localhost:5432\/xwiki<\/property>/' ./webapps/phenotips/WEB-INF/hibernate.cfg.xml
+sed -i.bak 's/<property.name="connection.url">.*<\/property>/<property name="connection.url">jdbc:postgresql:\/\/localhost:5432\/xwiki<\/property>/' ./webapps/phenotips/WEB-INF/hibernate.cfg.xml
 
 rm -rf data/extension data/jobs
 cp -r ${SEQR_DIR}/deploy/docker/phenotips/init/${PT_VERSION}/extension ./data/extension
