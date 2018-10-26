@@ -79,6 +79,24 @@ export const loadProject = (projectGuid) => {
 }
 
 
+export const loadFamilyProject = ({ familyGuids }) => {
+  // TODO initial project or analysisGroup
+  return (dispatch, getState) => {
+    familyGuids.filter(familyGuid => !getState().familiesByGuid[familyGuid]).forEach((familyGuid) => {
+      dispatch({ type: REQUEST_PROJECT_DETAILS })
+      new HttpRequestHelper(`/api/family/${familyGuid}/details`,
+        (responseJson) => {
+          dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+        },
+        (e) => {
+          dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
+        },
+      ).get()
+    })
+  }
+}
+
+
 /**
  * POSTS a request to update the specified project and dispatches the appropriate events when the request finishes
  * Accepts a values object that includes any data to be posted as well as the following keys:

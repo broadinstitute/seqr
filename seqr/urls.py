@@ -44,9 +44,8 @@ from seqr.views.pages.dashboard_page import \
 
 from seqr.views.pages.project_page import \
     project_page_data, \
+    family_page_data, \
     export_project_individuals_handler
-
-from seqr.views.pages.variant_search_page import variant_search_page_data
 
 from seqr.views.apis.gene_api import \
     gene_info, \
@@ -96,6 +95,7 @@ react_app_pages = [
 api_endpoints = {
     'individual/(?P<individual_guid>[\w.|-]+)/update': update_individual_handler,
 
+    'family/(?P<family_guid>[^/]+)/details': family_page_data,
     'family/(?P<family_guid>[\w.|-]+)/save_internal_case_review_notes': save_internal_case_review_notes,
     'family/(?P<family_guid>[\w.|-]+)/save_internal_case_review_summary': save_internal_case_review_summary,
     'family/(?P<family_guid>[\w.|-]+)/update': update_family_fields_handler,
@@ -132,7 +132,6 @@ api_endpoints = {
     'project/(?P<project_guid>[^/]+)/analysis_groups/(?P<analysis_group_guid>[^/]+)/delete': delete_analysis_group_handler,
     'project/(?P<project_guid>[^/]+)/update_saved_variant_json': update_saved_variant_json,
 
-    'search/project_details': variant_search_page_data,
     'search/(?P<search_hash>[^/]+)': query_variants_handler,
     'search/transcripts': variant_transcripts,
 

@@ -14,6 +14,7 @@ import FrequencyFilter from './filters/FrequencyFilter'
 import annotationsFilterLayout from './filters/AnnotationsFilterLayout'
 import { LocusListSelector } from './filters/LocationFilter'
 import CustomInheritanceFilter from './filters/CustomInheritanceFilter'
+import FamiliesFilter from './filters/FamiliesFilter'
 import {
   INHERITANCE_FILTER_OPTIONS,
   INHERITANCE_LOOKUP,
@@ -232,4 +233,9 @@ const PANELS = PANEL_DETAILS.map(({ name, headerProps, ...panelContentProps }, i
 }))
 
 
-export default () => <Accordion fluid panels={PANELS} />
+export default () => (
+  <div>
+    {configuredFields({ fields: [{ name: 'familyContext', control: FamiliesFilter, isArrayField: true }] })}
+    <Accordion fluid panels={PANELS} />
+  </div>
+)
