@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 def save_temp_file(request):
 
     try:
-        uploaded_file_id, filename, json_records = save_uploaded_file(request, parse_file)
+        uploaded_file_id, filename, json_records = save_uploaded_file(request)
     except Exception as e:
         return create_json_response({'errors': [e.message]}, status=400)
 
@@ -67,7 +67,7 @@ def _compute_serialized_file_path(uploaded_file_id):
     return os.path.join(upload_directory, "temp_upload_{}.json.gz".format(uploaded_file_id))
 
 
-def save_uploaded_file(request, parse_file):
+def save_uploaded_file(request, process_records=None):
 
     if len(request.FILES) != 1:
         raise ValueError("Received %s files instead of 1" % len(request.FILES))
@@ -77,6 +77,8 @@ def save_uploaded_file(request, parse_file):
     filename = stream._name
 
     json_records = parse_file(filename, stream)
+    if process_records:
+        json_records = process_records(json_records, filename=filename)
 
     # save json to temporary file
     uploaded_file_id = hashlib.md5(str(json_records)).hexdigest()

@@ -2,7 +2,7 @@ import React from 'react'
 import { Tab } from 'semantic-ui-react'
 import styled from 'styled-components'
 import Modal from 'shared/components/modal/Modal'
-import { EditIndividualsBulkForm } from './BulkEditForm'
+import { EditIndividualsBulkForm, EditHPOBulkForm } from './BulkEditForm'
 import EditIndividualsForm from './EditIndividualsForm'
 import EditFamiliesForm from './EditFamiliesForm'
 
@@ -19,6 +19,10 @@ const PANE_DETAILS = [
   {
     menuItem: 'Edit Individuals',
     formClass: EditIndividualsForm,
+  },
+  {
+    menuItem: 'Edit HPO Terms',
+    formClass: EditHPOBulkForm,
   },
   {
     menuItem: 'Bulk Upload',

@@ -7,7 +7,7 @@ import styled from 'styled-components'
 import { FileLink } from 'shared/components/buttons/export-table/ExportTableButton'
 import FileUploadField from 'shared/components/form/XHRUploaderField'
 import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
-import { INDIVIDUAL_ID_EXPORT_DATA, INDIVIDUAL_CORE_EXPORT_DATA } from '../../constants'
+import { INDIVIDUAL_ID_EXPORT_DATA, INDIVIDUAL_CORE_EXPORT_DATA, INDIVIDUAL_HPO_EXPORT_DATA } from '../../constants'
 import { updateIndividuals } from '../../reducers'
 import { getProject, getEntityExportConfig, getProjectAnalysisGroupIndividualsByGuid } from '../../selectors'
 
@@ -40,27 +40,27 @@ const TableCell = styled(Table.Cell)`
 const FILE_FIELD_NAME = 'uploadedFile'
 const UPLOADER_STYLE = { maxWidth: '700px', margin: 'auto' }
 const UPLOAD_FORMATS = [
-  { name: 'Excel', ext: 'xls' },
-  { name: 'Text', ext: 'tsv', detail: <a href="https://en.wikipedia.org/wiki/Tab-separated_values" target="_blank">.tsv</a> / <a href="https://www.cog-genomics.org/plink2/formats#fam" target="_blank">.fam</a> },
+  { title: 'Excel', ext: 'xls' },
+  { title: 'Text', ext: 'tsv', detail: <a href="https://en.wikipedia.org/wiki/Tab-separated_values" target="_blank">.tsv</a> / <a href="https://www.cog-genomics.org/plink2/formats#fam" target="_blank">.fam</a> },
 ]
 
 
-const BaseBulkContent = ({ actionDescription, details, url, project, individualFields, individualsExportConfig, blankIndividualsExportConfig }) =>
+const BaseBulkContent = ({ actionDescription, details, project, name, individualFields, individualsExportConfig, blankIndividualsExportConfig }) =>
   <div>
     <Container>
       To {actionDescription}, upload a table in one of these formats:
       <StyledTable>
         <Table.Body>
-          {UPLOAD_FORMATS.map(({ name, ext, detail }) =>
+          {UPLOAD_FORMATS.map(({ title, ext, detail }) =>
             <TableRow key={ext}>
               <TableCell>
-                <BoldText>{name}</BoldText> ({detail || `.${ext}`})
+                <BoldText>{title}</BoldText> ({detail || `.${ext}`})
               </TableCell>
               <TableCell>
-                download
+                download&nbsp;
                 {blankIndividualsExportConfig &&
                   <span>
-                    &nbsp;template: <FileLink data={blankIndividualsExportConfig} ext={ext} linkContent="blank" /> or&nbsp;
+                    template: <FileLink data={blankIndividualsExportConfig} ext={ext} linkContent="blank" /> or&nbsp;
                   </span>
                 }
                 <FileLink data={individualsExportConfig} ext={ext} linkContent="current individuals" />
@@ -103,7 +103,7 @@ const BaseBulkContent = ({ actionDescription, details, url, project, individualF
     <FileUploadField
       clearTimeOut={0}
       dropzoneLabel="Click here to upload a table, or drag-drop it into this box"
-      url={url && url(project)}
+      url={`/api/project/${project.projectGuid}/upload_${name}_table`}
       auto
       required
       name={FILE_FIELD_NAME}
@@ -116,7 +116,7 @@ BaseBulkContent.propTypes = {
   actionDescription: PropTypes.string.isRequired,
   individualFields: PropTypes.array.isRequired,
   details: PropTypes.string,
-  url: PropTypes.func,
+  name: PropTypes.string.isRequired,
   project: PropTypes.object,
   individualsExportConfig: PropTypes.object,
   blankIndividualsExportConfig: PropTypes.object,
@@ -124,39 +124,44 @@ BaseBulkContent.propTypes = {
 
 const mapStateToProps = (state, ownProps) => ({
   project: getProject(state),
-  individualsExportConfig: getEntityExportConfig(getProject(state), Object.values(getProjectAnalysisGroupIndividualsByGuid(state, ownProps)), null, 'individuals', INDIVIDUAL_ID_EXPORT_DATA.concat(ownProps.individualFields)),
+  individualsExportConfig: getEntityExportConfig(
+    getProject(state),
+    Object.values(ownProps.individualsByGuid || getProjectAnalysisGroupIndividualsByGuid(state, ownProps)),
+    null,
+    ownProps.name,
+    INDIVIDUAL_ID_EXPORT_DATA.concat(ownProps.individualFields),
+  ),
   blankIndividualsExportConfig: ownProps.blankDownload && getEntityExportConfig(getProject(state), [], null, 'template', INDIVIDUAL_ID_EXPORT_DATA.concat(ownProps.individualFields)),
 })
 
 const BulkContent = connect(mapStateToProps)(BaseBulkContent)
 
-const EditBulkForm = ({ form, modalName, onSubmit, ...props }) =>
+const EditBulkForm = ({ name, modalName, onSubmit, ...props }) =>
   <ReduxFormWrapper
-    form={form}
+    form={`bulkUpload_${name}`}
     modalName={modalName}
     onSubmit={values => onSubmit(values[FILE_FIELD_NAME])}
     confirmCloseIfNotSaved
     closeOnSuccess
     showErrorPanel
     size="small"
-    renderChildren={() => <BulkContent {...props} />}
+    renderChildren={() => <BulkContent name={name} {...props} />}
   />
 
 EditBulkForm.propTypes = {
-  form: PropTypes.string,
-  modalName: PropTypes.string,
-  onSubmit: PropTypes.func,
+  name: PropTypes.string.isRequired,
+  modalName: PropTypes.string.isRequired,
+  onSubmit: PropTypes.func.isRequired,
 }
 
 const IndividualsBulkForm = props =>
   <EditBulkForm
-    form="bulkUploadIndividuals"
+    name="individuals"
     actionDescription="bulk-add or edit individuals"
     details="If the Family ID and Individual ID in the table match those of an existing individual in the project,
       the matching individual's data will be updated with values from the table. Otherwise, a new individual
       will be created."
     individualFields={INDIVIDUAL_CORE_EXPORT_DATA}
-    url={project => `/api/project/${project.projectGuid}/upload_individuals_table`}
     blankDownload
     {...props}
   />
@@ -165,5 +170,15 @@ const mapDispatchToProps = {
   onSubmit: updateIndividuals,
 }
 
-
 export const EditIndividualsBulkForm = connect(null, mapDispatchToProps)(IndividualsBulkForm)
+
+
+const HPOBulkForm = props =>
+  <EditBulkForm
+    name="hpo_terms"
+    actionDescription="edit individual's HPO terms"
+    individualFields={INDIVIDUAL_HPO_EXPORT_DATA}
+    {...props}
+  />
+
+export const EditHPOBulkForm = connect(null, mapDispatchToProps)(HPOBulkForm)

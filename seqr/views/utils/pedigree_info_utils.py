@@ -4,28 +4,24 @@ import collections
 import difflib
 import os
 import logging
-import re
 import tempfile
 import traceback
-import xlrd
 import xlwt
 from django.core.mail.message import EmailMultiAlternatives
 from django.utils.html import strip_tags
 
 import settings
-from reference_data.models import HumanPhenotypeOntology
 from seqr.models import Individual
-from seqr.views.utils.file_utils import parse_file
 
 logger = logging.getLogger(__name__)
 
 
-def parse_pedigree_table(filename, stream, user=None, project=None):
+def parse_pedigree_table(parsed_file, filename, user=None, project=None):
     """Validates and parses pedigree information from a .fam, .tsv, or Excel file.
 
     Args:
+        parsed_file (array): The parsed output from the raw file.
         filename (string): The original filename - used to determine the file format based on the suffix.
-        stream (file): An open input stream object.
         user (User): (optional) Django User object
         project (Project): (optional) Django Project object
 
@@ -46,10 +42,9 @@ def parse_pedigree_table(filename, stream, user=None, project=None):
 
     # parse rows from file
     try:
-        all_rows = parse_file(filename, stream)
-        rows = [row for row in all_rows[1:] if row and not row[0].startswith('#')]
+        rows = [row for row in parsed_file[1:] if row and not row[0].startswith('#')]
 
-        headers = [all_rows[0]] + [row for row in all_rows[1:] if row[0].startswith('#')]
+        headers = [parsed_file[0]] + [row for row in parsed_file[1:] if row[0].startswith('#')]
         header_string = ','.join(headers[0])
         if "do not modify" in header_string.lower() and "Broad" in header_string:
             # the merged pedigree/sample manifest has 3 header rows, so use the known header and skip the next 2 rows.
@@ -99,7 +94,7 @@ def parse_pedigree_table(filename, stream, user=None, project=None):
     errors, warnings = validate_fam_file_records(json_records)
 
     if not errors and is_merged_pedigree_sample_manifest:
-        _send_sample_manifest(sample_manifest_rows, kit_id, original_filename=filename, original_file_rows=all_rows, user=user, project=project)
+        _send_sample_manifest(sample_manifest_rows, kit_id, original_filename=filename, original_file_rows=parsed_file, user=user, project=project)
 
     return json_records, errors, warnings
 

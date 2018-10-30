@@ -388,7 +388,7 @@ export const INDIVIDUAL_HPO_EXPORT_DATA = [
     field: 'phenotipsData',
     format: phenotipsData => (
       (phenotipsData || {}).features ?
-        phenotipsData.features.filter(feature => feature.observed === 'yes').map(feature => feature.label).join('; ') :
+        phenotipsData.features.filter(feature => feature.observed === 'yes').map(feature => `${feature.id} (${feature.label})`).join('; ') :
         ''
     ),
     description: 'comma-separated list of HPO Terms for present phenotypes in this individual',
@@ -398,7 +398,7 @@ export const INDIVIDUAL_HPO_EXPORT_DATA = [
     field: 'phenotipsData',
     format: phenotipsData => (
       (phenotipsData || {}).features ?
-        phenotipsData.features.filter(feature => feature.observed === 'no').map(feature => feature.label).join('; ') :
+        phenotipsData.features.filter(feature => feature.observed === 'no').map(feature => `${feature.id} (${feature.label})`).join('; ') :
         ''
     ),
     description: 'comma-separated list of HPO Terms for phenotypes not present in this individual',

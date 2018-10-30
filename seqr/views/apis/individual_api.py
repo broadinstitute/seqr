@@ -12,13 +12,13 @@ from seqr.model_utils import get_or_create_seqr_model, update_seqr_model, delete
 from seqr.models import Sample, Individual, Family, CAN_EDIT
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.pedigree_image_api import update_pedigree_images
-from seqr.views.apis.phenotips_api import set_patient_hpo_terms, delete_patient, PhenotipsException
+from seqr.views.apis.phenotips_api import delete_patient, PhenotipsException
 from seqr.views.utils.export_table_utils import export_table
 from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file
 from seqr.views.utils.json_to_orm_utils import update_individual_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_individual, _get_json_for_individuals, _get_json_for_family, _get_json_for_families
-from seqr.views.utils.pedigree_info_utils import parse_pedigree_table, validate_fam_file_records, JsonConstants
+from seqr.views.utils.pedigree_info_utils import parse_pedigree_table, validate_fam_file_records
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_permissions
 
 
@@ -234,14 +234,14 @@ def receive_individuals_table_handler(request, project_guid):
 
     project = get_project_and_check_permissions(project_guid, request.user)
 
-    def parse_file(filename, stream):
-        pedigree_records, errors, warnings = parse_pedigree_table(filename, stream, user=request.user, project=project)
+    def process_records(json_records, filename='ped_file'):
+        pedigree_records, errors, warnings = parse_pedigree_table(json_records, filename, user=request.user, project=project)
         if errors:
             raise ErrorsWarningsException(errors, warnings)
         return pedigree_records
 
     try:
-        uploaded_file_id, filename, json_records = save_uploaded_file(request, parse_file)
+        uploaded_file_id, filename, json_records = save_uploaded_file(request, process_records=process_records)
     except ErrorsWarningsException as e:
         return create_json_response({'errors': e.errors, 'warnings': e.warnings}, status=400, reason=e.errors)
     except Exception as e:
@@ -373,28 +373,6 @@ def add_or_update_individuals_and_families(project, individual_records, user=Non
     update_pedigree_images(updated_families, project_guid=project.guid)
 
     return updated_families, updated_individuals
-
-
-def update_individual_hpo():
-    if record.get(JsonConstants.HPO_TERMS_PRESENT_COLUMN) or record.get(JsonConstants.FINAL_DIAGNOSIS_OMIM_COLUMN):
-        # update phenotips hpo ids
-        logger.info("Setting PhenoTips HPO Terms to: %s" % (record.get(JsonConstants.HPO_TERMS_PRESENT_COLUMN),))
-        set_patient_hpo_terms(
-            project,
-            individual,
-            hpo_terms_present=record.get(JsonConstants.HPO_TERMS_PRESENT_COLUMN, []),
-            hpo_terms_absent=record.get(JsonConstants.HPO_TERMS_ABSENT_COLUMN, []),
-            final_diagnosis_mim_ids=record.get(JsonConstants.FINAL_DIAGNOSIS_OMIM_COLUMN, []))
-
-        # check HPO ids
-        for column_key, column_label in [
-            (JsonConstants.HPO_TERMS_PRESENT_COLUMN, 'HPO Terms Present'),
-            (JsonConstants.HPO_TERMS_ABSENT_COLUMN, 'HPO Terms Absent')]:
-            if r.get(column_key):
-                for hpo_id in r[column_key]:
-                    if not HumanPhenotypeOntology.objects.filter(hpo_id=hpo_id):
-                        warnings.append(
-                            "Invalid HPO term \"{hpo_id}\" found in the {column_label} column".format(**locals()))
 
 
 def delete_individuals(project, individual_guids):

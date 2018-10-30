@@ -34,7 +34,9 @@ from reference_data.models import HumanPhenotypeOntology
 from seqr.model_utils import update_seqr_model
 from seqr.models import Project, CAN_EDIT, CAN_VIEW, Individual
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
-from seqr.views.utils.permissions_utils import check_permissions
+from seqr.views.utils.file_utils import save_uploaded_file
+from seqr.views.utils.json_utils import create_json_response
+from seqr.views.utils.permissions_utils import check_permissions, get_project_and_check_permissions
 from seqr.views.utils.proxy_request_utils import proxy_request
 
 logger = logging.getLogger(__name__)
@@ -51,6 +53,148 @@ DO_NOT_PROXY_URL_KEYWORDS = [
     '/ForgotUsername',
     '/ForgotPassword',
 ]
+
+FAMILY_ID_COLUMN = 'familyId'
+INDIVIDUAL_ID_COLUMN = 'individualId'
+HPO_TERMS_PRESENT_COLUMN = 'hpoPresent'
+HPO_TERMS_ABSENT_COLUMN = 'hpoAbsent'
+
+
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@csrf_exempt
+def receive_hpo_table_handler(request, project_guid):
+    """Handler for bulk update of hpo terms. This handler parses the records, but doesn't save them in the database.
+    Instead, it saves them to a temporary file and sends a 'uploadedFileId' representing this file back to the client.
+
+    Args:
+        request (object): Django request object
+        project_guid (string): project GUID
+    """
+
+    project = get_project_and_check_permissions(project_guid, request.user)
+    import traceback, sys
+    def process_records(records, **kwargs):
+        column_map = {}
+        for i, field in enumerate(records[0]):
+            key = field.lower()
+            if 'family' in key:
+                column_map[FAMILY_ID_COLUMN] = i
+            elif 'individual' in key:
+                column_map[INDIVIDUAL_ID_COLUMN] = i
+            elif re.match("hpo.*present", key):
+                column_map[HPO_TERMS_PRESENT_COLUMN] = i
+            elif re.match("hpo.*absent", key):
+                column_map[HPO_TERMS_ABSENT_COLUMN] = i
+        if len(column_map) != 4:
+            raise ValueError('Invalid header, expected 4 columns and received {}'.format(len(column_map)))
+        return [{column: row[index] for column, index in column_map.items()} for row in records[1:]]
+
+    try:
+        uploaded_file_id, filename, json_records = save_uploaded_file(request, process_records=process_records)
+    except Exception as e:
+        _,_, tb = sys.exc_info()
+        traceback.print_tb(tb)
+        return create_json_response({'errors': [e.message or str(e)], 'warnings': []}, status=400, reason=e.message or str(e))
+
+    updates_by_individual_guid = {}
+    missing_individuals = []
+    unchanged_individuals = []
+    all_hpo_terms = set()
+    for record in json_records:
+        family_id = record.pop('familyId')
+        individual_id = record.pop('individualId')
+        id_string = '{individual_id} ({family_id})'.format(individual_id=individual_id, family_id=family_id)
+        individual = Individual.objects.filter(
+            individual_id=individual_id,
+            family__family_id=family_id,
+            family__project=project).first()
+        if individual:
+            features = _parse_hpo_terms(record[HPO_TERMS_PRESENT_COLUMN] or '', 'yes')
+            features += _parse_hpo_terms(record[HPO_TERMS_ABSENT_COLUMN] or '', 'no')
+            if individual.phenotips_data and features and \
+                    _feature_set(features) == _feature_set(json.loads(individual.phenotips_data).get('features', [])):
+                unchanged_individuals.append(id_string)
+            else:
+                all_hpo_terms.update([feature['id'] for feature in features])
+                updates_by_individual_guid[individual.guid] = features
+        else:
+            missing_individuals.append(id_string)
+
+    if not updates_by_individual_guid:
+        return create_json_response({
+            'errors': ['Unable to find individuals to update for any of the {} parsed individuals'.format(
+                len(missing_individuals) + len(unchanged_individuals)
+            )],
+            'warnings': []
+        }, status=400, reason='Unable to find any matching individuals')
+
+    info = ['{} individuals will be updated'.format(len(updates_by_individual_guid))]
+    warnings = []
+    if missing_individuals:
+        warnings.append(
+            'Unable to find matching ids for {} individuals. The following entries will not be updated: {}'.format(
+                len(missing_individuals), ', '.join(missing_individuals)
+            ))
+    if unchanged_individuals:
+        warnings.append(
+            'No changes detected for {} individuals. The following entries will not be updated: {}'.format(
+                len(unchanged_individuals), ', '.join(unchanged_individuals)
+            ))
+
+    hpo_categories = {hpo.hpo_id: hpo.category_id for hpo in HumanPhenotypeOntology.objects.filter(hpo_id__in=all_hpo_terms)}
+    invalid_hpo_terms = []
+    for features in updates_by_individual_guid.values():
+        for feature in features:
+            category = hpo_categories.get(feature['id'])
+            if category:
+                feature['category'] = category
+            else:
+                invalid_hpo_terms.append(feature['id'])
+    if invalid_hpo_terms:
+        warnings.append(
+            "The following HPO terms were not found in seqr's HPO data, and while they will be added they may be incorrect: {}".format(
+                ', '.join(invalid_hpo_terms)
+            ))
+
+    response = {
+        'updatesByIndividualGuid': updates_by_individual_guid,
+        'uploadedFileId': uploaded_file_id,
+        'errors': [],
+        'warnings': warnings,
+        'info': info,
+    }
+    return create_json_response(response)
+
+
+def _parse_hpo_terms(hpo_term_string, observed):
+    return [{"id": hpo_term.split('(')[0].strip(), "observed": observed, "type": "phenotype"}
+            for hpo_term in hpo_term_string.split(';')] if hpo_term_string else []
+
+
+def _feature_set(features):
+    return set([(feature['id'], feature['observed']) for feature in features])
+
+
+def update_individual_hpo():
+    if record.get(JsonConstants.HPO_TERMS_PRESENT_COLUMN) or record.get(JsonConstants.FINAL_DIAGNOSIS_OMIM_COLUMN):
+        # update phenotips hpo ids
+        logger.info("Setting PhenoTips HPO Terms to: %s" % (record.get(JsonConstants.HPO_TERMS_PRESENT_COLUMN),))
+        set_patient_hpo_terms(
+            project,
+            individual,
+            hpo_terms_present=record.get(JsonConstants.HPO_TERMS_PRESENT_COLUMN, []),
+            hpo_terms_absent=record.get(JsonConstants.HPO_TERMS_ABSENT_COLUMN, []),
+            final_diagnosis_mim_ids=record.get(JsonConstants.FINAL_DIAGNOSIS_OMIM_COLUMN, []))
+
+        # check HPO ids
+        for column_key, column_label in [
+            (JsonConstants.HPO_TERMS_PRESENT_COLUMN, 'HPO Terms Present'),
+            (JsonConstants.HPO_TERMS_ABSENT_COLUMN, 'HPO Terms Absent')]:
+            if r.get(column_key):
+                for hpo_id in r[column_key]:
+                    if not HumanPhenotypeOntology.objects.filter(hpo_id=hpo_id):
+                        warnings.append(
+                            "Invalid HPO term \"{hpo_id}\" found in the {column_label} column".format(**locals()))
 
 
 def _create_patient_if_missing(project, individual):

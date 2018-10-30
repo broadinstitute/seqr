@@ -24,7 +24,8 @@ from seqr.views.apis.individual_api import \
 from seqr.views.apis.phenotips_api import \
     proxy_to_phenotips, \
     phenotips_pdf_handler, \
-    phenotips_edit_handler
+    phenotips_edit_handler, \
+    receive_hpo_table_handler
 
 from seqr.views.apis.case_review_api import \
     save_internal_case_review_notes, \
@@ -123,6 +124,7 @@ api_endpoints = {
     'project/(?P<project_guid>[^/]+)/igv_track/(?P<igv_track_path>.+)': fetch_igv_track,
     'project/(?P<project_guid>[^/]+)/individual/(?P<individual_guid>[\w.|-]+)/phenotips_pdf': phenotips_pdf_handler,
     'project/(?P<project_guid>[^/]+)/individual/(?P<individual_guid>[\w.|-]+)/phenotips_edit': phenotips_edit_handler,
+    'project/(?P<project_guid>[^/]+)/upload_hpo_terms_table': receive_hpo_table_handler,
 
     'project/(?P<project_guid>[^/]+)/analysis_groups/create': update_analysis_group_handler,
     'project/(?P<project_guid>[^/]+)/analysis_groups/(?P<analysis_group_guid>[^/]+)/update': update_analysis_group_handler,
