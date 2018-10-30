@@ -7,9 +7,9 @@ import styled from 'styled-components'
 import { FileLink } from 'shared/components/buttons/export-table/ExportTableButton'
 import FileUploadField from 'shared/components/form/XHRUploaderField'
 import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
-import { INDIVIDUAL_CORE_EXPORT_DATA } from '../../constants'
+import { INDIVIDUAL_ID_EXPORT_DATA, INDIVIDUAL_CORE_EXPORT_DATA } from '../../constants'
 import { updateIndividuals } from '../../reducers'
-import { getProject, getIndividualsExportConfig } from '../../selectors'
+import { getProject, getEntityExportConfig, getProjectAnalysisGroupIndividualsByGuid } from '../../selectors'
 
 
 const Container = styled.div`
@@ -37,7 +37,6 @@ const TableCell = styled(Table.Cell)`
   vertical-align: top;
 `
 
-const FORM_NAME = 'bulkUploadIndividuals'
 const FILE_FIELD_NAME = 'uploadedFile'
 const UPLOADER_STYLE = { maxWidth: '700px', margin: 'auto' }
 const UPLOAD_FORMATS = [
@@ -46,10 +45,10 @@ const UPLOAD_FORMATS = [
 ]
 
 
-const BaseBulkContent = ({ project, individualsExportConfig, blankIndividualsExportConfig }) =>
+const BaseBulkContent = ({ actionDescription, details, url, project, individualFields, individualsExportConfig, blankIndividualsExportConfig }) =>
   <div>
     <Container>
-      To bulk-add or edit individuals, upload a table in one of these formats:
+      To {actionDescription}, upload a table in one of these formats:
       <StyledTable>
         <Table.Body>
           {UPLOAD_FORMATS.map(({ name, ext, detail }) =>
@@ -58,8 +57,13 @@ const BaseBulkContent = ({ project, individualsExportConfig, blankIndividualsExp
                 <BoldText>{name}</BoldText> ({detail || `.${ext}`})
               </TableCell>
               <TableCell>
-                download template: <FileLink data={blankIndividualsExportConfig} ext={ext} linkContent="blank" /> &nbsp;
-                or <FileLink data={individualsExportConfig} ext={ext} linkContent="current individuals" />
+                download
+                {blankIndividualsExportConfig &&
+                  <span>
+                    &nbsp;template: <FileLink data={blankIndividualsExportConfig} ext={ext} linkContent="blank" /> or&nbsp;
+                  </span>
+                }
+                <FileLink data={individualsExportConfig} ext={ext} linkContent="current individuals" />
               </TableCell>
             </TableRow>,
           )}
@@ -72,7 +76,7 @@ const BaseBulkContent = ({ project, individualsExportConfig, blankIndividualsExp
         <BoldText>Required Columns:</BoldText><br />
         <StyledTable className="noBorder">
           <Table.Body>
-            {INDIVIDUAL_CORE_EXPORT_DATA.filter(field => !field.description).map(field =>
+            {INDIVIDUAL_ID_EXPORT_DATA.map(field =>
               <TableRow key={field.header}>
                 <TableCell><BoldText>{field.header}</BoldText></TableCell>
                 <TableCell />
@@ -83,7 +87,7 @@ const BaseBulkContent = ({ project, individualsExportConfig, blankIndividualsExp
         <BoldText>Optional Columns:</BoldText>
         <StyledTable>
           <Table.Body>
-            {INDIVIDUAL_CORE_EXPORT_DATA.filter(field => field.description).map(field =>
+            {individualFields.map(field =>
               <TableRow key={field.header}>
                 <TableCell><BoldText>{field.header}</BoldText></TableCell>
                 <TableCell>{field.description}</TableCell>
@@ -92,16 +96,14 @@ const BaseBulkContent = ({ project, individualsExportConfig, blankIndividualsExp
           </Table.Body>
         </StyledTable>
       </div>
-      If the Family ID and Individual ID in the table match those of an existing individual in the project,
-      the matching individual&rsquo;s data will be updated with values from the table. Otherwise, a new individual
-      will be created.<br />
+      {details}
       <br />
     </Container>
     <br />
     <FileUploadField
       clearTimeOut={0}
       dropzoneLabel="Click here to upload a table, or drag-drop it into this box"
-      url={`/api/project/${project.projectGuid}/upload_individuals_table`}
+      url={url && url(project)}
       auto
       required
       name={FILE_FIELD_NAME}
@@ -111,44 +113,57 @@ const BaseBulkContent = ({ project, individualsExportConfig, blankIndividualsExp
   </div>
 
 BaseBulkContent.propTypes = {
+  actionDescription: PropTypes.string.isRequired,
+  individualFields: PropTypes.array.isRequired,
+  details: PropTypes.string,
+  url: PropTypes.func,
   project: PropTypes.object,
   individualsExportConfig: PropTypes.object,
   blankIndividualsExportConfig: PropTypes.object,
 }
 
-const mapStateToProps = state => ({
+const mapStateToProps = (state, ownProps) => ({
   project: getProject(state),
-  individualsExportConfig: getIndividualsExportConfig(state, { omitHpo: true }),
-  blankIndividualsExportConfig: { ...getIndividualsExportConfig(state, { omitHpo: true, fileName: 'template' }), rawData: [] },
+  individualsExportConfig: getEntityExportConfig(getProject(state), Object.values(getProjectAnalysisGroupIndividualsByGuid(state, ownProps)), null, 'individuals', INDIVIDUAL_ID_EXPORT_DATA.concat(ownProps.individualFields)),
+  blankIndividualsExportConfig: ownProps.blankDownload && getEntityExportConfig(getProject(state), [], null, 'template', INDIVIDUAL_ID_EXPORT_DATA.concat(ownProps.individualFields)),
 })
 
 const BulkContent = connect(mapStateToProps)(BaseBulkContent)
 
-const EditIndividualsBulkForm = props =>
+const EditBulkForm = ({ form, modalName, onSubmit, ...props }) =>
   <ReduxFormWrapper
-    form={FORM_NAME}
-    modalName={props.modalName}
-    submitButtonText="Apply"
-    onSubmit={values => props.updateIndividuals(values[FILE_FIELD_NAME])}
+    form={form}
+    modalName={modalName}
+    onSubmit={values => onSubmit(values[FILE_FIELD_NAME])}
     confirmCloseIfNotSaved
     closeOnSuccess
     showErrorPanel
     size="small"
-    renderChildren={BulkContent}
+    renderChildren={() => <BulkContent {...props} />}
   />
 
-EditIndividualsBulkForm.propTypes = {
+EditBulkForm.propTypes = {
+  form: PropTypes.string,
   modalName: PropTypes.string,
-  updateIndividuals: PropTypes.func,
+  onSubmit: PropTypes.func,
 }
 
-export { EditIndividualsBulkForm as EditIndividualsBulkFormComponent }
+const IndividualsBulkForm = props =>
+  <EditBulkForm
+    form="bulkUploadIndividuals"
+    actionDescription="bulk-add or edit individuals"
+    details="If the Family ID and Individual ID in the table match those of an existing individual in the project,
+      the matching individual's data will be updated with values from the table. Otherwise, a new individual
+      will be created."
+    individualFields={INDIVIDUAL_CORE_EXPORT_DATA}
+    url={project => `/api/project/${project.projectGuid}/upload_individuals_table`}
+    blankDownload
+    {...props}
+  />
 
-const mapDispatchToProps = (dispatch) => {
-  return {
-    updateIndividuals: values => dispatch(updateIndividuals(values)),
-  }
+const mapDispatchToProps = {
+  onSubmit: updateIndividuals,
 }
 
 
-export default connect(null, mapDispatchToProps)(EditIndividualsBulkForm)
+export const EditIndividualsBulkForm = connect(null, mapDispatchToProps)(IndividualsBulkForm)

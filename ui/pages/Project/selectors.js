@@ -18,7 +18,6 @@ import {
   FAMILY_EXPORT_DATA,
   INTERNAL_FAMILY_EXPORT_DATA,
   INDIVIDUAL_EXPORT_DATA,
-  INDIVIDUAL_CORE_EXPORT_DATA,
   INTERNAL_INDIVIDUAL_EXPORT_DATA,
   SAMPLE_EXPORT_DATA,
   SORT_BY_FAMILY_GUID,
@@ -91,7 +90,7 @@ export const getProjectAnalysisGroupIndividualsByGuid = createSelector(
     Object.values(familiesByGuid).reduce((acc, family) => ({
       ...acc,
       ...family.individualGuids.reduce((indivAcc, individualGuid) => (
-        { ...indivAcc, [individualGuid]: individualsByGuid[individualGuid] }
+        { ...indivAcc, [individualGuid]: { ...individualsByGuid[individualGuid], familyId: family.familyId } }
       ), {}),
     }), {}),
 )
@@ -342,16 +341,8 @@ export const getIndividualsExportConfig = createSelector(
   getProject,
   getVisibleSortedIndividuals,
   (state, ownProps) => (ownProps || {}).tableName,
-  (state, ownProps) => (ownProps || {}).fileName || 'individuals',
-  (state, ownProps = {}) => {
-    if (ownProps.internal) {
-      return INDIVIDUAL_EXPORT_DATA.concat(INTERNAL_INDIVIDUAL_EXPORT_DATA)
-    }
-    if (ownProps.omitHpo) {
-      return INDIVIDUAL_CORE_EXPORT_DATA
-    }
-    return INDIVIDUAL_EXPORT_DATA
-  },
+  () => 'individuals',
+  (state, ownProps) => ((ownProps || {}).internal ? INDIVIDUAL_EXPORT_DATA.concat(INTERNAL_INDIVIDUAL_EXPORT_DATA) : INDIVIDUAL_EXPORT_DATA),
   getEntityExportConfig,
 )
 

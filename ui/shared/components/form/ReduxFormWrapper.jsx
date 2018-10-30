@@ -187,7 +187,6 @@ class ReduxFormWrapper extends React.Component {
       'submitSucceeded',
       'submitFailed',
       'closeOnSuccess',
-      'renderChildren',
       'fields',
       'showErrorPanel',
       'size',

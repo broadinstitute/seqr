@@ -369,9 +369,12 @@ export const INTERNAL_FAMILY_EXPORT_DATA = [
   { header: 'Internal Case Review Notes', field: 'internalCaseReviewNotes', format: stripMarkdown },
 ]
 
-export const INDIVIDUAL_CORE_EXPORT_DATA = [
+export const INDIVIDUAL_ID_EXPORT_DATA = [
   { header: 'Family ID', field: 'familyId' },
   { header: 'Individual ID', field: 'individualId' },
+]
+
+export const INDIVIDUAL_CORE_EXPORT_DATA = [
   { header: 'Paternal ID', field: 'paternalId', description: 'Individual ID of the father' },
   { header: 'Maternal ID', field: 'maternalId', description: 'Individual ID of the mother' },
   { header: 'Sex', field: 'sex', format: sex => SEX_LOOKUP[sex], description: 'Male or Female, leave blank if unknown' },
@@ -379,7 +382,7 @@ export const INDIVIDUAL_CORE_EXPORT_DATA = [
   { header: 'Notes', field: 'notes', format: stripMarkdown, description: 'free-text notes related to this individual'  },
 ]
 
-export const INDIVIDUAL_EXPORT_DATA = INDIVIDUAL_CORE_EXPORT_DATA.concat([
+export const INDIVIDUAL_HPO_EXPORT_DATA = [
   {
     header: 'HPO Terms (present)',
     field: 'phenotipsData',
@@ -400,7 +403,9 @@ export const INDIVIDUAL_EXPORT_DATA = INDIVIDUAL_CORE_EXPORT_DATA.concat([
     ),
     description: 'comma-separated list of HPO Terms for phenotypes not present in this individual',
   },
-])
+]
+
+export const INDIVIDUAL_EXPORT_DATA = [].concat(INDIVIDUAL_ID_EXPORT_DATA, INDIVIDUAL_CORE_EXPORT_DATA, INDIVIDUAL_HPO_EXPORT_DATA)
 
 
 export const INTERNAL_INDIVIDUAL_EXPORT_DATA = [
