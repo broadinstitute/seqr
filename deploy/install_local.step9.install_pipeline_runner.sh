@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 
 set +x
+
+if [ -z "$SEQR_DIR"  ]; then
+    echo "SEQR_DIR environment variable not set. Please run install_general_dependencies.sh as described in step 1 of https://github.com/macarthur-lab/seqr/blob/master/deploy/LOCAL_INSTALL.md"
+    exit 1
+fi
+
 #set +x
 #echo
 #echo "==== Installing legacy resources ===="
