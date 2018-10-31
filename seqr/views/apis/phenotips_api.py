@@ -72,7 +72,7 @@ def receive_hpo_table_handler(request, project_guid):
     """
 
     project = get_project_and_check_permissions(project_guid, request.user)
-    import traceback, sys
+
     def process_records(records, **kwargs):
         column_map = {}
         for i, field in enumerate(records[0]):
@@ -92,8 +92,6 @@ def receive_hpo_table_handler(request, project_guid):
     try:
         uploaded_file_id, filename, json_records = save_uploaded_file(request, process_records=process_records)
     except Exception as e:
-        _,_, tb = sys.exc_info()
-        traceback.print_tb(tb)
         return create_json_response({'errors': [e.message or str(e)], 'warnings': []}, status=400, reason=e.message or str(e))
 
     updates_by_individual_guid = {}

@@ -159,8 +159,9 @@ class ReduxFormWrapper extends React.Component {
     return (
       <StyledForm onSubmit={this.props.handleSubmit} size={this.props.size} loading={this.props.submitting} hasSubmitButton={!this.props.submitOnChange} inline={this.props.inline}>
         {fieldComponents}
-        {this.props.showErrorPanel && ['warningMessages', 'errorMessages'].map(messagesKey => (
-          this.props[messagesKey] && this.props[messagesKey].length > 0 ? <MessagePanel key={messagesKey} error visible list={this.props[messagesKey]} /> : null
+        {this.props.showErrorPanel && ['warning', 'error'].map(key => (
+          this.props[`${key}Messages`] && this.props[`${key}Messages`].length > 0 ?
+            <MessagePanel key={key} {...{ [key]: true }} visible list={this.props[`${key}Messages`]} /> : null
         ))}
         {
           this.props.secondarySubmitButton && this.props.onSecondarySubmit &&
@@ -227,14 +228,15 @@ class ReduxFormWrapper extends React.Component {
   }
 }
 
+const shouldShowValidationErrors = props => props.submitFailed || (props.liveValidate && props.dirty)
 const getValidationErrorList = validationErrors =>
   (validationErrors ? flatten(Object.values(validationErrors)).filter(err => err) : null)
 const getValidationErrors = createSelector(
-  (state, props) => (props.submitFailed ? getFormSyncErrors(props.form)(state) : null),
+  (state, props) => (shouldShowValidationErrors(props) ? getFormSyncErrors(props.form)(state) : null),
   getValidationErrorList,
 )
 const getValidationWarnings = createSelector(
-  (state, props) => (props.submitFailed ? getFormSyncWarnings(props.form)(state) : null),
+  (state, props) => (shouldShowValidationErrors(props) ? getFormSyncWarnings(props.form)(state) : null),
   getValidationErrorList,
 )
 

@@ -109,7 +109,6 @@ const BaseBulkContent = ({ actionDescription, details, project, name, individual
       name={FILE_FIELD_NAME}
       uploaderStyle={UPLOADER_STYLE}
     />
-    <br />
   </div>
 
 BaseBulkContent.propTypes = {
@@ -144,6 +143,7 @@ const EditBulkForm = ({ name, modalName, onSubmit, ...props }) =>
     confirmCloseIfNotSaved
     closeOnSuccess
     showErrorPanel
+    liveValidate
     size="small"
     renderChildren={() => <BulkContent name={name} {...props} />}
   />
@@ -179,6 +179,7 @@ const HPOBulkForm = props =>
     actionDescription="edit individual's HPO terms"
     individualFields={INDIVIDUAL_HPO_EXPORT_DATA}
     {...props}
+    onSubmit={console.log}
   />
 
 export const EditHPOBulkForm = connect(null, mapDispatchToProps)(HPOBulkForm)
