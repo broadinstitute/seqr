@@ -22,6 +22,7 @@ import json
 import logging
 import re
 import requests
+from collections import defaultdict
 
 import settings
 
@@ -58,6 +59,8 @@ FAMILY_ID_COLUMN = 'family_id'
 INDIVIDUAL_ID_COLUMN = 'external_id'
 HPO_TERMS_PRESENT_COLUMN = 'hpo_present'
 HPO_TERMS_ABSENT_COLUMN = 'hpo_absent'
+HPO_TERM_NUMBER_COLUMN = 'hpo_number'
+AFFECTED_COLUMN = 'affected'
 FEATURES_COLUMN = 'features'
 
 
@@ -74,36 +77,8 @@ def receive_hpo_table_handler(request, project_guid):
 
     project = get_project_and_check_permissions(project_guid, request.user)
 
-    def process_records(records, filename=''):
-        if filename.endswith('.json'):
-            return records
-        column_map = {}
-        for i, field in enumerate(records[0]):
-            key = field.lower()
-            if 'family' in key:
-                column_map[FAMILY_ID_COLUMN] = i
-            elif 'individual' in key:
-                column_map[INDIVIDUAL_ID_COLUMN] = i
-            elif re.match("hpo.*present", key):
-                column_map[HPO_TERMS_PRESENT_COLUMN] = i
-            elif re.match("hpo.*absent", key):
-                column_map[HPO_TERMS_ABSENT_COLUMN] = i
-            elif 'feature' in key:
-                column_map[FEATURES_COLUMN] = i
-        if INDIVIDUAL_ID_COLUMN not in column_map:
-            raise ValueError('Invalid header, missing individual id column')
-        if HPO_TERMS_PRESENT_COLUMN not in column_map and HPO_TERMS_ABSENT_COLUMN not in column_map and FEATURES_COLUMN not in column_map:
-            raise ValueError('Invalid header, missing hpo terms columns')
-
-        row_dicts = [{column: row[index] for column, index in column_map.items()} for row in records[1:]]
-        if HPO_TERMS_PRESENT_COLUMN in column_map or HPO_TERMS_ABSENT_COLUMN in column_map:
-            for row in row_dicts:
-                row[FEATURES_COLUMN] = _parse_hpo_terms(row.get(HPO_TERMS_PRESENT_COLUMN, ''), 'yes')
-                row[FEATURES_COLUMN] += _parse_hpo_terms(row.get(HPO_TERMS_ABSENT_COLUMN, ''), 'no')
-        return row_dicts
-
     try:
-        uploaded_file_id, filename, json_records = save_uploaded_file(request, process_records=process_records)
+        uploaded_file_id, filename, json_records = save_uploaded_file(request, process_records=_process_hpo_records)
     except Exception as e:
         return create_json_response({'errors': [e.message or str(e)], 'warnings': []}, status=400, reason=e.message or str(e))
 
@@ -114,7 +89,10 @@ def receive_hpo_table_handler(request, project_guid):
     for record in json_records:
         family_id = record.get(FAMILY_ID_COLUMN, None)
         individual_id = record.get(INDIVIDUAL_ID_COLUMN)
-        individual_q = Individual.objects.filter(individual_id=individual_id, family__project=project)
+        individual_q = Individual.objects.filter(
+            individual_id__in=[individual_id, '{}_{}'.format(family_id, individual_id)],
+            family__project=project,
+        )
         if family_id:
             individual_q = individual_q.filter(family__family_id=family_id)
         individual = individual_q.first()
@@ -176,9 +154,62 @@ def receive_hpo_table_handler(request, project_guid):
     return create_json_response(response)
 
 
+def _process_hpo_records(records, filename=''):
+    if filename.endswith('.json'):
+        return records
+
+    column_map = {}
+    for i, field in enumerate(records[0]):
+        key = field.lower()
+        if 'family' in key or 'pedigree' in key:
+            column_map[FAMILY_ID_COLUMN] = i
+        elif 'individual' in key:
+            column_map[INDIVIDUAL_ID_COLUMN] = i
+        elif re.match("hpo.*present", key):
+            column_map[HPO_TERMS_PRESENT_COLUMN] = i
+        elif re.match("hpo.*absent", key):
+            column_map[HPO_TERMS_ABSENT_COLUMN] = i
+        elif re.match("hp.*number*", key):
+            if not HPO_TERM_NUMBER_COLUMN in column_map:
+                column_map[HPO_TERM_NUMBER_COLUMN] = []
+            column_map[HPO_TERM_NUMBER_COLUMN].append(i)
+        elif 'affected' in key:
+            column_map[AFFECTED_COLUMN] = i
+        elif 'feature' in key:
+            column_map[FEATURES_COLUMN] = i
+    if INDIVIDUAL_ID_COLUMN not in column_map:
+        raise ValueError('Invalid header, missing individual id column')
+
+    row_dicts = [{column: row[index] if isinstance(index, int) else next((row[i] for i in index if row[i]), None)
+                  for column, index in column_map.items()} for row in records[1:]]
+    if FEATURES_COLUMN in column_map:
+        return row_dicts
+
+    if HPO_TERMS_PRESENT_COLUMN in column_map or HPO_TERMS_ABSENT_COLUMN in column_map:
+        for row in row_dicts:
+            row[FEATURES_COLUMN] = _parse_hpo_terms(row.get(HPO_TERMS_PRESENT_COLUMN, ''), 'yes')
+            row[FEATURES_COLUMN] += _parse_hpo_terms(row.get(HPO_TERMS_ABSENT_COLUMN, ''), 'no')
+        return row_dicts
+
+    if HPO_TERM_NUMBER_COLUMN in column_map:
+        aggregate_rows = defaultdict(list)
+        for row in row_dicts:
+            if row.get(HPO_TERM_NUMBER_COLUMN):
+                aggregate_rows[(row.get(FAMILY_ID_COLUMN), row.get(INDIVIDUAL_ID_COLUMN))].append(
+                    _hpo_term_item(row[HPO_TERM_NUMBER_COLUMN], row.get(AFFECTED_COLUMN, 'yes'))
+                )
+        return [{FAMILY_ID_COLUMN: family_id, INDIVIDUAL_ID_COLUMN: individual_id, FEATURES_COLUMN: features}
+                for (family_id, individual_id), features in aggregate_rows.items()]
+
+    raise ValueError('Invalid header, missing hpo terms columns')
+
+
+def _hpo_term_item(term, observed):
+    return {"id": term.strip(), "observed": observed.lower(), "type": "phenotype"}
+
+
 def _parse_hpo_terms(hpo_term_string, observed):
-    return [{"id": hpo_term.split('(')[0].strip(), "observed": observed, "type": "phenotype"}
-            for hpo_term in hpo_term_string.split(';')] if hpo_term_string else []
+    return [_hpo_term_item(hpo_term.split('(')[0], observed) for hpo_term in hpo_term_string.split(';')]
 
 
 def _feature_set(features):

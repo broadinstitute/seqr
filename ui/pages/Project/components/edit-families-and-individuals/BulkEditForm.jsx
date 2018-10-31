@@ -196,6 +196,7 @@ const HPOBulkForm = props =>
   <EditBulkForm
     name="hpo_terms"
     actionDescription="edit individual's HPO terms"
+    details="Alternately, the table can have a single row per HPO term"
     individualFields={INDIVIDUAL_HPO_EXPORT_DATA}
     uploadFormats={ALL_UPLOAD_FORMATS}
     {...props}
