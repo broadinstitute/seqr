@@ -46,6 +46,9 @@ def parse_file(filename, stream):
         ws = wb.sheet_by_index(0)
         return [[_parse_excel_string_cell(ws.cell(rowx=i, colx=j)) for j in range(ws.ncols)] for i in iter(range(ws.nrows))]
 
+    elif filename.endswith('.json'):
+        return json.loads(stream.read())
+
     raise ValueError("Unexpected file type: {}".format(filename))
 
 

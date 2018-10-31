@@ -39,31 +39,48 @@ const TableCell = styled(Table.Cell)`
 
 const FILE_FIELD_NAME = 'uploadedFile'
 const UPLOADER_STYLE = { maxWidth: '700px', margin: 'auto' }
-const UPLOAD_FORMATS = [
+const BASE_UPLOAD_FORMATS = [
   { title: 'Excel', ext: 'xls' },
-  { title: 'Text', ext: 'tsv', detail: <a href="https://en.wikipedia.org/wiki/Tab-separated_values" target="_blank">.tsv</a> / <a href="https://www.cog-genomics.org/plink2/formats#fam" target="_blank">.fam</a> },
+  {
+    title: 'Text',
+    ext: 'tsv',
+    formatLinks: [
+      { href: 'https://en.wikipedia.org/wiki/Tab-separated_values', linkExt: 'tsv' },
+      { href: 'https://en.wikipedia.org/wiki/Comma-separated_values', linkExt: 'csv' },
+    ] },
 ]
+const ALL_UPLOAD_FORMATS = BASE_UPLOAD_FORMATS.concat([
+  { title: 'Phenotips Export', formatLinks: [{ href: 'https://phenotips.org/', linkExt: 'json' }] },
+])
+const FAM_UPLOAD_FORMATS = [].concat(BASE_UPLOAD_FORMATS)
+FAM_UPLOAD_FORMATS[1] = { ...FAM_UPLOAD_FORMATS[1], formatLinks: [...FAM_UPLOAD_FORMATS[1].formatLinks, { href: 'https://www.cog-genomics.org/plink2/formats#fam', linkExt: 'fam' }] }
 
 
-const BaseBulkContent = ({ actionDescription, details, project, name, individualFields, individualsExportConfig, blankIndividualsExportConfig }) =>
+const BaseBulkContent = ({ actionDescription, details, project, name, individualFields, uploadFormats, individualsExportConfig, blankIndividualsExportConfig }) =>
   <div>
     <Container>
       To {actionDescription}, upload a table in one of these formats:
       <StyledTable>
         <Table.Body>
-          {UPLOAD_FORMATS.map(({ title, ext, detail }) =>
-            <TableRow key={ext}>
+          {uploadFormats.map(({ title, ext, formatLinks }) =>
+            <TableRow key={title}>
               <TableCell>
-                <BoldText>{title}</BoldText> ({detail || `.${ext}`})
+                <BoldText>{title}</BoldText> ({formatLinks ? formatLinks.map(
+                  ({ href, linkExt }, i) => <span key={linkExt}>{i > 0 && ' / '}<a href={href} target="_blank">.{linkExt}</a></span>)
+                  : `.${ext}`})
               </TableCell>
               <TableCell>
-                download&nbsp;
-                {blankIndividualsExportConfig &&
+                {ext &&
                   <span>
-                    template: <FileLink data={blankIndividualsExportConfig} ext={ext} linkContent="blank" /> or&nbsp;
+                    download &nbsp;
+                    {blankIndividualsExportConfig &&
+                      <span>
+                      template: <FileLink data={blankIndividualsExportConfig} ext={ext} linkContent="blank" /> or&nbsp;
+                      </span>
+                    }
+                    <FileLink data={individualsExportConfig} ext={ext} linkContent="current individuals" />
                   </span>
                 }
-                <FileLink data={individualsExportConfig} ext={ext} linkContent="current individuals" />
               </TableCell>
             </TableRow>,
           )}
@@ -114,6 +131,7 @@ const BaseBulkContent = ({ actionDescription, details, project, name, individual
 BaseBulkContent.propTypes = {
   actionDescription: PropTypes.string.isRequired,
   individualFields: PropTypes.array.isRequired,
+  uploadFormats: PropTypes.array,
   details: PropTypes.string,
   name: PropTypes.string.isRequired,
   project: PropTypes.object,
@@ -162,6 +180,7 @@ const IndividualsBulkForm = props =>
       the matching individual's data will be updated with values from the table. Otherwise, a new individual
       will be created."
     individualFields={INDIVIDUAL_CORE_EXPORT_DATA}
+    uploadFormats={FAM_UPLOAD_FORMATS}
     blankDownload
     {...props}
   />
@@ -178,6 +197,7 @@ const HPOBulkForm = props =>
     name="hpo_terms"
     actionDescription="edit individual's HPO terms"
     individualFields={INDIVIDUAL_HPO_EXPORT_DATA}
+    uploadFormats={ALL_UPLOAD_FORMATS}
     {...props}
   />
 

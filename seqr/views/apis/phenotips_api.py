@@ -54,10 +54,11 @@ DO_NOT_PROXY_URL_KEYWORDS = [
     '/ForgotPassword',
 ]
 
-FAMILY_ID_COLUMN = 'familyId'
-INDIVIDUAL_ID_COLUMN = 'individualId'
-HPO_TERMS_PRESENT_COLUMN = 'hpoPresent'
-HPO_TERMS_ABSENT_COLUMN = 'hpoAbsent'
+FAMILY_ID_COLUMN = 'family_id'
+INDIVIDUAL_ID_COLUMN = 'external_id'
+HPO_TERMS_PRESENT_COLUMN = 'hpo_present'
+HPO_TERMS_ABSENT_COLUMN = 'hpo_absent'
+FEATURES_COLUMN = 'features'
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -73,7 +74,9 @@ def receive_hpo_table_handler(request, project_guid):
 
     project = get_project_and_check_permissions(project_guid, request.user)
 
-    def process_records(records, **kwargs):
+    def process_records(records, filename=''):
+        if filename.endswith('.json'):
+            return records
         column_map = {}
         for i, field in enumerate(records[0]):
             key = field.lower()
@@ -85,9 +88,19 @@ def receive_hpo_table_handler(request, project_guid):
                 column_map[HPO_TERMS_PRESENT_COLUMN] = i
             elif re.match("hpo.*absent", key):
                 column_map[HPO_TERMS_ABSENT_COLUMN] = i
-        if len(column_map) != 4:
-            raise ValueError('Invalid header, expected 4 columns and received {}'.format(len(column_map)))
-        return [{column: row[index] for column, index in column_map.items()} for row in records[1:]]
+            elif 'feature' in key:
+                column_map[FEATURES_COLUMN] = i
+        if INDIVIDUAL_ID_COLUMN not in column_map:
+            raise ValueError('Invalid header, missing individual id column')
+        if HPO_TERMS_PRESENT_COLUMN not in column_map and HPO_TERMS_ABSENT_COLUMN not in column_map and FEATURES_COLUMN not in column_map:
+            raise ValueError('Invalid header, missing hpo terms columns')
+
+        row_dicts = [{column: row[index] for column, index in column_map.items()} for row in records[1:]]
+        if HPO_TERMS_PRESENT_COLUMN in column_map or HPO_TERMS_ABSENT_COLUMN in column_map:
+            for row in row_dicts:
+                row[FEATURES_COLUMN] = _parse_hpo_terms(row.get(HPO_TERMS_PRESENT_COLUMN, ''), 'yes')
+                row[FEATURES_COLUMN] += _parse_hpo_terms(row.get(HPO_TERMS_ABSENT_COLUMN, ''), 'no')
+        return row_dicts
 
     try:
         uploaded_file_id, filename, json_records = save_uploaded_file(request, process_records=process_records)
@@ -99,24 +112,22 @@ def receive_hpo_table_handler(request, project_guid):
     unchanged_individuals = []
     all_hpo_terms = set()
     for record in json_records:
-        family_id = record.pop('familyId')
-        individual_id = record.pop('individualId')
-        id_string = '{individual_id} ({family_id})'.format(individual_id=individual_id, family_id=family_id)
-        individual = Individual.objects.filter(
-            individual_id=individual_id,
-            family__family_id=family_id,
-            family__project=project).first()
+        family_id = record.get(FAMILY_ID_COLUMN, None)
+        individual_id = record.get(INDIVIDUAL_ID_COLUMN)
+        individual_q = Individual.objects.filter(individual_id=individual_id, family__project=project)
+        if family_id:
+            individual_q = individual_q.filter(family__family_id=family_id)
+        individual = individual_q.first()
         if individual:
-            features = _parse_hpo_terms(record[HPO_TERMS_PRESENT_COLUMN] or '', 'yes')
-            features += _parse_hpo_terms(record[HPO_TERMS_ABSENT_COLUMN] or '', 'no')
+            features = record.get(FEATURES_COLUMN, [])
             if individual.phenotips_data and features and \
                     _feature_set(features) == _feature_set(json.loads(individual.phenotips_data).get('features', [])):
-                unchanged_individuals.append(id_string)
+                unchanged_individuals.append(individual_id)
             else:
                 all_hpo_terms.update([feature['id'] for feature in features])
                 updates_by_individual_guid[individual.guid] = features
         else:
-            missing_individuals.append(id_string)
+            missing_individuals.append(individual_id)
 
     if not updates_by_individual_guid:
         return create_json_response({
