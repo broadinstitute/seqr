@@ -25,7 +25,8 @@ from seqr.views.apis.phenotips_api import \
     proxy_to_phenotips, \
     phenotips_pdf_handler, \
     phenotips_edit_handler, \
-    receive_hpo_table_handler
+    receive_hpo_table_handler, \
+    update_individual_hpo_terms
 
 from seqr.views.apis.case_review_api import \
     save_internal_case_review_notes, \
@@ -93,6 +94,7 @@ react_app_pages = [
 # NOTE: the actual url will be this with an '/api' prefix
 api_endpoints = {
     'individual/(?P<individual_guid>[\w.|-]+)/update': update_individual_handler,
+    'individual/(?P<individual_guid>[\w.|-]+)/update_hpo_terms': update_individual_hpo_terms,
 
     'family/(?P<family_guid>[\w.|-]+)/save_internal_case_review_notes': save_internal_case_review_notes,
     'family/(?P<family_guid>[\w.|-]+)/save_internal_case_review_summary': save_internal_case_review_summary,

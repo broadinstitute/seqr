@@ -8,7 +8,7 @@ import { FileLink } from 'shared/components/buttons/export-table/ExportTableButt
 import FileUploadField from 'shared/components/form/XHRUploaderField'
 import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
 import { INDIVIDUAL_ID_EXPORT_DATA, INDIVIDUAL_CORE_EXPORT_DATA, INDIVIDUAL_HPO_EXPORT_DATA } from '../../constants'
-import { updateIndividuals } from '../../reducers'
+import { updateIndividuals, updateIndividualsHpoTerms } from '../../reducers'
 import { getProject, getEntityExportConfig, getProjectAnalysisGroupIndividualsByGuid } from '../../selectors'
 
 
@@ -166,11 +166,11 @@ const IndividualsBulkForm = props =>
     {...props}
   />
 
-const mapDispatchToProps = {
+const mapIndividualsDispatchToProps = {
   onSubmit: updateIndividuals,
 }
 
-export const EditIndividualsBulkForm = connect(null, mapDispatchToProps)(IndividualsBulkForm)
+export const EditIndividualsBulkForm = connect(null, mapIndividualsDispatchToProps)(IndividualsBulkForm)
 
 
 const HPOBulkForm = props =>
@@ -179,7 +179,10 @@ const HPOBulkForm = props =>
     actionDescription="edit individual's HPO terms"
     individualFields={INDIVIDUAL_HPO_EXPORT_DATA}
     {...props}
-    onSubmit={console.log}
   />
 
-export const EditHPOBulkForm = connect(null, mapDispatchToProps)(HPOBulkForm)
+const mapHpoDispatchToProps = {
+  onSubmit: updateIndividualsHpoTerms,
+}
+
+export const EditHPOBulkForm = connect(null, mapHpoDispatchToProps)(HPOBulkForm)

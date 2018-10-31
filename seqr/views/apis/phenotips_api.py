@@ -139,13 +139,14 @@ def receive_hpo_table_handler(request, project_guid):
                 len(unchanged_individuals), ', '.join(unchanged_individuals)
             ))
 
-    hpo_categories = {hpo.hpo_id: hpo.category_id for hpo in HumanPhenotypeOntology.objects.filter(hpo_id__in=all_hpo_terms)}
+    hpo_terms = {hpo.hpo_id: hpo for hpo in HumanPhenotypeOntology.objects.filter(hpo_id__in=all_hpo_terms)}
     invalid_hpo_terms = []
     for features in updates_by_individual_guid.values():
         for feature in features:
-            category = hpo_categories.get(feature['id'])
-            if category:
-                feature['category'] = category
+            hpo_data = hpo_terms.get(feature['id'])
+            if hpo_data:
+                feature['category'] = hpo_data.category_id
+                feature['label'] = hpo_data.name
             else:
                 invalid_hpo_terms.append(feature['id'])
     if invalid_hpo_terms:
@@ -173,26 +174,42 @@ def _feature_set(features):
     return set([(feature['id'], feature['observed']) for feature in features])
 
 
-def update_individual_hpo():
-    if record.get(JsonConstants.HPO_TERMS_PRESENT_COLUMN) or record.get(JsonConstants.FINAL_DIAGNOSIS_OMIM_COLUMN):
-        # update phenotips hpo ids
-        logger.info("Setting PhenoTips HPO Terms to: %s" % (record.get(JsonConstants.HPO_TERMS_PRESENT_COLUMN),))
-        set_patient_hpo_terms(
-            project,
-            individual,
-            hpo_terms_present=record.get(JsonConstants.HPO_TERMS_PRESENT_COLUMN, []),
-            hpo_terms_absent=record.get(JsonConstants.HPO_TERMS_ABSENT_COLUMN, []),
-            final_diagnosis_mim_ids=record.get(JsonConstants.FINAL_DIAGNOSIS_OMIM_COLUMN, []))
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@csrf_exempt
+def update_individual_hpo_terms(request, individual_guid):
+    individual = Individual.objects.get(guid=individual_guid)
 
-        # check HPO ids
-        for column_key, column_label in [
-            (JsonConstants.HPO_TERMS_PRESENT_COLUMN, 'HPO Terms Present'),
-            (JsonConstants.HPO_TERMS_ABSENT_COLUMN, 'HPO Terms Absent')]:
-            if r.get(column_key):
-                for hpo_id in r[column_key]:
-                    if not HumanPhenotypeOntology.objects.filter(hpo_id=hpo_id):
-                        warnings.append(
-                            "Invalid HPO term \"{hpo_id}\" found in the {column_label} column".format(**locals()))
+    project = individual.family.project
+
+    check_permissions(project, request.user, CAN_EDIT)
+
+    features = json.loads(request.body)
+
+    _create_patient_if_missing(project, individual)
+
+    patient_json = _get_patient_data(project, individual)
+    patient_json["features"] = features
+    patient_json_string = json.dumps(patient_json)
+
+    url = _phenotips_patient_url(individual)
+    auth_tuple = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=False)
+    _make_api_call('PUT', url, data=patient_json_string, auth_tuple=auth_tuple, expected_status_code=204)
+
+    phenotips_patient_id = patient_json['id']
+    phenotips_eid = patient_json.get('external_id')
+    update_seqr_model(
+        individual,
+        phenotips_data=json.dumps(patient_json),
+        phenotips_patient_id=phenotips_patient_id,
+        phenotips_eid=phenotips_eid)
+
+    return create_json_response({
+        individual.guid: {
+            'phenotipsData': patient_json,
+            'phenotipsPatientId': phenotips_patient_id,
+            'phenotipsEid': phenotips_eid
+        }
+    })
 
 
 def _create_patient_if_missing(project, individual):
@@ -250,28 +267,6 @@ def _get_patient_data(project, individual):
     return _make_api_call('GET', url, auth_tuple=auth_tuple, verbose=False)
 
 
-def _update_patient_data(project, individual, patient_json):
-    """Updates patient data in PhenoTips to the values in patient_json.
-    Args:
-        project (Model): seqr Project - used to retrieve PhenoTips credentials
-        individual (Model): seqr Individual
-        patient_json (dict): phenotips patient record like the object returned by get_patient_data(..).
-    Raises:
-        PhenotipsException: if api call fails
-    """
-    if not patient_json:
-        raise ValueError("patient_json arg is empty")
-
-    url = _phenotips_patient_url(individual)
-    patient_json_string = json.dumps(patient_json)
-
-    auth_tuple = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=False)
-    result = _make_api_call('PUT', url, data=patient_json_string, auth_tuple=auth_tuple, expected_status_code=204)
-
-    _update_individual_phenotips_data(individual, patient_json)
-    return result
-
-
 def delete_patient(project, individual):
     """Deletes patient from PhenoTips for the given patient_id.
 
@@ -296,40 +291,6 @@ def _phenotips_patient_url(individual):
 
 def phenotips_patient_exists(individual):
     return individual.phenotips_patient_id or individual.phenotips_eid
-
-
-def set_patient_hpo_terms(project, individual, hpo_terms_present=[], hpo_terms_absent=[], final_diagnosis_mim_ids=[]):
-    """Utility method for specifying a list of HPO IDs for a patient.
-    Args:
-        project (Model): seqr Project - used to retrieve PhenoTips credentials
-        individual (Model): seqr Individual
-        hpo_terms_present (list): list of HPO IDs for phenotypes present in this patient (eg. ["HP:00012345", "HP:0012346", ...])
-        hpo_terms_absent (list): list of HPO IDs for phenotypes not present in this patient (eg. ["HP:00012345", "HP:0012346", ...])
-        final_diagnosis_mim_ids (int): one or more MIM Ids (eg. [105650, ..])
-    Raises:
-        PhenotipsException: if api call fails
-    """
-    if not hpo_terms_present or hpo_terms_absent or final_diagnosis_mim_ids:
-        return
-
-    _create_patient_if_missing(project, individual)
-
-    patient_json = _get_patient_data(project, individual)
-
-    if hpo_terms_present or hpo_terms_absent:
-        features_value = [{"id": hpo_term, "observed": "yes", "type": "phenotype"} for hpo_term in hpo_terms_present]
-        features_value += [{"id": hpo_term, "observed": "no", "type": "phenotype"} for hpo_term in hpo_terms_absent]
-        patient_json["features"] = features_value
-
-    if final_diagnosis_mim_ids:
-        omim_disorders = []
-        for mim_id in final_diagnosis_mim_ids:
-            if int(mim_id) < 100000:
-                raise ValueError("Invalid final_diagnosis_mim_id: %s. Expected a 6-digit number." % str(mim_id))
-            omim_disorders.append({'id': 'MIM:%s' % mim_id})
-        patient_json["disorders"] = omim_disorders
-
-    _update_patient_data(project, individual, patient_json)
 
 
 def _add_user_to_patient(username, patient_id, allow_edit=True):
