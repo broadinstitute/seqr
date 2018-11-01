@@ -28,7 +28,7 @@ class Command(BaseCommand):
             indices_for_project[project.get_elasticsearch_index()].append(project)
         indices_for_project.pop(None, None)
 
-        es_client = elasticsearch.Elasticsearch(host=settings.ELASTICSEARCH_SERVICE_HOSTNAME)
+        es_client = elasticsearch.Elasticsearch(host=settings.ELASTICSEARCH_SERVICE_HOSTNAME, timeout=10000)
         search = elasticsearch_dsl.Search(using=es_client, index='*,'.join(indices_for_project.keys()) + "*")
         search = search.query("match", mainTranscript_lof='HC')
         search = search.source(['contig', 'pos', 'ref', 'alt', '*num_alt'])
