@@ -262,7 +262,7 @@ def generate_rows(project, errors):
             "omim_number_initial": omim_number_initial or "NA",
             "omim_number_post_discovery": family.post_discovery_omim_number or "NA",
             "collaborator": project.name,  # TODO use email addresses?
-            "analysis_summary": family.analysis_summary.strip('" \n'),
+            "analysis_summary": (family.analysis_summary or '').strip('" \n'),
             "phenotype_class": "Known" if omim_number_initial else "New",  # "disorders"  UE, NEW, MULTI, EXPAN, KNOWN - If there is a MIM number enter "Known" - otherwise put "New"  and then we will need to edit manually for the other possible values
             "solved": "N",  # TIER 1 GENE (or known gene for phenotype also record as TIER 1 GENE), TIER 2 GENE, N - Pull from seqr using tags
             "submitted_to_mme": "Y" if submitted_to_mme else "NS",
