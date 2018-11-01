@@ -24,7 +24,7 @@ const BAM_TRACK_OPTIONS = {
 
 const ShowReadsButton = ({ variant, familyGuid, samplesByGuid, individualsByGuid }) => {
 
-  const locus = getLocus(variant, 100)
+  const locus = getLocus(variant.chrom, variant.pos, 100)
 
   const latestSamplesForIndividuals = Object.values(samplesByGuid).filter(sample => (
     sample.loadedDate &&
