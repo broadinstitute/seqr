@@ -17,49 +17,59 @@ EXCLUDE_PROJECTS = ['ext', '1000 genomes', 'DISABLED', 'project', 'interview', '
 class Command(BaseCommand):
 
     def add_arguments(self, parser):
-        pass
+        parser.add_argument("--metadata-only", action="store_true", help="Only get the project/ individual metadata.")
+        parser.add_argument("--use-project-indices-csv", action="store_true", help="Load projects to search from project_indices.csv")
 
     def handle(self, *args, **options):
-        projects_q = BaseProject.objects.filter(genome_version='37')
-        for exclude_project in EXCLUDE_PROJECTS:
-            projects_q = projects_q.exclude(project_name__icontains=exclude_project)
-        indices_for_project = defaultdict(list)
-        for project in projects_q:
-            indices_for_project[project.get_elasticsearch_index()].append(project)
-        indices_for_project.pop(None, None)
+        if options["use_project_indices_csv"]:
+            with open('project_indices.csv') as csvfile:
+                reader = csv.DictReader(csvfile)
+                es_indices = {row['index'] for row in reader}
 
-        es_client = elasticsearch.Elasticsearch(host=settings.ELASTICSEARCH_SERVICE_HOSTNAME, timeout=10000)
-        search = elasticsearch_dsl.Search(using=es_client, index='*,'.join(indices_for_project.keys()) + "*")
-        search = search.query("match", mainTranscript_lof='HC')
-        search = search.source(['contig', 'pos', 'ref', 'alt', '*num_alt'])
+        else:
+            projects_q = BaseProject.objects.filter(genome_version='37')
+            for exclude_project in EXCLUDE_PROJECTS:
+                projects_q = projects_q.exclude(project_name__icontains=exclude_project)
+            indices_for_project = defaultdict(list)
+            for project in projects_q:
+                indices_for_project[project.get_elasticsearch_index()].append(project)
+            indices_for_project.pop(None, None)
 
-        print('Searching...')
-        results = []
-        for i, hit in enumerate(search.scan()):
-            result = {key: hit[key] for key in hit}
-            result['index'] = hit.meta.index
-            results.append(result)
+            seqr_projects = []
+            with open('project_indices.csv', 'wb') as csvfile:
+                fieldnames = ['projectGuid', 'index']
+                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+                writer.writeheader()
+                for index, projects in indices_for_project.items():
+                    for project in projects:
+                        seqr_projects.append(project.seqr_project)
+                        writer.writerow({'projectGuid': project.seqr_project.guid, 'index': index})
 
-        print('Loaded {} variants'.format(len(results)))
-        with gzip.open('lof_variants.json.gz', 'w') as f:
-            json.dump(results, f)
+            individuals = _get_json_for_individuals(Individual.objects.filter(family__project__in=seqr_projects))
+            with open('seqr_individuals.csv', 'wb') as csvfile:
+                fieldnames = ['projectGuid', 'familyGuid', 'individualId', 'paternalId', 'maternalId', 'sex',
+                              'affected']
+                writer = csv.DictWriter(csvfile, fieldnames=fieldnames, extrasaction='ignore')
+                writer.writeheader()
+                for individual in individuals:
+                    writer.writerow(individual)
+            es_indices = indices_for_project.keys()
 
-        seqr_projects = []
-        with open('project_indices.csv', 'wb') as csvfile:
-            fieldnames = ['projectGuid', 'index']
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-            writer.writeheader()
-            for index, projects in indices_for_project.items():
-                for project in projects:
-                    seqr_projects.append(project.seqr_project)
-                    writer.writerow({'projectGuid': project.seqr_project.guid, 'index': index})
+        if not options["metadata_only"]:
+            es_client = elasticsearch.Elasticsearch(host=settings.ELASTICSEARCH_SERVICE_HOSTNAME, timeout=10000)
+            search = elasticsearch_dsl.Search(using=es_client, index='*,'.join(es_indices) + "*")
+            search = search.query("match", mainTranscript_lof='HC')
+            search = search.source(['contig', 'pos', 'ref', 'alt', '*num_alt'])
 
-        individuals = _get_json_for_individuals(Individual.objects.filter(family__project__in=seqr_projects))
-        with open('seqr_individuals.csv', 'wb') as csvfile:
-            fieldnames = ['projectGuid', 'familyGuid', 'individualId', 'paternalId', 'maternalId', 'sex', 'affected']
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames, extrasaction='ignore')
-            writer.writeheader()
-            for individual in individuals:
-                writer.writerow(individual)
+            print('Searching across {} indices...'.format(len(es_indices)))
+            results = []
+            for i, hit in enumerate(search.scan()):
+                result = {key: hit[key] for key in hit}
+                result['index'] = hit.meta.index
+                results.append(result)
 
-        print('output written to files')
+            print('Loaded {} variants'.format(len(results)))
+            with gzip.open('lof_variants.json.gz', 'w') as f:
+                json.dump(results, f)
+
+        print('Done')
