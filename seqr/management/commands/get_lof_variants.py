@@ -36,8 +36,6 @@ class Command(BaseCommand):
         print('Searching...')
         results = []
         for i, hit in enumerate(search.scan()):
-            if i > 100:
-                break
             result = {key: hit[key] for key in hit}
             result['index'] = hit.meta.index
             results.append(result)
