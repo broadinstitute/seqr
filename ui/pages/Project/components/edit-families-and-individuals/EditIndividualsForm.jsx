@@ -6,10 +6,10 @@ import styled from 'styled-components'
 import { connect } from 'react-redux'
 import { Field } from 'redux-form'
 
-import { updateIndividuals } from 'pages/Project/reducers'
-import { getProjectAnalysisGroupFamiliesByGuid, getProjectAnalysisGroupIndividualsByGuid } from 'pages/Project/selectors'
+import EditRecordsForm from 'shared/components/form/EditRecordsForm'
 import { SEX_OPTIONS, AFFECTED_OPTIONS } from 'shared/utils/constants'
-import EditRecordsForm from '../EditRecordsForm'
+import { updateIndividuals } from '../../reducers'
+import { getProjectAnalysisGroupFamiliesByGuid, getProjectAnalysisGroupIndividualsByGuid } from '../../selectors'
 
 const RadioField = styled(Field)`
   margin: 0 7px;

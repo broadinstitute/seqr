@@ -24,7 +24,9 @@ from seqr.views.apis.individual_api import \
 from seqr.views.apis.phenotips_api import \
     proxy_to_phenotips, \
     phenotips_pdf_handler, \
-    phenotips_edit_handler
+    phenotips_edit_handler, \
+    receive_hpo_table_handler, \
+    update_individual_hpo_terms
 
 from seqr.views.apis.case_review_api import \
     save_internal_case_review_notes, \
@@ -92,6 +94,7 @@ react_app_pages = [
 # NOTE: the actual url will be this with an '/api' prefix
 api_endpoints = {
     'individual/(?P<individual_guid>[\w.|-]+)/update': update_individual_handler,
+    'individual/(?P<individual_guid>[\w.|-]+)/update_hpo_terms': update_individual_hpo_terms,
 
     'family/(?P<family_guid>[\w.|-]+)/save_internal_case_review_notes': save_internal_case_review_notes,
     'family/(?P<family_guid>[\w.|-]+)/save_internal_case_review_summary': save_internal_case_review_summary,
@@ -123,6 +126,7 @@ api_endpoints = {
     'project/(?P<project_guid>[^/]+)/igv_track/(?P<igv_track_path>.+)': fetch_igv_track,
     'project/(?P<project_guid>[^/]+)/individual/(?P<individual_guid>[\w.|-]+)/phenotips_pdf': phenotips_pdf_handler,
     'project/(?P<project_guid>[^/]+)/individual/(?P<individual_guid>[\w.|-]+)/phenotips_edit': phenotips_edit_handler,
+    'project/(?P<project_guid>[^/]+)/upload_hpo_terms_table': receive_hpo_table_handler,
 
     'project/(?P<project_guid>[^/]+)/analysis_groups/create': update_analysis_group_handler,
     'project/(?P<project_guid>[^/]+)/analysis_groups/(?P<analysis_group_guid>[^/]+)/update': update_analysis_group_handler,

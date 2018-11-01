@@ -90,7 +90,7 @@ export const getProjectAnalysisGroupIndividualsByGuid = createSelector(
     Object.values(familiesByGuid).reduce((acc, family) => ({
       ...acc,
       ...family.individualGuids.reduce((indivAcc, individualGuid) => (
-        { ...indivAcc, [individualGuid]: individualsByGuid[individualGuid] }
+        { ...indivAcc, [individualGuid]: { ...individualsByGuid[individualGuid], familyId: family.familyId } }
       ), {}),
     }), {}),
 )

@@ -1,30 +1,38 @@
 import React from 'react'
 import { Tab } from 'semantic-ui-react'
 import styled from 'styled-components'
-import Modal from '../modal/Modal'
-import EditIndividualsBulkForm from '../form/edit-families-and-individuals/EditIndividualsBulkForm'
-import EditIndividualsForm from '../form/edit-families-and-individuals/EditIndividualsForm'
-import EditFamiliesForm from '../form/edit-families-and-individuals/EditFamiliesForm'
+import Modal from 'shared/components/modal/Modal'
+import { EditIndividualsBulkForm, EditHPOBulkForm } from './BulkEditForm'
+import EditIndividualsForm from './EditIndividualsForm'
+import EditFamiliesForm from './EditFamiliesForm'
 
 const TabPane = styled(Tab.Pane)`
   padding: 1em 0 !important;
 `
 
 const MODAL_NAME = 'editFamiliesAndIndividuals'
-const PANES = [
+const PANE_DETAILS = [
   {
     menuItem: 'Edit Families',
-    pane: <TabPane key={1}><EditFamiliesForm modalName={MODAL_NAME} /></TabPane>,
+    formClass: EditFamiliesForm,
   },
   {
     menuItem: 'Edit Individuals',
-    pane: <TabPane key={2}><EditIndividualsForm modalName={MODAL_NAME} /></TabPane>,
+    formClass: EditIndividualsForm,
+  },
+  {
+    menuItem: 'Edit HPO Terms',
+    formClass: EditHPOBulkForm,
   },
   {
     menuItem: 'Bulk Upload',
-    pane: <TabPane key={3}><EditIndividualsBulkForm modalName={MODAL_NAME} /></TabPane>,
+    formClass: EditIndividualsBulkForm,
   },
 ]
+const PANES = PANE_DETAILS.map(({ formClass, menuItem }) => ({
+  pane: <TabPane key={menuItem}>{React.createElement(formClass, { modalName: MODAL_NAME })}</TabPane>,
+  menuItem,
+}))
 
 export default () => (
   <Modal
