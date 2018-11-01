@@ -368,7 +368,8 @@ def _send_sample_manifest(sample_manifest_rows, kit_id, original_filename, origi
     wb_out = xlwt.Workbook()
     ws_out = wb.add_sheet("")
     for i, row in enumerate(original_file_rows):
-        [ws_out.write(i, j, cell) for j, cell in enumerate(row)]
+        for j, cell in enumerate(row):
+            ws_out.write(i, j, cell)
     wb_out.save(temp_original_file.name)
     temp_original_file.seek(0)
 

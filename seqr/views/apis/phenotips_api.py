@@ -78,7 +78,7 @@ def receive_hpo_table_handler(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user)
 
     try:
-        uploaded_file_id, filename, json_records = save_uploaded_file(request, process_records=_process_hpo_records)
+        uploaded_file_id, _, json_records = save_uploaded_file(request, process_records=_process_hpo_records)
     except Exception as e:
         return create_json_response({'errors': [e.message or str(e)], 'warnings': []}, status=400, reason=e.message or str(e))
 
