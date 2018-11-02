@@ -30,7 +30,7 @@ const PANE_DETAILS = [
   },
 ]
 const PANES = PANE_DETAILS.map(({ formClass, menuItem }) => ({
-  pane: <TabPane key={menuItem}>{React.createElement(formClass, { modalName: MODAL_NAME })}</TabPane>,
+  render: () => <TabPane key={menuItem}>{React.createElement(formClass, { modalName: MODAL_NAME })}</TabPane>,
   menuItem,
 }))
 
@@ -47,10 +47,7 @@ export default () => (
       </div>
     }
   >
-    <Tab
-      renderActiveOnly={false}
-      panes={PANES}
-    />
+    <Tab panes={PANES} />
   </Modal>
 
 )

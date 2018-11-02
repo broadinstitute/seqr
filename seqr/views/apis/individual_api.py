@@ -119,7 +119,7 @@ def edit_individuals_handler(request, project_guid):
     update_individuals = {ind['individualGuid']: ind for ind in modified_individuals_list}
     update_individual_models = {ind.guid: ind for ind in Individual.objects.filter(guid__in=update_individuals.keys())}
 
-    modified_family_ids = {ind['family']['familyId'] for ind in modified_individuals_list}
+    modified_family_ids = {ind.get('familyId') or ind['family']['familyId'] for ind in modified_individuals_list}
     modified_family_ids.update({ind.family.family_id for ind in update_individual_models.values()})
     related_individuals = Individual.objects.filter(
         family__family_id__in=modified_family_ids, family__project=project).exclude(guid__in=update_individuals.keys())

@@ -4,6 +4,7 @@ import styled from 'styled-components'
 import { Table, Checkbox } from 'semantic-ui-react'
 
 import { compareObjects } from '../../utils/sortUtils'
+import { configuredField } from '../form/ReduxFormWrapper'
 import TableLoading from './TableLoading'
 
 const StyledSortableTable = styled(Table)`
@@ -32,13 +33,17 @@ class SortableTable extends React.PureComponent {
   static propTypes = {
     data: PropTypes.array,
     columns: PropTypes.array,
-    idField: PropTypes.string,
+    idField: PropTypes.string.isRequired,
     defaultSortColumn: PropTypes.string,
     selectRows: PropTypes.func,
     selectedRows: PropTypes.object,
     loading: PropTypes.bool,
     emptyContent: PropTypes.node,
     footer: PropTypes.node,
+  }
+
+  static defaultProps = {
+    selectedRows: {},
   }
 
   constructor(props) {
@@ -99,6 +104,14 @@ class SortableTable extends React.PureComponent {
       sortedData = sortedData.reverse()
     }
 
+    const processedColumns = columns.map(({ formFieldProps, ...columnProps }) => (
+      formFieldProps ?
+        {
+          ...columnProps,
+          format: row => configuredField({ ...formFieldProps, name: `${row[idField]}.${columnProps.name}`, onClick: e => e.stopPropagation() }),
+        } : columnProps
+    ))
+
     let tableContent
     if (loading) {
       tableContent = <TableLoading numCols={columns.length} />
@@ -108,7 +121,7 @@ class SortableTable extends React.PureComponent {
       tableContent = sortedData.map(row => (
         <Table.Row key={row[idField]} onClick={this.handleSelect(row[idField])} active={selectedRows[row[idField]]}>
           {selectRows && <Table.Cell content={<Checkbox checked={selectedRows[row[idField]]} />} />}
-          {columns.map(({ name, format, textAlign, verticalAlign }) =>
+          {processedColumns.map(({ name, format, textAlign, verticalAlign }) =>
             <Table.Cell
               key={name}
               content={format ? format(row) : row[name]}
@@ -121,13 +134,13 @@ class SortableTable extends React.PureComponent {
     }
 
     return (
-      <StyledSortableTable sortable selectable={!!selectRows} {...tableProps}>
+      <StyledSortableTable sortable selectable={!!selectRows} columns={columns.length} {...tableProps}>
         <Table.Header>
           <Table.Row>
             {selectRows &&
               <Table.HeaderCell width={1} content={<Checkbox checked={this.allSelected()} indeterminate={this.someSelected()} onClick={this.selectAll} />} />
             }
-            {columns.map(({ name, format, ...columnProps }) =>
+            {processedColumns.map(({ name, format, ...columnProps }) =>
               <Table.HeaderCell
                 key={name}
                 sorted={column === name ? direction : null}
