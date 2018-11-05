@@ -38,11 +38,6 @@ const TableContainer = styled.div`
       padding-left: 18px;
     }
   }
-  
-  a {
-    font-size: 1.1em;
-    font-weight: 500;
-  }
 
 `
 
@@ -79,26 +74,10 @@ class EditRecordsForm extends React.Component
   constructor(props) {
     super(props)
     this.state = {
-      // activePage: 1,
       data: props.records,
     }
   }
 
-  // TODO pagination?
-  // const minIndex = (this.state.activePage - 1) * ROWS_PER_PAGE
-  //   const maxIndex = minIndex + ROWS_PER_PAGE
-  // <Divider />
-  //       {this.props.records.length > ROWS_PER_PAGE &&
-  //         <div style={{ marginRight: '20px', float: 'right' }}>
-  //           Showing rows {((this.state.activePage - 1) * ROWS_PER_PAGE) + 1}-
-  //           {Math.min(this.state.activePage * ROWS_PER_PAGE, this.props.records.length)} &nbsp;
-  //           <Pagination
-  //             activePage={this.state.activePage}
-  //             totalPages={Math.ceil(this.props.records.length / ROWS_PER_PAGE)}
-  //             onPageChange={(event, { activePage }) => this.setState({ activePage })}
-  //             size="mini"
-  //           />
-  //         </div>
 
   render() {
     const { formName, modalName, records, onSubmit, entityKey, closeParentModal, idField, columns, ...tableProps } = this.props
@@ -135,14 +114,17 @@ class EditRecordsForm extends React.Component
                 selectRows={this.checkboxHandler}
                 columns={columns}
                 idField={idField}
+                rowsPerPage={ROWS_PER_PAGE}
+                footer={
+                  <DeleteButton
+                    initialValues={this.state.data}
+                    onSubmit={submitRecords(record => record.toDelete)}
+                    onSuccess={closeParentModal}
+                    confirmDialog={`Are you sure you want to delete the selected ${entityKey}?`}
+                    buttonText="Deleted Selected"
+                  />
+                }
                 {...tableProps}
-              />
-              <DeleteButton
-                initialValues={this.state.data}
-                onSubmit={submitRecords(record => record.toDelete)}
-                onSuccess={closeParentModal}
-                confirmDialog={`Are you sure you want to delete the selected ${entityKey}?`}
-                buttonText="Deleted Selected"
               />
             </TableContainer>
           }
