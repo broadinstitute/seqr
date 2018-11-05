@@ -61,26 +61,6 @@ def get_extra_indivs_in_vcf(families, vcf_file):
     return extra_indivs
 
 
-def get_cohort_from_vcf(project_id, family_id, vcf_file, ids_in_cohort=None):
-    """
-    Gets a cohort from a vcf file, reading the identifiers in the VCF
-    # TODO: shouldn't need project ID
-    # TODO: should replace with make_cohort_from_ids in cohort_utils.py
-    """
-    if ids_in_cohort is not None:
-        indiv_ids = ids_in_cohort
-    else:
-        indiv_ids = get_ids_from_vcf_path(vcf_file)
-
-    family = family_utils.make_family(project_id, family_id)
-    family['is_cohort'] = True
-
-    for i in indiv_ids:
-        family['individuals'][i] = family_utils.make_indiv(i, family_id=family_id, affected='A')
-
-    return family
-
-
 def get_vcf_headers(header_line):
 
     if not header_line.startswith('#'):

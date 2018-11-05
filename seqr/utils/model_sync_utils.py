@@ -1,5 +1,8 @@
 from bs4 import BeautifulSoup
 
+from seqr.model_utils import find_matching_xbrowse_model
+from settings import SEQR_ID_TO_MME_ID_MAP
+
 
 def convert_html_to_plain_text(html_string, remove_line_breaks=False):
     """Returns string after removing all HTML markup.
@@ -18,3 +21,12 @@ def convert_html_to_plain_text(html_string, remove_line_breaks=False):
         text = ' '.join(line.strip() for line in text.splitlines() if line.strip())
 
     return text
+
+
+def can_edit_family_id(family):
+    project = family.project
+    base_project = find_matching_xbrowse_model(project)
+    if not base_project.has_elasticsearch_index():
+        raise ValueError('Editing family_id is disabled for projects which still use the mongo datastore')
+    if project.is_mme_enabled and SEQR_ID_TO_MME_ID_MAP.find({'project_id': project.deprecated_project_id, 'family_id': family.family_id}).count() > 0:
+        raise ValueError('Editing family_id is disabled for {} because it has matchmaker submissions'.format(family.family_id))

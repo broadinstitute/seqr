@@ -64,15 +64,6 @@ _FAMILY_DEFAULTS = {
     'coll_name': '.', 
 }
 
-def make_family(project_id, family_id): 
-    """
-    TODO: kwargs like make_indiv
-    ...and then validation
-    """
-    ret = copy.deepcopy(_FAMILY_DEFAULTS)
-    ret['project_id'] = project_id
-    ret['family_id'] = family_id
-    return ret
 
 def get_indiv_ids_for_family_set(family_set): 
     """
