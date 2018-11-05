@@ -91,7 +91,7 @@ const BaseBulkContent = ({ actionDescription, details, project, name, individual
       <br />
       <div>
         <BoldText>Required Columns:</BoldText><br />
-        <StyledTable className="noBorder">
+        <StyledTable>
           <Table.Body>
             {INDIVIDUAL_ID_EXPORT_DATA.map(field =>
               <TableRow key={field.header}>

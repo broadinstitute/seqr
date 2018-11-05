@@ -6,6 +6,7 @@ import styled from 'styled-components'
 
 import { Table, Icon, Popup } from 'semantic-ui-react'
 
+import { NoBorderTable } from '../../StyledComponents'
 import ButtonLink from '../ButtonLink'
 
 const NameCell = styled(Table.Cell)`
@@ -72,21 +73,21 @@ const ExportTableButton = ({ downloads, buttonText, ...buttonProps }) =>
       </ButtonLink>
     }
     content={
-      <Table className="noBorder">
-        <Table.Body className="noBorder">
+      <NoBorderTable>
+        <Table.Body>
           {
             downloads.map(({ name, url, data }) => {
               return [
-                <Table.Row key={1} className="noBorder">
-                  <NameCell colSpan="2" className="noBorder">
+                <Table.Row key={1}>
+                  <NameCell colSpan="2">
                     <b>{name}:</b>
                   </NameCell>
                 </Table.Row>,
-                <Table.Row key={2} className="noBorder">
-                  <LinkCell className="noBorder">
+                <Table.Row key={2}>
+                  <LinkCell>
                     <FileLink url={url} data={data} ext="xls" />
                   </LinkCell>
-                  <LinkCell className="noBorder">
+                  <LinkCell>
                     <FileLink url={url} data={data} ext="tsv" /><br />
                   </LinkCell>
                 </Table.Row>,
@@ -94,7 +95,7 @@ const ExportTableButton = ({ downloads, buttonText, ...buttonProps }) =>
             })
           }
         </Table.Body>
-      </Table>
+      </NoBorderTable>
     }
     on="click"
     position="bottom center"
