@@ -118,7 +118,7 @@ def discovery_sheet(request, project_guid=None):
 
         temp_file = tempfile.NamedTemporaryFile()
         wb_out = xl.Workbook()
-        ws_out = wb_out.create_sheet()
+        ws_out = wb_out.active
         ws_out.append(map(_to_title_case, HEADER))
         for row in rows:
             ws_out.append([row[column_key] for column_key in HEADER])
@@ -134,7 +134,7 @@ def discovery_sheet(request, project_guid=None):
             ],
         )
         email_message.send()
-        logger.info("exporting xls table for all projects")
+        logger.info("emailing discovery sheet to {}".format(request.user.email))
 
         return create_json_response({'errors': errors})
 
