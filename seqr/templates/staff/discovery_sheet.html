@@ -26,6 +26,25 @@
        //enable the DataTables FixedHeader plugin
        new $.fn.dataTable.FixedHeader( window.dataTable, {} )
     })
+
+    function downloadAll() {
+      $('#downloadAllStatus').css('color', 'red')
+      $('#downloadAllStatus').text( 'Generating...' )
+      fetch("{% url 'discovery_sheet' %}?download", {
+        method: 'GET',
+        credentials: 'include',
+      }).then(
+        (resp) => {
+          console.log(resp)
+          if (resp.ok) {
+            $('#downloadAllStatus').css('color', 'green')
+            $('#downloadAllStatus').text( 'The report for all projects has been emailed to you' )
+          } else {
+            $('#downloadAllStatus').text( 'An error occurred' )
+          }
+        }
+      ).catch(() => $('#downloadAllStatus').text( 'An error occurred' ))
+    }
   </script>
   <style>
     .title-row {
@@ -35,13 +54,14 @@
     .info-row {
       padding:10px 0px 0px 5px
     }
-    
+
     #dataTable td {
       text-align: center !important
     }
   </style>
   <br />
-  <a style="float:right; padding-right:30px" href="{% url 'discovery_sheet' %}/?download">Download All Projects</a>
+  <a style="float:right; padding-right:30px" href="#" onClick = "downloadAll();">Generate Report For All Projects</a>
+  <div style="float:right; padding-right:30px" id="downloadAllStatus"></div>
   <table>
     <tr>
       <td class="title-row">
