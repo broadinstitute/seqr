@@ -29,21 +29,11 @@
 
     function downloadAll() {
       $('#downloadAllStatus').css('color', 'red')
-      $('#downloadAllStatus').text( 'Generating...' )
+      $('#downloadAllStatus').text( 'Kicked off report generation. It will be emailed to you when it completes' )
       fetch("{% url 'discovery_sheet' %}?download", {
         method: 'GET',
         credentials: 'include',
-      }).then(
-        (resp) => {
-          console.log(resp)
-          if (resp.ok) {
-            $('#downloadAllStatus').css('color', 'green')
-            $('#downloadAllStatus').text( 'The report for all projects has been emailed to you' )
-          } else {
-            $('#downloadAllStatus').text( 'An error occurred' )
-          }
-        }
-      ).catch(() => $('#downloadAllStatus').text( 'An error occurred' ))
+      })
     }
   </script>
   <style>
