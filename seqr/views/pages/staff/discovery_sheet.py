@@ -153,7 +153,6 @@ def generate_rows(project, errors):
 
     loaded_samples_by_family = collections.defaultdict(set)
     for sample in loaded_samples:
-        print("Loaded time %s: %s" % (sample, sample.loaded_date))
         loaded_samples_by_family[sample.individual.family.guid].add(sample)
 
     project_variant_tags = list(
@@ -356,15 +355,17 @@ def generate_rows(project, errors):
                 continue
 
             vt.saved_variant_json = json.loads(vt.saved_variant.saved_variant_json)
+            annotation = vt.saved_variant_json.get('annotation') or {}
 
-            if "coding_gene_ids" not in vt.saved_variant_json["annotation"] and "gene_ids" not in vt.saved_variant_json["annotation"]:
+            if "coding_gene_ids" not in annotation and "gene_ids" not in annotation:
                 errors.append("%s - no gene_ids" % vt)
                 rows.append(row)
                 continue
 
-            gene_ids = vt.saved_variant_json["annotation"].get("coding_gene_ids", [])
+
+            gene_ids = annotation.get("coding_gene_ids", [])
             if not gene_ids:
-                gene_ids = vt.saved_variant_json["annotation"].get("gene_ids", [])
+                gene_ids = annotation.get("gene_ids", [])
 
             if not gene_ids:
                 errors.append("%s - gene_ids not specified" % vt)
