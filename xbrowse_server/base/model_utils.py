@@ -12,6 +12,7 @@ from seqr.models import Project as SeqrProject, Family as SeqrFamily, Individual
 from seqr.utils.model_sync_utils import convert_html_to_plain_text
 from seqr.views.utils.variant_utils import get_or_create_saved_variant
 from seqr.views.apis.locus_list_api import add_locus_list_user_permissions
+from xbrowse_server.base.models import Individual as BaseIndividual
 
 
 XBROWSE_TO_SEQR_CLASS_MAPPING = {
@@ -50,6 +51,8 @@ XBROWSE_TO_SEQR_FIELD_MAPPING = {
         "nickname": "display_name",
         "phenotips_id": "phenotips_eid",
         "other_notes": "notes",
+        "maternal_id": "mother",
+        "paternal_id": "father",
     },
     "ProjectTag": {
         "tag": "name",
@@ -246,6 +249,12 @@ def _convert_xbrowse_kwargs_to_seqr_kwargs(xbrowse_model, include_all=False, **k
         field_mapping.get(field, field): value for field, value in kwargs.items()
         if not field_mapping.get(field, field) == _DELETED_FIELD
     }
+
+    for parent_key in ['mother', 'father']:
+        if parent_key in seqr_kwargs and seqr_kwargs[parent_key] and seqr_kwargs[parent_key] != '.':
+            seqr_kwargs[parent_key] = BaseIndividual.objects.get(indiv_id=seqr_kwargs[parent_key], family=xbrowse_model.family)
+        else:
+            seqr_kwargs[parent_key] = None
 
     # handle foreign keys
     for key, value in seqr_kwargs.items():

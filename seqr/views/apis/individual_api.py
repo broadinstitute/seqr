@@ -55,7 +55,7 @@ def update_individual_handler(request, individual_guid):
             {
                 <individualGuid> : {
                     individualId: xxx,
-                    maternalId: xxx,
+                    sex: xxx,
                     affected: xxx,
                     ...
                 }
@@ -101,8 +101,8 @@ def edit_individuals_handler(request, project_guid):
     Response:
         json dictionary representing the updated individual(s) like:
             {
-                <individualGuid1> : { individualId: xxx, maternalId: xxx, paternalId: xxx, ...},
-                <individualGuid2> : { individualId: xxx, maternalId: xxx, paternalId: xxx, ...},
+                <individualGuid1> : { individualId: xxx, sex: xxx, affected: xxx, ...},
+                <individualGuid2> : { individualId: xxx, sex: xxx, affected: xxx, ...},
                 ...
             }
     """
@@ -123,14 +123,7 @@ def edit_individuals_handler(request, project_guid):
     modified_family_ids.update({ind.family.family_id for ind in update_individual_models.values()})
     related_individuals = Individual.objects.filter(
         family__family_id__in=modified_family_ids, family__project=project).exclude(guid__in=update_individuals.keys())
-    # can't use _get_json_for_individual because validation needs familyId, not familyGuid
-    related_individuals_json = [{
-        'individualId': ind.individual_id,
-        'familyId': ind.family.family_id,
-        'sex': ind.sex,
-        'maternalId': ind.maternal_id,
-        'paternalId': ind.paternal_id,
-    } for ind in related_individuals]
+    related_individuals_json = _get_json_for_individuals(related_individuals, project_guid=project_guid, add_family_id_field=True)
     individuals_list = modified_individuals_list + related_individuals_json
 
     # TODO more validation?
@@ -494,8 +487,8 @@ def export_individuals(
         row.extend([
             i.family.family_id,
             i.individual_id,
-            i.paternal_id,
-            i.maternal_id,
+            i.father.individual_id,
+            i.mother.individual_id,
             _SEX_TO_EXPORTED_VALUE.get(i.sex),
             __AFFECTED_TO_EXPORTED_VALUE.get(i.affected),
             i.notes,  # TODO should strip markdown (or be moved to client-side export)

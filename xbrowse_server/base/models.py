@@ -845,8 +845,8 @@ class Individual(models.Model):
     family = models.ForeignKey(Family, null=True, blank=True)
 
     indiv_id = models.SlugField(max_length=140, default="", blank=True, db_index=True)
-    maternal_id = models.SlugField(max_length=140, default="", blank=True)
-    paternal_id = models.SlugField(max_length=140, default="", blank=True)
+    maternal_id = models.SlugField(max_length=140, default="", blank=True, null=True)
+    paternal_id = models.SlugField(max_length=140, default="", blank=True, null=True)
 
     gender = models.CharField(max_length=1, choices=GENDER_CHOICES, default='U')  # => sex
     affected = models.CharField(max_length=1, choices=AFFECTED_CHOICES, default='U')
