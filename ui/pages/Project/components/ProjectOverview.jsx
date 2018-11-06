@@ -7,7 +7,6 @@ import { connect } from 'react-redux'
 
 import { VerticalSpacer } from 'shared/components/Spacers'
 import EditDatasetsButton from 'shared/components/buttons/EditDatasetsButton'
-import EditFamiliesAndIndividualsButton from 'shared/components/buttons/EditFamiliesAndIndividualsButton'
 import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
 import {
   SAMPLE_TYPE_LOOKUP,
@@ -19,6 +18,8 @@ import {
   getProjectAnalysisGroupFamiliesByGuid,
   getProjectAnalysisGroupIndividualsByGuid, getProjectAnalysisGroupSamplesByGuid,
 } from '../selectors'
+import EditFamiliesAndIndividualsButton from './edit-families-and-individuals/EditFamiliesAndIndividualsButton'
+
 
 const DetailContent = styled.div`
  padding: 5px 0px 0px 20px;

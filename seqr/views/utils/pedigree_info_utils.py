@@ -4,27 +4,24 @@ import collections
 import difflib
 import os
 import logging
-import re
 import tempfile
 import traceback
-import xlrd
 import xlwt
 from django.core.mail.message import EmailMultiAlternatives
 from django.utils.html import strip_tags
 
 import settings
-from reference_data.models import HumanPhenotypeOntology
 from seqr.models import Individual
 
 logger = logging.getLogger(__name__)
 
 
-def parse_pedigree_table(filename, stream, user=None, project=None):
+def parse_pedigree_table(parsed_file, filename, user=None, project=None):
     """Validates and parses pedigree information from a .fam, .tsv, or Excel file.
 
     Args:
+        parsed_file (array): The parsed output from the raw file.
         filename (string): The original filename - used to determine the file format based on the suffix.
-        stream (file): An open input stream object.
         user (User): (optional) Django User object
         project (Project): (optional) Django Project object
 
@@ -41,24 +38,46 @@ def parse_pedigree_table(filename, stream, user=None, project=None):
     json_records = []
     errors = []
     warnings = []
-    if not any(map(filename.endswith, ['.ped', '.fam', '.tsv', '.xls', '.xlsx'])):
-        errors.append("Unexpected file type: %(filename)s" % locals())
-        return json_records, errors, warnings
+    is_merged_pedigree_sample_manifest = False
 
     # parse rows from file
-    temp_file = tempfile.NamedTemporaryFile()
     try:
-        if filename.endswith('.fam') or filename.endswith('.ped') or filename.endswith('.tsv'):
-            rows = parse_rows_from_fam_file(stream)
-        elif filename.endswith('.xls') or filename.endswith('.xlsx'):
-            rows = parse_rows_from_xls(stream, save_to_path=temp_file.name)
+        rows = [row for row in parsed_file[1:] if row and not row[0].startswith('#')]
+
+        headers = [parsed_file[0]] + [row for row in parsed_file[1:] if row[0].startswith('#')]
+        header_string = ','.join(headers[0])
+        if "do not modify" in header_string.lower() and "Broad" in header_string:
+            # the merged pedigree/sample manifest has 3 header rows, so use the known header and skip the next 2 rows.
+            rows = rows[:2]
+
+            # validate manifest_header_row1
+            expected_header_columns = MergedPedigreeSampleManifestConstants.MERGED_PEDIGREE_SAMPLE_MANIFEST_COLUMN_NAMES
+            expected_header_columns = expected_header_columns[:4] + ["Alias", "Alias"] + expected_header_columns[6:]
+            actual_header_columns = headers[0]
+            unexpected_header_columns = "\t".join(difflib.unified_diff(expected_header_columns, actual_header_columns)).split("\n")[3:]
+            if unexpected_header_columns:
+                raise ValueError("Expected vs. actual header columns: " + "\t".join(unexpected_header_columns))
+
+            header = expected_header_columns
+            is_merged_pedigree_sample_manifest = True
+        else:
+            header = next(
+                ([field.strip('#') for field in row] for row in headers if _is_header_row(','.join(row))),
+                ['family_id', 'individual_id', 'paternal_id', 'maternal_id', 'sex', 'affected']
+            )
+
+        for i, row in enumerate(rows):
+            if len(row) != len(header):
+                raise ValueError("Row {} contains {} columns: {}, while header contains {}: {}".format(
+                    i + 1, len(row), row, len(header), header
+                ))
+
+        rows = [dict(zip(header, row)) for row in rows]
     except Exception as e:
         traceback.print_exc()
         errors.append("Error while parsing file: %(filename)s. %(e)s" % locals())
         return json_records, errors, warnings
 
-    # send merged XLS table
-    is_merged_pedigree_sample_manifest = len(rows) > 1 and _is_merged_pedigree_sample_manifest_header_row("\t".join(rows[0]))
     if is_merged_pedigree_sample_manifest:
         logger.info("Parsing merged pedigree-sample-manifest file")
         rows, sample_manifest_rows, kit_id = _parse_merged_pedigree_sample_manifest_format(rows)
@@ -75,128 +94,9 @@ def parse_pedigree_table(filename, stream, user=None, project=None):
     errors, warnings = validate_fam_file_records(json_records)
 
     if not errors and is_merged_pedigree_sample_manifest:
-        with open(temp_file.name) as original_file:
-            _send_sample_manifest(sample_manifest_rows, kit_id, original_filename=filename, original_file_stream=original_file, user=user, project=project)
+        _send_sample_manifest(sample_manifest_rows, kit_id, original_filename=filename, original_file_rows=parsed_file, user=user, project=project)
 
     return json_records, errors, warnings
-
-
-def parse_rows_from_fam_file(stream):
-    """Parses a .ped or .tsv file into a list of rows.
-
-    Args:
-        stream (object): a file handle or stream for iterating over lines in the file
-    Returns:
-        list: a list of rows where each row is a dict that maps column names to values in the table
-    """
-
-    header = []
-    result = []
-    for i, line in enumerate(stream):
-        if (i == 0 or line.startswith("#")) and _is_header_row(line):
-            header = line.strip('#\n').split('\t')
-            continue
-        elif not line or line.startswith('#'):
-            continue
-        elif not header:
-            header = ['family_id', 'individual_id', 'paternal_id', 'maternal_id', 'sex', 'affected']
-
-        fields = line.rstrip('\n').split('\t')
-        if len(fields) != len(header):
-            raise ValueError("Row %s contains %d columns: %s, while header contains %s: %s" % (i+1, len(fields), fields, len(header), header))
-
-        fields = map(lambda s: s.strip(), fields)
-
-        row_dict = dict(zip(header, fields))
-        result.append(row_dict)
-
-    return result
-
-
-def parse_rows_from_xls(stream, save_to_path=None):
-    """Parses an Excel table into a list of rows.
-
-    Args:
-        stream (object): a file handle or stream for reading the Excel file
-        save_to_path (string): (optional) writes out a copy of the stream contents to the given file path
-    Returns:
-        list: a list of rows where each row is a list of strings corresponding to values in the table
-    """
-    wb = xlrd.open_workbook(file_contents=stream.read())
-    ws = wb.sheet_by_index(0)
-
-    if save_to_path is not None:
-        wb_out = xlwt.Workbook()
-        ws_out = wb_out.add_sheet(ws.name)
-
-        def copy_row(i_out, ncols):
-            [ws_out.write(i_out, j_out, ws.cell(rowx=i_out, colx=j_out).value) for j_out in range(ncols)]
-
-    header = []
-    rows = []
-    row_idx_iter = iter(range(ws.nrows))
-    for i in row_idx_iter:
-        if save_to_path is not None:
-            copy_row(i, ws.ncols)
-
-        row_fields = [ws.cell(rowx=i, colx=j).value for j in range(ws.ncols)]
-        row_string = "\t".join(map(str, row_fields))
-        if i == 0 and _is_header_row(row_string):
-            header = row_fields
-            continue
-        elif i == 0 and "do not modify" in row_string.lower() and "Broad" in row_string:
-            # the merged pedigree/sample manifest has 3 header rows, so use the known header and skip the next 2 rows.
-
-            row_idx_iter.next() # skip the 2 header rows
-            row_idx_iter.next()
-
-            if save_to_path is not None:
-                copy_row(i + 1, ws.ncols)
-                copy_row(i + 2, ws.ncols)
-
-            # validate manifest_header_row1
-            expected_header_columns = MergedPedigreeSampleManifestConstants.MERGED_PEDIGREE_SAMPLE_MANIFEST_COLUMN_NAMES
-            expected_header_columns = expected_header_columns[:4] + ["Alias", "Alias"] + expected_header_columns[6:]
-            actual_header_columns = [ws.cell(rowx=1, colx=j).value for j in range(len(MergedPedigreeSampleManifestConstants.MERGED_PEDIGREE_SAMPLE_MANIFEST_COLUMN_NAMES))]
-            unexpected_header_columns = "\t".join(difflib.unified_diff(expected_header_columns, actual_header_columns)).split("\n")[3:]
-            if unexpected_header_columns:
-                raise ValueError("Expected vs. actual header columns: " + "\t".join(unexpected_header_columns))
-
-            header = MergedPedigreeSampleManifestConstants.MERGED_PEDIGREE_SAMPLE_MANIFEST_COLUMN_NAMES
-            continue
-        elif not header:
-            raise ValueError("Unexpected header row format: " + row_string)
-
-        parsed_row = []
-        for j in range(len(header)):
-            try:
-                cell = ws.cell(rowx=i, colx=j)
-            except Exception as e:
-                logger.warn("WARNING: Unable to access cell (%s, %s): %s" % (i, j, e))
-
-            cell_value = cell.value
-            if not cell_value:
-                # if the 1st and 2nd column in a row is empty, treat this as the end of the table
-                if j == 0 and (ws.ncols < 2 or not ws.cell(rowx=i, colx=1).value):
-                    break
-                else:
-                    parsed_row.append('')
-            else:
-                if cell.ctype in (2,3) and int(cell_value) == cell_value:
-                    cell_value = int(cell_value)
-                parsed_row.append(unicode(cell_value).encode('UTF-8'))
-        else:
-            # keep this row as part of the table
-            if len(parsed_row) != len(header):
-                raise ValueError("Row %s contains %d columns, while header contains %s: %s" % (i+1, len(parsed_row), len(header), parsed_row))
-
-            row_dict = collections.OrderedDict(zip(header, parsed_row))
-            rows.append(row_dict)
-
-    if save_to_path is not None:
-        wb_out.save(save_to_path)
-
-    return rows
 
 
 def convert_fam_file_rows_to_json(rows):
@@ -249,12 +149,6 @@ def convert_fam_file_rows_to_json(rows):
                 json_record[JsonConstants.AFFECTED_COLUMN] = value
             elif key.startswith("notes"):
                 json_record[JsonConstants.NOTES_COLUMN] = value
-            elif re.match("hpo.*present", key):
-                json_record[JsonConstants.HPO_TERMS_PRESENT_COLUMN] = filter(None, map(lambda s: s.strip(), value.split(',')))
-            elif re.match("hpo.*absent", key):
-                json_record[JsonConstants.HPO_TERMS_ABSENT_COLUMN] = filter(None, map(lambda s: s.strip(), value.split(',')))
-            elif re.match("diagnosis", key) or re.match("disorder", key):
-                json_record[JsonConstants.FINAL_DIAGNOSIS_OMIM_COLUMN] = filter(None, map(lambda s: s.strip(), value.split(',')))
             elif "coded" in key and "phenotype" in key:
                 json_record[JsonConstants.CODED_PHENOTYPE_COLUMN] = value
             #elif key.startswith("funding"):
@@ -346,15 +240,6 @@ def validate_fam_file_records(records, fail_on_warnings=False):
             if parent_family_id != family_id:
                 errors.append("%(parent_id)s is recorded as the %(parent_id_type)s of %(individual_id)s but they have different family ids: %(parent_family_id)s and %(family_id)s" % locals())
 
-        # check HPO ids
-        for column_key, column_label in [
-            (JsonConstants.HPO_TERMS_PRESENT_COLUMN, 'HPO Terms Present'),
-            (JsonConstants.HPO_TERMS_ABSENT_COLUMN, 'HPO Terms Absent')]:
-            if r.get(column_key):
-                for hpo_id in r[column_key]:
-                    if not HumanPhenotypeOntology.objects.filter(hpo_id=hpo_id):
-                        warnings.append("Invalid HPO term \"{hpo_id}\" found in the {column_label} column".format(**locals()))
-
     if errors:
         for error in errors:
             logger.info("ERROR: " + error)
@@ -440,7 +325,7 @@ def _parse_merged_pedigree_sample_manifest_format(rows):
     return pedigree_rows, sample_manifest_rows, kit_id
 
 
-def _send_sample_manifest(sample_manifest_rows, kit_id, original_filename, original_file_stream, user=None, project=None):
+def _send_sample_manifest(sample_manifest_rows, kit_id, original_filename, original_file_rows, user=None, project=None):
 
     # write out the sample manifest file
     wb = xlwt.Workbook()
@@ -479,13 +364,22 @@ def _send_sample_manifest(sample_manifest_rows, kit_id, original_filename, origi
     <b>%(original_filename)s</b> is the original merged pedigree-sample-manifest file that the user uploaded.<br />
     """ % locals()
 
+    temp_original_file = tempfile.NamedTemporaryFile()
+    wb_out = xlwt.Workbook()
+    ws_out = wb.add_sheet("")
+    for i, row in enumerate(original_file_rows):
+        for j, cell in enumerate(row):
+            ws_out.write(i, j, cell)
+    wb_out.save(temp_original_file.name)
+    temp_original_file.seek(0)
+
     email_message = EmailMultiAlternatives(
         subject=kit_id + " Merged Sample Pedigree File",
         body=strip_tags(email_body),
         to=settings.UPLOADED_PEDIGREE_FILE_RECIPIENTS,
         attachments=[
             (sample_manifest_filename, temp_sample_manifest_file.read(), "application/xls"),
-            (original_table_attachment_filename, original_file_stream.read(), "application/xls"),
+            (original_table_attachment_filename, temp_original_file.read(), "application/xls"),
         ],
     )
     email_message.attach_alternative(email_body, 'text/html')
@@ -501,10 +395,6 @@ class JsonConstants:
     AFFECTED_COLUMN = 'affected'
     SAMPLE_ID_COLUMN = 'sampleId'
     NOTES_COLUMN = 'notes'
-
-    HPO_TERMS_PRESENT_COLUMN = 'hpoTermsPresent'
-    HPO_TERMS_ABSENT_COLUMN = 'hpoTermsAbsent'
-    FINAL_DIAGNOSIS_OMIM_COLUMN = 'finalDiagnosisOmim'
 
     CODED_PHENOTYPE_COLUMN = 'codedPhenotype'
 

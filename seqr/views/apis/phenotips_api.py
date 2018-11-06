@@ -22,6 +22,7 @@ import json
 import logging
 import re
 import requests
+from collections import defaultdict
 
 import settings
 
@@ -34,7 +35,9 @@ from reference_data.models import HumanPhenotypeOntology
 from seqr.model_utils import update_seqr_model
 from seqr.models import Project, CAN_EDIT, CAN_VIEW, Individual
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
-from seqr.views.utils.permissions_utils import check_permissions
+from seqr.views.utils.file_utils import save_uploaded_file
+from seqr.views.utils.json_utils import create_json_response
+from seqr.views.utils.permissions_utils import check_permissions, get_project_and_check_permissions
 from seqr.views.utils.proxy_request_utils import proxy_request
 
 logger = logging.getLogger(__name__)
@@ -51,6 +54,204 @@ DO_NOT_PROXY_URL_KEYWORDS = [
     '/ForgotUsername',
     '/ForgotPassword',
 ]
+
+FAMILY_ID_COLUMN = 'family_id'
+INDIVIDUAL_ID_COLUMN = 'external_id'
+HPO_TERMS_PRESENT_COLUMN = 'hpo_present'
+HPO_TERMS_ABSENT_COLUMN = 'hpo_absent'
+HPO_TERM_NUMBER_COLUMN = 'hpo_number'
+AFFECTED_COLUMN = 'affected'
+FEATURES_COLUMN = 'features'
+
+
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@csrf_exempt
+def receive_hpo_table_handler(request, project_guid):
+    """Handler for bulk update of hpo terms. This handler parses the records, but doesn't save them in the database.
+    Instead, it saves them to a temporary file and sends a 'uploadedFileId' representing this file back to the client.
+
+    Args:
+        request (object): Django request object
+        project_guid (string): project GUID
+    """
+
+    project = get_project_and_check_permissions(project_guid, request.user)
+
+    try:
+        uploaded_file_id, _, json_records = save_uploaded_file(request, process_records=_process_hpo_records)
+    except Exception as e:
+        return create_json_response({'errors': [e.message or str(e)], 'warnings': []}, status=400, reason=e.message or str(e))
+
+    updates_by_individual_guid = {}
+    missing_individuals = []
+    unchanged_individuals = []
+    all_hpo_terms = set()
+    for record in json_records:
+        family_id = record.get(FAMILY_ID_COLUMN, None)
+        individual_id = record.get(INDIVIDUAL_ID_COLUMN)
+        individual_q = Individual.objects.filter(
+            individual_id__in=[individual_id, '{}_{}'.format(family_id, individual_id)],
+            family__project=project,
+        )
+        if family_id:
+            individual_q = individual_q.filter(family__family_id=family_id)
+        individual = individual_q.first()
+        if individual:
+            features = record.get(FEATURES_COLUMN, [])
+            if individual.phenotips_data and features and \
+                    _feature_set(features) == _feature_set(json.loads(individual.phenotips_data).get('features', [])):
+                unchanged_individuals.append(individual_id)
+            else:
+                all_hpo_terms.update([feature['id'] for feature in features])
+                updates_by_individual_guid[individual.guid] = features
+        else:
+            missing_individuals.append(individual_id)
+
+    if not updates_by_individual_guid:
+        return create_json_response({
+            'errors': ['Unable to find individuals to update for any of the {} parsed individuals'.format(
+                len(missing_individuals) + len(unchanged_individuals)
+            )],
+            'warnings': []
+        }, status=400, reason='Unable to find any matching individuals')
+
+    info = ['{} individuals will be updated'.format(len(updates_by_individual_guid))]
+    warnings = []
+    if missing_individuals:
+        warnings.append(
+            'Unable to find matching ids for {} individuals. The following entries will not be updated: {}'.format(
+                len(missing_individuals), ', '.join(missing_individuals)
+            ))
+    if unchanged_individuals:
+        warnings.append(
+            'No changes detected for {} individuals. The following entries will not be updated: {}'.format(
+                len(unchanged_individuals), ', '.join(unchanged_individuals)
+            ))
+
+    hpo_terms = {hpo.hpo_id: hpo for hpo in HumanPhenotypeOntology.objects.filter(hpo_id__in=all_hpo_terms)}
+    invalid_hpo_terms = []
+    for features in updates_by_individual_guid.values():
+        for feature in features:
+            hpo_data = hpo_terms.get(feature['id'])
+            if hpo_data:
+                feature['category'] = hpo_data.category_id
+                feature['label'] = hpo_data.name
+            else:
+                invalid_hpo_terms.append(feature['id'])
+    if invalid_hpo_terms:
+        warnings.append(
+            "The following HPO terms were not found in seqr's HPO data, and while they will be added they may be incorrect: {}".format(
+                ', '.join(invalid_hpo_terms)
+            ))
+
+    response = {
+        'updatesByIndividualGuid': updates_by_individual_guid,
+        'uploadedFileId': uploaded_file_id,
+        'errors': [],
+        'warnings': warnings,
+        'info': info,
+    }
+    return create_json_response(response)
+
+
+def _process_hpo_records(records, filename=''):
+    if filename.endswith('.json'):
+        return records
+
+    column_map = {}
+    for i, field in enumerate(records[0]):
+        key = field.lower()
+        if 'family' in key or 'pedigree' in key:
+            column_map[FAMILY_ID_COLUMN] = i
+        elif 'individual' in key:
+            column_map[INDIVIDUAL_ID_COLUMN] = i
+        elif re.match("hpo.*present", key):
+            column_map[HPO_TERMS_PRESENT_COLUMN] = i
+        elif re.match("hpo.*absent", key):
+            column_map[HPO_TERMS_ABSENT_COLUMN] = i
+        elif re.match("hp.*number*", key):
+            if not HPO_TERM_NUMBER_COLUMN in column_map:
+                column_map[HPO_TERM_NUMBER_COLUMN] = []
+            column_map[HPO_TERM_NUMBER_COLUMN].append(i)
+        elif 'affected' in key:
+            column_map[AFFECTED_COLUMN] = i
+        elif 'feature' in key:
+            column_map[FEATURES_COLUMN] = i
+    if INDIVIDUAL_ID_COLUMN not in column_map:
+        raise ValueError('Invalid header, missing individual id column')
+
+    row_dicts = [{column: row[index] if isinstance(index, int) else next((row[i] for i in index if row[i]), None)
+                  for column, index in column_map.items()} for row in records[1:]]
+    if FEATURES_COLUMN in column_map:
+        return row_dicts
+
+    if HPO_TERMS_PRESENT_COLUMN in column_map or HPO_TERMS_ABSENT_COLUMN in column_map:
+        for row in row_dicts:
+            row[FEATURES_COLUMN] = _parse_hpo_terms(row.get(HPO_TERMS_PRESENT_COLUMN, ''), 'yes')
+            row[FEATURES_COLUMN] += _parse_hpo_terms(row.get(HPO_TERMS_ABSENT_COLUMN, ''), 'no')
+        return row_dicts
+
+    if HPO_TERM_NUMBER_COLUMN in column_map:
+        aggregate_rows = defaultdict(list)
+        for row in row_dicts:
+            if row.get(HPO_TERM_NUMBER_COLUMN):
+                aggregate_rows[(row.get(FAMILY_ID_COLUMN), row.get(INDIVIDUAL_ID_COLUMN))].append(
+                    _hpo_term_item(row[HPO_TERM_NUMBER_COLUMN], row.get(AFFECTED_COLUMN, 'yes'))
+                )
+        return [{FAMILY_ID_COLUMN: family_id, INDIVIDUAL_ID_COLUMN: individual_id, FEATURES_COLUMN: features}
+                for (family_id, individual_id), features in aggregate_rows.items()]
+
+    raise ValueError('Invalid header, missing hpo terms columns')
+
+
+def _hpo_term_item(term, observed):
+    return {"id": term.strip(), "observed": observed.lower(), "type": "phenotype"}
+
+
+def _parse_hpo_terms(hpo_term_string, observed):
+    return [_hpo_term_item(hpo_term.split('(')[0], observed) for hpo_term in hpo_term_string.split(';')]
+
+
+def _feature_set(features):
+    return set([(feature['id'], feature['observed']) for feature in features])
+
+
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@csrf_exempt
+def update_individual_hpo_terms(request, individual_guid):
+    individual = Individual.objects.get(guid=individual_guid)
+
+    project = individual.family.project
+
+    check_permissions(project, request.user, CAN_EDIT)
+
+    features = json.loads(request.body)
+
+    _create_patient_if_missing(project, individual)
+
+    patient_json = _get_patient_data(project, individual)
+    patient_json["features"] = features
+    patient_json_string = json.dumps(patient_json)
+
+    url = _phenotips_patient_url(individual)
+    auth_tuple = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=False)
+    _make_api_call('PUT', url, data=patient_json_string, auth_tuple=auth_tuple, expected_status_code=204)
+
+    phenotips_patient_id = patient_json['id']
+    phenotips_eid = patient_json.get('external_id')
+    update_seqr_model(
+        individual,
+        phenotips_data=json.dumps(patient_json),
+        phenotips_patient_id=phenotips_patient_id,
+        phenotips_eid=phenotips_eid)
+
+    return create_json_response({
+        individual.guid: {
+            'phenotipsData': patient_json,
+            'phenotipsPatientId': phenotips_patient_id,
+            'phenotipsEid': phenotips_eid
+        }
+    })
 
 
 def _create_patient_if_missing(project, individual):
@@ -108,28 +309,6 @@ def _get_patient_data(project, individual):
     return _make_api_call('GET', url, auth_tuple=auth_tuple, verbose=False)
 
 
-def _update_patient_data(project, individual, patient_json):
-    """Updates patient data in PhenoTips to the values in patient_json.
-    Args:
-        project (Model): seqr Project - used to retrieve PhenoTips credentials
-        individual (Model): seqr Individual
-        patient_json (dict): phenotips patient record like the object returned by get_patient_data(..).
-    Raises:
-        PhenotipsException: if api call fails
-    """
-    if not patient_json:
-        raise ValueError("patient_json arg is empty")
-
-    url = _phenotips_patient_url(individual)
-    patient_json_string = json.dumps(patient_json)
-
-    auth_tuple = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=False)
-    result = _make_api_call('PUT', url, data=patient_json_string, auth_tuple=auth_tuple, expected_status_code=204)
-
-    _update_individual_phenotips_data(individual, patient_json)
-    return result
-
-
 def delete_patient(project, individual):
     """Deletes patient from PhenoTips for the given patient_id.
 
@@ -154,40 +333,6 @@ def _phenotips_patient_url(individual):
 
 def phenotips_patient_exists(individual):
     return individual.phenotips_patient_id or individual.phenotips_eid
-
-
-def set_patient_hpo_terms(project, individual, hpo_terms_present=[], hpo_terms_absent=[], final_diagnosis_mim_ids=[]):
-    """Utility method for specifying a list of HPO IDs for a patient.
-    Args:
-        project (Model): seqr Project - used to retrieve PhenoTips credentials
-        individual (Model): seqr Individual
-        hpo_terms_present (list): list of HPO IDs for phenotypes present in this patient (eg. ["HP:00012345", "HP:0012346", ...])
-        hpo_terms_absent (list): list of HPO IDs for phenotypes not present in this patient (eg. ["HP:00012345", "HP:0012346", ...])
-        final_diagnosis_mim_ids (int): one or more MIM Ids (eg. [105650, ..])
-    Raises:
-        PhenotipsException: if api call fails
-    """
-    if not hpo_terms_present or hpo_terms_absent or final_diagnosis_mim_ids:
-        return
-
-    _create_patient_if_missing(project, individual)
-
-    patient_json = _get_patient_data(project, individual)
-
-    if hpo_terms_present or hpo_terms_absent:
-        features_value = [{"id": hpo_term, "observed": "yes", "type": "phenotype"} for hpo_term in hpo_terms_present]
-        features_value += [{"id": hpo_term, "observed": "no", "type": "phenotype"} for hpo_term in hpo_terms_absent]
-        patient_json["features"] = features_value
-
-    if final_diagnosis_mim_ids:
-        omim_disorders = []
-        for mim_id in final_diagnosis_mim_ids:
-            if int(mim_id) < 100000:
-                raise ValueError("Invalid final_diagnosis_mim_id: %s. Expected a 6-digit number." % str(mim_id))
-            omim_disorders.append({'id': 'MIM:%s' % mim_id})
-        patient_json["disorders"] = omim_disorders
-
-    _update_patient_data(project, individual, patient_json)
 
 
 def _add_user_to_patient(username, patient_id, allow_edit=True):

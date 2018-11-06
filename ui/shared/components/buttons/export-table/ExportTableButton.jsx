@@ -32,10 +32,12 @@ const EXT_CONFIG = {
   },
 }
 
-const FileLink = ({ url, data, ext }) => {
+export const FileLink = ({ url, data, ext, linkContent }) => {
   const extConfig = EXT_CONFIG[ext]
-  const linkContent =
-    <span><img alt={ext} src={`/static/images/table_${extConfig.imageName || ext}.png`} /> &nbsp; .{ext}</span>
+  if (!linkContent) {
+    linkContent =
+      <span><img alt={ext} src={`/static/images/table_${extConfig.imageName || ext}.png`} /> &nbsp; .{ext}</span>
+  }
 
   if (data) {
     let content = data.rawData.map(row => data.processRow(row).map(item => `"${item || ''}"`).join(extConfig.delimiter)).join('\n')
@@ -59,6 +61,7 @@ FileLink.propTypes = {
   ext: PropTypes.string.isRequired,
   url: PropTypes.string,
   data: PropTypes.object,
+  linkContent: PropTypes.node,
 }
 
 const ExportTableButton = ({ downloads, buttonText, ...buttonProps }) =>

@@ -20,16 +20,28 @@ const LargeText = styled.div`
   font-size: 1.2em;
 `
 
-export const getLocus = (variant, rangeSize) =>
-  `chr${variant.chrom}:${variant.pos - rangeSize}-${variant.pos + rangeSize}`
+export const getLocus = (chrom, pos, rangeSize) =>
+  `chr${chrom}:${pos - rangeSize}-${pos + rangeSize}`
 
-const ucscBrowserLink = (variant, genomeVersion) => {
-  /* eslint-disable space-infix-ops */
-  genomeVersion = genomeVersion || variant.genomeVersion
+const UcscBrowserLink = ({ variant, useLiftover }) => {
+  const chrom = useLiftover ? variant.liftedOverChrom : variant.chrom
+  const pos = parseInt(useLiftover ? variant.liftedOverPos : variant.pos, 10)
+  let genomeVersion = useLiftover ? variant.liftedOverGenomeVersion : variant.genomeVersion
   genomeVersion = genomeVersion === GENOME_VERSION_37 ? '19' : genomeVersion
-  const highlight = `hg${genomeVersion}.chr${variant.chrom}:${variant.pos}-${variant.pos + (variant.ref.length-1)}`
-  const position = getLocus(variant, 10)
-  return `http://genome.ucsc.edu/cgi-bin/hgTracks?db=hg${genomeVersion}&highlight=${highlight}&position=${position}`
+
+  const highlight = `hg${genomeVersion}.chr${chrom}:${pos}-${pos + (variant.ref.length - 1)}`
+  const position = getLocus(chrom, pos, 10)
+
+  return (
+    <a href={`http://genome.ucsc.edu/cgi-bin/hgTracks?db=hg${genomeVersion}&highlight=${highlight}&position=${position}`} target="_blank">
+      {chrom}:{pos}
+    </a>
+  )
+}
+
+UcscBrowserLink.propTypes = {
+  variant: PropTypes.object,
+  useLiftover: PropTypes.bool,
 }
 
 const MAX_SEQUENCE_LENGTH = 30
@@ -160,7 +172,7 @@ const Annotations = ({ variant }) => {
       }
       { Object.keys(mainTranscript).length > 0 && <VerticalSpacer height={10} />}
       <LargeText>
-        <a href={ucscBrowserLink(variant)} target="_blank"><b>{variant.chrom}:{variant.pos}</b></a>
+        <b><UcscBrowserLink variant={variant} /></b>
         <HorizontalSpacer width={10} />
         <Sequence sequence={variant.ref} />
         <Icon name="angle right" />
@@ -176,10 +188,7 @@ const Annotations = ({ variant }) => {
       {variant.liftedOverGenomeVersion === GENOME_VERSION_37 && (
         variant.liftedOverPos ?
           <div>
-            hg19:<HorizontalSpacer width={5} />
-            <a href={ucscBrowserLink(variant, GENOME_VERSION_37)} target="_blank">
-              chr{variant.liftedOverChrom}:{variant.liftedOverPos}
-            </a>
+            hg19: <UcscBrowserLink variant={variant} useLiftover />
           </div>
           : <div>hg19: liftover failed</div>
         )
