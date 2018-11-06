@@ -13,15 +13,21 @@ from xbrowse_server.base.models import Project as BaseProject
 
 EXCLUDE_PROJECTS = ['ext', '1000 genomes', 'DISABLED', 'project', 'interview', 'non-cmg', 'amel']
 
+PER_PAGE = 5000
+
 
 class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("--metadata-only", action="store_true", help="Only get the project/ individual metadata.")
         parser.add_argument("--use-project-indices-csv", action="store_true", help="Load projects to search from project_indices.csv")
+        parser.add_argument("--index", nargs='+', help="Individual index to use")
 
     def handle(self, *args, **options):
-        if options["use_project_indices_csv"]:
+
+        if options["index"]:
+            es_indices = options["index"]
+        elif options["use_project_indices_csv"]:
             with open('project_indices.csv') as csvfile:
                 reader = csv.DictReader(csvfile)
                 es_indices = {row['index'] for row in reader}
@@ -59,17 +65,30 @@ class Command(BaseCommand):
             es_client = elasticsearch.Elasticsearch(host=settings.ELASTICSEARCH_SERVICE_HOSTNAME, timeout=10000)
             search = elasticsearch_dsl.Search(using=es_client, index='*,'.join(es_indices) + "*")
             search = search.query("match", mainTranscript_lof='HC')
-            search = search.source(['contig', 'pos', 'ref', 'alt', '*num_alt'])
+            search = search.source(['contig', 'pos', 'ref', 'alt', '*num_alt', '*gq', '*ab', '*dp', '*ad'])
 
             print('Searching across {} indices...'.format(len(es_indices)))
-            results = []
-            for i, hit in enumerate(search.scan()):
-                result = {key: hit[key] for key in hit}
-                result['index'] = hit.meta.index
-                results.append(result)
+            result_count_search = search.params(size=0)
+            total = result_count_search.execute().hits.total
+            print('Loading {} variants...'.format(total))
 
-            print('Loaded {} variants'.format(len(results)))
-            with gzip.open('lof_variants.json.gz', 'w') as f:
-                json.dump(results, f)
+            with open('lof_variants.csv', 'a') as csvfile:
+                sample_fields = ['num_alt', 'gq', 'ab', 'dp', 'ad']
+                fieldnames = ['contig', 'pos', 'ref', 'alt', 'index'] + sample_fields
+                writer = csv.DictWriter(csvfile, fieldnames=fieldnames, extrasaction='ignore')
+                if not options["index"]:
+                    writer.writeheader()
+                for i, hit in enumerate(search.scan()):
+                    result = {key: hit[key] for key in hit}
+                    result['index'] = hit.meta.index
+                    for field in sample_fields:
+                        result[field] = json.dumps({
+                            key.rstrip('_{}'.format(field)): val for key, val in result.items() if key.endswith(field)
+                        })
+                    writer.writerow(result)
+                    if i % 10000 == 0:
+                        print('Parsed {} variants'.format(i))
+
+            print('Loaded {} variants'.format(i))
 
         print('Done')
