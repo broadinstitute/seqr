@@ -4,11 +4,11 @@ APIs for retrieving, updating, creating, and deleting Individual records
 
 import json
 import logging
-
+from collections import defaultdict
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 
-from seqr.model_utils import get_or_create_seqr_model, update_seqr_model, delete_seqr_model
+from seqr.model_utils import get_or_create_seqr_model, delete_seqr_model
 from seqr.models import Sample, Individual, Family, CAN_EDIT
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.pedigree_image_api import update_pedigree_images
@@ -18,7 +18,7 @@ from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file
 from seqr.views.utils.json_to_orm_utils import update_individual_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_individual, _get_json_for_individuals, _get_json_for_family, _get_json_for_families
-from seqr.views.utils.pedigree_info_utils import parse_pedigree_table, validate_fam_file_records
+from seqr.views.utils.pedigree_info_utils import parse_pedigree_table, validate_fam_file_records, JsonConstants
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_permissions
 
 
@@ -241,25 +241,31 @@ def receive_individuals_table_handler(request, project_guid):
         return create_json_response({'errors': [e.message or str(e)], 'warnings': []}, status=400, reason=e.message or str(e))
 
     # send back some stats
-    num_families = len(set(r['familyId'] for r in json_records))
-    num_individuals = len(set(r['individualId'] for r in json_records))
-    num_families_to_create = len([
-        family_id for family_id in set(r['familyId'] for r in json_records)
-        if not Family.objects.filter(family_id=family_id, project=project)])
+    family_ids = set(r[JsonConstants.FAMILY_ID_COLUMN] for r in json_records)
+    num_families = len(family_ids)
+    num_existing_families = Family.objects.filter(family_id__in=family_ids, project=project).count()
+    num_families_to_create = num_families - num_existing_families
 
-    num_individuals_to_create = len(set(
-        r['individualId'] for r in json_records
-        if not Individual.objects.filter(
-            individual_id=r['individualId'],
-            family__family_id=r['familyId'],
-            family__project=project)))
+    individual_ids_by_family = defaultdict(list)
+    for r in json_records:
+        individual_ids_by_family[r[JsonConstants.FAMILY_ID_COLUMN]].append(
+            r.get(JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN) or r[JsonConstants.INDIVIDUAL_ID_COLUMN]
+        )
+
+    num_individuals = sum([len(indiv_ids) for indiv_ids in individual_ids_by_family.values()])
+    num_existing_individuals = 0
+    for family_id, indiv_ids in individual_ids_by_family.items():
+        num_existing_individuals += Individual.objects.filter(
+            individual_id__in=indiv_ids, family__family_id=family_id, family__project=project
+        ).count()
+    num_individuals_to_create = num_individuals - num_existing_individuals
 
     info = [
         "{num_families} families, {num_individuals} individuals parsed from {filename}".format(
             num_families=num_families, num_individuals=num_individuals, filename=filename
         ),
-        "%d new families, %d new individuals will be added to the project" % (num_families_to_create, num_individuals_to_create),
-        "%d existing individuals will be updated" % (num_individuals - num_individuals_to_create),
+        "{} new families, {} new individuals will be added to the project".format(num_families_to_create, num_individuals_to_create),
+        "{} existing individuals will be updated".format(num_existing_individuals),
     ]
 
     response = {
@@ -319,11 +325,11 @@ def add_or_update_individuals_and_families(project, individual_records, user=Non
     updated_individuals = []
     for i, record in enumerate(individual_records):
         # family id will be in different places in the json depending on whether it comes from a flat uploaded file or from the nested individual object
-        family_id = record.get('familyId') or record.get('family', {}).get('familyId')
+        family_id = record.get(JsonConstants.FAMILY_ID_COLUMN) or record.get('family', {}).get('familyId')
         if not family_id:
             raise ValueError("record #%s doesn't contain a 'familyId' key: %s" % (i, record))
 
-        if 'individualId' not in record and 'individualGuid' not in record:
+        if JsonConstants.INDIVIDUAL_ID_COLUMN not in record and 'individualGuid' not in record:
             raise ValueError("record #%s doesn't contain an 'individualId' key: %s" % (i, record))
 
         family = families.get(family_id)
@@ -339,7 +345,8 @@ def add_or_update_individuals_and_families(project, individual_records, user=Non
         if record.get('individualGuid'):
             individual_filters = {'guid': record['individualGuid']}
         else:
-            individual_filters = {'family': family, 'individual_id': record['individualId']}
+            individual_id = record.get(JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN) or record[JsonConstants.INDIVIDUAL_ID_COLUMN]
+            individual_filters = {'family': family, 'individual_id': individual_id}
 
         individual, created = get_or_create_seqr_model(Individual, **individual_filters)
         record['family'] = family

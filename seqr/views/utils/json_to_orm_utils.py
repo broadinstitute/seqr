@@ -3,7 +3,7 @@ from django.utils import timezone
 
 from seqr.models import Individual
 from seqr.model_utils import update_seqr_model
-from seqr.utils.model_sync_utils import can_edit_family_id
+from seqr.utils.model_sync_utils import can_edit_family_id, can_edit_individual_id
 from seqr.views.utils.json_utils import _to_snake_case
 
 logger = logging.getLogger(__name__)
@@ -39,7 +39,8 @@ def update_individual_from_json(individual, json, verbose=False, user=None, allo
         json['displayName'] = ''
 
     update_model_from_json(
-        individual, json, user=user, verbose=verbose, allow_unknown_keys=allow_unknown_keys, immutable_keys=['phenotips_data']
+        individual, json, user=user, verbose=verbose, allow_unknown_keys=allow_unknown_keys,
+        immutable_keys=['phenotips_data'], conditional_edit_keys={'individual_id': can_edit_individual_id}
     )
 
 

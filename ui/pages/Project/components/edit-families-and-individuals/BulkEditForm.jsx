@@ -113,7 +113,7 @@ const BaseBulkContent = ({ actionDescription, details, project, name, individual
           </Table.Body>
         </StyledTable>
       </div>
-      {details}
+      {details && <div><br />{details}</div>}
       <br />
     </Container>
     <br />
@@ -132,7 +132,7 @@ BaseBulkContent.propTypes = {
   actionDescription: PropTypes.string.isRequired,
   individualFields: PropTypes.array.isRequired,
   uploadFormats: PropTypes.array,
-  details: PropTypes.string,
+  details: PropTypes.node,
   name: PropTypes.string.isRequired,
   project: PropTypes.object,
   individualsExportConfig: PropTypes.object,
@@ -176,9 +176,13 @@ const IndividualsBulkForm = props =>
   <EditBulkForm
     name="individuals"
     actionDescription="bulk-add or edit individuals"
-    details="If the Family ID and Individual ID in the table match those of an existing individual in the project,
-      the matching individual's data will be updated with values from the table. Otherwise, a new individual
-      will be created."
+    details={
+      <div>
+        If the Family ID and Individual ID in the table match those of an existing individual in the project,
+        the matching individual&apos;s data will be updated with values from the table. Otherwise, a new individual
+        will be created. To edit an existing individual&apos;s ID include a <b>Previous Individual ID</b> column.
+      </div>
+    }
     individualFields={INDIVIDUAL_CORE_EXPORT_DATA}
     uploadFormats={FAM_UPLOAD_FORMATS}
     blankDownload
