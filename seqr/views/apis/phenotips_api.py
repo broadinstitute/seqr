@@ -97,7 +97,7 @@ def receive_hpo_table_handler(request, project_guid):
             individual_q = individual_q.filter(family__family_id=family_id)
         individual = individual_q.first()
         if individual:
-            features = record.get(FEATURES_COLUMN, [])
+            features = record.get(FEATURES_COLUMN) or []
             if individual.phenotips_data and features and \
                     _feature_set(features) == _feature_set(json.loads(individual.phenotips_data).get('features', [])):
                 unchanged_individuals.append(individual_id)
@@ -109,8 +109,10 @@ def receive_hpo_table_handler(request, project_guid):
 
     if not updates_by_individual_guid:
         return create_json_response({
-            'errors': ['Unable to find individuals to update for any of the {} parsed individuals'.format(
-                len(missing_individuals) + len(unchanged_individuals)
+            'errors': ['Unable to find individuals to update for any of the {total} parsed individuals.{missing}{unchanged}'.format(
+                total=len(missing_individuals) + len(unchanged_individuals),
+                missing=' No matching ids found for {} individuals'.format(len(missing_individuals)) if missing_individuals else '',
+                unchanged=' No changes detected for {} individuals'.format(len(unchanged_individuals)) if unchanged_individuals else '',
             )],
             'warnings': []
         }, status=400, reason='Unable to find any matching individuals')
@@ -187,8 +189,8 @@ def _process_hpo_records(records, filename=''):
 
     if HPO_TERMS_PRESENT_COLUMN in column_map or HPO_TERMS_ABSENT_COLUMN in column_map:
         for row in row_dicts:
-            row[FEATURES_COLUMN] = _parse_hpo_terms(row.get(HPO_TERMS_PRESENT_COLUMN, ''), 'yes')
-            row[FEATURES_COLUMN] += _parse_hpo_terms(row.get(HPO_TERMS_ABSENT_COLUMN, ''), 'no')
+            row[FEATURES_COLUMN] = _parse_hpo_terms(row.get(HPO_TERMS_PRESENT_COLUMN), 'yes')
+            row[FEATURES_COLUMN] += _parse_hpo_terms(row.get(HPO_TERMS_ABSENT_COLUMN), 'no')
         return row_dicts
 
     if HPO_TERM_NUMBER_COLUMN in column_map:
@@ -209,6 +211,8 @@ def _hpo_term_item(term, observed):
 
 
 def _parse_hpo_terms(hpo_term_string, observed):
+    if not hpo_term_string:
+        return []
     return [_hpo_term_item(hpo_term.split('(')[0], observed) for hpo_term in hpo_term_string.split(';')]
 
 
@@ -265,7 +269,7 @@ def _create_patient_if_missing(project, individual):
     Raises:
         PhenotipsException: if unable to create patient record
     """
-    if phenotips_patient_exists(individual):
+    if _phenotips_patient_exists(individual):
         return False
 
     url = '/rest/patients'
@@ -318,7 +322,7 @@ def delete_patient(project, individual):
     Raises:
         PhenotipsException: if api call fails
     """
-    if phenotips_patient_exists(individual):
+    if _phenotips_patient_exists(individual):
         url = _phenotips_patient_url(individual)
         auth_tuple = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=False)
         return _make_api_call('DELETE', url, auth_tuple=auth_tuple, expected_status_code=204)
@@ -331,8 +335,8 @@ def _phenotips_patient_url(individual):
         return '/rest/patients/eid/{0}'.format(individual.phenotips_eid)
 
 
-def phenotips_patient_exists(individual):
-    return individual.phenotips_patient_id or individual.phenotips_eid
+def _phenotips_patient_exists(individual):
+    return individual.phenotips_patient_id
 
 
 def _add_user_to_patient(username, patient_id, allow_edit=True):
