@@ -13,11 +13,19 @@ def set_parent_objects(apps, schema_editor):
     Individual = apps.get_model("seqr", "Individual")
     db_alias = schema_editor.connection.alias
     individuals_by_id = {i.individual_id: i for i in Individual.objects.using(db_alias).all()}
+    problems = []
     for i in individuals_by_id.values():
         if i.maternal_id or i.paternal_id:
-            i.mother = individuals_by_id[i.maternal_id] if i.maternal_id else None
-            i.father = individuals_by_id[i.paternal_id] if i.paternal_id else None
-            i.save()
+            try:
+                i.mother = individuals_by_id[i.maternal_id] if i.maternal_id else None
+                i.father = individuals_by_id[i.paternal_id] if i.paternal_id else None
+                i.save()
+            except KeyError:
+                problems.append(i)
+    if len(problems):
+        raise Exception('Some individuals have parental IDs that do not correspond to seqr individuals: {}'.format(
+            ', '.join([i.individual_id for i in problems])
+        ))
 
 
 def set_parent_ids(apps, schema_editor):
