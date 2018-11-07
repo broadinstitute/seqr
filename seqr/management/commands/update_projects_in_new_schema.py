@@ -10,10 +10,9 @@ from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 from django.db.models import Q
 from guardian.shortcuts import assign_perm
 
-from seqr.utils.model_sync_utils import convert_html_to_plain_text
 from seqr.views.utils.variant_utils import get_or_create_saved_variant
 from seqr.views.apis import phenotips_api
-from seqr.views.apis.phenotips_api import phenotips_patient_exists, _get_patient_data, _update_individual_phenotips_data
+from seqr.views.apis.phenotips_api import _phenotips_patient_exists, _get_patient_data, _update_individual_phenotips_data
 from xbrowse_server.base.models import \
     Project, \
     Family, \
@@ -38,6 +37,7 @@ from seqr.models import \
     CAN_VIEW, ModelWithGUID
 
 from xbrowse_server.mall import get_datastore, get_annotator
+from xbrowse_server.base.model_utils import _convert_xbrowse_kwargs_to_seqr_kwargs, find_matching_seqr_model, _create_seqr_model
 
 logger = logging.getLogger(__name__)
 
@@ -102,6 +102,15 @@ class Command(BaseCommand):
         updated_seqr_family_guids = set()
         updated_seqr_individual_guids = set()
 
+        core_variant_tag_type_names = [vtt.name for vtt in SeqrVariantTagType.objects.filter(project=None)]
+        # If a core tag type exists with that name, delete any project-specific tag types
+        _, deleted = SeqrVariantTagType.objects.filter(
+            project__isnull=False,
+            name__in=core_variant_tag_type_names,
+        ).delete()
+        for model, delete_count in deleted.items():
+            print("=== deleted {} {} models with  core tag types".format(delete_count, model))
+
         for source_project in tqdm(projects, unit=" projects"):
             counters['source_projects'] += 1
 
@@ -115,7 +124,7 @@ class Command(BaseCommand):
             # transfer Families and Individuals
             source_family_id_to_new_family = {}
             for source_family in Family.objects.filter(project=source_project):
-                new_family, family_created = transfer_family(source_family, new_project)
+                new_family, family_created = transfer_family(source_family)
 
                 updated_seqr_family_guids.add(new_family.guid)
 
@@ -126,7 +135,7 @@ class Command(BaseCommand):
                 for source_individual in Individual.objects.filter(family=source_family):
 
                     new_individual, individual_created, phenotips_data_retrieved = transfer_individual(
-                        source_individual, new_family, new_project, connect_to_phenotips
+                        source_individual, new_project, connect_to_phenotips
                     )
 
                     updated_seqr_individual_guids.add(new_individual.guid)
@@ -134,37 +143,7 @@ class Command(BaseCommand):
                     if individual_created: counters['individuals_created'] += 1
                     if phenotips_data_retrieved: counters['individuals_data_retrieved_from_phenotips'] += 1
 
-                    if source_individual.combined_individuals_info:
-                        combined_individuals_info = json.loads(source_individual.combined_individuals_info)
-                        """
-                        combined_individuals_info json is expected to look like:
-                        {
-                            'WES' : {
-                                'project_id': from_project.project_id,
-                                'family_id': from_f.family_id,
-                                'indiv_id': from_i.indiv_id
-                            },
-                            'WGS' : {
-                                'project_id': from_project.project_id,
-                                'family_id': from_f.family_id,
-                                'indiv_id': from_i.indiv_id
-                            },
-                            'RNA' : {
-                                'project_id': from_project.project_id,
-                                'family_id': from_f.family_id,
-                                'indiv_id': from_i.indiv_id
-                            },
-                        }
-                        """
-                        for i, sample_type_i, combined_individuals_info_i in enumerate(combined_individuals_info.items()):
-                            source_project_i = Project.objects.get(project_id=combined_individuals_info_i['project_id'])
-                            #source_family_i = Project.objects.get(project_id=combined_individuals_info_i['family_id'])
-                            source_individual_i = Project.objects.get(project_id=combined_individuals_info_i['indiv_id'])
-
-                            create_sample_records(sample_type_i, source_individual_i, new_project, new_individual, counters)
-                    else:
-                        create_sample_records(source_individual, new_project, new_individual, counters)
-                        #combined_families_info.update({from_project_datatype: {'project_id': from_project.project_id, 'family_id': from_f.family_id}})
+                    create_sample_records(source_individual, new_individual, counters)
 
                 for source_analysed_by in AnalysedBy.objects.filter(family=source_family):
                     new_analysed_by, analysed_by_created = transfer_analysed_by(source_analysed_by, new_family)
@@ -173,17 +152,13 @@ class Command(BaseCommand):
 
             # TODO family groups, cohorts
             for source_variant_tag_type in ProjectTag.objects.filter(project=source_project).order_by('order'):
-                new_variant_tag_type, created = get_or_create_variant_tag_type(
-                    source_variant_tag_type, new_project)
+                if source_variant_tag_type not in core_variant_tag_type_names:
+                    new_variant_tag_type, created = get_or_create_variant_tag_type(source_variant_tag_type)
+                    if created: counters['variant_tag_types_created'] += 1
 
                 for source_variant_tag in VariantTag.objects.filter(project_tag=source_variant_tag_type):
                     new_family = source_family_id_to_new_family.get(source_variant_tag.family.id if source_variant_tag.family else None)
-                    new_variant_tag, variant_tag_created = get_or_create_variant_tag(
-                        source_variant_tag,
-                        new_project,
-                        new_family,
-                        new_variant_tag_type,
-                    )
+                    new_variant_tag, variant_tag_created = get_or_create_variant_tag(source_variant_tag, new_family)
 
                     if variant_tag_created: counters['variant_tags_created'] += 1
 
@@ -192,7 +167,6 @@ class Command(BaseCommand):
 
                 _, variant_functional_data_created = get_or_create_variant_functional_data(
                     source_variant_functional_data,
-                    new_project,
                     new_family,
                 )
 
@@ -203,7 +177,6 @@ class Command(BaseCommand):
 
                 new_variant_note, variant_note_created = get_or_create_variant_note(
                     source_variant_note,
-                    new_project,
                     new_family,
                 )
 
@@ -326,7 +299,7 @@ class Command(BaseCommand):
                 logger.info("  %s: %s" % (k, v))
 
 
-def create_sample_records(source_individual, new_project, new_individual, counters):
+def create_sample_records(source_individual, new_individual, counters):
     loaded_vcf_files = source_individual.vcf_files.filter(dataset_type=VCFFile.DATASET_TYPE_VARIANT_CALLS, loaded_date__isnull=False)
     for loaded_vcf_file in loaded_vcf_files:
         new_sample, sample_created = get_or_create_sample(
@@ -370,41 +343,37 @@ def look_up_vcf_loaded_date(vcf_path):
     return loaded_date
 
 
-def update_model_field(model, field_name, new_value, strip_html=False):
+def update_model_fields(model, xbrowse_model, xbrowse_fields):
     """Updates the given field if the new value is different from it's current value.
     Args:
         model: django ORM model
         field_name: name of field to update
         new_value: The new value to set the field to
     """
-    if not hasattr(model, field_name):
-        raise ValueError("model %s doesn't have the field %s" % (model, field_name))
+    original_values = {field_name: getattr(xbrowse_model, field_name) for field_name in xbrowse_fields}
+    seqr_fields = _convert_xbrowse_kwargs_to_seqr_kwargs(xbrowse_model, **original_values)
+    for field_name, new_value in seqr_fields.items():
+        if getattr(model, field_name) != new_value:
+            if DEBUG and field_name != 'phenotips_data':
+                i = raw_input("Should %s.%s = %s\n instead of \n%s \n in %s ? [Y\n]" % (model.__class__.__name__.encode('utf-8'), field_name.encode('utf-8'), unicode(new_value).encode('utf-8'), getattr(model, field_name), str(model)))
+                if i.lower() != "y":
+                    print("ok, skipping.")
+                    return
 
-    if strip_html:
-        new_value = convert_html_to_plain_text(new_value)
-    if getattr(model, field_name) != new_value:
-        if DEBUG and field_name != 'phenotips_data':
-            i = raw_input("Should %s.%s = %s\n instead of \n%s \n in %s ? [Y\n]" % (model.__class__.__name__.encode('utf-8'), field_name.encode('utf-8'), unicode(new_value).encode('utf-8'), getattr(model, field_name), str(model)))
-            if i.lower() != "y":
-                print("ok, skipping.")
-                return
+            setattr(model, field_name, new_value)
+            if field_name != 'phenotips_data':
+                print("Setting %s.%s = %s" % (model.__class__.__name__.encode('utf-8'), field_name.encode('utf-8'), unicode(new_value).encode('utf-8')))
 
-        setattr(model, field_name, new_value)
-        if field_name != 'phenotips_data':
-            print("Setting %s.%s = %s" % (model.__class__.__name__.encode('utf-8'), field_name.encode('utf-8'), unicode(new_value).encode('utf-8')))
+    if hasattr(xbrowse_model, 'date_saved'):
+        model.save(last_modified_date=getattr(xbrowse_model, 'date_saved'))
+    else:
         model.save()
 
 
 def transfer_project(source_project):
     """Transfers the given project and returns the new project"""
 
-    # create project
-    try:
-        new_project, created = safe_get_or_create(SeqrProject,
-            deprecated_project_id=source_project.project_id.strip(),
-        )
-    except MultipleObjectsReturned as e:
-        raise ValueError("multiple SeqrProjects found to have deprecated_project_id=%s" % source_project.project_id.strip(), e)
+    new_project, created = safe_get_or_create(source_project)
 
     if created:
         print("Created SeqrProject", new_project)
@@ -412,38 +381,14 @@ def transfer_project(source_project):
     source_project.seqr_project = new_project
     source_project.save()
 
-    update_model_field(new_project, 'guid', new_project._compute_guid()[:ModelWithGUID.MAX_GUID_SIZE])
-    update_model_field(new_project, 'name', (source_project.project_name or source_project.project_id).strip())
-    update_model_field(new_project, 'description', source_project.description)
-    update_model_field(new_project, 'genome_version', source_project.genome_version)
-
-    update_model_field(new_project, 'is_phenotips_enabled', source_project.is_phenotips_enabled)
-
-    update_model_field(new_project, 'is_mme_enabled', source_project.is_mme_enabled)
-    update_model_field(new_project, 'mme_primary_data_owner', source_project.mme_primary_data_owner)
-    update_model_field(new_project, 'mme_contact_url', source_project.mme_contact_url)
-    update_model_field(new_project, 'mme_contact_institution', source_project.mme_contact_institution)
-
-    update_model_field(new_project, 'is_functional_data_enabled', source_project.is_functional_data_enabled)
-    update_model_field(new_project, 'disease_area', source_project.disease_area)
-
-    update_model_field(new_project, 'deprecated_last_accessed_date', source_project.last_accessed_date)
+    update_model_fields(new_project, source_project, [
+        'description', 'genome_version', 'is_phenotips_enabled', 'is_mme_enabled', 'mme_primary_data_owner',
+        'mme_contact_url', 'mme_contact_institution', 'is_functional_data_enabled', 'last_accessed_date',
+        'project_name', 'project_id', 'is_phenotips_enabled', 'phenotips_user_id'
+    ])
 
     for p in source_project.private_reference_populations.all():
         new_project.custom_reference_populations.add(p)
-
-    if source_project.project_id not in settings.PROJECTS_WITHOUT_PHENOTIPS:
-        update_model_field(new_project, 'is_phenotips_enabled', True)
-        update_model_field(new_project, 'phenotips_user_id', source_project.project_id)
-    else:
-        new_project.is_phenotips_enabled = False
-
-    #if source_project.project_id in settings.PROJECTS_WITH_MATCHMAKER:
-    #    update_model_field(new_project, 'is_mme_enabled', True)
-    #    update_model_field(new_project, 'mme_primary_data_owner', settings.MME_PATIENT_PRIMARY_DATA_OWNER[source_project.project_id])
-    #else:
-    #    new_project.is_mme_enabled = False
-
     new_project.save()
 
     # grant gene list CAN_VIEW permissions to project collaborators
@@ -488,55 +433,35 @@ def transfer_project(source_project):
     return new_project, created
 
 
-def safe_get_or_create(model_class, delete_extra_instances=False, **kwargs):
-    matching_objects = list(model_class.objects.filter(**kwargs).order_by('pk'))
-    if len(matching_objects) > 1:
-        if delete_extra_instances:
-            for matching_obj in matching_objects[1:]:
-                print("--- Deleting duplicate instances: " + str(matching_obj.__dict__))
-                matching_obj.delete()
-            print("--- Kept only: " + str(matching_objects[0].__dict__))
-
-        return matching_objects[0], False  # keep the oldest object
-
-    return model_class.objects.get_or_create(**kwargs)
+def safe_get_or_create(xbrowse_model):
+    seqr_model = find_matching_seqr_model(xbrowse_model)
+    if seqr_model:
+        return seqr_model, False
+    else:
+        return _create_seqr_model(xbrowse_model), True
 
 
-def transfer_family(source_family, new_project):
+def transfer_family(source_family):
     """Transfers the given family and returns the new family"""
-    #new_project.created_date.microsecond = random.randint(0, 10**6 - 1)
 
-    new_family, created = safe_get_or_create(SeqrFamily, project=new_project, family_id=source_family.family_id)
+    new_family, created = safe_get_or_create(source_family)
     if created:
         print("Created SeqrFamily", new_family)
 
-    source_family.seqr_family = new_family
-    source_family.save()
-
-    update_model_field(new_family, 'display_name', source_family.family_name)
-    update_model_field(new_family, 'description', source_family.short_description)
-    update_model_field(new_family, 'pedigree_image', source_family.pedigree_image)
-    update_model_field(new_family, 'analysis_notes', source_family.about_family_content, strip_html=True)
-    update_model_field(new_family, 'analysis_summary', source_family.analysis_summary_content, strip_html=True)
-    update_model_field(new_family, 'causal_inheritance_mode', source_family.causal_inheritance_mode)
-    update_model_field(new_family, 'analysis_status', source_family.analysis_status)
-    update_model_field(new_family, 'coded_phenotype', source_family.coded_phenotype)
-    update_model_field(new_family, 'post_discovery_omim_number', source_family.post_discovery_omim_number)
-    update_model_field(new_family, 'internal_case_review_notes', source_family.internal_case_review_notes)
-    update_model_field(new_family, 'internal_case_review_summary', source_family.internal_case_review_summary)
+    update_model_fields(new_family, source_family, [
+        'project', 'family_id', 'family_name', 'short_description', 'pedigree_image', 'about_family_content', 'analysis_summary_content',
+        'causal_inheritance_mode', 'analysis_status', 'coded_phenotype', 'post_discovery_omim_number',
+        'internal_case_review_notes', 'internal_case_review_summary',
+    ])
+    if new_family.display_name == new_family.family_id:
+        new_family.display_name = ''
+        new_family.save()
 
     return new_family, created
 
 
-def transfer_individual(source_individual, new_family, new_project, connect_to_phenotips):
+def transfer_individual(source_individual, new_project, connect_to_phenotips):
     """Transfers the given Individual and returns the new Individual"""
-
-    new_individual, created = safe_get_or_create(SeqrIndividual, family=new_family, individual_id=source_individual.indiv_id)
-    if created:
-        print("Created SeqrSample", new_individual)
-
-    source_individual.seqr_individual = new_individual
-    source_individual.save()
 
     # get rid of '.' to signify 'unknown'
     if source_individual.paternal_id == "." or source_individual.maternal_id == "." or source_individual.gender == "." or source_individual.affected == ".":
@@ -550,16 +475,18 @@ def transfer_individual(source_individual, new_family, new_project, connect_to_p
             source_individual.gender = ""
         source_individual.save()
 
-    update_model_field(new_individual, 'created_date', source_individual.created_date)
-    update_model_field(new_individual, 'maternal_id',  source_individual.maternal_id)
-    update_model_field(new_individual, 'paternal_id',  source_individual.paternal_id)
-    update_model_field(new_individual, 'sex',  source_individual.gender)
-    update_model_field(new_individual, 'affected',  source_individual.affected)
-    update_model_field(new_individual, 'display_name', source_individual.nickname)
-    #update_model_field(new_individual, 'notes',  source_individual.notes) <-- notes exist only in the new SeqrIndividual schema. other_notes was never really used
-    update_model_field(new_individual, 'case_review_status',  source_individual.case_review_status)
-    update_model_field(new_individual, 'phenotips_eid',  source_individual.phenotips_id)
-    update_model_field(new_individual, 'phenotips_data',  source_individual.phenotips_data)
+    new_individual, created = safe_get_or_create(source_individual)
+    if created:
+        print("Created SeqrSample", new_individual)
+
+    update_model_fields(new_individual, source_individual, [
+        'family', 'indiv_id', 'created_date', 'maternal_id', 'paternal_id', 'gender', 'affected', 'nickname',
+        'case_review_status', 'phenotips_id', 'phenotips_data',
+    ])
+
+    if new_individual.display_name == new_individual.individual_id:
+        new_individual.display_name = ''
+        new_individual.save()
 
     # update PhenoTips data
     phenotips_data_retrieved = False
@@ -623,7 +550,7 @@ def get_or_create_sample(
         loaded_date):
     """Creates and returns a new Sample based on the provided models."""
 
-    new_sample, created = safe_get_or_create(SeqrSample, delete_extra_instances=True,
+    new_sample, created = SeqrSample.objects.get_or_create(
         sample_type=sample_type,
         individual=new_individual,
         sample_id=(source_individual.vcf_id or source_individual.indiv_id).strip(),
@@ -640,121 +567,65 @@ def get_or_create_sample(
     return new_sample, created
 
 
-def get_or_create_variant_tag_type(source_variant_tag_type, new_project):
-    try:
-        created = False
-        new_variant_tag_type = SeqrVariantTagType.objects.get(
-            project=None,
-            name=source_variant_tag_type.tag,
-        )
-        # If a core tag type exists with that name, delete any project-specific tag types
-        _, deleted = SeqrVariantTagType.objects.filter(
-            project=new_project,
-            name=source_variant_tag_type.tag,
-        ).delete()
-        for model, delete_count in deleted.items():
-            print("=== deleted {} {} models with tag type {}".format(delete_count, model, source_variant_tag_type.tag))
-            source_variant_tag_type.seqr_variant_tag_type = None
+def get_or_create_variant_tag_type(source_variant_tag_type):
+    new_variant_tag_type, created = safe_get_or_create(source_variant_tag_type)
 
-    except ObjectDoesNotExist:
-        new_variant_tag_type, created = safe_get_or_create(SeqrVariantTagType,
-            project=new_project,
-            name=source_variant_tag_type.tag,
-        )
+    if created:
+        print("=== created variant tag type: " + str(new_variant_tag_type))
 
-        if created:
-            print("=== created variant tag type: " + str(new_variant_tag_type))
-
-        new_variant_tag_type.description = source_variant_tag_type.title
-        new_variant_tag_type.color = source_variant_tag_type.color
-        new_variant_tag_type.order = source_variant_tag_type.order
-        new_variant_tag_type.category = source_variant_tag_type.category
-        new_variant_tag_type.is_built_in = False
-        new_variant_tag_type.save()
-
-    source_variant_tag_type.seqr_variant_tag_type = new_variant_tag_type
-    source_variant_tag_type.save()
+    update_model_fields(new_variant_tag_type, source_variant_tag_type, [
+        'project', 'tag', 'title', 'color', 'order', 'category'
+    ])
 
     return new_variant_tag_type, created
 
 
-def get_or_create_variant_tag(source_variant_tag, new_project, new_family, new_variant_tag_type):
-    new_saved_variant = get_or_create_saved_variant(
-        xpos=source_variant_tag.xpos,
-        ref=source_variant_tag.ref,
-        alt=source_variant_tag.alt,
-        family=new_family,
-        project=new_project
-    )
-
-    new_variant_tag, created = safe_get_or_create(SeqrVariantTag, delete_extra_instances=True,
-        saved_variant=new_saved_variant,
-        variant_tag_type=new_variant_tag_type,
-    )
+def get_or_create_variant_tag(source_variant_tag, new_family):
+    new_variant_tag, created = safe_get_or_create(source_variant_tag)
     if created:
         print("=== created variant tag: " + str(new_variant_tag))
+        new_variant_tag.saved_variant = get_or_create_saved_variant(
+            xpos=source_variant_tag.xpos,
+            ref=source_variant_tag.ref,
+            alt=source_variant_tag.alt,
+            family=new_family,
+        )
 
-    source_variant_tag.seqr_variant_tag = new_variant_tag
-    source_variant_tag.save()
-
-    new_variant_tag.search_parameters = source_variant_tag.search_url
-    new_variant_tag.created_by = source_variant_tag.user
-    new_variant_tag.save(last_modified_date=source_variant_tag.date_saved)
+    update_model_fields(new_variant_tag, source_variant_tag, ['project_tag', 'search_url', 'user'])
 
     return new_variant_tag, created
 
 
-def get_or_create_variant_functional_data(source_variant_functional_data, new_project, new_family):
-    new_saved_variant = get_or_create_saved_variant(
-        xpos=source_variant_functional_data.xpos,
-        ref=source_variant_functional_data.ref,
-        alt=source_variant_functional_data.alt,
-        family=new_family,
-        project=new_project
-    )
-
-    new_variant_functional_data, created = safe_get_or_create(SeqrVariantFunctionalData, delete_extra_instances=True,
-        saved_variant=new_saved_variant,
-        functional_data_tag=source_variant_functional_data.functional_data_tag,
-    )
+def get_or_create_variant_functional_data(source_variant_functional_data, new_family):
+    new_variant_functional_data, created = safe_get_or_create(source_variant_functional_data)
     if created:
         print("=== created variant functional data: " + str(new_variant_functional_data))
+        new_variant_functional_data.saved_variant = get_or_create_saved_variant(
+            xpos=source_variant_functional_data.xpos,
+            ref=source_variant_functional_data.ref,
+            alt=source_variant_functional_data.alt,
+            family=new_family,
+        )
 
-    source_variant_functional_data.seqr_variant_functional_data = new_variant_functional_data
-    source_variant_functional_data.save()
-
-    new_variant_functional_data.search_parameters = source_variant_functional_data.search_url
-    new_variant_functional_data.created_by = source_variant_functional_data.user
-    new_variant_functional_data.metadata = source_variant_functional_data.metadata
-    new_variant_functional_data.save(last_modified_date=source_variant_functional_data.date_saved)
+    update_model_fields(new_variant_functional_data, source_variant_functional_data, ['functional_data_tag', 'search_url', 'user', 'metadata'])
 
     return new_variant_functional_data, created
 
 
-def get_or_create_variant_note(source_variant_note, new_project, new_family):
-    new_saved_variant = get_or_create_saved_variant(
-        xpos=source_variant_note.xpos,
-        ref=source_variant_note.ref,
-        alt=source_variant_note.alt,
-        family=new_family,
-        project=new_project
-    )
-
-    new_variant_note, created = safe_get_or_create(SeqrVariantNote, delete_extra_instances=True,
-        created_by=source_variant_note.user,
-        saved_variant=new_saved_variant,
-        note=source_variant_note.note,
-    )
+def get_or_create_variant_note(source_variant_note, new_family):
+    new_variant_note, created = safe_get_or_create(source_variant_note)
 
     if created:
         print("=== created variant note: " + str(new_variant_note))
+        new_variant_note.saved_variant = get_or_create_saved_variant(
+            xpos=source_variant_note.xpos,
+            ref=source_variant_note.ref,
+            alt=source_variant_note.alt,
+            family=new_family,
+        )
 
-    source_variant_note.seqr_variant_note = new_variant_note
-    source_variant_note.save()
-
-    new_variant_note.search_parameters = source_variant_note.search_url
     new_variant_note.submit_to_clinvar = source_variant_note.submit_to_clinvar or False
-    new_variant_note.save(last_modified_date=source_variant_note.date_saved)
+    update_model_fields(new_variant_note, source_variant_note, ['note', 'submit_to_clinvar', 'search_url', 'user'])
 
     return new_variant_note, created
 
@@ -790,31 +661,3 @@ def look_up_individual_loaded_date(source_individual, earliest_loaded_date=False
         logger.error(e)
 
     return loaded_date
-
-
-def get_seqr_project_from_base_project(base_project):
-    seqr_projects = SeqrProject.objects.filter(deprecated_project_id = base_project.project_id)
-    if len(seqr_projects) == 1:
-        return seqr_projects[0]
-
-    return None
-
-
-def get_seqr_family_from_base_family(base_family):
-    seqr_families = SeqrFamily.objects.filter(family_id=base_family.family_id, project__deprecated_project_id=base_family.project.project_id)
-    if len(seqr_families) == 1:
-        return seqr_families[0]
-
-    return None
-
-
-def get_seqr_individual_from_base_individual(base_individual):
-    seqr_individual = SeqrIndividual.objects.filter(
-        individual_id=base_individual.indiv_id,
-        family__family_id=base_individual.family.family_id,
-        family__project__deprecated_project_id=base_individual.family.project.project_id
-    )
-    if len(seqr_individual) == 1:
-        return seqr_individual[0]
-
-    return None
