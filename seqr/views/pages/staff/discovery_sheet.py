@@ -4,12 +4,16 @@ import json
 import logging
 import re
 import requests
+import tempfile
+import openpyxl as xl
 
 from django.contrib.admin.views.decorators import staff_member_required
 from django.core.exceptions import ObjectDoesNotExist
+from django.core.mail.message import EmailMultiAlternatives
 from django.utils import timezone
 
 from seqr.views.utils.export_table_utils import export_table
+from seqr.views.utils.json_utils import create_json_response, _to_title_case
 from xbrowse_server.mall import get_reference
 from xbrowse import genomeloc
 from reference_data.models import HPO_CATEGORY_NAMES
@@ -112,7 +116,27 @@ def discovery_sheet(request, project_guid=None):
                 generate_rows(project, errors)
             )
 
-        return export_table("discovery_sheet", HEADER, rows, file_format="xls")
+        temp_file = tempfile.NamedTemporaryFile()
+        wb_out = xl.Workbook()
+        ws_out = wb_out.active
+        ws_out.append(map(_to_title_case, HEADER))
+        for row in rows:
+            ws_out.append([row[column_key] for column_key in HEADER])
+        wb_out.save(temp_file.name)
+        temp_file.seek(0)
+
+        email_message = EmailMultiAlternatives(
+            subject="Discovery Sheet",
+            body="Attached is the discovery sheet for all seqr projects",
+            to=[request.user.email],
+            attachments=[
+                ("discovery_sheet.xlsx", temp_file.read(), "application/xls"),
+            ],
+        )
+        email_message.send()
+        logger.info("emailing discovery sheet to {}".format(request.user.email))
+
+        return create_json_response({'errors': errors})
 
     # generate table for 1 project
     try:
@@ -153,7 +177,6 @@ def generate_rows(project, errors):
 
     loaded_samples_by_family = collections.defaultdict(set)
     for sample in loaded_samples:
-        print("Loaded time %s: %s" % (sample, sample.loaded_date))
         loaded_samples_by_family[sample.individual.family.guid].add(sample)
 
     project_variant_tags = list(
@@ -356,15 +379,17 @@ def generate_rows(project, errors):
                 continue
 
             vt.saved_variant_json = json.loads(vt.saved_variant.saved_variant_json)
+            annotation = vt.saved_variant_json.get('annotation') or {}
 
-            if "coding_gene_ids" not in vt.saved_variant_json["annotation"] and "gene_ids" not in vt.saved_variant_json["annotation"]:
+            if "coding_gene_ids" not in annotation and "gene_ids" not in annotation:
                 errors.append("%s - no gene_ids" % vt)
                 rows.append(row)
                 continue
 
-            gene_ids = vt.saved_variant_json["annotation"].get("coding_gene_ids", [])
+
+            gene_ids = annotation.get("coding_gene_ids", [])
             if not gene_ids:
-                gene_ids = vt.saved_variant_json["annotation"].get("gene_ids", [])
+                gene_ids = annotation.get("gene_ids", [])
 
             if not gene_ids:
                 errors.append("%s - gene_ids not specified" % vt)

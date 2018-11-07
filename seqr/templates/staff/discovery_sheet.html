@@ -26,6 +26,15 @@
        //enable the DataTables FixedHeader plugin
        new $.fn.dataTable.FixedHeader( window.dataTable, {} )
     })
+
+    function downloadAll() {
+      $('#downloadAllStatus').css('color', 'red')
+      $('#downloadAllStatus').text( 'Kicked off report generation. It will be emailed to you when it completes' )
+      fetch("{% url 'discovery_sheet' %}?download", {
+        method: 'GET',
+        credentials: 'include',
+      })
+    }
   </script>
   <style>
     .title-row {
@@ -35,13 +44,14 @@
     .info-row {
       padding:10px 0px 0px 5px
     }
-    
+
     #dataTable td {
       text-align: center !important
     }
   </style>
   <br />
-  <a style="float:right; padding-right:30px" href="{% url 'discovery_sheet' %}/?download">Download All Projects</a>
+  <a style="float:right; padding-right:30px" href="#" onClick = "downloadAll();">Generate Report For All Projects</a>
+  <div style="float:right; padding-right:30px" id="downloadAllStatus"></div>
   <table>
     <tr>
       <td class="title-row">
