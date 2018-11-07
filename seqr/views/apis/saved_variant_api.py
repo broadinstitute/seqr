@@ -5,7 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.views.decorators.csrf import csrf_exempt
 
-from seqr.models import SavedVariant, VariantTagType, VariantTag, VariantNote, VariantFunctionalData,\
+from seqr.models import Sample, SavedVariant, VariantTagType, VariantTag, VariantNote, VariantFunctionalData,\
     LocusListInterval, LocusListGene, CAN_VIEW, CAN_EDIT
 from seqr.model_utils import create_seqr_model, delete_seqr_model, find_matching_xbrowse_model
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
@@ -236,6 +236,33 @@ def _variant_details(variant_json, user=None):
     lifted_over_chrom = coords[0].lstrip('chr') if len(coords) > 0 else ''
     lifted_over_pos = coords[1] if len(coords) > 1 else ''
 
+    genotypes = {
+        sample_id: {
+            'ab': genotype.get('ab'),
+            'ad': genotype.get('extras', {}).get('ad'),
+            'alleles': genotype.get('alleles', []),
+            'cnvs': {
+                'array': genotype.get('extras', {}).get('cnvs', {}).get('array'),
+                'caller': genotype.get('extras', {}).get('cnvs', {}).get('caller'),
+                'cn': genotype.get('extras', {}).get('cnvs', {}).get('cn'),
+                'freq': genotype.get('extras', {}).get('cnvs', {}).get('freq'),
+                'LRR_median': genotype.get('extras', {}).get('cnvs', {}).get('LRR_median'),
+                'LRR_sd': genotype.get('extras', {}).get('cnvs', {}).get('LRR_sd'),
+                'size': genotype.get('extras', {}).get('cnvs', {}).get('size'),
+                'snps': genotype.get('extras', {}).get('cnvs', {}).get('snps'),
+                'type': genotype.get('extras', {}).get('cnvs', {}).get('type'),
+            },
+            'dp': genotype.get('extras', {}).get('dp'),
+            'filter': genotype.get('filter'),
+            'gq': genotype.get('gq'),
+            'numAlt': genotype.get('num_alt'),
+            'pl': genotype.get('extras', {}).get('pl'),
+        } for sample_id, genotype in variant_json.get('genotypes', {}).items()
+    }
+    sample_guids_by_id = {s.sample_id: s.guid for s in  Sample.objects.filter(sample_id__in=genotypes.keys())}
+    genotypes = {sample_guids_by_id.get(sample_id): genotype for sample_id, genotype in genotypes.items()
+                 if sample_guids_by_id.get(sample_id)}
+
     return {
         'annotation': {
             'cadd_phred': annotation.get('cadd_phred'),
@@ -315,29 +342,7 @@ def _variant_details(variant_json, user=None):
             'accession': extras.get('hgmd_accession'),
             'class': extras.get('hgmd_class') if (user and user.is_staff) else None,
         },
-        'genotypes': {
-            individual_id: {
-                'ab': genotype.get('ab'),
-                'ad': genotype.get('extras', {}).get('ad'),
-                'alleles': genotype.get('alleles', []),
-                'cnvs': {
-                    'array': genotype.get('extras', {}).get('cnvs', {}).get('array'),
-                    'caller': genotype.get('extras', {}).get('cnvs', {}).get('caller'),
-                    'cn': genotype.get('extras', {}).get('cnvs', {}).get('cn'),
-                    'freq': genotype.get('extras', {}).get('cnvs', {}).get('freq'),
-                    'LRR_median': genotype.get('extras', {}).get('cnvs', {}).get('LRR_median'),
-                    'LRR_sd': genotype.get('extras', {}).get('cnvs', {}).get('LRR_sd'),
-                    'size': genotype.get('extras', {}).get('cnvs', {}).get('size'),
-                    'snps': genotype.get('extras', {}).get('cnvs', {}).get('snps'),
-                    'type': genotype.get('extras', {}).get('cnvs', {}).get('type'),
-                },
-                'dp': genotype.get('extras', {}).get('dp'),
-                'filter': genotype.get('filter'),
-                'gq': genotype.get('gq'),
-                'numAlt': genotype.get('num_alt'),
-                'pl': genotype.get('extras', {}).get('pl'),
-            } for individual_id, genotype in variant_json.get('genotypes', {}).items()
-        },
+        'genotypes': genotypes,
         'genomeVersion': genome_version,
         'liftedOverGenomeVersion': lifted_over_genome_version,
         'liftedOverChrom': lifted_over_chrom,

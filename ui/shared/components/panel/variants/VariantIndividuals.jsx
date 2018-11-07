@@ -77,7 +77,10 @@ Alleles.propTypes = {
 
 
 const Genotype = ({ variant, individual }) => {
-  const genotype = variant.genotypes && variant.genotypes[individual.individualId]
+  if (!variant.genotypes) {
+    return null
+  }
+  const genotype = variant.genotypes[individual.sampleGuids.find(sampleGuid => variant.genotypes[sampleGuid])]
   if (!genotype) {
     return null
   }

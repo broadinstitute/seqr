@@ -549,7 +549,7 @@ export const VARIANT_EXPORT_DATA = [
 ]
 
 export const VARIANT_GENOTYPE_EXPORT_DATA = [
-  { header: 'sample_id', getVal: (genotype, individualId) => individualId },
+  { header: 'sample_id', getVal: (genotype, sample) => sample.sampleId },
   { header: 'genotype', getVal: genotype => (genotype.alleles.length ? genotype.alleles.join('/') : './.') },
   { header: 'filter' },
   { header: 'ad' },
