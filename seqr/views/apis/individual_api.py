@@ -334,8 +334,6 @@ def add_or_update_individuals_and_families(project, individual_records, user=Non
 
         if created:
             logger.info("Created family: %s", family)
-            if not family.display_name:
-                update_seqr_model(family, display_name=family.family_id)
 
         # uploaded files do not have unique guid's so fall back to a combination of family and individualId
         if record.get('individualGuid'):
@@ -351,9 +349,6 @@ def add_or_update_individuals_and_families(project, individual_records, user=Non
             record.update({
                 'caseReviewStatus': 'I',
             })
-
-        if not (individual.display_name or record.get('displayName')):
-            record['displayName'] = individual.individual_id or record.get('individualId')
 
         update_individual_from_json(individual, record, allow_unknown_keys=True, user=user)
 

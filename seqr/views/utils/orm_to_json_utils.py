@@ -164,6 +164,8 @@ def _get_json_for_families(families, user=None, add_individual_guids_field=False
             result['pedigreeImage'] = pedigree_image
         if add_individual_guids_field:
             result['individualGuids'] = [i.guid for i in family.individual_set.all()]
+        if not result['displayName']:
+            result['displayName'] = result['familyId']
 
     prefetch_related_objects(families, 'familyanalysedby_set')
     if add_individual_guids_field:
@@ -222,6 +224,7 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, family_
             'phenotipsData': _load_phenotips_data(result['phenotipsData']),
             'maternalId': mother.individual_id if mother else None,
             'paternalId': father.individual_id if father else None,
+            'displayName': result['displayName'] or result['individualId'],
         })
 
         if add_sample_guids_field:

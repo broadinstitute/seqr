@@ -15,6 +15,9 @@ def update_project_from_json(project, json, verbose=False, allow_unknown_keys=Fa
 
 
 def update_family_from_json(family, json, verbose=False, user=None, allow_unknown_keys=False):
+    if json.get('displayName') and json['displayName'] == family.family_id:
+        json['displayName'] = ''
+
     update_model_from_json(
         family, json, user=user, verbose=verbose, allow_unknown_keys=allow_unknown_keys,
         immutable_keys=['pedigree_image'], conditional_edit_keys={'family_id': can_edit_family_id}
@@ -31,6 +34,9 @@ def update_individual_from_json(individual, json, verbose=False, user=None, allo
 
     _parse_parent_field(json, individual, 'mother', 'maternalId')
     _parse_parent_field(json, individual, 'father', 'paternalId')
+
+    if json.get('displayName') and json['displayName'] == individual.individual_id:
+        json['displayName'] = ''
 
     update_model_from_json(
         individual, json, user=user, verbose=verbose, allow_unknown_keys=allow_unknown_keys, immutable_keys=['phenotips_data']

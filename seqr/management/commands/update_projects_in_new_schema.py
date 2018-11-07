@@ -513,7 +513,7 @@ def transfer_family(source_family, new_project):
     source_family.seqr_family = new_family
     source_family.save()
 
-    update_model_field(new_family, 'display_name', source_family.family_name or source_family.family_id)
+    update_model_field(new_family, 'display_name', source_family.family_name)
     update_model_field(new_family, 'description', source_family.short_description)
     update_model_field(new_family, 'pedigree_image', source_family.pedigree_image)
     update_model_field(new_family, 'analysis_notes', source_family.about_family_content, strip_html=True)
@@ -555,7 +555,7 @@ def transfer_individual(source_individual, new_family, new_project, connect_to_p
     update_model_field(new_individual, 'paternal_id',  source_individual.paternal_id)
     update_model_field(new_individual, 'sex',  source_individual.gender)
     update_model_field(new_individual, 'affected',  source_individual.affected)
-    update_model_field(new_individual, 'display_name', source_individual.nickname or source_individual.indiv_id)
+    update_model_field(new_individual, 'display_name', source_individual.nickname)
     #update_model_field(new_individual, 'notes',  source_individual.notes) <-- notes exist only in the new SeqrIndividual schema. other_notes was never really used
     update_model_field(new_individual, 'case_review_status',  source_individual.case_review_status)
     update_model_field(new_individual, 'phenotips_eid',  source_individual.phenotips_id)

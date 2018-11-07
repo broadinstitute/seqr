@@ -161,7 +161,7 @@ const VariantIndividuals = ({ variant, individualsByGuid }) => {
           <PedigreeIcon
             sex={individual.sex}
             affected={individual.affected}
-            label={<small>{individual.displayName || individual.individualId}</small>}
+            label={<small>{individual.displayName}</small>}
             popupContent={
               hasPhenotipsDetails(individual.phenotipsData) ?
                 <PhenotipsDataPanel

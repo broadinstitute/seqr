@@ -53,7 +53,7 @@ const CaseReviewStatusDropdown = props =>
           initialValues={props.individual}
           field="caseReviewDiscussion"
           idField="individualGuid"
-          modalTitle={`${props.individual.individualId}: Case Review Discussion`}
+          modalTitle={`${props.individual.displayName}: Case Review Discussion`}
           onSubmit={props.updateIndividual}
         />
       }
