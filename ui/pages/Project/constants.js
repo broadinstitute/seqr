@@ -27,6 +27,7 @@ import {
   FAMILY_FIELD_INTERNAL_SUMMARY,
   FAMILY_FIELD_FIRST_SAMPLE,
   FAMILY_FIELD_CREATED_DATE,
+  FAMILY_FIELD_CODED_PHENOTYPE,
   CLINSIG_SEVERITY,
   FAMILY_ANALYSIS_STATUS_OPTIONS,
   SAMPLE_STATUS_LOADED,
@@ -373,7 +374,7 @@ const tableConfigForField = fieldConfigs => (field) => {
 }
 
 const FAMILY_FIELD_CONFIGS = {
-  [FAMILY_FIELD_ID]: { label: 'Family ID', width: 3 },
+  [FAMILY_FIELD_ID]: { label: 'Family ID', width: 2 },
   [FAMILY_DISPLAY_NAME]: { label: 'Display Name', width: 3 },
   [FAMILY_FIELD_CREATED_DATE]: { label: 'Created Date' },
   [FAMILY_FIELD_FIRST_SAMPLE]: { label: 'First Data Loaded Date', format: firstSample => (firstSample || {}).loadedDate },
@@ -385,10 +386,11 @@ const FAMILY_FIELD_CONFIGS = {
   [FAMILY_FIELD_ANALYSED_BY]: { label: 'Analysed By', format: analysedBy => analysedBy.map(o => o.createdBy.fullName || o.createdBy.email).join(',') },
   [FAMILY_FIELD_ANALYSIS_SUMMARY]: { label: 'Analysis Summary', format: stripMarkdown },
   [FAMILY_FIELD_ANALYSIS_NOTES]: { label: 'Analysis Notes', format: stripMarkdown },
+  [FAMILY_FIELD_CODED_PHENOTYPE]: { label: 'Coded Phenotype', width: 4 },
 }
 
 export const FAMILY_FIELDS = [
-  FAMILY_FIELD_ID, FAMILY_DISPLAY_NAME, FAMILY_FIELD_DESCRIPTION,
+  FAMILY_FIELD_ID, FAMILY_FIELD_DESCRIPTION, FAMILY_FIELD_CODED_PHENOTYPE,
 ].map(tableConfigForField(FAMILY_FIELD_CONFIGS))
 
 export const FAMILY_EXPORT_DATA = [
