@@ -111,7 +111,7 @@ class ElasticsearchDatastore(datastore.Datastore):
 
         self._annotator = annotator
 
-        self._es_client = elasticsearch.Elasticsearch(host=settings.ELASTICSEARCH_SERVICE_HOSTNAME, timeout=30)
+        self._es_client = elasticsearch.Elasticsearch(host=settings.ELASTICSEARCH_SERVICE_HOSTNAME)
 
         self._redis_client = None
         if settings.REDIS_SERVICE_HOSTNAME:

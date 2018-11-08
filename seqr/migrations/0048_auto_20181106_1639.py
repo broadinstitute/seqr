@@ -17,8 +17,8 @@ def set_parent_objects(apps, schema_editor):
     for i in individuals_by_id.values():
         if i.maternal_id or i.paternal_id:
             try:
-                i.mother = individuals_by_id[i.maternal_id] if i.maternal_id else None
-                i.father = individuals_by_id[i.paternal_id] if i.paternal_id else None
+                i.mother = individuals_by_id[i.maternal_id] if i.maternal_id and i.maternal_id != '.' else None
+                i.father = individuals_by_id[i.paternal_id] if i.paternal_id and i.paternal_id != '.' else None
                 i.save()
             except KeyError:
                 problems.append(i)
