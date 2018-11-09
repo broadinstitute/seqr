@@ -12,7 +12,7 @@ from guardian.shortcuts import assign_perm
 
 from seqr.views.utils.variant_utils import get_or_create_saved_variant
 from seqr.views.apis import phenotips_api
-from seqr.views.apis.phenotips_api import _phenotips_patient_exists, _get_patient_data, _update_individual_phenotips_data
+from seqr.views.apis.phenotips_api import _get_patient_data, _update_individual_phenotips_data
 from xbrowse_server.base.models import \
     Project, \
     Family, \
@@ -34,7 +34,7 @@ from seqr.models import \
     Sample as SeqrSample, \
     LocusList, \
     FamilyAnalysedBy as SeqrAnalysedBy, \
-    CAN_VIEW, ModelWithGUID
+    CAN_VIEW
 
 from xbrowse_server.mall import get_datastore, get_annotator
 from xbrowse_server.base.model_utils import _convert_xbrowse_kwargs_to_seqr_kwargs, find_matching_seqr_model, _create_seqr_model
@@ -153,12 +153,12 @@ class Command(BaseCommand):
             # TODO family groups, cohorts
             for source_variant_tag_type in ProjectTag.objects.filter(project=source_project).order_by('order'):
                 if source_variant_tag_type not in core_variant_tag_type_names:
-                    new_variant_tag_type, created = get_or_create_variant_tag_type(source_variant_tag_type)
+                    _, created = get_or_create_variant_tag_type(source_variant_tag_type)
                     if created: counters['variant_tag_types_created'] += 1
 
                 for source_variant_tag in VariantTag.objects.filter(project_tag=source_variant_tag_type):
                     new_family = source_family_id_to_new_family.get(source_variant_tag.family.id if source_variant_tag.family else None)
-                    new_variant_tag, variant_tag_created = get_or_create_variant_tag(source_variant_tag, new_family)
+                    _, variant_tag_created = get_or_create_variant_tag(source_variant_tag, new_family)
 
                     if variant_tag_created: counters['variant_tags_created'] += 1
 
@@ -399,10 +399,10 @@ def transfer_project(source_project):
                 name=source_gene_list.name or source_gene_list.slug,
                 is_public=source_gene_list.is_public,
             )
-        except ObjectDoesNotExist as e:
+        except ObjectDoesNotExist:
             raise Exception('LocusList "%s" not found. Please run `python manage.py transfer_gene_lists`' % (
                 source_gene_list.name or source_gene_list.slug))
-        except MultipleObjectsReturned as e:
+        except MultipleObjectsReturned:
             logger.error("Multiple LocusLists with  owner '%s' and name '%s'" % (
                 source_gene_list.owner, (source_gene_list.name or source_gene_list.slug))
             )

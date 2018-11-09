@@ -147,8 +147,6 @@ def find_matching_seqr_model(xbrowse_model):
     seqr_model = getattr(xbrowse_model, xbrowse_model_foreign_key_name, None)
     if seqr_model:
         return seqr_model
-        setattr(xbrowse_model, xbrowse_model_foreign_key_name, seqr_model)
-        xbrowse_model.save()
 
     try:
         if xbrowse_class_name == "Project":
