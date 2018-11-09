@@ -51,12 +51,12 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='individual',
             name='father',
-            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='+', to='seqr.Individual'),
+            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='paternal_children', to='seqr.Individual'),
         ),
         migrations.AddField(
             model_name='individual',
             name='mother',
-            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='+', to='seqr.Individual'),
+            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='maternal_children', to='seqr.Individual'),
         ),
 
         migrations.RunPython(set_parent_objects, reverse_code=set_parent_ids),

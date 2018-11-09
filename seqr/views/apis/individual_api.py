@@ -118,6 +118,10 @@ def edit_individuals_handler(request, project_guid):
 
     update_individuals = {ind['individualGuid']: ind for ind in modified_individuals_list}
     update_individual_models = {ind.guid: ind for ind in Individual.objects.filter(guid__in=update_individuals.keys())}
+    for modified_ind in modified_individuals_list:
+        model = update_individual_models[modified_ind['individualGuid']]
+        if modified_ind[JsonConstants.INDIVIDUAL_ID_COLUMN] != model.individual_id:
+            modified_ind[JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN] = model.individual_id
 
     modified_family_ids = {ind.get('familyId') or ind['family']['familyId'] for ind in modified_individuals_list}
     modified_family_ids.update({ind.family.family_id for ind in update_individual_models.values()})
@@ -131,9 +135,12 @@ def edit_individuals_handler(request, project_guid):
     if errors:
         return create_json_response({'errors': errors, 'warnings': warnings}, status=400, reason='Invalid updates')
 
-    updated_families, updated_individuals = add_or_update_individuals_and_families(
-        project, modified_individuals_list, user=request.user
-    )
+    try:
+        updated_families, updated_individuals = add_or_update_individuals_and_families(
+            project, modified_individuals_list, user=request.user
+        )
+    except Exception as e:
+        return create_json_response({'errors': [e.message]}, status=400, reason='Invalid updates')
 
     individuals_by_guid = {
         individual.guid: _get_json_for_individual(individual, request.user) for individual in updated_individuals
@@ -322,7 +329,8 @@ def add_or_update_individuals_and_families(project, individual_records, user=Non
         2-tuple: updated_families, updated_individuals containing Django ORM models
     """
     families = {}
-    updated_individuals = []
+    updated_individuals = set()
+    parent_updates = []
     for i, record in enumerate(individual_records):
         # family id will be in different places in the json depending on whether it comes from a flat uploaded file or from the nested individual object
         family_id = record.get(JsonConstants.FAMILY_ID_COLUMN) or record.get('family', {}).get('familyId')
@@ -349,18 +357,37 @@ def add_or_update_individuals_and_families(project, individual_records, user=Non
             individual_filters = {'family': family, 'individual_id': individual_id}
 
         individual, created = get_or_create_seqr_model(Individual, **individual_filters)
-        record['family'] = family
-        record.pop('familyId', None)
 
         if created:
             record.update({
                 'caseReviewStatus': 'I',
             })
 
+        record['family'] = family
+        record.pop('familyId', None)
+        if individual.family != family:
+            families[individual.family.family_id] = individual.family
+
+        if record.get(JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN):
+            updated_individuals.update(individual.maternal_children.all())
+            updated_individuals.update(individual.paternal_children.all())
+
+        # Update the parent ids last, so if they are referencing updated individuals they will check for the correct ID
+        if record.get('maternalId') or record.get('paternalId'):
+            parent_updates.append({
+                'individual': individual,
+                'maternalId': record.pop('maternalId', None),
+                'paternalId': record.pop('paternalId', None),
+            })
+
         update_individual_from_json(individual, record, allow_unknown_keys=True, user=user)
 
-        updated_individuals.append(individual)
+        updated_individuals.add(individual)
         families[family.family_id] = family
+
+    for update in parent_updates:
+        individual = update.pop('individual')
+        update_individual_from_json(individual, update, user=user)
 
     updated_families = list(families.values())
 
@@ -368,6 +395,7 @@ def add_or_update_individuals_and_families(project, individual_records, user=Non
     update_pedigree_images(updated_families, project_guid=project.guid)
 
     return updated_families, updated_individuals
+
 
 
 def delete_individuals(project, individual_guids):
@@ -489,8 +517,8 @@ def export_individuals(
         row.extend([
             i.family.family_id,
             i.individual_id,
-            i.father.individual_id,
-            i.mother.individual_id,
+            i.father.individual_id if i.father else None,
+            i.mother.individual_id if i.mother else None,
             _SEX_TO_EXPORTED_VALUE.get(i.sex),
             __AFFECTED_TO_EXPORTED_VALUE.get(i.affected),
             i.notes,  # TODO should strip markdown (or be moved to client-side export)

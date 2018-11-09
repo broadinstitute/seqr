@@ -200,7 +200,9 @@ def validate_fam_file_records(records, fail_on_warnings=False):
                 'info': ['info message', ...],
             }
     """
-    records_by_id = {r[JsonConstants.INDIVIDUAL_ID_COLUMN]: r for r in records}
+    records_by_id = {r[JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN]: r for r in records
+                     if r.get(JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN)}
+    records_by_id.update({r[JsonConstants.INDIVIDUAL_ID_COLUMN]: r for r in records})
 
     errors = []
     warnings = []
