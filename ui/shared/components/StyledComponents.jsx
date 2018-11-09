@@ -1,6 +1,6 @@
 import React from 'react'
 import styled from 'styled-components'
-import { Icon, Label } from 'semantic-ui-react'
+import { Icon, Label, Table } from 'semantic-ui-react'
 
 export const ColoredIcon = styled(({ color, ...props }) => <Icon {...props} />)`
   color: ${props => props.color} !important;
@@ -19,4 +19,12 @@ export const ColoredOutlineLabel = styled(({ color, ...props }) => <Label {...pr
 export const HelpIcon = styled(Icon).attrs({ name: 'help circle outline', color: 'grey' })`
   cursor: pointer;
   margin-left: 5px !important;
+`
+
+export const NoBorderTable = styled(Table)`
+  border: none !important;
+  
+  td {
+    border: none !important;
+  }
 `

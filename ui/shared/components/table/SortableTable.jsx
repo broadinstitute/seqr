@@ -1,9 +1,10 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import { Table, Checkbox } from 'semantic-ui-react'
+import { Table, Checkbox, Pagination } from 'semantic-ui-react'
 
 import { compareObjects } from '../../utils/sortUtils'
+import { configuredField } from '../form/ReduxFormWrapper'
 import TableLoading from './TableLoading'
 
 const StyledSortableTable = styled(Table)`
@@ -32,13 +33,18 @@ class SortableTable extends React.PureComponent {
   static propTypes = {
     data: PropTypes.array,
     columns: PropTypes.array,
-    idField: PropTypes.string,
+    idField: PropTypes.string.isRequired,
     defaultSortColumn: PropTypes.string,
     selectRows: PropTypes.func,
     selectedRows: PropTypes.object,
     loading: PropTypes.bool,
     emptyContent: PropTypes.node,
     footer: PropTypes.node,
+    rowsPerPage: PropTypes.number,
+  }
+
+  static defaultProps = {
+    selectedRows: {},
   }
 
   constructor(props) {
@@ -47,6 +53,7 @@ class SortableTable extends React.PureComponent {
     this.state = {
       column: props.defaultSortColumn,
       direction: 'ascending',
+      activePage: 1,
     }
   }
 
@@ -91,13 +98,25 @@ class SortableTable extends React.PureComponent {
   }
 
   render() {
-    const { data, defaultSortColumn, idField, columns, selectRows, selectedRows = {}, loading, emptyContent, footer, ...tableProps } = this.props
-    const { column, direction } = this.state
+    const { data, defaultSortColumn, idField, columns, selectRows, selectedRows = {}, loading, emptyContent, footer, rowsPerPage, ...tableProps } = this.props
+    const { column, direction, activePage } = this.state
 
     let sortedData = data.sort(compareObjects(column))
     if (direction === DESCENDING) {
       sortedData = sortedData.reverse()
     }
+    const isPaginated = rowsPerPage && sortedData.length > rowsPerPage
+    if (isPaginated) {
+      sortedData = sortedData.slice((activePage - 1) * rowsPerPage, activePage * rowsPerPage)
+    }
+
+    const processedColumns = columns.map(({ formFieldProps, ...columnProps }) => (
+      formFieldProps ?
+        {
+          ...columnProps,
+          format: row => configuredField({ ...formFieldProps, name: `${row[idField]}.${columnProps.name}`, onClick: e => e.stopPropagation() }),
+        } : columnProps
+    ))
 
     let tableContent
     if (loading) {
@@ -108,7 +127,7 @@ class SortableTable extends React.PureComponent {
       tableContent = sortedData.map(row => (
         <Table.Row key={row[idField]} onClick={this.handleSelect(row[idField])} active={selectedRows[row[idField]]}>
           {selectRows && <Table.Cell content={<Checkbox checked={selectedRows[row[idField]]} />} />}
-          {columns.map(({ name, format, textAlign, verticalAlign }) =>
+          {processedColumns.map(({ name, format, textAlign, verticalAlign }) =>
             <Table.Cell
               key={name}
               content={format ? format(row) : row[name]}
@@ -121,13 +140,13 @@ class SortableTable extends React.PureComponent {
     }
 
     return (
-      <StyledSortableTable sortable selectable={!!selectRows} {...tableProps}>
+      <StyledSortableTable sortable selectable={!!selectRows} columns={columns.length} {...tableProps}>
         <Table.Header>
           <Table.Row>
             {selectRows &&
               <Table.HeaderCell width={1} content={<Checkbox checked={this.allSelected()} indeterminate={this.someSelected()} onClick={this.selectAll} />} />
             }
-            {columns.map(({ name, format, ...columnProps }) =>
+            {processedColumns.map(({ name, format, ...columnProps }) =>
               <Table.HeaderCell
                 key={name}
                 sorted={column === name ? direction : null}
@@ -140,10 +159,25 @@ class SortableTable extends React.PureComponent {
         <Table.Body>
           {tableContent}
         </Table.Body>
-        {footer &&
+        {(footer || isPaginated) &&
           <Table.Footer>
             <Table.Row>
-              <Table.HeaderCell colSpan={columns.length} content={footer} />
+              {footer && <Table.HeaderCell colSpan={(isPaginated ? 1 : columns.length) + (selectRows ? 1 : 0)} content={footer} />}
+              {isPaginated &&
+                <Table.HeaderCell
+                  colSpan={(footer ? columns.length - 1 : columns.length) + (selectRows ? 1 : 0)}
+                  textAlign="right"
+                >
+                  Showing rows {((activePage - 1) * rowsPerPage) + 1}-{Math.min(activePage * rowsPerPage, data.length)}
+                  &nbsp; &nbsp;
+                  <Pagination
+                    activePage={activePage}
+                    totalPages={Math.ceil(data.length / rowsPerPage)}
+                    onPageChange={(e, d) => this.setState({ activePage: d.activePage })}
+                    size="mini"
+                  />
+                </Table.HeaderCell>
+              }
             </Table.Row>
           </Table.Footer>
         }

@@ -77,7 +77,10 @@ Alleles.propTypes = {
 
 
 const Genotype = ({ variant, individual }) => {
-  const genotype = variant.genotypes && variant.genotypes[individual.individualId]
+  if (!variant.genotypes) {
+    return null
+  }
+  const genotype = variant.genotypes[individual.sampleGuids.find(sampleGuid => variant.genotypes[sampleGuid])]
   if (!genotype) {
     return null
   }
@@ -158,7 +161,7 @@ const VariantIndividuals = ({ variant, individualsByGuid }) => {
           <PedigreeIcon
             sex={individual.sex}
             affected={individual.affected}
-            label={<small>{individual.displayName || individual.individualId}</small>}
+            label={<small>{individual.displayName}</small>}
             popupContent={
               hasPhenotipsDetails(individual.phenotipsData) ?
                 <PhenotipsDataPanel

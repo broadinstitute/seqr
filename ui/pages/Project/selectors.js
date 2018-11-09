@@ -187,7 +187,8 @@ export const getSavedVariantTotalPages = createSelector(
 
 export const getSavedVariantExportConfig = createSelector(
   getFilteredProjectSavedVariants,
-  (filteredSavedVariants) => {
+  getSamplesByGuid,
+  (filteredSavedVariants, samplesByGuid) => {
     const maxGenotypes = Math.max(...filteredSavedVariants.map(variant => Object.keys(variant.genotypes).length), 0)
     return {
       rawData: filteredSavedVariants,
@@ -195,10 +196,9 @@ export const getSavedVariantExportConfig = createSelector(
         (acc, i) => [...acc, ...VARIANT_GENOTYPE_EXPORT_DATA.map(config => `${config.header}_${i + 1}`)],
         VARIANT_EXPORT_DATA.map(config => config.header),
       ),
-      processRow: variant => Object.keys(variant.genotypes).reduce(
-        (acc, individualId) => [...acc, ...VARIANT_GENOTYPE_EXPORT_DATA.map((config) => {
-          const genotype = variant.genotypes[individualId]
-          return config.getVal ? config.getVal(genotype, individualId) : genotype[config.header]
+      processRow: variant => Object.entries(variant.genotypes).reduce(
+        (acc, [sampleGuid, genotype]) => [...acc, ...VARIANT_GENOTYPE_EXPORT_DATA.map((config) => {
+          return config.getVal ? config.getVal(genotype, samplesByGuid[sampleGuid]) : genotype[config.header]
         })],
         VARIANT_EXPORT_DATA.map(config => (config.getVal ? config.getVal(variant) : variant[config.header])),
       ),

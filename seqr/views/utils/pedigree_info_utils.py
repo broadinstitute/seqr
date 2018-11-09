@@ -138,7 +138,10 @@ def convert_fam_file_rows_to_json(rows):
             if "family" in key:
                 json_record[JsonConstants.FAMILY_ID_COLUMN] = value
             elif "indiv" in key:
-                json_record[JsonConstants.INDIVIDUAL_ID_COLUMN] = value
+                if "previous" in key:
+                    json_record[JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN] = value
+                else:
+                    json_record[JsonConstants.INDIVIDUAL_ID_COLUMN] = value
             elif "father" in key or "paternal" in key:
                 json_record[JsonConstants.PATERNAL_ID_COLUMN] = value if value != "." else ""
             elif "mother" in key or "maternal" in key:
@@ -151,10 +154,6 @@ def convert_fam_file_rows_to_json(rows):
                 json_record[JsonConstants.NOTES_COLUMN] = value
             elif "coded" in key and "phenotype" in key:
                 json_record[JsonConstants.CODED_PHENOTYPE_COLUMN] = value
-            #elif key.startswith("funding"):
-            #    json_record[JsonConstants.FUNDING_SOURCE_COLUMN] = value
-            #elif re.match("case.*review.*status", key):
-            #    json_record[JsonConstants.CASE_REVIEW_STATUS_COLUMN] = value
 
         # validate
         if not json_record.get(JsonConstants.FAMILY_ID_COLUMN):
@@ -182,11 +181,6 @@ def convert_fam_file_rows_to_json(rows):
             elif json_record[JsonConstants.AFFECTED_COLUMN]:
                 raise ValueError("Invalid value '%s' for affected status in row #%d" % (json_record[JsonConstants.AFFECTED_COLUMN], i+1))
 
-        #if json_record[JsonConstants.CASE_REVIEW_STATUS_COLUMN]:
-        #    if json_record[JsonConstants.CASE_REVIEW_STATUS_COLUMN].lower() not in Individual.CASE_REVIEW_STATUS_REVERSE_LOOKUP:
-        #        raise ValueError("Invalid value '%s' in the 'Case Review Status' column in row #%d." % (json_record[JsonConstants.CASE_REVIEW_STATUS_COLUMN], i+1))
-        #    json_record[JsonConstants.CASE_REVIEW_STATUS_COLUMN] = Individual.CASE_REVIEW_STATUS_REVERSE_LOOKUP[json_record[JsonConstants.CASE_REVIEW_STATUS_COLUMN].lower()]
-
         json_results.append(json_record)
 
     return json_results
@@ -206,7 +200,9 @@ def validate_fam_file_records(records, fail_on_warnings=False):
                 'info': ['info message', ...],
             }
     """
-    records_by_id = {r[JsonConstants.INDIVIDUAL_ID_COLUMN]: r for r in records}
+    records_by_id = {r[JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN]: r for r in records
+                     if r.get(JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN)}
+    records_by_id.update({r[JsonConstants.INDIVIDUAL_ID_COLUMN]: r for r in records})
 
     errors = []
     warnings = []
@@ -389,6 +385,7 @@ def _send_sample_manifest(sample_manifest_rows, kit_id, original_filename, origi
 class JsonConstants:
     FAMILY_ID_COLUMN = 'familyId'
     INDIVIDUAL_ID_COLUMN = 'individualId'
+    PREVIOUS_INDIVIDUAL_ID_COLUMN = 'previousIndividualId'
     PATERNAL_ID_COLUMN = 'paternalId'
     MATERNAL_ID_COLUMN = 'maternalId'
     SEX_COLUMN = 'sex'

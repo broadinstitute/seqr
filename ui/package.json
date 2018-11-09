@@ -65,7 +65,6 @@
   },
   "dependencies": {
     "ajv": "^5.5.2",
-    "datatables.net": "2.1.1",
     "detect-port": "^1.2.3",
     "draft-js": "^0.10.4",
     "draftjs-md-converter": "^0.1.6",

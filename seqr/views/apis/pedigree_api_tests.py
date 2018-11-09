@@ -14,8 +14,8 @@ class PedigreeImageTest(TestCase):
         test_family = Family.objects.get(guid='F000001_1')
         parsed_data = _get_parsed_individuals(test_family)
         self.assertDictEqual(parsed_data, {
-            'NA19675': {
-                'individualId': 'NA19675',
+            'NA19675_1': {
+                'individualId': 'NA19675_1',
                 'paternalId': 'NA19678',
                 'maternalId': 'NA19679',
                 'sex': '1',
@@ -45,8 +45,8 @@ class PedigreeImageTest(TestCase):
         self.assertEqual(len(placeholders), 1)
         placeholder_id = placeholders.keys()[0]
         self.assertDictEqual(parsed_data, {
-            'NA19675': {
-                'individualId': 'NA19675',
+            'NA19675_1': {
+                'individualId': 'NA19675_1',
                 'paternalId': placeholder_id,
                 'maternalId': 'NA19679',
                 'sex': '1',

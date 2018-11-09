@@ -41,20 +41,11 @@ def edit_families_handler(request, project_guid):
 
     project = get_project_and_check_permissions(project_guid, request.user, CAN_EDIT)
 
-    # TODO more validation
-    #errors, warnings = validate_fam_file_records(modified_individuals_list)
-    #if errors:
-    #    return create_json_response({'errors': errors, 'warnings': warnings})
-
     updated_families = []
     for fields in modified_families:
         family = Family.objects.get(project=project, guid=fields['familyGuid'])
         update_family_from_json(family, fields, user=request.user, allow_unknown_keys=True)
         updated_families.append(family)
-
-        for key, value in fields.items():
-            # TODO do this more efficiently
-            _deprecated_update_original_family_field(project, family, key, value)
 
     updated_families_by_guid = {
         'familiesByGuid': {
@@ -161,20 +152,3 @@ def update_family_analysed_by(request, family_guid):
     return create_json_response({
         family.guid: _get_json_for_family(family, request.user)
     })
-
-
-def _deprecated_update_original_family_field(project, family, field_name, value):
-    base_family = BaseFamily.objects.filter(
-        project__project_id=project.deprecated_project_id, family_id=family.family_id)
-    base_family = base_family[0]
-    if field_name == "description":
-        base_family.short_description = value
-    elif field_name == "analysisNotes":
-        base_family.about_family_content = value
-    elif field_name == "analysisSummary":
-        base_family.analysis_summary_content = value
-    elif field_name == "codedPhenotype":
-        base_family.coded_phenotype = value
-    elif field_name == "postDiscoveryOmimNumber":
-        base_family.post_discovery_omim_number = value
-    base_family.save()

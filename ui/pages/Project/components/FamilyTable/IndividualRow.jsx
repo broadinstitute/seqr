@@ -120,9 +120,9 @@ class IndividualRow extends React.Component
   render() {
     const { project, family, individual, editCaseReview, matchmakerSubmission, deleteIndividualMmePatient } = this.props
 
-    const { individualId, displayName, paternalId, maternalId, sex, affected, createdDate } = individual
+    const { displayName, paternalId, maternalId, sex, affected, createdDate, sampleGuids, caseReviewStatus, caseReviewDiscussion } = individual
 
-    let loadedSamples = individual.sampleGuids.map(
+    let loadedSamples = sampleGuids.map(
       sampleGuid => this.props.samplesByGuid[sampleGuid],
     ).filter(s =>
       s.datasetType === DATASET_TYPE_VARIANT_CALLS &&
@@ -135,9 +135,7 @@ class IndividualRow extends React.Component
     const leftContent =
       <div>
         <div>
-          <PedigreeIcon sex={sex} affected={affected} />
-          &nbsp;
-          {displayName || individualId}
+          <PedigreeIcon sex={sex} affected={affected} /> {displayName}
         </div>
         <div>
           {
@@ -179,8 +177,8 @@ class IndividualRow extends React.Component
           <TextFieldView
             key="discussion"
             isVisible={
-              individual.caseReviewStatus === CASE_REVIEW_STATUS_MORE_INFO_NEEDED
-              || (editCaseReview && individual.caseReviewDiscussion) || false
+              caseReviewStatus === CASE_REVIEW_STATUS_MORE_INFO_NEEDED
+              || (editCaseReview && caseReviewDiscussion) || false
             }
             fieldName={editCaseReview ? 'Case Review Discussion' : 'Discussion'}
             field="caseReviewDiscussion"
@@ -198,7 +196,7 @@ class IndividualRow extends React.Component
             field="notes"
             idField="individualGuid"
             initialValues={individual}
-            modalTitle={`Notes for Individual ${individual.individualId}`}
+            modalTitle={`Notes for Individual ${displayName}`}
             onSubmit={this.props.updateIndividual}
           />
         ),

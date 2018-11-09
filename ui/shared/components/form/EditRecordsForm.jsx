@@ -1,47 +1,44 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import styled, { injectGlobal } from 'styled-components'
 import { connect } from 'react-redux'
-import { Table, Divider, Pagination } from 'semantic-ui-react'
-import { Field, FieldArray, formValueSelector, change } from 'redux-form'
-import get from 'lodash/get'
+import styled from 'styled-components'
 
-import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
+import { closeModal } from 'redux/utils/modalReducer'
+import DeleteButton from '../buttons/DeleteButton'
+import SortableTable from '../table/SortableTable'
+import ReduxFormWrapper from './ReduxFormWrapper'
 
 const ROWS_PER_PAGE = 12
 
 /* eslint-disable no-unused-expressions */
-injectGlobal`
+const TableContainer = styled.div`
+
+  padding: 0 1em;
   
-  .ui.table.basic.compact td { 
-    border-top: 0px !important; 
+  .ui.table.basic.compact th {
+    padding-bottom: 8px;
   }
-  
-  .ui.table.basic.compact tr.active {
-    background-color: #F3F3F3 !important;
+
+  .ui.table.basic.compact td {
+    border-top: 0px !important;
   }
-  
-  .ui.table.basic.compact input[type="checkbox"] {
-    cursor: pointer;
-    margin: 0px 10px;
-    vertical-align: middle;
-  }
-  
+
   .ui.table.basic.compact input[type="text"] {
     padding: 5px 7px;
   }
+  
+  .ui.table.basic.compact .inline.fields {
+    margin: 0 7px;
+    
+    .field {
+      padding-right: 8px;
+    }
+    
+    label {
+      padding-left: 18px;
+    }
+  }
 
-`
-
-const DeleteButton = styled.a.attrs({ role: 'button', tabIndex: '0' })`
-  cursor: pointer;
-  margin: 20px 20px 5px 20px !important;
-  font-size: 1.1em;
-  font-weight: 500;
-`
-
-const TableHeaderCell = styled(Table.HeaderCell)`
-  padding-bottom: 8px;
 `
 
 const FormContentContainer = styled.div`
@@ -52,14 +49,17 @@ const FormContentContainer = styled.div`
 class EditRecordsForm extends React.Component
 {
   static propTypes = {
-    /* Array of records to be edited in this form */
-    records: PropTypes.arrayOf(PropTypes.object).isRequired,
-    editedRecords: PropTypes.arrayOf(PropTypes.object),
-    changeField: PropTypes.func,
+    /* Object of records to be edited in this form */
+    records: PropTypes.object.isRequired,
+
+    /* The unique identifier key for the record objects */
+    idField: PropTypes.string,
+
     isActiveRow: PropTypes.func,
+    entityKey: PropTypes.string,
 
     /* Array of fields to show for a given record row */
-    fields: PropTypes.arrayOf(PropTypes.object).isRequired,
+    columns: PropTypes.arrayOf(PropTypes.object).isRequired,
 
     /* Unique identifier for the form */
     formName: PropTypes.string.isRequired,
@@ -68,143 +68,86 @@ class EditRecordsForm extends React.Component
     modalName: PropTypes.string,
 
     onSubmit: PropTypes.func.isRequired,
-    onClose: PropTypes.func,
+    closeParentModal: PropTypes.func,
   }
 
   constructor(props) {
     super(props)
     this.state = {
-      activePage: 1,
+      data: props.records,
     }
   }
 
-  renderRow = ({ fields }) => {
-    const checkboxField = {
-      field: 'toDelete',
-      fieldProps: { component: 'input', type: 'checkbox', onChange: this.checkboxHandler },
-      cellProps: { collapsing: true },
-    }
-    const minIndex = (this.state.activePage - 1) * ROWS_PER_PAGE
-    const maxIndex = minIndex + ROWS_PER_PAGE
-    return (
-      fields.map((record, i) => {
-        return (i < minIndex || i >= maxIndex) ? null : (
-          <Table.Row
-            key={record}
-            active={(this.props.isActiveRow || false) && this.props.isActiveRow(this.props.records[i])}
-          >
-            {[checkboxField, ...this.props.fields].map(field =>
-              <Table.Cell key={`${record}-${field.field}`} {...field.cellProps} >
-                <Field name={`${record}.${field.field}`} {...field.fieldProps} />
-              </Table.Cell>,
-            )}
-          </Table.Row>
-        )
-      })
+
+  render() {
+    const { formName, modalName, records, onSubmit, entityKey, closeParentModal, idField, columns, ...tableProps } = this.props
+
+    const rowsToDelete = Object.entries(this.state.data).reduce((acc, [recordId, { toDelete }]) => (
+      { ...acc, [recordId]: toDelete }
+    ), {})
+
+    const submitRecords = filterFunc => values => onSubmit({ [entityKey]: Object.values(values).filter(filterFunc) })
+    const isChangedRecord = record => columns.map(field => field.name).some(
+      field => record[field] !== records[record[idField]][field],
     )
-  }
 
-  formContent = () => {
     return (
       <FormContentContainer>
-        <Table basic="very" compact="very">
-          <Table.Header>
-            <Table.Row>
-              <TableHeaderCell key="headerCheckbox">
-                <Field name="allChecked" component="input" type="checkbox" onClick={this.headerCheckboxHandler} />
-              </TableHeaderCell >
-              {this.props.fields.map(field =>
-                <TableHeaderCell key={field.header}>
-                  {field.header}
-                </TableHeaderCell>,
-              )}
-            </Table.Row>
-          </Table.Header>
-          <Table.Body>
-            <FieldArray
-              name="records"
-              component={this.renderRow}
-            />
-          </Table.Body>
-        </Table>
-        <Divider />
-        {this.props.records.length > ROWS_PER_PAGE &&
-          <div style={{ marginRight: '20px', float: 'right' }}>
-            Showing rows {((this.state.activePage - 1) * ROWS_PER_PAGE) + 1}-
-            {Math.min(this.state.activePage * ROWS_PER_PAGE, this.props.records.length)} &nbsp;
-            <Pagination
-              activePage={this.state.activePage}
-              totalPages={Math.ceil(this.props.records.length / ROWS_PER_PAGE)}
-              onPageChange={(event, { activePage }) => this.setState({ activePage })}
-              size="mini"
-            />
-          </div>
-        }
+        <ReduxFormWrapper
+          form={formName}
+          modalName={modalName}
+          submitButtonText="Apply"
+          onSubmit={submitRecords(isChangedRecord)}
+          confirmCloseIfNotSaved
+          closeOnSuccess
+          showErrorPanel
+          size="small"
+          initialValues={records}
+          renderChildren={() =>
+            <TableContainer>
+              <SortableTable
+                compact="very"
+                basic="very"
+                fixed
+                data={Object.values(this.state.data)}
+                selectedRows={rowsToDelete}
+                selectRows={this.checkboxHandler}
+                columns={columns}
+                idField={idField}
+                rowsPerPage={ROWS_PER_PAGE}
+                footer={
+                  <DeleteButton
+                    initialValues={this.state.data}
+                    onSubmit={submitRecords(record => record.toDelete)}
+                    onSuccess={closeParentModal}
+                    confirmDialog={`Are you sure you want to delete the selected ${entityKey}?`}
+                    buttonText="Deleted Selected"
+                  />
+                }
+                {...tableProps}
+              />
+            </TableContainer>
+          }
+        />
       </FormContentContainer>
     )
   }
 
-  render() {
-    const initialValues = { records: this.props.records }
-    return (
-      <ReduxFormWrapper
-        form={this.props.formName}
-        modalName={this.props.modalName}
-        submitButtonText="Apply"
-        onSubmit={this.handleSubmit}
-        confirmCloseIfNotSaved
-        closeOnSuccess
-        showErrorPanel
-        size="small"
-        initialValues={initialValues}
-        secondarySubmitButton={<DeleteButton>Deleted Selected</DeleteButton>}
-        onSecondarySubmit={this.handleDelete}
-        renderChildren={this.formContent}
-      />
-    )
-  }
-
-  headerCheckboxHandler = (event) => {
-    const editedRecords = this.props.editedRecords.map(record => Object.assign(record, { toDelete: event.target.checked }))
-    this.props.changeField(
-      'records', editedRecords.slice((this.state.activePage - 1) * ROWS_PER_PAGE, this.state.activePage * ROWS_PER_PAGE),
-    )
-  }
-
-  checkboxHandler = () => {
-    this.props.changeField('allChecked', false)
-  }
-
-  handleSubmit = (values) => {
-    const editableFields = this.props.fields.map(field => field.field)
-    const changedRecords = values.records.filter(
-      (record, i) => editableFields.some(field => get(record, field) !== get(this.props.records[i], field)),
-    )
-
-    console.log(`${this.props.formName} - handleSubmit:`)
-    console.log(changedRecords)
-
-    return this.props.onSubmit({ records: changedRecords })
-  }
-
-  handleDelete = (values) => {
-    const toDelete = values.records.filter(record => record.toDelete)
-    console.log(`${this.props.formName} - handleDelete:`)
-    console.log(toDelete)
-    this.props.onSubmit({ records: toDelete, delete: true })
+  checkboxHandler = (newValues) => {
+    this.setState({
+      data: Object.entries(this.state.data).reduce((acc, [recordId, record]) => (
+        { ...acc, [recordId]: { ...record, toDelete: newValues[recordId] } }
+      ), {}),
+    })
   }
 }
 
-const mapStateToProps = (state, ownProps) => ({
-  editedRecords: formValueSelector(ownProps.formName)(state, 'records') || ownProps.records,
-})
-
 const mapDispatchToProps = (dispatch, ownProps) => {
   return {
-    changeField: (field, value) => {
-      dispatch(change(ownProps.formName, field, value))
+    closeParentModal: () => {
+      dispatch(closeModal(ownProps.modalName))
     },
   }
 }
 
-export default connect(mapStateToProps, mapDispatchToProps)(EditRecordsForm)
+export default connect(null, mapDispatchToProps)(EditRecordsForm)

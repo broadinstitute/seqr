@@ -4,6 +4,7 @@ import json
 import logging
 import redis
 import sys
+from django.db.models import prefetch_related_objects
 
 from xbrowse.core.constants import GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38, ANNOTATION_GROUPS_MAP, \
     ANNOTATION_GROUPS_MAP_INTERNAL
@@ -23,6 +24,7 @@ import elasticsearch_dsl
 from elasticsearch_dsl import Q
 
 from xbrowse.utils.basic_utils import _encode_name
+
 
 logger = logging.getLogger()
 
@@ -133,8 +135,10 @@ class ElasticsearchDatastore(datastore.Datastore):
             user=None,
             max_results_limit=settings.VARIANT_QUERY_RESULTS_LIMIT,
         ):
-        from xbrowse_server.base.models import Individual
+        from xbrowse_server.base.models import Project, Family, Individual
+        from seqr.models import Sample
         from xbrowse_server.mall import get_reference
+        from pyliftover.liftover import LiftOver
 
         cache_key = "Variants___%s___%s___%s" % (
             project_id,
@@ -154,19 +158,50 @@ class ElasticsearchDatastore(datastore.Datastore):
             variant_results = json.loads(cached_results)
             return [Variant.fromJSON(variant_json) for variant_json in variant_results]
 
+        if family_id is None:
+            project = Project.objects.get(project_id=project_id)
+            elasticsearch_index = project.get_elasticsearch_index()
+            logger.info("Searching in project elasticsearch index: " + str(elasticsearch_index))
+        else:
+            family = Family.objects.get(project__project_id=project_id, family_id=family_id)
+            elasticsearch_index = family.get_elasticsearch_index()
+            project = family.project
+            logger.info("Searching in family elasticsearch index: " + str(elasticsearch_index))
+
         if indivs_to_consider is None:
             if genotype_filter:
                 indivs_to_consider = genotype_filter.keys()
             else:
                 indivs_to_consider = []
 
+        individuals = Individual.objects.filter(family__project__project_id=project_id).only("indiv_id", "seqr_individual")
+        if indivs_to_consider:
+            individuals = individuals.filter(indiv_id__in=indivs_to_consider)
         if family_id is not None:
-            family_individual_ids = [i.indiv_id for i in Individual.objects.filter(family__family_id=family_id, family__project__project_id=project_id).only("indiv_id")]
-        else:
-            family_individual_ids = [i.indiv_id for i in Individual.objects.filter(family__project__project_id=project_id).only("indiv_id")]
+            individuals = individuals.filter(family__family_id=family_id)
+        prefetch_related_objects(individuals, "seqr_individual")
 
-        from xbrowse_server.base.models import Project, Family
-        from pyliftover.liftover import LiftOver
+        samples = Sample.objects.filter(
+            individual__in=[i.seqr_individual for i in individuals if i.seqr_individual],
+            dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
+            sample_status=Sample.SAMPLE_STATUS_LOADED,
+            elasticsearch_index__startswith=False,
+            loaded_date__isnull=False,
+        ).order_by('-loaded_date')
+        prefetch_related_objects(samples, "individual")
+
+        es_indices = [index.rstrip('*') for index in elasticsearch_index.split(',')]
+
+        family_individual_ids_to_sample_ids = {}
+        for i in individuals:
+            indiv_id = i.indiv_id
+            sample_id = None
+            if i.seqr_individual:
+                sample_id = next((
+                    sample.sample_id for sample in samples
+                    if sample.individual == i.seqr_individual and sample.elasticsearch_index.startswith(*es_indices)
+                ), None)
+            family_individual_ids_to_sample_ids[indiv_id] = sample_id or indiv_id
 
         query_json = self._make_db_query(genotype_filter, variant_filter)
 
@@ -179,35 +214,25 @@ class ElasticsearchDatastore(datastore.Datastore):
         except Exception as e:
             logger.info("WARNING: Unable to set up liftover. Is there a working internet connection? " + str(e))
 
-        if family_id is None:
-            project = Project.objects.get(project_id=project_id)
-            elasticsearch_index = project.get_elasticsearch_index()
-            logger.info("Searching in project elasticsearch index: " + str(elasticsearch_index))
-        else:
-            family = Family.objects.get(project__project_id=project_id, family_id=family_id)
-            elasticsearch_index = family.get_elasticsearch_index()
-            project = family.project
-            logger.info("Searching in family elasticsearch index: " + str(elasticsearch_index))
 
         mapping = self._es_client.indices.get_mapping(str(elasticsearch_index) + "*")
         index_fields = {}
-        if family_id is not None and len(family_individual_ids) > 0:
+        if family_id is not None and len(family_individual_ids_to_sample_ids) > 0:
             # figure out which index to use
             # TODO add caching
             matching_indices = []
 
-            if family_individual_ids:
-                for raw_indiv_id in family_individual_ids:
-                    indiv_id = _encode_name(raw_indiv_id)
-                    for index_name, index_mapping in mapping.items():
-                        if indiv_id+"_num_alt" in index_mapping["mappings"]["variant"]["properties"]:
-                            matching_indices.append(index_name)
-                            index_fields.update(index_mapping["mappings"]["variant"]["properties"])
-                    if len(matching_indices) > 0:
-                        break
+            for raw_sample_id in family_individual_ids_to_sample_ids.values():
+                sample_id = _encode_name(raw_sample_id)
+                for index_name, index_mapping in mapping.items():
+                    if sample_id+"_num_alt" in index_mapping["mappings"]["variant"]["properties"]:
+                        matching_indices.append(index_name)
+                        index_fields.update(index_mapping["mappings"]["variant"]["properties"])
+                if len(matching_indices) > 0:
+                    break
 
             if not matching_indices:
-                if not family_individual_ids:
+                if not family_individual_ids_to_sample_ids:
                     logger.error("no individuals found for family %s" % (family_id))
                 elif not mapping:
                     logger.error("no es mapping found for found with prefix %s" % (elasticsearch_index))
@@ -235,7 +260,8 @@ class ElasticsearchDatastore(datastore.Datastore):
 
         if indivs_to_consider:
             atleast_one_nonref_genotype_filter = None
-            for sample_id in indivs_to_consider:
+            for indiv_id in indivs_to_consider:
+                sample_id = family_individual_ids_to_sample_ids.get(indiv_id) or indiv_id
                 encoded_sample_id = _encode_name(sample_id)
                 q = Q('range', **{encoded_sample_id+"_num_alt": {'gte': 1}})
                 if atleast_one_nonref_genotype_filter is None:
@@ -252,7 +278,8 @@ class ElasticsearchDatastore(datastore.Datastore):
                 min_ab /= 100.0   # convert to fraction
             min_gq = quality_filter.get('min_gq')
             vcf_filter = quality_filter.get('vcf_filter')
-            for sample_id in indivs_to_consider:
+            for indiv_id in indivs_to_consider:
+                sample_id = family_individual_ids_to_sample_ids.get(indiv_id) or indiv_id
                 encoded_sample_id = _encode_name(sample_id)
 
                 #'vcf_filter': u'pass', u'min_ab': 17, u'min_gq': 46
@@ -333,7 +360,8 @@ class ElasticsearchDatastore(datastore.Datastore):
                 #logger.info("==> transcriptConsequenceTerms: %s" % str(vep_consequences))
 
             if key.startswith("genotypes"):
-                sample_id = ".".join(key.split(".")[1:-1])
+                indiv_id = ".".join(key.split(".")[1:-1])
+                sample_id = family_individual_ids_to_sample_ids.get(indiv_id) or indiv_id
                 encoded_sample_id = _encode_name(sample_id)
                 genotype_filter = value
                 #logger.info("==> genotype filter: " + str(genotype_filter))
@@ -477,15 +505,15 @@ class ElasticsearchDatastore(datastore.Datastore):
 
         #for i, hit in enumerate(response.hits):
         variant_results = []
-        for i, hit in enumerate(s.scan()):  # preserve_order=True
+        for i, hit in enumerate(response):  # preserve_order=True
             #logger.info("HIT %s: %s %s %s" % (i, hit["variantId"], hit["geneIds"], pformat(hit.__dict__)))
             #print("HIT %s: %s" % (i, pformat(hit.to_dict())))
             filters = ",".join(hit["filters"] or []) if "filters" in hit else ""
             genotypes = {}
             all_num_alt = []
-            for individual_id in family_individual_ids:
-                encoded_individual_id = _encode_name(individual_id)
-                num_alt = int(hit["%s_num_alt" % encoded_individual_id]) if ("%s_num_alt" % encoded_individual_id) in hit else -1
+            for individual_id, sample_id in family_individual_ids_to_sample_ids.items():
+                encoded_sample_id = _encode_name(sample_id)
+                num_alt = int(hit["%s_num_alt" % encoded_sample_id]) if ("%s_num_alt" % encoded_sample_id) in hit else -1
                 if num_alt is not None:
                     all_num_alt.append(num_alt)
 
@@ -502,15 +530,15 @@ class ElasticsearchDatastore(datastore.Datastore):
                     raise ValueError("Invalid num_alt: " + str(num_alt))
 
                 genotypes[individual_id] = {
-                    'ab': hit["%s_ab" % encoded_individual_id] if ("%s_ab" % encoded_individual_id) in hit else None,
+                    'ab': hit["%s_ab" % encoded_sample_id] if ("%s_ab" % encoded_sample_id) in hit else None,
                     'alleles': map(str, alleles),
                     'extras': {
-                        'ad': hit["%s_ab" % encoded_individual_id] if ("%s_ad" % encoded_individual_id) in hit else None,
-                        'dp': hit["%s_dp" % encoded_individual_id] if ("%s_dp" % encoded_individual_id) in hit else None,
+                        'ad': hit["%s_ab" % encoded_sample_id] if ("%s_ad" % encoded_sample_id) in hit else None,
+                        'dp': hit["%s_dp" % encoded_sample_id] if ("%s_dp" % encoded_sample_id) in hit else None,
                         #'pl': '',
                     },
                     'filter': filters or "pass",
-                    'gq': hit["%s_gq" % encoded_individual_id] if ("%s_gq" % encoded_individual_id in hit and hit["%s_gq" % encoded_individual_id] is not None) else '',
+                    'gq': hit["%s_gq" % encoded_sample_id] if ("%s_gq" % encoded_sample_id in hit and hit["%s_gq" % encoded_sample_id] is not None) else '',
                     'num_alt': num_alt,
                 }
 
