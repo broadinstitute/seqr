@@ -1,12 +1,11 @@
 """Utilities for parsing .fam files or other tables that describe individual pedigree structure."""
 
-import collections
 import difflib
 import os
 import logging
 import tempfile
 import traceback
-import xlwt
+import openpyxl as xl
 from django.core.mail.message import EmailMultiAlternatives
 from django.utils.html import strip_tags
 
@@ -48,15 +47,21 @@ def parse_pedigree_table(parsed_file, filename, user=None, project=None):
         header_string = ','.join(headers[0])
         if "do not modify" in header_string.lower() and "Broad" in header_string:
             # the merged pedigree/sample manifest has 3 header rows, so use the known header and skip the next 2 rows.
-            rows = rows[:2]
+            headers = rows[:2]
+            rows = rows[2:]
 
             # validate manifest_header_row1
             expected_header_columns = MergedPedigreeSampleManifestConstants.MERGED_PEDIGREE_SAMPLE_MANIFEST_COLUMN_NAMES
-            expected_header_columns = expected_header_columns[:4] + ["Alias", "Alias"] + expected_header_columns[6:]
-            actual_header_columns = headers[0]
-            unexpected_header_columns = "\t".join(difflib.unified_diff(expected_header_columns, actual_header_columns)).split("\n")[3:]
+            expected_header_1_columns = expected_header_columns[:4] + ["Alias", "Alias"] + expected_header_columns[6:]
+
+            expected = expected_header_1_columns
+            actual = headers[0]
+            if expected == actual:
+                expected = expected_header_columns[4:6]
+                actual = headers[1][4:6]
+            unexpected_header_columns = "\t".join(difflib.unified_diff(expected, actual)).split("\n")[3:]
             if unexpected_header_columns:
-                raise ValueError("Expected vs. actual header columns: " + "\t".join(unexpected_header_columns))
+                raise ValueError("Expected vs. actual header columns: {}".format("\t".join(unexpected_header_columns)))
 
             header = expected_header_columns
             is_merged_pedigree_sample_manifest = True
@@ -324,19 +329,15 @@ def _parse_merged_pedigree_sample_manifest_format(rows):
 def _send_sample_manifest(sample_manifest_rows, kit_id, original_filename, original_file_rows, user=None, project=None):
 
     # write out the sample manifest file
-    wb = xlwt.Workbook()
-    ws = wb.add_sheet("Sample Info")
+    wb = xl.Workbook()
+    ws = wb.active
+    ws.title = "Sample Info"
 
-    for i, header_row in enumerate([
-        MergedPedigreeSampleManifestConstants.SAMPLE_MANIFEST_HEADER_ROW1,
-        MergedPedigreeSampleManifestConstants.SAMPLE_MANIFEST_HEADER_ROW2,
-    ]):
-        for j, header_column in enumerate(header_row):
-            ws.write(i, j, header_column)
+    ws.append(MergedPedigreeSampleManifestConstants.SAMPLE_MANIFEST_HEADER_ROW1)
+    ws.append(MergedPedigreeSampleManifestConstants.SAMPLE_MANIFEST_HEADER_ROW2)
 
-    for i, row in enumerate(sample_manifest_rows):
-        for j, column_key in enumerate(MergedPedigreeSampleManifestConstants.SAMPLE_MANIFEST_COLUMN_NAMES):
-            ws.write(i + 2, j, row[column_key])  # add + 2 to skip 2 header rows
+    for row in sample_manifest_rows:
+        ws.append([row[column_key] for column_key in MergedPedigreeSampleManifestConstants.SAMPLE_MANIFEST_COLUMN_NAMES])
 
     temp_sample_manifest_file = tempfile.NamedTemporaryFile()
     wb.save(temp_sample_manifest_file.name)
@@ -361,11 +362,10 @@ def _send_sample_manifest(sample_manifest_rows, kit_id, original_filename, origi
     """ % locals()
 
     temp_original_file = tempfile.NamedTemporaryFile()
-    wb_out = xlwt.Workbook()
-    ws_out = wb.add_sheet("")
-    for i, row in enumerate(original_file_rows):
-        for j, cell in enumerate(row):
-            ws_out.write(i, j, cell)
+    wb_out = xl.Workbook()
+    ws_out = wb_out.active
+    for row in original_file_rows:
+        ws_out.append(row)
     wb_out.save(temp_original_file.name)
     temp_original_file.seek(0)
 

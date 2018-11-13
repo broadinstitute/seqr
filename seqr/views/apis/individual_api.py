@@ -394,7 +394,7 @@ def add_or_update_individuals_and_families(project, individual_records, user=Non
     # update pedigree images
     update_pedigree_images(updated_families, project_guid=project.guid)
 
-    return updated_families, updated_individuals
+    return updated_families, list(updated_individuals)
 
 
 
