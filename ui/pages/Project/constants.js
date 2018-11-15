@@ -375,10 +375,10 @@ const tableConfigForField = fieldConfigs => (field) => {
 
 const FAMILY_FIELD_CONFIGS = {
   [FAMILY_FIELD_ID]: { label: 'Family ID', width: 2 },
-  [FAMILY_DISPLAY_NAME]: { label: 'Display Name', width: 3 },
+  [FAMILY_DISPLAY_NAME]: { label: 'Display Name', width: 3, description: 'The human-readable family name to show in place of the family ID' },
   [FAMILY_FIELD_CREATED_DATE]: { label: 'Created Date' },
   [FAMILY_FIELD_FIRST_SAMPLE]: { label: 'First Data Loaded Date', format: firstSample => (firstSample || {}).loadedDate },
-  [FAMILY_FIELD_DESCRIPTION]: { label: 'Description', format: stripMarkdown, width: 10 },
+  [FAMILY_FIELD_DESCRIPTION]: { label: 'Description', format: stripMarkdown, width: 10, description: 'A short description of the family' },
   [FAMILY_FIELD_ANALYSIS_STATUS]: {
     label: 'Analysis Status',
     format: status => (FAMILY_ANALYSIS_STATUS_OPTIONS.find(option => option.value === status) || {}).name,
@@ -386,7 +386,7 @@ const FAMILY_FIELD_CONFIGS = {
   [FAMILY_FIELD_ANALYSED_BY]: { label: 'Analysed By', format: analysedBy => analysedBy.map(o => o.createdBy.fullName || o.createdBy.email).join(',') },
   [FAMILY_FIELD_ANALYSIS_SUMMARY]: { label: 'Analysis Summary', format: stripMarkdown },
   [FAMILY_FIELD_ANALYSIS_NOTES]: { label: 'Analysis Notes', format: stripMarkdown },
-  [FAMILY_FIELD_CODED_PHENOTYPE]: { label: 'Coded Phenotype', width: 4 },
+  [FAMILY_FIELD_CODED_PHENOTYPE]: { label: 'Coded Phenotype', width: 4, description: "High level summary of the family's phenotype/disease" },
 }
 
 export const FAMILY_FIELDS = [
@@ -403,6 +403,13 @@ export const FAMILY_EXPORT_DATA = [
   FAMILY_FIELD_ANALYSED_BY,
   FAMILY_FIELD_ANALYSIS_SUMMARY,
   FAMILY_FIELD_ANALYSIS_NOTES,
+].map(exportConfigForField(FAMILY_FIELD_CONFIGS))
+
+export const FAMILY_BULK_EDIT_EXPORT_DATA = [
+  FAMILY_FIELD_ID,
+  FAMILY_DISPLAY_NAME,
+  FAMILY_FIELD_DESCRIPTION,
+  FAMILY_FIELD_CODED_PHENOTYPE,
 ].map(exportConfigForField(FAMILY_FIELD_CONFIGS))
 
 export const INTERNAL_FAMILY_EXPORT_DATA = [

@@ -12,7 +12,8 @@ from seqr.views.apis.family_api import \
     update_family_fields_handler, \
     edit_families_handler, \
     delete_families_handler, \
-    update_family_analysed_by
+    update_family_analysed_by, \
+    receive_families_table_handler
 
 from seqr.views.apis.individual_api import \
     update_individual_handler, \
@@ -118,6 +119,7 @@ api_endpoints = {
     'project/(?P<project_guid>[^/]+)/delete_families': delete_families_handler,
     'project/(?P<project_guid>[^/]+)/edit_individuals': edit_individuals_handler,
     'project/(?P<project_guid>[^/]+)/delete_individuals': delete_individuals_handler,
+    'project/(?P<project_guid>[^/]+)/upload_families_table': receive_families_table_handler,
 
     'project/(?P<project_guid>[^/]+)/upload_individuals_table': receive_individuals_table_handler,
     'project/(?P<project_guid>[^/]+)/save_individuals_table/(?P<upload_file_id>[^/]+)': save_individuals_table_handler,
