@@ -752,6 +752,8 @@ class ElasticsearchDatastore(datastore.Datastore):
 
     def get_single_variant(self, project_id, family_id, xpos, ref, alt, user=None):
         chrom, pos = get_chr_pos(xpos)
+        if chrom == 'M':
+            chrom = 'MT'
 
         variant_id = "%s-%s-%s-%s" % (chrom, pos, ref, alt)
         results = list(self.get_elasticsearch_variants(project_id, family_id=family_id, variant_id_filter=[variant_id], user=user, include_all_consequences=True))
@@ -776,6 +778,8 @@ class ElasticsearchDatastore(datastore.Datastore):
         variant_ids = []
         for xpos, ref, alt in  xpos_ref_alt_tuples:
             chrom, pos = get_chr_pos(xpos)
+            if chrom == 'M':
+                chrom = 'MT'
             variant_ids.append("%s-%s-%s-%s" % (chrom, pos, ref, alt))
 
 
