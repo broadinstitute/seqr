@@ -43,10 +43,11 @@ p = argparse.ArgumentParser()
 subparsers = p.add_subparsers(dest='command')
 
 COMPONENT_ARG_CHOICES = DEPLOYABLE_COMPONENTS + COMPONENT_GROUP_NAMES
+DEPLOYMENT_TARGETS_SET = set(DEPLOYMENT_TARGETS.keys())
 
 ## ENVIRONMENT_COMMAND
 sp = subparsers.add_parser(SET_ENVIRONMENT_COMMAND, description="Set terminal environment for a particular deployment target (eg. 'minikube', 'gcloud-dev', etc.)")
-sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS, help="kubernetes cluster")
+sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS_SET, help="kubernetes cluster")
 
 ## LOAD_DATASET_COMMAND
 sp = subparsers.add_parser(LOAD_DATASET_COMMAND, description="Load new dataset into a new or existing project in seqr.")
@@ -70,18 +71,18 @@ sp.add_argument("--vep-block-size", help="Block size to use for VEP", default=20
 sp.add_argument("--es-block-size", help="Block size to use when exporting to elasticsearch", default=1000, type=int)
 sp.add_argument("--cpu-limit", help="Max CPUs to use when loading the dataset. Only applies to local deployments.", type=int)
 sp.add_argument("--input-vcf", help="Local path or google cloud bucket path (eg. gs://) of VCF to load", required=True)
-sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS, help="which kubernetes cluster to load the data to")
+sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS_SET, help="which kubernetes cluster to load the data to")
 
 # LOAD_EXAMPLE_PROJECT_COMMAND
 sp = subparsers.add_parser(LOAD_EXAMPLE_PROJECT_COMMAND, description="Load a demo project with an example dataset")
 sp.add_argument("-g", "--genome-version", help="Genome version 37 or 38", choices=["37", "38"], default="37")
 sp.add_argument("--cpu-limit", help="Max CPUs to use when loading the dataset. Only applies to local deployments.", type=int)
 sp.add_argument("--start-with-step", help="Which pipeline step to start with.", type=int, default=0, choices=[0, 1, 2, 3, 4])
-sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS, help="kubernetes cluster")
+sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS_SET, help="kubernetes cluster")
 
 # UPDATE_REFERENCE_DATA_COMMAND
 sp = subparsers.add_parser(UPDATE_REFERENCE_DATA_COMMAND, description="Load or update gene-level and other reference data (eg. gencode, omim, HPO, etc.)")
-sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS, help="kubernetes cluster")
+sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS_SET, help="kubernetes cluster")
 
 ## LOG_COMMAND
 sp = subparsers.add_parser(LOG_COMMAND, description="Show logs for one or more components")
@@ -89,29 +90,29 @@ sp.add_argument("-f", "--stream-log", action="store_true", help="continue printi
 sp.add_argument("--previous", action="store_true", help="Prints logs from a previous instance of the container. "
     "This is useful for debugging pods that don't start or immediately enter crash-loop.")
 sp.add_argument("components", nargs="+", help="show log", choices=COMPONENT_ARG_CHOICES)
-sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS, help="kubernetes cluster")
+sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS_SET, help="kubernetes cluster")
 
 ## TROUBLESHOOT_COMMAND
 sp = subparsers.add_parser(TROUBLESHOOT_COMMAND, description="Print detailed debugging info to troubleshoot components not starting")
 sp.add_argument("component", help="print detailed debugging info", choices=COMPONENT_ARG_CHOICES)
-sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS, help="kubernetes cluster")
+sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS_SET, help="kubernetes cluster")
 
 ## PORT_FORWARD_COMMAND
 sp = subparsers.add_parser(PORT_FORWARD_COMMAND, description="Start port-forwarding for service(s) running inside one or more containers, "
     "allowing connections via localhost. After starting port-forwarding as a background process, start streaming logs from these components. ")
 sp.add_argument("components", nargs="+", help="start port-forwarding for service(s) running in the given component container(s), allowing connections via localhost", choices=COMPONENT_ARG_CHOICES)
-sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS, help="kubernetes cluster")
+sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS_SET, help="kubernetes cluster")
 
 ## PORT_FORWARD_AND_LOG_COMMAND
 sp = subparsers.add_parser(PORT_FORWARD_AND_LOG_COMMAND, description="Start port-forwarding for service(s) running inside one or more containers, allowing connections via localhost")
 sp.add_argument("components", nargs="+", help="start port-forwarding for service(s) running in the given component container(s), allowing connections via localhost", choices=COMPONENT_ARG_CHOICES)
-sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS, help="kubernetes cluster")
+sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS_SET, help="kubernetes cluster")
 
 ## COPY_COMMAND
 for command in [COPY_TO_POD_COMMAND, COPY_FROM_POD_COMMAND]:
     sp = subparsers.add_parser(command, description="Copy files to or from a container")
     sp.add_argument("component", help="open a bash shell inside this component container", choices=COMPONENT_ARG_CHOICES)
-    sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS, help="kubernetes cluster")
+    sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS_SET, help="kubernetes cluster")
 
     if command == COPY_TO_POD_COMMAND:
         sp.add_argument("source_path", help="source file path")
@@ -123,33 +124,33 @@ for command in [COPY_TO_POD_COMMAND, COPY_FROM_POD_COMMAND]:
 ## SHELL_COMMAND
 sp = subparsers.add_parser(SHELL_COMMAND, description="Open a bash shell inside one of the component containers")
 sp.add_argument("component", help="open a bash shell inside this component container", choices=COMPONENT_ARG_CHOICES)
-sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS, help="kubernetes cluster")
+sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS_SET, help="kubernetes cluster")
 
 ## CREATE_USER_COMMAND
 sp = subparsers.add_parser(CREATE_USER_COMMAND, description="Create a new seqr superuser account.")
-sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS, help="kubernetes cluster")
+sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS_SET, help="kubernetes cluster")
 
 ## STATUS_COMMAND
 sp = subparsers.add_parser(STATUS_COMMAND, description="Print docker and kubectl info")
-sp.add_argument("deployment_target", nargs="?", choices=DEPLOYMENT_TARGETS, help="kubernetes cluster")
+sp.add_argument("deployment_target", nargs="?", choices=DEPLOYMENT_TARGETS_SET, help="kubernetes cluster")
 
 ## DASHBOARD_COMMAND
 sp = subparsers.add_parser(DASHBOARD_COMMAND, description="Show the kubernetes dashboard")
-sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS, help="kubernetes cluster")
+sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS_SET, help="kubernetes cluster")
 
 ## DELETE_COMMAND
 sp = subparsers.add_parser(DELETE_COMMAND, description="Terminate any live deployments, services, and pods for a given component")
 sp.add_argument("components", nargs="+", help="terminate all deployments, services, and pods for the given component(s)", choices=COMPONENT_ARG_CHOICES)
-sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS, help="kubernetes cluster")
+sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS_SET, help="kubernetes cluster")
 
 ## DELETE_ALL_COMMAND
 sp = subparsers.add_parser(DELETE_ALL_COMMAND, description="Delete all components + the cluster")
-sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS, help="kubernetes cluster")
+sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS_SET, help="kubernetes cluster")
 
 ## RESET_COMMAND
 sp = subparsers.add_parser(RESET_COMMAND, description="Delete all data from the given database")
 sp.add_argument('database', nargs="+", choices=["seqrdb", "phenotipsdb", "mongodb"])
-sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS, help="kubernetes cluster")
+sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS_SET, help="kubernetes cluster")
 
 
 def _check_restore_db_file(path):
@@ -187,7 +188,7 @@ for command_name in [DEPLOY_COMMAND, DEPLOY_ALL_COMMAND]:
     if command_name == DEPLOY_COMMAND:
         sp.add_argument("components", nargs="+", help="one or more components to deploy", choices=COMPONENT_ARG_CHOICES)
 
-    sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS, help="which kubernetes cluster to deploy to")
+    sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS_SET, help="which kubernetes cluster to deploy to")
 
 
 args = p.parse_args()
@@ -231,34 +232,7 @@ if args.command in [DEPLOY_COMMAND, DEPLOY_ALL_COMMAND]:
 
     elif args.command == DEPLOY_ALL_COMMAND:
         # compute which components to deploy
-        components_to_deploy = [
-            "init-cluster",
-            "settings",
-            "secrets",
-        ]
-
-        if args.deployment_target == "minikube":
-            components_to_deploy += [
-                #"cockpit",
-                "mongo",  # deprecated
-            ]
-        else:
-            components_to_deploy += [
-                "external-mongo-connector",
-                "matchbox",
-                "nginx",
-            ]
-
-        components_to_deploy += [
-            "postgres",
-            #"elasticsearch",
-            "external-elasticsearch-connector",
-            "kibana",
-            "redis",
-            "phenotips",
-            "seqr",
-            "pipeline-runner",
-        ]
+        components_to_deploy = DEPLOYMENT_TARGETS[args.deployment_target]
 
         #print("\nOptionally enter an email and password for the django/seqr superuser account. After seqr is deployed, "
         #      "you will be able to login to seqr with this account. Leave blank to skip.")

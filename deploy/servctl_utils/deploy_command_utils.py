@@ -5,9 +5,12 @@ import multiprocessing
 import os
 from pprint import pformat
 
+import tempfile
 import psutil
 import time
 import sys
+
+from __builtin__ import raw_input
 
 from deploy.servctl_utils.other_command_utils import check_kubernetes_context, set_environment
 from hail_elasticsearch_pipelines.kubernetes.kubectl_utils import is_pod_running, get_pod_name, get_node_name, run_in_pod, \
@@ -18,14 +21,6 @@ from seqr.utils.shell_utils import run
 logging.basicConfig(format='%(asctime)s %(levelname)-8s %(message)s')
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
-
-
-DEPLOYMENT_TARGETS = [
-    "minikube",
-    "gcloud-dev",
-    "gcloud-prod",
-    "gcloud-prod-elasticsearch"
-]
 
 
 DEPLOYABLE_COMPONENTS = [
@@ -55,6 +50,60 @@ DEPLOYABLE_COMPONENTS = [
     "es-data",
     "es-kibana",
 ]
+
+
+
+
+DEPLOYMENT_TARGETS = {}
+DEPLOYMENT_TARGETS["minikube"] = [
+    "init-cluster",
+    "settings",
+    "secrets",
+    "mongo",
+
+    "postgres",
+    #"elasticsearch",
+    "external-elasticsearch-connector",
+    "kibana",
+    "redis",
+    "phenotips",
+    "seqr",
+    "pipeline-runner",
+]
+
+DEPLOYMENT_TARGETS["gcloud-prod"] = [
+    "init-cluster",
+    "settings",
+    "secrets",
+    #"cockpit",
+    "external-mongo-connector",
+    "matchbox",
+    "nginx",
+
+    "postgres",
+    #"elasticsearch",
+    "external-elasticsearch-connector",
+    "kibana",
+    "redis",
+    "phenotips",
+    "seqr",
+    "pipeline-runner",
+]
+
+
+DEPLOYMENT_TARGETS["gcloud-dev"] = DEPLOYMENT_TARGETS["gcloud-prod"]
+#"gcloud-prod-elasticsearch",
+DEPLOYMENT_TARGETS["gcloud-prod-test-elasticsearch"] = [
+    "init-cluster",
+    "settings",
+    "secrets",
+    "es-master",
+    "es-client",
+    "es-data",
+    "es-kibana",
+]
+
+
 
 
 def deploy_init_cluster(settings):
@@ -464,22 +513,22 @@ def deploy_elasticsearch_sharded(settings, component):
 
     if component == "es-master":
         config_files = [
-            "%(DEPLOYMENT_TEMP_DIR)s/hail-elasticsearch-pipelines/kubernetes/elasticsearch-sharded/es-discovery-svc.yaml",
-            "%(DEPLOYMENT_TEMP_DIR)s/hail-elasticsearch-pipelines/kubernetes/elasticsearch-sharded/es-master.yaml",
+            "%(DEPLOYMENT_TEMP_DIR)s/hail_elasticsearch_pipelines/kubernetes/elasticsearch-sharded/es-discovery-svc.yaml",
+            "%(DEPLOYMENT_TEMP_DIR)s/hail_elasticsearch_pipelines/kubernetes/elasticsearch-sharded/es-master.yaml",
         ]
     elif component == "es-client":
         config_files = [
-            "%(DEPLOYMENT_TEMP_DIR)s/hail-elasticsearch-pipelines/kubernetes/elasticsearch-sharded/es-svc.yaml",
-            "%(DEPLOYMENT_TEMP_DIR)s/hail-elasticsearch-pipelines/kubernetes/elasticsearch-sharded/es-client.yaml",
+            "%(DEPLOYMENT_TEMP_DIR)s/hail_elasticsearch_pipelines/kubernetes/elasticsearch-sharded/es-svc.yaml",
+            "%(DEPLOYMENT_TEMP_DIR)s/hail_elasticsearch_pipelines/kubernetes/elasticsearch-sharded/es-client.yaml",
         ]
     elif component == "es-data":
         config_files = [
-            "%(DEPLOYMENT_TEMP_DIR)s/hail-elasticsearch-pipelines/kubernetes/elasticsearch-sharded/es-data-svc.yaml",
-            "%(DEPLOYMENT_TEMP_DIR)s/hail-elasticsearch-pipelines/kubernetes/elasticsearch-sharded/es-data-stateful.yaml",
+            "%(DEPLOYMENT_TEMP_DIR)s/hail_elasticsearch_pipelines/kubernetes/elasticsearch-sharded/es-data-svc.yaml",
+            "%(DEPLOYMENT_TEMP_DIR)s/hail_elasticsearch_pipelines/kubernetes/elasticsearch-sharded/es-data-stateful.yaml",
         ]
     elif component == "es-kibana":
         config_files = [
-            "%(DEPLOYMENT_TEMP_DIR)s/hail-elasticsearch-pipelines/kubernetes/elasticsearch-sharded/es-kibana.yaml",
+            "%(DEPLOYMENT_TEMP_DIR)s/hail_elasticsearch_pipelines/kubernetes/elasticsearch-sharded/es-kibana.yaml",
         ]
     elif component == "kibana":
         config_files = [
@@ -495,7 +544,7 @@ def deploy_elasticsearch_sharded(settings, component):
     for config_file in config_files:
         run("kubectl apply -f " + config_file % settings)
 
-    if component in set(["es-client", "es-master", "es-data", "es-kibana"]):
+    if component in ["es-client", "es-master", "es-data", "es-kibana"]:
         # wait until all replicas are running
         num_pods = int(settings.get(component.replace("-", "_").upper()+"_NUM_PODS", 1))
         for pod_number_i in range(num_pods):
@@ -623,6 +672,7 @@ def _init_cluster_gcloud(settings):
     # create cluster
     run(" ".join([
         "gcloud container clusters create %(CLUSTER_NAME)s",
+        "--enable-autorepair ",
         "--project %(GCLOUD_PROJECT)s",
         "--zone %(GCLOUD_ZONE)s",
         "--machine-type %(CLUSTER_MACHINE_TYPE)s",
@@ -651,7 +701,7 @@ def _init_cluster_gcloud(settings):
             #"--network %(GCLOUD_PROJECT)s-auto-vpc",
             #"--local-ssd-count 1",
             "--scopes", "https://www.googleapis.com/auth/devstorage.read_write"
-        ]) % settings, verbose=False, errors_to_ignore=["already exists"])
+        ]) % settings, verbose=False, errors_to_ignore=["lready exists"])
 
         num_nodes_remaining_to_create -= num_nodes_per_node_pool
 
@@ -660,6 +710,34 @@ def _init_cluster_gcloud(settings):
         "--project %(GCLOUD_PROJECT)s",
         "--zone %(GCLOUD_ZONE)s",
     ]) % settings)
+
+
+    # create PersistentVolume objects for disk
+    namespace = settings["NAMESPACE"]
+    for i, existing_disk_name in enumerate(settings["EXISTING_DISKS"].split(",")):
+        file_path = None
+        existing_disk_name = existing_disk_name.strip()
+        elasticsearch_disk_size = settings["ELASTICSEARCH_DISK_SIZE"]
+        with tempfile.NamedTemporaryFile("w") as f:
+            f.write("""apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: %(existing_disk_name)s
+  namespace: %(namespace)s
+spec:
+  capacity:
+    storage: %(elasticsearch_disk_size)s
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ssd-storage-class
+  gcePersistentDisk:
+    fsType: ext4
+    pdName: %(existing_disk_name)s
+""" % locals())
+            f.flush()
+            file_path = f.name
+            run("kubectl create -f %(file_path)s"  % locals(), print_command=True, errors_to_ignore=["already exists"])
 
     # create elasticsearch disks storage class
     #run(" ".join([

@@ -1,0 +1,33 @@
+#####################################################
+####### SETTINGS THAT MAY NEED TO BE MODIFIED #######
+
+CLUSTER_NAME: 'seqr-test-elasticsearch-cluster-prod'
+CLUSTER_MACHINE_TYPE: 'n1-highmem-8'   # n1-standard-2, n1-standard-4 .. n1-standard-64,  n1-highmem-2, n1-highcpu-2 ..
+CLUSTER_NUM_NODES: 12
+
+ES_DATA_NUM_PODS: 12
+ES_CLIENT_NUM_PODS: 2
+ES_MASTER_NUM_PODS: 3
+
+ELASTICSEARCH_DISK_SIZE: 350
+ELASTICSEARCH_JVM_MEMORY: 8g
+
+GCLOUD_PROJECT: 'seqr-project'
+GCLOUD_ZONE: 'us-central1-b'
+
+EXISTING_DISKS: es-disk-1, es-disk-2, es-disk-3, es-disk-4, es-disk-5, es-disk-6, es-disk-7, es-disk-8, es-disk-9, es-disk-10, es-disk-11, es-disk-12
+
+###########################################################
+####### SETTINGS THAT SHOULDN'T NEED TO BE MODIFIED #######
+
+NAMESPACE: test-elasticsearch
+
+ES_CLUSTER_NAME: test-myesdb
+ELASTICSEARCH_VERSION: 6.3.2  #  5.6.3  # later upgrade to 6.3.2
+
+DEPLOY_TO: 'gcloud-prod-test-elasticsearch'
+DEPLOY_TO_PREFIX: 'gcloud'
+DEPLOYMENT_TYPE: 'prod'
+
+CLUSTER_EXTERNAL_IP: ''
+CLUSTER_HOSTNAME: ''
