@@ -10,11 +10,6 @@ body {
   color: #111;
 }
 
-.noBorder {
-  border: 0px solid white !important;
-  borderTop: 0px solid white !important;
-}
-
 .clickable {
   -webkit-user-select: none;
   -moz-user-select: none;

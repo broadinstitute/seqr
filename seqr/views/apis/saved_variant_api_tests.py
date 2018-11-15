@@ -34,6 +34,7 @@ class ProjectAPITest(TransactionTestCase):
              'liftedOverChrom', 'liftedOverPos', 'familyGuid', 'tags', 'functionalData', 'notes', 'clinvar',
              'origAltAlleles', 'mainTranscript', 'genotypes', 'hgmd', 'annotation', 'transcripts', 'locusLists'}
         )
+        self.assertSetEqual(set(variant['genotypes'].keys()), {'S000131_na19679', 'S000129_na19675'})
 
         # filter by family
         response = self.client.get('{}?families=F000002_2'.format(url))

@@ -12,6 +12,7 @@ from seqr.models import Project as SeqrProject, Family as SeqrFamily, Individual
 from seqr.utils.model_sync_utils import convert_html_to_plain_text
 from seqr.views.utils.variant_utils import get_or_create_saved_variant
 from seqr.views.apis.locus_list_api import add_locus_list_user_permissions
+from xbrowse_server.base.models import Individual as BaseIndividual
 
 
 XBROWSE_TO_SEQR_CLASS_MAPPING = {
@@ -50,6 +51,8 @@ XBROWSE_TO_SEQR_FIELD_MAPPING = {
         "nickname": "display_name",
         "phenotips_id": "phenotips_eid",
         "other_notes": "notes",
+        "maternal_id": "mother",
+        "paternal_id": "father",
     },
     "ProjectTag": {
         "tag": "name",
@@ -137,28 +140,31 @@ def find_matching_seqr_model(xbrowse_model):
     if not _is_xbrowse_model(xbrowse_model):
         raise ValueError("Unexpected model class: %s.%s" % (type(xbrowse_model).__module__, type(xbrowse_model).__name__))
 
-    try:
-        xbrowse_class_name = type(xbrowse_model).__name__
+    xbrowse_class_name = type(xbrowse_model).__name__
+    seqr_model_class_name = XBROWSE_TO_SEQR_CLASS_MAPPING[xbrowse_class_name].__name__
+    xbrowse_model_foreign_key_name = "seqr_" + _to_snake_case(seqr_model_class_name)
 
+    seqr_model = getattr(xbrowse_model, xbrowse_model_foreign_key_name, None)
+    if seqr_model:
+        return seqr_model
+
+    try:
         if xbrowse_class_name == "Project":
-            return xbrowse_model.seqr_project if xbrowse_model.seqr_project else SeqrProject.objects.get(
-                deprecated_project_id=xbrowse_model.project_id)
+            seqr_model =SeqrProject.objects.get(deprecated_project_id=xbrowse_model.project_id)
         elif xbrowse_class_name == "Family":
-            return xbrowse_model.seqr_family if xbrowse_model.seqr_family else SeqrFamily.objects.get(
+            seqr_model = SeqrFamily.objects.get(
                 project__deprecated_project_id=xbrowse_model.project.project_id,
                 family_id=xbrowse_model.family_id)
         elif xbrowse_class_name == "Individual":
-            return xbrowse_model.seqr_individual if xbrowse_model.seqr_individual else SeqrIndividual.objects.get(
+            seqr_model = SeqrIndividual.objects.get(
                 family__project__deprecated_project_id=xbrowse_model.project.project_id,
                 family__family_id=xbrowse_model.family.family_id,
                 individual_id=xbrowse_model.indiv_id)
         elif xbrowse_class_name == "ProjectTag":
-            return xbrowse_model.seqr_variant_tag_type if xbrowse_model.seqr_variant_tag_type else SeqrVariantTagType.objects.get(
+            seqr_model = SeqrVariantTagType.objects.get(
                 Q(project__deprecated_project_id=xbrowse_model.project.project_id) | Q(project__isnull=True),
                 Q(name=xbrowse_model.tag))
         elif xbrowse_class_name == "VariantTag":
-            if xbrowse_model.seqr_variant_tag:
-                return xbrowse_model.seqr_variant_tag
 
             criteria = {
                 'variant_tag_type__name': xbrowse_model.project_tag.tag,
@@ -169,11 +175,8 @@ def find_matching_seqr_model(xbrowse_model):
             }
             if xbrowse_model.family:
                 criteria['saved_variant__family__family_id'] = xbrowse_model.family.family_id
-            return SeqrVariantTag.objects.get(**criteria)
+            seqr_model = SeqrVariantTag.objects.get(**criteria)
         elif xbrowse_class_name == "VariantFunctionalData":
-            if xbrowse_model.seqr_variant_functional_data:
-                return xbrowse_model.seqr_variant_functional_data
-
             criteria = {
                 'functional_data_tag': xbrowse_model.functional_data_tag,
                 'saved_variant__xpos_start': xbrowse_model.xpos,
@@ -183,11 +186,8 @@ def find_matching_seqr_model(xbrowse_model):
             if xbrowse_model.family:
                 criteria['saved_variant__family__family_id'] = xbrowse_model.family.family_id
                 criteria['saved_variant__project__deprecated_project_id'] = xbrowse_model.family.project.project_id
-            return SeqrVariantFunctionalData.objects.get(**criteria)
+            seqr_model = SeqrVariantFunctionalData.objects.get(**criteria)
         elif xbrowse_class_name == "VariantNote":
-            if xbrowse_model.seqr_variant_note:
-                return xbrowse_model.seqr_variant_note
-
             criteria = {
                 'note': xbrowse_model.note,
                 'saved_variant__project__deprecated_project_id': xbrowse_model.project.project_id,
@@ -197,9 +197,9 @@ def find_matching_seqr_model(xbrowse_model):
             }
             if xbrowse_model.family:
                 criteria['saved_variant__family__family_id'] = xbrowse_model.family.family_id
-            return SeqrVariantNote.objects.get(**criteria)
+            seqr_model = SeqrVariantNote.objects.get(**criteria)
         elif xbrowse_class_name == "GeneList":
-            return xbrowse_model.seqr_locus_list or SeqrLocusList.objects.get(
+            seqr_model = SeqrLocusList.objects.get(
                 name=xbrowse_model.name,
                 description=xbrowse_model.description,
                 is_public=xbrowse_model.is_public,
@@ -208,19 +208,17 @@ def find_matching_seqr_model(xbrowse_model):
             description_q = Q(description=xbrowse_model.description)
             if xbrowse_model.description == '':
                 description_q = (Q(description=xbrowse_model.description) | Q(description__isnull=True))
-            return SeqrLocusListGene.objects.get(
+            seqr_model = SeqrLocusListGene.objects.get(
                 Q(locus_list=xbrowse_model.gene_list.seqr_locus_list or find_matching_seqr_model(xbrowse_model.gene_list)),
                 Q(gene_id=xbrowse_model.gene_id),
                 description_q)
         elif xbrowse_class_name == "GeneNote":
-            return SeqrGeneNote.objects.get(
+            seqr_model = SeqrGeneNote.objects.get(
                 note=xbrowse_model.note,
                 gene_id=xbrowse_model.gene_id,
             )
-        elif xbrowse_class_name == "AnalysedBy":
-            return xbrowse_model.seqr_family_analysed_by
         elif xbrowse_class_name == "FamilyGroup":
-            return xbrowse_model.seqr_analysis_group or SeqrAnalysisGroup.objects.get(
+            seqr_model = SeqrAnalysisGroup.objects.get(
                 project__deprecated_project_id=xbrowse_model.project.project_id,
                 name=xbrowse_model.name
             )
@@ -231,7 +229,11 @@ def find_matching_seqr_model(xbrowse_model):
         logging.error("ERROR: when looking up seqr model for xbrowse %s model: %s" % (xbrowse_model, e))
         traceback.print_exc()
 
-    return None
+    if seqr_model and xbrowse_model_foreign_key_name:
+        setattr(xbrowse_model, xbrowse_model_foreign_key_name, seqr_model)
+        xbrowse_model.save()
+
+    return seqr_model
 
 
 def _convert_xbrowse_kwargs_to_seqr_kwargs(xbrowse_model, include_all=False, **kwargs):
@@ -246,6 +248,13 @@ def _convert_xbrowse_kwargs_to_seqr_kwargs(xbrowse_model, include_all=False, **k
         field_mapping.get(field, field): value for field, value in kwargs.items()
         if not field_mapping.get(field, field) == _DELETED_FIELD
     }
+
+    for parent_key in ['mother', 'father']:
+        if parent_key in seqr_kwargs:
+            if seqr_kwargs[parent_key] and seqr_kwargs[parent_key] != '.':
+                seqr_kwargs[parent_key] = BaseIndividual.objects.get(indiv_id=seqr_kwargs[parent_key], family=xbrowse_model.family)
+            else:
+                seqr_kwargs[parent_key] = None
 
     # handle foreign keys
     for key, value in seqr_kwargs.items():

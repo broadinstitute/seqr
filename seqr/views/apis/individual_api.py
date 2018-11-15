@@ -4,11 +4,11 @@ APIs for retrieving, updating, creating, and deleting Individual records
 
 import json
 import logging
-
+from collections import defaultdict
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 
-from seqr.model_utils import get_or_create_seqr_model, update_seqr_model, delete_seqr_model
+from seqr.model_utils import get_or_create_seqr_model, delete_seqr_model
 from seqr.models import Sample, Individual, Family, CAN_EDIT
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.pedigree_image_api import update_pedigree_images
@@ -18,7 +18,7 @@ from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file
 from seqr.views.utils.json_to_orm_utils import update_individual_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_individual, _get_json_for_individuals, _get_json_for_family, _get_json_for_families
-from seqr.views.utils.pedigree_info_utils import parse_pedigree_table, validate_fam_file_records
+from seqr.views.utils.pedigree_info_utils import parse_pedigree_table, validate_fam_file_records, JsonConstants
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_permissions
 
 
@@ -55,7 +55,7 @@ def update_individual_handler(request, individual_guid):
             {
                 <individualGuid> : {
                     individualId: xxx,
-                    maternalId: xxx,
+                    sex: xxx,
                     affected: xxx,
                     ...
                 }
@@ -101,8 +101,8 @@ def edit_individuals_handler(request, project_guid):
     Response:
         json dictionary representing the updated individual(s) like:
             {
-                <individualGuid1> : { individualId: xxx, maternalId: xxx, paternalId: xxx, ...},
-                <individualGuid2> : { individualId: xxx, maternalId: xxx, paternalId: xxx, ...},
+                <individualGuid1> : { individualId: xxx, sex: xxx, affected: xxx, ...},
+                <individualGuid2> : { individualId: xxx, sex: xxx, affected: xxx, ...},
                 ...
             }
     """
@@ -118,19 +118,16 @@ def edit_individuals_handler(request, project_guid):
 
     update_individuals = {ind['individualGuid']: ind for ind in modified_individuals_list}
     update_individual_models = {ind.guid: ind for ind in Individual.objects.filter(guid__in=update_individuals.keys())}
+    for modified_ind in modified_individuals_list:
+        model = update_individual_models[modified_ind['individualGuid']]
+        if modified_ind[JsonConstants.INDIVIDUAL_ID_COLUMN] != model.individual_id:
+            modified_ind[JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN] = model.individual_id
 
-    modified_family_ids = {ind['family']['familyId'] for ind in modified_individuals_list}
+    modified_family_ids = {ind.get('familyId') or ind['family']['familyId'] for ind in modified_individuals_list}
     modified_family_ids.update({ind.family.family_id for ind in update_individual_models.values()})
     related_individuals = Individual.objects.filter(
         family__family_id__in=modified_family_ids, family__project=project).exclude(guid__in=update_individuals.keys())
-    # can't use _get_json_for_individual because validation needs familyId, not familyGuid
-    related_individuals_json = [{
-        'individualId': ind.individual_id,
-        'familyId': ind.family.family_id,
-        'sex': ind.sex,
-        'maternalId': ind.maternal_id,
-        'paternalId': ind.paternal_id,
-    } for ind in related_individuals]
+    related_individuals_json = _get_json_for_individuals(related_individuals, project_guid=project_guid, add_family_id_field=True)
     individuals_list = modified_individuals_list + related_individuals_json
 
     # TODO more validation?
@@ -138,9 +135,12 @@ def edit_individuals_handler(request, project_guid):
     if errors:
         return create_json_response({'errors': errors, 'warnings': warnings}, status=400, reason='Invalid updates')
 
-    updated_families, updated_individuals = add_or_update_individuals_and_families(
-        project, modified_individuals_list, user=request.user
-    )
+    try:
+        updated_families, updated_individuals = add_or_update_individuals_and_families(
+            project, modified_individuals_list, user=request.user
+        )
+    except Exception as e:
+        return create_json_response({'errors': [e.message]}, status=400, reason='Invalid updates')
 
     individuals_by_guid = {
         individual.guid: _get_json_for_individual(individual, request.user) for individual in updated_individuals
@@ -248,25 +248,45 @@ def receive_individuals_table_handler(request, project_guid):
         return create_json_response({'errors': [e.message or str(e)], 'warnings': []}, status=400, reason=e.message or str(e))
 
     # send back some stats
-    num_families = len(set(r['familyId'] for r in json_records))
-    num_individuals = len(set(r['individualId'] for r in json_records))
-    num_families_to_create = len([
-        family_id for family_id in set(r['familyId'] for r in json_records)
-        if not Family.objects.filter(family_id=family_id, project=project)])
+    individual_ids_by_family = defaultdict(list)
+    for r in json_records:
+        if r.get(JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN):
+            individual_ids_by_family[r[JsonConstants.FAMILY_ID_COLUMN]].append(
+                (r[JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN], True)
+            )
+        else:
+            individual_ids_by_family[r[JsonConstants.FAMILY_ID_COLUMN]].append(
+                (r[JsonConstants.INDIVIDUAL_ID_COLUMN], False)
+            )
 
-    num_individuals_to_create = len(set(
-        r['individualId'] for r in json_records
-        if not Individual.objects.filter(
-            individual_id=r['individualId'],
-            family__family_id=r['familyId'],
-            family__project=project)))
+    num_individuals = sum([len(indiv_ids) for indiv_ids in individual_ids_by_family.values()])
+    num_existing_individuals = 0
+    missing_prev_ids = []
+    for family_id, indiv_ids in individual_ids_by_family.items():
+        existing_individuals = {i.individual_id for i in Individual.objects.filter(
+            individual_id__in=[indiv_id for (indiv_id, _) in indiv_ids], family__family_id=family_id, family__project=project
+        ).only('individual_id')}
+        num_existing_individuals += len(existing_individuals)
+        missing_prev_ids += [indiv_id for (indiv_id, is_previous) in indiv_ids if is_previous and indiv_id not in existing_individuals]
+    num_individuals_to_create = num_individuals - num_existing_individuals
+    if missing_prev_ids:
+        return create_json_response(
+            {'errors': [
+                'Could not find individuals with the following previous IDs: {}'.format(', '.join(missing_prev_ids))
+            ], 'warnings': []},
+            status=400, reason='Invalid input')
+
+    family_ids = set(r[JsonConstants.FAMILY_ID_COLUMN] for r in json_records)
+    num_families = len(family_ids)
+    num_existing_families = Family.objects.filter(family_id__in=family_ids, project=project).count()
+    num_families_to_create = num_families - num_existing_families
 
     info = [
         "{num_families} families, {num_individuals} individuals parsed from {filename}".format(
             num_families=num_families, num_individuals=num_individuals, filename=filename
         ),
-        "%d new families, %d new individuals will be added to the project" % (num_families_to_create, num_individuals_to_create),
-        "%d existing individuals will be updated" % (num_individuals - num_individuals_to_create),
+        "{} new families, {} new individuals will be added to the project".format(num_families_to_create, num_individuals_to_create),
+        "{} existing individuals will be updated".format(num_existing_individuals),
     ]
 
     response = {
@@ -323,14 +343,15 @@ def add_or_update_individuals_and_families(project, individual_records, user=Non
         2-tuple: updated_families, updated_individuals containing Django ORM models
     """
     families = {}
-    updated_individuals = []
+    updated_individuals = set()
+    parent_updates = []
     for i, record in enumerate(individual_records):
         # family id will be in different places in the json depending on whether it comes from a flat uploaded file or from the nested individual object
-        family_id = record.get('familyId') or record.get('family', {}).get('familyId')
+        family_id = record.get(JsonConstants.FAMILY_ID_COLUMN) or record.get('family', {}).get('familyId')
         if not family_id:
             raise ValueError("record #%s doesn't contain a 'familyId' key: %s" % (i, record))
 
-        if 'individualId' not in record and 'individualGuid' not in record:
+        if JsonConstants.INDIVIDUAL_ID_COLUMN not in record and 'individualGuid' not in record:
             raise ValueError("record #%s doesn't contain an 'individualId' key: %s" % (i, record))
 
         family = families.get(family_id)
@@ -341,38 +362,54 @@ def add_or_update_individuals_and_families(project, individual_records, user=Non
 
         if created:
             logger.info("Created family: %s", family)
-            if not family.display_name:
-                update_seqr_model(family, display_name=family.family_id)
 
         # uploaded files do not have unique guid's so fall back to a combination of family and individualId
         if record.get('individualGuid'):
             individual_filters = {'guid': record['individualGuid']}
         else:
-            individual_filters = {'family': family, 'individual_id': record['individualId']}
+            individual_id = record.get(JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN) or record[JsonConstants.INDIVIDUAL_ID_COLUMN]
+            individual_filters = {'family': family, 'individual_id': individual_id}
 
         individual, created = get_or_create_seqr_model(Individual, **individual_filters)
-        record['family'] = family
-        record.pop('familyId', None)
 
         if created:
             record.update({
                 'caseReviewStatus': 'I',
             })
 
-        if not (individual.display_name or record.get('displayName')):
-            record['displayName'] = individual.individual_id or record.get('individualId')
+        record['family'] = family
+        record.pop('familyId', None)
+        if individual.family != family:
+            families[individual.family.family_id] = individual.family
+
+        if record.get(JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN):
+            updated_individuals.update(individual.maternal_children.all())
+            updated_individuals.update(individual.paternal_children.all())
+
+        # Update the parent ids last, so if they are referencing updated individuals they will check for the correct ID
+        if record.get('maternalId') or record.get('paternalId'):
+            parent_updates.append({
+                'individual': individual,
+                'maternalId': record.pop('maternalId', None),
+                'paternalId': record.pop('paternalId', None),
+            })
 
         update_individual_from_json(individual, record, allow_unknown_keys=True, user=user)
 
-        updated_individuals.append(individual)
+        updated_individuals.add(individual)
         families[family.family_id] = family
+
+    for update in parent_updates:
+        individual = update.pop('individual')
+        update_individual_from_json(individual, update, user=user)
 
     updated_families = list(families.values())
 
     # update pedigree images
     update_pedigree_images(updated_families, project_guid=project.guid)
 
-    return updated_families, updated_individuals
+    return updated_families, list(updated_individuals)
+
 
 
 def delete_individuals(project, individual_guids):
@@ -494,8 +531,8 @@ def export_individuals(
         row.extend([
             i.family.family_id,
             i.individual_id,
-            i.paternal_id,
-            i.maternal_id,
+            i.father.individual_id if i.father else None,
+            i.mother.individual_id if i.mother else None,
             _SEX_TO_EXPORTED_VALUE.get(i.sex),
             __AFFECTED_TO_EXPORTED_VALUE.get(i.affected),
             i.notes,  # TODO should strip markdown (or be moved to client-side export)

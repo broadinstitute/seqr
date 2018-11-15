@@ -75,6 +75,7 @@ export const FAMILY_ANALYSIS_STATUS_OPTIONS = [
 
 // FAMILY FIELDS
 
+export const FAMILY_FIELD_ID = 'familyId'
 export const FAMILY_DISPLAY_NAME = 'displayName'
 export const FAMILY_FIELD_DESCRIPTION = 'description'
 export const FAMILY_FIELD_ANALYSIS_STATUS = 'analysisStatus'
@@ -87,6 +88,7 @@ export const FAMILY_FIELD_FIRST_SAMPLE = 'firstSample'
 export const FAMILY_FIELD_CODED_PHENOTYPE = 'codedPhenotype'
 export const FAMILY_FIELD_OMIM_NUMBER = 'postDiscoveryOmimNumber'
 export const FAMILY_FIELD_PEDIGREE = 'pedigreeImage'
+export const FAMILY_FIELD_CREATED_DATE = 'createdDate'
 
 export const FAMILY_FIELD_RENDER_LOOKUP = {
   [FAMILY_FIELD_DESCRIPTION]: { name: 'Family Description' },
@@ -118,28 +120,28 @@ export const FAMILY_DETAIL_FIELDS = [
 // INDIVIDUAL FIELDS
 
 export const SEX_OPTIONS = [
-  { value: 'M', label: 'Male' },
-  { value: 'F', label: 'Female' },
-  { value: 'U', label: '?' },
+  { value: 'M', text: 'Male' },
+  { value: 'F', text: 'Female' },
+  { value: 'U', text: '?' },
 ]
 
 export const SEX_LOOKUP = SEX_OPTIONS.reduce(
   (acc, opt) => ({
     ...acc,
-    ...{ [opt.value]: opt.label === '?' ? 'Unknown' : opt.label },
+    ...{ [opt.value]: opt.text === '?' ? 'Unknown' : opt.text },
   }), {},
 )
 
 export const AFFECTED_OPTIONS = [
-  { value: 'A', label: 'Affected' },
-  { value: 'N', label: 'Unaffected' },
-  { value: 'U', label: '?' },
+  { value: 'A', text: 'Affected' },
+  { value: 'N', text: 'Unaffected' },
+  { value: 'U', text: '?' },
 ]
 
 export const AFFECTED_LOOKUP = AFFECTED_OPTIONS.reduce(
   (acc, opt) => ({
     ...acc,
-    ...{ [opt.value]: opt.label === '?' ? 'Unknown' : opt.label },
+    ...{ [opt.value]: opt.text === '?' ? 'Unknown' : opt.text },
   }), {},
 )
 
@@ -256,4 +258,5 @@ export const LOCUS_LIST_ITEMS_FIELD = {
 
 export const EXCLUDED_TAG_NAME = 'Excluded'
 export const REVIEW_TAG_NAME = 'Review'
-
+export const KNOWN_GENE_FOR_PHENOTYPE_TAG_NAME = 'Known gene for phenotype'
+export const DISCOVERY_CATEGORY_NAME = 'CMG Discovery Tags'

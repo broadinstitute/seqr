@@ -3,47 +3,35 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 
 import EditRecordsForm from 'shared/components/form/EditRecordsForm'
+import { FAMILY_FIELD_ID } from 'shared/utils/constants'
+import { FAMILY_FIELDS } from '../../constants'
 import { updateFamilies } from '../../reducers'
 import { getProjectFamiliesByGuid } from '../../selectors'
 
-const FAMILY_FIELDS = [
-  {
-    header: 'Family Id',
-    field: 'familyId',
-    fieldProps: { component: ({ input }) => input.value },
-    cellProps: { collapsing: true, style: { minWidth: '100px' } },
-  },
-  {
-    header: 'Family Description',
-    field: 'description',
-    fieldProps: { component: 'input', type: 'text' },
-    cellProps: { style: { paddingRight: '150px' } },
-  },
-]
 
 const EditFamiliesForm = props =>
   <EditRecordsForm
     formName="editFamilies"
     modalName={props.modalName}
-    records={Object.values(props.familiesByGuid)}
-    fields={FAMILY_FIELDS}
-    onSubmit={({ records, ...values }) => props.updateFamilies({ families: records, ...values })}
+    idField="familyGuid"
+    entityKey="families"
+    defaultSortColumn={FAMILY_FIELD_ID}
+    columns={FAMILY_FIELDS}
+    {...props}
   />
 
 EditFamiliesForm.propTypes = {
-  familiesByGuid: PropTypes.object.isRequired,
-  updateFamilies: PropTypes.func.isRequired,
+  records: PropTypes.object.isRequired,
+  onSubmit: PropTypes.func.isRequired,
   modalName: PropTypes.string,
 }
 
-export { EditFamiliesForm as EditFamiliesFormComponent }
-
 const mapStateToProps = state => ({
-  familiesByGuid: getProjectFamiliesByGuid(state),
+  records: getProjectFamiliesByGuid(state),
 })
 
 const mapDispatchToProps = {
-  updateFamilies,
+  onSubmit: updateFamilies,
 }
 
 export default connect(mapStateToProps, mapDispatchToProps)(EditFamiliesForm)

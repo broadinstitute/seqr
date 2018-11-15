@@ -50,31 +50,33 @@ renderField.propTypes = {
   submitForm: PropTypes.func,
 }
 
-export const configuredFields = props =>
-  props.fields.map(({ component, name, isArrayField, addArrayElement, key, label, labelHelp, ...fieldProps }) => {
-    const baseProps = {
-      key: key || name,
-      name,
-    }
-    const singleFieldProps = {
-      component: renderField,
-      fieldComponent: component,
-      submitForm: props.submitOnChange ? props.onSubmit : null,
-      label: labelHelp ?
-        <label> {label} <Popup trigger={<Icon name="question circle outline" />} content={labelHelp} size="small" position="top center" /></label>
-        : label,
-      ...fieldProps,
-    }
-    return isArrayField ?
-      <FieldArray {...baseProps} component={({ fields }) =>
-        <div className="field">
-          <label>{label}</label>
-          {fields.map((fieldPath, i) => <Field key={fieldPath} name={fieldPath} {...singleFieldProps} removeField={() => fields.remove(i)} />)}
-          {addArrayElement && <ButtonLink onClick={() => fields.push(addArrayElement.newValue)}><Icon link name="plus" />{addArrayElement.label}</ButtonLink>}
-        </div>}
-      /> :
-      <Field {...baseProps} {...singleFieldProps} />
-  })
+export const configuredField = (field, formProps = {}) => {
+  const { component, name, isArrayField, addArrayElement, key, label, labelHelp, ...fieldProps } = field
+  const baseProps = {
+    key: key || name,
+    name,
+  }
+  const singleFieldProps = {
+    component: renderField,
+    fieldComponent: component,
+    submitForm: formProps.submitOnChange ? formProps.onSubmit : null,
+    label: labelHelp ?
+      <label> {label} <Popup trigger={<Icon name="question circle outline" />} content={labelHelp} size="small" position="top center" /></label>
+      : label,
+    ...fieldProps,
+  }
+  return isArrayField ?
+    <FieldArray {...baseProps} component={({ fields }) =>
+      <div className="field">
+        <label>{label}</label>
+        {fields.map((fieldPath, i) => <Field key={fieldPath} name={fieldPath} {...singleFieldProps} removeField={() => fields.remove(i)} />)}
+        {addArrayElement && <ButtonLink onClick={() => fields.push(addArrayElement.newValue)}><Icon link name="plus" />{addArrayElement.label}</ButtonLink>}
+      </div>}
+    /> :
+    <Field {...baseProps} {...singleFieldProps} />
+}
+
+export const configuredFields = props => props.fields.map(field => configuredField(field, props))
 
 class ReduxFormWrapper extends React.Component {
 
@@ -105,10 +107,6 @@ class ReduxFormWrapper extends React.Component {
     /* Submit the form whenever values change rather than with a submit button */
     submitOnChange: PropTypes.bool,
 
-    /* An optional secondary submit button with its own submit callback */
-    secondarySubmitButton: PropTypes.node,
-    onSecondarySubmit: PropTypes.func,
-
     /* form size (see https://react.semantic-ui.com/collections/form#form-example-size) */
     size: PropTypes.string,
 
@@ -120,7 +118,7 @@ class ReduxFormWrapper extends React.Component {
     fields: PropTypes.arrayOf(PropTypes.object), //eslint-disable-line react/no-unused-prop-types
 
     /* React child component class. Mutually exclusive with fields */
-    renderChildren: PropTypes.func,
+    children: PropTypes.node,
 
     /*  These props are added by redux-form and should never be passed explicitly */
     submitting: PropTypes.bool,
@@ -154,7 +152,7 @@ class ReduxFormWrapper extends React.Component {
       (this.props.warningMessages && this.props.warningMessages.length > 0 && this.props.warningMessages.join('; ')) ||
       (this.props.submitFailed ? 'Error' : null)
 
-    const fieldComponents = this.props.renderChildren ? React.createElement(this.props.renderChildren) : configuredFields(this.props)
+    const fieldComponents = this.props.children || configuredFields(this.props)
 
     return (
       <StyledForm onSubmit={this.props.handleSubmit} size={this.props.size} loading={this.props.submitting} hasSubmitButton={!this.props.submitOnChange} inline={this.props.inline}>
@@ -163,10 +161,6 @@ class ReduxFormWrapper extends React.Component {
           this.props[`${key}Messages`] && this.props[`${key}Messages`].length > 0 ?
             <MessagePanel key={key} {...{ [key]: true }} visible list={this.props[`${key}Messages`]} /> : null
         ))}
-        {
-          this.props.secondarySubmitButton && this.props.onSecondarySubmit &&
-          React.cloneElement(this.props.secondarySubmitButton, { onClick: this.props.handleSubmit(values => this.props.onSecondarySubmit(values)) })
-        }
         {
           !this.props.submitOnChange &&
             <ButtonPanel
@@ -192,13 +186,13 @@ class ReduxFormWrapper extends React.Component {
       'showErrorPanel',
       'size',
       'submitting',
-      'secondarySubmitButton',
       'submitOnChange',
       'cancelButtonText',
       'submitButtonText',
       'dirty',
       'confirmCloseIfNotSaved',
       'initialValues',
+      'children',
     ]
     const listUpdateProps = [
       'errorMessages',

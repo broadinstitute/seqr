@@ -6,7 +6,7 @@ import { Popup, Table } from 'semantic-ui-react'
 import { Link } from 'react-router-dom'
 //import randomMC from 'random-material-color'
 
-import { ColoredIcon } from '../StyledComponents'
+import { ColoredIcon, NoBorderTable } from '../StyledComponents'
 
 
 const BarContainer = styled.div.attrs({
@@ -103,7 +103,7 @@ class HorizontalStackedBar extends React.PureComponent {
           content={
             <div>
               {title && <div><b>{title}</b><br /></div>}
-              <Table basic="very" compact="very">
+              <NoBorderTable basic="very" compact="very">
                 <Table.Body>
                   {
                     popupData.map(d => (
@@ -124,7 +124,7 @@ class HorizontalStackedBar extends React.PureComponent {
                     </TableRow>
                   }
                 </Table.Body>
-              </Table>
+              </NoBorderTable>
             </div>
           }
           position="bottom center"

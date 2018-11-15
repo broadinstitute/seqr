@@ -845,8 +845,8 @@ class Individual(models.Model):
     family = models.ForeignKey(Family, null=True, blank=True)
 
     indiv_id = models.SlugField(max_length=140, default="", blank=True, db_index=True)
-    maternal_id = models.SlugField(max_length=140, default="", blank=True)
-    paternal_id = models.SlugField(max_length=140, default="", blank=True)
+    maternal_id = models.SlugField(max_length=140, default="", blank=True, null=True)
+    paternal_id = models.SlugField(max_length=140, default="", blank=True, null=True)
 
     gender = models.CharField(max_length=1, choices=GENDER_CHOICES, default='U')  # => sex
     affected = models.CharField(max_length=1, choices=AFFECTED_CHOICES, default='U')
@@ -994,13 +994,20 @@ class Individual(models.Model):
         elif self.affected == 'N':
             affected_status = 'unaffected'
 
-        paternal_id = self.paternal_id
-        if not Individual.objects.filter(indiv_id=paternal_id, project=self.project).exists():
-            paternal_id = '.'
+        maternal_id = '.'
+        paternal_id = '.'
+        if self.seqr_individual:
+            if self.seqr_individual.mother:
+                maternal_id = self.seqr_individual.mother.individual_id
 
-        maternal_id = self.maternal_id
-        if not Individual.objects.filter(indiv_id=maternal_id, project=self.project).exists():
-            maternal_id = '.'
+            if self.seqr_individual.father:
+                paternal_id = self.seqr_individual.father.individual_id
+        else:
+            if self.paternal_id and Individual.objects.filter(indiv_id=self.paternal_id, project=self.project).exists():
+                paternal_id = self.paternal_id
+
+            if self.maternal_id and Individual.objects.filter(indiv_id=self.maternal_id, project=self.project).exists():
+                maternal_id = self.maternal_id
 
         return XIndividual(
             self.indiv_id,
@@ -1009,7 +1016,7 @@ class Individual(models.Model):
             paternal_id=paternal_id,
             maternal_id=maternal_id,
             gender=gender,
-            affected_status=affected_status
+            affected_status=affected_status,
         )
 
     def from_xindividual(self, xindividual):
