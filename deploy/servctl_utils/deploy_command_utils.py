@@ -10,8 +10,6 @@ import psutil
 import time
 import sys
 
-from __builtin__ import raw_input
-
 from deploy.servctl_utils.other_command_utils import check_kubernetes_context, set_environment
 from hail_elasticsearch_pipelines.kubernetes.kubectl_utils import is_pod_running, get_pod_name, get_node_name, run_in_pod, \
     wait_until_pod_is_running as sleep_until_pod_is_running, wait_until_pod_is_ready as sleep_until_pod_is_ready

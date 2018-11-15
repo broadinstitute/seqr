@@ -5,9 +5,11 @@ import logging
 import os
 import subprocess
 import sys
+import time
 
 from hail_elasticsearch_pipelines.kubernetes.kubectl_utils import get_pod_name, run_in_pod, wait_until_pod_is_running
 from hail_elasticsearch_pipelines.kubernetes.yaml_settings_utils import load_settings
+from hail_elasticsearch_pipelines.kubernetes.kubectl_utils import is_pod_running
 from seqr.utils.shell_utils import run, wait_for, run_in_background
 
 logging.basicConfig(format='%(asctime)s %(levelname)-8s %(message)s')
@@ -25,6 +27,7 @@ COMPONENT_PORTS = {
     "es-client":       [9200],
     "es-master":       [9020],
     "es-data":         [9020],
+    "es-kibana":       [5601],
 
     "redis":           [6379],
 
@@ -40,7 +43,7 @@ COMPONENT_PORTS = {
 COMPONENTS_TO_OPEN_IN_BROWSER = set([
     "cockpit",
     "elasticsearch",
-    "kibana",
+    "kibana", "es-kibana",
     "phenotips",
     "seqr",
     "pipeline-runner",  # python notebook
@@ -315,6 +318,11 @@ def delete_component(component, deployment_target=None):
     pod_name = get_pod_name(component, deployment_target=deployment_target)
     if pod_name:
         run("kubectl delete pods %(pod_name)s" % locals(), errors_to_ignore=["not found"])
+
+        logger.info("waiting for \"%s\" to exit Running status" % component)
+        while is_pod_running(component, deployment_target):
+            time.sleep(5)
+
 
     # print services and pods status
     run("kubectl get services" % locals(), verbose=True)

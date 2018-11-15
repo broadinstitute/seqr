@@ -23,7 +23,7 @@ EXISTING_DISKS: es-disk-1, es-disk-2, es-disk-3, es-disk-4, es-disk-5, es-disk-6
 NAMESPACE: test-elasticsearch
 
 ES_CLUSTER_NAME: test-myesdb
-ELASTICSEARCH_VERSION: 6.3.2  #  5.6.3  # later upgrade to 6.3.2
+ELASTICSEARCH_VERSION: 6.3.2
 
 DEPLOY_TO: 'gcloud-prod-test-elasticsearch'
 DEPLOY_TO_PREFIX: 'gcloud'
