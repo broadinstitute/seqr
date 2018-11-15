@@ -118,7 +118,7 @@ class ReduxFormWrapper extends React.Component {
     fields: PropTypes.arrayOf(PropTypes.object), //eslint-disable-line react/no-unused-prop-types
 
     /* React child component class. Mutually exclusive with fields */
-    renderChildren: PropTypes.func,
+    children: PropTypes.node,
 
     /*  These props are added by redux-form and should never be passed explicitly */
     submitting: PropTypes.bool,
@@ -152,7 +152,7 @@ class ReduxFormWrapper extends React.Component {
       (this.props.warningMessages && this.props.warningMessages.length > 0 && this.props.warningMessages.join('; ')) ||
       (this.props.submitFailed ? 'Error' : null)
 
-    const fieldComponents = this.props.renderChildren ? React.createElement(this.props.renderChildren) : configuredFields(this.props)
+    const fieldComponents = this.props.children || configuredFields(this.props)
 
     return (
       <StyledForm onSubmit={this.props.handleSubmit} size={this.props.size} loading={this.props.submitting} hasSubmitButton={!this.props.submitOnChange} inline={this.props.inline}>
@@ -192,7 +192,7 @@ class ReduxFormWrapper extends React.Component {
       'dirty',
       'confirmCloseIfNotSaved',
       'initialValues',
-      'renderChildren',
+      'children',
     ]
     const listUpdateProps = [
       'errorMessages',

@@ -46,9 +46,10 @@ def update_individual_from_json(individual, json, verbose=False, user=None, allo
 
 def _parse_parent_field(json, individual, parent_key, parent_id_key):
     parent = getattr(individual, parent_key, None)
-    if parent_id_key in json and json[parent_id_key] != (parent.individual_id if parent else None):
+    if parent_id_key in json:
         parent_id = json.pop(parent_id_key)
-        json[parent_key] = Individual.objects.get(individual_id=parent_id, family=individual.family) if parent_id else None
+        if parent_id != (parent.individual_id if parent else None):
+            json[parent_key] = Individual.objects.get(individual_id=parent_id, family=individual.family) if parent_id else None
 
 
 def update_model_from_json(model_obj, json, user=None, verbose=False, allow_unknown_keys=False, immutable_keys=None, conditional_edit_keys=None):

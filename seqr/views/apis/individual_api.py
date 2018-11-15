@@ -248,24 +248,38 @@ def receive_individuals_table_handler(request, project_guid):
         return create_json_response({'errors': [e.message or str(e)], 'warnings': []}, status=400, reason=e.message or str(e))
 
     # send back some stats
+    individual_ids_by_family = defaultdict(list)
+    for r in json_records:
+        if r.get(JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN):
+            individual_ids_by_family[r[JsonConstants.FAMILY_ID_COLUMN]].append(
+                (r[JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN], True)
+            )
+        else:
+            individual_ids_by_family[r[JsonConstants.FAMILY_ID_COLUMN]].append(
+                (r[JsonConstants.INDIVIDUAL_ID_COLUMN], False)
+            )
+
+    num_individuals = sum([len(indiv_ids) for indiv_ids in individual_ids_by_family.values()])
+    num_existing_individuals = 0
+    missing_prev_ids = []
+    for family_id, indiv_ids in individual_ids_by_family.items():
+        existing_individuals = {i.individual_id for i in Individual.objects.filter(
+            individual_id__in=[indiv_id for (indiv_id, _) in indiv_ids], family__family_id=family_id, family__project=project
+        ).only('individual_id')}
+        num_existing_individuals += len(existing_individuals)
+        missing_prev_ids += [indiv_id for (indiv_id, is_previous) in indiv_ids if is_previous and indiv_id not in existing_individuals]
+    num_individuals_to_create = num_individuals - num_existing_individuals
+    if missing_prev_ids:
+        return create_json_response(
+            {'errors': [
+                'Could not find individuals with the following previous IDs: {}'.format(', '.join(missing_prev_ids))
+            ], 'warnings': []},
+            status=400, reason='Invalid input')
+
     family_ids = set(r[JsonConstants.FAMILY_ID_COLUMN] for r in json_records)
     num_families = len(family_ids)
     num_existing_families = Family.objects.filter(family_id__in=family_ids, project=project).count()
     num_families_to_create = num_families - num_existing_families
-
-    individual_ids_by_family = defaultdict(list)
-    for r in json_records:
-        individual_ids_by_family[r[JsonConstants.FAMILY_ID_COLUMN]].append(
-            r.get(JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN) or r[JsonConstants.INDIVIDUAL_ID_COLUMN]
-        )
-
-    num_individuals = sum([len(indiv_ids) for indiv_ids in individual_ids_by_family.values()])
-    num_existing_individuals = 0
-    for family_id, indiv_ids in individual_ids_by_family.items():
-        num_existing_individuals += Individual.objects.filter(
-            individual_id__in=indiv_ids, family__family_id=family_id, family__project=project
-        ).count()
-    num_individuals_to_create = num_individuals - num_existing_individuals
 
     info = [
         "{num_families} families, {num_individuals} individuals parsed from {filename}".format(

@@ -163,8 +163,9 @@ const EditBulkForm = ({ name, modalName, onSubmit, ...props }) =>
     showErrorPanel
     liveValidate
     size="small"
-    renderChildren={() => <BulkContent name={name} {...props} />}
-  />
+  >
+    <BulkContent name={name} {...props} />
+  </ReduxFormWrapper>
 
 EditBulkForm.propTypes = {
   name: PropTypes.string.isRequired,

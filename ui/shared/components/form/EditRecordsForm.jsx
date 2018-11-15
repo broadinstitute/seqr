@@ -86,10 +86,12 @@ class EditRecordsForm extends React.Component
       { ...acc, [recordId]: toDelete }
     ), {})
 
-    const submitRecords = filterFunc => values => onSubmit({ [entityKey]: Object.values(values).filter(filterFunc) })
-    const isChangedRecord = record => columns.map(field => field.name).some(
-      field => record[field] !== records[record[idField]][field],
-    )
+    const getFilteredRecords = (values, filterFunc) => ({ [entityKey]: Object.values(values).filter(filterFunc) })
+
+    const submitRecords = values =>
+      onSubmit(getFilteredRecords(values, record => columns.map(field => field.name).some(
+        field => record[field] !== records[record[idField]][field],
+      )))
 
     return (
       <FormContentContainer>
@@ -97,38 +99,37 @@ class EditRecordsForm extends React.Component
           form={formName}
           modalName={modalName}
           submitButtonText="Apply"
-          onSubmit={submitRecords(isChangedRecord)}
+          onSubmit={submitRecords}
           confirmCloseIfNotSaved
           closeOnSuccess
           showErrorPanel
           size="small"
           initialValues={records}
-          renderChildren={() =>
-            <TableContainer>
-              <SortableTable
-                compact="very"
-                basic="very"
-                fixed
-                data={Object.values(this.state.data)}
-                selectedRows={rowsToDelete}
-                selectRows={this.checkboxHandler}
-                columns={columns}
-                idField={idField}
-                rowsPerPage={ROWS_PER_PAGE}
-                footer={
-                  <DeleteButton
-                    initialValues={this.state.data}
-                    onSubmit={submitRecords(record => record.toDelete)}
-                    onSuccess={closeParentModal}
-                    confirmDialog={`Are you sure you want to delete the selected ${entityKey}?`}
-                    buttonText="Deleted Selected"
-                  />
-                }
-                {...tableProps}
-              />
-            </TableContainer>
-          }
-        />
+        >
+          <TableContainer>
+            <SortableTable
+              compact="very"
+              basic="very"
+              fixed
+              data={Object.values(this.state.data)}
+              selectedRows={rowsToDelete}
+              selectRows={this.checkboxHandler}
+              columns={columns}
+              idField={idField}
+              rowsPerPage={ROWS_PER_PAGE}
+              footer={
+                <DeleteButton
+                  initialValues={getFilteredRecords(this.state.data, record => record.toDelete)}
+                  onSubmit={onSubmit}
+                  onSuccess={closeParentModal}
+                  confirmDialog={`Are you sure you want to delete the selected ${entityKey}?`}
+                  buttonText="Deleted Selected"
+                />
+              }
+              {...tableProps}
+            />
+          </TableContainer>
+        </ReduxFormWrapper>
       </FormContentContainer>
     )
   }
