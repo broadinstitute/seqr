@@ -258,4 +258,5 @@ export const LOCUS_LIST_ITEMS_FIELD = {
 
 export const EXCLUDED_TAG_NAME = 'Excluded'
 export const REVIEW_TAG_NAME = 'Review'
-
+export const KNOWN_GENE_FOR_PHENOTYPE_TAG_NAME = 'Known gene for phenotype'
+export const DISCOVERY_CATEGORY_NAME = 'CMG Discovery Tags'
