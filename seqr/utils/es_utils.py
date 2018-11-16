@@ -488,7 +488,7 @@ def _parse_es_hit(raw_hit, samples_by_id, liftover_grch38_to_grch37, field_names
 
     matched_sample_ids = [sample_id for sample_id in samples_by_id.keys() if any(k for k in hit.keys() if k.startswith(sample_id))]
     genotypes = {
-        samples_by_id[sample_id].individual.guid: _get_field_values(hit, GENOTYPE_FIELDS_CONFIG, lookup_field_prefix=sample_id)
+        samples_by_id[sample_id].guid: _get_field_values(hit, GENOTYPE_FIELDS_CONFIG, lookup_field_prefix=sample_id)
         for sample_id in matched_sample_ids
     }
 
