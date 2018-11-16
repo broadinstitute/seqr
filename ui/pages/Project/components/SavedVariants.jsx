@@ -11,14 +11,16 @@ import VariantTagTypeBar, { getSavedVariantsLinkPath } from 'shared/components/g
 import Variants from 'shared/components/panel/variants/Variants'
 import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
 import { HorizontalSpacer } from 'shared/components/Spacers'
-import { toSnakecase } from 'shared/utils/stringUtils'
 import {
+  DISCOVERY_CATEGORY_NAME,
   VARIANT_SORT_FIELD,
   VARIANT_HIDE_EXCLUDED_FIELD,
   VARIANT_HIDE_REVIEW_FIELD,
+  VARIANT_HIDE_KNOWN_GENE_FOR_PHENOTYPE_FIELD,
   VARIANT_PER_PAGE_FIELD,
   VARIANT_PAGINATION_FIELD,
 } from 'shared/utils/constants'
+import { toSnakecase } from 'shared/utils/stringUtils'
 import { loadProjectVariants, updateSavedVariantTable } from '../reducers'
 import {
   getProject, getProjectSavedVariantsIsLoading, getProjectSavedVariants, getVisibleSortedProjectSavedVariants,
@@ -30,10 +32,12 @@ const ALL_FILTER = 'ALL'
 
 const FILTER_FIELDS = [
   VARIANT_SORT_FIELD,
+  VARIANT_HIDE_KNOWN_GENE_FOR_PHENOTYPE_FIELD,
   VARIANT_HIDE_EXCLUDED_FIELD,
   VARIANT_HIDE_REVIEW_FIELD,
   VARIANT_PER_PAGE_FIELD,
 ]
+const NON_DISCOVERY_FILTER_FIELDS = FILTER_FIELDS.filter(({ name }) => name !== 'hideKnownGeneForPhenotype')
 
 const ControlsRow = styled(Grid.Row)`
   font-size: 1.1em;
@@ -166,8 +170,13 @@ class BaseSavedVariants extends React.Component {
       }, []),
     ]
 
-    const filterFields = this.props.totalPages > 1 ?
-      [...FILTER_FIELDS, { ...VARIANT_PAGINATION_FIELD, totalPages: this.props.totalPages }] : FILTER_FIELDS
+    const appliedTagCategoryFilter = tag || (variantGuid ? null : (this.props.tableState.categoryFilter || ALL_FILTER))
+
+    let filters = appliedTagCategoryFilter === DISCOVERY_CATEGORY_NAME ? FILTER_FIELDS : NON_DISCOVERY_FILTER_FIELDS
+
+    if (this.props.totalPages > 1) {
+      filters = filters.concat({ ...VARIANT_PAGINATION_FIELD, totalPages: this.props.totalPages })
+    }
 
     const allShown = this.props.variantsToDisplay.length === this.props.totalVariantsCount
     let shownSummary = ''
@@ -196,7 +205,7 @@ class BaseSavedVariants extends React.Component {
               <Dropdown
                 inline
                 options={tagOptions}
-                value={tag || (variantGuid ? null : (this.props.tableState.categoryFilter || ALL_FILTER))}
+                value={appliedTagCategoryFilter}
                 onChange={this.navigateToTag}
               />
               &nbsp;variants {!allShown && `(${this.props.totalVariantsCount} total)`}
@@ -211,7 +220,7 @@ class BaseSavedVariants extends React.Component {
                   closeOnSuccess={false}
                   submitOnChange
                   inline
-                  fields={filterFields}
+                  fields={filters}
                 />
               }
               <HorizontalSpacer width={10} />

@@ -11,16 +11,20 @@ from django.views.decorators.csrf import csrf_exempt
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.individual_api import delete_individuals
 
+from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file
 from seqr.views.utils.json_to_orm_utils import update_family_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_family
 from seqr.models import Family, FamilyAnalysedBy, CAN_EDIT, Individual
-from seqr.model_utils import create_seqr_model
+from seqr.model_utils import create_seqr_model, get_or_create_seqr_model
 from seqr.views.utils.permissions_utils import check_permissions, get_project_and_check_permissions
 
 from xbrowse_server.base.models import Family as BaseFamily
 
 logger = logging.getLogger(__name__)
+
+FAMILY_ID_FIELD = 'familyId'
+PREVIOUS_FAMILY_ID_FIELD = 'previousFamilyId'
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -34,27 +38,27 @@ def edit_families_handler(request, project_guid):
 
     request_json = json.loads(request.body)
 
-    modified_families = request_json.get('families')
+    if request_json.get('uploadedFileId'):
+        modified_families = load_uploaded_file(request_json.get('uploadedFileId'))
+    else:
+        modified_families = request_json.get('families')
     if modified_families is None:
         return create_json_response(
             {}, status=400, reason="'families' not specified")
 
     project = get_project_and_check_permissions(project_guid, request.user, CAN_EDIT)
 
-    # TODO more validation
-    #errors, warnings = validate_fam_file_records(modified_individuals_list)
-    #if errors:
-    #    return create_json_response({'errors': errors, 'warnings': warnings})
-
     updated_families = []
     for fields in modified_families:
-        family = Family.objects.get(project=project, guid=fields['familyGuid'])
+        if fields.get('familyGuid'):
+            family = Family.objects.get(project=project, guid=fields['familyGuid'])
+        elif fields.get(PREVIOUS_FAMILY_ID_FIELD):
+            family = Family.objects.get(project=project, family_id=fields[PREVIOUS_FAMILY_ID_FIELD])
+        else:
+            family, _ = get_or_create_seqr_model(Family, project=project, family_id=fields[FAMILY_ID_FIELD])
+
         update_family_from_json(family, fields, user=request.user, allow_unknown_keys=True)
         updated_families.append(family)
-
-        for key, value in fields.items():
-            # TODO do this more efficiently
-            _deprecated_update_original_family_field(project, family, key, value)
 
     updated_families_by_guid = {
         'familiesByGuid': {
@@ -163,18 +167,70 @@ def update_family_analysed_by(request, family_guid):
     })
 
 
-def _deprecated_update_original_family_field(project, family, field_name, value):
-    base_family = BaseFamily.objects.filter(
-        project__project_id=project.deprecated_project_id, family_id=family.family_id)
-    base_family = base_family[0]
-    if field_name == "description":
-        base_family.short_description = value
-    elif field_name == "analysisNotes":
-        base_family.about_family_content = value
-    elif field_name == "analysisSummary":
-        base_family.analysis_summary_content = value
-    elif field_name == "codedPhenotype":
-        base_family.coded_phenotype = value
-    elif field_name == "postDiscoveryOmimNumber":
-        base_family.post_discovery_omim_number = value
-    base_family.save()
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@csrf_exempt
+def receive_families_table_handler(request, project_guid):
+    """Handler for the initial upload of an Excel or .tsv table of families. This handler
+    parses the records, but doesn't save them in the database. Instead, it saves them to
+    a temporary file and sends a 'uploadedFileId' representing this file back to the client.
+
+    Args:
+        request (object): Django request object
+        project_guid (string): project GUID
+    """
+
+    project = get_project_and_check_permissions(project_guid, request.user)
+
+    def _process_records(records, filename=''):
+        column_map = {}
+        for i, field in enumerate(records[0]):
+            key = field.lower()
+            if 'family' in key:
+                if 'prev' in key:
+                    column_map[PREVIOUS_FAMILY_ID_FIELD] = i
+                else:
+                    column_map[FAMILY_ID_FIELD] = i
+            elif 'display' in key:
+                column_map['displayName'] = i
+            elif 'description' in key:
+                column_map['description'] = i
+            elif 'phenotype' in key:
+                column_map['codedPhenotype'] = i
+        if FAMILY_ID_FIELD not in column_map:
+            raise ValueError('Invalid header, missing family id column')
+
+        return [{column: row[index] if isinstance(index, int) else next((row[i] for i in index if row[i]), None)
+                for column, index in column_map.items()} for row in records[1:]]
+
+    try:
+        uploaded_file_id, filename, json_records = save_uploaded_file(request, process_records=_process_records)
+    except Exception as e:
+        return create_json_response({'errors': [e.message or str(e)], 'warnings': []}, status=400, reason=e.message or str(e))
+
+    prev_fam_ids = {r[PREVIOUS_FAMILY_ID_FIELD] for r in json_records if r.get(PREVIOUS_FAMILY_ID_FIELD)}
+    existing_prev_fam_ids = {f.family_id for f in Family.objects.filter(family_id__in=prev_fam_ids, project=project).only('family_id')}
+    if len(prev_fam_ids) != len(existing_prev_fam_ids):
+        missing_prev_ids = [family_id for family_id in prev_fam_ids if family_id not in existing_prev_fam_ids]
+        return create_json_response(
+            {'errors': [
+                'Could not find families with the following previous IDs: {}'.format(', '.join(missing_prev_ids))
+            ], 'warnings': []},
+            status=400, reason='Invalid input')
+
+    fam_ids = {r[FAMILY_ID_FIELD] for r in json_records if not r.get(PREVIOUS_FAMILY_ID_FIELD)}
+    num_families_to_update = len(prev_fam_ids) + Family.objects.filter(family_id__in=fam_ids, project=project).count()
+
+    num_families = len(json_records)
+    num_families_to_create = num_families - num_families_to_update
+
+    info = [
+        "{num_families} families parsed from {filename}".format(num_families=num_families, filename=filename),
+        "{} new families will be added, {} existing families will be updated".format(num_families_to_create, num_families_to_update),
+    ]
+
+    return create_json_response({
+        'uploadedFileId': uploaded_file_id,
+        'errors': [],
+        'warnings': [],
+        'info': info,
+    })

@@ -323,13 +323,14 @@ class Individual(ModelWithGUID):
 
     # WARNING: individual_id is unique within a family, but not necessarily unique globally
     individual_id = models.TextField(db_index=True)
-    maternal_id = models.TextField(null=True, blank=True, db_index=True)  # individual_id of mother
-    paternal_id = models.TextField(null=True, blank=True, db_index=True)  # individual_id of father
-    # add ForeignKeys for mother Individual & father Individual?
+
+    mother = models.ForeignKey('seqr.Individual', null=True, on_delete=models.SET_NULL, related_name='maternal_children')
+    father = models.ForeignKey('seqr.Individual', null=True, on_delete=models.SET_NULL, related_name='paternal_children')
 
     sex = models.CharField(max_length=1, choices=SEX_CHOICES, default='U')
     affected = models.CharField(max_length=1, choices=AFFECTED_STATUS_CHOICES, default=AFFECTED_STATUS_UNKNOWN)
 
+    # TODO once sample and individual ids are fully decoupled no reason to maintain this field
     display_name = models.TextField(default="", blank=True)
 
     notes = models.TextField(blank=True, null=True)
@@ -356,7 +357,7 @@ class Individual(ModelWithGUID):
         unique_together = ('family', 'individual_id')
 
         json_fields = [
-            'guid', 'individual_id', 'paternal_id', 'maternal_id', 'sex', 'affected', 'display_name', 'notes',
+            'guid', 'individual_id', 'father', 'mother', 'sex', 'affected', 'display_name', 'notes',
             'phenotips_patient_id', 'phenotips_data', 'created_date', 'last_modified_date'
         ]
         internal_json_fields = [

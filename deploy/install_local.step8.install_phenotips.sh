@@ -2,6 +2,12 @@
 
 set +x
 set +x
+
+if [ -z "$SEQR_DIR"  ]; then
+    echo "SEQR_DIR environment variable not set. Please run install_general_dependencies.sh as described in step 1 of https://github.com/macarthur-lab/seqr/blob/master/deploy/LOCAL_INSTALL.md"
+    exit 1
+fi
+
 echo
 echo "==== Installing Phenotips ===="
 echo
@@ -17,7 +23,7 @@ wget -nv https://jdbc.postgresql.org/download/postgresql-42.1.4.jar -O ./webapps
 
 cp ${SEQR_DIR}/deploy/docker/phenotips/config/${PT_VERSION}/xwiki.cfg ./webapps/phenotips/WEB-INF/xwiki.cfg
 cp ${SEQR_DIR}/deploy/docker/phenotips/config/${PT_VERSION}/hibernate.cfg.xml ./webapps/phenotips/WEB-INF/hibernate.cfg.xml
-sed -i 's/<property.name="connection.url">.*<\/property>/<property name="connection.url">jdbc:postgresql:\/\/localhost:5432\/xwiki<\/property>/' ./webapps/phenotips/WEB-INF/hibernate.cfg.xml
+sed -i.bak 's/<property.name="connection.url">.*<\/property>/<property name="connection.url">jdbc:postgresql:\/\/localhost:5432\/xwiki<\/property>/' ./webapps/phenotips/WEB-INF/hibernate.cfg.xml
 
 rm -rf data/extension data/jobs
 cp -r ${SEQR_DIR}/deploy/docker/phenotips/init/${PT_VERSION}/extension ./data/extension

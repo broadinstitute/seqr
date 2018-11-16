@@ -75,6 +75,7 @@ export const FAMILY_ANALYSIS_STATUS_OPTIONS = [
 
 // FAMILY FIELDS
 
+export const FAMILY_FIELD_ID = 'familyId'
 export const FAMILY_DISPLAY_NAME = 'displayName'
 export const FAMILY_FIELD_DESCRIPTION = 'description'
 export const FAMILY_FIELD_ANALYSIS_STATUS = 'analysisStatus'
@@ -87,6 +88,7 @@ export const FAMILY_FIELD_FIRST_SAMPLE = 'firstSample'
 export const FAMILY_FIELD_CODED_PHENOTYPE = 'codedPhenotype'
 export const FAMILY_FIELD_OMIM_NUMBER = 'postDiscoveryOmimNumber'
 export const FAMILY_FIELD_PEDIGREE = 'pedigreeImage'
+export const FAMILY_FIELD_CREATED_DATE = 'createdDate'
 
 export const FAMILY_FIELD_RENDER_LOOKUP = {
   [FAMILY_FIELD_DESCRIPTION]: { name: 'Family Description' },
@@ -118,15 +120,15 @@ export const FAMILY_DETAIL_FIELDS = [
 // INDIVIDUAL FIELDS
 
 export const SEX_OPTIONS = [
-  { value: 'M', label: 'Male' },
-  { value: 'F', label: 'Female' },
-  { value: 'U', label: '?' },
+  { value: 'M', text: 'Male' },
+  { value: 'F', text: 'Female' },
+  { value: 'U', text: '?' },
 ]
 
 export const SEX_LOOKUP = SEX_OPTIONS.reduce(
   (acc, opt) => ({
     ...acc,
-    ...{ [opt.value]: opt.label === '?' ? 'Unknown' : opt.label },
+    ...{ [opt.value]: opt.text === '?' ? 'Unknown' : opt.text },
   }), {},
 )
 
@@ -134,15 +136,15 @@ export const AFFECTED = 'A'
 export const UNAFFECTED = 'N'
 export const UNKNOWN_AFFECTED = 'U'
 export const AFFECTED_OPTIONS = [
-  { value: AFFECTED, label: 'Affected' },
-  { value: UNAFFECTED, label: 'Unaffected' },
-  { value: UNKNOWN_AFFECTED, label: '?' },
+  { value: AFFECTED, text: 'Affected' },
+  { value: UNAFFECTED, text: 'Unaffected' },
+  { value: UNKNOWN_AFFECTED, text: '?' },
 ]
 
 export const AFFECTED_LOOKUP = AFFECTED_OPTIONS.reduce(
   (acc, opt) => ({
     ...acc,
-    ...{ [opt.value]: opt.label === '?' ? 'Unknown' : opt.label },
+    ...{ [opt.value]: opt.text === '?' ? 'Unknown' : opt.text },
   }), {},
 )
 
@@ -527,7 +529,8 @@ export const VEP_CONSEQUENCE_ORDER_LOOKUP = ORDERED_VEP_CONSEQUENCES.reduce((acc
 
 export const EXCLUDED_TAG_NAME = 'Excluded'
 export const REVIEW_TAG_NAME = 'Review'
-export const DISCOVERY_TAG_CATEGORY = 'CMG Discovery Tags'
+export const KNOWN_GENE_FOR_PHENOTYPE_TAG_NAME = 'Known gene for phenotype'
+export const DISCOVERY_CATEGORY_NAME = 'CMG Discovery Tags'
 
 
 export const SORT_BY_FAMILY_GUID = 'FAMILY_GUID'
@@ -612,6 +615,12 @@ export const VARIANT_HIDE_REVIEW_FIELD = {
   label: 'Hide Review Only',
   labelHelp: 'Remove all variants tagged with only the "Review" tag from the results',
 }
+export const VARIANT_HIDE_KNOWN_GENE_FOR_PHENOTYPE_FIELD = {
+  name: 'hideKnownGeneForPhenotype',
+  component: InlineToggle,
+  label: 'Hide Known Gene For Phenotype',
+  labelHelp: 'Remove all variants tagged with the "Known Gene For Phenotype" tag from the results',
+}
 export const VARIANT_PER_PAGE_FIELD = {
   name: 'recordsPerPage',
   component: Dropdown,
@@ -664,7 +673,7 @@ export const VARIANT_GENOTYPE_EXPORT_DATA = [
   { header: 'ab' },
 ]
 
-export const getVariantsExportData = (variants) => {
+export const getVariantsExportData = (variants, samplesByGuid) => {
   const maxGenotypes = Math.max(...variants.map(variant => Object.keys(variant.genotypes).length), 0)
   return {
     rawData: variants,
@@ -672,10 +681,9 @@ export const getVariantsExportData = (variants) => {
       (acc, i) => [...acc, ...VARIANT_GENOTYPE_EXPORT_DATA.map(config => `${config.header}_${i + 1}`)],
       VARIANT_EXPORT_DATA.map(config => config.header),
     ),
-    processRow: variant => Object.keys(variant.genotypes).reduce(
-      (acc, individualId) => [...acc, ...VARIANT_GENOTYPE_EXPORT_DATA.map((config) => {
-        const genotype = variant.genotypes[individualId]
-        return config.getVal ? config.getVal(genotype, individualId) : genotype[config.header]
+    processRow: variant => Object.entries(variant.genotypes).reduce(
+      (acc, [sampleGuid, genotype]) => [...acc, ...VARIANT_GENOTYPE_EXPORT_DATA.map((config) => {
+        return config.getVal ? config.getVal(genotype, samplesByGuid[sampleGuid]) : genotype[config.header]
       })],
       VARIANT_EXPORT_DATA.map(config => (config.getVal ? config.getVal(variant) : variant[config.header])),
     ),

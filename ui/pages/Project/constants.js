@@ -2,6 +2,7 @@
 
 import orderBy from 'lodash/orderBy'
 
+import { RadioGroup } from 'shared/components/form/Inputs'
 import { hasPhenotipsDetails } from 'shared/components/panel/view-phenotips-info/PhenotipsDataPanel'
 import { stripMarkdown } from 'shared/utils/stringUtils'
 import {
@@ -15,11 +16,25 @@ import {
   FAMILY_STATUS_REVIEWED_PURSUING_CANDIDATES,
   FAMILY_STATUS_REVIEWED_NO_CLEAR_CANDIDATE,
   FAMILY_STATUS_ANALYSIS_IN_PROGRESS,
+  FAMILY_FIELD_ID,
+  FAMILY_DISPLAY_NAME,
+  FAMILY_FIELD_DESCRIPTION,
+  FAMILY_FIELD_ANALYSIS_STATUS,
+  FAMILY_FIELD_ANALYSED_BY,
+  FAMILY_FIELD_ANALYSIS_NOTES,
+  FAMILY_FIELD_ANALYSIS_SUMMARY,
+  FAMILY_FIELD_INTERNAL_NOTES,
+  FAMILY_FIELD_INTERNAL_SUMMARY,
+  FAMILY_FIELD_FIRST_SAMPLE,
+  FAMILY_FIELD_CREATED_DATE,
+  FAMILY_FIELD_CODED_PHENOTYPE,
   FAMILY_ANALYSIS_STATUS_OPTIONS,
   SAMPLE_STATUS_LOADED,
   DATASET_TYPE_VARIANT_CALLS,
   SEX_LOOKUP,
+  SEX_OPTIONS,
   AFFECTED_LOOKUP,
+  AFFECTED_OPTIONS,
 } from 'shared/utils/constants'
 
 export const CASE_REVIEW_TABLE_NAME = 'Case Review'
@@ -347,54 +362,135 @@ export const FAMILY_SORT_OPTIONS = [
   },
 ]
 
-export const FAMILY_EXPORT_DATA = [
-  { header: 'Family ID', field: 'familyId' },
-  { header: 'Display Name', field: 'displayName' },
-  { header: 'Created Date', field: 'createdDate' },
-  { header: 'First Data Loaded Date', field: 'firstSample', format: firstSample => (firstSample || {}).loadedDate },
-  { header: 'Description', field: 'description', format: stripMarkdown },
-  {
-    header: 'Analysis Status',
-    field: 'analysisStatus',
+const exportConfigForField = fieldConfigs => (field) => {
+  const  { label, format, description } = fieldConfigs[field]
+  return { field,  header: label, format, description }
+}
+
+const tableConfigForField = fieldConfigs => (field) => {
+  const  { label, width, formFieldProps = {} } = fieldConfigs[field]
+  return { name: field,  content: label, width, formFieldProps }
+}
+
+const FAMILY_FIELD_CONFIGS = {
+  [FAMILY_FIELD_ID]: { label: 'Family ID', width: 2 },
+  [FAMILY_DISPLAY_NAME]: { label: 'Display Name', width: 3, description: 'The human-readable family name to show in place of the family ID' },
+  [FAMILY_FIELD_CREATED_DATE]: { label: 'Created Date' },
+  [FAMILY_FIELD_FIRST_SAMPLE]: { label: 'First Data Loaded Date', format: firstSample => (firstSample || {}).loadedDate },
+  [FAMILY_FIELD_DESCRIPTION]: { label: 'Description', format: stripMarkdown, width: 10, description: 'A short description of the family' },
+  [FAMILY_FIELD_ANALYSIS_STATUS]: {
+    label: 'Analysis Status',
     format: status => (FAMILY_ANALYSIS_STATUS_OPTIONS.find(option => option.value === status) || {}).name,
   },
-  { header: 'Analysed By', field: 'analysedBy', format: analysedBy => analysedBy.map(o => o.createdBy.fullName || o.createdBy.email).join(',') },
-  { header: 'Analysis Summary', field: 'analysisSummary', format: stripMarkdown },
-  { header: 'Analysis Notes', field: 'analysisNotes', format: stripMarkdown },
-]
+  [FAMILY_FIELD_ANALYSED_BY]: { label: 'Analysed By', format: analysedBy => analysedBy.map(o => o.createdBy.fullName || o.createdBy.email).join(',') },
+  [FAMILY_FIELD_ANALYSIS_SUMMARY]: { label: 'Analysis Summary', format: stripMarkdown },
+  [FAMILY_FIELD_ANALYSIS_NOTES]: { label: 'Analysis Notes', format: stripMarkdown },
+  [FAMILY_FIELD_CODED_PHENOTYPE]: { label: 'Coded Phenotype', width: 4, description: "High level summary of the family's phenotype/disease" },
+}
+
+export const FAMILY_FIELDS = [
+  FAMILY_FIELD_ID, FAMILY_FIELD_DESCRIPTION, FAMILY_FIELD_CODED_PHENOTYPE,
+].map(tableConfigForField(FAMILY_FIELD_CONFIGS))
+
+export const FAMILY_EXPORT_DATA = [
+  FAMILY_FIELD_ID,
+  FAMILY_DISPLAY_NAME,
+  FAMILY_FIELD_CREATED_DATE,
+  FAMILY_FIELD_FIRST_SAMPLE,
+  FAMILY_FIELD_DESCRIPTION,
+  FAMILY_FIELD_ANALYSIS_STATUS,
+  FAMILY_FIELD_ANALYSED_BY,
+  FAMILY_FIELD_ANALYSIS_SUMMARY,
+  FAMILY_FIELD_ANALYSIS_NOTES,
+].map(exportConfigForField(FAMILY_FIELD_CONFIGS))
+
+export const FAMILY_BULK_EDIT_EXPORT_DATA = [
+  FAMILY_FIELD_ID,
+  FAMILY_DISPLAY_NAME,
+  FAMILY_FIELD_DESCRIPTION,
+  FAMILY_FIELD_CODED_PHENOTYPE,
+].map(exportConfigForField(FAMILY_FIELD_CONFIGS))
 
 export const INTERNAL_FAMILY_EXPORT_DATA = [
-  { header: 'Internal Case Review Summary', field: 'internalCaseReviewSummary', format: stripMarkdown },
-  { header: 'Internal Case Review Notes', field: 'internalCaseReviewNotes', format: stripMarkdown },
+  { header: 'Internal Case Review Summary', field: FAMILY_FIELD_INTERNAL_SUMMARY, format: stripMarkdown },
+  { header: 'Internal Case Review Notes', field: FAMILY_FIELD_INTERNAL_NOTES, format: stripMarkdown },
 ]
 
-export const INDIVIDUAL_EXPORT_DATA = [
-  { header: 'Family ID', field: 'familyId' },
-  { header: 'Individual ID', field: 'individualId' },
-  { header: 'Paternal ID', field: 'paternalId' },
-  { header: 'Maternal ID', field: 'maternalId' },
-  { header: 'Sex', field: 'sex', format: sex => SEX_LOOKUP[sex] },
-  { header: 'Affected Status', field: 'affected', format: affected => AFFECTED_LOOKUP[affected] },
-  { header: 'Notes', field: 'notes', format: stripMarkdown  },
+const INDIVIDUAL_FIELD_ID = 'individualId'
+const INDIVIDUAL_FIELD_PATERNAL_ID = 'paternalId'
+const INDIVIDUAL_FIELD_MATERNAL_ID = 'maternalId'
+const INDIVIDUAL_FIELD_SEX = 'sex'
+const INDIVIDUAL_FIELD_AFFECTED = 'affected'
+const INDIVIDUAL_FIELD_NOTES = 'notes'
+
+const INDIVIDUAL_FIELD_CONFIGS = {
+  [FAMILY_FIELD_ID]: { label: 'Family ID' },
+  [INDIVIDUAL_FIELD_ID]: { label: 'Individual ID' },
+  [INDIVIDUAL_FIELD_PATERNAL_ID]: { label: 'Paternal ID', description: 'Individual ID of the father' },
+  [INDIVIDUAL_FIELD_MATERNAL_ID]: { label: 'Maternal ID', description: 'Individual ID of the mother' },
+  [INDIVIDUAL_FIELD_SEX]: {
+    label: 'Sex',
+    format: sex => SEX_LOOKUP[sex],
+    width: 3,
+    description: 'Male or Female, leave blank if unknown',
+    formFieldProps: { component: RadioGroup, options: SEX_OPTIONS },
+  },
+  [INDIVIDUAL_FIELD_AFFECTED]: {
+    label: 'Affected Status',
+    format: affected => AFFECTED_LOOKUP[affected],
+    width: 4,
+    description: 'Affected or Unaffected, leave blank if unknown',
+    formFieldProps: { component: RadioGroup, options: AFFECTED_OPTIONS },
+  },
+  [INDIVIDUAL_FIELD_NOTES]: { label: 'Notes', format: stripMarkdown, description: 'free-text notes related to this individual'  },
+}
+
+export const INDIVIDUAL_FIELDS = [
+  FAMILY_FIELD_ID,
+  INDIVIDUAL_FIELD_ID,
+  INDIVIDUAL_FIELD_PATERNAL_ID,
+  INDIVIDUAL_FIELD_MATERNAL_ID,
+  INDIVIDUAL_FIELD_SEX,
+  INDIVIDUAL_FIELD_AFFECTED,
+].map(tableConfigForField(INDIVIDUAL_FIELD_CONFIGS))
+
+export const INDIVIDUAL_ID_EXPORT_DATA = [
+  FAMILY_FIELD_ID, INDIVIDUAL_FIELD_ID,
+].map(exportConfigForField(INDIVIDUAL_FIELD_CONFIGS))
+
+export const INDIVIDUAL_CORE_EXPORT_DATA = [
+  INDIVIDUAL_FIELD_PATERNAL_ID,
+  INDIVIDUAL_FIELD_MATERNAL_ID,
+  INDIVIDUAL_FIELD_SEX,
+  INDIVIDUAL_FIELD_AFFECTED,
+  INDIVIDUAL_FIELD_NOTES,
+].map(exportConfigForField(INDIVIDUAL_FIELD_CONFIGS))
+
+export const INDIVIDUAL_HPO_EXPORT_DATA = [
   {
     header: 'HPO Terms (present)',
     field: 'phenotipsData',
     format: phenotipsData => (
       (phenotipsData || {}).features ?
-        phenotipsData.features.filter(feature => feature.observed === 'yes').map(feature => feature.label).join(', ') :
+        phenotipsData.features.filter(feature => feature.observed === 'yes').map(feature => `${feature.id} (${feature.label})`).join('; ') :
         ''
     ),
+    description: 'comma-separated list of HPO Terms for present phenotypes in this individual',
   },
   {
     header: 'HPO Terms (absent)',
     field: 'phenotipsData',
     format: phenotipsData => (
       (phenotipsData || {}).features ?
-        phenotipsData.features.filter(feature => feature.observed === 'no').map(feature => feature.label).join(', ') :
+        phenotipsData.features.filter(feature => feature.observed === 'no').map(feature => `${feature.id} (${feature.label})`).join('; ') :
         ''
     ),
+    description: 'comma-separated list of HPO Terms for phenotypes not present in this individual',
   },
 ]
+
+export const INDIVIDUAL_EXPORT_DATA = [].concat(INDIVIDUAL_ID_EXPORT_DATA, INDIVIDUAL_CORE_EXPORT_DATA, INDIVIDUAL_HPO_EXPORT_DATA)
+
 
 export const INTERNAL_INDIVIDUAL_EXPORT_DATA = [
   { header: 'Case Review Status', field: 'caseReviewStatus', format: status => CASE_REVIEW_STATUS_OPT_LOOKUP[status].name },

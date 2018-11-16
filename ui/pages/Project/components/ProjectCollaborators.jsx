@@ -5,6 +5,7 @@ import styled from 'styled-components'
 
 import { Table, Popup } from 'semantic-ui-react'
 import { connect } from 'react-redux'
+import { NoBorderTable } from 'shared/components/StyledComponents'
 import { getProject } from '../selectors'
 
 const NameCell = styled(Table.Cell)`
@@ -17,12 +18,12 @@ const ManagerCell = styled(Table.Cell)`
 `
 
 const ProjectCollaborators = props => (
-  <Table className="noBorder" compact="very">
-    <Table.Body className="noBorder">
+  <NoBorderTable compact="very">
+    <Table.Body>
       {
         orderBy(props.project.collaborators, [c => c.hasEditPermissions, c => c.email], ['desc', 'asc']).map((c, i) =>
-          <Table.Row key={c.email} className="noBorder">
-            <NameCell className="noBorder">
+          <Table.Row key={c.email}>
+            <NameCell>
               {c.displayName ? `${c.displayName} ▪ ` : null}
               {
                  c.email ?
@@ -30,7 +31,7 @@ const ProjectCollaborators = props => (
               }
 
             </NameCell>
-            <ManagerCell className="noBorder">
+            <ManagerCell>
               <Popup
                 position="top center"
                 trigger={<b style={{ cursor: 'pointer' }}> {c.hasEditPermissions ? ' † ' : ' '}</b>}
@@ -42,7 +43,7 @@ const ProjectCollaborators = props => (
         )
       }
     </Table.Body>
-  </Table>
+  </NoBorderTable>
 )
 
 

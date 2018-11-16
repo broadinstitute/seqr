@@ -164,6 +164,8 @@ def _get_json_for_families(families, user=None, add_individual_guids_field=False
             result['pedigreeImage'] = pedigree_image
         if add_individual_guids_field:
             result['individualGuids'] = [i.guid for i in family.individual_set.all()]
+        if not result['displayName']:
+            result['displayName'] = result['familyId']
 
     prefetch_related_objects(families, 'familyanalysedby_set')
     if add_individual_guids_field:
@@ -188,7 +190,7 @@ def _get_json_for_family(family, user=None, **kwargs):
     return _get_json_for_model(family, get_json_for_models=_get_json_for_families, user=user, **kwargs)
 
 
-def _get_json_for_individuals(individuals, user=None, project_guid=None, family_guid=None, add_sample_guids_field=False):
+def _get_json_for_individuals(individuals, user=None, project_guid=None, family_guid=None, add_sample_guids_field=False, add_family_id_field=False):
     """Returns a JSON representation for the given list of Individuals.
 
     Args:
@@ -214,10 +216,17 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, family_
         return phenotips_json
 
     def _process_result(result, individual):
+        mother = result.pop('mother', None)
+        father = result.pop('father', None)
+
         result.update({
             'caseReviewStatusLastModifiedBy': _get_case_review_status_modified_by(result.get('caseReviewStatusLastModifiedBy')),
-            'phenotipsData': _load_phenotips_data(result['phenotipsData'])
+            'phenotipsData': _load_phenotips_data(result['phenotipsData']),
+            'maternalId': mother.individual_id if mother else None,
+            'paternalId': father.individual_id if father else None,
+            'displayName': result['displayName'] or result['individualId'],
         })
+
         if add_sample_guids_field:
             result['sampleGuids'] = [s.guid for s in individual.sample_set.all()]
 
@@ -225,6 +234,8 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, family_
         {'fields': ('family', 'guid'), 'value': family_guid},
         {'fields': ('family', 'project', 'guid'), 'key': 'projectGuid', 'value': project_guid},
     ]
+    if add_family_id_field:
+        nested_fields.append({'fields': ('family', 'family_id'), 'key': 'familyId'})
 
     if add_sample_guids_field:
         prefetch_related_objects(individuals, 'sample_set')

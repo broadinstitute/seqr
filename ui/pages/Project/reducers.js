@@ -123,6 +123,23 @@ export const updateIndividuals = (values) => {
   }
 }
 
+export const updateIndividualsHpoTerms = ({ updatesByIndividualGuid }) => {
+  return (dispatch, getState) => {
+    const errors = []
+
+    return Promise.all(Object.entries(updatesByIndividualGuid).map(([individualGuid, values]) =>
+      new HttpRequestHelper(`/api/individual/${individualGuid}/update_hpo_terms`,
+        responseJson => dispatch({ type: RECEIVE_DATA, updatesById: { [individualGuid]: responseJson } }),
+        e => errors.push(`Error updating ${getState().individualsByGuid[individualGuid].individualId}: ${e.message}`),
+      ).post(values),
+    )).then(() => {
+      if (errors.length) {
+        throw new SubmissionError({ _error: errors })
+      }
+    })
+  }
+}
+
 export const addDataset = (values) => {
   return (dispatch, getState) => {
     return new HttpRequestHelper(`/api/project/${getState().currentProjectGuid}/add_dataset`,

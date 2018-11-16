@@ -6,6 +6,8 @@ import {
   FAMILY_ANALYSIS_STATUS_OPTIONS,
   EXCLUDED_TAG_NAME,
   REVIEW_TAG_NAME,
+  KNOWN_GENE_FOR_PHENOTYPE_TAG_NAME,
+  DISCOVERY_CATEGORY_NAME,
   SORT_BY_FAMILY_GUID,
   VARIANT_SORT_LOOKUP,
   getVariantsExportData,
@@ -88,7 +90,7 @@ export const getProjectAnalysisGroupIndividualsByGuid = createSelector(
     Object.values(familiesByGuid).reduce((acc, family) => ({
       ...acc,
       ...family.individualGuids.reduce((indivAcc, individualGuid) => (
-        { ...indivAcc, [individualGuid]: individualsByGuid[individualGuid] }
+        { ...indivAcc, [individualGuid]: { ...individualsByGuid[individualGuid], familyId: family.familyId } }
       ), {}),
     }), {}),
 )
@@ -112,6 +114,7 @@ export const getSavedVariantCategoryFilter = state => state.savedVariantTableSta
 export const getSavedVariantSortOrder = state => state.savedVariantTableState.sortOrder || SORT_BY_FAMILY_GUID
 export const getSavedVariantHideExcluded = state => state.savedVariantTableState.hideExcluded
 export const getSavedVariantHideReviewOnly = state => state.savedVariantTableState.hideReviewOnly
+const getSavedVariantHideKnownGeneForPhenotype = state => state.savedVariantTableState.hideKnownGeneForPhenotype
 export const getSavedVariantCurrentPage = state => state.savedVariantTableState.currentPage || 1
 export const getSavedVariantRecordsPerPage = state => state.savedVariantTableState.recordsPerPage || 25
 
@@ -146,8 +149,9 @@ export const getFilteredProjectSavedVariants = createSelector(
   getSavedVariantCategoryFilter,
   getSavedVariantHideExcluded,
   getSavedVariantHideReviewOnly,
+  getSavedVariantHideKnownGeneForPhenotype,
   (state, props) => props.match.params.tag,
-  (projectSavedVariants, categoryFilter, hideExcluded, hideReviewOnly, tag) => {
+  (projectSavedVariants, categoryFilter, hideExcluded, hideReviewOnly, hideKnownGeneForPhenotype, tag) => {
     let variantsToShow = projectSavedVariants
     if (hideExcluded) {
       variantsToShow = variantsToShow.filter(variant => variant.tags.every(t => t.name !== EXCLUDED_TAG_NAME))
@@ -155,8 +159,14 @@ export const getFilteredProjectSavedVariants = createSelector(
     if (hideReviewOnly) {
       variantsToShow = variantsToShow.filter(variant => variant.tags.length !== 1 || variant.tags[0].name !== REVIEW_TAG_NAME)
     }
-    if (!tag && categoryFilter !== SHOW_ALL) {
-      variantsToShow = variantsToShow.filter(variant => variant.tags.some(t => t.category === categoryFilter))
+    if (!tag) {
+      if (hideKnownGeneForPhenotype && categoryFilter === DISCOVERY_CATEGORY_NAME) {
+        variantsToShow = variantsToShow.filter(variant => variant.tags.every(t => t.name !== KNOWN_GENE_FOR_PHENOTYPE_TAG_NAME))
+      }
+
+      if (categoryFilter !== SHOW_ALL) {
+        variantsToShow = variantsToShow.filter(variant => variant.tags.some(t => t.category === categoryFilter))
+      }
     }
     return variantsToShow
   },
@@ -186,6 +196,7 @@ export const getSavedVariantTotalPages = createSelector(
 
 export const getSavedVariantExportConfig = createSelector(
   getFilteredProjectSavedVariants,
+  getSamplesByGuid,
   getVariantsExportData,
 )
 

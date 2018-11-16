@@ -235,7 +235,7 @@ export const RadioGroup = (props) => {
   return (
     <InlineFormGroup margin={margin} widths={widths}>
       {/* eslint-disable-next-line jsx-a11y/label-has-for */}
-      <label>{label}</label>
+      {label && <label>{label}</label>}
       {options.map(option =>
         <BaseSemanticInput
           {...baseProps}

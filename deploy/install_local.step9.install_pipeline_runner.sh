@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 
 set +x
+
+if [ -z "$SEQR_DIR"  ]; then
+    echo "SEQR_DIR environment variable not set. Please run install_general_dependencies.sh as described in step 1 of https://github.com/macarthur-lab/seqr/blob/master/deploy/LOCAL_INSTALL.md"
+    exit 1
+fi
+
 #set +x
 #echo
 #echo "==== Installing legacy resources ===="
@@ -58,8 +64,9 @@ cpanm --sudo --notest List::MoreUtils
 cp ${SEQR_DIR}/hail_elasticsearch_pipelines/hail_builds/v01/gcs-connector-1.6.10-hadoop2.jar ${SPARK_HOME}/jars/
 cp ${SEQR_DIR}/deploy/docker/pipeline-runner/config/core-site.xml ${SPARK_HOME}/conf/
 
-sudo mkdir -p /vep/loftee_data_grch37 /vep/loftee_data_grch38 /vep/homo_sapiens
-sudo chmod 777 -R /vep
+mkdir -p ${SEQR_DIR}/vep/loftee_data_grch37 ${SEQR_DIR}/vep/loftee_data_grch38 ${SEQR_DIR}/vep/homo_sapiens
+sudo ln -s ${SEQR_DIR}/vep /vep
+sudo chmod -R 777 /vep
 
 if [ ! -f /usr/local/bin/perl ]
 then

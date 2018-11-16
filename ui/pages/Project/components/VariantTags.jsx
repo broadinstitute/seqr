@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom'
 import { Popup, Table } from 'semantic-ui-react'
 
 import { getVariantTagTypeCount, getSavedVariantsLinkPath } from 'shared/components/graph/VariantTagTypeBar'
-import { ColoredIcon, HelpIcon } from 'shared/components/StyledComponents'
+import { ColoredIcon, HelpIcon, NoBorderTable } from 'shared/components/StyledComponents'
 
 const TableRow = styled(Table.Row)`
   padding: 0px !important;`
@@ -14,7 +14,7 @@ const TableCell = styled(Table.Cell)`
   padding: 0 0 0 10px !important;`
 
 const VariantTags = ({ project, analysisGroup }) =>
-  <Table basic="very" compact="very">
+  <NoBorderTable basic="very" compact="very">
     <Table.Body>
       {
         project.variantTagTypes && project.variantTagTypes.map(variantTagType => (
@@ -43,7 +43,7 @@ const VariantTags = ({ project, analysisGroup }) =>
         )
       }
     </Table.Body>
-  </Table>
+  </NoBorderTable>
 
 
 VariantTags.propTypes = {

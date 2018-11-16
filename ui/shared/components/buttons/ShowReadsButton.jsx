@@ -24,7 +24,7 @@ const BAM_TRACK_OPTIONS = {
 
 const ShowReadsButton = ({ variant, familyGuid, samplesByGuid, individualsByGuid }) => {
 
-  const locus = getLocus(variant, 100)
+  const locus = getLocus(variant.chrom, variant.pos, 100)
 
   const latestSamplesForIndividuals = Object.values(samplesByGuid).filter(sample => (
     sample.loadedDate &&
@@ -42,7 +42,7 @@ const ShowReadsButton = ({ variant, familyGuid, samplesByGuid, individualsByGuid
 
     const trackOptions = sample.datasetFilePath.endsWith('.cram') ? CRAM_TRACK_OPTIONS : BAM_TRACK_OPTIONS
     const trackName = ReactDOMServer.renderToString(
-      <span><PedigreeIcon sex={individual.sex} affected={individual.affected} />{individual.individualId}</span>,
+      <span><PedigreeIcon sex={individual.sex} affected={individual.affected} />{individual.displayName}</span>,
     )
     return {
       url: `/api/project/${sample.projectGuid}/igv_track/${encodeURIComponent(sample.datasetFilePath)}`,

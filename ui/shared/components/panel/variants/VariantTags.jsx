@@ -6,7 +6,7 @@ import styled from 'styled-components'
 
 import { updateVariantNote, updateVariantTags } from 'redux/rootReducer'
 import { getProjectsByGuid } from 'redux/selectors'
-import { DISCOVERY_TAG_CATEGORY } from '../../../utils/constants'
+import { DISCOVERY_CATEGORY_NAME } from 'shared/utils/constants'
 import { HorizontalSpacer } from '../../Spacers'
 import ReduxFormWrapper from '../../form/ReduxFormWrapper'
 import { InlineToggle, BooleanCheckbox } from '../../form/Inputs'
@@ -170,7 +170,7 @@ const VariantTags = ({ variant, project, updateVariantNote: dispatchUpdateVarian
         onSubmit={dispatchUpdateVariantTags}
       />
       <HorizontalSpacer width={5} />
-      {variant.tags.some(tag => tag.category === DISCOVERY_TAG_CATEGORY) &&
+      {variant.tags.some(tag => tag.category === DISCOVERY_CATEGORY_NAME) &&
         <span>
           <TagTitle>Fxnl Data:</TagTitle>
           <VariantTagField

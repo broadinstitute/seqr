@@ -12,7 +12,8 @@ from seqr.views.apis.family_api import \
     update_family_fields_handler, \
     edit_families_handler, \
     delete_families_handler, \
-    update_family_analysed_by
+    update_family_analysed_by, \
+    receive_families_table_handler
 
 from seqr.views.apis.individual_api import \
     update_individual_handler, \
@@ -24,7 +25,9 @@ from seqr.views.apis.individual_api import \
 from seqr.views.apis.phenotips_api import \
     proxy_to_phenotips, \
     phenotips_pdf_handler, \
-    phenotips_edit_handler
+    phenotips_edit_handler, \
+    receive_hpo_table_handler, \
+    update_individual_hpo_terms
 
 from seqr.views.apis.case_review_api import \
     save_internal_case_review_notes, \
@@ -94,6 +97,7 @@ react_app_pages = [
 # NOTE: the actual url will be this with an '/api' prefix
 api_endpoints = {
     'individual/(?P<individual_guid>[\w.|-]+)/update': update_individual_handler,
+    'individual/(?P<individual_guid>[\w.|-]+)/update_hpo_terms': update_individual_hpo_terms,
 
     'family/(?P<family_guid>[^/]+)/details': family_page_data,
     'family/(?P<family_guid>[\w.|-]+)/save_internal_case_review_notes': save_internal_case_review_notes,
@@ -118,6 +122,7 @@ api_endpoints = {
     'project/(?P<project_guid>[^/]+)/delete_families': delete_families_handler,
     'project/(?P<project_guid>[^/]+)/edit_individuals': edit_individuals_handler,
     'project/(?P<project_guid>[^/]+)/delete_individuals': delete_individuals_handler,
+    'project/(?P<project_guid>[^/]+)/upload_families_table': receive_families_table_handler,
 
     'project/(?P<project_guid>[^/]+)/upload_individuals_table': receive_individuals_table_handler,
     'project/(?P<project_guid>[^/]+)/save_individuals_table/(?P<upload_file_id>[^/]+)': save_individuals_table_handler,
@@ -126,6 +131,7 @@ api_endpoints = {
     'project/(?P<project_guid>[^/]+)/igv_track/(?P<igv_track_path>.+)': fetch_igv_track,
     'project/(?P<project_guid>[^/]+)/individual/(?P<individual_guid>[\w.|-]+)/phenotips_pdf': phenotips_pdf_handler,
     'project/(?P<project_guid>[^/]+)/individual/(?P<individual_guid>[\w.|-]+)/phenotips_edit': phenotips_edit_handler,
+    'project/(?P<project_guid>[^/]+)/upload_hpo_terms_table': receive_hpo_table_handler,
 
     'project/(?P<project_guid>[^/]+)/analysis_groups/create': update_analysis_group_handler,
     'project/(?P<project_guid>[^/]+)/analysis_groups/(?P<analysis_group_guid>[^/]+)/update': update_analysis_group_handler,

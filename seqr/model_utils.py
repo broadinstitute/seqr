@@ -46,6 +46,8 @@ SEQR_TO_XBROWSE_FIELD_MAPPING = {
         "display_name": "nickname",
         "phenotips_eid": "phenotips_id",
         "notes": "other_notes",
+        "mother": "maternal_id",
+        "father": "paternal_id",
     },
     "VariantTagType": {
         "name": "tag",
@@ -87,14 +89,18 @@ SEQR_TO_XBROWSE_FIELD_MAPPING = {
 }
 
 FLATTENED_MODEL_FIELDS = {
+    'Individual': {
+        'maternal_id':  {'field': 'individual_id'},
+        'paternal_id':  {'field': 'individual_id'},
+    },
     'VariantTag': {
-        'saved_variant': ['xpos_start', 'ref', 'alt', 'family']
+        'saved_variant': {'fields': ['xpos_start', 'ref', 'alt', 'family']}
     },
     'VariantFunctionalData': {
-        'saved_variant': ['xpos_start', 'ref', 'alt', 'family']
+        'saved_variant': {'fields': ['xpos_start', 'ref', 'alt', 'family']}
     },
     'VariantNote': {
-        'saved_variant': ['xpos_start', 'ref', 'alt', 'family', 'project']
+        'saved_variant': {'fields': ['xpos_start', 'ref', 'alt', 'family', 'project']}
     },
 }
 
@@ -237,9 +243,13 @@ def convert_seqr_kwargs_to_xbrowse_kwargs(seqr_model, **kwargs):
     for key, value in xbrowse_kwargs.items():
         if _is_seqr_model(value):
             if key in FLATTENED_MODEL_FIELDS.get(seqr_class_name, {}):
-                nested_model_kwargs = {k: getattr(value, k, None) for k in FLATTENED_MODEL_FIELDS[seqr_class_name][key]}
-                xbrowse_kwargs.update(convert_seqr_kwargs_to_xbrowse_kwargs(value, **nested_model_kwargs))
-                del xbrowse_kwargs[key]
+                nested_config = FLATTENED_MODEL_FIELDS[seqr_class_name][key]
+                if nested_config.get('fields'):
+                    nested_model_kwargs = {k: getattr(value, k, None) for k in nested_config['fields']}
+                    xbrowse_kwargs.update(convert_seqr_kwargs_to_xbrowse_kwargs(value, **nested_model_kwargs))
+                    del xbrowse_kwargs[key]
+                elif nested_config.get('field'):
+                    xbrowse_kwargs[key] = getattr(value, nested_config['field'], None)
             else:
                 if key == 'project_tag':
                     value.project = seqr_model.saved_variant.project

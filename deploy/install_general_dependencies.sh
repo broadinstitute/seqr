@@ -42,8 +42,9 @@ set +x
 echo ==== Adjust system settings for elasticsearch =====
 set -x
 
-if (( $(sysctl -b vm.max_map_count) < 262144 )); then
-
+# vm.max_map_count needs to be increased on linux for elasticsearch to run. It's not necessary on Mac.
+MAX_MAP_COUNT=$(sysctl -b vm.max_map_count)
+if [[ -n "$MAX_MAP_COUNT" ]] && (( $MAX_MAP_COUNT < 262144 )); then
     echo '
 vm.max_map_count=262144
 ' | sudo tee -a /etc/sysctl.conf
@@ -178,7 +179,7 @@ elif [ $PLATFORM = "ubuntu" ]; then
     sudo apt-get update && sudo apt-get install -y google-cloud-sdk
 
     # make sure crcmod is installed for copying files with gsutil
-    sudo apt-get install gcc python-dev python-setuptools
+    sudo apt-get install -y gcc python-dev python-setuptools
     sudo easy_install -U pip
     sudo pip uninstall crcmod
     sudo pip install -U crcmod

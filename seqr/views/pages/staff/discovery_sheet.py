@@ -4,12 +4,16 @@ import json
 import logging
 import re
 import requests
+import tempfile
+import openpyxl as xl
 
 from django.contrib.admin.views.decorators import staff_member_required
 from django.core.exceptions import ObjectDoesNotExist
+from django.core.mail.message import EmailMultiAlternatives
 from django.utils import timezone
 
 from seqr.views.utils.export_table_utils import export_table
+from seqr.views.utils.json_utils import create_json_response, _to_title_case
 from xbrowse_server.mall import get_reference
 from xbrowse import genomeloc
 from reference_data.models import HPO_CATEGORY_NAMES
@@ -112,7 +116,27 @@ def discovery_sheet(request, project_guid=None):
                 generate_rows(project, errors)
             )
 
-        return export_table("discovery_sheet", HEADER, rows, file_format="xls")
+        temp_file = tempfile.NamedTemporaryFile()
+        wb_out = xl.Workbook()
+        ws_out = wb_out.active
+        ws_out.append(map(_to_title_case, HEADER))
+        for row in rows:
+            ws_out.append([row[column_key] for column_key in HEADER])
+        wb_out.save(temp_file.name)
+        temp_file.seek(0)
+
+        email_message = EmailMultiAlternatives(
+            subject="Discovery Sheet",
+            body="Attached is the discovery sheet for all seqr projects",
+            to=[request.user.email],
+            attachments=[
+                ("discovery_sheet.xlsx", temp_file.read(), "application/xls"),
+            ],
+        )
+        email_message.send()
+        logger.info("emailing discovery sheet to {}".format(request.user.email))
+
+        return create_json_response({'errors': errors})
 
     # generate table for 1 project
     try:
@@ -153,7 +177,6 @@ def generate_rows(project, errors):
 
     loaded_samples_by_family = collections.defaultdict(set)
     for sample in loaded_samples:
-        print("Loaded time %s: %s" % (sample, sample.loaded_date))
         loaded_samples_by_family[sample.individual.family.guid].add(sample)
 
     project_variant_tags = list(
@@ -181,11 +204,19 @@ def generate_rows(project, errors):
 
     now = timezone.now()
     for family in Family.objects.filter(project=project).prefetch_related('individual_set'):
-        samples_loaded_date_for_family = [sample.loaded_date for sample in loaded_samples_by_family[family.guid] if
-                                           sample.loaded_date is not None]
-        if not samples_loaded_date_for_family:
+        samples = loaded_samples_by_family[family.guid]
+
+        t0 = min([sample.loaded_date for sample in samples if sample.loaded_date is not None] or [None])
+        if not t0:
             errors.append("No data loaded for family: %s. Skipping..." % family)
             continue
+
+        t0_diff = rdelta.relativedelta(now, t0)
+        t0_months_since_t0 = t0_diff.years * 12 + t0_diff.months
+
+        analysis_complete_status = "first_pass_in_progress"
+        if t0_months_since_t0 >= 12:  # or (project_has_tier1 or project_has_tier2 or project_has_known_gene_for_phenotype):
+            analysis_complete_status = "complete"
 
         individuals = list(family.individual_set.all())
 
@@ -235,15 +266,6 @@ def generate_rows(project, errors):
 
         submitted_to_mme = any([individual.mme_submitted_data for individual in individuals if individual.mme_submitted_data])
 
-        t0 = min(samples_loaded_date_for_family)
-
-        t0_diff = rdelta.relativedelta(now, t0)
-        t0_months_since_t0 = t0_diff.years*12 + t0_diff.months
-
-        analysis_complete_status = "first_pass_in_progress"
-        if t0_months_since_t0 >= 12: # or (project_has_tier1 or project_has_tier2 or project_has_known_gene_for_phenotype):
-            analysis_complete_status = "complete"
-
         row = {
             "extras_pedigree_url": family.pedigree_image.url if family.pedigree_image else "",
 
@@ -262,7 +284,7 @@ def generate_rows(project, errors):
             "omim_number_initial": omim_number_initial or "NA",
             "omim_number_post_discovery": family.post_discovery_omim_number or "NA",
             "collaborator": project.name,  # TODO use email addresses?
-            "analysis_summary": family.analysis_summary.strip('" \n'),
+            "analysis_summary": (family.analysis_summary or '').strip('" \n'),
             "phenotype_class": "Known" if omim_number_initial else "New",  # "disorders"  UE, NEW, MULTI, EXPAN, KNOWN - If there is a MIM number enter "Known" - otherwise put "New"  and then we will need to edit manually for the other possible values
             "solved": "N",  # TIER 1 GENE (or known gene for phenotype also record as TIER 1 GENE), TIER 2 GENE, N - Pull from seqr using tags
             "submitted_to_mme": "Y" if submitted_to_mme else "NS",
@@ -356,15 +378,17 @@ def generate_rows(project, errors):
                 continue
 
             vt.saved_variant_json = json.loads(vt.saved_variant.saved_variant_json)
+            annotation = vt.saved_variant_json.get('annotation') or {}
 
-            if "coding_gene_ids" not in vt.saved_variant_json["annotation"] and "gene_ids" not in vt.saved_variant_json["annotation"]:
+            if "coding_gene_ids" not in annotation and "gene_ids" not in annotation:
                 errors.append("%s - no gene_ids" % vt)
                 rows.append(row)
                 continue
 
-            gene_ids = vt.saved_variant_json["annotation"].get("coding_gene_ids", [])
+
+            gene_ids = annotation.get("coding_gene_ids", [])
             if not gene_ids:
-                gene_ids = vt.saved_variant_json["annotation"].get("gene_ids", [])
+                gene_ids = annotation.get("gene_ids", [])
 
             if not gene_ids:
                 errors.append("%s - gene_ids not specified" % vt)
@@ -417,11 +441,11 @@ def generate_rows(project, errors):
                 if vt.saved_variant_json["genotypes"]:
                     chrom, _ = genomeloc.get_chr_pos(vt.saved_variant.xpos_start)
                     is_x_linked = "X" in chrom
-                    for indiv_id, genotype in vt.saved_variant_json["genotypes"].items():
+                    for sample_id, genotype in vt.saved_variant_json["genotypes"].items():
                         try:
-                            i = next(i for i in individuals if i.individual_id == indiv_id)
+                            i = next(s.individual for s in samples if s.sample_id == sample_id)
                         except StopIteration as e:
-                            logger.warn("WARNING: Couldn't find individual: %s, %s" % (family, indiv_id))
+                            logger.warn("WARNING: Couldn't find individual for sample: %s, %s" % (family, sample_id))
                             continue
 
                         if i.affected == "A":
@@ -430,13 +454,13 @@ def generate_rows(project, errors):
                             unaffected_total_individuals += 1
 
                         if genotype["num_alt"] == 2 and i.affected == "A":
-                            affected_indivs_with_hom_alt_variants.add(indiv_id)
+                            affected_indivs_with_hom_alt_variants.add(i.individual_id)
                         elif genotype["num_alt"] == 1 and i.affected == "A":
-                            affected_indivs_with_het_variants.add(indiv_id)
+                            affected_indivs_with_het_variants.add(i.individual_id)
                         elif genotype["num_alt"] == 2 and i.affected == "N":
-                            unaffected_indivs_with_hom_alt_variants.add(indiv_id)
+                            unaffected_indivs_with_hom_alt_variants.add(i.individual_id)
                         elif genotype["num_alt"] == 1 and i.affected == "N":
-                            unaffected_indivs_with_het_variants.add(indiv_id)
+                            unaffected_indivs_with_het_variants.add(i.individual_id)
 
                 # AR-homozygote, AR-comphet, AR, AD, de novo, X-linked, UPD, other, multiple
                 if not unaffected_indivs_with_hom_alt_variants and affected_indivs_with_hom_alt_variants:
