@@ -249,22 +249,27 @@ if args.command in [DEPLOY_COMMAND, DEPLOY_ALL_COMMAND]:
 
     if not runtime_settings["ONLY_PUSH_TO_REGISTRY"]:
         if args.command == DEPLOY_ALL_COMMAND:
-            update_reference_data(args.deployment_target)
-            #load_example_project(args.deployment_target)
+            if "seqr" in components_to_deploy:
+                update_reference_data(args.deployment_target)
+                #load_example_project(args.deployment_target)
 
-            components_to_tail = ["seqr"]
+                components_to_connect_to = ["seqr"]
+            elif "es-kibana" in components_to_deploy:
+                components_to_connect_to = ["es-kibana"]
+            else:
+                components_to_connect_to = []
         else:
-            components_to_tail = components_to_deploy
+            components_to_connect_to = components_to_deploy
 
-        component_port_pairs = get_component_port_pairs(components_to_tail)
+        component_port_pairs = get_component_port_pairs(components_to_connect_to)
         if component_port_pairs:
             logger.info("=============")
             print_los_for_components = [pair[0] for pair in component_port_pairs]
-            logger.info("tail %s logs ..." % components_to_tail)
+            logger.info("tail %s logs ..." % components_to_connect_to)
             os.system("sleep 10")
 
             procs1 = port_forward(component_port_pairs, deployment_target=args.deployment_target, wait=False, open_browser=True)
-            procs2 = print_log(components_to_tail, deployment_target=args.deployment_target, enable_stream_log=True, wait=False)
+            procs2 = print_log(components_to_connect_to, deployment_target=args.deployment_target, enable_stream_log=True, wait=False)
             wait_for(procs1 + procs2)
 
     logger.info("==> Done")

@@ -91,10 +91,9 @@ DEPLOYMENT_TARGETS["gcloud-prod"] = [
 
 DEPLOYMENT_TARGETS["gcloud-dev"] = DEPLOYMENT_TARGETS["gcloud-prod"]
 #"gcloud-prod-elasticsearch",
-DEPLOYMENT_TARGETS["gcloud-prod-test-elasticsearch"] = [
+DEPLOYMENT_TARGETS["gcloud-prod-es"] = [
     "init-cluster",
     "settings",
-    "secrets",
     "es-master",
     "es-client",
     "es-data",
@@ -669,15 +668,17 @@ def _init_cluster_gcloud(settings):
 
     # create cluster
     run(" ".join([
-        "gcloud container clusters create %(CLUSTER_NAME)s",
-        "--enable-autorepair ",
+        "gcloud beta container clusters create %(CLUSTER_NAME)s",
+        "--enable-autorepair",
+        "--enable-stackdriver-kubernetes",
+        "--cluster-version %(KUBERNETES_VERSION)s",  # to get available versions, run: gcloud container get-server-config
         "--project %(GCLOUD_PROJECT)s",
         "--zone %(GCLOUD_ZONE)s",
         "--machine-type %(CLUSTER_MACHINE_TYPE)s",
         "--num-nodes 1",
         #"--network %(GCLOUD_PROJECT)s-auto-vpc",
         #"--local-ssd-count 1",
-        "--scopes", "https://www.googleapis.com/auth/devstorage.read_write"
+        "--scopes", "https://www.googleapis.com/auth/devstorage.read_write",
     ]) % settings, verbose=False, errors_to_ignore=["Already exists"])
 
     # create cluster nodes - breaking them up into node pools of several machines each.
@@ -709,10 +710,25 @@ def _init_cluster_gcloud(settings):
         "--zone %(GCLOUD_ZONE)s",
     ]) % settings)
 
+    # create disks from snapshots
+    created_disks = []
+    for i, snapshot_name in enumerate([d.strip() for d in settings.get("CREATE_FROM_SNAPSHOTS", "").split(",") if d]):
+        disk_name = "es-data-%d" % (i+1)
+        run(" ".join([
+            "gcloud compute disks create " + disk_name,
+            "--zone %(GCLOUD_ZONE)s",
+            "--type pd-ssd",
+            "--source-snapshot " + snapshot_name,
+        ]) % settings, errors_to_ignore=["lready exists"])
+
+        created_disks.append(disk_name)
+
+    if created_disks:
+        settings["CREATE_WITH_EXISTING_DISKS"] = ",".join(created_disks)
 
     # create PersistentVolume objects for disk
     namespace = settings["NAMESPACE"]
-    for i, existing_disk_name in enumerate(settings["EXISTING_DISKS"].split(",")):
+    for i, existing_disk_name in enumerate([d.strip() for d in settings.get("CREATE_WITH_EXISTING_DISKS", "").split(",") if d]):
         file_path = None
         existing_disk_name = existing_disk_name.strip()
         elasticsearch_disk_size = settings["ELASTICSEARCH_DISK_SIZE"]

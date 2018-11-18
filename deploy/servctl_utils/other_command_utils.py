@@ -247,6 +247,7 @@ def port_forward(component_port_pairs=[], deployment_target=None, wait=True, ope
             else:
                 url = "http://localhost:%s" % port
 
+            time.sleep(3)
             os.system("open " + url)
 
         procs.append(p)
