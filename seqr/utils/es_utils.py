@@ -432,7 +432,7 @@ CORE_FIELDS_CONFIG = {
     'contig': {'response_key': 'chrom'},
     'start': {'response_key': 'pos', 'format_value': long},
     'filters': {'response_key': 'genotypeFilters', 'format_value': lambda filters: ','.join(filters), 'default_value': []},
-    'origAltAlleles': {'format_value': lambda alleles: [a.split('-')[-1] for a in alleles], 'default_value': []},
+    'originalAltAlleles': {'format_value': lambda alleles: [a.split('-')[-1] for a in alleles], 'default_value': []},
     'ref': {},
     'xpos': {'format_value': long},
 }

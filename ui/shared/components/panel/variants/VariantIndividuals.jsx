@@ -87,9 +87,9 @@ const Genotype = ({ variant, individual }) => {
   const qualityDetails = [
     {
       title: 'Raw Alt. Alleles',
-      value: variant.origAltAlleles.join(', '),
-      shouldHide: variant.origAltAlleles.length < 1 ||
-      (variant.origAltAlleles.length === 1 && variant.origAltAlleles[0] === variant.alt),
+      value: variant.originalAltAlleles.join(', '),
+      shouldHide: variant.originalAltAlleles.length < 1 ||
+      (variant.originalAltAlleles.length === 1 && variant.originalAltAlleles[0] === variant.alt),
     },
     { title: 'Allelic Depth', value: genotype.ad },
     { title: 'Read Depth', value: genotype.dp },

@@ -261,6 +261,7 @@ def _variant_details(variant_json, user):
         'liftedOverChrom': lifted_over_chrom,
         'liftedOverPos': lifted_over_pos,
         'locusLists': [],
+        'originalAltAlleles': extras.get('orig_alt_alleles', []),
         'populations': {
             'callset': {
                 'af': annotation.get('freqs', {}).get('AF'),
