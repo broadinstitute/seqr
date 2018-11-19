@@ -43,7 +43,8 @@ COMPONENT_PORTS = {
 COMPONENTS_TO_OPEN_IN_BROWSER = set([
     "cockpit",
     "elasticsearch",
-    "kibana", "es-kibana",
+    "kibana",
+    "es-kibana",
     "phenotips",
     "seqr",
     "pipeline-runner",  # python notebook
