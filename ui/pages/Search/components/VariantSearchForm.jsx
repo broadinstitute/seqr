@@ -6,7 +6,7 @@ import { Form, Accordion, Header, Segment, Grid, List } from 'semantic-ui-react'
 
 import { VerticalSpacer } from 'shared/components/Spacers'
 import ButtonLink from 'shared/components/buttons/ButtonLink'
-import { configuredFields } from 'shared/components/form/ReduxFormWrapper'
+import { configuredField, configuredFields } from 'shared/components/form/ReduxFormWrapper'
 import { Select, LabeledSlider, CheckboxGroup } from 'shared/components/form/Inputs'
 import Modal from 'shared/components/modal/Modal'
 import { LOCUS_LIST_ITEMS_FIELD, AFFECTED, UNAFFECTED } from 'shared/utils/constants'
@@ -181,7 +181,7 @@ const HeaderContent = ({ name, title, inputSize, inputProps }) =>
       <Grid.Column width={9} verticalAlign="middle">{title}</Grid.Column>
       {inputProps &&
         <ToggleHeaderFieldColumn width={inputSize || 3} floated="right" textAlign="right" onClick={e => e.stopPropagation()}>
-          {configuredFields({ fields: [{ ...inputProps, name }] })}
+          {configuredField({ ...inputProps, name })}
         </ToggleHeaderFieldColumn>
       }
     </Grid.Row>
@@ -235,7 +235,7 @@ const PANELS = PANEL_DETAILS.map(({ name, headerProps, ...panelContentProps }, i
 
 export default () => (
   <div>
-    {configuredFields({ fields: [{ name: 'familyContext', control: FamiliesFilter, isArrayField: true }] })}
+    {configuredField({ name: 'familyContext', control: FamiliesFilter, isArrayField: true })}
     <Accordion fluid panels={PANELS} />
   </div>
 )

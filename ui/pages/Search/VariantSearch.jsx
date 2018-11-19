@@ -21,9 +21,11 @@ const BaseVariantSearch = ({ queryParams, updateQueryParams, searchParams, searc
   }
 
   // TODO initial project or analysisGroup
-  const initialValues = searchParams || queryParams
-  initialValues.familyContext = initialValues.familyContext ||
-    (initialValues.familyGuid ? [{ familyGuids: [initialValues.familyGuid] }] : [])
+  const initialValues = {
+    familyContext: (queryParams.familyGuid ? [{ familyGuids: [queryParams.familyGuid] }] : []),
+    ...(searchParams || queryParams),
+  }
+
 
   return (
     <Grid>
@@ -35,8 +37,9 @@ const BaseVariantSearch = ({ queryParams, updateQueryParams, searchParams, searc
             form="variantSearch"
             submitButtonText="Search"
             noModal
-            renderChildren={VariantSearchForm}
-          />
+          >
+            <VariantSearchForm />
+          </ReduxFormWrapper>
         </Grid.Column>
       </Grid.Row>
       <VariantSearchResults queryParams={queryParams} updateQueryParams={updateQueryParams} />
