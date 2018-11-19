@@ -1,0 +1,36 @@
+#####################################################
+####### SETTINGS THAT MAY NEED TO BE MODIFIED #######
+
+CLUSTER_NAME: 'gcloud-prod-es'
+CLUSTER_MACHINE_TYPE: 'n1-highmem-4'   # n1-standard-2, n1-standard-4 .. n1-standard-64,  n1-highmem-2, n1-highcpu-2 ..
+CLUSTER_NUM_NODES: 3
+
+KUBERNETES_VERSION: '1.11.2-gke.18'
+
+ES_DATA_NUM_PODS: 3
+ES_CLIENT_NUM_PODS: 2
+ES_MASTER_NUM_PODS: 3
+
+ELASTICSEARCH_DISK_SIZE: 1700
+ELASTICSEARCH_JVM_MEMORY: 13g
+
+GCLOUD_PROJECT: 'seqr-project'
+GCLOUD_ZONE: 'us-central1-b'
+
+#CREATE_FROM_SNAPSHOTS: es-rebuild-cluster-snapshot, es-rebuild-cluster-snapshot-2, es-rebuild-cluster-snapshot-3
+CREATE_WITH_EXISTING_DISKS: es-data-1, es-data-2, es-data-3
+
+###########################################################
+####### SETTINGS THAT SHOULDN'T NEED TO BE MODIFIED #######
+
+NAMESPACE: gcloud-prod-es
+
+ES_CLUSTER_NAME: gcloud-prod-es
+ELASTICSEARCH_VERSION: 6.3.2  #5.6.3   # 6.3.2
+
+DEPLOY_TO: 'gcloud-prod-es'
+DEPLOY_TO_PREFIX: 'gcloud'
+DEPLOYMENT_TYPE: 'prod'
+
+CLUSTER_EXTERNAL_IP: ''
+CLUSTER_HOSTNAME: ''
