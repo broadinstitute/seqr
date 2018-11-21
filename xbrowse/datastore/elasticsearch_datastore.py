@@ -168,17 +168,16 @@ class ElasticsearchDatastore(datastore.Datastore):
             project = family.project
             logger.info("Searching in family elasticsearch index: " + str(elasticsearch_index))
 
-        if indivs_to_consider is None:
-            if genotype_filter:
-                indivs_to_consider = genotype_filter.keys()
-            else:
-                indivs_to_consider = []
+        if indivs_to_consider is None and genotype_filter and not family_id:
+            indivs_to_consider = genotype_filter.keys()
 
         individuals = Individual.objects.filter(family__project__project_id=project_id).only("indiv_id", "seqr_individual")
         if indivs_to_consider:
             individuals = individuals.filter(indiv_id__in=indivs_to_consider)
         if family_id is not None:
             individuals = individuals.filter(family__family_id=family_id)
+            if not indivs_to_consider:
+                indivs_to_consider = [i.indiv_id for i in individuals]
         prefetch_related_objects(individuals, "seqr_individual")
 
         samples = Sample.objects.filter(
@@ -216,37 +215,46 @@ class ElasticsearchDatastore(datastore.Datastore):
 
 
         mapping = self._es_client.indices.get_mapping(str(elasticsearch_index) + "*")
+        if family_id is not None and not family_individual_ids_to_sample_ids:
+            logger.error("no individuals found for family %s" % (family_id))
+        if not mapping:
+            logger.error("no es mapping found for found with prefix %s" % (elasticsearch_index))
         index_fields = {}
+        is_nested = False
         if family_id is not None and len(family_individual_ids_to_sample_ids) > 0:
             # figure out which index to use
             # TODO add caching
-            matching_indices = []
 
-            for raw_sample_id in family_individual_ids_to_sample_ids.values():
-                sample_id = _encode_name(raw_sample_id)
-                for index_name, index_mapping in mapping.items():
-                    if sample_id+"_num_alt" in index_mapping["mappings"]["variant"]["properties"]:
-                        matching_indices.append(index_name)
-                        index_fields.update(index_mapping["mappings"]["variant"]["properties"])
-                if len(matching_indices) > 0:
-                    break
-
-            if not matching_indices:
-                if not family_individual_ids_to_sample_ids:
-                    logger.error("no individuals found for family %s" % (family_id))
-                elif not mapping:
-                    logger.error("no es mapping found for found with prefix %s" % (elasticsearch_index))
-                else:
-                    logger.error("%s not found in %s:\n%s" % (indiv_id, elasticsearch_index, pformat(index_mapping["mappings"]["variant"]["properties"])))
-            else:
+            if elasticsearch_index in mapping and 'join_field' in mapping[elasticsearch_index]["mappings"]["variant"]["properties"]:
+                # Nested indices are not sharded so all samples are in the single index
                 logger.info("matching indices: " + str(elasticsearch_index))
-                elasticsearch_index = ",".join(matching_indices)
+                is_nested = True
+
+            else:
+                matching_indices = []
+
+                for raw_sample_id in family_individual_ids_to_sample_ids.values():
+                    sample_id = _encode_name(raw_sample_id)
+                    for index_name, index_mapping in mapping.items():
+                        if sample_id+"_num_alt" in index_mapping["mappings"]["variant"]["properties"]:
+                            matching_indices.append(index_name)
+                            index_fields.update(index_mapping["mappings"]["variant"]["properties"])
+                    if len(matching_indices) > 0:
+                        break
+
+                if not matching_indices:
+                    logger.error("%s not found in %s:\n%s" % (indiv_id, elasticsearch_index, pformat(index_mapping["mappings"]["variant"]["properties"])))
+                else:
+                    elasticsearch_index = ",".join(matching_indices)
+                    logger.info("matching indices: " + str(elasticsearch_index))
+        else:
+            elasticsearch_index = str(elasticsearch_index)+"*"
                 
         if not index_fields:
             for index_mapping in mapping.values():
                 index_fields.update(index_mapping["mappings"]["variant"]["properties"])
 
-        s = elasticsearch_dsl.Search(using=self._es_client, index=str(elasticsearch_index)+"*") #",".join(indices))
+        s = elasticsearch_dsl.Search(using=self._es_client, index=elasticsearch_index) #",".join(indices))
 
         if variant_id_filter is not None:
             variant_id_filter_term = None
@@ -258,42 +266,98 @@ class ElasticsearchDatastore(datastore.Datastore):
                     variant_id_filter_term |= q_obj
             s = s.filter(variant_id_filter_term)
 
-        if indivs_to_consider:
-            atleast_one_nonref_genotype_filter = None
-            for indiv_id in indivs_to_consider:
+        genotype_filters = {}
+        for key, value in query_json.items():
+            if key.startswith("genotypes"):
+                indiv_id = ".".join(key.split(".")[1:-1])
                 sample_id = family_individual_ids_to_sample_ids.get(indiv_id) or indiv_id
                 encoded_sample_id = _encode_name(sample_id)
-                q = Q('range', **{encoded_sample_id+"_num_alt": {'gte': 1}})
-                if atleast_one_nonref_genotype_filter is None:
-                    atleast_one_nonref_genotype_filter = q
-                else:
-                    atleast_one_nonref_genotype_filter |= q
+                genotype_filter = value
+                if type(genotype_filter) == int or type(genotype_filter) == basestring:
+                    genotype_filters[encoded_sample_id] = [('term', genotype_filter)]
+                elif '$gte' in genotype_filter:
+                    genotype_filter = {k.replace("$", ""): v for k, v in genotype_filter.items()}
+                    genotype_filters[encoded_sample_id] = [('range', genotype_filter)]
+                elif "$in" in genotype_filter:
+                    num_alt_values = genotype_filter['$in']
+                    genotype_filters[encoded_sample_id] = [('term', num_alt_value) for num_alt_value in num_alt_values]
 
-            s = s.filter(atleast_one_nonref_genotype_filter)
+        encoded_sample_ids = [_encode_name(family_individual_ids_to_sample_ids.get(indiv_id) or indiv_id)
+                              for indiv_id in (indivs_to_consider or [])]
 
+        min_ab = None
+        min_gq = None
         if quality_filter is not None and indivs_to_consider:
-            #'vcf_filter': u'pass', u'min_ab': 17, u'min_gq': 46
+            # 'vcf_filter': u'pass', u'min_ab': 17, u'min_gq': 46
             min_ab = quality_filter.get('min_ab')
             if min_ab is not None:
-                min_ab /= 100.0   # convert to fraction
+                min_ab /= 100.0  # convert to fraction
             min_gq = quality_filter.get('min_gq')
             vcf_filter = quality_filter.get('vcf_filter')
-            for indiv_id in indivs_to_consider:
-                sample_id = family_individual_ids_to_sample_ids.get(indiv_id) or indiv_id
-                encoded_sample_id = _encode_name(sample_id)
+            if vcf_filter is not None:
+                s = s.filter(~Q('exists', field='filters'))
 
-                #'vcf_filter': u'pass', u'min_ab': 17, u'min_gq': 46
-                if min_ab:
-                    s = s.filter(
-                        ~Q('term', **{encoded_sample_id+"_num_alt": 1}) |
-                        Q('range', **{encoded_sample_id+"_ab": {'gte': min_ab}}))
-                    #logger.info("### ADDED FILTER: " + str({encoded_sample_id+"_ab": {'gte': min_ab}}))
-                if min_gq:
-                    s = s.filter('range', **{encoded_sample_id+"_gq": {'gte': min_gq}})
-                    #logger.info("### ADDED FILTER: " + str({encoded_sample_id+"_gq": {'gte': min_gq}}))
-                if vcf_filter is not None:
-                    s = s.filter(~Q('exists', field='filters'))
-                    #logger.info("### ADDED FILTER: " + str(~Q('exists', field='filters')))
+        if is_nested:
+            #  Subquery for child docs with the requested sample IDs
+            sample_id_q = Q('terms', sample_id__keyword=encoded_sample_ids)
+
+            # Return inner hits with the requested sample IDs
+            if indivs_to_consider:
+                s = s.filter(Q('has_child', type='child', query=sample_id_q, inner_hits={}))
+
+            if genotype_filters:
+                genotype_q = None
+                for encoded_sample_id, queries in genotype_filters.items():
+                    q = Q(queries[0][0], num_alt=queries[0][1])
+                    for (op, val) in queries[1:]:
+                        q = q | Q(op, num_alt=val)
+                    q &= Q('term', sample_id__keyword=encoded_sample_id)
+                    if not genotype_q:
+                        genotype_q = q
+                    else:
+                        genotype_q |= q
+                s = s.filter(Q('has_child', type='child', query=genotype_q,  min_children=len(genotype_filters), inner_hits=None if indivs_to_consider else {}))
+            elif indivs_to_consider:
+                s = s.filter(Q('has_child', type='child', query=(Q(Q('range', num_alt={'gte': 1}) & sample_id_q))))
+
+            if min_ab or min_gq:
+                q = sample_id_q
+                if min_ab is not None:
+                    #  AB only relevant for hets
+                    q &= Q(~Q('term', num_alt=1) | Q('range', ab={'gte': min_ab}))
+                if min_gq is not None:
+                    q &= Q('range', gq={'gte': min_gq})
+                s = s.filter(Q('has_child', type='child', query=q, min_children=len(encoded_sample_ids)))
+
+        else:
+            for encoded_sample_id, queries in genotype_filters.items():
+                q = Q(queries[0][0], **{encoded_sample_id + "_num_alt": queries[0][1]})
+                for (op, val) in queries[1:]:
+                    q = q | Q(op, **{encoded_sample_id + "_num_alt": val})
+                s = s.filter(q)
+
+            if indivs_to_consider:
+                atleast_one_nonref_genotype_filter = None
+                for encoded_sample_id in encoded_sample_ids:
+                    q = Q('range', **{encoded_sample_id+"_num_alt": {'gte': 1}})
+                    if atleast_one_nonref_genotype_filter is None:
+                        atleast_one_nonref_genotype_filter = q
+                    else:
+                        atleast_one_nonref_genotype_filter |= q
+
+                s = s.filter(atleast_one_nonref_genotype_filter)
+
+            if min_ab or min_gq:
+                for encoded_sample_id in encoded_sample_ids:
+
+                    if min_ab:
+                        s = s.filter(
+                            ~Q('term', **{encoded_sample_id+"_num_alt": 1}) |
+                            Q('range', **{encoded_sample_id+"_ab": {'gte': min_ab}}))
+                        #logger.info("### ADDED FILTER: " + str({encoded_sample_id+"_ab": {'gte': min_ab}}))
+                    if min_gq:
+                        s = s.filter('range', **{encoded_sample_id+"_gq": {'gte': min_gq}})
+                        #logger.info("### ADDED FILTER: " + str({encoded_sample_id+"_gq": {'gte': min_gq}}))
 
         # parse variant query
         annotation_groups_map = ANNOTATION_GROUPS_MAP_INTERNAL if user and user.is_staff else ANNOTATION_GROUPS_MAP
@@ -360,27 +424,7 @@ class ElasticsearchDatastore(datastore.Datastore):
                 #logger.info("==> transcriptConsequenceTerms: %s" % str(vep_consequences))
 
             if key.startswith("genotypes"):
-                indiv_id = ".".join(key.split(".")[1:-1])
-                sample_id = family_individual_ids_to_sample_ids.get(indiv_id) or indiv_id
-                encoded_sample_id = _encode_name(sample_id)
-                genotype_filter = value
-                #logger.info("==> genotype filter: " + str(genotype_filter))
-                if type(genotype_filter) == int or type(genotype_filter) == basestring:
-                    #logger.info("==> genotypes: %s" % str({encoded_sample_id+"_num_alt": genotype_filter}))
-                    s = s.filter('term', **{encoded_sample_id+"_num_alt": genotype_filter})
-
-                elif '$gte' in genotype_filter:
-                    genotype_filter = {k.replace("$", ""): v for k, v in genotype_filter.items()}
-                    s = s.filter('range', **{encoded_sample_id+"_num_alt": genotype_filter})
-                    #logger.info("==> genotypes: %s" % str({encoded_sample_id+"_num_alt": genotype_filter}))
-                elif "$in" in genotype_filter:
-                    num_alt_values = genotype_filter['$in']
-                    q = Q('term', **{encoded_sample_id+"_num_alt": num_alt_values[0]})
-                    #logger.info("==> genotypes: %s" % str({encoded_sample_id+"_num_alt": num_alt_values[0]}))
-                    for num_alt_value in num_alt_values[1:]:
-                        q = q | Q('term', **{encoded_sample_id+"_num_alt": num_alt_value})
-                        #logger.info("==> genotypes: %s" % str({encoded_sample_id+"_num_alt": num_alt_value}))
-                    s = s.filter(q)
+                continue
 
             if key == "db_gene_ids":
                 db_gene_ids = query_json.get('db_gene_ids', {})
@@ -511,11 +555,26 @@ class ElasticsearchDatastore(datastore.Datastore):
             filters = ",".join(hit["filters"] or []) if "filters" in hit else ""
             genotypes = {}
             all_num_alt = []
+
+            if is_nested:
+                genotypes_by_sample_id = {gen_hit['sample_id']: gen_hit for gen_hit in hit.meta.inner_hits.child}
+
             for individual_id, sample_id in family_individual_ids_to_sample_ids.items():
                 encoded_sample_id = _encode_name(sample_id)
-                num_alt = int(hit["%s_num_alt" % encoded_sample_id]) if ("%s_num_alt" % encoded_sample_id) in hit else -1
-                if num_alt is not None:
-                    all_num_alt.append(num_alt)
+
+                def _get_hit_field(field):
+                    if is_nested:
+                        gen_hit = genotypes_by_sample_id.get(encoded_sample_id, {})
+                        key = field
+                    else:
+                        gen_hit = hit
+                        key = '{}_{}'.format(encoded_sample_id, field)
+                    return gen_hit[key] if key in gen_hit else None
+
+                num_alt = _get_hit_field('num_alt')
+                if num_alt is None:
+                    num_alt = -1
+                all_num_alt.append(num_alt)
 
                 alleles = []
                 if num_alt == 0:
@@ -530,19 +589,24 @@ class ElasticsearchDatastore(datastore.Datastore):
                     raise ValueError("Invalid num_alt: " + str(num_alt))
 
                 genotypes[individual_id] = {
-                    'ab': hit["%s_ab" % encoded_sample_id] if ("%s_ab" % encoded_sample_id) in hit else None,
+                    'ab': _get_hit_field('ab'),
                     'alleles': map(str, alleles),
                     'extras': {
-                        'ad': hit["%s_ab" % encoded_sample_id] if ("%s_ad" % encoded_sample_id) in hit else None,
-                        'dp': hit["%s_dp" % encoded_sample_id] if ("%s_dp" % encoded_sample_id) in hit else None,
+                        'ad': _get_hit_field('ad'),
+                        'dp': _get_hit_field('dp'),
                         #'pl': '',
                     },
                     'filter': filters or "pass",
-                    'gq': hit["%s_gq" % encoded_sample_id] if ("%s_gq" % encoded_sample_id in hit and hit["%s_gq" % encoded_sample_id] is not None) else '',
+                    'gq': _get_hit_field('gq') or '',
                     'num_alt': num_alt,
                 }
 
-            vep_annotation = json.loads(str(hit['sortedTranscriptConsequences'])) if 'sortedTranscriptConsequences' in hit else None
+            vep_annotation = hit['sortedTranscriptConsequences'] if 'sortedTranscriptConsequences' in hit else None
+            if vep_annotation:
+                if is_nested:
+                    vep_annotation = [annot.to_dict() for annot in vep_annotation]
+                else:
+                    vep_annotation = json.loads(str(vep_annotation))
 
             if project.genome_version == GENOME_VERSION_GRCh37:
                 grch38_coord = None
