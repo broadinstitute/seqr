@@ -213,40 +213,38 @@ class ElasticsearchDatastore(datastore.Datastore):
         except Exception as e:
             logger.info("WARNING: Unable to set up liftover. Is there a working internet connection? " + str(e))
 
-
         mapping = self._es_client.indices.get_mapping(str(elasticsearch_index) + "*")
-        if family_id is not None and not family_individual_ids_to_sample_ids:
-            logger.error("no individuals found for family %s" % (family_id))
-        if not mapping:
-            logger.error("no es mapping found for found with prefix %s" % (elasticsearch_index))
         index_fields = {}
         is_nested = False
-        if family_id is not None and len(family_individual_ids_to_sample_ids) > 0:
+        if elasticsearch_index in mapping and 'join_field' in mapping[elasticsearch_index]["mappings"]["variant"]["properties"]:
+            # Nested indices are not sharded so all samples are in the single index
+            logger.info("matching indices: " + str(elasticsearch_index))
+            is_nested = True
+        elif family_id is not None and len(family_individual_ids_to_sample_ids) > 0:
             # figure out which index to use
             # TODO add caching
 
-            if elasticsearch_index in mapping and 'join_field' in mapping[elasticsearch_index]["mappings"]["variant"]["properties"]:
-                # Nested indices are not sharded so all samples are in the single index
-                logger.info("matching indices: " + str(elasticsearch_index))
-                is_nested = True
+            matching_indices = []
 
-            else:
-                matching_indices = []
+            for raw_sample_id in family_individual_ids_to_sample_ids.values():
+                sample_id = _encode_name(raw_sample_id)
+                for index_name, index_mapping in mapping.items():
+                    if sample_id+"_num_alt" in index_mapping["mappings"]["variant"]["properties"]:
+                        matching_indices.append(index_name)
+                        index_fields.update(index_mapping["mappings"]["variant"]["properties"])
+                if len(matching_indices) > 0:
+                    break
 
-                for raw_sample_id in family_individual_ids_to_sample_ids.values():
-                    sample_id = _encode_name(raw_sample_id)
-                    for index_name, index_mapping in mapping.items():
-                        if sample_id+"_num_alt" in index_mapping["mappings"]["variant"]["properties"]:
-                            matching_indices.append(index_name)
-                            index_fields.update(index_mapping["mappings"]["variant"]["properties"])
-                    if len(matching_indices) > 0:
-                        break
-
-                if not matching_indices:
-                    logger.error("%s not found in %s:\n%s" % (indiv_id, elasticsearch_index, pformat(index_mapping["mappings"]["variant"]["properties"])))
+            if not matching_indices:
+                if family_id is not None and not family_individual_ids_to_sample_ids:
+                    logger.error("no individuals found for family %s" % (family_id))
+                if not mapping:
+                    logger.error("no es mapping found for found with prefix %s" % (elasticsearch_index))
                 else:
-                    elasticsearch_index = ",".join(matching_indices)
-                    logger.info("matching indices: " + str(elasticsearch_index))
+                    logger.error("%s not found in %s:\n%s" % (indiv_id, elasticsearch_index, pformat(index_mapping["mappings"]["variant"]["properties"])))
+            else:
+                elasticsearch_index = ",".join(matching_indices)
+                logger.info("matching indices: " + str(elasticsearch_index))
         else:
             elasticsearch_index = str(elasticsearch_index)+"*"
                 
@@ -301,9 +299,11 @@ class ElasticsearchDatastore(datastore.Datastore):
             #  Subquery for child docs with the requested sample IDs
             sample_id_q = Q('terms', sample_id__keyword=encoded_sample_ids)
 
-            # Return inner hits with the requested sample IDs
+            # Return inner hits with the requested samples
             if indivs_to_consider:
-                s = s.filter(Q('has_child', type='child', query=sample_id_q, inner_hits={}))
+                s = s.filter(Q('has_child', type='child', query=sample_id_q, inner_hits={'size': len(indivs_to_consider)}))
+            else:
+                s = s.filter(Q('has_child', type='child', query=Q(), inner_hits={'size': 100}))
 
             if genotype_filters:
                 genotype_q = None
@@ -316,7 +316,7 @@ class ElasticsearchDatastore(datastore.Datastore):
                         genotype_q = q
                     else:
                         genotype_q |= q
-                s = s.filter(Q('has_child', type='child', query=genotype_q,  min_children=len(genotype_filters), inner_hits=None if indivs_to_consider else {}))
+                s = s.filter(Q('has_child', type='child', query=genotype_q,  min_children=len(genotype_filters)))
             elif indivs_to_consider:
                 s = s.filter(Q('has_child', type='child', query=(Q(Q('range', num_alt={'gte': 1}) & sample_id_q))))
 
