@@ -31,20 +31,21 @@ def get_variant_display_headers(mall, project, indiv_id_list=None):
 
 
 AF_KEY_MAP = {
-    "1kg_wgs_phase3": "g1k_AF",
-    "1kg_wgs_phase3_popmax": "g1k_POPMAX_AF",
-    "exac_v3": "exac_AF",
-    "exac_v3_popmax": "exac_AF_POPMAX",
-    "topmed": "topmed_AF",
-    "gnomad_exomes": "gnomad_exomes_AF",
-    "gnomad_exomes_popmax": "gnomad_exomes_AF_POPMAX",
-    "gnomad_genomes": "gnomad_genomes_AF",
-    "gnomad_genomes_popmax": "gnomad_genomes_AF_POPMAX",
-    "gnomad-exomes2": "gnomad_exomes_AF",
-    "gnomad-exomes2_popmax": "gnomad_exomes_AF_POPMAX",
-    "gnomad-genomes2": "gnomad_genomes_AF",
-    "gnomad-genomes2_popmax": "gnomad_genomes_AF_POPMAX",
+    "1kg_wgs_phase3": ["g1k_AF", "1kg_wgs_AF"],
+    "1kg_wgs_phase3_popmax": ["g1k_POPMAX_AF", "1kg_wgs_popmax_AF"],
+    "exac_v3": ["exac_AF", "exac_v3_AF"],
+    "exac_v3_popmax": ["exac_AF_POPMAX", "exac_v3_popmax_AF"],
+    "topmed": ["topmed_AF"],
+    "gnomad_exomes": ["gnomad_exomes_AF"],
+    "gnomad_exomes_popmax": ["gnomad_exomes_AF_POPMAX"],
+    "gnomad_genomes": ["gnomad_genomes_AF"],
+    "gnomad_genomes_popmax": ["gnomad_genomes_AF_POPMAX"],
+    "gnomad-exomes2": ["gnomad_exomes_AF"],
+    "gnomad-exomes2_popmax": ["gnomad_exomes_AF_POPMAX"],
+    "gnomad-genomes2": ["gnomad_genomes_AF"],
+    "gnomad-genomes2_popmax": ["gnomad_genomes_AF_POPMAX"],
 }
+
 
 def get_display_fields_for_variant(mall, project, variant, indiv_id_list=None):
     """
@@ -63,9 +64,11 @@ def get_display_fields_for_variant(mall, project, variant, indiv_id_list=None):
     for ref_population_slug in project.get_reference_population_slugs():
         freq_value = variant.annotation['freqs'].get(ref_population_slug)
         if freq_value is None:
-            freq_value = variant.annotation['freqs'].get(AF_KEY_MAP.get(ref_population_slug))
-        if freq_value is not None:
-            fields.append(freq_value)
+            for ref_key in AF_KEY_MAP.get(ref_population_slug, []):
+                if variant.annotation['freqs'].get(ref_key) is not None:
+                    freq_value = variant.annotation['freqs'].get(ref_key)
+                    break
+        fields.append(freq_value or 0)
     for field_key in ['polyphen', 'sift', 'muttaster', 'fathmm']:
         fields.append(variant.annotation.get(field_key, ''))
     if indiv_id_list is None:
