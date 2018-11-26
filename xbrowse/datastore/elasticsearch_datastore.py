@@ -296,13 +296,13 @@ class ElasticsearchDatastore(datastore.Datastore):
 
         if is_nested:
             #  Subquery for child docs with the requested sample IDs
-            sample_id_q = Q('terms', sample_id__keyword=encoded_sample_ids)
+            sample_id_q = Q('terms', sample_id=encoded_sample_ids)
 
             # Return inner hits with the requested samples
             if indivs_to_consider:
-                s = s.filter(Q('has_child', type='child', query=sample_id_q, inner_hits={'size': len(indivs_to_consider)}))
+                s = s.filter(Q('has_child', type='genotype', query=sample_id_q, inner_hits={'size': len(indivs_to_consider)}))
             else:
-                s = s.filter(Q('has_child', type='child', query=Q(), inner_hits={'size': 100}))
+                s = s.filter(Q('has_child', type='genotype', query=Q(), inner_hits={'size': 100}))
 
             if genotype_filters:
                 genotype_q = None
@@ -310,14 +310,14 @@ class ElasticsearchDatastore(datastore.Datastore):
                     q = Q(queries[0][0], num_alt=queries[0][1])
                     for (op, val) in queries[1:]:
                         q = q | Q(op, num_alt=val)
-                    q &= Q('term', sample_id__keyword=encoded_sample_id)
+                    q &= Q('term', sample_id=encoded_sample_id)
                     if not genotype_q:
                         genotype_q = q
                     else:
                         genotype_q |= q
-                s = s.filter(Q('has_child', type='child', query=genotype_q,  min_children=len(genotype_filters)))
+                s = s.filter(Q('has_child', type='genotype', query=genotype_q,  min_children=len(genotype_filters)))
             elif indivs_to_consider:
-                s = s.filter(Q('has_child', type='child', query=(Q(Q('range', num_alt={'gte': 1}) & sample_id_q))))
+                s = s.filter(Q('has_child', type='genotype', query=(Q(Q('range', num_alt={'gte': 1}) & sample_id_q))))
 
             if min_ab or min_gq:
                 q = sample_id_q
@@ -326,7 +326,7 @@ class ElasticsearchDatastore(datastore.Datastore):
                     q &= Q(~Q('term', num_alt=1) | Q('range', ab={'gte': min_ab}))
                 if min_gq is not None:
                     q &= Q('range', gq={'gte': min_gq})
-                s = s.filter(Q('has_child', type='child', query=q, min_children=len(encoded_sample_ids)))
+                s = s.filter(Q('has_child', type='genotype', query=q, min_children=len(encoded_sample_ids)))
 
         else:
             for encoded_sample_id, queries in genotype_filters.items():
@@ -556,7 +556,7 @@ class ElasticsearchDatastore(datastore.Datastore):
             all_num_alt = []
 
             if is_nested:
-                genotypes_by_sample_id = {gen_hit['sample_id']: gen_hit for gen_hit in hit.meta.inner_hits.child}
+                genotypes_by_sample_id = {gen_hit['sample_id']: gen_hit for gen_hit in hit.meta.inner_hits.genotype}
 
             for individual_id, sample_id in family_individual_ids_to_sample_ids.items():
                 encoded_sample_id = _encode_name(sample_id)

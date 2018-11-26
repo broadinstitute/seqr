@@ -160,7 +160,7 @@ def _get_elasticsearch_index_samples(elasticsearch_index):
     if field_mapping.get(elasticsearch_index, {}).get('mappings', {}).get(VARIANT_DOC_TYPE, {}).get('join_field'):
         s = elasticsearch_dsl.Search(using=es_client, index=elasticsearch_index)
         s = s.params(size=0)
-        s.aggs.bucket('sample_ids', elasticsearch_dsl.A('terms', field='sample_id.keyword'))
+        s.aggs.bucket('sample_ids', elasticsearch_dsl.A('terms', field='sample_id'))
         response = s.execute()
         return [agg['key'] for agg in response.aggregations.sample_ids.buckets]
 
