@@ -601,7 +601,7 @@ class ElasticsearchDatastore(datastore.Datastore):
                 }
 
             vep_annotation = hit['sortedTranscriptConsequences'] if 'sortedTranscriptConsequences' in hit else None
-            if vep_annotation:
+            if vep_annotation is not None:
                 if is_nested:
                     vep_annotation = [annot.to_dict() for annot in vep_annotation]
                 else:
