@@ -238,7 +238,7 @@ class ElasticsearchDatastore(datastore.Datastore):
             if not matching_indices:
                 if family_id is not None and not family_individual_ids_to_sample_ids:
                     logger.error("no individuals found for family %s" % (family_id))
-                if not mapping:
+                elif not mapping:
                     logger.error("no es mapping found for found with prefix %s" % (elasticsearch_index))
                 else:
                     logger.error("%s not found in %s:\n%s" % (indiv_id, elasticsearch_index, pformat(index_mapping["mappings"]["variant"]["properties"])))
@@ -286,7 +286,6 @@ class ElasticsearchDatastore(datastore.Datastore):
         min_ab = None
         min_gq = None
         if quality_filter is not None and indivs_to_consider:
-            # 'vcf_filter': u'pass', u'min_ab': 17, u'min_gq': 46
             min_ab = quality_filter.get('min_ab')
             if min_ab is not None:
                 min_ab /= 100.0  # convert to fraction
