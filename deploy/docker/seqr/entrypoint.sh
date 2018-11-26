@@ -34,6 +34,7 @@ python -u manage.py makemigrations
 python -u manage.py migrate
 python -u manage.py check
 python -u manage.py collectstatic --no-input
+python -u manage.py loaddata variant_tag_types
 
 # launch django server in background
 /usr/local/bin/start_server.sh
