@@ -549,15 +549,21 @@ export const VARIANT_EXPORT_DATA = [
   { header: 'consequence', getVal: variant => variant.annotation.vepConsequence },
   { header: '1kg_freq', getVal: variant => variant.annotation.freqs.g1k },
   { header: 'exac_freq', getVal: variant => variant.annotation.freqs.exac },
+  { header: 'gnomad_exomes_freq', getVal: variant => variant.annotation.freqs.gnomad_exomes },
+  { header: 'gnomad_genomes_freq', getVal: variant => variant.annotation.freqs.gnomad_genomes },
   { header: 'sift', getVal: variant => variant.annotation.sift },
   { header: 'polyphen', getVal: variant => variant.annotation.polyphen },
+  { header: 'rsid', getVal: variant => variant.annotation.rsid },
   { header: 'hgvsc', getVal: variant => variant.mainTranscript.hgvsc },
   { header: 'hgvsp', getVal: variant => variant.mainTranscript.hgvsp },
+  { header: 'clinvar_clinical_significance', getVal: variant => variant.clinvar.clinsig },
+  { header: 'clinvar_gold_stars', getVal: variant => variant.clinvar.goldStars },
 ]
 
 export const VARIANT_GENOTYPE_EXPORT_DATA = [
   { header: 'sample_id', getVal: (genotype, sample) => sample.sampleId },
   { header: 'genotype', getVal: genotype => (genotype.alleles.length ? genotype.alleles.join('/') : './.') },
+  { header: 'num_alt_alleles', getVal: genotype => genotype.numAlt },
   { header: 'filter' },
   { header: 'ad' },
   { header: 'dp' },
