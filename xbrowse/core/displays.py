@@ -1,4 +1,18 @@
 
+ANNOTATIONS = [
+    'polyphen',
+    'sift',
+    'muttaster',
+    'fathmm',
+    'rsid',
+]
+
+EXTRAS = [
+    'clinvar_clinsig',
+    'clinvar_gold_stars',
+]
+
+
 def get_variant_display_headers(mall, project, indiv_id_list=None):
     """
     Get the list of header fields to display in a variants table
@@ -14,16 +28,13 @@ def get_variant_display_headers(mall, project, indiv_id_list=None):
         'worst_annotation',
     ]
     headers.extend(project.get_reference_population_slugs())
-    headers.extend([
-        'polyphen',
-        'sift',
-        'muttaster',
-        'fathmm',
-    ])
+    headers.extend(ANNOTATIONS)
+    headers.extend(EXTRAS)
 
     if indiv_id_list:
         for indiv_id in indiv_id_list:
             headers.append(indiv_id)
+            headers.append(indiv_id +'_num_alt_alleles')
             headers.append(indiv_id+'_gq')
             headers.append(indiv_id+'_dp')
 
@@ -69,8 +80,10 @@ def get_display_fields_for_variant(mall, project, variant, indiv_id_list=None):
                     freq_value = variant.annotation['freqs'].get(ref_key)
                     break
         fields.append(freq_value or 0)
-    for field_key in ['polyphen', 'sift', 'muttaster', 'fathmm']:
+    for field_key in ANNOTATIONS:
         fields.append(variant.annotation.get(field_key, ''))
+    for field_key in EXTRAS:
+        fields.append(variant.extras.get(field_key, ''))
     if indiv_id_list is None:
         indiv_id_list = []
     for indiv_id in indiv_id_list:
@@ -87,6 +100,7 @@ def get_display_fields_for_variant(mall, project, variant, indiv_id_list=None):
             else:
                 fields.append("./.")
 
+            fields.append(genotype.num_alt if genotype.num_alt is not None else -1)
             fields.append(str(genotype.gq) if genotype.gq is not None else '.')
             fields.append(genotype.extras['dp'] if genotype.extras.get('dp') is not None else '.')
     return fields
