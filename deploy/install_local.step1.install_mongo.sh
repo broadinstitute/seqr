@@ -15,6 +15,11 @@ elif [ $PLATFORM = "macos" ]; then
 
     brew install mongodb
 
+    mkdir -p /data/db
+    sudo chown -R `id -un` /data/db
+
+    mongod --fork --syslog
+
 elif [ $PLATFORM = "centos" ]; then
 
     sudo tee /etc/yum.repos.d/mongodb-org-4.0.repo << EOM

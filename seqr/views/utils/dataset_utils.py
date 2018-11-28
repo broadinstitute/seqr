@@ -2,7 +2,7 @@ import logging
 import elasticsearch_dsl
 from elasticsearch import NotFoundError, TransportError
 from django.utils import timezone
-
+from seqr.views.apis.igv_api import proxy_to_igv
 from seqr.models import Sample
 from seqr.utils.es_utils import get_es_client, VARIANT_DOC_TYPE
 from seqr.utils.file_utils import does_file_exist, file_iter, get_file_stats
@@ -72,7 +72,7 @@ def add_dataset(
         for individual_id, dataset_path in _load_mapping_file(mapping_file_id).items():
             if not (dataset_path.endswith(".bam") or dataset_path.endswith(".cram")):
                 raise Exception('BAM / CRAM file "{}" must have a .bam or .cram extension'.format(dataset_path))
-            _validate_dataset_path(dataset_path)
+            _validate_alignment_dataset_path(dataset_path)
             sample_id = dataset_path.split('/')[-1].split('.')[0]
             sample_id_to_individual_id_mapping[sample_id] = individual_id
             sample_dataset_path_mapping[sample_id] = dataset_path
@@ -210,6 +210,13 @@ def validate_variant_call_inputs(sample_type, dataset_path, project, elasticsear
         # TODO need to fix credentials
         #_validate_dataset_path(dataset_path)
         #_validate_vcf(dataset_path)
+
+
+def _validate_alignment_dataset_path(dataset_path):
+    headers = {'Range': 'bytes=0-100'} if dataset_path.endswith('.bam') else {}
+    resp = proxy_to_igv(dataset_path, {'options': '-b,-H'}, method='GET', scheme='http', headers=headers)
+    if resp.status_code >= 400 or (resp.get('Content-Type') != 'application/octet-stream' and resp.get('Content-Encoding') != 'gzip'):
+        raise Exception('Error accessing "{}": {}'.format(dataset_path, resp.content))
 
 
 def _validate_dataset_path(dataset_path):

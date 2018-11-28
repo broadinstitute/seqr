@@ -663,6 +663,7 @@ class ElasticsearchDatastore(datastore.Datastore):
                     'eigen_phred': hit["eigen_Eigen_phred"] if "eigen_Eigen_phred" in hit else (hit["dbnsfp_Eigen_phred"] if "dbnsfp_Eigen_phred" in hit else None),
                     'mpc_score': hit["mpc_MPC"] if "mpc_MPC" in hit else None,
                     'primate_ai_score': hit["primate_ai_score"] if "primate_ai_score" in hit else None,
+                    'rsid': hit["rsid"] if "rsid" in hit else None,
                     'annotation_tags': list(hit["transcriptConsequenceTerms"] or []) if "transcriptConsequenceTerms" in hit else None,
                     'coding_gene_ids': list(hit['codingGeneIds'] or []),
                     'gene_ids': list(hit['geneIds'] or []),
