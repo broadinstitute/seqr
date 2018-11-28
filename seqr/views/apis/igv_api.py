@@ -28,9 +28,9 @@ def proxy_to_igv(igv_track_path, params, request=None, **request_kwargs):
     if is_cram:
         absolute_path = "/alignments?reference=igvjs/static/data/public/Homo_sapiens_assembly38.fasta&file=igvjs/static/data/readviz-mounts/{0}&options={1}&region={2}".format(
             igv_track_path, params.get('options', ''), params.get('region', ''))
-        request_kwargs.update({'host': 'localhost:5000', 'stream': True})
+        request_kwargs.update({'host': settings.READ_VIZ_CRAM_PATH, 'stream': True})
     else:
-        absolute_path = os.path.join('https://localhost', igv_track_path)
+        absolute_path = os.path.join(settings.READ_VIZ_BAM_PATH, igv_track_path)
         request_kwargs.update({'auth_tuple': ('xbrowse-bams', 'xbrowse-bams'), 'verify': False})
 
     return proxy_request(request, absolute_path, **request_kwargs)
