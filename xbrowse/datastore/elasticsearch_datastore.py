@@ -28,6 +28,8 @@ from xbrowse.utils.basic_utils import _encode_name
 
 logger = logging.getLogger()
 
+MAX_INNER_HITS = 100
+
 GENOTYPE_QUERY_MAP = {
 
     'ref_ref': 0,
@@ -269,19 +271,17 @@ class ElasticsearchDatastore(datastore.Datastore):
             if key.startswith("genotypes"):
                 indiv_id = ".".join(key.split(".")[1:-1])
                 sample_id = family_individual_ids_to_sample_ids.get(indiv_id) or indiv_id
-                encoded_sample_id = _encode_name(sample_id)
                 genotype_filter = value
                 if type(genotype_filter) == int or type(genotype_filter) == basestring:
-                    genotype_filters[encoded_sample_id] = [('term', genotype_filter)]
+                    genotype_filters[sample_id] = [('term', genotype_filter)]
                 elif '$gte' in genotype_filter:
                     genotype_filter = {k.replace("$", ""): v for k, v in genotype_filter.items()}
-                    genotype_filters[encoded_sample_id] = [('range', genotype_filter)]
+                    genotype_filters[sample_id] = [('range', genotype_filter)]
                 elif "$in" in genotype_filter:
                     num_alt_values = genotype_filter['$in']
-                    genotype_filters[encoded_sample_id] = [('term', num_alt_value) for num_alt_value in num_alt_values]
+                    genotype_filters[sample_id] = [('term', num_alt_value) for num_alt_value in num_alt_values]
 
-        encoded_sample_ids = [_encode_name(family_individual_ids_to_sample_ids.get(indiv_id) or indiv_id)
-                              for indiv_id in (indivs_to_consider or [])]
+        sample_ids = [family_individual_ids_to_sample_ids.get(indiv_id) or indiv_id for indiv_id in (indivs_to_consider or [])]
 
         min_ab = None
         min_gq = None
@@ -296,21 +296,24 @@ class ElasticsearchDatastore(datastore.Datastore):
 
         if is_nested:
             #  Subquery for child docs with the requested sample IDs
-            sample_id_q = Q('terms', sample_id=encoded_sample_ids)
+            sample_id_q = Q('terms', sample_id=sample_ids)
 
             # Return inner hits with the requested samples
             if indivs_to_consider:
                 s = s.filter(Q('has_child', type='genotype', query=sample_id_q, inner_hits={'size': len(indivs_to_consider)}))
             else:
-                s = s.filter(Q('has_child', type='genotype', query=Q(), inner_hits={'size': 100}))
+                s = s.filter(Q('has_child', type='genotype', query=Q(), inner_hits={'size': MAX_INNER_HITS}))
 
             if genotype_filters:
                 genotype_q = None
-                for encoded_sample_id, queries in genotype_filters.items():
-                    q = Q(queries[0][0], num_alt=queries[0][1])
-                    for (op, val) in queries[1:]:
-                        q = q | Q(op, num_alt=val)
-                    q &= Q('term', sample_id=encoded_sample_id)
+                for sample_id, queries in genotype_filters.items():
+                    q = None
+                    for (op, val) in queries:
+                        if q:
+                            q |= Q(op, num_alt=val)
+                        else:
+                            q = Q(op, num_alt=val)
+                    q &= Q('term', sample_id=sample_id)
                     if not genotype_q:
                         genotype_q = q
                     else:
@@ -326,18 +329,20 @@ class ElasticsearchDatastore(datastore.Datastore):
                     q &= Q(~Q('term', num_alt=1) | Q('range', ab={'gte': min_ab}))
                 if min_gq is not None:
                     q &= Q('range', gq={'gte': min_gq})
-                s = s.filter(Q('has_child', type='genotype', query=q, min_children=len(encoded_sample_ids)))
+                s = s.filter(Q('has_child', type='genotype', query=q, min_children=len(sample_ids)))
 
         else:
-            for encoded_sample_id, queries in genotype_filters.items():
+            for sample_id, queries in genotype_filters.items():
+                encoded_sample_id = _encode_name(sample_id)
                 q = Q(queries[0][0], **{encoded_sample_id + "_num_alt": queries[0][1]})
                 for (op, val) in queries[1:]:
                     q = q | Q(op, **{encoded_sample_id + "_num_alt": val})
                 s = s.filter(q)
 
-            if indivs_to_consider:
+            if sample_ids:
                 atleast_one_nonref_genotype_filter = None
-                for encoded_sample_id in encoded_sample_ids:
+                for sample_id in sample_ids:
+                    encoded_sample_id = _encode_name(sample_id)
                     q = Q('range', **{encoded_sample_id+"_num_alt": {'gte': 1}})
                     if atleast_one_nonref_genotype_filter is None:
                         atleast_one_nonref_genotype_filter = q
@@ -347,7 +352,8 @@ class ElasticsearchDatastore(datastore.Datastore):
                 s = s.filter(atleast_one_nonref_genotype_filter)
 
             if min_ab or min_gq:
-                for encoded_sample_id in encoded_sample_ids:
+                for sample_id in sample_ids:
+                    encoded_sample_id = _encode_name(sample_id)
 
                     if min_ab:
                         s = s.filter(
@@ -559,15 +565,13 @@ class ElasticsearchDatastore(datastore.Datastore):
                 genotypes_by_sample_id = {gen_hit['sample_id']: gen_hit for gen_hit in hit.meta.inner_hits.genotype}
 
             for individual_id, sample_id in family_individual_ids_to_sample_ids.items():
-                encoded_sample_id = _encode_name(sample_id)
-
                 def _get_hit_field(field):
                     if is_nested:
-                        gen_hit = genotypes_by_sample_id.get(encoded_sample_id, {})
+                        gen_hit = genotypes_by_sample_id.get(sample_id, {})
                         key = field
                     else:
                         gen_hit = hit
-                        key = '{}_{}'.format(encoded_sample_id, field)
+                        key = '{}_{}'.format(_encode_name(sample_id), field)
                     return gen_hit[key] if key in gen_hit else None
 
                 num_alt = _get_hit_field('num_alt')
