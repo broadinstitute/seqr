@@ -295,41 +295,47 @@ class ElasticsearchDatastore(datastore.Datastore):
                 s = s.filter(~Q('exists', field='filters'))
 
         if is_nested:
-            #  Subquery for child docs with the requested sample IDs
-            sample_id_q = Q('terms', sample_id=sample_ids)
-
-            # Return inner hits with the requested samples
-            if indivs_to_consider:
-                s = s.filter(Q('has_child', type='genotype', query=sample_id_q, inner_hits={'size': len(indivs_to_consider)}))
-            else:
-                s = s.filter(Q('has_child', type='genotype', query=Q(), inner_hits={'size': MAX_INNER_HITS}))
-
-            if genotype_filters:
-                genotype_q = None
-                for sample_id, queries in genotype_filters.items():
-                    q = None
-                    for (op, val) in queries:
-                        if q:
-                            q |= Q(op, num_alt=val)
-                        else:
-                            q = Q(op, num_alt=val)
-                    q &= Q('term', sample_id=sample_id)
-                    if not genotype_q:
-                        genotype_q = q
-                    else:
-                        genotype_q |= q
-                s = s.filter(Q('has_child', type='genotype', query=genotype_q,  min_children=len(genotype_filters)))
-            elif indivs_to_consider:
-                s = s.filter(Q('has_child', type='genotype', query=(Q(Q('range', num_alt={'gte': 1}) & sample_id_q))))
-
+            quality_q = Q()
             if min_ab or min_gq:
-                q = sample_id_q
                 if min_ab is not None:
                     #  AB only relevant for hets
-                    q &= Q(~Q('term', num_alt=1) | Q('range', ab={'gte': min_ab}))
+                    quality_q &= Q(~Q('term', num_alt=1) | Q('range', ab={'gte': min_ab}))
                 if min_gq is not None:
-                    q &= Q('range', gq={'gte': min_gq})
-                s = s.filter(Q('has_child', type='genotype', query=q, min_children=len(sample_ids)))
+                    quality_q &= Q('range', gq={'gte': min_gq})
+
+            if genotype_filters:
+                # Return inner hits for all requested samples, even those without a specified genotype
+                genotype_sample_ids = sample_ids or genotype_filters.keys()
+                genotype_q = None
+                for sample_id in genotype_sample_ids:
+                    sample_q = Q(Q('term', sample_id=sample_id) & quality_q)
+                    if genotype_filters.get(sample_id):
+                        q = None
+                        for (op, val) in genotype_filters[sample_id]:
+                            if q:
+                                q |= Q(op, num_alt=val)
+                            else:
+                                q = Q(op, num_alt=val)
+                        sample_q &= q
+                    if not genotype_q:
+                        genotype_q = sample_q
+                    else:
+                        genotype_q |= sample_q
+                genotype_kwargs = {'query': genotype_q, 'min_children': len(genotype_sample_ids)}
+            elif sample_ids:
+                # Subquery for child docs with the requested sample IDs and quality metrics
+                sample_id_q = Q('terms', sample_id=sample_ids) & quality_q
+                # Only return variants where at least one of the requested samples has an alt allele
+                s = s.filter(Q('has_child', type='genotype', query=(Q(Q('range', num_alt={'gte': 1}) & sample_id_q))))
+                # Return inner hits for all the requested samples regardless of genotype
+                genotype_kwargs = {'query': sample_id_q, 'min_children': len(sample_ids)}
+            else:
+                # Return all inner hits for the variant
+                # This case is only used by gene search, which also does not use quality filters
+                genotype_kwargs = {'query': Q()}
+
+            s = s.filter(Q('has_child', type='genotype',
+                           inner_hits={'size': genotype_kwargs.get('min_children', MAX_INNER_HITS)}, **genotype_kwargs))
 
         else:
             for sample_id, queries in genotype_filters.items():
