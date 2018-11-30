@@ -83,7 +83,7 @@ DATASET_TYPE="VARIANTS"    # can be "VARIANTS" (for GATK VCFs) or "SV" (for Mant
 PROJECT_GUID="R001_test"   # should match the ID in the url of the project page 
 INPUT_VCF="test.vcf.gz"    # local path of VCF file
  
-python2.7 gcloud_dataproc/submit.py --run-locally hail_scripts/v01/load_dataset_to_es.py  --spark-home $SPARK_HOME --genome-version $GENOME_VERSION --project-guid $PROJECT_GUID --sample-type $SAMPLE_TYPE --dataset-type $DATASET_TYPE --skip-validation  --exclude-hgmd --vep-block-size 100 --es-block-size 10 --num-shards 1 --use-nested-objects-for-vep --use-child-docs-for-genotypes  $INPUT_VCF
+python2.7 gcloud_dataproc/submit.py --run-locally hail_scripts/v01/load_dataset_to_es.py  --spark-home $SPARK_HOME --genome-version $GENOME_VERSION --project-guid $PROJECT_GUID --sample-type $SAMPLE_TYPE --dataset-type $DATASET_TYPE --skip-validation  --exclude-hgmd --vep-block-size 100 --es-block-size 10 --num-shards 1 --hail-version 0.1 --use-nested-objects-for-vep --use-child-docs-for-genotypes  $INPUT_VCF
 ```
 
 Now that the dataset is loaded into elasticsearch, it can be added to the project:
