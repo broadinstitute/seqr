@@ -147,13 +147,22 @@ def _update_samples_for_dataset(
 def _get_elasticsearch_index_samples(elasticsearch_index):
     sample_field_suffix = '_num_alt'
 
-    index = elasticsearch_dsl.Index('{}*'.format(elasticsearch_index), using=get_es_client())
+    es_client = get_es_client()
+    index = elasticsearch_dsl.Index('{}*'.format(elasticsearch_index), using=es_client)
     try:
-        field_mapping = index.get_field_mapping(fields=['*{}'.format(sample_field_suffix)], doc_type=[VARIANT_DOC_TYPE])
+        field_mapping = index.get_field_mapping(fields=['*{}'.format(sample_field_suffix), 'join_field'], doc_type=[VARIANT_DOC_TYPE])
     except NotFoundError:
         raise Exception('Index "{}" not found'.format(elasticsearch_index))
     except TransportError as e:
         raise Exception(e.error)
+
+    #  Nested genotypes
+    if field_mapping.get(elasticsearch_index, {}).get('mappings', {}).get(VARIANT_DOC_TYPE, {}).get('join_field'):
+        s = elasticsearch_dsl.Search(using=es_client, index=elasticsearch_index)
+        s = s.params(size=0)
+        s.aggs.bucket('sample_ids', elasticsearch_dsl.A('terms', field='sample_id'))
+        response = s.execute()
+        return [agg['key'] for agg in response.aggregations.sample_ids.buckets]
 
     samples = set()
     for index in field_mapping.values():
