@@ -476,6 +476,7 @@ export const VARIANT = {
       name: "Genome-wide Linkage", user: "hsnow@broadinstitute.org" },
   ],
   mainTranscript: "37",
+  geneIds: ['ENSG00000228198'],
   genotypes: {
     NA19675: {
       ab: 1,

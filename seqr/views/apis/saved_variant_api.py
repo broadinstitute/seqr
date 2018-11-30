@@ -346,6 +346,7 @@ def variant_details(variant_json, project, user=None):
             'accession': extras.get('hgmd_accession'),
             'class': extras.get('hgmd_class') if (user and user.is_staff) else None,
         },
+        'geneIds': extras.get('genes', {}).keys(),
         'genotypes': genotypes,
         'genomeVersion': genome_version,
         'liftedOverGenomeVersion': lifted_over_genome_version,
@@ -358,7 +359,9 @@ def variant_details(variant_json, project, user=None):
 
 
 def _saved_variant_genes(variants):
-    gene_ids = {variant['mainTranscript']['geneId'] for variant in variants.values()}
+    gene_ids = set()
+    for variant in variants.values():
+        gene_ids.update(variant['geneIds'])
     genes = get_genes(gene_ids, add_dbnsfp=True, add_omim=True, add_constraints=True)
     for gene in genes.values():
         if gene:
