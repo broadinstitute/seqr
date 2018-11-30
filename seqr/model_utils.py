@@ -104,6 +104,10 @@ FLATTENED_MODEL_FIELDS = {
     },
 }
 
+NON_NULL_MODEL_FIELDS = {
+    'AnalysisGroup': {'description': ''}
+}
+
 
 def _update_model(model_obj, **kwargs):
     for field, value in kwargs.items():
@@ -232,6 +236,9 @@ def convert_seqr_kwargs_to_xbrowse_kwargs(seqr_model, **kwargs):
         field_mapping.get(field, field): value for field, value in kwargs.items()
         if not field_mapping.get(field, field) == _DELETED_FIELD
     }
+    for field, default_value in NON_NULL_MODEL_FIELDS.get(seqr_class_name, {}).items():
+        if field in xbrowse_kwargs and xbrowse_kwargs[field] is None:
+            xbrowse_kwargs[field] = default_value
 
     if seqr_class_name == "Individual" and "family" in xbrowse_kwargs:
         xbrowse_kwargs["project"] = getattr(seqr_model, "family").project

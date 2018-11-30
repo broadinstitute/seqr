@@ -1,4 +1,18 @@
 
+ANNOTATIONS = [
+    'polyphen',
+    'sift',
+    'muttaster',
+    'fathmm',
+    'rsid',
+]
+
+EXTRAS = [
+    'clinvar_clinsig',
+    'clinvar_gold_stars',
+]
+
+
 def get_variant_display_headers(mall, project, indiv_id_list=None):
     """
     Get the list of header fields to display in a variants table
@@ -14,16 +28,13 @@ def get_variant_display_headers(mall, project, indiv_id_list=None):
         'worst_annotation',
     ]
     headers.extend(project.get_reference_population_slugs())
-    headers.extend([
-        'polyphen',
-        'sift',
-        'muttaster',
-        'fathmm',
-    ])
+    headers.extend(ANNOTATIONS)
+    headers.extend(EXTRAS)
 
     if indiv_id_list:
         for indiv_id in indiv_id_list:
             headers.append(indiv_id)
+            headers.append(indiv_id +'_num_alt_alleles')
             headers.append(indiv_id+'_gq')
             headers.append(indiv_id+'_dp')
 
@@ -31,20 +42,21 @@ def get_variant_display_headers(mall, project, indiv_id_list=None):
 
 
 AF_KEY_MAP = {
-    "1kg_wgs_phase3": "g1k_AF",
-    "1kg_wgs_phase3_popmax": "g1k_POPMAX_AF",
-    "exac_v3": "exac_AF",
-    "exac_v3_popmax": "exac_AF_POPMAX",
-    "topmed": "topmed_AF",
-    "gnomad_exomes": "gnomad_exomes_AF",
-    "gnomad_exomes_popmax": "gnomad_exomes_AF_POPMAX",
-    "gnomad_genomes": "gnomad_genomes_AF",
-    "gnomad_genomes_popmax": "gnomad_genomes_AF_POPMAX",
-    "gnomad-exomes2": "gnomad_exomes_AF",
-    "gnomad-exomes2_popmax": "gnomad_exomes_AF_POPMAX",
-    "gnomad-genomes2": "gnomad_genomes_AF",
-    "gnomad-genomes2_popmax": "gnomad_genomes_AF_POPMAX",
+    "1kg_wgs_phase3": ["g1k_AF", "1kg_wgs_AF"],
+    "1kg_wgs_phase3_popmax": ["g1k_POPMAX_AF", "1kg_wgs_popmax_AF"],
+    "exac_v3": ["exac_AF", "exac_v3_AF"],
+    "exac_v3_popmax": ["exac_AF_POPMAX", "exac_v3_popmax_AF"],
+    "topmed": ["topmed_AF"],
+    "gnomad_exomes": ["gnomad_exomes_AF"],
+    "gnomad_exomes_popmax": ["gnomad_exomes_AF_POPMAX"],
+    "gnomad_genomes": ["gnomad_genomes_AF"],
+    "gnomad_genomes_popmax": ["gnomad_genomes_AF_POPMAX"],
+    "gnomad-exomes2": ["gnomad_exomes_AF"],
+    "gnomad-exomes2_popmax": ["gnomad_exomes_AF_POPMAX"],
+    "gnomad-genomes2": ["gnomad_genomes_AF"],
+    "gnomad-genomes2_popmax": ["gnomad_genomes_AF_POPMAX"],
 }
+
 
 def get_display_fields_for_variant(mall, project, variant, indiv_id_list=None):
     """
@@ -63,11 +75,15 @@ def get_display_fields_for_variant(mall, project, variant, indiv_id_list=None):
     for ref_population_slug in project.get_reference_population_slugs():
         freq_value = variant.annotation['freqs'].get(ref_population_slug)
         if freq_value is None:
-            freq_value = variant.annotation['freqs'].get(AF_KEY_MAP.get(ref_population_slug))
-        if freq_value is not None:
-            fields.append(freq_value)
-    for field_key in ['polyphen', 'sift', 'muttaster', 'fathmm']:
+            for ref_key in AF_KEY_MAP.get(ref_population_slug, []):
+                if variant.annotation['freqs'].get(ref_key) is not None:
+                    freq_value = variant.annotation['freqs'].get(ref_key)
+                    break
+        fields.append(freq_value or 0)
+    for field_key in ANNOTATIONS:
         fields.append(variant.annotation.get(field_key, ''))
+    for field_key in EXTRAS:
+        fields.append(variant.extras.get(field_key, ''))
     if indiv_id_list is None:
         indiv_id_list = []
     for indiv_id in indiv_id_list:
@@ -84,6 +100,7 @@ def get_display_fields_for_variant(mall, project, variant, indiv_id_list=None):
             else:
                 fields.append("./.")
 
+            fields.append(genotype.num_alt if genotype.num_alt is not None else -1)
             fields.append(str(genotype.gq) if genotype.gq is not None else '.')
             fields.append(genotype.extras['dp'] if genotype.extras.get('dp') is not None else '.')
     return fields

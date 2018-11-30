@@ -44,7 +44,7 @@ def saved_variant_data(request, project_guid, variant_guid=None):
         variant = get_json_for_saved_variant(saved_variant, add_tags=True)
         if variant['tags'] or variant['notes']:
             variant_json = json.loads(saved_variant.saved_variant_json or '{}')
-            variant.update(_variant_details(variant_json, request.user))
+            variant.update(variant_details(variant_json, project, request.user))
             variants[variant['variantId']] = variant
 
     genes = _saved_variant_genes(variants)
@@ -223,7 +223,7 @@ def _variant_transcripts(annotation):
     return transcripts
 
 
-def _variant_details(variant_json, user=None):
+def variant_details(variant_json, project, user=None):
     annotation = variant_json.get('annotation') or {}
     main_transcript = annotation.get('main_transcript') or (annotation['vep_annotation'][annotation['worst_vep_annotation_index']] if annotation.get('worst_vep_annotation_index') is not None and annotation['vep_annotation'] else {})
     is_es_variant = annotation.get('db') == 'elasticsearch'
@@ -259,7 +259,11 @@ def _variant_details(variant_json, user=None):
             'pl': genotype.get('extras', {}).get('pl'),
         } for sample_id, genotype in variant_json.get('genotypes', {}).items()
     }
-    sample_guids_by_id = {s.sample_id: s.guid for s in  Sample.objects.filter(sample_id__in=genotypes.keys())}
+    sample_guids_by_id = {s.sample_id: s.guid for s in Sample.objects.filter(
+        individual__family__project=project,
+        sample_id__in=genotypes.keys(),
+        dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS
+    )}
     genotypes = {sample_guids_by_id.get(sample_id): genotype for sample_id, genotype in genotypes.items()
                  if sample_guids_by_id.get(sample_id)}
 
