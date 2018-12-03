@@ -107,13 +107,7 @@ const VariantGene = ({ geneId, gene, project, variant, compact }) => {
 
   const geneSummary = (
     <div>
-      <ShowGeneModal
-        gene={gene}
-        fontWeight="bold"
-        fontSize={compact ? '1.2em' : '1.5em'}
-        color={compact && 'grey'}
-        modalId={variant.variantId}
-      />
+      <ShowGeneModal gene={gene} fontWeight="bold" fontSize={compact ? '1.2em' : '1.5em'} modalId={variant.variantId} />
       <HorizontalSpacer width={10} />
       {compact ? variant.transcripts[geneId] && variant.transcripts[geneId][0].consequence.replace(/_/g, ' ') :
       <GeneLinks>

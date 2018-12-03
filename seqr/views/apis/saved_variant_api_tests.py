@@ -5,7 +5,7 @@ from django.test import TransactionTestCase
 from django.urls.base import reverse
 
 from seqr.models import VariantNote, VariantTag, VariantFunctionalData
-from seqr.views.apis.saved_variant_api import saved_variant_data, saved_variant_transcripts, create_variant_note_handler, \
+from seqr.views.apis.saved_variant_api import saved_variant_data, create_variant_note_handler, \
     update_variant_note_handler, delete_variant_note_handler, update_variant_tags_handler, update_saved_variant_json
 from seqr.views.utils.test_utils import _check_login
 
@@ -51,22 +51,6 @@ class ProjectAPITest(TransactionTestCase):
         # filter by invalid variant guid
         response = self.client.get('{}foo'.format(url))
         self.assertEqual(response.status_code, 404)
-
-    @mock.patch('seqr.views.apis.saved_variant_api.find_matching_xbrowse_model')
-    @mock.patch('seqr.views.apis.saved_variant_api.get_datastore')
-    def test_saved_variant_transcripts(self, mock_datastore, mock_xbrowse_model):
-        mock_datastore.get_single_variant.return_value.annotation = {'vep_annotation': []}
-        url = reverse(saved_variant_transcripts, args=[VARIANT_GUID_2])
-        _check_login(self, url)
-
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {'savedVariants': {VARIANT_GUID_2: {'transcripts': {}}}, 'genesById': {}})
-
-        invalid_url = reverse(saved_variant_transcripts, args=['not_a_guid'])
-        response = self.client.get(invalid_url)
-        self.assertEqual(response.status_code, 500)
-        self.assertEqual(response.json().get('message'), 'SavedVariant matching query does not exist.')
 
     def test_create_update_and_delete_variant_note(self):
         create_variant_note_url = reverse(create_variant_note_handler, args=[VARIANT_GUID])

@@ -16,7 +16,6 @@ import modalReducers from './utils/modalReducer'
 export const RECEIVE_DATA = 'RECEIVE_DATA'
 export const REQUEST_PROJECTS = 'REQUEST_PROJECTS'
 const RECEIVE_SAVED_VARIANTS = 'RECEIVE_SAVED_VARIANTS'
-const REQUEST_VARIANT = 'REQUEST_VARIANT'
 const REQUEST_GENES = 'REQUEST_GENES'
 const RECEIVE_GENES = 'RECEIVE_GENES'
 const REQUEST_GENE_LISTS = 'REQUEST_GENE_LISTS'
@@ -155,24 +154,6 @@ export const loadLocusLists = (locusListId) => {
   }
 }
 
-export const loadVariantTranscripts = (variantId) => {
-  return (dispatch, getState) => {
-    const variant = getState().projectSavedVariants[variantId]
-    if (!(variant && variant.transcripts)) {
-      dispatch({ type: REQUEST_VARIANT })
-      new HttpRequestHelper(`/api/saved_variant/${variantId}/transcripts`,
-        (responseJson) => {
-          dispatch({ type: RECEIVE_GENES, updatesById: responseJson.genesById })
-          dispatch({ type: RECEIVE_SAVED_VARIANTS, updatesById: responseJson.savedVariants })
-        },
-        (e) => {
-          dispatch({ type: RECEIVE_SAVED_VARIANTS, error: e.message, updatesById: {} })
-        },
-      ).get()
-    }
-  }
-}
-
 export const updateGeneNote = (values) => {
   return updateEntity(values, RECEIVE_GENES, `/api/gene_info/${values.geneId || values.gene_id}/note`, 'noteGuid')
 }
@@ -235,7 +216,6 @@ const rootReducer = combineReducers(Object.assign({
   locusListsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'locusListsByGuid'),
   locusListsLoading: loadingReducer(REQUEST_GENE_LISTS, RECEIVE_DATA),
   locusListLoading: loadingReducer(REQUEST_GENE_LIST, RECEIVE_DATA),
-  variantLoading: loadingReducer(REQUEST_VARIANT, RECEIVE_SAVED_VARIANTS),
   user: zeroActionsReducer,
   form: formReducer,
   search: searchReducer,

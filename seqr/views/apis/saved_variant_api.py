@@ -7,7 +7,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 from seqr.models import Sample, SavedVariant, VariantTagType, VariantTag, VariantNote, VariantFunctionalData,\
     LocusListInterval, LocusListGene, CAN_VIEW, CAN_EDIT
-from seqr.model_utils import create_seqr_model, delete_seqr_model, find_matching_xbrowse_model
+from seqr.model_utils import create_seqr_model, delete_seqr_model
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.locus_list_api import get_project_locus_list_models
 from seqr.utils.gene_utils import get_genes
@@ -17,7 +17,6 @@ from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variant, get_j
     get_json_for_variant_functional_data, get_json_for_variant_note
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_permissions
 from seqr.views.utils.variant_utils import update_project_saved_variant_json
-from xbrowse_server.mall import get_datastore
 
 logger = logging.getLogger(__name__)
 
@@ -53,32 +52,6 @@ def saved_variant_data(request, project_guid, variant_guid=None):
     return create_json_response({
         'savedVariants': variants,
         'genesById': genes,
-    })
-
-
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
-def saved_variant_transcripts(request, variant_guid):
-    saved_variant = SavedVariant.objects.get(guid=variant_guid)
-    check_permissions(saved_variant.project, request.user, CAN_VIEW)
-
-    annotation = json.loads(saved_variant.saved_variant_json or '{}').get('annotation', {})
-    if not annotation.get('vep_annotation'):
-        # TODO when variant search is rewritten for seqr models use that here
-        base_project = find_matching_xbrowse_model(saved_variant.project)
-        loaded_variant = get_datastore(base_project).get_single_variant(
-            base_project.project_id,
-            saved_variant.family.family_id,
-            saved_variant.xpos,
-            saved_variant.ref,
-            saved_variant.alt,
-        )
-        annotation = loaded_variant.annotation
-
-    transcripts = _variant_transcripts(annotation)
-    return create_json_response({
-        'savedVariants': {variant_guid: {'transcripts': transcripts}},
-        'genesById': get_genes(transcripts.keys()),
     })
 
 
@@ -207,7 +180,7 @@ def update_saved_variant_json(request, project_guid):
 
 def _variant_transcripts(annotation):
     transcripts = defaultdict(list)
-    for i, vep_a in enumerate(annotation['vep_annotation']):
+    for i, vep_a in enumerate(annotation.get('vep_annotation', [])):
         transcripts[vep_a.get('gene', vep_a.get('gene_id'))].append({
             'transcriptId': vep_a.get('feature') or vep_a.get('transcript_id'),
             'isChosenTranscript': i == annotation.get('worst_vep_annotation_index'),
