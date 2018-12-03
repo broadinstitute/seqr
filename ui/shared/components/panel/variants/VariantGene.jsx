@@ -7,6 +7,7 @@ import { Label, Popup, List } from 'semantic-ui-react'
 import { getProject } from 'pages/Project/selectors'
 import { getGenesById } from 'redux/selectors'
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
+import { InlineHeader } from '../../StyledComponents'
 import ShowGeneModal from '../../buttons/ShowGeneModal'
 
 const CONSTRAINED_GENE_RANK_THRESHOLD = 1000
@@ -101,15 +102,17 @@ GeneDetailSection.propTypes = {
 
 const VariantGene = ({ geneId, gene, project, variant, compact }) => {
 
+  const geneConsequence = variant.transcripts[geneId] && variant.transcripts[geneId][0].consequence.replace(/_/g, ' ')
+
   if (!gene) {
-    return null
+    return <InlineHeader size="medium" content={geneId} subheader={geneConsequence} />
   }
 
   const geneSummary = (
     <div>
       <ShowGeneModal gene={gene} fontWeight="bold" fontSize={compact ? '1.2em' : '1.5em'} modalId={variant.variantId} />
       <HorizontalSpacer width={10} />
-      {compact ? variant.transcripts[geneId] && variant.transcripts[geneId][0].consequence.replace(/_/g, ' ') :
+      {compact ? geneConsequence :
       <GeneLinks>
         <a href={`http://gnomad-beta.broadinstitute.org/gene/${gene.geneSymbol}`} target="_blank">gnomAD</a>
         <HorizontalSpacer width={5} />|<HorizontalSpacer width={5} />

@@ -68,8 +68,8 @@ const Variants = ({ variants, projectGuid }) =>
         </Grid.Column>
         <Grid.Column>
           <VariantGene geneId={variant.mainTranscript.geneId} variant={variant} />
-          {variant.geneIds.length > 1 && <Divider />}
-          {variant.geneIds.filter(geneId => geneId !== variant.mainTranscript.geneId).map(geneId =>
+          {Object.keys(variant.transcripts).length > 1 && <Divider />}
+          {Object.keys(variant.transcripts).filter(geneId => geneId !== variant.mainTranscript.geneId).map(geneId =>
             <VariantGene key={geneId} geneId={geneId} variant={variant} compact />,
           )}
         </Grid.Column>

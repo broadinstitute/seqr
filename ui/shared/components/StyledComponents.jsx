@@ -1,6 +1,6 @@
 import React from 'react'
 import styled from 'styled-components'
-import { Icon, Label, Table } from 'semantic-ui-react'
+import { Header, Icon, Label, Table } from 'semantic-ui-react'
 
 export const ColoredIcon = styled(({ color, ...props }) => <Icon {...props} />)`
   color: ${props => props.color} !important;
@@ -26,5 +26,17 @@ export const NoBorderTable = styled(Table)`
   
   td {
     border: none !important;
+  }
+`
+
+export const InlineHeader = styled(({ overrideInline, ...props }) => <Header {...props} />)`
+  display: ${props => (props.overrideInline ? 'block' : 'inline-block')};
+  margin-right: 1em !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  
+  .sub.header {
+    display: inline-block !important;
+    margin-left: 0.5em !important;
   }
 `
