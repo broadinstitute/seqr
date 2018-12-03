@@ -41,7 +41,9 @@ export const FileLink = ({ url, data, ext, linkContent }) => {
   }
 
   if (data) {
-    let content = data.rawData.map(row => data.processRow(row).map(item => `"${item || ''}"`).join(extConfig.delimiter)).join('\n')
+    let content = data.rawData.map(row => data.processRow(row).map(
+      item => `"${(item === null || item === undefined) ? '' : item}"`,
+    ).join(extConfig.delimiter)).join('\n')
     if (data.headers) {
       content = `${data.headers.join(extConfig.delimiter)}\n${content}`
     }
