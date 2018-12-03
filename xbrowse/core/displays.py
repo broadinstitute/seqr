@@ -12,6 +12,11 @@ EXTRAS = [
     'clinvar_gold_stars',
 ]
 
+MAIN_TRANSCRIPT_FIELDS = [
+    'hgvsc',
+    'hgvsp',
+]
+
 
 def get_variant_display_headers(mall, project, indiv_id_list=None):
     """
@@ -30,6 +35,7 @@ def get_variant_display_headers(mall, project, indiv_id_list=None):
     headers.extend(project.get_reference_population_slugs())
     headers.extend(ANNOTATIONS)
     headers.extend(EXTRAS)
+    headers.extend(MAIN_TRANSCRIPT_FIELDS)
 
     if indiv_id_list:
         for indiv_id in indiv_id_list:
@@ -58,12 +64,13 @@ AF_KEY_MAP = {
 }
 
 
-def get_display_fields_for_variant(mall, project, variant, indiv_id_list=None):
+def get_display_fields_for_variant(mall, project, variant, indiv_id_list=None, genes_to_return=None):
     """
     Return a list of strings that can be output as a tsv or spreadsheet
     """
     fields = []
-    genes = [(mall.reference.get_gene_symbol(gene_id) or gene_id) for gene_id in variant.coding_gene_ids]
+    gene_ids = [gene_id for gene_id in variant.gene_ids if gene_id in genes_to_return] if genes_to_return else variant.coding_gene_ids
+    genes = [(mall.reference.get_gene_symbol(gene_id) or gene_id) for gene_id in gene_ids]
     fields.append(','.join(genes))
     fields.extend([
         variant.chr,
@@ -84,6 +91,9 @@ def get_display_fields_for_variant(mall, project, variant, indiv_id_list=None):
         fields.append(variant.annotation.get(field_key, ''))
     for field_key in EXTRAS:
         fields.append(variant.extras.get(field_key, ''))
+    main_transcript = variant.annotation.get('main_transcript', {})
+    for field_key in MAIN_TRANSCRIPT_FIELDS:
+        fields.append(main_transcript.get(field_key, ''))
     if indiv_id_list is None:
         indiv_id_list = []
     for indiv_id in indiv_id_list:
