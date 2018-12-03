@@ -267,6 +267,21 @@ def variant_details(variant_json, project, user=None):
     genotypes = {sample_guids_by_id.get(sample_id): genotype for sample_id, genotype in genotypes.items()
                  if sample_guids_by_id.get(sample_id)}
 
+    transcripts = defaultdict(list)
+    for i, vep_a in enumerate(annotation['vep_annotation']):
+        transcripts[vep_a.get('gene', vep_a.get('gene_id'))].append({
+            'transcriptId': vep_a.get('feature') or vep_a.get('transcript_id'),
+            'isChosenTranscript': i == annotation.get('worst_vep_annotation_index'),
+            'aminoAcids': vep_a.get('amino_acids'),
+            'canonical': vep_a.get('canonical'),
+            'cdnaPosition': vep_a.get('cdna_position') or vep_a.get('cdna_start'),
+            'cdsPosition': vep_a.get('cds_position'),
+            'codons': vep_a.get('codons'),
+            'consequence': vep_a.get('consequence') or vep_a.get('major_consequence'),
+            'hgvsc': vep_a.get('hgvsc'),
+            'hgvsp': vep_a.get('hgvsp'),
+        })
+
     return {
         'annotation': {
             'cadd_phred': annotation.get('cadd_phred'),
@@ -354,7 +369,7 @@ def variant_details(variant_json, project, user=None):
         'liftedOverPos': lifted_over_pos,
         'locusLists': [],
         'origAltAlleles': extras.get('orig_alt_alleles', []),
-        'transcripts': None,
+        'transcripts': transcripts,
     }
 
 

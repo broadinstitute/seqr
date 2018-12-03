@@ -67,10 +67,10 @@ const Variants = ({ variants, projectGuid }) =>
           <VariantTags variant={variant} />
         </Grid.Column>
         <Grid.Column>
-          <VariantGene geneId={variant.mainTranscript.geneId} variantId={variant.variantId} fontSize="1.5em" />
+          <VariantGene geneId={variant.mainTranscript.geneId} variant={variant} />
           {variant.geneIds.length > 1 && <Divider />}
           {variant.geneIds.filter(geneId => geneId !== variant.mainTranscript.geneId).map(geneId =>
-            <VariantGene key={geneId} geneId={geneId} variantId={variant.variantId} fontSize="1.2em" color="grey" />,
+            <VariantGene key={geneId} geneId={geneId} variant={variant} compact />,
           )}
         </Grid.Column>
         <Grid.Column><Annotations variant={variant} /></Grid.Column>

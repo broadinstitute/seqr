@@ -257,7 +257,7 @@
                                 <% _.each(variant.annotation.vep_annotation, function(annotation) { %>
                                     <% if(annotation.gene_id === gene_id && annotation.major_consequence_rank < major_consequence_rank) { %>
                                         <% major_consequence_rank = annotation.major_consequence_rank; %>
-                                        <% major_consequence = annotation.major_consequence; %>
+                                        <% major_consequence = annotation.major_consequence.replace(/_/g, ' '); %>
                                     <% } %>
                                 <% }) %>
                                 <small><%= major_consequence %></small><br/>
