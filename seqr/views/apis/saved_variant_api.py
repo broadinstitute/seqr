@@ -178,24 +178,6 @@ def update_saved_variant_json(request, project_guid):
 
 # TODO once variant search is rewritten saved_variant_json shouldn't need any postprocessing
 
-def _variant_transcripts(annotation):
-    transcripts = defaultdict(list)
-    for i, vep_a in enumerate(annotation.get('vep_annotation', [])):
-        transcripts[vep_a.get('gene', vep_a.get('gene_id'))].append({
-            'transcriptId': vep_a.get('feature') or vep_a.get('transcript_id'),
-            'isChosenTranscript': i == annotation.get('worst_vep_annotation_index'),
-            'aminoAcids': vep_a.get('amino_acids'),
-            'canonical': vep_a.get('canonical'),
-            'cdnaPosition': vep_a.get('cdna_position') or vep_a.get('cdna_start'),
-            'cdsPosition': vep_a.get('cds_position'),
-            'codons': vep_a.get('codons'),
-            'consequence': vep_a.get('consequence') or vep_a.get('major_consequence'),
-            'hgvsc': vep_a.get('hgvsc'),
-            'hgvsp': vep_a.get('hgvsp'),
-        })
-    return transcripts
-
-
 def variant_details(variant_json, project, user=None):
     annotation = variant_json.get('annotation') or {}
     main_transcript = annotation.get('main_transcript') or (annotation['vep_annotation'][annotation['worst_vep_annotation_index']] if annotation.get('worst_vep_annotation_index') is not None and annotation['vep_annotation'] else {})
