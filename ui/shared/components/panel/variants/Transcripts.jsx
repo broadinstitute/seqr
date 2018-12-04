@@ -4,10 +4,8 @@ import styled from 'styled-components'
 import { connect } from 'react-redux'
 import { Label, Header, Table, Segment } from 'semantic-ui-react'
 
-import { loadVariantTranscripts } from 'redux/rootReducer'
-import { getVariantIsLoading, getGenesById } from 'redux/selectors'
+import { getGenesById } from 'redux/selectors'
 import { VerticalSpacer } from '../../Spacers'
-import DataLoader from '../../DataLoader'
 import ShowGeneModal from '../../buttons/ShowGeneModal'
 import { ProteinSequence } from './Annotations'
 import { GENOME_VERSION_37 } from '../../../utils/constants'
@@ -29,82 +27,77 @@ const AnnotationLabel = styled.small`
   padding-right: 10px;
 `
 
-const Transcripts = ({ variant, loading, loadVariantTranscripts: dispatchLoadVariantTranscripts, genesById }) =>
-  <DataLoader contentId={variant} content={variant.transcripts} loading={loading} load={dispatchLoadVariantTranscripts}>
-    {variant.transcripts && Object.entries(variant.transcripts).map(([geneId, geneTranscripts]) =>
-      <div key={geneId}>
-        <Header size="huge" attached="top" content={<ShowGeneModal gene={genesById[geneId]} modalId="transcripts" />} subheader={`Gene Id: ${geneId}`} />
-        <Segment attached="bottom">
-          <Table basic="very">
-            <Table.Body>
-              {geneTranscripts.map(transcript =>
-                <Table.Row key={transcript.transcriptId}>
-                  <Table.Cell width={3}>
-                    <TranscriptLink
-                      target="_blank"
-                      href={`http://${variant.genomeVersion === GENOME_VERSION_37 ? 'grch37' : 'useast'}.ensembl.org/Homo_sapiens/Transcript/Summary?t=${transcript.transcriptId}`}
-                      isChosen={transcript.isChosenTranscript}
-                    >
-                      {transcript.transcriptId}
-                    </TranscriptLink>
-                    <div>
-                      {transcript.isChosenTranscript &&
-                        <span>
-                          <VerticalSpacer height={5} />
-                          <Label content="Chosen Transcript" color="orange" size="small" />
-                        </span>
-                      }
-                      {transcript.canonical &&
-                        <span>
-                          <VerticalSpacer height={5} />
-                          <Label content="Canonical Transcript" color="green" size="small" />
-                        </span>
-                      }
-                    </div>
-                  </Table.Cell>
-                  <Table.Cell width={4}>
-                    {transcript.consequence}
-                  </Table.Cell>
-                  <Table.Cell width={9}>
-                    <AnnotationSection>
-                      <AnnotationLabel>Codons</AnnotationLabel>{transcript.codons}<br />
-                      <AnnotationLabel>Amino Acids</AnnotationLabel>{transcript.aminoAcids}<br />
-                    </AnnotationSection>
-                    <AnnotationSection>
-                      <AnnotationLabel>cDNA Position</AnnotationLabel>{transcript.cdnaPosition}<br />
-                      <AnnotationLabel>CDS Position</AnnotationLabel>{transcript.cdsPosition}<br />
-                    </AnnotationSection>
-                    <AnnotationSection>
-                      <AnnotationLabel>HGVS.C</AnnotationLabel>{transcript.hgvsc && <ProteinSequence hgvs={transcript.hgvsc} />}<br />
-                      <AnnotationLabel>HGVS.P</AnnotationLabel>{transcript.hgvsp && <ProteinSequence hgvs={transcript.hgvsp} />}<br />
-                    </AnnotationSection>
-                  </Table.Cell>
-                </Table.Row>,
-              )}
-            </Table.Body>
-          </Table>
-        </Segment>
-        <VerticalSpacer height={10} />
-      </div>,
-    )}
-  </DataLoader>
+const Transcripts = ({ variant, genesById }) =>
+  variant.transcripts && Object.entries(variant.transcripts).map(([geneId, geneTranscripts]) =>
+    <div key={geneId}>
+      <Header
+        size="huge"
+        attached="top"
+        content={genesById[geneId] && <ShowGeneModal gene={genesById[geneId]} modalId={`${variant.variantId}-transcripts`} />}
+        subheader={`Gene Id: ${geneId}`}
+      />
+      <Segment attached="bottom">
+        <Table basic="very">
+          <Table.Body>
+            {geneTranscripts.map(transcript =>
+              <Table.Row key={transcript.transcriptId}>
+                <Table.Cell width={3}>
+                  <TranscriptLink
+                    target="_blank"
+                    href={`http://${variant.genomeVersion === GENOME_VERSION_37 ? 'grch37' : 'useast'}.ensembl.org/Homo_sapiens/Transcript/Summary?t=${transcript.transcriptId}`}
+                    isChosen={transcript.isChosenTranscript}
+                  >
+                    {transcript.transcriptId}
+                  </TranscriptLink>
+                  <div>
+                    {transcript.isChosenTranscript &&
+                      <span>
+                        <VerticalSpacer height={5} />
+                        <Label content="Chosen Transcript" color="orange" size="small" />
+                      </span>
+                    }
+                    {transcript.canonical &&
+                      <span>
+                        <VerticalSpacer height={5} />
+                        <Label content="Canonical Transcript" color="green" size="small" />
+                      </span>
+                    }
+                  </div>
+                </Table.Cell>
+                <Table.Cell width={4}>
+                  {transcript.consequence}
+                </Table.Cell>
+                <Table.Cell width={9}>
+                  <AnnotationSection>
+                    <AnnotationLabel>Codons</AnnotationLabel>{transcript.codons}<br />
+                    <AnnotationLabel>Amino Acids</AnnotationLabel>{transcript.aminoAcids}<br />
+                  </AnnotationSection>
+                  <AnnotationSection>
+                    <AnnotationLabel>cDNA Position</AnnotationLabel>{transcript.cdnaPosition}<br />
+                    <AnnotationLabel>CDS Position</AnnotationLabel>{transcript.cdsPosition}<br />
+                  </AnnotationSection>
+                  <AnnotationSection>
+                    <AnnotationLabel>HGVS.C</AnnotationLabel>{transcript.hgvsc && <ProteinSequence hgvs={transcript.hgvsc} />}<br />
+                    <AnnotationLabel>HGVS.P</AnnotationLabel>{transcript.hgvsp && <ProteinSequence hgvs={transcript.hgvsp} />}<br />
+                  </AnnotationSection>
+                </Table.Cell>
+              </Table.Row>,
+            )}
+          </Table.Body>
+        </Table>
+      </Segment>
+      <VerticalSpacer height={10} />
+    </div>,
+  )
 
 Transcripts.propTypes = {
   variant: PropTypes.object.isRequired,
-  loading: PropTypes.bool.isRequired,
-  loadVariantTranscripts: PropTypes.func.isRequired,
   genesById: PropTypes.object.isRequired,
 }
 
-
-const mapDispatchToProps = {
-  loadVariantTranscripts,
-}
-
 const mapStateToProps = state => ({
-  loading: getVariantIsLoading(state),
   genesById: getGenesById(state),
 })
 
-export default connect(mapStateToProps, mapDispatchToProps)(Transcripts)
+export default connect(mapStateToProps)(Transcripts)
 

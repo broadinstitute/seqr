@@ -125,7 +125,7 @@ const annotationVariations = (mainTranscript, variant) => {
 }
 
 const Annotations = ({ variant }) => {
-  const { mainTranscript } = variant
+  const { mainTranscript, rsid } = variant
 
   const variations = annotationVariations(mainTranscript, variant)
   const lofDetails = (mainTranscript.lof === 'LC' || mainTranscript.lofFlags === 'NAGNAG_SITE') ? [
@@ -177,6 +177,13 @@ const Annotations = ({ variant }) => {
         <Icon name="angle right" />
         <Sequence sequence={variant.alt} />
       </LargeText>
+      {rsid &&
+        <div>
+          <a href={`http://www.ncbi.nlm.nih.gov/SNP/snp_ref.cgi?searchType=adhoc_search&type=rs&rs=${rsid}`} target="_blank">
+            {rsid}
+          </a>
+        </div>
+      }
       {variant.liftedOverGenomeVersion === GENOME_VERSION_37 && (
         variant.liftedOverPos ?
           <div>

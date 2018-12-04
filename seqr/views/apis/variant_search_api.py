@@ -1,5 +1,4 @@
 import json
-from collections import defaultdict
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.views.decorators.csrf import csrf_exempt
@@ -11,9 +10,7 @@ from seqr.views.apis.saved_variant_api import _saved_variant_genes, _add_locus_l
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import add_additional_json_fields_for_saved_variant
 from seqr.views.utils.permissions_utils import check_permissions
-from seqr.model_utils import find_matching_xbrowse_model
 
-from xbrowse_server.mall import get_datastore
 
 GENOTYPE_AC_LOOKUP = {
     'ref_ref': [0, 0],
@@ -80,48 +77,6 @@ def query_variants_handler(request, search_hash):
         'genesById': genes,
         'search': search,
     })
-
-
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
-def variant_transcripts(request):
-    project = get_project_and_check_permissions(request.GET.get('projectGuid'), request.user)
-    family = Family.objects.get(guid=request.GET.get('familyGuid'))
-
-    base_project = find_matching_xbrowse_model(project)
-    # TODO use new es utils
-    loaded_variant = get_datastore(base_project).get_single_variant(
-        base_project.project_id,
-        family.family_id,
-        int(request.GET.get('xpos')),
-        request.GET.get('ref'),
-        request.GET.get('alt'),
-    )
-
-    transcripts = _parsed_variant_transcripts(loaded_variant.annotation)
-    return create_json_response({
-        'transcripts': transcripts,
-        'genesById': get_genes(transcripts.keys()),
-    })
-
-
-
-def _parsed_variant_transcripts(annotation):
-    transcripts = defaultdict(list)
-    for i, vep_a in enumerate(annotation['vep_annotation']):
-        transcripts[vep_a.get('gene', vep_a.get('gene_id'))].append({
-            'transcriptId': vep_a.get('feature') or vep_a.get('transcript_id'),
-            'isChosenTranscript': i == annotation.get('worst_vep_annotation_index'),
-            'aminoAcids': vep_a.get('amino_acids'),
-            'canonical': vep_a.get('canonical'),
-            'cdnaPosition': vep_a.get('cdna_position') or vep_a.get('cdna_start'),
-            'cdsPosition': vep_a.get('cds_position'),
-            'codons': vep_a.get('codons'),
-            'consequence': vep_a.get('consequence') or vep_a.get('major_consequence'),
-            'hgvsc': vep_a.get('hgvsc'),
-            'hgvsp': vep_a.get('hgvsp'),
-        })
-    return transcripts
 
 
 def _get_saved_variants(variants, project, family):

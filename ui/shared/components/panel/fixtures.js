@@ -445,20 +445,6 @@ export const VARIANT = {
     cadd_phred: "27.2",
     freqs: { AF: null, exac: 0.0006726888333653661, g1k: 0, gnomad_exomes: 0.00006505916317651364 },
     popCounts: { AC: null, AN: null, exac_hemi: null, exac_hom: null, gnomadExomesAC: null, gnomadGenomesAC: null} ,
-    vepAnnotations: [
-      {
-        aminoAcids: "P/X",
-        canonical: "YES",
-        cdnaPosition: "897",
-        cdsPosition: "859",
-        codons: "Ccc/cc",
-        consequence: "frameshift_variant",
-        hgvsc: "ENST00000456743.1:c.862delC",
-        hgvsp: "ENSP00000389625.1:p.Leu288SerfsTer10",
-        isChosenTranscript: true,
-        transcriptId: "ENST00000456743",
-      }
-    ],
     vepConsequence: "frameshift_variant",
     vepGroup: "frameshift",
   },
@@ -476,6 +462,7 @@ export const VARIANT = {
       name: "Genome-wide Linkage", user: "hsnow@broadinstitute.org" },
   ],
   mainTranscript: "37",
+  geneIds: ['ENSG00000228198'],
   genotypes: {
     NA19675: {
       ab: 1,
@@ -534,6 +521,22 @@ export const VARIANT = {
       user: "hsnow@broadinstitute.org",
     },
   ],
+  transcripts: {
+    ENSG00000228198: [
+      {
+        aminoAcids: "P/X",
+        canonical: "YES",
+        cdnaPosition: "897",
+        cdsPosition: "859",
+        codons: "Ccc/cc",
+        consequence: "frameshift_variant",
+        hgvsc: "ENST00000456743.1:c.862delC",
+        hgvsp: "ENSP00000389625.1:p.Leu288SerfsTer10",
+        isChosenTranscript: true,
+        transcriptId: "ENST00000456743",
+      }
+    ],
+  },
   variantId: "SV0000002_1248367227_r0390_100",
   xpos: 1248367227,
   }

@@ -17,7 +17,6 @@ import modalReducers from './utils/modalReducer'
 export const RECEIVE_DATA = 'RECEIVE_DATA'
 export const REQUEST_PROJECTS = 'REQUEST_PROJECTS'
 const REQUEST_PROJECT_DETAILS = 'REQUEST_PROJECT_DETAILS'
-const REQUEST_VARIANT = 'REQUEST_VARIANT'
 const REQUEST_GENES = 'REQUEST_GENES'
 const REQUEST_GENE_LISTS = 'REQUEST_GENE_LISTS'
 const REQUEST_GENE_LIST = 'REQUEST_GENE_LIST'
@@ -208,31 +207,6 @@ export const loadLocusListItems = (locusListId, onSuccess) => {
   }
 }
 
-export const loadVariantTranscripts = (variant) => {
-  return (dispatch) => {
-    if (!(variant && variant.transcripts)) {
-      dispatch({ type: REQUEST_VARIANT })
-      const variantQuery = Object.keys(variant).reduce((acc, k) => (
-        (typeof variant[k] === 'string' || typeof variant[k] === 'number') ? { [k]: variant[k], ...acc } : acc
-      ), {})
-      new HttpRequestHelper('/api/search/transcripts',
-        (responseJson) => {
-          const { transcripts, genesById } = responseJson
-          const updates = { genesById }
-          variant.transcripts = transcripts
-          if (variant.variantGuid) {
-            updates.savedVariantsByGuid = { [variant.variantGuid]: { transcripts } }
-          }
-          dispatch({ type: RECEIVE_DATA, updatesById: updates })
-        },
-        (e) => {
-          dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
-        },
-      ).get(variantQuery)
-    }
-  }
-}
-
 export const updateGeneNote = (values) => {
   return updateEntity(values, RECEIVE_DATA, `/api/gene_info/${values.geneId || values.gene_id}/note`, 'noteGuid')
 }
@@ -296,7 +270,6 @@ const rootReducer = combineReducers(Object.assign({
   locusListsLoading: loadingReducer(REQUEST_GENE_LISTS, RECEIVE_DATA),
   locusListLoading: loadingReducer(REQUEST_GENE_LIST, RECEIVE_DATA),
   savedVariantsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'savedVariantsByGuid'),
-  variantLoading: loadingReducer(REQUEST_VARIANT, RECEIVE_DATA),
   user: zeroActionsReducer,
   form: formReducer,
   search: searchReducer,

@@ -2,7 +2,7 @@ import logging
 import elasticsearch_dsl
 from elasticsearch import NotFoundError, TransportError
 from django.utils import timezone
-
+from seqr.views.apis.igv_api import proxy_to_igv
 from seqr.models import Sample
 from seqr.utils.es_utils import get_es_client, VARIANT_DOC_TYPE
 from seqr.utils.file_utils import does_file_exist, file_iter, get_file_stats
@@ -72,7 +72,7 @@ def add_dataset(
         for individual_id, dataset_path in _load_mapping_file(mapping_file_id).items():
             if not (dataset_path.endswith(".bam") or dataset_path.endswith(".cram")):
                 raise Exception('BAM / CRAM file "{}" must have a .bam or .cram extension'.format(dataset_path))
-            _validate_dataset_path(dataset_path)
+            _validate_alignment_dataset_path(dataset_path)
             sample_id = dataset_path.split('/')[-1].split('.')[0]
             sample_id_to_individual_id_mapping[sample_id] = individual_id
             sample_dataset_path_mapping[sample_id] = dataset_path
@@ -147,13 +147,22 @@ def _update_samples_for_dataset(
 def _get_elasticsearch_index_samples(elasticsearch_index):
     sample_field_suffix = '_num_alt'
 
-    index = elasticsearch_dsl.Index('{}*'.format(elasticsearch_index), using=get_es_client())
+    es_client = get_es_client()
+    index = elasticsearch_dsl.Index('{}*'.format(elasticsearch_index), using=es_client)
     try:
-        field_mapping = index.get_field_mapping(fields=['*{}'.format(sample_field_suffix)], doc_type=[VARIANT_DOC_TYPE])
+        field_mapping = index.get_field_mapping(fields=['*{}'.format(sample_field_suffix), 'join_field'], doc_type=[VARIANT_DOC_TYPE])
     except NotFoundError:
         raise Exception('Index "{}" not found'.format(elasticsearch_index))
     except TransportError as e:
         raise Exception(e.error)
+
+    #  Nested genotypes
+    if field_mapping.get(elasticsearch_index, {}).get('mappings', {}).get(VARIANT_DOC_TYPE, {}).get('join_field'):
+        s = elasticsearch_dsl.Search(using=es_client, index=elasticsearch_index)
+        s = s.params(size=0)
+        s.aggs.bucket('sample_ids', elasticsearch_dsl.A('terms', field='sample_id'))
+        response = s.execute()
+        return [agg['key'] for agg in response.aggregations.sample_ids.buckets]
 
     samples = set()
     for index in field_mapping.values():
@@ -201,6 +210,13 @@ def validate_variant_call_inputs(sample_type, dataset_path, project, elasticsear
         # TODO need to fix credentials
         #_validate_dataset_path(dataset_path)
         #_validate_vcf(dataset_path)
+
+
+def _validate_alignment_dataset_path(dataset_path):
+    headers = {'Range': 'bytes=0-100'} if dataset_path.endswith('.bam') else {}
+    resp = proxy_to_igv(dataset_path, {'options': '-b,-H'}, method='GET', scheme='http', headers=headers)
+    if resp.status_code >= 400 or (resp.get('Content-Type') != 'application/octet-stream' and resp.get('Content-Encoding') != 'gzip'):
+        raise Exception('Error accessing "{}": {}'.format(dataset_path, resp.content))
 
 
 def _validate_dataset_path(dataset_path):

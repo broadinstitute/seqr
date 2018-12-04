@@ -1,7 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import { Grid, Icon, Popup } from 'semantic-ui-react'
+import { Grid, Icon, Popup, Divider } from 'semantic-ui-react'
 import { NavLink } from 'react-router-dom'
 
 import { CLINSIG_SEVERITY } from 'shared/utils/constants'
@@ -66,7 +66,13 @@ const Variants = ({ variants }) =>
         <Grid.Column width={16}>
           <VariantTags variant={variant} />
         </Grid.Column>
-        <Grid.Column>{variant.mainTranscript.geneId && <VariantGene geneId={variant.mainTranscript.geneId} variantId={variant.variantId} />}</Grid.Column>
+        <Grid.Column>
+          <VariantGene geneId={variant.mainTranscript.geneId} variant={variant} />
+          {Object.keys(variant.transcripts).length > 1 && <Divider />}
+          {Object.keys(variant.transcripts).filter(geneId => geneId !== variant.mainTranscript.geneId).map(geneId =>
+            <VariantGene key={geneId} geneId={geneId} variant={variant} compact />,
+          )}
+        </Grid.Column>
         <Grid.Column><Annotations variant={variant} /></Grid.Column>
         <Grid.Column><Predictions predictions={variant.predictions} /></Grid.Column>
         <Grid.Column><Frequencies variant={variant} /></Grid.Column>

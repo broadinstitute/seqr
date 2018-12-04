@@ -1,9 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import styled from 'styled-components'
 import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
-import { Header } from 'semantic-ui-react'
 
 import { getFamiliesByGuid } from 'redux/selectors'
 import {
@@ -16,6 +14,7 @@ import {
 } from 'shared/utils/constants'
 import { HorizontalSpacer } from '../../Spacers'
 import PopupWithModal from '../../PopupWithModal'
+import { InlineHeader } from '../../StyledComponents'
 import Family from '../family'
 
 
@@ -27,12 +26,6 @@ const FAMILY_FIELDS = [
   { id: FAMILY_FIELD_INTERNAL_NOTES },
   { id: FAMILY_FIELD_INTERNAL_SUMMARY },
 ]
-
-const InlineHeader = styled(Header)`
-  display: inline-block;
-  margin-right: 1em !important;
-  margin-bottom: 0 !important;
-`
 
 const FAMILY_POPUP_STYLE = { maxWidth: '1200px' }
 

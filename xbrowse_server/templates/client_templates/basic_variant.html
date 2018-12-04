@@ -172,7 +172,8 @@
         } %>
         <% if (show_gene) {  %>
             <div class="cell genes">
-                <% var gene_id = worst_vep_annotation && (worst_vep_annotation.gene || worst_vep_annotation.gene_id); %>
+                <% var worst_gene_id = worst_vep_annotation && (worst_vep_annotation.gene || worst_vep_annotation.gene_id); %>
+                <% var gene_id = worst_gene_id %>
                 <% var gene = gene_id && variant.extras.genes[gene_id]; %>
                 <% if(gene) { %>
                     <div class="gene-cell">
@@ -185,23 +186,23 @@
                             <% } %>
                         </sub>
                         <div class="highlights">
-                            <% if (gene.missense_constraint && gene.missense_constraint_rank[0] < 1000) { %>
+                            <% if ((gene.missense_constraint && gene.missense_constraint_rank[0] < 1000) || (gene.tags.missense_constraint && gene.tags.missense_constraint_rank[0] < 1000)) { %>
                                 <span class="label label-default" style='display:inline'>MISSENSE CONSTR
                                     <i class="icon-question-sign icon-popover"
                                        title="Missense Constraint"
                                        data-placement="right"
-                                       data-content="This gene ranks <%= gene.missense_constraint_rank[0] %> most constrained out of <%= gene.missense_constraint_rank[1] %> genes under study in terms of missense constraint (z-score: <%= gene.missense_constraint.toPrecision(4) %>). Missense contraint is a measure of the degree to which the number of missense variants found in this gene in ExAC v0.3 is higher or lower than expected according to the statistical model described in [K. Samocha 2014]. In general this metric is most useful for genes that act via a dominant mechanism, and where a large proportion of the protein is heavily functionally constrained.">
+                                       data-content="This gene ranks <%= gene.missense_constraint_rank ? gene.missense_constraint_rank[0] : gene.tags.missense_constraint_rank[0] %> most constrained out of <%= gene.missense_constraint_rank ? gene.missense_constraint_rank[1] : gene.tags.missense_constraint_rank[1] %> genes under study in terms of missense constraint (z-score: <%= (gene.missense_constraint || gene.tags.missense_constraint).toPrecision(4) %>). Missense contraint is a measure of the degree to which the number of missense variants found in this gene in ExAC v0.3 is higher or lower than expected according to the statistical model described in [K. Samocha 2014]. In general this metric is most useful for genes that act via a dominant mechanism, and where a large proportion of the protein is heavily functionally constrained.">
                                     </i>
                                 </span>
                                 <br />
                             <% } %>
-                            <% if (gene.lof_constraint && gene.lof_constraint_rank[0] < 1000) { %>
+                            <% if ((gene.lof_constraint && gene.lof_constraint_rank[0] < 1000) || (gene.tags.lof_constraint && gene.tags.lof_constraint_rank[0] < 1000)) { %>
                                 <span class="label label-default">
                                     LOF CONSTR
                                     <i class="icon-question-sign icon-popover"
                                        title="Loss of Function Constraint"
                                        data-placement="right"
-                                       data-content="This gene ranks as <%= gene.lof_constraint_rank[0] %> most intolerant of LoF mutations out of <%= gene.lof_constraint_rank[1] %> genes under study. This metric is based on the amount of expected variation observed in the ExAC data and is a measure of how likely the gene is to be intolerant of loss-of-function mutations."></i>
+                                       data-content="This gene ranks as <%= gene.lof_constraint_rank ? gene.lof_constraint_rank[0] : gene.tags.lof_constraint_rank[0] %> most intolerant of LoF mutations out of <%= gene.lof_constraint_rank ? gene.lof_constraint_rank[1] : gene.tags.lof_constraint_rank[1] %> genes under study. This metric is based on the amount of expected variation observed in the ExAC data and is a measure of how likely the gene is to be intolerant of loss-of-function mutations."></i>
                                 </span><br/>
                             <% } %>
                         </div>
@@ -219,6 +220,51 @@
                         <% } %>
                     </div>
                 <% } %>
+                <% if(Object.keys(variant.extras.genes).length > 1) { %>
+                    <hr style="margin: 10px 0px;" />
+                <% } %>
+                <% _.each(variant.extras.genes, function(gene, gene_id) { %>
+                    <% if(gene_id != worst_gene_id) { %>
+                        <div class="gene-cell icon-popover" style="font-family: inherit;" data-html="true" title="Gene Details"
+                             data-content="
+                                <div class='highlights'>
+                                    <% if ((gene.missense_constraint && gene.missense_constraint_rank[0] < 1000) || (gene.tags.missense_constraint && gene.tags.missense_constraint_rank[0] < 1000)) { %>
+                                        <span class='label label-default' style='display:inline'>MISSENSE CONSTRAINT</span>
+                                        This gene ranks <%= gene.missense_constraint_rank ? gene.missense_constraint_rank[0] : gene.tags.missense_constraint_rank[0] %> most constrained out of <%= gene.missense_constraint_rank ? gene.missense_constraint_rank[1] : gene.tags.missense_constraint_rank[1] %> genes under study in terms of missense constraint (z-score: <%= (gene.missense_constraint || gene.tags.missense_constraint).toPrecision(4) %>). Missense contraint is a measure of the degree to which the number of missense variants found in this gene in ExAC v0.3 is higher or lower than expected according to the statistical model described in [K. Samocha 2014]. In general this metric is most useful for genes that act via a dominant mechanism, and where a large proportion of the protein is heavily functionally constrained.
+                                        <br />
+                                    <% } %>
+                                    <% if ((gene.lof_constraint && gene.lof_constraint_rank[0] < 1000) || (gene.tags.lof_constraint && gene.tags.lof_constraint_rank[0] < 1000)) { %>
+                                        <span class='label label-default'>LOF CONSTRAINT</span>
+                                        This gene ranks as <%= gene.lof_constraint_rank ? gene.lof_constraint_rank[0] : gene.tags.lof_constraint_rank[0] %> most intolerant of LoF mutations out of <%= gene.lof_constraint_rank ? gene.lof_constraint_rank[1] : gene.tags.lof_constraint_rank[1] %> genes under study. This metric is based on the amount of expected variation observed in the ExAC data and is a measure of how likely the gene is to be intolerant of loss-of-function mutations.
+                                        <br/>
+                                    <% } %>
+                                </div>
+                                <% if (gene.disease_db_phenotypes && gene.disease_db_phenotypes.length > 0) { %>
+                                    <span class='label label-default'>IN OMIM</span><br/>
+                                <% } %>
+                                <% if (gene.disease_gene_lists && gene.disease_gene_lists.length > 0 ) { %>
+                                    <span class='label label-danger'>GENE LISTS:</span>
+                                    <%= gene.disease_gene_lists.join(', ') %>
+                                <% } %>
+                            "
+                        >
+                            <a class="gene-link" style="font-size: 16px;color: grey;" data-gene_id="<%= gene_id %>">
+                                <%= gene.symbol || variant.extras.gene_names[gene_id] %>
+                            </a><br/>
+                             <% if(variant.annotation && variant.annotation.vep_annotation) { %>
+                                <% var major_consequence = null; %>
+                                <% var major_consequence_rank = 1000; %>
+                                <% _.each(variant.annotation.vep_annotation, function(annotation) { %>
+                                    <% if(annotation.gene_id === gene_id && annotation.major_consequence_rank < major_consequence_rank) { %>
+                                        <% major_consequence_rank = annotation.major_consequence_rank; %>
+                                        <% major_consequence = annotation.major_consequence.replace(/_/g, ' '); %>
+                                    <% } %>
+                                <% }) %>
+                                <small><%= major_consequence %></small><br/>
+                            <% } %>
+                        </div>
+                    <% } %>
+                <% }) %>
             </div>
         <% } %>
         <div class="cell location">

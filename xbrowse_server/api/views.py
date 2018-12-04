@@ -114,7 +114,16 @@ def mendelian_variant_search(request):
                 'search_hash': search_hash,
             })
         elif return_type == 'csv':
-            return ''
+            response = HttpResponse(content_type='text/csv')
+            response['Content-Disposition'] = 'attachment; filename="results_{}.csv"'.format(search_hash)
+            writer = csv.writer(response)
+            indiv_ids = family.indiv_ids_with_variant_data()
+            headers = xbrowse_displays.get_variant_display_headers(get_mall(project), project, indiv_ids)
+            writer.writerow(headers)
+            for variant in variants:
+                fields = xbrowse_displays.get_display_fields_for_variant(get_mall(project), project, variant, indiv_ids, genes_to_return=search_spec.variant_filter.genes)
+                writer.writerow(fields)
+            return response
         else:
             return HttpResponse("Return type not implemented")
 

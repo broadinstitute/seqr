@@ -82,7 +82,7 @@ from seqr.views.apis.igv_api import fetch_igv_track
 from seqr.views.apis.analysis_group_api import update_analysis_group_handler, delete_analysis_group_handler
 from seqr.views.apis.project_api import create_project_handler, update_project_handler, delete_project_handler
 from seqr.views.apis.project_categories_api import update_project_categories_handler
-from seqr.views.apis.variant_search_api import query_variants_handler, variant_transcripts
+from seqr.views.apis.variant_search_api import query_variants_handler
 from seqr.views.utils.file_utils import save_temp_file
 
 react_app_pages = [
@@ -139,7 +139,6 @@ api_endpoints = {
     'project/(?P<project_guid>[^/]+)/update_saved_variant_json': update_saved_variant_json,
 
     'search/(?P<search_hash>[^/]+)': query_variants_handler,
-    'search/transcripts': variant_transcripts,
 
     'saved_variant/(?P<variant_guid>[^/]+)/update_tags': update_variant_tags_handler,
     'saved_variant/(?P<variant_guid>[^/]+)/note/create': create_variant_note_handler,

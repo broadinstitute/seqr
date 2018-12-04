@@ -659,13 +659,17 @@ export const VARIANT_EXPORT_DATA = [
   { header: 'polyphen', getVal: variant => variant.predictions.polyphen },
   { header: 'muttaster', getVal: variant => variant.predictions.mut_taster },
   { header: 'fathmm', getVal: variant => variant.predictions.fathmm },
+  { header: 'rsid', getVal: variant => variant.rsid },
   { header: 'hgvsc', getVal: variant => variant.mainTranscript.hgvsc },
   { header: 'hgvsp', getVal: variant => variant.mainTranscript.hgvsp },
+  { header: 'clinvar_clinical_significance', getVal: variant => variant.clinvar.clinsig },
+  { header: 'clinvar_gold_stars', getVal: variant => variant.clinvar.goldStars },
 ]
 
 export const VARIANT_GENOTYPE_EXPORT_DATA = [
-  { header: 'sample_id', getVal: (genotype, individualId) => individualId },
+  { header: 'sample_id', getVal: (genotype, sample) => sample.sampleId },
   { header: 'genotype', getVal: genotype => (genotype.alleles.length ? genotype.alleles.join('/') : './.') },
+  { header: 'num_alt_alleles', getVal: genotype => genotype.numAlt },
   { header: 'filter' },
   { header: 'ad' },
   { header: 'dp' },

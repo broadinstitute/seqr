@@ -43,7 +43,7 @@ def saved_variant_data(request, project_guid, variant_guid=None):
         variant = get_json_for_saved_variant(saved_variant, add_tags=True, project_guid=project_guid)
         if variant['tags'] or variant['notes']:
             variant_json = json.loads(saved_variant.saved_variant_json or '{}')
-            variant.update(_variant_details(variant_json, request.user))
+            variant.update(variant_details(variant_json, project, request.user))
             variants[variant['variantGuid']] = variant
 
     genes = _saved_variant_genes(variants.values())
@@ -177,7 +177,7 @@ def update_saved_variant_json(request, project_guid):
 
 
 # TODO once variant search is rewritten saved_variant_json shouldn't need any postprocessing
-def _variant_details(variant_json, user):
+def variant_details(variant_json, project, user):
     annotation = variant_json.get('annotation') or {}
     main_transcript = annotation.get('main_transcript') or (annotation['vep_annotation'][annotation['worst_vep_annotation_index']] if annotation.get('worst_vep_annotation_index') is not None and annotation['vep_annotation'] else {})
     is_es_variant = annotation.get('db') == 'elasticsearch'
@@ -213,9 +213,28 @@ def _variant_details(variant_json, user):
             'pl': genotype.get('extras', {}).get('pl'),
         } for sample_id, genotype in variant_json.get('genotypes', {}).items()
     }
-    sample_guids_by_id = {s.sample_id: s.guid for s in  Sample.objects.filter(sample_id__in=genotypes.keys())}
+    sample_guids_by_id = {s.sample_id: s.guid for s in Sample.objects.filter(
+        individual__family__project=project,
+        sample_id__in=genotypes.keys(),
+        dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS
+    )}
     genotypes = {sample_guids_by_id.get(sample_id): genotype for sample_id, genotype in genotypes.items()
                  if sample_guids_by_id.get(sample_id)}
+
+    transcripts = defaultdict(list)
+    for i, vep_a in enumerate(annotation['vep_annotation']):
+        transcripts[vep_a.get('gene', vep_a.get('gene_id'))].append({
+            'transcriptId': vep_a.get('feature') or vep_a.get('transcript_id'),
+            'isChosenTranscript': i == annotation.get('worst_vep_annotation_index'),
+            'aminoAcids': vep_a.get('amino_acids'),
+            'canonical': vep_a.get('canonical'),
+            'cdnaPosition': vep_a.get('cdna_position') or vep_a.get('cdna_start'),
+            'cdsPosition': vep_a.get('cds_position'),
+            'codons': vep_a.get('codons'),
+            'consequence': vep_a.get('consequence') or vep_a.get('major_consequence'),
+            'hgvsc': vep_a.get('hgvsc'),
+            'hgvsp': vep_a.get('hgvsp'),
+        })
 
     return {
         'predictions': {
@@ -231,7 +250,6 @@ def _variant_details(variant_json, user):
             'polyphen': annotation.get('polyphen'),
             'primate_ai': annotation.get('primate_ai_score'),
             'revel': annotation.get('revel_score'),
-            'rsid': annotation.get('rsid'),
             'sift': annotation.get('sift'),
         },
         'mainTranscript': {
@@ -310,11 +328,15 @@ def _variant_details(variant_json, user):
                 'hemi': annotation.get('pop_counts', {}).get('gnomad_genomes_Hemi'),
             },
         },
+        'rsid': annotation.get('rsid'),
+        'transcripts': transcripts,
     }
 
 
 def _saved_variant_genes(variants):
-    gene_ids = {variant['mainTranscript']['geneId'] for variant in variants}
+    gene_ids = set()
+    for variant in variants:
+        gene_ids.update(variant['transcripts'].keys())
     genes = get_genes(gene_ids, add_dbnsfp=True, add_omim=True, add_constraints=True)
     for gene in genes.values():
         if gene:
