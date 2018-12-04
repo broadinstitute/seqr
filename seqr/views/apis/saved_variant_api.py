@@ -223,18 +223,9 @@ def variant_details(variant_json, project, user):
 
     transcripts = defaultdict(list)
     for i, vep_a in enumerate(annotation['vep_annotation']):
-        transcripts[vep_a.get('gene', vep_a.get('gene_id'))].append({
-            'transcriptId': vep_a.get('feature') or vep_a.get('transcript_id'),
-            'isChosenTranscript': i == annotation.get('worst_vep_annotation_index'),
-            'aminoAcids': vep_a.get('amino_acids'),
-            'canonical': vep_a.get('canonical'),
-            'cdnaPosition': vep_a.get('cdna_position') or vep_a.get('cdna_start'),
-            'cdsPosition': vep_a.get('cds_position'),
-            'codons': vep_a.get('codons'),
-            'consequence': vep_a.get('consequence') or vep_a.get('major_consequence'),
-            'hgvsc': vep_a.get('hgvsc'),
-            'hgvsp': vep_a.get('hgvsp'),
-        })
+        # ,
+        transcripts[vep_a.get('gene', vep_a.get('gene_id'))].append(
+            _transcript_detail(vep_a, i == annotation.get('worst_vep_annotation_index')))
 
     return {
         'predictions': {
@@ -252,17 +243,7 @@ def variant_details(variant_json, project, user):
             'revel': annotation.get('revel_score'),
             'sift': annotation.get('sift'),
         },
-        'mainTranscript': {
-            'geneId': main_transcript.get('gene') or main_transcript.get('gene_id'),
-            'symbol': main_transcript.get('gene_symbol') or main_transcript.get('symbol'),
-            'lof': main_transcript.get('lof'),
-            'lofFlags': main_transcript.get('lof_flags'),
-            'lofFilter': main_transcript.get('lof_filter'),
-            'hgvsc': main_transcript.get('hgvsc'),
-            'hgvsp': main_transcript.get('hgvsp'),
-            'aminoAcids': main_transcript.get('amino_acids'),
-            'proteinPosition': main_transcript.get('protein_position'),
-        },
+        'mainTranscript': _transcript_detail(main_transcript, True),
         'clinvar': {
             'clinsig': extras.get('clinvar_clinsig'),
             'variantId': extras.get('clinvar_variant_id'),
@@ -330,6 +311,26 @@ def variant_details(variant_json, project, user):
         },
         'rsid': annotation.get('rsid'),
         'transcripts': transcripts,
+    }
+
+
+def _transcript_detail(transcript, isChosenTranscript):
+    return {
+        'transcriptId': transcript.get('feature') or transcript.get('transcript_id'),
+        'transcriptRank': 0 if isChosenTranscript else 1,
+        'geneId': transcript.get('gene') or transcript.get('gene_id'),
+        'geneSymbol': transcript.get('gene_symbol') or transcript.get('symbol'),
+        'lof': transcript.get('lof'),
+        'lofFlags': transcript.get('lof_flags'),
+        'lofFilter': transcript.get('lof_filter'),
+        'aminoAcids': transcript.get('amino_acids'),
+        'biotype': transcript.get('biotype'),
+        'canonical': transcript.get('canonical'),
+        'cdnaPosition': transcript.get('cdna_position') or transcript.get('cdna_start'),
+        'codons': transcript.get('codons'),
+        'majorConsequence': transcript.get('consequence') or transcript.get('major_consequence'),
+        'hgvsc': transcript.get('hgvsc'),
+        'hgvsp': transcript.get('hgvsp'),
     }
 
 

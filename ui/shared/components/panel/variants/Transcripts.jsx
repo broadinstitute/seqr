@@ -28,7 +28,9 @@ const AnnotationLabel = styled.small`
 `
 
 const Transcripts = ({ variant, genesById }) =>
-  variant.transcripts && Object.entries(variant.transcripts).map(([geneId, geneTranscripts]) =>
+  variant.transcripts && Object.entries(variant.transcripts).sort((transcriptsA, transcriptsB) => (
+    Math.min(...transcriptsA[1].map(t => t.transcriptRank)) - Math.min(...transcriptsB[1].map(t => t.transcriptRank))
+  )).map(([geneId, geneTranscripts]) =>
     <div key={geneId}>
       <Header
         size="huge"
@@ -45,12 +47,12 @@ const Transcripts = ({ variant, genesById }) =>
                   <TranscriptLink
                     target="_blank"
                     href={`http://${variant.genomeVersion === GENOME_VERSION_37 ? 'grch37' : 'useast'}.ensembl.org/Homo_sapiens/Transcript/Summary?t=${transcript.transcriptId}`}
-                    isChosen={transcript.isChosenTranscript}
+                    isChosen={transcript.transcriptRank === 0}
                   >
                     {transcript.transcriptId}
                   </TranscriptLink>
                   <div>
-                    {transcript.isChosenTranscript &&
+                    {transcript.transcriptRank === 0 &&
                       <span>
                         <VerticalSpacer height={5} />
                         <Label content="Chosen Transcript" color="orange" size="small" />
@@ -65,7 +67,7 @@ const Transcripts = ({ variant, genesById }) =>
                   </div>
                 </Table.Cell>
                 <Table.Cell width={4}>
-                  {transcript.consequence}
+                  {transcript.majorConsequence}
                 </Table.Cell>
                 <Table.Cell width={9}>
                   <AnnotationSection>
@@ -73,8 +75,8 @@ const Transcripts = ({ variant, genesById }) =>
                     <AnnotationLabel>Amino Acids</AnnotationLabel>{transcript.aminoAcids}<br />
                   </AnnotationSection>
                   <AnnotationSection>
+                    <AnnotationLabel>Biotype</AnnotationLabel>{transcript.biotype}<br />
                     <AnnotationLabel>cDNA Position</AnnotationLabel>{transcript.cdnaPosition}<br />
-                    <AnnotationLabel>CDS Position</AnnotationLabel>{transcript.cdsPosition}<br />
                   </AnnotationSection>
                   <AnnotationSection>
                     <AnnotationLabel>HGVS.C</AnnotationLabel>{transcript.hgvsc && <ProteinSequence hgvs={transcript.hgvsc} />}<br />

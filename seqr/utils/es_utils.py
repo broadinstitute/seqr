@@ -42,10 +42,15 @@ def get_es_variants(search, individuals, sort=None, offset=0, num_results=None):
     }
     samples = [s for s in samples if s.loaded_date == sample_individual_max_loaded_date[s.individual.guid]]
 
-    elasticsearch_index = ','.join({s.elasticsearch_index for s in samples})
+    es_indices = {s.elasticsearch_index for s in samples}
+    if len(es_indices) > 1:
+        # TODO get rid of this once add multi-project support and handle duplicate variants in different indices
+        raise Exception('Samples are not all contained in the same index: {}'.format(', '.join(es_indices)))
+    elasticsearch_index = ','.join(es_indices)
     logger.info('Searching in elasticsearch index: {}'.format(elasticsearch_index))
 
-    samples_by_id = {_encode_name(sample.sample_id): sample for sample in samples}
+    #  TODO does not work across projects/ families?
+    samples_by_id = {sample.sample_id: sample for sample in samples}
 
     #  TODO move liftover to hail pipeline once upgraded to 0.2
     liftover_grch38_to_grch37 = None
@@ -56,19 +61,12 @@ def get_es_variants(search, individuals, sort=None, offset=0, num_results=None):
 
     es_search = Search(using=get_es_client(), index=elasticsearch_index)
 
-    if search.get('inheritance'):
-        es_search = es_search.filter(_genotype_filter(search.get('inheritance'), individuals, samples_by_id))
-    else:
-        es_search = es_search.filter(_has_genotype_filter(samples_by_id.keys()))
+    es_search = es_search.filter(
+        _genotype_filter(search.get('inheritance'), search.get('qualityFilter'), individuals, samples_by_id)
+    )
 
-    if search.get('qualityFilter'):
-        es_search = es_search.filter(_quality_filter(search['qualityFilter'], samples_by_id.keys()))
-
-    if intervals:
-        es_search = es_search.filter(_interval_filter(intervals))
-
-    if genes:
-        es_search = es_search.filter(_gene_filter(genes, search['locus']))
+    if genes or intervals:
+        es_search = es_search.filter(_location_filter(genes, intervals, search['locus']))
 
     if search.get('annotations'):
         es_search = es_search.filter(_annotations_filter(search['annotations']))
@@ -129,7 +127,41 @@ INHERITANCE_FILTERS = {
 }
 
 
-def _genotype_filter(inheritance, individuals, samples_by_id):
+def _genotype_filter(inheritance, quality_filter, individuals, samples_by_id):
+    genotypes_q = Q()
+
+    quality_q = Q()
+    if quality_filter:
+        if quality_filter.get('vcf_filter') is not None:
+            genotypes_q = ~Q('exists', field='filters')
+
+        min_ab = quality_filter['min_ab'] / 100.0 if quality_filter.get('min_ab') else None
+        min_gq = quality_filter.get('min_gq')
+        if min_ab:
+            #  AB only relevant for hets
+            quality_q &= Q(~Q('term', num_alt=1) | Q('range', ab={'gte': min_ab}))
+        if min_gq:
+            quality_q &= Q('range', gq={'gte': min_gq})
+
+    if inheritance:
+        samples_q, addl_filter = _genotype_inheritance_filter(inheritance, quality_q, individuals, samples_by_id)
+        if addl_filter:
+            genotypes_q &= addl_filter
+    else:
+        samples_q = Q('terms', sample_id=samples_by_id.keys()) & quality_q
+        # If no inheritance specified only return variants where at least one of the requested samples has an alt allele
+        # TODO this should be on a per-family basis (i.e. only return families with at least one alt allele)
+        genotypes_q &= Q('has_child', type='genotype', query=Q(Q('range', num_alt={'gte': 1}) & samples_q))
+
+    # Return variants where all requested samples meet the filtering criteria
+    genotypes_q &= Q('has_child', type='genotype', query=samples_q, min_children=len(samples_by_id), inner_hits={})
+
+    return genotypes_q
+
+
+def _genotype_inheritance_filter(inheritance, quality_q, individuals, samples_by_id):
+    samples_q = None
+    global_filter = None
     inheritance_mode = inheritance.get('mode')
     inheritance_filter = inheritance.get('filter') or {}
     parent_x_linked_genotypes = {}
@@ -140,21 +172,22 @@ def _genotype_filter(inheritance, individuals, samples_by_id):
         if INHERITANCE_FILTERS.get(inheritance_mode):
             inheritance_filter = INHERITANCE_FILTERS[inheritance_mode]
         if inheritance_mode == X_LINKED_RECESSIVE:
+            global_filter = Q('match', contig='X')
             for individual in individuals:
                 if individual.affected == AFFECTED:
                     parent_x_linked_genotypes.update({
-                        individual.maternal_id: REF_ALT,
-                        individual.paternal_id: REF_REF,
+                        individual.mother.guid: REF_ALT,
+                        individual.father.guid: REF_REF,
                     })
         # TODO compound het
 
-    samples_q = None
     for sample_id, sample in samples_by_id.items():
+        sample_q = Q(Q('term', sample_id=sample_id) & quality_q)
         genotype = None
         filter_for_status = inheritance_filter.get(sample.individual.affected, {})
 
-        if sample.individual.affected == UNAFFECTED and parent_x_linked_genotypes.get(sample.individual.individual_id):
-            genotype = parent_x_linked_genotypes[sample.individual.individual_id]
+        if sample.individual.affected == UNAFFECTED and parent_x_linked_genotypes.get(sample.individual.guid):
+            genotype = parent_x_linked_genotypes[sample.individual.guid]
         elif filter_for_status.get('individuals'):
             if filter_for_status['individuals'].get(sample.individual.individual_id):
                 genotype = filter_for_status['individuals'][sample.individual.individual_id]
@@ -162,70 +195,37 @@ def _genotype_filter(inheritance, individuals, samples_by_id):
             genotype = filter_for_status['genotype']
 
         if genotype:
-            sample_q = Q('range' if genotype in RANGE_FIELDS else 'term', num_alt=GENOTYPE_QUERY_MAP[genotype])
-            sample_q &= Q('match', sample_id=sample_id)
-            if not samples_q:
-                samples_q = sample_q
-            else:
-                samples_q |= sample_q
+            sample_q &= Q('range' if genotype in RANGE_FIELDS else 'term', num_alt=GENOTYPE_QUERY_MAP[genotype])
 
-    inheritance_q = _genotype_child_q(samples_q, min_children=len(samples_by_id), inner_hits={})
-    if inheritance_mode == X_LINKED_RECESSIVE:
-        inheritance_q &= Q('match', contig='X')
-    return inheritance_q
+        if not samples_q:
+            samples_q = sample_q
+        else:
+            samples_q |= sample_q
+
+    return samples_q, global_filter
 
 
-def _has_genotype_filter(sample_ids):
-    #  TODO analyzed field for sample_id so works with "terms"?
-    sample_id_q = _sample_id_q(sample_ids)
+def _location_filter(genes, intervals, location_filter):
+    q = None
+    if intervals:
+        q = _build_or_filter('range', [{
+            'xpos': {
+                'gte': get_xpos(interval['chrom'], interval['start']),
+                'lte': get_xpos(interval['chrom'], interval['end'])
+            }
+        } for interval in intervals])
 
-    # Return all child documents with the requested sample IDs
-    sample_genotypes_q = _genotype_child_q(sample_id_q, inner_hits={})
+    if genes:
+        gene_q = Q('terms', geneIds=genes.keys())
+        if q:
+            q |= gene_q
+        else:
+            q = gene_q
 
-    return sample_genotypes_q & _genotype_child_q(Q(Q('range', num_alt={'gte': 1}) & sample_id_q))
-
-
-def _sample_id_q(sample_ids):
-    return _build_or_filter('match', [{'sample_id': sample_id} for sample_id in sample_ids])
-
-
-def _genotype_child_q(query, **kwargs):
-    return Q('has_child', type='child', query=query, **kwargs)
-
-
-def _quality_filter(quality_filter, sample_ids):
-    q = Q()
-    if quality_filter.get('vcf_filter') is not None:
-        q = ~Q('exists', field='filters')
-
-    min_ab = quality_filter['min_ab'] / 100.0 if quality_filter.get('min_ab') else None
-    min_gq = quality_filter.get('min_gq')
-    if min_ab is not None or min_gq is not None:
-        genotype_q = _sample_id_q(sample_ids)
-        if min_ab is not None:
-            #  AB only relevant for hets
-            genotype_q &= Q(~Q('term', num_alt=1) | Q('range', ab={'gte': min_ab}))
-        if min_gq is not None:
-            genotype_q &= Q('range', gq={'gte': min_gq})
-        q &= _genotype_child_q(genotype_q, min_children=len(sample_ids))
-
-    return q
-
-
-def _interval_filter(intervals):
-    return _build_or_filter('range', [{
-        'xpos': {
-            'gte': get_xpos(interval['chrom'], interval['start']),
-            'lte': get_xpos(interval['chrom'], interval['end'])
-        }
-    } for interval in intervals])
-
-
-def _gene_filter(genes, location_filter):
     if location_filter.get('excludeLocations'):
-        return ~Q('terms', geneIds=genes.keys())
+        return ~q
     else:
-        return Q('terms', geneIds=genes.keys())
+        return q
 
 
 CLINVAR_SIGNFICANCE_MAP = {
@@ -439,15 +439,11 @@ def _get_sort(sort_key, *args):
 
 CLINVAR_FIELDS = ['clinical_significance', 'variation_id', 'allele_id', 'gold_stars']
 HGMD_FIELDS = ['accession', 'class']
-TRANSCRIPT_FIELDS = [
-    'gene_id', 'gene_symbol', 'lof', 'lof_flags', 'lof_filter', 'hgvsc', 'hgvsp', 'amino_acids', 'protein_position',
-    'major_consequence',
-]
+SORTED_TRANSCRIPTS_FIELD_KEY = 'sortedTranscriptConsequences'
 NESTED_FIELDS = {
     field_name: {field: {} for field in fields} for field_name, fields in {
         'clinvar': CLINVAR_FIELDS,
         'hgmd': HGMD_FIELDS,
-        'mainTranscript': TRANSCRIPT_FIELDS
     }.items()
 }
 
@@ -459,6 +455,7 @@ CORE_FIELDS_CONFIG = {
     'filters': {'response_key': 'genotypeFilters', 'format_value': lambda filters: ','.join(filters), 'default_value': []},
     'originalAltAlleles': {'format_value': lambda alleles: [a.split('-')[-1] for a in alleles], 'default_value': []},
     'ref': {},
+    'rsid': {},
     'xpos': {'format_value': long},
 }
 PREDICTION_FIELDS_CONFIG = {
@@ -494,7 +491,7 @@ POPULATION_RESPONSE_FIELD_CONFIGS = {k: dict(DEFAULT_POP_FIELD_CONFIG, **v) for 
 
 
 def _get_query_field_names():
-    field_names = CORE_FIELDS_CONFIG.keys() + PREDICTION_FIELDS_CONFIG.keys()
+    field_names = CORE_FIELDS_CONFIG.keys() + PREDICTION_FIELDS_CONFIG.keys() + [SORTED_TRANSCRIPTS_FIELD_KEY]
     for field_name, fields in NESTED_FIELDS.items():
         field_names += ['{}_{}'.format(field_name, field) for field in fields.keys()]
     for population, pop_config in POPULATIONS.items():
@@ -509,7 +506,7 @@ def _get_query_field_names():
 def _parse_es_hit(raw_hit, samples_by_id, liftover_grch38_to_grch37, field_names):
     genotypes = {}
     matched_samples = set()
-    for genotype_hit in raw_hit.meta.inner_hits.child:
+    for genotype_hit in raw_hit.meta.inner_hits.genotype:
         sample = samples_by_id[genotype_hit['sample_id']]
         matched_samples.add(sample)
         genotypes[sample.guid] = _get_field_values(genotype_hit, GENOTYPE_FIELDS_CONFIG)
@@ -542,6 +539,14 @@ def _parse_es_hit(raw_hit, samples_by_id, liftover_grch38_to_grch37, field_names
         for population, pop_config in POPULATIONS.items()
     }
 
+    sorted_transcripts = [
+        {_to_camel_case(k): v for k, v in transcript.to_dict().items()}
+        for transcript in hit[SORTED_TRANSCRIPTS_FIELD_KEY]
+    ]
+    transcripts = defaultdict(list)
+    for transcript in sorted_transcripts:
+        transcripts[transcript['geneId']].append(transcript)
+
     result = _get_field_values(hit, CORE_FIELDS_CONFIG, format_response_key=str)
     result.update({
         field_name: _get_field_values(hit, fields, lookup_field_prefix=field_name)
@@ -555,10 +560,12 @@ def _parse_es_hit(raw_hit, samples_by_id, liftover_grch38_to_grch37, field_names
         'liftedOverGenomeVersion': lifted_over_genome_version,
         'liftedOverChrom': lifted_over_chrom,
         'liftedOverPos': lifted_over_pos,
+        'mainTranscript': sorted_transcripts[0],
         'populations': populations,
         'predictions': _get_field_values(
             hit, PREDICTION_FIELDS_CONFIG, format_response_key=lambda key: key.split('_')[1].lower()
         ),
+        'transcripts': transcripts,
     })
     return result
 
@@ -580,39 +587,3 @@ def _value_if_has_key(hit, keys, format_value=None, default_value=None, no_key_u
         if key in hit:
             return format_value(default_value if hit[key] is None else hit[key]) if format_value else hit[key]
     return default_value if no_key_use_default else None
-
-
-# TODO so not support indexing samples with bad IDs in the first place?
-# make encoded values as human-readable as possible
-#  TODO store sample ids already encoded
-ES_FIELD_NAME_ESCAPE_CHAR = '$'
-ES_FIELD_NAME_BAD_LEADING_CHARS = set(['_', '-', '+', ES_FIELD_NAME_ESCAPE_CHAR])
-ES_FIELD_NAME_SPECIAL_CHAR_MAP = {
-    '.': '_$dot$_',
-    ',': '_$comma$_',
-    '#': '_$hash$_',
-    '*': '_$star$_',
-    '(': '_$lp$_',
-    ')': '_$rp$_',
-    '[': '_$lsb$_',
-    ']': '_$rsb$_',
-    '{': '_$lcb$_',
-    '}': '_$rcb$_',
-}
-
-
-def _encode_name(s):
-    '''Applies a reversable encoding to the special chars in the given name or id string, and returns the result.
-    Among other things, the encoded string is a valid elasticsearch or mongodb field name.
-
-    See:
-    https://discuss.elastic.co/t/special-characters-in-field-names/10658/2
-    https://discuss.elastic.co/t/illegal-characters-in-elasticsearch-field-names/17196/2
-    '''
-    s = s.replace(ES_FIELD_NAME_ESCAPE_CHAR, 2 * ES_FIELD_NAME_ESCAPE_CHAR)
-    for original_value, encoded in ES_FIELD_NAME_SPECIAL_CHAR_MAP.items():
-        s = s.replace(original_value, encoded)
-    if s[0] in ES_FIELD_NAME_BAD_LEADING_CHARS:
-        s = ES_FIELD_NAME_ESCAPE_CHAR + s
-    return s
-

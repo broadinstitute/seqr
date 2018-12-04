@@ -100,17 +100,6 @@ const annotationVariations = (mainTranscript, variant) => {
     )
   }
 
-  if (mainTranscript.aminoAcids && mainTranscript.proteinPosition) {
-    const aminoAcids = mainTranscript.aminoAcids.split('/')
-    const aa1 = aminoAcids[0] || ''
-    const aa2 = aminoAcids[1] || ''
-
-    variations.push(
-      `${aa1}${mainTranscript.proteinPosition}${aa2}`, //A625V
-      `${mainTranscript.proteinPosition}${aa1}/${aa2}`, //625A/V
-    )
-  }
-
   if (variant.alt && variant.ref && variant.pos) {
     variations.push(
       `${variant.pos}${variant.ref}->${variant.alt}`, //179432185A->G

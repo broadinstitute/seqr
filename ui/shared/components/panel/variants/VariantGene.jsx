@@ -102,7 +102,7 @@ GeneDetailSection.propTypes = {
 
 const VariantGene = ({ geneId, gene, project, variant, compact }) => {
 
-  const geneConsequence = variant.transcripts[geneId] && variant.transcripts[geneId][0].consequence.replace(/_/g, ' ')
+  const geneConsequence = variant.transcripts[geneId] && variant.transcripts[geneId][0].majorConsequence.replace(/_/g, ' ')
 
   if (!gene) {
     return <InlineHeader size="medium" content={geneId} subheader={geneConsequence} />
