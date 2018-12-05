@@ -61,26 +61,36 @@ def get_es_variants(search, individuals, sort=None, offset=0, num_results=None):
 
     es_search = Search(using=get_es_client(), index=elasticsearch_index)
 
-    es_search = es_search.filter(
-        _genotype_filter(search.get('inheritance'), search.get('qualityFilter'), individuals, samples_by_id)
-    )
+    genotypes_q, is_compound_het = _genotype_filter(search.get('inheritance'), search.get('qualityFilter'), individuals, samples_by_id)
+    es_search = es_search.filter(genotypes_q)
 
     if genes or intervals:
         es_search = es_search.filter(_location_filter(genes, intervals, search['locus']))
 
+    allowed_consequences = None
     if search.get('annotations'):
-        es_search = es_search.filter(_annotations_filter(search['annotations']))
+        consequences_filter, allowed_consequences = _annotations_filter(search['annotations'])
+        es_search = es_search.filter(consequences_filter)
 
     if search.get('freqs'):
         es_search = es_search.filter(_frequency_filter(search['freqs']))
 
-    # sort and pagination
-    es_search = es_search.sort(*_get_sort(sort, samples_by_id))
-    es_search = es_search[offset: offset + num_results]
-
-    # Only return relevant fields
     field_names = _get_query_field_names()
-    es_search = es_search.source(field_names)
+    sort = _get_sort(sort, samples_by_id)
+
+    if is_compound_het:
+        # For compound het search get results from aggregation instead of top level hits
+        es_search = es_search[:0]
+        es_search.aggs.bucket(
+            'genes', 'terms', field='geneIds', min_doc_count=2, size=10000
+        ).metric(
+            'vars_by_gene', 'top_hits', size=100, sort=sort, _source=field_names
+        )
+    else:
+        es_search = es_search.source(field_names)
+        es_search = es_search.sort(*sort)
+        # Pagination
+        es_search = es_search[offset: offset + num_results]
 
     logger.info(json.dumps(es_search.to_dict(), indent=2))
 
@@ -88,9 +98,18 @@ def get_es_variants(search, individuals, sort=None, offset=0, num_results=None):
 
     logger.info('Total hits: {} ({} seconds)'.format(response.hits.total, response.took/100.0))
 
-    variant_results = [_parse_es_hit(hit, samples_by_id, liftover_grch38_to_grch37, field_names) for hit in response]
+    if is_compound_het:
+        variant_results, total_results = _parse_compound_het_hits(
+            response, allowed_consequences, samples_by_id, liftover_grch38_to_grch37, field_names
+        )
+    else:
+        variant_results = [_parse_es_hit(hit, samples_by_id, liftover_grch38_to_grch37, field_names) for hit in response]
+        total_results = response.hits.total
 
-    return variant_results, response.hits.total, elasticsearch_index
+    for var in variant_results:
+        var.pop('_sort')
+
+    return variant_results, total_results, elasticsearch_index
 
 
 AFFECTED = Individual.AFFECTED_STATUS_AFFECTED
@@ -102,16 +121,17 @@ HAS_ALT = 'has_alt'
 HAS_REF = 'has_ref'
 # TODO no call?
 GENOTYPE_QUERY_MAP = {
-    REF_REF: 0,
+    REF_REF: {'lte': 0},
     REF_ALT: 1,
     ALT_ALT: 2,
     HAS_ALT: {'gte': 1},
-    HAS_REF: {'gte': 0, 'lte': 1},
+    HAS_REF: {'lte': 1},
 }
 RANGE_FIELDS = {k for k, v in GENOTYPE_QUERY_MAP.items() if type(v) != int}
 
 RECESSIVE = 'recessive'
 X_LINKED_RECESSIVE = 'x_linked_recessive'
+COMPOUND_HET = 'compound_het'
 RECESSIVE_FILTER = {
     AFFECTED: {'genotype': ALT_ALT},
     UNAFFECTED: {'genotype': HAS_REF},
@@ -120,6 +140,10 @@ INHERITANCE_FILTERS = {
     X_LINKED_RECESSIVE: RECESSIVE_FILTER,
     RECESSIVE: RECESSIVE_FILTER,
     'homozygous_recessive': RECESSIVE_FILTER,
+    COMPOUND_HET: {
+        AFFECTED: {'genotype': REF_ALT},
+        UNAFFECTED: {'genotype': HAS_REF},
+    },
     'de_novo': {
         AFFECTED: {'genotype': HAS_ALT},
         UNAFFECTED: {'genotype': REF_REF},
@@ -129,6 +153,7 @@ INHERITANCE_FILTERS = {
 
 def _genotype_filter(inheritance, quality_filter, individuals, samples_by_id):
     genotypes_q = Q()
+    is_compound_het = False
 
     quality_q = Q()
     if quality_filter:
@@ -144,7 +169,7 @@ def _genotype_filter(inheritance, quality_filter, individuals, samples_by_id):
             quality_q &= Q('range', gq={'gte': min_gq})
 
     if inheritance:
-        samples_q, addl_filter = _genotype_inheritance_filter(inheritance, quality_q, individuals, samples_by_id)
+        samples_q, addl_filter, is_compound_het = _genotype_inheritance_filter(inheritance, quality_q, individuals, samples_by_id)
         if addl_filter:
             genotypes_q &= addl_filter
     else:
@@ -156,7 +181,7 @@ def _genotype_filter(inheritance, quality_filter, individuals, samples_by_id):
     # Return variants where all requested samples meet the filtering criteria
     genotypes_q &= Q('has_child', type='genotype', query=samples_q, min_children=len(samples_by_id), inner_hits={})
 
-    return genotypes_q
+    return genotypes_q, is_compound_het
 
 
 def _genotype_inheritance_filter(inheritance, quality_q, individuals, samples_by_id):
@@ -181,6 +206,8 @@ def _genotype_inheritance_filter(inheritance, quality_q, individuals, samples_by
                     })
         # TODO compound het
 
+        # TODO recessive merge all recessive search types
+
     for sample_id, sample in samples_by_id.items():
         sample_q = Q(Q('term', sample_id=sample_id) & quality_q)
         genotype = None
@@ -202,7 +229,7 @@ def _genotype_inheritance_filter(inheritance, quality_q, individuals, samples_by
         else:
             samples_q |= sample_q
 
-    return samples_q, global_filter
+    return samples_q, global_filter, inheritance_mode == COMPOUND_HET
 
 
 def _location_filter(genes, intervals, location_filter):
@@ -272,7 +299,7 @@ def _annotations_filter(annotations):
         # for many intergenic variants VEP doesn't add any annotations, so if user selected 'intergenic_variant', also match variants where transcriptConsequenceTerms is emtpy
         consequences_filter |= ~Q('exists', field='transcriptConsequenceTerms')
 
-    return consequences_filter
+    return consequences_filter, vep_consequences
 
 
 POPULATIONS = {
@@ -288,6 +315,7 @@ POPULATIONS = {
         'AF': 'g1k_POPMAX_AF',
     },
     'exac': {
+        'AF': 'exac_AF_POPMAX',
         'AC': 'exac_AC_Adj',
         'AN': 'exac_AN_Adj',
         'Hom': 'exac_AC_Hom',
@@ -566,8 +594,54 @@ def _parse_es_hit(raw_hit, samples_by_id, liftover_grch38_to_grch37, field_names
             hit, PREDICTION_FIELDS_CONFIG, format_response_key=lambda key: key.split('_')[1].lower()
         ),
         'transcripts': transcripts,
+        '_sort': [_parse_es_sort(sort) for sort in raw_hit.meta.sort],
     })
     return result
+
+
+def _parse_compound_het_hits(response, allowed_consequences, samples_by_id, *args):
+    unaffected_indiv_sample_guids = [sample.guid for sample in samples_by_id.values()
+                                     if sample.individual.affected == UNAFFECTED]
+
+    variants_by_gene = []
+    for gene_agg in response.aggregations.genes.buckets:
+        gene_variants = [_parse_es_hit(hit, samples_by_id, *args) for hit in gene_agg['vars_by_gene']]
+
+        if allowed_consequences:
+            # Variants are returned if any transcripts have the filtered consequence, but to be compound het
+            # the filtered consequence needs to be present in at least one transcript in the gene of interest
+            gene_variants = [variant for variant in gene_variants if any(
+                transcript['majorConsequence'] in allowed_consequences for transcript in
+                variant['transcripts'][gene_agg['key']]
+            )]
+
+        if len(gene_variants) > 1:
+            is_compound_het = True
+            for sample_guid in unaffected_indiv_sample_guids:
+                # To be compound het all unaffected individuals need to be hom ref for at least one of the variants
+                is_compound_het = any(
+                    variant['genotypes'].get(sample_guid, {}).get('numAlt') != 1 for variant in gene_variants)
+                if not is_compound_het:
+                    break
+
+            if is_compound_het:
+                variants_by_gene.append(gene_variants)
+
+    # Top hits are sorted within buckets, but the buckets themselves are not sorted
+    # This is not done as part of the original search because they need to be sorted after filtering out variants
+    variants_by_gene = sorted(variants_by_gene, key=lambda variants: tuple(variants[0]['_sort']))
+    #  Flatten the lists
+    results = [var for variants in variants_by_gene for var in variants]
+    logger.info('Total compound hets: {}'.format(len(results)))
+    return results, len(results)
+
+
+def _parse_es_sort(sort):
+    if sort == 'Infinity':
+        sort = float('inf')
+    elif sort == '-Infinity':
+        sort = float('-inf')
+    return sort
 
 
 def _get_field_values(hit, field_configs, format_response_key=_to_camel_case, get_addl_fields=None, lookup_field_prefix=''):

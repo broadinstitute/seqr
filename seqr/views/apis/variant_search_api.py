@@ -64,6 +64,9 @@ def query_variants_handler(request, search_hash):
         search_model.total_results = total_results
         search_model.es_index = es_index
         search_model.save()
+        # Compound het searches return all variants not just the requested page
+        if len(variants) > per_page:
+            variants = variants[:per_page]
 
     genes = _saved_variant_genes(variants)
     # TODO add locus lists on the client side (?)
