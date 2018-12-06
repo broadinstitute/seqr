@@ -88,7 +88,10 @@ export const INHERITANCE_LOOKUP = {
     description: 'Finds variants where all affected indivs have at least one alternate allele and all unaffected are homozygous reference.',
   },
   [COMPOUND_HET_FILTER]: {
-    filter: {},
+    filter: {
+      [AFFECTED]: { genotype: REF_ALT },
+      [UNAFFECTED]: { genotype: HAS_REF },
+    },
     text: 'Compound Heterozygous',
     description: 'Affected individual(s) have two heterozygous mutations in the same gene on opposite haplotypes. Unaffected individuals cannot have the same combination of alleles as affected individuals, or be homozygous alternate for any of the variants. If parents are not present, this method only searches for pairs of heterozygous variants; they may not be on different haplotypes.',
   },

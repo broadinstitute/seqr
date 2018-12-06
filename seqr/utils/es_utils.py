@@ -24,7 +24,21 @@ def get_es_client():
     return elasticsearch.Elasticsearch(host=settings.ELASTICSEARCH_SERVICE_HOSTNAME, timeout=30, retry_on_timeout=True)
 
 
-def get_es_variants(search, individuals, sort=None, offset=0, num_results=None):
+def get_es_variants(search_model, individuals, page=1, num_results=100):
+
+    start_index = (page - 1) * num_results
+    end_index = page * num_results
+    if search_model.total_results is not None and False:
+        end_index = min(end_index, search_model.total_results)
+
+    loaded_results = json.loads(search_model.results or '[]')
+    if len(loaded_results) >= end_index and False:
+        return loaded_results[start_index:end_index], search_model.total_results
+    elif len(loaded_results):
+        start_index = max(start_index, len(loaded_results))
+
+    search = json.loads(search_model.search)
+    sort = search_model.sort
 
     genes, intervals, invalid_items = parse_locus_list_items(search.get('locus', {}), all_new=True)
     if invalid_items:
@@ -42,11 +56,13 @@ def get_es_variants(search, individuals, sort=None, offset=0, num_results=None):
     }
     samples = [s for s in samples if s.loaded_date == sample_individual_max_loaded_date[s.individual.guid]]
 
-    es_indices = {s.elasticsearch_index for s in samples}
-    if len(es_indices) > 1:
-        # TODO get rid of this once add multi-project support and handle duplicate variants in different indices
-        raise Exception('Samples are not all contained in the same index: {}'.format(', '.join(es_indices)))
-    elasticsearch_index = ','.join(es_indices)
+    elasticsearch_index = search_model.es_index
+    if not elasticsearch_index:
+        es_indices = {s.elasticsearch_index for s in samples}
+        if len(es_indices) > 1:
+            # TODO get rid of this once add multi-project support and handle duplicate variants in different indices
+            raise Exception('Samples are not all contained in the same index: {}'.format(', '.join(es_indices)))
+        elasticsearch_index = ','.join(es_indices)
     logger.info('Searching in elasticsearch index: {}'.format(elasticsearch_index))
 
     #  TODO does not work across projects/ families?
@@ -61,7 +77,7 @@ def get_es_variants(search, individuals, sort=None, offset=0, num_results=None):
 
     es_search = Search(using=get_es_client(), index=elasticsearch_index)
 
-    genotypes_q, is_compound_het = _genotype_filter(search.get('inheritance'), search.get('qualityFilter'), individuals, samples_by_id)
+    genotypes_q, inheritance_mode = _genotype_filter(search.get('inheritance'), search.get('qualityFilter'), individuals, samples_by_id)
     es_search = es_search.filter(genotypes_q)
 
     if genes or intervals:
@@ -78,7 +94,7 @@ def get_es_variants(search, individuals, sort=None, offset=0, num_results=None):
     field_names = _get_query_field_names()
     sort = _get_sort(sort, samples_by_id)
 
-    if is_compound_het:
+    if inheritance_mode == COMPOUND_HET:
         # For compound het search get results from aggregation instead of top level hits
         es_search = es_search[:0]
         es_search.aggs.bucket(
@@ -90,7 +106,7 @@ def get_es_variants(search, individuals, sort=None, offset=0, num_results=None):
         es_search = es_search.source(field_names)
         es_search = es_search.sort(*sort)
         # Pagination
-        es_search = es_search[offset: offset + num_results]
+        es_search = es_search[start_index:end_index]
 
     logger.info(json.dumps(es_search.to_dict(), indent=2))
 
@@ -98,7 +114,7 @@ def get_es_variants(search, individuals, sort=None, offset=0, num_results=None):
 
     logger.info('Total hits: {} ({} seconds)'.format(response.hits.total, response.took/100.0))
 
-    if is_compound_het:
+    if inheritance_mode == COMPOUND_HET:
         variant_results, total_results = _parse_compound_het_hits(
             response, allowed_consequences, samples_by_id, liftover_grch38_to_grch37, field_names
         )
@@ -109,7 +125,18 @@ def get_es_variants(search, individuals, sort=None, offset=0, num_results=None):
     for var in variant_results:
         var.pop('_sort')
 
-    return variant_results, total_results, elasticsearch_index
+    # Only save contiguous pages of results
+    if len(loaded_results) == start_index:
+        search_model.results = json.dumps(loaded_results + variant_results)
+    search_model.total_results = total_results
+    search_model.es_index = elasticsearch_index
+    search_model.save()
+
+    # Compound het searches return all variants not just the requested page
+    if len(variant_results) > num_results:
+        variant_results = variant_results[:num_results]
+
+    return variant_results, total_results
 
 
 AFFECTED = Individual.AFFECTED_STATUS_AFFECTED
@@ -131,15 +158,16 @@ RANGE_FIELDS = {k for k, v in GENOTYPE_QUERY_MAP.items() if type(v) != int}
 
 RECESSIVE = 'recessive'
 X_LINKED_RECESSIVE = 'x_linked_recessive'
+HOMOZYGOUS_RECESSIVE = 'homozygous_recessive'
 COMPOUND_HET = 'compound_het'
 RECESSIVE_FILTER = {
     AFFECTED: {'genotype': ALT_ALT},
     UNAFFECTED: {'genotype': HAS_REF},
 }
 INHERITANCE_FILTERS = {
-    X_LINKED_RECESSIVE: RECESSIVE_FILTER,
     RECESSIVE: RECESSIVE_FILTER,
-    'homozygous_recessive': RECESSIVE_FILTER,
+    X_LINKED_RECESSIVE: RECESSIVE_FILTER,
+    HOMOZYGOUS_RECESSIVE: RECESSIVE_FILTER,
     COMPOUND_HET: {
         AFFECTED: {'genotype': REF_ALT},
         UNAFFECTED: {'genotype': HAS_REF},
@@ -153,7 +181,7 @@ INHERITANCE_FILTERS = {
 
 def _genotype_filter(inheritance, quality_filter, individuals, samples_by_id):
     genotypes_q = Q()
-    is_compound_het = False
+    inheritance_mode = None
 
     quality_q = Q()
     if quality_filter:
@@ -169,7 +197,7 @@ def _genotype_filter(inheritance, quality_filter, individuals, samples_by_id):
             quality_q &= Q('range', gq={'gte': min_gq})
 
     if inheritance:
-        samples_q, addl_filter, is_compound_het = _genotype_inheritance_filter(inheritance, quality_q, individuals, samples_by_id)
+        samples_q, addl_filter, inheritance_mode = _genotype_inheritance_filter(inheritance, quality_q, individuals, samples_by_id)
         if addl_filter:
             genotypes_q &= addl_filter
     else:
@@ -179,9 +207,20 @@ def _genotype_filter(inheritance, quality_filter, individuals, samples_by_id):
         genotypes_q &= Q('has_child', type='genotype', query=Q(Q('range', num_alt={'gte': 1}) & samples_q))
 
     # Return variants where all requested samples meet the filtering criteria
-    genotypes_q &= Q('has_child', type='genotype', query=samples_q, min_children=len(samples_by_id), inner_hits={})
+    genotypes_child_q = Q('has_child', type='genotype', query=samples_q, min_children=len(samples_by_id), inner_hits={})
 
-    return genotypes_q, is_compound_het
+    # For recessive search, should be either standard recessive or x-linked (compound hets are added later)
+    if inheritance_mode == RECESSIVE:
+        x_linked_q, addl_filter, _ = _genotype_inheritance_filter(
+            {'mode': X_LINKED_RECESSIVE}, quality_q, individuals, samples_by_id
+        )
+        genotypes_child_q |= Q(
+            addl_filter & Q('has_child', type='genotype', query=x_linked_q, min_children=len(samples_by_id), inner_hits={})
+        )
+
+    genotypes_q &= genotypes_child_q
+
+    return genotypes_q, inheritance_mode
 
 
 def _genotype_inheritance_filter(inheritance, quality_q, individuals, samples_by_id):
@@ -194,6 +233,7 @@ def _genotype_inheritance_filter(inheritance, quality_q, individuals, samples_by
     if inheritance_mode:
         if inheritance_filter.get(AFFECTED) and inheritance_filter.get(UNAFFECTED):
             inheritance_mode = None
+
         if INHERITANCE_FILTERS.get(inheritance_mode):
             inheritance_filter = INHERITANCE_FILTERS[inheritance_mode]
         if inheritance_mode == X_LINKED_RECESSIVE:
@@ -229,7 +269,7 @@ def _genotype_inheritance_filter(inheritance, quality_q, individuals, samples_by
         else:
             samples_q |= sample_q
 
-    return samples_q, global_filter, inheritance_mode == COMPOUND_HET
+    return samples_q, global_filter, inheritance_mode
 
 
 def _location_filter(genes, intervals, location_filter):

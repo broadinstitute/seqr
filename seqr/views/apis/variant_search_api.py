@@ -52,27 +52,13 @@ def query_variants_handler(request, search_hash):
     check_permissions(project, request.user)
     individuals = family.individual_set.all()
 
-    search_results = json.loads(search_model.results or '[]')
-    offset = (page - 1) * per_page
-    if len(search_results) >= page * per_page or (search_model.total_results and len(search_results) == search_model.total_results):
-        variants = search_results[offset:(page * per_page)]
-    else:
-        variants, total_results, es_index = get_es_variants(search, individuals, sort=sort, offset=offset, num_results=per_page)
-        # Only save contiguous pages of results
-        if len(search_results) == (page - 1) * per_page:
-            search_model.results = json.dumps(search_results + variants)
-        search_model.total_results = total_results
-        search_model.es_index = es_index
-        search_model.save()
-        # Compound het searches return all variants not just the requested page
-        if len(variants) > per_page:
-            variants = variants[:per_page]
+    variants, total_results = get_es_variants(search_model, individuals, page=page, num_results=per_page)
 
     genes = _saved_variant_genes(variants)
     # TODO add locus lists on the client side (?)
     _add_locus_lists(project, variants, genes)
     searched_variants, saved_variants_by_guid = _get_saved_variants(variants, project, family)
-    search['totalResults'] = search_model.total_results
+    search['totalResults'] = total_results
 
     return create_json_response({
         'searchedVariants': searched_variants,
