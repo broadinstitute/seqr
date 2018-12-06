@@ -28,11 +28,12 @@ def get_es_variants(search_model, individuals, page=1, num_results=100):
 
     start_index = (page - 1) * num_results
     end_index = page * num_results
-    if search_model.total_results is not None and False:
+    if search_model.total_results is not None:
         end_index = min(end_index, search_model.total_results)
 
-    loaded_results = json.loads(search_model.results or '[]')
-    if len(loaded_results) >= end_index and False:
+    previous_search_results = json.loads(search_model.results or '{}')
+    loaded_results = previous_search_results.get('all_results') or []
+    if len(loaded_results) >= end_index:
         return loaded_results[start_index:end_index], search_model.total_results
     elif len(loaded_results):
         start_index = max(start_index, len(loaded_results))
@@ -77,9 +78,6 @@ def get_es_variants(search_model, individuals, page=1, num_results=100):
 
     es_search = Search(using=get_es_client(), index=elasticsearch_index)
 
-    genotypes_q, inheritance_mode = _genotype_filter(search.get('inheritance'), search.get('qualityFilter'), individuals, samples_by_id)
-    es_search = es_search.filter(genotypes_q)
-
     if genes or intervals:
         es_search = es_search.filter(_location_filter(genes, intervals, search['locus']))
 
@@ -91,50 +89,101 @@ def get_es_variants(search_model, individuals, page=1, num_results=100):
     if search.get('freqs'):
         es_search = es_search.filter(_frequency_filter(search['freqs']))
 
+    genotypes_q, inheritance_mode, compound_het_q = _genotype_filter(
+        search.get('inheritance'), search.get('qualityFilter'), individuals, samples_by_id,
+    )
+    compound_het_search = None
+    if compound_het_q:
+        compound_het_search = es_search.filter(compound_het_q)
+    es_search = es_search.filter(genotypes_q)
+
+    if inheritance_mode == RECESSIVE:
+        # recessive results are merged with compound het results so need to load all results through the end of the requested page,
+        # not just a single page's worth of results (i.e. when skipping pages need to load middle pages as well)
+        start_index = len(previous_search_results.get('variant_results') or [])
+
+    es_search = es_search[start_index:end_index]
+
     field_names = _get_query_field_names()
     sort = _get_sort(sort, samples_by_id)
 
-    if inheritance_mode == COMPOUND_HET:
+    variant_results = []
+    total_results = 0
+    if inheritance_mode != COMPOUND_HET:
+        es_search = es_search.source(field_names)
+        es_search = es_search.sort(*sort)
+
+        logger.info(json.dumps(es_search.to_dict(), indent=2))
+
+        response = es_search.execute()
+        total_results = response.hits.total
+        logger.info('Total hits: {} ({} seconds)'.format(total_results, response.took / 100.0))
+
+        variant_results = [_parse_es_hit(hit, samples_by_id, liftover_grch38_to_grch37, field_names) for hit in response]
+
+    compound_het_results = previous_search_results.get('compound_het_results')
+    total_compound_het_results = None
+    if inheritance_mode in [COMPOUND_HET, RECESSIVE] and compound_het_results is None:
         # For compound het search get results from aggregation instead of top level hits
-        es_search = es_search[:0]
-        es_search.aggs.bucket(
+        compound_het_search = compound_het_search[:0] if compound_het_search else es_search[:0]
+        compound_het_search.aggs.bucket(
             'genes', 'terms', field='geneIds', min_doc_count=2, size=10000
         ).metric(
             'vars_by_gene', 'top_hits', size=100, sort=sort, _source=field_names
         )
-    else:
-        es_search = es_search.source(field_names)
-        es_search = es_search.sort(*sort)
-        # Pagination
-        es_search = es_search[start_index:end_index]
 
-    logger.info(json.dumps(es_search.to_dict(), indent=2))
+        logger.info(json.dumps(compound_het_search.to_dict(), indent=2))
 
-    response = es_search.execute()
+        response = compound_het_search.execute()
 
-    logger.info('Total hits: {} ({} seconds)'.format(response.hits.total, response.took/100.0))
-
-    if inheritance_mode == COMPOUND_HET:
-        variant_results, total_results = _parse_compound_het_hits(
+        compound_het_results, total_compound_het_results = _parse_compound_het_hits(
             response, allowed_consequences, samples_by_id, liftover_grch38_to_grch37, field_names
         )
-    else:
-        variant_results = [_parse_es_hit(hit, samples_by_id, liftover_grch38_to_grch37, field_names) for hit in response]
-        total_results = response.hits.total
+        logger.info('Total compound het genes: {}'.format(total_compound_het_results))
 
-    for var in variant_results:
-        var.pop('_sort')
+    if compound_het_results:
+        previous_search_results['compound_het_results'] = compound_het_results
+        variant_results += previous_search_results.get('variant_results', [])
+        previous_search_results['variant_results'] =variant_results
+
+        if total_compound_het_results is not None:
+            total_results += total_compound_het_results
+        else:
+            total_results = search_model.total_results
+
+        grouped_variants = compound_het_results
+
+        if variant_results:
+            grouped_variants += [[var] for var in variant_results]
+
+        # Sort merged result sets
+        try:
+            grouped_variants = sorted(grouped_variants, key=lambda variants: tuple(variants[0]['_sort']))
+        except Exception as e:
+            import pdb; pdb.set_trace()
+
+        # Only return the requested page of variants
+        start_index = max(len(loaded_results), (page - 1) * num_results)
+        skipped = 0
+        variant_results = []
+        for variants in grouped_variants:
+            if skipped < start_index:
+                if start_index > len(loaded_results):
+                    loaded_results += variants
+                skipped += len(variants)
+            else:
+                variant_results += variants
+                if len(variant_results) >= num_results:
+                    break
 
     # Only save contiguous pages of results
     if len(loaded_results) == start_index:
-        search_model.results = json.dumps(loaded_results + variant_results)
+        previous_search_results['all_results'] = loaded_results + variant_results
+
+    search_model.results = json.dumps(previous_search_results)
     search_model.total_results = total_results
     search_model.es_index = elasticsearch_index
     search_model.save()
-
-    # Compound het searches return all variants not just the requested page
-    if len(variant_results) > num_results:
-        variant_results = variant_results[:num_results]
 
     return variant_results, total_results
 
@@ -181,6 +230,7 @@ INHERITANCE_FILTERS = {
 
 def _genotype_filter(inheritance, quality_filter, individuals, samples_by_id):
     genotypes_q = Q()
+    compound_het_q = None
     inheritance_mode = None
 
     quality_q = Q()
@@ -207,20 +257,26 @@ def _genotype_filter(inheritance, quality_filter, individuals, samples_by_id):
         genotypes_q &= Q('has_child', type='genotype', query=Q(Q('range', num_alt={'gte': 1}) & samples_q))
 
     # Return variants where all requested samples meet the filtering criteria
-    genotypes_child_q = Q('has_child', type='genotype', query=samples_q, min_children=len(samples_by_id), inner_hits={})
+    genotypes_child_q = _genotypes_child_q(samples_q, samples_by_id)
 
-    # For recessive search, should be either standard recessive or x-linked (compound hets are added later)
+    # For recessive search, should be hom recessive, x-linked recessive, or compound het
     if inheritance_mode == RECESSIVE:
+        compound_het_q, _, _ = _genotype_inheritance_filter(
+            {'mode': COMPOUND_HET}, quality_q, individuals, samples_by_id
+        )
+        compound_het_q = _genotypes_child_q(compound_het_q, samples_by_id)
         x_linked_q, addl_filter, _ = _genotype_inheritance_filter(
             {'mode': X_LINKED_RECESSIVE}, quality_q, individuals, samples_by_id
         )
-        genotypes_child_q |= Q(
-            addl_filter & Q('has_child', type='genotype', query=x_linked_q, min_children=len(samples_by_id), inner_hits={})
-        )
+        genotypes_child_q |= Q(addl_filter & _genotypes_child_q(x_linked_q, samples_by_id))
 
     genotypes_q &= genotypes_child_q
 
-    return genotypes_q, inheritance_mode
+    return genotypes_q, inheritance_mode, compound_het_q
+
+
+def _genotypes_child_q(samples_q, samples_by_id):
+    return Q('has_child', type='genotype', query=samples_q, min_children=len(samples_by_id), inner_hits={})
 
 
 def _genotype_inheritance_filter(inheritance, quality_q, individuals, samples_by_id):
@@ -231,7 +287,8 @@ def _genotype_inheritance_filter(inheritance, quality_q, individuals, samples_by
     parent_x_linked_genotypes = {}
 
     if inheritance_mode:
-        if inheritance_filter.get(AFFECTED) and inheritance_filter.get(UNAFFECTED):
+        #  TODO fix custom inheritance
+        if inheritance_filter.get(AFFECTED) and inheritance_filter.get(UNAFFECTED) and False:
             inheritance_mode = None
 
         if INHERITANCE_FILTERS.get(inheritance_mode):
@@ -644,6 +701,10 @@ def _parse_compound_het_hits(response, allowed_consequences, samples_by_id, *arg
                                      if sample.individual.affected == UNAFFECTED]
 
     variants_by_gene = []
+    try:
+        response.aggregations.genes.buckets
+    except Exception as e:
+        import pdb; pdb.set_trace()
     for gene_agg in response.aggregations.genes.buckets:
         gene_variants = [_parse_es_hit(hit, samples_by_id, *args) for hit in gene_agg['vars_by_gene']]
 
@@ -667,13 +728,7 @@ def _parse_compound_het_hits(response, allowed_consequences, samples_by_id, *arg
             if is_compound_het:
                 variants_by_gene.append(gene_variants)
 
-    # Top hits are sorted within buckets, but the buckets themselves are not sorted
-    # This is not done as part of the original search because they need to be sorted after filtering out variants
-    variants_by_gene = sorted(variants_by_gene, key=lambda variants: tuple(variants[0]['_sort']))
-    #  Flatten the lists
-    results = [var for variants in variants_by_gene for var in variants]
-    logger.info('Total compound hets: {}'.format(len(results)))
-    return results, len(results)
+    return variants_by_gene, sum(len(results) for results in variants_by_gene)
 
 
 def _parse_es_sort(sort):
