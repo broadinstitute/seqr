@@ -64,7 +64,6 @@ def get_es_variants(search_model, individuals, page=1, num_results=100):
             # TODO get rid of this once add multi-project support and handle duplicate variants in different indices
             raise Exception('Samples are not all contained in the same index: {}'.format(', '.join(es_indices)))
         elasticsearch_index = ','.join(es_indices)
-    logger.info('Searching in elasticsearch index: {}'.format(elasticsearch_index))
 
     #  TODO does not work across projects/ families?
     samples_by_id = {sample.sample_id: sample for sample in samples}
@@ -113,6 +112,7 @@ def get_es_variants(search_model, individuals, page=1, num_results=100):
         es_search = es_search.source(field_names)
         es_search = es_search.sort(*sort)
 
+        logger.info('Searching in elasticsearch index: {}'.format(elasticsearch_index))
         logger.info(json.dumps(es_search.to_dict(), indent=2))
 
         response = es_search.execute()
@@ -132,6 +132,7 @@ def get_es_variants(search_model, individuals, page=1, num_results=100):
             'vars_by_gene', 'top_hits', size=100, sort=sort, _source=field_names
         )
 
+        logger.info('Searching in elasticsearch index: {}'.format(elasticsearch_index))
         logger.info(json.dumps(compound_het_search.to_dict(), indent=2))
 
         response = compound_het_search.execute()
@@ -157,10 +158,7 @@ def get_es_variants(search_model, individuals, page=1, num_results=100):
             grouped_variants += [[var] for var in variant_results]
 
         # Sort merged result sets
-        try:
-            grouped_variants = sorted(grouped_variants, key=lambda variants: tuple(variants[0]['_sort']))
-        except Exception as e:
-            import pdb; pdb.set_trace()
+        grouped_variants = sorted(grouped_variants, key=lambda variants: tuple(variants[0]['_sort']))
 
         # Only return the requested page of variants
         start_index = max(len(loaded_results), (page - 1) * num_results)
