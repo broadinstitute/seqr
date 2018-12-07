@@ -1,7 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Grid, Header, Popup, Icon } from 'semantic-ui-react'
+import { Grid, Popup, Icon } from 'semantic-ui-react'
 import { Link } from 'react-router-dom'
 import styled from 'styled-components'
 
@@ -12,7 +12,7 @@ import ShowMatchmakerModal from '../buttons/ShowMatchmakerModal'
 import PedigreeImagePanel from './view-pedigree-image/PedigreeImagePanel'
 import TextFieldView from './view-fields/TextFieldView'
 import Sample from './sample'
-import { ColoredIcon } from '../StyledComponents'
+import { ColoredIcon, InlineHeader } from '../StyledComponents'
 import { VerticalSpacer, HorizontalSpacer } from '../Spacers'
 import {
   FAMILY_ANALYSIS_STATUS_OPTIONS,
@@ -26,11 +26,6 @@ import {
 const FamilyGrid = styled(({ annotation, offset, ...props }) => <Grid {...props} />)`
   margin-left: ${props => ((props.annotation || props.offset) ? '25px !important' : 'inherit')};
   margin-top: ${props => (props.annotation ? '-33px !important' : 'inherit')};
-`
-
-const InlineHeader = styled(({ inline, ...props }) => <Header {...props} />)`
-  display: ${props => (props.inline ? 'inline-block' : 'block')};
-  margin-right: 15px !important;
 `
 
 const NoWrap = styled.div`
@@ -145,7 +140,7 @@ const Family = (
   const leftContent = [
     <InlineHeader
       key="name"
-      inline={compact}
+      overrideInline={!compact}
       size="small"
       content={showFamilyPageLink ?
         <Link to={`/project/${project.projectGuid}/family_page/${family.familyGuid}`}>{family.displayName}</Link> :

@@ -4,7 +4,7 @@ import styled from 'styled-components'
 import Timeago from 'timeago.js'
 import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
-import { Header, Icon } from 'semantic-ui-react'
+import { Icon } from 'semantic-ui-react'
 
 import { getProjectsIsLoading, getUser } from 'redux/selectors'
 import ButtonLink from 'shared/components/buttons/ButtonLink'
@@ -12,7 +12,8 @@ import ExportTableButton from 'shared/components/buttons/export-table/ExportTabl
 import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
 import EditProjectModal from 'shared/components/modal/EditProjectModal'
 import SortableTable from 'shared/components/table/SortableTable'
-import { HorizontalSpacer } from 'shared/components/Spacers'
+import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
+import { InlineHeader } from 'shared/components/StyledComponents'
 import { FAMILY_ANALYSIS_STATUS_OPTIONS, SAMPLE_TYPE_EXOME, SAMPLE_TYPE_GENOME } from 'shared/utils/constants'
 
 import FilterSelector from './FilterSelector'
@@ -20,11 +21,6 @@ import CategoryIndicator from './CategoryIndicator'
 import ProjectEllipsisMenu from './ProjectEllipsisMenu'
 import { getVisibleProjectsInSortedOrder } from '../utils/visibleProjectsSelector'
 
-
-const InlineHeader = styled(Header)`
-  display: inline-block;
-  margin: 0 !important;
-`
 
 const RightAligned = styled.span`
   float: right;
@@ -147,9 +143,9 @@ STAFF_COLUMNS.splice(3, 0, {
 
 const ProjectsTable = ({ visibleProjects, loading, user }) =>
   <ProjectTableContainer>
+    <VerticalSpacer height={10} />
     <HorizontalSpacer width={10} />
     <InlineHeader size="medium" content="Projects:" />
-    <HorizontalSpacer width={30} />
     <FilterSelector />
     <RightAligned>
       <ExportTableButton downloads={PROJECT_EXPORT_URLS} />

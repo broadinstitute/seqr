@@ -35,7 +35,6 @@ from seqr.views.apis.case_review_api import \
 
 from seqr.views.apis.saved_variant_api import \
     saved_variant_data, \
-    saved_variant_transcripts, \
     update_variant_tags_handler, \
     create_variant_note_handler, \
     update_variant_note_handler, \
@@ -135,7 +134,6 @@ api_endpoints = {
     'project/(?P<project_guid>[^/]+)/analysis_groups/(?P<analysis_group_guid>[^/]+)/delete': delete_analysis_group_handler,
 
     'project/(?P<project_guid>[^/]+)/update_saved_variant_json': update_saved_variant_json,
-    'saved_variant/(?P<variant_guid>[^/]+)/transcripts': saved_variant_transcripts,
     'saved_variant/(?P<variant_guid>[^/]+)/update_tags': update_variant_tags_handler,
     'saved_variant/(?P<variant_guid>[^/]+)/note/create': create_variant_note_handler,
     'saved_variant/(?P<variant_guid>[^/]+)/note/(?P<note_guid>[^/]+)/update': update_variant_note_handler,

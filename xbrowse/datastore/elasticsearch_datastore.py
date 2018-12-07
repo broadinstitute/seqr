@@ -774,14 +774,9 @@ class ElasticsearchDatastore(datastore.Datastore):
 
             try:
                 genes = {}
-                for gene_id in result["coding_gene_ids"]:
+                for gene_id in result["gene_ids"]:
                     if gene_id:
                         genes[gene_id] = reference.get_gene_summary(gene_id) or {}
-
-                if not genes:
-                    for gene_id in result["gene_ids"]:
-                        if gene_id:
-                            genes[gene_id] = reference.get_gene_summary(gene_id) or {}
 
                 #if not genes:
                 #    genes =  {vep_anno["gene_id"]: {"symbol": vep_anno["gene_symbol"]} for vep_anno in vep_annotation}
