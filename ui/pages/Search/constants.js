@@ -57,40 +57,43 @@ const DE_NOVO_FILTER = 'de_novo'
 export const INHERITANCE_LOOKUP = {
   [ALL_INHERITANCE_FILTER]: { text: 'All' },
   [RECESSIVE_FILTER]: {
-    filter: {},
+    filter: {
+      [AFFECTED]: null,
+      [UNAFFECTED]: null,
+    },
     text: 'Recessive',
     description: 'This method identifies genes with any evidence of recessive variation. It is the union of all variants returned by the homozygous recessive, x-linked recessive, and compound heterozygous methods.',
   },
   [HOM_RECESSIVE_FILTER]: {
     filter: {
-      [AFFECTED]: { genotype: ALT_ALT },
-      [UNAFFECTED]: { genotype: HAS_REF },
+      [AFFECTED]: ALT_ALT,
+      [UNAFFECTED]: HAS_REF,
     },
     text: 'Homozygous Recessive',
     description: 'Finds variants where all affected individuals are Alt / Alt and each of their parents Heterozygous.',
   },
   [X_LINKED_RECESSIVE_FILTER]: {
     filter: {
-      [AFFECTED]: { genotype: ALT_ALT },
+      [AFFECTED]: ALT_ALT,
+      [UNAFFECTED]: HAS_REF,
       mother: REF_ALT,
       father: REF_REF,
-      otherUnaffected: HAS_REF,
     },
     text: 'X-Linked Recessive',
     description: "Recessive inheritance on the X Chromosome. This is similar to the homozygous recessive search, but a proband's father must be homozygous reference. (This is how hemizygous genotypes are called by current variant calling methods.)",
   },
   [DE_NOVO_FILTER]: {
     filter: {
-      [AFFECTED]: { genotype: HAS_ALT },
-      [UNAFFECTED]: { genotype: REF_REF },
+      [AFFECTED]: HAS_ALT,
+      [UNAFFECTED]: REF_REF,
     },
     text: 'De Novo/ Dominant',
     description: 'Finds variants where all affected indivs have at least one alternate allele and all unaffected are homozygous reference.',
   },
   [COMPOUND_HET_FILTER]: {
     filter: {
-      [AFFECTED]: { genotype: REF_ALT },
-      [UNAFFECTED]: { genotype: HAS_REF },
+      [AFFECTED]: REF_ALT,
+      [UNAFFECTED]: HAS_REF,
     },
     text: 'Compound Heterozygous',
     description: 'Affected individual(s) have two heterozygous mutations in the same gene on opposite haplotypes. Unaffected individuals cannot have the same combination of alleles as affected individuals, or be homozygous alternate for any of the variants. If parents are not present, this method only searches for pairs of heterozygous variants; they may not be on different haplotypes.',

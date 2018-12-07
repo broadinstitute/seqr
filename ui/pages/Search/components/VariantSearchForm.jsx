@@ -9,7 +9,7 @@ import ButtonLink from 'shared/components/buttons/ButtonLink'
 import { configuredField, configuredFields } from 'shared/components/form/ReduxFormWrapper'
 import { Select, LabeledSlider, CheckboxGroup } from 'shared/components/form/Inputs'
 import Modal from 'shared/components/modal/Modal'
-import { LOCUS_LIST_ITEMS_FIELD, AFFECTED, UNAFFECTED } from 'shared/utils/constants'
+import { LOCUS_LIST_ITEMS_FIELD } from 'shared/utils/constants'
 import FrequencyFilter from './filters/FrequencyFilter'
 import annotationsFilterLayout from './filters/AnnotationsFilterLayout'
 import { LocusListSelector } from './filters/LocationFilter'
@@ -86,20 +86,30 @@ const INHERITANCE_PANEL = {
     inputProps: {
       component: Select,
       options: INHERITANCE_FILTER_OPTIONS,
-      format: val => ((val || {}).filter ? INHERITANCE_MODE_LOOKUP[JSON.stringify(val.filter)] : ALL_INHERITANCE_FILTER),
-      normalize: val => (val === ALL_INHERITANCE_FILTER ? null : { filter: INHERITANCE_LOOKUP[val].filter, mode: val }),
+      format: (val) => {
+        if (!(val || {}).filter) {
+          return ALL_INHERITANCE_FILTER
+        }
+        if (val.filter.genotype) {
+          return null
+        }
+        const { affected, genotype, ...coreFilter } = val.filter
+        return INHERITANCE_MODE_LOOKUP[JSON.stringify(coreFilter)]
+      },
+      normalize: (val, prevVal) => (val === ALL_INHERITANCE_FILTER ? null :
+        { mode: val, filter: { affected: ((prevVal || {}).filter || {}).affected, ...INHERITANCE_LOOKUP[val].filter } }),
     },
   },
   fields: [
-    { name: `filter.${AFFECTED}.genotype`, label: 'Affected Allele Counts' },
-    { name: `filter.${UNAFFECTED}.genotype`, label: 'Unaffected Allele Counts' },
+    { width: 2, name: '   ', control: null },
     {
       name: 'filter',
-      label: 'Custom Allele Counts',
+      label: 'Custom Inheritance',
       width: 8,
       control: CustomInheritanceFilter,
       format: val => val || {},
     },
+    { width: 2, name: '  ', control: null },
   ],
   fieldProps: { control: Select, options: NUM_ALT_OPTIONS, width: 4 },
   helpText: (
@@ -121,7 +131,8 @@ const INHERITANCE_PANEL = {
           <List.Item>All methods assume complete penetrance</List.Item>
           <List.Item>seqr assumes unphased genotypes</List.Item>
         </List>
-      </Modal>) or specify custom alternate allele counts
+      </Modal>) or specify custom alternate allele counts. You can also specify the affected status for an individual
+      that differs from the status in the pedigree.
     </span>
   ),
 }

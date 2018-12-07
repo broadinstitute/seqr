@@ -140,7 +140,7 @@ def get_es_variants(search_model, individuals, page=1, num_results=100):
         compound_het_results, total_compound_het_results = _parse_compound_het_hits(
             response, allowed_consequences, samples_by_id, liftover_grch38_to_grch37, field_names
         )
-        logger.info('Total compound het genes: {}'.format(total_compound_het_results))
+        logger.info('Total compound het hits: {}'.format(total_compound_het_results))
 
     if compound_het_results:
         previous_search_results['compound_het_results'] = compound_het_results
@@ -195,11 +195,11 @@ HAS_ALT = 'has_alt'
 HAS_REF = 'has_ref'
 # TODO no call?
 GENOTYPE_QUERY_MAP = {
-    REF_REF: {'lte': 0},
+    REF_REF: 0,
     REF_ALT: 1,
     ALT_ALT: 2,
     HAS_ALT: {'gte': 1},
-    HAS_REF: {'lte': 1},
+    HAS_REF: {'gte': 0, 'lte': 1},
 }
 RANGE_FIELDS = {k for k, v in GENOTYPE_QUERY_MAP.items() if type(v) != int}
 
@@ -208,21 +208,21 @@ X_LINKED_RECESSIVE = 'x_linked_recessive'
 HOMOZYGOUS_RECESSIVE = 'homozygous_recessive'
 COMPOUND_HET = 'compound_het'
 RECESSIVE_FILTER = {
-    AFFECTED: {'genotype': ALT_ALT},
-    UNAFFECTED: {'genotype': HAS_REF},
+    AFFECTED: ALT_ALT,
+    UNAFFECTED: HAS_REF,
 }
 INHERITANCE_FILTERS = {
-    RECESSIVE: RECESSIVE_FILTER,
-    X_LINKED_RECESSIVE: RECESSIVE_FILTER,
-    HOMOZYGOUS_RECESSIVE: RECESSIVE_FILTER,
-    COMPOUND_HET: {
-        AFFECTED: {'genotype': REF_ALT},
-        UNAFFECTED: {'genotype': HAS_REF},
-    },
-    'de_novo': {
-        AFFECTED: {'genotype': HAS_ALT},
-        UNAFFECTED: {'genotype': REF_REF},
-    },
+   RECESSIVE: RECESSIVE_FILTER,
+   X_LINKED_RECESSIVE: RECESSIVE_FILTER,
+   HOMOZYGOUS_RECESSIVE: RECESSIVE_FILTER,
+   COMPOUND_HET: {
+       AFFECTED: REF_ALT,
+       UNAFFECTED: HAS_REF,
+   },
+   'de_novo': {
+       AFFECTED: HAS_ALT,
+       UNAFFECTED: REF_REF,
+   },
 }
 
 
@@ -260,11 +260,11 @@ def _genotype_filter(inheritance, quality_filter, individuals, samples_by_id):
     # For recessive search, should be hom recessive, x-linked recessive, or compound het
     if inheritance_mode == RECESSIVE:
         compound_het_q, _, _ = _genotype_inheritance_filter(
-            {'mode': COMPOUND_HET}, quality_q, individuals, samples_by_id
+            inheritance, quality_q, individuals, samples_by_id, inheritance_mode=COMPOUND_HET,
         )
         compound_het_q = _genotypes_child_q(compound_het_q, samples_by_id)
         x_linked_q, addl_filter, _ = _genotype_inheritance_filter(
-            {'mode': X_LINKED_RECESSIVE}, quality_q, individuals, samples_by_id
+            inheritance, quality_q, individuals, samples_by_id, inheritance_mode=X_LINKED_RECESSIVE
         )
         genotypes_child_q |= Q(addl_filter & _genotypes_child_q(x_linked_q, samples_by_id))
 
@@ -277,44 +277,42 @@ def _genotypes_child_q(samples_q, samples_by_id):
     return Q('has_child', type='genotype', query=samples_q, min_children=len(samples_by_id), inner_hits={})
 
 
-def _genotype_inheritance_filter(inheritance, quality_q, individuals, samples_by_id):
+def _genotype_inheritance_filter(inheritance, quality_q, individuals, samples_by_id, inheritance_mode=None):
     samples_q = None
     global_filter = None
-    inheritance_mode = inheritance.get('mode')
+
+    inheritance_mode = inheritance_mode or inheritance.get('mode')
     inheritance_filter = inheritance.get('filter') or {}
-    parent_x_linked_genotypes = {}
+    individual_genotype_filter = inheritance_filter.get('genotype') or {}
+    individual_affected_status = inheritance_filter.get('affected') or {}
+    for individual in individuals:
+        if not individual_affected_status.get(individual.guid):
+            individual_affected_status[individual.guid] = individual.affected
+
+    if individual_genotype_filter:
+        inheritance_mode = None
 
     if inheritance_mode:
-        #  TODO fix custom inheritance
-        if inheritance_filter.get(AFFECTED) and inheritance_filter.get(UNAFFECTED) and False:
-            inheritance_mode = None
+        inheritance_filter.update(INHERITANCE_FILTERS[inheritance_mode])
 
-        if INHERITANCE_FILTERS.get(inheritance_mode):
-            inheritance_filter = INHERITANCE_FILTERS[inheritance_mode]
-        if inheritance_mode == X_LINKED_RECESSIVE:
-            global_filter = Q('match', contig='X')
-            for individual in individuals:
-                if individual.affected == AFFECTED:
-                    parent_x_linked_genotypes.update({
-                        individual.mother.guid: REF_ALT,
-                        individual.father.guid: REF_REF,
-                    })
-        # TODO compound het
-
-        # TODO recessive merge all recessive search types
+    parent_x_linked_genotypes = {}
+    if inheritance_mode == X_LINKED_RECESSIVE:
+        global_filter = Q('match', contig='X')
+        for individual in individuals:
+            if individual_affected_status[individual.guid] == AFFECTED:
+                if individual.mother and individual_affected_status[individual.mother.guid] == UNAFFECTED:
+                    parent_x_linked_genotypes[individual.mother.guid] = REF_ALT
+                if individual.father and individual_affected_status[individual.father.guid] == UNAFFECTED:
+                    parent_x_linked_genotypes[individual.mother.guid] = REF_REF
 
     for sample_id, sample in samples_by_id.items():
         sample_q = Q(Q('term', sample_id=sample_id) & quality_q)
-        genotype = None
-        filter_for_status = inheritance_filter.get(sample.individual.affected, {})
+        individual_guid = sample.individual.guid
+        affected = individual_affected_status[individual_guid]
 
-        if sample.individual.affected == UNAFFECTED and parent_x_linked_genotypes.get(sample.individual.guid):
-            genotype = parent_x_linked_genotypes[sample.individual.guid]
-        elif filter_for_status.get('individuals'):
-            if filter_for_status['individuals'].get(sample.individual.individual_id):
-                genotype = filter_for_status['individuals'][sample.individual.individual_id]
-        elif filter_for_status.get('genotype'):
-            genotype = filter_for_status['genotype']
+        genotype = individual_genotype_filter.get(individual_guid) \
+                   or parent_x_linked_genotypes.get(individual_guid) \
+                   or inheritance_filter.get(affected)
 
         if genotype:
             sample_q &= Q('range' if genotype in RANGE_FIELDS else 'term', num_alt=GENOTYPE_QUERY_MAP[genotype])
@@ -683,7 +681,7 @@ def _parse_es_hit(raw_hit, samples_by_id, liftover_grch38_to_grch37, field_names
         'liftedOverGenomeVersion': lifted_over_genome_version,
         'liftedOverChrom': lifted_over_chrom,
         'liftedOverPos': lifted_over_pos,
-        'mainTranscript': sorted_transcripts[0],
+        'mainTranscript': sorted_transcripts[0] if len(sorted_transcripts) else {},
         'populations': populations,
         'predictions': _get_field_values(
             hit, PREDICTION_FIELDS_CONFIG, format_response_key=lambda key: key.split('_')[1].lower()

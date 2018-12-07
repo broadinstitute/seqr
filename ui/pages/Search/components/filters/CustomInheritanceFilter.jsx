@@ -2,20 +2,20 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { formValueSelector } from 'redux-form'
-import { Form, Table } from 'semantic-ui-react'
+import { Table } from 'semantic-ui-react'
 
 import { getFamiliesByGuid, getIndividualsByGuid } from 'redux/selectors'
 import { Select } from 'shared/components/form/Inputs'
 import PedigreeIcon from 'shared/components/icons/PedigreeIcon'
 import PedigreeImagePanel from 'shared/components/panel/view-pedigree-image/PedigreeImagePanel'
-import { AFFECTED, UNAFFECTED } from 'shared/utils/constants'
+import { AFFECTED, UNAFFECTED, AFFECTED_OPTIONS } from 'shared/utils/constants'
 import { NUM_ALT_OPTIONS } from '../../constants'
 
 
-const NUM_ALT_SELECT_PROPS = {
-  control: Select,
-  options: NUM_ALT_OPTIONS,
-}
+const CUSTOM_FILTERS = [
+  { filterField: 'affected', options: AFFECTED_OPTIONS },
+  { filterField: 'genotype', options: NUM_ALT_OPTIONS, placeholder: 'Allele count' },
+]
 
 const CustomInheritanceFilter = ({ value, onChange, familyGuid, familiesByGuid, individualsByGuid }) => {
   const family = familiesByGuid[familyGuid]
@@ -34,28 +34,21 @@ const CustomInheritanceFilter = ({ value, onChange, familyGuid, familiesByGuid, 
     })
   }
 
-  const individualValuesByStatus = individuals.reduce((acc, ind) => ({
-    ...acc,
-    [ind.affected]: {
-      ...acc[ind.affected],
-      [ind.individualId]:
-        (value[ind.affected] || {}).genotype || ((value[ind.affected] || {}).individuals || {})[ind.individualId],
-    },
-  }), {})
+  const individualFilters = individuals.reduce((acc, ind) => {
+    const affected = (value.affected || {})[ind.individualGuid] || ind.affected
+    let genotype = (value.genotype || {})[ind.individualGuid]
+    if (!genotype) {
+      if (affected === UNAFFECTED && parentGenotypes[ind.individualId]) {
+        genotype = parentGenotypes[ind.individualId]
+      } else {
+        genotype = value[affected]
+      }
+    }
+    return { ...acc, [ind.individualGuid]: { affected, genotype } }
+  }, {})
 
-  individualValuesByStatus[UNAFFECTED] = Object.entries(individualValuesByStatus[UNAFFECTED] || {}).reduce(
-    (acc, [individualId, val]) => (
-      { ...acc, [individualId]: val || parentGenotypes[individualId] || value.otherUnaffected }
-    ), {},
-  )
-
-  const handleChange = individual => (val) => {
-    individualValuesByStatus[individual.affected][individual.individualId] = val
-    onChange(Object.entries(individualValuesByStatus).reduce((acc, [affected, indivs]) => ({
-      ...acc,
-      [affected]: Object.values(indivs).every(ac => ac === Object.values(indivs)[0]) ?
-        { genotype: Object.values(indivs)[0] } : { individuals: indivs },
-    }), {}))
+  const handleChange = (individual, filterField) => (val) => {
+    onChange({ ...value, [filterField]: { ...value[filterField], [individual.individualGuid]: val } })
   }
 
   return (
@@ -69,13 +62,15 @@ const CustomInheritanceFilter = ({ value, onChange, familyGuid, familiesByGuid, 
               {individual.displayName || individual.individualId}
               {individual.displayName && individual.displayName !== individual.individualId ? `(${individual.individualId})` : null}
             </Table.Cell>
-            <Table.Cell>
-              <Form.Field
-                {...NUM_ALT_SELECT_PROPS}
-                value={individualValuesByStatus[individual.affected][individual.individualId]}
-                onChange={handleChange(individual)}
-              />
-            </Table.Cell>
+            {CUSTOM_FILTERS.map(({ filterField, ...fieldProps }) => (
+              <Table.Cell key={filterField}>
+                <Select
+                  {...fieldProps}
+                  value={individualFilters[individual.individualGuid][filterField]}
+                  onChange={handleChange(individual, filterField)}
+                />
+              </Table.Cell>
+            ))}
             {i === 0 ?
               <Table.Cell collapsing rowSpan={individuals.length}>
                 <PedigreeImagePanel key="pedigree" family={family} />
