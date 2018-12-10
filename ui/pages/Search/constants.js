@@ -62,15 +62,16 @@ export const INHERITANCE_LOOKUP = {
       [UNAFFECTED]: null,
     },
     text: 'Recessive',
-    description: 'This method identifies genes with any evidence of recessive variation. It is the union of all variants returned by the homozygous recessive, x-linked recessive, and compound heterozygous methods.',
+    detail: 'This method identifies genes with any evidence of recessive variation. It is the union of all variants returned by the homozygous recessive, x-linked recessive, and compound heterozygous methods.',
   },
   [HOM_RECESSIVE_FILTER]: {
     filter: {
       [AFFECTED]: ALT_ALT,
       [UNAFFECTED]: HAS_REF,
     },
+    color: 'transparent', // Adds an empty label so option is indented
     text: 'Homozygous Recessive',
-    description: 'Finds variants where all affected individuals are Alt / Alt and each of their parents Heterozygous.',
+    detail: 'Finds variants where all affected individuals are Alt / Alt and each of their parents Heterozygous.',
   },
   [X_LINKED_RECESSIVE_FILTER]: {
     filter: {
@@ -79,8 +80,9 @@ export const INHERITANCE_LOOKUP = {
       mother: REF_ALT,
       father: REF_REF,
     },
+    color: 'transparent', // Adds an empty label so option is indented
     text: 'X-Linked Recessive',
-    description: "Recessive inheritance on the X Chromosome. This is similar to the homozygous recessive search, but a proband's father must be homozygous reference. (This is how hemizygous genotypes are called by current variant calling methods.)",
+    detail: "Recessive inheritance on the X Chromosome. This is similar to the homozygous recessive search, but a proband's father must be homozygous reference. (This is how hemizygous genotypes are called by current variant calling methods.)",
   },
   [DE_NOVO_FILTER]: {
     filter: {
@@ -88,15 +90,16 @@ export const INHERITANCE_LOOKUP = {
       [UNAFFECTED]: REF_REF,
     },
     text: 'De Novo/ Dominant',
-    description: 'Finds variants where all affected indivs have at least one alternate allele and all unaffected are homozygous reference.',
+    detail: 'Finds variants where all affected indivs have at least one alternate allele and all unaffected are homozygous reference.',
   },
   [COMPOUND_HET_FILTER]: {
     filter: {
       [AFFECTED]: REF_ALT,
       [UNAFFECTED]: HAS_REF,
     },
+    color: 'transparent', // Adds an empty label so option is indented
     text: 'Compound Heterozygous',
-    description: 'Affected individual(s) have two heterozygous mutations in the same gene on opposite haplotypes. Unaffected individuals cannot have the same combination of alleles as affected individuals, or be homozygous alternate for any of the variants. If parents are not present, this method only searches for pairs of heterozygous variants; they may not be on different haplotypes.',
+    detail: 'Affected individual(s) have two heterozygous mutations in the same gene on opposite haplotypes. Unaffected individuals cannot have the same combination of alleles as affected individuals, or be homozygous alternate for any of the variants. If parents are not present, this method only searches for pairs of heterozygous variants; they may not be on different haplotypes.',
   },
 }
 
@@ -106,7 +109,7 @@ export const INHERITANCE_MODE_LOOKUP = Object.entries(INHERITANCE_LOOKUP).reduce
 
 export const INHERITANCE_FILTER_OPTIONS = [
   ALL_INHERITANCE_FILTER, RECESSIVE_FILTER, HOM_RECESSIVE_FILTER, X_LINKED_RECESSIVE_FILTER, COMPOUND_HET_FILTER, DE_NOVO_FILTER,
-].map(value => ({ value, text: INHERITANCE_LOOKUP[value].text }))
+].map(value => ({ value, ...INHERITANCE_LOOKUP[value] }))
 
 
 export const CLINVAR_GROUP = 'clinvar'

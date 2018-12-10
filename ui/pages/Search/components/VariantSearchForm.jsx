@@ -118,8 +118,8 @@ const INHERITANCE_PANEL = {
       <Modal trigger={<ButtonLink> here</ButtonLink>} title="Inheritance Searching" modalName="inheritanceModes">
         <i>seqr</i> implements the following set of standard Mendelian inheritance methods to identify variants that
         segregate with a phenotype in a family
-        {INHERITANCE_FILTER_OPTIONS.filter(({ value }) => value !== ALL_INHERITANCE_FILTER).map(({ text, value }) =>
-          <Header key={value} content={text} subheader={INHERITANCE_LOOKUP[value].description} />,
+        {INHERITANCE_FILTER_OPTIONS.filter(({ value }) => value !== ALL_INHERITANCE_FILTER).map(({ value, text, detail }) =>
+          <Header key={value} content={text} subheader={detail} />,
         )}
 
         <Header size="small" content="Notes on inheritance searching:" />
