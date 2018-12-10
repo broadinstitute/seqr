@@ -291,6 +291,7 @@ def _genotype_inheritance_filter(inheritance, quality_q, individuals, samples_by
 
     if individual_genotype_filter:
         inheritance_mode = None
+        logger.info('CUSTOM GENOTYPE FILTER: {}'.format(', '.join(individual_genotype_filter.keys())))
 
     if inheritance_mode:
         inheritance_filter.update(INHERITANCE_FILTERS[inheritance_mode])
