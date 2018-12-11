@@ -15,8 +15,8 @@ import {
 import { toCamelcase, toSnakecase } from 'shared/utils/stringUtils'
 
 import {
-  getProjectsByGuid, getFamiliesByGuid, getIndividualsByGuid, getSamplesByGuid, getGenesById, getUser,
-  getAnalysisGroupsByGuid, getSavedVariantsByGuid,
+  getProjectsByGuid, getFamiliesGroupedByProjectGuid, getIndividualsByGuid, getSamplesByGuid, getGenesById, getUser,
+  getAnalysisGroupsGroupedByProjectGuid, getSavedVariantsGroupedByProjectGuid,
 } from 'redux/selectors'
 
 import {
@@ -49,20 +49,6 @@ export const getProject = createSelector(
   getProjectsByGuid, getProjectGuid, (projectsByGuid, currentProjectGuid) => projectsByGuid[currentProjectGuid],
 )
 
-
-const groupEntitiesByProjectGuid = entities => Object.entries(entities).reduce((acc, [entityGuid, entity]) => {
-  if (!(entity.projectGuid in acc)) {
-    acc[entity.projectGuid] = {}
-  }
-  acc[entity.projectGuid][entityGuid] = entity
-
-  return acc
-
-}, {})
-const getFamiliesGroupedByProjectGuid = createSelector(getFamiliesByGuid, groupEntitiesByProjectGuid)
-const getAnalysisGroupsGroupedByProjectGuid = createSelector(getAnalysisGroupsByGuid, groupEntitiesByProjectGuid)
-const getSavedVariantsGroupedByProjectGuid = createSelector(getSavedVariantsByGuid, groupEntitiesByProjectGuid)
-
 const selectEntitiesForProjectGuid = (entitiesGroupedByProjectGuid, projectGuid) => entitiesGroupedByProjectGuid[projectGuid] || {}
 export const getProjectFamiliesByGuid = createSelector(getFamiliesGroupedByProjectGuid, getProjectGuid, selectEntitiesForProjectGuid)
 export const getProjectAnalysisGroupsByGuid = createSelector(getAnalysisGroupsGroupedByProjectGuid, getProjectGuid, selectEntitiesForProjectGuid)
@@ -71,13 +57,13 @@ export const getProjectSavedVariantsByGuid = createSelector(getSavedVariantsGrou
 
 export const getProjectAnalysisGroupFamiliesByGuid = createSelector(
   getProjectFamiliesByGuid,
-  getAnalysisGroupsByGuid,
+  getProjectAnalysisGroupsByGuid,
   (state, props) => (props.match ? props.match.params.analysisGroupGuid : props.analysisGroupGuid),
-  (projectFamiliesByGuid, analysisGroupsByGuid, analysisGroupGuid) => {
-    if (!analysisGroupGuid || !analysisGroupsByGuid[analysisGroupGuid]) {
+  (projectFamiliesByGuid, projectAnalysisGroupsByGuid, analysisGroupGuid) => {
+    if (!analysisGroupGuid || !projectAnalysisGroupsByGuid[analysisGroupGuid]) {
       return projectFamiliesByGuid
     }
-    return analysisGroupsByGuid[analysisGroupGuid].familyGuids.reduce(
+    return projectAnalysisGroupsByGuid[analysisGroupGuid].familyGuids.reduce(
       (acc, familyGuid) => ({ ...acc, [familyGuid]: projectFamiliesByGuid[familyGuid] }), {},
     )
   },
@@ -121,14 +107,14 @@ export const getSavedVariantRecordsPerPage = state => state.savedVariantTableSta
 export const getProjectSavedVariants = createSelector(
   getProjectSavedVariantsByGuid,
   (state, props) => props.match.params,
-  getAnalysisGroupsByGuid,
-  (projectSavedVariants, { tag, familyGuid, analysisGroupGuid, variantGuid }, analysisGroupsByGuid) => {
+  getProjectAnalysisGroupsByGuid,
+  (projectSavedVariants, { tag, familyGuid, analysisGroupGuid, variantGuid }, projectAnalysisGroupsByGuid) => {
     let variants = Object.values(projectSavedVariants)
     if (variantGuid) {
       return variants.filter(o => o.variantId === variantGuid)
     }
-    if (analysisGroupGuid && analysisGroupsByGuid[analysisGroupGuid]) {
-      variants = variants.filter(o => analysisGroupsByGuid[analysisGroupGuid].familyGuids.includes(o.familyGuid))
+    if (analysisGroupGuid && projectAnalysisGroupsByGuid[analysisGroupGuid]) {
+      variants = variants.filter(o => projectAnalysisGroupsByGuid[analysisGroupGuid].familyGuids.includes(o.familyGuid))
     }
     if (familyGuid) {
       variants = variants.filter(o => o.familyGuid === familyGuid)

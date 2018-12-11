@@ -78,12 +78,11 @@ export const loadProject = (projectGuid) => {
 }
 
 
-export const loadFamilyProject = ({ familyGuids }) => {
-  // TODO initial project or analysisGroup
+export const loadFamilyProject = (familyGuid) => {
   return (dispatch, getState) => {
-    familyGuids.filter(familyGuid => !getState().familiesByGuid[familyGuid]).forEach((familyGuid) => {
+    if (!getState().familiesByGuid[familyGuid]) {
       dispatch({ type: REQUEST_PROJECT_DETAILS })
-      new HttpRequestHelper(`/api/family/${familyGuid}/details`,
+      return new HttpRequestHelper(`/api/family/${familyGuid}/details`,
         (responseJson) => {
           dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
         },
@@ -91,7 +90,8 @@ export const loadFamilyProject = ({ familyGuids }) => {
           dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
         },
       ).get()
-    })
+    }
+    return Promise.resolve()
   }
 }
 

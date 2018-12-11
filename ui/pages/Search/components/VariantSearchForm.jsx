@@ -14,7 +14,7 @@ import FrequencyFilter from './filters/FrequencyFilter'
 import annotationsFilterLayout from './filters/AnnotationsFilterLayout'
 import { LocusListSelector } from './filters/LocationFilter'
 import CustomInheritanceFilter from './filters/CustomInheritanceFilter'
-import FamiliesFilter from './filters/FamiliesFilter'
+import ProjectFamiliesFilter from './filters/ProjectFamiliesFilter'
 import {
   INHERITANCE_FILTER_OPTIONS,
   INHERITANCE_LOOKUP,
@@ -186,6 +186,14 @@ const QUALITY_PANEL = {
   fieldProps: { control: LabeledSlider, format: val => val || null },
 }
 
+
+const PROJECT_FAMILIES_FIELD = {
+  name: 'searchedProjectFamilies',
+  arrayFieldName: 'familyGuids',
+  component: ProjectFamiliesFilter,
+  isArrayField: true,
+}
+
 const HeaderContent = ({ name, title, inputSize, inputProps }) =>
   <Grid>
     <Grid.Row>
@@ -246,7 +254,7 @@ const PANELS = PANEL_DETAILS.map(({ name, headerProps, ...panelContentProps }, i
 
 export default () => (
   <div>
-    {configuredField({ name: 'familyContext', control: FamiliesFilter, isArrayField: true })}
+    {configuredField(PROJECT_FAMILIES_FIELD)}
     <Accordion fluid panels={PANELS} />
   </div>
 )

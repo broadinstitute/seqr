@@ -58,7 +58,7 @@ export const helpLabel = (label, labelHelp) => (
 )
 
 export const configuredField = (field, formProps = {}) => {
-  const { component, name, isArrayField, addArrayElement, key, label, labelHelp, ...fieldProps } = field
+  const { component, name, isArrayField, addArrayElement, arrayFieldName, key, label, labelHelp, ...fieldProps } = field
   const baseProps = {
     key: key || name,
     name,
@@ -74,7 +74,13 @@ export const configuredField = (field, formProps = {}) => {
     <FieldArray {...baseProps} component={({ fields }) =>
       <div className="field">
         <label>{label}</label>
-        {fields.map((fieldPath, i) => <Field key={fieldPath} name={fieldPath} {...singleFieldProps} removeField={() => fields.remove(i)} />)}
+        {fields.map((fieldPath, i) =>
+          <Field
+            key={fieldPath}
+            name={arrayFieldName ? `${fieldPath}.${arrayFieldName}` : fieldPath}
+            removeField={() => fields.remove(i)}
+            {...singleFieldProps}
+          />)}
         {addArrayElement && <ButtonLink onClick={() => fields.push(addArrayElement.newValue)}><Icon link name="plus" />{addArrayElement.label}</ButtonLink>}
       </div>}
     /> :

@@ -19,6 +19,19 @@ export const getLocusListsIsLoading = state => state.locusListsLoading.isLoading
 export const getLocusListIsLoading = state => state.locusListLoading.isLoading
 export const getUser = state => state.user
 
+const groupEntitiesByProjectGuid = entities => Object.entries(entities).reduce((acc, [entityGuid, entity]) => {
+  if (!(entity.projectGuid in acc)) {
+    acc[entity.projectGuid] = {}
+  }
+  acc[entity.projectGuid][entityGuid] = entity
+
+  return acc
+
+}, {})
+export const getFamiliesGroupedByProjectGuid = createSelector(getFamiliesByGuid, groupEntitiesByProjectGuid)
+export const getAnalysisGroupsGroupedByProjectGuid = createSelector(getAnalysisGroupsByGuid, groupEntitiesByProjectGuid)
+export const getSavedVariantsGroupedByProjectGuid = createSelector(getSavedVariantsByGuid, groupEntitiesByProjectGuid)
+
 export const getFamilyMatchmakerSubmissions = createSelector(
   getMatchmakerSubmissions,
   (state, props) => props.family,

@@ -1,7 +1,7 @@
 import { combineReducers } from 'redux'
 
+import { loadProject, loadFamilyProject, RECEIVE_DATA } from 'redux/rootReducer'
 import { loadingReducer, createSingleObjectReducer, createSingleValueReducer, createObjectsByIdReducer } from 'redux/utils/reducerFactories'
-import { RECEIVE_DATA } from 'redux/rootReducer'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 import { SORT_BY_XPOS } from 'shared/utils/constants'
 
@@ -13,6 +13,17 @@ const UPDATE_SEARCHED_VARIANT_DISPLAY = 'UPDATE_SEARCHED_VARIANT_DISPLAY'
 const UPDATE_HASHED_SEARCHES = 'UPDATE_HASHED_SEARCHES'
 
 // actions
+
+export const loadProjectFamiliesContext = ({ projectGuid, familyGuid }) => {
+  // TODO initial analysisGroup
+  if (projectGuid) {
+    return loadProject(projectGuid)
+  }
+  if (familyGuid) {
+    return loadFamilyProject(familyGuid)
+  }
+  return () => {}
+}
 
 export const loadSearchedVariants = (searchHash, search) => {
   return (dispatch, getState) => {

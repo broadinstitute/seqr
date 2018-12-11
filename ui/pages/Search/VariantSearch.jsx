@@ -4,46 +4,54 @@ import { connect } from 'react-redux'
 import { Grid } from 'semantic-ui-react'
 import hash from 'object-hash'
 
+import { getFamiliesByGuid, getProjectDetailsIsLoading } from 'redux/selectors'
 import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
+import DataLoader from 'shared/components/DataLoader'
 import { QueryParamsEditor } from 'shared/components/QueryParamEditor'
 import VariantSearchForm from './components/VariantSearchForm'
 import VariantSearchResults from './components/VariantSearchResults'
-import { loadSearchedVariants } from './reducers'
+import { loadProjectFamiliesContext, loadSearchedVariants } from './reducers'
 import { getCurrentSearchParams } from './selectors'
 
 
-const BaseVariantSearch = ({ queryParams, updateQueryParams, searchParams, search }) => {
+const BaseVariantSearch = ({ queryParams, updateQueryParams, searchParams, search, load, loading, familiesByGuid }) => {
+
+  const { familyGuid, ...coreQueryParams } = queryParams
 
   const onSubmit = (updatedSearchParams) => {
     const searchHash = hash.MD5(updatedSearchParams)
     search(searchHash, updatedSearchParams)
-    updateQueryParams({ ...queryParams, search: searchHash })
+    updateQueryParams({ ...coreQueryParams, search: searchHash })
   }
 
   // TODO initial project or analysisGroup
-  const initialValues = {
-    familyContext: (queryParams.familyGuid ? [{ familyGuids: [queryParams.familyGuid] }] : []),
-    ...(searchParams || queryParams),
+  const initialValues = searchParams || coreQueryParams
+  if (familyGuid) {
+    initialValues.searchedProjectFamilies = [{
+      projectGuid: (familiesByGuid[familyGuid] || {}).projectGuid,
+      familyGuids: [familyGuid],
+    }]
   }
 
-
   return (
-    <Grid>
-      <Grid.Row>
-        <Grid.Column width={16}>
-          <ReduxFormWrapper
-            initialValues={initialValues}
-            onSubmit={onSubmit}
-            form="variantSearch"
-            submitButtonText="Search"
-            noModal
-          >
-            <VariantSearchForm />
-          </ReduxFormWrapper>
-        </Grid.Column>
-      </Grid.Row>
-      <VariantSearchResults queryParams={queryParams} updateQueryParams={updateQueryParams} />
-    </Grid>
+    <DataLoader contentId={queryParams} loading={loading} load={load} content>
+      <Grid>
+        <Grid.Row>
+          <Grid.Column width={16}>
+            <ReduxFormWrapper
+              initialValues={initialValues}
+              onSubmit={onSubmit}
+              form="variantSearch"
+              submitButtonText="Search"
+              noModal
+            >
+              <VariantSearchForm />
+            </ReduxFormWrapper>
+          </Grid.Column>
+        </Grid.Row>
+        <VariantSearchResults queryParams={coreQueryParams} updateQueryParams={updateQueryParams} />
+      </Grid>
+    </DataLoader>
   )
 }
 
@@ -52,13 +60,19 @@ BaseVariantSearch.propTypes = {
   updateQueryParams: PropTypes.func,
   searchParams: PropTypes.object,
   search: PropTypes.func,
+  loading: PropTypes.bool,
+  load: PropTypes.func,
+  familiesByGuid: PropTypes.object,
 }
 
 const mapStateToProps = (state, ownProps) => ({
   searchParams: getCurrentSearchParams(state, ownProps),
+  familiesByGuid: getFamiliesByGuid(state),
+  loading: getProjectDetailsIsLoading(state),
 })
 
 const mapDispatchToProps = {
+  load: loadProjectFamiliesContext,
   search: loadSearchedVariants,
 }
 
