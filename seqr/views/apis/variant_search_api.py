@@ -7,6 +7,7 @@ from seqr.models import Family, Individual, SavedVariant, VariantSearch
 from seqr.utils.es_utils import get_es_variants, XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.saved_variant_api import _saved_variant_genes, _add_locus_lists
+from seqr.views.pages.project_page import get_project_details
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import add_additional_json_fields_for_saved_variant
 from seqr.views.utils.permissions_utils import check_permissions
@@ -66,6 +67,31 @@ def query_variants_handler(request, search_hash):
         'genesById': genes,
         'search': search,
     })
+
+
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@csrf_exempt
+def search_context_handler(request, search_hash):
+    """Search variants.
+    """
+
+    search_model = VariantSearch.objects.filter(search_hash=search_hash).first()
+    if not search_model:
+        return create_json_response({}, status=400, reason='Invalid search hash: {}'.format(search_hash))
+
+    search = json.loads(search_model.search)
+    search_context = {
+        'search': search,
+    }
+
+    for context in search.get('searchedProjectFamilies', []):
+        for k, v in get_project_details(context['projectGuid'], request.user).items():
+            if search_context.get(k):
+                search_context[k].update(v)
+            else:
+                search_context[k] = v
+
+    return create_json_response(search_context)
 
 
 def _get_saved_variants(variants, project, family):

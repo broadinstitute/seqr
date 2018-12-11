@@ -13,7 +13,7 @@ class DataLoader extends React.Component
     loading: PropTypes.bool.isRequired,
     load: PropTypes.func,
     hideError: PropTypes.bool,
-    errorMessage: PropTypes.string,
+    errorMessage: PropTypes.node,
     children: PropTypes.node,
   }
 
@@ -32,7 +32,7 @@ class DataLoader extends React.Component
       return <Dimmer inverted active><Loader content="Loading" /></Dimmer>
     }
     else if (errorMessage) {
-      return <Header size="huge" textAlign="center">{errorMessage}</Header>
+      return errorMessage
     }
     else if (content) {
       return children

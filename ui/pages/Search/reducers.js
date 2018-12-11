@@ -11,16 +11,36 @@ const REQUEST_SEARCHED_VARIANTS = 'REQUEST_SEARCHED_VARIANTS'
 const RECEIVE_SEARCHED_VARIANTS = 'RECEIVE_SEARCHED_VARIANTS'
 const UPDATE_SEARCHED_VARIANT_DISPLAY = 'UPDATE_SEARCHED_VARIANT_DISPLAY'
 const UPDATE_HASHED_SEARCHES = 'UPDATE_HASHED_SEARCHES'
+const REQUEST_PROJECT_DETAILS = 'REQUEST_PROJECT_DETAILS'
 
 // actions
 
-export const loadProjectFamiliesContext = ({ projectGuid, familyGuid }) => {
+export const loadProjectFamiliesContext = ({ projectGuid, familyGuid, search }) => {
   // TODO initial analysisGroup
   if (projectGuid) {
     return loadProject(projectGuid)
   }
   if (familyGuid) {
     return loadFamilyProject(familyGuid)
+  }
+  if (search) {
+    return (dispatch, getState) => {
+      const { searchedProjectFamilies } = getState().searchesByHash[search] || {}
+      if (searchedProjectFamilies) {
+        searchedProjectFamilies.forEach(searchContext => loadProject(searchContext.projectGuid)(dispatch, getState))
+      } else {
+        dispatch({ type: REQUEST_PROJECT_DETAILS })
+        new HttpRequestHelper(`/api/search_context/${search}`,
+          (responseJson) => {
+            dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+            dispatch({ type: UPDATE_HASHED_SEARCHES, updatesById: { [search]: responseJson.search } })
+          },
+          (e) => {
+            dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
+          },
+        ).get()
+      }
+    }
   }
   return () => {}
 }

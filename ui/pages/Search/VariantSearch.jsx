@@ -25,13 +25,15 @@ const BaseVariantSearch = ({ queryParams, updateQueryParams, searchParams, searc
   }
 
   // TODO initial project or analysisGroup
-  const initialValues = searchParams || coreQueryParams
+  let searchedProjectFamilies = []
   if (familyGuid) {
-    initialValues.searchedProjectFamilies = [{
+    searchedProjectFamilies = [{
       projectGuid: (familiesByGuid[familyGuid] || {}).projectGuid,
       familyGuids: [familyGuid],
     }]
   }
+  const initialValues = { searchedProjectFamilies, ...(searchParams || coreQueryParams) }
+
 
   return (
     <DataLoader contentId={queryParams} loading={loading} load={load} content>

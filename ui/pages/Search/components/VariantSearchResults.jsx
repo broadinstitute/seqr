@@ -1,7 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Grid } from 'semantic-ui-react'
+import { Grid, Message } from 'semantic-ui-react'
 import styled from 'styled-components'
 
 import DataLoader from 'shared/components/DataLoader'
@@ -50,7 +50,13 @@ const VariantSearchResults = ({
       content={searchedVariants}
       loading={loading}
       load={load}
-      errorMessage={errorMessage}
+      errorMessage={errorMessage &&
+        <Grid.Row>
+          <Grid.Column width={16}>
+            <Message error textAlign="center" content={errorMessage} />
+          </Grid.Column>
+        </Grid.Row>
+      }
     >
       {queryParams.search &&
       <LargeRow>
