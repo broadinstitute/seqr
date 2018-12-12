@@ -151,8 +151,8 @@ const Genotype = ({ variant, individual }) => {
 }
 
 
-const VariantIndividuals = ({ variant, individualsByGuid }) => {
-  const individuals = Object.values(individualsByGuid).filter(individual => individual.familyGuid === variant.familyGuid)
+const VariantIndividuals = ({ variant, familyGuid, individualsByGuid }) => {
+  const individuals = Object.values(individualsByGuid).filter(individual => individual.familyGuid === familyGuid)
   individuals.sort((a, b) => a.affected.localeCompare(b.affected))
   return (
     <div>
@@ -176,13 +176,14 @@ const VariantIndividuals = ({ variant, individualsByGuid }) => {
           <Genotype variant={variant} individual={individual} />
         </IndividualCell>,
       )}
-      <ShowReadsButton familyGuid={variant.familyGuid} variant={variant} />
+      <ShowReadsButton familyGuid={familyGuid} variant={variant} />
     </div>
   )
 }
 
 VariantIndividuals.propTypes = {
   variant: PropTypes.object,
+  familyGuid: PropTypes.string.isRequired,
   individualsByGuid: PropTypes.object,
 }
 

@@ -9,8 +9,8 @@ from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.saved_variant_api import _saved_variant_genes, _add_locus_lists
 from seqr.views.pages.project_page import get_project_details
 from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.orm_to_json_utils import add_additional_json_fields_for_saved_variant
-from seqr.views.utils.permissions_utils import check_permissions
+from seqr.views.utils.orm_to_json_utils import get_saved_variant_tags_json
+from seqr.views.utils.permissions_utils import get_project_and_check_permissions
 
 
 GENOTYPE_AC_LOOKUP = {
@@ -47,18 +47,20 @@ def query_variants_handler(request, search_hash):
     if not search_model:
         search_model = VariantSearch.objects.create(search_hash=search_hash, sort=sort, search=search_json)
 
-    # TODO this is only mendelian variant search, should be others and not require project/ family
-    family = Family.objects.get(guid=search.get('familyGuid'))
-    project = family.project
-    check_permissions(project, request.user)
-    individuals = family.individual_set.all()
+    search_context = search.get('searchedProjectFamilies')
+    if not search_context:
+        return create_json_response({}, status=400, reason='Invalid search: no projects/ families specified')
 
-    variants, total_results = get_es_variants(search_model, individuals, page=page, num_results=per_page)
+    # TODO handle multiple projects
+    project = get_project_and_check_permissions(search_context[0]['projectGuid'], request.user)
+    families = Family.objects.filter(guid__in=search_context[0]['familyGuids'])
+
+    variants, total_results = get_es_variants(search_model, families, page=page, num_results=per_page)
 
     genes = _saved_variant_genes(variants)
     # TODO add locus lists on the client side (?)
     _add_locus_lists(project, variants, genes)
-    searched_variants, saved_variants_by_guid = _get_saved_variants(variants, project, family)
+    searched_variants, saved_variants_by_guid = _get_saved_variants(variants)
     search['totalResults'] = total_results
 
     return create_json_response({
@@ -94,33 +96,28 @@ def search_context_handler(request, search_hash):
     return create_json_response(search_context)
 
 
-def _get_saved_variants(variants, project, family):
+def _get_saved_variants(variants):
     variant_q = Q()
     for variant in variants:
-        variant_q |= Q(xpos_start=variant['xpos'], ref=variant['ref'], alt=variant['alt'])
-    saved_variants = SavedVariant.objects.filter(project=project, family=family).filter(variant_q).prefetch_related(
+        variant_q |= Q(xpos_start=variant['xpos'], ref=variant['ref'], alt=variant['alt'], family__guid__in=variant['familyGuids'])
+    saved_variants = SavedVariant.objects.filter(variant_q).prefetch_related(
         'varianttag_set', 'variantfunctionaldata_set', 'variantnote_set',
     )
 
-    # TODO may not be unique in non-family speific searches
-    saved_variants_by_id = {'{}-{}-{}'.format(var.xpos, var.ref, var.alt): var for var in saved_variants}
+    saved_variants_by_id = {'{}-{}-{}-{}'.format(var.family.guid, var.xpos, var.ref, var.alt): var for var in saved_variants}
     saved_variants_by_guid = {}
     searched_variants = []
     for variant in variants:
-        variant_key = '{}-{}-{}'.format(variant['xpos'], variant['ref'], variant['alt'])
-        if saved_variants_by_id.get(variant_key):
-            saved_variant = saved_variants_by_id[variant_key]
-            add_additional_json_fields_for_saved_variant(variant, saved_variant, add_tags=True)
-            saved_variants_by_guid[saved_variant.guid] = variant
-            searched_variants.append({'variantGuid': saved_variant.guid})
-        else:
-            variant.update({
-                'variantGuid':  None,
-                'tags': [],
-                'functionalData': [],
-                'notes': [],
-            })
-            searched_variants.append(variant)
+        variant_keys = ['{}-{}-{}-{}'.format(family_guid, variant['xpos'], variant['ref'], variant['alt']) for family_guid in variant['familyGuids']]
+        saved_variants = [saved_variants_by_id.get(variant_key) for variant_key in variant_keys]
+        saved_variants = [saved_variant for saved_variant in saved_variants if saved_variant]
+        if saved_variants:
+            variant['familyTags'] = {}
+            for saved_variant in saved_variants:
+                saved_variant_data = get_saved_variant_tags_json(saved_variant, add_tags=True)
+                variant['familyTags'][saved_variant.family.guid] = saved_variant_data
+                saved_variants_by_guid[saved_variant.guid] = variant
+        searched_variants.append(variant)
 
     return searched_variants, saved_variants_by_guid
 

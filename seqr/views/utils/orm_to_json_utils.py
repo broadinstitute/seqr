@@ -12,7 +12,6 @@ from django.db.models.fields.files import ImageFieldFile
 
 from reference_data.models import GeneConstraint, dbNSFPGene
 from seqr.models import CAN_EDIT, Sample, GeneNote
-from seqr.utils.xpos_utils import get_chrom_pos
 from seqr.views.utils.json_utils import _to_camel_case
 logger = logging.getLogger(__name__)
 
@@ -318,21 +317,23 @@ def get_json_for_analysis_group(analysis_group, **kwargs):
     return _get_json_for_model(analysis_group, get_json_for_models=get_json_for_analysis_groups, **kwargs)
 
 
-def add_additional_json_fields_for_saved_variant(variant_json, saved_variant, add_tags=False):
-    chrom, pos = get_chrom_pos(variant_json['xpos'])
-    variant_json.update({
-        'variantGuid': saved_variant.guid,
-        'chrom': chrom,
-        'pos': pos,
-    })
+def _get_additional_json_fields_for_saved_variant(saved_variant, add_tags=False):
+    variant_json = {
+        'familyGuids': [saved_variant.family.guid],
+    }
     if add_tags:
-        variant_json.update({
-            'tags': [get_json_for_variant_tag(tag) for tag in saved_variant.varianttag_set.all()],
-            'functionalData': [get_json_for_variant_functional_data(tag) for tag in
-                               saved_variant.variantfunctionaldata_set.all()],
-            'notes': [get_json_for_variant_note(tag) for tag in saved_variant.variantnote_set.all()],
-        })
+        variant_json['familyTags'] = {saved_variant.family.guid: get_saved_variant_tags_json(saved_variant)}
     return variant_json
+
+
+def get_saved_variant_tags_json(saved_variant):
+    return {
+        'variantGuid': saved_variant.guid,
+        'tags': [get_json_for_variant_tag(tag) for tag in saved_variant.varianttag_set.all()],
+        'functionalData': [get_json_for_variant_functional_data(tag) for tag in
+                           saved_variant.variantfunctionaldata_set.all()],
+        'notes': [get_json_for_variant_note(tag) for tag in saved_variant.variantnote_set.all()],
+    }
 
 
 def get_json_for_saved_variant(saved_variant, add_tags=False, project_guid=None, family_guid=None):
@@ -343,6 +344,9 @@ def get_json_for_saved_variant(saved_variant, add_tags=False, project_guid=None,
     Returns:
         dict: json object
     """
+    def _process_result(variant_json, saved_variant):
+        variant_json.update(_get_additional_json_fields_for_saved_variant(saved_variant, add_tags=add_tags))
+        return variant_json
 
     nested_fields = [
         {'fields': ('family', 'guid'), 'value': family_guid},
@@ -350,8 +354,7 @@ def get_json_for_saved_variant(saved_variant, add_tags=False, project_guid=None,
     ]
 
     return _get_json_for_model(
-        saved_variant, nested_fields=nested_fields, guid_key='variantId',
-        process_result=lambda *args: add_additional_json_fields_for_saved_variant(*args, add_tags=add_tags)
+        saved_variant, nested_fields=nested_fields, guid_key='variantId', process_result=_process_result,
     )
 
 

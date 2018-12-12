@@ -1,17 +1,15 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import { Grid, Icon, Popup, Divider } from 'semantic-ui-react'
-import { NavLink } from 'react-router-dom'
+import { Grid, Divider } from 'semantic-ui-react'
 
 import { CLINSIG_SEVERITY } from 'shared/utils/constants'
-import VariantTags from './VariantTags'
+import FamilyVariantTags from './FamilyVariantTags'
 import Annotations from './Annotations'
 import Pathogenicity from './Pathogenicity'
 import Predictions from './Predictions'
 import Frequencies from './Frequencies'
 import VariantGene from './VariantGene'
-import VariantFamily from './VariantFamily'
 import VariantIndividuals from './VariantIndividuals'
 
 
@@ -35,37 +33,18 @@ const VariantRow = styled(Grid.Row)`
   }}
 `
 
-const VariantLinkContainer = styled.div`
-  position: absolute;
-  top: .5em;
-  right: 1em;
-`
-
-const NO_DISPLAY = { display: 'none' }
-
 const Variants = ({ variants }) =>
   <Grid stackable divided="vertically" columns="equal">
     {variants.map(variant =>
       <VariantRow key={variant.variantId} severity={CLINSIG_SEVERITY[(variant.clinvar.clinicalSignificance || '').toLowerCase()]}>
-        {variant.variantGuid &&
-          <VariantLinkContainer>
-            <NavLink to={`/project/${variant.projectGuid}/saved_variants/variant/${variant.variantGuid}`} activeStyle={NO_DISPLAY}>
-              <Popup
-                trigger={<Icon name="linkify" link />}
-                content="Go to the page for this individual variant. Note: There is no additional information on this page, it is intended for sharing specific variants."
-                position="right center"
-                wide
-              />
-            </NavLink>
-          </VariantLinkContainer>
-        }
         <Grid.Column width={16}>
-          <VariantFamily variant={variant} />
           <Pathogenicity variant={variant} />
         </Grid.Column>
-        <Grid.Column width={16}>
-          <VariantTags variant={variant} />
-        </Grid.Column>
+        {variant.familyGuids.map(familyGuid =>
+          <Grid.Column key={familyGuid} width={16}>
+            <FamilyVariantTags familyGuid={familyGuid} variant={variant} />
+          </Grid.Column>,
+        )}
         <Grid.Column>
           <VariantGene geneId={variant.mainTranscript.geneId} variant={variant} />
           {Object.keys(variant.transcripts).length > 1 && <Divider />}
@@ -76,9 +55,11 @@ const Variants = ({ variants }) =>
         <Grid.Column><Annotations variant={variant} /></Grid.Column>
         <Grid.Column><Predictions predictions={variant.predictions} /></Grid.Column>
         <Grid.Column><Frequencies variant={variant} /></Grid.Column>
-        <Grid.Column width={16}>
-          <VariantIndividuals variant={variant} />
-        </Grid.Column>
+        {variant.familyGuids.map(familyGuid =>
+          <Grid.Column key={familyGuid} width={16}>
+            <VariantIndividuals familyGuid={familyGuid} variant={variant} />
+          </Grid.Column>,
+        )}
       </VariantRow>,
     )}
   </Grid>

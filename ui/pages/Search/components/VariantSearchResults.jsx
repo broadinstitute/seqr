@@ -13,7 +13,7 @@ import { VARIANT_SORT_FIELD, VARIANT_PAGINATION_FIELD } from 'shared/utils/const
 
 import { loadSearchedVariants, updateVariantSearchDisplay } from '../reducers'
 import {
-  getSearchedVariantsWithSavedVariants,
+  getSearchedVariants,
   getSearchedVariantsIsLoading,
   getSearchedVariantsErrorMessage,
   getTotalVariantsCount,
@@ -105,7 +105,7 @@ VariantSearchResults.propTypes = {
 }
 
 const mapStateToProps = (state, ownProps) => ({
-  searchedVariants: getSearchedVariantsWithSavedVariants(state),
+  searchedVariants: getSearchedVariants(state),
   loading: getSearchedVariantsIsLoading(state),
   variantSearchDisplay: getVariantSearchDisplay(state),
   searchedVariantExportConfig: getSearchedVariantExportConfig(state),

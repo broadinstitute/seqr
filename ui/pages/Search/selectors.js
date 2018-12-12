@@ -1,6 +1,6 @@
 import { createSelector } from 'reselect'
 
-import { getSavedVariantsByGuid, getProjectsByGuid, getFamiliesByGuid, getLocusListsByGuid } from 'redux/selectors'
+import { getProjectsByGuid, getFamiliesByGuid, getLocusListsByGuid } from 'redux/selectors'
 import { getVariantsExportData } from 'shared/utils/constants'
 
 export const getSearchedProjectIsLoading = state => state.searchedProjectLoading.isLoading
@@ -21,17 +21,8 @@ export const getTotalVariantsCount = createSelector(
   searchParams => (searchParams || {}).totalResults,
 )
 
-export const getSearchedVariantsWithSavedVariants = createSelector(
-  getSearchedVariants,
-  getSavedVariantsByGuid,
-  (searchedVariants, savedVariantsByGuid) =>
-    searchedVariants.map(variant =>
-      (variant.variantGuid ? savedVariantsByGuid[variant.variantGuid] : variant),
-    ),
-)
-
 export const getSearchedVariantExportConfig = createSelector(
-  getSearchedVariantsWithSavedVariants,
+  getSearchedVariants,
   variants => [{
     name: 'Variant Search Results',
     data: {

@@ -51,7 +51,7 @@ VariantFamily.propTypes = {
 }
 
 const mapStateToProps = (state, ownProps) => ({
-  family: getFamiliesByGuid(state)[ownProps.variant.familyGuid],
+  family: getFamiliesByGuid(state)[ownProps.familyGuid],
 })
 
 export default connect(mapStateToProps)(VariantFamily)

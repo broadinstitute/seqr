@@ -1,17 +1,19 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Popup } from 'semantic-ui-react'
+import { NavLink } from 'react-router-dom'
+import { Icon, Popup } from 'semantic-ui-react'
 import styled from 'styled-components'
 
 import { updateVariantNote, updateVariantTags } from 'redux/rootReducer'
-import { getProjectsByGuid } from 'redux/selectors'
+import { getProjectsByGuid, getFamiliesByGuid } from 'redux/selectors'
 import { DISCOVERY_CATEGORY_NAME } from 'shared/utils/constants'
 import { HorizontalSpacer } from '../../Spacers'
 import ReduxFormWrapper from '../../form/ReduxFormWrapper'
 import { InlineToggle, BooleanCheckbox } from '../../form/Inputs'
 import TagFieldView from '../view-fields/TagFieldView'
 import TextFieldView from '../view-fields/TextFieldView'
+import VariantFamily from './VariantFamily'
 
 const TagTitle = styled.span`
   font-weight: bolder;
@@ -19,8 +21,9 @@ const TagTitle = styled.span`
   vertical-align: top;
 `
 
-const ShortcutToggleContainer = styled.div`
+const InlineContainer = styled.div`
   display: inline-block;
+  vertical-align: top;
   
   .form {
     display: inline-block;
@@ -37,6 +40,12 @@ const NoteContainer = styled.div`
     display: flex;
   }
 `
+
+const VariantLinkContainer = styled(InlineContainer)`
+  float: right;
+`
+
+const NO_DISPLAY = { display: 'none' }
 
 const SHORTCUT_TAGS = ['Review', 'Excluded']
 
@@ -75,7 +84,7 @@ ShortcutTagToggle.propTypes = {
   tag: PropTypes.object,
 }
 
-const ShortcutTags = ({ variant, dispatchUpdateVariantTags }) => {
+const ShortcutTags = ({ variant, dispatchUpdateFamilyVariantTags }) => {
   const appliedShortcutTags = SHORTCUT_TAGS.reduce((acc, tagName) => {
     const appliedTag = variant.tags.find(tag => tag.name === tagName)
     return appliedTag ? { ...acc, [tagName]: appliedTag } : acc
@@ -95,11 +104,11 @@ const ShortcutTags = ({ variant, dispatchUpdateVariantTags }) => {
       }
       return allTags.filter(tag => tag.name !== tagName)
     }, variant.tags)
-    return dispatchUpdateVariantTags({ ...variant, tags: updatedTags })
+    return dispatchUpdateFamilyVariantTags({ ...variant, tags: updatedTags })
   }
 
   return (
-    <ShortcutToggleContainer>
+    <InlineContainer>
       <ReduxFormWrapper
         onSubmit={onSubmit}
         form={`editShorcutTags-${variant.variantId}`}
@@ -108,13 +117,13 @@ const ShortcutTags = ({ variant, dispatchUpdateVariantTags }) => {
         submitOnChange
         fields={shortcutTagFields}
       />
-    </ShortcutToggleContainer>
+    </InlineContainer>
   )
 }
 
 ShortcutTags.propTypes = {
   variant: PropTypes.object,
-  dispatchUpdateVariantTags: PropTypes.func,
+  dispatchUpdateFamilyVariantTags: PropTypes.func,
 }
 
 
@@ -156,73 +165,97 @@ VariantNoteField.propTypes = {
   action: PropTypes.string,
 }
 
-const VariantTags = ({ variant, project, updateVariantNote: dispatchUpdateVariantNote, updateVariantTags: dispatchUpdateVariantTags }) =>
+const FamilyVariantTags = ({ variant, familyGuid, project, dispatchUpdateVariantNote, dispatchUpdateFamilyVariantTags }) =>
   <div>
-    <div>
-      <TagTitle>Tags:</TagTitle>
-      <HorizontalSpacer width={5} />
-      <ShortcutTags variant={variant} dispatchUpdateVariantTags={dispatchUpdateVariantTags} />
-      <VariantTagField
-        field="tags"
-        fieldName="Tags"
-        variant={variant}
-        tagOptions={project.variantTagTypes}
-        onSubmit={dispatchUpdateVariantTags}
-      />
-      <HorizontalSpacer width={5} />
-      {variant.tags.some(tag => tag.category === DISCOVERY_CATEGORY_NAME) &&
-        <span>
-          <TagTitle>Fxnl Data:</TagTitle>
-          <VariantTagField
-            field="functionalData"
-            fieldName="Fxnl Data"
-            variant={variant}
-            tagOptions={project.variantFunctionalTagTypes}
-            editMetadata
-            onSubmit={dispatchUpdateVariantTags}
-          />
-          <HorizontalSpacer width={5} />
-        </span>
-      }
-    </div>
-    <div>
-      <TagTitle>Notes:</TagTitle>
-      <NoteContainer>
-        {variant.notes.map(note =>
-          <VariantNoteField
-            key={note.noteGuid}
-            note={note}
-            variant={variant}
-            isDeletable
-            compact
-            action="Edit"
-            onSubmit={dispatchUpdateVariantNote}
-          />,
-        )}
-        <VariantNoteField
+    <InlineContainer><VariantFamily familyGuid={familyGuid} /></InlineContainer>
+    <InlineContainer>
+      <div>
+        <TagTitle>Tags:</TagTitle>
+        <HorizontalSpacer width={5} />
+        <ShortcutTags variant={variant} dispatchUpdateFamilyVariantTags={dispatchUpdateFamilyVariantTags} />
+        <VariantTagField
+          field="tags"
+          fieldName="Tags"
           variant={variant}
-          editIconName="plus"
-          editLabel="Add Note"
-          action="Add"
-          onSubmit={dispatchUpdateVariantNote}
+          tagOptions={project.variantTagTypes}
+          onSubmit={dispatchUpdateFamilyVariantTags}
         />
-      </NoteContainer>
-    </div>
+        <HorizontalSpacer width={5} />
+        {variant.tags.some(tag => tag.category === DISCOVERY_CATEGORY_NAME) &&
+          <span>
+            <TagTitle>Fxnl Data:</TagTitle>
+            <VariantTagField
+              field="functionalData"
+              fieldName="Fxnl Data"
+              variant={variant}
+              tagOptions={project.variantFunctionalTagTypes}
+              editMetadata
+              onSubmit={dispatchUpdateFamilyVariantTags}
+            />
+            <HorizontalSpacer width={5} />
+          </span>
+        }
+      </div>
+      <div>
+        <TagTitle>Notes:</TagTitle>
+        <NoteContainer>
+          {variant.notes.map(note =>
+            <VariantNoteField
+              key={note.noteGuid}
+              note={note}
+              variant={variant}
+              isDeletable
+              compact
+              action="Edit"
+              onSubmit={dispatchUpdateVariantNote}
+            />,
+          )}
+          <VariantNoteField
+            variant={variant}
+            editIconName="plus"
+            editLabel="Add Note"
+            action="Add"
+            onSubmit={dispatchUpdateVariantNote}
+          />
+        </NoteContainer>
+      </div>
+    </InlineContainer>
+    {variant.variantGuid &&
+      <VariantLinkContainer>
+        <NavLink to={`/project/${variant.projectGuid}/saved_variants/variant/${variant.variantGuid}`} activeStyle={NO_DISPLAY}>
+          <Popup
+            trigger={<Icon name="linkify" link />}
+            content="Go to the page for this individual variant. Note: There is no additional information on this page, it is intended for sharing specific variants."
+            position="right center"
+            wide
+          />
+        </NavLink>
+      </VariantLinkContainer>
+    }
   </div>
 
-VariantTags.propTypes = {
+FamilyVariantTags.propTypes = {
   variant: PropTypes.object,
   project: PropTypes.object,
-  updateVariantNote: PropTypes.func,
-  updateVariantTags: PropTypes.func,
+  familyGuid: PropTypes.string,
+  dispatchUpdateVariantNote: PropTypes.func,
+  dispatchUpdateFamilyVariantTags: PropTypes.func,
+}
+
+const EMPTY_FAMILY_TAGS = {
+  tags: [],
+  notes: [],
+  functionalData: [],
 }
 
 const mapStateToProps = (state, ownProps) => ({
-  project: getProjectsByGuid(state)[ownProps.variant.projectGuid],
+  project: getProjectsByGuid(state)[getFamiliesByGuid(state)[ownProps.familyGuid].projectGuid],
+  variant: { ...ownProps.variant, ...(ownProps.variant.familyTags[ownProps.familyGuid] || EMPTY_FAMILY_TAGS) },
 })
 
 const mapDispatchToProps = {
-  updateVariantNote, updateVariantTags,
+  dispatchUpdateVariantNote: updateVariantNote,
+  dispatchUpdateFamilyVariantTags: updateVariantTags,
 }
 
-export default connect(mapStateToProps, mapDispatchToProps)(VariantTags)
+export default connect(mapStateToProps, mapDispatchToProps)(FamilyVariantTags)

@@ -17,6 +17,8 @@ from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variant, get_j
     get_json_for_variant_functional_data, get_json_for_variant_note
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_permissions
 from seqr.views.utils.variant_utils import update_project_saved_variant_json
+from seqr.utils.xpos_utils import get_chrom_pos
+
 
 logger = logging.getLogger(__name__)
 
@@ -40,11 +42,11 @@ def saved_variant_data(request, project_guid, variant_guid=None):
         if variant_query.count() < 1:
             return create_json_response({}, status=404, reason='Variant {} not found'.format(variant_guid))
     for saved_variant in variant_query:
-        variant = get_json_for_saved_variant(saved_variant, add_tags=True, project_guid=project_guid)
-        if variant['tags'] or variant['notes']:
+        if saved_variant.varianttag_set.count() or saved_variant.variantnote_set.count():
+            variant = get_json_for_saved_variant(saved_variant, add_tags=True, project_guid=project_guid)
             variant_json = json.loads(saved_variant.saved_variant_json or '{}')
             variant.update(variant_details(variant_json, project, request.user))
-            variants[variant['variantGuid']] = variant
+            variants[saved_variant.guid] = variant
 
     genes = _saved_variant_genes(variants.values())
     _add_locus_lists(project, variants.values(), genes)
@@ -182,6 +184,8 @@ def variant_details(variant_json, project, user):
     main_transcript = annotation.get('main_transcript') or (annotation['vep_annotation'][annotation['worst_vep_annotation_index']] if annotation.get('worst_vep_annotation_index') is not None and annotation['vep_annotation'] else {})
     is_es_variant = annotation.get('db') == 'elasticsearch'
 
+    chrom, pos = get_chrom_pos(variant_json['xpos'])
+
     extras = variant_json.get('extras') or {}
     genome_version = extras.get('genome_version') or '37'
     lifted_over_genome_version = '37' if genome_version == '38' else '38'
@@ -228,6 +232,8 @@ def variant_details(variant_json, project, user):
             _transcript_detail(vep_a, i == annotation.get('worst_vep_annotation_index')))
 
     return {
+        'chrom': chrom,
+        'pos': pos,
         'predictions': {
             'cadd': annotation.get('cadd_phred'),
             'dann': annotation.get('dann_score'),
