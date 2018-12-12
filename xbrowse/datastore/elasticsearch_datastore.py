@@ -617,6 +617,12 @@ class ElasticsearchDatastore(datastore.Datastore):
                 else:
                     vep_annotation = json.loads(str(vep_annotation))
 
+            gene_ids = list(hit['geneIds'] or [])
+            worst_vep_index_per_gene = {
+                gene_id: next((i for i, annot in enumerate(vep_annotation) if annot['gene_id'] == gene_id), None)
+                for gene_id in gene_ids
+            }
+
             if project.genome_version == GENOME_VERSION_GRCh37:
                 grch38_coord = None
                 if self.liftover_grch37_to_grch38:
@@ -682,11 +688,11 @@ class ElasticsearchDatastore(datastore.Datastore):
                     'vep_consequence': str(hit['mainTranscript_major_consequence'] or ""),
                     'main_transcript': {k.replace('mainTranscript_', ''): hit[k] for k in dir(hit) if k.startswith('mainTranscript_')},
                     'worst_vep_annotation_index': 0,
-                    'worst_vep_index_per_gene': {str(hit['mainTranscript_gene_id']): 0},
+                    'worst_vep_index_per_gene': worst_vep_index_per_gene,
                 },
                 'chr': hit["contig"],
                 'coding_gene_ids': list(hit['codingGeneIds'] or []),
-                'gene_ids': list(hit['geneIds'] or []),
+                'gene_ids': gene_ids,
                 'coverage': {
                     'gnomad_exome_coverage': float(hit["gnomad_exome_coverage"] or -1) if "gnomad_exome_coverage" in hit else -1,
                     'gnomad_genome_coverage': float(hit["gnomad_genome_coverage"] or -1) if "gnomad_genome_coverage" in hit else -1,
