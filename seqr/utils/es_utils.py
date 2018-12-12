@@ -269,7 +269,7 @@ def _genotype_filter(inheritance, quality_filter, family_samples_by_id):
             family_genotypes_child_q |= Q(addl_filter & _genotypes_child_q(x_linked_q, samples_by_id))
 
             family_compound_het_q, _ = _genotype_inheritance_filter(COMPOUND_HET, inheritance_filter, quality_q, samples_by_id)
-            family_compound_het_q = _genotypes_child_q(compound_het_q, samples_by_id)
+            family_compound_het_q = _genotypes_child_q(family_compound_het_q, samples_by_id)
             if not compound_het_q:
                 compound_het_q = family_compound_het_q
             else:
@@ -644,11 +644,12 @@ def _parse_es_hit(raw_hit, family_samples_by_id, liftover_grch38_to_grch37, fiel
         family_guids.add(family_guid)
         sample = family_samples_by_id[family_guid][genotype_hit['sample_id']]
         genotypes[sample.guid] = _get_field_values(genotype_hit, GENOTYPE_FIELDS_CONFIG)
+    family_guids = list(family_guids)
 
     hit = {k: raw_hit[k] for k in field_names if k in raw_hit}
 
     # TODO better handling for multi-project searches
-    project = family_samples_by_id[list(family_guids)[0]].values()[0].individual.family.project
+    project = family_samples_by_id[family_guids[0]].values()[0].individual.family.project
 
     genome_version = project.genome_version
     lifted_over_genome_version = None
@@ -722,20 +723,22 @@ def _parse_compound_het_hits(response, allowed_consequences, family_samples_by_i
                 variant['transcripts'][gene_agg['key']]
             )]
 
-        family_guids = set()
-        for variant in gene_variants:
-            family_guids = family_guids.intersection(set(variant['familyGuids']))
-
         if len(gene_variants) > 1:
+            family_guids = set(gene_variants[0]['familyGuids'])
+            for variant in gene_variants[1:]:
+                family_guids = family_guids.intersection(set(variant['familyGuids']))
+
+            invalid_family_guids = set()
             for family_guid in family_guids:
                 for sample_guid in family_unaffected_indiv_sample_guids[family_guid]:
                     # To be compound het all unaffected individuals need to be hom ref for at least one of the variants
                     is_family_compound_het = any(
                         variant['genotypes'].get(sample_guid, {}).get('numAlt') != 1 for variant in gene_variants)
                     if not is_family_compound_het:
-                        family_guids.remove(family_guid)
+                        invalid_family_guids.add(family_guid)
                         break
 
+            family_guids -= invalid_family_guids
             if family_guids:
                 for variant in gene_variants:
                     variant['familyGuids'] = list(family_guids)

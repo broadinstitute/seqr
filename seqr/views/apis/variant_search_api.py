@@ -97,6 +97,9 @@ def search_context_handler(request, search_hash):
 
 
 def _get_saved_variants(variants):
+    if not variants:
+        return [], {}
+
     variant_q = Q()
     for variant in variants:
         variant_q |= Q(xpos_start=variant['xpos'], ref=variant['ref'], alt=variant['alt'], family__guid__in=variant['familyGuids'])
@@ -108,15 +111,14 @@ def _get_saved_variants(variants):
     saved_variants_by_guid = {}
     searched_variants = []
     for variant in variants:
+        variant['familyTags'] = {}
         variant_keys = ['{}-{}-{}-{}'.format(family_guid, variant['xpos'], variant['ref'], variant['alt']) for family_guid in variant['familyGuids']]
         saved_variants = [saved_variants_by_id.get(variant_key) for variant_key in variant_keys]
         saved_variants = [saved_variant for saved_variant in saved_variants if saved_variant]
-        if saved_variants:
-            variant['familyTags'] = {}
-            for saved_variant in saved_variants:
-                saved_variant_data = get_saved_variant_tags_json(saved_variant, add_tags=True)
-                variant['familyTags'][saved_variant.family.guid] = saved_variant_data
-                saved_variants_by_guid[saved_variant.guid] = variant
+        for saved_variant in saved_variants:
+            saved_variant_data = get_saved_variant_tags_json(saved_variant)
+            variant['familyTags'][saved_variant.family.guid] = saved_variant_data
+            saved_variants_by_guid[saved_variant.guid] = variant
         searched_variants.append(variant)
 
     return searched_variants, saved_variants_by_guid
