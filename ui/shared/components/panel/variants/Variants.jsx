@@ -55,11 +55,12 @@ const Variants = ({ variants }) =>
         <Grid.Column><Annotations variant={variant} /></Grid.Column>
         <Grid.Column><Predictions predictions={variant.predictions} /></Grid.Column>
         <Grid.Column><Frequencies variant={variant} /></Grid.Column>
-        {variant.familyGuids.map(familyGuid =>
-          <Grid.Column key={familyGuid} width={16}>
-            <VariantIndividuals familyGuid={familyGuid} variant={variant} />
-          </Grid.Column>,
-        )}
+        <Grid.Column width={16}>
+          {variant.familyGuids.map(familyGuid =>
+            <VariantIndividuals key={familyGuid} familyGuid={familyGuid} variant={variant} />,
+          )}
+        </Grid.Column>
+
       </VariantRow>,
     )}
   </Grid>

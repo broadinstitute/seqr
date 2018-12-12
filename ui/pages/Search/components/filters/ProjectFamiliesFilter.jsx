@@ -6,14 +6,19 @@ import { Link } from 'react-router-dom'
 import { Form, Header } from 'semantic-ui-react'
 
 import { getProjectsByGuid, getFamiliesGroupedByProjectGuid } from 'redux/selectors'
-import { Multiselect } from 'shared/components/form/Inputs'
+import { Multiselect, BooleanCheckbox } from 'shared/components/form/Inputs'
 
 
-const ProjectFamiliesFilter = ({ projectFamiliesByGuid, project, removeField, dispatch, ...props }) => {
+const ProjectFamiliesFilter = ({ projectFamiliesByGuid, project, value, onChange, removeField, dispatch, ...props }) => {
   const familyOptions = Object.values(projectFamiliesByGuid).map(
     family => ({ value: family.familyGuid, text: family.displayName }),
   )
-  // TODO handle multiple families
+  const selectAllFamilies = (checked) => {
+    if (checked) {
+      onChange(familyOptions.map((opt => opt.value)))
+    }
+  }
+  // TODO analysis groups
   return (
     <div>
       {project &&
@@ -21,9 +26,18 @@ const ProjectFamiliesFilter = ({ projectFamiliesByGuid, project, removeField, di
           Project: <Link to={`/project/${project.projectGuid}/project_page`}>{project.name}</Link>
         </Header>
       }
-      <Form.Group>
+      <Form.Group inline>
+        <BooleanCheckbox
+          {...props}
+          value={value.length === familyOptions.length}
+          onChange={selectAllFamilies}
+          width={2}
+          label="Include All Families"
+        />
         <Multiselect
           {...props}
+          value={value}
+          onChange={onChange}
           width={7}
           options={familyOptions}
           label="Families"
@@ -45,6 +59,8 @@ ProjectFamiliesFilter.propTypes = {
   name: PropTypes.string,
   project: PropTypes.object,
   projectFamiliesByGuid: PropTypes.object,
+  value: PropTypes.array,
+  onChange: PropTypes.func,
   removeField: PropTypes.func,
   dispatch: PropTypes.func,
 }

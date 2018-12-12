@@ -155,7 +155,7 @@ const VariantIndividuals = ({ variant, familyGuid, individualsByGuid }) => {
   const individuals = Object.values(individualsByGuid).filter(individual => individual.familyGuid === familyGuid)
   individuals.sort((a, b) => a.affected.localeCompare(b.affected))
   return (
-    <div>
+    <span>
       {individuals.map(individual =>
         <IndividualCell key={individual.individualGuid}>
           <PedigreeIcon
@@ -177,7 +177,7 @@ const VariantIndividuals = ({ variant, familyGuid, individualsByGuid }) => {
         </IndividualCell>,
       )}
       <ShowReadsButton familyGuid={familyGuid} variant={variant} />
-    </div>
+    </span>
   )
 }
 

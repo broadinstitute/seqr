@@ -16,7 +16,7 @@ import { getCurrentSearchParams } from './selectors'
 
 const BaseVariantSearch = ({ queryParams, updateQueryParams, searchParams, search, load, loading, familiesByGuid }) => {
 
-  const { familyGuid, ...coreQueryParams } = queryParams
+  const { projectGuid, familyGuid, ...coreQueryParams } = queryParams
 
   const onSubmit = (updatedSearchParams) => {
     const searchHash = hash.MD5(updatedSearchParams)
@@ -26,7 +26,14 @@ const BaseVariantSearch = ({ queryParams, updateQueryParams, searchParams, searc
 
   // TODO initial project or analysisGroup
   let searchedProjectFamilies = []
-  if (familyGuid) {
+  if (projectGuid) {
+    searchedProjectFamilies = [{
+      projectGuid,
+      familyGuids: Object.values(familiesByGuid).filter(
+        family => family.projectGuid === projectGuid).map(family => family.familyGuid),
+    }]
+  }
+  else if (familyGuid) {
     searchedProjectFamilies = [{
       projectGuid: (familiesByGuid[familyGuid] || {}).projectGuid,
       familyGuids: [familyGuid],
@@ -34,9 +41,14 @@ const BaseVariantSearch = ({ queryParams, updateQueryParams, searchParams, searc
   }
   const initialValues = { searchedProjectFamilies, ...(searchParams || coreQueryParams) }
 
-
   return (
-    <DataLoader contentId={queryParams} loading={loading} load={load} content>
+    <DataLoader
+      contentId={queryParams}
+      loading={loading}
+      load={load}
+      // TODO should always be true once multi-project search is enabled
+      content={projectGuid || familyGuid || coreQueryParams.search}
+    >
       <Grid>
         <Grid.Row>
           <Grid.Column width={16}>
