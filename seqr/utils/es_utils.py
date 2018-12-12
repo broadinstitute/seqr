@@ -248,7 +248,7 @@ def _genotype_filter(inheritance, quality_filter, family_samples_by_id):
         if min_gq:
             quality_q &= Q('range', gq={'gte': min_gq})
 
-    for samples_by_id in family_samples_by_id.values():
+    for family_guid, samples_by_id in family_samples_by_id.items():
 
         if inheritance:
             samples_q, addl_filter = _genotype_inheritance_filter(inheritance_mode, inheritance_filter, quality_q, samples_by_id)
@@ -261,15 +261,15 @@ def _genotype_filter(inheritance, quality_filter, family_samples_by_id):
             genotypes_q &= Q('has_child', type='genotype', query=Q(Q('range', num_alt={'gte': 1}) & samples_q))
 
         # Return variants where all requested samples meet the filtering criteria
-        family_genotypes_child_q = _genotypes_child_q(samples_q, samples_by_id)
+        family_genotypes_child_q = _genotypes_child_q(samples_q, family_guid, samples_by_id)
 
         # For recessive search, should be hom recessive, x-linked recessive, or compound het
         if inheritance_mode == RECESSIVE:
             x_linked_q, addl_filter = _genotype_inheritance_filter(X_LINKED_RECESSIVE, inheritance_filter, quality_q, samples_by_id)
-            family_genotypes_child_q |= Q(addl_filter & _genotypes_child_q(x_linked_q, samples_by_id))
+            family_genotypes_child_q |= Q(addl_filter & _genotypes_child_q(x_linked_q, family_guid, samples_by_id))
 
             family_compound_het_q, _ = _genotype_inheritance_filter(COMPOUND_HET, inheritance_filter, quality_q, samples_by_id)
-            family_compound_het_q = _genotypes_child_q(family_compound_het_q, samples_by_id)
+            family_compound_het_q = _genotypes_child_q(family_compound_het_q, family_guid, samples_by_id)
             if not compound_het_q:
                 compound_het_q = family_compound_het_q
             else:
@@ -285,8 +285,8 @@ def _genotype_filter(inheritance, quality_filter, family_samples_by_id):
     return genotypes_q, inheritance_mode, compound_het_q
 
 
-def _genotypes_child_q(samples_q, samples_by_id):
-    return Q('has_child', type='genotype', query=samples_q, min_children=len(samples_by_id), inner_hits={})
+def _genotypes_child_q(samples_q, family_guid, samples_by_id):
+    return Q('has_child', type='genotype', query=samples_q, min_children=len(samples_by_id), inner_hits={'name': family_guid})
 
 
 def _genotype_inheritance_filter(inheritance_mode, inheritance_filter, quality_q, samples_by_id):
@@ -633,18 +633,17 @@ def _get_query_field_names():
 def _parse_es_hit(raw_hit, family_samples_by_id, liftover_grch38_to_grch37, field_names):
     genotypes = {}
 
-    # TODO for multi-project search can't assume all sample ids distinct, needs to factor in es index of hit
-    sample_family_guids = {}
+    family_guids = []
+    genotype_hits = raw_hit.meta.inner_hits
     for family_guid, samples_by_id in family_samples_by_id.items():
-        sample_family_guids.update({sample_id: family_guid for sample_id in samples_by_id.keys()})
-
-    family_guids = set()
-    for genotype_hit in raw_hit.meta.inner_hits.genotype:
-        family_guid = sample_family_guids[genotype_hit['sample_id']]
-        family_guids.add(family_guid)
-        sample = family_samples_by_id[family_guid][genotype_hit['sample_id']]
-        genotypes[sample.guid] = _get_field_values(genotype_hit, GENOTYPE_FIELDS_CONFIG)
-    family_guids = list(family_guids)
+        # For multi-family search, all genotypes are returned including for those families where not
+        # all individuals have the correct genotype
+        if family_guid in genotype_hits and len(samples_by_id) == genotype_hits[family_guid].hits.total:
+            family_guids.append(family_guid)
+            genotypes.update({
+                samples_by_id[genotype_hit['sample_id']].guid: _get_field_values(genotype_hit, GENOTYPE_FIELDS_CONFIG)
+                for genotype_hit in genotype_hits[family_guid]
+            })
 
     hit = {k: raw_hit[k] for k in field_names if k in raw_hit}
 
