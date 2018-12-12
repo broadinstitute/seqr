@@ -4,7 +4,7 @@ import { connect } from 'react-redux'
 import { Grid } from 'semantic-ui-react'
 import hash from 'object-hash'
 
-import { getFamiliesByGuid, getProjectDetailsIsLoading } from 'redux/selectors'
+import { getFamiliesByGuid, getAnalysisGroupsByGuid, getProjectDetailsIsLoading } from 'redux/selectors'
 import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
 import DataLoader from 'shared/components/DataLoader'
 import { QueryParamsEditor } from 'shared/components/QueryParamEditor'
@@ -14,9 +14,9 @@ import { loadProjectFamiliesContext, loadSearchedVariants } from './reducers'
 import { getCurrentSearchParams } from './selectors'
 
 
-const BaseVariantSearch = ({ queryParams, updateQueryParams, searchParams, search, load, loading, familiesByGuid }) => {
+const BaseVariantSearch = ({ queryParams, updateQueryParams, searchParams, search, load, loading, familiesByGuid, analysisGroupByGuid }) => {
 
-  const { projectGuid, familyGuid, ...coreQueryParams } = queryParams
+  const { projectGuid, familyGuid, analysisGroupGuid, ...coreQueryParams } = queryParams
 
   const onSubmit = (updatedSearchParams) => {
     const searchHash = hash.MD5(updatedSearchParams)
@@ -39,6 +39,12 @@ const BaseVariantSearch = ({ queryParams, updateQueryParams, searchParams, searc
       familyGuids: [familyGuid],
     }]
   }
+  else if (analysisGroupGuid) {
+    searchedProjectFamilies = [{
+      projectGuid: (analysisGroupByGuid[analysisGroupGuid] || {}).projectGuid,
+      familyGuids: (analysisGroupByGuid[analysisGroupGuid] || {}).familyGuids,
+    }]
+  }
   const initialValues = { searchedProjectFamilies, ...(searchParams || coreQueryParams) }
 
   return (
@@ -47,7 +53,7 @@ const BaseVariantSearch = ({ queryParams, updateQueryParams, searchParams, searc
       loading={loading}
       load={load}
       // TODO should always be true once multi-project search is enabled
-      content={projectGuid || familyGuid || coreQueryParams.search}
+      content={coreQueryParams.search || projectGuid || familyGuid || analysisGroupGuid}
     >
       <Grid>
         <Grid.Row>
@@ -77,11 +83,13 @@ BaseVariantSearch.propTypes = {
   loading: PropTypes.bool,
   load: PropTypes.func,
   familiesByGuid: PropTypes.object,
+  analysisGroupByGuid: PropTypes.object,
 }
 
 const mapStateToProps = (state, ownProps) => ({
   searchParams: getCurrentSearchParams(state, ownProps),
   familiesByGuid: getFamiliesByGuid(state),
+  analysisGroupByGuid: getAnalysisGroupsByGuid(state),
   loading: getProjectDetailsIsLoading(state),
 })
 

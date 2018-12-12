@@ -1,6 +1,6 @@
 import { combineReducers } from 'redux'
 
-import { loadProject, loadFamilyProject, RECEIVE_DATA } from 'redux/rootReducer'
+import { loadProject, loadFamilyProject, loadAnalysisGroupProject, RECEIVE_DATA } from 'redux/rootReducer'
 import { loadingReducer, createSingleObjectReducer, createSingleValueReducer, createObjectsByIdReducer } from 'redux/utils/reducerFactories'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 import { SORT_BY_XPOS } from 'shared/utils/constants'
@@ -15,13 +15,16 @@ const REQUEST_PROJECT_DETAILS = 'REQUEST_PROJECT_DETAILS'
 
 // actions
 
-export const loadProjectFamiliesContext = ({ projectGuid, familyGuid, search }) => {
+export const loadProjectFamiliesContext = ({ projectGuid, familyGuid, analysisGroupGuid, search }) => {
   // TODO initial analysisGroup
   if (projectGuid) {
     return loadProject(projectGuid)
   }
   if (familyGuid) {
     return loadFamilyProject(familyGuid)
+  }
+  if (analysisGroupGuid) {
+    return loadAnalysisGroupProject(analysisGroupGuid)
   }
   if (search) {
     return (dispatch, getState) => {

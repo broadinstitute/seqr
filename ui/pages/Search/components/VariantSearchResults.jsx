@@ -53,7 +53,7 @@ const VariantSearchResults = ({
       errorMessage={errorMessage &&
         <Grid.Row>
           <Grid.Column width={16}>
-            <Message error textAlign="center" content={errorMessage} />
+            <Message error content={errorMessage} />
           </Grid.Column>
         </Grid.Row>
       }

@@ -96,6 +96,24 @@ export const loadFamilyProject = (familyGuid) => {
 }
 
 
+export const loadAnalysisGroupProject = (analysisGroupGuid) => {
+  return (dispatch, getState) => {
+    if (!getState().analysisGroupsByGuid[analysisGroupGuid]) {
+      dispatch({ type: REQUEST_PROJECT_DETAILS })
+      return new HttpRequestHelper(`/api/analysis_group/${analysisGroupGuid}/details`,
+        (responseJson) => {
+          dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+        },
+        (e) => {
+          dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
+        },
+      ).get()
+    }
+    return Promise.resolve()
+  }
+}
+
+
 /**
  * POSTS a request to update the specified project and dispatches the appropriate events when the request finishes
  * Accepts a values object that includes any data to be posted as well as the following keys:

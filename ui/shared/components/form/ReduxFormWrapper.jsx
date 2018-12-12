@@ -23,6 +23,11 @@ const StyledForm = styled(({ hasSubmitButton, inline, ...props }) => <Form {...p
     display: inline;
     padding-right: 1em;
   }
+  
+  .inline.fields .field:last-child {
+    padding-right: 0 !important;
+  }
+  
 `
 
 const MessagePanel = styled(Message)`

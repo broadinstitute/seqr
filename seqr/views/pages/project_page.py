@@ -67,6 +67,23 @@ def family_page_data(request, family_guid):
     return create_json_response(get_project_details(family.project.guid, request.user))
 
 
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
+def analysis_group_page_data(request, analysis_group_guid):
+    """Returns a JSON object containing information needed to display the analysis group page
+    ::
+
+      json_response = {
+         'user': {..},
+         'variants': [..],
+       }
+    Args:
+        family (string): GUID of the Family to retrieve data for.
+    """
+    analysis_group = AnalysisGroup.objects.get(guid=analysis_group_guid)
+
+    return create_json_response(get_project_details(analysis_group.project.guid, request.user))
+
+
 def get_project_details(project_guid, user):
     project = get_project_and_check_permissions(project_guid, user)
 
