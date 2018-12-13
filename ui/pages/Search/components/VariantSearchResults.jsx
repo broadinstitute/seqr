@@ -19,6 +19,7 @@ import {
   getTotalVariantsCount,
   getVariantSearchDisplay,
   getSearchedVariantExportConfig,
+  getCoreQueryParams,
 } from '../selectors'
 
 
@@ -35,7 +36,7 @@ const FIELDS = [
 ]
 
 const VariantSearchResults = ({
-  searchedVariants, variantSearchDisplay, searchedVariantExportConfig, queryParams, updateQueryParams,
+  searchedVariants, variantSearchDisplay, searchedVariantExportConfig, coreQueryParams, updateQueryParams,
   loading, load, errorMessage, onSubmit, totalVariantsCount,
 }) => {
   const { currentPage = 1, recordsPerPage } = variantSearchDisplay
@@ -46,7 +47,7 @@ const VariantSearchResults = ({
 
   return (
     <DataLoader
-      contentId={queryParams.search}
+      contentId={coreQueryParams.search}
       content={searchedVariants}
       loading={loading}
       load={load}
@@ -58,7 +59,7 @@ const VariantSearchResults = ({
         </Grid.Row>
       }
     >
-      {queryParams.search &&
+      {coreQueryParams.search &&
       <LargeRow>
         <Grid.Column width={5}>
           {totalVariantsCount === searchedVariants.length ? 'Found ' : `Showing ${variantDisplayPageOffset + 1}-${variantDisplayPageOffset + searchedVariants.length} of `}
@@ -67,7 +68,7 @@ const VariantSearchResults = ({
         <Grid.Column width={11} floated="right" textAlign="right">
           <ReduxFormWrapper
             onSubmit={(updates) => {
-              updateQueryParams({ ...queryParams, ...Object.entries(updates).reduce((acc, [k, v]) => ({ ...acc, [k]: String(v).toLowerCase() }), {}) })
+              updateQueryParams({ ...coreQueryParams, ...Object.entries(updates).reduce((acc, [k, v]) => ({ ...acc, [k]: String(v).toLowerCase() }), {}) })
               onSubmit(updates)
             }}
             form="editSearchedVariantsDisplay"
@@ -100,7 +101,7 @@ VariantSearchResults.propTypes = {
   onSubmit: PropTypes.func,
   searchedVariantExportConfig: PropTypes.array,
   totalVariantsCount: PropTypes.number,
-  queryParams: PropTypes.object,
+  coreQueryParams: PropTypes.object,
   updateQueryParams: PropTypes.func,
 }
 
@@ -111,15 +112,16 @@ const mapStateToProps = (state, ownProps) => ({
   searchedVariantExportConfig: getSearchedVariantExportConfig(state),
   totalVariantsCount: getTotalVariantsCount(state, ownProps),
   errorMessage: getSearchedVariantsErrorMessage(state),
+  coreQueryParams: getCoreQueryParams(state, ownProps),
 })
 
 const mapDispatchToProps = (dispatch, ownProps) => {
   return {
     load: (searchHash) => {
-      dispatch(loadSearchedVariants(searchHash, ownProps.queryParams))
+      dispatch(loadSearchedVariants(searchHash, ownProps.coreQueryParams))
     },
     onSubmit: (updates) => {
-      dispatch(updateVariantSearchDisplay(updates, ownProps.queryParams.search))
+      dispatch(updateVariantSearchDisplay(updates, ownProps.coreQueryParams.search))
     },
   }
 }
