@@ -257,7 +257,10 @@ export const LOCATION_FIELDS = [
     name: LOCUS_LIST_ITEMS_FIELD.name,
     label: LOCUS_LIST_ITEMS_FIELD.label,
     component: LoadedLocusListField,
-    normalize: LOCUS_LIST_ITEMS_FIELD.normalize,
+    normalize: (value, previousValue) => {
+      const { locusListGuid, ...normalizedValue } = LOCUS_LIST_ITEMS_FIELD.normalize(value, previousValue)
+      return normalizedValue
+    },
     format: val => val || {},
     rows: 8,
     width: 11,

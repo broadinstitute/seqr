@@ -15,7 +15,7 @@ const BaseLocusListSelector = ({ value, projectLocusLists, loadLocusList }) =>
     inline
     selection
     label="Gene List"
-    defaultValue={value.locusListGuid}
+    value={value.locusListGuid}
     onChange={loadLocusList}
     options={projectLocusLists.map(locusList => ({ text: locusList.name, value: locusList.locusListGuid }))}
   />
