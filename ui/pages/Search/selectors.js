@@ -9,7 +9,6 @@ import {
 } from 'redux/selectors'
 import { getVariantsExportData } from 'shared/utils/constants'
 
-export const getSearchedProjectIsLoading = state => state.searchedProjectLoading.isLoading
 export const getSearchedVariants = state => state.searchedVariants
 export const getSearchedVariantsIsLoading = state => state.searchedVariantsLoading.isLoading
 export const getSearchedVariantsErrorMessage = state => state.searchedVariantsLoading.errorMessage
@@ -24,25 +23,19 @@ export const getCurrentSearchParams = createSelector(
   (searchesByHash, queryParams) => searchesByHash[queryParams.search],
 )
 
-export const getCoreQueryParams = createSelector(
+export const getLoadedIntitialSearch = createSelector(
   getQueryParams,
-  (queryParams) => {
-    const { projectGuid, familyGuid, analysisGroupGuid, ...coreQueryParams } = queryParams
-    return coreQueryParams
-  },
-)
-
-export const getIntitialSearch = createSelector(
-  getQueryParams,
-  getCoreQueryParams,
   getCurrentSearchParams,
+  getProjectsByGuid,
   getFamiliesByGuid,
   getFamiliesGroupedByProjectGuid,
   getAnalysisGroupsByGuid,
-  (queryParams, coreQueryParams, searchParams, familiesByGuid, familiesByProjectGuid, analysisGroupByGuid) => {
+  (queryParams, searchParams, projectsByGuid, familiesByGuid, familiesByProjectGuid, analysisGroupByGuid) => {
 
     if (searchParams) {
-      return searchParams
+      return searchParams.searchedProjectFamilies.every(
+        ({ projectGuid }) => projectsByGuid[projectGuid],
+      ) ? searchParams : null
     }
 
     let searchedProjectFamilies
@@ -65,7 +58,7 @@ export const getIntitialSearch = createSelector(
       }]
     }
 
-    return { searchedProjectFamilies, ...coreQueryParams }
+    return searchedProjectFamilies ? { searchedProjectFamilies } : null
   },
 )
 

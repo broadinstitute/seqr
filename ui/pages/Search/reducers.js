@@ -1,4 +1,5 @@
 import { combineReducers } from 'redux'
+import hash from 'object-hash'
 
 import { loadProject, loadFamilyProject, loadAnalysisGroupProject, RECEIVE_DATA } from 'redux/rootReducer'
 import { loadingReducer, createSingleObjectReducer, createSingleValueReducer, createObjectsByIdReducer } from 'redux/utils/reducerFactories'
@@ -48,7 +49,7 @@ export const loadProjectFamiliesContext = ({ projectGuid, familyGuid, analysisGr
   return () => {}
 }
 
-export const loadSearchedVariants = (searchHash, search) => {
+export const loadSearchedVariafnts = (searchHash, search) => {
   return (dispatch, getState) => {
     if (!searchHash) {
       return
@@ -57,7 +58,7 @@ export const loadSearchedVariants = (searchHash, search) => {
     const sort = (searchDisplay.sort || SORT_BY_XPOS).toLowerCase()
 
     dispatch({ type: REQUEST_SEARCHED_VARIANTS })
-    new HttpRequestHelper(`/api/search/${searchHash}?sort=${sort}&page=${searchDisplay.currentPage || 1}`,
+    new HttpRequestHelper(`/api/search/${searchHash}?sort=${sort}&page=${searchDisplay.page || 1}`,
       (responseJson) => {
         dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
         dispatch({ type: RECEIVE_SEARCHED_VARIANTS, newValue: responseJson.searchedVariants })
@@ -70,10 +71,63 @@ export const loadSearchedVariants = (searchHash, search) => {
   }
 }
 
-export const updateVariantSearchDisplay = (updates, searchHash) => {
+export const updateVariantSearchfDisplay = (updates = {}, searchHash, search) => {
   return (dispatch, getState) => {
     dispatch({ type: UPDATE_SEARCHED_VARIANT_DISPLAY, updates })
-    return loadSearchedVariants(searchHash)(dispatch, getState)
+    return loadSearchedVariafnts(searchHash, search)(dispatch, getState)
+  }
+}
+
+export const searchVariants = ({ searchHash, search, displayUpdates, updateQueryParams }) => {
+  return (dispatch, getState) => {
+
+    if (!searchHash) {
+      if (search) {
+        searchHash = hash.MD5(search)
+        dispatch({ type: UPDATE_HASHED_SEARCHES, updatesById: { [searchHash]: search } })
+      } else {
+        return
+      }
+    }
+
+    // Update search table state
+    if (displayUpdates) {
+      if (displayUpdates.sort) {
+        displayUpdates.sort = displayUpdates.sort.toUpperCase()
+      } else if ('sort' in displayUpdates) {
+        displayUpdates.sort = SORT_BY_XPOS
+      }
+
+      if (!displayUpdates.page) {
+        displayUpdates.page = 1
+      }
+
+      dispatch({ type: UPDATE_SEARCHED_VARIANT_DISPLAY, updates: displayUpdates })
+    }
+
+    const searchDisplay = getState().variantSearchDisplay
+    const sort = searchDisplay.sort.toLowerCase()
+    const { page } = searchDisplay
+
+    // Update query params
+    const queryParams = { search: searchHash, sort }
+    if (page) {
+      queryParams.page = page
+    }
+    updateQueryParams(queryParams)
+
+    // Fetch variants
+    dispatch({ type: REQUEST_SEARCHED_VARIANTS })
+    new HttpRequestHelper(`/api/search/${searchHash}?sort=${sort}&page=${page || 1}`,
+      (responseJson) => {
+        dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+        dispatch({ type: RECEIVE_SEARCHED_VARIANTS, newValue: responseJson.searchedVariants })
+        dispatch({ type: UPDATE_HASHED_SEARCHES, updatesById: { [searchHash]: responseJson.search } })
+      },
+      (e) => {
+        dispatch({ type: RECEIVE_SEARCHED_VARIANTS, error: e.message, newValue: [] })
+      },
+    ).post(search)
   }
 }
 
@@ -86,7 +140,7 @@ export const reducers = {
   searchesByHash: createObjectsByIdReducer(UPDATE_HASHED_SEARCHES),
   variantSearchDisplay: createSingleObjectReducer(UPDATE_SEARCHED_VARIANT_DISPLAY, {
     sort: SORT_BY_XPOS,
-    currentPage: 1,
+    page: 1,
     recordsPerPage: 100,
   }, false),
 }

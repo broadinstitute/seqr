@@ -8,10 +8,11 @@ import DataLoader from 'shared/components/DataLoader'
 import { HorizontalSpacer } from 'shared/components/Spacers'
 import ExportTableButton from 'shared/components/buttons/export-table/ExportTableButton'
 import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
+import { Pagination } from 'shared/components/form/Inputs'
 import Variants from 'shared/components/panel/variants/Variants'
-import { VARIANT_SORT_FIELD, VARIANT_PAGINATION_FIELD } from 'shared/utils/constants'
+import { VARIANT_SORT_FIELD } from 'shared/utils/constants'
 
-import { loadSearchedVariants, updateVariantSearchDisplay } from '../reducers'
+import { searchVariants } from '../reducers'
 import {
   getSearchedVariants,
   getSearchedVariantsIsLoading,
@@ -19,7 +20,6 @@ import {
   getTotalVariantsCount,
   getVariantSearchDisplay,
   getSearchedVariantExportConfig,
-  getCoreQueryParams,
 } from '../selectors'
 
 
@@ -35,19 +35,30 @@ const FIELDS = [
   VARIANT_SORT_FIELD,
 ]
 
+const VARIANT_PAGINATION_FIELD = {
+  name: 'page',
+  component: Pagination,
+  size: 'mini',
+  siblingRange: 0,
+  firstItem: null,
+  lastItem: null,
+  format: page => parseInt(page, 10),
+}
+
+
 const VariantSearchResults = ({
-  searchedVariants, variantSearchDisplay, searchedVariantExportConfig, coreQueryParams, updateQueryParams,
+  searchedVariants, variantSearchDisplay, searchedVariantExportConfig, queryParams,
   loading, load, errorMessage, onSubmit, totalVariantsCount,
 }) => {
-  const { currentPage = 1, recordsPerPage } = variantSearchDisplay
-  const variantDisplayPageOffset = (currentPage - 1) * recordsPerPage
+  const { page = 1, recordsPerPage } = variantSearchDisplay
+  const variantDisplayPageOffset = (page - 1) * recordsPerPage
   const fields = totalVariantsCount > recordsPerPage ?
     [...FIELDS, { ...VARIANT_PAGINATION_FIELD, totalPages: Math.ceil(totalVariantsCount / recordsPerPage) }]
     : FIELDS
 
   return (
     <DataLoader
-      contentId={coreQueryParams.search}
+      contentId={queryParams.search}
       content={searchedVariants}
       loading={loading}
       load={load}
@@ -59,7 +70,7 @@ const VariantSearchResults = ({
         </Grid.Row>
       }
     >
-      {coreQueryParams.search &&
+      {queryParams.search &&
       <LargeRow>
         <Grid.Column width={5}>
           {totalVariantsCount === searchedVariants.length ? 'Found ' : `Showing ${variantDisplayPageOffset + 1}-${variantDisplayPageOffset + searchedVariants.length} of `}
@@ -67,10 +78,7 @@ const VariantSearchResults = ({
         </Grid.Column>
         <Grid.Column width={11} floated="right" textAlign="right">
           <ReduxFormWrapper
-            onSubmit={(updates) => {
-              updateQueryParams({ ...coreQueryParams, ...Object.entries(updates).reduce((acc, [k, v]) => ({ ...acc, [k]: String(v).toLowerCase() }), {}) })
-              onSubmit(updates)
-            }}
+            onSubmit={onSubmit}
             form="editSearchedVariantsDisplay"
             initialValues={variantSearchDisplay}
             closeOnSuccess={false}
@@ -101,8 +109,7 @@ VariantSearchResults.propTypes = {
   onSubmit: PropTypes.func,
   searchedVariantExportConfig: PropTypes.array,
   totalVariantsCount: PropTypes.number,
-  coreQueryParams: PropTypes.object,
-  updateQueryParams: PropTypes.func,
+  queryParams: PropTypes.object,
 }
 
 const mapStateToProps = (state, ownProps) => ({
@@ -112,16 +119,24 @@ const mapStateToProps = (state, ownProps) => ({
   searchedVariantExportConfig: getSearchedVariantExportConfig(state),
   totalVariantsCount: getTotalVariantsCount(state, ownProps),
   errorMessage: getSearchedVariantsErrorMessage(state),
-  coreQueryParams: getCoreQueryParams(state, ownProps),
 })
 
 const mapDispatchToProps = (dispatch, ownProps) => {
   return {
     load: (searchHash) => {
-      dispatch(loadSearchedVariants(searchHash, ownProps.coreQueryParams))
+      const { sort, page } = ownProps.queryParams
+      dispatch(searchVariants({
+        searchHash,
+        displayUpdates: { sort, page },
+        updateQueryParams: ownProps.updateQueryParams,
+      }))
     },
     onSubmit: (updates) => {
-      dispatch(updateVariantSearchDisplay(updates, ownProps.coreQueryParams.search))
+      dispatch(searchVariants({
+        searchHash: ownProps.queryParams.search,
+        displayUpdates: updates,
+        updateQueryParams: ownProps.updateQueryParams,
+      }))
     },
   }
 }
