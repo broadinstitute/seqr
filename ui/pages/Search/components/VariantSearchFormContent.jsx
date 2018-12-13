@@ -104,7 +104,6 @@ const INHERITANCE_PANEL = {
     { width: 2, name: '   ', control: null },
     {
       name: 'filter',
-      label: 'Custom Inheritance',
       width: 8,
       control: CustomInheritanceFilter,
       format: val => val || {},

@@ -1,7 +1,6 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { formValueSelector } from 'redux-form'
 
 import { loadLocusListItems } from 'redux/rootReducer'
 import { getLocusListIsLoading } from 'redux/selectors'
@@ -18,14 +17,11 @@ const BaseLocusListSelector = ({ value, projectLocusLists, loadLocusList }) =>
     label="Gene List"
     defaultValue={value.locusListGuid}
     onChange={loadLocusList}
-    options={projectLocusLists.map(locusList => ({ text: locusList.name, value: locusList.locusListGuid }))
-    }
+    options={projectLocusLists.map(locusList => ({ text: locusList.name, value: locusList.locusListGuid }))}
   />
 
-const mapStateToProps = (state, ownProps) => ({
-  projectLocusLists: getSearchedProjectsLocusLists(
-    state, { familyGuid: formValueSelector(ownProps.meta.form)(state, 'familyGuid') },
-  ),
+const mapStateToProps = state => ({
+  projectLocusLists: getSearchedProjectsLocusLists(state),
 })
 
 const mapDispatchToProps = (dispatch, ownProps) => {

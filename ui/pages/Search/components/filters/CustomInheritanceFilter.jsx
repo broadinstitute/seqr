@@ -1,8 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { formValueSelector } from 'redux-form'
-import { Table } from 'semantic-ui-react'
+import { Table, Header } from 'semantic-ui-react'
 
 import { getFamiliesByGuid, getIndividualsByGuid } from 'redux/selectors'
 import { Select } from 'shared/components/form/Inputs'
@@ -10,6 +9,7 @@ import PedigreeIcon from 'shared/components/icons/PedigreeIcon'
 import PedigreeImagePanel from 'shared/components/panel/view-pedigree-image/PedigreeImagePanel'
 import { AFFECTED, UNAFFECTED, AFFECTED_OPTIONS } from 'shared/utils/constants'
 import { NUM_ALT_OPTIONS } from '../../constants'
+import { getSearchedProjectsFamiliesInput } from '../../selectors'
 
 
 const CUSTOM_FILTERS = [
@@ -17,11 +17,12 @@ const CUSTOM_FILTERS = [
   { filterField: 'genotype', options: NUM_ALT_OPTIONS, placeholder: 'Allele count' },
 ]
 
-const CustomInheritanceFilter = ({ value, onChange, familyGuid, familiesByGuid, individualsByGuid }) => {
-  const family = familiesByGuid[familyGuid]
-  if (!family) {
-    return null
+const CustomInheritanceFilter = ({ value, onChange, searchedProjectFamilies, familiesByGuid, individualsByGuid }) => {
+  if (searchedProjectFamilies.length !== 1 || searchedProjectFamilies[0].familyGuids.length !== 1) {
+    return <Header disabled content="Custom inheritance search is disabled for multi-family searches" />
   }
+
+  const family = familiesByGuid[searchedProjectFamilies[0].familyGuids[0]]
   const individuals = family.individualGuids.map(individualGuid => individualsByGuid[individualGuid])
 
   const parentGenotypes = {}
@@ -84,8 +85,8 @@ const CustomInheritanceFilter = ({ value, onChange, familyGuid, familiesByGuid, 
 }
 
 
-const mapStateToProps = (state, ownProps) => ({
-  familyGuid: formValueSelector(ownProps.meta.form)(state, 'familyGuid'),
+const mapStateToProps = state => ({
+  searchedProjectFamilies: getSearchedProjectsFamiliesInput(state),
   familiesByGuid: getFamiliesByGuid(state),
   individualsByGuid: getIndividualsByGuid(state),
 })
@@ -93,7 +94,7 @@ const mapStateToProps = (state, ownProps) => ({
 CustomInheritanceFilter.propTypes = {
   value: PropTypes.object,
   onChange: PropTypes.func,
-  familyGuid: PropTypes.string,
+  searchedProjectFamilies: PropTypes.array,
   familiesByGuid: PropTypes.object,
   individualsByGuid: PropTypes.object,
 }

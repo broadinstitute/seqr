@@ -1,6 +1,5 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import { formValueSelector } from 'redux-form'
 import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
 import { Form, Header } from 'semantic-ui-react'
@@ -11,6 +10,7 @@ import {
   getAnalysisGroupsGroupedByProjectGuid,
 } from 'redux/selectors'
 import { Multiselect, BooleanCheckbox } from 'shared/components/form/Inputs'
+import { getSearchedProjectsFamiliesInput } from '../../selectors'
 
 
 const ProjectFamiliesFilter = (
@@ -81,7 +81,7 @@ const ProjectFamiliesFilter = (
 }
 
 const mapStateToProps = (state, ownProps) => {
-  const projectGuid = formValueSelector(ownProps.meta.form)(state, ownProps.name.replace('familyGuids', 'projectGuid'))
+  const { projectGuid } = getSearchedProjectsFamiliesInput(state)[ownProps.index]
   return ({
     projectFamiliesByGuid: getFamiliesGroupedByProjectGuid(state)[projectGuid] || {},
     projectAnalysisGroupsByGuid: getAnalysisGroupsGroupedByProjectGuid(state)[projectGuid] || {},

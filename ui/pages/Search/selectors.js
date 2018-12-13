@@ -1,4 +1,5 @@
 import { createSelector } from 'reselect'
+import { formValueSelector } from 'redux-form'
 
 import {
   getProjectsByGuid,
@@ -8,6 +9,8 @@ import {
   getLocusListsByGuid,
 } from 'redux/selectors'
 import { getVariantsExportData } from 'shared/utils/constants'
+import { SEARCH_FORM_NAME } from './constants'
+
 
 export const getSearchedVariants = state => state.searchedVariants
 export const getSearchedVariantsIsLoading = state => state.searchedVariantsLoading.isLoading
@@ -62,6 +65,9 @@ export const getLoadedIntitialSearch = createSelector(
   },
 )
 
+export const getSearchedProjectsFamiliesInput = state =>
+  formValueSelector(SEARCH_FORM_NAME)(state, 'searchedProjectFamilies')
+
 export const getTotalVariantsCount = createSelector(
   getCurrentSearchParams,
   searchParams => (searchParams || {}).totalResults,
@@ -79,12 +85,13 @@ export const getSearchedVariantExportConfig = createSelector(
 )
 
 export const getSearchedProjectsLocusLists = createSelector(
-  (state, props) => props.familyGuid,
+  getSearchedProjectsFamiliesInput,
   getProjectsByGuid,
-  getFamiliesByGuid,
   getLocusListsByGuid,
-  (familyGuid, projectsByGuid, familiesByGuid, locusListsByGuid) => (
-    projectsByGuid[familiesByGuid[familyGuid]] ?
-      projectsByGuid[familiesByGuid[familyGuid]].locusListGuids.map(locusListGuid => locusListsByGuid[locusListGuid])
-      : []),
+  (searchedProjectFamilies, projectsByGuid, locusListsByGuid) => {
+    const locusListGuids = [...new Set(searchedProjectFamilies.reduce((acc, { projectGuid }) => (
+      projectsByGuid[projectGuid] ? [...acc, ...projectsByGuid[projectGuid].locusListGuids] : acc), [],
+    ))]
+    return locusListGuids.map(locusListGuid => locusListsByGuid[locusListGuid])
+  },
 )

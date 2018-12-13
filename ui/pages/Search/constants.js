@@ -15,6 +15,8 @@ import {
 } from 'shared/utils/constants'
 import { LoadedLocusListField } from './components/filters/LocationFilter'
 
+export const SEARCH_FORM_NAME = 'variantSearch'
+
 const REF_REF = 'ref_ref'
 const HAS_REF = 'has_ref'
 const REF_ALT = 'ref_alt'

@@ -6,6 +6,7 @@ import { getProjectDetailsIsLoading } from 'redux/selectors'
 import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
 import DataLoader from 'shared/components/DataLoader'
 import VariantSearchFormContent from './VariantSearchFormContent'
+import { SEARCH_FORM_NAME } from '../constants'
 import { loadProjectFamiliesContext, searchVariants } from '../reducers'
 import { getLoadedIntitialSearch } from '../selectors'
 
@@ -22,7 +23,7 @@ const VariantSearchForm = ({ initialSearch, queryParams, search, load, loading }
     <ReduxFormWrapper
       initialValues={initialSearch}
       onSubmit={search}
-      form="variantSearch"
+      form={SEARCH_FORM_NAME}
       submitButtonText="Search"
       noModal
     >

@@ -84,6 +84,7 @@ export const configuredField = (field, formProps = {}) => {
             key={fieldPath}
             name={arrayFieldName ? `${fieldPath}.${arrayFieldName}` : fieldPath}
             removeField={() => fields.remove(i)}
+            index={i}
             {...singleFieldProps}
           />)}
         {addArrayElement && <ButtonLink onClick={() => fields.push(addArrayElement.newValue)}><Icon link name="plus" />{addArrayElement.label}</ButtonLink>}
