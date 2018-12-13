@@ -65,6 +65,7 @@ const ProjectFamiliesFilter = (
           onChange={onChange}
           options={familyOptions}
           label="Families"
+          color="violet"
         />
         <Multiselect
           {...props}
@@ -72,6 +73,7 @@ const ProjectFamiliesFilter = (
           onChange={selectAnalysisGroup}
           options={analysisGroupOptions}
           label="Analysis Groups"
+          color="blue"
         />
       </Form.Group>
     </div>
