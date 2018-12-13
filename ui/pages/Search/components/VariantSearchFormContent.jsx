@@ -187,10 +187,12 @@ const QUALITY_PANEL = {
 }
 
 
+const validateFamilies = value => (value && value.length ? undefined : 'Required')
 const PROJECT_FAMILIES_FIELD = {
   name: 'searchedProjectFamilies',
   arrayFieldName: 'familyGuids',
   component: ProjectFamiliesFilter,
+  validate: validateFamilies,
   isArrayField: true,
 }
 
@@ -251,10 +253,19 @@ const PANELS = PANEL_DETAILS.map(({ name, headerProps, ...panelContentProps }, i
   },
 }))
 
+class VariantSearchFormContent extends React.Component {
+  render() {
+    return (
+      <div>
+        {configuredField(PROJECT_FAMILIES_FIELD)}
+        <Accordion fluid panels={PANELS} />
+      </div>
+    )
+  }
 
-export default () => (
-  <div>
-    {configuredField(PROJECT_FAMILIES_FIELD)}
-    <Accordion fluid panels={PANELS} />
-  </div>
-)
+  shouldComponentUpdate() {
+    // Form content does not use passed props, so should never re-render on prop update
+    return false
+  }
+}
+export default VariantSearchFormContent

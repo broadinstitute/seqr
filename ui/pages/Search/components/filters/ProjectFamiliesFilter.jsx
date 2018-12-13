@@ -73,7 +73,7 @@ const ProjectFamiliesFilter = (
           onChange={selectAnalysisGroup}
           options={analysisGroupOptions}
           label="Analysis Groups"
-          color="blue"
+          color="pink"
         />
       </Form.Group>
     </div>
