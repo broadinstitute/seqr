@@ -30,7 +30,7 @@ const BaseFieldView = (props) => {
   if (!props.isEditable && !hasValue) {
     return null
   }
-  const modalId = props.isEditable ? `edit-${props.initialValues[props.idField] || 'new'}-${props.field}` : null
+  const modalId = props.isEditable ? `edit-${props.initialValues[props.idField] || 'new'}-${props.field}${props.modalId}` : null
 
   const editButton = props.isEditable && (props.formFields ?
     <UpdateButton
@@ -108,6 +108,7 @@ BaseFieldView.propTypes = {
   user: PropTypes.object,
   modalStyle: PropTypes.object,
   showErrorPanel: PropTypes.bool,
+  modalId: PropTypes.string,
 }
 
 BaseFieldView.defaultProps = {

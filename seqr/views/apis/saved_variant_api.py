@@ -59,6 +59,12 @@ def saved_variant_data(request, project_guid, variant_guid=None):
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
+def create_saved_variant_handler(request):
+    pass
+
+
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@csrf_exempt
 def create_variant_note_handler(request, variant_guid):
     saved_variant = SavedVariant.objects.get(guid=variant_guid)
     check_permissions(saved_variant.project, request.user, CAN_VIEW)

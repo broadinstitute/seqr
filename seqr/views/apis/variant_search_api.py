@@ -1,4 +1,5 @@
 import json
+from copy import deepcopy
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.views.decorators.csrf import csrf_exempt
@@ -9,7 +10,7 @@ from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.saved_variant_api import _saved_variant_genes, _add_locus_lists
 from seqr.views.pages.project_page import get_project_details
 from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.orm_to_json_utils import get_saved_variant_tags_json
+from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variant
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions
 
 
@@ -60,11 +61,11 @@ def query_variants_handler(request, search_hash):
     genes = _saved_variant_genes(variants)
     # TODO add locus lists on the client side (?)
     _add_locus_lists(project, variants, genes)
-    searched_variants, saved_variants_by_guid = _get_saved_variants(variants)
+    saved_variants_by_guid = _get_saved_variants(variants)
     search['totalResults'] = total_results
 
     return create_json_response({
-        'searchedVariants': searched_variants,
+        'searchedVariants': variants,
         'savedVariantsByGuid': saved_variants_by_guid,
         'genesById': genes,
         'search': search,
@@ -107,21 +108,14 @@ def _get_saved_variants(variants):
         'varianttag_set', 'variantfunctionaldata_set', 'variantnote_set',
     )
 
-    saved_variants_by_id = {'{}-{}-{}-{}'.format(var.family.guid, var.xpos, var.ref, var.alt): var for var in saved_variants}
+    variants_by_id = {'{}-{}-{}'.format(var['xpos'], var['ref'], var['alt']): var for var in variants}
     saved_variants_by_guid = {}
-    searched_variants = []
-    for variant in variants:
-        variant['familyTags'] = {}
-        variant_keys = ['{}-{}-{}-{}'.format(family_guid, variant['xpos'], variant['ref'], variant['alt']) for family_guid in variant['familyGuids']]
-        saved_variants = [saved_variants_by_id.get(variant_key) for variant_key in variant_keys]
-        saved_variants = [saved_variant for saved_variant in saved_variants if saved_variant]
-        for saved_variant in saved_variants:
-            saved_variant_data = get_saved_variant_tags_json(saved_variant)
-            variant['familyTags'][saved_variant.family.guid] = saved_variant_data
-            saved_variants_by_guid[saved_variant.guid] = variant
-        searched_variants.append(variant)
+    for saved_variant in saved_variants:
+        variant = deepcopy(variants_by_id['{}-{}-{}'.format(saved_variant.xpos, saved_variant.ref, saved_variant.alt)])
+        variant.update(get_json_for_saved_variant(saved_variant, add_tags=True))
+        saved_variants_by_guid[saved_variant.guid] = variant
 
-    return searched_variants, saved_variants_by_guid
+    return saved_variants_by_guid
 
 # Search spec conversion
 # variant_filter = {}

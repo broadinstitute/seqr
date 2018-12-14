@@ -35,6 +35,7 @@ from seqr.views.apis.case_review_api import \
 
 from seqr.views.apis.saved_variant_api import \
     saved_variant_data, \
+    create_saved_variant_handler, \
     update_variant_tags_handler, \
     create_variant_note_handler, \
     update_variant_note_handler, \
@@ -144,6 +145,7 @@ api_endpoints = {
     'search/(?P<search_hash>[^/]+)': query_variants_handler,
     'search_context/(?P<search_hash>[^/]+)': search_context_handler,
 
+    'saved_variant/create': create_saved_variant_handler,
     'saved_variant/(?P<variant_guid>[^/]+)/update_tags': update_variant_tags_handler,
     'saved_variant/(?P<variant_guid>[^/]+)/note/create': create_variant_note_handler,
     'saved_variant/(?P<variant_guid>[^/]+)/note/(?P<note_guid>[^/]+)/update': update_variant_note_handler,

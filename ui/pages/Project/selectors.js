@@ -105,9 +105,6 @@ export const getSavedVariantCurrentPage = state => state.savedVariantTableState.
 export const getSavedVariantRecordsPerPage = state => state.savedVariantTableState.recordsPerPage || 25
 
 
-const filterVariantsByTags = (variants, filterFunc) =>
-  variants.filter(variant => Object.values(variant.familyTags).some(({ tags }) => filterFunc(tags || [])))
-
 export const getProjectSavedVariants = createSelector(
   getProjectSavedVariantsByGuid,
   (state, props) => props.match.params,
@@ -115,18 +112,16 @@ export const getProjectSavedVariants = createSelector(
   (projectSavedVariants, { tag, familyGuid, analysisGroupGuid, variantGuid }, projectAnalysisGroupsByGuid) => {
     let variants = Object.values(projectSavedVariants)
     if (variantGuid) {
-      return variants.filter(o => Object.values(o.familyTags).some(familyTag => familyTag.variantGuid === variantGuid))
+      return variants.filter(o => o.variantGuid === variantGuid)
     }
     if (analysisGroupGuid && projectAnalysisGroupsByGuid[analysisGroupGuid]) {
-      variants = variants.filter(o => o.familyGuids.some(guid =>
-        projectAnalysisGroupsByGuid[analysisGroupGuid].familyGuids.includes(guid),
-      ))
+      variants = variants.filter(o => projectAnalysisGroupsByGuid[analysisGroupGuid].familyGuids.includes(o.familyGuid))
     }
     if (familyGuid) {
-      variants = variants.filter(o => o.familyGuids.some(guid => guid === familyGuid))
+      variants = variants.filter(o => o.familyGuid === familyGuid)
     }
     if (tag) {
-      variants = filterVariantsByTags(variants, tags => tags.some(t => t.name === tag))
+      variants = variants.filter(o => o.tags.some(t => t.name === tag))
     }
     return variants
   },
@@ -149,18 +144,18 @@ export const getFilteredProjectSavedVariants = createSelector(
   (projectSavedVariants, categoryFilter, hideExcluded, hideReviewOnly, hideKnownGeneForPhenotype, tag) => {
     let variantsToShow = projectSavedVariants
     if (hideExcluded) {
-      variantsToShow = filterVariantsByTags(variantsToShow, tags => tags.every(t => t.name !== EXCLUDED_TAG_NAME))
+      variantsToShow = variantsToShow.filter(variant => variant.tags.every(t => t.name !== EXCLUDED_TAG_NAME))
     }
     if (hideReviewOnly) {
-      variantsToShow = filterVariantsByTags(variantsToShow, tags => tags.length !== 1 || tags[0].name !== REVIEW_TAG_NAME)
+      variantsToShow = variantsToShow.filter(variant => variant.tags.length !== 1 || variant.tags[0].name !== REVIEW_TAG_NAME)
     }
     if (!tag) {
       if (hideKnownGeneForPhenotype && categoryFilter === DISCOVERY_CATEGORY_NAME) {
-        variantsToShow = filterVariantsByTags(variantsToShow, tags => tags.every(t => t.name !== KNOWN_GENE_FOR_PHENOTYPE_TAG_NAME))
+        variantsToShow = variantsToShow.filter(variant => variant.tags.every(t => t.name !== KNOWN_GENE_FOR_PHENOTYPE_TAG_NAME))
       }
 
       if (categoryFilter !== SHOW_ALL) {
-        variantsToShow = filterVariantsByTags(variantsToShow, tags => tags.some(t => t.category === categoryFilter))
+        variantsToShow = variantsToShow.filter(variant => variant.tags.some(t => t.category === categoryFilter))
       }
     }
     return variantsToShow

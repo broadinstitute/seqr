@@ -41,3 +41,18 @@ export const getFamilyMatchmakerSubmissions = createSelector(
     )
   },
 )
+
+export const getVariantId = ({ xpos, ref, alt }) => `${xpos}-${ref}-${alt}`
+
+export const getSavedVariantsGroupedByFamilyVariants = createSelector(
+  getSavedVariantsByGuid,
+  savedVariantsByGuid => Object.values(savedVariantsByGuid).reduce((acc, variant) => {
+    if (!(variant.familyGuid in acc)) {
+      acc[variant.familyGuid] = {}
+    }
+    acc[variant.familyGuid][getVariantId(variant)] = variant
+
+    return acc
+
+  }, {}),
+)

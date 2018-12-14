@@ -229,13 +229,9 @@ export const updateGeneNote = (values) => {
   return updateEntity(values, RECEIVE_DATA, `/api/gene_info/${values.geneId || values.gene_id}/note`, 'noteGuid')
 }
 
-export const updateVariantNote = (values) => {
-  return updateEntity(values, RECEIVE_DATA, `/api/saved_variant/${values.variantId}/note`, 'noteGuid')
-}
-
-export const updateVariantTags = (values) => {
+const updateSavedVariant = (values, action = 'create') => {
   return (dispatch) => {
-    return new HttpRequestHelper(`/api/saved_variant/${values.variantId}/update_tags`,
+    return new HttpRequestHelper(`/api/saved_variant/${action}`,
       (responseJson) => {
         dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
       },
@@ -244,6 +240,18 @@ export const updateVariantTags = (values) => {
       },
     ).post(values)
   }
+}
+
+export const updateVariantNote = (values) => {
+  if (values.variantGuid) {
+    return updateEntity(values, RECEIVE_DATA, `/api/saved_variant/${values.variantGuid}/note`, 'noteGuid')
+  }
+  return updateSavedVariant(values)
+}
+
+export const updateVariantTags = (values) => {
+  const urlPath = values.variantGuid ? `${values.variantGuid}/update_tags` : 'create'
+  return updateSavedVariant(values, urlPath)
 }
 
 export const updateLocusList = (values) => {

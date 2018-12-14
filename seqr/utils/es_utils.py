@@ -533,7 +533,7 @@ SORT_FIELDS = {
                         constraint.gene.gene_id: constraint.mis_z_rank + constraint.pLI_rank
                         for constraint in GeneConstraint.objects.all().only('gene__gene_id', 'mis_z_rank', 'pLI_rank')}
                 },
-                'source': "params.constraint_ranks_by_gene.getOrDefault(doc['mainTranscript_gene_id'].value, 10000000)"
+                'source': "params.constraint_ranks_by_gene.getOrDefault(doc['mainTranscript_gene_id'].value, 1000000000)"
             }
         }
     }],
