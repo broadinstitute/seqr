@@ -6,6 +6,7 @@ from elasticsearch_dsl import Search, Q
 import json
 import logging
 from pyliftover.liftover import LiftOver
+from sys import maxint
 
 import settings
 from reference_data.models import GENOME_VERSION_GRCh38, Omim, GeneConstraint
@@ -105,7 +106,7 @@ def get_es_variants(search_model, families, page=1, num_results=100):
     es_search = es_search[start_index:end_index]
 
     field_names = _get_query_field_names()
-    sort = _get_sort(sort, family_samples_by_id)
+    sort = _get_sort(sort)
 
     variant_results = []
     total_results = 0
@@ -497,19 +498,8 @@ CLINVAR_SORT = {
         }
     }
 }
-#  TODO family sort with nested genotypes
+
 SORT_FIELDS = {
-    'family_guid': [{
-        '_script': {
-            'type': 'string',
-            'script': {
-                'params': {
-                    'family_samples': lambda family_samples_by_id: family_samples_by_id,
-                },
-                'source': """ArrayList families = new ArrayList(params.family_samples.keySet()); families.sort((a, b) -> a.compareTo(b)); for (family in families) { for (sample in params.family_samples[family]) {if(doc.containsKey(sample+"_num_alt") && params._source[sample+\"_num_alt\"] >= 0) {return family;}}}return "zz";"""
-            }
-        }
-    }],
     PATHOGENICTY_SORT_KEY: [CLINVAR_SORT],
     PATHOGENICTY_HGMD_SORT_KEY: [CLINVAR_SORT, {
         '_script': {
@@ -524,7 +514,7 @@ SORT_FIELDS = {
             'type': 'number',
             'script': {
                 'params': {
-                    'omim_gene_ids': lambda *args: [omim.gene.gene_id for omim in Omim.objects.all().only('gene__gene_id')]
+                    'omim_gene_ids': lambda: [omim.gene.gene_id for omim in Omim.objects.all().only('gene__gene_id')]
                 },
                 'source': "params.omim_gene_ids.contains(doc['mainTranscript_gene_id'].value) ? 0 : 1"
             }
@@ -539,7 +529,7 @@ SORT_FIELDS = {
             'type': 'number',
             'script': {
                 'params': {
-                    'constraint_ranks_by_gene': lambda *args: {
+                    'constraint_ranks_by_gene': lambda: {
                         constraint.gene.gene_id: constraint.mis_z_rank + constraint.pLI_rank
                         for constraint in GeneConstraint.objects.all().only('gene__gene_id', 'mis_z_rank', 'pLI_rank')}
                 },
@@ -551,13 +541,13 @@ SORT_FIELDS = {
 }
 
 
-def _get_sort(sort_key, *args):
+def _get_sort(sort_key):
     sorts = SORT_FIELDS.get(sort_key, [])
 
     # Add parameters to scripts
     if len(sorts) and isinstance(sorts[0], dict) and sorts[0].get('_script', {}).get('script', {}).get('params'):
         for key, val_func in sorts[0]['_script']['script']['params'].items():
-            sorts[0]['_script']['script']['params'][key] = val_func(*args)
+            sorts[0]['_script']['script']['params'][key] = val_func()
 
     if XPOS_SORT_KEY not in sorts:
         sorts.append(XPOS_SORT_KEY)
@@ -747,10 +737,12 @@ def _parse_compound_het_hits(response, allowed_consequences, family_samples_by_i
 
 
 def _parse_es_sort(sort):
+    # ES returns these values for sort when a sort field is missing
     if sort == 'Infinity':
-        sort = float('inf')
+        sort = maxint
     elif sort == '-Infinity':
-        sort = float('-inf')
+        # None of the sorts used by seqr return negative values so -1 is fine
+        sort = -1
     return sort
 
 

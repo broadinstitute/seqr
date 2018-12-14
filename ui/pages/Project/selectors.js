@@ -97,11 +97,11 @@ export const getProjectAnalysisGroupSamplesByGuid = createSelector(
 // Saved variant selectors
 export const getSavedVariantTableState = state => state.savedVariantTableState
 export const getSavedVariantCategoryFilter = state => state.savedVariantTableState.categoryFilter || SHOW_ALL
-export const getSavedVariantSortOrder = state => state.savedVariantTableState.sortOrder || SORT_BY_FAMILY_GUID
+export const getSavedVariantSortOrder = state => state.savedVariantTableState.sort || SORT_BY_FAMILY_GUID
 export const getSavedVariantHideExcluded = state => state.savedVariantTableState.hideExcluded
 export const getSavedVariantHideReviewOnly = state => state.savedVariantTableState.hideReviewOnly
 const getSavedVariantHideKnownGeneForPhenotype = state => state.savedVariantTableState.hideKnownGeneForPhenotype
-export const getSavedVariantCurrentPage = state => state.savedVariantTableState.currentPage || 1
+export const getSavedVariantCurrentPage = state => state.savedVariantTableState.page || 1
 export const getSavedVariantRecordsPerPage = state => state.savedVariantTableState.recordsPerPage || 25
 
 
@@ -134,8 +134,8 @@ export const getProjectSavedVariants = createSelector(
 
 export const getSavedVariantVisibleIndices = createSelector(
   getSavedVariantCurrentPage, getSavedVariantRecordsPerPage,
-  (currentPage, recordsPerPage) => {
-    return [(currentPage - 1) * recordsPerPage, currentPage * recordsPerPage]
+  (page, recordsPerPage) => {
+    return [(page - 1) * recordsPerPage, page * recordsPerPage]
   },
 )
 
@@ -173,10 +173,10 @@ export const getVisibleSortedProjectSavedVariants = createSelector(
   getSavedVariantVisibleIndices,
   getGenesById,
   getUser,
-  (filteredSavedVariants, sortOrder, visibleIndices, genesById, user) => {
+  (filteredSavedVariants, sort, visibleIndices, genesById, user) => {
     // Always secondary sort on xpos
     filteredSavedVariants.sort((a, b) => {
-      return VARIANT_SORT_LOOKUP[sortOrder](a, b, genesById, user) || a.xpos - b.xpos
+      return VARIANT_SORT_LOOKUP[sort](a, b, genesById, user) || a.xpos - b.xpos
     })
     return filteredSavedVariants.slice(...visibleIndices)
   },

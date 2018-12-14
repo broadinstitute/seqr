@@ -556,14 +556,14 @@ const clinsigSeverity = (variant, user) => {
 }
 
 
-export const VARIANT_SORT_OPTONS = [
+const VARIANT_SORT_OPTONS = [
   { value: SORT_BY_FAMILY_GUID, text: 'Family', comparator: (a, b) => a.familyGuid.localeCompare(b.familyGuid) },
   { value: SORT_BY_XPOS, text: 'Position', comparator: (a, b) => a.xpos - b.xpos },
   {
     value: SORT_BY_PROTEIN_CONSQ,
     text: 'Protein Consequence',
     comparator: (a, b) =>
-      VEP_CONSEQUENCE_ORDER_LOOKUP[b.mainTranscript.majorConsequence] - VEP_CONSEQUENCE_ORDER_LOOKUP[a.mainTranscript.majorConsequence],
+      VEP_CONSEQUENCE_ORDER_LOOKUP[a.mainTranscript.majorConsequence] - VEP_CONSEQUENCE_ORDER_LOOKUP[b.mainTranscript.majorConsequence],
   },
   { value: SORT_BY_EXAC, text: 'ExAC Frequency', comparator: (a, b) => a.populations.exac.af - b.populations.exac.af },
   { value: SORT_BY_1KG, text: '1kg  Frequency', comparator: (a, b) => a.populations.g1k.af - b.populations.g1k.af },
@@ -572,11 +572,11 @@ export const VARIANT_SORT_OPTONS = [
     value: SORT_BY_CONSTRAINT,
     text: 'Constraint',
     comparator: (a, b, genesById) =>
-      Math.min(...a.geneIds.reduce((acc, geneId) =>
-        [...acc, ...Object.values(genesById[geneId].constraints).map(constraint => constraint.rank).filter(rank => rank)],
+      Math.min(...Object.keys(a.transcripts).reduce((acc, geneId) =>
+        [...acc, genesById[geneId].constraints.misZRank || Infinity, genesById[geneId].constraints.pliRank || Infinity],
       [])) -
-      Math.min(...b.geneIds.reduce((acc, geneId) =>
-        [...acc, ...Object.values(genesById[geneId].constraints).map(constraint => constraint.rank).filter(rank => rank)],
+      Math.min(...Object.keys(b.transcripts).reduce((acc, geneId) =>
+        [...acc, genesById[geneId].constraints.misZRank || Infinity, genesById[geneId].constraints.pliRank || Infinity],
       [])),
   },
   {
@@ -586,6 +586,7 @@ export const VARIANT_SORT_OPTONS = [
       (genesById[b.mainTranscript.geneId] || { omimPhenotypes: [] }).omimPhenotypes.length - (genesById[a.mainTranscript.geneId] || { omimPhenotypes: [] }).omimPhenotypes.length,
   },
 ]
+const VARIANT_SORT_OPTONS_NO_FAMILY_SORT = VARIANT_SORT_OPTONS.slice(1)
 
 export const VARIANT_SORT_LOOKUP = VARIANT_SORT_OPTONS.reduce(
   (acc, opt) => ({
@@ -594,15 +595,16 @@ export const VARIANT_SORT_LOOKUP = VARIANT_SORT_OPTONS.reduce(
   }), {},
 )
 
-export const VARIANT_SORT_FIELD = {
+const BASE_VARIANT_SORT_FIELD = {
   name: 'sort',
   component: Dropdown,
   inline: true,
   selection: false,
   fluid: false,
   label: 'Sort By:',
-  options: VARIANT_SORT_OPTONS,
 }
+export const VARIANT_SORT_FIELD = { ...BASE_VARIANT_SORT_FIELD, options: VARIANT_SORT_OPTONS }
+export const VARIANT_SORT_FIELD_NO_FAMILY_SORT = { ...BASE_VARIANT_SORT_FIELD, options: VARIANT_SORT_OPTONS_NO_FAMILY_SORT }
 export const VARIANT_HIDE_EXCLUDED_FIELD = {
   name: 'hideExcluded',
   component: InlineToggle,
@@ -631,12 +633,13 @@ export const VARIANT_PER_PAGE_FIELD = {
   options: [{ value: 10 }, { value: 25 }, { value: 50 }, { value: 100 }],
 }
 export const VARIANT_PAGINATION_FIELD = {
-  name: 'currentPage',
+  name: 'page',
   component: Pagination,
   size: 'mini',
   siblingRange: 0,
   firstItem: null,
   lastItem: null,
+  format: val => parseInt(val, 10),
 }
 
 

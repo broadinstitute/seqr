@@ -8,9 +8,8 @@ import DataLoader from 'shared/components/DataLoader'
 import { HorizontalSpacer } from 'shared/components/Spacers'
 import ExportTableButton from 'shared/components/buttons/export-table/ExportTableButton'
 import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
-import { Pagination } from 'shared/components/form/Inputs'
 import Variants from 'shared/components/panel/variants/Variants'
-import { VARIANT_SORT_FIELD } from 'shared/utils/constants'
+import { VARIANT_SORT_FIELD_NO_FAMILY_SORT, VARIANT_PAGINATION_FIELD } from 'shared/utils/constants'
 
 import { searchVariants } from '../reducers'
 import {
@@ -32,18 +31,8 @@ const LargeRow = styled(Grid.Row)`
 `
 
 const FIELDS = [
-  VARIANT_SORT_FIELD,
+  VARIANT_SORT_FIELD_NO_FAMILY_SORT,
 ]
-
-const VARIANT_PAGINATION_FIELD = {
-  name: 'page',
-  component: Pagination,
-  size: 'mini',
-  siblingRange: 0,
-  firstItem: null,
-  lastItem: null,
-  format: page => parseInt(page, 10),
-}
 
 
 const VariantSearchResults = ({

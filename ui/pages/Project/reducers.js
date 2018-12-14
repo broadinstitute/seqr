@@ -251,7 +251,7 @@ export const reducers = {
     hideReviewOnly: false,
     categoryFilter: SHOW_ALL,
     sort: SORT_BY_FAMILY_GUID,
-    currentPage: 1,
+    page: 1,
     recordsPerPage: 25,
   }, false),
 }
