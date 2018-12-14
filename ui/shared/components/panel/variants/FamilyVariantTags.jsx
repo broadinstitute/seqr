@@ -81,7 +81,7 @@ const taggedByPopup = (tag, title) => trigger =>
 
 
 const ShortcutTagToggle = ({ tag, ...props }) => {
-  const toggle = <InlineToggle color={tag && tag.color} {...props} />
+  const toggle = <InlineToggle color={tag && tag.color} {...props} value={tag} />
   return tag ? taggedByPopup(tag)(toggle) : toggle
 }
 
@@ -133,11 +133,11 @@ ShortcutTags.propTypes = {
 }
 
 
-const VariantTagField = ({ variant, fieldName, familyGuid, ...props }) =>
+const VariantTagField = ({ variant, fieldName, family, ...props }) =>
   <TagFieldView
     idField="variantId"
-    modalId={familyGuid}
-    modalTitle={`Edit Variant ${fieldName} for chr${variant.chrom}:${variant.pos} ${variant.ref} > ${variant.alt}`}
+    modalId={family.familyGuid}
+    modalTitle={`Edit Variant ${fieldName} for Family ${family.displayName} for chr${variant.chrom}:${variant.pos} ${variant.ref} > ${variant.alt}`}
     editLabel={`Edit ${fieldName}`}
     initialValues={variant}
     compact
@@ -149,16 +149,16 @@ const VariantTagField = ({ variant, fieldName, familyGuid, ...props }) =>
 VariantTagField.propTypes = {
   variant: PropTypes.object,
   fieldName: PropTypes.string,
-  familyGuid: PropTypes.string.isRequired,
+  family: PropTypes.object.isRequired,
 }
 
-const VariantNoteField = ({ action, note, variant, familyGuid, ...props }) => {
+const VariantNoteField = ({ action, note, variant, family, ...props }) => {
   const values = { ...variant, ...note }
   return <TextFieldView
     isEditable
     field="note"
-    modalId={familyGuid}
-    modalTitle={`${action} Variant Note`}
+    modalId={family.familyGuid}
+    modalTitle={`${action} Variant Note for Family ${family.displayName}`}
     additionalEditFields={VARIANT_NOTE_FIELDS}
     initialValues={values}
     idField={note ? 'noteGuid' : 'variantId'}
@@ -172,21 +172,21 @@ VariantNoteField.propTypes = {
   note: PropTypes.object,
   variant: PropTypes.object,
   action: PropTypes.string,
-  familyGuid: PropTypes.string.isRequired,
+  family: PropTypes.object.isRequired,
 }
 
-const FamilyVariantTags = ({ variant, familyGuid, project, dispatchUpdateVariantNote, dispatchUpdateFamilyVariantTags }) =>
+const FamilyVariantTags = ({ variant, family, project, dispatchUpdateVariantNote, dispatchUpdateFamilyVariantTags }) =>
   <div>
-    <InlineContainer><VariantFamily familyGuid={familyGuid} /></InlineContainer>
+    <InlineContainer><VariantFamily family={family} /></InlineContainer>
     <InlineContainer>
       <div>
         <TagTitle>Tags:</TagTitle>
         <HorizontalSpacer width={5} />
-        <ShortcutTags variant={variant} familyGuid={familyGuid} dispatchUpdateFamilyVariantTags={dispatchUpdateFamilyVariantTags} />
+        <ShortcutTags variant={variant} familyGuid={family.familyGuid} dispatchUpdateFamilyVariantTags={dispatchUpdateFamilyVariantTags} />
         <VariantTagField
           field="tags"
           fieldName="Tags"
-          familyGuid={familyGuid}
+          family={family}
           variant={variant}
           tagOptions={project.variantTagTypes}
           onSubmit={dispatchUpdateFamilyVariantTags}
@@ -198,7 +198,7 @@ const FamilyVariantTags = ({ variant, familyGuid, project, dispatchUpdateVariant
             <VariantTagField
               field="functionalData"
               fieldName="Fxnl Data"
-              familyGuid={familyGuid}
+              family={family}
               variant={variant}
               tagOptions={project.variantFunctionalTagTypes}
               editMetadata
@@ -216,7 +216,7 @@ const FamilyVariantTags = ({ variant, familyGuid, project, dispatchUpdateVariant
               key={note.noteGuid}
               note={note}
               variant={variant}
-              familyGuid={familyGuid}
+              family={family}
               isDeletable
               compact
               action="Edit"
@@ -225,7 +225,7 @@ const FamilyVariantTags = ({ variant, familyGuid, project, dispatchUpdateVariant
           )}
           <VariantNoteField
             variant={variant}
-            familyGuid={familyGuid}
+            family={family}
             editIconName="plus"
             editLabel="Add Note"
             action="Add"
@@ -251,7 +251,7 @@ const FamilyVariantTags = ({ variant, familyGuid, project, dispatchUpdateVariant
 FamilyVariantTags.propTypes = {
   variant: PropTypes.object.isRequired,
   project: PropTypes.object.isRequired,
-  familyGuid: PropTypes.string.isRequired,
+  family: PropTypes.object.isRequired,
   dispatchUpdateVariantNote: PropTypes.func,
   dispatchUpdateFamilyVariantTags: PropTypes.func,
 }
@@ -263,6 +263,7 @@ const EMPTY_FAMILY_TAGS = {
 }
 
 const mapStateToProps = (state, ownProps) => ({
+  family: getFamiliesByGuid(state)[ownProps.familyGuid],
   project: getProjectsByGuid(state)[getFamiliesByGuid(state)[ownProps.familyGuid].projectGuid],
   variant: (getSavedVariantsGroupedByFamilyVariants(state)[ownProps.familyGuid] || {})[getVariantId(ownProps.variant)] || {
     ...ownProps.variant,

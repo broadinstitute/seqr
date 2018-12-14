@@ -6,7 +6,7 @@ from django.db.models import Q
 from django.views.decorators.csrf import csrf_exempt
 
 from seqr.models import Sample, SavedVariant, VariantTagType, VariantTag, VariantNote, VariantFunctionalData,\
-    LocusListInterval, LocusListGene, CAN_VIEW, CAN_EDIT
+    LocusListInterval, LocusListGene, Family, CAN_VIEW, CAN_EDIT
 from seqr.model_utils import create_seqr_model, delete_seqr_model
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.locus_list_api import get_project_locus_list_models
@@ -44,9 +44,9 @@ def saved_variant_data(request, project_guid, variant_guid=None):
     for saved_variant in variant_query:
         if saved_variant.varianttag_set.count() or saved_variant.variantnote_set.count():
             variant = get_json_for_saved_variant(saved_variant, add_tags=True, project_guid=project_guid)
-            variant_json = json.loads(saved_variant.saved_variant_json or '{}')
-            variant.update(variant_details(variant_json, project, request.user))
-            variants[saved_variant.guid] = variant
+            variant_json = variant_details(json.loads(saved_variant.saved_variant_json or '{}'), project, request.user)
+            variant_json.update(variant)
+            variants[saved_variant.guid] = variant_json
 
     genes = _saved_variant_genes(variants.values())
     _add_locus_lists(project, variants.values(), genes)
@@ -60,7 +60,41 @@ def saved_variant_data(request, project_guid, variant_guid=None):
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def create_saved_variant_handler(request):
-    pass
+    variant_json = json.loads(request.body)
+    family_guid = variant_json.pop('familyGuid')
+    non_variant_json = {
+        k: variant_json.pop(k, None) for k in ['searchParameters', 'tags', 'functionalData', 'notes', 'note', 'submitToClinvar']
+    }
+
+    family = Family.objects.get(guid=family_guid)
+    check_permissions(family.project, request.user, CAN_VIEW)
+
+    xpos = variant_json['xpos']
+    ref = variant_json['ref']
+    alt = variant_json['alt']
+    # TODO remove project field from saved variants
+    saved_variant = SavedVariant.objects.create(
+        xpos=xpos,
+        xpos_start=xpos,
+        xpos_end=xpos + len(ref) - 1,
+        ref=ref,
+        alt=alt,
+        family=family,
+        project=family.project,
+        saved_variant_json=json.dumps(variant_json)
+    )
+
+    if non_variant_json.get('note'):
+        _create_variant_note(saved_variant, non_variant_json, request.user)
+    elif non_variant_json.get('tags'):
+        _create_new_tags(saved_variant, non_variant_json, request.user)
+
+    variant_json.update(get_json_for_saved_variant(
+        saved_variant, add_tags=True, family_guid=family.guid, project_guid=family.project.guid,
+    ))
+    return create_json_response({
+        'savedVariantsByGuid': {saved_variant.guid: variant_json},
+    })
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -69,19 +103,22 @@ def create_variant_note_handler(request, variant_guid):
     saved_variant = SavedVariant.objects.get(guid=variant_guid)
     check_permissions(saved_variant.project, request.user, CAN_VIEW)
 
-    request_json = json.loads(request.body)
-    create_seqr_model(
-        VariantNote,
-        saved_variant=saved_variant,
-        note=request_json.get('note'),
-        submit_to_clinvar=request_json.get('submitToClinvar', False),
-        search_parameters=request_json.get('searchParameters'),
-        created_by=request.user,
-    )
+    _create_variant_note(saved_variant, json.loads(request.body), request.user)
 
     return create_json_response({'savedVariantsByGuid': {variant_guid: {
         'notes': [get_json_for_variant_note(tag) for tag in saved_variant.variantnote_set.all()]
     }}})
+
+
+def _create_variant_note(saved_variant, note_json, user):
+    create_seqr_model(
+        VariantNote,
+        saved_variant=saved_variant,
+        note=note_json.get('note'),
+        submit_to_clinvar=note_json.get('submitToClinvar') or False,
+        search_parameters=note_json.get('searchParameters'),
+        created_by=user,
+    )
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -124,23 +161,11 @@ def update_variant_tags_handler(request, variant_guid):
     # Update tags
 
     existing_tag_guids = [tag['tagGuid'] for tag in updated_tags if tag.get('tagGuid')]
-    new_tags = [tag for tag in updated_tags if not tag.get('tagGuid')]
 
     for tag in saved_variant.varianttag_set.exclude(guid__in=existing_tag_guids):
         delete_seqr_model(tag)
 
-    for tag in new_tags:
-        variant_tag_type = VariantTagType.objects.get(
-            Q(name=tag['name']),
-            Q(project=saved_variant.project) | Q(project__isnull=True)
-        )
-        create_seqr_model(
-            VariantTag,
-            saved_variant=saved_variant,
-            variant_tag_type=variant_tag_type,
-            search_parameters=request_json.get('searchParameters'),
-            created_by=request.user,
-        )
+    _create_new_tags(saved_variant, request_json, request.user)
 
     # Update functional data
 
@@ -175,6 +200,24 @@ def update_variant_tags_handler(request, variant_guid):
     }})
 
 
+def _create_new_tags(saved_variant, tags_json, user):
+    tags = tags_json.get('tags', [])
+    new_tags = [tag for tag in tags if not tag.get('tagGuid')]
+
+    for tag in new_tags:
+        variant_tag_type = VariantTagType.objects.get(
+            Q(name=tag['name']),
+            Q(project=saved_variant.project) | Q(project__isnull=True)
+        )
+        create_seqr_model(
+            VariantTag,
+            saved_variant=saved_variant,
+            variant_tag_type=variant_tag_type,
+            search_parameters=tags_json.get('searchParameters'),
+            created_by=user,
+        )
+
+
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def update_saved_variant_json(request, project_guid):
@@ -184,8 +227,11 @@ def update_saved_variant_json(request, project_guid):
     return create_json_response({variant_guid: None for variant_guid in updated_saved_variant_guids})
 
 
-# TODO once variant search is rewritten saved_variant_json shouldn't need any postprocessing
+# TODO process data before saving and then get rid of this
 def variant_details(variant_json, project, user):
+    if variant_json.get('mainTranscript'):
+        return variant_json
+
     annotation = variant_json.get('annotation') or {}
     main_transcript = annotation.get('main_transcript') or (annotation['vep_annotation'][annotation['worst_vep_annotation_index']] if annotation.get('worst_vep_annotation_index') is not None and annotation['vep_annotation'] else {})
     is_es_variant = annotation.get('db') == 'elasticsearch'

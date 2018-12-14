@@ -231,6 +231,10 @@ export const updateGeneNote = (values) => {
 
 const updateSavedVariant = (values, action = 'create') => {
   return (dispatch) => {
+    const url = window.location.href
+    if (url.includes('variant_search')) {
+      values.searchParameters = url
+    }
     return new HttpRequestHelper(`/api/saved_variant/${action}`,
       (responseJson) => {
         dispatch({ type: RECEIVE_DATA, updatesById: responseJson })

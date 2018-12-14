@@ -1,9 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
 
-import { getFamiliesByGuid } from 'redux/selectors'
 import {
   FAMILY_FIELD_DESCRIPTION,
   FAMILY_FIELD_ANALYSIS_STATUS,
@@ -50,8 +48,4 @@ VariantFamily.propTypes = {
   family: PropTypes.object,
 }
 
-const mapStateToProps = (state, ownProps) => ({
-  family: getFamiliesByGuid(state)[ownProps.familyGuid],
-})
-
-export default connect(mapStateToProps)(VariantFamily)
+export default VariantFamily
