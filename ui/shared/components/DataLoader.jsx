@@ -15,6 +15,7 @@ class DataLoader extends React.Component
     hideError: PropTypes.bool,
     errorMessage: PropTypes.node,
     children: PropTypes.node,
+    reloadOnIdUpdate: PropTypes.bool,
   }
 
   constructor(props) {
@@ -41,6 +42,12 @@ class DataLoader extends React.Component
       return <Error404 />
     }
     return null
+  }
+
+  componentWillUpdate(nextProps) {
+    if (nextProps.reloadOnIdUpdate && nextProps.contentId !== this.props.contentId) {
+      nextProps.load(nextProps.contentId)
+    }
   }
 }
 

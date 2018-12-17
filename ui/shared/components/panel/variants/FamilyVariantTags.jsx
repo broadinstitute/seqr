@@ -12,13 +12,23 @@ import {
   getSavedVariantsGroupedByFamilyVariants,
   getVariantId,
 } from 'redux/selectors'
-import { DISCOVERY_CATEGORY_NAME } from 'shared/utils/constants'
+import {
+  DISCOVERY_CATEGORY_NAME,
+  FAMILY_FIELD_DESCRIPTION,
+  FAMILY_FIELD_ANALYSIS_STATUS,
+  FAMILY_FIELD_ANALYSIS_NOTES,
+  FAMILY_FIELD_ANALYSIS_SUMMARY,
+  FAMILY_FIELD_INTERNAL_NOTES,
+  FAMILY_FIELD_INTERNAL_SUMMARY,
+} from 'shared/utils/constants'
+import PopupWithModal from '../../PopupWithModal'
 import { HorizontalSpacer } from '../../Spacers'
+import { InlineHeader } from '../../StyledComponents'
 import ReduxFormWrapper from '../../form/ReduxFormWrapper'
 import { InlineToggle, BooleanCheckbox } from '../../form/Inputs'
 import TagFieldView from '../view-fields/TagFieldView'
 import TextFieldView from '../view-fields/TextFieldView'
-import VariantFamily from './VariantFamily'
+import Family from '../family'
 
 const TagTitle = styled.span`
   font-weight: bolder;
@@ -49,6 +59,17 @@ const NoteContainer = styled.div`
 const VariantLinkContainer = styled(InlineContainer)`
   float: right;
 `
+
+const FAMILY_FIELDS = [
+  { id: FAMILY_FIELD_DESCRIPTION, canEdit: true },
+  { id: FAMILY_FIELD_ANALYSIS_STATUS, canEdit: true },
+  { id: FAMILY_FIELD_ANALYSIS_NOTES, canEdit: true },
+  { id: FAMILY_FIELD_ANALYSIS_SUMMARY, canEdit: true },
+  { id: FAMILY_FIELD_INTERNAL_NOTES },
+  { id: FAMILY_FIELD_INTERNAL_SUMMARY },
+]
+
+const FAMILY_POPUP_STYLE = { maxWidth: '1200px' }
 
 const NO_DISPLAY = { display: 'none' }
 
@@ -177,7 +198,23 @@ VariantNoteField.propTypes = {
 
 const FamilyVariantTags = ({ variant, family, project, dispatchUpdateVariantNote, dispatchUpdateFamilyVariantTags }) =>
   <div>
-    <InlineContainer><VariantFamily family={family} /></InlineContainer>
+    <InlineContainer>
+      <InlineHeader size="small">
+        Family<HorizontalSpacer width={5} />
+        <PopupWithModal
+          hoverable
+          style={FAMILY_POPUP_STYLE}
+          position="right center"
+          keepInViewPort
+          trigger={
+            <NavLink to={`/project/${family.projectGuid}/family_page/${family.familyGuid}`}>
+              {family.displayName}
+            </NavLink>
+          }
+          content={<Family family={family} fields={FAMILY_FIELDS} useFullWidth disablePedigreeZoom />}
+        />
+      </InlineHeader>
+    </InlineContainer>
     <InlineContainer>
       <div>
         <TagTitle>Tags:</TagTitle>

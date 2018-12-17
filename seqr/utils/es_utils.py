@@ -514,7 +514,7 @@ SORT_FIELDS = {
             'type': 'number',
             'script': {
                 'params': {
-                    'omim_gene_ids': lambda: [omim.gene.gene_id for omim in Omim.objects.all().only('gene__gene_id')]
+                    'omim_gene_ids': lambda *args: [omim.gene.gene_id for omim in Omim.objects.all().only('gene__gene_id')]
                 },
                 'source': "params.omim_gene_ids.contains(doc['mainTranscript_gene_id'].value) ? 0 : 1"
             }
@@ -529,7 +529,7 @@ SORT_FIELDS = {
             'type': 'number',
             'script': {
                 'params': {
-                    'constraint_ranks_by_gene': lambda: {
+                    'constraint_ranks_by_gene': lambda *args: {
                         constraint.gene.gene_id: constraint.mis_z_rank + constraint.pLI_rank
                         for constraint in GeneConstraint.objects.all().only('gene__gene_id', 'mis_z_rank', 'pLI_rank')}
                 },

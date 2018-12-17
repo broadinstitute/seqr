@@ -18,22 +18,20 @@ export const getSearchedVariantsErrorMessage = state => state.searchedVariantsLo
 export const getSearchesByHash = state => state.searchesByHash
 export const getVariantSearchDisplay = state => state.variantSearchDisplay
 
-const getQueryParams = (state, props) => props.queryParams
-
 export const getCurrentSearchParams = createSelector(
   getSearchesByHash,
-  getQueryParams,
-  (searchesByHash, queryParams) => searchesByHash[queryParams.search],
+  (state, props) => props.match.params.searchHash,
+  (searchesByHash, searchHash) => searchesByHash[searchHash],
 )
 
 export const getLoadedIntitialSearch = createSelector(
-  getQueryParams,
+  (state, props) => props.match.params,
   getCurrentSearchParams,
   getProjectsByGuid,
   getFamiliesByGuid,
   getFamiliesGroupedByProjectGuid,
   getAnalysisGroupsByGuid,
-  (queryParams, searchParams, projectsByGuid, familiesByGuid, familiesByProjectGuid, analysisGroupByGuid) => {
+  (urlParams, searchParams, projectsByGuid, familiesByGuid, familiesByProjectGuid, analysisGroupByGuid) => {
 
     if (searchParams) {
       return searchParams.searchedProjectFamilies.every(
@@ -42,22 +40,22 @@ export const getLoadedIntitialSearch = createSelector(
     }
 
     let searchedProjectFamilies
-    if (queryParams.projectGuid && familiesByProjectGuid[queryParams.projectGuid]) {
+    if (urlParams.projectGuid && familiesByProjectGuid[urlParams.projectGuid]) {
       searchedProjectFamilies = [{
-        projectGuid: queryParams.projectGuid,
-        familyGuids: Object.keys(familiesByProjectGuid[queryParams.projectGuid]),
+        projectGuid: urlParams.projectGuid,
+        familyGuids: Object.keys(familiesByProjectGuid[urlParams.projectGuid]),
       }]
     }
-    else if (queryParams.familyGuid && familiesByGuid[queryParams.familyGuid]) {
+    else if (urlParams.familyGuid && familiesByGuid[urlParams.familyGuid]) {
       searchedProjectFamilies = [{
-        projectGuid: familiesByGuid[queryParams.familyGuid].projectGuid,
-        familyGuids: [queryParams.familyGuid],
+        projectGuid: familiesByGuid[urlParams.familyGuid].projectGuid,
+        familyGuids: [urlParams.familyGuid],
       }]
     }
-    else if (queryParams.analysisGroupGuid && analysisGroupByGuid[queryParams.analysisGroupGuid]) {
+    else if (urlParams.analysisGroupGuid && analysisGroupByGuid[urlParams.analysisGroupGuid]) {
       searchedProjectFamilies = [{
-        projectGuid: analysisGroupByGuid[queryParams.analysisGroupGuid].projectGuid,
-        familyGuids: analysisGroupByGuid[queryParams.analysisGroupGuid].familyGuids,
+        projectGuid: analysisGroupByGuid[urlParams.analysisGroupGuid].projectGuid,
+        familyGuids: analysisGroupByGuid[urlParams.analysisGroupGuid].familyGuids,
       }]
     }
 

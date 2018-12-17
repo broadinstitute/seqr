@@ -5,13 +5,14 @@ import { Grid, Message } from 'semantic-ui-react'
 import styled from 'styled-components'
 
 import DataLoader from 'shared/components/DataLoader'
+import { QueryParamsEditor } from 'shared/components/QueryParamEditor'
 import { HorizontalSpacer } from 'shared/components/Spacers'
 import ExportTableButton from 'shared/components/buttons/export-table/ExportTableButton'
 import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
 import Variants from 'shared/components/panel/variants/Variants'
 import { VARIANT_SORT_FIELD_NO_FAMILY_SORT, VARIANT_PAGINATION_FIELD } from 'shared/utils/constants'
 
-import { searchVariants } from '../reducers'
+import { loadSearchedVariants } from '../reducers'
 import {
   getSearchedVariants,
   getSearchedVariantsIsLoading,
@@ -35,22 +36,21 @@ const FIELDS = [
 ]
 
 
-const VariantSearchResults = ({
-  searchedVariants, variantSearchDisplay, searchedVariantExportConfig, queryParams,
-  loading, load, errorMessage, onSubmit, totalVariantsCount,
+const BaseVariantSearchResults = ({
+  match, searchedVariants, variantSearchDisplay, searchedVariantExportConfig, onSubmit, load, loading, errorMessage, totalVariantsCount,
 }) => {
   const { page = 1, recordsPerPage } = variantSearchDisplay
   const variantDisplayPageOffset = (page - 1) * recordsPerPage
   const fields = totalVariantsCount > recordsPerPage ?
     [...FIELDS, { ...VARIANT_PAGINATION_FIELD, totalPages: Math.ceil(totalVariantsCount / recordsPerPage) }]
     : FIELDS
-
   return (
     <DataLoader
-      contentId={queryParams.search}
+      contentId={match.params.searchHash}
       content={searchedVariants}
       loading={loading}
       load={load}
+      reloadOnIdUpdate
       errorMessage={errorMessage &&
         <Grid.Row>
           <Grid.Column width={16}>
@@ -59,7 +59,6 @@ const VariantSearchResults = ({
         </Grid.Row>
       }
     >
-      {queryParams.search &&
       <LargeRow>
         <Grid.Column width={5}>
           {totalVariantsCount === searchedVariants.length ? 'Found ' : `Showing ${variantDisplayPageOffset + 1}-${variantDisplayPageOffset + searchedVariants.length} of `}
@@ -79,7 +78,6 @@ const VariantSearchResults = ({
           <ExportTableButton downloads={searchedVariantExportConfig} buttonText="Download" />
         </Grid.Column>
       </LargeRow>
-      }
       <Grid.Row>
         <Grid.Column width={16}>
           <Variants variants={searchedVariants} />
@@ -89,16 +87,14 @@ const VariantSearchResults = ({
   )
 }
 
-VariantSearchResults.propTypes = {
-  load: PropTypes.func,
+BaseVariantSearchResults.propTypes = {
+  searchVariants: PropTypes.func,
   searchedVariants: PropTypes.array,
   loading: PropTypes.bool,
   errorMessage: PropTypes.string,
   variantSearchDisplay: PropTypes.object,
-  onSubmit: PropTypes.func,
   searchedVariantExportConfig: PropTypes.array,
   totalVariantsCount: PropTypes.number,
-  queryParams: PropTypes.object,
 }
 
 const mapStateToProps = (state, ownProps) => ({
@@ -113,21 +109,21 @@ const mapStateToProps = (state, ownProps) => ({
 const mapDispatchToProps = (dispatch, ownProps) => {
   return {
     load: (searchHash) => {
-      const { sort, page } = ownProps.queryParams
-      dispatch(searchVariants({
+      dispatch(loadSearchedVariants({
         searchHash,
-        displayUpdates: { sort, page },
-        updateQueryParams: ownProps.updateQueryParams,
+        ...ownProps,
       }))
     },
     onSubmit: (updates) => {
-      dispatch(searchVariants({
-        searchHash: ownProps.queryParams.search,
+      dispatch(loadSearchedVariants({
+        searchHash: ownProps.match.params.searchHash,
         displayUpdates: updates,
-        updateQueryParams: ownProps.updateQueryParams,
+        ...ownProps,
       }))
     },
   }
 }
 
-export default connect(mapStateToProps, mapDispatchToProps)(VariantSearchResults)
+const VariantSearchResults = connect(mapStateToProps, mapDispatchToProps)(BaseVariantSearchResults)
+
+export default props => <QueryParamsEditor {...props}><VariantSearchResults /></QueryParamsEditor>
