@@ -88,7 +88,9 @@ const BaseVariantSearchResults = ({
 }
 
 BaseVariantSearchResults.propTypes = {
-  searchVariants: PropTypes.func,
+  match: PropTypes.object,
+  load: PropTypes.func,
+  onSubmit: PropTypes.func,
   searchedVariants: PropTypes.array,
   loading: PropTypes.bool,
   errorMessage: PropTypes.string,

@@ -196,99 +196,101 @@ VariantNoteField.propTypes = {
   family: PropTypes.object.isRequired,
 }
 
-const FamilyVariantTags = ({ variant, family, project, dispatchUpdateVariantNote, dispatchUpdateFamilyVariantTags }) =>
-  <div>
-    <InlineContainer>
-      <InlineHeader size="small">
-        Family<HorizontalSpacer width={5} />
-        <PopupWithModal
-          hoverable
-          style={FAMILY_POPUP_STYLE}
-          position="right center"
-          keepInViewPort
-          trigger={
-            <NavLink to={`/project/${family.projectGuid}/family_page/${family.familyGuid}`}>
-              {family.displayName}
-            </NavLink>
-          }
-          content={<Family family={family} fields={FAMILY_FIELDS} useFullWidth disablePedigreeZoom />}
-        />
-      </InlineHeader>
-    </InlineContainer>
-    <InlineContainer>
-      <div>
-        <TagTitle>Tags:</TagTitle>
-        <HorizontalSpacer width={5} />
-        <ShortcutTags variant={variant} familyGuid={family.familyGuid} dispatchUpdateFamilyVariantTags={dispatchUpdateFamilyVariantTags} />
-        <VariantTagField
-          field="tags"
-          fieldName="Tags"
-          family={family}
-          variant={variant}
-          tagOptions={project.variantTagTypes}
-          onSubmit={dispatchUpdateFamilyVariantTags}
-        />
-        <HorizontalSpacer width={5} />
-        {variant.tags.some(tag => tag.category === DISCOVERY_CATEGORY_NAME) &&
-          <span>
-            <TagTitle>Fxnl Data:</TagTitle>
-            <VariantTagField
-              field="functionalData"
-              fieldName="Fxnl Data"
-              family={family}
-              variant={variant}
-              tagOptions={project.variantFunctionalTagTypes}
-              editMetadata
-              onSubmit={dispatchUpdateFamilyVariantTags}
-            />
-            <HorizontalSpacer width={5} />
-          </span>
-        }
-      </div>
-      <div>
-        <TagTitle>Notes:</TagTitle>
-        <NoteContainer>
-          {variant.notes.map(note =>
-            <VariantNoteField
-              key={note.noteGuid}
-              note={note}
-              variant={variant}
-              family={family}
-              isDeletable
-              compact
-              action="Edit"
-              onSubmit={dispatchUpdateVariantNote}
-            />,
-          )}
-          <VariantNoteField
-            variant={variant}
-            family={family}
-            editIconName="plus"
-            editLabel="Add Note"
-            action="Add"
-            onSubmit={dispatchUpdateVariantNote}
-          />
-        </NoteContainer>
-      </div>
-    </InlineContainer>
-    {variant.variantGuid &&
-      <VariantLinkContainer>
-        <NavLink to={`/project/${variant.projectGuid}/saved_variants/variant/${variant.variantGuid}`} activeStyle={NO_DISPLAY}>
-          <Popup
-            trigger={<Icon name="linkify" link />}
-            content="Go to the page for this individual variant. Note: There is no additional information on this page, it is intended for sharing specific variants."
+const FamilyVariantTags = ({ variant, family, project, dispatchUpdateVariantNote, dispatchUpdateFamilyVariantTags }) => (
+  family ?
+    <div>
+      <InlineContainer>
+        <InlineHeader size="small">
+          Family<HorizontalSpacer width={5} />
+          <PopupWithModal
+            hoverable
+            style={FAMILY_POPUP_STYLE}
             position="right center"
-            wide
+            keepInViewPort
+            trigger={
+              <NavLink to={`/project/${family.projectGuid}/family_page/${family.familyGuid}`}>
+                {family.displayName}
+              </NavLink>
+            }
+            content={<Family family={family} fields={FAMILY_FIELDS} useFullWidth disablePedigreeZoom />}
           />
-        </NavLink>
-      </VariantLinkContainer>
-    }
-  </div>
+        </InlineHeader>
+      </InlineContainer>
+      <InlineContainer>
+        <div>
+          <TagTitle>Tags:</TagTitle>
+          <HorizontalSpacer width={5} />
+          <ShortcutTags variant={variant} familyGuid={family.familyGuid} dispatchUpdateFamilyVariantTags={dispatchUpdateFamilyVariantTags} />
+          <VariantTagField
+            field="tags"
+            fieldName="Tags"
+            family={family}
+            variant={variant}
+            tagOptions={project.variantTagTypes}
+            onSubmit={dispatchUpdateFamilyVariantTags}
+          />
+          <HorizontalSpacer width={5} />
+          {variant.tags.some(tag => tag.category === DISCOVERY_CATEGORY_NAME) &&
+            <span>
+              <TagTitle>Fxnl Data:</TagTitle>
+              <VariantTagField
+                field="functionalData"
+                fieldName="Fxnl Data"
+                family={family}
+                variant={variant}
+                tagOptions={project.variantFunctionalTagTypes}
+                editMetadata
+                onSubmit={dispatchUpdateFamilyVariantTags}
+              />
+              <HorizontalSpacer width={5} />
+            </span>
+          }
+        </div>
+        <div>
+          <TagTitle>Notes:</TagTitle>
+          <NoteContainer>
+            {variant.notes.map(note =>
+              <VariantNoteField
+                key={note.noteGuid}
+                note={note}
+                variant={variant}
+                family={family}
+                isDeletable
+                compact
+                action="Edit"
+                onSubmit={dispatchUpdateVariantNote}
+              />,
+            )}
+            <VariantNoteField
+              variant={variant}
+              family={family}
+              editIconName="plus"
+              editLabel="Add Note"
+              action="Add"
+              onSubmit={dispatchUpdateVariantNote}
+            />
+          </NoteContainer>
+        </div>
+      </InlineContainer>
+      {variant.variantGuid &&
+        <VariantLinkContainer>
+          <NavLink to={`/project/${variant.projectGuid}/saved_variants/variant/${variant.variantGuid}`} activeStyle={NO_DISPLAY}>
+            <Popup
+              trigger={<Icon name="linkify" link />}
+              content="Go to the page for this individual variant. Note: There is no additional information on this page, it is intended for sharing specific variants."
+              position="right center"
+              wide
+            />
+          </NavLink>
+        </VariantLinkContainer>
+      }
+    </div> : null
+)
 
 FamilyVariantTags.propTypes = {
-  variant: PropTypes.object.isRequired,
-  project: PropTypes.object.isRequired,
-  family: PropTypes.object.isRequired,
+  variant: PropTypes.object,
+  project: PropTypes.object,
+  family: PropTypes.object,
   dispatchUpdateVariantNote: PropTypes.func,
   dispatchUpdateFamilyVariantTags: PropTypes.func,
 }
@@ -301,7 +303,7 @@ const EMPTY_FAMILY_TAGS = {
 
 const mapStateToProps = (state, ownProps) => ({
   family: getFamiliesByGuid(state)[ownProps.familyGuid],
-  project: getProjectsByGuid(state)[getFamiliesByGuid(state)[ownProps.familyGuid].projectGuid],
+  project: getProjectsByGuid(state)[(getFamiliesByGuid(state)[ownProps.familyGuid] || {}).projectGuid],
   variant: (getSavedVariantsGroupedByFamilyVariants(state)[ownProps.familyGuid] || {})[getVariantId(ownProps.variant)] || {
     ...ownProps.variant,
     ...EMPTY_FAMILY_TAGS,

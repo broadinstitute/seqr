@@ -56,6 +56,8 @@ export const saveHashedSearch = (searchHash, search) => {
 
 export const loadSearchedVariants = ({ searchHash, displayUpdates, queryParams, updateQueryParams }) => {
   return (dispatch, getState) => {
+    dispatch({ type: REQUEST_SEARCHED_VARIANTS })
+
     const state = getState()
 
     let { sort, page } = displayUpdates || queryParams
@@ -73,7 +75,6 @@ export const loadSearchedVariants = ({ searchHash, displayUpdates, queryParams, 
     const search = state.searchesByHash[searchHash]
 
     // Fetch variants
-    dispatch({ type: REQUEST_SEARCHED_VARIANTS })
     new HttpRequestHelper(`/api/search/${searchHash}?sort=${sort.toLowerCase()}&page=${page || 1}`,
       (responseJson) => {
         dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
