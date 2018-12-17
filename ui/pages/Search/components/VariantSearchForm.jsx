@@ -16,7 +16,7 @@ const VariantSearchForm = ({ match, history, saveSearch, initialSearch, load, lo
   const search = (searchParams) => {
     const searchHash = hash.MD5(searchParams)
     saveSearch(searchHash, searchParams)
-    history.push(`/variant_search/${searchHash}`)
+    history.push(`/variant_search/results/${searchHash}`)
   }
 
   return (

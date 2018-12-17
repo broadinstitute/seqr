@@ -15,16 +15,13 @@ const VariantSearch = ({ match }) =>
           <Route path={`${match.url}/project/:projectGuid`} component={VariantSearchForm} />
           <Route path={`${match.url}/analysis_group/:analysisGroupGuid`} component={VariantSearchForm} />
           <Route path={`${match.url}/family/:familyGuid`} component={VariantSearchForm} />
-          <Route path={`${match.url}/:searchHash`} component={VariantSearchForm} />
+          <Route path={`${match.url}/results/:searchHash`} component={VariantSearchForm} />
           {/* TODO once multi-project enabled allow no path*/}
           <Route component={() => <Header size="huge" textAlign="center">Error 404: Page Not Found</Header>} />
         </Switch>
       </Grid.Column>
     </Grid.Row>
-    <Switch>
-      <Route path={`${match.url}/:entityType/:entityGuid`} component={null} />
-      <Route path={`${match.url}/:searchHash`} component={VariantSearchResults} />
-    </Switch>
+    <Route path={`${match.url}/results/:searchHash`} component={VariantSearchResults} />
   </Grid>
 
 VariantSearch.propTypes = {
