@@ -42,6 +42,8 @@ const ProjectFamiliesFilter = (
   const selectAllFamilies = (checked) => {
     if (checked) {
       onChange(familyOptions.map((opt => opt.value)))
+    } else {
+      onChange([])
     }
   }
 
