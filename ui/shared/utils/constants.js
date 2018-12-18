@@ -450,18 +450,6 @@ const ORDERED_VEP_CONSEQUENCES = [
     so: 'SO:0001619',
   },
   {
-    description: "A sequence variant located 5' of a gene",
-    text: 'Upstream gene variant',
-    value: 'upstream_gene_variant',
-    so: 'SO:0001631',
-  },
-  {
-    description: "A sequence variant located 3' of a gene",
-    text: 'Downstream gene variant',
-    value: 'downstream_gene_variant',
-    so: 'SO:0001632',
-  },
-  {
     description: 'A feature ablation whereby the deleted region includes a transcription factor binding site',
     text: 'TFBS ablation',
     value: 'TFBS_ablation',

@@ -21,6 +21,7 @@ import {
   INHERITANCE_MODE_LOOKUP,
   ALL_INHERITANCE_FILTER,
   NUM_ALT_OPTIONS,
+  THIS_CALLSET_FREQUENCY,
   FREQUENCIES,
   ANNOTATION_GROUPS,
   ANNOTATION_FILTER_OPTIONS,
@@ -151,12 +152,18 @@ const FREQUENCY_PANEL = {
     inputSize: 6,
     inputProps: {
       component: FrequencyFilter,
-      format: values => (values ? Object.values(values).reduce((acc, value) => ({
-        af: value.af === acc.af ? value.af : null,
-        ac: value.ac === acc.ac ? value.ac : null,
-        hh: value.hh === acc.hh ? value.hh : null,
-      }), Object.values(values)[0]) : {}),
-      parse: value => FREQUENCIES.reduce((acc, { name }) => ({ ...acc, [name]: value }), {}),
+      format: (values) => {
+        if (!values) {
+          return {}
+        }
+        const { callset, ...freqValues } = values
+        return Object.values(freqValues).reduce((acc, value) => ({
+          af: value.af === acc.af ? value.af : null,
+          ac: value.ac === acc.ac ? value.ac : null,
+          hh: value.hh === acc.hh ? value.hh : null,
+        }), Object.values(freqValues)[0])
+      },
+      parse: value => FREQUENCIES.reduce((acc, { name }) => (name === THIS_CALLSET_FREQUENCY ? acc : { ...acc, [name]: value }), {}),
       homHemi: true,
       inlineSlider: true,
     },

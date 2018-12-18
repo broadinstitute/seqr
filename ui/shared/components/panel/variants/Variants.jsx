@@ -46,7 +46,7 @@ const Variants = ({ variants }) =>
           </Grid.Column>,
         )}
         <Grid.Column>
-          <VariantGene geneId={variant.mainTranscript.geneId} variant={variant} />
+          {variant.mainTranscript.geneId && <VariantGene geneId={variant.mainTranscript.geneId} variant={variant} />}
           {Object.keys(variant.transcripts).length > 1 && <Divider />}
           {Object.keys(variant.transcripts).filter(geneId => geneId !== variant.mainTranscript.geneId).map(geneId =>
             <VariantGene key={geneId} geneId={geneId} variant={variant} compact />,

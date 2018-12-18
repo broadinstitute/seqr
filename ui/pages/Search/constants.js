@@ -217,6 +217,7 @@ export const ANNOTATION_FILTER_OPTIONS = [
 }))
 
 
+export const THIS_CALLSET_FREQUENCY = 'callset'
 export const FREQUENCIES = [
   {
     name: 'g1k',
@@ -249,7 +250,7 @@ export const FREQUENCIES = [
     labelHelp: 'Filter by allele count (AC) or allele frequency (AF) in TOPMed',
   },
   {
-    name: 'callset',
+    name: THIS_CALLSET_FREQUENCY,
     label: 'This Callset',
     homHemi: false,
     labelHelp: 'Filter by allele count (AC) or by allele frequency (AF) among the samples in this family plus the rest of the samples that were joint-called as part of variant calling for this project.',

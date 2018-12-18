@@ -665,7 +665,7 @@ def _parse_es_hit(raw_hit, family_samples_by_id, liftover_grch38_to_grch37, fiel
 
     sorted_transcripts = [
         {_to_camel_case(k): v for k, v in transcript.to_dict().items()}
-        for transcript in hit[SORTED_TRANSCRIPTS_FIELD_KEY]
+        for transcript in hit[SORTED_TRANSCRIPTS_FIELD_KEY] or []
     ]
     transcripts = defaultdict(list)
     for transcript in sorted_transcripts:
