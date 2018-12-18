@@ -15,6 +15,11 @@ import {
 } from 'shared/utils/constants'
 import { LoadedLocusListField } from './components/filters/LocationFilter'
 
+export const getSelectedAnalysisGroups = (analysisGroupsByGuid, familyGuids) =>
+  Object.values(analysisGroupsByGuid).filter(
+    group => group.familyGuids.every(familyGuid => familyGuids.includes(familyGuid)),
+  )
+
 export const SEARCH_FORM_NAME = 'variantSearch'
 
 const REF_REF = 'ref_ref'

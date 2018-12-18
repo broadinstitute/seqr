@@ -10,6 +10,7 @@ import {
   getAnalysisGroupsGroupedByProjectGuid,
 } from 'redux/selectors'
 import { Multiselect, BooleanCheckbox } from 'shared/components/form/Inputs'
+import { getSelectedAnalysisGroups } from '../../constants'
 import { getSearchedProjectsFamiliesInput } from '../../selectors'
 
 
@@ -24,9 +25,9 @@ const ProjectFamiliesFilter = (
     group => ({ value: group.analysisGroupGuid, text: group.name }),
   )
 
-  const selectedAnalysisGroups = Object.values(projectAnalysisGroupsByGuid).filter(
-    group => group.familyGuids.every(familyGuid => value.includes(familyGuid)),
-  ).map(group => group.analysisGroupGuid)
+  const selectedAnalysisGroups = getSelectedAnalysisGroups(projectAnalysisGroupsByGuid, value).map(
+    group => group.analysisGroupGuid,
+  )
 
   const selectAnalysisGroup = (analysisGroups) => {
     if (analysisGroups.length > selectedAnalysisGroups.length) {
