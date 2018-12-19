@@ -21,13 +21,16 @@ const ProjectFamiliesFilter = (
     family => ({ value: family.familyGuid, text: family.displayName }),
   )
 
+  const allFamiliesSelected = value.length === familyOptions.length
+
+  const selectedFamilies = allFamiliesSelected ? [] : value
+
   const analysisGroupOptions = Object.values(projectAnalysisGroupsByGuid).map(
     group => ({ value: group.analysisGroupGuid, text: group.name }),
   )
 
-  const selectedAnalysisGroups = getSelectedAnalysisGroups(projectAnalysisGroupsByGuid, value).map(
-    group => group.analysisGroupGuid,
-  )
+  const selectedAnalysisGroups = allFamiliesSelected ? [] :
+    getSelectedAnalysisGroups(projectAnalysisGroupsByGuid, value).map(group => group.analysisGroupGuid)
 
   const selectAnalysisGroup = (analysisGroups) => {
     if (analysisGroups.length > selectedAnalysisGroups.length) {
@@ -57,16 +60,17 @@ const ProjectFamiliesFilter = (
       <Form.Group inline widths="equal">
         <BooleanCheckbox
           {...props}
-          value={value.length === familyOptions.length}
+          value={allFamiliesSelected}
           onChange={selectAllFamilies}
           width={5}
           label="Include All Families"
         />
         <Multiselect
           {...props}
-          value={value}
+          value={selectedFamilies}
           onChange={onChange}
           options={familyOptions}
+          disabled={allFamiliesSelected}
           label="Families"
           color="violet"
         />
@@ -75,6 +79,7 @@ const ProjectFamiliesFilter = (
           value={selectedAnalysisGroups}
           onChange={selectAnalysisGroup}
           options={analysisGroupOptions}
+          disabled={allFamiliesSelected}
           label="Analysis Groups"
           color="pink"
         />
