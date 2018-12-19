@@ -43,7 +43,7 @@ export const getLoadedIntitialSearch = createSelector(
     if (urlParams.projectGuid && familiesByProjectGuid[urlParams.projectGuid]) {
       searchedProjectFamilies = [{
         projectGuid: urlParams.projectGuid,
-        familyGuids: Object.keys(familiesByProjectGuid[urlParams.projectGuid]),
+        familyGuids: [],
       }]
     }
     else if (urlParams.familyGuid && familiesByGuid[urlParams.familyGuid]) {

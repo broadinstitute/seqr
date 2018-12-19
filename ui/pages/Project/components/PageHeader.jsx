@@ -21,13 +21,19 @@ const PAGE_CONFIGS = {
     breadcrumbIdSections: [{ content: `Family: ${family.displayName}`, link: match.url }],
     description: family.description,
     originalPages: [{ name: 'Family', path: `family/${family.familyId}` }],
+    entityLinks: [{
+      to: project.hasNewSearch && `/variant_search/family/${family.familyGuid}`,
+      href: !project.hasNewSearch && `/project/${project.deprecatedProjectId}/family/${family.familyId}/mendelian-variant-search`,
+      text: 'Family Variant Search',
+    }],
   }),
   analysis_group: (match, project, family, analysisGroup) => ({
     breadcrumbIdSections: [{ content: `Analysis Group: ${analysisGroup.name}`, link: match.url }],
     description: analysisGroup.description,
     originalPages: [{ name: 'Analysis Group', path: `family-group/guid/${analysisGroup.analysisGroupGuid}/` }],
     entityLinks: [{
-      href: `/project/${project.deprecatedProjectId}/family-group/guid/${analysisGroup.analysisGroupGuid}/combine-mendelian-families`,
+      to: project.hasNewSearch && `/variant_search/analysis_group/${analysisGroup.analysisGroupGuid}`,
+      href: !project.hasNewSearch && `/project/${project.deprecatedProjectId}/family-group/guid/${analysisGroup.analysisGroupGuid}/combine-mendelian-families`,
       text: 'Analysis Group Search',
     }],
     button: (
@@ -88,6 +94,9 @@ export const PageHeader = ({ user, project, family, analysisGroup, breadcrumb, m
     { breadcrumb, breadcrumbId: match.params.breadcrumbId, originalPages: [ORIGINAL_PROJECT_PAGE_CONFIG] }
 
   const entityLinks = (headerProps.entityLinks || [])
+  if (project.hasNewSearch && entityLinks.length === 0) {
+    entityLinks.push({ to: `/variant_search/project/${project.projectGuid}`, text: 'Project Variant Search' })
+  }
   if (project.hasGeneSearch) {
     entityLinks.push({ href: `/project/${project.deprecatedProjectId}/gene`, text: 'Gene Search' })
   }

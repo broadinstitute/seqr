@@ -4,7 +4,7 @@ from elasticsearch import NotFoundError, TransportError
 from django.utils import timezone
 from seqr.views.apis.igv_api import proxy_to_igv
 from seqr.models import Sample
-from seqr.utils.es_utils import get_es_client, VARIANT_DOC_TYPE
+from seqr.utils.es_utils import get_es_client, is_nested_genotype_index, VARIANT_DOC_TYPE
 from seqr.utils.file_utils import does_file_exist, file_iter, get_file_stats
 from seqr.views.utils.file_utils import load_uploaded_file
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
@@ -145,9 +145,17 @@ def _update_samples_for_dataset(
 
 
 def _get_elasticsearch_index_samples(elasticsearch_index):
-    sample_field_suffix = '_num_alt'
-
     es_client = get_es_client()
+
+    #  Nested genotypes
+    if is_nested_genotype_index(elasticsearch_index):
+        s = elasticsearch_dsl.Search(using=es_client, index=elasticsearch_index)
+        s = s.params(size=0)
+        s.aggs.bucket('sample_ids', elasticsearch_dsl.A('terms', field='sample_id', size=10000))
+        response = s.execute()
+        return [agg['key'] for agg in response.aggregations.sample_ids.buckets]
+
+    sample_field_suffix = '_num_alt'
     index = elasticsearch_dsl.Index('{}*'.format(elasticsearch_index), using=es_client)
     try:
         field_mapping = index.get_field_mapping(fields=['*{}'.format(sample_field_suffix), 'join_field'], doc_type=[VARIANT_DOC_TYPE])
@@ -155,14 +163,6 @@ def _get_elasticsearch_index_samples(elasticsearch_index):
         raise Exception('Index "{}" not found'.format(elasticsearch_index))
     except TransportError as e:
         raise Exception(e.error)
-
-    #  Nested genotypes
-    if field_mapping.get(elasticsearch_index, {}).get('mappings', {}).get(VARIANT_DOC_TYPE, {}).get('join_field'):
-        s = elasticsearch_dsl.Search(using=es_client, index=elasticsearch_index)
-        s = s.params(size=0)
-        s.aggs.bucket('sample_ids', elasticsearch_dsl.A('terms', field='sample_id'))
-        response = s.execute()
-        return [agg['key'] for agg in response.aggregations.sample_ids.buckets]
 
     samples = set()
     for index in field_mapping.values():

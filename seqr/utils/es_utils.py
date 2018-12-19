@@ -2,7 +2,7 @@ from collections import defaultdict
 from copy import deepcopy
 from django.db.models import Max
 import elasticsearch
-from elasticsearch_dsl import Search, Q
+from elasticsearch_dsl import Search, Q, Index
 import json
 import logging
 from pyliftover.liftover import LiftOver
@@ -23,6 +23,17 @@ VARIANT_DOC_TYPE = 'variant'
 
 def get_es_client():
     return elasticsearch.Elasticsearch(host=settings.ELASTICSEARCH_SERVICE_HOSTNAME, timeout=30, retry_on_timeout=True)
+
+
+# TODO once all project data is reloaded get rid of these checks
+def is_nested_genotype_index(es_index):
+    es_client = get_es_client()
+    index = Index(es_index, using=es_client)
+    try:
+        field_mapping = index.get_field_mapping(fields=['join_field'], doc_type=[VARIANT_DOC_TYPE])
+        return bool(field_mapping.get(es_index, {}).get('mappings', {}).get(VARIANT_DOC_TYPE, {}).get('join_field'))
+    except Exception:
+        return False
 
 
 def get_es_variants(search_model, families, page=1, num_results=100):
@@ -64,6 +75,8 @@ def get_es_variants(search_model, families, page=1, num_results=100):
         if len(es_indices) > 1:
             # TODO get rid of this once add multi-project support and handle duplicate variants in different indices
             raise Exception('Samples are not all contained in the same index: {}'.format(', '.join(es_indices)))
+        elif not is_nested_genotype_index(list(es_indices)[0]):
+            raise Exception('Index "{}" does not have a valid schema'.format(list(es_indices)[0]))
         elasticsearch_index = ','.join(es_indices)
 
     family_samples_by_id = defaultdict(dict)

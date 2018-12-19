@@ -79,9 +79,8 @@ const unloadSavedVariants = (dispatch, getState) => {
 }
 
 export const unloadProject = () => {
-  return (dispatch, getState) => {
+  return (dispatch) => {
     dispatch({ type: UPDATE_CURRENT_PROJECT, newValue: null })
-    unloadSavedVariants(dispatch, getState)
   }
 }
 
