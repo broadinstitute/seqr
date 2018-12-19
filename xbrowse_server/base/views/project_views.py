@@ -897,7 +897,11 @@ def gene_quicklook(request, project_id, gene_id):
         response['Content-Disposition'] = 'attachment; filename="{}_{}.csv"'.format(download_csv, gene.get("symbol") or gene.get("transcript_name"))
 
         def get_row(variant, worst_annotation):
-            measureset_id, clinvar_significance = get_reference().get_clinvar_info(*variant.unique_tuple())
+            if 'clinvar_allele_id' in variant.extras:
+                measureset_id = variant.extras['clinvar_allele_id']
+                clinvar_significance = variant.extras['clinvar_clinsig']
+            else:
+                measureset_id, clinvar_significance = get_reference().get_clinvar_info(*variant.unique_tuple())
             genotypes = []
 
             all_genotypes_string = ""
@@ -915,14 +919,14 @@ def gene_quicklook(request, project_id, gene_id):
                 variant.pos,
                 variant.ref,
                 variant.alt,
-                variant.vcf_id or "",
+                variant.vcf_id or variant.annotation.get("rsid") or "",
                 variant.annotation.get("vep_consequence") or "",
                 worst_annotation.get("hgvsc") or "",
                 (worst_annotation.get("hgvsp") or "").replace("%3D", "="),
-                worst_annotation.get("sift") or "",
-                worst_annotation.get("polyphen") or "",
-                worst_annotation.get("mutationtaster_pred") or "",
-                (";".join(set((worst_annotation.get("fathmm_pred") or "").split('%3B')))),
+                variant.annotation.get("sift") or "",
+                variant.annotation.get("polyphen") or "",
+                variant.annotation.get("mutationtaster_pred") or variant.annotation.get("muttaster") or "",
+                (";".join(set((worst_annotation.get("fathmm_pred") or "").split('%3B')))) or variant.annotation.get("fathmm") or "",
 
                 measureset_id or "",
                 clinvar_significance or "",
