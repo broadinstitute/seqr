@@ -75,6 +75,24 @@ def query_variants_handler(request, search_hash):
     })
 
 
+PREDICTION_MAP = {
+    'D': 'damaging',
+    'T': 'tolerated',
+}
+
+POLYPHEN_MAP = {
+    'D': 'probably_damaging',
+    'P': 'possibly_damaging',
+    'B': 'benign',
+}
+
+MUTTASTR_MAP = {
+    'A': 'disease_causing',
+    'D': 'disease_causing',
+    'N': 'polymorphism',
+    'P': 'polymorphism',
+}
+
 VARIANT_EXPORT_DATA = [
     {'header': 'chrom'},
     {'header': 'pos'},
@@ -87,10 +105,10 @@ VARIANT_EXPORT_DATA = [
     {'header': 'gnomad_genomes_freq', 'value_path': 'populations.gnomad_genomes.af'},
     {'header': 'gnomad_exomes_freq', 'value_path': 'populations.gnomad_exomes.af'},
     {'header': 'topmed_freq', 'value_path': 'populations.topmed.af'},
-    {'header': 'sift', 'value_path': 'predictions.sift'},
-    {'header': 'polyphen', 'value_path': 'predictions.polyphen'},
-    {'header': 'muttaster', 'value_path': 'predictions.mut_taster'},
-    {'header': 'fathmm', 'value_path': 'predictions.fathmm'},
+    {'header': 'sift', 'value_path': 'predictions.sift', 'process': lambda prediction: PREDICTION_MAP.get(prediction[0]) if prediction else None},
+    {'header': 'polyphen', 'value_path': 'predictions.polyphen', 'process': lambda prediction: POLYPHEN_MAP.get(prediction[0]) if prediction else None},
+    {'header': 'muttaster', 'value_path': 'predictions.mut_taster', 'process': lambda prediction: MUTTASTR_MAP.get(prediction[0]) if prediction else None},
+    {'header': 'fathmm', 'value_path': 'predictions.fathmm', 'process': lambda prediction: PREDICTION_MAP.get(prediction[0]) if prediction else None},
     {'header': 'rsid', 'value_path': 'rsid'},
     {'header': 'hgvsc', 'value_path': 'mainTranscript.hgvsc'},
     {'header': 'hgvsp', 'value_path': 'mainTranscript.hgvsp'},
@@ -134,22 +152,26 @@ def export_variants_handler(request, search_hash):
     for var in saved_variants_by_guid.values():
         saved_variants_by_family[var['familyGuid']]['{}-{}-{}'.format(var['xpos'], var['ref'], var['alt'])] = var
 
+    max_families_per_variant = max([len(variant['familyGuids']) for variant in variants])
+    max_samples_per_variant = max([len(variant['genotypes']) for variant in variants])
+
     rows = []
     for variant in variants:
         row = [_get_field_value(variant, config) for config in VARIANT_EXPORT_DATA]
-        for family_guid in variant['familyGuids']:
+        for i in range(max_families_per_variant):
+            family_guid = variant['familyGuids'][i] if i < len(variant['familyGuids']) else ''
             family_tags = saved_variants_by_family[family_guid].get('{}-{}-{}'.format(variant['xpos'], variant['ref'], variant['alt'])) or {}
             family_tags['family_id'] = family_ids_by_guid.get(family_guid)
             row += [_get_field_value(family_tags, config) for config in VARIANT_FAMILY_EXPORT_DATA]
-        for genotype in variant['genotypes'].values():
+        genotypes = variant['genotypes'].values()
+        for i in range(max_samples_per_variant):
+            genotype = genotypes[i] if i < len(genotypes) else {}
             row += [_get_field_value(genotype, config) for config in VARIANT_GENOTYPE_EXPORT_DATA]
         rows.append(row)
 
     header = [config['header'] for config in VARIANT_EXPORT_DATA]
-    max_families_per_variant = max([len(variant['familyGuids']) for variant in variants])
     for i in range(max_families_per_variant):
         header += ['{}_{}'.format(config['header'], i+1) for config in VARIANT_FAMILY_EXPORT_DATA]
-    max_samples_per_variant = max([len(variant['genotypes']) for variant in variants])
     for i in range(max_samples_per_variant):
         header += ['{}_{}'.format(config['header'], i+1) for config in VARIANT_GENOTYPE_EXPORT_DATA]
 
