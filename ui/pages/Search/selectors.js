@@ -8,7 +8,6 @@ import {
   getAnalysisGroupsByGuid,
   getLocusListsByGuid,
 } from 'redux/selectors'
-import { getVariantsExportData } from 'shared/utils/constants'
 import { SEARCH_FORM_NAME } from './constants'
 
 
@@ -18,9 +17,11 @@ export const getSearchedVariantsErrorMessage = state => state.searchedVariantsLo
 export const getSearchesByHash = state => state.searchesByHash
 export const getVariantSearchDisplay = state => state.variantSearchDisplay
 
+const getCurrentSearchHash = (state, props) => props.match.params.searchHash
+
 export const getCurrentSearchParams = createSelector(
   getSearchesByHash,
-  (state, props) => props.match.params.searchHash,
+  getCurrentSearchHash,
   (searchesByHash, searchHash) => searchesByHash[searchHash],
 )
 
@@ -72,13 +73,10 @@ export const getTotalVariantsCount = createSelector(
 )
 
 export const getSearchedVariantExportConfig = createSelector(
-  getSearchedVariants,
-  variants => [{
+  getCurrentSearchHash,
+  searchHash => [{
     name: 'Variant Search Results',
-    data: {
-      filename: 'searched_variants',
-      ...getVariantsExportData(variants),
-    },
+    url: `/api/search/${searchHash}/download`,
   }],
 )
 

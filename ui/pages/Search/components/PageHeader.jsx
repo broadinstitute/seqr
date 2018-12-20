@@ -24,7 +24,7 @@ const PAGE_CONFIGS = {
     entityUrlPath: `analysis_group/${entityGuid}`,
     originalPagePath: `family-group/guid/${entityGuid}/combine-mendelian-families`,
   }),
-  results: () => {},
+  results: () => ({}),
 }
 
 

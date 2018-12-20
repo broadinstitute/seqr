@@ -610,6 +610,7 @@ GENOTYPE_FIELDS_CONFIG = {
     'dp': {},
     'gq': {},
     'pl': {},
+    'sample_id': {},
     'num_alt': {'format_value': int, 'default_value': -1},
 }
 

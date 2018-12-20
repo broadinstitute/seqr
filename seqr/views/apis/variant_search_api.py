@@ -1,4 +1,6 @@
 import json
+import jmespath
+from collections import defaultdict
 from copy import deepcopy
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
@@ -9,6 +11,7 @@ from seqr.utils.es_utils import get_es_variants, XPOS_SORT_KEY, PATHOGENICTY_SOR
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.saved_variant_api import _saved_variant_genes, _add_locus_lists
 from seqr.views.pages.project_page import get_project_details
+from seqr.views.utils.export_table_utils import export_table
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variant
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions
@@ -72,6 +75,95 @@ def query_variants_handler(request, search_hash):
     })
 
 
+VARIANT_EXPORT_DATA = [
+    {'header': 'chrom'},
+    {'header': 'pos'},
+    {'header': 'ref'},
+    {'header': 'alt'},
+    {'header': 'gene', 'value_path': 'mainTranscript.geneSymbol'},
+    {'header': 'worst_consequence', 'value_path': 'mainTranscript.majorConsequence'},
+    {'header': '1kg_freq', 'value_path': 'populations.g1k.af'},
+    {'header': 'exac_freq', 'value_path': 'populations.exac.af'},
+    {'header': 'gnomad_genomes_freq', 'value_path': 'populations.gnomad_genomes.af'},
+    {'header': 'gnomad_exomes_freq', 'value_path': 'populations.gnomad_exomes.af'},
+    {'header': 'topmed_freq', 'value_path': 'populations.topmed.af'},
+    {'header': 'sift', 'value_path': 'predictions.sift'},
+    {'header': 'polyphen', 'value_path': 'predictions.polyphen'},
+    {'header': 'muttaster', 'value_path': 'predictions.mut_taster'},
+    {'header': 'fathmm', 'value_path': 'predictions.fathmm'},
+    {'header': 'rsid', 'value_path': 'rsid'},
+    {'header': 'hgvsc', 'value_path': 'mainTranscript.hgvsc'},
+    {'header': 'hgvsp', 'value_path': 'mainTranscript.hgvsp'},
+    {'header': 'clinvar_clinical_significance', 'value_path': 'clinvar.clinicalSignificance'},
+    {'header': 'clinvar_gold_stars', 'value_path': 'clinvar.goldStars'},
+]
+
+VARIANT_FAMILY_EXPORT_DATA = [
+    {'header': 'family_id'},
+    {'header': 'tags', 'process': lambda tags: '|'.join(['{} ({})'.format(tag['name'], tag['createdBy']) for tag in tags or []])},
+    {'header': 'notes', 'process': lambda notes: '|'.join(['{} ({})'.format(note['note'], note['createdBy']) for note in notes or []])},
+]
+
+VARIANT_GENOTYPE_EXPORT_DATA = [
+    {'header': 'sample_id', 'value_path': 'sampleId'},
+    {'header': 'num_alt_alleles', 'value_path': 'numAlt'},
+    {'header': 'filter'},
+    {'header': 'ad'},
+    {'header': 'dp'},
+    {'header': 'gq'},
+    {'header': 'ab'},
+]
+
+
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@csrf_exempt
+def export_variants_handler(request, search_hash):
+
+    search_model = VariantSearch.objects.get(search_hash=search_hash)
+    search_context = json.loads(search_model.search).get('searchedProjectFamilies')
+
+    # TODO handle multiple projects
+    get_project_and_check_permissions(search_context[0]['projectGuid'], request.user)
+    families = Family.objects.filter(guid__in=search_context[0]['familyGuids'])
+    family_ids_by_guid = {family.guid: family.family_id for family in families}
+
+    variants, _ = get_es_variants(search_model, families, page=1, num_results=search_model.total_results)
+
+    saved_variants_by_guid = _get_saved_variants(variants)
+    saved_variants_by_family = defaultdict(dict)
+    for var in saved_variants_by_guid.values():
+        saved_variants_by_family[var['familyGuid']]['{}-{}-{}'.format(var['xpos'], var['ref'], var['alt'])] = var
+
+    rows = []
+    for variant in variants:
+        row = [_get_field_value(variant, config) for config in VARIANT_EXPORT_DATA]
+        for family_guid in variant['familyGuids']:
+            family_tags = saved_variants_by_family[family_guid].get('{}-{}-{}'.format(variant['xpos'], variant['ref'], variant['alt'])) or {}
+            family_tags['family_id'] = family_ids_by_guid.get(family_guid)
+            row += [_get_field_value(family_tags, config) for config in VARIANT_FAMILY_EXPORT_DATA]
+        for genotype in variant['genotypes'].values():
+            row += [_get_field_value(genotype, config) for config in VARIANT_GENOTYPE_EXPORT_DATA]
+        rows.append(row)
+
+    header = [config['header'] for config in VARIANT_EXPORT_DATA]
+    max_families_per_variant = max([len(variant['familyGuids']) for variant in variants])
+    for i in range(max_families_per_variant):
+        header += ['{}_{}'.format(config['header'], i+1) for config in VARIANT_FAMILY_EXPORT_DATA]
+    max_samples_per_variant = max([len(variant['genotypes']) for variant in variants])
+    for i in range(max_samples_per_variant):
+        header += ['{}_{}'.format(config['header'], i+1) for config in VARIANT_GENOTYPE_EXPORT_DATA]
+
+    file_format = request.GET.get('file_format', 'tsv')
+
+    return export_table('search_results_{}'.format(search_hash), header, rows, file_format)
+
+
+def _get_field_value(value, config):
+    field_value = jmespath.search(config.get('value_path', config['header']), value)
+    if config.get('process'):
+        field_value = config['process'](field_value)
+    return field_value
+
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def search_context_handler(request, search_hash):
@@ -99,7 +191,7 @@ def search_context_handler(request, search_hash):
 
 def _get_saved_variants(variants):
     if not variants:
-        return [], {}
+        return {}
 
     variant_q = Q()
     for variant in variants:

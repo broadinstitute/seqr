@@ -103,7 +103,7 @@ const mapStateToProps = (state, ownProps) => ({
   searchedVariants: getSearchedVariants(state),
   loading: getSearchedVariantsIsLoading(state),
   variantSearchDisplay: getVariantSearchDisplay(state),
-  searchedVariantExportConfig: getSearchedVariantExportConfig(state),
+  searchedVariantExportConfig: getSearchedVariantExportConfig(state, ownProps),
   totalVariantsCount: getTotalVariantsCount(state, ownProps),
   errorMessage: getSearchedVariantsErrorMessage(state),
 })
