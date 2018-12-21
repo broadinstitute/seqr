@@ -262,6 +262,17 @@ def _genotype_filter(inheritance, quality_filter, family_samples_by_id):
         if min_gq:
             quality_q &= Q('range', gq={'gte': min_gq})
 
+    # If no inheritance specified only return variants where at least one of the requested samples has an alt allele
+    if not inheritance:
+        all_sample_ids = []
+        for samples_by_id in family_samples_by_id.values():
+            all_sample_ids += samples_by_id.keys()
+        genotypes_q &= Q(
+            'has_child',
+            type='genotype',
+            query=Q(Q('range', num_alt={'gte': 1}) & quality_q & Q('terms', sample_id=all_sample_ids))
+        )
+
     for family_guid, samples_by_id in family_samples_by_id.items():
 
         if inheritance:
@@ -269,10 +280,9 @@ def _genotype_filter(inheritance, quality_filter, family_samples_by_id):
             if addl_filter:
                 genotypes_q &= addl_filter
         else:
-            samples_q = Q('terms', sample_id=samples_by_id.keys()) & quality_q
-            # If no inheritance specified only return variants where at least one of the requested samples has an alt allele
-            # TODO this should be on a per-family basis (i.e. only return families with at least one alt allele)
-            genotypes_q &= Q('has_child', type='genotype', query=Q(Q('range', num_alt={'gte': 1}) & samples_q))
+            samples_q = Q('function_score',
+                          field_value_factor={'field': 'num_alt'},
+                          query=Q('terms', sample_id=samples_by_id.keys()) & quality_q)
 
         # Return variants where all requested samples meet the filtering criteria
         family_genotypes_child_q = _genotypes_child_q(samples_q, family_guid, samples_by_id)
@@ -643,7 +653,7 @@ def _parse_es_hit(raw_hit, family_samples_by_id, liftover_grch38_to_grch37, fiel
     for family_guid, samples_by_id in family_samples_by_id.items():
         # For multi-family search, all genotypes are returned including for those families where not
         # all individuals have the correct genotype
-        if family_guid in genotype_hits and len(samples_by_id) == genotype_hits[family_guid].hits.total:
+        if family_guid in genotype_hits and len(samples_by_id) == genotype_hits[family_guid].hits.total and genotype_hits[family_guid].hits.max_score > 0:
             family_guids.append(family_guid)
             genotypes.update({
                 samples_by_id[genotype_hit['sample_id']].guid: _get_field_values(genotype_hit, GENOTYPE_FIELDS_CONFIG)
