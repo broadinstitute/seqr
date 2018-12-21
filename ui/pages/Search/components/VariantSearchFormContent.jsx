@@ -57,9 +57,15 @@ const ToggleHeaderFieldColumn = styled(Grid.Column)`
     padding-right: 0 !important;
   }
       
-  .dropdown.icon {
-    margin: -0.75em !important;
-    transform: rotate(90deg) !important;
+  .dropdown {
+    &.fluid {
+      width: 100% !important;
+    }
+    
+    .icon {
+      margin: -0.75em !important;
+      transform: rotate(90deg) !important;
+    }
   }
       
   .rangeslider {
@@ -165,7 +171,7 @@ const FREQUENCY_PANEL = {
       },
       parse: value => FREQUENCIES.reduce((acc, { name }) => (name === THIS_CALLSET_FREQUENCY ? acc : { ...acc, [name]: value }), {}),
       homHemi: true,
-      inlineSlider: true,
+      inlineAF: true,
     },
   },
   fields: FREQUENCIES,

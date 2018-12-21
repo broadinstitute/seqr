@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import { Form } from 'semantic-ui-react'
 
 import { VerticalSpacer } from 'shared/components/Spacers'
-import { StepSlider, IntegerInput } from 'shared/components/form/Inputs'
+import { StepSlider, IntegerInput, Select } from 'shared/components/form/Inputs'
 
 const AF_STEPS = [
   0,
@@ -27,13 +27,15 @@ const AF_STEP_LABELS = {
   0.005: '5e-3',
 }
 
-const FrequencyIntegerInput = ({ label, value, field, nullField, inlineSlider, onChange }) =>
+const AF_OPTIONS = AF_STEPS.map(value => ({ value }))
+
+const FrequencyIntegerInput = ({ label, value, field, nullField, inlineAF, onChange }) =>
   <IntegerInput
     label={label}
     value={value[field]}
     min={0}
     max={100}
-    width={inlineSlider ? 4 : 8}
+    width={inlineAF ? 5 : 8}
     onChange={(val) => {
       const updateFields = { [field]: val }
       if (nullField) {
@@ -48,37 +50,37 @@ FrequencyIntegerInput.propTypes = {
   field: PropTypes.string,
   nullField: PropTypes.string,
   label: PropTypes.string,
-  inlineSlider: PropTypes.bool,
+  inlineAF: PropTypes.bool,
   onChange: PropTypes.func,
 }
 
-const FrequencyFilter = ({ value, onChange, homHemi, inlineSlider }) => {
-  const afSlider = (
-    <Form.Field
-      control={StepSlider}
-      value={value.af}
-      onChange={val => onChange({ ...value, af: val, ac: null })}
-      steps={AF_STEPS}
-      stepLabels={AF_STEP_LABELS}
-      width={inlineSlider && 8}
-      label={inlineSlider && 'AF'}
-    />
-  )
+const FrequencyFilter = ({ value, onChange, homHemi, inlineAF }) => {
+  const afProps = {
+    value: value.af,
+    onChange: val => onChange({ ...value, af: val, ac: null }),
+  }
   return (
     <span>
-      {!inlineSlider && <div>{afSlider} <VerticalSpacer height={15} /></div>}
+      {!inlineAF &&
+        <div>
+          <Form.Field control={StepSlider} steps={AF_STEPS} stepLabels={AF_STEP_LABELS} {...afProps} />
+          <VerticalSpacer height={15} />
+        </div>
+      }
       <Form.Group inline>
-        {inlineSlider && afSlider}
+        {inlineAF &&
+          <Select options={AF_OPTIONS} width={6} label="AF" {...afProps} />
+        }
         <FrequencyIntegerInput
           label="AC"
           field="ac"
           nullField="af"
           value={value}
-          inlineSlider={inlineSlider}
+          inlineAF={inlineAF}
           onChange={onChange}
         />
         {homHemi &&
-          <FrequencyIntegerInput label="H/H" field="hh" value={value} inlineSlider={inlineSlider} onChange={onChange} />
+          <FrequencyIntegerInput label="H/H" field="hh" value={value} inlineAF={inlineAF} onChange={onChange} />
         }
       </Form.Group>
     </span>
@@ -89,7 +91,7 @@ FrequencyFilter.propTypes = {
   value: PropTypes.object,
   onChange: PropTypes.func,
   homHemi: PropTypes.bool,
-  inlineSlider: PropTypes.bool,
+  inlineAF: PropTypes.bool,
 }
 
 export default FrequencyFilter
