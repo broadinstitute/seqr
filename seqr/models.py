@@ -4,6 +4,7 @@ import json
 import random
 
 from django.contrib.auth.models import User, Group
+from django.contrib.postgres.fields import JSONField
 from django.db import models
 from django.db.models import options
 from django.utils import timezone
@@ -571,7 +572,7 @@ class VariantTag(ModelWithGUID):
     variant_tag_type = models.ForeignKey('VariantTagType', on_delete=models.CASCADE)
 
     # context in which a variant tag was saved
-    variant_search = models.ForeignKey('VariantSearch', null=True, on_delete=models.SET_NULL)
+    variant_search = models.ForeignKey('VariantSearchResults', null=True, on_delete=models.SET_NULL)
     #  TODO deprecate and migrate to variant_search
     search_parameters = models.TextField(null=True, blank=True)  # aka. search url
 
@@ -778,13 +779,33 @@ class AnalysisGroup(ModelWithGUID):
         json_fields = ['guid', 'name', 'description']
 
 
-class VariantSearch(models.Model):
+class VariantSearch(ModelWithGUID):
+    name = models.CharField(max_length=200, null=True)
+    search = JSONField()
+
+    def __unicode__(self):
+        return self.name or self.id
+
+    def _compute_guid(self):
+        return 'VS%07d_%s' % (self.id, _slugify(self.name or ''))
+
+    class Meta:
+        unique_together = ('created_by', 'name')
+
+
+class VariantSearchResults(ModelWithGUID):
+    variant_search = models.ForeignKey('VariantSearch', on_delete=models.CASCADE)
     search_hash = models.CharField(max_length=50)
-    search = models.TextField()
     sort = models.CharField(null=True, max_length=50)
     es_index = models.TextField(null=True)
-    results = models.TextField(null=True)
+    results = JSONField(null=True)
     total_results = models.IntegerField(null=True)
+
+    def __unicode__(self):
+        return self.search_hash
+
+    def _compute_guid(self):
+        return 'VSR%07d_%s' % (self.id, _slugify(str(self)))
 
     class Meta:
         unique_together = ('search_hash', 'sort')

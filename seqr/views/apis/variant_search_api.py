@@ -6,7 +6,7 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.views.decorators.csrf import csrf_exempt
 
-from seqr.models import Family, Individual, SavedVariant, VariantSearch
+from seqr.models import Family, Individual, SavedVariant, VariantSearch, VariantSearchResults
 from seqr.utils.es_utils import get_es_variants, XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.saved_variant_api import _saved_variant_genes, _add_locus_lists
@@ -39,19 +39,25 @@ def query_variants_handler(request, search_hash):
     if sort == PATHOGENICTY_SORT_KEY and request.user.is_staff:
         sort = PATHOGENICTY_HGMD_SORT_KEY
 
-    search_models = VariantSearch.objects.filter(search_hash=search_hash)
-    if not search_models:
-        search_json = request.body
-        if not search_json:
+    results_model = VariantSearchResults.objects.filter(search_hash=search_hash).first()
+    if not results_model:
+        if not request.body:
             return create_json_response({}, status=400, reason='Invalid search hash: {}'.format(search_hash))
-    else:
-        search_json = search_models[0].search
-    search = json.loads(search_json)
-    search_model = search_models.filter(sort=sort).first()
-    if not search_model:
-        search_model = VariantSearch.objects.create(search_hash=search_hash, sort=sort, search=search_json)
+        search_model = VariantSearch.objects.create(created_by=request.user, search=json.loads(request.body))
+        results_model = VariantSearchResults.objects.create(
+            search_hash=search_hash,
+            variant_search=search_model,
+            sort=sort
+        )
+    elif results_model.sort != sort:
+        results_model, _ = VariantSearchResults.objects.get_or_create(
+            search_hash=search_hash,
+            variant_search=results_model.variant_search,
+            sort=sort
+        )
 
-    search_context = search.get('searchedProjectFamilies')
+    # TODO searchedProjectFamilies in results context not search object
+    search_context = results_model.variant_search.search.get('searchedProjectFamilies')
     if not search_context:
         return create_json_response({}, status=400, reason='Invalid search: no projects/ families specified')
 
@@ -59,19 +65,18 @@ def query_variants_handler(request, search_hash):
     project = get_project_and_check_permissions(search_context[0]['projectGuid'], request.user)
     families = Family.objects.filter(guid__in=search_context[0]['familyGuids'])
 
-    variants, total_results = get_es_variants(search_model, families, page=page, num_results=per_page)
+    variants, total_results = get_es_variants(results_model, families, page=page, num_results=per_page)
 
     genes = _saved_variant_genes(variants)
     # TODO add locus lists on the client side (?)
     _add_locus_lists(project, variants, genes)
     saved_variants_by_guid = _get_saved_variants(variants)
-    search['totalResults'] = total_results
 
     return create_json_response({
         'searchedVariants': variants,
         'savedVariantsByGuid': saved_variants_by_guid,
         'genesById': genes,
-        'search': search,
+        'search': dict(results_model.variant_search.search, totalResults=total_results),
     })
 
 
@@ -136,16 +141,15 @@ VARIANT_GENOTYPE_EXPORT_DATA = [
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def export_variants_handler(request, search_hash):
-
-    search_model = VariantSearch.objects.get(search_hash=search_hash)
-    search_context = json.loads(search_model.search).get('searchedProjectFamilies')
+    results_model = VariantSearchResults.objects.get(variant_search__search_hash=search_hash)
+    search_context = results_model.variant_search.search.get('searchedProjectFamilies')
 
     # TODO handle multiple projects
     get_project_and_check_permissions(search_context[0]['projectGuid'], request.user)
     families = Family.objects.filter(guid__in=search_context[0]['familyGuids'])
     family_ids_by_guid = {family.guid: family.family_id for family in families}
 
-    variants, _ = get_es_variants(search_model, families, page=1, num_results=search_model.total_results)
+    variants, _ = get_es_variants(results_model, families, page=1, num_results=results_model.total_results)
 
     saved_variants_by_guid = _get_saved_variants(variants)
     saved_variants_by_family = defaultdict(dict)
@@ -201,6 +205,7 @@ def search_context_handler(request, search_hash):
         'search': search,
     }
 
+    # TODO searchedProjectFamilies to results context
     for context in search.get('searchedProjectFamilies', []):
         for k, v in get_project_details(context['projectGuid'], request.user).items():
             if search_context.get(k):

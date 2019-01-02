@@ -43,14 +43,14 @@ def get_es_variants(search_model, families, page=1, num_results=100):
     if search_model.total_results is not None:
         end_index = min(end_index, search_model.total_results)
 
-    previous_search_results = json.loads(search_model.results or '{}')
+    previous_search_results = search_model.results or {}
     loaded_results = previous_search_results.get('all_results') or []
     if len(loaded_results) >= end_index:
         return loaded_results[start_index:end_index], search_model.total_results
     elif len(loaded_results):
         start_index = max(start_index, len(loaded_results))
 
-    search = json.loads(search_model.search)
+    search = search_model.variant_search.search
     sort = search_model.sort
 
     genes, intervals, invalid_items = parse_locus_list_items(search.get('locus', {}), all_new=True)
@@ -193,7 +193,7 @@ def get_es_variants(search_model, families, page=1, num_results=100):
     if len(loaded_results) == start_index:
         previous_search_results['all_results'] = loaded_results + variant_results
 
-    search_model.results = json.dumps(previous_search_results)
+    search_model.results = previous_search_results
     search_model.total_results = total_results
     search_model.es_index = elasticsearch_index
     search_model.save()
