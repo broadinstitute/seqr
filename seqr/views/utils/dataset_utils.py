@@ -147,7 +147,7 @@ def _update_samples_for_dataset(
 def _get_elasticsearch_index_samples(elasticsearch_index, project):
     sample_field_suffix = '_num_alt'
 
-    es_client = get_es_client()
+    es_client = get_es_client(timeout=30)
     index = elasticsearch_dsl.Index('{}*'.format(elasticsearch_index), using=es_client)
     try:
         field_mapping = index.get_field_mapping(fields=['*{}'.format(sample_field_suffix), 'join_field'], doc_type=[VARIANT_DOC_TYPE])
