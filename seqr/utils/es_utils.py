@@ -21,8 +21,8 @@ logger = logging.getLogger(__name__)
 VARIANT_DOC_TYPE = 'variant'
 
 
-def get_es_client():
-    return elasticsearch.Elasticsearch(host=settings.ELASTICSEARCH_SERVICE_HOSTNAME, timeout=30, retry_on_timeout=True)
+def get_es_client(timeout=30):
+    return elasticsearch.Elasticsearch(host=settings.ELASTICSEARCH_SERVICE_HOSTNAME, timeout=timeout, retry_on_timeout=True)
 
 
 # TODO once all project data is reloaded get rid of these checks
