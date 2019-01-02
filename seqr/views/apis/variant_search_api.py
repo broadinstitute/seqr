@@ -141,7 +141,7 @@ VARIANT_GENOTYPE_EXPORT_DATA = [
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def export_variants_handler(request, search_hash):
-    results_model = VariantSearchResults.objects.get(variant_search__search_hash=search_hash)
+    results_model = VariantSearchResults.objects.get(search_hash=search_hash)
     search_context = results_model.variant_search.search.get('searchedProjectFamilies')
 
     # TODO handle multiple projects
@@ -190,17 +190,18 @@ def _get_field_value(value, config):
         field_value = config['process'](field_value)
     return field_value
 
+
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def search_context_handler(request, search_hash):
     """Search variants.
     """
 
-    search_model = VariantSearch.objects.filter(search_hash=search_hash).first()
-    if not search_model:
+    results_model = VariantSearchResults.objects.filter(search_hash=search_hash).first()
+    if not results_model:
         return create_json_response({}, status=400, reason='Invalid search hash: {}'.format(search_hash))
 
-    search = json.loads(search_model.search)
+    search = results_model.variant_search.search
     search_context = {
         'search': search,
     }
