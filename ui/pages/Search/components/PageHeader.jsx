@@ -33,10 +33,10 @@ export const PageHeader = ({ projectsByGuid, familiesByGuid, analysisGroupsByGui
   let { pageType, entityGuid } = match.params
 
   if (pageType === 'results') {
-    const { searchedProjectFamilies } = searchesByHash[entityGuid] || {}
-    if (searchedProjectFamilies) {
-      if (searchedProjectFamilies.length === 1) {
-        const { projectGuid, familyGuids } = searchedProjectFamilies[0]
+    const { projectFamilies } = searchesByHash[entityGuid] || {}
+    if (projectFamilies) {
+      if (projectFamilies.length === 1) {
+        const { projectGuid, familyGuids } = projectFamilies[0]
         if (familyGuids.length === 1) {
           pageType = 'family'
           entityGuid = familyGuids[0] //eslint-disable-line prefer-destructuring

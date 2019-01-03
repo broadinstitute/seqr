@@ -35,37 +35,37 @@ export const getLoadedIntitialSearch = createSelector(
   (urlParams, searchParams, projectsByGuid, familiesByGuid, familiesByProjectGuid, analysisGroupByGuid) => {
 
     if (searchParams) {
-      return searchParams.searchedProjectFamilies.every(
+      return searchParams.projectFamilies.every(
         ({ projectGuid }) => projectsByGuid[projectGuid],
       ) ? searchParams : null
     }
 
-    let searchedProjectFamilies
+    let projectFamilies
     if (urlParams.projectGuid && familiesByProjectGuid[urlParams.projectGuid]) {
-      searchedProjectFamilies = [{
+      projectFamilies = [{
         projectGuid: urlParams.projectGuid,
         familyGuids: Object.keys(familiesByProjectGuid[urlParams.projectGuid]),
       }]
     }
     else if (urlParams.familyGuid && familiesByGuid[urlParams.familyGuid]) {
-      searchedProjectFamilies = [{
+      projectFamilies = [{
         projectGuid: familiesByGuid[urlParams.familyGuid].projectGuid,
         familyGuids: [urlParams.familyGuid],
       }]
     }
     else if (urlParams.analysisGroupGuid && analysisGroupByGuid[urlParams.analysisGroupGuid]) {
-      searchedProjectFamilies = [{
+      projectFamilies = [{
         projectGuid: analysisGroupByGuid[urlParams.analysisGroupGuid].projectGuid,
         familyGuids: analysisGroupByGuid[urlParams.analysisGroupGuid].familyGuids,
       }]
     }
 
-    return searchedProjectFamilies ? { searchedProjectFamilies } : null
+    return projectFamilies ? { projectFamilies } : null
   },
 )
 
-export const getSearchedProjectsFamiliesInput = state =>
-  formValueSelector(SEARCH_FORM_NAME)(state, 'searchedProjectFamilies')
+export const getProjectsFamiliesFieldInput = state =>
+  formValueSelector(SEARCH_FORM_NAME)(state, 'projectFamilies')
 
 export const getTotalVariantsCount = createSelector(
   getCurrentSearchParams,
@@ -81,11 +81,11 @@ export const getSearchedVariantExportConfig = createSelector(
 )
 
 export const getSearchedProjectsLocusLists = createSelector(
-  getSearchedProjectsFamiliesInput,
+  getProjectsFamiliesFieldInput,
   getProjectsByGuid,
   getLocusListsByGuid,
-  (searchedProjectFamilies, projectsByGuid, locusListsByGuid) => {
-    const locusListGuids = [...new Set(searchedProjectFamilies.reduce((acc, { projectGuid }) => (
+  (projectFamilies, projectsByGuid, locusListsByGuid) => {
+    const locusListGuids = [...new Set(projectFamilies.reduce((acc, { projectGuid }) => (
       projectsByGuid[projectGuid] ? [...acc, ...projectsByGuid[projectGuid].locusListGuids] : acc), [],
     ))]
     return locusListGuids.map(locusListGuid => locusListsByGuid[locusListGuid])

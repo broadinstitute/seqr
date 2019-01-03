@@ -10,11 +10,12 @@ import {
   getAnalysisGroupsGroupedByProjectGuid,
 } from 'redux/selectors'
 import { Multiselect, BooleanCheckbox } from 'shared/components/form/Inputs'
+import { configuredField } from 'shared/components/form/ReduxFormWrapper'
 import { getSelectedAnalysisGroups } from '../../constants'
-import { getSearchedProjectsFamiliesInput } from '../../selectors'
+import { getProjectsFamiliesFieldInput } from '../../selectors'
 
 
-const ProjectFamiliesFilter = (
+const BaseProjectFamiliesFilter = (
   { projectFamiliesByGuid, projectAnalysisGroupsByGuid, project, value, onChange, removeField, dispatch, ...props },
 ) => {
   const familyOptions = Object.values(projectFamiliesByGuid).map(
@@ -88,16 +89,7 @@ const ProjectFamiliesFilter = (
   )
 }
 
-const mapStateToProps = (state, ownProps) => {
-  const { projectGuid } = getSearchedProjectsFamiliesInput(state)[ownProps.index]
-  return ({
-    projectFamiliesByGuid: getFamiliesGroupedByProjectGuid(state)[projectGuid] || {},
-    projectAnalysisGroupsByGuid: getAnalysisGroupsGroupedByProjectGuid(state)[projectGuid] || {},
-    project: getProjectsByGuid(state)[projectGuid],
-  })
-}
-
-ProjectFamiliesFilter.propTypes = {
+BaseProjectFamiliesFilter.propTypes = {
   name: PropTypes.string,
   project: PropTypes.object,
   projectFamiliesByGuid: PropTypes.object,
@@ -108,5 +100,25 @@ ProjectFamiliesFilter.propTypes = {
   dispatch: PropTypes.func,
 }
 
+const mapStateToProps = (state, ownProps) => {
+  const { projectGuid } = getProjectsFamiliesFieldInput(state)[ownProps.index]
+  return ({
+    projectFamiliesByGuid: getFamiliesGroupedByProjectGuid(state)[projectGuid] || {},
+    projectAnalysisGroupsByGuid: getAnalysisGroupsGroupedByProjectGuid(state)[projectGuid] || {},
+    project: getProjectsByGuid(state)[projectGuid],
+  })
+}
 
-export default connect(mapStateToProps)(ProjectFamiliesFilter)
+const ProjectFamiliesFilter = connect(mapStateToProps)(BaseProjectFamiliesFilter)
+
+const validateFamilies = value => (value && value.length ? undefined : 'Required')
+
+const PROJECT_FAMILIES_FIELD = {
+  name: 'projectFamilies',
+  arrayFieldName: 'familyGuids',
+  component: ProjectFamiliesFilter,
+  validate: validateFamilies,
+  isArrayField: true,
+}
+
+export default () => configuredField(PROJECT_FAMILIES_FIELD)

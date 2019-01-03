@@ -14,7 +14,7 @@ from seqr.views.pages.project_page import get_project_details
 from seqr.views.utils.export_table_utils import export_table
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variant
-from seqr.views.utils.permissions_utils import get_project_and_check_permissions
+from seqr.views.utils.permissions_utils import check_permissions
 
 
 GENOTYPE_AC_LOOKUP = {
@@ -43,12 +43,25 @@ def query_variants_handler(request, search_hash):
     if not results_model:
         if not request.body:
             return create_json_response({}, status=400, reason='Invalid search hash: {}'.format(search_hash))
-        search_model = VariantSearch.objects.create(created_by=request.user, search=json.loads(request.body))
+
+        search_context = json.loads(request.body)
+
+        project_families = search_context.get('projectFamilies')
+        if not project_families:
+            return create_json_response({}, status=400, reason='Invalid search: no projects/ families specified')
+
+        search_model = VariantSearch.objects.create(created_by=request.user, search=search_context.get('search', {}))
+
         results_model = VariantSearchResults.objects.create(
             search_hash=search_hash,
             variant_search=search_model,
             sort=sort
         )
+
+        # TODO handle multiple projects
+        results_model.families = Family.objects.filter(guid__in=project_families[0]['familyGuids'])
+        results_model.save()
+
     elif results_model.sort != sort:
         results_model, _ = VariantSearchResults.objects.get_or_create(
             search_hash=search_hash,
@@ -56,27 +69,21 @@ def query_variants_handler(request, search_hash):
             sort=sort
         )
 
-    # TODO searchedProjectFamilies in results context not search object
-    search_context = results_model.variant_search.search.get('searchedProjectFamilies')
-    if not search_context:
-        return create_json_response({}, status=400, reason='Invalid search: no projects/ families specified')
+    _check_results_permission(results_model, request.user)
 
-    # TODO handle multiple projects
-    project = get_project_and_check_permissions(search_context[0]['projectGuid'], request.user)
-    families = Family.objects.filter(guid__in=search_context[0]['familyGuids'])
-
-    variants, total_results = get_es_variants(results_model, families, page=page, num_results=per_page)
+    variants = get_es_variants(results_model, page=page, num_results=per_page)
 
     genes = _saved_variant_genes(variants)
     # TODO add locus lists on the client side (?)
-    _add_locus_lists(project, variants, genes)
+    # TODO handle multiple projects
+    _add_locus_lists(results_model.families.first().project, variants, genes)
     saved_variants_by_guid = _get_saved_variants(variants)
 
     return create_json_response({
         'searchedVariants': variants,
         'savedVariantsByGuid': saved_variants_by_guid,
         'genesById': genes,
-        'search': dict(results_model.variant_search.search, totalResults=total_results),
+        'search': _get_search_context(results_model),
     })
 
 
@@ -142,14 +149,12 @@ VARIANT_GENOTYPE_EXPORT_DATA = [
 @csrf_exempt
 def export_variants_handler(request, search_hash):
     results_model = VariantSearchResults.objects.get(search_hash=search_hash)
-    search_context = results_model.variant_search.search.get('searchedProjectFamilies')
 
-    # TODO handle multiple projects
-    get_project_and_check_permissions(search_context[0]['projectGuid'], request.user)
-    families = Family.objects.filter(guid__in=search_context[0]['familyGuids'])
-    family_ids_by_guid = {family.guid: family.family_id for family in families}
+    _check_results_permission(results_model, request.user)
 
-    variants, _ = get_es_variants(results_model, families, page=1, num_results=results_model.total_results)
+    family_ids_by_guid = {family.guid: family.family_id for family in results_model.families}
+
+    variants = get_es_variants(results_model, page=1, num_results=results_model.total_results)
 
     saved_variants_by_guid = _get_saved_variants(variants)
     saved_variants_by_family = defaultdict(dict)
@@ -201,20 +206,40 @@ def search_context_handler(request, search_hash):
     if not results_model:
         return create_json_response({}, status=400, reason='Invalid search hash: {}'.format(search_hash))
 
-    search = results_model.variant_search.search
-    search_context = {
-        'search': search,
+    search_context = _get_search_context(results_model)
+    response = {
+        'search': search_context,
     }
 
-    # TODO searchedProjectFamilies to results context
-    for context in search.get('searchedProjectFamilies', []):
-        for k, v in get_project_details(context['projectGuid'], request.user).items():
-            if search_context.get(k):
-                search_context[k].update(v)
+    for project_family in search_context.get('projectFamilies'):
+        for k, v in get_project_details(project_family['projectGuid'], request.user).items():
+            if response.get(k):
+                response[k].update(v)
             else:
-                search_context[k] = v
+                response[k] = v
 
-    return create_json_response(search_context)
+    return create_json_response(response)
+
+
+def _check_results_permission(results_model, user):
+    projects = {family.project for family in results_model.families.all()}
+    for project in projects:
+        check_permissions(project, user)
+
+
+def _get_search_context(results_model):
+    project_families = defaultdict(list)
+    for family in results_model.families.all():
+        project_families[family.project.guid].append(family.guid)
+
+    return {
+        'search': results_model.variant_search.search,
+        'projectFamilies': [
+            {'projectGuid': project_guid, 'familyGuids': family_guids}
+            for project_guid, family_guids in project_families.items()
+        ],
+        'totalResults': results_model.total_results,
+    }
 
 
 def _get_saved_variants(variants):

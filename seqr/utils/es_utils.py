@@ -36,7 +36,7 @@ def is_nested_genotype_index(es_index):
         return False
 
 
-def get_es_variants(search_model, families, page=1, num_results=100):
+def get_es_variants(search_model, page=1, num_results=100):
 
     start_index = (page - 1) * num_results
     end_index = page * num_results
@@ -46,7 +46,7 @@ def get_es_variants(search_model, families, page=1, num_results=100):
     previous_search_results = search_model.results or {}
     loaded_results = previous_search_results.get('all_results') or []
     if len(loaded_results) >= end_index:
-        return loaded_results[start_index:end_index], search_model.total_results
+        return loaded_results[start_index:end_index]
     elif len(loaded_results):
         start_index = max(start_index, len(loaded_results))
 
@@ -58,7 +58,7 @@ def get_es_variants(search_model, families, page=1, num_results=100):
         raise Exception('Invalid genes/intervals: {}'.format(', '.join(invalid_items)))
 
     samples = Sample.objects.filter(
-        individual__family__in=families,
+        individual__family__in=search_model.families.all(),
         dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
         sample_status=Sample.SAMPLE_STATUS_LOADED,
         elasticsearch_index__isnull=False,
@@ -198,7 +198,7 @@ def get_es_variants(search_model, families, page=1, num_results=100):
     search_model.es_index = elasticsearch_index
     search_model.save()
 
-    return variant_results, total_results
+    return variant_results
 
 
 AFFECTED = Individual.AFFECTED_STATUS_AFFECTED

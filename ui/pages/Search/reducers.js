@@ -28,9 +28,9 @@ export const loadProjectFamiliesContext = ({ projectGuid, familyGuid, analysisGr
   }
   if (searchHash) {
     return (dispatch, getState) => {
-      const { searchedProjectFamilies } = getState().searchesByHash[searchHash] || {}
-      if (searchedProjectFamilies) {
-        searchedProjectFamilies.forEach(searchContext => loadProject(searchContext.projectGuid)(dispatch, getState))
+      const { projectFamilies } = getState().searchesByHash[searchHash] || {}
+      if (projectFamilies) {
+        projectFamilies.forEach(searchContext => loadProject(searchContext.projectGuid)(dispatch, getState))
       } else {
         dispatch({ type: REQUEST_PROJECT_DETAILS })
         new HttpRequestHelper(`/api/search_context/${searchHash}`,

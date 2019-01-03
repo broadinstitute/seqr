@@ -14,7 +14,7 @@ import FrequencyFilter from './filters/FrequencyFilter'
 import annotationsFilterLayout from './filters/AnnotationsFilterLayout'
 import { LocusListSelector } from './filters/LocationFilter'
 import CustomInheritanceFilter from './filters/CustomInheritanceFilter'
-import ProjectFamiliesFilter from './filters/ProjectFamiliesFilter'
+import ProjectFamiliesField from './filters/ProjectFamiliesField'
 import {
   INHERITANCE_FILTER_OPTIONS,
   INHERITANCE_LOOKUP,
@@ -199,15 +199,6 @@ const QUALITY_PANEL = {
 }
 
 
-const validateFamilies = value => (value && value.length ? undefined : 'Required')
-const PROJECT_FAMILIES_FIELD = {
-  name: 'searchedProjectFamilies',
-  arrayFieldName: 'familyGuids',
-  component: ProjectFamiliesFilter,
-  validate: validateFamilies,
-  isArrayField: true,
-}
-
 const HeaderContent = ({ name, title, inputSize, inputProps }) =>
   <Grid>
     <Grid.Row>
@@ -269,8 +260,10 @@ class VariantSearchFormContent extends React.Component {
   render() {
     return (
       <div>
-        {configuredField(PROJECT_FAMILIES_FIELD)}
-        <Accordion fluid panels={PANELS} />
+        <ProjectFamiliesField />
+        <FormSection name="search">
+          <Accordion fluid panels={PANELS} />
+        </FormSection>
       </div>
     )
   }
