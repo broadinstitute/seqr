@@ -118,4 +118,6 @@ const mapStateToProps = state => ({
   user: getUser(state),
 })
 
+export { Pathogenicity as BasePathogenicity }
+
 export default connect(mapStateToProps)(Pathogenicity)

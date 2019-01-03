@@ -545,7 +545,7 @@ const clinsigSeverity = (variant, user) => {
 
 
 const VARIANT_SORT_OPTONS = [
-  { value: SORT_BY_FAMILY_GUID, text: 'Family', comparator: (a, b) => a.familyGuid.localeCompare(b.familyGuid) },
+  { value: SORT_BY_FAMILY_GUID, text: 'Family', comparator: (a, b) => a.familyGuids[0].localeCompare(b.familyGuids[0]) },
   { value: SORT_BY_XPOS, text: 'Position', comparator: (a, b) => a.xpos - b.xpos },
   {
     value: SORT_BY_PROTEIN_CONSQ,
@@ -637,7 +637,7 @@ export const VARIANT_EXPORT_DATA = [
   { header: 'ref' },
   { header: 'alt' },
   { header: 'gene', getVal: variant => variant.mainTranscript.geneSymbol },
-  { header: 'family', getVal: variant => variant.familyGuid.split(/_(.+)/)[1] },
+  { header: 'family', getVal: variant => variant.familyGuids[0].split(/_(.+)/)[1] },
   { header: 'tags', getVal: variant => variant.tags.map(tag => tag.name).join('|') },
   { header: 'notes', getVal: variant => variant.notes.map(note => `${note.createdBy}: ${note.note}`).join('|') },
   { header: 'worst_consequence', getVal: variant => variant.mainTranscript.majorConsequence },
