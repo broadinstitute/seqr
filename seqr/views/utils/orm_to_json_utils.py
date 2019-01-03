@@ -317,7 +317,7 @@ def get_json_for_analysis_group(analysis_group, **kwargs):
     return _get_json_for_model(analysis_group, get_json_for_models=get_json_for_analysis_groups, **kwargs)
 
 
-def get_json_for_saved_variant(saved_variant, add_tags=False, project_guid=None, family_guid=None):
+def get_json_for_saved_variant(saved_variant, add_tags=False, project_guid=None):
     """Returns a JSON representation of the given variant.
 
     Args:
@@ -340,7 +340,6 @@ def get_json_for_saved_variant(saved_variant, add_tags=False, project_guid=None,
         return variant_json
 
     nested_fields = [
-        {'fields': ('family', 'guid'), 'value': family_guid},
         {'fields': ('project', 'guid'), 'value': project_guid},
     ]
 

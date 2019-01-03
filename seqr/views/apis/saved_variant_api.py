@@ -89,9 +89,7 @@ def create_saved_variant_handler(request):
     elif non_variant_json.get('tags'):
         _create_new_tags(saved_variant, non_variant_json, request.user)
 
-    variant_json.update(get_json_for_saved_variant(
-        saved_variant, add_tags=True, family_guid=family.guid, project_guid=family.project.guid,
-    ))
+    variant_json.update(get_json_for_saved_variant(saved_variant, add_tags=True, project_guid=family.project.guid))
     return create_json_response({
         'savedVariantsByGuid': {saved_variant.guid: variant_json},
     })

@@ -20,7 +20,7 @@ class GeneAPITest(TransactionTestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
 
-        gene = response.json()[GENE_ID]
+        gene = response.json()['genesById'][GENE_ID]
         self.assertSetEqual(set(gene.keys()), {
             'chromGrch37', 'chromGrch38', 'codingRegionSizeGrch37', 'codingRegionSizeGrch38', 'constraints',
             'diseaseDesc', 'endGrch37', 'endGrch38', 'functionDesc', 'gencodeGeneType', 'geneId', 'geneSymbol',
@@ -37,7 +37,7 @@ class GeneAPITest(TransactionTestCase):
         ))
 
         self.assertEqual(response.status_code, 200)
-        new_note_response = response.json()[GENE_ID]['notes'][0]
+        new_note_response = response.json()['genesById'][GENE_ID]['notes'][0]
         self.assertEqual(new_note_response['note'], 'new_gene_note')
 
         new_gene_note = GeneNote.objects.filter(guid=new_note_response['noteGuid']).first()
@@ -51,7 +51,7 @@ class GeneAPITest(TransactionTestCase):
 
         self.assertEqual(response.status_code, 200)
 
-        updated_note_response = response.json()[GENE_ID]['notes'][0]
+        updated_note_response = response.json()['genesById'][GENE_ID]['notes'][0]
         self.assertEqual(updated_note_response['note'], 'updated_gene_note')
 
         updated_gene_note = GeneNote.objects.filter(guid=updated_note_response['noteGuid']).first()

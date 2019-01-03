@@ -85,7 +85,7 @@ class JSONUtilsTest(TestCase):
         variant = SavedVariant.objects.first()
         json = get_json_for_saved_variant(variant)
 
-        fields = {'variantId', 'familyGuid', 'xpos', 'ref', 'alt', 'chrom', 'pos'}
+        fields = {'variantGuid', 'variantId', 'projectGuid', 'familyGuids', 'xpos', 'ref', 'alt'}
         self.assertSetEqual(set(json.keys()), fields)
 
         fields.update({'tags', 'functionalData', 'notes'})

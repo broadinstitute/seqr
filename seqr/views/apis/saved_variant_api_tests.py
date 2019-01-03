@@ -24,15 +24,16 @@ class ProjectAPITest(TransactionTestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
 
-        variants = response.json()['savedVariants']
+        variants = response.json()['savedVariantsByGuid']
         self.assertSetEqual(set(variants.keys()), {'SV0000002_1248367227_r0390_100', 'SV0000001_2103343353_r0390_100'})
 
         variant = variants['SV0000001_2103343353_r0390_100']
         self.assertSetEqual(
             set(variant.keys()),
-            {'variantId', 'xpos', 'ref', 'alt', 'chrom', 'pos', 'genomeVersion', 'liftedOverGenomeVersion',
-             'liftedOverChrom', 'liftedOverPos', 'familyGuid', 'tags', 'functionalData', 'notes', 'clinvar',
-             'origAltAlleles', 'mainTranscript', 'genotypes', 'hgmd', 'annotation', 'transcripts', 'locusLists'}
+            {'variantId', 'variantGuid', 'xpos', 'ref', 'alt', 'chrom', 'pos', 'genomeVersion', 'liftedOverGenomeVersion',
+             'liftedOverChrom', 'liftedOverPos', 'familyGuids', 'projectGuid', 'tags', 'functionalData', 'notes', 'clinvar',
+             'originalAltAlleles', 'mainTranscript', 'genotypes', 'hgmd', 'transcripts', 'locusLists', 'populations',
+             'predictions', 'rsid'}
         )
         self.assertSetEqual(set(variant['genotypes'].keys()), {'S000131_na19679', 'S000129_na19675'})
 
@@ -40,13 +41,13 @@ class ProjectAPITest(TransactionTestCase):
         response = self.client.get('{}?families=F000002_2'.format(url))
         self.assertEqual(response.status_code, 200)
 
-        self.assertSetEqual(set(response.json()['savedVariants'].keys()), {'SV0000002_1248367227_r0390_100'})
+        self.assertSetEqual(set(response.json()['savedVariantsByGuid'].keys()), {'SV0000002_1248367227_r0390_100'})
 
         # filter by variant guid
         response = self.client.get('{}{}'.format(url, VARIANT_GUID))
         self.assertEqual(response.status_code, 200)
 
-        self.assertSetEqual(set(response.json()['savedVariants'].keys()), {VARIANT_GUID})
+        self.assertSetEqual(set(response.json()['savedVariantsByGuid'].keys()), {VARIANT_GUID})
 
         # filter by invalid variant guid
         response = self.client.get('{}foo'.format(url))
@@ -62,7 +63,7 @@ class ProjectAPITest(TransactionTestCase):
         ))
 
         self.assertEqual(response.status_code, 200)
-        new_note_response = response.json()[VARIANT_GUID]['notes'][0]
+        new_note_response = response.json()['savedVariantsByGuid'][VARIANT_GUID]['notes'][0]
         self.assertEqual(new_note_response['note'], 'new_variant_note')
         self.assertEqual(new_note_response['submitToClinvar'], True)
 
@@ -78,7 +79,7 @@ class ProjectAPITest(TransactionTestCase):
 
         self.assertEqual(response.status_code, 200)
 
-        updated_note_response = response.json()[VARIANT_GUID]['notes'][0]
+        updated_note_response = response.json()['savedVariantsByGuid'][VARIANT_GUID]['notes'][0]
         self.assertEqual(updated_note_response['note'], 'updated_variant_note')
         self.assertEqual(updated_note_response['submitToClinvar'], False)
 
@@ -116,12 +117,12 @@ class ProjectAPITest(TransactionTestCase):
         }))
         self.assertEqual(response.status_code, 200)
 
-        tags = response.json()[VARIANT_GUID]['tags']
+        tags = response.json()['savedVariantsByGuid'][VARIANT_GUID]['tags']
         self.assertEqual(len(tags), 2)
         self.assertListEqual(["Review", "Excluded"], [vt['name'] for vt in tags])
         self.assertListEqual(["Review", "Excluded"], [vt.variant_tag_type.name for vt in VariantTag.objects.filter(saved_variant__guid=VARIANT_GUID)])
 
-        functionalData = response.json()[VARIANT_GUID]['functionalData']
+        functionalData = response.json()['savedVariantsByGuid'][VARIANT_GUID]['functionalData']
         self.assertEqual(len(functionalData), 2)
         self.assertListEqual(["Biochemical Function", "Bonferroni corrected p-value"], [vt['name'] for vt in functionalData])
         self.assertListEqual(["An updated note", "0.05"], [vt['metadata'] for vt in functionalData])

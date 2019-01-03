@@ -7,6 +7,7 @@ from seqr.views.utils.test_utils import _check_login
 
 MME_INDIVIDUAL_ID = 'IND_012'
 
+PROJECT_GUID = 'R0001_1kg'
 
 def find_mme_matches(search):
     return [{
@@ -33,7 +34,7 @@ class ProjectPageTest(TestCase):
     @mock.patch('seqr.views.pages.project_page._has_gene_search', _has_gene_search)
     @mock.patch('seqr.views.apis.locus_list_api.get_objects_for_group', get_objects_for_group)
     def test_project_page_data(self):
-        url = reverse(project_page_data, args=['R0001_1kg'])
+        url = reverse(project_page_data, args=[PROJECT_GUID])
         _check_login(self, url)
 
         response = self.client.get(url)
@@ -42,13 +43,13 @@ class ProjectPageTest(TestCase):
         response_json = response.json()
         self.assertSetEqual(
             set(response_json.keys()),
-            {'project', 'familiesByGuid', 'individualsByGuid', 'samplesByGuid', 'locusListsByGuid', 'analysisGroupsByGuid', 'matchmakerSubmissions'}
+            {'projectsByGuid', 'familiesByGuid', 'individualsByGuid', 'samplesByGuid', 'locusListsByGuid', 'analysisGroupsByGuid', 'matchmakerSubmissions'}
         )
         self.assertSetEqual(
-            set(response_json['project'].keys()),
+            set(response_json['projectsByGuid'][PROJECT_GUID].keys()),
             {'collaborators', 'locusListGuids', 'variantTagTypes', 'variantFunctionalTagTypes', 'hasGeneSearch',
              'detailsLoaded', 'projectGuid', 'projectCategoryGuids', 'canEdit', 'name', 'description', 'createdDate',
-             'lastModifiedDate', 'isPhenotipsEnabled', 'phenotipsUserId', 'deprecatedProjectId',
+             'lastModifiedDate', 'isPhenotipsEnabled', 'phenotipsUserId', 'deprecatedProjectId', 'hasNewSearch',
              'deprecatedLastAccessedDate', 'isMmeEnabled', 'mmePrimaryDataOwner', 'genomeVersion', 'discoveryTags'}
         )
         self.assertSetEqual(
