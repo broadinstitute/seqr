@@ -2,13 +2,12 @@ import React from 'react'
 import ReactDOMServer from 'react-dom/server'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Icon } from 'semantic-ui-react'
 
 import { getIndividualsByGuid, getSamplesByGuid } from 'redux/selectors'
 import Modal from '../modal/Modal'
 import PedigreeIcon from '../icons/PedigreeIcon'
 import IGV from '../graph/IGV'
-import ButtonLink from './ButtonLink'
+import { ButtonLink } from '../StyledComponents'
 import { DATASET_TYPE_READ_ALIGNMENTS } from '../../utils/constants'
 import { getLocus } from '../panel/variants/Annotations'
 
@@ -78,7 +77,7 @@ const ShowReadsButton = ({ variant, familyGuid, samplesByGuid, individualsByGuid
 
   return (
     <Modal
-      trigger={<ButtonLink><Icon name="options" /> SHOW READS</ButtonLink>}
+      trigger={<ButtonLink icon="options" content="SHOW READS" />}
       modalName={`${familyGuid}-${locus}-igv`}
       title="IGV"
       size="fullscreen"

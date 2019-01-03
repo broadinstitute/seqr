@@ -79,7 +79,7 @@ const LocusListDetail = ({ locusList, onSubmit }) => {
           compact
           showErrorPanel
         />
-        <ExportTableButton downloads={itemExportDownloads} buttonText="Download" float="right" fontWeight="300" fontSize=".75em" />
+        <ExportTableButton downloads={itemExportDownloads} buttonText="Download" floated="right" fontWeight="300" />
       </Header>
       <Grid columns={8}>
         {(Object.keys(locusList.parsedItems.itemMap).length) ?

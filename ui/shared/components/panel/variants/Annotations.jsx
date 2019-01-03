@@ -5,7 +5,7 @@ import { Popup, Label, Icon } from 'semantic-ui-react'
 
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
 import Modal from '../../modal/Modal'
-import ButtonLink from '../../buttons/ButtonLink'
+import { ButtonLink } from '../../StyledComponents'
 import Transcripts from './Transcripts'
 import { LocusListLabels } from './VariantGene'
 import { GENOME_VERSION_37 } from '../../../utils/constants'

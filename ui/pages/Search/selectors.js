@@ -67,6 +67,9 @@ export const getLoadedIntitialSearch = createSelector(
 export const getProjectsFamiliesFieldInput = state =>
   formValueSelector(SEARCH_FORM_NAME)(state, 'projectFamilies')
 
+export const getProjectsFamiliesSearchInput = state =>
+  formValueSelector(SEARCH_FORM_NAME)(state, 'search')
+
 export const getTotalVariantsCount = createSelector(
   getCurrentSearchParams,
   searchParams => (searchParams || {}).totalResults,

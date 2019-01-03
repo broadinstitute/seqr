@@ -1,10 +1,11 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import ButtonLink from 'shared/components/buttons/ButtonLink'
 import { Icon, Transition } from 'semantic-ui-react'
 
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
+import { HorizontalSpacer } from '../../Spacers'
+import { ButtonLink } from '../../StyledComponents'
 
 const INDICATOR_MAP = {
   D: { color: 'red', value: 'damaging' },
@@ -29,10 +30,6 @@ const PredictionValue = styled.span`
   font-weight: bolder;
   color: grey;
   text-transform: uppercase;
-`
-
-const StyledButtonLink = styled(ButtonLink)`
-  padding-left: 20px;
 `
 
 const NUM_TO_SHOW_ABOVE_THE_FOLD = 6 // how many predictors to show immediately
@@ -124,9 +121,10 @@ export default class Predictions extends React.PureComponent {
                   <Prediction key={predictorField.field} {...predictorField} />,
                 )
               }
-              <StyledButtonLink onClick={this.toggleShowMore}>
+              <ButtonLink onClick={this.toggleShowMore}>
+                <HorizontalSpacer width={20} />
                 {this.state.showMore ? 'hide' : 'show more...'}
-              </StyledButtonLink>
+              </ButtonLink>
             </Transition.Group>
         }
       </div>

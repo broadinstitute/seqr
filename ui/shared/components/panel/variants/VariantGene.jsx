@@ -110,7 +110,7 @@ const VariantGene = ({ geneId, gene, project, variant, compact }) => {
 
   const geneSummary = (
     <div>
-      <ShowGeneModal gene={gene} fontWeight="bold" fontSize={compact ? '1.2em' : '1.5em'} modalId={variant.variantId} />
+      <ShowGeneModal gene={gene} fontWeight="bold" size={compact ? 'large' : 'huge'} modalId={variant.variantId} />
       <HorizontalSpacer width={10} />
       {compact ? geneConsequence :
       <GeneLinks>

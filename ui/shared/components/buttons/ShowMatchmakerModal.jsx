@@ -17,7 +17,7 @@ import Modal from '../modal/Modal'
 import SortableTable from '../table/SortableTable'
 import DataLoader from '../DataLoader'
 import { HorizontalSpacer } from '../Spacers'
-import ButtonLink from './ButtonLink'
+import { ButtonLink } from '../StyledComponents'
 
 
 const MATCH_FIELDS = {

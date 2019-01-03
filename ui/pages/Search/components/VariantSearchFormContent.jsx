@@ -5,7 +5,7 @@ import { FormSection } from 'redux-form'
 import { Form, Accordion, Header, Segment, Grid, List } from 'semantic-ui-react'
 
 import { VerticalSpacer } from 'shared/components/Spacers'
-import ButtonLink from 'shared/components/buttons/ButtonLink'
+import { ButtonLink } from 'shared/components/StyledComponents'
 import { configuredField, configuredFields } from 'shared/components/form/ReduxFormWrapper'
 import { Select, LabeledSlider, CheckboxGroup } from 'shared/components/form/Inputs'
 import Modal from 'shared/components/modal/Modal'
@@ -79,6 +79,15 @@ const ToggleHeaderFieldColumn = styled(Grid.Column)`
   }
 `
 
+const DetailLink = styled(ButtonLink)`
+  &.ui.button.basic {
+    margin-left: .2em;
+    margin-right: 0;
+    font-weight: initial;
+    font-style: inherit;
+  }
+`
+
 const JsonSelectProps = options => ({
   component: Select,
   format: JSON.stringify,
@@ -121,7 +130,7 @@ const INHERITANCE_PANEL = {
   helpText: (
     <span>
       Filter by the mode of inheritance. Choose from the built-in search methods (described
-      <Modal trigger={<ButtonLink> here</ButtonLink>} title="Inheritance Searching" modalName="inheritanceModes">
+      <Modal trigger={<DetailLink>here</DetailLink>} title="Inheritance Searching" modalName="inheritanceModes">
         <i>seqr</i> implements the following set of standard Mendelian inheritance methods to identify variants that
         segregate with a phenotype in a family
         {INHERITANCE_FILTER_OPTIONS.filter(({ value }) => value !== ALL_INHERITANCE_FILTER).map(({ value, text, detail }) =>

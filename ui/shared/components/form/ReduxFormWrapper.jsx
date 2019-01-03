@@ -10,7 +10,7 @@ import { Form, Message, Icon, Popup } from 'semantic-ui-react'
 import flatten from 'lodash/flatten'
 
 import { closeModal, setModalConfirm } from 'redux/utils/modalReducer'
-import ButtonLink from '../buttons/ButtonLink'
+import { ButtonLink } from '../StyledComponents'
 import ButtonPanel from './ButtonPanel'
 import RequestStatus from './RequestStatus'
 

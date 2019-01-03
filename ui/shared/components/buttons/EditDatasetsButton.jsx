@@ -6,7 +6,7 @@ import Modal from '../modal/Modal'
 import UpdateDatasetForm, {
   ES_INDEX_FIELD, DATASET_NAME_FIELD, DATASET_PATH_FIELD, IGNORE_EXTRAS_FIELD, SAMPLE_TYPE_FIELD, mappingFileField,
 } from '../form/UpdateDatasetForm'
-import ButtonLink from './ButtonLink'
+import { ButtonLink } from '../StyledComponents'
 
 
 const MODAL_NAME = 'Datasets'

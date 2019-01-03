@@ -44,7 +44,7 @@ const BaseFieldView = (props) => {
       formFields={props.formFields}
       formContainer={<div style={props.modalStyle} />}
       showErrorPanel={props.showErrorPanel}
-      size="small"
+      size="tiny"
     />
     : (
       <DispatchRequestButton
@@ -60,7 +60,7 @@ const BaseFieldView = (props) => {
       initialValues={props.initialValues}
       onSubmit={props.onSubmit}
       confirmDialog={props.deleteConfirm}
-      size="small"
+      size="tiny"
     />
   )
   const buttons = [editButton, deleteButton]

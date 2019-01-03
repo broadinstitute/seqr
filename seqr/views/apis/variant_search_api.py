@@ -152,7 +152,7 @@ def export_variants_handler(request, search_hash):
 
     _check_results_permission(results_model, request.user)
 
-    family_ids_by_guid = {family.guid: family.family_id for family in results_model.families}
+    family_ids_by_guid = {family.guid: family.family_id for family in results_model.families.all()}
 
     variants = get_es_variants(results_model, page=1, num_results=results_model.total_results)
 
