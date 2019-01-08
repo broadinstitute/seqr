@@ -8,6 +8,7 @@ from collections import defaultdict
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 
+from reference_data.models import HumanPhenotypeOntology
 from seqr.model_utils import get_or_create_seqr_model, delete_seqr_model
 from seqr.models import Sample, Individual, Family, CAN_EDIT
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
@@ -462,17 +463,21 @@ def export_individuals(
     file_format,
 
     include_project_name=False,
+    include_project_created_date=False,
     include_display_name=False,
     include_created_date=False,
     include_case_review_status=False,
     include_case_review_last_modified_date=False,
     include_case_review_last_modified_by=False,
     include_case_review_discussion=False,
+    include_analysis_status=False,
+    include_coded_phenotype=False,
     include_hpo_terms_present=False,
     include_hpo_terms_absent=False,
     include_paternal_ancestry=False,
     include_maternal_ancestry=False,
     include_age_of_onset=False,
+    include_first_loaded_date=False,
 ):
     """Export Individuals table.
 
@@ -488,6 +493,8 @@ def export_individuals(
     header = []
     if include_project_name:
         header.append('Project')
+    if include_project_created_date:
+        header.append('Project Created Date')
 
     header.extend([
         'Family ID',
@@ -511,6 +518,10 @@ def export_individuals(
         header.append('Case Review Status Last Modified By')
     if include_case_review_discussion:
         header.append('Case Review Discussion')
+    if include_analysis_status:
+        header.append('Analysis Status')
+    if include_coded_phenotype:
+        header.append('Coded Phenotype')
     if include_hpo_terms_present:
         header.append('HPO Terms (present)')
     if include_hpo_terms_absent:
@@ -521,12 +532,16 @@ def export_individuals(
         header.append('Maternal Ancestry')
     if include_age_of_onset:
         header.append('Age of Onset')
+    if include_project_created_date:
+        header.append('First Data Loaded Date')
 
     rows = []
     for i in individuals:
         row = []
         if include_project_name:
             row.extend([i.family.project.name or i.family.project.project_id])
+        if include_project_created_date:
+            row.append(i.family.project.created_date)
 
         row.extend([
             i.family.family_id,
@@ -550,6 +565,10 @@ def export_individuals(
             row.append(_user_to_string(i.case_review_status_last_modified_by))
         if include_case_review_discussion:
             row.append(i.case_review_discussion)
+        if include_analysis_status:
+            row.append(i.family.analysis_status)
+        if include_coded_phenotype:
+            row.append(i.family.coded_phenotype)
 
         if (include_hpo_terms_present or \
             include_hpo_terms_absent or \
@@ -572,6 +591,13 @@ def export_individuals(
                 row.append(phenotips_fields.get('maternal_ancestry', ''))
             if include_age_of_onset:
                 row.append(phenotips_fields.get('age_of_onset', ''))
+
+        if include_first_loaded_date:
+            first_loaded_sample = i.sample_set.filter(
+                dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
+                loaded_date__isnull=False,
+            ).order_by('loaded_date').first()
+            row.append(first_loaded_sample.loaded_date if first_loaded_sample else None)
 
         rows.append(row)
 
@@ -643,14 +669,25 @@ def _parse_phenotips_data(phenotips_json):
         'age_of_onset': '',
     }
 
-    if phenotips_json.get('features'):
+    features = phenotips_json.get('features')
+    if features:
+        if any(feature for feature in features if not feature.get('label')):
+            all_hpo_terms = [feature['id'] for feature in features]
+            hpo_terms = {hpo.hpo_id: hpo for hpo in HumanPhenotypeOntology.objects.filter(hpo_id__in=all_hpo_terms)}
+            for feature in features:
+                hpo_data = hpo_terms.get(feature['id'])
+                if hpo_data:
+                    feature['label'] = hpo_data.name
+                else:
+                    feature['label'] = feature['id']
+
         result['phenotips_features_present'] = []
         result['phenotips_features_absent'] = []
-        for feature in phenotips_json.get('features'):
+        for feature in features:
             if feature.get('observed') == 'yes':
-                result['phenotips_features_present'].append(feature.get('label'))
+                result['phenotips_features_present'].append(feature['label'])
             elif feature.get('observed') == 'no':
-                result['phenotips_features_absent'].append(feature.get('label'))
+                result['phenotips_features_absent'].append(feature['label'])
         result['phenotips_features_present'] = ', '.join(result['phenotips_features_present'])
         result['phenotips_features_absent'] = ', '.join(result['phenotips_features_absent'])
 
