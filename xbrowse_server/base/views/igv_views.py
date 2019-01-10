@@ -44,7 +44,7 @@ def fetch_igv_track(request, project_id, igv_track_name):
         return HttpResponse("reads not available for " + individual)
 
     logger.debug("local_settings.READ_VIZ_BAM_PATH = %s", settings.READ_VIZ_BAM_PATH)
-    logger.debug("individual.bam_file_path=%s")
+    logger.debug("individual.bam_file_path = %s", individual.bam_file_path)
     complete_bam_path = os.path.join(settings.READ_VIZ_BAM_PATH, individual.bam_file_path)
     if igv_track_name.endswith(".bai"):
         complete_bam_path += ".bai"
