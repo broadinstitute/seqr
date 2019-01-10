@@ -43,21 +43,40 @@ def fetch_igv_track(request, project_id, igv_track_name):
     if not individual.bam_file_path:
         return HttpResponse("reads not available for " + individual)
 
-    absolute_path = os.path.join(settings.READ_VIZ_BAM_PATH, individual.bam_file_path)
+    logger.debug("local_settings.READ_VIZ_BAM_PATH = %s", settings.READ_VIZ_BAM_PATH)
+    logger.debug("individual.bam_file_path=%s")
+    complete_bam_path = os.path.join(settings.READ_VIZ_BAM_PATH, individual.bam_file_path)
     if igv_track_name.endswith(".bai"):
-        absolute_path += ".bai"
+        complete_bam_path += ".bai"
 
-    logger.info("Proxy Request: %s %s" % (request.method, individual.bam_file_path))
-    if os.path.isabs(individual.bam_file_path):
-        return fetch_local_file(request, absolute_path)
+    if os.path.isabs(complete_bam_path):
+        logger.info("fetch_igv_track() BAM - local file path: %s  (local_settings.READ_VIZ_BAM_PATH = %s)", complete_bam_path, settings.READ_VIZ_BAM_PATH)
+        try:
+            return fetch_local_file(request, complete_bam_path)
+        except:
+            logger.error("Unable to retrieve readviz data from local path: %s. Make sure both the .bam and .bam.bai files "
+                "exist and that the seqr server process has permissions to access them.", complete_bam_path)
+            raise
     else:
-        if individual.bam_file_path.endswith('.cram'):
-            file_path = "http://{0}/alignments?reference=igvjs/static/data/public/Homo_sapiens_assembly38.fasta&file=igvjs/static/data/readviz-mounts/{1}&options={2}&region={3}".format(
-                settings.READ_VIZ_CRAM_PATH, individual.bam_file_path, request.GET.get('options', ''), request.GET.get('region', ''))
-            return cram_request_proxy(request, file_path)
-        else:
-            return bam_request_proxy(request, absolute_path)
-        
+        try:
+            proxy_server = None
+            if individual.bam_file_path.endswith('.cram'):
+                proxy_server = settings.READ_VIZ_CRAM_PATH
+                logger.info("fetch_igv_track() CRAM - proxy to CRAM http server - file path: %s  (local_settings.READ_VIZ_CRAM_PATH = %s)", complete_bam_path, settings.READ_VIZ_CRAM_PATH)
+
+                file_path = "http://{0}/alignments?reference=igvjs/static/data/public/Homo_sapiens_assembly38.fasta&file=igvjs/static/data/readviz-mounts/{1}&options={2}&region={3}".format(
+                    settings.READ_VIZ_CRAM_PATH, individual.bam_file_path, request.GET.get('options', ''), request.GET.get('region', ''))
+                return cram_request_proxy(request, file_path)
+            else:
+                proxy_server = settings.READ_VIZ_BAM_PATH
+                logger.info("fetch_igv_track() BAM - proxy to BAM http server - file path: %s  (local_settings.READ_VIZ_BAM_PATH = %s)", complete_bam_path, settings.READ_VIZ_BAM_PATH)
+                return bam_request_proxy(request, complete_bam_path)
+        except:
+            logger.error("Unable to retrieve readviz data from proxy server. Make sure the proxy server is running at %s, "
+                "and is accessible over the network from the machine that's running the seqr application server. Also, make sure "
+                "the readviz files (both .bam and .bam.bai or .cram and .cram.crai) still exist on the proxy server, and that the "
+                "proxy server process has permissions to access these files.", proxy_server)
+            raise
 
 
 def cram_request_proxy(request, path):
