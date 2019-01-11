@@ -16,6 +16,8 @@ export const getSearchedVariantsIsLoading = state => state.searchedVariantsLoadi
 export const getSearchedVariantsErrorMessage = state => state.searchedVariantsLoading.errorMessage
 export const getSearchesByHash = state => state.searchesByHash
 export const getSavedSearchesByGuid = state => state.savedSearchesByGuid
+export const getSavedSearchesIsLoading = state => state.savedSearchesLoading.isLoading
+export const getSavedSearchesLoadingError = state => state.savedSearchesLoading.errorMessage
 export const getVariantSearchDisplay = state => state.variantSearchDisplay
 
 const getCurrentSearchHash = (state, props) => props.match.params.searchHash

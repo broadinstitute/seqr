@@ -10,6 +10,7 @@ import { SORT_BY_XPOS } from 'shared/utils/constants'
 const REQUEST_SEARCHED_VARIANTS = 'REQUEST_SEARCHED_VARIANTS'
 const RECEIVE_SEARCHED_VARIANTS = 'RECEIVE_SEARCHED_VARIANTS'
 const UPDATE_SEARCHED_VARIANT_DISPLAY = 'UPDATE_SEARCHED_VARIANT_DISPLAY'
+const REQUEST_SAVED_SEARCHES = 'REQUEST_SAVED_SEARCHES'
 const RECEIVE_SAVED_SEARCHES = 'RECEIVE_SAVED_SEARCHES'
 const REQUEST_PROJECT_DETAILS = 'REQUEST_PROJECT_DETAILS'
 
@@ -90,6 +91,23 @@ export const loadSearchedVariants = ({ searchHash, displayUpdates, queryParams, 
   }
 }
 
+export const loadSavedSearches = () => {
+  return (dispatch, getState) => {
+    if (!Object.keys(getState().savedSearchesByGuid || {}).length) {
+      dispatch({ type: REQUEST_SAVED_SEARCHES })
+
+      new HttpRequestHelper('/api/saved_search/all',
+        (responseJson) => {
+          dispatch({ type: RECEIVE_SAVED_SEARCHES, updatesById: responseJson })
+        },
+        (e) => {
+          dispatch({ type: RECEIVE_SAVED_SEARCHES, error: e.message, updatesById: {} })
+        },
+      ).get()
+    }
+  }
+}
+
 
 // reducers
 
@@ -98,6 +116,7 @@ export const reducers = {
   searchedVariantsLoading: loadingReducer(REQUEST_SEARCHED_VARIANTS, RECEIVE_SEARCHED_VARIANTS),
   searchesByHash: createObjectsByIdReducer(RECEIVE_SAVED_SEARCHES, 'searchesByHash'),
   savedSearchesByGuid: createObjectsByIdReducer(RECEIVE_SAVED_SEARCHES, 'savedSearchesByGuid'),
+  savedSearchesLoading: loadingReducer(REQUEST_SAVED_SEARCHES, RECEIVE_SAVED_SEARCHES),
   variantSearchDisplay: createSingleObjectReducer(UPDATE_SEARCHED_VARIANT_DISPLAY, {
     sort: SORT_BY_XPOS,
     page: 1,
