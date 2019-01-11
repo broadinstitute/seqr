@@ -13,7 +13,7 @@ from seqr.views.apis.saved_variant_api import _saved_variant_genes, _add_locus_l
 from seqr.views.pages.project_page import get_project_details
 from seqr.views.utils.export_table_utils import export_table
 from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variant, get_json_for_saved_search
+from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variant, get_json_for_saved_search, get_json_for_saved_searches
 from seqr.views.utils.permissions_utils import check_permissions
 
 
@@ -208,8 +208,14 @@ def search_context_handler(request, search_hash):
 
     search_context = _get_search_context(results_model)
     response = {
-        'search': search_context,
+        'searchesByHash': {search_hash: search_context},
     }
+
+    # TODO add default searches for all users
+    saved_searches = get_json_for_saved_searches(
+        VariantSearch.objects.filter(created_by=request.user, name__isnull=False)
+    )
+    response['savedSearchesByGuid'] = {search['savedSearchGuid']: search for search in saved_searches}
 
     for project_family in search_context.get('projectFamilies'):
         for k, v in get_project_details(project_family['projectGuid'], request.user).items():
@@ -236,7 +242,9 @@ def create_saved_search_handler(request):
     )
 
     return create_json_response({
-        saved_search.guid: get_json_for_saved_search(saved_search)
+        'savedSearchesByGuid': {
+            saved_search.guid: get_json_for_saved_search(saved_search)
+        }
     })
 
 

@@ -10,6 +10,7 @@ import { configuredField, configuredFields } from 'shared/components/form/ReduxF
 import { Select, LabeledSlider, CheckboxGroup } from 'shared/components/form/Inputs'
 import Modal from 'shared/components/modal/Modal'
 import { LOCUS_LIST_ITEMS_FIELD } from 'shared/utils/constants'
+import { SavedSearchDropdown } from './SavedSearch'
 import FrequencyFilter from './filters/FrequencyFilter'
 import annotationsFilterLayout from './filters/AnnotationsFilterLayout'
 import { LocusListSelector } from './filters/LocationFilter'
@@ -94,6 +95,12 @@ const JsonSelectProps = options => ({
   parse: JSON.parse,
   options: options.map(({ value, ...option }) => ({ ...option, value: JSON.stringify(value) })),
 })
+
+const SAVED_SEARCH_FIELD = {
+  name: 'search',
+  component: SavedSearchDropdown,
+  format: val => val || {},
+}
 
 const INHERITANCE_PANEL = {
   name: 'inheritance',
@@ -268,12 +275,20 @@ const PANELS = PANEL_DETAILS.map(({ name, headerProps, ...panelContentProps }, i
 class VariantSearchFormContent extends React.Component {
   render() {
     return (
-      <div>
-        <ProjectFamiliesField />
-        <FormSection name="search">
-          <Accordion fluid panels={PANELS} />
-        </FormSection>
-      </div>
+      <Grid>
+        <Grid.Row><Grid.Column width={16}><ProjectFamiliesField /></Grid.Column></Grid.Row>
+        <Grid.Row verticalAlign="bottom">
+          <Grid.Column width={13}><Header size="large" content="Search" /></Grid.Column>
+          <Grid.Column width={3} floated="right" textAlign="right">
+            {configuredField(SAVED_SEARCH_FIELD)}
+          </Grid.Column>
+        </Grid.Row>
+        <Grid.Row>
+          <Grid.Column width={16}>
+            <FormSection name="search"><Accordion fluid panels={PANELS} /></FormSection>
+          </Grid.Column>
+        </Grid.Row>
+      </Grid>
     )
   }
 

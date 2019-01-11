@@ -11,7 +11,6 @@ const REQUEST_SEARCHED_VARIANTS = 'REQUEST_SEARCHED_VARIANTS'
 const RECEIVE_SEARCHED_VARIANTS = 'RECEIVE_SEARCHED_VARIANTS'
 const UPDATE_SEARCHED_VARIANT_DISPLAY = 'UPDATE_SEARCHED_VARIANT_DISPLAY'
 const RECEIVE_SAVED_SEARCHES = 'RECEIVE_SAVED_SEARCHES'
-const UPDATE_HASHED_SEARCHES = 'UPDATE_HASHED_SEARCHES'
 const REQUEST_PROJECT_DETAILS = 'REQUEST_PROJECT_DETAILS'
 
 // actions
@@ -37,7 +36,7 @@ export const loadProjectFamiliesContext = ({ projectGuid, familyGuid, analysisGr
         new HttpRequestHelper(`/api/search_context/${searchHash}`,
           (responseJson) => {
             dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
-            dispatch({ type: UPDATE_HASHED_SEARCHES, updatesById: { [searchHash]: responseJson.search } })
+            dispatch({ type: RECEIVE_SAVED_SEARCHES, updatesById: responseJson })
           },
           (e) => {
             dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
@@ -51,7 +50,7 @@ export const loadProjectFamiliesContext = ({ projectGuid, familyGuid, analysisGr
 
 export const saveHashedSearch = (searchHash, search) => {
   return (dispatch) => {
-    dispatch({ type: UPDATE_HASHED_SEARCHES, updatesById: { [searchHash]: search } })
+    dispatch({ type: RECEIVE_SAVED_SEARCHES, updatesById: { searchesByHash: { [searchHash]: search } } })
   }
 }
 
@@ -82,7 +81,7 @@ export const loadSearchedVariants = ({ searchHash, displayUpdates, queryParams, 
       (responseJson) => {
         dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
         dispatch({ type: RECEIVE_SEARCHED_VARIANTS, newValue: responseJson.searchedVariants })
-        dispatch({ type: UPDATE_HASHED_SEARCHES, updatesById: { [searchHash]: responseJson.search } })
+        dispatch({ type: RECEIVE_SAVED_SEARCHES, updatesById: { searchesByHash: { [searchHash]: search } } })
       },
       (e) => {
         dispatch({ type: RECEIVE_SEARCHED_VARIANTS, error: e.message, newValue: [] })
@@ -97,8 +96,8 @@ export const loadSearchedVariants = ({ searchHash, displayUpdates, queryParams, 
 export const reducers = {
   searchedVariants: createSingleValueReducer(RECEIVE_SEARCHED_VARIANTS, []),
   searchedVariantsLoading: loadingReducer(REQUEST_SEARCHED_VARIANTS, RECEIVE_SEARCHED_VARIANTS),
-  searchesByHash: createObjectsByIdReducer(UPDATE_HASHED_SEARCHES),
-  savedSearchesByGuid: createObjectsByIdReducer(RECEIVE_SAVED_SEARCHES),
+  searchesByHash: createObjectsByIdReducer(RECEIVE_SAVED_SEARCHES, 'searchesByHash'),
+  savedSearchesByGuid: createObjectsByIdReducer(RECEIVE_SAVED_SEARCHES, 'savedSearchesByGuid'),
   variantSearchDisplay: createSingleObjectReducer(UPDATE_SEARCHED_VARIANT_DISPLAY, {
     sort: SORT_BY_XPOS,
     page: 1,

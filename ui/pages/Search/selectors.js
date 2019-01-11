@@ -15,6 +15,7 @@ export const getSearchedVariants = state => state.searchedVariants
 export const getSearchedVariantsIsLoading = state => state.searchedVariantsLoading.isLoading
 export const getSearchedVariantsErrorMessage = state => state.searchedVariantsLoading.errorMessage
 export const getSearchesByHash = state => state.searchesByHash
+export const getSavedSearchesByGuid = state => state.savedSearchesByGuid
 export const getVariantSearchDisplay = state => state.variantSearchDisplay
 
 const getCurrentSearchHash = (state, props) => props.match.params.searchHash
@@ -67,7 +68,7 @@ export const getLoadedIntitialSearch = createSelector(
 export const getProjectsFamiliesFieldInput = state =>
   formValueSelector(SEARCH_FORM_NAME)(state, 'projectFamilies')
 
-export const getProjectsFamiliesSearchInput = state =>
+export const getSearchInput = state =>
   formValueSelector(SEARCH_FORM_NAME)(state, 'search')
 
 export const getTotalVariantsCount = createSelector(
