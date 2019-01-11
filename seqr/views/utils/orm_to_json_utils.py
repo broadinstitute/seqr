@@ -529,3 +529,11 @@ def get_json_for_gene(gene, **kwargs):
     """
 
     return _get_json_for_model(gene, get_json_for_models=get_json_for_genes, **kwargs)
+
+
+def get_json_for_saved_searches(search):
+    return _get_json_for_models(search, guid_key='savedSearchGuid')
+
+
+def get_json_for_saved_search(search):
+    return _get_json_for_model(search, get_json_for_models=get_json_for_saved_searches)

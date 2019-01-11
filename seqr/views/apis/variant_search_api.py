@@ -13,7 +13,7 @@ from seqr.views.apis.saved_variant_api import _saved_variant_genes, _add_locus_l
 from seqr.views.pages.project_page import get_project_details
 from seqr.views.utils.export_table_utils import export_table
 from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variant
+from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variant, get_json_for_saved_search
 from seqr.views.utils.permissions_utils import check_permissions
 
 
@@ -219,6 +219,25 @@ def search_context_handler(request, search_hash):
                 response[k] = v
 
     return create_json_response(response)
+
+
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@csrf_exempt
+def create_saved_search_handler(request):
+    request_json = json.loads(request.body)
+    name = request_json.pop('name', None)
+    if not name:
+        return create_json_response({}, status=400, reason='"Name" is required')
+
+    saved_search = VariantSearch.objects.create(
+        name=name,
+        search=request_json,
+        created_by=request.user,
+    )
+
+    return create_json_response({
+        saved_search.guid: get_json_for_saved_search(saved_search)
+    })
 
 
 def _check_results_permission(results_model, user):

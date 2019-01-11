@@ -47,7 +47,7 @@ export const getVariantId = ({ xpos, ref, alt }) => `${xpos}-${ref}-${alt}`
 export const getSavedVariantsGroupedByFamilyVariants = createSelector(
   getSavedVariantsByGuid,
   savedVariantsByGuid => Object.values(savedVariantsByGuid).reduce((acc, variant) => {
-    variant.familyGuids.forEach(familyGuid => {
+    variant.familyGuids.forEach((familyGuid) => {
       if (!(familyGuid in acc)) {
         acc[familyGuid] = {}
       }

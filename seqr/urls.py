@@ -73,10 +73,15 @@ from seqr.views.apis.locus_list_api import \
     add_project_locus_lists, \
     delete_project_locus_lists
 
+from seqr.views.apis.variant_search_api import \
+    query_variants_handler, \
+    search_context_handler, \
+    export_variants_handler, \
+    create_saved_search_handler
+
 from seqr.views.pages.staff.discovery_sheet import discovery_sheet
 from seqr.views.pages.staff.elasticsearch_status import elasticsearch_status
 from seqr.views.pages.staff.komp_export import komp_export
-
 
 from seqr.views.apis.awesomebar_api import awesomebar_autocomplete_handler
 from seqr.views.apis.auth_api import login_required_error, API_LOGIN_REQUIRED_URL
@@ -84,7 +89,6 @@ from seqr.views.apis.igv_api import fetch_igv_track
 from seqr.views.apis.analysis_group_api import update_analysis_group_handler, delete_analysis_group_handler
 from seqr.views.apis.project_api import create_project_handler, update_project_handler, delete_project_handler
 from seqr.views.apis.project_categories_api import update_project_categories_handler
-from seqr.views.apis.variant_search_api import query_variants_handler, search_context_handler, export_variants_handler
 from seqr.views.utils.file_utils import save_temp_file
 
 react_app_pages = [
@@ -145,6 +149,7 @@ api_endpoints = {
     'search/(?P<search_hash>[^/]+)': query_variants_handler,
     'search/(?P<search_hash>[^/]+)/download': export_variants_handler,
     'search_context/(?P<search_hash>[^/]+)': search_context_handler,
+    'saved_search/create': create_saved_search_handler,
 
     'saved_variant/create': create_saved_variant_handler,
     'saved_variant/(?P<variant_guid>[^/]+)/update_tags': update_variant_tags_handler,

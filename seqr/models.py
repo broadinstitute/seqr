@@ -792,6 +792,8 @@ class VariantSearch(ModelWithGUID):
     class Meta:
         unique_together = ('created_by', 'name')
 
+        json_fields = ['guid', 'name', 'search']
+
 
 class VariantSearchResults(ModelWithGUID):
     variant_search = models.ForeignKey('VariantSearch', on_delete=models.CASCADE)

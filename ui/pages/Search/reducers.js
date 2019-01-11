@@ -1,6 +1,6 @@
 import { combineReducers } from 'redux'
 
-import { loadProject, loadFamilyProject, loadAnalysisGroupProject, RECEIVE_DATA } from 'redux/rootReducer'
+import { loadProject, loadFamilyProject, loadAnalysisGroupProject, updateEntity, RECEIVE_DATA } from 'redux/rootReducer'
 import { loadingReducer, createSingleObjectReducer, createSingleValueReducer, createObjectsByIdReducer } from 'redux/utils/reducerFactories'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 import { SORT_BY_XPOS } from 'shared/utils/constants'
@@ -10,6 +10,7 @@ import { SORT_BY_XPOS } from 'shared/utils/constants'
 const REQUEST_SEARCHED_VARIANTS = 'REQUEST_SEARCHED_VARIANTS'
 const RECEIVE_SEARCHED_VARIANTS = 'RECEIVE_SEARCHED_VARIANTS'
 const UPDATE_SEARCHED_VARIANT_DISPLAY = 'UPDATE_SEARCHED_VARIANT_DISPLAY'
+const RECEIVE_SAVED_SEARCHES = 'RECEIVE_SAVED_SEARCHES'
 const UPDATE_HASHED_SEARCHES = 'UPDATE_HASHED_SEARCHES'
 const REQUEST_PROJECT_DETAILS = 'REQUEST_PROJECT_DETAILS'
 
@@ -54,6 +55,8 @@ export const saveHashedSearch = (searchHash, search) => {
   }
 }
 
+export const saveSearch = search => updateEntity(search, RECEIVE_SAVED_SEARCHES, '/api/saved_search')
+
 export const loadSearchedVariants = ({ searchHash, displayUpdates, queryParams, updateQueryParams }) => {
   return (dispatch, getState) => {
     dispatch({ type: REQUEST_SEARCHED_VARIANTS })
@@ -95,6 +98,7 @@ export const reducers = {
   searchedVariants: createSingleValueReducer(RECEIVE_SEARCHED_VARIANTS, []),
   searchedVariantsLoading: loadingReducer(REQUEST_SEARCHED_VARIANTS, RECEIVE_SEARCHED_VARIANTS),
   searchesByHash: createObjectsByIdReducer(UPDATE_HASHED_SEARCHES),
+  savedSearchesByGuid: createObjectsByIdReducer(RECEIVE_SAVED_SEARCHES),
   variantSearchDisplay: createSingleObjectReducer(UPDATE_SEARCHED_VARIANT_DISPLAY, {
     sort: SORT_BY_XPOS,
     page: 1,
