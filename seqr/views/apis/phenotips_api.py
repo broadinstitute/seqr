@@ -131,7 +131,7 @@ def receive_hpo_table_handler(request, project_guid):
             ))
 
     hpo_terms = {hpo.hpo_id: hpo for hpo in HumanPhenotypeOntology.objects.filter(hpo_id__in=all_hpo_terms)}
-    invalid_hpo_terms = []
+    invalid_hpo_terms = set()
     for features in updates_by_individual_guid.values():
         for feature in features:
             hpo_data = hpo_terms.get(feature['id'])
@@ -139,7 +139,7 @@ def receive_hpo_table_handler(request, project_guid):
                 feature['category'] = hpo_data.category_id
                 feature['label'] = hpo_data.name
             else:
-                invalid_hpo_terms.append(feature['id'])
+                invalid_hpo_terms.add(feature['id'])
     if invalid_hpo_terms:
         warnings.append(
             "The following HPO terms were not found in seqr's HPO data, and while they will be added they may be incorrect: {}".format(
@@ -213,7 +213,7 @@ def _hpo_term_item(term, observed):
 def _parse_hpo_terms(hpo_term_string, observed):
     if not hpo_term_string:
         return []
-    return [_hpo_term_item(hpo_term.split('(')[0], observed) for hpo_term in hpo_term_string.split(';')]
+    return [_hpo_term_item(hpo_term.strip().split('(')[0], observed) for hpo_term in hpo_term_string.replace(',', ';').split(';')]
 
 
 def _feature_set(features):
