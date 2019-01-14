@@ -2,7 +2,7 @@ import json
 import logging
 from django.contrib.auth.models import User
 
-from seqr.models import SavedVariant
+from seqr.models import SavedVariant, VariantSearchResults
 from xbrowse_server.api.utils import add_extra_info_to_variants_project
 from xbrowse_server.mall import get_reference
 from xbrowse_server.base.models import Project as BaseProject
@@ -46,6 +46,13 @@ def update_project_saved_variant_json(project, family_id=None):
 
     return updated_saved_variant_guids
 
+
+def reset_cached_search_results(project):
+    VariantSearchResults.objects.filter(families__project=project).distinct().update(
+        es_index=None,
+        results=None,
+        total_results=None,
+    )
 
 def _retrieve_saved_variants_json(project, variant_tuples, create_if_missing=False):
     project_id = project.deprecated_project_id

@@ -72,7 +72,7 @@ export const loadProjectVariants = (familyGuids, variantGuid) => {
 
 const unloadSavedVariants = (dispatch, getState) => {
   const state = getState()
-  const variantsToDelete = Object.keys(state.projectSavedVariants).reduce((acc, o) => ({ ...acc, [o]: null }), {})
+  const variantsToDelete = Object.keys(state.projectSavedVariants || {}).reduce((acc, o) => ({ ...acc, [o]: null }), {})
   const variantFamiliesToDelete = Object.keys(state.projectSavedVariantFamilies).reduce((acc, o) => ({ ...acc, [o]: false }), {})
   dispatch({ type: RECEIVE_DATA, updatesById: { savedVariantsByGuid: variantsToDelete } })
   dispatch({ type: RECEIVE_SAVED_VARIANT_FAMILIES, updates: variantFamiliesToDelete })
