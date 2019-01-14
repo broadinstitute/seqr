@@ -254,35 +254,6 @@ def saved_variants(request, project_id, family_id):
 
 
 @login_required
-@log_request('diagnostic_search')
-def diagnostic_search(request, project_id, family_id):
-
-    project = get_object_or_404(Project, project_id=project_id)
-    family = get_object_or_404(Family, project=project, family_id=family_id)
-    if not project.can_view(request.user):
-        raise PermissionDenied
-
-    if not family.has_data('variation'):
-        return render(request, 'analysis_unavailable.html', {
-            'reason': 'This family does not have any variant data.'
-        })
-    elif project.project_status == Project.NEEDS_MORE_PHENOTYPES and not request.user.is_staff:
-        return render(request, 'analysis_unavailable.html', {
-            'reason': 'Awaiting phenotype data.'
-        })
-
-    gene_lists = project.get_gene_lists()
-    gene_lists.extend(list(GeneList.objects.filter(owner=request.user)))
-    gene_lists = list(set(gene_lists))
-
-    return render(request, 'family/diagnostic_search.html', {
-        'project': project,
-        'family': family,
-        'gene_lists_json': json.dumps([g.toJSON() for g in gene_lists]),
-    })
-
-
-@login_required
 @log_request('family_coverage')
 def family_coverage(request, project_id, family_id):
 
