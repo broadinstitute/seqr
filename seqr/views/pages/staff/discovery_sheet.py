@@ -21,7 +21,7 @@ from seqr.models import Project, Family, VariantTag, Sample, VariantFunctionalDa
 from dateutil import relativedelta as rdelta
 from django.db.models import Q
 from django.shortcuts import render
-from settings import PROJECT_IDS_TO_EXCLUDE_FROM_DISCOVERY_SHEET_DOWNLOAD, LOGIN_URL
+from settings import PROJECT_IDS_TO_EXCLUDE_FROM_DISCOVERY_SHEET_DOWNLOAD, LOGIN_URL, SEQR_ID_TO_MME_ID_MAP
 from seqr.views.utils.orm_to_json_utils import _get_json_for_project
 
 logger = logging.getLogger(__name__)
@@ -264,7 +264,7 @@ def generate_rows(project, errors):
                     # don't change omim_number_initial
                     logger.info("Unable to look up phenotypic series for OMIM initial number: %s. %s" % (omim_number_initial, e))
 
-        submitted_to_mme = any([individual.mme_submitted_data for individual in individuals if individual.mme_submitted_data])
+        submitted_to_mme = SEQR_ID_TO_MME_ID_MAP.find({'project_id': project.deprecated_project_id,'family_id': family.family_id})
 
         row = {
             "extras_pedigree_url": family.pedigree_image.url if family.pedigree_image else "",
@@ -504,6 +504,12 @@ def generate_rows(project, errors):
             # create a copy of the row dict
             row = dict(row)
 
+            if not submitted_to_mme:
+                if has_tier1 or has_tier2:
+                    row["submitted_to_mme"] = "N" if t0_months_since_t0 > 7 else "TBD"
+                elif has_known_gene_for_phenotype:
+                    row["submitted_to_mme"] = "KPG"
+
             row.update({
                 "extras_variant_tag_list": variant_tag_list,
                 "extras_num_variant_tags": len(variant_tags),
@@ -512,7 +518,6 @@ def generate_rows(project, errors):
                 "novel_mendelian_gene": "Y" if any("novel gene" in name for name in lower_case_variant_tag_type_names) else ("N" if has_tier1 or has_tier2 or has_known_gene_for_phenotype or has_tier2_phenotype_expansion else "NS"),
                 "solved": ("TIER 1 GENE" if (has_tier1 or has_known_gene_for_phenotype) else ("TIER 2 GENE" if has_tier2 else "N")),
                 "posted_publicly": ("" if has_tier1 or has_tier2 or has_known_gene_for_phenotype else "NS"),
-                "submitted_to_mme": "Y" if submitted_to_mme else ("TBD" if has_tier1 or has_tier2 else ("KPG" if has_known_gene_for_phenotype else "NS")),
                 "actual_inheritance_model": actual_inheritance_model,
                 "analysis_complete_status": analysis_complete_status,  # If known gene for phenotype, tier 1 or tier 2 tag is used on any variant  in project, or 1 year past t0 = complete.  If less than a year and none of the tags above = first pass in progress
                 "genome_wide_linkage": " ".join(set([f.metadata for f in functional_tags if f.functional_data_tag == "Genome-wide Linkage"])) or NA_or_KPG_or_NS,
