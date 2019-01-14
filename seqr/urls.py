@@ -77,6 +77,7 @@ from seqr.views.apis.variant_search_api import \
     query_variants_handler, \
     search_context_handler, \
     export_variants_handler, \
+    get_saved_search_handler, \
     create_saved_search_handler
 
 from seqr.views.pages.staff.discovery_sheet import discovery_sheet
@@ -149,6 +150,7 @@ api_endpoints = {
     'search/(?P<search_hash>[^/]+)': query_variants_handler,
     'search/(?P<search_hash>[^/]+)/download': export_variants_handler,
     'search_context/(?P<search_hash>[^/]+)': search_context_handler,
+    'saved_search/all': get_saved_search_handler,
     'saved_search/create': create_saved_search_handler,
 
     'saved_variant/create': create_saved_variant_handler,

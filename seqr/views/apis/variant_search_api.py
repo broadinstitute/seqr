@@ -210,12 +210,7 @@ def search_context_handler(request, search_hash):
     response = {
         'searchesByHash': {search_hash: search_context},
     }
-
-    # TODO add default searches for all users
-    saved_searches = get_json_for_saved_searches(
-        VariantSearch.objects.filter(created_by=request.user, name__isnull=False)
-    )
-    response['savedSearchesByGuid'] = {search['savedSearchGuid']: search for search in saved_searches}
+    response.update(_get_saved_searches(request.user))
 
     for project_family in search_context.get('projectFamilies'):
         for k, v in get_project_details(project_family['projectGuid'], request.user).items():
@@ -225,6 +220,12 @@ def search_context_handler(request, search_hash):
                 response[k] = v
 
     return create_json_response(response)
+
+
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@csrf_exempt
+def get_saved_search_handler(request):
+    return create_json_response(_get_saved_searches(request.user))
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -267,6 +268,14 @@ def _get_search_context(results_model):
         ],
         'totalResults': results_model.total_results,
     }
+
+
+def _get_saved_searches(user):
+    # TODO add default searches for all users
+    saved_searches = get_json_for_saved_searches(
+        VariantSearch.objects.filter(created_by=user, name__isnull=False)
+    )
+    return {'savedSearchesByGuid': {search['savedSearchGuid']: search for search in saved_searches}}
 
 
 def _get_saved_variants(variants):
