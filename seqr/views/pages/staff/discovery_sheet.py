@@ -264,7 +264,7 @@ def generate_rows(project, errors):
                     # don't change omim_number_initial
                     logger.info("Unable to look up phenotypic series for OMIM initial number: %s. %s" % (omim_number_initial, e))
 
-        submitted_to_mme = SEQR_ID_TO_MME_ID_MAP.find({'project_id': project.deprecated_project_id,'family_id': family.family_id})
+        submitted_to_mme = SEQR_ID_TO_MME_ID_MAP.find_one({'project_id': project.deprecated_project_id,'family_id': family.family_id})
 
         row = {
             "extras_pedigree_url": family.pedigree_image.url if family.pedigree_image else "",
