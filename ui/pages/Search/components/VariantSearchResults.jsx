@@ -12,7 +12,7 @@ import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
 import Variants from 'shared/components/panel/variants/Variants'
 import { VARIANT_SORT_FIELD_NO_FAMILY_SORT, VARIANT_PAGINATION_FIELD } from 'shared/utils/constants'
 
-import { loadSearchedVariants } from '../reducers'
+import { loadSearchedVariants, unloadSearchResults } from '../reducers'
 import {
   getSearchedVariants,
   getSearchedVariantsIsLoading,
@@ -37,7 +37,7 @@ const FIELDS = [
 
 
 const BaseVariantSearchResults = ({
-  match, searchedVariants, variantSearchDisplay, searchedVariantExportConfig, onSubmit, load, loading, errorMessage, totalVariantsCount,
+  match, searchedVariants, variantSearchDisplay, searchedVariantExportConfig, onSubmit, load, unload, loading, errorMessage, totalVariantsCount,
 }) => {
   const { page = 1, recordsPerPage } = variantSearchDisplay
   const variantDisplayPageOffset = (page - 1) * recordsPerPage
@@ -50,6 +50,7 @@ const BaseVariantSearchResults = ({
       content={searchedVariants}
       loading={loading}
       load={load}
+      unload={unload}
       reloadOnIdUpdate
       errorMessage={errorMessage &&
         <Grid.Row>
@@ -90,6 +91,7 @@ const BaseVariantSearchResults = ({
 BaseVariantSearchResults.propTypes = {
   match: PropTypes.object,
   load: PropTypes.func,
+  unload: PropTypes.func,
   onSubmit: PropTypes.func,
   searchedVariants: PropTypes.array,
   loading: PropTypes.bool,
@@ -122,6 +124,9 @@ const mapDispatchToProps = (dispatch, ownProps) => {
         displayUpdates: updates,
         ...ownProps,
       }))
+    },
+    unload: () => {
+      dispatch(unloadSearchResults())
     },
   }
 }

@@ -63,7 +63,7 @@ def create_saved_variant_handler(request):
     variant_json = json.loads(request.body)
     family_guid = variant_json.pop('familyGuid')
     non_variant_json = {
-        k: variant_json.pop(k, None) for k in ['searchParameters', 'tags', 'functionalData', 'notes', 'note', 'submitToClinvar']
+        k: variant_json.pop(k, None) for k in ['searchHash', 'tags', 'functionalData', 'notes', 'note', 'submitToClinvar']
     }
 
     family = Family.objects.get(guid=family_guid)
@@ -114,7 +114,7 @@ def _create_variant_note(saved_variant, note_json, user):
         saved_variant=saved_variant,
         note=note_json.get('note'),
         submit_to_clinvar=note_json.get('submitToClinvar') or False,
-        search_parameters=note_json.get('searchParameters'),
+        search_hash=note_json.get('searchHash'),
         created_by=user,
     )
 
@@ -186,7 +186,7 @@ def update_variant_tags_handler(request, variant_guid):
                 saved_variant=saved_variant,
                 functional_data_tag=tag.get('name'),
                 metadata=tag.get('metadata'),
-                search_parameters=request_json.get('searchParameters'),
+                search_hash=request_json.get('searchHash'),
                 created_by=request.user,
             )
 
@@ -211,7 +211,7 @@ def _create_new_tags(saved_variant, tags_json, user):
             VariantTag,
             saved_variant=saved_variant,
             variant_tag_type=variant_tag_type,
-            search_parameters=tags_json.get('searchParameters'),
+            search_hash=tags_json.get('searchHash'),
             created_by=user,
         )
 

@@ -20,7 +20,7 @@ export const getSavedSearchesIsLoading = state => state.savedSearchesLoading.isL
 export const getSavedSearchesLoadingError = state => state.savedSearchesLoading.errorMessage
 export const getVariantSearchDisplay = state => state.variantSearchDisplay
 
-const getCurrentSearchHash = (state, props) => props.match.params.searchHash
+const getCurrentSearchHash = state => state.currentSearchHash
 
 export const getCurrentSearchParams = createSelector(
   getSearchesByHash,

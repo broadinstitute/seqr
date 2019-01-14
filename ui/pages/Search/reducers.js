@@ -7,6 +7,7 @@ import { SORT_BY_XPOS } from 'shared/utils/constants'
 
 // action creators and reducers in one file as suggested by https://github.com/erikras/ducks-modular-redux
 
+const UPDATE_CURRENT_SEARCH = 'UPDATE_CURRENT_SEARCH'
 const REQUEST_SEARCHED_VARIANTS = 'REQUEST_SEARCHED_VARIANTS'
 const RECEIVE_SEARCHED_VARIANTS = 'RECEIVE_SEARCHED_VARIANTS'
 const UPDATE_SEARCHED_VARIANT_DISPLAY = 'UPDATE_SEARCHED_VARIANT_DISPLAY'
@@ -59,6 +60,7 @@ export const saveSearch = search => updateEntity(search, RECEIVE_SAVED_SEARCHES,
 
 export const loadSearchedVariants = ({ searchHash, displayUpdates, queryParams, updateQueryParams }) => {
   return (dispatch, getState) => {
+    dispatch({ type: UPDATE_CURRENT_SEARCH, newValue: searchHash })
     dispatch({ type: REQUEST_SEARCHED_VARIANTS })
 
     const state = getState()
@@ -91,6 +93,13 @@ export const loadSearchedVariants = ({ searchHash, displayUpdates, queryParams, 
   }
 }
 
+export const unloadSearchResults = () => {
+  return (dispatch) => {
+    dispatch({ type: UPDATE_CURRENT_SEARCH, newValue: null })
+    dispatch({ type: RECEIVE_SEARCHED_VARIANTS, newValue: [] })
+  }
+}
+
 export const loadSavedSearches = () => {
   return (dispatch, getState) => {
     if (!Object.keys(getState().savedSearchesByGuid || {}).length) {
@@ -112,6 +121,7 @@ export const loadSavedSearches = () => {
 // reducers
 
 export const reducers = {
+  currentSearchHash: createSingleValueReducer(UPDATE_CURRENT_SEARCH, null),
   searchedVariants: createSingleValueReducer(RECEIVE_SEARCHED_VARIANTS, []),
   searchedVariantsLoading: loadingReducer(REQUEST_SEARCHED_VARIANTS, RECEIVE_SEARCHED_VARIANTS),
   searchesByHash: createObjectsByIdReducer(RECEIVE_SAVED_SEARCHES, 'searchesByHash'),

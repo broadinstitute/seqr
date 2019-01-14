@@ -12,6 +12,7 @@ class DataLoader extends React.Component
     content: PropTypes.any,
     loading: PropTypes.bool.isRequired,
     load: PropTypes.func,
+    unload: PropTypes.func,
     hideError: PropTypes.bool,
     errorMessage: PropTypes.node,
     children: PropTypes.node,
@@ -47,6 +48,12 @@ class DataLoader extends React.Component
   componentWillUpdate(nextProps) {
     if (nextProps.reloadOnIdUpdate && nextProps.contentId !== this.props.contentId) {
       nextProps.load(nextProps.contentId)
+    }
+  }
+
+  componentWillUnmount() {
+    if (this.props.unload) {
+      this.props.unload()
     }
   }
 }

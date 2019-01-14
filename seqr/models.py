@@ -572,8 +572,8 @@ class VariantTag(ModelWithGUID):
     variant_tag_type = models.ForeignKey('VariantTagType', on_delete=models.CASCADE)
 
     # context in which a variant tag was saved
-    variant_search = models.ForeignKey('VariantSearchResults', null=True, on_delete=models.SET_NULL)
-    #  TODO deprecate and migrate to variant_search
+    search_hash = models.CharField(max_length=50, null=True)
+    #  TODO deprecate and migrate to search_hash
     search_parameters = models.TextField(null=True, blank=True)  # aka. search url
 
     def __unicode__(self):
@@ -585,7 +585,7 @@ class VariantTag(ModelWithGUID):
     class Meta:
         unique_together = ('variant_tag_type', 'saved_variant')
 
-        json_fields = ['guid', 'search_parameters', 'last_modified_date', 'created_by']
+        json_fields = ['guid', 'search_parameters', 'search_hash', 'last_modified_date', 'created_by']
 
 
 class VariantNote(ModelWithGUID):
@@ -594,6 +594,8 @@ class VariantNote(ModelWithGUID):
     submit_to_clinvar = models.BooleanField(default=False)
 
     # these are for context
+    search_hash = models.CharField(max_length=50, null=True)
+    #  TODO deprecate and migrate to search_hash
     search_parameters = models.TextField(null=True, blank=True)  # aka. search url
 
     def __unicode__(self):
@@ -672,6 +674,8 @@ class VariantFunctionalData(ModelWithGUID):
     functional_data_tag = models.TextField(choices=FUNCTIONAL_DATA_CHOICES)
     metadata = models.TextField(null=True)
 
+    search_hash = models.CharField(max_length=50, null=True)
+    #  TODO deprecate and migrate to search_hash
     search_parameters = models.TextField(null=True, blank=True)
 
     def __unicode__(self):
