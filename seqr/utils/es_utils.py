@@ -11,7 +11,7 @@ from sys import maxint
 import settings
 from reference_data.models import GENOME_VERSION_GRCh38, Omim, GeneConstraint
 from seqr.models import Sample, Individual
-from seqr.utils.xpos_utils import get_xpos
+from seqr.utils.xpos_utils import get_xpos, get_chrom_pos
 from seqr.utils.gene_utils import parse_locus_list_items
 from seqr.views.utils.json_utils import _to_camel_case
 
@@ -36,6 +36,29 @@ def is_nested_genotype_index(es_index):
         return False
 
 
+def get_latest_samples_for_families(families):
+    samples = Sample.objects.filter(
+        individual__family__in=families,
+        dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
+        sample_status=Sample.SAMPLE_STATUS_LOADED,
+        elasticsearch_index__isnull=False,
+    )
+    sample_individual_max_loaded_date = {
+        agg['individual__guid']: agg['max_loaded_date'] for agg in
+        samples.values('individual__guid').annotate(max_loaded_date=Max('loaded_date'))
+    }
+    return [s for s in samples if s.loaded_date == sample_individual_max_loaded_date[s.individual.guid]]
+
+
+def get_es_variants_by_ids(samples, xpos_ref_alt_tuples):
+    es_search, family_samples_by_id, _ = _get_es_search_for_samples(samples)
+    es_search = es_search.filter(_variant_id_filter(xpos_ref_alt_tuples))
+    genotypes_q, _, _ = _genotype_filter(inheritance=None, quality_filter=None, family_samples_by_id=family_samples_by_id)
+    es_search = es_search.filter(genotypes_q)
+    variant_results, _ = _execute_search(es_search, family_samples_by_id, end_index=len(xpos_ref_alt_tuples))
+    return variant_results
+
+
 def get_es_variants(search_model, page=1, num_results=100):
 
     start_index = (page - 1) * num_results
@@ -57,40 +80,10 @@ def get_es_variants(search_model, page=1, num_results=100):
     if invalid_items:
         raise Exception('Invalid genes/intervals: {}'.format(', '.join(invalid_items)))
 
-    samples = Sample.objects.filter(
-        individual__family__in=search_model.families.all(),
-        dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
-        sample_status=Sample.SAMPLE_STATUS_LOADED,
-        elasticsearch_index__isnull=False,
-    )
-    sample_individual_max_loaded_date = {
-        agg['individual__guid']: agg['max_loaded_date'] for agg in
-        samples.values('individual__guid').annotate(max_loaded_date=Max('loaded_date'))
-    }
-    samples = [s for s in samples if s.loaded_date == sample_individual_max_loaded_date[s.individual.guid]]
+    samples = get_latest_samples_for_families(search_model.families.all())
 
-    elasticsearch_index = search_model.es_index
-    if not elasticsearch_index:
-        es_indices = {s.elasticsearch_index for s in samples}
-        if len(es_indices) > 1:
-            # TODO get rid of this once add multi-project support and handle duplicate variants in different indices
-            raise Exception('Samples are not all contained in the same index: {}'.format(', '.join(es_indices)))
-        elif not is_nested_genotype_index(list(es_indices)[0]):
-            raise Exception('Index "{}" does not have a valid schema'.format(list(es_indices)[0]))
-        elasticsearch_index = ','.join(es_indices)
-
-    family_samples_by_id = defaultdict(dict)
-    for sample in samples:
-        family_samples_by_id[sample.individual.family.guid][sample.sample_id] = sample
-
-    #  TODO move liftover to hail pipeline once upgraded to 0.2
-    liftover_grch38_to_grch37 = None
-    try:
-        liftover_grch38_to_grch37 = LiftOver('hg38', 'hg19')
-    except Exception as e:
-        logger.warn('WARNING: Unable to set up liftover. {}'.format(e))
-
-    es_search = Search(using=get_es_client(), index=elasticsearch_index)
+    es_search, family_samples_by_id, elasticsearch_index = _get_es_search_for_samples(
+        samples, elasticsearch_index=search_model.es_index)
 
     if genes or intervals:
         es_search = es_search.filter(_location_filter(genes, intervals, search['locus']))
@@ -116,25 +109,16 @@ def get_es_variants(search_model, page=1, num_results=100):
         # not just a single page's worth of results (i.e. when skipping pages need to load middle pages as well)
         start_index = len(previous_search_results.get('variant_results') or [])
 
-    es_search = es_search[start_index:end_index]
-
-    field_names = _get_query_field_names()
     sort = _get_sort(sort)
 
     variant_results = []
     total_results = 0
     if inheritance_mode != COMPOUND_HET:
-        es_search = es_search.source(field_names)
         es_search = es_search.sort(*sort)
-
         logger.info('Searching in elasticsearch index: {}'.format(elasticsearch_index))
-        logger.info(json.dumps(es_search.to_dict(), indent=2))
 
-        response = es_search.execute()
-        total_results = response.hits.total
-        logger.info('Total hits: {} ({} seconds)'.format(total_results, response.took / 100.0))
-
-        variant_results = [_parse_es_hit(hit, family_samples_by_id, liftover_grch38_to_grch37, field_names) for hit in response]
+        variant_results, total_results = _execute_search(
+            es_search, family_samples_by_id, start_index=start_index, end_index=end_index)
 
     compound_het_results = previous_search_results.get('compound_het_results')
     total_compound_het_results = None
@@ -144,7 +128,7 @@ def get_es_variants(search_model, page=1, num_results=100):
         compound_het_search.aggs.bucket(
             'genes', 'terms', field='geneIds', min_doc_count=2, size=10000
         ).metric(
-            'vars_by_gene', 'top_hits', size=100, sort=sort, _source=field_names
+            'vars_by_gene', 'top_hits', size=100, sort=sort, _source=QUERY_FIELD_NAMES
         )
 
         logger.info('Searching in elasticsearch index: {}'.format(elasticsearch_index))
@@ -153,7 +137,7 @@ def get_es_variants(search_model, page=1, num_results=100):
         response = compound_het_search.execute()
 
         compound_het_results, total_compound_het_results = _parse_compound_het_hits(
-            response, allowed_consequences, family_samples_by_id, liftover_grch38_to_grch37, field_names
+            response, allowed_consequences, family_samples_by_id
         )
         logger.info('Total compound het hits: {}'.format(total_compound_het_results))
 
@@ -199,6 +183,55 @@ def get_es_variants(search_model, page=1, num_results=100):
     search_model.save()
 
     return variant_results
+
+
+class InvalidIndexException(Exception):
+    pass
+
+
+def _get_es_search_for_samples(samples, elasticsearch_index=None):
+    if not elasticsearch_index:
+        es_indices = {s.elasticsearch_index for s in samples}
+        if len(es_indices) > 1:
+            # TODO get rid of this once add multi-project support and handle duplicate variants in different indices
+            raise InvalidIndexException('Samples are not all contained in the same index: {}'.format(', '.join(es_indices)))
+        elif len(es_indices) < 1:
+            raise InvalidIndexException('No es index found for samples')
+        elif not is_nested_genotype_index(list(es_indices)[0]):
+            raise InvalidIndexException('Index "{}" does not have a valid schema'.format(list(es_indices)[0]))
+        elasticsearch_index = ','.join(es_indices)
+
+    family_samples_by_id = defaultdict(dict)
+    for sample in samples:
+        family_samples_by_id[sample.individual.family.guid][sample.sample_id] = sample
+
+    es_search = Search(using=get_es_client(), index=elasticsearch_index)
+    return es_search, family_samples_by_id, elasticsearch_index
+
+
+def _execute_search(es_search, family_samples_by_id, start_index=0, end_index=100):
+    es_search = es_search[start_index:end_index]
+    es_search = es_search.source(QUERY_FIELD_NAMES)
+
+    logger.info(json.dumps(es_search.to_dict(), indent=2))
+
+    response = es_search.execute()
+    total_results = response.hits.total
+    logger.info('Total hits: {} ({} seconds)'.format(total_results, response.took / 100.0))
+
+    variant_results = [_parse_es_hit(hit, family_samples_by_id) for hit in response]
+    return variant_results, total_results
+
+
+def _variant_id_filter(xpos_ref_alt_tuples):
+    variant_ids = []
+    for xpos, ref, alt in xpos_ref_alt_tuples:
+        chrom, pos = get_chrom_pos(xpos)
+        if chrom == 'M':
+            chrom = 'MT'
+        variant_ids.append('{}-{}-{}-{}'.format(chrom, pos, ref, alt))
+
+    return Q('terms', variantId=variant_ids)
 
 
 AFFECTED = Individual.AFFECTED_STATUS_AFFECTED
@@ -632,20 +665,18 @@ DEFAULT_POP_FIELD_CONFIG = {
 POPULATION_RESPONSE_FIELD_CONFIGS = {k: dict(DEFAULT_POP_FIELD_CONFIG, **v) for k, v in POPULATION_FIELD_CONFIGS.items()}
 
 
-def _get_query_field_names():
-    field_names = CORE_FIELDS_CONFIG.keys() + PREDICTION_FIELDS_CONFIG.keys() + [SORTED_TRANSCRIPTS_FIELD_KEY]
-    for field_name, fields in NESTED_FIELDS.items():
-        field_names += ['{}_{}'.format(field_name, field) for field in fields.keys()]
-    for population, pop_config in POPULATIONS.items():
-        for field, field_config in POPULATION_RESPONSE_FIELD_CONFIGS.items():
-            if pop_config.get(field):
-                field_names.append(pop_config.get(field))
-            field_names.append('{}_{}'.format(population, field))
-            field_names += ['{}_{}'.format(population, custom_field) for custom_field in field_config.get('fields', [])]
-    return field_names
+QUERY_FIELD_NAMES = CORE_FIELDS_CONFIG.keys() + PREDICTION_FIELDS_CONFIG.keys() + [SORTED_TRANSCRIPTS_FIELD_KEY]
+for field_name, fields in NESTED_FIELDS.items():
+    QUERY_FIELD_NAMES += ['{}_{}'.format(field_name, field) for field in fields.keys()]
+for population, pop_config in POPULATIONS.items():
+    for field, field_config in POPULATION_RESPONSE_FIELD_CONFIGS.items():
+        if pop_config.get(field):
+            QUERY_FIELD_NAMES.append(pop_config.get(field))
+        QUERY_FIELD_NAMES.append('{}_{}'.format(population, field))
+        QUERY_FIELD_NAMES += ['{}_{}'.format(population, custom_field) for custom_field in field_config.get('fields', [])]
 
 
-def _parse_es_hit(raw_hit, family_samples_by_id, liftover_grch38_to_grch37, field_names):
+def _parse_es_hit(raw_hit, family_samples_by_id):
     genotypes = {}
 
     family_guids = []
@@ -660,7 +691,7 @@ def _parse_es_hit(raw_hit, family_samples_by_id, liftover_grch38_to_grch37, fiel
                 for genotype_hit in genotype_hits[family_guid]
             })
 
-    hit = {k: raw_hit[k] for k in field_names if k in raw_hit}
+    hit = {k: raw_hit[k] for k in QUERY_FIELD_NAMES if k in raw_hit}
 
     # TODO better handling for multi-project searches
     project = family_samples_by_id[family_guids[0]].values()[0].individual.family.project
@@ -669,6 +700,7 @@ def _parse_es_hit(raw_hit, family_samples_by_id, liftover_grch38_to_grch37, fiel
     lifted_over_genome_version = None
     lifted_over_chrom= None
     lifted_over_pos = None
+    liftover_grch38_to_grch37 = _liftover_grch38_to_grch37()
     if liftover_grch38_to_grch37 and genome_version == GENOME_VERSION_GRCh38:
         if liftover_grch38_to_grch37:
             grch37_coord = liftover_grch38_to_grch37.convert_coordinate(
@@ -700,6 +732,8 @@ def _parse_es_hit(raw_hit, family_samples_by_id, liftover_grch38_to_grch37, fiel
         field_name: _get_field_values(hit, fields, lookup_field_prefix=field_name)
         for field_name, fields in NESTED_FIELDS.items()
     })
+    if hasattr(raw_hit.meta, 'sort'):
+        result['_sort'] = [_parse_es_sort(sort) for sort in raw_hit.meta.sort]
     result.update({
         'projectGuid': project.guid,
         'familyGuids': family_guids,
@@ -714,7 +748,6 @@ def _parse_es_hit(raw_hit, family_samples_by_id, liftover_grch38_to_grch37, fiel
             hit, PREDICTION_FIELDS_CONFIG, format_response_key=lambda key: key.split('_')[1].lower()
         ),
         'transcripts': transcripts,
-        '_sort': [_parse_es_sort(sort) for sort in raw_hit.meta.sort],
     })
     return result
 
@@ -759,6 +792,18 @@ def _parse_compound_het_hits(response, allowed_consequences, family_samples_by_i
                 variants_by_gene.append(gene_variants)
 
     return variants_by_gene, sum(len(results) for results in variants_by_gene)
+
+
+#  TODO move liftover to hail pipeline once upgraded to 0.2
+LIFTOVER_GRCH38_TO_GRCH37 = None
+def _liftover_grch38_to_grch37():
+    global LIFTOVER_GRCH38_TO_GRCH37
+    if not LIFTOVER_GRCH38_TO_GRCH37:
+        try:
+            LIFTOVER_GRCH38_TO_GRCH37 = LiftOver('hg38', 'hg19')
+        except Exception as e:
+            logger.warn('WARNING: Unable to set up liftover. {}'.format(e))
+    return LIFTOVER_GRCH38_TO_GRCH37
 
 
 def _parse_es_sort(sort):

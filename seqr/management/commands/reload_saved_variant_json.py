@@ -31,13 +31,14 @@ class Command(BaseCommand):
         error = {}
         for project in tqdm(projects, unit=" projects"):
             logger.info("Project: " + project.name)
-            try:
+            # try:
+            if True:
                 updated_saved_variant_guids = update_project_saved_variant_json(project, family_id=family_id)
                 success[project.name] = len(updated_saved_variant_guids)
                 logger.info('Updated {0} variants for project {1}'.format(len(updated_saved_variant_guids), project.name))
-            except Exception as e:
-                logger.error('Error in project {0}: {1}'.format(project.name, e))
-                error[project.name] = e
+            # except Exception as e:
+            #     logger.error('Error in project {0}: {1}'.format(project.name, e))
+            #     error[project.name] = e
 
         logger.info("Done")
         logger.info("Summary: ")
