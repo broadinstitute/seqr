@@ -17,9 +17,9 @@ from seqr.views.utils.json_utils import create_json_response, _to_title_case
 from xbrowse_server.mall import get_reference
 from xbrowse import genomeloc
 from reference_data.models import HPO_CATEGORY_NAMES
-from seqr.models import Project, Family, VariantTag, Sample, VariantFunctionalData
+from seqr.models import Project, Family, VariantTag, VariantTagType, Sample, SavedVariant
 from dateutil import relativedelta as rdelta
-from django.db.models import Q
+from django.db.models import Q, Prefetch
 from django.shortcuts import render
 from settings import PROJECT_IDS_TO_EXCLUDE_FROM_DISCOVERY_SHEET_DOWNLOAD, LOGIN_URL, SEQR_ID_TO_MME_ID_MAP
 from seqr.views.utils.orm_to_json_utils import _get_json_for_project
@@ -89,8 +89,87 @@ HEADER = collections.OrderedDict([
     ("analysis_summary", "Analysis Summary"),
 ])
 
+DEFAULT_ROW = row = {
+    "t0": None,
+    "t0_copy": None,
+    "months_since_t0": None,
+    "sample_source": "CMG",
+    "analysis_complete_status": "complete",
+    "expected_inheritance_model": "multiple",
+    "actual_inheritance_model": "",
+    "n_kindreds": "1",
+    "gene_name": "NS",
+    "novel_mendelian_gene": "NS",
+    "gene_count": "NA",
+    "phenotype_class": "New",
+    "solved": "N",
+    "genome_wide_linkage": "NS",
+    "p_value": "NS",
+    "n_kindreds_overlapping_sv_similar_phenotype": "NS",
+    "n_unrelated_kindreds_with_causal_variants_in_gene": "NS",
+    "biochemical_function": "NS",
+    "protein_interaction": "NS",
+    "expression": "NS",
+    "patient_cells": "NS",
+    "non_patient_cell_model": "NS",
+    "animal_model": "NS",
+    "non_human_cell_culture_model": "NS",
+    "rescue": "NS",
+    "omim_number_initial": "NA",
+    "omim_number_post_discovery": "NA",
+    "submitted_to_mme": "NS",
+    "posted_publicly": "NS",
+    "komp_early_release": "NS",
+    "pubmed_ids": "",
+}
+DEFAULT_ROW.update({hpo_category: 'N' for hpo_category in [
+    "connective_tissue",
+    "voice",
+    "nervous_system",
+    "breast",
+    "eye_defects",
+    "prenatal_development_or_birth",
+    "neoplasm",
+    "endocrine_system",
+    "head_or_neck",
+    "immune_system",
+    "growth",
+    "limbs",
+    "thoracic_cavity",
+    "blood",
+    "musculature",
+    "cardiovascular_system",
+    "abdomen",
+    "skeletal_system",
+    "respiratory",
+    "ear_defects",
+    "metabolism_homeostasis",
+    "genitourinary_system",
+    "integument",
+]})
 
-PHENOTYPIC_SERIES_CACHE = {}
+ADDITIONAL_KINDREDS_FIELD = "n_unrelated_kindreds_with_causal_variants_in_gene"
+FUNCTIONAL_DATA_FIELD_MAP = {
+    "Additional Unrelated Kindreds w/ Causal Variants in Gene": ADDITIONAL_KINDREDS_FIELD,
+    "Genome-wide Linkage": "genome_wide_linkage",
+    "Bonferroni corrected p-value": "p_value",
+    "Kindreds w/ Overlapping SV & Similar Phenotype": "n_kindreds_overlapping_sv_similar_phenotype",
+    "Biochemical Function": "biochemical_function",
+    "Protein Interaction": "protein_interaction",
+    "Expression": "expression",
+    "Patient Cells": "patient_cells",
+    "Non-patient cells": "non_patient_cell_model",
+    "Animal Model": "animal_model",
+    "Non-human cell culture model": "non_human_cell_culture_model",
+    "Rescue": "rescue",
+}
+METADATA_FUNCTIONAL_DATA_FIELDS = {
+    "genome_wide_linkage",
+    "p_value",
+    "n_kindreds_overlapping_sv_similar_phenotype",
+    ADDITIONAL_KINDREDS_FIELD,
+}
+
 
 
 @staff_member_required(login_url=LOGIN_URL)
@@ -106,6 +185,9 @@ def discovery_sheet(request, project_guid=None):
     # export table for all cmg projects
     if "download" in request.GET and project_guid is None:
         logger.info("exporting xls table for all projects")
+        import time
+        start = time.time()
+
         for project in projects:
             if any([proj_id.lower() == exclude_id.lower()
                     for exclude_id in PROJECT_IDS_TO_EXCLUDE_FROM_DISCOVERY_SHEET_DOWNLOAD
@@ -124,6 +206,7 @@ def discovery_sheet(request, project_guid=None):
             ws_out.append([row[column_key] for column_key in HEADER])
         wb_out.save(temp_file.name)
         temp_file.seek(0)
+        logger.info('TIME: {}'.format(time.time() - start))
 
         email_message = EmailMultiAlternatives(
             subject="Discovery Sheet",
@@ -165,183 +248,99 @@ def discovery_sheet(request, project_guid=None):
 
 
 def generate_rows(project, errors):
+    import time
+    start = time.time()
+
     rows = []
 
     loaded_samples = Sample.objects.filter(
-        individual__family__project=project, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS, sample_status=Sample.SAMPLE_STATUS_LOADED)
+        individual__family__project=project,
+        dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
+        sample_status=Sample.SAMPLE_STATUS_LOADED,
+        loaded_date__isnull=False
+    ).select_related('individual__family').order_by('loaded_date')
 
     if not loaded_samples:
         errors.append("No data loaded for project: %s" % project)
         logger.info("No data loaded for project: %s" % project)
         return []
 
-    loaded_samples_by_family = collections.defaultdict(set)
+    loaded_samples_by_family = collections.defaultdict(list)
     for sample in loaded_samples:
-        loaded_samples_by_family[sample.individual.family.guid].add(sample)
+        loaded_samples_by_family[sample.individual.family.guid].append(sample)
 
-    project_variant_tags = list(
-        VariantTag.objects.select_related('variant_tag_type').select_related('saved_variant').filter(
-            Q(saved_variant__project=project) & (
-            Q(variant_tag_type__name__icontains="tier 1") |
-            Q(variant_tag_type__name__icontains="tier 2") |
-            Q(variant_tag_type__name__icontains="known gene for phenotype") |
-            Q(variant_tag_type__name__icontains="komp"))
-        ))
+    tag_types = VariantTagType.objects.filter(Q(project__isnull=True) & (Q(category='CMG Discovery Tags') | Q(name='Share with KOMP')))
 
-    #"External" = REAN
-    #"RNA" = RNA
-    #"WGS" or "Genome" . = WGS
-    #else  "WES"
-    lower_case_project_id = project.deprecated_project_id.lower()
-    if "external" in lower_case_project_id or "reprocessed" in lower_case_project_id:
+    project_saved_variants = SavedVariant.objects.prefetch_related(Prefetch(
+        'varianttag_set', queryset=VariantTag.objects.filter(variant_tag_type__in=tag_types), to_attr='discovery_tags',
+    )).prefetch_related('variantfunctionaldata_set').filter(
+        project=project,
+        varianttag__variant_tag_type__in=tag_types,
+    )
+
+    saved_variants_by_family = collections.defaultdict(list)
+    for saved_variant in project_saved_variants:
+        saved_variants_by_family[saved_variant.family.guid].append(saved_variant)
+
+    if "external" in project.name or "reprocessed" in project.name:
         sequencing_approach = "REAN"
-    elif "rna" in lower_case_project_id:
-        sequencing_approach = "RNA"
-    elif "wgs" in lower_case_project_id or "genome" in lower_case_project_id:
-        sequencing_approach = "WGS"
     else:
-        sequencing_approach = "WES"
+        sequencing_approach = loaded_samples.last().sample_type
 
     now = timezone.now()
     for family in Family.objects.filter(project=project).prefetch_related('individual_set'):
-        samples = loaded_samples_by_family[family.guid]
-
-        t0 = min([sample.loaded_date for sample in samples if sample.loaded_date is not None] or [None])
-        if not t0:
+        samples = loaded_samples_by_family.get(family.guid)
+        if not samples:
             errors.append("No data loaded for family: %s. Skipping..." % family)
             continue
 
+        row = {
+            "project_guid": project.guid,
+            "family_guid": family.guid,
+            "family_id": family.family_id,
+            "collaborator": project.name,
+            "sequencing_approach": sequencing_approach,
+            "extras_pedigree_url": family.pedigree_image.url if family.pedigree_image else "",
+            "coded_phenotype": family.coded_phenotype or "",
+            "analysis_summary": (family.analysis_summary or '').strip('" \n'),
+        }
+        row.update(DEFAULT_ROW)
+
+        t0 = samples[0].loaded_date
         t0_diff = rdelta.relativedelta(now, t0)
         t0_months_since_t0 = t0_diff.years * 12 + t0_diff.months
-
-        analysis_complete_status = "first_pass_in_progress"
-        if t0_months_since_t0 >= 12:  # or (project_has_tier1 or project_has_tier2 or project_has_known_gene_for_phenotype):
-            analysis_complete_status = "complete"
-
-        individuals = list(family.individual_set.all())
-
-        phenotips_individual_data_records = [json.loads(i.phenotips_data) for i in individuals if i.phenotips_data]
-
-        phenotips_individual_features = [phenotips_data.get("features", []) for phenotips_data in phenotips_individual_data_records]
-        phenotips_individual_mim_disorders = [phenotips_data.get("disorders", []) for phenotips_data in phenotips_individual_data_records]
-        phenotips_individual_expected_inheritance_model = [
-            inheritance_mode["label"] for phenotips_data in phenotips_individual_data_records for inheritance_mode in phenotips_data.get("global_mode_of_inheritance", [])
-        ]
-
-        omim_ids = [disorder.get("id") for disorders in phenotips_individual_mim_disorders for disorder in disorders if "id" in disorder]
-        omim_number_initial = omim_ids[0].replace("MIM:", "") if omim_ids else ""
-
-        if omim_number_initial:
-            if omim_number_initial in PHENOTYPIC_SERIES_CACHE:
-                omim_number_initial = PHENOTYPIC_SERIES_CACHE[omim_number_initial]
-            else:
-                try:
-                    response = requests.get('https://www.omim.org/entry/'+omim_number_initial, headers={
-                        'Host': 'www.omim.org',
-                        'Connection': 'keep-alive',
-                        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/62.0.3202.94 Safari/537.36',
-                        'Upgrade-Insecure-Requests': '1',
-                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
-                        'Accept-Encoding': 'gzip, deflate, br',
-                        'Accept-Language': 'en-US,en;q=0.9,ru;q=0.8',
-                    })
-
-                    if not response.ok:
-                        raise ValueError("omim request failed: %s %s" % (response, response.reason))
-                    omim_page_html = response.content
-
-                    # <a href="/phenotypicSeries/PS613280" class="btn btn-info" role="button"> Phenotypic Series </a>
-                    match = re.search("/phenotypicSeries/([a-zA-Z0-9]+)", omim_page_html)
-                    if not match:
-                        logger.info("No phenotypic series found for OMIM initial # %s" % omim_number_initial)
-                        PHENOTYPIC_SERIES_CACHE[omim_number_initial] = omim_number_initial
-                    else:
-                        phenotypic_series_id = match.group(1)
-                        logger.info("Will replace OMIM initial # %s with phenotypic series %s" % (omim_number_initial, phenotypic_series_id))
-                        PHENOTYPIC_SERIES_CACHE[omim_number_initial] = phenotypic_series_id
-                        omim_number_initial = PHENOTYPIC_SERIES_CACHE[omim_number_initial]
-                except Exception as e:
-                    # don't change omim_number_initial
-                    logger.info("Unable to look up phenotypic series for OMIM initial number: %s. %s" % (omim_number_initial, e))
-
-        submitted_to_mme = SEQR_ID_TO_MME_ID_MAP.find_one({'project_id': project.deprecated_project_id,'family_id': family.family_id})
-
-        row = {
-            "extras_pedigree_url": family.pedigree_image.url if family.pedigree_image else "",
-
-            "project_id": project.deprecated_project_id,
-            "project_name": project.name,
+        row.update({
             "t0": t0,
             "t0_copy": t0,
             "months_since_t0": t0_months_since_t0,
-            "family_id": family.family_id,
-            "coded_phenotype": family.coded_phenotype or "",  # "Coded Phenotype" field - Ben will add a field that only staff can edit.  Will be on the family page, above short description.
-            "sequencing_approach": sequencing_approach,  # WES, WGS, RNA, REAN, GENO - Ben will do this using a script based off project name - may need to backfill some
-            "sample_source": "CMG",  # CMG, NHLBI-X01, NHLBI-nonX01, NEI - Most are CMG so default to them all being CMG.
-            "n_kindreds": "1",
-            "actual_inheritance_model": "",
-            "expected_inheritance_model": "".join(set(phenotips_individual_expected_inheritance_model)) if len(set(phenotips_individual_expected_inheritance_model)) == 1 else "multiple", # example: 20161205_044436_852786_MAN_0851_05_1 -  AR-homozygote, AR, AD, de novo, X-linked, UPD, other, multiple  - phenotips - Global mode of inheritance:
-            "omim_number_initial": omim_number_initial or "NA",
-            "omim_number_post_discovery": family.post_discovery_omim_number or "NA",
-            "collaborator": project.name,  # TODO use email addresses?
-            "analysis_summary": (family.analysis_summary or '').strip('" \n'),
-            "phenotype_class": "Known" if omim_number_initial else "New",  # "disorders"  UE, NEW, MULTI, EXPAN, KNOWN - If there is a MIM number enter "Known" - otherwise put "New"  and then we will need to edit manually for the other possible values
-            "solved": "N",  # TIER 1 GENE (or known gene for phenotype also record as TIER 1 GENE), TIER 2 GENE, N - Pull from seqr using tags
-            "submitted_to_mme": "Y" if submitted_to_mme else "NS",
-            "pubmed_ids": "",
-            "posted_publicly": "NS",
+        })
+        if t0_months_since_t0 < 12:
+            row['analysis_complete_status'] = "first_pass_in_progress"
 
-            "gene_name": "NS",
-            "gene_count": "NA",
-            "novel_mendelian_gene": "NS",
-            "analysis_complete_status": analysis_complete_status,  # If known gene for phenotype, tier 1 or tier 2 tag is used on any variant  in project, or 1 year past t0 = complete.  If less than a year and none of the tags above = first pass in progress
+        submitted_to_mme = SEQR_ID_TO_MME_ID_MAP.find_one({'project_id': project.deprecated_project_id, 'family_id': family.family_id})
+        if submitted_to_mme:
+            row["submitted_to_mme"] = "Y"
 
-            "genome_wide_linkage": "NS",
-            "p_value": "NS",
-            "n_kindreds_overlapping_sv_similar_phenotype": "NS",
-            "n_unrelated_kindreds_with_causal_variants_in_gene": "NS",
-            "biochemical_function": "NS",
-            "protein_interaction": "NS",
-            "expression": "NS",
-            "patient_cells": "NS",
-            "non_patient_cell_model": "NS",
-            "animal_model": "NS",
-            "non_human_cell_culture_model": "NS",
-            "rescue": "NS",
+        phenotips_individual_data_records = [json.loads(i.phenotips_data) for i in family.individual_set.all() if i.phenotips_data]
 
-            "komp_early_release": "NS",
-        }
+        phenotips_individual_expected_inheritance_model = [
+            inheritance_mode["label"] for phenotips_data in phenotips_individual_data_records for inheritance_mode in phenotips_data.get("global_mode_of_inheritance", [])
+        ]
+        if len(phenotips_individual_expected_inheritance_model) == 1:
+            row["expected_inheritance_model"] = phenotips_individual_expected_inheritance_model.pop()
 
-        #for hpo_category_id, hpo_category_name in HPO_CATEGORY_NAMES.items():
-        #    row[hpo_category_name.lower().replace(" ", "_").replace("/", "_")] = "N"
+        phenotips_individual_mim_disorders = [phenotips_data.get("disorders", []) for phenotips_data in phenotips_individual_data_records]
+        omim_number_initial = next((disorder["id"] for disorders in phenotips_individual_mim_disorders for disorder in disorders if "id" in disorder), '').replace("MIM:", "")
+        if omim_number_initial:
+            row.update({
+                "omim_number_initial": omim_number_initial,
+                "phenotype_class": "Known",
+            })
 
-        for hpo_category_name in [
-            "connective_tissue",
-            "voice",
-            "nervous_system",
-            "breast",
-            "eye_defects",
-            "prenatal_development_or_birth",
-            "neoplasm",
-            "endocrine_system",
-            "head_or_neck",
-            "immune_system",
-            "growth",
-            "limbs",
-            "thoracic_cavity",
-            "blood",
-            "musculature",
-            "cardiovascular_system",
-            "abdomen",
-            "skeletal_system",
-            "respiratory",
-            "ear_defects",
-            "metabolism_homeostasis",
-            "genitourinary_system",
-            "integument",
-        ]:
-            row[hpo_category_name] = "N"
+        if family.post_discovery_omim_number:
+            row["omim_number_post_discovery"] = family.post_discovery_omim_number
 
+        phenotips_individual_features = [phenotips_data.get("features", []) for phenotips_data in phenotips_individual_data_records]
         category_not_set_on_some_features = False
         for features_list in phenotips_individual_features:
             for feature in features_list:
@@ -363,103 +362,146 @@ def generate_rows(project, errors):
         if category_not_set_on_some_features:
             errors.append("HPO category field not set for some HPO terms in %s" % family)
 
-        variant_tags = [vt for vt in project_variant_tags if vt.saved_variant.family_id == family.id]
-        if not variant_tags:
+        saved_variants = saved_variants_by_family.get(family.guid)
+        if not saved_variants:
             rows.append(row)
             continue
 
-        gene_ids_to_variant_tags = defaultdict(list)
-        gene_ids_to_functional_tags = defaultdict(list)
-        for vt in variant_tags:
+        gene_ids_to_saved_variants = defaultdict(list)
+        gene_ids_to_variant_tag_names = defaultdict(set)
+        for variant in saved_variants:
 
-            if not vt.saved_variant.saved_variant_json:
-                errors.append("%s - variant annotation not found" % vt)
+            if not variant.saved_variant_json:
+                errors.append("%s - variant annotation not found" % variant)
                 rows.append(row)
                 continue
 
-            vt.saved_variant_json = json.loads(vt.saved_variant.saved_variant_json)
-            annotation = vt.saved_variant_json.get('annotation') or {}
+            saved_variant_json = json.loads(variant.saved_variant_json)
 
-            if "coding_gene_ids" not in annotation and "gene_ids" not in annotation:
-                errors.append("%s - no gene_ids" % vt)
-                rows.append(row)
-                continue
-
-
+            annotation = saved_variant_json.get('annotation') or {}
             gene_ids = annotation.get("coding_gene_ids", [])
             if not gene_ids:
                 gene_ids = annotation.get("gene_ids", [])
 
             if not gene_ids:
-                errors.append("%s - gene_ids not specified" % vt)
+                errors.append("%s - no gene ids" % variant)
                 rows.append(row)
                 continue
 
             # get the shortest gene_id
-            gene_id = list(sorted(gene_ids, key=lambda gene_id: len(gene_id)))[0]
+            gene_id = sorted(gene_ids, key=lambda gene_id: len(gene_id))[0]
+            gene_ids_to_saved_variants[gene_id].append(variant)
+            gene_ids_to_variant_tag_names[gene_id].update({vt.variant_tag_type.name for vt in variant.discovery_tags})
 
-            gene_ids_to_variant_tags[gene_id].append(vt)
+        if len(gene_ids_to_saved_variants) > 1:
+            row["gene_count"] = len(gene_ids_to_saved_variants)
 
-            functional_tags = VariantFunctionalData.objects.filter((
-                Q(saved_variant__family=family) | Q(saved_variant__family__isnull=True)) &
-                Q(saved_variant__xpos=vt.saved_variant.xpos) & Q(saved_variant__ref=vt.saved_variant.ref) & Q(saved_variant__alt=vt.saved_variant.alt))
-            gene_ids_to_functional_tags[gene_id].extend(functional_tags)
+        for gene_id, variants in gene_ids_to_saved_variants.items():
+            # create a copy of the row dict
+            row = dict(row)
 
-        for gene_id, variant_tags in gene_ids_to_variant_tags.items():
             gene_symbol = get_reference().get_gene_symbol(gene_id)
+            if gene_symbol:
+                row["gene_name"] = gene_symbol
 
-            functional_tags = gene_ids_to_functional_tags.get(gene_id, [])
+            variant_tag_names = gene_ids_to_variant_tag_names[gene_id]
 
-            lower_case_variant_tag_type_names = [vt.variant_tag_type.name.lower() for vt in variant_tags]
-            has_tier1 = any(name.startswith("tier 1") for name in lower_case_variant_tag_type_names)
-            has_tier2 = any(name.startswith("tier 2") for name in lower_case_variant_tag_type_names)
-            has_tier2_phenotype_expansion = any(name.startswith("tier 2") and "expansion" in name for name in lower_case_variant_tag_type_names)
-            has_known_gene_for_phenotype = any(name == "known gene for phenotype" for name in lower_case_variant_tag_type_names)
-            has_share_with_komp_tag = any("komp" in name and "share" in name for name in lower_case_variant_tag_type_names)
+            has_tier1 = any(name.startswith("Tier 1") for name in variant_tag_names)
+            has_tier2 = any(name.startswith("Tier 2") for name in variant_tag_names)
+            has_known_gene_for_phenotype = 'Known gene for phenotype' in variant_tag_names
 
-            has_tier1_phenotype_expansion_or_novel_mode_of_inheritance = any(
-                name.startswith("tier 1") and ('expansion' in name.lower() or 'novel mode' in name.lower()) for name in lower_case_variant_tag_type_names)
-            has_tier_1_or_2_phenotype_not_delineated = any(
-                (name.startswith("tier 1") or name.startswith("tier 2")) and ('not delineated' in name.lower()) for name in lower_case_variant_tag_type_names)
+            row.update({
+                "solved": ("TIER 1 GENE" if (has_tier1 or has_known_gene_for_phenotype) else (
+                    "TIER 2 GENE" if has_tier2 else "N")),
+                "komp_early_release": "Y" if 'Share with KOMP' in variant_tag_names else "N",
+            })
 
-            analysis_complete_status = row["analysis_complete_status"]
             if has_tier1 or has_tier2 or has_known_gene_for_phenotype:
-                analysis_complete_status = "complete"
+                row.update({
+                    "posted_publicly":  "",
+                    "analysis_complete_status": "complete",
+                    "novel_mendelian_gene":  "Y" if any("Novel gene" in name for name in variant_tag_names) else "N",
+                })
 
-            variant_tag_list = [("%s  %s  %s" % ("-".join(map(str, list(genomeloc.get_chr_pos(vt.saved_variant.xpos_start)) + [vt.saved_variant.ref, vt.saved_variant.alt])), gene_symbol, vt.variant_tag_type.name.lower())) for vt in variant_tags]
+            if any(tag in variant_tag_names for tag in [
+                'Tier 1 - Phenotype expansion', 'Tier 1 - Novel mode of inheritance',  'Tier 2 - Phenotype expansion',
+            ]):
+                row["phenotype_class"] = "EXPAN"
+            elif any(tag in variant_tag_names for tag in [
+                'Tier 1 - Phenotype not delineated', 'Tier 2 - Phenotype not delineated'
+            ]):
+                row["phenotype_class"] = "UE"
+
+            if not submitted_to_mme:
+                if has_tier1 or has_tier2:
+                    row["submitted_to_mme"] = "N" if t0_months_since_t0 > 7 else "TBD"
+                elif has_known_gene_for_phenotype:
+                    row["submitted_to_mme"] = "KPG"
+
+            if has_tier1 or has_tier2:
+                for functional_field in FUNCTIONAL_DATA_FIELD_MAP.values():
+                    if functional_field == ADDITIONAL_KINDREDS_FIELD:
+                        row[functional_field] = "1"
+                    elif functional_field in METADATA_FUNCTIONAL_DATA_FIELDS:
+                        row[functional_field] = "NA"
+                    else:
+                        row[functional_field] = "N"
+            elif has_known_gene_for_phenotype:
+                for functional_field in FUNCTIONAL_DATA_FIELD_MAP.values():
+                    row[functional_field] = "KPG"
+
+            variant_tag_list = []
+            for variant in variants:
+                variant_id = "-".join(map(str, list(genomeloc.get_chr_pos(variant.xpos_start)) + [variant.ref, variant.alt]))
+                variant_tag_list += ["{variant_id}  {gene_symbol}  {tag}".format(
+                    variant_id=variant_id, gene_symbol=gene_symbol, tag=vt.variant_tag_type.name.lower(),
+                ) for vt in variant.discovery_tags]
+
+                for f in variant.variantfunctionaldata_set.all():
+                    functional_field = FUNCTIONAL_DATA_FIELD_MAP[f.functional_data_tag]
+                    if functional_field in METADATA_FUNCTIONAL_DATA_FIELDS:
+                        value = f.metadata
+                        if functional_field == ADDITIONAL_KINDREDS_FIELD:
+                            value = str(int(value) + 1)
+                        if row[functional_field] != 'NS':
+                            value = '{} {}'.format(row[functional_field], value)
+                    else:
+                        value = 'Y'
+
+                    row[functional_field] = value
+
+            row["extras_variant_tag_list"] = variant_tag_list
+
+            affected_sample_ids = set()
+            unaffected_sample_ids = set()
+            for sample in samples:
+                if sample.individual.affected == "A":
+                    affected_sample_ids.add(sample.sample_id)
+                elif sample.individual.affected == "N":
+                    unaffected_sample_ids.add(sample.sample_id)
 
             actual_inheritance_models = set()
             potential_compound_hets = defaultdict(int)  # gene_id to compound_hets counter
-            for vt in variant_tags:
+            for variant in variants:
                 affected_indivs_with_hom_alt_variants = set()
                 affected_indivs_with_het_variants = set()
-                affected_total_individuals = 0
                 unaffected_indivs_with_hom_alt_variants = set()
                 unaffected_indivs_with_het_variants = set()
-                unaffected_total_individuals = 0
                 is_x_linked = False
-                if vt.saved_variant_json["genotypes"]:
-                    chrom, _ = genomeloc.get_chr_pos(vt.saved_variant.xpos_start)
+
+                # TODO use orm to json methods?
+                genotypes = json.loads(variant.saved_variant_json).get('genotypes')
+                if genotypes:
+                    chrom, _ = genomeloc.get_chr_pos(variant.xpos_start)
                     is_x_linked = "X" in chrom
-                    for sample_id, genotype in vt.saved_variant_json["genotypes"].items():
-                        try:
-                            i = next(s.individual for s in samples if s.sample_id == sample_id)
-                        except StopIteration as e:
-                            logger.warn("WARNING: Couldn't find individual for sample: %s, %s" % (family, sample_id))
-                            continue
-
-                        if i.affected == "A":
-                            affected_total_individuals += 1
-                        elif i.affected == "N":
-                            unaffected_total_individuals += 1
-
-                        if genotype["num_alt"] == 2 and i.affected == "A":
+                    for sample_id, genotype in genotypes.items():
+                        if genotype["num_alt"] == 2 and sample_id in affected_sample_ids:
                             affected_indivs_with_hom_alt_variants.add(i.individual_id)
-                        elif genotype["num_alt"] == 1 and i.affected == "A":
+                        elif genotype["num_alt"] == 1 and sample_id in affected_sample_ids:
                             affected_indivs_with_het_variants.add(i.individual_id)
-                        elif genotype["num_alt"] == 2 and i.affected == "N":
+                        elif genotype["num_alt"] == 2 and sample_id in unaffected_sample_ids:
                             unaffected_indivs_with_hom_alt_variants.add(i.individual_id)
-                        elif genotype["num_alt"] == 1 and i.affected == "N":
+                        elif genotype["num_alt"] == 1 and sample_id in unaffected_sample_ids:
                             unaffected_indivs_with_het_variants.add(i.individual_id)
 
                 # AR-homozygote, AR-comphet, AR, AD, de novo, X-linked, UPD, other, multiple
@@ -472,89 +514,62 @@ def generate_rows(project, errors):
 
                 if not unaffected_indivs_with_hom_alt_variants and not unaffected_indivs_with_het_variants and affected_indivs_with_het_variants:
                     if "AR-comphet" not in actual_inheritance_models:
-                        if unaffected_total_individuals > 0:
+                        if unaffected_sample_ids:
                             actual_inheritance_models.add("de novo")
                         else:
                             actual_inheritance_models.add("AD")
 
-                if not unaffected_indivs_with_hom_alt_variants and (unaffected_total_individuals < 2 or unaffected_indivs_with_het_variants) and affected_indivs_with_het_variants and not affected_indivs_with_hom_alt_variants:
+                if not unaffected_indivs_with_hom_alt_variants and (len(unaffected_sample_ids) < 2 or unaffected_indivs_with_het_variants) and affected_indivs_with_het_variants and not affected_indivs_with_hom_alt_variants:
                     potential_compound_hets[gene_id] += 1
                     if potential_compound_hets[gene_id] >= 2:
                         actual_inheritance_models.clear()
                         actual_inheritance_models.add("AR-comphet")
+                        break
 
-            actual_inheritance_model = " (%d aff hom, %d aff het, %d unaff hom, %d unaff het) " % (
-                #affected_total_individuals,
-                #unaffected_total_individuals,
-                len(affected_indivs_with_hom_alt_variants),
-                len(affected_indivs_with_het_variants),
-                len(unaffected_indivs_with_hom_alt_variants),
-                len(unaffected_indivs_with_het_variants),
-            )
-
-            actual_inheritance_model = ", ".join(actual_inheritance_models) #+ actual_inheritance_model
-            NA_or_KPG_or_NS = "NA" if has_tier1 or has_tier2 else ("KPG" if has_known_gene_for_phenotype else "NS")
-            KPG_or_blank_or_NS = "KPG" if has_known_gene_for_phenotype else ("" if has_tier1 or has_tier2 else "NS")
-
-            # "disorders"  UE, NEW, MULTI, EXPAN, KNOWN - If there is a MIM number enter "Known" - otherwise put "New"  and then we will need to edit manually for the other possible values
-            phenotype_class = "EXPAN" if has_tier1_phenotype_expansion_or_novel_mode_of_inheritance or has_tier2_phenotype_expansion else (
-                "UE" if has_tier_1_or_2_phenotype_not_delineated else (
-                    "Known" if omim_number_initial else "New"))
-
-            # create a copy of the row dict
-            row = dict(row)
-
-            if not submitted_to_mme:
-                if has_tier1 or has_tier2:
-                    row["submitted_to_mme"] = "N" if t0_months_since_t0 > 7 else "TBD"
-                elif has_known_gene_for_phenotype:
-                    row["submitted_to_mme"] = "KPG"
-
-            row.update({
-                "extras_variant_tag_list": variant_tag_list,
-                "extras_num_variant_tags": len(variant_tags),
-                "gene_name": str(gene_symbol) if gene_symbol and (has_tier1 or has_tier2 or has_known_gene_for_phenotype) else "NS",
-                "gene_count": len(gene_ids_to_variant_tags.keys()) if len(gene_ids_to_variant_tags.keys()) > 1 else "NA",
-                "novel_mendelian_gene": "Y" if any("novel gene" in name for name in lower_case_variant_tag_type_names) else ("N" if has_tier1 or has_tier2 or has_known_gene_for_phenotype or has_tier2_phenotype_expansion else "NS"),
-                "solved": ("TIER 1 GENE" if (has_tier1 or has_known_gene_for_phenotype) else ("TIER 2 GENE" if has_tier2 else "N")),
-                "posted_publicly": ("" if has_tier1 or has_tier2 or has_known_gene_for_phenotype else "NS"),
-                "actual_inheritance_model": actual_inheritance_model,
-                "analysis_complete_status": analysis_complete_status,  # If known gene for phenotype, tier 1 or tier 2 tag is used on any variant  in project, or 1 year past t0 = complete.  If less than a year and none of the tags above = first pass in progress
-                "genome_wide_linkage": " ".join(set([f.metadata for f in functional_tags if f.functional_data_tag == "Genome-wide Linkage"])) or NA_or_KPG_or_NS,
-                "p_value": " ".join(set([f.metadata for f in functional_tags if "p-value" in f.functional_data_tag.lower()])) or NA_or_KPG_or_NS,
-                "n_kindreds_overlapping_sv_similar_phenotype": " ".join(set([f.metadata for f in functional_tags if "overlapping sv" in f.functional_data_tag.lower()])) or NA_or_KPG_or_NS,
-                "n_unrelated_kindreds_with_causal_variants_in_gene": "KPG" if has_known_gene_for_phenotype else (" ".join(set([str(int(f.metadata) + 1) for f in functional_tags if f.metadata and "causal variants" in f.functional_data_tag.lower()])) or ("1" if has_tier1 or has_tier2 else "NS")),
-                "biochemical_function": ("Y" if any([f for f in functional_tags if f.functional_data_tag == 'Biochemical Function']) else "N") if has_tier1 or has_tier2 else KPG_or_blank_or_NS,
-                "protein_interaction": ("Y" if any([f for f in functional_tags if f.functional_data_tag == 'Protein Interaction']) else "N") if has_tier1 or has_tier2 else KPG_or_blank_or_NS,
-                "expression": ("Y" if any([f for f in functional_tags if f.functional_data_tag == 'Expression']) else "N") if has_tier1 or has_tier2 else KPG_or_blank_or_NS,
-                "patient_cells": ("Y" if any([f for f in functional_tags if f.functional_data_tag == "Patient Cells"]) else "N") if has_tier1 or has_tier2 else KPG_or_blank_or_NS,
-                "non_patient_cell_model": ("Y" if any([f for f in functional_tags if f.functional_data_tag.startswith('Non-patient')]) else "N") if has_tier1 or has_tier2 else KPG_or_blank_or_NS,
-                "animal_model": ("Y" if any([f for f in functional_tags if f.functional_data_tag == "Animal Model"]) else "N") if has_tier1 or has_tier2 else KPG_or_blank_or_NS,
-                "non_human_cell_culture_model": ("Y" if any([f for f in functional_tags if f.functional_data_tag.startswith('Non-human')]) else "N") if has_tier1 or has_tier2 else KPG_or_blank_or_NS,
-                "rescue": ("Y" if any([f for f in functional_tags if f.functional_data_tag == "Rescue"]) else "N") if has_tier1 or has_tier2 else KPG_or_blank_or_NS,
-                "komp_early_release": "Y" if has_share_with_komp_tag else "N",
-                "phenotype_class": phenotype_class,
-            })
+            row["actual_inheritance_model"] = ", ".join(actual_inheritance_models)
 
             rows.append(row)
 
+    _update_initial_omim_numbers(rows)
+
+    logger.info('TIME ({}): {}'.format(project.name, time.time() - start))
+    import pdb; pdb.set_trace()
     return rows
 
 
+def _update_initial_omim_numbers(rows):
+    omim_numbers = {row['omim_number_initial'] for row in rows if row['omim_number_initial']}
+    omim_number_map = {}
+    for omim_number_initial in omim_numbers:
+        try:
+            #  TODO figure out how to do this with the OMIM api so this can be done in one request
+            response = requests.get('https://www.omim.org/entry/' + omim_number_initial, headers={
+                'Host': 'www.omim.org',
+                'Connection': 'keep-alive',
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/62.0.3202.94 Safari/537.36',
+                'Upgrade-Insecure-Requests': '1',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+                'Accept-Encoding': 'gzip, deflate, br',
+                'Accept-Language': 'en-US,en;q=0.9,ru;q=0.8',
+            })
 
+            if not response.ok:
+                raise ValueError("omim request failed: %s %s" % (response, response.reason))
+            omim_page_html = response.content
 
-"""
-'tag': 'Genome-wide Linkage',
-'tag': 'Bonferroni corrected p-value',
-'tag': 'Kindreds w/ Overlapping SV & Similar Phenotype',
-'tag': 'Additional Unrelated Kindreds w/ Causal Variants in Gene',
+            # <a href="/phenotypicSeries/PS613280" class="btn btn-info" role="button"> Phenotypic Series </a>
+            match = re.search("/phenotypicSeries/([a-zA-Z0-9]+)", omim_page_html)
+            if not match:
+                logger.info("No phenotypic series found for OMIM initial # %s" % omim_number_initial)
+            else:
+                phenotypic_series_id = match.group(1)
+                logger.info("Will replace OMIM initial # %s with phenotypic series %s" % (omim_number_initial, phenotypic_series_id))
+                omim_number_map[omim_number_initial] = phenotypic_series_id
+        except Exception as e:
+            # don't change omim_number_initial
+            logger.info(
+                "Unable to look up phenotypic series for OMIM initial number: %s. %s" % (omim_number_initial, e))
 
-'tag': 'Biochemical Function',
-'tag': 'Protein Interaction',
-'tag': 'Expression',
-'tag': 'Patient Cells',
-'tag': 'Non-patient cells',
-'tag': 'Animal Model',
-'tag': 'Non-human cell culture model',
-'tag': 'Rescue',
-"""
+    for row in rows:
+        if omim_number_map.get(row['omim_number_initial']):
+            row['omim_number_initial'] = omim_number_map[row['omim_number_initial']]
