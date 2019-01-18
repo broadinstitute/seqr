@@ -12,6 +12,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.core.mail.message import EmailMultiAlternatives
 from django.utils import timezone
 
+from seqr.views.apis.saved_variant_api import variant_main_transcript
 from seqr.views.utils.export_table_utils import export_table
 from seqr.views.utils.json_utils import create_json_response, _to_title_case
 from xbrowse_server.mall import get_reference
@@ -367,10 +368,8 @@ def generate_rows(project, errors):
             rows.append(row)
             continue
 
-        gene_ids_to_saved_variants = defaultdict(list)
-        gene_ids_to_variant_tag_names = defaultdict(set)
+        saved_variants_to_json = {}
         for variant in saved_variants:
-
             if not variant.saved_variant_json:
                 errors.append("%s - variant annotation not found" % variant)
                 rows.append(row)
@@ -388,10 +387,94 @@ def generate_rows(project, errors):
                 rows.append(row)
                 continue
 
-            # get the shortest gene_id
-            gene_id = sorted(gene_ids, key=lambda gene_id: len(gene_id))[0]
-            gene_ids_to_saved_variants[gene_id].append(variant)
-            gene_ids_to_variant_tag_names[gene_id].update({vt.variant_tag_type.name for vt in variant.discovery_tags})
+            saved_variant_json['geneIds'] = gene_ids
+
+            saved_variants_to_json[variant] = saved_variant_json
+
+        affected_sample_ids = set()
+        unaffected_sample_ids = set()
+        for sample in samples:
+            if sample.individual.affected == "A":
+                affected_sample_ids.add(sample.sample_id)
+            elif sample.individual.affected == "N":
+                unaffected_sample_ids.add(sample.sample_id)
+
+        potential_compound_het_genes = defaultdict(set)
+        for variant, saved_variant_json in saved_variants_to_json.items():
+            inheritance_models = set()
+
+            affected_indivs_with_hom_alt_variants = set()
+            affected_indivs_with_het_variants = set()
+            unaffected_indivs_with_hom_alt_variants = set()
+            unaffected_indivs_with_het_variants = set()
+            is_x_linked = False
+
+            genotypes = saved_variant_json.get('genotypes')
+            if genotypes:
+                chrom, _ = genomeloc.get_chr_pos(variant.xpos_start)
+                is_x_linked = "X" in chrom
+                for sample_id, genotype in genotypes.items():
+                    if genotype["num_alt"] == 2 and sample_id in affected_sample_ids:
+                        affected_indivs_with_hom_alt_variants.add(i.individual_id)
+                    elif genotype["num_alt"] == 1 and sample_id in affected_sample_ids:
+                        affected_indivs_with_het_variants.add(i.individual_id)
+                    elif genotype["num_alt"] == 2 and sample_id in unaffected_sample_ids:
+                        unaffected_indivs_with_hom_alt_variants.add(i.individual_id)
+                    elif genotype["num_alt"] == 1 and sample_id in unaffected_sample_ids:
+                        unaffected_indivs_with_het_variants.add(i.individual_id)
+
+            # AR-homozygote, AR-comphet, AR, AD, de novo, X-linked, UPD, other, multiple
+            if not unaffected_indivs_with_hom_alt_variants and affected_indivs_with_hom_alt_variants:
+                if is_x_linked:
+                    inheritance_models.add("X-linked")
+                else:
+                    inheritance_models.add("AR-homozygote")
+
+            if not unaffected_indivs_with_hom_alt_variants and not unaffected_indivs_with_het_variants and affected_indivs_with_het_variants:
+                if unaffected_sample_ids:
+                    inheritance_models.add("de novo")
+                else:
+                    inheritance_models.add("AD")
+
+            if not unaffected_indivs_with_hom_alt_variants and (len(
+                    unaffected_sample_ids) < 2 or unaffected_indivs_with_het_variants) and affected_indivs_with_het_variants and not affected_indivs_with_hom_alt_variants:
+                for gene_id in saved_variant_json['geneIds']:
+                    potential_compound_het_genes[gene_id].add(variant)
+
+            saved_variant_json['inheritance'] = inheritance_models
+
+        gene_ids_to_saved_variants = defaultdict(set)
+        gene_ids_to_variant_tag_names = defaultdict(set)
+        gene_ids_to_inheritance = defaultdict(set)
+        # Compound het variants are reported in the gene that they share
+        for gene_id, variants in potential_compound_het_genes.items():
+            if len(variants) > 1:
+                gene_ids_to_inheritance[gene_id].add("AR-comphet")
+                # Only include compound hets for one of the genes they are both in
+                existing_gene_id = next((
+                    existing_gene_id for existing_gene_id, existing_variants in gene_ids_to_saved_variants.items()
+                    if existing_variants == variants), None)
+                if existing_gene_id:
+                    main_gene_ids = {
+                        variant_main_transcript(saved_variants_to_json[variant])['geneId'] for variant in variants
+                    }
+                    if gene_id in main_gene_ids:
+                        gene_ids_to_saved_variants[gene_id] = gene_ids_to_saved_variants[existing_gene_id]
+                        del gene_ids_to_saved_variants[existing_gene_id]
+                else:
+                    for variant in variants:
+                        saved_variants_to_json[variant]['inheritance'] = {"AR-comphet"}
+                        gene_ids_to_variant_tag_names[gene_id].update(
+                            {vt.variant_tag_type.name for vt in variant.discovery_tags})
+                    gene_ids_to_saved_variants[gene_id].update(variants)
+
+        # Non-compound het variants are reported in the main transcript gene
+        for variant, saved_variant_json in saved_variants_to_json.items():
+            if "AR-comphet" not in saved_variant_json['inheritance']:
+                gene_id = variant_main_transcript(saved_variant_json)['geneId']
+                gene_ids_to_saved_variants[gene_id].add(variant)
+                gene_ids_to_variant_tag_names[gene_id].update({vt.variant_tag_type.name for vt in variant.discovery_tags})
+                gene_ids_to_inheritance[gene_id].update(saved_variant_json['inheritance'])
 
         if len(gene_ids_to_saved_variants) > 1:
             row["gene_count"] = len(gene_ids_to_saved_variants)
@@ -399,6 +482,8 @@ def generate_rows(project, errors):
         for gene_id, variants in gene_ids_to_saved_variants.items():
             # create a copy of the row dict
             row = dict(row)
+
+            row["actual_inheritance_model"] = ", ".join(gene_ids_to_inheritance[gene_id])
 
             gene_symbol = get_reference().get_gene_symbol(gene_id)
             if gene_symbol:
@@ -472,68 +557,11 @@ def generate_rows(project, errors):
 
             row["extras_variant_tag_list"] = variant_tag_list
 
-            affected_sample_ids = set()
-            unaffected_sample_ids = set()
-            for sample in samples:
-                if sample.individual.affected == "A":
-                    affected_sample_ids.add(sample.sample_id)
-                elif sample.individual.affected == "N":
-                    unaffected_sample_ids.add(sample.sample_id)
-
-            actual_inheritance_models = set()
-            potential_compound_hets = defaultdict(int)  # gene_id to compound_hets counter
-            for variant in variants:
-                affected_indivs_with_hom_alt_variants = set()
-                affected_indivs_with_het_variants = set()
-                unaffected_indivs_with_hom_alt_variants = set()
-                unaffected_indivs_with_het_variants = set()
-                is_x_linked = False
-
-                # TODO use orm to json methods?
-                genotypes = json.loads(variant.saved_variant_json).get('genotypes')
-                if genotypes:
-                    chrom, _ = genomeloc.get_chr_pos(variant.xpos_start)
-                    is_x_linked = "X" in chrom
-                    for sample_id, genotype in genotypes.items():
-                        if genotype["num_alt"] == 2 and sample_id in affected_sample_ids:
-                            affected_indivs_with_hom_alt_variants.add(i.individual_id)
-                        elif genotype["num_alt"] == 1 and sample_id in affected_sample_ids:
-                            affected_indivs_with_het_variants.add(i.individual_id)
-                        elif genotype["num_alt"] == 2 and sample_id in unaffected_sample_ids:
-                            unaffected_indivs_with_hom_alt_variants.add(i.individual_id)
-                        elif genotype["num_alt"] == 1 and sample_id in unaffected_sample_ids:
-                            unaffected_indivs_with_het_variants.add(i.individual_id)
-
-                # AR-homozygote, AR-comphet, AR, AD, de novo, X-linked, UPD, other, multiple
-                if not unaffected_indivs_with_hom_alt_variants and affected_indivs_with_hom_alt_variants:
-                    if "AR-comphet" not in actual_inheritance_models:
-                        if is_x_linked:
-                            actual_inheritance_models.add("X-linked")
-                        else:
-                            actual_inheritance_models.add("AR-homozygote")
-
-                if not unaffected_indivs_with_hom_alt_variants and not unaffected_indivs_with_het_variants and affected_indivs_with_het_variants:
-                    if "AR-comphet" not in actual_inheritance_models:
-                        if unaffected_sample_ids:
-                            actual_inheritance_models.add("de novo")
-                        else:
-                            actual_inheritance_models.add("AD")
-
-                if not unaffected_indivs_with_hom_alt_variants and (len(unaffected_sample_ids) < 2 or unaffected_indivs_with_het_variants) and affected_indivs_with_het_variants and not affected_indivs_with_hom_alt_variants:
-                    potential_compound_hets[gene_id] += 1
-                    if potential_compound_hets[gene_id] >= 2:
-                        actual_inheritance_models.clear()
-                        actual_inheritance_models.add("AR-comphet")
-                        break
-
-            row["actual_inheritance_model"] = ", ".join(actual_inheritance_models)
-
             rows.append(row)
 
     _update_initial_omim_numbers(rows)
 
     logger.info('TIME ({}): {}'.format(project.name, time.time() - start))
-    import pdb; pdb.set_trace()
     return rows
 
 
