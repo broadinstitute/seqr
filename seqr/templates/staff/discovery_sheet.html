@@ -26,15 +26,6 @@
        //enable the DataTables FixedHeader plugin
        new $.fn.dataTable.FixedHeader( window.dataTable, {} )
     })
-
-    function downloadAll() {
-      $('#downloadAllStatus').css('color', 'red')
-      $('#downloadAllStatus').text( 'Kicked off report generation. It will be emailed to you when it completes' )
-      fetch("{% url 'discovery_sheet' %}?download", {
-        method: 'GET',
-        credentials: 'include',
-      })
-    }
   </script>
   <style>
     .title-row {
@@ -50,8 +41,7 @@
     }
   </style>
   <br />
-  <a style="float:right; padding-right:30px" href="#" onClick = "downloadAll();">Generate Report For All Projects</a>
-  <div style="float:right; padding-right:30px" id="downloadAllStatus"></div>
+  <a style="float:right; padding-right:30px" href="{% url 'discovery_sheet' %}/?download">Download All Projects</a>
   <table>
     <tr>
       <td class="title-row">
@@ -107,7 +97,7 @@
               <tr>
                 <td class="data-table-row"> </td>
                 <td class="data-table-row">
-                  {% if row.extras_pedigree_urrr %}
+                  {% if row.extras_pedigree_url %}
                     <a target="_blank" href="{{ row.extras_pedigree_url }}"><img height="50px" src="{{ row.extras_pedigree_url }}" /></a><br />
                   {% endif %}
                   <a href="/project/{{ row.project_guid }}/family_page/{{ row.family_guid }}" target="_blank">{{ row.family_id }}</a><br />

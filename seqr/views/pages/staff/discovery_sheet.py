@@ -4,12 +4,9 @@ import json
 import logging
 import re
 import requests
-import tempfile
-import openpyxl as xl
 
 from django.contrib.admin.views.decorators import staff_member_required
 from django.core.exceptions import ObjectDoesNotExist
-from django.core.mail.message import EmailMultiAlternatives
 from django.utils import timezone
 
 from seqr.utils.gene_utils import get_genes
@@ -202,28 +199,9 @@ def discovery_sheet(request, project_guid=None):
         _update_gene_symbols(rows)
         _update_initial_omim_numbers(rows)
 
-        temp_file = tempfile.NamedTemporaryFile()
-        wb_out = xl.Workbook()
-        ws_out = wb_out.active
-        ws_out.append(map(_to_title_case, HEADER))
-        for row in rows:
-            ws_out.append([row[column_key] for column_key in HEADER])
-        wb_out.save(temp_file.name)
-        temp_file.seek(0)
         logger.info('TIME: {}'.format(time.time() - start))
 
-        email_message = EmailMultiAlternatives(
-            subject="Discovery Sheet",
-            body="Attached is the discovery sheet for all seqr projects",
-            to=[request.user.email],
-            attachments=[
-                ("discovery_sheet.xlsx", temp_file.read(), "application/xls"),
-            ],
-        )
-        email_message.send()
-        logger.info("emailing discovery sheet to {}".format(request.user.email))
-
-        return create_json_response({'errors': errors})
+        return export_table("discovery_sheet", HEADER, rows, file_format="xls")
 
     # generate table for 1 project
     try:
