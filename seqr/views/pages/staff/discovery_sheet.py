@@ -195,14 +195,6 @@ def discovery_sheet(request, project_guid=None):
         _update_gene_symbols(rows)
         _update_initial_omim_numbers(rows)
 
-        return render(request, "staff/discovery_sheet.html", {
-            'project': project,
-            'projects': projects_json,
-            'header': HEADER.values(),
-            'rows': rows[:100],
-            'errors': [],
-        })
-
         return export_table("discovery_sheet", HEADER, rows, file_format="xls")
 
     # generate table for 1 project
