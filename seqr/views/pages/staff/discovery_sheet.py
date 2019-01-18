@@ -12,11 +12,11 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.core.mail.message import EmailMultiAlternatives
 from django.utils import timezone
 
+from seqr.utils.gene_utils import get_genes
+from seqr.utils.xpos_utils import get_chrom_pos
 from seqr.views.apis.saved_variant_api import variant_main_transcript
 from seqr.views.utils.export_table_utils import export_table
 from seqr.views.utils.json_utils import create_json_response, _to_title_case
-from xbrowse_server.mall import get_reference
-from xbrowse import genomeloc
 from reference_data.models import HPO_CATEGORY_NAMES
 from seqr.models import Project, Family, VariantTag, VariantTagType, Sample, SavedVariant
 from dateutil import relativedelta as rdelta
@@ -272,9 +272,10 @@ def generate_rows(project, errors):
 
     tag_types = VariantTagType.objects.filter(Q(project__isnull=True) & (Q(category='CMG Discovery Tags') | Q(name='Share with KOMP')))
 
-    project_saved_variants = SavedVariant.objects.prefetch_related(Prefetch(
-        'varianttag_set', queryset=VariantTag.objects.filter(variant_tag_type__in=tag_types), to_attr='discovery_tags',
-    )).prefetch_related('variantfunctionaldata_set').filter(
+    project_saved_variants = SavedVariant.objects.select_related('family').prefetch_related(
+        Prefetch('varianttag_set', to_attr='discovery_tags',
+                 queryset=VariantTag.objects.filter(variant_tag_type__in=tag_types).select_related('variant_tag_type'),
+        )).prefetch_related('variantfunctionaldata_set').filter(
         project=project,
         varianttag__variant_tag_type__in=tag_types,
     )
@@ -411,7 +412,7 @@ def generate_rows(project, errors):
 
             genotypes = saved_variant_json.get('genotypes')
             if genotypes:
-                chrom, _ = genomeloc.get_chr_pos(variant.xpos_start)
+                chrom, _ = get_chrom_pos(variant.xpos_start)
                 is_x_linked = "X" in chrom
                 for sample_id, genotype in genotypes.items():
                     if genotype["num_alt"] == 2 and sample_id in affected_sample_ids:
@@ -485,9 +486,7 @@ def generate_rows(project, errors):
 
             row["actual_inheritance_model"] = ", ".join(gene_ids_to_inheritance[gene_id])
 
-            gene_symbol = get_reference().get_gene_symbol(gene_id)
-            if gene_symbol:
-                row["gene_name"] = gene_symbol
+            row["gene_id"] = gene_id
 
             variant_tag_names = gene_ids_to_variant_tag_names[gene_id]
 
@@ -537,10 +536,9 @@ def generate_rows(project, errors):
 
             variant_tag_list = []
             for variant in variants:
-                variant_id = "-".join(map(str, list(genomeloc.get_chr_pos(variant.xpos_start)) + [variant.ref, variant.alt]))
-                variant_tag_list += ["{variant_id}  {gene_symbol}  {tag}".format(
-                    variant_id=variant_id, gene_symbol=gene_symbol, tag=vt.variant_tag_type.name.lower(),
-                ) for vt in variant.discovery_tags]
+                variant_id = "-".join(map(str, list(get_chrom_pos(variant.xpos_start)) + [variant.ref, variant.alt]))
+                variant_tag_list += [(variant_id, gene_id, vt.variant_tag_type.name.lower())
+                                     for vt in variant.discovery_tags]
 
                 for f in variant.variantfunctionaldata_set.all():
                     functional_field = FUNCTIONAL_DATA_FIELD_MAP[f.functional_data_tag]
@@ -559,10 +557,22 @@ def generate_rows(project, errors):
 
             rows.append(row)
 
+    _update_gene_symbols(rows)
     _update_initial_omim_numbers(rows)
 
     logger.info('TIME ({}): {}'.format(project.name, time.time() - start))
     return rows
+
+
+def _update_gene_symbols(rows):
+    genes_by_id = get_genes({row['gene_id'] for row in rows if row.get('gene_id')})
+    for row in rows:
+        if row.get('gene_id') and genes_by_id.get(row['gene_id']):
+            row['gene_name'] = genes_by_id[row['gene_id']]['geneSymbol']
+
+        row["extras_variant_tag_list"] = ["{variant_id}  {gene_symbol}  {tag}".format(
+            variant_id=variant_id, gene_symbol=genes_by_id.get(gene_id, {}).get('geneSymbol'), tag=tag,
+        ) for variant_id, gene_id, tag in row.get("extras_variant_tag_list", [])]
 
 
 def _update_initial_omim_numbers(rows):
