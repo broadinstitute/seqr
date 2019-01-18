@@ -13,7 +13,6 @@ from seqr.utils.gene_utils import get_genes
 from seqr.utils.xpos_utils import get_chrom_pos
 from seqr.views.apis.saved_variant_api import variant_main_transcript
 from seqr.views.utils.export_table_utils import export_table
-from seqr.views.utils.json_utils import create_json_response, _to_title_case
 from reference_data.models import HPO_CATEGORY_NAMES
 from seqr.models import Project, Family, VariantTag, VariantTagType, Sample, SavedVariant
 from dateutil import relativedelta as rdelta
@@ -183,8 +182,6 @@ def discovery_sheet(request, project_guid=None):
     # export table for all cmg projects
     if "download" in request.GET and project_guid is None:
         logger.info("exporting xls table for all projects")
-        import time
-        start = time.time()
 
         for project in projects:
             if any([proj_id.lower() == exclude_id.lower()
@@ -198,8 +195,6 @@ def discovery_sheet(request, project_guid=None):
 
         _update_gene_symbols(rows)
         _update_initial_omim_numbers(rows)
-
-        logger.info('TIME: {}'.format(time.time() - start))
 
         return export_table("discovery_sheet", HEADER, rows, file_format="xls")
 
@@ -230,9 +225,6 @@ def discovery_sheet(request, project_guid=None):
 
 
 def generate_rows(project, errors, update_omim_and_gene_symbols=True):
-    import time
-    start = time.time()
-
     rows = []
 
     loaded_samples = Sample.objects.filter(
@@ -542,7 +534,6 @@ def generate_rows(project, errors, update_omim_and_gene_symbols=True):
         _update_gene_symbols(rows)
         _update_initial_omim_numbers(rows)
 
-    logger.info('TIME ({}): {}'.format(project.name, time.time() - start))
     return rows
 
 
@@ -560,9 +551,9 @@ def _update_gene_symbols(rows):
 def _update_initial_omim_numbers(rows):
     omim_numbers = {row['omim_number_initial'] for row in rows if row['omim_number_initial']}
     omim_number_map = {}
+    # OMIM API works for doing this as a single bulk request in theory but they detect us as a craweler and block us
     for omim_number_initial in omim_numbers:
         try:
-            #  TODO figure out how to do this with the OMIM api so this can be done in one request
             response = requests.get('https://www.omim.org/entry/' + omim_number_initial, headers={
                 'Host': 'www.omim.org',
                 'Connection': 'keep-alive',
@@ -580,10 +571,10 @@ def _update_initial_omim_numbers(rows):
             # <a href="/phenotypicSeries/PS613280" class="btn btn-info" role="button"> Phenotypic Series </a>
             match = re.search("/phenotypicSeries/([a-zA-Z0-9]+)", omim_page_html)
             if not match:
-                logger.info("No phenotypic series found for OMIM initial # %s" % omim_number_initial)
+                logger.debug("No phenotypic series found for OMIM initial # %s" % omim_number_initial)
             else:
                 phenotypic_series_id = match.group(1)
-                logger.info("Will replace OMIM initial # %s with phenotypic series %s" % (omim_number_initial, phenotypic_series_id))
+                logger.debug("Will replace OMIM initial # %s with phenotypic series %s" % (omim_number_initial, phenotypic_series_id))
                 omim_number_map[omim_number_initial] = phenotypic_series_id
         except Exception as e:
             # don't change omim_number_initial
