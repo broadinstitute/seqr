@@ -196,8 +196,11 @@ def discovery_sheet(request, project_guid=None):
                 continue
 
             rows.extend(
-                generate_rows(project, errors)
+                generate_rows(project, errors, update_omim_and_gene_symbols=False)
             )
+
+        _update_gene_symbols(rows)
+        _update_initial_omim_numbers(rows)
 
         temp_file = tempfile.NamedTemporaryFile()
         wb_out = xl.Workbook()
@@ -248,7 +251,7 @@ def discovery_sheet(request, project_guid=None):
     })
 
 
-def generate_rows(project, errors):
+def generate_rows(project, errors, update_omim_and_gene_symbols=True):
     import time
     start = time.time()
 
@@ -557,8 +560,9 @@ def generate_rows(project, errors):
 
             rows.append(row)
 
-    _update_gene_symbols(rows)
-    _update_initial_omim_numbers(rows)
+    if update_omim_and_gene_symbols:
+        _update_gene_symbols(rows)
+        _update_initial_omim_numbers(rows)
 
     logger.info('TIME ({}): {}'.format(project.name, time.time() - start))
     return rows
