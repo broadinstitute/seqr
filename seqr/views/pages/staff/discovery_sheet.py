@@ -168,10 +168,11 @@ METADATA_FUNCTIONAL_DATA_FIELDS = {
 }
 
 
-
 @staff_member_required(login_url=LOGIN_URL)
 def discovery_sheet(request, project_guid=None):
-    projects = Project.objects.filter(projectcategory__name__iexact='cmg').distinct()
+    projects = Project.objects.filter(projectcategory__name__iexact='cmg').prefetch_related(
+        Prefetch('family_set', to_attr='families', queryset=Family.objects.prefetch_related('individual_set'))
+    ).distinct()
 
     projects_json = [_get_json_for_project(project, request.user, add_project_category_guids_field=False) for project in projects]
     projects_json.sort(key=lambda project: project["name"])
@@ -183,32 +184,39 @@ def discovery_sheet(request, project_guid=None):
     if "download" in request.GET and project_guid is None:
         logger.info("exporting xls table for all projects")
 
+        loaded_samples_by_project_family = get_loaded_samples_by_project_family(projects)
+        saved_variants_by_project_family = get_saved_variants_by_project_family(projects)
         for project in projects:
-            if any([proj_id.lower() == exclude_id.lower()
-                    for exclude_id in PROJECT_IDS_TO_EXCLUDE_FROM_DISCOVERY_SHEET_DOWNLOAD
-                    for proj_id in [project.guid, project.deprecated_project_id]]):
-                continue
-
-            rows.extend(
-                generate_rows(project, errors, update_omim_and_gene_symbols=False)
-            )
+            rows.extend(generate_rows(
+                project, loaded_samples_by_project_family, saved_variants_by_project_family, errors,
+                update_omim_and_gene_symbols=False,
+            ))
 
         _update_gene_symbols(rows)
         _update_initial_omim_numbers(rows)
 
+        return render(request, "staff/discovery_sheet.html", {
+            'project': project,
+            'projects': projects_json,
+            'header': HEADER.values(),
+            'rows': rows[:100],
+            'errors': [],
+        })
+
         return export_table("discovery_sheet", HEADER, rows, file_format="xls")
 
     # generate table for 1 project
-    try:
-        project = Project.objects.get(guid=project_guid)
-    except ObjectDoesNotExist:
+    project = next((project for project in projects if project.guid == project_guid), None)
+    if not project:
         return render(request, "staff/discovery_sheet.html", {
             'projects': projects_json,
             'rows': rows,
             'errors': errors,
         })
 
-    rows = generate_rows(project, errors)
+    loaded_samples_by_project_family = get_loaded_samples_by_project_family([project])
+    saved_variants_by_project_family = get_saved_variants_by_project_family([project])
+    rows = generate_rows(project, loaded_samples_by_project_family, saved_variants_by_project_family, errors)
 
     logger.info("request.get: " + str(request.GET))
     if "download" in request.GET:
@@ -224,46 +232,58 @@ def discovery_sheet(request, project_guid=None):
     })
 
 
-def generate_rows(project, errors, update_omim_and_gene_symbols=True):
-    rows = []
-
+def get_loaded_samples_by_project_family(projects):
     loaded_samples = Sample.objects.filter(
-        individual__family__project=project,
+        individual__family__project__in=projects,
         dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
         sample_status=Sample.SAMPLE_STATUS_LOADED,
         loaded_date__isnull=False
-    ).select_related('individual__family').order_by('loaded_date')
+    ).select_related('individual__family__project').order_by('loaded_date')
 
-    if not loaded_samples:
+    loaded_samples_by_project_family = collections.defaultdict(lambda: collections.defaultdict(list))
+    for sample in loaded_samples:
+        family = sample.individual.family
+        loaded_samples_by_project_family[family.project.guid][family.guid].append(sample)
+
+    return loaded_samples_by_project_family
+
+
+def get_saved_variants_by_project_family(projects):
+    tag_types = VariantTagType.objects.filter(Q(project__isnull=True) & (Q(category='CMG Discovery Tags') | Q(name='Share with KOMP')))
+
+    project_saved_variants = SavedVariant.objects.select_related('project').select_related('family').prefetch_related(
+        Prefetch('varianttag_set', to_attr='discovery_tags',
+                 queryset=VariantTag.objects.filter(variant_tag_type__in=tag_types).select_related('variant_tag_type'),
+                 )).prefetch_related('variantfunctionaldata_set').filter(
+        project__in=projects,
+        varianttag__variant_tag_type__in=tag_types,
+    )
+
+    saved_variants_by_project_family = collections.defaultdict(lambda: collections.defaultdict(list))
+    for saved_variant in project_saved_variants:
+        saved_variants_by_project_family[saved_variant.project.guid][saved_variant.family.guid].append(saved_variant)
+
+    return saved_variants_by_project_family
+
+
+def generate_rows(project, loaded_samples_by_project_family, saved_variants_by_project_family, errors, update_omim_and_gene_symbols=True):
+    rows = []
+
+    loaded_samples_by_family = loaded_samples_by_project_family[project.guid]
+    saved_variants_by_family = saved_variants_by_project_family[project.guid]
+
+    if not loaded_samples_by_family:
         errors.append("No data loaded for project: %s" % project)
         logger.info("No data loaded for project: %s" % project)
         return []
 
-    loaded_samples_by_family = collections.defaultdict(list)
-    for sample in loaded_samples:
-        loaded_samples_by_family[sample.individual.family.guid].append(sample)
-
-    tag_types = VariantTagType.objects.filter(Q(project__isnull=True) & (Q(category='CMG Discovery Tags') | Q(name='Share with KOMP')))
-
-    project_saved_variants = SavedVariant.objects.select_related('family').prefetch_related(
-        Prefetch('varianttag_set', to_attr='discovery_tags',
-                 queryset=VariantTag.objects.filter(variant_tag_type__in=tag_types).select_related('variant_tag_type'),
-        )).prefetch_related('variantfunctionaldata_set').filter(
-        project=project,
-        varianttag__variant_tag_type__in=tag_types,
-    )
-
-    saved_variants_by_family = collections.defaultdict(list)
-    for saved_variant in project_saved_variants:
-        saved_variants_by_family[saved_variant.family.guid].append(saved_variant)
-
     if "external" in project.name or "reprocessed" in project.name:
         sequencing_approach = "REAN"
     else:
-        sequencing_approach = loaded_samples.last().sample_type
+        sequencing_approach = loaded_samples_by_family.values()[0][-1].sample_type
 
     now = timezone.now()
-    for family in Family.objects.filter(project=project).prefetch_related('individual_set'):
+    for family in project.families:
         samples = loaded_samples_by_family.get(family.guid)
         if not samples:
             errors.append("No data loaded for family: %s. Skipping..." % family)
@@ -549,6 +569,7 @@ def _update_gene_symbols(rows):
 
 
 def _update_initial_omim_numbers(rows):
+    return rows
     omim_numbers = {row['omim_number_initial'] for row in rows if row['omim_number_initial']}
     omim_number_map = {}
     # OMIM API works for doing this as a single bulk request in theory but they detect us as a craweler and block us
