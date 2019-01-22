@@ -386,6 +386,7 @@ def add_or_update_individuals_and_families(project, individual_records, user=Non
         if record.get(JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN):
             updated_individuals.update(individual.maternal_children.all())
             updated_individuals.update(individual.paternal_children.all())
+            record['displayName'] = ''
 
         # Update the parent ids last, so if they are referencing updated individuals they will check for the correct ID
         if record.get('maternalId') or record.get('paternalId'):

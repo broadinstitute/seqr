@@ -7,6 +7,7 @@ import logging
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 
+import settings
 from seqr.model_utils import update_seqr_model, delete_seqr_model
 from seqr.models import Project, Family, Individual, Sample, _slugify, CAN_EDIT, IS_OWNER
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
@@ -145,7 +146,12 @@ def create_project(name, description=None, genome_version=None, user=None):
     project.deprecated_project_id = base_project.project_id
     project.save()
 
-    _enable_phenotips_for_project(project)
+    if settings.PHENOTIPS_SERVER:
+        try:
+            _enable_phenotips_for_project(project)
+        except Exception as e:
+            logger.error("Unable to create patient in PhenoTips. Make sure PhenoTips is running: %s", e)
+            raise
 
     # TODO: add custom populations
 
@@ -203,6 +209,7 @@ def _deprecated_create_original_project(project):
         logger.info("Created base project %s" % base_project)
 
     base_project.project_name = project.name
+    base_project.genome_version = project.genome_version
     base_project.description = project.description or ""
     base_project.seqr_project = project
     base_project.save()

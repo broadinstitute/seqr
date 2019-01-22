@@ -180,7 +180,7 @@ def update_saved_variant_json(request, project_guid):
 
 def variant_details(variant_json, project, user=None):
     annotation = variant_json.get('annotation') or {}
-    main_transcript = annotation.get('main_transcript') or (annotation['vep_annotation'][annotation['worst_vep_annotation_index']] if annotation.get('worst_vep_annotation_index') is not None and annotation['vep_annotation'] else {})
+    main_transcript = variant_main_transcript(variant_json)
     is_es_variant = annotation.get('db') == 'elasticsearch'
 
     extras = variant_json.get('extras') or {}
@@ -295,17 +295,7 @@ def variant_details(variant_json, project, user=None):
             'vepConsequence': annotation.get('vep_consequence'),
             'vepGroup': annotation.get('vep_group'),
         },
-        'mainTranscript': {
-            'geneId': main_transcript.get('gene') or main_transcript.get('gene_id'),
-            'symbol': main_transcript.get('gene_symbol') or main_transcript.get('symbol'),
-            'lof': main_transcript.get('lof'),
-            'lofFlags': main_transcript.get('lof_flags'),
-            'lofFilter': main_transcript.get('lof_filter'),
-            'hgvsc': main_transcript.get('hgvsc'),
-            'hgvsp': main_transcript.get('hgvsp'),
-            'aminoAcids': main_transcript.get('amino_acids'),
-            'proteinPosition': main_transcript.get('protein_position'),
-        },
+        'mainTranscript': main_transcript,
         'clinvar': {
             'clinsig': extras.get('clinvar_clinsig'),
             'variantId': extras.get('clinvar_variant_id'),
@@ -324,6 +314,24 @@ def variant_details(variant_json, project, user=None):
         'locusLists': [],
         'origAltAlleles': extras.get('orig_alt_alleles', []),
         'transcripts': transcripts,
+    }
+
+
+def variant_main_transcript(variant_json):
+    annotation = variant_json.get('annotation') or {}
+    main_transcript = annotation.get('main_transcript') or (
+        annotation['vep_annotation'][annotation['worst_vep_annotation_index']] if annotation.get(
+            'worst_vep_annotation_index') is not None and annotation['vep_annotation'] else {})
+    return {
+        'geneId': main_transcript.get('gene') or main_transcript.get('gene_id'),
+        'symbol': main_transcript.get('gene_symbol') or main_transcript.get('symbol'),
+        'lof': main_transcript.get('lof'),
+        'lofFlags': main_transcript.get('lof_flags'),
+        'lofFilter': main_transcript.get('lof_filter'),
+        'hgvsc': main_transcript.get('hgvsc'),
+        'hgvsp': main_transcript.get('hgvsp'),
+        'aminoAcids': main_transcript.get('amino_acids'),
+        'proteinPosition': main_transcript.get('protein_position'),
     }
 
 
