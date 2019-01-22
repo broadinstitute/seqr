@@ -271,10 +271,10 @@ def _get_search_context(results_model):
 
 
 def _get_saved_searches(user):
-    # TODO add default searches for all users
-    saved_searches = get_json_for_saved_searches(
-        VariantSearch.objects.filter(created_by=user, name__isnull=False)
-    )
+    saved_searches = get_json_for_saved_searches(VariantSearch.objects.filter(
+        Q(name__isnull=False),
+        Q(created_by=user) | Q(created_by__isnull=True)
+    ))
     return {'savedSearchesByGuid': {search['savedSearchGuid']: search for search in saved_searches}}
 
 

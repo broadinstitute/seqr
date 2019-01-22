@@ -1,0 +1,269 @@
+[
+{
+    "model": "seqr.variantsearch",
+    "pk": 1,
+    "fields": {
+        "guid": "VS0000001_de_novo_dominant_res",
+        "name": "De Novo/ Dominant Restrictive",
+        "search": {
+            "qualityFilter": {
+                "vcf_filter": "pass",
+                "min_ab": 20,
+                "min_gq": 20
+            },
+            "pathogenicity": {
+                "hgmd": [
+                    "disease_causing"
+                ],
+                "clinvar": [
+                    "pathogenic",
+                    "likely_pathogenic"
+                ]
+            },
+            "freqs": {
+                "g1k": {
+                    "ac": null,
+                    "af": 0.001
+                },
+                "gnomad_genomes": {
+                    "ac": null,
+                    "af": 0.001
+                },
+                "gnomad_exomes": {
+                    "ac": null,
+                    "af": 0.001
+                },
+                "exac": {
+                    "ac": null,
+                    "af": 0.001
+                },
+                "topmed": {
+                    "ac": null,
+                    "af": 0.001
+                },
+                "callset": {
+                    "ac": null,
+                    "af": 0.01
+                }
+            },
+            "annotations": {
+                "in_frame": [
+                    "inframe_insertion",
+                    "inframe_deletion"
+                ],
+                "nonsense": [
+                    "stop_gained"
+                ],
+                "frameshift": [
+                    "frameshift_variant"
+                ],
+                "missense": [
+                    "stop_lost",
+                    "initiator_codon_variant",
+                    "start_lost",
+                    "protein_altering_variant",
+                    "missense_variant"
+                ],
+                "extended_splice_site": [
+                    "splice_region_variant"
+                ],
+                "essential_splice_site": [
+                    "splice_donor_variant",
+                    "splice_acceptor_variant"
+                ]
+            },
+            "inheritance": {
+                "filter": {
+                    "A": "has_alt",
+                    "N": "ref_ref"
+                },
+                "mode": "de_novo"
+            }
+        }
+    }
+},
+{
+    "model": "seqr.variantsearch",
+    "pk": 2,
+    "fields": {
+        "guid": "VS0000002_recessive_restrictiv",
+        "name": "Recessive Restrictive",
+        "search": {
+            "qualityFilter": {
+                "vcf_filter": "pass",
+                "min_ab": 20,
+                "min_gq": 20
+            },
+            "pathogenicity": {
+                "hgmd": [
+                    "disease_causing"
+                ],
+                "clinvar": [
+                    "pathogenic",
+                    "likely_pathogenic"
+                ]
+            },
+            "freqs": {
+                "g1k": {
+                    "ac": null,
+                    "af": 0.01
+                },
+                "gnomad_genomes": {
+                    "ac": null,
+                    "af": 0.01
+                },
+                "gnomad_exomes": {
+                    "ac": null,
+                    "af": 0.01
+                },
+                "exac": {
+                    "ac": null,
+                    "af": 0.01
+                },
+                "topmed": {
+                    "ac": null,
+                    "af": 0.01
+                },
+                "callset": {
+                    "ac": null,
+                    "af": 0.03
+                }
+            },
+            "annotations": {
+                "in_frame": [
+                    "inframe_insertion",
+                    "inframe_deletion"
+                ],
+                "nonsense": [
+                    "stop_gained"
+                ],
+                "frameshift": [
+                    "frameshift_variant"
+                ],
+                "missense": [
+                    "stop_lost",
+                    "initiator_codon_variant",
+                    "start_lost",
+                    "protein_altering_variant",
+                    "missense_variant"
+                ],
+                "extended_splice_site": [
+                    "splice_region_variant"
+                ],
+                "essential_splice_site": [
+                    "splice_donor_variant",
+                    "splice_acceptor_variant"
+                ]
+            },
+            "inheritance": {
+                "filter": {
+                    "A": null,
+                    "N": null
+                },
+                "mode": "recessive"
+            }
+        }
+    }
+},
+{
+    "model": "seqr.variantsearch",
+    "pk": 3,
+    "fields": {
+        "guid": "VS0000003_de_novo_dominant_per",
+        "name": "De Novo/ Dominant Permissive",
+        "search": {
+            "qualityFilter": {
+                "vcf_filter": null,
+                "min_ab": 0,
+                "min_gq": 20
+            },
+            "pathogenicity": {
+                "hgmd": [
+                    "disease_causing"
+                ],
+                "clinvar": [
+                    "pathogenic",
+                    "likely_pathogenic",
+                    "vus_or_conflicting"
+                ]
+            },
+            "freqs": {
+                "g1k": {
+                    "ac": null,
+                    "af": 0.001
+                },
+                "gnomad_genomes": {
+                    "ac": null,
+                    "af": 0.001
+                },
+                "gnomad_exomes": {
+                    "ac": null,
+                    "af": 0.001
+                },
+                "exac": {
+                    "ac": null,
+                    "af": 0.001
+                },
+                "topmed": {
+                    "ac": null,
+                    "af": 0.001
+                },
+                "callset": {
+                    "ac": null,
+                    "af": 0.01
+                }
+            },
+            "annotations": {
+                "in_frame": [
+                    "inframe_insertion",
+                    "inframe_deletion"
+                ],
+                "synonymous": [
+                    "synonymous_variant",
+                    "stop_retained_variant"
+                ],
+                "nonsense": [
+                    "stop_gained"
+                ],
+                "frameshift": [
+                    "frameshift_variant"
+                ],
+                "other": [
+                    "5_prime_UTR_variant",
+                    "3_prime_UTR_variant",
+                    "TF_binding_site_variant",
+                    "non_coding_exon_variant",
+                    "regulatory_region_variant",
+                    "transcript_ablation",
+                    "transcript_amplification",
+                    "TFBS_ablation",
+                    "TFBS_amplification",
+                    "regulatory_region_ablation",
+                    "regulatory_region_amplification"
+                ],
+                "missense": [
+                    "stop_lost",
+                    "initiator_codon_variant",
+                    "start_lost",
+                    "protein_altering_variant",
+                    "missense_variant"
+                ],
+                "extended_splice_site": [
+                    "splice_region_variant"
+                ],
+                "essential_splice_site": [
+                    "splice_donor_variant",
+                    "splice_acceptor_variant"
+                ]
+            },
+            "inheritance": {
+                "filter": {
+                    "A": "has_alt",
+                    "N": "ref_ref"
+                },
+                "mode": "de_novo"
+            }
+        }
+    }
+}
+]
