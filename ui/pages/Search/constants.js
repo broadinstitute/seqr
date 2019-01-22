@@ -119,9 +119,10 @@ export const INHERITANCE_FILTER_OPTIONS = [
 ].map(value => ({ value, ...INHERITANCE_LOOKUP[value] }))
 
 
-export const CLINVAR_GROUP = 'clinvar'
+const CLINVAR_NAME = 'clinvar'
 const CLIVAR_PATH = 'pathogenic'
 const CLINVAR_LIKELY_PATH = 'likely_pathogenic'
+const CLINVAR_UNCERTAIN = 'vus_or_conflicting'
 const CLINVAR_OPTIONS = [
   {
     text: 'Pathogenic (P)',
@@ -134,7 +135,7 @@ const CLINVAR_OPTIONS = [
   {
     description: 'Clinvar variant of uncertain significance or variant with conflicting interpretations',
     text: 'VUS or Conflicting',
-    value: 'vus_or_conflicting',
+    value: CLINVAR_UNCERTAIN,
   },
   {
     text: 'Likely Benign (LB)',
@@ -146,12 +147,13 @@ const CLINVAR_OPTIONS = [
   },
 ]
 
-export const HGMD_GROUP = 'hgmd'
+const HGMD_NAME = 'hgmd'
+const HGMD_DM = 'disease_causing'
 const HGMD_OPTIONS = [ // see https://portal.biobase-international.com/hgmd/pro/global.php#cats
   {
     description: 'Pathological mutation reported to be disease causing in the corresponding report (i.e. all other HGMD data).',
     text: 'Disease Causing (DM)',
-    value: 'disease_causing',
+    value: HGMD_DM,
   },
   {
     description: 'Likely pathological mutation reported to be disease causing in the corresponding report, but where the author has indicated that there may be some degree of doubt, or subsequent evidence has come to light in the literature, calling the deleterious nature of the variant into question.',
@@ -164,56 +166,74 @@ const HGMD_OPTIONS = [ // see https://portal.biobase-international.com/hgmd/pro/
     value: 'hgmd_other',
   },
 ]
+// TODO filter HGMD for users
+export const PATHOGENICITY_FIELDS = [
+  {
+    name: CLINVAR_NAME,
+    options: CLINVAR_OPTIONS,
+    groupLabel: 'Clinvar',
+    width: 1,
+  },
+  {
+    name: HGMD_NAME,
+    options: HGMD_OPTIONS,
+    groupLabel: 'HGMD',
+    width: 1,
+  },
+]
 
-const GROUP_LABELS = { [VEP_GROUP_INFRAME]: 'In Frame', [CLINVAR_GROUP]: 'In Clinvar', [HGMD_GROUP]: 'In HGMD' }
+export const PATHOGENICITY_FILTER_OPTIONS = [
+  {
+    text: 'Pathogenic/ Likely Path.',
+    value: {
+      [CLINVAR_NAME]: [CLIVAR_PATH, CLINVAR_LIKELY_PATH],
+      [HGMD_NAME]: [HGMD_DM],
+    },
+  },
+  {
+    text: 'Not Benign',
+    value: {
+      [CLINVAR_NAME]: [CLIVAR_PATH, CLINVAR_LIKELY_PATH, CLINVAR_UNCERTAIN],
+      [HGMD_NAME]: HGMD_OPTIONS.map(({ value }) => value),
+    },
+  },
+]
 
-export const ANNOTATION_GROUPS = Object.entries({
-  [CLINVAR_GROUP]: CLINVAR_OPTIONS,
-  [HGMD_GROUP]: HGMD_OPTIONS,
-  ...GROUPED_VEP_CONSEQUENCES,
-}).map(([name, options]) => ({
-  name, options, groupLabel: GROUP_LABELS[name] || snakecaseToTitlecase(name),
+export const ANNOTATION_GROUPS = Object.entries(GROUPED_VEP_CONSEQUENCES).map(([name, options]) => ({
+  name, options, groupLabel: snakecaseToTitlecase(name),
 }))
 
+export const HIGH_IMPACT_GROUPS = [
+  VEP_GROUP_NONSENSE,
+  VEP_GROUP_ESSENTIAL_SPLICE_SITE,
+  VEP_GROUP_FRAMESHIFT,
+]
+export const MODERATE_IMPACT_GROUPS = [
+  VEP_GROUP_MISSENSE,
+  VEP_GROUP_INFRAME,
+]
+export const CODING_IMPACT_GROUPS = [
+  VEP_GROUP_SYNONYMOUS,
+  VEP_GROUP_EXTENDED_SPLICE_SITE,
+]
 export const ANNOTATION_FILTER_OPTIONS = [
   {
     text: 'High Impact',
-    vepGroups: [
-      VEP_GROUP_NONSENSE,
-      VEP_GROUP_ESSENTIAL_SPLICE_SITE,
-      VEP_GROUP_FRAMESHIFT,
-    ],
+    vepGroups: HIGH_IMPACT_GROUPS,
   },
   {
     text: 'Moderate to High Impact',
-    vepGroups: [
-      VEP_GROUP_NONSENSE,
-      VEP_GROUP_ESSENTIAL_SPLICE_SITE,
-      VEP_GROUP_FRAMESHIFT,
-      VEP_GROUP_MISSENSE,
-      VEP_GROUP_INFRAME,
-    ],
+    vepGroups: HIGH_IMPACT_GROUPS.concat(MODERATE_IMPACT_GROUPS),
   },
   {
     text: 'All rare coding variants',
-    vepGroups: [
-      VEP_GROUP_NONSENSE,
-      VEP_GROUP_ESSENTIAL_SPLICE_SITE,
-      VEP_GROUP_FRAMESHIFT,
-      VEP_GROUP_MISSENSE,
-      VEP_GROUP_INFRAME,
-      VEP_GROUP_SYNONYMOUS,
-      VEP_GROUP_EXTENDED_SPLICE_SITE,
-    ],
+    vepGroups: HIGH_IMPACT_GROUPS.concat(MODERATE_IMPACT_GROUPS).concat(CODING_IMPACT_GROUPS),
   },
 ].map(({ vepGroups, ...option }) => ({
   ...option,
-  value: {
-    [CLINVAR_GROUP]: [CLIVAR_PATH, CLINVAR_LIKELY_PATH],
-    ...vepGroups.reduce((acc, group) => (
-      { ...acc, [group]: GROUPED_VEP_CONSEQUENCES[group].map(({ value }) => value) }
-    ), {}),
-  },
+  value: vepGroups.reduce((acc, group) => (
+    { ...acc, [group]: GROUPED_VEP_CONSEQUENCES[group].map(({ value }) => value) }
+  ), {}),
 }))
 
 
@@ -258,7 +278,6 @@ export const FREQUENCIES = [
 ]
 
 export const LOCATION_FIELDS = [
-  { width: 2, name: '  ', control: null },
   {
     name: LOCUS_LIST_ITEMS_FIELD.name,
     label: LOCUS_LIST_ITEMS_FIELD.label,
@@ -278,7 +297,6 @@ export const LOCATION_FIELDS = [
     labelHelp: 'Search for variants not in the specified genes/ intervals',
     width: 3,
   },
-  { width: 2, name: ' ', control: null },
 ]
 
 export const QUALITY_FILTER_FIELDS = [

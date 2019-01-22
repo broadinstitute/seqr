@@ -7,7 +7,7 @@ import { Form, Accordion, Header, Segment, Grid, List } from 'semantic-ui-react'
 import { VerticalSpacer } from 'shared/components/Spacers'
 import { ButtonLink } from 'shared/components/StyledComponents'
 import { configuredField, configuredFields } from 'shared/components/form/ReduxFormWrapper'
-import { Select, LabeledSlider, CheckboxGroup } from 'shared/components/form/Inputs'
+import { Select, LabeledSlider, AlignedCheckboxGroup } from 'shared/components/form/Inputs'
 import Modal from 'shared/components/modal/Modal'
 import { LOCUS_LIST_ITEMS_FIELD } from 'shared/utils/constants'
 import { SavedSearchDropdown } from './SavedSearch'
@@ -24,6 +24,8 @@ import {
   NUM_ALT_OPTIONS,
   THIS_CALLSET_FREQUENCY,
   FREQUENCIES,
+  PATHOGENICITY_FIELDS,
+  PATHOGENICITY_FILTER_OPTIONS,
   ANNOTATION_GROUPS,
   ANNOTATION_FILTER_OPTIONS,
   QUALITY_FILTER_FIELDS,
@@ -124,16 +126,14 @@ const INHERITANCE_PANEL = {
     },
   },
   fields: [
-    { width: 2, name: '   ', control: null },
     {
       name: 'filter',
       width: 8,
       control: CustomInheritanceFilter,
       format: val => val || {},
     },
-    { width: 2, name: '  ', control: null },
   ],
-  fieldProps: { control: Select, options: NUM_ALT_OPTIONS, width: 4 },
+  fieldProps: { control: Select, options: NUM_ALT_OPTIONS },
   helpText: (
     <span>
       Filter by the mode of inheritance. Choose from the built-in search methods (described
@@ -159,11 +159,19 @@ const INHERITANCE_PANEL = {
   ),
 }
 
+const PATHOGENICITY_PANEL = {
+  name: 'pathogenicity',
+  headerProps: { title: 'Pathogenicity', inputProps: JsonSelectProps(PATHOGENICITY_FILTER_OPTIONS) },
+  fields: PATHOGENICITY_FIELDS,
+  fieldProps: { control: AlignedCheckboxGroup, format: val => val || [] },
+  helpText: 'Filter by reported pathogenicity. Note this filter will override any annotations filter (i.e variants will be returned if they have either the specified pathogenicity OR transcript consequence)',
+}
+
 const ANNOTATION_PANEL = {
   name: 'annotations',
   headerProps: { title: 'Annotations', inputProps: JsonSelectProps(ANNOTATION_FILTER_OPTIONS) },
   fields: ANNOTATION_GROUPS,
-  fieldProps: { control: CheckboxGroup, format: val => val || [] },
+  fieldProps: { control: AlignedCheckboxGroup, format: val => val || [] },
   fieldLayout: annotationsFilterLayout,
 }
 
@@ -240,7 +248,11 @@ const PanelContent = ({ name, fields, fieldProps, helpText, fieldLayout }) => {
   return (
     <FormSection name={name}>
       {helpText && <i>{helpText} <VerticalSpacer height={20} /></i>}
-      {fieldLayout ? fieldLayout(fieldComponents) : <Form.Group widths="equal">{fieldComponents}</Form.Group>}
+      <Form.Group widths="equal">
+        <Form.Field width={2} />
+        {fieldLayout ? fieldLayout(fieldComponents) : fieldComponents}
+        <Form.Field width={2} />
+      </Form.Group>
     </FormSection>
   )
 }
@@ -253,7 +265,7 @@ PanelContent.propTypes = {
   fieldLayout: PropTypes.func,
 }
 
-const PANEL_DETAILS = [INHERITANCE_PANEL, ANNOTATION_PANEL, FREQUENCY_PANEL, LOCATION_PANEL, QUALITY_PANEL]
+const PANEL_DETAILS = [INHERITANCE_PANEL, PATHOGENICITY_PANEL, ANNOTATION_PANEL, FREQUENCY_PANEL, LOCATION_PANEL, QUALITY_PANEL]
 const PANELS = PANEL_DETAILS.map(({ name, headerProps, ...panelContentProps }, i) => ({
   key: name,
   title: {

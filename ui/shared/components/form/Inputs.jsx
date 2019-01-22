@@ -196,6 +196,10 @@ CheckboxGroup.propTypes = {
   horizontalGrouped: PropTypes.bool,
 }
 
+export const AlignedCheckboxGroup = styled(CheckboxGroup)`
+  text-align: left;
+`
+
 
 export const StringValueCheckboxGroup = (props) => {
   const { value = '', options, onChange, ...baseProps } = props

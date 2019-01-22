@@ -265,7 +265,7 @@ export const VEP_GROUP_ESSENTIAL_SPLICE_SITE = 'essential_splice_site'
 export const VEP_GROUP_EXTENDED_SPLICE_SITE = 'extended_splice_site'
 export const VEP_GROUP_MISSENSE = 'missense'
 export const VEP_GROUP_FRAMESHIFT = 'frameshift'
-export const VEP_GROUP_INFRAME = 'inframe'
+export const VEP_GROUP_INFRAME = 'in_frame'
 export const VEP_GROUP_SYNONYMOUS = 'synonymous'
 export const VEP_GROUP_OTHER = 'other'
 
