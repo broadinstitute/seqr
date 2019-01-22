@@ -705,11 +705,7 @@ class Family(models.Model):
         return self.project.get_variant_tags(family=self)
 
     def get_elasticsearch_index(self):
-        vcf_file = self.project.vcffile_set.order_by('-pk').exclude(elasticsearch_index=None).only('elasticsearch_index').first()
-        if vcf_file:
-            return vcf_file.elasticsearch_index
-        else:
-            return None
+        return next((i.get_elasticsearch_index() for i in self.individual_set.all() if i.get_elasticsearch_index()), None)
 
 
 class FamilyImageSlide(models.Model):
@@ -911,6 +907,13 @@ class Individual(models.Model):
     def has_variant_data(self):
         return self.vcf_files.exists()
 
+    def get_elasticsearch_index(self):
+        vcf_file = self.vcf_files.order_by('-pk').exclude(elasticsearch_index=None).only('elasticsearch_index').first()
+        if vcf_file:
+            return vcf_file.elasticsearch_index
+        else:
+            return None
+
     def has_breakpoint_data(self):
         return self.breakpoint_set.exists()
 
@@ -1035,6 +1038,8 @@ class Individual(models.Model):
         List of VCF file (paths) that this individual is in
         """
         return list(self.vcf_files.all())
+
+
 
     def get_cohorts(self):
         """

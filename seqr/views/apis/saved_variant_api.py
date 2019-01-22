@@ -231,7 +231,7 @@ def variant_details(variant_json, project, user):
         return variant_json
 
     annotation = variant_json.get('annotation') or {}
-    main_transcript = annotation.get('main_transcript') or (annotation['vep_annotation'][annotation['worst_vep_annotation_index']] if annotation.get('worst_vep_annotation_index') is not None and annotation['vep_annotation'] else {})
+    main_transcript = variant_main_transcript(variant_json)
     is_es_variant = annotation.get('db') == 'elasticsearch'
 
     chrom, pos = get_chrom_pos(variant_json['xpos'])
