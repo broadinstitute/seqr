@@ -88,10 +88,20 @@ def get_es_variants(search_model, page=1, num_results=100):
     if genes or intervals:
         es_search = es_search.filter(_location_filter(genes, intervals, search['locus']))
 
+    #  Pathogencicity and transcript consequences actas "OR" filters instead of the usual "AND"
+
+    pathogenicity_annotations_filter = _pathogenicity_filter(search.get('pathogenicity', {}))
+
     allowed_consequences = None
     if search.get('annotations'):
         consequences_filter, allowed_consequences = _annotations_filter(search['annotations'])
-        es_search = es_search.filter(consequences_filter)
+        if pathogenicity_annotations_filter:
+            pathogenicity_annotations_filter |= consequences_filter
+        else:
+            pathogenicity_annotations_filter = consequences_filter
+
+    if pathogenicity_annotations_filter:
+        es_search = es_search.filter(pathogenicity_annotations_filter)
 
     if search.get('freqs'):
         es_search = es_search.filter(_frequency_filter(search['freqs']))
@@ -438,25 +448,33 @@ HGMD_CLASS_MAP = {
 }
 
 
-def _annotations_filter(annotations):
-    annotations = deepcopy(annotations)
-    clinvar_filters = annotations.pop('clinvar', [])
-    hgmd_filters = annotations.pop('hgmd', [])
-    vep_consequences = [ann for annotations in annotations.values() for ann in annotations]
+def _pathogenicity_filter(pathogenicity):
+    clinvar_filters = pathogenicity.get('clinvar', [])
+    hgmd_filters = pathogenicity.get('hgmd', [])
 
-    consequences_filter = Q('terms', transcriptConsequenceTerms=vep_consequences)
-
+    pathogenicity_filter = None
     if clinvar_filters:
         clinvar_clinical_significance_terms = set()
         for clinvar_filter in clinvar_filters:
             clinvar_clinical_significance_terms.update(CLINVAR_SIGNFICANCE_MAP.get(clinvar_filter, []))
-        consequences_filter |= Q('terms', clinvar_clinical_significance=list(clinvar_clinical_significance_terms))
+        pathogenicity_filter = Q('terms', clinvar_clinical_significance=list(clinvar_clinical_significance_terms))
 
+    # TODO filter HGMD for users
     if hgmd_filters:
         hgmd_class = set()
         for hgmd_filter in hgmd_filters:
             hgmd_class.update(HGMD_CLASS_MAP.get(hgmd_filter, []))
-        consequences_filter |= Q('terms', hgmd_class=list(hgmd_class))
+
+        hgmd_q = Q('terms', hgmd_class=list(hgmd_class))
+        pathogenicity_filter = pathogenicity_filter | hgmd_q if pathogenicity_filter else hgmd_q
+
+    return pathogenicity_filter
+
+
+def _annotations_filter(annotations):
+    vep_consequences = [ann for annotations in annotations.values() for ann in annotations]
+
+    consequences_filter = Q('terms', transcriptConsequenceTerms=vep_consequences)
 
     if 'intergenic_variant' in vep_consequences:
         # for many intergenic variants VEP doesn't add any annotations, so if user selected 'intergenic_variant', also match variants where transcriptConsequenceTerms is emtpy
