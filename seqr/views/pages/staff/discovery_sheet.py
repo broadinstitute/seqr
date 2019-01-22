@@ -561,7 +561,6 @@ def _update_gene_symbols(rows):
 
 
 def _update_initial_omim_numbers(rows):
-    return rows
     omim_numbers = {row['omim_number_initial'] for row in rows if row['omim_number_initial']}
     omim_number_map = {}
     # OMIM API works for doing this as a single bulk request in theory but they detect us as a craweler and block us
