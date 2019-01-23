@@ -11,12 +11,8 @@ const FreqValue = styled.span`
   color: grey;
 `
 
-const FreqLink = ({ url, value, variant, genomeVersion }) => {
-  let { chrom, pos } = variant
-  if (variant.liftedOverGenomeVersion === genomeVersion) {
-    chrom = variant.liftedOverChrom
-    pos = variant.liftedOverPos
-  }
+const FreqLink = ({ url, value, variant }) => {
+  const { chrom, pos } = variant
 
   const isRegion = parseFloat(value, 10) <= 0
   let coords
@@ -38,10 +34,9 @@ FreqLink.propTypes = {
   url: PropTypes.string.isRequired,
   value: PropTypes.string,
   variant: PropTypes.object.isRequired,
-  genomeVersion: PropTypes.string.isRequired,
 }
 
-const FreqSummary = ({ field, fieldTitle, variant, url, hasLink, showAC, genomeVersion = GENOME_VERSION_37, precision = 2 }) => {
+const FreqSummary = ({ field, fieldTitle, variant, url, hasLink, showAC, precision = 2 }) => {
   const { freqs, popCounts } = variant.annotation
   if (freqs[field] === null) {
     return null
@@ -66,7 +61,6 @@ const FreqSummary = ({ field, fieldTitle, variant, url, hasLink, showAC, genomeV
               url={url || `${field.split('_')[0]}.broadinstitute.org`}
               value={value}
               variant={variant}
-              genomeVersion={genomeVersion}
             /> : value
           }
         </b>
@@ -90,7 +84,6 @@ FreqSummary.propTypes = {
   url: PropTypes.string,
   hasLink: PropTypes.bool,
   showAC: PropTypes.bool,
-  genomeVersion: PropTypes.string,
 }
 
 const Frequencies = ({ variant }) => {
@@ -107,7 +100,7 @@ const Frequencies = ({ variant }) => {
       <FreqSummary field="gnomad_exomes" variant={variant} hasLink />
       <FreqSummary field="gnomad_genomes" variant={variant} precision={3} hasLink />
       <FreqSummary field="topmedAF" fieldTitle="TOPMED" variant={variant} genomeVersion="38" precision={3} hasLink
-        url="bravo.sph.umich.edu/freeze5/hg38"
+        url={`bravo.sph.umich.edu/${variant.genomeVersion === GENOME_VERSION_37 ? 'freeze3a/hg19' : 'freeze5/hg38'}`}
       />
     </div>
   )
