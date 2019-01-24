@@ -84,7 +84,7 @@ export const loadSearchedVariants = ({ searchHash, displayUpdates, queryParams, 
       (responseJson) => {
         dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
         dispatch({ type: RECEIVE_SEARCHED_VARIANTS, newValue: responseJson.searchedVariants })
-        dispatch({ type: RECEIVE_SAVED_SEARCHES, updatesById: { searchesByHash: { [searchHash]: search } } })
+        dispatch({ type: RECEIVE_SAVED_SEARCHES, updatesById: { searchesByHash: { [searchHash]: responseJson.search } } })
       },
       (e) => {
         dispatch({ type: RECEIVE_SEARCHED_VARIANTS, error: e.message, newValue: [] })
