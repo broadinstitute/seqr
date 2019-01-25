@@ -7,9 +7,10 @@ import { BooleanCheckbox, RadioGroup, Dropdown, InlineToggle, Pagination } from 
 
 
 export const GENOME_VERSION_37 = '37'
+export const GENOME_VERSION_38 = '38'
 export const GENOME_VERSION_OPTIONS = [
   { value: GENOME_VERSION_37, text: 'GRCh37' },
-  { value: '38', text: 'GRCh38' },
+  { value: GENOME_VERSION_38, text: 'GRCh38' },
 ]
 
 // PROJECT FIELDS

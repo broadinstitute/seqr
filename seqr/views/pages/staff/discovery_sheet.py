@@ -4,14 +4,18 @@ import json
 import logging
 import re
 import requests
+import tempfile
+import openpyxl as xl
 
 from django.contrib.admin.views.decorators import staff_member_required
+from django.core.mail.message import EmailMultiAlternatives
 from django.utils import timezone
 
 from seqr.utils.gene_utils import get_genes
 from seqr.utils.xpos_utils import get_chrom_pos
 from seqr.views.apis.saved_variant_api import variant_details
 from seqr.views.utils.export_table_utils import export_table
+from seqr.views.utils.json_utils import create_json_response, _to_title_case
 from reference_data.models import HPO_CATEGORY_NAMES
 from seqr.models import Project, Family, VariantTag, VariantTagType, Sample, SavedVariant
 from dateutil import relativedelta as rdelta
@@ -194,7 +198,27 @@ def discovery_sheet(request, project_guid=None):
         _update_gene_symbols(rows)
         _update_initial_omim_numbers(rows)
 
-        return export_table("discovery_sheet", HEADER, rows, file_format="xls")
+        temp_file = tempfile.NamedTemporaryFile()
+        wb_out = xl.Workbook()
+        ws_out = wb_out.active
+        ws_out.append(map(_to_title_case, HEADER))
+        for row in rows:
+            ws_out.append([row[column_key] for column_key in HEADER])
+        wb_out.save(temp_file.name)
+        temp_file.seek(0)
+
+        email_message = EmailMultiAlternatives(
+            subject="Discovery Sheet",
+            body="Attached is the discovery sheet for all seqr projects",
+            to=[request.user.email],
+            attachments=[
+                ("discovery_sheet.xlsx", temp_file.read(), "application/xls"),
+            ],
+        )
+        email_message.send()
+        logger.info("emailing discovery sheet to {}".format(request.user.email))
+
+        return create_json_response({'errors': errors})
 
     # generate table for 1 project
     project = next((project for project in projects if project.guid == project_guid), None)

@@ -4,19 +4,15 @@ import styled from 'styled-components'
 import { Popup } from 'semantic-ui-react'
 
 import { HorizontalSpacer } from '../../Spacers'
-import { GENOME_VERSION_37 } from '../../../utils/constants'
+import { GENOME_VERSION_37, GENOME_VERSION_38 } from '../../../utils/constants'
 
 
 const FreqValue = styled.span`
   color: grey;
 `
 
-const FreqLink = ({ url, value, variant, genomeVersion }) => {
-  let { chrom, pos } = variant
-  if (variant.liftedOverGenomeVersion === genomeVersion) {
-    chrom = variant.liftedOverChrom
-    pos = variant.liftedOverPos
-  }
+const FreqLink = ({ url, value, variant }) => {
+  const { chrom, pos } = variant
 
   const isRegion = parseFloat(value, 10) <= 0
   let coords
@@ -38,10 +34,9 @@ FreqLink.propTypes = {
   url: PropTypes.string.isRequired,
   value: PropTypes.string,
   variant: PropTypes.object.isRequired,
-  genomeVersion: PropTypes.string.isRequired,
 }
 
-const FreqSummary = ({ field, fieldTitle, variant, url, hasLink, showAC, genomeVersion = GENOME_VERSION_37, precision = 2 }) => {
+const FreqSummary = ({ field, fieldTitle, variant, urls, hasLink, showAC, precision = 2 }) => {
   const { populations, chrom } = variant
   const population = populations[field]
   if (population.af === null) {
@@ -64,10 +59,9 @@ const FreqSummary = ({ field, fieldTitle, variant, url, hasLink, showAC, genomeV
         <b>
           {hasLink ?
             <FreqLink
-              url={url || `${field.split('_')[0]}.broadinstitute.org`}
+              url={urls ? urls[variant.genomeVersion] : `${field.split('_')[0]}.broadinstitute.org`}
               value={value}
               variant={variant}
-              genomeVersion={genomeVersion}
             /> : value
           }
         </b>
@@ -90,10 +84,9 @@ FreqSummary.propTypes = {
   variant: PropTypes.object.isRequired,
   precision: PropTypes.number,
   fieldTitle: PropTypes.string,
-  url: PropTypes.string,
+  urls: PropTypes.object,
   hasLink: PropTypes.bool,
   showAC: PropTypes.bool,
-  genomeVersion: PropTypes.string,
 }
 
 const POPULATIONS = [
@@ -102,7 +95,16 @@ const POPULATIONS = [
   { field: 'exac', fieldTitle: 'ExAC', hasLink: true },
   { field: 'gnomad_exomes', fieldTitle: 'gnomAD exomes', hasLink: true },
   { field: 'gnomad_genomes', fieldTitle: 'gnomAD genomes', hasLink: true, precision: 3 },
-  { field: 'topmed', fieldTitle: 'TopMed', hasLink: true, precision: 3, url: 'bravo.sph.umich.edu/freeze5/hg38' },
+  {
+    field: 'topmed',
+    fieldTitle: 'TopMed',
+    hasLink: true,
+    precision: 3,
+    urls: {
+      [GENOME_VERSION_37]: 'bravo.sph.umich.edu/freeze3a/hg19',
+      [GENOME_VERSION_38]: 'bravo.sph.umich.edu/freeze5/hg38',
+    },
+  },
 ]
 
 const Frequencies = ({ variant }) => {
