@@ -81,9 +81,11 @@ class Reference(object):
     def get_gene_symbol(self, gene_id):
         return self.gene_utils.get_genes([gene_id]).get(gene_id, {}).get('geneSymbol')
 
-    def get_gene_id_from_symbol(self, symbol):
+    def get_gene_id_from_symbol(self, symbol, use_latest_gene_if_multiple=False):
         gene_ids = self.gene_utils.get_gene_ids_for_gene_symbols([symbol]).get(symbol, [])
-        return gene_ids[0] if len(gene_ids) == 1 else None
+        if len(gene_ids) == 1 or (use_latest_gene_if_multiple and gene_ids):
+            return gene_ids[0]
+        return None
 
     def is_valid_gene_id(self, gene_id):
         return bool(self.get_gene_symbol(gene_id))

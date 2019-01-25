@@ -23,7 +23,7 @@ def get_genes(gene_ids, **kwargs):
 
 
 def get_gene_ids_for_gene_symbols(gene_symbols):
-    genes = GeneInfo.objects.filter(gene_symbol__in=gene_symbols).only('gene_symbol', 'gene_id')
+    genes = GeneInfo.objects.filter(gene_symbol__in=gene_symbols).only('gene_symbol', 'gene_id').order_by('-gencode_release')
     symbols_to_ids = defaultdict(list)
     for gene in genes:
         symbols_to_ids[gene.gene_symbol].append(gene.gene_id)
