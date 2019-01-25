@@ -87,8 +87,9 @@ def get_gene_id_list_from_raw(raw_text, reference):
     gene_strs = raw_text.split()
     gene_ids = []
     for gene_str in gene_strs:
-        if xbrowse_utils.get_gene_id_from_str(gene_str, reference):
-            gene_ids.append(xbrowse_utils.get_gene_id_from_str(gene_str, reference))
+        gene_id = xbrowse_utils.get_gene_id_from_str(gene_str, reference, use_latest_gene_if_multiple=True)
+        if gene_id:
+            gene_ids.append(gene_id)
         else:
             return False, gene_str
 

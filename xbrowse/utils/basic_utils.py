@@ -121,15 +121,15 @@ def alt_allele_count_map(variant_list):
 
 
 # TODO: move to reference
-def get_gene_id_from_str(s, reference):
+def get_gene_id_from_str(s, reference, use_latest_gene_if_multiple=False):
     """
     Given an arbitrary string s, see if you can use reference
     to get a gene ID (ensembl ID)
     """
     if reference.is_valid_gene_id(s):
         return s
-    elif reference.get_gene_id_from_symbol(s.upper()):
-        return reference.get_gene_id_from_symbol(s.upper())
+    elif reference.get_gene_id_from_symbol(s.upper(), use_latest_gene_if_multiple=use_latest_gene_if_multiple):
+        return reference.get_gene_id_from_symbol(s.upper(), use_latest_gene_if_multiple=use_latest_gene_if_multiple)
     else:
         return None
 
