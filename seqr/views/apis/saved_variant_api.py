@@ -268,13 +268,13 @@ def variant_details(variant_json, project, user):
             'sampleId': sample_id,
         } for sample_id, genotype in variant_json.get('genotypes', {}).items()
     }
-    sample_guids_by_id = {s.sample_id: s.guid for s in Sample.objects.filter(
+    individual_guids_by_sample_id = {s.sample_id: s.individual.guid for s in Sample.objects.filter(
         individual__family__project=project,
         sample_id__in=genotypes.keys(),
         dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS
     )}
-    genotypes = {sample_guids_by_id.get(sample_id): genotype for sample_id, genotype in genotypes.items()
-                 if sample_guids_by_id.get(sample_id)}
+    genotypes = {individual_guids_by_sample_id.get(sample_id): genotype for sample_id, genotype in genotypes.items()
+                 if individual_guids_by_sample_id.get(sample_id)}
 
     transcripts = defaultdict(list)
     for i, vep_a in enumerate(annotation['vep_annotation'] or []):

@@ -159,7 +159,8 @@ def export_variants_handler(request, search_hash):
     saved_variants_by_guid = _get_saved_variants(variants)
     saved_variants_by_family = defaultdict(dict)
     for var in saved_variants_by_guid.values():
-        saved_variants_by_family[var['familyGuid']]['{}-{}-{}'.format(var['xpos'], var['ref'], var['alt'])] = var
+        for family_guid in var['familyGuids']:
+            saved_variants_by_family[family_guid]['{}-{}-{}'.format(var['xpos'], var['ref'], var['alt'])] = var
 
     max_families_per_variant = max([len(variant['familyGuids']) for variant in variants])
     max_samples_per_variant = max([len(variant['genotypes']) for variant in variants])
@@ -186,7 +187,7 @@ def export_variants_handler(request, search_hash):
 
     file_format = request.GET.get('file_format', 'tsv')
 
-    return export_table('search_results_{}'.format(search_hash), header, rows, file_format)
+    return export_table('search_results_{}'.format(search_hash), header, rows, file_format, titlecase_header=False)
 
 
 def _get_field_value(value, config):
