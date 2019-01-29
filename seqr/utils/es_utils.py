@@ -704,7 +704,7 @@ def _parse_es_hit(raw_hit, family_samples_by_id):
         if family_guid in genotype_hits and len(samples_by_id) == genotype_hits[family_guid].hits.total and genotype_hits[family_guid].hits.max_score > 0:
             family_guids.append(family_guid)
             genotypes.update({
-                samples_by_id[genotype_hit['sample_id']].guid: _get_field_values(genotype_hit, GENOTYPE_FIELDS_CONFIG)
+                samples_by_id[genotype_hit['sample_id']].individual.guid: _get_field_values(genotype_hit, GENOTYPE_FIELDS_CONFIG)
                 for genotype_hit in genotype_hits[family_guid]
             })
 

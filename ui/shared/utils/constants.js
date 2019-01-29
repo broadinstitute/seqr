@@ -658,8 +658,8 @@ export const VARIANT_EXPORT_DATA = [
   { header: 'clinvar_gold_stars', getVal: variant => variant.clinvar.goldStars },
 ]
 
-export const VARIANT_GENOTYPE_EXPORT_DATA = [
-  { header: 'sample_id', getVal: (genotype, sample) => sample.sampleId },
+const VARIANT_GENOTYPE_EXPORT_DATA = [
+  { header: 'sample_id', getVal: genotype => genotype.sampleId },
   { header: 'genotype', getVal: genotype => (genotype.alleles.length ? genotype.alleles.join('/') : './.') },
   { header: 'num_alt_alleles', getVal: genotype => genotype.numAlt },
   { header: 'filter' },
@@ -669,7 +669,7 @@ export const VARIANT_GENOTYPE_EXPORT_DATA = [
   { header: 'ab' },
 ]
 
-export const getVariantsExportData = (variants, samplesByGuid) => {
+export const getVariantsExportData = (variants) => {
   const maxGenotypes = Math.max(...variants.map(variant => Object.keys(variant.genotypes).length), 0)
   return {
     rawData: variants,
@@ -677,9 +677,9 @@ export const getVariantsExportData = (variants, samplesByGuid) => {
       (acc, i) => [...acc, ...VARIANT_GENOTYPE_EXPORT_DATA.map(config => `${config.header}_${i + 1}`)],
       VARIANT_EXPORT_DATA.map(config => config.header),
     ),
-    processRow: variant => Object.entries(variant.genotypes).reduce(
-      (acc, [sampleGuid, genotype]) => [...acc, ...VARIANT_GENOTYPE_EXPORT_DATA.map((config) => {
-        return config.getVal ? config.getVal(genotype, samplesByGuid[sampleGuid]) : genotype[config.header]
+    processRow: variant => Object.values(variant.genotypes).reduce(
+      (acc, genotype) => [...acc, ...VARIANT_GENOTYPE_EXPORT_DATA.map((config) => {
+        return config.getVal ? config.getVal(genotype) : genotype[config.header]
       })],
       VARIANT_EXPORT_DATA.map(config => (config.getVal ? config.getVal(variant) : variant[config.header])),
     ),

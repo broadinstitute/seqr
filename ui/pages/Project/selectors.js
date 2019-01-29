@@ -186,7 +186,6 @@ export const getSavedVariantTotalPages = createSelector(
 
 export const getSavedVariantExportConfig = createSelector(
   getFilteredProjectSavedVariants,
-  getSamplesByGuid,
   getVariantsExportData,
 )
 

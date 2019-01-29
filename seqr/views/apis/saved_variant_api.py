@@ -265,6 +265,7 @@ def variant_details(variant_json, project, user):
             'gq': genotype.get('gq'),
             'numAlt': genotype.get('num_alt'),
             'pl': genotype.get('extras', {}).get('pl'),
+            'sampleId': sample_id,
         } for sample_id, genotype in variant_json.get('genotypes', {}).items()
     }
     sample_guids_by_id = {s.sample_id: s.guid for s in Sample.objects.filter(

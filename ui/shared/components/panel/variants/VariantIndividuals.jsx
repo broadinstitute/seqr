@@ -79,7 +79,7 @@ const Genotype = ({ variant, individual }) => {
   if (!variant.genotypes) {
     return null
   }
-  const genotype = variant.genotypes[individual.sampleGuids.find(sampleGuid => variant.genotypes[sampleGuid])]
+  const genotype = variant.genotypes[individual.individualGuid]
   if (!genotype) {
     return null
   }
