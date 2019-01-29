@@ -200,7 +200,7 @@ class ElasticsearchDatastore(datastore.Datastore):
             if i.seqr_individual:
                 sample_id = next((
                     sample.sample_id for sample in samples
-                    if sample.individual == i.seqr_individual and sample.elasticsearch_index.startswith(*es_indices)
+                    if sample.individual == i.seqr_individual and sample.elasticsearch_index.startswith(tuple(es_indices))
                 ), None)
             family_individual_ids_to_sample_ids[indiv_id] = sample_id or indiv_id
 
