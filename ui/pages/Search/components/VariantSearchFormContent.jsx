@@ -1,9 +1,11 @@
 import React from 'react'
+import { connect } from 'react-redux'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { FormSection } from 'redux-form'
 import { Form, Accordion, Header, Segment, Grid, List } from 'semantic-ui-react'
 
+import { getUser } from 'redux/selectors'
 import { VerticalSpacer } from 'shared/components/Spacers'
 import { ButtonLink } from 'shared/components/StyledComponents'
 import { configuredField, configuredFields } from 'shared/components/form/ReduxFormWrapper'
@@ -26,6 +28,8 @@ import {
   FREQUENCIES,
   PATHOGENICITY_FIELDS,
   PATHOGENICITY_FILTER_OPTIONS,
+  STAFF_PATHOGENICITY_FIELDS,
+  STAFF_PATHOGENICITY_FILTER_OPTIONS,
   ANNOTATION_GROUPS,
   ANNOTATION_FILTER_OPTIONS,
   QUALITY_FILTER_FIELDS,
@@ -159,13 +163,17 @@ const INHERITANCE_PANEL = {
   ),
 }
 
-const PATHOGENICITY_PANEL = {
+
+const pathogenicityPanel = isStaff => ({
   name: 'pathogenicity',
-  headerProps: { title: 'Pathogenicity', inputProps: JsonSelectProps(PATHOGENICITY_FILTER_OPTIONS) },
-  fields: PATHOGENICITY_FIELDS,
+  headerProps: { title: 'Pathogenicity', inputProps: JsonSelectProps(isStaff ? STAFF_PATHOGENICITY_FILTER_OPTIONS : PATHOGENICITY_FILTER_OPTIONS) },
+  fields: isStaff ? STAFF_PATHOGENICITY_FIELDS : PATHOGENICITY_FIELDS,
   fieldProps: { control: AlignedCheckboxGroup, format: val => val || [] },
   helpText: 'Filter by reported pathogenicity. Note this filter will override any annotations filter (i.e variants will be returned if they have either the specified pathogenicity OR transcript consequence)',
-}
+})
+
+const STAFF_PATHOGENICITY_PANEL = pathogenicityPanel(true)
+const PATHOGENICITY_PANEL = pathogenicityPanel(false)
 
 const ANNOTATION_PANEL = {
   name: 'annotations',
@@ -265,8 +273,14 @@ PanelContent.propTypes = {
   fieldLayout: PropTypes.func,
 }
 
-const PANEL_DETAILS = [INHERITANCE_PANEL, PATHOGENICITY_PANEL, ANNOTATION_PANEL, FREQUENCY_PANEL, LOCATION_PANEL, QUALITY_PANEL]
-const PANELS = PANEL_DETAILS.map(({ name, headerProps, ...panelContentProps }, i) => ({
+const PANEL_DETAILS = [
+  INHERITANCE_PANEL, PATHOGENICITY_PANEL, ANNOTATION_PANEL, FREQUENCY_PANEL, LOCATION_PANEL, QUALITY_PANEL,
+]
+const STAFF_PANEL_DETAILS = [
+  INHERITANCE_PANEL, STAFF_PATHOGENICITY_PANEL, ANNOTATION_PANEL, FREQUENCY_PANEL, LOCATION_PANEL, QUALITY_PANEL,
+]
+
+const panelDetails = ({ name, headerProps, ...panelContentProps }, i) => ({
   key: name,
   title: {
     key: `${name}-title`,
@@ -282,7 +296,10 @@ const PANELS = PANEL_DETAILS.map(({ name, headerProps, ...panelContentProps }, i
     textAlign: 'center',
     content: <PanelContent name={name} {...panelContentProps} />,
   },
-}))
+})
+
+const PANELS = PANEL_DETAILS.map(panelDetails)
+const STAFF_PANELS = STAFF_PANEL_DETAILS.map(panelDetails)
 
 class VariantSearchFormContent extends React.Component {
   render() {
@@ -297,7 +314,9 @@ class VariantSearchFormContent extends React.Component {
         </Grid.Row>
         <Grid.Row>
           <Grid.Column width={16}>
-            <FormSection name="search"><Accordion fluid panels={PANELS} /></FormSection>
+            <FormSection name="search">
+              <Accordion fluid panels={this.props.user.is_staff ? STAFF_PANELS : PANELS} />
+            </FormSection>
           </Grid.Column>
         </Grid.Row>
       </Grid>
@@ -309,4 +328,13 @@ class VariantSearchFormContent extends React.Component {
     return false
   }
 }
-export default VariantSearchFormContent
+
+VariantSearchFormContent.propTypes = {
+  user: PropTypes.object,
+}
+
+const mapStateToProps = state => ({
+  user: getUser(state),
+})
+
+export default connect(mapStateToProps)(VariantSearchFormContent)

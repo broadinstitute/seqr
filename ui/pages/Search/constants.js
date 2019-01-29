@@ -166,14 +166,20 @@ const HGMD_OPTIONS = [ // see https://portal.biobase-international.com/hgmd/pro/
     value: 'hgmd_other',
   },
 ]
-// TODO filter HGMD for users
+
+const CLINVAR_FIELD = {
+  name: CLINVAR_NAME,
+  options: CLINVAR_OPTIONS,
+  groupLabel: 'Clinvar',
+  width: 1,
+}
+
 export const PATHOGENICITY_FIELDS = [
-  {
-    name: CLINVAR_NAME,
-    options: CLINVAR_OPTIONS,
-    groupLabel: 'Clinvar',
-    width: 1,
-  },
+  CLINVAR_FIELD,
+]
+
+export const STAFF_PATHOGENICITY_FIELDS = [
+  CLINVAR_FIELD,
   {
     name: HGMD_NAME,
     options: HGMD_OPTIONS,
@@ -182,7 +188,7 @@ export const PATHOGENICITY_FIELDS = [
   },
 ]
 
-export const PATHOGENICITY_FILTER_OPTIONS = [
+export const STAFF_PATHOGENICITY_FILTER_OPTIONS = [
   {
     text: 'Pathogenic/ Likely Path.',
     value: {
@@ -198,6 +204,9 @@ export const PATHOGENICITY_FILTER_OPTIONS = [
     },
   },
 ]
+export const PATHOGENICITY_FILTER_OPTIONS = STAFF_PATHOGENICITY_FILTER_OPTIONS.map(({ text, value }) => ({
+  text, value: { [CLINVAR_NAME]: value[CLINVAR_NAME] },
+}))
 
 export const ANNOTATION_GROUPS = Object.entries(GROUPED_VEP_CONSEQUENCES).map(([name, options]) => ({
   name, options, groupLabel: snakecaseToTitlecase(name),

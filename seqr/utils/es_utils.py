@@ -459,7 +459,6 @@ def _pathogenicity_filter(pathogenicity):
             clinvar_clinical_significance_terms.update(CLINVAR_SIGNFICANCE_MAP.get(clinvar_filter, []))
         pathogenicity_filter = Q('terms', clinvar_clinical_significance=list(clinvar_clinical_significance_terms))
 
-    # TODO filter HGMD for users
     if hgmd_filters:
         hgmd_class = set()
         for hgmd_filter in hgmd_filters:
