@@ -241,6 +241,23 @@
     "model": "seqr.varianttagtype",
     "pk": null,
     "fields": {
+        "guid": "VTT_sanger_troubleshooting",
+        "created_date": "2018-04-27T00:00:00.000Z",
+        "created_by": null,
+        "last_modified_date": null,
+        "project": null,
+        "name": "Sanger troubleshooting",
+        "category": "Collaboration",
+        "description": "",
+        "color": "#9e064b",
+        "order": 14.5,
+        "is_built_in": true
+    }
+},
+{
+    "model": "seqr.varianttagtype",
+    "pk": null,
+    "fields": {
         "guid": "VTT_confident_ar_one_hit",
         "created_date": "2018-04-27T00:00:00.000Z",
         "created_by": null,
