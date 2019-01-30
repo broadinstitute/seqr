@@ -1,7 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import { Table, Checkbox, Pagination } from 'semantic-ui-react'
+import { Table, Checkbox, Pagination, Form } from 'semantic-ui-react'
 
 import { compareObjects } from '../../utils/sortUtils'
 import { configuredField } from '../form/ReduxFormWrapper'
@@ -35,6 +35,7 @@ class SortableTable extends React.PureComponent {
     columns: PropTypes.array,
     idField: PropTypes.string.isRequired,
     defaultSortColumn: PropTypes.string,
+    filterColumn: PropTypes.string,
     selectRows: PropTypes.func,
     selectedRows: PropTypes.object,
     loading: PropTypes.bool,
@@ -54,6 +55,7 @@ class SortableTable extends React.PureComponent {
       column: props.defaultSortColumn,
       direction: 'ascending',
       activePage: 1,
+      filter: null,
     }
   }
 
@@ -70,6 +72,10 @@ class SortableTable extends React.PureComponent {
         direction: direction === ASCENDING ? DESCENDING : ASCENDING,
       })
     }
+  }
+
+  handleFilter = (e, data) => {
+    this.setState({ filter: data.value.toLowerCase() })
   }
 
   allSelected = () => (
@@ -98,12 +104,20 @@ class SortableTable extends React.PureComponent {
   }
 
   render() {
-    const { data, defaultSortColumn, idField, columns, selectRows, selectedRows = {}, loading, emptyContent, footer, rowsPerPage, ...tableProps } = this.props
-    const { column, direction, activePage } = this.state
+    const {
+      data, defaultSortColumn, filterColumn, idField, columns, selectRows, selectedRows = {}, loading, emptyContent,
+      footer, rowsPerPage, ...tableProps
+    } = this.props
+    const { column, direction, activePage, filter } = this.state
 
+    let totalRows = data.length
     let sortedData = data.sort(compareObjects(column))
     if (direction === DESCENDING) {
       sortedData = sortedData.reverse()
+    }
+    if (filter) {
+      sortedData = sortedData.filter(row => row[filterColumn].toLowerCase().startsWith(filter))
+      totalRows = sortedData.length
     }
     const isPaginated = rowsPerPage && sortedData.length > rowsPerPage
     if (isPaginated) {
@@ -139,49 +153,58 @@ class SortableTable extends React.PureComponent {
       ))
     }
 
+    const hasFooter = footer || isPaginated || filterColumn
     return (
-      <StyledSortableTable sortable selectable={!!selectRows} columns={columns.length} {...tableProps}>
-        <Table.Header>
-          <Table.Row>
-            {selectRows &&
-              <Table.HeaderCell width={1} content={<Checkbox checked={this.allSelected()} indeterminate={this.someSelected()} onClick={this.selectAll} />} />
-            }
-            {processedColumns.map(({ name, format, ...columnProps }) =>
-              <Table.HeaderCell
-                key={name}
-                sorted={column === name ? direction : null}
-                onClick={this.handleSort(name)}
-                {...columnProps}
-              />,
-            )}
-          </Table.Row>
-        </Table.Header>
-        <Table.Body>
-          {tableContent}
-        </Table.Body>
-        {(footer || isPaginated) &&
-          <Table.Footer>
+      <div>
+        <StyledSortableTable sortable selectable={!!selectRows} columns={columns.length} attached={hasFooter && 'top'} {...tableProps}>
+          <Table.Header>
             <Table.Row>
-              {footer && <Table.HeaderCell colSpan={(isPaginated ? 1 : columns.length) + (selectRows ? 1 : 0)} content={footer} />}
-              {isPaginated &&
-                <Table.HeaderCell
-                  colSpan={(footer ? columns.length - 1 : columns.length) + (selectRows ? 1 : 0)}
-                  textAlign="right"
-                >
-                  Showing rows {((activePage - 1) * rowsPerPage) + 1}-{Math.min(activePage * rowsPerPage, data.length)}
-                  &nbsp; &nbsp;
-                  <Pagination
-                    activePage={activePage}
-                    totalPages={Math.ceil(data.length / rowsPerPage)}
-                    onPageChange={(e, d) => this.setState({ activePage: d.activePage })}
-                    size="mini"
-                  />
-                </Table.HeaderCell>
+              {selectRows &&
+                <Table.HeaderCell width={1} content={<Checkbox checked={this.allSelected()} indeterminate={this.someSelected()} onClick={this.selectAll} />} />
               }
+              {processedColumns.map(({ name, format, ...columnProps }) =>
+                <Table.HeaderCell
+                  key={name}
+                  sorted={column === name ? direction : null}
+                  onClick={this.handleSort(name)}
+                  {...columnProps}
+                />,
+              )}
             </Table.Row>
-          </Table.Footer>
+          </Table.Header>
+          <Table.Body>
+            {tableContent}
+          </Table.Body>
+        </StyledSortableTable>
+        {hasFooter &&
+          <Table {...tableProps} fixed={false} attached="bottom">
+            <Table.Footer>
+              <Table.Row>
+                {footer && <Table.HeaderCell collapsing={rowsPerPage} content={footer} />}
+                {filterColumn &&
+                  <Table.HeaderCell collapsing>
+                    <Form.Input label="Filter: " inline onChange={this.handleFilter} />
+                  </Table.HeaderCell>
+                }
+                <Table.HeaderCell collapsing={!rowsPerPage} textAlign="right">
+                  {isPaginated &&
+                    <div>
+                      Showing rows {((activePage - 1) * rowsPerPage) + 1}-{Math.min(activePage * rowsPerPage, totalRows)}
+                      &nbsp; &nbsp;
+                      <Pagination
+                        activePage={activePage}
+                        totalPages={Math.ceil(totalRows / rowsPerPage)}
+                        onPageChange={(e, d) => this.setState({ activePage: d.activePage })}
+                        size="mini"
+                      />
+                    </div>
+                  }
+                </Table.HeaderCell>
+              </Table.Row>
+            </Table.Footer>
+          </Table>
         }
-      </StyledSortableTable>
+      </div>
     )
   }
 }
