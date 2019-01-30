@@ -16,6 +16,7 @@ const EditFamiliesForm = props =>
     idField="familyGuid"
     entityKey="families"
     defaultSortColumn={FAMILY_FIELD_ID}
+    filterColumn={FAMILY_FIELD_ID}
     columns={FAMILY_FIELDS}
     {...props}
   />
