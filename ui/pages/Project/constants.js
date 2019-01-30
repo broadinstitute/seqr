@@ -416,7 +416,7 @@ export const INTERNAL_FAMILY_EXPORT_DATA = [
   { header: 'Internal Case Review Notes', field: FAMILY_FIELD_INTERNAL_NOTES, format: stripMarkdown },
 ]
 
-const INDIVIDUAL_FIELD_ID = 'individualId'
+export const INDIVIDUAL_FIELD_ID = 'individualId'
 const INDIVIDUAL_FIELD_PATERNAL_ID = 'paternalId'
 const INDIVIDUAL_FIELD_MATERNAL_ID = 'maternalId'
 const INDIVIDUAL_FIELD_SEX = 'sex'
