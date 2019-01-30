@@ -1,8 +1,6 @@
-/* eslint-disable no-unused-expressions */
-/* eslint-disable react/no-array-index-key */
-
 import React from 'react'
 import PropTypes from 'prop-types'
+import styled from 'styled-components'
 import { Label } from 'semantic-ui-react'
 
 import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
@@ -10,9 +8,15 @@ import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
 import ShowPhenotipsModalButton from 'shared/components/buttons/ShowPhenotipsModalButton'
 import { getNameForCategoryHpoId } from 'shared/utils/hpoUtils'
 
-const infoDivStyle = {
-  padding: '5px 0px 10px 20px',
-}
+const IndentedContainer = styled.div`
+  padding-left: 20px;
+`
+
+const CompactContainer = styled.div`
+  display: inline-block;
+  padding-bottom: 15px;
+  color: gray;
+`
 
 export const hasPhenotipsDetails = phenotipsData =>
   phenotipsData && (phenotipsData.features || phenotipsData.rejectedGenes || phenotipsData.genes)
@@ -28,13 +32,15 @@ const PhenotipsSection = ({ phenotipsData, field, parseFieldRows, formatFieldRow
   return (
     <div>
       <Label basic horizontal color={color || 'grey'} content={title} />
-      <div style={infoDivStyle}>
+      <VerticalSpacer height={5} />
+      <IndentedContainer>
         {
-          join ? fieldData.map(row => formatFieldRow(row)).join(join) : fieldData.map((row, i) => {
-            return <div key={i}>{formatFieldRow(row)}</div>
-          })
+          join ? fieldData.map(row => formatFieldRow(row)).join(join) : fieldData.map((row, i) =>
+            <div key={i}>{formatFieldRow(row)}</div>, /* eslint-disable-line react/no-array-index-key */
+          )
         }
-      </div>
+      </IndentedContainer>
+      <VerticalSpacer height={10} />
     </div>
   )
 }
@@ -153,7 +159,7 @@ class PhenotipsDataPanel extends React.Component
           ]
         }
         {showDetails ?
-          <div style={infoDivStyle}>
+          <IndentedContainer>
             {phenotipsData && hasPhenotipsDetails(phenotipsData) &&
               <div>
                 <VerticalSpacer height={10} />
@@ -166,19 +172,16 @@ class PhenotipsDataPanel extends React.Component
                 )}
               </div>
             }
-          </div> :
-          <div style={{ display: 'inline-block', paddingBottom: '15px', color: 'gray' }}>
+          </IndentedContainer> :
+          <CompactContainer>
             <HorizontalSpacer width={30} />
             {(phenotipsData && phenotipsData.features) ? `${phenotipsData.features.length} phenotype terms` : null} &nbsp;
             {(phenotipsData && phenotipsData.rejectedGenes) ? `${phenotipsData.rejectedGenes.length} previously tested genes` : null} &nbsp;
             {(phenotipsData && phenotipsData.genes) ? `${phenotipsData.genes.length} candidate genes` : null}
-          </div>
+          </CompactContainer>
         }
       </div>)
   }
 }
 
 export default PhenotipsDataPanel
-
-//const mapDispatchToProps = dispatch => bindActionCreators({ showPhenotipsModal }, dispatch)
-//export default connect(null, mapDispatchToProps)(PhenotipsDataPanel)
