@@ -9,7 +9,7 @@ import DispatchRequestButton from 'shared/components/buttons/DispatchRequestButt
 import PedigreeIcon from 'shared/components/icons/PedigreeIcon'
 import TextFieldView from 'shared/components/panel/view-fields/TextFieldView'
 import OptionFieldView from 'shared/components/panel/view-fields/OptionFieldView'
-import PhenotipsDataPanel from 'shared/components/panel/view-phenotips-info/PhenotipsDataPanel'
+import PhenotipsDataPanel from 'shared/components/panel/PhenotipsDataPanel'
 import Sample from 'shared/components/panel/sample'
 import { FamilyLayout } from 'shared/components/panel/family'
 import { ColoredIcon } from 'shared/components/StyledComponents'
