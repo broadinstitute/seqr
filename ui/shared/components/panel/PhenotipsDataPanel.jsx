@@ -50,7 +50,7 @@ PhenotipsSection.propTypes = {
 }
 
 
-const getHpoTermsForCategory = observed => (features) => {
+export const getHpoTermsForCategory = observed => (features) => {
   const hpoTermsByCategory = features.filter(
     hpoTerm => hpoTerm.observed === observed,
   ).reduce((acc, hpoTerm) => {
@@ -177,8 +177,6 @@ class PhenotipsDataPanel extends React.Component
       </div>)
   }
 }
-
-export { PhenotipsDataPanel as PhenotipsDataPanelComponent }
 
 export default PhenotipsDataPanel
 

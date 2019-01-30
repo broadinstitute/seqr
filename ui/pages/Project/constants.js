@@ -3,7 +3,7 @@
 import orderBy from 'lodash/orderBy'
 
 import { RadioGroup } from 'shared/components/form/Inputs'
-import { hasPhenotipsDetails } from 'shared/components/panel/view-phenotips-info/PhenotipsDataPanel'
+import { hasPhenotipsDetails } from 'shared/components/panel/PhenotipsDataPanel'
 import { stripMarkdown } from 'shared/utils/stringUtils'
 import {
   FAMILY_STATUS_SOLVED,
