@@ -30,7 +30,7 @@ class Command(BaseCommand):
                     # make sure phenotips_patient_id is up to date
                     seqr_individual = individual.seqr_individual
                     data_json = _get_patient_data(
-                        to_project.seqr_project,
+                        from_project.seqr_project,
                         seqr_individual,
                     )
 
