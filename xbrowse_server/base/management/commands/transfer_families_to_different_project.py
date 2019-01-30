@@ -3,7 +3,7 @@ from xbrowse_server.base.models import Project as BaseProject, Family as BaseFam
     VariantTag as BaseVariantTag, ProjectTag, VCFFile
 from xbrowse_server.base.model_utils import update_xbrowse_model, find_matching_seqr_model, get_or_create_xbrowse_model
 from seqr.views.apis.phenotips_api import _get_phenotips_uname_and_pwd_for_project, _add_user_to_patient, \
-    phenotips_patient_exists, _get_patient_data
+    _phenotips_patient_exists, _get_patient_data
 
 
 class Command(BaseCommand):
@@ -26,7 +26,7 @@ class Command(BaseCommand):
                 individual.project = to_project
                 individual.save()
                 # Update individuals in phenotips
-                if phenotips_patient_exists(individual.seqr_individual):
+                if _phenotips_patient_exists(individual.seqr_individual):
                     # make sure phenotips_patient_id is up to date
                     seqr_individual = individual.seqr_individual
                     data_json = _get_patient_data(
