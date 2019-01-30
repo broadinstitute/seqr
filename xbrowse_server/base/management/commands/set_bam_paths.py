@@ -27,10 +27,12 @@ class Command(BaseCommand):
         project_id = args[0]
         project = Project.objects.get(project_id=project_id)
 
-
         for line in open(args[1]).readlines():
             try:
                 indiv_id, bam_path = line.strip('\n').split('\t')
+
+                indiv_id = indiv_id.strip()
+                bam_path = bam_path.strip()
 
                 if options["slugify"]:
                     indiv_id = slugify(indiv_id)
@@ -49,7 +51,6 @@ class Command(BaseCommand):
             absolute_path = os.path.join(settings.READ_VIZ_BAM_PATH, bam_path)
             if options["skip_path_validation"]:
                 print("Setting %s path to: %s" % (indiv_id, bam_path))
-
 
                 indiv.bam_file_path = bam_path
                 indiv.save()
@@ -74,11 +75,16 @@ class Command(BaseCommand):
                                 continue
                         else:
                             print("SUCCESS: reponse code == " + str(response.status_code))
-            elif not os.path.isfile(absolute_path):
-                print("ERROR: " + absolute_path + " not found. Skipping..")
-                continue
-            
-            
+            else:
+                if not os.path.isfile(absolute_path):
+                    print("ERROR: " + absolute_path + " not found. Skipping..")
+                    continue
+
+                if not os.path.isfile(absolute_path + ".bai"):
+                    print("ERROR: " + absolute_path + ".bai not found. Please run: samtools index "  + absolute_path)
+                    continue
+
+
             indiv.bam_file_path = bam_path
             indiv.save()
 

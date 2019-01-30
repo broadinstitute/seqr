@@ -14,7 +14,7 @@ class JsonErrorMiddleware(MiddlewareMixin):
             exception_json = {'message': str(exception.message)}
             traceback_message = traceback.format_exc()
             logger.error(traceback_message)
-            if settings.DEBUG:
+            if hasattr(settings, 'DEBUG'):
                 exception_json['traceback'] = traceback_message.split('\n')
             return create_json_response(exception_json, status=500)
         return None

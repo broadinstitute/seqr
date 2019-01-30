@@ -182,16 +182,16 @@ class ElasticsearchDatastore(datastore.Datastore):
                 indivs_to_consider = [i.indiv_id for i in individuals]
         prefetch_related_objects(individuals, "seqr_individual")
 
+        es_indices = [index.rstrip('*') for index in elasticsearch_index.split(',')]
+
         samples = Sample.objects.filter(
             individual__in=[i.seqr_individual for i in individuals if i.seqr_individual],
             dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
             sample_status=Sample.SAMPLE_STATUS_LOADED,
-            elasticsearch_index__startswith=False,
+            elasticsearch_index__startswith=es_indices[0],
             loaded_date__isnull=False,
         ).order_by('-loaded_date')
         prefetch_related_objects(samples, "individual")
-
-        es_indices = [index.rstrip('*') for index in elasticsearch_index.split(',')]
 
         family_individual_ids_to_sample_ids = {}
         for i in individuals:
@@ -200,7 +200,7 @@ class ElasticsearchDatastore(datastore.Datastore):
             if i.seqr_individual:
                 sample_id = next((
                     sample.sample_id for sample in samples
-                    if sample.individual == i.seqr_individual and sample.elasticsearch_index.startswith(*es_indices)
+                    if sample.individual == i.seqr_individual and sample.elasticsearch_index.startswith(tuple(es_indices))
                 ), None)
             family_individual_ids_to_sample_ids[indiv_id] = sample_id or indiv_id
 
