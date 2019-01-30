@@ -322,6 +322,7 @@ window.SelectVariantsView = Backbone.View.extend({
             }
         });
         this.$('#set-all-ac-filters').val( '---' );
+        this.$('#set-all-hom-hemi-filters').val( '---' );
     },
 
     allAcFilterSelectChange(event) {
@@ -353,6 +354,7 @@ window.SelectVariantsView = Backbone.View.extend({
               that.setHomHemiSelect(pop.slug, val);
             }
         });
+        this.$('#set-all-freq-filters').val( '---' );
     },
 
     acSelectChange(event) {
@@ -382,8 +384,10 @@ window.SelectVariantsView = Backbone.View.extend({
             this.$('.freq-slider-label[data-population="' + population + '"]').text( val );
             this.$('.freq-slider-label[data-population="' + population + '"]').css("margin-left", (utils.freqIndex(val)-1)/10*100+"%");
             this.$('.ac-select[data-population="' + population + '"]').val( '---' );
+            this.$('.hom-hemi-select[data-population="' + population + '"]').val( '---' );
             this.ref_freq_selectors[population].freqSlider.slider('value', utils.freqIndex(val));
             this.ref_freq_selectors[population].ac = null;
+            this.ref_freq_selectors[population].hom_hemi = null;
 	    }
     },
 
@@ -398,7 +402,9 @@ window.SelectVariantsView = Backbone.View.extend({
 
     setHomHemiSelect: function(population, val) {
 	    if(this.ref_freq_selectors[population]) {
+	          this.$('.freq-slider-label[data-population="' + population + '"]').text('');
             this.$('.hom-hemi-select[data-population="' + population + '"]').val(val);
+            this.ref_freq_selectors[population].freqSlider.slider('value', 2);
             this.ref_freq_selectors[population].hom_hemi = val;
 	    }
     },
