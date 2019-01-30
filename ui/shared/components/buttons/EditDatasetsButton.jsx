@@ -29,7 +29,7 @@ const UPLOAD_ALIGNMENT_FIELDS = [
   SAMPLE_TYPE_FIELD,
   mappingFileField({
     required: true,
-    dropzoneLabelMessage: 'Upload a file that maps that maps seqr Individual Ids to their BAM or CRAM file path',
+    dropzoneLabelMessage: 'Upload a file that maps seqr Individual Ids to their BAM or CRAM file path',
     column1Label: 'Individual ID',
     column2Label: 'gs:// Google bucket path or server filesystem path of the BAM or CRAM file for this Individual',
   }),
