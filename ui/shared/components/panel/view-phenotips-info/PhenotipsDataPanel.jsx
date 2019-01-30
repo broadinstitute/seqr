@@ -3,27 +3,31 @@
 
 import React from 'react'
 import PropTypes from 'prop-types'
+import { Label } from 'semantic-ui-react'
 
-import { HorizontalSpacer } from 'shared/components/Spacers'
+import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
 
 import ShowPhenotipsModalButton from 'shared/components/buttons/ShowPhenotipsModalButton'
-import PresentAbsentPhenotypesView from './PresentAbsentPhenotypesView'
+import { getNameForCategoryHpoId } from 'shared/utils/hpoUtils'
 
 const infoDivStyle = {
-  padding: '0px 0px 10px 20px',
+  padding: '5px 0px 10px 20px',
 }
 
 export const hasPhenotipsDetails = phenotipsData =>
   phenotipsData && (phenotipsData.features || phenotipsData.rejectedGenes || phenotipsData.genes)
 
-const PhenotipsSection = ({ phenotipsData, field, formatFieldRow, title, join }) => {
-  const fieldData = phenotipsData[field]
+const PhenotipsSection = ({ phenotipsData, field, parseFieldRows, formatFieldRow, title, join, color }) => {
+  let fieldData = phenotipsData[field]
+  if (fieldData && parseFieldRows) {
+    fieldData = parseFieldRows(fieldData)
+  }
   if (!fieldData || fieldData.length < 1) {
     return null
   }
   return (
     <div>
-      <b>{title}:</b>
+      <Label basic horizontal color={color || 'grey'} content={title} />
       <div style={infoDivStyle}>
         {
           join ? fieldData.map(row => formatFieldRow(row)).join(join) : fieldData.map((row, i) => {
@@ -38,11 +42,92 @@ const PhenotipsSection = ({ phenotipsData, field, formatFieldRow, title, join })
 PhenotipsSection.propTypes = {
   phenotipsData: PropTypes.object,
   field: PropTypes.string,
+  parseFieldRows: PropTypes.func,
   formatFieldRow: PropTypes.func,
   title: PropTypes.string,
   join: PropTypes.string,
+  color: PropTypes.string,
 }
 
+
+const getHpoTermsForCategory = observed => (features) => {
+  const hpoTermsByCategory = features.filter(
+    hpoTerm => hpoTerm.observed === observed,
+  ).reduce((acc, hpoTerm) => {
+    if (!acc[hpoTerm.category]) {
+      acc[hpoTerm.category] = [] //init array of features
+    }
+
+    acc[hpoTerm.category].push(hpoTerm)
+    return acc
+  }, {})
+
+  return Object.entries(hpoTermsByCategory).map(
+    ([categoryHpoId, terms]) => ({ categoryName: getNameForCategoryHpoId(categoryHpoId), terms }),
+  ).sort(
+    (a, b) => a.categoryName.localeCompare(b.categoryName),
+  )
+}
+
+const formatHpoCategoryRow = category =>
+  <div>
+    <b>{category.categoryName}</b>: {
+      (category.terms || []).map(
+        hpoTerm => (hpoTerm.notes ? `${hpoTerm.label} (${hpoTerm.notes})` : hpoTerm.label),
+      ).join(', ')
+    }
+  </div>
+
+const formatGene = gene => `${gene.gene} ${gene.comments ? `(${gene.comments.trim()})` : ''}`
+
+const PHENOTIPS_SECTIONS = [
+  {
+    field: 'features',
+    title: 'Present',
+    color: 'green',
+    parseFieldRows: getHpoTermsForCategory('yes'),
+    formatFieldRow: formatHpoCategoryRow,
+  },
+  {
+    field: 'features',
+    title: 'Not Present',
+    color: 'red',
+    parseFieldRows: getHpoTermsForCategory('no'),
+    formatFieldRow: formatHpoCategoryRow,
+  },
+  {
+    field: 'rejectedGenes',
+    title: 'Previously Tested Genes',
+    formatFieldRow: formatGene,
+  },
+  {
+    field: 'genes',
+    title: 'Candidate Genes',
+    formatFieldRow: formatGene,
+  },
+  {
+    field: 'ethnicity',
+    title: 'Ancestry',
+    parseFieldRows: (ethnicity) => {
+      const parentalAncestries = []
+      if (ethnicity.paternal_ethnicity && ethnicity.paternal_ethnicity.length) {
+        parentalAncestries.push({ parent: 'father', ancestries: ethnicity.paternal_ethnicity })
+      }
+      if (ethnicity.maternal_ethnicity && ethnicity.maternal_ethnicity.length) {
+        parentalAncestries.push({ parent: 'mother', ancestries: ethnicity.maternal_ethnicity })
+      }
+      return parentalAncestries
+    },
+    formatFieldRow: ({ parent, ancestries }) => `${parent} is ${ancestries.join(' / ')}`,
+    join: ', ',
+  },
+  {
+    field: 'global_age_of_onset',
+    title: 'Age of Onset',
+    formatFieldRow: s => s.label,
+    join: ', ',
+  },
+]
 
 class PhenotipsDataPanel extends React.Component
 {
@@ -70,51 +155,15 @@ class PhenotipsDataPanel extends React.Component
         {showDetails ?
           <div style={infoDivStyle}>
             {phenotipsData && hasPhenotipsDetails(phenotipsData) &&
-              <div style={{ paddingTop: '10px', paddingBottom: '10px' }}>
-                {
-                  phenotipsData.features ?
-                    <PresentAbsentPhenotypesView features={phenotipsData.features} /> : null
-                }
-                <PhenotipsSection
-                  phenotipsData={phenotipsData}
-                  field="rejectedGenes"
-                  title="Previously Tested Genes"
-                  formatFieldRow={gene => `${gene.gene} ${gene.comments ? `(${gene.comments.trim()})` : ''}`}
-                />
-                <PhenotipsSection
-                  phenotipsData={phenotipsData}
-                  field="genes"
-                  title="Candidate Genes"
-                  formatFieldRow={gene => `${gene.gene} ${gene.comments ? `(${gene.comments.trim()})` : ''}`}
-                />
-                {
-                  phenotipsData.ethnicity && (phenotipsData.ethnicity.paternal_ethnicity.length || phenotipsData.ethnicity.maternal_ethnicity.length) ?
-                    <div>
-                      <b>Ancestry:</b><br />
-                      <div style={infoDivStyle}>
-                        {(() => {
-                          const paternalAncestries = phenotipsData.ethnicity.paternal_ethnicity //array
-                          const maternalAncestries = phenotipsData.ethnicity.maternal_ethnicity
-                          if (!paternalAncestries.length && !maternalAncestries.length) {
-                            return ''
-                          }
-                          return (
-                            (paternalAncestries.length ? `father is ${paternalAncestries.join(' / ')}` : '') +
-                            (paternalAncestries.length && maternalAncestries.length ? ', ' : '') +
-                            (maternalAncestries.length ? `mother is ${maternalAncestries.join(' / ')}` : '')
-                          )
-                        })()}
-                      </div>
-                    </div>
-                    : null
-                }
-                <PhenotipsSection
-                  phenotipsData={phenotipsData}
-                  field="global_age_of_onset"
-                  title="Age of Onset"
-                  formatFieldRow={s => s.label}
-                  join=", "
-                />
+              <div>
+                <VerticalSpacer height={10} />
+                {PHENOTIPS_SECTIONS.map(sectionProps =>
+                  <PhenotipsSection
+                    key={sectionProps.title}
+                    phenotipsData={phenotipsData}
+                    {...sectionProps}
+                  />,
+                )}
               </div>
             }
           </div> :
