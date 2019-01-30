@@ -245,7 +245,7 @@ def create_saved_search_handler(request):
 
     return create_json_response({
         'savedSearchesByGuid': {
-            saved_search.guid: get_json_for_saved_search(saved_search)
+            saved_search.guid: get_json_for_saved_search(saved_search, request.user)
         }
     })
 
@@ -272,10 +272,11 @@ def _get_search_context(results_model):
 
 
 def _get_saved_searches(user):
-    saved_searches = get_json_for_saved_searches(VariantSearch.objects.filter(
+    saved_search_models = VariantSearch.objects.filter(
         Q(name__isnull=False),
         Q(created_by=user) | Q(created_by__isnull=True)
-    ))
+    )
+    saved_searches = get_json_for_saved_searches(saved_search_models, user)
     return {'savedSearchesByGuid': {search['savedSearchGuid']: search for search in saved_searches}}
 
 

@@ -531,9 +531,15 @@ def get_json_for_gene(gene, **kwargs):
     return _get_json_for_model(gene, get_json_for_models=get_json_for_genes, **kwargs)
 
 
-def get_json_for_saved_searches(search):
-    return _get_json_for_models(search, guid_key='savedSearchGuid')
+def get_json_for_saved_searches(search, user):
+    def _process_result(result, search):
+        # Do not apply HGMD filters in shared searches for non-staff users
+        if not search.created_by and not user.is_staff and result['search'].get('pathogenicity', {}).get('hgmd'):
+            result['search']['pathogenicity'] = {
+                k: v for k, v in result['search']['pathogenicity'].items() if k != 'hgmd'
+            }
+    return _get_json_for_models(search, guid_key='savedSearchGuid', process_result=_process_result)
 
 
-def get_json_for_saved_search(search):
-    return _get_json_for_model(search, get_json_for_models=get_json_for_saved_searches)
+def get_json_for_saved_search(search, user):
+    return _get_json_for_model(search, user, get_json_for_models=get_json_for_saved_searches)
