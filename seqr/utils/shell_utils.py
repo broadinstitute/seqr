@@ -74,20 +74,23 @@ def run(command,
         if out == '' and p.poll() is not None:
             break
         if out != '':
-            log_buffer.write(out.decode('utf-8'))
-            if verbose:
-                line_buffer.write(out.decode('utf-8'))
-                if out.endswith('\r') or (out.endswith('\n') and previous_is_slash_r):
-                    sys.stdout.write(line_buffer.getvalue())
-                    sys.stdout.flush()
-                    line_buffer = StringIO()
-                    previous_is_slash_r = True
-                elif out.endswith('\n'):
-                    logger.info(line_buffer.getvalue().rstrip('\n'))
-                    line_buffer = StringIO()
-                    previous_is_slash_r = False
-                else:
-                    previous_is_slash_r = False
+            try:
+                log_buffer.write(out.decode('utf-8'))
+                if verbose:
+                    line_buffer.write(out.decode('utf-8'))
+                    if out.endswith('\r') or (out.endswith('\n') and previous_is_slash_r):
+                        sys.stdout.write(line_buffer.getvalue())
+                        sys.stdout.flush()
+                        line_buffer = StringIO()
+                        previous_is_slash_r = True
+                    elif out.endswith('\n'):
+                        logger.info(line_buffer.getvalue().rstrip('\n'))
+                        line_buffer = StringIO()
+                        previous_is_slash_r = False
+                    else:
+                        previous_is_slash_r = False
+            except UnicodeDecodeError:
+                pass
     p.wait()
 
     output = log_buffer.getvalue()
