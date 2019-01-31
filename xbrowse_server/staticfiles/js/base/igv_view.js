@@ -73,19 +73,20 @@ window.IgvView = Backbone.View.extend({
         });
 
         var igvOptions = {
-            showCommandBar: true,
             locus: options.locus,
-        //reference: {
-        // 	id: options.genome_version,
-        //},
-        genome: options.genome_version,
-        showKaryo: false,
-        showIdeogram: true,
-        showNavigation: true,
-        showRuler: true,
-        tracks: tracks,
+            tracks: tracks,
+            //reference: {
+            // 	id: options.genome_version,
+            //},
+            genome: options.genome_version,
+            showKaryo: false,
+            showIdeogram: true,
+            showNavigation: true,
+            showRuler: true,
             showCenterGuide: true,
             showCursorTrackingGuide: true,
+            showSoftClips: true,
+            showCommandBar: true,
         };
 
         console.log('IGV options:', igvOptions);

@@ -1,7 +1,6 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import style from 'igv/igv.css' //eslint-disable-line no-unused-vars
 
 // Map font-awesome icons to semantic-ui icons
 const IGVContainer = styled.div`
