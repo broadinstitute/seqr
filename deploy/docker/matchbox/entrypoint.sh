@@ -6,7 +6,7 @@ env
 
 cd /matchbox_deployment
 
-java -jar \
+java -Xmx4G -jar \
     -Dallow.no-gene-in-common.matches=$ALLOW_NO_GENE_IN_COMMON_MATCHES \
     -Dexomiser.data-directory=$EXOMISER_DATA_DIR \
     -Dspring.data.mongodb.host=$MONGO_SERVICE_HOSTNAME \
