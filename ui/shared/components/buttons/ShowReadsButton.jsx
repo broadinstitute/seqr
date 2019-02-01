@@ -16,10 +16,12 @@ const CRAM_TRACK_OPTIONS = {
   sourceType: 'pysam',
   alignmentFile: '/placeholder.cram',
   referenceFile: '/placeholder.fa',
+  showSoftClips: true,
 }
 
 const BAM_TRACK_OPTIONS = {
   indexed: true,
+  showSoftClips: true,
 }
 
 const ShowReadsButton = ({ variant, familyGuid, samplesByGuid, individualsByGuid }) => {
@@ -77,7 +79,6 @@ const ShowReadsButton = ({ variant, familyGuid, samplesByGuid, individualsByGuid
     showRuler: true,
     showCenterGuide: true,
     showCursorTrackingGuide: true,
-    showSoftClips: true,
     showCommandBar: true,
   }
 
