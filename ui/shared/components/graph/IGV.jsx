@@ -1,6 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
+import igv from 'igv'
 
 // Map font-awesome icons to semantic-ui icons
 const IGVContainer = styled.div`
@@ -103,7 +104,8 @@ class IGV extends React.Component {
 
   componentDidMount() {
     if (this.container) {
-      const igv = require('igv') //eslint-disable-line global-require
+      console.log('######')
+      console.log(igv.version)
       igv.createBrowser(this.container, this.props.igvOptions)
     }
   }
