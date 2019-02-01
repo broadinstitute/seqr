@@ -11,6 +11,7 @@ import Dashboard from 'pages/Dashboard/Dashboard'
 import Project from 'pages/Project/Project'
 import GeneInfoSearch from 'pages/GeneInfoSearch'
 import LocusLists from 'pages/LocusLists'
+import Staff from 'pages/Staff/Staff'
 import rootReducer from 'redux/rootReducer'
 import { configureStore } from 'redux/utils/configureStore'
 
@@ -30,6 +31,7 @@ ReactDOM.render(
             <Route path="/gene_info/:geneId" component={({ match }) => <GeneDetail geneId={match.params.geneId} />} />
             <Route path="/gene_info" component={GeneInfoSearch} />
             <Route path="/gene_lists" component={LocusLists} />
+            <Route path="/staff" component={Staff} />
             <Route component={() => <div>Invalid URL</div>} />
           </Switch>
         </BaseLayout>
