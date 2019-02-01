@@ -289,6 +289,7 @@ def variant_details(variant_json, project, user=None):
                 'gnomad_genomes_hemi': annotation.get('pop_counts', {}).get('gnomad_genomes_Hemi'),
             },
             'primate_ai_score': annotation.get('primate_ai_score'),
+            'splice_ai_delta_score': annotation.get('splice_ai_delta_score'),
             'revel_score': annotation.get('revel_score'),
             'rsid': annotation.get('rsid'),
             'sift': annotation.get('sift'),
