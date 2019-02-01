@@ -73,7 +73,7 @@ const PREDICTOR_FIELDS = [
   { field: 'eigen_phred', name: 'EIGEN', warningThreshold: 1, dangerThreshold: 2 },
   { field: 'mpc_score', name: 'MPC', warningThreshold: 1, dangerThreshold: 2 },
   { field: 'primate_ai_score', name: 'PMT AI', warningThreshold: 0.5, dangerThreshold: 0.7 },
-  { field: 'splice_ai_delta_score', name: 'SPLC AI', warningThreshold: 0.5, dangerThreshold: 0.8 },
+  { field: 'splice_ai_delta_score', name: 'SPLICE AI', warningThreshold: 0.5, dangerThreshold: 0.8 },
   { field: 'polyphen' },
   { field: 'sift' },
   { field: 'mut_taster' },
