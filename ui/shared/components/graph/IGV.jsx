@@ -104,8 +104,6 @@ class IGV extends React.Component {
 
   componentDidMount() {
     if (this.container) {
-      console.log('######')
-      console.log(igv.version)
       igv.createBrowser(this.container, this.props.igvOptions)
     }
   }
