@@ -4,7 +4,8 @@ import { Tab } from 'semantic-ui-react'
 import { DATASET_TYPE_VARIANT_CALLS, DATASET_TYPE_READ_ALIGNMENTS } from '../../utils/constants'
 import Modal from '../modal/Modal'
 import UpdateDatasetForm, {
-  ES_INDEX_FIELD, DATASET_NAME_FIELD, DATASET_PATH_FIELD, IGNORE_EXTRAS_FIELD, SAMPLE_TYPE_FIELD, mappingFileField,
+  ES_INDEX_FIELD, DATASET_NAME_FIELD, DATASET_PATH_FIELD, IGNORE_EXTRAS_FIELD, SAMPLE_TYPE_FIELD,
+  SAMPLE_ID_MAPPING_PATH_FIELD, mappingFileField,
 } from '../form/UpdateDatasetForm'
 import ButtonLink from './ButtonLink'
 
@@ -17,12 +18,7 @@ const UPLOAD_CALLSET_FIELDS = [
   DATASET_NAME_FIELD,
   DATASET_PATH_FIELD,
   IGNORE_EXTRAS_FIELD,
-  mappingFileField({
-    required: false,
-    dropzoneLabelMessage: 'Upload an optional file that maps VCF Sample Ids to their corresponding Seqr Individual Ids',
-    column1Label: 'Sample ID',
-    column2Label: 'Individual ID',
-  }),
+  SAMPLE_ID_MAPPING_PATH_FIELD,
 ]
 
 const UPLOAD_ALIGNMENT_FIELDS = [

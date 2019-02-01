@@ -46,6 +46,12 @@ export const IGNORE_EXTRAS_FIELD = {
   label: 'Ignore extra samples in callset',
   labelHelp: 'If the callset contains sample ids that don\'t match individuals in this project, ignore them instead of reporting an error.',
 }
+export const SAMPLE_ID_MAPPING_PATH_FIELD = {
+  name: 'mappingFilePath',
+  label: 'ID Mapping File Path',
+  labelHelp: 'Optional path to a file that maps VCF Sample Ids (column 1) to their corresponding Seqr Individual Ids (column 2). It can either be on the server filesystem or on Google cloud storage.',
+  placeholder: 'gs:// Google bucket path or server filesystem path',
+}
 
 export const mappingFileField = ({ required, dropzoneLabelMessage, column1Label, column2Label }) => ({
   name: 'mappingFile',
