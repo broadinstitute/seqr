@@ -72,6 +72,7 @@ def add_dataset_handler(request, project_guid):
         dataset_name = dataset_name.strip()
 
     ignore_extra_samples_in_callset = request_json.get('ignoreExtraSamplesInCallset')
+    ignore_missing_family_members = request_json.get('ignoreMissingFamilyMembers')
     mapping_file_id = request_json.get('mappingFile', {}).get('uploadedFileId')
     mapping_file_path = request_json.get('mappingFilePath')
 
@@ -85,6 +86,7 @@ def add_dataset_handler(request, project_guid):
             dataset_name=dataset_name,
             max_edit_distance=0,
             ignore_extra_samples_in_callset=ignore_extra_samples_in_callset,
+            ignore_missing_family_members=ignore_missing_family_members,
             mapping_file_path=mapping_file_path,
             mapping_file_id=mapping_file_id,
         )

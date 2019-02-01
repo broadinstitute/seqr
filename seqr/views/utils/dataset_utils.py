@@ -2,6 +2,8 @@ import logging
 import elasticsearch_dsl
 from elasticsearch import NotFoundError, TransportError
 from django.utils import timezone
+from collections import defaultdict
+
 from seqr.views.apis.igv_api import proxy_to_igv
 from seqr.models import Sample, Individual
 from seqr.utils.es_utils import get_es_client, VARIANT_DOC_TYPE
@@ -23,6 +25,7 @@ def add_dataset(
     max_edit_distance=0,
     mapping_file_path=None,
     mapping_file_id=None,
+    ignore_missing_family_members=False,
     ignore_extra_samples_in_callset=False
 ):
 
@@ -56,6 +59,7 @@ def add_dataset(
         'dataset_name': dataset_name,
         'max_edit_distance': max_edit_distance,
         'ignore_extra_samples_in_callset': ignore_extra_samples_in_callset,
+        'ignore_missing_family_members': ignore_missing_family_members,
     }
 
     if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
@@ -103,6 +107,7 @@ def _update_samples_for_dataset(
     sample_id_to_individual_id_mapping=None,
     sample_dataset_path_mapping=None,
     ignore_extra_samples_in_callset=False,
+    ignore_missing_family_members=False,
     missing_sample_exception_template='Missing samples: {unmatched_samples}',
 ):
     matched_sample_id_to_sample_record, created_sample_ids = match_sample_ids_to_sample_records(
@@ -124,6 +129,23 @@ def _update_samples_for_dataset(
         raise Exception("None of the individuals or samples in the project matched the {} expected sample id(s)".format(
             len(sample_ids)
         ))
+
+    if not ignore_missing_family_members:
+        included_family_individuals = defaultdict(set)
+        for sample in matched_sample_id_to_sample_record.values():
+            included_family_individuals[sample.individual.family].add(sample.individual.individual_id)
+        missing_family_individuals = []
+        for family, individual_ids in included_family_individuals.items():
+            missing_indivs = family.individual_set.exclude(individual_id__in=individual_ids)
+            if missing_indivs:
+                missing_family_individuals.append(
+                    '{} ({})'.format(family.family_id, ', '.join([i.individual_id for i in missing_indivs]))
+                )
+        if missing_family_individuals:
+            raise Exception(
+                'The following families are included in the callset but are missing some family members: {}. This can lead to errors in variant search. If you still want to upload this callset, select the "Ignore missing family members" checkbox.'.format(
+                    ', '.join(missing_family_individuals)
+                ))
 
     not_loaded_samples = []
     update_json = {}
