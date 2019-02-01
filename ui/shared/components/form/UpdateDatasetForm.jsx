@@ -6,7 +6,7 @@ import styled from 'styled-components'
 import { addDataset } from 'pages/Project/reducers'
 import { SAMPLE_TYPE_OPTIONS } from '../../utils/constants'
 import ReduxFormWrapper from './ReduxFormWrapper'
-import FileUploadField from './XHRUploaderField'
+import FileUploadField, { uploadedFileHasErrors, validateUploadedFile } from './XHRUploaderField'
 import { BooleanCheckbox, Select } from './Inputs'
 
 const DropzoneLabel = styled.span`
@@ -53,6 +53,7 @@ export const mappingFileField = ({ required, dropzoneLabelMessage, column1Label,
   clearTimeOut: 0,
   auto: true,
   required,
+  validate: required ? validateUploadedFile : uploadedFileHasErrors,
   uploaderStyle: UPLOADER_STYLE,
   dropzoneLabel: (
     <DropzoneLabel>

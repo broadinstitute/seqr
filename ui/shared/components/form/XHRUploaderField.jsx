@@ -154,15 +154,15 @@ UploaderFieldComponent.propTypes = {
   uploaderProps: PropTypes.object,
 }
 
-const hasErrors = value => value && value.errors && (value.errors.length ? value.errors : undefined)
+export const uploadedFileHasErrors = value => value && value.errors && (value.errors.length ? value.errors : undefined)
 const hasUploadedFile = value => (value && value.uploadedFileId ? undefined : 'File not uploaded')
-const validate = value => hasErrors(value) || hasUploadedFile(value)
+export const validateUploadedFile = value => uploadedFileHasErrors(value) || hasUploadedFile(value)
 const warn = value => value && value.warnings && (value.warnings.length ? value.warnings : undefined)
 
 const UploaderFormField = ({ name, required, onChange, normalize, ...props }) =>
   <Field
     name={name}
-    validate={required ? validate : hasErrors}
+    validate={required ? validateUploadedFile : uploadedFileHasErrors}
     warn={warn}
     uploaderProps={props}
     component={UploaderFieldComponent}
