@@ -8,7 +8,7 @@ import { getIndividualsByGuid } from 'redux/selectors'
 import ShowReadsButton from '../../buttons/ShowReadsButton'
 import PedigreeIcon from '../../icons/PedigreeIcon'
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
-import PhenotipsDataPanel, { hasPhenotipsDetails } from '../view-phenotips-info/PhenotipsDataPanel'
+import PhenotipsDataPanel, { hasPhenotipsDetails } from '../PhenotipsDataPanel'
 
 
 const IndividualCell = styled.div`

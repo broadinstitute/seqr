@@ -43,6 +43,7 @@ const ProjectTableContainer = styled.div`
   tfoot th {
     padding-right: 45px !important;
     font-weight: 300 !important;
+    border-top: none !important;
   }
 `
 

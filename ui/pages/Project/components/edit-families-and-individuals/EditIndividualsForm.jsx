@@ -6,7 +6,7 @@ import { connect } from 'react-redux'
 
 import EditRecordsForm from 'shared/components/form/EditRecordsForm'
 import { FAMILY_FIELD_ID } from 'shared/utils/constants'
-import { INDIVIDUAL_FIELDS } from '../../constants'
+import { INDIVIDUAL_FIELDS, INDIVIDUAL_FIELD_ID } from '../../constants'
 import { updateIndividuals } from '../../reducers'
 import { getProjectAnalysisGroupIndividualsByGuid } from '../../selectors'
 
@@ -17,6 +17,7 @@ const EditIndividualsForm = props =>
     idField="individualGuid"
     entityKey="individuals"
     defaultSortColumn={FAMILY_FIELD_ID}
+    filterColumn={INDIVIDUAL_FIELD_ID}
     columns={INDIVIDUAL_FIELDS}
     {...props}
   />
