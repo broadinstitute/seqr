@@ -40,11 +40,23 @@ export const DATASET_PATH_FIELD = {
   labelHelp: 'Callset path either on the server filesystem or on Google cloud storage. The file can be a compressed VCF (*.vcf.gz), or a hail VDS file.',
   placeholder: 'gs:// Google bucket path or server filesystem path',
 }
+export const SAMPLE_ID_MAPPING_PATH_FIELD = {
+  name: 'mappingFilePath',
+  label: 'ID Mapping File Path',
+  labelHelp: 'Optional path to a file that maps VCF Sample Ids (column 1) to their corresponding Seqr Individual Ids (column 2). It can either be on the server filesystem or on Google cloud storage.',
+  placeholder: 'gs:// Google bucket path or server filesystem path',
+}
 export const IGNORE_EXTRAS_FIELD = {
   name: 'ignoreExtraSamplesInCallset',
   component: BooleanCheckbox,
   label: 'Ignore extra samples in callset',
   labelHelp: 'If the callset contains sample ids that don\'t match individuals in this project, ignore them instead of reporting an error.',
+}
+export const IGNORE_MISSING_FAMILY_MEMBERS_FIELD = {
+  name: 'ignoreMissingFamilyMembers',
+  component: BooleanCheckbox,
+  label: 'Ignore missing family members',
+  labelHelp: 'If the callset contains families where only some of the individuals are included, allow them to be added instead of reporting an error.',
 }
 
 export const mappingFileField = ({ required, dropzoneLabelMessage, column1Label, column2Label }) => ({
