@@ -122,6 +122,7 @@ const VariantTagField = ({ variant, fieldName, ...props }) =>
   <TagFieldView
     idField="variantId"
     modalTitle={`Edit Variant ${fieldName} for chr${variant.chrom}:${variant.pos} ${variant.ref} > ${variant.alt}`}
+    modalSize="large"
     editLabel={`Edit ${fieldName}`}
     initialValues={variant}
     compact
