@@ -15,9 +15,8 @@ const Error401 = () => (<Header size="huge" textAlign="center">Error 401: Unauth
 const Staff = ({ match, user }) => (
   user.is_staff ? (
     <Switch>
-      <Route path={`${match.url}/anvil`} component={Anvil} />
+      <Route path={`${match.url}/anvil/:projectGuid?`} component={Anvil} />
       <Route path={`${match.url}/anvil/projects/:allProjects`} component={Anvil} />
-      <Route path={`${match.url}/anvil/:projectGuid`} component={Anvil} />
       <Route component={() => <Error404 />} />
     </Switch>
   ) : <Error401 />
