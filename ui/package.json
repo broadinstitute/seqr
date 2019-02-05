@@ -6,7 +6,6 @@
     "babel-cli": "^6.24.1",
     "babel-core": "^6.26.3",
     "babel-eslint": "^8.2.5",
-    "babel-jest": "21.2.0",
     "babel-loader": "7.1.2",
     "babel-plugin-module-resolver": "^3.1.1",
     "babel-plugin-styled-components": "^1.5.1",
@@ -37,7 +36,7 @@
     "file-loader": "1.1.5",
     "fs-extra": "^4.0.3",
     "html-webpack-plugin": "2.30.1",
-    "jest": "21.2.1",
+    "jest": "^23.6.0",
     "object-assign": "4.1.1",
     "postcss-flexbugs-fixes": "3.2.0",
     "postcss-loader": "2.0.9",
@@ -71,7 +70,7 @@
     "filesize": "3.5.11",
     "glob": "^7.1.2",
     "gzip-size": "4.1.0",
-    "igv": "^0.1.1",
+    "igv": "^2.2.2",
     "jquery": "3.2.1",
     "lodash": "4.17.10",
     "prop-types": "15.6.0",
@@ -97,6 +96,7 @@
     "redux-form": "^7.3.0",
     "redux-search": "^2.4.0",
     "redux-thunk": "2.2.0",
+    "request": "^2.88.0",
     "reselect": "3.0.1",
     "semantic-ui": "2.2.12",
     "semantic-ui-react": "^0.80.0",
@@ -133,7 +133,7 @@
       "^(?!.*\\.(js|jsx|mjs|css|json)$)": "<rootDir>/config/jest/fileTransform.js"
     },
     "transformIgnorePatterns": [
-      "[/\\\\]node_modules[/\\\\].+\\.(js|jsx|mjs)$"
+      "<rootDir>[/\\\\]node_modules[/\\\\](?!(igv)/).+\\.(js|jsx|ts|tsx)$"
     ],
     "moduleNameMapper": {
       "^react-native$": "react-native-web"

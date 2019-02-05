@@ -16,10 +16,12 @@ const CRAM_TRACK_OPTIONS = {
   sourceType: 'pysam',
   alignmentFile: '/placeholder.cram',
   referenceFile: '/placeholder.fa',
+  showSoftClips: true,
 }
 
 const BAM_TRACK_OPTIONS = {
   indexed: true,
+  showSoftClips: true,
 }
 
 const ShowReadsButton = ({ variant, familyGuid, samplesByGuid, individualsByGuid }) => {
@@ -58,7 +60,7 @@ const ShowReadsButton = ({ variant, familyGuid, samplesByGuid, individualsByGuid
   }
 
   // TODO better determiner of genome version?
-  const genome = igvTracks.some(track => track.sourceType === 'pysam') ? 'GRCh38' : 'GRCh37'
+  const genome = igvTracks.some(track => track.sourceType === 'pysam') ? 'hg38' : 'hg19'
 
   // TODO confirm cnv_bed_file track is deprecated (is empty for all existing individuals, so it should be)
   igvTracks.push({
@@ -68,12 +70,16 @@ const ShowReadsButton = ({ variant, familyGuid, samplesByGuid, individualsByGuid
   })
 
   const igvOptions = {
-    tracks: igvTracks,
     locus,
+    tracks: igvTracks,
     genome,
+    showKaryo: false,
     showIdeogram: true,
+    showNavigation: true,
+    showRuler: true,
     showCenterGuide: true,
     showCursorTrackingGuide: true,
+    showCommandBar: true,
   }
 
   return (

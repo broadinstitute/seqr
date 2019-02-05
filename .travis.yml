@@ -3,7 +3,7 @@ language: node_js
 python:
 - '2.7'
 node_js:
-- '7.2.1'
+- '11.8.0'
 
 install:
 - ./install_dependencies.sh
@@ -12,10 +12,6 @@ script:
 - PYTHONPATH=.:./deploy/docker/seqr/config python -Wonce -u manage.py test -p '*_tests.py' -v 2 reference_data seqr xbrowse
 - cd ui/
 - npm test
-- cd ..
-- cd hail_elasticsearch_pipelines
-- python -m unittest discover -p "*tests.py"
-- cd ..
 
 notifications:
   slack:
