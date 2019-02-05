@@ -441,6 +441,17 @@
                     <% } %>
                     <span>PRIMATE AI</span> <%= parseFloat(variant.annotation.primate_ai_score).toPrecision(2) %> <br/>
                 <% } %>
+                <% if (variant.annotation.splice_ai_delta_score) {
+                    var splice_ai_delta_score = parseFloat(variant.annotation.splice_ai_delta_score)
+                    if( splice_ai_delta_score >= 0.8 ) { %>
+                        <i class="fa fa-circle redcircle"></i>
+                    <% } else if( splice_ai_delta_score >= 0.5 ) { %>
+                        <i class="fa fa-circle yellowcircle"></i>
+                    <% } else { %>
+                        <i class="fa fa-circle greencircle"></i>
+                    <% } %>
+                    <span>SPLICE AI</span> <%= parseFloat(variant.annotation.splice_ai_delta_score).toPrecision(2) %> <br/>
+                <% } %>
             <% } %>
         </div>
         <div class="cell frequencies">

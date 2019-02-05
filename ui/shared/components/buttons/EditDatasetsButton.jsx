@@ -4,7 +4,8 @@ import { Tab } from 'semantic-ui-react'
 import { DATASET_TYPE_VARIANT_CALLS, DATASET_TYPE_READ_ALIGNMENTS } from '../../utils/constants'
 import Modal from '../modal/Modal'
 import UpdateDatasetForm, {
-  ES_INDEX_FIELD, DATASET_NAME_FIELD, DATASET_PATH_FIELD, IGNORE_EXTRAS_FIELD, SAMPLE_TYPE_FIELD, mappingFileField,
+  ES_INDEX_FIELD, DATASET_NAME_FIELD, DATASET_PATH_FIELD, IGNORE_EXTRAS_FIELD, SAMPLE_TYPE_FIELD,
+  SAMPLE_ID_MAPPING_PATH_FIELD, IGNORE_MISSING_FAMILY_MEMBERS_FIELD, mappingFileField,
 } from '../form/UpdateDatasetForm'
 import { ButtonLink } from '../StyledComponents'
 
@@ -16,20 +17,16 @@ const UPLOAD_CALLSET_FIELDS = [
   SAMPLE_TYPE_FIELD,
   DATASET_NAME_FIELD,
   DATASET_PATH_FIELD,
+  SAMPLE_ID_MAPPING_PATH_FIELD,
   IGNORE_EXTRAS_FIELD,
-  mappingFileField({
-    required: false,
-    dropzoneLabelMessage: 'Upload an optional file that maps VCF Sample Ids to their corresponding Seqr Individual Ids',
-    column1Label: 'Sample ID',
-    column2Label: 'Individual ID',
-  }),
+  IGNORE_MISSING_FAMILY_MEMBERS_FIELD,
 ]
 
 const UPLOAD_ALIGNMENT_FIELDS = [
   SAMPLE_TYPE_FIELD,
   mappingFileField({
     required: true,
-    dropzoneLabelMessage: 'Upload a file that maps that maps seqr Individual Ids to their BAM or CRAM file path',
+    dropzoneLabelMessage: 'Upload a file that maps seqr Individual Ids to their BAM or CRAM file path',
     column1Label: 'Individual ID',
     column2Label: 'gs:// Google bucket path or server filesystem path of the BAM or CRAM file for this Individual',
   }),

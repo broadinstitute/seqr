@@ -92,4 +92,9 @@ Now that the dataset is loaded into elasticsearch, it can be added to the projec
 2. Click on Edit Datasets
 3. Enter the index name that the pipeline printed out when it completed, and submit the form.
 
-After this you can click "Variant Search" for each family, or "Gene Search" to search across families.   
+After this you can click "Variant Search" for each family, or "Gene Search" to search across families.
+
+
+#### Step 6 (optional): Enable read viewing in the browser
+
+To make .bam/.cram files viewable in the browser through igv.js, see **[ReadViz Setup Instructions](deploy/READVIZ_SETUP.md)**      

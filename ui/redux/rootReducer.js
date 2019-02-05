@@ -261,6 +261,9 @@ export const updateLocusList = (values) => {
       action = `${values.locusListGuid}/${values.delete ? 'delete' : 'update'}`
     }
 
+    // LocusLists have raw items and parsedItems but the raw items are not used and the request size gets too large with them included
+    const { items, ...submitValues } = values
+
     return new HttpRequestHelper(`/api/locus_lists/${action}`,
       (responseJson) => {
         dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
@@ -274,7 +277,7 @@ export const updateLocusList = (values) => {
           _error: [error],
         })
       },
-    ).post(values)
+    ).post(submitValues)
   }
 }
 

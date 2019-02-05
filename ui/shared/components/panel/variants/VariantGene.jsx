@@ -114,7 +114,7 @@ const VariantGene = ({ geneId, gene, project, variant, compact }) => {
       <HorizontalSpacer width={10} />
       {compact ? geneConsequence :
       <GeneLinks>
-        <a href={`http://gnomad-beta.broadinstitute.org/gene/${gene.geneSymbol}`} target="_blank">gnomAD</a>
+        <a href={`http://gnomad.broadinstitute.org/gene/${gene.geneSymbol}`} target="_blank">gnomAD</a>
         {/* TODO have gene search link for new gene search including on search page */}
         {project &&
           <span>

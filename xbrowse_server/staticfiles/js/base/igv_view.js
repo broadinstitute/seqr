@@ -25,6 +25,7 @@ window.IgvView = Backbone.View.extend({
                     alignmentTrack = {
                         url: "/project/" + indiv.project_id + "/igv-track/" + indiv.indiv_id,
                         sourceType: 'pysam',
+                        showSoftClips: true,
                         alignmentFile: '/placeholder.cram',
                         referenceFile: '/placeholder.fa',
                         type: "bam",
@@ -36,6 +37,7 @@ window.IgvView = Backbone.View.extend({
                     alignmentTrack = {
                         url: "/project/" + indiv.project_id + "/igv-track/" + indiv.indiv_id,
                         type: "bam",
+                        showSoftClips: true,
                         indexed: true,
                         alignmentShading: 'strand',
                         name: '<i style="font-family: FontAwesome; font-style: normal; font-weight: normal;" class="' + utils.getPedigreeIcon(indiv) + '"></i> ' + indiv.indiv_id,
@@ -73,19 +75,19 @@ window.IgvView = Backbone.View.extend({
         });
 
         var igvOptions = {
-            showCommandBar: true,
             locus: options.locus,
-        //reference: {
-        // 	id: options.genome_version,
-        //},
-        genome: options.genome_version,
-        showKaryo: false,
-        showIdeogram: true,
-        showNavigation: true,
-        showRuler: true,
-        tracks: tracks,
+            tracks: tracks,
+            //reference: {
+            // 	id: options.genome_version,
+            //},
+            genome: options.genome_version,
+            showKaryo: false,
+            showIdeogram: true,
+            showNavigation: true,
+            showRuler: true,
             showCenterGuide: true,
             showCursorTrackingGuide: true,
+            showCommandBar: true,
         };
 
         console.log('IGV options:', igvOptions);

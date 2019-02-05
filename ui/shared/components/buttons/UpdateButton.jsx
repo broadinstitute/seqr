@@ -5,10 +5,11 @@ import { ButtonLink } from '../StyledComponents'
 import ReduxFormWrapper from '../form/ReduxFormWrapper'
 import Modal from '../modal/Modal'
 
-const UpdateButton = ({ onSubmit, initialValues, formFields, modalTitle, modalId, buttonText, editIconName, size, showErrorPanel, disabled, formContainer = <div /> }) =>
+const UpdateButton = ({ onSubmit, initialValues, formFields, modalTitle, modalId, buttonText, editIconName, size, modalSize, showErrorPanel, disabled, formContainer = <div /> }) =>
   <Modal
     title={modalTitle}
     modalName={modalId}
+    size={modalSize}
     trigger={
       <ButtonLink
         content={buttonText}
@@ -43,6 +44,7 @@ UpdateButton.propTypes = {
   showErrorPanel: PropTypes.bool,
   disabled: PropTypes.bool,
   size: PropTypes.string,
+  modalSize: PropTypes.string,
 }
 
 export default UpdateButton

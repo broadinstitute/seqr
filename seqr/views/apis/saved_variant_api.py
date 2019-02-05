@@ -231,7 +231,6 @@ def variant_details(variant_json, project, user):
         return variant_json
 
     annotation = variant_json.get('annotation') or {}
-    main_transcript = annotation.get('main_transcript') or (annotation['vep_annotation'][annotation['worst_vep_annotation_index']] if annotation.get('worst_vep_annotation_index') is not None and annotation['vep_annotation'] else {})
     is_es_variant = annotation.get('db') == 'elasticsearch'
 
     chrom, pos = get_chrom_pos(variant_json['xpos'])
@@ -299,8 +298,10 @@ def variant_details(variant_json, project, user):
             'primate_ai': annotation.get('primate_ai_score'),
             'revel': annotation.get('revel_score'),
             'sift': annotation.get('sift'),
+            # TODO rename field
+            'splice_ai_delta_score': annotation.get('splice_ai_delta_score'),
         },
-        'mainTranscript': _transcript_detail(main_transcript, True),
+        'mainTranscript': variant_main_transcript(variant_json),
         'clinvar': {
             'clinsig': extras.get('clinvar_clinsig'),
             'variantId': extras.get('clinvar_variant_id'),
@@ -369,6 +370,14 @@ def variant_details(variant_json, project, user):
         'rsid': annotation.get('rsid'),
         'transcripts': transcripts,
     }
+
+
+def variant_main_transcript(variant_json):
+    annotation = variant_json.get('annotation') or {}
+    main_transcript = annotation.get('main_transcript') or (
+        annotation['vep_annotation'][annotation['worst_vep_annotation_index']] if annotation.get(
+            'worst_vep_annotation_index') is not None and annotation['vep_annotation'] else {})
+    return _transcript_detail(main_transcript, True)
 
 
 def _transcript_detail(transcript, isChosenTranscript):

@@ -161,6 +161,7 @@ const VariantTagField = ({ variant, fieldName, family, ...props }) =>
     idField="variantId"
     modalId={family.familyGuid}
     modalTitle={`Edit Variant ${fieldName} for Family ${family.displayName} for chr${variant.chrom}:${variant.pos} ${variant.ref} > ${variant.alt}`}
+    modalSize="large"
     editLabel={`Edit ${fieldName}`}
     initialValues={variant}
     compact

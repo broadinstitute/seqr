@@ -3,6 +3,8 @@ import { Form } from 'semantic-ui-react'
 import { validators } from '../components/form/ReduxFormWrapper'
 import BaseFieldView from '../components/panel/view-fields/BaseFieldView'
 import OptionFieldView from '../components/panel/view-fields/OptionFieldView'
+import PlainTextFieldView from '../components/panel/view-fields/PlainTextFieldView'
+
 import { BooleanCheckbox, RadioGroup, Dropdown, InlineToggle, Pagination } from '../components/form/Inputs'
 
 
@@ -102,7 +104,7 @@ export const FAMILY_FIELD_RENDER_LOOKUP = {
   [FAMILY_FIELD_FIRST_SAMPLE]: { name: 'Data Loaded?', component: BaseFieldView },
   [FAMILY_FIELD_ANALYSIS_NOTES]: { name: 'Notes' },
   [FAMILY_FIELD_ANALYSIS_SUMMARY]: { name: 'Analysis Summary' },
-  [FAMILY_FIELD_CODED_PHENOTYPE]: { name: 'Coded Phenotype' },
+  [FAMILY_FIELD_CODED_PHENOTYPE]: { name: 'Coded Phenotype', component: PlainTextFieldView },
   [FAMILY_FIELD_OMIM_NUMBER]: { name: 'Post-discovery OMIM #', component: BaseFieldView },
   [FAMILY_FIELD_INTERNAL_NOTES]: { name: 'Internal Notes', internal: true },
   [FAMILY_FIELD_INTERNAL_SUMMARY]: { name: 'Internal Summary', internal: true },

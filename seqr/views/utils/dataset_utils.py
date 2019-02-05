@@ -2,11 +2,13 @@ import logging
 import elasticsearch_dsl
 from elasticsearch import NotFoundError, TransportError
 from django.utils import timezone
+from collections import defaultdict
+
 from seqr.views.apis.igv_api import proxy_to_igv
 from seqr.models import Sample
 from seqr.utils.es_utils import get_es_client, is_nested_genotype_index, VARIANT_DOC_TYPE
 from seqr.utils.file_utils import does_file_exist, file_iter, get_file_stats
-from seqr.views.utils.file_utils import load_uploaded_file
+from seqr.views.utils.file_utils import load_uploaded_file, parse_file
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.apis.samples_api import match_sample_ids_to_sample_records
 
@@ -21,7 +23,9 @@ def add_dataset(
     dataset_path=None,
     dataset_name=None,
     max_edit_distance=0,
+    mapping_file_path=None,
     mapping_file_id=None,
+    ignore_missing_family_members=False,
     ignore_extra_samples_in_callset=False
 ):
 
@@ -35,6 +39,7 @@ def add_dataset(
         dataset_path (string):
         max_edit_distance (int):
         elasticsearch_index (string):
+        mapping_file_path (string):
         mapping_file_id (string):
         ignore_extra_samples_in_callset (bool):
     Return:
@@ -54,13 +59,14 @@ def add_dataset(
         'dataset_name': dataset_name,
         'max_edit_distance': max_edit_distance,
         'ignore_extra_samples_in_callset': ignore_extra_samples_in_callset,
+        'ignore_missing_family_members': ignore_missing_family_members,
     }
 
     if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
         all_samples = _get_elasticsearch_index_samples(elasticsearch_index)
         update_kwargs.update({
             'sample_ids': all_samples,
-            'sample_id_to_individual_id_mapping': _load_mapping_file(mapping_file_id),
+            'sample_id_to_individual_id_mapping': _load_mapping_file(mapping_file_id, mapping_file_path),
             'sample_dataset_path_mapping': {sample_id: dataset_path for sample_id in all_samples},
             'missing_sample_exception_template': 'Matches not found for ES sample ids: {unmatched_samples}. Uploading a mapping file for these samples, or select the "Ignore extra samples in callset" checkbox to ignore.'
         })
@@ -69,7 +75,7 @@ def add_dataset(
         sample_id_to_individual_id_mapping = {}
         sample_dataset_path_mapping = {}
         errors = []
-        for individual_id, dataset_path in _load_mapping_file(mapping_file_id).items():
+        for individual_id, dataset_path in _load_mapping_file(mapping_file_id, mapping_file_path).items():
             if not (dataset_path.endswith(".bam") or dataset_path.endswith(".cram")):
                 raise Exception('BAM / CRAM file "{}" must have a .bam or .cram extension'.format(dataset_path))
             _validate_alignment_dataset_path(dataset_path)
@@ -101,6 +107,7 @@ def _update_samples_for_dataset(
     sample_id_to_individual_id_mapping=None,
     sample_dataset_path_mapping=None,
     ignore_extra_samples_in_callset=False,
+    ignore_missing_family_members=False,
     missing_sample_exception_template='Missing samples: {unmatched_samples}',
 ):
     matched_sample_id_to_sample_record, created_sample_ids = match_sample_ids_to_sample_records(
@@ -122,6 +129,23 @@ def _update_samples_for_dataset(
         raise Exception("None of the individuals or samples in the project matched the {} expected sample id(s)".format(
             len(sample_ids)
         ))
+
+    if not ignore_missing_family_members:
+        included_family_individuals = defaultdict(set)
+        for sample in matched_sample_id_to_sample_record.values():
+            included_family_individuals[sample.individual.family].add(sample.individual.individual_id)
+        missing_family_individuals = []
+        for family, individual_ids in included_family_individuals.items():
+            missing_indivs = family.individual_set.exclude(individual_id__in=individual_ids)
+            if missing_indivs:
+                missing_family_individuals.append(
+                    '{} ({})'.format(family.family_id, ', '.join([i.individual_id for i in missing_indivs]))
+                )
+        if missing_family_individuals:
+            raise Exception(
+                'The following families are included in the callset but are missing some family members: {}. This can lead to errors in variant search. If you still want to upload this callset, select the "Ignore missing family members" checkbox.'.format(
+                    ', '.join(missing_family_individuals)
+                ))
 
     not_loaded_samples = []
     update_json = {}
@@ -253,12 +277,14 @@ def _validate_vcf(vcf_path):
         raise Exception('No samples found in VCF "{}"'.format(vcf_path))
 
 
-def _load_mapping_file(mapping_file_id):
-    if not mapping_file_id:
-        return {}
-
+def _load_mapping_file(mapping_file_id, mapping_file_path):
     id_mapping = {}
-    for line in load_uploaded_file(mapping_file_id):
+    file_content = []
+    if mapping_file_id:
+        file_content = load_uploaded_file(mapping_file_id)
+    elif mapping_file_path:
+        file_content = parse_file(mapping_file_path, file_iter(mapping_file_path))
+    for line in file_content:
         if len(line) != 2:
             raise ValueError("Must contain 2 columns: " + ', '.join(line))
         id_mapping[line[0]] = line[1]

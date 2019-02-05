@@ -37,6 +37,7 @@ const BaseFieldView = (props) => {
       key="edit"
       modalTitle={props.modalTitle}
       modalId={modalId}
+      modalSize={props.modalSize}
       buttonText={props.editLabel}
       editIconName={props.editIconName}
       onSubmit={props.onSubmit}
@@ -109,6 +110,7 @@ BaseFieldView.propTypes = {
   modalStyle: PropTypes.object,
   showErrorPanel: PropTypes.bool,
   modalId: PropTypes.string,
+  modalSize: PropTypes.string,
 }
 
 BaseFieldView.defaultProps = {
