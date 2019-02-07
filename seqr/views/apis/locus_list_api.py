@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
@@ -9,7 +10,7 @@ from guardian.shortcuts import assign_perm, remove_perm, get_objects_for_group
 
 from reference_data.models import GENOME_VERSION_GRCh37
 from seqr.models import LocusList, LocusListGene, LocusListInterval, IS_OWNER, CAN_VIEW, CAN_EDIT
-from seqr.model_utils import create_seqr_model, delete_seqr_model, find_matching_xbrowse_model
+from seqr.model_utils import get_or_create_seqr_model, create_seqr_model, delete_seqr_model, find_matching_xbrowse_model
 from seqr.utils.xpos_utils import get_xpos
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.utils.gene_utils import get_genes, get_gene_ids_for_gene_symbols
@@ -58,7 +59,7 @@ def create_locus_list_handler(request):
     if not request_json.get('name'):
         return create_json_response({}, status=400, reason='"Name" is required')
 
-    new_genes, existing_gene_ids, new_intervals, existing_interval_guids, invalid_items = _parse_list_items(request_json)
+    genes_by_id, intervals, invalid_items = _parse_list_items(request_json)
     if invalid_items and not request_json.get('ignoreInvalidItems'):
         return create_json_response({'invalidLocusListItems': invalid_items}, status=400, reason=INVALID_ITEMS_ERROR)
 
@@ -69,13 +70,12 @@ def create_locus_list_handler(request):
         is_public=request_json.get('isPublic') or False,
         created_by=request.user,
     )
-    _update_locus_list_items(locus_list, new_genes, existing_gene_ids, new_intervals, existing_interval_guids,
-                             request_json, request.user)
+    _update_locus_list_items(locus_list, genes_by_id, intervals, request_json, request.user)
     add_locus_list_user_permissions(locus_list)
 
     return create_json_response({
         'locusListsByGuid': {locus_list.guid: get_json_for_locus_list(locus_list, request.user)},
-        'genesById': new_genes,
+        'genesById': genes_by_id,
     })
 
 
@@ -87,18 +87,17 @@ def update_locus_list_handler(request, locus_list_guid):
 
     request_json = json.loads(request.body)
 
-    new_genes, existing_gene_ids, new_intervals, existing_interval_guids, invalid_items = _parse_list_items(request_json)
+    genes_by_id, intervals, invalid_items = _parse_list_items(request_json)
     if invalid_items and not request_json.get('ignoreInvalidItems'):
         return create_json_response({'invalidLocusListItems': invalid_items}, status=400, reason=INVALID_ITEMS_ERROR)
 
     update_model_from_json(locus_list, request_json, allow_unknown_keys=True)
-    if new_genes is not None:
-        _update_locus_list_items(locus_list, new_genes, existing_gene_ids, new_intervals, existing_interval_guids,
-                                 request_json, request.user)
+    if genes_by_id is not None:
+        _update_locus_list_items(locus_list, genes_by_id, intervals, request_json, request.user)
 
     return create_json_response({
         'locusListsByGuid': {locus_list.guid: get_json_for_locus_list(locus_list, request.user)},
-        'genesById': new_genes,
+        'genesById': genes_by_id,
     })
 
 
@@ -166,54 +165,48 @@ def add_locus_list_user_permissions(locus_list):
 def _parse_list_items(request_json):
     raw_items = request_json.get('rawItems')
     if not raw_items:
-        return None, None, None, None, None
+        return None, None, None
 
-    existing_gene_ids = set()
-    new_gene_symbols = set()
-    new_gene_ids = set()
-    existing_interval_guids = set()
-    new_intervals = []
     invalid_items = []
-    for item in requested_items:
-        if item.get('locusListIntervalGuid'):
-            existing_interval_guids.add(item.get('locusListIntervalGuid'))
-        elif item.get('geneId'):
-            if item.get('symbol'):
-                existing_gene_ids.add(item.get('geneId'))
-            else:
-                new_gene_ids.add(item.get('geneId'))
-        elif item.get('symbol'):
-            new_gene_symbols.add(item.get('symbol'))
-        else:
+    intervals = []
+    gene_ids = set()
+    gene_symbols = set()
+    for item in raw_items.replace(',', ' ').split():
+        interval_match = re.match('(?P<chrom>\w+):(?P<start>\d+)-(?P<end>\d+)', item)
+        if interval_match:
+            interval = interval_match.groupdict()
             try:
-                item['start'] = int(item['start'])
-                item['end'] = int(item['end'])
-                if item['start'] > item['end']:
+                interval['chrom'] = interval['chrom'].lstrip('chr')
+                interval['start'] = int(interval['start'])
+                interval['end'] = int(interval['end'])
+                if interval['start'] > interval['end']:
                     raise ValueError
-                get_xpos(item['chrom'], int(item['start']))
-                new_intervals.append(item)
+                get_xpos(interval['chrom'], interval['start'])
+                intervals.append(interval)
             except (KeyError, ValueError):
                 invalid_items.append('chr{chrom}:{start}-{end}'.format(
-                    chrom=item.get('chrom', '?'), start=item.get('start', '?'), end=item.get('end', '?')
+                    chrom=interval.get('chrom'), start=interval.get('start'), end=interval.get('end')
                 ))
+        elif item.upper().startswith('ENSG'):
+            gene_ids.add(item)
+        else:
+            gene_symbols.add(item)
 
-    gene_symbols_to_ids = get_gene_ids_for_gene_symbols(new_gene_symbols)
-    invalid_items += [symbol for symbol in new_gene_symbols if not gene_symbols_to_ids.get(symbol)]
-    invalid_items += [symbol for symbol in new_gene_symbols if len(gene_symbols_to_ids.get(symbol, [])) > 1]
-    new_genes = get_genes([gene_ids[0] for gene_ids in gene_symbols_to_ids.values() if len(gene_ids) == 1] + list(new_gene_ids),
-                          add_dbnsfp=True, add_omim=True, add_constraints=True)
-    invalid_items += [gene_id for gene_id, gene in new_genes.items() if not gene]
-    new_genes = {gene_id: gene for gene_id, gene in new_genes.items() if gene}
-    return new_genes, existing_gene_ids, new_intervals, existing_interval_guids, invalid_items
+    gene_symbols_to_ids = get_gene_ids_for_gene_symbols(gene_symbols)
+    invalid_items += [symbol for symbol in gene_symbols if not gene_symbols_to_ids.get(symbol)]
+    gene_ids.update({gene_ids[0] for gene_ids in gene_symbols_to_ids.values() if len(gene_ids)})
+    genes_by_id = get_genes(list(gene_ids), add_dbnsfp=True, add_omim=True, add_constraints=True) if gene_ids else {}
+    invalid_items += [gene_id for gene_id in gene_ids if not genes_by_id.get(gene_id)]
+    return genes_by_id, intervals, invalid_items
 
 
-def _update_locus_list_items(locus_list, new_genes, existing_gene_ids, new_intervals, existing_interval_guids, request_json, user):
+def _update_locus_list_items(locus_list, genes_by_id, intervals, request_json, user):
     # Update genes
-    for locus_list_gene in locus_list.locuslistgene_set.exclude(gene_id__in=existing_gene_ids):
+    for locus_list_gene in locus_list.locuslistgene_set.exclude(gene_id__in=genes_by_id.keys()):
         delete_seqr_model(locus_list_gene)
 
-    for gene_id in new_genes.keys():
-        create_seqr_model(
+    for gene_id in genes_by_id.keys():
+        get_or_create_seqr_model(
             LocusListGene,
             locus_list=locus_list,
             gene_id=gene_id,
@@ -222,14 +215,14 @@ def _update_locus_list_items(locus_list, new_genes, existing_gene_ids, new_inter
 
     # Update intervals
     genome_version = request_json.get('intervalGenomeVersion') or GENOME_VERSION_GRCh37
-    locus_list.locuslistinterval_set.exclude(guid__in=existing_interval_guids).delete()
-    for existing_interval in locus_list.locuslistinterval_set.all():
-        update_model_from_json(existing_interval, {'genomeVersion': genome_version})
-    for interval in new_intervals:
-        LocusListInterval.objects.create(
+    interval_guids = set()
+    for interval in intervals:
+        interval_model, _ = LocusListInterval.objects.get_or_create(
             locus_list=locus_list,
-            chrom=interval['chrom'].lstrip('chr'),
+            chrom=interval['chrom'],
             start=interval['start'],
             end=interval['end'],
             genome_version=genome_version,
         )
+        interval_guids.add(interval_model.guid)
+    locus_list.locuslistinterval_set.exclude(guid__in=interval_guids).delete()

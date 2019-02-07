@@ -215,8 +215,6 @@ export const LOCUS_LIST_FIELDS = [
   },
 ]
 
-const isInterval = intervalString => Boolean(intervalString.match(/([^\s-]*):(\d*)-(\d*)/))
-
 export const LOCUS_LIST_ITEMS_FIELD = {
   name: 'rawItems',
   label: 'Genes/ Intervals',
@@ -226,10 +224,6 @@ export const LOCUS_LIST_ITEMS_FIELD = {
   component: Form.TextArea,
   rows: 12,
   validate: value => ((value || []).length ? undefined : 'Genes and/or intervals are required'),
-  format: value => (value || []).join(', '),
-  normalize: (value, previousValue, allValues) => (
-    value ? value.split(/[\s|,]/).map(item => item.trim()).filter(val => val) : (allValues.items || []).map(({ display }) => display)
-  ),
   additionalFormFields: [
     {
       name: 'intervalGenomeVersion',
@@ -238,7 +232,7 @@ export const LOCUS_LIST_ITEMS_FIELD = {
       label: 'Genome Version',
       labelHelp: 'The genome version associated with intervals. Only required if the list contains intervals',
       validate: (value, allValues) => (
-        (value || (allValues.rawItems || []).every(item => !isInterval(item))) ? undefined :
+        (value || !(allValues.rawItems || '').match(/([^\s-]*):(\d*)-(\d*)/)) ? undefined :
           'Genome version is required for lists with intervals'
       ),
     },

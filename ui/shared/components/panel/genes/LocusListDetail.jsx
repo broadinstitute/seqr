@@ -50,9 +50,10 @@ const LocusListDetail = ({ locusList, onSubmit }) => {
       },
     },
   ]
+  const { items, ...locusListMetadata } = locusList
+  const itemsValues = { ...locusListMetadata, rawItems: items.map(({ display }) => display).join(', ') }
   const sharedFieldProps = {
     idField: 'locusListGuid',
-    initialValues: locusList,
     onSubmit,
     isEditable: locusList.canEdit,
     showEmptyValues: true,
@@ -65,6 +66,7 @@ const LocusListDetail = ({ locusList, onSubmit }) => {
             <BaseFieldView
               {...fieldProps}
               {...sharedFieldProps}
+              initialValues={locusListMetadata}
               isEditable={locusList.canEdit && isEditable}
               modalTitle={`Edit ${fieldProps.fieldName} for "${locusList.name}"`}
             />
@@ -75,6 +77,7 @@ const LocusListDetail = ({ locusList, onSubmit }) => {
         <BaseFieldView
           {...ITEMS_FIELD}
           {...sharedFieldProps}
+          initialValues={itemsValues}
           modalTitle={`Edit Genes and Intervals for "${locusList.name}"`}
           compact
           showErrorPanel
@@ -82,8 +85,8 @@ const LocusListDetail = ({ locusList, onSubmit }) => {
         <ExportTableButton downloads={itemExportDownloads} buttonText="Download" float="right" fontWeight="300" fontSize=".75em" />
       </Header>
       <Grid columns={8}>
-        {locusList.items.length ?
-          locusList.items.map(({ display, gene }) =>
+        {items.length ?
+          items.map(({ display, gene }) =>
             <Grid.Column key={display}>
               {gene ? <ShowGeneModal gene={gene} /> : display}
             </Grid.Column>,

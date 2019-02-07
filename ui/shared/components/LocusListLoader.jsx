@@ -19,13 +19,10 @@ BaseLocusListsLoader.propTypes = {
 }
 
 
-const BaseLocusListItemsLoader = ({ locusListGuid, locusList, loading, load, children }) => {
-  return (
-    <DataLoader contentId={locusListGuid || locusList.locusListGuid} content={locusList.items} loading={loading} load={load}>
-      {children}
-    </DataLoader>
-  )
-}
+const BaseLocusListItemsLoader = ({ locusListGuid, locusList, loading, load, children }) =>
+  <DataLoader contentId={locusListGuid || locusList.locusListGuid} content={locusList.items} loading={loading} load={load}>
+    {children}
+  </DataLoader>
 
 BaseLocusListItemsLoader.propTypes = {
   locusList: PropTypes.object,
