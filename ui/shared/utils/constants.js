@@ -223,7 +223,7 @@ export const LOCUS_LIST_ITEMS_FIELD = {
   isEditable: true,
   component: Form.TextArea,
   rows: 12,
-  validate: value => ((value || []).length ? undefined : 'Genes and/or intervals are required'),
+  validate: value => (value ? undefined : 'Genes and/or intervals are required'),
   additionalFormFields: [
     {
       name: 'intervalGenomeVersion',

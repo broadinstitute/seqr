@@ -123,5 +123,4 @@ const mapDispatchToProps = {
   onSubmit: updateLocusList,
 }
 
-export { LocusListDetail }
 export default connect(mapStateToProps, mapDispatchToProps)(LoadedLocusListDetail)
