@@ -24,10 +24,11 @@ IconButtonContent.propTypes = {
   size: PropTypes.string,
 }
 
-const UpdateButton = ({ onSubmit, initialValues, formFields, modalTitle, modalId, buttonText, editIconName, size, showErrorPanel, formContainer = <div /> }) =>
+const UpdateButton = ({ onSubmit, initialValues, formFields, modalTitle, modalId, buttonText, editIconName, size, modalSize, showErrorPanel, formContainer = <div /> }) =>
   <Modal
     title={modalTitle}
     modalName={modalId}
+    size={modalSize}
     trigger={<ButtonLink><IconButtonContent buttonText={buttonText} editIconName={editIconName} size={size} /></ButtonLink>}
   >
     {React.cloneElement(formContainer, { children: (
@@ -53,6 +54,7 @@ UpdateButton.propTypes = {
   formContainer: PropTypes.node,
   showErrorPanel: PropTypes.bool,
   size: PropTypes.string,
+  modalSize: PropTypes.string,
 }
 
 export default UpdateButton

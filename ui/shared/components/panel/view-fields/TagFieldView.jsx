@@ -22,6 +22,7 @@ const LargeMultiselect = styled(Multiselect)`
       
       .description {
         max-width: 50%;
+        text-align: right;
       }
     }
   }

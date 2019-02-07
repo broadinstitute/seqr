@@ -223,7 +223,7 @@ def variant_details(variant_json, project, user=None):
                  if sample_guids_by_id.get(sample_id)}
 
     transcripts = defaultdict(list)
-    for i, vep_a in enumerate(annotation['vep_annotation'] or []):
+    for i, vep_a in enumerate(annotation.get('vep_annotation') or []):
         transcripts[vep_a.get('gene', vep_a.get('gene_id'))].append({
             'transcriptId': vep_a.get('feature') or vep_a.get('transcript_id'),
             'isChosenTranscript': i == annotation.get('worst_vep_annotation_index'),
