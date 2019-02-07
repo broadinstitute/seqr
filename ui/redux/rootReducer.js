@@ -182,7 +182,7 @@ export const updateLocusList = (values) => {
       action = `${values.locusListGuid}/${values.delete ? 'delete' : 'update'}`
     }
 
-    // LocusLists have raw items and parsedItems but the raw items are not used and the request size gets too large with them included
+    // LocusLists have raw items and parsedItems but the raw items are not used and the request size gets too large with them included todo
     const { items, ...submitValues } = values
 
     return new HttpRequestHelper(`/api/locus_lists/${action}`,

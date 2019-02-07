@@ -92,8 +92,9 @@ def update_locus_list_handler(request, locus_list_guid):
         return create_json_response({'invalidLocusListItems': invalid_items}, status=400, reason=INVALID_ITEMS_ERROR)
 
     update_model_from_json(locus_list, request_json, allow_unknown_keys=True)
-    _update_locus_list_items(locus_list, new_genes, existing_gene_ids, new_intervals, existing_interval_guids,
-                             request_json, request.user)
+    if new_genes is not None:
+        _update_locus_list_items(locus_list, new_genes, existing_gene_ids, new_intervals, existing_interval_guids,
+                                 request_json, request.user)
 
     return create_json_response({
         'locusListsByGuid': {locus_list.guid: get_json_for_locus_list(locus_list, request.user)},
@@ -163,7 +164,9 @@ def add_locus_list_user_permissions(locus_list):
 
 
 def _parse_list_items(request_json):
-    requested_items = (request_json.get('parsedItems') or {}).get('items') or []
+    raw_items = request_json.get('rawItems')
+    if not raw_items:
+        return None, None, None, None, None
 
     existing_gene_ids = set()
     new_gene_symbols = set()

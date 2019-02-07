@@ -5,7 +5,7 @@ import { connect } from 'react-redux'
 import { Header, Grid } from 'semantic-ui-react'
 
 import { updateLocusList } from 'redux/rootReducer'
-import { getLocusListsByGuid } from 'redux/selectors'
+import { getParsedLocusList } from 'redux/selectors'
 import BaseFieldView from '../view-fields/BaseFieldView'
 import ShowGeneModal from '../../buttons/ShowGeneModal'
 import ExportTableButton from '../../buttons/export-table/ExportTableButton'
@@ -36,8 +36,8 @@ const LocusListDetail = ({ locusList, onSubmit }) => {
       data: {
         headers: ['Gene ID', 'Symbol'],
         filename: `${toSnakecase(locusList.name)}_genes`,
-        rawData: locusList.parsedItems.items.filter(item => item.geneId),
-        processRow: gene => ([gene.geneId, gene.geneSymbol]),
+        rawData: locusList.items.filter(item => item.geneId),
+        processRow: item => ([item.geneId, item.display]),
       },
     },
     {
@@ -45,8 +45,8 @@ const LocusListDetail = ({ locusList, onSubmit }) => {
       data: {
         headers: ['Chromosome', 'Start', 'End', 'Genome Version'],
         filename: `${toSnakecase(locusList.name)}_intervals`,
-        rawData: locusList.parsedItems.items.filter(item => item.chrom),
-        processRow: interval => ([interval.chrom, interval.start, interval.end, interval.genomeVersion]),
+        rawData: locusList.items.filter(item => item.chrom),
+        processRow: item => ([item.chrom, item.start, item.end, item.genomeVersion]),
       },
     },
   ]
@@ -82,12 +82,10 @@ const LocusListDetail = ({ locusList, onSubmit }) => {
         <ExportTableButton downloads={itemExportDownloads} buttonText="Download" float="right" fontWeight="300" fontSize=".75em" />
       </Header>
       <Grid columns={8}>
-        {(Object.keys(locusList.parsedItems.itemMap).length) ?
-          Object.keys(locusList.parsedItems.itemMap).sort().map(itemDisplay =>
-            <Grid.Column key={itemDisplay}>
-              {locusList.parsedItems.itemMap[itemDisplay].geneId ?
-                <ShowGeneModal gene={locusList.parsedItems.itemMap[itemDisplay]} /> : itemDisplay
-              }
+        {locusList.items.length ?
+          locusList.items.map(({ display, gene }) =>
+            <Grid.Column key={display}>
+              {gene ? <ShowGeneModal gene={gene} /> : display}
             </Grid.Column>,
           ) : <Grid.Column width={16}><i>This list has no entries</i></Grid.Column>
         }
@@ -115,7 +113,7 @@ LoadedLocusListDetail.propTypes = {
 }
 
 const mapStateToProps = (state, ownProps) => ({
-  locusList: getLocusListsByGuid(state)[ownProps.locusListGuid] || {},
+  locusList: getParsedLocusList(state, ownProps),
 })
 
 const mapDispatchToProps = {
