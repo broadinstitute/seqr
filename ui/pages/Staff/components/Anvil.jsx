@@ -3,7 +3,6 @@ import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { connect } from 'react-redux'
 
-import { getProjectsIsLoading, getFamiliesByGuid, getIndividualsByGuid } from 'redux/selectors'
 import ExportTableButton from 'shared/components/buttons/export-table/ExportTableButton'
 import SortableTable from 'shared/components/table/SortableTable'
 import DataLoader from 'shared/components/DataLoader'
@@ -12,7 +11,9 @@ import { InlineHeader } from 'shared/components/StyledComponents'
 
 // TODO move to shared
 import { INDIVIDUAL_EXPORT_DATA } from 'pages/Project/constants'
-import { loadProject } from 'pages/Project/reducers'
+
+import { loadAnvil } from '../reducers'
+import { getAnvilLoading, getAnvilRows } from '../selectors'
 
 const RightAligned = styled.span`
   float: right;
@@ -40,12 +41,6 @@ const getEntityExportConfig = (rawData, project) => [
   },
 ]
 
-const getIndividualsWithFamilyId = (familiesByGuid, individualsByGuid) =>
-  Object.values(familiesByGuid).reduce((acc, family) =>
-    [...acc, ...family.individualGuids.map(individualGuid => (
-      { ...individualsByGuid[individualGuid], familyId: family.familyId }
-    ))], [],
-  )
 
 const Anvil = ({ match, data, loading, load }) =>
   <DataLoader contentId={match.params.projectGuid} load={load} content loading={false}>
@@ -76,12 +71,12 @@ Anvil.propTypes = {
 }
 
 const mapStateToProps = state => ({
-  data: getIndividualsWithFamilyId(getFamiliesByGuid(state), getIndividualsByGuid(state)),
-  loading: getProjectsIsLoading(state),
+  data: getAnvilRows(state),
+  loading: getAnvilLoading(state),
 })
 
 const mapDispatchToProps = {
-  load: loadProject,
+  load: loadAnvil,
 }
 
 export default connect(mapStateToProps, mapDispatchToProps)(Anvil)

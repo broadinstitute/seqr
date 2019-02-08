@@ -4,6 +4,7 @@ import { reducer as searchReducer } from 'redux-search'
 
 import { reducers as dashboardReducers } from 'pages/Dashboard/reducers'
 import { reducers as projectReducers } from 'pages/Project/reducers'
+import { reducers as staffReducers } from 'pages/Staff/reducers'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 import { createObjectsByIdReducer, loadingReducer, zeroActionsReducer } from './utils/reducerFactories'
 import modalReducers from './utils/modalReducer'
@@ -219,6 +220,6 @@ const rootReducer = combineReducers(Object.assign({
   user: zeroActionsReducer,
   form: formReducer,
   search: searchReducer,
-}, modalReducers, dashboardReducers, projectReducers))
+}, modalReducers, dashboardReducers, projectReducers, staffReducers))
 
 export default rootReducer
