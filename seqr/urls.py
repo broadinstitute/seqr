@@ -70,6 +70,7 @@ from seqr.views.apis.locus_list_api import \
     add_project_locus_lists, \
     delete_project_locus_lists
 
+from seqr.views.apis.staff_api import anvil_export
 from seqr.views.pages.staff.discovery_sheet import discovery_sheet
 from seqr.views.pages.staff.elasticsearch_status import elasticsearch_status
 from seqr.views.pages.staff.komp_export import komp_export
@@ -157,6 +158,8 @@ api_endpoints = {
     'awesomebar': awesomebar_autocomplete_handler,
 
     'upload_temp_file': save_temp_file,
+
+    'staff/anvil/(?P<project_guid>[^/]+)?': anvil_export,
 
 }
 
