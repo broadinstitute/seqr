@@ -20,24 +20,3 @@ export const getAnvilColumns = createSelector(
       })))
   },
 )
-
-export const getAnvilExportConfig = createSelector(
-  getAnvilRows,
-  (state, props) => props.match.params.projectGuid,
-  getAnvilColumns,
-  (rawData, projectGuid, anvilColumns) => {
-    const projectName = projectGuid && projectGuid !== 'all' && rawData.length && rawData[0]['Project ID']
-    return [
-      {
-        name: 'All Cases',
-        data: {
-          filename: `${projectName ? projectName.replace(' ', '_') : 'All_AnVIL_Projects'}_${new Date().toISOString().slice(0, 10)}_Metadata`,
-          rawData,
-          headers: anvilColumns.map(config => config.content),
-          processRow: row => anvilColumns.map(config => (config.format ? config.format(row) : row[config.name])),
-        },
-      },
-    ]
-
-  },
-)

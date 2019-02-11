@@ -4,15 +4,13 @@ import styled from 'styled-components'
 import { connect } from 'react-redux'
 import { NavLink } from 'react-router-dom'
 
-import ExportTableButton from 'shared/components/buttons/export-table/ExportTableButton'
 import AwesomeBar from 'shared/components/page/AwesomeBar'
 import SortableTable from 'shared/components/table/SortableTable'
 import DataLoader from 'shared/components/DataLoader'
-import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
 import { InlineHeader } from 'shared/components/StyledComponents'
 
 import { loadAnvil } from '../reducers'
-import { getAnvilLoading, getAnvilRows, getAnvilColumns, getAnvilExportConfig } from '../selectors'
+import { getAnvilLoading, getAnvilRows, getAnvilColumns } from '../selectors'
 
 const SEARCH_CATEGORIES = ['projects']
 
@@ -21,17 +19,18 @@ const ACTIVE_LINK_STYLE = {
   color: 'grey',
 }
 
-const RightAligned = styled.span`
-  float: right;
-`
-
 const AwesomebarContainer = styled.div`
   display: inline-block;
 `
 
 const getResultHref = result => `/staff/anvil/${result.key}`
 
-const Anvil = ({ match, data, columns, exportConfig, loading, load }) =>
+const getDownloadFilename = (projectGuid, data) => {
+  const projectName = projectGuid && projectGuid !== 'all' && data.length && data[0]['Project ID'].replace(/ /g, '_')
+  return `${projectName || 'All_AnVIL_Projects'}_${new Date().toISOString().slice(0, 10)}_Metadata`
+}
+
+const Anvil = ({ match, data, columns, loading, load }) =>
   <DataLoader contentId={match.params.projectGuid} load={load} reloadOnIdUpdate content loading={false}>
     <InlineHeader size="medium" content="Projects:" />
     <AwesomebarContainer>
@@ -43,15 +42,11 @@ const Anvil = ({ match, data, columns, exportConfig, loading, load }) =>
       />
     </AwesomebarContainer>
     or <NavLink to="/staff/anvil/all" activeStyle={ACTIVE_LINK_STYLE}>view all AnVIL projects</NavLink>
-    <RightAligned>
-      <ExportTableButton downloads={exportConfig} />
-      <HorizontalSpacer width={45} />
-    </RightAligned>
-    <VerticalSpacer height={20} />
     <SortableTable
       striped
       collapsing
       horizontalScroll
+      downloadFileName={getDownloadFilename(match.params.projectGuid, data)}
       idField="individualGuid"
       defaultSortColumn="familyId"
       emptyContent={match.params.projectGuid ? '0 cases found' : 'Select a project to view data'}
@@ -65,15 +60,13 @@ Anvil.propTypes = {
   match: PropTypes.object,
   data: PropTypes.array,
   columns: PropTypes.array,
-  exportConfig: PropTypes.array,
   loading: PropTypes.bool,
   load: PropTypes.func,
 }
 
-const mapStateToProps = (state, ownProps) => ({
+const mapStateToProps = state => ({
   data: getAnvilRows(state),
   columns: getAnvilColumns(state),
-  exportConfig: getAnvilExportConfig(state, ownProps),
   loading: getAnvilLoading(state),
 })
 
