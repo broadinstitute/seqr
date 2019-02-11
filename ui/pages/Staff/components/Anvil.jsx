@@ -9,69 +9,46 @@ import DataLoader from 'shared/components/DataLoader'
 import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
 import { InlineHeader } from 'shared/components/StyledComponents'
 
-// TODO move to shared
-import { INDIVIDUAL_EXPORT_DATA } from 'pages/Project/constants'
-
 import { loadAnvil } from '../reducers'
-import { getAnvilLoading, getAnvilRows } from '../selectors'
+import { getAnvilLoading, getAnvilRows, getAnvilColumns, getAnvilExportConfig } from '../selectors'
 
 const RightAligned = styled.span`
   float: right;
 `
 
-const COLUMN_CONFIGS = INDIVIDUAL_EXPORT_DATA.concat([]) // TODO variant data
-
-const COLUMNS = COLUMN_CONFIGS.map(({ field, header, format }) => (
-  { name: field, content: header, format: format ? row => format(row[field]) : null }
-))
-
-// TODO use create selector
-const getEntityExportConfig = (rawData, project) => [
-  {
-    name: 'All Cases',
-    data: {
-      filename: `anvil_export_${project ? project.name.replace(' ', '_').toLowerCase() : 'all_projects'}`,
-      rawData,
-      headers: COLUMN_CONFIGS.map(config => config.header),
-      processRow: row => COLUMN_CONFIGS.map((config) => {
-        const val = row[config.field]
-        return config.format ? config.format(val) : val
-      }),
-    },
-  },
-]
-
-
-const Anvil = ({ match, data, loading, load }) =>
+const Anvil = ({ match, data, columns, exportConfig, loading, load }) =>
   <DataLoader contentId={match.params.projectGuid} load={load} content loading={false}>
     <InlineHeader size="medium" content="Projects:" />
     <RightAligned>
-      <ExportTableButton downloads={getEntityExportConfig(data)} />
+      <ExportTableButton downloads={exportConfig} />
       <HorizontalSpacer width={45} />
     </RightAligned>
     <VerticalSpacer height={20} />
     <SortableTable
       striped
-      stackable
       collapsing
       idField="individualGuid"
       defaultSortColumn="familyId"
       emptyContent={match.params.projectGuid ? '0 cases found' : 'Select a project to view data'}
       loading={loading}
       data={data}
-      columns={COLUMNS}
+      columns={columns}
     />
   </DataLoader>
 
 Anvil.propTypes = {
   match: PropTypes.object,
   data: PropTypes.array,
+  columns: PropTypes.array,
+  exportConfig: PropTypes.array,
   loading: PropTypes.bool,
   load: PropTypes.func,
 }
 
-const mapStateToProps = state => ({
+const mapStateToProps = (state, ownProps) => ({
   data: getAnvilRows(state),
+  columns: getAnvilColumns(state),
+  exportConfig: getAnvilExportConfig(state, ownProps),
   loading: getAnvilLoading(state),
 })
 

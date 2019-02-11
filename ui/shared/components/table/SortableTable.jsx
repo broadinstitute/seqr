@@ -7,6 +7,10 @@ import { compareObjects } from '../../utils/sortUtils'
 import { configuredField } from '../form/ReduxFormWrapper'
 import TableLoading from './TableLoading'
 
+const TableContainer = styled.div`
+  overflow-x: scroll;
+`
+
 const StyledSortableTable = styled(Table)`
   &.ui.sortable.table thead th {
     border-left: none;
@@ -155,7 +159,7 @@ class SortableTable extends React.PureComponent {
 
     const hasFooter = footer || isPaginated || filterColumn
     return (
-      <div>
+      <TableContainer>
         <StyledSortableTable sortable selectable={!!selectRows} columns={columns.length} attached={hasFooter && 'top'} {...tableProps}>
           <Table.Header>
             <Table.Row>
@@ -204,7 +208,7 @@ class SortableTable extends React.PureComponent {
             </Table.Footer>
           </Table>
         }
-      </div>
+      </TableContainer>
     )
   }
 }
