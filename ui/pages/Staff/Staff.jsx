@@ -1,23 +1,49 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Route, Switch } from 'react-router-dom'
-import { Header } from 'semantic-ui-react'
+import { NavLink, Route, Switch } from 'react-router-dom'
+import { Header, Menu } from 'semantic-ui-react'
 
 import { getUser } from 'redux/selectors'
+import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
+import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
+
 import Anvil from './components/Anvil'
+
+const STAFF_PAGES = [
+  { path: 'anvil', params: ':projectGuid?', component: Anvil },
+  { path: 'discovery_sheet' },
+  { path: 'elasticsearch_status' },
+  { path: 'komp_export' },
+  { path: 'seqr_stats' },
+]
 
 // TODO shared 404 component
 const Error404 = () => (<Header size="huge" textAlign="center">Error 404: Page Not Found</Header>)
 const Error401 = () => (<Header size="huge" textAlign="center">Error 401: Unauthorized</Header>)
 
+export const StaffPageHeader = () =>
+  <Menu attached>
+    <Menu.Item><Header size="medium"><HorizontalSpacer width={90} /> Staff Pages:</Header></Menu.Item>
+    {STAFF_PAGES.map(({ path, component }) => {
+      const href = `/staff/${path}`
+      const linkProps = component ? { as: NavLink, to: href } : { as: 'a', href }
+      return <Menu.Item key={path} {...linkProps}>{snakecaseToTitlecase(path)}</Menu.Item>
+    })}
+  </Menu>
 
 const Staff = ({ match, user }) => (
   user.is_staff ? (
-    <Switch>
-      <Route path={`${match.url}/anvil/:projectGuid?`} component={Anvil} />
-      <Route component={() => <Error404 />} />
-    </Switch>
+    <div>
+      <VerticalSpacer height={20} />
+      <Switch>
+        {STAFF_PAGES.filter(({ component }) => component).map(({ path, params, component }) =>
+          <Route key={path} path={`${match.url}/${path}/${params}`} component={component} />,
+        )}
+        <Route path={match.url} component={null} />
+        <Route component={() => <Error404 />} />
+      </Switch>
+    </div>
   ) : <Error401 />
 )
 

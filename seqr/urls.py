@@ -57,7 +57,6 @@ from seqr.views.apis.gene_api import \
     delete_gene_note_handler
 
 from seqr.views.pages.staff.staff_pages import \
-    staff_dashboard, \
     seqr_stats_page, \
     users_page, proxy_to_kibana, kibana_page
 
@@ -90,7 +89,7 @@ react_app_pages = [
     'project/(?P<project_guid>[^/]+)/.*',
     'gene_info/.*',
     'gene_lists/.*',
-    'staff/anvil/.*'
+    'staff/.*',
 ]
 
 # NOTE: the actual url will be this with an '/api' prefix
@@ -201,15 +200,14 @@ urlpatterns += [
 
 
 # other staff-only endpoints
-urlpatterns += [
-    url("^staff/?$", staff_dashboard, name="staff_dashboard"),
+urlpatterns = [
     url("^staff/seqr_stats/?", seqr_stats_page, name="seqr_stats"),
     url("^staff/discovery_sheet/?(?P<project_guid>[^/]+)?/?", discovery_sheet, name="discovery_sheet"),
     url("^staff/elasticsearch_status", elasticsearch_status, name="elasticsearch_status"),
     url("^staff/komp_export", komp_export, name="komp_export"),
     url("^staff/users/?", users_page, name="users_page"),
     url("^staff/kibana/?", kibana_page, name="kibana_page"),
-]
+] + urlpatterns
 
 urlpatterns += [
     url(r'^hijack/', include('hijack.urls')),
