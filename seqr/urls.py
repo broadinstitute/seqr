@@ -159,7 +159,7 @@ api_endpoints = {
 
     'upload_temp_file': save_temp_file,
 
-    'staff/anvil/(?P<project_guid>[^/]+)?': anvil_export,
+    'staff/anvil/(?P<project_guid>[^/]+)': anvil_export,
 
 }
 

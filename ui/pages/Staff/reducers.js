@@ -12,15 +12,17 @@ const RECEIVE_ANVIL = 'RECEIVE_ANVIL'
 
 export const loadAnvil = (projectGuid) => {
   return (dispatch) => {
-    dispatch({ type: REQUEST_ANVIL })
-    new HttpRequestHelper(`/api/staff/anvil/${projectGuid}`,
-      (responseJson) => {
-        dispatch({ type: RECEIVE_ANVIL, newValue: responseJson.anvilRows })
-      },
-      (e) => {
-        dispatch({ type: RECEIVE_ANVIL, error: e.message, newValue: [] })
-      },
-    ).get()
+    if (projectGuid) {
+      dispatch({ type: REQUEST_ANVIL })
+      new HttpRequestHelper(`/api/staff/anvil/${projectGuid}`,
+        (responseJson) => {
+          dispatch({ type: RECEIVE_ANVIL, newValue: responseJson.anvilRows })
+        },
+        (e) => {
+          dispatch({ type: RECEIVE_ANVIL, error: e.message, newValue: [] })
+        },
+      ).get()
+    }
   }
 }
 

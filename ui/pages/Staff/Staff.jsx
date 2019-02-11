@@ -16,7 +16,6 @@ const Staff = ({ match, user }) => (
   user.is_staff ? (
     <Switch>
       <Route path={`${match.url}/anvil/:projectGuid?`} component={Anvil} />
-      <Route path={`${match.url}/anvil/projects/:allProjects`} component={Anvil} />
       <Route component={() => <Error404 />} />
     </Switch>
   ) : <Error401 />

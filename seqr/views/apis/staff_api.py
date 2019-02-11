@@ -39,7 +39,10 @@ ZYGOSITY_MAP = {
 
 
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
-def anvil_export(request, project_guid=None):
+def anvil_export(request, project_guid):
+    if project_guid == 'all':
+        project_guid = None
+
     if project_guid:
         projects_by_guid = {project_guid: Project.objects.get(guid=project_guid)}
     else:

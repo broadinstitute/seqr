@@ -8,7 +8,7 @@ import { configuredField } from '../form/ReduxFormWrapper'
 import TableLoading from './TableLoading'
 
 const TableContainer = styled.div`
-  overflow-x: scroll;
+  overflow-x: ${props => (props.horizontalScroll ? 'scroll' : 'inherit')};
 `
 
 const StyledSortableTable = styled(Table)`
@@ -46,6 +46,7 @@ class SortableTable extends React.PureComponent {
     emptyContent: PropTypes.node,
     footer: PropTypes.node,
     rowsPerPage: PropTypes.number,
+    horizontalScroll: PropTypes.bool,
   }
 
   static defaultProps = {
@@ -110,7 +111,7 @@ class SortableTable extends React.PureComponent {
   render() {
     const {
       data, defaultSortColumn, filterColumn, idField, columns, selectRows, selectedRows = {}, loading, emptyContent,
-      footer, rowsPerPage, ...tableProps
+      footer, rowsPerPage, horizontalScroll, ...tableProps
     } = this.props
     const { column, direction, activePage, filter } = this.state
 
@@ -159,7 +160,7 @@ class SortableTable extends React.PureComponent {
 
     const hasFooter = footer || isPaginated || filterColumn
     return (
-      <TableContainer>
+      <TableContainer horizontalScroll={horizontalScroll}>
         <StyledSortableTable
           sortable
           selectable={!!selectRows}
