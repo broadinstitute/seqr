@@ -1,7 +1,6 @@
 import { createSelector } from 'reselect'
 
-import { getProjectsByGuid } from 'redux/selectors'
-import { CORE_ANVIL_COLUMNS, VARIANT_ANVIL_COLUMNS } from './constants'
+import { CORE_ANVIL_COLUMNS, VARIANT_ANVIL_COLUMNS, VARIANT_ANVIL_COLUMN_FORMATS } from './constants'
 
 export const getAnvilLoading = state => state.anvilLoading.isLoading
 export const getAnvilRows = state => state.anvilRows
@@ -13,23 +12,26 @@ export const getAnvilColumns = createSelector(
     return CORE_ANVIL_COLUMNS.concat(
       ...[...Array(maxSavedVariants).keys()].map(i => VARIANT_ANVIL_COLUMNS.map((col) => {
         const colName = `${col} - ${i + 1}`
-        return { name: colName, content: colName }
+        return {
+          name: colName,
+          content: colName,
+          format: VARIANT_ANVIL_COLUMN_FORMATS[col] && (row => VARIANT_ANVIL_COLUMN_FORMATS[col](row[colName])),
+        }
       })))
   },
 )
 
 export const getAnvilExportConfig = createSelector(
   getAnvilRows,
-  getProjectsByGuid,
   (state, props) => props.match.params.projectGuid,
   getAnvilColumns,
-  (rawData, projectsByGuid, projectGuid, anvilColumns) => {
-    const project = projectsByGuid[projectGuid]
+  (rawData, projectGuid, anvilColumns) => {
+    const projectName = projectGuid && rawData.length && rawData[0]['Project ID']
     return [
       {
         name: 'All Cases',
         data: {
-          filename: `anvil_export_${project ? project.name.replace(' ', '_').toLowerCase() : 'all_projects'}`,
+          filename: `${projectName ? projectName.replace(' ', '_') : 'All_Projects'}_${new Date().toISOString().slice(0, 10)}_Metadata`,
           rawData,
           headers: anvilColumns.map(config => config.content),
           processRow: row => anvilColumns.map(config => (config.format ? config.format(row) : row[config.name])),

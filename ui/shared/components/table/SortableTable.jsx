@@ -160,7 +160,13 @@ class SortableTable extends React.PureComponent {
     const hasFooter = footer || isPaginated || filterColumn
     return (
       <TableContainer>
-        <StyledSortableTable sortable selectable={!!selectRows} columns={columns.length} attached={hasFooter && 'top'} {...tableProps}>
+        <StyledSortableTable
+          sortable
+          selectable={!!selectRows}
+          columns={columns.length <= 16 ? columns.length : null}
+          attached={hasFooter && 'top'}
+          {...tableProps}
+        >
           <Table.Header>
             <Table.Row>
               {selectRows &&

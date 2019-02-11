@@ -59,8 +59,10 @@ Sequence.propTypes = {
   sequence: PropTypes.string.isRequired,
 }
 
+export const parseHgvs = hgvs => (hgvs || '').split(':').pop()
+
 export const ProteinSequence = ({ hgvs }) =>
-  <Sequence color="black" sequence={hgvs.split(':').pop()} />
+  <Sequence color="black" sequence={parseHgvs(hgvs)} />
 
 ProteinSequence.propTypes = {
   hgvs: PropTypes.string.isRequired,
