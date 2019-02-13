@@ -28,6 +28,7 @@ class AwesomeBar extends React.Component
     placeholder: PropTypes.string,
     history: PropTypes.object,
     inputwidth: PropTypes.string,
+    getResultHref: PropTypes.func,
   }
 
   constructor(props) {
@@ -88,10 +89,11 @@ class AwesomeBar extends React.Component
   handleResultSelect = (e, obj) => {
     e.preventDefault()
     this.setState({ value: obj.result.title })
+    const href = this.props.getResultHref ? this.props.getResultHref(obj.result) : obj.result.href
     if (this.props.newWindow) {
-      window.open(obj.result.href, '_blank')
+      window.open(href, '_blank')
     } else {
-      this.props.history.push(obj.result.href)
+      this.props.history.push(href)
     }
   }
 }

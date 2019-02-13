@@ -90,6 +90,7 @@ def add_dataset(
             'sample_ids': sample_id_to_individual_id_mapping.keys(),
             'sample_id_to_individual_id_mapping': sample_id_to_individual_id_mapping,
             'sample_dataset_path_mapping': sample_dataset_path_mapping,
+            'ignore_missing_family_members': True,
             'missing_sample_exception_template': 'The following Individual IDs do not exist: {unmatched_samples}'
         })
 

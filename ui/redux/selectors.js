@@ -1,4 +1,5 @@
 import { createSelector } from 'reselect'
+import { compareObjects } from 'shared/utils/sortUtils'
 
 export const getProjectsIsLoading = state => state.projectsLoading.isLoading
 export const getProjectDetailsIsLoading = state => state.projectDetailsLoading.isLoading
@@ -57,4 +58,27 @@ export const getSavedVariantsGroupedByFamilyVariants = createSelector(
     return acc
 
   }, {}),
+)
+
+export const getParsedLocusList = createSelector(
+  getLocusListsByGuid,
+  getGenesById,
+  (state, props) => props.locusListGuid,
+  (locusListsByGuid, genesById, locusListGuid) => {
+    const locusList = locusListsByGuid[locusListGuid] || {}
+    if (locusList.items) {
+      locusList.items = locusList.items.map((item) => {
+        const gene = genesById[item.geneId]
+        let display
+        if (item.geneId) {
+          display = gene ? gene.geneSymbol : item.geneId
+        } else {
+          display = `chr${item.chrom}:${item.start}-${item.end}`
+        }
+        return { ...item, display, gene }
+      })
+      locusList.items.sort(compareObjects('display'))
+    }
+    return locusList
+  },
 )

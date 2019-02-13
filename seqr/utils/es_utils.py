@@ -76,7 +76,7 @@ def get_es_variants(search_model, page=1, num_results=100):
     search = search_model.variant_search.search
     sort = search_model.sort
 
-    genes, intervals, invalid_items = parse_locus_list_items(search.get('locus', {}), all_new=True)
+    genes, intervals, invalid_items = parse_locus_list_items(search.get('locus', {}))
     if invalid_items:
         raise Exception('Invalid genes/intervals: {}'.format(', '.join(invalid_items)))
 

@@ -184,7 +184,6 @@ def deploy_secrets(settings):
         "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/seqr/omim_key",
         "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/seqr/postmark_server_token",
         "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/seqr/mme_node_admin_token",
-        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/seqr/slack_token",
     ]) % settings, errors_to_ignore=["already exists"])
 
     run(" ".join([
@@ -206,12 +205,15 @@ def deploy_secrets(settings):
         "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/matchbox/config.xml",
     ]) % settings, errors_to_ignore=["already exists"])
 
-    if os.path.isfile("deploy/secrets/shared/gcloud/service-account-key.json"):
+    account_key_path = "deploy/secrets/%(DEPLOY_TO_PREFIX)s/gcloud-client/service-account-key.json" % settings
+    if not os.path.isfile(account_key_path):
+        account_key_path = "deploy/secrets/shared/gcloud/service-account-key.json"
+    if os.path.isfile(account_key_path):
         run(" ".join([
             "kubectl create secret generic gcloud-client-secrets",
-            "--from-file deploy/secrets/shared/gcloud/service-account-key.json",
+            "--from-file %(account_key_path)s",
             "--from-file deploy/secrets/shared/gcloud/boto",
-        ]) % settings, errors_to_ignore=["already exists"])
+        ]) % {'account_key_path': account_key_path}, errors_to_ignore=["already exists"])
     else:
         run(" ".join([
             "kubectl create secret generic gcloud-client-secrets"   # create an empty set of client secrets

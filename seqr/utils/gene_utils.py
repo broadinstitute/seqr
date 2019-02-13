@@ -1,3 +1,4 @@
+import re
 from collections import defaultdict
 from django.db.models import Q
 from django.db.models.functions import Length
@@ -42,47 +43,39 @@ def get_queried_genes(query, max_results):
     return [{'gene_id': gene.gene_id, 'gene_symbol': gene.gene_symbol} for gene in matching_genes[:max_results]]
 
 
-def parse_locus_list_items(request_json, all_new=False):
-    requested_items = (request_json.get('parsedItems') or {}).get('items') or []
+def parse_locus_list_items(request_json):
+    raw_items = request_json.get('rawItems')
+    if not raw_items:
+        return None, None, None
 
-    existing_gene_ids = set()
-    new_gene_symbols = set()
-    new_gene_ids = set()
-    existing_interval_guids = set()
-    new_intervals = []
     invalid_items = []
-    for item in requested_items:
-        if item.get('locusListIntervalGuid') and not all_new:
-            existing_interval_guids.add(item.get('locusListIntervalGuid'))
-        elif item.get('geneId'):
-            if item.get('symbol') and not all_new:
-                existing_gene_ids.add(item.get('geneId'))
-            else:
-                new_gene_ids.add(item.get('geneId'))
-        elif item.get('symbol'):
-            new_gene_symbols.add(item.get('symbol'))
-        else:
+    intervals = []
+    gene_ids = set()
+    gene_symbols = set()
+    for item in raw_items.replace(',', ' ').split():
+        interval_match = re.match('(?P<chrom>\w+):(?P<start>\d+)-(?P<end>\d+)', item)
+        if interval_match:
+            interval = interval_match.groupdict()
             try:
-                item['start'] = int(item['start'])
-                item['end'] = int(item['end'])
-                if item['start'] > item['end']:
+                interval['chrom'] = interval['chrom'].lstrip('chr')
+                interval['start'] = int(interval['start'])
+                interval['end'] = int(interval['end'])
+                if interval['start'] > interval['end']:
                     raise ValueError
-                get_xpos(item['chrom'], int(item['start']))
-                new_intervals.append(item)
+                get_xpos(interval['chrom'], interval['start'])
+                intervals.append(interval)
             except (KeyError, ValueError):
                 invalid_items.append('chr{chrom}:{start}-{end}'.format(
-                    chrom=item.get('chrom', '?'), start=item.get('start', '?'), end=item.get('end', '?')
+                    chrom=interval.get('chrom'), start=interval.get('start'), end=interval.get('end')
                 ))
+        elif item.upper().startswith('ENSG'):
+            gene_ids.add(item)
+        else:
+            gene_symbols.add(item)
 
-    gene_symbols_to_ids = get_gene_ids_for_gene_symbols(new_gene_symbols)
-    invalid_items += [symbol for symbol in new_gene_symbols if not gene_symbols_to_ids.get(symbol)]
-    invalid_items += [symbol for symbol in new_gene_symbols if len(gene_symbols_to_ids.get(symbol, [])) > 1]
-    new_genes = get_genes([gene_ids[0] for gene_ids in gene_symbols_to_ids.values() if len(gene_ids) == 1] + list(new_gene_ids),
-                          add_dbnsfp=True, add_omim=True, add_constraints=True)
-    invalid_items += [gene_id for gene_id, gene in new_genes.items() if not gene]
-    new_genes = {gene_id: gene for gene_id, gene in new_genes.items() if gene}
-
-    if all_new:
-        return new_genes, new_intervals, invalid_items
-    else:
-        return new_genes, existing_gene_ids, new_intervals, existing_interval_guids, invalid_items
+    gene_symbols_to_ids = get_gene_ids_for_gene_symbols(gene_symbols)
+    invalid_items += [symbol for symbol in gene_symbols if not gene_symbols_to_ids.get(symbol)]
+    gene_ids.update({gene_ids[0] for gene_ids in gene_symbols_to_ids.values() if len(gene_ids)})
+    genes_by_id = get_genes(list(gene_ids), add_dbnsfp=True, add_omim=True, add_constraints=True) if gene_ids else {}
+    invalid_items += [gene_id for gene_id in gene_ids if not genes_by_id.get(gene_id)]
+    return genes_by_id, intervals, invalid_items

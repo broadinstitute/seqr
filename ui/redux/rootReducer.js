@@ -5,6 +5,7 @@ import { reducer as searchReducer } from 'redux-search'
 import { reducers as dashboardReducers } from 'pages/Dashboard/reducers'
 import { reducers as projectReducers } from 'pages/Project/reducers'
 import { reducers as searchReducers } from 'pages/Search/reducers'
+import { reducers as staffReducers } from 'pages/Staff/reducers'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 import { createObjectsByIdReducer, loadingReducer, zeroActionsReducer } from './utils/reducerFactories'
 import modalReducers from './utils/modalReducer'
@@ -261,9 +262,6 @@ export const updateLocusList = (values) => {
       action = `${values.locusListGuid}/${values.delete ? 'delete' : 'update'}`
     }
 
-    // LocusLists have raw items and parsedItems but the raw items are not used and the request size gets too large with them included
-    const { items, ...submitValues } = values
-
     return new HttpRequestHelper(`/api/locus_lists/${action}`,
       (responseJson) => {
         dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
@@ -277,7 +275,7 @@ export const updateLocusList = (values) => {
           _error: [error],
         })
       },
-    ).post(submitValues)
+    ).post(values)
   }
 }
 
@@ -302,6 +300,6 @@ const rootReducer = combineReducers(Object.assign({
   user: zeroActionsReducer,
   form: formReducer,
   search: searchReducer,
-}, modalReducers, dashboardReducers, projectReducers, searchReducers))
+}, modalReducers, dashboardReducers, projectReducers, searchReducers, staffReducers))
 
 export default rootReducer

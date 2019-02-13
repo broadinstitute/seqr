@@ -219,30 +219,15 @@ export const LOCUS_LIST_FIELDS = [
   },
 ]
 
-const parseInterval = (intervalString) => {
-  const match = intervalString.match(/([^\s-]*):(\d*)-(\d*)/)
-  return match ? { chrom: match[1], start: match[2], end: match[3] } : null
-}
-
 export const LOCUS_LIST_ITEMS_FIELD = {
-  name: 'parsedItems',
+  name: 'rawItems',
   label: 'Genes/ Intervals',
   labelHelp: 'A list of genes and intervals. Can be separated by commas or whitespace. Intervals should be in the form <chrom>:<start>-<end>',
   fieldDisplay: () => null,
   isEditable: true,
   component: Form.TextArea,
   rows: 12,
-  validate: value => (((value || {}).items || []).length ? undefined : 'Genes and/or intervals are required'),
-  format: value => (value || {}).display,
-  normalize: (value, previousValue) => ((value && value.items) ? value : {
-    ...(previousValue || {}),
-    display: value,
-    items: value.split(/[\s|,]/).filter(itemName => itemName.trim()).map(itemName =>
-      ((previousValue || {}).itemMap || {})[itemName.trim()] || parseInterval(itemName) ||
-      (itemName.trim().toUpperCase().startsWith('ENSG') ? { geneId: itemName.trim().toUpperCase() } : { symbol: itemName.trim() }),
-    ),
-    itemMap: (previousValue || {}).itemMap || {},
-  }),
+  validate: value => (value ? undefined : 'Genes and/or intervals are required'),
   additionalFormFields: [
     {
       name: 'intervalGenomeVersion',
@@ -251,7 +236,7 @@ export const LOCUS_LIST_ITEMS_FIELD = {
       label: 'Genome Version',
       labelHelp: 'The genome version associated with intervals. Only required if the list contains intervals',
       validate: (value, allValues) => (
-        (value || ((allValues.parsedItems || {}).items || []).every(item => item.symbol || item.geneId)) ? undefined :
+        (value || !(allValues.rawItems || '').match(/([^\s-]*):(\d*)-(\d*)/)) ? undefined :
           'Genome version is required for lists with intervals'
       ),
     },
