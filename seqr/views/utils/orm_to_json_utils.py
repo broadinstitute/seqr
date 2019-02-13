@@ -190,7 +190,7 @@ def _get_json_for_family(family, user=None, **kwargs):
     return _get_json_for_model(family, get_json_for_models=_get_json_for_families, user=user, **kwargs)
 
 
-def _get_json_for_individuals(individuals, user=None, project_guid=None, family_guid=None, add_sample_guids_field=False, add_family_id_field=False):
+def _get_json_for_individuals(individuals, user=None, project_guid=None, family_guid=None, add_sample_guids_field=False, family_fields=None):
     """Returns a JSON representation for the given list of Individuals.
 
     Args:
@@ -234,8 +234,9 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, family_
         {'fields': ('family', 'guid'), 'value': family_guid},
         {'fields': ('family', 'project', 'guid'), 'key': 'projectGuid', 'value': project_guid},
     ]
-    if add_family_id_field:
-        nested_fields.append({'fields': ('family', 'family_id'), 'key': 'familyId'})
+    if family_fields:
+        for field in family_fields:
+            nested_fields.append({'fields': ('family', field), 'key': _to_camel_case(field)})
 
     if add_sample_guids_field:
         prefetch_related_objects(individuals, 'sample_set')

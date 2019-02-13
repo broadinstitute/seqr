@@ -16,12 +16,6 @@ logger = logging.getLogger(__name__)
 
 
 @staff_member_required(login_url=LOGIN_URL)
-def staff_dashboard(request):
-
-    return render(request, "staff/staff_dashboard.html")
-
-
-@staff_member_required(login_url=LOGIN_URL)
 def seqr_stats_page(request):
 
     families_count = Family.objects.only('family_id').distinct('family_id').count()

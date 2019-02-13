@@ -424,7 +424,7 @@ const INDIVIDUAL_FIELD_SEX = 'sex'
 const INDIVIDUAL_FIELD_AFFECTED = 'affected'
 const INDIVIDUAL_FIELD_NOTES = 'notes'
 
-const INDIVIDUAL_FIELD_CONFIGS = {
+export const INDIVIDUAL_FIELD_CONFIGS = {
   [FAMILY_FIELD_ID]: { label: 'Family ID' },
   [INDIVIDUAL_FIELD_ID]: { label: 'Individual ID' },
   [INDIVIDUAL_FIELD_PATERNAL_ID]: { label: 'Paternal ID', description: 'Individual ID of the father' },
@@ -454,6 +454,8 @@ export const INDIVIDUAL_FIELDS = [
   INDIVIDUAL_FIELD_SEX,
   INDIVIDUAL_FIELD_AFFECTED,
 ].map(tableConfigForField(INDIVIDUAL_FIELD_CONFIGS))
+
+export const INDIVIDUAL_NOTES_CONFIG = tableConfigForField(INDIVIDUAL_FIELD_CONFIGS)(INDIVIDUAL_FIELD_NOTES)
 
 export const INDIVIDUAL_ID_EXPORT_DATA = [
   FAMILY_FIELD_ID, INDIVIDUAL_FIELD_ID,

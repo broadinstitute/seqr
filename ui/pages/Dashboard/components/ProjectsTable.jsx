@@ -152,6 +152,7 @@ const ProjectsTable = ({ visibleProjects, loading, user }) =>
       <ExportTableButton downloads={PROJECT_EXPORT_URLS} />
       <HorizontalSpacer width={45} />
     </RightAligned>
+    <VerticalSpacer height={10} />
     <SortableTable
       striped
       stackable
