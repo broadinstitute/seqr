@@ -1,31 +1,17 @@
-from collections import defaultdict
 import collections
 import json
 import logging
-import re
-import requests
-import tempfile
-import openpyxl as xl
 
 from datetime import datetime, timedelta
 from django.contrib.admin.views.decorators import staff_member_required
 from django.db.models import prefetch_related_objects
-from django.utils import timezone
 
 from seqr.utils.gene_utils import get_genes
-from seqr.utils.xpos_utils import get_chrom_pos
-
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
-from seqr.views.apis.saved_variant_api import variant_main_transcript, variant_details
-from seqr.views.utils.json_utils import create_json_response, _to_title_case
+from seqr.views.apis.saved_variant_api import variant_details
+from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_individuals, get_json_for_saved_variant
-from reference_data.models import HPO_CATEGORY_NAMES
-from seqr.models import Project, Family, VariantTag, VariantTagType, Sample, SavedVariant
-from dateutil import relativedelta as rdelta
-from django.db.models import Q, Prefetch
-from django.shortcuts import render
-from settings import LOGIN_URL, SEQR_ID_TO_MME_ID_MAP
-from seqr.views.utils.orm_to_json_utils import _get_json_for_project
+from seqr.models import Project, VariantTagType, Sample, SavedVariant
 
 logger = logging.getLogger(__name__)
 
@@ -105,7 +91,6 @@ def _get_over_year_loaded_project_families(projects):
         loaded_date__isnull=False,
         loaded_date__lte=max_loaded_date,
     ).select_related('individual__family__project').order_by('loaded_date')
-    
     return list({sample.individual.family for sample in loaded_samples})
 
 
