@@ -35,7 +35,7 @@ class ProjectAPITest(TransactionTestCase):
              'originalAltAlleles', 'mainTranscript', 'genotypes', 'hgmd', 'transcripts', 'locusLists', 'populations',
              'predictions', 'rsid'}
         )
-        self.assertSetEqual(set(variant['genotypes'].keys()), {'S000131_na19679', 'S000129_na19675'})
+        self.assertSetEqual(set(variant['genotypes'].keys()), {'I000003_na19679', 'I000001_na19675'})
 
         # filter by family
         response = self.client.get('{}?families=F000002_2'.format(url))
@@ -133,7 +133,7 @@ class ProjectAPITest(TransactionTestCase):
     @mock.patch('seqr.views.utils.variant_utils._retrieve_saved_variants_json')
     def test_update_saved_variant_json(self, mock_retrieve_variants):
         mock_retrieve_variants.side_effect = lambda project, variant_tuples: \
-            [{'xpos': var[0], 'ref': var[1], 'alt': var[2], 'extras': {'family_id': var[3]}} for var in variant_tuples]
+            [{'xpos': var[0], 'ref': var[1], 'alt': var[2], 'familyGuids': [var[3].guid]} for var in variant_tuples]
 
         url = reverse(update_saved_variant_json, args=['R0001_1kg'])
         _check_login(self, url)

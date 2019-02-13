@@ -1,4 +1,4 @@
-import { RadioGroup, BooleanCheckbox } from 'shared/components/form/Inputs'
+import { RadioGroup, BooleanCheckbox, BaseSemanticInput } from 'shared/components/form/Inputs'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 import {
   VEP_GROUP_NONSENSE,
@@ -13,7 +13,6 @@ import {
   AFFECTED,
   UNAFFECTED,
 } from 'shared/utils/constants'
-import { LoadedLocusListField } from './components/filters/LocationFilter'
 
 export const getSelectedAnalysisGroups = (analysisGroupsByGuid, familyGuids) =>
   Object.values(analysisGroupsByGuid).filter(
@@ -290,12 +289,9 @@ export const LOCATION_FIELDS = [
   {
     name: LOCUS_LIST_ITEMS_FIELD.name,
     label: LOCUS_LIST_ITEMS_FIELD.label,
-    component: LoadedLocusListField,
-    normalize: (value, previousValue) => {
-      const { locusListGuid, ...normalizedValue } = LOCUS_LIST_ITEMS_FIELD.normalize(value, previousValue)
-      return normalizedValue
-    },
-    format: val => val || {},
+    labelHelp: LOCUS_LIST_ITEMS_FIELD.labelHelp,
+    component: BaseSemanticInput,
+    inputType: 'TextArea',
     rows: 8,
     width: 11,
   },

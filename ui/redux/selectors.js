@@ -78,6 +78,7 @@ export const getParsedLocusList = createSelector(
         return { ...item, display, gene }
       })
       locusList.items.sort(compareObjects('display'))
+      locusList.rawItems = locusList.items.map(({ display }) => display).join(', ')
     }
     return locusList
   },

@@ -95,7 +95,7 @@ def update_locus_list_handler(request, locus_list_guid):
 
     return create_json_response({
         'locusListsByGuid': {locus_list.guid: get_json_for_locus_list(locus_list, request.user)},
-        'genesById': genes_by_id,
+        'genesById': genes_by_id or {},
     })
 
 

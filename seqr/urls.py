@@ -98,7 +98,7 @@ react_app_pages = [
     'project/(?P<project_guid>[^/]+)/.*',
     'gene_info/.*',
     'gene_lists/.*',
-    'variant_search/.*'
+    'variant_search/.*',
     'staff/.*',
 ]
 

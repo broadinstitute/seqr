@@ -3,7 +3,7 @@ import hash from 'object-hash'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 
-import { getProjectDetailsIsLoading } from 'redux/selectors'
+import { getProjectDetailsIsLoading, getLocusListIsLoading } from 'redux/selectors'
 import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
 import DataLoader from 'shared/components/DataLoader'
 import { SaveSearchButton } from './SavedSearch'
@@ -13,7 +13,7 @@ import { loadProjectFamiliesContext, saveHashedSearch } from '../reducers'
 import { getLoadedIntitialSearch } from '../selectors'
 
 
-const VariantSearchForm = ({ match, history, saveSearch, initialSearch, load, loading }) => {
+const VariantSearchForm = ({ match, history, saveSearch, initialSearch, load, loading, contentLoading }) => {
   const search = (searchParams) => {
     const searchHash = hash.MD5(searchParams)
     saveSearch(searchHash, searchParams)
@@ -34,6 +34,7 @@ const VariantSearchForm = ({ match, history, saveSearch, initialSearch, load, lo
         onSubmit={search}
         form={SEARCH_FORM_NAME}
         submitButtonText="Search"
+        loading={contentLoading}
         noModal
       >
         <VariantSearchFormContent />
@@ -50,12 +51,14 @@ VariantSearchForm.propTypes = {
   initialSearch: PropTypes.object,
   saveSearch: PropTypes.func,
   loading: PropTypes.bool,
+  contentLoading: PropTypes.bool,
   load: PropTypes.func,
 }
 
 const mapStateToProps = (state, ownProps) => ({
   initialSearch: getLoadedIntitialSearch(state, ownProps),
   loading: getProjectDetailsIsLoading(state),
+  contentLoading: getLocusListIsLoading(state),
 })
 
 const mapDispatchToProps = {

@@ -134,6 +134,9 @@ class ReduxFormWrapper extends React.Component {
     /* Whether form should be rendered inline instead of the default block display */
     inline: PropTypes.bool,
 
+    /* Whether the form should be rendered as loading */
+    loading: PropTypes.bool,
+
     /* Array of objects representing the fields to show in the form. */
     /* Each field must have a name and a component, and can have any additional props accepted by redux-form's Field */
     fields: PropTypes.arrayOf(PropTypes.object), //eslint-disable-line react/no-unused-prop-types
@@ -176,7 +179,7 @@ class ReduxFormWrapper extends React.Component {
     const fieldComponents = this.props.children || configuredFields(this.props)
 
     return (
-      <StyledForm onSubmit={this.props.handleSubmit} size={this.props.size} loading={this.props.submitting} hasSubmitButton={!this.props.submitOnChange} inline={this.props.inline}>
+      <StyledForm onSubmit={this.props.handleSubmit} size={this.props.size} loading={this.props.submitting || this.props.loading} hasSubmitButton={!this.props.submitOnChange} inline={this.props.inline}>
         {fieldComponents}
         {this.props.showErrorPanel && ['warning', 'error'].map(key => (
           this.props[`${key}Messages`] && this.props[`${key}Messages`].length > 0 ?

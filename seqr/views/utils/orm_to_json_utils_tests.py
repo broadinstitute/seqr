@@ -97,7 +97,7 @@ class JSONUtilsTest(TestCase):
         json = get_json_for_variant_tag(tag)
 
         fields = {
-             'tagGuid', 'name', 'category', 'color', 'searchParameters', 'lastModifiedDate', 'createdBy'
+             'tagGuid', 'name', 'category', 'color', 'searchParameters', 'searchHash', 'lastModifiedDate', 'createdBy'
         }
         self.assertSetEqual(set(json.keys()), fields)
 

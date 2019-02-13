@@ -11,11 +11,10 @@ import { ButtonLink } from 'shared/components/StyledComponents'
 import { configuredField, configuredFields } from 'shared/components/form/ReduxFormWrapper'
 import { Select, LabeledSlider, AlignedCheckboxGroup } from 'shared/components/form/Inputs'
 import Modal from 'shared/components/modal/Modal'
-import { LOCUS_LIST_ITEMS_FIELD } from 'shared/utils/constants'
 import { SavedSearchDropdown } from './SavedSearch'
 import FrequencyFilter from './filters/FrequencyFilter'
 import annotationsFilterLayout from './filters/AnnotationsFilterLayout'
-import { LocusListSelector } from './filters/LocationFilter'
+import LocusListSelector from './filters/LocusListSelector'
 import CustomInheritanceFilter from './filters/CustomInheritanceFilter'
 import ProjectFamiliesField from './filters/ProjectFamiliesField'
 import {
@@ -215,7 +214,7 @@ const LOCATION_PANEL = {
   name: 'locus',
   headerProps: {
     title: 'Location',
-    name: `locus.${LOCUS_LIST_ITEMS_FIELD.name}`,
+    name: 'locus',
     inputSize: 5,
     inputProps: { component: LocusListSelector, format: val => val || {} },
   },

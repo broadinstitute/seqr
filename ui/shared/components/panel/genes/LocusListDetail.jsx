@@ -5,7 +5,6 @@ import { connect } from 'react-redux'
 import { Header, Grid } from 'semantic-ui-react'
 
 import { updateLocusList } from 'redux/rootReducer'
-import { getParsedLocusList } from 'redux/selectors'
 import BaseFieldView from '../view-fields/BaseFieldView'
 import ShowGeneModal from '../../buttons/ShowGeneModal'
 import ExportTableButton from '../../buttons/export-table/ExportTableButton'
@@ -50,8 +49,8 @@ const LocusListDetail = ({ locusList, onSubmit }) => {
       },
     },
   ]
-  const { items, ...locusListMetadata } = locusList
-  const itemsValues = { ...locusListMetadata, rawItems: items.map(({ display }) => display).join(', ') }
+  const { items, ...itemsValues } = locusList
+  const { rawItems, ...locusListMetadata } = itemsValues
   const sharedFieldProps = {
     idField: 'locusListGuid',
     onSubmit,
@@ -104,23 +103,18 @@ LocusListDetail.propTypes = {
 }
 
 
-const LoadedLocusListDetail = ({ locusListGuid, locusList, onSubmit }) =>
-  <LocusListItemsLoader locusListGuid={locusListGuid} locusList={locusList}>
-    <LocusListDetail locusList={locusList} onSubmit={onSubmit} />
+const LoadedLocusListDetail = ({ locusListGuid, onSubmit }) =>
+  <LocusListItemsLoader locusListGuid={locusListGuid}>
+    <LocusListDetail onSubmit={onSubmit} />
   </LocusListItemsLoader>
 
 LoadedLocusListDetail.propTypes = {
   locusListGuid: PropTypes.string.isRequired,
-  locusList: PropTypes.object,
   onSubmit: PropTypes.func,
 }
-
-const mapStateToProps = (state, ownProps) => ({
-  locusList: getParsedLocusList(state, ownProps),
-})
 
 const mapDispatchToProps = {
   onSubmit: updateLocusList,
 }
 
-export default connect(mapStateToProps, mapDispatchToProps)(LoadedLocusListDetail)
+export default connect(null, mapDispatchToProps)(LoadedLocusListDetail)
