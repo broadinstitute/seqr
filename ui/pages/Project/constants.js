@@ -2,7 +2,6 @@
 
 import orderBy from 'lodash/orderBy'
 
-import { RadioGroup } from 'shared/components/form/Inputs'
 import { hasPhenotipsDetails } from 'shared/components/panel/PhenotipsDataPanel'
 import { stripMarkdown } from 'shared/utils/stringUtils'
 import {
@@ -28,14 +27,18 @@ import {
   FAMILY_FIELD_FIRST_SAMPLE,
   FAMILY_FIELD_CREATED_DATE,
   FAMILY_FIELD_CODED_PHENOTYPE,
+  INDIVIDUAL_FIELD_ID,
+  INDIVIDUAL_FIELD_PATERNAL_ID,
+  INDIVIDUAL_FIELD_MATERNAL_ID,
+  INDIVIDUAL_FIELD_SEX,
+  INDIVIDUAL_FIELD_AFFECTED,
+  INDIVIDUAL_FIELD_NOTES,
   CLINSIG_SEVERITY,
   FAMILY_ANALYSIS_STATUS_OPTIONS,
   SAMPLE_STATUS_LOADED,
   DATASET_TYPE_VARIANT_CALLS,
-  SEX_LOOKUP,
-  SEX_OPTIONS,
-  AFFECTED_LOOKUP,
-  AFFECTED_OPTIONS,
+  INDIVIDUAL_FIELD_CONFIGS,
+  INDIVIDUAL_HPO_EXPORT_DATA,
 } from 'shared/utils/constants'
 
 export const CASE_REVIEW_TABLE_NAME = 'Case Review'
@@ -412,40 +415,6 @@ export const FAMILY_BULK_EDIT_EXPORT_DATA = [
   FAMILY_FIELD_CODED_PHENOTYPE,
 ].map(exportConfigForField(FAMILY_FIELD_CONFIGS))
 
-export const INTERNAL_FAMILY_EXPORT_DATA = [
-  { header: 'Internal Case Review Summary', field: FAMILY_FIELD_INTERNAL_SUMMARY, format: stripMarkdown },
-  { header: 'Internal Case Review Notes', field: FAMILY_FIELD_INTERNAL_NOTES, format: stripMarkdown },
-]
-
-export const INDIVIDUAL_FIELD_ID = 'individualId'
-const INDIVIDUAL_FIELD_PATERNAL_ID = 'paternalId'
-const INDIVIDUAL_FIELD_MATERNAL_ID = 'maternalId'
-const INDIVIDUAL_FIELD_SEX = 'sex'
-const INDIVIDUAL_FIELD_AFFECTED = 'affected'
-const INDIVIDUAL_FIELD_NOTES = 'notes'
-
-export const INDIVIDUAL_FIELD_CONFIGS = {
-  [FAMILY_FIELD_ID]: { label: 'Family ID' },
-  [INDIVIDUAL_FIELD_ID]: { label: 'Individual ID' },
-  [INDIVIDUAL_FIELD_PATERNAL_ID]: { label: 'Paternal ID', description: 'Individual ID of the father' },
-  [INDIVIDUAL_FIELD_MATERNAL_ID]: { label: 'Maternal ID', description: 'Individual ID of the mother' },
-  [INDIVIDUAL_FIELD_SEX]: {
-    label: 'Sex',
-    format: sex => SEX_LOOKUP[sex],
-    width: 3,
-    description: 'Male or Female, leave blank if unknown',
-    formFieldProps: { component: RadioGroup, options: SEX_OPTIONS },
-  },
-  [INDIVIDUAL_FIELD_AFFECTED]: {
-    label: 'Affected Status',
-    format: affected => AFFECTED_LOOKUP[affected],
-    width: 4,
-    description: 'Affected or Unaffected, leave blank if unknown',
-    formFieldProps: { component: RadioGroup, options: AFFECTED_OPTIONS },
-  },
-  [INDIVIDUAL_FIELD_NOTES]: { label: 'Notes', format: stripMarkdown, description: 'free-text notes related to this individual'  },
-}
-
 export const INDIVIDUAL_FIELDS = [
   FAMILY_FIELD_ID,
   INDIVIDUAL_FIELD_ID,
@@ -455,6 +424,10 @@ export const INDIVIDUAL_FIELDS = [
   INDIVIDUAL_FIELD_AFFECTED,
 ].map(tableConfigForField(INDIVIDUAL_FIELD_CONFIGS))
 
+export const INTERNAL_FAMILY_EXPORT_DATA = [
+  { header: 'Internal Case Review Summary', field: FAMILY_FIELD_INTERNAL_SUMMARY, format: stripMarkdown },
+  { header: 'Internal Case Review Notes', field: FAMILY_FIELD_INTERNAL_NOTES, format: stripMarkdown },
+]
 export const INDIVIDUAL_NOTES_CONFIG = tableConfigForField(INDIVIDUAL_FIELD_CONFIGS)(INDIVIDUAL_FIELD_NOTES)
 
 export const INDIVIDUAL_ID_EXPORT_DATA = [
@@ -468,29 +441,6 @@ export const INDIVIDUAL_CORE_EXPORT_DATA = [
   INDIVIDUAL_FIELD_AFFECTED,
   INDIVIDUAL_FIELD_NOTES,
 ].map(exportConfigForField(INDIVIDUAL_FIELD_CONFIGS))
-
-export const INDIVIDUAL_HPO_EXPORT_DATA = [
-  {
-    header: 'HPO Terms (present)',
-    field: 'phenotipsData',
-    format: phenotipsData => (
-      (phenotipsData || {}).features ?
-        phenotipsData.features.filter(feature => feature.observed === 'yes').map(feature => `${feature.id} (${feature.label})`).join('; ') :
-        ''
-    ),
-    description: 'comma-separated list of HPO Terms for present phenotypes in this individual',
-  },
-  {
-    header: 'HPO Terms (absent)',
-    field: 'phenotipsData',
-    format: phenotipsData => (
-      (phenotipsData || {}).features ?
-        phenotipsData.features.filter(feature => feature.observed === 'no').map(feature => `${feature.id} (${feature.label})`).join('; ') :
-        ''
-    ),
-    description: 'comma-separated list of HPO Terms for phenotypes not present in this individual',
-  },
-]
 
 export const INDIVIDUAL_EXPORT_DATA = [].concat(INDIVIDUAL_ID_EXPORT_DATA, INDIVIDUAL_CORE_EXPORT_DATA, INDIVIDUAL_HPO_EXPORT_DATA)
 
