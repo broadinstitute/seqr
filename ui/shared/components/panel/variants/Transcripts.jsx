@@ -11,7 +11,11 @@ import { ProteinSequence } from './Annotations'
 import { GENOME_VERSION_37 } from '../../../utils/constants'
 
 
-const TranscriptLink = styled.a`
+export const TranscriptLink = styled.a.attrs({
+  target: '_blank',
+  href: ({ variant, transcript }) => `http://${variant.genomeVersion === GENOME_VERSION_37 ? 'grch37' : 'useast'}.ensembl.org/Homo_sapiens/Transcript/Summary?t=${transcript.transcriptId}`,
+  children: ({ transcript }) => transcript.transcriptId,
+})`
   font-size: 1.3em;
   font-weight: ${(props) => { return props.isChosen ? 'bold' : 'normal' }}
 `
@@ -45,12 +49,10 @@ const Transcripts = ({ variant, genesById }) =>
               <Table.Row key={transcript.transcriptId}>
                 <Table.Cell width={3}>
                   <TranscriptLink
-                    target="_blank"
-                    href={`http://${variant.genomeVersion === GENOME_VERSION_37 ? 'grch37' : 'useast'}.ensembl.org/Homo_sapiens/Transcript/Summary?t=${transcript.transcriptId}`}
+                    variant={variant}
+                    transcript={transcript}
                     isChosen={transcript.transcriptRank === 0}
-                  >
-                    {transcript.transcriptId}
-                  </TranscriptLink>
+                  />
                   <div>
                     {transcript.transcriptRank === 0 &&
                       <span>

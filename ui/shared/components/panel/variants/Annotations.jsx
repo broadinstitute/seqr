@@ -6,7 +6,7 @@ import { Popup, Label, Icon } from 'semantic-ui-react'
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
 import Modal from '../../modal/Modal'
 import { ButtonLink } from '../../StyledComponents'
-import Transcripts from './Transcripts'
+import Transcripts, { TranscriptLink } from './Transcripts'
 import { LocusListLabels } from './VariantGene'
 import { GENOME_VERSION_37 } from '../../../utils/constants'
 
@@ -129,6 +129,12 @@ const Annotations = ({ variant }) => {
       : null,
   ] : null
 
+  const transcriptPopupProps = {
+    content: <TranscriptLink variant={variant} transcript={mainTranscript} />,
+    size: 'mini',
+    hoverable: true,
+  }
+
   return (
     <div>
       { mainTranscript.majorConsequence &&
@@ -137,6 +143,7 @@ const Annotations = ({ variant }) => {
           title="Transcripts"
           size="large"
           trigger={<ButtonLink>{mainTranscript.majorConsequence.replace(/_/g, ' ')}</ButtonLink>}
+          popup={transcriptPopupProps}
         >
           <Transcripts variant={variant} />
         </Modal>
