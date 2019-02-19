@@ -298,8 +298,7 @@ def variant_details(variant_json, project, user):
             'primate_ai': annotation.get('primate_ai_score'),
             'revel': annotation.get('revel_score'),
             'sift': annotation.get('sift'),
-            # TODO rename field
-            'splice_ai_delta_score': annotation.get('splice_ai_delta_score'),
+            'splice_ai': annotation.get('splice_ai_delta_score'),
         },
         'mainTranscript': variant_main_transcript(variant_json),
         'clinvar': {

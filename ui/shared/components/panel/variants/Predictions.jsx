@@ -74,8 +74,7 @@ const PREDICTOR_FIELDS = [
   { field: 'mpc', warningThreshold: 1, dangerThreshold: 2 },
   { field: 'primate_ai', warningThreshold: 0.5, dangerThreshold: 0.7 },
   { field: 'polyphen', indicatorMap: POLYPHEN_MAP },
-  // TODO ADD THIS FOR REAL
-  { field: 'splice_ai_delta_score', name: 'SPLICE AI', warningThreshold: 0.5, dangerThreshold: 0.8 },
+  { field: 'splice_ai', warningThreshold: 0.5, dangerThreshold: 0.8 },
   { field: 'polyphen' },
   { field: 'sift' },
   { field: 'mut_taster', indicatorMap: MUTTASTER_MAP },
