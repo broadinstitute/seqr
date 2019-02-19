@@ -51,6 +51,7 @@ class RichTextEditor extends React.Component {
     this.state = { editorState }
 
     this.handleKeyCommand = this._handleKeyCommand.bind(this)
+    this.setEditorRef = (ref) => { this.editor = ref }
   }
 
   getMarkdown() {
@@ -97,10 +98,15 @@ class RichTextEditor extends React.Component {
             editorState={this.state.editorState}
             handleKeyCommand={this.handleKeyCommand}
             placeholder=""
+            ref={this.setEditorRef}
             onChange={this.updateEditorState}
           />
         </div>
       </div>)
+  }
+
+  componentDidMount() {
+    this.editor.focus()
   }
 }
 
