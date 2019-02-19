@@ -1,11 +1,12 @@
 import { Form } from 'semantic-ui-react'
 
 import { validators } from '../components/form/ReduxFormWrapper'
+import { BooleanCheckbox, RadioGroup, Dropdown, InlineToggle, Pagination } from '../components/form/Inputs'
 import BaseFieldView from '../components/panel/view-fields/BaseFieldView'
 import OptionFieldView from '../components/panel/view-fields/OptionFieldView'
 import PlainTextFieldView from '../components/panel/view-fields/PlainTextFieldView'
 
-import { BooleanCheckbox, RadioGroup, Dropdown, InlineToggle, Pagination } from '../components/form/Inputs'
+import { stripMarkdown } from './stringUtils'
 
 
 export const GENOME_VERSION_37 = '37'
@@ -151,6 +152,58 @@ export const AFFECTED_LOOKUP = AFFECTED_OPTIONS.reduce(
   }), {},
 )
 
+export const INDIVIDUAL_FIELD_ID = 'individualId'
+export const INDIVIDUAL_FIELD_PATERNAL_ID = 'paternalId'
+export const INDIVIDUAL_FIELD_MATERNAL_ID = 'maternalId'
+export const INDIVIDUAL_FIELD_SEX = 'sex'
+export const INDIVIDUAL_FIELD_AFFECTED = 'affected'
+export const INDIVIDUAL_FIELD_NOTES = 'notes'
+
+export const INDIVIDUAL_FIELD_CONFIGS = {
+  [FAMILY_FIELD_ID]: { label: 'Family ID' },
+  [INDIVIDUAL_FIELD_ID]: { label: 'Individual ID' },
+  [INDIVIDUAL_FIELD_PATERNAL_ID]: { label: 'Paternal ID', description: 'Individual ID of the father' },
+  [INDIVIDUAL_FIELD_MATERNAL_ID]: { label: 'Maternal ID', description: 'Individual ID of the mother' },
+  [INDIVIDUAL_FIELD_SEX]: {
+    label: 'Sex',
+    format: sex => SEX_LOOKUP[sex],
+    width: 3,
+    description: 'Male or Female, leave blank if unknown',
+    formFieldProps: { component: RadioGroup, options: SEX_OPTIONS },
+  },
+  [INDIVIDUAL_FIELD_AFFECTED]: {
+    label: 'Affected Status',
+    format: affected => AFFECTED_LOOKUP[affected],
+    width: 4,
+    description: 'Affected or Unaffected, leave blank if unknown',
+    formFieldProps: { component: RadioGroup, options: AFFECTED_OPTIONS },
+  },
+  [INDIVIDUAL_FIELD_NOTES]: { label: 'Notes', format: stripMarkdown, description: 'free-text notes related to this individual' },
+}
+
+
+export const INDIVIDUAL_HPO_EXPORT_DATA = [
+  {
+    header: 'HPO Terms (present)',
+    field: 'phenotipsData',
+    format: phenotipsData => (
+      (phenotipsData || {}).features ?
+        phenotipsData.features.filter(feature => feature.observed === 'yes').map(feature => `${feature.id} (${feature.label})`).join('; ') :
+        ''
+    ),
+    description: 'comma-separated list of HPO Terms for present phenotypes in this individual',
+  },
+  {
+    header: 'HPO Terms (absent)',
+    field: 'phenotipsData',
+    format: phenotipsData => (
+      (phenotipsData || {}).features ?
+        phenotipsData.features.filter(feature => feature.observed === 'no').map(feature => `${feature.id} (${feature.label})`).join('; ') :
+        ''
+    ),
+    description: 'comma-separated list of HPO Terms for phenotypes not present in this individual',
+  },
+]
 
 // CLINVAR
 

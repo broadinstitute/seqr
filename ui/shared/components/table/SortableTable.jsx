@@ -39,7 +39,7 @@ const StyledSortableTable = styled(Table)`
 const ASCENDING = 'ascending'
 const DESCENDING = 'descending'
 
-const getRowColumnContent = row => col => (col.format ? col.format(row) : row[col.name])
+const getRowColumnContent = (row, isExport) => col => ((col.format && !(isExport && col.noFormatExport)) ? col.format(row) : row[col.name])
 
 class SortableTable extends React.PureComponent {
 
@@ -141,7 +141,7 @@ class SortableTable extends React.PureComponent {
             filename: downloadFileName,
             rawData: sortedData,
             headers: columns.map(config => config.content),
-            processRow: row => columns.map(getRowColumnContent(row)),
+            processRow: row => columns.map(getRowColumnContent(row, true)),
           },
         },
       ]

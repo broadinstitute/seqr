@@ -16,14 +16,6 @@ from seqr.models import Project, VariantTagType, Sample, SavedVariant
 logger = logging.getLogger(__name__)
 
 
-ZYGOSITY_MAP = {
-    -1: 'no call',
-    0: 'homozygous reference',
-    1: 'heterozygous',
-    2: 'homozygous alt',
-}
-
-
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
 def anvil_export(request, project_guid):
     if project_guid == 'all':
@@ -39,6 +31,17 @@ def anvil_export(request, project_guid):
 
     saved_variants_by_family = _get_saved_variants_by_family(projects_by_guid.values(), request.user)
 
+    gene_id_by_family = {}
+    for family_guid, saved_variants in saved_variants_by_family.items():
+        main_gene_ids = {variant['mainTranscript']['geneId'] for variant in saved_variants}
+        if len(main_gene_ids) > 1:
+            # This occurs in compound hets where some hits have a primary transcripts in different genes
+            for gene_id in main_gene_ids:
+                if all(gene_id in variant['transcripts'] for variant in saved_variants):
+                    gene_id_by_family[family_guid] = gene_id
+        else:
+            gene_id_by_family[family_guid] = main_gene_ids.pop()
+
     individuals = set()
     for family in families:
         individuals.update(family.individual_set.all())
@@ -49,20 +52,11 @@ def anvil_export(request, project_guid):
 
         saved_variants = saved_variants_by_family[row['familyGuid']]
         row['numSavedVariants'] = len(saved_variants)
-        if saved_variants:
-            main_gene_ids = {variant['mainTranscript']['geneId'] for variant in saved_variants}
-            if len(main_gene_ids) > 1:
-                # This occurs in compound hets where some hits have a primary transcripts in different genes
-                for gene_id in main_gene_ids:
-                    if all(gene_id in variant['transcripts'] for variant in saved_variants):
-                        row['geneId'] = gene_id
-            else:
-                row['geneId'] = main_gene_ids.pop()
-
-            for i, variant in enumerate(saved_variants):
-                genotype = variant['genotypes'].get(row['individualGuid'], {})
+        for i, variant in enumerate(saved_variants):
+            genotype = variant['genotypes'].get(row['individualGuid'], {})
+            if genotype.get('numAlt', -1) > 0:
                 variant_fields = {
-                    'Zygosity': ZYGOSITY_MAP.get(genotype.get('numAlt')),
+                    'Zygosity': 'heterozygous' if genotype['numAlt'] == 1 else 'homozygous',
                     'Chrom': variant['chrom'],
                     'Pos': variant['pos'],
                     'Ref': variant['ref'],
@@ -72,6 +66,7 @@ def anvil_export(request, project_guid):
                     'Transcript': variant['mainTranscript']['transcriptId'],
                 }
                 row.update({'{} - {}'.format(k, i + 1): v for k, v in variant_fields.items()})
+                row['geneId'] = gene_id_by_family.get(row['familyGuid'])
 
     genes_by_id = get_genes({row['geneId'] for row in rows if row.get('geneId')})
     for row in rows:
