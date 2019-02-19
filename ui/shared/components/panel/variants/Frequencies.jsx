@@ -8,7 +8,7 @@ import { GENOME_VERSION_37, GENOME_VERSION_38 } from '../../../utils/constants'
 
 
 const FreqValue = styled.span`
-  color: grey;
+  color: black;
 `
 
 const FreqLink = ({ url, value, variant }) => {

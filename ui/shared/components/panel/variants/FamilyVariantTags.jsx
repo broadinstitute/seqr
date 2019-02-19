@@ -104,7 +104,7 @@ const taggedByPopup = (tag, title) => trigger =>
 
 
 const ShortcutTagToggle = ({ tag, ...props }) => {
-  const toggle = <InlineToggle color={tag && tag.color} {...props} value={tag} />
+  const toggle = <InlineToggle color={tag && tag.color} divided {...props} value={tag} />
   return tag ? taggedByPopup(tag)(toggle) : toggle
 }
 

@@ -28,7 +28,7 @@ const MUTTASTER_MAP = {
 
 const PredictionValue = styled.span`
   font-weight: bolder;
-  color: grey;
+  color: black;
   text-transform: uppercase;
 `
 
