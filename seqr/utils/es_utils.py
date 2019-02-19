@@ -661,6 +661,7 @@ PREDICTION_FIELDS_CONFIG = {
     'dbnsfp_phastCons100way_vertebrate': {'response_key': 'phastcons_100_vert'},
     'dbnsfp_Polyphen2_HVAR_pred': {'response_key': 'polyphen'},
     'primate_ai_score': {'response_key': 'primate_ai'},
+    'splice_ai_delta_score': {'response_key': 'splice_ai'},
     'dbnsfp_REVEL_score': {},
     'dbnsfp_SIFT_pred': {},
 }
