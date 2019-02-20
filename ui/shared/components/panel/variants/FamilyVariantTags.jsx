@@ -275,18 +275,22 @@ const FamilyVariantTags = ({ variant, family, project, dispatchUpdateVariantNote
           </NoteContainer>
         </div>
       </InlineContainer>
-      {variant.variantGuid &&
-        <VariantLinkContainer>
-          <NavLink to={`/project/${variant.projectGuid}/saved_variants/variant/${variant.variantGuid}`} activeStyle={NO_DISPLAY}>
-            <Popup
-              trigger={<Icon name="linkify" link />}
-              content="Go to the page for this individual variant. Note: There is no additional information on this page, it is intended for sharing specific variants."
-              position="right center"
-              wide
-            />
-          </NavLink>
-        </VariantLinkContainer>
-      }
+      <VariantLinkContainer>
+        <NavLink
+          to={variant.variantGuid ?
+            `/project/${variant.projectGuid}/saved_variants/variant/${variant.variantGuid}` :
+            `/variant_search/variant/${variant.variantId}/family/${family.familyGuid}`
+          }
+          activeStyle={NO_DISPLAY}
+        >
+          <Popup
+            trigger={<Icon name="linkify" link />}
+            content="Go to the page for this individual variant. Note: There is no additional information on this page, it is intended for sharing specific variants."
+            position="right center"
+            wide
+          />
+        </NavLink>
+      </VariantLinkContainer>
     </div> : null
 )
 

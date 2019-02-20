@@ -3,7 +3,7 @@ import logging
 from django.contrib.auth.models import User
 
 from seqr.models import SavedVariant, VariantSearchResults
-from seqr.utils.es_utils import get_es_variants_by_ids, get_latest_samples_for_families, InvalidIndexException
+from seqr.utils.es_utils import get_es_variants_for_variant_tuples, InvalidIndexException
 
 from xbrowse_server.api.utils import add_extra_info_to_variants_project
 from xbrowse_server.mall import get_reference
@@ -72,10 +72,9 @@ def _retrieve_saved_variants_json(project, variant_tuples, create_if_missing=Fal
         xpos_ref_alt_family_tuples.append((xpos, ref, alt, family.family_id))
         family_id_to_guid[family.family_id] = family.guid
 
-    samples = get_latest_samples_for_families(project.family_set.filter(guid__in=family_id_to_guid.values()))
-
     try:
-        return get_es_variants_by_ids(samples, xpos_ref_alt_tuples)
+        families = project.family_set.filter(guid__in=family_id_to_guid.values())
+        return get_es_variants_for_variant_tuples(families, xpos_ref_alt_tuples)
     except InvalidIndexException:
         variants = _deprecated_retrieve_saved_variants_json(project, xpos_ref_alt_family_tuples, create_if_missing)
         for var in variants:

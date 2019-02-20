@@ -2,7 +2,7 @@ import { combineReducers } from 'redux'
 
 import { loadProject, loadFamilyProject, loadAnalysisGroupProject, updateEntity, RECEIVE_DATA } from 'redux/rootReducer'
 import { loadingReducer, createSingleObjectReducer, createSingleValueReducer, createObjectsByIdReducer } from 'redux/utils/reducerFactories'
-import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
+import { HttpRequestHelper, getUrlQueryString } from 'shared/utils/httpRequestHelper'
 import { SORT_BY_XPOS } from 'shared/utils/constants'
 
 // action creators and reducers in one file as suggested by https://github.com/erikras/ducks-modular-redux
@@ -58,29 +58,39 @@ export const saveHashedSearch = (searchHash, search) => {
 
 export const saveSearch = search => updateEntity(search, RECEIVE_SAVED_SEARCHES, '/api/saved_search')
 
-export const loadSearchedVariants = ({ searchHash, displayUpdates, queryParams, updateQueryParams }) => {
+export const loadSearchedVariants = ({ searchHash, variantId, familyGuid, displayUpdates, queryParams, updateQueryParams }) => {
   return (dispatch, getState) => {
-    dispatch({ type: UPDATE_CURRENT_SEARCH, newValue: searchHash })
     dispatch({ type: REQUEST_SEARCHED_VARIANTS })
 
     const state = getState()
 
-    let { sort, page } = displayUpdates || queryParams
-    if (!page) {
-      page = 1
-    }
-    if (!sort) {
-      sort = state.variantSearchDisplay.sort || SORT_BY_XPOS
+    const apiQueryParams = {}
+    if (searchHash) {
+      dispatch({ type: UPDATE_CURRENT_SEARCH, newValue: searchHash })
+
+      let { sort, page } = displayUpdates || queryParams
+      if (!page) {
+        page = 1
+      }
+      if (!sort) {
+        sort = state.variantSearchDisplay.sort || SORT_BY_XPOS
+      }
+
+      apiQueryParams.sort = sort.toLowerCase()
+      apiQueryParams.page = page || 1
+
+      // Update search table state and query params
+      dispatch({ type: UPDATE_SEARCHED_VARIANT_DISPLAY, updates: { sort: sort.toUpperCase(), page } })
+      updateQueryParams(apiQueryParams)
+    } else {
+      apiQueryParams.familyGuid = familyGuid
     }
 
-    // Update search table state and query params
-    dispatch({ type: UPDATE_SEARCHED_VARIANT_DISPLAY, updates: { sort: sort.toUpperCase(), page } })
-    updateQueryParams({ sort: sort.toLowerCase(), page })
-
+    const url = `/api/search/${searchHash || `variant/${variantId}`}?${getUrlQueryString(apiQueryParams)}`
     const search = state.searchesByHash[searchHash]
 
     // Fetch variants
-    new HttpRequestHelper(`/api/search/${searchHash}?sort=${sort.toLowerCase()}&page=${page || 1}`,
+    new HttpRequestHelper(url,
       (responseJson) => {
         dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
         dispatch({ type: RECEIVE_SEARCHED_VARIANTS, newValue: responseJson.searchedVariants })

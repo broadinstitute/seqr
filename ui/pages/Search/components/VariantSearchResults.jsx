@@ -39,6 +39,7 @@ const FIELDS = [
 const BaseVariantSearchResults = ({
   match, searchedVariants, variantSearchDisplay, searchedVariantExportConfig, onSubmit, load, unload, loading, errorMessage, totalVariantsCount,
 }) => {
+  const { searchHash, variantId } = match.params
   const { page = 1, recordsPerPage } = variantSearchDisplay
   const variantDisplayPageOffset = (page - 1) * recordsPerPage
   const fields = totalVariantsCount > recordsPerPage ?
@@ -46,7 +47,7 @@ const BaseVariantSearchResults = ({
     : FIELDS
   return (
     <DataLoader
-      contentId={match.params.searchHash}
+      contentId={searchHash || variantId}
       content={searchedVariants}
       loading={loading}
       load={load}
@@ -60,25 +61,27 @@ const BaseVariantSearchResults = ({
         </Grid.Row>
       }
     >
-      <LargeRow>
-        <Grid.Column width={5}>
-          {totalVariantsCount === searchedVariants.length ? 'Found ' : `Showing ${variantDisplayPageOffset + 1}-${variantDisplayPageOffset + searchedVariants.length} of `}
-          <b>{totalVariantsCount}</b> variants
-        </Grid.Column>
-        <Grid.Column width={11} floated="right" textAlign="right">
-          <ReduxFormWrapper
-            onSubmit={onSubmit}
-            form="editSearchedVariantsDisplay"
-            initialValues={variantSearchDisplay}
-            closeOnSuccess={false}
-            submitOnChange
-            inline
-            fields={fields}
-          />
-          <HorizontalSpacer width={10} />
-          <ExportTableButton downloads={searchedVariantExportConfig} buttonText="Download" />
-        </Grid.Column>
-      </LargeRow>
+      {searchHash &&
+        <LargeRow>
+          <Grid.Column width={5}>
+            {totalVariantsCount === searchedVariants.length ? 'Found ' : `Showing ${variantDisplayPageOffset + 1}-${variantDisplayPageOffset + searchedVariants.length} of `}
+            <b>{totalVariantsCount}</b> variants
+          </Grid.Column>
+          <Grid.Column width={11} floated="right" textAlign="right">
+            <ReduxFormWrapper
+              onSubmit={onSubmit}
+              form="editSearchedVariantsDisplay"
+              initialValues={variantSearchDisplay}
+              closeOnSuccess={false}
+              submitOnChange
+              inline
+              fields={fields}
+            />
+            <HorizontalSpacer width={10} />
+            <ExportTableButton downloads={searchedVariantExportConfig} buttonText="Download" />
+          </Grid.Column>
+        </LargeRow>
+      }
       <Grid.Row>
         <Grid.Column width={16}>
           <Variants variants={searchedVariants} />
@@ -112,9 +115,9 @@ const mapStateToProps = (state, ownProps) => ({
 
 const mapDispatchToProps = (dispatch, ownProps) => {
   return {
-    load: (searchHash) => {
+    load: () => {
       dispatch(loadSearchedVariants({
-        searchHash,
+        ...ownProps.match.params,
         ...ownProps,
       }))
     },

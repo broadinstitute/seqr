@@ -1,5 +1,8 @@
 import delay from 'timeout-as-promise'
 
+export const getUrlQueryString = urlParams =>
+  Object.entries(urlParams).map(([key, value]) => [key, value].map(encodeURIComponent).join('=')).join('&')
+
 /**
  * Encapsulates the cycle of:
  * 1. sending an HTTP request to the server
@@ -33,7 +36,7 @@ export class HttpRequestHelper {
    *   and append to the url as HTTP GET params (eg. "?gene=ENSG00012345&chrom=1")
    */
   get = (urlParams = {}) => {
-    const urlQueryString = Object.entries(urlParams).map(([key, value]) => [key, value].map(encodeURIComponent).join('=')).join('&')
+    const urlQueryString = getUrlQueryString(urlParams)
 
     const p = fetch(`${this.url}?${urlQueryString}`, {
       method: 'GET',

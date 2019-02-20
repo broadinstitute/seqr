@@ -7,13 +7,17 @@ from django.db.models import Q
 from django.views.decorators.csrf import csrf_exempt
 
 from seqr.models import Family, Individual, SavedVariant, VariantSearch, VariantSearchResults
-from seqr.utils.es_utils import get_es_variants, XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
+from seqr.utils.es_utils import get_es_variants, get_single_es_variant, XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.saved_variant_api import _saved_variant_genes, _add_locus_lists
 from seqr.views.pages.project_page import get_project_details
 from seqr.views.utils.export_table_utils import export_table
 from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variant, get_json_for_saved_search, get_json_for_saved_searches
+from seqr.views.utils.orm_to_json_utils import \
+    get_json_for_saved_variant, \
+    get_json_for_saved_search,\
+    get_json_for_saved_searches, \
+    _get_json_for_family
 from seqr.views.utils.permissions_utils import check_permissions
 
 
@@ -73,18 +77,39 @@ def query_variants_handler(request, search_hash):
 
     variants = get_es_variants(results_model, page=page, num_results=per_page)
 
+    response = _process_variants(variants, results_model.families)
+    response['search'] = _get_search_context(results_model)
+
+    return create_json_response(response)
+
+
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@csrf_exempt
+def query_single_variant_handler(request, variant_id):
+    """Search variants.
+    """
+    families = Family.objects.filter(guid=request.GET.get('familyGuid'))
+
+    variant = get_single_es_variant(families, variant_id)
+
+    response = _process_variants([variant], families)
+    response.update(get_project_details(families.first().project.guid, request.user))
+
+    return create_json_response(response)
+
+
+def _process_variants(variants, families):
     genes = _saved_variant_genes(variants)
     # TODO add locus lists on the client side (?)
     # TODO handle multiple projects
-    _add_locus_lists(results_model.families.first().project, variants, genes)
+    _add_locus_lists(families.first().project, variants, genes)
     saved_variants_by_guid = _get_saved_variants(variants)
 
-    return create_json_response({
+    return {
         'searchedVariants': variants,
         'savedVariantsByGuid': saved_variants_by_guid,
         'genesById': genes,
-        'search': _get_search_context(results_model),
-    })
+    }
 
 
 PREDICTION_MAP = {

@@ -25,6 +25,7 @@ const PAGE_CONFIGS = {
     originalPagePath: `family-group/guid/${entityGuid}/combine-mendelian-families`,
   }),
   results: () => ({}),
+  variant: entityGuid => ({ entity: { name: entityGuid } }),
 }
 
 
@@ -62,7 +63,10 @@ export const PageHeader = ({ projectsByGuid, familiesByGuid, analysisGroupsByGui
   if (entity) {
     project = projectsByGuid[entity.projectGuid]
     breadcrumbIdSections.push({ content: snakecaseToTitlecase(pageType) })
-    breadcrumbIdSections.push({ content: entity.displayName || entity.name, link: `/project/${entity.projectGuid}/${entityUrlPath}` })
+    breadcrumbIdSections.push({
+      content: entity.displayName || entity.name,
+      link: project && `/project/${entity.projectGuid}/${entityUrlPath}`,
+    })
     if (originalPagePath) {
       originalPages = [{ path: originalPagePath }]
     }

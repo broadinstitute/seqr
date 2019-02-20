@@ -1,5 +1,4 @@
 from collections import defaultdict
-from copy import deepcopy
 from django.db.models import Max
 import elasticsearch
 from elasticsearch_dsl import Search, Q, Index
@@ -36,7 +35,7 @@ def is_nested_genotype_index(es_index):
         return False
 
 
-def get_latest_samples_for_families(families):
+def _get_latest_samples_for_families(families):
     samples = Sample.objects.filter(
         individual__family__in=families,
         dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
@@ -50,12 +49,24 @@ def get_latest_samples_for_families(families):
     return [s for s in samples if s.loaded_date == sample_individual_max_loaded_date[s.individual.guid]]
 
 
-def get_es_variants_by_ids(samples, xpos_ref_alt_tuples):
+def get_single_es_variant(families, variant_id):
+    variants = _get_filtered_family_es_variants(families, _single_variant_id_filter(variant_id), num_results=1)
+    if not variants:
+        raise Exception('Variant {} not found'.format(variant_id))
+    return variants[0]
+
+
+def get_es_variants_for_variant_tuples(families, xpos_ref_alt_tuples):
+    return _get_filtered_family_es_variants(families, _variant_id_filter(xpos_ref_alt_tuples), num_results=len(xpos_ref_alt_tuples))
+
+
+def _get_filtered_family_es_variants(families, filter, num_results=100):
+    samples = _get_latest_samples_for_families(families)
     es_search, family_samples_by_id, _ = _get_es_search_for_samples(samples)
-    es_search = es_search.filter(_variant_id_filter(xpos_ref_alt_tuples))
+    es_search = es_search.filter(filter)
     genotypes_q, _, _ = _genotype_filter(inheritance=None, quality_filter=None, family_samples_by_id=family_samples_by_id)
     es_search = es_search.filter(genotypes_q)
-    variant_results, _ = _execute_search(es_search, family_samples_by_id, end_index=len(xpos_ref_alt_tuples))
+    variant_results, _ = _execute_search(es_search, family_samples_by_id, end_index=num_results)
     return variant_results
 
 
@@ -80,7 +91,7 @@ def get_es_variants(search_model, page=1, num_results=100):
     if invalid_items:
         raise Exception('Invalid genes/intervals: {}'.format(', '.join(invalid_items)))
 
-    samples = get_latest_samples_for_families(search_model.families.all())
+    samples = _get_latest_samples_for_families(search_model.families.all())
 
     es_search, family_samples_by_id, elasticsearch_index = _get_es_search_for_samples(
         samples, elasticsearch_index=search_model.es_index)
@@ -242,6 +253,10 @@ def _variant_id_filter(xpos_ref_alt_tuples):
         variant_ids.append('{}-{}-{}-{}'.format(chrom, pos, ref, alt))
 
     return Q('terms', variantId=variant_ids)
+
+
+def _single_variant_id_filter(variant_id):
+    return Q('term', variantId=variant_id)
 
 
 AFFECTED = Individual.AFFECTED_STATUS_AFFECTED
