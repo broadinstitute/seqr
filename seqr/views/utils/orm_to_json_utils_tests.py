@@ -2,14 +2,15 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 from reference_data.models import GeneInfo
 from seqr.models import Project, Family, Individual, Sample, SavedVariant, VariantTag, VariantFunctionalData, \
-    VariantNote, LocusList
+    VariantNote, LocusList, VariantSearch
 from seqr.views.utils.orm_to_json_utils import _get_json_for_user, _get_json_for_project, _get_json_for_family, \
     _get_json_for_individual, _get_json_for_sample, get_json_for_saved_variant, get_json_for_variant_tag, \
-    get_json_for_variant_functional_data, get_json_for_variant_note, get_json_for_locus_list, get_json_for_gene
+    get_json_for_variant_functional_data, get_json_for_variant_note, get_json_for_locus_list, get_json_for_gene, \
+    get_json_for_saved_search
 
 
 class JSONUtilsTest(TestCase):
-    fixtures = ['users.json', '1kg_project', 'reference_data']
+    fixtures = ['users.json', '1kg_project', 'reference_data', 'variant_searches']
 
     def test_json_for_user(self):
         for user in User.objects.all():
@@ -118,6 +119,20 @@ class JSONUtilsTest(TestCase):
              'noteGuid', 'note', 'submitToClinvar', 'lastModifiedDate', 'createdBy'
         }
         self.assertSetEqual(set(json.keys()), fields)
+
+    def test_json_for_saved_search(self):
+        search = VariantSearch.objects.first()
+        user = User.objects.filter(is_staff=True).first()
+        json = get_json_for_saved_search(search, user)
+
+        fields = {'savedSearchGuid', 'name', 'search'}
+        self.assertSetEqual(set(json.keys()), fields)
+        self.assertTrue('hgmd' in json['search']['pathogenicity'])
+
+        user = User.objects.filter(is_staff=False).first()
+        json = get_json_for_saved_search(search, user)
+        self.assertSetEqual(set(json.keys()), fields)
+        self.assertFalse('hgmd' in json['search']['pathogenicity'])
 
     def test_json_for_locus_list(self):
         locus_list = LocusList.objects.first()

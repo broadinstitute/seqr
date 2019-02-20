@@ -227,7 +227,7 @@ def update_saved_variant_json(request, project_guid):
 
 # TODO process data before saving and then get rid of this
 def variant_details(variant_json, project, user):
-    if variant_json.get('mainTranscript'):
+    if 'mainTranscript' in variant_json:
         return variant_json
 
     annotation = variant_json.get('annotation') or {}

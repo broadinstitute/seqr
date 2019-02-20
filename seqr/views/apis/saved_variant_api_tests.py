@@ -4,8 +4,8 @@ import mock
 from django.test import TransactionTestCase
 from django.urls.base import reverse
 
-from seqr.models import VariantNote, VariantTag, VariantFunctionalData
-from seqr.views.apis.saved_variant_api import saved_variant_data, create_variant_note_handler, \
+from seqr.models import SavedVariant, VariantNote, VariantTag, VariantFunctionalData
+from seqr.views.apis.saved_variant_api import saved_variant_data, create_variant_note_handler, create_saved_variant_handler, \
     update_variant_note_handler, delete_variant_note_handler, update_variant_tags_handler, update_saved_variant_json
 from seqr.views.utils.test_utils import _check_login
 
@@ -52,6 +52,60 @@ class ProjectAPITest(TransactionTestCase):
         # filter by invalid variant guid
         response = self.client.get('{}foo'.format(url))
         self.assertEqual(response.status_code, 404)
+
+    def test_create_saved_variant(self):
+        create_saved_variant_url = reverse(create_saved_variant_handler)
+        _check_login(self, create_saved_variant_url)
+
+        variant_json = {
+            'alt': 'A',
+            'chrom': '2',
+            'genotypes': {},
+            'genomeVersion': '37',
+            'mainTranscript': {},
+            'originalAltAlleles': ['A'],
+            'populations': {'callset': {'ac': 2, 'af': 0.063, 'an': 32}},
+            'pos': 61413835,
+            'predictions': {'cadd': 21.9},
+            'ref': 'AAAG',
+            'transcripts': {},
+            'xpos': 2061413835,
+            'projectGuid': 'R0001_1kg',
+            'familyGuids': ['F000001_1'],
+            'variantId': '2-61413835-AAAG-A',
+        }
+
+        request_body = {
+            'searchHash': 'd380ed0fd28c3127d07a64ea2ba907d7',
+            'familyGuid': 'F000001_1',
+            'tags': [{'name': 'Review'}],
+            'notes': [],
+            'functionalData': [],
+        }
+        request_body.update(variant_json)
+
+        response = self.client.post(create_saved_variant_url, content_type='application/json', data=json.dumps(request_body))
+
+        self.assertEqual(response.status_code, 200)
+
+        self.assertEqual(len(response.json()['savedVariantsByGuid']), 1)
+        variant_guid = response.json()['savedVariantsByGuid'].keys()[0]
+
+        saved_variant = SavedVariant.objects.get(guid=variant_guid, family__guid='F000001_1')
+        self.assertDictEqual(variant_json, json.loads(saved_variant.saved_variant_json))
+
+        variant_json.update({
+            'variantId': variant_guid,
+            'variantGuid': variant_guid,
+            'notes': [],
+            'functionalData': [],
+        })
+        response_variant_json = response.json()['savedVariantsByGuid'][variant_guid]
+        tags = response_variant_json.pop('tags')
+        self.assertDictEqual(variant_json, response_variant_json)
+
+        self.assertListEqual(["Review"], [vt['name'] for vt in tags])
+        self.assertListEqual(["Review"], [vt.variant_tag_type.name for vt in VariantTag.objects.filter(saved_variant__guid=variant_guid)])
 
     def test_create_update_and_delete_variant_note(self):
         create_variant_note_url = reverse(create_variant_note_handler, args=[VARIANT_GUID])
@@ -100,10 +154,10 @@ class ProjectAPITest(TransactionTestCase):
 
     def test_update_variant_tags(self):
         variant_tags = VariantTag.objects.filter(saved_variant__guid=VARIANT_GUID)
-        self.assertListEqual(["Review", "Tier 1 - Novel gene and phenotype"], [vt.variant_tag_type.name for vt in variant_tags])
+        self.assertSetEqual({"Review", "Tier 1 - Novel gene and phenotype"}, {vt.variant_tag_type.name for vt in variant_tags})
         variant_functional_data = VariantFunctionalData.objects.filter(saved_variant__guid=VARIANT_GUID)
-        self.assertListEqual(["Biochemical Function", "Genome-wide Linkage"], [vt.functional_data_tag for vt in variant_functional_data])
-        self.assertListEqual(["A note", "2"], [vt.metadata for vt in variant_functional_data])
+        self.assertSetEqual({"Biochemical Function", "Genome-wide Linkage"}, {vt.functional_data_tag for vt in variant_functional_data})
+        self.assertSetEqual({"A note", "2"}, {vt.metadata for vt in variant_functional_data})
 
         update_variant_tags_url = reverse(update_variant_tags_handler, args=[VARIANT_GUID])
         _check_login(self, update_variant_tags_url)
@@ -119,16 +173,16 @@ class ProjectAPITest(TransactionTestCase):
 
         tags = response.json()['savedVariantsByGuid'][VARIANT_GUID]['tags']
         self.assertEqual(len(tags), 2)
-        self.assertListEqual(["Review", "Excluded"], [vt['name'] for vt in tags])
-        self.assertListEqual(["Review", "Excluded"], [vt.variant_tag_type.name for vt in VariantTag.objects.filter(saved_variant__guid=VARIANT_GUID)])
+        self.assertSetEqual({"Review", "Excluded"}, {vt['name'] for vt in tags})
+        self.assertSetEqual({"Review", "Excluded"}, {vt.variant_tag_type.name for vt in VariantTag.objects.filter(saved_variant__guid=VARIANT_GUID)})
 
         functionalData = response.json()['savedVariantsByGuid'][VARIANT_GUID]['functionalData']
         self.assertEqual(len(functionalData), 2)
-        self.assertListEqual(["Biochemical Function", "Bonferroni corrected p-value"], [vt['name'] for vt in functionalData])
-        self.assertListEqual(["An updated note", "0.05"], [vt['metadata'] for vt in functionalData])
+        self.assertSetEqual({"Biochemical Function", "Bonferroni corrected p-value"}, {vt['name'] for vt in functionalData})
+        self.assertSetEqual({"An updated note", "0.05"}, {vt['metadata'] for vt in functionalData})
         variant_functional_data = VariantFunctionalData.objects.filter(saved_variant__guid=VARIANT_GUID)
-        self.assertListEqual(["Biochemical Function", "Bonferroni corrected p-value"], [vt.functional_data_tag for vt in variant_functional_data])
-        self.assertListEqual(["An updated note", "0.05"], [vt.metadata for vt in variant_functional_data])
+        self.assertSetEqual({"Biochemical Function", "Bonferroni corrected p-value"}, {vt.functional_data_tag for vt in variant_functional_data})
+        self.assertSetEqual({"An updated note", "0.05"}, {vt.metadata for vt in variant_functional_data})
 
     @mock.patch('seqr.views.utils.variant_utils._retrieve_saved_variants_json')
     def test_update_saved_variant_json(self, mock_retrieve_variants):

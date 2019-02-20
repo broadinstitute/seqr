@@ -430,15 +430,17 @@ CSRF_COOKIE_HTTPONLY = True
 
 
 if len(sys.argv) >= 2 and sys.argv[1] == 'test':
-    # use in-memory sqlite database for running tests
+    # use in-memory database for running tests
     DATABASES['default'] = {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': 'seqr_test_db.sqlite',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'seqr_test_db',
         'USER': '',
         'PASSWORD': '',
         'HOST': '',
         'PORT': '',
     }
+    os.system("postgres")
+    os.system("createdb seqr_test_db")
 
 logger.info("MONGO_SERVICE_HOSTNAME: " + MONGO_SERVICE_HOSTNAME)
 logger.info("PHENOTIPS_SERVICE_HOSTNAME: " + PHENOTIPS_SERVICE_HOSTNAME)

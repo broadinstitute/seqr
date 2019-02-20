@@ -543,4 +543,4 @@ def get_json_for_saved_searches(search, user):
 
 
 def get_json_for_saved_search(search, user):
-    return _get_json_for_model(search, user, get_json_for_models=get_json_for_saved_searches)
+    return _get_json_for_model(search, user=user, get_json_for_models=get_json_for_saved_searches)

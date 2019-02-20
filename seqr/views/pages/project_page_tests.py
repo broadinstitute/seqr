@@ -2,12 +2,16 @@ import mock
 from django.test import TestCase
 from django.urls.base import reverse
 
-from seqr.views.pages.project_page import project_page_data, export_project_individuals_handler
+from seqr.views.pages.project_page import project_page_data, family_page_data, analysis_group_page_data, \
+    export_project_individuals_handler
 from seqr.views.utils.test_utils import _check_login
 
 MME_INDIVIDUAL_ID = 'IND_012'
 
 PROJECT_GUID = 'R0001_1kg'
+FAMILY_GUID = 'F000001_1'
+ANALYSIS_GROUP_GUID = 'AG0000183_test_group'
+
 
 def find_mme_matches(search):
     return [{
@@ -85,6 +89,46 @@ class ProjectPageTest(TestCase):
             set(response_json['matchmakerSubmissions'].values()[0][MME_INDIVIDUAL_ID].keys()),
             {'submissionDate', 'projectId', 'familyId', 'individualId', 'submittedData'}
         )
+
+    @mock.patch('seqr.views.pages.project_page.SEQR_ID_TO_MME_ID_MAP.find', find_mme_matches)
+    @mock.patch('seqr.views.pages.project_page._has_gene_search', _has_gene_search)
+    @mock.patch('seqr.views.apis.locus_list_api.get_objects_for_group', get_objects_for_group)
+    def test_family_page_data(self):
+        url = reverse(family_page_data, args=[FAMILY_GUID])
+        _check_login(self, url)
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+
+        response_json = response.json()
+        self.assertSetEqual(
+            set(response_json.keys()),
+            {'projectsByGuid', 'familiesByGuid', 'individualsByGuid', 'samplesByGuid', 'locusListsByGuid',
+             'analysisGroupsByGuid', 'matchmakerSubmissions'}
+        )
+
+        self.assertTrue(PROJECT_GUID in response_json['projectsByGuid'])
+        self.assertTrue(FAMILY_GUID in response_json['familiesByGuid'])
+
+    @mock.patch('seqr.views.pages.project_page.SEQR_ID_TO_MME_ID_MAP.find', find_mme_matches)
+    @mock.patch('seqr.views.pages.project_page._has_gene_search', _has_gene_search)
+    @mock.patch('seqr.views.apis.locus_list_api.get_objects_for_group', get_objects_for_group)
+    def test_analysis_group_page_data(self):
+        url = reverse(analysis_group_page_data, args=[ANALYSIS_GROUP_GUID])
+        _check_login(self, url)
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+
+        response_json = response.json()
+        self.assertSetEqual(
+            set(response_json.keys()),
+            {'projectsByGuid', 'familiesByGuid', 'individualsByGuid', 'samplesByGuid', 'locusListsByGuid',
+             'analysisGroupsByGuid', 'matchmakerSubmissions'}
+        )
+
+        self.assertTrue(PROJECT_GUID in response_json['projectsByGuid'])
+        self.assertTrue(ANALYSIS_GROUP_GUID in response_json['analysisGroupsByGuid'])
 
     @mock.patch('seqr.views.pages.project_page._has_gene_search', _has_gene_search)
     def test_export_tables(self):
