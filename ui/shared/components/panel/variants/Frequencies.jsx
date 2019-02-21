@@ -11,8 +11,12 @@ const FreqValue = styled.span`
   color: black;
 `
 
-const FreqLink = ({ url, value, variant }) => {
-  const { chrom, pos } = variant
+const FreqLink = ({ url, value, variant, genomeVersions = [GENOME_VERSION_37] }) => {
+  let { chrom, pos } = variant
+  if (!genomeVersions.includes(variant.genomeVersion) && genomeVersions.includes(variant.liftedOverGenomeVersion)) {
+    chrom = variant.liftedOverChrom
+    pos = variant.liftedOverPos
+  }
 
   const isRegion = parseFloat(value, 10) <= 0
   let coords
@@ -34,6 +38,7 @@ FreqLink.propTypes = {
   url: PropTypes.string.isRequired,
   value: PropTypes.string,
   variant: PropTypes.object.isRequired,
+  genomeVersions: PropTypes.array,
 }
 
 const FreqSummary = ({ field, fieldTitle, variant, urls, hasLink, showAC, precision = 2 }) => {
@@ -62,6 +67,7 @@ const FreqSummary = ({ field, fieldTitle, variant, urls, hasLink, showAC, precis
               url={urls ? urls[variant.genomeVersion] : `${field.split('_')[0]}.broadinstitute.org`}
               value={value}
               variant={variant}
+              genomeVersions={urls && Object.keys(urls)}
             /> : value
           }
         </b>
