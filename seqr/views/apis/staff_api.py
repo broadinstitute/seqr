@@ -31,22 +31,26 @@ def anvil_export(request, project_guid):
 
     saved_variants_by_family = _get_saved_variants_by_family(projects_by_guid.values(), request.user)
 
-    gene_id_by_family = {}
+    # Handle compound het genes
+    compound_het_gene_id_by_family = {}
     for family_guid, saved_variants in saved_variants_by_family.items():
-        main_gene_ids = {variant['mainTranscript']['geneId'] for variant in saved_variants}
-        if len(main_gene_ids) > 1:
-            # This occurs in compound hets where some hits have a primary transcripts in different genes
-            for gene_id in main_gene_ids:
-                if all(gene_id in variant['transcripts'] for variant in saved_variants):
-                    gene_id_by_family[family_guid] = gene_id
-        else:
-            gene_id_by_family[family_guid] = main_gene_ids.pop()
+        if len(saved_variants) > 1:
+            potential_compound_het_variants = [
+                variant for variant in saved_variants if all(gen['numAlt'] < 2 for gen in variant['genotypes'].values())
+            ]
+            main_gene_ids = {variant['mainTranscript']['geneId'] for variant in potential_compound_het_variants}
+            if len(main_gene_ids) > 1:
+                # This occurs in compound hets where some hits have a primary transcripts in different genes
+                for gene_id in main_gene_ids:
+                    if all(gene_id in variant['transcripts'] for variant in potential_compound_het_variants):
+                        compound_het_gene_id_by_family[family_guid] = gene_id
 
     individuals = set()
     for family in families:
         individuals.update(family.individual_set.all())
     rows = _get_json_for_individuals(list(individuals), project_guid=project_guid, family_fields=['family_id', 'coded_phenotype'])
 
+    gene_ids = set()
     for row in rows:
         row['Project ID'] = projects_by_guid[row['projectGuid']].name
 
@@ -55,6 +59,8 @@ def anvil_export(request, project_guid):
         for i, variant in enumerate(saved_variants):
             genotype = variant['genotypes'].get(row['individualGuid'], {})
             if genotype.get('numAlt', -1) > 0:
+                gene_id = compound_het_gene_id_by_family.get(row['familyGuid']) or variant['mainTranscript']['geneId']
+                gene_ids.add(gene_id)
                 variant_fields = {
                     'Zygosity': 'heterozygous' if genotype['numAlt'] == 1 else 'homozygous',
                     'Chrom': variant['chrom'],
@@ -64,14 +70,15 @@ def anvil_export(request, project_guid):
                     'hgvsc': variant['mainTranscript']['hgvsc'],
                     'hgvsp': variant['mainTranscript']['hgvsp'],
                     'Transcript': variant['mainTranscript']['transcriptId'],
+                    'geneId': gene_id,
                 }
                 row.update({'{} - {}'.format(k, i + 1): v for k, v in variant_fields.items()})
-                row['geneId'] = gene_id_by_family.get(row['familyGuid'])
 
-    genes_by_id = get_genes({row['geneId'] for row in rows if row.get('geneId')})
+    genes_by_id = get_genes(gene_ids)
     for row in rows:
-        if row.get('geneId') and genes_by_id.get(row['geneId']):
-            row['Causal gene'] = genes_by_id[row['geneId']]['geneSymbol']
+        for key, gene_id in row.items():
+            if key.startswith('geneId') and genes_by_id.get(gene_id):
+                row[key.replace('geneId', 'Gene')] = genes_by_id[gene_id]['geneSymbol']
 
     #
     return create_json_response({'anvilRows': rows})
