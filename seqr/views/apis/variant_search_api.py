@@ -16,8 +16,7 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import \
     get_json_for_saved_variant, \
     get_json_for_saved_search,\
-    get_json_for_saved_searches, \
-    _get_json_for_family
+    get_json_for_saved_searches
 from seqr.views.utils.permissions_utils import check_permissions
 
 
@@ -67,11 +66,15 @@ def query_variants_handler(request, search_hash):
         results_model.save()
 
     elif results_model.sort != sort:
-        results_model, _ = VariantSearchResults.objects.get_or_create(
+        families = results_model.families.all()
+        results_model, created = VariantSearchResults.objects.get_or_create(
             search_hash=search_hash,
             variant_search=results_model.variant_search,
             sort=sort
         )
+        if created:
+            results_model.families = families
+            results_model.save()
 
     _check_results_permission(results_model, request.user)
 
@@ -173,7 +176,7 @@ VARIANT_GENOTYPE_EXPORT_DATA = [
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def export_variants_handler(request, search_hash):
-    results_model = VariantSearchResults.objects.get(search_hash=search_hash)
+    results_model = VariantSearchResults.objects.filter(search_hash=search_hash).first()
 
     _check_results_permission(results_model, request.user)
 
