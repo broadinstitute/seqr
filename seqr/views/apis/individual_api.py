@@ -128,7 +128,7 @@ def edit_individuals_handler(request, project_guid):
     modified_family_ids.update({ind.family.family_id for ind in update_individual_models.values()})
     related_individuals = Individual.objects.filter(
         family__family_id__in=modified_family_ids, family__project=project).exclude(guid__in=update_individuals.keys())
-    related_individuals_json = _get_json_for_individuals(related_individuals, project_guid=project_guid, add_family_id_field=True)
+    related_individuals_json = _get_json_for_individuals(related_individuals, project_guid=project_guid, family_fields=['family_id'])
     individuals_list = modified_individuals_list + related_individuals_json
 
     # TODO more validation?

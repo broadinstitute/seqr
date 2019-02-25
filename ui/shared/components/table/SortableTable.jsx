@@ -4,8 +4,19 @@ import styled from 'styled-components'
 import { Table, Checkbox, Pagination, Form } from 'semantic-ui-react'
 
 import { compareObjects } from '../../utils/sortUtils'
+import ExportTableButton from '../buttons/export-table/ExportTableButton'
 import { configuredField } from '../form/ReduxFormWrapper'
 import TableLoading from './TableLoading'
+
+const TableContainer = styled.div`
+  overflow-x: ${props => (props.horizontalScroll ? 'scroll' : 'inherit')};
+`
+
+const RightAligned = styled.span`
+  position: absolute;
+  right: 20px;
+  top: 30px;
+`
 
 const StyledSortableTable = styled(Table)`
   &.ui.sortable.table thead th {
@@ -28,6 +39,8 @@ const StyledSortableTable = styled(Table)`
 const ASCENDING = 'ascending'
 const DESCENDING = 'descending'
 
+const getRowColumnContent = (row, isExport) => col => ((col.format && !(isExport && col.noFormatExport)) ? col.format(row) : row[col.name])
+
 class SortableTable extends React.PureComponent {
 
   static propTypes = {
@@ -42,6 +55,9 @@ class SortableTable extends React.PureComponent {
     emptyContent: PropTypes.node,
     footer: PropTypes.node,
     rowsPerPage: PropTypes.number,
+    horizontalScroll: PropTypes.bool,
+    downloadTableType: PropTypes.string,
+    downloadFileName: PropTypes.string,
   }
 
   static defaultProps = {
@@ -106,7 +122,7 @@ class SortableTable extends React.PureComponent {
   render() {
     const {
       data, defaultSortColumn, filterColumn, idField, columns, selectRows, selectedRows = {}, loading, emptyContent,
-      footer, rowsPerPage, ...tableProps
+      footer, rowsPerPage, horizontalScroll, downloadFileName, downloadTableType, ...tableProps
     } = this.props
     const { column, direction, activePage, filter } = this.state
 
@@ -115,6 +131,22 @@ class SortableTable extends React.PureComponent {
     if (direction === DESCENDING) {
       sortedData = sortedData.reverse()
     }
+
+    let exportConfig
+    if (downloadFileName) {
+      exportConfig = [
+        {
+          name: downloadTableType || 'All Data',
+          data: {
+            filename: downloadFileName,
+            rawData: sortedData,
+            headers: columns.map(config => config.content),
+            processRow: row => columns.map(getRowColumnContent(row, true)),
+          },
+        },
+      ]
+    }
+
     if (filter) {
       sortedData = sortedData.filter(row => row[filterColumn].toLowerCase().startsWith(filter))
       totalRows = sortedData.length
@@ -144,7 +176,7 @@ class SortableTable extends React.PureComponent {
           {processedColumns.map(({ name, format, textAlign, verticalAlign }) =>
             <Table.Cell
               key={name}
-              content={format ? format(row) : row[name]}
+              content={getRowColumnContent(row)({ format, name })}
               textAlign={textAlign}
               verticalAlign={verticalAlign}
             />,
@@ -155,8 +187,19 @@ class SortableTable extends React.PureComponent {
 
     const hasFooter = footer || isPaginated || filterColumn
     return (
-      <div>
-        <StyledSortableTable sortable selectable={!!selectRows} columns={columns.length} attached={hasFooter && 'top'} {...tableProps}>
+      <TableContainer horizontalScroll={horizontalScroll}>
+        {exportConfig &&
+          <RightAligned>
+            <ExportTableButton downloads={exportConfig} />
+          </RightAligned>
+        }
+        <StyledSortableTable
+          sortable
+          selectable={!!selectRows}
+          columns={columns.length <= 16 ? columns.length : null}
+          attached={hasFooter && 'top'}
+          {...tableProps}
+        >
           <Table.Header>
             <Table.Row>
               {selectRows &&
@@ -204,7 +247,7 @@ class SortableTable extends React.PureComponent {
             </Table.Footer>
           </Table>
         }
-      </div>
+      </TableContainer>
     )
   }
 }

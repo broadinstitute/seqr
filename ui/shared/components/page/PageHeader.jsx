@@ -8,6 +8,7 @@ import { Grid, Breadcrumb } from 'semantic-ui-react'
 
 import ProjectPageHeader from 'pages/Project/components/PageHeader'
 import { LocusListPageHeader } from 'pages/LocusLists'
+import { StaffPageHeader } from 'pages/Staff/Staff'
 import { getGenesById } from 'redux/selectors'
 import { snakecaseToTitlecase } from '../../utils/stringUtils'
 
@@ -166,5 +167,6 @@ export default () =>
     <Route path="/project/:projectGuid/:breadcrumb/:breadcrumbId*" component={ProjectPageHeader} />
     <Route path="/gene_lists/:locusListGuid?" component={LocusListPageHeader} />
     <Route path="/gene_info/:geneId?" component={GenePageHeader} />
+    <Route path="/staff" component={StaffPageHeader} />
     <Route path="/:entity/:entityGuid?/:breadcrumb?/:breadcrumbId*" component={({ match }) => <PageHeaderLayout {...match.params} />} />
   </Switch>
