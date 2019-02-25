@@ -292,7 +292,7 @@ class ElasticsearchDatastore(datastore.Datastore):
         min_gq = None
         if quality_filter is not None and indivs_to_consider:
             min_ab = quality_filter.get('min_ab')
-            if min_ab is not None:
+            if min_ab is not None and not is_nested:
                 min_ab /= 100.0  # convert to fraction
             min_gq = quality_filter.get('min_gq')
             vcf_filter = quality_filter.get('vcf_filter')
@@ -349,7 +349,7 @@ class ElasticsearchDatastore(datastore.Datastore):
                     #  AB only relevant for hets
                     q = ~Q('term', samples_num_alt_1=sample_id)
                     for i in range(min_ab_filter_val, 50, 5):
-                        q = q | Q('term', **{'samples_gq_gte_{}'.format(i): sample_id})
+                        q = q | Q('term', **{'samples_ab_gte_{}'.format(i): sample_id})
                     s = s.filter(q)
             if sample_ids and min_gq is not None:
                 min_gq_filter_val = int(min_gq) - int(min_gq % 5)
