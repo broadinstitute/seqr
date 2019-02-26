@@ -554,7 +554,7 @@ def generate_rows(project, loaded_samples_by_project_family, saved_variants_by_p
                         value = f.metadata
                         if functional_field == ADDITIONAL_KINDREDS_FIELD:
                             value = str(int(value) + 1)
-                        if row[functional_field] != 'NS':
+                        elif row[functional_field] != 'NS':
                             value = '{} {}'.format(row[functional_field], value)
                     else:
                         value = 'Y'
