@@ -470,6 +470,8 @@ def generate_rows(project, loaded_samples_by_project_family, saved_variants_by_p
                     if gene_id in main_gene_ids:
                         gene_ids_to_saved_variants[gene_id] = gene_ids_to_saved_variants[existing_gene_id]
                         del gene_ids_to_saved_variants[existing_gene_id]
+                        gene_ids_to_variant_tag_names[gene_id] = gene_ids_to_variant_tag_names[existing_gene_id]
+                        del gene_ids_to_variant_tag_names[existing_gene_id]
                 else:
                     for variant in variants:
                         saved_variants_to_json[variant]['inheritance'] = {"AR-comphet"}
