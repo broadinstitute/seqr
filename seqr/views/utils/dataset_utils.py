@@ -175,18 +175,18 @@ def _get_elasticsearch_index_samples(elasticsearch_index, project):
     es_client = get_es_client(timeout=30)
     index = elasticsearch_dsl.Index('{}*'.format(elasticsearch_index), using=es_client)
     try:
-        field_mapping = index.get_field_mapping(fields=['*{}'.format(sample_field_suffix), 'samples_num_alt_1'], doc_type=[VARIANT_DOC_TYPE])
+        field_mapping = index.get_field_mapping(fields=['*{}'.format(sample_field_suffix), 'join_field'], doc_type=[VARIANT_DOC_TYPE])
     except NotFoundError:
         raise Exception('Index "{}" not found'.format(elasticsearch_index))
     except TransportError as e:
         raise Exception(e.error)
 
     #  Nested genotypes
-    if field_mapping.get(elasticsearch_index, {}).get('mappings', {}).get(VARIANT_DOC_TYPE, {}).get('samples_num_alt_1'):
+    if field_mapping.get(elasticsearch_index, {}).get('mappings', {}).get(VARIANT_DOC_TYPE, {}).get('join_field'):
         max_samples = Individual.objects.filter(family__project=project).count()
         s = elasticsearch_dsl.Search(using=es_client, index=elasticsearch_index)
         s = s.params(size=0)
-        s.aggs.bucket('sample_ids', elasticsearch_dsl.A('terms', field='samples_num_alt_1', size=max_samples))
+        s.aggs.bucket('sample_ids', elasticsearch_dsl.A('terms', field='sample_id', size=max_samples))
         response = s.execute()
         return [agg['key'] for agg in response.aggregations.sample_ids.buckets]
 
