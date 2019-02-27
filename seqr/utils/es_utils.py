@@ -316,6 +316,7 @@ def _genotype_filter(inheritance, family_samples_by_id):
                 family_samples_q |= x_linked_q
 
                 family_compound_het_q = _genotype_inheritance_filter(COMPOUND_HET, inheritance_filter, samples_by_id)
+                family_compound_het_q = Q('bool', must=[family_compound_het_q], _name=family_guid)
                 if not compound_het_q:
                     compound_het_q = family_compound_het_q
                 else:
