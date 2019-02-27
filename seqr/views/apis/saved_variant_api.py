@@ -218,7 +218,7 @@ def variant_details(variant_json, project, user=None, genotypes_by_individual_gu
         individual__family__project=project,
         loaded_date__isnull=False,
         dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS
-    ).order_by('loaded_date')
+    ).order_by('loaded_date').prefetch_related('individual')
     if genotypes_by_individual_guid:
         individual_guids_by_id = {s.individual.individual_id: s.individual.guid for s in samples}
         genotypes = {individual_guids_by_id.get(individual_id): genotype for individual_id, genotype in genotypes.items()

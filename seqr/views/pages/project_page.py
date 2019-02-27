@@ -110,10 +110,7 @@ def _retrieve_individuals(project_guid, user):
         dictionary: individuals_by_guid
     """
 
-    fields = Individual._meta.json_fields + Individual._meta.internal_json_fields + \
-             ['family__guid', 'case_review_status_last_modified_by__email']
-    individual_models = Individual.objects.filter(family__project__guid=project_guid)\
-        .select_related('family', 'case_review_status_last_modified_by').only(*fields)
+    individual_models = Individual.objects.filter(family__project__guid=project_guid)
 
     individuals = _get_json_for_individuals(individual_models, user=user, project_guid=project_guid)
 
