@@ -328,6 +328,7 @@ def _genotype_filter(inheritance, family_samples_by_id):
             else:
                 compound_het_q |= family_compound_het_q
 
+        family_samples_q = Q('bool', must=[family_samples_q], _name=family_guid)
         if not genotypes_q:
             genotypes_q = family_samples_q
         else:
@@ -632,7 +633,7 @@ def _get_sort(sort_key):
     # Add parameters to scripts
     if len(sorts) and isinstance(sorts[0], dict) and sorts[0].get('_script', {}).get('script', {}).get('params'):
         for key, val_func in sorts[0]['_script']['script']['params'].items():
-            if not isinstance(val_func, dict) or isinstance(val_func, list):
+            if not (isinstance(val_func, dict) or isinstance(val_func, list)):
                 sorts[0]['_script']['script']['params'][key] = val_func()
 
     if XPOS_SORT_KEY not in sorts:
@@ -711,32 +712,14 @@ def _parse_es_hit(raw_hit, family_samples_by_id):
     hit = {k: raw_hit[k] for k in QUERY_FIELD_NAMES if k in raw_hit}
 
     genotypes = {}
-    family_guids = []
-    for family_guid, samples_by_id in family_samples_by_id.items():
-        family_genotypes = [genotype for genotype in hit[GENOTYPES_FIELD_KEY] if genotype['sample_id'] in samples_by_id]
-        # TODO filter out families with num_alt that aren't the correct inheritance
-        if any(genotype['num_alt'] > 0 for genotype in family_genotypes):
-            family_guids.append(family_guid)
-            genotypes.update({
-                samples_by_id[genotype_hit['sample_id']].individual.guid: _get_field_values(genotype_hit,
-                                                                                            GENOTYPE_FIELDS_CONFIG)
-                for genotype_hit in family_genotypes
-            })
-
-    # genotypes = {}
-    # family_guids = []
-    # genotype_hits = raw_hit.meta.inner_hits
-    # for family_guid, samples_by_id in family_samples_by_id.items():
-    #     # For multi-family search, all genotypes are returned including for those families where not
-    #     # all individuals have the correct genotype
-    #     if family_guid in genotype_hits and len(samples_by_id) == genotype_hits[family_guid].hits.total and \
-    #             genotype_hits[family_guid].hits.max_score > 0:
-    #         family_guids.append(family_guid)
-    #         genotypes.update({
-    #             samples_by_id[genotype_hit['sample_id']].individual.guid: _get_field_values(genotype_hit,
-    #                                                                                         GENOTYPE_FIELDS_CONFIG)
-    #             for genotype_hit in genotype_hits[family_guid]
-    #         })
+    family_guids = list(raw_hit.meta.matched_queries)
+    for family_guid in family_guids:
+        samples_by_id = family_samples_by_id[family_guid]
+        genotypes.update({
+            samples_by_id[genotype_hit['sample_id']].individual.guid: _get_field_values(genotype_hit,
+                                                                                        GENOTYPE_FIELDS_CONFIG)
+            for genotype_hit in hit[GENOTYPES_FIELD_KEY] if genotype_hit['sample_id'] in samples_by_id
+        })
 
     # TODO better handling for multi-project searches
     project = family_samples_by_id[family_guids[0]].values()[0].individual.family.project
