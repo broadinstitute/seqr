@@ -689,7 +689,6 @@ GENOTYPE_FIELDS_CONFIG = {
 DEFAULT_POP_FIELD_CONFIG = {
     'format_value': int,
     'default_value': 0,
-    'no_key_use_default': False,
 }
 POPULATION_RESPONSE_FIELD_CONFIGS = {k: dict(DEFAULT_POP_FIELD_CONFIG, **v) for k, v in POPULATION_FIELD_CONFIGS.items()}
 
@@ -853,8 +852,8 @@ def _get_field_values(hit, field_configs, format_response_key=_to_camel_case, ge
     }
 
 
-def _value_if_has_key(hit, keys, format_value=None, default_value=None, no_key_use_default=True, **kwargs):
+def _value_if_has_key(hit, keys, format_value=None, default_value=None, **kwargs):
     for key in keys:
         if key in hit:
             return format_value(default_value if hit[key] is None else hit[key]) if format_value else hit[key]
-    return default_value if no_key_use_default else None
+    return default_value
