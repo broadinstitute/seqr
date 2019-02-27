@@ -29,8 +29,8 @@ def is_nested_genotype_index(es_index):
     es_client = get_es_client()
     index = Index(es_index, using=es_client)
     try:
-        field_mapping = index.get_field_mapping(fields=['join_field'], doc_type=[VARIANT_DOC_TYPE])
-        return bool(field_mapping.get(es_index, {}).get('mappings', {}).get(VARIANT_DOC_TYPE, {}).get('join_field'))
+        field_mapping = index.get_field_mapping(fields=['samples_num_alt_1'], doc_type=[VARIANT_DOC_TYPE])
+        return bool(field_mapping.get(es_index, {}).get('mappings', {}).get(VARIANT_DOC_TYPE, {}).get('samples_num_alt_1'))
     except Exception:
         return False
 
@@ -64,7 +64,7 @@ def _get_filtered_family_es_variants(families, filter, num_results=100):
     samples = _get_latest_samples_for_families(families)
     es_search, family_samples_by_id, _ = _get_es_search_for_samples(samples)
     es_search = es_search.filter(filter)
-    genotypes_q, _, _ = _genotype_filter(inheritance=None, quality_filter=None, family_samples_by_id=family_samples_by_id)
+    genotypes_q, _, _ = _genotype_filter(inheritance=None, family_samples_by_id=family_samples_by_id)
     es_search = es_search.filter(genotypes_q)
     variant_results, _ = _execute_search(es_search, family_samples_by_id, end_index=num_results)
     return variant_results
@@ -117,9 +117,10 @@ def get_es_variants(search_model, page=1, num_results=100):
     if search.get('freqs'):
         es_search = es_search.filter(_frequency_filter(search['freqs']))
 
-    genotypes_q, inheritance_mode, compound_het_q = _genotype_filter(
-        search.get('inheritance'), search.get('qualityFilter'), family_samples_by_id,
-    )
+    if search.get('qualityFilter'):
+        es_search = es_search.filter(_quality_filter(search['qualityFilter'], family_samples_by_id))
+
+    genotypes_q, inheritance_mode, compound_het_q = _genotype_filter(search.get('inheritance'), family_samples_by_id)
     compound_het_search = None
     if compound_het_q:
         compound_het_search = es_search.filter(compound_het_q)
@@ -165,7 +166,7 @@ def get_es_variants(search_model, page=1, num_results=100):
     if compound_het_results:
         previous_search_results['compound_het_results'] = compound_het_results
         variant_results += previous_search_results.get('variant_results', [])
-        previous_search_results['variant_results'] =variant_results
+        previous_search_results['variant_results'] = variant_results
 
         if total_compound_het_results is not None:
             total_results += total_compound_het_results
@@ -261,20 +262,19 @@ def _single_variant_id_filter(variant_id):
 
 AFFECTED = Individual.AFFECTED_STATUS_AFFECTED
 UNAFFECTED = Individual.AFFECTED_STATUS_UNAFFECTED
+
 ALT_ALT = 'alt_alt'
 REF_REF = 'ref_ref'
 REF_ALT = 'ref_alt'
 HAS_ALT = 'has_alt'
 HAS_REF = 'has_ref'
-# TODO no call?
 GENOTYPE_QUERY_MAP = {
-    REF_REF: 0,
-    REF_ALT: 1,
-    ALT_ALT: 2,
-    HAS_ALT: {'gte': 1},
-    HAS_REF: {'gte': 0, 'lte': 1},
+    REF_REF: {'not_allowed_num_alt': ['no_call', 'num_alt_1', 'num_alt_2']},
+    REF_ALT: {'allowed_num_alt': ['num_alt_1']},
+    ALT_ALT: {'allowed_num_alt': ['num_alt_2']},
+    HAS_ALT: {'allowed_num_alt': ['num_alt_1', 'num_alt_2']},
+    HAS_REF: {'not_allowed_num_alt': ['no_call', 'num_alt_2']},
 }
-RANGE_FIELDS = {k for k, v in GENOTYPE_QUERY_MAP.items() if type(v) != int}
 
 RECESSIVE = 'recessive'
 X_LINKED_RECESSIVE = 'x_linked_recessive'
@@ -299,81 +299,45 @@ INHERITANCE_FILTERS = {
 }
 
 
-def _genotype_filter(inheritance, quality_filter, family_samples_by_id):
-    genotypes_q = Q()
-    genotypes_child_q = None
-    compound_het_q = None
-
-    inheritance_mode = (inheritance or {}).get('mode')
-    inheritance_filter = (inheritance or {}).get('filter') or {}
-
-    quality_q = Q()
-    if quality_filter:
-        if quality_filter.get('vcf_filter') is not None:
-            genotypes_q = ~Q('exists', field='filters')
-
-        min_ab = quality_filter['min_ab'] / 100.0 if quality_filter.get('min_ab') else None
-        min_gq = quality_filter.get('min_gq')
-        if min_ab:
-            #  AB only relevant for hets
-            quality_q &= Q(~Q('term', num_alt=1) | Q('range', ab={'gte': min_ab}))
-        if min_gq:
-            quality_q &= Q('range', gq={'gte': min_gq})
-
+def _genotype_filter(inheritance, family_samples_by_id):
     # If no inheritance specified only return variants where at least one of the requested samples has an alt allele
     if not inheritance:
         all_sample_ids = []
         for samples_by_id in family_samples_by_id.values():
             all_sample_ids += samples_by_id.keys()
-        genotypes_q &= Q(
-            'has_child',
-            type='genotype',
-            query=Q(Q('range', num_alt={'gte': 1}) & quality_q & Q('terms', sample_id=all_sample_ids))
-        )
+        genotypes_q = Q('terms', samples_num_alt_1=all_sample_ids) | Q('terms', samples_num_alt_2=all_sample_ids)
+        return genotypes_q, None, None
+
+    genotypes_q = None
+    compound_het_q = None
+
+    inheritance_mode = (inheritance or {}).get('mode')
+    inheritance_filter = (inheritance or {}).get('filter') or {}
 
     for family_guid, samples_by_id in family_samples_by_id.items():
-
-        if inheritance:
-            samples_q, addl_filter = _genotype_inheritance_filter(inheritance_mode, inheritance_filter, quality_q, samples_by_id)
-            if addl_filter:
-                genotypes_q &= addl_filter
-        else:
-            samples_q = Q('function_score',
-                          field_value_factor={'field': 'num_alt'},
-                          query=Q('terms', sample_id=samples_by_id.keys()) & quality_q)
-
-        # Return variants where all requested samples meet the filtering criteria
-        family_genotypes_child_q = _genotypes_child_q(samples_q, family_guid, samples_by_id)
+        family_samples_q = _genotype_inheritance_filter(inheritance_mode, inheritance_filter, samples_by_id)
 
         # For recessive search, should be hom recessive, x-linked recessive, or compound het
         if inheritance_mode == RECESSIVE:
-            x_linked_q, addl_filter = _genotype_inheritance_filter(X_LINKED_RECESSIVE, inheritance_filter, quality_q, samples_by_id)
-            family_genotypes_child_q |= Q(addl_filter & _genotypes_child_q(x_linked_q, family_guid, samples_by_id))
+            x_linked_q = _genotype_inheritance_filter(X_LINKED_RECESSIVE, inheritance_filter, samples_by_id)
+            family_samples_q |= x_linked_q
 
-            family_compound_het_q, _ = _genotype_inheritance_filter(COMPOUND_HET, inheritance_filter, quality_q, samples_by_id)
-            family_compound_het_q = _genotypes_child_q(family_compound_het_q, family_guid, samples_by_id)
+            family_compound_het_q = _genotype_inheritance_filter(COMPOUND_HET, inheritance_filter, samples_by_id)
             if not compound_het_q:
                 compound_het_q = family_compound_het_q
             else:
                 compound_het_q |= family_compound_het_q
 
-        if not genotypes_child_q:
-            genotypes_child_q = family_genotypes_child_q
+        if not genotypes_q:
+            genotypes_q = family_samples_q
         else:
-            genotypes_child_q |= family_genotypes_child_q
-
-    genotypes_q &= genotypes_child_q
+            genotypes_q |= family_samples_q
 
     return genotypes_q, inheritance_mode, compound_het_q
 
 
-def _genotypes_child_q(samples_q, family_guid, samples_by_id):
-    return Q('has_child', type='genotype', query=samples_q, min_children=len(samples_by_id), inner_hits={'name': family_guid})
-
-
-def _genotype_inheritance_filter(inheritance_mode, inheritance_filter, quality_q, samples_by_id):
-    samples_q = None
-    global_filter = None
+def _genotype_inheritance_filter(inheritance_mode, inheritance_filter, samples_by_id):
+    samples_q = Q()
 
     individuals = [sample.individual for sample in samples_by_id.values()]
 
@@ -392,7 +356,7 @@ def _genotype_inheritance_filter(inheritance_mode, inheritance_filter, quality_q
 
     parent_x_linked_genotypes = {}
     if inheritance_mode == X_LINKED_RECESSIVE:
-        global_filter = Q('match', contig='X')
+        samples_q &= Q('match', contig='X')
         for individual in individuals:
             if individual_affected_status[individual.guid] == AFFECTED:
                 if individual.mother and individual_affected_status[individual.mother.guid] == UNAFFECTED:
@@ -401,7 +365,7 @@ def _genotype_inheritance_filter(inheritance_mode, inheritance_filter, quality_q
                     parent_x_linked_genotypes[individual.mother.guid] = REF_REF
 
     for sample_id, sample in samples_by_id.items():
-        sample_q = Q(Q('term', sample_id=sample_id) & quality_q)
+
         individual_guid = sample.individual.guid
         affected = individual_affected_status[individual_guid]
 
@@ -410,14 +374,47 @@ def _genotype_inheritance_filter(inheritance_mode, inheritance_filter, quality_q
                    or inheritance_filter.get(affected)
 
         if genotype:
-            sample_q &= Q('range' if genotype in RANGE_FIELDS else 'term', num_alt=GENOTYPE_QUERY_MAP[genotype])
+            not_allowed_num_alt = GENOTYPE_QUERY_MAP[genotype].get('not_allowed_num_alt')
+            num_alt_to_filter = not_allowed_num_alt or GENOTYPE_QUERY_MAP[genotype].get('allowed_num_alt')
+            sample_filters = [{'samples_{}'.format(num_alt): sample_id} for num_alt in num_alt_to_filter]
 
-        if not samples_q:
-            samples_q = sample_q
-        else:
-            samples_q |= sample_q
+            sample_q = _build_or_filter('term', sample_filters)
+            if not_allowed_num_alt:
+                sample_q = ~Q(sample_q)
 
-    return samples_q, global_filter
+            samples_q &= sample_q
+
+    return samples_q
+
+
+def _quality_filter(quality_filter, family_samples_by_id):
+    if quality_filter.get('vcf_filter') is not None:
+        quality_q = ~Q('exists', field='filters')
+    else:
+        quality_q = Q()
+
+    min_ab = quality_filter.get('min_ab')
+    if min_ab % 5 != 0:
+        raise Exception('Invalid ab filter {}'.format(min_ab))
+    min_gq = quality_filter.get('min_gq')
+    if min_gq % 5 != 0:
+        raise Exception('Invalid gq filter {}'.format(min_gq))
+
+    for samples_by_id in family_samples_by_id.values():
+        for sample_id in samples_by_id.keys():
+            if min_ab:
+                #  AB only relevant for hets
+                q = ~Q('term', samples_num_alt_1=sample_id)
+                q |= _build_or_filter('term', [
+                    {'samples_ab_gte_{}'.format(i): sample_id} for i in range(min_ab, 50, 5)
+                ])
+                quality_q &= q
+            if min_gq:
+                quality_q &= _build_or_filter('term', [
+                    {'samples_gq_gte_{}'.format(i): sample_id} for i in range(min_gq, 100, 5)
+                ])
+
+    return quality_q
 
 
 def _location_filter(genes, intervals, location_filter):
@@ -635,7 +632,7 @@ def _get_sort(sort_key):
     # Add parameters to scripts
     if len(sorts) and isinstance(sorts[0], dict) and sorts[0].get('_script', {}).get('script', {}).get('params'):
         for key, val_func in sorts[0]['_script']['script']['params'].items():
-            if not isinstance(val_func, dict):
+            if not isinstance(val_func, dict) or isinstance(val_func, list):
                 sorts[0]['_script']['script']['params'][key] = val_func()
 
     if XPOS_SORT_KEY not in sorts:
@@ -645,6 +642,7 @@ def _get_sort(sort_key):
 
 CLINVAR_FIELDS = ['clinical_significance', 'variation_id', 'allele_id', 'gold_stars']
 HGMD_FIELDS = ['accession', 'class']
+GENOTYPES_FIELD_KEY = 'genotypes'
 SORTED_TRANSCRIPTS_FIELD_KEY = 'sortedTranscriptConsequences'
 NESTED_FIELDS = {
     field_name: {field: {} for field in fields} for field_name, fields in {
@@ -654,14 +652,14 @@ NESTED_FIELDS = {
 }
 
 CORE_FIELDS_CONFIG = {
-    'variantId': {},
     'alt': {},
     'contig': {'response_key': 'chrom'},
-    'start': {'response_key': 'pos', 'format_value': long},
     'filters': {'response_key': 'genotypeFilters', 'format_value': lambda filters: ','.join(filters), 'default_value': []},
     'originalAltAlleles': {'format_value': lambda alleles: [a.split('-')[-1] for a in alleles], 'default_value': []},
     'ref': {},
     'rsid': {},
+    'start': {'response_key': 'pos', 'format_value': long},
+    'variantId': {},
     'xpos': {'format_value': long},
 }
 PREDICTION_FIELDS_CONFIG = {
@@ -698,7 +696,7 @@ DEFAULT_POP_FIELD_CONFIG = {
 POPULATION_RESPONSE_FIELD_CONFIGS = {k: dict(DEFAULT_POP_FIELD_CONFIG, **v) for k, v in POPULATION_FIELD_CONFIGS.items()}
 
 
-QUERY_FIELD_NAMES = CORE_FIELDS_CONFIG.keys() + PREDICTION_FIELDS_CONFIG.keys() + [SORTED_TRANSCRIPTS_FIELD_KEY]
+QUERY_FIELD_NAMES = CORE_FIELDS_CONFIG.keys() + PREDICTION_FIELDS_CONFIG.keys() + [SORTED_TRANSCRIPTS_FIELD_KEY, GENOTYPES_FIELD_KEY]
 for field_name, fields in NESTED_FIELDS.items():
     QUERY_FIELD_NAMES += ['{}_{}'.format(field_name, field) for field in fields.keys()]
 for population, pop_config in POPULATIONS.items():
@@ -710,21 +708,35 @@ for population, pop_config in POPULATIONS.items():
 
 
 def _parse_es_hit(raw_hit, family_samples_by_id):
-    genotypes = {}
+    hit = {k: raw_hit[k] for k in QUERY_FIELD_NAMES if k in raw_hit}
 
+    genotypes = {}
     family_guids = []
-    genotype_hits = raw_hit.meta.inner_hits
     for family_guid, samples_by_id in family_samples_by_id.items():
-        # For multi-family search, all genotypes are returned including for those families where not
-        # all individuals have the correct genotype
-        if family_guid in genotype_hits and len(samples_by_id) == genotype_hits[family_guid].hits.total and genotype_hits[family_guid].hits.max_score > 0:
+        family_genotypes = [genotype for genotype in hit[GENOTYPES_FIELD_KEY] if genotype['sample_id'] in samples_by_id]
+        # TODO filter out families with num_alt that aren't the correct inheritance
+        if any(genotype['num_alt'] > 0 for genotype in family_genotypes):
             family_guids.append(family_guid)
             genotypes.update({
-                samples_by_id[genotype_hit['sample_id']].individual.guid: _get_field_values(genotype_hit, GENOTYPE_FIELDS_CONFIG)
-                for genotype_hit in genotype_hits[family_guid]
+                samples_by_id[genotype_hit['sample_id']].individual.guid: _get_field_values(genotype_hit,
+                                                                                            GENOTYPE_FIELDS_CONFIG)
+                for genotype_hit in family_genotypes
             })
 
-    hit = {k: raw_hit[k] for k in QUERY_FIELD_NAMES if k in raw_hit}
+    # genotypes = {}
+    # family_guids = []
+    # genotype_hits = raw_hit.meta.inner_hits
+    # for family_guid, samples_by_id in family_samples_by_id.items():
+    #     # For multi-family search, all genotypes are returned including for those families where not
+    #     # all individuals have the correct genotype
+    #     if family_guid in genotype_hits and len(samples_by_id) == genotype_hits[family_guid].hits.total and \
+    #             genotype_hits[family_guid].hits.max_score > 0:
+    #         family_guids.append(family_guid)
+    #         genotypes.update({
+    #             samples_by_id[genotype_hit['sample_id']].individual.guid: _get_field_values(genotype_hit,
+    #                                                                                         GENOTYPE_FIELDS_CONFIG)
+    #             for genotype_hit in genotype_hits[family_guid]
+    #         })
 
     # TODO better handling for multi-project searches
     project = family_samples_by_id[family_guids[0]].values()[0].individual.family.project
@@ -786,8 +798,8 @@ def _parse_es_hit(raw_hit, family_samples_by_id):
 
 
 def _parse_compound_het_hits(response, allowed_consequences, family_samples_by_id, *args):
-    family_unaffected_indiv_sample_guids = {
-        family_guid: [sample.guid for sample in samples_by_id.values() if sample.individual.affected == UNAFFECTED]
+    family_unaffected_individual_guids = {
+        family_guid: {sample.individual.guid for sample in samples_by_id.values() if sample.individual.affected == UNAFFECTED}
         for family_guid, samples_by_id in family_samples_by_id.items()
     }
 
@@ -810,10 +822,10 @@ def _parse_compound_het_hits(response, allowed_consequences, family_samples_by_i
 
             invalid_family_guids = set()
             for family_guid in family_guids:
-                for sample_guid in family_unaffected_indiv_sample_guids[family_guid]:
+                for individual_guid in family_unaffected_individual_guids[family_guid]:
                     # To be compound het all unaffected individuals need to be hom ref for at least one of the variants
                     is_family_compound_het = any(
-                        variant['genotypes'].get(sample_guid, {}).get('numAlt') != 1 for variant in gene_variants)
+                        variant['genotypes'].get(individual_guid, {}).get('numAlt') != 1 for variant in gene_variants)
                     if not is_family_compound_het:
                         invalid_family_guids.add(family_guid)
                         break
