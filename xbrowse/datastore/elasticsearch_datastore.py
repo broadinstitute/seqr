@@ -113,7 +113,7 @@ class ElasticsearchDatastore(datastore.Datastore):
 
         self._annotator = annotator
 
-        self._es_client = elasticsearch.Elasticsearch(host=settings.ELASTICSEARCH_SERVICE_HOSTNAME)
+        self._es_client = elasticsearch.Elasticsearch(host=settings.ELASTICSEARCH_SERVICE_HOSTNAME, timeout=30)
 
         self._redis_client = None
         if settings.REDIS_SERVICE_HOSTNAME:
@@ -217,8 +217,13 @@ class ElasticsearchDatastore(datastore.Datastore):
 
         mapping = self._es_client.indices.get_mapping(str(elasticsearch_index) + "*")
         index_fields = {}
+        is_parent_child = False
         is_nested = False
         if elasticsearch_index in mapping and 'join_field' in mapping[elasticsearch_index]["mappings"]["variant"]["properties"]:
+            # Nested indices are not sharded so all samples are in the single index
+            logger.info("matching indices: " + str(elasticsearch_index))
+            is_parent_child = True
+        elif elasticsearch_index in mapping and 'genotypes' in mapping[elasticsearch_index]["mappings"]["variant"]["properties"]:
             # Nested indices are not sharded so all samples are in the single index
             logger.info("matching indices: " + str(elasticsearch_index))
             is_nested = True
@@ -287,14 +292,14 @@ class ElasticsearchDatastore(datastore.Datastore):
         min_gq = None
         if quality_filter is not None and indivs_to_consider:
             min_ab = quality_filter.get('min_ab')
-            if min_ab is not None:
+            if min_ab is not None and not is_nested:
                 min_ab /= 100.0  # convert to fraction
             min_gq = quality_filter.get('min_gq')
             vcf_filter = quality_filter.get('vcf_filter')
             if vcf_filter is not None:
                 s = s.filter(~Q('exists', field='filters'))
 
-        if is_nested:
+        if is_parent_child:
             quality_q = Q()
             if min_ab or min_gq:
                 if min_ab is not None:
@@ -336,6 +341,46 @@ class ElasticsearchDatastore(datastore.Datastore):
 
             s = s.filter(Q('has_child', type='genotype',
                            inner_hits={'size': genotype_kwargs.get('min_children', MAX_INNER_HITS)}, **genotype_kwargs))
+
+        if is_nested:
+            if sample_ids and min_ab is not None:
+                min_ab_filter_val = int(min_ab) - int(min_ab % 5)
+                for sample_id in sample_ids:
+                    #  AB only relevant for hets
+                    q = ~Q('term', samples_num_alt_1=sample_id)
+                    for i in range(min_ab_filter_val, 50, 5):
+                        q = q | Q('term', **{'samples_ab_gte_{}'.format(i): sample_id})
+                    s = s.filter(q)
+            if sample_ids and min_gq is not None:
+                min_gq_filter_val = int(min_gq) - int(min_gq % 5)
+                for sample_id in sample_ids:
+                    q = Q('term', **{'samples_gq_gte_{}'.format(min_gq_filter_val): sample_id})
+                    for i in range(min_gq_filter_val + 5, 100, 5):
+                        q = q | Q('term', **{'samples_gq_gte_{}'.format(i): sample_id})
+                    s = s.filter(q)
+
+            if genotype_filters:
+                for sample_id, queries in genotype_filters.items():
+                    if queries[0][0] == 'range':
+                        allowed_num_alt = range(queries[0][1]['gte'], 3)
+                    else:
+                        allowed_num_alt = [query[1] for query in queries]
+
+                    if 0 in allowed_num_alt:
+                        q = Q('term', samples_no_call=sample_id)
+                        if 1 not in allowed_num_alt:
+                            q = q | Q('term', samples_num_alt_1=sample_id)
+                        if 2 not in allowed_num_alt:
+                            q = q | Q('term', samples_num_alt_2=sample_id)
+                        s = s.filter(~q)
+                    else:
+                        q = Q('term', **{'samples_num_alt_{}'.format(allowed_num_alt[0]): sample_id})
+                        for num_alt in allowed_num_alt[1:]:
+                            q = q | Q('term', **{'samples_num_alt_{}'.format(num_alt): sample_id})
+                        s = s.filter(q)
+
+            elif sample_ids:
+                s = s.filter(Q('terms', samples_num_alt_1=sample_ids) | Q('terms', samples_num_alt_2=sample_ids))
 
         else:
             for sample_id, queries in genotype_filters.items():
@@ -567,12 +612,14 @@ class ElasticsearchDatastore(datastore.Datastore):
             genotypes = {}
             all_num_alt = []
 
-            if is_nested:
+            if is_parent_child:
                 genotypes_by_sample_id = {gen_hit['sample_id']: gen_hit for gen_hit in hit.meta.inner_hits.genotype}
+            elif is_nested:
+                genotypes_by_sample_id = {gen_hit['sample_id']: gen_hit for gen_hit in hit['genotypes']}
 
             for individual_id, sample_id in family_individual_ids_to_sample_ids.items():
                 def _get_hit_field(field):
-                    if is_nested:
+                    if is_parent_child or is_nested:
                         gen_hit = genotypes_by_sample_id.get(sample_id, {})
                         key = field
                     else:
@@ -612,7 +659,7 @@ class ElasticsearchDatastore(datastore.Datastore):
 
             vep_annotation = hit['sortedTranscriptConsequences'] if 'sortedTranscriptConsequences' in hit else None
             if vep_annotation is not None:
-                if is_nested:
+                if is_parent_child or is_nested:
                     vep_annotation = [annot.to_dict() for annot in vep_annotation]
                 else:
                     vep_annotation = json.loads(str(vep_annotation))
@@ -685,8 +732,8 @@ class ElasticsearchDatastore(datastore.Datastore):
                     'coding_gene_ids': list(hit['codingGeneIds'] or []),
                     'gene_ids': list(hit['geneIds'] or []),
                     'vep_annotation': vep_annotation,
-                    'vep_group': str(hit['mainTranscript_major_consequence'] or ""),
-                    'vep_consequence': str(hit['mainTranscript_major_consequence'] or ""),
+                    'vep_group': str(hit['mainTranscript_major_consequence'] or "") if "mainTranscript_major_consequence" in hit else "",
+                    'vep_consequence': str(hit['mainTranscript_major_consequence'] or "") if "mainTranscript_major_consequence" in hit else "",
                     'main_transcript': {k.replace('mainTranscript_', ''): hit[k] for k in dir(hit) if k.startswith('mainTranscript_')},
                     'worst_vep_annotation_index': 0,
                     'worst_vep_index_per_gene': worst_vep_index_per_gene,

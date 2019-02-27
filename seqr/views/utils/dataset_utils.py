@@ -176,14 +176,14 @@ def _get_elasticsearch_index_samples(elasticsearch_index):
     if is_nested_genotype_index(elasticsearch_index):
         s = elasticsearch_dsl.Search(using=es_client, index=elasticsearch_index)
         s = s.params(size=0)
-        s.aggs.bucket('sample_ids', elasticsearch_dsl.A('terms', field='sample_id', size=10000))
+        s.aggs.bucket('sample_ids', elasticsearch_dsl.A('terms', field='samples_num_alt_1', size=10000))
         response = s.execute()
         return [agg['key'] for agg in response.aggregations.sample_ids.buckets]
 
     sample_field_suffix = '_num_alt'
     index = elasticsearch_dsl.Index('{}*'.format(elasticsearch_index), using=es_client)
     try:
-        field_mapping = index.get_field_mapping(fields=['*{}'.format(sample_field_suffix), 'join_field'], doc_type=[VARIANT_DOC_TYPE])
+        field_mapping = index.get_field_mapping(fields=['*{}'.format(sample_field_suffix)], doc_type=[VARIANT_DOC_TYPE])
     except NotFoundError:
         raise Exception('Index "{}" not found'.format(elasticsearch_index))
     except TransportError as e:

@@ -244,7 +244,7 @@ def variant_details(variant_json, project, user):
     lifted_over_pos = coords[1] if len(coords) > 1 else ''
 
     genotypes = {
-        sample_id: {
+        individual_id: {
             'ab': genotype.get('ab'),
             'ad': genotype.get('extras', {}).get('ad'),
             'alleles': genotype.get('alleles', []),
@@ -265,13 +265,22 @@ def variant_details(variant_json, project, user):
             'numAlt': genotype.get('num_alt'),
             'pl': genotype.get('extras', {}).get('pl'),
             'sampleId': sample_id,
-        } for sample_id, genotype in variant_json.get('genotypes', {}).items()
+        } for individual_id, genotype in variant_json.get('genotypes', {}).items()
     }
     individual_guids_by_sample_id = {s.sample_id: s.individual.guid for s in Sample.objects.filter(
         individual__family__project=project,
-        sample_id__in=genotypes.keys(),
+        loaded_date__isnull=False,
         dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS
-    )}
+    ).order_by('loaded_date')}
+    if genotypes_by_individual_guid:
+        individual_guids_by_id = {s.individual.individual_id: s.individual.guid for s in samples}
+        genotypes = {individual_guids_by_id.get(individual_id): genotype for individual_id, genotype in genotypes.items()
+                     if individual_guids_by_id.get(individual_id)}
+    else:
+        sample_guids_by_id = {s.individual.individual_id: s.guid for s in samples}
+        genotypes = {sample_guids_by_id.get(individual_id): genotype for individual_id, genotype in genotypes.items()
+                     if sample_guids_by_id.get(individual_id)}
+
     genotypes = {individual_guids_by_sample_id.get(sample_id): genotype for sample_id, genotype in genotypes.items()
                  if individual_guids_by_sample_id.get(sample_id)}
 
