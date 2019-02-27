@@ -166,7 +166,7 @@ def _get_json_for_families(families, user=None, add_individual_guids_field=False
         if not result['displayName']:
             result['displayName'] = result['familyId']
 
-    prefetch_related_objects(families, 'familyanalysedby_set')
+    prefetch_related_objects(families, 'familyanalysedby_set__created_by')
     if add_individual_guids_field:
         prefetch_related_objects(families, 'individual_set')
 
@@ -237,6 +237,10 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, family_
         for field in family_fields:
             nested_fields.append({'fields': ('family', field), 'key': _to_camel_case(field)})
 
+    prefetch_related_objects(individuals, 'family')
+    prefetch_related_objects(individuals, 'mother')
+    prefetch_related_objects(individuals, 'father')
+    prefetch_related_objects(individuals, 'case_review_status_last_modified_by')
     if add_sample_guids_field:
         prefetch_related_objects(individuals, 'sample_set')
 
@@ -461,8 +465,9 @@ def get_json_for_locus_lists(locus_lists, user, include_genes=False):
             'canEdit': user == locus_list.created_by,
         })
 
-    if include_genes:
-        prefetch_related_objects(locus_lists, 'locuslistinterval_set')
+    prefetch_related_objects(locus_lists, 'created_by')
+    prefetch_related_objects(locus_lists, 'locuslistgene_set')
+    prefetch_related_objects(locus_lists, 'locuslistinterval_set')
 
     return _get_json_for_models(locus_lists, user=user, process_result=_process_result)
 
