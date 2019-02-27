@@ -40,7 +40,7 @@ const PAR_REGIONS = {
 
 const isHemiVariant = (variant, individual) =>
   individual.sex === 'M' && (variant.chrom === 'X' || variant.chrom === 'Y') &&
-  PAR_REGIONS[variant.genomeVersion][variant.chrom].every(region => !(region[0] < variant.pos < region[1]))
+  PAR_REGIONS[variant.genomeVersion][variant.chrom].every(region => variant.pos < region[0] || variant.pos > region[1])
 
 const Allele = ({ isAlt, variant }) => {
   const allele = isAlt ? variant.alt : variant.ref
@@ -62,8 +62,8 @@ const Alleles = ({ numAlt, variant, individual }) => {
   const isHemi = isHemiVariant(variant, individual)
   return (
     <AlleleContainer>
-      {isHemi ? <Popup content="WARNING: Heterozygous Male" trigger={<Icon name="warning sign" color="red" />} /> : null}
-      <Allele isAlt={numAlt > 1} variant={variant} />/{isHemi ? '-' : <Allele isAlt={numAlt > 0} variant={variant} />}
+      {(isHemi && numAlt === 1) ? <Popup content="WARNING: Heterozygous Male" trigger={<Icon name="warning sign" color="red" />} /> : null}
+      <Allele isAlt={numAlt > 1} variant={variant} />/{(isHemi && numAlt !== 1) ? '-' : <Allele isAlt={numAlt > 0} variant={variant} />}
     </AlleleContainer>
   )
 }
