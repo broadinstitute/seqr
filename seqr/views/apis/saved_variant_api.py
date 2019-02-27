@@ -5,7 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.views.decorators.csrf import csrf_exempt
 
-from seqr.models import Sample, SavedVariant, VariantTagType, VariantTag, VariantNote, VariantFunctionalData,\
+from seqr.models import Individual, SavedVariant, VariantTagType, VariantTag, VariantNote, VariantFunctionalData,\
     LocusListInterval, LocusListGene, Family, CAN_VIEW, CAN_EDIT
 from seqr.model_utils import create_seqr_model, delete_seqr_model
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
@@ -227,7 +227,7 @@ def update_saved_variant_json(request, project_guid):
 
 # TODO process data before saving and then get rid of this
 def variant_details(variant_json, project, user):
-    if 'mainTranscript' in variant_json:
+    if 'populations' in variant_json:
         return variant_json
 
     annotation = variant_json.get('annotation') or {}
@@ -264,25 +264,13 @@ def variant_details(variant_json, project, user):
             'gq': genotype.get('gq'),
             'numAlt': genotype.get('num_alt'),
             'pl': genotype.get('extras', {}).get('pl'),
-            'sampleId': sample_id,
+            'sampleId': individual_id,
         } for individual_id, genotype in variant_json.get('genotypes', {}).items()
     }
-    individual_guids_by_sample_id = {s.sample_id: s.individual.guid for s in Sample.objects.filter(
-        individual__family__project=project,
-        loaded_date__isnull=False,
-        dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS
-    ).order_by('loaded_date')}
-    if genotypes_by_individual_guid:
-        individual_guids_by_id = {s.individual.individual_id: s.individual.guid for s in samples}
-        genotypes = {individual_guids_by_id.get(individual_id): genotype for individual_id, genotype in genotypes.items()
-                     if individual_guids_by_id.get(individual_id)}
-    else:
-        sample_guids_by_id = {s.individual.individual_id: s.guid for s in samples}
-        genotypes = {sample_guids_by_id.get(individual_id): genotype for individual_id, genotype in genotypes.items()
-                     if sample_guids_by_id.get(individual_id)}
+    individual_guids_by_id = {i.individual_id: i.guid for i in Individual.objects.filter(family__project=project)}
 
-    genotypes = {individual_guids_by_sample_id.get(sample_id): genotype for sample_id, genotype in genotypes.items()
-                 if individual_guids_by_sample_id.get(sample_id)}
+    genotypes = {individual_guids_by_id.get(individual_id): genotype for individual_id, genotype in genotypes.items()
+                 if individual_guids_by_id.get(individual_id)}
 
     transcripts = defaultdict(list)
     for i, vep_a in enumerate(annotation['vep_annotation'] or []):
