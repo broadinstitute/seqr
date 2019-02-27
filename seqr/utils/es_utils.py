@@ -300,14 +300,6 @@ INHERITANCE_FILTERS = {
 
 
 def _genotype_filter(inheritance, family_samples_by_id):
-    # If no inheritance specified only return variants where at least one of the requested samples has an alt allele
-    if not inheritance:
-        all_sample_ids = []
-        for samples_by_id in family_samples_by_id.values():
-            all_sample_ids += samples_by_id.keys()
-        genotypes_q = Q('terms', samples_num_alt_1=all_sample_ids) | Q('terms', samples_num_alt_2=all_sample_ids)
-        return genotypes_q, None, None
-
     genotypes_q = None
     compound_het_q = None
 
@@ -315,18 +307,23 @@ def _genotype_filter(inheritance, family_samples_by_id):
     inheritance_filter = (inheritance or {}).get('filter') or {}
 
     for family_guid, samples_by_id in family_samples_by_id.items():
-        family_samples_q = _genotype_inheritance_filter(inheritance_mode, inheritance_filter, samples_by_id)
+        if inheritance:
+            family_samples_q = _genotype_inheritance_filter(inheritance_mode, inheritance_filter, samples_by_id)
 
-        # For recessive search, should be hom recessive, x-linked recessive, or compound het
-        if inheritance_mode == RECESSIVE:
-            x_linked_q = _genotype_inheritance_filter(X_LINKED_RECESSIVE, inheritance_filter, samples_by_id)
-            family_samples_q |= x_linked_q
+            # For recessive search, should be hom recessive, x-linked recessive, or compound het
+            if inheritance_mode == RECESSIVE:
+                x_linked_q = _genotype_inheritance_filter(X_LINKED_RECESSIVE, inheritance_filter, samples_by_id)
+                family_samples_q |= x_linked_q
 
-            family_compound_het_q = _genotype_inheritance_filter(COMPOUND_HET, inheritance_filter, samples_by_id)
-            if not compound_het_q:
-                compound_het_q = family_compound_het_q
-            else:
-                compound_het_q |= family_compound_het_q
+                family_compound_het_q = _genotype_inheritance_filter(COMPOUND_HET, inheritance_filter, samples_by_id)
+                if not compound_het_q:
+                    compound_het_q = family_compound_het_q
+                else:
+                    compound_het_q |= family_compound_het_q
+        else:
+            # If no inheritance specified only return variants where at least one of the requested samples has an alt allele
+            sample_ids = samples_by_id.keys()
+            family_samples_q = Q('terms', samples_num_alt_1=sample_ids) | Q('terms', samples_num_alt_2=sample_ids)
 
         family_samples_q = Q('bool', must=[family_samples_q], _name=family_guid)
         if not genotypes_q:
