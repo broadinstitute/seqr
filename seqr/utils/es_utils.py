@@ -540,12 +540,12 @@ def _pop_freq_filter(filter_key, value):
 def _frequency_filter(frequencies):
     q = Q()
     for pop, freqs in frequencies.items():
-        if freqs.get('af'):
+        if freqs.get('af') is not None:
             q &= _pop_freq_filter(_get_pop_freq_key(pop, 'AF'), freqs['af'])
-        elif freqs.get('ac'):
+        elif freqs.get('ac') is not None:
             q &= _pop_freq_filter(_get_pop_freq_key(pop, 'AC'), freqs['ac'])
 
-        if freqs.get('hh'):
+        if freqs.get('hh') is not None:
             q &= _pop_freq_filter(_get_pop_freq_key(pop, 'Hom'), freqs['hh'])
             q &= _pop_freq_filter(_get_pop_freq_key(pop, 'Hemi'), freqs['hh'])
     return q
