@@ -35,7 +35,7 @@ class ProjectAPITest(TransactionTestCase):
              'originalAltAlleles', 'mainTranscript', 'genotypes', 'hgmd', 'transcripts', 'locusLists', 'populations',
              'predictions', 'rsid'}
         )
-        self.assertSetEqual(set(variant['genotypes'].keys()), {'I000003_na19679', 'I000001_na19675'})
+        self.assertSetEqual(set(variant['genotypes'].keys()), {'I000003_na19679', 'I000001_na19675', 'I000002_na19678'})
 
         # filter by family
         response = self.client.get('{}?families=F000002_2'.format(url))
@@ -85,7 +85,6 @@ class ProjectAPITest(TransactionTestCase):
         request_body.update(variant_json)
 
         response = self.client.post(create_saved_variant_url, content_type='application/json', data=json.dumps(request_body))
-
         self.assertEqual(response.status_code, 200)
 
         self.assertEqual(len(response.json()['savedVariantsByGuid']), 1)

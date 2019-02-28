@@ -96,7 +96,7 @@ def get_project_details(project_guid, user):
 
     project_json = _get_json_for_project(project, user)
     project_json['collaborators'] = _get_json_for_collaborator_list(project)
-    project_json.update(_get_json_for_variant_tag_types(project, individuals_by_guid))
+    project_json.update(_get_json_for_variant_tag_types(project, user, individuals_by_guid))
     locus_lists = get_sorted_project_locus_lists(project, user)
     project_json['locusListGuids'] = [locus_list['locusListGuid'] for locus_list in locus_lists]
 
@@ -262,7 +262,7 @@ def _get_json_for_collaborator_list(project):
     return sorted(collaborator_list, key=lambda collaborator: (collaborator['lastName'], collaborator['displayName']))
 
 
-def _get_json_for_variant_tag_types(project, individuals_by_guid):
+def _get_json_for_variant_tag_types(project, user, individuals_by_guid):
     individual_guids_by_id = {
         individual['individualId']: individual_guid for individual_guid, individual in individuals_by_guid.items()
     }
@@ -276,7 +276,8 @@ def _get_json_for_variant_tag_types(project, individuals_by_guid):
         if variant_tag_type.category == 'CMG Discovery Tags' and num_tags > 0:
             tags = VariantTag.objects.filter(saved_variant__project=project, variant_tag_type=variant_tag_type).select_related('saved_variant')
             saved_variants = [tag.saved_variant for tag in tags]
-            discovery_tags += get_json_for_saved_variants(saved_variants, add_tags=True, add_details=True, project=project, individual_guids_by_id=individual_guids_by_id)
+            discovery_tags += get_json_for_saved_variants(
+                saved_variants, add_tags=True, add_details=True, project=project, user=user, individual_guids_by_id=individual_guids_by_id)
 
         project_variant_tags.append({
             'variantTagTypeGuid': variant_tag_type.guid,

@@ -322,7 +322,7 @@ def get_json_for_analysis_group(analysis_group, **kwargs):
     return _get_json_for_model(analysis_group, get_json_for_models=get_json_for_analysis_groups, **kwargs)
 
 
-def get_json_for_saved_variants(saved_variants, add_tags=False, add_details=False, project=None, **kwargs):
+def get_json_for_saved_variants(saved_variants, add_tags=False, add_details=False, project=None, user=None, **kwargs):
     """Returns a JSON representation of the given variant.
 
     Args:
@@ -345,8 +345,8 @@ def get_json_for_saved_variants(saved_variants, add_tags=False, add_details=Fals
                 'notes': [get_json_for_variant_note(tag) for tag in saved_variant.variantnote_set.all()],
             })
         if add_details:
-            variant_json = json.loads(saved_variant.saved_variant_json or '{}')
-            variant_json.update(variant_details(variant_json, project or saved_variant.project, **kwargs))
+            saved_variant_json = json.loads(saved_variant.saved_variant_json or '{}')
+            variant_json.update(variant_details(saved_variant_json, project or saved_variant.project, user, **kwargs))
         return variant_json
 
     nested_fields = [
@@ -363,7 +363,7 @@ def get_json_for_saved_variants(saved_variants, add_tags=False, add_details=Fals
     return _get_json_for_models(saved_variants, nested_fields=nested_fields, guid_key='variantGuid', process_result=_process_result)
 
 
-def get_json_for_saved_variant(saved_variant, add_tags=False, add_details=False):
+def get_json_for_saved_variant(saved_variant, **kwargs):
     """Returns a JSON representation of the given variant.
 
     Args:
@@ -372,7 +372,7 @@ def get_json_for_saved_variant(saved_variant, add_tags=False, add_details=False)
         dict: json object
     """
 
-    return _get_json_for_model(saved_variant, get_json_for_models=get_json_for_saved_variants, add_tags=add_tags, add_details=add_details)
+    return _get_json_for_model(saved_variant, get_json_for_models=get_json_for_saved_variants, **kwargs)
 
 
 def get_json_for_variant_tag(tag):

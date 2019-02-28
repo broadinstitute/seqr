@@ -14,7 +14,7 @@ from seqr.utils.gene_utils import get_genes
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants, get_json_for_variant_tag, \
-    get_json_for_variant_functional_data, get_json_for_variant_note
+    get_json_for_variant_functional_data, get_json_for_variant_note, get_json_for_saved_variant
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_permissions
 from seqr.views.utils.variant_utils import update_project_saved_variant_json
 
@@ -39,7 +39,7 @@ def saved_variant_data(request, project_guid, variant_guid=None):
     individual_guids_by_id = {i.individual_id: i.guid for i in Individual.objects.filter(family__project=project)}
 
     saved_variants = get_json_for_saved_variants(variant_query, add_tags=True, add_details=True, project=project,
-                                                 individual_guids_by_id=individual_guids_by_id)
+                                                 user=request.user, individual_guids_by_id=individual_guids_by_id)
     variants = {variant['variantGuid']: variant for variant in saved_variants if variant['notes'] or variant['tags']}
 
     genes = _saved_variant_genes(variants.values())

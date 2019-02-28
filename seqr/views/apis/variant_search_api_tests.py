@@ -117,15 +117,15 @@ class VariantSearchAPITest(TestCase):
         self.assertListEqual(
             export_content[0],
             ['chrom', 'pos', 'ref', 'alt', 'gene', 'worst_consequence', '1kg_freq', 'exac_freq', 'gnomad_genomes_freq',
-            'gnomad_exomes_freq', 'topmed_freq', 'sift', 'polyphen', 'muttaster', 'fathmm', 'rsid', 'hgvsc', 'hgvsp',
-            'clinvar_clinical_significance', 'clinvar_gold_stars', 'family_id_1', 'tags_1', 'notes_1', 'family_id_2',
-            'tags_2', 'notes_2', 'sample_id_1', 'num_alt_alleles_1', 'filter_1', 'ad_1', 'dp_1', 'gq_1', 'ab_1',
-            'sample_id_2', 'num_alt_alleles_2', 'filter_2', 'ad_2', 'dp_2', 'gq_2', 'ab_2'])
+            'gnomad_exomes_freq', 'topmed_freq', 'cadd', 'revel', 'eigen', 'polyphen', 'sift', 'muttaster', 'fathmm',
+             'rsid', 'hgvsc', 'hgvsp', 'clinvar_clinical_significance', 'clinvar_gold_stars', 'filter', 'family_id_1',
+             'tags_1', 'notes_1', 'family_id_2', 'tags_2', 'notes_2', 'sample_id_1', 'num_alt_alleles_1', 'ad_1',
+             'dp_1', 'gq_1', 'ab_1', 'sample_id_2', 'num_alt_alleles_2', 'ad_2', 'dp_2', 'gq_2', 'ab_2'])
         self.assertListEqual(
             export_content[1],
-            ['21', '3343353', 'GAGA', 'G', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '1',
-            'Review (None)|Tier 1 - Novel gene and phenotype (None)', '', '2', '', '', '', '', '', '14,33', '50', '46.0',
-            '0.702127659574', '', '', '', '45,0', '45', '99.0', '0.0'])
+            ['21', '3343353', 'GAGA', 'G', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '1',
+            'Tier 1 - Novel gene and phenotype (None)|Review (None)', '', '2', '', '', '', '', '14,33', '50', '46.0',
+            '0.702127659574', '', '', '45,0', '45', '99.0', '0.0'])
 
         mock_get_variants.assert_called_with(results_models.first(), page=1, num_results=3)
 

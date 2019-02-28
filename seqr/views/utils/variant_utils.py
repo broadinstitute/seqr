@@ -176,7 +176,7 @@ def variant_details(variant_json, project, user, individual_guids_by_id=None):
             'sift': annotation.get('sift'),
             'splice_ai': annotation.get('splice_ai_delta_score'),
         },
-        'mainTranscript': variant_main_transcript(variant_json),
+        'mainTranscript': _variant_main_transcript(variant_json),
         'clinvar': {
             'clinsig': extras.get('clinvar_clinsig'),
             'variantId': extras.get('clinvar_variant_id'),
@@ -248,7 +248,7 @@ def variant_details(variant_json, project, user, individual_guids_by_id=None):
     }
 
 
-def variant_main_transcript(variant_json):
+def _variant_main_transcript(variant_json):
     annotation = variant_json.get('annotation') or {}
     main_transcript = annotation.get('main_transcript') or (
         annotation['vep_annotation'][annotation['worst_vep_annotation_index']] if annotation.get(

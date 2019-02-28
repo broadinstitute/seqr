@@ -62,8 +62,8 @@ const Alleles = ({ numAlt, variant, individual }) => {
   const isHemi = isHemiVariant(variant, individual)
   return (
     <AlleleContainer>
-      {(isHemi && numAlt === 1) ? <Popup content="WARNING: Heterozygous Male" trigger={<Icon name="warning sign" color="red" />} /> : null}
-      <Allele isAlt={numAlt > 1} variant={variant} />/{(isHemi && numAlt !== 1) ? '-' : <Allele isAlt={numAlt > 0} variant={variant} />}
+      {(isHemi && numAlt === 2) ? <Popup content="WARNING: Homozygous Male" trigger={<Icon name="warning sign" color="red" />} /> : null}
+      <Allele isAlt={numAlt > (isHemi ? 0 : 1)} variant={variant} />/{isHemi ? '-' : <Allele isAlt={numAlt > 0} variant={variant} />}
     </AlleleContainer>
   )
 }
