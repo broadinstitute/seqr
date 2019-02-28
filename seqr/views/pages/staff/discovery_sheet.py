@@ -16,7 +16,6 @@ from seqr.utils.xpos_utils import get_chrom_pos
 from seqr.views.utils.variant_utils import variant_main_transcript
 from seqr.views.utils.export_table_utils import export_table
 from seqr.views.utils.json_utils import create_json_response, _to_title_case
-from reference_data.models import HPO_CATEGORY_NAMES
 from seqr.models import Project, Family, VariantTag, VariantTagType, Sample, SavedVariant
 from dateutil import relativedelta as rdelta
 from django.db.models import Q, Prefetch
@@ -26,6 +25,37 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_project
 
 logger = logging.getLogger(__name__)
 
+
+# HPO categories are direct children of HP:0000118 "Phenotypic abnormality".
+# See http://compbio.charite.de/hpoweb/showterm?id=HP:0000118
+HPO_CATEGORY_NAMES = {
+    'HP:0000478': 'Eye Defects',
+    'HP:0025142': 'Constitutional Symptom',
+    'HP:0002664': 'Neoplasm',
+    'HP:0000818': 'Endocrine System',
+    'HP:0000152': 'Head or Neck',
+    'HP:0002715': 'Immune System',
+    'HP:0001507': 'Growth',
+    'HP:0045027': 'Thoracic Cavity',
+    'HP:0001871': 'Blood',
+    'HP:0002086': 'Respiratory',
+    'HP:0000598': 'Ear Defects',
+    'HP:0001939': 'Metabolism/Homeostasis',
+    'HP:0003549': 'Connective Tissue',
+    'HP:0001608': 'Voice',
+    'HP:0000707': 'Nervous System',
+    'HP:0000769': 'Breast',
+    'HP:0001197': 'Prenatal development or birth',
+    'HP:0040064': 'Limbs',
+    'HP:0025031': 'Abdomen',
+    'HP:0003011': 'Musculature',
+    'HP:0001626': 'Cardiovascular System',
+    'HP:0000924': 'Skeletal System',
+    'HP:0500014': 'Test Result',
+    'HP:0001574': 'Integument',
+    'HP:0000119': 'Genitourinary System',
+    'HP:0025354': 'Cellular Phenotype',
+}
 
 HEADER = collections.OrderedDict([
     ("t0", "T0"),
