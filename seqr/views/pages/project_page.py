@@ -75,6 +75,8 @@ def project_page_data(request, project_guid):
         'matchmakerSubmissions': {project.guid: _project_matchmaker_submissions(project)},
     }
 
+    from django.shortcuts import render
+    return render(request, 'app.html')
     return create_json_response(json_response)
 
 

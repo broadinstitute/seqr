@@ -3,6 +3,7 @@ import { createSelector } from 'reselect'
 import { CORE_ANVIL_COLUMNS, VARIANT_ANVIL_COLUMNS, VARIANT_ANVIL_COLUMN_FORMATS } from './constants'
 
 export const getAnvilLoading = state => state.anvilLoading.isLoading
+export const getAnvilLoadingError = state => state.anvilLoading.errorMessage
 export const getAnvilRows = state => state.anvilRows
 
 export const getAnvilColumns = createSelector(

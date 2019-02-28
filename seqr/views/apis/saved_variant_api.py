@@ -178,7 +178,7 @@ def update_saved_variant_json(request, project_guid):
 
 # TODO once variant search is rewritten saved_variant_json shouldn't need any postprocessing
 
-def variant_details(variant_json, project, user=None, genotypes_by_individual_guid=False):
+def variant_details(variant_json, project, user=None, individual_guids_by_id=None):
     annotation = variant_json.get('annotation') or {}
     main_transcript = variant_main_transcript(variant_json)
     is_es_variant = annotation.get('db') == 'elasticsearch'
@@ -214,17 +214,15 @@ def variant_details(variant_json, project, user=None, genotypes_by_individual_gu
             'pl': genotype.get('extras', {}).get('pl'),
         } for individual_id, genotype in variant_json.get('genotypes', {}).items()
     }
-    samples = Sample.objects.filter(
-        individual__family__project=project,
-        individual__individual_id__in=genotypes.keys(),
-        loaded_date__isnull=False,
-        dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS
-    ).order_by('loaded_date').prefetch_related('individual')
-    if genotypes_by_individual_guid:
-        individual_guids_by_id = {s.individual.individual_id: s.individual.guid for s in samples}
-        genotypes = {individual_guids_by_id.get(individual_id): genotype for individual_id, genotype in genotypes.items()
-                     if individual_guids_by_id.get(individual_id)}
+    if individual_guids_by_id:
+        genotypes = {individual_guids_by_id.get(individual_id): genotype for individual_id, genotype in genotypes.items()}
     else:
+        samples = Sample.objects.filter(
+            individual__family__project=project,
+            individual__individual_id__in=genotypes.keys(),
+            loaded_date__isnull=False,
+            dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS
+        ).order_by('loaded_date').prefetch_related('individual')
         sample_guids_by_id = {s.individual.individual_id: s.guid for s in samples}
         genotypes = {sample_guids_by_id.get(individual_id): genotype for individual_id, genotype in genotypes.items()
                      if sample_guids_by_id.get(individual_id)}
