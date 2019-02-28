@@ -6,6 +6,7 @@ from django.test import TestCase
 from django.urls.base import reverse
 
 from seqr.models import VariantSearchResults
+from seqr.utils.es_utils import InvalidIndexException
 from seqr.views.apis.locus_list_api import add_project_locus_lists
 from seqr.views.apis.variant_search_api import query_variants_handler, query_single_variant_handler, \
     export_variants_handler, search_context_handler, get_saved_search_handler, create_saved_search_handler
@@ -42,8 +43,6 @@ class VariantSearchAPITest(TestCase):
 
     @mock.patch('seqr.views.apis.variant_search_api.get_es_variants')
     def test_query_variants(self, mock_get_variants):
-        mock_get_variants.side_effect = _get_es_variants
-
         url = reverse(query_variants_handler, args=[SEARCH_HASH])
         _check_login(self, url)
 
@@ -61,6 +60,15 @@ class VariantSearchAPITest(TestCase):
         response = self.client.post(url, content_type='application/json', data=json.dumps({}))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.reason_phrase, 'Invalid search: no projects/ families specified')
+
+        mock_get_variants.side_effect = InvalidIndexException('Invalid index')
+        response = self.client.post(url, content_type='application/json', data=json.dumps({
+            'projectFamilies': PROJECT_FAMILIES, 'search': SEARCH
+        }))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.reason_phrase, 'Invalid index')
+
+        mock_get_variants.side_effect = _get_es_variants
 
         # Test new search
         response = self.client.post(url, content_type='application/json', data=json.dumps({
@@ -123,9 +131,9 @@ class VariantSearchAPITest(TestCase):
              'dp_1', 'gq_1', 'ab_1', 'sample_id_2', 'num_alt_alleles_2', 'ad_2', 'dp_2', 'gq_2', 'ab_2'])
         self.assertListEqual(
             export_content[1],
-            ['21', '3343353', 'GAGA', 'G', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '1',
-            'Tier 1 - Novel gene and phenotype (None)|Review (None)', '', '2', '', '', '', '', '14,33', '50', '46.0',
-            '0.702127659574', '', '', '45,0', '45', '99.0', '0.0'])
+            ['21', '3343353', 'GAGA', 'G', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
+             '', '1', 'Tier 1 - Novel gene and phenotype (None)|Review (None)', '', '2', '', '', '', '', '14,33', '50',
+             '46.0', '0.702127659574', '', '', '45,0', '45', '99.0', '0.0'])
 
         mock_get_variants.assert_called_with(results_models.first(), page=1, num_results=3)
 

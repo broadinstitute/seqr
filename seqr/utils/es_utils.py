@@ -218,7 +218,7 @@ def _get_es_search_for_samples(samples, elasticsearch_index=None):
             # TODO get rid of this once add multi-project support and handle duplicate variants in different indices
             raise InvalidIndexException('Samples are not all contained in the same index: {}'.format(', '.join(es_indices)))
         elif len(es_indices) < 1:
-            raise InvalidIndexException('No es index found for samples')
+            raise InvalidIndexException('No es index found')
         elif not is_nested_genotype_index(list(es_indices)[0]):
             raise InvalidIndexException('Index "{}" does not have a valid schema'.format(list(es_indices)[0]))
         elasticsearch_index = ','.join(es_indices)

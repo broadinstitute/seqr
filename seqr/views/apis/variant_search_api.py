@@ -7,7 +7,8 @@ from django.db.models import Q
 from django.views.decorators.csrf import csrf_exempt
 
 from seqr.models import Family, Individual, SavedVariant, VariantSearch, VariantSearchResults
-from seqr.utils.es_utils import get_es_variants, get_single_es_variant, XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
+from seqr.utils.es_utils import get_es_variants, get_single_es_variant, InvalidIndexException, XPOS_SORT_KEY, \
+    PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.saved_variant_api import _saved_variant_genes, _add_locus_lists
 from seqr.views.pages.project_page import get_project_details
@@ -78,7 +79,10 @@ def query_variants_handler(request, search_hash):
 
     _check_results_permission(results_model, request.user)
 
-    variants = get_es_variants(results_model, page=page, num_results=per_page)
+    try:
+        variants = get_es_variants(results_model, page=page, num_results=per_page)
+    except InvalidIndexException as e:
+        return create_json_response({}, status=400, reason=e.message)
 
     response = _process_variants(variants, results_model.families)
     response['search'] = _get_search_context(results_model)
