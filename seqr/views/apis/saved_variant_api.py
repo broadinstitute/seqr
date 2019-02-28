@@ -247,7 +247,6 @@ def variant_details(variant_json, project, user):
         individual_id: {
             'ab': genotype.get('ab'),
             'ad': genotype.get('extras', {}).get('ad'),
-            'alleles': genotype.get('alleles', []),
             'cnvs': {
                 'array': genotype.get('extras', {}).get('cnvs', {}).get('array'),
                 'caller': genotype.get('extras', {}).get('cnvs', {}).get('caller'),
@@ -260,7 +259,7 @@ def variant_details(variant_json, project, user):
                 'type': genotype.get('extras', {}).get('cnvs', {}).get('type'),
             },
             'dp': genotype.get('extras', {}).get('dp'),
-            'filter': genotype.get('filter'),
+            # 'filter': genotype.get('filter'),
             'gq': genotype.get('gq'),
             'numAlt': genotype.get('num_alt'),
             'pl': genotype.get('extras', {}).get('pl'),

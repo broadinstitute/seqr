@@ -133,6 +133,9 @@ MUTTASTR_MAP = {
     'P': 'polymorphism',
 }
 
+def _get_prediction_val(prediction):
+    return PREDICTION_MAP.get(prediction[0]) if prediction else None
+
 VARIANT_EXPORT_DATA = [
     {'header': 'chrom'},
     {'header': 'pos'},
@@ -145,8 +148,11 @@ VARIANT_EXPORT_DATA = [
     {'header': 'gnomad_genomes_freq', 'value_path': 'populations.gnomad_genomes.af'},
     {'header': 'gnomad_exomes_freq', 'value_path': 'populations.gnomad_exomes.af'},
     {'header': 'topmed_freq', 'value_path': 'populations.topmed.af'},
-    {'header': 'sift', 'value_path': 'predictions.sift', 'process': lambda prediction: PREDICTION_MAP.get(prediction[0]) if prediction else None},
+    {'header': 'cadd', 'value_path': 'predictions.cadd'},
+    {'header': 'revel', 'value_path': 'predictions.revel'},
+    {'header': 'eigen', 'value_path': 'predictions.eigen'},
     {'header': 'polyphen', 'value_path': 'predictions.polyphen', 'process': lambda prediction: POLYPHEN_MAP.get(prediction[0]) if prediction else None},
+    {'header': 'sift', 'value_path': 'predictions.sift', 'process': lambda prediction: PREDICTION_MAP.get(prediction[0]) if prediction else None},
     {'header': 'muttaster', 'value_path': 'predictions.mut_taster', 'process': lambda prediction: MUTTASTR_MAP.get(prediction[0]) if prediction else None},
     {'header': 'fathmm', 'value_path': 'predictions.fathmm', 'process': lambda prediction: PREDICTION_MAP.get(prediction[0]) if prediction else None},
     {'header': 'rsid', 'value_path': 'rsid'},
@@ -154,6 +160,7 @@ VARIANT_EXPORT_DATA = [
     {'header': 'hgvsp', 'value_path': 'mainTranscript.hgvsp'},
     {'header': 'clinvar_clinical_significance', 'value_path': 'clinvar.clinicalSignificance'},
     {'header': 'clinvar_gold_stars', 'value_path': 'clinvar.goldStars'},
+    {'header': 'filter', 'value_path': 'genotypeFilters'},
 ]
 
 VARIANT_FAMILY_EXPORT_DATA = [
@@ -165,7 +172,6 @@ VARIANT_FAMILY_EXPORT_DATA = [
 VARIANT_GENOTYPE_EXPORT_DATA = [
     {'header': 'sample_id', 'value_path': 'sampleId'},
     {'header': 'num_alt_alleles', 'value_path': 'numAlt'},
-    {'header': 'filter'},
     {'header': 'ad'},
     {'header': 'dp'},
     {'header': 'gq'},

@@ -670,6 +670,23 @@ export const VARIANT_PAGINATION_FIELD = {
   format: val => parseInt(val, 10),
 }
 
+export const PREDICTION_INDICATOR_MAP = {
+  D: { color: 'red', value: 'damaging' },
+  A: { color: 'red', value: 'disease causing' },
+  T: { color: 'green', value: 'tolerated' },
+  N: { color: 'green', value: 'polymorphism' },
+  P: { color: 'green', value: 'polymorphism' },
+  B: { color: 'green', value: 'benign' },
+}
+
+export const POLYPHEN_MAP = {
+  D: { value: 'probably damaging' },
+  P: { color: 'yellow', value: 'possibly damaging' },
+}
+
+export const MUTTASTER_MAP = {
+  D: { value: 'disease causing' },
+}
 
 export const VARIANT_EXPORT_DATA = [
   { header: 'chrom' },
@@ -677,31 +694,33 @@ export const VARIANT_EXPORT_DATA = [
   { header: 'ref' },
   { header: 'alt' },
   { header: 'gene', getVal: variant => variant.mainTranscript.geneSymbol },
+  { header: 'worst_consequence', getVal: variant => variant.mainTranscript.majorConsequence },
   { header: 'family', getVal: variant => variant.familyGuids[0].split(/_(.+)/)[1] },
   { header: 'tags', getVal: variant => variant.tags.map(tag => tag.name).join('|') },
   { header: 'notes', getVal: variant => variant.notes.map(note => `${note.createdBy}: ${note.note}`).join('|') },
-  { header: 'worst_consequence', getVal: variant => variant.mainTranscript.majorConsequence },
   { header: '1kg_freq', getVal: variant => variant.populations.g1k.af },
   { header: 'exac_freq', getVal: variant => variant.populations.exac.af },
   { header: 'gnomad_genomes_freq', getVal: variant => variant.populations.gnomad_genomes.af },
   { header: 'gnomad_exomes_freq', getVal: variant => variant.populations.gnomad_exomes.af },
   { header: 'topmed_freq', getVal: variant => variant.populations.topmed.af },
-  { header: 'sift', getVal: variant => variant.predictions.sift },
-  { header: 'polyphen', getVal: variant => variant.predictions.polyphen },
-  { header: 'muttaster', getVal: variant => variant.predictions.mut_taster },
-  { header: 'fathmm', getVal: variant => variant.predictions.fathmm },
+  { header: 'cadd', getVal: variant => variant.predictions.cadd },
+  { header: 'revel', getVal: variant => variant.predictions.revel },
+  { header: 'eigen', getVal: variant => variant.predictions.eigen },
+  { header: 'polyphen', getVal: variant => (MUTTASTER_MAP[variant.predictions.polyphen] || PREDICTION_INDICATOR_MAP[variant.predictions.polyphen] || {}).value },
+  { header: 'sift', getVal: variant => (PREDICTION_INDICATOR_MAP[variant.predictions.sift] || {}).value },
+  { header: 'muttaster', getVal: variant => (MUTTASTER_MAP[variant.predictions.mut_taster] || PREDICTION_INDICATOR_MAP[variant.predictions.mut_taster] || {}).value },
+  { header: 'fathmm', getVal: variant => (PREDICTION_INDICATOR_MAP[variant.predictions.fathmm] || {}).value },
   { header: 'rsid', getVal: variant => variant.rsid },
   { header: 'hgvsc', getVal: variant => variant.mainTranscript.hgvsc },
   { header: 'hgvsp', getVal: variant => variant.mainTranscript.hgvsp },
   { header: 'clinvar_clinical_significance', getVal: variant => variant.clinvar.clinsig },
   { header: 'clinvar_gold_stars', getVal: variant => variant.clinvar.goldStars },
+  { header: 'filter', getVal: variant => variant.genotypeFilters },
 ]
 
 const VARIANT_GENOTYPE_EXPORT_DATA = [
   { header: 'sample_id', getVal: genotype => genotype.sampleId },
-  { header: 'genotype', getVal: genotype => (genotype.alleles.length ? genotype.alleles.join('/') : './.') },
   { header: 'num_alt_alleles', getVal: genotype => genotype.numAlt },
-  { header: 'filter' },
   { header: 'ad' },
   { header: 'dp' },
   { header: 'gq' },

@@ -3,27 +3,10 @@ import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { Icon, Transition } from 'semantic-ui-react'
 
+import { PREDICTION_INDICATOR_MAP, POLYPHEN_MAP, MUTTASTER_MAP } from 'shared/utils/constants'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 import { HorizontalSpacer } from '../../Spacers'
 import { ButtonLink } from '../../StyledComponents'
-
-const INDICATOR_MAP = {
-  D: { color: 'red', value: 'damaging' },
-  A: { color: 'red', value: 'disease causing' },
-  T: { color: 'green', value: 'tolerated' },
-  N: { color: 'green', value: 'polymorphism' },
-  P: { color: 'green', value: 'polymorphism' },
-  B: { color: 'green', value: 'benign' },
-}
-
-const POLYPHEN_MAP = {
-  D: { value: 'probably damaging' },
-  P: { color: 'yellow', value: 'possibly damaging' },
-}
-
-const MUTTASTER_MAP = {
-  D: { value: 'disease causing' },
-}
 
 
 const PredictionValue = styled.span`
@@ -51,7 +34,7 @@ const predictionFieldValue = (predictions, { field, dangerThreshold, warningThre
     return { value, color: 'green' }
   }
 
-  return indicatorMap ? { ...INDICATOR_MAP[value[0]], ...indicatorMap[value[0]] } : INDICATOR_MAP[value[0]]
+  return indicatorMap ? { ...PREDICTION_INDICATOR_MAP[value[0]], ...indicatorMap[value[0]] } : PREDICTION_INDICATOR_MAP[value[0]]
 }
 
 const Prediction = ({ field, value, color }) =>
