@@ -13,7 +13,7 @@ from django.utils import timezone
 
 from seqr.utils.gene_utils import get_genes
 from seqr.utils.xpos_utils import get_chrom_pos
-from seqr.views.apis.saved_variant_api import variant_main_transcript
+from seqr.views.utils.variant_utils import variant_main_transcript
 from seqr.views.utils.export_table_utils import export_table
 from seqr.views.utils.json_utils import create_json_response, _to_title_case
 from reference_data.models import HPO_CATEGORY_NAMES

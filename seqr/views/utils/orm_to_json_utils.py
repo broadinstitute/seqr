@@ -7,13 +7,14 @@ import logging
 import os
 from collections import defaultdict
 from copy import copy
-from django.db.models import prefetch_related_objects
+from django.db.models import prefetch_related_objects, Prefetch
 from django.db.models.fields.files import ImageFieldFile
 
 from reference_data.models import GeneConstraint, dbNSFPGene
 from seqr.models import CAN_EDIT, Sample, GeneNote
 from seqr.utils.xpos_utils import get_chrom_pos
 from seqr.views.utils.json_utils import _to_camel_case
+from seqr.views.utils.variant_utils import variant_details
 logger = logging.getLogger(__name__)
 
 
@@ -323,7 +324,7 @@ def get_json_for_analysis_group(analysis_group, **kwargs):
     return _get_json_for_model(analysis_group, get_json_for_models=get_json_for_analysis_groups, **kwargs)
 
 
-def get_json_for_saved_variant(saved_variant, add_tags=False):
+def get_json_for_saved_variants(saved_variants, add_tags=False, add_details=False, project=None, **kwargs):
     """Returns a JSON representation of the given variant.
 
     Args:
@@ -332,20 +333,43 @@ def get_json_for_saved_variant(saved_variant, add_tags=False):
         dict: json object
     """
 
-    result = _get_json_for_model(saved_variant, nested_fields=[{'fields': ('family', 'guid')}], guid_key='variantId')
-
-    chrom, pos = get_chrom_pos(result['xpos'])
-    result.update({
-        'chrom': chrom,
-        'pos': pos,
-    })
-    if add_tags:
+    def _process_result(result, saved_variant):
+        chrom, pos = get_chrom_pos(result['xpos'])
         result.update({
-            'tags': [get_json_for_variant_tag(tag) for tag in saved_variant.varianttag_set.all()],
-            'functionalData': [get_json_for_variant_functional_data(tag) for tag in saved_variant.variantfunctionaldata_set.all()],
-            'notes': [get_json_for_variant_note(tag) for tag in saved_variant.variantnote_set.all()],
+            'chrom': chrom,
+            'pos': pos,
         })
-    return result
+        if add_tags:
+            result.update({
+                'tags': [get_json_for_variant_tag(tag) for tag in saved_variant.varianttag_set.all()],
+                'functionalData': [get_json_for_variant_functional_data(tag) for tag in
+                                   saved_variant.variantfunctionaldata_set.all()],
+                'notes': [get_json_for_variant_note(tag) for tag in saved_variant.variantnote_set.all()],
+            })
+        if add_details:
+            variant_json = json.loads(saved_variant.saved_variant_json or '{}')
+            result.update(variant_details(variant_json, project or saved_variant.project, **kwargs))
+
+    prefetch_related_objects(saved_variants, 'family')
+    if add_tags:
+        prefetch_related_objects(saved_variants, 'varianttag_set__variant_tag_type', 'varianttag_set__created_by',
+                                 'variantnote_set__created_by', 'variantfunctionaldata_set__created_by')
+
+    nested_fields = [{'fields': ('family', 'guid')}]
+
+    return _get_json_for_models(saved_variants, nested_fields=nested_fields, guid_key='variantId', process_result=_process_result)
+
+
+def get_json_for_saved_variant(saved_variant, add_tags=False, add_details=False):
+    """Returns a JSON representation of the given variant.
+
+    Args:
+        saved_variant (object): Django model for the SavedVariant.
+    Returns:
+        dict: json object
+    """
+
+    return _get_json_for_model(saved_variant, get_json_for_models=get_json_for_saved_variants, add_tags=add_tags, add_details=add_details)
 
 
 def get_json_for_variant_tag(tag):
@@ -495,7 +519,8 @@ def get_json_for_genes(genes, user=None, add_dbnsfp=False, add_omim=False, add_c
 
     def _process_result(result, gene):
         if add_dbnsfp:
-            dbnsfp = gene.dbnsfpgene_set.first()
+            # prefetching only works with all()
+            dbnsfp = next((dbnsfp for dbnsfp in gene.dbnsfpgene_set.all()), None)
             if dbnsfp:
                 result.update(_get_json_for_model(dbnsfp))
             else:
@@ -503,7 +528,7 @@ def get_json_for_genes(genes, user=None, add_dbnsfp=False, add_omim=False, add_c
         if add_omim:
             result['omimPhenotypes'] = _get_json_for_models(gene.omim_set.all())
         if add_constraints:
-            constraint = gene.geneconstraint_set.order_by('-mis_z', '-pLI').first()
+            constraint = next((constraint for constraint in gene.geneconstraint_set.all()), None)
             result['constraints'] = _get_json_for_model(constraint, process_result=_add_total_constraint_count) if constraint else {}
         if add_notes:
             result['notes'] = gene_notes_json.get(result['geneId'], [])
@@ -515,7 +540,7 @@ def get_json_for_genes(genes, user=None, add_dbnsfp=False, add_omim=False, add_c
     if add_omim:
         prefetch_related_objects(genes, 'omim_set')
     if add_constraints:
-        prefetch_related_objects(genes, 'geneconstraint_set')
+        prefetch_related_objects(genes, Prefetch('geneconstraint_set', queryset=GeneConstraint.objects.order_by('-mis_z', '-pLI')))
 
     return _get_json_for_models(genes, process_result=_process_result)
 

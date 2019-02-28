@@ -5,15 +5,15 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.views.decorators.csrf import csrf_exempt
 
-from seqr.models import Sample, SavedVariant, VariantTagType, VariantTag, VariantNote, VariantFunctionalData,\
-    LocusListInterval, LocusListGene, CAN_VIEW, CAN_EDIT
+from seqr.models import SavedVariant, VariantTagType, VariantTag, VariantNote, VariantFunctionalData,\
+    LocusListInterval, LocusListGene, Sample, CAN_VIEW, CAN_EDIT
 from seqr.model_utils import create_seqr_model, delete_seqr_model
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.locus_list_api import get_project_locus_list_models
 from seqr.utils.gene_utils import get_genes
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variant, get_json_for_variant_tag, \
+from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants, get_json_for_variant_tag, \
     get_json_for_variant_functional_data, get_json_for_variant_note
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_permissions
 from seqr.views.utils.variant_utils import update_project_saved_variant_json
@@ -25,26 +25,28 @@ logger = logging.getLogger(__name__)
 @csrf_exempt
 def saved_variant_data(request, project_guid, variant_guid=None):
     project = get_project_and_check_permissions(project_guid, request.user)
+    family_guids = request.GET['families'].split(',') if request.GET.get('families') else None
 
-    variants = {}
-    variant_query = SavedVariant.objects.filter(project=project)\
-        .select_related('family')\
-        .only('xpos_start', 'ref', 'alt', 'saved_variant_json', 'family__guid', 'guid')\
-        .prefetch_related('varianttag_set', 'varianttag_set__created_by', 'varianttag_set__variant_tag_type',
-                          'variantfunctionaldata_set', 'variantfunctionaldata_set__created_by', 'variantnote_set',
-                          'variantnote_set__created_by')
-    if request.GET.get('families'):
-        variant_query = variant_query.filter(family__guid__in=request.GET.get('families').split(','))
+    variant_query = SavedVariant.objects.filter(project=project)
+    if family_guids:
+        variant_query = variant_query.filter(family__guid__in=family_guids)
     if variant_guid:
         variant_query = variant_query.filter(guid=variant_guid)
         if variant_query.count() < 1:
             return create_json_response({}, status=404, reason='Variant {} not found'.format(variant_guid))
-    for saved_variant in variant_query:
-        variant = get_json_for_saved_variant(saved_variant, add_tags=True)
-        if variant['tags'] or variant['notes']:
-            variant_json = json.loads(saved_variant.saved_variant_json or '{}')
-            variant.update(variant_details(variant_json, project, request.user))
-            variants[variant['variantId']] = variant
+
+    sample_kargs = {'individual__family__guid__in': family_guids} if family_guids else {
+        'individual__family__project': project}
+    samples = Sample.objects.filter(
+        loaded_date__isnull=False,
+        dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
+        **sample_kargs
+    ).order_by('loaded_date').prefetch_related('individual')
+    sample_guids_by_id = {s.individual.individual_id: s.guid for s in samples}
+
+    saved_variants = get_json_for_saved_variants(variant_query, add_tags=True, add_details=True, project=project,
+                                                 sample_guids_by_id=sample_guids_by_id)
+    variants = {variant['variantId']: variant for variant in saved_variants if variant['notes'] or variant['tags']}
 
     genes = _saved_variant_genes(variants)
     _add_locus_lists(project, variants, genes)
@@ -176,172 +178,6 @@ def update_saved_variant_json(request, project_guid):
     return create_json_response({variant_guid: None for variant_guid in updated_saved_variant_guids})
 
 
-# TODO once variant search is rewritten saved_variant_json shouldn't need any postprocessing
-
-def variant_details(variant_json, project, user=None, individual_guids_by_id=None):
-    annotation = variant_json.get('annotation') or {}
-    main_transcript = variant_main_transcript(variant_json)
-    is_es_variant = annotation.get('db') == 'elasticsearch'
-
-    extras = variant_json.get('extras') or {}
-    genome_version = extras.get('genome_version') or '37'
-    lifted_over_genome_version = '37' if genome_version == '38' else '38'
-    coords_field = 'grch%s_coords' % lifted_over_genome_version
-    coords = extras.get(coords_field).split('-') if extras.get(coords_field) else []
-    lifted_over_chrom = coords[0].lstrip('chr') if len(coords) > 0 else ''
-    lifted_over_pos = coords[1] if len(coords) > 1 else ''
-
-    genotypes = {
-        individual_id: {
-            'ab': genotype.get('ab'),
-            'ad': genotype.get('extras', {}).get('ad'),
-            'alleles': genotype.get('alleles', []),
-            'cnvs': {
-                'array': genotype.get('extras', {}).get('cnvs', {}).get('array'),
-                'caller': genotype.get('extras', {}).get('cnvs', {}).get('caller'),
-                'cn': genotype.get('extras', {}).get('cnvs', {}).get('cn'),
-                'freq': genotype.get('extras', {}).get('cnvs', {}).get('freq'),
-                'LRR_median': genotype.get('extras', {}).get('cnvs', {}).get('LRR_median'),
-                'LRR_sd': genotype.get('extras', {}).get('cnvs', {}).get('LRR_sd'),
-                'size': genotype.get('extras', {}).get('cnvs', {}).get('size'),
-                'snps': genotype.get('extras', {}).get('cnvs', {}).get('snps'),
-                'type': genotype.get('extras', {}).get('cnvs', {}).get('type'),
-            },
-            'dp': genotype.get('extras', {}).get('dp'),
-            'filter': genotype.get('filter'),
-            'gq': genotype.get('gq'),
-            'numAlt': genotype.get('num_alt'),
-            'pl': genotype.get('extras', {}).get('pl'),
-        } for individual_id, genotype in variant_json.get('genotypes', {}).items()
-    }
-    if individual_guids_by_id:
-        genotypes = {individual_guids_by_id.get(individual_id): genotype for individual_id, genotype in genotypes.items()}
-    else:
-        samples = Sample.objects.filter(
-            individual__family__project=project,
-            individual__individual_id__in=genotypes.keys(),
-            loaded_date__isnull=False,
-            dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS
-        ).order_by('loaded_date').prefetch_related('individual')
-        sample_guids_by_id = {s.individual.individual_id: s.guid for s in samples}
-        genotypes = {sample_guids_by_id.get(individual_id): genotype for individual_id, genotype in genotypes.items()
-                     if sample_guids_by_id.get(individual_id)}
-
-    transcripts = defaultdict(list)
-    for i, vep_a in enumerate(annotation.get('vep_annotation') or []):
-        transcripts[vep_a.get('gene', vep_a.get('gene_id'))].append({
-            'transcriptId': vep_a.get('feature') or vep_a.get('transcript_id'),
-            'isChosenTranscript': i == annotation.get('worst_vep_annotation_index'),
-            'aminoAcids': vep_a.get('amino_acids'),
-            'canonical': vep_a.get('canonical'),
-            'cdnaPosition': vep_a.get('cdna_position') or vep_a.get('cdna_start'),
-            'cdsPosition': vep_a.get('cds_position'),
-            'codons': vep_a.get('codons'),
-            'consequence': vep_a.get('consequence') or vep_a.get('major_consequence'),
-            'hgvsc': vep_a.get('hgvsc'),
-            'hgvsp': vep_a.get('hgvsp'),
-        })
-
-    return {
-        'annotation': {
-            'cadd_phred': annotation.get('cadd_phred'),
-            'dann_score': annotation.get('dann_score'),
-            'eigen_phred': annotation.get('eigen_phred'),
-            'fathmm': annotation.get('fathmm'),
-            'freqs': {
-                'AF': annotation.get('freqs', {}).get('AF'),
-                'topmedAF': annotation.get('freqs', {}).get('topmed_AF'),
-                'g1k': annotation.get('freqs', {}).get('1kg_wgs_popmax_AF', annotation.get('freqs', {}).get(
-                    '1kg_wgs_AF', 0)) if is_es_variant else annotation.get('freqs', {}).get(
-                    '1kg_wgs_phase3_popmax', annotation.get('freqs', {}).get('1kg_wgs_phase3', 0)),
-                'exac': annotation.get('freqs', {}).get(
-                    'exac_v3_popmax_AF', annotation.get('freqs', {}).get(
-                        'exac_v3_AF', 0)) if is_es_variant else annotation.get('freqs', {}).get(
-                    'exac_v3_popmax', annotation.get('freqs', {}).get('exac_v3', 0)),
-                'gnomad_exomes': annotation.get('freqs', {}).get(
-                    'gnomad_exomes_popmax_AF', annotation.get('freqs', {}).get(
-                        'gnomad_exomes_AF', 0)) if is_es_variant else annotation.get(
-                    'freqs', {}).get('gnomad-exomes2_popmax', annotation.get('freqs', {}).get('gnomad-exomes2', None)),
-                'gnomad_genomes': annotation.get('freqs', {}).get('gnomad_genomes_popmax_AF', annotation.get(
-                    'freqs', {}).get('gnomad_genomes_AF', 0)) if is_es_variant else annotation.get('freqs', {}).get(
-                    'gnomad-gnomad-genomes2_popmax', annotation.get('freqs', {}).get('gnomad-genomes2', None)),
-            },
-            'gerp_rs': annotation.get('GERP_RS'),
-            'phastcons100vert': annotation.get('phastCons100way_vertebrate'),
-
-            'mpc_score': annotation.get('mpc_score'),
-            'metasvm': annotation.get('metasvm'),
-            'mut_taster': annotation.get('muttaster'),
-            'polyphen': annotation.get('polyphen'),
-            'popCounts': {
-                'AC': annotation.get('pop_counts', {}).get('AC'),
-                'AN': annotation.get('pop_counts', {}).get('AN'),
-                'g1kAC': annotation.get('pop_counts', {}).get('g1kAC'),
-                'g1kAN': annotation.get('pop_counts', {}).get('g1kAN'),
-                'topmedAC': annotation.get('pop_counts', {}).get('topmed_AC'),
-                'topmedAN': annotation.get('pop_counts', {}).get('topmed_AN'),
-                'gnomadExomesAC': annotation.get('pop_counts', {}).get('gnomad_exomes_AC'),
-                'gnomadExomesAN': annotation.get('pop_counts', {}).get('gnomad_exomes_AN'),
-                'gnomadGenomesAC': annotation.get('pop_counts', {}).get('gnomad_genomes_AC'),
-                'gnomadGenomesAN': annotation.get('pop_counts', {}).get('gnomad_genomes_AN'),
-                'exacAC': annotation.get('pop_counts', {}).get('exac_v3_AC'),
-                'exac_hom': annotation.get('pop_counts', {}).get('exac_v3_Hom'),
-                'exac_hemi': annotation.get('pop_counts', {}).get('exac_v3_Hemi'),
-                'exacAN': annotation.get('pop_counts', {}).get('exac_v3_AN'),
-                'gnomad_exomes_hom': annotation.get('pop_counts', {}).get('gnomad_exomes_Hom'),
-                'gnomad_exomes_hemi': annotation.get('pop_counts', {}).get('gnomad_exomes_Hemi'),
-                'gnomad_genomes_hom': annotation.get('pop_counts', {}).get('gnomad_genomes_Hom'),
-                'gnomad_genomes_hemi': annotation.get('pop_counts', {}).get('gnomad_genomes_Hemi'),
-            },
-            'primate_ai_score': annotation.get('primate_ai_score'),
-            'splice_ai_delta_score': annotation.get('splice_ai_delta_score'),
-            'revel_score': annotation.get('revel_score'),
-            'rsid': annotation.get('rsid'),
-            'sift': annotation.get('sift'),
-            'vepConsequence': annotation.get('vep_consequence'),
-            'vepGroup': annotation.get('vep_group'),
-        },
-        'mainTranscript': main_transcript,
-        'clinvar': {
-            'clinsig': extras.get('clinvar_clinsig'),
-            'variantId': extras.get('clinvar_variant_id'),
-            'alleleId': extras.get('clinvar_allele_id'),
-            'goldStars': extras.get('clinvar_gold_stars'),
-        },
-        'hgmd': {
-            'accession': extras.get('hgmd_accession'),
-            'class': extras.get('hgmd_class') if (user and user.is_staff) else None,
-        },
-        'genotypes': genotypes,
-        'genomeVersion': genome_version,
-        'liftedOverGenomeVersion': lifted_over_genome_version,
-        'liftedOverChrom': lifted_over_chrom,
-        'liftedOverPos': lifted_over_pos,
-        'locusLists': [],
-        'origAltAlleles': extras.get('orig_alt_alleles', []),
-        'transcripts': transcripts,
-    }
-
-
-def variant_main_transcript(variant_json):
-    annotation = variant_json.get('annotation') or {}
-    main_transcript = annotation.get('main_transcript') or (
-        annotation['vep_annotation'][annotation['worst_vep_annotation_index']] if annotation.get(
-            'worst_vep_annotation_index') is not None and annotation['vep_annotation'] else {})
-    return {
-        'transcriptId': main_transcript.get('feature') or main_transcript.get('transcript_id'),
-        'geneId': main_transcript.get('gene') or main_transcript.get('gene_id'),
-        'symbol': main_transcript.get('gene_symbol') or main_transcript.get('symbol'),
-        'lof': main_transcript.get('lof'),
-        'lofFlags': main_transcript.get('lof_flags'),
-        'lofFilter': main_transcript.get('lof_filter'),
-        'hgvsc': main_transcript.get('hgvsc'),
-        'hgvsp': main_transcript.get('hgvsp'),
-        'aminoAcids': main_transcript.get('amino_acids'),
-        'proteinPosition': main_transcript.get('protein_position'),
-    }
-
-
 def _saved_variant_genes(variants):
     gene_ids = set()
     for variant in variants.values():
@@ -366,5 +202,5 @@ def _add_locus_lists(project, variants, genes):
                 if pos and interval.start <= int(pos) <= interval.end:
                     variant['locusLists'].append(interval.locus_list.name)
 
-    for locus_list_gene in LocusListGene.objects.filter(locus_list__in=locus_lists, gene_id__in=genes.keys()):
+    for locus_list_gene in LocusListGene.objects.filter(locus_list__in=locus_lists, gene_id__in=genes.keys()).prefetch_related('locus_list'):
         genes[locus_list_gene.gene_id]['locusLists'].append(locus_list_gene.locus_list.name)

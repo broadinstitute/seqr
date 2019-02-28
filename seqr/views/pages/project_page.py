@@ -13,15 +13,14 @@ from django.db import connection
 from django.db.models import Q, Count
 
 from settings import SEQR_ID_TO_MME_ID_MAP
-from seqr.models import Family, Individual, _slugify, VariantTagType, VariantTag, VariantFunctionalData, AnalysisGroup
+from seqr.models import Family, Individual,Sample,  _slugify, VariantTagType, VariantTag, VariantFunctionalData, AnalysisGroup
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.individual_api import export_individuals
 from seqr.views.apis.locus_list_api import get_sorted_project_locus_lists
-from seqr.views.apis.saved_variant_api import variant_details
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import \
-    _get_json_for_project, get_json_for_sample_dict, _get_json_for_families, _get_json_for_individuals,\
-    get_json_for_saved_variant, get_json_for_analysis_groups
+    _get_json_for_project, get_json_for_sample_dict, _get_json_for_families, _get_json_for_individuals, \
+    get_json_for_saved_variants, get_json_for_analysis_groups
 
 
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions
@@ -57,7 +56,7 @@ def project_page_data(request, project_guid):
 
     project_json = _get_json_for_project(project, request.user)
     project_json['collaborators'] = _get_json_for_collaborator_list(project)
-    project_json.update(_get_json_for_variant_tag_types(project))
+    project_json.update(_get_json_for_variant_tag_types(project, individuals_by_guid, samples_by_guid))
     locus_lists = get_sorted_project_locus_lists(project, request.user)
     project_json['locusListGuids'] = [locus_list['locusListGuid'] for locus_list in locus_lists]
 
@@ -75,8 +74,6 @@ def project_page_data(request, project_guid):
         'matchmakerSubmissions': {project.guid: _project_matchmaker_submissions(project)},
     }
 
-    from django.shortcuts import render
-    return render(request, 'app.html')
     return create_json_response(json_response)
 
 
@@ -221,7 +218,12 @@ def _get_json_for_collaborator_list(project):
     return sorted(collaborator_list, key=lambda collaborator: (collaborator['lastName'], collaborator['displayName']))
 
 
-def _get_json_for_variant_tag_types(project):
+def _get_json_for_variant_tag_types(project, individuals_by_guid, samples_by_guid):
+    sample_guids_by_id = {
+        individuals_by_guid[sample['individualGuid']]['individualId']: sample_guid for sample_guid, sample in samples_by_guid.items()
+        if sample['loadedDate'] and sample['datasetType'] == Sample.DATASET_TYPE_VARIANT_CALLS
+    }
+
     project_variant_tags = []
     discovery_tags = []
     tag_counts_by_type_and_family = VariantTag.objects.filter(saved_variant__project=project).values('saved_variant__family__guid', 'variant_tag_type__name').annotate(count=Count('*'))
@@ -229,10 +231,9 @@ def _get_json_for_variant_tag_types(project):
         current_tag_type_counts = [counts for counts in tag_counts_by_type_and_family if counts['variant_tag_type__name'] == variant_tag_type.name]
         num_tags = sum(count['count'] for count in current_tag_type_counts)
         if variant_tag_type.category == 'CMG Discovery Tags' and num_tags > 0:
-            for tag in VariantTag.objects.filter(saved_variant__project=project, variant_tag_type=variant_tag_type).select_related('saved_variant'):
-                tag_data = get_json_for_saved_variant(tag.saved_variant)
-                tag_data.update(variant_details(json.loads(tag.saved_variant.saved_variant_json or '{}'), project))
-                discovery_tags.append(tag_data)
+            tags = VariantTag.objects.filter(saved_variant__project=project, variant_tag_type=variant_tag_type).select_related('saved_variant')
+            saved_variants = [tag.saved_variant for tag in tags]
+            discovery_tags += get_json_for_saved_variants(saved_variants, add_tags=True, add_details=True, project=project, sample_guids_by_id=sample_guids_by_id)
 
         project_variant_tags.append({
             'variantTagTypeGuid': variant_tag_type.guid,
