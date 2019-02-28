@@ -8,10 +8,10 @@ from django.db.models import prefetch_related_objects
 
 from seqr.utils.gene_utils import get_genes
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
-from seqr.views.apis.saved_variant_api import variant_details
+from seqr.views.utils.variant_utils import variant_details
 from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.orm_to_json_utils import _get_json_for_individuals, get_json_for_saved_variant
-from seqr.models import Project, VariantTagType, Sample, SavedVariant
+from seqr.views.utils.orm_to_json_utils import _get_json_for_individuals, get_json_for_saved_variants
+from seqr.models import Project, VariantTagType, Sample, SavedVariant, Individual
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +80,6 @@ def anvil_export(request, project_guid):
             if key.startswith('geneId') and genes_by_id.get(gene_id):
                 row[key.replace('geneId', 'Gene')] = genes_by_id[gene_id]['geneSymbol']
 
-    #
     return create_json_response({'anvilRows': rows})
 
 
@@ -99,17 +98,18 @@ def _get_over_year_loaded_project_families(projects):
 def _get_saved_variants_by_family(projects, user):
     tag_type = VariantTagType.objects.get(name='Known gene for phenotype')
 
-    project_saved_variants = SavedVariant.objects.select_related('family').filter(
+    project_saved_variants = SavedVariant.objects.select_related('family', 'project').filter(
         project__in=projects,
         varianttag__variant_tag_type=tag_type,
     )
 
-    saved_variants_by_family = collections.defaultdict(list)
-    for saved_variant in project_saved_variants:
-        variant = get_json_for_saved_variant(saved_variant)
-        variant_json = json.loads(saved_variant.saved_variant_json or '{}')
-        variant.update(variant_details(variant_json, saved_variant.project, user, genotypes_by_individual_guid=True))
+    individuals = Individual.objects.filter(family__project__in=projects).only('guid', 'individual_id')
+    individual_guids_by_id = {i.individual_id: i.guid for i in individuals}
+    project_saved_variants_json = get_json_for_saved_variants(
+        project_saved_variants, add_tags=True, add_details=True, user=user, individual_guids_by_id=individual_guids_by_id)
 
-        saved_variants_by_family[saved_variant.family.guid].append(variant)
+    saved_variants_by_family = collections.defaultdict(list)
+    for variant in project_saved_variants_json:
+        saved_variants_by_family[variant['familyGuid']].append(variant)
 
     return saved_variants_by_family

@@ -89,8 +89,10 @@ class JSONUtilsTest(TestCase):
         fields = {'variantGuid', 'variantId', 'projectGuid', 'familyGuids', 'xpos', 'ref', 'alt'}
         self.assertSetEqual(set(json.keys()), fields)
 
-        fields.update({'tags', 'functionalData', 'notes'})
-        json = get_json_for_saved_variant(variant, add_tags=True)
+        fields.update({'tags', 'functionalData', 'notes', 'liftedOverGenomeVersion', 'clinvar', 'locusLists',
+                       'origAltAlleles', 'liftedOverPos', 'genomeVersion', 'mainTranscript', 'hgmd', 'liftedOverChrom',
+                       'annotation', 'genotypes', 'transcripts'})
+        json = get_json_for_saved_variant(variant, add_tags=True, add_details=True)
         self.assertSetEqual(set(json.keys()), fields)
 
     def test_json_for_variant_tag(self):

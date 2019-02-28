@@ -10,7 +10,7 @@ import DataLoader from 'shared/components/DataLoader'
 import { InlineHeader } from 'shared/components/StyledComponents'
 
 import { loadAnvil } from '../reducers'
-import { getAnvilLoading, getAnvilRows, getAnvilColumns } from '../selectors'
+import { getAnvilLoading, getAnvilLoadingError, getAnvilRows, getAnvilColumns } from '../selectors'
 
 const SEARCH_CATEGORIES = ['projects']
 
@@ -30,7 +30,7 @@ const getDownloadFilename = (projectGuid, data) => {
   return `${projectName || 'All_AnVIL_Projects'}_${new Date().toISOString().slice(0, 10)}_Metadata`
 }
 
-const Anvil = ({ match, data, columns, loading, load }) =>
+const Anvil = ({ match, data, columns, loading, load, loadingError }) =>
   <DataLoader contentId={match.params.projectGuid} load={load} reloadOnIdUpdate content loading={false}>
     <InlineHeader size="medium" content="Projects:" />
     <AwesomebarContainer>
@@ -49,7 +49,7 @@ const Anvil = ({ match, data, columns, loading, load }) =>
       downloadFileName={getDownloadFilename(match.params.projectGuid, data)}
       idField="individualGuid"
       defaultSortColumn="familyId"
-      emptyContent={match.params.projectGuid ? '0 cases found' : 'Select a project to view data'}
+      emptyContent={loadingError || (match.params.projectGuid ? '0 cases found' : 'Select a project to view data')}
       loading={loading}
       data={data}
       columns={columns}
@@ -61,6 +61,7 @@ Anvil.propTypes = {
   data: PropTypes.array,
   columns: PropTypes.array,
   loading: PropTypes.bool,
+  loadingError: PropTypes.string,
   load: PropTypes.func,
 }
 
@@ -68,6 +69,7 @@ const mapStateToProps = state => ({
   data: getAnvilRows(state),
   columns: getAnvilColumns(state),
   loading: getAnvilLoading(state),
+  loadingError: getAnvilLoadingError(state),
 })
 
 const mapDispatchToProps = {
