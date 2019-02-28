@@ -216,6 +216,7 @@ def variant_details(variant_json, project, user=None, genotypes_by_individual_gu
     }
     samples = Sample.objects.filter(
         individual__family__project=project,
+        individual__individual_id__in=genotypes.keys(),
         loaded_date__isnull=False,
         dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS
     ).order_by('loaded_date').prefetch_related('individual')
