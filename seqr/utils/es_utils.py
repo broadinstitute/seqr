@@ -404,14 +404,14 @@ def _quality_filter(quality_filter, family_samples_by_id):
             if min_ab:
                 #  AB only relevant for hets
                 q = ~Q('term', samples_num_alt_1=sample_id)
-                q |= _build_or_filter('term', [
+                q |= ~Q(_build_or_filter('term', [
                     {'samples_ab_gte_{}'.format(i): sample_id} for i in range(min_ab, 50, 5)
-                ])
+                ]))
                 quality_q &= q
             if min_gq:
-                quality_q &= _build_or_filter('term', [
+                quality_q &= ~Q(_build_or_filter('term', [
                     {'samples_gq_gte_{}'.format(i): sample_id} for i in range(min_gq, 100, 5)
-                ])
+                ]))
 
     return quality_q
 
