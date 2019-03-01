@@ -320,6 +320,7 @@ export const QUALITY_FILTER_FIELDS = [
     labelHelp: 'Genotype Quality (GQ) is a statistical measure of confidence in the genotype call (eg. hom. or het) based on the read data',
     min: 0,
     max: 100,
+    step: 5,
   },
   {
     name: 'min_ab',
@@ -327,6 +328,7 @@ export const QUALITY_FILTER_FIELDS = [
     labelHelp: 'The allele balance represents the percentage of reads that support the alt allele out of the total number of sequencing reads overlapping a variant. Use this filter to set a minimum percentage for the allele balance in heterozygous individuals.',
     min: 0,
     max: 50,
+    step: 5,
   },
 ]
 
