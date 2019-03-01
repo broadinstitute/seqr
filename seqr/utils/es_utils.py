@@ -41,7 +41,7 @@ def _get_latest_samples_for_families(families):
         dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
         sample_status=Sample.SAMPLE_STATUS_LOADED,
         elasticsearch_index__isnull=False,
-    )
+    ).prefetch_related('individual', 'individual__family')
     sample_individual_max_loaded_date = {
         agg['individual__guid']: agg['max_loaded_date'] for agg in
         samples.values('individual__guid').annotate(max_loaded_date=Max('loaded_date'))

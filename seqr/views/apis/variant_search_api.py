@@ -1,7 +1,6 @@
 import json
 import jmespath
 from collections import defaultdict
-from copy import deepcopy
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.views.decorators.csrf import csrf_exempt
@@ -15,7 +14,7 @@ from seqr.views.pages.project_page import get_project_details
 from seqr.views.utils.export_table_utils import export_table
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import \
-    get_json_for_saved_variant, \
+    get_json_for_saved_variants, \
     get_json_for_saved_search,\
     get_json_for_saved_searches
 from seqr.views.utils.permissions_utils import check_permissions
@@ -77,7 +76,8 @@ def query_variants_handler(request, search_hash):
             results_model.families = families
             results_model.save()
 
-    _check_results_permission(results_model, request.user)
+    familes = results_model.families.prefetch_related('project').all()
+    _check_results_permission(familes, request.user)
 
     try:
         variants = get_es_variants(results_model, page=page, num_results=per_page)
@@ -288,15 +288,15 @@ def create_saved_search_handler(request):
     })
 
 
-def _check_results_permission(results_model, user):
-    projects = {family.project for family in results_model.families.all()}
+def _check_results_permission(familes, user):
+    projects = {family.project for family in familes}
     for project in projects:
         check_permissions(project, user)
 
 
 def _get_search_context(results_model):
     project_families = defaultdict(list)
-    for family in results_model.families.all():
+    for family in results_model.families.prefetch_related('project').all():
         project_families[family.project.guid].append(family.guid)
 
     return {
@@ -325,16 +325,15 @@ def _get_saved_variants(variants):
     variant_q = Q()
     for variant in variants:
         variant_q |= Q(xpos_start=variant['xpos'], ref=variant['ref'], alt=variant['alt'], family__guid__in=variant['familyGuids'])
-    saved_variants = SavedVariant.objects.filter(variant_q).prefetch_related(
-        'varianttag_set', 'variantfunctionaldata_set', 'variantnote_set',
-    )
+    saved_variants = SavedVariant.objects.filter(variant_q)
 
     variants_by_id = {'{}-{}-{}'.format(var['xpos'], var['ref'], var['alt']): var for var in variants}
-    saved_variants_by_guid = {}
-    for saved_variant in saved_variants:
-        variant = deepcopy(variants_by_id['{}-{}-{}'.format(saved_variant.xpos, saved_variant.ref, saved_variant.alt)])
-        variant.update(get_json_for_saved_variant(saved_variant, add_tags=True))
-        saved_variants_by_guid[saved_variant.guid] = variant
+    saved_variants_json = get_json_for_saved_variants(saved_variants, add_tags=True)
+    saved_variants_by_guid = {
+        saved_variant['variantGuid']: dict(
+            saved_variant,
+            **variants_by_id['{}-{}-{}'.format(saved_variant['xpos'], saved_variant['ref'], saved_variant['alt'])]
+        ) for saved_variant in saved_variants_json}
 
     return saved_variants_by_guid
 
