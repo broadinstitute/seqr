@@ -46,7 +46,8 @@ export const FileLink = ({ url, data, ext, linkContent }) => {
     if (data.headers) {
       content = `${data.headers.join(extConfig.delimiter)}\n${content}`
     }
-    const href = `data:text/${extConfig.dataType},${encodeURIComponent(content)}`
+    const href = URL.createObjectURL(new Blob([content], {  type: 'application/octet-stream' }))
+
     return <a href={href} download={`${data.filename}.${extConfig.dataExt || ext}`}>{linkContent}</a>
   }
 
