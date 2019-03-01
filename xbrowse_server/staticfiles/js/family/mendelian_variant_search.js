@@ -276,6 +276,14 @@ var MendelianVariantSearchResultsView = Backbone.View.extend({
                     return 0;
                 }
                 break;
+            case "splice_ai":
+                comparison_function = function (a, b) {
+                    if (!a.annotation.splice_ai_delta_score) {
+                      return b.annotation.splice_ai_delta_score ? 1 : 0
+                    }
+                    return that.sort_direction * (a.annotation.splice_ai_delta_score - b.annotation.splice_ai_delta_score);
+                };
+                break;
             case "omim":
                 comparison_function = function (a, b) {
                     var omim_a = (a.extras && a.extras.in_disease_gene_db) ? 1 : 2;
@@ -323,7 +331,7 @@ var MendelianVariantSearchResultsView = Backbone.View.extend({
                 }
                 break;
             default:
-                console.log("Unexpected sort column: ", column);
+                console.log("Unexpected sort column: ", this.sort_column);
 
         }
 
