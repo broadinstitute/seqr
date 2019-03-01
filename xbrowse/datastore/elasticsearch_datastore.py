@@ -346,18 +346,18 @@ class ElasticsearchDatastore(datastore.Datastore):
             if sample_ids and min_ab is not None:
                 min_ab_filter_val = int(min_ab) - int(min_ab % 5)
                 for sample_id in sample_ids:
+                    q = Q('term', samples_ab_0_to_5=sample_id)
+                    for i in range(5, min_ab_filter_val, 5):
+                        q = q | Q('term', **{'samples_ab_{}_to_{}'.format(i, i+5): sample_id})
                     #  AB only relevant for hets
-                    q = ~Q('term', samples_num_alt_1=sample_id)
-                    for i in range(min_ab_filter_val, 50, 5):
-                        q = q | Q('term', **{'samples_ab_gte_{}'.format(i): sample_id})
-                    s = s.filter(q)
+                    s = s.filter(~Q(q) | ~Q('term', samples_num_alt_1=sample_id))
             if sample_ids and min_gq is not None:
                 min_gq_filter_val = int(min_gq) - int(min_gq % 5)
                 for sample_id in sample_ids:
-                    q = Q('term', **{'samples_gq_gte_{}'.format(min_gq_filter_val): sample_id})
-                    for i in range(min_gq_filter_val + 5, 100, 5):
-                        q = q | Q('term', **{'samples_gq_gte_{}'.format(i): sample_id})
-                    s = s.filter(q)
+                    q = Q('term', samples_gq_0_to_5=sample_id)
+                    for i in range(5, min_gq_filter_val, 5):
+                        q = q | Q('term', **{'samples_gq_{}_to_{}'.format(i, i+5): sample_id})
+                    s = s.filter(~Q(q))
 
             if genotype_filters:
                 for sample_id, queries in genotype_filters.items():
