@@ -563,12 +563,15 @@ export const DISCOVERY_CATEGORY_NAME = 'CMG Discovery Tags'
 
 export const SORT_BY_FAMILY_GUID = 'FAMILY_GUID'
 export const SORT_BY_XPOS = 'XPOS'
-export const SORT_BY_PATHOGENICITY = 'PATHOGENICITY'
-export const SORT_BY_IN_OMIM = 'IN_OMIM'
-export const SORT_BY_PROTEIN_CONSQ = 'PROTEIN_CONSEQUENCE'
-export const SORT_BY_EXAC = 'EXAC'
-export const SORT_BY_1KG = '1KG'
-export const SORT_BY_CONSTRAINT = 'CONSTRAINT'
+const SORT_BY_PATHOGENICITY = 'PATHOGENICITY'
+const SORT_BY_IN_OMIM = 'IN_OMIM'
+const SORT_BY_PROTEIN_CONSQ = 'PROTEIN_CONSEQUENCE'
+const SORT_BY_EXAC = 'EXAC'
+const SORT_BY_1KG = '1KG'
+const SORT_BY_CONSTRAINT = 'CONSTRAINT'
+const SORT_BY_CADD = 'CADD'
+const SORT_BY_REVEL = 'REVEL'
+const SORT_BY_SPLICE_AI = 'SPLICE_AI'
 
 
 const clinsigSeverity = (variant, user) => {
@@ -595,6 +598,9 @@ const VARIANT_SORT_OPTONS = [
   },
   { value: SORT_BY_EXAC, text: 'ExAC Frequency', comparator: (a, b) => a.populations.exac.af - b.populations.exac.af },
   { value: SORT_BY_1KG, text: '1kg  Frequency', comparator: (a, b) => a.populations.g1k.af - b.populations.g1k.af },
+  { value: SORT_BY_CADD, text: 'Cadd', comparator: (a, b) => b.predictions.cadd - a.predictions.cadd },
+  { value: SORT_BY_REVEL, text: 'Revel', comparator: (a, b) => b.predictions.revel - a.predictions.revel },
+  { value: SORT_BY_SPLICE_AI, text: 'Splice AI', comparator: (a, b) => b.predictions.splice_ai - a.predictions.splice_ai },
   { value: SORT_BY_PATHOGENICITY, text: 'Pathogenicity', comparator: (a, b, geneId, user) => clinsigSeverity(b, user) - clinsigSeverity(a, user) },
   {
     value: SORT_BY_CONSTRAINT,
