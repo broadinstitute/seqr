@@ -5,6 +5,9 @@ import { CORE_ANVIL_COLUMNS, VARIANT_ANVIL_COLUMNS, VARIANT_ANVIL_COLUMN_FORMATS
 export const getAnvilLoading = state => state.anvilLoading.isLoading
 export const getAnvilLoadingError = state => state.anvilLoading.errorMessage
 export const getAnvilRows = state => state.anvilRows
+export const getDiscoverySheetLoading = state => state.discoverySheetLoading.isLoading
+export const getDiscoverySheetLoadingError = state => state.discoverySheetLoading.errorMessage
+export const getDiscoverySheetRows = state => state.discoverySheetRows
 
 export const getAnvilColumns = createSelector(
   getAnvilRows,
