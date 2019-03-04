@@ -69,8 +69,7 @@ from seqr.views.apis.locus_list_api import \
     add_project_locus_lists, \
     delete_project_locus_lists
 
-from seqr.views.apis.staff_api import anvil_export
-from seqr.views.pages.staff.discovery_sheet import discovery_sheet
+from seqr.views.apis.staff_api import anvil_export, discovery_sheet, get_projects_for_category
 from seqr.views.pages.staff.elasticsearch_status import elasticsearch_status
 from seqr.views.pages.staff.komp_export import komp_export
 
@@ -159,6 +158,8 @@ api_endpoints = {
     'upload_temp_file': save_temp_file,
 
     'staff/anvil/(?P<project_guid>[^/]+)': anvil_export,
+    'staff/discovery_sheet/(?P<project_guid>[^/]+)': discovery_sheet,
+    'staff/projects_for_category/(?P<project_category_name>[^/]+)': get_projects_for_category,
 
 }
 
@@ -202,7 +203,6 @@ urlpatterns += [
 # other staff-only endpoints
 urlpatterns = [
     url("^staff/seqr_stats/?", seqr_stats_page, name="seqr_stats"),
-    url("^staff/discovery_sheet/?(?P<project_guid>[^/]+)?/?", discovery_sheet, name="discovery_sheet"),
     url("^staff/elasticsearch_status", elasticsearch_status, name="elasticsearch_status"),
     url("^staff/komp_export", komp_export, name="komp_export"),
     url("^staff/users/?", users_page, name="users_page"),
