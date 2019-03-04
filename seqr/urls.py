@@ -159,6 +159,7 @@ api_endpoints = {
     'upload_temp_file': save_temp_file,
 
     'staff/anvil/(?P<project_guid>[^/]+)': anvil_export,
+    'staff/discovery_sheet/?(?P<project_guid>[^/]+)?/?': discovery_sheet,
 
 }
 
@@ -202,7 +203,6 @@ urlpatterns += [
 # other staff-only endpoints
 urlpatterns = [
     url("^staff/seqr_stats/?", seqr_stats_page, name="seqr_stats"),
-    url("^staff/discovery_sheet/?(?P<project_guid>[^/]+)?/?", discovery_sheet, name="discovery_sheet"),
     url("^staff/elasticsearch_status", elasticsearch_status, name="elasticsearch_status"),
     url("^staff/komp_export", komp_export, name="komp_export"),
     url("^staff/users/?", users_page, name="users_page"),

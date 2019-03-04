@@ -263,14 +263,7 @@ def discovery_sheet(request, project_guid=None):
     saved_variants_by_project_family = get_saved_variants_by_project_family([project])
     rows = generate_rows(project, loaded_samples_by_project_family, saved_variants_by_project_family, errors)
 
-    logger.info("request.get: " + str(request.GET))
-    if "download" in request.GET:
-        logger.info("exporting xls table")
-        return export_table("discovery_sheet", HEADER, rows, file_format="xls")
-
-    return render(request, "staff/discovery_sheet.html", {
-        'project': project,
-        'projects': projects_json,
+    return create_json_response({
         'header': HEADER.values(),
         'rows': rows,
         'errors': errors,

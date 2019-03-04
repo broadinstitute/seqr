@@ -6,6 +6,8 @@ import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 // action creators and reducers in one file as suggested by https://github.com/erikras/ducks-modular-redux
 const REQUEST_ANVIL = 'REQUEST_ANVIL'
 const RECEIVE_ANVIL = 'RECEIVE_ANVIL'
+const REQUEST_DISCOVERY_SHEET = 'REQUEST_DISCOVERY_SHEET'
+const RECEIVE_DISCOVERY_SHEET = 'RECEIVE_DISCOVERY_SHEET'
 
 
 // Data actions
@@ -26,9 +28,28 @@ export const loadAnvil = (projectGuid) => {
   }
 }
 
+export const loadDiscoverySheet = (projectGuid) => {
+  return (dispatch) => {
+    if (projectGuid) {
+      dispatch({ type: REQUEST_DISCOVERY_SHEET })
+      new HttpRequestHelper(`/api/staff/discovery_sheet/${projectGuid}`,
+        (responseJson) => {
+          console.log(responseJson.errors)
+          dispatch({ type: RECEIVE_DISCOVERY_SHEET, newValue: responseJson.rows })
+        },
+        (e) => {
+          dispatch({ type: RECEIVE_DISCOVERY_SHEET, error: e.message, newValue: {} })
+        },
+      ).get()
+    }
+  }
+}
+
 export const reducers = {
   anvilLoading: loadingReducer(REQUEST_ANVIL, RECEIVE_ANVIL),
   anvilRows: createSingleValueReducer(RECEIVE_ANVIL, []),
+  discoverySheetLoading: loadingReducer(REQUEST_DISCOVERY_SHEET, RECEIVE_DISCOVERY_SHEET),
+  discoverySheetRows: createSingleValueReducer(RECEIVE_DISCOVERY_SHEET, []),
 }
 
 const rootReducer = combineReducers(reducers)

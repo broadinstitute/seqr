@@ -58,6 +58,7 @@ class SortableTable extends React.PureComponent {
     horizontalScroll: PropTypes.bool,
     downloadTableType: PropTypes.string,
     downloadFileName: PropTypes.string,
+    loadingProps: PropTypes.object,
   }
 
   static defaultProps = {
@@ -122,7 +123,7 @@ class SortableTable extends React.PureComponent {
   render() {
     const {
       data, defaultSortColumn, filterColumn, idField, columns, selectRows, selectedRows = {}, loading, emptyContent,
-      footer, rowsPerPage, horizontalScroll, downloadFileName, downloadTableType, ...tableProps
+      footer, rowsPerPage, horizontalScroll, downloadFileName, downloadTableType, loadingProps = {}, ...tableProps
     } = this.props
     const { column, direction, activePage, filter } = this.state
 
@@ -166,7 +167,7 @@ class SortableTable extends React.PureComponent {
 
     let tableContent
     if (loading) {
-      tableContent = <TableLoading numCols={columns.length} />
+      tableContent = <TableLoading numCols={columns.length} {...loadingProps} />
     } else if (emptyContent && data.length === 0) {
       tableContent = <Table.Row><Table.Cell colSpan={columns.length}>{emptyContent}</Table.Cell></Table.Row>
     } else {

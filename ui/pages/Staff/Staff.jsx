@@ -9,10 +9,11 @@ import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 
 import Anvil from './components/Anvil'
+import DiscoverySheet from './components/DiscoverySheet'
 
 const STAFF_PAGES = [
   { path: 'anvil', params: ':projectGuid?', component: Anvil },
-  { path: 'discovery_sheet' },
+  { path: 'discovery_sheet', params: ':projectGuid?', component: DiscoverySheet },
   { path: 'elasticsearch_status' },
   { path: 'komp_export' },
   { path: 'seqr_stats' },
