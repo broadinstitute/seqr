@@ -76,8 +76,7 @@ def query_variants_handler(request, search_hash):
             results_model.families = families
             results_model.save()
 
-    familes = results_model.families.prefetch_related('project').all()
-    _check_results_permission(familes, request.user)
+    _check_results_permission(results_model, request.user)
 
     try:
         variants = get_es_variants(results_model, page=page, num_results=per_page)
@@ -288,8 +287,9 @@ def create_saved_search_handler(request):
     })
 
 
-def _check_results_permission(familes, user):
-    projects = {family.project for family in familes}
+def _check_results_permission(results_model, user):
+    families = results_model.families.prefetch_related('project').all()
+    projects = {family.project for family in families}
     for project in projects:
         check_permissions(project, user)
 
@@ -329,11 +329,15 @@ def _get_saved_variants(variants):
 
     variants_by_id = {'{}-{}-{}'.format(var['xpos'], var['ref'], var['alt']): var for var in variants}
     saved_variants_json = get_json_for_saved_variants(saved_variants, add_tags=True)
-    saved_variants_by_guid = {
-        saved_variant['variantGuid']: dict(
-            saved_variant,
-            **variants_by_id['{}-{}-{}'.format(saved_variant['xpos'], saved_variant['ref'], saved_variant['alt'])]
-        ) for saved_variant in saved_variants_json}
+    saved_variants_by_guid = {}
+    for saved_variant in saved_variants_json:
+        family_guids = saved_variant['familyGuids']
+        saved_variant.update(
+            variants_by_id['{}-{}-{}'.format(saved_variant['xpos'], saved_variant['ref'], saved_variant['alt'])]
+        )
+        #  For saved variants only use family it was saved for, not all families in search
+        saved_variant['familyGuids'] = family_guids
+        saved_variants_by_guid[saved_variant['variantGuid']] = saved_variant
 
     return saved_variants_by_guid
 

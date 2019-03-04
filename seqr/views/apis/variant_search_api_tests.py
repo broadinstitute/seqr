@@ -21,8 +21,8 @@ PROJECT_FAMILIES = [{'projectGuid': PROJECT_GUID, 'familyGuids': ['F000001_1', '
 VARIANTS = [
     {'alt': 'G', 'ref': 'GAGA', 'chrom': '21', 'pos': 3343353, 'xpos': 2103343353, 'genomeVersion': '38', 
      'transcripts': {'ENSG00000227232': {}, 'ENSG00000268903': {}}, 'familyGuids': ['F000001_1', 'F000002_2'], 
-     'genotypes': {'NA19675': {'ab': 0.7021276595744681, 'gq': 46.0, 'num_alt': 1, 'dp': '50', 'ad': '14,33'},
-                   'NA19679': {'ab': 0.0, 'gq': 99.0, 'num_alt': 0, 'dp': '45', 'ad': '45,0'}}},
+     'genotypes': {'NA19675': {'sampleId': 'NA19675', 'ab': 0.7021276595744681, 'gq': 46.0, 'numAlt': 1, 'dp': '50', 'ad': '14,33'},
+                   'NA19679': {'sampleId': 'NA19679', 'ab': 0.0, 'gq': 99.0, 'numAlt': 0, 'dp': '45', 'ad': '45,0'}}},
     {'alt': 'A', 'ref': 'AAAG', 'chrom': '3', 'pos': 835, 'xpos': 3000000835, 'genomeVersion': '38', 'transcripts': {}, 'familyGuids': ['F000001_1'], 'genotypes': {'NA19679': {'ab': 0.0, 'gq': 99.0, 'num_alt': 0, 'dp': '45', 'ad': '45,0'}}},
     {'alt': 'T', 'ref': 'TC', 'chrom': '12', 'pos': 48367227, 'xpos': 1248367227, 'genomeVersion': '38', 'transcripts': {'ENSG00000233653': {}}, 'familyGuids': ['F000002_2'], 'genotypes': {}},
 ]
@@ -119,7 +119,7 @@ class VariantSearchAPITest(TestCase):
         # Test export
         export_url = reverse(export_variants_handler, args=[SEARCH_HASH])
         response = self.client.get(export_url)
-
+        self.assertEqual(response.status_code, 200)
         export_content = [row.split('\t') for row in response.content.rstrip('\n').split('\n')]
         self.assertEqual(len(export_content), 4)
         self.assertListEqual(
@@ -132,8 +132,8 @@ class VariantSearchAPITest(TestCase):
         self.assertListEqual(
             export_content[1],
             ['21', '3343353', 'GAGA', 'G', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
-             '', '1', 'Tier 1 - Novel gene and phenotype (None)|Review (None)', '', '2', '', '', '', '', '14,33', '50',
-             '46.0', '0.702127659574', '', '', '45,0', '45', '99.0', '0.0'])
+             '', '1', 'Tier 1 - Novel gene and phenotype (None)|Review (None)', '', '2', '', '', 'NA19675', '1',
+             '14,33', '50', '46.0', '0.702127659574', 'NA19679', '0', '45,0', '45', '99.0', '0.0'])
 
         mock_get_variants.assert_called_with(results_models.first(), page=1, num_results=3)
 
