@@ -11,16 +11,18 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.core.mail.message import EmailMultiAlternatives
 from django.utils import timezone
 
+from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
+
 from seqr.utils.gene_utils import get_genes
 from seqr.utils.xpos_utils import get_chrom_pos
 from seqr.views.utils.variant_utils import variant_main_transcript
 from seqr.views.utils.export_table_utils import export_table
 from seqr.views.utils.json_utils import create_json_response, _to_title_case
-from seqr.models import Project, Family, VariantTag, VariantTagType, Sample, SavedVariant
+from seqr.models import Project, Family, VariantTag, VariantTagType, Sample, SavedVariant, ProjectCategory
 from dateutil import relativedelta as rdelta
 from django.db.models import Q, Prefetch
 from django.shortcuts import render
-from settings import LOGIN_URL, SEQR_ID_TO_MME_ID_MAP
+from settings import SEQR_ID_TO_MME_ID_MAP
 from seqr.views.utils.orm_to_json_utils import _get_json_for_project
 
 logger = logging.getLogger(__name__)
@@ -56,68 +58,6 @@ HPO_CATEGORY_NAMES = {
     'HP:0000119': 'Genitourinary System',
     'HP:0025354': 'Cellular Phenotype',
 }
-
-HEADER = collections.OrderedDict([
-    ("t0", "T0"),
-    ("family_id", "Family ID"),
-    ("coded_phenotype", "Phenotype"),
-    ("sequencing_approach", "Sequencing Approach"),
-    ("sample_source", "Sample Source"),
-    ("analysis_complete_status", "Analysis Status"),
-    ("expected_inheritance_model", "Expected Inheritance Model"),
-    ("actual_inheritance_model", "Actual Inheritance Model"),
-    ("n_kindreds", "# Kindreds"),
-    ("gene_name", "Gene Name"),
-    ("novel_mendelian_gene", "Novel Mendelian Gene"),
-    ("gene_count", "Gene Count"),
-    ("phenotype_class", "Phenotype Class"),
-    ("solved", "Solved"),
-    ("genome_wide_linkage", "Genome-wide Linkage"),
-    ("p_value", "Bonferroni corrected p-value, NA, NS, KPG"),
-    ("n_kindreds_overlapping_sv_similar_phenotype", "# Kindreds w/ Overlapping SV & Similar Phenotype"),
-    ("n_unrelated_kindreds_with_causal_variants_in_gene", "# Unrelated Kindreds w/ Causal Variants in Gene"),
-    ("biochemical_function", "Biochemical Function"),
-    ("protein_interaction", "Protein Interaction"),
-    ("expression", "Expression"),
-    ("patient_cells", "Patient cells"),
-    ("non_patient_cell_model", "Non-patient cells"),
-    ("animal_model", "Animal model"),
-    ("non_human_cell_culture_model", "Non-human Cell culture model"),
-    ("rescue", "Rescue"),
-    ("omim_number_initial", "OMIM # (initial)"),
-    ("omim_number_post_discovery", "OMIM # (post-discovery)"),
-    ("connective_tissue", "Abnormality of Connective Tissue"),
-    ("voice", "Abnormality of the Voice"),
-    ("nervous_system", "Abnormality of the Nervous System"),
-    ("breast", "Abnormality of the Breast"),
-    ("eye_defects", "Abnormality of the Eye"),
-    ("prenatal_development_or_birth", "Abnormality of Prenatal Development or Birth"),
-    ("neoplasm", "Neoplasm"),
-    ("endocrine_system", "Abnormality of the Endocrine System"),
-    ("head_or_neck", "Abnormality of Head or Neck"),
-    ("immune_system", "Abnormality of the Immune System"),
-    ("growth", "Growth Abnormality"),
-    ("limbs", "Abnormality of Limbs"),
-    ("thoracic_cavity", "Abnormality of the Thoracic Cavity"),
-    ("blood", "Abnormality of Blood and Blood-forming Tissues"),
-    ("musculature", "Abnormality of the Musculature"),
-    ("cardiovascular_system", "Abnormality of the Cardiovascular System"),
-    ("abdomen", "Abnormality of the Abdomen"),
-    ("skeletal_system", "Abnormality of the Skeletal System"),
-    ("respiratory", "Abnormality of the Respiratory System"),
-    ("ear_defects", "Abnormality of the Ear"),
-    ("metabolism_homeostasis", "Abnormality of Metabolism / Homeostasis"),
-    ("genitourinary_system", "Abnormality of the Genitourinary System"),
-    ("integument", "Abnormality of the Integument"),
-    ("t0_copy", "T0"),
-    ("months_since_t0", "Months since T0"),
-    ("submitted_to_mme", "Submitted to MME (deadline 7 months post T0)"),
-    ("posted_publicly", "Posted publicly (deadline 12 months posted T0)"),
-    ("komp_early_release", "KOMP Early Release"),
-    ("pubmed_ids", "PubMed IDs for gene"),
-    ("collaborator", "Collaborator"),
-    ("analysis_summary", "Analysis Summary"),
-])
 
 DEFAULT_ROW = row = {
     "t0": None,
@@ -201,21 +141,25 @@ METADATA_FUNCTIONAL_DATA_FIELDS = {
 }
 
 
-@staff_member_required(login_url=LOGIN_URL)
+@staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
+def get_projects_for_category(request, project_category_name):
+    category = ProjectCategory.objects.get(name=project_category_name)
+    return create_json_response({
+        'projectGuids': [p.guid for p in Project.objects.filter(projectcategory=category).only('guid')],
+    })
+
+
+@staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
 def discovery_sheet(request, project_guid=None):
-    projects = Project.objects.filter(projectcategory__name__iexact='cmg').prefetch_related(
-        Prefetch('family_set', to_attr='families', queryset=Family.objects.prefetch_related('individual_set'))
-    ).distinct()
-
-    projects_json = [_get_json_for_project(project, request.user, add_project_category_guids_field=False) for project in projects]
-    projects_json.sort(key=lambda project: project["name"])
-
     rows = []
     errors = []
 
-    # export table for all cmg projects
-    if "download" in request.GET and project_guid is None:
-        logger.info("exporting xls table for all projects")
+    # all cmg projects
+    if project_guid == 'all':
+        logger.info("exporting discovery sheet for all projects")
+        projects = Project.objects.filter(projectcategory__name__iexact='cmg').prefetch_related(
+            Prefetch('family_set', to_attr='families', queryset=Family.objects.prefetch_related('individual_set'))
+        ).distinct()
 
         loaded_samples_by_project_family = get_loaded_samples_by_project_family(projects)
         saved_variants_by_project_family = get_saved_variants_by_project_family(projects)
@@ -228,43 +172,19 @@ def discovery_sheet(request, project_guid=None):
         _update_gene_symbols(rows)
         _update_initial_omim_numbers(rows)
 
-        temp_file = tempfile.NamedTemporaryFile()
-        wb_out = xl.Workbook()
-        ws_out = wb_out.active
-        ws_out.append(map(_to_title_case, HEADER))
-        for row in rows:
-            ws_out.append([row[column_key] for column_key in HEADER])
-        wb_out.save(temp_file.name)
-        temp_file.seek(0)
+    else:
+        # generate table for 1 project
+        project = Project.objects.filter(guid=project_guid).prefetch_related(
+            Prefetch('family_set', to_attr='families', queryset=Family.objects.prefetch_related('individual_set'))
+        ).distinct().first()
+        if not project:
+            raise Exception('Invalid project {}'.format(project_guid))
 
-        email_message = EmailMultiAlternatives(
-            subject="Discovery Sheet",
-            body="Attached is the discovery sheet for all seqr projects",
-            to=[request.user.email],
-            attachments=[
-                ("discovery_sheet.xlsx", temp_file.read(), "application/xls"),
-            ],
-        )
-        email_message.send()
-        logger.info("emailing discovery sheet to {}".format(request.user.email))
-
-        return create_json_response({'errors': errors})
-
-    # generate table for 1 project
-    project = next((project for project in projects if project.guid == project_guid), None)
-    if not project:
-        return render(request, "staff/discovery_sheet.html", {
-            'projects': projects_json,
-            'rows': rows,
-            'errors': errors,
-        })
-
-    loaded_samples_by_project_family = get_loaded_samples_by_project_family([project])
-    saved_variants_by_project_family = get_saved_variants_by_project_family([project])
-    rows = generate_rows(project, loaded_samples_by_project_family, saved_variants_by_project_family, errors)
+        loaded_samples_by_project_family = get_loaded_samples_by_project_family([project])
+        saved_variants_by_project_family = get_saved_variants_by_project_family([project])
+        rows = generate_rows(project, loaded_samples_by_project_family, saved_variants_by_project_family, errors)
 
     return create_json_response({
-        'header': HEADER.values(),
         'rows': rows,
         'errors': errors,
     })

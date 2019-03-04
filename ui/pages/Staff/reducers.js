@@ -30,7 +30,38 @@ export const loadAnvil = (projectGuid) => {
 
 export const loadDiscoverySheet = (projectGuid) => {
   return (dispatch) => {
-    if (projectGuid) {
+    if (projectGuid === 'all') {
+      dispatch({ type: REQUEST_DISCOVERY_SHEET })
+
+      const errors = new Set()
+      const rows = []
+      new HttpRequestHelper('/api/staff/projects_for_category/CMG',
+        (projectsResponseJson) => {
+          Promise.all(projectsResponseJson.projectGuids.map(cmgProjectGuid =>
+            new HttpRequestHelper(`/api/staff/discovery_sheet/${cmgProjectGuid}`,
+              (responseJson) => {
+                if (responseJson.errors.length) {
+                  console.log(responseJson.errors)
+                }
+                rows.push(...responseJson.rows)
+              },
+              e => errors.add(e.message),
+            ).get(),
+          )).then(() => {
+            if (errors.length) {
+              dispatch({ type: RECEIVE_DISCOVERY_SHEET, error: [...errors].join(', '), newValue: [] })
+            } else {
+              dispatch({ type: RECEIVE_DISCOVERY_SHEET, newValue: rows })
+            }
+          })
+        },
+        (e) => {
+          dispatch({ type: RECEIVE_DISCOVERY_SHEET, error: e.message, newValue: [] })
+        },
+      ).get()
+    }
+
+    else if (projectGuid) {
       dispatch({ type: REQUEST_DISCOVERY_SHEET })
       new HttpRequestHelper(`/api/staff/discovery_sheet/${projectGuid}`,
         (responseJson) => {
@@ -38,7 +69,7 @@ export const loadDiscoverySheet = (projectGuid) => {
           dispatch({ type: RECEIVE_DISCOVERY_SHEET, newValue: responseJson.rows })
         },
         (e) => {
-          dispatch({ type: RECEIVE_DISCOVERY_SHEET, error: e.message, newValue: {} })
+          dispatch({ type: RECEIVE_DISCOVERY_SHEET, error: e.message, newValue: [] })
         },
       ).get()
     }
