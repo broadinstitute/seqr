@@ -4,7 +4,7 @@ import mock
 from django.test import TestCase
 from elasticsearch_dsl import Search
 
-from seqr.models import Family
+from seqr.models import Family, VariantSearch, VariantSearchResults
 from seqr.utils.es_utils import get_es_variants_for_variant_tuples, get_single_es_variant, get_es_variants
 
 
@@ -591,6 +591,7 @@ class MockHit:
 
 MOCK_ES_RESPONSE = mock.MagicMock()
 MOCK_ES_RESPONSE.__iter__.return_value = [MockHit(**var) for var in ES_VARIANTS]
+MOCK_ES_RESPONSE.hits.total = 5
 
 
 @mock.patch('seqr.utils.es_utils.is_nested_genotype_index', lambda *args: True)
@@ -617,19 +618,24 @@ class EsUtilsTest(TestCase):
 
         self.addCleanup(patcher.stop)
 
-    def assertExecutedSearch(self, filters=[], size=100):
+    def assertExecutedSearch(self, filters=[], start_index=0, size=2, sort=None):
         self.mock_create_search.assert_called_with(using=mock.ANY, index='test_index')
-        self.assertDictEqual(self.executed_search, {
+        expected_search = {
             'query': {
                 'bool': {
                     'filter': filters
                 }
             },
             '_source': mock.ANY,
-            'from': 0,
+            'from': start_index,
             'size': size
-        })
+        }
+        if sort:
+            expected_search['sort'] = sort
+        self.assertDictEqual(self.executed_search, expected_search)
         self.assertSetEqual(SOURCE_FIELDS, set(self.executed_search['_source']))
+
+        self.executed_search = None
 
     def test_get_es_variants_for_variant_tuples(self):
         variants = get_es_variants_for_variant_tuples(
@@ -643,7 +649,6 @@ class EsUtilsTest(TestCase):
 
         self.assertExecutedSearch(
             filters=[{'terms': {'variantId': ['2-103343353-GAGA-G', '1-248367227-TC-T']}}, ALL_INHERITANCE_QUERY],
-            size=2
         )
 
     def test_get_single_es_variant(self):
@@ -654,3 +659,184 @@ class EsUtilsTest(TestCase):
         self.assertExecutedSearch(
             filters=[{'term': {'variantId': '2-103343353-GAGA-G'}}, ALL_INHERITANCE_QUERY], size=1
         )
+
+    def test_get_es_variants(self):
+        search_model = VariantSearch.objects.create(search={})
+        results_model = VariantSearchResults.objects.create(variant_search=search_model, sort='xpos')
+        results_model.families = self.families
+        results_model.save()
+
+        variants = get_es_variants(results_model, num_results=2)
+        self.assertEqual(len(variants), 2)
+        self.assertDictEqual(variants[0], PARSED_VARIANTS[0])
+        self.assertDictEqual(variants[1], PARSED_VARIANTS[1])
+
+        self.assertDictEqual(results_model.results, {'all_results': variants})
+        self.assertEqual(results_model.es_index, 'test_index')
+        self.assertEqual(results_model.total_results, 5)
+
+        self.assertExecutedSearch(filters=[ALL_INHERITANCE_QUERY], sort=['xpos'])
+
+        # test pagination
+        variants = get_es_variants(results_model, page=2, num_results=2)
+        self.assertEqual(len(variants), 2)
+        self.assertDictEqual(results_model.results, {'all_results':  PARSED_VARIANTS + PARSED_VARIANTS})
+        self.assertExecutedSearch(filters=[ALL_INHERITANCE_QUERY], sort=['xpos'], start_index=2, size=2)
+
+        # test fetch partial page
+        get_es_variants(results_model, page=2, num_results=3)
+        self.assertExecutedSearch(filters=[ALL_INHERITANCE_QUERY], sort=['xpos'], start_index=4, size=1)
+
+        # test does not re-fetch page
+        variants = get_es_variants(results_model, page=1, num_results=3)
+        self.assertIsNone(self.executed_search)
+        self.assertEqual(len(variants), 3)
+        self.assertListEqual(variants, results_model.results['all_results'][0:3], )
+
+    def test_filtered_get_es_variants(self):
+        #  TODO quality and inheritance
+        search_model = VariantSearch.objects.create(search={
+            'locus': {'rawItems': 'DDX11L1, chr2:1234-5678'},
+            'pathogenicity': {
+                'clinvar': ["pathogenic", "likely_pathogenic"],
+                'hgmd': ["disease_causing", 'likely_disease_causing'],
+            },
+            'annotations': {
+                'in_frame': ["inframe_insertion", "inframe_deletion"],
+                'other': ["5_prime_UTR_variant", 'intergenic_variant'],
+            },
+            'freqs': {
+                'callset': {'af': 0.1},
+                'exac': {'ac': 2},
+                'g1k': {'ac': None, 'af': 0.001},
+                'gnomad_exomes': {'ac': 3, 'hh': 3},
+                'gnomad_genomes': {'af': 0.01, 'hh': 3},
+                'topmed': {'ac': 2, 'af': None},
+            },
+        })
+        results_model = VariantSearchResults.objects.create(variant_search=search_model, sort='in_omim')
+        results_model.families = self.families
+        results_model.save()
+
+        variants = get_es_variants(results_model, num_results=2)
+        self.assertListEqual(variants, PARSED_VARIANTS)
+
+        self.assertExecutedSearch(filters=[
+            {
+                "bool": {
+                    "should": [
+                        {"range": {"xpos": {"gte": 2000001234, "lte": 2000005678}}},
+                        {"terms": {"geneIds": ["ENSG00000223972"]}}
+                    ]
+                }
+            },
+            {
+                "bool": {
+                    "should": [
+                        {"terms": {
+                            "clinvar_clinical_significance": [
+                                "Pathogenic", "Likely_pathogenic", "Pathogenic/Likely_pathogenic"
+                            ]
+                        }},
+                        {"terms": {"hgmd_class": ["DM", "DM?"]}},
+                        {"bool": {"must_not": [{"exists": {"field": "transcriptConsequenceTerms"}}]}},
+                        {"terms": {
+                            "transcriptConsequenceTerms": [
+                                "5_prime_UTR_variant",
+                                "intergenic_variant",
+                                "inframe_insertion",
+                                "inframe_deletion",
+                            ]
+                        }}
+                    ]
+                }
+            },
+            {
+                "bool": {
+                    "minimum_should_match": 1,
+                    "should": [
+                        {"bool": {"must_not": [{"exists": {"field": "AF"}}]}},
+                        {"range": {"AF": {"lte": 0.1}}}
+                    ],
+                    "must": [
+                        {"bool": {
+                            "minimum_should_match": 1,
+                            "should": [
+                                {"bool": {"must_not": [{"exists": {"field": "g1k_POPMAX_AF"}}]}},
+                                {"range": {"g1k_POPMAX_AF": {"lte": 0.001}}}
+                            ]
+                        }},
+                        {"bool": {
+                            "minimum_should_match": 1,
+                            "should": [
+                                {"bool": {"must_not": [{"exists": {"field": "gnomad_genomes_AF_POPMAX_OR_GLOBAL"}}]}},
+                                {"range": {"gnomad_genomes_AF_POPMAX_OR_GLOBAL": {"lte": 0.01}}}
+                            ]
+                        }},
+                        {"bool": {
+                            "minimum_should_match": 1,
+                            "should": [
+                                {"bool": {"must_not": [{"exists": {"field": "gnomad_genomes_Hom"}}]}},
+                                {"range": {"gnomad_genomes_Hom": {"lte": 3}}}
+                            ]
+                        }},
+                        {"bool": {
+                            "minimum_should_match": 1,
+                            "should": [
+                                {"bool": {"must_not": [{"exists": {"field": "gnomad_genomes_Hemi"}}]}},
+                                {"range": {"gnomad_genomes_Hemi": {"lte": 3}}}
+                            ]}
+                        },
+                        {"bool": {
+                            "minimum_should_match": 1,
+                            "should": [
+                                {"bool": {"must_not": [{"exists": {"field": "gnomad_exomes_AC"}}]}},
+                                {"range": {"gnomad_exomes_AC": {"lte": 3}}}
+                            ]
+                        }},
+                        {"bool": {
+                            "minimum_should_match": 1,
+                            "should": [
+                                {"bool": {"must_not": [{"exists": {"field": "gnomad_exomes_Hom"}}]}},
+                                {"range": {"gnomad_exomes_Hom": {"lte": 3}}}
+                            ]
+                        }},
+                        {"bool": {
+                            "minimum_should_match": 1,
+                            "should": [
+                                {"bool": {"must_not": [{"exists": {"field": "gnomad_exomes_Hemi"}}]}},
+                                {"range": {"gnomad_exomes_Hemi": {"lte": 3}}}
+                            ]}
+                        },
+                        {"bool": {
+                            "minimum_should_match": 1,
+                            "should": [
+                                {"bool": {"must_not": [{"exists": {"field": "exac_AC_Adj"}}]}},
+                                {"range": {"exac_AC_Adj": {"lte": 2}}}
+                            ]}
+                        },
+                        {"bool": {
+                            "minimum_should_match": 1,
+                            "should": [
+                                {"bool": {"must_not": [{"exists": {"field": "topmed_AC"}}]}},
+                                {"range": {"topmed_AC": {"lte": 2}}}
+                            ]}
+                        }
+                    ]
+                }
+            },
+            ALL_INHERITANCE_QUERY
+        ], sort=[{
+            '_script': {
+                'type': 'number',
+                'script': {
+                    'params': {
+                        'omim_gene_ids': ['ENSG00000223972', 'ENSG00000243485', 'ENSG00000268020']
+                    },
+                    'source': "params.omim_gene_ids.contains(doc['mainTranscript_gene_id'].value) ? 0 : 1"
+                }
+            }
+        }, 'xpos'])
+
+    def test_recessive_get_es_variants(self):
+        pass

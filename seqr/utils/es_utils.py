@@ -35,20 +35,6 @@ def is_nested_genotype_index(es_index):
         return False
 
 
-def _get_latest_samples_for_families(families):
-    samples = Sample.objects.filter(
-        individual__family__in=families,
-        dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
-        sample_status=Sample.SAMPLE_STATUS_LOADED,
-        elasticsearch_index__isnull=False,
-    ).prefetch_related('individual', 'individual__family')
-    sample_individual_max_loaded_date = {
-        agg['individual__guid']: agg['max_loaded_date'] for agg in
-        samples.values('individual__guid').annotate(max_loaded_date=Max('loaded_date'))
-    }
-    return [s for s in samples if s.loaded_date == sample_individual_max_loaded_date[s.individual.guid]]
-
-
 def get_single_es_variant(families, variant_id):
     variants = _get_filtered_family_es_variants(families, _single_variant_id_filter(variant_id), num_results=1)
     if not variants:
@@ -61,8 +47,7 @@ def get_es_variants_for_variant_tuples(families, xpos_ref_alt_tuples):
 
 
 def _get_filtered_family_es_variants(families, filter, num_results=100):
-    samples = _get_latest_samples_for_families(families)
-    es_search, family_samples_by_id, _ = _get_es_search_for_samples(samples)
+    es_search, family_samples_by_id, _ = _get_es_search_for_families(families)
     es_search = es_search.filter(filter)
     genotypes_q, _, _ = _genotype_filter(inheritance=None, family_samples_by_id=family_samples_by_id)
     es_search = es_search.filter(genotypes_q)
@@ -91,10 +76,8 @@ def get_es_variants(search_model, page=1, num_results=100):
     if invalid_items:
         raise Exception('Invalid genes/intervals: {}'.format(', '.join(invalid_items)))
 
-    samples = _get_latest_samples_for_families(search_model.families.all())
-
-    es_search, family_samples_by_id, elasticsearch_index = _get_es_search_for_samples(
-        samples, elasticsearch_index=search_model.es_index)
+    es_search, family_samples_by_id, elasticsearch_index = _get_es_search_for_families(
+        search_model.families.all(), elasticsearch_index=search_model.es_index)
 
     if genes or intervals:
         es_search = es_search.filter(_location_filter(genes, intervals, search['locus']))
@@ -211,7 +194,19 @@ class InvalidIndexException(Exception):
     pass
 
 
-def _get_es_search_for_samples(samples, elasticsearch_index=None):
+def _get_es_search_for_families(families, elasticsearch_index=None):
+    all_samples = Sample.objects.filter(
+        individual__family__in=families,
+        dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
+        sample_status=Sample.SAMPLE_STATUS_LOADED,
+        elasticsearch_index__isnull=False,
+    ).prefetch_related('individual', 'individual__family')
+    sample_individual_max_loaded_date = {
+        agg['individual__guid']: agg['max_loaded_date'] for agg in
+        all_samples.values('individual__guid').annotate(max_loaded_date=Max('loaded_date'))
+    }
+    samples = [s for s in all_samples if s.loaded_date == sample_individual_max_loaded_date[s.individual.guid]]
+
     if not elasticsearch_index:
         es_indices = {s.elasticsearch_index for s in samples}
         if len(es_indices) > 1:

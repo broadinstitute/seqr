@@ -979,6 +979,48 @@
         "gencode_release": 27
     }
 },
+{
+    "model": "reference_data.omim",
+    "pk": 1,
+    "fields": {
+        "gene": 1,
+        "mim_number": 147571,
+        "gene_description": "ISG15 ubiquitin-like modifier",
+        "comments": "",
+        "phenotype_inheritance": "Autosomal recessive",
+        "phenotype_mim_number": 616126,
+        "phenotype_description": "Immunodeficiency 38",
+        "phenotype_map_method": "3"
+    }
+},
+{
+    "model": "reference_data.omim",
+    "pk": 2,
+    "fields": {
+        "gene": 3,
+        "mim_number": 103320,
+        "gene_description": "Agrin",
+        "comments": "",
+        "phenotype_inheritance": "Autosomal recessive",
+        "phenotype_mim_number": 615120,
+        "phenotype_description": "Myasthenic syndrome, congenital, 8, with pre- and postsynaptic defects",
+        "phenotype_map_method": "3"
+    }
+},
+{
+    "model": "reference_data.omim",
+    "pk": 3,
+    "fields": {
+        "gene": 5,
+        "mim_number": 600315,
+        "gene_description": "Tumor necrosis factor receptor superfamily, member 4",
+        "comments": "mutation identified in 1 IMD16 family",
+        "phenotype_inheritance": "Autosomal recessive",
+        "phenotype_mim_number": 615593,
+        "phenotype_description": "?Immunodeficiency 16",
+        "phenotype_map_method": "3"
+    }
+},
     {
     "model": "reference_data.dbnsfpgene",
     "pk": 36613,
