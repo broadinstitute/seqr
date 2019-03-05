@@ -100,10 +100,9 @@ def get_es_variants(search_model, page=1, num_results=100):
     if search.get('freqs'):
         es_search = es_search.filter(_frequency_filter(search['freqs']))
 
-    if search.get('qualityFilter'):
-        es_search = es_search.filter(_quality_filter(search['qualityFilter'], family_samples_by_id))
-
-    genotypes_q, inheritance_mode, compound_het_q = _genotype_filter(search.get('inheritance'), family_samples_by_id)
+    genotypes_q, inheritance_mode, compound_het_q = _genotype_filter(
+        search.get('inheritance'), family_samples_by_id, quality_filter=search.get('qualityFilter')
+    )
     compound_het_search = None
     if compound_het_q:
         compound_het_search = es_search.filter(compound_het_q)
@@ -294,14 +293,22 @@ INHERITANCE_FILTERS = {
 }
 
 
-def _genotype_filter(inheritance, family_samples_by_id):
+def _genotype_filter(inheritance, family_samples_by_id, quality_filter=None):
     genotypes_q = None
     compound_het_q = None
 
     inheritance_mode = (inheritance or {}).get('mode')
     inheritance_filter = (inheritance or {}).get('filter') or {}
 
+    min_ab = (quality_filter or {}).get('min_ab')
+    if min_ab % 5 != 0:
+        raise Exception('Invalid ab filter {}'.format(min_ab))
+    min_gq = (quality_filter or {}).get('min_gq')
+    if min_gq % 5 != 0:
+        raise Exception('Invalid gq filter {}'.format(min_gq))
+
     for family_guid, samples_by_id in family_samples_by_id.items():
+        # Filter samples by inheritance
         if inheritance:
             family_samples_q = _genotype_inheritance_filter(inheritance_mode, inheritance_filter, samples_by_id)
 
@@ -321,11 +328,32 @@ def _genotype_filter(inheritance, family_samples_by_id):
             sample_ids = samples_by_id.keys()
             family_samples_q = Q('terms', samples_num_alt_1=sample_ids) | Q('terms', samples_num_alt_2=sample_ids)
 
-        family_samples_q = Q('bool', must=[family_samples_q], _name=family_guid)
+        sample_queries = [family_samples_q]
+
+        # Filter samples by quality
+        if min_ab or min_gq:
+            quality_q = Q()
+            for sample_id in samples_by_id.keys():
+                if min_ab:
+                    q = _build_or_filter('term', [
+                        {'samples_ab_{}_to_{}'.format(i, i + 5): sample_id} for i in range(0, min_ab, 5)
+                    ])
+                    #  AB only relevant for hets
+                    quality_q &= ~Q(q) | ~Q('term', samples_num_alt_1=sample_id)
+                if min_gq:
+                    quality_q &= ~Q(_build_or_filter('term', [
+                        {'samples_gq_{}_to_{}'.format(i, i + 5): sample_id} for i in range(0, min_gq, 5)
+                    ]))
+            sample_queries.append(quality_q)
+
+        family_samples_q = Q('bool', must=sample_queries, _name=family_guid)
         if not genotypes_q:
             genotypes_q = family_samples_q
         else:
             genotypes_q |= family_samples_q
+
+    if quality_filter and quality_filter.get('vcf_filter') is not None:
+        genotypes_q &= ~Q('exists', field='filters')
 
     return genotypes_q, inheritance_mode, compound_het_q
 
@@ -379,36 +407,6 @@ def _genotype_inheritance_filter(inheritance_mode, inheritance_filter, samples_b
             samples_q &= sample_q
 
     return samples_q
-
-
-def _quality_filter(quality_filter, family_samples_by_id):
-    if quality_filter.get('vcf_filter') is not None:
-        quality_q = ~Q('exists', field='filters')
-    else:
-        quality_q = Q()
-
-    min_ab = quality_filter.get('min_ab')
-    if min_ab % 5 != 0:
-        raise Exception('Invalid ab filter {}'.format(min_ab))
-    min_gq = quality_filter.get('min_gq')
-    if min_gq % 5 != 0:
-        raise Exception('Invalid gq filter {}'.format(min_gq))
-
-    for samples_by_id in family_samples_by_id.values():
-        for sample_id in samples_by_id.keys():
-            if min_ab:
-                #  AB only relevant for hets
-                q = ~Q('term', samples_num_alt_1=sample_id)
-                q |= ~Q(_build_or_filter('term', [
-                    {'samples_ab_gte_{}'.format(i): sample_id} for i in range(min_ab, 50, 5)
-                ]))
-                quality_q &= q
-            if min_gq:
-                quality_q &= ~Q(_build_or_filter('term', [
-                    {'samples_gq_gte_{}'.format(i): sample_id} for i in range(min_gq, 100, 5)
-                ]))
-
-    return quality_q
 
 
 def _location_filter(genes, intervals, location_filter):
