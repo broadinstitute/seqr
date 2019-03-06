@@ -151,7 +151,7 @@ api_endpoints = {
     'search/variant/(?P<variant_id>[^/]+)': query_single_variant_handler,
     'search/(?P<search_hash>[^/]+)': query_variants_handler,
     'search/(?P<search_hash>[^/]+)/download': export_variants_handler,
-    'search_context/(?P<search_hash>[^/]+)': search_context_handler,
+    'search_context': search_context_handler,
     'saved_search/all': get_saved_search_handler,
     'saved_search/create': create_saved_search_handler,
 

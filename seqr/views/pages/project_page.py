@@ -21,7 +21,7 @@ from seqr.views.apis.locus_list_api import get_sorted_project_locus_lists
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import \
     _get_json_for_project, get_json_for_sample_dict, _get_json_for_families, _get_json_for_individuals, \
-    get_json_for_saved_variants, get_json_for_analysis_groups
+    get_json_for_saved_variants, get_json_for_analysis_groups, get_json_for_variant_functional_data_tag_types
 
 
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions
@@ -46,7 +46,6 @@ def project_page_data(request, project_guid):
     Args:
         project_guid (string): GUID of the Project to retrieve data for.
     """
-
     return create_json_response(get_project_details(project_guid, request.user))
 
 
@@ -87,18 +86,12 @@ def analysis_group_page_data(request, analysis_group_guid):
 def get_project_details(project_guid, user):
     project = get_project_and_check_permissions(project_guid, user)
 
-    families_by_guid = _retrieve_families(project.guid, user)
-    individuals_by_guid = _retrieve_individuals(project.guid, user)
-    for individual_guid, individual in individuals_by_guid.items():
-        families_by_guid[individual['familyGuid']]['individualGuids'].add(individual_guid)
-    samples_by_guid = _retrieve_samples(project.guid, individuals_by_guid)
-    analysis_groups_by_guid = _retrieve_analysis_groups(project)
+    families_by_guid, individuals_by_guid, samples_by_guid, analysis_groups_by_guid, locus_lists_by_guid = get_project_child_entities(project, user)
 
     project_json = _get_json_for_project(project, user)
     project_json['collaborators'] = _get_json_for_collaborator_list(project)
     project_json.update(_get_json_for_variant_tag_types(project, user, individuals_by_guid))
-    locus_lists = get_sorted_project_locus_lists(project, user)
-    project_json['locusListGuids'] = [locus_list['locusListGuid'] for locus_list in locus_lists]
+    project_json['locusListGuids'] = locus_lists_by_guid.keys()
 
     # gene search will be deprecated once the new database is online.
     project_json['hasGeneSearch'] = _has_gene_search(project)
@@ -115,10 +108,22 @@ def get_project_details(project_guid, user):
         'familiesByGuid': families_by_guid,
         'individualsByGuid': individuals_by_guid,
         'samplesByGuid': samples_by_guid,
-        'locusListsByGuid': {locus_list['locusListGuid']: locus_list for locus_list in locus_lists},
+        'locusListsByGuid': locus_lists_by_guid,
         'analysisGroupsByGuid': analysis_groups_by_guid,
         'matchmakerSubmissions': {project.guid: _project_matchmaker_submissions(project)},
     }
+
+
+def get_project_child_entities(project, user):
+    families_by_guid = _retrieve_families(project.guid, user)
+    individuals_by_guid = _retrieve_individuals(project.guid, user)
+    for individual_guid, individual in individuals_by_guid.items():
+        families_by_guid[individual['familyGuid']]['individualGuids'].add(individual_guid)
+    samples_by_guid = _retrieve_samples(project.guid, individuals_by_guid)
+    analysis_groups_by_guid = _retrieve_analysis_groups(project)
+    locus_lists = get_sorted_project_locus_lists(project, user)
+    locus_lists_by_guid = {locus_list['locusListGuid']: locus_list for locus_list in locus_lists}
+    return families_by_guid, individuals_by_guid, samples_by_guid, analysis_groups_by_guid, locus_lists_by_guid
 
 
 def _retrieve_families(project_guid, user):
@@ -267,29 +272,15 @@ def _get_json_for_variant_tag_types(project, user, individuals_by_guid):
         individual['individualId']: individual_guid for individual_guid, individual in individuals_by_guid.items()
     }
 
-    project_variant_tags = []
-    discovery_tags = []
     tag_counts_by_type_and_family = VariantTag.objects.filter(saved_variant__project=project).values('saved_variant__family__guid', 'variant_tag_type__name').annotate(count=Count('*'))
-    for variant_tag_type in VariantTagType.objects.filter(Q(project=project) | Q(project__isnull=True)):
-        current_tag_type_counts = [counts for counts in tag_counts_by_type_and_family if counts['variant_tag_type__name'] == variant_tag_type.name]
-        num_tags = sum(count['count'] for count in current_tag_type_counts)
-        if variant_tag_type.category == 'CMG Discovery Tags' and num_tags > 0:
-            tags = VariantTag.objects.filter(saved_variant__project=project, variant_tag_type=variant_tag_type).select_related('saved_variant')
+    project_variant_tags = get_project_variant_tag_types(project, tag_counts_by_type_and_family=tag_counts_by_type_and_family)
+    discovery_tags = []
+    for tag_type in project_variant_tags:
+        if tag_type['category'] == 'CMG Discovery Tags' and tag_type['numTags'] > 0:
+            tags = VariantTag.objects.filter(saved_variant__project=project, variant_tag_type__guid=tag_type['variantTagTypeGuid']).select_related('saved_variant')
             saved_variants = [tag.saved_variant for tag in tags]
             discovery_tags += get_json_for_saved_variants(
                 saved_variants, add_tags=True, add_details=True, project=project, user=user, individual_guids_by_id=individual_guids_by_id)
-
-        project_variant_tags.append({
-            'variantTagTypeGuid': variant_tag_type.guid,
-            'name': variant_tag_type.name,
-            'category': variant_tag_type.category,
-            'description': variant_tag_type.description,
-            'color': variant_tag_type.color,
-            'order': variant_tag_type.order,
-            'is_built_in': variant_tag_type.is_built_in,
-            'numTags': num_tags,
-            'numTagsPerFamily': {count['saved_variant__family__guid']: count['count'] for count in current_tag_type_counts},
-        })
 
     project_functional_tags = []
     for category, tags in VariantFunctionalData.FUNCTIONAL_DATA_CHOICES:
@@ -303,9 +294,35 @@ def _get_json_for_variant_tag_types(project, user, individuals_by_guid):
 
     return {
         'variantTagTypes': sorted(project_variant_tags, key=lambda variant_tag_type: variant_tag_type['order']),
-        'variantFunctionalTagTypes': project_functional_tags,
+        'variantFunctionalTagTypes': get_json_for_variant_functional_data_tag_types(),
         'discoveryTags': discovery_tags,
     }
+
+
+def get_project_variant_tag_types(project, tag_counts_by_type_and_family=None):
+    project_variant_tags = []
+    for variant_tag_type in VariantTagType.objects.filter(Q(project=project) | Q(project__isnull=True)):
+        tag_type = {
+            'variantTagTypeGuid': variant_tag_type.guid,
+            'name': variant_tag_type.name,
+            'category': variant_tag_type.category,
+            'description': variant_tag_type.description,
+            'color': variant_tag_type.color,
+            'order': variant_tag_type.order,
+            'is_built_in': variant_tag_type.is_built_in,
+        }
+        if tag_counts_by_type_and_family:
+            current_tag_type_counts = [counts for counts in tag_counts_by_type_and_family if
+                                       counts['variant_tag_type__name'] == variant_tag_type.name]
+            num_tags = sum(count['count'] for count in current_tag_type_counts)
+            tag_type.update({
+                'numTags': num_tags,
+                'numTagsPerFamily': {count['saved_variant__family__guid']: count['count'] for count in
+                                     current_tag_type_counts},
+            })
+        project_variant_tags.append(tag_type)
+
+    return sorted(project_variant_tags, key=lambda variant_tag_type: variant_tag_type['order'])
 
 
 """

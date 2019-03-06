@@ -11,7 +11,7 @@ from django.db.models import prefetch_related_objects, Prefetch
 from django.db.models.fields.files import ImageFieldFile
 
 from reference_data.models import GeneConstraint, dbNSFPGene
-from seqr.models import CAN_EDIT, Sample, GeneNote
+from seqr.models import CAN_EDIT, Sample, GeneNote, VariantFunctionalData
 from seqr.views.utils.json_utils import _to_camel_case
 logger = logging.getLogger(__name__)
 
@@ -406,6 +406,19 @@ def get_json_for_variant_functional_data(tag):
         'color': display_data['color'],
     })
     return result
+
+
+def get_json_for_variant_functional_data_tag_types():
+    functional_tag_types = []
+    for category, tags in VariantFunctionalData.FUNCTIONAL_DATA_CHOICES:
+        functional_tag_types += [{
+            'category': category,
+            'name': name,
+            'metadataTitle': json.loads(tag_json).get('metadata_title'),
+            'color': json.loads(tag_json)['color'],
+            'description': json.loads(tag_json).get('description'),
+        } for name, tag_json in tags]
+    return functional_tag_types
 
 
 def get_json_for_variant_note(note):

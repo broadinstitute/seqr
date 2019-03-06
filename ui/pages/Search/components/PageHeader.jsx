@@ -65,7 +65,7 @@ export const PageHeader = ({ projectsByGuid, familiesByGuid, analysisGroupsByGui
     breadcrumbIdSections.push({ content: snakecaseToTitlecase(pageType) })
     breadcrumbIdSections.push({
       content: entity.displayName || entity.name,
-      link: project && `/project/${entity.projectGuid}/${entityUrlPath}`,
+      link: project && `/project/${project.projectGuid}/${entityUrlPath}`,
     })
     if (originalPagePath) {
       originalPages = [{ path: originalPagePath }]

@@ -161,8 +161,8 @@ const Family = (
     <PedigreeImagePanel key="pedigree" family={family} disablePedigreeZoom={disablePedigreeZoom} compact={compact} />,
   ]
 
-  const discoveryGenes = project.discoveryTags.filter(tag => tag.familyGuid === family.familyGuid).reduce(
-    (acc, tag) => (tag.mainTranscript.symbol ? [...acc, tag.mainTranscript.symbol] : acc), [],
+  const discoveryGenes = project.discoveryTags.filter(tag => tag.familyGuids.includes(family.familyGuid)).reduce(
+    (acc, tag) => (tag.mainTranscript.geneSymbol ? [...acc, tag.mainTranscript.geneSymbol] : acc), [],
   )
 
   const rightContent = showVariantDetails ? [

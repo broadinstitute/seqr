@@ -5,7 +5,7 @@ from copy import deepcopy
 from django.test import TestCase
 from django.urls.base import reverse
 
-from seqr.models import VariantSearchResults
+from seqr.models import VariantSearchResults, VariantSearch, Family
 from seqr.utils.es_utils import InvalidIndexException
 from seqr.views.apis.locus_list_api import add_project_locus_lists
 from seqr.views.apis.variant_search_api import query_variants_handler, query_single_variant_handler, \
@@ -137,28 +137,81 @@ class VariantSearchAPITest(TestCase):
 
         mock_get_variants.assert_called_with(results_models.first(), page=1, num_results=3)
 
-        # Test search context
-        search_context_url = reverse(search_context_handler, args=[SEARCH_HASH])
+    def test_search_context(self):
+        search_context_url = reverse(search_context_handler)
+        _check_login(self, search_context_url)
 
-        response = self.client.get('{}_foo'.format(search_context_url))
+        response = self.client.get('{}?foo=bar'.format(search_context_url))
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.reason_phrase, 'Invalid search hash: {}_foo'.format(SEARCH_HASH))
+        self.assertEqual(response.reason_phrase, 'Invalid query params: {"foo": "bar"}')
 
-        response = self.client.get(search_context_url)
+        response = self.client.get('{}?projectGuid={}'.format(search_context_url, PROJECT_GUID))
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertSetEqual(
+            set(response_json),
+            {'savedSearchesByGuid', 'projectsByGuid', 'familiesByGuid', 'individualsByGuid', 'samplesByGuid',
+             'locusListsByGuid', 'analysisGroupsByGuid', }
+        )
+        self.assertEqual(len(response_json['savedSearchesByGuid']), 3)
+        self.assertTrue(PROJECT_GUID in response_json['projectsByGuid'])
+        self.assertTrue('F000001_1' in response_json['familiesByGuid'])
+        self.assertTrue('AG0000183_test_group' in response_json['analysisGroupsByGuid'])
+
+        response = self.client.get('{}?familyGuid=F000001_1'.format(search_context_url))
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertSetEqual(
+            set(response_json),
+            {'savedSearchesByGuid', 'projectsByGuid', 'familiesByGuid', 'individualsByGuid', 'samplesByGuid',
+             'locusListsByGuid', 'analysisGroupsByGuid', }
+        )
+        self.assertEqual(len(response_json['savedSearchesByGuid']), 3)
+        self.assertTrue(PROJECT_GUID in response_json['projectsByGuid'])
+        self.assertTrue('F000001_1' in response_json['familiesByGuid'])
+        self.assertTrue('AG0000183_test_group' in response_json['analysisGroupsByGuid'])
+
+        response = self.client.get('{}?analysisGroupGuid=AG0000183_test_group'.format(search_context_url))
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertSetEqual(
+            set(response_json),
+            {'savedSearchesByGuid', 'projectsByGuid', 'familiesByGuid', 'individualsByGuid', 'samplesByGuid',
+             'locusListsByGuid', 'analysisGroupsByGuid', }
+        )
+        self.assertEqual(len(response_json['savedSearchesByGuid']), 3)
+        self.assertTrue(PROJECT_GUID in response_json['projectsByGuid'])
+        self.assertTrue('F000001_1' in response_json['familiesByGuid'])
+        self.assertTrue('AG0000183_test_group' in response_json['analysisGroupsByGuid'])
+
+        response = self.client.get('{}?searchHash={}'.format(search_context_url, SEARCH_HASH))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.reason_phrase, 'Invalid search hash: {}'.format(SEARCH_HASH))
+
+        results_model = VariantSearchResults.objects.create(
+            search_hash=SEARCH_HASH,
+            variant_search=VariantSearch.objects.create(search=SEARCH),
+        )
+        results_model.families = Family.objects.filter(guid__in=['F000001_1', 'F000002_2'])
+        results_model.save()
+
+        response = self.client.get('{}?searchHash={}'.format(search_context_url, SEARCH_HASH))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertSetEqual(
             set(response_json),
             {'searchesByHash', 'savedSearchesByGuid', 'projectsByGuid', 'familiesByGuid',
-             'individualsByGuid', 'samplesByGuid', 'locusListsByGuid', 'analysisGroupsByGuid', 'matchmakerSubmissions'}
+             'individualsByGuid', 'samplesByGuid', 'locusListsByGuid', 'analysisGroupsByGuid',}
         )
         self.assertDictEqual(response.json()['searchesByHash'][SEARCH_HASH], {
             'search': SEARCH,
             'projectFamilies': PROJECT_FAMILIES,
-            'totalResults': 3,
+            'totalResults': None,
         })
         self.assertEqual(len(response_json['savedSearchesByGuid']), 3)
+        self.assertTrue(PROJECT_GUID in response_json['projectsByGuid'])
         self.assertTrue('F000001_1' in response_json['familiesByGuid'])
+        self.assertTrue('AG0000183_test_group' in response_json['analysisGroupsByGuid'])
 
     @mock.patch('seqr.views.apis.variant_search_api.get_single_es_variant')
     def test_query_single_variant(self, mock_get_variant):
@@ -173,7 +226,7 @@ class VariantSearchAPITest(TestCase):
         self.assertSetEqual(
             set(response_json.keys()),
             {'searchedVariants', 'savedVariantsByGuid', 'genesById', 'projectsByGuid', 'familiesByGuid',
-             'individualsByGuid', 'samplesByGuid', 'locusListsByGuid', 'analysisGroupsByGuid', 'matchmakerSubmissions'}
+             'individualsByGuid', 'samplesByGuid', 'locusListsByGuid', 'analysisGroupsByGuid',}
         )
 
         self.assertListEqual(response_json['searchedVariants'], EXPECTED_VARIANTS[:1])

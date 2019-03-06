@@ -5,15 +5,17 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.views.decorators.csrf import csrf_exempt
 
-from seqr.models import Family, Individual, SavedVariant, VariantSearch, VariantSearchResults
+from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults
 from seqr.utils.es_utils import get_es_variants, get_single_es_variant, InvalidIndexException, XPOS_SORT_KEY, \
     PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.saved_variant_api import _saved_variant_genes, _add_locus_lists
-from seqr.views.pages.project_page import get_project_details
+from seqr.views.pages.project_page import get_project_variant_tag_types, get_project_child_entities
 from seqr.views.utils.export_table_utils import export_table
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import \
+    get_json_for_variant_functional_data_tag_types, \
+    _get_json_for_project, \
     get_json_for_saved_variants, \
     get_json_for_saved_search,\
     get_json_for_saved_searches
@@ -99,7 +101,7 @@ def query_single_variant_handler(request, variant_id):
     variant = get_single_es_variant(families, variant_id)
 
     response = _process_variants([variant], families)
-    response.update(get_project_details(families.first().project.guid, request.user))
+    response.update(_get_project_details(families.first().project, request.user))
 
     return create_json_response(response)
 
@@ -236,28 +238,60 @@ def _get_field_value(value, config):
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
-def search_context_handler(request, search_hash):
+def search_context_handler(request):
     """Search variants.
     """
+    response = _get_saved_searches(request.user)
+    project_guid = request.GET.get('projectGuid')
 
-    results_model = VariantSearchResults.objects.filter(search_hash=search_hash).first()
-    if not results_model:
-        return create_json_response({}, status=400, reason='Invalid search hash: {}'.format(search_hash))
+    search_hash = request.GET.get('searchHash')
+    if search_hash:
+        results_model = VariantSearchResults.objects.filter(search_hash=search_hash).first()
+        if not results_model:
+            return create_json_response({}, status=400, reason='Invalid search hash: {}'.format(search_hash))
 
-    search_context = _get_search_context(results_model)
-    response = {
-        'searchesByHash': {search_hash: search_context},
-    }
-    response.update(_get_saved_searches(request.user))
+        search_context = _get_search_context(results_model)
+        response['searchesByHash'] = {search_hash: search_context}
 
-    for project_family in search_context.get('projectFamilies'):
-        for k, v in get_project_details(project_family['projectGuid'], request.user).items():
-            if response.get(k):
-                response[k].update(v)
-            else:
-                response[k] = v
+        # TODO handle multiple projects
+        project_guid = search_context['projectFamilies'][0]['projectGuid']
+
+    if project_guid:
+        project = Project.objects.get(guid=project_guid)
+    elif request.GET.get('familyGuid'):
+        project = Project.objects.get(family__guid=request.GET.get('familyGuid'))
+    elif request.GET.get('analysisGroupGuid'):
+        project = Project.objects.get(analysisgroup__guid=request.GET.get('analysisGroupGuid'))
+    else:
+        return create_json_response({}, status=400, reason='Invalid query params: {}'.format(json.dumps(request.GET)))
+
+    response.update(_get_project_details(project, request.user))
 
     return create_json_response(response)
+
+
+def _get_project_details(project, user):
+    check_permissions(project, user)
+
+    project_json = _get_json_for_project(project, user)
+
+    families_by_guid, individuals_by_guid, samples_by_guid, analysis_groups_by_guid, locus_lists_by_guid = get_project_child_entities(project, user)
+
+    project_json.update({
+        'hasGeneSearch': True,
+        'locusListGuids': locus_lists_by_guid.keys(),
+        'variantTagTypes': get_project_variant_tag_types(project),
+        'variantFunctionalTagTypes': get_json_for_variant_functional_data_tag_types(),
+    })
+
+    return {
+        'projectsByGuid': {project.guid: project_json},
+        'familiesByGuid': families_by_guid,
+        'individualsByGuid': individuals_by_guid,
+        'samplesByGuid': samples_by_guid,
+        'locusListsByGuid': locus_lists_by_guid,
+        'analysisGroupsByGuid': analysis_groups_by_guid,
+    }
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)

@@ -1,6 +1,6 @@
 import { combineReducers } from 'redux'
 
-import { loadProject, loadFamilyProject, loadAnalysisGroupProject, updateEntity, RECEIVE_DATA } from 'redux/rootReducer'
+import { updateEntity, RECEIVE_DATA } from 'redux/rootReducer'
 import { loadingReducer, createSingleObjectReducer, createSingleValueReducer, createObjectsByIdReducer } from 'redux/utils/reducerFactories'
 import { HttpRequestHelper, getUrlQueryString } from 'shared/utils/httpRequestHelper'
 import { SORT_BY_XPOS } from 'shared/utils/constants'
@@ -18,36 +18,44 @@ const REQUEST_PROJECT_DETAILS = 'REQUEST_PROJECT_DETAILS'
 // actions
 
 export const loadProjectFamiliesContext = ({ projectGuid, familyGuid, analysisGroupGuid, searchHash }) => {
-  // TODO initial analysisGroup
-  if (projectGuid) {
-    return loadProject(projectGuid)
-  }
-  if (familyGuid) {
-    return loadFamilyProject(familyGuid)
-  }
-  if (analysisGroupGuid) {
-    return loadAnalysisGroupProject(analysisGroupGuid)
-  }
-  if (searchHash) {
-    return (dispatch, getState) => {
+  return (dispatch, getState) => {
+    const state = getState()
+    const contextParams = {}
+    if (projectGuid && !(state.projectsByGuid[projectGuid] && state.projectsByGuid[projectGuid].variantTagTypes)) {
+      contextParams.projectGuid = projectGuid
+    }
+    else if (familyGuid && !state.familiesByGuid[familyGuid]) {
+      contextParams.familyGuid = familyGuid
+    }
+    else if (analysisGroupGuid && !state.analysisGroupsByGuid[analysisGroupGuid]) {
+      contextParams.analysisGroupGuid = analysisGroupGuid
+    }
+    else if (searchHash) {
       const { projectFamilies } = getState().searchesByHash[searchHash] || {}
-      if (projectFamilies) {
-        projectFamilies.forEach(searchContext => loadProject(searchContext.projectGuid)(dispatch, getState))
+      if (projectFamilies && projectFamilies.length) {
+        // TODO handle multiple project search
+        const project = state.projectsByGuid[projectFamilies[0].projectGuid]
+        if (!(project && project.variantTagTypes)) {
+          contextParams.projectGuid = projectFamilies[0].projectGuid
+        }
       } else {
-        dispatch({ type: REQUEST_PROJECT_DETAILS })
-        new HttpRequestHelper(`/api/search_context/${searchHash}`,
-          (responseJson) => {
-            dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
-            dispatch({ type: RECEIVE_SAVED_SEARCHES, updatesById: responseJson })
-          },
-          (e) => {
-            dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
-          },
-        ).get()
+        contextParams.searchHash = searchHash
       }
     }
+
+    if (Object.keys(contextParams).length) {
+      dispatch({ type: REQUEST_PROJECT_DETAILS })
+      new HttpRequestHelper('/api/search_context',
+        (responseJson) => {
+          dispatch({ type: RECEIVE_SAVED_SEARCHES, updatesById: responseJson })
+          dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+        },
+        (e) => {
+          dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
+        },
+      ).get(contextParams)
+    }
   }
-  return () => {}
 }
 
 export const saveHashedSearch = (searchHash, search) => {
