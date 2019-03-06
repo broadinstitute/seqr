@@ -14,6 +14,7 @@ import { SEARCH_FORM_NAME } from './constants'
 export const getSearchedVariants = state => state.searchedVariants
 export const getSearchedVariantsIsLoading = state => state.searchedVariantsLoading.isLoading
 export const getSearchedVariantsErrorMessage = state => state.searchedVariantsLoading.errorMessage
+export const getSearchContextIsLoading = state => state.searchContextLoading.isLoading
 export const getSearchesByHash = state => state.searchesByHash
 export const getSavedSearchesByGuid = state => state.savedSearchesByGuid
 export const getSavedSearchesIsLoading = state => state.savedSearchesLoading.isLoading

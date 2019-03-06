@@ -14,9 +14,9 @@ import {
   FAMILY_FIELD_FIRST_SAMPLE,
   FAMILY_DETAIL_FIELDS,
 } from 'shared/utils/constants'
-import { getProjectDetailsIsLoading } from 'redux/selectors'
 import {
   getProject,
+  getProjectDetailsIsLoading,
   getAnalysisStatusCounts,
   getFamiliesExportConfig,
   getIndividualsExportConfig,

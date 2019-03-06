@@ -48,8 +48,6 @@ from seqr.views.pages.dashboard_page import \
 
 from seqr.views.pages.project_page import \
     project_page_data, \
-    family_page_data, \
-    analysis_group_page_data, \
     export_project_individuals_handler
 
 from seqr.views.apis.gene_api import \
@@ -107,9 +105,6 @@ api_endpoints = {
     'individual/(?P<individual_guid>[\w.|-]+)/update': update_individual_handler,
     'individual/(?P<individual_guid>[\w.|-]+)/update_hpo_terms': update_individual_hpo_terms,
 
-    'analysis_group/(?P<analysis_group_guid>[^/]+)/details': analysis_group_page_data,
-
-    'family/(?P<family_guid>[^/]+)/details': family_page_data,
     'family/(?P<family_guid>[\w.|-]+)/save_internal_case_review_notes': save_internal_case_review_notes,
     'family/(?P<family_guid>[\w.|-]+)/save_internal_case_review_summary': save_internal_case_review_summary,
     'family/(?P<family_guid>[\w.|-]+)/update': update_family_fields_handler,

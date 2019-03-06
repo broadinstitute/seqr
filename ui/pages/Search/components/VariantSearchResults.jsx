@@ -20,6 +20,7 @@ import {
   getTotalVariantsCount,
   getVariantSearchDisplay,
   getSearchedVariantExportConfig,
+  getSearchContextIsLoading,
 } from '../selectors'
 
 
@@ -106,7 +107,7 @@ BaseVariantSearchResults.propTypes = {
 
 const mapStateToProps = (state, ownProps) => ({
   searchedVariants: getSearchedVariants(state),
-  loading: getSearchedVariantsIsLoading(state),
+  loading: getSearchedVariantsIsLoading(state) || getSearchContextIsLoading(state),
   variantSearchDisplay: getVariantSearchDisplay(state),
   searchedVariantExportConfig: getSearchedVariantExportConfig(state, ownProps),
   totalVariantsCount: getTotalVariantsCount(state, ownProps),

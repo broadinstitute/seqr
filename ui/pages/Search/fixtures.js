@@ -22,7 +22,7 @@ export const LOCUS_LIST = {
 
 export const STATE = {
   savedSearchesLoading: { isLoading: false },
-  projectDetailsLoading: { isLoading: false },
+  searchContextLoading: { isLoading: false },
   locusListLoading: { isLoading: false },
   currentSearchHash: SEARCH_HASH,
   searchesByHash: { [SEARCH_HASH]: SEARCH },

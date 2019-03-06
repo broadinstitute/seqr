@@ -4,9 +4,8 @@ import { connect } from 'react-redux'
 import { Route, Switch } from 'react-router-dom'
 import { Loader, Header } from 'semantic-ui-react'
 
-import { getProjectDetailsIsLoading } from 'redux/selectors'
-import { loadCurrentProject, unloadProject } from './reducers'
-import { getProject } from './selectors'
+import { loadProject, unloadProject } from './reducers'
+import { getProject, getProjectDetailsIsLoading } from './selectors'
 import ProjectPageUI from './components/ProjectPageUI'
 import CaseReview from './components/CaseReview'
 import FamilyPage from './components/FamilyPage'
@@ -22,14 +21,14 @@ class Project extends React.Component
     project: PropTypes.object,
     match: PropTypes.object,
     loading: PropTypes.bool.isRequired,
-    loadCurrentProject: PropTypes.func.isRequired,
+    loadProject: PropTypes.func.isRequired,
     unloadProject: PropTypes.func.isRequired,
   }
 
   constructor(props) {
     super(props)
 
-    props.loadCurrentProject(props.match.params.projectGuid)
+    props.loadProject(props.match.params.projectGuid)
   }
 
   componentWillUnmount() {
@@ -56,7 +55,7 @@ class Project extends React.Component
 }
 
 const mapDispatchToProps = {
-  loadCurrentProject, unloadProject,
+  loadProject, unloadProject,
 }
 
 const mapStateToProps = state => ({

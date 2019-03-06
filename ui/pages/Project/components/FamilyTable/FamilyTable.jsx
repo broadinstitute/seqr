@@ -9,9 +9,8 @@ import ExportTableButton from 'shared/components/buttons/export-table/ExportTabl
 import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
 import TableLoading from 'shared/components/table/TableLoading'
 import { HorizontalSpacer } from 'shared/components/Spacers'
-import { getProjectDetailsIsLoading } from 'redux/selectors'
 
-import { getVisibleSortedFamiliesWithIndividuals } from '../../selectors'
+import { getVisibleSortedFamiliesWithIndividuals, getProjectDetailsIsLoading } from '../../selectors'
 import { FamilyDetail } from '../FamilyPage'
 import TableHeaderRow from './header/TableHeaderRow'
 import EmptyTableRow from './EmptyTableRow'

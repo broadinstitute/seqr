@@ -3,14 +3,14 @@ import hash from 'object-hash'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 
-import { getProjectDetailsIsLoading, getLocusListIsLoading } from 'redux/selectors'
+import { getLocusListIsLoading } from 'redux/selectors'
 import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
 import DataLoader from 'shared/components/DataLoader'
 import { SaveSearchButton } from './SavedSearch'
 import VariantSearchFormContent from './VariantSearchFormContent'
 import { SEARCH_FORM_NAME } from '../constants'
 import { loadProjectFamiliesContext, saveHashedSearch } from '../reducers'
-import { getLoadedIntitialSearch } from '../selectors'
+import { getLoadedIntitialSearch, getSearchContextIsLoading } from '../selectors'
 
 
 const VariantSearchForm = ({ match, history, saveSearch, initialSearch, load, loading, contentLoading }) => {
@@ -57,7 +57,7 @@ VariantSearchForm.propTypes = {
 
 const mapStateToProps = (state, ownProps) => ({
   initialSearch: getLoadedIntitialSearch(state, ownProps),
-  loading: getProjectDetailsIsLoading(state),
+  loading: getSearchContextIsLoading(state),
   contentLoading: getLocusListIsLoading(state),
 })
 

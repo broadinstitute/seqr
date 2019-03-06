@@ -13,7 +13,9 @@ const RECEIVE_SEARCHED_VARIANTS = 'RECEIVE_SEARCHED_VARIANTS'
 const UPDATE_SEARCHED_VARIANT_DISPLAY = 'UPDATE_SEARCHED_VARIANT_DISPLAY'
 const REQUEST_SAVED_SEARCHES = 'REQUEST_SAVED_SEARCHES'
 const RECEIVE_SAVED_SEARCHES = 'RECEIVE_SAVED_SEARCHES'
-const REQUEST_PROJECT_DETAILS = 'REQUEST_PROJECT_DETAILS'
+const REQUEST_SEARCH_CONTEXT = 'REQUEST_SEARCH_CONTEXT'
+const RECEIVE_SEARCH_CONTEXT = 'RECEIVE_SEARCH_CONTEXT'
+
 
 // actions
 
@@ -44,14 +46,15 @@ export const loadProjectFamiliesContext = ({ projectGuid, familyGuid, analysisGr
     }
 
     if (Object.keys(contextParams).length) {
-      dispatch({ type: REQUEST_PROJECT_DETAILS })
+      dispatch({ type: REQUEST_SEARCH_CONTEXT })
       new HttpRequestHelper('/api/search_context',
         (responseJson) => {
           dispatch({ type: RECEIVE_SAVED_SEARCHES, updatesById: responseJson })
           dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+          dispatch({ type: RECEIVE_SEARCH_CONTEXT })
         },
         (e) => {
-          dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
+          dispatch({ type: RECEIVE_SEARCH_CONTEXT, error: e.message })
         },
       ).get(contextParams)
     }
@@ -142,6 +145,7 @@ export const reducers = {
   currentSearchHash: createSingleValueReducer(UPDATE_CURRENT_SEARCH, null),
   searchedVariants: createSingleValueReducer(RECEIVE_SEARCHED_VARIANTS, []),
   searchedVariantsLoading: loadingReducer(REQUEST_SEARCHED_VARIANTS, RECEIVE_SEARCHED_VARIANTS),
+  searchContextLoading: loadingReducer(REQUEST_SEARCH_CONTEXT, RECEIVE_SEARCH_CONTEXT),
   searchesByHash: createObjectsByIdReducer(RECEIVE_SAVED_SEARCHES, 'searchesByHash'),
   savedSearchesByGuid: createObjectsByIdReducer(RECEIVE_SAVED_SEARCHES, 'savedSearchesByGuid'),
   savedSearchesLoading: loadingReducer(REQUEST_SAVED_SEARCHES, RECEIVE_SAVED_SEARCHES),

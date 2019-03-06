@@ -2,7 +2,6 @@ import { createSelector } from 'reselect'
 import { compareObjects } from 'shared/utils/sortUtils'
 
 export const getProjectsIsLoading = state => state.projectsLoading.isLoading
-export const getProjectDetailsIsLoading = state => state.projectDetailsLoading.isLoading
 export const getProjectsByGuid = state => state.projectsByGuid
 export const getProjectCategoriesByGuid = state => state.projectCategoriesByGuid
 export const getFamiliesByGuid = state => state.familiesByGuid

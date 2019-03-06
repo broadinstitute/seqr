@@ -46,51 +46,13 @@ def project_page_data(request, project_guid):
     Args:
         project_guid (string): GUID of the Project to retrieve data for.
     """
-    return create_json_response(get_project_details(project_guid, request.user))
+    project = get_project_and_check_permissions(project_guid, request.user)
 
+    families_by_guid, individuals_by_guid, samples_by_guid, analysis_groups_by_guid, locus_lists_by_guid = get_project_child_entities(project, request.user)
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
-def family_page_data(request, family_guid):
-    """Returns a JSON object containing information needed to display the family page
-    ::
-
-      json_response = {
-         'user': {..},
-         'variants': [..],
-       }
-    Args:
-        family (string): GUID of the Family to retrieve data for.
-    """
-    family = Family.objects.get(guid=family_guid)
-
-    return create_json_response(get_project_details(family.project.guid, request.user))
-
-
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
-def analysis_group_page_data(request, analysis_group_guid):
-    """Returns a JSON object containing information needed to display the analysis group page
-    ::
-
-      json_response = {
-         'user': {..},
-         'variants': [..],
-       }
-    Args:
-        family (string): GUID of the Family to retrieve data for.
-    """
-    analysis_group = AnalysisGroup.objects.get(guid=analysis_group_guid)
-
-    return create_json_response(get_project_details(analysis_group.project.guid, request.user))
-
-
-def get_project_details(project_guid, user):
-    project = get_project_and_check_permissions(project_guid, user)
-
-    families_by_guid, individuals_by_guid, samples_by_guid, analysis_groups_by_guid, locus_lists_by_guid = get_project_child_entities(project, user)
-
-    project_json = _get_json_for_project(project, user)
+    project_json = _get_json_for_project(project, request.user)
     project_json['collaborators'] = _get_json_for_collaborator_list(project)
-    project_json.update(_get_json_for_variant_tag_types(project, user, individuals_by_guid))
+    project_json.update(_get_json_for_variant_tag_types(project, request.user, individuals_by_guid))
     project_json['locusListGuids'] = locus_lists_by_guid.keys()
 
     # gene search will be deprecated once the new database is online.
@@ -103,7 +65,7 @@ def get_project_details(project_guid, user):
     project_json['hasNewSearch'] = sorted_es_samples and is_nested_genotype_index(sorted_es_samples[0]['elasticsearchIndex'])
     project_json['detailsLoaded'] = True
 
-    return {
+    return create_json_response({
         'projectsByGuid': {project_guid: project_json},
         'familiesByGuid': families_by_guid,
         'individualsByGuid': individuals_by_guid,
@@ -111,7 +73,7 @@ def get_project_details(project_guid, user):
         'locusListsByGuid': locus_lists_by_guid,
         'analysisGroupsByGuid': analysis_groups_by_guid,
         'matchmakerSubmissions': {project.guid: _project_matchmaker_submissions(project)},
-    }
+    })
 
 
 def get_project_child_entities(project, user):
