@@ -300,10 +300,10 @@ def _genotype_filter(inheritance, family_samples_by_id, quality_filter=None):
     inheritance_mode = (inheritance or {}).get('mode')
     inheritance_filter = (inheritance or {}).get('filter') or {}
 
-    min_ab = (quality_filter or {}).get('min_ab')
+    min_ab = (quality_filter or {}).get('min_ab', 0)
     if min_ab % 5 != 0:
         raise Exception('Invalid ab filter {}'.format(min_ab))
-    min_gq = (quality_filter or {}).get('min_gq')
+    min_gq = (quality_filter or {}).get('min_gq', 0)
     if min_gq % 5 != 0:
         raise Exception('Invalid gq filter {}'.format(min_gq))
 

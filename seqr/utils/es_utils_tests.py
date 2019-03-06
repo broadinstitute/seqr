@@ -510,60 +510,24 @@ SOURCE_FIELDS = {
 ALL_INHERITANCE_QUERY = {
     "bool": {
         "should": [
-            {
-                "bool": {
-                    "must": [
-                        {
-                            "bool": {
-                                "should": [
-                                    {
-                                        "terms": {
-                                            "samples_num_alt_1": [
-                                                "HG00731"
-                                            ]
-                                        }
-                                    },
-                                    {
-                                        "terms": {
-                                            "samples_num_alt_2": [
-                                                "HG00731"
-                                            ]
-                                        }
-                                    }
-                                ]
-                            }
-                        }
-                    ],
-                    "_name": "F000002_2"
-                }
-            },
-            {
-                "bool": {
-                    "must": [
-                        {
-                            "bool": {
-                                "should": [
-                                    {
-                                        "terms": {
-                                            "samples_num_alt_1": [
-                                                "NA19675"
-                                            ]
-                                        }
-                                    },
-                                    {
-                                        "terms": {
-                                            "samples_num_alt_2": [
-                                                "NA19675"
-                                            ]
-                                        }
-                                    }
-                                ]
-                            }
-                        }
-                    ],
-                    "_name": "F000001_1"
-                }
-            }
+            {"bool": {
+                "must": [
+                    {"bool": {"should": [
+                        {"terms": {"samples_num_alt_1": ["HG00731", "HG00732", "HG00733"]}},
+                        {"terms": {"samples_num_alt_2": ["HG00731", "HG00732", "HG00733"]}}
+                    ]}}
+                ],
+                "_name": "F000002_2"
+            }},
+            {"bool": {
+                "must": [
+                    {"bool": {"should": [
+                        {"terms": {"samples_num_alt_1": ["NA19675"]}},
+                        {"terms": {"samples_num_alt_2": ["NA19675"]}}
+                    ]}}
+                ],
+                "_name": "F000001_1"
+            }}
         ]
     }
 }
@@ -694,7 +658,6 @@ class EsUtilsTest(TestCase):
         self.assertListEqual(variants, results_model.results['all_results'][0:3], )
 
     def test_filtered_get_es_variants(self):
-        #  TODO quality and inheritance
         search_model = VariantSearch.objects.create(search={
             'locus': {'rawItems': 'DDX11L1, chr2:1234-5678'},
             'pathogenicity': {
@@ -713,6 +676,8 @@ class EsUtilsTest(TestCase):
                 'gnomad_genomes': {'af': 0.01, 'hh': 3},
                 'topmed': {'ac': 2, 'af': None},
             },
+            "qualityFilter": {"min_ab": 10, "min_gq": 15, "vcf_filter": "pass"},
+            "inheritance": {"mode": "de_novo"}
         })
         results_model = VariantSearchResults.objects.create(variant_search=search_model, sort='in_omim')
         results_model.families = self.families
@@ -825,7 +790,107 @@ class EsUtilsTest(TestCase):
                     ]
                 }
             },
-            ALL_INHERITANCE_QUERY
+            {"bool": {
+                "minimum_should_match": 1,
+                "must_not": [{"exists": {"field": "filters"}}],
+                "should": [
+                    {"bool": {
+                        "must": [
+                            {"bool": {
+                                "minimum_should_match": 1,
+                                "must_not": [
+                                    {"term": {"samples_no_call": "HG00732"}},
+                                    {"term": {"samples_num_alt_1": "HG00732"}},
+                                    {"term": {"samples_num_alt_2": "HG00732"}},
+                                    {"term": {"samples_no_call": "HG00733"}},
+                                    {"term": {"samples_num_alt_1": "HG00733"}},
+                                    {"term": {"samples_num_alt_2": "HG00733"}}
+                                ],
+                                "should": [
+                                    {"term": {"samples_num_alt_1": "HG00731"}},
+                                    {"term": {"samples_num_alt_2": "HG00731"}}
+                                ]
+                            }},
+                            {"bool": {
+                                "minimum_should_match": 1,
+                                "should": [
+                                    {"bool": {
+                                        "must_not": [
+                                            {"term": {"samples_ab_0_to_5": "HG00731"}},
+                                            {"term": {"samples_ab_5_to_10": "HG00731"}},
+                                        ]
+                                    }},
+                                    {"bool": {"must_not": [{"term": {"samples_num_alt_1": "HG00731"}}]}}
+                                ],
+                                "must_not": [
+                                    {"term": {"samples_gq_0_to_5": "HG00731"}},
+                                    {"term": {"samples_gq_5_to_10": "HG00731"}},
+                                    {"term": {"samples_gq_10_to_15": "HG00731"}},
+                                    {"term": {"samples_gq_0_to_5": "HG00732"}},
+                                    {"term": {"samples_gq_5_to_10": "HG00732"}},
+                                    {"term": {"samples_gq_10_to_15": "HG00732"}},
+                                    {"term": {"samples_gq_0_to_5": "HG00733"}},
+                                    {"term": {"samples_gq_5_to_10": "HG00733"}},
+                                    {"term": {"samples_gq_10_to_15": "HG00733"}},
+                                ],
+                                "must": [
+                                    {"bool": {
+                                        "minimum_should_match": 1,
+                                        "should": [
+                                            {"bool": {
+                                                "must_not": [
+                                                    {"term": {"samples_ab_0_to_5": "HG00732"}},
+                                                    {"term": {"samples_ab_5_to_10": "HG00732"}},
+                                                ]
+                                            }},
+                                            {"bool": {"must_not": [{"term": {"samples_num_alt_1": "HG00732"}}]}}
+                                        ]
+                                    }},
+                                    {"bool": {
+                                        "minimum_should_match": 1,
+                                        "should": [
+                                            {"bool": {
+                                                "must_not": [
+                                                    {"term": {"samples_ab_0_to_5": "HG00733"}},
+                                                    {"term": {"samples_ab_5_to_10": "HG00733"}},
+                                                ]
+                                            }},
+                                            {"bool": {"must_not": [{"term": {"samples_num_alt_1": "HG00733"}}]}}
+                                        ]
+                                    }},
+                                ]
+                            }}
+                        ],
+                        "_name": "F000002_2"
+                    }},
+                    {"bool": {
+                        "must": [
+                            {"bool": {"should": [
+                                {"term": {"samples_num_alt_1": "NA19675"}},
+                                {"term": {"samples_num_alt_2": "NA19675"}}
+                            ]}},
+                            {"bool": {
+                                "minimum_should_match": 1,
+                                "should": [
+                                    {"bool": {
+                                        "must_not": [
+                                            {"term": {"samples_ab_0_to_5": "NA19675"}},
+                                            {"term": {"samples_ab_5_to_10": "NA19675"}},
+                                        ]
+                                    }},
+                                    {"bool": {"must_not": [{"term": {"samples_num_alt_1": "NA19675"}}]}}
+                                ],
+                                "must_not": [
+                                    {"term": {"samples_gq_0_to_5": "NA19675"}},
+                                    {"term": {"samples_gq_5_to_10": "NA19675"}},
+                                    {"term": {"samples_gq_10_to_15": "NA19675"}},
+                                ]
+                            }}
+                        ],
+                        "_name": "F000001_1"
+                    }}
+                ]
+            }}
         ], sort=[{
             '_script': {
                 'type': 'number',
@@ -839,4 +904,7 @@ class EsUtilsTest(TestCase):
         }, 'xpos'])
 
     def test_recessive_get_es_variants(self):
+        pass
+
+    def test_genotype_filter(self):
         pass
