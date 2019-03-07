@@ -159,6 +159,8 @@ def get_es_variants(search_model, page=1, num_results=100):
         grouped_variants = compound_het_results + grouped_variants
 
         # Sort merged result sets
+
+
         grouped_variants = sorted(grouped_variants, key=lambda variants: tuple(variants[0]['_sort']))
 
         # Only return the requested page of variants

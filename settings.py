@@ -439,8 +439,10 @@ if len(sys.argv) >= 2 and sys.argv[1] == 'test':
         'HOST': '',
         'PORT': '',
     }
+    logger.info('setting up postgres')
     os.system("postgres")
     os.system("createdb seqr_test_db")
+    logger.info('created test db')
 
 logger.info("MONGO_SERVICE_HOSTNAME: " + MONGO_SERVICE_HOSTNAME)
 logger.info("PHENOTIPS_SERVICE_HOSTNAME: " + PHENOTIPS_SERVICE_HOSTNAME)
