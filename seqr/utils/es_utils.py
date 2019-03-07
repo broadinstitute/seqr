@@ -136,7 +136,7 @@ def get_es_variants(search_model, page=1, num_results=100):
         )
 
         logger.info('Searching in elasticsearch index: {}'.format(elasticsearch_index))
-        logger.info(json.dumps(compound_het_search.to_dict(), indent=2))
+        logger.debug(json.dumps(compound_het_search.to_dict(), indent=2))
 
         response = compound_het_search.execute()
 
@@ -155,10 +155,8 @@ def get_es_variants(search_model, page=1, num_results=100):
         else:
             total_results = search_model.total_results
 
-        grouped_variants = compound_het_results
-
-        if variant_results:
-            grouped_variants += [[var] for var in variant_results]
+        grouped_variants = [[var] for var in variant_results]
+        grouped_variants = compound_het_results + grouped_variants
 
         # Sort merged result sets
         grouped_variants = sorted(grouped_variants, key=lambda variants: tuple(variants[0]['_sort']))
@@ -229,7 +227,7 @@ def _execute_search(es_search, family_samples_by_id, start_index=0, end_index=10
     es_search = es_search[start_index:end_index]
     es_search = es_search.source(QUERY_FIELD_NAMES)
 
-    logger.info(json.dumps(es_search.to_dict(), indent=2))
+    logger.debug(json.dumps(es_search.to_dict(), indent=2))
 
     response = es_search.execute()
     total_results = response.hits.total
