@@ -9,7 +9,7 @@ DATABASES = {
         'USER': os.environ.get('POSTGRES_USERNAME', 'postgres'),
         'PASSWORD': os.environ.get('POSTGRES_PASSWORD', ''),
         'TEST': {
-            'seqr_test_db'
+            'NAME': 'seqr_test_db'
         }
     }
 }
