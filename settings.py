@@ -428,6 +428,17 @@ SESSION_COOKIE_HTTPONLY = True
 CSRF_COOKIE_HTTPONLY = True
 # SESSION_EXPIRE_AT_BROWSER_CLOSE=True
 
+if len(sys.argv) >= 2 and sys.argv[1] == 'test':
+    # use in-memory sqlite database for running tests
+    DATABASES['default'] = {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': 'seqr_test_db.sqlite',
+        'USER': '',
+        'PASSWORD': '',
+        'HOST': '',
+        'PORT': '',
+    }
+
 logger.info("MONGO_SERVICE_HOSTNAME: " + MONGO_SERVICE_HOSTNAME)
 logger.info("PHENOTIPS_SERVICE_HOSTNAME: " + PHENOTIPS_SERVICE_HOSTNAME)
 logger.info("MATCHBOX_SERVICE_HOSTNAME: " + MATCHBOX_SERVICE_HOSTNAME)
