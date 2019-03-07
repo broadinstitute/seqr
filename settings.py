@@ -428,21 +428,17 @@ SESSION_COOKIE_HTTPONLY = True
 CSRF_COOKIE_HTTPONLY = True
 # SESSION_EXPIRE_AT_BROWSER_CLOSE=True
 
-
 if len(sys.argv) >= 2 and sys.argv[1] == 'test':
+    logger.info('setting test db settings')
     # use in-memory database for running tests
     DATABASES['default'] = {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'seqr_test_db',
+        'NAME': 'seqr_testing_db',
         'USER': '',
         'PASSWORD': '',
         'HOST': '',
         'PORT': '',
     }
-    logger.info('setting up postgres')
-    os.system("postgres")
-    os.system("createdb seqr_test_db")
-    logger.info('created test db')
 
 logger.info("MONGO_SERVICE_HOSTNAME: " + MONGO_SERVICE_HOSTNAME)
 logger.info("PHENOTIPS_SERVICE_HOSTNAME: " + PHENOTIPS_SERVICE_HOSTNAME)
