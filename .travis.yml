@@ -9,7 +9,6 @@ install:
 - ./install_dependencies.sh
 
 script:
-- createdb seqr_test_db
 - PYTHONPATH=.:./deploy/docker/seqr/config python -Wonce -u manage.py test -p '*_tests.py' -v 2 reference_data seqr xbrowse
 - cd ui/
 - npm test
