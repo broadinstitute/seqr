@@ -437,6 +437,9 @@ if len(sys.argv) >= 2 and sys.argv[1] == 'test':
         'PASSWORD': '',
         'HOST': '',
         'PORT': '',
+        'TEST': {
+            'NAME': 'seqr_test_db',
+        }
 
     }
 
