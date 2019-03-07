@@ -10,7 +10,7 @@ install:
 
 script:
 - createdb seqrdb
-- python -Wonce -u manage.py test -p '*_tests.py' -v 2 reference_data seqr xbrowse --pythonpath ./deploy/docker/seqr/config
+- python -Wonce -u manage.py test -p '*_tests.py' -v 3 reference_data seqr xbrowse --pythonpath ./deploy/docker/seqr/config
 - cd ui/
 - npm test
 
