@@ -14,6 +14,9 @@ script:
 - cd ui/
 - npm test
 
+addons:
+  postgresql: '9.6'
+
 notifications:
   slack:
     secure: tYNwi4kff+8FWbv+nWqKZt28Qez0Dv77rJG6nvdiaO7QgPZmaiG5l8NqYdxV63CMgNzHwTFAz8ca9uOoh06o7+HuiFNNiqXEAu8umLvlnvkKT6itSDyImxxD7ypitUwcBEKkNy1fxhrLRPQVLjxz37885kA/VtWpm19A5vQ8A7w=
