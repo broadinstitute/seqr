@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 
 import Modal from '../modal/Modal'
 import GeneDetail from '../panel/genes/GeneDetail'
-import ButtonLink from './ButtonLink'
+import { ButtonLink } from '../StyledComponents'
 
 const ShowGeneModal = ({ gene, modalId = 'gene', ...linkProps }) =>
   <Modal

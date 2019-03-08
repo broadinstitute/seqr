@@ -1,12 +1,13 @@
 import { combineReducers } from 'redux'
 import { SubmissionError } from 'redux-form'
 
-import { loadingReducer, createSingleObjectReducer, createObjectsByIdReducer, createSingleValueReducer } from 'redux/utils/reducerFactories'
+import { loadingReducer, createSingleObjectReducer, createSingleValueReducer } from 'redux/utils/reducerFactories'
 import { REQUEST_PROJECTS, updateEntity } from 'redux/rootReducer'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
+import { SORT_BY_FAMILY_GUID } from 'shared/utils/constants'
 import { getProject, getProjectFamiliesByGuid } from 'pages/Project/selectors'
 import {
-  SHOW_ALL, SHOW_IN_REVIEW, SORT_BY_FAMILY_NAME, SORT_BY_FAMILY_ADDED_DATE, SORT_BY_FAMILY_GUID, CASE_REVIEW_TABLE_NAME,
+  SHOW_ALL, SHOW_IN_REVIEW, SORT_BY_FAMILY_NAME, SORT_BY_FAMILY_ADDED_DATE, CASE_REVIEW_TABLE_NAME,
 } from './constants'
 
 // action creators and reducers in one file as suggested by https://github.com/erikras/ducks-modular-redux
@@ -16,11 +17,8 @@ const UPDATE_CASE_REVIEW_TABLE_STATE = 'UPDATE_CASE_REVIEW_TABLE_STATE'
 const UPDATE_SAVED_VARIANT_TABLE_STATE = 'UPDATE_VARIANT_STATE'
 const UPDATE_CURRENT_PROJECT = 'UPDATE_CURRENT_PROJECT'
 const REQUEST_PROJECT_DETAILS = 'REQUEST_PROJECT_DETAILS'
-const RECEIVE_PROJECT_DETAILS = 'RECEIVE_PROJECT_DETAILS'
 const REQUEST_SAVED_VARIANTS = 'REQUEST_SAVED_VARIANTS'
-const RECEIVE_SAVED_VARIANTS = 'RECEIVE_SAVED_VARIANTS'
 const RECEIVE_SAVED_VARIANT_FAMILIES = 'RECEIVE_SAVED_VARIANT_FAMILIES'
-const RECEIVE_GENES = 'RECEIVE_GENES'
 const REQUEST_MME_MATCHES = 'REQUEST_MME_MATCHES'
 const REQUEST_MONARCH_MATCHES = 'REQUEST_MONARCH_MATCHES'
 
@@ -30,17 +28,15 @@ const REQUEST_MONARCH_MATCHES = 'REQUEST_MONARCH_MATCHES'
 export const loadProject = (projectGuid) => {
   return (dispatch, getState) => {
     dispatch({ type: UPDATE_CURRENT_PROJECT, newValue: projectGuid })
-
-    const currentProject = getState().projectsByGuid[projectGuid]
-    if (!currentProject || !currentProject.detailsLoaded) {
+    const project = getState().projectsByGuid[projectGuid]
+    if (!project || !project.detailsLoaded) {
       dispatch({ type: REQUEST_PROJECT_DETAILS })
-      if (!currentProject) {
+      if (!project) {
         dispatch({ type: REQUEST_PROJECTS })
       }
       new HttpRequestHelper(`/api/project/${projectGuid}/details`,
         (responseJson) => {
-          dispatch({ type: RECEIVE_PROJECT_DETAILS })
-          dispatch({ type: RECEIVE_DATA, updatesById: { projectsByGuid: { [projectGuid]: responseJson.project }, ...responseJson } })
+          dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
         },
         (e) => {
           dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
@@ -60,7 +56,7 @@ export const loadProjectVariants = (familyGuids, variantGuid) => {
     // Do not load if already loaded
     let expectedFamilyGuids
     if (variantGuid) {
-      if (state.projectSavedVariants[variantGuid]) {
+      if (state.savedVariantsByGuid[variantGuid]) {
         return
       }
       url = `${url}/${variantGuid}`
@@ -74,8 +70,7 @@ export const loadProjectVariants = (familyGuids, variantGuid) => {
     dispatch({ type: REQUEST_SAVED_VARIANTS })
     new HttpRequestHelper(url,
       (responseJson) => {
-        dispatch({ type: RECEIVE_GENES, updatesById: responseJson.genesById })
-        dispatch({ type: RECEIVE_SAVED_VARIANTS, updatesById: responseJson.savedVariants })
+        dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
         if (expectedFamilyGuids) {
           dispatch({
             type: RECEIVE_SAVED_VARIANT_FAMILIES,
@@ -84,7 +79,7 @@ export const loadProjectVariants = (familyGuids, variantGuid) => {
         }
       },
       (e) => {
-        dispatch({ type: RECEIVE_SAVED_VARIANTS, error: e.message, updatesById: {} })
+        dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
       },
     ).get(familyGuids ? { families: familyGuids.join(',') } : {})
   }
@@ -92,16 +87,15 @@ export const loadProjectVariants = (familyGuids, variantGuid) => {
 
 const unloadSavedVariants = (dispatch, getState) => {
   const state = getState()
-  const variantsToDelete = Object.keys(state.projectSavedVariants).reduce((acc, o) => ({ ...acc, [o]: null }), {})
+  const variantsToDelete = Object.keys(state.projectSavedVariants || {}).reduce((acc, o) => ({ ...acc, [o]: null }), {})
   const variantFamiliesToDelete = Object.keys(state.projectSavedVariantFamilies).reduce((acc, o) => ({ ...acc, [o]: false }), {})
-  dispatch({ type: REQUEST_SAVED_VARIANTS, updatesById: variantsToDelete })
+  dispatch({ type: RECEIVE_DATA, updatesById: { savedVariantsByGuid: variantsToDelete } })
   dispatch({ type: RECEIVE_SAVED_VARIANT_FAMILIES, updates: variantFamiliesToDelete })
 }
 
 export const unloadProject = () => {
-  return (dispatch, getState) => {
+  return (dispatch) => {
     dispatch({ type: UPDATE_CURRENT_PROJECT, newValue: null })
-    unloadSavedVariants(dispatch, getState)
   }
 }
 
@@ -252,9 +246,8 @@ export const updateSavedVariantTable = updates => ({ type: UPDATE_SAVED_VARIANT_
 
 export const reducers = {
   currentProjectGuid: createSingleValueReducer(UPDATE_CURRENT_PROJECT, null),
-  projectDetailsLoading: loadingReducer(REQUEST_PROJECT_DETAILS, RECEIVE_PROJECT_DETAILS),
-  projectSavedVariants: createObjectsByIdReducer(RECEIVE_SAVED_VARIANTS),
-  projectSavedVariantsLoading: loadingReducer(REQUEST_SAVED_VARIANTS, RECEIVE_SAVED_VARIANTS),
+  projectDetailsLoading: loadingReducer(REQUEST_PROJECT_DETAILS, RECEIVE_DATA),
+  projectSavedVariantsLoading: loadingReducer(REQUEST_SAVED_VARIANTS, RECEIVE_DATA),
   projectSavedVariantFamilies: createSingleObjectReducer(RECEIVE_SAVED_VARIANT_FAMILIES),
   matchmakerMatchesLoading: loadingReducer(REQUEST_MME_MATCHES, RECEIVE_DATA),
   monarchMatchesLoading: loadingReducer(REQUEST_MONARCH_MATCHES, RECEIVE_DATA),
@@ -272,8 +265,8 @@ export const reducers = {
     hideExcluded: false,
     hideReviewOnly: false,
     categoryFilter: SHOW_ALL,
-    sortOrder: SORT_BY_FAMILY_GUID,
-    currentPage: 1,
+    sort: SORT_BY_FAMILY_GUID,
+    page: 1,
     recordsPerPage: 25,
   }, false),
 }

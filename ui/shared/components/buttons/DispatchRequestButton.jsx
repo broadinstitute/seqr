@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import { Confirm } from 'semantic-ui-react'
 
 import RequestStatus from '../form/RequestStatus'
-import ButtonLink from './ButtonLink'
+import { ButtonLink } from '../StyledComponents'
 
 
 class DispatchRequestButton extends React.Component {

@@ -5,8 +5,8 @@ from django.utils import timezone
 from collections import defaultdict
 
 from seqr.views.apis.igv_api import proxy_to_igv
-from seqr.models import Sample, Individual
-from seqr.utils.es_utils import get_es_client, VARIANT_DOC_TYPE
+from seqr.models import Sample
+from seqr.utils.es_utils import get_es_client, is_nested_genotype_index, VARIANT_DOC_TYPE
 from seqr.utils.file_utils import does_file_exist, file_iter, get_file_stats
 from seqr.views.utils.file_utils import load_uploaded_file, parse_file
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
@@ -63,7 +63,7 @@ def add_dataset(
     }
 
     if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
-        all_samples = _get_elasticsearch_index_samples(elasticsearch_index, project)
+        all_samples = _get_elasticsearch_index_samples(elasticsearch_index)
         update_kwargs.update({
             'sample_ids': all_samples,
             'sample_id_to_individual_id_mapping': _load_mapping_file(mapping_file_id, mapping_file_path),
@@ -169,26 +169,25 @@ def _update_samples_for_dataset(
     return matched_sample_id_to_sample_record.values(), created_sample_ids
 
 
-def _get_elasticsearch_index_samples(elasticsearch_index, project):
-    sample_field_suffix = '_num_alt'
+def _get_elasticsearch_index_samples(elasticsearch_index):
+    es_client = get_es_client()
 
-    es_client = get_es_client(timeout=30)
+    #  Nested genotypes
+    if is_nested_genotype_index(elasticsearch_index):
+        s = elasticsearch_dsl.Search(using=es_client, index=elasticsearch_index)
+        s = s.params(size=0)
+        s.aggs.bucket('sample_ids', elasticsearch_dsl.A('terms', field='samples_num_alt_1', size=10000))
+        response = s.execute()
+        return [agg['key'] for agg in response.aggregations.sample_ids.buckets]
+
+    sample_field_suffix = '_num_alt'
     index = elasticsearch_dsl.Index('{}*'.format(elasticsearch_index), using=es_client)
     try:
-        field_mapping = index.get_field_mapping(fields=['*{}'.format(sample_field_suffix), 'samples_num_alt_1'], doc_type=[VARIANT_DOC_TYPE])
+        field_mapping = index.get_field_mapping(fields=['*{}'.format(sample_field_suffix)], doc_type=[VARIANT_DOC_TYPE])
     except NotFoundError:
         raise Exception('Index "{}" not found'.format(elasticsearch_index))
     except TransportError as e:
         raise Exception(e.error)
-
-    #  Nested genotypes
-    if field_mapping.get(elasticsearch_index, {}).get('mappings', {}).get(VARIANT_DOC_TYPE, {}).get('samples_num_alt_1'):
-        max_samples = Individual.objects.filter(family__project=project).count()
-        s = elasticsearch_dsl.Search(using=es_client, index=elasticsearch_index)
-        s = s.params(size=0)
-        s.aggs.bucket('sample_ids', elasticsearch_dsl.A('terms', field='samples_num_alt_1', size=max_samples))
-        response = s.execute()
-        return [agg['key'] for agg in response.aggregations.sample_ids.buckets]
 
     samples = set()
     for index in field_mapping.values():

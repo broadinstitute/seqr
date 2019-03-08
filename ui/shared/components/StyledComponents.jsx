@@ -1,6 +1,32 @@
 import React from 'react'
 import styled from 'styled-components'
-import { Header, Icon, Label, Table } from 'semantic-ui-react'
+import { Button, Header, Icon, Label, Table } from 'semantic-ui-react'
+
+export const ButtonLink = styled(Button).attrs({ basic: true })`
+  &.ui.button.basic {
+    white-space: nowrap;
+    border: none;
+    padding: 0;
+    color: #4183C4 !important;
+    text-decoration: none;
+    font-weight: ${props => props.fontWeight || 'inherit'};
+    box-shadow: none !important;
+    
+    &:hover, &:focus, &:active {
+      color: #1e70bf !important;
+      background: transparent !important;
+    }
+    
+    &[class*="right labeled"].icon {
+      padding-left: 0 !important;
+      padding-right: 2.1em !important;
+      
+      > .icon {
+        background-color: initial;
+      }
+    }
+  }
+`
 
 export const ColoredIcon = styled(({ color, ...props }) => <Icon {...props} />)`
   color: ${props => props.color} !important;

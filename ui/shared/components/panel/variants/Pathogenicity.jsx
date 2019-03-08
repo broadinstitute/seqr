@@ -1,8 +1,10 @@
 import React from 'react'
 import PropTypes from 'prop-types'
+import { connect } from 'react-redux'
 import styled from 'styled-components'
 import { Label, Icon } from 'semantic-ui-react'
 
+import { getUser } from 'redux/selectors'
 import { CLINSIG_SEVERITY } from '../../../utils/constants'
 import { snakecaseToTitlecase } from '../../../utils/stringUtils'
 import { HorizontalSpacer } from '../../Spacers'
@@ -43,14 +45,14 @@ ClinvarStars.propTypes = {
 }
 
 
-const PathogenicityLabel = ({ clinsig, formatName, goldStars }) =>
-  <Label color={CLINSIG_COLOR[CLINSIG_SEVERITY[clinsig.toLowerCase()]] || 'grey'} size="medium" horizontal basic>
-    {formatName ? formatName(clinsig) : clinsig}
+const PathogenicityLabel = ({ significance, formatName, goldStars }) =>
+  <Label color={CLINSIG_COLOR[CLINSIG_SEVERITY[significance.toLowerCase()]] || 'grey'} size="medium" horizontal basic>
+    {formatName ? formatName(significance) : significance}
     <ClinvarStars goldStars={goldStars} />
   </Label>
 
 PathogenicityLabel.propTypes = {
-  clinsig: PropTypes.string.isRequired,
+  significance: PropTypes.string.isRequired,
   formatName: PropTypes.func,
   goldStars: PropTypes.number,
 }
@@ -68,35 +70,35 @@ PathogenicityLink.propTypes = {
 
 const clinvarUrl = (clinvar) => {
   const baseUrl = 'http://www.ncbi.nlm.nih.gov/clinvar'
-  const variantPath = clinvar.alleleId ? `?term=${clinvar.alleleId}[alleleid]` : `/variation/${clinvar.variantId}`
+  const variantPath = clinvar.alleleId ? `?term=${clinvar.alleleId}[alleleid]` : `/variation/${clinvar.variationId}`
   return baseUrl + variantPath
 }
 
-const Pathogenicity = ({ variant }) => {
-  if (!variant.clinvar.variantId && !variant.clinvar.alleleId && !variant.hgmd.class) {
+const Pathogenicity = ({ variant, user }) => {
+  if (!variant.clinvar.variationId && !variant.clinvar.alleleId && !(user.is_staff && variant.hgmd.class)) {
     return null
   }
 
   return (
     <span>
-      {variant.clinvar.clinsig &&
+      {variant.clinvar.clinicalSignificance &&
         <span>
           <b>ClinVar:<HorizontalSpacer width={5} /></b>
           <PathogenicityLink
-            key={variant.clinvar.clinsig}
-            clinsig={variant.clinvar.clinsig}
+            key={variant.clinvar.clinicalSignificance}
+            significance={variant.clinvar.clinicalSignificance}
             href={clinvarUrl(variant.clinvar)}
             formatName={snakecaseToTitlecase}
             goldStars={variant.clinvar.goldStars}
           />
         </span>
       }
-      {variant.hgmd.class &&
+      {user.is_staff && variant.hgmd.class &&
         <span>
           <HorizontalSpacer width={5} />
           <b>HGMD:<HorizontalSpacer width={5} /></b>
           <PathogenicityLink
-            clinsig={variant.hgmd.class}
+            significance={variant.hgmd.class}
             href={`https://portal.biobase-international.com/hgmd/pro/mut.php?acc=${variant.hgmd.accession}`}
             formatName={hgmdName}
           />
@@ -108,7 +110,14 @@ const Pathogenicity = ({ variant }) => {
 
 Pathogenicity.propTypes = {
   variant: PropTypes.object,
+  user: PropTypes.object,
 }
 
 
-export default Pathogenicity
+const mapStateToProps = state => ({
+  user: getUser(state),
+})
+
+export { Pathogenicity as BasePathogenicity }
+
+export default connect(mapStateToProps)(Pathogenicity)

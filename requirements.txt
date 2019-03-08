@@ -28,6 +28,7 @@ elasticsearch==6.2.0             # elasticsearch client
 elasticsearch-dsl==6.1.0	     # elasticsearch query utilities
 
 ipython                          # used by shell.py
+jmespath==0.9.3
 numpy==1.12.1
 openpyxl==2.4.8                  # library for reading/writing Excel files
 pandas==0.19.2

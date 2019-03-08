@@ -110,6 +110,17 @@ FamilyLayout.propTypes = {
   rightContent: PropTypes.node,
 }
 
+const SearchLink = ({ project, family, children }) => (
+  project.hasNewSearch ? <Link to={`/variant_search/family/${family.familyGuid}`}>{children}</Link>
+    : <a href={`/project/${project.deprecatedProjectId}/family/${family.familyId}/mendelian-variant-search`}>{children}</a>
+)
+
+SearchLink.propTypes = {
+  project: PropTypes.object.isRequired,
+  family: PropTypes.object.isRequired,
+  children: PropTypes.node,
+}
+
 const Family = (
   { project, family, fields = [], showVariantDetails, compact, useFullWidth, disablePedigreeZoom,
     showFamilyPageLink, annotation, updateFamily: dispatchUpdateFamily,
@@ -150,17 +161,15 @@ const Family = (
     <PedigreeImagePanel key="pedigree" family={family} disablePedigreeZoom={disablePedigreeZoom} compact={compact} />,
   ]
 
-  const discoveryGenes = project.discoveryTags.filter(tag => tag.familyGuid === family.familyGuid).reduce(
-    (acc, tag) => (tag.mainTranscript.symbol ? [...acc, tag.mainTranscript.symbol] : acc), [],
+  const discoveryGenes = project.discoveryTags.filter(tag => tag.familyGuids.includes(family.familyGuid)).reduce(
+    (acc, tag) => (tag.mainTranscript.geneSymbol ? [...acc, tag.mainTranscript.geneSymbol] : acc), [],
   )
-
-  const searchLink = `/project/${project.deprecatedProjectId}/family/${family.familyId}/mendelian-variant-search`
 
   const rightContent = showVariantDetails ? [
     <div key="variants">
       <VariantTagTypeBar height={15} width="calc(100% - 2.5em)" project={project} familyGuid={family.familyGuid} sectionLinks={false} />
       <HorizontalSpacer width={10} />
-      <a href={searchLink}><Icon name="search" /></a>
+      <SearchLink project={project} family={family}><Icon name="search" /></SearchLink>
       {discoveryGenes.length > 0 &&
         <span>
           <b>Discovery Genes:</b> {[...new Set(discoveryGenes)].join(', ')}
@@ -170,7 +179,7 @@ const Family = (
     !compact ?
       <div key="links">
         <VerticalSpacer height={20} />
-        <a href={searchLink}><Icon name="search" /> Variant Search</a>
+        <SearchLink project={project} family={family}><Icon name="search" /> Variant Search</SearchLink>
         <VerticalSpacer height={10} />
         {project.isMmeEnabled && <ShowMatchmakerModal family={family} />}
       </div> : null,

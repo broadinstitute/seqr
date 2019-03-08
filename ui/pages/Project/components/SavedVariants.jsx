@@ -1,7 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Loader, Grid, Pagination, Dropdown } from 'semantic-ui-react'
+import { Loader, Grid, Dropdown } from 'semantic-ui-react'
 import { Route, Switch, Link } from 'react-router-dom'
 import styled from 'styled-components'
 
@@ -9,10 +9,17 @@ import { getAnalysisGroupsByGuid } from 'redux/selectors'
 import ExportTableButton from 'shared/components/buttons/export-table/ExportTableButton'
 import VariantTagTypeBar, { getSavedVariantsLinkPath } from 'shared/components/graph/VariantTagTypeBar'
 import Variants from 'shared/components/panel/variants/Variants'
-import { Dropdown as DropdownInput, InlineToggle } from 'shared/components/form/Inputs'
 import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
 import { HorizontalSpacer } from 'shared/components/Spacers'
-import { DISCOVERY_CATEGORY_NAME } from 'shared/utils/constants'
+import {
+  DISCOVERY_CATEGORY_NAME,
+  VARIANT_SORT_FIELD,
+  VARIANT_HIDE_EXCLUDED_FIELD,
+  VARIANT_HIDE_REVIEW_FIELD,
+  VARIANT_HIDE_KNOWN_GENE_FOR_PHENOTYPE_FIELD,
+  VARIANT_PER_PAGE_FIELD,
+  VARIANT_PAGINATION_FIELD,
+} from 'shared/utils/constants'
 import { toSnakecase } from 'shared/utils/stringUtils'
 import { loadProjectVariants, updateSavedVariantTable } from '../reducers'
 import {
@@ -20,63 +27,23 @@ import {
   getFilteredProjectSavedVariants, getSavedVariantTableState, getSavedVariantVisibleIndices, getSavedVariantTotalPages,
   getSavedVariantExportConfig,
 } from '../selectors'
-import { VARIANT_SORT_OPTONS } from '../constants'
 
 const ALL_FILTER = 'ALL'
 
 const FILTER_FIELDS = [
-  {
-    name: 'sortOrder',
-    component: DropdownInput,
-    inline: true,
-    selection: false,
-    fluid: false,
-    label: 'Sort By:',
-    options: VARIANT_SORT_OPTONS,
-  },
-  {
-    name: 'hideKnownGeneForPhenotype',
-    component: InlineToggle,
-    label: 'Hide Known Gene For Phenotype',
-    labelHelp: 'Remove all variants tagged with the "Known Gene For Phenotype" tag from the results',
-  },
-  {
-    name: 'hideExcluded',
-    component: InlineToggle,
-    label: 'Hide Excluded',
-    labelHelp: 'Remove all variants tagged with the "Excluded" tag from the results',
-  },
-  {
-    name: 'hideReviewOnly',
-    component: InlineToggle,
-    label: 'Hide Review Only',
-    labelHelp: 'Remove all variants tagged with only the "Review" tag from the results',
-  },
-  {
-    name: 'recordsPerPage',
-    component: DropdownInput,
-    inline: true,
-    selection: false,
-    fluid: false,
-    label: 'Variants Per Page:',
-    options: [{ value: 10 }, { value: 25 }, { value: 50 }, { value: 100 }],
-  },
+  VARIANT_SORT_FIELD,
+  VARIANT_HIDE_KNOWN_GENE_FOR_PHENOTYPE_FIELD,
+  VARIANT_HIDE_EXCLUDED_FIELD,
+  VARIANT_HIDE_REVIEW_FIELD,
+  VARIANT_PER_PAGE_FIELD,
 ]
 const NON_DISCOVERY_FILTER_FIELDS = FILTER_FIELDS.filter(({ name }) => name !== 'hideKnownGeneForPhenotype')
 
-const InlineFormRow = styled(Grid.Row)`
+const ControlsRow = styled(Grid.Row)`
   font-size: 1.1em;
   
-  .ui.form {
-    display: inline-block;
-  }
-  
-  .field.inline {
-    padding-right: 25px;
-    
-    label {
-      font-size: 1.1em !important;
-    }
+  label {
+    font-size: 1.1em !important;
   }
   
   .pagination {
@@ -109,7 +76,6 @@ class BaseSavedVariants extends React.Component {
     totalPages: PropTypes.number,
     loadProjectVariants: PropTypes.func,
     updateSavedVariantTable: PropTypes.func,
-    updateSavedVariantPage: PropTypes.func,
   }
 
   constructor(props) {
@@ -206,7 +172,11 @@ class BaseSavedVariants extends React.Component {
 
     const appliedTagCategoryFilter = tag || (variantGuid ? null : (this.props.tableState.categoryFilter || ALL_FILTER))
 
-    const filters = appliedTagCategoryFilter === DISCOVERY_CATEGORY_NAME ? FILTER_FIELDS : NON_DISCOVERY_FILTER_FIELDS
+    let filters = appliedTagCategoryFilter === DISCOVERY_CATEGORY_NAME ? FILTER_FIELDS : NON_DISCOVERY_FILTER_FIELDS
+
+    if (this.props.totalPages > 1) {
+      filters = filters.concat({ ...VARIANT_PAGINATION_FIELD, totalPages: this.props.totalPages })
+    }
 
     const allShown = this.props.variantsToDisplay.length === this.props.totalVariantsCount
     let shownSummary = ''
@@ -228,7 +198,7 @@ class BaseSavedVariants extends React.Component {
           </Grid.Column>
         </Grid.Row>
         {!this.props.loading &&
-          <InlineFormRow>
+          <ControlsRow>
             <Grid.Column width={5}>
               Showing {shownSummary} {this.props.filteredVariants.length}
               &nbsp;&nbsp;
@@ -249,27 +219,19 @@ class BaseSavedVariants extends React.Component {
                   initialValues={this.props.tableState}
                   closeOnSuccess={false}
                   submitOnChange
+                  inline
                   fields={filters}
                 />
               }
               <HorizontalSpacer width={10} />
               <ExportTableButton downloads={exports} />
-              {this.props.totalPages > 1 &&
-                <Pagination
-                  activePage={this.props.tableState.currentPage || 1}
-                  totalPages={this.props.totalPages}
-                  onPageChange={this.props.updateSavedVariantPage}
-                  size="mini"
-                  siblingRange={0}
-                />
-              }
             </Grid.Column>
-          </InlineFormRow>
+          </ControlsRow>
         }
         <Grid.Row>
           <Grid.Column width={16}>
             {this.props.loading ? <Loader inline="centered" active /> :
-            <Variants variants={this.props.variantsToDisplay} projectGuid={this.props.project.projectGuid} />}
+            <Variants variants={this.props.variantsToDisplay} />}
           </Grid.Column>
         </Grid.Row>
       </Grid>
@@ -292,8 +254,7 @@ const mapStateToProps = (state, ownProps) => ({
 
 const mapDispatchToProps = {
   loadProjectVariants,
-  updateSavedVariantTable: updates => updateSavedVariantTable({ ...updates, currentPage: 1 }),
-  updateSavedVariantPage: (e, data) => updateSavedVariantTable({ currentPage: data.activePage }),
+  updateSavedVariantTable,
 }
 
 const SavedVariants = connect(mapStateToProps, mapDispatchToProps)(BaseSavedVariants)

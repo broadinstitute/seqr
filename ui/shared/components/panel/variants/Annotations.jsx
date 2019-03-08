@@ -5,8 +5,8 @@ import { Popup, Label, Icon } from 'semantic-ui-react'
 
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
 import Modal from '../../modal/Modal'
-import ButtonLink from '../../buttons/ButtonLink'
-import Transcripts from './Transcripts'
+import { ButtonLink } from '../../StyledComponents'
+import Transcripts, { TranscriptLink } from './Transcripts'
 import { LocusListLabels } from './VariantGene'
 import { GENOME_VERSION_37 } from '../../../utils/constants'
 
@@ -83,33 +83,22 @@ const annotationVariations = (mainTranscript, variant) => {
   if (mainTranscript.hgvsc) {
     const hgvsc = mainTranscript.hgvsc.split(':')[1].replace('c.', '')
     variations.push(
-      `${mainTranscript.symbol}:c.${hgvsc}`, //TTN:c.78674T>C
+      `${mainTranscript.geneSymbol}:c.${hgvsc}`, //TTN:c.78674T>C
       `c.${hgvsc}`, //c.1282C>T
       hgvsc, //1282C>T
       hgvsc.replace('>', '->'), //1282C->T
       hgvsc.replace('>', '-->'), //1282C-->T
       (`c.${hgvsc}`).replace('>', '/'), //c.1282C/T
       hgvsc.replace('>', '/'), //1282C/T
-      `${mainTranscript.symbol}:${hgvsc}`, //TTN:78674T>C
+      `${mainTranscript.geneSymbol}:${hgvsc}`, //TTN:78674T>C
     )
   }
 
   if (mainTranscript.hgvsp) {
     const hgvsp = mainTranscript.hgvsp.split(':')[1].replace('p.', '')
     variations.push(
-      `${mainTranscript.symbol}:p.${hgvsp}`, //TTN:p.Ile26225Thr
-      `${mainTranscript.symbol}:${hgvsp}`, //TTN:Ile26225Thr
-    )
-  }
-
-  if (mainTranscript.aminoAcids && mainTranscript.proteinPosition) {
-    const aminoAcids = mainTranscript.aminoAcids.split('/')
-    const aa1 = aminoAcids[0] || ''
-    const aa2 = aminoAcids[1] || ''
-
-    variations.push(
-      `${aa1}${mainTranscript.proteinPosition}${aa2}`, //A625V
-      `${mainTranscript.proteinPosition}${aa1}/${aa2}`, //625A/V
+      `${mainTranscript.geneSymbol}:p.${hgvsp}`, //TTN:p.Ile26225Thr
+      `${mainTranscript.geneSymbol}:${hgvsp}`, //TTN:Ile26225Thr
     )
   }
 
@@ -127,8 +116,7 @@ const annotationVariations = (mainTranscript, variant) => {
 }
 
 const Annotations = ({ variant }) => {
-  const { vepGroup, rsid } = variant.annotation
-  const { mainTranscript } = variant
+  const { mainTranscript, rsid } = variant
 
   const variations = annotationVariations(mainTranscript, variant)
   const lofDetails = (mainTranscript.lof === 'LC' || mainTranscript.lofFlags === 'NAGNAG_SITE') ? [
@@ -141,14 +129,21 @@ const Annotations = ({ variant }) => {
       : null,
   ] : null
 
+  const transcriptPopupProps = {
+    content: <TranscriptLink variant={variant} transcript={mainTranscript} />,
+    size: 'mini',
+    hoverable: true,
+  }
+
   return (
     <div>
-      { vepGroup &&
+      { mainTranscript.majorConsequence &&
         <Modal
           modalName={`${variant.variantId}-annotations`}
           title="Transcripts"
           size="large"
-          trigger={<ButtonLink>{vepGroup.replace(/_/g, ' ')}</ButtonLink>}
+          trigger={<ButtonLink>{mainTranscript.majorConsequence.replace(/_/g, ' ')}</ButtonLink>}
+          popup={transcriptPopupProps}
         >
           <Transcripts variant={variant} />
         </Modal>
@@ -198,13 +193,13 @@ const Annotations = ({ variant }) => {
       <VerticalSpacer height={5} />
       <LocusListLabels locusLists={variant.locusLists} />
       <VerticalSpacer height={5} />
-      {mainTranscript.symbol &&
+      {mainTranscript.geneSymbol &&
         <div>
-          <a href={`https://www.google.com/search?q=${mainTranscript.symbol}+${variations.join('+')}`} target="_blank">
+          <a href={`https://www.google.com/search?q=${mainTranscript.geneSymbol}+${variations.join('+')}`} target="_blank">
             google
           </a>
           <HorizontalSpacer width={5} />|<HorizontalSpacer width={5} />
-          <a href={`https://www.ncbi.nlm.nih.gov/pubmed?term=${mainTranscript.symbol} AND ( ${variations.join(' OR ')})`} target="_blank">
+          <a href={`https://www.ncbi.nlm.nih.gov/pubmed?term=${mainTranscript.geneSymbol} AND ( ${variations.join(' OR ')})`} target="_blank">
             pubmed
           </a>
         </div>

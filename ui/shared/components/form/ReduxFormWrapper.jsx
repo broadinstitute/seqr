@@ -10,18 +10,24 @@ import { Form, Message, Icon, Popup } from 'semantic-ui-react'
 import flatten from 'lodash/flatten'
 
 import { closeModal, setModalConfirm } from 'redux/utils/modalReducer'
-import ButtonLink from '../buttons/ButtonLink'
+import { ButtonLink } from '../StyledComponents'
 import ButtonPanel from './ButtonPanel'
 import RequestStatus from './RequestStatus'
 
 const StyledForm = styled(({ hasSubmitButton, inline, ...props }) => <Form {...props} />)`
   min-height: inherit;
   display: ${props => (props.inline ? 'inline-block' : 'block')};
-  padding-bottom: ${props => props.hasSubmitButton && '40px'};
+  padding-bottom: ${props => props.hasSubmitButton && '50px'};
   
   .field.inline {
     display: inline;
+    padding-right: 1em;
   }
+  
+  .inline.fields .field:last-child {
+    padding-right: 0 !important;
+  }
+  
 `
 
 const MessagePanel = styled(Message)`
@@ -50,8 +56,14 @@ renderField.propTypes = {
   submitForm: PropTypes.func,
 }
 
+export const helpLabel = (label, labelHelp) => (
+  labelHelp ?
+    <label> {label} <Popup trigger={<Icon name="question circle outline" />} content={labelHelp} size="small" position="top center" /></label>
+    : label
+)
+
 export const configuredField = (field, formProps = {}) => {
-  const { component, name, isArrayField, addArrayElement, key, label, labelHelp, ...fieldProps } = field
+  const { component, name, isArrayField, addArrayElement, arrayFieldName, key, label, labelHelp, ...fieldProps } = field
   const baseProps = {
     key: key || name,
     name,
@@ -60,16 +72,21 @@ export const configuredField = (field, formProps = {}) => {
     component: renderField,
     fieldComponent: component,
     submitForm: formProps.submitOnChange ? formProps.onSubmit : null,
-    label: labelHelp ?
-      <label> {label} <Popup trigger={<Icon name="question circle outline" />} content={labelHelp} size="small" position="top center" /></label>
-      : label,
+    label: helpLabel(label, labelHelp),
     ...fieldProps,
   }
   return isArrayField ?
     <FieldArray {...baseProps} component={({ fields }) =>
       <div className="field">
         <label>{label}</label>
-        {fields.map((fieldPath, i) => <Field key={fieldPath} name={fieldPath} {...singleFieldProps} removeField={() => fields.remove(i)} />)}
+        {fields.map((fieldPath, i) =>
+          <Field
+            key={fieldPath}
+            name={arrayFieldName ? `${fieldPath}.${arrayFieldName}` : fieldPath}
+            removeField={() => fields.remove(i)}
+            index={i}
+            {...singleFieldProps}
+          />)}
         {addArrayElement && <ButtonLink onClick={() => fields.push(addArrayElement.newValue)}><Icon link name="plus" />{addArrayElement.label}</ButtonLink>}
       </div>}
     /> :
@@ -100,6 +117,9 @@ class ReduxFormWrapper extends React.Component {
     /* Whether or not to show a confirm message before canceling if there are unsaved changes */
     confirmCloseIfNotSaved: PropTypes.bool,
 
+    /* Whether or not the form is rendered outside a modal */
+    noModal: PropTypes.bool,
+
     showErrorPanel: PropTypes.bool,
     cancelButtonText: PropTypes.string,
     submitButtonText: PropTypes.string,
@@ -112,6 +132,9 @@ class ReduxFormWrapper extends React.Component {
 
     /* Whether form should be rendered inline instead of the default block display */
     inline: PropTypes.bool,
+
+    /* Whether the form should be rendered as loading */
+    loading: PropTypes.bool,
 
     /* Array of objects representing the fields to show in the form. */
     /* Each field must have a name and a component, and can have any additional props accepted by redux-form's Field */
@@ -155,7 +178,7 @@ class ReduxFormWrapper extends React.Component {
     const fieldComponents = this.props.children || configuredFields(this.props)
 
     return (
-      <StyledForm onSubmit={this.props.handleSubmit} size={this.props.size} loading={this.props.submitting} hasSubmitButton={!this.props.submitOnChange} inline={this.props.inline}>
+      <StyledForm onSubmit={this.props.handleSubmit} size={this.props.size} loading={this.props.submitting || this.props.loading} hasSubmitButton={!this.props.submitOnChange} inline={this.props.inline}>
         {fieldComponents}
         {this.props.showErrorPanel && ['warning', 'error'].map(key => (
           this.props[`${key}Messages`] && this.props[`${key}Messages`].length > 0 ?
@@ -168,7 +191,7 @@ class ReduxFormWrapper extends React.Component {
               submitButtonText={this.props.submitButtonText}
               saveStatus={saveStatus}
               saveErrorMessage={saveErrorMessage}
-              handleClose={this.handleUnconfirmedClose}
+              handleClose={this.props.noModal ? null : this.handleUnconfirmedClose}
             />
         }
       </StyledForm>
@@ -210,7 +233,7 @@ class ReduxFormWrapper extends React.Component {
   }
 
   componentWillUpdate(nextProps) {
-    if (nextProps.submitSucceeded && nextProps.closeOnSuccess) {
+    if (nextProps.submitSucceeded && nextProps.closeOnSuccess && !nextProps.noModal) {
       this.props.handleClose(true)
     } else if (this.props.confirmCloseIfNotSaved) {
       if (nextProps.dirty && !this.props.dirty) {

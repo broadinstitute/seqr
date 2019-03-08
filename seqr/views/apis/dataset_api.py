@@ -13,6 +13,7 @@ from seqr.views.utils.dataset_utils import add_dataset
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_samples
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions
+from seqr.views.utils.variant_utils import reset_cached_search_results
 
 from xbrowse_server.base.models import VCFFile, Project as BaseProject, Individual as BaseIndividual
 from xbrowse_server.mall import get_datastore
@@ -94,6 +95,8 @@ def add_dataset_handler(request, project_guid):
         # update VCFFile records
         if updated_samples:
             if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
+                reset_cached_search_results(project)
+
                 base_project = BaseProject.objects.get(seqr_project=project)
                 get_datastore(base_project).bust_project_cache(base_project.project_id)
                 clear_project_results_cache(base_project.project_id)

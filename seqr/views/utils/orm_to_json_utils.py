@@ -11,10 +11,8 @@ from django.db.models import prefetch_related_objects, Prefetch
 from django.db.models.fields.files import ImageFieldFile
 
 from reference_data.models import GeneConstraint, dbNSFPGene
-from seqr.models import CAN_EDIT, Sample, GeneNote
-from seqr.utils.xpos_utils import get_chrom_pos
+from seqr.models import CAN_EDIT, Sample, GeneNote, VariantFunctionalData
 from seqr.views.utils.json_utils import _to_camel_case
-from seqr.views.utils.variant_utils import variant_details
 logger = logging.getLogger(__name__)
 
 
@@ -324,7 +322,7 @@ def get_json_for_analysis_group(analysis_group, **kwargs):
     return _get_json_for_model(analysis_group, get_json_for_models=get_json_for_analysis_groups, **kwargs)
 
 
-def get_json_for_saved_variants(saved_variants, add_tags=False, add_details=False, project=None, **kwargs):
+def get_json_for_saved_variants(saved_variants, add_tags=False, add_details=False, project=None, user=None, **kwargs):
     """Returns a JSON representation of the given variant.
 
     Args:
@@ -332,35 +330,40 @@ def get_json_for_saved_variants(saved_variants, add_tags=False, add_details=Fals
     Returns:
         dict: json object
     """
+    from seqr.views.utils.variant_utils import variant_details
 
-    def _process_result(result, saved_variant):
-        chrom, pos = get_chrom_pos(result['xpos'])
-        result.update({
-            'chrom': chrom,
-            'pos': pos,
-        })
+    def _process_result(variant_json, saved_variant):
         if add_tags:
-            result.update({
+            variant_json.update({
                 'tags': [get_json_for_variant_tag(tag) for tag in saved_variant.varianttag_set.all()],
                 'functionalData': [get_json_for_variant_functional_data(tag) for tag in
                                    saved_variant.variantfunctionaldata_set.all()],
                 'notes': [get_json_for_variant_note(tag) for tag in saved_variant.variantnote_set.all()],
             })
         if add_details:
-            variant_json = json.loads(saved_variant.saved_variant_json or '{}')
-            result.update(variant_details(variant_json, project or saved_variant.project, **kwargs))
+            saved_variant_json = json.loads(saved_variant.saved_variant_json or '{}')
+            variant_json.update(variant_details(saved_variant_json, project or saved_variant.project, user, **kwargs))
+        variant_json.update({
+            'variantId': saved_variant.guid,  # TODO get from json
+            'familyGuids': [saved_variant.family.guid],
+        })
+        return variant_json
+
+    nested_fields = [
+        {'fields': ('project', 'guid'), 'value': project.guid if project else None},
+    ]
 
     prefetch_related_objects(saved_variants, 'family')
+    if not project:
+        prefetch_related_objects(saved_variants, 'project')
     if add_tags:
         prefetch_related_objects(saved_variants, 'varianttag_set__variant_tag_type', 'varianttag_set__created_by',
                                  'variantnote_set__created_by', 'variantfunctionaldata_set__created_by')
 
-    nested_fields = [{'fields': ('family', 'guid')}]
-
-    return _get_json_for_models(saved_variants, nested_fields=nested_fields, guid_key='variantId', process_result=_process_result)
+    return _get_json_for_models(saved_variants, nested_fields=nested_fields, guid_key='variantGuid', process_result=_process_result)
 
 
-def get_json_for_saved_variant(saved_variant, add_tags=False, add_details=False):
+def get_json_for_saved_variant(saved_variant, **kwargs):
     """Returns a JSON representation of the given variant.
 
     Args:
@@ -369,7 +372,7 @@ def get_json_for_saved_variant(saved_variant, add_tags=False, add_details=False)
         dict: json object
     """
 
-    return _get_json_for_model(saved_variant, get_json_for_models=get_json_for_saved_variants, add_tags=add_tags, add_details=add_details)
+    return _get_json_for_model(saved_variant, get_json_for_models=get_json_for_saved_variants, **kwargs)
 
 
 def get_json_for_variant_tag(tag):
@@ -403,6 +406,19 @@ def get_json_for_variant_functional_data(tag):
         'color': display_data['color'],
     })
     return result
+
+
+def get_json_for_variant_functional_data_tag_types():
+    functional_tag_types = []
+    for category, tags in VariantFunctionalData.FUNCTIONAL_DATA_CHOICES:
+        functional_tag_types += [{
+            'category': category,
+            'name': name,
+            'metadataTitle': json.loads(tag_json).get('metadata_title'),
+            'color': json.loads(tag_json)['color'],
+            'description': json.loads(tag_json).get('description'),
+        } for name, tag_json in tags]
+    return functional_tag_types
 
 
 def get_json_for_variant_note(note):
@@ -555,3 +571,17 @@ def get_json_for_gene(gene, **kwargs):
     """
 
     return _get_json_for_model(gene, get_json_for_models=get_json_for_genes, **kwargs)
+
+
+def get_json_for_saved_searches(search, user):
+    def _process_result(result, search):
+        # Do not apply HGMD filters in shared searches for non-staff users
+        if not search.created_by and not user.is_staff and result['search'].get('pathogenicity', {}).get('hgmd'):
+            result['search']['pathogenicity'] = {
+                k: v for k, v in result['search']['pathogenicity'].items() if k != 'hgmd'
+            }
+    return _get_json_for_models(search, guid_key='savedSearchGuid', process_result=_process_result)
+
+
+def get_json_for_saved_search(search, user):
+    return _get_json_for_model(search, user=user, get_json_for_models=get_json_for_saved_searches)

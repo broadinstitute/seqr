@@ -7,13 +7,12 @@ import { Link } from 'react-router-dom'
 import { Icon } from 'semantic-ui-react'
 
 import { getProjectsIsLoading, getUser } from 'redux/selectors'
-import ButtonLink from 'shared/components/buttons/ButtonLink'
 import ExportTableButton from 'shared/components/buttons/export-table/ExportTableButton'
 import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
 import EditProjectModal from 'shared/components/modal/EditProjectModal'
 import SortableTable from 'shared/components/table/SortableTable'
 import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
-import { InlineHeader } from 'shared/components/StyledComponents'
+import { InlineHeader, ButtonLink } from 'shared/components/StyledComponents'
 import { FAMILY_ANALYSIS_STATUS_OPTIONS, SAMPLE_TYPE_EXOME, SAMPLE_TYPE_GENOME } from 'shared/utils/constants'
 
 import FilterSelector from './FilterSelector'
@@ -164,7 +163,7 @@ const ProjectsTable = ({ visibleProjects, loading, user }) =>
       data={visibleProjects}
       columns={user.is_staff ? STAFF_COLUMNS : COLUMNS}
       footer={user.is_staff ? <EditProjectModal
-        trigger={<ButtonLink float="right"><Icon name="plus" />Create Project</ButtonLink>}
+        trigger={<ButtonLink floated="right"><Icon name="plus" />Create Project</ButtonLink>}
         title="Create Project"
       /> : null}
     />

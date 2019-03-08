@@ -10,6 +10,8 @@ from xbrowse_server.base.models import Project, Family, Cohort, ProjectGeneList
 from xbrowse import inheritance as x_inheritance
 from xbrowse_server.mall import get_project_datastore
 
+from seqr.utils.es_utils import is_nested_genotype_index
+
 @login_required
 @log_request('mendelian_variant_search')
 def mendelian_variant_search(request, project_id, family_id):
@@ -32,7 +34,8 @@ def mendelian_variant_search(request, project_id, family_id):
         'project': project,
         'family': family,
         'family_genotype_filters_json': json.dumps(x_inheritance.get_genotype_filters(family.xfamily())),
-        'has_gene_search': has_gene_search
+        'has_gene_search': has_gene_search,
+        'new_page_url': '/variant_search/family/{0}'.format(family.seqr_family.guid) if family.seqr_family and is_nested_genotype_index(project.get_elasticsearch_index()) else None,
     })
 
 
