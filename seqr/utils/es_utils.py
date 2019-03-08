@@ -222,7 +222,7 @@ def _execute_search(es_search, family_samples_by_id, start_index=0, end_index=10
 
     response = es_search.execute()
     total_results = response.hits.total
-    logger.info('Total hits: {} ({} seconds)'.format(total_results, response.took / 100.0))
+    logger.info('Total hits: {} ({} seconds)'.format(total_results, response.took / 1000.0))
 
     variant_results = [_parse_es_hit(hit, family_samples_by_id) for hit in response]
     return variant_results, total_results
@@ -297,29 +297,8 @@ def _genotype_filter(inheritance, family_samples_by_id, quality_filter=None):
         raise Exception('Invalid gq filter {}'.format(min_gq))
 
     for family_guid, samples_by_id in family_samples_by_id.items():
-        # Filter samples by inheritance
-        if inheritance:
-            family_samples_q = _genotype_inheritance_filter(inheritance_mode, inheritance_filter, samples_by_id)
-
-            # For recessive search, should be hom recessive, x-linked recessive, or compound het
-            if inheritance_mode == RECESSIVE:
-                x_linked_q = _genotype_inheritance_filter(X_LINKED_RECESSIVE, inheritance_filter, samples_by_id)
-                family_samples_q |= x_linked_q
-
-                family_compound_het_q = _genotype_inheritance_filter(COMPOUND_HET, inheritance_filter, samples_by_id)
-                family_compound_het_q = Q('bool', must=[family_compound_het_q], _name=family_guid)
-                if not compound_het_q:
-                    compound_het_q = family_compound_het_q
-                else:
-                    compound_het_q |= family_compound_het_q
-        else:
-            # If no inheritance specified only return variants where at least one of the requested samples has an alt allele
-            sample_ids = samples_by_id.keys()
-            family_samples_q = Q('terms', samples_num_alt_1=sample_ids) | Q('terms', samples_num_alt_2=sample_ids)
-
-        sample_queries = [family_samples_q]
-
         # Filter samples by quality
+        quality_q = None
         if min_ab or min_gq:
             quality_q = Q()
             for sample_id in samples_by_id.keys():
@@ -333,6 +312,32 @@ def _genotype_filter(inheritance, family_samples_by_id, quality_filter=None):
                     quality_q &= ~Q(_build_or_filter('term', [
                         {'samples_gq_{}_to_{}'.format(i, i + 5): sample_id} for i in range(0, min_gq, 5)
                     ]))
+
+        # Filter samples by inheritance
+        if inheritance:
+            family_samples_q = _genotype_inheritance_filter(inheritance_mode, inheritance_filter, samples_by_id)
+
+            # For recessive search, should be hom recessive, x-linked recessive, or compound het
+            if inheritance_mode == RECESSIVE:
+                x_linked_q = _genotype_inheritance_filter(X_LINKED_RECESSIVE, inheritance_filter, samples_by_id)
+                family_samples_q |= x_linked_q
+
+                family_compound_het_q = _genotype_inheritance_filter(COMPOUND_HET, inheritance_filter, samples_by_id)
+                sample_queries = [family_compound_het_q]
+                if quality_q:
+                    sample_queries.append(quality_q)
+                family_compound_het_q = Q('bool', must=sample_queries, _name=family_guid)
+                if not compound_het_q:
+                    compound_het_q = family_compound_het_q
+                else:
+                    compound_het_q |= family_compound_het_q
+        else:
+            # If no inheritance specified only return variants where at least one of the requested samples has an alt allele
+            sample_ids = samples_by_id.keys()
+            family_samples_q = Q('terms', samples_num_alt_1=sample_ids) | Q('terms', samples_num_alt_2=sample_ids)
+
+        sample_queries = [family_samples_q]
+        if quality_q:
             sample_queries.append(quality_q)
 
         family_samples_q = Q('bool', must=sample_queries, _name=family_guid)
@@ -343,6 +348,8 @@ def _genotype_filter(inheritance, family_samples_by_id, quality_filter=None):
 
     if quality_filter and quality_filter.get('vcf_filter') is not None:
         genotypes_q &= ~Q('exists', field='filters')
+        if compound_het_q:
+            compound_het_q &= ~Q('exists', field='filters')
 
     return genotypes_q, inheritance_mode, compound_het_q
 
@@ -815,7 +822,7 @@ def _get_compound_het_page(grouped_variants, page, num_results):
             variant_results += variants
             if len(variant_results) >= num_results:
                 return variant_results, i + 1
-    return variant_results
+    return variant_results, len(grouped_variants)
 
 
 #  TODO move liftover to hail pipeline once upgraded to 0.2

@@ -986,6 +986,7 @@ class EsUtilsTest(TestCase):
     def test_recessive_get_es_variants(self):
         search_model = VariantSearch.objects.create(search={
             'annotations': {'frameshift': ['frameshift_variant']},
+            'qualityFilter': {'min_gq': 10, 'vcf_filter': 'pass'},
             'inheritance': {'mode': 'recessive'}
         })
         results_model = VariantSearchResults.objects.create(variant_search=search_model, sort='xpos')
@@ -1007,18 +1008,25 @@ class EsUtilsTest(TestCase):
         annotation_query = {'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}}
         recessive_inheritance_query = {
             'bool': {
+                'minimum_should_match': 1,
+                'must_not': [{'exists': {'field': 'filters'}}],
                 'should': [
                     {'bool': {
                         '_name': 'F000003_3',
                         'must': [
                             {'bool': {
                                 'should': [
-                                    {'bool': {
-                                        'must': [{'match': {'contig': 'X'}}, {'term': {'samples_num_alt_2': 'NA20870'}}]
-                                    }},
-                                    {'term': {'samples_num_alt_2': 'NA20870'}}
+                                    {'bool': {'must': [
+                                        {'match': {'contig': 'X'}},
+                                        {'term': {'samples_num_alt_2': 'NA20870'}}
+                                    ]}},
+                                    {'term': {'samples_num_alt_2': 'NA20870'}},
                                 ]
-                            }}
+                            }},
+                            {'bool': {'must_not': [
+                                {'term': {'samples_gq_0_to_5': 'NA20870'}},
+                                {'term': {'samples_gq_5_to_10': 'NA20870'}}
+                            ]}}
                         ]
                     }},
                     {'bool': {
@@ -1046,7 +1054,15 @@ class EsUtilsTest(TestCase):
                                         'must': [{'match': {'contig': 'X'}}, {'term': {'samples_num_alt_2': 'HG00731'}}]
                                     }}
                                 ]
-                            }}
+                            }},
+                            {'bool': {'must_not': [
+                                {'term': {'samples_gq_0_to_5': 'HG00731'}},
+                                {'term': {'samples_gq_5_to_10': 'HG00731'}},
+                                {'term': {'samples_gq_0_to_5': 'HG00732'}},
+                                {'term': {'samples_gq_5_to_10': 'HG00732'}},
+                                {'term': {'samples_gq_0_to_5': 'HG00733'}},
+                                {'term': {'samples_gq_5_to_10': 'HG00733'}},
+                            ]}},
                         ]
                     }}
                 ]
@@ -1055,10 +1071,18 @@ class EsUtilsTest(TestCase):
 
         compound_het_inheritance_query = {
             'bool': {
+                'minimum_should_match': 1,
+                'must_not': [{'exists': {'field': 'filters'}}],
                 'should': [
                     {'bool': {
                         '_name': 'F000003_3',
-                        'must': [{'term': {'samples_num_alt_1': 'NA20870'}}]
+                        'must': [
+                            {'term': {'samples_num_alt_1': 'NA20870'}},
+                            {'bool': {'must_not': [
+                                {'term': {'samples_gq_0_to_5': 'NA20870'}},
+                                {'term': {'samples_gq_5_to_10': 'NA20870'}}
+                            ]}}
+                        ]
                     }},
                     {'bool': {
                         '_name': 'F000002_2',
@@ -1071,13 +1095,20 @@ class EsUtilsTest(TestCase):
                                     {'term': {'samples_num_alt_2': 'HG00733'}}
                                 ],
                                 'must': [{'term': {'samples_num_alt_1': 'HG00731'}}]
-                            }}
+                            }},
+                            {'bool': {'must_not': [
+                                {'term': {'samples_gq_0_to_5': 'HG00731'}},
+                                {'term': {'samples_gq_5_to_10': 'HG00731'}},
+                                {'term': {'samples_gq_0_to_5': 'HG00732'}},
+                                {'term': {'samples_gq_5_to_10': 'HG00732'}},
+                                {'term': {'samples_gq_0_to_5': 'HG00733'}},
+                                {'term': {'samples_gq_5_to_10': 'HG00733'}},
+                            ]}},
                         ]
                     }}
                 ]
             }
         }
-
         self.assertExecutedSearches([
             dict(filters=[annotation_query, recessive_inheritance_query], start_index=0, size=2, sort=['xpos']),
             dict(
