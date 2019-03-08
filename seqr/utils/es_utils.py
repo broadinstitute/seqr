@@ -65,6 +65,9 @@ def get_es_variants(search_model, page=1, num_results=100):
     previous_search_results = search_model.results or {}
     loaded_results = previous_search_results.get('all_results') or []
     if len(loaded_results) >= end_index:
+        if previous_search_results.get('compound_het_results'):
+            results, _ = _get_compound_het_page(loaded_results, page, num_results)
+            return results
         return loaded_results[start_index:end_index]
     elif len(loaded_results):
         start_index = max(start_index, len(loaded_results))
@@ -159,26 +162,14 @@ def get_es_variants(search_model, page=1, num_results=100):
         grouped_variants = compound_het_results + grouped_variants
 
         # Sort merged result sets
-
-
         grouped_variants = sorted(grouped_variants, key=lambda variants: tuple(variants[0]['_sort']))
 
         # Only return the requested page of variants
-        start_index = max(len(loaded_results), (page - 1) * num_results)
-        skipped = 0
-        variant_results = []
-        for variants in grouped_variants:
-            if skipped < start_index:
-                if start_index > len(loaded_results):
-                    loaded_results += variants
-                skipped += len(variants)
-            else:
-                variant_results += variants
-                if len(variant_results) >= num_results:
-                    break
+        variant_results, end_index = _get_compound_het_page(grouped_variants, page, num_results)
+        previous_search_results['all_results'] = grouped_variants[:end_index]
 
     # Only save contiguous pages of results
-    if len(loaded_results) == start_index:
+    elif len(loaded_results) == start_index:
         previous_search_results['all_results'] = loaded_results + variant_results
 
     search_model.results = previous_search_results
@@ -813,6 +804,20 @@ def _parse_compound_het_hits(response, allowed_consequences, family_samples_by_i
                 variants_by_gene.append(gene_variants)
 
     return variants_by_gene, sum(len(results) for results in variants_by_gene)
+
+
+def _get_compound_het_page(grouped_variants, page, num_results):
+    start_index = (page - 1) * num_results
+    skipped = 0
+    variant_results = []
+    for i, variants in enumerate(grouped_variants):
+        if skipped < start_index:
+            skipped += len(variants)
+        else:
+            variant_results += variants
+            if len(variant_results) >= num_results:
+                return variant_results, i + 1
+    return variant_results
 
 
 #  TODO move liftover to hail pipeline once upgraded to 0.2

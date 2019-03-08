@@ -999,7 +999,7 @@ class EsUtilsTest(TestCase):
         self.assertDictEqual(results_model.results, {
             'compound_het_results': [PARSED_COMPOUND_HET_VARIANTS],
             'variant_results': PARSED_VARIANTS,
-            'all_results': [PARSED_VARIANTS[0]] + PARSED_COMPOUND_HET_VARIANTS
+            'all_results': [[PARSED_VARIANTS[0]], PARSED_COMPOUND_HET_VARIANTS]
         })
         self.assertEqual(results_model.total_results, 7)
 
@@ -1091,7 +1091,23 @@ class EsUtilsTest(TestCase):
             )
         ])
 
-        # test pagination (skip page)
+        # test pagination
+
+        variants = get_es_variants(results_model, page=3, num_results=2)
+        self.assertEqual(len(variants), 2)
+        self.assertDictEqual(variants[0], PARSED_VARIANTS[1])
+        self.assertDictEqual(variants[1], PARSED_VARIANTS[1])
+
+        self.assertDictEqual(results_model.results, {
+            'compound_het_results': [PARSED_COMPOUND_HET_VARIANTS],
+            'variant_results': PARSED_VARIANTS + PARSED_VARIANTS,
+            'all_results': [[PARSED_VARIANTS[0]], [PARSED_VARIANTS[0]], PARSED_COMPOUND_HET_VARIANTS, [PARSED_VARIANTS[1]], [PARSED_VARIANTS[1]]],
+        })
+
+        self.assertExecutedSearch(filters=[annotation_query, recessive_inheritance_query], start_index=2, size=4, sort=['xpos'])
+
+        get_es_variants(results_model, page=2, num_results=2)
+        self.assertEqual(len(self.executed_searches), 0)
 
     def test_genotype_filter(self):
         # TODO test custom genotype filters
