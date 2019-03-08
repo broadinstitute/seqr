@@ -64,8 +64,7 @@ def query_variants_handler(request, search_hash):
         )
 
         # TODO handle multiple projects
-        results_model.families = Family.objects.filter(guid__in=project_families[0]['familyGuids'])
-        results_model.save()
+        results_model.families.set(Family.objects.filter(guid__in=project_families[0]['familyGuids']))
 
     elif results_model.sort != sort:
         families = results_model.families.all()
@@ -75,8 +74,7 @@ def query_variants_handler(request, search_hash):
             sort=sort
         )
         if created:
-            results_model.families = families
-            results_model.save()
+            results_model.families.set(families)
 
     _check_results_permission(results_model, request.user)
 
@@ -374,58 +372,3 @@ def _get_saved_variants(variants):
         saved_variants_by_guid[saved_variant['variantGuid']] = saved_variant
 
     return saved_variants_by_guid
-
-# Search spec conversion
-# variant_filter = {}
-# if search.get('freqs'):
-#     freqs = search.get('freqs')
-#     variant_filter['ref_freqs'] = [[k, v['af']] for k, v in freqs.items() if v.get('af') is not None]
-#     variant_filter['ref_acs'] = [[k, v['ac']] for k, v in freqs.items() if v.get('ac') is not None and not v.get('af')]
-#     variant_filter['ref_hom_hemi'] = [[k, v['hh']] for k, v in freqs.items() if v.get('hh') is not None]
-# if search.get('annotations'):
-#     variant_filter['so_annotations'] = [ann for annotations in search.get('annotations').values() for ann in annotations]
-# if search.get('locus'):
-#     locus_json = search.get('locus')
-#     genes, intervals, invalid_items = parse_locus_list_items(locus_json, all_new=True)
-#     if invalid_items:
-#         error = 'Invalid genes/intervals: {}'.format(', '.join(invalid_items))
-#         return create_json_response({'error': error}, status=400, reason=error)
-#     variant_filter['genes'] = genes.keys()
-#     variant_filter['locations'] = [(get_xpos(i['chrom'], i['start']), get_xpos(i['chrom'], i['end'])) for i in intervals]
-#     variant_filter['exclude_genes'] = locus_json.get('excludeLocations', False)
-#
-# inheritance = search.get('inheritance', {})
-# inheritance_mode = inheritance.get('mode')
-# search_mode = 'all_variants'
-# genotype_inheritance_filter = {}
-# allele_count_filter = {}
-# if inheritance.get('filter') and inheritance['filter'].get(AFFECTED) and inheritance['filter'].get(UNAFFECTED):
-#     inheritance_mode = 'custom'
-#     if inheritance['filter'][AFFECTED].get('genotype') and inheritance['filter'][UNAFFECTED].get('genotype'):
-#         search_mode = 'allele_count'
-#         allele_count_filter = {
-#             'affected_gte': GENOTYPE_AC_LOOKUP[inheritance['filter'][AFFECTED]['genotype']][0],
-#             'affected_lte': GENOTYPE_AC_LOOKUP[inheritance['filter'][AFFECTED]['genotype']][1],
-#             'unaffected_gte': GENOTYPE_AC_LOOKUP[inheritance['filter'][UNAFFECTED]['genotype']][0],
-#             'unaffected_lte': GENOTYPE_AC_LOOKUP[inheritance['filter'][UNAFFECTED]['genotype']][1],
-#         }
-#     else:
-#         search_mode = 'custom_inheritance'
-#         for affected_status, filters in inheritance['filter'].items():
-#             if filters.get('individuals'):
-#                 genotype_inheritance_filter.update(filters['individuals'])
-#             else:
-#                 for individual in Individual.objects.filter(family=family, affected=affected_status).only('individual_id'):
-#                     genotype_inheritance_filter[individual.individual_id] = filters['genotype']
-# elif inheritance_mode:
-#     search_mode = 'standard_inheritance'
-#
-# search_spec = MendelianVariantSearchSpec.fromJSON({
-#     'family_id': family.family_id,
-#     'search_mode': search_mode,
-#     'inheritance_mode': inheritance_mode,
-#     'genotype_inheritance_filter': genotype_inheritance_filter,
-#     'allele_count_filter': allele_count_filter,
-#     'variant_filter': variant_filter,
-#     'quality_filter': search.get('qualityFilter', {}),
-# })

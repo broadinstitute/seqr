@@ -136,7 +136,6 @@ def variant_details(variant_json, project, user, individual_guids_by_id=None):
                 'type': genotype.get('extras', {}).get('cnvs', {}).get('type'),
             },
             'dp': genotype.get('extras', {}).get('dp'),
-            # 'filter': genotype.get('filter'),
             'gq': genotype.get('gq'),
             'numAlt': genotype.get('num_alt'),
             'pl': genotype.get('extras', {}).get('pl'),
@@ -153,7 +152,6 @@ def variant_details(variant_json, project, user, individual_guids_by_id=None):
 
     transcripts = defaultdict(list)
     for i, vep_a in enumerate(annotation['vep_annotation'] or []):
-        # ,
         transcripts[vep_a.get('gene', vep_a.get('gene_id'))].append(
             _transcript_detail(vep_a, i == annotation.get('worst_vep_annotation_index')))
 
@@ -188,6 +186,7 @@ def variant_details(variant_json, project, user, individual_guids_by_id=None):
             'class': extras.get('hgmd_class') if (user and user.is_staff) else None,
         },
         'genotypes': genotypes,
+        'genotypeFilters': next((genotype.get('filter') for genotype in variant_json.get('genotypes', {}).values()), None),
         'genomeVersion': genome_version,
         'liftedOverGenomeVersion': lifted_over_genome_version,
         'liftedOverChrom': lifted_over_chrom,
@@ -259,7 +258,7 @@ def _variant_main_transcript(variant_json):
 def _transcript_detail(transcript, isChosenTranscript):
     return {
         'transcriptId': transcript.get('feature') or transcript.get('transcript_id'),
-        'transcriptRank': 0 if isChosenTranscript else 1,
+        'transcriptRank': 0 if isChosenTranscript else transcript.get('transcript_rank', 100),
         'geneId': transcript.get('gene') or transcript.get('gene_id'),
         'geneSymbol': transcript.get('gene_symbol') or transcript.get('symbol'),
         'lof': transcript.get('lof'),

@@ -85,10 +85,8 @@ def get_es_variants(search_model, page=1, num_results=100):
     if genes or intervals:
         es_search = es_search.filter(_location_filter(genes, intervals, search['locus']))
 
-    #  Pathogencicity and transcript consequences actas "OR" filters instead of the usual "AND"
-
+    #  Pathogencicity and transcript consequences act as "OR" filters instead of the usual "AND"
     pathogenicity_annotations_filter = _pathogenicity_filter(search.get('pathogenicity', {}))
-
     allowed_consequences = None
     if search.get('annotations'):
         consequences_filter, allowed_consequences = _annotations_filter(search['annotations'])

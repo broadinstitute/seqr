@@ -91,7 +91,7 @@ class JSONUtilsTest(TestCase):
 
         fields.update({'tags', 'functionalData', 'notes', 'liftedOverGenomeVersion', 'clinvar', 'locusLists',
                        'originalAltAlleles', 'liftedOverPos', 'genomeVersion', 'mainTranscript', 'hgmd', 'liftedOverChrom',
-                       'genotypes', 'transcripts', 'populations', 'predictions', 'chrom', 'pos', 'rsid'})
+                       'genotypes', 'transcripts', 'populations', 'predictions', 'chrom', 'pos', 'rsid', 'genotypeFilters'})
         json = get_json_for_saved_variant(variant, add_tags=True, add_details=True)
         self.assertSetEqual(set(json.keys()), fields)
 

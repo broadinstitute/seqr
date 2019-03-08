@@ -30,7 +30,7 @@ const BaseFieldView = (props) => {
   if (!props.isEditable && !hasValue) {
     return null
   }
-  const modalId = props.isEditable ? `edit-${props.initialValues[props.idField] || 'new'}-${props.field}${props.modalId}` : null
+  const modalId = props.isEditable ? `edit-${props.initialValues[props.idField] || 'new'}-${props.field}-${props.modalId}` : null
 
   const editButton = props.isEditable && (props.formFields ?
     <UpdateButton

@@ -709,8 +709,7 @@ class EsUtilsTest(TestCase):
     def test_get_es_variants(self):
         search_model = VariantSearch.objects.create(search={})
         results_model = VariantSearchResults.objects.create(variant_search=search_model, sort='xpos')
-        results_model.families = self.families
-        results_model.save()
+        results_model.families.set(self.families)
 
         variants = get_es_variants(results_model, num_results=2)
         self.assertEqual(len(variants), 2)
@@ -762,8 +761,7 @@ class EsUtilsTest(TestCase):
             'inheritance': {'mode': 'de_novo'}
         })
         results_model = VariantSearchResults.objects.create(variant_search=search_model, sort='in_omim')
-        results_model.families = self.families
-        results_model.save()
+        results_model.families.set(self.families)
 
         variants = get_es_variants(results_model, num_results=2)
         self.assertListEqual(variants, PARSED_VARIANTS)
@@ -991,8 +989,7 @@ class EsUtilsTest(TestCase):
             'inheritance': {'mode': 'recessive'}
         })
         results_model = VariantSearchResults.objects.create(variant_search=search_model, sort='xpos')
-        results_model.families = self.families
-        results_model.save()
+        results_model.families.set(self.families)
 
         variants = get_es_variants(results_model, num_results=2)
         self.assertEqual(len(variants), 3)

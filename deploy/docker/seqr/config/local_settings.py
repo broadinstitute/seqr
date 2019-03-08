@@ -21,9 +21,6 @@ DATABASES = {
         'NAME': 'seqrdb',
         'USER': os.environ.get('POSTGRES_USERNAME', 'postgres'),
         'PASSWORD': os.environ.get('POSTGRES_PASSWORD', ''),
-        'TEST': {
-            'NAME': 'seqr_test_db'
-        }
     }
 }
 

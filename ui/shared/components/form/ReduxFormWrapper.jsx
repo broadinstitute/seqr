@@ -95,7 +95,6 @@ export const configuredField = (field, formProps = {}) => {
 
 export const configuredFields = props => props.fields.map(field => configuredField(field, props))
 
-
 class ReduxFormWrapper extends React.Component {
 
   static propTypes = {

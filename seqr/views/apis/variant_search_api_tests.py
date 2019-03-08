@@ -192,8 +192,7 @@ class VariantSearchAPITest(TestCase):
             search_hash=SEARCH_HASH,
             variant_search=VariantSearch.objects.create(search=SEARCH),
         )
-        results_model.families = Family.objects.filter(guid__in=['F000001_1', 'F000002_2'])
-        results_model.save()
+        results_model.families.set(Family.objects.filter(guid__in=['F000001_1', 'F000002_2']))
 
         response = self.client.get('{}?searchHash={}'.format(search_context_url, SEARCH_HASH))
         self.assertEqual(response.status_code, 200)
