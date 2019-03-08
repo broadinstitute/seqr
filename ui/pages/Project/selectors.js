@@ -116,7 +116,8 @@ export const getProjectSavedVariants = createSelector(
       return variants.filter(o => o.variantGuid === variantGuid)
     }
     if (analysisGroupGuid && projectAnalysisGroupsByGuid[analysisGroupGuid]) {
-      variants = variants.filter(o => projectAnalysisGroupsByGuid[analysisGroupGuid].familyGuids.includes(o.familyGuid))
+      const analysisGroupFamilyGuids = projectAnalysisGroupsByGuid[analysisGroupGuid].familyGuids
+      variants = variants.filter(o => o.familyGuids.some(fg => analysisGroupFamilyGuids.includes(fg)))
     }
     if (familyGuid) {
       variants = variants.filter(o => o.familyGuids.includes(familyGuid))

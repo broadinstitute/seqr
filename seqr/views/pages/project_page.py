@@ -273,7 +273,7 @@ def get_project_variant_tag_types(project, tag_counts_by_type_and_family=None):
             'order': variant_tag_type.order,
             'is_built_in': variant_tag_type.is_built_in,
         }
-        if tag_counts_by_type_and_family:
+        if tag_counts_by_type_and_family is not None:
             current_tag_type_counts = [counts for counts in tag_counts_by_type_and_family if
                                        counts['variant_tag_type__name'] == variant_tag_type.name]
             num_tags = sum(count['count'] for count in current_tag_type_counts)

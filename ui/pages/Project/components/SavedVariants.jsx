@@ -95,9 +95,9 @@ class BaseSavedVariants extends React.Component {
     const { familyGuid, variantGuid, analysisGroupGuid, tag } = this.props.match.params
     if (nextFamilyGuid !== familyGuid || nextAnalysisGroupGuid !== analysisGroupGuid || nextVariantGuid !== variantGuid) {
       this.loadVariants(nextProps)
-      this.props.updateSavedVariantTable() // resets the page
+      this.props.updateSavedVariantTable({ page: 1 })
     } else if (nextTag !== tag) {
-      this.props.updateSavedVariantTable() // resets the page
+      this.props.updateSavedVariantTable({ page: 1 })
     }
   }
 
