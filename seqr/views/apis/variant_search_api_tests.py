@@ -19,8 +19,8 @@ SEARCH_HASH = 'd380ed0fd28c3127d07a64ea2ba907d7'
 SEARCH = {'filters': {}}
 PROJECT_FAMILIES = [{'projectGuid': PROJECT_GUID, 'familyGuids': ['F000001_1', 'F000002_2']}]
 VARIANTS = [
-    {'alt': 'G', 'ref': 'GAGA', 'chrom': '21', 'pos': 3343353, 'xpos': 2103343353, 'genomeVersion': '38', 
-     'transcripts': {'ENSG00000227232': {}, 'ENSG00000268903': {}}, 'familyGuids': ['F000001_1', 'F000002_2'], 
+    {'alt': 'G', 'ref': 'GAGA', 'chrom': '21', 'pos': 3343353, 'xpos': 2103343353, 'genomeVersion': '38',
+     'transcripts': {'ENSG00000227232': {}, 'ENSG00000268903': {}}, 'familyGuids': ['F000001_1', 'F000002_2'],
      'genotypes': {'NA19675': {'sampleId': 'NA19675', 'ab': 0.7021276595744681, 'gq': 46.0, 'numAlt': 1, 'dp': '50', 'ad': '14,33'},
                    'NA19679': {'sampleId': 'NA19679', 'ab': 0.0, 'gq': 99.0, 'numAlt': 0, 'dp': '45', 'ad': '45,0'}}},
     {'alt': 'A', 'ref': 'AAAG', 'chrom': '3', 'pos': 835, 'xpos': 3000000835, 'genomeVersion': '38', 'transcripts': {}, 'familyGuids': ['F000001_1'], 'genotypes': {'NA19679': {'ab': 0.0, 'gq': 99.0, 'num_alt': 0, 'dp': '45', 'ad': '45,0'}}},

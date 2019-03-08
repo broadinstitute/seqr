@@ -450,21 +450,25 @@ PARSED_VARIANTS = [
         'genotypeFilters': '',
         'genomeVersion': '37',
         'hgmd': {'accession': None, 'class': None},
-        'liftedOverGenomeVersion': None, 
-        'liftedOverChrom': None, 
+        'liftedOverGenomeVersion': None,
+        'liftedOverChrom': None,
         'liftedOverPos': None,
         'mainTranscript': TRANSCRIPT_1,
         'originalAltAlleles': ['G'],
         'populations': {
-            'callset': {'an': 32, 'ac': 1, 'hom': 0, 'af': 0.031, 'hemi': 0}, 
-            'g1k': {'an': 0, 'ac': 0, 'hom': 0, 'af': 0.0, 'hemi': 0}, 
-            'gnomad_genomes': {'an': 0, 'ac': 0, 'hom': 0, 'af': 0.0, 'hemi': 0}, 
-            'exac': {'an': 121336, 'ac': 6, 'hom': 0, 'af': 0.000242306760358614, 'hemi': 0}, 
-            'gnomad_exomes': {'an': 245714, 'ac': 6, 'hom': 0, 'af': 0.00016269686320447742, 'hemi': 0}, 
+            'callset': {'an': 32, 'ac': 1, 'hom': 0, 'af': 0.031, 'hemi': 0},
+            'g1k': {'an': 0, 'ac': 0, 'hom': 0, 'af': 0.0, 'hemi': 0},
+            'gnomad_genomes': {'an': 0, 'ac': 0, 'hom': 0, 'af': 0.0, 'hemi': 0},
+            'exac': {'an': 121336, 'ac': 6, 'hom': 0, 'af': 0.000242306760358614, 'hemi': 0},
+            'gnomad_exomes': {'an': 245714, 'ac': 6, 'hom': 0, 'af': 0.00016269686320447742, 'hemi': 0},
             'topmed': {'an': 0, 'ac': 0, 'hom': 0, 'af': 0.0, 'hemi': 0}
-        }, 
-        'pos': 103343353, 
-        'predictions': {'splice_ai': None, 'eigen': None, 'revel': None, 'mut_taster': None, 'fathmm': None, 'polyphen': None, 'dann': None, 'sift': None, 'cadd': 17.26, 'metasvm': None, 'primate_ai': None, 'gerp_rs': None, 'mpc': None, 'phastcons_100_vert': None}, 
+        },
+        'pos': 103343353,
+        'predictions': {
+            'splice_ai': None, 'eigen': None, 'revel': None, 'mut_taster': None, 'fathmm': None, 'polyphen': None,
+            'dann': None, 'sift': None, 'cadd': 17.26, 'metasvm': None, 'primate_ai': None, 'gerp_rs': None,
+            'mpc': None, 'phastcons_100_vert': None
+        },
         'projectGuid': 'R0001_1kg',
         'ref': 'GAGA',
         'rsid': None,
@@ -563,25 +567,25 @@ SOURCE_FIELDS = {
 }
 
 ALL_INHERITANCE_QUERY = {
-    "bool": {
-        "should": [
-            {"bool": {
-                "must": [
-                    {"bool": {"should": [
-                        {"terms": {"samples_num_alt_1": ["NA20870"]}},
-                        {"terms": {"samples_num_alt_2": ["NA20870"]}}
+    'bool': {
+        'should': [
+            {'bool': {
+                'must': [
+                    {'bool': {'should': [
+                        {'terms': {'samples_num_alt_1': ['NA20870']}},
+                        {'terms': {'samples_num_alt_2': ['NA20870']}}
                     ]}}
                 ],
-                "_name": "F000003_3"
+                '_name': 'F000003_3'
             }},
-            {"bool": {
-                "must": [
-                    {"bool": {"should": [
-                        {"terms": {"samples_num_alt_1": ["HG00731", "HG00732", "HG00733"]}},
-                        {"terms": {"samples_num_alt_2": ["HG00731", "HG00732", "HG00733"]}}
+            {'bool': {
+                'must': [
+                    {'bool': {'should': [
+                        {'terms': {'samples_num_alt_1': ['HG00731', 'HG00732', 'HG00733']}},
+                        {'terms': {'samples_num_alt_2': ['HG00731', 'HG00732', 'HG00733']}}
                     ]}}
                 ],
-                "_name": "F000002_2"
+                '_name': 'F000002_2'
             }},
         ]
     }
@@ -590,7 +594,7 @@ ALL_INHERITANCE_QUERY = {
 
 class MockHit:
 
-    def __init__(self, matched_queries=[], _source={}, increment_sort=False):
+    def __init__(self, matched_queries=None, _source=None, increment_sort=False):
         self.meta = mock.MagicMock()
         self.meta.matched_queries = matched_queries
         sort = _source['xpos']
@@ -678,7 +682,7 @@ class EsUtilsTest(TestCase):
 
         self.executed_searches = []
 
-    def assertExecutedSearch(self, filters=[], start_index=0, size=2, sort=None):
+    def assertExecutedSearch(self, filters=None, start_index=0, size=2, sort=None):
         self.assertExecutedSearches([dict(filters=filters, start_index=start_index, size=size, sort=sort)])
 
     def test_get_es_variants_for_variant_tuples(self):
@@ -739,12 +743,12 @@ class EsUtilsTest(TestCase):
         search_model = VariantSearch.objects.create(search={
             'locus': {'rawItems': 'DDX11L1, chr2:1234-5678'},
             'pathogenicity': {
-                'clinvar': ["pathogenic", "likely_pathogenic"],
-                'hgmd': ["disease_causing", 'likely_disease_causing'],
+                'clinvar': ['pathogenic', 'likely_pathogenic'],
+                'hgmd': ['disease_causing', 'likely_disease_causing'],
             },
             'annotations': {
-                'in_frame': ["inframe_insertion", "inframe_deletion"],
-                'other': ["5_prime_UTR_variant", 'intergenic_variant'],
+                'in_frame': ['inframe_insertion', 'inframe_deletion'],
+                'other': ['5_prime_UTR_variant', 'intergenic_variant'],
             },
             'freqs': {
                 'callset': {'af': 0.1},
@@ -754,8 +758,8 @@ class EsUtilsTest(TestCase):
                 'gnomad_genomes': {'af': 0.01, 'hh': 3},
                 'topmed': {'ac': 2, 'af': None},
             },
-            "qualityFilter": {"min_ab": 10, "min_gq": 15, "vcf_filter": "pass"},
-            "inheritance": {"mode": "de_novo"}
+            'qualityFilter': {'min_ab': 10, 'min_gq': 15, 'vcf_filter': 'pass'},
+            'inheritance': {'mode': 'de_novo'}
         })
         results_model = VariantSearchResults.objects.create(variant_search=search_model, sort='in_omim')
         results_model.families = self.families
@@ -766,206 +770,206 @@ class EsUtilsTest(TestCase):
 
         self.assertExecutedSearch(filters=[
             {
-                "bool": {
-                    "should": [
-                        {"range": {"xpos": {"gte": 2000001234, "lte": 2000005678}}},
-                        {"terms": {"geneIds": ["ENSG00000223972"]}}
+                'bool': {
+                    'should': [
+                        {'range': {'xpos': {'gte': 2000001234, 'lte': 2000005678}}},
+                        {'terms': {'geneIds': ['ENSG00000223972']}}
                     ]
                 }
             },
             {
-                "bool": {
-                    "should": [
-                        {"terms": {
-                            "clinvar_clinical_significance": [
-                                "Pathogenic", "Likely_pathogenic", "Pathogenic/Likely_pathogenic"
+                'bool': {
+                    'should': [
+                        {'terms': {
+                            'clinvar_clinical_significance': [
+                                'Pathogenic', 'Likely_pathogenic', 'Pathogenic/Likely_pathogenic'
                             ]
                         }},
-                        {"terms": {"hgmd_class": ["DM", "DM?"]}},
-                        {"bool": {"must_not": [{"exists": {"field": "transcriptConsequenceTerms"}}]}},
-                        {"terms": {
-                            "transcriptConsequenceTerms": [
-                                "5_prime_UTR_variant",
-                                "intergenic_variant",
-                                "inframe_insertion",
-                                "inframe_deletion",
+                        {'terms': {'hgmd_class': ['DM', 'DM?']}},
+                        {'bool': {'must_not': [{'exists': {'field': 'transcriptConsequenceTerms'}}]}},
+                        {'terms': {
+                            'transcriptConsequenceTerms': [
+                                '5_prime_UTR_variant',
+                                'intergenic_variant',
+                                'inframe_insertion',
+                                'inframe_deletion',
                             ]
                         }}
                     ]
                 }
             },
             {
-                "bool": {
-                    "minimum_should_match": 1,
-                    "should": [
-                        {"bool": {"must_not": [{"exists": {"field": "AF"}}]}},
-                        {"range": {"AF": {"lte": 0.1}}}
+                'bool': {
+                    'minimum_should_match': 1,
+                    'should': [
+                        {'bool': {'must_not': [{'exists': {'field': 'AF'}}]}},
+                        {'range': {'AF': {'lte': 0.1}}}
                     ],
-                    "must": [
-                        {"bool": {
-                            "minimum_should_match": 1,
-                            "should": [
-                                {"bool": {"must_not": [{"exists": {"field": "g1k_POPMAX_AF"}}]}},
-                                {"range": {"g1k_POPMAX_AF": {"lte": 0.001}}}
+                    'must': [
+                        {'bool': {
+                            'minimum_should_match': 1,
+                            'should': [
+                                {'bool': {'must_not': [{'exists': {'field': 'g1k_POPMAX_AF'}}]}},
+                                {'range': {'g1k_POPMAX_AF': {'lte': 0.001}}}
                             ]
                         }},
-                        {"bool": {
-                            "minimum_should_match": 1,
-                            "should": [
-                                {"bool": {"must_not": [{"exists": {"field": "gnomad_genomes_AF_POPMAX_OR_GLOBAL"}}]}},
-                                {"range": {"gnomad_genomes_AF_POPMAX_OR_GLOBAL": {"lte": 0.01}}}
+                        {'bool': {
+                            'minimum_should_match': 1,
+                            'should': [
+                                {'bool': {'must_not': [{'exists': {'field': 'gnomad_genomes_AF_POPMAX_OR_GLOBAL'}}]}},
+                                {'range': {'gnomad_genomes_AF_POPMAX_OR_GLOBAL': {'lte': 0.01}}}
                             ]
                         }},
-                        {"bool": {
-                            "minimum_should_match": 1,
-                            "should": [
-                                {"bool": {"must_not": [{"exists": {"field": "gnomad_genomes_Hom"}}]}},
-                                {"range": {"gnomad_genomes_Hom": {"lte": 3}}}
+                        {'bool': {
+                            'minimum_should_match': 1,
+                            'should': [
+                                {'bool': {'must_not': [{'exists': {'field': 'gnomad_genomes_Hom'}}]}},
+                                {'range': {'gnomad_genomes_Hom': {'lte': 3}}}
                             ]
                         }},
-                        {"bool": {
-                            "minimum_should_match": 1,
-                            "should": [
-                                {"bool": {"must_not": [{"exists": {"field": "gnomad_genomes_Hemi"}}]}},
-                                {"range": {"gnomad_genomes_Hemi": {"lte": 3}}}
+                        {'bool': {
+                            'minimum_should_match': 1,
+                            'should': [
+                                {'bool': {'must_not': [{'exists': {'field': 'gnomad_genomes_Hemi'}}]}},
+                                {'range': {'gnomad_genomes_Hemi': {'lte': 3}}}
                             ]}
                         },
-                        {"bool": {
-                            "minimum_should_match": 1,
-                            "should": [
-                                {"bool": {"must_not": [{"exists": {"field": "gnomad_exomes_AC"}}]}},
-                                {"range": {"gnomad_exomes_AC": {"lte": 3}}}
+                        {'bool': {
+                            'minimum_should_match': 1,
+                            'should': [
+                                {'bool': {'must_not': [{'exists': {'field': 'gnomad_exomes_AC'}}]}},
+                                {'range': {'gnomad_exomes_AC': {'lte': 3}}}
                             ]
                         }},
-                        {"bool": {
-                            "minimum_should_match": 1,
-                            "should": [
-                                {"bool": {"must_not": [{"exists": {"field": "gnomad_exomes_Hom"}}]}},
-                                {"range": {"gnomad_exomes_Hom": {"lte": 3}}}
+                        {'bool': {
+                            'minimum_should_match': 1,
+                            'should': [
+                                {'bool': {'must_not': [{'exists': {'field': 'gnomad_exomes_Hom'}}]}},
+                                {'range': {'gnomad_exomes_Hom': {'lte': 3}}}
                             ]
                         }},
-                        {"bool": {
-                            "minimum_should_match": 1,
-                            "should": [
-                                {"bool": {"must_not": [{"exists": {"field": "gnomad_exomes_Hemi"}}]}},
-                                {"range": {"gnomad_exomes_Hemi": {"lte": 3}}}
+                        {'bool': {
+                            'minimum_should_match': 1,
+                            'should': [
+                                {'bool': {'must_not': [{'exists': {'field': 'gnomad_exomes_Hemi'}}]}},
+                                {'range': {'gnomad_exomes_Hemi': {'lte': 3}}}
                             ]}
                         },
-                        {"bool": {
-                            "minimum_should_match": 1,
-                            "should": [
-                                {"bool": {"must_not": [{"exists": {"field": "exac_AC_Adj"}}]}},
-                                {"range": {"exac_AC_Adj": {"lte": 2}}}
+                        {'bool': {
+                            'minimum_should_match': 1,
+                            'should': [
+                                {'bool': {'must_not': [{'exists': {'field': 'exac_AC_Adj'}}]}},
+                                {'range': {'exac_AC_Adj': {'lte': 2}}}
                             ]}
                         },
-                        {"bool": {
-                            "minimum_should_match": 1,
-                            "should": [
-                                {"bool": {"must_not": [{"exists": {"field": "topmed_AC"}}]}},
-                                {"range": {"topmed_AC": {"lte": 2}}}
+                        {'bool': {
+                            'minimum_should_match': 1,
+                            'should': [
+                                {'bool': {'must_not': [{'exists': {'field': 'topmed_AC'}}]}},
+                                {'range': {'topmed_AC': {'lte': 2}}}
                             ]}
                         }
                     ]
                 }
             },
-            {"bool": {
-                "minimum_should_match": 1,
-                "must_not": [{"exists": {"field": "filters"}}],
-                "should": [
-                    {"bool": {
-                        "must": [
-                            {"bool": {"should": [
-                                {"term": {"samples_num_alt_1": "NA20870"}},
-                                {"term": {"samples_num_alt_2": "NA20870"}}
+            {'bool': {
+                'minimum_should_match': 1,
+                'must_not': [{'exists': {'field': 'filters'}}],
+                'should': [
+                    {'bool': {
+                        'must': [
+                            {'bool': {'should': [
+                                {'term': {'samples_num_alt_1': 'NA20870'}},
+                                {'term': {'samples_num_alt_2': 'NA20870'}}
                             ]}},
-                            {"bool": {
-                                "minimum_should_match": 1,
-                                "should": [
-                                    {"bool": {
-                                        "must_not": [
-                                            {"term": {"samples_ab_0_to_5": "NA20870"}},
-                                            {"term": {"samples_ab_5_to_10": "NA20870"}},
+                            {'bool': {
+                                'minimum_should_match': 1,
+                                'should': [
+                                    {'bool': {
+                                        'must_not': [
+                                            {'term': {'samples_ab_0_to_5': 'NA20870'}},
+                                            {'term': {'samples_ab_5_to_10': 'NA20870'}},
                                         ]
                                     }},
-                                    {"bool": {"must_not": [{"term": {"samples_num_alt_1": "NA20870"}}]}}
+                                    {'bool': {'must_not': [{'term': {'samples_num_alt_1': 'NA20870'}}]}}
                                 ],
-                                "must_not": [
-                                    {"term": {"samples_gq_0_to_5": "NA20870"}},
-                                    {"term": {"samples_gq_5_to_10": "NA20870"}},
-                                    {"term": {"samples_gq_10_to_15": "NA20870"}},
+                                'must_not': [
+                                    {'term': {'samples_gq_0_to_5': 'NA20870'}},
+                                    {'term': {'samples_gq_5_to_10': 'NA20870'}},
+                                    {'term': {'samples_gq_10_to_15': 'NA20870'}},
                                 ]
                             }}
                         ],
-                        "_name": "F000003_3"
+                        '_name': 'F000003_3'
                     }},
-                    {"bool": {
-                        "must": [
-                            {"bool": {
-                                "minimum_should_match": 1,
-                                "must_not": [
-                                    {"term": {"samples_no_call": "HG00732"}},
-                                    {"term": {"samples_num_alt_1": "HG00732"}},
-                                    {"term": {"samples_num_alt_2": "HG00732"}},
-                                    {"term": {"samples_no_call": "HG00733"}},
-                                    {"term": {"samples_num_alt_1": "HG00733"}},
-                                    {"term": {"samples_num_alt_2": "HG00733"}}
+                    {'bool': {
+                        'must': [
+                            {'bool': {
+                                'minimum_should_match': 1,
+                                'must_not': [
+                                    {'term': {'samples_no_call': 'HG00732'}},
+                                    {'term': {'samples_num_alt_1': 'HG00732'}},
+                                    {'term': {'samples_num_alt_2': 'HG00732'}},
+                                    {'term': {'samples_no_call': 'HG00733'}},
+                                    {'term': {'samples_num_alt_1': 'HG00733'}},
+                                    {'term': {'samples_num_alt_2': 'HG00733'}}
                                 ],
-                                "should": [
-                                    {"term": {"samples_num_alt_1": "HG00731"}},
-                                    {"term": {"samples_num_alt_2": "HG00731"}}
+                                'should': [
+                                    {'term': {'samples_num_alt_1': 'HG00731'}},
+                                    {'term': {'samples_num_alt_2': 'HG00731'}}
                                 ]
                             }},
-                            {"bool": {
-                                "minimum_should_match": 1,
-                                "should": [
-                                    {"bool": {
-                                        "must_not": [
-                                            {"term": {"samples_ab_0_to_5": "HG00731"}},
-                                            {"term": {"samples_ab_5_to_10": "HG00731"}},
+                            {'bool': {
+                                'minimum_should_match': 1,
+                                'should': [
+                                    {'bool': {
+                                        'must_not': [
+                                            {'term': {'samples_ab_0_to_5': 'HG00731'}},
+                                            {'term': {'samples_ab_5_to_10': 'HG00731'}},
                                         ]
                                     }},
-                                    {"bool": {"must_not": [{"term": {"samples_num_alt_1": "HG00731"}}]}}
+                                    {'bool': {'must_not': [{'term': {'samples_num_alt_1': 'HG00731'}}]}}
                                 ],
-                                "must_not": [
-                                    {"term": {"samples_gq_0_to_5": "HG00731"}},
-                                    {"term": {"samples_gq_5_to_10": "HG00731"}},
-                                    {"term": {"samples_gq_10_to_15": "HG00731"}},
-                                    {"term": {"samples_gq_0_to_5": "HG00732"}},
-                                    {"term": {"samples_gq_5_to_10": "HG00732"}},
-                                    {"term": {"samples_gq_10_to_15": "HG00732"}},
-                                    {"term": {"samples_gq_0_to_5": "HG00733"}},
-                                    {"term": {"samples_gq_5_to_10": "HG00733"}},
-                                    {"term": {"samples_gq_10_to_15": "HG00733"}},
+                                'must_not': [
+                                    {'term': {'samples_gq_0_to_5': 'HG00731'}},
+                                    {'term': {'samples_gq_5_to_10': 'HG00731'}},
+                                    {'term': {'samples_gq_10_to_15': 'HG00731'}},
+                                    {'term': {'samples_gq_0_to_5': 'HG00732'}},
+                                    {'term': {'samples_gq_5_to_10': 'HG00732'}},
+                                    {'term': {'samples_gq_10_to_15': 'HG00732'}},
+                                    {'term': {'samples_gq_0_to_5': 'HG00733'}},
+                                    {'term': {'samples_gq_5_to_10': 'HG00733'}},
+                                    {'term': {'samples_gq_10_to_15': 'HG00733'}},
                                 ],
-                                "must": [
-                                    {"bool": {
-                                        "minimum_should_match": 1,
-                                        "should": [
-                                            {"bool": {
-                                                "must_not": [
-                                                    {"term": {"samples_ab_0_to_5": "HG00732"}},
-                                                    {"term": {"samples_ab_5_to_10": "HG00732"}},
+                                'must': [
+                                    {'bool': {
+                                        'minimum_should_match': 1,
+                                        'should': [
+                                            {'bool': {
+                                                'must_not': [
+                                                    {'term': {'samples_ab_0_to_5': 'HG00732'}},
+                                                    {'term': {'samples_ab_5_to_10': 'HG00732'}},
                                                 ]
                                             }},
-                                            {"bool": {"must_not": [{"term": {"samples_num_alt_1": "HG00732"}}]}}
+                                            {'bool': {'must_not': [{'term': {'samples_num_alt_1': 'HG00732'}}]}}
                                         ]
                                     }},
-                                    {"bool": {
-                                        "minimum_should_match": 1,
-                                        "should": [
-                                            {"bool": {
-                                                "must_not": [
-                                                    {"term": {"samples_ab_0_to_5": "HG00733"}},
-                                                    {"term": {"samples_ab_5_to_10": "HG00733"}},
+                                    {'bool': {
+                                        'minimum_should_match': 1,
+                                        'should': [
+                                            {'bool': {
+                                                'must_not': [
+                                                    {'term': {'samples_ab_0_to_5': 'HG00733'}},
+                                                    {'term': {'samples_ab_5_to_10': 'HG00733'}},
                                                 ]
                                             }},
-                                            {"bool": {"must_not": [{"term": {"samples_num_alt_1": "HG00733"}}]}}
+                                            {'bool': {'must_not': [{'term': {'samples_num_alt_1': 'HG00733'}}]}}
                                         ]
                                     }},
                                 ]
                             }}
                         ],
-                        "_name": "F000002_2"
+                        '_name': 'F000002_2'
                     }},
                 ]
             }}
@@ -983,8 +987,8 @@ class EsUtilsTest(TestCase):
 
     def test_recessive_get_es_variants(self):
         search_model = VariantSearch.objects.create(search={
-            'annotations': {"frameshift": ["frameshift_variant"]},
-            "inheritance": {"mode": "recessive"}
+            'annotations': {'frameshift': ['frameshift_variant']},
+            'inheritance': {'mode': 'recessive'}
         })
         results_model = VariantSearchResults.objects.create(variant_search=search_model, sort='xpos')
         results_model.families = self.families
@@ -1003,7 +1007,7 @@ class EsUtilsTest(TestCase):
         })
         self.assertEqual(results_model.total_results, 7)
 
-        annotation_query = {"terms": {"transcriptConsequenceTerms": ["frameshift_variant"]}}
+        annotation_query = {'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}}
         recessive_inheritance_query = {
             'bool': {
                 'should': [

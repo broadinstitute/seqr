@@ -46,9 +46,9 @@ def get_es_variants_for_variant_tuples(families, xpos_ref_alt_tuples):
     return _get_filtered_family_es_variants(families, _variant_id_filter(xpos_ref_alt_tuples), num_results=len(xpos_ref_alt_tuples))
 
 
-def _get_filtered_family_es_variants(families, filter, num_results=100):
+def _get_filtered_family_es_variants(families, family_filter, num_results=100):
     es_search, family_samples_by_id, _ = _get_es_search_for_families(families)
-    es_search = es_search.filter(filter)
+    es_search = es_search.filter(family_filter)
     genotypes_q, _, _ = _genotype_filter(inheritance=None, family_samples_by_id=family_samples_by_id)
     es_search = es_search.filter(genotypes_q)
     variant_results, _ = _execute_search(es_search, family_samples_by_id, end_index=num_results)
@@ -640,7 +640,7 @@ NESTED_FIELDS = {
 CORE_FIELDS_CONFIG = {
     'alt': {},
     'contig': {'response_key': 'chrom'},
-    'filters': {'response_key': 'genotypeFilters', 'format_value': lambda filters: ','.join(filters), 'default_value': []},
+    'filters': {'response_key': 'genotypeFilters', 'format_value': ','.join, 'default_value': []},
     'originalAltAlleles': {'format_value': lambda alleles: [a.split('-')[-1] for a in alleles], 'default_value': []},
     'ref': {},
     'rsid': {},
