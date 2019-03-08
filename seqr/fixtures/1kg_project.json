@@ -22,6 +22,28 @@
     }
 },
 {
+    "model": "seqr.project",
+    "pk": 2,
+    "fields": {
+        "guid": "R0002_empty",
+        "created_date": "2017-03-12T19:27:08.156Z",
+        "created_by": null,
+        "last_modified_date": "2017-03-13T09:07:49.582Z",
+        "name": "Empty Project",
+        "description": "",
+	"owners_group": 1,
+	"can_edit_group": 2,
+	"can_view_group": 3,
+	"is_phenotips_enabled": true,
+	"phenotips_user_id": "",
+	"is_mme_enabled": false,
+	"mme_primary_data_owner": "",
+	"deprecated_last_accessed_date": "2017-09-15T18:15:50.827Z",
+	"deprecated_project_id": "",
+	"custom_reference_populations": []
+    }
+},
+{
     "model": "seqr.projectcategory",
     "pk": 2,
     "fields": {

@@ -8,6 +8,7 @@ from seqr.views.utils.test_utils import _check_login
 MME_INDIVIDUAL_ID = 'IND_012'
 
 PROJECT_GUID = 'R0001_1kg'
+EMPTY_PROJECT_GUID = 'R0002_empty'
 FAMILY_GUID = 'F000001_1'
 ANALYSIS_GROUP_GUID = 'AG0000183_test_group'
 
@@ -88,6 +89,27 @@ class ProjectPageTest(TestCase):
             set(response_json['matchmakerSubmissions'].values()[0][MME_INDIVIDUAL_ID].keys()),
             {'submissionDate', 'projectId', 'familyId', 'individualId', 'submittedData'}
         )
+
+    @mock.patch('seqr.views.pages.project_page.SEQR_ID_TO_MME_ID_MAP.find', find_mme_matches)
+    @mock.patch('seqr.views.pages.project_page._has_gene_search', _has_gene_search)
+    @mock.patch('seqr.views.apis.locus_list_api.get_objects_for_group', get_objects_for_group)
+    def test_empty_project_page_data(self):
+        url = reverse(project_page_data, args=[EMPTY_PROJECT_GUID])
+        _check_login(self, url)
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+
+        response_json = response.json()
+        self.assertSetEqual(
+            set(response_json.keys()),
+            {'projectsByGuid', 'familiesByGuid', 'individualsByGuid', 'samplesByGuid', 'locusListsByGuid', 'analysisGroupsByGuid', 'matchmakerSubmissions'}
+        )
+        self.assertListEqual(response_json['projectsByGuid'].keys(), [EMPTY_PROJECT_GUID])
+        self.assertDictEqual(response_json['familiesByGuid'], {})
+        self.assertDictEqual(response_json['individualsByGuid'], {})
+        self.assertDictEqual(response_json['samplesByGuid'], {})
+        self.assertDictEqual(response_json['analysisGroupsByGuid'], {})
 
     @mock.patch('seqr.views.pages.project_page._has_gene_search', _has_gene_search)
     def test_export_tables(self):
