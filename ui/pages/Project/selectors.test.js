@@ -79,6 +79,14 @@ test('getProjectSavedVariants', () => {
   expect(savedFamilyVariants[0].variantId).toEqual('SV0000004_116042722_r0390_1000')
   expect(savedFamilyVariants[1].variantId).toEqual('SV0000002_1248367227_r0390_100')
 
+  const savedAnalysisGroupVariants = getProjectSavedVariants(
+    STATE_WITH_2_FAMILIES, { match: { params:  { analysisGroupGuid: 'AG0000183_test_group' } } }
+  )
+  expect(savedAnalysisGroupVariants.length).toEqual(2)
+  expect(savedAnalysisGroupVariants[0].variantId).toEqual('SV0000004_116042722_r0390_1000')
+  expect(savedAnalysisGroupVariants[1].variantId).toEqual('SV0000002_1248367227_r0390_100')
+
+
   const savedVariants= getProjectSavedVariants(
     STATE_WITH_2_FAMILIES, { match: { params:  { variantGuid: 'SV0000004_116042722_r0390_1000' } } }
   )
