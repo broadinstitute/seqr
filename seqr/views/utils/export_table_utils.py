@@ -8,7 +8,7 @@ from django.http.response import HttpResponse
 from seqr.views.utils.json_utils import _to_title_case
 
 
-def export_table(filename_prefix, header, rows, file_format):
+def export_table(filename_prefix, header, rows, file_format, titlecase_header=True):
     """Generates an HTTP response for a table with the given header and rows, exported into the given file_format.
 
     Args:
@@ -60,7 +60,9 @@ def export_table(filename_prefix, header, rows, file_format):
         response['Content-Disposition'] = 'attachment; filename="{}.xlsx"'.format(filename_prefix)
         wb = xl.Workbook(write_only=True)
         ws = wb.create_sheet()
-        ws.append(map(_to_title_case, header))
+        if titlecase_header:
+            header = map(_to_title_case, header)
+        ws.append(header)
         for row in rows:
             try:
                 if isinstance(row, dict):

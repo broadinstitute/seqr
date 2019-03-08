@@ -11,10 +11,9 @@ import LocusListDetailPanel from 'shared/components/panel/genes/LocusListDetail'
 import LocusListTables from 'shared/components/table/LocusListTables'
 import { CreateLocusListButton } from 'shared/components/buttons/LocusListButtons'
 import DispatchRequestButton from 'shared/components/buttons/DispatchRequestButton'
-import ButtonLink from 'shared/components/buttons/ButtonLink'
 import DeleteButton from 'shared/components/buttons/DeleteButton'
 import Modal from 'shared/components/modal/Modal'
-import { HelpIcon } from 'shared/components/StyledComponents'
+import { HelpIcon, ButtonLink } from 'shared/components/StyledComponents'
 import {
   LOCUS_LIST_IS_PUBLIC_FIELD_NAME, LOCUS_LIST_LAST_MODIFIED_FIELD_NAME, LOCUS_LIST_CURATOR_FIELD_NAME,
 } from 'shared/utils/constants'

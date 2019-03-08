@@ -67,11 +67,11 @@ class LocusListAPITest(TransactionTestCase):
         self.assertEqual(response.reason_phrase, '"Name" is required')
 
         response = self.client.post(create_locus_list_url, content_type='application/json', data=json.dumps({
-            'name': 'new_locus_list', 'isPublic': True, 'rawItems': 'DDX11L1, foo   chr100:1-1 \n2:1234-5678',
+            'name': 'new_locus_list', 'isPublic': True, 'rawItems': 'DDX11L1, foo  10:10-1  chr100:1-10 \n2:1234-5678',
         }))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.reason_phrase, 'This list contains invalid genes/ intervals. Update them, or select the "Ignore invalid genes and intervals" checkbox to ignore.')
-        self.assertListEqual(response.json()['invalidLocusListItems'], ['chr100:1-1', 'foo'])
+        self.assertListEqual(response.json()['invalidLocusListItems'], ['chr10:10-1', 'chr100:1-10', 'foo'])
 
         # send valid request to create locus_list
         response = self.client.post(create_locus_list_url, content_type='application/json', data=json.dumps({

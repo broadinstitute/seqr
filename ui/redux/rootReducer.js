@@ -4,6 +4,7 @@ import { reducer as searchReducer } from 'redux-search'
 
 import { reducers as dashboardReducers } from 'pages/Dashboard/reducers'
 import { reducers as projectReducers } from 'pages/Project/reducers'
+import { reducers as searchReducers } from 'pages/Search/reducers'
 import { reducers as staffReducers } from 'pages/Staff/reducers'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 import { createObjectsByIdReducer, loadingReducer, zeroActionsReducer } from './utils/reducerFactories'
@@ -16,9 +17,7 @@ import modalReducers from './utils/modalReducer'
 // actions
 export const RECEIVE_DATA = 'RECEIVE_DATA'
 export const REQUEST_PROJECTS = 'REQUEST_PROJECTS'
-const RECEIVE_SAVED_VARIANTS = 'RECEIVE_SAVED_VARIANTS'
 const REQUEST_GENES = 'REQUEST_GENES'
-const RECEIVE_GENES = 'RECEIVE_GENES'
 const REQUEST_GENE_LISTS = 'REQUEST_GENE_LISTS'
 const REQUEST_GENE_LIST = 'REQUEST_GENE_LIST'
 
@@ -105,10 +104,10 @@ export const loadGene = (geneId) => {
       dispatch({ type: REQUEST_GENES })
       new HttpRequestHelper(`/api/gene_info/${geneId}`,
         (responseJson) => {
-          dispatch({ type: RECEIVE_GENES, updatesById: responseJson })
+          dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
         },
         (e) => {
-          dispatch({ type: RECEIVE_GENES, error: e.message, updatesById: {} })
+          dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
         },
       ).get()
     }
@@ -122,32 +121,41 @@ export const loadGenes = (geneIds) => {
       dispatch({ type: REQUEST_GENES })
       new HttpRequestHelper('/api/genes_info',
         (responseJson) => {
-          dispatch({ type: RECEIVE_GENES, updatesById: responseJson })
+          dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
         },
         (e) => {
-          dispatch({ type: RECEIVE_GENES, error: e.message, updatesById: {} })
+          dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
         },
       ).get({ geneIds: [...geneIds] })
     }
   }
 }
 
-export const loadLocusLists = (locusListId) => {
+export const loadLocusLists = () => {
+  return (dispatch) => {
+    dispatch({ type: REQUEST_GENE_LISTS })
+    new HttpRequestHelper('/api/locus_lists',
+      (responseJson) => {
+        dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+      },
+      (e) => {
+        dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
+      },
+    ).get()
+  }
+}
+
+export const loadLocusListItems = (locusListId) => {
   return (dispatch, getState) => {
     const locusList = getState().locusListsByGuid[locusListId]
-    if (!locusListId || !locusList || !locusList.items) {
-      dispatch({ type: locusListId ? REQUEST_GENE_LIST : REQUEST_GENE_LISTS })
-      let url = '/api/locus_lists'
-      if (locusListId) {
-        url = `${url}/${locusListId}`
-      }
-      new HttpRequestHelper(url,
+    if (locusListId && !(locusList && locusList.items)) {
+      dispatch({ type: REQUEST_GENE_LIST })
+      new HttpRequestHelper(`/api/locus_lists/${locusListId}`,
         (responseJson) => {
-          dispatch({ type: RECEIVE_GENES, updatesById: responseJson.genesById || {} })
           dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
         },
         (e) => {
-          const updates = locusListId ? { locusListsByGuid: { [locusListId]: { items: [] } } } : {}
+          const updates = { locusListsByGuid: { [locusListId]: { items: [] } } }
           dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: updates })
         },
       ).get()
@@ -156,24 +164,32 @@ export const loadLocusLists = (locusListId) => {
 }
 
 export const updateGeneNote = (values) => {
-  return updateEntity(values, RECEIVE_GENES, `/api/gene_info/${values.geneId || values.gene_id}/note`, 'noteGuid')
+  return updateEntity(values, RECEIVE_DATA, `/api/gene_info/${values.geneId || values.gene_id}/note`, 'noteGuid')
 }
 
-export const updateVariantNote = (values) => {
-  return updateEntity(values, RECEIVE_SAVED_VARIANTS, `/api/saved_variant/${values.variantId}/note`, 'noteGuid')
-}
-
-export const updateVariantTags = (values) => {
-  return (dispatch) => {
-    return new HttpRequestHelper(`/api/saved_variant/${values.variantId}/update_tags`,
+const updateSavedVariant = (values, action = 'create') => {
+  return (dispatch, getState) => {
+    return new HttpRequestHelper(`/api/saved_variant/${action}`,
       (responseJson) => {
-        dispatch({ type: RECEIVE_SAVED_VARIANTS, updatesById: responseJson })
+        dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
       },
       (e) => {
         throw new SubmissionError({ _error: [e.message] })
       },
-    ).post(values)
+    ).post({ searchHash: getState().currentSearchHash, ...values })
   }
+}
+
+export const updateVariantNote = (values) => {
+  if (values.variantGuid) {
+    return updateEntity(values, RECEIVE_DATA, `/api/saved_variant/${values.variantGuid}/note`, 'noteGuid')
+  }
+  return updateSavedVariant(values)
+}
+
+export const updateVariantTags = (values) => {
+  const urlPath = values.variantGuid ? `${values.variantGuid}/update_tags` : 'create'
+  return updateSavedVariant(values, urlPath)
 }
 
 export const updateLocusList = (values) => {
@@ -185,7 +201,6 @@ export const updateLocusList = (values) => {
 
     return new HttpRequestHelper(`/api/locus_lists/${action}`,
       (responseJson) => {
-        dispatch({ type: RECEIVE_GENES, updatesById: responseJson.genesById || {} })
         dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
       },
       (e) => {
@@ -212,14 +227,15 @@ const rootReducer = combineReducers(Object.assign({
   samplesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'samplesByGuid'),
   analysisGroupsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'analysisGroupsByGuid'),
   matchmakerSubmissions: createObjectsByIdReducer(RECEIVE_DATA, 'matchmakerSubmissions'),
-  genesById: createObjectsByIdReducer(RECEIVE_GENES),
-  genesLoading: loadingReducer(REQUEST_GENES, RECEIVE_GENES),
+  genesById: createObjectsByIdReducer(RECEIVE_DATA, 'genesById'),
+  genesLoading: loadingReducer(REQUEST_GENES, RECEIVE_DATA),
   locusListsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'locusListsByGuid'),
   locusListsLoading: loadingReducer(REQUEST_GENE_LISTS, RECEIVE_DATA),
   locusListLoading: loadingReducer(REQUEST_GENE_LIST, RECEIVE_DATA),
+  savedVariantsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'savedVariantsByGuid'),
   user: zeroActionsReducer,
   form: formReducer,
   search: searchReducer,
-}, modalReducers, dashboardReducers, projectReducers, staffReducers))
+}, modalReducers, dashboardReducers, projectReducers, searchReducers, staffReducers))
 
 export default rootReducer

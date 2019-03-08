@@ -3,9 +3,13 @@
 import React, { createElement } from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import { Form } from 'semantic-ui-react'
+import { Form, List, Pagination as PaginationComponent } from 'semantic-ui-react'
+import Slider from 'react-rangeslider'
+import 'react-rangeslider/lib/index.css'
 
-class BaseSemanticInput extends React.Component {
+import { helpLabel } from './ReduxFormWrapper'
+
+export class BaseSemanticInput extends React.Component {
 
   static propTypes = {
     onChange: PropTypes.func,
@@ -21,6 +25,34 @@ class BaseSemanticInput extends React.Component {
     return createElement(Form[inputType], { ...props, onChange: this.handleChange, onBlur: null })
   }
 }
+
+
+export const IntegerInput = ({ onChange, min, max, value, ...props }) =>
+  <BaseSemanticInput
+    {...props}
+    value={Number.isInteger(value) ? value : ''}
+    inputType="Input"
+    type="number"
+    min={min}
+    max={max}
+    onChange={(stringVal) => {
+      if (stringVal === '') {
+        onChange(null)
+      }
+      const val = parseInt(stringVal, 10)
+      if ((min === undefined || val >= min) && (max === undefined || val <= max)) {
+        onChange(val)
+      }
+    }}
+  />
+
+IntegerInput.propTypes = {
+  onChange: PropTypes.func,
+  value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+  min: PropTypes.number,
+  max: PropTypes.number,
+}
+
 
 const labelStyle = (color) => { return color ? { color: 'white', backgroundColor: color } : {} }
 
@@ -106,8 +138,68 @@ export class Multiselect extends React.PureComponent {
 }
 
 const InlineFormGroup = styled(Form.Group).attrs({ inline: true })`
-  flex-wrap: wrap;
+  flex-wrap: ${props => (props.widths ? 'inherit' : 'wrap')};
+  margin: ${props => props.margin || '0em 0em 1em'} !important;
 `
+
+export const CheckboxGroup = (props) => {
+  const { value, options, label, groupLabel, onChange, ...baseProps } = props
+  return (
+    <List>
+      <List.Item>
+        <List.Header>
+          <BaseSemanticInput
+            {...baseProps}
+            inputType="Checkbox"
+            checked={value.length === options.length}
+            indeterminate={value.length > 0 && value.length < options.length}
+            label={groupLabel || label}
+            onChange={({ checked }) => {
+              if (checked) {
+                onChange(options.map(option => option.value))
+              } else {
+                onChange([])
+              }
+            }}
+          />
+        </List.Header>
+        <List.List>
+          {options.map(option =>
+            <List.Item key={option.value}>
+              <BaseSemanticInput
+                {...baseProps}
+                inputType="Checkbox"
+                checked={value.includes(option.value)}
+                label={helpLabel(option.text, option.description)}
+                onChange={({ checked }) => {
+                  if (checked) {
+                    onChange([...value, option.value])
+                  } else {
+                    onChange(value.filter(val => val !== option.value))
+                  }
+                }}
+              />
+            </List.Item>,
+          )}
+        </List.List>
+      </List.Item>
+    </List>
+  )
+}
+
+CheckboxGroup.propTypes = {
+  value: PropTypes.any,
+  options: PropTypes.array,
+  onChange: PropTypes.func,
+  label: PropTypes.node,
+  groupLabel: PropTypes.string,
+  horizontalGrouped: PropTypes.bool,
+}
+
+export const AlignedCheckboxGroup = styled(CheckboxGroup)`
+  text-align: left;
+`
+
 
 export const StringValueCheckboxGroup = (props) => {
   const { value = '', options, onChange, ...baseProps } = props
@@ -143,9 +235,9 @@ StringValueCheckboxGroup.propTypes = {
 
 
 export const RadioGroup = (props) => {
-  const { value, options, label, onChange, ...baseProps } = props
+  const { value, options, label, onChange, margin, widths, ...baseProps } = props
   return (
-    <InlineFormGroup>
+    <InlineFormGroup margin={margin} widths={widths}>
       {/* eslint-disable-next-line jsx-a11y/label-has-for */}
       {label && <label>{label}</label>}
       {options.map(option =>
@@ -172,6 +264,8 @@ RadioGroup.propTypes = {
   options: PropTypes.array,
   onChange: PropTypes.func,
   label: PropTypes.node,
+  margin: PropTypes.string,
+  widths: PropTypes.string,
 }
 
 export const BooleanCheckbox = (props) => {
@@ -191,6 +285,13 @@ BooleanCheckbox.propTypes = {
 
 export const InlineToggle = styled(BooleanCheckbox).attrs({ toggle: true, inline: true })`
   padding-right: 10px;
+  
+  ${props => (props.divided ?
+    `&:after {
+      content: "|";
+      padding-left: 10px;
+      font-weight: bold;
+  }` : '')}
   
   .ui.toggle.checkbox label {
     font-size: small;
@@ -213,3 +314,66 @@ export const InlineToggle = styled(BooleanCheckbox).attrs({ toggle: true, inline
     right: 2em !important;
   }
 `
+
+export const LabeledSlider = styled(Slider).attrs({
+  handleLabel: props => `${props.valueLabel !== undefined ? props.valueLabel : (props.value || '')}`,
+  labels: props => ({ [props.min]: props.minLabel || props.min, [props.max]: props.maxLabel || props.max }),
+  tooltip: false,
+})`
+  width: 100%;
+
+  .rangeslider__fill {
+    background-color: grey !important;
+  }
+
+  .rangeslider__handle {
+    z-index: 1;
+    
+    .rangeslider__handle-label {
+      text-align: center;
+      margin-top: .3em;
+      font-size: .9em;
+    }
+    
+    &:after {
+      display: none;
+    }
+  }
+  
+  .rangeslider__labels .rangeslider__label-item {
+    top: -0.8em;
+  }
+`
+
+export const StepSlider = ({ steps, stepLabels, value, onChange, ...props }) =>
+  <LabeledSlider
+    {...props}
+    min={0}
+    minLabel={stepLabels[steps[0]] || steps[0]}
+    max={steps.length - 1}
+    maxLabel={stepLabels[steps.length - 1] || steps[steps.length - 1]}
+    value={steps.indexOf(value)}
+    valueLabel={steps.indexOf(value) >= 0 ? (stepLabels[value] || value) : ''}
+    onChange={val => onChange(steps[val])}
+  />
+
+
+StepSlider.propTypes = {
+  value: PropTypes.any,
+  steps: PropTypes.array,
+  stepLabels: PropTypes.object,
+  onChange: PropTypes.func,
+}
+
+export const Pagination = ({ onChange, value, error, ...props }) =>
+  <PaginationComponent
+    activePage={value}
+    onPageChange={(e, data) => onChange(data.activePage)}
+    {...props}
+  />
+
+Pagination.propTypes = {
+  value: PropTypes.number,
+  onChange: PropTypes.func,
+  error: PropTypes.bool,
+}

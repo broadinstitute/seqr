@@ -8,7 +8,9 @@ import reduxSearchEnhancer from './reduxSearchEnhancer'
 const env = process.env.NODE_ENV || 'development'
 console.log('ENV: ', env)
 
-const PERSISTING_STATE = ['projectsTableState', 'familyTableState', 'savedVariantTableState']
+const PERSISTING_STATE = [
+  'projectsTableState', 'familyTableState', 'savedVariantTableState', 'variantSearchDisplay', 'searchesByHash',
+]
 
 const persistStoreMiddleware = store => next => (action) => {
   const result = next(action)

@@ -16,7 +16,7 @@ from seqr.utils.xpos_utils import get_chrom_pos
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_individuals, get_json_for_saved_variants
-from seqr.views.utils.variant_utils import variant_main_transcript
+from seqr.views.utils.variant_utils import variant_details
 from seqr.models import Project, Family, VariantTag, VariantTagType, Sample, SavedVariant, Individual, ProjectCategory
 
 from settings import SEQR_ID_TO_MME_ID_MAP
@@ -118,7 +118,8 @@ def _get_saved_variants_by_family(projects, user):
 
     saved_variants_by_family = defaultdict(list)
     for variant in project_saved_variants_json:
-        saved_variants_by_family[variant['familyGuid']].append(variant)
+        for family_guid in variant['familyGuids']:
+            saved_variants_by_family[family_guid].append(variant)
 
     return saved_variants_by_family
 
@@ -402,29 +403,22 @@ def _generate_rows(project, loaded_samples_by_project_family, saved_variants_by_
                 rows.append(row)
                 continue
 
-            saved_variant_json = json.loads(variant.saved_variant_json)
+            saved_variant_json = variant_details(json.loads(variant.saved_variant_json), project, user=None)
 
-            annotation = saved_variant_json.get('annotation') or {}
-            gene_ids = annotation.get("coding_gene_ids", [])
-            if not gene_ids:
-                gene_ids = annotation.get("gene_ids", [])
-
-            if not gene_ids:
+            if not saved_variant_json['transcripts']:
                 errors.append("%s - no gene ids" % variant)
                 rows.append(row)
                 continue
 
-            saved_variant_json['geneIds'] = gene_ids
-
             saved_variants_to_json[variant] = saved_variant_json
 
-        affected_sample_ids = set()
-        unaffected_sample_ids = set()
+        affected_sample_guids = set()
+        unaffected_sample_guids = set()
         for sample in samples:
             if sample.individual.affected == "A":
-                affected_sample_ids.add(sample.sample_id)
+                affected_sample_guids.add(sample.guid)
             elif sample.individual.affected == "N":
-                unaffected_sample_ids.add(sample.sample_id)
+                unaffected_sample_guids.add(sample.guid)
 
         potential_compound_het_genes = defaultdict(set)
         for variant, saved_variant_json in saved_variants_to_json.items():
@@ -438,17 +432,17 @@ def _generate_rows(project, loaded_samples_by_project_family, saved_variants_by_
 
             genotypes = saved_variant_json.get('genotypes')
             if genotypes:
-                chrom, _ = get_chrom_pos(variant.xpos_start)
+                chrom = saved_variant_json['chrom']
                 is_x_linked = "X" in chrom
-                for sample_id, genotype in genotypes.items():
-                    if genotype["num_alt"] == 2 and sample_id in affected_sample_ids:
-                        affected_indivs_with_hom_alt_variants.add(i.individual_id)
-                    elif genotype["num_alt"] == 1 and sample_id in affected_sample_ids:
-                        affected_indivs_with_het_variants.add(i.individual_id)
-                    elif genotype["num_alt"] == 2 and sample_id in unaffected_sample_ids:
-                        unaffected_indivs_with_hom_alt_variants.add(i.individual_id)
-                    elif genotype["num_alt"] == 1 and sample_id in unaffected_sample_ids:
-                        unaffected_indivs_with_het_variants.add(i.individual_id)
+                for sample_guid, genotype in genotypes.items():
+                    if genotype["numAlt"] == 2 and sample_guid in affected_sample_guids:
+                        affected_indivs_with_hom_alt_variants.add(sample_guid)
+                    elif genotype["numAlt"] == 1 and sample_guid in affected_sample_guids:
+                        affected_indivs_with_het_variants.add(sample_guid)
+                    elif genotype["numAlt"] == 2 and sample_guid in unaffected_sample_guids:
+                        unaffected_indivs_with_hom_alt_variants.add(sample_guid)
+                    elif genotype["numAlt"] == 1 and sample_guid in unaffected_sample_guids:
+                        unaffected_indivs_with_het_variants.add(sample_guid)
 
             # AR-homozygote, AR-comphet, AR, AD, de novo, X-linked, UPD, other, multiple
             if not unaffected_indivs_with_hom_alt_variants and affected_indivs_with_hom_alt_variants:
@@ -458,14 +452,14 @@ def _generate_rows(project, loaded_samples_by_project_family, saved_variants_by_
                     inheritance_models.add("AR-homozygote")
 
             if not unaffected_indivs_with_hom_alt_variants and not unaffected_indivs_with_het_variants and affected_indivs_with_het_variants:
-                if unaffected_sample_ids:
+                if unaffected_sample_guids:
                     inheritance_models.add("de novo")
                 else:
                     inheritance_models.add("AD")
 
             if not unaffected_indivs_with_hom_alt_variants and (len(
-                    unaffected_sample_ids) < 2 or unaffected_indivs_with_het_variants) and affected_indivs_with_het_variants and not affected_indivs_with_hom_alt_variants:
-                for gene_id in saved_variant_json['geneIds']:
+                    unaffected_sample_guids) < 2 or unaffected_indivs_with_het_variants) and affected_indivs_with_het_variants and not affected_indivs_with_hom_alt_variants:
+                for gene_id in saved_variant_json['transcripts']:
                     potential_compound_het_genes[gene_id].add(variant)
 
             saved_variant_json['inheritance'] = inheritance_models
@@ -483,7 +477,7 @@ def _generate_rows(project, loaded_samples_by_project_family, saved_variants_by_
                     if existing_variants == variants), None)
                 if existing_gene_id:
                     main_gene_ids = {
-                        variant_main_transcript(saved_variants_to_json[variant])['geneId'] for variant in variants
+                        saved_variants_to_json[variant]['mainTranscript']['geneId'] for variant in variants
                     }
                     if gene_id in main_gene_ids:
                         gene_ids_to_saved_variants[gene_id] = gene_ids_to_saved_variants[existing_gene_id]
@@ -500,7 +494,7 @@ def _generate_rows(project, loaded_samples_by_project_family, saved_variants_by_
         # Non-compound het variants are reported in the main transcript gene
         for variant, saved_variant_json in saved_variants_to_json.items():
             if "AR-comphet" not in saved_variant_json['inheritance']:
-                gene_id = variant_main_transcript(saved_variant_json)['geneId']
+                gene_id = saved_variant_json['mainTranscript']['geneId']
                 gene_ids_to_saved_variants[gene_id].add(variant)
                 gene_ids_to_variant_tag_names[gene_id].update({vt.variant_tag_type.name for vt in variant.discovery_tags})
                 gene_ids_to_inheritance[gene_id].update(saved_variant_json['inheritance'])

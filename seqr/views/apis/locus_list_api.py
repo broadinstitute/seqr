@@ -1,6 +1,5 @@
 import json
 import logging
-import re
 
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
@@ -11,9 +10,8 @@ from guardian.shortcuts import assign_perm, remove_perm, get_objects_for_group
 from reference_data.models import GENOME_VERSION_GRCh37
 from seqr.models import LocusList, LocusListGene, LocusListInterval, IS_OWNER, CAN_VIEW, CAN_EDIT
 from seqr.model_utils import get_or_create_seqr_model, create_seqr_model, delete_seqr_model, find_matching_xbrowse_model
-from seqr.utils.xpos_utils import get_xpos
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
-from seqr.utils.gene_utils import get_genes, get_gene_ids_for_gene_symbols
+from seqr.utils.gene_utils import get_genes, parse_locus_list_items
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_locus_lists, get_json_for_locus_list
@@ -59,7 +57,7 @@ def create_locus_list_handler(request):
     if not request_json.get('name'):
         return create_json_response({}, status=400, reason='"Name" is required')
 
-    genes_by_id, intervals, invalid_items = _parse_list_items(request_json)
+    genes_by_id, intervals, invalid_items = parse_locus_list_items(request_json)
     if invalid_items and not request_json.get('ignoreInvalidItems'):
         return create_json_response({'invalidLocusListItems': invalid_items}, status=400, reason=INVALID_ITEMS_ERROR)
 
@@ -87,7 +85,7 @@ def update_locus_list_handler(request, locus_list_guid):
 
     request_json = json.loads(request.body)
 
-    genes_by_id, intervals, invalid_items = _parse_list_items(request_json)
+    genes_by_id, intervals, invalid_items = parse_locus_list_items(request_json)
     if invalid_items and not request_json.get('ignoreInvalidItems'):
         return create_json_response({'invalidLocusListItems': invalid_items}, status=400, reason=INVALID_ITEMS_ERROR)
 
@@ -97,7 +95,7 @@ def update_locus_list_handler(request, locus_list_guid):
 
     return create_json_response({
         'locusListsByGuid': {locus_list.guid: get_json_for_locus_list(locus_list, request.user)},
-        'genesById': genes_by_id,
+        'genesById': genes_by_id or {},
     })
 
 
@@ -160,44 +158,6 @@ def add_locus_list_user_permissions(locus_list):
     assign_perm(user_or_group=locus_list.created_by, perm=IS_OWNER, obj=locus_list)
     assign_perm(user_or_group=locus_list.created_by, perm=CAN_EDIT, obj=locus_list)
     assign_perm(user_or_group=locus_list.created_by, perm=CAN_VIEW, obj=locus_list)
-
-
-def _parse_list_items(request_json):
-    raw_items = request_json.get('rawItems')
-    if not raw_items:
-        return None, None, None
-
-    invalid_items = []
-    intervals = []
-    gene_ids = set()
-    gene_symbols = set()
-    for item in raw_items.replace(',', ' ').split():
-        interval_match = re.match('(?P<chrom>\w+):(?P<start>\d+)-(?P<end>\d+)', item)
-        if interval_match:
-            interval = interval_match.groupdict()
-            try:
-                interval['chrom'] = interval['chrom'].lstrip('chr')
-                interval['start'] = int(interval['start'])
-                interval['end'] = int(interval['end'])
-                if interval['start'] > interval['end']:
-                    raise ValueError
-                get_xpos(interval['chrom'], interval['start'])
-                intervals.append(interval)
-            except (KeyError, ValueError):
-                invalid_items.append('chr{chrom}:{start}-{end}'.format(
-                    chrom=interval.get('chrom'), start=interval.get('start'), end=interval.get('end')
-                ))
-        elif item.upper().startswith('ENSG'):
-            gene_ids.add(item)
-        else:
-            gene_symbols.add(item)
-
-    gene_symbols_to_ids = get_gene_ids_for_gene_symbols(gene_symbols)
-    invalid_items += [symbol for symbol in gene_symbols if not gene_symbols_to_ids.get(symbol)]
-    gene_ids.update({gene_ids[0] for gene_ids in gene_symbols_to_ids.values() if len(gene_ids)})
-    genes_by_id = get_genes(list(gene_ids), add_dbnsfp=True, add_omim=True, add_constraints=True) if gene_ids else {}
-    invalid_items += [gene_id for gene_id in gene_ids if not genes_by_id.get(gene_id)]
-    return genes_by_id, intervals, invalid_items
 
 
 def _update_locus_list_items(locus_list, genes_by_id, intervals, request_json, user):

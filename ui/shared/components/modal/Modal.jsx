@@ -4,14 +4,14 @@ import { connect } from 'react-redux'
 import { Modal, Icon, Popup, Confirm } from 'semantic-ui-react'
 
 import { getModalOpen, getModalConfim, openModal, closeModal, cancelCloseModal } from 'redux/utils/modalReducer'
-import ButtonLink from '../buttons/ButtonLink'
+import { ButtonLink } from '../StyledComponents'
 
 class CustomModal extends React.Component
 {
   static propTypes = {
     trigger: PropTypes.node,
     popup: PropTypes.object,
-    title: PropTypes.string.isRequired,
+    title: PropTypes.string,
     modalName: PropTypes.string.isRequired,
     handleClose: PropTypes.func,
     size: PropTypes.oneOf(['small', 'large', 'fullscreen']),
@@ -43,9 +43,7 @@ class CustomModal extends React.Component
       <Modal open={this.props.isOpen} trigger={trigger} onClose={this.handleClose} size={this.props.size}>
         <Modal.Header>
           {this.props.title}
-          <ButtonLink float="right" onClick={this.handleClose}>
-            <Icon name="remove" color="grey" size="small" />
-          </ButtonLink>
+          <ButtonLink floated="right" onClick={this.handleClose} icon={<Icon name="remove" color="grey" />} />
         </Modal.Header>
         <Modal.Content>
           {this.props.children}

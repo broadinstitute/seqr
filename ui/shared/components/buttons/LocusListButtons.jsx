@@ -23,7 +23,7 @@ const UpdateLocusList = ({ locusList, size, onSubmit }) =>
     onSubmit={onSubmit}
     initialValues={locusList}
     formFields={FIELDS}
-    formContainer={<LocusListItemsLoader locusList={locusList} />}
+    formContainer={<LocusListItemsLoader locusListGuid={locusList.locusListGuid} />}
     size={size}
     showErrorPanel
   />

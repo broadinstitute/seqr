@@ -10,7 +10,7 @@ from seqr.models import Project as SeqrProject, Family as SeqrFamily, Individual
     VariantFunctionalData as SeqrVariantFunctionalData, LocusList as SeqrLocusList, LocusListGene as SeqrLocusListGene, \
     GeneNote as SeqrGeneNote, FamilyAnalysedBy as SeqrAnalysedBy, AnalysisGroup as SeqrAnalysisGroup
 from seqr.utils.model_sync_utils import convert_html_to_plain_text
-from seqr.views.utils.variant_utils import get_or_create_saved_variant
+from seqr.views.utils.variant_utils import deprecated_get_or_create_saved_variant
 from seqr.views.apis.locus_list_api import add_locus_list_user_permissions
 from xbrowse_server.base.models import Individual as BaseIndividual
 
@@ -110,13 +110,13 @@ XBROWSE_TO_SEQR_FIELD_MAPPING = {
 
 XBROWSE_TO_SEQR_ADDITIONAL_ENTITIES_MAPPING = {
     "VariantTag": {
-        "saved_variant": get_or_create_saved_variant
+        "saved_variant": deprecated_get_or_create_saved_variant
     },
     "VariantFunctionalData": {
-        "saved_variant": get_or_create_saved_variant
+        "saved_variant": deprecated_get_or_create_saved_variant
     },
     "VariantNote": {
-        "saved_variant": get_or_create_saved_variant
+        "saved_variant": deprecated_get_or_create_saved_variant
     }
 }
 

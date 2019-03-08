@@ -102,7 +102,7 @@ GeneDetailSection.propTypes = {
 
 const VariantGene = ({ geneId, gene, project, variant, compact }) => {
 
-  const geneConsequence = variant.transcripts[geneId] && variant.transcripts[geneId][0].consequence.replace(/_/g, ' ')
+  const geneConsequence = variant.transcripts[geneId] && variant.transcripts[geneId][0].majorConsequence.replace(/_/g, ' ')
 
   if (!gene) {
     return <InlineHeader size="medium" content={geneId} subheader={geneConsequence} />
@@ -110,13 +110,18 @@ const VariantGene = ({ geneId, gene, project, variant, compact }) => {
 
   const geneSummary = (
     <div>
-      <ShowGeneModal gene={gene} fontWeight="bold" fontSize={compact ? '1.2em' : '1.5em'} modalId={variant.variantId} />
+      <ShowGeneModal gene={gene} fontWeight="bold" size={compact ? 'large' : 'huge'} modalId={variant.variantId} />
       <HorizontalSpacer width={10} />
       {compact ? geneConsequence :
       <GeneLinks>
         <a href={`http://gnomad.broadinstitute.org/gene/${gene.geneSymbol}`} target="_blank">gnomAD</a>
-        <HorizontalSpacer width={5} />|<HorizontalSpacer width={5} />
-        <a href={`/project/${project.deprecatedProjectId}/gene/${gene.geneId}`} target="_blank">Gene Search</a><br />
+        {/* TODO have gene search link for new gene search including on search page */}
+        {project &&
+          <span>
+            <HorizontalSpacer width={5} />|<HorizontalSpacer width={5} />
+            <a href={`/project/${project.deprecatedProjectId}/gene/${gene.geneId}`} target="_blank" rel="noopener noreferrer">Gene Search</a><br />
+          </span>
+        }
       </GeneLinks>}
     </div>
   )

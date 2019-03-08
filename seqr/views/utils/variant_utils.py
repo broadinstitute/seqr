@@ -3,14 +3,18 @@ import logging
 from collections import defaultdict
 from django.contrib.auth.models import User
 
-from seqr.models import SavedVariant, Sample
+from seqr.models import SavedVariant, VariantSearchResults, Individual
+from seqr.utils.es_utils import get_es_variants_for_variant_tuples, InvalidIndexException
+from seqr.utils.xpos_utils import get_chrom_pos
+
+
 from xbrowse_server.api.utils import add_extra_info_to_variants_project
 from xbrowse_server.mall import get_reference
 from xbrowse_server.base.models import Project as BaseProject
 from xbrowse_server.base.lookups import get_variants_from_variant_tuples
 
 
-def get_or_create_saved_variant(xpos=None, ref=None, alt=None, family=None, project=None, **kwargs):
+def deprecated_get_or_create_saved_variant(xpos=None, ref=None, alt=None, family=None, project=None, **kwargs):
     if not project:
         project = family.project
     saved_variant, _ = SavedVariant.objects.get_or_create(
@@ -23,7 +27,7 @@ def get_or_create_saved_variant(xpos=None, ref=None, alt=None, family=None, proj
     )
     if not saved_variant.saved_variant_json:
         try:
-            saved_variants_json = _retrieve_saved_variants_json(project, [(xpos, ref, alt, family.family_id)], create_if_missing=True)
+            saved_variants_json = _retrieve_saved_variants_json(project, [(xpos, ref, alt, family)], create_if_missing=True)
             if len(saved_variants_json):
                 _update_saved_variant_json(saved_variant, saved_variants_json[0])
         except Exception as e:
@@ -35,20 +39,53 @@ def update_project_saved_variant_json(project, family_id=None):
     saved_variants = SavedVariant.objects.filter(project=project, family__isnull=False).select_related('family')
     if family_id:
         saved_variants = saved_variants.filter(family__family_id=family_id)
-    saved_variants_map = {(v.xpos_start, v.ref, v.alt, v.family.family_id): v for v in saved_variants}
 
-    variants_json = _retrieve_saved_variants_json(project, saved_variants_map.keys())
+    saved_variants_map = {(v.xpos_start, v.ref, v.alt, v.family): v for v in saved_variants}
+    variant_tuples = saved_variants_map.keys()
+    saved_variants_map = {
+        (xpos, ref, alt, family.guid): v for (xpos, ref, alt, family), v in saved_variants_map.items()
+    }
+
+    variants_json = _retrieve_saved_variants_json(project, variant_tuples)
 
     updated_saved_variant_guids = []
     for var in variants_json:
-        saved_variant = saved_variants_map[(var['xpos'], var['ref'], var['alt'], var['extras']['family_id'])]
-        _update_saved_variant_json(saved_variant, var)
-        updated_saved_variant_guids.append(saved_variant.guid)
+        for family_guid in var['familyGuids']:
+            saved_variant = saved_variants_map[(var['xpos'], var['ref'], var['alt'], family_guid)]
+            _update_saved_variant_json(saved_variant, var)
+            updated_saved_variant_guids.append(saved_variant.guid)
 
     return updated_saved_variant_guids
 
 
+def reset_cached_search_results(project):
+    VariantSearchResults.objects.filter(families__project=project).distinct().update(
+        es_index=None,
+        results=None,
+        total_results=None,
+    )
+
+
 def _retrieve_saved_variants_json(project, variant_tuples, create_if_missing=False):
+    xpos_ref_alt_tuples = []
+    xpos_ref_alt_family_tuples = []
+    family_id_to_guid = {}
+    for xpos, ref, alt, family in variant_tuples:
+        xpos_ref_alt_tuples.append((xpos, ref, alt))
+        xpos_ref_alt_family_tuples.append((xpos, ref, alt, family.family_id))
+        family_id_to_guid[family.family_id] = family.guid
+
+    try:
+        families = project.family_set.filter(guid__in=family_id_to_guid.values())
+        return get_es_variants_for_variant_tuples(families, xpos_ref_alt_tuples)
+    except InvalidIndexException:
+        variants = _deprecated_retrieve_saved_variants_json(project, xpos_ref_alt_family_tuples, create_if_missing)
+        for var in variants:
+            var['familyGuids'] = [family_id_to_guid[var['extras']['family_id']]]
+        return variants
+
+
+def _deprecated_retrieve_saved_variants_json(project, variant_tuples, create_if_missing):
     project_id = project.deprecated_project_id
     xbrowse_project = BaseProject.objects.get(project_id=project_id)
     user = User.objects.filter(is_staff=True).first()  # HGMD annotations are only returned for staff users
@@ -65,12 +102,15 @@ def _update_saved_variant_json(saved_variant, saved_variant_json):
     saved_variant.save()
 
 
-# TODO once variant search is rewritten saved_variant_json shouldn't need any postprocessing
+# TODO process data before saving and then get rid of this
+def variant_details(variant_json, project, user, individual_guids_by_id=None):
+    if 'populations' in variant_json:
+        return variant_json
 
-def variant_details(variant_json, project, user=None, individual_guids_by_id=None, sample_guids_by_id=None):
     annotation = variant_json.get('annotation') or {}
-    main_transcript = variant_main_transcript(variant_json)
     is_es_variant = annotation.get('db') == 'elasticsearch'
+
+    chrom, pos = get_chrom_pos(variant_json['xpos'])
 
     extras = variant_json.get('extras') or {}
     genome_version = extras.get('genome_version') or '37'
@@ -84,7 +124,6 @@ def variant_details(variant_json, project, user=None, individual_guids_by_id=Non
         individual_id: {
             'ab': genotype.get('ab'),
             'ad': genotype.get('extras', {}).get('ad'),
-            'alleles': genotype.get('alleles', []),
             'cnvs': {
                 'array': genotype.get('extras', {}).get('cnvs', {}).get('array'),
                 'caller': genotype.get('extras', {}).get('cnvs', {}).get('caller'),
@@ -97,101 +136,45 @@ def variant_details(variant_json, project, user=None, individual_guids_by_id=Non
                 'type': genotype.get('extras', {}).get('cnvs', {}).get('type'),
             },
             'dp': genotype.get('extras', {}).get('dp'),
-            'filter': genotype.get('filter'),
             'gq': genotype.get('gq'),
             'numAlt': genotype.get('num_alt'),
             'pl': genotype.get('extras', {}).get('pl'),
+            'sampleId': individual_id,
         } for individual_id, genotype in variant_json.get('genotypes', {}).items()
     }
-    if individual_guids_by_id:
-        genotypes = {individual_guids_by_id.get(individual_id): genotype for individual_id, genotype in genotypes.items()}
-    else:
-        if not sample_guids_by_id:
-            samples = Sample.objects.filter(
-                individual__family__project=project,
-                individual__individual_id__in=genotypes.keys(),
-                loaded_date__isnull=False,
-                dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS
-            ).order_by('loaded_date').prefetch_related('individual')
-            sample_guids_by_id = {s.individual.individual_id: s.guid for s in samples}
-        genotypes = {sample_guids_by_id.get(individual_id): genotype for individual_id, genotype in genotypes.items()
-                     if sample_guids_by_id.get(individual_id)}
+
+    if not individual_guids_by_id:
+        individual_guids_by_id = {i.individual_id: i.guid for i in Individual.objects.filter(family__project=project)}
+
+    genotypes = {individual_guids_by_id.get(individual_id): genotype for individual_id, genotype in
+                 genotypes.items()
+                 if individual_guids_by_id.get(individual_id)}
 
     transcripts = defaultdict(list)
-    for i, vep_a in enumerate(annotation.get('vep_annotation') or []):
-        transcripts[vep_a.get('gene', vep_a.get('gene_id'))].append({
-            'transcriptId': vep_a.get('feature') or vep_a.get('transcript_id'),
-            'isChosenTranscript': i == annotation.get('worst_vep_annotation_index'),
-            'aminoAcids': vep_a.get('amino_acids'),
-            'canonical': vep_a.get('canonical'),
-            'cdnaPosition': vep_a.get('cdna_position') or vep_a.get('cdna_start'),
-            'cdsPosition': vep_a.get('cds_position'),
-            'codons': vep_a.get('codons'),
-            'consequence': vep_a.get('consequence') or vep_a.get('major_consequence'),
-            'hgvsc': vep_a.get('hgvsc'),
-            'hgvsp': vep_a.get('hgvsp'),
-        })
+    for i, vep_a in enumerate(annotation['vep_annotation'] or []):
+        transcripts[vep_a.get('gene', vep_a.get('gene_id'))].append(
+            _transcript_detail(vep_a, i == annotation.get('worst_vep_annotation_index')))
 
     return {
-        'annotation': {
-            'cadd_phred': annotation.get('cadd_phred'),
-            'dann_score': annotation.get('dann_score'),
-            'eigen_phred': annotation.get('eigen_phred'),
+        'chrom': chrom,
+        'pos': pos,
+        'predictions': {
+            'cadd': annotation.get('cadd_phred'),
+            'dann': annotation.get('dann_score'),
+            'eigen': annotation.get('eigen_phred'),
             'fathmm': annotation.get('fathmm'),
-            'freqs': {
-                'AF': annotation.get('freqs', {}).get('AF'),
-                'topmedAF': annotation.get('freqs', {}).get('topmed_AF'),
-                'g1k': annotation.get('freqs', {}).get('1kg_wgs_popmax_AF', annotation.get('freqs', {}).get(
-                    '1kg_wgs_AF', 0)) if is_es_variant else annotation.get('freqs', {}).get(
-                    '1kg_wgs_phase3_popmax', annotation.get('freqs', {}).get('1kg_wgs_phase3', 0)),
-                'exac': annotation.get('freqs', {}).get(
-                    'exac_v3_popmax_AF', annotation.get('freqs', {}).get(
-                        'exac_v3_AF', 0)) if is_es_variant else annotation.get('freqs', {}).get(
-                    'exac_v3_popmax', annotation.get('freqs', {}).get('exac_v3', 0)),
-                'gnomad_exomes': annotation.get('freqs', {}).get(
-                    'gnomad_exomes_popmax_AF', annotation.get('freqs', {}).get(
-                        'gnomad_exomes_AF', 0)) if is_es_variant else annotation.get(
-                    'freqs', {}).get('gnomad-exomes2_popmax', annotation.get('freqs', {}).get('gnomad-exomes2', None)),
-                'gnomad_genomes': annotation.get('freqs', {}).get('gnomad_genomes_popmax_AF', annotation.get(
-                    'freqs', {}).get('gnomad_genomes_AF', 0)) if is_es_variant else annotation.get('freqs', {}).get(
-                    'gnomad-gnomad-genomes2_popmax', annotation.get('freqs', {}).get('gnomad-genomes2', None)),
-            },
             'gerp_rs': annotation.get('GERP_RS'),
-            'phastcons100vert': annotation.get('phastCons100way_vertebrate'),
-
-            'mpc_score': annotation.get('mpc_score'),
+            'phastcons_100_vert': annotation.get('phastCons100way_vertebrate'),
+            'mpc': annotation.get('mpc_score'),
             'metasvm': annotation.get('metasvm'),
             'mut_taster': annotation.get('muttaster'),
             'polyphen': annotation.get('polyphen'),
-            'popCounts': {
-                'AC': annotation.get('pop_counts', {}).get('AC'),
-                'AN': annotation.get('pop_counts', {}).get('AN'),
-                'g1kAC': annotation.get('pop_counts', {}).get('g1kAC'),
-                'g1kAN': annotation.get('pop_counts', {}).get('g1kAN'),
-                'topmedAC': annotation.get('pop_counts', {}).get('topmed_AC'),
-                'topmedAN': annotation.get('pop_counts', {}).get('topmed_AN'),
-                'gnomadExomesAC': annotation.get('pop_counts', {}).get('gnomad_exomes_AC'),
-                'gnomadExomesAN': annotation.get('pop_counts', {}).get('gnomad_exomes_AN'),
-                'gnomadGenomesAC': annotation.get('pop_counts', {}).get('gnomad_genomes_AC'),
-                'gnomadGenomesAN': annotation.get('pop_counts', {}).get('gnomad_genomes_AN'),
-                'exacAC': annotation.get('pop_counts', {}).get('exac_v3_AC'),
-                'exac_hom': annotation.get('pop_counts', {}).get('exac_v3_Hom'),
-                'exac_hemi': annotation.get('pop_counts', {}).get('exac_v3_Hemi'),
-                'exacAN': annotation.get('pop_counts', {}).get('exac_v3_AN'),
-                'gnomad_exomes_hom': annotation.get('pop_counts', {}).get('gnomad_exomes_Hom'),
-                'gnomad_exomes_hemi': annotation.get('pop_counts', {}).get('gnomad_exomes_Hemi'),
-                'gnomad_genomes_hom': annotation.get('pop_counts', {}).get('gnomad_genomes_Hom'),
-                'gnomad_genomes_hemi': annotation.get('pop_counts', {}).get('gnomad_genomes_Hemi'),
-            },
-            'primate_ai_score': annotation.get('primate_ai_score'),
-            'splice_ai_delta_score': annotation.get('splice_ai_delta_score'),
-            'revel_score': annotation.get('revel_score'),
-            'rsid': annotation.get('rsid'),
+            'primate_ai': annotation.get('primate_ai_score'),
+            'revel': annotation.get('revel_score'),
             'sift': annotation.get('sift'),
-            'vepConsequence': annotation.get('vep_consequence'),
-            'vepGroup': annotation.get('vep_group'),
+            'splice_ai': annotation.get('splice_ai_delta_score'),
         },
-        'mainTranscript': main_transcript,
+        'mainTranscript': _variant_main_transcript(variant_json),
         'clinvar': {
             'clinsig': extras.get('clinvar_clinsig'),
             'variantId': extras.get('clinvar_variant_id'),
@@ -203,33 +186,91 @@ def variant_details(variant_json, project, user=None, individual_guids_by_id=Non
             'class': extras.get('hgmd_class') if (user and user.is_staff) else None,
         },
         'genotypes': genotypes,
+        'genotypeFilters': next((genotype.get('filter') for genotype in variant_json.get('genotypes', {}).values()), None),
         'genomeVersion': genome_version,
         'liftedOverGenomeVersion': lifted_over_genome_version,
         'liftedOverChrom': lifted_over_chrom,
         'liftedOverPos': lifted_over_pos,
         'locusLists': [],
-        'origAltAlleles': extras.get('orig_alt_alleles', []),
+        'originalAltAlleles': extras.get('orig_alt_alleles', []),
+        'populations': {
+            'callset': {
+                'af': annotation.get('freqs', {}).get('AF'),
+                'ac': annotation.get('pop_counts', {}).get('AC'),
+                'an': annotation.get('pop_counts', {}).get('AN'),
+            },
+            'topmed': {
+                'af': annotation.get('freqs', {}).get('topmed_AF'),
+                'ac': annotation.get('pop_counts', {}).get('topmed_AC'),
+                'an': annotation.get('pop_counts', {}).get('topmed_AN'),
+            },
+            'g1k': {
+                'af': annotation.get('freqs', {}).get('1kg_wgs_popmax_AF', annotation.get('freqs', {}).get(
+                    '1kg_wgs_AF', 0)) if is_es_variant else annotation.get('freqs', {}).get(
+                    '1kg_wgs_phase3_popmax', annotation.get('freqs', {}).get('1kg_wgs_phase3', 0)),
+                'ac': annotation.get('pop_counts', {}).get('g1kAC'),
+                'an': annotation.get('pop_counts', {}).get('g1kAN'),
+            },
+            'exac': {
+                'af': annotation.get('freqs', {}).get(
+                    'exac_v3_popmax_AF', annotation.get('freqs', {}).get(
+                        'exac_v3_AF', 0)) if is_es_variant else annotation.get('freqs', {}).get(
+                    'exac_v3_popmax', annotation.get('freqs', {}).get('exac_v3', 0)),
+                'ac': annotation.get('pop_counts', {}).get('exac_v3_AC'),
+                'an': annotation.get('pop_counts', {}).get('exac_v3_AN'),
+                'hom': annotation.get('pop_counts', {}).get('exac_v3_Hom'),
+                'hemi': annotation.get('pop_counts', {}).get('exac_v3_Hemi'),
+            },
+            'gnomad_exomes': {
+                'af': annotation.get('freqs', {}).get(
+                    'gnomad_exomes_popmax_AF', annotation.get('freqs', {}).get(
+                        'gnomad_exomes_AF', 0)) if is_es_variant else annotation.get(
+                    'freqs', {}).get('gnomad-exomes2_popmax',
+                                     annotation.get('freqs', {}).get('gnomad-exomes2', None)),
+                'ac': annotation.get('pop_counts', {}).get('gnomad_exomes_AC'),
+                'an': annotation.get('pop_counts', {}).get('gnomad_exomes_AN'),
+                'hom': annotation.get('pop_counts', {}).get('gnomad_exomes_Hom'),
+                'hemi': annotation.get('pop_counts', {}).get('gnomad_exomes_Hemi'),
+            },
+            'gnomad_genomes': {
+                'af': annotation.get('freqs', {}).get('gnomad_genomes_popmax_AF', annotation.get(
+                    'freqs', {}).get('gnomad_genomes_AF', 0)) if is_es_variant else annotation.get('freqs', {}).get(
+                    'gnomad-gnomad-genomes2_popmax', annotation.get('freqs', {}).get('gnomad-genomes2', None)),
+                'ac': annotation.get('pop_counts', {}).get('gnomad_genomes_AC'),
+                'an': annotation.get('pop_counts', {}).get('gnomad_genomes_AN'),
+                'hom': annotation.get('pop_counts', {}).get('gnomad_genomes_Hom'),
+                'hemi': annotation.get('pop_counts', {}).get('gnomad_genomes_Hemi'),
+            },
+        },
+        'rsid': annotation.get('rsid'),
         'transcripts': transcripts,
     }
 
 
-def variant_main_transcript(variant_json):
+def _variant_main_transcript(variant_json):
     annotation = variant_json.get('annotation') or {}
     main_transcript = annotation.get('main_transcript') or (
         annotation['vep_annotation'][annotation['worst_vep_annotation_index']] if annotation.get(
             'worst_vep_annotation_index') is not None and annotation['vep_annotation'] else {})
+    return _transcript_detail(main_transcript, True)
+
+
+def _transcript_detail(transcript, isChosenTranscript):
     return {
-        'transcriptId': main_transcript.get('feature') or main_transcript.get('transcript_id'),
-        'geneId': main_transcript.get('gene') or main_transcript.get('gene_id'),
-        'symbol': main_transcript.get('gene_symbol') or main_transcript.get('symbol'),
-        'lof': main_transcript.get('lof'),
-        'lofFlags': main_transcript.get('lof_flags'),
-        'lofFilter': main_transcript.get('lof_filter'),
-        'hgvsc': main_transcript.get('hgvsc'),
-        'hgvsp': main_transcript.get('hgvsp'),
-        'aminoAcids': main_transcript.get('amino_acids'),
-        'proteinPosition': main_transcript.get('protein_position'),
+        'transcriptId': transcript.get('feature') or transcript.get('transcript_id'),
+        'transcriptRank': 0 if isChosenTranscript else transcript.get('transcript_rank', 100),
+        'geneId': transcript.get('gene') or transcript.get('gene_id'),
+        'geneSymbol': transcript.get('gene_symbol') or transcript.get('symbol'),
+        'lof': transcript.get('lof'),
+        'lofFlags': transcript.get('lof_flags'),
+        'lofFilter': transcript.get('lof_filter'),
+        'aminoAcids': transcript.get('amino_acids'),
+        'biotype': transcript.get('biotype'),
+        'canonical': transcript.get('canonical'),
+        'cdnaPosition': transcript.get('cdna_position') or transcript.get('cdna_start'),
+        'codons': transcript.get('codons'),
+        'majorConsequence': transcript.get('consequence') or transcript.get('major_consequence'),
+        'hgvsc': transcript.get('hgvsc'),
+        'hgvsp': transcript.get('hgvsp'),
     }
-
-
 

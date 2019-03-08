@@ -10,7 +10,7 @@ from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 from django.db.models import Q
 from guardian.shortcuts import assign_perm
 
-from seqr.views.utils.variant_utils import get_or_create_saved_variant
+from seqr.views.utils.variant_utils import deprecated_get_or_create_saved_variant
 from seqr.views.apis import phenotips_api
 from seqr.views.apis.phenotips_api import _get_patient_data, _update_individual_phenotips_data
 from xbrowse_server.base.models import \
@@ -584,7 +584,7 @@ def get_or_create_variant_tag(source_variant_tag, new_family):
     new_variant_tag, created = safe_get_or_create(source_variant_tag)
     if created:
         print("=== created variant tag: " + str(new_variant_tag))
-        new_variant_tag.saved_variant = get_or_create_saved_variant(
+        new_variant_tag.saved_variant = deprecated_get_or_create_saved_variant(
             xpos=source_variant_tag.xpos,
             ref=source_variant_tag.ref,
             alt=source_variant_tag.alt,
@@ -600,7 +600,7 @@ def get_or_create_variant_functional_data(source_variant_functional_data, new_fa
     new_variant_functional_data, created = safe_get_or_create(source_variant_functional_data)
     if created:
         print("=== created variant functional data: " + str(new_variant_functional_data))
-        new_variant_functional_data.saved_variant = get_or_create_saved_variant(
+        new_variant_functional_data.saved_variant = deprecated_get_or_create_saved_variant(
             xpos=source_variant_functional_data.xpos,
             ref=source_variant_functional_data.ref,
             alt=source_variant_functional_data.alt,
@@ -617,7 +617,7 @@ def get_or_create_variant_note(source_variant_note, new_family):
 
     if created:
         print("=== created variant note: " + str(new_variant_note))
-        new_variant_note.saved_variant = get_or_create_saved_variant(
+        new_variant_note.saved_variant = deprecated_get_or_create_saved_variant(
             xpos=source_variant_note.xpos,
             ref=source_variant_note.ref,
             alt=source_variant_note.alt,

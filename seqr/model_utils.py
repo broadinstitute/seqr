@@ -60,14 +60,17 @@ SEQR_TO_XBROWSE_FIELD_MAPPING = {
         "variant_tag_type": "project_tag",
         "created_by": "user",
         "search_parameters": "search_url",
+        "search_hash": _DELETED_FIELD,
     },
     "VariantNote": {
         "created_by": "user",
         "search_parameters": "search_url",
+        "search_hash": _DELETED_FIELD,
     },
     "VariantFunctionalData": {
         "created_by": "user",
         "search_parameters": "search_url",
+        "search_hash": _DELETED_FIELD,
     },
     "LocusList": {
         "created_by": "owner",

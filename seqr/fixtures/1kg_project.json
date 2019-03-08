@@ -759,7 +759,7 @@
         "dataset_type": "VARIANTS",
         "sample_id": "NA19675",
         "sample_status": "loaded",
-
+        "elasticsearch_index": "test_index",
         "dataset_file_path": "1kg.vcf.gz",
         "loaded_date": "2017-02-05T06:42:55.397Z"
     }
@@ -790,7 +790,7 @@
         "created_date": "2017-02-05T06:42:55.397Z",
         "created_by": null,
         "last_modified_date": "2017-03-13T09:07:49.937Z",
-        
+        "elasticsearch_index": "test_index",
         "sample_id": "HG00731",
         "sample_type": "WES",
         "sample_status": "loaded",
@@ -808,7 +808,7 @@
         "created_date": "2017-02-05T06:42:55.397Z",
         "created_by": null,
         "last_modified_date": "2017-03-13T09:07:49.963Z",
-        
+        "elasticsearch_index": "test_index",
         "sample_id": "HG00732",
         "sample_type": "WES",
         "sample_status": "loaded",
@@ -826,7 +826,7 @@
         "created_date": "2017-02-05T06:42:55.397Z",
         "created_by": null,
         "last_modified_date": "2017-03-13T09:07:49.990Z",
-        
+        "elasticsearch_index": "test_index",
         "sample_id": "HG00733",
         "sample_type": "WES",
         "sample_status": "loaded",
@@ -844,7 +844,7 @@
         "created_date": "2017-02-05T06:42:55.397Z",
         "created_by": null,
         "last_modified_date": "2017-03-13T09:07:50.022Z",
-        
+        "elasticsearch_index": "test_index",
         "sample_id": "NA20870",
         "sample_type": "WES",
         "sample_status": "loaded",

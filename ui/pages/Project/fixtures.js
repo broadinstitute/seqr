@@ -486,7 +486,7 @@ export const STATE_WITH_2_FAMILIES = {
   },
   savedVariantTableState: { hideExcluded: true, recordsPerPage: 1 },
   projectSavedVariantsLoading: {},
-  projectSavedVariants: {
+  savedVariantsByGuid: {
     SV0000004_116042722_r0390_1000: {
       alt: "T",
       annotation: {
@@ -516,7 +516,7 @@ export const STATE_WITH_2_FAMILIES = {
       },
       chrom: "22",
       clinvar: { clinsig: "", variantId: null },
-      familyGuid: "F011652_1",
+      familyGuids: ["F011652_1"],
       functionalData: [],
       genes: [
         {
@@ -576,6 +576,7 @@ export const STATE_WITH_2_FAMILIES = {
       }],
       origAltAlleles: ["T"],
       pos: 45919065,
+      projectGuid: 'R0237_1000_genomes_demo',
       ref: "TTTC",
       tags: [
         {
@@ -584,6 +585,7 @@ export const STATE_WITH_2_FAMILIES = {
         },
       ],
       variantId: "SV0000004_116042722_r0390_1000",
+      variantGuid: "SV0000004_116042722_r0390_1000",
       xpos: 22045919065,
     },
     SV0000002_1248367227_r0390_100: {
@@ -615,7 +617,7 @@ export const STATE_WITH_2_FAMILIES = {
       },
       chrom: "1",
       clinvar: { clinsig: "", variantId: null },
-      familyGuid: "F011652_1",
+      familyGuids: ["F011652_1"],
       functionalData: [
         { color: "#311B92", dateSaved: "2018-05-24T15:30:04.483Z", metadata: "An updated note",
           metadataTitle: null, name: "Biochemical Function", user: "hsnow@broadinstitute.org" },
@@ -677,6 +679,7 @@ export const STATE_WITH_2_FAMILIES = {
       notes: [],
       origAltAlleles: ["T"],
       pos: 248367227,
+      projectGuid: 'R0237_1000_genomes_demo',
       ref: "TC",
       tags: [
         {
@@ -694,6 +697,7 @@ export const STATE_WITH_2_FAMILIES = {
         },
       ],
       variantId: "SV0000002_1248367227_r0390_100",
+      variantGuid: "SV0000002_1248367227_r0390_100",
       xpos: 1248367227,
     },
     SV0000003_2246859832_r0390_100: {
@@ -725,7 +729,7 @@ export const STATE_WITH_2_FAMILIES = {
       },
       chrom: "22",
       clinvar: { clinsig: "", variantId: null },
-      familyGuid: "F011652_2",
+      familyGuids: ["F011652_2"],
       functionalData: [],
       genes: [
         {
@@ -782,6 +786,7 @@ export const STATE_WITH_2_FAMILIES = {
       notes: [],
       origAltAlleles: ["T"],
       pos: 248367227,
+      projectGuid: 'R0237_1000_genomes_demo',
       ref: "C",
       tags: [
         {
@@ -790,6 +795,7 @@ export const STATE_WITH_2_FAMILIES = {
         }
       ],
       variantId: "SV0000003_2246859832_r0390_100",
+      variantGuid: "SV0000003_2246859832_r0390_100",
       xpos: 22046859832,
     },
   }

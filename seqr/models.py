@@ -1,10 +1,10 @@
 from abc import abstractmethod
-import os
 import uuid
 import json
 import random
 
 from django.contrib.auth.models import User, Group
+from django.contrib.postgres.fields import JSONField
 from django.db import models
 from django.db.models import options
 from django.utils import timezone
@@ -12,8 +12,8 @@ from django.utils.text import slugify as __slugify
 
 from guardian.shortcuts import assign_perm
 
-from seqr.utils.xpos_utils import get_chrom_pos, get_xpos
-from reference_data.models import GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38, GENOME_VERSION_CHOICES
+from seqr.utils.xpos_utils import get_chrom_pos
+from reference_data.models import GENOME_VERSION_GRCh37, GENOME_VERSION_CHOICES
 from django.conf import settings
 
 #  Allow adding the custom json_fields and internal_json_fields to the model Meta
@@ -295,10 +295,13 @@ class Individual(ModelWithGUID):
         ('U', 'Unknown'),
     )
 
+    AFFECTED_STATUS_AFFECTED = 'A'
+    AFFECTED_STATUS_UNAFFECTED = 'N'
+    AFFECTED_STATUS_UNKNOWN = 'U'
     AFFECTED_STATUS_CHOICES = (
-        ('A', 'Affected'),
-        ('N', 'Unaffected'),
-        ('U', 'Unknown'),
+        (AFFECTED_STATUS_AFFECTED, 'Affected'),
+        (AFFECTED_STATUS_UNAFFECTED, 'Unaffected'),
+        (AFFECTED_STATUS_UNKNOWN, 'Unknown'),
     )
 
     CASE_REVIEW_STATUS_IN_REVIEW = "I"
@@ -326,7 +329,7 @@ class Individual(ModelWithGUID):
     father = models.ForeignKey('seqr.Individual', null=True, on_delete=models.SET_NULL, related_name='paternal_children')
 
     sex = models.CharField(max_length=1, choices=SEX_CHOICES, default='U')
-    affected = models.CharField(max_length=1, choices=AFFECTED_STATUS_CHOICES, default='U')
+    affected = models.CharField(max_length=1, choices=AFFECTED_STATUS_CHOICES, default=AFFECTED_STATUS_UNKNOWN)
 
     # TODO once sample and individual ids are fully decoupled no reason to maintain this field
     display_name = models.TextField(default="", blank=True)
@@ -569,6 +572,8 @@ class VariantTag(ModelWithGUID):
     variant_tag_type = models.ForeignKey('VariantTagType', on_delete=models.CASCADE)
 
     # context in which a variant tag was saved
+    search_hash = models.CharField(max_length=50, null=True)
+    #  TODO deprecate and migrate to search_hash
     search_parameters = models.TextField(null=True, blank=True)  # aka. search url
 
     def __unicode__(self):
@@ -580,7 +585,7 @@ class VariantTag(ModelWithGUID):
     class Meta:
         unique_together = ('variant_tag_type', 'saved_variant')
 
-        json_fields = ['guid', 'search_parameters', 'last_modified_date', 'created_by']
+        json_fields = ['guid', 'search_parameters', 'search_hash', 'last_modified_date', 'created_by']
 
 
 class VariantNote(ModelWithGUID):
@@ -589,6 +594,8 @@ class VariantNote(ModelWithGUID):
     submit_to_clinvar = models.BooleanField(default=False)
 
     # these are for context
+    search_hash = models.CharField(max_length=50, null=True)
+    #  TODO deprecate and migrate to search_hash
     search_parameters = models.TextField(null=True, blank=True)  # aka. search url
 
     def __unicode__(self):
@@ -667,6 +674,8 @@ class VariantFunctionalData(ModelWithGUID):
     functional_data_tag = models.TextField(choices=FUNCTIONAL_DATA_CHOICES)
     metadata = models.TextField(null=True)
 
+    search_hash = models.CharField(max_length=50, null=True)
+    #  TODO deprecate and migrate to search_hash
     search_parameters = models.TextField(null=True, blank=True)
 
     def __unicode__(self):
@@ -772,4 +781,39 @@ class AnalysisGroup(ModelWithGUID):
         unique_together = ('project', 'name')
 
         json_fields = ['guid', 'name', 'description']
+
+
+class VariantSearch(ModelWithGUID):
+    name = models.CharField(max_length=200, null=True)
+    search = JSONField()
+
+    def __unicode__(self):
+        return self.name or self.id
+
+    def _compute_guid(self):
+        return 'VS%07d_%s' % (self.id, _slugify(self.name or ''))
+
+    class Meta:
+        unique_together = ('created_by', 'name')
+
+        json_fields = ['guid', 'name', 'search']
+
+
+class VariantSearchResults(ModelWithGUID):
+    variant_search = models.ForeignKey('VariantSearch', on_delete=models.CASCADE)
+    families = models.ManyToManyField('Family')
+    search_hash = models.CharField(max_length=50)
+    sort = models.CharField(null=True, max_length=50)
+    es_index = models.TextField(null=True)
+    results = JSONField(null=True)
+    total_results = models.IntegerField(null=True)
+
+    def __unicode__(self):
+        return self.search_hash
+
+    def _compute_guid(self):
+        return 'VSR%07d_%s' % (self.id, _slugify(str(self)))
+
+    class Meta:
+        unique_together = ('search_hash', 'sort')
 

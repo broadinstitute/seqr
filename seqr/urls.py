@@ -35,6 +35,7 @@ from seqr.views.apis.case_review_api import \
 
 from seqr.views.apis.saved_variant_api import \
     saved_variant_data, \
+    create_saved_variant_handler, \
     update_variant_tags_handler, \
     create_variant_note_handler, \
     update_variant_note_handler, \
@@ -69,10 +70,17 @@ from seqr.views.apis.locus_list_api import \
     add_project_locus_lists, \
     delete_project_locus_lists
 
+from seqr.views.apis.variant_search_api import \
+    query_variants_handler, \
+    query_single_variant_handler, \
+    search_context_handler, \
+    export_variants_handler, \
+    get_saved_search_handler, \
+    create_saved_search_handler
+
 from seqr.views.apis.staff_api import anvil_export, discovery_sheet, get_projects_for_category
 from seqr.views.pages.staff.elasticsearch_status import elasticsearch_status
 from seqr.views.pages.staff.komp_export import komp_export
-
 
 from seqr.views.apis.awesomebar_api import awesomebar_autocomplete_handler
 from seqr.views.apis.auth_api import login_required_error, API_LOGIN_REQUIRED_URL
@@ -88,6 +96,7 @@ react_app_pages = [
     'project/(?P<project_guid>[^/]+)/.*',
     'gene_info/.*',
     'gene_lists/.*',
+    'variant_search/.*',
     'staff/.*',
 ]
 
@@ -132,8 +141,16 @@ api_endpoints = {
     'project/(?P<project_guid>[^/]+)/analysis_groups/create': update_analysis_group_handler,
     'project/(?P<project_guid>[^/]+)/analysis_groups/(?P<analysis_group_guid>[^/]+)/update': update_analysis_group_handler,
     'project/(?P<project_guid>[^/]+)/analysis_groups/(?P<analysis_group_guid>[^/]+)/delete': delete_analysis_group_handler,
-
     'project/(?P<project_guid>[^/]+)/update_saved_variant_json': update_saved_variant_json,
+
+    'search/variant/(?P<variant_id>[^/]+)': query_single_variant_handler,
+    'search/(?P<search_hash>[^/]+)': query_variants_handler,
+    'search/(?P<search_hash>[^/]+)/download': export_variants_handler,
+    'search_context': search_context_handler,
+    'saved_search/all': get_saved_search_handler,
+    'saved_search/create': create_saved_search_handler,
+
+    'saved_variant/create': create_saved_variant_handler,
     'saved_variant/(?P<variant_guid>[^/]+)/update_tags': update_variant_tags_handler,
     'saved_variant/(?P<variant_guid>[^/]+)/note/create': create_variant_note_handler,
     'saved_variant/(?P<variant_guid>[^/]+)/note/(?P<note_guid>[^/]+)/update': update_variant_note_handler,
