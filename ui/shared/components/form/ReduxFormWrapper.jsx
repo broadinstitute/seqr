@@ -6,7 +6,7 @@ import styled from 'styled-components'
 import { createSelector } from 'reselect'
 import { connect } from 'react-redux'
 import { Field, FieldArray, reduxForm, getFormSyncErrors, getFormSyncWarnings } from 'redux-form'
-import { Form, Message, Icon, Popup } from 'semantic-ui-react'
+import { Form, Message, Icon, Popup, Confirm } from 'semantic-ui-react'
 import flatten from 'lodash/flatten'
 
 import { closeModal, setModalConfirm } from 'redux/utils/modalReducer'
@@ -117,6 +117,9 @@ class ReduxFormWrapper extends React.Component {
     /* Whether or not to show a confirm message before canceling if there are unsaved changes */
     confirmCloseIfNotSaved: PropTypes.bool,
 
+    /* An optional confirm message to show before saving */
+    confirmDialog: PropTypes.string,
+
     /* Whether or not the form is rendered outside a modal */
     noModal: PropTypes.bool,
 
@@ -160,7 +163,19 @@ class ReduxFormWrapper extends React.Component {
     submitButtonText: 'Submit',
   }
 
+  constructor(props) {
+    super(props)
+
+    this.state = {
+      confirming: false,
+    }
+  }
+
   handleUnconfirmedClose = () => this.props.handleClose()
+
+  showConfirmDialog = () => this.setState({ confirming: true })
+
+  hideConfirmDialog = () => this.setState({ confirming: false })
 
   render() {
     let saveStatus = RequestStatus.NONE
@@ -178,7 +193,13 @@ class ReduxFormWrapper extends React.Component {
     const fieldComponents = this.props.children || configuredFields(this.props)
 
     return (
-      <StyledForm onSubmit={this.props.handleSubmit} size={this.props.size} loading={this.props.submitting || this.props.loading} hasSubmitButton={!this.props.submitOnChange} inline={this.props.inline}>
+      <StyledForm
+        onSubmit={this.props.confirmDialog ? this.showConfirmDialog : this.props.handleSubmit}
+        size={this.props.size}
+        loading={this.props.submitting || this.props.loading}
+        hasSubmitButton={!this.props.submitOnChange}
+        inline={this.props.inline}
+      >
         {fieldComponents}
         {this.props.showErrorPanel && ['warning', 'error'].map(key => (
           this.props[`${key}Messages`] && this.props[`${key}Messages`].length > 0 ?
@@ -194,6 +215,15 @@ class ReduxFormWrapper extends React.Component {
               handleClose={this.props.noModal ? null : this.handleUnconfirmedClose}
             />
         }
+        <Confirm
+          content={this.props.confirmDialog}
+          open={this.state.confirming}
+          onCancel={this.hideConfirmDialog}
+          onConfirm={() => {
+            this.hideConfirmDialog()
+            this.props.handleSubmit()
+          }}
+        />
       </StyledForm>
     )
   }
@@ -214,6 +244,7 @@ class ReduxFormWrapper extends React.Component {
       'submitButtonText',
       'dirty',
       'confirmCloseIfNotSaved',
+      'confirmDialog',
       'initialValues',
       'children',
     ]
