@@ -21,6 +21,7 @@ import {
   FAMILY_FIELD_FIRST_SAMPLE,
   FAMILY_FIELD_RENDER_LOOKUP,
   FAMILY_FIELD_OMIM_NUMBER,
+  FAMILY_FIELD_PMIDS,
 } from '../../utils/constants'
 
 const FamilyGrid = styled(({ annotation, offset, ...props }) => <Grid {...props} />)`
@@ -51,7 +52,13 @@ const familyFieldRenderProps = {
   },
   [FAMILY_FIELD_OMIM_NUMBER]: {
     fieldDisplay: value => <a target="_blank" href={`https://www.omim.org/entry/${value}`}>{value}</a>,
-    formFields: [{ name: FAMILY_FIELD_OMIM_NUMBER }],
+  },
+  [FAMILY_FIELD_PMIDS]: {
+    fieldDisplay: values => values.map(value =>
+      <div><a target="_blank" href={`https://www.ncbi.nlm.nih.gov/pubmed/${value}`}>{value}</a></div>,
+    ),
+    addElementLabel: 'Add publication',
+    addConfirm: 'This field is intended for publications which list this gene discovery on this particular family only. It is not intended for gene or phenotype level evidence, which should be added to the notes field.',
   },
 }
 

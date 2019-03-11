@@ -4,7 +4,7 @@ import json
 import random
 
 from django.contrib.auth.models import User, Group
-from django.contrib.postgres.fields import JSONField
+from django.contrib.postgres.fields import JSONField, ArrayField
 from django.db import models
 from django.db.models import options
 from django.utils import timezone
@@ -239,6 +239,7 @@ class Family(ModelWithGUID):
 
     coded_phenotype = models.TextField(null=True, blank=True)
     post_discovery_omim_number = models.TextField(null=True, blank=True)
+    pubmed_ids = ArrayField(models.TextField(), default=list())
 
     analysis_status = models.CharField(
         max_length=10,
@@ -268,13 +269,14 @@ class Family(ModelWithGUID):
         json_fields = [
             'guid', 'family_id', 'display_name', 'description', 'analysis_notes', 'analysis_summary',
             'causal_inheritance_mode', 'analysis_status', 'pedigree_image', 'created_date', 'coded_phenotype',
-            'post_discovery_omim_number'
+            'post_discovery_omim_number', 'pubmed_ids'
         ]
         internal_json_fields = [
             'internal_analysis_status', 'internal_case_review_notes', 'internal_case_review_summary'
         ]
 
 
+# TODO should be an ArrayField directly on family once family fields have audit trail
 class FamilyAnalysedBy(ModelWithGUID):
     family = models.ForeignKey(Family)
 

@@ -45,6 +45,7 @@ const BaseFieldView = (props) => {
       formFields={props.formFields}
       formContainer={<div style={props.modalStyle} />}
       showErrorPanel={props.showErrorPanel}
+      confirmDialog={props.addConfirm}
       size="tiny"
     />
     : (
