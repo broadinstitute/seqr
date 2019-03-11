@@ -187,7 +187,6 @@ DEFAULT_ROW = row = {
     "submitted_to_mme": "NS",
     "posted_publicly": "NS",
     "komp_early_release": "NS",
-    "pubmed_ids": "",
 }
 DEFAULT_ROW.update({hpo_category: 'N' for hpo_category in [
     "connective_tissue",
@@ -331,7 +330,9 @@ def _generate_rows(project, loaded_samples_by_project_family, saved_variants_by_
             "sequencing_approach": sequencing_approach,
             "extras_pedigree_url": family.pedigree_image.url if family.pedigree_image else "",
             "coded_phenotype": family.coded_phenotype or "",
+            "pubmed_ids": '; '.join(family.pubmed_ids),
             "analysis_summary": (family.analysis_summary or '').strip('" \n'),
+            "row_id": family.guid,
         }
         row.update(DEFAULT_ROW)
 
@@ -363,7 +364,7 @@ def _generate_rows(project, loaded_samples_by_project_family, saved_variants_by_
         if omim_number_initial:
             row.update({
                 "omim_number_initial": omim_number_initial,
-                "phenotype_class": "Known",
+                "phenotype_class": "KNOWN",
             })
 
         if family.post_discovery_omim_number:
@@ -509,6 +510,7 @@ def _generate_rows(project, loaded_samples_by_project_family, saved_variants_by_
             row["actual_inheritance_model"] = ", ".join(gene_ids_to_inheritance[gene_id])
 
             row["gene_id"] = gene_id
+            row["row_id"] += gene_id
 
             variant_tag_names = gene_ids_to_variant_tag_names[gene_id]
 
@@ -529,14 +531,20 @@ def _generate_rows(project, loaded_samples_by_project_family, saved_variants_by_
                     "novel_mendelian_gene":  "Y" if any("Novel gene" in name for name in variant_tag_names) else "N",
                 })
 
-            if any(tag in variant_tag_names for tag in [
-                'Tier 1 - Phenotype expansion', 'Tier 1 - Novel mode of inheritance',  'Tier 2 - Phenotype expansion',
-            ]):
-                row["phenotype_class"] = "EXPAN"
-            elif any(tag in variant_tag_names for tag in [
-                'Tier 1 - Phenotype not delineated', 'Tier 2 - Phenotype not delineated'
-            ]):
-                row["phenotype_class"] = "UE"
+                if has_known_gene_for_phenotype:
+                    row["phenotype_class"] = "KNOWN"
+                elif any(tag in variant_tag_names for tag in [
+                    'Tier 1 - Known gene, new phenotype', 'Tier 2 - Known gene, new phenotype',
+                ]):
+                    row["phenotype_class"] = "NEW"
+                elif any(tag in variant_tag_names for tag in [
+                    'Tier 1 - Phenotype expansion', 'Tier 1 - Novel mode of inheritance',  'Tier 2 - Phenotype expansion',
+                ]):
+                    row["phenotype_class"] = "EXPAN"
+                elif any(tag in variant_tag_names for tag in [
+                    'Tier 1 - Phenotype not delineated', 'Tier 2 - Phenotype not delineated'
+                ]):
+                    row["phenotype_class"] = "UE"
 
             if not submitted_to_mme:
                 if has_tier1 or has_tier2:

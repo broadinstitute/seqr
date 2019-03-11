@@ -13,7 +13,7 @@ const DiscoverySheet = props =>
   <BaseReport
     page="discovery_sheet"
     viewAllCategory="CMG"
-    idField="family_guid"
+    idField="row_id"
     defaultSortColumn="family_id"
     columns={DISCOVERY_SHEET_COLUMNS}
     getDownloadFilename={getDownloadFilename}
