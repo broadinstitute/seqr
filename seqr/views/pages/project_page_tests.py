@@ -50,6 +50,11 @@ class ProjectPageTest(TestCase):
             {'projectsByGuid', 'familiesByGuid', 'individualsByGuid', 'samplesByGuid', 'locusListsByGuid', 'analysisGroupsByGuid', 'matchmakerSubmissions'}
         )
         self.assertSetEqual(
+            set(response_json['projectsByGuid'][PROJECT_GUID]['variantTagTypes'][0].keys()),
+            {'variantTagTypeGuid', 'name', 'category', 'description', 'color', 'order', 'is_built_in', 'numTags',
+             'numTagsPerFamily'}
+        )
+        self.assertSetEqual(
             set(response_json['projectsByGuid'][PROJECT_GUID].keys()),
             {'collaborators', 'locusListGuids', 'variantTagTypes', 'variantFunctionalTagTypes', 'hasGeneSearch',
              'detailsLoaded', 'projectGuid', 'projectCategoryGuids', 'canEdit', 'name', 'description', 'createdDate',
