@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 
 import BaseFieldView from './BaseFieldView'
 
-const PlainTextFieldView = (props) => {
+const SingleFieldView = (props) => {
   const fields = [{ name: props.field }]
   return <BaseFieldView
     formFields={fields}
@@ -11,8 +11,8 @@ const PlainTextFieldView = (props) => {
   />
 }
 
-PlainTextFieldView.propTypes = {
+SingleFieldView.propTypes = {
   field: PropTypes.string.isRequired,
 }
 
-export default PlainTextFieldView
+export default SingleFieldView
