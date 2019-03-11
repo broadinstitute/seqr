@@ -4,8 +4,9 @@ import mock
 from django.test import TestCase
 from elasticsearch_dsl import Search
 
-from seqr.models import Family, VariantSearch, VariantSearchResults
-from seqr.utils.es_utils import get_es_variants_for_variant_tuples, get_single_es_variant, get_es_variants
+from seqr.models import Family, Sample, VariantSearch, VariantSearchResults
+from seqr.utils.es_utils import get_es_variants_for_variant_tuples, get_single_es_variant, get_es_variants, \
+    _genotype_inheritance_filter
 
 
 ES_VARIANTS = [
@@ -1046,9 +1047,9 @@ class EsUtilsTest(TestCase):
                                     {'bool': {
                                         'must_not': [
                                             {'term': {'samples_no_call': 'HG00732'}},
+                                            {'term': {'samples_num_alt_1': 'HG00732'}},
                                             {'term': {'samples_num_alt_2': 'HG00732'}},
                                             {'term': {'samples_no_call': 'HG00733'}},
-                                            {'term': {'samples_num_alt_1': 'HG00733'}},
                                             {'term': {'samples_num_alt_2': 'HG00733'}}
                                         ],
                                         'must': [{'match': {'contig': 'X'}}, {'term': {'samples_num_alt_2': 'HG00731'}}]
@@ -1141,6 +1142,177 @@ class EsUtilsTest(TestCase):
         get_es_variants(results_model, page=2, num_results=2)
         self.assertEqual(len(self.executed_searches), 0)
 
-    def test_genotype_filter(self):
-        # TODO test custom genotype filters
-        pass
+    def test_genotype_inheritance_filter(self):
+        samples_by_id = {
+            sample_id: Sample.objects.get(sample_id=sample_id) for sample_id in ['HG00731', 'HG00732', 'HG00733']
+        }
+        custom_affected = {'I000004_hg00731': 'N', 'I000005_hg00732': 'A'}
+
+        # custom genotype
+        inheritance_filter, mode = _genotype_inheritance_filter('de_novo', {
+            'genotype': {'I000004_hg00731': 'ref_ref', 'I000005_hg00732': 'ref_alt'}
+        }, samples_by_id)
+        self.assertIsNone(mode)
+        self.assertDictEqual(inheritance_filter.to_dict(), {
+            'bool': {
+                'must_not': [
+                    {'term': {'samples_no_call': 'HG00731'}},
+                    {'term': {'samples_num_alt_1': 'HG00731'}},
+                    {'term': {'samples_num_alt_2': 'HG00731'}},
+                ],
+                'must': [
+                    {'term': {'samples_num_alt_1': 'HG00732'}}
+                ]
+            }
+        })
+
+        # de novo
+        inheritance_filter, mode = _genotype_inheritance_filter('de_novo', {}, samples_by_id)
+        self.assertEqual(mode, 'de_novo')
+        self.assertDictEqual(inheritance_filter.to_dict(), {
+            'bool': {
+                'minimum_should_match': 1,
+                'must_not': [
+                    {'term': {'samples_no_call': 'HG00732'}},
+                    {'term': {'samples_num_alt_1': 'HG00732'}},
+                    {'term': {'samples_num_alt_2': 'HG00732'}},
+                    {'term': {'samples_no_call': 'HG00733'}},
+                    {'term': {'samples_num_alt_1': 'HG00733'}},
+                    {'term': {'samples_num_alt_2': 'HG00733'}}
+                ],
+                'should': [
+                    {'term': {'samples_num_alt_1': 'HG00731'}},
+                    {'term': {'samples_num_alt_2': 'HG00731'}}
+                ]
+            }
+        })
+        inheritance_filter, mode = _genotype_inheritance_filter('de_novo', {'affected': custom_affected}, samples_by_id)
+        self.assertEqual(mode, 'de_novo')
+        self.assertDictEqual(inheritance_filter.to_dict(), {
+            'bool': {
+                'minimum_should_match': 1,
+                'must_not': [
+                    {'term': {'samples_no_call': 'HG00731'}},
+                    {'term': {'samples_num_alt_1': 'HG00731'}},
+                    {'term': {'samples_num_alt_2': 'HG00731'}},
+                    {'term': {'samples_no_call': 'HG00733'}},
+                    {'term': {'samples_num_alt_1': 'HG00733'}},
+                    {'term': {'samples_num_alt_2': 'HG00733'}}
+                ],
+                'should': [
+                    {'term': {'samples_num_alt_1': 'HG00732'}},
+                    {'term': {'samples_num_alt_2': 'HG00732'}}
+                ]
+            }
+        })
+
+        recessive_filter = {
+            'bool': {
+                'must_not': [
+                    {'term': {'samples_no_call': 'HG00732'}},
+                    {'term': {'samples_num_alt_2': 'HG00732'}},
+                    {'term': {'samples_no_call': 'HG00733'}},
+                    {'term': {'samples_num_alt_2': 'HG00733'}}
+                ],
+                'must': [
+                    {'term': {'samples_num_alt_2': 'HG00731'}}
+                ]
+            }
+        }
+        custom_affected_recessive_filter = {
+            'bool': {
+                'must_not': [
+                    {'term': {'samples_no_call': 'HG00731'}},
+                    {'term': {'samples_num_alt_2': 'HG00731'}},
+                    {'term': {'samples_no_call': 'HG00733'}},
+                    {'term': {'samples_num_alt_2': 'HG00733'}}
+                ],
+                'must': [
+                    {'term': {'samples_num_alt_2': 'HG00732'}}
+                ]
+            }
+        }
+
+        # recessive
+        inheritance_filter, mode = _genotype_inheritance_filter('recessive', {}, samples_by_id)
+        self.assertEqual(mode, 'recessive')
+        self.assertDictEqual(inheritance_filter.to_dict(), recessive_filter)
+        inheritance_filter, mode = _genotype_inheritance_filter('recessive', {'affected': custom_affected}, samples_by_id)
+        self.assertEqual(mode, 'recessive')
+        self.assertDictEqual(inheritance_filter.to_dict(), custom_affected_recessive_filter)
+
+        # homozygous recessive
+        inheritance_filter, mode = _genotype_inheritance_filter('homozygous_recessive', {}, samples_by_id)
+        self.assertEqual(mode, 'homozygous_recessive')
+        self.assertDictEqual(inheritance_filter.to_dict(), recessive_filter)
+        inheritance_filter, mode = _genotype_inheritance_filter('homozygous_recessive', {'affected': custom_affected}, samples_by_id)
+        self.assertEqual(mode, 'homozygous_recessive')
+        self.assertDictEqual(inheritance_filter.to_dict(), custom_affected_recessive_filter)
+
+        # compound het
+        inheritance_filter, mode = _genotype_inheritance_filter('compound_het', {}, samples_by_id)
+        self.assertEqual(mode, 'compound_het')
+        self.assertDictEqual(inheritance_filter.to_dict(), {
+            'bool': {
+                'must_not': [
+                    {'term': {'samples_no_call': 'HG00732'}},
+                    {'term': {'samples_num_alt_2': 'HG00732'}},
+                    {'term': {'samples_no_call': 'HG00733'}},
+                    {'term': {'samples_num_alt_2': 'HG00733'}}
+                ],
+                'must': [
+                    {'term': {'samples_num_alt_1': 'HG00731'}},
+                ]
+            }
+        })
+        inheritance_filter, mode = _genotype_inheritance_filter('compound_het', {'affected': custom_affected}, samples_by_id)
+        self.assertEqual(mode, 'compound_het')
+        self.assertDictEqual(inheritance_filter.to_dict(), {
+            'bool': {
+                'must_not': [
+                    {'term': {'samples_no_call': 'HG00731'}},
+                    {'term': {'samples_num_alt_2': 'HG00731'}},
+                    {'term': {'samples_no_call': 'HG00733'}},
+                    {'term': {'samples_num_alt_2': 'HG00733'}}
+                ],
+                'must': [
+                    {'term': {'samples_num_alt_1': 'HG00732'}},
+                ]
+            }
+        })
+
+        # x-linked recessive
+        inheritance_filter, mode = _genotype_inheritance_filter('x_linked_recessive', {}, samples_by_id)
+        self.assertEqual(mode, 'x_linked_recessive')
+        self.assertDictEqual(inheritance_filter.to_dict(), {
+            'bool': {
+                'must_not': [
+                    {'term': {'samples_no_call': 'HG00732'}},
+                    {'term': {'samples_num_alt_1': 'HG00732'}},
+                    {'term': {'samples_num_alt_2': 'HG00732'}},
+                    {'term': {'samples_no_call': 'HG00733'}},
+                    {'term': {'samples_num_alt_2': 'HG00733'}}
+                ],
+                'must': [
+                    {'match': {'contig': 'X'}},
+                    {'term': {'samples_num_alt_2': 'HG00731'}},
+                ]
+            }
+        })
+        inheritance_filter, mode = _genotype_inheritance_filter(
+            'x_linked_recessive', {'affected': custom_affected}, samples_by_id)
+        self.assertEqual(mode, 'x_linked_recessive')
+        self.assertDictEqual(inheritance_filter.to_dict(), {
+            'bool': {
+                'must_not': [
+                    {'term': {'samples_no_call': 'HG00731'}},
+                    {'term': {'samples_num_alt_2': 'HG00731'}},
+                    {'term': {'samples_no_call': 'HG00733'}},
+                    {'term': {'samples_num_alt_2': 'HG00733'}}
+                ],
+                'must': [
+                    {'match': {'contig': 'X'}},
+                    {'term': {'samples_num_alt_2': 'HG00732'}},
+                ]
+            }
+        })

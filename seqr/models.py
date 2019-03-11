@@ -289,8 +289,9 @@ class FamilyAnalysedBy(ModelWithGUID):
 
 
 class Individual(ModelWithGUID):
+    SEX_MALE = 'M'
     SEX_CHOICES = (
-        ('M', 'Male'),
+        (SEX_MALE, 'Male'),
         ('F', 'Female'),
         ('U', 'Unknown'),
     )
