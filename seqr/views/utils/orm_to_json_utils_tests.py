@@ -41,7 +41,7 @@ class JSONUtilsTest(TestCase):
         family_fields = {
             'projectGuid', 'familyGuid', 'analysedBy', 'pedigreeImage', 'familyId', 'displayName', 'description',
             'analysisNotes', 'analysisSummary', 'causalInheritanceMode', 'analysisStatus', 'pedigreeImage', 'createdDate',
-            'codedPhenotype', 'postDiscoveryOmimNumber',
+            'codedPhenotype', 'postDiscoveryOmimNumber', 'pubmedIds',
         }
         self.assertSetEqual(set(json.keys()), family_fields)
 
