@@ -108,7 +108,7 @@ export const FAMILY_FIELD_RENDER_LOOKUP = {
   [FAMILY_FIELD_ANALYSIS_NOTES]: { name: 'Notes' },
   [FAMILY_FIELD_ANALYSIS_SUMMARY]: { name: 'Analysis Summary' },
   [FAMILY_FIELD_CODED_PHENOTYPE]: { name: 'Coded Phenotype', component: SingleFieldView },
-  [FAMILY_FIELD_OMIM_NUMBER]: { name: 'Post-discovery OMIM #', component: BaseFieldView },
+  [FAMILY_FIELD_OMIM_NUMBER]: { name: 'Post-discovery OMIM #', component: SingleFieldView },
   [FAMILY_FIELD_PMIDS]: { name: 'Publications on this discovery', component: ListFieldView },
   [FAMILY_FIELD_INTERNAL_NOTES]: { name: 'Internal Notes', internal: true },
   [FAMILY_FIELD_INTERNAL_SUMMARY]: { name: 'Internal Summary', internal: true },
