@@ -30,11 +30,12 @@ class Command(BaseCommand):
             get_or_create_project_tag(project, order=3, category="CMG Discovery Tags", tag_name="Tier 1 - Phenotype expansion", color='#298A49', description="Phenotype studies have different clinical characteristics and/or natural history")
             get_or_create_project_tag(project, order=4, category="CMG Discovery Tags", tag_name="Tier 1 - Phenotype not delineated", color='#44AA60', description="Phenotype not previously delineated (i.e. no MIM #)")
             get_or_create_project_tag(project, order=5, category="CMG Discovery Tags", tag_name="Tier 1 - Novel mode of inheritance", color='#75C475', description="Gene previously associated with a Mendelian condition but mode of inheritance is different")
+            get_or_create_project_tag(project, order=5.5, category="CMG Discovery Tags", tag_name="Tier 1 - Known gene, new phenotype", color='#7fad7f', description="Gene is previously associated, in OMIM, with a different phenotype")
             get_or_create_project_tag(project, order=6, category="CMG Discovery Tags", original_names=["Novel Gene"], tag_name="Tier 2 - Novel gene and phenotype", color='#0B437D', description="Gene not previously associated with a Mendelian condition")
             get_or_create_project_tag(project, order=7, category="CMG Discovery Tags", original_names=["Known Gene Phenotype Expansion"], tag_name="Tier 2 - Novel gene for known phenotype", color='#1469B0', description="Phenotype known but no causal gene known (includes adding to locus heterogeneity)")
             get_or_create_project_tag(project, order=7.5, category="CMG Discovery Tags", original_names=[], tag_name="Tier 2 - Phenotype expansion", color='#318CC2', description="Phenotype studies have different clinical characteristics and/or natural history")
             get_or_create_project_tag(project, order=8, category="CMG Discovery Tags", tag_name="Tier 2 - Phenotype not delineated", color='#5383aa', description="Phenotype not previously delineated (i.e. no OMIM #)")
-
+            get_or_create_project_tag(project, order=8.5, category="CMG Discovery Tags", tag_name="Tier 2 - Known gene, new phenotype", color='#4f8dbdd6', description="Gene is previously associated, in OMIM, with a different phenotype")
             get_or_create_project_tag(project, order=9, category="CMG Discovery Tags", tag_name="Known gene for phenotype", color='#030A75', description="The gene overlapping the variant has been previously associated with the same phenotype presented by the patient")
             get_or_create_project_tag(project, order=10, category="Collaboration", original_names=["Review", "Interesting"], tag_name="Review", description="To mark a variant and/or gene of interest for further review.", color='#668FE3')
 
