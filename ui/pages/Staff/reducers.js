@@ -8,6 +8,8 @@ const REQUEST_ANVIL = 'REQUEST_ANVIL'
 const RECEIVE_ANVIL = 'RECEIVE_ANVIL'
 const REQUEST_DISCOVERY_SHEET = 'REQUEST_DISCOVERY_SHEET'
 const RECEIVE_DISCOVERY_SHEET = 'RECEIVE_DISCOVERY_SHEET'
+const REQUEST_ELASTICSEARCH_STATUS = 'REQUEST_ELASTICSEARCH_STATUS'
+const RECEIVE_ELASTICSEARCH_STATUS = 'RECEIVE_ELASTICSEARCH_STATUS'
 
 
 // Data actions
@@ -25,6 +27,20 @@ export const loadAnvil = (projectGuid) => {
         },
       ).get()
     }
+  }
+}
+
+export const loadElasticsearchStatus = () => {
+  return (dispatch) => {
+    dispatch({ type: REQUEST_ELASTICSEARCH_STATUS })
+    new HttpRequestHelper('/api/staff/elasticsearch_status',
+      (responseJson) => {
+        dispatch({ type: RECEIVE_ELASTICSEARCH_STATUS, newValue: responseJson })
+      },
+      (e) => {
+        dispatch({ type: RECEIVE_ELASTICSEARCH_STATUS, error: e.message, newValue: { errors: [e.message] } })
+      },
+    ).get()
   }
 }
 
@@ -81,6 +97,8 @@ export const reducers = {
   anvilRows: createSingleValueReducer(RECEIVE_ANVIL, []),
   discoverySheetLoading: loadingReducer(REQUEST_DISCOVERY_SHEET, RECEIVE_DISCOVERY_SHEET),
   discoverySheetRows: createSingleValueReducer(RECEIVE_DISCOVERY_SHEET, []),
+  elasticsearchStatusLoading: loadingReducer(REQUEST_ELASTICSEARCH_STATUS, RECEIVE_ELASTICSEARCH_STATUS),
+  elasticsearchStatus: createSingleValueReducer(RECEIVE_ELASTICSEARCH_STATUS, {}),
 }
 
 const rootReducer = combineReducers(reducers)

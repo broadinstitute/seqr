@@ -76,8 +76,8 @@ def elasticsearch_status(request):
 
     return create_json_response({
         'indices': indices,
-        'disk_stats': disk_status,
-        'elasticsearch_host': ELASTICSEARCH_SERVER,
+        'diskStats': disk_status,
+        'elasticsearchHost': ELASTICSEARCH_SERVER,
         'errors': errors,
     })
 

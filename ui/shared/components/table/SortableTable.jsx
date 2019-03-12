@@ -48,6 +48,7 @@ class SortableTable extends React.PureComponent {
     columns: PropTypes.array,
     idField: PropTypes.string.isRequired,
     defaultSortColumn: PropTypes.string,
+    defaultSortDescending: PropTypes.bool,
     filterColumn: PropTypes.string,
     selectRows: PropTypes.func,
     selectedRows: PropTypes.object,
@@ -70,7 +71,7 @@ class SortableTable extends React.PureComponent {
 
     this.state = {
       column: props.defaultSortColumn,
-      direction: 'ascending',
+      direction: props.defaultSortDescending ? DESCENDING : ASCENDING,
       activePage: 1,
       filter: null,
     }
