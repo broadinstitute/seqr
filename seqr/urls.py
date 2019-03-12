@@ -78,8 +78,7 @@ from seqr.views.apis.variant_search_api import \
     get_saved_search_handler, \
     create_saved_search_handler
 
-from seqr.views.apis.staff_api import anvil_export, discovery_sheet, get_projects_for_category
-from seqr.views.pages.staff.elasticsearch_status import elasticsearch_status
+from seqr.views.apis.staff_api import anvil_export, discovery_sheet, get_projects_for_category, elasticsearch_status
 from seqr.views.pages.staff.komp_export import komp_export
 
 from seqr.views.apis.awesomebar_api import awesomebar_autocomplete_handler
@@ -177,6 +176,7 @@ api_endpoints = {
     'staff/anvil/(?P<project_guid>[^/]+)': anvil_export,
     'staff/discovery_sheet/(?P<project_guid>[^/]+)': discovery_sheet,
     'staff/projects_for_category/(?P<project_category_name>[^/]+)': get_projects_for_category,
+    'staff/elasticsearch_status': elasticsearch_status,
 
 }
 
@@ -220,7 +220,6 @@ urlpatterns += [
 # other staff-only endpoints
 urlpatterns = [
     url("^staff/seqr_stats/?", seqr_stats_page, name="seqr_stats"),
-    url("^staff/elasticsearch_status", elasticsearch_status, name="elasticsearch_status"),
     url("^staff/komp_export", komp_export, name="komp_export"),
     url("^staff/users/?", users_page, name="users_page"),
     url("^staff/kibana/?", kibana_page, name="kibana_page"),
