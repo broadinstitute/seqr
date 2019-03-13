@@ -123,8 +123,9 @@ class SortableTable extends React.PureComponent {
 
   render() {
     const {
-      data, defaultSortColumn, filterColumn, idField, columns, selectRows, selectedRows = {}, loading, emptyContent,
-      footer, rowsPerPage, horizontalScroll, downloadFileName, downloadTableType, loadingProps = {}, ...tableProps
+      data, defaultSortColumn, defaultSortDescending, filterColumn, idField, columns, selectRows, selectedRows = {},
+      loading, emptyContent, footer, rowsPerPage, horizontalScroll, downloadFileName, downloadTableType,
+      loadingProps = {}, ...tableProps
     } = this.props
     const { column, direction, activePage, filter } = this.state
 

@@ -23,12 +23,15 @@ const INDEX_COLUMNS = [
     name: 'projects',
     content: 'Project(s)',
     format: row => (row.projects ? row.projects.map(project =>
-      <div key={project.guid}><Link to={`/project/${project.guid}/project_page`} target="_blank">{project.name}</Link></div>,
+      <div key={project.projectGuid}>
+        <Link to={`/project/${project.projectGuid}/project_page`} target="_blank">{project.projectName}</Link>
+      </div>,
     ) : ''),
   },
   {
     name: 'hasNestedGenotypes',
     content: 'Nested Schema?',
+    textAlign: 'center',
     format: row => (
       row.hasNestedGenotypes ? <Icon name="check circle" color="green" /> : <Icon name="remove circle" color="red" />
     ),
@@ -41,18 +44,32 @@ const INDEX_COLUMNS = [
   { name: 'sourceFilePath', content: 'File Path' },
 ]
 
+const MONGO_COLUMNS = [
+  {
+    name: 'projectGuid',
+    content: 'Project(s)',
+    format: row => (
+      <Link key={row.projectGuid} to={`/project/${row.projectGuid}/project_page`} target="_blank">{row.projectName}</Link>
+    ),
+  },
+  {
+    name: 'sourceFilePaths',
+    content: 'Mongo File Path(s)',
+    format: row => row.sourceFilePaths.map(path => <div key={path}>{path}</div>),
+  },
+]
+
 const ElasticsearchStatus = ({ data, loading, load }) =>
   <DataLoader load={load} content={Object.keys(data).length} loading={loading}>
     <InlineHeader size="small" content="Elasticsearch Host:" /> {data.elasticsearchHost}
 
-    <Header size="medium" content="Disk status:" />
+    <Header size="medium" content="Disk Status:" />
     <SortableTable
       striped
       collapsing
       singleLine
       idField="node"
-      defaultSortColumn="diskPercent"
-      defaultSortDescending
+      defaultSortColumn="node"
       data={data.diskStats}
       columns={DISK_STAT_COLUMNS}
     />
@@ -68,6 +85,17 @@ const ElasticsearchStatus = ({ data, loading, load }) =>
       defaultSortDescending
       data={data.indices}
       columns={INDEX_COLUMNS}
+    />
+
+    <Header size="medium" content="Mongo Projects:" />
+    <SortableTable
+      striped
+      collapsing
+      singleLine
+      idField="projectGuid"
+      defaultSortColumn="projectName"
+      data={data.mongoProjects}
+      columns={MONGO_COLUMNS}
     />
   </DataLoader>
 

@@ -8,7 +8,7 @@ import requests
 from datetime import datetime, timedelta
 from dateutil import relativedelta as rdelta
 from django.contrib.admin.views.decorators import staff_member_required
-from django.db.models import prefetch_related_objects, Q, Prefetch
+from django.db.models import prefetch_related_objects, Q, Prefetch, Max
 from django.utils import timezone
 
 from seqr.utils.es_utils import get_es_client, get_latest_loaded_samples
@@ -50,9 +50,11 @@ def elasticsearch_status(request):
     latest_loaded_samples = get_latest_loaded_samples()
     prefetch_related_objects(latest_loaded_samples, 'individual__family__project')
     seqr_index_projects = defaultdict(set)
+    es_projects = set()
     for sample in latest_loaded_samples:
         for index_name in sample.elasticsearch_index.split(','):
             project = sample.individual.family.project
+            es_projects.add(project)
             if index_name in aliases:
                 for aliased_index_name in aliases[index_name]:
                     seqr_index_projects[aliased_index_name].add(project)
@@ -69,15 +71,33 @@ def elasticsearch_status(request):
         for index_prefix, projects in seqr_index_projects.items():
             if index_name.startswith(index_prefix):
                 projects_for_index += seqr_index_projects.pop(index_prefix)
-        index['projects'] = [{'guid': project.guid, 'name': project.name} for project in projects_for_index]
+        index['projects'] = [{'projectGuid': project.guid, 'projectName': project.name} for project in projects_for_index]
 
     errors = ['{} does not exist and is used by project(s) {}'.format(index, ', '.join([p.name for p in projects]))
               for index, projects in seqr_index_projects.items() if projects]
+
+    # TODO remove once all projects are switched off of mongo
+    all_mongo_samples = Sample.objects.filter(
+        dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
+        sample_status=Sample.SAMPLE_STATUS_LOADED,
+        elasticsearch_index__isnull=True,
+    ).exclude(individual__family__project__in=es_projects).prefetch_related('individual', 'individual__family__project')
+    mongo_sample_individual_max_loaded_date = {
+        agg['individual__guid']: agg['max_loaded_date'] for agg in
+        all_mongo_samples.values('individual__guid').annotate(max_loaded_date=Max('loaded_date'))
+    }
+    mongo_project_samples = defaultdict(set)
+    for s in all_mongo_samples:
+        if s.loaded_date == mongo_sample_individual_max_loaded_date[s.individual.guid]:
+            mongo_project_samples[s.individual.family.project].add(s.dataset_file_path)
+    mongo_projects = [{'projectGuid': project.guid, 'projectName': project.name, 'sourceFilePaths': sample_file_paths}
+                      for project, sample_file_paths in mongo_project_samples.items()]
 
     return create_json_response({
         'indices': indices,
         'diskStats': disk_status,
         'elasticsearchHost': ELASTICSEARCH_SERVER,
+        'mongoProjects': mongo_projects,
         'errors': errors,
     })
 
