@@ -17,7 +17,7 @@ export const getAnvilColumns = createSelector(
     const maxSavedVariants = Math.max(1, ...rawData.map(({ numSavedVariants }) => numSavedVariants))
     return CORE_ANVIL_COLUMNS.concat(
       ...[...Array(maxSavedVariants).keys()].map(i => VARIANT_ANVIL_COLUMNS.map((col) => {
-        const colName = `${col} - ${i + 1}`
+        const colName = `${col}-${i + 1}`
         return {
           name: colName,
           content: colName,

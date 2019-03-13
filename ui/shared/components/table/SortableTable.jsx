@@ -208,7 +208,7 @@ class SortableTable extends React.PureComponent {
               {selectRows &&
                 <Table.HeaderCell width={1} content={<Checkbox checked={this.allSelected()} indeterminate={this.someSelected()} onClick={this.selectAll} />} />
               }
-              {processedColumns.map(({ name, format, ...columnProps }) =>
+              {processedColumns.map(({ name, format, noFormatExport, ...columnProps }) =>
                 <Table.HeaderCell
                   key={name}
                   sorted={column === name ? direction : null}

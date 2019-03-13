@@ -138,7 +138,7 @@ def anvil_export(request, project_guid):
 
     gene_ids = set()
     for row in rows:
-        row['Project ID'] = projects_by_guid[row['projectGuid']].name
+        row['Project_ID'] = projects_by_guid[row['projectGuid']].name
 
         saved_variants = saved_variants_by_family[row['familyGuid']]
         row['numSavedVariants'] = len(saved_variants)
@@ -158,7 +158,7 @@ def anvil_export(request, project_guid):
                     'Transcript': variant['mainTranscript']['transcriptId'],
                     'geneId': gene_id,
                 }
-                row.update({'{} - {}'.format(k, i + 1): v for k, v in variant_fields.items()})
+                row.update({'{}-{}'.format(k, i + 1): v for k, v in variant_fields.items()})
 
     genes_by_id = get_genes(gene_ids)
     for row in rows:
