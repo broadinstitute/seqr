@@ -10,11 +10,12 @@ import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 
 import Anvil from './components/Anvil'
 import DiscoverySheet from './components/DiscoverySheet'
+import ElasticsearchStatus from './components/ElasticsearchStatus'
 
 const STAFF_PAGES = [
-  { path: 'anvil', params: ':projectGuid?', component: Anvil },
-  { path: 'discovery_sheet', params: ':projectGuid?', component: DiscoverySheet },
-  { path: 'elasticsearch_status' },
+  { path: 'anvil', params: '/:projectGuid?', component: Anvil },
+  { path: 'discovery_sheet', params: '/:projectGuid?', component: DiscoverySheet },
+  { path: 'elasticsearch_status', component: ElasticsearchStatus },
   { path: 'komp_export' },
   { path: 'seqr_stats' },
 ]
@@ -39,7 +40,7 @@ const Staff = ({ match, user }) => (
       <VerticalSpacer height={20} />
       <Switch>
         {STAFF_PAGES.filter(({ component }) => component).map(({ path, params, component }) =>
-          <Route key={path} path={`${match.url}/${path}/${params}`} component={component} />,
+          <Route key={path} path={`${match.url}/${path}${params || ''}`} component={component} />,
         )}
         <Route path={match.url} component={null} />
         <Route component={() => <Error404 />} />
