@@ -2,7 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 
 import HorizontalStackedBar from '../graph/HorizontalStackedBar'
-import { EXCLUDED_TAG_NAME, REVIEW_TAG_NAME } from '../../utils/constants'
+import { EXCLUDED_TAG_NAME, REVIEW_TAG_NAME, NOTE_TAG_NAME } from '../../utils/constants'
 
 
 export const getVariantTagTypeCount = (vtt, familyGuids) => (
@@ -30,7 +30,7 @@ const VariantTagTypeBar = ({ project, familyGuid, analysisGroup, sectionLinks = 
     linkPath={getSavedVariantsLinkPath({ project, analysisGroup, familyGuid })}
     sectionLinks={sectionLinks}
     data={(project.variantTagTypes || []).filter(
-      vtt => !(hideExcluded && vtt.name === EXCLUDED_TAG_NAME) && !(hideReviewOnly && vtt.name === REVIEW_TAG_NAME),
+      vtt => vtt.name !== NOTE_TAG_NAME && !(hideExcluded && vtt.name === EXCLUDED_TAG_NAME) && !(hideReviewOnly && vtt.name === REVIEW_TAG_NAME),
     ).map((vtt) => {
       return { count: getVariantTagTypeCount(vtt, familyGuid ? [familyGuid] : (analysisGroup || {}).familyGuids), ...vtt }
     })}
