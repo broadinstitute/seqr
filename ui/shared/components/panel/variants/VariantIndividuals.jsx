@@ -11,6 +11,26 @@ import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
 import PhenotipsDataPanel, { hasPhenotipsDetails } from '../PhenotipsDataPanel'
 
 
+const IndividualsContainer = styled.div`
+  display: inline-block;
+  padding: 0 10px;
+  border-left: 1px solid grey;
+  border-right: .5px solid grey;
+  margin-left: -1px;
+  margin-bottom: 5px;
+  
+  &:first-child {
+    padding-left 0;
+    margin-left: 0;
+    border-left: none;
+  }
+  
+  &:last-child {
+    border-right: none;
+  }
+  
+`
+
 const IndividualCell = styled.div`
   display: inline-block;
   vertical-align: top;
@@ -154,7 +174,7 @@ const VariantIndividuals = ({ variant, familyGuid, individualsByGuid }) => {
   const individuals = Object.values(individualsByGuid).filter(individual => individual.familyGuid === familyGuid)
   individuals.sort((a, b) => a.affected.localeCompare(b.affected))
   return (
-    <span>
+    <IndividualsContainer>
       {individuals.map(individual =>
         <IndividualCell key={individual.individualGuid}>
           <PedigreeIcon
@@ -176,7 +196,7 @@ const VariantIndividuals = ({ variant, familyGuid, individualsByGuid }) => {
         </IndividualCell>,
       )}
       <ShowReadsButton familyGuid={familyGuid} variant={variant} />
-    </span>
+    </IndividualsContainer>
   )
 }
 
