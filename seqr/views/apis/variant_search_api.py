@@ -4,6 +4,7 @@ from collections import defaultdict
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.views.decorators.csrf import csrf_exempt
+from elasticsearch.exceptions import ConnectionTimeout
 
 from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults
 from seqr.utils.es_utils import get_es_variants, get_single_es_variant, InvalidIndexException, XPOS_SORT_KEY, \
@@ -82,6 +83,8 @@ def query_variants_handler(request, search_hash):
         variants = get_es_variants(results_model, page=page, num_results=per_page)
     except InvalidIndexException as e:
         return create_json_response({}, status=400, reason=e.message)
+    except ConnectionTimeout as e:
+        return create_json_response({}, status=504, reason='Query Time Out')
 
     response = _process_variants(variants, results_model.families)
     response['search'] = _get_search_context(results_model)
