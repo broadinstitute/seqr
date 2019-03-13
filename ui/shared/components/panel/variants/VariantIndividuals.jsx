@@ -2,7 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { connect } from 'react-redux'
-import { Popup, Label, Icon } from 'semantic-ui-react'
+import { Popup, Label } from 'semantic-ui-react'
 
 import { getIndividualsByGuid } from 'redux/selectors'
 import ShowReadsButton from '../../buttons/ShowReadsButton'
@@ -62,7 +62,6 @@ const Alleles = ({ numAlt, variant, individual }) => {
   const isHemi = isHemiVariant(variant, individual)
   return (
     <AlleleContainer>
-      {(isHemi && numAlt === 2) ? <Popup content="WARNING: Homozygous Male" trigger={<Icon name="warning sign" color="red" />} /> : null}
       <Allele isAlt={numAlt > (isHemi ? 0 : 1)} variant={variant} />/{isHemi ? '-' : <Allele isAlt={numAlt > 0} variant={variant} />}
     </AlleleContainer>
   )
