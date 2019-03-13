@@ -182,18 +182,23 @@ class InvalidIndexException(Exception):
     pass
 
 
-def _get_es_search_for_families(families, elasticsearch_index=None):
+def get_latest_loaded_samples(families=None):
     all_samples = Sample.objects.filter(
-        individual__family__in=families,
         dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
         sample_status=Sample.SAMPLE_STATUS_LOADED,
         elasticsearch_index__isnull=False,
     ).prefetch_related('individual', 'individual__family')
+    if families:
+        all_samples = all_samples.filter(individual__family__in=families,)
     sample_individual_max_loaded_date = {
         agg['individual__guid']: agg['max_loaded_date'] for agg in
         all_samples.values('individual__guid').annotate(max_loaded_date=Max('loaded_date'))
     }
-    samples = [s for s in all_samples if s.loaded_date == sample_individual_max_loaded_date[s.individual.guid]]
+    return [s for s in all_samples if s.loaded_date == sample_individual_max_loaded_date[s.individual.guid]]
+
+
+def _get_es_search_for_families(families, elasticsearch_index=None):
+    samples = get_latest_loaded_samples(families)
 
     if not elasticsearch_index:
         es_indices = {s.elasticsearch_index for s in samples}

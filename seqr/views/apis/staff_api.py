@@ -1,4 +1,5 @@
 from collections import defaultdict
+from elasticsearch_dsl import Index
 import json
 import logging
 import re
@@ -7,21 +8,98 @@ import requests
 from datetime import datetime, timedelta
 from dateutil import relativedelta as rdelta
 from django.contrib.admin.views.decorators import staff_member_required
-from django.db.models import prefetch_related_objects, Q, Prefetch
+from django.db.models import prefetch_related_objects, Q, Prefetch, Max
 from django.utils import timezone
 
+from seqr.utils.es_utils import get_es_client, get_latest_loaded_samples
 from seqr.utils.gene_utils import get_genes
 from seqr.utils.xpos_utils import get_chrom_pos
 
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
-from seqr.views.utils.json_utils import create_json_response
+from seqr.views.utils.json_utils import create_json_response, _to_camel_case
 from seqr.views.utils.orm_to_json_utils import _get_json_for_individuals, get_json_for_saved_variants
 from seqr.views.utils.variant_utils import variant_details
 from seqr.models import Project, Family, VariantTag, VariantTagType, Sample, SavedVariant, Individual, ProjectCategory
 
-from settings import SEQR_ID_TO_MME_ID_MAP
+from settings import SEQR_ID_TO_MME_ID_MAP, ELASTICSEARCH_SERVER
 
 logger = logging.getLogger(__name__)
+
+
+@staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
+def elasticsearch_status(request):
+    client = get_es_client()
+
+    disk_fields = ['node', 'disk.avail', 'disk.used', 'disk.percent']
+    disk_status = [{
+        _to_camel_case(field.replace('.', '_')): disk[field] for field in disk_fields
+    } for disk in client.cat.allocation(format="json", h=','.join(disk_fields))]
+
+    index_fields = ['index', 'docs.count', 'store.size', 'creation.date.string']
+    indices = [{
+        _to_camel_case(field.replace('.', '_')): index[field] for field in index_fields
+    } for index in client.cat.indices(format="json", h=','.join(index_fields))
+        if index['index'] not in ['.kibana', 'index_operations_log']]
+
+    aliases = defaultdict(list)
+    for alias in client.cat.aliases(format="json", h='alias,index'):
+        aliases[alias['alias']].append(alias['index'])
+
+    mappings = Index('_all', using=client).get_mapping(doc_type='variant')
+
+    latest_loaded_samples = get_latest_loaded_samples()
+    prefetch_related_objects(latest_loaded_samples, 'individual__family__project')
+    seqr_index_projects = defaultdict(set)
+    es_projects = set()
+    for sample in latest_loaded_samples:
+        for index_name in sample.elasticsearch_index.split(','):
+            project = sample.individual.family.project
+            es_projects.add(project)
+            if index_name in aliases:
+                for aliased_index_name in aliases[index_name]:
+                    seqr_index_projects[aliased_index_name].add(project)
+            else:
+                seqr_index_projects[index_name.rstrip('*')].add(project)
+
+    for index in indices:
+        index_name = index['index']
+        index_mapping = mappings[index_name]['mappings']['variant']
+        index.update(index_mapping.get('_meta', {}))
+        index['hasNestedGenotypes'] = 'samples_num_alt_1' in index_mapping['properties']
+
+        projects_for_index = []
+        for index_prefix, projects in seqr_index_projects.items():
+            if index_name.startswith(index_prefix):
+                projects_for_index += seqr_index_projects.pop(index_prefix)
+        index['projects'] = [{'projectGuid': project.guid, 'projectName': project.name} for project in projects_for_index]
+
+    errors = ['{} does not exist and is used by project(s) {}'.format(index, ', '.join([p.name for p in projects]))
+              for index, projects in seqr_index_projects.items() if projects]
+
+    # TODO remove once all projects are switched off of mongo
+    all_mongo_samples = Sample.objects.filter(
+        dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
+        sample_status=Sample.SAMPLE_STATUS_LOADED,
+        elasticsearch_index__isnull=True,
+    ).exclude(individual__family__project__in=es_projects).prefetch_related('individual', 'individual__family__project')
+    mongo_sample_individual_max_loaded_date = {
+        agg['individual__guid']: agg['max_loaded_date'] for agg in
+        all_mongo_samples.values('individual__guid').annotate(max_loaded_date=Max('loaded_date'))
+    }
+    mongo_project_samples = defaultdict(set)
+    for s in all_mongo_samples:
+        if s.loaded_date == mongo_sample_individual_max_loaded_date[s.individual.guid]:
+            mongo_project_samples[s.individual.family.project].add(s.dataset_file_path)
+    mongo_projects = [{'projectGuid': project.guid, 'projectName': project.name, 'sourceFilePaths': sample_file_paths}
+                      for project, sample_file_paths in mongo_project_samples.items()]
+
+    return create_json_response({
+        'indices': indices,
+        'diskStats': disk_status,
+        'elasticsearchHost': ELASTICSEARCH_SERVER,
+        'mongoProjects': mongo_projects,
+        'errors': errors,
+    })
 
 
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -122,7 +200,6 @@ def _get_saved_variants_by_family(projects, user):
             saved_variants_by_family[family_guid].append(variant)
 
     return saved_variants_by_family
-
 
 
 # HPO categories are direct children of HP:0000118 "Phenotypic abnormality".
@@ -640,6 +717,3 @@ def _update_initial_omim_numbers(rows):
     for row in rows:
         if omim_number_map.get(row['omim_number_initial']):
             row['omim_number_initial'] = omim_number_map[row['omim_number_initial']]
-
-
-
