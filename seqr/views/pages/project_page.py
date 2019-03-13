@@ -13,7 +13,7 @@ from django.db import connection
 from django.db.models import Q, Count
 
 from settings import SEQR_ID_TO_MME_ID_MAP
-from seqr.models import Family, Individual, _slugify, VariantTagType, VariantTag, VariantFunctionalData, AnalysisGroup
+from seqr.models import Family, Individual, _slugify, VariantTagType, VariantTag, VariantFunctionalData, VariantNote, AnalysisGroup
 from seqr.utils.es_utils import is_nested_genotype_index
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.individual_api import export_individuals
@@ -235,7 +235,8 @@ def _get_json_for_variant_tag_types(project, user, individuals_by_guid):
     }
 
     tag_counts_by_type_and_family = VariantTag.objects.filter(saved_variant__project=project).values('saved_variant__family__guid', 'variant_tag_type__name').annotate(count=Count('*'))
-    project_variant_tags = get_project_variant_tag_types(project, tag_counts_by_type_and_family=tag_counts_by_type_and_family)
+    note_counts_by_family = VariantNote.objects.filter(saved_variant__project=project).values('saved_variant__family__guid').annotate(count=Count('*'))
+    project_variant_tags = get_project_variant_tag_types(project, tag_counts_by_type_and_family=tag_counts_by_type_and_family, note_counts_by_family=note_counts_by_family)
     discovery_tags = []
     for tag_type in project_variant_tags:
         if tag_type['category'] == 'CMG Discovery Tags' and tag_type['numTags'] > 0:
@@ -261,8 +262,24 @@ def _get_json_for_variant_tag_types(project, user, individuals_by_guid):
     }
 
 
-def get_project_variant_tag_types(project, tag_counts_by_type_and_family=None):
-    project_variant_tags = []
+def get_project_variant_tag_types(project, tag_counts_by_type_and_family=None, note_counts_by_family=None):
+    note_tag_type = {
+        'variantTagTypeGuid': 'notes',
+        'name': 'Has Notes',
+        'category': 'Notes',
+        'description': '',
+        'color': 'grey',
+        'order': 100,
+        'is_built_in': True,
+    }
+    if note_counts_by_family is not None:
+        num_tags = sum(count['count'] for count in note_counts_by_family)
+        note_tag_type.update({
+            'numTags': num_tags,
+            'numTagsPerFamily': {count['saved_variant__family__guid']: count['count'] for count in
+                                 note_counts_by_family},
+        })
+    project_variant_tags = [note_tag_type]
     for variant_tag_type in VariantTagType.objects.filter(Q(project=project) | Q(project__isnull=True)):
         tag_type = {
             'variantTagTypeGuid': variant_tag_type.guid,

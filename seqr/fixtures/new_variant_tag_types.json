@@ -1,0 +1,36 @@
+[
+{
+    "model": "seqr.varianttagtype",
+    "pk": null,
+    "fields": {
+        "guid": "VTT_tier_1_known_gene_new_phen",
+        "created_date": "2018-04-27T00:00:00.000Z",
+        "created_by": null,
+        "last_modified_date": null,
+        "project": null,
+        "name": "Tier 1 - Known gene, new phenotype",
+        "category": "CMG Discovery Tags",
+        "description": "Gene is previously associated, in OMIM, with a different phenotype",
+        "color": "#7fad7f",
+        "order": 5.5,
+        "is_built_in": true
+    }
+},
+{
+    "model": "seqr.varianttagtype",
+    "pk": null,
+    "fields": {
+        "guid": "VTT_tier_2_known_gene_new_phen",
+        "created_date": "2018-04-27T00:00:00.000Z",
+        "created_by": null,
+        "last_modified_date": null,
+        "project": null,
+        "name": "Tier 2 - Known gene, new phenotype",
+        "category": "CMG Discovery Tags",
+        "description": "Gene is previously associated, in OMIM, with a different phenotype",
+        "color": "#4f8dbdd6",
+        "order": 9.5,
+        "is_built_in": true
+    }
+}
+]

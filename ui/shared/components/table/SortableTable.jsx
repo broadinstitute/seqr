@@ -48,6 +48,7 @@ class SortableTable extends React.PureComponent {
     columns: PropTypes.array,
     idField: PropTypes.string.isRequired,
     defaultSortColumn: PropTypes.string,
+    defaultSortDescending: PropTypes.bool,
     filterColumn: PropTypes.string,
     selectRows: PropTypes.func,
     selectedRows: PropTypes.object,
@@ -70,7 +71,7 @@ class SortableTable extends React.PureComponent {
 
     this.state = {
       column: props.defaultSortColumn,
-      direction: 'ascending',
+      direction: props.defaultSortDescending ? DESCENDING : ASCENDING,
       activePage: 1,
       filter: null,
     }
@@ -122,8 +123,9 @@ class SortableTable extends React.PureComponent {
 
   render() {
     const {
-      data, defaultSortColumn, filterColumn, idField, columns, selectRows, selectedRows = {}, loading, emptyContent,
-      footer, rowsPerPage, horizontalScroll, downloadFileName, downloadTableType, loadingProps = {}, ...tableProps
+      data, defaultSortColumn, defaultSortDescending, filterColumn, idField, columns, selectRows, selectedRows = {},
+      loading, emptyContent, footer, rowsPerPage, horizontalScroll, downloadFileName, downloadTableType,
+      loadingProps = {}, ...tableProps
     } = this.props
     const { column, direction, activePage, filter } = this.state
 
@@ -206,7 +208,7 @@ class SortableTable extends React.PureComponent {
               {selectRows &&
                 <Table.HeaderCell width={1} content={<Checkbox checked={this.allSelected()} indeterminate={this.someSelected()} onClick={this.selectAll} />} />
               }
-              {processedColumns.map(({ name, format, ...columnProps }) =>
+              {processedColumns.map(({ name, format, noFormatExport, ...columnProps }) =>
                 <Table.HeaderCell
                   key={name}
                   sorted={column === name ? direction : null}

@@ -5,7 +5,7 @@ import { ButtonLink } from '../StyledComponents'
 import ReduxFormWrapper from '../form/ReduxFormWrapper'
 import Modal from '../modal/Modal'
 
-const UpdateButton = ({ onSubmit, initialValues, formFields, modalTitle, modalId, buttonText, editIconName, size, modalSize, showErrorPanel, disabled, formContainer = <div /> }) =>
+const UpdateButton = ({ onSubmit, initialValues, formFields, modalTitle, modalId, buttonText, editIconName, size, modalSize, showErrorPanel, disabled, confirmDialog, formContainer = <div /> }) =>
   <Modal
     title={modalTitle}
     modalName={modalId}
@@ -27,6 +27,7 @@ const UpdateButton = ({ onSubmit, initialValues, formFields, modalTitle, modalId
         initialValues={initialValues}
         fields={formFields}
         showErrorPanel={showErrorPanel}
+        confirmDialog={confirmDialog}
         confirmCloseIfNotSaved
       />
     ) }) }
@@ -45,6 +46,7 @@ UpdateButton.propTypes = {
   disabled: PropTypes.bool,
   size: PropTypes.string,
   modalSize: PropTypes.string,
+  confirmDialog: PropTypes.string,
 }
 
 export default UpdateButton

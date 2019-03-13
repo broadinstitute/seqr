@@ -14,6 +14,7 @@ import {
 } from 'redux/selectors'
 import {
   DISCOVERY_CATEGORY_NAME,
+  NOTE_TAG_NAME,
   FAMILY_FIELD_DESCRIPTION,
   FAMILY_FIELD_ANALYSIS_STATUS,
   FAMILY_FIELD_ANALYSIS_NOTES,
@@ -229,7 +230,7 @@ const FamilyVariantTags = ({ variant, family, project, dispatchUpdateVariantNote
             fieldName="Tags"
             family={family}
             variant={variant}
-            tagOptions={project.variantTagTypes}
+            tagOptions={project.variantTagTypes.filter(vtt => vtt.name !== NOTE_TAG_NAME)}
             onSubmit={dispatchUpdateFamilyVariantTags}
           />
           <HorizontalSpacer width={5} />

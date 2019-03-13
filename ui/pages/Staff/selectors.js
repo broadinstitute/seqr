@@ -8,6 +8,8 @@ export const getAnvilRows = state => state.anvilRows
 export const getDiscoverySheetLoading = state => state.discoverySheetLoading.isLoading
 export const getDiscoverySheetLoadingError = state => state.discoverySheetLoading.errorMessage
 export const getDiscoverySheetRows = state => state.discoverySheetRows
+export const getElasticsearchStatusLoading = state => state.elasticsearchStatusLoading.isLoading
+export const getElasticsearchStatusData = state => state.elasticsearchStatus
 
 export const getAnvilColumns = createSelector(
   getAnvilRows,
@@ -15,7 +17,7 @@ export const getAnvilColumns = createSelector(
     const maxSavedVariants = Math.max(1, ...rawData.map(({ numSavedVariants }) => numSavedVariants))
     return CORE_ANVIL_COLUMNS.concat(
       ...[...Array(maxSavedVariants).keys()].map(i => VARIANT_ANVIL_COLUMNS.map((col) => {
-        const colName = `${col} - ${i + 1}`
+        const colName = `${col}-${i + 1}`
         return {
           name: colName,
           content: colName,

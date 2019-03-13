@@ -182,18 +182,23 @@ class InvalidIndexException(Exception):
     pass
 
 
-def _get_es_search_for_families(families, elasticsearch_index=None):
+def get_latest_loaded_samples(families=None):
     all_samples = Sample.objects.filter(
-        individual__family__in=families,
         dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
         sample_status=Sample.SAMPLE_STATUS_LOADED,
         elasticsearch_index__isnull=False,
     ).prefetch_related('individual', 'individual__family')
+    if families:
+        all_samples = all_samples.filter(individual__family__in=families,)
     sample_individual_max_loaded_date = {
         agg['individual__guid']: agg['max_loaded_date'] for agg in
         all_samples.values('individual__guid').annotate(max_loaded_date=Max('loaded_date'))
     }
-    samples = [s for s in all_samples if s.loaded_date == sample_individual_max_loaded_date[s.individual.guid]]
+    return [s for s in all_samples if s.loaded_date == sample_individual_max_loaded_date[s.individual.guid]]
+
+
+def _get_es_search_for_families(families, elasticsearch_index=None):
+    samples = get_latest_loaded_samples(families)
 
     if not elasticsearch_index:
         es_indices = {s.elasticsearch_index for s in samples}
@@ -315,14 +320,16 @@ def _genotype_filter(inheritance, family_samples_by_id, quality_filter=None):
 
         # Filter samples by inheritance
         if inheritance:
-            family_samples_q = _genotype_inheritance_filter(inheritance_mode, inheritance_filter, samples_by_id)
+            family_samples_q, inheritance_mode = _genotype_inheritance_filter(
+                inheritance_mode, inheritance_filter, samples_by_id
+            )
 
             # For recessive search, should be hom recessive, x-linked recessive, or compound het
             if inheritance_mode == RECESSIVE:
-                x_linked_q = _genotype_inheritance_filter(X_LINKED_RECESSIVE, inheritance_filter, samples_by_id)
+                x_linked_q, _ = _genotype_inheritance_filter(X_LINKED_RECESSIVE, inheritance_filter, samples_by_id)
                 family_samples_q |= x_linked_q
 
-                family_compound_het_q = _genotype_inheritance_filter(COMPOUND_HET, inheritance_filter, samples_by_id)
+                family_compound_het_q, _ = _genotype_inheritance_filter(COMPOUND_HET, inheritance_filter, samples_by_id)
                 sample_queries = [family_compound_het_q]
                 if quality_q:
                     sample_queries.append(quality_q)
@@ -372,24 +379,18 @@ def _genotype_inheritance_filter(inheritance_mode, inheritance_filter, samples_b
     if inheritance_mode:
         inheritance_filter.update(INHERITANCE_FILTERS[inheritance_mode])
 
-    parent_x_linked_genotypes = {}
     if inheritance_mode == X_LINKED_RECESSIVE:
         samples_q &= Q('match', contig='X')
         for individual in individuals:
-            if individual_affected_status[individual.guid] == AFFECTED:
-                if individual.mother and individual_affected_status[individual.mother.guid] == UNAFFECTED:
-                    parent_x_linked_genotypes[individual.mother.guid] = REF_ALT
-                if individual.father and individual_affected_status[individual.father.guid] == UNAFFECTED:
-                    parent_x_linked_genotypes[individual.mother.guid] = REF_REF
+            if individual_affected_status[individual.guid] == UNAFFECTED and individual.sex == Individual.SEX_MALE:
+                individual_genotype_filter[individual.guid] = REF_REF
 
     for sample_id, sample in samples_by_id.items():
 
         individual_guid = sample.individual.guid
         affected = individual_affected_status[individual_guid]
 
-        genotype = individual_genotype_filter.get(individual_guid) \
-                   or parent_x_linked_genotypes.get(individual_guid) \
-                   or inheritance_filter.get(affected)
+        genotype = individual_genotype_filter.get(individual_guid) or inheritance_filter.get(affected)
 
         if genotype:
             not_allowed_num_alt = GENOTYPE_QUERY_MAP[genotype].get('not_allowed_num_alt')
@@ -402,7 +403,7 @@ def _genotype_inheritance_filter(inheritance_mode, inheritance_filter, samples_b
 
             samples_q &= sample_q
 
-    return samples_q
+    return samples_q, inheritance_mode
 
 
 def _location_filter(genes, intervals, location_filter):

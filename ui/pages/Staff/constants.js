@@ -15,7 +15,7 @@ import {
   INDIVIDUAL_FIELD_AFFECTED,
 } from 'shared/utils/constants'
 
-const PROJECT_ID_FIELD = 'Project ID'
+const PROJECT_ID_FIELD = 'Project_ID'
 
 const FORMAT_FIELDS = {
   [PROJECT_ID_FIELD]: row =>
@@ -38,13 +38,18 @@ const INDIVIDUAL_COLUMNS = [
   const { label, format } = INDIVIDUAL_FIELD_CONFIGS[field]
   return {
     name: field,
-    content: label,
+    content: label.replace(' ', '_'),
     format: format ? row => format(row[field]) : null,
   }
 })
 
 const HPO_COLUMNS = INDIVIDUAL_HPO_EXPORT_DATA.map(({ field, header, format }) => (
-  { name: header, content: header, format: row => format(row[field]), style: { minWidth: '400px' } }
+  {
+    name: header,
+    content: header.replace(/[()]/g, '').split(' ').map(word => word[0].toUpperCase() + word.slice(1)).join('_'),
+    format: row => format(row[field]),
+    style: { minWidth: '400px' },
+  }
 ))
 
 export const CORE_ANVIL_COLUMNS = [

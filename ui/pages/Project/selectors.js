@@ -4,6 +4,7 @@ import { createSelector } from 'reselect'
 import { getSearchResults } from 'redux/utils/reduxSearchEnhancer'
 import {
   FAMILY_ANALYSIS_STATUS_OPTIONS,
+  NOTE_TAG_NAME,
   EXCLUDED_TAG_NAME,
   REVIEW_TAG_NAME,
   KNOWN_GENE_FOR_PHENOTYPE_TAG_NAME,
@@ -123,7 +124,11 @@ export const getProjectSavedVariants = createSelector(
       variants = variants.filter(o => o.familyGuids.includes(familyGuid))
     }
     if (tag) {
-      variants = variants.filter(o => o.tags.some(t => t.name === tag))
+      if (tag === NOTE_TAG_NAME) {
+        variants = variants.filter(o => o.notes.length)
+      } else {
+        variants = variants.filter(o => o.tags.some(t => t.name === tag))
+      }
     }
     return variants
   },
