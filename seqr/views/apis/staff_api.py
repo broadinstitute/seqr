@@ -49,7 +49,7 @@ def elasticsearch_status(request):
 
     latest_loaded_samples = get_latest_loaded_samples()
     prefetch_related_objects(latest_loaded_samples, 'individual__family__project')
-    seqr_index_projects = defaultdict(set)
+    seqr_index_projects = defaultdict(lambda: defaultdict(set))
     es_projects = set()
     for sample in latest_loaded_samples:
         for index_name in sample.elasticsearch_index.split(','):
@@ -57,9 +57,9 @@ def elasticsearch_status(request):
             es_projects.add(project)
             if index_name in aliases:
                 for aliased_index_name in aliases[index_name]:
-                    seqr_index_projects[aliased_index_name].add(project)
+                    seqr_index_projects[aliased_index_name][project].add(sample.individual.guid)
             else:
-                seqr_index_projects[index_name.rstrip('*')].add(project)
+                seqr_index_projects[index_name.rstrip('*')][project].add(sample.individual.guid)
 
     for index in indices:
         index_name = index['index']
@@ -68,13 +68,14 @@ def elasticsearch_status(request):
         index['hasNestedGenotypes'] = 'samples_num_alt_1' in index_mapping['properties']
 
         projects_for_index = []
-        for index_prefix, projects in seqr_index_projects.items():
+        for index_prefix in seqr_index_projects.keys():
             if index_name.startswith(index_prefix):
-                projects_for_index += seqr_index_projects.pop(index_prefix)
+                projects_for_index += seqr_index_projects.pop(index_prefix).keys()
         index['projects'] = [{'projectGuid': project.guid, 'projectName': project.name} for project in projects_for_index]
 
-    errors = ['{} does not exist and is used by project(s) {}'.format(index, ', '.join([p.name for p in projects]))
-              for index, projects in seqr_index_projects.items() if projects]
+    errors = ['{} does not exist and is used by project(s) {}'.format(
+        index, ', '.join(['{} ({} samples)'.format(p.name, len(indivs)) for p, indivs in project_individuals.items()])
+    ) for index, project_individuals in seqr_index_projects.items() if project_individuals]
 
     # TODO remove once all projects are switched off of mongo
     all_mongo_samples = Sample.objects.filter(
