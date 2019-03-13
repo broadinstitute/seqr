@@ -32,6 +32,8 @@ const EXT_CONFIG = {
   },
 }
 
+const escapeExportItem = item => (item.replace ? item.replace(/"/g, '\'\'') : item)
+
 export const FileLink = ({ url, data, ext, linkContent }) => {
   const extConfig = EXT_CONFIG[ext]
   if (!linkContent) {
@@ -41,7 +43,7 @@ export const FileLink = ({ url, data, ext, linkContent }) => {
 
   if (data) {
     let content = data.rawData.map(row => data.processRow(row).map(
-      item => `"${(item === null || item === undefined) ? '' : item}"`.replace(/\n/g, ' '),
+      item => `"${(item === null || item === undefined) ? '' : escapeExportItem(item)}"`,
     ).join(extConfig.delimiter)).join('\n')
     if (data.headers) {
       content = `${data.headers.join(extConfig.delimiter)}\n${content}`
