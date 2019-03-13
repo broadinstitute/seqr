@@ -225,7 +225,18 @@ def _execute_search(es_search, family_samples_by_id, start_index=0, end_index=10
 
     logger.debug(json.dumps(es_search.to_dict(), indent=2))
 
-    response = es_search.execute()
+    try:
+        response = es_search.execute()
+    except elasticsearch.exceptions.ConnectionTimeout as e:
+        search_tasks = es_search._using.tasks.list(actions='*search', group_by='parents')
+        canceled = 0
+        for parent_id, task in search_tasks['tasks'].items():
+            if task['running_time_in_nanos'] > 10 ** 11:
+                canceled += 1
+                es_search._using.tasks.cancel(parent_task_id=parent_id)
+        logger.error('ES Query Timeout. Canceled {} long running searches'.format(canceled))
+        raise e
+
     total_results = response.hits.total
     logger.info('Total hits: {} ({} seconds)'.format(total_results, response.took / 1000.0))
 
