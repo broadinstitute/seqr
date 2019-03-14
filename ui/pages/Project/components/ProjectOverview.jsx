@@ -57,7 +57,7 @@ const ProjectOverview = ({ project, familiesByGuid, individualsByGuid, samplesBy
   const loadedProjectSamples = Object.values(samplesByGuid).filter(sample =>
     sample.datasetType === DATASET_TYPE_VARIANT_CALLS && sample.sampleStatus === SAMPLE_STATUS_LOADED,
   ).reduce((acc, sample) => {
-    const loadedDate = new Date(sample.loadedDate).toLocaleDateString()
+    const loadedDate = sample.loadedDate.split('T')[0]
     const currentTypeSamplesByDate = acc[sample.sampleType] || {}
     return { ...acc, [sample.sampleType]: { ...currentTypeSamplesByDate, [loadedDate]: (currentTypeSamplesByDate[loadedDate] || 0) + 1 } }
   }, {})
@@ -85,7 +85,7 @@ const ProjectOverview = ({ project, familiesByGuid, individualsByGuid, samplesBy
               content={
                 Object.keys(loadedProjectSamples[sampleType]).sort().map(loadedDate =>
                   <div key={loadedDate}>
-                    {loadedDate} - {loadedProjectSamples[sampleType][loadedDate]} samples
+                    { new Date(loadedDate).toLocaleDateString()} - {loadedProjectSamples[sampleType][loadedDate]} samples
                   </div>,
                 )
               }
