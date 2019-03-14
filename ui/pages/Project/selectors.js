@@ -28,6 +28,7 @@ import {
   FAMILY_SORT_OPTIONS,
   FAMILY_EXPORT_DATA,
   INTERNAL_FAMILY_EXPORT_DATA,
+  INDIVIDUAL_HAS_DATA_FIELD,
   INDIVIDUAL_EXPORT_DATA,
   INTERNAL_INDIVIDUAL_EXPORT_DATA,
   SAMPLE_EXPORT_DATA,
@@ -278,9 +279,15 @@ export const getVisibleSortedFamiliesWithIndividuals = createSelector(
     const getIndivSortKey = individual => AFFECTED_STATUS_ORDER[individual.affected] || 0
 
     return visibleFamilies.map((family) => {
-      const familyIndividuals = orderBy(family.individualGuids.map(individualGuid => individualsByGuid[individualGuid]), [getIndivSortKey])
-
       const familySamples = familySamplesLoaded(family, individualsByGuid, samplesByGuid)
+
+      const familyIndividuals = orderBy(
+        family.individualGuids.map(individualGuid => ({
+          [INDIVIDUAL_HAS_DATA_FIELD]: familySamples.some(sample => sample.individualGuid === individualGuid),
+          ...individualsByGuid[individualGuid],
+        })),
+        [getIndivSortKey],
+      )
 
       return Object.assign(family, {
         individuals: familyIndividuals,
@@ -291,7 +298,7 @@ export const getVisibleSortedFamiliesWithIndividuals = createSelector(
 )
 
 export const getVisibleSortedIndividuals = createSelector(
-  getVisibleFamiliesInSortedOrder,
+  getVisibleSortedFamiliesWithIndividuals,
   families => families.reduce((acc, family) =>
     [...acc, ...family.individuals.map(individual => ({ ...individual, familyId: family.familyId }))], [],
   ),
