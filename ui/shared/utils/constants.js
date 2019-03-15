@@ -577,6 +577,9 @@ const SORT_BY_CONSTRAINT = 'CONSTRAINT'
 const SORT_BY_CADD = 'CADD'
 const SORT_BY_REVEL = 'REVEL'
 const SORT_BY_SPLICE_AI = 'SPLICE_AI'
+const SORT_BY_EIGEN = 'EIGEN'
+const SORT_BY_MPC = 'MPC'
+const SORT_BY_PRIMATE_AI = 'PRIMATE_AI'
 
 
 const clinsigSeverity = (variant, user) => {
@@ -605,7 +608,10 @@ const VARIANT_SORT_OPTONS = [
   { value: SORT_BY_1KG, text: '1kg  Frequency', comparator: (a, b) => a.populations.g1k.af - b.populations.g1k.af },
   { value: SORT_BY_CADD, text: 'Cadd', comparator: (a, b) => b.predictions.cadd - a.predictions.cadd },
   { value: SORT_BY_REVEL, text: 'Revel', comparator: (a, b) => b.predictions.revel - a.predictions.revel },
+  { value: SORT_BY_EIGEN, text: 'Eigen', comparator: (a, b) => b.predictions.eigen - a.predictions.eigen },
+  { value: SORT_BY_MPC, text: 'MPC', comparator: (a, b) => b.predictions.mpc - a.predictions.mpc },
   { value: SORT_BY_SPLICE_AI, text: 'Splice AI', comparator: (a, b) => b.predictions.splice_ai - a.predictions.splice_ai },
+  { value: SORT_BY_PRIMATE_AI, text: 'Primate AI', comparator: (a, b) => b.predictions.primate_ai - a.predictions.primate_ai },
   { value: SORT_BY_PATHOGENICITY, text: 'Pathogenicity', comparator: (a, b, geneId, user) => clinsigSeverity(b, user) - clinsigSeverity(a, user) },
   {
     value: SORT_BY_CONSTRAINT,
