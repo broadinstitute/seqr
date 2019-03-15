@@ -117,19 +117,6 @@ def receive_hpo_table_handler(request, project_guid):
             'warnings': []
         }, status=400, reason='Unable to find any matching individuals')
 
-    info = ['{} individuals will be updated'.format(len(updates_by_individual_guid))]
-    warnings = []
-    if missing_individuals:
-        warnings.append(
-            'Unable to find matching ids for {} individuals. The following entries will not be updated: {}'.format(
-                len(missing_individuals), ', '.join(missing_individuals)
-            ))
-    if unchanged_individuals:
-        warnings.append(
-            'No changes detected for {} individuals. The following entries will not be updated: {}'.format(
-                len(unchanged_individuals), ', '.join(unchanged_individuals)
-            ))
-
     hpo_terms = {hpo.hpo_id: hpo for hpo in HumanPhenotypeOntology.objects.filter(hpo_id__in=all_hpo_terms)}
     invalid_hpo_terms = set()
     for features in updates_by_individual_guid.values():
@@ -141,9 +128,24 @@ def receive_hpo_table_handler(request, project_guid):
             else:
                 invalid_hpo_terms.add(feature['id'])
     if invalid_hpo_terms:
+        return create_json_response({
+            'errors': [
+                "The following HPO terms were not found in seqr's HPO data: {}".format(', '.join(invalid_hpo_terms))
+            ],
+            'warnings': []
+        }, status=400, reason='Invalid HPO terms')
+
+    info = ['{} individuals will be updated'.format(len(updates_by_individual_guid))]
+    warnings = []
+    if missing_individuals:
         warnings.append(
-            "The following HPO terms were not found in seqr's HPO data, and while they will be added they may be incorrect: {}".format(
-                ', '.join(invalid_hpo_terms)
+            'Unable to find matching ids for {} individuals. The following entries will not be updated: {}'.format(
+                len(missing_individuals), ', '.join(missing_individuals)
+            ))
+    if unchanged_individuals:
+        warnings.append(
+            'No changes detected for {} individuals. The following entries will not be updated: {}'.format(
+                len(unchanged_individuals), ', '.join(unchanged_individuals)
             ))
 
     response = {
