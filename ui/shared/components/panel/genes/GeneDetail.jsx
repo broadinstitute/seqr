@@ -142,7 +142,7 @@ const GeneDetailContent = ({ gene, updateGeneNote: dispatchUpdateGeneNote }) => 
   ]
   if (gene.diseaseDesc) {
     associationDetails.push({
-      title: 'Details',
+      title: 'dbNSFP Details',
       content: textWithLinks(gene.diseaseDesc),
     })
   }
