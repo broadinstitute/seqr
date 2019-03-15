@@ -293,11 +293,12 @@ DEFAULT_ROW.update({hpo_category: 'N' for hpo_category in [
 ]})
 
 ADDITIONAL_KINDREDS_FIELD = "n_unrelated_kindreds_with_causal_variants_in_gene"
+OVERLAPPING_KINDREDS_FIELD = "n_kindreds_overlapping_sv_similar_phenotype"
 FUNCTIONAL_DATA_FIELD_MAP = {
     "Additional Unrelated Kindreds w/ Causal Variants in Gene": ADDITIONAL_KINDREDS_FIELD,
     "Genome-wide Linkage": "genome_wide_linkage",
     "Bonferroni corrected p-value": "p_value",
-    "Kindreds w/ Overlapping SV & Similar Phenotype": "n_kindreds_overlapping_sv_similar_phenotype",
+    "Kindreds w/ Overlapping SV & Similar Phenotype": OVERLAPPING_KINDREDS_FIELD,
     "Biochemical Function": "biochemical_function",
     "Protein Interaction": "protein_interaction",
     "Expression": "expression",
@@ -310,7 +311,7 @@ FUNCTIONAL_DATA_FIELD_MAP = {
 METADATA_FUNCTIONAL_DATA_FIELDS = {
     "genome_wide_linkage",
     "p_value",
-    "n_kindreds_overlapping_sv_similar_phenotype",
+    OVERLAPPING_KINDREDS_FIELD,
     ADDITIONAL_KINDREDS_FIELD,
 }
 
@@ -631,6 +632,7 @@ def _generate_rows(project, loaded_samples_by_project_family, saved_variants_by_
                     row["submitted_to_mme"] = "KPG"
 
             if has_tier1 or has_tier2:
+                # Set defaults
                 for functional_field in FUNCTIONAL_DATA_FIELD_MAP.values():
                     if functional_field == ADDITIONAL_KINDREDS_FIELD:
                         row[functional_field] = "1"
@@ -638,30 +640,34 @@ def _generate_rows(project, loaded_samples_by_project_family, saved_variants_by_
                         row[functional_field] = "NA"
                     else:
                         row[functional_field] = "N"
+                # Set values
+                for variant in variants:
+                    for f in variant.variantfunctionaldata_set.all():
+                        functional_field = FUNCTIONAL_DATA_FIELD_MAP[f.functional_data_tag]
+                        if functional_field in METADATA_FUNCTIONAL_DATA_FIELDS:
+                            value = f.metadata
+                            if functional_field == ADDITIONAL_KINDREDS_FIELD:
+                                value = str(int(value) + 1)
+                            elif functional_field == OVERLAPPING_KINDREDS_FIELD:
+                                existing_val = row[functional_field]
+                                if existing_val != 'NA':
+                                    value = str(max(int(existing_val), int(value)))
+                            elif row[functional_field] != 'NS':
+                                value = '{} {}'.format(row[functional_field], value)
+                        else:
+                            value = 'Y'
+
+                        row[functional_field] = value
             elif has_known_gene_for_phenotype:
                 for functional_field in FUNCTIONAL_DATA_FIELD_MAP.values():
                     row[functional_field] = "KPG"
 
-            variant_tag_list = []
+            row["extras_variant_tag_list"] = []
             for variant in variants:
                 variant_id = "-".join(map(str, list(get_chrom_pos(variant.xpos_start)) + [variant.ref, variant.alt]))
-                variant_tag_list += [(variant_id, gene_id, vt.variant_tag_type.name.lower())
-                                     for vt in variant.discovery_tags]
-
-                for f in variant.variantfunctionaldata_set.all():
-                    functional_field = FUNCTIONAL_DATA_FIELD_MAP[f.functional_data_tag]
-                    if functional_field in METADATA_FUNCTIONAL_DATA_FIELDS:
-                        value = f.metadata
-                        if functional_field == ADDITIONAL_KINDREDS_FIELD:
-                            value = str(int(value) + 1)
-                        elif row[functional_field] != 'NS':
-                            value = '{} {}'.format(row[functional_field], value)
-                    else:
-                        value = 'Y'
-
-                    row[functional_field] = value
-
-            row["extras_variant_tag_list"] = variant_tag_list
+                row["extras_variant_tag_list"] += [
+                    (variant_id, gene_id, vt.variant_tag_type.name.lower()) for vt in variant.discovery_tags
+                ]
 
             rows.append(row)
 
@@ -683,7 +689,7 @@ def _update_gene_symbols(rows):
 
 
 def _update_initial_omim_numbers(rows):
-    omim_numbers = {row['omim_number_initial'] for row in rows if row['omim_number_initial']}
+    omim_numbers = {row['omim_number_initial'] for row in rows if row['omim_number_initial'] and row['omim_number_initial'] != 'NA'}
     omim_number_map = {}
     # OMIM API works for doing this as a single bulk request in theory but they detect us as a craweler and block us
     for omim_number_initial in omim_numbers:
@@ -705,7 +711,7 @@ def _update_initial_omim_numbers(rows):
             # <a href="/phenotypicSeries/PS613280" class="btn btn-info" role="button"> Phenotypic Series </a>
             match = re.search("/phenotypicSeries/([a-zA-Z0-9]+)", omim_page_html)
             if not match:
-                logger.debug("No phenotypic series found for OMIM initial # %s" % omim_number_initial)
+                logger.info("No phenotypic series found for OMIM initial # %s" % omim_number_initial)
             else:
                 phenotypic_series_id = match.group(1)
                 logger.debug("Will replace OMIM initial # %s with phenotypic series %s" % (omim_number_initial, phenotypic_series_id))

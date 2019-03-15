@@ -610,7 +610,10 @@ SORT_FIELDS = {
     '1kg': [{_get_pop_freq_key('g1k', 'AF'): {'missing': '_first'}}],
     'cadd': [{'cadd_PHRED': {'order': 'desc'}}],
     'revel': [{'dbnsfp_REVEL_score': {'order': 'desc'}}],
+    'eigen': [{'eigen_Eigen_phred': {'order': 'desc'}}],
+    'mpc': [{'mpc_MPC': {'order': 'desc'}}],
     'splice_ai': [{'splice_ai_delta_score': {'order': 'desc'}}],
+    'primate_ai': [{'primate_ai_score': {'order': 'desc'}}],
     'constraint': [{
         '_script': {
             'order': 'asc',

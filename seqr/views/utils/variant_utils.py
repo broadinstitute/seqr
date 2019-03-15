@@ -191,7 +191,6 @@ def variant_details(variant_json, project, user, individual_guids_by_id=None):
         'liftedOverGenomeVersion': lifted_over_genome_version,
         'liftedOverChrom': lifted_over_chrom,
         'liftedOverPos': lifted_over_pos,
-        'locusLists': [],
         'originalAltAlleles': extras.get('orig_alt_alleles') or [],
         'populations': {
             'callset': {

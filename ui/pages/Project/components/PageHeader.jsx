@@ -12,6 +12,18 @@ import { getProject } from '../selectors'
 
 const ORIGINAL_PROJECT_PAGE_CONFIG = { name: 'Project', path: '' }
 
+const familySearchEntityLink = (project, family) => ({
+  to: project.hasNewSearch && `/variant_search/family/${family.familyGuid}`,
+  href: !project.hasNewSearch && `/project/${project.deprecatedProjectId}/family/${family.familyId}/mendelian-variant-search`,
+  text: 'Family Variant Search',
+})
+
+const analysisGroupSearchEntityLink = (project, analysisGroup) => ({
+  to: project.hasNewSearch && `/variant_search/analysis_group/${analysisGroup.analysisGroupGuid}`,
+  href: !project.hasNewSearch && `/project/${project.deprecatedProjectId}/family-group/guid/${analysisGroup.analysisGroupGuid}/combine-mendelian-families`,
+  text: 'Analysis Group Search',
+})
+
 const PAGE_CONFIGS = {
   project_page: () => ({
     breadcrumbIdSections: [],
@@ -21,21 +33,13 @@ const PAGE_CONFIGS = {
     breadcrumbIdSections: [{ content: `Family: ${family.displayName}`, link: match.url }],
     description: family.description,
     originalPages: [{ name: 'Family', path: `family/${family.familyId}` }],
-    entityLinks: [{
-      to: project.hasNewSearch && `/variant_search/family/${family.familyGuid}`,
-      href: !project.hasNewSearch && `/project/${project.deprecatedProjectId}/family/${family.familyId}/mendelian-variant-search`,
-      text: 'Family Variant Search',
-    }],
+    entityLinks: [familySearchEntityLink(project, family)],
   }),
   analysis_group: (match, project, family, analysisGroup) => ({
     breadcrumbIdSections: [{ content: `Analysis Group: ${analysisGroup.name}`, link: match.url }],
     description: analysisGroup.description,
     originalPages: [{ name: 'Analysis Group', path: `family-group/guid/${analysisGroup.analysisGroupGuid}/` }],
-    entityLinks: [{
-      to: project.hasNewSearch && `/variant_search/analysis_group/${analysisGroup.analysisGroupGuid}`,
-      href: !project.hasNewSearch && `/project/${project.deprecatedProjectId}/family-group/guid/${analysisGroup.analysisGroupGuid}/combine-mendelian-families`,
-      text: 'Analysis Group Search',
-    }],
+    entityLinks: [analysisGroupSearchEntityLink(project, analysisGroup)],
     button: (
       <span>
         <UpdateAnalysisGroupButton analysisGroup={analysisGroup} />
@@ -49,11 +53,13 @@ const PAGE_CONFIGS = {
     const path = `/project/${project.projectGuid}/saved_variants`
     let originalPagePath = 'saved-variants'
     const breadcrumbIdSections = [{ content: 'Saved Variants', link: path }]
+    const entityLinks = []
     if (variantPage === 'variant') {
       originalPagePath = null
       breadcrumbIdSections.push({ content: 'Variant', link: match.url })
     } else if (variantPage === 'family') {
       breadcrumbIdSections.push({ content: `Family: ${family.displayName}`, link: `${path}/family/${family.familyGuid}` })
+      entityLinks.push(familySearchEntityLink(project, family))
       if (tag) {
         breadcrumbIdSections.push({ content: tag, link: `${path}/family/${family.familyGuid}/${tag}` })
         originalPagePath = `variants/${tag}?family=${family.familyId}`
@@ -62,6 +68,7 @@ const PAGE_CONFIGS = {
       }
     } else if (variantPage === 'analysis_group') {
       breadcrumbIdSections.push({ content: `Analysis Group: ${analysisGroup.name}`, link: `${path}/analysis_group/${analysisGroup.analysisGroupGuid}` })
+      entityLinks.push(analysisGroupSearchEntityLink(project, analysisGroup))
       if (tag) {
         breadcrumbIdSections.push({ content: tag, link: `${path}/analysis_group/${analysisGroup.analysisGroupGuid}/${tag}` })
         originalPagePath = `variants/${tag}`
@@ -76,6 +83,7 @@ const PAGE_CONFIGS = {
       breadcrumb: 'saved_variants',
       originalPages: originalPagePath ? [{ name: 'Saved Variants', path: originalPagePath }] : [],
       breadcrumbIdSections,
+      entityLinks,
     }
   },
 }
