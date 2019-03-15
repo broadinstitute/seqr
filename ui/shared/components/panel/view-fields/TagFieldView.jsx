@@ -37,6 +37,7 @@ const MetadataFormGroup = styled(Form.Group).attrs({ inline: true })`
 
 const MetadataField = ({ value, name, error }) => {
   const label = <ColoredOutlineLabel color={value.color} content={value.name} size="large" pointing="right" basic />
+  const fieldProps = value.category === NOTES_CATEGORY ? { width: 16 } : { width: 4, type: 'number', min: 0 }
   return (
     <MetadataFormGroup>
       {value.description ? <Popup trigger={label} content={value.description} /> : label}
@@ -46,8 +47,7 @@ const MetadataField = ({ value, name, error }) => {
         label={value.metadataTitle || 'Notes'}
         maxLength={50}
         error={error}
-        width={value.category === NOTES_CATEGORY ? 16 : 4}
-        type={value.category !== NOTES_CATEGORY ? 'number' : null}
+        {...fieldProps}
       />
     </MetadataFormGroup>
   )
