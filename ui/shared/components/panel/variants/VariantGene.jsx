@@ -5,7 +5,7 @@ import { connect } from 'react-redux'
 import { Label, Popup, List } from 'semantic-ui-react'
 
 import { getProject } from 'pages/Project/selectors'
-import { getGenesById } from 'redux/selectors'
+import { getGenesById, getLocusListsByGuid } from 'redux/selectors'
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
 import { InlineHeader } from '../../StyledComponents'
 import ShowGeneModal from '../../buttons/ShowGeneModal'
@@ -18,6 +18,10 @@ const GeneLabelContent = styled(Label).attrs({
   content: props => props.label,
 })`
    margin: 0px .5em .8em 0px !important;
+   overflow: hidden;
+   text-overflow: ellipsis;
+   white-space: nowrap;
+   max-width: ${props => props.maxWidth || 'none'};
 `
 
 const GeneLinks = styled.div`
@@ -38,9 +42,10 @@ const ListItemLink = styled(List.Item).attrs({ as: 'a', icon: 'linkify' })`
  }
 `
 
-const GeneLabel = ({ popupHeader, popupContent, ...labelProps }) => {
+const GeneLabel = ({ popupHeader, popupContent, showEmpty, ...labelProps }) => {
   const content = <GeneLabelContent {...labelProps} />
-  return popupContent ? <Popup header={popupHeader} trigger={content} content={popupContent} size="tiny" wide hoverable /> : content
+  return (popupContent || showEmpty) ?
+    <Popup header={popupHeader} trigger={content} content={popupContent} size="tiny" wide hoverable /> : content
 }
 
 GeneLabel.propTypes = {
@@ -48,47 +53,60 @@ GeneLabel.propTypes = {
   color: PropTypes.string,
   popupHeader: PropTypes.string,
   popupContent: PropTypes.oneOfType([PropTypes.string, PropTypes.node]),
+  showEmpty: PropTypes.bool,
 }
 
-export const LocusListLabels = ({ locusLists, compact }) => {
-  const locusListLabelProps = {
-    color: 'teal',
-    description: 'Gene Lists',
-    compact,
-    details: locusLists.length > 0 && <List bulleted items={locusLists} />,
-  }
-  return (
-    compact ? <GeneDetailSection {...locusListLabelProps} /> :
+const BaseLocusListLabels = ({ locusListGuids, locusListsByGuid, compact }) => (
+  compact ?
+    <GeneDetailSection
+      compact
+      color="teal"
+      compactLabel="Gene Lists"
+      details={locusListGuids.length > 0 &&
+        <List bulleted items={locusListGuids.map(locusListGuid => locusListsByGuid[locusListGuid].name)} />
+      }
+    /> :
     <div>
-      {locusLists.map(geneListName =>
+      {locusListGuids.map(locusListGuid =>
         <GeneDetailSection
-          key={geneListName}
-          label={`${geneListName.substring(0, 10)}${geneListName.length > 10 ? ' ...' : ''}`}
-          {...locusListLabelProps}
+          key={locusListGuid}
+          color="teal"
+          maxWidth="7em"
+          showEmpty
+          label={locusListsByGuid[locusListGuid].name}
+          description={locusListsByGuid[locusListGuid].name}
+          details={locusListsByGuid[locusListGuid].description}
         />,
       )}
     </div>
-  )
-}
+)
 
-LocusListLabels.propTypes = {
-  locusLists: PropTypes.array.isRequired,
+BaseLocusListLabels.propTypes = {
+  locusListGuids: PropTypes.array.isRequired,
   compact: PropTypes.bool,
+  locusListsByGuid: PropTypes.object,
 }
 
-const GeneDetailSection = ({ details, compact, color, description, label, compactLabel }) => {
-  if (!details) {
+const mapLocusListStateToProps = state => ({
+  locusListsByGuid: getLocusListsByGuid(state),
+})
+
+export const LocusListLabels = connect(mapLocusListStateToProps)(BaseLocusListLabels)
+
+
+const GeneDetailSection = ({ details, compact, description, compactLabel, showEmpty, ...labelProps }) => {
+  if (!details && !showEmpty) {
     return null
   }
 
   return compact ? (
     <div>
       <VerticalSpacer height={10} />
-      <Label size="tiny" color={color} content={`${compactLabel || description}:`} />
+      <Label size="tiny" color={labelProps.color} content={`${compactLabel || description}:`} />
       <HorizontalSpacer width={10} />
       {details}
     </div>
-  ) : <GeneLabel color={color} label={label} popupHeader={description} popupContent={details} />
+  ) : <GeneLabel popupHeader={description} popupContent={details} showEmpty={showEmpty} {...labelProps} />
 }
 
 GeneDetailSection.propTypes = {
@@ -98,6 +116,7 @@ GeneDetailSection.propTypes = {
   description: PropTypes.string,
   label: PropTypes.string,
   compactLabel: PropTypes.string,
+  showEmpty: PropTypes.bool,
 }
 
 const VariantGene = ({ geneId, gene, project, variant, compact }) => {
@@ -172,7 +191,7 @@ const VariantGene = ({ geneId, gene, project, variant, compact }) => {
            This metric is based on the amount of expected variation observed in the ExAC data and is a measure of how
            likely the gene is to be intolerant of loss-of-function mutations`}
       />
-      <LocusListLabels locusLists={gene.locusLists} compact={compact} />
+      <LocusListLabels locusListGuids={gene.locusListGuids} compact={compact} />
     </div>
 
   return compact ?

@@ -191,7 +191,7 @@ const Annotations = ({ variant }) => {
         )
       }
       <VerticalSpacer height={5} />
-      <LocusListLabels locusLists={variant.locusLists} />
+      <LocusListLabels locusListGuids={variant.locusListGuids} />
       <VerticalSpacer height={5} />
       {mainTranscript.geneSymbol &&
         <div>

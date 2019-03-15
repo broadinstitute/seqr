@@ -41,7 +41,6 @@ def saved_variant_data(request, project_guid, variant_guid=None):
     saved_variants = get_json_for_saved_variants(variant_query, add_tags=True, add_details=True, project=project,
                                                  user=request.user, individual_guids_by_id=individual_guids_by_id)
     variants = {variant['variantGuid']: variant for variant in saved_variants if variant['notes'] or variant['tags']}
-
     genes = _saved_variant_genes(variants.values())
     _add_locus_lists(project, variants.values(), genes)
 
@@ -226,14 +225,14 @@ def _saved_variant_genes(variants):
     genes = get_genes(gene_ids, add_dbnsfp=True, add_omim=True, add_constraints=True)
     for gene in genes.values():
         if gene:
-            gene['locusLists'] = []
+            gene['locusListGuids'] = []
     return genes
 
 
 def _add_locus_lists(project, variants, genes):
     locus_lists = get_project_locus_list_models(project)
     for variant in variants:
-        variant['locusLists'] = []
+        variant['locusListGuids'] = []
 
     locus_list_intervals_by_chrom = defaultdict(list)
     for interval in LocusListInterval.objects.filter(locus_list__in=locus_lists):
@@ -243,7 +242,7 @@ def _add_locus_lists(project, variants, genes):
             for interval in locus_list_intervals_by_chrom[variant['chrom']]:
                 pos = variant['pos'] if variant['genomeVersion'] == interval.genome_version else variant['liftedOverPos']
                 if pos and interval.start <= int(pos) <= interval.end:
-                    variant['locusLists'].append(interval.locus_list.name)
+                    variant['locusListGuids'].append(interval.locus_list.guid)
 
     for locus_list_gene in LocusListGene.objects.filter(locus_list__in=locus_lists, gene_id__in=genes.keys()).prefetch_related('locus_list'):
-        genes[locus_list_gene.gene_id]['locusLists'].append(locus_list_gene.locus_list.name)
+        genes[locus_list_gene.gene_id]['locusListGuids'].append(locus_list_gene.locus_list.guid)

@@ -27,9 +27,9 @@ VARIANTS = [
     {'alt': 'T', 'ref': 'TC', 'chrom': '12', 'pos': 48367227, 'xpos': 1248367227, 'genomeVersion': '38', 'transcripts': {'ENSG00000233653': {}}, 'familyGuids': ['F000002_2'], 'genotypes': {}},
 ]
 EXPECTED_VARIANTS = deepcopy(VARIANTS)
-EXPECTED_VARIANTS[0]['locusLists'] = []
-EXPECTED_VARIANTS[1]['locusLists'] = ['PID genes - Autosomal dominant']
-EXPECTED_VARIANTS[2]['locusLists'] = []
+EXPECTED_VARIANTS[0]['locusListGuids'] = []
+EXPECTED_VARIANTS[1]['locusListGuids'] = [LOCUS_LIST_GUID]
+EXPECTED_VARIANTS[2]['locusListGuids'] = []
 
 
 def _get_es_variants(results_model, **kwargs):
@@ -93,7 +93,7 @@ class VariantSearchAPITest(TestCase):
             {'ENSG00000227232', 'ENSG00000268903', 'ENSG00000233653'}
         )
         self.assertListEqual(
-            response_json['genesById']['ENSG00000227232']['locusLists'], ['PID genes - Autosomal dominant']
+            response_json['genesById']['ENSG00000227232']['locusListGuids'], [LOCUS_LIST_GUID]
         )
 
         results_models = VariantSearchResults.objects.filter(search_hash=SEARCH_HASH)
