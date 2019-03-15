@@ -712,6 +712,7 @@ def _update_initial_omim_numbers(rows):
             match = re.search("/phenotypicSeries/([a-zA-Z0-9]+)", omim_page_html)
             if not match:
                 logger.info("No phenotypic series found for OMIM initial # %s" % omim_number_initial)
+                logger.info(response.content)
             else:
                 phenotypic_series_id = match.group(1)
                 logger.debug("Will replace OMIM initial # %s with phenotypic series %s" % (omim_number_initial, phenotypic_series_id))
