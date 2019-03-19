@@ -46,6 +46,7 @@ import collections
 import logging
 import os
 import re
+import requests
 from tqdm import tqdm
 
 from django.core.management.base import BaseCommand, CommandError
@@ -56,6 +57,8 @@ from reference_data.models import GeneInfo, Omim
 logger = logging.getLogger(__name__)
 
 GENEMAP2_URL = "http://data.omim.org/downloads/{omim_key}/genemap2.txt"
+
+OMIM_ENTRIES_URL = 'https://api.omim.org/api/entry?apiKey={omim_key}&include=geneMap&format=json&mimNumber={mim_numbers}'
 
 OMIM_PHENOTYPE_MAP_METHOD_CHOICES = {
     1: 'the disorder is placed on the map based on its association with a gene, but the underlying defect is not known.',
@@ -97,48 +100,74 @@ def update_omim(omim_key=None, genemap2_file_path=None):
     else:
         raise CommandError("Must provide --omim-key or genemap2.txt file path")
 
-    logger.info("Parsing genemap2 file")
-    try:
-        genemap2_records = [r for r in parse_genemap2_table(tqdm(genemap2_file, unit=" lines"))]
-    except Exception as e:
-        raise CommandError("Unable to parse {}: {}".format(genemap2_file, e))
-
     logger.info("Deleting {} existing OMIM records".format(Omim.objects.count()))
     Omim.objects.all().delete()
 
-    logger.info("Creating {} OMIM gene-phenotype association records".format(len(genemap2_records)))
-    gene_symbol_to_gene_id = collections.defaultdict(set)  # lookup for symbols that have a 1-to-1 mapping to ENSG ids in gencode
+    logger.info("Loading gene info")
+    gene_symbol_to_gene_id = collections.defaultdict(list)
     gene_id_to_gene_info = {}
-    for gene_info in GeneInfo.objects.all().only('gene_id', 'gene_symbol'):
-        gene_symbol_to_gene_id[gene_info.gene_symbol].add(gene_info.gene_id)
+    for gene_info in GeneInfo.objects.all().only('gene_id', 'gene_symbol').order_by('-gencode_release'):
+        gene_symbol_to_gene_id[gene_info.gene_symbol].append(gene_info.gene_id)
         gene_id_to_gene_info[gene_info.gene_id] = gene_info
+    gene_symbol_to_gene_id = {}
 
-    skip_counter = 0
-    for omim_record in tqdm(genemap2_records, unit=" records"):
+    skip_records = set()
+    omim_records = []
+    logger.info("Parsing genemap2 file")
+    for omim_record in tqdm(parse_genemap2_table(genemap2_file), unit=" records"):
         gene_id = omim_record["gene_id"]
         gene_symbol = omim_record["gene_symbol"]
-        if not gene_id and len(gene_symbol_to_gene_id.get(gene_symbol, [])) == 1:
-            gene_id = iter(gene_symbol_to_gene_id[gene_symbol]).next()
+        if not gene_id and gene_symbol_to_gene_id.get(gene_symbol):
+            gene_id = gene_symbol_to_gene_id[gene_symbol][0]
             omim_record["gene_id"] = gene_id
             logger.info("Mapped gene symbol {} to gene_id {}".format(gene_symbol, gene_id))
 
         gene = gene_id_to_gene_info.get(gene_id)
         if not gene:
-            skip_counter += 1
-            logger.warn(("OMIM gene id '{}' not found in GeneInfo table. "
-                         "Running ./manage.py update_gencode to update the gencode version might fix this. "
-                         "Full OMIM record: {}").format(gene_id, omim_record))
+            # We don't really care about skipping records with no phenotypes and no valid gene
+            if omim_record.get('phenotype_mim_number'):
+                skip_records.add(gene_id or gene_symbol)
             continue
 
         del omim_record["gene_id"]
         del omim_record["gene_symbol"]
 
         omim_record['gene'] = gene
-        Omim.objects.create(**omim_record)
+        omim_records.append(omim_record)
+
+    if skip_records:
+        logger.warn(("The following {} OMIM genes were not found in the GeneInfo table. "
+                     "Running ./manage.py update_gencode to update the gencode version might fix this. "
+                     ).format(len(skip_records)))
+        logger.debug(', '.join(skip_records))
+
+    logger.info('Adding phenotypic series information')
+    mim_numbers = {omim_record['mim_number'] for omim_record in omim_records if omim_record.get('phenotype_mim_number')}
+    mim_numbers = map(str, list(mim_numbers))
+    mim_number_to_phenotypic_series = {}
+    for i in range(0, len(mim_numbers), 50):
+        logger.debug('Fetching entries {}-{}'.format(i, i + 50))
+        response = requests.get(OMIM_ENTRIES_URL.format(omim_key=omim_key, mim_numbers=','.join(mim_numbers[i:i+50])))
+        if not response.ok:
+            raise CommandError('Request failed with {}: {}'.format(response.status_code, response.reason))
+
+        for entry in response.json()['omim']['entryList']:
+            mim_nuber = entry['entry']['mimNumber']
+            for phenotype in entry['entry'].get('geneMap', {}).get('phenotypeMapList', []):
+                phenotypic_series_number = phenotype['phenotypeMap'].get('phenotypicSeriesNumber')
+                if phenotypic_series_number:
+                    mim_number_to_phenotypic_series[mim_nuber] = phenotypic_series_number
+
+    for omim_record in omim_records:
+        omim_record['phenotypic_series_number'] = mim_number_to_phenotypic_series.get(omim_record['mim_number'])
+    logger.info('Found {} records with phenotypic series'.format(len(mim_number_to_phenotypic_series)))
+
+    logger.info("Creating {} OMIM gene-phenotype association records".format(len(omim_records)))
+    Omim.objects.bulk_create([Omim(**omim_record) for omim_record in omim_records])
 
     logger.info("Done")
     logger.info("Loaded {} OMIM records from {}. Skipped {} records with unrecognized gene id".format(
-        Omim.objects.count(), genemap2_file_path, skip_counter))
+        Omim.objects.count(), genemap2_file_path, len(skip_records)))
 
 
 class ParsingError(Exception):
@@ -198,8 +227,11 @@ def parse_genemap2_table(omim_genemap2_file_iter):
 
             yield record_with_phenotype
 
-        if len(phenotype_field) > 0 and record_with_phenotype is None:
-            raise ParsingError("No phenotypes found in line #{}: {}".format(i, line))
+        if record_with_phenotype is None:
+            if len(phenotype_field) > 0:
+                raise ParsingError("No phenotypes found in line #{}: {}".format(i, line))
+            else:
+                yield output_record
 
 """
 Comment at the end of genemap2.txt:
