@@ -728,6 +728,7 @@ def _parse_es_hit(raw_hit, family_samples_by_id):
     # TODO better handling for multi-project searches
     project = family_samples_by_id[family_guids[0]].values()[0].individual.family.project
 
+    # TODO should come from index metadata
     genome_version = project.genome_version
     lifted_over_genome_version = None
     lifted_over_chrom= None

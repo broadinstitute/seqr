@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 def update_project_from_json(project, json, verbose=False, allow_unknown_keys=False):
 
-    update_model_from_json(project, json, verbose=verbose, allow_unknown_keys=allow_unknown_keys)
+    update_model_from_json(project, json, verbose=verbose, allow_unknown_keys=allow_unknown_keys, immutable_keys=['genome_version'])
 
 
 def update_family_from_json(family, json, verbose=False, user=None, allow_unknown_keys=False):
