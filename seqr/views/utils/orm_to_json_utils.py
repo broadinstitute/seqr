@@ -542,7 +542,9 @@ def get_json_for_genes(genes, user=None, add_dbnsfp=False, add_omim=False, add_c
             else:
                 result.update(_get_empty_json_for_model(dbNSFPGene))
         if add_omim:
-            result['omimPhenotypes'] = _get_json_for_models(gene.omim_set.all())
+            omim_phenotypes = _get_json_for_models(gene.omim_set.all())
+            result['omimPhenotypes'] = [phenotype for phenotype in omim_phenotypes if phenotype['phenotypeMimNumber']]
+            result['mimNumber'] = omim_phenotypes[0]['mimNumber'] if omim_phenotypes else None
         if add_constraints:
             constraint = next((constraint for constraint in gene.geneconstraint_set.all()), None)
             result['constraints'] = _get_json_for_model(constraint, process_result=_add_total_constraint_count) if constraint else {}
