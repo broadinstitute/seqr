@@ -19,9 +19,13 @@ export const GENOME_VERSION_OPTIONS = [
 
 // PROJECT FIELDS
 
-export const PROJECT_FIELDS = [
+export const EDITABLE_PROJECT_FIELDS = [
   { name: 'name', label: 'Project Name', placeholder: 'Name', validate: validators.required, autoFocus: true },
   { name: 'description', label: 'Project Description', placeholder: 'Description' },
+]
+
+export const PROJECT_FIELDS = [
+  ...EDITABLE_PROJECT_FIELDS,
   { name: 'genomeVersion', label: 'Genome Version', component: RadioGroup, options: GENOME_VERSION_OPTIONS },
 ]
 

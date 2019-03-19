@@ -22,6 +22,8 @@ class DispatchRequestButton extends React.Component {
     /** child componenets */
     children: PropTypes.node,
 
+    buttonContainer: PropTypes.node,
+
     /** Optional callback when request succeeds **/
     onSuccess: PropTypes.func,
   }
@@ -38,21 +40,19 @@ class DispatchRequestButton extends React.Component {
   }
 
   render() {
-    return (
-      <span>
-        {this.props.children ?
-          React.cloneElement(this.props.children, { onChange: this.handleButtonClick, onClick: this.handleButtonClick }) :
-          <ButtonLink onClick={this.handleButtonClick}>{this.props.buttonContent}</ButtonLink>
-        }
-        <RequestStatus status={this.state.requestStatus} errorMessage={this.state.requestErrorMessage} />
-        <Confirm
-          content={this.props.confirmDialog}
-          open={this.state.isConfirmDialogVisible}
-          onConfirm={this.performAction}
-          onCancel={() => this.setState({ isConfirmDialogVisible: false })}
-        />
-      </span>
-    )
+    return React.cloneElement(this.props.buttonContainer || <span />, { children: [
+      this.props.children ?
+        React.cloneElement(this.props.children, { onChange: this.handleButtonClick, onClick: this.handleButtonClick, key: 'children' }) :
+        <ButtonLink key="button" onClick={this.handleButtonClick}>{this.props.buttonContent}</ButtonLink>,
+      <RequestStatus key="status" status={this.state.requestStatus} errorMessage={this.state.requestErrorMessage} />,
+      <Confirm
+        key="confirm"
+        content={this.props.confirmDialog}
+        open={this.state.isConfirmDialogVisible}
+        onConfirm={this.performAction}
+        onCancel={() => this.setState({ isConfirmDialogVisible: false })}
+      />,
+    ] })
   }
 
   handleButtonClick = (values) => {
