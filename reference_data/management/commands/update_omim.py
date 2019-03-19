@@ -145,18 +145,23 @@ def update_omim(omim_key=None, genemap2_file_path=None):
     mim_numbers = {omim_record['mim_number'] for omim_record in omim_records if omim_record.get('phenotype_mim_number')}
     mim_numbers = map(str, list(mim_numbers))
     mim_number_to_phenotypic_series = {}
-    for i in range(0, len(mim_numbers), 50):
-        logger.debug('Fetching entries {}-{}'.format(i, i + 50))
-        response = requests.get(OMIM_ENTRIES_URL.format(omim_key=omim_key, mim_numbers=','.join(mim_numbers[i:i+50])))
+    for i in range(0, len(mim_numbers), 20):
+        logger.debug('Fetching entries {}-{}'.format(i, i + 20))
+        entries_to_fetch = mim_numbers[i:i+20]
+        response = requests.get(OMIM_ENTRIES_URL.format(omim_key=omim_key, mim_numbers=','.join(entries_to_fetch)))
         if not response.ok:
             raise CommandError('Request failed with {}: {}'.format(response.status_code, response.reason))
 
-        for entry in response.json()['omim']['entryList']:
-            mim_nuber = entry['entry']['mimNumber']
+        entries = response.json()['omim']['entryList']
+        if len(entries) != len(entries_to_fetch):
+            raise CommandError('Expected {} omim entries but recieved {}'.format(len(entries_to_fetch), len(entries)))
+
+        for entry in entries:
+            mim_number = entry['entry']['mimNumber']
             for phenotype in entry['entry'].get('geneMap', {}).get('phenotypeMapList', []):
                 phenotypic_series_number = phenotype['phenotypeMap'].get('phenotypicSeriesNumber')
                 if phenotypic_series_number:
-                    mim_number_to_phenotypic_series[mim_nuber] = phenotypic_series_number
+                    mim_number_to_phenotypic_series[mim_number] = phenotypic_series_number
 
     for omim_record in omim_records:
         omim_record['phenotypic_series_number'] = mim_number_to_phenotypic_series.get(omim_record['mim_number'])
