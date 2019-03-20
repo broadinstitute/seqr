@@ -174,3 +174,12 @@ class dbNSFPGene(models.Model):
     class Meta:
         json_fields = ['function_desc', 'disease_desc']
 
+
+class PrimateAI(models.Model):
+    gene = models.ForeignKey(GeneInfo, on_delete=models.CASCADE)
+
+    percentile_25 = models.FloatField()
+    percentile_75 = models.FloatField()
+
+    class Meta:
+        json_fields = ['percentile_25', 'percentile_75']

@@ -7,6 +7,7 @@ from reference_data.management.commands.update_dbnsfp_gene import update_dbnsfp_
 from reference_data.management.commands.update_gencode import update_gencode
 from reference_data.management.commands.update_gene_constraint import update_gene_constraint
 from reference_data.management.commands.update_omim import update_omim
+from reference_data.management.commands.update_primate_ai import update_primate_ai
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +25,7 @@ class Command(BaseCommand):
         parser.add_argument('--skip-gene-constraint', help="Don't reload gene constraint", action="store_true")
         parser.add_argument('--skip-hpo', help="Don't reload human phenotype ontology", action="store_true")
         parser.add_argument('--skip-gtex', help="Don't reload gtex", action="store_true")
+        parser.add_argument('--skip-primate-ai', help="Don't reload primate ai", action="store_true")
 
     def handle(self, *args, **options):
         if not options["skip_gencode"]:
@@ -61,3 +63,9 @@ class Command(BaseCommand):
                 update_gtex()
             except Exception as e:
                 logger.error("unable to update gtex: {}".format(e))
+
+        if not options["skip_primate_ai"]:
+            try:
+                update_primate_ai()
+            except Exception as e:
+                logger.error("unable to update primate ai: {}".format(e))
