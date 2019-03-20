@@ -2,15 +2,15 @@ import React from 'react'
 import PropTypes from 'prop-types'
 
 import DispatchRequestButton from './DispatchRequestButton'
-import { ButtonLink } from '../StyledComponents'
 
-const DeleteButton = ({ initialValues, onSubmit, buttonText, size, ...props }) =>
+const DeleteButton = ({ initialValues, onSubmit, buttonText, ...props }) =>
   <DispatchRequestButton
     onSubmit={() => onSubmit({ ...initialValues, delete: true })}
+    buttonContent={buttonText}
+    icon="trash"
+    labelPosition={buttonText && 'right'}
     {...props}
-  >
-    <ButtonLink content={buttonText} icon="trash" labelPosition={buttonText && 'right'} size={size} />
-  </DispatchRequestButton>
+  />
 
 DeleteButton.propTypes = {
   onSubmit: PropTypes.func,
