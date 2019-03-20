@@ -42,13 +42,14 @@ import {
 
 export const CASE_REVIEW_TABLE_NAME = 'Case Review'
 
-export const CASE_REVIEW_STATUS_IN_REVIEW = 'I'
-export const CASE_REVIEW_STATUS_UNCERTAIN = 'U'
-export const CASE_REVIEW_STATUS_ACCEPTED = 'A'
-export const CASE_REVIEW_STATUS_NOT_ACCEPTED = 'R'
+const CASE_REVIEW_STATUS_IN_REVIEW = 'I'
+const CASE_REVIEW_STATUS_UNCERTAIN = 'U'
+const CASE_REVIEW_STATUS_ACCEPTED = 'A'
+const CASE_REVIEW_STATUS_NOT_ACCEPTED = 'R'
 export const CASE_REVIEW_STATUS_MORE_INFO_NEEDED = 'Q'
-export const CASE_REVIEW_STATUS_PENDING_RESULTS_AND_RECORDS = 'P'
-export const CASE_REVIEW_STATUS_WAITLIST = 'W'
+const CASE_REVIEW_STATUS_PENDING_RESULTS_AND_RECORDS = 'P'
+const CASE_REVIEW_STATUS_WAITLIST = 'W'
+const CASE_REVIEW_STATUS_NMI_REVIEW = 'N'
 
 export const CASE_REVIEW_STATUS_OPTIONS = [
   { value: CASE_REVIEW_STATUS_IN_REVIEW,                   name: 'In Review',             color: '#2196F3' },
@@ -57,6 +58,7 @@ export const CASE_REVIEW_STATUS_OPTIONS = [
   { value: CASE_REVIEW_STATUS_NOT_ACCEPTED,                name: 'Not Accepted',          color: '#4f5cb3' },  //#C5CAE9
   { value: CASE_REVIEW_STATUS_MORE_INFO_NEEDED,            name: 'More Info Needed',      color: '#F44336' },  //#673AB7
   { value: CASE_REVIEW_STATUS_PENDING_RESULTS_AND_RECORDS, name: 'Pending Results and Records', color: '#996699' },
+  { value: CASE_REVIEW_STATUS_NMI_REVIEW,                  name: 'NMI Review',            color: '#3827c1' },
   { value: CASE_REVIEW_STATUS_WAITLIST,                    name: 'Waitlist',              color: '#990099' },
 ]
 
@@ -70,33 +72,23 @@ export const CASE_REVIEW_STATUS_OPT_LOOKUP = CASE_REVIEW_STATUS_OPTIONS.reduce(
 export const SHOW_ALL = 'ALL'
 
 export const SHOW_IN_REVIEW = 'IN_REVIEW'
-export const SHOW_ACCEPTED = 'ACCEPTED'
-export const SHOW_NOT_ACCEPTED = 'NOT_ACCEPTED'
-export const SHOW_UNCERTAIN = 'UNCERTAIN'
-export const SHOW_MORE_INFO_NEEDED = 'MORE_INFO_NEEDED'
+const SHOW_ACCEPTED = 'ACCEPTED'
 
-export const SHOW_SOLVED = 'SHOW_SOLVED'
-export const SHOW_STRONG_CANDIDATE = 'SHOW_STRONG_CANDIDATE'
-export const SHOW_REVIEWED_NO_CLEAR_CANDIDATE = 'SHOW_REVIEWED_NO_CLEAR_CANDIDATE'
-export const SHOW_ANALYSIS_IN_PROGRESS = 'SHOW_ANALYSIS_IN_PROGRESS'
+const SHOW_SOLVED = 'SHOW_SOLVED'
+const SHOW_STRONG_CANDIDATE = 'SHOW_STRONG_CANDIDATE'
+const SHOW_REVIEWED_NO_CLEAR_CANDIDATE = 'SHOW_REVIEWED_NO_CLEAR_CANDIDATE'
+const SHOW_ANALYSIS_IN_PROGRESS = 'SHOW_ANALYSIS_IN_PROGRESS'
 
-export const SHOW_NOT_IN_REVIEW = 'NOT_IN_REVIEW'
-export const SHOW_PENDING_RESULTS_AND_RECORDS = 'PENDING_RESULTS_AND_RECORDS'
-export const SHOW_WAITLIST = 'WAITLIST'
-export const SHOW_WITHDREW = 'WITHDREW'
-export const SHOW_INELIGIBLE = 'INELIGIBLE'
-export const SHOW_DECLINED_TO_PARTICIPATE = 'DECLINED_TO_PARTICIPATE'
+const SHOW_DATA_LOADED = 'SHOW_DATA_LOADED'
+const SHOW_PHENOTYPES_ENTERED = 'SHOW_PHENOTYPES_ENTERED'
+const SHOW_NO_PHENOTYPES_ENTERED = 'SHOW_NO_PHENOTYPES_ENTERED'
 
-export const SHOW_DATA_LOADED = 'SHOW_DATA_LOADED'
-export const SHOW_PHENOTYPES_ENTERED = 'SHOW_PHENOTYPES_ENTERED'
-export const SHOW_NO_PHENOTYPES_ENTERED = 'SHOW_NO_PHENOTYPES_ENTERED'
-
-export const SHOW_ANALYSED_BY_ME = 'SHOW_ANALYSED_BY_ME'
-export const SHOW_NOT_ANALYSED_BY_ME = 'SHOW_NOT_ANALYSED_BY_ME'
-export const SHOW_ANALYSED_BY_CMG = 'SHOW_ANALYSED_BY_CMG'
-export const SHOW_NOT_ANALYSED_BY_CMG = 'SHOW_NOT_ANALYSED_BY_CMG'
-export const SHOW_ANALYSED = 'SHOW_ANALYSED'
-export const SHOW_NOT_ANALYSED = 'SHOW_NOT_ANALYSED'
+const SHOW_ANALYSED_BY_ME = 'SHOW_ANALYSED_BY_ME'
+const SHOW_NOT_ANALYSED_BY_ME = 'SHOW_NOT_ANALYSED_BY_ME'
+const SHOW_ANALYSED_BY_CMG = 'SHOW_ANALYSED_BY_CMG'
+const SHOW_NOT_ANALYSED_BY_CMG = 'SHOW_NOT_ANALYSED_BY_CMG'
+const SHOW_ANALYSED = 'SHOW_ANALYSED'
+const SHOW_NOT_ANALYSED = 'SHOW_NOT_ANALYSED'
 
 
 const SOLVED_STATUSES = new Set([
@@ -251,13 +243,6 @@ export const FAMILY_FILTER_OPTIONS = [
     createFilter: caseReviewStatusFilter(CASE_REVIEW_STATUS_ACCEPTED),
   },
   {
-    value: SHOW_NOT_ACCEPTED,
-    category: 'Analysis Status:',
-    name: 'Not Accepted',
-    internalOnly: true,
-    createFilter: caseReviewStatusFilter(CASE_REVIEW_STATUS_NOT_ACCEPTED),
-  },
-  {
     value: SHOW_IN_REVIEW,
     category: 'Analysis Status:',
     name: 'In Review',
@@ -266,34 +251,15 @@ export const FAMILY_FILTER_OPTIONS = [
         individual => individual.caseReviewStatus === CASE_REVIEW_STATUS_IN_REVIEW,
       ),
   },
-  {
-    value: SHOW_UNCERTAIN,
+  ...CASE_REVIEW_STATUS_OPTIONS.filter(({ value }) =>
+    value !== CASE_REVIEW_STATUS_ACCEPTED && value !== CASE_REVIEW_STATUS_IN_REVIEW,
+  ).map(({ name, value }) => ({
+    value: `SHOW_${name.toUpperCase()}`,
     category: 'Analysis Status:',
-    name: 'Uncertain',
+    name,
     internalOnly: true,
-    createFilter: caseReviewStatusFilter(CASE_REVIEW_STATUS_UNCERTAIN),
-  },
-  {
-    value: SHOW_MORE_INFO_NEEDED,
-    category: 'Analysis Status:',
-    name: 'More Info Needed',
-    internalOnly: true,
-    createFilter: caseReviewStatusFilter(CASE_REVIEW_STATUS_MORE_INFO_NEEDED),
-  },
-  {
-    value: SHOW_PENDING_RESULTS_AND_RECORDS,
-    category: 'Analysis Status:',
-    name: 'Pending Results and Records',
-    internalOnly: true,
-    createFilter: caseReviewStatusFilter(CASE_REVIEW_STATUS_PENDING_RESULTS_AND_RECORDS),
-  },
-  {
-    value: SHOW_WAITLIST,
-    category: 'Analysis Status:',
-    name: 'Waitlist',
-    internalOnly: true,
-    createFilter: caseReviewStatusFilter(CASE_REVIEW_STATUS_WAITLIST),
-  },
+    createFilter: caseReviewStatusFilter(value),
+  })),
 ]
 
 export const FAMILY_FILTER_LOOKUP = FAMILY_FILTER_OPTIONS.reduce(
