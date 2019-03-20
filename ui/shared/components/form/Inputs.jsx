@@ -324,10 +324,13 @@ export const LabeledSlider = styled(Slider).attrs({
 
   .rangeslider__fill {
     background-color: grey !important;
+    ${props => props.value < 0 && 'width: 0 !important;'}
   }
 
   .rangeslider__handle {
     z-index: 1;
+    
+    ${props => props.value < 0 && 'left: calc(100% - 1em) !important;'}
     
     .rangeslider__handle-label {
       text-align: center;
