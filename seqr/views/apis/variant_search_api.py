@@ -309,6 +309,9 @@ def create_saved_search_handler(request):
     if not name:
         return create_json_response({}, status=400, reason='"Name" is required')
 
+    if request_json.get('inheritance', {}).get('filter', {}).get('genotype'):
+        return create_json_response({}, status=400, reason='Saved searches cannot include custom genotype filters')
+
     saved_search = VariantSearch.objects.create(
         name=name,
         search=request_json,
@@ -320,6 +323,39 @@ def create_saved_search_handler(request):
             saved_search.guid: get_json_for_saved_search(saved_search, request.user)
         }
     })
+
+
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@csrf_exempt
+def update_saved_search_handler(request, saved_search_guid):
+    search = VariantSearch.objects.get(guid=saved_search_guid)
+    if search.created_by != request.user:
+        return create_json_response({}, status=403, reason='User does not have permission to edit this search')
+
+    request_json = json.loads(request.body)
+    name = request_json.pop('name', None)
+    if not name:
+        return create_json_response({}, status=400, reason='"Name" is required')
+
+    search.name = name
+    search.save()
+
+    return create_json_response({
+        'savedSearchesByGuid': {
+            saved_search_guid: get_json_for_saved_search(search, request.user)
+        }
+    })
+
+
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@csrf_exempt
+def delete_saved_search_handler(request, saved_search_guid):
+    search = VariantSearch.objects.get(guid=saved_search_guid)
+    if search.created_by != request.user:
+        return create_json_response({}, status=403, reason='User does not have permission to delete this search')
+
+    search.delete()
+    return create_json_response({'savedSearchesByGuid': {saved_search_guid: None}})
 
 
 def _check_results_permission(results_model, user):

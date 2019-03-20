@@ -74,6 +74,13 @@ export const getProjectsFamiliesFieldInput = state =>
 export const getSearchInput = state =>
   formValueSelector(SEARCH_FORM_NAME)(state, 'search')
 
+export const getCurrentSavedSearch = createSelector(
+  getSearchInput,
+  getSavedSearchesByGuid,
+  (search, savedSearchesByGuid) =>
+    Object.values(savedSearchesByGuid).find(savedSearch => savedSearch.search === search),
+)
+
 export const getTotalVariantsCount = createSelector(
   getCurrentSearchParams,
   searchParams => (searchParams || {}).totalResults,

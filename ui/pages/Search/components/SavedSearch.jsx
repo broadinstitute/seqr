@@ -6,16 +6,22 @@ import styled from 'styled-components'
 import DataLoader from 'shared/components/DataLoader'
 import UpdateButton from 'shared/components/buttons/UpdateButton'
 import { validators } from 'shared/components/form/ReduxFormWrapper'
-import { Dropdown } from 'shared/components/form/Inputs'
+import { Dropdown, BooleanCheckbox } from 'shared/components/form/Inputs'
 import { saveSearch, loadSavedSearches } from '../reducers'
 import {
   getSearchInput,
   getSavedSearchesByGuid,
   getSavedSearchesIsLoading,
   getSavedSearchesLoadingError,
+  getCurrentSavedSearch,
 } from '../selectors'
 
-const SAVED_SEARCH_FIELDS = [{ name: 'name', label: 'Search Name', validate: validators.required }]
+const SEARCH_NAME_FIELD = { name: 'name', label: 'Search Name', validate: validators.required }
+const SAVED_SEARCH_FIELDS = [SEARCH_NAME_FIELD]
+const EXISTING_SAVED_SEARCH_FIELDS = [
+  SEARCH_NAME_FIELD,
+  { name: 'delete', label: 'Delete saved search?', component: BooleanCheckbox },
+]
 
 const FormButtonContainer = styled.div`
   position: absolute;
@@ -23,27 +29,29 @@ const FormButtonContainer = styled.div`
   bottom: 10px;
 `
 
-const SaveSearch = ({ search, onSubmit }) =>
+const SaveSearch = ({ search, savedSearch, onSubmit }) =>
   <FormButtonContainer>
     <UpdateButton
-      formFields={SAVED_SEARCH_FIELDS}
+      formFields={savedSearch ? EXISTING_SAVED_SEARCH_FIELDS : SAVED_SEARCH_FIELDS}
       onSubmit={onSubmit}
-      initialValues={search}
+      initialValues={savedSearch || search}
       disabled={!search}
       modalId="saveSearch"
-      modalTitle="Save Search"
-      buttonText="Save Search"
-      editIconName="save"
+      modalTitle={savedSearch ? 'Edit Saved Search' : 'Save Search'}
+      buttonText={savedSearch ? 'Edit Saved Search' : 'Save Search'}
+      editIconName={savedSearch ? 'write' : 'save'}
     />
   </FormButtonContainer>
 
 SaveSearch.propTypes = {
   search: PropTypes.object,
+  savedSearch: PropTypes.object,
   onSubmit: PropTypes.func,
 }
 
 const mapStateToProps = state => ({
   search: getSearchInput(state),
+  savedSearch: getCurrentSavedSearch(state),
 })
 
 const mapDispatchToProps = {
@@ -53,10 +61,9 @@ const mapDispatchToProps = {
 export const SaveSearchButton = connect(mapStateToProps, mapDispatchToProps)(SaveSearch)
 
 
-const SavedSearches = ({ savedSearchesByGuid, load, loading, errorMessage, value, onChange }) => {
+const SavedSearches = ({ savedSearchesByGuid, selectedSearch, load, loading, errorMessage, onChange }) => {
   const savedSearches = Object.values(savedSearchesByGuid)
   const options = savedSearches.map(search => ({ text: search.name, value: search.savedSearchGuid }))
-  const selectedSearch = savedSearches.find(search => JSON.stringify(search) === JSON.stringify(value))
   return (
     <DataLoader load={load} errorMessage={errorMessage} loading={false} content>
       <Dropdown
@@ -74,15 +81,16 @@ const SavedSearches = ({ savedSearchesByGuid, load, loading, errorMessage, value
 
 SavedSearches.propTypes = {
   savedSearchesByGuid: PropTypes.object,
+  selectedSearch: PropTypes.object,
   loading: PropTypes.bool,
   load: PropTypes.func,
   errorMessage: PropTypes.string,
-  value: PropTypes.object,
   onChange: PropTypes.func,
 }
 
 const mapDropdownStateToProps = state => ({
   savedSearchesByGuid: getSavedSearchesByGuid(state),
+  selectedSearch: getCurrentSavedSearch(state),
   loading: getSavedSearchesIsLoading(state),
   errorMessage: getSavedSearchesLoadingError(state),
 })

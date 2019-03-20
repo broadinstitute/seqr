@@ -9,7 +9,8 @@ from seqr.models import VariantSearchResults, VariantSearch, Family
 from seqr.utils.es_utils import InvalidIndexException
 from seqr.views.apis.locus_list_api import add_project_locus_lists
 from seqr.views.apis.variant_search_api import query_variants_handler, query_single_variant_handler, \
-    export_variants_handler, search_context_handler, get_saved_search_handler, create_saved_search_handler
+    export_variants_handler, search_context_handler, get_saved_search_handler, create_saved_search_handler, \
+    update_saved_search_handler, delete_saved_search_handler
 from seqr.views.utils.test_utils import _check_login
 
 
@@ -248,6 +249,14 @@ class VariantSearchAPITest(TestCase):
         self.assertEqual(response.reason_phrase, '"Name" is required')
 
         body = {'name': 'Test Search'}
+
+        invalid_body = {'inheritance': {'filter': {'genotype': {'indiv_1': 'ref_alt'}}}}
+        invalid_body.update(body)
+        response = self.client.post(create_saved_search_url, content_type='application/json', data=json.dumps(invalid_body))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.reason_phrase, 'Saved searches cannot include custom genotype filters')
+
+
         body.update(SEARCH)
         response = self.client.post(create_saved_search_url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
@@ -261,3 +270,30 @@ class VariantSearchAPITest(TestCase):
         response = self.client.get(get_saved_search_url)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.json()['savedSearchesByGuid']), 4)
+
+        update_saved_search_url = reverse(update_saved_search_handler, args=[search_guid])
+        body['name'] = 'Updated Test Search'
+        response = self.client.post(update_saved_search_url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json()['savedSearchesByGuid'][search_guid], {
+            'savedSearchGuid': search_guid, 'name': 'Updated Test Search', 'search': SEARCH,
+        })
+
+        delete_saved_search_url = reverse(delete_saved_search_handler, args=[search_guid])
+        response = self.client.get(delete_saved_search_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'savedSearchesByGuid': {search_guid: None}})
+
+        response = self.client.get(get_saved_search_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.json()['savedSearchesByGuid']), 3)
+
+        global_saved_search_guid = response.json()['savedSearchesByGuid'].keys()[0]
+
+        update_saved_search_url = reverse(update_saved_search_handler, args=[global_saved_search_guid])
+        response = self.client.post(update_saved_search_url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 403)
+
+        delete_saved_search_url = reverse(delete_saved_search_handler, args=[global_saved_search_guid])
+        response = self.client.get(delete_saved_search_url)
+        self.assertEqual(response.status_code, 403)
