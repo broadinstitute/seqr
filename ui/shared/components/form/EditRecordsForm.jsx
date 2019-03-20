@@ -146,7 +146,7 @@ class EditRecordsForm extends React.Component
 const mapDispatchToProps = (dispatch, ownProps) => {
   return {
     closeParentModal: () => {
-      dispatch(closeModal(ownProps.modalName))
+      dispatch(closeModal(ownProps.modalName, true))
     },
   }
 }

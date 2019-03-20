@@ -53,7 +53,7 @@ const ProjectEllipsisMenu = (props) => {
         key="delete"
         buttonContainer={<Dropdown.Item />}
         buttonText="Delete Project"
-        buttonColor="black"
+        color="black"
         initialValues={props.project}
         onSubmit={props.updateProject}
         confirmDialog={`Are you sure you want to delete project "${props.project.name}"?`}

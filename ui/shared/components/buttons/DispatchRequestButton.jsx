@@ -33,21 +33,21 @@ class DispatchRequestButton extends React.Component {
 
     this.state = {
       requestStatus: RequestStatus.NONE,
-      values: {},
       requestErrorMessage: null,
       isConfirmDialogVisible: false,
     }
   }
 
   render() {
-    return React.cloneElement(this.props.buttonContainer || <span />, { children: [
-      this.props.children ?
-        React.cloneElement(this.props.children, { onChange: this.handleButtonClick, onClick: this.handleButtonClick, key: 'children' }) :
-        <ButtonLink key="button" onClick={this.handleButtonClick}>{this.props.buttonContent}</ButtonLink>,
+    const { buttonContainer, buttonContent, confirmDialog, children, onSuccess, onSubmit, ...props } = this.props
+    return React.cloneElement(buttonContainer || <span />, { children: [
+      children ?
+        React.cloneElement(children, { onClick: this.handleButtonClick }) :
+        <ButtonLink onClick={this.handleButtonClick} content={buttonContent} {...props} />,
       <RequestStatus key="status" status={this.state.requestStatus} errorMessage={this.state.requestErrorMessage} />,
       <Confirm
         key="confirm"
-        content={this.props.confirmDialog}
+        content={confirmDialog}
         open={this.state.isConfirmDialogVisible}
         onConfirm={this.performAction}
         onCancel={() => this.setState({ isConfirmDialogVisible: false })}
@@ -55,21 +55,19 @@ class DispatchRequestButton extends React.Component {
     ] })
   }
 
-  handleButtonClick = (values) => {
-    if (values) {
-      this.setState({ values })
-    }
+  handleButtonClick = (event) => {
+    event.preventDefault()
     if (this.props.confirmDialog) {
       this.setState({ isConfirmDialogVisible: true })
     } else {
-      this.performAction(values)
+      this.performAction()
     }
   }
 
-  performAction = (values) => {
+  performAction = () => {
     this.setState({ isConfirmDialogVisible: false, requestStatus: RequestStatus.IN_PROGRESS })
 
-    const dispatch = this.props.onSubmit(values || this.state.values)
+    const dispatch = this.props.onSubmit()
     dispatch.onClear = this.handleReset
     dispatch.then(
       this.handleRequestSuccess,
@@ -93,6 +91,10 @@ class DispatchRequestButton extends React.Component {
 
   handleReset = () => {
     this.setState({ requestStatus: RequestStatus.NONE, requestErrorMessage: null })
+  }
+
+  shouldComponentUpdate(nextProps, nextState) {
+    return nextState !== this.state
   }
 }
 
