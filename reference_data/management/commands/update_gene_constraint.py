@@ -7,7 +7,7 @@ from reference_data.models import TranscriptInfo, GeneConstraint
 
 logger = logging.getLogger(__name__)
 
-GENE_CONSTRAINT_SCORES_URL = "ftp://ftp.broadinstitute.org/pub/ExAC_release/release0.3.1/functional_gene_constraint/fordist_cleaned_exac_r03_march16_z_pli_rec_null_data.txt"
+GENE_CONSTRAINT_SCORES_URL = "http://storage.googleapis.com/seqr-reference-data/gene_constraint/gnomad.v2.1.1.lof_metrics.by_gene.txt"
 
 
 class Command(BaseCommand):
@@ -15,7 +15,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('gene_constraint_path', nargs="?",
-            help="local path of 'fordist_cleaned_exac_r03_march16_z_pli_rec_null_data.txt' downloaded from http://exac.broadinstitute.org",
+            help="local path of gene constraint file",
             default=os.path.join('resource_bundle', os.path.basename(GENE_CONSTRAINT_SCORES_URL)))
 
     def handle(self, *args, **options):
@@ -46,20 +46,24 @@ def update_gene_constraint(gene_constraint_path=None):
 
     logger.info("Creating {} GeneConstraint records".format(len(constraint_records)))
     skip_counter = 0
-    for record in tqdm(constraint_records, unit=" records"):
-        transcript_id = record["transcript_id"]
-        del record["transcript_id"]
+    models = []
 
-        transcript = TranscriptInfo.objects.filter(transcript_id=transcript_id)
-        if not transcript.exists():
+    transcripts_by_id = {t.transcript_id: t for t in TranscriptInfo.objects.all().prefetch_related('gene')}
+
+    for record in tqdm(constraint_records, unit=" records"):
+        transcript_id = record.pop("transcript_id")
+        transcript = transcripts_by_id.get(transcript_id)
+        if not transcript:
             skip_counter += 1
             logger.warn(("transcript id '{}' not found in TranscriptInfo table. "
                          "Running ./manage.py update_gencode to update the gencode version might fix this. "
                          "Full record: {}").format(transcript_id, record))
             continue
 
-        record['gene'] = transcript.first().gene
-        GeneConstraint.objects.create(**record)
+        record['gene'] = transcript.gene
+        models.append(GeneConstraint(**record))
+
+    GeneConstraint.objects.bulk_create(models)
 
     logger.info("Done")
     logger.info("Loaded {} GeneConstraint records from {}. Skipped {} records with unrecognized transcript id.".format(
@@ -78,7 +82,7 @@ def parse_gene_constraint_table(gene_constraint_path):
             constraint_records.append({
                 'transcript_id': record['transcript'].split(".")[0],
                 'mis_z': float(record['mis_z']),
-                'pLI': float(record['pLI']),
+                'pLI': float(record['pLI']) if record['pLI'] != 'NA' else 0,
             })
 
         return constraint_records
