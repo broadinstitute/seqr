@@ -8,7 +8,7 @@ import { fetchProjects } from 'redux/rootReducer'
 import ProjectsTable from './components/ProjectsTable'
 
 
-class Dashboard extends React.Component {
+class Dashboard extends React.PureComponent {
   static propTypes = {
     fetchProjects: PropTypes.func.isRequired,
   }

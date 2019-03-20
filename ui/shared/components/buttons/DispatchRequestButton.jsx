@@ -6,7 +6,7 @@ import RequestStatus from '../form/RequestStatus'
 import { ButtonLink } from '../StyledComponents'
 
 
-class DispatchRequestButton extends React.Component {
+class DispatchRequestButton extends React.PureComponent {
 
   static propTypes = {
 
@@ -91,10 +91,6 @@ class DispatchRequestButton extends React.Component {
 
   handleReset = () => {
     this.setState({ requestStatus: RequestStatus.NONE, requestErrorMessage: null })
-  }
-
-  shouldComponentUpdate(nextProps, nextState) {
-    return nextState !== this.state
   }
 }
 

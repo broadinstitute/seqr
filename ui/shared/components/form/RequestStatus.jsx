@@ -5,7 +5,7 @@ import { Popup } from 'semantic-ui-react'
 import { ColoredIcon } from 'shared/components/StyledComponents'
 
 
-class RequestStatus extends React.Component {
+class RequestStatus extends React.PureComponent {
 
   static NONE = 'NONE'
   static IN_PROGRESS = 'IN_PROGRESS'

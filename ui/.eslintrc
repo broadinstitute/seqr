@@ -45,6 +45,7 @@
     "no-class-assign": 0,
     "react/jsx-filename-extension": [ 1, { "extensions": [".js", ".jsx"]} ],
     "react/require-default-props": 0,
+    "react/require-optimization": 2,
     "react/jsx-max-props-per-line": 0,
     "react/jsx-no-target-blank": 0,
     "spaced-comment": 0,
