@@ -1021,6 +1021,15 @@
         "phenotype_map_method": "3"
     }
 },
+{
+    "model": "reference_data.primateai",
+    "pk": 1,
+    "fields": {
+        "gene": 1,
+        "percentile_75": 0.821286439896,
+        "percentile_25": 0.587214291096
+    }
+},
     {
     "model": "reference_data.dbnsfpgene",
     "pk": 36613,

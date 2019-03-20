@@ -53,7 +53,7 @@ const Variants = ({ variants }) =>
           )}
         </Grid.Column>
         <Grid.Column><Annotations variant={variant} /></Grid.Column>
-        <Grid.Column><Predictions predictions={variant.predictions} /></Grid.Column>
+        <Grid.Column><Predictions variant={variant} /></Grid.Column>
         <Grid.Column><Frequencies variant={variant} /></Grid.Column>
         <Grid.Column width={16}>
           {variant.familyGuids.map(familyGuid =>
