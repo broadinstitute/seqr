@@ -10,7 +10,6 @@ class MGIReferenceDataHandler(ReferenceDataHandler):
 
     model_cls = MGI
     url = "http://www.informatics.jax.org/downloads/reports/HMD_HumanPhenotype.rpt"
-    header_fields = ['gene_symbol', 'entrez_gene_id', 'homologene_id', '?', 'mouse_gene_symbol', 'marker_id', 'phenotype_ids']
 
     gene_reference = {
         'gene_symbols_to_gene': get_genes_by_symbol(),
@@ -18,8 +17,12 @@ class MGIReferenceDataHandler(ReferenceDataHandler):
     }
 
     @staticmethod
+    def get_file_header(f):
+        return ['gene_symbol', 'entrez_gene_id', 'homologene_id', '?', 'mouse_gene_symbol', 'marker_id', 'phenotype_ids']
+
+    @staticmethod
     def parse_record(record):
-        return {k: v.strip() for k, v in record.items() if k in ['gene_symbol', 'marker_id', 'entrez_gene_id']}
+        yield {k: v.strip() for k, v in record.items() if k in ['gene_symbol', 'marker_id', 'entrez_gene_id']}
 
     @classmethod
     def get_gene_for_record(cls, record):

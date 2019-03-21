@@ -4,6 +4,7 @@ from tqdm import tqdm
 from django.core.management.base import BaseCommand, CommandError
 from reference_data.management.commands.utils.download_utils import download_file
 from reference_data.management.commands.utils.gene_utils import get_genes_by_symbol
+from reference_data.models import GeneInfo
 
 logger = logging.getLogger(__name__)
 
@@ -13,12 +14,17 @@ class ReferenceDataHandler(object):
     model_cls = None
     url = None
     header_fields = None
+    post_process_models = None
 
     gene_reference = {'gene_symbols_to_gene': get_genes_by_symbol()}
 
     @staticmethod
     def parse_record(record):
         raise NotImplementedError
+
+    @staticmethod
+    def get_file_header(f):
+        return next(f).rstrip('\n\r').split('\t')
 
     @classmethod
     def get_gene_for_record(cls, record):
@@ -40,6 +46,9 @@ class GeneCommand(BaseCommand):
                             default=os.path.join('resource_bundle', os.path.basename(self.reference_data_handler.url)))
 
     def handle(self, *args, **options):
+        if GeneInfo.objects.count() == 0:
+            raise CommandError("GeneInfo table is empty. Run './manage.py update_gencode' before running this command.")
+
         update_records(self.reference_data_handler, file_path=options.get('file_path'), )
 
 
@@ -55,7 +64,7 @@ def update_records(reference_data_handler, file_path=None):
         file_path = download_file(reference_data_handler.url)
 
     model_cls = reference_data_handler.model_cls
-    model_name = type(model_cls).__name__
+    model_name = model_cls.__name__
     model_objects = getattr(model_cls, 'objects')
 
     logger.info("Deleting {} existing {} records".format(model_objects.count(), model_name))
@@ -63,27 +72,33 @@ def update_records(reference_data_handler, file_path=None):
 
     models = []
     skip_counter = 0
+    logger.info('Parsing file')
     with open(file_path) as f:
-        header_fields = reference_data_handler.header_fields or next(f).rstrip('\n\r').split('\t')
+        header_fields = reference_data_handler.get_file_header(f)
 
         for line in tqdm(f, unit=" records"):
             record = dict(zip(header_fields, line.rstrip('\r\n').split('\t')))
-            record = reference_data_handler.parse_record(record)
+            for record in reference_data_handler.parse_record(record):
+                if record is None:
+                    continue
 
-            try:
-                record['gene'] = reference_data_handler.get_gene_for_record(record)
-            except ValueError as e:
-                skip_counter += 1
-                logger.warn(e)
-                continue
+                try:
+                    record['gene'] = reference_data_handler.get_gene_for_record(record)
+                except ValueError as e:
+                    skip_counter += 1
+                    logger.debug(e)
+                    continue
 
-            models.append(model_cls(**record))
+                models.append(model_cls(**record))
+
+    if reference_data_handler.post_process_models:
+        reference_data_handler.post_process_models(models)
 
     logger.info("Creating {} {} records".format(len(models), model_name))
     model_objects.bulk_create(models)
 
     logger.info("Done")
-    logger.info("Loaded {} {} records from {}. Skipped {} records with unrecognized gene symbols.".format(
+    logger.info("Loaded {} {} records from {}. Skipped {} records with unrecognized genes.".format(
         model_objects.count(), model_name, file_path, skip_counter))
     if skip_counter > 0:
         logger.info('Running ./manage.py update_gencode to update the gencode version might fix missing genes')

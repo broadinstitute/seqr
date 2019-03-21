@@ -42,21 +42,19 @@ Example genemap2.txt record:
 
 """
 
-import collections
+import json
 import logging
 import os
 import re
 import requests
-from tqdm import tqdm
 
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import CommandError
 
-from reference_data.management.commands.utils.download_utils import download_file
-from reference_data.models import GeneInfo, Omim
+from reference_data.management.commands.utils.gene_utils import get_genes_by_symbol_and_id
+from reference_data.management.commands.utils.update_utils import GeneCommand, ReferenceDataHandler, update_records
+from reference_data.models import Omim
 
 logger = logging.getLogger(__name__)
-
-GENEMAP2_URL = "http://data.omim.org/downloads/{omim_key}/genemap2.txt"
 
 OMIM_ENTRIES_URL = 'https://api.omim.org/api/entry?apiKey={omim_key}&include=geneMap&format=json&mimNumber={mim_numbers}'
 
@@ -68,23 +66,132 @@ OMIM_PHENOTYPE_MAP_METHOD_CHOICES = {
 }
 
 
-class Command(BaseCommand):
-    help = "Downloads the latest OMIM genemap2.txt data and populates the OMIM table so it contains 1 row per gene-phenotype pair"
+class OmimReferenceDataHandler(ReferenceDataHandler):
+
+    model_cls = Omim
+    url = "http://data.omim.org/downloads/{omim_key}/genemap2.txt"
+
+    def __init__(self, omim_key):
+        self.url = self.url.format(omim_key=omim_key)
+        self.omim_key = omim_key
+        gene_symbols_to_gene, gene_ids_to_gene = get_genes_by_symbol_and_id()
+        self.gene_reference = {
+            'gene_symbols_to_gene': gene_symbols_to_gene,
+            'gene_ids_to_gene': gene_ids_to_gene,
+        }
+
+    @staticmethod
+    def get_file_header(f):
+        header_fields = None
+        for line in f:
+            line = line.rstrip('\r\n')
+            if line.startswith("# Chrom") and header_fields is None:
+                header_fields = [c.lower().replace(' ', '_') for c in line.split('\t')]
+                break
+            elif not line or line.startswith("#"):
+                continue
+            elif line.startswith('This account is inactive'):
+                raise Exception(line)
+            elif header_fields is None:
+                raise ValueError("Header row not found in genemap2 file before line {}: {}".format(i, line))
+
+        return header_fields
+
+    @staticmethod
+    def parse_record(record):
+        # skip commented rows
+        if len(record) == 1:
+            yield None
+
+        else:
+            # rename some of the fields
+            output_record = {}
+            output_record['gene_id'] = record['ensembl_gene_id']
+            output_record['mim_number'] = int(record['mim_number'])
+            output_record['gene_symbol'] = record['approved_symbol'].strip() or record['gene_symbols'].split(",")[0]
+            output_record['gene_description'] = record['gene_name']
+            output_record['comments'] = record['comments']
+
+            phenotype_field = record['phenotypes'].strip()
+
+            record_with_phenotype = None
+            for phenotype_match in re.finditer("[\[{ ]*(.+?)[ }\]]*(, (\d{4,}))? \(([1-4])\)(, ([^;]+))?;?",
+                                               phenotype_field):
+                # Phenotypes example: "Langer mesomelic dysplasia, 249700 (3), Autosomal recessive; Leri-Weill dyschondrosteosis, 127300 (3), Autosomal dominant"
+
+                record_with_phenotype = dict(output_record)  # copy
+                record_with_phenotype["phenotype_description"] = phenotype_match.group(1)
+                record_with_phenotype["phenotype_mim_number"] = int(phenotype_match.group(3)) if phenotype_match.group(
+                    3) else None
+                record_with_phenotype["phenotype_map_method"] = phenotype_match.group(4)
+                record_with_phenotype["phenotype_inheritance"] = phenotype_match.group(6) or None
+
+                # basic checks
+                if len(record_with_phenotype["phenotype_description"].strip()) == 0:
+                    raise ValueError("Empty phenotype description: {}".format(json.dumps(record)))
+
+                if int(record_with_phenotype["phenotype_map_method"]) not in OMIM_PHENOTYPE_MAP_METHOD_CHOICES:
+                    raise ValueError("Unexpected value (%s) for phenotype_map_method: %s" % (
+                        record_with_phenotype["phenotype_map_method"], phenotype_field))
+
+                yield record_with_phenotype
+
+            if record_with_phenotype is None:
+                if len(phenotype_field) > 0:
+                    raise ValueError("No phenotypes found: {}".format(json.dumps(record)))
+                else:
+                    yield output_record
+
+    def get_gene_for_record(self, record):
+        gene = self.gene_reference['gene_ids_to_gene'].get(record.pop('gene_id'))
+        if gene:
+            del record['gene_symbol']
+            return gene
+
+        return super(OmimReferenceDataHandler, self).get_gene_for_record(record)
+
+    def post_process_models(self, models):
+        logger.info('Adding phenotypic series information')
+        mim_numbers = {omim_record.mim_number for omim_record in models if omim_record.phenotype_mim_number}
+        mim_numbers = map(str, list(mim_numbers))
+        mim_number_to_phenotypic_series = {}
+        for i in range(0, len(mim_numbers), 20):
+            logger.debug('Fetching entries {}-{}'.format(i, i + 20))
+            entries_to_fetch = mim_numbers[i:i + 20]
+            response = requests.get(OMIM_ENTRIES_URL.format(omim_key=self.omim_key, mim_numbers=','.join(entries_to_fetch)))
+            if not response.ok:
+                raise CommandError('Request failed with {}: {}'.format(response.status_code, response.reason))
+
+            entries = response.json()['omim']['entryList']
+            if len(entries) != len(entries_to_fetch):
+                raise CommandError(
+                    'Expected {} omim entries but recieved {}'.format(len(entries_to_fetch), len(entries)))
+
+            for entry in entries:
+                mim_number = entry['entry']['mimNumber']
+                for phenotype in entry['entry'].get('geneMap', {}).get('phenotypeMapList', []):
+                    phenotypic_series_number = phenotype['phenotypeMap'].get('phenotypicSeriesNumber')
+                    if phenotypic_series_number:
+                        mim_number_to_phenotypic_series[mim_number] = phenotypic_series_number
+
+        for omim_record in models:
+            omim_record.phenotypic_series_number = mim_number_to_phenotypic_series.get(omim_record.mim_number)
+        logger.info('Found {} records with phenotypic series'.format(len(mim_number_to_phenotypic_series)))
+
+
+class Command(GeneCommand):
+    reference_data_handler = OmimReferenceDataHandler
 
     def add_arguments(self, parser):
         parser.add_argument('--omim-key', help="OMIM key provided with registration", default=os.environ.get("OMIM_KEY"))
-        parser.add_argument(
-            'genemap2_file_path',
-            nargs="?",
-            help="path of genemap2.txt file downloaded from http://data.omim.org/downloads/{omim_key}/genemap2.txt")
+        super(Command, self).add_arguments(parser)
 
     def handle(self, *args, **options):
-        if GeneInfo.objects.count() == 0:
-            raise CommandError("GeneInfo table is empty. Run './manage.py update_gencode' before running this command.")
-        update_omim(omim_key=options['omim_key'], genemap2_file_path=options['genemap2_file_path'])
+        self.reference_data_handler = OmimReferenceDataHandler(options.get('omim_key'))
+        super(Command, self).handle(*args, **options)
 
 
-def update_omim(omim_key=None, genemap2_file_path=None):
+def update_omim(omim_key=None, **kwargs):
     """Updates the OMIM table, using either the genemap2_file_path to load an existing local genemap2.txt file, or
     if an omim_key is provided instead, using the omim_key to download the file from https://www.omim.org
 
@@ -92,151 +199,8 @@ def update_omim(omim_key=None, genemap2_file_path=None):
         omim_key (str): OMIM download key obtained by filling in a form at https://www.omim.org/downloads/
         genemap2_file_path (str):
     """
-    if genemap2_file_path:
-        genemap2_file = open(genemap2_file_path)
-    elif omim_key:
-        genemap2_file_path = download_file(url=GENEMAP2_URL.format(omim_key=omim_key))
-        genemap2_file = open(genemap2_file_path)
-    else:
-        raise CommandError("Must provide --omim-key or genemap2.txt file path")
+    update_records(OmimReferenceDataHandler(omim_key), **kwargs)
 
-    logger.info("Deleting {} existing OMIM records".format(Omim.objects.count()))
-    Omim.objects.all().delete()
-
-    logger.info("Loading gene info")
-    gene_symbol_to_gene_id = collections.defaultdict(list)
-    gene_id_to_gene_info = {}
-    for gene_info in GeneInfo.objects.all().only('gene_id', 'gene_symbol').order_by('-gencode_release'):
-        gene_symbol_to_gene_id[gene_info.gene_symbol].append(gene_info.gene_id)
-        gene_id_to_gene_info[gene_info.gene_id] = gene_info
-    gene_symbol_to_gene_id = {}
-
-    skip_records = set()
-    omim_records = []
-    logger.info("Parsing genemap2 file")
-    for omim_record in tqdm(parse_genemap2_table(genemap2_file), unit=" records"):
-        gene_id = omim_record["gene_id"]
-        gene_symbol = omim_record["gene_symbol"]
-        if not gene_id and gene_symbol_to_gene_id.get(gene_symbol):
-            gene_id = gene_symbol_to_gene_id[gene_symbol][0]
-            omim_record["gene_id"] = gene_id
-            logger.info("Mapped gene symbol {} to gene_id {}".format(gene_symbol, gene_id))
-
-        gene = gene_id_to_gene_info.get(gene_id)
-        if not gene:
-            # We don't really care about skipping records with no phenotypes and no valid gene
-            if omim_record.get('phenotype_mim_number'):
-                skip_records.add(gene_id or gene_symbol)
-            continue
-
-        del omim_record["gene_id"]
-        del omim_record["gene_symbol"]
-
-        omim_record['gene'] = gene
-        omim_records.append(omim_record)
-
-    if skip_records:
-        logger.warn(("The following {} OMIM genes were not found in the GeneInfo table. "
-                     "Running ./manage.py update_gencode to update the gencode version might fix this. "
-                     ).format(len(skip_records)))
-        logger.debug(', '.join(skip_records))
-
-    logger.info('Adding phenotypic series information')
-    mim_numbers = {omim_record['mim_number'] for omim_record in omim_records if omim_record.get('phenotype_mim_number')}
-    mim_numbers = map(str, list(mim_numbers))
-    mim_number_to_phenotypic_series = {}
-    for i in range(0, len(mim_numbers), 20):
-        logger.debug('Fetching entries {}-{}'.format(i, i + 20))
-        entries_to_fetch = mim_numbers[i:i+20]
-        response = requests.get(OMIM_ENTRIES_URL.format(omim_key=omim_key, mim_numbers=','.join(entries_to_fetch)))
-        if not response.ok:
-            raise CommandError('Request failed with {}: {}'.format(response.status_code, response.reason))
-
-        entries = response.json()['omim']['entryList']
-        if len(entries) != len(entries_to_fetch):
-            raise CommandError('Expected {} omim entries but recieved {}'.format(len(entries_to_fetch), len(entries)))
-
-        for entry in entries:
-            mim_number = entry['entry']['mimNumber']
-            for phenotype in entry['entry'].get('geneMap', {}).get('phenotypeMapList', []):
-                phenotypic_series_number = phenotype['phenotypeMap'].get('phenotypicSeriesNumber')
-                if phenotypic_series_number:
-                    mim_number_to_phenotypic_series[mim_number] = phenotypic_series_number
-
-    for omim_record in omim_records:
-        omim_record['phenotypic_series_number'] = mim_number_to_phenotypic_series.get(omim_record['mim_number'])
-    logger.info('Found {} records with phenotypic series'.format(len(mim_number_to_phenotypic_series)))
-
-    logger.info("Creating {} OMIM gene-phenotype association records".format(len(omim_records)))
-    Omim.objects.bulk_create([Omim(**omim_record) for omim_record in omim_records])
-
-    logger.info("Done")
-    logger.info("Loaded {} OMIM records from {}. Skipped {} records with unrecognized gene id".format(
-        Omim.objects.count(), genemap2_file_path, len(skip_records)))
-
-
-class ParsingError(Exception):
-    pass
-
-
-def parse_genemap2_table(omim_genemap2_file_iter):
-    """Parse the genemap2 table, and yield a dictionary representing each gene-phenotype pair."""
-
-    header_fields = None
-    for i, line in enumerate(omim_genemap2_file_iter):
-        line = line.rstrip('\r\n')
-        if line.startswith("# Chrom") and header_fields is None:
-            header_fields = [c.lower().replace(' ', '_') for c in line.split('\t')]
-            continue
-        elif not line or line.startswith("#"):
-            continue
-        elif line.startswith('This account is inactive'):
-            raise Exception(line)
-        elif header_fields is None:
-            raise ValueError("Header row not found in genemap2 file before line {}: {}".format(i, line))
-
-        fields = line.rstrip('\r\n').split('\t')
-        if len(fields) != len(header_fields):
-            raise ParsingError("Found %s instead of %s fields in line #%s: %s" % (
-                len(fields), len(header_fields), i, str(fields)))
-
-        record = dict(zip(header_fields, fields))
-
-        # rename some of the fields
-        output_record = {}
-        output_record['gene_id'] = record['ensembl_gene_id']
-        output_record['mim_number'] = int(record['mim_number'])
-        output_record['gene_symbol'] = record['approved_symbol'].strip() or record['gene_symbols'].split(",")[0]
-        output_record['gene_description'] = record['gene_name']
-        output_record['comments'] = record['comments']
-
-        phenotype_field = record['phenotypes'].strip()
-
-        record_with_phenotype = None
-        for phenotype_match in re.finditer("[\[{ ]*(.+?)[ }\]]*(, (\d{4,}))? \(([1-4])\)(, ([^;]+))?;?", phenotype_field):
-            # Phenotypes example: "Langer mesomelic dysplasia, 249700 (3), Autosomal recessive; Leri-Weill dyschondrosteosis, 127300 (3), Autosomal dominant"
-
-            record_with_phenotype = dict(output_record) # copy
-            record_with_phenotype["phenotype_description"] = phenotype_match.group(1)
-            record_with_phenotype["phenotype_mim_number"] = int(phenotype_match.group(3)) if phenotype_match.group(3) else None
-            record_with_phenotype["phenotype_map_method"] = phenotype_match.group(4)
-            record_with_phenotype["phenotype_inheritance"] = phenotype_match.group(6) or None
-
-            # basic checks
-            if len(record_with_phenotype["phenotype_description"].strip()) == 0:
-                raise ParsingError("Empty phenotype description in line #{}: {}".format(i, line))
-
-            if int(record_with_phenotype["phenotype_map_method"]) not in OMIM_PHENOTYPE_MAP_METHOD_CHOICES:
-                raise ParsingError("Unexpected value (%s) for phenotype_map_method on line #%s: %s" % (
-                    record_with_phenotype["phenotype_map_method"], i, phenotype_field))
-
-            yield record_with_phenotype
-
-        if record_with_phenotype is None:
-            if len(phenotype_field) > 0:
-                raise ParsingError("No phenotypes found in line #{}: {}".format(i, line))
-            else:
-                yield output_record
 
 """
 Comment at the end of genemap2.txt:
