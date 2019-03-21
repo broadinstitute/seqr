@@ -11,7 +11,7 @@ from seqr.views.utils.orm_to_json_utils import get_json_for_genes, get_json_for_
 def get_gene(gene_id, user):
     gene = GeneInfo.objects.get(gene_id=gene_id)
     gene_json = get_json_for_gene(
-        gene, user=user, add_dbnsfp=True, add_omim=True, add_constraints=True, add_notes=True, add_expression=True
+        gene, user=user, add_dbnsfp=True, add_omim=True, add_constraints=True, add_notes=True, add_expression=True, add_mgi=True
     )
     return gene_json
 

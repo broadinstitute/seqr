@@ -156,6 +156,7 @@ const GeneDetailContent = ({ gene, updateGeneNote: dispatchUpdateGeneNote }) => 
     { title: 'Monarch', link: `http://monarchinitiative.org/search/${gene.geneId}`, description: 'Cross-species gene and phenotype resource' },
     { title: 'Decipher', link: `https://decipher.sanger.ac.uk/gene/${gene.geneSymbol}#overview/protein-info`, description: 'DatabasE of genomiC varIation and Phenotype in Humans using Ensembl Resources' },
     { title: 'UniProt', link: `http://www.uniprot.org/uniprot/?random=true&query=gene:${gene.geneSymbol}+AND+reviewed:yes+AND+organism:9606`, description: 'Protein sequence and functional information' },
+    gene.mgiMarkerId ? { title: 'MGI', link: `http://www.informatics.jax.org/marker/${gene.mgiMarkerId}`, description: 'Mouse Genome Informatics' } : null,
   ]
   return (
     <div>
