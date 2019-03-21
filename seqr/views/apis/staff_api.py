@@ -491,13 +491,13 @@ def _generate_rows(project, loaded_samples_by_project_family, saved_variants_by_
 
             saved_variants_to_json[variant] = saved_variant_json
 
-        affected_sample_guids = set()
-        unaffected_sample_guids = set()
+        affected_individual_guids = set()
+        unaffected_individual_guids = set()
         for sample in samples:
             if sample.individual.affected == "A":
-                affected_sample_guids.add(sample.guid)
+                affected_individual_guids.add(sample.individual.guid)
             elif sample.individual.affected == "N":
-                unaffected_sample_guids.add(sample.guid)
+                unaffected_individual_guids.add(sample.individual.guid)
 
         potential_compound_het_genes = defaultdict(set)
         for variant, saved_variant_json in saved_variants_to_json.items():
@@ -514,13 +514,13 @@ def _generate_rows(project, loaded_samples_by_project_family, saved_variants_by_
                 chrom = saved_variant_json['chrom']
                 is_x_linked = "X" in chrom
                 for sample_guid, genotype in genotypes.items():
-                    if genotype["numAlt"] == 2 and sample_guid in affected_sample_guids:
+                    if genotype["numAlt"] == 2 and sample_guid in affected_individual_guids:
                         affected_indivs_with_hom_alt_variants.add(sample_guid)
-                    elif genotype["numAlt"] == 1 and sample_guid in affected_sample_guids:
+                    elif genotype["numAlt"] == 1 and sample_guid in affected_individual_guids:
                         affected_indivs_with_het_variants.add(sample_guid)
-                    elif genotype["numAlt"] == 2 and sample_guid in unaffected_sample_guids:
+                    elif genotype["numAlt"] == 2 and sample_guid in unaffected_individual_guids:
                         unaffected_indivs_with_hom_alt_variants.add(sample_guid)
-                    elif genotype["numAlt"] == 1 and sample_guid in unaffected_sample_guids:
+                    elif genotype["numAlt"] == 1 and sample_guid in unaffected_individual_guids:
                         unaffected_indivs_with_het_variants.add(sample_guid)
 
             # AR-homozygote, AR-comphet, AR, AD, de novo, X-linked, UPD, other, multiple
@@ -531,13 +531,13 @@ def _generate_rows(project, loaded_samples_by_project_family, saved_variants_by_
                     inheritance_models.add("AR-homozygote")
 
             if not unaffected_indivs_with_hom_alt_variants and not unaffected_indivs_with_het_variants and affected_indivs_with_het_variants:
-                if unaffected_sample_guids:
+                if unaffected_individual_guids:
                     inheritance_models.add("de novo")
                 else:
                     inheritance_models.add("AD")
 
             if not unaffected_indivs_with_hom_alt_variants and (len(
-                    unaffected_sample_guids) < 2 or unaffected_indivs_with_het_variants) and affected_indivs_with_het_variants and not affected_indivs_with_hom_alt_variants:
+                    unaffected_individual_guids) < 2 or unaffected_indivs_with_het_variants) and affected_indivs_with_het_variants and not affected_indivs_with_hom_alt_variants:
                 for gene_id in saved_variant_json['transcripts']:
                     potential_compound_het_genes[gene_id].add(variant)
 
