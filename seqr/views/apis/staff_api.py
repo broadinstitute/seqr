@@ -351,7 +351,7 @@ def _get_loaded_samples_by_project_family(projects):
         loaded_date__isnull=False
     ).select_related('individual__family__project').order_by('loaded_date')
 
-    loaded_samples_by_project_family =  defaultdict(lambda:  defaultdict(list))
+    loaded_samples_by_project_family = defaultdict(lambda:  defaultdict(list))
     for sample in loaded_samples:
         family = sample.individual.family
         loaded_samples_by_project_family[family.project.guid][family.guid].append(sample)
@@ -411,6 +411,7 @@ def _generate_rows(project, loaded_samples_by_project_family, saved_variants_by_
             "pubmed_ids": '; '.join(family.pubmed_ids),
             "analysis_summary": (family.analysis_summary or '').strip('" \n'),
             "row_id": family.guid,
+            "num_individuals_sequenced": len({sample.individual for sample in samples})
         }
         row.update(DEFAULT_ROW)
 
