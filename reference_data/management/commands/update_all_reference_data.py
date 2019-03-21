@@ -8,6 +8,8 @@ from reference_data.management.commands.update_gencode import update_gencode
 from reference_data.management.commands.update_gene_constraint import update_gene_constraint
 from reference_data.management.commands.update_omim import update_omim
 from reference_data.management.commands.update_primate_ai import update_primate_ai
+from reference_data.management.commands.update_mgi import update_mgi
+
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +28,7 @@ class Command(BaseCommand):
         parser.add_argument('--skip-hpo', help="Don't reload human phenotype ontology", action="store_true")
         parser.add_argument('--skip-gtex', help="Don't reload gtex", action="store_true")
         parser.add_argument('--skip-primate-ai', help="Don't reload primate ai", action="store_true")
+        parser.add_argument('--skip-mgi', help="Don't reload mgi", action="store_true")
 
     def handle(self, *args, **options):
         if not options["skip_gencode"]:
@@ -69,3 +72,9 @@ class Command(BaseCommand):
                 update_primate_ai()
             except Exception as e:
                 logger.error("unable to update primate ai: {}".format(e))
+
+        if not options["skip_mgi"]:
+            try:
+                update_mgi()
+            except Exception as e:
+                logger.error("unable to mgi: {}".format(e))

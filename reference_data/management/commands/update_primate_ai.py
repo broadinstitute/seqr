@@ -1,10 +1,10 @@
 import logging
 import os
-import collections
 from tqdm import tqdm
 from django.core.management.base import BaseCommand
 from reference_data.management.commands.utils.download_utils import download_file
-from reference_data.models import PrimateAI, GeneInfo
+from reference_data.management.commands.utils.gene_utils import get_genes_by_symbol
+from reference_data.models import PrimateAI
 
 logger = logging.getLogger(__name__)
 
@@ -35,9 +35,7 @@ def update_primate_ai(file_path=None):
     logger.info("Deleting {} existing PrimateAI records".format(PrimateAI.objects.count()))
     PrimateAI.objects.all().delete()
 
-    gene_symbol_to_genes = collections.defaultdict(list)
-    for gene_info in GeneInfo.objects.all().only('gene_id', 'gene_symbol').order_by('-gencode_release'):
-        gene_symbol_to_genes[gene_info.gene_symbol].append(gene_info)
+    gene_symbols_to_gene = get_genes_by_symbol()
 
     models = []
     skip_counter = 0
@@ -48,13 +46,13 @@ def update_primate_ai(file_path=None):
             record = dict(zip(header_fields, line.rstrip('\r\n').split('\t')))
             gene_symbol = record['genesymbol']
 
-            if not gene_symbol_to_genes.get(gene_symbol):
+            if not gene_symbols_to_gene.get(gene_symbol):
                 skip_counter += 1
                 logger.warn('Gene "{}" not found in the GeneInfo table. Running ./manage.py update_gencode to update the gencode version might fix this.'.format(gene_symbol))
                 continue
 
             models.append(PrimateAI(
-                gene=gene_symbol_to_genes[gene_symbol][0],
+                gene=gene_symbols_to_gene[gene_symbol],
                 percentile_25=float(record['pcnt25']),
                 percentile_75=float(record['pcnt75']),
             ))

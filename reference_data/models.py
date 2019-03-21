@@ -183,3 +183,12 @@ class PrimateAI(models.Model):
 
     class Meta:
         json_fields = ['percentile_25', 'percentile_75']
+
+
+class MGI(models.Model):
+    gene = models.ForeignKey(GeneInfo, on_delete=models.CASCADE)
+
+    marker_id = models.CharField(max_length=15)
+
+    class Meta:
+        unique_together = ('gene', 'marker_id')
