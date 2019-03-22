@@ -50,7 +50,6 @@ import requests
 
 from django.core.management.base import CommandError
 
-from reference_data.management.commands.utils.gene_utils import get_genes_by_symbol_and_id
 from reference_data.management.commands.utils.update_utils import GeneCommand, ReferenceDataHandler, update_records
 from reference_data.models import Omim
 
@@ -74,11 +73,6 @@ class OmimReferenceDataHandler(ReferenceDataHandler):
     def __init__(self, omim_key):
         self.url = self.url.format(omim_key=omim_key)
         self.omim_key = omim_key
-        gene_symbols_to_gene, gene_ids_to_gene = get_genes_by_symbol_and_id()
-        self.gene_reference = {
-            'gene_symbols_to_gene': gene_symbols_to_gene,
-            'gene_ids_to_gene': gene_ids_to_gene,
-        }
 
     @staticmethod
     def get_file_header(f):
@@ -141,14 +135,6 @@ class OmimReferenceDataHandler(ReferenceDataHandler):
                     raise ValueError("No phenotypes found: {}".format(json.dumps(record)))
                 else:
                     yield output_record
-
-    def get_gene_for_record(self, record):
-        gene = self.gene_reference['gene_ids_to_gene'].get(record.pop('gene_id'))
-        if gene:
-            del record['gene_symbol']
-            return gene
-
-        return super(OmimReferenceDataHandler, self).get_gene_for_record(record)
 
     def post_process_models(self, models):
         logger.info('Adding phenotypic series information')

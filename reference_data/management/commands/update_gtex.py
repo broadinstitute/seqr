@@ -1,84 +1,53 @@
-import gzip
 import logging
 import os
-from tqdm import tqdm
-from django.core.management.base import BaseCommand, CommandError
+import collections
 from reference_data.management.commands.utils.download_utils import download_file
-from reference_data.models import GeneExpression, GeneInfo
+from reference_data.management.commands.utils.update_utils import GeneCommand, ReferenceDataHandler, update_records
+from reference_data.models import GeneExpression
 
 logger = logging.getLogger(__name__)
 
-
-GTEX_EXPRESSION_DATA = "http://storage.googleapis.com/gtex_analysis_v6/rna_seq_data/GTEx_Analysis_v6_RNA-seq_RNA-SeQCv1.1.8_gene_rpkm.gct.gz"
-GTEX_SAMPLE_ANNOTATIONS = "http://storage.googleapis.com/gtex_analysis_v6/annotations/GTEx_Data_V6_Annotations_SampleAttributesDS.txt"
+GTEX_SAMPLE_ANNOTATIONS = 'https://storage.googleapis.com/gtex_analysis_v7/annotations/GTEx_v7_Annotations_SampleAttributesDS.txt'
 
 
-class Command(BaseCommand):
-    help = "Loads GTEx tissue expression data"
+"""
+Expression array is:
+expressions: {
+    tissue_type: [array of expression values]
+}
 
-    def add_arguments(self, parser):
-        parser.add_argument('--gtex-expression-data', nargs="?", help="local path of '%s'" % os.path.basename(GTEX_EXPRESSION_DATA))
-        parser.add_argument('--gtex-sample-annotations', nargs="?", help="local path of '%s'" % os.path.basename(GTEX_SAMPLE_ANNOTATIONS))
-
-    def handle(self, *args, **options):
-        update_gtex(
-            gtex_expression_data_path = options.get("gtex_expression_data"),
-            gtex_sample_annotations_path = options.get("gtex_sample_annotations"))
+expression file is in gtex format
+samples file is just two columns: sample -> tissue type
+"""
 
 
-def update_gtex(gtex_expression_data_path=None, gtex_sample_annotations_path=None):
-    if not gtex_expression_data_path:
-        gtex_expression_data_path = download_file(GTEX_EXPRESSION_DATA)
-    if not gtex_sample_annotations_path:
-        gtex_sample_annotations_path = download_file(GTEX_SAMPLE_ANNOTATIONS)
+class GtexReferenceDataHandler(ReferenceDataHandler):
 
-    created_counter = total_counter = 0
-    for gene_id, expression_array in get_tissue_expression_values_by_gene(
-        gtex_expression_data_path,
-        gtex_sample_annotations_path,
-    ):
-        total_counter += 1
-        gene = GeneInfo.objects.filter(gene_id=gene_id).only('id').first()
-        if not gene:
-            logger.info("GTEx gene id not found: %s", gene_id)
-            continue
-        _, created = GeneExpression.objects.get_or_create(
-            gene=gene,
-            expression_values=expression_array)
+    model_cls = GeneExpression
+    url = 'https://storage.googleapis.com/gtex_analysis_v7/rna_seq_data/GTEx_Analysis_2016-01-15_v7_RNASeQCv1.1.8_gene_tpm.gct.gz'
 
-        if created:
-            created_counter += 1
+    def __init__(self, gtex_sample_annotations_path=None):
+        if not gtex_sample_annotations_path:
+            gtex_sample_annotations_path = download_file(GTEX_SAMPLE_ANNOTATIONS)
+        self.tissue_type_map = _get_tissue_type_map(gtex_sample_annotations_path)
+        self.tissues_by_columns = None
 
-    logger.info("Done. Parsed %s records from %s. Created %s new GeneExpression entries.",
-        total_counter, gtex_expression_data_path, created_counter)
+    @staticmethod
+    def parse_record(record):
+        expressions = collections.defaultdict(list)
+        for tissue, value in record.items():
+            tissue = tissue.split('_')[0]
+            if tissue not in ['Name', 'Description', None, 'na']:
+                expressions[tissue].append(float(value))
 
+        yield {
+            'gene_id': record['Name'].split('.')[0],
+            'expression_values': dict(expressions),
+        }
 
-def get_tissue_expression_values_by_gene(expression_file_name, samples_file_name):
-    """
-    Return iterator of (gene_id, expression array) tuples
-    Expression array is:
-    expressions: {
-        tissue_type: [array of expression values]
-    }
-
-    expression_file (RPKM_GeneLevel_September.gct) is in gtex format;
-    samples file is just two columns: sample -> tissue type
-
-    Command for getting samples file:
-    awk -F"\t" '{ gsub(/ /,"_",$47); gsub(/-/,".",$1); print $1"\t"tolower($47) }' RNA-SeQC_metrics_September.tsv > gtex_samples.txt
-
-    """
-
-    # read samples file to get a map of sample_id -> tissue_type
-    tissue_type_map = _get_tissue_type_map(samples_file_name)
-
-    logger.info("Parsing %s", expression_file_name)
-    with gzip.open(expression_file_name) as expression_file:
-        for i, line in tqdm(enumerate(expression_file), unit=' lines'):
+    def get_file_header(self, f):
+        for i, line in enumerate(f):
             line = line.rstrip('\n')
-            if not line:
-                break
-
             # first two lines are junk; third is the header
             if i < 2:
                 continue
@@ -87,13 +56,25 @@ def get_tissue_expression_values_by_gene(expression_file_name, samples_file_name
                 # (used to link column to tissue type)
                 # this wouldn't be necessary if samples file is in the same order as expression file,
                 # but I don't wait to rely on that guarantee (mainly because they have a different # of fields)
-                tissues_by_column = _get_tissues_by_column(line, tissue_type_map)
-                continue
+                header_fields = line.strip().split('\t')
+                tissue_types = ['{}_{}'.format(self.tissue_type_map.get(field), i) for i, field in enumerate(header_fields[2:])]
+                return header_fields[:2] + tissue_types
 
-            fields = line.split('\t')
-            gene_id = fields[0].split('.')[0]
 
-            yield (gene_id, _get_expressions(line, tissues_by_column))
+class Command(GeneCommand):
+    reference_data_handler = GtexReferenceDataHandler
+
+    def add_arguments(self, parser):
+        parser.add_argument('--gtex-sample-annotations', nargs="?", help="local path of '%s'" % os.path.basename(GTEX_SAMPLE_ANNOTATIONS))
+        super(Command, self).add_arguments(parser)
+
+    def handle(self, *args, **options):
+        self.reference_data_handler = GtexReferenceDataHandler(gtex_sample_annotations_path=options.get('gtex_sample_annotations'))
+        super(Command, self).handle(*args, **options)
+
+
+def update_gtex(gtex_sample_annotations_path=None, **kwargs):
+    update_records(GtexReferenceDataHandler(gtex_sample_annotations_path=gtex_sample_annotations_path), **kwargs)
 
 
 def _get_tissue_type_map(samples_file):
@@ -123,32 +104,3 @@ def _get_tissue_type_map(samples_file):
     logger.info("Parsed %s tissues", len(set(tissue_type_map.values())))
 
     return tissue_type_map
-
-
-def _get_tissues_by_column(header_line, tissue_type_map):
-    """
-    Return a list of tissue types for each sample in header
-    (len is # fields - 2, as first two fields ID the gene)
-    type is None if a sample is not in tissue_type_map
-    """
-    header_fields = header_line.strip().split('\t')
-    num_samples = len(header_fields) - 2
-    tissue_types = [ None for i in range(num_samples) ]
-    for i in range(num_samples):
-        tissue_types[i] = tissue_type_map.get(header_fields[i+2])
-    return tissue_types
-
-
-def _get_expressions(line, tissues_by_column):
-    """
-    Make an expression map from a data line in the expression file
-    """
-    uniq_expressions = set(tissues_by_column)
-    expressions = {e: [] for e in uniq_expressions if e is not None and e != 'na' }
-
-    fields = line.strip().split('\t')
-    for i in range(len(fields)-2):
-        tissue = tissues_by_column[i]
-        if expressions.has_key(tissue):
-            expressions[tissue].append(float(fields[i+2]))
-    return expressions

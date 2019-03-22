@@ -1,5 +1,4 @@
 import logging
-from reference_data.management.commands.utils.gene_utils import get_genes_by_symbol
 from reference_data.management.commands.utils.update_utils import GeneCommand, ReferenceDataHandler, update_records
 from reference_data.models import MGI, dbNSFPGene
 
@@ -11,9 +10,8 @@ class MGIReferenceDataHandler(ReferenceDataHandler):
     model_cls = MGI
     url = "http://www.informatics.jax.org/downloads/reports/HMD_HumanPhenotype.rpt"
 
-    gene_reference = {
-        'gene_symbols_to_gene': get_genes_by_symbol(),
-        'entrez_id_to_gene': {dbnsfp.entrez_gene_id: dbnsfp.gene for dbnsfp in dbNSFPGene.objects.all().prefetch_related('gene')},
+    entrez_id_to_gene = {
+        dbnsfp.entrez_gene_id: dbnsfp.gene for dbnsfp in dbNSFPGene.objects.all().prefetch_related('gene')
     }
 
     @staticmethod
@@ -26,7 +24,7 @@ class MGIReferenceDataHandler(ReferenceDataHandler):
 
     @classmethod
     def get_gene_for_record(cls, record):
-        gene = cls.gene_reference['entrez_id_to_gene'].get(record.pop('entrez_gene_id'))
+        gene = cls.entrez_id_to_gene.get(record.pop('entrez_gene_id'))
         if gene:
             del record['gene_symbol']
             return gene

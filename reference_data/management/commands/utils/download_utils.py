@@ -16,7 +16,7 @@ def download_file(url, to_dir=tempfile.gettempdir(), verbose=True):
         string: local file path
     """
 
-    if not url or (not url.startswith("http://") and not url.startswith("ftp://")):
+    if not (url and url.startswith(("http://", "https://", "ftp://"))):
         raise ValueError("Invalid url: {}".format(url))
     local_file_path = os.path.join(to_dir, os.path.basename(url))
     remote_file_size = get_remote_file_size(url)

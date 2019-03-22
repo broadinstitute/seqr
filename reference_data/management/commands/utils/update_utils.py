@@ -1,9 +1,11 @@
 import logging
 import os
+import gzip
 from tqdm import tqdm
 from django.core.management.base import BaseCommand, CommandError
+from django.db import transaction
 from reference_data.management.commands.utils.download_utils import download_file
-from reference_data.management.commands.utils.gene_utils import get_genes_by_symbol
+from reference_data.management.commands.utils.gene_utils import get_genes_by_symbol_and_id
 from reference_data.models import GeneInfo
 
 logger = logging.getLogger(__name__)
@@ -16,7 +18,11 @@ class ReferenceDataHandler(object):
     header_fields = None
     post_process_models = None
 
-    gene_reference = {'gene_symbols_to_gene': get_genes_by_symbol()}
+    gene_symbols_to_gene, gene_ids_to_gene = get_genes_by_symbol_and_id()
+    gene_reference = {
+        'gene_symbols_to_gene': gene_symbols_to_gene,
+        'gene_ids_to_gene': gene_ids_to_gene,
+    }
 
     @staticmethod
     def parse_record(record):
@@ -28,13 +34,15 @@ class ReferenceDataHandler(object):
 
     @classmethod
     def get_gene_for_record(cls, record):
-        gene_symbols_to_gene = cls.gene_reference['gene_symbols_to_gene']
-        gene_symbol = record.pop('gene_symbol')
+        gene_id = record.pop('gene_id', None)
+        gene_symbol = record.pop('gene_symbol', None)
 
-        if not gene_symbols_to_gene.get(gene_symbol):
-            raise ValueError('Gene "{}" not found in the GeneInfo table'.format(gene_symbol))
+        gene = cls.gene_reference['gene_ids_to_gene'].get(gene_id) or \
+               cls.gene_reference['gene_symbols_to_gene'].get(gene_symbol)
 
-        return gene_symbols_to_gene[gene_symbol]
+        if not gene:
+            raise ValueError('Gene "{}" not found in the GeneInfo table'.format(gene_id or gene_symbol))
+        return gene
 
 
 class GeneCommand(BaseCommand):
@@ -67,13 +75,11 @@ def update_records(reference_data_handler, file_path=None):
     model_name = model_cls.__name__
     model_objects = getattr(model_cls, 'objects')
 
-    logger.info("Deleting {} existing {} records".format(model_objects.count(), model_name))
-    model_objects.all().delete()
-
     models = []
     skip_counter = 0
     logger.info('Parsing file')
-    with open(file_path) as f:
+    open_file = gzip.open if file_path.endswith('.gz') else open
+    with open_file(file_path) as f:
         header_fields = reference_data_handler.get_file_header(f)
 
         for line in tqdm(f, unit=" records"):
@@ -94,8 +100,12 @@ def update_records(reference_data_handler, file_path=None):
     if reference_data_handler.post_process_models:
         reference_data_handler.post_process_models(models)
 
-    logger.info("Creating {} {} records".format(len(models), model_name))
-    model_objects.bulk_create(models)
+    with transaction.atomic():
+        logger.info("Deleting {} existing {} records".format(model_objects.count(), model_name))
+        model_objects.all().delete()
+
+        logger.info("Creating {} {} records".format(len(models), model_name))
+        model_objects.bulk_create(models, batch_size=10000)
 
     logger.info("Done")
     logger.info("Loaded {} {} records from {}. Skipped {} records with unrecognized genes.".format(
