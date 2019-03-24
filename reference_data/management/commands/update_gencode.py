@@ -5,7 +5,6 @@ import os
 from tqdm import tqdm
 
 from django.core.management.base import BaseCommand, CommandError
-from django.db.utils import DataError
 
 from reference_data.management.commands.utils.download_utils import download_file
 from reference_data.models import GeneInfo, TranscriptInfo, GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38
@@ -14,6 +13,11 @@ logger = logging.getLogger(__name__)
 
 GENCODE_GTF_URL = "http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_{gencode_release}/gencode.v{gencode_release}.annotation.gtf.gz"
 GENCODE_LIFT37_GTF_URL = "http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_{gencode_release}/GRCh37_mapping/gencode.v{gencode_release}lift37.annotation.gtf.gz"
+
+# expected GTF file header
+GENCODE_FILE_HEADER = [
+    'chrom', 'source', 'feature_type', 'start', 'end', 'score', 'strand', 'phase', 'info'
+]
 
 
 class Command(BaseCommand):
@@ -81,98 +85,90 @@ def update_gencode(gencode_release, gencode_gtf_path=None, genome_version=None, 
     existing_transcript_ids = {
         transcript.transcript_id for transcript in TranscriptInfo.objects.all().only('transcript_id')
     }
+
+    counters = collections.defaultdict(int)
+    new_genes = collections.defaultdict(dict)
+    new_transcripts = collections.defaultdict(dict)
+
     for genome_version, gencode_gtf_path in gencode_gtf_paths.items():
-        load_gencode_gtf_file(gencode_gtf_path, genome_version, gencode_release, existing_gene_ids, existing_transcript_ids)
+        coding_region_size_field_name = "coding_region_size_grch{}".format(genome_version)
 
+        logger.info("Loading {} (genome version: {})".format(gencode_gtf_path, genome_version))
+        with gzip.open(gencode_gtf_path) as gencode_file:
 
-def load_gencode_gtf_file(gencode_gtf_path, genome_version, gencode_release, existing_gene_ids, existing_transcript_ids):
-    """Parses and loads the given gencode GTF file into the GeneInfo and TranscriptInfo tables.
+            for i, line in enumerate(tqdm(gencode_file, unit=' gencode records')):
+                line = line.rstrip('\r\n')
+                if not line or line.startswith('#'):
+                    continue
+                fields = line.split('\t')
 
-    Args:
-        gencode_gtf_path (str): local file path
-        genome_version (str): "37" or "38"
-        gencode_release (int):  gencode release verison (eg. 25)
-    """
+                if len(fields) != len(GENCODE_FILE_HEADER):
+                    raise ValueError("Unexpected number of fields on line #%s: %s" % (i, fields))
 
-    gene_id_to_gene_info = {g.gene_id: g for g in GeneInfo.objects.exclude(gene_id__in=existing_gene_ids)}
-    transcript_id_to_transcript_info = {
-        t.transcript_id: t
-        for t in TranscriptInfo.objects.exclude(transcript_id__in=existing_transcript_ids)
-    }
+                record = dict(zip(GENCODE_FILE_HEADER, fields))
 
-    logger.info("Loading {} (genome version: {})".format(gencode_gtf_path, genome_version))
-    with gzip.open(gencode_gtf_path) as gencode_file:
-
-        counters = collections.defaultdict(int)
-        transcript_id_to_cds_size = collections.defaultdict(int)
-
-        new_genes = collections.defaultdict(dict)
-        new_transcripts = collections.defaultdict(dict)
-
-        for i, record in enumerate(_parse_gencode_file(gencode_file)):
-            if len(record["chrom"]) > 2:
-                continue  # skip super-contigs
-
-            if record['feature_type'] == 'gene':
-                if record["gene_id"] in existing_gene_ids:
-                    counters["genes_skipped"] += 1
+                if record['feature_type'] not in ('gene', 'transcript', 'CDS'):
                     continue
 
-                record = {
-                    "gene_id": record["gene_id"],
-                    "gene_symbol": record["gene_name"],
+                # parse info field
+                info_fields = [x.strip().split() for x in record['info'].split(';') if x != '']
+                info_fields = {k: v.strip('"') for k, v in info_fields}
+                record.update(info_fields)
 
-                    "chrom_grch{}".format(genome_version): record["chrom"],
-                    "start_grch{}".format(genome_version): record["start"],
-                    "end_grch{}".format(genome_version): record["end"],
-                    "strand_grch{}".format(genome_version): record["strand"],
+                record['gene_id'] = record['gene_id'].split('.')[0]
+                if 'transcript_id' in record:
+                    record['transcript_id'] = record['transcript_id'].split('.')[0]
+                record['chrom'] = record['chrom'].replace("chr", "").upper()
+                record['start'] = int(record['start'])
+                record['end'] = int(record['end'])
 
-                    "gencode_gene_type": record["gene_type"],
-                    "gencode_release": int(gencode_release),
-                }
+                if len(record["chrom"]) > 2:
+                    continue  # skip super-contigs
 
-                gene_info = gene_id_to_gene_info.get(record['gene_id'])
-                if gene_info:
-                    counters["genes_updated"] += 1
-                    try:
-                        for key, value in record.items():
-                            setattr(gene_info, key, value)
-                        gene_info.save()
-                    except DataError as e:
-                        logger.error("ERROR: {} on record #{}: {} ".format(e, i, record))
-                else:
-                    new_genes[record['gene_id']].update(record)
+                if record['feature_type'] == 'gene':
+                    if record["gene_id"] in existing_gene_ids:
+                        counters["genes_skipped"] += 1
+                        continue
 
-            elif record['feature_type'] == 'transcript':
-                if record["transcript_id"] in existing_transcript_ids:
-                    counters["transcripts_skipped"] += 1
-                    continue
+                    new_genes[record['gene_id']].update({
+                        "gene_id": record["gene_id"],
+                        "gene_symbol": record["gene_name"],
 
-                gene_id = record["gene_id"]
-                record = {
-                    "transcript_id": record["transcript_id"],
-                    "chrom_grch{}".format(genome_version): record["chrom"],
-                    "start_grch{}".format(genome_version): record["start"],
-                    "end_grch{}".format(genome_version): record["end"],
-                    "strand_grch{}".format(genome_version): record["strand"],
-                }
+                        "chrom_grch{}".format(genome_version): record["chrom"],
+                        "start_grch{}".format(genome_version): record["start"],
+                        "end_grch{}".format(genome_version): record["end"],
+                        "strand_grch{}".format(genome_version): record["strand"],
 
-                transcript_info = transcript_id_to_transcript_info.get(record['transcript_id'])
-                if transcript_info:
-                    counters["transcripts_updated"] += 1
-                    try:
-                        for key, value in record.items():
-                            setattr(transcript_info, key, value)
-                            transcript_info.save()
-                    except DataError as e:
-                        logger.error("ERROR: {} on record #{}: {} ".format(e, i, record))
-                else:
-                    record["gene_id"] = gene_id
-                    new_transcripts[record['transcript_id']].update(record)
+                        "gencode_gene_type": record["gene_type"],
+                        "gencode_release": int(gencode_release),
+                    })
 
-            elif record['feature_type'] == 'CDS':
-                # add + 1 because GTF has 1-based coords. (https://useast.ensembl.org/info/website/upload/gff.html)
-                transcript_id_to_cds_size[record["transcript_id"]] += int(record["end"]) - int(record["start"]) + 1
+                elif record['feature_type'] == 'transcript':
+                    if record["transcript_id"] in existing_transcript_ids:
+                        counters["transcripts_skipped"] += 1
+                        continue
+
+                    new_transcripts[record['transcript_id']].update({
+                        "gene_id": record["gene_id"],
+                        "transcript_id": record["transcript_id"],
+                        "chrom_grch{}".format(genome_version): record["chrom"],
+                        "start_grch{}".format(genome_version): record["start"],
+                        "end_grch{}".format(genome_version): record["end"],
+                        "strand_grch{}".format(genome_version): record["strand"],
+                    })
+
+                elif record['feature_type'] == 'CDS':
+                    if record["transcript_id"] in existing_transcript_ids:
+                        continue
+
+                    # add + 1 because GTF has 1-based coords. (https://useast.ensembl.org/info/website/upload/gff.html)
+                    transcript_size = record["end"] - record["start"] + 1
+                    transcript_size += new_transcripts[record['transcript_id']].get(coding_region_size_field_name, 0)
+                    new_transcripts[record['transcript_id']][coding_region_size_field_name] = transcript_size
+
+                    if record['gene_id'] not in existing_gene_ids and \
+                            transcript_size > new_genes[record['gene_id']].get(coding_region_size_field_name, 0):
+                        new_genes[record['gene_id']][coding_region_size_field_name] = transcript_size
 
     logger.info('Creating {} GeneInfo records'.format(len(new_genes)))
     counters["genes_created"] = len(new_genes)
@@ -185,95 +181,7 @@ def load_gencode_gtf_file(gencode_gtf_path, genome_version, gencode_release, exi
         TranscriptInfo(gene=gene_id_to_gene_info[record.pop('gene_id')], **record) for record in new_transcripts.values()
     ])
 
-    _update_coding_region_sizes(transcript_id_to_cds_size, genome_version)
-
     logger.info("Done")
     logger.info("Stats: ")
     for k, v in counters.items():
         logger.info("  %s: %s" % (k, v))
-
-
-def _update_coding_region_sizes(transcript_id_to_cds_size, genome_version):
-    """Sets the gencode_coding_region_size_grch{genome_version} field for
-
-    Args:
-        transcript_id_to_transcript_info (dict): maps ENST transcript ID to its TranscriptInfo object.
-        transcript_id_to_cds_size (dict): for coding transcripts, maps ENST transcript IDs to their coding region size.
-        genome_version (str): "37" or "38"
-    """
-    transcript_id_to_transcript_info = {
-        t.transcript_id: t
-        for t in TranscriptInfo.objects.filter(transcript_id__in=transcript_id_to_cds_size.keys()).prefetch_related('gene')
-    }
-
-    coding_region_size_field_name = "coding_region_size_grch{}".format(genome_version)
-
-    logger.info("Updating {}".format(coding_region_size_field_name))
-    for transcript_id, coding_region_size in tqdm(transcript_id_to_cds_size.items(), unit=" transcripts"):
-        transcript_info = transcript_id_to_transcript_info[transcript_id]
-        setattr(transcript_info, coding_region_size_field_name, coding_region_size)
-        transcript_info.save()
-
-        gene_info = transcript_info.gene
-        if coding_region_size > getattr(gene_info, coding_region_size_field_name):
-            setattr(gene_info, coding_region_size_field_name, coding_region_size)
-            gene_info.save()
-
-
-def _parse_gencode_file(gencode_file):
-    """Parses the gencode GTF file and yields a simple dictionary for each record
-
-    Args:
-        gencode_file: file handle
-    """
-
-    # expected GTF file header
-    gencode_file_header = [
-        'chrom', 'source', 'feature_type', 'start', 'end', 'score', 'strand', 'phase', 'info'
-    ]
-
-    for i, line in enumerate(tqdm(gencode_file, unit=' gencode records')):
-        line = line.rstrip('\r\n')
-        if not line or line.startswith('#'):
-            continue
-        fields = line.split('\t')
-
-        if len(fields) != len(gencode_file_header):
-            raise ValueError("Unexpected number of fields on line #%s: %s" % (i, fields))
-
-        record = dict(zip(gencode_file_header, fields))
-
-        # Feature types in gencode v19:
-        #   1196293 exon
-        #    723784 CDS
-        #    284573 UTR
-        #    196520 transcript
-        #     84144 start_codon
-        #     76196 stop_codon
-        #     57820 gene
-        #       114 Selenocysteine
-
-        if record['feature_type'] not in ('gene', 'transcript', 'exon', 'CDS'):
-            continue
-
-        # parse info field
-        info_fields = [x.strip().split() for x in record['info'].split(';') if x != '']
-        info_fields = {k: v.strip('"') for k, v in info_fields}
-        info_fields['gene_id'] = info_fields['gene_id'].split('.')[0]
-        if 'transcript_id' in info_fields:
-            info_fields['transcript_id'] = info_fields['transcript_id'].split('.')[0]
-        if 'exon_id' in info_fields:
-            info_fields['exon_id'] = info_fields['exon_id'].split('.')[0]
-
-        # add info field keys, values to record
-        record.update(info_fields)
-
-        # modify some of the fields
-        record['chrom'] = record['chrom'].replace("chr", "").upper()
-        record['start'] = int(record['start'])
-        record['end'] = int(record['end'])
-        record['source'] = record['source'][0].upper()
-        del record['info']
-
-        yield record
-
