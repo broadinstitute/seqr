@@ -50,7 +50,7 @@ import requests
 
 from django.core.management.base import CommandError
 
-from reference_data.management.commands.utils.update_utils import GeneCommand, ReferenceDataHandler, update_records
+from reference_data.management.commands.utils.update_utils import GeneCommand, ReferenceDataHandler
 from reference_data.models import Omim
 
 logger = logging.getLogger(__name__)
@@ -73,6 +73,7 @@ class OmimReferenceDataHandler(ReferenceDataHandler):
     def __init__(self, omim_key):
         self.url = self.url.format(omim_key=omim_key)
         self.omim_key = omim_key
+        super(OmimReferenceDataHandler, self).__init__()
 
     @staticmethod
     def get_file_header(f):
@@ -175,30 +176,3 @@ class Command(GeneCommand):
     def handle(self, *args, **options):
         self.reference_data_handler = OmimReferenceDataHandler(options.get('omim_key'))
         super(Command, self).handle(*args, **options)
-
-
-def update_omim(omim_key=None, **kwargs):
-    """Updates the OMIM table, using either the genemap2_file_path to load an existing local genemap2.txt file, or
-    if an omim_key is provided instead, using the omim_key to download the file from https://www.omim.org
-
-    Args:
-        omim_key (str): OMIM download key obtained by filling in a form at https://www.omim.org/downloads/
-        genemap2_file_path (str):
-    """
-    update_records(OmimReferenceDataHandler(omim_key), **kwargs)
-
-
-"""
-Comment at the end of genemap2.txt:
-
-# Phenotype Mapping Method - Appears in parentheses after a disorder :
-# --------------------------------------------------------------------
-# 1 - the disorder is placed on the map based on its association with
-# a gene, but the underlying defect is not known.
-# 2 - the disorder has been placed on the map by linkage; no mutation has
-# been found.
-# 3 - the molecular basis for the disorder is known; a mutation has been
-# found in the gene.
-# 4 - a contiguous gene deletion or duplication syndrome, multiple genes
-# are deleted or duplicated causing the phenotype.
-"""

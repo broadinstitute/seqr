@@ -3,7 +3,6 @@ import os
 import gzip
 from tqdm import tqdm
 from django.core.management.base import BaseCommand, CommandError
-from django.db import transaction
 from reference_data.management.commands.utils.download_utils import download_file
 from reference_data.management.commands.utils.gene_utils import get_genes_by_symbol_and_id
 from reference_data.models import GeneInfo
@@ -17,12 +16,17 @@ class ReferenceDataHandler(object):
     url = None
     header_fields = None
     post_process_models = None
+    batch_size = None
 
-    gene_symbols_to_gene, gene_ids_to_gene = get_genes_by_symbol_and_id()
-    gene_reference = {
-        'gene_symbols_to_gene': gene_symbols_to_gene,
-        'gene_ids_to_gene': gene_ids_to_gene,
-    }
+    def __init__(self):
+        if GeneInfo.objects.count() == 0:
+            raise CommandError("GeneInfo table is empty. Run './manage.py update_gencode' before running this command.")
+
+        gene_symbols_to_gene, gene_ids_to_gene = get_genes_by_symbol_and_id()
+        self.gene_reference = {
+            'gene_symbols_to_gene': gene_symbols_to_gene,
+            'gene_ids_to_gene': gene_ids_to_gene,
+        }
 
     @staticmethod
     def parse_record(record):
@@ -32,13 +36,12 @@ class ReferenceDataHandler(object):
     def get_file_header(f):
         return next(f).rstrip('\n\r').split('\t')
 
-    @classmethod
-    def get_gene_for_record(cls, record):
+    def get_gene_for_record(self, record):
         gene_id = record.pop('gene_id', None)
         gene_symbol = record.pop('gene_symbol', None)
 
-        gene = cls.gene_reference['gene_ids_to_gene'].get(gene_id) or \
-               cls.gene_reference['gene_symbols_to_gene'].get(gene_symbol)
+        gene = self.gene_reference['gene_ids_to_gene'].get(gene_id) or \
+               self.gene_reference['gene_symbols_to_gene'].get(gene_symbol)
 
         if not gene:
             raise ValueError('Gene "{}" not found in the GeneInfo table'.format(gene_id or gene_symbol))
@@ -54,10 +57,7 @@ class GeneCommand(BaseCommand):
                             default=os.path.join('resource_bundle', os.path.basename(self.reference_data_handler.url)))
 
     def handle(self, *args, **options):
-        if GeneInfo.objects.count() == 0:
-            raise CommandError("GeneInfo table is empty. Run './manage.py update_gencode' before running this command.")
-
-        update_records(self.reference_data_handler, file_path=options.get('file_path'), )
+        update_records(self.reference_data_handler(), file_path=options.get('file_path'), )
 
 
 def update_records(reference_data_handler, file_path=None):
@@ -74,6 +74,9 @@ def update_records(reference_data_handler, file_path=None):
     model_cls = reference_data_handler.model_cls
     model_name = model_cls.__name__
     model_objects = getattr(model_cls, 'objects')
+
+    logger.info("Deleting {} existing {} records".format(model_objects.count(), model_name))
+    model_objects.all().delete()
 
     models = []
     skip_counter = 0
@@ -97,15 +100,15 @@ def update_records(reference_data_handler, file_path=None):
 
                 models.append(model_cls(**record))
 
+            if reference_data_handler.batch_size and reference_data_handler.batch_size >= len(models):
+                logger.info("Creating {} {} records".format(len(models), model_name))
+                model_objects.bulk_create(models)
+
     if reference_data_handler.post_process_models:
         reference_data_handler.post_process_models(models)
 
-    with transaction.atomic():
-        logger.info("Deleting {} existing {} records".format(model_objects.count(), model_name))
-        model_objects.all().delete()
-
-        logger.info("Creating {} {} records".format(len(models), model_name))
-        model_objects.bulk_create(models, batch_size=10000)
+    logger.info("Creating {} {} records".format(len(models), model_name))
+    model_objects.bulk_create(models)
 
     logger.info("Done")
     logger.info("Loaded {} {} records from {}. Skipped {} records with unrecognized genes.".format(

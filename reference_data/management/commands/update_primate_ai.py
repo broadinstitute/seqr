@@ -1,5 +1,5 @@
 import logging
-from reference_data.management.commands.utils.update_utils import GeneCommand, ReferenceDataHandler, update_records
+from reference_data.management.commands.utils.update_utils import GeneCommand, ReferenceDataHandler
 from reference_data.models import PrimateAI
 
 logger = logging.getLogger(__name__)
@@ -21,11 +21,3 @@ class PrimateAIReferenceDataHandler(ReferenceDataHandler):
 
 class Command(GeneCommand):
     reference_data_handler = PrimateAIReferenceDataHandler
-
-
-def update_primate_ai(**kwargs):
-    """
-    Args:
-        file_path (str): optional local file path. If not specified, or the path doesn't exist, the table will be downloaded.
-    """
-    update_records(PrimateAIReferenceDataHandler, **kwargs)

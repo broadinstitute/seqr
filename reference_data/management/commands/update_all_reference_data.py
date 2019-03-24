@@ -1,4 +1,5 @@
 import logging
+from collections import OrderedDict
 from django.core.management.base import BaseCommand, CommandError
 
 from reference_data.management.commands.utils.update_utils import update_records
@@ -14,14 +15,14 @@ from reference_data.management.commands.update_mgi import MGIReferenceDataHandle
 
 logger = logging.getLogger(__name__)
 
-REFERENCE_DATA_SOURCES = {
-    "dbnsfp_gene": DbNSFPReferenceDataHandler,
-    "gene_constraint": GeneConstraintReferenceDataHandler,
-    "gtex": GtexReferenceDataHandler,
-    "primate_ai": PrimateAIReferenceDataHandler,
-    "mgi": MGIReferenceDataHandler,
-    "hpo": None,
-}
+REFERENCE_DATA_SOURCES = OrderedDict([
+    ("dbnsfp_gene", DbNSFPReferenceDataHandler),
+    ("gene_constraint", GeneConstraintReferenceDataHandler),
+    ("primate_ai", PrimateAIReferenceDataHandler),
+    ("mgi", MGIReferenceDataHandler),
+    ("hpo", None),
+    ("gtex", GtexReferenceDataHandler),
+])
 
 
 class Command(BaseCommand):
@@ -66,7 +67,7 @@ class Command(BaseCommand):
             if not options["skip_{}".format(source)]:
                 try:
                     if data_handler:
-                        update_records(data_handler)
+                        update_records(data_handler())
                     elif source == "hpo":
                         update_hpo()
                     updated.append(source)

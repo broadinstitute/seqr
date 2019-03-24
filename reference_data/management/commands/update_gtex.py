@@ -2,7 +2,7 @@ import logging
 import os
 import collections
 from reference_data.management.commands.utils.download_utils import download_file
-from reference_data.management.commands.utils.update_utils import GeneCommand, ReferenceDataHandler, update_records
+from reference_data.management.commands.utils.update_utils import GeneCommand, ReferenceDataHandler
 from reference_data.models import GeneExpression
 
 logger = logging.getLogger(__name__)
@@ -25,12 +25,14 @@ class GtexReferenceDataHandler(ReferenceDataHandler):
 
     model_cls = GeneExpression
     url = 'https://storage.googleapis.com/gtex_analysis_v7/rna_seq_data/GTEx_Analysis_2016-01-15_v7_RNASeQCv1.1.8_gene_tpm.gct.gz'
+    batch_size = 5000
 
     def __init__(self, gtex_sample_annotations_path=None):
         if not gtex_sample_annotations_path:
             gtex_sample_annotations_path = download_file(GTEX_SAMPLE_ANNOTATIONS)
         self.tissue_type_map = _get_tissue_type_map(gtex_sample_annotations_path)
         self.tissues_by_columns = None
+        super(GtexReferenceDataHandler, self).__init__()
 
     @staticmethod
     def parse_record(record):
@@ -71,10 +73,6 @@ class Command(GeneCommand):
     def handle(self, *args, **options):
         self.reference_data_handler = GtexReferenceDataHandler(gtex_sample_annotations_path=options.get('gtex_sample_annotations'))
         super(Command, self).handle(*args, **options)
-
-
-def update_gtex(gtex_sample_annotations_path=None, **kwargs):
-    update_records(GtexReferenceDataHandler(gtex_sample_annotations_path=gtex_sample_annotations_path), **kwargs)
 
 
 def _get_tissue_type_map(samples_file):

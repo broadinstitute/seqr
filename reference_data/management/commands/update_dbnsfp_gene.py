@@ -1,6 +1,6 @@
 import logging
 
-from reference_data.management.commands.utils.update_utils import GeneCommand, ReferenceDataHandler, update_records
+from reference_data.management.commands.utils.update_utils import GeneCommand, ReferenceDataHandler
 from reference_data.models import dbNSFPGene
 
 logger = logging.getLogger(__name__)
@@ -47,11 +47,3 @@ class DbNSFPReferenceDataHandler(ReferenceDataHandler):
 
 class Command(GeneCommand):
     reference_data_handler = DbNSFPReferenceDataHandler
-
-
-def update_dbnsfp_gene(**kwargs):
-    """
-    Args:
-        file_path (str): optional local file path. If not specified, or the path doesn't exist, the table will be downloaded.
-    """
-    update_records(DbNSFPReferenceDataHandler, **kwargs)
