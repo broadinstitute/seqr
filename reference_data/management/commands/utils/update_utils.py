@@ -49,7 +49,7 @@ class ReferenceDataHandler(object):
 
 
 class GeneCommand(BaseCommand):
-    reference_data_handler = None
+    reference_data_handler = ReferenceDataHandler
 
     def add_arguments(self, parser):
         parser.add_argument('file_path', nargs="?",
