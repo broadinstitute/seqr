@@ -1,4 +1,5 @@
 import logging
+import gc
 import os
 import gzip
 from tqdm import tqdm
@@ -17,6 +18,7 @@ class ReferenceDataHandler(object):
     header_fields = None
     post_process_models = None
     batch_size = None
+    keep_existing_records = False
 
     def __init__(self, **kwargs):
         if GeneInfo.objects.count() == 0:
@@ -75,8 +77,9 @@ def update_records(reference_data_handler, file_path=None):
     model_name = model_cls.__name__
     model_objects = getattr(model_cls, 'objects')
 
-    logger.info("Deleting {} existing {} records".format(model_objects.count(), model_name))
-    model_objects.all().delete()
+    if not reference_data_handler.keep_existing_records:
+        logger.info("Deleting {} existing {} records".format(model_objects.count(), model_name))
+        model_objects.all().delete()
 
     models = []
     skip_counter = 0
@@ -104,6 +107,9 @@ def update_records(reference_data_handler, file_path=None):
                 logger.info("Creating {} {} records".format(len(models), model_name))
                 model_objects.bulk_create(models)
                 models = []
+                # For large data like genexpression, need to explicitly garbage collect or the job will use
+                # too much memory and it will get killed
+                gc.collect()
 
     if reference_data_handler.post_process_models:
         reference_data_handler.post_process_models(models)
