@@ -26,6 +26,7 @@ export const STATE = {
   locusListLoading: { isLoading: false },
   currentSearchHash: SEARCH_HASH,
   searchesByHash: { [SEARCH_HASH]: SEARCH },
+  savedSearchesByGuid: {},
   familiesByGuid: {
    [FAMILY_GUID]: {
       analysisNotes: 'added note',

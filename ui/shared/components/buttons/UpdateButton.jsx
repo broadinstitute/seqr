@@ -5,20 +5,24 @@ import { ButtonLink } from '../StyledComponents'
 import ReduxFormWrapper from '../form/ReduxFormWrapper'
 import Modal from '../modal/Modal'
 
-const UpdateButton = ({ onSubmit, initialValues, formFields, modalTitle, modalId, buttonText, editIconName, size, modalSize, showErrorPanel, disabled, confirmDialog, formContainer = <div /> }) =>
+const UpdateButton = (
+  { onSubmit, initialValues, formFields, modalTitle, modalId, buttonText, editIconName, size, modalSize, showErrorPanel,
+    disabled, confirmDialog, submitButtonText, buttonFloated, trigger, formContainer = <div /> },
+) =>
   <Modal
     title={modalTitle}
     modalName={modalId}
     size={modalSize}
-    trigger={
+    trigger={trigger || (
       <ButtonLink
         content={buttonText}
         icon={editIconName || 'write'}
         labelPosition={buttonText && 'right'}
         size={size}
         disabled={disabled}
+        floated={buttonFloated}
       />
-    }
+    )}
   >
     {React.cloneElement(formContainer, { children: (
       <ReduxFormWrapper
@@ -28,6 +32,7 @@ const UpdateButton = ({ onSubmit, initialValues, formFields, modalTitle, modalId
         fields={formFields}
         showErrorPanel={showErrorPanel}
         confirmDialog={confirmDialog}
+        submitButtonText={submitButtonText}
         confirmCloseIfNotSaved
       />
     ) }) }
@@ -40,6 +45,8 @@ UpdateButton.propTypes = {
   modalId: PropTypes.string.isRequired,
   initialValues: PropTypes.object,
   buttonText: PropTypes.string,
+  buttonFloated: PropTypes.string,
+  submitButtonText: PropTypes.string,
   editIconName: PropTypes.string,
   formContainer: PropTypes.node,
   showErrorPanel: PropTypes.bool,
@@ -47,6 +54,7 @@ UpdateButton.propTypes = {
   size: PropTypes.string,
   modalSize: PropTypes.string,
   confirmDialog: PropTypes.string,
+  trigger: PropTypes.node,
 }
 
 export default UpdateButton

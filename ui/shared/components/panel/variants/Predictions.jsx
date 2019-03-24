@@ -1,8 +1,10 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
+import { connect } from 'react-redux'
 import { Icon, Transition } from 'semantic-ui-react'
 
+import { getGenesById } from 'redux/selectors'
 import { PREDICTION_INDICATOR_MAP, POLYPHEN_MAP, MUTTASTER_MAP } from 'shared/utils/constants'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 import { HorizontalSpacer } from '../../Spacers'
@@ -66,9 +68,10 @@ const PREDICTOR_FIELDS = [
   { field: 'phastcons_100_vert', noSeverity: true },
 ]
 
-export default class Predictions extends React.PureComponent {
+class Predictions extends React.PureComponent {
   static propTypes = {
-    predictions: PropTypes.object,
+    variant: PropTypes.object,
+    gene: PropTypes.object,
   }
 
   constructor(props) {
@@ -82,15 +85,25 @@ export default class Predictions extends React.PureComponent {
   }
 
   render() {
-    const { predictions } = this.props
+    const { predictions } = this.props.variant
 
     if (!predictions) {
       return null
     }
 
-    const predictorFields = PREDICTOR_FIELDS.map(predictorField =>
-      ({ field: predictorField.field, ...predictionFieldValue(predictions, predictorField) }),
-    ).filter(predictorField => predictorField.value !== null && predictorField.value !== undefined)
+    const genePredictors = {}
+    if (this.props.gene && this.props.gene.primateAi) {
+      genePredictors.primate_ai = {
+        field: 'primate_ai',
+        warningThreshold: this.props.gene.primateAi.percentile25,
+        dangerThreshold: this.props.gene.primateAi.percentile75,
+      }
+    }
+
+    const predictorFields = PREDICTOR_FIELDS.map(predictorField => ({
+      field: predictorField.field,
+      ...predictionFieldValue(predictions, genePredictors[predictorField.field] || predictorField),
+    })).filter(predictorField => predictorField.value !== null && predictorField.value !== undefined)
     return (
       <div>
         {
@@ -115,4 +128,10 @@ export default class Predictions extends React.PureComponent {
     )
   }
 }
+
+const mapStateToProps = (state, ownProps) => ({
+  gene: getGenesById(state)[ownProps.variant.mainTranscript.geneId],
+})
+
+export default connect(mapStateToProps)(Predictions)
 

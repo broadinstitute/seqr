@@ -6,7 +6,7 @@ import RequestStatus from '../form/RequestStatus'
 import { ButtonLink } from '../StyledComponents'
 
 
-class DispatchRequestButton extends React.Component {
+class DispatchRequestButton extends React.PureComponent {
 
   static propTypes = {
 
@@ -21,6 +21,8 @@ class DispatchRequestButton extends React.Component {
 
     /** child componenets */
     children: PropTypes.node,
+
+    buttonContainer: PropTypes.node,
 
     /** Optional callback when request succeeds **/
     onSuccess: PropTypes.func,
@@ -37,22 +39,20 @@ class DispatchRequestButton extends React.Component {
   }
 
   render() {
-    const { buttonContent, confirmDialog, children, onSuccess, onSubmit, ...props } = this.props
-    return (
-      <span>
-        {children ?
-          React.cloneElement(children, { onClick: this.handleButtonClick }) :
-          <ButtonLink onClick={this.handleButtonClick} content={buttonContent} {...props} />
-        }
-        <RequestStatus status={this.state.requestStatus} errorMessage={this.state.requestErrorMessage} />
-        <Confirm
-          content={confirmDialog}
-          open={this.state.isConfirmDialogVisible}
-          onConfirm={this.performAction}
-          onCancel={() => this.setState({ isConfirmDialogVisible: false })}
-        />
-      </span>
-    )
+    const { buttonContainer, buttonContent, confirmDialog, children, onSuccess, onSubmit, ...props } = this.props
+    return React.cloneElement(buttonContainer || <span />, { children: [
+      children ?
+        React.cloneElement(children, { onClick: this.handleButtonClick }) :
+        <ButtonLink onClick={this.handleButtonClick} content={buttonContent} {...props} />,
+      <RequestStatus key="status" status={this.state.requestStatus} errorMessage={this.state.requestErrorMessage} />,
+      <Confirm
+        key="confirm"
+        content={confirmDialog}
+        open={this.state.isConfirmDialogVisible}
+        onConfirm={this.performAction}
+        onCancel={() => this.setState({ isConfirmDialogVisible: false })}
+      />,
+    ] })
   }
 
   handleButtonClick = (event) => {
@@ -91,10 +91,6 @@ class DispatchRequestButton extends React.Component {
 
   handleReset = () => {
     this.setState({ requestStatus: RequestStatus.NONE, requestErrorMessage: null })
-  }
-
-  shouldComponentUpdate(nextProps, nextState) {
-    return nextState !== this.state
   }
 }
 

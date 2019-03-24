@@ -150,5 +150,6 @@ export const DISCOVERY_SHEET_COLUMNS = [
   { name: 'komp_early_release', content: 'KOMP Early Release' },
   { name: 'pubmed_ids', content: 'PubMed IDs for gene' },
   { name: 'collaborator', content: 'Collaborator' },
+  { name: 'num_individuals_sequenced', content: '# of Individuals Sequenced' },
   { name: 'analysis_summary', content: 'Analysis Summary', style: { minWidth: '800px' } },
 ]

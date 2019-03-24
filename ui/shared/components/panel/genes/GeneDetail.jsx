@@ -147,7 +147,7 @@ const GeneDetailContent = ({ gene, updateGeneNote: dispatchUpdateGeneNote }) => 
     })
   }
   const linkDetails = [
-    gene.omimPhenotypes.length > 0 ? { title: 'OMIM', link: `http://www.omim.org/entry/${gene.omimPhenotypes[0].mimNumber}`, description: 'Database of Mendelian phenotypes' } : null,
+    gene.mimNumber ? { title: 'OMIM', link: `http://www.omim.org/entry/${gene.mimNumber}`, description: 'Database of Mendelian phenotypes' } : null,
     { title: 'PubMed', link: `http://www.ncbi.nlm.nih.gov/pubmed/?term=${gene.geneSymbol}`, description: `Search PubMed for ${gene.geneSymbol}` },
     { title: 'GeneCards', link: `http://www.genecards.org/cgi-bin/carddisp.pl?gene=${gene.geneSymbol}`, description: 'Reference of public data for this gene' },
     { title: 'Protein Atlas', link: `http://www.proteinatlas.org/${gene.geneId}/tissue`, description: 'Detailed protein and transcript expression' },
@@ -156,6 +156,7 @@ const GeneDetailContent = ({ gene, updateGeneNote: dispatchUpdateGeneNote }) => 
     { title: 'Monarch', link: `http://monarchinitiative.org/search/${gene.geneId}`, description: 'Cross-species gene and phenotype resource' },
     { title: 'Decipher', link: `https://decipher.sanger.ac.uk/gene/${gene.geneSymbol}#overview/protein-info`, description: 'DatabasE of genomiC varIation and Phenotype in Humans using Ensembl Resources' },
     { title: 'UniProt', link: `http://www.uniprot.org/uniprot/?random=true&query=gene:${gene.geneSymbol}+AND+reviewed:yes+AND+organism:9606`, description: 'Protein sequence and functional information' },
+    gene.mgiMarkerId ? { title: 'MGI', link: `http://www.informatics.jax.org/marker/${gene.mgiMarkerId}`, description: 'Mouse Genome Informatics' } : null,
   ]
   return (
     <div>

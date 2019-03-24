@@ -67,7 +67,7 @@ export const saveHashedSearch = (searchHash, search) => {
   }
 }
 
-export const saveSearch = search => updateEntity(search, RECEIVE_SAVED_SEARCHES, '/api/saved_search')
+export const saveSearch = search => updateEntity(search, RECEIVE_SAVED_SEARCHES, '/api/saved_search', 'savedSearchGuid')
 
 export const loadSearchedVariants = ({ searchHash, variantId, familyGuid, displayUpdates, queryParams, updateQueryParams }) => {
   return (dispatch, getState) => {

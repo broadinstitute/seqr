@@ -1,14 +1,28 @@
 import logging
+from collections import OrderedDict
 from django.core.management.base import BaseCommand, CommandError
 
-from reference_data.management.commands.update_gtex import update_gtex
+from reference_data.management.commands.utils.update_utils import update_records
+from reference_data.management.commands.update_gtex import GtexReferenceDataHandler
 from reference_data.management.commands.update_human_phenotype_ontology import update_hpo
-from reference_data.management.commands.update_dbnsfp_gene import update_dbnsfp_gene
+from reference_data.management.commands.update_dbnsfp_gene import DbNSFPReferenceDataHandler
 from reference_data.management.commands.update_gencode import update_gencode
-from reference_data.management.commands.update_gene_constraint import update_gene_constraint
-from reference_data.management.commands.update_omim import update_omim
+from reference_data.management.commands.update_gene_constraint import GeneConstraintReferenceDataHandler
+from reference_data.management.commands.update_omim import OmimReferenceDataHandler
+from reference_data.management.commands.update_primate_ai import PrimateAIReferenceDataHandler
+from reference_data.management.commands.update_mgi import MGIReferenceDataHandler
+
 
 logger = logging.getLogger(__name__)
+
+REFERENCE_DATA_SOURCES = OrderedDict([
+    ("dbnsfp_gene", DbNSFPReferenceDataHandler),
+    ("gene_constraint", GeneConstraintReferenceDataHandler),
+    ("primate_ai", PrimateAIReferenceDataHandler),
+    ("mgi", MGIReferenceDataHandler),
+    ("hpo", None),
+    ("gtex", GtexReferenceDataHandler),
+])
 
 
 class Command(BaseCommand):
@@ -20,44 +34,49 @@ class Command(BaseCommand):
         omim_options.add_argument('--skip-omim', help="Don't reload gene constraint", action="store_true")
 
         parser.add_argument('--skip-gencode', help="Don't reload gencode", action="store_true")
-        parser.add_argument('--skip-dbnsfp-gene', help="Don't reload the dbNSFP_gene table", action="store_true")
-        parser.add_argument('--skip-gene-constraint', help="Don't reload gene constraint", action="store_true")
-        parser.add_argument('--skip-hpo', help="Don't reload human phenotype ontology", action="store_true")
-        parser.add_argument('--skip-gtex', help="Don't reload gtex", action="store_true")
+
+        for source in REFERENCE_DATA_SOURCES.keys():
+            parser.add_argument(
+                '--skip-{}'.format(source.replace('_', '-')), help="Don't reload {}".format(source), action="store_true"
+            )
 
     def handle(self, *args, **options):
-        if not options["skip_gencode"]:
-            # download v19 and then v27 and then v28 because there are 1000+ gene and transcript ids in v19 that
-            # gencode retired by the time of v28, but that are used in the gene constraint table and other datasets
-            # and also ~100 genes and transcripts that were retired between v27 and v28
-            update_gencode(19, reset=True)
-            update_gencode(27)
-            update_gencode(28)
+        updated = []
+        update_failed = []
 
-        if not options["skip_dbnsfp_gene"]:
-            update_dbnsfp_gene()
-        if not options["skip_gene_constraint"]:
-            try:
-                update_gene_constraint()
-            except Exception as e:
-                logger.error("unable to update gene constraint: {}".format(e))
+        if not options["skip_gencode"]:
+            # Download latest version first, and then add any genes from old releases not included in the latest release
+            # Old gene ids are used in the gene constraint table and other datasets, as well as older sequencing data
+            update_gencode(29, reset=True)
+            update_gencode(28)
+            update_gencode(27)
+            update_gencode(19)
+            updated.append('gencode')
 
         if not options["skip_omim"]:
             if not options["omim_key"]:
                 raise CommandError("Please provide --omim-key or use --skip-omim")
             try:
-                update_omim(omim_key=options["omim_key"])
+                update_records(OmimReferenceDataHandler(options["omim_key"]))
+                updated.append('omim')
             except Exception as e:
                 logger.error("unable to update omim: {}".format(e))
+                update_failed.append('omim')
 
-        if not options["skip_hpo"]:
-            try:
-                update_hpo()
-            except Exception as e:
-                logger.error("unable to update human phenotype ontology: {}".format(e))
+        for source, data_handler in REFERENCE_DATA_SOURCES.items():
+            if not options["skip_{}".format(source)]:
+                try:
+                    if data_handler:
+                        update_records(data_handler())
+                    elif source == "hpo":
+                        update_hpo()
+                    updated.append(source)
+                except Exception as e:
+                    logger.error("unable to update {}: {}".format(source, e))
+                    update_failed.append(source)
 
-        if not options["skip_gtex"]:
-            try:
-                update_gtex()
-            except Exception as e:
-                logger.error("unable to update gtex: {}".format(e))
+        logger.info("Done")
+        if updated:
+            logger.info("Updated: {}".format(', '.join(updated)))
+        if update_failed:
+            logger.info("Failed to Update: {}".format(', '.join(update_failed)))

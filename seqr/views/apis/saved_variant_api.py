@@ -222,7 +222,7 @@ def _saved_variant_genes(variants):
     gene_ids = set()
     for variant in variants:
         gene_ids.update(variant['transcripts'].keys())
-    genes = get_genes(gene_ids, add_dbnsfp=True, add_omim=True, add_constraints=True)
+    genes = get_genes(gene_ids, add_dbnsfp=True, add_omim=True, add_constraints=True, add_primate_ai=True)
     for gene in genes.values():
         if gene:
             gene['locusListGuids'] = []

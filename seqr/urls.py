@@ -76,7 +76,9 @@ from seqr.views.apis.variant_search_api import \
     search_context_handler, \
     export_variants_handler, \
     get_saved_search_handler, \
-    create_saved_search_handler
+    create_saved_search_handler,\
+    update_saved_search_handler, \
+    delete_saved_search_handler
 
 from seqr.views.apis.staff_api import anvil_export, discovery_sheet, get_projects_for_category, elasticsearch_status
 from seqr.views.pages.staff.komp_export import komp_export
@@ -148,6 +150,8 @@ api_endpoints = {
     'search_context': search_context_handler,
     'saved_search/all': get_saved_search_handler,
     'saved_search/create': create_saved_search_handler,
+    'saved_search/(?P<saved_search_guid>[^/]+)/update': update_saved_search_handler,
+    'saved_search/(?P<saved_search_guid>[^/]+)/delete': delete_saved_search_handler,
 
     'saved_variant/create': create_saved_variant_handler,
     'saved_variant/(?P<variant_guid>[^/]+)/update_tags': update_variant_tags_handler,

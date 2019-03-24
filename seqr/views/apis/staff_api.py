@@ -2,8 +2,6 @@ from collections import defaultdict
 from elasticsearch_dsl import Index
 import json
 import logging
-import re
-import requests
 
 from datetime import datetime, timedelta
 from dateutil import relativedelta as rdelta
@@ -20,6 +18,7 @@ from seqr.views.utils.json_utils import create_json_response, _to_camel_case
 from seqr.views.utils.orm_to_json_utils import _get_json_for_individuals, get_json_for_saved_variants
 from seqr.views.utils.variant_utils import variant_details
 from seqr.models import Project, Family, VariantTag, VariantTagType, Sample, SavedVariant, Individual, ProjectCategory
+from reference_data.models import Omim
 
 from settings import SEQR_ID_TO_MME_ID_MAP, ELASTICSEARCH_SERVER
 
@@ -352,7 +351,7 @@ def _get_loaded_samples_by_project_family(projects):
         loaded_date__isnull=False
     ).select_related('individual__family__project').order_by('loaded_date')
 
-    loaded_samples_by_project_family =  defaultdict(lambda:  defaultdict(list))
+    loaded_samples_by_project_family = defaultdict(lambda:  defaultdict(list))
     for sample in loaded_samples:
         family = sample.individual.family
         loaded_samples_by_project_family[family.project.guid][family.guid].append(sample)
@@ -412,6 +411,7 @@ def _generate_rows(project, loaded_samples_by_project_family, saved_variants_by_
             "pubmed_ids": '; '.join(family.pubmed_ids),
             "analysis_summary": (family.analysis_summary or '').strip('" \n'),
             "row_id": family.guid,
+            "num_individuals_sequenced": len({sample.individual for sample in samples})
         }
         row.update(DEFAULT_ROW)
 
@@ -492,13 +492,13 @@ def _generate_rows(project, loaded_samples_by_project_family, saved_variants_by_
 
             saved_variants_to_json[variant] = saved_variant_json
 
-        affected_sample_guids = set()
-        unaffected_sample_guids = set()
+        affected_individual_guids = set()
+        unaffected_individual_guids = set()
         for sample in samples:
             if sample.individual.affected == "A":
-                affected_sample_guids.add(sample.guid)
+                affected_individual_guids.add(sample.individual.guid)
             elif sample.individual.affected == "N":
-                unaffected_sample_guids.add(sample.guid)
+                unaffected_individual_guids.add(sample.individual.guid)
 
         potential_compound_het_genes = defaultdict(set)
         for variant, saved_variant_json in saved_variants_to_json.items():
@@ -515,13 +515,13 @@ def _generate_rows(project, loaded_samples_by_project_family, saved_variants_by_
                 chrom = saved_variant_json['chrom']
                 is_x_linked = "X" in chrom
                 for sample_guid, genotype in genotypes.items():
-                    if genotype["numAlt"] == 2 and sample_guid in affected_sample_guids:
+                    if genotype["numAlt"] == 2 and sample_guid in affected_individual_guids:
                         affected_indivs_with_hom_alt_variants.add(sample_guid)
-                    elif genotype["numAlt"] == 1 and sample_guid in affected_sample_guids:
+                    elif genotype["numAlt"] == 1 and sample_guid in affected_individual_guids:
                         affected_indivs_with_het_variants.add(sample_guid)
-                    elif genotype["numAlt"] == 2 and sample_guid in unaffected_sample_guids:
+                    elif genotype["numAlt"] == 2 and sample_guid in unaffected_individual_guids:
                         unaffected_indivs_with_hom_alt_variants.add(sample_guid)
-                    elif genotype["numAlt"] == 1 and sample_guid in unaffected_sample_guids:
+                    elif genotype["numAlt"] == 1 and sample_guid in unaffected_individual_guids:
                         unaffected_indivs_with_het_variants.add(sample_guid)
 
             # AR-homozygote, AR-comphet, AR, AD, de novo, X-linked, UPD, other, multiple
@@ -532,13 +532,13 @@ def _generate_rows(project, loaded_samples_by_project_family, saved_variants_by_
                     inheritance_models.add("AR-homozygote")
 
             if not unaffected_indivs_with_hom_alt_variants and not unaffected_indivs_with_het_variants and affected_indivs_with_het_variants:
-                if unaffected_sample_guids:
+                if unaffected_individual_guids:
                     inheritance_models.add("de novo")
                 else:
                     inheritance_models.add("AD")
 
             if not unaffected_indivs_with_hom_alt_variants and (len(
-                    unaffected_sample_guids) < 2 or unaffected_indivs_with_het_variants) and affected_indivs_with_het_variants and not affected_indivs_with_hom_alt_variants:
+                    unaffected_individual_guids) < 2 or unaffected_indivs_with_het_variants) and affected_indivs_with_het_variants and not affected_indivs_with_hom_alt_variants:
                 for gene_id in saved_variant_json['transcripts']:
                     potential_compound_het_genes[gene_id].add(variant)
 
@@ -690,36 +690,12 @@ def _update_gene_symbols(rows):
 
 def _update_initial_omim_numbers(rows):
     omim_numbers = {row['omim_number_initial'] for row in rows if row['omim_number_initial'] and row['omim_number_initial'] != 'NA'}
-    omim_number_map = {}
-    # OMIM API works for doing this as a single bulk request in theory but they detect us as a craweler and block us
-    for omim_number_initial in omim_numbers:
-        try:
-            response = requests.get('https://www.omim.org/entry/' + omim_number_initial, headers={
-                'Host': 'www.omim.org',
-                'Connection': 'keep-alive',
-                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/62.0.3202.94 Safari/537.36',
-                'Upgrade-Insecure-Requests': '1',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
-                'Accept-Encoding': 'gzip, deflate, br',
-                'Accept-Language': 'en-US,en;q=0.9,ru;q=0.8',
-            })
 
-            if not response.ok:
-                raise ValueError("omim request failed: %s %s" % (response, response.reason))
-            omim_page_html = response.content
+    omim_number_map = {str(omim.phenotype_mim_number): omim.phenotypic_series_number
+                       for omim in Omim.objects.filter(phenotype_mim_number__in=omim_numbers, phenotypic_series_number__isnull=False)}
 
-            # <a href="/phenotypicSeries/PS613280" class="btn btn-info" role="button"> Phenotypic Series </a>
-            match = re.search("/phenotypicSeries/([a-zA-Z0-9]+)", omim_page_html)
-            if not match:
-                logger.info("No phenotypic series found for OMIM initial # %s" % omim_number_initial)
-            else:
-                phenotypic_series_id = match.group(1)
-                logger.debug("Will replace OMIM initial # %s with phenotypic series %s" % (omim_number_initial, phenotypic_series_id))
-                omim_number_map[omim_number_initial] = phenotypic_series_id
-        except Exception as e:
-            # don't change omim_number_initial
-            logger.info(
-                "Unable to look up phenotypic series for OMIM initial number: %s. %s" % (omim_number_initial, e))
+    for mim_number, phenotypic_series_number in omim_number_map.items():
+        logger.info("Will replace OMIM initial # %s with phenotypic series %s" % (mim_number, phenotypic_series_number))
 
     for row in rows:
         if omim_number_map.get(row['omim_number_initial']):

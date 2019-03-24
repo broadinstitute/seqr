@@ -518,7 +518,8 @@ def get_json_for_locus_list(locus_list, user):
     return _get_json_for_model(locus_list, get_json_for_models=get_json_for_locus_lists, user=user, include_genes=True)
 
 
-def get_json_for_genes(genes, user=None, add_dbnsfp=False, add_omim=False, add_constraints=False, add_notes=False, add_expression=False):
+def get_json_for_genes(genes, user=None, add_dbnsfp=False, add_omim=False, add_constraints=False, add_notes=False,
+                       add_expression=False, add_primate_ai=False, add_mgi=False):
     """Returns a JSON representation of the given list of GeneInfo.
 
     Args:
@@ -541,8 +542,19 @@ def get_json_for_genes(genes, user=None, add_dbnsfp=False, add_omim=False, add_c
                 result.update(_get_json_for_model(dbnsfp))
             else:
                 result.update(_get_empty_json_for_model(dbNSFPGene))
+        if add_primate_ai:
+            # prefetching only works with all()
+            primate_ai = next((primate_ai for primate_ai in gene.primateai_set.all()), None)
+            if primate_ai:
+                result['primateAi'] = _get_json_for_model(primate_ai)
+        if add_mgi:
+            # prefetching only works with all()
+            mgi = next((mgi for mgi in gene.mgi_set.all()), None)
+            result['mgiMarkerId'] = mgi.marker_id if mgi else None
         if add_omim:
-            result['omimPhenotypes'] = _get_json_for_models(gene.omim_set.all())
+            omim_phenotypes = _get_json_for_models(gene.omim_set.all())
+            result['omimPhenotypes'] = [phenotype for phenotype in omim_phenotypes if phenotype['phenotypeMimNumber']]
+            result['mimNumber'] = omim_phenotypes[0]['mimNumber'] if omim_phenotypes else None
         if add_constraints:
             constraint = next((constraint for constraint in gene.geneconstraint_set.all()), None)
             result['constraints'] = _get_json_for_model(constraint, process_result=_add_total_constraint_count) if constraint else {}
@@ -557,6 +569,10 @@ def get_json_for_genes(genes, user=None, add_dbnsfp=False, add_omim=False, add_c
         prefetch_related_objects(genes, 'omim_set')
     if add_constraints:
         prefetch_related_objects(genes, Prefetch('geneconstraint_set', queryset=GeneConstraint.objects.order_by('-mis_z', '-pLI')))
+    if add_primate_ai:
+        prefetch_related_objects(genes, 'mgi_set')
+    if add_mgi:
+        prefetch_related_objects(genes, 'mgi_set')
 
     return _get_json_for_models(genes, process_result=_process_result)
 

@@ -124,7 +124,8 @@ class Omim(models.Model):
     phenotype_inheritance = models.TextField(null=True, blank=True)  # Example: "Autosomal dominant"
     phenotype_mim_number = models.IntegerField(null=True, blank=True)  # Example: 616331
     phenotype_description = models.TextField(null=True, blank=True)  # Example: "Robinow syndrome, autosomal dominant 2"
-    phenotype_map_method = models.CharField(max_length=1, choices=MAP_METHOD_CHOICES)  # Example: 2
+    phenotype_map_method = models.CharField(max_length=1, choices=MAP_METHOD_CHOICES, null=True, blank=True)  # Example: 2
+    phenotypic_series_number = models.TextField(null=True, blank=True)
 
     class Meta:
         # ('mim_number', 'phenotype_mim_number') is not unique - for example ('124020', '609535')
@@ -173,3 +174,21 @@ class dbNSFPGene(models.Model):
     class Meta:
         json_fields = ['function_desc', 'disease_desc']
 
+
+class PrimateAI(models.Model):
+    gene = models.ForeignKey(GeneInfo, on_delete=models.CASCADE)
+
+    percentile_25 = models.FloatField()
+    percentile_75 = models.FloatField()
+
+    class Meta:
+        json_fields = ['percentile_25', 'percentile_75']
+
+
+class MGI(models.Model):
+    gene = models.ForeignKey(GeneInfo, on_delete=models.CASCADE)
+
+    marker_id = models.CharField(max_length=15)
+
+    class Meta:
+        unique_together = ('gene', 'marker_id')

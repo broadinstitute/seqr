@@ -1,32 +1,33 @@
 import React from 'react'
-import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
+import PropTypes from 'prop-types'
 
-import { getProject } from 'pages/Project/selectors'
-import EditProjectModal from '../modal/EditProjectModal'
+import { updateProject } from 'redux/rootReducer'
+import UpdateButton from '../buttons/UpdateButton'
+import { EDITABLE_PROJECT_FIELDS } from '../../utils/constants'
 
-
-const EditProjectButton = (props) => {
-  if (props.project && props.project.canEdit) {
-    return (
-      <EditProjectModal
-        trigger={<a tabIndex="0" role="button" style={{ cursor: 'pointer' }}>Edit Project</a>}
-        project={props.project}
-      />
-    )
-  }
-  return null
-}
-
-export { EditProjectButton as EditProjectButtonComponent }
+const EditProjectButton = props => (
+  props.project && props.project.canEdit ?
+    <UpdateButton
+      buttonText="Edit Project"
+      modalTitle="Edit Project"
+      modalId={`editProject-${props.project.projectGuid}`}
+      onSubmit={props.updateProject}
+      formFields={EDITABLE_PROJECT_FIELDS}
+      initialValues={props.project}
+      trigger={props.trigger}
+      submitButtonText="Save"
+    /> : null
+)
 
 EditProjectButton.propTypes = {
   project: PropTypes.object,
+  updateProject: PropTypes.func,
+  trigger: PropTypes.node,
 }
 
-const mapStateToProps = state => ({
-  project: getProject(state),
-})
+const mapDispatchToProps = {
+  updateProject,
+}
 
-export default connect(mapStateToProps)(EditProjectButton)
-
+export default connect(null, mapDispatchToProps)(EditProjectButton)

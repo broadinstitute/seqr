@@ -315,6 +315,7 @@ class Individual(ModelWithGUID):
         ('R', 'Not Accepted'),
         ('Q', 'More Info Needed'),
         ('P', 'Pending Results and Records'),
+        ('N', 'NMI Review'),
         ('W', 'Waitlist'),
     )
 

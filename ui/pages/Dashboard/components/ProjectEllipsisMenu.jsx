@@ -5,9 +5,8 @@ import { Dropdown, Icon } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 
 import { updateProject } from 'redux/rootReducer'
-import EditProjectModal from 'shared/components/modal/EditProjectModal'
-import Modal from 'shared/components/modal/Modal'
-import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
+import DeleteButton from 'shared/components/buttons/DeleteButton'
+import EditProjectButton from 'shared/components/buttons/EditProjectButton'
 import EditProjectCategoriesModal from './EditProjectCategoriesModal'
 
 const EllipsisContainer = styled.span`
@@ -23,66 +22,49 @@ const EllipsisContainer = styled.span`
 `
 
 const ProjectEllipsisMenu = (props) => {
-  const deleteValues = { projectGuid: props.project.projectGuid, delete: true }
+  if (!props.user.is_staff && !props.project.canEdit) {
+    return null
+  }
+
+  const menuItems = [
+    <EditProjectButton
+      key="edit"
+      trigger={<Dropdown.Item>Edit Project</Dropdown.Item>}
+      project={props.project}
+    />,
+    <EditProjectCategoriesModal
+      key="editCategories"
+      trigger={<Dropdown.Item>Edit Categories</Dropdown.Item>}
+      triggerName="ellipsesMenu"
+      project={props.project}
+    />,
+  ]
+
+  if (props.user.is_staff) {
+    menuItems.unshift(
+      <Dropdown.Item key="caseReview" onClick={() => { window.open(`/project/${props.project.projectGuid}/case_review`, '_blank') }}>
+        Case Review Page
+      </Dropdown.Item>,
+      <Dropdown.Divider key="divider1" />,
+    )
+    menuItems.push(
+      <Dropdown.Divider key="divider2" />,
+      <DeleteButton
+        key="delete"
+        buttonContainer={<Dropdown.Item />}
+        buttonText="Delete Project"
+        color="black"
+        initialValues={props.project}
+        onSubmit={props.updateProject}
+        confirmDialog={`Are you sure you want to delete project "${props.project.name}"?`}
+      />,
+    )
+  }
+
   return (
     <EllipsisContainer>
-      <Dropdown pointing="top right" icon={
-        <Icon name="ellipsis vertical" />}
-      >
-        <Dropdown.Menu>
-          {props.user.is_staff && [
-            <Dropdown.Item key={1} onClick={() => { window.open(`/project/${props.project.projectGuid}/case_review`, '_blank') }}>
-              Case Review Page
-            </Dropdown.Item>,
-            <Dropdown.Divider key={2} />,
-          ]}
-
-          {(props.user.is_staff || props.project.canEdit) && [
-            <EditProjectModal
-              key={1}
-              trigger={<Dropdown.Item>Edit Name</Dropdown.Item>}
-              project={props.project}
-              field="name"
-              updateProject={props.updateProject}
-            />,
-            <EditProjectModal
-              key={2}
-              trigger={<Dropdown.Item>Edit Description</Dropdown.Item>}
-              project={props.project}
-              field="description"
-              updateProject={props.updateProject}
-            />,
-            <EditProjectCategoriesModal key={3} trigger={<Dropdown.Item>Edit Categories</Dropdown.Item>} triggerName="ellipsesMenu" project={props.project} />,
-
-            <Dropdown.Divider key={4} />,
-
-            <Dropdown.Item key={5} onClick={() => (window.open(`/project/${props.project.deprecatedProjectId}/collaborators`))}>
-              Edit Collaborators
-            </Dropdown.Item>,
-            <Dropdown.Item key={6} onClick={() => (window.open(`/project/${props.project.deprecatedProjectId}/edit-individuals`))}>
-              Edit Individuals
-            </Dropdown.Item>,
-            <Dropdown.Item key={7} onClick={() => (window.open(`/project/${props.project.deprecatedProjectId}/project_gene_list_settings`))}>
-              Edit Gene Lists
-            </Dropdown.Item>,
-          ]}
-
-          {props.user.is_staff && [
-            <Dropdown.Divider key={1} />,
-            <Modal key={2} trigger={<Dropdown.Item>Delete Project</Dropdown.Item>} title="Delete Project?" modalName={`deleteProject-${props.project.projectGuid}`}>
-              <ReduxFormWrapper
-                initialValues={deleteValues}
-                onSubmit={props.updateProject}
-                form={`deleteProject-${props.project.projectGuid}`}
-                submitButtonText="Yes"
-              >
-                <div style={{ textAlign: 'left' }}>
-                  Are you sure you want to delete project <b>{props.project.name}</b>?
-                </div>
-              </ReduxFormWrapper>
-            </Modal>,
-          ]}
-        </Dropdown.Menu>
+      <Dropdown pointing="top right" icon={<Icon name="ellipsis vertical" />}>
+        <Dropdown.Menu>{menuItems}</Dropdown.Menu>
       </Dropdown>
     </EllipsisContainer>
   )

@@ -3,8 +3,8 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 
 import { getUser, getFamiliesByGuid, getAnalysisGroupsByGuid } from 'redux/selectors'
-import { PageHeaderLayout } from 'shared/components/page/PageHeader'
 import EditProjectButton from 'shared/components/buttons/EditProjectButton'
+import { PageHeaderLayout } from 'shared/components/page/PageHeader'
 import { HorizontalSpacer } from 'shared/components/Spacers'
 
 import { UpdateAnalysisGroupButton, DeleteAnalysisGroupButton } from './AnalysisGroupButtons'
@@ -118,7 +118,7 @@ export const PageHeader = ({ user, project, family, analysisGroup, breadcrumb, m
       entityGuid={project.projectGuid}
       title={project.name}
       description={project.description}
-      button={<EditProjectButton />}
+      button={<EditProjectButton project={project} />}
       entityLinkPath={null}
       entityGuidLinkPath="project_page"
       originalPagePath={`project/${project.deprecatedProjectId}`}
