@@ -25,27 +25,35 @@ class GtexReferenceDataHandler(ReferenceDataHandler):
 
     model_cls = GeneExpression
     url = 'https://storage.googleapis.com/gtex_analysis_v7/rna_seq_data/GTEx_Analysis_2016-01-15_v7_RNASeQCv1.1.8_gene_tpm.gct.gz'
-    batch_size = 1000
+    batch_size = 500
 
-    def __init__(self, gtex_sample_annotations_path=None, **kwargs):
+    def __init__(self, gtex_sample_annotations_path=None, keep_existing_records=False, **kwargs):
         if not gtex_sample_annotations_path:
             gtex_sample_annotations_path = download_file(GTEX_SAMPLE_ANNOTATIONS)
         self.tissue_type_map = _get_tissue_type_map(gtex_sample_annotations_path)
         self.tissues_by_columns = None
+        self.keep_existing_records = keep_existing_records
+        self.existing_gtex_gene_ids = {
+            ge.gene.gene_id for ge in GeneExpression.objects.all().only('gene').prefetch_related('gene')
+        } if keep_existing_records else {}
+
         super(GtexReferenceDataHandler, self).__init__()
 
-    @staticmethod
-    def parse_record(record):
-        expressions = collections.defaultdict(list)
-        for tissue, value in record.items():
-            tissue = tissue.split('_')[0]
-            if tissue not in ['Name', 'Description', None, 'na']:
-                expressions[tissue].append(float(value))
+    def parse_record(self, record):
+        gene_id = record['Name'].split('.')[0]
+        if self.keep_existing_records and gene_id in self.existing_gtex_gene_ids:
+            yield None
+        else:
+            expressions = collections.defaultdict(list)
+            for tissue, value in record.items():
+                tissue = tissue.split('_')[0]
+                if tissue not in ['Name', 'Description', None, 'na']:
+                    expressions[tissue].append(float(value))
 
-        yield {
-            'gene_id': record['Name'].split('.')[0],
-            'expression_values': dict(expressions),
-        }
+            yield {
+                'gene_id': gene_id,
+                'expression_values': dict(expressions),
+            }
 
     def get_file_header(self, f):
         for i, line in enumerate(f):
@@ -68,6 +76,7 @@ class Command(GeneCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('--gtex-sample-annotations-path', nargs="?", help="local path of '%s'" % os.path.basename(GTEX_SAMPLE_ANNOTATIONS))
+        parser.add_argument('--keep-existing-records', help="Keep previoulsy loaded GeneExpression records", action="store_true")
         super(Command, self).add_arguments(parser)
 
 
