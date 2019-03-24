@@ -179,7 +179,7 @@ def update_gencode(gencode_release, gencode_gtf_path=None, genome_version=None, 
     counters["transcripts_created"] = len(new_transcripts)
     TranscriptInfo.objects.bulk_create([
         TranscriptInfo(gene=gene_id_to_gene_info[record.pop('gene_id')], **record) for record in new_transcripts.values()
-    ])
+    ], batch_size=50000)
 
     logger.info("Done")
     logger.info("Stats: ")
