@@ -103,6 +103,7 @@ def update_records(reference_data_handler, file_path=None):
             if reference_data_handler.batch_size and reference_data_handler.batch_size < len(models):
                 logger.info("Creating {} {} records".format(len(models), model_name))
                 model_objects.bulk_create(models)
+                models = []
 
     if reference_data_handler.post_process_models:
         reference_data_handler.post_process_models(models)

@@ -25,7 +25,7 @@ class GtexReferenceDataHandler(ReferenceDataHandler):
 
     model_cls = GeneExpression
     url = 'https://storage.googleapis.com/gtex_analysis_v7/rna_seq_data/GTEx_Analysis_2016-01-15_v7_RNASeQCv1.1.8_gene_tpm.gct.gz'
-    batch_size = 5000
+    batch_size = 1000
 
     def __init__(self, gtex_sample_annotations_path=None, **kwargs):
         if not gtex_sample_annotations_path:
