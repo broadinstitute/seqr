@@ -12,13 +12,13 @@ class MGIReferenceDataHandler(ReferenceDataHandler):
     model_cls = MGI
     url = "http://www.informatics.jax.org/downloads/reports/HMD_HumanPhenotype.rpt"
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         if dbNSFPGene.objects.count() == 0:
             raise CommandError("dbNSFPGene table is empty. Run './manage.py update_dbnsfp_gene' before running this command.")
         self.entrez_id_to_gene = {
             dbnsfp.entrez_gene_id: dbnsfp.gene for dbnsfp in dbNSFPGene.objects.all().prefetch_related('gene')
         }
-        super(MGIReferenceDataHandler, self).__init__()
+        super(MGIReferenceDataHandler, self).__init__(**kwargs)
 
     @staticmethod
     def get_file_header(f):

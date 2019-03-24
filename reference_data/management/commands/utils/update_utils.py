@@ -18,7 +18,7 @@ class ReferenceDataHandler(object):
     post_process_models = None
     batch_size = None
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         if GeneInfo.objects.count() == 0:
             raise CommandError("GeneInfo table is empty. Run './manage.py update_gencode' before running this command.")
 
@@ -57,7 +57,7 @@ class GeneCommand(BaseCommand):
                             default=os.path.join('resource_bundle', os.path.basename(self.reference_data_handler.url)))
 
     def handle(self, *args, **options):
-        update_records(self.reference_data_handler(), file_path=options.get('file_path'), )
+        update_records(self.reference_data_handler(**options), file_path=options.get('file_path'), )
 
 
 def update_records(reference_data_handler, file_path=None):
@@ -100,7 +100,7 @@ def update_records(reference_data_handler, file_path=None):
 
                 models.append(model_cls(**record))
 
-            if reference_data_handler.batch_size and reference_data_handler.batch_size >= len(models):
+            if reference_data_handler.batch_size and reference_data_handler.batch_size < len(models):
                 logger.info("Creating {} {} records".format(len(models), model_name))
                 model_objects.bulk_create(models)
 

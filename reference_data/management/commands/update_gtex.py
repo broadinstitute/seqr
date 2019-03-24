@@ -27,7 +27,7 @@ class GtexReferenceDataHandler(ReferenceDataHandler):
     url = 'https://storage.googleapis.com/gtex_analysis_v7/rna_seq_data/GTEx_Analysis_2016-01-15_v7_RNASeQCv1.1.8_gene_tpm.gct.gz'
     batch_size = 5000
 
-    def __init__(self, gtex_sample_annotations_path=None):
+    def __init__(self, gtex_sample_annotations_path=None, **kwargs):
         if not gtex_sample_annotations_path:
             gtex_sample_annotations_path = download_file(GTEX_SAMPLE_ANNOTATIONS)
         self.tissue_type_map = _get_tissue_type_map(gtex_sample_annotations_path)
@@ -67,12 +67,8 @@ class Command(GeneCommand):
     reference_data_handler = GtexReferenceDataHandler
 
     def add_arguments(self, parser):
-        parser.add_argument('--gtex-sample-annotations', nargs="?", help="local path of '%s'" % os.path.basename(GTEX_SAMPLE_ANNOTATIONS))
+        parser.add_argument('--gtex-sample-annotations-path', nargs="?", help="local path of '%s'" % os.path.basename(GTEX_SAMPLE_ANNOTATIONS))
         super(Command, self).add_arguments(parser)
-
-    def handle(self, *args, **options):
-        self.reference_data_handler = GtexReferenceDataHandler(gtex_sample_annotations_path=options.get('gtex_sample_annotations'))
-        super(Command, self).handle(*args, **options)
 
 
 def _get_tissue_type_map(samples_file):

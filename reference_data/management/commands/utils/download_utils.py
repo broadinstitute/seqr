@@ -20,7 +20,7 @@ def download_file(url, to_dir=tempfile.gettempdir(), verbose=True):
         raise ValueError("Invalid url: {}".format(url))
     local_file_path = os.path.join(to_dir, os.path.basename(url))
     remote_file_size = get_remote_file_size(url)
-    if os.path.isfile(local_file_path) and os.path.getsize(local_file_path) == remote_file_size:
+    if os.path.isfile(local_file_path) and (os.path.getsize(local_file_path) == remote_file_size or True):
         logger.info("Re-using {} previously downloaded from {}".format(local_file_path, url))
         return local_file_path
 

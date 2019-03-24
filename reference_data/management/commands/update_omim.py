@@ -70,7 +70,10 @@ class OmimReferenceDataHandler(ReferenceDataHandler):
     model_cls = Omim
     url = "http://data.omim.org/downloads/{omim_key}/genemap2.txt"
 
-    def __init__(self, omim_key):
+    def __init__(self, omim_key=None, **kwargs):
+        if not omim_key:
+            raise CommandError("omim_key is required")
+
         self.url = self.url.format(omim_key=omim_key)
         self.omim_key = omim_key
         super(OmimReferenceDataHandler, self).__init__()
@@ -172,7 +175,3 @@ class Command(GeneCommand):
     def add_arguments(self, parser):
         parser.add_argument('--omim-key', help="OMIM key provided with registration", default=os.environ.get("OMIM_KEY"))
         super(Command, self).add_arguments(parser)
-
-    def handle(self, *args, **options):
-        self.reference_data_handler = OmimReferenceDataHandler(options.get('omim_key'))
-        super(Command, self).handle(*args, **options)

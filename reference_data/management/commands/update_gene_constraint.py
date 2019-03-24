@@ -11,7 +11,7 @@ class GeneConstraintReferenceDataHandler(ReferenceDataHandler):
     model_cls = GeneConstraint
     url = "http://storage.googleapis.com/seqr-reference-data/gene_constraint/gnomad.v2.1.1.lof_metrics.by_gene.txt"
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         if TranscriptInfo.objects.count() == 0:
             raise CommandError("TranscriptInfo table is empty. Run './manage.py update_gencode' before running this command.")
 
