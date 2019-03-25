@@ -11,6 +11,8 @@ import {
 } from 'redux/selectors'
 import { Multiselect, BooleanCheckbox } from 'shared/components/form/Inputs'
 import { configuredField } from 'shared/components/form/ReduxFormWrapper'
+import AwesomeBar from 'shared/components/page/AwesomeBar'
+import { InlineHeader } from 'shared/components/StyledComponents'
 import { getSelectedAnalysisGroups } from '../../constants'
 import { getProjectsFamiliesFieldInput } from '../../selectors'
 
@@ -111,12 +113,30 @@ const mapStateToProps = (state, ownProps) => {
 
 const ProjectFamiliesFilter = connect(mapStateToProps)(BaseProjectFamiliesFilter)
 
+const PROJECT_SEARCH_CATEGORIES = ['projects']
+
+const AddProjectButton = ({ addElement }) =>
+  <div>
+    <InlineHeader content="Add Project:" />
+    <AwesomeBar
+      categories={PROJECT_SEARCH_CATEGORIES}
+      placeholder="Search for a project"
+      inputwidth="400px"
+      onResultSelect={result => addElement({ projectGuid: result.key, familyGuids: [] })}
+    />
+  </div>
+
+AddProjectButton.propTypes = {
+  addElement: PropTypes.func,
+}
+
 const validateFamilies = value => (value && value.length ? undefined : 'Required')
 
 const PROJECT_FAMILIES_FIELD = {
   name: 'projectFamilies',
   arrayFieldName: 'familyGuids',
   component: ProjectFamiliesFilter,
+  addArrayElement: AddProjectButton,
   validate: validateFamilies,
   isArrayField: true,
 }
