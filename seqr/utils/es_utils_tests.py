@@ -146,9 +146,10 @@ ES_VARIANTS = [
               'dp': 88,
               'gq': 99,
               'sample_id': 'HG00731',
-
-            }
-          ]
+            },
+          ],
+          'samples_num_alt_1': [],
+          'samples_num_alt_2': ['NA20870'],
         },
         'matched_queries': ['F000003_3'],
       },
@@ -301,7 +302,9 @@ ES_VARIANTS = [
                 'gq': 96,
                 'sample_id': 'HG00733',
             }
-          ]
+          ],
+          'samples_num_alt_1': ['NA20870', 'HG00733'],
+          'samples_num_alt_2': ['HG00732'],
         },
         'matched_queries': ['F000003_3', 'F000002_2'],
       },
@@ -514,6 +517,8 @@ SOURCE_FIELDS = {
     'cadd_PHRED',
     'sortedTranscriptConsequences',
     'genotypes',
+    'samples_num_alt_1',
+    'samples_num_alt_2',
     'clinvar_clinical_significance',
     'clinvar_allele_id',
     'clinvar_variation_id',
@@ -595,9 +600,12 @@ ALL_INHERITANCE_QUERY = {
 
 class MockHit:
 
-    def __init__(self, matched_queries=None, _source=None, increment_sort=False):
+    def __init__(self, matched_queries=None, _source=None, increment_sort=False, no_matched_queries=False):
         self.meta = mock.MagicMock()
-        self.meta.matched_queries = matched_queries
+        if no_matched_queries:
+            del self.meta.matched_queries
+        else:
+            self.meta.matched_queries = matched_queries
         sort = _source['xpos']
         if increment_sort:
             sort += 100
@@ -625,6 +633,10 @@ MOCK_ES_RESPONSE.aggregations.genes.buckets = [
     {'key': 'ENSG00000228198', 'vars_by_gene': [MockHit(increment_sort=True, **var) for var in deepcopy(ES_VARIANTS)]}
 ]
 
+ALL_INHERITANCE_MOCK_ES_RESPONSE = mock.MagicMock()
+ALL_INHERITANCE_MOCK_ES_RESPONSE.__iter__.return_value = [MockHit(no_matched_queries=True, **var) for var in deepcopy(ES_VARIANTS)]
+ALL_INHERITANCE_MOCK_ES_RESPONSE.hits.total = 2
+
 
 @mock.patch('seqr.utils.es_utils.is_nested_genotype_index', lambda *args: True)
 class EsUtilsTest(TestCase):
@@ -639,8 +651,13 @@ class EsUtilsTest(TestCase):
         class MockSearch(Search):
 
             def execute(_self):
-                self.executed_searches.append(deepcopy(_self.to_dict()))
-                return MOCK_ES_RESPONSE
+                executed_search = deepcopy(_self.to_dict())
+                self.executed_searches.append(executed_search)
+                for search_filter in executed_search['query']['bool']['filter']:
+                    possible_inheritance_filters = search_filter.get('bool', {}).get('should', [])
+                    if any('_name' in possible_filter.get('bool', {}) for possible_filter in possible_inheritance_filters):
+                        return MOCK_ES_RESPONSE
+                return ALL_INHERITANCE_MOCK_ES_RESPONSE
 
         self.mock_search = MockSearch()
 
@@ -697,14 +714,14 @@ class EsUtilsTest(TestCase):
         self.assertDictEqual(variants[1], PARSED_VARIANTS[1])
 
         self.assertExecutedSearch(
-            filters=[{'terms': {'variantId': ['2-103343353-GAGA-G', '1-248367227-TC-T']}}, ALL_INHERITANCE_QUERY],
+            filters=[{'terms': {'variantId': ['2-103343353-GAGA-G', '1-248367227-TC-T']}}],
         )
 
     def test_get_single_es_variant(self):
         variant = get_single_es_variant(self.families, '2-103343353-GAGA-G')
         self.assertDictEqual(variant, PARSED_VARIANTS[0])
         self.assertExecutedSearch(
-            filters=[{'term': {'variantId': '2-103343353-GAGA-G'}}, ALL_INHERITANCE_QUERY], size=1
+            filters=[{'term': {'variantId': '2-103343353-GAGA-G'}}], size=1
         )
 
     def test_get_es_variants(self):
@@ -1141,6 +1158,16 @@ class EsUtilsTest(TestCase):
 
         get_es_variants(results_model, page=2, num_results=2)
         self.assertEqual(len(self.executed_searches), 0)
+
+    def test_get_all_samples_all_inheritance_es_variants(self):
+        search_model = VariantSearch.objects.create(search={'annotations': {'frameshift': ['frameshift_variant']}})
+        results_model = VariantSearchResults.objects.create(variant_search=search_model, sort='xpos')
+        results_model.families.set(Family.objects.all())
+
+        variants = get_es_variants(results_model, num_results=2)
+        self.assertEqual(len(variants), 2)
+
+        self.assertExecutedSearch(filters=[{'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}}], sort=['xpos'])
 
     def test_genotype_inheritance_filter(self):
         samples_by_id = {
