@@ -49,8 +49,6 @@ def get_es_variants_for_variant_tuples(families, xpos_ref_alt_tuples):
 def _get_filtered_family_es_variants(families, family_filter, num_results=100):
     es_search, family_samples_by_id, _ = _get_es_search_for_families(families)
     es_search = es_search.filter(family_filter)
-    genotypes_q, _, _ = _genotype_filter(inheritance=None, family_samples_by_id=family_samples_by_id)
-    es_search = es_search.filter(genotypes_q)
     variant_results, _ = _execute_search(es_search, family_samples_by_id, end_index=num_results)
     return variant_results
 
@@ -102,12 +100,13 @@ def get_es_variants(search_model, page=1, num_results=100):
         es_search = es_search.filter(_frequency_filter(search['freqs']))
 
     genotypes_q, inheritance_mode, compound_het_q = _genotype_filter(
-        search.get('inheritance'), family_samples_by_id, quality_filter=search.get('qualityFilter')
+        search.get('inheritance'), family_samples_by_id, elasticsearch_index, quality_filter=search.get('qualityFilter')
     )
     compound_het_search = None
     if compound_het_q:
         compound_het_search = es_search.filter(compound_het_q)
-    es_search = es_search.filter(genotypes_q)
+    if genotypes_q:
+        es_search = es_search.filter(genotypes_q)
 
     if inheritance_mode == RECESSIVE:
         # recessive results are merged with compound het results so need to load all results through the end of the requested page,
@@ -298,7 +297,7 @@ INHERITANCE_FILTERS = {
 }
 
 
-def _genotype_filter(inheritance, family_samples_by_id, quality_filter=None):
+def _genotype_filter(inheritance, family_samples_by_id, elasticsearch_index, quality_filter=None):
     genotypes_q = None
     compound_het_q = None
 
@@ -311,6 +310,15 @@ def _genotype_filter(inheritance, family_samples_by_id, quality_filter=None):
     min_gq = (quality_filter or {}).get('min_gq', 0)
     if min_gq % 5 != 0:
         raise Exception('Invalid gq filter {}'.format(min_gq))
+
+    # TODO handle multiple indices
+    if not inheritance and not min_gq and not min_gq:
+        search_sample_count = sum(len(samples) for samples in family_samples_by_id.values())
+        index_sample_count = Sample.objects.filter(elasticsearch_index=elasticsearch_index).count()
+        if search_sample_count == index_sample_count:
+            # If searching across all families in an index with no inheritance mode we do not need to explicitly filter
+            # on inheritance, as all variants have some inheritance for at least one family
+            return None, None, None
 
     for family_guid, samples_by_id in family_samples_by_id.items():
         # Filter samples by quality
@@ -649,6 +657,7 @@ def _get_sort(sort_key):
 CLINVAR_FIELDS = ['clinical_significance', 'variation_id', 'allele_id', 'gold_stars']
 HGMD_FIELDS = ['accession', 'class']
 GENOTYPES_FIELD_KEY = 'genotypes'
+HAS_ALT_FIELD_KEYS = ['samples_num_alt_1', 'samples_num_alt_2']
 SORTED_TRANSCRIPTS_FIELD_KEY = 'sortedTranscriptConsequences'
 NESTED_FIELDS = {
     field_name: {field: {} for field in fields} for field_name, fields in {
@@ -701,7 +710,8 @@ DEFAULT_POP_FIELD_CONFIG = {
 POPULATION_RESPONSE_FIELD_CONFIGS = {k: dict(DEFAULT_POP_FIELD_CONFIG, **v) for k, v in POPULATION_FIELD_CONFIGS.items()}
 
 
-QUERY_FIELD_NAMES = CORE_FIELDS_CONFIG.keys() + PREDICTION_FIELDS_CONFIG.keys() + [SORTED_TRANSCRIPTS_FIELD_KEY, GENOTYPES_FIELD_KEY]
+QUERY_FIELD_NAMES = CORE_FIELDS_CONFIG.keys() + PREDICTION_FIELDS_CONFIG.keys() + \
+                    [SORTED_TRANSCRIPTS_FIELD_KEY, GENOTYPES_FIELD_KEY] + HAS_ALT_FIELD_KEYS
 for field_name, fields in NESTED_FIELDS.items():
     QUERY_FIELD_NAMES += ['{}_{}'.format(field_name, field) for field in fields.keys()]
 for population, pop_config in POPULATIONS.items():
@@ -715,8 +725,17 @@ for population, pop_config in POPULATIONS.items():
 def _parse_es_hit(raw_hit, family_samples_by_id):
     hit = {k: raw_hit[k] for k in QUERY_FIELD_NAMES if k in raw_hit}
 
+    if hasattr(raw_hit.meta, 'matched_queries'):
+        family_guids = list(raw_hit.meta.matched_queries)
+    else:
+        # Searches for all inheritance and all families do not filter on inheritance so there are no matched_queries
+        alt_allele_samples = set()
+        for alt_samples_field in HAS_ALT_FIELD_KEYS:
+            alt_allele_samples.update(hit[alt_samples_field])
+        family_guids = [family_guid for family_guid, samples_by_id in family_samples_by_id.items() if
+                        any(sample_id in alt_allele_samples for sample_id in samples_by_id.keys())]
+
     genotypes = {}
-    family_guids = list(raw_hit.meta.matched_queries)
     for family_guid in family_guids:
         samples_by_id = family_samples_by_id[family_guid]
         genotypes.update({
