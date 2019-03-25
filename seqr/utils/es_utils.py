@@ -312,8 +312,7 @@ def _genotype_filter(inheritance, family_samples_by_id, elasticsearch_index, qua
         raise Exception('Invalid gq filter {}'.format(min_gq))
 
     # TODO handle multiple indices
-    # TODO handle quality filter
-    if not inheritance:
+    if not inheritance and not min_gq and not min_gq:
         search_sample_count = sum(len(samples) for samples in family_samples_by_id.values())
         index_sample_count = Sample.objects.filter(elasticsearch_index=elasticsearch_index).count()
         if search_sample_count == index_sample_count:
