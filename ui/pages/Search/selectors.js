@@ -29,42 +29,49 @@ export const getCurrentSearchParams = createSelector(
   (searchesByHash, searchHash) => searchesByHash[searchHash],
 )
 
-export const getLoadedIntitialSearch = createSelector(
+export const getProjectFamilies = (params, familiesByGuid, familiesByProjectGuid, analysisGroupByGuid) => {
+  if (params.projectGuid && params.familyGuids) {
+    return params
+  }
+
+  if (params.projectGuid) {
+    const loadedProjectFamilies = familiesByProjectGuid[params.projectGuid]
+    return {
+      projectGuid: params.projectGuid,
+      familyGuids: loadedProjectFamilies ? Object.keys(loadedProjectFamilies) : null,
+    }
+  }
+  else if (params.analysisGroupGuid) {
+    const analysisGroup = analysisGroupByGuid[params.analysisGroupGuid]
+    return analysisGroup ? {
+      projectGuid: analysisGroup.projectGuid,
+      familyGuids: analysisGroup.familyGuids,
+    } : { analysisGroupGuid: params.analysisGroupGuid }
+  } else if (params.familyGuid || params.familyGuids) {
+    const familyGuid = params.familyGuid || params.familyGuids[0]
+    return {
+      projectGuid: (familiesByGuid[familyGuid] || {}).projectGuid,
+      familyGuids: [familyGuid],
+    }
+  }
+  return null
+}
+
+export const getIntitialSearch = createSelector(
   (state, props) => props.match.params,
   getCurrentSearchParams,
-  getProjectsByGuid,
   getFamiliesByGuid,
   getFamiliesGroupedByProjectGuid,
   getAnalysisGroupsByGuid,
-  (urlParams, searchParams, projectsByGuid, familiesByGuid, familiesByProjectGuid, analysisGroupByGuid) => {
+  (urlParams, searchParams, familiesByGuid, familiesByProjectGuid, analysisGroupByGuid) => {
 
     if (searchParams) {
-      return searchParams.projectFamilies.every(
-        ({ projectGuid }) => projectsByGuid[projectGuid],
-      ) ? searchParams : null
+      return searchParams
     }
 
-    let projectFamilies
-    if (urlParams.projectGuid && familiesByProjectGuid[urlParams.projectGuid]) {
-      projectFamilies = [{
-        projectGuid: urlParams.projectGuid,
-        familyGuids: Object.keys(familiesByProjectGuid[urlParams.projectGuid]),
-      }]
-    }
-    else if (urlParams.familyGuid && familiesByGuid[urlParams.familyGuid]) {
-      projectFamilies = [{
-        projectGuid: familiesByGuid[urlParams.familyGuid].projectGuid,
-        familyGuids: [urlParams.familyGuid],
-      }]
-    }
-    else if (urlParams.analysisGroupGuid && analysisGroupByGuid[urlParams.analysisGroupGuid]) {
-      projectFamilies = [{
-        projectGuid: analysisGroupByGuid[urlParams.analysisGroupGuid].projectGuid,
-        familyGuids: analysisGroupByGuid[urlParams.analysisGroupGuid].familyGuids,
-      }]
-    }
+    const projectFamilies = getProjectFamilies(urlParams, familiesByGuid, familiesByProjectGuid, analysisGroupByGuid)
 
-    return projectFamilies ? { projectFamilies } : null
+    return projectFamilies ? { projectFamilies: [projectFamilies] } : null
   },
 )
 
@@ -99,7 +106,7 @@ export const getSearchedProjectsLocusLists = createSelector(
   getProjectsByGuid,
   getLocusListsByGuid,
   (projectFamilies, projectsByGuid, locusListsByGuid) => {
-    const locusListGuids = [...new Set(projectFamilies.reduce((acc, { projectGuid }) => (
+    const locusListGuids = [...new Set((projectFamilies || []).reduce((acc, { projectGuid }) => (
       projectsByGuid[projectGuid] ? [...acc, ...projectsByGuid[projectGuid].locusListGuids] : acc), [],
     ))]
     return locusListGuids.map(locusListGuid => locusListsByGuid[locusListGuid])

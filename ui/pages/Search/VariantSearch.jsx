@@ -30,7 +30,7 @@ const VariantSearch = ({ match }) =>
             <Route key={pagePath} path={`${match.url}/${pagePath}`} component={VariantSearchForm} />,
           )}
           <Route path={`${match.url}/${SINGLE_VARIANT_RESULTS_PATH}`} />,
-          {/* TODO once multi-project enabled allow no path*/}
+          <Route path={match.url} exact component={VariantSearchForm} />,
           <Route component={() => <Header size="huge" textAlign="center">Error 404: Page Not Found</Header>} />
         </Switch>
       </Grid.Column>

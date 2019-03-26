@@ -18,11 +18,14 @@ const CUSTOM_FILTERS = [
 ]
 
 const CustomInheritanceFilter = ({ value, onChange, projectFamilies, familiesByGuid, individualsByGuid }) => {
-  if (projectFamilies.length !== 1 || projectFamilies[0].familyGuids.length !== 1) {
+  if (!projectFamilies || projectFamilies.length !== 1 || (projectFamilies[0].familyGuids || []).length !== 1) {
     return <Header disabled content="Custom inheritance search is disabled for multi-family searches" />
   }
 
   const family = familiesByGuid[projectFamilies[0].familyGuids[0]]
+  if (!family) {
+    return null
+  }
   const individuals = family.individualGuids.map(individualGuid => individualsByGuid[individualGuid])
 
   const parentGenotypes = {}

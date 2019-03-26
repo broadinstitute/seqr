@@ -8,48 +8,54 @@ import {
   getProjectsByGuid,
   getFamiliesGroupedByProjectGuid,
   getAnalysisGroupsGroupedByProjectGuid,
+  getFamiliesByGuid,
+  getAnalysisGroupsByGuid,
 } from 'redux/selectors'
 import { Multiselect, BooleanCheckbox } from 'shared/components/form/Inputs'
 import { configuredField } from 'shared/components/form/ReduxFormWrapper'
 import AwesomeBar from 'shared/components/page/AwesomeBar'
+import DataLoader from 'shared/components/DataLoader'
 import { InlineHeader } from 'shared/components/StyledComponents'
 import { getSelectedAnalysisGroups } from '../../constants'
-import { getProjectsFamiliesFieldInput } from '../../selectors'
+import { getProjectFamilies, getSearchContextIsLoading } from '../../selectors'
+import { loadProjectFamiliesContext } from '../../reducers'
 
 
-const BaseProjectFamiliesFilter = (
+const ProjectFamiliesFilterContent = (
   { projectFamiliesByGuid, projectAnalysisGroupsByGuid, project, value, onChange, removeField, dispatch, ...props },
 ) => {
   const familyOptions = Object.values(projectFamiliesByGuid).map(
     family => ({ value: family.familyGuid, text: family.displayName }),
   )
 
-  const allFamiliesSelected = value.length === familyOptions.length
+  const allFamiliesSelected = !value.familyGuids || value.familyGuids.length === familyOptions.length
 
-  const selectedFamilies = allFamiliesSelected ? [] : value
+  const selectedFamilies = allFamiliesSelected ? [] : value.familyGuids
 
   const analysisGroupOptions = Object.values(projectAnalysisGroupsByGuid).map(
     group => ({ value: group.analysisGroupGuid, text: group.name }),
   )
 
+  const onFamiliesChange = familyGuids => onChange({ ...value, familyGuids })
+
   const selectedAnalysisGroups = allFamiliesSelected ? [] :
-    getSelectedAnalysisGroups(projectAnalysisGroupsByGuid, value).map(group => group.analysisGroupGuid)
+    getSelectedAnalysisGroups(projectAnalysisGroupsByGuid, value.familyGuids).map(group => group.analysisGroupGuid)
 
   const selectAnalysisGroup = (analysisGroups) => {
     if (analysisGroups.length > selectedAnalysisGroups.length) {
       const newGroupGuid = analysisGroups.find(analysisGroupGuid => !selectedAnalysisGroups.includes(analysisGroupGuid))
-      onChange([...new Set([...value, ...projectAnalysisGroupsByGuid[newGroupGuid].familyGuids])])
+      onFamiliesChange([...new Set([...value.familyGuids, ...projectAnalysisGroupsByGuid[newGroupGuid].familyGuids])])
     } else if (analysisGroups.length < selectedAnalysisGroups.length) {
       const removedGroupGuid = selectedAnalysisGroups.find(analysisGroupGuid => !analysisGroups.includes(analysisGroupGuid))
-      onChange(value.filter(familyGuid => !projectAnalysisGroupsByGuid[removedGroupGuid].familyGuids.includes(familyGuid)))
+      onFamiliesChange(value.familyGuids.filter(familyGuid => !projectAnalysisGroupsByGuid[removedGroupGuid].familyGuids.includes(familyGuid)))
     }
   }
 
   const selectAllFamilies = (checked) => {
     if (checked) {
-      onChange(familyOptions.map((opt => opt.value)))
+      onFamiliesChange(familyOptions.map((opt => opt.value)))
     } else {
-      onChange([])
+      onFamiliesChange([])
     }
   }
 
@@ -71,7 +77,7 @@ const BaseProjectFamiliesFilter = (
         <Multiselect
           {...props}
           value={selectedFamilies}
-          onChange={onChange}
+          onChange={onFamiliesChange}
           options={familyOptions}
           disabled={allFamiliesSelected}
           label="Families"
@@ -91,7 +97,7 @@ const BaseProjectFamiliesFilter = (
   )
 }
 
-BaseProjectFamiliesFilter.propTypes = {
+ProjectFamiliesFilterContent.propTypes = {
   name: PropTypes.string,
   project: PropTypes.object,
   projectFamiliesByGuid: PropTypes.object,
@@ -102,16 +108,48 @@ BaseProjectFamiliesFilter.propTypes = {
   dispatch: PropTypes.func,
 }
 
-const mapStateToProps = (state, ownProps) => {
-  const { projectGuid } = getProjectsFamiliesFieldInput(state)[ownProps.index]
-  return ({
-    projectFamiliesByGuid: getFamiliesGroupedByProjectGuid(state)[projectGuid] || {},
-    projectAnalysisGroupsByGuid: getAnalysisGroupsGroupedByProjectGuid(state)[projectGuid] || {},
-    project: getProjectsByGuid(state)[projectGuid],
-  })
+const LoadedProjectFamiliesFilter = ({ loading, load, ...props }) =>
+  <DataLoader
+    contentId={props.value}
+    loading={loading}
+    load={load}
+    content={props.project}
+  >
+    <ProjectFamiliesFilterContent {...props} />
+  </DataLoader>
+
+LoadedProjectFamiliesFilter.propTypes = {
+  project: PropTypes.object,
+  value: PropTypes.object,
+  load: PropTypes.func,
+  loading: PropTypes.bool,
 }
 
-const ProjectFamiliesFilter = connect(mapStateToProps)(BaseProjectFamiliesFilter)
+const mapStateToProps = (state, ownProps) => ({
+  projectFamiliesByGuid: getFamiliesGroupedByProjectGuid(state)[ownProps.value.projectGuid] || {},
+  projectAnalysisGroupsByGuid: getAnalysisGroupsGroupedByProjectGuid(state)[ownProps.value.projectGuid] || {},
+  project: getProjectsByGuid(state)[ownProps.value.projectGuid],
+  loading: getSearchContextIsLoading(state),
+})
+
+const mapDispatchToProps = (dispatch, ownProps) => {
+  const onLoadSuccess = (state) => {
+    const newVal = getProjectFamilies(
+      ownProps.value, getFamiliesByGuid(state), getFamiliesGroupedByProjectGuid(state), getAnalysisGroupsByGuid(state),
+    )
+    if (newVal) {
+      ownProps.onChange(newVal)
+    }
+  }
+
+  return {
+    load: (context) => {
+      dispatch(loadProjectFamiliesContext(context, onLoadSuccess))
+    },
+  }
+}
+
+const ProjectFamiliesFilter = connect(mapStateToProps, mapDispatchToProps)(LoadedProjectFamiliesFilter)
 
 const PROJECT_SEARCH_CATEGORIES = ['projects']
 
@@ -130,11 +168,10 @@ AddProjectButton.propTypes = {
   addElement: PropTypes.func,
 }
 
-const validateFamilies = value => (value && value.length ? undefined : 'Required')
+const validateFamilies = value => (value && value.familyGuids && value.familyGuids.length ? undefined : 'Required')
 
 const PROJECT_FAMILIES_FIELD = {
   name: 'projectFamilies',
-  arrayFieldName: 'familyGuids',
   component: ProjectFamiliesFilter,
   addArrayElement: AddProjectButton,
   validate: validateFamilies,

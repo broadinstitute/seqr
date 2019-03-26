@@ -19,30 +19,21 @@ const RECEIVE_SEARCH_CONTEXT = 'RECEIVE_SEARCH_CONTEXT'
 
 // actions
 
-export const loadProjectFamiliesContext = ({ projectGuid, familyGuid, analysisGroupGuid, searchHash }) => {
+export const loadProjectFamiliesContext = ({ projectGuid, familyGuids, analysisGroupGuid }, onSuccess) => {
   return (dispatch, getState) => {
     const state = getState()
     const contextParams = {}
     if (projectGuid && !(state.projectsByGuid[projectGuid] && state.projectsByGuid[projectGuid].variantTagTypes)) {
       contextParams.projectGuid = projectGuid
     }
-    else if (familyGuid && !state.familiesByGuid[familyGuid]) {
-      contextParams.familyGuid = familyGuid
+    else if (familyGuids && familyGuids.length) {
+      const [familyGuid] = familyGuids
+      if (!state.familiesByGuid[familyGuid]) {
+        contextParams.familyGuid = familyGuid
+      }
     }
     else if (analysisGroupGuid && !state.analysisGroupsByGuid[analysisGroupGuid]) {
       contextParams.analysisGroupGuid = analysisGroupGuid
-    }
-    else if (searchHash) {
-      const { projectFamilies } = getState().searchesByHash[searchHash] || {}
-      if (projectFamilies && projectFamilies.length) {
-        // TODO handle multiple project search
-        const project = state.projectsByGuid[projectFamilies[0].projectGuid]
-        if (!(project && project.variantTagTypes)) {
-          contextParams.projectGuid = projectFamilies[0].projectGuid
-        }
-      } else {
-        contextParams.searchHash = searchHash
-      }
     }
 
     if (Object.keys(contextParams).length) {
@@ -52,6 +43,7 @@ export const loadProjectFamiliesContext = ({ projectGuid, familyGuid, analysisGr
           dispatch({ type: RECEIVE_SAVED_SEARCHES, updatesById: responseJson })
           dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
           dispatch({ type: RECEIVE_SEARCH_CONTEXT })
+          onSuccess(getState())
         },
         (e) => {
           dispatch({ type: RECEIVE_SEARCH_CONTEXT, error: e.message })
