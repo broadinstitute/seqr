@@ -106,7 +106,14 @@ export const PageHeader = ({ user, project, family, analysisGroup, breadcrumb, m
     entityLinks.push({ to: `/variant_search/project/${project.projectGuid}`, text: 'Project Variant Search' })
   }
   if (project.hasGeneSearch) {
-    entityLinks.push({ href: `/project/${project.deprecatedProjectId}/gene`, text: 'Gene Search' })
+    if (project.hasNewSearch) {
+      if (!headerProps.originalPages) {
+        headerProps.originalPages = []
+      }
+      headerProps.originalPages.push({ path: 'gene', name: 'Gene Search' })
+    } else {
+      entityLinks.push({ href: `/project/${project.deprecatedProjectId}/gene`, text: 'Gene Search' })
+    }
   }
   if (user.is_staff && breadcrumb !== 'case_review') {
     entityLinks.push({ to: `/project/${project.projectGuid}/case_review`, text: 'Case Review' })
