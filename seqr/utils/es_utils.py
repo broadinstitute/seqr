@@ -441,11 +441,7 @@ class EsSearch(object):
         if hasattr(raw_hit.meta, 'sort'):
             result['_sort'] = [_parse_es_sort(sort) for sort in raw_hit.meta.sort]
 
-        # TODO MULTI better handling for multi-project searches
-        project = self.family_samples_by_id[family_guids[0]].values()[0].individual.family.project
-
         result.update({
-            'projectGuid': project.guid,
             'familyGuids': family_guids,
             'genotypes': genotypes,
             'genomeVersion': genome_version,

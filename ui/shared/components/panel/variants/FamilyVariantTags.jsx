@@ -279,7 +279,7 @@ const FamilyVariantTags = ({ variant, family, project, dispatchUpdateVariantNote
       <VariantLinkContainer>
         <NavLink
           to={variant.variantGuid ?
-            `/project/${variant.projectGuid}/saved_variants/variant/${variant.variantGuid}` :
+            `/project/${family.projectGuid}/saved_variants/variant/${variant.variantGuid}` :
             `/variant_search/variant/${variant.variantId}/family/${family.familyGuid}`
           }
           activeStyle={NO_DISPLAY}
