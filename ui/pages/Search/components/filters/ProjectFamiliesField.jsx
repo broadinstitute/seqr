@@ -2,7 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
-import { Form, Header } from 'semantic-ui-react'
+import { Form, Header, Icon, Popup } from 'semantic-ui-react'
 
 import {
   getProjectsByGuid,
@@ -15,7 +15,7 @@ import { Multiselect, BooleanCheckbox } from 'shared/components/form/Inputs'
 import { configuredField } from 'shared/components/form/ReduxFormWrapper'
 import AwesomeBar from 'shared/components/page/AwesomeBar'
 import DataLoader from 'shared/components/DataLoader'
-import { InlineHeader } from 'shared/components/StyledComponents'
+import { InlineHeader, ButtonLink } from 'shared/components/StyledComponents'
 import { getSelectedAnalysisGroups } from '../../constants'
 import { getProjectFamilies, getSearchContextIsLoading } from '../../selectors'
 import { loadProjectFamiliesContext } from '../../reducers'
@@ -63,6 +63,10 @@ const ProjectFamiliesFilterContent = (
     <div>
       {project &&
         <Header>
+          <Popup
+            trigger={<ButtonLink onClick={removeField}><Icon name="remove" color="grey" /></ButtonLink>}
+            content="Remove this project from search"
+          />
           Project: <Link to={`/project/${project.projectGuid}/project_page`}>{project.name}</Link>
         </Header>
       }
