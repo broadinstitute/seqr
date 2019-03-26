@@ -2,7 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
-import { Form, Header, Icon, Popup } from 'semantic-ui-react'
+import { Form, Header, Icon, Popup, Message } from 'semantic-ui-react'
 
 import {
   getProjectsByGuid,
@@ -16,14 +16,13 @@ import { configuredField } from 'shared/components/form/ReduxFormWrapper'
 import AwesomeBar from 'shared/components/page/AwesomeBar'
 import DataLoader from 'shared/components/DataLoader'
 import { InlineHeader, ButtonLink } from 'shared/components/StyledComponents'
+import { VerticalSpacer } from 'shared/components/Spacers'
 import { getSelectedAnalysisGroups } from '../../constants'
 import { getProjectFamilies, getSearchContextIsLoading } from '../../selectors'
 import { loadProjectFamiliesContext } from '../../reducers'
 
 
-const ProjectFamiliesFilterContent = (
-  { projectFamiliesByGuid, projectAnalysisGroupsByGuid, project, value, onChange, removeField, dispatch, ...props },
-) => {
+const ProjectFamiliesFilterInput = ({ projectFamiliesByGuid, projectAnalysisGroupsByGuid, value, onChange, ...props }) => {
   const familyOptions = Object.values(projectFamiliesByGuid).map(
     family => ({ value: family.familyGuid, text: family.displayName }),
   )
@@ -60,54 +59,68 @@ const ProjectFamiliesFilterContent = (
   }
 
   return (
-    <div>
-      {project &&
-        <Header>
-          <Popup
-            trigger={<ButtonLink onClick={removeField}><Icon name="remove" color="grey" /></ButtonLink>}
-            content="Remove this project from search"
-          />
-          Project: <Link to={`/project/${project.projectGuid}/project_page`}>{project.name}</Link>
-        </Header>
-      }
-      <Form.Group inline widths="equal">
-        <BooleanCheckbox
-          {...props}
-          value={allFamiliesSelected}
-          onChange={selectAllFamilies}
-          width={5}
-          label="Include All Families"
-        />
-        <Multiselect
-          {...props}
-          value={selectedFamilies}
-          onChange={onFamiliesChange}
-          options={familyOptions}
-          disabled={allFamiliesSelected}
-          label="Families"
-          color="violet"
-        />
-        <Multiselect
-          {...props}
-          value={selectedAnalysisGroups}
-          onChange={selectAnalysisGroup}
-          options={analysisGroupOptions}
-          disabled={allFamiliesSelected}
-          label="Analysis Groups"
-          color="pink"
-        />
-      </Form.Group>
-    </div>
+    <Form.Group inline widths="equal">
+      <BooleanCheckbox
+        {...props}
+        value={allFamiliesSelected}
+        onChange={selectAllFamilies}
+        width={5}
+        label="Include All Families"
+      />
+      <Multiselect
+        {...props}
+        value={selectedFamilies}
+        onChange={onFamiliesChange}
+        options={familyOptions}
+        disabled={allFamiliesSelected}
+        label="Families"
+        color="violet"
+      />
+      <Multiselect
+        {...props}
+        value={selectedAnalysisGroups}
+        onChange={selectAnalysisGroup}
+        options={analysisGroupOptions}
+        disabled={allFamiliesSelected}
+        label="Analysis Groups"
+        color="pink"
+      />
+    </Form.Group>
   )
 }
 
-ProjectFamiliesFilterContent.propTypes = {
-  name: PropTypes.string,
-  project: PropTypes.object,
+ProjectFamiliesFilterInput.propTypes = {
   projectFamiliesByGuid: PropTypes.object,
   projectAnalysisGroupsByGuid: PropTypes.object,
   value: PropTypes.any,
   onChange: PropTypes.func,
+}
+
+const ProjectFamiliesFilterContent = ({ project, removeField, dispatch, ...props }) => (
+  <div>
+    <Header>
+      <Popup
+        trigger={<ButtonLink onClick={removeField}><Icon name="remove" color="grey" /></ButtonLink>}
+        content="Remove this project from search"
+      />
+      Project: <Link to={`/project/${project.projectGuid}/project_page`}>{project.name}</Link>
+    </Header>
+    {project.hasNewSearch ? <ProjectFamiliesFilterInput {...props} /> :
+    <Message
+      color="red"
+      header="This search is not enabled for this project"
+      content={
+        <div>
+          Please contact the seqr team to add this functionality. You can access this project&apos;s Gene Search
+          &nbsp;<a href={`/project/${project.deprecatedProjectId}/gene`}>here</a>
+        </div>}
+    />}
+    <VerticalSpacer height={10} />
+  </div>
+)
+
+ProjectFamiliesFilterContent.propTypes = {
+  project: PropTypes.object,
   removeField: PropTypes.func,
   dispatch: PropTypes.func,
 }
@@ -172,7 +185,7 @@ AddProjectButton.propTypes = {
   addElement: PropTypes.func,
 }
 
-const validateFamilies = value => (value && value.familyGuids && value.familyGuids.length ? undefined : 'Required')
+const validateFamilies = value => (value && value.familyGuids && value.familyGuids.length ? undefined : 'Families are required for all projects')
 
 const PROJECT_FAMILIES_FIELD = {
   name: 'projectFamilies',

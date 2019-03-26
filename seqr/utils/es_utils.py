@@ -25,6 +25,12 @@ def get_es_client(timeout=30):
 
 
 # TODO once all project data is reloaded get rid of these checks
+def has_nested_genotypes_index(samples_by_guid):
+    samples = sorted(samples_by_guid.values(), key=lambda sample: (sample['loadedDate'] is not None, sample['loadedDate']), reverse=True)
+    latest_index = next((sample['elasticsearchIndex'] for sample in samples), None)
+    return is_nested_genotype_index(latest_index) if latest_index else False
+
+
 def is_nested_genotype_index(es_index):
     es_client = get_es_client()
     index = Index(es_index, using=es_client)

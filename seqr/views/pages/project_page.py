@@ -14,7 +14,7 @@ from django.db.models import Q, Count
 
 from settings import SEQR_ID_TO_MME_ID_MAP
 from seqr.models import Family, Individual, _slugify, VariantTagType, VariantTag, VariantFunctionalData, VariantNote, AnalysisGroup
-from seqr.utils.es_utils import is_nested_genotype_index
+from seqr.utils.es_utils import has_nested_genotypes_index
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.individual_api import export_individuals
 from seqr.views.apis.locus_list_api import get_sorted_project_locus_lists
@@ -58,11 +58,7 @@ def project_page_data(request, project_guid):
     # gene search will be deprecated once the new database is online.
     project_json['hasGeneSearch'] = _has_gene_search(project)
     # TODO once all project data is reloaded get rid of this
-    sorted_es_samples = sorted(
-        [sample for sample in samples_by_guid.values() if sample['elasticsearchIndex']],
-        key=lambda sample: sample['loadedDate'], reverse=True
-    )
-    project_json['hasNewSearch'] = sorted_es_samples and is_nested_genotype_index(sorted_es_samples[0]['elasticsearchIndex'])
+    project_json['hasNewSearch'] = has_nested_genotypes_index(samples_by_guid)
     project_json['detailsLoaded'] = True
 
     return create_json_response({
