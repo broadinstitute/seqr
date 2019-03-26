@@ -808,7 +808,6 @@ class VariantSearchResults(ModelWithGUID):
     families = models.ManyToManyField('Family')
     search_hash = models.CharField(max_length=50)
     sort = models.CharField(null=True, max_length=50)
-    es_index = models.TextField(null=True)
     results = JSONField(null=True)
     total_results = models.IntegerField(null=True)
 

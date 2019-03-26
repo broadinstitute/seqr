@@ -735,7 +735,6 @@ class EsUtilsTest(TestCase):
         self.assertDictEqual(variants[1], PARSED_VARIANTS[1])
 
         self.assertDictEqual(results_model.results, {'all_results': variants})
-        self.assertEqual(results_model.es_index, 'test_index')
         self.assertEqual(results_model.total_results, 5)
 
         self.assertExecutedSearch(filters=[ALL_INHERITANCE_QUERY], sort=['xpos'])

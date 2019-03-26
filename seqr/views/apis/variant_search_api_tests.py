@@ -185,34 +185,6 @@ class VariantSearchAPITest(TestCase):
         self.assertTrue('F000001_1' in response_json['familiesByGuid'])
         self.assertTrue('AG0000183_test_group' in response_json['analysisGroupsByGuid'])
 
-        response = self.client.get('{}?searchHash={}'.format(search_context_url, SEARCH_HASH))
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.reason_phrase, 'Invalid search hash: {}'.format(SEARCH_HASH))
-
-        results_model = VariantSearchResults.objects.create(
-            search_hash=SEARCH_HASH,
-            variant_search=VariantSearch.objects.create(search=SEARCH),
-        )
-        results_model.families.set(Family.objects.filter(guid__in=['F000001_1', 'F000002_2']))
-
-        response = self.client.get('{}?searchHash={}'.format(search_context_url, SEARCH_HASH))
-        self.assertEqual(response.status_code, 200)
-        response_json = response.json()
-        self.assertSetEqual(
-            set(response_json),
-            {'searchesByHash', 'savedSearchesByGuid', 'projectsByGuid', 'familiesByGuid',
-             'individualsByGuid', 'samplesByGuid', 'locusListsByGuid', 'analysisGroupsByGuid',}
-        )
-        self.assertDictEqual(response.json()['searchesByHash'][SEARCH_HASH], {
-            'search': SEARCH,
-            'projectFamilies': PROJECT_FAMILIES,
-            'totalResults': None,
-        })
-        self.assertEqual(len(response_json['savedSearchesByGuid']), 3)
-        self.assertTrue(PROJECT_GUID in response_json['projectsByGuid'])
-        self.assertTrue('F000001_1' in response_json['familiesByGuid'])
-        self.assertTrue('AG0000183_test_group' in response_json['analysisGroupsByGuid'])
-
     @mock.patch('seqr.views.apis.variant_search_api.get_single_es_variant')
     def test_query_single_variant(self, mock_get_variant):
         mock_get_variant.return_value = VARIANTS[0]

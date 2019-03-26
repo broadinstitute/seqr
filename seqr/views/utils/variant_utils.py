@@ -60,7 +60,6 @@ def update_project_saved_variant_json(project, family_id=None):
 
 def reset_cached_search_results(project):
     VariantSearchResults.objects.filter(families__project=project).distinct().update(
-        es_index=None,
         results=None,
         total_results=None,
     )
