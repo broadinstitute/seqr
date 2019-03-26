@@ -83,7 +83,7 @@ export const configuredField = (field, formProps = {}) => {
           <Field
             key={fieldPath}
             name={arrayFieldName ? `${fieldPath}.${arrayFieldName}` : fieldPath}
-            removeField={() => fields.remove(i)}
+            removeField={(e) => { e.preventDefault(); fields.remove(i) }}
             index={i}
             {...singleFieldProps}
           />)}

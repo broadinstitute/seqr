@@ -208,13 +208,12 @@ def _get_es_search_for_families(families, elasticsearch_index=None):
     if not elasticsearch_index:
         es_indices = {s.elasticsearch_index for s in samples}
         if len(es_indices) > 1:
-            # TODO get rid of this once add multi-project support and handle duplicate variants in different indices
+            # TODO MULTI get rid of this once add multi-project support and handle duplicate variants in different indices
             raise InvalidIndexException('Samples are not all contained in the same index: {}'.format(', '.join(es_indices)))
         elif len(es_indices) < 1:
             raise InvalidIndexException('No es index found')
         elif not is_nested_genotype_index(list(es_indices)[0]):
             raise InvalidIndexException('Index "{}" does not have a valid schema'.format(list(es_indices)[0]))
-        elasticsearch_index = ','.join(es_indices)
 
     family_samples_by_id = defaultdict(dict)
     for sample in samples:
@@ -317,7 +316,7 @@ def _genotype_filter(inheritance, family_samples_by_id, elasticsearch_index, qua
     if min_gq % 5 != 0:
         raise Exception('Invalid gq filter {}'.format(min_gq))
 
-    # TODO handle multiple indices
+    # TODO MULTI handle multiple indices
     if not inheritance and not min_gq and not min_gq:
         search_sample_count = sum(len(samples) for samples in family_samples_by_id.values())
         index_sample_count = Sample.objects.filter(elasticsearch_index=elasticsearch_index).count()
@@ -750,10 +749,10 @@ def _parse_es_hit(raw_hit, family_samples_by_id):
             for genotype_hit in hit[GENOTYPES_FIELD_KEY] if genotype_hit['sample_id'] in samples_by_id
         })
 
-    # TODO better handling for multi-project searches
+    # TODO MULTI better handling for multi-project searches
     project = family_samples_by_id[family_guids[0]].values()[0].individual.family.project
 
-    # TODO should come from index metadata
+    # TODO MULTI should come from index metadata
     genome_version = project.genome_version
     lifted_over_genome_version = None
     lifted_over_chrom= None
