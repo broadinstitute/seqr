@@ -8,7 +8,7 @@ from pyliftover.liftover import LiftOver
 from sys import maxint
 
 import settings
-from reference_data.models import GENOME_VERSION_GRCh38, Omim, GeneConstraint
+from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37, Omim, GeneConstraint
 from seqr.models import Sample, Individual
 from seqr.utils.xpos_utils import get_xpos, get_chrom_pos
 from seqr.utils.gene_utils import parse_locus_list_items
@@ -165,24 +165,34 @@ def get_latest_loaded_samples(families=None):
 class EsSearch(object):
 
     def __init__(self, families):
+        client = get_es_client()
 
         samples = get_latest_loaded_samples(families)
 
         es_indices = {s.elasticsearch_index for s in samples}
+        if len(es_indices) < 1:
+            raise InvalidIndexException('No es index found')
+
+        self._elasticsearch_index = ','.join(es_indices)
+        index = Index(self._elasticsearch_index, using=client)
+        mappings = index.get_mapping(doc_type=[VARIANT_DOC_TYPE])
+        self.index_metadata = {}
+        for index_name, mapping in mappings.items():
+            variant_mapping = mapping['mappings'].get(VARIANT_DOC_TYPE, {})
+            # TODO remove this check once all projects are migrated
+            if not variant_mapping['properties'].get('samples_num_alt_1'):
+                raise InvalidIndexException('Index "{}" does not have a valid schema'.format(index_name))
+            self.index_metadata[index_name] = variant_mapping.get('_meta', {})
+
         if len(es_indices) > 1:
             # TODO MULTI get rid of this once add multi-project support and handle duplicate variants in different indices
             raise InvalidIndexException('Samples are not all contained in the same index: {}'.format(', '.join(es_indices)))
-        elif len(es_indices) < 1:
-            raise InvalidIndexException('No es index found')
-        elif not is_nested_genotype_index(list(es_indices)[0]):
-            raise InvalidIndexException('Index "{}" does not have a valid schema'.format(list(es_indices)[0]))
-        self._elasticsearch_index = ','.join(es_indices)
 
         self.family_samples_by_id = defaultdict(dict)
         for sample in samples:
             self.family_samples_by_id[sample.individual.family.guid][sample.sample_id] = sample
 
-        self._search = Search(using=get_es_client(), index=self._elasticsearch_index)
+        self._search = Search(using=client, index=self._elasticsearch_index)
         self.total_results = None
         self._compound_het_search = None
         self._sort = None
@@ -389,11 +399,7 @@ class EsSearch(object):
                 for genotype_hit in hit[GENOTYPES_FIELD_KEY] if genotype_hit['sample_id'] in samples_by_id
             })
 
-        # TODO MULTI better handling for multi-project searches
-        project = self.family_samples_by_id[family_guids[0]].values()[0].individual.family.project
-
-        # TODO MULTI should come from index metadata
-        genome_version = project.genome_version
+        genome_version = self.index_metadata[raw_hit.meta.index].get('genomeVersion')
         lifted_over_genome_version = None
         lifted_over_chrom = None
         lifted_over_pos = None
@@ -404,6 +410,7 @@ class EsSearch(object):
                     'chr{}'.format(hit['contig'].lstrip('chr')), int(hit['start'])
                 )
                 if grch37_coord and grch37_coord[0]:
+                    lifted_over_genome_version = GENOME_VERSION_GRCh37
                     lifted_over_chrom = grch37_coord[0][0].lstrip('chr')
                     lifted_over_pos = grch37_coord[0][1]
 
@@ -433,6 +440,10 @@ class EsSearch(object):
         })
         if hasattr(raw_hit.meta, 'sort'):
             result['_sort'] = [_parse_es_sort(sort) for sort in raw_hit.meta.sort]
+
+        # TODO MULTI better handling for multi-project searches
+        project = self.family_samples_by_id[family_guids[0]].values()[0].individual.family.project
+
         result.update({
             'projectGuid': project.guid,
             'familyGuids': family_guids,
@@ -526,8 +537,7 @@ def _genotype_inheritance_filter(inheritance_mode, inheritance_filter, samples_b
     if inheritance_mode == X_LINKED_RECESSIVE:
         samples_q &= Q('match', contig='X')
         for individual in individuals:
-            if individual_affected_status[
-                individual.guid] == UNAFFECTED and individual.sex == Individual.SEX_MALE:
+            if individual_affected_status[individual.guid] == UNAFFECTED and individual.sex == Individual.SEX_MALE:
                 individual_genotype_filter[individual.guid] = REF_REF
 
     for sample_id, sample in samples_by_id.items():
