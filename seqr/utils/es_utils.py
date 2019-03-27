@@ -207,16 +207,15 @@ class EsSearch(object):
         if min_gq % 5 != 0:
             raise Exception('Invalid gq filter {}'.format(min_gq))
 
-        # TODO MULTI handle multiple indices
-        if not inheritance and not min_gq and not min_gq:
-            search_sample_count = sum(len(samples) for samples in self.family_samples_by_id.values())
-            index_sample_count = Sample.objects.filter(elasticsearch_index=self._elasticsearch_index).count()
-            if search_sample_count == index_sample_count:
-                # If searching across all families in an index with no inheritance mode we do not need to explicitly
-                # filter on inheritance, as all variants have some inheritance for at least one family
-                return inheritance
-
         for index, family_samples_by_id in self.samples_by_family_index.items():
+            if not inheritance and not min_gq and not min_gq:
+                search_sample_count = sum(len(samples) for samples in family_samples_by_id.values())
+                index_sample_count = Sample.objects.filter(elasticsearch_index=index).count()
+                if search_sample_count == index_sample_count:
+                    # If searching across all families in an index with no inheritance mode we do not need to explicitly
+                    # filter on inheritance, as all variants have some inheritance for at least one family
+                    continue
+
             for family_guid, samples_by_id in family_samples_by_id.items():
                 # Filter samples by quality
                 quality_q = None
@@ -314,7 +313,7 @@ class EsSearch(object):
                 search = search.filter(self._index_filters[index_name])
 
             ms = ms.add(search)
-            logger.debug(json.dumps(search.to_dict(), indent=2))
+            logger.debugger(json.dumps(search.to_dict(), indent=2))
 
         try:
             responses = ms.execute()

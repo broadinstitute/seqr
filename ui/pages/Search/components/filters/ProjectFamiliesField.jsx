@@ -131,6 +131,7 @@ const LoadedProjectFamiliesFilter = ({ loading, load, ...props }) =>
     loading={loading}
     load={load}
     content={props.project}
+    hideError
   >
     <ProjectFamiliesFilterContent {...props} />
   </DataLoader>
