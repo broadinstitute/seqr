@@ -42,7 +42,7 @@ def is_nested_genotype_index(es_index):
 
 
 def get_single_es_variant(families, variant_id):
-    variants, _ = EsSearch(families).filter(_single_variant_id_filter(variant_id)).execute_search(num_results=1)
+    variants, _ = EsSearch(families).filter(_single_variant_id_filter(variant_id)).search(num_results=1)
     if not variants:
         raise Exception('Variant {} not found'.format(variant_id))
     return variants[0]
@@ -50,7 +50,7 @@ def get_single_es_variant(families, variant_id):
 
 def get_es_variants_for_variant_tuples(families, xpos_ref_alt_tuples):
     variant_id_filter = _variant_id_filter(xpos_ref_alt_tuples)
-    variants, _ = EsSearch(families).filter(variant_id_filter).execute_search(num_results=len(xpos_ref_alt_tuples))
+    variants, _ = EsSearch(families).filter(variant_id_filter).search(num_results=len(xpos_ref_alt_tuples))
     return variants
 
 
@@ -103,7 +103,7 @@ def get_es_variants(search_model, page=1, num_results=100):
 
     variant_results = []
     if inheritance_mode != COMPOUND_HET:
-        variant_results, previous_search_results = es_search.execute_search(
+        variant_results, previous_search_results = es_search.search(
             page=page, num_results=num_results, previous_search_results=previous_search_results
         )
 
@@ -280,7 +280,7 @@ class EsSearch(object):
 
         return inheritance_mode
 
-    def execute_search(self, page=1, num_results=100, previous_search_results=None):
+    def search(self, page=1, num_results=100, previous_search_results=None):
         self._search = self._search.source(QUERY_FIELD_NAMES)
 
         indices = self.samples_by_family_index.keys()
@@ -289,72 +289,112 @@ class EsSearch(object):
 
         if not previous_search_results:
             previous_search_results = {}
+
+        if len(indices) == 1:
+            return self._execute_single_search(page, num_results, previous_search_results)
+        elif not self._index_searches:
+            # If doing all project-families all inheritance search, do it as a single query
+
+            # Only load contiguous pages
+            num_loaded = len(previous_search_results.get('all_results', []))
+            num_loaded += previous_search_results.get('duplicate_doc_count', 0)
+            if num_loaded >= (page-1)*num_results:
+                start_index = num_loaded
+            else:
+                start_index = 0
+            return self._execute_single_search(
+                page, num_results, previous_search_results, start_index=start_index, deduplicate=True
+            )
+        else:
+            return self._execute_multi_search(page, num_results, previous_search_results)
+
+    def _execute_single_search(self, page, num_results, previous_search_results, deduplicate=False, start_index=None):
+        index_name = ','.join(self.samples_by_family_index.keys())
+        search = self._get_paginated_search(
+            index_name, page, num_results*len(self.samples_by_family_index), start_index=start_index
+        )
+
+        response = self._execute_search(search)
+        variant_results, total_results = self._parse_response(response)
+        self.total_results = total_results
+
+        if deduplicate:
+            variant_results, previous_search_results = self._deduplicate_results(variant_results, previous_search_results)
+
+        previous_search_results['all_results'] = previous_search_results.get('all_results', []) + variant_results
+        return variant_results[:num_results], previous_search_results
+
+    def _execute_multi_search(self, page, num_results, previous_search_results):
+        indices = self.samples_by_family_index.keys()
+
         if not previous_search_results.get('loaded_variant_counts'):
             previous_search_results['loaded_variant_counts'] = {}
 
-        ms = MultiSearch(using=self.client)
+        ms = MultiSearch()
         for index_name in indices:
-            search = self._index_searches.get(index_name, self._search)
-            ms = ms.index(index_name)
-
-            # Load correct page for index
             start_index = 0
-            end_index = page*num_results
             if previous_search_results['loaded_variant_counts'].get(index_name):
                 index_total = previous_search_results['loaded_variant_counts'][index_name]['total']
-                if end_index > index_total:
-                    continue
                 start_index = previous_search_results['loaded_variant_counts'][index_name]['loaded']
+                if start_index >= index_total:
+                    continue
             else:
                 previous_search_results['loaded_variant_counts'][index_name] = {'loaded': 0, 'total': 0}
-            search = search[start_index:end_index]
 
+            search = self._get_paginated_search(index_name, page, num_results, start_index=start_index)
+            ms = ms.index(index_name)
             ms = ms.add(search)
-            logger.debug(json.dumps(search.to_dict(), indent=2))
 
-        try:
-            responses = ms.execute()
-        except elasticsearch.exceptions.ConnectionTimeout as e:
-            canceled = self.delete_long_running_tasks()
-            logger.error('ES Query Timeout. Canceled {} long running searches'.format(canceled))
-            raise e
+        responses = self._execute_search(ms)
 
-        # combine new results with previously loaded results to correctly sort/paginate
-        all_variant_results = previous_search_results.get('all_results', [])
+        # combine new results with unsorted previously loaded results to correctly sort/paginate
+        all_loaded_results = previous_search_results.get('all_results', [])
+        previous_page_record_count = (page - 1) * num_results
+        if len(all_loaded_results) >= previous_page_record_count:
+            loaded_results = all_loaded_results[:previous_page_record_count]
+            new_results = all_loaded_results[previous_page_record_count:]
+        else:
+            loaded_results = []
+            new_results = all_loaded_results
+
         for response in responses:
-            response_total = response.hits.total
-            logger.info('Total hits: {} ({} seconds)'.format(response_total, response.took / 1000.0))
+            response_hits, response_total = self._parse_response(response)
             if not response_total:
                 continue
 
-            response_hits = [self._parse_hit(hit) for hit in response]
-            all_variant_results += response_hits
+            new_results += response_hits
             index_name = response.hits[0].meta.index
             previous_search_results['loaded_variant_counts'][index_name]['total'] = response_total
             previous_search_results['loaded_variant_counts'][index_name]['loaded'] += len(response_hits)
 
-        duplicates = previous_search_results.get('duplicate_doc_count', 0)
-        all_variant_results = sorted(all_variant_results, key=lambda variant: variant.get('_sort', []) + [variant['variantId']])
-        variant_results = []
-        for variant in all_variant_results:
-            if variant_results and variant_results[-1]['variantId'] == variant['variantId']:
-                variant_results[-1]['genotypes'].update(variant['genotypes'])
-                variant_results[-1]['familyGuids'] += variant['familyGuids']
-                duplicates += 1
-            else:
-                variant_results.append(variant)
+        self.total_results = sum(counts['total'] for counts in previous_search_results['loaded_variant_counts'].values())
 
-        previous_search_results['all_results'] = variant_results
-        previous_search_results['duplicate_doc_count'] = duplicates
+        new_results = sorted(new_results, key=lambda variant: variant['_sort'])
+        variant_results, previous_search_results = self._deduplicate_results(new_results, previous_search_results)
+        previous_search_results['all_results'] = loaded_results + variant_results
 
-        self.total_results = sum(
-            counts['total'] for counts in previous_search_results['loaded_variant_counts'].values()
-        ) - duplicates
+        return variant_results[:num_results], previous_search_results
 
-        # Only return the requested page of variants
-        variant_results = variant_results[(page-1)*num_results:page*num_results]
+    def _get_paginated_search(self, index_name, page, num_results, start_index=None):
+        search = self._index_searches.get(index_name, self._search)
+        search = search.index(index_name)
 
-        return variant_results, previous_search_results
+        if start_index is None:
+            end_index = page * num_results
+            start_index = end_index - num_results
+        else:
+            end_index = start_index + num_results
+        logger.info('Loading {} records {}-{}'.format(index_name, start_index, end_index))
+        return search[start_index:end_index]
+
+    def _execute_search(self, search):
+        logger.debug(json.dumps(search.to_dict(), indent=2))
+        try:
+            return search.using(self.client).execute()
+        except elasticsearch.exceptions.ConnectionTimeout as e:
+            canceled = self._delete_long_running_tasks()
+            logger.error('ES Query Timeout. Canceled {} long running searches'.format(canceled))
+            raise e
 
     def execute_compound_het_search(self, allowed_consequences=None):
         # For compound het search get results from aggregation instead of top level hits
@@ -416,6 +456,12 @@ class EsSearch(object):
         logger.info('Total compound het hits: {}'.format(total_compound_het_results))
 
         return variants_by_gene
+
+    def _parse_response(self, response):
+        response_total = response.hits.total
+        logger.info('Total hits: {} ({} seconds)'.format(response_total, response.took / 1000.0))
+
+        return [self._parse_hit(hit) for hit in response], response_total
 
     def _parse_hit(self, raw_hit):
         hit = {k: raw_hit[k] for k in QUERY_FIELD_NAMES if k in raw_hit}
@@ -498,7 +544,24 @@ class EsSearch(object):
         })
         return result
 
-    def delete_long_running_tasks(self):
+    def _deduplicate_results(self, sorted_new_results, previous_search_results):
+        duplicates = previous_search_results.get('duplicate_doc_count', 0)
+        variant_results = []
+        for variant in sorted_new_results:
+            if variant_results and variant_results[-1]['variantId'] == variant['variantId']:
+                variant_results[-1]['genotypes'].update(variant['genotypes'])
+                variant_results[-1]['familyGuids'] += variant['familyGuids']
+                duplicates += 1
+            else:
+                variant_results.append(variant)
+
+        previous_search_results['duplicate_doc_count'] = duplicates
+
+        self.total_results -= duplicates
+
+        return variant_results, previous_search_results
+
+    def _delete_long_running_tasks(self):
         search_tasks = self.client.tasks.list(actions='*search', group_by='parents')
         canceled = 0
         for parent_id, task in search_tasks['tasks'].items():

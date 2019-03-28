@@ -73,9 +73,9 @@ const BaseLocusListLabels = ({ locusListGuids, locusListsByGuid, compact }) => (
           color="teal"
           maxWidth="7em"
           showEmpty
-          label={locusListsByGuid[locusListGuid].name}
-          description={locusListsByGuid[locusListGuid].name}
-          details={locusListsByGuid[locusListGuid].description}
+          label={(locusListsByGuid[locusListGuid] || {}).name}
+          description={(locusListsByGuid[locusListGuid] || {}).name}
+          details={(locusListsByGuid[locusListGuid] || {}).description}
         />,
       )}
     </div>
