@@ -76,6 +76,8 @@ def get_es_variants(search_model, page=1, num_results=100):
 
     es_search = EsSearch(search_model.families.all())
 
+    es_search.sort(sort)
+
     if genes or intervals:
         es_search.filter(_location_filter(genes, intervals, search['locus']))
 
@@ -98,8 +100,6 @@ def get_es_variants(search_model, page=1, num_results=100):
     inheritance_mode = es_search.filter_by_genotype(
         search.get('inheritance'), quality_filter=search.get('qualityFilter')
     )
-
-    es_search.sort(sort)
 
     variant_results = []
     if inheritance_mode != COMPOUND_HET:
@@ -180,7 +180,7 @@ class EsSearch(object):
             ))
 
         self._search = Search() #, index=self._elasticsearch_index)
-        self._index_filters = {}
+        self._index_searches = {}
         self.total_results = None
         self._compound_het_search = None
         self._sort = None
@@ -194,9 +194,6 @@ class EsSearch(object):
         self._search = self._search.sort(*self._sort)
 
     def filter_by_genotype(self, inheritance, quality_filter=None):
-        genotypes_q = None
-        compound_het_q = None
-
         inheritance_mode = (inheritance or {}).get('mode')
         inheritance_filter = (inheritance or {}).get('filter') or {}
 
@@ -216,6 +213,8 @@ class EsSearch(object):
                     # filter on inheritance, as all variants have some inheritance for at least one family
                     continue
 
+            genotypes_q = None
+            compound_het_q = None
             for family_guid, samples_by_id in family_samples_by_id.items():
                 # Filter samples by quality
                 quality_q = None
@@ -277,7 +276,7 @@ class EsSearch(object):
             if compound_het_q:
                 self._compound_het_search = self._search.filter(compound_het_q)
 
-            self._index_filters[index] = genotypes_q
+            self._index_searches[index] = self._search.filter(genotypes_q)
 
         return inheritance_mode
 
@@ -295,7 +294,8 @@ class EsSearch(object):
 
         ms = MultiSearch(using=self.client)
         for index_name in indices:
-            search = self._search.index(index_name)
+            search = self._index_searches.get(index_name, self._search)
+            ms = ms.index(index_name)
 
             # Load correct page for index
             start_index = 0
@@ -309,11 +309,8 @@ class EsSearch(object):
                 previous_search_results['loaded_variant_counts'][index_name] = {'loaded': 0, 'total': 0}
             search = search[start_index:end_index]
 
-            if self._index_filters.get(index_name):
-                search = search.filter(self._index_filters[index_name])
-
             ms = ms.add(search)
-            logger.debugger(json.dumps(search.to_dict(), indent=2))
+            logger.debug(json.dumps(search.to_dict(), indent=2))
 
         try:
             responses = ms.execute()
