@@ -31,7 +31,7 @@ class ProjectAPITest(TransactionTestCase):
         self.assertSetEqual(
             set(variant.keys()),
             {'variantId', 'variantGuid', 'xpos', 'ref', 'alt', 'chrom', 'pos', 'genomeVersion', 'liftedOverGenomeVersion',
-             'liftedOverChrom', 'liftedOverPos', 'familyGuids', 'projectGuid', 'tags', 'functionalData', 'notes', 'clinvar',
+             'liftedOverChrom', 'liftedOverPos', 'familyGuids', 'tags', 'functionalData', 'notes', 'clinvar',
              'originalAltAlleles', 'mainTranscript', 'genotypes', 'hgmd', 'transcripts', 'locusListGuids', 'populations',
              'predictions', 'rsid', 'genotypeFilters'}
         )

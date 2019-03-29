@@ -90,7 +90,7 @@ def get_es_variants(search_model, page=1, num_results=100):
     pathogenicity_filter = _pathogenicity_filter(search.get('pathogenicity', {}))
     if search.get('annotations'):
         es_search.filter_by_annotations(search['annotations'], pathogenicity_filter)
-    else:
+    elif pathogenicity_filter:
         es_search.filter(pathogenicity_filter)
 
     if search.get('freqs'):
@@ -144,15 +144,7 @@ class EsSearch(object):
         if len(self.samples_by_family_index) < 1:
             raise InvalidIndexException('No es index found')
 
-        index = Index(','.join(self.samples_by_family_index.keys()), using=self._client)
-        mappings = index.get_mapping(doc_type=[VARIANT_DOC_TYPE])
-        self.index_metadata = {}
-        for index_name, mapping in mappings.items():
-            variant_mapping = mapping['mappings'].get(VARIANT_DOC_TYPE, {})
-            # TODO remove this check once all projects are migrated
-            if not variant_mapping['properties'].get('samples_num_alt_1'):
-                raise InvalidIndexException('Index "{}" does not have a valid schema'.format(index_name))
-            self.index_metadata[index_name] = variant_mapping.get('_meta', {})
+        self._set_index_metadata()
 
         if len(self.samples_by_family_index) != len(self.index_metadata):
             raise InvalidIndexException('Could not find expected indices: {}'.format(
@@ -164,6 +156,17 @@ class EsSearch(object):
         self.total_results = None
         self._sort = None
         self._allowed_consequences = None
+
+    def _set_index_metadata(self):
+        index = Index(','.join(self.samples_by_family_index.keys()), using=self._client)
+        mappings = index.get_mapping(doc_type=[VARIANT_DOC_TYPE])
+        self.index_metadata = {}
+        for index_name, mapping in mappings.items():
+            variant_mapping = mapping['mappings'].get(VARIANT_DOC_TYPE, {})
+            # TODO remove this check once all projects are migrated
+            if not variant_mapping['properties'].get('samples_num_alt_1'):
+                raise InvalidIndexException('Index "{}" does not have a valid schema'.format(index_name))
+            self.index_metadata[index_name] = variant_mapping.get('_meta', {})
 
     def filter(self, new_filter):
         self._search = self._search.filter(new_filter)
@@ -186,17 +189,17 @@ class EsSearch(object):
         if inheritance_filter.get('genotype'):
             inheritance_mode = None
 
-        quality_filter = dict({'ab': 0, 'gq': 0}, **(quality_filter or {}))
-        if quality_filter['ab'] % 5 != 0:
-            raise Exception('Invalid ab filter {}'.format(quality_filter['ab']))
-        if quality_filter['gq'] % 5 != 0:
-            raise Exception('Invalid gq filter {}'.format(quality_filter['gq']))
+        quality_filter = dict({'min_ab': 0, 'min_gq': 0}, **(quality_filter or {}))
+        if quality_filter['min_ab'] % 5 != 0:
+            raise Exception('Invalid ab filter {}'.format(quality_filter['min_ab']))
+        if quality_filter['min_gq'] % 5 != 0:
+            raise Exception('Invalid gq filter {}'.format(quality_filter['min_gq']))
 
         if quality_filter and quality_filter.get('vcf_filter') is not None:
             self.filter(~Q('exists', field='filters'))
 
         for index, family_samples_by_id in self.samples_by_family_index.items():
-            if not inheritance and not quality_filter['ab'] and not quality_filter['gq']:
+            if not inheritance and not quality_filter['min_ab'] and not quality_filter['min_gq']:
                 search_sample_count = sum(len(samples) for samples in family_samples_by_id.values())
                 index_sample_count = Sample.objects.filter(elasticsearch_index=index).count()
                 if search_sample_count == index_sample_count:
@@ -205,7 +208,7 @@ class EsSearch(object):
                     continue
 
             genotypes_q = _genotype_inheritance_filter(
-                family_samples_by_id, inheritance_mode, inheritance_filter, quality_filter,
+                inheritance_mode, inheritance_filter, family_samples_by_id, quality_filter,
             )
 
             compound_het_q = None
@@ -216,7 +219,7 @@ class EsSearch(object):
 
             if inheritance_mode == RECESSIVE:
                 compound_het_q = _genotype_inheritance_filter(
-                    family_samples_by_id, COMPOUND_HET, inheritance_filter, quality_filter,
+                    COMPOUND_HET, inheritance_filter, family_samples_by_id, quality_filter,
                 )
 
             if compound_het_q and not has_previous_compound_hets:
@@ -229,8 +232,6 @@ class EsSearch(object):
                 self._index_searches[index].append(compound_het_search)
 
     def search(self, page=1, num_results=100, previous_search_results=None):
-        self._search = self._search.source(QUERY_FIELD_NAMES)
-
         indices = self.samples_by_family_index.keys()
 
         logger.info('Searching in elasticsearch indices: {}'.format(', '.join(indices)))
@@ -244,7 +245,7 @@ class EsSearch(object):
             return self._execute_single_search(page, num_results, previous_search_results)
         elif not self._index_searches:
             # If doing all project-families all inheritance search, do it as a single query
-            # Load contiguous pages
+            # Load all variants, do not skip pages
             num_loaded = len(previous_search_results.get('all_results', []))
             num_loaded += previous_search_results.get('duplicate_doc_count', 0)
             if num_loaded >= (page-1)*num_results:
@@ -338,7 +339,7 @@ class EsSearch(object):
         new_results = sorted(new_results, key=lambda variant: variant['_sort'])
         variant_results, previous_search_results = self._deduplicate_results(new_results, previous_search_results)
 
-        if compound_het_results:
+        if compound_het_results or previous_search_results.get('grouped_results'):
             return self._process_compound_hets(compound_het_results, variant_results, previous_search_results, num_results)
         else:
             previous_search_results['all_results'] = loaded_results + variant_results
@@ -354,12 +355,12 @@ class EsSearch(object):
                 search = search[:1]
                 logger.info('Loading compound hets for {}'.format(index_name))
             else:
+                end_index = page * num_results
                 if start_index is None:
-                    end_index = page * num_results
                     start_index = end_index - num_results
-                else:
-                    end_index = start_index + num_results
+
                 search = search[start_index:end_index]
+                search = search.source(QUERY_FIELD_NAMES)
                 logger.info('Loading {} records {}-{}'.format(index_name, start_index, end_index))
 
             searches.append(search)
@@ -498,7 +499,7 @@ class EsSearch(object):
             result['_sort'] = [_parse_es_sort(sort, self._sort[i]) for i, sort in enumerate(raw_hit.meta.sort)]
 
         result.update({
-            'familyGuids': family_guids,
+            'familyGuids': sorted(family_guids),
             'genotypes': genotypes,
             'genomeVersion': genome_version,
             'liftedOverGenomeVersion': lifted_over_genome_version,
@@ -632,26 +633,27 @@ INHERITANCE_FILTERS = {
 }
 
 
-def _genotype_inheritance_filter(family_samples_by_id, inheritance_mode, inheritance_filter, quality_filter):
-    if inheritance_filter and inheritance_mode:
+def _genotype_inheritance_filter(inheritance_mode, inheritance_filter, family_samples_by_id, quality_filter):
+    if inheritance_mode:
         inheritance_filter.update(INHERITANCE_FILTERS[inheritance_mode])
 
     genotypes_q = None
-    for family_guid, samples_by_id in family_samples_by_id.items():
+    for family_guid in sorted(family_samples_by_id.keys()):
+        samples_by_id = family_samples_by_id[family_guid]
         # Filter samples by quality
         quality_q = None
-        if quality_filter['ab'] or quality_filter['gq']:
+        if quality_filter.get('min_ab') or quality_filter.get('min_gq'):
             quality_q = Q()
             for sample_id in samples_by_id.keys():
-                if quality_filter['ab']:
+                if quality_filter['min_ab']:
                     q = _build_or_filter('term', [
-                        {'samples_ab_{}_to_{}'.format(i, i + 5): sample_id} for i in range(0, quality_filter['ab'], 5)
+                        {'samples_ab_{}_to_{}'.format(i, i + 5): sample_id} for i in range(0, quality_filter['min_ab'], 5)
                     ])
                     #  AB only relevant for hets
                     quality_q &= ~Q(q) | ~Q('term', samples_num_alt_1=sample_id)
-                if quality_filter['gq']:
+                if quality_filter['min_gq']:
                     quality_q &= ~Q(_build_or_filter('term', [
-                        {'samples_gq_{}_to_{}'.format(i, i + 5): sample_id} for i in range(0, quality_filter['gq'], 5)
+                        {'samples_gq_{}_to_{}'.format(i, i + 5): sample_id} for i in range(0, quality_filter['min_gq'], 5)
                     ]))
 
         # Filter samples by inheritance
