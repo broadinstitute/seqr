@@ -1100,7 +1100,7 @@ class EsUtilsTest(TestCase):
         self.assertListEqual(variants, PARSED_COMPOUND_HET_VARIANTS)
 
         self.assertDictEqual(results_model.results, {
-            'grouped_results': [PARSED_COMPOUND_HET_VARIANTS, PARSED_COMPOUND_HET_VARIANTS],
+            'grouped_results': [{'ENSG00000135953': PARSED_COMPOUND_HET_VARIANTS}, {'ENSG00000228198': PARSED_COMPOUND_HET_VARIANTS}],
         })
         self.assertEqual(results_model.total_results, 4)
 
@@ -1138,7 +1138,7 @@ class EsUtilsTest(TestCase):
         self.assertDictEqual(results_model.results, {
             'compound_het_results': [],
             'variant_results': [PARSED_VARIANTS[1]],
-            'grouped_results': [[PARSED_VARIANTS[0]], PARSED_COMPOUND_HET_VARIANTS],
+            'grouped_results': [{None: [PARSED_VARIANTS[0]]}, {'ENSG00000228198': PARSED_COMPOUND_HET_VARIANTS}],
             'duplicate_doc_count': 0,
             'loaded_variant_counts': {'test_index_compound_het': {'total': 2}, INDEX_NAME: {'loaded': 2, 'total': 5}}
         })
@@ -1230,7 +1230,9 @@ class EsUtilsTest(TestCase):
         self.assertDictEqual(results_model.results, {
             'compound_het_results': [],
             'variant_results': [PARSED_VARIANTS[1]],
-            'grouped_results': [[PARSED_VARIANTS[0]], PARSED_COMPOUND_HET_VARIANTS, [PARSED_VARIANTS[0]], [PARSED_VARIANTS[1]]],
+            'grouped_results': [
+                {None: [PARSED_VARIANTS[0]]}, {'ENSG00000228198': PARSED_COMPOUND_HET_VARIANTS},
+                {None: [PARSED_VARIANTS[0]]}, {None: [PARSED_VARIANTS[1]]}],
             'duplicate_doc_count': 0,
             'loaded_variant_counts': {'test_index_compound_het': {'total': 2}, INDEX_NAME: {'loaded': 4, 'total': 5}},
         })

@@ -270,7 +270,7 @@ class EsSearch(object):
 
         results_start_index = (page - 1) * num_results
         if is_compound_het:
-            variant_results = sorted(variant_results, key=lambda variants: variants[0]['_sort'])
+            variant_results = _sort_compound_hets(variant_results)
             previous_search_results['grouped_results'] = variant_results
             end_index = min(results_start_index + num_results, total_results)
             return _get_compound_het_page(variant_results, results_start_index, end_index), previous_search_results
@@ -426,9 +426,9 @@ class EsSearch(object):
                 if family_guids:
                     for variant in gene_variants:
                         variant['familyGuids'] = list(family_guids)
-                    variants_by_gene.append(gene_variants)
+                    variants_by_gene.append({gene_agg['key']: gene_variants})
 
-        total_compound_het_results = sum(len(results) for results in variants_by_gene)
+        total_compound_het_results = sum(len(results.values()[0]) for results in variants_by_gene)
         logger.info('Total compound het hits: {}'.format(total_compound_het_results))
 
         return variants_by_gene, total_compound_het_results
@@ -537,20 +537,21 @@ class EsSearch(object):
             previous_search_results['grouped_results'] = []
 
         # Sort merged result sets
-        grouped_variants = [[var] for var in single_variant_results]
+        grouped_variants = [{None: [var]} for var in single_variant_results]
         grouped_variants = compound_het_results + grouped_variants
-        grouped_variants = sorted(grouped_variants, key=lambda variants: variants[0]['_sort'])
+        grouped_variants = _sort_compound_hets(grouped_variants)
 
-        loaded_result_count = sum(len(vars) for vars in grouped_variants + previous_search_results['grouped_results'])
+        loaded_result_count = sum(len(vars.values()[0]) for vars in grouped_variants + previous_search_results['grouped_results'])
 
         # Get requested page of variants
         variant_results = []
         num_compound_hets = 0
         num_single_variants = 0
-        for i, variants in enumerate(grouped_variants):
+        for i, variants_group in enumerate(grouped_variants):
+            variants = variants_group.values()[0]
             variant_results += variants
             if loaded_result_count != self.total_results:
-                previous_search_results['grouped_results'].append(variants)
+                previous_search_results['grouped_results'].append(variants_group)
             if len(variants) > 1:
                 num_compound_hets += 1
             else:
@@ -1019,14 +1020,18 @@ for population, pop_config in POPULATIONS.items():
         QUERY_FIELD_NAMES += ['{}_{}'.format(population, custom_field) for custom_field in field_config.get('fields', [])]
 
 
+def _sort_compound_hets(grouped_variants):
+    return sorted(grouped_variants, key=lambda variants: variants.values()[0][0]['_sort'])
+
+
 def _get_compound_het_page(grouped_variants, start_index, end_index):
     skipped = 0
     variant_results = []
     for i, variants in enumerate(grouped_variants):
         if skipped < start_index:
-            skipped += len(variants)
+            skipped += len(variants.values()[0])
         else:
-            variant_results += variants
+            variant_results += variants.values()[0]
         if len(variant_results) + skipped >= end_index:
             return variant_results
     return None
