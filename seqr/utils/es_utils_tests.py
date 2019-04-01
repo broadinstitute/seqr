@@ -1386,6 +1386,25 @@ class EsUtilsTest(TestCase):
             size=4,
         )
 
+        # test pagination
+        variants = get_es_variants(results_model, num_results=2, page=2)
+        expected_variants = [PARSED_VARIANTS[0], PARSED_MULTI_INDEX_VARIANT]
+        self.assertListEqual(variants, expected_variants)
+
+        self.assertDictEqual(results_model.results, {
+            'all_results': expected_variants + expected_variants,
+            'duplicate_doc_count': 2,
+        })
+        self.assertEqual(results_model.total_results, 3)
+
+        self.assertExecutedSearch(
+            index='{},{}'.format(SECOND_INDEX_NAME, INDEX_NAME),
+            filters=[{'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}}],
+            sort=['xpos'],
+            size=5,
+            start_index=3,
+        )
+
     def test_genotype_inheritance_filter(self):
         samples_by_id = {'F000002_2': {
             sample_id: Sample.objects.get(sample_id=sample_id) for sample_id in ['HG00731', 'HG00732', 'HG00733']
