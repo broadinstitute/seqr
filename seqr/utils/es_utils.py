@@ -335,11 +335,15 @@ class EsSearch(object):
             new_results += all_loaded_results[previous_page_record_count:]
         else:
             loaded_results = []
+            new_results += previous_search_results.get('variant_results', [])
 
         new_results = sorted(new_results, key=lambda variant: variant['_sort'])
         variant_results, previous_search_results = self._deduplicate_results(new_results, previous_search_results)
 
         if compound_het_results or previous_search_results.get('grouped_results'):
+            if compound_het_results:
+                compound_het_results, previous_search_results = self._deduplicate_compound_het_results(
+                    compound_het_results, previous_search_results)
             return self._process_compound_hets(compound_het_results, variant_results, previous_search_results, num_results)
         else:
             previous_search_results['all_results'] = loaded_results + variant_results
@@ -520,7 +524,7 @@ class EsSearch(object):
         for variant in sorted_new_results:
             if variant_results and variant_results[-1]['variantId'] == variant['variantId']:
                 variant_results[-1]['genotypes'].update(variant['genotypes'])
-                variant_results[-1]['familyGuids'] = sorted(variant_results[-1]['familyGuids'] + variant['familyGuids'])
+                variant_results[-1]['familyGuids'] = sorted(set(variant_results[-1]['familyGuids'] + variant['familyGuids']))
                 duplicates += 1
             else:
                 variant_results.append(variant)
@@ -531,32 +535,59 @@ class EsSearch(object):
 
         return variant_results, previous_search_results
 
+    def _deduplicate_compound_het_results(self, compound_het_results, previous_search_results):
+        duplicates = 0
+        results = {}
+        for variant_group in compound_het_results:
+            gene = variant_group.keys()[0]
+            variants = variant_group[gene]
+            if gene in results:
+                for variant in variants:
+                    existing_index = next(
+                        (i for i, existing in enumerate(results[gene]) if existing['variantId'] == variant['variantId']), None,
+                    )
+                    if existing_index is not None:
+                        results[gene][existing_index]['genotypes'].update(variant['genotypes'])
+                        results[gene][existing_index]['familyGuids'] = sorted(
+                            results[gene][existing_index]['familyGuids'] + variant['familyGuids']
+                        )
+                        duplicates += 1
+                    else:
+                        results[gene].append(variant)
+            else:
+                results[gene] = variants
+
+        previous_search_results['duplicate_doc_count'] = duplicates + previous_search_results.get('duplicate_doc_count', 0)
+
+        self.total_results -= duplicates
+
+        return [{k: v} for k, v in results.items()], previous_search_results
+
     def _process_compound_hets(self, compound_het_results, variant_results, previous_search_results, num_results):
-        single_variant_results = previous_search_results.get('variant_results', []) + variant_results
         if not previous_search_results.get('grouped_results'):
             previous_search_results['grouped_results'] = []
 
         # Sort merged result sets
-        grouped_variants = [{None: [var]} for var in single_variant_results]
+        grouped_variants = [{None: [var]} for var in variant_results]
         grouped_variants = compound_het_results + grouped_variants
         grouped_variants = _sort_compound_hets(grouped_variants)
 
         loaded_result_count = sum(len(vars.values()[0]) for vars in grouped_variants + previous_search_results['grouped_results'])
 
         # Get requested page of variants
-        variant_results = []
+        flattened_variant_results = []
         num_compound_hets = 0
         num_single_variants = 0
         for i, variants_group in enumerate(grouped_variants):
             variants = variants_group.values()[0]
-            variant_results += variants
+            flattened_variant_results += variants
             if loaded_result_count != self.total_results:
                 previous_search_results['grouped_results'].append(variants_group)
             if len(variants) > 1:
                 num_compound_hets += 1
             else:
                 num_single_variants += 1
-            if len(variant_results) >= num_results:
+            if len(flattened_variant_results) >= num_results:
                 break
 
         # Only save non-returned results separately if have not loaded all results
@@ -566,9 +597,9 @@ class EsSearch(object):
             previous_search_results['variant_results'] = []
         else:
             previous_search_results['compound_het_results'] = compound_het_results[num_compound_hets:]
-            previous_search_results['variant_results'] = single_variant_results[num_single_variants:]
+            previous_search_results['variant_results'] = variant_results[num_single_variants:]
 
-        return variant_results, previous_search_results
+        return flattened_variant_results, previous_search_results
 
     def _delete_long_running_tasks(self):
         search_tasks = self._client.tasks.list(actions='*search', group_by='parents')
