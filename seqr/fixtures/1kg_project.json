@@ -44,6 +44,28 @@
     }
 },
 {
+    "model": "seqr.project",
+    "pk": 3,
+    "fields": {
+        "guid": "R0003_test",
+        "created_date": "2017-03-12T19:27:08.156Z",
+        "created_by": null,
+        "last_modified_date": "2017-03-13T09:07:49.582Z",
+        "name": "Test Project",
+        "description": "",
+	"owners_group": 1,
+	"can_edit_group": 2,
+	"can_view_group": 3,
+	"is_phenotips_enabled": true,
+	"phenotips_user_id": "",
+	"is_mme_enabled": false,
+	"mme_primary_data_owner": "",
+	"deprecated_last_accessed_date": "2017-09-15T18:15:50.827Z",
+	"deprecated_project_id": "",
+	"custom_reference_populations": []
+    }
+},
+{
     "model": "seqr.projectcategory",
     "pk": 2,
     "fields": {
@@ -299,7 +321,7 @@
         "created_date": "2017-03-12T19:27:08.806Z",
         "created_by": null,
         "last_modified_date": "2017-03-12T22:36:49.654Z",
-        "project": 1,
+        "project": 3,
         "family_id": "11",
         "display_name": "11",
         "description": "",
@@ -1010,7 +1032,7 @@
         "created_date": "2017-02-05T06:42:55.397Z",
         "created_by": null,
         "last_modified_date": "2017-03-13T09:07:50.247Z",
-        
+        "elasticsearch_index": "test_index_second",
         "sample_id": "NA20885",
         "sample_type": "WES",
         "sample_status": "loaded",

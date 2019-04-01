@@ -520,7 +520,7 @@ class EsSearch(object):
         for variant in sorted_new_results:
             if variant_results and variant_results[-1]['variantId'] == variant['variantId']:
                 variant_results[-1]['genotypes'].update(variant['genotypes'])
-                variant_results[-1]['familyGuids'] += variant['familyGuids']
+                variant_results[-1]['familyGuids'] = sorted(variant_results[-1]['familyGuids'] + variant['familyGuids'])
                 duplicates += 1
             else:
                 variant_results.append(variant)

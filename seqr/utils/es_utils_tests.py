@@ -8,6 +8,7 @@ from seqr.utils.es_utils import get_es_variants_for_variant_tuples, get_single_e
     _genotype_inheritance_filter
 
 INDEX_NAME = 'test_index'
+SECOND_INDEX_NAME = 'test_index_second'
 
 ES_VARIANTS = [
     {
@@ -151,7 +152,7 @@ ES_VARIANTS = [
           'samples_num_alt_1': [],
           'samples_num_alt_2': ['NA20870'],
         },
-        'matched_queries': ['F000003_3'],
+        'matched_queries': {INDEX_NAME: ['F000003_3']},
       },
     {
         '_source': {
@@ -282,6 +283,13 @@ ES_VARIANTS = [
                 'sample_id': 'NA20870',
             },
             {
+                'num_alt': 1,
+                'ab': 0.631,
+                'dp': 50,
+                'gq': 99,
+                'sample_id': 'NA20885',
+            },
+            {
                 'num_alt': 0,
                 'ab': 0,
                 'dp': 67,
@@ -303,12 +311,13 @@ ES_VARIANTS = [
                 'sample_id': 'HG00733',
             }
           ],
-          'samples_num_alt_1': ['NA20870', 'HG00733'],
+          'samples_num_alt_1': ['NA20870', 'HG00733', 'NA20885'],
           'samples_num_alt_2': ['HG00732'],
         },
-        'matched_queries': ['F000003_3', 'F000002_2'],
+        'matched_queries': {INDEX_NAME: ['F000003_3', 'F000002_2'], SECOND_INDEX_NAME: ['F000011_11']},
       },
 ]
+INDEX_ES_VARIANTS = {INDEX_NAME: ES_VARIANTS, SECOND_INDEX_NAME: [ES_VARIANTS[1]]}
 
 TRANSCRIPT_1 = {
   'aminoAcids': 'LL/L',
@@ -491,6 +500,19 @@ PARSED_NO_SORT_VARIANTS = deepcopy(PARSED_VARIANTS)
 for var in PARSED_NO_SORT_VARIANTS:
     del var['_sort']
 
+PARSED_MULTI_INDEX_VARIANT = deepcopy(PARSED_VARIANTS[1])
+PARSED_MULTI_INDEX_VARIANT.update({
+    'familyGuids': ['F000002_2', 'F000003_3', 'F000011_11'],
+    'genotypes': {
+        'I000004_hg00731': {'ab': 0, 'ad': None, 'gq': 99, 'sampleId': 'HG00731', 'numAlt': 0, 'dp': 67, 'pl': None},
+        'I000005_hg00732': {'ab': 0, 'ad': None, 'gq': 96, 'sampleId': 'HG00732', 'numAlt': 2, 'dp': 42, 'pl': None},
+        'I000006_hg00733': {'ab': 0, 'ad': None, 'gq': 96, 'sampleId': 'HG00733', 'numAlt': 1, 'dp': 42, 'pl': None},
+        'I000007_na20870': {'ab': 0.70212764, 'ad': None, 'gq': 46, 'sampleId': 'NA20870', 'numAlt': 1, 'dp': 50, 'pl': None},
+        'I000015_na20885': {'ab': 0.631, 'ad': None, 'gq': 99, 'sampleId': 'NA20885', 'numAlt': 1, 'dp': 50, 'pl': None},
+    },
+})
+
+
 SOURCE_FIELDS = {
     'start',
     'rsid',
@@ -597,16 +619,55 @@ ALL_INHERITANCE_QUERY = {
     }
 }
 
+COMPOUND_HET_INHERITANCE_QUERY = {
+    'bool': {
+        'should': [
+            {'bool': {
+                '_name': 'F000002_2',
+                'must': [
+                    {'bool': {
+                        'must_not': [
+                            {'term': {'samples_no_call': 'HG00732'}},
+                            {'term': {'samples_num_alt_2': 'HG00732'}},
+                            {'term': {'samples_no_call': 'HG00733'}},
+                            {'term': {'samples_num_alt_2': 'HG00733'}}
+                        ],
+                        'must': [{'term': {'samples_num_alt_1': 'HG00731'}}]
+                    }},
+                    {'bool': {'must_not': [
+                        {'term': {'samples_gq_0_to_5': 'HG00731'}},
+                        {'term': {'samples_gq_5_to_10': 'HG00731'}},
+                        {'term': {'samples_gq_0_to_5': 'HG00732'}},
+                        {'term': {'samples_gq_5_to_10': 'HG00732'}},
+                        {'term': {'samples_gq_0_to_5': 'HG00733'}},
+                        {'term': {'samples_gq_5_to_10': 'HG00733'}},
+                    ]}},
+                ]
+            }},
+            {'bool': {
+                '_name': 'F000003_3',
+                'must': [
+                    {'term': {'samples_num_alt_1': 'NA20870'}},
+                    {'bool': {'must_not': [
+                        {'term': {'samples_gq_0_to_5': 'NA20870'}},
+                        {'term': {'samples_gq_5_to_10': 'NA20870'}}
+                    ]}}
+                ]
+            }},
+        ]
+    }
+}
+
 
 class MockHit:
 
-    def __init__(self, matched_queries=None, _source=None, increment_sort=False, no_matched_queries=False, sort=None):
+    def __init__(self, matched_queries=None, _source=None, increment_sort=False, no_matched_queries=False, sort=None, index=INDEX_NAME):
         self.meta = mock.MagicMock()
         if no_matched_queries:
             del self.meta.matched_queries
         else:
-            self.meta.matched_queries = matched_queries
-        self.meta.index = INDEX_NAME
+            self.meta.matched_queries = matched_queries[index]
+        self.meta.index = index
         if sort or increment_sort:
             sort = _source['xpos']
             if increment_sort:
@@ -629,7 +690,8 @@ class MockHit:
         return self._dict.__iter__()
 
 
-def create_mock_response(search):
+def create_mock_response(search, index=INDEX_NAME):
+    indices = index.split(',')
     no_matched_queries = True
     for search_filter in search['query']['bool']['filter']:
         possible_inheritance_filters = search_filter.get('bool', {}).get('should', [])
@@ -639,9 +701,12 @@ def create_mock_response(search):
 
     mock_response = mock.MagicMock()
     mock_response.hits.total = 5
-    hits = [
-        MockHit(no_matched_queries=no_matched_queries, sort=search.get('sort'), **var) for var in deepcopy(ES_VARIANTS)
-    ]
+    hits = []
+    for i, index_name in enumerate(sorted(indices)):
+        hits += [
+            MockHit(no_matched_queries=no_matched_queries, sort=search.get('sort'), index=index_name, **var)
+            for var in deepcopy(INDEX_ES_VARIANTS[index_name])
+        ]
     mock_response.__iter__.return_value = hits
     mock_response.hits.__getitem__.side_effect = hits.__getitem__
 
@@ -673,28 +738,36 @@ class EsUtilsTest(TestCase):
 
         def mock_execute_search(search):
             self.executed_search = deepcopy(search.to_dict())
+            self.searched_indices += search._index
 
             if isinstance(self.executed_search, list):
-                return [create_mock_response(search) for search in self.executed_search if search.get('query')]
+                return [create_mock_response(
+                    search, index=self.searched_indices[i/2] if len(self.searched_indices) > i/2 else INDEX_NAME
+                ) for i, search in enumerate(self.executed_search) if search.get('query')]
             else:
-                return create_mock_response(self.executed_search)
+                return create_mock_response(self.executed_search, index=self.searched_indices[0])
 
         patcher = mock.patch('seqr.utils.es_utils.EsSearch._execute_search')
         patcher.start().side_effect = mock_execute_search
         self.addCleanup(patcher.stop)
 
-    def assertExecutedSearch(self, filters=None, start_index=0, size=2, sort=None):
+    def assertExecutedSearch(self, filters=None, start_index=0, size=2, sort=None, aggs=None, index=INDEX_NAME):
         self.assertIsInstance(self.executed_search, dict)
-        self.assertSameSearch(self.executed_search, dict(filters=filters, start_index=start_index, size=size, sort=sort))
+        self.assertEqual(self.searched_indices, [index])
+        self.assertSameSearch(
+            self.executed_search, dict(filters=filters, start_index=start_index, size=size, sort=sort, aggs=aggs)
+        )
         self.executed_search = None
+        self.searched_indices = []
 
     def assertExecutedSearches(self, searches):
         self.assertIsInstance(self.executed_search, list)
         self.assertEqual(len(self.executed_search), len(searches)*2)
         for i, expected_search in enumerate(searches):
-            self.assertDictEqual(self.executed_search[i*2], {'index': [INDEX_NAME]})
+            self.assertDictEqual(self.executed_search[i*2], {'index': [expected_search.get('index', INDEX_NAME)]})
             self.assertSameSearch(self.executed_search[(i*2)+1], expected_search)
         self.executed_search = None
+        self.searched_indices = []
 
     def assertSameSearch(self, executed_search, expected_search_params):
         expected_search = {
@@ -1014,6 +1087,39 @@ class EsUtilsTest(TestCase):
             }}
         ], sort=['mainTranscript_major_consequence_rank', 'xpos'])
 
+    def test_compound_het_get_es_variants(self):
+        search_model = VariantSearch.objects.create(search={
+            'qualityFilter': {'min_gq': 10},
+            'inheritance': {'mode': 'compound_het'}
+        })
+        results_model = VariantSearchResults.objects.create(variant_search=search_model, sort='xpos')
+        results_model.families.set(self.families)
+
+        variants = get_es_variants(results_model, num_results=2)
+        self.assertEqual(len(variants), 2)
+        self.assertListEqual(variants, PARSED_COMPOUND_HET_VARIANTS)
+
+        self.assertDictEqual(results_model.results, {
+            'grouped_results': [PARSED_COMPOUND_HET_VARIANTS, PARSED_COMPOUND_HET_VARIANTS],
+        })
+        self.assertEqual(results_model.total_results, 4)
+
+        self.assertExecutedSearch(
+            filters=[COMPOUND_HET_INHERITANCE_QUERY],
+            aggs={
+                'name': 'genes', 'terms': {'field': 'geneIds', 'min_doc_count': 2, 'size': 10000},
+                'nested_name': 'vars_by_gene', 'nested_size': 100,
+            },
+            sort=['xpos'],
+            start_index=0,
+            size=1
+        )
+
+        # test pagination does not fetch
+        variants = get_es_variants(results_model, page=2, num_results=2)
+        self.assertIsNone(self.executed_search)
+        self.assertListEqual(variants, PARSED_COMPOUND_HET_VARIANTS)
+
     def test_recessive_get_es_variants(self):
         search_model = VariantSearch.objects.create(search={
             'annotations': {'frameshift': ['frameshift_variant']},
@@ -1101,48 +1207,10 @@ class EsUtilsTest(TestCase):
             }
         }
 
-        compound_het_inheritance_query = {
-            'bool': {
-                'should': [
-                    {'bool': {
-                        '_name': 'F000002_2',
-                        'must': [
-                            {'bool': {
-                                'must_not': [
-                                    {'term': {'samples_no_call': 'HG00732'}},
-                                    {'term': {'samples_num_alt_2': 'HG00732'}},
-                                    {'term': {'samples_no_call': 'HG00733'}},
-                                    {'term': {'samples_num_alt_2': 'HG00733'}}
-                                ],
-                                'must': [{'term': {'samples_num_alt_1': 'HG00731'}}]
-                            }},
-                            {'bool': {'must_not': [
-                                {'term': {'samples_gq_0_to_5': 'HG00731'}},
-                                {'term': {'samples_gq_5_to_10': 'HG00731'}},
-                                {'term': {'samples_gq_0_to_5': 'HG00732'}},
-                                {'term': {'samples_gq_5_to_10': 'HG00732'}},
-                                {'term': {'samples_gq_0_to_5': 'HG00733'}},
-                                {'term': {'samples_gq_5_to_10': 'HG00733'}},
-                            ]}},
-                        ]
-                    }},
-                    {'bool': {
-                        '_name': 'F000003_3',
-                        'must': [
-                            {'term': {'samples_num_alt_1': 'NA20870'}},
-                            {'bool': {'must_not': [
-                                {'term': {'samples_gq_0_to_5': 'NA20870'}},
-                                {'term': {'samples_gq_5_to_10': 'NA20870'}}
-                            ]}}
-                        ]
-                    }},
-                ]
-            }
-        }
         self.assertExecutedSearches([
             dict(filters=[annotation_query, pass_filter_query, recessive_inheritance_query], start_index=0, size=2, sort=['xpos']),
             dict(
-                filters=[annotation_query, pass_filter_query, compound_het_inheritance_query],
+                filters=[annotation_query, pass_filter_query, COMPOUND_HET_INHERITANCE_QUERY],
                 aggs={
                     'name': 'genes', 'terms': {'field': 'geneIds', 'min_doc_count': 2, 'size': 10000},
                     'nested_name': 'vars_by_gene', 'nested_size': 100,
@@ -1172,15 +1240,149 @@ class EsUtilsTest(TestCase):
         get_es_variants(results_model, page=2, num_results=2)
         self.assertIsNone(self.executed_search)
 
-    def test_get_all_samples_all_inheritance_es_variants(self):
+    def test_all_samples_all_inheritance_get_es_variants(self):
+        search_model = VariantSearch.objects.create(search={'annotations': {'frameshift': ['frameshift_variant']}})
+        results_model = VariantSearchResults.objects.create(variant_search=search_model, sort='xpos')
+        results_model.families.set(Family.objects.filter(project__guid='R0001_1kg'))
+
+        variants = get_es_variants(results_model, num_results=2)
+        self.assertListEqual(variants, PARSED_VARIANTS)
+
+        self.assertExecutedSearch(filters=[{'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}}], sort=['xpos'])
+
+    def test_multi_project_get_es_variants(self):
+        search_model = VariantSearch.objects.create(search={
+            'annotations': {'frameshift': ['frameshift_variant']},
+            'qualityFilter': {'min_gq': 10},
+            'inheritance': {'mode': 'de_novo'}
+        })
+        results_model = VariantSearchResults.objects.create(variant_search=search_model, sort='xpos')
+        results_model.families.set(Family.objects.filter(guid__in=['F000011_11', 'F000003_3', 'F000002_2']))
+
+        variants = get_es_variants(results_model, num_results=2)
+        expected_variants = [PARSED_VARIANTS[0], PARSED_MULTI_INDEX_VARIANT]
+        self.assertListEqual(variants, expected_variants)
+
+        self.assertDictEqual(results_model.results, {
+            'all_results': expected_variants,
+            'duplicate_doc_count': 1,
+            'loaded_variant_counts': {SECOND_INDEX_NAME: {'loaded': 1, 'total': 5}, INDEX_NAME: {'loaded': 2, 'total': 5}}
+        })
+        self.assertEqual(results_model.total_results, 9)
+
+        annotation_query = {'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}}
+
+        project_2_search = dict(
+            filters=[
+                annotation_query,
+                {'bool': {
+                    'must': [
+                        {'bool': {'should': [
+                            {'term': {'samples_num_alt_1': 'NA20885'}},
+                            {'term': {'samples_num_alt_2': 'NA20885'}}
+                        ]}},
+                        {'bool': {
+                            'must_not': [
+                                {'term': {'samples_gq_0_to_5': 'NA20885'}},
+                                {'term': {'samples_gq_5_to_10': 'NA20885'}},
+                            ]
+                        }}
+                    ],
+                    '_name': 'F000011_11'
+                }}
+            ], start_index=0, size=2, sort=['xpos'], index=SECOND_INDEX_NAME)
+        project_1_search = dict(
+            filters=[
+                annotation_query,
+                {'bool': {
+                    'should': [
+                        {'bool': {
+                            'must': [
+                                {'bool': {
+                                    'minimum_should_match': 1,
+                                    'must_not': [
+                                        {'term': {'samples_no_call': 'HG00732'}},
+                                        {'term': {'samples_num_alt_1': 'HG00732'}},
+                                        {'term': {'samples_num_alt_2': 'HG00732'}},
+                                        {'term': {'samples_no_call': 'HG00733'}},
+                                        {'term': {'samples_num_alt_1': 'HG00733'}},
+                                        {'term': {'samples_num_alt_2': 'HG00733'}}
+                                    ],
+                                    'should': [
+                                        {'term': {'samples_num_alt_1': 'HG00731'}},
+                                        {'term': {'samples_num_alt_2': 'HG00731'}}
+                                    ]
+                                }},
+                                {'bool': {
+                                    'must_not': [
+                                        {'term': {'samples_gq_0_to_5': 'HG00731'}},
+                                        {'term': {'samples_gq_5_to_10': 'HG00731'}},
+                                        {'term': {'samples_gq_0_to_5': 'HG00732'}},
+                                        {'term': {'samples_gq_5_to_10': 'HG00732'}},
+                                        {'term': {'samples_gq_0_to_5': 'HG00733'}},
+                                        {'term': {'samples_gq_5_to_10': 'HG00733'}},
+                                    ],
+                                }}
+                            ],
+                            '_name': 'F000002_2'
+                        }},
+                        {'bool': {
+                            'must': [
+                                {'bool': {'should': [
+                                    {'term': {'samples_num_alt_1': 'NA20870'}},
+                                    {'term': {'samples_num_alt_2': 'NA20870'}}
+                                ]}},
+                                {'bool': {
+                                    'must_not': [
+                                        {'term': {'samples_gq_0_to_5': 'NA20870'}},
+                                        {'term': {'samples_gq_5_to_10': 'NA20870'}},
+                                    ]
+                                }}
+                            ],
+                            '_name': 'F000003_3'
+                        }},
+                    ]
+                }},
+            ], start_index=0, size=2, sort=['xpos'], index=INDEX_NAME)
+        self.assertExecutedSearches([project_2_search, project_1_search])
+
+        # test pagination
+        variants = get_es_variants(results_model, num_results=2, page=2)
+        self.assertListEqual(variants, expected_variants)
+
+        self.assertDictEqual(results_model.results, {
+            'all_results': expected_variants + expected_variants,
+            'duplicate_doc_count': 2,
+            'loaded_variant_counts': {SECOND_INDEX_NAME: {'loaded': 2, 'total': 5}, INDEX_NAME: {'loaded': 4, 'total': 5}}
+        })
+        self.assertEqual(results_model.total_results, 8)
+
+        project_2_search['start_index'] = 1
+        project_2_search['size'] = 3
+        project_1_search['start_index'] = 2
+        self.assertExecutedSearches([project_2_search, project_1_search])
+
+    def test_multi_project_all_samples_all_inheritance_get_es_variants(self):
         search_model = VariantSearch.objects.create(search={'annotations': {'frameshift': ['frameshift_variant']}})
         results_model = VariantSearchResults.objects.create(variant_search=search_model, sort='xpos')
         results_model.families.set(Family.objects.all())
 
         variants = get_es_variants(results_model, num_results=2)
-        self.assertEqual(len(variants), 2)
+        expected_variants = [PARSED_VARIANTS[0], PARSED_MULTI_INDEX_VARIANT]
+        self.assertListEqual(variants, expected_variants)
 
-        self.assertExecutedSearch(filters=[{'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}}], sort=['xpos'])
+        self.assertDictEqual(results_model.results, {
+            'all_results': expected_variants,
+            'duplicate_doc_count': 1,
+        })
+        self.assertEqual(results_model.total_results, 4)
+
+        self.assertExecutedSearch(
+            index='{},{}'.format(SECOND_INDEX_NAME, INDEX_NAME),
+            filters=[{'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}}],
+            sort=['xpos'],
+            size=4,
+        )
 
     def test_genotype_inheritance_filter(self):
         samples_by_id = {'F000002_2': {
