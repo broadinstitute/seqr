@@ -398,44 +398,72 @@ class EsSearch(object):
             for family_guid, samples_by_id in self.samples_by_family_index[index_name].items()
         }
 
-        variants_by_gene = []
+        variants_by_gene = {}
         for gene_agg in response.aggregations.genes.buckets:
             gene_variants = [self._parse_hit(hit) for hit in gene_agg['vars_by_gene']]
+            gene_id = gene_agg['key']
+
+            if gene_id in variants_by_gene:
+                continue
 
             if self._allowed_consequences:
                 # Variants are returned if any transcripts have the filtered consequence, but to be compound het
                 # the filtered consequence needs to be present in at least one transcript in the gene of interest
                 gene_variants = [variant for variant in gene_variants if any(
                     transcript['majorConsequence'] in self._allowed_consequences for transcript in
-                    variant['transcripts'][gene_agg['key']]
+                    variant['transcripts'][gene_id]
                 )]
+            if len(gene_variants) < 2:
+                continue
 
-            if len(gene_variants) > 1:
-                family_guids = set(gene_variants[0]['familyGuids'])
-                for variant in gene_variants[1:]:
-                    family_guids = family_guids.intersection(set(variant['familyGuids']))
+            # Do not include groups multiple times if identical variants are in the same multiple genes
+            if any(variant['mainTranscript']['geneId'] != gene_id for variant in gene_variants):
+                primary_genes = [variant['mainTranscript']['geneId'] for variant in gene_variants]
+                if all(gene == primary_genes[0] for gene in primary_genes):
+                    is_valid_gene = True
+                    if self._allowed_consequences:
+                        is_valid_gene = all(any(
+                            transcript['majorConsequence'] in self._allowed_consequences for transcript in
+                            variant['transcripts'][primary_genes[0]]
+                        ) for variant in gene_variants)
+                    if is_valid_gene:
+                        gene_id = primary_genes[0]
+                        if gene_id in variants_by_gene:
+                            continue
+                else:
+                    variant_ids = [variant['variantId'] for variant in gene_variants]
+                    for gene in set(primary_genes):
+                        if variant_ids == [variant['variantId'] for variant in variants_by_gene.get(gene, [])]:
+                            continue
 
-                invalid_family_guids = set()
-                for family_guid in family_guids:
-                    for individual_guid in family_unaffected_individual_guids[family_guid]:
-                        # To be compound het all unaffected individuals need to be hom ref for at least one of the variants
-                        is_family_compound_het = any(
-                            variant['genotypes'].get(individual_guid, {}).get('numAlt') != 1 for variant in
-                            gene_variants)
-                        if not is_family_compound_het:
-                            invalid_family_guids.add(family_guid)
-                            break
+            family_guids = set(gene_variants[0]['familyGuids'])
+            for variant in gene_variants[1:]:
+                family_guids = family_guids.intersection(set(variant['familyGuids']))
 
-                family_guids -= invalid_family_guids
-                if family_guids:
-                    for variant in gene_variants:
-                        variant['familyGuids'] = list(family_guids)
-                    variants_by_gene.append({gene_agg['key']: gene_variants})
+            invalid_family_guids = set()
+            for family_guid in family_guids:
+                for individual_guid in family_unaffected_individual_guids[family_guid]:
+                    # To be compound het all unaffected individuals need to be hom ref for at least one of the variants
+                    is_family_compound_het = any(
+                        variant['genotypes'].get(individual_guid, {}).get('numAlt') != 1 for variant in
+                        gene_variants)
+                    if not is_family_compound_het:
+                        invalid_family_guids.add(family_guid)
+                        break
 
-        total_compound_het_results = sum(len(results.values()[0]) for results in variants_by_gene)
+            family_guids -= invalid_family_guids
+            if not family_guids:
+                continue
+
+            for variant in gene_variants:
+                variant['familyGuids'] = list(family_guids)
+
+            variants_by_gene[gene_id] = gene_variants
+
+        total_compound_het_results = sum(len(variants) for variants in variants_by_gene.values())
         logger.info('Total compound het hits: {}'.format(total_compound_het_results))
 
-        return variants_by_gene, total_compound_het_results
+        return [{k: v} for k, v in variants_by_gene.items()], total_compound_het_results
 
     def _parse_hit(self, raw_hit):
         hit = {k: raw_hit[k] for k in QUERY_FIELD_NAMES if k in raw_hit}

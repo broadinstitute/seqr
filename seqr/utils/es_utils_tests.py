@@ -325,11 +325,18 @@ ES_VARIANTS = [
       },
 ]
 
-COMPOUND_HET_ES_VARIANTS = deepcopy(ES_VARIANTS)
-COMPOUND_HET_ES_VARIANTS[1]['_source']['sortedTranscriptConsequences'][0]['major_consequence'] = 'frameshift_variant'
+OR2M3_COMPOUND_HET_ES_VARIANTS = deepcopy(ES_VARIANTS)
+transcripts = OR2M3_COMPOUND_HET_ES_VARIANTS[1]['_source']['sortedTranscriptConsequences']
+transcripts[0]['major_consequence'] = 'frameshift_variant'
+OR2M3_COMPOUND_HET_ES_VARIANTS[1]['_source']['sortedTranscriptConsequences'] = [transcripts[1], transcripts[0]]
+MFSD9_COMPOUND_HET_ES_VARIANTS = deepcopy(OR2M3_COMPOUND_HET_ES_VARIANTS)
+for var in MFSD9_COMPOUND_HET_ES_VARIANTS:
+    var['_source']['variantId'] = '{}-het'.format(var['_source']['variantId'])
+COMPOUND_HET_INDEX_VARIANTS = {SECOND_INDEX_NAME: {
+    'ENSG00000135953': MFSD9_COMPOUND_HET_ES_VARIANTS, 'ENSG00000228198': OR2M3_COMPOUND_HET_ES_VARIANTS,
+}}
 
 INDEX_ES_VARIANTS = {INDEX_NAME: ES_VARIANTS, SECOND_INDEX_NAME: [ES_VARIANTS[1]]}
-COMPOUND_HET_INDEX_VARIANTS = {INDEX_NAME: ES_VARIANTS, SECOND_INDEX_NAME: COMPOUND_HET_ES_VARIANTS}
 
 TRANSCRIPT_1 = {
   'aminoAcids': 'LL/L',
@@ -516,10 +523,12 @@ for variant in PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT:
         'I000015_na20885': {'ab': 0.631, 'ad': None, 'gq': 99, 'sampleId': 'NA20885', 'numAlt': 1, 'dp': 50, 'pl': None},
     })
 PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT[1]['transcripts']['ENSG00000135953'][0]['majorConsequence'] = 'frameshift_variant'
+PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT[1]['mainTranscript'] = TRANSCRIPT_2
 
 PARSED_COMPOUND_HET_VARIANTS_PROJECT_2 = deepcopy(PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT)
 for variant in PARSED_COMPOUND_HET_VARIANTS_PROJECT_2:
     variant.update({
+        'variantId': '{}-het'.format(variant['variantId']),
         'familyGuids': ['F000011_11'],
         'genotypes': {
             'I000015_na20885': {'ab': 0.631, 'ad': None, 'gq': 99, 'sampleId': 'NA20885', 'numAlt': 1, 'dp': 50, 'pl': None},
@@ -802,12 +811,11 @@ def create_mock_response(search, index=INDEX_NAME):
     mock_response.hits.__getitem__.side_effect = hits.__getitem__
 
     if search.get('aggs'):
-        mock_response.aggregations.genes.buckets = [
-            {'key': 'ENSG00000135953',
-             'vars_by_gene': [MockHit(increment_sort=True, index=index, **var) for var in deepcopy(COMPOUND_HET_INDEX_VARIANTS[index])]},
-            {'key': 'ENSG00000228198',
-             'vars_by_gene': [MockHit(increment_sort=True, index=index, **var) for var in deepcopy(COMPOUND_HET_INDEX_VARIANTS[index])]}
-        ]
+        vars = COMPOUND_HET_INDEX_VARIANTS.get(index, {})
+        mock_response.aggregations.genes.buckets = [{
+            'key': gene_id,
+            'vars_by_gene': [MockHit(increment_sort=True, index=index, **var) for var in deepcopy(vars.get(gene_id, ES_VARIANTS))]
+        } for gene_id in ['ENSG00000135953', 'ENSG00000228198']]
     else:
         del mock_response.aggregations.genes
     return mock_response
@@ -883,11 +891,7 @@ class EsUtilsTest(TestCase):
         else:
             expected_search['_source'] = mock.ANY
 
-        try:
-            self.assertDictEqual(executed_search, expected_search)
-        except:
-            diff = {k for k, v in executed_search.items() if v != expected_search[k]}
-            import pdb; pdb.set_trace()
+        self.assertDictEqual(executed_search, expected_search)
 
         source = executed_search['aggs']['genes']['aggs']['vars_by_gene']['top_hits']['_source'] \
             if expected_search_params.get('gene_aggs') else executed_search['_source']
@@ -1193,9 +1197,9 @@ class EsUtilsTest(TestCase):
         self.assertListEqual(variants, PARSED_COMPOUND_HET_VARIANTS)
 
         self.assertDictEqual(results_model.results, {
-            'grouped_results': [{'ENSG00000135953': PARSED_COMPOUND_HET_VARIANTS}, {'ENSG00000228198': PARSED_COMPOUND_HET_VARIANTS}],
+            'grouped_results': [{'ENSG00000135953': PARSED_COMPOUND_HET_VARIANTS}],
         })
-        self.assertEqual(results_model.total_results, 4)
+        self.assertEqual(results_model.total_results, 2)
 
         self.assertExecutedSearch(
             filters=[COMPOUND_HET_INHERITANCE_QUERY],
@@ -1206,9 +1210,8 @@ class EsUtilsTest(TestCase):
         )
 
         # test pagination does not fetch
-        variants = get_es_variants(results_model, page=2, num_results=2)
+        get_es_variants(results_model, page=2, num_results=2)
         self.assertIsNone(self.executed_search)
-        self.assertListEqual(variants, PARSED_COMPOUND_HET_VARIANTS)
 
     def test_recessive_get_es_variants(self):
         search_model = VariantSearch.objects.create(search={
