@@ -566,7 +566,7 @@ def get_json_for_genes(genes, user=None, add_dbnsfp=False, add_omim=False, add_c
     if add_constraints:
         prefetch_related_objects(genes, Prefetch('geneconstraint_set', queryset=GeneConstraint.objects.order_by('-mis_z', '-pLI')))
     if add_primate_ai:
-        prefetch_related_objects(genes, 'mgi_set')
+        prefetch_related_objects(genes, 'primateai_set')
     if add_mgi:
         prefetch_related_objects(genes, 'mgi_set')
 

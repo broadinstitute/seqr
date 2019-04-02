@@ -2,7 +2,7 @@ import json
 import jmespath
 from collections import defaultdict
 from django.contrib.auth.decorators import login_required
-from django.db.models import Q
+from django.db.models import Q, prefetch_related_objects
 from django.views.decorators.csrf import csrf_exempt
 from elasticsearch.exceptions import ConnectionTimeout
 
@@ -110,6 +110,7 @@ def query_single_variant_handler(request, variant_id):
 
 
 def _process_variants(variants, families):
+    prefetch_related_objects(families, 'project')
     genes = _saved_variant_genes(variants)
     # TODO add locus lists on the client side (?)
     projects = {family.project for family in families}
