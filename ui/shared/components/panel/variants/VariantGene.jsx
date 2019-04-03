@@ -12,11 +12,9 @@ import ShowGeneModal from '../../buttons/ShowGeneModal'
 
 const CONSTRAINED_GENE_RANK_THRESHOLD = 1000
 
-const GeneLabelContent = styled(Label).attrs({
-  size: 'mini',
-  color: props => props.color || 'grey',
-  content: props => props.label,
-})`
+const GeneLabelContent = styled(
+  ({ color, label, maxWidth, ...props }) => <Label {...props} size="mini" color={color || 'grey'} content={label} />,
+)`
    margin: 0px .5em .8em 0px !important;
    overflow: hidden;
    text-overflow: ellipsis;

@@ -283,7 +283,7 @@ BooleanCheckbox.propTypes = {
   onChange: PropTypes.func,
 }
 
-export const InlineToggle = styled(BooleanCheckbox).attrs({ toggle: true, inline: true })`
+export const InlineToggle = styled(({ divided, ...props }) => <BooleanCheckbox {...props} toggle inline />)`
   padding-right: 10px;
   
   ${props => (props.divided ?
