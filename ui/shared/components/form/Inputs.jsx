@@ -1,7 +1,6 @@
 /* eslint-disable react/no-multi-comp */
 
 import React, { createElement } from 'react'
-import { createSelector } from 'reselect'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { Form, List, Pagination as PaginationComponent } from 'semantic-ui-react'
@@ -15,6 +14,7 @@ export class BaseSemanticInput extends React.Component {
   static propTypes = {
     onChange: PropTypes.func,
     inputType: PropTypes.string.isRequired,
+    options: PropTypes.array,
   }
 
   handleChange = (e, data) => {
@@ -27,7 +27,17 @@ export class BaseSemanticInput extends React.Component {
   }
 
   shouldComponentUpdate(nextProps, nextState) {
-    if (Object.keys(nextProps).filter(k => k !== 'onChange').some(k => nextProps[k] !== this.props[k])) {
+    if (nextProps.options) {
+      if (nextProps.options.length !== (this.props.options || []).length) {
+        return true
+      }
+      Object.entries(nextProps.options).forEach(([i, opt]) => { //eslint-disable-line consistent-return
+        if (['value', 'text', 'color', 'disabled', 'description'].some(k => opt[k] !== this.props.options[i][k])) {
+          return true
+        }
+      })
+    }
+    if (Object.keys(nextProps).filter(k => k !== 'onChange' && k !== 'options').some(k => nextProps[k] !== this.props[k])) {
       return true
     }
     return nextState !== this.state
@@ -76,29 +86,25 @@ const styledOption = (option) => {
   }
 }
 
-const processOptions = createSelector(
-  args => args.options,
-  args => args.includeCategories,
-  (options, includeCategories) => {
-    let currCategory = null
-    return options.reduce((acc, option) => {
-      if (includeCategories && option.category !== currCategory) {
-        currCategory = option.category
-        if (option.category) {
-          acc.push({ text: option.category, disabled: true })
-        }
+const processOptions = (options, includeCategories) => {
+  let currCategory = null
+  return options.reduce((acc, option) => {
+    if (includeCategories && option.category !== currCategory) {
+      currCategory = option.category
+      if (option.category) {
+        acc.push({ text: option.category, disabled: true })
       }
-      acc.push(option)
-      return acc
-    }, []).map(styledOption)
-  },
-)
+    }
+    acc.push(option)
+    return acc
+  }, []).map(styledOption)
+}
 
 export const Dropdown = ({ options, includeCategories, ...props }) =>
   <BaseSemanticInput
     {...props}
     inputType="Dropdown"
-    options={processOptions({ options, includeCategories })}
+    options={processOptions(options, includeCategories)}
     noResultsMessage={null}
     tabIndex="0"
   />

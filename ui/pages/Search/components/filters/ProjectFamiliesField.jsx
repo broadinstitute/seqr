@@ -18,22 +18,14 @@ import DataLoader from 'shared/components/DataLoader'
 import { InlineHeader, ButtonLink } from 'shared/components/StyledComponents'
 import { VerticalSpacer } from 'shared/components/Spacers'
 import { getSelectedAnalysisGroups } from '../../constants'
-import { getProjectFamilies, getSearchContextIsLoading } from '../../selectors'
+import { getProjectFamilies, getSearchContextIsLoading, getFamilyOptions, getAnalysisGroupOptions } from '../../selectors'
 import { loadProjectFamiliesContext } from '../../reducers'
 
 
-const ProjectFamiliesFilterInput = ({ projectFamiliesByGuid, projectAnalysisGroupsByGuid, value, onChange, ...props }) => {
-  const familyOptions = Object.values(projectFamiliesByGuid).map(
-    family => ({ value: family.familyGuid, text: family.displayName }),
-  )
-
+const ProjectFamiliesFilterInput = ({ familyOptions, analysisGroupOptions, projectAnalysisGroupsByGuid, value, onChange, ...props }) => {
   const allFamiliesSelected = !value.familyGuids || value.familyGuids.length === familyOptions.length
 
   const selectedFamilies = allFamiliesSelected ? [] : value.familyGuids
-
-  const analysisGroupOptions = Object.values(projectAnalysisGroupsByGuid).map(
-    group => ({ value: group.analysisGroupGuid, text: group.name }),
-  )
 
   const onFamiliesChange = familyGuids => onChange({ ...value, familyGuids })
 
@@ -90,7 +82,8 @@ const ProjectFamiliesFilterInput = ({ projectFamiliesByGuid, projectAnalysisGrou
 }
 
 ProjectFamiliesFilterInput.propTypes = {
-  projectFamiliesByGuid: PropTypes.object,
+  familyOptions: PropTypes.array,
+  analysisGroupOptions: PropTypes.array,
   projectAnalysisGroupsByGuid: PropTypes.object,
   value: PropTypes.any,
   onChange: PropTypes.func,
@@ -144,7 +137,8 @@ LoadedProjectFamiliesFilter.propTypes = {
 }
 
 const mapStateToProps = (state, ownProps) => ({
-  projectFamiliesByGuid: getFamiliesGroupedByProjectGuid(state)[ownProps.value.projectGuid] || {},
+  familyOptions: getFamilyOptions(state, ownProps),
+  analysisGroupOptions: getAnalysisGroupOptions(state, ownProps),
   projectAnalysisGroupsByGuid: getAnalysisGroupsGroupedByProjectGuid(state)[ownProps.value.projectGuid] || {},
   project: getProjectsByGuid(state)[ownProps.value.projectGuid],
   loading: getSearchContextIsLoading(state),

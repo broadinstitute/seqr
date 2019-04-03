@@ -7,6 +7,7 @@ import {
   getFamiliesGroupedByProjectGuid,
   getAnalysisGroupsByGuid,
   getLocusListsByGuid,
+  getAnalysisGroupsGroupedByProjectGuid,
 } from 'redux/selectors'
 import { SEARCH_FORM_NAME } from './constants'
 
@@ -75,7 +76,7 @@ export const getIntitialSearch = createSelector(
   },
 )
 
-export const getProjectsFamiliesFieldInput = state =>
+const getProjectsFamiliesFieldInput = state =>
   formValueSelector(SEARCH_FORM_NAME)(state, 'projectFamilies')
 
 export const getSearchInput = state =>
@@ -128,7 +129,7 @@ export const getSearchedVariantExportConfig = createSelector(
 
 const getProjectsInput = createSelector(
   getProjectsFamiliesFieldInput,
-  projectFamilies => projectFamilies.map(({ projectGuid }) => projectGuid),
+  projectFamilies => (projectFamilies || []).map(({ projectGuid }) => projectGuid),
 )
 
 export const getSearchedProjectsLocusLists = createListEqualSelector(
@@ -155,4 +156,21 @@ export const getSingleInputFamily = createSelector(
   getSingleFamlilyGuidInput,
   getFamiliesByGuid,
   (familyGuid, familiesByGuid) => familiesByGuid[familyGuid],
+)
+
+export const getFamilyOptions = createSelector(
+  getFamiliesGroupedByProjectGuid,
+  (state, props) => props.value.projectGuid,
+  (familesGroupedByProjectGuid, projectGuid) => Object.values(familesGroupedByProjectGuid[projectGuid] || {}).map(
+    family => ({ value: family.familyGuid, text: family.displayName }),
+  ),
+)
+
+export const getAnalysisGroupOptions = createSelector(
+  getAnalysisGroupsGroupedByProjectGuid,
+  (state, props) => props.value.projectGuid,
+  (analysisGroupsGroupedByProjectGuid, projectGuid) =>
+    Object.values(analysisGroupsGroupedByProjectGuid[projectGuid] || {}).map(
+      group => ({ value: group.analysisGroupGuid, text: group.name }),
+    ),
 )
