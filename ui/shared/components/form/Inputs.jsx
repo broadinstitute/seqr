@@ -1,6 +1,7 @@
 /* eslint-disable react/no-multi-comp */
 
 import React, { createElement } from 'react'
+import { createSelector } from 'reselect'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { Form, List, Pagination as PaginationComponent } from 'semantic-ui-react'
@@ -23,6 +24,13 @@ export class BaseSemanticInput extends React.Component {
   render() {
     const { inputType, ...props } = this.props
     return createElement(Form[inputType], { ...props, onChange: this.handleChange, onBlur: null })
+  }
+
+  shouldComponentUpdate(nextProps, nextState) {
+    if (Object.keys(nextProps).filter(k => k !== 'onChange').some(k => nextProps[k] !== this.props[k])) {
+      return true
+    }
+    return nextState !== this.state
   }
 }
 
@@ -68,25 +76,29 @@ const styledOption = (option) => {
   }
 }
 
-const processOptions = (options, includeCategories) => {
-  let currCategory = null
-  return options.reduce((acc, option) => {
-    if (includeCategories && option.category !== currCategory) {
-      currCategory = option.category
-      if (option.category) {
-        acc.push({ text: option.category, disabled: true })
+const processOptions = createSelector(
+  args => args.options,
+  args => args.includeCategories,
+  (options, includeCategories) => {
+    let currCategory = null
+    return options.reduce((acc, option) => {
+      if (includeCategories && option.category !== currCategory) {
+        currCategory = option.category
+        if (option.category) {
+          acc.push({ text: option.category, disabled: true })
+        }
       }
-    }
-    acc.push(option)
-    return acc
-  }, []).map(styledOption)
-}
+      acc.push(option)
+      return acc
+    }, []).map(styledOption)
+  },
+)
 
 export const Dropdown = ({ options, includeCategories, ...props }) =>
   <BaseSemanticInput
     {...props}
     inputType="Dropdown"
-    options={processOptions(options, includeCategories)}
+    options={processOptions({ options, includeCategories })}
     noResultsMessage={null}
     tabIndex="0"
   />

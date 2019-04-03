@@ -42,8 +42,8 @@ export const loadProjectFamiliesContext = ({ projectGuid, familyGuids, analysisG
         (responseJson) => {
           dispatch({ type: RECEIVE_SAVED_SEARCHES, updatesById: responseJson })
           dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
-          dispatch({ type: RECEIVE_SEARCH_CONTEXT })
           onSuccess(getState())
+          dispatch({ type: RECEIVE_SEARCH_CONTEXT })
         },
         (e) => {
           dispatch({ type: RECEIVE_SEARCH_CONTEXT, error: e.message })

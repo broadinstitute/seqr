@@ -1,4 +1,4 @@
-import { createSelector } from 'reselect'
+import { createSelector, createSelectorCreator, defaultMemoize } from 'reselect'
 import { formValueSelector } from 'redux-form'
 
 import {
@@ -88,6 +88,31 @@ export const getCurrentSavedSearch = createSelector(
     Object.values(savedSearchesByGuid).find(savedSearch => savedSearch.search === search),
 )
 
+const createListEqualSelector = createSelectorCreator(
+  defaultMemoize,
+  (a, b) => (
+    Array.isArray(a) ? (a.length === b.length && Object.entries(a).every(([i, val]) => val === b[i])) : a === b
+  ),
+)
+
+const getSavedSearches = createSelector(
+  getSavedSearchesByGuid,
+  savedSearchesByGuid => Object.values(savedSearchesByGuid),
+)
+
+const createSavedSearchesSelector = createSelectorCreator(
+  defaultMemoize,
+  (a, b) => (
+    a.length === b.length && Object.entries(a).every(
+      ([i, val]) => val.savedSearchGuid === b[i].savedSearchGuid,
+    )),
+)
+
+export const getSavedSearchOptions = createSavedSearchesSelector(
+  getSavedSearches,
+  savedSearches => savedSearches.map(search => ({ text: search.name, value: search.savedSearchGuid })),
+)
+
 export const getTotalVariantsCount = createSelector(
   getCurrentSearchParams,
   searchParams => (searchParams || {}).totalResults,
@@ -101,14 +126,33 @@ export const getSearchedVariantExportConfig = createSelector(
   }],
 )
 
-export const getSearchedProjectsLocusLists = createSelector(
+const getProjectsInput = createSelector(
   getProjectsFamiliesFieldInput,
+  projectFamilies => projectFamilies.map(({ projectGuid }) => projectGuid),
+)
+
+export const getSearchedProjectsLocusLists = createListEqualSelector(
+  getProjectsInput,
   getProjectsByGuid,
   getLocusListsByGuid,
-  (projectFamilies, projectsByGuid, locusListsByGuid) => {
-    const locusListGuids = [...new Set((projectFamilies || []).reduce((acc, { projectGuid }) => (
+  (projectGuids, projectsByGuid, locusListsByGuid) => {
+    const locusListGuids = [...new Set((projectGuids || []).reduce((acc, projectGuid) => (
       projectsByGuid[projectGuid] ? [...acc, ...projectsByGuid[projectGuid].locusListGuids] : acc), [],
     ))]
     return locusListGuids.map(locusListGuid => locusListsByGuid[locusListGuid])
   },
+)
+
+const getSingleFamlilyGuidInput = createSelector(
+  getProjectsFamiliesFieldInput,
+  projectFamilies => (
+    (projectFamilies && projectFamilies.length === 1 && (projectFamilies[0].familyGuids || []).length === 1) ?
+      projectFamilies[0].familyGuids[0] : null
+  ),
+)
+
+export const getSingleInputFamily = createSelector(
+  getSingleFamlilyGuidInput,
+  getFamiliesByGuid,
+  (familyGuid, familiesByGuid) => familiesByGuid[familyGuid],
 )
