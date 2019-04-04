@@ -35,6 +35,6 @@ test('getIntitialSearch', () => {
 
 test('getSearchedProjectsLocusLists', () => {
   expect(getSearchedProjectsLocusLists.resultFunc(
-    EXPECTED_INITAL_SEARCH.projectFamilies, STATE.projectsByGuid, STATE.locusListsByGuid,
+    [PROJECT_GUID], STATE.projectsByGuid, STATE.locusListsByGuid,
   )).toEqual([LOCUS_LIST])
 })

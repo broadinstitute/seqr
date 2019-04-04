@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
-    help = 'Transfer projects to the new seqr schema'
+    help = 'Reset all saved variant search results'
 
     def add_arguments(self, parser):
         parser.add_argument('--project', help='optional project to reload variants for')
