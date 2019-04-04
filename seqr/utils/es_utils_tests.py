@@ -802,7 +802,7 @@ def create_mock_response(search, index=INDEX_NAME):
     mock_response = mock.MagicMock()
     mock_response.hits.total = 5
     hits = []
-    for i, index_name in enumerate(sorted(indices)):
+    for index_name in sorted(indices):
         hits += [
             MockHit(no_matched_queries=no_matched_queries, sort=search.get('sort'), index=index_name, **var)
             for var in deepcopy(INDEX_ES_VARIANTS[index_name])
@@ -811,10 +811,10 @@ def create_mock_response(search, index=INDEX_NAME):
     mock_response.hits.__getitem__.side_effect = hits.__getitem__
 
     if search.get('aggs'):
-        vars = COMPOUND_HET_INDEX_VARIANTS.get(index, {})
+        index_vars = COMPOUND_HET_INDEX_VARIANTS.get(index, {})
         mock_response.aggregations.genes.buckets = [{
             'key': gene_id,
-            'vars_by_gene': [MockHit(increment_sort=True, index=index, **var) for var in deepcopy(vars.get(gene_id, ES_VARIANTS))]
+            'vars_by_gene': [MockHit(increment_sort=True, index=index, **var) for var in deepcopy(index_vars.get(gene_id, ES_VARIANTS))]
         } for gene_id in ['ENSG00000135953', 'ENSG00000228198']]
     else:
         del mock_response.aggregations.genes

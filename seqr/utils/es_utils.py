@@ -606,7 +606,7 @@ class EsSearch(object):
         flattened_variant_results = []
         num_compound_hets = 0
         num_single_variants = 0
-        for i, variants_group in enumerate(grouped_variants):
+        for variants_group in grouped_variants:
             variants = variants_group.values()[0]
             flattened_variant_results += variants
             if loaded_result_count != self.total_results:
