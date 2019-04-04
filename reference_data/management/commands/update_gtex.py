@@ -1,6 +1,5 @@
 import logging
 import os
-import collections
 from reference_data.management.commands.utils.download_utils import download_file
 from reference_data.management.commands.utils.update_utils import GeneCommand, ReferenceDataHandler
 from reference_data.models import GeneExpression
@@ -10,22 +9,11 @@ logger = logging.getLogger(__name__)
 GTEX_SAMPLE_ANNOTATIONS = 'https://storage.googleapis.com/gtex_analysis_v7/annotations/GTEx_v7_Annotations_SampleAttributesDS.txt'
 
 
-"""
-Expression array is:
-expressions: {
-    tissue_type: [array of expression values]
-}
-
-expression file is in gtex format
-samples file is just two columns: sample -> tissue type
-"""
-
-
 class GtexReferenceDataHandler(ReferenceDataHandler):
 
     model_cls = GeneExpression
     url = 'https://storage.googleapis.com/gtex_analysis_v7/rna_seq_data/GTEx_Analysis_2016-01-15_v7_RNASeQCv1.1.8_gene_tpm.gct.gz'
-    batch_size = 500
+    batch_size = 10000
 
     def __init__(self, gtex_sample_annotations_path=None, keep_existing_records=False, **kwargs):
         if not gtex_sample_annotations_path:
@@ -44,16 +32,19 @@ class GtexReferenceDataHandler(ReferenceDataHandler):
         if self.keep_existing_records and gene_id in self.existing_gtex_gene_ids:
             yield None
         else:
-            expressions = collections.defaultdict(list)
-            for tissue, value in record.items():
-                tissue = tissue.split('_')[0]
-                if tissue not in ['Name', 'Description', None, 'na']:
-                    expressions[tissue].append(float(value))
+            for tissue_type in GeneExpression.GTEX_TISSUE_TYPES:
+                tissue_keys = {k for k in record.keys() if k.startswith(tissue_type)}
+                expressions = []
+                for tissue_key in tissue_keys:
+                    tissue_type = tissue_key.split('~')[0]
+                    expressions.append(float(record.pop(tissue_key)))
 
-            yield {
-                'gene_id': gene_id,
-                'expression_values': dict(expressions),
-            }
+                if expressions:
+                    yield {
+                        'gene_id': gene_id,
+                        'tissue_type': tissue_type,
+                        'expression_values': expressions,
+                    }
 
     def get_file_header(self, f):
         for i, line in enumerate(f):
@@ -67,7 +58,7 @@ class GtexReferenceDataHandler(ReferenceDataHandler):
                 # this wouldn't be necessary if samples file is in the same order as expression file,
                 # but I don't wait to rely on that guarantee (mainly because they have a different # of fields)
                 header_fields = line.strip().split('\t')
-                tissue_types = ['{}_{}'.format(self.tissue_type_map.get(field), i) for i, field in enumerate(header_fields[2:])]
+                tissue_types = ['{}~{}'.format(self.tissue_type_map.get(field), i) for i, field in enumerate(header_fields[2:])]
                 return header_fields[:2] + tissue_types
 
 
@@ -99,10 +90,8 @@ def _get_tissue_type_map(samples_file):
             if 'cells' in tissue_detailed_slug or 'whole_blood' in tissue_detailed_slug:
                 tissue_slug = tissue_detailed_slug
 
-            if tissue_slug not in set(GeneExpression.GTEX_TISSUE_TYPES):
-                continue
-
-            tissue_type_map[sample_id] = tissue_slug
+            if tissue_slug in GeneExpression.GTEX_TISSUE_TYPES:
+                tissue_type_map[sample_id] = tissue_slug
 
     logger.info("Parsed %s tissues", len(set(tissue_type_map.values())))
 
