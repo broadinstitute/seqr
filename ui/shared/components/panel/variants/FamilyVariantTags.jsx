@@ -280,8 +280,8 @@ const FamilyVariantTags = (
       </InlineContainer>
       <VariantLinkContainer>
         <NavLink
-          to={variant.variantGuid ?
-            `/project/${family.projectGuid}/saved_variants/variant/${variant.variantGuid}` :
+          to={savedVariant ?
+            `/project/${family.projectGuid}/saved_variants/variant/${savedVariant.variantGuid}` :
             `/variant_search/variant/${variant.variantId}/family/${family.familyGuid}`
           }
           activeStyle={NO_DISPLAY}
