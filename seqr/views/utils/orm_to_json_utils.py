@@ -557,7 +557,7 @@ def get_json_for_genes(genes, user=None, add_dbnsfp=False, add_omim=False, add_c
         if add_notes:
             result['notes'] = gene_notes_json.get(result['geneId'], [])
         if add_expression:
-            result['expression'] = gene.geneexpression.expression_values if hasattr(gene, 'geneexpression') else None
+            result['expression'] = {ge.tissue_type: ge.expression_values for ge in gene.geneexpression_set.all()}
 
     if add_dbnsfp:
         prefetch_related_objects(genes, 'dbnsfpgene_set')
@@ -569,6 +569,8 @@ def get_json_for_genes(genes, user=None, add_dbnsfp=False, add_omim=False, add_c
         prefetch_related_objects(genes, 'primateai_set')
     if add_mgi:
         prefetch_related_objects(genes, 'mgi_set')
+    if add_expression:
+        prefetch_related_objects(genes, 'geneexpression_set')
 
     return _get_json_for_models(genes, process_result=_process_result)
 

@@ -104,8 +104,12 @@ class GeneExpression(models.Model):
         'skin', 'small_intestine', 'spleen', 'stomach', 'testis', 'thyroid', 'uterus', 'vagina'
     }  # 'bladder', 'cells_-_leukemia_cell_line_(cml)', 'cervix_uteri', 'fallopian_tube' - excluded because too few samples or not relevant
 
-    gene = models.OneToOneField(GeneInfo, on_delete=models.CASCADE)
-    expression_values = postgres_fields.JSONField(null=True)
+    gene = models.ForeignKey(GeneInfo, on_delete=models.CASCADE)
+    tissue_type = models.CharField(max_length=40, choices=[(tissue, tissue) for tissue in GTEX_TISSUE_TYPES])
+    expression_values = postgres_fields.ArrayField(models.FloatField())
+
+    class Meta:
+        unique_together = ('gene', 'tissue_type')
 
 
 class Omim(models.Model):
