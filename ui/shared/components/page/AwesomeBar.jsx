@@ -7,12 +7,8 @@ import { Search } from 'semantic-ui-react'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 
 const AwesomebarSearch = styled(Search)`
-  width: 100%;
-
-  .ui.icon.input {
-    max-width: 100%;
-    width: ${props => props.inputwidth || '100%'};
-  }
+  width: ${props => props.inputwidth || '100%'};
+  ${props => (props.inputwidth ? 'display: inline-block;' : '')}
   
   .results {
     min-width: ${props => props.inputwidth || '100%'};
@@ -29,6 +25,7 @@ class AwesomeBar extends React.Component
     history: PropTypes.object,
     inputwidth: PropTypes.string,
     getResultHref: PropTypes.func,
+    onResultSelect: PropTypes.func,
   }
 
   constructor(props) {
@@ -90,7 +87,9 @@ class AwesomeBar extends React.Component
     e.preventDefault()
     this.setState({ value: obj.result.title })
     const href = this.props.getResultHref ? this.props.getResultHref(obj.result) : obj.result.href
-    if (this.props.newWindow) {
+    if (this.props.onResultSelect) {
+      this.props.onResultSelect(obj.result)
+    } else if (this.props.newWindow) {
       window.open(href, '_blank')
     } else {
       this.props.history.push(href)

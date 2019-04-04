@@ -30,7 +30,6 @@ const groupEntitiesByProjectGuid = entities => Object.entries(entities).reduce((
 }, {})
 export const getFamiliesGroupedByProjectGuid = createSelector(getFamiliesByGuid, groupEntitiesByProjectGuid)
 export const getAnalysisGroupsGroupedByProjectGuid = createSelector(getAnalysisGroupsByGuid, groupEntitiesByProjectGuid)
-export const getSavedVariantsGroupedByProjectGuid = createSelector(getSavedVariantsByGuid, groupEntitiesByProjectGuid)
 
 export const getFamilyMatchmakerSubmissions = createSelector(
   getMatchmakerSubmissions,

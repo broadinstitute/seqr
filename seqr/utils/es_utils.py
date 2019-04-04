@@ -1,14 +1,14 @@
 from collections import defaultdict
 from django.db.models import Max
 import elasticsearch
-from elasticsearch_dsl import Search, Q, Index
+from elasticsearch_dsl import Search, Q, Index, MultiSearch
 import json
 import logging
 from pyliftover.liftover import LiftOver
 from sys import maxint
 
 import settings
-from reference_data.models import GENOME_VERSION_GRCh38, Omim, GeneConstraint
+from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37, Omim, GeneConstraint
 from seqr.models import Sample, Individual
 from seqr.utils.xpos_utils import get_xpos, get_chrom_pos
 from seqr.utils.gene_utils import parse_locus_list_items
@@ -25,6 +25,12 @@ def get_es_client(timeout=30):
 
 
 # TODO once all project data is reloaded get rid of these checks
+def has_nested_genotypes_index(samples_by_guid):
+    samples = sorted(samples_by_guid.values(), key=lambda sample: (sample['loadedDate'] is not None, sample['loadedDate']), reverse=True)
+    latest_index = next((sample['elasticsearchIndex'] for sample in samples), None)
+    return is_nested_genotype_index(latest_index) if latest_index else False
+
+
 def is_nested_genotype_index(es_index):
     es_client = get_es_client()
     index = Index(es_index, using=es_client)
@@ -36,39 +42,35 @@ def is_nested_genotype_index(es_index):
 
 
 def get_single_es_variant(families, variant_id):
-    variants = _get_filtered_family_es_variants(families, _single_variant_id_filter(variant_id), num_results=1)
+    variants, _ = EsSearch(families).filter(_single_variant_id_filter(variant_id)).search(num_results=1)
     if not variants:
         raise Exception('Variant {} not found'.format(variant_id))
     return variants[0]
 
 
 def get_es_variants_for_variant_tuples(families, xpos_ref_alt_tuples):
-    return _get_filtered_family_es_variants(families, _variant_id_filter(xpos_ref_alt_tuples), num_results=len(xpos_ref_alt_tuples))
-
-
-def _get_filtered_family_es_variants(families, family_filter, num_results=100):
-    es_search, family_samples_by_id, _ = _get_es_search_for_families(families)
-    es_search = es_search.filter(family_filter)
-    variant_results, _ = _execute_search(es_search, family_samples_by_id, end_index=num_results)
-    return variant_results
+    variant_id_filter = _variant_id_filter(xpos_ref_alt_tuples)
+    variants, _ = EsSearch(families).filter(variant_id_filter).search(num_results=len(xpos_ref_alt_tuples))
+    return variants
 
 
 def get_es_variants(search_model, page=1, num_results=100):
+    previous_search_results = search_model.results or {}
 
-    start_index = (page - 1) * num_results
+    start_index = (page-1)*num_results
     end_index = page * num_results
     if search_model.total_results is not None:
         end_index = min(end_index, search_model.total_results)
 
-    previous_search_results = search_model.results or {}
     loaded_results = previous_search_results.get('all_results') or []
     if len(loaded_results) >= end_index:
-        if previous_search_results.get('compound_het_results'):
-            results, _ = _get_compound_het_page(loaded_results, page, num_results)
-            return results
         return loaded_results[start_index:end_index]
-    elif len(loaded_results):
-        start_index = max(start_index, len(loaded_results))
+
+    grouped_results = previous_search_results.get('grouped_results')
+    if grouped_results:
+        results = _get_compound_het_page(grouped_results, start_index, end_index)
+        if results is not None:
+            return results
 
     search = search_model.variant_search.search
     sort = search_model.sort
@@ -77,101 +79,35 @@ def get_es_variants(search_model, page=1, num_results=100):
     if invalid_items:
         raise Exception('Invalid genes/intervals: {}'.format(', '.join(invalid_items)))
 
-    es_search, family_samples_by_id, elasticsearch_index = _get_es_search_for_families(
-        search_model.families.all(), elasticsearch_index=search_model.es_index)
+    es_search = EsSearch(search_model.families.all())
+
+    es_search.sort(sort)
 
     if genes or intervals:
-        es_search = es_search.filter(_location_filter(genes, intervals, search['locus']))
+        es_search.filter(_location_filter(genes, intervals, search['locus']))
 
-    #  Pathogencicity and transcript consequences act as "OR" filters instead of the usual "AND"
-    pathogenicity_annotations_filter = _pathogenicity_filter(search.get('pathogenicity', {}))
-    allowed_consequences = None
+    # Pathogencicity and transcript consequences act as "OR" filters instead of the usual "AND"
+    pathogenicity_filter = _pathogenicity_filter(search.get('pathogenicity', {}))
     if search.get('annotations'):
-        consequences_filter, allowed_consequences = _annotations_filter(search['annotations'])
-        if pathogenicity_annotations_filter:
-            pathogenicity_annotations_filter |= consequences_filter
-        else:
-            pathogenicity_annotations_filter = consequences_filter
-
-    if pathogenicity_annotations_filter:
-        es_search = es_search.filter(pathogenicity_annotations_filter)
+        es_search.filter_by_annotations(search['annotations'], pathogenicity_filter)
+    elif pathogenicity_filter:
+        es_search.filter(pathogenicity_filter)
 
     if search.get('freqs'):
-        es_search = es_search.filter(_frequency_filter(search['freqs']))
+        es_search.filter(_frequency_filter(search['freqs']))
 
-    genotypes_q, inheritance_mode, compound_het_q = _genotype_filter(
-        search.get('inheritance'), family_samples_by_id, elasticsearch_index, quality_filter=search.get('qualityFilter')
+    es_search.filter_by_genotype(
+        search.get('inheritance'),
+        quality_filter=search.get('qualityFilter'),
+        has_previous_compound_hets=previous_search_results.get('grouped_results'),
     )
-    compound_het_search = None
-    if compound_het_q:
-        compound_het_search = es_search.filter(compound_het_q)
-    if genotypes_q:
-        es_search = es_search.filter(genotypes_q)
 
-    if inheritance_mode == RECESSIVE:
-        # recessive results are merged with compound het results so need to load all results through the end of the requested page,
-        # not just a single page's worth of results (i.e. when skipping pages need to load middle pages as well)
-        start_index = len(previous_search_results.get('variant_results') or [])
-
-    sort = _get_sort(sort)
-
-    variant_results = []
-    total_results = 0
-    if inheritance_mode != COMPOUND_HET:
-        es_search = es_search.sort(*sort)
-        logger.info('Searching in elasticsearch index: {}'.format(elasticsearch_index))
-
-        variant_results, total_results = _execute_search(
-            es_search, family_samples_by_id, start_index=start_index, end_index=end_index)
-
-    compound_het_results = previous_search_results.get('compound_het_results')
-    total_compound_het_results = None
-    if inheritance_mode in [COMPOUND_HET, RECESSIVE] and compound_het_results is None:
-        # For compound het search get results from aggregation instead of top level hits
-        compound_het_search = compound_het_search[:0] if compound_het_search else es_search[:0]
-        compound_het_search.aggs.bucket(
-            'genes', 'terms', field='geneIds', min_doc_count=2, size=10000
-        ).metric(
-            'vars_by_gene', 'top_hits', size=100, sort=sort, _source=QUERY_FIELD_NAMES
-        )
-
-        logger.info('Searching in elasticsearch index: {}'.format(elasticsearch_index))
-        logger.debug(json.dumps(compound_het_search.to_dict(), indent=2))
-
-        response = compound_het_search.execute()
-
-        compound_het_results, total_compound_het_results = _parse_compound_het_hits(
-            response, allowed_consequences, family_samples_by_id
-        )
-        logger.info('Total compound het hits: {}'.format(total_compound_het_results))
-
-    if compound_het_results:
-        previous_search_results['compound_het_results'] = compound_het_results
-        variant_results += previous_search_results.get('variant_results', [])
-        previous_search_results['variant_results'] = variant_results
-
-        if total_compound_het_results is not None:
-            total_results += total_compound_het_results
-        else:
-            total_results = search_model.total_results
-
-        grouped_variants = [[var] for var in variant_results]
-        grouped_variants = compound_het_results + grouped_variants
-
-        # Sort merged result sets
-        grouped_variants = sorted(grouped_variants, key=lambda variants: tuple(variants[0]['_sort']))
-
-        # Only return the requested page of variants
-        variant_results, end_index = _get_compound_het_page(grouped_variants, page, num_results)
-        previous_search_results['all_results'] = grouped_variants[:end_index]
-
-    # Only save contiguous pages of results
-    elif len(loaded_results) == start_index:
-        previous_search_results['all_results'] = loaded_results + variant_results
+    variant_results, previous_search_results = es_search.search(
+        page=page, num_results=num_results, previous_search_results=previous_search_results
+    )
 
     search_model.results = previous_search_results
-    search_model.total_results = total_results
-    search_model.es_index = elasticsearch_index
+    search_model.total_results = es_search.total_results
     search_model.save()
 
     return variant_results
@@ -196,51 +132,511 @@ def get_latest_loaded_samples(families=None):
     return [s for s in all_samples if s.loaded_date == sample_individual_max_loaded_date[s.individual.guid]]
 
 
-def _get_es_search_for_families(families, elasticsearch_index=None):
-    samples = get_latest_loaded_samples(families)
+class EsSearch(object):
 
-    if not elasticsearch_index:
-        es_indices = {s.elasticsearch_index for s in samples}
-        if len(es_indices) > 1:
-            # TODO get rid of this once add multi-project support and handle duplicate variants in different indices
-            raise InvalidIndexException('Samples are not all contained in the same index: {}'.format(', '.join(es_indices)))
-        elif len(es_indices) < 1:
+    def __init__(self, families):
+        self._client = get_es_client()
+
+        self.samples_by_family_index = defaultdict(lambda: defaultdict(dict))
+        for s in get_latest_loaded_samples(families):
+            self.samples_by_family_index[s.elasticsearch_index][s.individual.family.guid][s.sample_id] = s
+
+        if len(self.samples_by_family_index) < 1:
             raise InvalidIndexException('No es index found')
-        elif not is_nested_genotype_index(list(es_indices)[0]):
-            raise InvalidIndexException('Index "{}" does not have a valid schema'.format(list(es_indices)[0]))
-        elasticsearch_index = ','.join(es_indices)
 
-    family_samples_by_id = defaultdict(dict)
-    for sample in samples:
-        family_samples_by_id[sample.individual.family.guid][sample.sample_id] = sample
+        self._set_index_metadata()
 
-    es_search = Search(using=get_es_client(), index=elasticsearch_index)
-    return es_search, family_samples_by_id, elasticsearch_index
+        if len(self.samples_by_family_index) != len(self.index_metadata):
+            raise InvalidIndexException('Could not find expected indices: {}'.format(
+                ', '.join(set(self.samples_by_family_index.keys()) - set(self.index_metadata.keys()))
+            ))
 
+        self._search = Search()
+        self._index_searches = defaultdict(list)
+        self.total_results = None
+        self._sort = None
+        self._allowed_consequences = None
 
-def _execute_search(es_search, family_samples_by_id, start_index=0, end_index=100):
-    es_search = es_search[start_index:end_index]
-    es_search = es_search.source(QUERY_FIELD_NAMES)
+    def _set_index_metadata(self):
+        index = Index(','.join(self.samples_by_family_index.keys()), using=self._client)
+        mappings = index.get_mapping(doc_type=[VARIANT_DOC_TYPE])
+        self.index_metadata = {}
+        for index_name, mapping in mappings.items():
+            variant_mapping = mapping['mappings'].get(VARIANT_DOC_TYPE, {})
+            # TODO remove this check once all projects are migrated
+            if not variant_mapping['properties'].get('samples_num_alt_1'):
+                raise InvalidIndexException('Index "{}" does not have a valid schema'.format(index_name))
+            self.index_metadata[index_name] = variant_mapping.get('_meta', {})
 
-    logger.debug(json.dumps(es_search.to_dict(), indent=2))
+    def filter(self, new_filter):
+        self._search = self._search.filter(new_filter)
+        return self
 
-    try:
-        response = es_search.execute()
-    except elasticsearch.exceptions.ConnectionTimeout as e:
-        search_tasks = es_search._using.tasks.list(actions='*search', group_by='parents')
+    def sort(self, sort):
+        self._sort = _get_sort(sort)
+        self._search = self._search.sort(*self._sort)
+
+    def filter_by_annotations(self, annotations, pathogenicity_filter):
+        consequences_filter, allowed_consequences = _annotations_filter(annotations)
+        if pathogenicity_filter:
+            consequences_filter |= pathogenicity_filter
+        self.filter(consequences_filter)
+        self._allowed_consequences = allowed_consequences
+
+    def filter_by_genotype(self, inheritance, quality_filter=None, has_previous_compound_hets=False):
+        inheritance_mode = (inheritance or {}).get('mode')
+        inheritance_filter = (inheritance or {}).get('filter') or {}
+        if inheritance_filter.get('genotype'):
+            inheritance_mode = None
+
+        quality_filter = dict({'min_ab': 0, 'min_gq': 0}, **(quality_filter or {}))
+        if quality_filter['min_ab'] % 5 != 0:
+            raise Exception('Invalid ab filter {}'.format(quality_filter['min_ab']))
+        if quality_filter['min_gq'] % 5 != 0:
+            raise Exception('Invalid gq filter {}'.format(quality_filter['min_gq']))
+
+        if quality_filter and quality_filter.get('vcf_filter') is not None:
+            self.filter(~Q('exists', field='filters'))
+
+        for index, family_samples_by_id in self.samples_by_family_index.items():
+            if not inheritance and not quality_filter['min_ab'] and not quality_filter['min_gq']:
+                search_sample_count = sum(len(samples) for samples in family_samples_by_id.values())
+                index_sample_count = Sample.objects.filter(elasticsearch_index=index).count()
+                if search_sample_count == index_sample_count:
+                    # If searching across all families in an index with no inheritance mode we do not need to explicitly
+                    # filter on inheritance, as all variants have some inheritance for at least one family
+                    continue
+
+            genotypes_q = _genotype_inheritance_filter(
+                inheritance_mode, inheritance_filter, family_samples_by_id, quality_filter,
+            )
+
+            compound_het_q = None
+            if inheritance_mode == COMPOUND_HET:
+                compound_het_q = genotypes_q
+            else:
+                self._index_searches[index].append(self._search.filter(genotypes_q))
+
+            if inheritance_mode == RECESSIVE:
+                compound_het_q = _genotype_inheritance_filter(
+                    COMPOUND_HET, inheritance_filter, family_samples_by_id, quality_filter,
+                )
+
+            if compound_het_q and not has_previous_compound_hets:
+                compound_het_search = self._search.filter(compound_het_q)
+                compound_het_search.aggs.bucket(
+                    'genes', 'terms', field='geneIds', min_doc_count=2, size=10000
+                ).metric(
+                    'vars_by_gene', 'top_hits', size=100, sort=self._sort, _source=QUERY_FIELD_NAMES
+                )
+                self._index_searches[index].append(compound_het_search)
+
+    def search(self, page=1, num_results=100, previous_search_results=None):
+        indices = self.samples_by_family_index.keys()
+
+        logger.info('Searching in elasticsearch indices: {}'.format(', '.join(indices)))
+
+        if not previous_search_results:
+            previous_search_results = {}
+
+        if len(indices) == 1 \
+                and len(self._index_searches.get(indices[0], [])) <= 1 \
+                and not previous_search_results.get('grouped_results'):
+            return self._execute_single_search(page, num_results, previous_search_results)
+        elif not self._index_searches:
+            # If doing all project-families all inheritance search, do it as a single query
+            # Load all variants, do not skip pages
+            num_loaded = len(previous_search_results.get('all_results', []))
+            num_loaded += previous_search_results.get('duplicate_doc_count', 0)
+            if num_loaded >= (page-1)*num_results:
+                start_index = num_loaded
+            else:
+                start_index = 0
+            return self._execute_single_search(
+                page, num_results, previous_search_results, start_index=start_index, deduplicate=True
+            )
+        else:
+            return self._execute_multi_search(page, num_results, previous_search_results)
+
+    def _execute_single_search(self, page, num_results, previous_search_results, deduplicate=False, start_index=None):
+        index_name = ','.join(self.samples_by_family_index.keys())
+        search = self._get_paginated_searches(
+            index_name, page, num_results*len(self.samples_by_family_index), start_index=start_index
+        )[0]
+
+        response = self._execute_search(search)
+        variant_results, total_results, is_compound_het = self._parse_response(response)
+        self.total_results = total_results
+
+        results_start_index = (page - 1) * num_results
+        if is_compound_het:
+            variant_results = _sort_compound_hets(variant_results)
+            previous_search_results['grouped_results'] = variant_results
+            end_index = min(results_start_index + num_results, total_results)
+            return _get_compound_het_page(variant_results, results_start_index, end_index), previous_search_results
+
+        if deduplicate:
+            variant_results, previous_search_results = self._deduplicate_results(variant_results, previous_search_results)
+
+        # Only save contiguous pages of results:
+        previous_all_results = previous_search_results.get('all_results', [])
+        if len(previous_all_results) >= results_start_index:
+            previous_search_results['all_results'] = previous_search_results.get('all_results', []) + variant_results
+
+        return variant_results[:num_results], previous_search_results
+
+    def _execute_multi_search(self, page, num_results, previous_search_results):
+        indices = self.samples_by_family_index.keys()
+
+        if not previous_search_results.get('loaded_variant_counts'):
+            previous_search_results['loaded_variant_counts'] = {}
+
+        ms = MultiSearch()
+        for index_name in indices:
+            start_index = 0
+            if previous_search_results['loaded_variant_counts'].get(index_name):
+                index_total = previous_search_results['loaded_variant_counts'][index_name]['total']
+                start_index = previous_search_results['loaded_variant_counts'][index_name]['loaded']
+                if start_index >= index_total:
+                    continue
+            else:
+                previous_search_results['loaded_variant_counts'][index_name] = {'loaded': 0, 'total': 0}
+
+            searches = self._get_paginated_searches(index_name, page, num_results, start_index=start_index)
+            ms = ms.index(index_name)
+            for search in searches:
+                ms = ms.add(search)
+
+        responses = self._execute_search(ms)
+
+        new_results = []
+        compound_het_results = previous_search_results.get('compound_het_results', [])
+        for response in responses:
+            response_hits, response_total, is_compound_het = self._parse_response(response)
+            if not response_total:
+                continue
+
+            index_name = response.hits[0].meta.index
+            if is_compound_het:
+                compound_het_results += response_hits
+                previous_search_results['loaded_variant_counts']['{}_compound_het'.format(index_name)] = {'total': response_total}
+            else:
+                new_results += response_hits
+                previous_search_results['loaded_variant_counts'][index_name]['total'] = response_total
+                previous_search_results['loaded_variant_counts'][index_name]['loaded'] += len(response_hits)
+
+        self.total_results = sum(counts['total'] for counts in previous_search_results['loaded_variant_counts'].values())
+
+        # combine new results with unsorted previously loaded results to correctly sort/paginate
+        all_loaded_results = previous_search_results.get('all_results', [])
+        previous_page_record_count = (page - 1) * num_results
+        if len(all_loaded_results) >= previous_page_record_count:
+            loaded_results = all_loaded_results[:previous_page_record_count]
+            new_results += all_loaded_results[previous_page_record_count:]
+        else:
+            loaded_results = []
+            new_results += previous_search_results.get('variant_results', [])
+
+        new_results = sorted(new_results, key=lambda variant: variant['_sort'])
+        variant_results, previous_search_results = self._deduplicate_results(new_results, previous_search_results)
+
+        if compound_het_results or previous_search_results.get('grouped_results'):
+            if compound_het_results:
+                compound_het_results, previous_search_results = self._deduplicate_compound_het_results(
+                    compound_het_results, previous_search_results)
+            return self._process_compound_hets(compound_het_results, variant_results, previous_search_results, num_results)
+        else:
+            previous_search_results['all_results'] = loaded_results + variant_results
+            return variant_results[:num_results], previous_search_results
+
+    def _get_paginated_searches(self, index_name, page, num_results, start_index=None):
+        searches = []
+        for search in self._index_searches.get(index_name, [self._search]):
+            search = search.index(index_name)
+
+            if search.aggs.to_dict():
+                # For compound het search get results from aggregation instead of top level hits
+                search = search[:1]
+                logger.info('Loading compound hets for {}'.format(index_name))
+            else:
+                end_index = page * num_results
+                if start_index is None:
+                    start_index = end_index - num_results
+
+                search = search[start_index:end_index]
+                search = search.source(QUERY_FIELD_NAMES)
+                logger.info('Loading {} records {}-{}'.format(index_name, start_index, end_index))
+
+            searches.append(search)
+        return searches
+
+    def _execute_search(self, search):
+        logger.debug(json.dumps(search.to_dict(), indent=2))
+        try:
+            return search.using(self._client).execute()
+        except elasticsearch.exceptions.ConnectionTimeout as e:
+            canceled = self._delete_long_running_tasks()
+            logger.error('ES Query Timeout. Canceled {} long running searches'.format(canceled))
+            raise e
+
+    def _parse_response(self, response):
+        if hasattr(response.aggregations, 'genes') and response.hits:
+            response_hits, response_total = self._parse_compound_het_response(response)
+            return response_hits, response_total, True
+
+        response_total = response.hits.total
+        logger.info('Total hits: {} ({} seconds)'.format(response_total, response.took / 1000.0))
+
+        return [self._parse_hit(hit) for hit in response], response_total, False
+
+    def _parse_compound_het_response(self, response):
+        index_name = response.hits[0].meta.index
+
+        family_unaffected_individual_guids = {
+            family_guid: {sample.individual.guid for sample in samples_by_id.values() if
+                          sample.individual.affected == UNAFFECTED}
+            for family_guid, samples_by_id in self.samples_by_family_index[index_name].items()
+        }
+
+        variants_by_gene = {}
+        for gene_agg in response.aggregations.genes.buckets:
+            gene_variants = [self._parse_hit(hit) for hit in gene_agg['vars_by_gene']]
+            gene_id = gene_agg['key']
+
+            if gene_id in variants_by_gene:
+                continue
+
+            if self._allowed_consequences:
+                # Variants are returned if any transcripts have the filtered consequence, but to be compound het
+                # the filtered consequence needs to be present in at least one transcript in the gene of interest
+                gene_variants = [variant for variant in gene_variants if any(
+                    transcript['majorConsequence'] in self._allowed_consequences for transcript in
+                    variant['transcripts'][gene_id]
+                )]
+            if len(gene_variants) < 2:
+                continue
+
+            # Do not include groups multiple times if identical variants are in the same multiple genes
+            if any(variant['mainTranscript']['geneId'] != gene_id for variant in gene_variants):
+                primary_genes = [variant['mainTranscript']['geneId'] for variant in gene_variants]
+                if all(gene == primary_genes[0] for gene in primary_genes):
+                    is_valid_gene = True
+                    if self._allowed_consequences:
+                        is_valid_gene = all(any(
+                            transcript['majorConsequence'] in self._allowed_consequences for transcript in
+                            variant['transcripts'][primary_genes[0]]
+                        ) for variant in gene_variants)
+                    if is_valid_gene:
+                        gene_id = primary_genes[0]
+                        if gene_id in variants_by_gene:
+                            continue
+                else:
+                    variant_ids = [variant['variantId'] for variant in gene_variants]
+                    for gene in set(primary_genes):
+                        if variant_ids == [variant['variantId'] for variant in variants_by_gene.get(gene, [])]:
+                            continue
+
+            family_guids = set(gene_variants[0]['familyGuids'])
+            for variant in gene_variants[1:]:
+                family_guids = family_guids.intersection(set(variant['familyGuids']))
+
+            invalid_family_guids = set()
+            for family_guid in family_guids:
+                for individual_guid in family_unaffected_individual_guids[family_guid]:
+                    # To be compound het all unaffected individuals need to be hom ref for at least one of the variants
+                    is_family_compound_het = any(
+                        variant['genotypes'].get(individual_guid, {}).get('numAlt') != 1 for variant in
+                        gene_variants)
+                    if not is_family_compound_het:
+                        invalid_family_guids.add(family_guid)
+                        break
+
+            family_guids -= invalid_family_guids
+            if not family_guids:
+                continue
+
+            for variant in gene_variants:
+                variant['familyGuids'] = list(family_guids)
+
+            variants_by_gene[gene_id] = gene_variants
+
+        total_compound_het_results = sum(len(variants) for variants in variants_by_gene.values())
+        logger.info('Total compound het hits: {}'.format(total_compound_het_results))
+
+        return [{k: v} for k, v in variants_by_gene.items()], total_compound_het_results
+
+    def _parse_hit(self, raw_hit):
+        hit = {k: raw_hit[k] for k in QUERY_FIELD_NAMES if k in raw_hit}
+        index_name = raw_hit.meta.index
+        index_family_samples = self.samples_by_family_index[index_name]
+
+        if hasattr(raw_hit.meta, 'matched_queries'):
+            family_guids = list(raw_hit.meta.matched_queries)
+        else:
+            # Searches for all inheritance and all families do not filter on inheritance so there are no matched_queries
+            alt_allele_samples = set()
+            for alt_samples_field in HAS_ALT_FIELD_KEYS:
+                alt_allele_samples.update(hit[alt_samples_field])
+            family_guids = [family_guid for family_guid, samples_by_id in index_family_samples.items()
+                            if any(sample_id in alt_allele_samples for sample_id in samples_by_id.keys())]
+
+        genotypes = {}
+        for family_guid in family_guids:
+            samples_by_id = index_family_samples[family_guid]
+            genotypes.update({
+                samples_by_id[genotype_hit['sample_id']].individual.guid: _get_field_values(genotype_hit, GENOTYPE_FIELDS_CONFIG)
+                for genotype_hit in hit[GENOTYPES_FIELD_KEY] if genotype_hit['sample_id'] in samples_by_id
+            })
+
+        genome_version = self.index_metadata[index_name].get('genomeVersion')
+        lifted_over_genome_version = None
+        lifted_over_chrom = None
+        lifted_over_pos = None
+        liftover_grch38_to_grch37 = _liftover_grch38_to_grch37()
+        if liftover_grch38_to_grch37 and genome_version == GENOME_VERSION_GRCh38:
+            if liftover_grch38_to_grch37:
+                grch37_coord = liftover_grch38_to_grch37.convert_coordinate(
+                    'chr{}'.format(hit['contig'].lstrip('chr')), int(hit['start'])
+                )
+                if grch37_coord and grch37_coord[0]:
+                    lifted_over_genome_version = GENOME_VERSION_GRCh37
+                    lifted_over_chrom = grch37_coord[0][0].lstrip('chr')
+                    lifted_over_pos = grch37_coord[0][1]
+
+        populations = {
+            population: _get_field_values(
+                hit, POPULATION_RESPONSE_FIELD_CONFIGS, format_response_key=lambda key: key.lower(),
+                lookup_field_prefix=population,
+                get_addl_fields=lambda field, field_config:
+                [pop_config.get(field)] + ['{}_{}'.format(population, custom_field) for custom_field in
+                                           field_config.get('fields', [])],
+            )
+            for population, pop_config in POPULATIONS.items()
+        }
+
+        sorted_transcripts = [
+            {_to_camel_case(k): v for k, v in transcript.to_dict().items()}
+            for transcript in hit[SORTED_TRANSCRIPTS_FIELD_KEY] or []
+        ]
+        transcripts = defaultdict(list)
+        for transcript in sorted_transcripts:
+            transcripts[transcript['geneId']].append(transcript)
+
+        result = _get_field_values(hit, CORE_FIELDS_CONFIG, format_response_key=str)
+        result.update({
+            field_name: _get_field_values(hit, fields, lookup_field_prefix=field_name)
+            for field_name, fields in NESTED_FIELDS.items()
+        })
+        if hasattr(raw_hit.meta, 'sort'):
+            result['_sort'] = [_parse_es_sort(sort, self._sort[i]) for i, sort in enumerate(raw_hit.meta.sort)]
+
+        result.update({
+            'familyGuids': sorted(family_guids),
+            'genotypes': genotypes,
+            'genomeVersion': genome_version,
+            'liftedOverGenomeVersion': lifted_over_genome_version,
+            'liftedOverChrom': lifted_over_chrom,
+            'liftedOverPos': lifted_over_pos,
+            'mainTranscript': sorted_transcripts[0] if len(sorted_transcripts) else {},
+            'populations': populations,
+            'predictions': _get_field_values(
+                hit, PREDICTION_FIELDS_CONFIG, format_response_key=lambda key: key.split('_')[1].lower()
+            ),
+            'transcripts': transcripts,
+        })
+        return result
+
+    def _deduplicate_results(self, sorted_new_results, previous_search_results):
+        duplicates = previous_search_results.get('duplicate_doc_count', 0)
+        variant_results = []
+        for variant in sorted_new_results:
+            if variant_results and variant_results[-1]['variantId'] == variant['variantId']:
+                variant_results[-1]['genotypes'].update(variant['genotypes'])
+                variant_results[-1]['familyGuids'] = sorted(set(variant_results[-1]['familyGuids'] + variant['familyGuids']))
+                duplicates += 1
+            else:
+                variant_results.append(variant)
+
+        previous_search_results['duplicate_doc_count'] = duplicates
+
+        self.total_results -= duplicates
+
+        return variant_results, previous_search_results
+
+    def _deduplicate_compound_het_results(self, compound_het_results, previous_search_results):
+        duplicates = 0
+        results = {}
+        for variant_group in compound_het_results:
+            gene = variant_group.keys()[0]
+            variants = variant_group[gene]
+            if gene in results:
+                for variant in variants:
+                    existing_index = next(
+                        (i for i, existing in enumerate(results[gene]) if existing['variantId'] == variant['variantId']), None,
+                    )
+                    if existing_index is not None:
+                        results[gene][existing_index]['genotypes'].update(variant['genotypes'])
+                        results[gene][existing_index]['familyGuids'] = sorted(
+                            results[gene][existing_index]['familyGuids'] + variant['familyGuids']
+                        )
+                        duplicates += 1
+                    else:
+                        results[gene].append(variant)
+            else:
+                results[gene] = variants
+
+        previous_search_results['duplicate_doc_count'] = duplicates + previous_search_results.get('duplicate_doc_count', 0)
+
+        self.total_results -= duplicates
+
+        return [{k: v} for k, v in results.items()], previous_search_results
+
+    def _process_compound_hets(self, compound_het_results, variant_results, previous_search_results, num_results):
+        if not previous_search_results.get('grouped_results'):
+            previous_search_results['grouped_results'] = []
+
+        # Sort merged result sets
+        grouped_variants = [{None: [var]} for var in variant_results]
+        grouped_variants = compound_het_results + grouped_variants
+        grouped_variants = _sort_compound_hets(grouped_variants)
+
+        loaded_result_count = sum(len(vars.values()[0]) for vars in grouped_variants + previous_search_results['grouped_results'])
+
+        # Get requested page of variants
+        flattened_variant_results = []
+        num_compound_hets = 0
+        num_single_variants = 0
+        for variants_group in grouped_variants:
+            variants = variants_group.values()[0]
+            flattened_variant_results += variants
+            if loaded_result_count != self.total_results:
+                previous_search_results['grouped_results'].append(variants_group)
+            if len(variants) > 1:
+                num_compound_hets += 1
+            else:
+                num_single_variants += 1
+            if len(flattened_variant_results) >= num_results:
+                break
+
+        # Only save non-returned results separately if have not loaded all results
+        if loaded_result_count == self.total_results:
+            previous_search_results['grouped_results'] += grouped_variants
+            previous_search_results['compound_het_results'] = []
+            previous_search_results['variant_results'] = []
+        else:
+            previous_search_results['compound_het_results'] = compound_het_results[num_compound_hets:]
+            previous_search_results['variant_results'] = variant_results[num_single_variants:]
+
+        return flattened_variant_results, previous_search_results
+
+    def _delete_long_running_tasks(self):
+        search_tasks = self._client.tasks.list(actions='*search', group_by='parents')
         canceled = 0
         for parent_id, task in search_tasks['tasks'].items():
             if task['running_time_in_nanos'] > 10 ** 11:
                 canceled += 1
-                es_search._using.tasks.cancel(parent_task_id=parent_id)
-        logger.error('ES Query Timeout. Canceled {} long running searches'.format(canceled))
-        raise e
-
-    total_results = response.hits.total
-    logger.info('Total hits: {} ({} seconds)'.format(total_results, response.took / 1000.0))
-
-    variant_results = [_parse_es_hit(hit, family_samples_by_id) for hit in response]
-    return variant_results, total_results
+                self._client.tasks.cancel(parent_task_id=parent_id)
+        return canceled
 
 
 def _variant_id_filter(xpos_ref_alt_tuples):
@@ -297,66 +693,39 @@ INHERITANCE_FILTERS = {
 }
 
 
-def _genotype_filter(inheritance, family_samples_by_id, elasticsearch_index, quality_filter=None):
+def _genotype_inheritance_filter(inheritance_mode, inheritance_filter, family_samples_by_id, quality_filter):
+    if inheritance_mode:
+        inheritance_filter.update(INHERITANCE_FILTERS[inheritance_mode])
+
     genotypes_q = None
-    compound_het_q = None
-
-    inheritance_mode = (inheritance or {}).get('mode')
-    inheritance_filter = (inheritance or {}).get('filter') or {}
-
-    min_ab = (quality_filter or {}).get('min_ab', 0)
-    if min_ab % 5 != 0:
-        raise Exception('Invalid ab filter {}'.format(min_ab))
-    min_gq = (quality_filter or {}).get('min_gq', 0)
-    if min_gq % 5 != 0:
-        raise Exception('Invalid gq filter {}'.format(min_gq))
-
-    # TODO handle multiple indices
-    if not inheritance and not min_gq and not min_gq:
-        search_sample_count = sum(len(samples) for samples in family_samples_by_id.values())
-        index_sample_count = Sample.objects.filter(elasticsearch_index=elasticsearch_index).count()
-        if search_sample_count == index_sample_count:
-            # If searching across all families in an index with no inheritance mode we do not need to explicitly filter
-            # on inheritance, as all variants have some inheritance for at least one family
-            return None, None, None
-
-    for family_guid, samples_by_id in family_samples_by_id.items():
+    for family_guid in sorted(family_samples_by_id.keys()):
+        samples_by_id = family_samples_by_id[family_guid]
         # Filter samples by quality
         quality_q = None
-        if min_ab or min_gq:
+        if quality_filter.get('min_ab') or quality_filter.get('min_gq'):
             quality_q = Q()
             for sample_id in samples_by_id.keys():
-                if min_ab:
+                if quality_filter['min_ab']:
                     q = _build_or_filter('term', [
-                        {'samples_ab_{}_to_{}'.format(i, i + 5): sample_id} for i in range(0, min_ab, 5)
+                        {'samples_ab_{}_to_{}'.format(i, i + 5): sample_id} for i in range(0, quality_filter['min_ab'], 5)
                     ])
                     #  AB only relevant for hets
                     quality_q &= ~Q(q) | ~Q('term', samples_num_alt_1=sample_id)
-                if min_gq:
+                if quality_filter['min_gq']:
                     quality_q &= ~Q(_build_or_filter('term', [
-                        {'samples_gq_{}_to_{}'.format(i, i + 5): sample_id} for i in range(0, min_gq, 5)
+                        {'samples_gq_{}_to_{}'.format(i, i + 5): sample_id} for i in range(0, quality_filter['min_gq'], 5)
                     ]))
 
         # Filter samples by inheritance
-        if inheritance:
-            family_samples_q, inheritance_mode = _genotype_inheritance_filter(
+        if inheritance_filter:
+            family_samples_q = _family_genotype_inheritance_filter(
                 inheritance_mode, inheritance_filter, samples_by_id
             )
 
             # For recessive search, should be hom recessive, x-linked recessive, or compound het
             if inheritance_mode == RECESSIVE:
-                x_linked_q, _ = _genotype_inheritance_filter(X_LINKED_RECESSIVE, inheritance_filter, samples_by_id)
+                x_linked_q = _family_genotype_inheritance_filter(X_LINKED_RECESSIVE, inheritance_filter, samples_by_id)
                 family_samples_q |= x_linked_q
-
-                family_compound_het_q, _ = _genotype_inheritance_filter(COMPOUND_HET, inheritance_filter, samples_by_id)
-                sample_queries = [family_compound_het_q]
-                if quality_q:
-                    sample_queries.append(quality_q)
-                family_compound_het_q = Q('bool', must=sample_queries, _name=family_guid)
-                if not compound_het_q:
-                    compound_het_q = family_compound_het_q
-                else:
-                    compound_het_q |= family_compound_het_q
         else:
             # If no inheritance specified only return variants where at least one of the requested samples has an alt allele
             sample_ids = samples_by_id.keys()
@@ -372,15 +741,10 @@ def _genotype_filter(inheritance, family_samples_by_id, elasticsearch_index, qua
         else:
             genotypes_q |= family_samples_q
 
-    if quality_filter and quality_filter.get('vcf_filter') is not None:
-        genotypes_q &= ~Q('exists', field='filters')
-        if compound_het_q:
-            compound_het_q &= ~Q('exists', field='filters')
-
-    return genotypes_q, inheritance_mode, compound_het_q
+    return genotypes_q
 
 
-def _genotype_inheritance_filter(inheritance_mode, inheritance_filter, samples_by_id):
+def _family_genotype_inheritance_filter(inheritance_mode, inheritance_filter, samples_by_id):
     samples_q = Q()
 
     individuals = [sample.individual for sample in samples_by_id.values()]
@@ -390,13 +754,6 @@ def _genotype_inheritance_filter(inheritance_mode, inheritance_filter, samples_b
     for individual in individuals:
         if not individual_affected_status.get(individual.guid):
             individual_affected_status[individual.guid] = individual.affected
-
-    if individual_genotype_filter:
-        inheritance_mode = None
-        logger.info('CUSTOM GENOTYPE FILTER: {}'.format(', '.join(individual_genotype_filter.keys())))
-
-    if inheritance_mode:
-        inheritance_filter.update(INHERITANCE_FILTERS[inheritance_mode])
 
     if inheritance_mode == X_LINKED_RECESSIVE:
         samples_q &= Q('match', contig='X')
@@ -422,7 +779,7 @@ def _genotype_inheritance_filter(inheritance_mode, inheritance_filter, samples_b
 
             samples_q &= sample_q
 
-    return samples_q, inheritance_mode
+    return samples_q
 
 
 def _location_filter(genes, intervals, location_filter):
@@ -722,142 +1079,21 @@ for population, pop_config in POPULATIONS.items():
         QUERY_FIELD_NAMES += ['{}_{}'.format(population, custom_field) for custom_field in field_config.get('fields', [])]
 
 
-def _parse_es_hit(raw_hit, family_samples_by_id):
-    hit = {k: raw_hit[k] for k in QUERY_FIELD_NAMES if k in raw_hit}
-
-    if hasattr(raw_hit.meta, 'matched_queries'):
-        family_guids = list(raw_hit.meta.matched_queries)
-    else:
-        # Searches for all inheritance and all families do not filter on inheritance so there are no matched_queries
-        alt_allele_samples = set()
-        for alt_samples_field in HAS_ALT_FIELD_KEYS:
-            alt_allele_samples.update(hit[alt_samples_field])
-        family_guids = [family_guid for family_guid, samples_by_id in family_samples_by_id.items() if
-                        any(sample_id in alt_allele_samples for sample_id in samples_by_id.keys())]
-
-    genotypes = {}
-    for family_guid in family_guids:
-        samples_by_id = family_samples_by_id[family_guid]
-        genotypes.update({
-            samples_by_id[genotype_hit['sample_id']].individual.guid: _get_field_values(genotype_hit,
-                                                                                        GENOTYPE_FIELDS_CONFIG)
-            for genotype_hit in hit[GENOTYPES_FIELD_KEY] if genotype_hit['sample_id'] in samples_by_id
-        })
-
-    # TODO better handling for multi-project searches
-    project = family_samples_by_id[family_guids[0]].values()[0].individual.family.project
-
-    # TODO should come from index metadata
-    genome_version = project.genome_version
-    lifted_over_genome_version = None
-    lifted_over_chrom= None
-    lifted_over_pos = None
-    liftover_grch38_to_grch37 = _liftover_grch38_to_grch37()
-    if liftover_grch38_to_grch37 and genome_version == GENOME_VERSION_GRCh38:
-        if liftover_grch38_to_grch37:
-            grch37_coord = liftover_grch38_to_grch37.convert_coordinate(
-                'chr{}'.format(hit['contig'].lstrip('chr')), int(hit['start'])
-            )
-            if grch37_coord and grch37_coord[0]:
-                lifted_over_chrom = grch37_coord[0][0].lstrip('chr')
-                lifted_over_pos = grch37_coord[0][1]
-
-    populations = {
-        population: _get_field_values(
-            hit, POPULATION_RESPONSE_FIELD_CONFIGS, format_response_key=lambda key: key.lower(), lookup_field_prefix=population,
-            get_addl_fields=lambda field, field_config:
-                [pop_config.get(field)] + ['{}_{}'.format(population, custom_field) for custom_field in field_config.get('fields', [])],
-        )
-        for population, pop_config in POPULATIONS.items()
-    }
-
-    sorted_transcripts = [
-        {_to_camel_case(k): v for k, v in transcript.to_dict().items()}
-        for transcript in hit[SORTED_TRANSCRIPTS_FIELD_KEY] or []
-    ]
-    transcripts = defaultdict(list)
-    for transcript in sorted_transcripts:
-        transcripts[transcript['geneId']].append(transcript)
-
-    result = _get_field_values(hit, CORE_FIELDS_CONFIG, format_response_key=str)
-    result.update({
-        field_name: _get_field_values(hit, fields, lookup_field_prefix=field_name)
-        for field_name, fields in NESTED_FIELDS.items()
-    })
-    if hasattr(raw_hit.meta, 'sort'):
-        result['_sort'] = [_parse_es_sort(sort) for sort in raw_hit.meta.sort]
-    result.update({
-        'projectGuid': project.guid,
-        'familyGuids': family_guids,
-        'genotypes': genotypes,
-        'genomeVersion': genome_version,
-        'liftedOverGenomeVersion': lifted_over_genome_version,
-        'liftedOverChrom': lifted_over_chrom,
-        'liftedOverPos': lifted_over_pos,
-        'mainTranscript': sorted_transcripts[0] if len(sorted_transcripts) else {},
-        'populations': populations,
-        'predictions': _get_field_values(
-            hit, PREDICTION_FIELDS_CONFIG, format_response_key=lambda key: key.split('_')[1].lower()
-        ),
-        'transcripts': transcripts,
-    })
-    return result
+def _sort_compound_hets(grouped_variants):
+    return sorted(grouped_variants, key=lambda variants: variants.values()[0][0]['_sort'])
 
 
-def _parse_compound_het_hits(response, allowed_consequences, family_samples_by_id, *args):
-    family_unaffected_individual_guids = {
-        family_guid: {sample.individual.guid for sample in samples_by_id.values() if sample.individual.affected == UNAFFECTED}
-        for family_guid, samples_by_id in family_samples_by_id.items()
-    }
-
-    variants_by_gene = []
-    for gene_agg in response.aggregations.genes.buckets:
-        gene_variants = [_parse_es_hit(hit, family_samples_by_id, *args) for hit in gene_agg['vars_by_gene']]
-
-        if allowed_consequences:
-            # Variants are returned if any transcripts have the filtered consequence, but to be compound het
-            # the filtered consequence needs to be present in at least one transcript in the gene of interest
-            gene_variants = [variant for variant in gene_variants if any(
-                transcript['majorConsequence'] in allowed_consequences for transcript in
-                variant['transcripts'][gene_agg['key']]
-            )]
-
-        if len(gene_variants) > 1:
-            family_guids = set(gene_variants[0]['familyGuids'])
-            for variant in gene_variants[1:]:
-                family_guids = family_guids.intersection(set(variant['familyGuids']))
-
-            invalid_family_guids = set()
-            for family_guid in family_guids:
-                for individual_guid in family_unaffected_individual_guids[family_guid]:
-                    # To be compound het all unaffected individuals need to be hom ref for at least one of the variants
-                    is_family_compound_het = any(
-                        variant['genotypes'].get(individual_guid, {}).get('numAlt') != 1 for variant in gene_variants)
-                    if not is_family_compound_het:
-                        invalid_family_guids.add(family_guid)
-                        break
-
-            family_guids -= invalid_family_guids
-            if family_guids:
-                for variant in gene_variants:
-                    variant['familyGuids'] = list(family_guids)
-                variants_by_gene.append(gene_variants)
-
-    return variants_by_gene, sum(len(results) for results in variants_by_gene)
-
-
-def _get_compound_het_page(grouped_variants, page, num_results):
-    start_index = (page - 1) * num_results
+def _get_compound_het_page(grouped_variants, start_index, end_index):
     skipped = 0
     variant_results = []
     for i, variants in enumerate(grouped_variants):
         if skipped < start_index:
-            skipped += len(variants)
+            skipped += len(variants.values()[0])
         else:
-            variant_results += variants
-            if len(variant_results) >= num_results:
-                return variant_results, i + 1
-    return variant_results, len(grouped_variants)
+            variant_results += variants.values()[0]
+        if len(variant_results) + skipped >= end_index:
+            return variant_results
+    return None
 
 
 #  TODO move liftover to hail pipeline once upgraded to 0.2
@@ -872,13 +1108,23 @@ def _liftover_grch38_to_grch37():
     return LIFTOVER_GRCH38_TO_GRCH37
 
 
-def _parse_es_sort(sort):
+def _parse_es_sort(sort, sort_config):
+    if hasattr(sort_config, 'values') and any(cfg.get('order') == 'desc' for cfg in sort_config.values()):
+        if sort == 'Infinity':
+            sort = -1
+        elif sort == '-Infinity':
+            # None of the sorts used by seqr return negative values so -1 is fine
+            sort = maxint
+        else:
+            sort = sort * -1
+
     # ES returns these values for sort when a sort field is missing
-    if sort == 'Infinity':
+    elif sort == 'Infinity':
         sort = maxint
     elif sort == '-Infinity':
         # None of the sorts used by seqr return negative values so -1 is fine
         sort = -1
+
     return sort
 
 

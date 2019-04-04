@@ -10,7 +10,6 @@ import { Form, Message, Icon, Popup, Confirm } from 'semantic-ui-react'
 import flatten from 'lodash/flatten'
 
 import { closeModal, setModalConfirm } from 'redux/utils/modalReducer'
-import { ButtonLink } from '../StyledComponents'
 import ButtonPanel from './ButtonPanel'
 import RequestStatus from './RequestStatus'
 
@@ -63,7 +62,8 @@ export const helpLabel = (label, labelHelp) => (
 )
 
 export const configuredField = (field, formProps = {}) => {
-  const { component, name, isArrayField, addArrayElement, arrayFieldName, key, label, labelHelp, ...fieldProps } = field
+  const { component, name, isArrayField, addArrayElement, addArrayElementProps, arrayFieldName, key, label, labelHelp,
+    ...fieldProps } = field
   const baseProps = {
     key: key || name,
     name,
@@ -83,11 +83,11 @@ export const configuredField = (field, formProps = {}) => {
           <Field
             key={fieldPath}
             name={arrayFieldName ? `${fieldPath}.${arrayFieldName}` : fieldPath}
-            removeField={() => fields.remove(i)}
+            removeField={(e) => { e.preventDefault(); fields.remove(i) }}
             index={i}
             {...singleFieldProps}
           />)}
-        {addArrayElement && <ButtonLink onClick={() => fields.push(addArrayElement.newValue)}><Icon link name="plus" />{addArrayElement.label}</ButtonLink>}
+        {addArrayElement && createElement(addArrayElement, { addElement: fields.push, ...addArrayElementProps })}
       </div>}
     /> :
     <Field {...baseProps} {...singleFieldProps} />

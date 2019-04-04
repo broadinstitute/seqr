@@ -115,7 +115,7 @@ ShortcutTagToggle.propTypes = {
 
 const ShortcutTags = ({ variant, dispatchUpdateFamilyVariantTags, familyGuid }) => {
   const appliedShortcutTags = SHORTCUT_TAGS.reduce((acc, tagName) => {
-    const appliedTag = variant.tags.find(tag => tag.name === tagName)
+    const appliedTag = (variant.tags || []).find(tag => tag.name === tagName)
     return appliedTag ? { ...acc, [tagName]: appliedTag } : acc
   }, {})
   const shortcutTagFields = SHORTCUT_TAGS.map(tagName => ({
@@ -132,7 +132,7 @@ const ShortcutTags = ({ variant, dispatchUpdateFamilyVariantTags, familyGuid }) 
         return [...allTags, { name: tagName }]
       }
       return allTags.filter(tag => tag.name !== tagName)
-    }, variant.tags)
+    }, variant.tags || [])
     return dispatchUpdateFamilyVariantTags({ ...variant, tags: updatedTags })
   }
 
@@ -200,7 +200,9 @@ VariantNoteField.propTypes = {
   family: PropTypes.object.isRequired,
 }
 
-const FamilyVariantTags = ({ variant, family, project, dispatchUpdateVariantNote, dispatchUpdateFamilyVariantTags }) => (
+const FamilyVariantTags = (
+  { variant, savedVariant, family, project, dispatchUpdateVariantNote, dispatchUpdateFamilyVariantTags },
+) => (
   family ?
     <div>
       <InlineContainer>
@@ -224,24 +226,24 @@ const FamilyVariantTags = ({ variant, family, project, dispatchUpdateVariantNote
         <div>
           <TagTitle>Tags:</TagTitle>
           <HorizontalSpacer width={5} />
-          <ShortcutTags variant={variant} familyGuid={family.familyGuid} dispatchUpdateFamilyVariantTags={dispatchUpdateFamilyVariantTags} />
+          <ShortcutTags variant={savedVariant || variant} familyGuid={family.familyGuid} dispatchUpdateFamilyVariantTags={dispatchUpdateFamilyVariantTags} />
           <VariantTagField
             field="tags"
             fieldName="Tags"
             family={family}
-            variant={variant}
+            variant={savedVariant || variant}
             tagOptions={project.variantTagTypes.filter(vtt => vtt.name !== NOTE_TAG_NAME)}
             onSubmit={dispatchUpdateFamilyVariantTags}
           />
           <HorizontalSpacer width={5} />
-          {variant.tags.some(tag => tag.category === DISCOVERY_CATEGORY_NAME) &&
+          {savedVariant && savedVariant.tags.some(tag => tag.category === DISCOVERY_CATEGORY_NAME) &&
             <span>
               <TagTitle>Fxnl Data:</TagTitle>
               <VariantTagField
                 field="functionalData"
                 fieldName="Fxnl Data"
                 family={family}
-                variant={variant}
+                variant={savedVariant}
                 tagOptions={project.variantFunctionalTagTypes}
                 editMetadata
                 onSubmit={dispatchUpdateFamilyVariantTags}
@@ -253,11 +255,11 @@ const FamilyVariantTags = ({ variant, family, project, dispatchUpdateVariantNote
         <div>
           <TagTitle>Notes:</TagTitle>
           <NoteContainer>
-            {variant.notes.map(note =>
+            {savedVariant && savedVariant.notes.map(note =>
               <VariantNoteField
                 key={note.noteGuid}
                 note={note}
-                variant={variant}
+                variant={savedVariant}
                 family={family}
                 isDeletable
                 compact
@@ -266,7 +268,7 @@ const FamilyVariantTags = ({ variant, family, project, dispatchUpdateVariantNote
               />,
             )}
             <VariantNoteField
-              variant={variant}
+              variant={savedVariant || variant}
               family={family}
               editIconName="plus"
               editLabel="Add Note"
@@ -278,8 +280,8 @@ const FamilyVariantTags = ({ variant, family, project, dispatchUpdateVariantNote
       </InlineContainer>
       <VariantLinkContainer>
         <NavLink
-          to={variant.variantGuid ?
-            `/project/${variant.projectGuid}/saved_variants/variant/${variant.variantGuid}` :
+          to={savedVariant ?
+            `/project/${family.projectGuid}/saved_variants/variant/${savedVariant.variantGuid}` :
             `/variant_search/variant/${variant.variantId}/family/${family.familyGuid}`
           }
           activeStyle={NO_DISPLAY}
@@ -297,31 +299,26 @@ const FamilyVariantTags = ({ variant, family, project, dispatchUpdateVariantNote
 
 FamilyVariantTags.propTypes = {
   variant: PropTypes.object,
+  savedVariant: PropTypes.object,
   project: PropTypes.object,
   family: PropTypes.object,
   dispatchUpdateVariantNote: PropTypes.func,
   dispatchUpdateFamilyVariantTags: PropTypes.func,
 }
 
-const EMPTY_FAMILY_TAGS = {
-  tags: [],
-  notes: [],
-  functionalData: [],
-}
-
 const mapStateToProps = (state, ownProps) => ({
   family: getFamiliesByGuid(state)[ownProps.familyGuid],
   project: getProjectsByGuid(state)[(getFamiliesByGuid(state)[ownProps.familyGuid] || {}).projectGuid],
-  variant: (getSavedVariantsGroupedByFamilyVariants(state)[ownProps.familyGuid] || {})[getVariantId(ownProps.variant)] || {
-    ...ownProps.variant,
-    ...EMPTY_FAMILY_TAGS,
-    familyGuid: ownProps.familyGuid,
-  },
+  savedVariant: (getSavedVariantsGroupedByFamilyVariants(state)[ownProps.familyGuid] || {})[getVariantId(ownProps.variant)],
 })
 
-const mapDispatchToProps = {
-  dispatchUpdateVariantNote: updateVariantNote,
-  dispatchUpdateFamilyVariantTags: updateVariantTags,
-}
+const mapDispatchToProps = (dispatch, ownProps) => ({
+  dispatchUpdateVariantNote: (updates) => {
+    dispatch(updateVariantNote({ ...updates, familyGuid: ownProps.familyGuid }))
+  },
+  dispatchUpdateFamilyVariantTags: (updates) => {
+    dispatch(updateVariantTags({ ...updates, familyGuid: ownProps.familyGuid }))
+  },
+})
 
 export default connect(mapStateToProps, mapDispatchToProps)(FamilyVariantTags)

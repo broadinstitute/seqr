@@ -24,17 +24,10 @@ const PAGE_CONFIGS = {
     entityUrlPath: `analysis_group/${entityGuid}`,
     originalPagePath: `family-group/guid/${entityGuid}/combine-mendelian-families`,
   }),
-  results: () => ({}),
-  variant: entityGuid => ({ entity: { name: entityGuid } }),
-}
-
-
-export const PageHeader = ({ projectsByGuid, familiesByGuid, analysisGroupsByGuid, searchesByHash, match }) => {
-
-  let { pageType, entityGuid } = match.params
-
-  if (pageType === 'results') {
+  results: (entityGuid, projectsByGuid, familiesByGuid, analysisGroupsByGuid, searchesByHash) => {
     const { projectFamilies } = searchesByHash[entityGuid] || {}
+    let pageType
+    let description
     if (projectFamilies) {
       if (projectFamilies.length === 1) {
         const { projectGuid, familyGuids } = projectFamilies[0]
@@ -51,18 +44,36 @@ export const PageHeader = ({ projectsByGuid, familiesByGuid, analysisGroupsByGui
             entityGuid = projectGuid
           }
         }
+      } else if (projectFamilies.length > 1) {
+        description = `Projects: ${projectFamilies.map(
+          ({ projectGuid }) => (projectsByGuid[projectGuid] || {}).name,
+        ).join(', ')}`
       }
-      // TODO parse multi-project search
     }
-  }
+    if (pageType) {
+      return {
+        actualPageType: pageType,
+        ...PAGE_CONFIGS[pageType](entityGuid, projectsByGuid, familiesByGuid, analysisGroupsByGuid),
+      }
+    }
+    return { description }
+  },
+  variant: entityGuid => ({ entity: { name: entityGuid } }),
+}
+
+
+export const PageHeader = ({ projectsByGuid, familiesByGuid, analysisGroupsByGuid, searchesByHash, match }) => {
+
+  const { pageType, entityGuid } = match.params
 
   let project
   let originalPages
   const breadcrumbIdSections = []
-  const { entity, entityUrlPath, originalPagePath } = PAGE_CONFIGS[pageType](entityGuid, projectsByGuid, familiesByGuid, analysisGroupsByGuid)
+  const { entity, entityUrlPath, originalPagePath, actualPageType, description } =
+    PAGE_CONFIGS[pageType](entityGuid, projectsByGuid, familiesByGuid, analysisGroupsByGuid, searchesByHash)
   if (entity) {
     project = projectsByGuid[entity.projectGuid]
-    breadcrumbIdSections.push({ content: snakecaseToTitlecase(pageType) })
+    breadcrumbIdSections.push({ content: snakecaseToTitlecase(actualPageType || pageType) })
     breadcrumbIdSections.push({
       content: entity.displayName || entity.name,
       link: project && `/project/${project.projectGuid}/${entityUrlPath}`,
@@ -72,20 +83,20 @@ export const PageHeader = ({ projectsByGuid, familiesByGuid, analysisGroupsByGui
     }
   }
 
-  const entityLinks = []
   if (project && project.hasGeneSearch) {
-    entityLinks.push({ href: `/project/${project.deprecatedProjectId}/gene`, text: 'Gene Search' })
+    if (!originalPages) {
+      originalPages = []
+    }
+    originalPages.push({ path: 'gene', name: 'Gene Search' })
   }
 
   return (
     <PageHeaderLayout
       entity="variant_search"
-      entityLinkPath={null} // TODO remove this to enable main page link once multi-project search is enabled
       breadcrumbIdSections={breadcrumbIdSections}
-      description={null} // TODO add description for multi-project searches
+      description={description}
       originalPagePath={project && `project/${project.deprecatedProjectId}`}
       originalPages={originalPages}
-      entityLinks={entityLinks}
     />
   )
 }

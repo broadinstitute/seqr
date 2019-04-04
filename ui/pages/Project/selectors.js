@@ -17,7 +17,7 @@ import { toCamelcase, toSnakecase } from 'shared/utils/stringUtils'
 
 import {
   getProjectsByGuid, getFamiliesGroupedByProjectGuid, getIndividualsByGuid, getSamplesByGuid, getGenesById, getUser,
-  getAnalysisGroupsGroupedByProjectGuid, getSavedVariantsGroupedByProjectGuid,
+  getAnalysisGroupsGroupedByProjectGuid, getSavedVariantsByGuid,
 } from 'redux/selectors'
 
 import {
@@ -55,8 +55,6 @@ export const getProject = createSelector(
 const selectEntitiesForProjectGuid = (entitiesGroupedByProjectGuid, projectGuid) => entitiesGroupedByProjectGuid[projectGuid] || {}
 export const getProjectFamiliesByGuid = createSelector(getFamiliesGroupedByProjectGuid, getProjectGuid, selectEntitiesForProjectGuid)
 export const getProjectAnalysisGroupsByGuid = createSelector(getAnalysisGroupsGroupedByProjectGuid, getProjectGuid, selectEntitiesForProjectGuid)
-export const getProjectSavedVariantsByGuid = createSelector(getSavedVariantsGroupedByProjectGuid, getProjectGuid, selectEntitiesForProjectGuid)
-
 
 export const getProjectAnalysisGroupFamiliesByGuid = createSelector(
   getProjectFamiliesByGuid,
@@ -107,23 +105,27 @@ const getSavedVariantHideKnownGeneForPhenotype = state => state.savedVariantTabl
 export const getSavedVariantCurrentPage = state => state.savedVariantTableState.page || 1
 export const getSavedVariantRecordsPerPage = state => state.savedVariantTableState.recordsPerPage || 25
 
-
 export const getProjectSavedVariants = createSelector(
-  getProjectSavedVariantsByGuid,
+  getSavedVariantsByGuid,
   (state, props) => props.match.params,
+  getProjectFamiliesByGuid,
   getProjectAnalysisGroupsByGuid,
-  (projectSavedVariants, { tag, familyGuid, analysisGroupGuid, variantGuid }, projectAnalysisGroupsByGuid) => {
-    let variants = Object.values(projectSavedVariants)
+  (savedVariants, { tag, familyGuid, analysisGroupGuid, variantGuid }, projectFamiliesByGuid, projectAnalysisGroupsByGuid) => {
+    let variants = Object.values(savedVariants)
     if (variantGuid) {
       return variants.filter(o => o.variantGuid === variantGuid)
     }
+
     if (analysisGroupGuid && projectAnalysisGroupsByGuid[analysisGroupGuid]) {
       const analysisGroupFamilyGuids = projectAnalysisGroupsByGuid[analysisGroupGuid].familyGuids
       variants = variants.filter(o => o.familyGuids.some(fg => analysisGroupFamilyGuids.includes(fg)))
     }
-    if (familyGuid) {
+    else if (familyGuid) {
       variants = variants.filter(o => o.familyGuids.includes(familyGuid))
+    } else {
+      variants = variants.filter(o => o.familyGuids.some(fg => Object.keys(projectFamiliesByGuid).includes(fg)))
     }
+
     if (tag) {
       if (tag === NOTE_TAG_NAME) {
         variants = variants.filter(o => o.notes.length)
@@ -131,6 +133,7 @@ export const getProjectSavedVariants = createSelector(
         variants = variants.filter(o => o.tags.some(t => t.name === tag))
       }
     }
+
     return variants
   },
 )

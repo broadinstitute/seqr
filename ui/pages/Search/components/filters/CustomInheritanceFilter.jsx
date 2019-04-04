@@ -3,13 +3,13 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Table, Header } from 'semantic-ui-react'
 
-import { getFamiliesByGuid, getIndividualsByGuid } from 'redux/selectors'
+import { getIndividualsByGuid } from 'redux/selectors'
 import { Select } from 'shared/components/form/Inputs'
 import PedigreeIcon from 'shared/components/icons/PedigreeIcon'
 import PedigreeImagePanel from 'shared/components/panel/view-pedigree-image/PedigreeImagePanel'
 import { AFFECTED, UNAFFECTED, AFFECTED_OPTIONS } from 'shared/utils/constants'
 import { NUM_ALT_OPTIONS } from '../../constants'
-import { getProjectsFamiliesFieldInput } from '../../selectors'
+import { getSingleInputFamily } from '../../selectors'
 
 
 const CUSTOM_FILTERS = [
@@ -17,12 +17,11 @@ const CUSTOM_FILTERS = [
   { filterField: 'genotype', options: NUM_ALT_OPTIONS, placeholder: 'Allele count' },
 ]
 
-const CustomInheritanceFilter = ({ value, onChange, projectFamilies, familiesByGuid, individualsByGuid }) => {
-  if (projectFamilies.length !== 1 || projectFamilies[0].familyGuids.length !== 1) {
+const CustomInheritanceFilter = ({ value, onChange, family, individualsByGuid }) => {
+  if (!family) {
     return <Header disabled content="Custom inheritance search is disabled for multi-family searches" />
   }
 
-  const family = familiesByGuid[projectFamilies[0].familyGuids[0]]
   const individuals = family.individualGuids.map(individualGuid => individualsByGuid[individualGuid])
 
   const parentGenotypes = {}
@@ -86,16 +85,14 @@ const CustomInheritanceFilter = ({ value, onChange, projectFamilies, familiesByG
 
 
 const mapStateToProps = state => ({
-  projectFamilies: getProjectsFamiliesFieldInput(state),
-  familiesByGuid: getFamiliesByGuid(state),
+  family: getSingleInputFamily(state),
   individualsByGuid: getIndividualsByGuid(state),
 })
 
 CustomInheritanceFilter.propTypes = {
   value: PropTypes.object,
   onChange: PropTypes.func,
-  projectFamilies: PropTypes.array,
-  familiesByGuid: PropTypes.object,
+  family: PropTypes.object,
   individualsByGuid: PropTypes.object,
 }
 
