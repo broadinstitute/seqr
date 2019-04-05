@@ -349,10 +349,6 @@ def get_json_for_saved_variants(saved_variants, add_tags=False, add_details=Fals
         })
         return variant_json
 
-    nested_fields = [
-        {'fields': ('project', 'guid'), 'value': project.guid if project else None},
-    ]
-
     prefetch_related_objects(saved_variants, 'family')
     if not project:
         prefetch_related_objects(saved_variants, 'project')
@@ -360,7 +356,7 @@ def get_json_for_saved_variants(saved_variants, add_tags=False, add_details=Fals
         prefetch_related_objects(saved_variants, 'varianttag_set__variant_tag_type', 'varianttag_set__created_by',
                                  'variantnote_set__created_by', 'variantfunctionaldata_set__created_by')
 
-    return _get_json_for_models(saved_variants, nested_fields=nested_fields, guid_key='variantGuid', process_result=_process_result)
+    return _get_json_for_models(saved_variants, guid_key='variantGuid', process_result=_process_result)
 
 
 def get_json_for_saved_variant(saved_variant, **kwargs):
@@ -561,7 +557,7 @@ def get_json_for_genes(genes, user=None, add_dbnsfp=False, add_omim=False, add_c
         if add_notes:
             result['notes'] = gene_notes_json.get(result['geneId'], [])
         if add_expression:
-            result['expression'] = gene.geneexpression.expression_values if hasattr(gene, 'geneexpression') else None
+            result['expression'] = {ge.tissue_type: ge.expression_values for ge in gene.geneexpression_set.all()}
 
     if add_dbnsfp:
         prefetch_related_objects(genes, 'dbnsfpgene_set')
@@ -570,9 +566,11 @@ def get_json_for_genes(genes, user=None, add_dbnsfp=False, add_omim=False, add_c
     if add_constraints:
         prefetch_related_objects(genes, Prefetch('geneconstraint_set', queryset=GeneConstraint.objects.order_by('-mis_z', '-pLI')))
     if add_primate_ai:
-        prefetch_related_objects(genes, 'mgi_set')
+        prefetch_related_objects(genes, 'primateai_set')
     if add_mgi:
         prefetch_related_objects(genes, 'mgi_set')
+    if add_expression:
+        prefetch_related_objects(genes, 'geneexpression_set')
 
     return _get_json_for_models(genes, process_result=_process_result)
 

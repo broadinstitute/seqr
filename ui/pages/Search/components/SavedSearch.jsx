@@ -14,6 +14,7 @@ import {
   getSavedSearchesIsLoading,
   getSavedSearchesLoadingError,
   getCurrentSavedSearch,
+  getSavedSearchOptions,
 } from '../selectors'
 
 const SEARCH_NAME_FIELD = { name: 'name', label: 'Search Name', validate: validators.required }
@@ -61,25 +62,21 @@ const mapDispatchToProps = {
 export const SaveSearchButton = connect(mapStateToProps, mapDispatchToProps)(SaveSearch)
 
 
-const SavedSearches = ({ savedSearchesByGuid, selectedSearch, load, loading, errorMessage, onChange }) => {
-  const savedSearches = Object.values(savedSearchesByGuid)
-  const options = savedSearches.map(search => ({ text: search.name, value: search.savedSearchGuid }))
-  return (
-    <DataLoader load={load} errorMessage={errorMessage} loading={false} content>
-      <Dropdown
-        selection
-        inline
-        loading={loading}
-        placeholder="Select a Saved Search"
-        value={(selectedSearch || {}).savedSearchGuid}
-        onChange={val => onChange(savedSearchesByGuid[val].search)}
-        options={options}
-      />
-    </DataLoader>
-  )
-}
+const SavedSearches = ({ options, savedSearchesByGuid, selectedSearch, load, loading, errorMessage, onChange }) =>
+  <DataLoader load={load} errorMessage={errorMessage} loading={false} content>
+    <Dropdown
+      selection
+      inline
+      loading={loading}
+      placeholder="Select a Saved Search"
+      value={(selectedSearch || {}).savedSearchGuid}
+      onChange={val => onChange(savedSearchesByGuid[val].search)}
+      options={options}
+    />
+  </DataLoader>
 
 SavedSearches.propTypes = {
+  options: PropTypes.array,
   savedSearchesByGuid: PropTypes.object,
   selectedSearch: PropTypes.object,
   loading: PropTypes.bool,
@@ -89,6 +86,7 @@ SavedSearches.propTypes = {
 }
 
 const mapDropdownStateToProps = state => ({
+  options: getSavedSearchOptions(state),
   savedSearchesByGuid: getSavedSearchesByGuid(state),
   selectedSearch: getCurrentSavedSearch(state),
   loading: getSavedSearchesIsLoading(state),

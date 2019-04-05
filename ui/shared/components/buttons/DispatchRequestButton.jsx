@@ -42,8 +42,8 @@ class DispatchRequestButton extends React.PureComponent {
     const { buttonContainer, buttonContent, confirmDialog, children, onSuccess, onSubmit, ...props } = this.props
     return React.cloneElement(buttonContainer || <span />, { children: [
       children ?
-        React.cloneElement(children, { onClick: this.handleButtonClick }) :
-        <ButtonLink onClick={this.handleButtonClick} content={buttonContent} {...props} />,
+        React.cloneElement(children, { onClick: this.handleButtonClick, key: 'button' }) :
+        <ButtonLink key="button" onClick={this.handleButtonClick} content={buttonContent} {...props} />,
       <RequestStatus key="status" status={this.state.requestStatus} errorMessage={this.state.requestErrorMessage} />,
       <Confirm
         key="confirm"

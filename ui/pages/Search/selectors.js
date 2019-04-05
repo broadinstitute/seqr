@@ -1,4 +1,4 @@
-import { createSelector } from 'reselect'
+import { createSelector, createSelectorCreator, defaultMemoize } from 'reselect'
 import { formValueSelector } from 'redux-form'
 
 import {
@@ -7,6 +7,7 @@ import {
   getFamiliesGroupedByProjectGuid,
   getAnalysisGroupsByGuid,
   getLocusListsByGuid,
+  getAnalysisGroupsGroupedByProjectGuid,
 } from 'redux/selectors'
 import { SEARCH_FORM_NAME } from './constants'
 
@@ -29,46 +30,53 @@ export const getCurrentSearchParams = createSelector(
   (searchesByHash, searchHash) => searchesByHash[searchHash],
 )
 
-export const getLoadedIntitialSearch = createSelector(
+export const getProjectFamilies = (params, familiesByGuid, familiesByProjectGuid, analysisGroupByGuid) => {
+  if (params.projectGuid && params.familyGuids) {
+    return params
+  }
+
+  if (params.projectGuid) {
+    const loadedProjectFamilies = familiesByProjectGuid[params.projectGuid]
+    return {
+      projectGuid: params.projectGuid,
+      familyGuids: loadedProjectFamilies ? Object.keys(loadedProjectFamilies) : null,
+    }
+  }
+  else if (params.analysisGroupGuid) {
+    const analysisGroup = analysisGroupByGuid[params.analysisGroupGuid]
+    return analysisGroup ? {
+      projectGuid: analysisGroup.projectGuid,
+      familyGuids: analysisGroup.familyGuids,
+    } : { analysisGroupGuid: params.analysisGroupGuid }
+  } else if (params.familyGuid || params.familyGuids) {
+    const familyGuid = params.familyGuid || params.familyGuids[0]
+    return {
+      projectGuid: (familiesByGuid[familyGuid] || {}).projectGuid,
+      familyGuids: [familyGuid],
+    }
+  }
+  return null
+}
+
+export const getIntitialSearch = createSelector(
   (state, props) => props.match.params,
   getCurrentSearchParams,
-  getProjectsByGuid,
   getFamiliesByGuid,
   getFamiliesGroupedByProjectGuid,
   getAnalysisGroupsByGuid,
-  (urlParams, searchParams, projectsByGuid, familiesByGuid, familiesByProjectGuid, analysisGroupByGuid) => {
+  (urlParams, searchParams, familiesByGuid, familiesByProjectGuid, analysisGroupByGuid) => {
 
     if (searchParams) {
-      return searchParams.projectFamilies.every(
-        ({ projectGuid }) => projectsByGuid[projectGuid],
-      ) ? searchParams : null
+      return searchParams
     }
 
-    let projectFamilies
-    if (urlParams.projectGuid && familiesByProjectGuid[urlParams.projectGuid]) {
-      projectFamilies = [{
-        projectGuid: urlParams.projectGuid,
-        familyGuids: Object.keys(familiesByProjectGuid[urlParams.projectGuid]),
-      }]
-    }
-    else if (urlParams.familyGuid && familiesByGuid[urlParams.familyGuid]) {
-      projectFamilies = [{
-        projectGuid: familiesByGuid[urlParams.familyGuid].projectGuid,
-        familyGuids: [urlParams.familyGuid],
-      }]
-    }
-    else if (urlParams.analysisGroupGuid && analysisGroupByGuid[urlParams.analysisGroupGuid]) {
-      projectFamilies = [{
-        projectGuid: analysisGroupByGuid[urlParams.analysisGroupGuid].projectGuid,
-        familyGuids: analysisGroupByGuid[urlParams.analysisGroupGuid].familyGuids,
-      }]
-    }
+    const projectFamilies = getProjectFamilies(urlParams, familiesByGuid, familiesByProjectGuid, analysisGroupByGuid)
 
-    return projectFamilies ? { projectFamilies } : null
+    return projectFamilies ? { projectFamilies: [projectFamilies] } : null
   },
 )
 
-export const getProjectsFamiliesFieldInput = state =>
+const getProjectsFamiliesFieldInput = state =>
   formValueSelector(SEARCH_FORM_NAME)(state, 'projectFamilies')
 
 export const getSearchInput = state =>
@@ -79,6 +87,31 @@ export const getCurrentSavedSearch = createSelector(
   getSavedSearchesByGuid,
   (search, savedSearchesByGuid) =>
     Object.values(savedSearchesByGuid).find(savedSearch => savedSearch.search === search),
+)
+
+const createListEqualSelector = createSelectorCreator(
+  defaultMemoize,
+  (a, b) => (
+    Array.isArray(a) ? (a.length === b.length && Object.entries(a).every(([i, val]) => val === b[i])) : a === b
+  ),
+)
+
+const getSavedSearches = createSelector(
+  getSavedSearchesByGuid,
+  savedSearchesByGuid => Object.values(savedSearchesByGuid),
+)
+
+const createSavedSearchesSelector = createSelectorCreator(
+  defaultMemoize,
+  (a, b) => (
+    a.length === b.length && Object.entries(a).every(
+      ([i, val]) => val.savedSearchGuid === b[i].savedSearchGuid,
+    )),
+)
+
+export const getSavedSearchOptions = createSavedSearchesSelector(
+  getSavedSearches,
+  savedSearches => savedSearches.map(search => ({ text: search.name, value: search.savedSearchGuid })),
 )
 
 export const getTotalVariantsCount = createSelector(
@@ -94,14 +127,50 @@ export const getSearchedVariantExportConfig = createSelector(
   }],
 )
 
-export const getSearchedProjectsLocusLists = createSelector(
+const getProjectsInput = createSelector(
   getProjectsFamiliesFieldInput,
+  projectFamilies => (projectFamilies || []).map(({ projectGuid }) => projectGuid),
+)
+
+export const getSearchedProjectsLocusLists = createListEqualSelector(
+  getProjectsInput,
   getProjectsByGuid,
   getLocusListsByGuid,
-  (projectFamilies, projectsByGuid, locusListsByGuid) => {
-    const locusListGuids = [...new Set(projectFamilies.reduce((acc, { projectGuid }) => (
+  (projectGuids, projectsByGuid, locusListsByGuid) => {
+    const locusListGuids = [...new Set((projectGuids || []).reduce((acc, projectGuid) => (
       projectsByGuid[projectGuid] ? [...acc, ...projectsByGuid[projectGuid].locusListGuids] : acc), [],
     ))]
     return locusListGuids.map(locusListGuid => locusListsByGuid[locusListGuid])
   },
+)
+
+const getSingleFamlilyGuidInput = createSelector(
+  getProjectsFamiliesFieldInput,
+  projectFamilies => (
+    (projectFamilies && projectFamilies.length === 1 && (projectFamilies[0].familyGuids || []).length === 1) ?
+      projectFamilies[0].familyGuids[0] : null
+  ),
+)
+
+export const getSingleInputFamily = createSelector(
+  getSingleFamlilyGuidInput,
+  getFamiliesByGuid,
+  (familyGuid, familiesByGuid) => familiesByGuid[familyGuid],
+)
+
+export const getFamilyOptions = createSelector(
+  getFamiliesGroupedByProjectGuid,
+  (state, props) => props.value.projectGuid,
+  (familesGroupedByProjectGuid, projectGuid) => Object.values(familesGroupedByProjectGuid[projectGuid] || {}).map(
+    family => ({ value: family.familyGuid, text: family.displayName }),
+  ),
+)
+
+export const getAnalysisGroupOptions = createSelector(
+  getAnalysisGroupsGroupedByProjectGuid,
+  (state, props) => props.value.projectGuid,
+  (analysisGroupsGroupedByProjectGuid, projectGuid) =>
+    Object.values(analysisGroupsGroupedByProjectGuid[projectGuid] || {}).map(
+      group => ({ value: group.analysisGroupGuid, text: group.name }),
+    ),
 )

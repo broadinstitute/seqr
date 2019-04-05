@@ -42,7 +42,7 @@ def saved_variant_data(request, project_guid, variant_guid=None):
                                                  user=request.user, individual_guids_by_id=individual_guids_by_id)
     variants = {variant['variantGuid']: variant for variant in saved_variants if variant['notes'] or variant['tags']}
     genes = _saved_variant_genes(variants.values())
-    _add_locus_lists(project, variants.values(), genes)
+    _add_locus_lists([project], variants.values(), genes)
 
     return create_json_response({
         'savedVariantsByGuid': variants,
@@ -229,8 +229,10 @@ def _saved_variant_genes(variants):
     return genes
 
 
-def _add_locus_lists(project, variants, genes):
-    locus_lists = get_project_locus_list_models(project)
+def _add_locus_lists(projects, variants, genes):
+    locus_lists = set()
+    for project in projects:
+        locus_lists.update(get_project_locus_list_models(project))
     for variant in variants:
         variant['locusListGuids'] = []
 

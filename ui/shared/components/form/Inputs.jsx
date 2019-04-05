@@ -14,6 +14,7 @@ export class BaseSemanticInput extends React.Component {
   static propTypes = {
     onChange: PropTypes.func,
     inputType: PropTypes.string.isRequired,
+    options: PropTypes.array,
   }
 
   handleChange = (e, data) => {
@@ -23,6 +24,23 @@ export class BaseSemanticInput extends React.Component {
   render() {
     const { inputType, ...props } = this.props
     return createElement(Form[inputType], { ...props, onChange: this.handleChange, onBlur: null })
+  }
+
+  shouldComponentUpdate(nextProps, nextState) {
+    if (nextProps.options) {
+      if (nextProps.options.length !== (this.props.options || []).length) {
+        return true
+      }
+      Object.entries(nextProps.options).forEach(([i, opt]) => { //eslint-disable-line consistent-return
+        if (['value', 'text', 'color', 'disabled', 'description'].some(k => opt[k] !== this.props.options[i][k])) {
+          return true
+        }
+      })
+    }
+    if (Object.keys(nextProps).filter(k => k !== 'onChange' && k !== 'options').some(k => nextProps[k] !== this.props[k])) {
+      return true
+    }
+    return nextState !== this.state
   }
 }
 
@@ -283,7 +301,7 @@ BooleanCheckbox.propTypes = {
   onChange: PropTypes.func,
 }
 
-export const InlineToggle = styled(BooleanCheckbox).attrs({ toggle: true, inline: true })`
+export const InlineToggle = styled(({ divided, ...props }) => <BooleanCheckbox {...props} toggle inline />)`
   padding-right: 10px;
   
   ${props => (props.divided ?

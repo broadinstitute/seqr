@@ -2,13 +2,13 @@ import json
 import jmespath
 from collections import defaultdict
 from django.contrib.auth.decorators import login_required
-from django.db.models import Q
+from django.db.models import Q, prefetch_related_objects
 from django.views.decorators.csrf import csrf_exempt
 from elasticsearch.exceptions import ConnectionTimeout
 
 from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults
 from seqr.utils.es_utils import get_es_variants, get_single_es_variant, InvalidIndexException, XPOS_SORT_KEY, \
-    PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
+    PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY, has_nested_genotypes_index
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.saved_variant_api import _saved_variant_genes, _add_locus_lists
 from seqr.views.pages.project_page import get_project_variant_tag_types, get_project_child_entities
@@ -64,8 +64,10 @@ def query_variants_handler(request, search_hash):
             sort=sort
         )
 
-        # TODO handle multiple projects
-        results_model.families.set(Family.objects.filter(guid__in=project_families[0]['familyGuids']))
+        all_families = set()
+        for project_family in project_families:
+            all_families.update(project_family['familyGuids'])
+        results_model.families.set(Family.objects.filter(guid__in=all_families))
 
     elif results_model.sort != sort:
         families = results_model.families.all()
@@ -86,7 +88,7 @@ def query_variants_handler(request, search_hash):
     except ConnectionTimeout as e:
         return create_json_response({}, status=504, reason='Query Time Out')
 
-    response = _process_variants(variants, results_model.families)
+    response = _process_variants(variants, results_model.families.all())
     response['search'] = _get_search_context(results_model)
 
     return create_json_response(response)
@@ -108,10 +110,11 @@ def query_single_variant_handler(request, variant_id):
 
 
 def _process_variants(variants, families):
+    prefetch_related_objects(families, 'project')
     genes = _saved_variant_genes(variants)
     # TODO add locus lists on the client side (?)
-    # TODO handle multiple projects
-    _add_locus_lists(families.first().project, variants, genes)
+    projects = {family.project for family in families}
+    _add_locus_lists(projects, variants, genes)
     saved_variants_by_guid = _get_saved_variants(variants)
 
     return {
@@ -245,18 +248,6 @@ def search_context_handler(request):
     response = _get_saved_searches(request.user)
     project_guid = request.GET.get('projectGuid')
 
-    search_hash = request.GET.get('searchHash')
-    if search_hash:
-        results_model = VariantSearchResults.objects.filter(search_hash=search_hash).first()
-        if not results_model:
-            return create_json_response({}, status=400, reason='Invalid search hash: {}'.format(search_hash))
-
-        search_context = _get_search_context(results_model)
-        response['searchesByHash'] = {search_hash: search_context}
-
-        # TODO handle multiple projects
-        project_guid = search_context['projectFamilies'][0]['projectGuid']
-
     if project_guid:
         project = Project.objects.get(guid=project_guid)
     elif request.GET.get('familyGuid'):
@@ -280,6 +271,7 @@ def _get_project_details(project, user):
 
     project_json.update({
         'hasGeneSearch': True,
+        'hasNewSearch': has_nested_genotypes_index(samples_by_guid),
         'locusListGuids': locus_lists_by_guid.keys(),
         'variantTagTypes': get_project_variant_tag_types(project),
         'variantFunctionalTagTypes': get_json_for_variant_functional_data_tag_types(),
