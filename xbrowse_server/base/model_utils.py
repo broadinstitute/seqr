@@ -36,7 +36,6 @@ XBROWSE_TO_SEQR_FIELD_MAPPING = {
     "Project": {
         "project_name": "name",
         'project_id': 'deprecated_project_id',
-        'last_accessed_date': 'deprecated_last_accessed_date',
     },
     "Family": {
         "family_name": "display_name",

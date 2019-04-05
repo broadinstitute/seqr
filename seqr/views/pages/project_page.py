@@ -11,6 +11,7 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import connection
 from django.db.models import Q, Count
+from django.utils import timezone
 
 from settings import SEQR_ID_TO_MME_ID_MAP
 from seqr.models import Family, Individual, _slugify, VariantTagType, VariantTag, VariantFunctionalData, VariantNote, AnalysisGroup
@@ -19,6 +20,7 @@ from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.individual_api import export_individuals
 from seqr.views.apis.locus_list_api import get_sorted_project_locus_lists
 from seqr.views.utils.json_utils import create_json_response
+from seqr.views.utils.json_to_orm_utils import update_project_from_json
 from seqr.views.utils.orm_to_json_utils import \
     _get_json_for_project, get_json_for_sample_dict, _get_json_for_families, _get_json_for_individuals, \
     get_json_for_saved_variants, get_json_for_analysis_groups, get_json_for_variant_functional_data_tag_types
@@ -47,6 +49,7 @@ def project_page_data(request, project_guid):
         project_guid (string): GUID of the Project to retrieve data for.
     """
     project = get_project_and_check_permissions(project_guid, request.user)
+    update_project_from_json(project, {'last_accessed_date': timezone.now()})
 
     families_by_guid, individuals_by_guid, samples_by_guid, analysis_groups_by_guid, locus_lists_by_guid = get_project_child_entities(project, request.user)
 

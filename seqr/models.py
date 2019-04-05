@@ -108,7 +108,6 @@ class Project(ModelWithGUID):
 
     genome_version = models.CharField(max_length=5, choices=GENOME_VERSION_CHOICES, default=GENOME_VERSION_GRCh37)
 
-    #primary_investigator = models.ForeignKey(User, null=True, blank=True, related_name='+')
     is_phenotips_enabled = models.BooleanField(default=False)
     phenotips_user_id = models.CharField(max_length=100, null=True, blank=True, db_index=True)
 
@@ -122,9 +121,10 @@ class Project(ModelWithGUID):
 
     disable_staff_access = models.BooleanField(default=False)
 
+    last_accessed_date = models.DateTimeField(null=True, blank=True, db_index=True)
+
     # legacy
     custom_reference_populations = models.ManyToManyField('base.ReferencePopulation', blank=True, related_name='+')
-    deprecated_last_accessed_date = models.DateTimeField(null=True, blank=True, db_index=True)
     deprecated_project_id = models.TextField(default="", blank=True, db_index=True)  # replace with model's 'id' field
 
     def __unicode__(self):
@@ -178,7 +178,7 @@ class Project(ModelWithGUID):
 
         json_fields = [
             'name', 'description', 'created_date', 'last_modified_date', 'genome_version', 'is_phenotips_enabled',
-            'phenotips_user_id', 'deprecated_project_id', 'deprecated_last_accessed_date',
+            'phenotips_user_id', 'deprecated_project_id', 'last_accessed_date',
             'is_mme_enabled', 'mme_primary_data_owner', 'guid'
         ]
 
