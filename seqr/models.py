@@ -126,6 +126,7 @@ class Project(ModelWithGUID):
     # legacy
     custom_reference_populations = models.ManyToManyField('base.ReferencePopulation', blank=True, related_name='+')
     deprecated_project_id = models.TextField(default="", blank=True, db_index=True)  # replace with model's 'id' field
+    has_new_search = models.BooleanField(default=False)
 
     def __unicode__(self):
         return self.name.strip()
@@ -178,7 +179,7 @@ class Project(ModelWithGUID):
 
         json_fields = [
             'name', 'description', 'created_date', 'last_modified_date', 'genome_version', 'is_phenotips_enabled',
-            'phenotips_user_id', 'deprecated_project_id', 'last_accessed_date',
+            'phenotips_user_id', 'deprecated_project_id', 'last_accessed_date', 'has_new_search',
             'is_mme_enabled', 'mme_primary_data_owner', 'guid'
         ]
 
