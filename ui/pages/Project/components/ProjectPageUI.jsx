@@ -26,7 +26,7 @@ import {
 import ProjectOverview from './ProjectOverview'
 import AnalysisGroups from './AnalysisGroups'
 import { UpdateAnalysisGroupButton } from './AnalysisGroupButtons'
-import ProjectCollaborators from './ProjectCollaborators'
+import ProjectCollaborators, { AddProjectCollaboratorButton } from './ProjectCollaborators'
 import { GeneLists, AddGeneListsButton } from './GeneLists'
 import FamilyTable from './FamilyTable/FamilyTable'
 import VariantTags from './VariantTags'
@@ -129,14 +129,7 @@ const ProjectPageUI = (props) => {
           </ProjectSection>
         </Grid.Column>
         <Grid.Column width={4}>
-          <ProjectSection
-            label="Collaborators"
-            editButton={
-              <a key="edit" href={`/project/${props.project.deprecatedProjectId}/collaborators`}>
-                Edit Collaborators
-              </a>
-            }
-          >
+          <ProjectSection label="Collaborators" editButton={<AddProjectCollaboratorButton />}>
             <ProjectCollaborators />
           </ProjectSection>
         </Grid.Column>

@@ -190,6 +190,10 @@ export const updateLocusLists = (values) => {
   }
 }
 
+export const updateCollaborator = (values) => {
+  return updateEntity(values, RECEIVE_DATA, null, 'username', null, state => `/api/project/${state.currentProjectGuid}/collaborators`)
+}
+
 export const updateAnalysisGroup = (values) => {
   return updateEntity(values, RECEIVE_DATA, `/api/project/${values.projectGuid}/analysis_groups`, 'analysisGroupGuid')
 }

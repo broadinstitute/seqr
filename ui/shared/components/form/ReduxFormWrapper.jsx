@@ -19,7 +19,7 @@ const StyledForm = styled(({ hasSubmitButton, inline, ...props }) => <Form {...p
   padding-bottom: ${props => props.hasSubmitButton && '50px'};
   
   .field.inline {
-    display: inline;
+    display: inline-block;
     padding-right: 1em;
   }
   
