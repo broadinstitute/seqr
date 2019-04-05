@@ -9,7 +9,7 @@ from seqr.models import Sample
 from seqr.utils.es_utils import get_es_client, is_nested_genotype_index, VARIANT_DOC_TYPE
 from seqr.utils.file_utils import does_file_exist, file_iter, get_file_stats
 from seqr.views.utils.file_utils import load_uploaded_file, parse_file
-from seqr.views.utils.json_to_orm_utils import update_model_from_json
+from seqr.views.utils.json_to_orm_utils import update_model_from_json, update_project_from_json
 from seqr.views.apis.samples_api import match_sample_ids_to_sample_records
 
 logger = logging.getLogger(__name__)
@@ -63,13 +63,15 @@ def add_dataset(
     }
 
     if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
-        all_samples = _get_elasticsearch_index_samples(elasticsearch_index)
+        all_samples, is_nested_genotype_index = _get_elasticsearch_index_samples(elasticsearch_index)
         update_kwargs.update({
             'sample_ids': all_samples,
             'sample_id_to_individual_id_mapping': _load_mapping_file(mapping_file_id, mapping_file_path),
             'sample_dataset_path_mapping': {sample_id: dataset_path for sample_id in all_samples},
             'missing_sample_exception_template': 'Matches not found for ES sample ids: {unmatched_samples}. Uploading a mapping file for these samples, or select the "Ignore extra samples in callset" checkbox to ignore.'
         })
+        if is_nested_genotype_index:
+            update_project_from_json(project, {'has_new_search': True})
 
     elif dataset_type == Sample.DATASET_TYPE_READ_ALIGNMENTS:
         sample_id_to_individual_id_mapping = {}
@@ -180,7 +182,7 @@ def _get_elasticsearch_index_samples(elasticsearch_index):
         s = s.params(size=0)
         s.aggs.bucket('sample_ids', elasticsearch_dsl.A('terms', field='samples_num_alt_1', size=10000))
         response = s.execute()
-        return [agg['key'] for agg in response.aggregations.sample_ids.buckets]
+        return [agg['key'] for agg in response.aggregations.sample_ids.buckets], True
 
     sample_field_suffix = '_num_alt'
     index = elasticsearch_dsl.Index('{}*'.format(elasticsearch_index), using=es_client)
@@ -196,7 +198,7 @@ def _get_elasticsearch_index_samples(elasticsearch_index):
         samples.update([key.split(sample_field_suffix)[0] for key in index.get('mappings', {}).get(VARIANT_DOC_TYPE, {}).keys()])
     if not samples:
         raise Exception('No sample fields found for index "{}"'.format(elasticsearch_index))
-    return samples
+    return samples, False
 
 
 def _validate_inputs(dataset_type, sample_type, dataset_path, project, elasticsearch_index, mapping_file_id):

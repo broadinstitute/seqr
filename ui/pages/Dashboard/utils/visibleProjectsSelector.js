@@ -1,8 +1,7 @@
 import { createSelector } from 'reselect'
 
 import { getProjectsByGuid } from '../../../redux/selectors'
-import { getProjectFilter, getProjectSortColumn, getProjectSortDirection } from '../reducers'
-import { computeSortedProjectGuids } from './projectSort'
+import { getProjectFilter } from '../reducers'
 import { createProjectFilter } from './projectFilter'
 
 
@@ -12,30 +11,12 @@ import { createProjectFilter } from './projectFilter'
  *
  * @param state {object} global Redux state
  */
-export const getVisibleProjectGuids = createSelector(
+export const getVisibleProjects = createSelector(
   getProjectsByGuid,
   getProjectFilter,
   (projectsByGuid, projectFilter) => {
     const filterFunc = createProjectFilter(projectsByGuid, projectFilter)
     const visibleProjectGuids = Object.keys(projectsByGuid).filter(filterFunc)
-    return visibleProjectGuids
-  },
-)
-
-/**
- * function that returns an array of currently-visible project objects, sorted according to
- * current user-selected values of projectSortColumn and projectSortDirection.
- *
- * @param state {object} global Redux state
- */
-export const getVisibleProjectsInSortedOrder = createSelector(
-  getVisibleProjectGuids,
-  getProjectsByGuid,
-  getProjectSortColumn,
-  getProjectSortDirection,
-  (visibleProjectGuids, projectsByGuid, projectSortColumn, projectSortDirection) => {
-    const sortedProjectGuids = computeSortedProjectGuids(visibleProjectGuids, projectsByGuid, projectSortColumn, projectSortDirection)
-    const sortedProjects = sortedProjectGuids.map(projectGuid => projectsByGuid[projectGuid])
-    return sortedProjects
+    return visibleProjectGuids.map(projectGuid => projectsByGuid[projectGuid])
   },
 )

@@ -1,4 +1,5 @@
 import mock
+from datetime import datetime
 from django.test import TestCase
 from django.urls.base import reverse
 
@@ -59,7 +60,10 @@ class ProjectPageTest(TestCase):
             {'collaborators', 'locusListGuids', 'variantTagTypes', 'variantFunctionalTagTypes', 'hasGeneSearch',
              'detailsLoaded', 'projectGuid', 'projectCategoryGuids', 'canEdit', 'name', 'description', 'createdDate',
              'lastModifiedDate', 'isPhenotipsEnabled', 'phenotipsUserId', 'deprecatedProjectId', 'hasNewSearch',
-             'deprecatedLastAccessedDate', 'isMmeEnabled', 'mmePrimaryDataOwner', 'genomeVersion', 'discoveryTags'}
+             'lastAccessedDate', 'isMmeEnabled', 'mmePrimaryDataOwner', 'genomeVersion', 'discoveryTags'}
+        )
+        self.assertEqual(
+            response_json['projectsByGuid'][PROJECT_GUID]['lastAccessedDate'][:10], datetime.today().strftime('%Y-%m-%d')
         )
         self.assertSetEqual(
             set(response_json['familiesByGuid'].values()[0].keys()),

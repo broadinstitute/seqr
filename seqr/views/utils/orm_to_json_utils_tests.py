@@ -30,7 +30,7 @@ class JSONUtilsTest(TestCase):
         self.assertSetEqual(
             set(json.keys()),
             {'projectGuid', 'projectCategoryGuids', 'canEdit', 'name', 'description', 'createdDate', 'lastModifiedDate',
-             'isPhenotipsEnabled', 'phenotipsUserId', 'deprecatedProjectId', 'deprecatedLastAccessedDate',
+             'isPhenotipsEnabled', 'phenotipsUserId', 'deprecatedProjectId', 'lastAccessedDate', 'hasNewSearch',
              'isMmeEnabled', 'mmePrimaryDataOwner', 'genomeVersion'}
         )
 

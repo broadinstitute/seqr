@@ -17,7 +17,7 @@ import CreateProjectButton from './CreateProjectButton'
 import FilterSelector from './FilterSelector'
 import CategoryIndicator from './CategoryIndicator'
 import ProjectEllipsisMenu from './ProjectEllipsisMenu'
-import { getVisibleProjectsInSortedOrder } from '../utils/visibleProjectsSelector'
+import { getVisibleProjects } from '../utils/visibleProjectsSelector'
 
 
 const RightAligned = styled.span`
@@ -133,11 +133,11 @@ const COLUMNS = [
 
 const STAFF_COLUMNS = [...COLUMNS]
 STAFF_COLUMNS.splice(3, 0, {
-  name: 'deprecatedLastAccessedDate',
+  name: 'lastAccessedDate',
   width: 2,
   content: 'Last Accessed',
   textAlign: 'right',
-  format: project => new Timeago().format(project.deprecatedLastAccessedDate),
+  format: project => (project.lastAccessedDate ? new Timeago().format(project.lastAccessedDate) : ''),
 })
 
 const ProjectsTable = ({ visibleProjects, loading, user }) =>
@@ -174,7 +174,7 @@ ProjectsTable.propTypes = {
 export { ProjectsTable as ProjectsTableComponent }
 
 const mapStateToProps = state => ({
-  visibleProjects: getVisibleProjectsInSortedOrder(state),
+  visibleProjects: getVisibleProjects(state),
   loading: getProjectsIsLoading(state),
   user: getUser(state),
 })

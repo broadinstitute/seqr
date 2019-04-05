@@ -16,7 +16,7 @@
 	"phenotips_user_id": "1kg",
 	"is_mme_enabled": false,
 	"mme_primary_data_owner": "PI",
-	"deprecated_last_accessed_date": "2017-09-15T18:15:50.827Z",
+	"last_accessed_date": "2017-09-15T18:15:50.827Z",
 	"deprecated_project_id": "1kg",
 	"custom_reference_populations": []
     }
@@ -38,7 +38,7 @@
 	"phenotips_user_id": "",
 	"is_mme_enabled": false,
 	"mme_primary_data_owner": "",
-	"deprecated_last_accessed_date": "2017-09-15T18:15:50.827Z",
+	"last_accessed_date": "2017-09-15T18:15:50.827Z",
 	"deprecated_project_id": "",
 	"custom_reference_populations": []
     }
@@ -60,7 +60,7 @@
 	"phenotips_user_id": "",
 	"is_mme_enabled": false,
 	"mme_primary_data_owner": "",
-	"deprecated_last_accessed_date": "2017-09-15T18:15:50.827Z",
+	"last_accessed_date": "2017-09-15T18:15:50.827Z",
 	"deprecated_project_id": "",
 	"custom_reference_populations": []
     }
