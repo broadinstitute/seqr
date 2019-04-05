@@ -8,6 +8,7 @@ import { getProject } from 'pages/Project/selectors'
 import { getGenesById, getLocusListsByGuid } from 'redux/selectors'
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
 import { InlineHeader } from '../../StyledComponents'
+import SearchResultsLink from '../../buttons/SearchResultsLink'
 import ShowGeneModal from '../../buttons/ShowGeneModal'
 
 const CONSTRAINED_GENE_RANK_THRESHOLD = 1000
@@ -132,13 +133,10 @@ const VariantGene = ({ geneId, gene, project, variant, compact }) => {
       {compact ? geneConsequence :
       <GeneLinks>
         <a href={`http://gnomad.broadinstitute.org/gene/${gene.geneSymbol}`} target="_blank">gnomAD</a>
-        {/* TODO have gene search link for new gene search including on search page */}
-        {project &&
-          <span>
-            <HorizontalSpacer width={5} />|<HorizontalSpacer width={5} />
-            <a href={`/project/${project.deprecatedProjectId}/gene/${gene.geneId}`} target="_blank" rel="noopener noreferrer">Gene Search</a><br />
-          </span>
-        }
+        <HorizontalSpacer width={5} />|<HorizontalSpacer width={5} />
+        {project && !project.hasNewSearch ?
+          <a href={`/project/${project.deprecatedProjectId}/gene/${gene.geneId}`} target="_blank" rel="noopener noreferrer">Gene Search</a> :
+          <SearchResultsLink geneId={gene.geneId} familyGuids={variant.familyGuids} />}
       </GeneLinks>}
     </div>
   )
