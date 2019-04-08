@@ -80,6 +80,12 @@ from seqr.views.apis.variant_search_api import \
     update_saved_search_handler, \
     delete_saved_search_handler
 
+from seqr.views.apis.users_api import \
+    get_all_collaborators, \
+    create_project_collaborator, \
+    update_project_collaborator, \
+    delete_project_collaborator
+
 from seqr.views.apis.staff_api import anvil_export, discovery_sheet, get_projects_for_category, elasticsearch_status
 from seqr.views.pages.staff.komp_export import komp_export
 
@@ -90,7 +96,6 @@ from seqr.views.apis.analysis_group_api import update_analysis_group_handler, de
 from seqr.views.apis.project_api import create_project_handler, update_project_handler, delete_project_handler
 from seqr.views.apis.project_categories_api import update_project_categories_handler
 from seqr.views.utils.file_utils import save_temp_file
-from seqr.views.apis.users_api import get_all_collaborators
 
 react_app_pages = [
     r'^$',
@@ -174,11 +179,14 @@ api_endpoints = {
     'project/(?P<project_guid>[^/]+)/add_locus_lists': add_project_locus_lists,
     'project/(?P<project_guid>[^/]+)/delete_locus_lists': delete_project_locus_lists,
 
+    'users/get_all': get_all_collaborators,
+    'project/(?P<project_guid>[^/]+)/collaborators/create': create_project_collaborator,
+    'project/(?P<project_guid>[^/]+)/collaborators/(?P<username>[^/]+)/update': update_project_collaborator,
+    'project/(?P<project_guid>[^/]+)/collaborators/(?P<username>[^/]+)/delete': delete_project_collaborator,
+
     'awesomebar': awesomebar_autocomplete_handler,
 
     'upload_temp_file': save_temp_file,
-
-    'users/get_all': get_all_collaborators,
 
     'staff/anvil/(?P<project_guid>[^/]+)': anvil_export,
     'staff/discovery_sheet/(?P<project_guid>[^/]+)': discovery_sheet,

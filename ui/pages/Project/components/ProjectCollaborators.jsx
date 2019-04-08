@@ -116,7 +116,7 @@ const ProjectCollaborators = ({ project, onSubmit }) => (
       <Popup
         position="top center"
         trigger={<Icon link name={c.hasEditPermissions ? 'star' : ''} />}
-        content={c.hasEditPermissions ? 'Has "Manager" permissions' : ''}
+        content={`Has "${c.hasEditPermissions ? 'Manager' : 'Collaborator'}" permissions`}
         size="small"
       />
       {c.displayName && <span>{c.displayName}<br /><HorizontalSpacer width={20} /></span>}

@@ -19,7 +19,7 @@ class Command(BaseCommand):
             count += 1
         print('Update {} users'.format(count))
         if errors:
-            print('Unable to migrate the following usernames')
+            print('Unable to migrate the following users:')
             for error in errors:
                 print(error)
 
