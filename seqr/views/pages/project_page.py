@@ -18,6 +18,7 @@ from seqr.models import Family, Individual, _slugify, VariantTagType, VariantTag
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.individual_api import export_individuals
 from seqr.views.apis.locus_list_api import get_sorted_project_locus_lists
+from seqr.views.apis.users_api import get_project_collaborators
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.json_to_orm_utils import update_project_from_json
 from seqr.views.utils.orm_to_json_utils import \
@@ -193,34 +194,7 @@ def _retrieve_analysis_groups(project):
 
 def _get_json_for_collaborator_list(project):
     """Returns a JSON representation of the collaborators in the given project"""
-    collaborator_list = []
-
-    def _compute_json(collaborator, can_view, can_edit):
-        return {
-            'displayName': collaborator.profile.display_name,
-            'username': collaborator.username,
-            'email': collaborator.email,
-            'firstName': collaborator.first_name,
-            'lastName': collaborator.last_name,
-            'hasViewPermissions': can_view,
-            'hasEditPermissions': can_edit,
-        }
-
-    previously_added_ids = set()
-    for collaborator in itertools.chain(project.owners_group.user_set.all(), project.can_edit_group.user_set.all()):
-        if collaborator.id in previously_added_ids:
-            continue
-        previously_added_ids.add(collaborator.id)
-        collaborator_list.append(
-            _compute_json(collaborator, can_edit=True, can_view=True)
-        )
-    for collaborator in project.can_view_group.user_set.all():
-        if collaborator.id in previously_added_ids:
-            continue
-        previously_added_ids.add(collaborator.id)
-        collaborator_list.append(
-            _compute_json(collaborator, can_edit=False, can_view=True)
-        )
+    collaborator_list = get_project_collaborators(project).values()
 
     return sorted(collaborator_list, key=lambda collaborator: (collaborator['lastName'], collaborator['displayName']))
 

@@ -380,3 +380,16 @@ export const getAnalysisStatusCounts = createSelector(
       { ...option, count: (analysisStatusCounts[option.value] || 0) }),
     )
   })
+
+
+// user options selectors
+
+export const getUsersByUsername = state => state.usersByUsername
+export const getUserOptionsIsLoading = state => state.userOptionsLoading.isLoading
+
+export const getUserOptions = createSelector(
+  getUsersByUsername,
+  usersByUsername => Object.values(usersByUsername).map(
+    user => ({ key: user.username, value: user.username, text: user.email }),
+  ),
+)

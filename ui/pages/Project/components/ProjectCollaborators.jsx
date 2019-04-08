@@ -4,14 +4,45 @@ import orderBy from 'lodash/orderBy'
 import { Icon, Popup } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 
+import DataLoader from 'shared/components/DataLoader'
 import { HorizontalSpacer } from 'shared/components/Spacers'
 import DeleteButton from 'shared/components/buttons/DeleteButton'
 import UpdateButton from 'shared/components/buttons/UpdateButton'
-import { RadioGroup } from 'shared/components/form/Inputs'
+import { RadioGroup, AddableSelect } from 'shared/components/form/Inputs'
 import { validators } from 'shared/components/form/ReduxFormWrapper'
 
-import { updateCollaborator } from '../reducers'
-import { getProject } from '../selectors'
+import { updateCollaborator, loadUserOptions } from '../reducers'
+import { getProject, getUsersByUsername, getUserOptions, getUserOptionsIsLoading } from '../selectors'
+
+
+const CollaboratorEmailDropdown = ({ load, loading, usersByUsername, onChange, value, ...props }) =>
+  <DataLoader load={load} loading={false} content>
+    <AddableSelect
+      loading={loading}
+      additionLabel="New Collaborator: "
+      onChange={val => onChange(usersByUsername[val] || { email: val })}
+      value={value.username || value.email}
+      {...props}
+    />
+  </DataLoader>
+
+CollaboratorEmailDropdown.propTypes = {
+  load: PropTypes.func,
+  loading: PropTypes.bool,
+  usersByUsername: PropTypes.object,
+  onChange: PropTypes.func,
+  value: PropTypes.any,
+}
+
+const mapDropdownStateToProps = state => ({
+  loading: getUserOptionsIsLoading(state),
+  options: getUserOptions(state),
+  usersByUsername: getUsersByUsername(state),
+})
+
+const mapDropdownDispatchToProps = {
+  load: loadUserOptions,
+}
 
 const NAME_FIELDS = [
   {
@@ -30,11 +61,14 @@ const NAME_FIELDS = [
 
 const CREATE_FIELDS = [
   {
-    name: 'email',
+    name: 'user',
     label: 'Email',
+    component: connect(mapDropdownStateToProps, mapDropdownDispatchToProps)(CollaboratorEmailDropdown),
     validate: validators.required,
+    width: 16,
+    inline: true,
   },
-  ...NAME_FIELDS,
+  ...NAME_FIELDS.map(({ name, ...field }) => ({ ...field, name: `user.${name}` })),
 ]
 
 const EDIT_FIELDS = [
@@ -47,14 +81,6 @@ const EDIT_FIELDS = [
   ...NAME_FIELDS,
 ]
 
-
-const mapStateToProps = state => ({
-  project: getProject(state),
-})
-
-const mapDispatchToProps = {
-  onSubmit: updateCollaborator,
-}
 
 const AddCollaboratorButton = ({ project, onSubmit }) => (
   project.canEdit ?
@@ -74,11 +100,19 @@ AddCollaboratorButton.propTypes = {
   onSubmit: PropTypes.func,
 }
 
-export const AddProjectCollaboratorButton = connect(mapStateToProps, mapDispatchToProps)(AddCollaboratorButton)
+const mapStateToProps = state => ({
+  project: getProject(state),
+})
+
+const mapCreateDispatchToProps = {
+  onSubmit: updates => updateCollaborator(updates.user),
+}
+
+export const AddProjectCollaboratorButton = connect(mapStateToProps, mapCreateDispatchToProps)(AddCollaboratorButton)
 
 const ProjectCollaborators = ({ project, onSubmit }) => (
   orderBy(project.collaborators, [c => c.hasEditPermissions, c => c.email], ['desc', 'asc']).map((c, i) =>
-    <div key={c.email}>
+    <div key={c.username}>
       <Popup
         position="top center"
         trigger={<Icon link name={c.hasEditPermissions ? 'star' : ''} />}
@@ -121,6 +155,10 @@ const ProjectCollaborators = ({ project, onSubmit }) => (
 
 ProjectCollaborators.propTypes = {
   project: PropTypes.object.isRequired,
+}
+
+const mapDispatchToProps = {
+  onSubmit: updateCollaborator,
 }
 
 export default connect(mapStateToProps, mapDispatchToProps)(ProjectCollaborators)
