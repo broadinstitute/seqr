@@ -36,7 +36,7 @@ def get_project_collaborators(project, include_permissions=True):
 
 def _get_collaborator_json(collaborator, include_permissions, can_edit):
     collaborator_json = {
-        'displayName': collaborator.profile.display_name, # TODO use get_full_name() and deprecate profile
+        'displayName': collaborator.get_full_name(),
         'username': collaborator.username,
         'email': collaborator.email,
         'firstName': collaborator.first_name,

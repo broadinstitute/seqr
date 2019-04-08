@@ -119,11 +119,8 @@ const ProjectCollaborators = ({ project, onSubmit }) => (
         content={c.hasEditPermissions ? 'Has "Manager" permissions' : ''}
         size="small"
       />
-      {c.displayName ? `${c.displayName} ▪ ` : null}
-      {
-         c.email ?
-           <i><a href={`mailto:${c.email}`}>{c.email}</a></i> : null
-      }
+      {c.displayName && <span>{c.displayName}<br /><HorizontalSpacer width={20} /></span>}
+      <i><a href={`mailto:${c.email}`}>{c.email}</a></i>
       {project.canEdit &&
         <span>
           <HorizontalSpacer width={10} />
