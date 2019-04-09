@@ -167,7 +167,6 @@ export class AddableSelect extends React.PureComponent {
     return <Select
       {...this.props}
       options={this.state.options}
-      renderLabel={this.renderLabel}
       allowAdditions={this.props.allowAdditions !== false}
       onAddItem={this.handleAddition}
       search
