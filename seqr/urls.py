@@ -109,7 +109,7 @@ react_app_pages = [
 ]
 
 no_login_react_app_pages = [
-    'set_password/(?P<user_token>[^/]+)/.*',
+    'users/set_password/(?P<user_token>[^/]+)/.*',
 ]
 
 # NOTE: the actual url will be this with an '/api' prefix

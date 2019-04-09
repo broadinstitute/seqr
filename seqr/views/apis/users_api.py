@@ -70,7 +70,7 @@ def create_project_collaborator(request, project_guid):
     {referrer} has added you as a collaborator in seqr.  
     
     Please click this link to set up your account:
-    {base_url}set_password/{password_token}
+    {base_url}users/set_password/{password_token}
     
     Thanks!
     """.format(

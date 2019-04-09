@@ -35,7 +35,7 @@ ReactDOM.render(
             <Route path="/gene_info" component={GeneInfoSearch} />
             <Route path="/gene_lists" component={LocusLists} />
             <Route path="/staff" component={Staff} />
-            <Route path="/set_password" component={SetPassword} />
+            <Route path="/users/set_password" component={SetPassword} />
             <Route component={() => <div>Invalid URL</div>} />
           </Switch>
         </BaseLayout>
