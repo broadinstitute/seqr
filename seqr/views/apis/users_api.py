@@ -1,5 +1,7 @@
 import itertools
 import json
+from anymail.exceptions import AnymailError
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.views.decorators.csrf import csrf_exempt
@@ -22,16 +24,51 @@ def get_all_collaborators(request):
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def create_project_collaborator(request, project_guid):
-    raise NotImplementedError
-
-
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
-def update_project_collaborator(request, project_guid, username):
     project = get_project_and_check_permissions(project_guid, request.user, permission_level=CAN_EDIT)
-    user = User.objects.get(username=username)
 
     request_json = json.loads(request.body)
+    if not request_json.get('email'):
+        return create_json_response({'error': 'Email is required'}, status=400, reason='Email is required')
+
+    existing_user = User.objects.filter(email=request_json['email']).first()
+    if existing_user:
+        return _update_existing_user(existing_user, project, request_json)
+
+    username = User.objects.make_random_password()
+    user = User.objects.create_user(
+        username,
+        email=request_json['email'],
+        first_name=request_json.get('firstName') or '',
+        last_name=request_json.get('lastName') or '',
+    )
+    project.can_view_group.user_set.add(user)
+
+    email_content = """
+    Hi there {full_name}--
+    
+    {referrer} has added you as a collaborator in seqr.  
+    
+    Please click this link to set up your account:
+    {base_url}users/set_password/{password_token}
+    
+    Thanks!
+    """.format(
+        full_name=user.get_full_name(),
+        referrer=request.user.get_full_name() or request.user.email,
+        base_url=settings.BASE_URL,
+        password_token=user.password,
+    )
+    try:
+        user.email_user('Set up your seqr account', email_content, fail_silently=False)
+    except AnymailError as e:
+        return create_json_response({'error': str(e)}, status=getattr(e, 'status_code', None) or 400, reason=str(e))
+
+    return create_json_response({
+        'projectsByGuid': {project_guid: {'collaborators': get_json_for_project_collaborator_list(project)}}
+    })
+
+
+def _update_existing_user(user, project, request_json):
     user.first_name = request_json.get('firstName') or ''
     user.last_name = request_json.get('lastName') or ''
     user.save()
@@ -43,8 +80,18 @@ def update_project_collaborator(request, project_guid, username):
         project.can_edit_group.user_set.remove(user)
 
     return create_json_response({
-        'projectsByGuid': {project_guid: {'collaborators': get_json_for_project_collaborator_list(project)}}
+        'projectsByGuid': {project.guid: {'collaborators': get_json_for_project_collaborator_list(project)}}
     })
+
+
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@csrf_exempt
+def update_project_collaborator(request, project_guid, username):
+    project = get_project_and_check_permissions(project_guid, request.user, permission_level=CAN_EDIT)
+    user = User.objects.get(username=username)
+
+    request_json = json.loads(request.body)
+    return _update_existing_user(user, project, request_json)
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
