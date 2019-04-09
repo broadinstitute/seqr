@@ -2,6 +2,7 @@ import itertools
 import json
 from anymail.exceptions import AnymailError
 from django.conf import settings
+from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth import login, authenticate
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
@@ -11,6 +12,13 @@ from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_user
 from seqr.views.utils.permissions_utils import get_projects_user_can_view, get_project_and_check_permissions, CAN_EDIT
+
+
+class CreateUserException(Exception):
+    def __init__(self, error, status_code=400, existing_user=None):
+        Exception.__init__(self, error)
+        self.status_code = status_code
+        self.existing_user = existing_user
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -42,18 +50,44 @@ def set_password(request, username):
     return create_json_response({'success': True})
 
 
+@staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
+@csrf_exempt
+def create_staff_user(request):
+    try:
+        _create_user(request, is_staff=True)
+    except CreateUserException as e:
+        return create_json_response({'error': e.message}, status=e.status_code, reason=e.message)
+
+    return create_json_response({'success': True})
+
+
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def create_project_collaborator(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user, permission_level=CAN_EDIT)
 
+    try:
+        user = _create_user(request)
+    except CreateUserException as e:
+        if e.existing_user:
+            return _update_existing_user(e.existing_user, project, json.loads(request.body))
+        else:
+            return create_json_response({'error': e.message}, status=e.status_code, reason=e.message)
+
+    project.can_view_group.user_set.add(user)
+    return create_json_response({
+        'projectsByGuid': {project_guid: {'collaborators': get_json_for_project_collaborator_list(project)}}
+    })
+
+
+def _create_user(request, is_staff=False):
     request_json = json.loads(request.body)
     if not request_json.get('email'):
-        return create_json_response({'error': 'Email is required'}, status=400, reason='Email is required')
+        raise CreateUserException('Email is required')
 
     existing_user = User.objects.filter(email=request_json['email']).first()
     if existing_user:
-        return _update_existing_user(existing_user, project, request_json)
+        raise CreateUserException('This user already exists', existing_user=existing_user)
 
     username = User.objects.make_random_password()
     user = User.objects.create_user(
@@ -61,8 +95,8 @@ def create_project_collaborator(request, project_guid):
         email=request_json['email'],
         first_name=request_json.get('firstName') or '',
         last_name=request_json.get('lastName') or '',
+        is_staff=is_staff,
     )
-    project.can_view_group.user_set.add(user)
 
     email_content = """
     Hi there {full_name}--
@@ -82,11 +116,9 @@ def create_project_collaborator(request, project_guid):
     try:
         user.email_user('Set up your seqr account', email_content, fail_silently=False)
     except AnymailError as e:
-        return create_json_response({'error': str(e)}, status=getattr(e, 'status_code', None) or 400, reason=str(e))
+        raise CreateUserException(str(e), status_code=getattr(e, 'status_code', None) or 400)
 
-    return create_json_response({
-        'projectsByGuid': {project_guid: {'collaborators': get_json_for_project_collaborator_list(project)}}
-    })
+    return user
 
 
 def _update_existing_user(user, project, request_json):

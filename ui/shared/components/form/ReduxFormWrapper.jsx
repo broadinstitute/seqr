@@ -126,6 +126,7 @@ class ReduxFormWrapper extends React.Component {
     showErrorPanel: PropTypes.bool,
     cancelButtonText: PropTypes.string,
     submitButtonText: PropTypes.string,
+    successMessage: PropTypes.string,
 
     /* Submit the form whenever values change rather than with a submit button */
     submitOnChange: PropTypes.bool,
@@ -205,6 +206,9 @@ class ReduxFormWrapper extends React.Component {
           this.props[`${key}Messages`] && this.props[`${key}Messages`].length > 0 ?
             <MessagePanel key={key} {...{ [key]: true }} visible list={this.props[`${key}Messages`]} /> : null
         ))}
+        {this.props.submitSucceeded && this.props.successMessage &&
+          <MessagePanel success visible content={this.props.successMessage} />
+        }
         {
           !this.props.submitOnChange &&
             <ButtonPanel

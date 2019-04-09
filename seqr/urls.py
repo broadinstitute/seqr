@@ -85,7 +85,8 @@ from seqr.views.apis.users_api import \
     create_project_collaborator, \
     update_project_collaborator, \
     delete_project_collaborator, \
-    set_password
+    set_password, \
+    create_staff_user
 
 from seqr.views.apis.staff_api import anvil_export, discovery_sheet, get_projects_for_category, elasticsearch_status
 from seqr.views.pages.staff.komp_export import komp_export
@@ -186,6 +187,7 @@ api_endpoints = {
 
     'users/get_all': get_all_collaborators,
     'users/(?P<username>[^/]+)/set_password': set_password,
+    'users/create_staff_user': create_staff_user,
     'project/(?P<project_guid>[^/]+)/collaborators/create': create_project_collaborator,
     'project/(?P<project_guid>[^/]+)/collaborators/(?P<username>[^/]+)/update': update_project_collaborator,
     'project/(?P<project_guid>[^/]+)/collaborators/(?P<username>[^/]+)/delete': delete_project_collaborator,
