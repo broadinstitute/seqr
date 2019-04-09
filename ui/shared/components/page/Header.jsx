@@ -18,17 +18,19 @@ const HeaderMenu = styled(Menu)`
 const PageHeader = ({ user }) =>
   <HeaderMenu borderless inverted attached>
     <Menu.Item as={Link} to="/dashboard"><Header size="medium" inverted>seqr</Header></Menu.Item>
-    <Menu.Item as={Link} to="/gene_info" content="Gene Info" />
-    <Menu.Item as={Link} to="/gene_lists" content="Gene Lists" />
-    <Menu.Item fitted="vertically"><AwesomeBar newWindow inputwidth="350px" /></Menu.Item>
-    <Menu.Item position="right">
-      <p>Logged in as &nbsp; <b>{user ? (user.email || user.username) : null}</b></p>
-    </Menu.Item>
-    <Menu.Item as="a" href="/logout">Log out</Menu.Item>
+    {Object.keys(user).length && [
+      <Menu.Item key="gene" as={Link} to="/gene_info" content="Gene Info" />,
+      <Menu.Item key="gene_lists" as={Link} to="/gene_lists" content="Gene Lists" />,
+      <Menu.Item key="awesomebar" fitted="vertically"><AwesomeBar newWindow inputwidth="350px" /></Menu.Item>,
+      <Menu.Item key="user" position="right">
+        <p>Logged in as &nbsp; <b>{user ? (user.displayName || user.email) : null}</b></p>
+      </Menu.Item>,
+      <Menu.Item key="logout" as="a" href="/logout">Log out</Menu.Item>,
+    ]}
   </HeaderMenu>
 
 PageHeader.propTypes = {
-  user: PropTypes.object.isRequired,
+  user: PropTypes.object,
 }
 
 // wrap top-level component so that redux state is passed in as props

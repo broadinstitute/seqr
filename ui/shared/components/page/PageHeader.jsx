@@ -164,6 +164,7 @@ export const GenePageHeader = connect(mapStateToProps)(BaseGenePageHeader)
 export default () =>
   <Switch>
     <Route path="/dashboard" component={() => null} />
+    <Route path="/set_password" component={() => null} />
     <Route path="/project/:projectGuid/saved_variants/:variantPage?/:breadcrumbId?/:tag?" component={({ match }) => <ProjectPageHeader match={match} breadcrumb="saved_variants" />} />
     <Route path="/project/:projectGuid/:breadcrumb/:breadcrumbId*" component={ProjectPageHeader} />
     <Route path="/gene_lists/:locusListGuid?" component={LocusListPageHeader} />

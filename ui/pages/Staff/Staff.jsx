@@ -35,7 +35,7 @@ export const StaffPageHeader = () =>
   </Menu>
 
 const Staff = ({ match, user }) => (
-  user.is_staff ? (
+  user.isStaff ? (
     <div>
       <VerticalSpacer height={20} />
       <Switch>

@@ -588,7 +588,7 @@ const SORT_BY_PRIMATE_AI = 'PRIMATE_AI'
 
 const clinsigSeverity = (variant, user) => {
   const clinvarSignificance = variant.clinvar.clinicalSignificance && variant.clinvar.clinicalSignificance.split('/')[0]
-  const hgmdSignificance = user.is_staff && variant.hgmd.class
+  const hgmdSignificance = user.isStaff && variant.hgmd.class
   if (!clinvarSignificance && !hgmdSignificance) return -10
   let clinvarSeverity = 0.1
   if (clinvarSignificance) {
@@ -764,3 +764,21 @@ export const getVariantsExportData = (variants) => {
     ),
   }
 }
+
+// Users
+
+export const USER_NAME_FIELDS = [
+  {
+    name: 'firstName',
+    label: 'First Name',
+    width: 8,
+    inline: true,
+  },
+  {
+    name: 'lastName',
+    label: 'Last Name',
+    width: 8,
+    inline: true,
+  },
+]
+

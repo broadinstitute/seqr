@@ -2,12 +2,14 @@ import itertools
 import json
 from anymail.exceptions import AnymailError
 from django.conf import settings
+from django.contrib.auth import login, authenticate
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.views.decorators.csrf import csrf_exempt
 
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.utils.json_utils import create_json_response
+from seqr.views.utils.orm_to_json_utils import _get_json_for_user
 from seqr.views.utils.permissions_utils import get_projects_user_can_view, get_project_and_check_permissions, CAN_EDIT
 
 
@@ -19,6 +21,25 @@ def get_all_collaborators(request):
         collaborators.update(_get_project_collaborators(project, include_permissions=False))
 
     return create_json_response(collaborators)
+
+
+@csrf_exempt
+def set_password(request, username):
+    user = User.objects.get(username=username)
+
+    request_json = json.loads(request.body)
+    if not request_json.get('password'):
+        return create_json_response({}, status=400, reason='Password is required')
+
+    user.set_password(request_json['password'])
+    user.first_name = request_json.get('firstName') or ''
+    user.last_name = request_json.get('lastName') or ''
+    user.save()
+
+    u = authenticate(username=username, password=request_json['password'])
+    login(request, u)
+
+    return create_json_response({'success': True})
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -49,7 +70,7 @@ def create_project_collaborator(request, project_guid):
     {referrer} has added you as a collaborator in seqr.  
     
     Please click this link to set up your account:
-    {base_url}users/set_password/{password_token}
+    {base_url}set_password/{password_token}
     
     Thanks!
     """.format(
@@ -133,13 +154,7 @@ def _get_project_collaborators(project, include_permissions=True):
 
 
 def _get_collaborator_json(collaborator, include_permissions, can_edit):
-    collaborator_json = {
-        'displayName': collaborator.get_full_name(),
-        'username': collaborator.username,
-        'email': collaborator.email,
-        'firstName': collaborator.first_name,
-        'lastName': collaborator.last_name,
-    }
+    collaborator_json = _get_json_for_user(collaborator)
     if include_permissions:
         collaborator_json.update({
             'hasViewPermissions': True,

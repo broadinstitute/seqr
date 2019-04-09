@@ -252,6 +252,7 @@ const rootReducer = combineReducers(Object.assign({
   savedSearchesByGuid: createObjectsByIdReducer(RECEIVE_SAVED_SEARCHES, 'savedSearchesByGuid'),
   savedSearchesLoading: loadingReducer(REQUEST_SAVED_SEARCHES, RECEIVE_SAVED_SEARCHES),
   user: zeroActionsReducer,
+  newUser: zeroActionsReducer,
   form: formReducer,
   search: searchReducer,
 }, modalReducers, dashboardReducers, projectReducers, searchReducers, staffReducers))

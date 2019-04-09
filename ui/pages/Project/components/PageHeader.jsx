@@ -115,7 +115,7 @@ export const PageHeader = ({ user, project, family, analysisGroup, breadcrumb, m
       entityLinks.push({ href: `/project/${project.deprecatedProjectId}/gene`, text: 'Gene Search' })
     }
   }
-  if (user.is_staff && breadcrumb !== 'case_review') {
+  if (user.isStaff && breadcrumb !== 'case_review') {
     entityLinks.push({ to: `/project/${project.projectGuid}/case_review`, text: 'Case Review' })
   }
 

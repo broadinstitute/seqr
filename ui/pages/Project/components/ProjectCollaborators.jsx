@@ -9,7 +9,7 @@ import { HorizontalSpacer } from 'shared/components/Spacers'
 import DeleteButton from 'shared/components/buttons/DeleteButton'
 import UpdateButton from 'shared/components/buttons/UpdateButton'
 import { RadioGroup, AddableSelect } from 'shared/components/form/Inputs'
-import { validators } from 'shared/components/form/ReduxFormWrapper'
+import { USER_NAME_FIELDS } from 'shared/utils/constants'
 
 import { updateCollaborator, loadUserOptions } from '../reducers'
 import { getProject, getUsersByUsername, getUserOptions, getUserOptionsIsLoading } from '../selectors'
@@ -44,31 +44,18 @@ const mapDropdownDispatchToProps = {
   load: loadUserOptions,
 }
 
-const NAME_FIELDS = [
-  {
-    name: 'firstName',
-    label: 'First Name',
-    width: 8,
-    inline: true,
-  },
-  {
-    name: 'lastName',
-    label: 'Last Name',
-    width: 8,
-    inline: true,
-  },
-]
-
 const CREATE_FIELDS = [
   {
     name: 'user',
     label: 'Email',
     component: connect(mapDropdownStateToProps, mapDropdownDispatchToProps)(CollaboratorEmailDropdown),
-    validate: validators.required,
+    validate: value => (
+      /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}$/i.test((value || {}).email) ? undefined : 'Invalid email address'
+    ),
     width: 16,
     inline: true,
   },
-  ...NAME_FIELDS.map(({ name, ...field }) => ({ ...field, name: `user.${name}` })),
+  ...USER_NAME_FIELDS.map(({ name, ...field }) => ({ ...field, name: `user.${name}` })),
 ]
 
 const EDIT_FIELDS = [
@@ -78,7 +65,7 @@ const EDIT_FIELDS = [
     component: RadioGroup,
     options: [{ value: false, text: 'Collaborator' }, { value: true, text: 'Manager' }],
   },
-  ...NAME_FIELDS,
+  ...USER_NAME_FIELDS,
 ]
 
 
