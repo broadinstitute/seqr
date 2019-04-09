@@ -89,6 +89,7 @@ def manage_project(request, project_id):
 
     return render(request, 'project/manage_project.html', {
         'project': project,
+        'new_page_url': '/project/{}/project_page'.format(project.seqr_project.guid) if project.seqr_project else None,
     })
 
 @login_required
@@ -136,6 +137,7 @@ def project_collaborators(request, project_id):
     return render(request, 'project/collaborators.html', {
         'project': project,
         'is_manager': project.can_admin(request.user),
+        'new_page_url': '/project/{}/project_page'.format(project.seqr_project.guid) if project.seqr_project else None,
     })
 
 @login_required
@@ -694,6 +696,7 @@ def add_collaborator(request, project_id):
         'project': project,
         'form': form,
         'other_users': get_collaborators_for_user(request.user)[:50],
+        'new_page_url': '/project/{}/project_page'.format(project.seqr_project.guid) if project.seqr_project else None,
     })
 
 
@@ -729,6 +732,7 @@ def add_collaborator_confirm(request, project_id):
     return render(request, 'project/add_collaborator_confirm.html', {
         'project': project,
         'collaborator_email': collaborator_email,
+        'new_page_url': '/project/{}/project_page'.format(project.seqr_project.guid) if project.seqr_project else None,
     })
 
 
@@ -770,6 +774,7 @@ def edit_collaborator(request, project_id, username):
         'project_collaborator': project_collaborator,
         'project': project,
         'form': form,
+        'new_page_url': '/project/{}/project_page'.format(project.seqr_project.guid) if project.seqr_project else None,
     })
 
 
@@ -797,6 +802,7 @@ def delete_collaborator(request, project_id, username):
     return render(request, 'project/delete_collaborator.html', {
         'project': project,
         'project_collaborator': project_collaborator,
+        'new_page_url': '/project/{}/project_page'.format(project.seqr_project.guid) if project.seqr_project else None,
     })
 
 
@@ -808,6 +814,8 @@ def gene_quicklook(request, project_id, gene_id):
     main_project = get_object_or_404(Project, project_id=project_id)
     if not main_project.can_view(request.user):
         return HttpResponse("Unauthorized")
+
+    new_page_url = '/variant_search/project/{}'.format(main_project.seqr_project.guid) if main_project.seqr_project and main_project.seqr_project.has_new_search else None
 
     # other projects this user can view
     other_projects = get_loaded_projects_for_user(request.user, fields=['project_id', 'project_name'])
@@ -826,6 +834,7 @@ def gene_quicklook(request, project_id, gene_id):
             'individuals_json': None,
             'knockouts_json': None,
             'other_projects_json': other_projects_json,
+            'new_page_url': new_page_url,
         })
 
     projects_to_search_param = request.GET.get('selected_projects')
@@ -1011,6 +1020,7 @@ def gene_quicklook(request, project_id, gene_id):
             'individuals_json': json.dumps([i.get_json_obj(skip_has_variant_data=True) for i in individuals]),
             'knockouts_json': json.dumps(individ_ids_and_variants),
             'other_projects_json': other_projects_json,
+            'new_page_url': new_page_url,
         })
 
 

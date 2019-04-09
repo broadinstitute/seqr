@@ -176,5 +176,5 @@ def combine_mendelian_families(request, project_id, family_group_slug):
         'family_group': family_group,
         'family_group_json': json.dumps(family_group.toJSON()),
         'new_page_url': '/variant_search/analysis_group/{0}'.format(family_group.seqr_analysis_group.guid)
-        if family_group.seqr_analysis_group and is_nested_genotype_index(project.get_elasticsearch_index()) else None,
+        if family_group.seqr_analysis_group and family_group.seqr_analysis_group.project.has_new_search else None,
     })
