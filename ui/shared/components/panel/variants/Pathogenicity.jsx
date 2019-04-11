@@ -75,7 +75,7 @@ const clinvarUrl = (clinvar) => {
 }
 
 const Pathogenicity = ({ variant, user }) => {
-  if (!variant.clinvar.variationId && !variant.clinvar.alleleId && !(user.is_staff && variant.hgmd.class)) {
+  if (!variant.clinvar.variationId && !variant.clinvar.alleleId && !(user.isStaff && variant.hgmd.class)) {
     return null
   }
 
@@ -93,7 +93,7 @@ const Pathogenicity = ({ variant, user }) => {
           />
         </span>
       }
-      {user.is_staff && variant.hgmd.class &&
+      {user.isStaff && variant.hgmd.class &&
         <span>
           <HorizontalSpacer width={5} />
           <b>HGMD:<HorizontalSpacer width={5} /></b>

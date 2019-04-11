@@ -31,7 +31,7 @@ urlpatterns = [
     #
     url(r'^login$', xbrowse_server.base.views.login_view, name='login_view'),
     url(r'^logout$', xbrowse_server.base.views.logout_view, name='logout_view'),
-    url(r'^set-password$', xbrowse_server.base.views.set_password, name='set_password'),
+    url(r'^set-password$', xbrowse_server.base.views.set_password, name='set_password'),   # DEPRECATED
     url(r'^forgot-password$', xbrowse_server.base.views.forgot_password, name='forgot_password'),
     url(r'^forgot-password-sent$', xbrowse_server.base.views.forgot_password_sent, name='forgot_password_sent'),
     url(r'^user/(?P<username>\w+)', xbrowse_server.base.views.user_summary, name='user_summary'),
@@ -40,7 +40,7 @@ urlpatterns = [
     # Project
     #
     url(r'^project/(?P<project_id>[\w.|-]+)/?$', xbrowse_server.base.views.project_home, name='project_home'),  # DEPRECATED
-    url(r'^project/(?P<project_id>[\w.|-]+)/manage$', xbrowse_server.base.views.project_views.manage_project, name='manage_project'),
+    url(r'^project/(?P<project_id>[\w.|-]+)/manage$', xbrowse_server.base.views.project_views.manage_project, name='manage_project'),  # DEPRECATED
 
     url(r'^project/(?P<project_id>[\w.|-]+)/individuals$', xbrowse_server.base.views.project_individuals, name='project_individuals'),  # DEPRECATED
     url(r'^project/(?P<project_id>[\w.|-]+)/saved-variants', xbrowse_server.base.views.project_views.variants_with_tag, name='saved_variants'),  # DEPRECATED
@@ -48,8 +48,8 @@ urlpatterns = [
 
     url(r'^project/(?P<project_id>[\w.|-]+)/settings$', xbrowse_server.base.views.project_settings, name='project_settings'),  # DEPRECATED
     url(r'^project/(?P<project_id>[\w.|-]+)/project_gene_list_settings', xbrowse_server.base.views.project_gene_list_settings, name='project_gene_list_settings'),  # DEPRECATED
-    url(r'^project/(?P<project_id>[\w.|-]+)/collaborators', xbrowse_server.base.views.project_collaborators, name='project_collaborators'),
-    url(r'^project/(?P<project_id>[\w.|-]+)/settings/add-collaborator$', xbrowse_server.base.views.add_collaborator, name='add_collaborator'),
+    url(r'^project/(?P<project_id>[\w.|-]+)/collaborators', xbrowse_server.base.views.project_collaborators, name='project_collaborators'),    # DEPRECATED
+    url(r'^project/(?P<project_id>[\w.|-]+)/settings/add-collaborator$', xbrowse_server.base.views.add_collaborator, name='add_collaborator'),    # DEPRECATED
     url(r'^project/(?P<project_id>[\w.|-]+)/settings/add-gene-list', xbrowse_server.base.views.add_gene_list, name='add_gene_list'),  # DEPRECATED
     url(r'^project/(?P<project_id>[\w.|-]+)/gene-list/(?P<gene_list_slug>[\w|-]+)$', xbrowse_server.base.views.project_gene_list, name='project_gene_list'),  # DEPRECATED
     url(r'^project/(?P<project_id>[\w.|-]+)/gene-list/(?P<gene_list_slug>[\w|-]+)/download$', xbrowse_server.base.views.project_gene_list_download, name='project_gene_list_download'),  # DEPRECATED
@@ -65,12 +65,12 @@ urlpatterns = [
     url(r'^project/(?P<project_id>[\w.|-]+)/add-individuals', xbrowse_server.base.views.add_individuals, name='add_individuals'),  # DEPRECATED
 
     url(r'^project/(?P<project_id>[\w.|-]+)/edit-basic-info$', xbrowse_server.base.views.project_views.edit_basic_info, name='edit_basic_info'),  # DEPRECATED
-    url(r'^project/(?P<project_id>[\w.|-]+)/add-collaborator$', xbrowse_server.base.views.project_views.add_collaborator, name='add_collaborator'),
-    url(r'^project/(?P<project_id>[\w.|-]+)/add-collaborator-confirm$', xbrowse_server.base.views.project_views.add_collaborator_confirm, name='add_collaborator_confirm'),
-    url(r'^project/(?P<project_id>[\w.|-]+)/collaborator/(?P<username>[\w|-]+)/edit$', xbrowse_server.base.views.project_views.edit_collaborator, name='edit_collaborator'),
-    url(r'^project/(?P<project_id>[\w.|-]+)/collaborator/(?P<username>[\w|-]+)/delete$', xbrowse_server.base.views.project_views.delete_collaborator, name='delete_collaborator'),
+    url(r'^project/(?P<project_id>[\w.|-]+)/add-collaborator$', xbrowse_server.base.views.project_views.add_collaborator, name='add_collaborator'),    # DEPRECATED
+    url(r'^project/(?P<project_id>[\w.|-]+)/add-collaborator-confirm$', xbrowse_server.base.views.project_views.add_collaborator_confirm, name='add_collaborator_confirm'),    # DEPRECATED
+    url(r'^project/(?P<project_id>[\w.|-]+)/collaborator/(?P<username>[\w|-]+)/edit$', xbrowse_server.base.views.project_views.edit_collaborator, name='edit_collaborator'),   # DEPRECATED
+    url(r'^project/(?P<project_id>[\w.|-]+)/collaborator/(?P<username>[\w|-]+)/delete$', xbrowse_server.base.views.project_views.delete_collaborator, name='delete_collaborator'),   # DEPRECATED
 
-    url(r'^project/(?P<project_id>[\w.|-]+)/gene/?(?P<gene_id>\w+)?$', xbrowse_server.base.views.project_views.gene_quicklook, name='project_gene_quicklook'),
+    url(r'^project/(?P<project_id>[\w.|-]+)/gene/?(?P<gene_id>\w+)?$', xbrowse_server.base.views.project_views.gene_quicklook, name='project_gene_quicklook'),   # DEPRECATED
 
     #
     # IGV.js views

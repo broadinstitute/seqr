@@ -27,8 +27,12 @@ const REQUEST_GENE_LIST = 'REQUEST_GENE_LIST'
 // action creators
 
 // A helper action that handles create, update and delete requests
-export const updateEntity = (values, receiveDataAction, urlPath, idField, actionSuffix) => {
-  return (dispatch) => {
+export const updateEntity = (values, receiveDataAction, urlPath, idField, actionSuffix, getUrlPath) => {
+  return (dispatch, getState) => {
+    if (getUrlPath) {
+      urlPath = getUrlPath(getState())
+    }
+
     let action = 'create'
     if (values[idField]) {
       urlPath = `${urlPath}/${values[idField]}`
@@ -248,6 +252,7 @@ const rootReducer = combineReducers(Object.assign({
   savedSearchesByGuid: createObjectsByIdReducer(RECEIVE_SAVED_SEARCHES, 'savedSearchesByGuid'),
   savedSearchesLoading: loadingReducer(REQUEST_SAVED_SEARCHES, RECEIVE_SAVED_SEARCHES),
   user: zeroActionsReducer,
+  newUser: zeroActionsReducer,
   form: formReducer,
   search: searchReducer,
 }, modalReducers, dashboardReducers, projectReducers, searchReducers, staffReducers))

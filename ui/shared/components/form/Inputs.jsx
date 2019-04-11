@@ -77,7 +77,7 @@ const labelStyle = (color) => { return color ? { color: 'white', backgroundColor
 const styledOption = (option) => {
   return {
     value: option.value,
-    key: option.text || option.value,
+    key: option.key || option.text || option.value,
     text: option.text || option.name || option.value,
     label: option.color ? { empty: true, circular: true, style: labelStyle(option.color) } : null,
     color: option.color,
@@ -126,32 +126,57 @@ Select.propTypes = {
 export class Multiselect extends React.PureComponent {
   static propTypes = {
     color: PropTypes.string,
-    options: PropTypes.array,
-  }
-
-  state = {
-    options: this.props.options,
+    allowAdditions: PropTypes.bool,
   }
 
   renderLabel = (data) => {
     return { color: this.props.color, content: data.text || data.value, style: labelStyle(data.color) }
   }
 
-  handleAddition = (e, option) => {
+  render() {
+    return <AddableSelect
+      {...this.props}
+      renderLabel={this.renderLabel}
+      allowAdditions={this.props.allowAdditions || false}
+      multiple
+    />
+  }
+}
+
+export class AddableSelect extends React.PureComponent {
+  static propTypes = {
+    options: PropTypes.array,
+    allowAdditions: PropTypes.bool,
+  }
+
+  state = {
+    options: this.props.options,
+  }
+
+  handleAddition = (e, { value }) => {
     this.setState({
-      options: [option, ...this.state.options],
+      options: [{ value }, ...this.state.options],
     })
+  }
+
+  resetOptions = () => {
+    this.setState({ options: this.props.options })
   }
 
   render() {
     return <Select
       {...this.props}
       options={this.state.options}
-      renderLabel={this.renderLabel}
+      allowAdditions={this.props.allowAdditions !== false}
       onAddItem={this.handleAddition}
-      multiple
       search
     />
+  }
+
+  componentDidUpdate(prevProps) {
+    if (this.props.options.length !== prevProps.options.length) {
+      this.resetOptions()
+    }
   }
 }
 

@@ -2,7 +2,6 @@
 APIs used by the project page
 """
 
-import itertools
 import logging
 import json
 
@@ -18,6 +17,7 @@ from seqr.models import Family, Individual, _slugify, VariantTagType, VariantTag
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.individual_api import export_individuals
 from seqr.views.apis.locus_list_api import get_sorted_project_locus_lists
+from seqr.views.apis.users_api import get_json_for_project_collaborator_list
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.json_to_orm_utils import update_project_from_json
 from seqr.views.utils.orm_to_json_utils import \
@@ -53,7 +53,7 @@ def project_page_data(request, project_guid):
     families_by_guid, individuals_by_guid, samples_by_guid, analysis_groups_by_guid, locus_lists_by_guid = get_project_child_entities(project, request.user)
 
     project_json = _get_json_for_project(project, request.user)
-    project_json['collaborators'] = _get_json_for_collaborator_list(project)
+    project_json['collaborators'] = get_json_for_project_collaborator_list(project)
     project_json.update(_get_json_for_variant_tag_types(project, request.user, individuals_by_guid))
     project_json['locusListGuids'] = locus_lists_by_guid.keys()
 
@@ -189,40 +189,6 @@ def _retrieve_analysis_groups(project):
     group_models = AnalysisGroup.objects.filter(project=project)
     groups = get_json_for_analysis_groups(group_models, project_guid=project.guid)
     return {group['analysisGroupGuid']: group for group in groups}
-
-
-def _get_json_for_collaborator_list(project):
-    """Returns a JSON representation of the collaborators in the given project"""
-    collaborator_list = []
-
-    def _compute_json(collaborator, can_view, can_edit):
-        return {
-            'displayName': collaborator.profile.display_name,
-            'username': collaborator.username,
-            'email': collaborator.email,
-            'firstName': collaborator.first_name,
-            'lastName': collaborator.last_name,
-            'hasViewPermissions': can_view,
-            'hasEditPermissions': can_edit,
-        }
-
-    previously_added_ids = set()
-    for collaborator in itertools.chain(project.owners_group.user_set.all(), project.can_edit_group.user_set.all()):
-        if collaborator.id in previously_added_ids:
-            continue
-        previously_added_ids.add(collaborator.id)
-        collaborator_list.append(
-            _compute_json(collaborator, can_edit=True, can_view=True)
-        )
-    for collaborator in project.can_view_group.user_set.all():
-        if collaborator.id in previously_added_ids:
-            continue
-        previously_added_ids.add(collaborator.id)
-        collaborator_list.append(
-            _compute_json(collaborator, can_edit=False, can_view=True)
-        )
-
-    return sorted(collaborator_list, key=lambda collaborator: (collaborator['lastName'], collaborator['displayName']))
 
 
 def _get_json_for_variant_tag_types(project, user, individuals_by_guid):

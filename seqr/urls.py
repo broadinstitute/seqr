@@ -3,7 +3,7 @@
 The `urlpatterns` list routes URLs to views. For more information please see:
     https://docs.djangoproject.com/en/1.9/topics/http/urls/
 """
-from seqr.views.react_app import main_app
+from seqr.views.react_app import main_app, no_login_main_app
 from seqr.views.apis.dataset_api import add_dataset_handler
 from settings import ENABLE_DJANGO_DEBUG_TOOLBAR
 from django.conf.urls import url, include
@@ -80,6 +80,14 @@ from seqr.views.apis.variant_search_api import \
     update_saved_search_handler, \
     delete_saved_search_handler
 
+from seqr.views.apis.users_api import \
+    get_all_collaborators, \
+    create_project_collaborator, \
+    update_project_collaborator, \
+    delete_project_collaborator, \
+    set_password, \
+    create_staff_user
+
 from seqr.views.apis.staff_api import anvil_export, discovery_sheet, get_projects_for_category, elasticsearch_status
 from seqr.views.pages.staff.komp_export import komp_export
 
@@ -99,6 +107,10 @@ react_app_pages = [
     'gene_lists/.*',
     'variant_search/.*',
     'staff/.*',
+]
+
+no_login_react_app_pages = [
+    'users/set_password/(?P<user_token>[^/]+)/.*',
 ]
 
 # NOTE: the actual url will be this with an '/api' prefix
@@ -173,6 +185,13 @@ api_endpoints = {
     'project/(?P<project_guid>[^/]+)/add_locus_lists': add_project_locus_lists,
     'project/(?P<project_guid>[^/]+)/delete_locus_lists': delete_project_locus_lists,
 
+    'users/get_all': get_all_collaborators,
+    'users/(?P<username>[^/]+)/set_password': set_password,
+    'users/create_staff_user': create_staff_user,
+    'project/(?P<project_guid>[^/]+)/collaborators/create': create_project_collaborator,
+    'project/(?P<project_guid>[^/]+)/collaborators/(?P<username>[^/]+)/update': update_project_collaborator,
+    'project/(?P<project_guid>[^/]+)/collaborators/(?P<username>[^/]+)/delete': delete_project_collaborator,
+
     'awesomebar': awesomebar_autocomplete_handler,
 
     'upload_temp_file': save_temp_file,
@@ -197,6 +216,7 @@ urlpatterns += [
 
 # core react page templates
 urlpatterns += [url("^%(url_endpoint)s$" % locals(), main_app) for url_endpoint in react_app_pages]
+urlpatterns += [url("^%(url_endpoint)s$" % locals(), no_login_main_app) for url_endpoint in no_login_react_app_pages]
 
 # api
 for url_endpoint, handler_function in api_endpoints.items():

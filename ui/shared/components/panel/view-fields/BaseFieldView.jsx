@@ -22,7 +22,7 @@ const BaseFieldView = (props) => {
   if (props.isVisible !== undefined && !props.isVisible) {
     return null
   }
-  if (props.isPrivate && !props.user.is_staff) {
+  if (props.isPrivate && !props.user.isStaff) {
     return null
   }
   const fieldValue = props.initialValues[props.field]
