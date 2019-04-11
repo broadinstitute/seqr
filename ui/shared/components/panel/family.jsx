@@ -128,6 +128,20 @@ SearchLink.propTypes = {
   children: PropTypes.node,
 }
 
+const DiscoveryGenes = ({ project, familyGuid }) => {
+  const discoveryGenes = project.discoveryTags.filter(tag => tag.familyGuids.includes(familyGuid)).reduce(
+    (acc, tag) => (tag.mainTranscript.geneSymbol ? [...acc, tag.mainTranscript.geneSymbol] : acc), [],
+  )
+  return discoveryGenes.length > 0 ? (
+    <span> <b>Discovery Genes:</b> {[...new Set(discoveryGenes)].join(', ')}</span>
+  ) : null
+}
+
+DiscoveryGenes.propTypes = {
+  project: PropTypes.object.isRequired,
+  familyGuid: PropTypes.string.isRequired,
+}
+
 const Family = (
   { project, family, fields = [], showVariantDetails, compact, useFullWidth, disablePedigreeZoom,
     showFamilyPageLink, annotation, updateFamily: dispatchUpdateFamily,
@@ -168,20 +182,12 @@ const Family = (
     <PedigreeImagePanel key="pedigree" family={family} disablePedigreeZoom={disablePedigreeZoom} compact={compact} />,
   ]
 
-  const discoveryGenes = project.discoveryTags.filter(tag => tag.familyGuids.includes(family.familyGuid)).reduce(
-    (acc, tag) => (tag.mainTranscript.geneSymbol ? [...acc, tag.mainTranscript.geneSymbol] : acc), [],
-  )
-
   const rightContent = showVariantDetails ? [
     <div key="variants">
       <VariantTagTypeBar height={15} width="calc(100% - 2.5em)" project={project} familyGuid={family.familyGuid} sectionLinks={false} />
       <HorizontalSpacer width={10} />
       <SearchLink project={project} family={family}><Icon name="search" /></SearchLink>
-      {discoveryGenes.length > 0 &&
-        <span>
-          <b>Discovery Genes:</b> {[...new Set(discoveryGenes)].join(', ')}
-        </span>
-      }
+      <DiscoveryGenes project={project} familyGuid={family.familyGuid} />
     </div>,
     !compact ?
       <div key="links">
