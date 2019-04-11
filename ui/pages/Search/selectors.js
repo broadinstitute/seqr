@@ -132,7 +132,7 @@ const getProjectsInput = createSelector(
   projectFamilies => (projectFamilies || []).map(({ projectGuid }) => projectGuid),
 )
 
-export const getSearchedProjectsLocusLists = createListEqualSelector(
+export const getSearchedProjectsLocusListOptions = createListEqualSelector(
   getProjectsInput,
   getProjectsByGuid,
   getLocusListsByGuid,
@@ -140,7 +140,10 @@ export const getSearchedProjectsLocusLists = createListEqualSelector(
     const locusListGuids = [...new Set((projectGuids || []).reduce((acc, projectGuid) => (
       projectsByGuid[projectGuid] ? [...acc, ...projectsByGuid[projectGuid].locusListGuids] : acc), [],
     ))]
-    return locusListGuids.map(locusListGuid => locusListsByGuid[locusListGuid])
+    const locusListOptions = locusListGuids.map(locusListGuid => (
+      { text: locusListsByGuid[locusListGuid].name, value: locusListsByGuid[locusListGuid].locusListGuid }
+    ))
+    return [{ value: null }, ...locusListOptions]
   },
 )
 

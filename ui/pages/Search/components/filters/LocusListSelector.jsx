@@ -4,13 +4,13 @@ import { connect } from 'react-redux'
 
 import { Dropdown } from 'shared/components/form/Inputs'
 import { LocusListItemsLoader } from 'shared/components/LocusListLoader'
-import { getSearchedProjectsLocusLists } from '../../selectors'
+import { getSearchedProjectsLocusListOptions } from '../../selectors'
 
 
 class BaseLocusListDropdown extends React.Component
 {
   render() {
-    const { locusList, projectLocusLists, onChange } = this.props
+    const { locusList, projectLocusListOptions, onChange } = this.props
     return (
       <Dropdown
         inline
@@ -18,7 +18,7 @@ class BaseLocusListDropdown extends React.Component
         label="Gene List"
         value={locusList.locusListGuid}
         onChange={locusListGuid => onChange({ locusListGuid })}
-        options={projectLocusLists.map(ll => ({ text: ll.name, value: ll.locusListGuid }))}
+        options={projectLocusListOptions}
       />
     )
   }
@@ -32,12 +32,12 @@ class BaseLocusListDropdown extends React.Component
 }
 
 const mapStateToProps = state => ({
-  projectLocusLists: getSearchedProjectsLocusLists(state),
+  projectLocusListOptions: getSearchedProjectsLocusListOptions(state),
 })
 
 BaseLocusListDropdown.propTypes = {
   locusList: PropTypes.object,
-  projectLocusLists: PropTypes.array,
+  projectLocusListOptions: PropTypes.array,
   onChange: PropTypes.func,
 }
 
