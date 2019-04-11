@@ -6,7 +6,6 @@ import { Grid } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 
 import { VerticalSpacer } from 'shared/components/Spacers'
-import EditDatasetsButton from 'shared/components/buttons/EditDatasetsButton'
 import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
 import {
   SAMPLE_TYPE_LOOKUP,
@@ -19,6 +18,7 @@ import {
   getProjectAnalysisGroupIndividualsByGuid, getProjectAnalysisGroupSamplesByGuid,
 } from '../selectors'
 import EditFamiliesAndIndividualsButton from './edit-families-and-individuals/EditFamiliesAndIndividualsButton'
+import EditDatasetsButton from './EditDatasetsButton'
 
 
 const DetailContent = styled.div`
