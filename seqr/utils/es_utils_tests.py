@@ -821,12 +821,7 @@ def create_mock_response(search, index=INDEX_NAME):
     return mock_response
 
 
-def mock_set_index_metdata(self):
-    self.index_metadata = {k: {'genomeVersion': '37'} for k in self.samples_by_family_index.keys()}
-
-
-@mock.patch('seqr.utils.es_utils.EsSearch._set_index_metadata', mock_set_index_metdata)
-@mock.patch('seqr.utils.es_utils.is_nested_genotype_index', lambda *args: True)
+@mock.patch('seqr.utils.es_utils.get_index_metadata', lambda index_name, client: {k: {'genomeVersion': '37'} for k in index_name.split(',')})
 class EsUtilsTest(TestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
 
