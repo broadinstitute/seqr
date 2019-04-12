@@ -465,6 +465,7 @@ class Sample(ModelWithGUID):
     elasticsearch_index = models.TextField(null=True, blank=True, db_index=True)
 
     # source file
+    #  TODO remove
     dataset_name = models.TextField(null=True, blank=True)  # optional name to display instead of filename
     dataset_file_path = models.TextField(db_index=True, null=True, blank=True)
 

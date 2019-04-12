@@ -16,8 +16,6 @@ from xbrowse_server.base.model_utils import update_xbrowse_model, get_or_create_
     find_matching_seqr_model
 from xbrowse_server.decorators import log_request
 
-from seqr.utils.es_utils import is_nested_genotype_index
-
 
 def redirect_family_group_guid(request, project_id, family_group_guid, path):
     family_group = get_object_or_404(FamilyGroup, seqr_analysis_group__guid=family_group_guid)

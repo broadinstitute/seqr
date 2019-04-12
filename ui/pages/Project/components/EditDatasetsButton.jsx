@@ -27,7 +27,7 @@ const BaseUpdateDatasetForm = ({ datasetType, formFields, onSubmit }) => (
     form={`upload${datasetType}`}
     modalName={MODAL_NAME}
     onSubmit={onSubmit}
-    confirmCloseIfNotSaved={false}
+    confirmCloseIfNotSaved
     showErrorPanel
     size="small"
     fields={formFields}
@@ -42,7 +42,7 @@ BaseUpdateDatasetForm.propTypes = {
 
 const mapDispatchToProps = (dispatch, ownProps) => ({
   onSubmit: (values) => {
-    dispatch(addDataset(values, ownProps.datasetType))
+    return dispatch(addDataset(values, ownProps.datasetType))
   },
 })
 

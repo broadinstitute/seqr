@@ -4,7 +4,7 @@ The `urlpatterns` list routes URLs to views. For more information please see:
     https://docs.djangoproject.com/en/1.9/topics/http/urls/
 """
 from seqr.views.react_app import main_app, no_login_main_app
-from seqr.views.apis.dataset_api import add_dataset_handler
+from seqr.views.apis.dataset_api import add_alignment_dataset_handler, add_variants_dataset_handler
 from settings import ENABLE_DJANGO_DEBUG_TOOLBAR
 from django.conf.urls import url, include
 
@@ -144,7 +144,8 @@ api_endpoints = {
 
     'project/(?P<project_guid>[^/]+)/upload_individuals_table': receive_individuals_table_handler,
     'project/(?P<project_guid>[^/]+)/save_individuals_table/(?P<upload_file_id>[^/]+)': save_individuals_table_handler,
-    'project/(?P<project_guid>[^/]+)/add_dataset': add_dataset_handler,
+    'project/(?P<project_guid>[^/]+)/add_dataset/align': add_alignment_dataset_handler,
+    'project/(?P<project_guid>[^/]+)/add_dataset/variants': add_variants_dataset_handler,
 
     'project/(?P<project_guid>[^/]+)/igv_track/(?P<igv_track_path>.+)': fetch_igv_track,
     'project/(?P<project_guid>[^/]+)/individual/(?P<individual_guid>[\w.|-]+)/phenotips_pdf': phenotips_pdf_handler,
