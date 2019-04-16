@@ -27,7 +27,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='geneexpression',
             name='expression_values',
-            field=django.contrib.postgres.fields.ArrayField(base_field=models.FloatField(), size=None),
+            field=django.contrib.postgres.fields.ArrayField(base_field=models.FloatField(), size=None, default=list(), null=True),
         ),
         migrations.AlterField(
             model_name='geneexpression',
