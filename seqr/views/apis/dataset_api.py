@@ -9,7 +9,7 @@ from django.utils import timezone
 
 from seqr.models import Individual, CAN_EDIT, Sample
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
-from seqr.views.utils.dataset_utils import match_sample_ids_to_sample_records, validate_index_metdata, \
+from seqr.views.utils.dataset_utils import match_sample_ids_to_sample_records, validate_index_metadata, \
     get_elasticsearch_index_samples, load_mapping_file, load_uploaded_mapping_file, validate_alignment_dataset_path
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.json_to_orm_utils import update_project_from_json, update_model_from_json
@@ -51,18 +51,18 @@ def add_variants_dataset_handler(request, project_guid):
 
     try:
         if 'elasticsearchIndex' not in request_json:
-            raise ValueError('request must contain field: "elasticsearchIndex"')
+            raise ValueError('"elasticsearchIndex" is required')
         elasticsearch_index = request_json['elasticsearchIndex'].strip()
 
         sample_ids, index_metadata = get_elasticsearch_index_samples(elasticsearch_index)
-        validate_index_metdata(index_metadata, project, elasticsearch_index)
+        validate_index_metadata(index_metadata, project, elasticsearch_index)
         sample_type = index_metadata['sampleType']
         dataset_path = index_metadata['sourceFilePath']
 
         sample_id_to_individual_id_mapping = load_mapping_file(
             request_json['mappingFilePath']) if request_json.get('mappingFilePath') else {}
 
-        matched_sample_id_to_sample_record, created_sample_ids = match_sample_ids_to_sample_records(
+        matched_sample_id_to_sample_record = match_sample_ids_to_sample_records(
             project=project,
             sample_ids=sample_ids,
             sample_type=sample_type,
@@ -80,9 +80,9 @@ def add_variants_dataset_handler(request, project_guid):
                         len(sample_ids)
                     ))
         elif len(unmatched_samples) > 0:
-            raise Exception("""
-            Matches not found for ES sample ids: {}. Uploading a mapping file for these samples, or  select 
-            the "Ignore extra samples in callset" checkbox to ignore.""".format(", ".join(unmatched_samples)))
+            raise Exception(
+                'Matches not found for ES sample ids: {}. Uploading a mapping file for these samples, or select the "Ignore extra samples in callset" checkbox to ignore.'.format(
+                    ", ".join(unmatched_samples)))
 
         if not request_json.get('ignoreMissingFamilyMembers'):
             included_family_individuals = defaultdict(set)
@@ -122,7 +122,7 @@ def add_variants_dataset_handler(request, project_guid):
         project, sample_type, elasticsearch_index, dataset_path, matched_sample_id_to_sample_record
     )
 
-    return create_json_response(_get_samples_json(matched_sample_id_to_sample_record, created_sample_ids, project_guid))
+    return create_json_response(_get_samples_json(matched_sample_id_to_sample_record, project_guid))
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -173,7 +173,7 @@ def add_alignment_dataset_handler(request, project_guid):
             sample_id_to_individual_id_mapping[sample_id] = individual_id
             sample_dataset_path_mapping[sample_id] = dataset_path
 
-        matched_sample_id_to_sample_record, created_sample_ids = match_sample_ids_to_sample_records(
+        matched_sample_id_to_sample_record = match_sample_ids_to_sample_records(
             project=project,
             sample_ids=sample_id_to_individual_id_mapping.keys(),
             sample_type=sample_type,
@@ -200,7 +200,7 @@ def add_alignment_dataset_handler(request, project_guid):
             base_indiv.bam_file_path = sample.dataset_file_path
             base_indiv.save()
 
-    return create_json_response(_get_samples_json(matched_sample_id_to_sample_record, created_sample_ids, project_guid))
+    return create_json_response(_get_samples_json(matched_sample_id_to_sample_record, project_guid))
 
 
 def _update_samples(matched_sample_id_to_sample_record, elasticsearch_index=None, dataset_path=None, sample_dataset_path_mapping=None):
@@ -217,12 +217,12 @@ def _update_samples(matched_sample_id_to_sample_record, elasticsearch_index=None
         update_model_from_json(sample, sample_update_json)
 
 
-def _get_samples_json(matched_sample_id_to_sample_record, created_sample_ids, project_guid):
+def _get_samples_json(matched_sample_id_to_sample_record, project_guid):
     updated_sample_json = get_json_for_samples(matched_sample_id_to_sample_record.values(), project_guid=project_guid)
     response = {
         'samplesByGuid': {s['sampleGuid']: s for s in updated_sample_json}
     }
-    updated_individuals = {s['individualGuid'] for s in updated_sample_json if s['sampleId'] in created_sample_ids}
+    updated_individuals = {s['individualGuid'] for s in updated_sample_json}
     if updated_individuals:
         individuals = Individual.objects.filter(guid__in=updated_individuals).prefetch_related('sample_set',
                                                                                                'family').only('guid')

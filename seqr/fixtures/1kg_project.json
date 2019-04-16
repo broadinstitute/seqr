@@ -14,6 +14,7 @@
 	"can_view_group": 3,
 	"is_phenotips_enabled": true,
 	"phenotips_user_id": "1kg",
+    "genome_version": "38",
 	"is_mme_enabled": false,
 	"mme_primary_data_owner": "PI",
 	"last_accessed_date": "2017-09-15T18:15:50.827Z",
@@ -816,10 +817,10 @@
         "created_date": "2017-02-05T06:42:55.397Z",
         "created_by": null,
         "last_modified_date": "2017-03-13T09:07:49.800Z",
-        
+
         "sample_id": "NA19679",
         "sample_type": "WES",
-        "sample_status": "loaded",
+        "sample_status": "Loading",
         "individual": 3,
         "dataset_type": "VARIANTS",
         "dataset_file_path": "1kg.vcf.gz",

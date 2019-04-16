@@ -7,7 +7,7 @@ from django.db.models.query_utils import Q
 from seqr.views.apis.igv_api import proxy_to_igv
 from seqr.models import Sample, Individual
 from seqr.utils.es_utils import get_es_client, get_index_metadata
-from seqr.utils.file_utils import does_file_exist, file_iter, get_file_stats
+from seqr.utils import file_utils
 from seqr.views.utils.file_utils import load_uploaded_file, parse_file
 
 logger = logging.getLogger(__name__)
@@ -25,7 +25,7 @@ def get_elasticsearch_index_samples(elasticsearch_index):
     return [agg['key'] for agg in response.aggregations.sample_ids.buckets], index_metadata
 
 
-def validate_index_metdata(index_metadata, project, elasticsearch_index):
+def validate_index_metadata(index_metadata, project, elasticsearch_index):
     metadata_fields = ['genomeVersion', 'sampleType', 'sourceFilePath']
     if any(field not in (index_metadata or {}) for field in metadata_fields):
         raise ValueError("Index metadata must contain fields: {}".format(', '.join(metadata_fields)))
@@ -60,11 +60,11 @@ def validate_alignment_dataset_path(dataset_path):
 
 def _validate_dataset_path(dataset_path):
     try:
-        dataset_file = does_file_exist(dataset_path)
+        dataset_file = file_utils.does_file_exist(dataset_path)
         if dataset_file is None:
             raise Exception('"{}" not found'.format(dataset_path))
         # check that dataset_path is accessible
-        dataset_file_stats = get_file_stats(dataset_path)
+        dataset_file_stats = file_utils.get_file_stats(dataset_path)
         if dataset_file_stats is None:
             raise Exception('Unable to access "{}"'.format(dataset_path))
     except Exception as e:
@@ -73,7 +73,7 @@ def _validate_dataset_path(dataset_path):
 
 def _validate_vcf(vcf_path):
     header_line = None
-    for line in file_iter(vcf_path):
+    for line in file_utils.file_iter(vcf_path):
         if line.startswith("#CHROM"):
             header_line = line
             break
@@ -93,13 +93,13 @@ def _validate_vcf(vcf_path):
 
 
 def _validate_vcf_metadata(vcf_path):
-    metadata = '\n'.join([line for line in file_iter(vcf_path)])
+    metadata = '\n'.join([line for line in file_utils.file_iter(vcf_path)])
     if 'sample_annotations' not in json.loads(metadata):
-        raise Exception('No samples found in VCF "{}"'.format(vcf_path))
+        raise Exception('No samples found in "{}"'.format(vcf_path))
 
 
 def load_mapping_file(mapping_file_path):
-    file_content = parse_file(mapping_file_path, file_iter(mapping_file_path))
+    file_content = parse_file(mapping_file_path, file_utils.file_iter(mapping_file_path))
     return _load_mapping_file(file_content)
 
 
@@ -157,7 +157,6 @@ def match_sample_ids_to_sample_records(
     logger.info(str(len(sample_id_to_sample_record)) + " exact sample record matches")
 
     remaining_sample_ids = set(sample_ids) - set(sample_id_to_sample_record.keys())
-    created_sample_ids = []
     if len(remaining_sample_ids) > 0:
         already_matched_individual_ids = {
             sample.individual.individual_id for sample in sample_id_to_sample_record.values()
@@ -184,7 +183,6 @@ def match_sample_ids_to_sample_records(
 
         # create new Sample records for Individual records that matches
         if create_sample_records:
-            created_sample_ids = sample_id_to_individual_record.keys()
             for sample_id, individual in sample_id_to_individual_record.items():
                 new_sample = Sample.objects.create(
                     sample_id=sample_id,
@@ -197,7 +195,7 @@ def match_sample_ids_to_sample_records(
                 )
                 sample_id_to_sample_record[sample_id] = new_sample
 
-    return sample_id_to_sample_record, created_sample_ids
+    return sample_id_to_sample_record
 
 
 def find_matching_sample_records(project, sample_ids, sample_type, dataset_type, elasticsearch_index):
