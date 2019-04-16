@@ -79,7 +79,7 @@ class JSONUtilsTest(TestCase):
         self.assertSetEqual(
             set(json.keys()),
             {'projectGuid', 'individualGuid', 'sampleGuid', 'createdDate', 'sampleType', 'sampleId', 'sampleStatus',
-             'datasetFilePath', 'loadedDate', 'datasetName', 'datasetType', 'elasticsearchIndex'}
+             'datasetFilePath', 'loadedDate', 'datasetType', 'elasticsearchIndex'}
         )
 
     def test_json_for_saved_variant(self):

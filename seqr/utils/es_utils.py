@@ -24,14 +24,17 @@ def get_es_client(timeout=30):
     return elasticsearch.Elasticsearch(host=settings.ELASTICSEARCH_SERVICE_HOSTNAME, timeout=timeout, retry_on_timeout=True)
 
 
-def is_nested_genotype_index(es_index):
-    es_client = get_es_client()
-    index = Index(es_index, using=es_client)
-    try:
-        field_mapping = index.get_field_mapping(fields=['samples_num_alt_1'], doc_type=[VARIANT_DOC_TYPE])
-        return bool(field_mapping.get(es_index, {}).get('mappings', {}).get(VARIANT_DOC_TYPE, {}).get('samples_num_alt_1'))
-    except Exception:
-        return False
+def get_index_metadata(index_name, client):
+    index = Index(index_name, using=client)
+    mappings = index.get_mapping(doc_type=[VARIANT_DOC_TYPE])
+    index_metadata = {}
+    for index_name, mapping in mappings.items():
+        variant_mapping = mapping['mappings'].get(VARIANT_DOC_TYPE, {})
+        # TODO remove this check once all projects are migrated
+        if not variant_mapping['properties'].get('samples_num_alt_1'):
+            raise InvalidIndexException('Index "{}" does not have a valid schema'.format(index_name))
+        index_metadata[index_name] = variant_mapping.get('_meta', {})
+    return index_metadata
 
 
 def get_single_es_variant(families, variant_id):
@@ -151,15 +154,7 @@ class EsSearch(object):
         self._allowed_consequences = None
 
     def _set_index_metadata(self):
-        index = Index(','.join(self.samples_by_family_index.keys()), using=self._client)
-        mappings = index.get_mapping(doc_type=[VARIANT_DOC_TYPE])
-        self.index_metadata = {}
-        for index_name, mapping in mappings.items():
-            variant_mapping = mapping['mappings'].get(VARIANT_DOC_TYPE, {})
-            # TODO remove this check once all projects are migrated
-            if not variant_mapping['properties'].get('samples_num_alt_1'):
-                raise InvalidIndexException('Index "{}" does not have a valid schema'.format(index_name))
-            self.index_metadata[index_name] = variant_mapping.get('_meta', {})
+        self.index_metadata = get_index_metadata(','.join(self.samples_by_family_index.keys()), self._client)
 
     def filter(self, new_filter):
         self._search = self._search.filter(new_filter)

@@ -156,9 +156,9 @@ export const updateIndividualsHpoTerms = ({ updatesByIndividualGuid }) => {
   }
 }
 
-export const addDataset = (values) => {
+export const addDataset = (values, datasetType) => {
   return (dispatch, getState) => {
-    return new HttpRequestHelper(`/api/project/${getState().currentProjectGuid}/add_dataset`,
+    return new HttpRequestHelper(`/api/project/${getState().currentProjectGuid}/add_dataset/${datasetType.toLowerCase()}`,
       (responseJson) => {
         dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
 

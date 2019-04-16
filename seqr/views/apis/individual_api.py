@@ -115,7 +115,7 @@ def edit_individuals_handler(request, project_guid):
     modified_individuals_list = request_json.get('individuals')
     if modified_individuals_list is None:
         return create_json_response(
-            {}, status=200, reason="'individuals' not specified")
+            {}, status=400, reason="'individuals' not specified")
 
     update_individuals = {ind['individualGuid']: ind for ind in modified_individuals_list}
     update_individual_models = {ind.guid: ind for ind in Individual.objects.filter(guid__in=update_individuals.keys())}
