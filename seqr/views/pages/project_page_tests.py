@@ -82,7 +82,7 @@ class ProjectPageTest(TestCase):
         self.assertSetEqual(
             set(response_json['samplesByGuid'].values()[0].keys()),
             {'projectGuid', 'individualGuid', 'sampleGuid', 'createdDate', 'sampleType', 'datasetType', 'sampleId',
-             'sampleStatus',  'loadedDate', 'datasetFilePath', 'elasticsearchIndex', 'datasetName'}
+             'sampleStatus',  'loadedDate', 'datasetFilePath', 'elasticsearchIndex'}
         )
         self.assertSetEqual(
             set(response_json['locusListsByGuid'].values()[0].keys()),

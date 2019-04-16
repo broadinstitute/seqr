@@ -465,8 +465,6 @@ class Sample(ModelWithGUID):
     elasticsearch_index = models.TextField(null=True, blank=True, db_index=True)
 
     # source file
-    #  TODO remove
-    dataset_name = models.TextField(null=True, blank=True)  # optional name to display instead of filename
     dataset_file_path = models.TextField(db_index=True, null=True, blank=True)
 
     # sample status
@@ -485,7 +483,7 @@ class Sample(ModelWithGUID):
     class Meta:
        json_fields = [
            'guid', 'created_date', 'sample_type', 'dataset_type', 'sample_id', 'elasticsearch_index',
-           'dataset_name', 'dataset_file_path', 'sample_status', 'loaded_date',
+           'dataset_file_path', 'sample_status', 'loaded_date',
        ]
 
 
