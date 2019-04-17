@@ -329,7 +329,7 @@ const getIndividualsExportData = createSelector(
     [...acc, ...individualsByFamily[family.familyGuid].map(individual => ({
       ...individual,
       [FAMILY_FIELD_ID]: family.familyId,
-      [INDIVIDUAL_HAS_DATA_FIELD]: latestSamplesLoaded(individual.sampleGuids, samplesByGuid),
+      [INDIVIDUAL_HAS_DATA_FIELD]: latestSamplesLoaded(individual.sampleGuids, samplesByGuid).length > 0,
     }))], [],
   ),
 )
