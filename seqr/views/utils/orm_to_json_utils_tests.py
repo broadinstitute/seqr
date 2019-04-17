@@ -59,8 +59,7 @@ class JSONUtilsTest(TestCase):
         individual_fields = {
             'projectGuid', 'familyGuid', 'individualGuid', 'caseReviewStatusLastModifiedBy', 'phenotipsData',
             'individualId', 'paternalId', 'maternalId', 'sex', 'affected', 'displayName', 'notes',
-            'phenotipsPatientId', 'phenotipsData', 'createdDate', 'lastModifiedDate'
-
+            'phenotipsPatientId', 'phenotipsData', 'createdDate', 'lastModifiedDate', 'paternalGuid', 'maternalGuid',
         }
         self.assertSetEqual(set(json.keys()), individual_fields)
 

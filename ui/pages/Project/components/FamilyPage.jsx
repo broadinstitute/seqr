@@ -2,11 +2,10 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 
-import { getFamiliesByGuid } from 'redux/selectors'
+import { getFamiliesByGuid, getSortedIndividualsByFamily } from 'redux/selectors'
 import { FAMILY_DETAIL_FIELDS } from 'shared/utils/constants'
 import Family from 'shared/components/panel/family'
 import IndividualRow from './FamilyTable/IndividualRow'
-import { getSortedIndividualsByFamily } from '../selectors'
 
 export const BaseFamilyDetail = ({ family, individuals, editCaseReview, ...props }) =>
   <div>

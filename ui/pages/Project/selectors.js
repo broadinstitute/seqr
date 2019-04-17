@@ -22,7 +22,7 @@ import { toCamelcase, toSnakecase } from 'shared/utils/stringUtils'
 
 import {
   getProjectsByGuid, getFamiliesGroupedByProjectGuid, getIndividualsByGuid, getSamplesByGuid, getGenesById, getUser,
-  getAnalysisGroupsGroupedByProjectGuid, getSavedVariantsByGuid, getFirstSampleByFamily,
+  getAnalysisGroupsGroupedByProjectGuid, getSavedVariantsByGuid, getFirstSampleByFamily, getSortedIndividualsByFamily,
 } from 'redux/selectors'
 
 import {
@@ -268,29 +268,6 @@ export const getVisibleFamiliesInSortedOrder = createSelector(
     const getSortKey = FAMILY_SORT_LOOKUP[familiesSortOrder](individualsByGuid, samplesByGuid)
 
     return orderBy(visibleFamilies, [getSortKey], [familiesSortDirection > 0 ? 'asc' : 'desc'])
-  },
-)
-
-/**
- * function that returns a mapping of each familyGuid to an array of individuals in that family.
- * The array of individuals is in sorted order.
- *
- * @param state {object} global Redux state
- */
-export const getSortedIndividualsByFamily = createSelector(
-  getProjectFamiliesByGuid,
-  getIndividualsByGuid,
-  (familiesByGuid, individualsByGuid) => {
-    const AFFECTED_STATUS_ORDER = { A: 1, N: 2, U: 3 }
-    const getIndivSortKey = individual => AFFECTED_STATUS_ORDER[individual.affected] || 0
-
-    return Object.entries(familiesByGuid).reduce((acc, [familyGuid, family]) => ({
-      ...acc,
-      [familyGuid]: orderBy(
-        family.individualGuids.map(individualGuid => individualsByGuid[individualGuid]),
-        [getIndivSortKey],
-      ),
-    }), {})
   },
 )
 

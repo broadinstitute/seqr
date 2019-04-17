@@ -2,9 +2,9 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { connect } from 'react-redux'
-import { Popup, Label } from 'semantic-ui-react'
+import { Popup, Label, Icon } from 'semantic-ui-react'
 
-import { getIndividualsByGuid } from 'redux/selectors'
+import { getSortedIndividualsByFamily } from 'redux/selectors'
 import ShowReadsButton from '../../buttons/ShowReadsButton'
 import PedigreeIcon from '../../icons/PedigreeIcon'
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
@@ -58,9 +58,15 @@ const PAR_REGIONS = {
   },
 }
 
-const isHemiVariant = (variant, individual) =>
+const isHemiXVariant = (variant, individual) =>
   individual.sex === 'M' && (variant.chrom === 'X' || variant.chrom === 'Y') &&
   PAR_REGIONS[variant.genomeVersion][variant.chrom].every(region => variant.pos < region[0] || variant.pos > region[1])
+
+const isHemiUPDVariant = (numAlt, variant, individual) =>
+  numAlt === 2 && [individual.maternalGuid, individual.paternalGuid].some((parentGuid) => {
+    const parentGenotype = variant.genotypes[parentGuid] || {}
+    return parentGenotype.numAlt === 0 && parentGenotype.affected !== 'A'
+  })
 
 const Allele = ({ isAlt, variant }) => {
   const allele = isAlt ? variant.alt : variant.ref
@@ -79,10 +85,18 @@ Allele.propTypes = {
 
 
 const Alleles = ({ numAlt, variant, individual }) => {
-  const isHemi = isHemiVariant(variant, individual)
+  const isHemiX = isHemiXVariant(variant, individual)
+  const isHemiUPD = isHemiUPDVariant(numAlt, variant, individual)
   return (
     <AlleleContainer>
-      <Allele isAlt={numAlt > (isHemi ? 0 : 1)} variant={variant} />/{isHemi ? '-' : <Allele isAlt={numAlt > 0} variant={variant} />}
+      {isHemiUPD &&
+        <Popup
+          flowing
+          trigger={<Icon name="warning sign" color="yellow" />}
+          content={<div><b>Warning:</b> Potential UPD/ Hemizygosity</div>}
+        />
+      }
+      <Allele isAlt={numAlt > (isHemiX ? 0 : 1)} variant={variant} />/{isHemiX ? '-' : <Allele isAlt={numAlt > 0} variant={variant} />}
     </AlleleContainer>
   )
 }
@@ -170,44 +184,40 @@ const Genotype = ({ variant, individual }) => {
 }
 
 
-const VariantIndividuals = ({ variant, familyGuid, individualsByGuid }) => {
-  const individuals = Object.values(individualsByGuid).filter(individual => individual.familyGuid === familyGuid)
-  individuals.sort((a, b) => a.affected.localeCompare(b.affected))
-  return (
-    <IndividualsContainer>
-      {individuals.map(individual =>
-        <IndividualCell key={individual.individualGuid}>
-          <PedigreeIcon
-            sex={individual.sex}
-            affected={individual.affected}
-            label={<small>{individual.displayName}</small>}
-            popupContent={
-              hasPhenotipsDetails(individual.phenotipsData) ?
-                <PhenotipsDataPanel
-                  individual={individual}
-                  showDetails
-                  showEditPhenotipsLink={false}
-                  showViewPhenotipsLink={false}
-                /> : null
-            }
-          />
-          <br />
-          <Genotype variant={variant} individual={individual} />
-        </IndividualCell>,
-      )}
-      <ShowReadsButton familyGuid={familyGuid} variant={variant} />
-    </IndividualsContainer>
-  )
-}
+const VariantIndividuals = ({ variant, familyGuid, individuals }) => (
+  <IndividualsContainer>
+    {individuals.map(individual =>
+      <IndividualCell key={individual.individualGuid}>
+        <PedigreeIcon
+          sex={individual.sex}
+          affected={individual.affected}
+          label={<small>{individual.displayName}</small>}
+          popupContent={
+            hasPhenotipsDetails(individual.phenotipsData) ?
+              <PhenotipsDataPanel
+                individual={individual}
+                showDetails
+                showEditPhenotipsLink={false}
+                showViewPhenotipsLink={false}
+              /> : null
+          }
+        />
+        <br />
+        <Genotype variant={variant} individual={individual} />
+      </IndividualCell>,
+    )}
+    <ShowReadsButton familyGuid={familyGuid} variant={variant} />
+  </IndividualsContainer>
+)
 
 VariantIndividuals.propTypes = {
   variant: PropTypes.object,
   familyGuid: PropTypes.string.isRequired,
-  individualsByGuid: PropTypes.object,
+  individuals: PropTypes.array,
 }
 
-const mapStateToProps = state => ({
-  individualsByGuid: getIndividualsByGuid(state),
+const mapStateToProps = (state, ownProps) => ({
+  individuals: getSortedIndividualsByFamily(state)[ownProps.familyGuid],
 })
 
 export default connect(mapStateToProps)(VariantIndividuals)

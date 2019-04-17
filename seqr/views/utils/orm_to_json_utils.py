@@ -219,6 +219,8 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, family_
         result.update({
             'caseReviewStatusLastModifiedBy': _get_case_review_status_modified_by(result.get('caseReviewStatusLastModifiedBy')),
             'phenotipsData': _load_phenotips_data(result['phenotipsData']),
+            'maternalGuid': mother.guid if mother else None,
+            'paternalGuid': father.guid if father else None,
             'maternalId': mother.individual_id if mother else None,
             'paternalId': father.individual_id if father else None,
             'displayName': result['displayName'] or result['individualId'],
