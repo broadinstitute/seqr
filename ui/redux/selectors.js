@@ -1,5 +1,6 @@
 import { createSelector } from 'reselect'
 import { compareObjects } from 'shared/utils/sortUtils'
+import { familySamplesLoaded } from 'shared/utils/constants'
 
 export const getProjectsIsLoading = state => state.projectsLoading.isLoading
 export const getProjectsByGuid = state => state.projectsByGuid
@@ -38,6 +39,22 @@ export const getFamilyMatchmakerSubmissions = createSelector(
     return Object.values(matchmakerSubmissions[family.projectGuid] || {}).filter(
       submission => submission.familyId === family.familyId,
     )
+  },
+)
+
+export const getFirstSampleByFamily = createSelector(
+  getFamiliesByGuid,
+  getIndividualsByGuid,
+  getSamplesByGuid,
+  (familiesByGuid, individualsByGuid, samplesByGuid) => {
+    return Object.entries(familiesByGuid).reduce((acc, [familyGuid, family]) => {
+      const familySamples = familySamplesLoaded(family, individualsByGuid, samplesByGuid)
+
+      return {
+        ...acc,
+        [familyGuid]: familySamples.length > 0 ? familySamples[0] : null,
+      }
+    }, {})
   },
 )
 

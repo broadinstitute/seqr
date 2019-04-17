@@ -165,8 +165,6 @@ export const addDataset = (values, datasetType) => {
         // Clear all loaded variants and update the saved variant json. This should happen asynchronously
         unloadSavedVariants(dispatch, getState)
         new HttpRequestHelper(`/api/project/${getState().currentProjectGuid}/update_saved_variant_json`).get()
-
-        window.location.href = window.location.href //TODO remove this - reload the page to apply dataset changes
       },
       (e) => {
         if (e.body && e.body.errors) {

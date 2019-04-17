@@ -1,4 +1,5 @@
 import { Form } from 'semantic-ui-react'
+import orderBy from 'lodash/orderBy'
 
 import { validators } from '../components/form/ReduxFormWrapper'
 import { BooleanCheckbox, RadioGroup, Dropdown, InlineToggle, Pagination } from '../components/form/Inputs'
@@ -212,6 +213,23 @@ export const INDIVIDUAL_HPO_EXPORT_DATA = [
     description: 'comma-separated list of HPO Terms for phenotypes not present in this individual',
   },
 ]
+
+export const latestSamplesLoaded = (sampleGuids, samplesByGuid) => {
+  const loadedSamples = sampleGuids.map(sampleGuid => samplesByGuid[sampleGuid]).filter(sample =>
+    sample.datasetType === DATASET_TYPE_VARIANT_CALLS &&
+    sample.sampleStatus === SAMPLE_STATUS_LOADED &&
+    sample.sampleStatus === SAMPLE_STATUS_LOADED &&
+    sample.loadedDate,
+  )
+  return orderBy(loadedSamples, [s => s.loadedDate], 'asc')
+}
+
+export const familySamplesLoaded = (family, individualsByGuid, samplesByGuid) => {
+  const sampleGuids = [...family.individualGuids.map(individualGuid => individualsByGuid[individualGuid]).reduce(
+    (acc, individual) => new Set([...acc, ...individual.sampleGuids]), new Set(),
+  )]
+  return latestSamplesLoaded(sampleGuids, samplesByGuid)
+}
 
 // CLINVAR
 

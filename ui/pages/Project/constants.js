@@ -1,7 +1,5 @@
 /* eslint-disable no-multi-spaces */
 
-import orderBy from 'lodash/orderBy'
-
 import { hasPhenotipsDetails } from 'shared/components/panel/PhenotipsDataPanel'
 import { stripMarkdown } from 'shared/utils/stringUtils'
 import {
@@ -34,10 +32,9 @@ import {
   INDIVIDUAL_FIELD_AFFECTED,
   INDIVIDUAL_FIELD_NOTES,
   FAMILY_ANALYSIS_STATUS_OPTIONS,
-  SAMPLE_STATUS_LOADED,
-  DATASET_TYPE_VARIANT_CALLS,
   INDIVIDUAL_FIELD_CONFIGS,
   INDIVIDUAL_HPO_EXPORT_DATA,
+  familySamplesLoaded,
 } from 'shared/utils/constants'
 
 export const CASE_REVIEW_TABLE_NAME = 'Case Review'
@@ -113,17 +110,6 @@ const caseReviewStatusFilter = status => individualsByGuid => family =>
   family.individualGuids.map(individualGuid => individualsByGuid[individualGuid]).some(
     individual => individual.caseReviewStatus === status,
   )
-
-export const familySamplesLoaded = (family, individualsByGuid, samplesByGuid) => {
-  const loadedSamples = [...family.individualGuids.map(individualGuid => individualsByGuid[individualGuid]).reduce(
-    (acc, individual) => new Set([...acc, ...individual.sampleGuids]), new Set(),
-  )].map(sampleGuid => samplesByGuid[sampleGuid]).filter(sample =>
-    sample.datasetType === DATASET_TYPE_VARIANT_CALLS &&
-    sample.sampleStatus === SAMPLE_STATUS_LOADED &&
-    sample.loadedDate,
-  )
-  return orderBy(loadedSamples, [s => s.loadedDate], 'asc')
-}
 
 export const FAMILY_FILTER_OPTIONS = [
   {
@@ -379,6 +365,7 @@ export const FAMILY_BULK_EDIT_EXPORT_DATA = [
   FAMILY_FIELD_DESCRIPTION,
   FAMILY_FIELD_CODED_PHENOTYPE,
 ].map(exportConfigForField(FAMILY_FIELD_CONFIGS))
+
 
 export const INDIVIDUAL_HAS_DATA_FIELD = 'hasLoadedSamples'
 const INDIVIDUAL_HAS_DATA_EXPORT_CONFIG = {
