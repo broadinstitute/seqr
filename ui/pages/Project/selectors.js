@@ -304,7 +304,7 @@ export const getEntityExportConfig = (project, rawData, tableName, fileName, fie
   }),
 })
 
-const getFamiliesExportData = createSelector(
+export const getFamiliesExportData = createSelector(
   getVisibleFamiliesInSortedOrder,
   getFirstSampleByFamily,
   (visibleFamilies, firstSampleByFamily) =>
@@ -321,7 +321,7 @@ export const getFamiliesExportConfig = createSelector(
   getEntityExportConfig,
 )
 
-const getIndividualsExportData = createSelector(
+export const getIndividualsExportData = createSelector(
   getVisibleFamiliesInSortedOrder,
   getSortedIndividualsByFamily,
   getSamplesByGuid,
