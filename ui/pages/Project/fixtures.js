@@ -392,6 +392,7 @@ export const STATE_WITH_2_FAMILIES = {
     I021476_na19678_2: {
       projectGuid: 'R0237_1000_genomes_demo',
       familyGuid: 'F011652_2',
+      individualId: 'NA19678',
       affected: 'N',
       caseReviewStatus: 'A',
       caseReviewStatusLastModifiedBy: null,
@@ -403,6 +404,7 @@ export const STATE_WITH_2_FAMILIES = {
     I021475_na19675_2: {
       projectGuid: 'R0237_1000_genomes_demo',
       familyGuid: 'F011652_2',
+      individualId: 'NA19675',
       affected: 'A',
       caseReviewStatus: 'I',
       caseReviewStatusLastModifiedBy: null,
@@ -414,6 +416,7 @@ export const STATE_WITH_2_FAMILIES = {
     I021474_na19679_2: {
       projectGuid: 'R0237_1000_genomes_demo',
       familyGuid: 'F011652_2',
+      individualId: 'NA19679',
       affected: 'N',
       caseReviewStatus: 'I',
       caseReviewStatusLastModifiedBy: null,
@@ -798,5 +801,6 @@ export const STATE_WITH_2_FAMILIES = {
       variantGuid: "SV0000003_2246859832_r0390_100",
       xpos: 22046859832,
     },
-  }
+  },
+  search: { familiesByGuid: { result: ['F011652_1', 'F011652_2'] } },
 }
