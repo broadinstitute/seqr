@@ -3,6 +3,6 @@ mock                             # mock objects for unit tests
 psutil                           # library for process and system monitoring
 
 # kubernetes deployment dependencies
-Jinja2==2.9.6                    # jinja templates are used in the kubernetes deployment scripts
-PyYAML==3.12                     # yaml parsing
+Jinja2==2.10.1                    # jinja templates are used in the kubernetes deployment scripts
+PyYAML==5.1                     # yaml parsing
 gunicorn==19.7.1                 # web server
