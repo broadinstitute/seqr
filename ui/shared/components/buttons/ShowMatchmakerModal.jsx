@@ -3,14 +3,12 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Header, Icon, List, Accordion } from 'semantic-ui-react'
 
-import { loadGenes } from 'redux/rootReducer'
 import {
   getProjectsByGuid,
   getFamilyMatchmakerSubmissions,
   getMatchmakerMatchesLoading,
   getMonarchMatchesLoading,
   getGenesById,
-  getGenesIsLoading,
 } from 'redux/selectors'
 import { loadMmeMatches } from 'pages/Project/reducers'
 import Modal from '../modal/Modal'
@@ -27,7 +25,11 @@ const MATCH_FIELDS = {
     content: 'Contacted',
     textAlign: 'center',
     verticalAlign: 'top',
-    format: val => <Icon name={val.contacted ? 'check' : 'x'} color={val.contacted ? 'green' : 'red'} />,
+    format: val =>
+      <Icon
+        name={val.hostContacted || val.weContacted ? 'check' : 'x'}
+        color={val.hostContacted || val.weContacted ? 'green' : 'red'}
+      />,
   },
   comments: {
     name: 'comments',
@@ -50,7 +52,7 @@ const MATCH_FIELDS = {
       <a target="_blank" href={`https://www.omim.org/entry/${val.id.replace('OMIM:', '')}`}>{val.id}</a> : val.id),
   },
   geneIds: {
-    name: 'geneIds',
+    name: 'genes',
     width: 3,
     content: 'Genes',
     verticalAlign: 'top',
@@ -92,53 +94,25 @@ const DISPLAY_FIELDS = {
 }
 
 
-const BaseMatches = ({ matchKey, submission, genesById, loading, load }) => {
+const BaseMatches = ({ matchKey, submission, genesById }) => {
   if (!submission[matchKey]) {
     return null
   }
 
-  const geneIds = new Set()
-  const matchResults = Object.values(submission[matchKey].match_results).filter(
-    resultSummary => parseInt(resultSummary.status_code, 10) === 200,
-  ).reduce((acc, resultSummary) => [...acc, ...resultSummary.result.results], [])
-    .filter(result => result.patient.id)
-    .map((result) => {
-      const analysisStatus = (submission[matchKey].result_analysis_state || {})[result.patient.id] || {}
-      return {
-        id: result.patient.id,
-        contacted: analysisStatus.host_contacted_us || analysisStatus.we_contacted_host,
-        comments: analysisStatus.comments,
-        description: result.patient.label,
-        geneIds: (result.patient.genomicFeatures || []).map((geneFeature) => {
-          let geneId = geneFeature.gene.id
-          if (geneId.startsWith('ENSG')) {
-            const gene = genesById[geneId]
-            if (!gene) {
-              geneIds.add(geneId)
-            } else {
-              geneId = gene.geneSymbol
-            }
-          }
-          return geneId
-        }).sort().join(', '),
-        phenotypes: (result.patient.features || []).filter(feature => feature.observed !== 'no').map(
-          feature => ({ ...submission[matchKey].hpo_map[feature.id], ...feature }),
-        ),
-        score: result.score.patient,
-      }
-    })
+  const matchResults = Object.values(submission[matchKey]).filter(result => result.id).map(result => ({
+    genes: result.geneIds.map(geneId => (genesById[geneId] || {}).geneSymbol).sort().join(', '),
+    ...result,
+  }))
 
   return (
-    <DataLoader contentId={geneIds} content loading={loading} load={load}>
-      <SortableTable
-        basic="very"
-        fixed
-        idField="id"
-        defaultSortColumn={matchKey === 'mmeMatch' ? 'geneIds' : 'id'}
-        columns={DISPLAY_FIELDS[matchKey]}
-        data={matchResults}
-      />
-    </DataLoader>
+    <SortableTable
+      basic="very"
+      fixed
+      idField="id"
+      defaultSortColumn={matchKey === 'mmeMatch' ? 'genes' : 'id'}
+      columns={DISPLAY_FIELDS[matchKey]}
+      data={matchResults}
+    />
   )
 }
 
@@ -146,20 +120,13 @@ BaseMatches.propTypes = {
   matchKey: PropTypes.string.isRequired,
   submission: PropTypes.object,
   genesById: PropTypes.object,
-  loading: PropTypes.bool,
-  load: PropTypes.func,
 }
 
 const matchesMapStateToProps = state => ({
   genesById: getGenesById(state),
-  loading: getGenesIsLoading(state),
 })
 
-const matchesMapDispatchToProps = {
-  load: loadGenes,
-}
-
-const Matches = connect(matchesMapStateToProps, matchesMapDispatchToProps)(BaseMatches)
+const Matches = connect(matchesMapStateToProps)(BaseMatches)
 
 const monarchDetailPanels = submission => [{
   title: { content: <b>Similar patients in the Monarch Initiative</b>, key: 'title' },

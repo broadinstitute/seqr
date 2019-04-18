@@ -326,6 +326,7 @@ def _has_gene_search(project):
 
 def _project_matchmaker_submissions(project):
     submissions_by_individual = {}
+    # TODO use MME API not direct access to db
     for submission in SEQR_ID_TO_MME_ID_MAP.find({'project_id': project.deprecated_project_id}):
         individual_submission = submissions_by_individual.get(submission['seqr_id'])
         if not individual_submission or individual_submission['submissionDate'] < submission['insertion_date']:

@@ -219,18 +219,24 @@ export const loadMmeMatches = (submission, matchSource) => {
     const individualSubmission = state.matchmakerSubmissions[currentProject.projectGuid][submission.individualId]
     const matchKey = `${matchSource || 'mme'}Match`
     if (!individualSubmission || !individualSubmission[matchKey]) {
+      const individual = Object.values(state.individualsByGuid).find(i =>
+        i.projectGuid === state.currentProjectGuid && i.individualId === submission.individualId,
+      )
       dispatch({ type: matchSource === 'monarch' ? REQUEST_MONARCH_MATCHES : REQUEST_MME_MATCHES })
-      const searchPath = matchSource === 'monarch' ? 'match_in_open_mme_sources' : 'match_internally_and_externally'
-      new HttpRequestHelper(`/api/matchmaker/${searchPath}/project/${currentProject.deprecatedProjectId}/individual/${submission.individualId}`,
+      // TODO monarch
+      // const searchPath = matchSource === 'monarch' ? 'match_in_open_mme_sources' : 'match_internally_and_externally'
+      // new HttpRequestHelper(`/api/matchmaker/${searchPath}/project/${currentProject.deprecatedProjectId}/individual/${submission.individualId}`,
+      new HttpRequestHelper(`/api/matchmaker/get_matches/${individual.individualGuid}`,
         (responseJson) => {
           dispatch({
             type: RECEIVE_DATA,
             updatesById: {
               matchmakerSubmissions: {
                 [currentProject.projectGuid]: {
-                  [submission.individualId]: { ...individualSubmission, [matchKey]: responseJson },
+                  [submission.individualId]: { ...individualSubmission, [matchKey]: responseJson.mmeResults },
                 },
               },
+              genesById: responseJson.genesById,
             },
           })
         },
