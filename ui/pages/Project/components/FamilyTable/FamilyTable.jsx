@@ -10,7 +10,7 @@ import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
 import TableLoading from 'shared/components/table/TableLoading'
 import { HorizontalSpacer } from 'shared/components/Spacers'
 
-import { getVisibleSortedFamiliesWithIndividuals, getProjectDetailsIsLoading } from '../../selectors'
+import { getVisibleFamiliesInSortedOrder, getProjectDetailsIsLoading } from '../../selectors'
 import { FamilyDetail } from '../FamilyPage'
 import TableHeaderRow from './header/TableHeaderRow'
 import EmptyTableRow from './EmptyTableRow'
@@ -46,19 +46,19 @@ class FamilyTableRow extends React.PureComponent {
   }
 
   render() {
-    const { family, editCaseReview, showVariantDetails, detailFields, noDetailFields } = this.props
+    const { familyGuid, editCaseReview, showVariantDetails, detailFields, noDetailFields } = this.props
     return (
       <Table.Row>
         <OverflowCell>
           <FamilyDetail
-            key={family.familyGuid}
-            family={family}
+            key={familyGuid}
+            familyGuid={familyGuid}
             showFamilyPageLink
             showVariantDetails={showVariantDetails}
             fields={this.state.showDetails ? detailFields : noDetailFields}
             compact={!this.state.showDetails}
             annotation={detailFields && noDetailFields && <ToggleIcon rotated={this.state.showDetails ? undefined : 'counterclockwise'} onClick={this.toggle} />}
-            individuals={this.state.showDetails && family.individuals}
+            showIndividuals={this.state.showDetails}
             editCaseReview={editCaseReview}
           />
         </OverflowCell>
@@ -68,7 +68,7 @@ class FamilyTableRow extends React.PureComponent {
 }
 
 FamilyTableRow.propTypes = {
-  family: PropTypes.object.isRequired,
+  familyGuid: PropTypes.string.isRequired,
   editCaseReview: PropTypes.bool,
   detailFields: PropTypes.array,
   noDetailFields: PropTypes.array,
@@ -111,7 +111,7 @@ const FamilyTable = ({ visibleFamilies, loading, headerStatus, showInternalFilte
           visibleFamilies.map(family =>
             <FamilyTableRow
               key={family.familyGuid}
-              family={family}
+              familyGuid={family.familyGuid}
               noDetailFields={noDetailFields}
               showVariantDetails={showVariantDetails}
               {...props}
@@ -140,7 +140,7 @@ FamilyTable.propTypes = {
 }
 
 const mapStateToProps = (state, ownProps) => ({
-  visibleFamilies: getVisibleSortedFamiliesWithIndividuals(state, ownProps),
+  visibleFamilies: getVisibleFamiliesInSortedOrder(state, ownProps),
   loading: getProjectDetailsIsLoading(state),
 })
 

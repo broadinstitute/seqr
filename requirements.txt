@@ -8,14 +8,14 @@ sphinx                           # doc generator
 
 # kubernetes deployment dependencies
 gunicorn==19.7.1                 # web server
-Jinja2==2.9.6                    # jinja templates are used in the kubernetes deployment scripts
-PyYAML==3.12                     # yaml parsing
+Jinja2==2.10.1                    # jinja templates are used in the kubernetes deployment scripts
+PyYAML==5.1                     # yaml parsing
 
 
 # runtime dependencies
 asciitree                        # used by print_project_tree django command
 beautifulsoup4==4.5.3            # used for html parsing utilites
-Django==1.11.15                  # core server-side framework
+Django==1.11.20                  # core server-side framework
 django-anymail==2.2              # for sending emails using cloud-based mail service providers
 django-debug-toolbar             # https://github.com/jazzband/django-debug-toolbar
 django-debug-toolbar-request-history  # for debugging database queries on async requests.

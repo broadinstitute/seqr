@@ -6,7 +6,7 @@ import { Link } from 'react-router-dom'
 import styled from 'styled-components'
 
 import { updateFamily } from 'redux/rootReducer'
-import { getProjectsByGuid } from 'redux/selectors'
+import { getProjectsByGuid, getFirstSampleByFamily } from 'redux/selectors'
 import VariantTagTypeBar from '../graph/VariantTagTypeBar'
 import ShowMatchmakerModal from '../buttons/ShowMatchmakerModal'
 import PedigreeImagePanel from './view-pedigree-image/PedigreeImagePanel'
@@ -33,6 +33,20 @@ const NoWrap = styled.div`
   white-space: nowrap;
 `
 
+const BaseFirstSample = ({ firstFamilySample, compact }) =>
+  <Sample loadedSample={firstFamilySample} hoverDetails={compact ? 'first loaded' : null} />
+
+BaseFirstSample.propTypes = {
+  firstFamilySample: PropTypes.object,
+  compact: PropTypes.bool,
+}
+
+const mapSampleDispatchToProps = (state, ownProps) => ({
+  firstFamilySample: getFirstSampleByFamily(state)[ownProps.familyGuid],
+})
+
+const FirstSample = connect(mapSampleDispatchToProps)(BaseFirstSample)
+
 const familyFieldRenderProps = {
   [FAMILY_FIELD_ANALYSIS_STATUS]: {
     tagOptions: FAMILY_ANALYSIS_STATUS_OPTIONS,
@@ -47,15 +61,15 @@ const familyFieldRenderProps = {
   },
   [FAMILY_FIELD_FIRST_SAMPLE]: {
     showEmptyValues: true,
-    fieldDisplay: (loadedSample, compact) =>
-      <Sample loadedSample={loadedSample} hoverDetails={compact ? 'first loaded' : null} />,
+    fieldDisplay: (loadedSample, compact, familyGuid) =>
+      <FirstSample familyGuid={familyGuid} compact={compact} />,
   },
   [FAMILY_FIELD_OMIM_NUMBER]: {
     fieldDisplay: value => <a target="_blank" href={`https://www.omim.org/entry/${value}`}>{value}</a>,
   },
   [FAMILY_FIELD_PMIDS]: {
     fieldDisplay: values => values.map(value =>
-      <div><a target="_blank" href={`https://www.ncbi.nlm.nih.gov/pubmed/${value}`}>{value}</a></div>,
+      <div key={value}><a target="_blank" href={`https://www.ncbi.nlm.nih.gov/pubmed/${value}`}>{value}</a></div>,
     ),
     addElementLabel: 'Add publication',
     addConfirm: 'This field is intended for publications which list this gene discovery on this particular family only. It is not intended for gene or phenotype level evidence, which should be added to the notes field.',
@@ -128,6 +142,20 @@ SearchLink.propTypes = {
   children: PropTypes.node,
 }
 
+const DiscoveryGenes = ({ project, familyGuid }) => {
+  const discoveryGenes = project.discoveryTags.filter(tag => tag.familyGuids.includes(familyGuid)).reduce(
+    (acc, tag) => (tag.mainTranscript.geneSymbol ? [...acc, tag.mainTranscript.geneSymbol] : acc), [],
+  )
+  return discoveryGenes.length > 0 ? (
+    <span> <b>Discovery Genes:</b> {[...new Set(discoveryGenes)].join(', ')}</span>
+  ) : null
+}
+
+DiscoveryGenes.propTypes = {
+  project: PropTypes.object.isRequired,
+  familyGuid: PropTypes.string.isRequired,
+}
+
 const Family = (
   { project, family, fields = [], showVariantDetails, compact, useFullWidth, disablePedigreeZoom,
     showFamilyPageLink, annotation, updateFamily: dispatchUpdateFamily,
@@ -168,20 +196,12 @@ const Family = (
     <PedigreeImagePanel key="pedigree" family={family} disablePedigreeZoom={disablePedigreeZoom} compact={compact} />,
   ]
 
-  const discoveryGenes = project.discoveryTags.filter(tag => tag.familyGuids.includes(family.familyGuid)).reduce(
-    (acc, tag) => (tag.mainTranscript.geneSymbol ? [...acc, tag.mainTranscript.geneSymbol] : acc), [],
-  )
-
   const rightContent = showVariantDetails ? [
     <div key="variants">
       <VariantTagTypeBar height={15} width="calc(100% - 2.5em)" project={project} familyGuid={family.familyGuid} sectionLinks={false} />
       <HorizontalSpacer width={10} />
       <SearchLink project={project} family={family}><Icon name="search" /></SearchLink>
-      {discoveryGenes.length > 0 &&
-        <span>
-          <b>Discovery Genes:</b> {[...new Set(discoveryGenes)].join(', ')}
-        </span>
-      }
+      <DiscoveryGenes project={project} familyGuid={family.familyGuid} />
     </div>,
     !compact ?
       <div key="links">

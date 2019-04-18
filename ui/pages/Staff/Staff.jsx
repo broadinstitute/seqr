@@ -11,6 +11,7 @@ import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 import Anvil from './components/Anvil'
 import DiscoverySheet from './components/DiscoverySheet'
 import ElasticsearchStatus from './components/ElasticsearchStatus'
+import CreateUser from './components/CreateUser'
 
 const STAFF_PAGES = [
   { path: 'anvil', params: '/:projectGuid?', component: Anvil },
@@ -18,6 +19,7 @@ const STAFF_PAGES = [
   { path: 'elasticsearch_status', component: ElasticsearchStatus },
   { path: 'komp_export' },
   { path: 'seqr_stats' },
+  { path: 'create_user', component: CreateUser },
 ]
 
 // TODO shared 404 component
@@ -35,7 +37,7 @@ export const StaffPageHeader = () =>
   </Menu>
 
 const Staff = ({ match, user }) => (
-  user.is_staff ? (
+  user.isStaff ? (
     <div>
       <VerticalSpacer height={20} />
       <Switch>

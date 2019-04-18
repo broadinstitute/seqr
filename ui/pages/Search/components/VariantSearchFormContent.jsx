@@ -314,7 +314,7 @@ class VariantSearchFormContent extends React.Component {
         <Grid.Row>
           <Grid.Column width={16}>
             <FormSection name="search">
-              <Accordion fluid panels={this.props.user.is_staff ? STAFF_PANELS : PANELS} />
+              <Accordion fluid panels={this.props.user.isStaff ? STAFF_PANELS : PANELS} />
             </FormSection>
           </Grid.Column>
         </Grid.Row>

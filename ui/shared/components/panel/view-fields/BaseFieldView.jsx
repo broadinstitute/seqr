@@ -22,7 +22,7 @@ const BaseFieldView = (props) => {
   if (props.isVisible !== undefined && !props.isVisible) {
     return null
   }
-  if (props.isPrivate && !props.user.is_staff) {
+  if (props.isPrivate && !props.user.isStaff) {
     return null
   }
   const fieldValue = props.initialValues[props.field]
@@ -30,7 +30,8 @@ const BaseFieldView = (props) => {
   if (!props.isEditable && !hasValue) {
     return null
   }
-  const modalId = props.isEditable ? `edit-${props.initialValues[props.idField] || 'new'}-${props.field}-${props.modalId}` : null
+  const fieldId = props.initialValues[props.idField]
+  const modalId = props.isEditable ? `edit-${fieldId || 'new'}-${props.field}-${props.modalId}` : null
 
   const editButton = props.isEditable && (props.formFields ?
     <UpdateButton
@@ -79,7 +80,7 @@ const BaseFieldView = (props) => {
       {
         hasValue && !props.hideValue &&
         <FieldValue compact={props.compact} fieldName={props.fieldName}>
-          {props.fieldDisplay(fieldValue, props.compact)}
+          {props.fieldDisplay(fieldValue, props.compact, fieldId)}
         </FieldValue>
       }
       {!props.fieldName && buttons}

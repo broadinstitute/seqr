@@ -19,7 +19,7 @@ class JSONUtilsTest(TestCase):
 
             self.assertSetEqual(
                 user_json_keys,
-                set(('date_joined', 'email', 'first_name', 'id', 'is_active', 'is_staff', 'last_login', 'last_name', 'username'))
+                set(('dateJoined', 'email', 'firstName', 'isStaff', 'lastLogin', 'lastName', 'username', 'displayName'))
             )
 
     def test_json_for_project(self):
@@ -59,8 +59,7 @@ class JSONUtilsTest(TestCase):
         individual_fields = {
             'projectGuid', 'familyGuid', 'individualGuid', 'caseReviewStatusLastModifiedBy', 'phenotipsData',
             'individualId', 'paternalId', 'maternalId', 'sex', 'affected', 'displayName', 'notes',
-            'phenotipsPatientId', 'phenotipsData', 'createdDate', 'lastModifiedDate'
-
+            'phenotipsPatientId', 'phenotipsData', 'createdDate', 'lastModifiedDate', 'paternalGuid', 'maternalGuid',
         }
         self.assertSetEqual(set(json.keys()), individual_fields)
 
@@ -79,7 +78,7 @@ class JSONUtilsTest(TestCase):
         self.assertSetEqual(
             set(json.keys()),
             {'projectGuid', 'individualGuid', 'sampleGuid', 'createdDate', 'sampleType', 'sampleId', 'sampleStatus',
-             'datasetFilePath', 'loadedDate', 'datasetName', 'datasetType', 'elasticsearchIndex'}
+             'datasetFilePath', 'loadedDate', 'datasetType', 'elasticsearchIndex'}
         )
 
     def test_json_for_saved_variant(self):

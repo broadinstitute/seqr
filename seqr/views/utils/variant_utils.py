@@ -51,9 +51,10 @@ def update_project_saved_variant_json(project, family_id=None):
     updated_saved_variant_guids = []
     for var in variants_json:
         for family_guid in var['familyGuids']:
-            saved_variant = saved_variants_map[(var['xpos'], var['ref'], var['alt'], family_guid)]
-            _update_saved_variant_json(saved_variant, var)
-            updated_saved_variant_guids.append(saved_variant.guid)
+            saved_variant = saved_variants_map.get((var['xpos'], var['ref'], var['alt'], family_guid))
+            if saved_variant:
+                _update_saved_variant_json(saved_variant, var)
+                updated_saved_variant_guids.append(saved_variant.guid)
 
     return updated_saved_variant_guids
 

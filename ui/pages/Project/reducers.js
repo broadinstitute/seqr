@@ -21,6 +21,8 @@ const REQUEST_SAVED_VARIANTS = 'REQUEST_SAVED_VARIANTS'
 const RECEIVE_SAVED_VARIANT_FAMILIES = 'RECEIVE_SAVED_VARIANT_FAMILIES'
 const REQUEST_MME_MATCHES = 'REQUEST_MME_MATCHES'
 const REQUEST_MONARCH_MATCHES = 'REQUEST_MONARCH_MATCHES'
+const REQUEST_USERS = 'REQUEST_USERS'
+const RECEIVE_USERS = 'RECEIVE_USERS'
 
 
 // Data actions
@@ -154,17 +156,15 @@ export const updateIndividualsHpoTerms = ({ updatesByIndividualGuid }) => {
   }
 }
 
-export const addDataset = (values) => {
+export const addDataset = (values, datasetType) => {
   return (dispatch, getState) => {
-    return new HttpRequestHelper(`/api/project/${getState().currentProjectGuid}/add_dataset`,
+    return new HttpRequestHelper(`/api/project/${getState().currentProjectGuid}/add_dataset/${datasetType.toLowerCase()}`,
       (responseJson) => {
         dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
 
         // Clear all loaded variants and update the saved variant json. This should happen asynchronously
         unloadSavedVariants(dispatch, getState)
         new HttpRequestHelper(`/api/project/${getState().currentProjectGuid}/update_saved_variant_json`).get()
-
-        window.location.href = window.location.href //TODO remove this - reload the page to apply dataset changes
       },
       (e) => {
         if (e.body && e.body.errors) {
@@ -188,6 +188,24 @@ export const updateLocusLists = (values) => {
       (e) => { throw new SubmissionError({ _error: [e.message] }) },
     ).post(values)
   }
+}
+
+export const loadUserOptions = () => {
+  return (dispatch) => {
+    dispatch({ type: REQUEST_USERS })
+    new HttpRequestHelper('/api/users/get_all',
+      (responseJson) => {
+        dispatch({ type: RECEIVE_USERS, newValue: responseJson })
+      },
+      (e) => {
+        dispatch({ type: RECEIVE_USERS, error: e.message, newValue: [] })
+      },
+    ).get()
+  }
+}
+
+export const updateCollaborator = (values) => {
+  return updateEntity(values, RECEIVE_DATA, null, 'username', null, state => `/api/project/${state.currentProjectGuid}/collaborators`)
 }
 
 export const updateAnalysisGroup = (values) => {
@@ -251,6 +269,8 @@ export const reducers = {
   projectSavedVariantFamilies: createSingleObjectReducer(RECEIVE_SAVED_VARIANT_FAMILIES),
   matchmakerMatchesLoading: loadingReducer(REQUEST_MME_MATCHES, RECEIVE_DATA),
   monarchMatchesLoading: loadingReducer(REQUEST_MONARCH_MATCHES, RECEIVE_DATA),
+  usersByUsername: createSingleValueReducer(RECEIVE_USERS, {}),
+  userOptionsLoading: loadingReducer(REQUEST_USERS, RECEIVE_USERS),
   familyTableState: createSingleObjectReducer(UPDATE_FAMILY_TABLE_STATE, {
     familiesFilter: SHOW_ALL,
     familiesSortOrder: SORT_BY_FAMILY_NAME,

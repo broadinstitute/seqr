@@ -1,4 +1,4 @@
-import { getIntitialSearch, getSearchedProjectsLocusLists } from './selectors'
+import { getIntitialSearch, getSearchedProjectsLocusListOptions } from './selectors'
 
 import { STATE, SEARCH_HASH, SEARCH, PROJECT_GUID, FAMILY_GUID, ANALYSIS_GROUP_GUID, LOCUS_LIST } from './fixtures'
 
@@ -33,8 +33,8 @@ test('getIntitialSearch', () => {
   )
 })
 
-test('getSearchedProjectsLocusLists', () => {
-  expect(getSearchedProjectsLocusLists.resultFunc(
+test('getSearchedProjectsLocusListOptions', () => {
+  expect(getSearchedProjectsLocusListOptions.resultFunc(
     [PROJECT_GUID], STATE.projectsByGuid, STATE.locusListsByGuid,
-  )).toEqual([LOCUS_LIST])
+  )).toEqual([{ value: null }, { text: LOCUS_LIST.name, value: LOCUS_LIST.locusListGuid }])
 })

@@ -22,7 +22,7 @@ const EllipsisContainer = styled.span`
 `
 
 const ProjectEllipsisMenu = (props) => {
-  if (!props.user.is_staff && !props.project.canEdit) {
+  if (!props.user.isStaff && !props.project.canEdit) {
     return null
   }
 
@@ -40,7 +40,7 @@ const ProjectEllipsisMenu = (props) => {
     />,
   ]
 
-  if (props.user.is_staff) {
+  if (props.user.isStaff) {
     menuItems.unshift(
       <Dropdown.Item key="caseReview" onClick={() => { window.open(`/project/${props.project.projectGuid}/case_review`, '_blank') }}>
         Case Review Page

@@ -160,8 +160,8 @@ const ProjectsTable = ({ visibleProjects, loading, user }) =>
       emptyContent="0 projects found"
       loading={loading}
       data={visibleProjects}
-      columns={user.is_staff ? STAFF_COLUMNS : COLUMNS}
-      footer={user.is_staff ? <CreateProjectButton /> : null}
+      columns={user.isStaff ? STAFF_COLUMNS : COLUMNS}
+      footer={user.isStaff ? <CreateProjectButton /> : null}
     />
   </ProjectTableContainer>
 

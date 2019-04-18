@@ -1,7 +1,7 @@
 /* eslint-disable no-undef */
 
 import orderBy from 'lodash/orderBy'
-import { getVisibleFamilies, getVisibleFamiliesInSortedOrder, getVisibleSortedFamiliesWithIndividuals,
+import { getVisibleFamilies, getVisibleFamiliesInSortedOrder, getFamiliesExportData, getIndividualsExportData,
   getCaseReviewStatusCounts, getProjectSavedVariants, getFilteredProjectSavedVariants,
   getVisibleSortedProjectSavedVariants, getProjectAnalysisGroupFamiliesByGuid } from './selectors'
 
@@ -9,11 +9,7 @@ import { STATE_WITH_2_FAMILIES } from './fixtures'
 
 test('getVisibleFamilies', () => {
 
-  const visibleFamilies = getVisibleFamilies.resultFunc(
-    STATE_WITH_2_FAMILIES.familiesByGuid, STATE_WITH_2_FAMILIES.individualsByGuid, STATE_WITH_2_FAMILIES.samplesByGuid,
-    STATE_WITH_2_FAMILIES.user, STATE_WITH_2_FAMILIES.familyTableState.familiesFilter,
-    Object.keys(STATE_WITH_2_FAMILIES.familiesByGuid)
-  )
+  const visibleFamilies = getVisibleFamilies(STATE_WITH_2_FAMILIES, {})
 
   expect(visibleFamilies.length).toEqual(2)
   expect(visibleFamilies[0].familyGuid).toEqual('F011652_1')
@@ -21,26 +17,35 @@ test('getVisibleFamilies', () => {
 })
 
 test('getVisibleFamiliesInSortedOrder', () => {
-  const visibleFamiliesSorted = getVisibleFamiliesInSortedOrder.resultFunc(
-    Object.values(STATE_WITH_2_FAMILIES.familiesByGuid), STATE_WITH_2_FAMILIES.individualsByGuid,
-    STATE_WITH_2_FAMILIES.samplesByGuid, STATE_WITH_2_FAMILIES.familyTableState.familiesSortOrder,
-    STATE_WITH_2_FAMILIES.familyTableState.familiesSortDirection)
+  const visibleFamiliesSorted = getVisibleFamiliesInSortedOrder(STATE_WITH_2_FAMILIES, {})
 
   expect(visibleFamiliesSorted.length).toEqual(2)
   expect(visibleFamiliesSorted[0].familyGuid).toEqual('F011652_2')
   expect(visibleFamiliesSorted[1].familyGuid).toEqual('F011652_1')
 })
 
-test('getVisibleSortedFamiliesWithIndividuals', () => {
-  const visibleSortedFamiliesWithIndividuals = getVisibleSortedFamiliesWithIndividuals.resultFunc(
-    Object.values(STATE_WITH_2_FAMILIES.familiesByGuid), STATE_WITH_2_FAMILIES.individualsByGuid,
-    STATE_WITH_2_FAMILIES.samplesByGuid,
-  )
-  expect(visibleSortedFamiliesWithIndividuals.length).toEqual(2)
-  expect(visibleSortedFamiliesWithIndividuals[0].individuals.length).toEqual(3)
-  expect(visibleSortedFamiliesWithIndividuals[1].individuals.length).toEqual(3)
-  expect(visibleSortedFamiliesWithIndividuals[0].firstSample).toEqual(null)
-  expect(visibleSortedFamiliesWithIndividuals[1].firstSample.sampleGuid).toEqual('S2310656_wal_mc16200_mc16203')
+
+test('getFamiliesExportData', () => {
+  const exportFamilies = getFamiliesExportData(STATE_WITH_2_FAMILIES, {})
+
+  expect(exportFamilies.length).toEqual(2)
+  expect(exportFamilies[0].familyGuid).toEqual('F011652_2')
+  expect(exportFamilies[1].familyGuid).toEqual('F011652_1')
+  expect(exportFamilies[0].firstSample.sampleGuid).toEqual('S2310656_wal_mc16200_mc16203')
+  expect(exportFamilies[1].firstSample).toEqual(null)
+})
+
+test('getIndividualsExportData', () => {
+  const exportIndividuals = getIndividualsExportData(STATE_WITH_2_FAMILIES, {})
+
+  expect(exportIndividuals.length).toEqual(6)
+  expect(exportIndividuals.map(individual => individual.individualId)).toEqual([
+    'NA19675', 'NA19678', 'NA19679', 'NA19675', 'NA19678', 'NA19679',
+  ])
+  expect(exportIndividuals[1].familyId).toEqual('2')
+  expect(exportIndividuals[1].hasLoadedSamples).toEqual(true)
+  expect(exportIndividuals[3].familyId).toEqual('1')
+  expect(exportIndividuals[3].hasLoadedSamples).toEqual(false)
 })
 
 test('getCaseReviewStatusCounts', () => {

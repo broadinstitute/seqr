@@ -11,13 +11,18 @@ import {
   DISCOVERY_CATEGORY_NAME,
   SORT_BY_FAMILY_GUID,
   VARIANT_SORT_LOOKUP,
+  FAMILY_FIELD_ID,
+  INDIVIDUAL_FIELD_ID,
+  FAMILY_FIELD_FIRST_SAMPLE,
   getVariantsExportData,
+  latestSamplesLoaded,
+  familySamplesLoaded,
 } from 'shared/utils/constants'
 import { toCamelcase, toSnakecase } from 'shared/utils/stringUtils'
 
 import {
   getProjectsByGuid, getFamiliesGroupedByProjectGuid, getIndividualsByGuid, getSamplesByGuid, getGenesById, getUser,
-  getAnalysisGroupsGroupedByProjectGuid, getSavedVariantsByGuid,
+  getAnalysisGroupsGroupedByProjectGuid, getSavedVariantsByGuid, getFirstSampleByFamily, getSortedIndividualsByFamily,
 } from 'redux/selectors'
 
 import {
@@ -32,7 +37,6 @@ import {
   INDIVIDUAL_EXPORT_DATA,
   INTERNAL_INDIVIDUAL_EXPORT_DATA,
   SAMPLE_EXPORT_DATA,
-  familySamplesLoaded,
 } from './constants'
 
 const FAMILY_SORT_LOOKUP = FAMILY_SORT_OPTIONS.reduce(
@@ -77,7 +81,7 @@ export const getProjectAnalysisGroupIndividualsByGuid = createSelector(
     Object.values(familiesByGuid).reduce((acc, family) => ({
       ...acc,
       ...family.individualGuids.reduce((indivAcc, individualGuid) => (
-        { ...indivAcc, [individualGuid]: { ...individualsByGuid[individualGuid], familyId: family.familyId } }
+        { ...indivAcc, [individualGuid]: { ...individualsByGuid[individualGuid], [FAMILY_FIELD_ID]: family.familyId } }
       ), {}),
     }), {}),
 )
@@ -267,57 +271,6 @@ export const getVisibleFamiliesInSortedOrder = createSelector(
   },
 )
 
-/**
- * function that returns a mapping of each familyGuid to an array of individuals in that family.
- * The array of individuals is in sorted order.
- *
- * @param state {object} global Redux state
- */
-export const getVisibleSortedFamiliesWithIndividuals = createSelector(
-  getVisibleFamiliesInSortedOrder,
-  getIndividualsByGuid,
-  getSamplesByGuid,
-  (visibleFamilies, individualsByGuid, samplesByGuid) => {
-    const AFFECTED_STATUS_ORDER = { A: 1, N: 2, U: 3 }
-    const getIndivSortKey = individual => AFFECTED_STATUS_ORDER[individual.affected] || 0
-
-    return visibleFamilies.map((family) => {
-      const familySamples = familySamplesLoaded(family, individualsByGuid, samplesByGuid)
-
-      const familyIndividuals = orderBy(
-        family.individualGuids.map(individualGuid => ({
-          [INDIVIDUAL_HAS_DATA_FIELD]: familySamples.some(sample => sample.individualGuid === individualGuid),
-          ...individualsByGuid[individualGuid],
-        })),
-        [getIndivSortKey],
-      )
-
-      return Object.assign(family, {
-        individuals: familyIndividuals,
-        firstSample: familySamples.length > 0 ? familySamples[0] : null,
-      })
-    })
-  },
-)
-
-export const getVisibleSortedIndividuals = createSelector(
-  getVisibleSortedFamiliesWithIndividuals,
-  families => families.reduce((acc, family) =>
-    [...acc, ...family.individuals.map(individual => ({ ...individual, familyId: family.familyId }))], [],
-  ),
-)
-
-export const getVisibleSamples = createSelector(
-  getVisibleFamiliesInSortedOrder,
-  getIndividualsByGuid,
-  getSamplesByGuid,
-  (visibleFamilies, individualsByGuid, samplesByGuid) =>
-    visibleFamilies.reduce((acc, family) =>
-      [...acc, ...familySamplesLoaded(family, individualsByGuid, samplesByGuid).map(sample => (
-        { ...sample, familyId: family.familyId, individualId: individualsByGuid[sample.individualGuid].individualId }
-      ))], []),
-)
-
 export const getEntityExportConfig = (project, rawData, tableName, fileName, fields) => ({
   filename: `${project.name.replace(' ', '_').toLowerCase()}_${tableName ? `${toSnakecase(tableName)}_` : ''}${fileName}`,
   rawData,
@@ -328,27 +281,61 @@ export const getEntityExportConfig = (project, rawData, tableName, fileName, fie
   }),
 })
 
+export const getFamiliesExportData = createSelector(
+  getVisibleFamiliesInSortedOrder,
+  getFirstSampleByFamily,
+  (visibleFamilies, firstSampleByFamily) =>
+    visibleFamilies.reduce((acc, family) =>
+      [...acc, { ...family, [FAMILY_FIELD_FIRST_SAMPLE]: firstSampleByFamily[family.familyGuid] }], []),
+)
+
 export const getFamiliesExportConfig = createSelector(
   getProject,
-  getVisibleSortedFamiliesWithIndividuals,
+  getFamiliesExportData,
   (state, ownProps) => (ownProps || {}).tableName,
   () => 'families',
   (state, ownProps) => ((ownProps || {}).internal ? FAMILY_EXPORT_DATA.concat(INTERNAL_FAMILY_EXPORT_DATA) : FAMILY_EXPORT_DATA),
   getEntityExportConfig,
 )
 
+export const getIndividualsExportData = createSelector(
+  getVisibleFamiliesInSortedOrder,
+  getSortedIndividualsByFamily,
+  getSamplesByGuid,
+  (families, individualsByFamily, samplesByGuid) => families.reduce((acc, family) =>
+    [...acc, ...individualsByFamily[family.familyGuid].map(individual => ({
+      ...individual,
+      [FAMILY_FIELD_ID]: family.familyId,
+      [INDIVIDUAL_HAS_DATA_FIELD]: latestSamplesLoaded(individual.sampleGuids, samplesByGuid).length > 0,
+    }))], [],
+  ),
+)
+
 export const getIndividualsExportConfig = createSelector(
   getProject,
-  getVisibleSortedIndividuals,
+  getIndividualsExportData,
   (state, ownProps) => (ownProps || {}).tableName,
   () => 'individuals',
   (state, ownProps) => ((ownProps || {}).internal ? INDIVIDUAL_EXPORT_DATA.concat(INTERNAL_INDIVIDUAL_EXPORT_DATA) : INDIVIDUAL_EXPORT_DATA),
   getEntityExportConfig,
 )
 
+const getSamplesExportData = createSelector(
+  getVisibleFamiliesInSortedOrder,
+  getIndividualsByGuid,
+  getSamplesByGuid,
+  (visibleFamilies, individualsByGuid, samplesByGuid) =>
+    visibleFamilies.reduce((acc, family) =>
+      [...acc, ...familySamplesLoaded(family, individualsByGuid, samplesByGuid).map(sample => ({
+        ...sample,
+        [FAMILY_FIELD_ID]: family.familyId,
+        [INDIVIDUAL_FIELD_ID]: individualsByGuid[sample.individualGuid].individualId,
+      }))], []),
+)
+
 export const getSamplesExportConfig = createSelector(
   getProject,
-  getVisibleSamples,
+  getSamplesExportData,
   (state, ownProps) => (ownProps || {}).tableName,
   () => 'samples',
   () => SAMPLE_EXPORT_DATA,
@@ -380,3 +367,16 @@ export const getAnalysisStatusCounts = createSelector(
       { ...option, count: (analysisStatusCounts[option.value] || 0) }),
     )
   })
+
+
+// user options selectors
+
+export const getUsersByUsername = state => state.usersByUsername
+export const getUserOptionsIsLoading = state => state.userOptionsLoading.isLoading
+
+export const getUserOptions = createSelector(
+  getUsersByUsername,
+  usersByUsername => Object.values(usersByUsername).map(
+    user => ({ key: user.username, value: user.username, text: user.email }),
+  ),
+)

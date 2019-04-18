@@ -1,4 +1,5 @@
 import { combineReducers } from 'redux'
+import { SubmissionError } from 'redux-form'
 
 import { loadingReducer, createSingleValueReducer } from 'redux/utils/reducerFactories'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
@@ -89,6 +90,21 @@ export const loadDiscoverySheet = (projectGuid) => {
         },
       ).get()
     }
+  }
+}
+
+export const createStaffUser = (values) => {
+  return () => {
+    return new HttpRequestHelper('/api/users/create_staff_user',
+      () => {},
+      (e) => {
+        if (e.body && e.body.error) {
+          throw new SubmissionError({ _error: [e.body.error] })
+        } else {
+          throw new SubmissionError({ _error: [e.message] })
+        }
+      },
+    ).post(values)
   }
 }
 

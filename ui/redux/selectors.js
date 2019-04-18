@@ -1,5 +1,8 @@
 import { createSelector } from 'reselect'
+import orderBy from 'lodash/orderBy'
+
 import { compareObjects } from 'shared/utils/sortUtils'
+import { familySamplesLoaded } from 'shared/utils/constants'
 
 export const getProjectsIsLoading = state => state.projectsLoading.isLoading
 export const getProjectsByGuid = state => state.projectsByGuid
@@ -38,6 +41,45 @@ export const getFamilyMatchmakerSubmissions = createSelector(
     return Object.values(matchmakerSubmissions[family.projectGuid] || {}).filter(
       submission => submission.familyId === family.familyId,
     )
+  },
+)
+
+/**
+ * function that returns a mapping of each familyGuid to an array of individuals in that family.
+ * The array of individuals is in sorted order.
+ *
+ * @param state {object} global Redux state
+ */
+export const getSortedIndividualsByFamily = createSelector(
+  getFamiliesByGuid,
+  getIndividualsByGuid,
+  (familiesByGuid, individualsByGuid) => {
+    const AFFECTED_STATUS_ORDER = { A: 1, N: 2, U: 3 }
+    const getIndivSortKey = individual => AFFECTED_STATUS_ORDER[individual.affected] || 0
+
+    return Object.entries(familiesByGuid).reduce((acc, [familyGuid, family]) => ({
+      ...acc,
+      [familyGuid]: orderBy(
+        family.individualGuids.map(individualGuid => individualsByGuid[individualGuid]),
+        [getIndivSortKey],
+      ),
+    }), {})
+  },
+)
+
+export const getFirstSampleByFamily = createSelector(
+  getFamiliesByGuid,
+  getIndividualsByGuid,
+  getSamplesByGuid,
+  (familiesByGuid, individualsByGuid, samplesByGuid) => {
+    return Object.entries(familiesByGuid).reduce((acc, [familyGuid, family]) => {
+      const familySamples = familySamplesLoaded(family, individualsByGuid, samplesByGuid)
+
+      return {
+        ...acc,
+        [familyGuid]: familySamples.length > 0 ? familySamples[0] : null,
+      }
+    }, {})
   },
 )
 
