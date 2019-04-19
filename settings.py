@@ -208,6 +208,8 @@ AUTHENTICATION_BACKENDS = (
 # optional - slack token for sending matchmaker alerts to Slack
 SLACK_TOKEN = os.environ.get("SLACK_TOKEN")
 
+BASE_URL = os.environ.get("BASE_URL", "/")
+
 # ===========================================================
 # ===========================================================
 # legacy settings that need to be reviewed
