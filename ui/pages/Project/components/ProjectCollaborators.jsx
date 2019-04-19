@@ -3,6 +3,7 @@ import PropTypes from 'prop-types'
 import orderBy from 'lodash/orderBy'
 import { Icon, Popup } from 'semantic-ui-react'
 import { connect } from 'react-redux'
+import styled from 'styled-components'
 
 import DataLoader from 'shared/components/DataLoader'
 import { HorizontalSpacer } from 'shared/components/Spacers'
@@ -97,17 +98,21 @@ const mapCreateDispatchToProps = {
 
 export const AddProjectCollaboratorButton = connect(mapStateToProps, mapCreateDispatchToProps)(AddCollaboratorButton)
 
+const CollaboratorContainer = styled.div`
+  white-space: nowrap;
+`
+
 const ProjectCollaborators = ({ project, onSubmit }) => (
-  orderBy(project.collaborators, [c => c.hasEditPermissions, c => c.email], ['desc', 'asc']).map((c, i) =>
-    <div key={c.username}>
+  orderBy(project.collaborators, [c => c.hasEditPermissions, c => c.email], ['desc', 'asc']).map(c =>
+    <CollaboratorContainer key={c.username}>
       <Popup
         position="top center"
         trigger={<Icon link name={c.hasEditPermissions ? 'star' : ''} />}
         content={`Has "${c.hasEditPermissions ? 'Manager' : 'Collaborator'}" permissions`}
         size="small"
       />
-      {c.displayName && <span>{c.displayName}<br /><HorizontalSpacer width={20} /></span>}
-      <i><a href={`mailto:${c.email}`}>{c.email}</a></i>
+      {c.displayName && `${c.displayName} - `}
+      <a href={`mailto:${c.email}`}>{c.email}</a>
       {project.canEdit &&
         <span>
           <HorizontalSpacer width={10} />
@@ -132,7 +137,7 @@ const ProjectCollaborators = ({ project, onSubmit }) => (
         </span>
 
       }
-    </div>,
+    </CollaboratorContainer>,
   )
 )
 
