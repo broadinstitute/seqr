@@ -86,7 +86,7 @@ Allele.propTypes = {
 
 const Alleles = ({ numAlt, variant, individual }) => {
   const isHemiX = isHemiXVariant(variant, individual)
-  const isHemiUPD = isHemiUPDVariant(numAlt, variant, individual)
+  const isHemiUPD = !isHemiX && isHemiUPDVariant(numAlt, variant, individual)
   return (
     <AlleleContainer>
       {isHemiUPD &&

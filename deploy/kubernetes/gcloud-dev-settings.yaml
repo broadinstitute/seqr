@@ -9,6 +9,7 @@ KUBERNETES_VERSION: '1.11.2-gke.18'
 
 CLUSTER_EXTERNAL_IP: '104.198.135.79'
 CLUSTER_HOSTNAME: 'seqr-dev.broadinstitute.org'
+BASE_URL: 'https://seqr-dev.broadinstitute.org/'
 
 MONGO_SERVICE_EXTERNAL_IP: 10.128.0.3  # broad-seqr
 MONGO_SERVICE_EXTERNAL_PORT: 27017
