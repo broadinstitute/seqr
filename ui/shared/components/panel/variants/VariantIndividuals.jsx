@@ -186,7 +186,7 @@ const Genotype = ({ variant, individual }) => {
 
 const VariantIndividuals = ({ variant, familyGuid, individuals }) => (
   <IndividualsContainer>
-    {individuals.map(individual =>
+    {(individuals || []).map(individual =>
       <IndividualCell key={individual.individualGuid}>
         <PedigreeIcon
           sex={individual.sex}
