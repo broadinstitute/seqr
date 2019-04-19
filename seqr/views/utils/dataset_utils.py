@@ -68,9 +68,6 @@ def _validate_dataset_path(dataset_path):
         if dataset_file_stats is None:
             raise Exception('Unable to access "{}"'.format(dataset_path))
     except Exception as e:
-        import traceback
-        traceback_message = traceback.format_exc()
-        logger.error(traceback_message)
         raise Exception("Dataset path error: " + str(e))
 
 
