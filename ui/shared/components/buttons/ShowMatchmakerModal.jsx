@@ -2,6 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Header, Icon, List, Accordion } from 'semantic-ui-react'
+import styled from 'styled-components'
 
 import {
   getProjectsByGuid,
@@ -11,17 +12,22 @@ import {
   getGenesById,
 } from 'redux/selectors'
 import { loadMmeMatches } from 'pages/Project/reducers'
+import ShowGeneModal from './ShowGeneModal'
 import Modal from '../modal/Modal'
 import SortableTable from '../table/SortableTable'
 import DataLoader from '../DataLoader'
 import { HorizontalSpacer } from '../Spacers'
 import { ButtonLink } from '../StyledComponents'
 
+const PhenotypeListItem = styled(List.Item)`
+  text-decoration: ${props => (props.observed === 'no' ? 'line-through' : 'none')};
+`
+
 
 const MATCH_FIELDS = {
   contacted: {
     name: 'contacted',
-    width: 2,
+    width: 1,
     content: 'Contacted',
     textAlign: 'center',
     verticalAlign: 'top',
@@ -29,6 +35,18 @@ const MATCH_FIELDS = {
       <Icon
         name={val.hostContacted || val.weContacted ? 'check' : 'x'}
         color={val.hostContacted || val.weContacted ? 'green' : 'red'}
+      />,
+  },
+  irrelevent: {
+    name: 'irrelevent',
+    width: 1,
+    content: 'Irrelevent',
+    textAlign: 'center',
+    verticalAlign: 'top',
+    format: val =>
+      <Icon
+        name={val.irrelevent ? 'check' : 'x'}
+        color={val.irrelevent ? 'green' : 'red'}
       />,
   },
   comments: {
@@ -51,11 +69,26 @@ const MATCH_FIELDS = {
     format: val => (val.id.match('OMIM') ?
       <a target="_blank" href={`https://www.omim.org/entry/${val.id.replace('OMIM:', '')}`}>{val.id}</a> : val.id),
   },
-  geneIds: {
-    name: 'genes',
+  geneVariants: {
+    name: 'geneVariants',
     width: 3,
     content: 'Genes',
     verticalAlign: 'top',
+    format: val =>
+      <List>
+        {Object.entries(val.geneVariants).map(([geneId, variants]) =>
+          <List.Item key={geneId}>
+            <ShowGeneModal gene={val.genesById[geneId]} modalId={val.id} />
+            {variants.length > 0 &&
+              <List.List>
+                {variants.map(({ chrom, pos, ref, alt }) =>
+                  <List.Item>{chrom}:{pos}{alt && <span> {ref}<Icon fitted name="angle right" />{alt}</span>}</List.Item>,
+                )}
+              </List.List>
+            }
+          </List.Item>,
+        )}
+      </List>,
   },
   score: {
     name: 'score',
@@ -65,30 +98,43 @@ const MATCH_FIELDS = {
   },
   phenotypes: {
     name: 'phenotypes',
-    width: 6,
+    width: 5,
     content: 'Phenotypes',
     verticalAlign: 'top',
     format: val =>
       <List bulleted>
         {val.phenotypes.map(phenotype =>
-          <List.Item key={phenotype.id}>{phenotype.name} ({phenotype.id})</List.Item>,
+          <PhenotypeListItem key={phenotype.id} observed={phenotype.observed}>
+            {phenotype.name} ({phenotype.id})
+          </PhenotypeListItem>,
         )}
       </List>,
+  },
+  seenOn: {
+    name: 'seenOn',
+    width: 1,
+    content: 'First Seen',
+    verticalAlign: 'top',
+    format: val => new Date(val.seenOn).toLocaleDateString(),
   },
 }
 
 const DISPLAY_FIELDS = {
   mmeMatch: [
+    // TODO match id/ hover patient details
+    MATCH_FIELDS.seenOn,
+    // TODO contact info (patient.contact)
     MATCH_FIELDS.contacted,
+    MATCH_FIELDS.irrelevent,
     MATCH_FIELDS.comments,
-    MATCH_FIELDS.geneIds,
+    MATCH_FIELDS.geneVariants,
     MATCH_FIELDS.phenotypes,
   ],
   monarchMatch: [
     MATCH_FIELDS.id,
     MATCH_FIELDS.description,
     MATCH_FIELDS.score,
-    MATCH_FIELDS.geneIds,
+    MATCH_FIELDS.genes,
     MATCH_FIELDS.phenotypes,
   ],
 }
@@ -99,8 +145,13 @@ const BaseMatches = ({ matchKey, submission, genesById }) => {
     return null
   }
 
-  const matchResults = Object.values(submission[matchKey]).filter(result => result.id).map(result => ({
-    genes: result.geneIds.map(geneId => (genesById[geneId] || {}).geneSymbol).sort().join(', '),
+  // TODO gene variants
+  const matchResults = Object.values(submission[matchKey]).filter(
+    result => result.id,
+  ).map(({ matchStatus, ...result }) => ({
+    genes: Object.keys(result.geneVariants).map(geneId => (genesById[geneId] || {}).geneSymbol).sort().join(', '),
+    genesById,
+    ...matchStatus,
     ...result,
   }))
 
@@ -109,7 +160,8 @@ const BaseMatches = ({ matchKey, submission, genesById }) => {
       basic="very"
       fixed
       idField="id"
-      defaultSortColumn={matchKey === 'mmeMatch' ? 'genes' : 'id'}
+      defaultSortColumn={matchKey === 'mmeMatch' ? 'seenOn' : 'id'}
+      defaultSortDescending={matchKey === 'mmeMatch'}
       columns={DISPLAY_FIELDS[matchKey]}
       data={matchResults}
     />
@@ -138,7 +190,7 @@ const ShowMatchmakerModal = ({ project, family, loading, load, monarchLoading, l
     trigger={<ButtonLink>Match Maker Exchange</ButtonLink>}
     title={`${family.displayName}: Match Maker Exchange`}
     modalName={`mme-${family.familyGuid}`}
-    size="large"
+    size="fullscreen"
   >
     {matchmakerSubmissions.length ? matchmakerSubmissions.map(submission =>
       <div key={submission.individualId}>

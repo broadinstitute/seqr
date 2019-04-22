@@ -2,11 +2,12 @@ import json
 import logging
 import pymongo
 import requests
+from collections import defaultdict
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
-from reference_data.models import HumanPhenotypeOntology
+from reference_data.models import HumanPhenotypeOntology, GENOME_VERSION_CHOICES
 
 from seqr.models import Individual
 from seqr.utils.gene_utils import get_genes, get_gene_ids_for_gene_symbols
@@ -18,6 +19,10 @@ from settings import MME_NODE_ADMIN_TOKEN, MME_NODE_ACCEPT_HEADER, MME_CONTENT_T
     MME_EXTERNAL_MATCH_URL, SEQR_ID_TO_MME_ID_MAP, MME_SEARCH_RESULT_ANALYSIS_STATE
 
 logger = logging.getLogger(__name__)
+
+GENOME_VERSION_LOOKUP = {}
+for v, k in GENOME_VERSION_CHOICES:
+    GENOME_VERSION_LOOKUP[k] = v
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -95,8 +100,14 @@ def get_individual_matches(request, individual_guid):
             }
             MME_SEARCH_RESULT_ANALYSIS_STATE.insert(result_analysis_state, manipulate=False)
             new_result_count += 1
-        result_analysis_state.pop('_id', None)
-        result['analysis_state'] = result_analysis_state
+
+        result['matchStatus'] = {
+            'comments': result_analysis_state['comments'],
+            'hostContacted': result_analysis_state['host_contacted_us'],
+            'weContacted': result_analysis_state['we_contacted_host'],
+            'irrelevent': result_analysis_state['deemed_irrelevant'],
+            'seenOn': result_analysis_state['seen_on'],
+        }
 
         hpo_ids.update({feature['id'] for feature in result['patient'].get('features', []) if feature.get('id')})
         genes.update({gene_feature['gene']['id'] for gene_feature in result['patient'].get('genomicFeatures', [])})
@@ -120,24 +131,38 @@ def get_individual_matches(request, individual_guid):
 
 
 def _parse_mme_result(result, hpo_terms_by_id, gene_symbols_to_ids):
-    phenotypes = [feature for feature in result['patient'].get('features', []) if feature.get('observed') != 'no']
+    phenotypes = [feature for feature in result['patient'].get('features', [])]
     for feature in phenotypes:
         feature['name'] = hpo_terms_by_id.get(feature['id'])
 
-    gene_ids = set()
-    for gene in result['patient'].get('genomicFeatures', []):
-        if gene['gene']['id'].startswith('ENSG'):
-            gene_ids.add(gene['gene']['id'])
-        else:
-            gene_id = gene_symbols_to_ids.get(gene['gene']['id'])
-            if gene_id:
-                gene_ids.add(gene_id[0])
+    gene_variants = defaultdict(list)
+    for gene_feature in result['patient'].get('genomicFeatures', []):
+        gene_id = gene_feature['gene']['id']
+        if not gene_id.startswith('ENSG'):
+            gene_ids = gene_symbols_to_ids.get(gene_feature['gene']['id'])
+            gene_id = gene_ids[0] if gene_ids else None
+
+        if gene_id:
+            if gene_feature.get('variant'):
+                assembly = gene_feature['variant'].get('assembly')
+                gene_variants[gene_id].append({
+                    'alt': gene_feature['variant'].get('alternateBases'),
+                    'ref': gene_feature['variant'].get('referenceBases'),
+                    'chrom': gene_feature['variant'].get('referenceName'),
+                    'pos': gene_feature['variant'].get('start'),
+                    'genomeVersion': GENOME_VERSION_LOOKUP.get(assembly, assembly),
+                })
+            else:
+                # Ensures key is present in defaultdict
+                gene_variants[gene_id]
+    patient = {
+        k: result['patient'].get('k') for k in ['inheritanceMode', 'sex', 'contact', 'ageOfOnset', 'label', 'species']
+    }
     return {
         'id': result['patient']['id'],
         'score': result['score']['patient'],
-        'hostContacted': result['analysis_state']['host_contacted_us'],
-        'weContacted': result['analysis_state']['we_contacted_host'],
-        'comments': result['analysis_state']['comments'],
-        'geneIds': list(gene_ids),
+        'geneVariants': dict(gene_variants),
         'phenotypes': phenotypes,
+        'patient': patient,
+        'matchStatus': result['matchStatus'],
     }
