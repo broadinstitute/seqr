@@ -2,6 +2,7 @@ import logging
 from django.core.management.base import BaseCommand
 from django.db.models.query_utils import Q
 from tqdm import tqdm
+import traceback
 from seqr.models import Project
 from seqr.views.utils.variant_utils import update_project_saved_variant_json
 
@@ -36,6 +37,8 @@ class Command(BaseCommand):
                 success[project.name] = len(updated_saved_variant_guids)
                 logger.info('Updated {0} variants for project {1}'.format(len(updated_saved_variant_guids), project.name))
             except Exception as e:
+                traceback_message = traceback.format_exc()
+                logger.error(traceback_message)
                 logger.error('Error in project {0}: {1}'.format(project.name, e))
                 error[project.name] = e
 

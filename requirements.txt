@@ -54,6 +54,6 @@ progressbar==2.3                 # using tqdm instead
 pymongo==3.4.0                   # switching to other database
 pysam==0.10.0                    # bam and tabix library
 PyVCF==0.6.8
-six==1.10.0
+six==1.12.0                      # This is required by gsutil
 slacker==0.9.42                  # intend to move this to separate external modules
 slugify

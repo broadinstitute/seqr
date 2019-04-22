@@ -86,7 +86,7 @@ Allele.propTypes = {
 
 const Alleles = ({ numAlt, variant, individual }) => {
   const isHemiX = isHemiXVariant(variant, individual)
-  const isHemiUPD = isHemiUPDVariant(numAlt, variant, individual)
+  const isHemiUPD = !isHemiX && isHemiUPDVariant(numAlt, variant, individual)
   return (
     <AlleleContainer>
       {isHemiUPD &&
@@ -186,7 +186,7 @@ const Genotype = ({ variant, individual }) => {
 
 const VariantIndividuals = ({ variant, familyGuid, individuals }) => (
   <IndividualsContainer>
-    {individuals.map(individual =>
+    {(individuals || []).map(individual =>
       <IndividualCell key={individual.individualGuid}>
         <PedigreeIcon
           sex={individual.sex}
