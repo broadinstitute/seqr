@@ -1,15 +1,15 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Header, Icon, List, Accordion } from 'semantic-ui-react'
+import { Header, Icon, List, Accordion, Popup, Label } from 'semantic-ui-react'
 import styled from 'styled-components'
 
 import { getFamiliesByGuid, getGenesById } from 'redux/selectors'
 import ShowGeneModal from 'shared/components/buttons/ShowGeneModal'
 import SortableTable from 'shared/components/table/SortableTable'
 import DataLoader from 'shared/components/DataLoader'
-import { HorizontalSpacer } from 'shared/components/Spacers'
 import { ButtonLink } from 'shared/components/StyledComponents'
+import { camelcaseToTitlecase } from 'shared/utils/stringUtils'
 
 import { loadMmeMatches } from '../reducers'
 import { getFamilyMatchmakerSubmissions, getMatchmakerMatchesLoading, getMonarchMatchesLoading } from '../selectors'
@@ -18,37 +18,63 @@ const PhenotypeListItem = styled(List.Item)`
   text-decoration: ${props => (props.observed === 'no' ? 'line-through' : 'none')};
 `
 
+const BreakWordLink = styled.a`
+  word-break: break-all;
+`
+
+const MatchContainer = styled.div`
+  word-break: break-all;
+`
+
+const PATIENT_FIELDS = ['label', 'sex', 'ageOfOnset', 'inheritanceMode', 'species']
+
+const contactedLabel = (val) => {
+  if (val.hostContacted) {
+    return 'Host Contacted Us'
+  }
+  return val.weContacted ? 'We Contacted Host' : 'Not Contacted'
+}
 
 const MATCH_FIELDS = {
-  contacted: {
-    name: 'contacted',
-    width: 1,
-    content: 'Contacted',
-    textAlign: 'center',
+  patient: {
+    name: 'id',
+    width: 2,
+    content: 'Match',
     verticalAlign: 'top',
-    format: val =>
-      <Icon
-        name={val.hostContacted || val.weContacted ? 'check' : 'x'}
-        color={val.hostContacted || val.weContacted ? 'green' : 'red'}
-      />,
+    format: (val) => {
+      const patientFields = PATIENT_FIELDS.filter(k => val.patient[k])
+      return patientFields.length ? <Popup
+        header="Patient Details"
+        trigger={<MatchContainer>{val.id} <Icon link name="info circle" /></MatchContainer>}
+        content={patientFields.map(k => <div key={k}><b>{camelcaseToTitlecase(k)}:</b> {val.patient[k]}</div>)}
+      /> : <MatchContainer>{val.id}</MatchContainer>
+    },
   },
-  irrelevent: {
-    name: 'irrelevent',
-    width: 1,
-    content: 'Irrelevent',
-    textAlign: 'center',
+  contact: {
+    name: 'contact',
+    width: 3,
+    content: 'Contact',
     verticalAlign: 'top',
-    format: val =>
-      <Icon
-        name={val.irrelevent ? 'check' : 'x'}
-        color={val.irrelevent ? 'green' : 'red'}
-      />,
+    format: ({ patient }) => patient.contact &&
+      <div>
+        <div><b>{patient.contact.institution}</b></div>
+        <div>{patient.contact.name}</div>
+        <BreakWordLink href={patient.contact.href}>{patient.contact.href.replace('mailto:', '')}</BreakWordLink>
+      </div>,
   },
-  comments: {
+  matchStatus: {
     name: 'comments',
-    width: 5,
-    content: 'Comments',
+    width: 4,
+    content: 'Follow Up Status',
     verticalAlign: 'top',
+    format: val =>
+      <div>
+        <Label horizontal content={contactedLabel(val)} color={val.hostContacted || val.weContacted ? 'green' : 'red'} />
+        {val.flagForAnalysis && <Label horizontal content="Flag for Analysis" color="purple" />}
+        {val.deemedIrrelevent && <Label horizontal content="Deemed Irrelevent" color="red" />}
+        <p>{val.comments}</p>
+        {/* TODO edit*/}
+      </div>,
   },
   description: {
     name: 'description',
@@ -66,7 +92,7 @@ const MATCH_FIELDS = {
   },
   geneVariants: {
     name: 'geneVariants',
-    width: 3,
+    width: 2,
     content: 'Genes',
     verticalAlign: 'top',
     format: val =>
@@ -95,7 +121,7 @@ const MATCH_FIELDS = {
   },
   phenotypes: {
     name: 'phenotypes',
-    width: 5,
+    width: 4,
     content: 'Phenotypes',
     verticalAlign: 'top',
     format: val =>
@@ -118,15 +144,14 @@ const MATCH_FIELDS = {
 
 const DISPLAY_FIELDS = {
   mmeMatch: [
-    // TODO match id/ hover patient details
+    MATCH_FIELDS.patient,
     MATCH_FIELDS.seenOn,
-    // TODO contact info (patient.contact)
-    MATCH_FIELDS.contacted,
-    MATCH_FIELDS.irrelevent,
-    MATCH_FIELDS.comments,
+    MATCH_FIELDS.contact,
     MATCH_FIELDS.geneVariants,
     MATCH_FIELDS.phenotypes,
+    MATCH_FIELDS.matchStatus,
   ],
+  // TODO monarch
   monarchMatch: [
     MATCH_FIELDS.id,
     MATCH_FIELDS.description,
@@ -136,13 +161,8 @@ const DISPLAY_FIELDS = {
   ],
 }
 
-
-const BaseMatches = ({ matchKey, submission, genesById }) => {
-  if (!submission[matchKey]) {
-    return null
-  }
-
-  const matchResults = Object.values(submission[matchKey]).filter(
+const BaseMatches = ({ matchKey, submission, genesById, loading }) => {
+  const matchResults = Object.values(submission[matchKey] || {}).filter(
     result => result.id,
   ).map(({ matchStatus, ...result }) => ({
     genesById,
@@ -159,6 +179,7 @@ const BaseMatches = ({ matchKey, submission, genesById }) => {
       defaultSortDescending={matchKey === 'mmeMatch'}
       columns={DISPLAY_FIELDS[matchKey]}
       data={matchResults}
+      loading={loading}
     />
   )
 }
@@ -167,6 +188,7 @@ BaseMatches.propTypes = {
   matchKey: PropTypes.string.isRequired,
   submission: PropTypes.object,
   genesById: PropTypes.object,
+  loading: PropTypes.bool,
 }
 
 const matchesMapStateToProps = state => ({
@@ -183,17 +205,16 @@ const monarchDetailPanels = submission => [{
 const ShowMatchmakerModal = ({ family, loading, load, monarchLoading, loadMonarch, matchmakerSubmissions }) => (
   matchmakerSubmissions.length ? matchmakerSubmissions.map(submission =>
     <div key={submission.individualId}>
-      <Header size="medium" disabled content={submission.individualId} dividing />
-      <DataLoader contentId={submission} content={submission.mmeMatch} loading={loading} load={load}>
-        <a target="_blank" href={`/matchmaker/search/project/${submission.projectId}/family/${submission.familyId}`}>
-          View Detailed Results
-        </a>
-        <HorizontalSpacer width={10} /> | <HorizontalSpacer width={10} />
-        <ButtonLink key="search" onClick={loadMonarch(submission)}>Search in the Monarch Initiative</ButtonLink>
+      <Header size="medium" content={submission.individualId} dividing />
+      {/* TODO show submission details/ update */}
+      <DataLoader contentId={submission} content load={load} loading={false}>
+        <ButtonLink key="search" disabled={!submission.mmeMatch} onClick={loadMonarch(submission)}>
+          Search in the Monarch Initiative
+        </ButtonLink>
         <DataLoader content={submission.monarchMatch} loading={monarchLoading} hideError>
           <Accordion defaultActiveIndex={0} panels={monarchDetailPanels(submission)} />
         </DataLoader>
-        <Matches matchKey="mmeMatch" submission={submission} />
+        <Matches matchKey="mmeMatch" submission={submission} loading={loading} />
       </DataLoader>
     </div>,
   ) : (

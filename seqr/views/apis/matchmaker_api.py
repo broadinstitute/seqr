@@ -105,7 +105,8 @@ def get_individual_matches(request, individual_guid):
             'comments': result_analysis_state['comments'],
             'hostContacted': result_analysis_state['host_contacted_us'],
             'weContacted': result_analysis_state['we_contacted_host'],
-            'irrelevent': result_analysis_state['deemed_irrelevant'],
+            'deemedIrrelevent': result_analysis_state['deemed_irrelevant'],
+            'flagForAnalysis': result_analysis_state['flag_for_analysis'],
             'seenOn': result_analysis_state['seen_on'],
         }
 
@@ -156,7 +157,7 @@ def _parse_mme_result(result, hpo_terms_by_id, gene_symbols_to_ids):
                 # Ensures key is present in defaultdict
                 gene_variants[gene_id]
     patient = {
-        k: result['patient'].get('k') for k in ['inheritanceMode', 'sex', 'contact', 'ageOfOnset', 'label', 'species']
+        k: result['patient'].get(k) for k in ['inheritanceMode', 'sex', 'contact', 'ageOfOnset', 'label', 'species']
     }
     return {
         'id': result['patient']['id'],
