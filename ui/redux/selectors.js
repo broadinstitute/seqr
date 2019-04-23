@@ -12,8 +12,6 @@ export const getIndividualsByGuid = state => state.individualsByGuid
 export const getSamplesByGuid = state => state.samplesByGuid
 export const getAnalysisGroupsByGuid = state => state.analysisGroupsByGuid
 export const getMatchmakerSubmissions = state => state.matchmakerSubmissions
-export const getMatchmakerMatchesLoading = state => state.matchmakerMatchesLoading.isLoading
-export const getMonarchMatchesLoading = state => state.monarchMatchesLoading.isLoading
 export const getSavedVariantsByGuid = state => state.savedVariantsByGuid
 export const getGenesById = state => state.genesById
 export const getGenesIsLoading = state => state.genesLoading.isLoading
@@ -33,16 +31,6 @@ const groupEntitiesByProjectGuid = entities => Object.entries(entities).reduce((
 }, {})
 export const getFamiliesGroupedByProjectGuid = createSelector(getFamiliesByGuid, groupEntitiesByProjectGuid)
 export const getAnalysisGroupsGroupedByProjectGuid = createSelector(getAnalysisGroupsByGuid, groupEntitiesByProjectGuid)
-
-export const getFamilyMatchmakerSubmissions = createSelector(
-  getMatchmakerSubmissions,
-  (state, props) => props.family,
-  (matchmakerSubmissions, family) => {
-    return Object.values(matchmakerSubmissions[family.projectGuid] || {}).filter(
-      submission => submission.familyId === family.familyId,
-    )
-  },
-)
 
 /**
  * function that returns a mapping of each familyGuid to an array of individuals in that family.

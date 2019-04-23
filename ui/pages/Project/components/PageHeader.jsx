@@ -6,6 +6,7 @@ import { getUser, getFamiliesByGuid, getAnalysisGroupsByGuid } from 'redux/selec
 import EditProjectButton from 'shared/components/buttons/EditProjectButton'
 import { PageHeaderLayout } from 'shared/components/page/PageHeader'
 import { HorizontalSpacer } from 'shared/components/Spacers'
+import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 
 import { UpdateAnalysisGroupButton, DeleteAnalysisGroupButton } from './AnalysisGroupButtons'
 import { getProject } from '../selectors'
@@ -25,16 +26,37 @@ const analysisGroupSearchEntityLink = (project, analysisGroup) => ({
 })
 
 const PAGE_CONFIGS = {
-  project_page: () => ({
+  project_page: (match, project) => ({
     breadcrumbIdSections: [],
     originalPages: [ORIGINAL_PROJECT_PAGE_CONFIG, { name: 'Families', path: 'families' }],
+    button: <EditProjectButton project={project} />,
   }),
-  family_page: (match, project, family) => ({
-    breadcrumbIdSections: [{ content: `Family: ${family.displayName}`, link: match.url }],
-    description: family.description,
-    originalPages: [{ name: 'Family', path: `family/${family.familyId}` }],
-    entityLinks: [familySearchEntityLink(project, family)],
-  }),
+  family_page: (match, project, family) => {
+    let { description } = family
+    const breadcrumbIdSections = [{
+      content: `Family: ${family.displayName}`,
+      link: `/project/${project.projectGuid}/family_page/${family.familyGuid}`,
+    }]
+    const originalPages = [{ name: 'Family', path: `project/${project.deprecatedProjectId}/family/${family.familyId}` }]
+    if (match.params.breadcrumbIdSection) {
+      breadcrumbIdSections.push({ content: snakecaseToTitlecase(match.params.breadcrumbIdSection), link: match.url })
+      if (match.params.breadcrumbIdSection === 'matchmaker_exchange') {
+        description = ''
+        originalPages.unshift({
+          name: 'MatchMaker',
+          path: `matchmaker/search/project/${project.deprecatedProjectId}/family/${family.familyId}`,
+        })
+      }
+    }
+
+    return {
+      breadcrumbIdSections,
+      description,
+      originalPages,
+      originalPagePath: '',
+      entityLinks: [familySearchEntityLink(project, family)],
+    }
+  },
   analysis_group: (match, project, family, analysisGroup) => ({
     breadcrumbIdSections: [{ content: `Analysis Group: ${analysisGroup.name}`, link: match.url }],
     description: analysisGroup.description,
@@ -125,7 +147,6 @@ export const PageHeader = ({ user, project, family, analysisGroup, breadcrumb, m
       entityGuid={project.projectGuid}
       title={project.name}
       description={project.description}
-      button={<EditProjectButton project={project} />}
       entityLinkPath={null}
       entityGuidLinkPath="project_page"
       originalPagePath={`project/${project.deprecatedProjectId}`}

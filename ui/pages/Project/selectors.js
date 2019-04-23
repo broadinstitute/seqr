@@ -23,6 +23,7 @@ import { toCamelcase, toSnakecase } from 'shared/utils/stringUtils'
 import {
   getProjectsByGuid, getFamiliesGroupedByProjectGuid, getIndividualsByGuid, getSamplesByGuid, getGenesById, getUser,
   getAnalysisGroupsGroupedByProjectGuid, getSavedVariantsByGuid, getFirstSampleByFamily, getSortedIndividualsByFamily,
+  getFamiliesByGuid, getMatchmakerSubmissions,
 } from 'redux/selectors'
 
 import {
@@ -51,6 +52,8 @@ const FAMILY_SORT_LOOKUP = FAMILY_SORT_OPTIONS.reduce(
 export const getProjectDetailsIsLoading = state => state.projectDetailsLoading.isLoading
 export const getProjectSavedVariantsIsLoading = state => state.projectSavedVariantsLoading.isLoading
 export const getProjectGuid = state => state.currentProjectGuid
+export const getMatchmakerMatchesLoading = state => state.matchmakerMatchesLoading.isLoading
+export const getMonarchMatchesLoading = state => state.monarchMatchesLoading.isLoading
 
 export const getProject = createSelector(
   getProjectsByGuid, getProjectGuid, (projectsByGuid, currentProjectGuid) => projectsByGuid[currentProjectGuid],
@@ -96,6 +99,18 @@ export const getProjectAnalysisGroupSamplesByGuid = createSelector(
         { ...sampleAcc, [sampleGuid]: samplesByGuid[sampleGuid] }
       ), {}),
     }), {}),
+)
+
+
+export const getFamilyMatchmakerSubmissions = createSelector(
+  getFamiliesByGuid,
+  getMatchmakerSubmissions,
+  (state, props) => props.match.params.familyGuid,
+  (familiesByGuid, matchmakerSubmissions, familyGuid) => {
+    return Object.values(matchmakerSubmissions[(familiesByGuid[familyGuid] || {}).projectGuid] || {}).filter(
+      submission => submission.familyId === familiesByGuid[familyGuid].familyId,
+    )
+  },
 )
 
 

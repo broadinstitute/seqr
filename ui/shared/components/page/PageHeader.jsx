@@ -166,7 +166,7 @@ export default () =>
     <Route path="/dashboard" component={() => null} />
     <Route path="/users" component={() => null} />
     <Route path="/project/:projectGuid/saved_variants/:variantPage?/:breadcrumbId?/:tag?" component={({ match }) => <ProjectPageHeader match={match} breadcrumb="saved_variants" />} />
-    <Route path="/project/:projectGuid/:breadcrumb/:breadcrumbId*" component={ProjectPageHeader} />
+    <Route path="/project/:projectGuid/:breadcrumb/:breadcrumbId?/:breadcrumbIdSection*" component={ProjectPageHeader} />
     <Route path="/gene_lists/:locusListGuid?" component={LocusListPageHeader} />
     <Route path="/gene_info/:geneId?" component={GenePageHeader} />
     <Route path="/variant_search/:pageType/:entityGuid" component={VariantSearchPageHeader} />

@@ -4,20 +4,15 @@ import { connect } from 'react-redux'
 import { Header, Icon, List, Accordion } from 'semantic-ui-react'
 import styled from 'styled-components'
 
-import {
-  getProjectsByGuid,
-  getFamilyMatchmakerSubmissions,
-  getMatchmakerMatchesLoading,
-  getMonarchMatchesLoading,
-  getGenesById,
-} from 'redux/selectors'
-import { loadMmeMatches } from 'pages/Project/reducers'
-import ShowGeneModal from './ShowGeneModal'
-import Modal from '../modal/Modal'
-import SortableTable from '../table/SortableTable'
-import DataLoader from '../DataLoader'
-import { HorizontalSpacer } from '../Spacers'
-import { ButtonLink } from '../StyledComponents'
+import { getFamiliesByGuid, getGenesById } from 'redux/selectors'
+import ShowGeneModal from 'shared/components/buttons/ShowGeneModal'
+import SortableTable from 'shared/components/table/SortableTable'
+import DataLoader from 'shared/components/DataLoader'
+import { HorizontalSpacer } from 'shared/components/Spacers'
+import { ButtonLink } from 'shared/components/StyledComponents'
+
+import { loadMmeMatches } from '../reducers'
+import { getFamilyMatchmakerSubmissions, getMatchmakerMatchesLoading, getMonarchMatchesLoading } from '../selectors'
 
 const PhenotypeListItem = styled(List.Item)`
   text-decoration: ${props => (props.observed === 'no' ? 'line-through' : 'none')};
@@ -185,45 +180,39 @@ const monarchDetailPanels = submission => [{
   content: { content: <Matches matchKey="monarchMatch" submission={submission} />, key: 'monarch' },
 }]
 
-const ShowMatchmakerModal = ({ project, family, loading, load, monarchLoading, loadMonarch, matchmakerSubmissions }) =>
-  <Modal
-    trigger={<ButtonLink>Match Maker Exchange</ButtonLink>}
-    title={`${family.displayName}: Match Maker Exchange`}
-    modalName={`mme-${family.familyGuid}`}
-    size="fullscreen"
-  >
-    {matchmakerSubmissions.length ? matchmakerSubmissions.map(submission =>
-      <div key={submission.individualId}>
-        <Header size="medium" disabled content={submission.individualId} dividing />
-        <DataLoader contentId={submission} content={submission.mmeMatch} loading={loading} load={load}>
-          <a target="_blank" href={`/matchmaker/search/project/${submission.projectId}/family/${submission.familyId}`}>
-            View Detailed Results
-          </a>
-          <HorizontalSpacer width={10} /> | <HorizontalSpacer width={10} />
-          <ButtonLink key="search" onClick={loadMonarch(submission)}>Search in the Monarch Initiative</ButtonLink>
-          <DataLoader content={submission.monarchMatch} loading={monarchLoading} hideError>
-            <Accordion defaultActiveIndex={0} panels={monarchDetailPanels(submission)} />
-          </DataLoader>
-          <Matches matchKey="mmeMatch" submission={submission} />
-        </DataLoader>
-      </div>,
-    ) : (
-      <div>
-        <Header
-          size="small"
-          content="No individuals from this family have been submitted"
-          icon={<Icon name="warning sign" color="orange" />}
-        />
-        <a target="_blank" href={`/matchmaker/search/project/${project.deprecatedProjectId}/family/${family.familyId}`}>
-          Submit to Match Maker Exchange
+const ShowMatchmakerModal = ({ family, loading, load, monarchLoading, loadMonarch, matchmakerSubmissions }) => (
+  matchmakerSubmissions.length ? matchmakerSubmissions.map(submission =>
+    <div key={submission.individualId}>
+      <Header size="medium" disabled content={submission.individualId} dividing />
+      <DataLoader contentId={submission} content={submission.mmeMatch} loading={loading} load={load}>
+        <a target="_blank" href={`/matchmaker/search/project/${submission.projectId}/family/${submission.familyId}`}>
+          View Detailed Results
         </a>
-      </div>
-    )}
-  </Modal>
+        <HorizontalSpacer width={10} /> | <HorizontalSpacer width={10} />
+        <ButtonLink key="search" onClick={loadMonarch(submission)}>Search in the Monarch Initiative</ButtonLink>
+        <DataLoader content={submission.monarchMatch} loading={monarchLoading} hideError>
+          <Accordion defaultActiveIndex={0} panels={monarchDetailPanels(submission)} />
+        </DataLoader>
+        <Matches matchKey="mmeMatch" submission={submission} />
+      </DataLoader>
+    </div>,
+  ) : (
+    <div>
+      <Header
+        size="small"
+        content="No individuals from this family have been submitted"
+        icon={<Icon name="warning sign" color="orange" />}
+      />
+      <a target="_blank" href={`/matchmaker/search/project/TODO/family/${family.familyId}`}>
+        {/* TODO submit UI */}
+        Submit to Match Maker Exchange
+      </a>
+    </div>
+  )
+)
 
 ShowMatchmakerModal.propTypes = {
   matchmakerSubmissions: PropTypes.array,
-  project: PropTypes.object,
   family: PropTypes.object,
   loading: PropTypes.bool,
   load: PropTypes.func,
@@ -232,7 +221,7 @@ ShowMatchmakerModal.propTypes = {
 }
 
 const mapStateToProps = (state, ownProps) => ({
-  project: getProjectsByGuid(state)[ownProps.family.projectGuid],
+  family: getFamiliesByGuid(state)[ownProps.match.params.familyGuid],
   matchmakerSubmissions: getFamilyMatchmakerSubmissions(state, ownProps),
   loading: getMatchmakerMatchesLoading(state),
   monarchLoading: getMonarchMatchesLoading(state),
