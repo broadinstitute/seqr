@@ -82,7 +82,9 @@ const MATCH_FIELDS = {
             {variants.length > 0 &&
               <List.List>
                 {variants.map(({ chrom, pos, ref, alt }) =>
-                  <List.Item>{chrom}:{pos}{alt && <span> {ref}<Icon fitted name="angle right" />{alt}</span>}</List.Item>,
+                  <List.Item key={pos}>
+                    {chrom}:{pos}{alt && <span> {ref}<Icon fitted name="angle right" />{alt}</span>}
+                  </List.Item>,
                 )}
               </List.List>
             }
@@ -145,11 +147,9 @@ const BaseMatches = ({ matchKey, submission, genesById }) => {
     return null
   }
 
-  // TODO gene variants
   const matchResults = Object.values(submission[matchKey]).filter(
     result => result.id,
   ).map(({ matchStatus, ...result }) => ({
-    genes: Object.keys(result.geneVariants).map(geneId => (genesById[geneId] || {}).geneSymbol).sort().join(', '),
     genesById,
     ...matchStatus,
     ...result,
