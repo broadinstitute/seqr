@@ -8,6 +8,7 @@ import { getFamiliesByGuid, getGenesById } from 'redux/selectors'
 import ShowGeneModal from 'shared/components/buttons/ShowGeneModal'
 import SortableTable from 'shared/components/table/SortableTable'
 import DataLoader from 'shared/components/DataLoader'
+import { HorizontalSpacer } from 'shared/components/Spacers'
 import { ButtonLink } from 'shared/components/StyledComponents'
 import { camelcaseToTitlecase } from 'shared/utils/stringUtils'
 
@@ -202,13 +203,17 @@ const monarchDetailPanels = submission => [{
   content: { content: <Matches matchKey="monarchMatch" submission={submission} />, key: 'monarch' },
 }]
 
-const ShowMatchmakerModal = ({ family, loading, load, monarchLoading, loadMonarch, matchmakerSubmissions }) => (
+const Matchmaker = ({ family, loading, load, searchMme, monarchLoading, loadMonarch, matchmakerSubmissions }) => (
   matchmakerSubmissions.length ? matchmakerSubmissions.map(submission =>
     <div key={submission.individualId}>
       <Header size="medium" content={submission.individualId} dividing />
       {/* TODO show submission details/ update */}
-      <DataLoader contentId={submission} content load={load} loading={false}>
-        <ButtonLink key="search" disabled={!submission.mmeMatch} onClick={loadMonarch(submission)}>
+      <DataLoader contentId={submission.individualId} content load={load} loading={false}>
+        <ButtonLink disabled={!submission.mmeMatch} onClick={searchMme(submission.individualId)}>
+          Search for New Matches
+        </ButtonLink>
+        <HorizontalSpacer width={5} />|<HorizontalSpacer width={5} />
+        <ButtonLink disabled={!submission.mmeMatch} onClick={loadMonarch(submission.individualId)}>
           Search in the Monarch Initiative
         </ButtonLink>
         <DataLoader content={submission.monarchMatch} loading={monarchLoading} hideError>
@@ -232,13 +237,14 @@ const ShowMatchmakerModal = ({ family, loading, load, monarchLoading, loadMonarc
   )
 )
 
-ShowMatchmakerModal.propTypes = {
+Matchmaker.propTypes = {
   matchmakerSubmissions: PropTypes.array,
   family: PropTypes.object,
   loading: PropTypes.bool,
   load: PropTypes.func,
   monarchLoading: PropTypes.bool,
   loadMonarch: PropTypes.func,
+  searchMme: PropTypes.func,
 }
 
 const mapStateToProps = (state, ownProps) => ({
@@ -250,14 +256,16 @@ const mapStateToProps = (state, ownProps) => ({
 
 const mapDispatchToProps = (dispatch) => {
   return {
-    load: (values) => {
-      return dispatch(loadMmeMatches(values))
+    load: (individualId) => {
+      return dispatch(loadMmeMatches(individualId))
     },
-    loadMonarch: submission => () => {
-      return dispatch(loadMmeMatches(submission, 'monarch'))
+    searchMme: individualId => () => {
+      return dispatch(loadMmeMatches(individualId, 'mme'))
+    },
+    loadMonarch: individualId => () => {
+      return dispatch(loadMmeMatches(individualId, 'monarch'))
     },
   }
 }
 
-export { ShowMatchmakerModal as ShowMatchmakerModalComponent }
-export default connect(mapStateToProps, mapDispatchToProps)(ShowMatchmakerModal)
+export default connect(mapStateToProps, mapDispatchToProps)(Matchmaker)

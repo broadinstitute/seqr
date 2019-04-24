@@ -37,18 +37,46 @@ def get_individual_matches(request, individual_guid):
         Status code and results
     """
 
-    individul = Individual.objects.get(guid=individual_guid)
-    project = individul.family.project
+    individual = Individual.objects.get(guid=individual_guid)
+    project = individual.family.project
+    check_permissions(project, request.user)
+
+    # TODO use postgres not mongo
+    results_analysis_state = MME_SEARCH_RESULT_ANALYSIS_STATE.find(
+        {'seqr_project_id': project.deprecated_project_id, 'id_of_indiv_searched_with': individual.individual_id}
+    )
+    results, genes_by_id = _parse_mme_results(results_analysis_state)
+
+    return create_json_response({
+        'mmeResults': results,
+        'genesById': genes_by_id,
+    })
+
+
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@csrf_exempt
+def search_individual_matches(request, individual_guid):
+    """
+    Looks for matches for the given individual. Expects a single patient (MME spec) in the POST
+    data field under key "patient_data"
+    Args:
+        project_id,indiv_id and POST all data in POST under key "patient_data"
+    Returns:
+        Status code and results
+    """
+
+    individual = Individual.objects.get(guid=individual_guid)
+    project = individual.family.project
     check_permissions(project, request.user)
 
     # TODO use MME API not direct access to db
     submission = SEQR_ID_TO_MME_ID_MAP.find_one(
-        {'project_id': project.deprecated_project_id, 'seqr_id': individul.individual_id},
+        {'project_id': project.deprecated_project_id, 'seqr_id': individual.individual_id},
         sort=[('insertion_date', pymongo.DESCENDING)]
     )
     if not submission:
         create_json_response(
-            {}, status_code=404, reason='No matchmaker submission found for {}'.format(individul.individual_id),
+            {}, status_code=404, reason='No matchmaker submission found for {}'.format(individual.individual_id),
         )
 
     patient_data = submission['submitted_data']
@@ -72,11 +100,8 @@ def get_individual_matches(request, individual_guid):
     # TODO use postgres not mongo
     results_analysis_state = {
         detail['result_id']: detail for detail in MME_SEARCH_RESULT_ANALYSIS_STATE.find(
-            {'seqr_project_id': project.deprecated_project_id, 'id_of_indiv_searched_with': individul.individual_id}
+            {'seqr_project_id': project.deprecated_project_id, 'id_of_indiv_searched_with': individual.individual_id}
         )}
-
-    hpo_ids = {feature['id'] for feature in patient_data['patient'].get('features', []) if feature.get('id')}
-    genes = set()
 
     new_result_count = 0
     for result in results:
@@ -85,10 +110,10 @@ def get_individual_matches(request, individual_guid):
         if not result_analysis_state:
             # TODO use postgres not mongo
             result_analysis_state = {
-                "id_of_indiv_searched_with": individul.individual_id,
+                "id_of_indiv_searched_with": individual.individual_id,
                 "content_of_indiv_searched_with": patient_data,
                 "content_of_result": result,
-                "result_id": id,
+                "result_id": result['patient']['id'],
                 "we_contacted_host": False,
                 "host_contacted_us": False,
                 "seen_on": str(timezone.now()),
@@ -100,7 +125,26 @@ def get_individual_matches(request, individual_guid):
             }
             MME_SEARCH_RESULT_ANALYSIS_STATE.insert(result_analysis_state, manipulate=False)
             new_result_count += 1
+            results_analysis_state[result['patient']['id']] = result_analysis_state
 
+    # TODO post to slack
+
+    logger.info('Found {} matches for {} ({} new)'.format(len(results), individual.individual_id, new_result_count))
+
+    parsed_results, genes_by_id = _parse_mme_results(results_analysis_state.values())
+
+    return create_json_response({
+        'mmeResults': parsed_results,
+        'genesById': genes_by_id,
+    })
+
+
+def _parse_mme_results(saved_results):
+    hpo_ids = set()
+    genes = set()
+    results = []
+    for result_analysis_state in saved_results:
+        result = result_analysis_state['content_of_result']
         result['matchStatus'] = {
             'comments': result_analysis_state['comments'],
             'hostContacted': result_analysis_state['host_contacted_us'],
@@ -109,13 +153,10 @@ def get_individual_matches(request, individual_guid):
             'flagForAnalysis': result_analysis_state['flag_for_analysis'],
             'seenOn': result_analysis_state['seen_on'],
         }
+        results.append(result)
 
         hpo_ids.update({feature['id'] for feature in result['patient'].get('features', []) if feature.get('id')})
         genes.update({gene_feature['gene']['id'] for gene_feature in result['patient'].get('genomicFeatures', [])})
-
-    # TODO post to slack
-
-    logger.info('Found {} matches for {} ({} new)'.format(len(results), individul.individual_id, new_result_count))
 
     gene_ids = {gene for gene in genes if gene.startswith('ENSG')}
     gene_symols = {gene for gene in genes if not gene.startswith('ENSG')}
@@ -125,10 +166,7 @@ def get_individual_matches(request, individual_guid):
 
     hpo_terms_by_id = {hpo.hpo_id: hpo.name for hpo in HumanPhenotypeOntology.objects.filter(hpo_id__in=hpo_ids)}
 
-    return create_json_response({
-        'mmeResults': [_parse_mme_result(result, hpo_terms_by_id, gene_symbols_to_ids) for result in results],
-        'genesById': genes_by_id,
-    })
+    return [_parse_mme_result(result, hpo_terms_by_id, gene_symbols_to_ids) for result in results], genes_by_id
 
 
 def _parse_mme_result(result, hpo_terms_by_id, gene_symbols_to_ids):
