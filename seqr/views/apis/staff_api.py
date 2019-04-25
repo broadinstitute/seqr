@@ -20,7 +20,7 @@ from seqr.views.utils.variant_utils import variant_details
 from seqr.models import Project, Family, VariantTag, VariantTagType, Sample, SavedVariant, Individual, ProjectCategory
 from reference_data.models import Omim
 
-from settings import SEQR_ID_TO_MME_ID_MAP, ELASTICSEARCH_SERVER
+from settings import ELASTICSEARCH_SERVER
 
 logger = logging.getLogger(__name__)
 
@@ -426,7 +426,7 @@ def _generate_rows(project, loaded_samples_by_project_family, saved_variants_by_
         if t0_months_since_t0 < 12:
             row['analysis_complete_status'] = "first_pass_in_progress"
 
-        submitted_to_mme = SEQR_ID_TO_MME_ID_MAP.find_one({'project_id': project.deprecated_project_id, 'family_id': family.family_id})
+        submitted_to_mme = any(i.mme_submitted_date for i in family.individual_set.all())
         if submitted_to_mme:
             row["submitted_to_mme"] = "Y"
 

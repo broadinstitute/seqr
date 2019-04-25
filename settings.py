@@ -364,7 +364,6 @@ SEARCH_IN_EXTERNAL_MME_NODES=True
 
 
 mme_db = _client['mme_primary']
-SEQR_ID_TO_MME_ID_MAP = mme_db['seqr_id_to_mme_id_map']
 MME_EXTERNAL_MATCH_REQUEST_LOG = mme_db['match_request_log']
 MME_SEARCH_RESULT_ANALYSIS_STATE = mme_db['match_result_analysis_state']
 MME_NODE_ADMIN_TOKEN=os.environ.get("MME_NODE_ADMIN_TOKEN", "abcd")

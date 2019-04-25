@@ -1,7 +1,7 @@
 from bs4 import BeautifulSoup
 
+from seqr.models import Individual
 from seqr.model_utils import find_matching_xbrowse_model
-from settings import SEQR_ID_TO_MME_ID_MAP
 
 
 def convert_html_to_plain_text(html_string, remove_line_breaks=False):
@@ -35,5 +35,9 @@ def _can_edit_entity_id(project, entity_id_key, entity_id):
     base_project = find_matching_xbrowse_model(project)
     if not base_project.has_elasticsearch_index():
         raise ValueError('Editing {} is disabled for projects which still use the mongo datastore'.format(entity_id_key))
-    if project.is_mme_enabled and SEQR_ID_TO_MME_ID_MAP.find({'project_id': project.deprecated_project_id, entity_id_key: entity_id}).count() > 0:
-        raise ValueError('Editing {} is disabled for {} because it has matchmaker submissions'.format(entity_id_key, entity_id))
+    if project.is_mme_enabled:
+        filter_key = 'family__family_id' if entity_id_key == 'family_id' else 'individual_id'
+        individual_filter = {'family__project': project, filter_key: entity_id}
+        if any(indiv for indiv in Individual.objects.filter(**individual_filter) if indiv.mme_submitted_date and not indiv.mme_deleted_date):
+            raise ValueError('Editing {} is disabled for {} because it has matchmaker submissions'.format(
+                entity_id_key, entity_id))

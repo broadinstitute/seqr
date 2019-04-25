@@ -78,6 +78,9 @@ def transfer_mme_submission_data(project):
                 invalid_individuals.add(submission['seqr_id'])
                 continue
 
+        if individual.mme_submitted_date:
+            continue
+
         submitted_data = submission['submitted_data']
         if submitted_data:
             individual.mme_submitted_data = submitted_data

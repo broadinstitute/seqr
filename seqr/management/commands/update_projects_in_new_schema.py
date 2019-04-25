@@ -3,7 +3,6 @@ import json
 import logging
 import pymongo
 from tqdm import tqdm
-import settings
 
 from django.core.management.base import BaseCommand
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
@@ -149,6 +148,13 @@ class Command(BaseCommand):
                     new_analysed_by, analysed_by_created = transfer_analysed_by(source_analysed_by, new_family)
 
                     if analysed_by_created: counters['analysed_by_created'] += 1
+
+            # transfer MME data
+            if new_project.is_mme_enabled:
+                num_transferred_mme_submissions, errors = transfer_mme_submission_data(new_project)
+                for error in errors:
+                    logger.error(error)
+                counters['mme_submissions'] += num_transferred_mme_submissions
 
             # TODO family groups, cohorts
             for source_variant_tag_type in ProjectTag.objects.filter(project=source_project).order_by('order'):
@@ -502,23 +508,6 @@ def transfer_individual(source_individual, new_project, connect_to_phenotips):
             phenotips_data_retrieved = True
         except phenotips_api.PhenotipsException as e:
             print("Couldn't retrieve latest data from phenotips for %s: %s" % (new_individual, e))
-
-    # transfer MME data
-    if new_project.is_mme_enabled:
-        mme_data_for_individual = list(
-            settings.SEQR_ID_TO_MME_ID_MAP.find(
-                {'seqr_id': new_individual.individual_id}
-            ).sort(
-                'insertion_date', pymongo.DESCENDING
-            )
-        )
-
-        if mme_data_for_individual:
-            submitted_data = mme_data_for_individual[0]['submitted_data']
-            if submitted_data:
-                new_individual.mme_submitted_data = json.dumps(submitted_data, default=json_util.default)
-                new_individual.mme_id = submitted_data['patient']['id']
-                new_individual.save()
 
     return new_individual, created, phenotips_data_retrieved
 
