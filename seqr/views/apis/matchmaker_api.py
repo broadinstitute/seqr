@@ -1,6 +1,5 @@
 import json
 import logging
-import pymongo
 import requests
 from collections import defaultdict
 from django.contrib.auth.decorators import login_required
@@ -16,7 +15,7 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.permissions_utils import check_permissions
 
 from settings import MME_NODE_ADMIN_TOKEN, MME_NODE_ACCEPT_HEADER, MME_CONTENT_TYPE_HEADER, MME_LOCAL_MATCH_URL, \
-    MME_EXTERNAL_MATCH_URL, SEQR_ID_TO_MME_ID_MAP, MME_SEARCH_RESULT_ANALYSIS_STATE
+    MME_EXTERNAL_MATCH_URL, MME_SEARCH_RESULT_ANALYSIS_STATE
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +26,7 @@ for v, k in GENOME_VERSION_CHOICES:
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
-def get_individual_matches(request, individual_guid):
+def get_individual_mme_matches(request, individual_guid):
     """
     Looks for matches for the given individual. Expects a single patient (MME spec) in the POST
     data field under key "patient_data"
@@ -45,17 +44,12 @@ def get_individual_matches(request, individual_guid):
     results_analysis_state = MME_SEARCH_RESULT_ANALYSIS_STATE.find(
         {'seqr_project_id': project.deprecated_project_id, 'id_of_indiv_searched_with': individual.individual_id}
     )
-    results, genes_by_id = _parse_mme_results(results_analysis_state)
-
-    return create_json_response({
-        'mmeResults': results,
-        'genesById': genes_by_id,
-    })
+    return _parse_mme_results(individual_guid, results_analysis_state)
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
-def search_individual_matches(request, individual_guid):
+def search_individual_mme_matches(request, individual_guid):
     """
     Looks for matches for the given individual. Expects a single patient (MME spec) in the POST
     data field under key "patient_data"
@@ -69,17 +63,11 @@ def search_individual_matches(request, individual_guid):
     project = individual.family.project
     check_permissions(project, request.user)
 
-    # TODO use MME API not direct access to db
-    submission = SEQR_ID_TO_MME_ID_MAP.find_one(
-        {'project_id': project.deprecated_project_id, 'seqr_id': individual.individual_id},
-        sort=[('insertion_date', pymongo.DESCENDING)]
-    )
-    if not submission:
+    patient_data = individual.mme_submitted_data
+    if not patient_data:
         create_json_response(
             {}, status_code=404, reason='No matchmaker submission found for {}'.format(individual.individual_id),
         )
-
-    patient_data = submission['submitted_data']
 
     headers = {
         'X-Auth-Token': MME_NODE_ADMIN_TOKEN,
@@ -131,15 +119,10 @@ def search_individual_matches(request, individual_guid):
 
     logger.info('Found {} matches for {} ({} new)'.format(len(results), individual.individual_id, new_result_count))
 
-    parsed_results, genes_by_id = _parse_mme_results(results_analysis_state.values())
-
-    return create_json_response({
-        'mmeResults': parsed_results,
-        'genesById': genes_by_id,
-    })
+    return _parse_mme_results(individual_guid, results_analysis_state.values())
 
 
-def _parse_mme_results(saved_results):
+def _parse_mme_results(individual_guid, saved_results):
     hpo_ids = set()
     genes = set()
     results = []
@@ -166,7 +149,11 @@ def _parse_mme_results(saved_results):
 
     hpo_terms_by_id = {hpo.hpo_id: hpo.name for hpo in HumanPhenotypeOntology.objects.filter(hpo_id__in=hpo_ids)}
 
-    return [_parse_mme_result(result, hpo_terms_by_id, gene_symbols_to_ids) for result in results], genes_by_id
+    parsed_results = [_parse_mme_result(result, hpo_terms_by_id, gene_symbols_to_ids) for result in results]
+    return create_json_response({
+        'individualsByGuid': {individual_guid: {'mmeResults': parsed_results}},
+        'genesById': genes_by_id,
+    })
 
 
 def _parse_mme_result(result, hpo_terms_by_id, gene_symbols_to_ids):

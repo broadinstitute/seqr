@@ -13,7 +13,7 @@ import { ButtonLink } from 'shared/components/StyledComponents'
 import { camelcaseToTitlecase } from 'shared/utils/stringUtils'
 
 import { loadMmeMatches } from '../reducers'
-import { getFamilyMatchmakerSubmissions, getMatchmakerMatchesLoading, getMonarchMatchesLoading } from '../selectors'
+import { getFamilyMatchmakerIndividuals, getMatchmakerMatchesLoading, getMonarchMatchesLoading } from '../selectors'
 
 const PhenotypeListItem = styled(List.Item)`
   text-decoration: ${props => (props.observed === 'no' ? 'line-through' : 'none')};
@@ -70,7 +70,7 @@ const MATCH_FIELDS = {
     verticalAlign: 'top',
     format: val =>
       <div>
-        <Label horizontal content={contactedLabel(val)} color={val.hostContacted || val.weContacted ? 'green' : 'red'} />
+        <Label horizontal content={contactedLabel(val)} color={val.hostContacted || val.weContacted ? 'green' : 'orange'} />
         {val.flagForAnalysis && <Label horizontal content="Flag for Analysis" color="purple" />}
         {val.deemedIrrelevent && <Label horizontal content="Deemed Irrelevent" color="red" />}
         <p>{val.comments}</p>
@@ -143,8 +143,10 @@ const MATCH_FIELDS = {
   },
 }
 
+const MME_RESULTS_KEY = 'mmeResults'
+
 const DISPLAY_FIELDS = {
-  mmeMatch: [
+  [MME_RESULTS_KEY]: [
     MATCH_FIELDS.patient,
     MATCH_FIELDS.seenOn,
     MATCH_FIELDS.contact,
@@ -153,7 +155,7 @@ const DISPLAY_FIELDS = {
     MATCH_FIELDS.matchStatus,
   ],
   // TODO monarch
-  monarchMatch: [
+  monarchResults: [
     MATCH_FIELDS.id,
     MATCH_FIELDS.description,
     MATCH_FIELDS.score,
@@ -162,8 +164,8 @@ const DISPLAY_FIELDS = {
   ],
 }
 
-const BaseMatches = ({ matchKey, submission, genesById, loading }) => {
-  const matchResults = Object.values(submission[matchKey] || {}).filter(
+const BaseMatches = ({ resultsKey, individual, genesById, loading }) => {
+  const matchResults = (individual[resultsKey] || []).filter(
     result => result.id,
   ).map(({ matchStatus, ...result }) => ({
     genesById,
@@ -176,9 +178,9 @@ const BaseMatches = ({ matchKey, submission, genesById, loading }) => {
       basic="very"
       fixed
       idField="id"
-      defaultSortColumn={matchKey === 'mmeMatch' ? 'seenOn' : 'id'}
-      defaultSortDescending={matchKey === 'mmeMatch'}
-      columns={DISPLAY_FIELDS[matchKey]}
+      defaultSortColumn={resultsKey === MME_RESULTS_KEY ? 'seenOn' : 'id'}
+      defaultSortDescending={resultsKey === MME_RESULTS_KEY}
+      columns={DISPLAY_FIELDS[MME_RESULTS_KEY]}
       data={matchResults}
       loading={loading}
     />
@@ -186,8 +188,8 @@ const BaseMatches = ({ matchKey, submission, genesById, loading }) => {
 }
 
 BaseMatches.propTypes = {
-  matchKey: PropTypes.string.isRequired,
-  submission: PropTypes.object,
+  resultsKey: PropTypes.string.isRequired,
+  individual: PropTypes.object,
   genesById: PropTypes.object,
   loading: PropTypes.bool,
 }
@@ -203,23 +205,23 @@ const monarchDetailPanels = submission => [{
   content: { content: <Matches matchKey="monarchMatch" submission={submission} />, key: 'monarch' },
 }]
 
-const Matchmaker = ({ family, loading, load, searchMme, monarchLoading, loadMonarch, matchmakerSubmissions }) => (
-  matchmakerSubmissions.length ? matchmakerSubmissions.map(submission =>
-    <div key={submission.individualId}>
-      <Header size="medium" content={submission.individualId} dividing />
+const Matchmaker = ({ family, loading, load, searchMme, monarchLoading, loadMonarch, matchmakerIndividuals }) => (
+  matchmakerIndividuals.length ? matchmakerIndividuals.map(individual =>
+    <div key={individual.individualGuid}>
+      <Header size="medium" content={individual.individualId} dividing />
       {/* TODO show submission details/ update */}
-      <DataLoader contentId={submission.individualId} content load={load} loading={false}>
-        <ButtonLink disabled={!submission.mmeMatch} onClick={searchMme(submission.individualId)}>
+      <DataLoader contentId={individual.individualGuid} content load={load} loading={false}>
+        <ButtonLink disabled={!individual.mmeResults} onClick={searchMme(individual.individualGuid)}>
           Search for New Matches
         </ButtonLink>
         <HorizontalSpacer width={5} />|<HorizontalSpacer width={5} />
-        <ButtonLink disabled={!submission.mmeMatch} onClick={loadMonarch(submission.individualId)}>
+        <ButtonLink disabled={!individual.mmeResults} onClick={loadMonarch(individual.individualGuid)}>
           Search in the Monarch Initiative
         </ButtonLink>
-        <DataLoader content={submission.monarchMatch} loading={monarchLoading} hideError>
-          <Accordion defaultActiveIndex={0} panels={monarchDetailPanels(submission)} />
+        <DataLoader content={individual.monarchResults} loading={monarchLoading} hideError>
+          <Accordion defaultActiveIndex={0} panels={monarchDetailPanels(individual)} />
         </DataLoader>
-        <Matches matchKey="mmeMatch" submission={submission} loading={loading} />
+        <Matches resultsKey={MME_RESULTS_KEY} individual={individual} loading={loading} />
       </DataLoader>
     </div>,
   ) : (
@@ -238,7 +240,7 @@ const Matchmaker = ({ family, loading, load, searchMme, monarchLoading, loadMona
 )
 
 Matchmaker.propTypes = {
-  matchmakerSubmissions: PropTypes.array,
+  matchmakerIndividuals: PropTypes.array,
   family: PropTypes.object,
   loading: PropTypes.bool,
   load: PropTypes.func,
@@ -249,7 +251,7 @@ Matchmaker.propTypes = {
 
 const mapStateToProps = (state, ownProps) => ({
   family: getFamiliesByGuid(state)[ownProps.match.params.familyGuid],
-  matchmakerSubmissions: getFamilyMatchmakerSubmissions(state, ownProps),
+  matchmakerIndividuals: getFamilyMatchmakerIndividuals(state, ownProps),
   loading: getMatchmakerMatchesLoading(state),
   monarchLoading: getMonarchMatchesLoading(state),
 })

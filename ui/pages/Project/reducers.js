@@ -212,32 +212,20 @@ export const updateAnalysisGroup = (values) => {
   return updateEntity(values, RECEIVE_DATA, `/api/project/${values.projectGuid}/analysis_groups`, 'analysisGroupGuid')
 }
 
-export const loadMmeMatches = (individualId, matchSource) => {
+export const loadMmeMatches = (individualGuid, matchSource) => {
   return (dispatch, getState) => {
     const state = getState()
-    const currentProject = state.projectsByGuid[state.currentProjectGuid]
-    const individualSubmission = state.matchmakerSubmissions[currentProject.projectGuid][individualId]
-    const matchKey = `${matchSource || 'mme'}Match`
-    if (!individualSubmission || !individualSubmission[matchKey] || matchSource === 'mme') {
-      const individual = Object.values(state.individualsByGuid).find(i =>
-        i.projectGuid === state.currentProjectGuid && i.individualId === individualId,
-      )
+    const individual = state.individualsByGuid[individualGuid]
+    const matchKey = `${matchSource || 'mme'}Results`
+    if (!individual[matchKey] || matchSource === 'mme') {
       dispatch({ type: matchSource === 'monarch' ? REQUEST_MONARCH_MATCHES : REQUEST_MME_MATCHES })
       // TODO monarch
       // const searchPath = matchSource === 'monarch' ? 'match_in_open_mme_sources' : 'match_internally_and_externally'
-      // new HttpRequestHelper(`/api/matchmaker/${searchPath}/project/${currentProject.deprecatedProjectId}/individual/${submission.individualId}`,
-      new HttpRequestHelper(`/api/matchmaker/${matchSource === 'mme' ? 'search' : 'get'}_matches/${individual.individualGuid}`,
+      new HttpRequestHelper(`/api/matchmaker/${matchSource ? 'search' : 'get'}_${matchSource || 'mme'}_matches/${individual.individualGuid}`,
         (responseJson) => {
           dispatch({
             type: RECEIVE_DATA,
-            updatesById: {
-              matchmakerSubmissions: {
-                [currentProject.projectGuid]: {
-                  [individualId]: { ...individualSubmission, [matchKey]: responseJson.mmeResults },
-                },
-              },
-              genesById: responseJson.genesById,
-            },
+            updatesById: responseJson,
           })
         },
         (e) => {

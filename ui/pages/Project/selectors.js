@@ -23,7 +23,6 @@ import { toCamelcase, toSnakecase } from 'shared/utils/stringUtils'
 import {
   getProjectsByGuid, getFamiliesGroupedByProjectGuid, getIndividualsByGuid, getSamplesByGuid, getGenesById, getUser,
   getAnalysisGroupsGroupedByProjectGuid, getSavedVariantsByGuid, getFirstSampleByFamily, getSortedIndividualsByFamily,
-  getFamiliesByGuid, getMatchmakerSubmissions,
 } from 'redux/selectors'
 
 import {
@@ -102,15 +101,11 @@ export const getProjectAnalysisGroupSamplesByGuid = createSelector(
 )
 
 
-export const getFamilyMatchmakerSubmissions = createSelector(
-  getFamiliesByGuid,
-  getMatchmakerSubmissions,
+export const getFamilyMatchmakerIndividuals = createSelector(
+  getSortedIndividualsByFamily,
   (state, props) => props.match.params.familyGuid,
-  (familiesByGuid, matchmakerSubmissions, familyGuid) => {
-    return Object.values(matchmakerSubmissions[(familiesByGuid[familyGuid] || {}).projectGuid] || {}).filter(
-      submission => submission.familyId === familiesByGuid[familyGuid].familyId,
-    )
-  },
+  (individualsByFamily, familyGuid) =>
+    (individualsByFamily[familyGuid] || []).filter(individual => individual.mmeSubmittedDate),
 )
 
 

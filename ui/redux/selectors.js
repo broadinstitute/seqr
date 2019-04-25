@@ -11,7 +11,6 @@ export const getFamiliesByGuid = state => state.familiesByGuid
 export const getIndividualsByGuid = state => state.individualsByGuid
 export const getSamplesByGuid = state => state.samplesByGuid
 export const getAnalysisGroupsByGuid = state => state.analysisGroupsByGuid
-export const getMatchmakerSubmissions = state => state.matchmakerSubmissions
 export const getSavedVariantsByGuid = state => state.savedVariantsByGuid
 export const getGenesById = state => state.genesById
 export const getGenesIsLoading = state => state.genesLoading.isLoading

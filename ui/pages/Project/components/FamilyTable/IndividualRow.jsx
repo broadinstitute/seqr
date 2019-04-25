@@ -15,7 +15,7 @@ import { FamilyLayout } from 'shared/components/panel/family'
 import { ColoredIcon } from 'shared/components/StyledComponents'
 
 import { updateIndividual } from 'redux/rootReducer'
-import { getSamplesByGuid, getMatchmakerSubmissions } from 'redux/selectors'
+import { getSamplesByGuid } from 'redux/selectors'
 import { getProject } from 'pages/Project/selectors'
 import { deleteMmePatient } from 'pages/Project/reducers'
 import { SAMPLE_STATUS_LOADED, DATASET_TYPE_VARIANT_CALLS } from 'shared/utils/constants'
@@ -58,34 +58,33 @@ CaseReviewStatus.propTypes = {
   individual: PropTypes.object.isRequired,
 }
 
-const DataDetails = ({ loadedSamples, matchmakerSubmission, deleteIndividualMmePatient }) =>
+const DataDetails = ({ loadedSamples, individual, deleteIndividualMmePatient }) =>
   <div>
     {loadedSamples.map((sample, i) =>
       <div key={sample.sampleGuid}>
         <Sample loadedSample={sample} isOutdated={i !== 0} />
       </div>,
     )}
-    {matchmakerSubmission && (
-      matchmakerSubmission.deletion ? (
+    {individual.mmeSubmittedDate && (
+      individual.mmeDeletedDate ? (
         <Popup
-          key={matchmakerSubmission.submissionDate}
+          key={individual.mmeSubmittedDate}
           flowing
           trigger={
             <SpacedLabel color="red" size="small">
-              Removed from MME: {new Date(matchmakerSubmission.deletion.date).toLocaleDateString()}
+              Removed from MME: {new Date(individual.mmeDeletedDate).toLocaleDateString()}
             </SpacedLabel>
           }
           content={
             <div>
-              <b>Removed By: </b>{matchmakerSubmission.deletion.by}<br />
-              <b>Originally Submitted: </b>{new Date(matchmakerSubmission.submissionDate).toLocaleDateString()}
+              <b>Originally Submitted: </b>{new Date(individual.mmeSubmittedDate).toLocaleDateString()}
             </div>
           }
         />
       ) : (
-        <div key={matchmakerSubmission.submissionDate}>
+        <div key={individual.mmeSubmittedDate}>
           <SpacedLabel color="violet" size="small">
-            Submitted to MME: {new Date(matchmakerSubmission.submissionDate).toLocaleDateString()}
+            Submitted to MME: {new Date(individual.mmeSubmittedDate).toLocaleDateString()}
           </SpacedLabel>
           <DispatchRequestButton
             buttonContent={<Icon name="trash" />}
@@ -99,7 +98,7 @@ const DataDetails = ({ loadedSamples, matchmakerSubmission, deleteIndividualMmeP
   </div>
 
 DataDetails.propTypes = {
-  matchmakerSubmission: PropTypes.object,
+  individual: PropTypes.object,
   loadedSamples: PropTypes.array,
   deleteIndividualMmePatient: PropTypes.func,
 }
@@ -111,14 +110,13 @@ class IndividualRow extends React.Component
     family: PropTypes.object.isRequired,
     individual: PropTypes.object.isRequired,
     samplesByGuid: PropTypes.object.isRequired,
-    matchmakerSubmission: PropTypes.object,
     updateIndividual: PropTypes.func,
     deleteIndividualMmePatient: PropTypes.func,
     editCaseReview: PropTypes.bool,
   }
 
   render() {
-    const { project, family, individual, editCaseReview, matchmakerSubmission, deleteIndividualMmePatient } = this.props
+    const { project, family, individual, editCaseReview, deleteIndividualMmePatient } = this.props
 
     const { displayName, paternalId, maternalId, sex, affected, createdDate, sampleGuids, caseReviewStatus, caseReviewDiscussion } = individual
 
@@ -155,7 +153,7 @@ class IndividualRow extends React.Component
 
     const rightContent = editCaseReview ?
       <CaseReviewStatus individual={individual} /> :
-      <DataDetails loadedSamples={loadedSamples} matchmakerSubmission={matchmakerSubmission} deleteIndividualMmePatient={deleteIndividualMmePatient} />
+      <DataDetails loadedSamples={loadedSamples} individual={individual} deleteIndividualMmePatient={deleteIndividualMmePatient} />
 
     const fields = [
       {
@@ -226,10 +224,9 @@ class IndividualRow extends React.Component
 
 export { IndividualRow as IndividualRowComponent }
 
-const mapStateToProps = (state, ownProps) => ({
+const mapStateToProps = state => ({
   project: getProject(state),
   samplesByGuid: getSamplesByGuid(state),
-  matchmakerSubmission: getMatchmakerSubmissions(state)[ownProps.family.projectGuid][ownProps.individual.individualId],
 })
 
 
