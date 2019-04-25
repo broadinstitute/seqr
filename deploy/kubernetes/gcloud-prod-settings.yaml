@@ -22,7 +22,7 @@ GCLOUD_ZONE: 'us-central1-b'
 
 SEQR_GIT_BRANCH: 'master'
 
-GUNICORN_WORKER_THREADS: 20    # number of webserver threads
+GUNICORN_WORKER_THREADS: 15    # number of webserver threads
 
 ###########################################################
 ####### SETTINGS THAT SHOULDN'T NEED TO BE MODIFIED #######
