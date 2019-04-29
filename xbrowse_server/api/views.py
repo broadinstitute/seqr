@@ -19,6 +19,7 @@ from xbrowse_server.base.model_utils import update_xbrowse_model, get_or_create_
     create_xbrowse_model
 from xbrowse_server.base.models import Project, Family, FamilySearchFlag, VariantNote, ProjectTag, VariantTag, GeneNote, \
     AnalysedBy, VariantFunctionalData
+from seqr.models import Individual as SeqrIndividual
 from xbrowse_server.api.utils import get_project_and_family_for_user, get_project_and_cohort_for_user, \
     add_extra_info_to_variants_project, add_notes_to_genes, get_variant_notes, get_variant_tags, get_variant_functional_data
 from xbrowse.variant_search.family import get_variants_with_inheritance_mode
@@ -43,8 +44,6 @@ from xbrowse_server.matchmaker.utilities import get_all_clinical_data_for_family
 from xbrowse_server.matchmaker.utilities import is_a_valid_patient_structure
 from xbrowse_server.matchmaker.utilities import generate_notification_for_incoming_match
 from xbrowse_server.matchmaker.utilities import generate_slack_notification_for_seqr_match
-from xbrowse_server.matchmaker.utilities import find_latest_family_member_submissions
-from xbrowse_server.matchmaker.utilities import convert_matchbox_id_to_seqr_id
 from xbrowse_server.matchmaker.utilities import gather_all_annotated_genes_in_seqr
 from xbrowse_server.matchmaker.utilities import find_projects_with_families_in_matchbox
 from xbrowse_server.matchmaker.utilities import find_families_of_this_project_in_matchbox
@@ -1235,6 +1234,7 @@ def add_individual(request):
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_view(request.user):
         raise PermissionDenied
+    individual = get_object_or_404(SeqrIndividual, individual_id=seqr_id)
     
     submission = json.dumps({'patient':affected_patient})
     
@@ -1250,19 +1250,19 @@ def add_individual(request):
        'Accept': settings.MME_NODE_ACCEPT_HEADER,
        'Content-Type': settings.MME_CONTENT_TYPE_HEADER
          }
+
     result = requests.post(url=settings.MME_ADD_INDIVIDUAL_URL,
                    headers=headers,
                    data=submission)
-    
+
     #if successfully submitted to MME, persist info
     if result.status_code==200 or result.status_code==409:
-        settings.SEQR_ID_TO_MME_ID_MAP.insert({
-                                               'submitted_data':{'patient':affected_patient},
-                                               'seqr_id':seqr_id,
-                                               'family_id':family_id,
-                                               'project_id':project_id,
-                                               'insertion_date':datetime.datetime.now()
-                                               })
+        individual.mme_submitted_data = {'patient':affected_patient}
+        individual.mme_submitted_date = datetime.datetime.now()
+        individual.mme_deleted_date = None
+        individual.mme_deleted_by = None
+        individual.save()
+
         #update the contact information store if any updates were made
         updated_contact_name = affected_patient['contact']['name']
         updated_contact_href = affected_patient['contact']['href']
@@ -1288,9 +1288,6 @@ def add_individual(request):
                         })
 
 
-
-
-
 @csrf_exempt
 @login_required
 @log_request('matchmaker_individual_delete')
@@ -1306,6 +1303,7 @@ def delete_individual(request,project_id, indiv_id):
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_view(request.user):
         raise PermissionDenied
+    individual = get_object_or_404(SeqrIndividual, individual_id=indiv_id)
     
     headers={
        'X-Auth-Token': settings.MME_NODE_ADMIN_TOKEN,
@@ -1314,13 +1312,11 @@ def delete_individual(request,project_id, indiv_id):
          }
     #find the latest ID that was used in submission which might defer from seqr ID
     matchbox_id=indiv_id
-    submission_records = settings.SEQR_ID_TO_MME_ID_MAP.find({'seqr_id':indiv_id,'project_id':project_id}) \
-                                                       .sort([("insertion_date", pymongo.DESCENDING)])
-    if submission_records.count()>0:
-         if submission_records[0].has_key('deletion_date'):
+    if individual.mme_submitted_date:
+         if individual.mme_deleted_date:
              return JSONResponse({"status_code":402,"message":"that individual has already been deleted"})
          else:
-            matchbox_id = submission_records[0]['submitted_data']['patient']['id']
+            matchbox_id = individual.mme_submitted_data['patient']['id']
             logger.info("using matchbox ID: %s" % (matchbox_id))
     
     payload = {"id":matchbox_id}
@@ -1330,9 +1326,12 @@ def delete_individual(request,project_id, indiv_id):
     
     #if successfully deleted from matchbox/MME, persist that detail
     if result.status_code == 200:
-        settings.SEQR_ID_TO_MME_ID_MAP.find_one_and_update({'_id':submission_records[0]['_id']},
-                                                                 {'$set':{'deletion':{'date':datetime.datetime.now(),'by':str(request.user)}}})
-        return JSONResponse({"status_code":result.status_code,"message":result.text, 'deletion_date':str(datetime.datetime.now())})
+        deleted_date = datetime.datetime.now()
+        individual.mme_deleted_date = deleted_date
+        individual.mme_deleted_by = request.user
+        individual.save()
+
+        return JSONResponse({"status_code":result.status_code,"message":result.text, 'deletion_date':str(deleted_date)})
     else:
         return JSONResponse({"status_code":404,"message":result.text})
     return JSONResponse({"status_code":result.status_code,"message":result.text})
@@ -1349,23 +1348,21 @@ def get_family_submissions(request,project_id,family_id):
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_view(request.user):
         raise PermissionDenied
-    else:                                             
-        submission_records=settings.SEQR_ID_TO_MME_ID_MAP.find({'project_id':project_id, 
-                                             'family_id':family_id}).sort('insertion_date',-1)                                              
-        latest_submissions_from_family = find_latest_family_member_submissions(submission_records)
+    else:
+        family = get_object_or_404(Family, project=project, family_id=family_id)
         family_submissions=[]
-        family_members_submitted=[] 
-        is_deleted = lambda sub: {'by':sub['deletion']['by'],'date':str(sub['deletion']['date'])} if sub.has_key('deletion') else None
-        for individual,submission in latest_submissions_from_family.iteritems():  
-            family_submissions.append({'submitted_data':submission['submitted_data'],
-                                       'hpo_details':extract_hpo_id_list_from_mme_patient_struct(submission['submitted_data']),
-                                       'seqr_id':submission['seqr_id'],
-                                       'family_id':submission['family_id'],
-                                       'project_id':submission['project_id'],
-                                       'insertion_date':submission['insertion_date'].strftime("%b %d %Y %H:%M:%S"),
-                                       'deletion':is_deleted(submission)
+        family_members_submitted=[]
+        for individual in family.individual_set.filter(seqr_individual__mme_submitted_date__isnull=False):
+            family_submissions.append({'submitted_data': individual.seqr_individual.mme_submitted_data,
+                                       'hpo_details': extract_hpo_id_list_from_mme_patient_struct(individual.seqr_individual.mme_submitted_data),
+                                       'seqr_id': individual.indiv_id,
+                                       'family_id': family_id,
+                                       'project_id': project_id,
+                                       'insertion_date': individual.seqr_individual.mme_submitted_date.strftime("%b %d %Y %H:%M:%S"),
+                                       'deletion': individual.seqr_individual.mme_deleted_date,
                                        })
-            family_members_submitted.append(individual)
+            family_members_submitted.append(individual.indiv_id)
+
         #TODO: figure out when more than 1 indi for a family. For now returning a list. Eventually
         #this must be the latest submission for every indiv in a family
         return JSONResponse({
@@ -1456,9 +1453,8 @@ def match_internally_and_externally(request,project_id,indiv_id):
             result_analysis_state[id]=record
             settings.MME_SEARCH_RESULT_ANALYSIS_STATE.insert(record,manipulate=False)
     #post to slack
-    seqr_id = convert_matchbox_id_to_seqr_id(json.loads(patient_data)['patient']['id'])
     if settings.SLACK_TOKEN is not None:
-        generate_slack_notification_for_seqr_match(results,project_id,seqr_id) 
+        generate_slack_notification_for_seqr_match(results,project_id,indiv_id)
     
     return JSONResponse({
                          "match_results":results,
@@ -1624,34 +1620,35 @@ def match(request):
 def get_matchbox_id_details(request,matchbox_id):
     """
     Gets information of this matchbox_id
-    """                           
-    submission_records=settings.SEQR_ID_TO_MME_ID_MAP.find({'submitted_data.patient.id':matchbox_id},
-                                                           {'_id':0}).sort('insertion_date',-1)
-                                    
-    records=[]                                         
-    for record in submission_records:  
-        r={}
-        for k,v in record.iteritems():
-            if k=="submitted_data":
-                genomicFatures=[]
-                for g_feature in v['patient']['genomicFeatures']:
-                    genomicFatures.append({'gene_id':g_feature['gene']['id'],
-                                           'variant_start':g_feature['variant']['start'],
-                                           'variant_end': g_feature['variant']['end']})
-                r['submitted_genomic_features']=genomicFatures
-                
-                features=[]
-                for feature in v['patient']['features']:
-                    id=feature['id']
-                    label=''
-                    if feature.has_key('label'):
-                        label=feature['label']
-                    features.append({'id':id,
-                                    'label':label}),      
-                r['submitted_features']=features
-            else:
-                r[k]=str(v)
-        records.append(r)
+    """
+    match_individuals = SeqrIndividual.objects.filter(mme_submitted_data__patient__id=matchbox_id)
+    records = []
+    for individual in match_individuals:
+        record = {
+            'seqr_id':individual.individual_id,
+            'family_id':individual.family.family_id,
+            'project_id':individual.family.project.deprecated_project_id,
+            'insertion_date':str(individual.mme_submitted_date)}
+
+        genomicFatures = []
+        for g_feature in individual.mme_submitted_data['patient']['genomicFeatures']:
+            genomicFatures.append({'gene_id': g_feature['gene']['id'],
+                                   'variant_start': g_feature['variant']['start'],
+                                   'variant_end': g_feature['variant']['end']})
+        record['submitted_genomic_features'] = genomicFatures
+
+        features = []
+        for feature in individual.mme_submitted_data['patient']['features']:
+            id = feature['id']
+            label = ''
+            if feature.has_key('label'):
+                label = feature['label']
+            features.append({'id': id,
+                             'label': label}),
+        record['submitted_features'] = features
+
+        records.append(record)
+
     return JSONResponse({
                          'submission_records':records
                          })

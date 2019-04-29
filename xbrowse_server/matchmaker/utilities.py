@@ -177,6 +177,7 @@ def is_a_valid_patient_structure(patient_struct):
     return submission_validity
 
 
+# TODO move to noew models when move proxy URLs
 def generate_notification_for_incoming_match(response_from_matchbox,incoming_request,incoming_external_request_patient):
     """
     Generate a SLACK notifcation to say that a VALID match request came in and the following
@@ -312,21 +313,6 @@ def find_latest_family_member_submissions(submission_records):
     return individual
 
 
-def convert_matchbox_id_to_seqr_id(matchbox_id):
-    """
-    Given a matchbox ID returns a seqr ID
-    Args:
-        A matchbox ID
-    Returns:
-        A seqr ID
-    """
-    try:
-        patient=settings.SEQR_ID_TO_MME_ID_MAP.find_one({'submitted_data.patient.id':matchbox_id})
-        return patient['seqr_id']
-    except:
-        raise
-    
-
 def gather_all_annotated_genes_in_seqr():
     """
     Finds all genes mentioned in seqr
@@ -380,27 +366,7 @@ def find_projects_with_families_in_matchbox():
         A dictionary with the key being a project name and the value being a dictionary with the
         key being a family name and the value being the insertion date of that family into matchbox
     """
-    all_submissions = settings.SEQR_ID_TO_MME_ID_MAP.find({})
-    most_recent_submission={}
-    for submission in all_submissions:
-        if most_recent_submission.has_key(submission['project_id']):
-            if most_recent_submission[submission['project_id']].has_key(submission['family_id']):
-                if submission['insertion_date'] > most_recent_submission[submission['project_id']][submission['family_id']]:
-                    most_recent_submission[submission['project_id']][submission['family_id']] = submission['insertion_date']
-            else:
-                most_recent_submission[submission['project_id']][submission['family_id']] = submission['insertion_date']
-            
-        else:
-            most_recent_submission[submission['project_id']]= {submission['family_id'] : submission['insertion_date']}
-    #make date serializable
-    serializable_most_recent_submission={}
-    for proj,families in most_recent_submission.iteritems():
-        serializable_most_recent_submission[proj]=[]
-        for f,v in families.iteritems():
-            serializable_most_recent_submission[proj].append({"family_id":f, "insertion_date":str(v)})
-    return serializable_most_recent_submission
-
-
+    raise NotImplementedError
 
 
 def find_families_of_this_project_in_matchbox(project_id):
@@ -413,31 +379,7 @@ def find_families_of_this_project_in_matchbox(project_id):
             family_id:  {"phenotype_count": n, "genotype_count": n,"insertion_date:date"},
         }
     """
-    all_submissions = settings.SEQR_ID_TO_MME_ID_MAP.find({'project_id':project_id})
-    #the mongo query needs to be updated to do all this..
-    most_recent_submission={}
-    for submission in all_submissions:
-        if most_recent_submission.has_key(submission['family_id']):
-            if submission['insertion_date'] > most_recent_submission[submission['family_id']]["insertion_date"]:
-                counts=count_genotypes_and_phenotypes(submission)
-                most_recent_submission[submission['family_id']]= {"phenotype_count": counts["phenotype_count"], 
-                                                                  "genotype_count": counts["genotype_count"],
-                                                                  "insertion_date":submission['insertion_date'],
-                                                                  "submitted_data":submission['submitted_data']}
-        else:
-            counts=count_genotypes_and_phenotypes(submission)
-            most_recent_submission[submission['family_id']]= {"phenotype_count": counts["phenotype_count"], 
-                                                            "genotype_count": counts["genotype_count"],
-                                                            "insertion_date":submission['insertion_date'],
-                                                            "submitted_data":submission['submitted_data']}
-    #make date serializable
-    serializable_most_recent_submission={}
-    for family_id,counts in most_recent_submission.iteritems():
-        serializable_most_recent_submission[family_id]={"phenotype_count": most_recent_submission[family_id]["phenotype_count"], 
-                                                        "genotype_count":  most_recent_submission[family_id]["genotype_count"],
-                                                        "insertion_date": str(most_recent_submission[family_id]['insertion_date']),
-                                                        "submitted_data":submission['submitted_data']}
-    return serializable_most_recent_submission
+    raise NotImplementedError
 
 
 def count_genotypes_and_phenotypes(submission):
