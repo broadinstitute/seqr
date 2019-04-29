@@ -3,19 +3,19 @@ import logging
 import requests
 from collections import defaultdict
 from django.contrib.auth.decorators import login_required
-from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
 from reference_data.models import HumanPhenotypeOntology, GENOME_VERSION_CHOICES
 
-from seqr.models import Individual
+from seqr.models import Individual, MatchmakerResult
 from seqr.utils.gene_utils import get_genes, get_gene_ids_for_gene_symbols
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.utils.json_utils import create_json_response
+from seqr.views.utils.orm_to_json_utils import _get_json_for_model
 from seqr.views.utils.permissions_utils import check_permissions
 
 from settings import MME_NODE_ADMIN_TOKEN, MME_NODE_ACCEPT_HEADER, MME_CONTENT_TYPE_HEADER, MME_LOCAL_MATCH_URL, \
-    MME_EXTERNAL_MATCH_URL, MME_SEARCH_RESULT_ANALYSIS_STATE
+    MME_EXTERNAL_MATCH_URL
 
 logger = logging.getLogger(__name__)
 
@@ -40,11 +40,8 @@ def get_individual_mme_matches(request, individual_guid):
     project = individual.family.project
     check_permissions(project, request.user)
 
-    # TODO use postgres not mongo
-    results_analysis_state = MME_SEARCH_RESULT_ANALYSIS_STATE.find(
-        {'seqr_project_id': project.deprecated_project_id, 'id_of_indiv_searched_with': individual.individual_id}
-    )
-    return _parse_mme_results(individual_guid, results_analysis_state)
+    results = MatchmakerResult.objects.filter(individual=individual)
+    return _parse_mme_results(individual_guid, results)
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -85,57 +82,36 @@ def search_individual_mme_matches(request, individual_guid):
 
     results = local_result.json()['results'] + external_result.json()['results']
 
-    # TODO use postgres not mongo
-    results_analysis_state = {
-        detail['result_id']: detail for detail in MME_SEARCH_RESULT_ANALYSIS_STATE.find(
-            {'seqr_project_id': project.deprecated_project_id, 'id_of_indiv_searched_with': individual.individual_id}
-        )}
+    saved_results = {
+        result.result_data['patient']['id']: result for result in MatchmakerResult.objects.filter(individual=individual)
+    }
 
     new_result_count = 0
     for result in results:
-        # Get analysis state for result
-        result_analysis_state = results_analysis_state.get(result['patient']['id'])
-        if not result_analysis_state:
-            # TODO use postgres not mongo
-            result_analysis_state = {
-                "id_of_indiv_searched_with": individual.individual_id,
-                "content_of_indiv_searched_with": patient_data,
-                "content_of_result": result,
-                "result_id": result['patient']['id'],
-                "we_contacted_host": False,
-                "host_contacted_us": False,
-                "seen_on": str(timezone.now()),
-                "deemed_irrelevant": False,
-                "comments": "",
-                "seqr_project_id": project.deprecated_project_id,
-                "flag_for_analysis": False,
-                "username_of_last_event_initiator": request.user.username
-            }
-            MME_SEARCH_RESULT_ANALYSIS_STATE.insert(result_analysis_state, manipulate=False)
+        saved_result = saved_results.get(result['patient']['id'])
+        if not saved_result:
+            saved_result = MatchmakerResult.objects.create(
+                individual=individual,
+                result_data=result,
+                last_modified_by=request.user,
+            )
             new_result_count += 1
-            results_analysis_state[result['patient']['id']] = result_analysis_state
+            saved_results[result['patient']['id']] = saved_result
 
     # TODO post to slack
 
     logger.info('Found {} matches for {} ({} new)'.format(len(results), individual.individual_id, new_result_count))
 
-    return _parse_mme_results(individual_guid, results_analysis_state.values())
+    return _parse_mme_results(individual_guid, saved_results.values())
 
 
 def _parse_mme_results(individual_guid, saved_results):
     hpo_ids = set()
     genes = set()
     results = []
-    for result_analysis_state in saved_results:
-        result = result_analysis_state['content_of_result']
-        result['matchStatus'] = {
-            'comments': result_analysis_state['comments'],
-            'hostContacted': result_analysis_state['host_contacted_us'],
-            'weContacted': result_analysis_state['we_contacted_host'],
-            'deemedIrrelevent': result_analysis_state['deemed_irrelevant'],
-            'flagForAnalysis': result_analysis_state['flag_for_analysis'],
-            'seenOn': result_analysis_state['seen_on'],
-        }
+    for result_model in saved_results:
+        result = result_model.result_data
+        result['matchStatus'] = _get_json_for_model(result_model)
         results.append(result)
 
         hpo_ids.update({feature['id'] for feature in result['patient'].get('features', []) if feature.get('id')})

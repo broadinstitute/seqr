@@ -365,7 +365,6 @@ SEARCH_IN_EXTERNAL_MME_NODES=True
 
 mme_db = _client['mme_primary']
 MME_EXTERNAL_MATCH_REQUEST_LOG = mme_db['match_request_log']
-MME_SEARCH_RESULT_ANALYSIS_STATE = mme_db['match_result_analysis_state']
 MME_NODE_ADMIN_TOKEN=os.environ.get("MME_NODE_ADMIN_TOKEN", "abcd")
 MME_NODE_ACCEPT_HEADER='application/vnd.ga4gh.matchmaker.v1.0+json'
 MME_CONTENT_TYPE_HEADER='application/vnd.ga4gh.matchmaker.v1.0+json'

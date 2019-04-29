@@ -19,7 +19,7 @@ from xbrowse_server.base.model_utils import update_xbrowse_model, get_or_create_
     create_xbrowse_model
 from xbrowse_server.base.models import Project, Family, FamilySearchFlag, VariantNote, ProjectTag, VariantTag, GeneNote, \
     AnalysedBy, VariantFunctionalData
-from seqr.models import Individual as SeqrIndividual
+from seqr.models import Individual as SeqrIndividual, MatchmakerResult
 from xbrowse_server.api.utils import get_project_and_family_for_user, get_project_and_cohort_for_user, \
     add_extra_info_to_variants_project, add_notes_to_genes, get_variant_notes, get_variant_tags, get_variant_functional_data
 from xbrowse.variant_search.family import get_variants_with_inheritance_mode
@@ -50,7 +50,6 @@ from xbrowse_server.matchmaker.utilities import find_families_of_this_project_in
 from xbrowse_server.matchmaker.utilities import extract_hpo_id_list_from_mme_patient_struct
 import requests
 from django.contrib.admin.views.decorators import staff_member_required
-import pymongo
 
 
 logger = logging.getLogger()
@@ -1234,7 +1233,7 @@ def add_individual(request):
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_view(request.user):
         raise PermissionDenied
-    individual = get_object_or_404(SeqrIndividual, individual_id=seqr_id)
+    individual = get_object_or_404(SeqrIndividual, individual_id=seqr_id, family__project=project.seqr_project)
     
     submission = json.dumps({'patient':affected_patient})
     
@@ -1303,7 +1302,7 @@ def delete_individual(request,project_id, indiv_id):
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_view(request.user):
         raise PermissionDenied
-    individual = get_object_or_404(SeqrIndividual, individual_id=indiv_id)
+    individual = get_object_or_404(SeqrIndividual, individual_id=indiv_id, family__project=project.seqr_project)
     
     headers={
        'X-Auth-Token': settings.MME_NODE_ADMIN_TOKEN,
@@ -1386,6 +1385,7 @@ def match_internally_and_externally(request,project_id,indiv_id):
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_view(request.user):
         raise PermissionDenied
+    individual = get_object_or_404(SeqrIndividual, individual_id=indiv_id, family__project=project.seqr_project)
     
     patient_data = request.POST.get("patient_data")
     if patient_data is None:
@@ -1426,32 +1426,37 @@ def match_internally_and_externally(request,project_id,indiv_id):
         for ext_res in extnl_result.json().get('results',[]):
             extract_hpo_id_list_from_mme_patient_struct(ext_res,hpo_map)
             ids[ext_res['patient']['id']] = ext_res
-       
+
+    saved_results = {
+        result.result_data['patient']['id']: result for result in MatchmakerResult.objects.filter(individual=individual)
+    }
+
     result_analysis_state={}
     for id in ids.keys():
-        persisted_result_det = settings.MME_SEARCH_RESULT_ANALYSIS_STATE.find_one({"result_id":id,
-                                                                                "seqr_project_id":project_id,
-                                                                                "id_of_indiv_searched_with":indiv_id})
-        if persisted_result_det:
-            del persisted_result_det['_id']
-            result_analysis_state[id]=persisted_result_det
-        else:
-            record={
-                    "id_of_indiv_searched_with":indiv_id,
-                    "content_of_indiv_searched_with":json.loads(patient_data),
-                    "content_of_result":ids[id],
-                    "result_id":id,
-                    "we_contacted_host":False,
-                    "host_contacted_us":False,
-                    "seen_on":str(timezone.now()),
-                    "deemed_irrelevant":False,
-                    "comments":"",
-                    "seqr_project_id":project_id,
-                    "flag_for_analysis":False,
-                    "username_of_last_event_initiator":request.user.username
-                }
-            result_analysis_state[id]=record
-            settings.MME_SEARCH_RESULT_ANALYSIS_STATE.insert(record,manipulate=False)
+        persisted_result_det = saved_results.get(id)
+
+        if not persisted_result_det:
+            persisted_result_det = MatchmakerResult.objects.create(
+                individual=individual,
+                result_data=ids[id],
+                last_modified_by=request.user,
+            )
+
+        result_analysis_state[id] = {
+            "id_of_indiv_searched_with":indiv_id,
+            "content_of_indiv_searched_with":json.loads(patient_data),
+            "content_of_result":ids[id],
+            "result_id":id,
+            "we_contacted_host":persisted_result_det.we_contacted,
+            "host_contacted_us":persisted_result_det.host_contacted,
+            "seen_on":str(persisted_result_det.created_date),
+            "deemed_irrelevant":persisted_result_det.deemed_irrelevant,
+            "comments":persisted_result_det.comments or '',
+            "seqr_project_id":project_id,
+            "flag_for_analysis":persisted_result_det.flag_for_analysis,
+            "username_of_last_event_initiator":persisted_result_det.last_modified_by.username,
+        }
+
     #post to slack
     if settings.SLACK_TOKEN is not None:
         generate_slack_notification_for_seqr_match(results,project_id,indiv_id)
@@ -1717,21 +1722,20 @@ def update_match_comment(request,project_id,match_id,indiv_id):
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_view(request.user):
         raise PermissionDenied
+    individual = get_object_or_404(SeqrIndividual, individual_id=indiv_id, family__project=project.seqr_project)
     
     parse_json_error_mesg="wasn't able to parse POST!" 
     comment = request.POST.get("comment",parse_json_error_mesg)
     if comment == parse_json_error_mesg:
         return HttpResponse('{"message":"' + parse_json_error_mesg +'"}',status=500)
-    persisted_result_dets = settings.MME_SEARCH_RESULT_ANALYSIS_STATE.find({"result_id":match_id,
-                                                                            "seqr_project_id":project_id,
-                                                                            "id_of_indiv_searched_with":indiv_id})
+
+    persisted_result_dets = MatchmakerResult.objects.filter(individual=individual, result_data__patient__id=match_id)
+
     if persisted_result_dets.count()>0:
         for persisted_result_det in persisted_result_dets:
-                    mongo_id=persisted_result_det['_id']
-                    persisted_result_det['comments']=comment.strip()
-                    persisted_result_det["username_of_last_event_initiator"]=request.user.username
-                    del persisted_result_det['_id']
-                    settings.MME_SEARCH_RESULT_ANALYSIS_STATE.update({'_id':mongo_id},{"$set": persisted_result_det}, upsert=False,manipulate=False)
+                    persisted_result_det.comments=comment.strip()
+                    persisted_result_det.last_modified_by=request.user
+                    persisted_result_det.save()
         resp = HttpResponse('{"message":"OK"}',status=200)
         return resp
     else:
@@ -1746,16 +1750,7 @@ def get_current_match_state_of_all_results(request):
     """
     gets the current state of all matches in this project
     """
-    result_states=[]
-    try:
-        persisted_result_dets = settings.MME_SEARCH_RESULT_ANALYSIS_STATE.find({})
-        for result in persisted_result_dets:
-            del result['_id'] 
-            result_states.append(result)   
-    except Exception as e:
-        print e
-        return HttpResponse('{"message":"error talking to database"}',status=500)
-    return JSONResponse(result_states)
+    return HttpResponse('{"message":"error unimplemented MME endpoint"}',status=500)
 
 
 @login_required
@@ -1768,11 +1763,24 @@ def get_current_match_state(request,project_id,match_id,indiv_id):
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_view(request.user):
         raise PermissionDenied
+    individual = get_object_or_404(SeqrIndividual, individual_id=indiv_id, family__project=project.seqr_project)
+
     try:
-        persisted_result_det = settings.MME_SEARCH_RESULT_ANALYSIS_STATE.find_one({"result_id":match_id,
-                                                                               "seqr_project_id":project_id,
-                                                                               "id_of_indiv_searched_with":indiv_id})
-        del persisted_result_det['_id']  
+        result_model = MatchmakerResult.objects.filter(individual=individual, result_data__patient__id=match_id).first()
+
+        persisted_result_det = {
+            "id_of_indiv_searched_with":indiv_id,
+            "content_of_result":result_model.result_data,
+            "result_id":result_model.result_data['patient']['id'],
+            "we_contacted_host":result_model.we_contacted,
+            "host_contacted_us":result_model.host_contacted,
+            "seen_on":str(result_model.created_date),
+            "deemed_irrelevant":result_model.deemed_irrelevant,
+            "comments":result_model.comments or '',
+            "seqr_project_id":project_id,
+            "flag_for_analysis":result_model.flag_for_analysis,
+            "username_of_last_event_initiator":result_model.last_modified_by.username,
+        }
     except Exception as e:
         print e
         return HttpResponse('{"message":"error talking to database"}',status=500)
@@ -1792,35 +1800,34 @@ def match_state_update(request,project_id,match_id,indiv_id):
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_view(request.user):
         raise PermissionDenied
+    individual = get_object_or_404(SeqrIndividual, individual_id=indiv_id, family__project=project.seqr_project)
 
     state_type = request.POST.get('state_type', None)
     state =  request.POST.get('state',None)
     if state_type is None or state is None:
         return HttpResponse('{"message":"error parsing POST"}',status=500)
-    persisted_result_det = settings.MME_SEARCH_RESULT_ANALYSIS_STATE.find_one({"result_id":match_id,
-                                                                               "seqr_project_id":project_id,
-                                                                               "id_of_indiv_searched_with":indiv_id})
-    mongo_id=persisted_result_det['_id']
+
+    persisted_result_det = MatchmakerResult.objects.filter(individual=individual, result_data__patient__id=match_id).first()
+
     try:
         if state_type == 'flag_for_analysis':
-            persisted_result_det['flag_for_analysis']=False
+            persisted_result_det.flag_for_analysis=False
             if state == "true":
-                persisted_result_det['flag_for_analysis']=True
+                persisted_result_det.flag_for_analysis=True
         if state_type == 'deemed_irrelevant':
-            persisted_result_det['deemed_irrelevant']=False
+            persisted_result_det.deemed_irrelevant=False
             if state == "true":
-                persisted_result_det['deemed_irrelevant']=True
+                persisted_result_det.deemed_irrelevant=True
         if state_type == 'we_contacted_host':
-            persisted_result_det['we_contacted_host']=False   
+            persisted_result_det.we_contacted=False
             if state == "true":
-                persisted_result_det['we_contacted_host']=True
+                persisted_result_det.we_contacted=True
         if state_type == 'host_contacted_us':
-            persisted_result_det['host_contacted_us']=False
+            persisted_result_det.host_contacted=False
             if state == "true":
-                persisted_result_det['host_contacted_us']=True   
-        persisted_result_det["username_of_last_event_initiator"]=request.user.username
-        del persisted_result_det['_id']
-        settings.MME_SEARCH_RESULT_ANALYSIS_STATE.update({'_id':mongo_id},{"$set": persisted_result_det}, upsert=False,manipulate=False)
+                persisted_result_det.host_contacted=True
+        persisted_result_det.last_modified_by=request.user
+        persisted_result_det.save()
     except:
         raise
         return HttpResponse('{"message":"error updating database"}',status=500)

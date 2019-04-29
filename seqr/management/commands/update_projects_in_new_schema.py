@@ -6,7 +6,7 @@ from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 from django.db.models import Q
 from guardian.shortcuts import assign_perm
 
-from seqr.management.commands.transfer_mme_data import transfer_mme_submission_data
+from seqr.management.commands.transfer_mme_data import transfer_mme_submission_data, transfer_mme_results_data
 from seqr.views.utils.variant_utils import deprecated_get_or_create_saved_variant
 from seqr.views.apis import phenotips_api
 from seqr.views.apis.phenotips_api import _get_patient_data, _update_individual_phenotips_data
@@ -153,6 +153,12 @@ class Command(BaseCommand):
                 for error in errors:
                     logger.error(error)
                 counters['mme_submissions'] += num_transferred_mme_submissions
+
+                num_transferred_mme_results, errors = transfer_mme_results_data(new_project)
+                for error in errors:
+                    logger.error(error)
+                counters['mme_results'] += num_transferred_mme_results
+
 
             # TODO family groups, cohorts
             for source_variant_tag_type in ProjectTag.objects.filter(project=source_project).order_by('order'):

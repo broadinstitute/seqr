@@ -72,7 +72,7 @@ const MATCH_FIELDS = {
       <div>
         <Label horizontal content={contactedLabel(val)} color={val.hostContacted || val.weContacted ? 'green' : 'orange'} />
         {val.flagForAnalysis && <Label horizontal content="Flag for Analysis" color="purple" />}
-        {val.deemedIrrelevent && <Label horizontal content="Deemed Irrelevent" color="red" />}
+        {val.deemedIrrelevant && <Label horizontal content="Deemed Irrelevant" color="red" />}
         <p>{val.comments}</p>
         {/* TODO edit*/}
       </div>,
@@ -134,12 +134,12 @@ const MATCH_FIELDS = {
         )}
       </List>,
   },
-  seenOn: {
-    name: 'seenOn',
+  createdDate: {
+    name: 'createdDate',
     width: 1,
     content: 'First Seen',
     verticalAlign: 'top',
-    format: val => new Date(val.seenOn).toLocaleDateString(),
+    format: val => new Date(val.createdDate).toLocaleDateString(),
   },
 }
 
@@ -148,7 +148,7 @@ const MME_RESULTS_KEY = 'mmeResults'
 const DISPLAY_FIELDS = {
   [MME_RESULTS_KEY]: [
     MATCH_FIELDS.patient,
-    MATCH_FIELDS.seenOn,
+    MATCH_FIELDS.createdDate,
     MATCH_FIELDS.contact,
     MATCH_FIELDS.geneVariants,
     MATCH_FIELDS.phenotypes,
@@ -178,7 +178,7 @@ const BaseMatches = ({ resultsKey, individual, genesById, loading }) => {
       basic="very"
       fixed
       idField="id"
-      defaultSortColumn={resultsKey === MME_RESULTS_KEY ? 'seenOn' : 'id'}
+      defaultSortColumn={resultsKey === MME_RESULTS_KEY ? 'createdDate' : 'id'}
       defaultSortDescending={resultsKey === MME_RESULTS_KEY}
       columns={DISPLAY_FIELDS[MME_RESULTS_KEY]}
       data={matchResults}
