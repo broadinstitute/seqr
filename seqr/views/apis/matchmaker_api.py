@@ -63,7 +63,7 @@ def search_individual_mme_matches(request, individual_guid):
     patient_data = individual.mme_submitted_data
     if not patient_data:
         create_json_response(
-            {}, status_code=404, reason='No matchmaker submission found for {}'.format(individual.individual_id),
+            {}, status=404, reason='No matchmaker submission found for {}'.format(individual.individual_id),
         )
 
     headers = {
@@ -74,11 +74,11 @@ def search_individual_mme_matches(request, individual_guid):
 
     local_result = requests.post(url=MME_LOCAL_MATCH_URL, headers=headers, data=json.dumps(patient_data))
     if local_result.status_code != 200:
-        create_json_response(local_result.json(), status_code=local_result.status_code, reason='Error in local match')
+        create_json_response(local_result.json(), status=local_result.status_code, reason='Error in local match')
 
     external_result = requests.post(url=MME_EXTERNAL_MATCH_URL, headers=headers, data=json.dumps(patient_data))
     if external_result.status_code != 200:
-        create_json_response(external_result.json(), status_code=external_result.status_code, reason='Error in external match')
+        create_json_response(external_result.json(), status=external_result.status_code, reason='Error in external match')
 
     results = local_result.json()['results'] + external_result.json()['results']
 
@@ -105,15 +105,10 @@ def search_individual_mme_matches(request, individual_guid):
     return _parse_mme_results(individual_guid, saved_results.values())
 
 
-def _parse_mme_results(individual_guid, saved_results):
+def get_mme_genes_phenotypes(results):
     hpo_ids = set()
     genes = set()
-    results = []
-    for result_model in saved_results:
-        result = result_model.result_data
-        result['matchStatus'] = _get_json_for_model(result_model)
-        results.append(result)
-
+    for result in results:
         hpo_ids.update({feature['id'] for feature in result['patient'].get('features', []) if feature.get('id')})
         genes.update({gene_feature['gene']['id'] for gene_feature in result['patient'].get('genomicFeatures', [])})
 
@@ -124,6 +119,18 @@ def _parse_mme_results(individual_guid, saved_results):
     genes_by_id = get_genes(gene_ids)
 
     hpo_terms_by_id = {hpo.hpo_id: hpo.name for hpo in HumanPhenotypeOntology.objects.filter(hpo_id__in=hpo_ids)}
+
+    return hpo_terms_by_id, genes_by_id, gene_symbols_to_ids
+
+
+def _parse_mme_results(individual_guid, saved_results):
+    results = []
+    for result_model in saved_results:
+        result = result_model.result_data
+        result['matchStatus'] = _get_json_for_model(result_model)
+        results.append(result)
+
+    hpo_terms_by_id, genes_by_id, gene_symbols_to_ids = get_mme_genes_phenotypes(results)
 
     parsed_results = [_parse_mme_result(result, hpo_terms_by_id, gene_symbols_to_ids) for result in results]
     return create_json_response({

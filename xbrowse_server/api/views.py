@@ -42,7 +42,6 @@ from xbrowse_server.phenotips.reporting_utilities import phenotype_entry_metric_
 from xbrowse_server.base.models import ANALYSIS_STATUS_CHOICES
 from xbrowse_server.matchmaker.utilities import get_all_clinical_data_for_family
 from xbrowse_server.matchmaker.utilities import is_a_valid_patient_structure
-from xbrowse_server.matchmaker.utilities import generate_notification_for_incoming_match
 from xbrowse_server.matchmaker.utilities import generate_slack_notification_for_seqr_match
 from xbrowse_server.matchmaker.utilities import gather_all_annotated_genes_in_seqr
 from xbrowse_server.matchmaker.utilities import find_projects_with_families_in_matchbox
@@ -1574,52 +1573,6 @@ def get_family_individuals(request,project_id,family_id):
                          })
     
 
-@csrf_exempt
-@log_request('match')
-def match(request):
-    """    
-    -This is a proxy URL for backend MME server as per MME spec.
-    -Looks for matches for the given individual ONLY in the local MME DB. 
-    -Expects a single patient (as per MME spec) in the POST
-    
-    Args:
-        None, all data in POST under key "patient_data"
-    Returns:
-        Status code and results (as per MME spec), returns raw results from MME Server
-    NOTES: 
-    1. login is not required, since AUTH is handled by MME server, hence missing
-    decorator @login_required
-        
-    """
-    try:
-        mme_headers={
-                     'X-Auth-Token':request.META['HTTP_X_AUTH_TOKEN'],
-                     'Accept':request.META['HTTP_ACCEPT'],
-                     'Content-Type':request.META['CONTENT_TYPE']
-                     }
-        query_patient_data=''  
-        for line in request.readlines():
-          query_patient_data = query_patient_data + ' ' + line
-        r = requests.post(url=settings.MME_LOCAL_MATCH_URL,
-                          data=query_patient_data,
-                          headers=mme_headers)
-        if r.status_code==200:
-            generate_notification_for_incoming_match(r,request,query_patient_data)
-        resp = HttpResponse(r.text)
-        resp.status_code=r.status_code
-        for k,v in r.headers.iteritems():
-            if k=='Content-Type':
-                resp[k]=v
-                if ';' in v:
-                    resp[k]=v.split(';')[0]
-        return resp
-    except:
-        raise
-        r = HttpResponse('{"message":"message not formatted properly and possibly missing header information", "status":400}',status=400)
-        r.status_code=400
-        return r
-    
-
 @staff_member_required(login_url=LOGIN_URL)
 @log_request('matchmaker_get_matchbox_id_details')
 def get_matchbox_id_details(request,matchbox_id):
@@ -1833,54 +1786,3 @@ def match_state_update(request,project_id,match_id,indiv_id):
         return HttpResponse('{"message":"error updating database"}',status=500)
     
     return HttpResponse('{"message":"successfully updated database"}',status=200)
-    
-    
-    
-
-
-@csrf_exempt
-@log_request('get_public_metrics')
-def get_public_metrics(request):
-    """    
-    -This is a proxy URL for backend MME server as per MME spec.
-    -Proxies public metrics endpoint
-    
-    Args:
-        None, all data in POST under key "patient_data"
-    Returns:
-        Metric JSON from matchbox
-    NOTES: 
-    1. seqr login IS NOT required, since AUTH via toke in POST is handled by MME server, hence no
-    decorator @login_required. This is a PUBLIC endpoint
-        
-    """
-    try:
-        if not request.META.has_key('HTTP_X_AUTH_TOKEN'):
-            r = HttpResponse('{"message":"missing or improperly written HTTP_X_AUTH_TOKEN information", "status":400}',status=400)
-            r.status_code=400
-            return r
-        if not request.META.has_key('HTTP_ACCEPT'):
-            r = HttpResponse('{"message":"missing or improperly written HTTP_ACCEPT information", "status":400}',status=400)
-            r.status_code=400
-            return r
-        mme_headers={
-                     'X-Auth-Token':request.META['HTTP_X_AUTH_TOKEN'],
-                     'Accept':request.META['HTTP_ACCEPT'],
-                     'Content-Type':request.META['CONTENT_TYPE']
-                     }
-        r = requests.get(url=settings.MME_MATCHBOX_PUBLIC_METRICS_URL,headers=mme_headers)
-        if r.status_code==200:
-            print "processed external metrics request"
-        resp = HttpResponse(r.text)
-        resp.status_code=r.status_code
-        for k,v in r.headers.iteritems():
-            if k=='Content-Type':
-                resp[k]=v
-                if ';' in v:
-                    resp[k]=v.split(';')[0]
-        return resp
-    except:
-        raise
-        r = HttpResponse('{"message":"message not formatted properly and possibly missing header information", "status":400}',status=400)
-        r.status_code=400
-        return r

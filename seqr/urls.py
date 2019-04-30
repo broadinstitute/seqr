@@ -98,6 +98,7 @@ from seqr.views.apis.analysis_group_api import update_analysis_group_handler, de
 from seqr.views.apis.matchmaker_api import get_individual_mme_matches, search_individual_mme_matches
 from seqr.views.apis.project_api import create_project_handler, update_project_handler, delete_project_handler
 from seqr.views.apis.project_categories_api import update_project_categories_handler
+from seqr.views.apis import external_api
 from seqr.views.utils.file_utils import save_temp_file
 
 react_app_pages = [
@@ -205,6 +206,11 @@ api_endpoints = {
     'staff/discovery_sheet/(?P<project_guid>[^/]+)': discovery_sheet,
     'staff/projects_for_category/(?P<project_category_name>[^/]+)': get_projects_for_category,
     'staff/elasticsearch_status': elasticsearch_status,
+
+    # EXTERNAL APIS: DO NOT CHANGE
+    # matchmaker public facing MME spec'ed match URL
+    'matchmaker/v1/match': external_api.mm_match_proxy,
+    'matchmaker/v1/metrics': external_api.mme_metrics_proxy,
 
 }
 
