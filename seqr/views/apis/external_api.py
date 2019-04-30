@@ -1,7 +1,6 @@
 import json
 import logging
 from datetime import datetime
-from django.core.mail import send_mail
 from django.views.decorators.csrf import csrf_exempt
 
 from seqr.models import Individual
@@ -9,9 +8,8 @@ from seqr.utils.slack_utils import post_to_slack
 from seqr.views.apis.matchmaker_api import get_mme_genes_phenotypes
 from seqr.views.utils.proxy_request_utils import proxy_request
 
-from settings import MME_LOCAL_MATCH_URL, MME_MATCHBOX_PUBLIC_METRICS_URL, ENABLE_MME_MATCH_EMAIL_NOTIFICATIONS, \
-    MME_SLACK_MATCH_NOTIFICATION_CHANNEL, MME_SLACK_EVENT_NOTIFICATION_CHANNEL, SEQR_HOSTNAME_FOR_SLACK_POST, \
-    FROM_EMAIL, ADMINS
+from settings import MME_LOCAL_MATCH_URL, MME_MATCHBOX_PUBLIC_METRICS_URL, MME_SLACK_MATCH_NOTIFICATION_CHANNEL,\
+    MME_SLACK_EVENT_NOTIFICATION_CHANNEL, SEQR_HOSTNAME_FOR_SLACK_POST
 
 logger = logging.getLogger(__name__)
 
@@ -131,15 +129,6 @@ def _generate_notification_for_incoming_match(response_from_matchbox, incoming_r
             email_addresses_alert_sent_to=' ,'.join(emails),
         )
 
-        if ENABLE_MME_MATCH_EMAIL_NOTIFICATIONS:
-            send_mail('match found by matchbox, the Matchmaker Exchange @Broad',
-                      message,
-                      FROM_EMAIL,
-                      # TODO don't just email to me
-                      # commenting for now for advanced testing, and swapping in with admin alerts
-                      # [i for i in seqr_project.mme_contact_url.replace('mailto:','').split(',')],
-                      [admin[1] for admin in ADMINS],
-                      fail_silently=True)
         post_to_slack(MME_SLACK_MATCH_NOTIFICATION_CHANNEL, message)
     else:
         message = """Dear collaborators,
