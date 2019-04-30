@@ -203,7 +203,7 @@ def generate_slack_notification_for_seqr_match(response_from_matchbox,project_id
             message += '. '
             message += settings.SEQR_HOSTNAME_FOR_SLACK_POST + '/' + project_id
             message += '\n\n'
-            post_in_slack(message,'matchmaker_seqr_match')
+            post_in_slack(message,settings.MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL)
 
     
 def post_in_slack(message,channel):

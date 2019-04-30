@@ -1,9 +1,13 @@
+import logging
 from slacker import Slacker
 from settings import SLACK_TOKEN
+
+logger = logging.getLogger(__name__)
 
 
 def post_to_slack(channel, message):
     if not SLACK_TOKEN:
+        logger.info(message)
         return None
 
     slack = Slacker(SLACK_TOKEN)

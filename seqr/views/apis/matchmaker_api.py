@@ -9,13 +9,14 @@ from reference_data.models import HumanPhenotypeOntology, GENOME_VERSION_CHOICES
 
 from seqr.models import Individual, MatchmakerResult
 from seqr.utils.gene_utils import get_genes, get_gene_ids_for_gene_symbols
+from seqr.utils.slack_utils import post_to_slack
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_model
 from seqr.views.utils.permissions_utils import check_permissions
 
 from settings import MME_NODE_ADMIN_TOKEN, MME_NODE_ACCEPT_HEADER, MME_CONTENT_TYPE_HEADER, MME_LOCAL_MATCH_URL, \
-    MME_EXTERNAL_MATCH_URL
+    MME_EXTERNAL_MATCH_URL, MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL, SEQR_HOSTNAME_FOR_SLACK_POST
 
 logger = logging.getLogger(__name__)
 
@@ -86,7 +87,7 @@ def search_individual_mme_matches(request, individual_guid):
         result.result_data['patient']['id']: result for result in MatchmakerResult.objects.filter(individual=individual)
     }
 
-    new_result_count = 0
+    new_results = []
     for result in results:
         saved_result = saved_results.get(result['patient']['id'])
         if not saved_result:
@@ -95,12 +96,13 @@ def search_individual_mme_matches(request, individual_guid):
                 result_data=result,
                 last_modified_by=request.user,
             )
-            new_result_count += 1
+            new_results.append(result)
             saved_results[result['patient']['id']] = saved_result
 
-    # TODO post to slack
+    if new_results:
+        _generate_slack_notification_for_seqr_match(individual, new_results)
 
-    logger.info('Found {} matches for {} ({} new)'.format(len(results), individual.individual_id, new_result_count))
+    logger.info('Found {} matches for {} ({} new)'.format(len(results), individual.individual_id, len(new_results)))
 
     return _parse_mme_results(individual_guid, saved_results.values())
 
@@ -175,3 +177,49 @@ def _parse_mme_result(result, hpo_terms_by_id, gene_symbols_to_ids):
         'patient': patient,
         'matchStatus': result['matchStatus'],
     }
+
+
+def _generate_slack_notification_for_seqr_match(individual, results):
+    """
+    Generate a SLACK notifcation to say that a match happened initiated from a seqr user.
+    """
+    matches = []
+    hpo_terms_by_id, genes_by_id, _ = get_mme_genes_phenotypes(results)
+    for result in results:
+        patient = result['patient']
+
+        gene_message = ''
+        if patient.get('genomicFeatures'):
+            gene_symbols = set()
+            for gene in patient['genomicFeatures']:
+                gene_symbol = gene['gene']['id']
+                if gene_symbol.startswith('ENSG'):
+                    gene_symbol = genes_by_id.get(gene_symbol, {}).get('geneSymbol', gene_symbol)
+                gene_symbols.add(gene_symbol)
+
+            gene_message = ' with genes {}'.format(' '.join(sorted(gene_symbols)))
+
+        phenotypes_message = ''
+        if patient.get('features'):
+            phenotypes_message = ' with phenotypes {}'.format(' '.join(
+                ['{} ({})'.format(feature['id'], hpo_terms_by_id.get(feature['id'])) for feature in patient['features']]
+            ))
+
+        matches.append(' - From {contact} at institution {institution}{gene_message}{phenotypes_message}.'.format(
+            contact=patient['contact'].get('name', '(none given)'),
+            institution=patient['contact'].get('institution', '(none given)'),
+            gene_message=gene_message, phenotypes_message=phenotypes_message,
+        ))
+
+    message = """
+    A search from a seqr user from project {project} individual {individual_id} had the following new match(es):
+    
+    {matches}
+    
+    {host}/project/{project_guid}/family_page/{family_guid}/matchmaker_exchange
+    """.format(
+        project=individual.family.project.name, individual_id=individual.individual_id, matches='\n\n'.join(matches),
+        host=SEQR_HOSTNAME_FOR_SLACK_POST, project_guid=individual.family.project.guid, family_guid=individual.family.guid,
+    )
+
+    post_to_slack(MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL, message)
