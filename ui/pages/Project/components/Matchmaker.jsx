@@ -4,15 +4,17 @@ import { connect } from 'react-redux'
 import { Header, Icon, List, Accordion, Popup, Label } from 'semantic-ui-react'
 import styled from 'styled-components'
 
-import { getFamiliesByGuid, getGenesById } from 'redux/selectors'
+import { getFamiliesByGuid, getGenesById, getMmeResultsByGuid } from 'redux/selectors'
 import ShowGeneModal from 'shared/components/buttons/ShowGeneModal'
+import { BooleanCheckbox, BaseSemanticInput } from 'shared/components/form/Inputs'
+import BaseFieldView from 'shared/components/panel/view-fields/BaseFieldView'
 import SortableTable from 'shared/components/table/SortableTable'
 import DataLoader from 'shared/components/DataLoader'
 import { HorizontalSpacer } from 'shared/components/Spacers'
 import { ButtonLink } from 'shared/components/StyledComponents'
 import { camelcaseToTitlecase } from 'shared/utils/stringUtils'
 
-import { loadMmeMatches } from '../reducers'
+import { loadMmeMatches, updateMmeSubmissionStatus } from '../reducers'
 import { getFamilyMatchmakerIndividuals, getMatchmakerMatchesLoading, getMonarchMatchesLoading } from '../selectors'
 
 const PhenotypeListItem = styled(List.Item)`
@@ -29,12 +31,51 @@ const MatchContainer = styled.div`
 
 const PATIENT_FIELDS = ['label', 'sex', 'ageOfOnset', 'inheritanceMode', 'species']
 
+const MATCH_STATUS_EDIT_FIELDS = [
+  { name: 'weContacted', label: 'We Contacted Host', component: BooleanCheckbox, inline: true },
+  { name: 'hostContacted', label: 'Host Contacted Us', component: BooleanCheckbox, inline: true },
+  { name: 'flagForAnalysis', label: 'Flag for Analysis', component: BooleanCheckbox, inline: true },
+  { name: 'deemedIrrelevant', label: 'Deemed Irrelevant', component: BooleanCheckbox, inline: true },
+  { name: 'comments', label: 'Comments', component: BaseSemanticInput, inputType: 'TextArea', rows: 5 },
+]
+
 const contactedLabel = (val) => {
   if (val.hostContacted) {
     return 'Host Contacted Us'
   }
   return val.weContacted ? 'We Contacted Host' : 'Not Contacted'
 }
+
+const BaseMatchStatus = ({ initialValues, onSubmit }) =>
+  <BaseFieldView
+    initialValues={initialValues}
+    field="matchStatus"
+    idField="matchmakerResultGuid"
+    compact
+    isEditable
+    showErrorPanel
+    modalTitle="Edit MME Submission Status"
+    formFields={MATCH_STATUS_EDIT_FIELDS}
+    onSubmit={onSubmit}
+    fieldDisplay={val =>
+      <div>
+        <Label horizontal content={contactedLabel(val)} color={val.hostContacted || val.weContacted ? 'green' : 'orange'} />
+        {val.flagForAnalysis && <Label horizontal content="Flag for Analysis" color="purple" />}
+        {val.deemedIrrelevant && <Label horizontal content="Deemed Irrelevant" color="red" />}
+        <p>{val.comments}</p>
+      </div>}
+  />
+
+BaseMatchStatus.propTypes = {
+  initialValues: PropTypes.object,
+  onSubmit: PropTypes.func,
+}
+
+const mapStatusDispatchToProps = {
+  onSubmit: updateMmeSubmissionStatus,
+}
+
+const MatchStatus = connect(null, mapStatusDispatchToProps)(BaseMatchStatus)
 
 const MATCH_FIELDS = {
   patient: {
@@ -68,14 +109,7 @@ const MATCH_FIELDS = {
     width: 4,
     content: 'Follow Up Status',
     verticalAlign: 'top',
-    format: val =>
-      <div>
-        <Label horizontal content={contactedLabel(val)} color={val.hostContacted || val.weContacted ? 'green' : 'orange'} />
-        {val.flagForAnalysis && <Label horizontal content="Flag for Analysis" color="purple" />}
-        {val.deemedIrrelevant && <Label horizontal content="Deemed Irrelevant" color="red" />}
-        <p>{val.comments}</p>
-        {/* TODO edit*/}
-      </div>,
+    format: initialValues => <MatchStatus initialValues={initialValues} />,
   },
   description: {
     name: 'description',
@@ -143,7 +177,7 @@ const MATCH_FIELDS = {
   },
 }
 
-const MME_RESULTS_KEY = 'mmeResults'
+const MME_RESULTS_KEY = 'mmeResultGuids'
 
 const DISPLAY_FIELDS = {
   [MME_RESULTS_KEY]: [
@@ -164,13 +198,12 @@ const DISPLAY_FIELDS = {
   ],
 }
 
-const BaseMatches = ({ resultsKey, individual, genesById, loading }) => {
-  const matchResults = (individual[resultsKey] || []).filter(
-    result => result.id,
-  ).map(({ matchStatus, ...result }) => ({
+const BaseMatches = ({ resultsKey, individual, genesById, loading, mmeResultsByGuid }) => {
+  // TODO monarch
+  const matchResults = (individual[resultsKey] || []).map(resultGuid => ({
     genesById,
-    ...matchStatus,
-    ...result,
+    ...mmeResultsByGuid[resultGuid].matchStatus,
+    ...mmeResultsByGuid[resultGuid],
   }))
 
   return (
@@ -190,12 +223,14 @@ const BaseMatches = ({ resultsKey, individual, genesById, loading }) => {
 BaseMatches.propTypes = {
   resultsKey: PropTypes.string.isRequired,
   individual: PropTypes.object,
+  mmeResultsByGuid: PropTypes.object,
   genesById: PropTypes.object,
   loading: PropTypes.bool,
 }
 
 const matchesMapStateToProps = state => ({
   genesById: getGenesById(state),
+  mmeResultsByGuid: getMmeResultsByGuid(state),
 })
 
 const Matches = connect(matchesMapStateToProps)(BaseMatches)
@@ -211,11 +246,11 @@ const Matchmaker = ({ family, loading, load, searchMme, monarchLoading, loadMona
       <Header size="medium" content={individual.individualId} dividing />
       {/* TODO show submission details/ update */}
       <DataLoader contentId={individual.individualGuid} content load={load} loading={false}>
-        <ButtonLink disabled={!individual.mmeResults} onClick={searchMme(individual.individualGuid)}>
+        <ButtonLink disabled={!individual.mmeResultGuids} onClick={searchMme(individual.individualGuid)}>
           Search for New Matches
         </ButtonLink>
         <HorizontalSpacer width={5} />|<HorizontalSpacer width={5} />
-        <ButtonLink disabled={!individual.mmeResults} onClick={loadMonarch(individual.individualGuid)}>
+        <ButtonLink disabled={!individual.mmeResultGuids} onClick={loadMonarch(individual.individualGuid)}>
           Search in the Monarch Initiative
         </ButtonLink>
         <DataLoader content={individual.monarchResults} loading={monarchLoading} hideError>

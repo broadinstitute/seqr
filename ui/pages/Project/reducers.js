@@ -238,6 +238,10 @@ export const loadMmeMatches = (individualGuid, matchSource) => {
   }
 }
 
+export const updateMmeSubmissionStatus = (values) => {
+  return updateEntity(values, RECEIVE_DATA, '/api/matchmaker/result_status', 'matchmakerResultGuid')
+}
+
 export const deleteMmePatient = (individual) => {
   return (dispatch, getState) => {
     const state = getState()

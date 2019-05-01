@@ -11,6 +11,7 @@ from seqr.models import Individual, MatchmakerResult
 from seqr.utils.gene_utils import get_genes, get_gene_ids_for_gene_symbols
 from seqr.utils.slack_utils import post_to_slack
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
+from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_model
 from seqr.views.utils.permissions_utils import check_permissions
@@ -107,6 +108,29 @@ def search_individual_mme_matches(request, individual_guid):
     return _parse_mme_results(individual_guid, saved_results.values())
 
 
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@csrf_exempt
+def update_mme_result_status(request, matchmaker_result_guid):
+    """
+    Looks for matches for the given individual. Expects a single patient (MME spec) in the POST
+    data field under key "patient_data"
+    Args:
+        project_id,indiv_id and POST all data in POST under key "patient_data"
+    Returns:
+        Status code and results
+    """
+    result = MatchmakerResult.objects.get(guid=matchmaker_result_guid)
+    project = result.individual.family.project
+    check_permissions(project, request.user)
+
+    request_json = json.loads(request.body)
+    update_model_from_json(result, request_json, allow_unknown_keys=True)
+
+    return create_json_response({
+        'mmeResultsByGuid': {matchmaker_result_guid: {'matchStatus': _get_json_for_model(result)}},
+    })
+
+
 def get_mme_genes_phenotypes(results):
     hpo_ids = set()
     genes = set()
@@ -135,8 +159,10 @@ def _parse_mme_results(individual_guid, saved_results):
     hpo_terms_by_id, genes_by_id, gene_symbols_to_ids = get_mme_genes_phenotypes(results)
 
     parsed_results = [_parse_mme_result(result, hpo_terms_by_id, gene_symbols_to_ids) for result in results]
+    parsed_results_gy_guid = {result['matchStatus']['matchmakerResultGuid']: result for result in parsed_results}
     return create_json_response({
-        'individualsByGuid': {individual_guid: {'mmeResults': parsed_results}},
+        'mmeResultsByGuid': parsed_results_gy_guid,
+        'individualsByGuid': {individual_guid: {'mmeResultGuids': parsed_results_gy_guid.keys()}},
         'genesById': genes_by_id,
     })
 

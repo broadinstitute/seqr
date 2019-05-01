@@ -70,6 +70,11 @@ from seqr.views.apis.locus_list_api import \
     add_project_locus_lists, \
     delete_project_locus_lists
 
+from seqr.views.apis.matchmaker_api import \
+    get_individual_mme_matches, \
+    search_individual_mme_matches, \
+    update_mme_result_status
+
 from seqr.views.apis.variant_search_api import \
     query_variants_handler, \
     query_single_variant_handler, \
@@ -95,7 +100,6 @@ from seqr.views.apis.awesomebar_api import awesomebar_autocomplete_handler
 from seqr.views.apis.auth_api import login_required_error, API_LOGIN_REQUIRED_URL
 from seqr.views.apis.igv_api import fetch_igv_track
 from seqr.views.apis.analysis_group_api import update_analysis_group_handler, delete_analysis_group_handler
-from seqr.views.apis.matchmaker_api import get_individual_mme_matches, search_individual_mme_matches
 from seqr.views.apis.project_api import create_project_handler, update_project_handler, delete_project_handler
 from seqr.views.apis.project_categories_api import update_project_categories_handler
 from seqr.views.apis import external_api
@@ -190,6 +194,7 @@ api_endpoints = {
 
     'matchmaker/get_mme_matches/(?P<individual_guid>[\w.|-]+)': get_individual_mme_matches,
     'matchmaker/search_mme_matches/(?P<individual_guid>[\w.|-]+)': search_individual_mme_matches,
+    'matchmaker/result_status/(?P<matchmaker_result_guid>[\w.|-]+)/update': update_mme_result_status,
 
     'users/get_all': get_all_collaborators,
     'users/(?P<username>[^/]+)/set_password': set_password,
