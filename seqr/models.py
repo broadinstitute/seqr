@@ -368,7 +368,7 @@ class Individual(ModelWithGUID):
         json_fields = [
             'guid', 'individual_id', 'father', 'mother', 'sex', 'affected', 'display_name', 'notes',
             'phenotips_patient_id', 'phenotips_data', 'created_date', 'last_modified_date', 'mme_submitted_date',
-            'mme_deleted_date', 'mme_submitted_data',
+            'mme_deleted_date',
         ]
         internal_json_fields = [
             'case_review_status', 'case_review_discussion',

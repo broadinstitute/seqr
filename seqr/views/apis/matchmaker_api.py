@@ -37,13 +37,12 @@ def get_individual_mme_matches(request, individual_guid):
     Returns:
         Status code and results
     """
-
     individual = Individual.objects.get(guid=individual_guid)
     project = individual.family.project
     check_permissions(project, request.user)
 
     results = MatchmakerResult.objects.filter(individual=individual)
-    return _parse_mme_results(individual_guid, results)
+    return _parse_mme_results(individual, results)
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -105,7 +104,7 @@ def search_individual_mme_matches(request, individual_guid):
 
     logger.info('Found {} matches for {} ({} new)'.format(len(results), individual.individual_id, len(new_results)))
 
-    return _parse_mme_results(individual_guid, saved_results.values())
+    return _parse_mme_results(individual, saved_results.values())
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -149,59 +148,68 @@ def get_mme_genes_phenotypes(results):
     return hpo_terms_by_id, genes_by_id, gene_symbols_to_ids
 
 
-def _parse_mme_results(individual_guid, saved_results):
+def _parse_mme_results(individual, saved_results):
     results = []
     for result_model in saved_results:
         result = result_model.result_data
         result['matchStatus'] = _get_json_for_model(result_model)
         results.append(result)
 
-    hpo_terms_by_id, genes_by_id, gene_symbols_to_ids = get_mme_genes_phenotypes(results)
+    hpo_terms_by_id, genes_by_id, gene_symbols_to_ids = get_mme_genes_phenotypes(results + [individual.mme_submitted_data])
 
     parsed_results = [_parse_mme_result(result, hpo_terms_by_id, gene_symbols_to_ids) for result in results]
     parsed_results_gy_guid = {result['matchStatus']['matchmakerResultGuid']: result for result in parsed_results}
     return create_json_response({
         'mmeResultsByGuid': parsed_results_gy_guid,
-        'individualsByGuid': {individual_guid: {'mmeResultGuids': parsed_results_gy_guid.keys()}},
+        'individualsByGuid': {individual.guid: {
+            'mmeResultGuids': parsed_results_gy_guid.keys(),
+            'mmeSubmittedData': _parse_mme_patient(individual.mme_submitted_data, hpo_terms_by_id, gene_symbols_to_ids),
+        }},
         'genesById': genes_by_id,
     })
 
 
 def _parse_mme_result(result, hpo_terms_by_id, gene_symbols_to_ids):
+    parsed_result = _parse_mme_patient(result, hpo_terms_by_id, gene_symbols_to_ids)
+    parsed_result.update({
+        'id': result['patient']['id'],
+        'score': result['score']['patient'],
+        'matchStatus': result['matchStatus'],
+    })
+    return parsed_result
+
+
+def _parse_mme_patient(result, hpo_terms_by_id, gene_symbols_to_ids):
     phenotypes = [feature for feature in result['patient'].get('features', [])]
     for feature in phenotypes:
-        feature['name'] = hpo_terms_by_id.get(feature['id'])
+        feature['label'] = hpo_terms_by_id.get(feature['id'])
 
-    gene_variants = defaultdict(list)
+    gene_variants = []
     for gene_feature in result['patient'].get('genomicFeatures', []):
         gene_id = gene_feature['gene']['id']
         if not gene_id.startswith('ENSG'):
             gene_ids = gene_symbols_to_ids.get(gene_feature['gene']['id'])
             gene_id = gene_ids[0] if gene_ids else None
 
+        gene_variant = {'geneId': gene_id}
         if gene_id:
             if gene_feature.get('variant'):
                 assembly = gene_feature['variant'].get('assembly')
-                gene_variants[gene_id].append({
+                gene_variant.update({
                     'alt': gene_feature['variant'].get('alternateBases'),
                     'ref': gene_feature['variant'].get('referenceBases'),
                     'chrom': gene_feature['variant'].get('referenceName'),
                     'pos': gene_feature['variant'].get('start'),
                     'genomeVersion': GENOME_VERSION_LOOKUP.get(assembly, assembly),
                 })
-            else:
-                # Ensures key is present in defaultdict
-                gene_variants[gene_id]
+            gene_variants.append(gene_variant)
     patient = {
         k: result['patient'].get(k) for k in ['inheritanceMode', 'sex', 'contact', 'ageOfOnset', 'label', 'species']
     }
     return {
-        'id': result['patient']['id'],
-        'score': result['score']['patient'],
-        'geneVariants': dict(gene_variants),
+        'geneVariants': gene_variants,
         'phenotypes': phenotypes,
         'patient': patient,
-        'matchStatus': result['matchStatus'],
     }
 
 

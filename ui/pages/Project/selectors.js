@@ -152,6 +152,19 @@ export const getProjectSavedVariants = createSelector(
   },
 )
 
+export const getIndividualTaggedVariants = createSelector(
+  getSavedVariantsByGuid,
+  getIndividualsByGuid,
+  getGenesById,
+  (state, props) => props.individualGuid,
+  (savedVariants, individualsByGuid, genesById, individualGuid) => {
+    const { familyGuid } = individualsByGuid[individualGuid]
+    return Object.values(savedVariants).filter(
+      o => o.familyGuids.includes(familyGuid) && o.tags.length).map(variant => (
+      { ...variant, ...variant.genotypes[individualGuid], ...genesById[variant.mainTranscript.geneId] }))
+  },
+)
+
 export const getSavedVariantVisibleIndices = createSelector(
   getSavedVariantCurrentPage, getSavedVariantRecordsPerPage,
   (page, recordsPerPage) => {

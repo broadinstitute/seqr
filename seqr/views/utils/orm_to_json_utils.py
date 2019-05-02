@@ -333,6 +333,7 @@ def get_json_for_saved_variants(saved_variants, add_tags=False, add_details=Fals
     from seqr.views.utils.variant_utils import variant_details
 
     def _process_result(variant_json, saved_variant):
+        variant_json['variantId'] = saved_variant.guid,
         if add_tags:
             variant_json.update({
                 'tags': [get_json_for_variant_tag(tag) for tag in saved_variant.varianttag_set.all()],
@@ -344,7 +345,6 @@ def get_json_for_saved_variants(saved_variants, add_tags=False, add_details=Fals
             saved_variant_json = json.loads(saved_variant.saved_variant_json or '{}')
             variant_json.update(variant_details(saved_variant_json, project or saved_variant.project, user, **kwargs))
         variant_json.update({
-            'variantId': saved_variant.guid,  # TODO get from json
             'familyGuids': [saved_variant.family.guid],
         })
         return variant_json
