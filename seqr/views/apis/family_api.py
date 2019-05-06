@@ -5,6 +5,7 @@ APIs used to retrieve and modify Individual fields
 import json
 import logging
 
+from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 
@@ -27,7 +28,7 @@ FAMILY_ID_FIELD = 'familyId'
 PREVIOUS_FAMILY_ID_FIELD = 'previousFamilyId'
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def edit_families_handler(request, project_guid):
     """Edit or one or more Family records.
@@ -69,7 +70,7 @@ def edit_families_handler(request, project_guid):
     return create_json_response(updated_families_by_guid)
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def delete_families_handler(request, project_guid):
     """Edit or delete one or more Individual records.
@@ -167,7 +168,7 @@ def update_family_analysed_by(request, family_guid):
     })
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def receive_families_table_handler(request, project_guid):
     """Handler for the initial upload of an Excel or .tsv table of families. This handler

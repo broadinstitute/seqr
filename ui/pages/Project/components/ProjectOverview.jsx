@@ -5,6 +5,7 @@ import styled from 'styled-components'
 import { Grid } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 
+import { getUser } from 'redux/selectors'
 import { VerticalSpacer } from 'shared/components/Spacers'
 import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
 import {
@@ -18,6 +19,7 @@ import {
   getProjectAnalysisGroupIndividualsByGuid, getProjectAnalysisGroupSamplesByGuid,
 } from '../selectors'
 import EditFamiliesAndIndividualsButton from './edit-families-and-individuals/EditFamiliesAndIndividualsButton'
+import EditHpoTermsButton from './edit-families-and-individuals/EditHpoTermsButton'
 import EditDatasetsButton from './EditDatasetsButton'
 
 
@@ -47,7 +49,7 @@ DetailSection.propTypes = {
   button: PropTypes.node,
 }
 
-const ProjectOverview = ({ project, familiesByGuid, individualsByGuid, samplesByGuid, analysisStatusCounts }) => {
+const ProjectOverview = ({ project, familiesByGuid, individualsByGuid, samplesByGuid, analysisStatusCounts, user }) => {
   const familySizeHistogram = Object.values(familiesByGuid)
     .map(family => Math.min(family.individualGuids.length, 5))
     .reduce((acc, familySize) => (
@@ -62,6 +64,13 @@ const ProjectOverview = ({ project, familiesByGuid, individualsByGuid, samplesBy
     return { ...acc, [sample.sampleType]: { ...currentTypeSamplesByDate, [loadedDate]: (currentTypeSamplesByDate[loadedDate] || 0) + 1 } }
   }, {})
 
+  let editIndividualsButton = null
+  if (user.isStaff) {
+    editIndividualsButton = <EditFamiliesAndIndividualsButton />
+  } else if (project.canEdit) {
+    editIndividualsButton = <EditHpoTermsButton />
+  }
+
   return (
     <Grid>
       <Grid.Column width={5}>
@@ -73,7 +82,7 @@ const ProjectOverview = ({ project, familiesByGuid, individualsByGuid, samplesBy
                 {familySizeHistogram[size]} {FAMILY_SIZE_LABELS[size](familySizeHistogram[size] > 1)}
               </div>)
           }
-          button={project.canEdit ? <EditFamiliesAndIndividualsButton /> : null}
+          button={editIndividualsButton}
         />
       </Grid.Column>
       <Grid.Column width={5}>
@@ -111,9 +120,11 @@ ProjectOverview.propTypes = {
   individualsByGuid: PropTypes.object.isRequired,
   samplesByGuid: PropTypes.object.isRequired,
   analysisStatusCounts: PropTypes.array.isRequired,
+  user: PropTypes.object.isRequired,
 }
 
 const mapStateToProps = (state, ownProps) => ({
+  user: getUser(state),
   familiesByGuid: getProjectAnalysisGroupFamiliesByGuid(state, ownProps),
   individualsByGuid: getProjectAnalysisGroupIndividualsByGuid(state, ownProps),
   samplesByGuid: getProjectAnalysisGroupSamplesByGuid(state, ownProps),

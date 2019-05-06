@@ -7,7 +7,7 @@ import { Form, Accordion, Header, Segment, Grid, List } from 'semantic-ui-react'
 
 import { getUser } from 'redux/selectors'
 import { VerticalSpacer } from 'shared/components/Spacers'
-import { ButtonLink } from 'shared/components/StyledComponents'
+import { ButtonLink, InlineHeader } from 'shared/components/StyledComponents'
 import { configuredField, configuredFields } from 'shared/components/form/ReduxFormWrapper'
 import { Select, LabeledSlider, AlignedCheckboxGroup } from 'shared/components/form/Inputs'
 import Modal from 'shared/components/modal/Modal'
@@ -303,22 +303,16 @@ const STAFF_PANELS = STAFF_PANEL_DETAILS.map(panelDetails)
 class VariantSearchFormContent extends React.Component {
   render() {
     return (
-      <Grid>
-        <Grid.Row><Grid.Column width={16}><ProjectFamiliesField /></Grid.Column></Grid.Row>
-        <Grid.Row verticalAlign="bottom">
-          <Grid.Column width={13}><Header size="large" content="Search" /></Grid.Column>
-          <Grid.Column width={3} floated="right" textAlign="right">
-            {configuredField(SAVED_SEARCH_FIELD)}
-          </Grid.Column>
-        </Grid.Row>
-        <Grid.Row>
-          <Grid.Column width={16}>
-            <FormSection name="search">
-              <Accordion fluid panels={this.props.user.isStaff ? STAFF_PANELS : PANELS} />
-            </FormSection>
-          </Grid.Column>
-        </Grid.Row>
-      </Grid>
+      <div>
+        <ProjectFamiliesField />
+        <VerticalSpacer height={10} />
+        <InlineHeader content="Saved Search:" />
+        {configuredField(SAVED_SEARCH_FIELD)}
+        <VerticalSpacer height={10} />
+        <FormSection name="search">
+          <Accordion fluid panels={this.props.user.isStaff ? STAFF_PANELS : PANELS} />
+        </FormSection>
+      </div>
     )
   }
 

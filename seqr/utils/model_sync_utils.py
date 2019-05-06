@@ -33,7 +33,7 @@ def can_edit_individual_id(individual):
 
 def _can_edit_entity_id(project, entity_id_key, entity_id):
     base_project = find_matching_xbrowse_model(project)
-    if not base_project.has_elasticsearch_index():
+    if base_project.vcffile_set.count() and not base_project.has_elasticsearch_index():
         raise ValueError('Editing {} is disabled for projects which still use the mongo datastore'.format(entity_id_key))
     if project.is_mme_enabled and SEQR_ID_TO_MME_ID_MAP.find({'project_id': project.deprecated_project_id, entity_id_key: entity_id}).count() > 0:
         raise ValueError('Editing {} is disabled for {} because it has matchmaker submissions'.format(entity_id_key, entity_id))

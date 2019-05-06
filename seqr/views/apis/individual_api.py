@@ -5,6 +5,7 @@ APIs for retrieving, updating, creating, and deleting Individual records
 import json
 import logging
 from collections import defaultdict
+from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 
@@ -78,7 +79,7 @@ def update_individual_handler(request, individual_guid):
     })
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def edit_individuals_handler(request, project_guid):
     """Modify one or more Individual records.
@@ -157,7 +158,7 @@ def edit_individuals_handler(request, project_guid):
     })
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def delete_individuals_handler(request, project_guid):
     """Delete one or more Individual records.
@@ -219,7 +220,7 @@ def delete_individuals_handler(request, project_guid):
     })
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def receive_individuals_table_handler(request, project_guid):
     """Handler for the initial upload of an Excel or .tsv table of individuals. This handler
@@ -300,7 +301,7 @@ def receive_individuals_table_handler(request, project_guid):
     return create_json_response(response)
 
 
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def save_individuals_table_handler(request, project_guid, upload_file_id):
     """Handler for 'save' requests to apply Individual tables previously uploaded through receive_individuals_table(..)
@@ -411,7 +412,6 @@ def add_or_update_individuals_and_families(project, individual_records, user=Non
     update_pedigree_images(updated_families, project_guid=project.guid)
 
     return updated_families, list(updated_individuals)
-
 
 
 def delete_individuals(project, individual_guids):
