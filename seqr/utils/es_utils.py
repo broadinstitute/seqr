@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 VARIANT_DOC_TYPE = 'variant'
+MAX_COMPOUND_HET_GENES = 1000
 
 
 def get_es_client(timeout=30):
@@ -217,7 +218,7 @@ class EsSearch(object):
             if compound_het_q and not has_previous_compound_hets:
                 compound_het_search = self._search.filter(compound_het_q)
                 compound_het_search.aggs.bucket(
-                    'genes', 'terms', field='geneIds', min_doc_count=2, size=10000
+                    'genes', 'terms', field='geneIds', min_doc_count=2, size=MAX_COMPOUND_HET_GENES+1
                 ).metric(
                     'vars_by_gene', 'top_hits', size=100, sort=self._sort, _source=QUERY_FIELD_NAMES
                 )
@@ -382,6 +383,9 @@ class EsSearch(object):
         return [self._parse_hit(hit) for hit in response], response_total, False
 
     def _parse_compound_het_response(self, response):
+        if len(response.aggregations.genes.buckets) > MAX_COMPOUND_HET_GENES:
+            raise Exception('This search returned too many compound heterozygous variants. Please add stricter filters')
+
         index_name = response.hits[0].meta.index
 
         family_unaffected_individual_guids = {
