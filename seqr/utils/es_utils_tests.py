@@ -878,7 +878,7 @@ class EsUtilsTest(TestCase):
 
         if expected_search_params.get('gene_aggs'):
             expected_search['aggs'] = {
-                'genes': {'terms': {'field': 'geneIds', 'min_doc_count': 2, 'size': 10000}, 'aggs': {
+                'genes': {'terms': {'field': 'geneIds', 'min_doc_count': 2, 'size': 1001}, 'aggs': {
                     'vars_by_gene': {
                         'top_hits': {'sort': expected_search_params['sort'], '_source': mock.ANY, 'size': 100}
                     }
