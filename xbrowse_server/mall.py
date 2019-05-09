@@ -21,7 +21,7 @@ def get_custom_population_store():
         if x_custom_populations is None:
             raise Exception('x_custom_populations has not been set yet')
         _custom_population_store = PopulationFrequencyStore(
-            db_conn=settings.CUSTOM_POPULATIONS_DB,
+            get_db=lambda: settings.CUSTOM_POPULATIONS_DB,
             reference_populations=x_custom_populations,
         )
     return _custom_population_store
@@ -40,7 +40,7 @@ def get_custom_annotator():
     global _custom_annotator
     # custom annotator can be None
     if _custom_annotator is None and settings.CUSTOM_ANNOTATOR_SETTINGS:
-        _custom_annotator = CustomAnnotator(settings.CUSTOM_ANNOTATOR_SETTINGS)
+        _custom_annotator = CustomAnnotator()
 
     return _custom_annotator
 
@@ -50,7 +50,6 @@ def get_annotator():
     global _annotator
     if _annotator is None:
         _annotator = VariantAnnotator(
-            settings_module=settings.ANNOTATOR_SETTINGS,
             custom_annotator=get_custom_annotator(),
         )
     return _annotator
