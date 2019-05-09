@@ -67,7 +67,7 @@ def get_datastore(project=None):
             if x_custom_populations_map is None:
                 raise Exception('x_custom_populations_map has not been set yet')
             _mongo_datastore = MongoDatastore(
-                settings.DATASTORE_DB,
+                'DATASTORE_DB',
                 get_annotator(),
                 get_custom_population_store(),
                 x_custom_populations_map,
@@ -84,7 +84,7 @@ def get_population_datastore():
     global _population_datastore
     if _population_datastore is None:
         _population_datastore = PopulationDatastore(
-            settings.POPULATION_DATASTORE_DB,
+            'POPULATION_DATASTORE_DB',
             get_annotator(),
             get_custom_population_store(),
             settings.CONTROL_COHORTS,
@@ -109,7 +109,7 @@ def get_mongo_project_datastore():
         if x_custom_populations_map is None:
             raise Exception('x_custom_populations_map has not been set yet')
         _project_mongo_datastore = MongoDatastore(
-            settings.PROJECT_DATASTORE_DB,
+            'PROJECT_DATASTORE_DB',
             get_annotator(),
             get_custom_population_store(),
             x_custom_populations_map,
