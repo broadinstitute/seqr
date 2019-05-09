@@ -10,6 +10,8 @@ import random
 import string
 import sys
 
+from django.conf import settings
+
 from xbrowse.core.constants import CHROMOSOME_SIZES
 from xbrowse.utils import compressed_file
 from xbrowse.utils import slugify
@@ -58,8 +60,8 @@ def _add_index_fields_to_variant(variant_dict, annotation=None):
 
 class MongoDatastore(datastore.Datastore):
 
-    def __init__(self, db, annotator, custom_population_store=None, custom_populations_map=None):
-        self._db = db
+    def __init__(self, db_name, annotator, custom_population_store=None, custom_populations_map=None):
+        self._db_name = db_name
         self._annotator = annotator
         self._custom_population_store = custom_population_store
         self._custom_populations_map = custom_populations_map
@@ -184,17 +186,17 @@ class MongoDatastore(datastore.Datastore):
         List of all individuals in the datastore
         Items are (project_id, indiv_id) tuples
         """
-        return [(i['project_id'], i['indiv_id']) for i in self._db.individuals.find()]
+        return [(i['project_id'], i['indiv_id']) for i in getattr(settings, self._db_name).individuals.find()]
 
     def get_all_families(self):
         """
         List of all families in the datastore
         Items are (project_id, family_id) tuples
         """
-        return [(i['project_id'], i['family_id']) for i in self._db.families.find()]
+        return [(i['project_id'], i['family_id']) for i in getattr(settings, self._db_name).families.find()]
 
     def individual_exists(self, project_id, indiv_id):
-        return self._db.individuals.find_one({
+        return getattr(settings, self._db_name).individuals.find_one({
             'project_id': project_id,
             'indiv_id': indiv_id
         }) is not None
@@ -206,19 +208,19 @@ class MongoDatastore(datastore.Datastore):
             'project_id': project_id,
             'indiv_id': indiv_id,
         }
-        self._db.individuals.save(indiv)
+        getattr(settings, self._db_name).individuals.save(indiv)
 
     def get_individuals(self, project_id):
-        return [ i['indiv_id'] for i in self._db.individuals.find({ 'project_id': project_id }) ]
+        return [ i['indiv_id'] for i in getattr(settings, self._db_name).individuals.find({ 'project_id': project_id }) ]
 
     def family_exists(self, project_id, family_id):
-        return self._db.families.find_one({'project_id': project_id, 'family_id': family_id}) is not None
+        return getattr(settings, self._db_name).families.find_one({'project_id': project_id, 'family_id': family_id}) is not None
 
     def get_individuals_for_family(self, project_id, family_id):
-        return self._db.families.find_one({'project_id': project_id, 'family_id': family_id})['individuals']
+        return getattr(settings, self._db_name).families.find_one({'project_id': project_id, 'family_id': family_id})['individuals']
 
     def get_family_status(self, project_id, family_id):
-        family_doc = self._db.families.find_one({'project_id': project_id, 'family_id': family_id})
+        family_doc = getattr(settings, self._db_name).families.find_one({'project_id': project_id, 'family_id': family_id})
         if not family_doc:
             return None
         return family_doc['status']
@@ -229,21 +231,21 @@ class MongoDatastore(datastore.Datastore):
         for project_id, family_id in family_list:
             by_project[project_id].append(family_id)
         for project_id, family_id_list in by_project.items():
-            for family_doc in self._db.families.find({'project_id': project_id, 'family_id': {'$in': family_id_list}}):
+            for family_doc in getattr(settings, self._db_name).families.find({'project_id': project_id, 'family_id': {'$in': family_id_list}}):
                 ret[(project_id, family_doc['family_id'])] = family_doc['status']
         return ret
 
     def _get_family_info(self, project_id, family_id=None):
         if family_id is None:
-            return [family_info for family_info in self._db.families.find({'project_id': project_id})]
+            return [family_info for family_info in getattr(settings, self._db_name).families.find({'project_id': project_id})]
         else:
-            return self._db.families.find_one({'project_id': project_id, 'family_id': family_id})
+            return getattr(settings, self._db_name).families.find_one({'project_id': project_id, 'family_id': family_id})
 
     def _get_family_collection(self, project_id, family_id):
         family_info = self._get_family_info(project_id, family_id)
         if not family_info:
             return None
-        return self._db[family_info['coll_name']]
+        return getattr(settings, self._db_name)[family_info['coll_name']]
 
     #
     # Variant loading
@@ -276,10 +278,10 @@ class MongoDatastore(datastore.Datastore):
             'status': 'loading'
         }
 
-        family_collection = self._db[family_coll_name]
+        family_collection = getattr(settings, self._db_name)[family_coll_name]
         self._index_family_collection(family_collection)
 
-        self._db.families.save(family)
+        getattr(settings, self._db_name).families.save(family)
 
     def add_family(self, project_id, family_id, individuals):
         """
@@ -342,7 +344,7 @@ class MongoDatastore(datastore.Datastore):
         )
 
     def _add_vcf_file_for_family_set(self, family_info_list, vcf_file_path, reference_populations=None, vcf_id_map=None, start_from_chrom=None, end_with_chrom=None):
-        collections = {f['family_id']: self._db[f['coll_name']] for f in family_info_list}
+        collections = {f['family_id']: getattr(settings, self._db_name)[f['coll_name']] for f in family_info_list}
         #for collection in collections.values():
         #    collection.drop_indexes()
         indiv_id_list = [i for f in family_info_list for i in f['individuals']]
@@ -480,9 +482,9 @@ class MongoDatastore(datastore.Datastore):
         Call after family is loaded. Sets status and possibly more in the future
         """
         self._index_family_collection(self._get_family_collection(project_id, family_id))
-        family = self._db.families.find_one({'project_id': project_id, 'family_id': family_id})
+        family = getattr(settings, self._db_name).families.find_one({'project_id': project_id, 'family_id': family_id})
         family['status'] = 'loaded'
-        self._db.families.save(family)
+        getattr(settings, self._db_name).families.save(family)
 
     def _index_family_collection(self, collection):
         collection.ensure_index('xpos')
@@ -491,15 +493,15 @@ class MongoDatastore(datastore.Datastore):
         collection.ensure_index([('db_gene_ids', 1), ('xpos', 1)])
 
     def delete_project(self, project_id):
-        self._db.individuals.remove({'project_id': project_id})
-        for family_info in self._db.families.find({'project_id': project_id}):
-            self._db.drop_collection(family_info['coll_name'])
-        self._db.families.remove({'project_id': project_id})
+        getattr(settings, self._db_name).individuals.remove({'project_id': project_id})
+        for family_info in getattr(settings, self._db_name).families.find({'project_id': project_id}):
+            getattr(settings, self._db_name).drop_collection(family_info['coll_name'])
+        getattr(settings, self._db_name).families.remove({'project_id': project_id})
 
     def delete_family(self, project_id, family_id):
-        for family_info in self._db.families.find({'project_id': project_id, 'family_id': family_id}):
-            self._db.drop_collection(family_info['coll_name'])
-        self._db.families.remove({'project_id': project_id, 'family_id': family_id})
+        for family_info in getattr(settings, self._db_name).families.find({'project_id': project_id, 'family_id': family_id}):
+            getattr(settings, self._db_name).drop_collection(family_info['coll_name'])
+        getattr(settings, self._db_name).families.remove({'project_id': project_id, 'family_id': family_id})
 
     def add_annotations_to_variants(self, variants, project_id, family_id=None):
         for variant in variants:
@@ -523,9 +525,9 @@ class MongoDatastore(datastore.Datastore):
     #
 
     def _get_project_collection(self, project_id):
-        project = self._db.projects.find_one({'project_id': project_id})
+        project = getattr(settings, self._db_name).projects.find_one({'project_id': project_id})
         if project:
-            return self._db[project['collection_name']]
+            return getattr(settings, self._db_name)[project['collection_name']]
         else:
             return None
 
@@ -577,13 +579,13 @@ class MongoDatastore(datastore.Datastore):
             project_collection.save(variant_dict)
 
     def project_exists(self, project_id):
-        return self._db.projects.find_one({'project_id': project_id})
+        return getattr(settings, self._db_name).projects.find_one({'project_id': project_id})
 
     def project_collection_is_loaded(self, project):
         """Returns true if the project collection is fully loaded (this is the
         collection that stores the project-wide set of variants used for gene
         search)."""
-        project_json = self._db.projects.find_one({'project_id': project.project_id})
+        project_json = getattr(settings, self._db_name).projects.find_one({'project_id': project.project_id})
         if project_json is not None and "is_loaded" in project_json:
             return project_json["is_loaded"]
         else:
@@ -593,19 +595,19 @@ class MongoDatastore(datastore.Datastore):
         """Set the project collection "is_loaded" field to the given value.
         This field is used by other parts of seqr to decide if this collection
         is ready for use."""
-        project = self._db.projects.find_one({'project_id': project_id})
+        project = getattr(settings, self._db_name).projects.find_one({'project_id': project_id})
         if project is not None and "is_loaded" in project:
             project["is_loaded"] = is_loaded
             #print("Setting %s to %s" % (project["_id"], project))
             project_id = project['_id']
             del project['_id']
-            self._db.projects.update({'_id': project_id}, {"$set": project})
+            getattr(settings, self._db_name).projects.update({'_id': project_id}, {"$set": project})
         else:
             raise ValueError("Couldn't find project collection for %s" % project_id)
 
     def all_loaded_projects(self):
         """Returns all the loaded project ids."""
-        return {p['project_id'] for p in self._db.projects.find({'is_loaded': True})}
+        return {p['project_id'] for p in getattr(settings, self._db_name).projects.find({'is_loaded': True})}
 
     def add_project(self, project_id):
         """
@@ -622,15 +624,15 @@ class MongoDatastore(datastore.Datastore):
             'collection_name': 'project_' + ''.join([random.choice(string.digits) for i in range(8)]),
             'is_loaded': False,
         }
-        self._db.projects.insert(project)
-        project_collection = self._db[project['collection_name']]
+        getattr(settings, self._db_name).projects.insert(project)
+        project_collection = getattr(settings, self._db_name)[project['collection_name']]
         self._index_family_collection(project_collection)
 
     def delete_project_store(self, project_id):
-        project = self._db.projects.find_one({'project_id': project_id})
+        project = getattr(settings, self._db_name).projects.find_one({'project_id': project_id})
         if project:
-            self._db.drop_collection(project['collection_name'])
-        self._db.projects.remove({'project_id': project_id})
+            getattr(settings, self._db_name).drop_collection(project['collection_name'])
+        getattr(settings, self._db_name).projects.remove({'project_id': project_id})
 
     def get_project_variants_in_gene(self, project_id, gene_id, variant_filter=None):
 
