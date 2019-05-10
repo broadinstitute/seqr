@@ -1,20 +1,20 @@
 import collections
+from django.conf import settings
+
 from xbrowse.core import genomeloc, constants
 from xbrowse.core.genomeloc import CHROMOSOMES, get_xpos
 from tqdm import tqdm
 
 class CustomAnnotator():
 
-    def __init__(self, settings_module, genome_version=constants.GENOME_VERSION_GRCh37):
+    def __init__(self, genome_version=constants.GENOME_VERSION_GRCh37):
         """Constructor.
 
         Args:
             settings_module (module): eg. imported instance of custom_annotator_settings.py
             genome_version (string): constants.GRCh37 or constants.GRCh38
         """
-        self._settings = settings_module
         self._genome_version = genome_version
-        self._db = settings_module.db[self._genome_version]
         self._esp_target_filter = None
 
     def get_annotations_for_variants(self, variant_t_list):
@@ -23,7 +23,7 @@ class CustomAnnotator():
         ret = collections.OrderedDict()
         fields_to_include = ['rsid', 'polyphen', 'sift', 'fathmm', 'muttaster']
         for variant_t in variant_t_list:
-            doc = self._db.variants.find_one({'xpos': variant_t[0], 'ref': variant_t[1], 'alt': variant_t[2]})
+            doc = settings.CUSTOM_ANNOTATOR_SETTINGS.db[self._genome_version].variants.find_one({'xpos': variant_t[0], 'ref': variant_t[1], 'alt': variant_t[2]})
 
             d = {name: None for name in fields_to_include}
             if doc:
@@ -38,8 +38,8 @@ class CustomAnnotator():
 
 
     def load_dbnsfp(self):
-        self._db.drop_collection('variants')
-        self._db.variants.ensure_index([('xpos', 1), ('ref', 1), ('alt', 1)])
+        settings.CUSTOM_ANNOTATOR_SETTINGS.db[self._genome_version].drop_collection('variants')
+        settings.CUSTOM_ANNOTATOR_SETTINGS.db[self._genome_version].variants.ensure_index([('xpos', 1), ('ref', 1), ('alt', 1)])
 
         # load dbnsfp info
         polyphen_map = {
@@ -90,7 +90,7 @@ class CustomAnnotator():
                 continue  # no dbNSFP data for chrM
 
             print "Reading dbNSFP data for {}".format(chrom)
-            single_chrom_file = open(self._settings.dbnsfp_dir[self._genome_version] + 'dbNSFP2.9_variant.' + chrom)
+            single_chrom_file = open(settings.CUSTOM_ANNOTATOR_SETTINGS.dbnsfp_dir[self._genome_version] + 'dbNSFP2.9_variant.' + chrom)
             header = single_chrom_file.readline()
             header_fields = header.strip("\n").split()
             field_index = {name: header_fields.index(name) for name in header_fields}
@@ -117,7 +117,7 @@ class CustomAnnotator():
                     #'cadd_phred': collapse(fields[field_index["CADD_phred"]]),
                 }
 
-                self._db.variants.update(
+                settings.CUSTOM_ANNOTATOR_SETTINGS.db[self._genome_version].variants.update(
                     {'xpos': xpos, 'ref': ref, 'alt': alt},
                     {'$set': annotations_dict},
                     upsert=True

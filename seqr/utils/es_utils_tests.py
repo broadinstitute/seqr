@@ -446,7 +446,7 @@ PARSED_VARIANTS = [
         'mainTranscript': TRANSCRIPT_3,
         'originalAltAlleles': ['T'],
         'populations': {
-            'callset': {'an': 32, 'ac': 2, 'hom': 0, 'af': 0.063, 'hemi': 0},
+            'callset': {'an': 32, 'ac': 2, 'hom': None, 'af': 0.063, 'hemi': None},
             'g1k': {'an': 0, 'ac': 0, 'hom': 0, 'af': 0.0, 'hemi': 0},
             'gnomad_genomes': {'an': 30946, 'ac': 4, 'hom': 0, 'af': 0.0004590314436538903, 'hemi': 0},
             'exac': {'an': 121308, 'ac': 8, 'hom': 0, 'af': 0.0006726888333653661, 'hemi': 0},
@@ -487,7 +487,7 @@ PARSED_VARIANTS = [
         'mainTranscript': TRANSCRIPT_1,
         'originalAltAlleles': ['G'],
         'populations': {
-            'callset': {'an': 32, 'ac': 1, 'hom': 0, 'af': 0.031, 'hemi': 0},
+            'callset': {'an': 32, 'ac': 1, 'hom': None, 'af': 0.031, 'hemi': None},
             'g1k': {'an': 0, 'ac': 0, 'hom': 0, 'af': 0.0, 'hemi': 0},
             'gnomad_genomes': {'an': 0, 'ac': 0, 'hom': 0, 'af': 0.0, 'hemi': 0},
             'exac': {'an': 121336, 'ac': 6, 'hom': 0, 'af': 0.000242306760358614, 'hemi': 0},
@@ -551,8 +551,7 @@ PARSED_MULTI_INDEX_VARIANT.update({
     },
 })
 
-
-SOURCE_FIELDS = {
+MAPPING_FIELDS = [
     'start',
     'rsid',
     'originalAltAlleles',
@@ -587,9 +586,6 @@ SOURCE_FIELDS = {
     'hgmd_accession',
     'hgmd_class',
     'AC',
-    'callset_AC',
-    'callset_Hom',
-    'callset_Hemi',
     'AF',
     'callset_AF',
     'callset_AF_POPMAX_OR_GLOBAL',
@@ -630,8 +626,11 @@ SOURCE_FIELDS = {
     'topmed_Hemi',
     'topmed_AF',
     'topmed_AF_POPMAX_OR_GLOBAL',
-    'topmed_AN'
-}
+    'topmed_AN',
+    'callset_AC',
+]
+SOURCE_FIELDS = {'callset_Hom', 'callset_Hemi'}
+SOURCE_FIELDS.update(MAPPING_FIELDS)
 
 ALL_INHERITANCE_QUERY = {
     'bool': {
@@ -821,7 +820,7 @@ def create_mock_response(search, index=INDEX_NAME):
     return mock_response
 
 
-@mock.patch('seqr.utils.es_utils.get_index_metadata', lambda index_name, client: {k: {'genomeVersion': '37'} for k in index_name.split(',')})
+@mock.patch('seqr.utils.es_utils.get_index_metadata', lambda index_name, client: {k: {'genomeVersion': '37', 'fields': MAPPING_FIELDS} for k in index_name.split(',')})
 class EsUtilsTest(TestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
 
@@ -878,7 +877,7 @@ class EsUtilsTest(TestCase):
 
         if expected_search_params.get('gene_aggs'):
             expected_search['aggs'] = {
-                'genes': {'terms': {'field': 'geneIds', 'min_doc_count': 2, 'size': 10000}, 'aggs': {
+                'genes': {'terms': {'field': 'geneIds', 'min_doc_count': 2, 'size': 1001}, 'aggs': {
                     'vars_by_gene': {
                         'top_hits': {'sort': expected_search_params['sort'], '_source': mock.ANY, 'size': 100}
                     }

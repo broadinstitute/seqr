@@ -113,17 +113,6 @@ class ElasticsearchDatastore(datastore.Datastore):
 
         self._annotator = annotator
 
-        self._es_client = elasticsearch.Elasticsearch(host=settings.ELASTICSEARCH_SERVICE_HOSTNAME, timeout=30)
-
-        self._redis_client = None
-        if settings.REDIS_SERVICE_HOSTNAME:
-            try:
-                self._redis_client = redis.StrictRedis(host=settings.REDIS_SERVICE_HOSTNAME, socket_connect_timeout=3)
-                self._redis_client.ping()
-            except redis.exceptions.TimeoutError as e:
-                logger.warn("Unable to connect to redis host: {}".format(settings.REDIS_SERVICE_HOSTNAME) + str(e))
-                self._redis_client = None
-            
     def get_elasticsearch_variants(
             self,
             project_id,
@@ -142,6 +131,15 @@ class ElasticsearchDatastore(datastore.Datastore):
         from xbrowse_server.mall import get_reference
         from pyliftover.liftover import LiftOver
 
+        redis_client = None
+        if settings.REDIS_SERVICE_HOSTNAME:
+            try:
+                redis_client = redis.StrictRedis(host=settings.REDIS_SERVICE_HOSTNAME, socket_connect_timeout=3)
+                redis_client.ping()
+            except redis.exceptions.TimeoutError as e:
+                logger.warn("Unable to connect to redis host: {}".format(settings.REDIS_SERVICE_HOSTNAME) + str(e))
+                redis_client = None
+
         cache_key = "Variants___%s___%s___%s" % (
             project_id,
             family_id,
@@ -155,7 +153,7 @@ class ElasticsearchDatastore(datastore.Datastore):
             ])
         )
 
-        cached_results = self._redis_client and self._redis_client.get(cache_key)
+        cached_results = redis_client and redis_client.get(cache_key)
         if cached_results is not None:
             variant_results = json.loads(cached_results)
             return [Variant.fromJSON(variant_json) for variant_json in variant_results]
@@ -215,7 +213,8 @@ class ElasticsearchDatastore(datastore.Datastore):
         except Exception as e:
             logger.info("WARNING: Unable to set up liftover. Is there a working internet connection? " + str(e))
 
-        mapping = self._es_client.indices.get_mapping(str(elasticsearch_index) + "*")
+        es_client = elasticsearch.Elasticsearch(host=settings.ELASTICSEARCH_SERVICE_HOSTNAME, timeout=30)
+        mapping = es_client.indices.get_mapping(str(elasticsearch_index) + "*")
         index_fields = {}
         is_parent_child = False
         is_nested = False
@@ -259,7 +258,7 @@ class ElasticsearchDatastore(datastore.Datastore):
             for index_mapping in mapping.values():
                 index_fields.update(index_mapping["mappings"]["variant"]["properties"])
 
-        s = elasticsearch_dsl.Search(using=self._es_client, index=elasticsearch_index) #",".join(indices))
+        s = elasticsearch_dsl.Search(using=es_client, index=elasticsearch_index) #",".join(indices))
 
         if variant_id_filter is not None:
             variant_id_filter_term = None
@@ -844,8 +843,8 @@ class ElasticsearchDatastore(datastore.Datastore):
 
         logger.info("Finished returning the %s variants: %s seconds" % (response.hits.total, time.time() - start))
 
-        if self._redis_client:
-            self._redis_client.set(cache_key, json.dumps(variant_results))
+        if redis_client:
+            redis_client.set(cache_key, json.dumps(variant_results))
 
         return [Variant.fromJSON(variant_json) for variant_json in variant_results]
 

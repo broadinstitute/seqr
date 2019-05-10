@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 VARIANT_DOC_TYPE = 'variant'
+MAX_COMPOUND_HET_GENES = 1000
 
 
 def get_es_client(timeout=30):
@@ -38,6 +39,7 @@ def get_index_metadata(index_name, client):
         if not variant_mapping['properties'].get('samples_num_alt_1'):
             raise InvalidIndexException('Index "{}" does not have a valid schema'.format(index_name))
         index_metadata[index_name] = variant_mapping.get('_meta', {})
+        index_metadata[index_name]['fields'] = variant_mapping['properties'].keys()
     return index_metadata
 
 
@@ -217,7 +219,7 @@ class EsSearch(object):
             if compound_het_q and not has_previous_compound_hets:
                 compound_het_search = self._search.filter(compound_het_q)
                 compound_het_search.aggs.bucket(
-                    'genes', 'terms', field='geneIds', min_doc_count=2, size=10000
+                    'genes', 'terms', field='geneIds', min_doc_count=2, size=MAX_COMPOUND_HET_GENES+1
                 ).metric(
                     'vars_by_gene', 'top_hits', size=100, sort=self._sort, _source=QUERY_FIELD_NAMES
                 )
@@ -382,6 +384,9 @@ class EsSearch(object):
         return [self._parse_hit(hit) for hit in response], response_total, False
 
     def _parse_compound_het_response(self, response):
+        if len(response.aggregations.genes.buckets) > MAX_COMPOUND_HET_GENES:
+            raise Exception('This search returned too many compound heterozygous variants. Please add stricter filters')
+
         index_name = response.hits[0].meta.index
 
         family_unaffected_individual_guids = {
@@ -499,6 +504,7 @@ class EsSearch(object):
             population: _get_field_values(
                 hit, POPULATION_RESPONSE_FIELD_CONFIGS, format_response_key=lambda key: key.lower(),
                 lookup_field_prefix=population,
+                existing_fields=self.index_metadata[index_name]['fields'],
                 get_addl_fields=lambda field, field_config:
                 [pop_config.get(field)] + ['{}_{}'.format(population, custom_field) for custom_field in
                                            field_config.get('fields', [])],
@@ -1120,20 +1126,21 @@ def _parse_es_sort(sort, sort_config):
     return sort
 
 
-def _get_field_values(hit, field_configs, format_response_key=_to_camel_case, get_addl_fields=None, lookup_field_prefix=''):
+def _get_field_values(hit, field_configs, format_response_key=_to_camel_case, get_addl_fields=None, lookup_field_prefix='', existing_fields=None):
     return {
         field_config.get('response_key', format_response_key(field)): _value_if_has_key(
             hit,
             (get_addl_fields(field, field_config) if get_addl_fields else []) +
             ['{}_{}'.format(lookup_field_prefix, field) if lookup_field_prefix else field],
+            existing_fields=existing_fields,
             **field_config
         )
         for field, field_config in field_configs.items()
     }
 
 
-def _value_if_has_key(hit, keys, format_value=None, default_value=None, **kwargs):
+def _value_if_has_key(hit, keys, format_value=None, default_value=None, existing_fields=None, **kwargs):
     for key in keys:
         if key in hit:
             return format_value(default_value if hit[key] is None else hit[key]) if format_value else hit[key]
-    return default_value
+    return default_value if not existing_fields or any(key in existing_fields for key in keys) else None
