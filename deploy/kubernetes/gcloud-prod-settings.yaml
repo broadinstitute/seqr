@@ -24,6 +24,11 @@ SEQR_GIT_BRANCH: 'master'
 
 GUNICORN_WORKER_THREADS: 15    # number of webserver threads
 
+SEQR_POD_MEMORY_LIMIT: 35Gi
+REDIS_POD_MEMORY_LIMIT: 10Gi
+PHENOTIPS_POD_MEMORY_LIMIT: 3Gi
+
+
 ###########################################################
 ####### SETTINGS THAT SHOULDN'T NEED TO BE MODIFIED #######
 
