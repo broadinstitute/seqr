@@ -58,31 +58,17 @@ def query_variants_handler(request, search_hash):
 
         search_model = VariantSearch.objects.create(created_by=request.user, search=search_context.get('search', {}))
 
-        results_model = VariantSearchResults.objects.create(
-            search_hash=search_hash,
-            variant_search=search_model,
-            sort=sort
-        )
+        results_model = VariantSearchResults.objects.create(search_hash = search_hash, variant_search = search_model)
 
         all_families = set()
         for project_family in project_families:
             all_families.update(project_family['familyGuids'])
         results_model.families.set(Family.objects.filter(guid__in=all_families))
 
-    elif results_model.sort != sort:
-        families = results_model.families.all()
-        results_model, created = VariantSearchResults.objects.get_or_create(
-            search_hash=search_hash,
-            variant_search=results_model.variant_search,
-            sort=sort
-        )
-        if created:
-            results_model.families.set(families)
-
     _check_results_permission(results_model, request.user)
 
     try:
-        variants = get_es_variants(results_model, page=page, num_results=per_page)
+        variants = get_es_variants(results_model, sort=sort, page=page, num_results=per_page)
     except InvalidIndexException as e:
         return create_json_response({}, status=400, reason=e.message)
     except ConnectionTimeout as e:
@@ -191,7 +177,7 @@ VARIANT_GENOTYPE_EXPORT_DATA = [
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def export_variants_handler(request, search_hash):
-    results_model = VariantSearchResults.objects.filter(search_hash=search_hash).first()
+    results_model = VariantSearchResults.objects.get(search_hash=search_hash)
 
     _check_results_permission(results_model, request.user)
 

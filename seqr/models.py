@@ -806,9 +806,7 @@ class VariantSearch(ModelWithGUID):
 class VariantSearchResults(ModelWithGUID):
     variant_search = models.ForeignKey('VariantSearch', on_delete=models.CASCADE)
     families = models.ManyToManyField('Family')
-    search_hash = models.CharField(max_length=50)
-    sort = models.CharField(null=True, max_length=50)
-    results = JSONField(null=True)
+    search_hash = models.CharField(max_length=50, db_index=True, unique=True)
     total_results = models.IntegerField(null=True)
 
     def __unicode__(self):
@@ -816,7 +814,4 @@ class VariantSearchResults(ModelWithGUID):
 
     def _compute_guid(self):
         return 'VSR%07d_%s' % (self.id, _slugify(str(self)))
-
-    class Meta:
-        unique_together = ('search_hash', 'sort')
 

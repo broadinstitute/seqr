@@ -6,6 +6,7 @@ import json
 import logging
 from pyliftover.liftover import LiftOver
 from sys import maxint
+import redis
 
 import settings
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37, Omim, GeneConstraint
@@ -19,6 +20,8 @@ logger = logging.getLogger(__name__)
 
 VARIANT_DOC_TYPE = 'variant'
 MAX_COMPOUND_HET_GENES = 1000
+
+XPOS_SORT_KEY = 'xpos'
 
 
 def get_es_client(timeout=30):
@@ -56,8 +59,15 @@ def get_es_variants_for_variant_tuples(families, xpos_ref_alt_tuples):
     return variants
 
 
-def get_es_variants(search_model, page=1, num_results=100):
-    previous_search_results = search_model.results or {}
+def get_es_variants(search_model, sort=XPOS_SORT_KEY, page=1, num_results=100):
+    cache_key = 'search_results__{}__{}'.format(search_model.guid, sort)
+    redis_client = None
+    previous_search_results = {}
+    try:
+        redis_client = redis.StrictRedis(host=settings.REDIS_SERVICE_HOSTNAME, socket_connect_timeout=3)
+        previous_search_results = json.loads(redis_client.get(cache_key) or '{}')
+    except Exception as e:
+        logger.warn("Unable to connect to redis host: {}".format(settings.REDIS_SERVICE_HOSTNAME) + str(e))
 
     start_index = (page-1)*num_results
     end_index = page * num_results
@@ -75,7 +85,6 @@ def get_es_variants(search_model, page=1, num_results=100):
             return results
 
     search = search_model.variant_search.search
-    sort = search_model.sort
 
     genes, intervals, invalid_items = parse_locus_list_items(search.get('locus', {}))
     if invalid_items:
@@ -108,7 +117,11 @@ def get_es_variants(search_model, page=1, num_results=100):
         page=page, num_results=num_results, previous_search_results=previous_search_results
     )
 
-    search_model.results = previous_search_results
+    try:
+        redis_client.set(cache_key, json.dumps(previous_search_results))
+    except Exception as e:
+        logger.warn("Unable to write to redis: {}".format(settings.REDIS_SERVICE_HOSTNAME) + str(e))
+
     search_model.total_results = es_search.total_results
     search_model.save()
 
@@ -926,7 +939,6 @@ def _build_or_filter(op, filters):
 
 PATHOGENICTY_SORT_KEY = 'pathogenicity'
 PATHOGENICTY_HGMD_SORT_KEY = 'pathogenicity_hgmd'
-XPOS_SORT_KEY = 'xpos'
 CLINVAR_SORT = {
     '_script': {
         'type': 'number',
