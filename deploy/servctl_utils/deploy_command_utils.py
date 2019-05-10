@@ -781,7 +781,7 @@ spec:
     #]), is_interactive=True)
 
     # create persistent disks
-    for label in ("postgres",): # "mongo"): # , "elasticsearch-sharded"):  # "elasticsearch"
+    for label in ("postgres", "seqr-static-files"): # "mongo"): # , "elasticsearch-sharded"):  # "elasticsearch"
         run(" ".join([
             "gcloud compute disks create",
             "--zone %(GCLOUD_ZONE)s",
