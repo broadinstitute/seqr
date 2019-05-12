@@ -41,7 +41,7 @@ spec:
             memory: "0.5Gi"
             cpu: "0.01"
           limits:
-            memory: "3Gi"
+            memory: "{{ PHENOTIPS_POD_MEMORY_LIMIT }}"
             cpu: "2"
         env:
         - name: POSTGRES_USERNAME

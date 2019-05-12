@@ -25,7 +25,6 @@ from elasticsearch_dsl import Q
 
 from xbrowse.utils.basic_utils import _encode_name
 
-
 logger = logging.getLogger()
 
 MAX_INNER_HITS = 100
@@ -108,7 +107,6 @@ def _add_index_fields_to_variant(variant_dict, annotation=None):
 class ElasticsearchDatastore(datastore.Datastore):
 
     def __init__(self, annotator):
-        self.liftover_grch38_to_grch37 = None
         self.liftover_grch37_to_grch38 = None
 
         self._annotator = annotator
@@ -128,8 +126,8 @@ class ElasticsearchDatastore(datastore.Datastore):
         ):
         from xbrowse_server.base.models import Project, Family, Individual
         from seqr.models import Sample
+        from seqr.utils.es_utils import _liftover_grch38_to_grch37
         from xbrowse_server.mall import get_reference
-        from pyliftover.liftover import LiftOver
 
         redis_client = None
         if settings.REDIS_SERVICE_HOSTNAME:
@@ -203,15 +201,6 @@ class ElasticsearchDatastore(datastore.Datastore):
             family_individual_ids_to_sample_ids[indiv_id] = sample_id or indiv_id
 
         query_json = self._make_db_query(genotype_filter, variant_filter)
-
-        try:
-            if self.liftover_grch38_to_grch37 is None:
-                self.liftover_grch38_to_grch37 = LiftOver('hg38', 'hg19')
-
-            if self.liftover_grch37_to_grch38 is None:
-                self.liftover_grch37_to_grch38 = None # LiftOver('hg19', 'hg38')
-        except Exception as e:
-            logger.info("WARNING: Unable to set up liftover. Is there a working internet connection? " + str(e))
 
         es_client = elasticsearch.Elasticsearch(host=settings.ELASTICSEARCH_SERVICE_HOSTNAME, timeout=30)
         mapping = es_client.indices.get_mapping(str(elasticsearch_index) + "*")
@@ -682,8 +671,9 @@ class ElasticsearchDatastore(datastore.Datastore):
 
             if project.genome_version == GENOME_VERSION_GRCh38:
                 grch37_coord = None
-                if self.liftover_grch38_to_grch37:
-                    grch37_coord = self.liftover_grch38_to_grch37.convert_coordinate("chr%s" % hit["contig"].replace("chr", ""), int(hit["start"]))
+                liftover_grch38_to_grch37 = _liftover_grch38_to_grch37()
+                if liftover_grch38_to_grch37:
+                    grch37_coord = liftover_grch38_to_grch37.convert_coordinate("chr%s" % hit["contig"].replace("chr", ""), int(hit["start"]))
                     if grch37_coord and grch37_coord[0]:
                         grch37_coord = "%s-%s-%s-%s "% (grch37_coord[0][0], grch37_coord[0][1], hit["ref"], hit["alt"])
                     else:

@@ -35,6 +35,11 @@ spec:
       - name: gcloud-client-secrets-volume
         secret:
           secretName: gcloud-client-secrets
+      - name: seqr-static-files
+        gcePersistentDisk:
+          # This disk must already exist.
+          pdName: {{ CLUSTER_NAME }}-seqr-static-files-disk
+          fsType: ext4
       containers:
       - name: seqr-pod
         ports:
@@ -51,6 +56,8 @@ spec:
         - name: gcloud-client-secrets-volume
           mountPath: /.config
           readOnly: true
+        - name: seqr-static-files
+          mountPath: /seqr_static_files
         lifecycle:
           postStart:
             exec:
@@ -63,7 +70,7 @@ spec:
             memory: "0.5Gi"
             cpu: "0.05"
           limits:
-            memory: "15Gi"
+            memory: "{{ SEQR_POD_MEMORY_LIMIT }}"
             cpu: "8"
         envFrom:
           - configMapRef:
