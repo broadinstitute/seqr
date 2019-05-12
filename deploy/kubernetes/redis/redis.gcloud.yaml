@@ -37,7 +37,7 @@ spec:
             memory: "0.25Gi"
             cpu: "0.01"
           limits:
-            memory: "25Gi"
+            memory: "{{ REDIS_POD_MEMORY_LIMIT }}"
             cpu: "1"
       restartPolicy: Always
       dnsPolicy: ClusterFirst
