@@ -1,17 +1,20 @@
 import json
 import logging
+import redis
 from collections import defaultdict
 from django.contrib.auth.models import User
 
 from seqr.models import SavedVariant, VariantSearchResults, Individual
 from seqr.utils.es_utils import get_es_variants_for_variant_tuples, InvalidIndexException
 from seqr.utils.xpos_utils import get_chrom_pos
-
+from settings import REDIS_SERVICE_HOSTNAME
 
 from xbrowse_server.api.utils import add_extra_info_to_variants_project
 from xbrowse_server.mall import get_reference
 from xbrowse_server.base.models import Project as BaseProject
 from xbrowse_server.base.lookups import get_variants_from_variant_tuples
+
+logger = logging.getLogger(__name__)
 
 
 def deprecated_get_or_create_saved_variant(xpos=None, ref=None, alt=None, family=None, project=None, **kwargs):
@@ -31,7 +34,7 @@ def deprecated_get_or_create_saved_variant(xpos=None, ref=None, alt=None, family
             if len(saved_variants_json):
                 _update_saved_variant_json(saved_variant, saved_variants_json[0])
         except Exception as e:
-            logging.error("Unable to retrieve variant annotations for %s (%s, %s, %s): %s" % (family, xpos, ref, alt, e))
+            logger.error("Unable to retrieve variant annotations for %s (%s, %s, %s): %s" % (family, xpos, ref, alt, e))
     return saved_variant
 
 
@@ -60,14 +63,19 @@ def update_project_saved_variant_json(project, family_id=None):
 
 
 def reset_cached_search_results(project):
-    # TODO fix this
-    results = VariantSearchResults.objects.filter(results__isnull=False)
-    if project:
-        results = VariantSearchResults.objects.filter(families__project=project)
-    results.distinct().update(
-        results=None,
-        total_results=None,
-    )
+    try:
+        redis_client = redis.StrictRedis(host=REDIS_SERVICE_HOSTNAME, socket_connect_timeout=3)
+        keys_to_delete = []
+        if project:
+            result_guids = [res.guid for res in VariantSearchResults.objects.filter(families__project=project)]
+            for guid in result_guids:
+                keys_to_delete += redis_client.scan_iter(match='search_results__{}*'.format(guid))
+        else:
+            keys_to_delete = redis_client.keys(pattern='search_results__*')
+        redis_client.delete(*keys_to_delete)
+        logger.info('Reset {} cached results'.format(len(keys_to_delete)))
+    except Exception as e:
+        logger.error("Unable to reset cached search results: {}".format(e))
 
 
 def _retrieve_saved_variants_json(project, variant_tuples, create_if_missing=False):
