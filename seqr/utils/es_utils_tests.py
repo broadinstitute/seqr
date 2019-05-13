@@ -762,7 +762,7 @@ REDIS_CACHE = {}
 def _set_cache(k, v):
     REDIS_CACHE[k] = v
 MOCK_REDIS = mock.MagicMock()
-MOCK_REDIS.get.side_effect = lambda k: REDIS_CACHE.get(k)
+MOCK_REDIS.get.side_effect = REDIS_CACHE.get
 MOCK_REDIS.set.side_effect =_set_cache
 
 
