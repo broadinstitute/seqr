@@ -34,9 +34,8 @@ EXPECTED_VARIANTS[2]['locusListGuids'] = []
 
 
 def _get_es_variants(results_model, **kwargs):
-    results_model.total_results = len(VARIANTS)
     results_model.save()
-    return deepcopy(VARIANTS)
+    return deepcopy(VARIANTS), len(VARIANTS)
 
 
 class VariantSearchAPITest(TestCase):
@@ -97,25 +96,18 @@ class VariantSearchAPITest(TestCase):
             response_json['genesById']['ENSG00000227232']['locusListGuids'], [LOCUS_LIST_GUID]
         )
 
-        results_models = VariantSearchResults.objects.filter(search_hash=SEARCH_HASH)
-        self.assertEqual(results_models.count(), 1)
-        self.assertEqual(results_models.first().sort, 'xpos')
-        mock_get_variants.assert_called_with(results_models.first(), page=1, num_results=100)
+        results_model = VariantSearchResults.objects.get(search_hash=SEARCH_HASH)
+        mock_get_variants.assert_called_with(results_model, sort='xpos', page=1, num_results=100)
 
         # Test pagination
         response = self.client.get('{}?page=3'.format(url))
         self.assertEqual(response.status_code, 200)
-        results_models = VariantSearchResults.objects.filter(search_hash=SEARCH_HASH)
-        self.assertEqual(results_models.count(), 1)
-        mock_get_variants.assert_called_with(results_models.first(), page=3, num_results=100)
+        mock_get_variants.assert_called_with(results_model, sort='xpos', page=3, num_results=100)
 
         # Test sort
         response = self.client.get('{}?sort=consequence'.format(url))
         self.assertEqual(response.status_code, 200)
-        results_models = VariantSearchResults.objects.filter(search_hash=SEARCH_HASH)
-        self.assertEqual(results_models.count(), 2)
-        self.assertSetEqual({rm.sort for rm in results_models}, {'xpos', 'consequence'})
-        mock_get_variants.assert_called_with(results_models.last(), page=1, num_results=100)
+        mock_get_variants.assert_called_with(results_model, sort='consequence', page=1, num_results=100)
 
         # Test export
         export_url = reverse(export_variants_handler, args=[SEARCH_HASH])
@@ -136,7 +128,7 @@ class VariantSearchAPITest(TestCase):
              '', '1', 'Tier 1 - Novel gene and phenotype (None)|Review (None)', '', '2', '', '', 'NA19675', '1',
              '14,33', '50', '46.0', '0.702127659574', 'NA19679', '0', '45,0', '45', '99.0', '0.0'])
 
-        mock_get_variants.assert_called_with(results_models.first(), page=1, num_results=3)
+        mock_get_variants.assert_called_with(results_model, page=1, load_all=True)
 
     def test_search_context(self):
         search_context_url = reverse(search_context_handler)
@@ -227,7 +219,6 @@ class VariantSearchAPITest(TestCase):
         response = self.client.post(create_saved_search_url, content_type='application/json', data=json.dumps(invalid_body))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.reason_phrase, 'Saved searches cannot include custom genotype filters')
-
 
         body.update(SEARCH)
         response = self.client.post(create_saved_search_url, content_type='application/json', data=json.dumps(body))
