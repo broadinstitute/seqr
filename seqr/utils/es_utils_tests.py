@@ -1203,7 +1203,8 @@ class EsUtilsTest(TestCase):
     def test_compound_het_get_es_variants(self):
         search_model = VariantSearch.objects.create(search={
             'qualityFilter': {'min_gq': 10},
-            'inheritance': {'mode': 'compound_het'}
+            'annotations': {'other': []},
+            'inheritance': {'mode': 'compound_het'},
         })
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(self.families)

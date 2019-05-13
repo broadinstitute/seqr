@@ -185,10 +185,11 @@ class EsSearch(object):
 
     def filter_by_annotations(self, annotations, pathogenicity_filter):
         consequences_filter, allowed_consequences = _annotations_filter(annotations)
-        if pathogenicity_filter:
-            consequences_filter |= pathogenicity_filter
-        self.filter(consequences_filter)
-        self._allowed_consequences = allowed_consequences
+        if allowed_consequences:
+            if pathogenicity_filter:
+                consequences_filter |= pathogenicity_filter
+            self.filter(consequences_filter)
+            self._allowed_consequences = allowed_consequences
 
     def filter_by_genotype(self, inheritance, quality_filter=None):
         has_previous_compound_hets = self.previous_search_results.get('grouped_results')
