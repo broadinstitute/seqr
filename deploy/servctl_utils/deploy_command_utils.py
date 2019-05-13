@@ -124,6 +124,12 @@ def deploy_init_cluster(settings):
 
     create_namespace(settings)
 
+    # create priority classes - " Priority affects scheduling order of Pods and out-of-resource eviction ordering
+    # on the Node.... A PriorityClass is a non-namespaced object .. The higher the value, the higher the priority."
+    # (from https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#priorityclass)
+    run("kubectl create priorityclass medium-priority --value=1000" % settings, errors_to_ignore=["already exists"])
+    run("kubectl create priorityclass high-priority --value=10000" % settings, errors_to_ignore=["already exists"])
+
     # print cluster info
     run("kubectl cluster-info", verbose=True)
 
@@ -775,7 +781,7 @@ spec:
     #]), is_interactive=True)
 
     # create persistent disks
-    for label in ("postgres",): # "mongo"): # , "elasticsearch-sharded"):  # "elasticsearch"
+    for label in ("postgres", "seqr-static-files"): # "mongo"): # , "elasticsearch-sharded"):  # "elasticsearch"
         run(" ".join([
             "gcloud compute disks create",
             "--zone %(GCLOUD_ZONE)s",

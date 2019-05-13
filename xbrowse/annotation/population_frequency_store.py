@@ -9,12 +9,12 @@ from xbrowse.core import genomeloc
 
 class PopulationFrequencyStore():
 
-    def __init__(self, db_conn, reference_populations):
-        self._db = db_conn
+    def __init__(self, get_db, reference_populations):
+        self._get_db = get_db
         self.reference_populations = reference_populations
 
     def get_frequencies(self, xpos, ref, alt):
-        d = self._db.pop_variants.find_one({'xpos': xpos, 'ref': ref, 'alt': alt}, projection={'_id': False})
+        d = self._get_db().pop_variants.find_one({'xpos': xpos, 'ref': ref, 'alt': alt}, projection={'_id': False})
         if d is None:
             d = {}
 
@@ -40,10 +40,10 @@ class PopulationFrequencyStore():
         self.load_populations(self.reference_populations)
 
     def _ensure_indices(self):
-        self._db.pop_variants.ensure_index([('xpos', 1), ('ref', 1), ('alt', 1)])
+        self._get_db().pop_variants.ensure_index([('xpos', 1), ('ref', 1), ('alt', 1)])
 
     def _add_population_frequency(self, xpos, ref, alt, population, freq):
-        self._db.pop_variants.update(
+        self._get_db().pop_variants.update(
             {'xpos': xpos, 'ref': ref, 'alt': alt},
             {'$set': {population: freq}},
             upsert=True

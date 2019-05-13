@@ -30,6 +30,13 @@ const FormButtonContainer = styled.div`
   bottom: 10px;
 `
 
+const ButtonDropdown = styled(Dropdown).attrs({ button: true, basic: true })`
+  .ui.basic.button.dropdown {
+    color: ${props => props.color} !important;
+    box-shadow: 0px 0px 0px 1px ${props => props.color} inset !important;
+  }
+`
+
 const SaveSearch = ({ search, savedSearch, onSubmit }) =>
   <FormButtonContainer>
     <UpdateButton
@@ -64,8 +71,8 @@ export const SaveSearchButton = connect(mapStateToProps, mapDispatchToProps)(Sav
 
 const SavedSearches = ({ options, savedSearchesByGuid, selectedSearch, load, loading, errorMessage, onChange }) =>
   <DataLoader load={load} errorMessage={errorMessage} loading={false} content>
-    <Dropdown
-      selection
+    <ButtonDropdown
+      color="black"
       inline
       loading={loading}
       placeholder="Select a Saved Search"

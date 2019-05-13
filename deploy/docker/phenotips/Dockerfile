@@ -1,7 +1,7 @@
 # Creates a PhenoTips instance that's configured to use a postgres database.
 # This Dockerfile is based on https://github.com/meatcar/docker-phenotips/blob/master/Dockerfile
 
-FROM java:8
+FROM bitnami/minideb:stretch
 
 MAINTAINER MacArthur Lab
 
@@ -10,14 +10,10 @@ ENV PT_VERSION="1.2.6"
 #ENV PT_VERSION="1.3.4"
 #ENV PT_VERSION="1.4-milestone-1"
 
+RUN install_packages default-jdk
+
 # install common utilities
-RUN apt-get update && apt-get install -y --fix-missing \
-    curl \
-    emacs \
-    nano \
-    less \
-    htop \
-    wget
+RUN install_packages curl emacs nano less htop wget unzip
 
 # install postgres client
 RUN apt-get update && apt-get install -y \

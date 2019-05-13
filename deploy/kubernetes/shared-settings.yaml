@@ -3,6 +3,7 @@
 
 MONGO_DISK_SIZE: '200Gb'      # used when creating the GKE cluster on gcloud deployments
 POSTGRES_DISK_SIZE: '200Gb'   # used when creating the GKE cluster on gcloud deployments
+SEQR_STATIC_FILES_DISK_SIZE: '50Gb'  # used when creating the GKE cluster on gcloud deployments
 ELASTICSEARCH_DISK_SIZE: 200  # used when creating the GKE cluster on gcloud deployments
 
 NUM_NODES_PER_NODE_POOL: 4    # used when creating nodes for gcloud deployments

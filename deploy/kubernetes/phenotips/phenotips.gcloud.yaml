@@ -41,7 +41,7 @@ spec:
             memory: "0.5Gi"
             cpu: "0.01"
           limits:
-            memory: "3Gi"
+            memory: "{{ PHENOTIPS_POD_MEMORY_LIMIT }}"
             cpu: "2"
         env:
         - name: POSTGRES_USERNAME
@@ -62,3 +62,15 @@ spec:
             - /readiness_probe
       restartPolicy: Always
       dnsPolicy: ClusterFirst
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 1.0
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: "name"
+                      operator: In
+                      values:
+                      - seqr
+                topologyKey: "kubernetes.io/hostname"

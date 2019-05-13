@@ -25,7 +25,6 @@ from elasticsearch_dsl import Q
 
 from xbrowse.utils.basic_utils import _encode_name
 
-
 logger = logging.getLogger()
 
 MAX_INNER_HITS = 100
@@ -108,22 +107,10 @@ def _add_index_fields_to_variant(variant_dict, annotation=None):
 class ElasticsearchDatastore(datastore.Datastore):
 
     def __init__(self, annotator):
-        self.liftover_grch38_to_grch37 = None
         self.liftover_grch37_to_grch38 = None
 
         self._annotator = annotator
 
-        self._es_client = elasticsearch.Elasticsearch(host=settings.ELASTICSEARCH_SERVICE_HOSTNAME, timeout=30)
-
-        self._redis_client = None
-        if settings.REDIS_SERVICE_HOSTNAME:
-            try:
-                self._redis_client = redis.StrictRedis(host=settings.REDIS_SERVICE_HOSTNAME, socket_connect_timeout=3)
-                self._redis_client.ping()
-            except redis.exceptions.TimeoutError as e:
-                logger.warn("Unable to connect to redis host: {}".format(settings.REDIS_SERVICE_HOSTNAME) + str(e))
-                self._redis_client = None
-            
     def get_elasticsearch_variants(
             self,
             project_id,
@@ -139,8 +126,17 @@ class ElasticsearchDatastore(datastore.Datastore):
         ):
         from xbrowse_server.base.models import Project, Family, Individual
         from seqr.models import Sample
+        from seqr.utils.es_utils import _liftover_grch38_to_grch37
         from xbrowse_server.mall import get_reference
-        from pyliftover.liftover import LiftOver
+
+        redis_client = None
+        if settings.REDIS_SERVICE_HOSTNAME:
+            try:
+                redis_client = redis.StrictRedis(host=settings.REDIS_SERVICE_HOSTNAME, socket_connect_timeout=3)
+                redis_client.ping()
+            except redis.exceptions.TimeoutError as e:
+                logger.warn("Unable to connect to redis host: {}".format(settings.REDIS_SERVICE_HOSTNAME) + str(e))
+                redis_client = None
 
         cache_key = "Variants___%s___%s___%s" % (
             project_id,
@@ -155,7 +151,7 @@ class ElasticsearchDatastore(datastore.Datastore):
             ])
         )
 
-        cached_results = self._redis_client and self._redis_client.get(cache_key)
+        cached_results = redis_client and redis_client.get(cache_key)
         if cached_results is not None:
             variant_results = json.loads(cached_results)
             return [Variant.fromJSON(variant_json) for variant_json in variant_results]
@@ -206,16 +202,8 @@ class ElasticsearchDatastore(datastore.Datastore):
 
         query_json = self._make_db_query(genotype_filter, variant_filter)
 
-        try:
-            if self.liftover_grch38_to_grch37 is None:
-                self.liftover_grch38_to_grch37 = LiftOver('hg38', 'hg19')
-
-            if self.liftover_grch37_to_grch38 is None:
-                self.liftover_grch37_to_grch38 = None # LiftOver('hg19', 'hg38')
-        except Exception as e:
-            logger.info("WARNING: Unable to set up liftover. Is there a working internet connection? " + str(e))
-
-        mapping = self._es_client.indices.get_mapping(str(elasticsearch_index) + "*")
+        es_client = elasticsearch.Elasticsearch(host=settings.ELASTICSEARCH_SERVICE_HOSTNAME, timeout=30)
+        mapping = es_client.indices.get_mapping(str(elasticsearch_index) + "*")
         index_fields = {}
         is_parent_child = False
         is_nested = False
@@ -259,7 +247,7 @@ class ElasticsearchDatastore(datastore.Datastore):
             for index_mapping in mapping.values():
                 index_fields.update(index_mapping["mappings"]["variant"]["properties"])
 
-        s = elasticsearch_dsl.Search(using=self._es_client, index=elasticsearch_index) #",".join(indices))
+        s = elasticsearch_dsl.Search(using=es_client, index=elasticsearch_index) #",".join(indices))
 
         if variant_id_filter is not None:
             variant_id_filter_term = None
@@ -683,8 +671,9 @@ class ElasticsearchDatastore(datastore.Datastore):
 
             if project.genome_version == GENOME_VERSION_GRCh38:
                 grch37_coord = None
-                if self.liftover_grch38_to_grch37:
-                    grch37_coord = self.liftover_grch38_to_grch37.convert_coordinate("chr%s" % hit["contig"].replace("chr", ""), int(hit["start"]))
+                liftover_grch38_to_grch37 = _liftover_grch38_to_grch37()
+                if liftover_grch38_to_grch37:
+                    grch37_coord = liftover_grch38_to_grch37.convert_coordinate("chr%s" % hit["contig"].replace("chr", ""), int(hit["start"]))
                     if grch37_coord and grch37_coord[0]:
                         grch37_coord = "%s-%s-%s-%s "% (grch37_coord[0][0], grch37_coord[0][1], hit["ref"], hit["alt"])
                     else:
@@ -844,8 +833,8 @@ class ElasticsearchDatastore(datastore.Datastore):
 
         logger.info("Finished returning the %s variants: %s seconds" % (response.hits.total, time.time() - start))
 
-        if self._redis_client:
-            self._redis_client.set(cache_key, json.dumps(variant_results))
+        if redis_client:
+            redis_client.set(cache_key, json.dumps(variant_results))
 
         return [Variant.fromJSON(variant_json) for variant_json in variant_results]
 

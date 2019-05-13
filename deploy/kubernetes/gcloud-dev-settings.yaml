@@ -14,7 +14,7 @@ BASE_URL: 'https://seqr-dev.broadinstitute.org/'
 MONGO_SERVICE_EXTERNAL_IP: 10.128.0.3  # broad-seqr
 MONGO_SERVICE_EXTERNAL_PORT: 27017
 
-ELASTICSEARCH_SERVICE_EXTERNAL_IP: 10.16.1.4
+ELASTICSEARCH_SERVICE_EXTERNAL_IP: 10.16.0.3
 ELASTICSEARCH_SERVICE_EXTERNAL_PORT: 9200
 
 SEQR_SERVICE_NODE_PORT: 30003   # after deployment, seqr will be accessible at http://$(minikube ip):$SEQR_SERVICE_NODE_PORT . Node port range starts at 30000
@@ -23,6 +23,11 @@ GCLOUD_PROJECT: 'seqr-project'
 GCLOUD_ZONE: 'us-central1-b'
 
 SEQR_GIT_BRANCH: 'dev'
+
+SEQR_POD_MEMORY_LIMIT: 15Gi
+REDIS_POD_MEMORY_LIMIT: 8Gi
+PHENOTIPS_POD_MEMORY_LIMIT: 3Gi
+
 
 ###########################################################
 ####### SETTINGS THAT SHOULDN'T NEED TO BE MODIFIED #######

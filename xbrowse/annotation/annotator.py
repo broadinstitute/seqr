@@ -1,5 +1,7 @@
 import datetime
 import os
+from django.conf import settings
+
 import pymongo
 import pysam
 import sys
@@ -20,35 +22,35 @@ import vcf
 
 class VariantAnnotator():
 
-    def __init__(self, settings_module, custom_annotator=None):
-        self._db = pymongo.MongoClient(host=settings_module.db_host, port=settings_module.db_port)[settings_module.db_name]
+    def __init__(self,  custom_annotator=None):
         self._population_frequency_store = PopulationFrequencyStore(
-            db_conn=self._db,
-            reference_populations=settings_module.reference_populations,
+            get_db=self.get_annotator_datastore,
+            reference_populations=settings.ANNOTATOR_SETTINGS.reference_populations,
         )
         self._vep_annotator = HackedVEPAnnotator(
-            vep_perl_path=settings_module.vep_perl_path,
-            vep_cache_dir=settings_module.vep_cache_dir,
-            vep_batch_size=settings_module.vep_batch_size,
+            vep_perl_path=settings.ANNOTATOR_SETTINGS.vep_perl_path,
+            vep_cache_dir=settings.ANNOTATOR_SETTINGS.vep_cache_dir,
+            vep_batch_size=settings.ANNOTATOR_SETTINGS.vep_batch_size,
             human_ancestor_fa=None,
             #human_ancestor_fa=settings_module.human_ancestor_fa,
         )
         self._custom_annotator = custom_annotator
-        self.reference_populations = settings_module.reference_populations
-        self.reference_population_slugs = [pop['slug'] for pop in settings_module.reference_populations]
+        self.reference_populations = settings.ANNOTATOR_SETTINGS.reference_populations
+        self.reference_population_slugs = [pop['slug'] for pop in settings.ANNOTATOR_SETTINGS.reference_populations]
 
     def _ensure_indices(self):
-        self._db.variants.ensure_index([('xpos', 1), ('ref', 1), ('alt', 1)])
+        self.get_annotator_datastore().variants.ensure_index([('xpos', 1), ('ref', 1), ('alt', 1)])
 
     def _clear(self):
-        self._db.drop_collection('variants')
-        self._db.drop_collection('vcf_files')
+        db = self.get_annotator_datastore()
+        db.drop_collection('variants')
+        db.drop_collection('vcf_files')
         self._ensure_indices()
 
     def get_annotator_datastore(self):
         """Returns the mongo database object for the xbrowse_annotator database. This database contains the
         'variants' and 'pop_variants' collections."""
-        return self._db
+        return pymongo.MongoClient(host=settings.ANNOTATOR_SETTINGS.db_host, port=settings.ANNOTATOR_SETTINGS.db_port)[settings.ANNOTATOR_SETTINGS.db_name]
 
     def get_population_frequency_store(self):
         """Returns the PopulationFrequencyStore used to store the system-wide reference populations available on all
@@ -67,7 +69,7 @@ class VariantAnnotator():
         return variant
 
     def get_annotation(self, xpos, ref, alt, populations=None):
-        doc = self._db.variants.find_one({'xpos': xpos, 'ref': ref, 'alt': alt})
+        doc = self.get_annotator_datastore().variants.find_one({'xpos': xpos, 'ref': ref, 'alt': alt})
         if doc is None:
             raise ValueError("Could not find annotations for variant: " + str((xpos, ref, alt)))
         annotation = doc['annotation']
@@ -102,7 +104,7 @@ class VariantAnnotator():
             add_convenience_annotations(annotation)
             if self._custom_annotator:
                 annotation.update(custom_annotations[variant_t])
-            self._db.variants.update({
+            self.get_annotator_datastore().variants.update({
                 'xpos': variant_t[0],
                 'ref': variant_t[1],
                 'alt': variant_t[2]
@@ -114,7 +116,7 @@ class VariantAnnotator():
         Add the variants in vcf_file_path to annotator
         Convenience wrapper around add_variants_to_annotator
         """
-        if not force_all and self._db.vcf_files.find_one({'vcf_file_path': vcf_file_path}):
+        if not force_all and self.get_annotator_datastore().vcf_files.find_one({'vcf_file_path': vcf_file_path}):
             print "VCF already annotated"
             return
         print "Scanning VCF file first..."
@@ -126,18 +128,18 @@ class VariantAnnotator():
                 self.add_variants_to_annotator(variant_t_list, force_all)
                 variant_t_list = []
         self.add_variants_to_annotator(variant_t_list, force_all)
-        self._db.vcf_files.insert({'vcf_file_path': vcf_file_path, 'date_added': datetime.datetime.utcnow()})
+        self.get_annotator_datastore().vcf_files.insert({'vcf_file_path': vcf_file_path, 'date_added': datetime.datetime.utcnow()})
 
     def get_vcf_file_from_annotator(self, vcf_file_path):
 
-        return self._db.vcf_files.find_one({'vcf_file_path': vcf_file_path})
+        return self.get_annotator_datastore().vcf_files.find_one({'vcf_file_path': vcf_file_path})
 
     def add_preannotated_vcf_file(self, vcf_file_path, force=False, start_from_chrom=None, end_with_chrom=None):
         """
         Add the variants in vcf_file_path to annotator
         Convenience wrapper around add_variants_to_annotator
         """
-        if not force and self._db.vcf_files.find_one({'vcf_file_path': vcf_file_path}):
+        if not force and self.get_annotator_datastore().vcf_files.find_one({'vcf_file_path': vcf_file_path}):
             print "VCF %(vcf_file_path)s already loaded into db.variants cache" % locals()
             return
 
@@ -205,7 +207,7 @@ class VariantAnnotator():
                 import pprint
                 pprint.pprint(variant_t)
 
-            self._db.variants.update(
+            self.get_annotator_datastore().variants.update(
                 {
                     'xpos': variant_t[0],
                     'ref': variant_t[1],
@@ -215,13 +217,13 @@ class VariantAnnotator():
                 }, upsert=True)
 
         print("Finished parsing %s alleles from %s" %  (counters.get('alleles', 0), vcf_file_path))
-        self._db.vcf_files.update({'vcf_file_path': vcf_file_path},
+        self.get_annotator_datastore().vcf_files.update({'vcf_file_path': vcf_file_path},
             {'vcf_file_path': vcf_file_path, 'date_added': datetime.datetime.utcnow()}, upsert=True)
 
     def _get_missing_annotations(self, variant_t_list):
         ret = []
         for variant_t in variant_t_list:
-            if not self._db.variants.find_one(
+            if not self.get_annotator_datastore().variants.find_one(
                 {'xpos': variant_t[0],
                  'ref': variant_t[1],
                  'alt': variant_t[2]}):
