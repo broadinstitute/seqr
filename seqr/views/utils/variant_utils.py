@@ -59,11 +59,11 @@ def update_project_saved_variant_json(project, family_id=None):
     return updated_saved_variant_guids
 
 
-def reset_cached_search_results(project=None):
+def reset_cached_search_results(project):
     # TODO fix this
     results = VariantSearchResults.objects.filter(results__isnull=False)
     if project:
-        results = results.filter(families__project=project)
+        results = VariantSearchResults.objects.filter(families__project=project)
     results.distinct().update(
         results=None,
         total_results=None,

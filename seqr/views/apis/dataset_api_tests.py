@@ -123,7 +123,6 @@ class DatasetAPITest(TransactionTestCase):
             'elasticsearchIndex': INDEX_NAME,
             'mappingFilePath': 'mapping.csv',
         }))
-        import pdb; pdb.set_trace()
         self.assertEqual(response.status_code, 200)
 
         response_json = response.json()

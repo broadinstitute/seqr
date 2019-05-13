@@ -807,7 +807,6 @@ class VariantSearchResults(ModelWithGUID):
     variant_search = models.ForeignKey('VariantSearch', on_delete=models.CASCADE)
     families = models.ManyToManyField('Family')
     search_hash = models.CharField(max_length=50, db_index=True, unique=True)
-    total_results = models.IntegerField(null=True)
 
     def __unicode__(self):
         return self.search_hash

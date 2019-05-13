@@ -34,9 +34,8 @@ EXPECTED_VARIANTS[2]['locusListGuids'] = []
 
 
 def _get_es_variants(results_model, **kwargs):
-    results_model.total_results = len(VARIANTS)
     results_model.save()
-    return deepcopy(VARIANTS)
+    return deepcopy(VARIANTS), len(VARIANTS)
 
 
 class VariantSearchAPITest(TestCase):
@@ -129,7 +128,7 @@ class VariantSearchAPITest(TestCase):
              '', '1', 'Tier 1 - Novel gene and phenotype (None)|Review (None)', '', '2', '', '', 'NA19675', '1',
              '14,33', '50', '46.0', '0.702127659574', 'NA19679', '0', '45,0', '45', '99.0', '0.0'])
 
-        mock_get_variants.assert_called_with(results_model, page=1, num_results=3)
+        mock_get_variants.assert_called_with(results_model, page=1, load_all=True)
 
     def test_search_context(self):
         search_context_url = reverse(search_context_handler)
@@ -220,7 +219,6 @@ class VariantSearchAPITest(TestCase):
         response = self.client.post(create_saved_search_url, content_type='application/json', data=json.dumps(invalid_body))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.reason_phrase, 'Saved searches cannot include custom genotype filters')
-
 
         body.update(SEARCH)
         response = self.client.post(create_saved_search_url, content_type='application/json', data=json.dumps(body))

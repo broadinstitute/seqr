@@ -2,6 +2,7 @@ import json
 import jmespath
 from collections import defaultdict
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import MultipleObjectsReturned
 from django.db.models import Q, prefetch_related_objects
 from django.views.decorators.csrf import csrf_exempt
 from elasticsearch.exceptions import ConnectionTimeout
@@ -56,9 +57,12 @@ def query_variants_handler(request, search_hash):
         if not project_families:
             return create_json_response({}, status=400, reason='Invalid search: no projects/ families specified')
 
-        search_model = VariantSearch.objects.create(created_by=request.user, search=search_context.get('search', {}))
+        search_dict = search_context.get('search', {})
+        search_model = VariantSearch.objects.filter(search=search_dict).filter(Q(created_by=request.user) | Q(name__isnull=False)).first()
+        if not search_model:
+            search_model = VariantSearch.objects.create(created_by=request.user, search=search_dict)
 
-        results_model = VariantSearchResults.objects.create(search_hash = search_hash, variant_search = search_model)
+        results_model = VariantSearchResults.objects.create(search_hash=search_hash, variant_search=search_model)
 
         all_families = set()
         for project_family in project_families:
@@ -68,7 +72,7 @@ def query_variants_handler(request, search_hash):
     _check_results_permission(results_model, request.user)
 
     try:
-        variants = get_es_variants(results_model, sort=sort, page=page, num_results=per_page)
+        variants, total_results = get_es_variants(results_model, sort=sort, page=page, num_results=per_page)
     except InvalidIndexException as e:
         return create_json_response({}, status=400, reason=e.message)
     except ConnectionTimeout as e:
@@ -76,6 +80,7 @@ def query_variants_handler(request, search_hash):
 
     response = _process_variants(variants, results_model.families.all())
     response['search'] = _get_search_context(results_model)
+    response['search']['totalResults'] = total_results
 
     return create_json_response(response)
 
@@ -183,7 +188,7 @@ def export_variants_handler(request, search_hash):
 
     family_ids_by_guid = {family.guid: family.family_id for family in results_model.families.all()}
 
-    variants = get_es_variants(results_model, page=1, num_results=results_model.total_results)
+    variants, _ = get_es_variants(results_model, page=1, load_all=True)
 
     saved_variants_by_guid = _get_saved_variants(variants)
     saved_variants_by_family = defaultdict(dict)
@@ -289,11 +294,22 @@ def create_saved_search_handler(request):
     if request_json.get('inheritance', {}).get('filter', {}).get('genotype'):
         return create_json_response({}, status=400, reason='Saved searches cannot include custom genotype filters')
 
-    saved_search = VariantSearch.objects.create(
-        name=name,
-        search=request_json,
-        created_by=request.user,
-    )
+    try:
+        saved_search, _ = VariantSearch.objects.get_or_create(
+            search=request_json,
+            created_by=request.user,
+        )
+    except MultipleObjectsReturned:
+        # Can't create a unique constraint on JSON field, so its possible that a duplicate gets made by accident
+        dup_searches = VariantSearch.objects.filter(
+            search=request_json,
+            created_by=request.user,
+        )
+        saved_search = dup_searches[0]
+        for search in dup_searches:
+            search.delete()
+    saved_search.name = name
+    saved_search.save()
 
     return create_json_response({
         'savedSearchesByGuid': {
@@ -353,7 +369,6 @@ def _get_search_context(results_model):
             {'projectGuid': project_guid, 'familyGuids': family_guids}
             for project_guid, family_guids in project_families.items()
         ],
-        'totalResults': results_model.total_results,
     }
 
 

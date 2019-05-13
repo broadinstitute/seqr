@@ -929,32 +929,41 @@ class EsUtilsTest(TestCase):
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(self.families)
 
-        variants = get_es_variants(results_model, num_results=2)
+        variants, total_results = get_es_variants(results_model, num_results=2)
         self.assertEqual(len(variants), 2)
         self.assertDictEqual(variants[0], PARSED_VARIANTS[0])
         self.assertDictEqual(variants[1], PARSED_VARIANTS[1])
+        self.assertEqual(total_results, 5)
 
-        self.assertCachedResults(results_model, {'all_results': variants})
-        self.assertEqual(results_model.total_results, 5)
+        self.assertCachedResults(results_model, {'all_results': variants, 'total_results': 5})
 
         self.assertExecutedSearch(filters=[ALL_INHERITANCE_QUERY], sort=['xpos'])
 
         # does not save non-consecutive pages
-        variants = get_es_variants(results_model, page=3, num_results=2)
-        self.assertCachedResults(results_model, {'all_results': variants})
+        variants, total_results = get_es_variants(results_model, page=3, num_results=2)
+        self.assertEqual(total_results, 5)
+        self.assertCachedResults(results_model, {'all_results': variants, 'total_results': 5})
         self.assertExecutedSearch(filters=[ALL_INHERITANCE_QUERY], sort=['xpos'], start_index=4, size=2)
 
         # test pagination
-        variants = get_es_variants(results_model, page=2, num_results=2)
+        variants, total_results = get_es_variants(results_model, page=2, num_results=2)
         self.assertEqual(len(variants), 2)
-        self.assertCachedResults(results_model, {'all_results': PARSED_VARIANTS + PARSED_VARIANTS})
+        self.assertEqual(total_results, 5)
+        self.assertCachedResults(results_model, {'all_results': PARSED_VARIANTS + PARSED_VARIANTS, 'total_results': 5})
         self.assertExecutedSearch(filters=[ALL_INHERITANCE_QUERY], sort=['xpos'], start_index=2, size=2)
 
         # test does not re-fetch page
-        variants = get_es_variants(results_model, page=1, num_results=3)
+        variants, total_results = get_es_variants(results_model, page=1, num_results=3)
         self.assertIsNone(self.executed_search)
         self.assertEqual(len(variants), 3)
         self.assertListEqual(variants, PARSED_VARIANTS + PARSED_VARIANTS[:1])
+        self.assertEqual(total_results, 5)
+
+        # test load_all
+        variants, _ = get_es_variants(results_model, page=1, load_all=True)
+        self.assertExecutedSearch(filters=[ALL_INHERITANCE_QUERY], sort=['xpos'], start_index=4, size=1)
+        self.assertEqual(len(variants), 5)
+        self.assertListEqual(variants, PARSED_VARIANTS + PARSED_VARIANTS + PARSED_VARIANTS[:1])
 
     def test_filtered_get_es_variants(self):
         search_model = VariantSearch.objects.create(search={
@@ -981,8 +990,9 @@ class EsUtilsTest(TestCase):
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(self.families)
 
-        variants = get_es_variants(results_model, sort='protein_consequence', num_results=2)
+        variants, total_results = get_es_variants(results_model, sort='protein_consequence', num_results=2)
         self.assertListEqual(variants, PARSED_VARIANTS)
+        self.assertEqual(total_results, 5)
 
         self.assertExecutedSearch(filters=[
             {
@@ -1198,14 +1208,15 @@ class EsUtilsTest(TestCase):
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(self.families)
 
-        variants = get_es_variants(results_model, num_results=2)
+        variants, total_results = get_es_variants(results_model, num_results=2)
         self.assertEqual(len(variants), 2)
         self.assertListEqual(variants, PARSED_COMPOUND_HET_VARIANTS)
+        self.assertEqual(total_results, 2)
 
         self.assertCachedResults(results_model, {
             'grouped_results': [{'ENSG00000135953': PARSED_COMPOUND_HET_VARIANTS}],
+            'total_results': 2,
         })
-        self.assertEqual(results_model.total_results, 2)
 
         self.assertExecutedSearch(
             filters=[COMPOUND_HET_INHERITANCE_QUERY],
@@ -1228,20 +1239,21 @@ class EsUtilsTest(TestCase):
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(self.families)
 
-        variants = get_es_variants(results_model, num_results=2)
+        variants, total_results = get_es_variants(results_model, num_results=2)
         self.assertEqual(len(variants), 3)
         self.assertDictEqual(variants[0], PARSED_VARIANTS[0])
         self.assertDictEqual(variants[1], PARSED_COMPOUND_HET_VARIANTS[0])
         self.assertDictEqual(variants[2], PARSED_COMPOUND_HET_VARIANTS[1])
+        self.assertEqual(total_results, 7)
 
         self.assertCachedResults(results_model, {
             'compound_het_results': [],
             'variant_results': [PARSED_VARIANTS[1]],
             'grouped_results': [{'null': [PARSED_VARIANTS[0]]}, {'ENSG00000228198': PARSED_COMPOUND_HET_VARIANTS}],
             'duplicate_doc_count': 0,
-            'loaded_variant_counts': {'test_index_compound_het': {'total': 2}, INDEX_NAME: {'loaded': 2, 'total': 5}}
+            'loaded_variant_counts': {'test_index_compound_het': {'total': 2}, INDEX_NAME: {'loaded': 2, 'total': 5}},
+            'total_results': 7,
         })
-        self.assertEqual(results_model.total_results, 7)
 
         annotation_query = {'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}}
         pass_filter_query = {'bool': {'must_not': [{'exists': {'field': 'filters'}}]}}
@@ -1259,9 +1271,10 @@ class EsUtilsTest(TestCase):
 
         # test pagination
 
-        variants = get_es_variants(results_model, page=3, num_results=2)
+        variants, total_results = get_es_variants(results_model, page=3, num_results=2)
         self.assertEqual(len(variants), 2)
         self.assertListEqual(variants, PARSED_VARIANTS)
+        self.assertEqual(total_results, 6)
 
         self.assertCachedResults(results_model, {
             'compound_het_results': [],
@@ -1271,6 +1284,7 @@ class EsUtilsTest(TestCase):
                 {'null': [PARSED_VARIANTS[0]]}, {'null': [PARSED_VARIANTS[1]]}],
             'duplicate_doc_count': 1,
             'loaded_variant_counts': {'test_index_compound_het': {'total': 2}, INDEX_NAME: {'loaded': 4, 'total': 5}},
+            'total_results': 6,
         })
 
         self.assertExecutedSearches([dict(filters=[annotation_query, pass_filter_query, RECESSIVE_INHERITANCE_QUERY], start_index=2, size=4, sort=['xpos'])])
@@ -1283,8 +1297,9 @@ class EsUtilsTest(TestCase):
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(Family.objects.filter(project__guid='R0001_1kg'))
 
-        variants = get_es_variants(results_model, num_results=2)
+        variants, total_results = get_es_variants(results_model, num_results=2)
         self.assertListEqual(variants, PARSED_VARIANTS)
+        self.assertEqual(total_results, 5)
 
         self.assertExecutedSearch(filters=[{'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}}], sort=['xpos'])
 
@@ -1297,11 +1312,12 @@ class EsUtilsTest(TestCase):
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(Family.objects.filter(guid__in=['F000011_11', 'F000003_3', 'F000002_2']))
 
-        variants = get_es_variants(results_model, num_results=2)
+        variants, total_results = get_es_variants(results_model, num_results=2)
         self.assertEqual(len(variants), 3)
         self.assertDictEqual(variants[0], PARSED_VARIANTS[0])
         self.assertDictEqual(variants[1], PARSED_COMPOUND_HET_VARIANTS_PROJECT_2[0])
         self.assertDictEqual(variants[2], PARSED_COMPOUND_HET_VARIANTS_PROJECT_2[1])
+        self.assertEqual(total_results, 13)
 
         self.assertCachedResults(results_model, {
             'compound_het_results': [{'ENSG00000228198': PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT}],
@@ -1313,9 +1329,9 @@ class EsUtilsTest(TestCase):
                 '{}_compound_het'.format(SECOND_INDEX_NAME): {'total': 4},
                 INDEX_NAME: {'loaded': 2, 'total': 5},
                 '{}_compound_het'.format(INDEX_NAME): {'total': 2},
-            }
+            },
+            'total_results': 13,
         })
-        self.assertEqual(results_model.total_results, 13)
 
         annotation_query = {'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}}
 
@@ -1372,9 +1388,10 @@ class EsUtilsTest(TestCase):
         ])
 
         # test pagination
-        variants = get_es_variants(results_model, num_results=2, page=2)
+        variants, total_results = get_es_variants(results_model, num_results=2, page=2)
         self.assertEqual(len(variants), 3)
         self.assertListEqual(variants, [PARSED_VARIANTS[0]] + PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT)
+        self.assertEqual(total_results, 11)
 
         self.assertCachedResults(results_model, {
             'compound_het_results': [],
@@ -1391,9 +1408,9 @@ class EsUtilsTest(TestCase):
                 '{}_compound_het'.format(SECOND_INDEX_NAME): {'total': 4},
                 INDEX_NAME: {'loaded': 4, 'total': 5},
                 '{}_compound_het'.format(INDEX_NAME): {'total': 2},
-            }
+            },
+            'total_results': 11,
         })
-        self.assertEqual(results_model.total_results, 11)
 
         project_2_search['start_index'] = 1
         project_2_search['size'] = 3
@@ -1405,15 +1422,16 @@ class EsUtilsTest(TestCase):
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(Family.objects.all())
 
-        variants = get_es_variants(results_model, num_results=2)
+        variants, total_results = get_es_variants(results_model, num_results=2)
         expected_variants = [PARSED_VARIANTS[0], PARSED_MULTI_INDEX_VARIANT]
         self.assertListEqual(variants, expected_variants)
+        self.assertEqual(total_results, 4)
 
         self.assertCachedResults(results_model, {
             'all_results': expected_variants,
             'duplicate_doc_count': 1,
+            'total_results': 4,
         })
-        self.assertEqual(results_model.total_results, 4)
 
         self.assertExecutedSearch(
             index='{},{}'.format(SECOND_INDEX_NAME, INDEX_NAME),
@@ -1423,15 +1441,16 @@ class EsUtilsTest(TestCase):
         )
 
         # test pagination
-        variants = get_es_variants(results_model, num_results=2, page=2)
+        variants, total_results = get_es_variants(results_model, num_results=2, page=2)
         expected_variants = [PARSED_VARIANTS[0], PARSED_MULTI_INDEX_VARIANT]
         self.assertListEqual(variants, expected_variants)
+        self.assertEqual(total_results, 3)
 
         self.assertCachedResults(results_model, {
             'all_results': expected_variants + expected_variants,
             'duplicate_doc_count': 2,
+            'total_results': 3,
         })
-        self.assertEqual(results_model.total_results, 3)
 
         self.assertExecutedSearch(
             index='{},{}'.format(SECOND_INDEX_NAME, INDEX_NAME),
