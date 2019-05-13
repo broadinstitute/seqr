@@ -70,7 +70,7 @@ spec:
             memory: "0.5Gi"
             cpu: "0.05"
           limits:
-            memory: "15Gi"
+            memory: "{{ SEQR_POD_MEMORY_LIMIT }}"
             cpu: "8"
         envFrom:
           - configMapRef:
