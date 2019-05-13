@@ -160,8 +160,12 @@ export const getIndividualTaggedVariants = createSelector(
   (savedVariants, individualsByGuid, genesById, individualGuid) => {
     const { familyGuid } = individualsByGuid[individualGuid]
     return Object.values(savedVariants).filter(
-      o => o.familyGuids.includes(familyGuid) && o.tags.length).map(variant => (
-      { ...variant, ...variant.genotypes[individualGuid], ...genesById[variant.mainTranscript.geneId] }))
+      o => o.familyGuids.includes(familyGuid) && o.tags.length).map(variant => ({
+      ...variant,
+      variantId: `${variant.chrom}-${variant.pos}-${variant.ref}-${variant.alt}`,
+      ...variant.genotypes[individualGuid],
+      ...genesById[variant.mainTranscript.geneId],
+    }))
   },
 )
 
