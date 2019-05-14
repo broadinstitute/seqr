@@ -977,7 +977,7 @@ SORT_FIELDS = {
             'type': 'number',
             'script': {
                 'params': {
-                    'omim_gene_ids': lambda *args: [omim.gene.gene_id for omim in Omim.objects.all().only('gene__gene_id')]
+                    'omim_gene_ids': lambda *args: [omim.gene.gene_id for omim in Omim.objects.filter(phenotype_mim_number__isnull=False).only('gene__gene_id')]
                 },
                 'source': "params.omim_gene_ids.contains(doc['mainTranscript_gene_id'].value) ? 0 : 1"
             }
@@ -1125,7 +1125,7 @@ def _parse_es_sort(sort, sort_config):
     if hasattr(sort_config, 'values') and any(cfg.get('order') == 'desc' for cfg in sort_config.values()):
         if sort == 'Infinity':
             sort = -1
-        elif sort == '-Infinity':
+        elif sort == '-Infinity' or sort is None:
             # None of the sorts used by seqr return negative values so -1 is fine
             sort = maxint
         else:
