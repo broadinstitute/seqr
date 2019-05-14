@@ -230,8 +230,6 @@ export const loadMmeMatches = (individualGuid, matchSource) => {
           dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
         },
       ).get()
-      // TODO cleanup
-      // ).postForm({ patient_data: submission.submittedData })
     }
   }
 }
