@@ -392,7 +392,7 @@ const Matchmaker = ({ loading, load, searchMme, monarchLoading, loadMonarch, ind
   individuals.filter(individual => individual.affected === AFFECTED).map(individual =>
     <div key={individual.individualGuid}>
       <Header size="medium" content={individual.individualId} dividing />
-      {individual.mmeSubmittedData &&
+      {individual.mmeSubmittedData && !individual.mmeDeletedDate &&
         <Grid padded>
           <Grid.Row>
             <Grid.Column width={2}><b>Submitted Genotypes:</b></Grid.Column>
@@ -414,7 +414,7 @@ const Matchmaker = ({ loading, load, searchMme, monarchLoading, loadMonarch, ind
           </Grid.Row>
         </Grid>
       }
-      {individual.mmeSubmittedDate ?
+      {individual.mmeSubmittedDate && !individual.mmeDeletedDate ?
         <DataLoader contentId={individual.individualGuid} content load={load} loading={false}>
           <ButtonLink
             disabled={!individual.mmeResultGuids}

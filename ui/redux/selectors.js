@@ -44,7 +44,9 @@ export const getSortedIndividualsByFamily = createSelector(
   (familiesByGuid, individualsByGuid) => {
     const AFFECTED_STATUS_ORDER = { A: 1, N: 2, U: 3 }
     const getIndivAffectedSort = individual => AFFECTED_STATUS_ORDER[individual.affected] || 0
-    const getIndivMmeSort = individual => individual.mmeSubmittedDate || '1900-01-01'
+    const getIndivMmeSort = individual => (
+      individual.mmeDeletedDate ? '2000-01-01' : (individual.mmeSubmittedDate || '1900-01-01')
+    )
 
     return Object.entries(familiesByGuid).reduce((acc, [familyGuid, family]) => ({
       ...acc,
