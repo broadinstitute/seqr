@@ -219,8 +219,6 @@ export const loadMmeMatches = (individualGuid, matchSource) => {
     const matchKey = `${matchSource || 'mme'}Results`
     if (!individual[matchKey] || matchSource === 'mme') {
       dispatch({ type: matchSource === 'monarch' ? REQUEST_MONARCH_MATCHES : REQUEST_MME_MATCHES })
-      // TODO monarch
-      // const searchPath = matchSource === 'monarch' ? 'match_in_open_mme_sources' : 'match_internally_and_externally'
       new HttpRequestHelper(`/api/matchmaker/${matchSource ? 'search' : 'get'}_${matchSource || 'mme'}_matches/${individual.individualGuid}`,
         (responseJson) => {
           dispatch({

@@ -383,6 +383,9 @@ MME_MATCHBOX_PUBLIC_METRICS_URL= MME_SERVER_HOST + '/metrics/public'
 MME_SLACK_EVENT_NOTIFICATION_CHANNEL='matchmaker_alerts'
 MME_SLACK_MATCH_NOTIFICATION_CHANNEL='matchmaker_matches'
 MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL='matchmaker_seqr_match'
+
+MONARCH_MATCH_URL = 'https://mme.monarchinitiative.org/match'
+
 #This is used in slack post to add a link back to project
 SEQR_HOSTNAME_FOR_SLACK_POST='https://seqr.broadinstitute.org/project'
 
