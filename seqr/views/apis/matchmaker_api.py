@@ -137,6 +137,34 @@ def search_individual_monarch_matches(request, individual_guid):
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
+def update_mme_submission(request, individual_guid):
+    """
+    Create or update the submission for the given individual.
+    """
+    individual = Individual.objects.get(guid=individual_guid)
+    project = individual.family.project
+    check_permissions(project, request.user)
+
+    # TODO
+    raise NotImplementedError
+
+
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@csrf_exempt
+def delete_mme_submission(request, individual_guid):
+    """
+    Create or update the submission for the given individual.
+    """
+    individual = Individual.objects.get(guid=individual_guid)
+    project = individual.family.project
+    check_permissions(project, request.user)
+
+    # TODO
+    raise NotImplementedError
+
+
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@csrf_exempt
 def update_mme_result_status(request, matchmaker_result_guid):
     """
     Looks for matches for the given individual. Expects a single patient (MME spec) in the POST

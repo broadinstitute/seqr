@@ -74,6 +74,8 @@ from seqr.views.apis.matchmaker_api import \
     get_individual_mme_matches, \
     search_individual_mme_matches, \
     search_individual_monarch_matches, \
+    update_mme_submission, \
+    delete_mme_submission, \
     update_mme_result_status
 
 from seqr.views.apis.variant_search_api import \
@@ -196,6 +198,8 @@ api_endpoints = {
     'matchmaker/get_mme_matches/(?P<individual_guid>[\w.|-]+)': get_individual_mme_matches,
     'matchmaker/search_mme_matches/(?P<individual_guid>[\w.|-]+)': search_individual_mme_matches,
     'matchmaker/search_monarch_matches/(?P<individual_guid>[\w.|-]+)': search_individual_monarch_matches,
+    'matchmaker/submission/(?P<individual_guid>[\w.|-]+)/update': update_mme_submission,
+    'matchmaker/submission/(?P<individual_guid>[\w.|-]+)/delete': delete_mme_submission,
     'matchmaker/result_status/(?P<matchmaker_result_guid>[\w.|-]+)/update': update_mme_result_status,
 
     'users/get_all': get_all_collaborators,
