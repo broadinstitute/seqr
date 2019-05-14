@@ -1,5 +1,7 @@
 import orderBy from 'lodash/orderBy'
+import mapValues from 'lodash/mapValues'
 import { createSelector } from 'reselect'
+
 
 import { getSearchResults } from 'redux/utils/reduxSearchEnhancer'
 import {
@@ -14,6 +16,7 @@ import {
   FAMILY_FIELD_ID,
   INDIVIDUAL_FIELD_ID,
   FAMILY_FIELD_FIRST_SAMPLE,
+  SEX_LOOKUP,
   getVariantsExportData,
   latestSamplesLoaded,
   familySamplesLoaded,
@@ -99,15 +102,6 @@ export const getProjectAnalysisGroupSamplesByGuid = createSelector(
       ), {}),
     }), {}),
 )
-
-
-export const getFamilyMatchmakerIndividuals = createSelector(
-  getSortedIndividualsByFamily,
-  (state, props) => props.match.params.familyGuid,
-  (individualsByFamily, familyGuid) =>
-    (individualsByFamily[familyGuid] || []).filter(individual => individual.mmeSubmittedDate),
-)
-
 
 // Saved variant selectors
 export const getSavedVariantTableState = state => state.savedVariantTableState
@@ -394,6 +388,25 @@ export const getAnalysisStatusCounts = createSelector(
       { ...option, count: (analysisStatusCounts[option.value] || 0) }),
     )
   })
+
+export const getDefaultMmeSubmissionByIndividual = createSelector(
+  getProject,
+  getProjectAnalysisGroupIndividualsByGuid,
+  (project, individualsByGuid) => mapValues(individualsByGuid, individual => ({
+    patient: {
+      contact: {
+        name: project.mmePrimaryDataOwner,
+        institution: project.mmeContactInstitution,
+        href: project.mmeContactUrl,
+      },
+      species: 'NCBITaxon:9606',
+      sex: SEX_LOOKUP[individual.sex].toUpperCase(),
+      label: individual.individualId,
+    },
+    geneVariants: [],
+    phenotypes: [],
+  })),
+)
 
 
 // user options selectors

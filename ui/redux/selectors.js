@@ -43,13 +43,14 @@ export const getSortedIndividualsByFamily = createSelector(
   getIndividualsByGuid,
   (familiesByGuid, individualsByGuid) => {
     const AFFECTED_STATUS_ORDER = { A: 1, N: 2, U: 3 }
-    const getIndivSortKey = individual => AFFECTED_STATUS_ORDER[individual.affected] || 0
+    const getIndivAffectedSort = individual => AFFECTED_STATUS_ORDER[individual.affected] || 0
+    const getIndivMmeSort = individual => individual.mmeSubmittedDate || '1900-01-01'
 
     return Object.entries(familiesByGuid).reduce((acc, [familyGuid, family]) => ({
       ...acc,
       [familyGuid]: orderBy(
         family.individualGuids.map(individualGuid => individualsByGuid[individualGuid]),
-        [getIndivSortKey],
+        [getIndivAffectedSort, getIndivMmeSort], ['asc', 'desc'],
       ),
     }), {})
   },

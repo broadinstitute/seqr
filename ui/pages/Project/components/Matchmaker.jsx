@@ -4,7 +4,7 @@ import { connect } from 'react-redux'
 import { Header, Icon, List, Accordion, Popup, Label, Grid } from 'semantic-ui-react'
 import styled from 'styled-components'
 
-import { getFamiliesByGuid, getIndividualsByGuid, getGenesById, getMmeResultsByGuid } from 'redux/selectors'
+import { getIndividualsByGuid, getGenesById, getMmeResultsByGuid, getSortedIndividualsByFamily } from 'redux/selectors'
 import ShowGeneModal from 'shared/components/buttons/ShowGeneModal'
 import DeleteButton from 'shared/components/buttons/DeleteButton'
 import UpdateButton from 'shared/components/buttons/UpdateButton'
@@ -13,17 +13,18 @@ import BaseFieldView from 'shared/components/panel/view-fields/BaseFieldView'
 import { Alleles } from 'shared/components/panel/variants/VariantIndividuals'
 import SortableTable, { SelectableTableFormInput } from 'shared/components/table/SortableTable'
 import DataLoader from 'shared/components/DataLoader'
-import { HorizontalSpacer } from 'shared/components/Spacers'
+import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
 import { ButtonLink, ColoredLabel } from 'shared/components/StyledComponents'
+import { AFFECTED } from 'shared/utils/constants'
 import { camelcaseToTitlecase } from 'shared/utils/stringUtils'
 
 import { loadMmeMatches, updateMmeSubmission, updateMmeSubmissionStatus, loadProjectVariants } from '../reducers'
 import {
-  getFamilyMatchmakerIndividuals,
   getMatchmakerMatchesLoading,
   getMonarchMatchesLoading,
   getProjectSavedVariantsIsLoading,
   getIndividualTaggedVariants,
+  getDefaultMmeSubmissionByIndividual,
 } from '../selectors'
 
 const PhenotypeListItem = styled(List.Item)`
@@ -387,8 +388,8 @@ const monarchDetailPanels = submission => [{
   content: { content: <Matches matchKey="monarchMatch" submission={submission} />, key: 'monarch' },
 }]
 
-const Matchmaker = ({ family, loading, load, searchMme, monarchLoading, loadMonarch, matchmakerIndividuals, onSubmit }) => (
-  matchmakerIndividuals.length ? matchmakerIndividuals.map(individual =>
+const Matchmaker = ({ loading, load, searchMme, monarchLoading, loadMonarch, individuals, onSubmit, defaultMmeSubmissionsByIndividual }) =>
+  individuals.filter(individual => individual.affected === AFFECTED).map(individual =>
     <div key={individual.individualGuid}>
       <Header size="medium" content={individual.individualId} dividing />
       {individual.mmeSubmittedData &&
@@ -413,76 +414,87 @@ const Matchmaker = ({ family, loading, load, searchMme, monarchLoading, loadMona
           </Grid.Row>
         </Grid>
       }
-      <DataLoader contentId={individual.individualGuid} content load={load} loading={false}>
-        <ButtonLink
-          disabled={!individual.mmeResultGuids}
-          onClick={searchMme(individual.individualGuid)}
-          icon="search"
-          labelPosition="right"
-          content="Search for New Matches"
-        />|<HorizontalSpacer width={10} />
-        <ButtonLink
-          disabled={!individual.mmeResultGuids}
-          onClick={loadMonarch(individual.individualGuid)}
-          icon="search"
-          labelPosition="right"
-          content="Search in the Monarch Initiative"
-        />|<HorizontalSpacer width={10} />
-        <UpdateButton
-          disabled={!individual.mmeSubmittedData}
-          buttonText="Update Submission"
-          modalSize="large"
-          modalTitle={`Update Submission for ${individual.individualId}`}
-          modalId={`${individual.individualGuid}_-_updateMmeSubmission`}
-          confirmDialog="Are you sure you want to update this submission?"
-          initialValues={individual.mmeSubmittedData}
-          formFields={SUBMISSION_EDIT_FIELDS}
-          onSubmit={onSubmit(individual.individualGuid)}
-          showErrorPanel
-        />|<HorizontalSpacer width={10} />
-        <DeleteButton
-          disabled={!individual.mmeSubmittedData}
-          onSubmit={onSubmit(individual.individualGuid)}
-          buttonText="Delete Submission"
-          confirmDialog="Are you sure you want to remove this patient from the Matchmaker Exchange"
-        />
-        <DataLoader content={individual.monarchResults} loading={monarchLoading} hideError>
-          <Accordion defaultActiveIndex={0} panels={monarchDetailPanels(individual)} />
-        </DataLoader>
-        <Matches resultsKey={MME_RESULTS_KEY} individual={individual} loading={loading} />
-      </DataLoader>
+      {individual.mmeSubmittedDate ?
+        <DataLoader contentId={individual.individualGuid} content load={load} loading={false}>
+          <ButtonLink
+            disabled={!individual.mmeResultGuids}
+            onClick={searchMme(individual.individualGuid)}
+            icon="search"
+            labelPosition="right"
+            content="Search for New Matches"
+          />|<HorizontalSpacer width={10} />
+          <ButtonLink
+            disabled={!individual.mmeResultGuids}
+            onClick={loadMonarch(individual.individualGuid)}
+            icon="search"
+            labelPosition="right"
+            content="Search in the Monarch Initiative"
+          />|<HorizontalSpacer width={10} />
+          <UpdateButton
+            disabled={!individual.mmeSubmittedData}
+            buttonText="Update Submission"
+            modalSize="large"
+            modalTitle={`Update Submission for ${individual.individualId}`}
+            modalId={`${individual.individualGuid}_-_updateMmeSubmission`}
+            confirmDialog="Are you sure you want to update this submission?"
+            initialValues={individual.mmeSubmittedData}
+            formFields={SUBMISSION_EDIT_FIELDS}
+            onSubmit={onSubmit(individual.individualGuid)}
+            showErrorPanel
+          />|<HorizontalSpacer width={10} />
+          <DeleteButton
+            disabled={!individual.mmeSubmittedData}
+            onSubmit={onSubmit(individual.individualGuid)}
+            buttonText="Delete Submission"
+            confirmDialog="Are you sure you want to remove this patient from the Matchmaker Exchange"
+          />
+          <DataLoader content={individual.monarchResults} loading={monarchLoading} hideError>
+            <Accordion defaultActiveIndex={0} panels={monarchDetailPanels(individual)} />
+          </DataLoader>
+          <Matches resultsKey={MME_RESULTS_KEY} individual={individual} loading={loading} />
+        </DataLoader> :
+        <div>
+          <Header
+            size="small"
+            content="This individual has no submissions"
+            icon={<Icon name="warning sign" color="orange" />}
+            subheader={
+              <div className="sub header">
+                <UpdateButton
+                  initialValues={defaultMmeSubmissionsByIndividual[individual.individualGuid]}
+                  buttonText="Submit to Matchmaker"
+                  editIconName=" "
+                  modalSize="large"
+                  modalTitle={`Create Submission for ${individual.individualId}`}
+                  modalId={`${individual.individualGuid}_-_createMmeSubmission`}
+                  confirmDialog="Are you sure you want to submit this individual?"
+                  formFields={SUBMISSION_EDIT_FIELDS}
+                  onSubmit={onSubmit(individual.individualGuid)}
+                  showErrorPanel
+                />
+              </div>}
+          />
+          <VerticalSpacer height={10} />
+        </div>}
     </div>,
-  ) : (
-    <div>
-      <Header
-        size="small"
-        content="No individuals from this family have been submitted"
-        icon={<Icon name="warning sign" color="orange" />}
-      />
-      <a target="_blank" href={`/matchmaker/search/project/todo/family/${family.familyId}`}>
-        {/* TODO submit UI */}
-        Submit to Match Maker Exchange
-      </a>
-    </div>
   )
-)
 
 Matchmaker.propTypes = {
-  matchmakerIndividuals: PropTypes.array,
-  family: PropTypes.object,
+  individuals: PropTypes.array,
   loading: PropTypes.bool,
   load: PropTypes.func,
   monarchLoading: PropTypes.bool,
   loadMonarch: PropTypes.func,
   searchMme: PropTypes.func,
   onSubmit: PropTypes.func,
+  defaultMmeSubmissionsByIndividual: PropTypes.object,
 }
 
 const mapStateToProps = (state, ownProps) => ({
-  family: getFamiliesByGuid(state)[ownProps.match.params.familyGuid],
-  matchmakerIndividuals: getFamilyMatchmakerIndividuals(state, ownProps),
+  individuals: getSortedIndividualsByFamily(state)[ownProps.match.params.familyGuid],
   loading: getMatchmakerMatchesLoading(state),
   monarchLoading: getMonarchMatchesLoading(state),
+  defaultMmeSubmissionsByIndividual: getDefaultMmeSubmissionByIndividual(state, ownProps),
 })
 
 const mapDispatchToProps = (dispatch) => {
