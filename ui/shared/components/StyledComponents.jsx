@@ -11,6 +11,7 @@ export const ButtonLink = styled(({ color, ...props }) => <Button {...props} />)
     text-decoration: none;
     font-weight: ${props => props.fontWeight || 'inherit'};
     box-shadow: none !important;
+    user-select: auto;
     
     &:hover, &:focus, &:active {
       color: #1e70bf !important;
