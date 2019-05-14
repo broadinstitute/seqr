@@ -59,11 +59,12 @@ const ShowReadsButton = ({ variant, familyGuid, samplesByGuid, individualsByGuid
   }
 
   // TODO better determiner of genome version?
-  const genome = igvTracks.some(track => track.sourceType === 'pysam') ? 'hg38' : 'hg19'
+  const isBuild38 = igvTracks.some(track => track.sourceType === 'pysam')
+  const genome = isBuild38 ? 'hg38' : 'hg19'
 
   // TODO confirm cnv_bed_file track is deprecated (is empty for all existing individuals, so it should be)
   igvTracks.push({
-    url: `https://storage.googleapis.com/seqr-reference-data/${genome}/gencode/gencode.v27${genome === 'GRCh37' ? 'lift37' : ''}.annotation.sorted.gtf.gz`,
+    url: `https://storage.googleapis.com/seqr-reference-data/${isBuild38 ? 'GRCh38' : 'GRCh37'}/gencode/gencode.v27${isBuild38 ? '' : 'lift37'}.annotation.sorted.gtf.gz`,
     name: `gencode ${genome}v27`,
     displayMode: 'SQUISHED',
   })
