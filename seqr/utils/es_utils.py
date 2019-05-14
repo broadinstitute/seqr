@@ -1125,7 +1125,7 @@ def _parse_es_sort(sort, sort_config):
     if hasattr(sort_config, 'values') and any(cfg.get('order') == 'desc' for cfg in sort_config.values()):
         if sort == 'Infinity':
             sort = -1
-        elif sort == '-Infinity':
+        elif sort == '-Infinity' or sort is None:
             # None of the sorts used by seqr return negative values so -1 is fine
             sort = maxint
         else:
