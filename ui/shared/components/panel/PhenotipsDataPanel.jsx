@@ -20,9 +20,9 @@ const CompactContainer = styled.div`
 
 export const hasPhenotipsDetails = phenotipsData =>
   phenotipsData && (
-    (phenotipsData.features || []).length ||
-    (phenotipsData.rejectedGenes || []).length ||
-    (phenotipsData.genes || []).length)
+    (phenotipsData.features || []).length > 0 ||
+    (phenotipsData.rejectedGenes || []).length > 0 ||
+    (phenotipsData.genes || []).length > 0)
 
 const PhenotipsSection = ({ phenotipsData, field, parseFieldRows, formatFieldRow, title, join, color }) => {
   let fieldData = phenotipsData[field]
