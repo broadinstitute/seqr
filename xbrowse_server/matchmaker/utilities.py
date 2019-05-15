@@ -172,8 +172,8 @@ def is_a_valid_patient_structure(patient_struct):
             submission_validity['status']=False
             submission_validity['reason']="Gene ID is required, and is missing in one of the genotypes. Please refine your submission"
     return submission_validity
-    
-    
+
+
 def generate_slack_notification_for_seqr_match(response_from_matchbox,project_id,seqr_id):
     """
     Generate a SLACK notifcation to say that a match happened initiated from a seqr user.
@@ -203,7 +203,7 @@ def generate_slack_notification_for_seqr_match(response_from_matchbox,project_id
             message += '. '
             message += settings.SEQR_HOSTNAME_FOR_SLACK_POST + '/' + project_id
             message += '\n\n'
-            post_in_slack(message,settings.MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL)
+    post_in_slack(message,settings.MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL)
 
     
 def post_in_slack(message,channel):
