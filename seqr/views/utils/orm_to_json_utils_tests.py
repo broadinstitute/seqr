@@ -31,7 +31,7 @@ class JSONUtilsTest(TestCase):
             set(json.keys()),
             {'projectGuid', 'projectCategoryGuids', 'canEdit', 'name', 'description', 'createdDate', 'lastModifiedDate',
              'isPhenotipsEnabled', 'phenotipsUserId', 'deprecatedProjectId', 'lastAccessedDate', 'hasNewSearch',
-             'isMmeEnabled', 'mmePrimaryDataOwner', 'genomeVersion'}
+             'isMmeEnabled', 'mmePrimaryDataOwner', 'mmeContactInstitution', 'mmeContactUrl', 'genomeVersion'}
         )
 
     def test_json_for_family(self):
@@ -60,6 +60,7 @@ class JSONUtilsTest(TestCase):
             'projectGuid', 'familyGuid', 'individualGuid', 'caseReviewStatusLastModifiedBy', 'phenotipsData',
             'individualId', 'paternalId', 'maternalId', 'sex', 'affected', 'displayName', 'notes',
             'phenotipsPatientId', 'phenotipsData', 'createdDate', 'lastModifiedDate', 'paternalGuid', 'maternalGuid',
+            'mmeSubmittedDate', 'mmeDeletedDate',
         }
         self.assertSetEqual(set(json.keys()), individual_fields)
 

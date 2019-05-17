@@ -374,6 +374,7 @@ export const STATE_WITH_2_FAMILIES = {
       caseReviewStatusLastModifiedBy: null,
       caseReviewStatusLastModifiedDate: '2016-12-05T10:29:00.000Z',
       createdDate: '2016-12-05T10:29:00.000Z',
+      mmeSubmittedDate: '2018-05-09T10:29:00.000Z',
       sampleGuids: [],
       sex: 'M',
     },
