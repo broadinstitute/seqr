@@ -14,10 +14,10 @@ from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_model
 from seqr.views.utils.permissions_utils import check_permissions
+from seqr.views.utils.proxy_request_utils import proxy_request
 
-from settings import MME_NODE_ADMIN_TOKEN, MME_NODE_ACCEPT_HEADER, MME_CONTENT_TYPE_HEADER, MME_LOCAL_MATCH_URL, \
+from settings import MME_HEADERS, MME_NODE_ACCEPT_HEADER, MME_CONTENT_TYPE_HEADER, MME_LOCAL_MATCH_URL, \
     MME_EXTERNAL_MATCH_URL, MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL, SEQR_HOSTNAME_FOR_SLACK_POST, MONARCH_MATCH_URL
-
 logger = logging.getLogger(__name__)
 
 GENOME_VERSION_LOOKUP = {}
@@ -66,17 +66,11 @@ def search_individual_mme_matches(request, individual_guid):
             {}, status=404, reason='No matchmaker submission found for {}'.format(individual.individual_id),
         )
 
-    headers = {
-        'X-Auth-Token': MME_NODE_ADMIN_TOKEN,
-        'Accept': MME_NODE_ACCEPT_HEADER,
-        'Content-Type': MME_CONTENT_TYPE_HEADER
-    }
-
-    local_result = requests.post(url=MME_LOCAL_MATCH_URL, headers=headers, data=json.dumps(patient_data))
+    local_result = requests.post(url=MME_LOCAL_MATCH_URL, headers=MME_HEADERS, data=json.dumps(patient_data))
     if local_result.status_code != 200:
         create_json_response(local_result.json(), status=local_result.status_code, reason='Error in local match')
 
-    external_result = requests.post(url=MME_EXTERNAL_MATCH_URL, headers=headers, data=json.dumps(patient_data))
+    external_result = requests.post(url=MME_EXTERNAL_MATCH_URL, headers=MME_HEADERS, data=json.dumps(patient_data))
     if external_result.status_code != 200:
         create_json_response(external_result.json(), status=external_result.status_code, reason='Error in external match')
 
@@ -219,14 +213,14 @@ def _parse_mme_results(individual, saved_results):
         'mmeResultsByGuid': parsed_results_gy_guid,
         'individualsByGuid': {individual.guid: {
             'mmeResultGuids': parsed_results_gy_guid.keys(),
-            'mmeSubmittedData': _parse_mme_patient(individual.mme_submitted_data, hpo_terms_by_id, gene_symbols_to_ids),
+            'mmeSubmittedData': parse_mme_patient(individual.mme_submitted_data, hpo_terms_by_id, gene_symbols_to_ids),
         }},
         'genesById': genes_by_id,
     })
 
 
 def _parse_mme_result(result, hpo_terms_by_id, gene_symbols_to_ids):
-    parsed_result = _parse_mme_patient(result, hpo_terms_by_id, gene_symbols_to_ids)
+    parsed_result = parse_mme_patient(result, hpo_terms_by_id, gene_symbols_to_ids)
     parsed_result.update({
         'id': result['patient']['id'],
         'score': result['score']['patient'],
@@ -235,7 +229,7 @@ def _parse_mme_result(result, hpo_terms_by_id, gene_symbols_to_ids):
     return parsed_result
 
 
-def _parse_mme_patient(result, hpo_terms_by_id, gene_symbols_to_ids):
+def parse_mme_patient(result, hpo_terms_by_id, gene_symbols_to_ids):
     phenotypes = [feature for feature in result['patient'].get('features', [])]
     for feature in phenotypes:
         feature['label'] = hpo_terms_by_id.get(feature['id'])

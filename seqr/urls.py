@@ -96,7 +96,13 @@ from seqr.views.apis.users_api import \
     set_password, \
     create_staff_user
 
-from seqr.views.apis.staff_api import anvil_export, discovery_sheet, get_projects_for_category, elasticsearch_status
+from seqr.views.apis.staff_api import \
+    anvil_export, \
+    discovery_sheet, \
+    get_projects_for_category, \
+    elasticsearch_status, \
+    mme_metrics_proxy, \
+    mme_submissions
 from seqr.views.pages.staff.komp_export import komp_export
 
 from seqr.views.apis.awesomebar_api import awesomebar_autocomplete_handler
@@ -217,10 +223,12 @@ api_endpoints = {
     'staff/discovery_sheet/(?P<project_guid>[^/]+)': discovery_sheet,
     'staff/projects_for_category/(?P<project_category_name>[^/]+)': get_projects_for_category,
     'staff/elasticsearch_status': elasticsearch_status,
+    'staff/matchmaker_metrics': mme_metrics_proxy,
+    'staff/matchmaker_submissions': mme_submissions,
 
     # EXTERNAL APIS: DO NOT CHANGE
-    # matchmaker public facing MME spec'ed match URL
-    'matchmaker/v1/match': external_api.mm_match_proxy,
+    # matchmaker public facing MME URLs
+    'matchmaker/v1/match': external_api.mme_match_proxy,
     'matchmaker/v1/metrics': external_api.mme_metrics_proxy,
 
 }

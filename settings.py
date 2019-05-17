@@ -365,6 +365,11 @@ SEARCH_IN_EXTERNAL_MME_NODES=True
 MME_NODE_ADMIN_TOKEN=os.environ.get("MME_NODE_ADMIN_TOKEN", "abcd")
 MME_NODE_ACCEPT_HEADER='application/vnd.ga4gh.matchmaker.v1.0+json'
 MME_CONTENT_TYPE_HEADER='application/vnd.ga4gh.matchmaker.v1.0+json'
+MME_HEADERS = {
+    'X-Auth-Token': MME_NODE_ADMIN_TOKEN,
+    'Accept': MME_NODE_ACCEPT_HEADER,
+    'Content-Type': MME_CONTENT_TYPE_HEADER
+}
 MATCHBOX_SERVICE_HOSTNAME = os.environ.get('MATCHBOX_SERVICE_HOSTNAME', 'localhost')
 MME_SERVER_HOST='http://%s:9020' % MATCHBOX_SERVICE_HOSTNAME
 #adds a patient to MME

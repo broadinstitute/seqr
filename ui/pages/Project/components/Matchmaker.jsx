@@ -1,14 +1,14 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Header, Icon, List, Accordion, Popup, Label, Grid } from 'semantic-ui-react'
+import { Header, Icon, Accordion, Popup, Label, Grid } from 'semantic-ui-react'
 import styled from 'styled-components'
 
-import { getIndividualsByGuid, getGenesById, getMmeResultsByGuid, getSortedIndividualsByFamily } from 'redux/selectors'
-import ShowGeneModal from 'shared/components/buttons/ShowGeneModal'
+import { getIndividualsByGuid, getMmeResultsByGuid, getSortedIndividualsByFamily } from 'redux/selectors'
 import DeleteButton from 'shared/components/buttons/DeleteButton'
 import UpdateButton from 'shared/components/buttons/UpdateButton'
 import { BooleanCheckbox, BaseSemanticInput } from 'shared/components/form/Inputs'
+import { SubmissionGeneVariants, Phenotypes } from 'shared/components/panel/MatchmakerPanel'
 import BaseFieldView from 'shared/components/panel/view-fields/BaseFieldView'
 import { Alleles } from 'shared/components/panel/variants/VariantIndividuals'
 import SortableTable, { SelectableTableFormInput } from 'shared/components/table/SortableTable'
@@ -26,10 +26,6 @@ import {
   getIndividualTaggedVariants,
   getDefaultMmeSubmissionByIndividual,
 } from '../selectors'
-
-const PhenotypeListItem = styled(List.Item)`
-  text-decoration: ${props => (props.observed === 'no' ? 'line-through' : 'none')};
-`
 
 const BreakWordLink = styled.a`
   word-break: break-all;
@@ -205,52 +201,6 @@ const mapStatusDispatchToProps = {
 
 const MatchStatus = connect(null, mapStatusDispatchToProps)(BaseMatchStatus)
 
-const BaseSubmissionGeneVariants = ({ geneVariants, modalId, genesById, dispatch, ...listProps }) =>
-  <List {...listProps}>
-    {Object.entries(geneVariants.reduce((acc, variant) =>
-      ({ ...acc, [variant.geneId]: [...(acc[variant.geneId] || []), variant] }), {}),
-    ).map(([geneId, variants]) =>
-      <List.Item key={geneId}>
-        <ShowGeneModal gene={genesById[geneId]} modalId={modalId} />
-        {variants.length > 0 && variants[0].pos &&
-          <List.List>
-            {variants.map(variant =>
-              <List.Item key={variant.pos}>
-                {variantSummary(variant)}
-              </List.Item>,
-            )}
-          </List.List>
-        }
-      </List.Item>,
-    )}
-  </List>
-
-BaseSubmissionGeneVariants.propTypes = {
-  genesById: PropTypes.object,
-  geneVariants: PropTypes.array,
-  modalId: PropTypes.string,
-  dispatch: PropTypes.func,
-}
-
-const mapGeneStateToProps = state => ({
-  genesById: getGenesById(state),
-})
-
-const SubmissionGeneVariants = connect(mapGeneStateToProps)(BaseSubmissionGeneVariants)
-
-const Phenotypes = ({ phenotypes, ...listProps }) =>
-  <List {...listProps}>
-    {phenotypes.map(phenotype =>
-      <PhenotypeListItem key={phenotype.id} observed={phenotype.observed}>
-        {phenotype.label} ({phenotype.id})
-      </PhenotypeListItem>,
-    )}
-  </List>
-
-Phenotypes.propTypes = {
-  phenotypes: PropTypes.array,
-}
-
 const MATCH_FIELDS = {
   patient: {
     name: 'id',
@@ -317,7 +267,7 @@ const MATCH_FIELDS = {
     width: 4,
     content: 'Phenotypes',
     verticalAlign: 'top',
-    format: val => <Phenotypes phenotypes={val.phenotypes} bulleted />,
+    format: val => <Phenotypes phenotypes={val.phenotypes} />,
   },
   createdDate: {
     name: 'createdDate',
@@ -409,7 +359,7 @@ const Matchmaker = ({ loading, load, searchMme, monarchLoading, loadMonarch, ind
             <Grid.Column width={2}><b>Submitted Phenotypes:</b></Grid.Column>
             <Grid.Column width={14}>
               {individual.mmeSubmittedData.phenotypes.length ?
-                <Phenotypes phenotypes={individual.mmeSubmittedData.phenotypes} horizontal bulleted /> : <i>None</i>}
+                <Phenotypes phenotypes={individual.mmeSubmittedData.phenotypes} horizontal /> : <i>None</i>}
             </Grid.Column>
           </Grid.Row>
         </Grid>

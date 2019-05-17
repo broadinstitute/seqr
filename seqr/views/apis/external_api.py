@@ -38,7 +38,7 @@ def mme_metrics_proxy(request):
 
 
 @csrf_exempt
-def mm_match_proxy(request):
+def mme_match_proxy(request):
     """
     -This is a proxy URL for backend MME server as per MME spec.
     -Looks for matches for the given individual ONLY in the local MME DB.

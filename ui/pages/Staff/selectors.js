@@ -10,6 +10,11 @@ export const getDiscoverySheetLoadingError = state => state.discoverySheetLoadin
 export const getDiscoverySheetRows = state => state.discoverySheetRows
 export const getElasticsearchStatusLoading = state => state.elasticsearchStatusLoading.isLoading
 export const getElasticsearchStatusData = state => state.elasticsearchStatus
+export const getMmeMetricsLoading = state => state.mmeMetricsLoading.isLoading
+export const getMmeMetricsLoadingError = state => state.mmeMetricsLoading.errorMessage
+export const getMmeMetrics = state => state.mmeMetrics
+export const getMmeSubmissionsLoading = state => state.mmeSubmissionsLoading.isLoading
+export const getMmeSubmissions = state => state.mmeSubmissions
 
 export const getAnvilColumns = createSelector(
   getAnvilRows,
