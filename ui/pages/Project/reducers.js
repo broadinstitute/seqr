@@ -20,7 +20,6 @@ const REQUEST_PROJECT_DETAILS = 'REQUEST_PROJECT_DETAILS'
 const REQUEST_SAVED_VARIANTS = 'REQUEST_SAVED_VARIANTS'
 const RECEIVE_SAVED_VARIANT_FAMILIES = 'RECEIVE_SAVED_VARIANT_FAMILIES'
 const REQUEST_MME_MATCHES = 'REQUEST_MME_MATCHES'
-const REQUEST_MONARCH_MATCHES = 'REQUEST_MONARCH_MATCHES'
 const REQUEST_USERS = 'REQUEST_USERS'
 const RECEIVE_USERS = 'RECEIVE_USERS'
 
@@ -212,14 +211,13 @@ export const updateAnalysisGroup = (values) => {
   return updateEntity(values, RECEIVE_DATA, `/api/project/${values.projectGuid}/analysis_groups`, 'analysisGroupGuid')
 }
 
-export const loadMmeMatches = (individualGuid, matchSource) => {
+export const loadMmeMatches = (individualGuid, search) => {
   return (dispatch, getState) => {
     const state = getState()
     const individual = state.individualsByGuid[individualGuid]
-    const matchKey = `${matchSource || 'mme'}Results`
-    if (!individual[matchKey] || matchSource === 'mme') {
-      dispatch({ type: matchSource === 'monarch' ? REQUEST_MONARCH_MATCHES : REQUEST_MME_MATCHES })
-      new HttpRequestHelper(`/api/matchmaker/${matchSource ? 'search' : 'get'}_${matchSource || 'mme'}_matches/${individual.individualGuid}`,
+    if (!individual.mmeResults || search) {
+      dispatch({ type: REQUEST_MME_MATCHES })
+      new HttpRequestHelper(`/api/matchmaker/${search ? 'search' : 'get'}_mme_matches/${individual.individualGuid}`,
         (responseJson) => {
           dispatch({
             type: RECEIVE_DATA,
@@ -268,7 +266,6 @@ export const reducers = {
   projectSavedVariantsLoading: loadingReducer(REQUEST_SAVED_VARIANTS, RECEIVE_DATA),
   projectSavedVariantFamilies: createSingleObjectReducer(RECEIVE_SAVED_VARIANT_FAMILIES),
   matchmakerMatchesLoading: loadingReducer(REQUEST_MME_MATCHES, RECEIVE_DATA),
-  monarchMatchesLoading: loadingReducer(REQUEST_MONARCH_MATCHES, RECEIVE_DATA),
   usersByUsername: createSingleValueReducer(RECEIVE_USERS, {}),
   userOptionsLoading: loadingReducer(REQUEST_USERS, RECEIVE_USERS),
   familyTableState: createSingleObjectReducer(UPDATE_FAMILY_TABLE_STATE, {

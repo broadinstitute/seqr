@@ -26,6 +26,7 @@ import { toCamelcase, toSnakecase } from 'shared/utils/stringUtils'
 import {
   getProjectsByGuid, getFamiliesGroupedByProjectGuid, getIndividualsByGuid, getSamplesByGuid, getGenesById, getUser,
   getAnalysisGroupsGroupedByProjectGuid, getSavedVariantsByGuid, getFirstSampleByFamily, getSortedIndividualsByFamily,
+  getMmeResultsByGuid,
 } from 'redux/selectors'
 
 import {
@@ -55,7 +56,6 @@ export const getProjectDetailsIsLoading = state => state.projectDetailsLoading.i
 export const getProjectSavedVariantsIsLoading = state => state.projectSavedVariantsLoading.isLoading
 export const getProjectGuid = state => state.currentProjectGuid
 export const getMatchmakerMatchesLoading = state => state.matchmakerMatchesLoading.isLoading
-export const getMonarchMatchesLoading = state => state.monarchMatchesLoading.isLoading
 
 export const getProject = createSelector(
   getProjectsByGuid, getProjectGuid, (projectsByGuid, currentProjectGuid) => projectsByGuid[currentProjectGuid],
@@ -406,6 +406,20 @@ export const getDefaultMmeSubmissionByIndividual = createSelector(
     geneVariants: [],
     phenotypes: [],
   })),
+)
+
+export const getSortedMmeIndividuals = createSelector(
+  getMmeResultsByGuid,
+  getSortedIndividualsByFamily,
+  (state, props) => props.match.params.familyGuid,
+  (mmeResultsByGuid, individualsByFamily, familyGuid) =>
+    individualsByFamily[familyGuid].map(individual => ({
+      ...individual,
+      mmeResults: (individual.mmeResultGuids || []).map(resultGuid => ({
+        ...mmeResultsByGuid[resultGuid].matchStatus,
+        ...mmeResultsByGuid[resultGuid],
+      })),
+    })),
 )
 
 

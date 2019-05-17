@@ -1,10 +1,10 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Header, Icon, Accordion, Popup, Label, Grid } from 'semantic-ui-react'
+import { Header, Icon, Popup, Label, Grid } from 'semantic-ui-react'
 import styled from 'styled-components'
 
-import { getIndividualsByGuid, getMmeResultsByGuid, getSortedIndividualsByFamily } from 'redux/selectors'
+import { getIndividualsByGuid } from 'redux/selectors'
 import DeleteButton from 'shared/components/buttons/DeleteButton'
 import UpdateButton from 'shared/components/buttons/UpdateButton'
 import { BooleanCheckbox, BaseSemanticInput } from 'shared/components/form/Inputs'
@@ -21,10 +21,10 @@ import { camelcaseToTitlecase } from 'shared/utils/stringUtils'
 import { loadMmeMatches, updateMmeSubmission, updateMmeSubmissionStatus, loadProjectVariants } from '../reducers'
 import {
   getMatchmakerMatchesLoading,
-  getMonarchMatchesLoading,
   getProjectSavedVariantsIsLoading,
   getIndividualTaggedVariants,
   getDefaultMmeSubmissionByIndividual,
+  getSortedMmeIndividuals,
 } from '../selectors'
 
 const BreakWordLink = styled.a`
@@ -201,8 +201,8 @@ const mapStatusDispatchToProps = {
 
 const MatchStatus = connect(null, mapStatusDispatchToProps)(BaseMatchStatus)
 
-const MATCH_FIELDS = {
-  patient: {
+const DISPLAY_FIELDS = [
+  {
     name: 'id',
     width: 2,
     content: 'Match',
@@ -216,7 +216,14 @@ const MATCH_FIELDS = {
       /> : <MatchContainer>{val.id}</MatchContainer>
     },
   },
-  contact: {
+  {
+    name: 'createdDate',
+    width: 1,
+    content: 'First Seen',
+    verticalAlign: 'top',
+    format: val => new Date(val.createdDate).toLocaleDateString(),
+  },
+  {
     name: 'contact',
     width: 3,
     content: 'Contact',
@@ -228,117 +235,30 @@ const MATCH_FIELDS = {
         <BreakWordLink href={patient.contact.href}>{patient.contact.href.replace('mailto:', '')}</BreakWordLink>
       </div>,
   },
-  matchStatus: {
-    name: 'comments',
-    width: 4,
-    content: 'Follow Up Status',
-    verticalAlign: 'top',
-    format: initialValues => <MatchStatus initialValues={initialValues} />,
-  },
-  description: {
-    name: 'description',
-    width: 3,
-    content: 'External Description',
-    verticalAlign: 'top',
-  },
-  id: {
-    name: 'id',
-    width: 3,
-    content: 'External ID',
-    verticalAlign: 'top',
-    format: val => (val.id.match('OMIM') ?
-      <a target="_blank" href={`https://www.omim.org/entry/${val.id.replace('OMIM:', '')}`}>{val.id}</a> : val.id),
-  },
-  geneVariants: {
+  {
     name: 'geneVariants',
     width: 2,
     content: 'Genes',
     verticalAlign: 'top',
     format: val => <SubmissionGeneVariants geneVariants={val.geneVariants} modalId={val.id} />,
   },
-  score: {
-    name: 'score',
-    width: 1,
-    content: 'Score',
-    verticalAlign: 'top',
-  },
-  phenotypes: {
+  {
     name: 'phenotypes',
     width: 4,
     content: 'Phenotypes',
     verticalAlign: 'top',
     format: val => <Phenotypes phenotypes={val.phenotypes} />,
   },
-  createdDate: {
-    name: 'createdDate',
-    width: 1,
-    content: 'First Seen',
+  {
+    name: 'comments',
+    width: 4,
+    content: 'Follow Up Status',
     verticalAlign: 'top',
-    format: val => new Date(val.createdDate).toLocaleDateString(),
+    format: initialValues => <MatchStatus initialValues={initialValues} />,
   },
-}
+]
 
-const MME_RESULTS_KEY = 'mmeResultGuids'
-
-const DISPLAY_FIELDS = {
-  [MME_RESULTS_KEY]: [
-    MATCH_FIELDS.patient,
-    MATCH_FIELDS.createdDate,
-    MATCH_FIELDS.contact,
-    MATCH_FIELDS.geneVariants,
-    MATCH_FIELDS.phenotypes,
-    MATCH_FIELDS.matchStatus,
-  ],
-  // TODO monarch
-  monarchResults: [
-    MATCH_FIELDS.id,
-    MATCH_FIELDS.description,
-    MATCH_FIELDS.score,
-    MATCH_FIELDS.genes,
-    MATCH_FIELDS.phenotypes,
-  ],
-}
-
-const BaseMatches = ({ resultsKey, individual, loading, mmeResultsByGuid }) => {
-  // TODO monarch
-  const matchResults = (individual[resultsKey] || []).map(resultGuid => ({
-    ...mmeResultsByGuid[resultGuid].matchStatus,
-    ...mmeResultsByGuid[resultGuid],
-  }))
-
-  return (
-    <SortableTable
-      basic="very"
-      fixed
-      idField="id"
-      defaultSortColumn={resultsKey === MME_RESULTS_KEY ? 'createdDate' : 'id'}
-      defaultSortDescending={resultsKey === MME_RESULTS_KEY}
-      columns={DISPLAY_FIELDS[MME_RESULTS_KEY]}
-      data={matchResults}
-      loading={loading}
-    />
-  )
-}
-
-BaseMatches.propTypes = {
-  resultsKey: PropTypes.string.isRequired,
-  individual: PropTypes.object,
-  mmeResultsByGuid: PropTypes.object,
-  loading: PropTypes.bool,
-}
-
-const matchesMapStateToProps = state => ({
-  mmeResultsByGuid: getMmeResultsByGuid(state),
-})
-
-const Matches = connect(matchesMapStateToProps)(BaseMatches)
-
-const monarchDetailPanels = submission => [{
-  title: { content: <b>Similar patients in the Monarch Initiative</b>, key: 'title' },
-  content: { content: <Matches matchKey="monarchMatch" submission={submission} />, key: 'monarch' },
-}]
-
-const Matchmaker = ({ loading, load, searchMme, monarchLoading, loadMonarch, individuals, onSubmit, defaultMmeSubmissionsByIndividual }) =>
+const Matchmaker = ({ loading, load, searchMme, individuals, onSubmit, defaultMmeSubmissionsByIndividual }) =>
   individuals.filter(individual => individual.affected === AFFECTED).map(individual =>
     <div key={individual.individualGuid}>
       <Header size="medium" content={individual.individualId} dividing />
@@ -373,13 +293,6 @@ const Matchmaker = ({ loading, load, searchMme, monarchLoading, loadMonarch, ind
             labelPosition="right"
             content="Search for New Matches"
           />|<HorizontalSpacer width={10} />
-          <ButtonLink
-            disabled={!individual.mmeResultGuids}
-            onClick={loadMonarch(individual.individualGuid)}
-            icon="search"
-            labelPosition="right"
-            content="Search in the Monarch Initiative"
-          />|<HorizontalSpacer width={10} />
           <UpdateButton
             disabled={!individual.mmeSubmittedData}
             buttonText="Update Submission"
@@ -398,10 +311,16 @@ const Matchmaker = ({ loading, load, searchMme, monarchLoading, loadMonarch, ind
             buttonText="Delete Submission"
             confirmDialog="Are you sure you want to remove this patient from the Matchmaker Exchange"
           />
-          <DataLoader content={individual.monarchResults} loading={monarchLoading} hideError>
-            <Accordion defaultActiveIndex={0} panels={monarchDetailPanels(individual)} />
-          </DataLoader>
-          <Matches resultsKey={MME_RESULTS_KEY} individual={individual} loading={loading} />
+          <SortableTable
+            basic="very"
+            fixed
+            idField="id"
+            defaultSortColumn="createdDate"
+            defaultSortDescending
+            columns={DISPLAY_FIELDS}
+            data={individual.mmeResults}
+            loading={loading}
+          />
         </DataLoader> :
         <div>
           <Header
@@ -433,17 +352,14 @@ Matchmaker.propTypes = {
   individuals: PropTypes.array,
   loading: PropTypes.bool,
   load: PropTypes.func,
-  monarchLoading: PropTypes.bool,
-  loadMonarch: PropTypes.func,
   searchMme: PropTypes.func,
   onSubmit: PropTypes.func,
   defaultMmeSubmissionsByIndividual: PropTypes.object,
 }
 
 const mapStateToProps = (state, ownProps) => ({
-  individuals: getSortedIndividualsByFamily(state)[ownProps.match.params.familyGuid],
+  individuals: getSortedMmeIndividuals(state, ownProps),
   loading: getMatchmakerMatchesLoading(state),
-  monarchLoading: getMonarchMatchesLoading(state),
   defaultMmeSubmissionsByIndividual: getDefaultMmeSubmissionByIndividual(state, ownProps),
 })
 
@@ -453,10 +369,7 @@ const mapDispatchToProps = (dispatch) => {
       return dispatch(loadMmeMatches(individualId))
     },
     searchMme: individualId => () => {
-      return dispatch(loadMmeMatches(individualId, 'mme'))
-    },
-    loadMonarch: individualId => () => {
-      return dispatch(loadMmeMatches(individualId, 'monarch'))
+      return dispatch(loadMmeMatches(individualId, true))
     },
     onSubmit: individualGuid => (values) => {
       return dispatch(updateMmeSubmission({ ...values, individualGuid }))

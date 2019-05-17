@@ -14,10 +14,10 @@ from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_model
 from seqr.views.utils.permissions_utils import check_permissions
-from seqr.views.utils.proxy_request_utils import proxy_request
 
-from settings import MME_HEADERS, MME_NODE_ACCEPT_HEADER, MME_CONTENT_TYPE_HEADER, MME_LOCAL_MATCH_URL, \
-    MME_EXTERNAL_MATCH_URL, MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL, SEQR_HOSTNAME_FOR_SLACK_POST, MONARCH_MATCH_URL
+from settings import MME_HEADERS, MME_LOCAL_MATCH_URL,  MME_EXTERNAL_MATCH_URL, SEQR_HOSTNAME_FOR_SLACK_POST,  \
+    MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL
+
 logger = logging.getLogger(__name__)
 
 GENOME_VERSION_LOOKUP = {}
@@ -98,35 +98,6 @@ def search_individual_mme_matches(request, individual_guid):
     logger.info('Found {} matches for {} ({} new)'.format(len(results), individual.individual_id, len(new_results)))
 
     return _parse_mme_results(individual, saved_results.values())
-
-
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
-def search_individual_monarch_matches(request, individual_guid):
-    individual = Individual.objects.get(guid=individual_guid)
-    project = individual.family.project
-    check_permissions(project, request.user)
-
-    patient_data = individual.mme_submitted_data
-    if not patient_data:
-        create_json_response(
-            {}, status=404, reason='No matchmaker submission found for {}'.format(individual.individual_id),
-        )
-
-    headers = {
-        'Accept': MME_NODE_ACCEPT_HEADER,
-        'Content-Type': MME_CONTENT_TYPE_HEADER
-    }
-    response = requests.post(url=MONARCH_MATCH_URL, headers=headers, data=json.dumps(patient_data))
-    results = response.json().get('results', [])
-
-    hpo_terms_by_id, genes_by_id, gene_symbols_to_ids = get_mme_genes_phenotypes(results)
-
-    parsed_results = [_parse_mme_patient(result, hpo_terms_by_id, gene_symbols_to_ids) for result in results]
-    return create_json_response({
-        'monarchResults': parsed_results,
-        'genesById': genes_by_id,
-    })
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)

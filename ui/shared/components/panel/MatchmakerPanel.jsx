@@ -22,6 +22,10 @@ const SequenceContainer = styled.div`
   padding-right: 5px;
 `
 
+const TopAlignedItem = styled(List.Item)`
+  vertical-align: top;
+`
+
 const variantSummary = variant => (
   <div>
     {variant.chrom}:{variant.pos}
@@ -40,7 +44,7 @@ const BaseSubmissionGeneVariants = ({ geneVariants, modalId, genesById, dispatch
     {Object.entries(geneVariants.reduce((acc, variant) =>
       ({ ...acc, [variant.geneId]: [...(acc[variant.geneId] || []), variant] }), {}),
     ).map(([geneId, variants]) =>
-      <List.Item key={geneId}>
+      <TopAlignedItem key={geneId}>
         <ShowGeneModal gene={genesById[geneId]} modalId={modalId} />
         {variants.length > 0 && variants[0].pos &&
           <List.List>
@@ -51,7 +55,7 @@ const BaseSubmissionGeneVariants = ({ geneVariants, modalId, genesById, dispatch
             )}
           </List.List>
         }
-      </List.Item>,
+      </TopAlignedItem>,
     )}
   </List>
 
