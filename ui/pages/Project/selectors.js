@@ -408,18 +408,14 @@ export const getDefaultMmeSubmissionByIndividual = createSelector(
   })),
 )
 
-export const getSortedMmeIndividuals = createSelector(
+export const getMmeResultsByIndividual = createSelector(
   getMmeResultsByGuid,
-  getSortedIndividualsByFamily,
-  (state, props) => props.match.params.familyGuid,
-  (mmeResultsByGuid, individualsByFamily, familyGuid) =>
-    individualsByFamily[familyGuid].map(individual => ({
-      ...individual,
-      mmeResults: (individual.mmeResultGuids || []).map(resultGuid => ({
-        ...mmeResultsByGuid[resultGuid].matchStatus,
-        ...mmeResultsByGuid[resultGuid],
-      })),
-    })),
+  getProjectAnalysisGroupIndividualsByGuid,
+  (mmeResultsByGuid, individualsByGuid) =>
+    mapValues(individualsByGuid, individual => (individual.mmeResultGuids || []).map(resultGuid => ({
+      ...mmeResultsByGuid[resultGuid].matchStatus,
+      ...mmeResultsByGuid[resultGuid],
+    }))),
 )
 
 

@@ -4,7 +4,7 @@ import { connect } from 'react-redux'
 import { Header, Icon, Popup, Label, Grid } from 'semantic-ui-react'
 import styled from 'styled-components'
 
-import { getIndividualsByGuid } from 'redux/selectors'
+import { getIndividualsByGuid, getSortedIndividualsByFamily } from 'redux/selectors'
 import DeleteButton from 'shared/components/buttons/DeleteButton'
 import UpdateButton from 'shared/components/buttons/UpdateButton'
 import { BooleanCheckbox, BaseSemanticInput } from 'shared/components/form/Inputs'
@@ -24,7 +24,7 @@ import {
   getProjectSavedVariantsIsLoading,
   getIndividualTaggedVariants,
   getDefaultMmeSubmissionByIndividual,
-  getSortedMmeIndividuals,
+  getMmeResultsByIndividual,
 } from '../selectors'
 
 const BreakWordLink = styled.a`
@@ -258,123 +258,137 @@ const DISPLAY_FIELDS = [
   },
 ]
 
-const Matchmaker = ({ loading, load, searchMme, individuals, onSubmit, defaultMmeSubmissionsByIndividual }) =>
-  individuals.filter(individual => individual.affected === AFFECTED).map(individual =>
-    <div key={individual.individualGuid}>
-      <Header size="medium" content={individual.individualId} dividing />
-      {individual.mmeSubmittedData && !individual.mmeDeletedDate &&
-        <Grid padded>
-          <Grid.Row>
-            <Grid.Column width={2}><b>Submitted Genotypes:</b></Grid.Column>
-            <Grid.Column width={14}>
-              {individual.mmeSubmittedData.geneVariants.length ?
-                <SubmissionGeneVariants
-                  geneVariants={individual.mmeSubmittedData.geneVariants}
-                  modalId="submission"
-                  horizontal
-                /> : <i>None</i>}
-            </Grid.Column>
-          </Grid.Row>
-          <Grid.Row>
-            <Grid.Column width={2}><b>Submitted Phenotypes:</b></Grid.Column>
-            <Grid.Column width={14}>
-              {individual.mmeSubmittedData.phenotypes.length ?
-                <Phenotypes phenotypes={individual.mmeSubmittedData.phenotypes} horizontal /> : <i>None</i>}
-            </Grid.Column>
-          </Grid.Row>
-        </Grid>
-      }
-      {individual.mmeSubmittedDate && !individual.mmeDeletedDate ?
-        <DataLoader contentId={individual.individualGuid} content load={load} loading={false}>
-          <ButtonLink
-            disabled={!individual.mmeResultGuids}
-            onClick={searchMme(individual.individualGuid)}
-            icon="search"
-            labelPosition="right"
-            content="Search for New Matches"
-          />|<HorizontalSpacer width={10} />
-          <UpdateButton
-            disabled={!individual.mmeSubmittedData}
-            buttonText="Update Submission"
-            modalSize="large"
-            modalTitle={`Update Submission for ${individual.individualId}`}
-            modalId={`${individual.individualGuid}_-_updateMmeSubmission`}
-            confirmDialog="Are you sure you want to update this submission?"
-            initialValues={individual.mmeSubmittedData}
-            formFields={SUBMISSION_EDIT_FIELDS}
-            onSubmit={onSubmit(individual.individualGuid)}
-            showErrorPanel
-          />|<HorizontalSpacer width={10} />
-          <DeleteButton
-            disabled={!individual.mmeSubmittedData}
-            onSubmit={onSubmit(individual.individualGuid)}
-            buttonText="Delete Submission"
-            confirmDialog="Are you sure you want to remove this patient from the Matchmaker Exchange"
-          />
-          <SortableTable
-            basic="very"
-            fixed
-            idField="id"
-            defaultSortColumn="createdDate"
-            defaultSortDescending
-            columns={DISPLAY_FIELDS}
-            data={individual.mmeResults}
-            loading={loading}
-          />
-        </DataLoader> :
-        <div>
-          <Header
-            size="small"
-            content="This individual has no submissions"
-            icon={<Icon name="warning sign" color="orange" />}
-            subheader={
-              <div className="sub header">
-                <UpdateButton
-                  initialValues={defaultMmeSubmissionsByIndividual[individual.individualGuid]}
-                  buttonText="Submit to Matchmaker"
-                  editIconName=" "
-                  modalSize="large"
-                  modalTitle={`Create Submission for ${individual.individualId}`}
-                  modalId={`${individual.individualGuid}_-_createMmeSubmission`}
-                  confirmDialog="Are you sure you want to submit this individual?"
-                  formFields={SUBMISSION_EDIT_FIELDS}
-                  onSubmit={onSubmit(individual.individualGuid)}
-                  showErrorPanel
-                />
-              </div>}
-          />
-          <VerticalSpacer height={10} />
-        </div>}
-    </div>,
-  )
+const BaseMatchmakerIndividual = ({ loading, load, searchMme, individual, onSubmit, defaultMmeSubmission, mmeResults }) =>
+  <div>
+    <Header size="medium" content={individual.individualId} dividing />
+    {individual.mmeSubmittedData && !individual.mmeDeletedDate &&
+      <Grid padded>
+        <Grid.Row>
+          <Grid.Column width={2}><b>Submitted Genotypes:</b></Grid.Column>
+          <Grid.Column width={14}>
+            {individual.mmeSubmittedData.geneVariants.length ?
+              <SubmissionGeneVariants
+                geneVariants={individual.mmeSubmittedData.geneVariants}
+                modalId="submission"
+                horizontal
+              /> : <i>None</i>}
+          </Grid.Column>
+        </Grid.Row>
+        <Grid.Row>
+          <Grid.Column width={2}><b>Submitted Phenotypes:</b></Grid.Column>
+          <Grid.Column width={14}>
+            {individual.mmeSubmittedData.phenotypes.length ?
+              <Phenotypes phenotypes={individual.mmeSubmittedData.phenotypes} horizontal /> : <i>None</i>}
+          </Grid.Column>
+        </Grid.Row>
+      </Grid>
+    }
+    {individual.mmeSubmittedDate && !individual.mmeDeletedDate ?
+      <DataLoader content load={load} loading={false}>
+        <ButtonLink
+          disabled={!individual.mmeResultGuids}
+          onClick={searchMme}
+          icon="search"
+          labelPosition="right"
+          content="Search for New Matches"
+        />|<HorizontalSpacer width={10} />
+        <UpdateButton
+          disabled={!individual.mmeSubmittedData}
+          buttonText="Update Submission"
+          modalSize="large"
+          modalTitle={`Update Submission for ${individual.individualId}`}
+          modalId={`${individual.individualGuid}_-_updateMmeSubmission`}
+          confirmDialog="Are you sure you want to update this submission?"
+          initialValues={individual.mmeSubmittedData}
+          formFields={SUBMISSION_EDIT_FIELDS}
+          onSubmit={onSubmit}
+          showErrorPanel
+        />|<HorizontalSpacer width={10} />
+        <DeleteButton
+          disabled={!individual.mmeSubmittedData}
+          onSubmit={onSubmit}
+          buttonText="Delete Submission"
+          confirmDialog="Are you sure you want to remove this patient from the Matchmaker Exchange"
+        />
+        <SortableTable
+          basic="very"
+          fixed
+          idField="id"
+          defaultSortColumn="createdDate"
+          defaultSortDescending
+          columns={DISPLAY_FIELDS}
+          data={mmeResults}
+          loading={loading}
+        />
+      </DataLoader> :
+      <div>
+        <Header
+          size="small"
+          content="This individual has no submissions"
+          icon={<Icon name="warning sign" color="orange" />}
+          subheader={
+            <div className="sub header">
+              <UpdateButton
+                initialValues={defaultMmeSubmission}
+                buttonText="Submit to Matchmaker"
+                editIconName=" "
+                modalSize="large"
+                modalTitle={`Create Submission for ${individual.individualId}`}
+                modalId={`${individual.individualGuid}_-_createMmeSubmission`}
+                confirmDialog="Are you sure you want to submit this individual?"
+                formFields={SUBMISSION_EDIT_FIELDS}
+                onSubmit={onSubmit}
+                showErrorPanel
+              />
+            </div>}
+        />
+        <VerticalSpacer height={10} />
+      </div>}
+  </div>
 
-Matchmaker.propTypes = {
-  individuals: PropTypes.array,
+BaseMatchmakerIndividual.propTypes = {
+  individual: PropTypes.object.isRequired,
   loading: PropTypes.bool,
   load: PropTypes.func,
   searchMme: PropTypes.func,
   onSubmit: PropTypes.func,
-  defaultMmeSubmissionsByIndividual: PropTypes.object,
+  defaultMmeSubmission: PropTypes.object,
+  mmeResults: PropTypes.object,
 }
 
 const mapStateToProps = (state, ownProps) => ({
-  individuals: getSortedMmeIndividuals(state, ownProps),
   loading: getMatchmakerMatchesLoading(state),
-  defaultMmeSubmissionsByIndividual: getDefaultMmeSubmissionByIndividual(state, ownProps),
+  defaultMmeSubmission: getDefaultMmeSubmissionByIndividual(state, ownProps)[ownProps.individual.individualGuid],
+  mmeResults: getMmeResultsByIndividual(state, ownProps)[ownProps.individual.individualGuid],
 })
 
-const mapDispatchToProps = (dispatch) => {
+const mapDispatchToProps = (dispatch, ownProps) => {
   return {
-    load: (individualId) => {
-      return dispatch(loadMmeMatches(individualId))
+    load: () => {
+      return dispatch(loadMmeMatches(ownProps.individual.individualGuid, false))
     },
-    searchMme: individualId => () => {
-      return dispatch(loadMmeMatches(individualId, true))
+    searchMme: () => {
+      return dispatch(loadMmeMatches(ownProps.individual.individualGuid, true))
     },
-    onSubmit: individualGuid => (values) => {
-      return dispatch(updateMmeSubmission({ ...values, individualGuid }))
+    onSubmit: (values) => {
+      return dispatch(updateMmeSubmission({ ...values, individualGuid: ownProps.individual.individualGuid }))
     },
   }
 }
 
-export default connect(mapStateToProps, mapDispatchToProps)(Matchmaker)
+const MatchmakerIndividual = connect(mapStateToProps, mapDispatchToProps)(BaseMatchmakerIndividual)
+
+const Matchmaker = ({ individuals }) =>
+  individuals.filter(individual => individual.affected === AFFECTED).map(individual =>
+    <MatchmakerIndividual key={individual.individualGuid} individual={individual} />,
+  )
+
+Matchmaker.propTypes = {
+  individuals: PropTypes.array,
+}
+
+const mapIndividualsStateToProps = (state, ownProps) => ({
+  individuals: getSortedIndividualsByFamily(state)[ownProps.match.params.familyGuid],
+})
+
+export default connect(mapIndividualsStateToProps)(Matchmaker)
