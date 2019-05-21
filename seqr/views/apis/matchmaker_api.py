@@ -1,6 +1,7 @@
 import json
 import logging
 import requests
+from datetime import datetime
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 
@@ -16,7 +17,7 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_model
 from seqr.views.utils.permissions_utils import check_permissions
 
 from settings import MME_HEADERS, MME_LOCAL_MATCH_URL,  MME_EXTERNAL_MATCH_URL, SEQR_HOSTNAME_FOR_SLACK_POST,  \
-    MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL
+    MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL, MME_DELETE_INDIVIDUAL_URL
 
 logger = logging.getLogger(__name__)
 
@@ -110,6 +111,14 @@ def update_mme_submission(request, individual_guid):
     project = individual.family.project
     check_permissions(project, request.user)
 
+    request_json = json.loads(request.body)
+
+    phenotypes = request_json.pop('phenotypes', [])
+    gene_variants = request_json.pop('geneVariants', [])
+    if not phenotypes and not gene_variants:
+        create_json_response({}, status=400, reason='Genotypes or phentoypes are required')
+
+
     # TODO
     raise NotImplementedError
 
@@ -124,8 +133,27 @@ def delete_mme_submission(request, individual_guid):
     project = individual.family.project
     check_permissions(project, request.user)
 
-    # TODO
-    raise NotImplementedError
+    if individual.mme_deleted_date:
+        return create_json_response(
+            {}, status=402, reason='Matchmaker submission has already been deleted for {}'.format(individual.individual_id),
+        )
+
+    matchbox_id = individual.mme_submitted_data['patient']['id']
+    response = requests.delete(url=MME_DELETE_INDIVIDUAL_URL, headers=MME_HEADERS, data=json.dumps({'id': matchbox_id}))
+
+    if response.status_code != 200:
+        try:
+            response_json = response.json()
+        except:
+            response_json = {}
+        return create_json_response(response_json, status=response.status_code, reason=response.content)
+
+    deleted_date = datetime.now()
+    individual.mme_deleted_date = deleted_date
+    individual.mme_deleted_by = request.user
+    individual.save()
+
+    return create_json_response({'individualsByGuid': {individual_guid: {'mmeDeletedDate': deleted_date}}})
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
