@@ -240,18 +240,6 @@ export const updateMmeSubmissionStatus = (values) => {
   return updateEntity(values, RECEIVE_DATA, '/api/matchmaker/result_status', 'matchmakerResultGuid')
 }
 
-export const deleteMmePatient = (individual) => {
-  return (dispatch, getState) => {
-    const state = getState()
-    const currentProject = state.projectsByGuid[state.currentProjectGuid]
-    return new HttpRequestHelper(
-      `/api/matchmaker/project/${currentProject.deprecatedProjectId}/individual/${individual.individualId}/delete`,
-      () => {},
-      (e) => { throw e },
-    ).get()
-  }
-}
-
 // Table actions
 export const updateFamiliesTable = (updates, tableName) => (
   { type: tableName === CASE_REVIEW_TABLE_NAME ? UPDATE_CASE_REVIEW_TABLE_STATE : UPDATE_FAMILY_TABLE_STATE, updates }

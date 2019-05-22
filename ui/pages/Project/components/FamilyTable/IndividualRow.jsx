@@ -2,10 +2,10 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { connect } from 'react-redux'
-import { Label, Popup, Icon } from 'semantic-ui-react'
+import { Link } from 'react-router-dom'
+import { Label, Popup } from 'semantic-ui-react'
 import orderBy from 'lodash/orderBy'
 
-import DispatchRequestButton from 'shared/components/buttons/DispatchRequestButton'
 import PedigreeIcon from 'shared/components/icons/PedigreeIcon'
 import TextFieldView from 'shared/components/panel/view-fields/TextFieldView'
 import OptionFieldView from 'shared/components/panel/view-fields/OptionFieldView'
@@ -13,11 +13,11 @@ import PhenotipsDataPanel from 'shared/components/panel/PhenotipsDataPanel'
 import Sample from 'shared/components/panel/sample'
 import { FamilyLayout } from 'shared/components/panel/family'
 import { ColoredIcon } from 'shared/components/StyledComponents'
+import { VerticalSpacer } from 'shared/components/Spacers'
 
 import { updateIndividual } from 'redux/rootReducer'
 import { getSamplesByGuid } from 'redux/selectors'
 import { getProject } from 'pages/Project/selectors'
-import { deleteMmePatient } from 'pages/Project/reducers'
 import { SAMPLE_STATUS_LOADED, DATASET_TYPE_VARIANT_CALLS } from 'shared/utils/constants'
 import { CASE_REVIEW_STATUS_MORE_INFO_NEEDED, CASE_REVIEW_STATUS_OPTIONS } from '../../constants'
 
@@ -37,10 +37,6 @@ const CaseReviewDropdownContainer = styled.div`
   width: 220px;
 `
 
-const SpacedLabel = styled(Label)`
-  margin-top: 5px !important;
-`
-
 const CaseReviewStatus = ({ individual }) =>
   <CaseReviewDropdownContainer>
     <CaseReviewStatusDropdown individual={individual} />
@@ -58,7 +54,22 @@ CaseReviewStatus.propTypes = {
   individual: PropTypes.object.isRequired,
 }
 
-const DataDetails = ({ loadedSamples, individual, deleteIndividualMmePatient }) =>
+const MmeStatusLabel = ({ title, dateField, color, individual }) =>
+  <Link to={`/project/${individual.projectGuid}/family_page/${individual.familyGuid}/matchmaker_exchange`}>
+    <VerticalSpacer height={5} />
+    <Label color={color} size="small">
+      {title}: {new Date(individual[dateField]).toLocaleDateString()}
+    </Label>
+  </Link>
+
+MmeStatusLabel.propTypes = {
+  title: PropTypes.string,
+  dateField: PropTypes.string,
+  color: PropTypes.string,
+  individual: PropTypes.object,
+}
+
+const DataDetails = ({ loadedSamples, individual }) =>
   <div>
     {loadedSamples.map((sample, i) =>
       <div key={sample.sampleGuid}>
@@ -68,12 +79,9 @@ const DataDetails = ({ loadedSamples, individual, deleteIndividualMmePatient }) 
     {individual.mmeSubmittedDate && (
       individual.mmeDeletedDate ? (
         <Popup
-          key={individual.mmeSubmittedDate}
           flowing
           trigger={
-            <SpacedLabel color="red" size="small">
-              Removed from MME: {new Date(individual.mmeDeletedDate).toLocaleDateString()}
-            </SpacedLabel>
+            <MmeStatusLabel title="Removed from MME" dateField="mmeDeletedDate" color="red" individual={individual} />
           }
           content={
             <div>
@@ -81,18 +89,7 @@ const DataDetails = ({ loadedSamples, individual, deleteIndividualMmePatient }) 
             </div>
           }
         />
-      ) : (
-        <div key={individual.mmeSubmittedDate}>
-          <SpacedLabel color="violet" size="small">
-            Submitted to MME: {new Date(individual.mmeSubmittedDate).toLocaleDateString()}
-          </SpacedLabel>
-          <DispatchRequestButton
-            buttonContent={<Icon name="trash" />}
-            confirmDialog="Are you sure you want to remove the patient from MatchMaker Exchange?"
-            onSubmit={deleteIndividualMmePatient}
-          />
-        </div>
-      )
+      ) : <MmeStatusLabel title="Submitted to MME" dateField="mmeSubmittedDate" color="violet" individual={individual} />
     )
   }
   </div>
@@ -100,7 +97,6 @@ const DataDetails = ({ loadedSamples, individual, deleteIndividualMmePatient }) 
 DataDetails.propTypes = {
   individual: PropTypes.object,
   loadedSamples: PropTypes.array,
-  deleteIndividualMmePatient: PropTypes.func,
 }
 
 class IndividualRow extends React.Component
@@ -111,12 +107,11 @@ class IndividualRow extends React.Component
     individual: PropTypes.object.isRequired,
     samplesByGuid: PropTypes.object.isRequired,
     updateIndividual: PropTypes.func,
-    deleteIndividualMmePatient: PropTypes.func,
     editCaseReview: PropTypes.bool,
   }
 
   render() {
-    const { project, family, individual, editCaseReview, deleteIndividualMmePatient } = this.props
+    const { project, family, individual, editCaseReview } = this.props
 
     const { displayName, paternalId, maternalId, sex, affected, createdDate, sampleGuids, caseReviewStatus, caseReviewDiscussion } = individual
 
@@ -153,7 +148,7 @@ class IndividualRow extends React.Component
 
     const rightContent = editCaseReview ?
       <CaseReviewStatus individual={individual} /> :
-      <DataDetails loadedSamples={loadedSamples} individual={individual} deleteIndividualMmePatient={deleteIndividualMmePatient} />
+      <DataDetails loadedSamples={loadedSamples} individual={individual} />
 
     const fields = [
       {
@@ -230,15 +225,8 @@ const mapStateToProps = state => ({
 })
 
 
-const mapDispatchToProps = (dispatch, ownProps) => {
-  return {
-    updateIndividual: (values) => {
-      return dispatch(updateIndividual(values))
-    },
-    deleteIndividualMmePatient: () => {
-      return dispatch(deleteMmePatient(ownProps.individual))
-    },
-  }
+const mapDispatchToProps = {
+  updateIndividual,
 }
 
 export default connect(mapStateToProps, mapDispatchToProps)(IndividualRow)
