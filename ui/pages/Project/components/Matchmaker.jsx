@@ -35,7 +35,7 @@ const MatchContainer = styled.div`
   word-break: break-all;
 `
 
-const PATIENT_FIELDS = ['label', 'sex', 'ageOfOnset', 'inheritanceMode', 'species']
+const PATIENT_CORE_FIELDS = ['id', 'contact', 'features', 'genomicFeatures']
 
 const MATCH_STATUS_EDIT_FIELDS = [
   { name: 'weContacted', label: 'We Contacted Host', component: BooleanCheckbox, inline: true },
@@ -208,11 +208,15 @@ const DISPLAY_FIELDS = [
     content: 'Match',
     verticalAlign: 'top',
     format: (val) => {
-      const patientFields = PATIENT_FIELDS.filter(k => val.patient[k])
+      const patientFields = Object.keys(val.patient).filter(k => val.patient[k] && !PATIENT_CORE_FIELDS.includes(k))
       return patientFields.length ? <Popup
         header="Patient Details"
         trigger={<MatchContainer>{val.id} <Icon link name="info circle" /></MatchContainer>}
-        content={patientFields.map(k => <div key={k}><b>{camelcaseToTitlecase(k)}:</b> {val.patient[k]}</div>)}
+        content={patientFields.map(k =>
+          <div key={k}>
+            <b>{camelcaseToTitlecase(k)}:</b> {k === 'disorders' ? val.patient[k].map(({ id }) => id).join(', ') : val.patient[k]}
+          </div>,
+        )}
       /> : <MatchContainer>{val.id}</MatchContainer>
     },
   },
@@ -353,7 +357,7 @@ BaseMatchmakerIndividual.propTypes = {
   searchMme: PropTypes.func,
   onSubmit: PropTypes.func,
   defaultMmeSubmission: PropTypes.object,
-  mmeResults: PropTypes.object,
+  mmeResults: PropTypes.array,
 }
 
 const mapStateToProps = (state, ownProps) => ({

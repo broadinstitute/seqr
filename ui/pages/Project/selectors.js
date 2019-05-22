@@ -401,6 +401,7 @@ export const getDefaultMmeSubmissionByIndividual = createSelector(
       },
       species: 'NCBITaxon:9606',
       sex: SEX_LOOKUP[individual.sex].toUpperCase(),
+      id: individual.individualId,
       label: individual.individualId,
     },
     geneVariants: [],

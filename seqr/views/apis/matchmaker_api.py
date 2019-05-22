@@ -8,6 +8,7 @@ from django.views.decorators.csrf import csrf_exempt
 from reference_data.models import HumanPhenotypeOntology, GENOME_VERSION_CHOICES
 
 from seqr.models import Individual, MatchmakerResult
+from seqr.model_utils import update_seqr_model
 from seqr.utils.gene_utils import get_genes, get_gene_ids_for_gene_symbols
 from seqr.utils.slack_utils import post_to_slack
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
@@ -17,7 +18,7 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_model
 from seqr.views.utils.permissions_utils import check_permissions
 
 from settings import MME_HEADERS, MME_LOCAL_MATCH_URL,  MME_EXTERNAL_MATCH_URL, SEQR_HOSTNAME_FOR_SLACK_POST,  \
-    MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL, MME_DELETE_INDIVIDUAL_URL
+    MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL, MME_ADD_INDIVIDUAL_URL, MME_DELETE_INDIVIDUAL_URL
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +61,10 @@ def search_individual_mme_matches(request, individual_guid):
     individual = Individual.objects.get(guid=individual_guid)
     project = individual.family.project
     check_permissions(project, request.user)
+    return _search_individual_matches(individual, request.user)
 
+
+def _search_individual_matches(individual, user):
     patient_data = individual.mme_submitted_data
     if not patient_data:
         create_json_response(
@@ -71,11 +75,12 @@ def search_individual_mme_matches(request, individual_guid):
     if local_result.status_code != 200:
         create_json_response(local_result.json(), status=local_result.status_code, reason='Error in local match')
 
-    external_result = requests.post(url=MME_EXTERNAL_MATCH_URL, headers=MME_HEADERS, data=json.dumps(patient_data))
-    if external_result.status_code != 200:
-        create_json_response(external_result.json(), status=external_result.status_code, reason='Error in external match')
-
-    results = local_result.json()['results'] + external_result.json()['results']
+    # external_result = requests.post(url=MME_EXTERNAL_MATCH_URL, headers=MME_HEADERS, data=json.dumps(patient_data))
+    # if external_result.status_code != 200:
+    #     create_json_response(external_result.json(), status=external_result.status_code, reason='Error in external match')
+    #
+    # results = local_result.json()['results'] + external_result.json()['results']
+    results = local_result.json()['results']
 
     saved_results = {
         result.result_data['patient']['id']: result for result in MatchmakerResult.objects.filter(individual=individual)
@@ -88,7 +93,7 @@ def search_individual_mme_matches(request, individual_guid):
             saved_result = MatchmakerResult.objects.create(
                 individual=individual,
                 result_data=result,
-                last_modified_by=request.user,
+                last_modified_by=user,
             )
             new_results.append(result)
             saved_results[result['patient']['id']] = saved_result
@@ -111,16 +116,63 @@ def update_mme_submission(request, individual_guid):
     project = individual.family.project
     check_permissions(project, request.user)
 
-    request_json = json.loads(request.body)
+    submission_json = json.loads(request.body)
 
-    phenotypes = request_json.pop('phenotypes', [])
-    gene_variants = request_json.pop('geneVariants', [])
+    del submission_json['individualGuid']
+    phenotypes = submission_json.pop('phenotypes', [])
+    gene_variants = submission_json.pop('geneVariants', [])
     if not phenotypes and not gene_variants:
         create_json_response({}, status=400, reason='Genotypes or phentoypes are required')
 
+    genomic_features = []
+    for gene_variant in gene_variants:
+        if not gene_variant.get('geneId'):
+            create_json_response({}, status=400, reason='Gene id is required for genomic features')
+        feature = {'gene': {'id': gene_variant['geneId']}}
+        if 'numAlt' in gene_variant:
+            feature['zygosity'] = gene_variant['numAlt'] % 2
+        if gene_variant.get('pos'):
+            feature['variant'] = {
+                'alternateBases': gene_variant['alt'],
+                'referenceBases': gene_variant['ref'],
+                'referenceName': gene_variant['chrom'],
+                'start': gene_variant['pos'],
+                'assembly': gene_variant['genomeVersion'],
+            }
+        genomic_features.append(feature)
 
-    # TODO
-    raise NotImplementedError
+    submission_json['patient']['genomicFeatures'] = genomic_features
+    submission_json['patient']['features'] = phenotypes
+
+    response = requests.post(url=MME_ADD_INDIVIDUAL_URL, headers=MME_HEADERS, data=json.dumps(submission_json))
+
+    if response.status_code not in (200, 409):
+        try:
+            response_json = response.json()
+        except:
+            response_json = {}
+        return create_json_response(response_json, status=response.status_code, reason=response.content)
+
+    submitted_date = datetime.now()
+    individual.mme_submitted_data = submission_json
+    individual.mme_submitted_date = submitted_date
+    individual.mme_deleted_date = None
+    individual.mme_deleted_by = None
+    individual.save()
+
+    # update the project contact information if anything new was added
+    new_contact_names = set(submission_json['patient']['contact']['name'].split(',')) - set(project.mme_primary_data_owner.split(','))
+    new_contact_urls = set(submission_json['patient']['contact']['href'].split(',')) - set(project.mme_contact_url.split(','))
+    updates = {}
+    if new_contact_names:
+        updates['mme_primary_data_owner'] = '{},{}'.format(project.mme_primary_data_owner, ','.join(new_contact_names))
+    if new_contact_urls:
+        updates['mme_contact_url'] = '{},{}'.format(project.mme_contact_url, ','.join(new_contact_urls))
+    if updates:
+        update_seqr_model(project, **updates)
+
+    # search for new matches
+    return _search_individual_matches(individual, request.user)
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -213,6 +265,8 @@ def _parse_mme_results(individual, saved_results):
         'individualsByGuid': {individual.guid: {
             'mmeResultGuids': parsed_results_gy_guid.keys(),
             'mmeSubmittedData': parse_mme_patient(individual.mme_submitted_data, hpo_terms_by_id, gene_symbols_to_ids),
+            'mmeSubmittedDate': individual.mme_submitted_date,
+            'mmeDeletedDate': individual.mme_deleted_date,
         }},
         'genesById': genes_by_id,
     })
@@ -252,14 +306,13 @@ def parse_mme_patient(result, hpo_terms_by_id, gene_symbols_to_ids):
                     'genomeVersion': GENOME_VERSION_LOOKUP.get(assembly, assembly),
                 })
             gene_variants.append(gene_variant)
-    patient = {
-        k: result['patient'].get(k) for k in ['inheritanceMode', 'sex', 'contact', 'ageOfOnset', 'label', 'species']
-    }
-    return {
+
+    parsed_result = {
         'geneVariants': gene_variants,
         'phenotypes': phenotypes,
-        'patient': patient,
     }
+    parsed_result.update(result)
+    return parsed_result
 
 
 def _generate_slack_notification_for_seqr_match(individual, results):
