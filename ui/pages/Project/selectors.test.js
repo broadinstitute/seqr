@@ -3,7 +3,9 @@
 import orderBy from 'lodash/orderBy'
 import { getVisibleFamilies, getVisibleFamiliesInSortedOrder, getFamiliesExportData, getIndividualsExportData,
   getCaseReviewStatusCounts, getProjectSavedVariants, getFilteredProjectSavedVariants,
-  getVisibleSortedProjectSavedVariants, getProjectAnalysisGroupFamiliesByGuid } from './selectors'
+  getVisibleSortedProjectSavedVariants, getProjectAnalysisGroupFamiliesByGuid, getIndividualTaggedVariants,
+  getDefaultMmeSubmissionByIndividual, getMmeResultsByIndividual,
+} from './selectors'
 
 import { STATE_WITH_2_FAMILIES } from './fixtures'
 
@@ -131,4 +133,44 @@ test('getProjectAnalysisGroupFamiliesByGuid', () => {
 
   expect(Object.keys(families)).toEqual(['F011652_1'])
   expect(families.F011652_1.familyId).toEqual('1')
+})
+
+test('getIndividualTaggedVariants', () => {
+  const individualVariants = getIndividualTaggedVariants(STATE_WITH_2_FAMILIES, { individualGuid: 'I021475_na19675_1' })
+  expect(individualVariants.length).toEqual(2)
+  expect(individualVariants[0].variantGuid).toEqual('SV0000004_116042722_r0390_1000')
+  expect(individualVariants[0].variantId).toEqual('22-45919065-TTTC-T')
+  expect(individualVariants[0].numAlt).toEqual(2)
+  expect(individualVariants[0].gq).toEqual(99)
+  expect(individualVariants[0].geneSymbol).toEqual('OR2M3')
+})
+
+test('getDefaultMmeSubmissionByIndividual', () => {
+  const defaultSubmissions = getDefaultMmeSubmissionByIndividual(STATE_WITH_2_FAMILIES, { match: { params:  {} } })
+  expect(Object.keys(defaultSubmissions).length).toEqual(6)
+  expect(defaultSubmissions.I021475_na19675_1).toEqual({
+    patient: {
+      contact: {
+        name: 'PI',
+        institution: 'Broad',
+        href: 'test@broadinstitute.org',
+      },
+      species: 'NCBITaxon:9606',
+      sex: 'MALE',
+      id: 'NA19675',
+      label: 'NA19675',
+    },
+    geneVariants: [],
+    phenotypes: [],
+  })
+})
+
+test('getMmeResultsByIndividual', () => {
+  const mmeResults = getMmeResultsByIndividual(STATE_WITH_2_FAMILIES, {match: {params: {}}})
+  expect(Object.keys(mmeResults).length).toEqual(6)
+  expect(mmeResults.I021475_na19675_1.length).toEqual(1)
+  expect(mmeResults.I021475_na19675_1[0].id).toEqual('12531')
+  expect(mmeResults.I021475_na19675_1[0].geneVariants.length).toEqual(1)
+  expect(mmeResults.I021475_na19675_1[0].comments).toEqual('This seems promising')
+  expect(mmeResults.I021475_na19675_1[0].matchStatus.comments).toEqual('This seems promising')
 })

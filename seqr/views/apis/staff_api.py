@@ -107,7 +107,6 @@ def elasticsearch_status(request):
 
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
 def mme_metrics_proxy(request):
-    raise Exception('Nope')
     return proxy_request(request, MME_MATCHBOX_METRICS_URL, headers=MME_HEADERS)
 
 

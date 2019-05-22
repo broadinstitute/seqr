@@ -374,6 +374,7 @@ export const STATE_WITH_2_FAMILIES = {
       caseReviewStatusLastModifiedBy: null,
       caseReviewStatusLastModifiedDate: '2016-12-05T10:29:00.000Z',
       createdDate: '2016-12-05T10:29:00.000Z',
+      mmeResultGuids: ['MR0005038_HK018_0047'],
       mmeSubmittedDate: '2018-05-09T10:29:00.000Z',
       sampleGuids: [],
       sex: 'M',
@@ -464,6 +465,8 @@ export const STATE_WITH_2_FAMILIES = {
       isPhenotipsEnabled: true,
       lastModifiedDate: '2017-03-14T17:37:32.712Z',
       mmePrimaryDataOwner: 'PI',
+      mmeContactInstitution: 'Broad',
+      mmeContactUrl: 'test@broadinstitute.org',
       name: '1000 Genomes Demo',
       phenotipsUserId: '1kg',
       projectCategoryGuids: [],
@@ -522,21 +525,9 @@ export const STATE_WITH_2_FAMILIES = {
       clinvar: { clinsig: "", variantId: null },
       familyGuids: ["F011652_1"],
       functionalData: [],
-      genes: [
-        {
-          constraints: {
-            lof: { constraint: 0.0671997116609769, rank: 8248, totalGenes: 18225 },
-            missense: { constraint: -0.7885573790993861, rank: 15052, totalGenes: 18225 },
-          },
-          diseaseDbPhenotypes: [],
-          diseaseGeneLists: [],
-          geneId: "ENSG00000228198",
-          symbol: "OR2M3",
-        }
-      ],
       genomeVersion: "37",
       genotypes: {
-        NA19675: {
+        I021475_na19675_1: {
           ab: 1,
           ad: "0,74",
           alleles: ["T", "T"],
@@ -574,6 +565,11 @@ export const STATE_WITH_2_FAMILIES = {
       liftedOverChrom: "",
       liftedOverGenomeVersion: "38",
       liftedOverPos: "",
+      mainTranscript: {
+        aminoAcids: "P/X", hgvsc: "ENST00000456743.1:c.862delC", hgvsp: "ENSP00000389625.1:p.Leu288SerfsTer10", lof: "HC",
+        lofFilter: "", lofFlags: "SINGLE_EXON", proteinPosition: "287", symbol: "OR2M3", geneId: 'ENSG00000228198',
+        majorConsequence: 'frameshift_variant'
+      },
       notes: [{
         dateSaved: "2018-05-29T17:25:23.770Z", note: "test note edited", noteGuid: "VN0727076_116042722_r0390_1000",
         submitToClinvar: true, user: "hsnow@broadinstitute.org"
@@ -642,7 +638,7 @@ export const STATE_WITH_2_FAMILIES = {
       ],
       genomeVersion: "37",
       genotypes: {
-        NA19675: {
+        I021475_na19675_1: {
           ab: 1,
           ad: "0,74",
           alleles: ["T", "T"],
@@ -682,6 +678,7 @@ export const STATE_WITH_2_FAMILIES = {
       liftedOverPos: "",
       notes: [],
       origAltAlleles: ["T"],
+      mainTranscript: {},
       pos: 248367227,
       projectGuid: 'R0237_1000_genomes_demo',
       ref: "TC",
@@ -749,7 +746,7 @@ export const STATE_WITH_2_FAMILIES = {
       ],
       genomeVersion: "37",
       genotypes: {
-        NA19675: {
+        I021475_na19675_1: {
           ab: 1,
           ad: "0,74",
           alleles: ["T", "T"],
@@ -787,6 +784,7 @@ export const STATE_WITH_2_FAMILIES = {
       liftedOverChrom: "",
       liftedOverGenomeVersion: "38",
       liftedOverPos: "",
+      mainTranscript: {},
       notes: [],
       origAltAlleles: ["T"],
       pos: 248367227,
@@ -803,5 +801,31 @@ export const STATE_WITH_2_FAMILIES = {
       xpos: 22046859832,
     },
   },
+  mmeResultsByGuid: {
+    MR0005038_HK018_0047: {
+      geneVariants: [{geneId: "ENSG00000228198"}],
+      phenotypes: [
+        {id: "HP:0012638", label: "Abnormality of nervous system physiology", observed: "yes"},
+        {id: "HP:0001371", label: "Flexion contracture", observed: "yes"}
+      ],
+      id: "12531",
+      matchStatus: {
+        comments: "This seems promising",
+        createdDate: "2017-07-18T20:38:53.195Z",
+        deemedIrrelevant: false,
+        flagForAnalysis: false,
+        hostContacted: true,
+        matchmakerResultGuid: "MR0005038_HK018_0047",
+      },
+      patient: {
+        contact: { href: "mailto:crowley@unc.edu", institution: "UNC Chapel Hill", name: "James Crowley" },
+        id: "12531",
+        label: "Childhood Psychiatric Disorder Candidate Genes",
+        inheritanceMode: 'Recessive',
+      },
+      score: 1,
+    }
+  },
   search: { familiesByGuid: { result: ['F011652_1', 'F011652_2'] } },
+  genesById: { 'ENSG00000228198': { geneId: 'ENSG00000228198', geneSymbol: 'OR2M3' } },
 }

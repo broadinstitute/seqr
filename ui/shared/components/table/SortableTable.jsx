@@ -151,7 +151,6 @@ class SortableTable extends React.PureComponent {
     }
 
     if (filter) {
-      //row[filterColumn].toLowerCase().startsWith(filter)
       sortedData = sortedData.filter(row => getRowFilterVal(row).toLowerCase().includes(filter))
       totalRows = sortedData.length
     }
