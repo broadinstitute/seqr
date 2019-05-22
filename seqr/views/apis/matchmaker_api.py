@@ -17,7 +17,7 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_model
 from seqr.views.utils.permissions_utils import check_permissions
 
-from settings import MME_HEADERS, MME_LOCAL_MATCH_URL,  MME_EXTERNAL_MATCH_URL, SEQR_HOSTNAME_FOR_SLACK_POST,  \
+from settings import MME_HEADERS, MME_LOCAL_MATCH_URL, SEQR_HOSTNAME_FOR_SLACK_POST,  \
     MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL, MME_ADD_INDIVIDUAL_URL, MME_DELETE_INDIVIDUAL_URL
 
 logger = logging.getLogger(__name__)

@@ -58,7 +58,10 @@ def mme_match_proxy(request):
         query_patient_data = query_patient_data + ' ' + line
     response = proxy_request(request, MME_LOCAL_MATCH_URL, data=query_patient_data)
     if response.status_code == 200:
-        _generate_notification_for_incoming_match(response, request, query_patient_data)
+        try:
+            _generate_notification_for_incoming_match(response, request, query_patient_data)
+        except Exception:
+            pass
     return response
 
 
@@ -91,16 +94,16 @@ def _generate_notification_for_incoming_match(response_from_matchbox, incoming_r
             individual = Individual.objects.filter(mme_submitted_data__patient__id=result['patient']['id']).first()
             project = individual.family.project
 
-            result_text = 'seqr ID {individual_id} from project {project_name} in family {family_id} ' \
-                          'inserted into matchbox on {insertion_date}, with seqr link ' \
-                          '{host}/project/{project_guid}/family_page/{family_guid}/matchmaker_exchange'.format(
+            result_text = u'seqr ID {individual_id} from project {project_name} in family {family_id} ' \
+                          u'inserted into matchbox on {insertion_date}, with seqr link ' \
+                          u'{host}/{project_guid}/family_page/{family_guid}/matchmaker_exchange'.format(
                 individual_id=individual.individual_id, project_guid=project.guid, project_name=project.name,
                 family_guid=individual.family.guid, family_id=individual.family.family_id,
                 insertion_date=individual.mme_submitted_date.strftime('%b %d, %Y'), host=SEQR_HOSTNAME_FOR_SLACK_POST)
             match_results.append(result_text)
             emails.update([i for i in project.mme_contact_url.replace('mailto:', '').split(',')])
 
-        message = """Dear collaborators, 
+        message = u"""Dear collaborators, 
 
         matchbox found a match between a patient from {query_institution} and the following {number_of_results} case(s) 
         in matchbox. The following information was included with the query,
@@ -118,15 +121,15 @@ def _generate_notification_for_incoming_match(response_from_matchbox, incoming_r
 
         Thank you for using the matchbox system for the Matchmaker Exchange at the Broad Center for Mendelian Genomics. 
         Our website can be found at https://seqr.broadinstitute.org/matchmaker/matchbox and our legal disclaimers can 
-        be found found at https://seqr.broadinstitute.org/matchmaker/disclaimer. """.format(
+        be found found at https://seqr.broadinstitute.org/matchmaker/disclaimer.""".format(
             query_institution=institution,
             number_of_results=len(results_from_matchbox),
-            incoming_query_genes=' ,'.join(sorted([gene['geneSymbol'] for gene in genes_by_id.values()])),
+            incoming_query_genes=', '.join(sorted([gene['geneSymbol'] for gene in genes_by_id.values()])),
             incoming_query_phenotypes=', '.join(['{} ({})'.format(hpo_id, term) for hpo_id, term in hpo_terms_by_id.items()]),
             incoming_query_contact_url=contact_href,
             incoming_query_contact_name=incoming_patient['patient']['contact'].get('name', '(sorry I was not able to read the information given for name'),
             match_results='\n'.join(match_results),
-            email_addresses_alert_sent_to=' ,'.join(emails),
+            email_addresses_alert_sent_to=', '.join(emails),
         )
 
         post_to_slack(MME_SLACK_MATCH_NOTIFICATION_CHANNEL, message)

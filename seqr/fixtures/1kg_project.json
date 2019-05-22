@@ -17,6 +17,7 @@
     "genome_version": "38",
 	"is_mme_enabled": false,
 	"mme_primary_data_owner": "PI",
+    "mme_contact_url": "mailto:test@broadinstitute.org",
 	"last_accessed_date": "2017-09-15T18:15:50.827Z",
 	"deprecated_project_id": "1kg",
 	"custom_reference_populations": []
@@ -61,6 +62,7 @@
 	"phenotips_user_id": "",
 	"is_mme_enabled": false,
 	"mme_primary_data_owner": "",
+    "mme_contact_url": "mailto:seqr-test@gmail.com,test@broadinstitute.org",
 	"last_accessed_date": "2017-09-15T18:15:50.827Z",
 	"deprecated_project_id": "",
 	"custom_reference_populations": []
@@ -373,7 +375,7 @@
         "sex": "M",
         "affected": "A",
         "display_name": "",
-	"notes": "",
+        "notes": "",
         "case_review_status": "I",
         "case_review_status_last_modified_date": "2017-03-12T22:34:43.204Z",
         "case_review_status_last_modified_by": null,
@@ -382,8 +384,9 @@
         "phenotips_eid": "20161012_131013_744125_NA19675",
         "phenotips_data": "{\"features\": [{\"observed\": \"no\", \"category\": \"HP:0001626\", \"type\": \"phenotype\", \"id\": \"HP:0011675\", \"label\": \"Arrhythmia\"}, {\"observed\": \"no\", \"category\": \"HP:0001626\", \"type\": \"phenotype\", \"id\": \"HP:0001674\", \"label\": \"Complete atrioventricular canal defect\"}, {\"observed\": \"yes\", \"category\": \"HP:0001626\", \"type\": \"phenotype\", \"id\": \"HP:0001631\", \"label\": \"Defect in the atrial septum\"}, {\"observed\": \"no\", \"category\": \"HP:0001507\", \"type\": \"phenotype\", \"id\": \"HP:0001508\", \"label\": \"Failure to thrive\"}, {\"observed\": \"yes\", \"category\": \"HP:0000707\", \"type\": \"phenotype\", \"id\": \"HP:0002011\", \"label\": \"Morphological abnormality of the central nervous system\"}, {\"observed\": \"yes\", \"category\": \"HP:0001626\", \"type\": \"phenotype\", \"id\": \"HP:0001636\", \"label\": \"Tetralogy of Fallot\"}], \"links\": {\"href\": \"http://localhost:8080/rest/patients/P0000001\", \"rel\": \"self\"}, \"nonstandard_features\": [], \"sex\": \"M\", \"meta\": {\"hgnc_version\": \"2015-08-09T17:45:23.025Z\", \"hgncRemote_version\": \"2017-03-12T05:50:28.721Z\", \"hpo_version\": \"releases/2015-09-15\", \"phenotips_version\": \"1.2.6\", \"omim_version\": \"2015-10-07T18:26:19.654Z\"}, \"specificity\": {\"date\": \"2017-03-13T09:07:49.711Z\", \"score\": 0.7296054396830466, \"server\": \"local-omim\"}, \"last_modification_date\": \"2017-03-13T09:06:58.000Z\", \"id\": \"P0000001\", \"ethnicity\": {\"maternal_ethnicity\": [\"Azerbaijanis\"], \"paternal_ethnicity\": [\"African Americans\"]}, \"family_history\": {\"consanguinity\": true, \"affectedRelatives\": false}, \"rejectedGenes\": [{\"gene\": \"IKBKAP\", \"comments\": \"comments IKBKAP\"}, {\"gene\": \"CCDC102B\", \"comments\": \"comments for CCDC102B\"}], \"date_of_birth\": \"\", \"life_status\": \"alive\", \"reporter\": \"1kg\", \"genes\": [{\"gene\": \"EHBP1L1\", \"comments\": \"comments EHBP1L1\"}, {\"gene\": \"ACY3\", \"comments\": \"comments ACY3\"}], \"date_of_death\": \"\", \"prenatal_perinatal_phenotype\": {\"prenatal_phenotype\": [], \"negative_prenatal_phenotype\": []}, \"prenatal_perinatal_history\": {}, \"date\": \"2017-03-13T02:38:25.000Z\", \"clinicalStatus\": {\"clinicalStatus\": \"affected\"}, \"report_id\": \"P0000001\", \"global_age_of_onset\": [{\"id\": \"HP:0003581\", \"label\": \"Adult onset\"}], \"last_modified_by\": \"1kg\", \"solved\": {\"status\": \"unsolved\"}, \"contact\": {\"user_id\": \"1kg\", \"name\": \"1kg\", \"email\": \"harindra@broadinstitute.org\"}, \"external_id\": \"20161012_131013_744125_NA19675\"}",
         "mme_id": null,
-        "mme_submitted_data": null
-    }
+        "mme_submitted_data": {"patient": {"id": "NA19675_1_01", "label": "NA19675_1", "contact": {"href": "mailto:matchmaker@broadinstitute.org", "name": "Sam Baxter", "institution": "Broad Center for Mendelian Genomics"}, "species": "NCBITaxon:9606", "features": [{"id": "HP:0000286", "label": "Epicanthus", "observed": "yes"}, {"id": "HP:0000316", "label": "Hypertelorism", "observed": "yes"}, {"id": "HP:0000358", "label": "Posteriorly rotated ears", "observed": "yes"}, {"id": "HP:0000455", "label": "Broad nasal tip", "observed": "yes"}, {"id": "HP:0000490", "label": "Deeply set eye", "observed": "yes"}, {"id": "HP:0000582", "label": "Upslanted palpebral fissure", "observed": "yes"}, {"id": "HP:0000592", "label": "Blue sclerae", "observed": "yes"}, {"id": "HP:0001252", "label": "Muscular hypotonia", "observed": "yes"}, {"id": "HP:0001263", "label": "Global developmental delay", "observed": "yes"}, {"id": "HP:0002187", "label": "Intellectual disability", "observed": " profound"}, {"id": "HP:0002521", "label": "Hypsarrhythmia", "observed": "yes"}, {"id": "HP:0002557", "label": "Hypoplastic nipples", "observed": "yes"}, {"id": "HP:0002562", "label": "Low-set nipples", "observed": "yes"}, {"id": "HP:0006610", "label": "Wide intermamillary distance", "observed": "yes"}, {"id": "HP:0011197", "label": "EEG with focal spike waves", "observed": "yes"}, {"id": "HP:0011436", "label": "Abnormal maternal serum screening", "observed": "yes"}, {"id": "HP:0012420", "label": "Meconium stained amniotic fluid", "observed": "yes"}, {"id": "HP:0012469", "label": "Infantile spasms", "observed": "yes"}], "genomicFeatures": [{"gene": {"id": "ENSG00000119669"}, "variant": {"end": 77027548, "start": 77027549, "_share": true, "assembly": "GRCh38", "referenceName": "14", "alternateBases": "C", "referenceBases": "CCACT"}, "zygosity": 1}]}},
+    "mme_submitted_date": "2018-05-23T09:07:49.719Z"
+}
 },
 {
     "model": "seqr.individual",
@@ -760,7 +763,8 @@
         "phenotips_eid": "20161012_131013_859533_NA20885",
         "phenotips_data": "{\"life_status\": \"alive\", \"links\": {\"href\": \"http://localhost:8080/rest/patients/P0000015\", \"rel\": \"self\"}, \"solved\": {\"status\": \"unsolved\"}, \"reporter\": \"1kg\", \"last_modified_by\": \"1kg\", \"sex\": \"M\", \"last_modification_date\": \"2017-03-13T02:38:39.000Z\", \"prenatal_perinatal_phenotype\": {\"prenatal_phenotype\": [], \"negative_prenatal_phenotype\": []}, \"contact\": {\"user_id\": \"1kg\", \"name\": \"1kg\", \"email\": \"harindra@broadinstitute.org\"}, \"meta\": {\"hgnc_version\": \"2015-08-09T17:45:23.025Z\", \"hgncRemote_version\": \"2017-03-12T05:50:28.721Z\", \"hpo_version\": \"releases/2015-09-15\", \"phenotips_version\": \"1.2.6\", \"omim_version\": \"2015-10-07T18:26:19.654Z\"}, \"prenatal_perinatal_history\": {}, \"specificity\": {\"date\": \"2017-03-13T09:01:53.748Z\", \"score\": 0.0, \"server\": \"monarchinitiative.org\"}, \"date\": \"2017-03-13T02:38:37.000Z\", \"clinicalStatus\": {\"clinicalStatus\": \"affected\"}, \"external_id\": \"20161012_131013_859533_NA20885\", \"id\": \"P0000015\", \"ethnicity\": {\"maternal_ethnicity\": [], \"paternal_ethnicity\": []}, \"report_id\": \"P0000015\"}",
         "mme_id": null,
-        "mme_submitted_data": null
+        "mme_submitted_date": "2019-02-05T06:42:55.397Z",
+        "mme_submitted_data": {"patient": {"id": "NA20885", "label": "NA20885", "contact": {"href": "mailto:matchmaker@broadinstitute.org", "name": "Samantha Baxter", "institution": "Broad Center for Mendelian Genomics"}, "species": "NCBITaxon:9606", "features": [{"id": "HP:0001249", "label": "Intellectual disability", "observed": "yes"}, {"id": "HP:0001252", "label": "Muscular hypotonia", "observed": "yes"}, {"id": "HP:0000505", "label": "Visual impairment", "observed": "yes"}], "genomicFeatures": [{"gene": {"id": "ENSG00000277258"}, "variant": {"end": 38739601, "start": 38739601, "assembly": "GRCh38", "referenceName": "17", "alternateBases": "A", "referenceBases": "G"}, "zygosity": 1}]}}
     }
 },
 {

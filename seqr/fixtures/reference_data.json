@@ -1140,5 +1140,31 @@
         "zebrafish_phenotype_quality": "",
         "zebrafish_phenotype_tag": ""
     }
+},
+{
+    "model": "reference_data.humanphenotypeontology",
+    "pk": 1,
+    "fields": {
+        "hpo_id": "HP:0002017",
+        "parent_id": "HP:0011458",
+        "category_id": "HP:0025031",
+        "is_category": "f",
+        "name": "Nausea and vomiting",
+        "definition": "",
+        "comment": ""
+    }
+},
+{
+    "model": "reference_data.humanphenotypeontology",
+    "pk": 2,
+    "fields": {
+        "hpo_id": "HP:0003273",
+        "parent_id": "HP:0008800",
+        "category_id": "HP:0000924",
+        "is_category": "f",
+        "name": "Hip contracture",
+        "definition": "",
+        "comment": ""
+    }
 }
 ]
