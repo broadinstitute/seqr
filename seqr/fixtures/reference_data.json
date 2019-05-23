@@ -1158,6 +1158,45 @@
     "model": "reference_data.humanphenotypeontology",
     "pk": 2,
     "fields": {
+        "hpo_id": "HP:0012469",
+        "parent_id": "",
+        "category_id": "HP:0025031",
+        "is_category": "f",
+        "name": "Infantile spasms",
+        "definition": "",
+        "comment": ""
+    }
+},
+{
+    "model": "reference_data.humanphenotypeontology",
+    "pk": 3,
+    "fields": {
+        "hpo_id": "HP:0001252",
+        "parent_id": "",
+        "category_id": "HP:0025031",
+        "is_category": "f",
+        "name": "Muscular hypotonia",
+        "definition": "",
+        "comment": ""
+    }
+},
+{
+    "model": "reference_data.humanphenotypeontology",
+    "pk": 4,
+    "fields": {
+        "hpo_id": "HP:0001263",
+        "parent_id": "",
+        "category_id": "HP:0025031",
+        "is_category": "f",
+        "name": "Global developmental delay",
+        "definition": "",
+        "comment": ""
+    }
+},
+{
+    "model": "reference_data.humanphenotypeontology",
+    "pk": 5,
+    "fields": {
         "hpo_id": "HP:0003273",
         "parent_id": "HP:0008800",
         "category_id": "HP:0000924",

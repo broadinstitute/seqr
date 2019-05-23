@@ -19,7 +19,7 @@ def _check_login(test_case, url):
     test_case.client.force_login(test_user)
 
 
-def create_proxy_request_stub(response_status=200, reason="OK", content='text content'):
+def create_proxy_request_stub(response_status=200, reason="OK"):
 
     """Factory for creating a PhenoTips mock function to replace _send_request_to_phenotips.
     This allows unit tests to be decoupled from communicating with PhenoTips.
@@ -33,7 +33,7 @@ def create_proxy_request_stub(response_status=200, reason="OK", content='text co
         """Function that stubs out sending a request to PhenoTips."""
 
         http_response = HttpResponse(
-            content=content,
+            content='text content',
             status=response_status,
             reason=reason,
             charset='UTF-8'

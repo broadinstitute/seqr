@@ -5,7 +5,7 @@ from datetime import datetime
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 
-from reference_data.models import HumanPhenotypeOntology, GENOME_VERSION_CHOICES
+from reference_data.models import HumanPhenotypeOntology
 
 from seqr.models import Individual, MatchmakerResult
 from seqr.model_utils import update_seqr_model
@@ -17,14 +17,10 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_model
 from seqr.views.utils.permissions_utils import check_permissions
 
-from settings import MME_HEADERS, MME_LOCAL_MATCH_URL, SEQR_HOSTNAME_FOR_SLACK_POST,  \
+from settings import MME_HEADERS, MME_LOCAL_MATCH_URL, MME_EXTERNAL_MATCH_URL, SEQR_HOSTNAME_FOR_SLACK_POST,  \
     MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL, MME_ADD_INDIVIDUAL_URL, MME_DELETE_INDIVIDUAL_URL
 
 logger = logging.getLogger(__name__)
-
-GENOME_VERSION_LOOKUP = {}
-for v, k in GENOME_VERSION_CHOICES:
-    GENOME_VERSION_LOOKUP[k] = v
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -67,20 +63,26 @@ def search_individual_mme_matches(request, individual_guid):
 def _search_individual_matches(individual, user):
     patient_data = individual.mme_submitted_data
     if not patient_data:
-        create_json_response(
+        return create_json_response(
             {}, status=404, reason='No matchmaker submission found for {}'.format(individual.individual_id),
         )
 
     local_result = requests.post(url=MME_LOCAL_MATCH_URL, headers=MME_HEADERS, data=json.dumps(patient_data))
     if local_result.status_code != 200:
-        create_json_response(local_result.json(), status=local_result.status_code, reason='Error in local match')
+        try:
+            response_json = local_result.json()
+        except Exception:
+            response_json = {}
+        return create_json_response(response_json, status=local_result.status_code, reason='Error in local match')
+    external_result = requests.post(url=MME_EXTERNAL_MATCH_URL, headers=MME_HEADERS, data=json.dumps(patient_data))
+    if external_result.status_code != 200:
+        try:
+            response_json = external_result.json()
+        except Exception:
+            response_json = {}
+        return create_json_response(response_json, status=external_result.status_code, reason='Error in external match')
 
-    # external_result = requests.post(url=MME_EXTERNAL_MATCH_URL, headers=MME_HEADERS, data=json.dumps(patient_data))
-    # if external_result.status_code != 200:
-    #     create_json_response(external_result.json(), status=external_result.status_code, reason='Error in external match')
-    #
-    # results = local_result.json()['results'] + external_result.json()['results']
-    results = local_result.json()['results']
+    results = local_result.json()['results'] + external_result.json()['results']
 
     saved_results = {
         result.result_data['patient']['id']: result for result in MatchmakerResult.objects.filter(individual=individual)
@@ -277,7 +279,6 @@ def _parse_mme_result(result, hpo_terms_by_id, gene_symbols_to_ids):
     parsed_result.update({
         'id': result['patient']['id'],
         'score': result['score']['patient'],
-        'matchStatus': result['matchStatus'],
     })
     return parsed_result
 
@@ -297,13 +298,12 @@ def parse_mme_patient(result, hpo_terms_by_id, gene_symbols_to_ids):
         gene_variant = {'geneId': gene_id}
         if gene_id:
             if gene_feature.get('variant'):
-                assembly = gene_feature['variant'].get('assembly')
                 gene_variant.update({
                     'alt': gene_feature['variant'].get('alternateBases'),
                     'ref': gene_feature['variant'].get('referenceBases'),
                     'chrom': gene_feature['variant'].get('referenceName'),
                     'pos': gene_feature['variant'].get('start'),
-                    'genomeVersion': GENOME_VERSION_LOOKUP.get(assembly, assembly),
+                    'genomeVersion':  gene_feature['variant'].get('assembly'),
                 })
             gene_variants.append(gene_variant)
 
@@ -347,12 +347,12 @@ def _generate_slack_notification_for_seqr_match(individual, results):
             gene_message=gene_message, phenotypes_message=phenotypes_message,
         ))
 
-    message = """
+    message = u"""
     A search from a seqr user from project {project} individual {individual_id} had the following new match(es):
     
     {matches}
     
-    {host}/project/{project_guid}/family_page/{family_guid}/matchmaker_exchange
+    {host}/{project_guid}/family_page/{family_guid}/matchmaker_exchange
     """.format(
         project=individual.family.project.name, individual_id=individual.individual_id, matches='\n\n'.join(matches),
         host=SEQR_HOSTNAME_FOR_SLACK_POST, project_guid=individual.family.project.guid, family_guid=individual.family.guid,
