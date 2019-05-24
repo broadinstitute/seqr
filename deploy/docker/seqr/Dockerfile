@@ -62,14 +62,6 @@ RUN echo 'deb http://apt.postgresql.org/pub/repos/apt/ jessie-pgdg main' >> /etc
 RUN apt-get update && apt-get install -y \
     redis-tools
 
-# set up mounted bucket for easier backups, etc.
-RUN GCSFUSE_REPO=gcsfuse-$(lsb_release -c -s) \
-    && echo "deb http://packages.cloud.google.com/apt $GCSFUSE_REPO main" | tee /etc/apt/sources.list.d/gcsfuse.list \
-    && curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - \
-    && apt-get update \
-    && apt-get install -y gcsfuse \
-    && mkdir /mounted-bucket
-
 # install gcloud tools
 RUN CLOUDSDK_CORE_DISABLE_PROMPTS=1 \
     && curl https://sdk.cloud.google.com | bash \

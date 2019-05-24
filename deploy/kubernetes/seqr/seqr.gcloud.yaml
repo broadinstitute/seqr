@@ -58,13 +58,6 @@ spec:
           readOnly: true
         - name: seqr-static-files
           mountPath: /seqr_static_files
-        lifecycle:
-          postStart:
-            exec:
-              command: ["gcsfuse", "-o", "nonempty", {{ SEQR_POD_MOUNTED_BUCKET }}, "/mounted-bucket"]
-          preStop:
-            exec:
-              command: ["fusermount", "-u", "/mounted-bucket"]
         resources:
           requests:
             memory: "0.5Gi"

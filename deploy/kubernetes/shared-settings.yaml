@@ -8,8 +8,6 @@ ELASTICSEARCH_DISK_SIZE: 200  # used when creating the GKE cluster on gcloud dep
 
 NUM_NODES_PER_NODE_POOL: 4    # used when creating nodes for gcloud deployments
 
-SEQR_POD_MOUNTED_BUCKET: seqr-mounted-bucket   # name of the private google bucket (for example: gs://seqr-mounted-bucket) mounted into the seqr pod and used for easily saving postgres backups, etc.
-
 GUNICORN_WORKER_THREADS: 4    # number of webserver threads
 
 ###########################################################
