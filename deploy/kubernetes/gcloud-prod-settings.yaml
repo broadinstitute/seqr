@@ -22,6 +22,8 @@ GCLOUD_ZONE: 'us-central1-b'
 
 SEQR_GIT_BRANCH: 'master'
 
+ENABLE_DATABASE_BACKUPS: true
+
 GUNICORN_WORKER_THREADS: 20    # number of webserver threads
 
 SEQR_POD_MEMORY_LIMIT: 35Gi
