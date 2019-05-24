@@ -140,6 +140,10 @@ spec:
           value: "{{ SEQR_GIT_BRANCH }}"
         - name: BASE_URL
           value: "{{ BASE_URL }}"
+        - name: DATABASE_BACKUP_BUCKET
+          value: "{{ DATABASE_BACKUP_BUCKET }}"
+        - name: ENABLE_DATABASE_BACKUPS
+          value: "{{ ENABLE_DATABASE_BACKUPS }}"
         readinessProbe:
           exec:
             command:
