@@ -23,6 +23,7 @@ GCLOUD_ZONE: 'us-central1-b'
 SEQR_GIT_BRANCH: 'master'
 
 ENABLE_DATABASE_BACKUPS: true
+DATABASE_BACKUP_BUCKET: seqr-backups
 
 GUNICORN_WORKER_THREADS: 20    # number of webserver threads
 

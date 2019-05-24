@@ -12,6 +12,7 @@ class Command(BaseCommand):
     help = 'Run database backups.'
 
     def add_arguments(self, parser):
+        parser.add_argument('--bucket', required=True)
         parser.add_argument('--deployment-type', default='unknown')
 
     def handle(self, *args, **options):
@@ -34,6 +35,6 @@ class Command(BaseCommand):
             run("/usr/bin/pg_dump -U postgres {exclude_table_arg} {db_name} | gzip -c - > {backup_dir}/{backup_filename}".format(
                 exclude_table_arg=exclude_table_arg, db_name=db_name, backup_dir=backup_dir, backup_filename=backup_filename
             ))
-            run("gsutil mv {backup_dir}/{backup_filename} gs://seqr-backups/postgres/{backup_filename}".format(
+            run("gsutil mv {backup_dir}/{backup_filename} gs://{bucket}/postgres/{backup_filename}".format(
                 backup_dir=backup_dir, backup_filename=backup_filename, bucket=args['bucket']
             ))
