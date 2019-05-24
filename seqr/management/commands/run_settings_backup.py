@@ -9,7 +9,7 @@ def run(cmd):
 
 
 class Command(BaseCommand):
-    help = 'Create a new user.'
+    help = 'Run settings backups.'
 
     def add_arguments(self, parser):
         parser.add_argument('--deployment-type', default='unknown')
