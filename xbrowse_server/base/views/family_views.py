@@ -24,12 +24,10 @@ from xbrowse_server.base.models import Project, Family, FamilySearchFlag, Projec
 from xbrowse_server.decorators import log_request
 from xbrowse_server.base.lookups import get_saved_variants_for_family
 from xbrowse_server.api.utils import add_extra_info_to_variants_project
-from xbrowse_server import json_displays
 from xbrowse_server import sample_management
 from xbrowse_server.mall import get_reference, get_datastore, get_coverage_store
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
-from xbrowse_server.matchmaker.utilities import find_latest_family_member_submissions
 
 import logging
 

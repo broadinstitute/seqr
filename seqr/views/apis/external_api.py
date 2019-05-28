@@ -61,7 +61,7 @@ def mme_match_proxy(request):
         try:
             _generate_notification_for_incoming_match(response, request, query_patient_data)
         except Exception:
-            pass
+            logger.error('Unable to create slack notification for incoming MME match request')
     return response
 
 
@@ -103,7 +103,7 @@ def _generate_notification_for_incoming_match(response_from_matchbox, incoming_r
             match_results.append(result_text)
             emails.update([i for i in project.mme_contact_url.replace('mailto:', '').split(',')])
 
-        message = u"""Dear collaborators, 
+        message = u"""Dear collaborators,
 
         matchbox found a match between a patient from {query_institution} and the following {number_of_results} case(s) 
         in matchbox. The following information was included with the query,

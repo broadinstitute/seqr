@@ -1226,7 +1226,6 @@ def add_individual(request):
     """
     affected_patient =  json.loads(request.POST.get("patient_data", "wasn't able to parse patient_data in POST!"))
     seqr_id =  request.POST.get("localId", "wasn't able to parse Id (as seqr knows it) in POST!")
-    family_id = request.POST.get("familyId", "wasn't able to parse family Id in POST!")
     project_id =  request.POST.get("projectId", "wasn't able to parse project Id in POST!")
     
     project = get_object_or_404(Project, project_id=project_id)

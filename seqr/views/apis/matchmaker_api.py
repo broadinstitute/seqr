@@ -201,7 +201,7 @@ def delete_mme_submission(request, individual_guid):
     if response.status_code != 200:
         try:
             response_json = response.json()
-        except:
+        except Exception:
             response_json = {}
         return create_json_response(response_json, status=response.status_code, reason=response.content)
 

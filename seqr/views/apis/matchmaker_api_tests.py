@@ -214,13 +214,13 @@ class VariantSearchAPITest(TestCase):
                     'genomicFeatures': [{
                         'gene': {'id': 'ENSG00000186092'},
                         'variant': {
-                            'end': 77027548, 
-                            'start': 77027549, 
-                            'assembly': 'GRCh38', 
-                            'referenceName': '14', 
-                            'alternateBases': 'C', 
+                            'end': 77027548,
+                            'start': 77027549,
+                            'assembly': 'GRCh38',
+                            'referenceName': '14',
+                            'alternateBases': 'C',
                             'referenceBases': 'CCACT'
-                        }, 
+                        },
                         'zygosity': 1
                     }],
                 },
@@ -251,7 +251,7 @@ class VariantSearchAPITest(TestCase):
         )
 
         # Test proxy calls
-        assert len(responses.calls) == 3
+        self.assertEqual(len(responses.calls), 3)
         expected_body = json.dumps({
             'patient': {
                 'id': 'NA19675_1_01',
@@ -405,7 +405,7 @@ class VariantSearchAPITest(TestCase):
         self.assertListEqual(response_json['genesById'].keys(), ['ENSG00000186092'])
 
         # Test proxy calls
-        assert len(responses.calls) == 4
+        self.assertEqual(len(responses.calls), 4)
         expected_body = {
             'patient': {
                 'id': 'HG00733',
@@ -497,7 +497,7 @@ class VariantSearchAPITest(TestCase):
         self.assertEqual(project.mme_contact_url, 'mailto:test@broadinstitute.org,matchmaker@broadinstitute.org')
 
         # Test proxy calls
-        assert len(responses.calls) == 7
+        self.assertEqual(len(responses.calls), 7)
         expected_body = {
             'patient': {
                 'id': 'HG00733',
@@ -541,7 +541,7 @@ class VariantSearchAPITest(TestCase):
         )
 
         # Test proxy calls
-        assert len(responses.calls) == 2
+        self.assertEqual(len(responses.calls), 2)
         self.assertEqual(responses.calls[1].request.url, 'http://localhost:9020/patient/delete')
         self.assertEqual(responses.calls[1].request.headers['X-Auth-Token'], 'abcd')
         self.assertEqual(responses.calls[1].request.headers['Accept'], 'application/vnd.ga4gh.matchmaker.v1.0+json')
