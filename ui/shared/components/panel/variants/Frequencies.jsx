@@ -132,9 +132,7 @@ const Frequencies = ({ variant }) => {
         header="Allele Counts"
         content={
           <div>
-            {POPULATIONS.filter(
-              pop => populations[pop.field].ac !== null || populations[pop.field].an !== null,
-            ).map(pop =>
+            {POPULATIONS.filter(pop => populations[pop.field].ac).map(pop =>
               <div key={pop.field}>{pop.fieldTitle}: {populations[pop.field].ac} out of {populations[pop.field].an}</div>,
             )}
           </div>
