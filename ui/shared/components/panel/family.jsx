@@ -8,7 +8,6 @@ import styled from 'styled-components'
 import { updateFamily } from 'redux/rootReducer'
 import { getProjectsByGuid, getFirstSampleByFamily } from 'redux/selectors'
 import VariantTagTypeBar from '../graph/VariantTagTypeBar'
-import ShowMatchmakerModal from '../buttons/ShowMatchmakerModal'
 import PedigreeImagePanel from './view-pedigree-image/PedigreeImagePanel'
 import TextFieldView from './view-fields/TextFieldView'
 import Sample from './sample'
@@ -208,7 +207,11 @@ const Family = (
         <VerticalSpacer height={20} />
         <SearchLink project={project} family={family}><Icon name="search" /> Variant Search</SearchLink>
         <VerticalSpacer height={10} />
-        {project.isMmeEnabled && <ShowMatchmakerModal family={family} />}
+        {project.isMmeEnabled &&
+          <Link to={`/project/${project.projectGuid}/family_page/${family.familyGuid}/matchmaker_exchange`}>
+            MatchMaker Exchange
+          </Link>
+        }
       </div> : null,
   ] : null
 

@@ -20,7 +20,6 @@ const REQUEST_PROJECT_DETAILS = 'REQUEST_PROJECT_DETAILS'
 const REQUEST_SAVED_VARIANTS = 'REQUEST_SAVED_VARIANTS'
 const RECEIVE_SAVED_VARIANT_FAMILIES = 'RECEIVE_SAVED_VARIANT_FAMILIES'
 const REQUEST_MME_MATCHES = 'REQUEST_MME_MATCHES'
-const REQUEST_MONARCH_MATCHES = 'REQUEST_MONARCH_MATCHES'
 const REQUEST_USERS = 'REQUEST_USERS'
 const RECEIVE_USERS = 'RECEIVE_USERS'
 
@@ -212,46 +211,33 @@ export const updateAnalysisGroup = (values) => {
   return updateEntity(values, RECEIVE_DATA, `/api/project/${values.projectGuid}/analysis_groups`, 'analysisGroupGuid')
 }
 
-export const loadMmeMatches = (submission, matchSource) => {
+export const loadMmeMatches = (individualGuid, search) => {
   return (dispatch, getState) => {
     const state = getState()
-    const currentProject = state.projectsByGuid[state.currentProjectGuid]
-    const individualSubmission = state.matchmakerSubmissions[currentProject.projectGuid][submission.individualId]
-    const matchKey = `${matchSource || 'mme'}Match`
-    if (!individualSubmission || !individualSubmission[matchKey]) {
-      dispatch({ type: matchSource === 'monarch' ? REQUEST_MONARCH_MATCHES : REQUEST_MME_MATCHES })
-      const searchPath = matchSource === 'monarch' ? 'match_in_open_mme_sources' : 'match_internally_and_externally'
-      new HttpRequestHelper(`/api/matchmaker/${searchPath}/project/${currentProject.deprecatedProjectId}/individual/${submission.individualId}`,
+    const individual = state.individualsByGuid[individualGuid]
+    if (!individual.mmeResults || search) {
+      dispatch({ type: REQUEST_MME_MATCHES })
+      new HttpRequestHelper(`/api/matchmaker/${search ? 'search' : 'get'}_mme_matches/${individual.individualGuid}`,
         (responseJson) => {
           dispatch({
             type: RECEIVE_DATA,
-            updatesById: {
-              matchmakerSubmissions: {
-                [currentProject.projectGuid]: {
-                  [submission.individualId]: { ...individualSubmission, [matchKey]: responseJson },
-                },
-              },
-            },
+            updatesById: responseJson,
           })
         },
         (e) => {
           dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
         },
-      ).postForm({ patient_data: submission.submittedData })
+      ).get()
     }
   }
 }
 
-export const deleteMmePatient = (individual) => {
-  return (dispatch, getState) => {
-    const state = getState()
-    const currentProject = state.projectsByGuid[state.currentProjectGuid]
-    return new HttpRequestHelper(
-      `/api/matchmaker/project/${currentProject.deprecatedProjectId}/individual/${individual.individualId}/delete`,
-      () => {},
-      (e) => { throw e },
-    ).get()
-  }
+export const updateMmeSubmission = (values) => {
+  return updateEntity(values, RECEIVE_DATA, '/api/matchmaker/submission', 'individualGuid')
+}
+
+export const updateMmeSubmissionStatus = (values) => {
+  return updateEntity(values, RECEIVE_DATA, '/api/matchmaker/result_status', 'matchmakerResultGuid')
 }
 
 // Table actions
@@ -268,7 +254,6 @@ export const reducers = {
   projectSavedVariantsLoading: loadingReducer(REQUEST_SAVED_VARIANTS, RECEIVE_DATA),
   projectSavedVariantFamilies: createSingleObjectReducer(RECEIVE_SAVED_VARIANT_FAMILIES),
   matchmakerMatchesLoading: loadingReducer(REQUEST_MME_MATCHES, RECEIVE_DATA),
-  monarchMatchesLoading: loadingReducer(REQUEST_MONARCH_MATCHES, RECEIVE_DATA),
   usersByUsername: createSingleValueReducer(RECEIVE_USERS, {}),
   userOptionsLoading: loadingReducer(REQUEST_USERS, RECEIVE_USERS),
   familyTableState: createSingleObjectReducer(UPDATE_FAMILY_TABLE_STATE, {

@@ -53,7 +53,7 @@ def _parse_parent_field(json, individual, parent_key, parent_id_key):
 
 
 def update_model_from_json(model_obj, json, user=None, verbose=False, allow_unknown_keys=False, immutable_keys=None, conditional_edit_keys=None):
-    immutable_keys = (immutable_keys or []) + ['created_by', 'created_date', 'last_modified_date']
+    immutable_keys = (immutable_keys or []) + ['created_by', 'created_date', 'last_modified_date', 'id']
     seqr_update_fields = {}
     internal_fields = model_obj._meta.internal_json_fields if hasattr(model_obj._meta, 'internal_json_fields') else []
 
@@ -71,7 +71,7 @@ def update_model_from_json(model_obj, json, user=None, verbose=False, allow_unkn
             if conditional_edit_keys and orm_key in conditional_edit_keys:
                 conditional_edit_keys[orm_key](model_obj)
             if verbose:
-                model_obj_name = getattr(model_obj, 'guid', model_obj.__name__)
+                model_obj_name = getattr(model_obj, 'guid', None) or model_obj.__name__
                 logger.info("Setting {0}.{1} to {2}".format(model_obj_name, orm_key, value))
             seqr_update_fields[orm_key] = value
 

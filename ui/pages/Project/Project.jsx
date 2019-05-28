@@ -10,6 +10,8 @@ import ProjectPageUI from './components/ProjectPageUI'
 import CaseReview from './components/CaseReview'
 import FamilyPage from './components/FamilyPage'
 import SavedVariants from './components/SavedVariants'
+import Matchmaker from './components/Matchmaker'
+
 
 // TODO shared 404 component
 const Error404 = () => (<Header size="huge" textAlign="center">Error 404: Page Not Found</Header>)
@@ -42,6 +44,7 @@ class Project extends React.Component
           <Route path={`${this.props.match.url}/project_page`} component={ProjectPageUI} />
           <Route path={`${this.props.match.url}/case_review`} component={CaseReview} />
           <Route path={`${this.props.match.url}/analysis_group/:analysisGroupGuid`} component={ProjectPageUI} />
+          <Route path={`${this.props.match.url}/family_page/:familyGuid/matchmaker_exchange`} component={Matchmaker} />
           <Route path={`${this.props.match.url}/family_page/:familyGuid`} component={FamilyPage} />
           <Route path={`${this.props.match.url}/saved_variants`} component={SavedVariants} />
           <Route component={() => <Error404 />} />

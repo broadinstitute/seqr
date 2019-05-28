@@ -88,9 +88,4 @@ urlpatterns = [
     url(r'^matchmaker/result_tracking/match_state_update/project/(?P<project_id>[\w|-]+)/match_id/(?P<match_id>[\w:|-]+)/individual/(?P<indiv_id>[\w|-]+)$', xbrowse_server.api.views.match_state_update, name='match_state_update'),
     url(r'^matchmaker/result_tracking/current_match_state$', xbrowse_server.api.views.get_current_match_state_of_all_results, name='get_current_match_state_of_all_results'),
     url(r'^matchmaker/result_tracking/current_match_state/project/(?P<project_id>[\w|-]+)/match_id/(?P<match_id>[\w:|-]+)/individual/(?P<indiv_id>[\w|-]+)$', xbrowse_server.api.views.get_current_match_state, name='get_current_match_state'),
-    
-    #matchmaker public facing MME spec'ed match URL
-    url(r'^matchmaker/v1/match$', xbrowse_server.api.views.match, name='match'),
-    url(r'^matchmaker/v1/metrics$', xbrowse_server.api.views.get_public_metrics, name='match'),
-   
 ]

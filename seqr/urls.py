@@ -70,6 +70,13 @@ from seqr.views.apis.locus_list_api import \
     add_project_locus_lists, \
     delete_project_locus_lists
 
+from seqr.views.apis.matchmaker_api import \
+    get_individual_mme_matches, \
+    search_individual_mme_matches, \
+    update_mme_submission, \
+    delete_mme_submission, \
+    update_mme_result_status
+
 from seqr.views.apis.variant_search_api import \
     query_variants_handler, \
     query_single_variant_handler, \
@@ -88,7 +95,13 @@ from seqr.views.apis.users_api import \
     set_password, \
     create_staff_user
 
-from seqr.views.apis.staff_api import anvil_export, discovery_sheet, get_projects_for_category, elasticsearch_status
+from seqr.views.apis.staff_api import \
+    anvil_export, \
+    discovery_sheet, \
+    get_projects_for_category, \
+    elasticsearch_status, \
+    mme_metrics_proxy, \
+    mme_submissions
 from seqr.views.pages.staff.komp_export import komp_export
 
 from seqr.views.apis.awesomebar_api import awesomebar_autocomplete_handler
@@ -97,6 +110,7 @@ from seqr.views.apis.igv_api import fetch_igv_track
 from seqr.views.apis.analysis_group_api import update_analysis_group_handler, delete_analysis_group_handler
 from seqr.views.apis.project_api import create_project_handler, update_project_handler, delete_project_handler
 from seqr.views.apis.project_categories_api import update_project_categories_handler
+from seqr.views.apis import external_api
 from seqr.views.utils.file_utils import save_temp_file
 
 react_app_pages = [
@@ -186,6 +200,12 @@ api_endpoints = {
     'project/(?P<project_guid>[^/]+)/add_locus_lists': add_project_locus_lists,
     'project/(?P<project_guid>[^/]+)/delete_locus_lists': delete_project_locus_lists,
 
+    'matchmaker/get_mme_matches/(?P<individual_guid>[\w.|-]+)': get_individual_mme_matches,
+    'matchmaker/search_mme_matches/(?P<individual_guid>[\w.|-]+)': search_individual_mme_matches,
+    'matchmaker/submission/(?P<individual_guid>[\w.|-]+)/update': update_mme_submission,
+    'matchmaker/submission/(?P<individual_guid>[\w.|-]+)/delete': delete_mme_submission,
+    'matchmaker/result_status/(?P<matchmaker_result_guid>[\w.|-]+)/update': update_mme_result_status,
+
     'users/get_all': get_all_collaborators,
     'users/(?P<username>[^/]+)/set_password': set_password,
     'users/create_staff_user': create_staff_user,
@@ -201,6 +221,13 @@ api_endpoints = {
     'staff/discovery_sheet/(?P<project_guid>[^/]+)': discovery_sheet,
     'staff/projects_for_category/(?P<project_category_name>[^/]+)': get_projects_for_category,
     'staff/elasticsearch_status': elasticsearch_status,
+    'staff/matchmaker_metrics': mme_metrics_proxy,
+    'staff/matchmaker_submissions': mme_submissions,
+
+    # EXTERNAL APIS: DO NOT CHANGE
+    # matchmaker public facing MME URLs
+    'matchmaker/v1/match': external_api.mme_match_proxy,
+    'matchmaker/v1/metrics': external_api.mme_metrics_proxy,
 
 }
 

@@ -24,12 +24,10 @@ from xbrowse_server.base.models import Project, Family, FamilySearchFlag, Projec
 from xbrowse_server.decorators import log_request
 from xbrowse_server.base.lookups import get_saved_variants_for_family
 from xbrowse_server.api.utils import add_extra_info_to_variants_project
-from xbrowse_server import json_displays
 from xbrowse_server import sample_management
 from xbrowse_server.mall import get_reference, get_datastore, get_coverage_store
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
-from xbrowse_server.matchmaker.utilities import find_latest_family_member_submissions
 
 import logging
 
@@ -108,18 +106,15 @@ def family_home(request, project_id, family_id):
     if not project.can_view(request.user):
         raise PermissionDenied
     else:
-        exported_to_matchmaker=None
-        submission_records=settings.SEQR_ID_TO_MME_ID_MAP.find({'project_id':project_id,'family_id':family_id}).sort('insertion_date',-1)
-        latest_submissions_from_family = find_latest_family_member_submissions(submission_records)
-        if len(latest_submissions_from_family)>0:
-            exported_to_matchmaker={}
-        for individual,submission in latest_submissions_from_family.iteritems():
-            was_deleted_on=None
-            was_deleted_by=None
-            if submission.has_key("deletion"):
-                was_deleted_on = submission['deletion']['date'].strftime('%d %b %Y')
-                was_deleted_by = submission['deletion']['by']
-            exported_to_matchmaker[individual] = {'insertion_date':submission['insertion_date'],'deletion_date':was_deleted_on, 'by':was_deleted_by}                  
+        exported_to_matchmaker={}
+        if family.seqr_family:
+            for individual in family.seqr_family.individual_set.filter(mme_submitted_date__isnull=False):
+                exported_to_matchmaker[individual.individual_id] = {
+                    'insertion_date': individual.mme_submitted_date,
+                    'deletion_date': individual.mme_deleted_date.strftime('%d %b %Y') if individual.mme_deleted_date else None,
+                    'by': individual.mme_deleted_by.get_full_name() if individual.mme_deleted_by else None,
+                }
+
         phenotips_supported=True
         if settings.PROJECTS_WITHOUT_PHENOTIPS is not None and project_id in settings.PROJECTS_WITHOUT_PHENOTIPS:
           phenotips_supported=False

@@ -1,5 +1,7 @@
 import orderBy from 'lodash/orderBy'
+import mapValues from 'lodash/mapValues'
 import { createSelector } from 'reselect'
+
 
 import { getSearchResults } from 'redux/utils/reduxSearchEnhancer'
 import {
@@ -14,6 +16,7 @@ import {
   FAMILY_FIELD_ID,
   INDIVIDUAL_FIELD_ID,
   FAMILY_FIELD_FIRST_SAMPLE,
+  SEX_LOOKUP,
   getVariantsExportData,
   latestSamplesLoaded,
   familySamplesLoaded,
@@ -23,6 +26,7 @@ import { toCamelcase, toSnakecase } from 'shared/utils/stringUtils'
 import {
   getProjectsByGuid, getFamiliesGroupedByProjectGuid, getIndividualsByGuid, getSamplesByGuid, getGenesById, getUser,
   getAnalysisGroupsGroupedByProjectGuid, getSavedVariantsByGuid, getFirstSampleByFamily, getSortedIndividualsByFamily,
+  getMmeResultsByGuid,
 } from 'redux/selectors'
 
 import {
@@ -51,6 +55,7 @@ const FAMILY_SORT_LOOKUP = FAMILY_SORT_OPTIONS.reduce(
 export const getProjectDetailsIsLoading = state => state.projectDetailsLoading.isLoading
 export const getProjectSavedVariantsIsLoading = state => state.projectSavedVariantsLoading.isLoading
 export const getProjectGuid = state => state.currentProjectGuid
+export const getMatchmakerMatchesLoading = state => state.matchmakerMatchesLoading.isLoading
 
 export const getProject = createSelector(
   getProjectsByGuid, getProjectGuid, (projectsByGuid, currentProjectGuid) => projectsByGuid[currentProjectGuid],
@@ -98,7 +103,6 @@ export const getProjectAnalysisGroupSamplesByGuid = createSelector(
     }), {}),
 )
 
-
 // Saved variant selectors
 export const getSavedVariantTableState = state => state.savedVariantTableState
 export const getSavedVariantCategoryFilter = state => state.savedVariantTableState.categoryFilter || SHOW_ALL
@@ -139,6 +143,23 @@ export const getProjectSavedVariants = createSelector(
     }
 
     return variants
+  },
+)
+
+export const getIndividualTaggedVariants = createSelector(
+  getSavedVariantsByGuid,
+  getIndividualsByGuid,
+  getGenesById,
+  (state, props) => props.individualGuid,
+  (savedVariants, individualsByGuid, genesById, individualGuid) => {
+    const { familyGuid } = individualsByGuid[individualGuid]
+    return Object.values(savedVariants).filter(
+      o => o.familyGuids.includes(familyGuid) && o.tags.length).map(variant => ({
+      ...variant,
+      variantId: `${variant.chrom}-${variant.pos}-${variant.ref}-${variant.alt}`,
+      ...variant.genotypes[individualGuid],
+      ...genesById[variant.mainTranscript.geneId],
+    }))
   },
 )
 
@@ -367,6 +388,36 @@ export const getAnalysisStatusCounts = createSelector(
       { ...option, count: (analysisStatusCounts[option.value] || 0) }),
     )
   })
+
+export const getDefaultMmeSubmissionByIndividual = createSelector(
+  getProject,
+  getProjectAnalysisGroupIndividualsByGuid,
+  (project, individualsByGuid) => mapValues(individualsByGuid, individual => ({
+    patient: {
+      contact: {
+        name: project.mmePrimaryDataOwner,
+        institution: project.mmeContactInstitution,
+        href: project.mmeContactUrl,
+      },
+      species: 'NCBITaxon:9606',
+      sex: SEX_LOOKUP[individual.sex].toUpperCase(),
+      id: individual.individualId,
+      label: individual.individualId,
+    },
+    geneVariants: [],
+    phenotypes: [],
+  })),
+)
+
+export const getMmeResultsByIndividual = createSelector(
+  getMmeResultsByGuid,
+  getProjectAnalysisGroupIndividualsByGuid,
+  (mmeResultsByGuid, individualsByGuid) =>
+    mapValues(individualsByGuid, individual => (individual.mmeResultGuids || []).map(resultGuid => ({
+      ...mmeResultsByGuid[resultGuid].matchStatus,
+      ...mmeResultsByGuid[resultGuid],
+    }))),
+)
 
 
 // user options selectors

@@ -11,10 +11,8 @@ export const getFamiliesByGuid = state => state.familiesByGuid
 export const getIndividualsByGuid = state => state.individualsByGuid
 export const getSamplesByGuid = state => state.samplesByGuid
 export const getAnalysisGroupsByGuid = state => state.analysisGroupsByGuid
-export const getMatchmakerSubmissions = state => state.matchmakerSubmissions
-export const getMatchmakerMatchesLoading = state => state.matchmakerMatchesLoading.isLoading
-export const getMonarchMatchesLoading = state => state.monarchMatchesLoading.isLoading
 export const getSavedVariantsByGuid = state => state.savedVariantsByGuid
+export const getMmeResultsByGuid = state => state.mmeResultsByGuid
 export const getGenesById = state => state.genesById
 export const getGenesIsLoading = state => state.genesLoading.isLoading
 export const getLocusListsByGuid = state => state.locusListsByGuid
@@ -34,16 +32,6 @@ const groupEntitiesByProjectGuid = entities => Object.entries(entities).reduce((
 export const getFamiliesGroupedByProjectGuid = createSelector(getFamiliesByGuid, groupEntitiesByProjectGuid)
 export const getAnalysisGroupsGroupedByProjectGuid = createSelector(getAnalysisGroupsByGuid, groupEntitiesByProjectGuid)
 
-export const getFamilyMatchmakerSubmissions = createSelector(
-  getMatchmakerSubmissions,
-  (state, props) => props.family,
-  (matchmakerSubmissions, family) => {
-    return Object.values(matchmakerSubmissions[family.projectGuid] || {}).filter(
-      submission => submission.familyId === family.familyId,
-    )
-  },
-)
-
 /**
  * function that returns a mapping of each familyGuid to an array of individuals in that family.
  * The array of individuals is in sorted order.
@@ -55,13 +43,16 @@ export const getSortedIndividualsByFamily = createSelector(
   getIndividualsByGuid,
   (familiesByGuid, individualsByGuid) => {
     const AFFECTED_STATUS_ORDER = { A: 1, N: 2, U: 3 }
-    const getIndivSortKey = individual => AFFECTED_STATUS_ORDER[individual.affected] || 0
+    const getIndivAffectedSort = individual => AFFECTED_STATUS_ORDER[individual.affected] || 0
+    const getIndivMmeSort = individual => (
+      individual.mmeDeletedDate ? '2000-01-01' : (individual.mmeSubmittedDate || '1900-01-01')
+    )
 
     return Object.entries(familiesByGuid).reduce((acc, [familyGuid, family]) => ({
       ...acc,
       [familyGuid]: orderBy(
         family.individualGuids.map(individualGuid => individualsByGuid[individualGuid]),
-        [getIndivSortKey],
+        [getIndivAffectedSort, getIndivMmeSort], ['asc', 'desc'],
       ),
     }), {})
   },

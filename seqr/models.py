@@ -180,7 +180,7 @@ class Project(ModelWithGUID):
         json_fields = [
             'name', 'description', 'created_date', 'last_modified_date', 'genome_version', 'is_phenotips_enabled',
             'phenotips_user_id', 'deprecated_project_id', 'last_accessed_date', 'has_new_search',
-            'is_mme_enabled', 'mme_primary_data_owner', 'guid'
+            'is_mme_enabled', 'mme_primary_data_owner', 'mme_contact_url', 'mme_contact_institution', 'guid'
         ]
 
 
@@ -351,7 +351,10 @@ class Individual(ModelWithGUID):
     phenotips_data = models.TextField(null=True, blank=True)
 
     mme_id = models.CharField(max_length=50, null=True, blank=True)
-    mme_submitted_data = models.TextField(null=True, blank=True)
+    mme_submitted_data = JSONField(null=True)
+    mme_submitted_date = models.DateTimeField(null=True)
+    mme_deleted_date = models.DateTimeField(null=True)
+    mme_deleted_by = models.ForeignKey(User, null=True, on_delete=models.SET_NULL)
 
     def __unicode__(self):
         return self.individual_id.strip()
@@ -364,7 +367,8 @@ class Individual(ModelWithGUID):
 
         json_fields = [
             'guid', 'individual_id', 'father', 'mother', 'sex', 'affected', 'display_name', 'notes',
-            'phenotips_patient_id', 'phenotips_data', 'created_date', 'last_modified_date'
+            'phenotips_patient_id', 'phenotips_data', 'created_date', 'last_modified_date', 'mme_submitted_date',
+            'mme_deleted_date',
         ]
         internal_json_fields = [
             'case_review_status', 'case_review_discussion',
@@ -814,3 +818,26 @@ class VariantSearchResults(ModelWithGUID):
     def _compute_guid(self):
         return 'VSR%07d_%s' % (self.id, _slugify(str(self)))
 
+
+class MatchmakerResult(ModelWithGUID):
+    individual = models.ForeignKey(Individual, on_delete=models.PROTECT)
+    result_data = JSONField()
+
+    last_modified_by = models.ForeignKey(User, null=True, on_delete=models.SET_NULL)
+    we_contacted = models.BooleanField(default=False)
+    host_contacted = models.BooleanField(default=False)
+    deemed_irrelevant = models.BooleanField(default=False)
+    flag_for_analysis = models.BooleanField(default=False)
+    comments = models.TextField(null=True, blank=True)
+
+    def __unicode__(self):
+        return '{}_{}_result'.format(self.id, str(self.individual))
+
+    def _compute_guid(self):
+        return 'MR%07d_%s' % (self.id, str(self.individual))
+
+    class Meta:
+        json_fields = [
+            'guid', 'comments', 'we_contacted', 'host_contacted', 'deemed_irrelevant', 'flag_for_analysis',
+            'created_date',
+        ]

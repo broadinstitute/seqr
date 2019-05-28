@@ -67,6 +67,9 @@ class EditRecordsForm extends React.Component
     /* Unique identifier for the modal containing the form if there are multiple forms in the modal */
     modalName: PropTypes.string,
 
+    /* Column for filtering displayed table rows */
+    filterColumn: PropTypes.string,
+
     onSubmit: PropTypes.func.isRequired,
     closeParentModal: PropTypes.func,
   }
@@ -80,13 +83,15 @@ class EditRecordsForm extends React.Component
 
 
   render() {
-    const { formName, modalName, records, onSubmit, entityKey, closeParentModal, idField, columns, ...tableProps } = this.props
+    const { formName, modalName, records, onSubmit, entityKey, closeParentModal, idField, columns, filterColumn, ...tableProps } = this.props
 
     const rowsToDelete = Object.entries(this.state.data).reduce((acc, [recordId, { toDelete }]) => (
       { ...acc, [recordId]: toDelete }
     ), {})
 
     const getFilteredRecords = (values, filterFunc) => ({ [entityKey]: Object.values(values).filter(filterFunc) })
+
+    const getRowFilterVal = filterColumn ? row => row[filterColumn] : null
 
     const submitRecords = values =>
       onSubmit(getFilteredRecords(values, record => columns.map(field => field.name).some(
@@ -126,6 +131,7 @@ class EditRecordsForm extends React.Component
                   buttonText="Deleted Selected"
                 />
               }
+              getRowFilterVal={getRowFilterVal}
               {...tableProps}
             />
           </TableContainer>

@@ -90,7 +90,7 @@ const GeneDetailContent = ({ gene, updateGeneNote: dispatchUpdateGeneNote }) => 
     { title: 'Coding Size', content: ((gene.codingRegionSizeGrch38 || gene.codingRegionSizeGrch37) / 1000).toPrecision(2) },
     {
       title: 'Missense Constraint',
-      content: gene.constraints.misZ ?
+      content: (gene.constraints || {}).misZ ?
         <div>
           z-score: {gene.constraints.misZ.toPrecision(4)} (ranked {gene.constraints.misZRank} most
           constrained out of {gene.constraints.totalGenes} genes under study). <br />
@@ -111,7 +111,7 @@ const GeneDetailContent = ({ gene, updateGeneNote: dispatchUpdateGeneNote }) => 
     },
     {
       title: 'LoF Constraint',
-      content: gene.constraints.pli ?
+      content: (gene.constraints || {}).pli ?
         <div>
           pLI-score: {gene.constraints.pli.toPrecision(4)} (ranked {gene.constraints.pliRank} most
           intolerant of LoF mutations out of {gene.constraints.totalGenes} genes under study). <br />
@@ -125,7 +125,7 @@ const GeneDetailContent = ({ gene, updateGeneNote: dispatchUpdateGeneNote }) => 
   const associationDetails = [
     {
       title: 'OMIM',
-      content: gene.omimPhenotypes.length > 0 ?
+      content: (gene.omimPhenotypes || []).length > 0 ?
         <div>
           {gene.omimPhenotypes.map(phenotype =>
             <span key={phenotype.phenotypeDescription}>{phenotype.phenotypeMimNumber ?

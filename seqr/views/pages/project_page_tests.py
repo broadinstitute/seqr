@@ -35,7 +35,6 @@ def get_objects_for_group(can_view_group, permission, object_cls):
 class ProjectPageTest(TestCase):
     fixtures = ['users', '1kg_project']
 
-    @mock.patch('seqr.views.pages.project_page.SEQR_ID_TO_MME_ID_MAP.find', find_mme_matches)
     @mock.patch('seqr.views.pages.project_page._has_gene_search', _has_gene_search)
     @mock.patch('seqr.views.apis.locus_list_api.get_objects_for_group', get_objects_for_group)
     def test_project_page_data(self):
@@ -48,7 +47,7 @@ class ProjectPageTest(TestCase):
         response_json = response.json()
         self.assertSetEqual(
             set(response_json.keys()),
-            {'projectsByGuid', 'familiesByGuid', 'individualsByGuid', 'samplesByGuid', 'locusListsByGuid', 'analysisGroupsByGuid', 'matchmakerSubmissions'}
+            {'projectsByGuid', 'familiesByGuid', 'individualsByGuid', 'samplesByGuid', 'locusListsByGuid', 'analysisGroupsByGuid'}
         )
         self.assertSetEqual(
             set(response_json['projectsByGuid'][PROJECT_GUID]['variantTagTypes'][0].keys()),
@@ -60,7 +59,8 @@ class ProjectPageTest(TestCase):
             {'collaborators', 'locusListGuids', 'variantTagTypes', 'variantFunctionalTagTypes', 'hasGeneSearch',
              'detailsLoaded', 'projectGuid', 'projectCategoryGuids', 'canEdit', 'name', 'description', 'createdDate',
              'lastModifiedDate', 'isPhenotipsEnabled', 'phenotipsUserId', 'deprecatedProjectId', 'hasNewSearch',
-             'lastAccessedDate', 'isMmeEnabled', 'mmePrimaryDataOwner', 'genomeVersion', 'discoveryTags'}
+             'lastAccessedDate', 'isMmeEnabled', 'mmePrimaryDataOwner', 'mmeContactInstitution', 'mmeContactUrl',
+             'genomeVersion', 'discoveryTags'}
         )
         self.assertEqual(
             response_json['projectsByGuid'][PROJECT_GUID]['lastAccessedDate'][:10], datetime.today().strftime('%Y-%m-%d')
@@ -78,7 +78,7 @@ class ProjectPageTest(TestCase):
              'phenotipsData', 'individualId', 'paternalId', 'maternalId', 'sex', 'affected', 'displayName', 'notes',
              'phenotipsPatientId', 'phenotipsData', 'createdDate', 'lastModifiedDate', 'caseReviewStatus',
              'caseReviewDiscussion', 'caseReviewStatusLastModifiedDate', 'caseReviewStatusLastModifiedBy',
-             'paternalGuid', 'maternalGuid',}
+             'paternalGuid', 'maternalGuid', 'mmeSubmittedDate', 'mmeDeletedDate'}
         )
         self.assertSetEqual(
             set(response_json['samplesByGuid'].values()[0].keys()),
@@ -94,13 +94,7 @@ class ProjectPageTest(TestCase):
             set(response_json['analysisGroupsByGuid'].values()[0].keys()),
             {'analysisGroupGuid', 'description', 'name', 'projectGuid', 'familyGuids'}
         )
-        self.assertSetEqual(set(response_json['matchmakerSubmissions'].values()[0].keys()), {MME_INDIVIDUAL_ID})
-        self.assertSetEqual(
-            set(response_json['matchmakerSubmissions'].values()[0][MME_INDIVIDUAL_ID].keys()),
-            {'submissionDate', 'projectId', 'familyId', 'individualId', 'submittedData'}
-        )
 
-    @mock.patch('seqr.views.pages.project_page.SEQR_ID_TO_MME_ID_MAP.find', find_mme_matches)
     @mock.patch('seqr.views.pages.project_page._has_gene_search', _has_gene_search)
     @mock.patch('seqr.views.apis.locus_list_api.get_objects_for_group', get_objects_for_group)
     def test_empty_project_page_data(self):
@@ -113,7 +107,7 @@ class ProjectPageTest(TestCase):
         response_json = response.json()
         self.assertSetEqual(
             set(response_json.keys()),
-            {'projectsByGuid', 'familiesByGuid', 'individualsByGuid', 'samplesByGuid', 'locusListsByGuid', 'analysisGroupsByGuid', 'matchmakerSubmissions'}
+            {'projectsByGuid', 'familiesByGuid', 'individualsByGuid', 'samplesByGuid', 'locusListsByGuid', 'analysisGroupsByGuid'}
         )
         self.assertListEqual(response_json['projectsByGuid'].keys(), [EMPTY_PROJECT_GUID])
         self.assertDictEqual(response_json['familiesByGuid'], {})

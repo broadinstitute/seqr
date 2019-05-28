@@ -49,7 +49,7 @@ class SortableTable extends React.PureComponent {
     idField: PropTypes.string.isRequired,
     defaultSortColumn: PropTypes.string,
     defaultSortDescending: PropTypes.bool,
-    filterColumn: PropTypes.string,
+    getRowFilterVal: PropTypes.func,
     selectRows: PropTypes.func,
     selectedRows: PropTypes.object,
     loading: PropTypes.bool,
@@ -123,7 +123,7 @@ class SortableTable extends React.PureComponent {
 
   render() {
     const {
-      data, defaultSortColumn, defaultSortDescending, filterColumn, idField, columns, selectRows, selectedRows = {},
+      data, defaultSortColumn, defaultSortDescending, getRowFilterVal, idField, columns, selectRows, selectedRows = {},
       loading, emptyContent, footer, rowsPerPage, horizontalScroll, downloadFileName, downloadTableType,
       loadingProps = {}, ...tableProps
     } = this.props
@@ -151,7 +151,7 @@ class SortableTable extends React.PureComponent {
     }
 
     if (filter) {
-      sortedData = sortedData.filter(row => row[filterColumn].toLowerCase().startsWith(filter))
+      sortedData = sortedData.filter(row => getRowFilterVal(row).toLowerCase().includes(filter))
       totalRows = sortedData.length
     }
     const isPaginated = rowsPerPage && sortedData.length > rowsPerPage
@@ -188,9 +188,12 @@ class SortableTable extends React.PureComponent {
       ))
     }
 
-    const hasFooter = footer || isPaginated || filterColumn
+    const hasFooter = footer || isPaginated
+    const filterInput = getRowFilterVal && <Form.Input label="Filter: " inline onChange={this.handleFilter} />
+
     return (
       <TableContainer horizontalScroll={horizontalScroll}>
+        {!hasFooter && filterInput}
         {exportConfig &&
           <RightAligned>
             <ExportTableButton downloads={exportConfig} />
@@ -199,7 +202,7 @@ class SortableTable extends React.PureComponent {
         <StyledSortableTable
           sortable
           selectable={!!selectRows}
-          columns={columns.length <= 16 ? columns.length : null}
+          columns={!tableProps.collapsing && columns.length <= 16 ? columns.length : null}
           attached={hasFooter && 'top'}
           {...tableProps}
         >
@@ -227,11 +230,7 @@ class SortableTable extends React.PureComponent {
             <Table.Footer>
               <Table.Row>
                 {footer && <Table.HeaderCell collapsing={rowsPerPage} content={footer} />}
-                {filterColumn &&
-                  <Table.HeaderCell collapsing>
-                    <Form.Input label="Filter: " inline onChange={this.handleFilter} />
-                  </Table.HeaderCell>
-                }
+                {filterInput && <Table.HeaderCell collapsing>{filterInput}</Table.HeaderCell>}
                 <Table.HeaderCell collapsing={!rowsPerPage} textAlign="right">
                   {isPaginated &&
                     <div>

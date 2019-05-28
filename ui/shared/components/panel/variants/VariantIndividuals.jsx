@@ -83,28 +83,23 @@ Allele.propTypes = {
   variant: PropTypes.object,
 }
 
-
-const Alleles = ({ numAlt, variant, individual }) => {
-  const isHemiX = isHemiXVariant(variant, individual)
-  const isHemiUPD = !isHemiX && isHemiUPDVariant(numAlt, variant, individual)
-  return (
-    <AlleleContainer>
-      {isHemiUPD &&
-        <Popup
-          flowing
-          trigger={<Icon name="warning sign" color="yellow" />}
-          content={<div><b>Warning:</b> Potential UPD/ Hemizygosity</div>}
-        />
-      }
-      <Allele isAlt={numAlt > (isHemiX ? 0 : 1)} variant={variant} />/{isHemiX ? '-' : <Allele isAlt={numAlt > 0} variant={variant} />}
-    </AlleleContainer>
-  )
-}
+export const Alleles = ({ numAlt, variant, isHemiUPD, isHemiX }) =>
+  <AlleleContainer>
+    {isHemiUPD &&
+      <Popup
+        flowing
+        trigger={<Icon name="warning sign" color="yellow" />}
+        content={<div><b>Warning:</b> Potential UPD/ Hemizygosity</div>}
+      />
+    }
+    <Allele isAlt={numAlt > (isHemiX ? 0 : 1)} variant={variant} />/{isHemiX ? '-' : <Allele isAlt={numAlt > 0} variant={variant} />}
+  </AlleleContainer>
 
 Alleles.propTypes = {
   numAlt: PropTypes.number,
   variant: PropTypes.object,
-  individual: PropTypes.object,
+  isHemiUPD: PropTypes.bool,
+  isHemiX: PropTypes.bool,
 }
 
 
@@ -131,6 +126,8 @@ const Genotype = ({ variant, individual }) => {
     { title: 'Filter', value: variant.genotypeFilters },
     { title: 'Phred Likelihoods', value: genotype.pl },
   ]
+  const isHemiX = isHemiXVariant(variant, individual)
+  const isHemiUPD = !isHemiX && isHemiUPDVariant(genotype.numAlt, variant, individual)
   return [
     genotype.numAlt >= 0 ?
       <Popup
@@ -139,7 +136,7 @@ const Genotype = ({ variant, individual }) => {
         flowing
         trigger={
           <span>
-            <Alleles numAlt={genotype.numAlt} variant={variant} individual={individual} />
+            <Alleles numAlt={genotype.numAlt} variant={variant} isHemiX={isHemiX} isHemiUPD={isHemiUPD} />
             <VerticalSpacer width={5} />
             {genotype.gq || '-'}, {genotype.ab ? genotype.ab.toPrecision(2) : '-'}
             {variant.genotypeFilters && <small><br />{variant.genotypeFilters}</small>}

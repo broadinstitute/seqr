@@ -14,13 +14,16 @@ from seqr.utils.gene_utils import get_genes
 from seqr.utils.xpos_utils import get_chrom_pos
 
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
+from seqr.views.apis.matchmaker_api import get_mme_genes_phenotypes, parse_mme_patient
 from seqr.views.utils.json_utils import create_json_response, _to_camel_case
 from seqr.views.utils.orm_to_json_utils import _get_json_for_individuals, get_json_for_saved_variants
+from seqr.views.utils.proxy_request_utils import proxy_request
 from seqr.views.utils.variant_utils import variant_details
+
 from seqr.models import Project, Family, VariantTag, VariantTagType, Sample, SavedVariant, Individual, ProjectCategory
 from reference_data.models import Omim
 
-from settings import SEQR_ID_TO_MME_ID_MAP, ELASTICSEARCH_SERVER
+from settings import ELASTICSEARCH_SERVER, MME_HEADERS, MME_MATCHBOX_METRICS_URL
 
 logger = logging.getLogger(__name__)
 
@@ -99,6 +102,39 @@ def elasticsearch_status(request):
         'elasticsearchHost': ELASTICSEARCH_SERVER,
         'mongoProjects': mongo_projects,
         'errors': errors,
+    })
+
+
+@staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
+def mme_metrics_proxy(request):
+    return proxy_request(request, MME_MATCHBOX_METRICS_URL, headers=MME_HEADERS)
+
+
+@staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
+def mme_submissions(request):
+    individuals = Individual.objects.filter(
+        mme_submitted_date__isnull=False, mme_deleted_date__isnull=True,
+    ).prefetch_related('family').prefetch_related('family__project')
+
+    hpo_terms_by_id, genes_by_id, gene_symbols_to_ids = get_mme_genes_phenotypes([i.mme_submitted_data for i in individuals])
+
+    submissions = []
+    for individual in individuals:
+        submitted_data = parse_mme_patient(individual.mme_submitted_data, hpo_terms_by_id, gene_symbols_to_ids)
+        submissions.append({
+            'projectGuid': individual.family.project.guid,
+            'familyGuid': individual.family.guid,
+            'individualGuid': individual.guid,
+            'individualId': individual.individual_id,
+            'mmeSubmittedDate': individual.mme_submitted_date,
+            'mmeLabel': individual.mme_submitted_data['patient'].get('label'),
+            'mmeSubmittedData': submitted_data,
+            'geneSymbols': ','.join({genes_by_id.get(gv['geneId'], {}).get('geneSymbol') for gv in submitted_data['geneVariants']})
+        })
+
+    return create_json_response({
+        'submissions': submissions,
+        'genesById': genes_by_id,
     })
 
 
@@ -426,7 +462,7 @@ def _generate_rows(project, loaded_samples_by_project_family, saved_variants_by_
         if t0_months_since_t0 < 12:
             row['analysis_complete_status'] = "first_pass_in_progress"
 
-        submitted_to_mme = SEQR_ID_TO_MME_ID_MAP.find_one({'project_id': project.deprecated_project_id, 'family_id': family.family_id})
+        submitted_to_mme = any(i.mme_submitted_date for i in family.individual_set.all())
         if submitted_to_mme:
             row["submitted_to_mme"] = "Y"
 

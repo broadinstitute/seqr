@@ -7,7 +7,7 @@ import { createSelector } from 'reselect'
 import { connect } from 'react-redux'
 import { Field, FieldArray, reduxForm, getFormSyncErrors, getFormSyncWarnings } from 'redux-form'
 import { Form, Message, Icon, Popup, Confirm } from 'semantic-ui-react'
-import flatten from 'lodash/flatten'
+import flattenDeep from 'lodash/flattenDeep'
 
 import { closeModal, setModalConfirm } from 'redux/utils/modalReducer'
 import ButtonPanel from './ButtonPanel'
@@ -280,9 +280,11 @@ class ReduxFormWrapper extends React.Component {
   }
 }
 
+const nestedObjectValues = obj => (typeof obj === 'object' ? Object.values(obj).map(nestedObjectValues) : obj)
+
 const shouldShowValidationErrors = props => props.submitFailed || (props.liveValidate && props.dirty)
 const getValidationErrorList = validationErrors =>
-  (validationErrors ? flatten(Object.values(validationErrors)).filter(err => err) : null)
+  (validationErrors ? flattenDeep(nestedObjectValues(validationErrors)).filter(err => err) : null)
 const getValidationErrors = createSelector(
   (state, props) => (shouldShowValidationErrors(props) ? getFormSyncErrors(props.form)(state) : null),
   getValidationErrorList,

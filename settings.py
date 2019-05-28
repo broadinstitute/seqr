@@ -362,17 +362,16 @@ MME_DEFAULT_CONTACT_HREF = "mailto:matchmaker@broadinstitute.org"
 #########################################################
 SEARCH_IN_EXTERNAL_MME_NODES=True
 
-
-mme_db = _client['mme_primary']
-SEQR_ID_TO_MME_ID_MAP = mme_db['seqr_id_to_mme_id_map']
-MME_EXTERNAL_MATCH_REQUEST_LOG = mme_db['match_request_log']
-MME_SEARCH_RESULT_ANALYSIS_STATE = mme_db['match_result_analysis_state']
 MME_NODE_ADMIN_TOKEN=os.environ.get("MME_NODE_ADMIN_TOKEN", "abcd")
 MME_NODE_ACCEPT_HEADER='application/vnd.ga4gh.matchmaker.v1.0+json'
 MME_CONTENT_TYPE_HEADER='application/vnd.ga4gh.matchmaker.v1.0+json'
+MME_HEADERS = {
+    'X-Auth-Token': MME_NODE_ADMIN_TOKEN,
+    'Accept': MME_NODE_ACCEPT_HEADER,
+    'Content-Type': MME_CONTENT_TYPE_HEADER
+}
 MATCHBOX_SERVICE_HOSTNAME = os.environ.get('MATCHBOX_SERVICE_HOSTNAME', 'localhost')
 MME_SERVER_HOST='http://%s:9020' % MATCHBOX_SERVICE_HOSTNAME
-ENABLE_MME_MATCH_EMAIL_NOTIFICATIONS=True
 #adds a patient to MME
 MME_ADD_INDIVIDUAL_URL = MME_SERVER_HOST + '/patient/add'
 #deletes a patient from MME
@@ -388,6 +387,10 @@ MME_MATCHBOX_PUBLIC_METRICS_URL= MME_SERVER_HOST + '/metrics/public'
 #set this to None if you don't have Slack
 MME_SLACK_EVENT_NOTIFICATION_CHANNEL='matchmaker_alerts'
 MME_SLACK_MATCH_NOTIFICATION_CHANNEL='matchmaker_matches'
+MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL='matchmaker_seqr_match'
+
+MONARCH_MATCH_URL = 'https://mme.monarchinitiative.org/match'
+
 #This is used in slack post to add a link back to project
 SEQR_HOSTNAME_FOR_SLACK_POST='https://seqr.broadinstitute.org/project'
 
