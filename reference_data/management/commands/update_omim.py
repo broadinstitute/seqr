@@ -81,7 +81,7 @@ class OmimReferenceDataHandler(ReferenceDataHandler):
     @staticmethod
     def get_file_header(f):
         header_fields = None
-        for line in f:
+        for i, line in enumerate(f):
             line = line.rstrip('\r\n')
             if line.startswith("# Chrom") and header_fields is None:
                 header_fields = [c.lower().replace(' ', '_') for c in line.split('\t')]
