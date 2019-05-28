@@ -120,16 +120,19 @@ def update_mme_submission(request, individual_guid):
 
     submission_json = json.loads(request.body)
 
-    del submission_json['individualGuid']
+    submission_json.pop('individualGuid', {})
     phenotypes = submission_json.pop('phenotypes', [])
     gene_variants = submission_json.pop('geneVariants', [])
     if not phenotypes and not gene_variants:
-        create_json_response({}, status=400, reason='Genotypes or phentoypes are required')
+        return create_json_response({}, status=400, reason='Genotypes or phentoypes are required')
+
+    if not submission_json.get('patient', {}).get('id'):
+        return create_json_response({}, status=400, reason='Patient id is required')
 
     genomic_features = []
     for gene_variant in gene_variants:
         if not gene_variant.get('geneId'):
-            create_json_response({}, status=400, reason='Gene id is required for genomic features')
+            return create_json_response({}, status=400, reason='Gene id is required for genomic features')
         feature = {'gene': {'id': gene_variant['geneId']}}
         if 'numAlt' in gene_variant:
             feature['zygosity'] = gene_variant['numAlt'] % 2
@@ -164,7 +167,7 @@ def update_mme_submission(request, individual_guid):
 
     # update the project contact information if anything new was added
     new_contact_names = set(submission_json['patient']['contact']['name'].split(',')) - set(project.mme_primary_data_owner.split(','))
-    new_contact_urls = set(submission_json['patient']['contact']['href'].split(',')) - set(project.mme_contact_url.split(','))
+    new_contact_urls = set(submission_json['patient']['contact']['href'].replace('mailto:', '').split(',')) - set(project.mme_contact_url.replace('mailto:', '').split(','))
     updates = {}
     if new_contact_names:
         updates['mme_primary_data_owner'] = '{},{}'.format(project.mme_primary_data_owner, ','.join(new_contact_names))
