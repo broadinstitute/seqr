@@ -125,7 +125,7 @@ def forgot_password(request):
         elif not User.objects.filter(email__iexact=email).exists():
             error = "This email address is not valid."
         else: 
-            user = User.objects.get(email=email)
+            user = User.objects.get(email__iexact=email)
             profile = user.profile
             profile.set_password_token = User.objects.make_random_password(length=30)
             profile.save()
