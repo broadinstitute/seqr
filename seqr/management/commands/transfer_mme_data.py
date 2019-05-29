@@ -88,10 +88,11 @@ def transfer_mme_submission_data(project, use_near_id_matches=False):
                 input_id = None
                 while not individual and input_id != 'no':
                     input_id = raw_input(
-                    'No matching individual found for MME ID {}. Enter an id to use instead, or enter "no" to continue'.format(submission['seqr_id']))
+                    'No matching individual found for MME ID {}. Enter an id to use instead, or enter "no" to continue '.format(submission['seqr_id']))
                     individual = individuals_by_id.get(input_id)
-                invalid_individuals.add(submission['seqr_id'])
-                continue
+                if not individual:
+                    invalid_individuals.add(submission['seqr_id'])
+                    continue
 
         if individual.mme_submitted_date:
             continue
