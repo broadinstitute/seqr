@@ -61,8 +61,8 @@ def transfer_mme_submission_data(project, use_near_id_matches=False):
     )
 
     errors = []
-    if submissions and not project.is_mme_enabled:
-        errors.append('{} is disabled for MME but has {} submissions'.format(project.name, len(submissions)))
+    if submissions and submissions.count() > 0 and not project.is_mme_enabled:
+        errors.append('{} is disabled for MME but has {} submissions'.format(project.name, submissions.count()))
 
     updated_individuals = set()
     individuals_by_id = {i.individual_id: i for i in Individual.objects.filter(family__project=project)}
@@ -85,6 +85,11 @@ def transfer_mme_submission_data(project, use_near_id_matches=False):
                     individual = individuals_by_id[possible_indivs[0]]
 
             if not individual:
+                input_id = None
+                while not individual and input_id != 'no':
+                    input_id = raw_input(
+                    'No matching individual found for MME ID {}. Enter an id to use instead, or enter "no" to continue'.format(submission['seqr_id']))
+                    individual = individuals_by_id.get(input_id)
                 invalid_individuals.add(submission['seqr_id'])
                 continue
 
@@ -115,8 +120,8 @@ def transfer_mme_results_data(project, use_near_id_matches=False):
     users_by_username = {u.username: u for u in User.objects.all()}
 
     errors = []
-    if project_results and not project.is_mme_enabled:
-        errors.append('{} is disabled for MME but has {} match results'.format(project.name, len(project_results)))
+    if project_results and project_results.count() > 0 and not project.is_mme_enabled:
+        errors.append('{} is disabled for MME but has {} match results'.format(project.name,  project_results.count()))
 
     num_result_updated = 0
     invalid_individuals = set()
