@@ -2,6 +2,9 @@
 
 source ~/.bashrc
 
+set -x
+cat ~/.bashrc
+
 env 
 pwd
 
