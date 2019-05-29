@@ -56,7 +56,7 @@ def login_view(request):
     if request.method == 'POST': 
 
         form = LoginForm(request.POST)
-        if form.is_valid(): 
+        if form.is_valid():
             user = form.user
             login(request, user)
             if next and '.wsgi' not in next:
@@ -122,7 +122,7 @@ def forgot_password(request):
         email = request.POST.get('email').lower()
         if email is None or email == "": 
             error = "Please enter an email."
-        elif not User.objects.filter(email=email).exists(): 
+        elif not User.objects.filter(email__iexact=email).exists():
             error = "This email address is not valid."
         else: 
             user = User.objects.get(email=email)
