@@ -2,6 +2,9 @@
 
 source ~/.bashrc
 
+env 
+pwd
+
 if [ -z "$SEQR_DIR"  ]; then
     echo "SEQR_DIR environment variable not set. Please run previous install step."
     exit 1
