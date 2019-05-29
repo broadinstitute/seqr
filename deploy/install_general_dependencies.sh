@@ -21,7 +21,7 @@ elif "darwin" in p: print("macos")
 else: print("unknown")
 EOF
 )
-    echo 'export PLATFORM='${PLATFORM} >> ~/.bashrc
+    cat <(echo 'export PLATFORM='${PLATFORM}) ~/.bashrc > ~/.bashrc
 
 fi
 
@@ -30,10 +30,10 @@ if [ -z "$SEQR_DIR"  ]; then
 
     export SEQR_DIR=$(pwd)/seqr
     export SEQR_BIN_DIR=${SEQR_DIR}/../bin
-    echo 'export SEQR_DIR='${SEQR_DIR} >> ~/.bashrc
-    echo 'export SEQR_BIN_DIR='${SEQR_BIN_DIR} >> ~/.bashrc
-    echo 'export PYTHONPATH='${SEQR_DIR}':'${SEQR_DIR}'/seqr_settings:$PYTHONPATH' >> ~/.bashrc
-    echo 'export PATH='${SEQR_BIN_DIR}':$PATH' >> ~/.bashrc
+    cat <(echo 'export SEQR_DIR='${SEQR_DIR}) ~/.bashrc > ~/.bashrc
+    cat <(echo 'export SEQR_BIN_DIR='${SEQR_BIN_DIR}) ~/.bashrc > ~/.bashrc
+    cat <(echo 'export PYTHONPATH='${SEQR_DIR}':'${SEQR_DIR}'/seqr_settings:$PYTHONPATH') ~/.bashrc > ~/.bashrc
+    cat <(echo 'export PATH='${SEQR_BIN_DIR}':$PATH') ~/.bashrc > ~/.bashrc
 
 fi
 
@@ -246,7 +246,7 @@ export PERL_VERSION=perl-5.20.3
 curl -L http://install.perlbrew.pl | bash
 ~/perl5/perlbrew/bin/perlbrew install --notest $PERL_VERSION
 
-echo 'source ~/perl5/perlbrew/etc/bashrc' >> ~/.bashrc
+cat <(echo 'source ~/perl5/perlbrew/etc/bashrc') ~/.bashrc > ~/.bashrc
 
 sudo ln -s ~/perl5/perlbrew/perls/${PERL_VERSION}/bin/perl /usr/local/bin/perl
 
