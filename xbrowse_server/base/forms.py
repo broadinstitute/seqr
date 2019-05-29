@@ -23,8 +23,8 @@ class LoginForm(forms.Form):
             user = None
             if User.objects.filter(username=self.cleaned_data['username_or_email']).exists():
                 user = User.objects.get(username=self.cleaned_data['username_or_email'])
-            elif User.objects.filter(email=self.cleaned_data['username_or_email'].lower()).exists():
-                user = User.objects.get(email=self.cleaned_data['username_or_email'].lower())
+            elif User.objects.filter(email__iexact=self.cleaned_data['username_or_email']).exists():
+                user = User.objects.get(email__iexact=self.cleaned_data['username_or_email'])
             if user is None:
                 raise forms.ValidationError("This username/password combination is not valid")
 
