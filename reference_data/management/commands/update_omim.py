@@ -81,14 +81,14 @@ class OmimReferenceDataHandler(ReferenceDataHandler):
     @staticmethod
     def get_file_header(f):
         header_fields = None
-        for line in f:
+        for i, line in enumerate(f):
             line = line.rstrip('\r\n')
             if line.startswith("# Chrom") and header_fields is None:
                 header_fields = [c.lower().replace(' ', '_') for c in line.split('\t')]
                 break
             elif not line or line.startswith("#"):
                 continue
-            elif line.startswith('This account is inactive'):
+            elif line.startswith('This account is inactive') or line.startswith('This account has expired'):
                 raise Exception(line)
             elif header_fields is None:
                 raise ValueError("Header row not found in genemap2 file before line {}: {}".format(i, line))
