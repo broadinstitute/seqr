@@ -8,7 +8,6 @@ reference_data_dir = '../data/reference_data'
 
 #DEBUG = True
 #COMPRESS_ENABLED = False
-BASE_URL = '/'
 
 GENERATED_FILES_DIR = os.path.join(os.path.dirname(__file__), 'generated_files')
 MEDIA_ROOT = os.path.join(GENERATED_FILES_DIR , 'media/')
