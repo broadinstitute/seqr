@@ -87,6 +87,13 @@ python -u manage.py collectstatic --no-input
 python -u manage.py loaddata variant_tag_types
 python -u manage.py loaddata variant_searches
 
+# download and restore gene reference data
+REFERENCE_DATA_BACKUP_FILE=gene_reference_data_backup.gz
+wget -N https://storage.googleapis.com/seqr-reference-data/gene_reference_data_backup.gz -O ${REFERENCE_DATA_BACKUP_FILE}
+psql -U postgres seqrdb <  <(gunzip -c ${REFERENCE_DATA_BACKUP_FILE})
+rm ${REFERENCE_DATA_BACKUP_FILE}
+
+
 GUNICORN_WORKER_THREADS=4
 
 echo 'cd '${SEQR_DIR}'/seqr_settings
