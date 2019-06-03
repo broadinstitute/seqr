@@ -52,8 +52,8 @@ chmod 600 ~/.pgpass
 if [ $ENABLE_DATABASE_BACKUPS ]; then
     # set up cron database backups
     echo 'SHELL=/bin/bash
-0 0 * * * python -u -m manage run_settings_backup --bucket $DATABASE_BACKUP_BUCKET --deployment-type $DEPLOYMENT_TYPE >> /var/log/cron.log 2>&1
-0 */4 * * * python -u -m manage run_postgres_database_backup --bucket $DATABASE_BACKUP_BUCKET --deployment-type $DEPLOYMENT_TYPE >> /var/log/cron.log 2>&1
+0 0 * * * python -u -m manage run_settings_backup --bucket $DATABASE_BACKUP_BUCKET --postgres-host $POSTGRES_SERVICE_HOSTNAME --deployment-type $DEPLOYMENT_TYPE >> /var/log/cron.log 2>&1
+0 */4 * * * python -u -m manage run_postgres_database_backup --bucket $DATABASE_BACKUP_BUCKET --postgres-host $POSTGRES_SERVICE_HOSTNAME --deployment-type $DEPLOYMENT_TYPE >> /var/log/cron.log 2>&1
 0 0 * * 0 python -u -m manage update_omim --omim-key $OMIM_KEY >> /var/log/cron.log 2>&1
 0 0 * * 0 python -u -m manage update_human_phenotype_ontology >> /var/log/cron.log 2>&1
 ' | crontab -
