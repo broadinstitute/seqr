@@ -38,7 +38,6 @@ def add_variants_dataset_handler(request, project_guid):
         {
             'elasticsearchIndex': <String> (required)
             'ignoreExtraSamplesInCallset': <Boolean>
-            'ignoreMissingFamilyMembers': <Boolean>
             'mappingFilePath':  <String>
         }
 
@@ -84,25 +83,24 @@ def add_variants_dataset_handler(request, project_guid):
                 'Matches not found for ES sample ids: {}. Uploading a mapping file for these samples, or select the "Ignore extra samples in callset" checkbox to ignore.'.format(
                     ", ".join(unmatched_samples)))
 
-        if not request_json.get('ignoreMissingFamilyMembers'):
-            included_family_individuals = defaultdict(set)
-            for sample in matched_sample_id_to_sample_record.values():
-                included_family_individuals[sample.individual.family].add(sample.individual.individual_id)
-            missing_family_individuals = []
-            for family, individual_ids in included_family_individuals.items():
-                missing_indivs = family.individual_set.filter(
-                    sample__sample_status=Sample.SAMPLE_STATUS_LOADED,
-                    sample__dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS
-                ).exclude(individual_id__in=individual_ids)
-                if missing_indivs:
-                    missing_family_individuals.append(
-                        '{} ({})'.format(family.family_id, ', '.join([i.individual_id for i in missing_indivs]))
-                    )
-            if missing_family_individuals:
-                raise Exception(
-                    'The following families are included in the callset but are missing some family members: {}. This can lead to errors in variant search. If you still want to upload this callset, select the "Ignore missing family members" checkbox.'.format(
-                        ', '.join(missing_family_individuals)
-                    ))
+        included_family_individuals = defaultdict(set)
+        for sample in matched_sample_id_to_sample_record.values():
+            included_family_individuals[sample.individual.family].add(sample.individual.individual_id)
+        missing_family_individuals = []
+        for family, individual_ids in included_family_individuals.items():
+            missing_indivs = family.individual_set.filter(
+                sample__sample_status=Sample.SAMPLE_STATUS_LOADED,
+                sample__dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS
+            ).exclude(individual_id__in=individual_ids)
+            if missing_indivs:
+                missing_family_individuals.append(
+                    '{} ({})'.format(family.family_id, ', '.join([i.individual_id for i in missing_indivs]))
+                )
+        if missing_family_individuals:
+            raise Exception(
+                'The following families are included in the callset but are missing some family members: {}.'.format(
+                    ', '.join(missing_family_individuals)
+                ))
 
         _update_samples(
             matched_sample_id_to_sample_record, elasticsearch_index=elasticsearch_index, dataset_path=dataset_path
