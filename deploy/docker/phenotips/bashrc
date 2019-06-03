@@ -11,9 +11,3 @@ alias less='less -m -g -i--underline-special --SILENT'
 alias more='less'
 
 export TERM=xterm
-
-
-# databases
-
-export PGHOST=${POSTGRES_SERVICE_HOSTNAME}
-export PGUSER=postgres
