@@ -88,15 +88,10 @@ python -u manage.py loaddata variant_tag_types
 python -u manage.py loaddata variant_searches
 
 # download and restore gene reference data
-for table_name in \
-    reference_data_humanphenotypeontology reference_data_mgi reference_data_omim reference_data_primateai reference_data_transcriptinfo \
-    reference_data_dbnsfpgene reference_data_geneconstraint reference_data_geneexpression reference_data_geneinfo; do
-
-    psql -U postgres seqrdb -c "DROP TABLE ${table_name}"
-done
-
 REFERENCE_DATA_BACKUP_FILE=gene_reference_data_backup.gz
 wget -N https://storage.googleapis.com/seqr-reference-data/gene_reference_data_backup.gz -O ${REFERENCE_DATA_BACKUP_FILE}
+
+psql -U postgres seqrdb -c "DROP TABLE reference_data_geneinfo CASCADE"
 psql -U postgres seqrdb <  <(gunzip -c ${REFERENCE_DATA_BACKUP_FILE})
 rm ${REFERENCE_DATA_BACKUP_FILE}
 
