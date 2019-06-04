@@ -188,8 +188,8 @@ def variant_details(variant_json, project, user, individual_guids_by_id=None):
         },
         'mainTranscript': _variant_main_transcript(variant_json),
         'clinvar': {
-            'clinsig': extras.get('clinvar_clinsig'),
-            'variantId': extras.get('clinvar_variant_id'),
+            'clinicalSignificance': extras.get('clinvar_clinsig'),
+            'variationId': extras.get('clinvar_variant_id'),
             'alleleId': extras.get('clinvar_allele_id'),
             'goldStars': extras.get('clinvar_gold_stars'),
         },
