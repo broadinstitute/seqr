@@ -12,8 +12,8 @@ class Command(BaseCommand):
     help = 'Run settings backups.'
 
     def add_arguments(self, parser):
-        parser.add_argument('--bucket', required=True)
-        parser.add_argument('--deployment-type', default='unknown')
+        parser.add_argument('--bucket', default=os.environ.get('DATABASE_BACKUP_BUCKET', 'unknown'))
+        parser.add_argument('--deployment-type', default=os.environ.get('DEPLOYMENT_TYPE', 'unknown'))
 
     def handle(self, *args, **options):
         os.chdir('/')

@@ -112,7 +112,7 @@ class DatasetAPITest(TransactionTestCase):
             'ignoreExtraSamplesInCallset': True,
         }))
         self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'errors': ['The following families are included in the callset but are missing some family members: 1 (NA19675_1). This can lead to errors in variant search. If you still want to upload this callset, select the "Ignore missing family members" checkbox.']})
+        self.assertDictEqual(response.json(), {'errors': ['The following families are included in the callset but are missing some family members: 1 (NA19675_1).']})
 
         # Send valid request
         mock_es_search.return_value.params.return_value.execute.return_value.aggregations.sample_ids.buckets = [

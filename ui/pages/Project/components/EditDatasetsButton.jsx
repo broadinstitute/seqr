@@ -67,12 +67,6 @@ const UPLOAD_CALLSET_FIELDS = [
     label: 'Ignore extra samples in callset',
     labelHelp: 'If the callset contains sample ids that don\'t match individuals in this project, ignore them instead of reporting an error.',
   },
-  {
-    name: 'ignoreMissingFamilyMembers',
-    component: BooleanCheckbox,
-    label: 'Ignore missing family members',
-    labelHelp: 'If the callset contains families where only some of the individuals are included, allow them to be added instead of reporting an error.',
-  },
 ]
 
 const UPLOAD_ALIGNMENT_FIELDS = [
