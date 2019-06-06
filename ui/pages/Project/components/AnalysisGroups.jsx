@@ -4,12 +4,10 @@ import { Link } from 'react-router-dom'
 import { Popup } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 
+import { getCurrentProject } from 'redux/selectors'
 import { HelpIcon } from 'shared/components/StyledComponents'
 import { compareObjects } from 'shared/utils/sortUtils'
-import {
-  getProject,
-  getProjectAnalysisGroupsByGuid,
-} from '../selectors'
+import { getProjectAnalysisGroupsByGuid } from '../selectors'
 import { UpdateAnalysisGroupButton, DeleteAnalysisGroupButton } from './AnalysisGroupButtons'
 
 
@@ -34,7 +32,7 @@ AnalysisGroups.propTypes = {
 }
 
 const mapStateToProps = state => ({
-  project: getProject(state),
+  project: getCurrentProject(state),
   analysisGroupsByGuid: getProjectAnalysisGroupsByGuid(state),
 })
 

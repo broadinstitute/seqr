@@ -34,6 +34,7 @@ import {
   FAMILY_ANALYSIS_STATUS_OPTIONS,
   INDIVIDUAL_FIELD_CONFIGS,
   INDIVIDUAL_HPO_EXPORT_DATA,
+  SHOW_ALL,
   familySamplesLoaded,
 } from 'shared/utils/constants'
 
@@ -66,7 +67,6 @@ export const CASE_REVIEW_STATUS_OPT_LOOKUP = CASE_REVIEW_STATUS_OPTIONS.reduce(
   }), {},
 )
 
-export const SHOW_ALL = 'ALL'
 
 export const SHOW_IN_REVIEW = 'IN_REVIEW'
 const SHOW_ACCEPTED = 'ACCEPTED'

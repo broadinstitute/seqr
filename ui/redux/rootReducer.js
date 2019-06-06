@@ -8,7 +8,8 @@ import { reducers as projectReducers } from 'pages/Project/reducers'
 import { reducers as searchReducers } from 'pages/Search/reducers'
 import { reducers as staffReducers } from 'pages/Staff/reducers'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
-import { createObjectsByIdReducer, loadingReducer, zeroActionsReducer } from './utils/reducerFactories'
+import { SHOW_ALL, SORT_BY_FAMILY_GUID } from 'shared/utils/constants'
+import { createObjectsByIdReducer, loadingReducer, zeroActionsReducer, createSingleObjectReducer } from './utils/reducerFactories'
 import modalReducers from './utils/modalReducer'
 
 /**
@@ -20,9 +21,12 @@ export const RECEIVE_DATA = 'RECEIVE_DATA'
 export const REQUEST_PROJECTS = 'REQUEST_PROJECTS'
 export const RECEIVE_SAVED_SEARCHES = 'RECEIVE_SAVED_SEARCHES'
 export const REQUEST_SAVED_SEARCHES = 'REQUEST_SAVED_SEARCHES'
+const REQUEST_SAVED_VARIANTS = 'REQUEST_SAVED_VARIANTS'
+const RECEIVE_SAVED_VARIANT_FAMILIES = 'RECEIVE_SAVED_VARIANT_FAMILIES'
 const REQUEST_GENES = 'REQUEST_GENES'
 const REQUEST_GENE_LISTS = 'REQUEST_GENE_LISTS'
 const REQUEST_GENE_LIST = 'REQUEST_GENE_LIST'
+const UPDATE_SAVED_VARIANT_TABLE_STATE = 'UPDATE_VARIANT_STATE'
 
 // action creators
 
@@ -182,6 +186,52 @@ export const navigateSavedHashedSearch = (search, navigateSearch) => {
   }
 }
 
+export const loadSavedVariants = (familyGuids, variantGuid, tag) => {
+  return (dispatch, getState) => {
+    const state = getState()
+    const projectGuid = state.currentProjectGuid
+
+    let url = projectGuid ? `/api/project/${projectGuid}/saved_variants` : `/api/staff/saved_variants/${tag}`
+
+    // Do not load if already loaded
+    let expectedFamilyGuids
+    if (variantGuid) {
+      if (state.savedVariantsByGuid[variantGuid]) {
+        return
+      }
+      url = `${url}/${variantGuid}`
+    } else if (projectGuid) {
+      expectedFamilyGuids = familyGuids
+      if (!expectedFamilyGuids) {
+        expectedFamilyGuids = Object.values(state.familiesByGuid).filter(
+          family => family.projectGuid === projectGuid).map(({ familyGuid }) => familyGuid)
+      }
+      if (expectedFamilyGuids.length > 0 && expectedFamilyGuids.every(family => state.savedVariantFamilies[family])) {
+        return
+      }
+    } else if (!tag) {
+      return
+    }
+
+    dispatch({ type: REQUEST_SAVED_VARIANTS })
+    new HttpRequestHelper(url,
+      (responseJson) => {
+        dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+        if (expectedFamilyGuids) {
+          dispatch({
+            type: RECEIVE_SAVED_VARIANT_FAMILIES,
+            updates: expectedFamilyGuids.reduce((acc, family) => ({ ...acc, [family]: true }), {}),
+          })
+        }
+      },
+      (e) => {
+        dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
+      },
+    ).get(familyGuids ? { families: familyGuids.join(',') } : {})
+  }
+}
+
+
 const updateSavedVariant = (values, action = 'create') => {
   return (dispatch, getState) => {
     return new HttpRequestHelper(`/api/saved_variant/${action}`,
@@ -231,6 +281,8 @@ export const updateLocusList = (values) => {
   }
 }
 
+export const updateSavedVariantTable = updates => ({ type: UPDATE_SAVED_VARIANT_TABLE_STATE, updates })
+
 
 // root reducer
 const rootReducer = combineReducers(Object.assign({
@@ -248,13 +300,23 @@ const rootReducer = combineReducers(Object.assign({
   locusListsLoading: loadingReducer(REQUEST_GENE_LISTS, RECEIVE_DATA),
   locusListLoading: loadingReducer(REQUEST_GENE_LIST, RECEIVE_DATA),
   savedVariantsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'savedVariantsByGuid'),
+  savedVariantsLoading: loadingReducer(REQUEST_SAVED_VARIANTS, RECEIVE_DATA),
   searchesByHash: createObjectsByIdReducer(RECEIVE_SAVED_SEARCHES, 'searchesByHash'),
   savedSearchesByGuid: createObjectsByIdReducer(RECEIVE_SAVED_SEARCHES, 'savedSearchesByGuid'),
+  savedVariantFamilies: createSingleObjectReducer(RECEIVE_SAVED_VARIANT_FAMILIES),
   savedSearchesLoading: loadingReducer(REQUEST_SAVED_SEARCHES, RECEIVE_SAVED_SEARCHES),
   user: zeroActionsReducer,
   newUser: zeroActionsReducer,
   form: formReducer,
   search: searchReducer,
+  savedVariantTableState: createSingleObjectReducer(UPDATE_SAVED_VARIANT_TABLE_STATE, {
+    hideExcluded: false,
+    hideReviewOnly: false,
+    categoryFilter: SHOW_ALL,
+    sort: SORT_BY_FAMILY_GUID,
+    page: 1,
+    recordsPerPage: 25,
+  }, false),
 }, modalReducers, dashboardReducers, projectReducers, searchReducers, staffReducers))
 
 export default rootReducer

@@ -4,8 +4,7 @@ import styled from 'styled-components'
 import { connect } from 'react-redux'
 import { Label, Popup, List } from 'semantic-ui-react'
 
-import { getProject } from 'pages/Project/selectors'
-import { getGenesById, getLocusListsByGuid } from 'redux/selectors'
+import { getGenesById, getLocusListsByGuid, getCurrentProject } from 'redux/selectors'
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
 import { InlineHeader } from '../../StyledComponents'
 import SearchResultsLink from '../../buttons/SearchResultsLink'
@@ -216,7 +215,7 @@ VariantGene.propTypes = {
 }
 
 const mapStateToProps = (state, ownProps) => ({
-  project: getProject(state),
+  project: getCurrentProject(state),
   gene: getGenesById(state)[ownProps.geneId],
 })
 

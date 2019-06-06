@@ -5,13 +5,12 @@ import { Loader, Grid, Dropdown } from 'semantic-ui-react'
 import { Route, Switch, Link } from 'react-router-dom'
 import styled from 'styled-components'
 
-import { getAnalysisGroupsByGuid } from 'redux/selectors'
-import ExportTableButton from 'shared/components/buttons/export-table/ExportTableButton'
-import VariantTagTypeBar, { getSavedVariantsLinkPath } from 'shared/components/graph/VariantTagTypeBar'
-import Variants from 'shared/components/panel/variants/Variants'
-import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
-import { HorizontalSpacer } from 'shared/components/Spacers'
+import { loadSavedVariants, updateSavedVariantTable } from 'redux/rootReducer'
+import { getAnalysisGroupsByGuid, getCurrentProject, getSavedVariantsIsLoading, getSelectedSavedVariants,
+  getVisibleSortedSavedVariants, getFilteredSavedVariants, getSavedVariantTableState,
+  getSavedVariantVisibleIndices, getSavedVariantTotalPages, getSavedVariantExportConfig } from 'redux/selectors'
 import {
+  REVIEW_TAG_NAME,
   DISCOVERY_CATEGORY_NAME,
   VARIANT_SORT_FIELD,
   VARIANT_HIDE_EXCLUDED_FIELD,
@@ -21,12 +20,12 @@ import {
   VARIANT_PAGINATION_FIELD,
 } from 'shared/utils/constants'
 import { toSnakecase } from 'shared/utils/stringUtils'
-import { loadProjectVariants, updateSavedVariantTable } from '../reducers'
-import {
-  getProject, getProjectSavedVariantsIsLoading, getProjectSavedVariants, getVisibleSortedProjectSavedVariants,
-  getFilteredProjectSavedVariants, getSavedVariantTableState, getSavedVariantVisibleIndices, getSavedVariantTotalPages,
-  getSavedVariantExportConfig,
-} from '../selectors'
+
+import ExportTableButton from '../../buttons/export-table/ExportTableButton'
+import VariantTagTypeBar, { getSavedVariantsLinkPath } from '../../graph/VariantTagTypeBar'
+import ReduxFormWrapper from '../../form/ReduxFormWrapper'
+import { HorizontalSpacer } from '../../Spacers'
+import Variants from './Variants'
 
 const ALL_FILTER = 'ALL'
 
@@ -38,6 +37,17 @@ const FILTER_FIELDS = [
   VARIANT_PER_PAGE_FIELD,
 ]
 const NON_DISCOVERY_FILTER_FIELDS = FILTER_FIELDS.filter(({ name }) => name !== 'hideKnownGeneForPhenotype')
+
+const TAG_TYPES = [
+  REVIEW_TAG_NAME,
+  'Send for Sanger validation',
+  'Sanger validated',
+  'Sanger did not confirm',
+  'Confident AR one hit',
+  'MatchBox (MME)',
+  'Submit to Clinvar',
+  'Share with KOMP',
+].map(name => ({ name, color: 'white' }))
 
 const ControlsRow = styled(Grid.Row)`
   font-size: 1.1em;
@@ -66,6 +76,7 @@ class BaseSavedVariants extends React.Component {
     history: PropTypes.object,
     project: PropTypes.object,
     analysisGroup: PropTypes.object,
+    variantTagTypes: PropTypes.array,
     loading: PropTypes.bool,
     variantsToDisplay: PropTypes.array,
     totalVariantsCount: PropTypes.number,
@@ -74,7 +85,7 @@ class BaseSavedVariants extends React.Component {
     tableState: PropTypes.object,
     firstRecordIndex: PropTypes.number,
     totalPages: PropTypes.number,
-    loadProjectVariants: PropTypes.func,
+    loadSavedVariants: PropTypes.func,
     updateSavedVariantTable: PropTypes.func,
   }
 
@@ -83,9 +94,9 @@ class BaseSavedVariants extends React.Component {
 
     this.loadVariants(props)
 
-    this.categoryOptions = [...new Set(
+    this.categoryOptions = this.props.project ? [...new Set(
       this.props.project.variantTagTypes.map(type => type.category).filter(category => category),
-    )]
+    )] : []
   }
 
   componentWillReceiveProps(nextProps) {
@@ -98,13 +109,16 @@ class BaseSavedVariants extends React.Component {
       this.props.updateSavedVariantTable({ page: 1 })
     } else if (nextTag !== tag) {
       this.props.updateSavedVariantTable({ page: 1 })
+      if (!this.props.project) {
+        this.loadVariants(nextProps)
+      }
     }
   }
 
   loadVariants = ({ match, analysisGroup }) => {
-    const { familyGuid, variantGuid } = match.params
+    const { familyGuid, variantGuid, tag } = match.params
     const familyGuids = familyGuid ? [familyGuid] : (analysisGroup || {}).familyGuids
-    this.props.loadProjectVariants(familyGuids, variantGuid)
+    this.props.loadSavedVariants(familyGuids, variantGuid, tag)
   }
 
 
@@ -130,26 +144,14 @@ class BaseSavedVariants extends React.Component {
     const exports = [{
       name: `${tagName} Variants${familyId ? ` in Family ${familyId}` : ''}${analsisGroupName ? ` in Analysis Group ${analsisGroupName}` : ''}`,
       data: {
-        filename: toSnakecase(`saved_${tagName}_variants_${this.props.project.name}${familyId ? `_family_${familyId}` : ''}${analsisGroupName ? `_analysis_group_${analsisGroupName}` : ''}`),
+        filename: toSnakecase(`saved_${tagName}_variants_${(this.props.project || {}).name}${familyId ? `_family_${familyId}` : ''}${analsisGroupName ? `_analysis_group_${analsisGroupName}` : ''}`),
         ...this.props.variantExportConfig,
       },
     }]
 
     let currCategory = null
     const tagOptions = [
-      {
-        value: ALL_FILTER,
-        text: 'All Saved',
-        content: (
-          <LabelLink
-            to={getSavedVariantsLinkPath({ project: this.props.project, analysisGroup: this.props.analysisGroup, familyGuid })}
-          >
-            All Saved
-          </LabelLink>
-        ),
-        key: 'all',
-      },
-      ...this.props.project.variantTagTypes.reduce((acc, vtt) => {
+      ...(this.props.project ? this.props.project.variantTagTypes : TAG_TYPES).reduce((acc, vtt) => {
         if (vtt.category !== currCategory) {
           currCategory = vtt.category
           if (vtt.category) {
@@ -169,6 +171,20 @@ class BaseSavedVariants extends React.Component {
         return acc
       }, []),
     ]
+    if (this.props.project) {
+      tagOptions.unshift({
+        value: ALL_FILTER,
+        text: 'All Saved',
+        content: (
+          <LabelLink
+            to={getSavedVariantsLinkPath({ project: this.props.project, analysisGroup: this.props.analysisGroup, familyGuid })}
+          >
+            All Saved
+          </LabelLink>
+        ),
+        key: 'all',
+      })
+    }
 
     const appliedTagCategoryFilter = tag || (variantGuid ? null : (this.props.tableState.categoryFilter || ALL_FILTER))
 
@@ -185,18 +201,20 @@ class BaseSavedVariants extends React.Component {
     }
     return (
       <Grid stackable>
-        <Grid.Row>
-          <Grid.Column width={16}>
-            <VariantTagTypeBar
-              height={30}
-              project={this.props.project}
-              analysisGroup={this.props.analysisGroup}
-              familyGuid={familyGuid}
-              hideExcluded={this.props.tableState.hideExcluded}
-              hideReviewOnly={this.props.tableState.hideReviewOnly}
-            />
-          </Grid.Column>
-        </Grid.Row>
+        {this.props.project &&
+          <Grid.Row>
+            <Grid.Column width={16}>
+              <VariantTagTypeBar
+                height={30}
+                project={this.props.project}
+                analysisGroup={this.props.analysisGroup}
+                familyGuid={familyGuid}
+                hideExcluded={this.props.tableState.hideExcluded}
+                hideReviewOnly={this.props.tableState.hideReviewOnly}
+              />
+            </Grid.Column>
+          </Grid.Row>
+        }
         {!this.props.loading &&
           <ControlsRow>
             <Grid.Column width={5}>
@@ -240,11 +258,11 @@ class BaseSavedVariants extends React.Component {
 }
 
 const mapStateToProps = (state, ownProps) => ({
-  project: getProject(state),
-  loading: getProjectSavedVariantsIsLoading(state),
-  variantsToDisplay: getVisibleSortedProjectSavedVariants(state, ownProps),
-  totalVariantsCount: getProjectSavedVariants(state, ownProps).length,
-  filteredVariants: getFilteredProjectSavedVariants(state, ownProps),
+  project: getCurrentProject(state),
+  loading: getSavedVariantsIsLoading(state),
+  variantsToDisplay: getVisibleSortedSavedVariants(state, ownProps),
+  totalVariantsCount: getSelectedSavedVariants(state, ownProps).length,
+  filteredVariants: getFilteredSavedVariants(state, ownProps),
   tableState: getSavedVariantTableState(state, ownProps),
   firstRecordIndex: getSavedVariantVisibleIndices(state, ownProps)[0],
   totalPages: getSavedVariantTotalPages(state, ownProps),
@@ -253,7 +271,7 @@ const mapStateToProps = (state, ownProps) => ({
 })
 
 const mapDispatchToProps = {
-  loadProjectVariants,
+  loadSavedVariants,
   updateSavedVariantTable,
 }
 

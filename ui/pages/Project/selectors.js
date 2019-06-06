@@ -6,31 +6,23 @@ import { createSelector } from 'reselect'
 import { getSearchResults } from 'redux/utils/reduxSearchEnhancer'
 import {
   FAMILY_ANALYSIS_STATUS_OPTIONS,
-  NOTE_TAG_NAME,
-  EXCLUDED_TAG_NAME,
-  REVIEW_TAG_NAME,
-  KNOWN_GENE_FOR_PHENOTYPE_TAG_NAME,
-  DISCOVERY_CATEGORY_NAME,
-  SORT_BY_FAMILY_GUID,
-  VARIANT_SORT_LOOKUP,
   FAMILY_FIELD_ID,
   INDIVIDUAL_FIELD_ID,
   FAMILY_FIELD_FIRST_SAMPLE,
   SEX_LOOKUP,
-  getVariantsExportData,
+  SHOW_ALL,
   latestSamplesLoaded,
   familySamplesLoaded,
 } from 'shared/utils/constants'
 import { toCamelcase, toSnakecase } from 'shared/utils/stringUtils'
 
 import {
-  getProjectsByGuid, getFamiliesGroupedByProjectGuid, getIndividualsByGuid, getSamplesByGuid, getGenesById, getUser,
+  getCurrentProject, getFamiliesGroupedByProjectGuid, getIndividualsByGuid, getSamplesByGuid, getGenesById, getUser,
   getAnalysisGroupsGroupedByProjectGuid, getSavedVariantsByGuid, getFirstSampleByFamily, getSortedIndividualsByFamily,
-  getMmeResultsByGuid,
+  getMmeResultsByGuid, getProjectGuid,
 } from 'redux/selectors'
 
 import {
-  SHOW_ALL,
   SORT_BY_FAMILY_NAME,
   CASE_REVIEW_STATUS_OPTIONS,
   FAMILY_FILTER_LOOKUP,
@@ -53,13 +45,8 @@ const FAMILY_SORT_LOOKUP = FAMILY_SORT_OPTIONS.reduce(
 // project data selectors
 
 export const getProjectDetailsIsLoading = state => state.projectDetailsLoading.isLoading
-export const getProjectSavedVariantsIsLoading = state => state.projectSavedVariantsLoading.isLoading
-export const getProjectGuid = state => state.currentProjectGuid
 export const getMatchmakerMatchesLoading = state => state.matchmakerMatchesLoading.isLoading
 
-export const getProject = createSelector(
-  getProjectsByGuid, getProjectGuid, (projectsByGuid, currentProjectGuid) => projectsByGuid[currentProjectGuid],
-)
 
 const selectEntitiesForProjectGuid = (entitiesGroupedByProjectGuid, projectGuid) => entitiesGroupedByProjectGuid[projectGuid] || {}
 export const getProjectFamiliesByGuid = createSelector(getFamiliesGroupedByProjectGuid, getProjectGuid, selectEntitiesForProjectGuid)
@@ -103,48 +90,6 @@ export const getProjectAnalysisGroupSamplesByGuid = createSelector(
     }), {}),
 )
 
-// Saved variant selectors
-export const getSavedVariantTableState = state => state.savedVariantTableState
-export const getSavedVariantCategoryFilter = state => state.savedVariantTableState.categoryFilter || SHOW_ALL
-export const getSavedVariantSortOrder = state => state.savedVariantTableState.sort || SORT_BY_FAMILY_GUID
-export const getSavedVariantHideExcluded = state => state.savedVariantTableState.hideExcluded
-export const getSavedVariantHideReviewOnly = state => state.savedVariantTableState.hideReviewOnly
-const getSavedVariantHideKnownGeneForPhenotype = state => state.savedVariantTableState.hideKnownGeneForPhenotype
-export const getSavedVariantCurrentPage = state => state.savedVariantTableState.page || 1
-export const getSavedVariantRecordsPerPage = state => state.savedVariantTableState.recordsPerPage || 25
-
-export const getProjectSavedVariants = createSelector(
-  getSavedVariantsByGuid,
-  (state, props) => props.match.params,
-  getProjectFamiliesByGuid,
-  getProjectAnalysisGroupsByGuid,
-  (savedVariants, { tag, familyGuid, analysisGroupGuid, variantGuid }, projectFamiliesByGuid, projectAnalysisGroupsByGuid) => {
-    let variants = Object.values(savedVariants)
-    if (variantGuid) {
-      return variants.filter(o => o.variantGuid === variantGuid)
-    }
-
-    if (analysisGroupGuid && projectAnalysisGroupsByGuid[analysisGroupGuid]) {
-      const analysisGroupFamilyGuids = projectAnalysisGroupsByGuid[analysisGroupGuid].familyGuids
-      variants = variants.filter(o => o.familyGuids.some(fg => analysisGroupFamilyGuids.includes(fg)))
-    }
-    else if (familyGuid) {
-      variants = variants.filter(o => o.familyGuids.includes(familyGuid))
-    } else {
-      variants = variants.filter(o => o.familyGuids.some(fg => Object.keys(projectFamiliesByGuid).includes(fg)))
-    }
-
-    if (tag) {
-      if (tag === NOTE_TAG_NAME) {
-        variants = variants.filter(o => o.notes.length)
-      } else {
-        variants = variants.filter(o => o.tags.some(t => t.name === tag))
-      }
-    }
-
-    return variants
-  },
-)
 
 export const getIndividualTaggedVariants = createSelector(
   getSavedVariantsByGuid,
@@ -161,68 +106,6 @@ export const getIndividualTaggedVariants = createSelector(
       ...genesById[variant.mainTranscript.geneId],
     }))
   },
-)
-
-export const getSavedVariantVisibleIndices = createSelector(
-  getSavedVariantCurrentPage, getSavedVariantRecordsPerPage,
-  (page, recordsPerPage) => {
-    return [(page - 1) * recordsPerPage, page * recordsPerPage]
-  },
-)
-
-export const getFilteredProjectSavedVariants = createSelector(
-  getProjectSavedVariants,
-  getSavedVariantCategoryFilter,
-  getSavedVariantHideExcluded,
-  getSavedVariantHideReviewOnly,
-  getSavedVariantHideKnownGeneForPhenotype,
-  (state, props) => props.match.params.tag,
-  (projectSavedVariants, categoryFilter, hideExcluded, hideReviewOnly, hideKnownGeneForPhenotype, tag) => {
-    let variantsToShow = projectSavedVariants
-    if (hideExcluded) {
-      variantsToShow = variantsToShow.filter(variant => variant.tags.every(t => t.name !== EXCLUDED_TAG_NAME))
-    }
-    if (hideReviewOnly) {
-      variantsToShow = variantsToShow.filter(variant => variant.tags.length !== 1 || variant.tags[0].name !== REVIEW_TAG_NAME)
-    }
-    if (!tag) {
-      if (hideKnownGeneForPhenotype && categoryFilter === DISCOVERY_CATEGORY_NAME) {
-        variantsToShow = variantsToShow.filter(variant => variant.tags.every(t => t.name !== KNOWN_GENE_FOR_PHENOTYPE_TAG_NAME))
-      }
-
-      if (categoryFilter !== SHOW_ALL) {
-        variantsToShow = variantsToShow.filter(variant => variant.tags.some(t => t.category === categoryFilter))
-      }
-    }
-    return variantsToShow
-  },
-)
-
-export const getVisibleSortedProjectSavedVariants = createSelector(
-  getFilteredProjectSavedVariants,
-  getSavedVariantSortOrder,
-  getSavedVariantVisibleIndices,
-  getGenesById,
-  getUser,
-  (filteredSavedVariants, sort, visibleIndices, genesById, user) => {
-    // Always secondary sort on xpos
-    filteredSavedVariants.sort((a, b) => {
-      return VARIANT_SORT_LOOKUP[sort](a, b, genesById, user) || a.xpos - b.xpos
-    })
-    return filteredSavedVariants.slice(...visibleIndices)
-  },
-)
-
-export const getSavedVariantTotalPages = createSelector(
-  getFilteredProjectSavedVariants, getSavedVariantRecordsPerPage,
-  (filteredSavedVariants, recordsPerPage) => {
-    return Math.max(1, Math.ceil(filteredSavedVariants.length / recordsPerPage))
-  },
-)
-
-export const getSavedVariantExportConfig = createSelector(
-  getFilteredProjectSavedVariants,
-  getVariantsExportData,
 )
 
 // Family table selectors
@@ -311,7 +194,7 @@ export const getFamiliesExportData = createSelector(
 )
 
 export const getFamiliesExportConfig = createSelector(
-  getProject,
+  getCurrentProject,
   getFamiliesExportData,
   (state, ownProps) => (ownProps || {}).tableName,
   () => 'families',
@@ -333,7 +216,7 @@ export const getIndividualsExportData = createSelector(
 )
 
 export const getIndividualsExportConfig = createSelector(
-  getProject,
+  getCurrentProject,
   getIndividualsExportData,
   (state, ownProps) => (ownProps || {}).tableName,
   () => 'individuals',
@@ -355,7 +238,7 @@ const getSamplesExportData = createSelector(
 )
 
 export const getSamplesExportConfig = createSelector(
-  getProject,
+  getCurrentProject,
   getSamplesExportData,
   (state, ownProps) => (ownProps || {}).tableName,
   () => 'samples',
@@ -390,7 +273,7 @@ export const getAnalysisStatusCounts = createSelector(
   })
 
 export const getDefaultMmeSubmissionByIndividual = createSelector(
-  getProject,
+  getCurrentProject,
   getProjectAnalysisGroupIndividualsByGuid,
   (project, individualsByGuid) => mapValues(individualsByGuid, individual => ({
     patient: {
