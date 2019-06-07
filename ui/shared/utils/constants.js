@@ -2,7 +2,7 @@ import { Form } from 'semantic-ui-react'
 import orderBy from 'lodash/orderBy'
 
 import { validators } from '../components/form/ReduxFormWrapper'
-import { BooleanCheckbox, RadioGroup, Dropdown, InlineToggle, Pagination } from '../components/form/Inputs'
+import { BooleanCheckbox, RadioGroup, Dropdown, InlineToggle, Pagination, BaseSemanticInput } from '../components/form/Inputs'
 import BaseFieldView from '../components/panel/view-fields/BaseFieldView'
 import OptionFieldView from '../components/panel/view-fields/OptionFieldView'
 import ListFieldView from '../components/panel/view-fields/ListFieldView'
@@ -709,6 +709,13 @@ export const VARIANT_PAGINATION_FIELD = {
   firstItem: null,
   lastItem: null,
   format: val => parseInt(val, 10),
+}
+export const VARIANT_GENE_FIELD = {
+  name: 'gene',
+  component: BaseSemanticInput,
+  inputType: 'Input',
+  label: 'Gene',
+  inline: true,
 }
 
 export const PREDICTION_INDICATOR_MAP = {

@@ -100,6 +100,7 @@ export const getSavedVariantHideReviewOnly = state => state.savedVariantTableSta
 const getSavedVariantHideKnownGeneForPhenotype = state => state.savedVariantTableState.hideKnownGeneForPhenotype
 export const getSavedVariantCurrentPage = state => state.savedVariantTableState.page || 1
 export const getSavedVariantRecordsPerPage = state => state.savedVariantTableState.recordsPerPage || 25
+export const getSavedVariantGeneFilter = state => state.savedVariantTableState.gene
 
 export const getVariantId = ({ xpos, ref, alt }) => `${xpos}-${ref}-${alt}`
 
@@ -166,8 +167,9 @@ export const getFilteredSavedVariants = createSelector(
   getSavedVariantHideExcluded,
   getSavedVariantHideReviewOnly,
   getSavedVariantHideKnownGeneForPhenotype,
+  getSavedVariantGeneFilter,
   (state, props) => props.match.params.tag,
-  (savedVariants, categoryFilter, hideExcluded, hideReviewOnly, hideKnownGeneForPhenotype, tag) => {
+  (savedVariants, categoryFilter, hideExcluded, hideReviewOnly, hideKnownGeneForPhenotype, geneFilter, tag) => {
     let variantsToShow = savedVariants
     if (hideExcluded) {
       variantsToShow = variantsToShow.filter(variant => variant.tags.every(t => t.name !== EXCLUDED_TAG_NAME))
@@ -183,6 +185,9 @@ export const getFilteredSavedVariants = createSelector(
       if (categoryFilter !== SHOW_ALL) {
         variantsToShow = variantsToShow.filter(variant => variant.tags.some(t => t.category === categoryFilter))
       }
+    } else if (geneFilter) {
+      variantsToShow = variantsToShow.filter(variant =>
+        (variant.mainTranscript.geneSymbol || '').toLowerCase().startsWith(geneFilter.toLowerCase()))
     }
     return variantsToShow
   },

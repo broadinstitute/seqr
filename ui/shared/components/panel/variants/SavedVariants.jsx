@@ -10,7 +10,7 @@ import { getAnalysisGroupsByGuid, getCurrentProject, getSavedVariantsIsLoading, 
   getVisibleSortedSavedVariants, getFilteredSavedVariants, getSavedVariantTableState,
   getSavedVariantVisibleIndices, getSavedVariantTotalPages, getSavedVariantExportConfig } from 'redux/selectors'
 import {
-  REVIEW_TAG_NAME,
+  KNOWN_GENE_FOR_PHENOTYPE_TAG_NAME,
   DISCOVERY_CATEGORY_NAME,
   VARIANT_SORT_FIELD,
   VARIANT_HIDE_EXCLUDED_FIELD,
@@ -18,6 +18,7 @@ import {
   VARIANT_HIDE_KNOWN_GENE_FOR_PHENOTYPE_FIELD,
   VARIANT_PER_PAGE_FIELD,
   VARIANT_PAGINATION_FIELD,
+  VARIANT_GENE_FIELD,
 } from 'shared/utils/constants'
 import { toSnakecase } from 'shared/utils/stringUtils'
 
@@ -29,6 +30,11 @@ import Variants from './Variants'
 
 const ALL_FILTER = 'ALL'
 
+const NO_PROJECT_FILTER_FIELDS = [
+  VARIANT_GENE_FIELD,
+  VARIANT_SORT_FIELD,
+  VARIANT_PER_PAGE_FIELD,
+]
 const FILTER_FIELDS = [
   VARIANT_SORT_FIELD,
   VARIANT_HIDE_KNOWN_GENE_FOR_PHENOTYPE_FIELD,
@@ -39,7 +45,18 @@ const FILTER_FIELDS = [
 const NON_DISCOVERY_FILTER_FIELDS = FILTER_FIELDS.filter(({ name }) => name !== 'hideKnownGeneForPhenotype')
 
 const TAG_TYPES = [
-  REVIEW_TAG_NAME,
+  'Tier 1 - Novel gene and phenotype',
+  'Tier 1 - Novel gene for known phenotype',
+  'Tier 1 - Phenotype expansion',
+  'Tier 1 - Phenotype not delineated',
+  'Tier 1 - Novel mode of inheritance',
+  'Tier 1 - Known gene, new phenotype',
+  'Tier 2 - Novel gene and phenotype',
+  'Tier 2 - Novel gene for known phenotype',
+  'Tier 2 - Phenotype expansion',
+  'Tier 2 - Phenotype not delineated',
+  'Tier 2 - Known gene, new phenotype',
+  KNOWN_GENE_FOR_PHENOTYPE_TAG_NAME,
   'Send for Sanger validation',
   'Sanger validated',
   'Sanger did not confirm',
@@ -188,7 +205,12 @@ class BaseSavedVariants extends React.Component {
 
     const appliedTagCategoryFilter = tag || (variantGuid ? null : (this.props.tableState.categoryFilter || ALL_FILTER))
 
-    let filters = appliedTagCategoryFilter === DISCOVERY_CATEGORY_NAME ? FILTER_FIELDS : NON_DISCOVERY_FILTER_FIELDS
+    let filters
+    if (this.props.project) {
+      filters = appliedTagCategoryFilter === DISCOVERY_CATEGORY_NAME ? FILTER_FIELDS : NON_DISCOVERY_FILTER_FIELDS
+    } else {
+      filters = NO_PROJECT_FILTER_FIELDS
+    }
 
     if (this.props.totalPages > 1) {
       filters = filters.concat({ ...VARIANT_PAGINATION_FIELD, totalPages: this.props.totalPages })
