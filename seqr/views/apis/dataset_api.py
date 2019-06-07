@@ -8,6 +8,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 
 from seqr.models import Individual, CAN_EDIT, Sample
+from seqr.model_utils import update_xbrowse_vcfffiles, find_matching_xbrowse_model
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.utils.dataset_utils import match_sample_ids_to_sample_records, validate_index_metadata, \
     get_elasticsearch_index_samples, load_mapping_file, load_uploaded_mapping_file, validate_alignment_dataset_path
@@ -17,9 +18,6 @@ from seqr.views.utils.orm_to_json_utils import get_json_for_samples
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions
 from seqr.views.utils.variant_utils import reset_cached_search_results
 
-from xbrowse_server.base.models import VCFFile, Project as BaseProject, Individual as BaseIndividual
-from xbrowse_server.mall import get_datastore
-from xbrowse_server.search_cache.utils import clear_project_results_cache
 
 logger = logging.getLogger(__name__)
 
@@ -116,7 +114,7 @@ def add_variants_dataset_handler(request, project_guid):
     update_project_from_json(project, {'has_new_search': True})
     reset_cached_search_results(project)
 
-    _deprecated_update_vcfffiles(
+    update_xbrowse_vcfffiles(
         project, sample_type, elasticsearch_index, dataset_path, matched_sample_id_to_sample_record
     )
 
@@ -194,7 +192,8 @@ def add_alignment_dataset_handler(request, project_guid):
 
     # Deprecated update VCFFile records
     for sample in matched_sample_id_to_sample_record.values():
-        for base_indiv in BaseIndividual.objects.filter(seqr_individual=sample.individual).only('id'):
+        base_indiv = find_matching_xbrowse_model(sample.individual)
+        if base_indiv:
             base_indiv.bam_file_path = sample.dataset_file_path
             base_indiv.save()
 
@@ -228,32 +227,3 @@ def _get_samples_json(matched_sample_id_to_sample_record, project_guid):
             ind.guid: {'sampleGuids': [s.guid for s in ind.sample_set.only('guid').all()]} for ind in individuals
         }
     return response
-
-
-def _deprecated_update_vcfffiles(project, sample_type, elasticsearch_index, dataset_path, matched_sample_id_to_sample_record):
-    base_project = BaseProject.objects.get(seqr_project=project)
-    get_datastore(base_project).bust_project_cache(base_project.project_id)
-    clear_project_results_cache(base_project.project_id)
-
-    vcf_file = VCFFile.objects.filter(
-        project=base_project,
-        dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
-        sample_type=sample_type,
-        elasticsearch_index=elasticsearch_index).order_by('-pk').first()
-
-    if not vcf_file:
-        vcf_file = VCFFile.objects.create(
-            project=base_project,
-            dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
-            sample_type=sample_type,
-            elasticsearch_index=elasticsearch_index,
-        )
-        logger.info("Created vcf file: " + str(vcf_file.__dict__))
-
-    vcf_file.file_path = dataset_path
-    vcf_file.loaded_date = matched_sample_id_to_sample_record.values()[0].loaded_date
-    vcf_file.save()
-
-    for indiv in [s.individual for s in matched_sample_id_to_sample_record.values()]:
-        for base_indiv in BaseIndividual.objects.filter(seqr_individual=indiv).only('id'):
-            base_indiv.vcf_files.add(vcf_file)

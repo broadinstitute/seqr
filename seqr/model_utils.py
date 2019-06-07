@@ -4,12 +4,15 @@ import traceback
 from django.db.models.query_utils import Q
 from django.utils import timezone
 
+from seqr.models import Sample
 from seqr.views.utils.json_utils import _to_snake_case
 from xbrowse_server.base.models import Project as BaseProject, Family as BaseFamily, Individual as BaseIndividual, \
     ProjectTag as BaseProjectTag, VariantTag as BaseVariantTag, VariantNote as BaseVariantNote, \
     VariantFunctionalData as BaseVariantFunctionalData, GeneNote as BaseGeneNote, AnalysedBy as BaseAnalysedBy, \
-    FamilyGroup as BaseFamilyGroup
+    FamilyGroup as BaseFamilyGroup, VCFFile
 from xbrowse_server.gene_lists.models import GeneList as BaseGeneList, GeneListItem as BaseGeneListItem
+from xbrowse_server.mall import get_datastore
+from xbrowse_server.search_cache.utils import clear_project_results_cache
 
 SEQR_TO_XBROWSE_CLASS_MAPPING = {
     "Project": BaseProject,
@@ -349,3 +352,33 @@ def delete_seqr_model(seqr_model):
         except Exception as e:
             logging.error("ERROR: error when deleting seqr model %s: %s" % (seqr_model, e))
             traceback.print_exc()
+
+
+# model-specific functions
+def update_xbrowse_vcfffiles(project, sample_type, elasticsearch_index, dataset_path, matched_sample_id_to_sample_record):
+    base_project = find_matching_xbrowse_model(project)
+    get_datastore(base_project).bust_project_cache(base_project.project_id)
+    clear_project_results_cache(base_project.project_id)
+
+    vcf_file = VCFFile.objects.filter(
+        project=base_project,
+        dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
+        sample_type=sample_type,
+        elasticsearch_index=elasticsearch_index).order_by('-pk').first()
+
+    if not vcf_file:
+        vcf_file = VCFFile.objects.create(
+            project=base_project,
+            dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
+            sample_type=sample_type,
+            elasticsearch_index=elasticsearch_index,
+        )
+        logging.info("Created vcf file: " + str(vcf_file.__dict__))
+
+    vcf_file.file_path = dataset_path
+    vcf_file.loaded_date = matched_sample_id_to_sample_record.values()[0].loaded_date
+    vcf_file.save()
+
+    for indiv in [s.individual for s in matched_sample_id_to_sample_record.values()]:
+        for base_indiv in BaseIndividual.objects.filter(seqr_individual=indiv).only('id'):
+            base_indiv.vcf_files.add(vcf_file)

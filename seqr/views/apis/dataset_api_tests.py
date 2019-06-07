@@ -16,7 +16,7 @@ INDEX_NAME = 'test_index'
 class DatasetAPITest(TransactionTestCase):
     fixtures = ['users', '1kg_project']
 
-    @mock.patch('seqr.views.apis.dataset_api._deprecated_update_vcfffiles', lambda *args: args)
+    @mock.patch('seqr.views.apis.dataset_api.update_xbrowse_vcfffiles', lambda *args: args)
     @mock.patch('seqr.views.utils.dataset_utils.file_utils')
     @mock.patch('seqr.views.utils.dataset_utils.get_index_metadata')
     @mock.patch('seqr.views.utils.dataset_utils.elasticsearch_dsl.Search')

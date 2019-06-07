@@ -8,7 +8,7 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 
 import settings
-from seqr.model_utils import update_seqr_model, delete_seqr_model
+from seqr.model_utils import get_or_create_seqr_model, delete_seqr_model
 from seqr.models import Project, Family, Individual, Sample, _slugify, CAN_EDIT, IS_OWNER
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.phenotips_api import create_phenotips_user, _get_phenotips_uname_and_pwd_for_project
@@ -16,9 +16,6 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.json_to_orm_utils import update_project_from_json
 from seqr.views.utils.orm_to_json_utils import _get_json_for_project
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_permissions
-
-from xbrowse_server.base.models import Project as BaseProject, ReferencePopulation
-
 
 logger = logging.getLogger(__name__)
 
@@ -135,16 +132,12 @@ def create_project(name, description=None, genome_version=None, user=None):
         'name': name,
         'description': description,
         'created_by': user,
+        'deprecated_project_id': _slugify(name),
     }
     if genome_version:
         project_args['genome_version'] = genome_version
 
-    project, _ = Project.objects.get_or_create(**project_args)
-
-    base_project = _deprecated_create_original_project(project)
-
-    project.deprecated_project_id = base_project.project_id
-    project.save()
+    project, _ = get_or_create_seqr_model(Project, **project_args)
 
     if settings.PHENOTIPS_SERVER:
         try:
@@ -191,36 +184,3 @@ def _enable_phenotips_for_project(project):
     username, password = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=False)
     create_phenotips_user(username, password)
     project.save()
-
-
-def _deprecated_create_original_project(project):
-    """DEPRECATED - create project in original xbrowse schema to keep things in sync.
-
-    Args:
-        project (object): new-style seqr project model
-    """
-
-    # keep new seqr.Project model in sync with existing xbrowse_server.base.models
-    base_project, created = BaseProject.objects.get_or_create(
-        project_id=_slugify(project.name)
-    )
-
-    if created:
-        logger.info("Created base project %s" % base_project)
-
-    base_project.project_name = project.name
-    base_project.genome_version = project.genome_version
-    base_project.description = project.description or ""
-    base_project.seqr_project = project
-    base_project.save()
-
-    for reference_population_id in ["gnomad-genomes2", "gnomad-exomes2", "topmed"]:
-        try:
-            population = ReferencePopulation.objects.get(slug=reference_population_id)
-            logger.info("Adding population " + reference_population_id + " to project " + str(project))
-            base_project.private_reference_populations.add(population)
-        except Exception as e:
-            logger.error("Unable to add reference population %s: %s" % (reference_population_id, e))
-            
-    return base_project
-
