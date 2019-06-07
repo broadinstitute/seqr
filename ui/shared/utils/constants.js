@@ -717,6 +717,14 @@ export const VARIANT_GENE_FIELD = {
   label: 'Gene',
   inline: true,
 }
+export const VARIANT_TAGGED_DATE_FIELD = {
+  name: 'taggedAfter',
+  component: BaseSemanticInput,
+  inputType: 'Input',
+  label: 'Tagged After',
+  type: 'date',
+  inline: true,
+}
 
 export const PREDICTION_INDICATOR_MAP = {
   D: { color: 'red', value: 'damaging' },

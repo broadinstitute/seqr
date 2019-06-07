@@ -101,6 +101,7 @@ const getSavedVariantHideKnownGeneForPhenotype = state => state.savedVariantTabl
 export const getSavedVariantCurrentPage = state => state.savedVariantTableState.page || 1
 export const getSavedVariantRecordsPerPage = state => state.savedVariantTableState.recordsPerPage || 25
 export const getSavedVariantGeneFilter = state => state.savedVariantTableState.gene
+export const getSavedVariantTaggedAfter = state => state.savedVariantTableState.taggedAfter
 
 export const getVariantId = ({ xpos, ref, alt }) => `${xpos}-${ref}-${alt}`
 
@@ -168,8 +169,9 @@ export const getFilteredSavedVariants = createSelector(
   getSavedVariantHideReviewOnly,
   getSavedVariantHideKnownGeneForPhenotype,
   getSavedVariantGeneFilter,
+  getSavedVariantTaggedAfter,
   (state, props) => props.match.params.tag,
-  (savedVariants, categoryFilter, hideExcluded, hideReviewOnly, hideKnownGeneForPhenotype, geneFilter, tag) => {
+  (savedVariants, categoryFilter, hideExcluded, hideReviewOnly, hideKnownGeneForPhenotype, geneFilter, taggedAfter, tag) => {
     let variantsToShow = savedVariants
     if (hideExcluded) {
       variantsToShow = variantsToShow.filter(variant => variant.tags.every(t => t.name !== EXCLUDED_TAG_NAME))
@@ -185,9 +187,17 @@ export const getFilteredSavedVariants = createSelector(
       if (categoryFilter !== SHOW_ALL) {
         variantsToShow = variantsToShow.filter(variant => variant.tags.some(t => t.category === categoryFilter))
       }
-    } else if (geneFilter) {
-      variantsToShow = variantsToShow.filter(variant =>
-        (variant.mainTranscript.geneSymbol || '').toLowerCase().startsWith(geneFilter.toLowerCase()))
+    } else {
+      if (geneFilter) {
+        variantsToShow = variantsToShow.filter(variant =>
+          (variant.mainTranscript.geneSymbol || '').toLowerCase().startsWith(geneFilter.toLowerCase()))
+      }
+
+      if (taggedAfter) {
+        const taggedAfterDate = new Date(taggedAfter)
+        variantsToShow = variantsToShow.filter(variant =>
+          new Date((variant.tags.find(t => t.name === tag) || {}).lastModifiedDate) > taggedAfterDate)
+      }
     }
     return variantsToShow
   },

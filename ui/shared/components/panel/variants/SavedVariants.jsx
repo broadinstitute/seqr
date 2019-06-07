@@ -19,6 +19,7 @@ import {
   VARIANT_PER_PAGE_FIELD,
   VARIANT_PAGINATION_FIELD,
   VARIANT_GENE_FIELD,
+  VARIANT_TAGGED_DATE_FIELD,
 } from 'shared/utils/constants'
 import { toSnakecase } from 'shared/utils/stringUtils'
 
@@ -32,6 +33,7 @@ const ALL_FILTER = 'ALL'
 
 const NO_PROJECT_FILTER_FIELDS = [
   VARIANT_GENE_FIELD,
+  VARIANT_TAGGED_DATE_FIELD,
   VARIANT_SORT_FIELD,
   VARIANT_PER_PAGE_FIELD,
 ]
