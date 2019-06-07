@@ -261,7 +261,6 @@ def _get_project_details(project, user):
     families_by_guid, individuals_by_guid, samples_by_guid, analysis_groups_by_guid, locus_lists_by_guid = get_project_child_entities(project, user)
 
     project_json.update({
-        'hasGeneSearch': True,
         'locusListGuids': locus_lists_by_guid.keys(),
         'variantTagTypes': get_project_variant_tag_types(project),
         'variantFunctionalTagTypes': get_json_for_variant_functional_data_tag_types(),

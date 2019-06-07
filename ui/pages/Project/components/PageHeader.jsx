@@ -126,7 +126,7 @@ const PageHeader = ({ user, project, family, analysisGroup, breadcrumb, match })
   if (project.hasNewSearch && entityLinks.length === 0) {
     entityLinks.push({ to: `/variant_search/project/${project.projectGuid}`, text: 'Project Variant Search' })
   }
-  if (!project.hasNewSearch && project.hasGeneSearch) {
+  if (!project.hasNewSearch) {
     headerProps.originalPages.push({ path: 'gene', name: 'Gene Search' })
   }
   if (user.isStaff && breadcrumb !== 'case_review') {

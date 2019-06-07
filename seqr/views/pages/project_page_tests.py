@@ -56,7 +56,7 @@ class ProjectPageTest(TestCase):
         )
         self.assertSetEqual(
             set(response_json['projectsByGuid'][PROJECT_GUID].keys()),
-            {'collaborators', 'locusListGuids', 'variantTagTypes', 'variantFunctionalTagTypes', 'hasGeneSearch',
+            {'collaborators', 'locusListGuids', 'variantTagTypes', 'variantFunctionalTagTypes',
              'detailsLoaded', 'projectGuid', 'projectCategoryGuids', 'canEdit', 'name', 'description', 'createdDate',
              'lastModifiedDate', 'isPhenotipsEnabled', 'phenotipsUserId', 'deprecatedProjectId', 'hasNewSearch',
              'lastAccessedDate', 'isMmeEnabled', 'mmePrimaryDataOwner', 'mmeContactInstitution', 'mmeContactUrl',
