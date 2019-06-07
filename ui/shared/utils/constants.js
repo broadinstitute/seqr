@@ -2,7 +2,7 @@ import { Form } from 'semantic-ui-react'
 import orderBy from 'lodash/orderBy'
 
 import { validators } from '../components/form/ReduxFormWrapper'
-import { BooleanCheckbox, RadioGroup, Dropdown, InlineToggle, Pagination } from '../components/form/Inputs'
+import { BooleanCheckbox, RadioGroup, Dropdown, InlineToggle, Pagination, BaseSemanticInput } from '../components/form/Inputs'
 import BaseFieldView from '../components/panel/view-fields/BaseFieldView'
 import OptionFieldView from '../components/panel/view-fields/OptionFieldView'
 import ListFieldView from '../components/panel/view-fields/ListFieldView'
@@ -582,11 +582,13 @@ export const VEP_CONSEQUENCE_ORDER_LOOKUP = ORDERED_VEP_CONSEQUENCES.reduce((acc
   ({ ...acc, [consequence.value]: i }),
 {})
 
+export const SHOW_ALL = 'ALL'
 export const NOTE_TAG_NAME = 'Has Notes'
 export const EXCLUDED_TAG_NAME = 'Excluded'
 export const REVIEW_TAG_NAME = 'Review'
 export const KNOWN_GENE_FOR_PHENOTYPE_TAG_NAME = 'Known gene for phenotype'
 export const DISCOVERY_CATEGORY_NAME = 'CMG Discovery Tags'
+
 
 export const SORT_BY_FAMILY_GUID = 'FAMILY_GUID'
 export const SORT_BY_XPOS = 'XPOS'
@@ -707,6 +709,21 @@ export const VARIANT_PAGINATION_FIELD = {
   firstItem: null,
   lastItem: null,
   format: val => parseInt(val, 10),
+}
+export const VARIANT_GENE_FIELD = {
+  name: 'gene',
+  component: BaseSemanticInput,
+  inputType: 'Input',
+  label: 'Gene',
+  inline: true,
+}
+export const VARIANT_TAGGED_DATE_FIELD = {
+  name: 'taggedAfter',
+  component: BaseSemanticInput,
+  inputType: 'Input',
+  label: 'Tagged After',
+  type: 'date',
+  inline: true,
 }
 
 export const PREDICTION_INDICATOR_MAP = {

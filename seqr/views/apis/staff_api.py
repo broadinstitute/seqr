@@ -13,14 +13,19 @@ from seqr.utils.es_utils import get_es_client, get_latest_loaded_samples
 from seqr.utils.gene_utils import get_genes
 from seqr.utils.xpos_utils import get_chrom_pos
 
+from seqr.views.pages.project_page import get_project_variant_tag_types
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.matchmaker_api import get_mme_genes_phenotypes, parse_mme_patient
+from seqr.views.apis.saved_variant_api import _saved_variant_genes, _add_locus_lists
 from seqr.views.utils.json_utils import create_json_response, _to_camel_case
-from seqr.views.utils.orm_to_json_utils import _get_json_for_individuals, get_json_for_saved_variants
+from seqr.views.utils.orm_to_json_utils import _get_json_for_individuals, get_json_for_saved_variants, \
+    get_json_for_variant_functional_data_tag_types, get_json_for_projects, _get_json_for_families, \
+    get_json_for_locus_lists
 from seqr.views.utils.proxy_request_utils import proxy_request
 from seqr.views.utils.variant_utils import variant_details
 
-from seqr.models import Project, Family, VariantTag, VariantTagType, Sample, SavedVariant, Individual, ProjectCategory
+from seqr.models import Project, Family, VariantTag, VariantTagType, Sample, SavedVariant, Individual, ProjectCategory, \
+    LocusList
 from reference_data.models import Omim
 
 from settings import ELASTICSEARCH_SERVER, MME_HEADERS, MME_MATCHBOX_METRICS_URL
@@ -736,3 +741,41 @@ def _update_initial_omim_numbers(rows):
     for row in rows:
         if omim_number_map.get(row['omim_number_initial']):
             row['omim_number_initial'] = omim_number_map[row['omim_number_initial']]
+
+
+@staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
+def saved_variants(request, tag):
+    tag_type = VariantTagType.objects.get(name=tag, project__isnull=True)
+    saved_variant_models = SavedVariant.objects.filter(varianttag__variant_tag_type=tag_type, family__isnull=False)
+    saved_variants = get_json_for_saved_variants(saved_variant_models, add_tags=True, add_details=True, user=request.user)
+
+    project_models_by_guid = {variant.project.guid: variant.project for variant in saved_variant_models}
+    families = {variant.family for variant in saved_variant_models}
+    individuals = Individual.objects.filter(family__in=families)
+
+    genes = _saved_variant_genes(saved_variants)
+    locus_list_guids = _add_locus_lists(project_models_by_guid.values(), saved_variants, genes)
+
+    projects_json = get_json_for_projects(project_models_by_guid.values(), user=request.user, add_project_category_guids_field=False)
+    functional_tag_types = get_json_for_variant_functional_data_tag_types()
+
+    for project_json in projects_json:
+        project_json.update({
+            'locusListGuids': locus_list_guids,
+            'variantTagTypes': get_project_variant_tag_types(project_models_by_guid[project_json['projectGuid']]),
+            'variantFunctionalTagTypes': functional_tag_types,
+        })
+
+    families_json = _get_json_for_families(list(families), user=request.user, add_individual_guids_field=True)
+    individuals_json = _get_json_for_individuals(individuals, user=request.user)
+    locus_lists_by_guid = {locus_list['locusListGuid']: locus_list for locus_list in
+                           get_json_for_locus_lists(LocusList.objects.filter(guid__in=locus_list_guids), request.user)}
+
+    return create_json_response({
+        'savedVariantsByGuid': {variant['variantGuid']: variant for variant in saved_variants},
+        'genesById': genes,
+        'projectsByGuid': {project['projectGuid']: project for project in projects_json},
+        'familiesByGuid': {family['familyGuid']: family for family in families_json},
+        'individualsByGuid': {indiv['individualGuid']: indiv for indiv in individuals_json},
+        'locusListsByGuid': locus_lists_by_guid,
+    })

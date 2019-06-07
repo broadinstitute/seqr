@@ -2,14 +2,13 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 
-import { getUser, getFamiliesByGuid, getAnalysisGroupsByGuid } from 'redux/selectors'
+import { getUser, getFamiliesByGuid, getAnalysisGroupsByGuid, getCurrentProject } from 'redux/selectors'
 import EditProjectButton from 'shared/components/buttons/EditProjectButton'
 import { PageHeaderLayout } from 'shared/components/page/PageHeader'
 import { HorizontalSpacer } from 'shared/components/Spacers'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 
 import { UpdateAnalysisGroupButton, DeleteAnalysisGroupButton } from './AnalysisGroupButtons'
-import { getProject } from '../selectors'
 
 const ORIGINAL_PROJECT_PAGE_CONFIG = { name: 'Project', path: '' }
 
@@ -111,7 +110,7 @@ const PAGE_CONFIGS = {
 }
 
 
-export const PageHeader = ({ user, project, family, analysisGroup, breadcrumb, match }) => {
+const PageHeader = ({ user, project, family, analysisGroup, breadcrumb, match }) => {
 
   if (!project) {
     return null
@@ -160,7 +159,7 @@ PageHeader.propTypes = {
 
 const mapStateToProps = (state, ownProps) => ({
   user: getUser(state),
-  project: getProject(state),
+  project: getCurrentProject(state),
   family: getFamiliesByGuid(state)[ownProps.match.params.breadcrumbId] || {},
   analysisGroup: getAnalysisGroupsByGuid(state)[ownProps.match.params.breadcrumbId] || {},
 })

@@ -1,8 +1,7 @@
 import React from 'react'
 import { shallow, configure } from 'enzyme'
 import Adapter from 'enzyme-adapter-react-16'
-import { getUser } from 'redux/selectors'
-import { getProject } from '../selectors'
+import configureStore from 'redux-mock-store'
 import { ProjectPageUIComponent } from './ProjectPageUI'
 
 
@@ -16,10 +15,8 @@ test('shallow-render without crashing', () => {
    */
 
   const props = {
-    user: getUser(STATE_WITH_2_FAMILIES),
-    project: getProject(STATE_WITH_2_FAMILIES),
     match: { params: {} },
   }
-
-  shallow(<ProjectPageUIComponent {...props} />)
+  const store = configureStore()(STATE_WITH_2_FAMILIES)
+  shallow(<ProjectPageUIComponent store={store} {...props} />)
 })

@@ -3,6 +3,7 @@ import PropTypes from 'prop-types'
 import { withRouter } from 'react-router-dom'
 import { connect } from 'react-redux'
 
+import { getCurrentProject } from 'redux/selectors'
 import UpdateButton from 'shared/components/buttons/UpdateButton'
 import DeleteButton from 'shared/components/buttons/DeleteButton'
 import FileUploadField from 'shared/components/form/XHRUploaderField'
@@ -15,7 +16,7 @@ import {
 } from 'shared/utils/constants'
 
 import { updateAnalysisGroup } from '../reducers'
-import { getProject, getProjectFamiliesByGuid } from '../selectors'
+import { getProjectFamiliesByGuid } from '../selectors'
 
 
 const FAMILY_FIELDS = [
@@ -140,7 +141,7 @@ DeleteAnalysisGroup.propTypes = {
 }
 
 const mapStateToProps = state => ({
-  project: getProject(state),
+  project: getCurrentProject(state),
   projectFamiliesByGuid: getProjectFamiliesByGuid(state),
 })
 

@@ -4,7 +4,8 @@ import { connect } from 'react-redux'
 import { Header, Icon, Popup, Label, Grid } from 'semantic-ui-react'
 import styled from 'styled-components'
 
-import { getIndividualsByGuid, getSortedIndividualsByFamily } from 'redux/selectors'
+import { loadSavedVariants } from 'redux/rootReducer'
+import { getIndividualsByGuid, getSortedIndividualsByFamily, getSavedVariantsIsLoading } from 'redux/selectors'
 import DeleteButton from 'shared/components/buttons/DeleteButton'
 import UpdateButton from 'shared/components/buttons/UpdateButton'
 import { BooleanCheckbox, BaseSemanticInput } from 'shared/components/form/Inputs'
@@ -18,10 +19,9 @@ import { ButtonLink, ColoredLabel } from 'shared/components/StyledComponents'
 import { AFFECTED } from 'shared/utils/constants'
 import { camelcaseToTitlecase } from 'shared/utils/stringUtils'
 
-import { loadMmeMatches, updateMmeSubmission, updateMmeSubmissionStatus, loadProjectVariants } from '../reducers'
+import { loadMmeMatches, updateMmeSubmission, updateMmeSubmissionStatus } from '../reducers'
 import {
   getMatchmakerMatchesLoading,
-  getProjectSavedVariantsIsLoading,
   getIndividualTaggedVariants,
   getDefaultMmeSubmissionByIndividual,
   getMmeResultsByIndividual,
@@ -93,12 +93,12 @@ const mapGenotypesStateToProps = (state, ownProps) => {
   return {
     familyGuids: [getIndividualsByGuid(state)[individualGuid].familyGuid],
     savedVariants: getIndividualTaggedVariants(state, { individualGuid }),
-    loading: getProjectSavedVariantsIsLoading(state),
+    loading: getSavedVariantsIsLoading(state),
   }
 }
 
 const mapGenotypesDispatchToProps = {
-  load: loadProjectVariants,
+  load: loadSavedVariants,
 }
 
 const EditGenotypesTable = connect(mapGenotypesStateToProps, mapGenotypesDispatchToProps)(BaseEditGenotypesTable)

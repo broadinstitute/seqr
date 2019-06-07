@@ -4,6 +4,7 @@ import { connect } from 'react-redux'
 import { Table } from 'semantic-ui-react'
 import styled from 'styled-components'
 
+import { getCurrentProject } from 'redux/selectors'
 import { FileLink } from 'shared/components/buttons/export-table/ExportTableButton'
 import FileUploadField from 'shared/components/form/XHRUploaderField'
 import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
@@ -11,7 +12,6 @@ import { INDIVIDUAL_HPO_EXPORT_DATA } from 'shared/utils/constants'
 import { INDIVIDUAL_ID_EXPORT_DATA, INDIVIDUAL_CORE_EXPORT_DATA, FAMILY_BULK_EDIT_EXPORT_DATA } from '../../constants'
 import { updateFamilies, updateIndividuals, updateIndividualsHpoTerms } from '../../reducers'
 import {
-  getProject,
   getEntityExportConfig,
   getProjectAnalysisGroupFamiliesByGuid,
   getProjectAnalysisGroupIndividualsByGuid,
@@ -147,15 +147,15 @@ BaseBulkContent.propTypes = {
 }
 
 const mapStateToProps = (state, ownProps) => ({
-  project: getProject(state),
+  project: getCurrentProject(state),
   exportConfig: getEntityExportConfig(
-    getProject(state),
+    getCurrentProject(state),
     Object.values(ownProps.rawData || getProjectAnalysisGroupIndividualsByGuid(state, ownProps)),
     null,
     ownProps.name,
     ownProps.requiredFields.concat(ownProps.optionalFields),
   ),
-  blankExportConfig: ownProps.blankDownload && getEntityExportConfig(getProject(state), [], null, 'template', ownProps.requiredFields.concat(ownProps.optionalFields)),
+  blankExportConfig: ownProps.blankDownload && getEntityExportConfig(getCurrentProject(state), [], null, 'template', ownProps.requiredFields.concat(ownProps.optionalFields)),
 })
 
 const BulkContent = connect(mapStateToProps)(BaseBulkContent)
