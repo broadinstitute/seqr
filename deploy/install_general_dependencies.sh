@@ -240,15 +240,6 @@ gsutil -m cp gs://hail-common/vep/htslib/* ${SEQR_BIN_DIR}/ \
     && chmod a+rx  ${SEQR_BIN_DIR}/tabix ${SEQR_BIN_DIR}/bgzip ${SEQR_BIN_DIR}/htsfile ${SEQR_BIN_DIR}/samtools
 
 
-echo "===== install perl 5.20 ====="
-
-wget http://www.cpan.org/authors/id/S/SH/SHAY/perl-5.20.3.tar.bz2
-tar xjf perl-5.20.3.tar.bz2
-cd perl-5.20.3
-./configure.gnu
-make
-sudo make install
-
 if [ "$needs_reboot" ] ; then
 
   echo '

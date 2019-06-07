@@ -8,6 +8,19 @@ if [ -z "$SEQR_DIR"  ]; then
     exit 1
 fi
 
+echo "===== install perl 5.20 ====="
+
+# this is used by the seqr pedigree image-generating script and by the variant effect predictor (VEP) which is run within hail 0.1
+# the VEP hail 0.1 integration in particular depends on this specific version of VEP
+
+wget http://www.cpan.org/authors/id/S/SH/SHAY/perl-5.20.3.tar.bz2
+tar xjf perl-5.20.3.tar.bz2
+cd perl-5.20.3
+./configure.gnu
+make
+sudo make install
+
+
 echo
 echo "==== Installing seqr ===="
 echo
@@ -41,7 +54,6 @@ elif [ $PLATFORM = "ubuntu" ]; then
 
     # install dependencies of the HaploPainter.pl script used to generate static pedigree images
     sudo apt-get install -y \
-        perl \
         build-essential \
         libcairo2-dev \
         libglib2.0-bin \
