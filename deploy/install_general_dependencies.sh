@@ -242,21 +242,18 @@ gsutil -m cp gs://hail-common/vep/htslib/* ${SEQR_BIN_DIR}/ \
 
 echo "===== install perl 5.20 ====="
 
-export PERL_VERSION=perl-5.20.3
-curl -L http://install.perlbrew.pl | bash
-~/perl5/perlbrew/bin/perlbrew install --notest $PERL_VERSION
-
-cat <(echo 'source ~/perl5/perlbrew/etc/bashrc') ~/.bashrc > /tmp/bashrc && mv /tmp/bashrc ~/.bashrc
-
-sudo ln -s ~/perl5/perlbrew/perls/${PERL_VERSION}/bin/perl /usr/local/bin/perl
+wget http://www.cpan.org/authors/id/S/SH/SHAY/perl-5.20.3.tar.bz2
+tar xjf perl-5.20.3.tar.bz2
+cd perl-5.20.3
+./configure.gnu
+make
+sudo make install
 
 if [ "$needs_reboot" ] ; then
 
   echo '
   ==================================================================
-
   Config changes above will take effect after a reboot.
-
   ==================================================================
 '
     read -p "Reboot now? [y/n] " -n 1 -r
