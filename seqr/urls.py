@@ -100,6 +100,7 @@ from seqr.views.apis.staff_api import \
     discovery_sheet, \
     get_projects_for_category, \
     elasticsearch_status, \
+    saved_variants, \
     mme_metrics_proxy, \
     mme_submissions
 from seqr.views.pages.staff.komp_export import komp_export
@@ -223,6 +224,7 @@ api_endpoints = {
     'staff/elasticsearch_status': elasticsearch_status,
     'staff/matchmaker_metrics': mme_metrics_proxy,
     'staff/matchmaker_submissions': mme_submissions,
+    'staff/saved_variants/(?P<tag>[^/]+)': saved_variants,
 
     # EXTERNAL APIS: DO NOT CHANGE
     # matchmaker public facing MME URLs
