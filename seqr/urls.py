@@ -103,7 +103,6 @@ from seqr.views.apis.staff_api import \
     saved_variants, \
     mme_metrics_proxy, \
     mme_submissions
-from seqr.views.pages.staff.komp_export import komp_export
 
 from seqr.views.apis.awesomebar_api import awesomebar_autocomplete_handler
 from seqr.views.apis.auth_api import login_required_error, API_LOGIN_REQUIRED_URL
@@ -274,7 +273,6 @@ urlpatterns += [
 # other staff-only endpoints
 urlpatterns = [
     url("^staff/seqr_stats/?", seqr_stats_page, name="seqr_stats"),
-    url("^staff/komp_export", komp_export, name="komp_export"),
     url("^staff/users/?", users_page, name="users_page"),
     url("^staff/kibana/?", kibana_page, name="kibana_page"),
 ] + urlpatterns
