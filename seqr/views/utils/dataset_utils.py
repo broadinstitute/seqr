@@ -1,5 +1,4 @@
 import logging
-import json
 import elasticsearch_dsl
 from django.utils import timezone
 from django.db.models.query_utils import Q
@@ -7,7 +6,7 @@ from django.db.models.query_utils import Q
 from seqr.views.apis.igv_api import proxy_to_igv
 from seqr.models import Sample, Individual
 from seqr.utils.es_utils import get_es_client, get_index_metadata
-from seqr.utils import file_utils
+from seqr.utils.file_utils import file_iter
 from seqr.views.utils.file_utils import load_uploaded_file, parse_file
 
 logger = logging.getLogger(__name__)
@@ -40,14 +39,7 @@ def validate_index_metadata(index_metadata, project, elasticsearch_index):
         ))
 
     dataset_path = index_metadata['sourceFilePath']
-    if dataset_path.endswith('.vds'):
-        dataset_path += '/metadata.json.gz'
-        _validate_dataset_path(dataset_path)
-        _validate_vcf_metadata(dataset_path)
-    elif dataset_path.endswith(".vcf.gz"):
-        _validate_dataset_path(dataset_path)
-        _validate_vcf(dataset_path)
-    else:
+    if not dataset_path.endswith('.vds') and not dataset_path.endswith('.vcf.gz'):
         raise Exception("Variant call dataset path must end with .vcf.gz or .vds")
 
 
@@ -58,48 +50,8 @@ def validate_alignment_dataset_path(dataset_path):
         raise Exception('Error accessing "{}": {}'.format(dataset_path, resp.content))
 
 
-def _validate_dataset_path(dataset_path):
-    try:
-        dataset_file = file_utils.does_file_exist(dataset_path)
-        if dataset_file is None:
-            raise Exception('"{}" not found'.format(dataset_path))
-        # check that dataset_path is accessible
-        dataset_file_stats = file_utils.get_file_stats(dataset_path)
-        if dataset_file_stats is None:
-            raise Exception('Unable to access "{}"'.format(dataset_path))
-    except Exception as e:
-        raise Exception("Dataset path error: " + str(e))
-
-
-def _validate_vcf(vcf_path):
-    header_line = None
-    for line in file_utils.file_iter(vcf_path):
-        if line.startswith("#CHROM"):
-            header_line = line
-            break
-        if line.startswith("#"):
-            continue
-        else:
-            break
-
-    if not header_line:
-        raise Exception("Unexpected VCF header. #CHROM not found before line: {}".format(line))
-
-    header_fields = header_line.strip().split('\t')
-    sample_ids = header_fields[9:]
-
-    if not sample_ids:
-        raise Exception('No samples found in VCF "{}"'.format(vcf_path))
-
-
-def _validate_vcf_metadata(vcf_path):
-    metadata = '\n'.join([line for line in file_utils.file_iter(vcf_path)])
-    if 'sample_annotations' not in json.loads(metadata):
-        raise Exception('No samples found in "{}"'.format(vcf_path))
-
-
 def load_mapping_file(mapping_file_path):
-    file_content = parse_file(mapping_file_path, file_utils.file_iter(mapping_file_path))
+    file_content = parse_file(mapping_file_path, file_iter(mapping_file_path))
     return _load_mapping_file(file_content)
 
 

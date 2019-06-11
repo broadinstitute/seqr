@@ -17,10 +17,10 @@ class DatasetAPITest(TransactionTestCase):
     fixtures = ['users', '1kg_project']
 
     @mock.patch('seqr.views.apis.dataset_api.update_xbrowse_vcfffiles', lambda *args: args)
-    @mock.patch('seqr.views.utils.dataset_utils.file_utils')
+    @mock.patch('seqr.views.utils.dataset_utils.file_iter')
     @mock.patch('seqr.views.utils.dataset_utils.get_index_metadata')
     @mock.patch('seqr.views.utils.dataset_utils.elasticsearch_dsl.Search')
-    def test_add_variants_dataset(self, mock_es_search, mock_get_index_metadata, mock_file_utils):
+    def test_add_variants_dataset(self, mock_es_search, mock_get_index_metadata, mock_file_iter):
         url = reverse(add_variants_dataset_handler, args=[PROJECT_GUID])
         _check_login(self, url)
 
@@ -91,18 +91,6 @@ class DatasetAPITest(TransactionTestCase):
             'genomeVersion': '38',
             'sourceFilePath': 'test_data.vds',
         }}
-        mock_file_utils.get_file_stats.return_value = None
-        response = self.client.post(url, content_type='application/json', data=json.dumps({'elasticsearchIndex': INDEX_NAME}))
-        self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'errors': ['Dataset path error: Unable to access "test_data.vds/metadata.json.gz"']})
-
-        mock_file_utils.get_file_stats.return_value = {}
-        mock_file_utils.file_iter.return_value = ['{', '}']
-        response = self.client.post(url, content_type='application/json', data=json.dumps({'elasticsearchIndex': INDEX_NAME}))
-        self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'errors': ['No samples found in "test_data.vds/metadata.json.gz"']})
-
-        mock_file_utils.file_iter.return_value = ['{', '"sample_annotations":', '[]' '}']
         response = self.client.post(url, content_type='application/json', data=json.dumps({'elasticsearchIndex': INDEX_NAME}))
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['Matches not found for ES sample ids: NA19678_1. Uploading a mapping file for these samples, or select the "Ignore extra samples in callset" checkbox to ignore.']})
@@ -118,7 +106,7 @@ class DatasetAPITest(TransactionTestCase):
         mock_es_search.return_value.params.return_value.execute.return_value.aggregations.sample_ids.buckets = [
             {'key': 'NA19675'}, {'key': 'NA19679'}, {'key': 'NA19678_1'},
         ]
-        mock_file_utils.file_iter.side_effect = [['{"sample_annotations": []}'], ['NA19678_1,NA19678']]
+        mock_file_iter.return_value = ['NA19678_1,NA19678']
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'elasticsearchIndex': INDEX_NAME,
             'mappingFilePath': 'mapping.csv',
