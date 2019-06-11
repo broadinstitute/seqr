@@ -83,7 +83,7 @@ export const PageHeader = ({ projectsByGuid, familiesByGuid, analysisGroupsByGui
     }
   }
 
-  if (project && project.hasGeneSearch) {
+  if (project) {
     if (!originalPages) {
       originalPages = []
     }

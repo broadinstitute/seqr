@@ -3,8 +3,9 @@ import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { connect } from 'react-redux'
 import { Table } from 'semantic-ui-react'
+import { SHOW_ALL } from 'shared/utils/constants'
 import { getFamiliesFilter } from '../../selectors'
-import { FAMILY_FILTER_LOOKUP, SHOW_ALL } from '../../constants'
+import { FAMILY_FILTER_LOOKUP } from '../../constants'
 
 const EmptyCell = styled(Table.Cell)`
   padding: 10px 0px 10px 15px;

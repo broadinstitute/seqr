@@ -248,3 +248,5 @@ def _add_locus_lists(projects, variants, genes):
 
     for locus_list_gene in LocusListGene.objects.filter(locus_list__in=locus_lists, gene_id__in=genes.keys()).prefetch_related('locus_list'):
         genes[locus_list_gene.gene_id]['locusListGuids'].append(locus_list_gene.locus_list.guid)
+
+    return [locus_list.guid for locus_list in locus_lists]

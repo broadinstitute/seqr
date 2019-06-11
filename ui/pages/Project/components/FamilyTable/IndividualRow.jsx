@@ -16,8 +16,7 @@ import { ColoredIcon } from 'shared/components/StyledComponents'
 import { VerticalSpacer } from 'shared/components/Spacers'
 
 import { updateIndividual } from 'redux/rootReducer'
-import { getSamplesByGuid } from 'redux/selectors'
-import { getProject } from 'pages/Project/selectors'
+import { getSamplesByGuid, getCurrentProject } from 'redux/selectors'
 import { SAMPLE_STATUS_LOADED, DATASET_TYPE_VARIANT_CALLS } from 'shared/utils/constants'
 import { CASE_REVIEW_STATUS_MORE_INFO_NEEDED, CASE_REVIEW_STATUS_OPTIONS } from '../../constants'
 
@@ -220,7 +219,7 @@ class IndividualRow extends React.Component
 export { IndividualRow as IndividualRowComponent }
 
 const mapStateToProps = state => ({
-  project: getProject(state),
+  project: getCurrentProject(state),
   samplesByGuid: getSamplesByGuid(state),
 })
 

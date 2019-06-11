@@ -6,7 +6,6 @@ import logging
 import json
 
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import ObjectDoesNotExist
 from django.db import connection
 from django.db.models import Q, Count
 from django.utils import timezone
@@ -24,8 +23,6 @@ from seqr.views.utils.orm_to_json_utils import \
 
 
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions
-from xbrowse_server.mall import get_project_datastore
-from xbrowse_server.base.models import Project as BaseProject
 
 logger = logging.getLogger(__name__)
 
@@ -54,9 +51,6 @@ def project_page_data(request, project_guid):
     project_json['collaborators'] = get_json_for_project_collaborator_list(project)
     project_json.update(_get_json_for_variant_tag_types(project, request.user, individuals_by_guid))
     project_json['locusListGuids'] = locus_lists_by_guid.keys()
-
-    # TODO gene search will be deprecated once the new database is online.
-    project_json['hasGeneSearch'] = _has_gene_search(project)
     project_json['detailsLoaded'] = True
 
     return create_json_response({
@@ -302,20 +296,3 @@ def export_project_individuals_handler(request, project_guid):
         include_hpo_terms_present=include_phenotypes,
         include_hpo_terms_absent=include_phenotypes,
     )
-
-
-def _has_gene_search(project):
-    """
-    Returns True if this project has Gene Search enabled.
-
-    DEPRECATED - will be removed along with mongodb.
-
-    Args:
-         project (object): django project
-    """
-    try:
-        base_project = BaseProject.objects.get(seqr_project=project)
-    except ObjectDoesNotExist as e:
-        return False
-
-    return base_project.has_elasticsearch_index() or get_project_datastore(base_project).project_collection_is_loaded(base_project)

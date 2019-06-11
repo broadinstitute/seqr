@@ -5,6 +5,7 @@ import { Icon, Popup } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 import styled from 'styled-components'
 
+import { getCurrentProject } from 'redux/selectors'
 import DataLoader from 'shared/components/DataLoader'
 import { HorizontalSpacer } from 'shared/components/Spacers'
 import DeleteButton from 'shared/components/buttons/DeleteButton'
@@ -13,7 +14,7 @@ import { RadioGroup, AddableSelect } from 'shared/components/form/Inputs'
 import { USER_NAME_FIELDS } from 'shared/utils/constants'
 
 import { updateCollaborator, loadUserOptions } from '../reducers'
-import { getProject, getUsersByUsername, getUserOptions, getUserOptionsIsLoading } from '../selectors'
+import { getUsersByUsername, getUserOptions, getUserOptionsIsLoading } from '../selectors'
 
 
 const CollaboratorEmailDropdown = ({ load, loading, usersByUsername, onChange, value, ...props }) =>
@@ -89,7 +90,7 @@ AddCollaboratorButton.propTypes = {
 }
 
 const mapStateToProps = state => ({
-  project: getProject(state),
+  project: getCurrentProject(state),
 })
 
 const mapCreateDispatchToProps = {

@@ -23,11 +23,6 @@ def find_mme_matches(search):
         'submitted_data': {},
     }]
 
-
-def _has_gene_search(project):
-    return True
-
-
 def get_objects_for_group(can_view_group, permission, object_cls):
     return object_cls.objects.all()
 
@@ -35,7 +30,6 @@ def get_objects_for_group(can_view_group, permission, object_cls):
 class ProjectPageTest(TestCase):
     fixtures = ['users', '1kg_project']
 
-    @mock.patch('seqr.views.pages.project_page._has_gene_search', _has_gene_search)
     @mock.patch('seqr.views.apis.locus_list_api.get_objects_for_group', get_objects_for_group)
     def test_project_page_data(self):
         url = reverse(project_page_data, args=[PROJECT_GUID])
@@ -56,7 +50,7 @@ class ProjectPageTest(TestCase):
         )
         self.assertSetEqual(
             set(response_json['projectsByGuid'][PROJECT_GUID].keys()),
-            {'collaborators', 'locusListGuids', 'variantTagTypes', 'variantFunctionalTagTypes', 'hasGeneSearch',
+            {'collaborators', 'locusListGuids', 'variantTagTypes', 'variantFunctionalTagTypes',
              'detailsLoaded', 'projectGuid', 'projectCategoryGuids', 'canEdit', 'name', 'description', 'createdDate',
              'lastModifiedDate', 'isPhenotipsEnabled', 'phenotipsUserId', 'deprecatedProjectId', 'hasNewSearch',
              'lastAccessedDate', 'isMmeEnabled', 'mmePrimaryDataOwner', 'mmeContactInstitution', 'mmeContactUrl',
@@ -95,7 +89,6 @@ class ProjectPageTest(TestCase):
             {'analysisGroupGuid', 'description', 'name', 'projectGuid', 'familyGuids'}
         )
 
-    @mock.patch('seqr.views.pages.project_page._has_gene_search', _has_gene_search)
     @mock.patch('seqr.views.apis.locus_list_api.get_objects_for_group', get_objects_for_group)
     def test_empty_project_page_data(self):
         url = reverse(project_page_data, args=[EMPTY_PROJECT_GUID])
@@ -115,7 +108,6 @@ class ProjectPageTest(TestCase):
         self.assertDictEqual(response_json['samplesByGuid'], {})
         self.assertDictEqual(response_json['analysisGroupsByGuid'], {})
 
-    @mock.patch('seqr.views.pages.project_page._has_gene_search', _has_gene_search)
     def test_export_tables(self):
         url = reverse(export_project_individuals_handler, args=['R0001_1kg'])
         _check_login(self, url)

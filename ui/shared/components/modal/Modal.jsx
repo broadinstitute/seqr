@@ -66,7 +66,8 @@ const mapStateToProps = (state, ownProps) => ({
 
 const mapDispatchToProps = (dispatch, ownProps) => {
   return {
-    open: () => {
+    open: (e) => {
+      e.preventDefault()
       dispatch(openModal(ownProps.modalName))
     },
     close: (confirm) => {

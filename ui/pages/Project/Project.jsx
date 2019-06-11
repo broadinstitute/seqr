@@ -4,12 +4,13 @@ import { connect } from 'react-redux'
 import { Route, Switch } from 'react-router-dom'
 import { Loader, Header } from 'semantic-ui-react'
 
+import { getCurrentProject } from 'redux/selectors'
+import SavedVariants from 'shared/components/panel/variants/SavedVariants'
 import { loadProject, unloadProject } from './reducers'
-import { getProject, getProjectDetailsIsLoading } from './selectors'
+import { getProjectDetailsIsLoading } from './selectors'
 import ProjectPageUI from './components/ProjectPageUI'
 import CaseReview from './components/CaseReview'
 import FamilyPage from './components/FamilyPage'
-import SavedVariants from './components/SavedVariants'
 import Matchmaker from './components/Matchmaker'
 
 
@@ -62,7 +63,7 @@ const mapDispatchToProps = {
 }
 
 const mapStateToProps = state => ({
-  project: getProject(state),
+  project: getCurrentProject(state),
   loading: getProjectDetailsIsLoading(state),
 })
 

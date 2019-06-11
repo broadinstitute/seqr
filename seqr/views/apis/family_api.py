@@ -17,10 +17,8 @@ from seqr.views.utils.json_to_orm_utils import update_family_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_family
 from seqr.models import Family, FamilyAnalysedBy, CAN_EDIT, Individual
-from seqr.model_utils import create_seqr_model, get_or_create_seqr_model
+from seqr.model_utils import create_seqr_model, get_or_create_seqr_model, delete_seqr_model
 from seqr.views.utils.permissions_utils import check_permissions, get_project_and_check_permissions
-
-from xbrowse_server.base.models import Family as BaseFamily
 
 logger = logging.getLogger(__name__)
 
@@ -98,12 +96,7 @@ def delete_families_handler(request, project_guid):
 
     # delete families
     for family in Family.objects.filter(project=project, guid__in=family_guids_to_delete):
-        base_family = BaseFamily.objects.get(
-            project__project_id=project.deprecated_project_id,
-            family_id=family.family_id)
-        base_family.delete()
-
-        family.delete()
+        delete_seqr_model(family)
 
     # send response
     return create_json_response({
@@ -114,14 +107,6 @@ def delete_families_handler(request, project_guid):
             family_guid: None for family_guid in family_guids_to_delete
         },
     })
-
-
-def _deprecated_update_original_family_fields(project, family, fields):
-    # also update base family
-    base_family = BaseFamily.objects.filter(
-        project__project_id=project.deprecated_project_id, family_id=family.family_id)
-    base_family = base_family[0]
-    update_family_from_json(base_family, fields)
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)

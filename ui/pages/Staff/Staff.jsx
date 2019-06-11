@@ -5,6 +5,7 @@ import { NavLink, Route, Switch } from 'react-router-dom'
 import { Header, Menu } from 'semantic-ui-react'
 
 import { getUser } from 'redux/selectors'
+import SavedVariants from 'shared/components/panel/variants/SavedVariants'
 import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 
@@ -14,14 +15,13 @@ import ElasticsearchStatus from './components/ElasticsearchStatus'
 import CreateUser from './components/CreateUser'
 import Matchmaker from './components/Matchmaker'
 
-
 const STAFF_PAGES = [
   { path: 'anvil', params: '/:projectGuid?', component: Anvil },
   { path: 'create_user', component: CreateUser },
   { path: 'discovery_sheet', params: '/:projectGuid?', component: DiscoverySheet },
-  { path: 'matchmaker', component: Matchmaker },
   { path: 'elasticsearch_status', component: ElasticsearchStatus },
-  { path: 'komp_export' },
+  { path: 'matchmaker', component: Matchmaker },
+  { path: 'saved_variants', component: SavedVariants },
   { path: 'seqr_stats' },
 ]
 

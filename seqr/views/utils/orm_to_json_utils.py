@@ -113,7 +113,25 @@ def _get_json_for_user(user):
     return user_json
 
 
-def _get_json_for_project(project, user, add_project_category_guids_field=True):
+def get_json_for_projects(projects, user=None, add_project_category_guids_field=True):
+    """Returns JSON representation of the given Projects.
+
+    Args:
+        projects (object array): Django models for the projects
+        user (object): Django User object for determining whether to include restricted/internal-only fields
+    Returns:
+        dict: json object
+    """
+    def _process_result(result, project):
+        result.update({
+            'projectCategoryGuids': [c.guid for c in project.projectcategory_set.all()] if add_project_category_guids_field else [],
+            'canEdit': user.is_staff or user.has_perm(CAN_EDIT, project),
+        })
+
+    return _get_json_for_models(projects, user=user, process_result=_process_result)
+
+
+def _get_json_for_project(project, user, **kwargs):
     """Returns JSON representation of the given Project.
 
     Args:
@@ -122,13 +140,7 @@ def _get_json_for_project(project, user, add_project_category_guids_field=True):
     Returns:
         dict: json object
     """
-    def _process_result(result, *args):
-        result.update({
-            'projectCategoryGuids': [c.guid for c in project.projectcategory_set.all()] if add_project_category_guids_field else [],
-            'canEdit': user.is_staff or user.has_perm(CAN_EDIT, project),
-        })
-
-    return _get_json_for_model(project, user=user, process_result=_process_result)
+    return _get_json_for_model(project, get_json_for_models=get_json_for_projects, user=user, **kwargs)
 
 
 def _get_json_for_families(families, user=None, add_individual_guids_field=False, project_guid=None):

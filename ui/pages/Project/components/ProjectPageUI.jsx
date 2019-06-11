@@ -4,6 +4,7 @@ import { connect } from 'react-redux'
 import { Grid, Loader } from 'semantic-ui-react'
 import { Link } from 'react-router-dom'
 
+import { getCurrentProject } from 'redux/selectors'
 import SectionHeader from 'shared/components/SectionHeader'
 import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
 import VariantTagTypeBar from 'shared/components/graph/VariantTagTypeBar'
@@ -15,7 +16,6 @@ import {
   FAMILY_DETAIL_FIELDS,
 } from 'shared/utils/constants'
 import {
-  getProject,
   getProjectDetailsIsLoading,
   getAnalysisStatusCounts,
   getFamiliesExportConfig,
@@ -79,7 +79,7 @@ const ProjectSectionComponent = ({ loading, label, children, editButton, linkPat
 }
 
 const mapSectionStateToProps = state => ({
-  project: getProject(state),
+  project: getCurrentProject(state),
   loading: getProjectDetailsIsLoading(state),
 })
 
@@ -159,7 +159,7 @@ ProjectPageUI.propTypes = {
 }
 
 const mapStateToProps = (state, ownProps) => ({
-  project: getProject(state),
+  project: getCurrentProject(state),
   analysisGroup: getProjectAnalysisGroupsByGuid(state)[ownProps.match.params.analysisGroupGuid],
   analysisStatusCounts: getAnalysisStatusCounts(state, ownProps),
   familyExportConfig: getFamiliesExportConfig(state, ownProps),
