@@ -4,6 +4,7 @@ import { NavLink } from 'react-router-dom'
 
 import AwesomeBar from 'shared/components/page/AwesomeBar'
 import SortableTable from 'shared/components/table/SortableTable'
+import { HorizontalSpacer } from 'shared/components/Spacers'
 import DataLoader from 'shared/components/DataLoader'
 import { InlineHeader } from 'shared/components/StyledComponents'
 
@@ -18,16 +19,18 @@ const LOADING_PROPS = { inline: true }
 
 const getResultHref = page => result => `/staff/${page}/${result.key}`
 
-const BaseReport = ({ page, viewAllCategory, idField, defaultSortColumn, getDownloadFilename, match, data, columns, loading, load, loadingError }) =>
+const BaseReport = ({ page, viewAllCategory, idField, defaultSortColumn, getDownloadFilename, match, data, columns, loading, load, loadingError, filters }) =>
   <DataLoader contentId={match.params.projectGuid} load={load} reloadOnIdUpdate content loading={false}>
     <InlineHeader size="medium" content="Projects:" />
     <AwesomeBar
       categories={SEARCH_CATEGORIES}
       placeholder="Enter project name"
-      inputwidth="400px"
+      inputwidth="350px"
       getResultHref={getResultHref(page)}
     />
     or <NavLink to={`/staff/${page}/all`} activeStyle={ACTIVE_LINK_STYLE}>view all {viewAllCategory} projects</NavLink>
+    <HorizontalSpacer width={20} />
+    {filters}
     <SortableTable
       striped
       collapsing
@@ -55,6 +58,7 @@ BaseReport.propTypes = {
   loading: PropTypes.bool,
   loadingError: PropTypes.string,
   load: PropTypes.func,
+  filters: PropTypes.node,
 }
 
 export default BaseReport

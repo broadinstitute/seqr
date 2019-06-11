@@ -20,7 +20,7 @@ const RECEIVE_MME_SUBMISSIONS = 'RECEIVE_MME_SUBMISSIONS'
 
 // Data actions
 
-export const loadAnvil = (projectGuid) => {
+export const loadAnvil = (projectGuid, filterValues) => {
   return (dispatch) => {
     if (projectGuid) {
       dispatch({ type: REQUEST_ANVIL })
@@ -31,7 +31,7 @@ export const loadAnvil = (projectGuid) => {
         (e) => {
           dispatch({ type: RECEIVE_ANVIL, error: e.message, newValue: [] })
         },
-      ).get()
+      ).get(filterValues)
     }
   }
 }

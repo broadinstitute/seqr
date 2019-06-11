@@ -153,7 +153,7 @@ def anvil_export(request, project_guid):
     else:
         projects_by_guid = {p.guid: p for p in Project.objects.filter(projectcategory__name__iexact='anvil')}
 
-    families = _get_over_year_loaded_project_families(projects_by_guid.values())
+    families = _get_loaded_before_date_project_families(projects_by_guid.values(), loaded_before=request.GET.get('loadedBefore'))
     prefetch_related_objects(families, 'individual_set')
 
     saved_variants_by_family = _get_saved_variants_by_family(projects_by_guid.values(), request.user)
@@ -210,8 +210,11 @@ def anvil_export(request, project_guid):
     return create_json_response({'anvilRows': rows})
 
 
-def _get_over_year_loaded_project_families(projects):
-    max_loaded_date = datetime.now() - timedelta(days=365)
+def _get_loaded_before_date_project_families(projects, loaded_before=None):
+    if loaded_before:
+        max_loaded_date = datetime.strptime(loaded_before, '%Y-%m-%d')
+    else:
+        max_loaded_date = datetime.now() - timedelta(days=365)
     loaded_samples = Sample.objects.filter(
         individual__family__project__in=projects,
         dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
