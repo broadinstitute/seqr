@@ -153,8 +153,7 @@ def anvil_export(request, project_guid):
     else:
         projects_by_guid = {p.guid: p for p in Project.objects.filter(projectcategory__name__iexact='anvil')}
 
-    families = _get_loaded_before_date_project_families(projects_by_guid.values(), loaded_before=request.GET.get('loadedBefore'))
-    prefetch_related_objects(families, 'individual_set')
+    individuals = _get_loaded_before_date_project_individuals(projects_by_guid.values(), loaded_before=request.GET.get('loadedBefore'))
 
     saved_variants_by_family = _get_saved_variants_by_family(projects_by_guid.values(), request.user)
 
@@ -172,9 +171,6 @@ def anvil_export(request, project_guid):
                     if all(gene_id in variant['transcripts'] for variant in potential_compound_het_variants):
                         compound_het_gene_id_by_family[family_guid] = gene_id
 
-    individuals = set()
-    for family in families:
-        individuals.update(family.individual_set.all())
     rows = _get_json_for_individuals(list(individuals), project_guid=project_guid, family_fields=['family_id', 'coded_phenotype'])
 
     gene_ids = set()
@@ -210,7 +206,7 @@ def anvil_export(request, project_guid):
     return create_json_response({'anvilRows': rows})
 
 
-def _get_loaded_before_date_project_families(projects, loaded_before=None):
+def _get_loaded_before_date_project_individuals(projects, loaded_before=None):
     if loaded_before:
         max_loaded_date = datetime.strptime(loaded_before, '%Y-%m-%d')
     else:
@@ -222,7 +218,7 @@ def _get_loaded_before_date_project_families(projects, loaded_before=None):
         loaded_date__isnull=False,
         loaded_date__lte=max_loaded_date,
     ).select_related('individual__family__project').order_by('loaded_date')
-    return list({sample.individual.family for sample in loaded_samples})
+    return list({sample.individual for sample in loaded_samples})
 
 
 def _get_saved_variants_by_family(projects, user):
