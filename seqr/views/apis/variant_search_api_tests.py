@@ -17,7 +17,7 @@ from seqr.views.utils.test_utils import _check_login
 LOCUS_LIST_GUID = 'LL00049_pid_genes_autosomal_do'
 PROJECT_GUID = 'R0001_1kg'
 SEARCH_HASH = 'd380ed0fd28c3127d07a64ea2ba907d7'
-SEARCH = {'filters': {}}
+SEARCH = {'filters': {}, 'inheritance': None}
 PROJECT_FAMILIES = [{'projectGuid': PROJECT_GUID, 'familyGuids': ['F000001_1', 'F000002_2']}]
 VARIANTS = [
     {'alt': 'G', 'ref': 'GAGA', 'chrom': '21', 'pos': 3343353, 'xpos': 2103343353, 'genomeVersion': '38',

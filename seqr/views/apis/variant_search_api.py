@@ -290,7 +290,7 @@ def create_saved_search_handler(request):
     if not name:
         return create_json_response({}, status=400, reason='"Name" is required')
 
-    if request_json.get('inheritance', {}).get('filter', {}).get('genotype'):
+    if (request_json.get('inheritance') or {}).get('filter', {}).get('genotype'):
         return create_json_response({}, status=400, reason='Saved searches cannot include custom genotype filters')
 
     try:
