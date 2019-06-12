@@ -214,21 +214,20 @@ export const INDIVIDUAL_HPO_EXPORT_DATA = [
   },
 ]
 
-export const latestSamplesLoaded = (sampleGuids, samplesByGuid) => {
+export const latestSamplesLoaded = (sampleGuids, samplesByGuid, datasetType) => {
   const loadedSamples = sampleGuids.map(sampleGuid => samplesByGuid[sampleGuid]).filter(sample =>
-    sample.datasetType === DATASET_TYPE_VARIANT_CALLS &&
-    sample.sampleStatus === SAMPLE_STATUS_LOADED &&
+    sample.datasetType === (datasetType || DATASET_TYPE_VARIANT_CALLS) &&
     sample.sampleStatus === SAMPLE_STATUS_LOADED &&
     sample.loadedDate,
   )
   return orderBy(loadedSamples, [s => s.loadedDate], 'asc')
 }
 
-export const familySamplesLoaded = (family, individualsByGuid, samplesByGuid) => {
+export const familySamplesLoaded = (family, individualsByGuid, samplesByGuid, datasetType) => {
   const sampleGuids = [...family.individualGuids.map(individualGuid => individualsByGuid[individualGuid]).reduce(
     (acc, individual) => new Set([...acc, ...individual.sampleGuids]), new Set(),
   )]
-  return latestSamplesLoaded(sampleGuids, samplesByGuid)
+  return latestSamplesLoaded(sampleGuids, samplesByGuid, datasetType)
 }
 
 // CLINVAR

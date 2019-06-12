@@ -654,6 +654,15 @@ ALL_INHERITANCE_QUERY = {
                 ],
                 '_name': 'F000003_3'
             }},
+            {'bool': {
+                'must': [
+                    {'bool': {'should': [
+                        {'terms': {'samples_num_alt_1': ['NA20874']}},
+                        {'terms': {'samples_num_alt_2': ['NA20874']}},
+                    ]}}
+                ],
+                '_name': 'F000005_5'
+            }}
         ]
     }
 }
@@ -834,7 +843,7 @@ class EsUtilsTest(TestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
 
     def setUp(self):
-        self.families = Family.objects.filter(guid__in=['F000003_3', 'F000002_2'])
+        self.families = Family.objects.filter(guid__in=['F000003_3', 'F000002_2', 'F000005_5'])
         self.executed_search = None
         self.searched_indices = []
 

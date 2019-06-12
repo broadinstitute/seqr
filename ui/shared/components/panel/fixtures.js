@@ -293,6 +293,7 @@ export const STATE1 = {
       },
       phenotipsPatientId: 'P0005221',
       sex: 'F',
+      sampleGuids: [],
     },
     I021475_na19675: {
       affected: 'A',
@@ -381,6 +382,7 @@ export const STATE1 = {
       },
       phenotipsPatientId: 'P0005219',
       sex: 'M',
+      sampleGuids: [],
     },
     I021476_na19678: {
       affected: 'N',
@@ -446,8 +448,10 @@ export const STATE1 = {
       },
       phenotipsPatientId: 'P0005220',
       sex: 'M',
+      sampleGuids: [],
     },
   },
+  samplesByGuid: {},
   project: {
     createdDate: '2016-05-16T05:37:08.634Z',
     deprecatedLastAccessedDate: '2017-03-14T15:15:42.580Z',
