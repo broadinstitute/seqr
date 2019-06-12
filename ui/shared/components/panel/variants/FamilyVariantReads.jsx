@@ -2,14 +2,14 @@ import React from 'react'
 import ReactDOMServer from 'react-dom/server'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
+import { Segment, Icon } from 'semantic-ui-react'
 
-import { getIndividualsByGuid, getSamplesByGuid } from 'redux/selectors'
-import Modal from '../modal/Modal'
-import PedigreeIcon from '../icons/PedigreeIcon'
-import IGV from '../graph/IGV'
-import { ButtonLink } from '../StyledComponents'
-import { DATASET_TYPE_READ_ALIGNMENTS } from '../../utils/constants'
-import { getLocus } from '../panel/variants/Annotations'
+import { getIndividualsByGuid, getAlignmentSamplesByFamily } from 'redux/selectors'
+import PedigreeIcon from '../../icons/PedigreeIcon'
+import IGV from '../../graph/IGV'
+import { ButtonLink } from '../../StyledComponents'
+import { VerticalSpacer } from '../../Spacers'
+import { getLocus } from './Annotations'
 
 const CRAM_TRACK_OPTIONS = {
   sourceType: 'pysam',
@@ -23,16 +23,16 @@ const BAM_TRACK_OPTIONS = {
   showSoftClips: true,
 }
 
-const ShowReadsButton = ({ variant, familyGuid, samplesByGuid, individualsByGuid }) => {
+const FamilyVariantReads = ({ variant, samples, individualsByGuid, hideReads }) => {
+
+  if (!samples || !samples.length) {
+    return null
+  }
 
   const locus = getLocus(variant.chrom, variant.pos, 100)
 
-  const latestSamplesForIndividuals = Object.values(samplesByGuid).filter(sample => (
-    sample.loadedDate &&
-    sample.datasetType === DATASET_TYPE_READ_ALIGNMENTS &&
-    individualsByGuid[sample.individualGuid].familyGuid === familyGuid
-  )).reduce((acc, sample) => {
-    if (!acc[sample.individualGuid] || acc[sample.individualGuid].loadedDate < sample.loadedDate) {
+  const latestSamplesForIndividuals = samples.reduce((acc, sample) => {
+    if (!acc[sample.individualGuid]) {
       acc[sample.individualGuid] = sample
     }
     return acc
@@ -53,10 +53,6 @@ const ShowReadsButton = ({ variant, familyGuid, samplesByGuid, individualsByGuid
       ...trackOptions,
     }
   }).filter(track => track)
-
-  if (igvTracks.length <= 0) {
-    return null
-  }
 
   // TODO better determiner of genome version?
   const isBuild38 = igvTracks.some(track => track.sourceType === 'pysam')
@@ -83,27 +79,24 @@ const ShowReadsButton = ({ variant, familyGuid, samplesByGuid, individualsByGuid
   }
 
   return (
-    <Modal
-      trigger={<ButtonLink icon="options" content="SHOW READS" />}
-      modalName={`${familyGuid}-${locus}-igv`}
-      title="IGV"
-      size="fullscreen"
-    >
+    <Segment>
+      <ButtonLink onClick={hideReads} icon={<Icon name="remove" color="grey" />} floated="right" size="large" />
+      <VerticalSpacer height={20} />
       <IGV igvOptions={igvOptions} />
-    </Modal>
+    </Segment>
   )
 }
 
-ShowReadsButton.propTypes = {
+FamilyVariantReads.propTypes = {
   variant: PropTypes.object,
-  familyGuid: PropTypes.string,
-  samplesByGuid: PropTypes.object,
+  samples: PropTypes.array,
   individualsByGuid: PropTypes.object,
+  hideReads: PropTypes.func,
 }
 
-const mapStateToProps = state => ({
-  samplesByGuid: getSamplesByGuid(state),
+const mapStateToProps = (state, ownProps) => ({
+  samples: getAlignmentSamplesByFamily(state)[ownProps.familyGuid],
   individualsByGuid: getIndividualsByGuid(state),
 })
 
-export default connect(mapStateToProps)(ShowReadsButton)
+export default connect(mapStateToProps)(FamilyVariantReads)

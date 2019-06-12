@@ -92,6 +92,7 @@ class IGV extends React.Component {
   constructor(props) {
     super(props)
     this.container = null
+    this.browser = null
   }
 
   setContainerElement = (element) => {
@@ -104,7 +105,19 @@ class IGV extends React.Component {
 
   componentDidMount() {
     if (this.container) {
-      igv.createBrowser(this.container, this.props.igvOptions)
+      igv.createBrowser(this.container, this.props.igvOptions).then((browser) => {
+        this.browser = browser
+      })
+    }
+  }
+
+  componentDidUpdate(prevProps) {
+    if (this.browser && prevProps.igvOptions.tracks !== this.props.igvOptions.tracks) {
+      this.browser.removeAllTracks()
+      this.props.igvOptions.tracks.forEach((track) => {
+        this.browser.loadTrack(track)
+      })
+
     }
   }
 }

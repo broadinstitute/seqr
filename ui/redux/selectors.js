@@ -11,6 +11,7 @@ import {
   SORT_BY_FAMILY_GUID,
   VARIANT_SORT_LOOKUP,
   SHOW_ALL,
+  DATASET_TYPE_READ_ALIGNMENTS,
   getVariantsExportData,
   familySamplesLoaded,
 } from 'shared/utils/constants'
@@ -88,6 +89,18 @@ export const getFirstSampleByFamily = createSelector(
         [familyGuid]: familySamples.length > 0 ? familySamples[0] : null,
       }
     }, {})
+  },
+)
+
+export const getAlignmentSamplesByFamily = createSelector(
+  getFamiliesByGuid,
+  getIndividualsByGuid,
+  getSamplesByGuid,
+  (familiesByGuid, individualsByGuid, samplesByGuid) => {
+    return Object.entries(familiesByGuid).reduce((acc, [familyGuid, family]) => ({
+      ...acc,
+      [familyGuid]: familySamplesLoaded(family, individualsByGuid, samplesByGuid, DATASET_TYPE_READ_ALIGNMENTS),
+    }), {})
   },
 )
 
