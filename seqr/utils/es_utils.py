@@ -93,7 +93,7 @@ def get_es_variants(search_model, sort=XPOS_SORT_KEY, page=1, num_results=100, l
     if invalid_items:
         raise Exception('Invalid genes/intervals: {}'.format(', '.join(invalid_items)))
 
-    es_search = EsSearch(search_model.families.all(), previous_search_results=previous_search_results)
+    es_search = EsSearch(search_model.families.all(), previous_search_results=previous_search_results, skip_unaffected_families=search.get('inheritance'))
 
     es_search.sort(sort)
 
@@ -148,12 +148,22 @@ def get_latest_loaded_samples(families=None):
 
 class EsSearch(object):
 
-    def __init__(self, families, previous_search_results=None):
+    def __init__(self, families, previous_search_results=None, skip_unaffected_families=False):
         self._client = get_es_client()
 
         self.samples_by_family_index = defaultdict(lambda: defaultdict(dict))
         for s in get_latest_loaded_samples(families):
             self.samples_by_family_index[s.elasticsearch_index][s.individual.family.guid][s.sample_id] = s
+
+        if skip_unaffected_families:
+            for index, family_samples in self.samples_by_family_index.items():
+                index_skipped_families = []
+                for family_guid, samples_by_id in family_samples.items():
+                    if not any(s.individual.affected == AFFECTED for s in samples_by_id.values()):
+                        index_skipped_families.append(family_guid)
+
+                for family_guid in index_skipped_families:
+                    del self.samples_by_family_index[index][family_guid]
 
         if len(self.samples_by_family_index) < 1:
             raise InvalidIndexException('No es index found')
