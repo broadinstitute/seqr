@@ -306,15 +306,38 @@ export const getMmeDefaultContactEmail = createSelector(
   getMmeResultsByGuid,
   getIndividualsByGuid,
   getGenesById,
+  getSavedVariantsByGuid,
   getUser,
   (state, ownProps) => ownProps.matchmakerResultGuid,
-  (mmeResultsByGuid, individualsByGuid, genesById, user, matchmakerResultGuid) => {
+  (mmeResultsByGuid, individualsByGuid, genesById, savedVariants, user, matchmakerResultGuid) => {
     const { patient, geneVariants, individualGuid } = mmeResultsByGuid[matchmakerResultGuid]
     const geneName = geneVariants && geneVariants.length && (genesById[geneVariants[0].geneId] || {}).geneSymbol
 
-    const { mmeSubmittedData } = individualsByGuid[individualGuid]
-    const submittedGenes = (mmeSubmittedData.geneVariants || []).map(
-      ({ geneId }) => (genesById[geneId] || {}).geneSymbol).join(', ')
+    const { mmeSubmittedData, familyGuid } = individualsByGuid[individualGuid]
+
+    const submittedGenes = [...new Set((mmeSubmittedData.geneVariants || []).map(
+      ({ geneId }) => (genesById[geneId] || {}).geneSymbol))].join(', ')
+
+    Object.values(savedVariants).filter(
+      o => o.familyGuids.includes(familyGuid) && o.tags.length).map(variant => ({
+      ...variant,
+      variantId: `${variant.chrom}-${variant.pos}-${variant.ref}-${variant.alt}`,
+      ...variant.genotypes[individualGuid],
+      ...genesById[variant.mainTranscript.geneId],
+    }))
+
+    const submittedVariants = (mmeSubmittedData.geneVariants || []).map(({ alt, ref, chrom, pos }) => {
+      const savedVariant = Object.values(savedVariants).find(
+        o => o.chrom === chrom && o.pos === pos && o.ref === ref && o.alt === alt
+          && o.familyGuids.includes(familyGuid)) || {}
+      const genotype = (savedVariant.genotypes || {})[individualGuid] || {}
+      const mainTranscript = savedVariant.mainTranscript || {}
+      const consequence = (mainTranscript.majorConsequence || '').replace(/_variant/g, '').replace(/_/g, ' ')
+      const hgvs = [(mainTranscript.hgvsc || '').split(':').pop(), (savedVariant.hgvsp || '').split(':').pop()].filter(val => val).join(' ')
+
+      return `a ${genotype.numAlt === 1 ? 'heterozygous' : 'homozygous'} ${consequence} variant ${chrom}:${pos} ${ref}>${alt}${hgvs ? ` (${hgvs})` : ''}`
+    }).join(', ')
+
     const submittedPhenotypes = (mmeSubmittedData.phenotypes || []).filter(
       ({ observed }) => observed === 'yes').map(({ label }) => label).join(', ')
 
@@ -323,7 +346,7 @@ export const getMmeDefaultContactEmail = createSelector(
       patientId: patient.id,
       to: patient.contact.href.replace('mailto:', ''),
       subject: `${geneName || `Patient ${patient.id}`} Matchmaker Exchange connection`,
-      body: `Dear ${patient.contact.name},\n\nWe have a patient with variants in ${submittedGenes}.${submittedPhenotypes ? ` The phenotype of our patient is ${submittedPhenotypes}.` : ''} Can you share some information about your case and whether you think this is a good match?\n\nBest,\n${user.displayName}`,
+      body: `Dear ${patient.contact.name},\n\nWe recently matched with one of your patients in Matchmaker Exchange harboring ${(mmeSubmittedData.geneVariants || []).length === 1 ? 'a variant' : 'variants'} in ${submittedGenes}. Our patient has ${submittedVariants}${submittedPhenotypes ? ` and presents with ${submittedPhenotypes}` : ''}. Would you be willing to share whether your patient's phenotype and genotype match with ours? We are very grateful for your help and look forward to hearing more.\n\nBest wishes,\n${user.displayName}`,
     }
   },
 )

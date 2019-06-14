@@ -4,8 +4,7 @@ import { connect } from 'react-redux'
 import { Header, Icon, Popup, Label, Grid } from 'semantic-ui-react'
 import styled from 'styled-components'
 
-import { loadSavedVariants } from 'redux/rootReducer'
-import { getIndividualsByGuid, getSortedIndividualsByFamily, getSavedVariantsIsLoading } from 'redux/selectors'
+import { getIndividualsByGuid, getSortedIndividualsByFamily } from 'redux/selectors'
 import DeleteButton from 'shared/components/buttons/DeleteButton'
 import UpdateButton from 'shared/components/buttons/UpdateButton'
 import { BooleanCheckbox, BaseSemanticInput } from 'shared/components/form/Inputs'
@@ -67,24 +66,18 @@ const GENOTYPE_FIELDS = [
   },
 ]
 
-const BaseEditGenotypesTable = ({ familyGuids, savedVariants, loading, load, value, onChange }) =>
-  <DataLoader contentId={familyGuids} content load={load} loading={false}>
-    <SelectableTableFormInput
-      idField="variantId"
-      defaultSortColumn="xpos"
-      columns={GENOTYPE_FIELDS}
-      data={savedVariants}
-      value={value}
-      onChange={newValue => onChange(savedVariants.filter(variant => newValue[variant.variantId]))}
-      loading={loading}
-    />
-  </DataLoader>
+const BaseEditGenotypesTable = ({ savedVariants, value, onChange }) =>
+  <SelectableTableFormInput
+    idField="variantId"
+    defaultSortColumn="xpos"
+    columns={GENOTYPE_FIELDS}
+    data={savedVariants}
+    value={value}
+    onChange={newValue => onChange(savedVariants.filter(variant => newValue[variant.variantId]))}
+  />
 
 BaseEditGenotypesTable.propTypes = {
-  familyGuids: PropTypes.array,
   savedVariants: PropTypes.array,
-  loading: PropTypes.bool,
-  load: PropTypes.func,
   value: PropTypes.object,
   onChange: PropTypes.func,
 }
@@ -92,17 +85,11 @@ BaseEditGenotypesTable.propTypes = {
 const mapGenotypesStateToProps = (state, ownProps) => {
   const individualGuid = ownProps.meta.form.split('_-_')[0]
   return {
-    familyGuids: [getIndividualsByGuid(state)[individualGuid].familyGuid],
     savedVariants: getIndividualTaggedVariants(state, { individualGuid }),
-    loading: getSavedVariantsIsLoading(state),
   }
 }
 
-const mapGenotypesDispatchToProps = {
-  load: loadSavedVariants,
-}
-
-const EditGenotypesTable = connect(mapGenotypesStateToProps, mapGenotypesDispatchToProps)(BaseEditGenotypesTable)
+const EditGenotypesTable = connect(mapGenotypesStateToProps)(BaseEditGenotypesTable)
 
 const PHENOTYPE_FIELDS = [
   { name: 'id', content: 'HPO ID', width: 3 },
