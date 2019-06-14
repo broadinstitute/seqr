@@ -84,13 +84,14 @@ def _search_individual_matches(individual, user):
 
     results = local_result.json()['results'] + external_result.json()['results']
 
-    saved_results = {
+    initial_saved_results = {
         result.result_data['patient']['id']: result for result in MatchmakerResult.objects.filter(individual=individual)
     }
 
     new_results = []
+    saved_results = {}
     for result in results:
-        saved_result = saved_results.get(result['patient']['id'])
+        saved_result = initial_saved_results.get(result['patient']['id'])
         if not saved_result:
             saved_result = MatchmakerResult.objects.create(
                 individual=individual,
@@ -98,12 +99,25 @@ def _search_individual_matches(individual, user):
                 last_modified_by=user,
             )
             new_results.append(result)
-            saved_results[result['patient']['id']] = saved_result
+        saved_results[result['patient']['id']] = saved_result
 
     if new_results:
         _generate_slack_notification_for_seqr_match(individual, new_results)
 
     logger.info('Found {} matches for {} ({} new)'.format(len(results), individual.individual_id, len(new_results)))
+
+    removed_patients = set(initial_saved_results.keys()) - set(saved_results.keys())
+    removed_count = 0
+    for patient_id in removed_patients:
+        saved_result = initial_saved_results[patient_id]
+        if saved_result.we_contacted or saved_result.host_contacted or saved_result.comments:
+            saved_results[patient_id] = saved_result
+        else:
+            saved_result.delete()
+            removed_count += 1
+
+    if removed_count:
+        logger.info('Removed {} old matches for {}'.format(removed_count, individual.individual_id))
 
     return _parse_mme_results(individual, saved_results.values())
 

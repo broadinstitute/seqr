@@ -102,7 +102,7 @@ class VariantSearchAPITest(TestCase):
             ],
             'matchStatus': {
                 'matchmakerResultGuid': RESULT_STATUS_GUID,
-                'comments': '',
+                'comments': 'AMBRA1 c.2228G>C p.(Ser743Thr) missense variant. Maternally inherited, both have epilepsy',
                 'weContacted': False,
                 'hostContacted': True,
                 'deemedIrrelevant': True,
@@ -173,7 +173,7 @@ class VariantSearchAPITest(TestCase):
             'results': [{'patient': {'id': 'P0004515'}}]
         })
         responses.add(responses.POST, 'http://localhost:9020/match/external', status=200, json={
-            'results': [{'patient': {'id': '34301'}}, NEW_MATCH_JSON]
+            'results': [NEW_MATCH_JSON]
         })
 
         # Test invalid inputs
@@ -192,8 +192,7 @@ class VariantSearchAPITest(TestCase):
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {'mmeResultsByGuid', 'individualsByGuid', 'genesById'})
 
-        self.assertEqual(len(response_json['mmeResultsByGuid']), 3)
-        self.assertTrue('MR0007228_VCGS_FAM50_156' in response_json['mmeResultsByGuid'])
+        self.assertEqual(len(response_json['mmeResultsByGuid']), 2)
         self.assertTrue(RESULT_STATUS_GUID in response_json['mmeResultsByGuid'])
         new_result_guid = next(k for k in response_json['mmeResultsByGuid'].keys() if k not in {'MR0007228_VCGS_FAM50_156', RESULT_STATUS_GUID})
 
@@ -249,6 +248,9 @@ class VariantSearchAPITest(TestCase):
             set(response_json['genesById'].keys()),
             {'ENSG00000186092', 'ENSG00000233750', 'ENSG00000223972'}
         )
+
+        #  Test removed match is deleted
+        self.assertEqual(MatchmakerResult.objects.filter(guid='MR0007228_VCGS_FAM50_156').count(), 0)
 
         # Test proxy calls
         self.assertEqual(len(responses.calls), 3)
