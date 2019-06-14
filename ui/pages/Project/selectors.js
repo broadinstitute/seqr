@@ -302,6 +302,32 @@ export const getMmeResultsByIndividual = createSelector(
     }))),
 )
 
+export const getMmeDefaultContactEmail = createSelector(
+  getMmeResultsByGuid,
+  getIndividualsByGuid,
+  getGenesById,
+  getUser,
+  (state, ownProps) => ownProps.matchmakerResultGuid,
+  (mmeResultsByGuid, individualsByGuid, genesById, user, matchmakerResultGuid) => {
+    const { patient, geneVariants, individualGuid } = mmeResultsByGuid[matchmakerResultGuid]
+    const geneName = geneVariants && geneVariants.length && (genesById[geneVariants[0].geneId] || {}).geneSymbol
+
+    const { mmeSubmittedData } = individualsByGuid[individualGuid]
+    const submittedGenes = (mmeSubmittedData.geneVariants || []).map(
+      ({ geneId }) => (genesById[geneId] || {}).geneSymbol).join(', ')
+    const submittedPhenotypes = (mmeSubmittedData.phenotypes || []).filter(
+      ({ observed }) => observed === 'yes').map(({ label }) => label).join(', ')
+
+    return {
+      matchmakerResultGuid,
+      patientId: patient.id,
+      to: patient.contact.href.replace('mailto:', ''),
+      subject: `${geneName || `Patient ${patient.id}`} Matchmaker Exchange connection`,
+      body: `Dear ${patient.contact.name},\n\nWe have a patient with variants in ${submittedGenes}.${submittedPhenotypes ? ` The phenotype of our patient is ${submittedPhenotypes}.` : ''} Can you share some information about your case and whether you think this is a good match?\n\nBest,\n${user.displayName}`,
+    }
+  },
+)
+
 
 // user options selectors
 

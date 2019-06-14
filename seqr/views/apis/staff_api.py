@@ -125,7 +125,7 @@ def mme_submissions(request):
 
     submissions = []
     for individual in individuals:
-        submitted_data = parse_mme_patient(individual.mme_submitted_data, hpo_terms_by_id, gene_symbols_to_ids)
+        submitted_data = parse_mme_patient(individual.mme_submitted_data, hpo_terms_by_id, gene_symbols_to_ids, individual.guid)
         submissions.append({
             'projectGuid': individual.family.project.guid,
             'familyGuid': individual.family.guid,
