@@ -3,18 +3,19 @@ import logging
 import requests
 from datetime import datetime
 from django.contrib.auth.decorators import login_required
+from django.core.mail.message import EmailMessage
 from django.views.decorators.csrf import csrf_exempt
 
 from reference_data.models import HumanPhenotypeOntology
 
-from seqr.models import Individual, MatchmakerResult
+from seqr.models import Individual, MatchmakerResult, SavedVariant
 from seqr.model_utils import update_seqr_model
 from seqr.utils.gene_utils import get_genes, get_gene_ids_for_gene_symbols
 from seqr.utils.slack_utils import post_to_slack
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.orm_to_json_utils import _get_json_for_model
+from seqr.views.utils.orm_to_json_utils import _get_json_for_model, get_json_for_saved_variants
 from seqr.views.utils.permissions_utils import check_permissions
 
 from settings import MME_HEADERS, MME_LOCAL_MATCH_URL, MME_EXTERNAL_MATCH_URL, SEQR_HOSTNAME_FOR_SLACK_POST,  \
@@ -39,7 +40,18 @@ def get_individual_mme_matches(request, individual_guid):
     check_permissions(project, request.user)
 
     results = MatchmakerResult.objects.filter(individual=individual)
-    return _parse_mme_results(individual, results)
+
+    saved_variants = get_json_for_saved_variants(
+        SavedVariant.objects.filter(family=individual.family), add_tags=True, add_details=True,
+        project=project, user=request.user)
+
+    gene_ids = set()
+    for variant in saved_variants:
+        gene_ids.update(variant['transcripts'].keys())
+
+    return _parse_mme_results(
+        individual, results, additional_genes=gene_ids, response_json={
+            'savedVariantsByGuid': {variant['variantGuid']: variant for variant in saved_variants}})
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -250,9 +262,39 @@ def update_mme_result_status(request, matchmaker_result_guid):
     })
 
 
-def get_mme_genes_phenotypes(results):
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@csrf_exempt
+def send_mme_contact_email(request, matchmaker_result_guid):
+    """
+    Sends the given email and updates the contacted status for the match
+    Args:
+        matchmaker_result_guid
+    Returns:
+        Status code and results
+    """
+    result = MatchmakerResult.objects.get(guid=matchmaker_result_guid)
+    project = result.individual.family.project
+    check_permissions(project, request.user)
+
+    request_json = json.loads(request.body)
+    email_message = EmailMessage(
+        subject=request_json['subject'],
+        body=request_json['body'],
+        to=map(lambda s: s.strip(), request_json['to'].split(',')),
+        from_email=request.user.email,
+    )
+    email_message.send()
+
+    update_model_from_json(result, {'weContacted': True})
+
+    return create_json_response({
+        'mmeResultsByGuid': {matchmaker_result_guid: {'matchStatus': _get_json_for_model(result)}},
+    })
+
+
+def get_mme_genes_phenotypes(results, additional_genes=None):
     hpo_ids = set()
-    genes = set()
+    genes = additional_genes if additional_genes else set()
     for result in results:
         hpo_ids.update({feature['id'] for feature in result['patient'].get('features', []) if feature.get('id')})
         genes.update({gene_feature['gene']['id'] for gene_feature in result['patient'].get('genomicFeatures', [])})
@@ -268,31 +310,36 @@ def get_mme_genes_phenotypes(results):
     return hpo_terms_by_id, genes_by_id, gene_symbols_to_ids
 
 
-def _parse_mme_results(individual, saved_results):
+def _parse_mme_results(individual, saved_results, additional_genes=None, response_json=None):
     results = []
     for result_model in saved_results:
         result = result_model.result_data
         result['matchStatus'] = _get_json_for_model(result_model)
         results.append(result)
 
-    hpo_terms_by_id, genes_by_id, gene_symbols_to_ids = get_mme_genes_phenotypes(results + [individual.mme_submitted_data])
+    hpo_terms_by_id, genes_by_id, gene_symbols_to_ids = get_mme_genes_phenotypes(
+        results + [individual.mme_submitted_data], additional_genes=additional_genes)
 
-    parsed_results = [_parse_mme_result(result, hpo_terms_by_id, gene_symbols_to_ids) for result in results]
+    parsed_results = [_parse_mme_result(result, hpo_terms_by_id, gene_symbols_to_ids, individual.guid) for result in results]
     parsed_results_gy_guid = {result['matchStatus']['matchmakerResultGuid']: result for result in parsed_results}
-    return create_json_response({
+
+    response = {
         'mmeResultsByGuid': parsed_results_gy_guid,
         'individualsByGuid': {individual.guid: {
             'mmeResultGuids': parsed_results_gy_guid.keys(),
-            'mmeSubmittedData': parse_mme_patient(individual.mme_submitted_data, hpo_terms_by_id, gene_symbols_to_ids),
+            'mmeSubmittedData': parse_mme_patient(individual.mme_submitted_data, hpo_terms_by_id, gene_symbols_to_ids, individual.guid),
             'mmeSubmittedDate': individual.mme_submitted_date,
             'mmeDeletedDate': individual.mme_deleted_date,
         }},
         'genesById': genes_by_id,
-    })
+    }
+    if response_json:
+        response.update(response_json)
+    return create_json_response(response)
 
 
-def _parse_mme_result(result, hpo_terms_by_id, gene_symbols_to_ids):
-    parsed_result = parse_mme_patient(result, hpo_terms_by_id, gene_symbols_to_ids)
+def _parse_mme_result(result, hpo_terms_by_id, gene_symbols_to_ids, individual_guid):
+    parsed_result = parse_mme_patient(result, hpo_terms_by_id, gene_symbols_to_ids, individual_guid)
     parsed_result.update({
         'id': result['patient']['id'],
         'score': result['score']['patient'],
@@ -300,7 +347,7 @@ def _parse_mme_result(result, hpo_terms_by_id, gene_symbols_to_ids):
     return parsed_result
 
 
-def parse_mme_patient(result, hpo_terms_by_id, gene_symbols_to_ids):
+def parse_mme_patient(result, hpo_terms_by_id, gene_symbols_to_ids, individual_guid):
     phenotypes = [feature for feature in result['patient'].get('features', [])]
     for feature in phenotypes:
         feature['label'] = hpo_terms_by_id.get(feature['id'])
@@ -327,6 +374,7 @@ def parse_mme_patient(result, hpo_terms_by_id, gene_symbols_to_ids):
     parsed_result = {
         'geneVariants': gene_variants,
         'phenotypes': phenotypes,
+        'individualGuid': individual_guid,
     }
     parsed_result.update(result)
     return parsed_result

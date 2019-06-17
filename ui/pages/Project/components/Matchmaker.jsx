@@ -4,8 +4,7 @@ import { connect } from 'react-redux'
 import { Header, Icon, Popup, Label, Grid } from 'semantic-ui-react'
 import styled from 'styled-components'
 
-import { loadSavedVariants } from 'redux/rootReducer'
-import { getIndividualsByGuid, getSortedIndividualsByFamily, getSavedVariantsIsLoading } from 'redux/selectors'
+import { getIndividualsByGuid, getSortedIndividualsByFamily } from 'redux/selectors'
 import DeleteButton from 'shared/components/buttons/DeleteButton'
 import UpdateButton from 'shared/components/buttons/UpdateButton'
 import { BooleanCheckbox, BaseSemanticInput } from 'shared/components/form/Inputs'
@@ -19,12 +18,13 @@ import { ButtonLink, ColoredLabel } from 'shared/components/StyledComponents'
 import { AFFECTED } from 'shared/utils/constants'
 import { camelcaseToTitlecase } from 'shared/utils/stringUtils'
 
-import { loadMmeMatches, updateMmeSubmission, updateMmeSubmissionStatus } from '../reducers'
+import { loadMmeMatches, updateMmeSubmission, updateMmeSubmissionStatus, sendMmeContactEmail } from '../reducers'
 import {
   getMatchmakerMatchesLoading,
   getIndividualTaggedVariants,
   getDefaultMmeSubmissionByIndividual,
   getMmeResultsByIndividual,
+  getMmeDefaultContactEmail,
 } from '../selectors'
 
 const BreakWordLink = styled.a`
@@ -66,24 +66,18 @@ const GENOTYPE_FIELDS = [
   },
 ]
 
-const BaseEditGenotypesTable = ({ familyGuids, savedVariants, loading, load, value, onChange }) =>
-  <DataLoader contentId={familyGuids} content load={load} loading={false}>
-    <SelectableTableFormInput
-      idField="variantId"
-      defaultSortColumn="xpos"
-      columns={GENOTYPE_FIELDS}
-      data={savedVariants}
-      value={value}
-      onChange={newValue => onChange(savedVariants.filter(variant => newValue[variant.variantId]))}
-      loading={loading}
-    />
-  </DataLoader>
+const BaseEditGenotypesTable = ({ savedVariants, value, onChange }) =>
+  <SelectableTableFormInput
+    idField="variantId"
+    defaultSortColumn="xpos"
+    columns={GENOTYPE_FIELDS}
+    data={savedVariants}
+    value={value}
+    onChange={newValue => onChange(savedVariants.filter(variant => newValue[variant.variantId]))}
+  />
 
 BaseEditGenotypesTable.propTypes = {
-  familyGuids: PropTypes.array,
   savedVariants: PropTypes.array,
-  loading: PropTypes.bool,
-  load: PropTypes.func,
   value: PropTypes.object,
   onChange: PropTypes.func,
 }
@@ -91,17 +85,11 @@ BaseEditGenotypesTable.propTypes = {
 const mapGenotypesStateToProps = (state, ownProps) => {
   const individualGuid = ownProps.meta.form.split('_-_')[0]
   return {
-    familyGuids: [getIndividualsByGuid(state)[individualGuid].familyGuid],
     savedVariants: getIndividualTaggedVariants(state, { individualGuid }),
-    loading: getSavedVariantsIsLoading(state),
   }
 }
 
-const mapGenotypesDispatchToProps = {
-  load: loadSavedVariants,
-}
-
-const EditGenotypesTable = connect(mapGenotypesStateToProps, mapGenotypesDispatchToProps)(BaseEditGenotypesTable)
+const EditGenotypesTable = connect(mapGenotypesStateToProps)(BaseEditGenotypesTable)
 
 const PHENOTYPE_FIELDS = [
   { name: 'id', content: 'HPO ID', width: 3 },
@@ -138,7 +126,8 @@ const mapPhenotypeStateToProps = (state, ownProps) => ({
 
 const EditPhenotypesTable = connect(mapPhenotypeStateToProps)(BaseEditPhenotypesTable)
 
-const CONTACT_URL_REGEX = /^mailto:[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}(,\s*[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{1,4})*$/i
+const MAILTO_CONTACT_URL_REGEX = /^mailto:[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}(,\s*[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{1,4})*$/i
+const CONTACT_URL_REGEX = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}(,\s*[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{1,4})*$/i
 const SUBMISSION_EDIT_FIELDS = [
   { name: 'patient.contact.name', label: 'Contact Name' },
   {
@@ -146,7 +135,7 @@ const SUBMISSION_EDIT_FIELDS = [
     label: 'Contact URL',
     parse: val => `mailto:${val}`,
     format: val => val.replace('mailto:', ''),
-    validate: val => (CONTACT_URL_REGEX.test(val) ? undefined : 'Invalid contact url'),
+    validate: val => (MAILTO_CONTACT_URL_REGEX.test(val) ? undefined : 'Invalid contact url'),
   },
   {
     name: 'geneVariants',
@@ -162,6 +151,45 @@ const SUBMISSION_EDIT_FIELDS = [
       undefined : 'Genotypes and/or phenotypes are required'),
   },
 ]
+
+const CONTACT_FIELDS = [
+  {
+    name: 'to',
+    label: 'Send To:',
+    validate: val => (CONTACT_URL_REGEX.test(val) ? undefined : 'Invalid Contact Email'),
+  },
+  { name: 'subject', label: 'Subject:' },
+  { name: 'body', component: BaseSemanticInput, inputType: 'TextArea', rows: 12 },
+]
+
+const BaseContactHostButton = ({ defaultContactEmail, onSubmit }) =>
+  <UpdateButton
+    onSubmit={onSubmit}
+    initialValues={defaultContactEmail}
+    formFields={CONTACT_FIELDS}
+    modalTitle={`Send Contact Email for Patient ${defaultContactEmail.patientId}`}
+    modalId={`contactEmail-${defaultContactEmail.patientId}`}
+    buttonText="Contact Host"
+    editIconName="mail"
+    showErrorPanel
+    submitButtonText="Send"
+    buttonFloated="right"
+  />
+
+BaseContactHostButton.propTypes = {
+  defaultContactEmail: PropTypes.object,
+  onSubmit: PropTypes.func,
+}
+
+const mapContactButtonStateToProps = (state, ownProps) => ({
+  defaultContactEmail: getMmeDefaultContactEmail(state, ownProps),
+})
+
+const mapContactDispatchToProps = {
+  onSubmit: sendMmeContactEmail,
+}
+
+const ContactHostButton = connect(mapContactButtonStateToProps, mapContactDispatchToProps)(BaseContactHostButton)
 
 const contactedLabel = (val) => {
   if (val.hostContacted) {
@@ -187,6 +215,7 @@ const BaseMatchStatus = ({ initialValues, onSubmit }) =>
         {val.flagForAnalysis && <Label horizontal content="Flag for Analysis" color="purple" />}
         {val.deemedIrrelevant && <Label horizontal content="Deemed Irrelevant" color="red" />}
         <p>{val.comments}</p>
+        <ContactHostButton matchmakerResultGuid={val.matchmakerResultGuid} />
       </div>}
   />
 
