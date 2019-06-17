@@ -2,13 +2,14 @@ import json
 import responses
 import mock
 
+from copy import deepcopy
 from datetime import datetime
 from django.test import TestCase
 from django.urls.base import reverse
 
 from seqr.models import MatchmakerResult, Project
 from seqr.views.apis.matchmaker_api import get_individual_mme_matches, search_individual_mme_matches, \
-    update_mme_submission, delete_mme_submission, update_mme_result_status
+    update_mme_submission, delete_mme_submission, update_mme_result_status, send_mme_contact_email
 from seqr.views.utils.test_utils import _check_login
 
 INDIVIDUAL_GUID = 'I000001_na19675'
@@ -42,6 +43,7 @@ PARSED_NEW_MATCH_JSON = {
     'id': '33845',
     'score': 0.92,
     'patient': NEW_MATCH_JSON['patient'],
+    'individualGuid': INDIVIDUAL_GUID,
     'phenotypes': [{'observed': 'yes', 'id': 'HP:0012469', 'label': 'Infantile spasms'}],
     'geneVariants': [{'geneId': 'ENSG00000186092'}],
     'matchStatus': {
@@ -54,6 +56,8 @@ PARSED_NEW_MATCH_JSON = {
         'createdDate': mock.ANY,
     },
 }
+PARSED_NEW_MATCH_NEW_SUBMISSION_JSON = deepcopy(PARSED_NEW_MATCH_JSON)
+PARSED_NEW_MATCH_NEW_SUBMISSION_JSON['individualGuid'] = NO_SUBMISSION_INDIVIDUAL_GUID
 
 
 class VariantSearchAPITest(TestCase):
@@ -67,7 +71,7 @@ class VariantSearchAPITest(TestCase):
 
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), {'mmeResultsByGuid', 'individualsByGuid', 'genesById'})
+        self.assertSetEqual(set(response_json.keys()), {'mmeResultsByGuid', 'individualsByGuid', 'genesById', 'savedVariantsByGuid'})
 
         self.assertSetEqual(
             set(response_json['mmeResultsByGuid'].keys()), {'MR0007228_VCGS_FAM50_156', RESULT_STATUS_GUID}
@@ -75,6 +79,7 @@ class VariantSearchAPITest(TestCase):
         self.assertDictEqual(response_json['mmeResultsByGuid'][RESULT_STATUS_GUID], {
             'id': 'P0004515',
             'score': 0.5706712016939723,
+            'individualGuid': INDIVIDUAL_GUID,
             'patient': {
                 'genomicFeatures': [
                     {'gene': {'id': 'OR4F5'}},
@@ -113,6 +118,7 @@ class VariantSearchAPITest(TestCase):
         self.assertDictEqual(response_json['individualsByGuid'], {INDIVIDUAL_GUID: {
             'mmeResultGuids': mock.ANY,
             'mmeSubmittedData': {
+                'individualGuid': INDIVIDUAL_GUID,
                 'patient': {
                     'id': 'NA19675_1_01',
                     'label': 'NA19675_1',
@@ -161,6 +167,9 @@ class VariantSearchAPITest(TestCase):
             set(response_json['genesById'].keys()),
             {'ENSG00000186092', 'ENSG00000233750', 'ENSG00000223972'}
         )
+        self.assertSetEqual(
+            set(response_json['savedVariantsByGuid'].keys()),
+            {'SV0000001_2103343353_r0390_100', 'SV0000003_2246859832_r0390_100'})
 
     @mock.patch('seqr.views.apis.matchmaker_api.post_to_slack')
     @responses.activate
@@ -236,6 +245,7 @@ class VariantSearchAPITest(TestCase):
                     'pos': 77027549,
                     'genomeVersion': 'GRCh38',
                 }],
+                'individualGuid': INDIVIDUAL_GUID,
             },
             'mmeSubmittedDate': '2018-05-23T09:07:49.719Z',
             'mmeDeletedDate': None,
@@ -360,10 +370,11 @@ class VariantSearchAPITest(TestCase):
         self.assertSetEqual(set(response_json.keys()), {'mmeResultsByGuid', 'individualsByGuid', 'genesById'})
 
         self.assertEqual(len(response_json['mmeResultsByGuid']), 1)
-        self.assertDictEqual(response_json['mmeResultsByGuid'].values()[0], PARSED_NEW_MATCH_JSON)
+        self.assertDictEqual(response_json['mmeResultsByGuid'].values()[0], PARSED_NEW_MATCH_NEW_SUBMISSION_JSON)
         self.assertDictEqual(response_json['individualsByGuid'], {NO_SUBMISSION_INDIVIDUAL_GUID: {
             'mmeResultGuids': response_json['mmeResultsByGuid'].keys(),
             'mmeSubmittedData': {
+                'individualGuid': NO_SUBMISSION_INDIVIDUAL_GUID,
                 'patient': {
                     'id': 'HG00733',
                     'label': 'HG00733',
@@ -462,10 +473,11 @@ class VariantSearchAPITest(TestCase):
         self.assertSetEqual(set(response_json.keys()), {'mmeResultsByGuid', 'individualsByGuid', 'genesById'})
 
         self.assertEqual(len(response_json['mmeResultsByGuid']), 1)
-        self.assertDictEqual(response_json['mmeResultsByGuid'].values()[0], PARSED_NEW_MATCH_JSON)
+        self.assertDictEqual(response_json['mmeResultsByGuid'].values()[0], PARSED_NEW_MATCH_NEW_SUBMISSION_JSON)
         self.assertDictEqual(response_json['individualsByGuid'], {NO_SUBMISSION_INDIVIDUAL_GUID: {
             'mmeResultGuids': response_json['mmeResultsByGuid'].keys(),
             'mmeSubmittedData': {
+                'individualGuid': NO_SUBMISSION_INDIVIDUAL_GUID,
                 'patient': {
                     'id': 'HG00733',
                     'label': 'HG00733',
@@ -583,3 +595,35 @@ class VariantSearchAPITest(TestCase):
 
         result_model = MatchmakerResult.objects.get(guid=RESULT_STATUS_GUID)
         self.assertEqual(result_model.comments, 'test comment')
+
+    @mock.patch('seqr.views.apis.matchmaker_api.EmailMessage')
+    def test_send_mme_contact_email(self, mock_email):
+        url = reverse(send_mme_contact_email, args=[RESULT_STATUS_GUID])
+        _check_login(self, url)
+
+        response = self.client.post(url, content_type='application/json', data=json.dumps({
+            'to': 'test@test.com , other_test@gmail.com',
+            'body': 'some email content',
+            'subject': 'some email subject'
+        }))
+
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertDictEqual(response_json, {'mmeResultsByGuid': {RESULT_STATUS_GUID: {
+            'matchStatus': {
+                'matchmakerResultGuid': RESULT_STATUS_GUID,
+                'comments': 'AMBRA1 c.2228G>C p.(Ser743Thr) missense variant. Maternally inherited, both have epilepsy',
+                'weContacted': True,
+                'hostContacted': True,
+                'deemedIrrelevant': True,
+                'flagForAnalysis': False,
+                'createdDate': '2019-02-12T18:43:56.358Z',
+            },
+        }}})
+
+        mock_email.assert_called_with(
+            subject='some email subject',
+            body='some email content',
+            to=['test@test.com', 'other_test@gmail.com'],
+            from_email='test_user@test.com')
+        mock_email.return_value.send.assert_called()

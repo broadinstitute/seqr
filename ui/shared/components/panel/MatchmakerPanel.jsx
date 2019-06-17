@@ -7,7 +7,7 @@ import styled from 'styled-components'
 import { getGenesById } from 'redux/selectors'
 import ShowGeneModal from '../buttons/ShowGeneModal'
 
-const PhenotypeListItem = styled(List.Item)`
+const PhenotypeListItem = styled(({ maxWidth, observed, ...props }) => <List.Item {...props} />)`
   text-decoration: ${props => (props.observed === 'no' ? 'line-through' : 'none')};
   max-width: ${props => props.maxWidth || 'inherit'};
 `

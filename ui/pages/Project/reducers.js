@@ -196,6 +196,19 @@ export const updateMmeSubmissionStatus = (values) => {
   return updateEntity(values, RECEIVE_DATA, '/api/matchmaker/result_status', 'matchmakerResultGuid')
 }
 
+export const sendMmeContactEmail = (values) => {
+  return (dispatch) => {
+    return new HttpRequestHelper(`/api/matchmaker/send_email/${values.matchmakerResultGuid}`,
+      (responseJson) => {
+        dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+      },
+      (e) => {
+        dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
+      },
+    ).post(values)
+  }
+}
+
 // Table actions
 export const updateFamiliesTable = (updates, tableName) => (
   { type: tableName === CASE_REVIEW_TABLE_NAME ? UPDATE_CASE_REVIEW_TABLE_STATE : UPDATE_FAMILY_TABLE_STATE, updates }
