@@ -3,6 +3,7 @@ import logging
 import requests
 from datetime import datetime
 from django.contrib.auth.decorators import login_required
+from django.core.mail.message import EmailMessage
 from django.views.decorators.csrf import csrf_exempt
 
 from reference_data.models import HumanPhenotypeOntology
@@ -255,6 +256,36 @@ def update_mme_result_status(request, matchmaker_result_guid):
 
     request_json = json.loads(request.body)
     update_model_from_json(result, request_json, allow_unknown_keys=True)
+
+    return create_json_response({
+        'mmeResultsByGuid': {matchmaker_result_guid: {'matchStatus': _get_json_for_model(result)}},
+    })
+
+
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@csrf_exempt
+def send_mme_contact_email(request, matchmaker_result_guid):
+    """
+    Sends the given email and updates the contacted status for the match
+    Args:
+        matchmaker_result_guid
+    Returns:
+        Status code and results
+    """
+    result = MatchmakerResult.objects.get(guid=matchmaker_result_guid)
+    project = result.individual.family.project
+    check_permissions(project, request.user)
+
+    request_json = json.loads(request.body)
+    email_message = EmailMessage(
+        subject=request_json['subject'],
+        body=request_json['body'],
+        to=map(lambda s: s.strip(), request_json['to'].split(',')),
+        from_email=request.user.email,
+    )
+    email_message.send()
+
+    update_model_from_json(result, {'weContacted': True})
 
     return create_json_response({
         'mmeResultsByGuid': {matchmaker_result_guid: {'matchStatus': _get_json_for_model(result)}},
