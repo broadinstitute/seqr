@@ -376,6 +376,14 @@ export const STATE_WITH_2_FAMILIES = {
       createdDate: '2016-12-05T10:29:00.000Z',
       mmeResultGuids: ['MR0005038_HK018_0047'],
       mmeSubmittedDate: '2018-05-09T10:29:00.000Z',
+      mmeSubmittedData: {
+        phenotypes: [
+          {id: 'HP:0011405', label: 'Childhood onset short-limb short stature', observed: 'yes'},
+          {id: "HP:0012638", label: "Abnormality of nervous system physiology", observed: "no"},
+          {id: "HP:0001371", label: "Flexion contracture", observed: "yes"}
+        ],
+        geneVariants: [{ geneId: "ENSG00000228198", alt: 'T', ref: 'TC', chrom: '1', pos: 248367227 }],
+      },
       sampleGuids: [],
       sex: 'M',
     },
@@ -490,6 +498,7 @@ export const STATE_WITH_2_FAMILIES = {
     last_login: '2017-03-14T17:44:53.403Z',
     last_name: '',
     username: 'test',
+    displayName: 'Test User',
   },
   savedVariantTableState: { hideExcluded: true, recordsPerPage: 1 },
   projectSavedVariantsLoading: {},
@@ -678,7 +687,7 @@ export const STATE_WITH_2_FAMILIES = {
       liftedOverPos: "",
       notes: [],
       origAltAlleles: ["T"],
-      mainTranscript: {},
+      mainTranscript: {majorConsequence: 'missense_variant'},
       pos: 248367227,
       projectGuid: 'R0237_1000_genomes_demo',
       ref: "TC",
@@ -803,6 +812,7 @@ export const STATE_WITH_2_FAMILIES = {
   },
   mmeResultsByGuid: {
     MR0005038_HK018_0047: {
+      individualGuid: 'I021475_na19675_1',
       geneVariants: [{geneId: "ENSG00000228198"}],
       phenotypes: [
         {id: "HP:0012638", label: "Abnormality of nervous system physiology", observed: "yes"},

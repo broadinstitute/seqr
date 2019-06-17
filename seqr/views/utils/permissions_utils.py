@@ -46,7 +46,7 @@ def check_public_object_permissions(obj, user, permission_level=CAN_VIEW):
 
 
 def _check_object_permissions(obj, user, permission_level, check_permission):
-    if user.has_perm(permission_level, obj) or user.is_superuser or (check_permission and check_permission(obj, user)):
+    if user.has_perm(permission_level, obj) or user.is_superuser or user.is_staff or (check_permission and check_permission(obj, user)):
         pass
     else:
         raise PermissionDenied("{user} does not have {permission_level} permissions for {object}".format(
