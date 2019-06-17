@@ -60,6 +60,15 @@ PARSED_NEW_MATCH_NEW_SUBMISSION_JSON = deepcopy(PARSED_NEW_MATCH_JSON)
 PARSED_NEW_MATCH_NEW_SUBMISSION_JSON['individualGuid'] = NO_SUBMISSION_INDIVIDUAL_GUID
 
 
+class EmailException(Exception):
+
+    def __init__(self, *args, **kwargs):
+        self.response = mock.MagicMock()
+        self.response.content = 'email error'
+        self.response.json.return_value = {}
+        self.status_code = 402
+
+
 class VariantSearchAPITest(TestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
 
@@ -625,5 +634,16 @@ class VariantSearchAPITest(TestCase):
             subject='some email subject',
             body='some email content',
             to=['test@test.com', 'other_test@gmail.com'],
-            from_email='test_user@test.com')
+            reply_to=['test_user@test.com'])
         mock_email.return_value.send.assert_called()
+
+        mock_email.return_value.send.side_effect = EmailException
+        response = self.client.post(url, content_type='application/json', data=json.dumps({
+            'to': 'test@test.com , other_test@gmail.com',
+            'body': 'some email content',
+            'subject': 'some email subject'
+        }))
+
+        self.assertEqual(response.status_code, 402)
+        self.assertEqual(response.reason_phrase, 'email error')
+

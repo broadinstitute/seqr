@@ -203,7 +203,7 @@ export const sendMmeContactEmail = (values) => {
         dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
       },
       (e) => {
-        dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
+        throw new SubmissionError({ _error: [e.message] })
       },
     ).post(values)
   }
