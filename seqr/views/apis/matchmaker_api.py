@@ -281,9 +281,20 @@ def send_mme_contact_email(request, matchmaker_result_guid):
         subject=request_json['subject'],
         body=request_json['body'],
         to=map(lambda s: s.strip(), request_json['to'].split(',')),
-        from_email=request.user.email,
+        reply_to=[request.user.email],
     )
-    email_message.send()
+    try:
+        email_message.send()
+    except Exception as e:
+        message = e.message
+        json_body = {}
+        if hasattr(e, 'response'):
+            message = e.response.content
+            try:
+                json_body = e.response.json()
+            except Exception:
+                pass
+        return create_json_response(json_body, status=getattr(e, 'status_code', 400), reason=message)
 
     update_model_from_json(result, {'weContacted': True})
 
