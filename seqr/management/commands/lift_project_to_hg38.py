@@ -6,21 +6,16 @@ from django.db.models.query_utils import Q
 from pyliftover.liftover import LiftOver
 
 from reference_data.models import GENOME_VERSION_GRCh38
-from seqr.models import Project, SavedVariant
-from seqr.views.utils.json_to_orm_utils import update_model_from_json
-from seqr.views.utils.variant_utils import update_project_saved_variant_json
-from seqr.utils.xpos_utils import get_xpos
-from seqr.utils.es_utils import get_es_variants_for_variant_tuples
-from seqr.models import Individual, CAN_EDIT, Sample
-from seqr.model_utils import update_xbrowse_vcfffiles, find_matching_xbrowse_model
+from seqr.models import Project, SavedVariant, Sample
+from seqr.model_utils import update_xbrowse_vcfffiles
 from seqr.views.apis.dataset_api import _update_samples
 from seqr.views.utils.dataset_utils import match_sample_ids_to_sample_records, validate_index_metadata, \
-    get_elasticsearch_index_samples, load_mapping_file, load_uploaded_mapping_file, validate_alignment_dataset_path
-from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.json_to_orm_utils import update_project_from_json, update_model_from_json
+    get_elasticsearch_index_samples
+from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants
-from seqr.views.utils.permissions_utils import get_project_and_check_permissions
 from seqr.views.utils.variant_utils import reset_cached_search_results
+from seqr.utils.es_utils import get_es_variants_for_variant_tuples
+from seqr.utils.xpos_utils import get_xpos
 
 logger = logging.getLogger(__name__)
 
