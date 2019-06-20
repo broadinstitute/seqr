@@ -24,7 +24,7 @@ def get_elasticsearch_index_samples(elasticsearch_index):
     return [agg['key'] for agg in response.aggregations.sample_ids.buckets], index_metadata
 
 
-def validate_index_metadata(index_metadata, project, elasticsearch_index):
+def validate_index_metadata(index_metadata, project, elasticsearch_index, genome_version=None):
     metadata_fields = ['genomeVersion', 'sampleType', 'sourceFilePath']
     if any(field not in (index_metadata or {}) for field in metadata_fields):
         raise ValueError("Index metadata must contain fields: {}".format(', '.join(metadata_fields)))
@@ -33,7 +33,7 @@ def validate_index_metadata(index_metadata, project, elasticsearch_index):
     if sample_type not in {choice[0] for choice in Sample.SAMPLE_TYPE_CHOICES}:
         raise Exception("Sample type not supported: {}".format(sample_type))
 
-    if index_metadata['genomeVersion'] != project.genome_version:
+    if index_metadata['genomeVersion'] != (genome_version or project.genome_version):
         raise Exception('Index "{0}" has genome version {1} but this project uses version {2}'.format(
             elasticsearch_index, index_metadata['genomeVersion'], project.genome_version
         ))
