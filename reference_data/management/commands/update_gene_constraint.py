@@ -21,7 +21,7 @@ class GeneConstraintReferenceDataHandler(ReferenceDataHandler):
     def parse_record(record):
         yield {
             'transcript_id': record['transcript'].split(".")[0],
-            'mis_z': float(record['mis_z']),
+            'mis_z': float(record['mis_z']) if record['mis_z'] != 'NaN' else -100,
             'pLI': float(record['pLI']) if record['pLI'] != 'NA' else 0,
         }
 
