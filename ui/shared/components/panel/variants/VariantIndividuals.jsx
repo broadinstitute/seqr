@@ -4,10 +4,10 @@ import styled from 'styled-components'
 import { connect } from 'react-redux'
 import { Popup, Label, Icon } from 'semantic-ui-react'
 
-import { getSortedIndividualsByFamily, getAlignmentSamplesByFamily } from 'redux/selectors'
+import { getSortedIndividualsByFamily } from 'redux/selectors'
+import ShowReadsButton from '../../buttons/ShowReadsButton'
 import PedigreeIcon from '../../icons/PedigreeIcon'
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
-import { ButtonLink } from '../../StyledComponents'
 import PhenotipsDataPanel, { hasPhenotipsDetails } from '../PhenotipsDataPanel'
 
 
@@ -181,7 +181,7 @@ const Genotype = ({ variant, individual }) => {
 }
 
 
-const VariantIndividuals = ({ variant, individuals, showReads, numAlignmentSamples }) => (
+const VariantIndividuals = ({ variant, individuals, familyGuid }) => (
   <IndividualsContainer>
     {(individuals || []).map(individual =>
       <IndividualCell key={individual.individualGuid}>
@@ -203,20 +203,18 @@ const VariantIndividuals = ({ variant, individuals, showReads, numAlignmentSampl
         <Genotype variant={variant} individual={individual} />
       </IndividualCell>,
     )}
-    {numAlignmentSamples ? <ButtonLink icon="options" content="SHOW READS" onClick={showReads} /> : null}
+    <ShowReadsButton familyGuid={familyGuid} igvId={variant.variantId} />
   </IndividualsContainer>
 )
 
 VariantIndividuals.propTypes = {
+  familyGuid: PropTypes.string,
   variant: PropTypes.object,
   individuals: PropTypes.array,
-  showReads: PropTypes.func,
-  numAlignmentSamples: PropTypes.number,
 }
 
 const mapStateToProps = (state, ownProps) => ({
   individuals: getSortedIndividualsByFamily(state)[ownProps.familyGuid],
-  numAlignmentSamples: (getAlignmentSamplesByFamily(state)[ownProps.familyGuid] || []).length,
 })
 
 export default connect(mapStateToProps)(VariantIndividuals)

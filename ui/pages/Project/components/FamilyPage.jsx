@@ -4,15 +4,19 @@ import { connect } from 'react-redux'
 
 import { getFamiliesByGuid, getSortedIndividualsByFamily } from 'redux/selectors'
 import { FAMILY_DETAIL_FIELDS } from 'shared/utils/constants'
+import ShowReadsButton from 'shared/components/buttons/ShowReadsButton'
 import Family from 'shared/components/panel/family'
+import FamilyVariantReads from 'shared/components/panel/variants/FamilyVariantReads'
 import IndividualRow from './FamilyTable/IndividualRow'
 
-export const BaseFamilyDetail = ({ family, individuals, editCaseReview, ...props }) =>
+const BaseFamilyDetail = ({ family, individuals, editCaseReview, ...props }) =>
   <div>
     <Family
       family={family}
       {...props}
     />
+    <ShowReadsButton familyGuid={family.familyGuid} igvId={family.familyGuid} padding="0.5em 0 1.5em 0" />
+    <FamilyVariantReads igvId={family.familyGuid} />
     {individuals && individuals.map(individual => (
       <IndividualRow
         key={individual.individualGuid}
