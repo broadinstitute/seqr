@@ -4,13 +4,12 @@ import logging
 
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
-
 from django.views.decorators.http import require_GET
 
 from seqr.utils.gene_utils import get_queried_genes
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.utils.json_utils import create_json_response, _to_title_case
-from seqr.models import Project, Family, Individual, AnalysisGroup
+from seqr.models import Project, Family, Individual, AnalysisGroup, ProjectCategory
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +17,7 @@ MAX_RESULTS_PER_CATEGORY = 8
 MAX_STRING_LENGTH = 100
 
 
-def _get_matching_objects(user, query, object_cls, filter_fields, get_title, get_href, get_description=None, project_field=''):
+def _get_matching_objects(user, query, object_cls, filter_fields, get_title, get_href, get_description=None, project_field='', select_related_project=True):
     """Returns objects that match the given query string, and that the user can view, for the given object criteria.
 
     Args:
@@ -38,14 +37,11 @@ def _get_matching_objects(user, query, object_cls, filter_fields, get_title, get
     for field in filter_fields:
         object_filter |= Q(**{'{}__icontains'.format(field): query})
     if not user.is_superuser:
-        if user.is_staff:
-            object_filter &= Q(**{'{}can_view_group__user'.format(project_field_prefix): user}) | Q(**{'{}disable_staff_access'.format(project_field_prefix): False})
-        else:
-            object_filter &= Q(**{'{}can_view_group__user'.format(project_field_prefix): user})
+        object_filter &= _get_project_can_view_query(user, project_field_prefix=project_field_prefix)
 
     matching_objects = getattr(object_cls, 'objects').filter(object_filter).distinct()
-    if project_field:
-        matching_objects = matching_objects.select_related(project_field)
+    if project_field and select_related_project:
+        matching_objects = matching_objects.select_related(project_field).all()
 
     results = [{
         'key': obj.guid,
@@ -57,6 +53,13 @@ def _get_matching_objects(user, query, object_cls, filter_fields, get_title, get
     results.sort(key=lambda f: len(f.get('title', '')))
 
     return results
+
+
+def _get_project_can_view_query(user, project_field_prefix=''):
+    if user.is_staff:
+        return Q(**{'{}can_view_group__user'.format(project_field_prefix): user}) | Q(**{'{}disable_staff_access'.format(project_field_prefix): False})
+    else:
+        return Q(**{'{}can_view_group__user'.format(project_field_prefix): user})
 
 
 def _get_matching_projects(user, query):
@@ -94,8 +97,19 @@ def _get_matching_individuals(user, query):
         filter_fields=['individual_id', 'display_name'],
         get_title=lambda i: i.display_name or i.individual_id,
         get_href=lambda i: '/project/{}/family_page/{}'.format(i.family.project.guid, i.family.guid),
-        get_description=lambda i: '{}: family {}'.format(i.family.project.name, (i.family.display_name or i.family.family_id)),
+        get_description=lambda i: u'{}: family {}'.format(i.family.project.name, (i.family.display_name or i.family.family_id)),
         project_field='family__project')
+
+
+def _get_matching_project_groups(user, query):
+    return _get_matching_objects(
+        user, query, ProjectCategory,
+        filter_fields=['name'],
+        get_title=lambda p: p.name,
+        get_href=lambda p: p.guid,
+        project_field='projects',
+        select_related_project=False,
+    )
 
 
 def _get_matching_genes(user, query):
@@ -132,7 +146,9 @@ CATEGORY_MAP = {
     'analysis_groups': _get_matching_analysis_groups,
     'individuals': _get_matching_individuals,
     'genes': _get_matching_genes,
+    'project_groups': _get_matching_project_groups,
 }
+DEFAULT_CATEGORIES = [k for k in CATEGORY_MAP.keys() if k != 'project_groups']
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -144,7 +160,7 @@ def awesomebar_autocomplete_handler(request):
     if query is None:
         raise ValueError("missing ?q=<prefix> url arg")
 
-    categories = request.GET.get('categories').split(',') if request.GET.get('categories') else CATEGORY_MAP.keys()
+    categories = request.GET.get('categories').split(',') if request.GET.get('categories') else DEFAULT_CATEGORIES
 
     results = {
         category: {'name': _to_title_case(category), 'results': CATEGORY_MAP[category](request.user, query)}

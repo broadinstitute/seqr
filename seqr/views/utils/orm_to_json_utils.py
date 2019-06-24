@@ -37,6 +37,10 @@ def _get_json_for_models(models, nested_fields=None, user=None, process_result=N
     if user and user.is_staff:
         fields += getattr(model_class._meta, 'internal_json_fields', [])
 
+    for nested_field in nested_fields or []:
+        if not nested_field.get('value'):
+            prefetch_related_objects(models, '__'.join(nested_field['fields'][:-1]))
+
     results = []
     for model in models:
         result = {_to_camel_case(field): getattr(model, field) for field in fields}
@@ -127,6 +131,9 @@ def get_json_for_projects(projects, user=None, add_project_category_guids_field=
             'projectCategoryGuids': [c.guid for c in project.projectcategory_set.all()] if add_project_category_guids_field else [],
             'canEdit': user.is_staff or user.has_perm(CAN_EDIT, project),
         })
+
+    if add_project_category_guids_field:
+        prefetch_related_objects(projects, 'projectcategory_set')
 
     return _get_json_for_models(projects, user=user, process_result=_process_result)
 

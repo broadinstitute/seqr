@@ -7,17 +7,24 @@ from django.db.models import Q, prefetch_related_objects
 from django.views.decorators.csrf import csrf_exempt
 from elasticsearch.exceptions import ConnectionTimeout
 
-from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults
+from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, Sample,\
+    AnalysisGroup, ProjectCategory
 from seqr.utils.es_utils import get_es_variants, get_single_es_variant, InvalidIndexException, XPOS_SORT_KEY, \
     PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
+from seqr.views.apis.locus_list_api import get_project_locus_list_models
 from seqr.views.apis.saved_variant_api import _saved_variant_genes, _add_locus_lists
-from seqr.views.pages.project_page import get_project_variant_tag_types, get_project_child_entities
+from seqr.views.pages.project_page import get_project_variant_tag_types
 from seqr.views.utils.export_table_utils import export_table
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import \
     get_json_for_variant_functional_data_tag_types, \
-    _get_json_for_project, \
+    get_json_for_projects, \
+    _get_json_for_families, \
+    _get_json_for_individuals, \
+    get_json_for_analysis_groups, \
+    get_json_for_samples, \
+    get_json_for_locus_lists, \
     get_json_for_saved_variants, \
     get_json_for_saved_search,\
     get_json_for_saved_searches
@@ -95,7 +102,7 @@ def query_single_variant_handler(request, variant_id):
     variant = get_single_es_variant(families, variant_id)
 
     response = _process_variants([variant], families)
-    response.update(_get_project_details(families.first().project, request.user))
+    response.update(_get_projects_details([families.first().project], request.user))
 
     return create_json_response(response)
 
@@ -240,40 +247,61 @@ def search_context_handler(request):
     project_guid = request.GET.get('projectGuid')
 
     if project_guid:
-        project = Project.objects.get(guid=project_guid)
+        projects = Project.objects.filter(guid=project_guid)
     elif request.GET.get('familyGuid'):
-        project = Project.objects.get(family__guid=request.GET.get('familyGuid'))
+        projects = Project.objects.filter(family__guid=request.GET.get('familyGuid'))
     elif request.GET.get('analysisGroupGuid'):
-        project = Project.objects.get(analysisgroup__guid=request.GET.get('analysisGroupGuid'))
+        projects = Project.objects.filter(analysisgroup__guid=request.GET.get('analysisGroupGuid'))
+    elif request.GET.get('projectCategoryGuid'):
+        projects = Project.objects.filter(projectcategory__guid=request.GET.get('projectCategoryGuid'))
     else:
         return create_json_response({}, status=400, reason='Invalid query params: {}'.format(json.dumps(request.GET)))
 
-    response.update(_get_project_details(project, request.user))
+    response.update(_get_projects_details(projects, request.user, project_category_guid=request.GET.get('projectCategoryGuid')))
 
     return create_json_response(response)
 
 
-def _get_project_details(project, user):
-    check_permissions(project, user)
+def _get_projects_details(projects, user, project_category_guid=None):
+    for project in projects:
+        check_permissions(project, user)
 
-    project_json = _get_json_for_project(project, user)
+    prefetch_related_objects(projects, 'can_view_group')
+    project_models_by_guid = {project.guid: project for project in projects}
+    projects_json = get_json_for_projects(projects, user)
 
-    families_by_guid, individuals_by_guid, samples_by_guid, analysis_groups_by_guid, locus_lists_by_guid = get_project_child_entities(project, user)
+    locus_lists = set()
+    functional_data_tag_types = get_json_for_variant_functional_data_tag_types()
+    for project_json in projects_json:
+        project = project_models_by_guid[project_json['projectGuid']]
+        project_locus_lists = get_project_locus_list_models(project)
+        locus_lists.update(project_locus_lists)
 
-    project_json.update({
-        'locusListGuids': locus_lists_by_guid.keys(),
-        'variantTagTypes': get_project_variant_tag_types(project),
-        'variantFunctionalTagTypes': get_json_for_variant_functional_data_tag_types(),
-    })
+        project_json.update({
+            'locusListGuids': [locus_list.guid for locus_list in project_locus_lists],
+            'variantTagTypes': get_project_variant_tag_types(project),
+            'variantFunctionalTagTypes': functional_data_tag_types,
+        })
 
-    return {
-        'projectsByGuid': {project.guid: project_json},
-        'familiesByGuid': families_by_guid,
-        'individualsByGuid': individuals_by_guid,
-        'samplesByGuid': samples_by_guid,
-        'locusListsByGuid': locus_lists_by_guid,
-        'analysisGroupsByGuid': analysis_groups_by_guid,
+    families = _get_json_for_families(Family.objects.filter(project__in=projects), user, add_individual_guids_field=True)
+    individuals = _get_json_for_individuals(
+        Individual.objects.filter(family__project__in=projects), user=user, add_sample_guids_field=True)
+    samples = get_json_for_samples(Sample.objects.filter(individual__family__project__in=projects))
+    analysis_groups = get_json_for_analysis_groups(AnalysisGroup.objects.filter(project__in=projects))
+
+    response = {
+        'projectsByGuid': {p['projectGuid']: p for p in projects_json},
+        'familiesByGuid': {f['familyGuid']: f for f in families},
+        'individualsByGuid': {i['individualGuid']: i for i in individuals},
+        'samplesByGuid': {s['sampleGuid']: s for s in samples},
+        'locusListsByGuid': {ll['locusListGuid']: ll for ll in get_json_for_locus_lists(list(locus_lists), user)},
+        'analysisGroupsByGuid': {ag['analysisGroupGuid']: ag for ag in analysis_groups},
     }
+    if project_category_guid:
+        response['projectCategoriesByGuid'] = {
+            project_category_guid: ProjectCategory.objects.get(guid=project_category_guid).json()
+        }
+    return response
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)

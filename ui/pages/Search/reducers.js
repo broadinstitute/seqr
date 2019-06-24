@@ -39,13 +39,54 @@ export const loadProjectFamiliesContext = ({ projectGuid, familyGuids, analysisG
         (responseJson) => {
           dispatch({ type: RECEIVE_SAVED_SEARCHES, updatesById: responseJson })
           dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
-          onSuccess(getState())
+
           dispatch({ type: RECEIVE_SEARCH_CONTEXT })
         },
         (e) => {
           dispatch({ type: RECEIVE_SEARCH_CONTEXT, error: e.message })
         },
       ).get(contextParams)
+    } else {
+      onSuccess(getState())
+    }
+  }
+}
+
+export const loadProjectGroupContext = (projectCategoryGuid, addElementCallback) => {
+  return (dispatch, getState) => {
+    const state = getState()
+
+    let loadedProjects = null
+    if (state.projectCategoriesByGuid[projectCategoryGuid]) {
+      const projects = Object.values(state.projectsByGuid).filter(({ projectCategoryGuids }) =>
+        projectCategoryGuids.includes(projectCategoryGuid),
+      )
+      if (projects.every(project => project.variantTagTypes)) {
+        loadedProjects = projects
+      }
+    }
+
+    const addProjectElements = projects => projects.forEach(({ projectGuid }) => addElementCallback({
+      projectGuid,
+      familyGuids: Object.values(getState().familiesByGuid).filter(
+        family => family.projectGuid === projectGuid).map(({ familyGuid }) => familyGuid),
+    }))
+
+    if (loadedProjects) {
+      addProjectElements(loadedProjects)
+    } else {
+      dispatch({ type: REQUEST_SEARCH_CONTEXT })
+      new HttpRequestHelper('/api/search_context',
+        (responseJson) => {
+          dispatch({ type: RECEIVE_SAVED_SEARCHES, updatesById: responseJson })
+          dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+          addProjectElements(Object.values(responseJson.projectsByGuid))
+          dispatch({ type: RECEIVE_SEARCH_CONTEXT })
+        },
+        (e) => {
+          dispatch({ type: RECEIVE_SEARCH_CONTEXT, error: e.message })
+        },
+      ).get({ projectCategoryGuid })
     }
   }
 }
