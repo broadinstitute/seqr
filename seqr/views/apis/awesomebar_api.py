@@ -99,7 +99,7 @@ def _get_matching_individuals(user, query):
         filter_fields=['individual_id', 'display_name'],
         get_title=lambda i: i.display_name or i.individual_id,
         get_href=lambda i: '/project/{}/family_page/{}'.format(i.family.project.guid, i.family.guid),
-        get_description=lambda i: '{}: family {}'.format(i.family.project.name, (i.family.display_name or i.family.family_id)),
+        get_description=lambda i: u'{}: family {}'.format(i.family.project.name, (i.family.display_name or i.family.family_id)),
         project_field='family__project')
 
 
@@ -162,7 +162,7 @@ def awesomebar_autocomplete_handler(request):
     if query is None:
         raise ValueError("missing ?q=<prefix> url arg")
 
-    categories = request.GET.get('categories').split(',') if request.GET.get('categories') else CATEGORY_MAP.keys()
+    categories = request.GET.get('categories').split(',') if request.GET.get('categories') else DEFAULT_CATEGORIES
 
     results = {
         category: {'name': _to_title_case(category), 'results': CATEGORY_MAP[category](request.user, query)}

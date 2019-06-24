@@ -298,7 +298,9 @@ def _get_projects_details(projects, user, project_category_guid=None):
         'analysisGroupsByGuid': {ag['analysisGroupGuid']: ag for ag in analysis_groups},
     }
     if project_category_guid:
-        response['projectCategoriesByGuid'] = ProjectCategory.objects.get(guid=project_category_guid).json()
+        response['projectCategoriesByGuid'] = {
+            project_category_guid: ProjectCategory.objects.get(guid=project_category_guid).json()
+        }
     return response
 
 

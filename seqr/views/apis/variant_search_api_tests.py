@@ -177,6 +177,20 @@ class VariantSearchAPITest(TestCase):
         self.assertTrue('F000001_1' in response_json['familiesByGuid'])
         self.assertTrue('AG0000183_test_group' in response_json['analysisGroupsByGuid'])
 
+        response = self.client.get('{}?projectCategoryGuid=PC000003_test_category_name'.format(search_context_url))
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertSetEqual(
+            set(response_json),
+            {'savedSearchesByGuid', 'projectsByGuid', 'familiesByGuid', 'individualsByGuid', 'samplesByGuid',
+             'locusListsByGuid', 'analysisGroupsByGuid', 'projectCategoriesByGuid'}
+        )
+        self.assertEqual(len(response_json['savedSearchesByGuid']), 3)
+        self.assertTrue(PROJECT_GUID in response_json['projectsByGuid'])
+        self.assertTrue('F000001_1' in response_json['familiesByGuid'])
+        self.assertTrue('AG0000183_test_group' in response_json['analysisGroupsByGuid'])
+        self.assertListEqual(response_json['projectCategoriesByGuid'].keys(), ['PC000003_test_category_name'])
+
     @mock.patch('seqr.views.apis.variant_search_api.get_single_es_variant')
     def test_query_single_variant(self, mock_get_variant):
         mock_get_variant.return_value = VARIANTS[0]
