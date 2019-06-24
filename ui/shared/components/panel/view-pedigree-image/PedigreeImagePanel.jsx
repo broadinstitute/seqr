@@ -6,8 +6,8 @@ import styled from 'styled-components'
 import Modal from '../../modal/Modal'
 
 const PedigreeImage = styled.img.attrs({ alt: 'pedigree' })`
-  max-height: ${props => (props.compact ? '35px' : '100px')};
-  max-width: 150px;
+  max-height: ${props => (props.compact ? '35px' : '150px')};
+  max-width: 225px;
   vertical-align: top;
   cursor: ${props => (props.disablePedigreeZoom ? 'auto' : 'zoom-in')};
 `
