@@ -10,5 +10,5 @@ configure({ adapter: new Adapter() })
 test('shallow-render without crashing', () => {
   const store = configureStore()(STATE_WITH_2_FAMILIES)
 
-  shallow(<FamilyVariantReads store={store} />)
+  shallow(<FamilyVariantReads store={store} igvId="abc123" />)
 })
