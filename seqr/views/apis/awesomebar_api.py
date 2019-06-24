@@ -19,7 +19,7 @@ MAX_RESULTS_PER_CATEGORY = 8
 MAX_STRING_LENGTH = 100
 
 
-def _get_matching_objects(user, query, object_cls, filter_fields, get_title, get_href, get_description=None, get_metadata=None, project_field='', select_related_project=True):
+def _get_matching_objects(user, query, object_cls, filter_fields, get_title, get_href, get_description=None, project_field='', select_related_project=True):
     """Returns objects that match the given query string, and that the user can view, for the given object criteria.
 
     Args:
@@ -50,7 +50,6 @@ def _get_matching_objects(user, query, object_cls, filter_fields, get_title, get
         'title': get_title(obj)[:MAX_STRING_LENGTH],
         'description': u'({})'.format(get_description(obj)) if get_description else '',
         'href': get_href(obj),
-        'metadata': get_metadata(obj) if get_metadata else None,
     } for obj in matching_objects[:MAX_RESULTS_PER_CATEGORY]]
 
     results.sort(key=lambda f: len(f.get('title', '')))
@@ -112,7 +111,6 @@ def _get_matching_project_groups(user, query):
         get_href=lambda p: p.guid,
         project_field='projects',
         select_related_project=False,
-        get_metadata=lambda p: [project.guid for project in p.projects.filter(_get_project_can_view_query(user))],
     )
 
 
