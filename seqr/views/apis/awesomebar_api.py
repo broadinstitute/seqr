@@ -4,13 +4,11 @@ import logging
 
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
-from django.core.exceptions import FieldError
 from django.views.decorators.http import require_GET
 
 from seqr.utils.gene_utils import get_queried_genes
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.utils.json_utils import create_json_response, _to_title_case
-from seqr.views.utils.permissions_utils import check_permissions
 from seqr.models import Project, Family, Individual, AnalysisGroup, ProjectCategory
 
 logger = logging.getLogger(__name__)
