@@ -4,12 +4,13 @@ import { connect } from 'react-redux'
 import { Header, Icon, Popup, Label, Grid } from 'semantic-ui-react'
 import styled from 'styled-components'
 
-import { getIndividualsByGuid, getSortedIndividualsByFamily } from 'redux/selectors'
+import { getIndividualsByGuid, getSortedIndividualsByFamily, getUser } from 'redux/selectors'
 import DeleteButton from 'shared/components/buttons/DeleteButton'
 import UpdateButton from 'shared/components/buttons/UpdateButton'
 import { BooleanCheckbox, BaseSemanticInput } from 'shared/components/form/Inputs'
 import { SubmissionGeneVariants, Phenotypes } from 'shared/components/panel/MatchmakerPanel'
 import BaseFieldView from 'shared/components/panel/view-fields/BaseFieldView'
+import TextFieldView from 'shared/components/panel/view-fields/TextFieldView'
 import { Alleles } from 'shared/components/panel/variants/VariantIndividuals'
 import SortableTable, { SelectableTableFormInput } from 'shared/components/table/SortableTable'
 import DataLoader from 'shared/components/DataLoader'
@@ -18,13 +19,16 @@ import { ButtonLink, ColoredLabel } from 'shared/components/StyledComponents'
 import { AFFECTED } from 'shared/utils/constants'
 import { camelcaseToTitlecase } from 'shared/utils/stringUtils'
 
-import { loadMmeMatches, updateMmeSubmission, updateMmeSubmissionStatus, sendMmeContactEmail } from '../reducers'
+import {
+  loadMmeMatches, updateMmeSubmission, updateMmeSubmissionStatus, sendMmeContactEmail, updateMmeContactNotes,
+} from '../reducers'
 import {
   getMatchmakerMatchesLoading,
   getIndividualTaggedVariants,
   getDefaultMmeSubmissionByIndividual,
   getMmeResultsByIndividual,
   getMmeDefaultContactEmail,
+  getMatchmakerContactNotes,
 } from '../selectors'
 
 const BreakWordLink = styled.a`
@@ -230,6 +234,37 @@ const mapStatusDispatchToProps = {
 
 const MatchStatus = connect(null, mapStatusDispatchToProps)(BaseMatchStatus)
 
+const BaseContactNotes = ({ contact, user, contactNote, onSubmit, ...props }) =>
+  <TextFieldView
+    isVisible={user.isStaff}
+    fieldName="Contact Notes"
+    field="comments"
+    idField="contactInstitution"
+    initialValues={contactNote || contact}
+    isEditable
+    modalTitle={`Edit Shared Notes for "${contact.institution}"`}
+    onSubmit={onSubmit}
+    {...props}
+  />
+
+BaseContactNotes.propTypes = {
+  contact: PropTypes.object,
+  contactNote: PropTypes.object,
+  user: PropTypes.object,
+  onSubmit: PropTypes.func,
+}
+
+const mapContactNotesStateToProps = (state, ownProps) => ({
+  user: getUser(state),
+  contactNote: getMatchmakerContactNotes(state)[(ownProps.contact.institution || '').toLowerCase()],
+})
+
+const mapContactNotesDispatchToProps = {
+  onSubmit: updateMmeContactNotes,
+}
+
+const ContactNotes = connect(mapContactNotesStateToProps, mapContactNotesDispatchToProps)(BaseContactNotes)
+
 const DISPLAY_FIELDS = [
   {
     name: 'id',
@@ -266,6 +301,8 @@ const DISPLAY_FIELDS = [
         <div><b>{patient.contact.institution}</b></div>
         <div>{patient.contact.name}</div>
         <BreakWordLink href={patient.contact.href}>{patient.contact.href.replace('mailto:', '')}</BreakWordLink>
+        <VerticalSpacer height={10} />
+        <ContactNotes contact={patient.contact} modalId={patient.id} />
       </div>,
   },
   {

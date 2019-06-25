@@ -76,6 +76,7 @@ from seqr.views.apis.matchmaker_api import \
     update_mme_submission, \
     delete_mme_submission, \
     update_mme_result_status, \
+    update_mme_contact_note, \
     send_mme_contact_email
 
 from seqr.views.apis.variant_search_api import \
@@ -207,6 +208,7 @@ api_endpoints = {
     'matchmaker/submission/(?P<individual_guid>[\w.|-]+)/delete': delete_mme_submission,
     'matchmaker/result_status/(?P<matchmaker_result_guid>[\w.|-]+)/update': update_mme_result_status,
     'matchmaker/send_email/(?P<matchmaker_result_guid>[\w.|-]+)': send_mme_contact_email,
+    'matchmaker/contact_notes/(?P<institution>[^/]+)/update': update_mme_contact_note,
 
     'users/get_all': get_all_collaborators,
     'users/(?P<username>[^/]+)/set_password': set_password,

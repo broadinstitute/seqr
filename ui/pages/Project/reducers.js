@@ -1,7 +1,9 @@
 import { combineReducers } from 'redux'
 import { SubmissionError } from 'redux-form'
 
-import { loadingReducer, createSingleObjectReducer, createSingleValueReducer } from 'redux/utils/reducerFactories'
+import {
+  loadingReducer, createSingleObjectReducer, createSingleValueReducer, createObjectsByIdReducer,
+} from 'redux/utils/reducerFactories'
 import { REQUEST_PROJECTS, updateEntity } from 'redux/rootReducer'
 import { SHOW_ALL } from 'shared/utils/constants'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
@@ -196,6 +198,10 @@ export const updateMmeSubmissionStatus = (values) => {
   return updateEntity(values, RECEIVE_DATA, '/api/matchmaker/result_status', 'matchmakerResultGuid')
 }
 
+export const updateMmeContactNotes = (values) => {
+  return updateEntity(values, RECEIVE_DATA, '/api/matchmaker/contact_notes', 'institution')
+}
+
 export const sendMmeContactEmail = (values) => {
   return (dispatch) => {
     return new HttpRequestHelper(`/api/matchmaker/send_email/${values.matchmakerResultGuid}`,
@@ -222,6 +228,7 @@ export const reducers = {
   matchmakerMatchesLoading: loadingReducer(REQUEST_MME_MATCHES, RECEIVE_DATA),
   usersByUsername: createSingleValueReducer(RECEIVE_USERS, {}),
   userOptionsLoading: loadingReducer(REQUEST_USERS, RECEIVE_USERS),
+  mmeContactNotes: createObjectsByIdReducer(RECEIVE_DATA, 'mmeContactNotes'),
   familyTableState: createSingleObjectReducer(UPDATE_FAMILY_TABLE_STATE, {
     familiesFilter: SHOW_ALL,
     familiesSortOrder: SORT_BY_FAMILY_NAME,
