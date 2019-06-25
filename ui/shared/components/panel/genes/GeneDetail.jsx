@@ -109,6 +109,20 @@ const GeneDetailContent = ({ gene, updateGeneNote: dispatchUpdateGeneNote }) => 
           </i>
         </div> : ' No score available',
     },
+    // TODO better metric description
+    {
+      title: 'LoF Constraint',
+      content: ((gene.constraints || {}).louef !== undefined && (gene.constraints || {}).louef !== 100) ?
+        <div>
+          louef: {gene.constraints.louef.toPrecision(4)} (ranked {gene.constraints.louefRank} most
+          intolerant of LoF mutations out of {gene.constraints.totalGenes} genes under study). <br />
+          <i style={{ color: 'gray' }}>
+            NOTE: This metric is based on the amount of expected variation observed in the ExAC data and is a
+            measure of how likely the gene is to be intolerant of loss-of-function mutations.
+          </i>
+        </div> : 'No score available',
+    },
+    // TODO get rid of pLI?
     {
       title: 'LoF Constraint',
       content: (gene.constraints || {}).pli ?

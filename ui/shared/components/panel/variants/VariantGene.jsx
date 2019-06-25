@@ -174,15 +174,16 @@ const VariantGene = ({ geneId, gene, project, variant, compact }) => {
           statistical model described in [K. Samocha 2014]. In general this metric is most useful for genes that act
           via a dominant mechanism, and where a large proportion of the protein is heavily functionally constrained.`}
       />
+      {/* TODO better metric description */}
       <GeneDetailSection
         compact={compact}
         color="red"
         label="LOF CONSTR"
         description="Loss of Function Constraint"
-        details={((gene.constraints.pli && gene.constraints.pli > 0.9) ||
-          (gene.constraints.pliRank && gene.constraints.pliRank < CONSTRAINED_GENE_RANK_THRESHOLD)) &&
-          `This gene ranks as ${gene.constraints.pliRank} most intolerant of LoF mutations out of
-           ${gene.constraints.totalGenes} genes under study (pli: ${gene.constraints.pli.toPrecision(4)}).
+        details={gene.constraints.louef < 0.35 &&
+          `This gene ranks as ${gene.constraints.louefRank} most intolerant of LoF mutations out of
+           ${gene.constraints.totalGenes} genes under study (louef:
+           ${gene.constraints.louef.toPrecision(4)}${gene.constraints.pli ? `, pli: ${gene.constraints.pli.toPrecision(4)}` : ''}).
            This metric is based on the amount of expected variation observed in the ExAC data and is a measure of how
            likely the gene is to be intolerant of loss-of-function mutations`}
       />
