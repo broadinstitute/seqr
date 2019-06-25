@@ -385,6 +385,7 @@ def family_gene_lookup(request, project_id, family_id):
     return render(request, 'family/gene_lookup.html', {
         'project': project,
         'family': family,
+        'new_page_url': '/variant_search/family/{}'.format(family.seqr_family.guid) if family.seqr_family and family.seqr_family.project.has_new_search else None,
     })
 
 

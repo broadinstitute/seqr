@@ -7,10 +7,8 @@ import xbrowse_server.base.views.individual_views
 import xbrowse_server.base.views.igv_views
 import xbrowse_server.base.views.family_group_views
 import xbrowse_server.base.views.reference_views
-#import xbrowse_server.phenotips.views
 import xbrowse_server.gene_lists.urls
 import xbrowse_server.staff.urls
-import django.contrib.admindocs.urls
 import django.views.static
 import xbrowse_server.api.urls
 
@@ -34,7 +32,7 @@ urlpatterns = [
     url(r'^set-password$', xbrowse_server.base.views.set_password, name='set_password'),   # DEPRECATED
     url(r'^forgot-password$', xbrowse_server.base.views.forgot_password, name='forgot_password'),
     url(r'^forgot-password-sent$', xbrowse_server.base.views.forgot_password_sent, name='forgot_password_sent'),
-    url(r'^user/(?P<username>\w+)', xbrowse_server.base.views.user_summary, name='user_summary'),
+    url(r'^user/(?P<username>\w+)', xbrowse_server.base.views.user_summary, name='user_summary'),  # WILL NOT CONVERT
 
     #
     # Project
@@ -85,22 +83,22 @@ urlpatterns = [
     url(r'^project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w.|-]+)/mendelian-variant-search', xbrowse_server.base.views.mendelian_variant_search, name='mendelian_variant_search'),  # DEPRECATED
     url(r'^project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w.|-]+)/edit$', xbrowse_server.base.views.edit_family, name='edit_family'),  # DEPRECATED
     url(r'^project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w.|-]+)/delete$', xbrowse_server.base.views.family_views.delete, name='delete_family'),  # DEPRECATED
-    url(r'^project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w.|-]+)/coverage$', xbrowse_server.base.views.family_views.family_coverage, name='family_coverage'),
-    url(r'^project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w.|-]+)/gene$', xbrowse_server.base.views.family_views.family_gene_lookup, name='family_gene_lookup'),
-    url(r'^project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w.|-]+)/cause$', xbrowse_server.base.views.family_views.edit_family_cause, name='edit_family_cause'),
+    url(r'^project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w.|-]+)/coverage$', xbrowse_server.base.views.family_views.family_coverage, name='family_coverage'),  # WILL NOT CONVERT
+    url(r'^project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w.|-]+)/gene$', xbrowse_server.base.views.family_views.family_gene_lookup, name='family_gene_lookup'),  # DEPRECATED
+    url(r'^project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w.|-]+)/cause$', xbrowse_server.base.views.family_views.edit_family_cause, name='edit_family_cause'),  # WILL NOT CONVERT
     url(r'^project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w.|-]+)/pedigreeimage/delete', xbrowse_server.base.views.family_views.pedigree_image_delete, name='pedigree_image_delete'),
 
 
     #
     # Cohort views
     #
-    url(r'^project/(?P<project_id>[\w.|-]+)/cohorts$', xbrowse_server.base.views.cohort_views.cohorts, name='cohorts'),
-    url(r'^project/(?P<project_id>[\w.|-]+)/cohorts/add', xbrowse_server.base.views.cohort_views.add, name='cohort_add'),
-    url(r'^project/(?P<project_id>[\w.|-]+)/cohort/(?P<cohort_id>[\w.|-]+)$', xbrowse_server.base.views.cohort_home, name='cohort_home'),
-    url(r'^project/(?P<project_id>[\w.|-]+)/cohort/(?P<cohort_id>[\w.|-]+)/edit$', xbrowse_server.base.views.cohort_views.edit, name='cohort_edit'),
-    url(r'^project/(?P<project_id>[\w.|-]+)/cohort/(?P<cohort_id>[\w.|-]+)/delete', xbrowse_server.base.views.cohort_views.delete, name='cohort_delete'),
-    url(r'^project/(?P<project_id>[\w.|-]+)/cohort/(?P<cohort_id>[\w.|-]+)/variant-search', xbrowse_server.base.views.cohort_variant_search, name='cohort_variant_search'),
-    url(r'^project/(?P<project_id>[\w.|-]+)/cohort/(?P<cohort_id>[\w.|-]+)/cohort-gene-search$', xbrowse_server.base.views.cohort_gene_search, name='cohort_gene_search'),
+    url(r'^project/(?P<project_id>[\w.|-]+)/cohorts$', xbrowse_server.base.views.cohort_views.cohorts, name='cohorts'),  # WILL NOT CONVERT
+    url(r'^project/(?P<project_id>[\w.|-]+)/cohorts/add', xbrowse_server.base.views.cohort_views.add, name='cohort_add'),  # WILL NOT CONVERT
+    url(r'^project/(?P<project_id>[\w.|-]+)/cohort/(?P<cohort_id>[\w.|-]+)$', xbrowse_server.base.views.cohort_home, name='cohort_home'),  # WILL NOT CONVERT
+    url(r'^project/(?P<project_id>[\w.|-]+)/cohort/(?P<cohort_id>[\w.|-]+)/edit$', xbrowse_server.base.views.cohort_views.edit, name='cohort_edit'),  # WILL NOT CONVERT
+    url(r'^project/(?P<project_id>[\w.|-]+)/cohort/(?P<cohort_id>[\w.|-]+)/delete', xbrowse_server.base.views.cohort_views.delete, name='cohort_delete'),  # WILL NOT CONVERT
+    url(r'^project/(?P<project_id>[\w.|-]+)/cohort/(?P<cohort_id>[\w.|-]+)/variant-search', xbrowse_server.base.views.cohort_variant_search, name='cohort_variant_search'),  # WILL NOT CONVERT
+    url(r'^project/(?P<project_id>[\w.|-]+)/cohort/(?P<cohort_id>[\w.|-]+)/cohort-gene-search$', xbrowse_server.base.views.cohort_gene_search, name='cohort_gene_search'),  # WILL NOT CONVERT
 
 
     #
@@ -116,21 +114,18 @@ urlpatterns = [
     url(r'^project/(?P<project_id>[\w.|-]+)/family-group/(?P<family_group_slug>[\w.|-]+)/delete$', xbrowse_server.base.views.family_group_views.delete, name='family_group_delete'),  # DEPRECATED
     url(r'^project/(?P<project_id>[\w.|-]+)/family-group/(?P<family_group_slug>[\w.|-]+)/combine-mendelian-families$', xbrowse_server.base.views.family_group_views.combine_mendelian_families, name='combine_mendelian_families'),  # DEPRECATED
 
-    url(r'', include('seqr.urls')),
-    url(r'^api/', include('xbrowse_server.api.urls')),
+    url(r'', include('seqr.urls')),  # CONVERTED
+    url(r'^api/', include('xbrowse_server.api.urls')),  # WILL NOT CONVERT
     url(r'^gene-lists/', include(xbrowse_server.gene_lists.urls)),  # DEPRECATED
 
-    url(r'^staff/', include(xbrowse_server.staff.urls)),
-
-    url(r'^xadmin/doc/', include(django.contrib.admindocs.urls)),
-    url(r'^xadmin/', admin.site.urls),
+    url(r'^staff/', include(xbrowse_server.staff.urls)),  # WILL NOT CONVERT
 
     # TODO: new app
-    url(r'^docs/(?P<doc_page_id>[\w|-]+)$', xbrowse_server.base.views.docs_md, name='docs_md'),
+    url(r'^docs/(?P<doc_page_id>[\w|-]+)$', xbrowse_server.base.views.docs_md, name='docs_md'),  # WILL NOT CONVERT
 
-    url(r'^xstatic/style.css$', xbrowse_server.base.views.style_css, name='style_css'),
+    url(r'^xstatic/style.css$', xbrowse_server.base.views.style_css, name='style_css'),  # WILL NOT CONVERT
 
-    url(r'^errorlog$', xbrowse_server.base.views.account_views.errorlog, name='errorlog'),
+    url(r'^errorlog$', xbrowse_server.base.views.account_views.errorlog, name='errorlog'),  # WILL NOT CONVERT
 
     url(r'^gene/?$', xbrowse_server.base.views.reference_views.gene_search, name='gene_search'),  # DEPRECATED
     url(r'^gene/(?P<gene_str>[\S]+)/?$', xbrowse_server.base.views.reference_views.gene_info, name='gene_info'),  # DEPRECATED
@@ -138,26 +133,26 @@ urlpatterns = [
     #
     # Reporting pages
     #
-    url(r'^report/project/(?P<project_id>[\w.|-]+)/?$', xbrowse_server.reports.views.project_report, name='project_report'),
+    url(r'^report/project/(?P<project_id>[\w.|-]+)/?$', xbrowse_server.reports.views.project_report, name='project_report'),  # WILL NOT CONVERT
 
     #
     # Matchmaker pages
     #
-    url(r'^matchmaker/add/project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w|-]+)/individual/(?P<individual_id>[\w|-]+)$', xbrowse_server.matchmaker.views.matchmaker_add_page, name='matchmaker_add_page'),
-    url(r'^matchmaker/search/project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w|-]+)$', xbrowse_server.matchmaker.views.matchmaker_search_page, name='matchmaker_search_page'),
+    url(r'^matchmaker/add/project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w|-]+)/individual/(?P<individual_id>[\w|-]+)$', xbrowse_server.matchmaker.views.matchmaker_add_page, name='matchmaker_add_page'),  # DEPRECATED
+    url(r'^matchmaker/search/project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w|-]+)$', xbrowse_server.matchmaker.views.matchmaker_search_page, name='matchmaker_search_page'),  # DEPRECATED
     url(r'^matchmaker/disclaimer$', xbrowse_server.matchmaker.views.matchmaker_disclaimer_page, name='matchmaker_disclaimer_page'),
-    url(r'^matchmaker/translate/matchbox_id$', xbrowse_server.matchmaker.views.matchbox_id_info, name='matchbox_id_info'),
-    url(r'^matchmaker/matchbox_dashboard$', xbrowse_server.matchmaker.views.matchbox_dashboard, name='matchbox_dashboard'),
+    url(r'^matchmaker/translate/matchbox_id$', xbrowse_server.matchmaker.views.matchbox_id_info, name='matchbox_id_info'),  # DEPRECATED
+    url(r'^matchmaker/matchbox_dashboard$', xbrowse_server.matchmaker.views.matchbox_dashboard, name='matchbox_dashboard'),  # DEPRECATED
     url(r'^matchmaker/matchbox$', xbrowse_server.matchmaker.views.matchbox_info_page, name='matchbox_info_page'),
 
     #
     # Phenotype upload pages
     #
-    url(r'^phenotypes/upload/project/(?P<project_id>[\w.|-]+)$', xbrowse_server.phenotips.views.phenotypes_upload_page, name='phenotypes_upload_page'),
+    url(r'^phenotypes/upload/project/(?P<project_id>[\w.|-]+)$', xbrowse_server.phenotips.views.phenotypes_upload_page, name='phenotypes_upload_page'),  # DEPRECATED
 
 
     # Breakpoint Search
-    url(r'', include('breakpoint_search.urls')),
+    url(r'', include('breakpoint_search.urls')),  # WILL NOT CONVERT
 
 ]
 

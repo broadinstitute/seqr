@@ -4,7 +4,7 @@ from settings import LOGIN_URL
 from xbrowse_server.decorators import log_request
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404
-from xbrowse_server.base.models import Project
+from xbrowse_server.base.models import Project, Family
 from django.conf import settings
 from xbrowse_server.server_utils import JSONResponse
 import requests
@@ -25,9 +25,12 @@ def matchmaker_add_page(request, project_id,family_id,individual_id):
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_view(request.user):
         raise PermissionDenied
+    family = get_object_or_404(Family, project=project, family_id=family_id)
     
     return render(request, 'matchmaker/matchmaker_add_page.html', {
         'project': project,
+        'new_page_url': '/project/{0}/family_page/{1}/matchmaker_exchange'.format(
+            family.seqr_family.project.guid, family.seqr_family.guid) if family.seqr_family else None,
     })
  
  
@@ -42,7 +45,11 @@ def matchmaker_search_page(request, project_id,family_id):
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_view(request.user):
         raise PermissionDenied
-    return render(request, 'matchmaker/matchmaker_search_page.html',{})
+    family = get_object_or_404(Family, project=project, family_id=family_id)
+    return render(request, 'matchmaker/matchmaker_search_page.html',{
+        'new_page_url': '/project/{0}/family_page/{1}/matchmaker_exchange'.format(
+            family.seqr_family.project.guid, family.seqr_family.guid) if family.seqr_family else None,
+    })
 
 
 @csrf_exempt
@@ -63,7 +70,7 @@ def matchbox_id_info(request):
     Notes: 
         User HAS TO BE staff to access this page
     '''
-    return render(request, 'matchmaker/matchbox_id_info.html', {})
+    return render(request, 'matchmaker/matchbox_id_info.html', {'new_page_url': '/staff/matchmaker'})
 
 
 @staff_member_required(login_url=LOGIN_URL)
@@ -73,7 +80,7 @@ def matchbox_dashboard(request):
     Notes: 
         User HAS TO BE staff to access this page
     '''
-    return render(request, 'matchmaker/matchbox_dashboard.html', {})
+    return render(request, 'matchmaker/matchbox_dashboard.html', {'new_page_url': '/staff/matchmaker'})
 
 
 @log_request('matchmaker_info_page')

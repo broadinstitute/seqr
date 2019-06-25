@@ -7,6 +7,8 @@ from seqr.views.react_app import main_app, no_login_main_app
 from seqr.views.apis.dataset_api import add_alignment_dataset_handler, add_variants_dataset_handler
 from settings import ENABLE_DJANGO_DEBUG_TOOLBAR
 from django.conf.urls import url, include
+from django.contrib import admin
+import django.contrib.admindocs.urls
 
 from seqr.views.apis.family_api import \
     update_family_fields_handler, \
@@ -283,6 +285,8 @@ urlpatterns = [
 
 urlpatterns += [
     url(r'^hijack/', include('hijack.urls')),
+    url(r'^xadmin/doc/', include(django.contrib.admindocs.urls)),
+    url(r'^xadmin/', admin.site.urls),
 ]
 
 # django debug toolbar
