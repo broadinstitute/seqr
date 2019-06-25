@@ -649,7 +649,7 @@ class VariantSearchAPITest(TestCase):
             subject='some email subject',
             body='some email content',
             to=['test@test.com', 'other_test@gmail.com'],
-            reply_to=['test_user@test.com'])
+            from_email='matchmaker@broadinstitute.org')
         mock_email.return_value.send.assert_called()
 
         mock_email.return_value.send.side_effect = EmailException

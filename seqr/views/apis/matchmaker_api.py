@@ -282,7 +282,7 @@ def send_mme_contact_email(request, matchmaker_result_guid):
         subject=request_json['subject'],
         body=request_json['body'],
         to=map(lambda s: s.strip(), request_json['to'].split(',')),
-        reply_to=[request.user.email],
+        from_email='matchmaker@broadinstitute.org',
     )
     try:
         email_message.send()
