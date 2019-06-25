@@ -851,7 +851,7 @@ class MatchmakerContactNotes(ModelWithGUID):
         return '{}_{}_result'.format(self.id, self.institution)
 
     def _compute_guid(self):
-        return 'MCN%07d_%s' % (self.id, self.institution)
+        return 'MCN%07d_%s' % (self.id, self.institution.replace(' ', '_'))
 
     class Meta:
         json_fields = []
