@@ -46,6 +46,7 @@ const FAMILY_SORT_LOOKUP = FAMILY_SORT_OPTIONS.reduce(
 
 export const getProjectDetailsIsLoading = state => state.projectDetailsLoading.isLoading
 export const getMatchmakerMatchesLoading = state => state.matchmakerMatchesLoading.isLoading
+export const getMatchmakerContactNotes = state => state.mmeContactNotes
 
 
 const selectEntitiesForProjectGuid = (entitiesGroupedByProjectGuid, projectGuid) => entitiesGroupedByProjectGuid[projectGuid] || {}

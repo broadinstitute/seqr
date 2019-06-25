@@ -841,3 +841,18 @@ class MatchmakerResult(ModelWithGUID):
             'guid', 'comments', 'we_contacted', 'host_contacted', 'deemed_irrelevant', 'flag_for_analysis',
             'created_date',
         ]
+
+
+class MatchmakerContactNotes(ModelWithGUID):
+    institution = models.CharField(max_length=200, db_index=True, unique=True)
+    comments = models.TextField(blank=True)
+
+    def __unicode__(self):
+        return '{}_{}_result'.format(self.id, self.institution)
+
+    def _compute_guid(self):
+        return 'MCN%07d_%s' % (self.id, self.institution)
+
+    class Meta:
+        json_fields = []
+        internal_json_fields = ['institution', 'comments']
