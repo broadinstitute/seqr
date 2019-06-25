@@ -5,7 +5,7 @@ The `urlpatterns` list routes URLs to views. For more information please see:
 """
 from seqr.views.react_app import main_app, no_login_main_app
 from seqr.views.apis.dataset_api import add_alignment_dataset_handler, add_variants_dataset_handler
-from settings import ENABLE_DJANGO_DEBUG_TOOLBAR
+from settings import ENABLE_DJANGO_DEBUG_TOOLBAR, MEDIA_ROOT
 from django.conf.urls import url, include
 from django.contrib import admin
 import django.contrib.admindocs.urls
@@ -287,6 +287,9 @@ urlpatterns += [
     url(r'^hijack/', include('hijack.urls')),
     url(r'^xadmin/doc/', include(django.contrib.admindocs.urls)),
     url(r'^xadmin/', admin.site.urls),
+    url(r'^media/(?P<path>.*)$', django.views.static.serve, {
+        'document_root': MEDIA_ROOT,
+    }),
 ]
 
 # django debug toolbar
