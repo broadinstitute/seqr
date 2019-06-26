@@ -14,7 +14,7 @@ const MessagePanel = styled(Message)`
   margin: 2em !important;
 `
 
-class XHRUploaderWithEvents extends XHRUploader {
+export class XHRUploaderWithEvents extends XHRUploader {
 
   static propTypes = {
     onUploadStarted: PropTypes.func,
