@@ -167,15 +167,18 @@ def update_family_pedigree_image(request, family_guid):
     # check permission
     check_permissions(family.project, request.user, CAN_EDIT)
 
-    if len(request.FILES) != 1:
+    if len(request.FILES) == 0:
+        pedigree_image = None
+    elif len(request.FILES) > 1:
         return create_json_response({}, status=400, reason='Received {} files'.format(len(request.FILES)))
+    else:
+        pedigree_image = request.FILES.values()[0]
 
-    update_seqr_model(family, pedigree_image=request.FILES.values()[0])
+    update_seqr_model(family, pedigree_image=pedigree_image)
 
     return create_json_response({
-        'familiesByGuid': {family.guid: _get_json_for_family(family, request.user)}
+        family.guid: _get_json_for_family(family, request.user)
     })
-
 
 
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)

@@ -176,8 +176,7 @@ def _get_json_for_families(families, user=None, add_individual_guids_field=False
             'lastModifiedDate': ab.last_modified_date,
         } for ab in family.familyanalysedby_set.all()]
         pedigree_image = _get_pedigree_image_url(result.pop('pedigreeImage'))
-        if pedigree_image:
-            result['pedigreeImage'] = pedigree_image
+        result['pedigreeImage'] = pedigree_image
         if add_individual_guids_field:
             result['individualGuids'] = [i.guid for i in family.individual_set.all()]
         if not result['displayName']:
