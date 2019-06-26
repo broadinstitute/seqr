@@ -3,7 +3,7 @@ import { connect } from 'react-redux'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { FormSection } from 'redux-form'
-import { Form, Accordion, Header, Segment, Grid, List } from 'semantic-ui-react'
+import { Form, Accordion, Header, Segment, Grid, List, Icon } from 'semantic-ui-react'
 
 import { getUser } from 'redux/selectors'
 import { VerticalSpacer } from 'shared/components/Spacers'
@@ -92,6 +92,11 @@ const DetailLink = styled(ButtonLink)`
     font-weight: initial;
     font-style: inherit;
   }
+`
+
+const ExpandCollapseCategoryContainer = styled.span`
+  float: right;
+  padding-top: 1em;
 `
 
 const JsonSelectProps = options => ({
@@ -300,6 +305,21 @@ const panelDetails = ({ name, headerProps, ...panelContentProps }, i) => ({
 const PANELS = PANEL_DETAILS.map(panelDetails)
 const STAFF_PANELS = STAFF_PANEL_DETAILS.map(panelDetails)
 
+const ExpandableAccordion = (view) => {
+  var activeIndex;
+  switch (view) {
+    case 'EXPAND_ALL': {
+      activeIndex = [0, 1, 2, 3, 4, 5];
+    }
+    default: {
+      activeIndex = [];
+    }
+    return (
+      <Accordion fluid panels={this.props.user.isStaff ? STAFF_PANELS : PANELS} exclusive={false} activeIndex={activeIndex} />
+    )
+  }
+}
+
 class VariantSearchFormContent extends React.Component {
   render() {
     return (
@@ -308,9 +328,14 @@ class VariantSearchFormContent extends React.Component {
         <VerticalSpacer height={10} />
         <InlineHeader content="Saved Search:" />
         {configuredField(SAVED_SEARCH_FIELD)}
+        <ExpandCollapseCategoryContainer>
+          <ButtonLink>Expand All &nbsp;<Icon name="plus" /></ButtonLink>
+          <b>| &nbsp;&nbsp;</b>
+          <ButtonLink>Collapse All &nbsp;<Icon name="minus" /></ButtonLink>
+        </ExpandCollapseCategoryContainer>
         <VerticalSpacer height={10} />
         <FormSection name="search">
-          <Accordion fluid panels={this.props.user.isStaff ? STAFF_PANELS : PANELS} />
+          <ExpandableAccordion />
         </FormSection>
       </div>
     )
