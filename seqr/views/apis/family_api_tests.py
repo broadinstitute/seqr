@@ -1,16 +1,8 @@
 # -*- coding: utf-8 -*-
-
-import json
-import mock
-
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls.base import reverse
 
-from openpyxl import load_workbook
-from StringIO import StringIO
-
-from seqr.models import Individual, Family
 from seqr.views.apis.family_api import update_family_pedigree_image
 from seqr.views.utils.test_utils import _check_login
 
@@ -26,7 +18,7 @@ class ProjectAPITest(TestCase):
         url = reverse(update_family_pedigree_image, args=[FAMILY_GUID])
         _check_login(self, url)
 
-        f = SimpleUploadedFile("new_ped_image.png", b"file_content")
+        f = SimpleUploadedFile("new_ped_image_123.png", b"file_content")
 
         # send invalid request
         response = self.client.post(url, {'f1': f, 'f2': f})
