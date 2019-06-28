@@ -114,7 +114,6 @@ const SAVED_SEARCH_FIELD = {
 
 const INHERITANCE_PANEL = {
   name: 'inheritance',
-  index: 0,
   headerProps: {
     title: 'Inheritance',
     inputProps: {
@@ -171,7 +170,6 @@ const INHERITANCE_PANEL = {
 
 const pathogenicityPanel = isStaff => ({
   name: 'pathogenicity',
-  index: 1,
   headerProps: { title: 'Pathogenicity', inputProps: JsonSelectProps(isStaff ? STAFF_PATHOGENICITY_FILTER_OPTIONS : PATHOGENICITY_FILTER_OPTIONS) },
   fields: isStaff ? STAFF_PATHOGENICITY_FIELDS : PATHOGENICITY_FIELDS,
   fieldProps: { control: AlignedCheckboxGroup, format: val => val || [] },
@@ -183,7 +181,6 @@ const PATHOGENICITY_PANEL = pathogenicityPanel(false)
 
 const ANNOTATION_PANEL = {
   name: 'annotations',
-  index: 2,
   headerProps: { title: 'Annotations', inputProps: JsonSelectProps(ANNOTATION_FILTER_OPTIONS) },
   fields: ANNOTATION_GROUPS,
   fieldProps: { control: AlignedCheckboxGroup, format: val => val || [] },
@@ -192,7 +189,6 @@ const ANNOTATION_PANEL = {
 
 const FREQUENCY_PANEL = {
   name: 'freqs',
-  index: 3,
   headerProps: {
     title: 'Frequency',
     inputSize: 6,
@@ -221,7 +217,6 @@ const FREQUENCY_PANEL = {
 
 const LOCATION_PANEL = {
   name: 'locus',
-  index: 4,
   headerProps: {
     title: 'Location',
     name: 'locus',
@@ -234,7 +229,6 @@ const LOCATION_PANEL = {
 
 const QUALITY_PANEL = {
   name: 'qualityFilter',
-  index: 5,
   headerProps: { title: 'Call Quality', inputProps: JsonSelectProps(QUALITY_FILTER_OPTIONS) },
   fields: QUALITY_FILTER_FIELDS,
   fieldProps: { control: LabeledSlider, format: val => val || null },
@@ -260,11 +254,10 @@ HeaderContent.propTypes = {
   inputProps: PropTypes.object,
 }
 
-const PanelContent = ({ name, index, fields, fieldProps, helpText, fieldLayout }) => {
+const PanelContent = ({ name, fields, fieldProps, helpText, fieldLayout }) => {
   const fieldComponents = configuredFields({ fields: fields.map(field => ({ ...(fieldProps || {}), ...field })) })
   return (
     <FormSection name={name}>
-      <div>index of this section is: { index }</div>
       {helpText && <i>{helpText} <VerticalSpacer height={20} /></i>}
       <Form.Group widths="equal">
         <Form.Field width={2} />
@@ -278,7 +271,6 @@ const PanelContent = ({ name, index, fields, fieldProps, helpText, fieldLayout }
 PanelContent.propTypes = {
   fields: PropTypes.array.isRequired,
   name: PropTypes.string.isRequired,
-  index: PropTypes.number.isRequired,
   fieldProps: PropTypes.object,
   helpText: PropTypes.node,
   fieldLayout: PropTypes.func,
@@ -337,7 +329,6 @@ class VariantSearchFormContent extends React.Component {
   render() {
     return (
       <div>
-        active index is: {this.state.activeIndex.toString()}
         <ProjectFamiliesField />
         <VerticalSpacer height={10} />
         <InlineHeader content="Saved Search:" />
