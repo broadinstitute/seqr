@@ -91,9 +91,11 @@ class GeneConstraint(models.Model):
     mis_z_rank = models.IntegerField()
     pLI = models.FloatField()
     pLI_rank = models.IntegerField()
+    louef = models.FloatField()
+    louef_rank = models.IntegerField()
 
     class Meta:
-        json_fields = ['mis_z', 'mis_z_rank', 'pLI', 'pLI_rank']
+        json_fields = ['mis_z', 'mis_z_rank', 'pLI', 'pLI_rank', 'louef', 'louef_rank']
 
 
 class GeneExpression(models.Model):
