@@ -86,14 +86,16 @@ const GeneDetailContent = ({ gene, updateGeneNote: dispatchUpdateGeneNote }) => 
     { title: 'Coordinates', content: grch38Coords ? `${grch38Coords} (hg19: ${grch37Coords || 'liftover failed'})` : grch37Coords },
     { title: 'Gene Type', content: gene.gencodeGeneType },
   ]
+  const constraints = gene.constraints || {}
   const statDetails = [
     { title: 'Coding Size', content: ((gene.codingRegionSizeGrch38 || gene.codingRegionSizeGrch37) / 1000).toPrecision(2) },
     {
       title: 'Missense Constraint',
-      content: (gene.constraints || {}).misZ ?
+      content: constraints.misZ ?
         <div>
-          z-score: {gene.constraints.misZ.toPrecision(4)} (ranked {gene.constraints.misZRank} most
-          constrained out of {gene.constraints.totalGenes} genes under study). <br />
+          z-score: {constraints.misZ.toPrecision(4)} (ranked {constraints.misZRank} most constrained out of
+          {constraints.totalGenes} genes under study).
+          <br />
           <i style={{ color: 'gray' }}>
             NOTE: Missense contraint is a measure of the degree to which the number of missense variants found
             in this gene in ExAC v0.3 is higher or lower than expected according to the statistical model
@@ -109,28 +111,20 @@ const GeneDetailContent = ({ gene, updateGeneNote: dispatchUpdateGeneNote }) => 
           </i>
         </div> : ' No score available',
     },
-    // TODO better metric description
     {
       title: 'LoF Constraint',
-      content: ((gene.constraints || {}).louef !== undefined && (gene.constraints || {}).louef !== 100) ?
+      content: (constraints.pli || (constraints.louef !== undefined && constraints.louef !== 100)) ?
         <div>
-          louef: {gene.constraints.louef.toPrecision(4)} (ranked {gene.constraints.louefRank} most
-          intolerant of LoF mutations out of {gene.constraints.totalGenes} genes under study). <br />
+          {constraints.louef !== undefined && constraints.louef !== 100 &&
+            <span>louef: {constraints.louef.toPrecision(4)} (ranked {constraints.louefRank} most intolerant of LoF
+              mutations out of {constraints.totalGenes} genes under study). <br />
+            </span>}
+          {constraints.pli > 0 &&
+            <span>pLI-score: {constraints.pli.toPrecision(4)} (ranked {constraints.pliRank} most intolerant of LoF
+              mutations out of {constraints.totalGenes} genes under study). <br />
+            </span>}
           <i style={{ color: 'gray' }}>
-            NOTE: This metric is based on the amount of expected variation observed in the ExAC data and is a
-            measure of how likely the gene is to be intolerant of loss-of-function mutations.
-          </i>
-        </div> : 'No score available',
-    },
-    // TODO get rid of pLI?
-    {
-      title: 'LoF Constraint',
-      content: (gene.constraints || {}).pli ?
-        <div>
-          pLI-score: {gene.constraints.pli.toPrecision(4)} (ranked {gene.constraints.pliRank} most
-          intolerant of LoF mutations out of {gene.constraints.totalGenes} genes under study). <br />
-          <i style={{ color: 'gray' }}>
-            NOTE: This metric is based on the amount of expected variation observed in the ExAC data and is a
+            NOTE: These metrics are based on the amount of expected variation observed in the gnomAD data and is a
             measure of how likely the gene is to be intolerant of loss-of-function mutations.
           </i>
         </div> : 'No score available',
