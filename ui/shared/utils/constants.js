@@ -641,10 +641,10 @@ const VARIANT_SORT_OPTONS = [
     text: 'Constraint',
     comparator: (a, b, genesById) =>
       Math.min(...Object.keys(a.transcripts).reduce((acc, geneId) =>
-        [...acc, genesById[geneId].constraints.misZRank || Infinity, genesById[geneId].constraints.pliRank || Infinity],
+        [...acc, genesById[geneId].constraints.misZRank || Infinity, genesById[geneId].constraints.louefRank || Infinity],
       [])) -
       Math.min(...Object.keys(b.transcripts).reduce((acc, geneId) =>
-        [...acc, genesById[geneId].constraints.misZRank || Infinity, genesById[geneId].constraints.pliRank || Infinity],
+        [...acc, genesById[geneId].constraints.misZRank || Infinity, genesById[geneId].constraints.louefRank || Infinity],
       [])),
   },
   {
