@@ -617,6 +617,20 @@ const clinsigSeverity = (variant, user) => {
   return clinvarSeverity + hgmdSeverity
 }
 
+export const MISSENSE_THRESHHOLD = 3
+export const LOF_THRESHHOLD = 0.35
+
+const getGeneConstraintSortScore = ({ constraints }) => {
+  if (!constraints || constraints.louef === undefined) {
+    return Infinity
+  }
+  let missenseOffset = constraints.misZ > MISSENSE_THRESHHOLD ? constraints.misZ : 0
+  if (constraints.louef > LOF_THRESHHOLD) {
+    missenseOffset /= MISSENSE_THRESHHOLD
+  }
+  return constraints.louef - missenseOffset
+}
+
 
 const VARIANT_SORT_OPTONS = [
   { value: SORT_BY_FAMILY_GUID, text: 'Family', comparator: (a, b) => a.familyGuids[0].localeCompare(b.familyGuids[0]) },
@@ -641,11 +655,9 @@ const VARIANT_SORT_OPTONS = [
     text: 'Constraint',
     comparator: (a, b, genesById) =>
       Math.min(...Object.keys(a.transcripts).reduce((acc, geneId) =>
-        [...acc, genesById[geneId].constraints.misZRank || Infinity, genesById[geneId].constraints.louefRank || Infinity],
-      [])) -
+        [...acc, getGeneConstraintSortScore(genesById[geneId] || {})], [])) -
       Math.min(...Object.keys(b.transcripts).reduce((acc, geneId) =>
-        [...acc, genesById[geneId].constraints.misZRank || Infinity, genesById[geneId].constraints.louefRank || Infinity],
-      [])),
+        [...acc, getGeneConstraintSortScore(genesById[geneId] || {})], [])),
   },
   {
     value: SORT_BY_IN_OMIM,
