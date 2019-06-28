@@ -2,13 +2,14 @@ import json
 import logging
 import requests
 from datetime import datetime
+from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
 from django.core.mail.message import EmailMessage
 from django.views.decorators.csrf import csrf_exempt
 
 from reference_data.models import HumanPhenotypeOntology
 
-from seqr.models import Individual, MatchmakerResult, SavedVariant
+from seqr.models import Individual, MatchmakerResult, MatchmakerContactNotes, SavedVariant
 from seqr.model_utils import update_seqr_model
 from seqr.utils.gene_utils import get_genes, get_gene_ids_for_gene_symbols
 from seqr.utils.slack_utils import post_to_slack
@@ -50,7 +51,7 @@ def get_individual_mme_matches(request, individual_guid):
         gene_ids.update(variant['transcripts'].keys())
 
     return _parse_mme_results(
-        individual, results, additional_genes=gene_ids, response_json={
+        individual, results, request.user, additional_genes=gene_ids, response_json={
             'savedVariantsByGuid': {variant['variantGuid']: variant for variant in saved_variants}})
 
 
@@ -131,7 +132,7 @@ def _search_individual_matches(individual, user):
     if removed_count:
         logger.info('Removed {} old matches for {}'.format(removed_count, individual.individual_id))
 
-    return _parse_mme_results(individual, saved_results.values())
+    return _parse_mme_results(individual, saved_results.values(), user)
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -281,7 +282,7 @@ def send_mme_contact_email(request, matchmaker_result_guid):
         subject=request_json['subject'],
         body=request_json['body'],
         to=map(lambda s: s.strip(), request_json['to'].split(',')),
-        reply_to=[request.user.email],
+        from_email='matchmaker@broadinstitute.org',
     )
     try:
         email_message.send()
@@ -303,6 +304,29 @@ def send_mme_contact_email(request, matchmaker_result_guid):
     })
 
 
+@staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
+@csrf_exempt
+def update_mme_contact_note(request, institution):
+    """
+    Looks for matches for the given individual. Expects a single patient (MME spec) in the POST
+    data field under key "patient_data"
+    Args:
+        project_id,indiv_id and POST all data in POST under key "patient_data"
+    Returns:
+        Status code and results
+    """
+    institution = institution.strip().lower()
+    note, _ = MatchmakerContactNotes.objects.get_or_create(institution=institution)
+
+    request_json = json.loads(request.body)
+    note.comments = request_json.get('comments', '')
+    note.save()
+
+    return create_json_response({
+        'mmeContactNotes': {institution: _get_json_for_model(note, user=request.user)},
+    })
+
+
 def get_mme_genes_phenotypes(results, additional_genes=None):
     hpo_ids = set()
     genes = additional_genes if additional_genes else set()
@@ -321,12 +345,14 @@ def get_mme_genes_phenotypes(results, additional_genes=None):
     return hpo_terms_by_id, genes_by_id, gene_symbols_to_ids
 
 
-def _parse_mme_results(individual, saved_results, additional_genes=None, response_json=None):
+def _parse_mme_results(individual, saved_results, user, additional_genes=None, response_json=None):
     results = []
+    contact_institutions = set()
     for result_model in saved_results:
         result = result_model.result_data
         result['matchStatus'] = _get_json_for_model(result_model)
         results.append(result)
+        contact_institutions.add(result['patient']['contact'].get('institution', '').strip().lower())
 
     hpo_terms_by_id, genes_by_id, gene_symbols_to_ids = get_mme_genes_phenotypes(
         results + [individual.mme_submitted_data], additional_genes=additional_genes)
@@ -334,8 +360,12 @@ def _parse_mme_results(individual, saved_results, additional_genes=None, respons
     parsed_results = [_parse_mme_result(result, hpo_terms_by_id, gene_symbols_to_ids, individual.guid) for result in results]
     parsed_results_gy_guid = {result['matchStatus']['matchmakerResultGuid']: result for result in parsed_results}
 
+    contact_notes = {note.institution: _get_json_for_model(note, user=user)
+                     for note in MatchmakerContactNotes.objects.filter(institution__in=contact_institutions)}
+
     response = {
         'mmeResultsByGuid': parsed_results_gy_guid,
+        'mmeContactNotes': contact_notes,
         'individualsByGuid': {individual.guid: {
             'mmeResultGuids': parsed_results_gy_guid.keys(),
             'mmeSubmittedData': parse_mme_patient(individual.mme_submitted_data, hpo_terms_by_id, gene_symbols_to_ids, individual.guid),

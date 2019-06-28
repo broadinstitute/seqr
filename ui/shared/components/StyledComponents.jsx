@@ -2,11 +2,11 @@ import React from 'react'
 import styled from 'styled-components'
 import { Button, Header, Icon, Label, Table } from 'semantic-ui-react'
 
-export const ButtonLink = styled(({ color, ...props }) => <Button {...props} />).attrs({ basic: true })`
+export const ButtonLink = styled(({ color, padding, ...props }) => <Button {...props} />).attrs({ basic: true })`
   &.ui.button.basic {
     white-space: nowrap;
     border: none;
-    padding: 0;
+    padding: ${props => props.padding || 0};
     color: ${props => props.color || '#4183C4'} !important;
     text-decoration: none;
     font-weight: ${props => props.fontWeight || 'inherit'};

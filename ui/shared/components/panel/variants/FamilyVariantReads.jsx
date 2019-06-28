@@ -4,7 +4,8 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Segment, Icon } from 'semantic-ui-react'
 
-import { getIndividualsByGuid, getAlignmentSamplesByFamily } from 'redux/selectors'
+import { updateIgvReadsVisibility } from 'redux/rootReducer'
+import { getIndividualsByGuid, getAlignmentSamplesByFamily, getIgvReadsVisibility } from 'redux/selectors'
 import PedigreeIcon from '../../icons/PedigreeIcon'
 import IGV from '../../graph/IGV'
 import { ButtonLink } from '../../StyledComponents'
@@ -29,7 +30,7 @@ const FamilyVariantReads = ({ variant, samples, individualsByGuid, hideReads }) 
     return null
   }
 
-  const locus = getLocus(variant.chrom, variant.pos, 100)
+  const locus = variant && getLocus(variant.chrom, variant.pos, 100)
 
   const latestSamplesForIndividuals = samples.reduce((acc, sample) => {
     if (!acc[sample.individualGuid]) {
@@ -94,9 +95,20 @@ FamilyVariantReads.propTypes = {
   hideReads: PropTypes.func,
 }
 
-const mapStateToProps = (state, ownProps) => ({
-  samples: getAlignmentSamplesByFamily(state)[ownProps.familyGuid],
-  individualsByGuid: getIndividualsByGuid(state),
-})
+const mapStateToProps = (state, ownProps) => {
+  const familyGuid = getIgvReadsVisibility(state)[ownProps.igvId || ownProps.variant.variantId]
+  return {
+    samples: getAlignmentSamplesByFamily(state)[familyGuid],
+    individualsByGuid: getIndividualsByGuid(state),
+  }
+}
 
-export default connect(mapStateToProps)(FamilyVariantReads)
+const mapDispatchToProps = (dispatch, ownProps) => {
+  return {
+    hideReads: () => {
+      dispatch(updateIgvReadsVisibility({ [ownProps.igvId || ownProps.variant.variantId]: null }))
+    },
+  }
+}
+
+export default connect(mapStateToProps, mapDispatchToProps)(FamilyVariantReads)

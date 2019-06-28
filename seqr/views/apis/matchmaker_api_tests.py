@@ -7,9 +7,10 @@ from datetime import datetime
 from django.test import TestCase
 from django.urls.base import reverse
 
-from seqr.models import MatchmakerResult, Project
+from seqr.models import MatchmakerResult, Project, MatchmakerContactNotes
 from seqr.views.apis.matchmaker_api import get_individual_mme_matches, search_individual_mme_matches, \
-    update_mme_submission, delete_mme_submission, update_mme_result_status, send_mme_contact_email
+    update_mme_submission, delete_mme_submission, update_mme_result_status, send_mme_contact_email, \
+    update_mme_contact_note
 from seqr.views.utils.test_utils import _check_login
 
 INDIVIDUAL_GUID = 'I000001_na19675'
@@ -80,7 +81,7 @@ class VariantSearchAPITest(TestCase):
 
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), {'mmeResultsByGuid', 'individualsByGuid', 'genesById', 'savedVariantsByGuid'})
+        self.assertSetEqual(set(response_json.keys()), {'mmeResultsByGuid', 'individualsByGuid', 'genesById', 'savedVariantsByGuid', 'mmeContactNotes'})
 
         self.assertSetEqual(
             set(response_json['mmeResultsByGuid'].keys()), {'MR0007228_VCGS_FAM50_156', RESULT_STATUS_GUID}
@@ -179,6 +180,7 @@ class VariantSearchAPITest(TestCase):
         self.assertSetEqual(
             set(response_json['savedVariantsByGuid'].keys()),
             {'SV0000001_2103343353_r0390_100', 'SV0000003_2246859832_r0390_100'})
+        self.assertDictEqual(response_json['mmeContactNotes'], {})
 
     @mock.patch('seqr.views.apis.matchmaker_api.post_to_slack')
     @responses.activate
@@ -208,7 +210,7 @@ class VariantSearchAPITest(TestCase):
 
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), {'mmeResultsByGuid', 'individualsByGuid', 'genesById'})
+        self.assertSetEqual(set(response_json.keys()), {'mmeResultsByGuid', 'individualsByGuid', 'genesById', 'mmeContactNotes'})
 
         self.assertEqual(len(response_json['mmeResultsByGuid']), 2)
         self.assertTrue(RESULT_STATUS_GUID in response_json['mmeResultsByGuid'])
@@ -267,6 +269,12 @@ class VariantSearchAPITest(TestCase):
             set(response_json['genesById'].keys()),
             {'ENSG00000186092', 'ENSG00000233750', 'ENSG00000223972'}
         )
+
+        self.assertDictEqual(response_json['mmeContactNotes'], {
+            'st georges, university of london': {
+                'institution': 'st georges, university of london',
+                'comments': 'Some additional data about this institution',
+            }})
 
         #  Test removed match is deleted
         self.assertEqual(MatchmakerResult.objects.filter(guid='MR0007228_VCGS_FAM50_156').count(), 0)
@@ -376,7 +384,7 @@ class VariantSearchAPITest(TestCase):
 
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), {'mmeResultsByGuid', 'individualsByGuid', 'genesById'})
+        self.assertSetEqual(set(response_json.keys()), {'mmeResultsByGuid', 'individualsByGuid', 'genesById', 'mmeContactNotes'})
 
         self.assertEqual(len(response_json['mmeResultsByGuid']), 1)
         self.assertDictEqual(response_json['mmeResultsByGuid'].values()[0], PARSED_NEW_MATCH_NEW_SUBMISSION_JSON)
@@ -425,6 +433,12 @@ class VariantSearchAPITest(TestCase):
             datetime.today().strftime('%Y-%m-%d')
         )
         self.assertListEqual(response_json['genesById'].keys(), ['ENSG00000186092'])
+
+        self.assertDictEqual(response_json['mmeContactNotes'], {
+            'st georges, university of london': {
+                'institution': 'st georges, university of london',
+                'comments': 'Some additional data about this institution',
+            }})
 
         # Test proxy calls
         self.assertEqual(len(responses.calls), 4)
@@ -479,7 +493,7 @@ class VariantSearchAPITest(TestCase):
 
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), {'mmeResultsByGuid', 'individualsByGuid', 'genesById'})
+        self.assertSetEqual(set(response_json.keys()), {'mmeResultsByGuid', 'individualsByGuid', 'genesById', 'mmeContactNotes'})
 
         self.assertEqual(len(response_json['mmeResultsByGuid']), 1)
         self.assertDictEqual(response_json['mmeResultsByGuid'].values()[0], PARSED_NEW_MATCH_NEW_SUBMISSION_JSON)
@@ -513,6 +527,7 @@ class VariantSearchAPITest(TestCase):
             datetime.today().strftime('%Y-%m-%d')
         )
         self.assertListEqual(response_json['genesById'].keys(), ['ENSG00000186092'])
+        self.assertListEqual(response_json['mmeContactNotes'].keys(), ['st georges, university of london'])
 
         # Test updates project MME contact
         project = Project.objects.get(family__individual__guid=NO_SUBMISSION_INDIVIDUAL_GUID)
@@ -634,7 +649,7 @@ class VariantSearchAPITest(TestCase):
             subject='some email subject',
             body='some email content',
             to=['test@test.com', 'other_test@gmail.com'],
-            reply_to=['test_user@test.com'])
+            from_email='matchmaker@broadinstitute.org')
         mock_email.return_value.send.assert_called()
 
         mock_email.return_value.send.side_effect = EmailException
@@ -646,4 +661,40 @@ class VariantSearchAPITest(TestCase):
 
         self.assertEqual(response.status_code, 402)
         self.assertEqual(response.reason_phrase, 'email error')
+
+    def test_update_mme_contact_note(self):
+        url = reverse(update_mme_contact_note, args=['GeneDx'])
+        _check_login(self, url)
+
+        # Test create
+        response = self.client.post(url, content_type='application/json', data=json.dumps({
+            'institution': 'GeneDx',
+            'comments': 'test comment',
+        }))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'mmeContactNotes': {'genedx': {
+            'institution': 'genedx',
+            'comments': 'test comment',
+        }}})
+
+        models = MatchmakerContactNotes.objects.filter(institution='genedx')
+        self.assertEqual(models.count(), 1)
+        self.assertEqual(models.first().comments, 'test comment')
+
+        # Test update
+        response = self.client.post(url, content_type='application/json', data=json.dumps({
+            'institution': 'GeneDx',
+            'comments': 'test comment update',
+        }))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'mmeContactNotes': {'genedx': {
+            'institution': 'genedx',
+            'comments': 'test comment update',
+        }}})
+
+        models = MatchmakerContactNotes.objects.filter(institution='genedx')
+        self.assertEqual(models.count(), 1)
+        self.assertEqual(models.first().comments, 'test comment update')
 

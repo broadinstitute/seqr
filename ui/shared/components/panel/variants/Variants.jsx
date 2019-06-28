@@ -1,7 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import { Grid, Divider, Transition } from 'semantic-ui-react'
+import { Grid, Divider } from 'semantic-ui-react'
 
 import { CLINSIG_SEVERITY } from 'shared/utils/constants'
 import FamilyVariantReads from './FamilyVariantReads'
@@ -34,31 +34,9 @@ const StyledVariantRow = styled(Grid.Row)`
   }}
 `
 
-class VariantRow extends React.PureComponent {
-
-  static propTypes = {
-    variant: PropTypes.object,
-  }
-
-  constructor(props) {
-    super(props)
-
-    this.state = {
-      familyReadsVisible: null,
-    }
-  }
-
-  showFamilyReads = familyGuid => () => {
-    this.setState({ familyReadsVisible: familyGuid })
-  }
-
-  hideReads= () => {
-    this.setState({ familyReadsVisible: null })
-  }
-
-  render() {
-    const { variant } = this.props
-    return (
+const Variants = ({ variants }) =>
+  <Grid stackable divided="vertically" columns="equal">
+    {variants.map(variant =>
       <StyledVariantRow key={variant.variantId} severity={CLINSIG_SEVERITY[(variant.clinvar.clinicalSignificance || '').toLowerCase()]}>
         <Grid.Column width={16}>
           <Pathogenicity variant={variant} />
@@ -80,23 +58,13 @@ class VariantRow extends React.PureComponent {
         <Grid.Column><Frequencies variant={variant} /></Grid.Column>
         <Grid.Column width={16}>
           {variant.familyGuids.map(familyGuid =>
-            <VariantIndividuals key={familyGuid} familyGuid={familyGuid} variant={variant} showReads={this.showFamilyReads(familyGuid)} />,
+            <VariantIndividuals key={familyGuid} familyGuid={familyGuid} variant={variant} />,
           )}
         </Grid.Column>
         <Grid.Column width={16}>
-          <Transition visible={this.state.familyReadsVisible !== null}>
-            <FamilyVariantReads familyGuid={this.state.familyReadsVisible} variant={variant} hideReads={this.hideReads} />
-          </Transition>
+          <FamilyVariantReads variant={variant} />
         </Grid.Column>
-      </StyledVariantRow>
-    )
-  }
-}
-
-const Variants = ({ variants }) =>
-  <Grid stackable divided="vertically" columns="equal">
-    {variants.map(variant =>
-      <VariantRow key={variant.variantId} variant={variant} />,
+      </StyledVariantRow>,
     )}
   </Grid>
 

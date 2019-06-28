@@ -6,11 +6,11 @@ import logging
 import json
 
 from django.contrib.auth.decorators import login_required
-from django.db import connection
 from django.db.models import Q, Count
 from django.utils import timezone
 
-from seqr.models import Family, Individual, _slugify, VariantTagType, VariantTag, VariantFunctionalData, VariantNote, AnalysisGroup
+from seqr.models import Family, Individual, _slugify, VariantTagType, VariantTag, VariantFunctionalData, VariantNote, \
+    AnalysisGroup, Sample
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.individual_api import export_individuals
 from seqr.views.apis.locus_list_api import get_sorted_project_locus_lists
@@ -18,7 +18,7 @@ from seqr.views.apis.users_api import get_json_for_project_collaborator_list
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.json_to_orm_utils import update_project_from_json
 from seqr.views.utils.orm_to_json_utils import \
-    _get_json_for_project, get_json_for_sample_dict, _get_json_for_families, _get_json_for_individuals, \
+    _get_json_for_project, get_json_for_samples, _get_json_for_families, _get_json_for_individuals, \
     get_json_for_saved_variants, get_json_for_analysis_groups, get_json_for_variant_functional_data_tag_types
 
 
@@ -45,7 +45,7 @@ def project_page_data(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user)
     update_project_from_json(project, {'last_accessed_date': timezone.now()})
 
-    families_by_guid, individuals_by_guid, samples_by_guid, analysis_groups_by_guid, locus_lists_by_guid = get_project_child_entities(project, request.user)
+    families_by_guid, individuals_by_guid, samples_by_guid, analysis_groups_by_guid, locus_lists_by_guid = _get_project_child_entities(project, request.user)
 
     project_json = _get_json_for_project(project, request.user)
     project_json['collaborators'] = get_json_for_project_collaborator_list(project)
@@ -63,7 +63,7 @@ def project_page_data(request, project_guid):
     })
 
 
-def get_project_child_entities(project, user):
+def _get_project_child_entities(project, user):
     families_by_guid = _retrieve_families(project.guid, user)
     individuals_by_guid = _retrieve_individuals(project.guid, user)
     for individual_guid, individual in individuals_by_guid.items():
@@ -130,48 +130,17 @@ def _retrieve_samples(project_guid, individuals_by_guid):
         Returns:
             2-tuple with dictionaries: (samples_by_guid, sample_batches_by_guid)
         """
-    # TODO use ORM  instead of raw query
-    cursor = connection.cursor()
+    sample_models = Sample.objects.filter(individual__family__project__guid=project_guid)
 
-    # use raw SQL since the Django ORM doesn't have a good way to express these types of queries.
-    sample_query = """
-        SELECT
-          p.guid AS project_guid,
-          i.guid AS individual_guid,
-          s.guid AS sample_guid,
-          s.created_date AS sample_created_date,
-          s.sample_type AS sample_sample_type,
-          s.dataset_type AS sample_dataset_type,
-          s.sample_id AS sample_sample_id,
-          s.elasticsearch_index AS sample_elasticsearch_index,
-          s.dataset_file_path AS sample_dataset_file_path,
-          s.sample_status AS sample_sample_status,
-          s.loaded_date AS sample_loaded_date
-        FROM seqr_sample AS s
-          JOIN seqr_individual AS i ON s.individual_id=i.id
-          JOIN seqr_family AS f ON i.family_id=f.id
-          JOIN seqr_project AS p ON f.project_id=p.id
-        WHERE p.guid=%s
-    """.strip()
-
-    cursor.execute(sample_query, [project_guid])
-
-    columns = [col[0] for col in cursor.description]
+    samples = get_json_for_samples(sample_models, project_guid=project_guid)
 
     samples_by_guid = {}
-    for row in cursor.fetchall():
-        record = dict(zip(columns, row))
+    for s in samples:
+        sample_guid = s['sampleGuid']
+        samples_by_guid[sample_guid] = s
 
-        sample_guid = record['sample_guid']
-        if sample_guid not in samples_by_guid:
-            samples_by_guid[sample_guid] = get_json_for_sample_dict(record)
-
-        individual_guid = record['individual_guid']
+        individual_guid = s['individualGuid']
         individuals_by_guid[individual_guid]['sampleGuids'].add(sample_guid)
-
-        samples_by_guid[sample_guid]['individualGuid'] = individual_guid
-
-    cursor.close()
 
     return samples_by_guid
 

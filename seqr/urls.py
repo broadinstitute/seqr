@@ -5,15 +5,18 @@ The `urlpatterns` list routes URLs to views. For more information please see:
 """
 from seqr.views.react_app import main_app, no_login_main_app
 from seqr.views.apis.dataset_api import add_alignment_dataset_handler, add_variants_dataset_handler
-from settings import ENABLE_DJANGO_DEBUG_TOOLBAR
+from settings import ENABLE_DJANGO_DEBUG_TOOLBAR, MEDIA_ROOT
 from django.conf.urls import url, include
+from django.contrib import admin
+import django.contrib.admindocs.urls
 
 from seqr.views.apis.family_api import \
     update_family_fields_handler, \
     edit_families_handler, \
     delete_families_handler, \
     update_family_analysed_by, \
-    receive_families_table_handler
+    receive_families_table_handler, \
+    update_family_pedigree_image
 
 from seqr.views.apis.individual_api import \
     update_individual_handler, \
@@ -76,6 +79,7 @@ from seqr.views.apis.matchmaker_api import \
     update_mme_submission, \
     delete_mme_submission, \
     update_mme_result_status, \
+    update_mme_contact_note, \
     send_mme_contact_email
 
 from seqr.views.apis.variant_search_api import \
@@ -137,6 +141,7 @@ api_endpoints = {
     'family/(?P<family_guid>[\w.|-]+)/save_internal_case_review_summary': save_internal_case_review_summary,
     'family/(?P<family_guid>[\w.|-]+)/update': update_family_fields_handler,
     'family/(?P<family_guid>[\w.|-]+)/update_analysed_by': update_family_analysed_by,
+    'family/(?P<family_guid>[\w.|-]+)/update_pedigree_image': update_family_pedigree_image,
 
     'dashboard': dashboard_page_data,
     'dashboard/export_projects_table': export_projects_table_handler,
@@ -207,6 +212,7 @@ api_endpoints = {
     'matchmaker/submission/(?P<individual_guid>[\w.|-]+)/delete': delete_mme_submission,
     'matchmaker/result_status/(?P<matchmaker_result_guid>[\w.|-]+)/update': update_mme_result_status,
     'matchmaker/send_email/(?P<matchmaker_result_guid>[\w.|-]+)': send_mme_contact_email,
+    'matchmaker/contact_notes/(?P<institution>[^/]+)/update': update_mme_contact_note,
 
     'users/get_all': get_all_collaborators,
     'users/(?P<username>[^/]+)/set_password': set_password,
@@ -281,6 +287,11 @@ urlpatterns = [
 
 urlpatterns += [
     url(r'^hijack/', include('hijack.urls')),
+    url(r'^xadmin/doc/', include(django.contrib.admindocs.urls)),
+    url(r'^xadmin/', admin.site.urls),
+    url(r'^media/(?P<path>.*)$', django.views.static.serve, {
+        'document_root': MEDIA_ROOT,
+    }),
 ]
 
 # django debug toolbar

@@ -33,6 +33,7 @@ export const getLocusListIsLoading = state => state.locusListLoading.isLoading
 export const getUser = state => state.user
 export const getProjectGuid = state => state.currentProjectGuid
 export const getSavedVariantsIsLoading = state => state.savedVariantsLoading.isLoading
+export const getIgvReadsVisibility = state => state.igvReadsVisibility
 
 export const getCurrentProject = createSelector(
   getProjectsByGuid, getProjectGuid, (projectsByGuid, currentProjectGuid) => projectsByGuid[currentProjectGuid],

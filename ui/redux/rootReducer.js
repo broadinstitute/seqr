@@ -27,6 +27,7 @@ const REQUEST_GENES = 'REQUEST_GENES'
 const REQUEST_GENE_LISTS = 'REQUEST_GENE_LISTS'
 const REQUEST_GENE_LIST = 'REQUEST_GENE_LIST'
 const UPDATE_SAVED_VARIANT_TABLE_STATE = 'UPDATE_VARIANT_STATE'
+const UPDATE_IGV_VISIBILITY = 'UPDATE_IGV_VISIBILITY'
 
 // action creators
 
@@ -282,6 +283,7 @@ export const updateLocusList = (values) => {
 }
 
 export const updateSavedVariantTable = updates => ({ type: UPDATE_SAVED_VARIANT_TABLE_STATE, updates })
+export const updateIgvReadsVisibility = updates => ({ type: UPDATE_IGV_VISIBILITY, updates })
 
 
 // root reducer
@@ -317,6 +319,7 @@ const rootReducer = combineReducers(Object.assign({
     page: 1,
     recordsPerPage: 25,
   }, false),
+  igvReadsVisibility: createSingleObjectReducer(UPDATE_IGV_VISIBILITY),
 }, modalReducers, dashboardReducers, projectReducers, searchReducers, staffReducers))
 
 export default rootReducer

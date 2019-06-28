@@ -17,7 +17,7 @@ from seqr.views.utils.json_to_orm_utils import update_family_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_family
 from seqr.models import Family, FamilyAnalysedBy, CAN_EDIT, Individual
-from seqr.model_utils import create_seqr_model, get_or_create_seqr_model, delete_seqr_model
+from seqr.model_utils import create_seqr_model, get_or_create_seqr_model, delete_seqr_model, update_seqr_model
 from seqr.views.utils.permissions_utils import check_permissions, get_project_and_check_permissions
 
 logger = logging.getLogger(__name__)
@@ -147,6 +147,34 @@ def update_family_analysed_by(request, family_guid):
     check_permissions(family.project, request.user, CAN_EDIT)
 
     create_seqr_model(FamilyAnalysedBy, family=family, created_by=request.user)
+
+    return create_json_response({
+        family.guid: _get_json_for_family(family, request.user)
+    })
+
+
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@csrf_exempt
+def update_family_pedigree_image(request, family_guid):
+    """Updates the specified field in the Family model.
+
+    Args:
+        family_guid (string): GUID of the family.
+    """
+
+    family = Family.objects.get(guid=family_guid)
+
+    # check permission
+    check_permissions(family.project, request.user, CAN_EDIT)
+
+    if len(request.FILES) == 0:
+        pedigree_image = None
+    elif len(request.FILES) > 1:
+        return create_json_response({}, status=400, reason='Received {} files'.format(len(request.FILES)))
+    else:
+        pedigree_image = request.FILES.values()[0]
+
+    update_seqr_model(family, pedigree_image=pedigree_image)
 
     return create_json_response({
         family.guid: _get_json_for_family(family, request.user)

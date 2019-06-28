@@ -114,6 +114,8 @@ class DatasetAPITest(TransactionTestCase):
         self.assertEqual(response.status_code, 200)
 
         response_json = response.json()
+        self.assertSetEqual(set(response_json.keys()), {'samplesByGuid', 'individualsByGuid', 'familiesByGuid'})
+
         new_sample = Sample.objects.get(sample_id='NA19678_1')
         self.assertSetEqual(
             set(response_json['samplesByGuid'].keys()),
@@ -124,6 +126,7 @@ class DatasetAPITest(TransactionTestCase):
             'I000002_na19678': {'sampleGuids': [new_sample.guid]},
             'I000003_na19679': {'sampleGuids': [existing_sample_guid]},
         })
+        self.assertDictEqual(response_json['familiesByGuid'], {'F000001_1': {'analysisStatus': 'I'}})
         self.assertSetEqual(
             {INDEX_NAME},
             {sample['elasticsearchIndex'] for sample in response_json['samplesByGuid'].values()}

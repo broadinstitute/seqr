@@ -192,7 +192,7 @@ const Family = (
         family.displayName
       }
     />,
-    <PedigreeImagePanel key="pedigree" family={family} disablePedigreeZoom={disablePedigreeZoom} compact={compact} />,
+    <PedigreeImagePanel key="pedigree" family={family} disablePedigreeZoom={disablePedigreeZoom} compact={compact} isEditable={project.canEdit} />,
   ]
 
   const rightContent = showVariantDetails ? [

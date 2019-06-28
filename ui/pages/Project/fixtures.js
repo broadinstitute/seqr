@@ -838,4 +838,5 @@ export const STATE_WITH_2_FAMILIES = {
   },
   search: { familiesByGuid: { result: ['F011652_1', 'F011652_2'] } },
   genesById: { 'ENSG00000228198': { geneId: 'ENSG00000228198', geneSymbol: 'OR2M3' } },
+  igvReadsVisibility: {},
 }

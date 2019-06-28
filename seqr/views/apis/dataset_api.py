@@ -7,7 +7,7 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 
-from seqr.models import Individual, CAN_EDIT, Sample
+from seqr.models import Individual, CAN_EDIT, Sample, Family
 from seqr.model_utils import update_xbrowse_vcfffiles, find_matching_xbrowse_model
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.utils.dataset_utils import match_sample_ids_to_sample_records, validate_index_metadata, \
@@ -118,7 +118,15 @@ def add_variants_dataset_handler(request, project_guid):
         project, sample_type, elasticsearch_index, dataset_path, matched_sample_id_to_sample_record
     )
 
-    return create_json_response(_get_samples_json(matched_sample_id_to_sample_record, project_guid))
+    families_to_update = [family for family in included_family_individuals.keys()
+                          if family.analysis_status == Family.ANALYSIS_STATUS_WAITING_FOR_DATA]
+    for family in families_to_update:
+        update_model_from_json(family, {'analysis_status': Family.ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS})
+
+    response_json = _get_samples_json(matched_sample_id_to_sample_record, project_guid)
+    response_json['familiesByGuid'] = {family.guid: {'analysisStatus': Family.ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS}
+                                       for family in families_to_update}
+    return create_json_response(response_json)
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
