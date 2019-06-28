@@ -292,7 +292,9 @@ def phenotypes_upload_page(request, project_id):
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_view(request.user):
         raise PermissionDenied
-    return render(request, 'phenotypes/upload_phenotypes.html',{})
+    return render(request, 'phenotypes/upload_phenotypes.html',{
+        'new_page_url': '/project/{}/project_page'.format(project.seqr_project.guid) if project.seqr_project else None,
+    })
 
 
 @csrf_exempt
