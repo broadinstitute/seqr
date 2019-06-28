@@ -19,7 +19,3 @@ deploy/secrets/gcloud*/*
 
 pedigree_images/*
 seqr_settings
-
-django_key
-gene_reference_data_backup.gz
-semantic

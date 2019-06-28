@@ -305,21 +305,19 @@ const PANELS = PANEL_DETAILS.map(panelDetails)
 const STAFF_PANELS = STAFF_PANEL_DETAILS.map(panelDetails)
 
 class VariantSearchFormContent extends React.Component {
-  constructor(props) {
-    super(props)
-    this.state = { activeIndex: [] }
+  state = { activeIndex: [] }
+
+  expandAll = (e) => {
+    e.preventDefault()
+    this.setState({ activeIndex: [...PANELS.keys()] })
   }
 
-  expandAll = () => {
-    this.setState({ activeIndex: [0, 1, 2, 3, 4, 5] })
-  }
-
-  collapseAll = () => {
+  collapseAll = (e) => {
+    e.preventDefault()
     this.setState({ activeIndex: [] })
   }
 
-  handleTitleClick = (e, itemProps) => {
-    const { index } = itemProps
+  handleTitleClick = (e, { index }) => {
     const { activeIndex } = this.state
     const newIndex = activeIndex.indexOf(index) === -1 ? [...activeIndex, index] : activeIndex.filter(item => item !== index)
 
@@ -346,9 +344,9 @@ class VariantSearchFormContent extends React.Component {
     )
   }
 
-  shouldComponentUpdate() {
+  shouldComponentUpdate(nextState) {
     // Form content does not use passed props, so should never re-render on prop update
-    return true
+    return nextState.activeIndex !== this.state.activeIndex
   }
 }
 
