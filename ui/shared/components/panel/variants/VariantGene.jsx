@@ -5,6 +5,7 @@ import { connect } from 'react-redux'
 import { Label, Popup, List } from 'semantic-ui-react'
 
 import { getGenesById, getLocusListsByGuid, getCurrentProject } from 'redux/selectors'
+import { MISSENSE_THRESHHOLD, LOF_THRESHHOLD } from '../../../utils/constants'
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
 import { InlineHeader } from '../../StyledComponents'
 import SearchResultsLink from '../../buttons/SearchResultsLink'
@@ -165,7 +166,7 @@ const VariantGene = ({ geneId, gene, project, variant, compact }) => {
         color="red"
         label="MISSENSE CONSTR"
         description="Missense Constraint"
-        details={((gene.constraints.misZ && gene.constraints.misZ > 3) ||
+        details={((gene.constraints.misZ && gene.constraints.misZ > MISSENSE_THRESHHOLD) ||
           (gene.constraints.misZRank && gene.constraints.misZRank < CONSTRAINED_GENE_RANK_THRESHOLD)) &&
           `This gene ranks ${gene.constraints.misZRank} most constrained out of
           ${gene.constraints.totalGenes} genes under study in terms of missense constraint (z-score:
@@ -174,18 +175,18 @@ const VariantGene = ({ geneId, gene, project, variant, compact }) => {
           statistical model described in [K. Samocha 2014]. In general this metric is most useful for genes that act
           via a dominant mechanism, and where a large proportion of the protein is heavily functionally constrained.`}
       />
-      {/* TODO better metric description */}
       <GeneDetailSection
         compact={compact}
         color="red"
         label="LOF CONSTR"
         description="Loss of Function Constraint"
-        details={gene.constraints.louef < 0.35 &&
+        details={gene.constraints.louef < LOF_THRESHHOLD &&
           `This gene ranks as ${gene.constraints.louefRank} most intolerant of LoF mutations out of
            ${gene.constraints.totalGenes} genes under study (louef:
-           ${gene.constraints.louef.toPrecision(4)}${gene.constraints.pli ? `, pli: ${gene.constraints.pli.toPrecision(4)}` : ''}).
-           This metric is based on the amount of expected variation observed in the ExAC data and is a measure of how
-           likely the gene is to be intolerant of loss-of-function mutations`}
+           ${gene.constraints.louef.toPrecision(4)}${gene.constraints.pli ? `, pLi: ${gene.constraints.pli.toPrecision(4)}` : ''}).
+           LOEUF is the observed to expected upper bound fraction for loss-of-function variants based on the variation
+           observed in the gnomad data. Both LOEUF and pLi are measures of how likely the gene is to be intolerant of
+           loss-of-function mutations`}
       />
       <LocusListLabels locusListGuids={gene.locusListGuids} compact={compact} />
     </div>
