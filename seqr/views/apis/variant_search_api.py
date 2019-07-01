@@ -9,8 +9,8 @@ from elasticsearch.exceptions import ConnectionTimeout
 
 from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, Sample,\
     AnalysisGroup, ProjectCategory
-from seqr.utils.es_utils import get_es_variants, get_single_es_variant, InvalidIndexException, XPOS_SORT_KEY, \
-    PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
+from seqr.utils.es_utils import get_es_variants, get_single_es_variant, get_es_variant_gene_counts,\
+    InvalidIndexException, XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.locus_list_api import get_project_locus_list_models
 from seqr.views.apis.saved_variant_api import _saved_variant_genes, _add_locus_lists
@@ -184,6 +184,18 @@ VARIANT_GENOTYPE_EXPORT_DATA = [
     {'header': 'gq'},
     {'header': 'ab'},
 ]
+
+
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@csrf_exempt
+def get_variant_gene_breakdown(request, search_hash):
+    results_model = VariantSearchResults.objects.get(search_hash=search_hash)
+
+    _check_results_permission(results_model, request.user)
+
+    gene_counts = get_es_variant_gene_counts(results_model)
+
+    return create_json_response(gene_counts)
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
