@@ -1,6 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 
+import { Segment } from 'semantic-ui-react'
 import { ButtonLink } from '../StyledComponents'
 import ReduxFormWrapper from '../form/ReduxFormWrapper'
 import Modal from '../modal/Modal'
@@ -9,7 +10,20 @@ const UpdateButton = (
   { showInLine, onSubmit, initialValues, formFields, modalTitle, modalId, buttonText, editIconName, size, modalSize, showErrorPanel,
     disabled, confirmDialog, submitButtonText, buttonFloated, trigger, formContainer = <div /> },
 ) => {
-  const updateButton = showInLine ? 'inline' : (
+  const updateButton = showInLine ?
+    React.cloneElement(formContainer = <Segment />, { children: (
+      <ReduxFormWrapper
+        onSubmit={onSubmit}
+        form={modalId}
+        initialValues={initialValues}
+        fields={formFields}
+        showErrorPanel={showErrorPanel}
+        confirmDialog={confirmDialog}
+        submitButtonText={submitButtonText}
+        confirmCloseIfNotSaved
+      />
+    ) })
+    :
     <Modal
       title={modalTitle}
       modalName={modalId}
@@ -37,7 +51,7 @@ const UpdateButton = (
           confirmCloseIfNotSaved
         />
       ) }) }
-    </Modal>)
+    </Modal>
   return updateButton
 }
 
