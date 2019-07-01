@@ -9,38 +9,36 @@ const UpdateButton = (
   { showInLine, onSubmit, initialValues, formFields, modalTitle, modalId, buttonText, editIconName, size, modalSize, showErrorPanel,
     disabled, confirmDialog, submitButtonText, buttonFloated, trigger, formContainer = <div /> },
 ) => {
-  return ({ showInLine } ?
-    'inline'
-    : (
-      <Modal
-        title={modalTitle}
-        modalName={modalId}
-        size={modalSize}
-        trigger={trigger || (
-          <ButtonLink
-            content={buttonText}
-            icon={editIconName || 'write'}
-            labelPosition={buttonText && 'right'}
-            size={size}
-            disabled={disabled}
-            floated={buttonFloated}
-          />
-        )}
-      >
-        {React.cloneElement(formContainer, { children: (
-          <ReduxFormWrapper
-            onSubmit={onSubmit}
-            form={modalId}
-            initialValues={initialValues}
-            fields={formFields}
-            showErrorPanel={showErrorPanel}
-            confirmDialog={confirmDialog}
-            submitButtonText={submitButtonText}
-            confirmCloseIfNotSaved
-          />
-        ) }) }
-      </Modal>
-    ))
+  const updateButton = showInLine ? 'inline' : (
+    <Modal
+      title={modalTitle}
+      modalName={modalId}
+      size={modalSize}
+      trigger={trigger || (
+        <ButtonLink
+          content={buttonText}
+          icon={editIconName || 'write'}
+          labelPosition={buttonText && 'right'}
+          size={size}
+          disabled={disabled}
+          floated={buttonFloated}
+        />
+      )}
+    >
+      {React.cloneElement(formContainer, { children: (
+        <ReduxFormWrapper
+          onSubmit={onSubmit}
+          form={modalId}
+          initialValues={initialValues}
+          fields={formFields}
+          showErrorPanel={showErrorPanel}
+          confirmDialog={confirmDialog}
+          submitButtonText={submitButtonText}
+          confirmCloseIfNotSaved
+        />
+      ) }) }
+    </Modal>)
+  return updateButton
 }
 
 

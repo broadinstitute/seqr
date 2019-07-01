@@ -257,6 +257,7 @@ const FamilyVariantTags = (
           <NoteContainer>
             {savedVariant && savedVariant.notes.map(note =>
               <VariantNoteField
+                showInLine
                 key={note.noteGuid}
                 note={note}
                 variant={savedVariant}
