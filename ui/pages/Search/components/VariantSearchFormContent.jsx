@@ -344,7 +344,7 @@ class VariantSearchFormContent extends React.Component {
     )
   }
 
-  shouldComponentUpdate(nextState) {
+  shouldComponentUpdate(nextProps, nextState) {
     // Form content does not use passed props, so should never re-render on prop update
     return nextState.activeIndex !== this.state.activeIndex
   }
