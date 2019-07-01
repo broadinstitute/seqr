@@ -32,9 +32,11 @@ const BaseFieldView = (props) => {
   }
   const fieldId = props.initialValues[props.idField]
   const modalId = props.isEditable ? `edit-${fieldId || 'new'}-${props.field}-${props.modalId}` : null
+  const showInLine = false
 
   const editButton = props.isEditable && (props.formFields ?
     <UpdateButton
+      showInLine={showInLine}
       key="edit"
       modalTitle={props.modalTitle}
       modalId={modalId}

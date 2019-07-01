@@ -6,39 +6,46 @@ import ReduxFormWrapper from '../form/ReduxFormWrapper'
 import Modal from '../modal/Modal'
 
 const UpdateButton = (
-  { onSubmit, initialValues, formFields, modalTitle, modalId, buttonText, editIconName, size, modalSize, showErrorPanel,
+  { showInLine, onSubmit, initialValues, formFields, modalTitle, modalId, buttonText, editIconName, size, modalSize, showErrorPanel,
     disabled, confirmDialog, submitButtonText, buttonFloated, trigger, formContainer = <div /> },
-) =>
-  <Modal
-    title={modalTitle}
-    modalName={modalId}
-    size={modalSize}
-    trigger={trigger || (
-      <ButtonLink
-        content={buttonText}
-        icon={editIconName || 'write'}
-        labelPosition={buttonText && 'right'}
-        size={size}
-        disabled={disabled}
-        floated={buttonFloated}
-      />
-    )}
-  >
-    {React.cloneElement(formContainer, { children: (
-      <ReduxFormWrapper
-        onSubmit={onSubmit}
-        form={modalId}
-        initialValues={initialValues}
-        fields={formFields}
-        showErrorPanel={showErrorPanel}
-        confirmDialog={confirmDialog}
-        submitButtonText={submitButtonText}
-        confirmCloseIfNotSaved
-      />
-    ) }) }
-  </Modal>
+) => {
+  return ({ showInLine } ?
+    'inline'
+    : (
+      <Modal
+        title={modalTitle}
+        modalName={modalId}
+        size={modalSize}
+        trigger={trigger || (
+          <ButtonLink
+            content={buttonText}
+            icon={editIconName || 'write'}
+            labelPosition={buttonText && 'right'}
+            size={size}
+            disabled={disabled}
+            floated={buttonFloated}
+          />
+        )}
+      >
+        {React.cloneElement(formContainer, { children: (
+          <ReduxFormWrapper
+            onSubmit={onSubmit}
+            form={modalId}
+            initialValues={initialValues}
+            fields={formFields}
+            showErrorPanel={showErrorPanel}
+            confirmDialog={confirmDialog}
+            submitButtonText={submitButtonText}
+            confirmCloseIfNotSaved
+          />
+        ) }) }
+      </Modal>
+    ))
+}
+
 
 UpdateButton.propTypes = {
+  showInLine: PropTypes.bool,
   formFields: PropTypes.array,
   onSubmit: PropTypes.func,
   modalTitle: PropTypes.string,
