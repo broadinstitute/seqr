@@ -903,9 +903,7 @@ POPULATIONS = {
         'Hemi': 'exac_AC_Hemi',
     },
     'gnomad_exomes': {},
-    'gnomad_genomes': {
-        'AF': 'gnomad_genomes_AF',
-    },
+    'gnomad_genomes': {},
 }
 POPULATION_FIELD_CONFIGS = {
     'AF': {'fields': ['AF_POPMAX_OR_GLOBAL'], 'format_value': float},
