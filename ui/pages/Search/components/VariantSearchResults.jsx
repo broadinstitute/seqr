@@ -22,6 +22,7 @@ import {
   getSearchedVariantExportConfig,
   getSearchContextIsLoading,
 } from '../selectors'
+import GeneBreakdown from './GeneBreakdown'
 
 
 const LargeRow = styled(Grid.Row)`
@@ -80,6 +81,8 @@ const BaseVariantSearchResults = ({
             />
             <HorizontalSpacer width={10} />
             <ExportTableButton downloads={searchedVariantExportConfig} buttonText="Download" />
+            <HorizontalSpacer width={10} />
+            <GeneBreakdown searchHash={searchHash} />
           </Grid.Column>
         </LargeRow>
       }

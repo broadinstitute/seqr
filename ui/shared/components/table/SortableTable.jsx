@@ -57,6 +57,7 @@ class SortableTable extends React.PureComponent {
     footer: PropTypes.node,
     rowsPerPage: PropTypes.number,
     horizontalScroll: PropTypes.bool,
+    fixedWidth: PropTypes.bool,
     downloadTableType: PropTypes.string,
     downloadFileName: PropTypes.string,
     loadingProps: PropTypes.object,
@@ -125,7 +126,7 @@ class SortableTable extends React.PureComponent {
     const {
       data, defaultSortColumn, defaultSortDescending, getRowFilterVal, idField, columns, selectRows, selectedRows = {},
       loading, emptyContent, footer, rowsPerPage, horizontalScroll, downloadFileName, downloadTableType,
-      loadingProps = {}, ...tableProps
+      fixedWidth, loadingProps = {}, ...tableProps
     } = this.props
     const { column, direction, activePage, filter } = this.state
 
@@ -202,7 +203,7 @@ class SortableTable extends React.PureComponent {
         <StyledSortableTable
           sortable
           selectable={!!selectRows}
-          columns={!tableProps.collapsing && columns.length <= 16 ? columns.length : null}
+          columns={!tableProps.collapsing && !fixedWidth && columns.length <= 16 ? columns.length : null}
           attached={hasFooter && 'top'}
           {...tableProps}
         >

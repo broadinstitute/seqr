@@ -8,6 +8,7 @@ import {
   getAnalysisGroupsByGuid,
   getLocusListsByGuid,
   getAnalysisGroupsGroupedByProjectGuid,
+  getGenesById,
 } from 'redux/selectors'
 import { SEARCH_FORM_NAME } from './constants'
 
@@ -15,6 +16,10 @@ import { SEARCH_FORM_NAME } from './constants'
 export const getSearchedVariants = state => state.searchedVariants
 export const getSearchedVariantsIsLoading = state => state.searchedVariantsLoading.isLoading
 export const getSearchedVariantsErrorMessage = state => state.searchedVariantsLoading.errorMessage
+export const getSearchGeneBreakdown = state => state.searchGeneBreakdown
+export const getSearchGeneBreakdownLoading = state => state.searchGeneBreakdownLoading.isLoading
+export const getSearchGeneBreakdownErrorMessage = state => state.searchGeneBreakdownLoading.errorMessage
+
 export const getSearchContextIsLoading = state => state.searchContextLoading.isLoading
 export const getSearchesByHash = state => state.searchesByHash
 export const getSavedSearchesByGuid = state => state.savedSearchesByGuid
@@ -176,4 +181,19 @@ export const getAnalysisGroupOptions = createSelector(
     Object.values(analysisGroupsGroupedByProjectGuid[projectGuid] || {}).map(
       group => ({ value: group.analysisGroupGuid, text: group.name }),
     ),
+)
+
+export const getSearchGeneBreakdownValues = createSelector(
+  getSearchGeneBreakdown,
+  (state, props) => props.searchHash,
+  getFamiliesByGuid,
+  getGenesById,
+  (geneBreakdowns, searchHash, familiesByGuid, genesById) => Object.entries(geneBreakdowns[searchHash] || {}).map(
+    ([geneId, familyCounts]) => ({
+      numVariants: Object.values(familyCounts).reduce((acc, val) => acc + val, 0),
+      numFamilies: Object.keys(familyCounts).length,
+      families: Object.entries(familyCounts).map(([familyGuid, count]) => ({ family: familiesByGuid[familyGuid], count })),
+      ...genesById[geneId],
+    }),
+  ),
 )
