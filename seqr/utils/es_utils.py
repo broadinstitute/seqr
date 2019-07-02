@@ -903,7 +903,9 @@ POPULATIONS = {
         'Hemi': 'exac_AC_Hemi',
     },
     'gnomad_exomes': {},
-    'gnomad_genomes': {},
+    'gnomad_genomes': {
+        'AF': 'gnomad_genomes_AF',
+    },
 }
 POPULATION_FIELD_CONFIGS = {
     'AF': {'fields': ['AF_POPMAX_OR_GLOBAL'], 'format_value': float},
@@ -994,6 +996,7 @@ SORT_FIELDS = {
         }
     }],
     'protein_consequence': ['mainTranscript_major_consequence_rank'],
+    'gnomad': [{_get_pop_freq_key('gnomad_genomes', 'AF'): {'missing': '_first'}}],
     'exac': [{_get_pop_freq_key('exac', 'AF'): {'missing': '_first'}}],
     '1kg': [{_get_pop_freq_key('g1k', 'AF'): {'missing': '_first'}}],
     'cadd': [{'cadd_PHRED': {'order': 'desc'}}],
