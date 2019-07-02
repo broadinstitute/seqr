@@ -642,7 +642,7 @@ const VARIANT_SORT_OPTONS = [
     comparator: (a, b) =>
       VEP_CONSEQUENCE_ORDER_LOOKUP[a.mainTranscript.majorConsequence] - VEP_CONSEQUENCE_ORDER_LOOKUP[b.mainTranscript.majorConsequence],
   },
-  { value: SORT_BY_GNOMAD, text: 'gnodAD genome Frequency', comparator: (a, b) => a.populations.gnomad_genomes.af - b.populations.gnomad_genomes.af },
+  { value: SORT_BY_GNOMAD, text: 'gnomAD Genome Frequency', comparator: (a, b) => a.populations.gnomad_genomes.af - b.populations.gnomad_genomes.af },
   { value: SORT_BY_EXAC, text: 'ExAC Frequency', comparator: (a, b) => a.populations.exac.af - b.populations.exac.af },
   { value: SORT_BY_1KG, text: '1kg  Frequency', comparator: (a, b) => a.populations.g1k.af - b.populations.g1k.af },
   { value: SORT_BY_CADD, text: 'Cadd', comparator: (a, b) => b.predictions.cadd - a.predictions.cadd },
