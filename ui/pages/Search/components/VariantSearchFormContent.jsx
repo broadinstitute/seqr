@@ -3,7 +3,7 @@ import { connect } from 'react-redux'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { FormSection } from 'redux-form'
-import { Form, Accordion, Header, Segment, Grid, List } from 'semantic-ui-react'
+import { Form, Accordion, Header, Segment, Grid, List, Icon } from 'semantic-ui-react'
 
 import { getUser } from 'redux/selectors'
 import { VerticalSpacer } from 'shared/components/Spacers'
@@ -92,6 +92,11 @@ const DetailLink = styled(ButtonLink)`
     font-weight: initial;
     font-style: inherit;
   }
+`
+
+const ExpandCollapseCategoryContainer = styled.span`
+  float: right;
+  padding-top: 1em;
 `
 
 const JsonSelectProps = options => ({
@@ -249,7 +254,6 @@ HeaderContent.propTypes = {
   inputProps: PropTypes.object,
 }
 
-
 const PanelContent = ({ name, fields, fieldProps, helpText, fieldLayout }) => {
   const fieldComponents = configuredFields({ fields: fields.map(field => ({ ...(fieldProps || {}), ...field })) })
   return (
@@ -301,6 +305,25 @@ const PANELS = PANEL_DETAILS.map(panelDetails)
 const STAFF_PANELS = STAFF_PANEL_DETAILS.map(panelDetails)
 
 class VariantSearchFormContent extends React.Component {
+  state = { activeIndex: [] }
+
+  expandAll = (e) => {
+    e.preventDefault()
+    this.setState({ activeIndex: [...PANELS.keys()] })
+  }
+
+  collapseAll = (e) => {
+    e.preventDefault()
+    this.setState({ activeIndex: [] })
+  }
+
+  handleTitleClick = (e, { index }) => {
+    const { activeIndex } = this.state
+    const newIndex = activeIndex.indexOf(index) === -1 ? [...activeIndex, index] : activeIndex.filter(item => item !== index)
+
+    this.setState({ activeIndex: newIndex })
+  }
+
   render() {
     return (
       <div>
@@ -308,17 +331,22 @@ class VariantSearchFormContent extends React.Component {
         <VerticalSpacer height={10} />
         <InlineHeader content="Saved Search:" />
         {configuredField(SAVED_SEARCH_FIELD)}
+        <ExpandCollapseCategoryContainer>
+          <ButtonLink onClick={this.expandAll}>Expand All &nbsp;<Icon name="plus" /></ButtonLink>
+          <b>| &nbsp;&nbsp;</b>
+          <ButtonLink onClick={this.collapseAll}>Collapse All &nbsp;<Icon name="minus" /></ButtonLink>
+        </ExpandCollapseCategoryContainer>
         <VerticalSpacer height={10} />
         <FormSection name="search">
-          <Accordion fluid panels={this.props.user.isStaff ? STAFF_PANELS : PANELS} />
+          <Accordion fluid panels={this.props.user.isStaff ? STAFF_PANELS : PANELS} exclusive={false} activeIndex={this.state.activeIndex} onTitleClick={this.handleTitleClick} />
         </FormSection>
       </div>
     )
   }
 
-  shouldComponentUpdate() {
+  shouldComponentUpdate(nextProps, nextState) {
     // Form content does not use passed props, so should never re-render on prop update
-    return false
+    return nextState.activeIndex !== this.state.activeIndex
   }
 }
 

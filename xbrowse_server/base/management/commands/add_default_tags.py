@@ -44,6 +44,10 @@ class Command(BaseCommand):
             get_or_create_project_tag(project, order=10.32, category="Collaboration", original_names=["Sanger did not validate"], tag_name="Sanger did not confirm", description="Sanger did not validate", color='#823a3a')
             get_or_create_project_tag(project, order=10.33, category="Collaboration", original_names=[], tag_name="Sanger troubleshooting", description="Sanger troubleshooting", color='#9e064b')
 
+            get_or_create_project_tag(project, order=10.37, category="Collaboration", original_names=[], tag_name="Test segregation", description="", color='#c17110')
+            get_or_create_project_tag(project, order=10.38, category="Collaboration", original_names=[], tag_name="Segregation validated", description="", color='#799a5b')
+            get_or_create_project_tag(project, order=10.39, category="Collaboration", original_names=[], tag_name="Segregation did not confirm", description="", color='#b44b4b')
+
             get_or_create_project_tag(project, order=10.41, category="Collaboration", tag_name="Confident AR one hit", description="To mark a variant/gene where one disease causing variant has been identified in a KNOWN disease gene that is consistent with the patient's phenotype - but a second variant is needed. These families may be candidates for WGS or other approaches.", color='#764080')
             get_or_create_project_tag(project, order=10.42, category="Collaboration", tag_name="Analyst high priority", description="To mark a variant that is viewed by the analyst as a likely disease-causing variant but further review is needed by a clinician and/or collaborator. These tags should be transitioned to more appropriate tags prior to progress reporting.", color='#e46b2e')
 
