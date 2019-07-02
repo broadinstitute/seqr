@@ -39,7 +39,7 @@ const StyledSortableTable = styled(Table)`
 const ASCENDING = 'ascending'
 const DESCENDING = 'descending'
 
-const getRowColumnContent = (row, isExport) => col => ((col.format && !(isExport && col.noFormatExport)) ? col.format(row) : row[col.name])
+const getRowColumnContent = (row, isExport) => col => ((col.format && !(isExport && col.noFormatExport)) ? col.format(row, isExport) : row[col.name])
 
 class SortableTable extends React.PureComponent {
 

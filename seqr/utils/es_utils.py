@@ -89,7 +89,9 @@ def get_es_variants(search_model, sort=XPOS_SORT_KEY, page=1, num_results=100, l
 def get_es_variant_gene_counts(search_model):
 
     def process_previous_results(previous_search_results):
-        # TODO
+        if previous_search_results.get('gene_aggs'):
+            return previous_search_results['gene_aggs'], {}
+        # TODO actually loaded all results
         return None, {}
 
     gene_counts, _ = _get_es_variants_for_search(search_model, EsGeneAggSearch, process_previous_results, aggregate_by_gene=True)
