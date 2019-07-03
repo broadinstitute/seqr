@@ -79,7 +79,7 @@ class UsersAPITest(TransactionTestCase):
 
         # calling create again just updates the existing user
         response = self.client.post(create_url, content_type='application/json', data=json.dumps({
-            'email': 'test@test.com', 'firstName': 'Test', 'lastName': 'User'}))
+            'email': 'Test@test.com', 'firstName': 'Test', 'lastName': 'User'}))
         self.assertEqual(response.status_code, 200)
         collaborators = response.json()['projectsByGuid'][PROJECT_GUID]['collaborators']
         self.assertEqual(len(collaborators), 1)
