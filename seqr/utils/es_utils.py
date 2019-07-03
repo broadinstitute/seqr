@@ -91,7 +91,31 @@ def get_es_variant_gene_counts(search_model):
     def process_previous_results(previous_search_results):
         if previous_search_results.get('gene_aggs'):
             return previous_search_results['gene_aggs'], {}
-        # TODO actually loaded all results
+
+        total_results = previous_search_results.get('total_results')
+        if total_results is not None:
+            gene_aggs = defaultdict(lambda: {'total': 0, 'families': defaultdict(int)})
+            if 'all_results' in previous_search_results:
+                if len(previous_search_results['all_results']) == total_results:
+                    for var in previous_search_results['all_results']:
+                        gene_id = var['mainTranscript']['geneId']
+                        if gene_id:
+                            gene_aggs[gene_id]['total'] += 1
+                            for family_guid in var['familyGuids']:
+                                gene_aggs[gene_id]['families'][family_guid] += 1
+                    return gene_aggs, {}
+            elif 'grouped_results' in previous_search_results:
+                loaded = sum(counts.get('loaded', 0) for counts in previous_search_results.get('loaded_variant_counts', {}).values())
+                if loaded == total_results:
+                    for group in previous_search_results['grouped_results']:
+                        vars = group.values()[0]
+                        gene_id = vars[0]['mainTranscript']['geneId']
+                        if gene_id:
+                            gene_aggs[gene_id]['total'] += len(vars)
+                            for family_guid in vars[0]['familyGuids']:
+                                gene_aggs[gene_id]['families'][family_guid] += len(vars)
+                    return gene_aggs, {}
+
         return None, {}
 
     gene_counts, _ = _get_es_variants_for_search(search_model, EsGeneAggSearch, process_previous_results, aggregate_by_gene=True)
@@ -414,7 +438,7 @@ class EsSearch(BaseEsSearch):
             index_name = response.hits[0].meta.index
             if is_compound_het:
                 compound_het_results += response_hits
-                self.previous_search_results['loaded_variant_counts']['{}_compound_het'.format(index_name)] = {'total': response_total}
+                self.previous_search_results['loaded_variant_counts']['{}_compound_het'.format(index_name)] = {'total': response_total, 'loaded': response_total}
             else:
                 new_results += response_hits
                 self.previous_search_results['loaded_variant_counts'][index_name]['total'] = response_total
