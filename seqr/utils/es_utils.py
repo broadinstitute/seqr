@@ -93,7 +93,7 @@ def get_es_variant_gene_counts(search_model):
             return previous_search_results['gene_aggs'], {}
         # TODO actually loaded all results
         return None, {}
-    # TODO this is pagnating?
+
     gene_counts, _ = _get_es_variants_for_search(search_model, EsGeneAggSearch, process_previous_results, aggregate_by_gene=True)
     return gene_counts
 
@@ -174,6 +174,8 @@ def get_latest_loaded_samples(families=None):
 
 
 class BaseEsSearch(object):
+
+    AGGREGATION_NAME = 'compound het'
 
     def __init__(self, families, previous_search_results=None, skip_unaffected_families=False):
         self._client = get_es_client()
@@ -285,7 +287,7 @@ class BaseEsSearch(object):
             if search.aggs.to_dict():
                 # For compound het search get results from aggregation instead of top level hits
                 search = search[:1]
-                logger.info('Loading compound hets for {}'.format(index_name))
+                logger.info('Loading {}s for {}'.format(self.AGGREGATION_NAME, index_name))
             else:
                 end_index = page * num_results
                 if start_index is None:
@@ -697,6 +699,7 @@ class EsSearch(BaseEsSearch):
 
 
 class EsGeneAggSearch(BaseEsSearch):
+    AGGREGATION_NAME = 'gene aggregation'
 
     def aggregate_by_gene(self):
         searches = {self._search}
@@ -736,11 +739,11 @@ class EsGeneAggSearch(BaseEsSearch):
         gene_counts = {}
         for gene_agg in response.aggregations.genes.buckets:
             gene_id = gene_agg['key']
-            gene_counts[gene_id] = defaultdict(int)
+            gene_counts[gene_id] = {'total': gene_agg['doc_count'], 'families': defaultdict(int)}
             for hit in gene_agg['vars_by_gene']:
                 if hasattr(hit.meta, 'matched_queries'):
                     for family_guid in hit.meta.matched_queries:
-                        gene_counts[gene_id][family_guid] += 1
+                        gene_counts[gene_id]['families'][family_guid] += 1
                 else:
                     #  TODO handle all project families search
                     raise Exception('No families in query')

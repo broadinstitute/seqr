@@ -50,7 +50,7 @@ const COLUMNS = [
       <SearchResultsLink
         geneId={row.geneId}
         familyGuids={row.families.map(({ family }) => family.familyGuid)}
-        buttonText={row.numVariants}
+        buttonText={row.numVariants.toString()}
         initialSearch={row.search}
       />,
   },

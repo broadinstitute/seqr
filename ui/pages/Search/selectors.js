@@ -191,10 +191,10 @@ export const getSearchGeneBreakdownValues = createSelector(
   getSearchesByHash,
   (geneBreakdowns, searchHash, familiesByGuid, genesById, searchesByHash) =>
     Object.entries(geneBreakdowns[searchHash] || {}).map(
-      ([geneId, familyCounts]) => ({
-        numVariants: Object.values(familyCounts).reduce((acc, val) => acc + val, 0),
-        numFamilies: Object.keys(familyCounts).length,
-        families: Object.entries(familyCounts).map(([familyGuid, count]) => ({ family: familiesByGuid[familyGuid], count })),
+      ([geneId, counts]) => ({
+        numVariants: counts.total,
+        numFamilies: Object.keys(counts.families).length,
+        families: Object.entries(counts.families).map(([familyGuid, count]) => ({ family: familiesByGuid[familyGuid], count })),
         search: searchesByHash[searchHash].search,
         ...genesById[geneId],
       }),
