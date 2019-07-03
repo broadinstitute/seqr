@@ -503,29 +503,28 @@ class EsSearch(BaseEsSearch):
                         if variant_ids == [variant['variantId'] for variant in variants_by_gene.get(gene, [])]:
                             continue
 
-            family_guids = set(gene_variants[0]['familyGuids'])
-            for variant in gene_variants[1:]:
-                family_guids = family_guids.intersection(set(variant['familyGuids']))
+            family_variants = defaultdict(list)
+            for variant in gene_variants:
+                for family_guid in variant['familyGuids']:
+                    family_variants[family_guid].append(variant)
 
-            invalid_family_guids = set()
-            for family_guid in family_guids:
-                for individual_guid in family_unaffected_individual_guids[family_guid]:
+            for family_guid, variants in family_variants.items():
+                for individual_guid in family_unaffected_individual_guids.get(family_guid, []):
                     # To be compound het all unaffected individuals need to be hom ref for at least one of the variants
                     is_family_compound_het = any(
-                        variant['genotypes'].get(individual_guid, {}).get('numAlt') != 1 for variant in
-                        gene_variants)
+                        variant['genotypes'].get(individual_guid, {}).get('numAlt') != 1 for variant in variants)
                     if not is_family_compound_het:
-                        invalid_family_guids.add(family_guid)
+                        family_variants[family_guid] = []
                         break
 
-            family_guids -= invalid_family_guids
-            if not family_guids:
-                continue
-
             for variant in gene_variants:
-                variant['familyGuids'] = list(family_guids)
+                variant['familyGuids'] = [family_guid for family_guid in variant['familyGuids']
+                                          if len(family_variants[family_guid]) > 1]
 
-            variants_by_gene[gene_id] = gene_variants
+            gene_variants = [variant for variant in gene_variants if variant['familyGuids']]
+
+            if gene_variants:
+                variants_by_gene[gene_id] = gene_variants
 
         total_compound_het_results = sum(len(variants) for variants in variants_by_gene.values())
         logger.info('Total compound het hits: {}'.format(total_compound_het_results))
@@ -1082,6 +1081,7 @@ SORT_FIELDS = {
         }
     }],
     'protein_consequence': ['mainTranscript_major_consequence_rank'],
+    'gnomad': [{_get_pop_freq_key('gnomad_genomes', 'AF'): {'missing': '_first'}}],
     'exac': [{_get_pop_freq_key('exac', 'AF'): {'missing': '_first'}}],
     '1kg': [{_get_pop_freq_key('g1k', 'AF'): {'missing': '_first'}}],
     'cadd': [{'cadd_PHRED': {'order': 'desc'}}],
