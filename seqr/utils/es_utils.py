@@ -994,6 +994,7 @@ SORT_FIELDS = {
         }
     }],
     'protein_consequence': ['mainTranscript_major_consequence_rank'],
+    'gnomad': [{_get_pop_freq_key('gnomad_genomes', 'AF'): {'missing': '_first'}}],
     'exac': [{_get_pop_freq_key('exac', 'AF'): {'missing': '_first'}}],
     '1kg': [{_get_pop_freq_key('g1k', 'AF'): {'missing': '_first'}}],
     'cadd': [{'cadd_PHRED': {'order': 'desc'}}],
