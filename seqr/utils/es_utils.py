@@ -93,7 +93,7 @@ def get_es_variant_gene_counts(search_model):
             return previous_search_results['gene_aggs'], {}
         # TODO actually loaded all results
         return None, {}
-
+    # TODO this is pagnating?
     gene_counts, _ = _get_es_variants_for_search(search_model, EsGeneAggSearch, process_previous_results, aggregate_by_gene=True)
     return gene_counts
 

@@ -47,10 +47,12 @@ const COLUMNS = [
     width: 2,
     noFormatExport: true,
     format: row =>
-      // TODO should only link to searched variants, not all in gene
-      <span>
-        {row.numVariants} (<SearchResultsLink geneId={row.geneId} familyGuids={row.families.map(({ family }) => family.familyGuid)} />)
-      </span>,
+      <SearchResultsLink
+        geneId={row.geneId}
+        familyGuids={row.families.map(({ family }) => family.familyGuid)}
+        buttonText={row.numVariants}
+        initialSearch={row.search}
+      />,
   },
   { name: 'numFamilies', content: '# Families', width: 2, noFormatExport: true },
   {
