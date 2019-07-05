@@ -91,7 +91,7 @@ def _create_user(request, is_staff=False):
     if not request_json.get('email'):
         raise CreateUserException('Email is required')
 
-    existing_user = User.objects.filter(email=request_json['email']).first()
+    existing_user = User.objects.filter(email__iexact=request_json['email']).first()
     if existing_user:
         raise CreateUserException('This user already exists', existing_user=existing_user)
 

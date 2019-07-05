@@ -12,6 +12,7 @@ import {
   FAMILY_STATUS_STRONG_CANDIDATE_NOVEL_GENE,
   FAMILY_STATUS_REVIEWED_PURSUING_CANDIDATES,
   FAMILY_STATUS_REVIEWED_NO_CLEAR_CANDIDATE,
+  FAMILY_STATUS_CLOSED,
   FAMILY_STATUS_ANALYSIS_IN_PROGRESS,
   FAMILY_FIELD_ID,
   FAMILY_DISPLAY_NAME,
@@ -86,6 +87,7 @@ const SHOW_ANALYSED_BY_CMG = 'SHOW_ANALYSED_BY_CMG'
 const SHOW_NOT_ANALYSED_BY_CMG = 'SHOW_NOT_ANALYSED_BY_CMG'
 const SHOW_ANALYSED = 'SHOW_ANALYSED'
 const SHOW_NOT_ANALYSED = 'SHOW_NOT_ANALYSED'
+const SHOW_CLOSED = 'SHOW_CLOSED'
 
 
 const SOLVED_STATUSES = new Set([
@@ -213,6 +215,13 @@ export const FAMILY_FILTER_OPTIONS = [
     name: 'No Clear Candidate',
     internalOmit: true,
     createFilter: () => family => family.analysisStatus === FAMILY_STATUS_REVIEWED_NO_CLEAR_CANDIDATE,
+  },
+  {
+    value: SHOW_CLOSED,
+    category: 'Analysis Status:',
+    name: 'Closed',
+    internalOmit: true,
+    createFilter: () => family => family.analysisStatus === FAMILY_STATUS_CLOSED,
   },
   {
     value: SHOW_ANALYSIS_IN_PROGRESS,
