@@ -752,17 +752,14 @@ class EsGeneAggSearch(BaseEsSearch):
 
         return gene_aggs
 
-    @staticmethod
-    def _parse_response(response):
+    def _parse_response(self, response):
         if len(response.aggregations.genes.buckets) > MAX_COMPOUND_HET_GENES:
             raise Exception('This search returned too many genes')
 
-        #  TODO previously loaded compound hets
-
-        gene_counts = {}
+        gene_counts = defaultdict(lambda: {'total': 0, 'families': defaultdict(int)})
         for gene_agg in response.aggregations.genes.buckets:
             gene_id = gene_agg['key']
-            gene_counts[gene_id] = {'total': gene_agg['doc_count'], 'families': defaultdict(int)}
+            gene_counts[gene_id]['total'] += gene_agg['doc_count']
             for hit in gene_agg['vars_by_gene']:
                 if hasattr(hit.meta, 'matched_queries'):
                     for family_guid in hit.meta.matched_queries:
@@ -770,6 +767,17 @@ class EsGeneAggSearch(BaseEsSearch):
                 else:
                     #  TODO handle all project families search
                     raise Exception('No families in query')
+
+        # Compound hets are always loaded as part of the initial search and are not part of the fetched aggregation
+        loaded_compound_hets = self.previous_search_results.get('grouped_results', []) + \
+                               self.previous_search_results.get('compound_het_results', [])
+        for group in loaded_compound_hets:
+            vars = group.values()[0]
+            gene_id = group.keys()[0]
+            if gene_id and gene_id != 'null':
+                gene_counts[gene_id]['total'] += len(vars)
+                for family_guid in vars[0]['familyGuids']:
+                    gene_counts[gene_id]['families'][family_guid] += len(vars)
 
         return gene_counts
 
