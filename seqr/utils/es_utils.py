@@ -234,6 +234,7 @@ class BaseEsSearch(object):
         self._index_searches = defaultdict(list)
         self._sort = None
         self._allowed_consequences = None
+        self._no_sample_filters = False
 
     def _set_index_metadata(self):
         self.index_metadata = get_index_metadata(','.join(self.samples_by_family_index.keys()), self._client)
@@ -274,6 +275,7 @@ class BaseEsSearch(object):
                 if search_sample_count == index_sample_count:
                     # If searching across all families in an index with no inheritance mode we do not need to explicitly
                     # filter on inheritance, as all variants have some inheritance for at least one family
+                    self._no_sample_filters = True
                     continue
 
             genotypes_q = _genotype_inheritance_filter(
@@ -730,11 +732,16 @@ class EsGeneAggSearch(BaseEsSearch):
             searches.update(index_searches)
 
         for search in searches:
-            search.aggs.bucket(
+            agg = search.aggs.bucket(
                 'genes', 'terms', field='mainTranscript_gene_id', size=MAX_COMPOUND_HET_GENES+1
-            ).metric(
-                'vars_by_gene', 'top_hits', size=100, _source='none'
             )
+            if self._no_sample_filters:
+                agg.bucket('samples_num_alt_1', 'terms', field='samples_num_alt_1', size=10000)
+                agg.bucket('samples_num_alt_2', 'terms', field='samples_num_alt_2', size=10000)
+            else:
+                agg.metric(
+                    'vars_by_gene', 'top_hits', size=100, _source='none'
+                )
 
     def search(self, **kwargs):
         indices = self.samples_by_family_index.keys()
@@ -760,13 +767,23 @@ class EsGeneAggSearch(BaseEsSearch):
         for gene_agg in response.aggregations.genes.buckets:
             gene_id = gene_agg['key']
             gene_counts[gene_id]['total'] += gene_agg['doc_count']
-            for hit in gene_agg['vars_by_gene']:
-                if hasattr(hit.meta, 'matched_queries'):
+            if 'vars_by_gene' in gene_agg:
+                for hit in gene_agg['vars_by_gene']:
                     for family_guid in hit.meta.matched_queries:
                         gene_counts[gene_id]['families'][family_guid] += 1
-                else:
-                    #  TODO handle all project families search
-                    raise Exception('No families in query')
+            else:
+                families_by_sample = {}
+                for index_samples_by_family in self.samples_by_family_index.values():
+                    for family_guid, samples_by_id in index_samples_by_family.items():
+                        for sample_id in samples_by_id.keys():
+                            families_by_sample[sample_id] = family_guid
+
+                for sample_agg in gene_agg.samples_num_alt_1.buckets:
+                    family_guid = families_by_sample[sample_agg['key']]
+                    gene_counts[gene_id]['families'][family_guid] += sample_agg['doc_count']
+                for sample_agg in gene_agg.samples_num_alt_2.buckets:
+                    family_guid = families_by_sample[sample_agg['key']]
+                    gene_counts[gene_id]['families'][family_guid] += sample_agg['doc_count']
 
         # Compound hets are always loaded as part of the initial search and are not part of the fetched aggregation
         loaded_compound_hets = self.previous_search_results.get('grouped_results', []) + \
