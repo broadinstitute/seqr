@@ -18,7 +18,7 @@ const mapDispatchToProps = (dispatch, ownProps) => {
     openSearchResults: () => {
       dispatch(navigateSavedHashedSearch(
         {
-          projectFamilies: [{ familyGuids: ownProps.familyGuids }],
+          projectFamilies: ownProps.projectFamilies || [{ familyGuids: ownProps.familyGuids }],
           search: { locus: { rawItems: ownProps.geneId }, ...(ownProps.initialSearch || {}) },
         },
         resultsLink => window.open(resultsLink, '_blank')),

@@ -163,6 +163,7 @@ def _get_es_variants_for_search(search_model, es_search_cls, process_previous_re
     es_search.filter_by_genotype(
         search.get('inheritance'),
         quality_filter=search.get('qualityFilter'),
+        execute_single_search=aggregate_by_gene,
     )
 
     if aggregate_by_gene:
@@ -251,7 +252,7 @@ class BaseEsSearch(object):
             self.filter(consequences_filter)
             self._allowed_consequences = allowed_consequences
 
-    def filter_by_genotype(self, inheritance, quality_filter=None):
+    def filter_by_genotype(self, inheritance, quality_filter=None, execute_single_search=False):
         has_previous_compound_hets = self.previous_search_results.get('grouped_results')
 
         inheritance_mode = (inheritance or {}).get('mode')
@@ -268,6 +269,7 @@ class BaseEsSearch(object):
         if quality_filter and quality_filter.get('vcf_filter') is not None:
             self.filter(~Q('exists', field='filters'))
 
+        genotype_filters = []
         for index, family_samples_by_id in self.samples_by_family_index.items():
             if not inheritance and not quality_filter['min_ab'] and not quality_filter['min_gq']:
                 search_sample_count = sum(len(samples) for samples in family_samples_by_id.values())
@@ -286,7 +288,10 @@ class BaseEsSearch(object):
             if inheritance_mode == COMPOUND_HET:
                 compound_het_q = genotypes_q
             else:
-                self._index_searches[index].append(self._search.filter(genotypes_q))
+                if execute_single_search:
+                    genotype_filters.append(genotypes_q)
+                else:
+                    self._index_searches[index].append(self._search.filter(genotypes_q))
 
             if inheritance_mode == RECESSIVE:
                 compound_het_q = _genotype_inheritance_filter(
@@ -301,6 +306,12 @@ class BaseEsSearch(object):
                     'vars_by_gene', 'top_hits', size=100, sort=self._sort, _source=QUERY_FIELD_NAMES
                 )
                 self._index_searches[index].append(compound_het_search)
+
+        if genotype_filters:
+            genotypes_q = genotype_filters[0]
+            for q in genotype_filters[1:]:
+                genotypes_q |= q
+            self._search = self._search.filter(genotypes_q)
 
     def search(self, **kwargs):
         raise NotImplementedError
@@ -748,7 +759,6 @@ class EsGeneAggSearch(BaseEsSearch):
 
         logger.info('Searching in elasticsearch indices: {}'.format(', '.join(indices)))
 
-        #  TODO handle multi-project search
         index_name = ','.join(self.samples_by_family_index.keys())
         search = self._get_paginated_searches(index_name)[0]
 
