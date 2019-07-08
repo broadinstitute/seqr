@@ -1,6 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
+import { Link } from 'react-router-dom'
 
 import { login } from '../reducers'
 import UserFormLayout from './UserFormLayout'
@@ -28,7 +29,9 @@ const Login = ({ onSubmit }) =>
     form="login"
     fields={FIELDS}
     submitButtonText="Log In"
-  />
+  >
+    <Link to="/users/forgot_password">Forgot Password?</Link>
+  </UserFormLayout>
 
 Login.propTypes = {
   onSubmit: PropTypes.func,
