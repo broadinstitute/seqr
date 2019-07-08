@@ -60,7 +60,72 @@ def get_es_variants_for_variant_tuples(families, xpos_ref_alt_tuples):
 
 
 def get_es_variants(search_model, sort=XPOS_SORT_KEY, page=1, num_results=100, load_all=False):
-    cache_key = 'search_results__{}__{}'.format(search_model.guid, sort)
+
+    def process_previous_results(previous_search_results):
+        num_results_to_use = num_results
+        total_results = previous_search_results.get('total_results')
+        if load_all:
+            num_results_to_use = total_results or 10000
+        start_index = (page - 1) * num_results
+        end_index = page * num_results
+        if previous_search_results.get('total_results') is not None:
+            end_index = min(end_index, previous_search_results['total_results'])
+
+        loaded_results = previous_search_results.get('all_results') or []
+        if len(loaded_results) >= end_index:
+            return loaded_results[start_index:end_index], {}
+
+        grouped_results = previous_search_results.get('grouped_results')
+        if grouped_results:
+            results = _get_compound_het_page(grouped_results, start_index, end_index)
+            if results is not None:
+                return results, {}
+
+        return None, {'page': page, 'num_results': num_results_to_use}
+
+    return _get_es_variants_for_search(search_model, EsSearch, process_previous_results, sort=sort)
+
+
+def get_es_variant_gene_counts(search_model):
+
+    def process_previous_results(previous_search_results):
+        if previous_search_results.get('gene_aggs'):
+            return previous_search_results['gene_aggs'], {}
+
+        total_results = previous_search_results.get('total_results')
+        if total_results is not None:
+            gene_aggs = defaultdict(lambda: {'total': 0, 'families': defaultdict(int)})
+            if 'all_results' in previous_search_results:
+                if len(previous_search_results['all_results']) == total_results:
+                    for var in previous_search_results['all_results']:
+                        gene_id = var['mainTranscript']['geneId']
+                        if gene_id:
+                            gene_aggs[gene_id]['total'] += 1
+                            for family_guid in var['familyGuids']:
+                                gene_aggs[gene_id]['families'][family_guid] += 1
+                    return gene_aggs, {}
+            elif 'grouped_results' in previous_search_results:
+                loaded = sum(counts.get('loaded', 0) for counts in previous_search_results.get('loaded_variant_counts', {}).values())
+                if loaded == total_results:
+                    for group in previous_search_results['grouped_results']:
+                        variants = group.values()[0]
+                        gene_id = group.keys()[0]
+                        if not gene_id or gene_id == 'null':
+                            gene_id = variants[0]['mainTranscript']['geneId']
+                        if gene_id:
+                            gene_aggs[gene_id]['total'] += len(variants)
+                            for family_guid in variants[0]['familyGuids']:
+                                gene_aggs[gene_id]['families'][family_guid] += len(variants)
+                    return gene_aggs, {}
+
+        return None, {}
+
+    gene_counts, _ = _get_es_variants_for_search(search_model, EsGeneAggSearch, process_previous_results, aggregate_by_gene=True)
+    return gene_counts
+
+
+def _get_es_variants_for_search(search_model, es_search_cls, process_previous_results, sort=None, aggregate_by_gene=False):
+    cache_key = 'search_results__{}__{}'.format(search_model.guid, sort or XPOS_SORT_KEY)
     redis_client = None
     previous_search_results = {}
     try:
@@ -69,23 +134,9 @@ def get_es_variants(search_model, sort=XPOS_SORT_KEY, page=1, num_results=100, l
     except Exception as e:
         logger.warn("Unable to connect to redis host: {}".format(settings.REDIS_SERVICE_HOSTNAME) + str(e))
 
-    total_results = previous_search_results.get('total_results')
-    if load_all:
-        num_results = total_results or 10000
-    start_index = (page-1)*num_results
-    end_index = page * num_results
-    if previous_search_results.get('total_results') is not None:
-        end_index = min(end_index, previous_search_results['total_results'])
-
-    loaded_results = previous_search_results.get('all_results') or []
-    if len(loaded_results) >= end_index:
-        return loaded_results[start_index:end_index], total_results
-
-    grouped_results = previous_search_results.get('grouped_results')
-    if grouped_results:
-        results = _get_compound_het_page(grouped_results, start_index, end_index)
-        if results is not None:
-            return results, total_results
+    previously_loaded_results, search_kwargs = process_previous_results(previous_search_results)
+    if previously_loaded_results is not None:
+        return previously_loaded_results, previous_search_results.get('total_results')
 
     search = search_model.variant_search.search
 
@@ -93,9 +144,10 @@ def get_es_variants(search_model, sort=XPOS_SORT_KEY, page=1, num_results=100, l
     if invalid_items:
         raise Exception('Invalid genes/intervals: {}'.format(', '.join(invalid_items)))
 
-    es_search = EsSearch(search_model.families.all(), previous_search_results=previous_search_results, skip_unaffected_families=search.get('inheritance'))
+    es_search = es_search_cls(search_model.families.all(), previous_search_results=previous_search_results, skip_unaffected_families=search.get('inheritance'))
 
-    es_search.sort(sort)
+    if sort:
+        es_search.sort(sort)
 
     if genes or intervals:
         es_search.filter(_location_filter(genes, intervals, search['locus']))
@@ -113,16 +165,18 @@ def get_es_variants(search_model, sort=XPOS_SORT_KEY, page=1, num_results=100, l
     es_search.filter_by_genotype(
         search.get('inheritance'),
         quality_filter=search.get('qualityFilter'),
+        execute_single_search=aggregate_by_gene,
     )
 
-    variant_results = es_search.search(page=page, num_results=num_results)
+    if aggregate_by_gene:
+        es_search.aggregate_by_gene()
+
+    variant_results = es_search.search(**search_kwargs)
 
     try:
         redis_client.set(cache_key, json.dumps(es_search.previous_search_results))
     except Exception as e:
         logger.warn("Unable to write to redis: {}".format(settings.REDIS_SERVICE_HOSTNAME) + str(e))
-
-    search_model.save()
 
     return variant_results, es_search.previous_search_results['total_results']
 
@@ -146,7 +200,9 @@ def get_latest_loaded_samples(families=None):
     return [s for s in all_samples if s.loaded_date == sample_individual_max_loaded_date[s.individual.guid]]
 
 
-class EsSearch(object):
+class BaseEsSearch(object):
+
+    AGGREGATION_NAME = 'compound het'
 
     def __init__(self, families, previous_search_results=None, skip_unaffected_families=False):
         self._client = get_es_client()
@@ -181,6 +237,7 @@ class EsSearch(object):
         self._index_searches = defaultdict(list)
         self._sort = None
         self._allowed_consequences = None
+        self._no_sample_filters = False
 
     def _set_index_metadata(self):
         self.index_metadata = get_index_metadata(','.join(self.samples_by_family_index.keys()), self._client)
@@ -188,10 +245,6 @@ class EsSearch(object):
     def filter(self, new_filter):
         self._search = self._search.filter(new_filter)
         return self
-
-    def sort(self, sort):
-        self._sort = _get_sort(sort)
-        self._search = self._search.sort(*self._sort)
 
     def filter_by_annotations(self, annotations, pathogenicity_filter):
         consequences_filter, allowed_consequences = _annotations_filter(annotations)
@@ -201,7 +254,7 @@ class EsSearch(object):
             self.filter(consequences_filter)
             self._allowed_consequences = allowed_consequences
 
-    def filter_by_genotype(self, inheritance, quality_filter=None):
+    def filter_by_genotype(self, inheritance, quality_filter=None, execute_single_search=False):
         has_previous_compound_hets = self.previous_search_results.get('grouped_results')
 
         inheritance_mode = (inheritance or {}).get('mode')
@@ -218,6 +271,7 @@ class EsSearch(object):
         if quality_filter and quality_filter.get('vcf_filter') is not None:
             self.filter(~Q('exists', field='filters'))
 
+        genotype_filters = []
         for index, family_samples_by_id in self.samples_by_family_index.items():
             if not inheritance and not quality_filter['min_ab'] and not quality_filter['min_gq']:
                 search_sample_count = sum(len(samples) for samples in family_samples_by_id.values())
@@ -225,6 +279,7 @@ class EsSearch(object):
                 if search_sample_count == index_sample_count:
                     # If searching across all families in an index with no inheritance mode we do not need to explicitly
                     # filter on inheritance, as all variants have some inheritance for at least one family
+                    self._no_sample_filters = True
                     continue
 
             genotypes_q = _genotype_inheritance_filter(
@@ -235,7 +290,10 @@ class EsSearch(object):
             if inheritance_mode == COMPOUND_HET:
                 compound_het_q = genotypes_q
             else:
-                self._index_searches[index].append(self._search.filter(genotypes_q))
+                if execute_single_search:
+                    genotype_filters.append(genotypes_q)
+                else:
+                    self._index_searches[index].append(self._search.filter(genotypes_q))
 
             if inheritance_mode == RECESSIVE:
                 compound_het_q = _genotype_inheritance_filter(
@@ -250,6 +308,61 @@ class EsSearch(object):
                     'vars_by_gene', 'top_hits', size=100, sort=self._sort, _source=QUERY_FIELD_NAMES
                 )
                 self._index_searches[index].append(compound_het_search)
+
+        if genotype_filters:
+            genotypes_q = genotype_filters[0]
+            for q in genotype_filters[1:]:
+                genotypes_q |= q
+            self._search = self._search.filter(genotypes_q)
+
+    def search(self, **kwargs):
+        raise NotImplementedError
+
+    def _get_paginated_searches(self, index_name, page=1, num_results=100, start_index=None):
+        searches = []
+        for search in self._index_searches.get(index_name, [self._search]):
+            search = search.index(index_name)
+
+            if search.aggs.to_dict():
+                # For compound het search get results from aggregation instead of top level hits
+                search = search[:1]
+                logger.info('Loading {}s for {}'.format(self.AGGREGATION_NAME, index_name))
+            else:
+                end_index = page * num_results
+                if start_index is None:
+                    start_index = end_index - num_results
+
+                search = search[start_index:end_index]
+                search = search.source(QUERY_FIELD_NAMES)
+                logger.info('Loading {} records {}-{}'.format(index_name, start_index, end_index))
+
+            searches.append(search)
+        return searches
+
+    def _execute_search(self, search):
+        logger.debug(json.dumps(search.to_dict(), indent=2))
+        try:
+            return search.using(self._client).execute()
+        except elasticsearch.exceptions.ConnectionTimeout as e:
+            canceled = self._delete_long_running_tasks()
+            logger.error('ES Query Timeout. Canceled {} long running searches'.format(canceled))
+            raise e
+
+    def _delete_long_running_tasks(self):
+        search_tasks = self._client.tasks.list(actions='*search', group_by='parents')
+        canceled = 0
+        for parent_id, task in search_tasks['tasks'].items():
+            if task['running_time_in_nanos'] > 10 ** 11:
+                canceled += 1
+                self._client.tasks.cancel(parent_task_id=parent_id)
+        return canceled
+
+
+class EsSearch(BaseEsSearch):
+
+    def sort(self, sort):
+        self._sort = _get_sort(sort)
+        self._search = self._search.sort(*self._sort)
 
     def search(self, page=1, num_results=100):
         indices = self.samples_by_family_index.keys()
@@ -340,7 +453,7 @@ class EsSearch(object):
             index_name = response.hits[0].meta.index
             if is_compound_het:
                 compound_het_results += response_hits
-                self.previous_search_results['loaded_variant_counts']['{}_compound_het'.format(index_name)] = {'total': response_total}
+                self.previous_search_results['loaded_variant_counts']['{}_compound_het'.format(index_name)] = {'total': response_total, 'loaded': response_total}
             else:
                 new_results += response_hits
                 self.previous_search_results['loaded_variant_counts'][index_name]['total'] = response_total
@@ -368,36 +481,6 @@ class EsSearch(object):
         else:
             self.previous_search_results['all_results'] = loaded_results + variant_results
             return variant_results[:num_results]
-
-    def _get_paginated_searches(self, index_name, page, num_results, start_index=None):
-        searches = []
-        for search in self._index_searches.get(index_name, [self._search]):
-            search = search.index(index_name)
-
-            if search.aggs.to_dict():
-                # For compound het search get results from aggregation instead of top level hits
-                search = search[:1]
-                logger.info('Loading compound hets for {}'.format(index_name))
-            else:
-                end_index = page * num_results
-                if start_index is None:
-                    start_index = end_index - num_results
-
-                search = search[start_index:end_index]
-                search = search.source(QUERY_FIELD_NAMES)
-                logger.info('Loading {} records {}-{}'.format(index_name, start_index, end_index))
-
-            searches.append(search)
-        return searches
-
-    def _execute_search(self, search):
-        logger.debug(json.dumps(search.to_dict(), indent=2))
-        try:
-            return search.using(self._client).execute()
-        except elasticsearch.exceptions.ConnectionTimeout as e:
-            canceled = self._delete_long_running_tasks()
-            logger.error('ES Query Timeout. Canceled {} long running searches'.format(canceled))
-            raise e
 
     def _parse_response(self, response):
         if hasattr(response.aggregations, 'genes') and response.hits:
@@ -623,7 +706,7 @@ class EsSearch(object):
         grouped_variants = compound_het_results + grouped_variants
         grouped_variants = _sort_compound_hets(grouped_variants)
 
-        loaded_result_count = sum(len(vars.values()[0]) for vars in grouped_variants + self.previous_search_results['grouped_results'])
+        loaded_result_count = sum(len(variants.values()[0]) for variants in grouped_variants + self.previous_search_results['grouped_results'])
 
         # Get requested page of variants
         flattened_variant_results = []
@@ -652,14 +735,80 @@ class EsSearch(object):
 
         return flattened_variant_results
 
-    def _delete_long_running_tasks(self):
-        search_tasks = self._client.tasks.list(actions='*search', group_by='parents')
-        canceled = 0
-        for parent_id, task in search_tasks['tasks'].items():
-            if task['running_time_in_nanos'] > 10 ** 11:
-                canceled += 1
-                self._client.tasks.cancel(parent_task_id=parent_id)
-        return canceled
+
+class EsGeneAggSearch(BaseEsSearch):
+    AGGREGATION_NAME = 'gene aggregation'
+
+    def aggregate_by_gene(self):
+        searches = {self._search}
+        for index_searches in self._index_searches.values():
+            searches.update(index_searches)
+
+        for search in searches:
+            agg = search.aggs.bucket(
+                'genes', 'terms', field='mainTranscript_gene_id', size=MAX_COMPOUND_HET_GENES+1
+            )
+            if self._no_sample_filters:
+                agg.bucket('samples_num_alt_1', 'terms', field='samples_num_alt_1', size=10000)
+                agg.bucket('samples_num_alt_2', 'terms', field='samples_num_alt_2', size=10000)
+            else:
+                agg.metric(
+                    'vars_by_gene', 'top_hits', size=100, _source='none'
+                )
+
+    def search(self, **kwargs):
+        indices = self.samples_by_family_index.keys()
+
+        logger.info('Searching in elasticsearch indices: {}'.format(', '.join(indices)))
+
+        index_name = ','.join(self.samples_by_family_index.keys())
+        search = self._get_paginated_searches(index_name)[0]
+
+        response = self._execute_search(search)
+        gene_aggs = self._parse_response(response)
+
+        self.previous_search_results['gene_aggs'] = gene_aggs
+
+        return gene_aggs
+
+    def _parse_response(self, response):
+        if len(response.aggregations.genes.buckets) > MAX_COMPOUND_HET_GENES:
+            raise Exception('This search returned too many genes')
+
+        gene_counts = defaultdict(lambda: {'total': 0, 'families': defaultdict(int)})
+        for gene_agg in response.aggregations.genes.buckets:
+            gene_id = gene_agg['key']
+            gene_counts[gene_id]['total'] += gene_agg['doc_count']
+            if 'vars_by_gene' in gene_agg:
+                for hit in gene_agg['vars_by_gene']:
+                    for family_guid in hit.meta.matched_queries:
+                        gene_counts[gene_id]['families'][family_guid] += 1
+            else:
+                families_by_sample = {}
+                for index_samples_by_family in self.samples_by_family_index.values():
+                    for family_guid, samples_by_id in index_samples_by_family.items():
+                        for sample_id in samples_by_id.keys():
+                            families_by_sample[sample_id] = family_guid
+
+                for sample_agg in gene_agg['samples_num_alt_1']['buckets']:
+                    family_guid = families_by_sample[sample_agg['key']]
+                    gene_counts[gene_id]['families'][family_guid] += sample_agg['doc_count']
+                for sample_agg in gene_agg['samples_num_alt_2']['buckets']:
+                    family_guid = families_by_sample[sample_agg['key']]
+                    gene_counts[gene_id]['families'][family_guid] += sample_agg['doc_count']
+
+        # Compound hets are always loaded as part of the initial search and are not part of the fetched aggregation
+        loaded_compound_hets = self.previous_search_results.get('grouped_results', []) + \
+                               self.previous_search_results.get('compound_het_results', [])
+        for group in loaded_compound_hets:
+            variants = group.values()[0]
+            gene_id = group.keys()[0]
+            if gene_id and gene_id != 'null':
+                gene_counts[gene_id]['total'] += len(variants)
+                for family_guid in variants[0]['familyGuids']:
+                    gene_counts[gene_id]['families'][family_guid] += len(variants)
+
+        return gene_counts
 
 
 def _variant_id_filter(xpos_ref_alt_tuples):

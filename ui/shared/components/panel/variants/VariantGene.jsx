@@ -16,7 +16,7 @@ const CONSTRAINED_GENE_RANK_THRESHOLD = 1000
 const GeneLabelContent = styled(
   ({ color, label, maxWidth, ...props }) => <Label {...props} size="mini" color={color || 'grey'} content={label} />,
 )`
-   margin: 0px .5em .8em 0px !important;
+   margin: ${props => props.margin || '0px .5em .8em 0px'} !important;
    overflow: hidden;
    text-overflow: ellipsis;
    white-space: nowrap;
@@ -118,6 +118,65 @@ GeneDetailSection.propTypes = {
   showEmpty: PropTypes.bool,
 }
 
+export const GeneDetails = ({ gene, compact, showLocusLists, ...labelProps }) =>
+  <div>
+    <GeneDetailSection
+      compact={compact}
+      color="orange"
+      description="Disease Phenotypes"
+      label="IN OMIM"
+      compactLabel="OMIM Disease Phenotypes"
+      details={gene.omimPhenotypes.length > 0 &&
+        <List>
+          {gene.omimPhenotypes.map(phenotype =>
+            <ListItemLink
+              key={phenotype.phenotypeDescription}
+              content={phenotype.phenotypeDescription}
+              target="_blank"
+              href={`https://www.omim.org/entry/${phenotype.phenotypeMimNumber}`}
+            />,
+          )}
+        </List>}
+      {...labelProps}
+    />
+    <GeneDetailSection
+      compact={compact}
+      color="red"
+      label="MISSENSE CONSTR"
+      description="Missense Constraint"
+      details={((gene.constraints.misZ && gene.constraints.misZ > MISSENSE_THRESHHOLD) ||
+        (gene.constraints.misZRank && gene.constraints.misZRank < CONSTRAINED_GENE_RANK_THRESHOLD)) &&
+        `This gene ranks ${gene.constraints.misZRank} most constrained out of
+        ${gene.constraints.totalGenes} genes under study in terms of missense constraint (z-score:
+        ${gene.constraints.misZ.toPrecision(4)}). Missense contraint is a measure of the degree to which the number
+        of missense variants found in this gene in ExAC v0.3 is higher or lower than expected according to the
+        statistical model described in [K. Samocha 2014]. In general this metric is most useful for genes that act
+        via a dominant mechanism, and where a large proportion of the protein is heavily functionally constrained.`}
+      {...labelProps}
+    />
+    <GeneDetailSection
+      compact={compact}
+      color="red"
+      label="LOF CONSTR"
+      description="Loss of Function Constraint"
+      details={gene.constraints.louef < LOF_THRESHHOLD &&
+        `This gene ranks as ${gene.constraints.louefRank} most intolerant of LoF mutations out of
+         ${gene.constraints.totalGenes} genes under study (louef:
+         ${gene.constraints.louef.toPrecision(4)}${gene.constraints.pli ? `, pLi: ${gene.constraints.pli.toPrecision(4)}` : ''}).
+         LOEUF is the observed to expected upper bound fraction for loss-of-function variants based on the variation
+         observed in the gnomad data. Both LOEUF and pLi are measures of how likely the gene is to be intolerant of
+         loss-of-function mutations`}
+      {...labelProps}
+    />
+    {showLocusLists && <LocusListLabels locusListGuids={gene.locusListGuids} compact={compact} />}
+  </div>
+
+GeneDetails.propTypes = {
+  gene: PropTypes.object,
+  compact: PropTypes.bool,
+  showLocusLists: PropTypes.bool,
+}
+
 const VariantGene = ({ geneId, gene, project, variant, compact }) => {
 
   const geneConsequence = variant.transcripts[geneId] && variant.transcripts[geneId][0].majorConsequence.replace(/_/g, ' ')
@@ -141,55 +200,7 @@ const VariantGene = ({ geneId, gene, project, variant, compact }) => {
     </div>
   )
 
-  const geneDetails =
-    <div>
-      <GeneDetailSection
-        compact={compact}
-        color="orange"
-        description="Disease Phenotypes"
-        label="IN OMIM"
-        compactLabel="OMIM Disease Phenotypes"
-        details={gene.omimPhenotypes.length > 0 &&
-          <List>
-            {gene.omimPhenotypes.map(phenotype =>
-              <ListItemLink
-                key={phenotype.phenotypeDescription}
-                content={phenotype.phenotypeDescription}
-                target="_blank"
-                href={`https://www.omim.org/entry/${phenotype.phenotypeMimNumber}`}
-              />,
-            )}
-          </List>}
-      />
-      <GeneDetailSection
-        compact={compact}
-        color="red"
-        label="MISSENSE CONSTR"
-        description="Missense Constraint"
-        details={((gene.constraints.misZ && gene.constraints.misZ > MISSENSE_THRESHHOLD) ||
-          (gene.constraints.misZRank && gene.constraints.misZRank < CONSTRAINED_GENE_RANK_THRESHOLD)) &&
-          `This gene ranks ${gene.constraints.misZRank} most constrained out of
-          ${gene.constraints.totalGenes} genes under study in terms of missense constraint (z-score:
-          ${gene.constraints.misZ.toPrecision(4)}). Missense contraint is a measure of the degree to which the number
-          of missense variants found in this gene in ExAC v0.3 is higher or lower than expected according to the
-          statistical model described in [K. Samocha 2014]. In general this metric is most useful for genes that act
-          via a dominant mechanism, and where a large proportion of the protein is heavily functionally constrained.`}
-      />
-      <GeneDetailSection
-        compact={compact}
-        color="red"
-        label="LOF CONSTR"
-        description="Loss of Function Constraint"
-        details={gene.constraints.louef < LOF_THRESHHOLD &&
-          `This gene ranks as ${gene.constraints.louefRank} most intolerant of LoF mutations out of
-           ${gene.constraints.totalGenes} genes under study (louef:
-           ${gene.constraints.louef.toPrecision(4)}${gene.constraints.pli ? `, pLi: ${gene.constraints.pli.toPrecision(4)}` : ''}).
-           LOEUF is the observed to expected upper bound fraction for loss-of-function variants based on the variation
-           observed in the gnomad data. Both LOEUF and pLi are measures of how likely the gene is to be intolerant of
-           loss-of-function mutations`}
-      />
-      <LocusListLabels locusListGuids={gene.locusListGuids} compact={compact} />
-    </div>
+  const geneDetails = <GeneDetails gene={gene} compact={compact} showLocusLists />
 
   return compact ?
     <Popup

@@ -4,7 +4,8 @@ export const PROJECT_GUID = 'R0237_1000_genomes_demo'
 export const FAMILY_GUID = 'F011652_1'
 export const ANALYSIS_GROUP_GUID = 'AG0000183_test_group'
 export const SEARCH_HASH = 'd380ed0fd28c3127d07a64ea2ba907d7'
-export const SEARCH = { projectFamilies: [{ projectGuid: PROJECT_GUID, familyGuid: FAMILY_GUID}] }
+export const GENE_ID = 'ENSG00000228198'
+export const SEARCH = { projectFamilies: [{ projectGuid: PROJECT_GUID, familyGuid: FAMILY_GUID}], search: {} }
 
 export const LOCUS_LIST_GUID = "LL00132_2017_monogenic_ibd_gen"
 export const LOCUS_LIST = {
@@ -23,9 +24,11 @@ export const LOCUS_LIST = {
 export const STATE = {
   savedSearchesLoading: { isLoading: false },
   searchContextLoading: { isLoading: false },
+  searchGeneBreakdownLoading: { isLoading: false },
   locusListLoading: { isLoading: false },
   currentSearchHash: SEARCH_HASH,
   searchesByHash: { [SEARCH_HASH]: SEARCH },
+  searchGeneBreakdown: { [SEARCH_HASH]: {[GENE_ID]: { total: 3, families: { [FAMILY_GUID]: 2 }}} },
   savedSearchesByGuid: {},
   familiesByGuid: {
    [FAMILY_GUID]: {
@@ -345,6 +348,7 @@ export const STATE = {
       projectGuid: PROJECT_GUID,
       locusListGuids: [LOCUS_LIST_GUID],
     }},
+  genesById: { [GENE_ID]: { geneId: GENE_ID, geneSymbol: 'OR2M3' } },
   user: {
     date_joined: '2015-02-19T20:22:50.633Z',
     email: 'test@broadinstitute.org',
