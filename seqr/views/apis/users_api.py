@@ -211,3 +211,4 @@ def _get_collaborator_json(collaborator, include_permissions, can_edit):
             'hasEditPermissions': can_edit,
         })
     return collaborator_json
+

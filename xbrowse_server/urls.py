@@ -27,8 +27,6 @@ urlpatterns = [
     #
     # Account
     #
-    url(r'^login$', xbrowse_server.base.views.login_view, name='login_view'),
-    url(r'^logout$', xbrowse_server.base.views.logout_view, name='logout_view'),
     url(r'^set-password$', xbrowse_server.base.views.set_password, name='set_password'),   # DEPRECATED
     url(r'^forgot-password$', xbrowse_server.base.views.forgot_password, name='forgot_password'),
     url(r'^forgot-password-sent$', xbrowse_server.base.views.forgot_password_sent, name='forgot_password_sent'),

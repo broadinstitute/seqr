@@ -1,14 +1,13 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import { Segment, Header, Grid } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 
-import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
-import { VerticalSpacer } from 'shared/components/Spacers'
 import { USER_NAME_FIELDS } from 'shared/utils/constants'
 
 import { setPassword } from '../reducers'
 import { getNewUser } from '../selectors'
+import UserFormLayout from './UserFormLayout'
+
 
 const minLengthValidate = value => ((value && value.length > 7) ? undefined : 'Password must be at least 8 characters')
 const maxLengthValidate = value => ((value && value.length < 128) ? undefined : 'Password must be no longer than 128 characters')
@@ -36,28 +35,14 @@ const FIELDS = [
 ]
 
 const SetPassword = ({ onSubmit, newUser }) =>
-  <Grid>
-    <Grid.Column width={5} />
-    <Grid.Column width={6}>
-      <VerticalSpacer height={80} />
-      <Segment padded="very">
-        <Header
-          size="large"
-          content="Welcome to seqr"
-          subheader="Fill out this form to finish setting up your account"
-        />
-        <ReduxFormWrapper
-          onSubmit={onSubmit}
-          form="set-password"
-          fields={FIELDS}
-          initialValues={newUser}
-          showErrorPanel
-          noModal
-        />
-      </Segment>
-    </Grid.Column>
-    <Grid.Column width={5} />
-  </Grid>
+  <UserFormLayout
+    header="Welcome to seqr"
+    subheader="Fill out this form to finish setting up your account"
+    onSubmit={onSubmit}
+    form="set-password"
+    fields={FIELDS}
+    initialValues={newUser}
+  />
 
 SetPassword.propTypes = {
   newUser: PropTypes.object,
