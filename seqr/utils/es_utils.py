@@ -109,7 +109,9 @@ def get_es_variant_gene_counts(search_model):
                 if loaded == total_results:
                     for group in previous_search_results['grouped_results']:
                         vars = group.values()[0]
-                        gene_id = vars[0]['mainTranscript']['geneId']
+                        gene_id = group.keys()[0]
+                        if not gene_id or gene_id == 'null':
+                            gene_id = vars[0]['mainTranscript']['geneId']
                         if gene_id:
                             gene_aggs[gene_id]['total'] += len(vars)
                             for family_guid in vars[0]['familyGuids']:
@@ -788,10 +790,10 @@ class EsGeneAggSearch(BaseEsSearch):
                         for sample_id in samples_by_id.keys():
                             families_by_sample[sample_id] = family_guid
 
-                for sample_agg in gene_agg.samples_num_alt_1.buckets:
+                for sample_agg in gene_agg['samples_num_alt_1']['buckets']:
                     family_guid = families_by_sample[sample_agg['key']]
                     gene_counts[gene_id]['families'][family_guid] += sample_agg['doc_count']
-                for sample_agg in gene_agg.samples_num_alt_2.buckets:
+                for sample_agg in gene_agg['samples_num_alt_2']['buckets']:
                     family_guid = families_by_sample[sample_agg['key']]
                     gene_counts[gene_id]['families'][family_guid] += sample_agg['doc_count']
 
