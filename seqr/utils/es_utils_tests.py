@@ -881,7 +881,7 @@ class EsUtilsTest(TestCase):
         patcher.start().side_effect = mock_execute_search
         self.addCleanup(patcher.stop)
 
-    def assertExecutedSearch(self, filters=None, start_index=0, size=2, sort=None, gene_aggs=False, gene_count_aggs={}, index=INDEX_NAME):
+    def assertExecutedSearch(self, filters=None, start_index=0, size=2, sort=None, gene_aggs=False, gene_count_aggs=None, index=INDEX_NAME):
         self.assertIsInstance(self.executed_search, dict)
         self.assertEqual(self.searched_indices, [index])
         self.assertSameSearch(

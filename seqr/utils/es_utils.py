@@ -108,14 +108,14 @@ def get_es_variant_gene_counts(search_model):
                 loaded = sum(counts.get('loaded', 0) for counts in previous_search_results.get('loaded_variant_counts', {}).values())
                 if loaded == total_results:
                     for group in previous_search_results['grouped_results']:
-                        vars = group.values()[0]
+                        variants = group.values()[0]
                         gene_id = group.keys()[0]
                         if not gene_id or gene_id == 'null':
-                            gene_id = vars[0]['mainTranscript']['geneId']
+                            gene_id = variants[0]['mainTranscript']['geneId']
                         if gene_id:
-                            gene_aggs[gene_id]['total'] += len(vars)
-                            for family_guid in vars[0]['familyGuids']:
-                                gene_aggs[gene_id]['families'][family_guid] += len(vars)
+                            gene_aggs[gene_id]['total'] += len(variants)
+                            for family_guid in variants[0]['familyGuids']:
+                                gene_aggs[gene_id]['families'][family_guid] += len(variants)
                     return gene_aggs, {}
 
         return None, {}
@@ -706,7 +706,7 @@ class EsSearch(BaseEsSearch):
         grouped_variants = compound_het_results + grouped_variants
         grouped_variants = _sort_compound_hets(grouped_variants)
 
-        loaded_result_count = sum(len(vars.values()[0]) for vars in grouped_variants + self.previous_search_results['grouped_results'])
+        loaded_result_count = sum(len(variants.values()[0]) for variants in grouped_variants + self.previous_search_results['grouped_results'])
 
         # Get requested page of variants
         flattened_variant_results = []
@@ -801,12 +801,12 @@ class EsGeneAggSearch(BaseEsSearch):
         loaded_compound_hets = self.previous_search_results.get('grouped_results', []) + \
                                self.previous_search_results.get('compound_het_results', [])
         for group in loaded_compound_hets:
-            vars = group.values()[0]
+            variants = group.values()[0]
             gene_id = group.keys()[0]
             if gene_id and gene_id != 'null':
-                gene_counts[gene_id]['total'] += len(vars)
-                for family_guid in vars[0]['familyGuids']:
-                    gene_counts[gene_id]['families'][family_guid] += len(vars)
+                gene_counts[gene_id]['total'] += len(variants)
+                for family_guid in variants[0]['familyGuids']:
+                    gene_counts[gene_id]['families'][family_guid] += len(variants)
 
         return gene_counts
 
