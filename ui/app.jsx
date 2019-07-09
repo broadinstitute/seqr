@@ -3,7 +3,8 @@ import React from 'react'
 import ReactDOM from 'react-dom'
 import { AppContainer } from 'react-hot-loader'
 import { BrowserRouter, Route, Switch } from 'react-router-dom'
-import { Provider } from 'react-redux'
+import { connect, Provider } from 'react-redux'
+import PropTypes from 'prop-types'
 
 import BaseLayout from 'shared/components/page/BaseLayout'
 import GeneDetail from 'shared/components/panel/genes/GeneDetail'
@@ -16,11 +17,27 @@ import Staff from 'pages/Staff/Staff'
 import Login from 'pages/Login/components/Login'
 import ForgotPassword from 'pages/Login/components/ForgotPassword'
 import SetPassword from 'pages/Login/components/SetPassword'
+import LandingPage from 'pages/Public/LandingPage'
 import rootReducer from 'redux/rootReducer'
+import { getUser } from 'redux/selectors'
 import { configureStore } from 'redux/utils/configureStore'
 
 import 'semantic-ui-css/semantic-custom.css'
 import 'shared/global.css'
+
+const BaseHome = ({ user, ...props }) => (
+  user && Object.keys(user).length ? <Dashboard {...props} /> : <LandingPage />
+)
+
+BaseHome.propTypes = {
+  user: PropTypes.object,
+}
+
+const mapStateToProps = state => ({
+  user: getUser(state),
+})
+
+const Home = connect(mapStateToProps)(BaseHome)
 
 
 ReactDOM.render(
@@ -29,7 +46,7 @@ ReactDOM.render(
       <BrowserRouter>
         <BaseLayout>
           <Switch>
-            <Route exact path="/" component={Dashboard} />
+            <Route exact path="/" component={Home} />
             <Route path="/dashboard" component={Dashboard} />
             <Route path="/project/:projectGuid" component={Project} />
             <Route path="/variant_search" component={VariantSearch} />

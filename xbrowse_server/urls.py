@@ -21,7 +21,7 @@ urlpatterns = [
     #
     # Public
     #
-    url(r'^landingpage$', xbrowse_server.base.views.landing_page, name='landing_page'),
+    url(r'^landingpage$', xbrowse_server.base.views.landing_page, name='landing_page'),  # DEPRECATED
     url(r'^projects$', xbrowse_server.base.views.home, name='home'),  # DEPRECATED
 
     #

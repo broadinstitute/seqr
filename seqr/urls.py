@@ -121,7 +121,6 @@ from seqr.views.apis import external_api
 from seqr.views.utils.file_utils import save_temp_file
 
 react_app_pages = [
-    r'^$',
     'dashboard',
     'project/(?P<project_guid>[^/]+)/.*',
     'gene_info/.*',
@@ -131,6 +130,7 @@ react_app_pages = [
 ]
 
 no_login_react_app_pages = [
+    r'^$',
     'login',
     'users/forgot_password',
     'users/set_password/(?P<user_token>.+)',
