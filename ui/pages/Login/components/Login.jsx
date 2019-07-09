@@ -3,23 +3,13 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
 
+import { validators } from 'shared/components/form/ReduxFormWrapper'
 import { login } from '../reducers'
 import UserFormLayout from './UserFormLayout'
 
 const FIELDS = [
-  {
-    name: 'email',
-    label: 'Email',
-    width: 16,
-    inline: true,
-  },
-  {
-    name: 'password',
-    label: 'Password',
-    type: 'password',
-    width: 16,
-    inline: true,
-  },
+  { name: 'email', label: 'Email', validate: validators.required },
+  { name: 'password', label: 'Password', type: 'password', validate: validators.required },
 ]
 
 const Login = ({ onSubmit }) =>

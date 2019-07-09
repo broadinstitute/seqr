@@ -99,6 +99,7 @@ from seqr.views.apis.users_api import \
     update_project_collaborator, \
     delete_project_collaborator, \
     set_password, \
+    forgot_password, \
     create_staff_user
 
 from seqr.views.apis.staff_api import \
@@ -131,7 +132,8 @@ react_app_pages = [
 
 no_login_react_app_pages = [
     'login',
-    'users/set_password/(?P<user_token>[^/]+)/.*',
+    'users/forgot_password',
+    'users/set_password/(?P<user_token>.+)',
 ]
 
 # NOTE: the actual url will be this with an '/api' prefix
@@ -218,6 +220,7 @@ api_endpoints = {
     'matchmaker/contact_notes/(?P<institution>[^/]+)/update': update_mme_contact_note,
 
     'login': login_view,
+    'users/forgot_password': forgot_password,
     'users/(?P<username>[^/]+)/set_password': set_password,
 
     'users/get_all': get_all_collaborators,

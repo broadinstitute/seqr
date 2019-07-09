@@ -1,6 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
+import queryString from 'query-string'
 
 import { USER_NAME_FIELDS } from 'shared/utils/constants'
 
@@ -14,7 +15,7 @@ const maxLengthValidate = value => ((value && value.length < 128) ? undefined : 
 
 const samePasswordValidate = (value, allValues) => (value === allValues.password ? undefined : 'Passwords do not match')
 
-const FIELDS = [
+const PASSWORD_FIELDS = [
   {
     name: 'password',
     label: 'Password',
@@ -31,20 +32,25 @@ const FIELDS = [
     width: 16,
     inline: true,
   },
-  ...USER_NAME_FIELDS,
 ]
+const FIELDS = [...PASSWORD_FIELDS, ...USER_NAME_FIELDS]
 
-const SetPassword = ({ onSubmit, newUser }) =>
-  <UserFormLayout
-    header="Welcome to seqr"
-    subheader="Fill out this form to finish setting up your account"
-    onSubmit={onSubmit}
-    form="set-password"
-    fields={FIELDS}
-    initialValues={newUser}
-  />
+const SetPassword = ({ onSubmit, newUser, location }) => {
+  const isReset = queryString.parse(location.search).reset
+  return (
+    <UserFormLayout
+      header={isReset ? 'Reset password' : 'Welcome to seqr'}
+      subheader={isReset ? '' : 'Fill out this form to finish setting up your account'}
+      onSubmit={onSubmit}
+      form="set-password"
+      fields={isReset ? PASSWORD_FIELDS : FIELDS}
+      initialValues={newUser}
+    />
+  )
+}
 
 SetPassword.propTypes = {
+  location: PropTypes.object,
   newUser: PropTypes.object,
   onSubmit: PropTypes.func,
 }

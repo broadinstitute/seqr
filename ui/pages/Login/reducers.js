@@ -7,17 +7,24 @@ import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 
 export const login = (values) => {
   return () => {
-    return new HttpRequestHelper('api/login',
+    return new HttpRequestHelper('/api/login',
       () => {
         // Redirect to next page or home page
         window.location.href = `${window.location.origin}${queryString.parse(window.location.search).next || ''}`
       },
       (e) => {
-        if (e.body && e.body.errors) {
-          throw new SubmissionError({ _error: e.body.errors })
-        } else {
-          throw new SubmissionError({ _error: [e.message] })
-        }
+        throw new SubmissionError({ _error: [e.message] })
+      },
+    ).post(values)
+  }
+}
+
+export const forgotPassword = (values) => {
+  return () => {
+    return new HttpRequestHelper('/api/users/forgot_password',
+      () => {},
+      (e) => {
+        throw new SubmissionError({ _error: [e.message] })
       },
     ).post(values)
   }
@@ -31,11 +38,7 @@ export const setPassword = (values) => {
         window.location.href = window.location.origin
       },
       (e) => {
-        if (e.body && e.body.errors) {
-          throw new SubmissionError({ _error: e.body.errors })
-        } else {
-          throw new SubmissionError({ _error: [e.message] })
-        }
+        throw new SubmissionError({ _error: [e.message] })
       },
     ).post(values)
   }

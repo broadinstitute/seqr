@@ -137,7 +137,8 @@ def forgot_password(request):
             return redirect('forgot_password_sent')
 
     return render(request, 'forgot_password.html', {
-        'error': error, 
+        'error': error,
+        'new_page_url': '/users/forgot_password',
     })
 
 

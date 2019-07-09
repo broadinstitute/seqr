@@ -14,6 +14,7 @@ import GeneInfoSearch from 'pages/GeneInfoSearch'
 import LocusLists from 'pages/LocusLists'
 import Staff from 'pages/Staff/Staff'
 import Login from 'pages/Login/components/Login'
+import ForgotPassword from 'pages/Login/components/ForgotPassword'
 import SetPassword from 'pages/Login/components/SetPassword'
 import rootReducer from 'redux/rootReducer'
 import { configureStore } from 'redux/utils/configureStore'
@@ -37,6 +38,7 @@ ReactDOM.render(
             <Route path="/gene_lists" component={LocusLists} />
             <Route path="/staff" component={Staff} />
             <Route path="/login" component={Login} />
+            <Route path="/users/forgot_password" component={ForgotPassword} />
             <Route path="/users/set_password" component={SetPassword} />
             <Route component={() => <div>Invalid URL</div>} />
           </Switch>

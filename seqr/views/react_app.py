@@ -1,5 +1,6 @@
 import json
 import re
+import urllib
 from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
 from django.core.serializers.json import DjangoJSONEncoder
@@ -20,7 +21,7 @@ def no_login_main_app(request, *args, **kwargs):
     initial_json = {}
     user_token = kwargs.get('user_token')
     if user_token:
-        initial_json['newUser'] = _get_json_for_user(User.objects.get(password=user_token))
+        initial_json['newUser'] = _get_json_for_user(User.objects.get(password=urllib.unquote_plus(user_token)))
     return _render_app_html(request, initial_json)
 
 

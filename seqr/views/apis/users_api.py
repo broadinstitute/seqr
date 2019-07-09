@@ -1,5 +1,6 @@
 import itertools
 import json
+import urllib
 from anymail.exceptions import AnymailError
 from django.conf import settings
 from django.contrib.admin.views.decorators import staff_member_required
@@ -30,6 +31,36 @@ def get_all_collaborators(request):
         collaborators.update(_get_project_collaborators(project, include_permissions=False))
 
     return create_json_response(collaborators)
+
+
+@csrf_exempt
+def forgot_password(request):
+    request_json = json.loads(request.body)
+    if not request_json.get('email'):
+        return create_json_response({}, status=400, reason='Email is required')
+
+    users = User.objects.filter(email__iexact=request_json['email'])
+    if users.count() != 1:
+        return create_json_response({}, status=400, reason='No account found for this email')
+    user = users.first()
+
+    email_content = """
+        Hi there {full_name}--
+
+        Please click this link to reset your seqr password:
+        {base_url}users/set_password/{password_token}?reset=true
+        """.format(
+        full_name=user.get_full_name(),
+        base_url=settings.BASE_URL,
+        password_token=urllib.quote_plus(user.password),
+    )
+    print(email_content)
+    try:
+        user.email_user('Reset your seqr password', email_content, fail_silently=False)
+    except AnymailError as e:
+        return create_json_response({}, status=getattr(e, 'status_code', None) or 400, reason=str(e))
+
+    return create_json_response({'success': True})
 
 
 @csrf_exempt
