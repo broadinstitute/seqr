@@ -27,11 +27,9 @@ urlpatterns = [
     #
     # Account
     #
-    url(r'^login$', xbrowse_server.base.views.login_view, name='login_view'),
-    url(r'^logout$', xbrowse_server.base.views.logout_view, name='logout_view'),
     url(r'^set-password$', xbrowse_server.base.views.set_password, name='set_password'),   # DEPRECATED
-    url(r'^forgot-password$', xbrowse_server.base.views.forgot_password, name='forgot_password'),
-    url(r'^forgot-password-sent$', xbrowse_server.base.views.forgot_password_sent, name='forgot_password_sent'),
+    url(r'^forgot-password$', xbrowse_server.base.views.forgot_password, name='forgot_password'),  # DEPRECATED
+    url(r'^forgot-password-sent$', xbrowse_server.base.views.forgot_password_sent, name='forgot_password_sent'),  # WILL NOT CONVERT
     url(r'^user/(?P<username>\w+)', xbrowse_server.base.views.user_summary, name='user_summary'),  # WILL NOT CONVERT
 
     #
@@ -86,7 +84,7 @@ urlpatterns = [
     url(r'^project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w.|-]+)/coverage$', xbrowse_server.base.views.family_views.family_coverage, name='family_coverage'),  # WILL NOT CONVERT
     url(r'^project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w.|-]+)/gene$', xbrowse_server.base.views.family_views.family_gene_lookup, name='family_gene_lookup'),  # DEPRECATED
     url(r'^project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w.|-]+)/cause$', xbrowse_server.base.views.family_views.edit_family_cause, name='edit_family_cause'),  # WILL NOT CONVERT
-    url(r'^project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w.|-]+)/pedigreeimage/delete', xbrowse_server.base.views.family_views.pedigree_image_delete, name='pedigree_image_delete'),
+    url(r'^project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w.|-]+)/pedigreeimage/delete', xbrowse_server.base.views.family_views.pedigree_image_delete, name='pedigree_image_delete'),  # DEPRECATED
 
 
     #

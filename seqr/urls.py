@@ -99,6 +99,7 @@ from seqr.views.apis.users_api import \
     update_project_collaborator, \
     delete_project_collaborator, \
     set_password, \
+    forgot_password, \
     create_staff_user
 
 from seqr.views.apis.staff_api import \
@@ -111,7 +112,7 @@ from seqr.views.apis.staff_api import \
     mme_submissions
 
 from seqr.views.apis.awesomebar_api import awesomebar_autocomplete_handler
-from seqr.views.apis.auth_api import login_required_error, API_LOGIN_REQUIRED_URL
+from seqr.views.apis.auth_api import login_required_error, API_LOGIN_REQUIRED_URL, login_view, logout_view
 from seqr.views.apis.igv_api import fetch_igv_track
 from seqr.views.apis.analysis_group_api import update_analysis_group_handler, delete_analysis_group_handler
 from seqr.views.apis.project_api import create_project_handler, update_project_handler, delete_project_handler
@@ -130,7 +131,9 @@ react_app_pages = [
 ]
 
 no_login_react_app_pages = [
-    'users/set_password/(?P<user_token>[^/]+)/.*',
+    'login',
+    'users/forgot_password',
+    'users/set_password/(?P<user_token>.+)',
 ]
 
 # NOTE: the actual url will be this with an '/api' prefix
@@ -216,8 +219,11 @@ api_endpoints = {
     'matchmaker/send_email/(?P<matchmaker_result_guid>[\w.|-]+)': send_mme_contact_email,
     'matchmaker/contact_notes/(?P<institution>[^/]+)/update': update_mme_contact_note,
 
-    'users/get_all': get_all_collaborators,
+    'login': login_view,
+    'users/forgot_password': forgot_password,
     'users/(?P<username>[^/]+)/set_password': set_password,
+
+    'users/get_all': get_all_collaborators,
     'users/create_staff_user': create_staff_user,
     'project/(?P<project_guid>[^/]+)/collaborators/create': create_project_collaborator,
     'project/(?P<project_guid>[^/]+)/collaborators/(?P<username>[^/]+)/update': update_project_collaborator,
@@ -261,8 +267,9 @@ urlpatterns += [url("^%(url_endpoint)s$" % locals(), no_login_main_app) for url_
 for url_endpoint, handler_function in api_endpoints.items():
     urlpatterns.append( url("^api/%(url_endpoint)s$" % locals(), handler_function) )
 
-# login redirect for ajax calls
+# login/ logout
 urlpatterns += [
+    url('logout', logout_view),
     url(API_LOGIN_REQUIRED_URL.lstrip('/'), login_required_error)
 ]
 

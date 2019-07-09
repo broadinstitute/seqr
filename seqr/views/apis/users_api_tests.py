@@ -7,7 +7,7 @@ from django.test import TransactionTestCase
 from django.urls.base import reverse
 
 from seqr.views.apis.users_api import get_all_collaborators, set_password, create_staff_user, \
-    create_project_collaborator, update_project_collaborator, delete_project_collaborator
+    create_project_collaborator, update_project_collaborator, delete_project_collaborator, forgot_password
 from seqr.views.utils.test_utils import _check_login
 
 
@@ -50,7 +50,7 @@ class UsersAPITest(TransactionTestCase):
         expected_email_content = """
     Hi there --
     
-    test_user@test.com has added you as a collaborator in seqr.  
+    Test User has added you as a collaborator in seqr.  
     
     Please click this link to set up your account:
     /users/set_password/{password_token}
@@ -134,7 +134,7 @@ class UsersAPITest(TransactionTestCase):
         expected_email_content = """
     Hi there Test Staff--
     
-    test_user@test.com has added you as a collaborator in seqr.  
+    Test User has added you as a collaborator in seqr.  
     
     Please click this link to set up your account:
     /users/set_password/{password_token}
@@ -177,3 +177,38 @@ class UsersAPITest(TransactionTestCase):
 
         auth_user = auth.get_user(self.client)
         self.assertEqual(user, auth_user)
+
+    @mock.patch('django.contrib.auth.models.send_mail')
+    def test_forgot_password(self, mock_send_mail):
+        url = reverse(forgot_password)
+
+        # send invalid requests
+        response = self.client.post(url, content_type='application/json', data=json.dumps({}))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.reason_phrase, 'Email is required')
+
+        response = self.client.post(url, content_type='application/json', data=json.dumps({
+            'email': 'test_new_user@test.com'
+        }))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.reason_phrase, 'No account found for this email')
+
+        # Send valid request
+        response = self.client.post(url, content_type='application/json', data=json.dumps({
+            'email': 'test_user@test.com'
+        }))
+        self.assertEqual(response.status_code, 200)
+
+        expected_email_content = """
+        Hi there Test User--
+
+        Please click this link to reset your seqr password:
+        /users/set_password/pbkdf2_sha256%2430000%24y85kZgvhQ539%24jrEC3L1IhCezUx3Itp%2B14w%2FT7U6u5XUxtpBZXKv8eh4%3D?reset=true
+        """
+        mock_send_mail.assert_called_with(
+            'Reset your seqr password',
+            expected_email_content,
+            None,
+            ['test_user@test.com'],
+            fail_silently=False,
+        )

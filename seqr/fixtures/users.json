@@ -31,7 +31,7 @@
         "last_login": null,
         "is_superuser": true,
         "username": "test_user",
-        "first_name": "",
+        "first_name": "Test User",
         "last_name": "",
         "email": "test_user@test.com",
         "is_staff": true,
