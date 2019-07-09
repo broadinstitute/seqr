@@ -54,7 +54,7 @@ def forgot_password(request):
         base_url=settings.BASE_URL,
         password_token=urllib.quote_plus(user.password),
     )
-    print(email_content)
+
     try:
         user.email_user('Reset your seqr password', email_content, fail_silently=False)
     except AnymailError as e:
