@@ -134,6 +134,8 @@ no_login_react_app_pages = [
     'login',
     'users/forgot_password',
     'users/set_password/(?P<user_token>.+)',
+    'matchmaker/matchbox',
+    'matchmaker/disclaimer',
 ]
 
 # NOTE: the actual url will be this with an '/api' prefix

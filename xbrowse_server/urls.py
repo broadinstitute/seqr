@@ -1,15 +1,12 @@
 from django.conf.urls import include, url
-from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 from django.contrib import admin
 
-from django.conf import settings
 import xbrowse_server.base.views.individual_views
 import xbrowse_server.base.views.igv_views
 import xbrowse_server.base.views.family_group_views
 import xbrowse_server.base.views.reference_views
 import xbrowse_server.gene_lists.urls
 import xbrowse_server.staff.urls
-import django.views.static
 import xbrowse_server.api.urls
 
 
@@ -138,10 +135,8 @@ urlpatterns = [
     #
     url(r'^matchmaker/add/project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w|-]+)/individual/(?P<individual_id>[\w|-]+)$', xbrowse_server.matchmaker.views.matchmaker_add_page, name='matchmaker_add_page'),  # DEPRECATED
     url(r'^matchmaker/search/project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w|-]+)$', xbrowse_server.matchmaker.views.matchmaker_search_page, name='matchmaker_search_page'),  # DEPRECATED
-    url(r'^matchmaker/disclaimer$', xbrowse_server.matchmaker.views.matchmaker_disclaimer_page, name='matchmaker_disclaimer_page'),
     url(r'^matchmaker/translate/matchbox_id$', xbrowse_server.matchmaker.views.matchbox_id_info, name='matchbox_id_info'),  # DEPRECATED
     url(r'^matchmaker/matchbox_dashboard$', xbrowse_server.matchmaker.views.matchbox_dashboard, name='matchbox_dashboard'),  # DEPRECATED
-    url(r'^matchmaker/matchbox$', xbrowse_server.matchmaker.views.matchbox_info_page, name='matchbox_info_page'),
 
     #
     # Phenotype upload pages
