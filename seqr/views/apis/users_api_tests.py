@@ -49,12 +49,12 @@ class UsersAPITest(TransactionTestCase):
 
         expected_email_content = """
     Hi there --
-    
-    Test User has added you as a collaborator in seqr.  
-    
+
+    Test User has added you as a collaborator in seqr.
+
     Please click this link to set up your account:
     /users/set_password/{password_token}
-    
+
     Thanks!
     """.format(password_token=user.password)
         mock_send_mail.assert_called_with(
@@ -133,12 +133,12 @@ class UsersAPITest(TransactionTestCase):
 
         expected_email_content = """
     Hi there Test Staff--
-    
-    Test User has added you as a collaborator in seqr.  
-    
+
+    Test User has added you as a collaborator in seqr.
+
     Please click this link to set up your account:
     /users/set_password/{password_token}
-    
+
     Thanks!
     """.format(password_token=user.password)
         mock_send_mail.assert_called_with(

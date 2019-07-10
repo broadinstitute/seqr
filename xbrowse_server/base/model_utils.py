@@ -8,10 +8,10 @@ from django.db.models import Q
 from seqr.models import Project as SeqrProject, Family as SeqrFamily, Individual as SeqrIndividual, \
     VariantTagType as SeqrVariantTagType, VariantTag as SeqrVariantTag, VariantNote as SeqrVariantNote, \
     VariantFunctionalData as SeqrVariantFunctionalData, LocusList as SeqrLocusList, LocusListGene as SeqrLocusListGene, \
-    GeneNote as SeqrGeneNote, FamilyAnalysedBy as SeqrAnalysedBy, AnalysisGroup as SeqrAnalysisGroup
+    GeneNote as SeqrGeneNote, FamilyAnalysedBy as SeqrAnalysedBy, AnalysisGroup as SeqrAnalysisGroup, SavedVariant
 from seqr.utils.model_sync_utils import convert_html_to_plain_text
-from seqr.views.utils.variant_utils import deprecated_get_or_create_saved_variant
 from seqr.views.apis.locus_list_api import add_locus_list_user_permissions
+from seqr.views.utils.variant_utils import _retrieve_saved_variants_json, _update_saved_variant_json
 from xbrowse_server.base.models import Individual as BaseIndividual
 
 
@@ -107,15 +107,37 @@ XBROWSE_TO_SEQR_FIELD_MAPPING = {
     },
 }
 
+
+def _deprecated_get_or_create_saved_variant(xpos=None, ref=None, alt=None, family=None, project=None, **kwargs):
+    if not project:
+        project = family.project
+    saved_variant, _ = SavedVariant.objects.get_or_create(
+        xpos_start=xpos,
+        xpos_end=xpos + len(ref) - 1,
+        ref=ref,
+        alt=alt,
+        family=family,
+        project=project,
+    )
+    if not saved_variant.saved_variant_json:
+        try:
+            saved_variants_json = _retrieve_saved_variants_json(project, [(xpos, ref, alt, family)], create_if_missing=True)
+            if len(saved_variants_json):
+                _update_saved_variant_json(saved_variant, saved_variants_json[0])
+        except Exception as e:
+            logging.error("Unable to retrieve variant annotations for %s (%s, %s, %s): %s" % (family, xpos, ref, alt, e))
+    return saved_variant
+
+
 XBROWSE_TO_SEQR_ADDITIONAL_ENTITIES_MAPPING = {
     "VariantTag": {
-        "saved_variant": deprecated_get_or_create_saved_variant
+        "saved_variant": _deprecated_get_or_create_saved_variant
     },
     "VariantFunctionalData": {
-        "saved_variant": deprecated_get_or_create_saved_variant
+        "saved_variant": _deprecated_get_or_create_saved_variant
     },
     "VariantNote": {
-        "saved_variant": deprecated_get_or_create_saved_variant
+        "saved_variant": _deprecated_get_or_create_saved_variant
     }
 }
 

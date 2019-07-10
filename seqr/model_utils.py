@@ -1,6 +1,7 @@
 import logging
 import traceback
 
+from django.contrib.auth.models import User
 from django.db.models.query_utils import Q
 from django.utils import timezone
 
@@ -9,10 +10,12 @@ from seqr.views.utils.json_utils import _to_snake_case
 from xbrowse_server.base.models import Project as BaseProject, Family as BaseFamily, Individual as BaseIndividual, \
     ProjectTag as BaseProjectTag, VariantTag as BaseVariantTag, VariantNote as BaseVariantNote, \
     VariantFunctionalData as BaseVariantFunctionalData, GeneNote as BaseGeneNote, AnalysedBy as BaseAnalysedBy, \
-    FamilyGroup as BaseFamilyGroup, VCFFile
+    FamilyGroup as BaseFamilyGroup, VCFFile, ProjectGeneList, ProjectCollaborator
 from xbrowse_server.gene_lists.models import GeneList as BaseGeneList, GeneListItem as BaseGeneListItem
-from xbrowse_server.mall import get_datastore
+from xbrowse_server.mall import get_datastore, get_reference
 from xbrowse_server.search_cache.utils import clear_project_results_cache
+from xbrowse_server.api.utils import add_extra_info_to_variants_project
+from xbrowse_server.base.lookups import get_variants_from_variant_tuples
 
 SEQR_TO_XBROWSE_CLASS_MAPPING = {
     "Project": BaseProject,
@@ -382,3 +385,52 @@ def update_xbrowse_vcfffiles(project, sample_type, elasticsearch_index, dataset_
     for indiv in [s.individual for s in matched_sample_id_to_sample_record.values()]:
         for base_indiv in BaseIndividual.objects.filter(seqr_individual=indiv).only('id'):
             base_indiv.vcf_files.add(vcf_file)
+
+
+def add_xbrowse_project_gene_lists(project, locus_lists):
+    xbrowse_project = find_matching_xbrowse_model(project)
+    for locus_list in locus_lists:
+        xbrowse_gene_list = find_matching_xbrowse_model(locus_list)
+        if xbrowse_project and xbrowse_gene_list:
+            ProjectGeneList.objects.get_or_create(project=xbrowse_project, gene_list=xbrowse_gene_list)
+
+
+def remove_xbrowse_project_gene_lists(project, locus_lists):
+    xbrowse_project = find_matching_xbrowse_model(project)
+    for locus_list in locus_lists:
+        xbrowse_gene_list = find_matching_xbrowse_model(locus_list)
+        if xbrowse_project and xbrowse_gene_list:
+            ProjectGeneList.objects.filter(project=xbrowse_project, gene_list=xbrowse_gene_list).delete()
+
+
+def create_xbrowse_project_collaborator(project, user, collaborator_type=None):
+    base_project = find_matching_xbrowse_model(project)
+    if base_project:
+        collab, _ = ProjectCollaborator.objects.get_or_create(user=user, project=base_project)
+        if collaborator_type:
+            collab.collaborator_type = collaborator_type
+            collab.save()
+
+
+def delete_xbrowse_project_collaborator(project, user):
+    base_project = find_matching_xbrowse_model(project)
+    if base_project:
+        ProjectCollaborator.objects.get(user=user, project=base_project).delete()
+
+
+def update_xbrowse_family_group_families(analysis_group, families):
+    base_family_group = find_matching_xbrowse_model(analysis_group)
+    if base_family_group:
+        base_family_group.families.set(BaseFamily.objects.filter(seqr_family__in=families))
+
+
+def _deprecated_retrieve_saved_variants_json(project, variant_tuples, create_if_missing):
+    project_id = project.deprecated_project_id
+    xbrowse_project = BaseProject.objects.get(project_id=project_id)
+    user = User.objects.filter(is_staff=True).first()  # HGMD annotations are only returned for staff users
+
+    variants = get_variants_from_variant_tuples(xbrowse_project, variant_tuples, user=user)
+    if not create_if_missing:
+        variants = [var for var in variants if not var.get_extra('created_variant')]
+    add_extra_info_to_variants_project(get_reference(), xbrowse_project, variants, add_populations=True)
+    return [variant.toJSON() for variant in variants]

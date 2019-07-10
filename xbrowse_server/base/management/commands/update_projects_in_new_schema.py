@@ -7,7 +7,7 @@ from django.db.models import Q
 from guardian.shortcuts import assign_perm
 
 from xbrowse_server.base.management.commands.transfer_mme_data import transfer_mme_submission_data, transfer_mme_results_data
-from seqr.views.utils.variant_utils import deprecated_get_or_create_saved_variant
+from xbrowse_server.base.model_utils import deprecated_get_or_create_saved_variant
 from seqr.views.apis import phenotips_api
 from seqr.views.apis.phenotips_api import _get_patient_data, _update_individual_phenotips_data
 from xbrowse_server.base.models import \

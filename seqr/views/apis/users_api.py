@@ -13,7 +13,7 @@ from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_user
 from seqr.views.utils.permissions_utils import get_projects_user_can_view, get_project_and_check_permissions, CAN_EDIT
-from xbrowse_server.base.models import Project as BaseProject, ProjectCollaborator
+from seqr.model_utils import create_xbrowse_project_collaborator, delete_xbrowse_project_collaborator
 
 
 class CreateUserException(Exception):
@@ -107,10 +107,7 @@ def create_project_collaborator(request, project_guid):
             return create_json_response({'error': e.message}, status=e.status_code, reason=e.message)
 
     project.can_view_group.user_set.add(user)
-    if project.deprecated_project_id:
-        base_project = BaseProject.objects.filter(project_id=project.deprecated_project_id).first()
-        if base_project:
-            ProjectCollaborator.objects.get_or_create(user=user, project=base_project)
+    create_xbrowse_project_collaborator(project, user)
 
     return create_json_response({
         'projectsByGuid': {project_guid: {'collaborators': get_json_for_project_collaborator_list(project)}}
@@ -145,15 +142,15 @@ def _create_user(request, is_staff=False):
 
 def send_welcome_email(user, referrer):
     email_content = """
-        Hi there {full_name}--
+    Hi there {full_name}--
 
-        {referrer} has added you as a collaborator in seqr.  
+    {referrer} has added you as a collaborator in seqr.
 
-        Please click this link to set up your account:
-        {base_url}users/set_password/{password_token}
+    Please click this link to set up your account:
+    {base_url}users/set_password/{password_token}
 
-        Thanks!
-        """.format(
+    Thanks!
+    """.format(
         full_name=user.get_full_name(),
         referrer=referrer.get_full_name() or referrer.email,
         base_url=settings.BASE_URL,
@@ -173,12 +170,8 @@ def _update_existing_user(user, project, request_json):
     else:
         project.can_edit_group.user_set.remove(user)
 
-    if project.deprecated_project_id:
-        base_project = BaseProject.objects.filter(project_id=project.deprecated_project_id).first()
-        if base_project:
-            collab, _ = ProjectCollaborator.objects.get_or_create(user=user, project=base_project)
-            collab.collaborator_type = 'manager' if request_json.get('hasEditPermissions') else 'collaborator'
-            collab.save()
+    create_xbrowse_project_collaborator(
+        project, user, collaborator_type='manager' if request_json.get('hasEditPermissions') else 'collaborator')
 
     return create_json_response({
         'projectsByGuid': {project.guid: {'collaborators': get_json_for_project_collaborator_list(project)}}
@@ -204,10 +197,7 @@ def delete_project_collaborator(request, project_guid, username):
     project.can_view_group.user_set.remove(user)
     project.can_edit_group.user_set.remove(user)
 
-    if project.deprecated_project_id:
-        base_project = BaseProject.objects.filter(project_id=project.deprecated_project_id).first()
-        if base_project:
-            ProjectCollaborator.objects.get(user=user, project=base_project).delete()
+    delete_xbrowse_project_collaborator(project, user)
 
     return create_json_response({
         'projectsByGuid': {project_guid: {'collaborators': get_json_for_project_collaborator_list(project)}}
