@@ -209,6 +209,7 @@ class Family(ModelWithGUID):
         ('Sc_ng', 'Strong candidate - novel gene'),
         ('Rcpc', 'Reviewed, currently pursuing candidates'),
         ('Rncc', 'Reviewed, no clear candidate'),
+        ('C', 'Closed, no longer under analysis'),
         ('I', 'Analysis in Progress'),
         ('Q', 'Waiting for data'),
     )

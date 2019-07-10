@@ -10,7 +10,7 @@ from seqr.utils.es_utils import InvalidIndexException
 from seqr.views.apis.locus_list_api import add_project_locus_lists
 from seqr.views.apis.variant_search_api import query_variants_handler, query_single_variant_handler, \
     export_variants_handler, search_context_handler, get_saved_search_handler, create_saved_search_handler, \
-    update_saved_search_handler, delete_saved_search_handler
+    update_saved_search_handler, delete_saved_search_handler, get_variant_gene_breakdown
 from seqr.views.utils.test_utils import _check_login
 
 
@@ -41,8 +41,9 @@ def _get_es_variants(results_model, **kwargs):
 class VariantSearchAPITest(TestCase):
     fixtures = ['users', '1kg_project', 'reference_data', 'variant_searches']
 
+    @mock.patch('seqr.views.apis.variant_search_api.get_es_variant_gene_counts')
     @mock.patch('seqr.views.apis.variant_search_api.get_es_variants')
-    def test_query_variants(self, mock_get_variants):
+    def test_query_variants(self, mock_get_variants, mock_get_gene_counts):
         url = reverse(query_variants_handler, args=[SEARCH_HASH])
         _check_login(self, url)
 
@@ -129,6 +130,21 @@ class VariantSearchAPITest(TestCase):
              '14,33', '50', '46.0', '0.702127659574', 'NA19679', '0', '45,0', '45', '99.0', '0.0'])
 
         mock_get_variants.assert_called_with(results_model, page=1, load_all=True)
+
+        # Test gene breakdown
+        gene_counts = {
+            'ENSG00000227232': {'total': 2, 'families': {'F000001_1': 2, 'F000002_2': 1}},
+            'ENSG00000268903': {'total': 1, 'families': {'F000002_2': 1}}
+        }
+        mock_get_gene_counts.return_value = gene_counts
+
+        gene_breakdown_url = reverse(get_variant_gene_breakdown, args=[SEARCH_HASH])
+        response = self.client.get(gene_breakdown_url)
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertSetEqual(set(response_json.keys()), {'searchGeneBreakdown', 'genesById'})
+        self.assertDictEqual(response_json['searchGeneBreakdown'], {SEARCH_HASH: gene_counts})
+        self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000227232', 'ENSG00000268903'})
 
     def test_search_context(self):
         search_context_url = reverse(search_context_handler)

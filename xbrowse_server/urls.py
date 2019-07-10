@@ -1,15 +1,12 @@
 from django.conf.urls import include, url
-from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 from django.contrib import admin
 
-from django.conf import settings
 import xbrowse_server.base.views.individual_views
 import xbrowse_server.base.views.igv_views
 import xbrowse_server.base.views.family_group_views
 import xbrowse_server.base.views.reference_views
 import xbrowse_server.gene_lists.urls
 import xbrowse_server.staff.urls
-import django.views.static
 import xbrowse_server.api.urls
 
 
@@ -21,17 +18,15 @@ urlpatterns = [
     #
     # Public
     #
-    url(r'^landingpage$', xbrowse_server.base.views.landing_page, name='landing_page'),
+    url(r'^landingpage$', xbrowse_server.base.views.landing_page, name='landing_page'),  # DEPRECATED
     url(r'^projects$', xbrowse_server.base.views.home, name='home'),  # DEPRECATED
 
     #
     # Account
     #
-    url(r'^login$', xbrowse_server.base.views.login_view, name='login_view'),
-    url(r'^logout$', xbrowse_server.base.views.logout_view, name='logout_view'),
     url(r'^set-password$', xbrowse_server.base.views.set_password, name='set_password'),   # DEPRECATED
-    url(r'^forgot-password$', xbrowse_server.base.views.forgot_password, name='forgot_password'),
-    url(r'^forgot-password-sent$', xbrowse_server.base.views.forgot_password_sent, name='forgot_password_sent'),
+    url(r'^forgot-password$', xbrowse_server.base.views.forgot_password, name='forgot_password'),  # DEPRECATED
+    url(r'^forgot-password-sent$', xbrowse_server.base.views.forgot_password_sent, name='forgot_password_sent'),  # WILL NOT CONVERT
     url(r'^user/(?P<username>\w+)', xbrowse_server.base.views.user_summary, name='user_summary'),  # WILL NOT CONVERT
 
     #
@@ -86,7 +81,7 @@ urlpatterns = [
     url(r'^project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w.|-]+)/coverage$', xbrowse_server.base.views.family_views.family_coverage, name='family_coverage'),  # WILL NOT CONVERT
     url(r'^project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w.|-]+)/gene$', xbrowse_server.base.views.family_views.family_gene_lookup, name='family_gene_lookup'),  # DEPRECATED
     url(r'^project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w.|-]+)/cause$', xbrowse_server.base.views.family_views.edit_family_cause, name='edit_family_cause'),  # WILL NOT CONVERT
-    url(r'^project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w.|-]+)/pedigreeimage/delete', xbrowse_server.base.views.family_views.pedigree_image_delete, name='pedigree_image_delete'),
+    url(r'^project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w.|-]+)/pedigreeimage/delete', xbrowse_server.base.views.family_views.pedigree_image_delete, name='pedigree_image_delete'),  # DEPRECATED
 
 
     #
@@ -140,10 +135,8 @@ urlpatterns = [
     #
     url(r'^matchmaker/add/project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w|-]+)/individual/(?P<individual_id>[\w|-]+)$', xbrowse_server.matchmaker.views.matchmaker_add_page, name='matchmaker_add_page'),  # DEPRECATED
     url(r'^matchmaker/search/project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w|-]+)$', xbrowse_server.matchmaker.views.matchmaker_search_page, name='matchmaker_search_page'),  # DEPRECATED
-    url(r'^matchmaker/disclaimer$', xbrowse_server.matchmaker.views.matchmaker_disclaimer_page, name='matchmaker_disclaimer_page'),
     url(r'^matchmaker/translate/matchbox_id$', xbrowse_server.matchmaker.views.matchbox_id_info, name='matchbox_id_info'),  # DEPRECATED
     url(r'^matchmaker/matchbox_dashboard$', xbrowse_server.matchmaker.views.matchbox_dashboard, name='matchbox_dashboard'),  # DEPRECATED
-    url(r'^matchmaker/matchbox$', xbrowse_server.matchmaker.views.matchbox_info_page, name='matchbox_info_page'),
 
     #
     # Phenotype upload pages

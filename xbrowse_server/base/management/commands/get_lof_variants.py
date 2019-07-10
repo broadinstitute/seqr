@@ -3,7 +3,6 @@ import csv
 from django.core.management.base import BaseCommand
 import elasticsearch
 import elasticsearch_dsl
-import gzip
 import json
 
 import settings

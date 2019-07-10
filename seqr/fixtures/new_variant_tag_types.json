@@ -3,16 +3,16 @@
     "model": "seqr.varianttagtype",
     "pk": null,
     "fields": {
-        "guid": "VTT_tier_1_known_gene_new_phen",
+        "guid": "VTT_test_segregation",
         "created_date": "2018-04-27T00:00:00.000Z",
         "created_by": null,
         "last_modified_date": null,
         "project": null,
-        "name": "Tier 1 - Known gene, new phenotype",
-        "category": "CMG Discovery Tags",
-        "description": "Gene is previously associated, in OMIM, with a different phenotype",
-        "color": "#7fad7f",
-        "order": 5.5,
+        "name": "Test segregation",
+        "category": "Collaboration",
+        "description": "",
+        "color": "#c17110",
+        "order": 14.6,
         "is_built_in": true
     }
 },
@@ -20,16 +20,33 @@
     "model": "seqr.varianttagtype",
     "pk": null,
     "fields": {
-        "guid": "VTT_tier_2_known_gene_new_phen",
+        "guid": "VTT_segregation _validated",
         "created_date": "2018-04-27T00:00:00.000Z",
         "created_by": null,
         "last_modified_date": null,
         "project": null,
-        "name": "Tier 2 - Known gene, new phenotype",
-        "category": "CMG Discovery Tags",
-        "description": "Gene is previously associated, in OMIM, with a different phenotype",
-        "color": "#4f8dbdd6",
-        "order": 9.5,
+        "name": "Segregation validated",
+        "category": "Collaboration",
+        "description": "",
+        "color": "#799a5b",
+        "order": 14.7,
+        "is_built_in": true
+    }
+},
+{
+    "model": "seqr.varianttagtype",
+    "pk": null,
+    "fields": {
+        "guid": "VTT_segregation_did_not_confir",
+        "created_date": "2018-04-27T00:00:00.000Z",
+        "created_by": null,
+        "last_modified_date": null,
+        "project": null,
+        "name": "Segregation did not confirm",
+        "category": "Collaboration",
+        "description": "",
+        "color": "#b44b4b",
+        "order": 14.8,
         "is_built_in": true
     }
 }

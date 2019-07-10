@@ -466,6 +466,7 @@ def pedigree_image_delete(request, project_id, family_id):
     return render(request, 'family/pedigree_image_delete.html', {
         'project': project,
         'family': family,
+        'new_page_url': '/variant_search/family/{}'.format(family.seqr_family.guid) if family.seqr_family else None,
     })
 
 

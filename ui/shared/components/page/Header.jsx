@@ -17,7 +17,7 @@ const HeaderMenu = styled(Menu)`
 
 const PageHeader = ({ user }) =>
   <HeaderMenu borderless inverted attached>
-    <Menu.Item as={Link} to="/dashboard"><Header size="medium" inverted>seqr</Header></Menu.Item>
+    <Menu.Item as={Link} to="/"><Header size="medium" inverted>seqr</Header></Menu.Item>
     {Object.keys(user).length && [
       <Menu.Item key="gene" as={Link} to="/gene_info" content="Gene Info" />,
       <Menu.Item key="gene_lists" as={Link} to="/gene_lists" content="Gene Lists" />,

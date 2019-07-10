@@ -14,12 +14,10 @@ import tempfile
 
 from django.core.files import File
 
-from seqr.model_utils import update_seqr_model
+from seqr.model_utils import update_seqr_model, find_matching_xbrowse_model
 from seqr.models import Individual
 from seqr.views.utils.orm_to_json_utils import _get_json_for_individuals
 from settings import BASE_DIR
-
-from xbrowse_server.base.models import Family as BaseFamily
 
 logger = logging.getLogger(__name__)
 
@@ -143,17 +141,11 @@ def _save_pedigree_image_file(family, png_file_path):
         family.save()
 
     # update deprecated model
-    try:
-        base_families = BaseFamily.objects.filter(family_id=family.family_id, project__project_id=family.project.deprecated_project_id)
-        if base_families:
-            base_family = base_families[0]
-            with open(png_file_path) as pedigree_image_file:
-                base_family.pedigree_image.save(os.path.basename(png_file_path), File(pedigree_image_file))
-                base_family.save()
-    except Exception as e:
-        logger.error("Couldn't sync pedigree image to BaseFamily: " + str(e))
-
-    #print("saving "+os.path.abspath(os.path.join(settings.MEDIA_ROOT, family.pedigree_image.name)))
+    base_family = find_matching_xbrowse_model(family)
+    if base_family:
+        with open(png_file_path) as pedigree_image_file:
+            base_family.pedigree_image.save(os.path.basename(png_file_path), File(pedigree_image_file))
+            base_family.save()
 
 
 def _random_string(size=10):
