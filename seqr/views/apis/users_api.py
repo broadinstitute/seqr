@@ -135,27 +135,31 @@ def _create_user(request, is_staff=False):
         is_staff=is_staff,
     )
 
-    email_content = """
-    Hi there {full_name}--
-    
-    {referrer} has added you as a collaborator in seqr.  
-    
-    Please click this link to set up your account:
-    {base_url}users/set_password/{password_token}
-    
-    Thanks!
-    """.format(
-        full_name=user.get_full_name(),
-        referrer=request.user.get_full_name() or request.user.email,
-        base_url=settings.BASE_URL,
-        password_token=user.password,
-    )
     try:
-        user.email_user('Set up your seqr account', email_content, fail_silently=False)
+        send_welcome_email(user, request.user)
     except AnymailError as e:
         raise CreateUserException(str(e), status_code=getattr(e, 'status_code', None) or 400)
 
     return user
+
+
+def send_welcome_email(user, referrer):
+    email_content = """
+        Hi there {full_name}--
+
+        {referrer} has added you as a collaborator in seqr.  
+
+        Please click this link to set up your account:
+        {base_url}users/set_password/{password_token}
+
+        Thanks!
+        """.format(
+        full_name=user.get_full_name(),
+        referrer=referrer.get_full_name() or referrer.email,
+        base_url=settings.BASE_URL,
+        password_token=user.password,
+    )
+    user.email_user('Set up your seqr account', email_content, fail_silently=False)
 
 
 def _update_existing_user(user, project, request_json):

@@ -9,6 +9,7 @@ from settings import ENABLE_DJANGO_DEBUG_TOOLBAR, MEDIA_ROOT
 from django.conf.urls import url, include
 from django.contrib import admin
 import django.contrib.admindocs.urls
+import django.views.static
 
 from seqr.views.apis.family_api import \
     update_family_fields_handler, \
