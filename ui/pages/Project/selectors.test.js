@@ -111,11 +111,14 @@ test('getDefaultMmeSubmissionByIndividual', () => {
 test('getMmeResultsByIndividual', () => {
   const mmeResults = getMmeResultsByIndividual(STATE_WITH_2_FAMILIES, {match: {params: {}}})
   expect(Object.keys(mmeResults).length).toEqual(6)
-  expect(mmeResults.I021475_na19675_1.length).toEqual(1)
-  expect(mmeResults.I021475_na19675_1[0].id).toEqual('12531')
-  expect(mmeResults.I021475_na19675_1[0].geneVariants.length).toEqual(1)
-  expect(mmeResults.I021475_na19675_1[0].comments).toEqual('This seems promising')
-  expect(mmeResults.I021475_na19675_1[0].matchStatus.comments).toEqual('This seems promising')
+  expect(mmeResults.I021475_na19675_1.active.length).toEqual(1)
+  expect(mmeResults.I021475_na19675_1.active[0].id).toEqual('12531')
+  expect(mmeResults.I021475_na19675_1.active[0].geneVariants.length).toEqual(1)
+  expect(mmeResults.I021475_na19675_1.active[0].comments).toEqual('This seems promising')
+  expect(mmeResults.I021475_na19675_1.active[0].matchStatus.comments).toEqual('This seems promising')
+
+  expect(mmeResults.I021475_na19675_1.removed.length).toEqual(1)
+  expect(mmeResults.I021475_na19675_1.removed[0].id).toEqual('10509')
 })
 
 test('getMmeDefaultContactEmail', () => {

@@ -297,10 +297,19 @@ export const getMmeResultsByIndividual = createSelector(
   getMmeResultsByGuid,
   getProjectAnalysisGroupIndividualsByGuid,
   (mmeResultsByGuid, individualsByGuid) =>
-    mapValues(individualsByGuid, individual => (individual.mmeResultGuids || []).map(resultGuid => ({
-      ...mmeResultsByGuid[resultGuid].matchStatus,
-      ...mmeResultsByGuid[resultGuid],
-    }))),
+    mapValues(individualsByGuid, individual => (individual.mmeResultGuids || []).reduce((acc, resultGuid) => {
+      const result = {
+        ...mmeResultsByGuid[resultGuid].matchStatus,
+        ...mmeResultsByGuid[resultGuid],
+      }
+      if (result.matchRemoved || individual.mmeDeletedDate) {
+        acc.removed.push(result)
+      }
+      else {
+        acc.active.push(result)
+      }
+      return acc
+    }, { active: [], removed: [] })),
 )
 
 export const getMmeDefaultContactEmail = createSelector(
