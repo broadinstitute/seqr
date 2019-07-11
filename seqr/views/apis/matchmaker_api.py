@@ -124,6 +124,10 @@ def _search_individual_matches(individual, user):
     for patient_id in removed_patients:
         saved_result = initial_saved_results[patient_id]
         if saved_result.we_contacted or saved_result.host_contacted or saved_result.comments:
+            if not saved_result.match_removed:
+                saved_result.match_removed = True
+                saved_result.save()
+                removed_count += 1
             saved_results[patient_id] = saved_result
         else:
             saved_result.delete()

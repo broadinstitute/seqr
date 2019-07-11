@@ -831,6 +831,8 @@ class MatchmakerResult(ModelWithGUID):
     flag_for_analysis = models.BooleanField(default=False)
     comments = models.TextField(null=True, blank=True)
 
+    match_removed = models.BooleanField(default=False)
+
     def __unicode__(self):
         return '{}_{}_result'.format(self.id, str(self.individual))
 
@@ -840,7 +842,7 @@ class MatchmakerResult(ModelWithGUID):
     class Meta:
         json_fields = [
             'guid', 'comments', 'we_contacted', 'host_contacted', 'deemed_irrelevant', 'flag_for_analysis',
-            'created_date',
+            'created_date', 'match_removed'
         ]
 
 

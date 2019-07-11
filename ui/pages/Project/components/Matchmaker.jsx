@@ -387,9 +387,26 @@ const BaseMatchmakerIndividual = ({ loading, load, searchMme, individual, onSubm
           defaultSortColumn="createdDate"
           defaultSortDescending
           columns={DISPLAY_FIELDS}
-          data={mmeResults}
+          data={mmeResults.active}
           loading={loading}
+          emptyContent="No matches found"
         />
+        {mmeResults.removed && mmeResults.removed.length > 0 &&
+          <div>
+            <VerticalSpacer height={10} />
+            <Header dividing disabled size="medium" content="Previous Matches" />
+            <SortableTable
+              basic="very"
+              fixed
+              idField="id"
+              defaultSortColumn="createdDate"
+              defaultSortDescending
+              columns={DISPLAY_FIELDS}
+              data={mmeResults.removed}
+              loading={loading}
+            />
+          </div>
+        }
       </DataLoader> :
       <div>
         <Header
@@ -423,7 +440,7 @@ BaseMatchmakerIndividual.propTypes = {
   searchMme: PropTypes.func,
   onSubmit: PropTypes.func,
   defaultMmeSubmission: PropTypes.object,
-  mmeResults: PropTypes.array,
+  mmeResults: PropTypes.object,
 }
 
 const mapStateToProps = (state, ownProps) => ({
