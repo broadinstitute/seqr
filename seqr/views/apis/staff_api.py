@@ -8,6 +8,7 @@ from dateutil import relativedelta as rdelta
 from django.contrib.admin.views.decorators import staff_member_required
 from django.db.models import prefetch_related_objects, Q, Prefetch, Max
 from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
 
 from seqr.utils.es_utils import get_es_client, get_latest_loaded_samples
 from seqr.utils.gene_utils import get_genes
@@ -778,3 +779,100 @@ def saved_variants(request, tag):
         'individualsByGuid': {indiv['individualGuid']: indiv for indiv in individuals_json},
         'locusListsByGuid': locus_lists_by_guid,
     })
+
+
+@staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
+@csrf_exempt
+def receive_qc_pipeline_output(request):
+    # TODO
+    project = get_project_and_check_permissions(project_guid, request.user)
+
+    def process_records(json_records, filename='ped_file'):
+        pedigree_records, errors, warnings = parse_pedigree_table(json_records, filename, user=request.user, project=project)
+        if errors:
+            raise ErrorsWarningsException(errors, warnings)
+        return pedigree_records
+
+    try:
+        uploaded_file_id, filename, json_records = save_uploaded_file(request, process_records=process_records)
+    except ErrorsWarningsException as e:
+        return create_json_response({'errors': e.errors, 'warnings': e.warnings}, status=400, reason=e.errors)
+    except Exception as e:
+        return create_json_response({'errors': [e.message or str(e)], 'warnings': []}, status=400, reason=e.message or str(e))
+
+    # send back some stats
+    individual_ids_by_family = defaultdict(list)
+    for r in json_records:
+        if r.get(JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN):
+            individual_ids_by_family[r[JsonConstants.FAMILY_ID_COLUMN]].append(
+                (r[JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN], True)
+            )
+        else:
+            individual_ids_by_family[r[JsonConstants.FAMILY_ID_COLUMN]].append(
+                (r[JsonConstants.INDIVIDUAL_ID_COLUMN], False)
+            )
+
+    num_individuals = sum([len(indiv_ids) for indiv_ids in individual_ids_by_family.values()])
+    num_existing_individuals = 0
+    missing_prev_ids = []
+    for family_id, indiv_ids in individual_ids_by_family.items():
+        existing_individuals = {i.individual_id for i in Individual.objects.filter(
+            individual_id__in=[indiv_id for (indiv_id, _) in indiv_ids], family__family_id=family_id, family__project=project
+        ).only('individual_id')}
+        num_existing_individuals += len(existing_individuals)
+        missing_prev_ids += [indiv_id for (indiv_id, is_previous) in indiv_ids if is_previous and indiv_id not in existing_individuals]
+    num_individuals_to_create = num_individuals - num_existing_individuals
+    if missing_prev_ids:
+        return create_json_response(
+            {'errors': [
+                'Could not find individuals with the following previous IDs: {}'.format(', '.join(missing_prev_ids))
+            ], 'warnings': []},
+            status=400, reason='Invalid input')
+
+    family_ids = set(r[JsonConstants.FAMILY_ID_COLUMN] for r in json_records)
+    num_families = len(family_ids)
+    num_existing_families = Family.objects.filter(family_id__in=family_ids, project=project).count()
+    num_families_to_create = num_families - num_existing_families
+
+    info = [
+        "{num_families} families, {num_individuals} individuals parsed from {filename}".format(
+            num_families=num_families, num_individuals=num_individuals, filename=filename
+        ),
+        "{} new families, {} new individuals will be added to the project".format(num_families_to_create, num_individuals_to_create),
+        "{} existing individuals will be updated".format(num_existing_individuals),
+    ]
+
+    response = {
+        'uploadedFileId': uploaded_file_id,
+        'errors': [],
+        'warnings': [],
+        'info': info,
+    }
+    logger.info(response)
+    return create_json_response(response)
+
+
+@staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
+@csrf_exempt
+def save_qc_pipeline_output(request, upload_file_id):
+    # TODO
+    project = get_project_and_check_permissions(project_guid, request.user)
+
+    json_records = load_uploaded_file(upload_file_id)
+
+    updated_families, updated_individuals = add_or_update_individuals_and_families(
+        project, individual_records=json_records, user=request.user
+    )
+
+    # edit individuals
+    individuals = _get_json_for_individuals(updated_individuals, request.user, add_sample_guids_field=True)
+    individuals_by_guid = {individual['individualGuid']: individual for individual in individuals}
+    families = _get_json_for_families(updated_families, request.user, add_individual_guids_field=True)
+    families_by_guid = {family['familyGuid']: family for family in families}
+
+    updated_families_and_individuals_by_guid = {
+        'individualsByGuid': individuals_by_guid,
+        'familiesByGuid': families_by_guid,
+    }
+
+    return create_json_response(updated_families_and_individuals_by_guid)

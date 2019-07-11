@@ -14,6 +14,7 @@ import DiscoverySheet from './components/DiscoverySheet'
 import ElasticsearchStatus from './components/ElasticsearchStatus'
 import CreateUser from './components/CreateUser'
 import Matchmaker from './components/Matchmaker'
+import SampleQc from './components/SampleQc'
 
 const STAFF_PAGES = [
   { path: 'anvil', params: '/:projectGuid?', component: Anvil },
@@ -21,6 +22,7 @@ const STAFF_PAGES = [
   { path: 'discovery_sheet', params: '/:projectGuid?', component: DiscoverySheet },
   { path: 'elasticsearch_status', component: ElasticsearchStatus },
   { path: 'matchmaker', component: Matchmaker },
+  { path: 'sample_qc', component: SampleQc },
   { path: 'saved_variants', component: SavedVariants },
   { path: 'seqr_stats' },
 ]
