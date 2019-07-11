@@ -374,7 +374,7 @@ export const STATE_WITH_2_FAMILIES = {
       caseReviewStatusLastModifiedBy: null,
       caseReviewStatusLastModifiedDate: '2016-12-05T10:29:00.000Z',
       createdDate: '2016-12-05T10:29:00.000Z',
-      mmeResultGuids: ['MR0005038_HK018_0047'],
+      mmeResultGuids: ['MR0005038_HK018_0047','MR0004688_RGP_105_3'],
       mmeSubmittedDate: '2018-05-09T10:29:00.000Z',
       mmeSubmittedData: {
         phenotypes: [
@@ -834,7 +834,36 @@ export const STATE_WITH_2_FAMILIES = {
         inheritanceMode: 'Recessive',
       },
       score: 1,
-    }
+    },
+    MR0004688_RGP_105_3: {
+      geneVariants: [{ geneId: "ENSG00000272333" }],
+      id: "10509",
+      individualGuid: "I021475_na19675_1",
+      matchStatus: {
+          comments: "",
+          createdDate: "2018-07-26T17:36:25.422Z",
+          deemedIrrelevant: false,
+          flagForAnalysis: false,
+          hostContacted: false,
+          matchRemoved: true,
+          matchmakerResultGuid: "MR0004688_RGP_105_3",
+          weContacted: true
+      },
+      patient: {
+          contact: {
+              href: "mailto:j.weiss@vumc.nl",
+              institution: "VU University Medical Center",
+              name: "Janneke Weiss"
+          },
+          genomicFeatures: [{ gene: { id: "ENSG00000272333" } }],
+          id: "10509",
+          label: "2016-174",
+          sex: "MALE",
+          species: "NCBITaxon:9606"
+      },
+      phenotypes: [],
+      score: 1.0
+    },
   },
   search: { familiesByGuid: { result: ['F011652_1', 'F011652_2'] } },
   genesById: { 'ENSG00000228198': { geneId: 'ENSG00000228198', geneSymbol: 'OR2M3' } },

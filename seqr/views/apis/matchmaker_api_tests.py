@@ -54,6 +54,7 @@ PARSED_NEW_MATCH_JSON = {
         'hostContacted': False,
         'deemedIrrelevant': False,
         'flagForAnalysis': False,
+        'matchRemoved': False,
         'createdDate': mock.ANY,
     },
 }
@@ -84,7 +85,7 @@ class VariantSearchAPITest(TestCase):
         self.assertSetEqual(set(response_json.keys()), {'mmeResultsByGuid', 'individualsByGuid', 'genesById', 'savedVariantsByGuid', 'mmeContactNotes'})
 
         self.assertSetEqual(
-            set(response_json['mmeResultsByGuid'].keys()), {'MR0007228_VCGS_FAM50_156', RESULT_STATUS_GUID}
+            set(response_json['mmeResultsByGuid'].keys()), {'MR0007228_VCGS_FAM50_156', 'MR0004688_RGP_105_3', RESULT_STATUS_GUID}
         )
         self.assertDictEqual(response_json['mmeResultsByGuid'][RESULT_STATUS_GUID], {
             'id': 'P0004515',
@@ -122,6 +123,7 @@ class VariantSearchAPITest(TestCase):
                 'hostContacted': True,
                 'deemedIrrelevant': True,
                 'flagForAnalysis': False,
+                'matchRemoved': False,
                 'createdDate': '2019-02-12T18:43:56.358Z',
             },
         })
@@ -171,7 +173,7 @@ class VariantSearchAPITest(TestCase):
         }})
         self.assertSetEqual(
             set(response_json['individualsByGuid'][INDIVIDUAL_GUID]['mmeResultGuids']),
-            {'MR0007228_VCGS_FAM50_156', RESULT_STATUS_GUID})
+            {'MR0007228_VCGS_FAM50_156', 'MR0004688_RGP_105_3', RESULT_STATUS_GUID})
 
         self.assertSetEqual(
             set(response_json['genesById'].keys()),
@@ -212,11 +214,13 @@ class VariantSearchAPITest(TestCase):
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {'mmeResultsByGuid', 'individualsByGuid', 'genesById', 'mmeContactNotes'})
 
-        self.assertEqual(len(response_json['mmeResultsByGuid']), 2)
+        self.assertEqual(len(response_json['mmeResultsByGuid']), 3)
         self.assertTrue(RESULT_STATUS_GUID in response_json['mmeResultsByGuid'])
-        new_result_guid = next(k for k in response_json['mmeResultsByGuid'].keys() if k not in {'MR0007228_VCGS_FAM50_156', RESULT_STATUS_GUID})
+        new_result_guid = next(k for k in response_json['mmeResultsByGuid'].keys()
+                               if k not in {'MR0007228_VCGS_FAM50_156', 'MR0004688_RGP_105_3', RESULT_STATUS_GUID})
 
         self.assertDictEqual(response_json['mmeResultsByGuid'][new_result_guid], PARSED_NEW_MATCH_JSON)
+        self.assertTrue(response_json['mmeResultsByGuid']['MR0004688_RGP_105_3']['matchStatus']['matchRemoved'])
         self.assertDictEqual(response_json['individualsByGuid'], {INDIVIDUAL_GUID: {
             'mmeResultGuids': mock.ANY,
             'mmeSubmittedData': {
@@ -613,6 +617,7 @@ class VariantSearchAPITest(TestCase):
                 'hostContacted': True,
                 'deemedIrrelevant': False,
                 'flagForAnalysis': True,
+                'matchRemoved': False,
                 'createdDate': '2019-02-12T18:43:56.358Z',
             },
         }}})
@@ -641,6 +646,7 @@ class VariantSearchAPITest(TestCase):
                 'hostContacted': True,
                 'deemedIrrelevant': True,
                 'flagForAnalysis': False,
+                'matchRemoved': False,
                 'createdDate': '2019-02-12T18:43:56.358Z',
             },
         }}})
