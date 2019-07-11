@@ -302,7 +302,7 @@ export const getMmeResultsByIndividual = createSelector(
         ...mmeResultsByGuid[resultGuid].matchStatus,
         ...mmeResultsByGuid[resultGuid],
       }
-      if (result.matchRemoved) {
+      if (result.matchRemoved || individual.mmeDeletedDate) {
         acc.removed.push(result)
       }
       else {
