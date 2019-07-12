@@ -4,7 +4,7 @@ import { connect } from 'react-redux'
 import { Grid } from 'semantic-ui-react'
 
 import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
-import FileUploadField, { validateUploadedFile } from 'shared/components/form/XHRUploaderField'
+import FileUploadField, { validateUploadedFile, warnUploadedFile } from 'shared/components/form/XHRUploaderField'
 
 import { uploadQcPipelineOutput } from '../reducers'
 
@@ -17,6 +17,7 @@ const UPLOAD_FIELDS = [
     auto: true,
     required: true,
     validate: validateUploadedFile,
+    warn: warnUploadedFile,
     dropzoneLabel: 'Upload QC Pipeline Output',
     url: '/api/staff/upload_qc_pipeline_output',
   },
@@ -30,6 +31,7 @@ const SampleQcUpload = ({ onSubmit }) =>
         form="sampleQc"
         onSubmit={onSubmit}
         showErrorPanel
+        liveValidate
         fields={UPLOAD_FIELDS}
         noModal
         successMessage="QC info successfully added"

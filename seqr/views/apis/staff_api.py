@@ -6,6 +6,7 @@ import logging
 from datetime import datetime, timedelta
 from dateutil import relativedelta as rdelta
 from django.contrib.admin.views.decorators import staff_member_required
+from django.contrib.postgres.aggregates import ArrayAgg
 from django.db.models import prefetch_related_objects, Q, Prefetch, Max
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
@@ -18,6 +19,7 @@ from seqr.views.pages.project_page import get_project_variant_tag_types
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.matchmaker_api import get_mme_genes_phenotypes, parse_mme_patient
 from seqr.views.apis.saved_variant_api import _saved_variant_genes, _add_locus_lists
+from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file
 from seqr.views.utils.json_utils import create_json_response, _to_camel_case
 from seqr.views.utils.orm_to_json_utils import _get_json_for_individuals, get_json_for_saved_variants, \
     get_json_for_variant_functional_data_tag_types, get_json_for_projects, _get_json_for_families, \
@@ -784,72 +786,119 @@ def saved_variants(request, tag):
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def receive_qc_pipeline_output(request):
-    # TODO
-    project = get_project_and_check_permissions(project_guid, request.user)
-
-    def process_records(json_records, filename='ped_file'):
-        pedigree_records, errors, warnings = parse_pedigree_table(json_records, filename, user=request.user, project=project)
-        if errors:
-            raise ErrorsWarningsException(errors, warnings)
-        return pedigree_records
-
     try:
-        uploaded_file_id, filename, json_records = save_uploaded_file(request, process_records=process_records)
-    except ErrorsWarningsException as e:
-        return create_json_response({'errors': e.errors, 'warnings': e.warnings}, status=400, reason=e.errors)
+        uploaded_file_id, filename, json_records = save_uploaded_file(request, process_records=_process_qc_records)
     except Exception as e:
-        return create_json_response({'errors': [e.message or str(e)], 'warnings': []}, status=400, reason=e.message or str(e))
+        return create_json_response({'errors': [e.message or str(e)]}, status=400, reason=e.message or str(e))
 
-    # send back some stats
-    individual_ids_by_family = defaultdict(list)
-    for r in json_records:
-        if r.get(JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN):
-            individual_ids_by_family[r[JsonConstants.FAMILY_ID_COLUMN]].append(
-                (r[JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN], True)
-            )
-        else:
-            individual_ids_by_family[r[JsonConstants.FAMILY_ID_COLUMN]].append(
-                (r[JsonConstants.INDIVIDUAL_ID_COLUMN], False)
-            )
+    dataset_type = next(record['DATA_TYPE'].lower() for record in json_records if record['DATA_TYPE'].lower() != 'n/a')
+    info = ['Parsed {} {} samples'.format(len(json_records), dataset_type)]
+    warnings = []
 
-    num_individuals = sum([len(indiv_ids) for indiv_ids in individual_ids_by_family.values()])
-    num_existing_individuals = 0
-    missing_prev_ids = []
-    for family_id, indiv_ids in individual_ids_by_family.items():
-        existing_individuals = {i.individual_id for i in Individual.objects.filter(
-            individual_id__in=[indiv_id for (indiv_id, _) in indiv_ids], family__family_id=family_id, family__project=project
-        ).only('individual_id')}
-        num_existing_individuals += len(existing_individuals)
-        missing_prev_ids += [indiv_id for (indiv_id, is_previous) in indiv_ids if is_previous and indiv_id not in existing_individuals]
-    num_individuals_to_create = num_individuals - num_existing_individuals
-    if missing_prev_ids:
-        return create_json_response(
-            {'errors': [
-                'Could not find individuals with the following previous IDs: {}'.format(', '.join(missing_prev_ids))
-            ], 'warnings': []},
-            status=400, reason='Invalid input')
+    filter_flags = set()
+    pop_filter_flags = set()
+    for record in json_records:
+        filter_flags.update(record['filter_flags'])
+        pop_filter_flags.update(record['pop_platform_filters'])
 
-    family_ids = set(r[JsonConstants.FAMILY_ID_COLUMN] for r in json_records)
-    num_families = len(family_ids)
-    num_existing_families = Family.objects.filter(family_id__in=family_ids, project=project).count()
-    num_families_to_create = num_families - num_existing_families
+    unknown_filter_flags = []
+    for flag in filter_flags:
+        if any(col not in json_records[0] for col in FILTER_FLAG_COL_MAP.get(flag, [flag])):
+            unknown_filter_flags.append(flag)
+    if unknown_filter_flags:
+        warnings.append('The following filter flags have no known corresponding value and will not be saved: {}'.format(
+            ', '.join(unknown_filter_flags)))
 
-    info = [
-        "{num_families} families, {num_individuals} individuals parsed from {filename}".format(
-            num_families=num_families, num_individuals=num_individuals, filename=filename
-        ),
-        "{} new families, {} new individuals will be added to the project".format(num_families_to_create, num_individuals_to_create),
-        "{} existing individuals will be updated".format(num_existing_individuals),
-    ]
+    unknown_pop_filter_flags = [flag for flag in pop_filter_flags if 'sample_qc.{}'.format(flag) not in json_records[0]]
+    if unknown_pop_filter_flags:
+        warnings.append(
+            'The following population platform filters have no known corresponding value and will not be saved: {}'.format(
+                ', '.join(unknown_pop_filter_flags)))
 
-    response = {
+    missing_samples = {record['seqr_id'] for record in json_records if not record['individuals']}
+    multi_individual_samples = {record['seqr_id']: len(record['individuals'])
+                                for record in json_records if len(record['individuals']) > 1}
+
+    if multi_individual_samples:
+        warnings.append('The following {} samples will be added to multiple individuals: {}'.format(
+            len(multi_individual_samples), ', '.join(
+                sorted(['{} ({})'.format(sample_id, count) for sample_id, count in multi_individual_samples.items()]))))
+    if missing_samples:
+        warnings.append('The following {} samples will be skipped: {}'.format(
+            len(missing_samples), ', '.join(sorted(missing_samples))))
+
+    info.append('Found matching seqr individuals for {} samples'.format(len(json_records) - len(missing_samples)))
+
+    return create_json_response({
         'uploadedFileId': uploaded_file_id,
         'errors': [],
-        'warnings': [],
+        'warnings': warnings,
         'info': info,
+    })
+
+
+FILTER_FLAG_COL_MAP = {
+    'callrate': ['filtered_callrate'],
+    'contamination': ['PCT_CONTAMINATION'],
+    'chimera': ['AL_PCT_CHIMERAS'],
+    'coverage': ['WGS_MEAN_COVERAGE', 'HS_MEAN_TARGET_COVERAGE', 'HS_PCT_TARGET_BASES_20X']
+}
+
+
+def _process_qc_records(rows, **kwargs):
+    json_records = [dict(zip(rows[0], row)) for row in rows[1:]]
+
+    missing_columns = [field for field in ['seqr_id', 'DATA_TYPE', 'filter_flags', 'pop_platform_filters', 'qc_pop']
+                       if field not in json_records[0]]
+    if missing_columns:
+        raise Exception('The following required columns are missing: {}'.format(', '.join(missing_columns)))
+
+    for record in json_records:
+        record['filter_flags'] = json.loads(record['filter_flags'])
+        record['pop_platform_filters'] = json.loads(record['pop_platform_filters'])
+
+    dataset_types = {record['DATA_TYPE'].lower() for record in json_records if record['DATA_TYPE'].lower() != 'n/a'}
+    if len(dataset_types) == 0:
+        raise Exception('No dataset type detected')
+    elif len(dataset_types) > 1:
+        raise Exception('Multiple dataset types detected: {}'.format(' ,'.join(dataset_types)))
+    elif list(dataset_types)[0] not in {'exome', 'genome'}:
+        raise Exception('Unexpected dataset type detected: "{}" (should be "exome" or "genome")'.format(list(dataset_types)[0]))
+
+    dataset_type = list(dataset_types)[0]
+
+    sample_ids = {record['seqr_id'] for record in json_records}
+    samples = Sample.objects.filter(
+        sample_id__in=sample_ids,
+        sample_type=Sample.SAMPLE_TYPE_WES if dataset_type == 'exome' else Sample.SAMPLE_TYPE_WGS,
+    ).exclude(
+        individual__family__project__name__in=[
+            '[DISABLED_OLD_CMG_Walsh_WES]', 'Old Engle Lab All Samples 352S', 'Old MEEI Engle Samples',
+            'kl_temp_manton_orphan-diseases_cmg-samples_exomes_v1', 'Interview Exomes'
+        ]
+    ).exclude(individual__family__project__projectcategory__name='Demo')
+
+    sample_individual_counts = {
+        agg['sample_id']: agg['individuals'] for agg in
+        samples.values('sample_id').annotate(individuals=ArrayAgg('individual_id', distinct=True))
     }
-    logger.info(response)
-    return create_json_response(response)
+
+    sample_individual_max_loaded_date = {
+        agg['individual_id']: agg['max_loaded_date'] for agg in
+        samples.values('individual_id').annotate(max_loaded_date=Max('loaded_date'))
+    }
+    individual_latest_sample = {
+        s.individual_id: s.sample_id for s in samples
+        if s.loaded_date == sample_individual_max_loaded_date.get(s.individual_id)
+    }
+
+    for record in json_records:
+        record['individuals'] = list({
+            individual_id for individual_id in sample_individual_counts.get(record['seqr_id'], [])
+            if individual_latest_sample[individual_id] == record['seqr_id']
+        })
+
+    return json_records
 
 
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
