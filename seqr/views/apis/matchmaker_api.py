@@ -241,6 +241,10 @@ def delete_mme_submission(request, individual_guid):
     individual.mme_deleted_by = request.user
     individual.save()
 
+    for saved_result in MatchmakerResult.objects.filter(individual=individual):
+        if not (saved_result.we_contacted or saved_result.host_contacted or saved_result.comments):
+            saved_result.delete()
+
     return create_json_response({'individualsByGuid': {individual_guid: {'mmeDeletedDate': deleted_date}}})
 
 
@@ -358,8 +362,10 @@ def _parse_mme_results(individual, saved_results, user, additional_genes=None, r
         results.append(result)
         contact_institutions.add(result['patient']['contact'].get('institution', '').strip().lower())
 
+    results_for_genes = [individual.mme_submitted_data] if individual.mme_submitted_data else []
+    results_for_genes += results
     hpo_terms_by_id, genes_by_id, gene_symbols_to_ids = get_mme_genes_phenotypes(
-        results + [individual.mme_submitted_data], additional_genes=additional_genes)
+        results_for_genes, additional_genes=additional_genes)
 
     parsed_results = [_parse_mme_result(result, hpo_terms_by_id, gene_symbols_to_ids, individual.guid) for result in results]
     parsed_results_gy_guid = {result['matchStatus']['matchmakerResultGuid']: result for result in parsed_results}
@@ -367,12 +373,16 @@ def _parse_mme_results(individual, saved_results, user, additional_genes=None, r
     contact_notes = {note.institution: _get_json_for_model(note, user=user)
                      for note in MatchmakerContactNotes.objects.filter(institution__in=contact_institutions)}
 
+    submitted_data = parse_mme_patient(
+        individual.mme_submitted_data, hpo_terms_by_id, gene_symbols_to_ids, individual.guid
+    ) if individual.mme_submitted_data else None
+
     response = {
         'mmeResultsByGuid': parsed_results_gy_guid,
         'mmeContactNotes': contact_notes,
         'individualsByGuid': {individual.guid: {
             'mmeResultGuids': parsed_results_gy_guid.keys(),
-            'mmeSubmittedData': parse_mme_patient(individual.mme_submitted_data, hpo_terms_by_id, gene_symbols_to_ids, individual.guid),
+            'mmeSubmittedData': submitted_data,
             'mmeSubmittedDate': individual.mme_submitted_date,
             'mmeDeletedDate': individual.mme_deleted_date,
         }},

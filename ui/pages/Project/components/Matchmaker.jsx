@@ -330,8 +330,9 @@ const DISPLAY_FIELDS = [
 
 const BaseMatchmakerIndividual = ({ loading, load, searchMme, individual, onSubmit, defaultMmeSubmission, mmeResults }) =>
   <div>
-    <Header size="medium" content={individual.individualId} dividing />
-    {individual.mmeSubmittedData && !individual.mmeDeletedDate &&
+    <VerticalSpacer height={10} />
+    <Header size="medium" content={individual.displayName} dividing />
+    {individual.mmeSubmittedData && !individual.mmeDeletedDate ?
       <Grid padded>
         <Grid.Row>
           <Grid.Column width={2}><b>Submitted Genotypes:</b></Grid.Column>
@@ -351,63 +352,7 @@ const BaseMatchmakerIndividual = ({ loading, load, searchMme, individual, onSubm
               <Phenotypes phenotypes={individual.mmeSubmittedData.phenotypes} horizontal /> : <i>None</i>}
           </Grid.Column>
         </Grid.Row>
-      </Grid>
-    }
-    {individual.mmeSubmittedDate && !individual.mmeDeletedDate ?
-      <DataLoader content load={load} loading={false}>
-        <ButtonLink
-          disabled={!individual.mmeResultGuids}
-          onClick={searchMme}
-          icon="search"
-          labelPosition="right"
-          content="Search for New Matches"
-        />|<HorizontalSpacer width={10} />
-        <UpdateButton
-          disabled={!individual.mmeSubmittedData}
-          buttonText="Update Submission"
-          modalSize="large"
-          modalTitle={`Update Submission for ${individual.individualId}`}
-          modalId={`${individual.individualGuid}_-_updateMmeSubmission`}
-          confirmDialog="Are you sure you want to update this submission?"
-          initialValues={individual.mmeSubmittedData}
-          formFields={SUBMISSION_EDIT_FIELDS}
-          onSubmit={onSubmit}
-          showErrorPanel
-        />|<HorizontalSpacer width={10} />
-        <DeleteButton
-          disabled={!individual.mmeSubmittedData}
-          onSubmit={onSubmit}
-          buttonText="Delete Submission"
-          confirmDialog="Are you sure you want to remove this patient from the Matchmaker Exchange"
-        />
-        <SortableTable
-          basic="very"
-          fixed
-          idField="id"
-          defaultSortColumn="createdDate"
-          defaultSortDescending
-          columns={DISPLAY_FIELDS}
-          data={mmeResults.active}
-          loading={loading}
-          emptyContent="No matches found"
-        />
-        {mmeResults.removed && mmeResults.removed.length > 0 &&
-          <div>
-            <VerticalSpacer height={10} />
-            <Header dividing disabled size="medium" content="Previous Matches" />
-            <SortableTable
-              basic="very"
-              fixed
-              idField="id"
-              defaultSortColumn="createdDate"
-              defaultSortDescending
-              columns={DISPLAY_FIELDS}
-              data={mmeResults.removed}
-              loading={loading}
-            />
-          </div>
-        }
-      </DataLoader> :
+      </Grid> :
       <div>
         <Header
           size="small"
@@ -420,7 +365,7 @@ const BaseMatchmakerIndividual = ({ loading, load, searchMme, individual, onSubm
                 buttonText="Submit to Matchmaker"
                 editIconName=" "
                 modalSize="large"
-                modalTitle={`Create Submission for ${individual.individualId}`}
+                modalTitle={`Create Submission for ${individual.displayName}`}
                 modalId={`${individual.individualGuid}_-_createMmeSubmission`}
                 confirmDialog="Are you sure you want to submit this individual?"
                 formFields={SUBMISSION_EDIT_FIELDS}
@@ -429,8 +374,64 @@ const BaseMatchmakerIndividual = ({ loading, load, searchMme, individual, onSubm
               />
             </div>}
         />
-        <VerticalSpacer height={10} />
-      </div>}
+      </div>
+    }
+    <DataLoader content load={load} loading={false}>
+      {individual.mmeSubmittedDate && !individual.mmeDeletedDate &&
+        <div>
+          <ButtonLink
+            disabled={!individual.mmeResultGuids}
+            onClick={searchMme}
+            icon="search"
+            labelPosition="right"
+            content="Search for New Matches"
+          />|<HorizontalSpacer width={10} />
+          <UpdateButton
+            disabled={!individual.mmeSubmittedData}
+            buttonText="Update Submission"
+            modalSize="large"
+            modalTitle={`Update Submission for ${individual.displayName}`}
+            modalId={`${individual.individualGuid}_-_updateMmeSubmission`}
+            confirmDialog="Are you sure you want to update this submission?"
+            initialValues={individual.mmeSubmittedData}
+            formFields={SUBMISSION_EDIT_FIELDS}
+            onSubmit={onSubmit}
+            showErrorPanel
+          />|<HorizontalSpacer width={10} />
+          <DeleteButton
+            disabled={!individual.mmeSubmittedData}
+            onSubmit={onSubmit}
+            buttonText="Delete Submission"
+            confirmDialog="Are you sure you want to remove this patient from the Matchmaker Exchange"
+          />
+          <SortableTable
+            basic="very"
+            fixed
+            idField="id"
+            defaultSortColumn="createdDate"
+            defaultSortDescending
+            columns={DISPLAY_FIELDS}
+            data={mmeResults.active}
+            loading={loading}
+            emptyContent="No matches found"
+          />
+        </div>}
+      {mmeResults.removed && mmeResults.removed.length > 0 &&
+        <div>
+          <VerticalSpacer height={10} />
+          <Header dividing disabled size="medium" content="Previous Matches" />
+          <SortableTable
+            basic="very"
+            fixed
+            idField="id"
+            defaultSortColumn="createdDate"
+            defaultSortDescending
+            columns={DISPLAY_FIELDS}
+            data={mmeResults.removed}
+            loading={loading}
+          />
+        </div>}
+    </DataLoader>
   </div>
 
 BaseMatchmakerIndividual.propTypes = {

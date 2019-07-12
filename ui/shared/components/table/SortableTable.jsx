@@ -258,12 +258,13 @@ class SortableTable extends React.PureComponent {
 export default SortableTable
 
 const EMPTY_OBJECT = {}
-export const SelectableTableFormInput = ({ value, onChange, error, ...props }) =>
+export const SelectableTableFormInput = ({ value, onChange, error, data = [], ...props }) =>
   <SortableTable
     basic="very"
     fixed
     selectRows={onChange}
     selectedRows={value || EMPTY_OBJECT}
+    data={data}
     {...props}
   />
 
@@ -271,4 +272,5 @@ SelectableTableFormInput.propTypes = {
   value: PropTypes.any,
   onChange: PropTypes.func,
   error: PropTypes.bool,
+  data: PropTypes.array,
 }

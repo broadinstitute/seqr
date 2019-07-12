@@ -582,6 +582,8 @@ class VariantSearchAPITest(TestCase):
             datetime.today().strftime('%Y-%m-%d')
         )
 
+        self.assertEqual(MatchmakerResult.objects.filter(individual__guid=INDIVIDUAL_GUID).count(), 2)
+
         # Test proxy calls
         self.assertEqual(len(responses.calls), 2)
         self.assertEqual(responses.calls[1].request.url, 'http://localhost:9020/patient/delete')
