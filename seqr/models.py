@@ -6,7 +6,7 @@ import random
 from django.contrib.auth.models import User, Group
 from django.contrib.postgres.fields import JSONField, ArrayField
 from django.db import models
-from django.db.models import options
+from django.db.models import options, ForeignKey
 from django.utils import timezone
 from django.utils.text import slugify as __slugify
 
@@ -233,6 +233,9 @@ class Family(ModelWithGUID):
     description = models.TextField(null=True, blank=True)
 
     pedigree_image = models.ImageField(null=True, blank=True, upload_to='pedigree_images')
+
+    assigned_analyst = models.ForeignKey(User, null=True, on_delete=models.SET_NULL,
+                                    related_name='assigned_families')  # type: ForeignKey
 
     analysis_notes = models.TextField(null=True, blank=True)
     analysis_summary = models.TextField(null=True, blank=True)
