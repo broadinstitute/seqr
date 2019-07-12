@@ -132,6 +132,32 @@ def update_family_fields_handler(request, family_guid):
         family.guid: _get_json_for_family(family, request.user)
     })
 
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@csrf_exempt
+def update_family_assigned_to(request, family_guid):
+    """Updates the specified field in the Family model.
+
+    Args:
+        family_guid (string): GUID of the family.
+        field_name (string): Family model field name to update
+    """
+    family = Family.objects.get(guid=family_guid)
+    check_permissions(family.project, request.user, CAN_EDIT)
+
+    request_json = json.loads(request.body)
+    assigned_analyst = request_json.get('assigned_analyst')
+
+    if assigned_analyst is None:
+        return create_json_response(
+            {}, status=400, reason="'assigned_analyst' not specified")
+    else:
+        family = Family.objects.get(guid=family_guid)
+        family.assigned_analyst = assigned_analyst
+
+        return create_json_response({
+            family.guid: _get_json_for_family(family, request.user)
+        })
+
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
