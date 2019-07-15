@@ -108,7 +108,7 @@ export const FAMILY_FIELD_RENDER_LOOKUP = {
   [FAMILY_FIELD_DESCRIPTION]: { name: 'Family Description' },
   [FAMILY_FIELD_ANALYSIS_STATUS]: { name: 'Analysis Status', component: OptionFieldView },
   [FAMILY_FIELD_ASSIGNED_TO]: {
-    name: 'Assigned To',
+    name: 'Assigned Analyst',
     component: BaseFieldView,
     submitArgs: { familyField: 'assigned_to' },
   },
