@@ -13,15 +13,21 @@ import TextFieldView from './view-fields/TextFieldView'
 import Sample from './sample'
 import { ColoredIcon, InlineHeader } from '../StyledComponents'
 import { VerticalSpacer, HorizontalSpacer } from '../Spacers'
+import { AddableSelect } from '../form/Inputs'
+import DataLoader from '../DataLoader'
 import {
   FAMILY_ANALYSIS_STATUS_OPTIONS,
   FAMILY_FIELD_ANALYSIS_STATUS,
+  FAMILY_FIELD_ASSIGNED_ANALYST,
   FAMILY_FIELD_ANALYSED_BY,
   FAMILY_FIELD_FIRST_SAMPLE,
   FAMILY_FIELD_RENDER_LOOKUP,
   FAMILY_FIELD_OMIM_NUMBER,
   FAMILY_FIELD_PMIDS,
+  USER_NAME_FIELDS,
 } from '../../utils/constants'
+import { getUserOptions, getUserOptionsIsLoading, getUsersByUsername } from '../../../pages/Project/selectors'
+import { loadUserOptions } from '../../../pages/Project/reducers'
 
 const FamilyGrid = styled(({ annotation, offset, ...props }) => <Grid {...props} />)`
   margin-left: ${props => ((props.annotation || props.offset) ? '25px !important' : 'inherit')};
@@ -46,6 +52,57 @@ const mapSampleDispatchToProps = (state, ownProps) => ({
 
 const FirstSample = connect(mapSampleDispatchToProps)(BaseFirstSample)
 
+const AnalystEmailDropdown = ({ load, loading, usersByUsername, onChange, value, ...props }) =>
+  <DataLoader load={load} loading={false} content>
+    <AddableSelect
+      loading={loading}
+      additionLabel="Assigned Analyst: "
+      onChange={val => onChange(usersByUsername[val] || { email: val })}
+      value={value.username || value.email}
+      {...props}
+    />
+  </DataLoader>
+
+AnalystEmailDropdown.propTypes = {
+  load: PropTypes.func,
+  loading: PropTypes.bool,
+  usersByUsername: PropTypes.object,
+  onChange: PropTypes.func,
+  value: PropTypes.any,
+}
+
+const mapDropdownStateToProps = state => ({
+  loading: getUserOptionsIsLoading(state),
+  options: getUserOptions(state),
+  usersByUsername: getUsersByUsername(state),
+})
+
+const mapDropdownDispatchToProps = {
+  load: loadUserOptions,
+}
+
+AnalystEmailDropdown.propTypes = {
+  load: PropTypes.func,
+  loading: PropTypes.bool,
+  usersByUsername: PropTypes.object,
+  onChange: PropTypes.func,
+  value: PropTypes.any,
+}
+
+const EDIT_FIELDS = [
+  {
+    name: 'user',
+    label: 'Email',
+    component: connect(mapDropdownStateToProps, mapDropdownDispatchToProps)(AnalystEmailDropdown),
+    validate: value => (
+      /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}$/i.test((value || {}).email) ? undefined : 'Invalid email address'
+    ),
+    width: 16,
+    inline: true,
+  },
+  ...USER_NAME_FIELDS.map(({ name, ...field }) => ({ ...field, name: `user.${name}` })),
+]
+
 const familyFieldRenderProps = {
   [FAMILY_FIELD_ANALYSIS_STATUS]: {
     tagOptions: FAMILY_ANALYSIS_STATUS_OPTIONS,
@@ -53,6 +110,12 @@ const familyFieldRenderProps = {
       <Popup trigger={<ColoredIcon name="stop" color={value.color} />} content={value.text} position="top center" /> :
       <ColoredIcon name="stop" color={value.color} />
     ),
+  },
+  [FAMILY_FIELD_ASSIGNED_ANALYST]: {
+    formFields: EDIT_FIELDS,
+    addConfirm: 'Are you sure you want to add the analyst to this family?',
+    fieldDisplay: value => (value ? <div>{(value.fullName) ? (value.fullName).concat(' - ') : ''}{value.email}</div> :
+      ''),
   },
   [FAMILY_FIELD_ANALYSED_BY]: {
     addConfirm: 'Are you sure you want to add that you analysed this family?',

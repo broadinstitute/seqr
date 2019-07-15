@@ -175,6 +175,11 @@ def _get_json_for_families(families, user=None, add_individual_guids_field=False
             'createdBy': {'fullName': ab.created_by.get_full_name(), 'email': ab.created_by.email, 'isStaff': ab.created_by.is_staff},
             'lastModifiedDate': ab.last_modified_date,
         } for ab in family.familyanalysedby_set.all()]
+        if result['assignedAnalyst']:
+            result['assignedAnalyst'] = {
+                'fullName': result['assignedAnalyst'].get_full_name(),
+                'email': result['assignedAnalyst'].email,
+            }
         pedigree_image = _get_pedigree_image_url(result.pop('pedigreeImage'))
         result['pedigreeImage'] = pedigree_image
         if add_individual_guids_field:
