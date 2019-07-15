@@ -70,8 +70,9 @@ export class HttpRequestHelper {
    */
   handlePromise = (promise, onSuccessArg) => {
     return promise.then((response) => {
-      //if (response.status === 401)
-      // decided against auto-redirect to login form (in case user has unsaved text)
+      if (response.status === 401) {
+        window.location.href = `${window.location.origin}/login?next=${window.location.href.replace(window.location.origin, '')}`
+      }
       if (!response.ok) {
         console.log('ERROR: ', response.statusText, response.status, response)
         const throwJsonError = (responseJson) => {
