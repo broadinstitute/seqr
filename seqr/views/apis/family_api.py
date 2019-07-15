@@ -147,13 +147,13 @@ def update_family_assigned_to(request, family_guid):
     check_permissions(family.project, request.user, CAN_EDIT)
 
     request_json = json.loads(request.body)
-    assigned_analyst_username = request_json.get('assigned_analyst')
+    assigned_analyst = request_json.get('user')
 
-    if assigned_analyst_username is None:
+    if assigned_analyst is None:
         return create_json_response(
-            {}, status=400, reason="'assigned_analyst_id' not specified")
+            {}, status=400, reason="'assigned analyst' is not specified")
     else:
-        assigned_analyst = User.objects.get(username=assigned_analyst_username)
+        assigned_analyst = User.objects.get(username=assigned_analyst['username'])
         update_seqr_model(family, assigned_analyst=assigned_analyst)
 
         return create_json_response({
