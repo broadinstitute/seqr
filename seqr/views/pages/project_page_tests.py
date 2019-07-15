@@ -64,7 +64,7 @@ class ProjectPageTest(TestCase):
             {'projectGuid', 'familyGuid', 'individualGuids', 'analysedBy', 'pedigreeImage', 'familyId', 'displayName',
              'description', 'analysisNotes', 'analysisSummary', 'causalInheritanceMode', 'analysisStatus',
              'pedigreeImage', 'internalAnalysisStatus', 'internalCaseReviewNotes', 'internalCaseReviewSummary',
-             'createdDate', 'codedPhenotype', 'postDiscoveryOmimNumber', 'pubmedIds'}
+             'createdDate', 'codedPhenotype', 'postDiscoveryOmimNumber', 'pubmedIds', 'assignedAnalystId'}
         )
         self.assertSetEqual(
             set(response_json['individualsByGuid'].values()[0].keys()),
