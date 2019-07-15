@@ -801,10 +801,7 @@ def receive_qc_pipeline_output(request):
         filter_flags.update(record['filter_flags'])
         pop_filter_flags.update(record['pop_platform_filters'])
 
-    unknown_filter_flags = []
-    for flag in filter_flags:
-        if any(col not in json_records[0] for col in FILTER_FLAG_COL_MAP.get(flag, [flag])):
-            unknown_filter_flags.append(flag)
+    unknown_filter_flags = [flag for flag in filter_flags if FILTER_FLAG_COL_MAP.get(flag, flag) not in json_records[0]]
     if unknown_filter_flags:
         warnings.append('The following filter flags have no known corresponding value and will not be saved: {}'.format(
             ', '.join(unknown_filter_flags)))
@@ -838,10 +835,11 @@ def receive_qc_pipeline_output(request):
 
 
 FILTER_FLAG_COL_MAP = {
-    'callrate': ['filtered_callrate'],
-    'contamination': ['PCT_CONTAMINATION'],
-    'chimera': ['AL_PCT_CHIMERAS'],
-    'coverage': ['WGS_MEAN_COVERAGE', 'HS_MEAN_TARGET_COVERAGE', 'HS_PCT_TARGET_BASES_20X']
+    'callrate': 'filtered_callrate',
+    'contamination': 'PCT_CONTAMINATION',
+    'chimera': 'AL_PCT_CHIMERAS',
+    'coverage_exome': 'HS_PCT_TARGET_BASES_20X',
+    'coverage_genome': 'WGS_MEAN_COVERAGE'
 }
 
 
@@ -853,10 +851,6 @@ def _process_qc_records(rows, **kwargs):
     if missing_columns:
         raise Exception('The following required columns are missing: {}'.format(', '.join(missing_columns)))
 
-    for record in json_records:
-        record['filter_flags'] = json.loads(record['filter_flags'])
-        record['pop_platform_filters'] = json.loads(record['pop_platform_filters'])
-
     dataset_types = {record['DATA_TYPE'].lower() for record in json_records if record['DATA_TYPE'].lower() != 'n/a'}
     if len(dataset_types) == 0:
         raise Exception('No dataset type detected')
@@ -866,6 +860,11 @@ def _process_qc_records(rows, **kwargs):
         raise Exception('Unexpected dataset type detected: "{}" (should be "exome" or "genome")'.format(list(dataset_types)[0]))
 
     dataset_type = list(dataset_types)[0]
+
+    for record in json_records:
+        record['filter_flags'] = ['{}_{}'.format(flag, dataset_type) if flag == 'coverage' else flag
+                                  for flag in json.loads(record['filter_flags'])]
+        record['pop_platform_filters'] = json.loads(record['pop_platform_filters'])
 
     sample_ids = {record['seqr_id'] for record in json_records}
     samples = Sample.objects.filter(
@@ -915,15 +914,14 @@ def save_qc_pipeline_output(request, upload_file_id):
         for individual_id in record['individuals']:
             individual = individuals_by_id[individual_id]
             individual.filter_flags = {
-                # TODO does not work for coverage
-                flag: record[FILTER_FLAG_COL_MAP.get(flag, [flag])[0]] for flag in record['filter_flags']
-                if FILTER_FLAG_COL_MAP.get(flag, [flag])[0] in record
-            }
+                flag: record[FILTER_FLAG_COL_MAP.get(flag, flag)] for flag in record['filter_flags']
+                if FILTER_FLAG_COL_MAP.get(flag, flag) in record
+            } or None
             individual.pop_platform_filters = {
                 flag: record['sample_qc.{}'.format(flag)] for flag in record['pop_platform_filters']
                 if 'sample_qc.{}'.format(flag) in record
-            }
-            individual.population = record['qc_pop']
+            } or None
+            individual.population = record['qc_pop'].title()
             individual.save()
 
     return create_json_response({'info': ['Successfully updated {} individuals'.format(len(individuals_by_id))]})

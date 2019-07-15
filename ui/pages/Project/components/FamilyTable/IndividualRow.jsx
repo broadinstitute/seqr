@@ -7,6 +7,7 @@ import { Label, Popup } from 'semantic-ui-react'
 import orderBy from 'lodash/orderBy'
 
 import PedigreeIcon from 'shared/components/icons/PedigreeIcon'
+import BaseFieldView from 'shared/components/panel/view-fields/BaseFieldView'
 import TextFieldView from 'shared/components/panel/view-fields/TextFieldView'
 import OptionFieldView from 'shared/components/panel/view-fields/OptionFieldView'
 import PhenotipsDataPanel from 'shared/components/panel/PhenotipsDataPanel'
@@ -18,6 +19,7 @@ import { VerticalSpacer } from 'shared/components/Spacers'
 import { updateIndividual } from 'redux/rootReducer'
 import { getSamplesByGuid, getCurrentProject } from 'redux/selectors'
 import { SAMPLE_STATUS_LOADED, DATASET_TYPE_VARIANT_CALLS } from 'shared/utils/constants'
+import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 import { CASE_REVIEW_STATUS_MORE_INFO_NEEDED, CASE_REVIEW_STATUS_OPTIONS } from '../../constants'
 
 import CaseReviewStatusDropdown from './CaseReviewStatusDropdown'
@@ -35,6 +37,18 @@ const CaseReviewDropdownContainer = styled.div`
   float: right;
   width: 220px;
 `
+
+const FLAG_TITLE = {
+  chimera: '% Chimera',
+  contamination: '% Contamination',
+  coverage_exome: '% 20X Coverage',
+  coverage_genome: 'Mean Coverage',
+}
+
+const ratioLabel = (flag) => {
+  const words = snakecaseToTitlecase(flag).split(' ')
+  return `Ratio ${words[1]}/${words[2]}`
+}
 
 const CaseReviewStatus = ({ individual }) =>
   <CaseReviewDropdownContainer>
@@ -190,6 +204,60 @@ class IndividualRow extends React.Component
             initialValues={individual}
             modalTitle={`Notes for Individual ${displayName}`}
             onSubmit={this.props.updateIndividual}
+          />
+        ),
+      },
+      {
+        content: (
+          <TextFieldView
+            key="population"
+            isEditable={false}
+            fieldName="Imputed Population"
+            field="population"
+            idField="individualGuid"
+            initialValues={individual}
+          />
+        ),
+      },
+      {
+        content: (
+          <BaseFieldView
+            key="filterFlags"
+            isEditable={false}
+            fieldName="Failed Sample QC Filters"
+            field="filterFlags"
+            idField="individualGuid"
+            initialValues={individual}
+            fieldDisplay={filterFlags => Object.entries(filterFlags).map(([flag, val]) =>
+              <Label
+                key={flag}
+                basic
+                horizontal
+                color="orange"
+                content={`${FLAG_TITLE[flag] || snakecaseToTitlecase(flag)}: ${parseFloat(val).toFixed(2)}`}
+              />,
+            )}
+          />
+        ),
+      },
+      {
+        content: (
+          <BaseFieldView
+            key="popPlatformFilters"
+            isEditable={false}
+            fieldName="Failed Population/Platform Specific Sample QC Filters"
+            field="popPlatformFilters"
+            idField="individualGuid"
+            initialValues={individual}
+            fieldDisplay={filterFlags => Object.keys(filterFlags).map(flag =>
+              <Label
+                key={flag}
+                basic
+                horizontal
+                color="orange"
+                content={flag.startsWith('r_') ? ratioLabel(flag) : snakecaseToTitlecase(flag.replace('n_', 'num._'))}
+              />,
+            )}
           />
         ),
       },
