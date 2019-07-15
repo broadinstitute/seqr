@@ -878,7 +878,7 @@ def _process_qc_records(rows, **kwargs):
         ]
     ).exclude(individual__family__project__projectcategory__name='Demo')
 
-    sample_individual_counts = {
+    sample_individuals = {
         agg['sample_id']: agg['individuals'] for agg in
         samples.values('sample_id').annotate(individuals=ArrayAgg('individual_id', distinct=True))
     }
@@ -894,7 +894,7 @@ def _process_qc_records(rows, **kwargs):
 
     for record in json_records:
         record['individuals'] = list({
-            individual_id for individual_id in sample_individual_counts.get(record['seqr_id'], [])
+            individual_id for individual_id in sample_individuals.get(record['seqr_id'], [])
             if individual_latest_sample[individual_id] == record['seqr_id']
         })
 
@@ -904,24 +904,26 @@ def _process_qc_records(rows, **kwargs):
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def save_qc_pipeline_output(request, upload_file_id):
-    # TODO
-    project = get_project_and_check_permissions(project_guid, request.user)
-
     json_records = load_uploaded_file(upload_file_id)
 
-    updated_families, updated_individuals = add_or_update_individuals_and_families(
-        project, individual_records=json_records, user=request.user
-    )
+    individual_model_ids = set()
+    for record in json_records:
+        individual_model_ids.update(record['individuals'])
+    individuals_by_id = {i.id: i for i in Individual.objects.filter(id__in=individual_model_ids)}
 
-    # edit individuals
-    individuals = _get_json_for_individuals(updated_individuals, request.user, add_sample_guids_field=True)
-    individuals_by_guid = {individual['individualGuid']: individual for individual in individuals}
-    families = _get_json_for_families(updated_families, request.user, add_individual_guids_field=True)
-    families_by_guid = {family['familyGuid']: family for family in families}
+    for record in json_records:
+        for individual_id in record['individuals']:
+            individual = individuals_by_id[individual_id]
+            individual.filter_flags = {
+                # TODO does not work for coverage
+                flag: record[FILTER_FLAG_COL_MAP.get(flag, [flag])[0]] for flag in record['filter_flags']
+                if FILTER_FLAG_COL_MAP.get(flag, [flag])[0] in record
+            }
+            individual.pop_platform_filters = {
+                flag: record['sample_qc.{}'.format(flag)] for flag in record['pop_platform_filters']
+                if 'sample_qc.{}'.format(flag) in record
+            }
+            individual.population = record['qc_pop']
+            individual.save()
 
-    updated_families_and_individuals_by_guid = {
-        'individualsByGuid': individuals_by_guid,
-        'familiesByGuid': families_by_guid,
-    }
-
-    return create_json_response(updated_families_and_individuals_by_guid)
+    return create_json_response({'info': ['Successfully updated {} individuals'.format(len(individuals_by_id))]})
