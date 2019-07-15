@@ -224,7 +224,7 @@ class IndividualRow extends React.Component
           <BaseFieldView
             key="filterFlags"
             isEditable={false}
-            fieldName="Failed Sample QC Filters"
+            fieldName="Sample QC Flags"
             field="filterFlags"
             idField="individualGuid"
             initialValues={individual}
@@ -245,7 +245,7 @@ class IndividualRow extends React.Component
           <BaseFieldView
             key="popPlatformFilters"
             isEditable={false}
-            fieldName="Failed Population/Platform Specific Sample QC Filters"
+            fieldName="Population/Platform Specific Sample QC Flags"
             field="popPlatformFilters"
             idField="individualGuid"
             initialValues={individual}
