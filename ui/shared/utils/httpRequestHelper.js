@@ -70,7 +70,7 @@ export class HttpRequestHelper {
    */
   handlePromise = (promise, onSuccessArg) => {
     return promise.then((response) => {
-      if (response.status === 401) {
+      if (response.status === 401 && !window.location.href.includes('login')) {
         window.location.href = `${window.location.origin}/login?next=${window.location.href.replace(window.location.origin, '')}`
       }
       if (!response.ok) {
