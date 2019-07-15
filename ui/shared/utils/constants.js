@@ -110,7 +110,7 @@ export const FAMILY_FIELD_RENDER_LOOKUP = {
   [FAMILY_FIELD_ASSIGNED_TO]: {
     name: 'Assigned To',
     component: BaseFieldView,
-    submitArgs: { familyField: 'assigned_analyst' },
+    submitArgs: { familyField: 'assigned_to' },
   },
   [FAMILY_FIELD_ANALYSED_BY]: {
     name: 'Analysed By',

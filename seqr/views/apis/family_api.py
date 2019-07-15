@@ -9,11 +9,13 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 
+from django.contrib.auth.models import User
+
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.individual_api import delete_individuals
 
 from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file
-from seqr.views.utils.json_to_orm_utils import update_family_from_json
+from seqr.views.utils.json_to_orm_utils import update_family_from_json, update_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_family
 from seqr.models import Family, FamilyAnalysedBy, CAN_EDIT, Individual
@@ -145,14 +147,14 @@ def update_family_assigned_to(request, family_guid):
     check_permissions(family.project, request.user, CAN_EDIT)
 
     request_json = json.loads(request.body)
-    assigned_analyst = request_json.get('assigned_analyst')
+    assigned_analyst_username = request_json.get('assigned_analyst')
 
-    if assigned_analyst is None:
+    if assigned_analyst_username is None:
         return create_json_response(
-            {}, status=400, reason="'assigned_analyst' not specified")
+            {}, status=400, reason="'assigned_analyst_id' not specified")
     else:
-        family = Family.objects.get(guid=family_guid)
-        family.assigned_analyst = assigned_analyst
+        assigned_analyst = User.objects.get(username=assigned_analyst_username)
+        update_seqr_model(family, assigned_analyst=assigned_analyst)
 
         return create_json_response({
             family.guid: _get_json_for_family(family, request.user)
@@ -166,7 +168,7 @@ def update_family_analysed_by(request, family_guid):
 
     Args:
         family_guid (string): GUID of the family.
-        field_name (string): Family model field name to update
+      u  field_name (string): Family model field name to update
     """
 
     family = Family.objects.get(guid=family_guid)
