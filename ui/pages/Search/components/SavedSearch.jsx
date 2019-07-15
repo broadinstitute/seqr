@@ -74,6 +74,7 @@ const SavedSearches = ({ options, savedSearchesByGuid, selectedSearch, load, loa
     <ButtonDropdown
       color="black"
       inline
+      includeCategories
       loading={loading}
       placeholder="Select a Saved Search"
       value={(selectedSearch || {}).savedSearchGuid}
