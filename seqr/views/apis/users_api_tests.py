@@ -36,7 +36,7 @@ class UsersAPITest(TransactionTestCase):
         self.assertSetEqual(
             set(collaborators[0].keys()),
             {'dateJoined', 'email', 'firstName', 'isStaff', 'lastLogin', 'lastName', 'username', 'displayName',
-             'hasViewPermissions', 'hasEditPermissions', 'assignedFamilies'}
+             'hasViewPermissions', 'hasEditPermissions', 'assignedFamilies', 'id'}
         )
         self.assertEqual(collaborators[0]['email'], 'test@test.com')
         self.assertEqual(collaborators[0]['displayName'], '')
@@ -71,11 +71,11 @@ class UsersAPITest(TransactionTestCase):
         response = self.client.get(get_all_collaborators_url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertListEqual(response_json.keys(), [username])
+        self.assertSetEqual(set(response_json.keys()), {username, 'test_user'})
         self.assertSetEqual(
             set(response_json[username].keys()),
             {'dateJoined', 'email', 'firstName', 'isStaff', 'lastLogin', 'lastName', 'username', 'displayName',
-             'assignedFamilies'}
+             'assignedFamilies', 'id'}
         )
 
         # calling create again just updates the existing user
@@ -107,10 +107,6 @@ class UsersAPITest(TransactionTestCase):
         self.assertEqual(response.status_code, 200)
         collaborators = response.json()['projectsByGuid'][PROJECT_GUID]['collaborators']
         self.assertEqual(len(collaborators), 0)
-
-        response = self.client.get(get_all_collaborators_url)
-        self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {})
 
         # check that user still exists
         self.assertEqual(User.objects.filter(username=username).count(), 1)

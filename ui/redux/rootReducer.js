@@ -9,7 +9,9 @@ import { reducers as searchReducers } from 'pages/Search/reducers'
 import { reducers as staffReducers } from 'pages/Staff/reducers'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 import { SHOW_ALL, SORT_BY_FAMILY_GUID } from 'shared/utils/constants'
-import { createObjectsByIdReducer, loadingReducer, zeroActionsReducer, createSingleObjectReducer } from './utils/reducerFactories'
+import {
+  createObjectsByIdReducer, loadingReducer, zeroActionsReducer, createSingleObjectReducer, createSingleValueReducer,
+} from './utils/reducerFactories'
 import modalReducers from './utils/modalReducer'
 
 /**
@@ -28,6 +30,8 @@ const REQUEST_GENE_LISTS = 'REQUEST_GENE_LISTS'
 const REQUEST_GENE_LIST = 'REQUEST_GENE_LIST'
 const UPDATE_SAVED_VARIANT_TABLE_STATE = 'UPDATE_VARIANT_STATE'
 const UPDATE_IGV_VISIBILITY = 'UPDATE_IGV_VISIBILITY'
+const REQUEST_USERS = 'REQUEST_USERS'
+const RECEIVE_USERS = 'RECEIVE_USERS'
 
 // action creators
 
@@ -64,6 +68,20 @@ export const fetchProjects = () => {
         dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
       },
       e => dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} }),
+    ).get()
+  }
+}
+
+export const loadUserOptions = () => {
+  return (dispatch) => {
+    dispatch({ type: REQUEST_USERS })
+    new HttpRequestHelper('/api/users/get_all',
+      (responseJson) => {
+        dispatch({ type: RECEIVE_USERS, newValue: responseJson })
+      },
+      (e) => {
+        dispatch({ type: RECEIVE_USERS, error: e.message, newValue: [] })
+      },
     ).get()
   }
 }
@@ -309,6 +327,8 @@ const rootReducer = combineReducers(Object.assign({
   savedSearchesLoading: loadingReducer(REQUEST_SAVED_SEARCHES, RECEIVE_SAVED_SEARCHES),
   user: zeroActionsReducer,
   newUser: zeroActionsReducer,
+  usersByUsername: createSingleValueReducer(RECEIVE_USERS, {}),
+  userOptionsLoading: loadingReducer(REQUEST_USERS, RECEIVE_USERS),
   form: formReducer,
   search: searchReducer,
   savedVariantTableState: createSingleObjectReducer(UPDATE_SAVED_VARIANT_TABLE_STATE, {

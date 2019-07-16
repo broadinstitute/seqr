@@ -34,14 +34,6 @@ def seqr_stats_page(request):
         'sample_counts': sample_counts,
     })
 
-
-@staff_member_required(login_url=LOGIN_URL)
-def users_page(request):
-
-    return render(request, "staff/users_table.html", {
-        'users': User.objects.all().order_by('email')
-    })
-
 @staff_member_required(login_url=LOGIN_URL)
 def kibana_page(request):
 

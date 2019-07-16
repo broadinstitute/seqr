@@ -31,10 +31,16 @@ export const getLocusListsByGuid = state => state.locusListsByGuid
 export const getLocusListsIsLoading = state => state.locusListsLoading.isLoading
 export const getLocusListIsLoading = state => state.locusListLoading.isLoading
 export const getUser = state => state.user
+export const getUsersByUsername = state => state.usersByUsername
+export const getUserOptionsIsLoading = state => state.userOptionsLoading.isLoading
 export const getProjectGuid = state => state.currentProjectGuid
 export const getSavedVariantsIsLoading = state => state.savedVariantsLoading.isLoading
 export const getIgvReadsVisibility = state => state.igvReadsVisibility
 
+export const getAllUsers = createSelector(
+  getUsersByUsername,
+  usersByUsername => Object.values(usersByUsername),
+)
 export const getCurrentProject = createSelector(
   getProjectsByGuid, getProjectGuid, (projectsByGuid, currentProjectGuid) => projectsByGuid[currentProjectGuid],
 )

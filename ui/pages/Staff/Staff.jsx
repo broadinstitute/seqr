@@ -14,6 +14,8 @@ import DiscoverySheet from './components/DiscoverySheet'
 import ElasticsearchStatus from './components/ElasticsearchStatus'
 import CreateUser from './components/CreateUser'
 import Matchmaker from './components/Matchmaker'
+import Users from './components/Users'
+
 
 const STAFF_PAGES = [
   { path: 'anvil', params: '/:projectGuid?', component: Anvil },
@@ -23,6 +25,7 @@ const STAFF_PAGES = [
   { path: 'matchmaker', component: Matchmaker },
   { path: 'saved_variants', component: SavedVariants },
   { path: 'seqr_stats' },
+  { path: 'users', component: Users },
 ]
 
 // TODO shared 404 component
