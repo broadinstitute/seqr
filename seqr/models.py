@@ -807,7 +807,7 @@ class VariantSearch(ModelWithGUID):
     class Meta:
         unique_together = ('created_by', 'name')
 
-        json_fields = ['guid', 'name', 'search']
+        json_fields = ['guid', 'name', 'search', 'created_by_id']
 
 
 class VariantSearchResults(ModelWithGUID):

@@ -66,8 +66,8 @@ def get_es_variants(search_model, sort=XPOS_SORT_KEY, page=1, num_results=100, l
         total_results = previous_search_results.get('total_results')
         if load_all:
             num_results_to_use = total_results or 10000
-        start_index = (page - 1) * num_results
-        end_index = page * num_results
+        start_index = (page - 1) * num_results_to_use
+        end_index = page * num_results_to_use
         if previous_search_results.get('total_results') is not None:
             end_index = min(end_index, previous_search_results['total_results'])
 

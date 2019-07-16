@@ -995,7 +995,7 @@ class EsUtilsTest(TestCase):
         self.assertEqual(total_results, 5)
 
         # test load_all
-        variants, _ = get_es_variants(results_model, page=1, load_all=True)
+        variants, _ = get_es_variants(results_model, page=1, num_results=2, load_all=True)
         self.assertExecutedSearch(filters=[ALL_INHERITANCE_QUERY], sort=['xpos'], start_index=4, size=1)
         self.assertEqual(len(variants), 5)
         self.assertListEqual(variants, PARSED_VARIANTS + PARSED_VARIANTS + PARSED_VARIANTS[:1])

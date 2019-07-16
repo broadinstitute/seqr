@@ -257,7 +257,7 @@ class VariantSearchAPITest(TestCase):
         self.assertEqual(len(saved_searches), 1)
         search_guid = saved_searches.keys()[0]
         self.assertDictEqual(saved_searches[search_guid], {
-            'savedSearchGuid': search_guid, 'name': 'Test Search', 'search': SEARCH,
+            'savedSearchGuid': search_guid, 'name': 'Test Search', 'search': SEARCH, 'createdById': 10,
         })
 
         response = self.client.get(get_saved_search_url)
@@ -269,7 +269,7 @@ class VariantSearchAPITest(TestCase):
         response = self.client.post(update_saved_search_url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json()['savedSearchesByGuid'][search_guid], {
-            'savedSearchGuid': search_guid, 'name': 'Updated Test Search', 'search': SEARCH,
+            'savedSearchGuid': search_guid, 'name': 'Updated Test Search', 'search': SEARCH, 'createdById': 10,
         })
 
         delete_saved_search_url = reverse(delete_saved_search_handler, args=[search_guid])
