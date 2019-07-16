@@ -153,9 +153,8 @@ export const FAMILY_FILTER_OPTIONS = [
     value: SHOW_ASSIGNED_TO_ME,
     category: 'Analysed By:',
     name: 'Assigned To Me',
-    internalOmit: true,
     createFilter: (individualsByGuid, samplesByGuid, user) => family =>
-      family.analysedBy.map(assignedAnalyst => assignedAnalyst.email).includes(user.email),
+      family.analysedBy.map(analysedBy => analysedBy.createdBy.email).includes(user.email),
   },
   {
     value: SHOW_ANALYSED_BY_ME,
@@ -356,7 +355,7 @@ const FAMILY_FIELD_CONFIGS = {
     label: 'Analysis Status',
     format: status => (FAMILY_ANALYSIS_STATUS_OPTIONS.find(option => option.value === status) || {}).name,
   },
-  [FAMILY_FIELD_ASSIGNED_ANALYST]: { label: 'Assigned Analyst', format: stripMarkdown },
+  [FAMILY_FIELD_ASSIGNED_ANALYST]: { label: 'Assigned Analyst' },
   [FAMILY_FIELD_ANALYSED_BY]: { label: 'Analysed By', format: analysedBy => analysedBy.map(o => o.createdBy.fullName || o.createdBy.email).join(',') },
   [FAMILY_FIELD_ANALYSIS_SUMMARY]: { label: 'Analysis Summary', format: stripMarkdown },
   [FAMILY_FIELD_ANALYSIS_NOTES]: { label: 'Analysis Notes', format: stripMarkdown },
