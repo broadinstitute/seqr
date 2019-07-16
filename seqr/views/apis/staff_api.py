@@ -144,6 +144,26 @@ def mme_submissions(request):
 
 
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
+def seqr_stats(request):
+
+    families_count = Family.objects.only('family_id').distinct('family_id').count()
+    individuals_count = Individual.objects.only('individual_id').distinct('individual_id').count()
+
+    sample_counts = defaultdict(set)
+    for sample in Sample.objects.filter(sample_status=Sample.SAMPLE_STATUS_LOADED).only('sample_id', 'sample_type'):
+        sample_counts[sample.sample_type].add(sample.sample_id)
+
+    for sample_type, sample_ids_set in sample_counts.items():
+        sample_counts[sample_type] = len(sample_ids_set)
+
+    return create_json_response({
+        'familyCount': families_count,
+        'individualCount': individuals_count,
+        'sampleCountByType': sample_counts,
+    })
+
+
+@staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
 def anvil_export(request, project_guid):
     if project_guid == 'all':
         project_guid = None

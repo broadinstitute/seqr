@@ -14,6 +14,7 @@ import DiscoverySheet from './components/DiscoverySheet'
 import ElasticsearchStatus from './components/ElasticsearchStatus'
 import CreateUser from './components/CreateUser'
 import Matchmaker from './components/Matchmaker'
+import SeqrStats from './components/SeqrStats'
 import Users from './components/Users'
 
 
@@ -24,7 +25,7 @@ const STAFF_PAGES = [
   { path: 'elasticsearch_status', component: ElasticsearchStatus },
   { path: 'matchmaker', component: Matchmaker },
   { path: 'saved_variants', component: SavedVariants },
-  { path: 'seqr_stats' },
+  { path: 'seqr_stats', component: SeqrStats },
   { path: 'users', component: Users },
 ]
 
