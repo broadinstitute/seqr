@@ -27,7 +27,7 @@ import {
   USER_NAME_FIELDS,
 } from '../../utils/constants'
 import { getUserOptions, getUserOptionsIsLoading, getUsersByUsername } from '../../../pages/Project/selectors'
-import { loadUserOptions } from '../../../pages/Project/reducers'
+import { loadAnalystOptions } from '../../../pages/Project/reducers'
 
 const FamilyGrid = styled(({ annotation, offset, ...props }) => <Grid {...props} />)`
   margin-left: ${props => ((props.annotation || props.offset) ? '25px !important' : 'inherit')};
@@ -78,7 +78,7 @@ const mapDropdownStateToProps = state => ({
 })
 
 const mapDropdownDispatchToProps = {
-  load: loadUserOptions,
+  load: loadAnalystOptions,
 }
 
 AnalystEmailDropdown.propTypes = {

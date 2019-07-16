@@ -33,6 +33,21 @@ def get_all_collaborators(request):
     return create_json_response(collaborators)
 
 
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@csrf_exempt
+def get_all_analysts(request):
+    analysts = {}
+    for project in get_projects_user_can_view(request.user):
+        analysts.update(_get_project_collaborators(project, include_permissions=False))
+
+    for staff in User.objects.filter(is_staff=True):
+        staff_json = _get_json_for_user(staff)
+        staff_json = {staff_json['username']: staff_json}
+        analysts.update(staff_json)
+
+    return create_json_response(analysts)
+
+
 @csrf_exempt
 def forgot_password(request):
     request_json = json.loads(request.body)

@@ -161,6 +161,20 @@ export const loadUserOptions = () => {
   }
 }
 
+export const loadAnalystOptions = () => {
+  return (dispatch) => {
+    dispatch({ type: REQUEST_USERS })
+    new HttpRequestHelper('/api/users/get_all_analysts',
+      (responseJson) => {
+        dispatch({ type: RECEIVE_USERS, newValue: responseJson })
+      },
+      (e) => {
+        dispatch({ type: RECEIVE_USERS, error: e.message, newValue: [] })
+      },
+    ).get()
+  }
+}
+
 export const updateCollaborator = (values) => {
   return updateEntity(values, RECEIVE_DATA, null, 'username', null, state => `/api/project/${state.currentProjectGuid}/collaborators`)
 }
