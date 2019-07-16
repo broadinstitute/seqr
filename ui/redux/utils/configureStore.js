@@ -19,13 +19,10 @@ const persistStoreMiddleware = store => next => (action) => {
   return result
 }
 
-/* eslint-disable no-underscore-dangle */
-const composeEnhancers = window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__ || compose
-const enhancer = composeEnhancers(
+const enhancer = compose(
   applyMiddleware(thunkMiddleware, persistStoreMiddleware),
   reduxSearchEnhancer,
 )
-/* eslint-enable */
 
 
 /**
@@ -44,5 +41,5 @@ export const configureStore = (
   console.log('Creating store with initial state:')
   console.log(initialState)
 
-  return createStore(rootReducer, initialState, /* preloadedState, */ enhancer)
+  return createStore(rootReducer, initialState, enhancer)
 }
