@@ -1,7 +1,7 @@
 import { combineReducers } from 'redux'
 
 import { updateEntity, RECEIVE_DATA, RECEIVE_SAVED_SEARCHES, REQUEST_SAVED_SEARCHES } from 'redux/rootReducer'
-import { loadingReducer, createSingleObjectReducer, createSingleValueReducer } from 'redux/utils/reducerFactories'
+import { loadingReducer, createSingleObjectReducer, createSingleValueReducer, createObjectsByIdReducer } from 'redux/utils/reducerFactories'
 import { HttpRequestHelper, getUrlQueryString } from 'shared/utils/httpRequestHelper'
 import { SORT_BY_XPOS } from 'shared/utils/constants'
 
@@ -10,6 +10,8 @@ import { SORT_BY_XPOS } from 'shared/utils/constants'
 const UPDATE_CURRENT_SEARCH = 'UPDATE_CURRENT_SEARCH'
 const REQUEST_SEARCHED_VARIANTS = 'REQUEST_SEARCHED_VARIANTS'
 const RECEIVE_SEARCHED_VARIANTS = 'RECEIVE_SEARCHED_VARIANTS'
+const REQUEST_SEARCH_GENE_BREAKDOWN = 'REQUEST_SEARCH_GENE_BREAKDOWN'
+const RECEIVE_SEARCH_GENE_BREAKDOWN = 'RECEIVE_SEARCH_GENE_BREAKDOWN'
 const UPDATE_SEARCHED_VARIANT_DISPLAY = 'UPDATE_SEARCHED_VARIANT_DISPLAY'
 const REQUEST_SEARCH_CONTEXT = 'REQUEST_SEARCH_CONTEXT'
 const RECEIVE_SEARCH_CONTEXT = 'RECEIVE_SEARCH_CONTEXT'
@@ -138,6 +140,24 @@ export const loadSearchedVariants = ({ searchHash, variantId, familyGuid, displa
   }
 }
 
+export const loadGeneBreakdown = (searchHash) => {
+  return (dispatch, getState) => {
+    if (!getState().searchGeneBreakdown[searchHash]) {
+      dispatch({ type: REQUEST_SEARCH_GENE_BREAKDOWN })
+
+      new HttpRequestHelper(`/api/search/${searchHash}/gene_breakdown`,
+        (responseJson) => {
+          dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+          dispatch({ type: RECEIVE_SEARCH_GENE_BREAKDOWN, updatesById: responseJson })
+        },
+        (e) => {
+          dispatch({ type: RECEIVE_SEARCH_GENE_BREAKDOWN, error: e.message, updatesById: {} })
+        },
+      ).get()
+    }
+  }
+}
+
 export const unloadSearchResults = () => {
   return (dispatch) => {
     dispatch({ type: UPDATE_CURRENT_SEARCH, newValue: null })
@@ -169,6 +189,8 @@ export const reducers = {
   currentSearchHash: createSingleValueReducer(UPDATE_CURRENT_SEARCH, null),
   searchedVariants: createSingleValueReducer(RECEIVE_SEARCHED_VARIANTS, []),
   searchedVariantsLoading: loadingReducer(REQUEST_SEARCHED_VARIANTS, RECEIVE_SEARCHED_VARIANTS),
+  searchGeneBreakdown: createObjectsByIdReducer(RECEIVE_SEARCH_GENE_BREAKDOWN, 'searchGeneBreakdown'),
+  searchGeneBreakdownLoading: loadingReducer(REQUEST_SEARCH_GENE_BREAKDOWN, RECEIVE_SEARCH_GENE_BREAKDOWN),
   searchContextLoading: loadingReducer(REQUEST_SEARCH_CONTEXT, RECEIVE_SEARCH_CONTEXT),
   variantSearchDisplay: createSingleObjectReducer(UPDATE_SEARCHED_VARIANT_DISPLAY, {
     sort: SORT_BY_XPOS,

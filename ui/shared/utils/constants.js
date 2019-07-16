@@ -66,8 +66,9 @@ export const FAMILY_STATUS_STRONG_CANDIDATE_KNOWN_GENE_DIFFERENT_PHENOTYPE = 'Sc
 export const FAMILY_STATUS_STRONG_CANDIDATE_NOVEL_GENE = 'Sc_ng'
 export const FAMILY_STATUS_REVIEWED_PURSUING_CANDIDATES = 'Rcpc'
 export const FAMILY_STATUS_REVIEWED_NO_CLEAR_CANDIDATE = 'Rncc'
+export const FAMILY_STATUS_CLOSED = 'C'
 export const FAMILY_STATUS_ANALYSIS_IN_PROGRESS = 'I'
-export const FAMILY_STATUS_WAITING_FOR_DATA = 'Q'
+const FAMILY_STATUS_WAITING_FOR_DATA = 'Q'
 
 export const FAMILY_ANALYSIS_STATUS_OPTIONS = [
   { value: FAMILY_STATUS_SOLVED, color: '#4CAF50', name: 'Solved' },
@@ -79,6 +80,7 @@ export const FAMILY_ANALYSIS_STATUS_OPTIONS = [
   { value: FAMILY_STATUS_STRONG_CANDIDATE_NOVEL_GENE, color: '#CDDC39', name: 'Strong candidate - novel gene' },
   { value: FAMILY_STATUS_REVIEWED_PURSUING_CANDIDATES, color: '#CDDC39', name: 'Reviewed, currently pursuing candidates' },
   { value: FAMILY_STATUS_REVIEWED_NO_CLEAR_CANDIDATE, color: '#EF5350', name: 'Reviewed, no clear candidate' },
+  { value: FAMILY_STATUS_CLOSED, color: '#9c0502', name: 'Closed, no longer under analysis' },
   { value: FAMILY_STATUS_ANALYSIS_IN_PROGRESS, color: '#4682B4', name: 'Analysis in Progress' },
   { value: FAMILY_STATUS_WAITING_FOR_DATA, color: '#FFC107', name: 'Waiting for data' },
 ]
@@ -782,7 +784,7 @@ export const VARIANT_EXPORT_DATA = [
   { header: 'rsid', getVal: variant => variant.rsid },
   { header: 'hgvsc', getVal: variant => variant.mainTranscript.hgvsc },
   { header: 'hgvsp', getVal: variant => variant.mainTranscript.hgvsp },
-  { header: 'clinvar_clinical_significance', getVal: variant => variant.clinvar.clinsig },
+  { header: 'clinvar_clinical_significance', getVal: variant => variant.clinvar.clinicalSignificance },
   { header: 'clinvar_gold_stars', getVal: variant => variant.clinvar.goldStars },
   { header: 'filter', getVal: variant => variant.genotypeFilters },
 ]

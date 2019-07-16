@@ -39,7 +39,7 @@ const StyledSortableTable = styled(Table)`
 const ASCENDING = 'ascending'
 const DESCENDING = 'descending'
 
-const getRowColumnContent = (row, isExport) => col => ((col.format && !(isExport && col.noFormatExport)) ? col.format(row) : row[col.name])
+const getRowColumnContent = (row, isExport) => col => ((col.format && !(isExport && col.noFormatExport)) ? col.format(row, isExport) : row[col.name])
 
 class SortableTable extends React.PureComponent {
 
@@ -57,6 +57,7 @@ class SortableTable extends React.PureComponent {
     footer: PropTypes.node,
     rowsPerPage: PropTypes.number,
     horizontalScroll: PropTypes.bool,
+    fixedWidth: PropTypes.bool,
     downloadTableType: PropTypes.string,
     downloadFileName: PropTypes.string,
     loadingProps: PropTypes.object,
@@ -125,7 +126,7 @@ class SortableTable extends React.PureComponent {
     const {
       data, defaultSortColumn, defaultSortDescending, getRowFilterVal, idField, columns, selectRows, selectedRows = {},
       loading, emptyContent, footer, rowsPerPage, horizontalScroll, downloadFileName, downloadTableType,
-      loadingProps = {}, ...tableProps
+      fixedWidth, loadingProps = {}, ...tableProps
     } = this.props
     const { column, direction, activePage, filter } = this.state
 
@@ -202,7 +203,7 @@ class SortableTable extends React.PureComponent {
         <StyledSortableTable
           sortable
           selectable={!!selectRows}
-          columns={!tableProps.collapsing && columns.length <= 16 ? columns.length : null}
+          columns={!tableProps.collapsing && !fixedWidth && columns.length <= 16 ? columns.length : null}
           attached={hasFooter && 'top'}
           {...tableProps}
         >
@@ -257,12 +258,13 @@ class SortableTable extends React.PureComponent {
 export default SortableTable
 
 const EMPTY_OBJECT = {}
-export const SelectableTableFormInput = ({ value, onChange, error, ...props }) =>
+export const SelectableTableFormInput = ({ value, onChange, error, data = [], ...props }) =>
   <SortableTable
     basic="very"
     fixed
     selectRows={onChange}
     selectedRows={value || EMPTY_OBJECT}
+    data={data}
     {...props}
   />
 
@@ -270,4 +272,5 @@ SelectableTableFormInput.propTypes = {
   value: PropTypes.any,
   onChange: PropTypes.func,
   error: PropTypes.bool,
+  data: PropTypes.array,
 }

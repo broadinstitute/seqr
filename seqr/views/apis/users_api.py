@@ -1,5 +1,6 @@
 import itertools
 import json
+import urllib
 from anymail.exceptions import AnymailError
 from django.conf import settings
 from django.contrib.admin.views.decorators import staff_member_required
@@ -12,7 +13,7 @@ from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_user
 from seqr.views.utils.permissions_utils import get_projects_user_can_view, get_project_and_check_permissions, CAN_EDIT
-from xbrowse_server.base.models import Project as BaseProject, ProjectCollaborator
+from seqr.model_utils import create_xbrowse_project_collaborator, delete_xbrowse_project_collaborator
 
 
 class CreateUserException(Exception):
@@ -30,6 +31,36 @@ def get_all_collaborators(request):
         collaborators.update(_get_project_collaborators(project, include_permissions=False))
 
     return create_json_response(collaborators)
+
+
+@csrf_exempt
+def forgot_password(request):
+    request_json = json.loads(request.body)
+    if not request_json.get('email'):
+        return create_json_response({}, status=400, reason='Email is required')
+
+    users = User.objects.filter(email__iexact=request_json['email'])
+    if users.count() != 1:
+        return create_json_response({}, status=400, reason='No account found for this email')
+    user = users.first()
+
+    email_content = """
+        Hi there {full_name}--
+
+        Please click this link to reset your seqr password:
+        {base_url}users/set_password/{password_token}?reset=true
+        """.format(
+        full_name=user.get_full_name(),
+        base_url=settings.BASE_URL,
+        password_token=urllib.quote_plus(user.password),
+    )
+
+    try:
+        user.email_user('Reset your seqr password', email_content, fail_silently=False)
+    except AnymailError as e:
+        return create_json_response({}, status=getattr(e, 'status_code', None) or 400, reason=str(e))
+
+    return create_json_response({'success': True})
 
 
 @csrf_exempt
@@ -76,10 +107,7 @@ def create_project_collaborator(request, project_guid):
             return create_json_response({'error': e.message}, status=e.status_code, reason=e.message)
 
     project.can_view_group.user_set.add(user)
-    if project.deprecated_project_id:
-        base_project = BaseProject.objects.filter(project_id=project.deprecated_project_id).first()
-        if base_project:
-            ProjectCollaborator.objects.get_or_create(user=user, project=base_project)
+    create_xbrowse_project_collaborator(project, user)
 
     return create_json_response({
         'projectsByGuid': {project_guid: {'collaborators': get_json_for_project_collaborator_list(project)}}
@@ -91,7 +119,7 @@ def _create_user(request, is_staff=False):
     if not request_json.get('email'):
         raise CreateUserException('Email is required')
 
-    existing_user = User.objects.filter(email=request_json['email']).first()
+    existing_user = User.objects.filter(email__iexact=request_json['email']).first()
     if existing_user:
         raise CreateUserException('This user already exists', existing_user=existing_user)
 
@@ -104,27 +132,31 @@ def _create_user(request, is_staff=False):
         is_staff=is_staff,
     )
 
-    email_content = """
-    Hi there {full_name}--
-    
-    {referrer} has added you as a collaborator in seqr.  
-    
-    Please click this link to set up your account:
-    {base_url}users/set_password/{password_token}
-    
-    Thanks!
-    """.format(
-        full_name=user.get_full_name(),
-        referrer=request.user.get_full_name() or request.user.email,
-        base_url=settings.BASE_URL,
-        password_token=user.password,
-    )
     try:
-        user.email_user('Set up your seqr account', email_content, fail_silently=False)
+        send_welcome_email(user, request.user)
     except AnymailError as e:
         raise CreateUserException(str(e), status_code=getattr(e, 'status_code', None) or 400)
 
     return user
+
+
+def send_welcome_email(user, referrer):
+    email_content = """
+    Hi there {full_name}--
+
+    {referrer} has added you as a collaborator in seqr.
+
+    Please click this link to set up your account:
+    {base_url}users/set_password/{password_token}
+
+    Thanks!
+    """.format(
+        full_name=user.get_full_name(),
+        referrer=referrer.get_full_name() or referrer.email,
+        base_url=settings.BASE_URL,
+        password_token=user.password,
+    )
+    user.email_user('Set up your seqr account', email_content, fail_silently=False)
 
 
 def _update_existing_user(user, project, request_json):
@@ -138,12 +170,8 @@ def _update_existing_user(user, project, request_json):
     else:
         project.can_edit_group.user_set.remove(user)
 
-    if project.deprecated_project_id:
-        base_project = BaseProject.objects.filter(project_id=project.deprecated_project_id).first()
-        if base_project:
-            collab, _ = ProjectCollaborator.objects.get_or_create(user=user, project=base_project)
-            collab.collaborator_type = 'manager' if request_json.get('hasEditPermissions') else 'collaborator'
-            collab.save()
+    create_xbrowse_project_collaborator(
+        project, user, collaborator_type='manager' if request_json.get('hasEditPermissions') else 'collaborator')
 
     return create_json_response({
         'projectsByGuid': {project.guid: {'collaborators': get_json_for_project_collaborator_list(project)}}
@@ -169,10 +197,7 @@ def delete_project_collaborator(request, project_guid, username):
     project.can_view_group.user_set.remove(user)
     project.can_edit_group.user_set.remove(user)
 
-    if project.deprecated_project_id:
-        base_project = BaseProject.objects.filter(project_id=project.deprecated_project_id).first()
-        if base_project:
-            ProjectCollaborator.objects.get(user=user, project=base_project).delete()
+    delete_xbrowse_project_collaborator(project, user)
 
     return create_json_response({
         'projectsByGuid': {project_guid: {'collaborators': get_json_for_project_collaborator_list(project)}}
@@ -211,3 +236,4 @@ def _get_collaborator_json(collaborator, include_permissions, can_edit):
             'hasEditPermissions': can_edit,
         })
     return collaborator_json
+

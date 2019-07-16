@@ -111,19 +111,22 @@ test('getDefaultMmeSubmissionByIndividual', () => {
 test('getMmeResultsByIndividual', () => {
   const mmeResults = getMmeResultsByIndividual(STATE_WITH_2_FAMILIES, {match: {params: {}}})
   expect(Object.keys(mmeResults).length).toEqual(6)
-  expect(mmeResults.I021475_na19675_1.length).toEqual(1)
-  expect(mmeResults.I021475_na19675_1[0].id).toEqual('12531')
-  expect(mmeResults.I021475_na19675_1[0].geneVariants.length).toEqual(1)
-  expect(mmeResults.I021475_na19675_1[0].comments).toEqual('This seems promising')
-  expect(mmeResults.I021475_na19675_1[0].matchStatus.comments).toEqual('This seems promising')
+  expect(mmeResults.I021475_na19675_1.active.length).toEqual(1)
+  expect(mmeResults.I021475_na19675_1.active[0].id).toEqual('12531')
+  expect(mmeResults.I021475_na19675_1.active[0].geneVariants.length).toEqual(1)
+  expect(mmeResults.I021475_na19675_1.active[0].comments).toEqual('This seems promising')
+  expect(mmeResults.I021475_na19675_1.active[0].matchStatus.comments).toEqual('This seems promising')
+
+  expect(mmeResults.I021475_na19675_1.removed.length).toEqual(1)
+  expect(mmeResults.I021475_na19675_1.removed[0].id).toEqual('10509')
 })
 
 test('getMmeDefaultContactEmail', () => {
   expect(getMmeDefaultContactEmail(STATE_WITH_2_FAMILIES, { matchmakerResultGuid: 'MR0005038_HK018_0047' })).toEqual({
     matchmakerResultGuid: 'MR0005038_HK018_0047',
     patientId: '12531',
-    to: 'crowley@unc.edu',
-    subject: 'OR2M3 Matchmaker Exchange connection',
-    body: 'Dear James Crowley,\n\nWe recently matched with one of your patients in Matchmaker Exchange harboring a variant in OR2M3. Our patient has a homozygous missense variant 1:248367227 TC>T and presents with Childhood onset short-limb short stature, Flexion contracture. Would you be willing to share whether your patient\'s phenotype and genotype match with ours? We are very grateful for your help and look forward to hearing more.\n\nBest wishes,\nTest User',
+    to: 'crowley@unc.edu,test@test.com,test@broadinstitute.org',
+    subject: 'OR2M3 Matchmaker Exchange connection (NA19675_1)',
+    body: 'Dear James Crowley,\n\nWe recently matched with one of your patients in Matchmaker Exchange harboring a variant in OR2M3. Our patient has a homozygous missense variant 1:248367227 TC>T and presents with childhood onset short-limb short stature and flexion contracture. Would you be willing to share whether your patient\'s phenotype and genotype match with ours? We are very grateful for your help and look forward to hearing more.\n\nBest wishes,\nTest User',
   })
 })

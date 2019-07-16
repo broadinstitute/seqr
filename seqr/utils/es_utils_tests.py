@@ -1,12 +1,12 @@
 from copy import deepcopy
 import mock
 import json
-
+from collections import defaultdict
 from django.test import TestCase
 
 from seqr.models import Family, Sample, VariantSearch, VariantSearchResults
 from seqr.utils.es_utils import get_es_variants_for_variant_tuples, get_single_es_variant, get_es_variants, \
-    _genotype_inheritance_filter
+    get_es_variant_gene_counts, _genotype_inheritance_filter
 
 INDEX_NAME = 'test_index'
 SECOND_INDEX_NAME = 'test_index_second'
@@ -333,9 +333,17 @@ OR2M3_COMPOUND_HET_ES_VARIANTS[1]['_source']['sortedTranscriptConsequences'] = [
 MFSD9_COMPOUND_HET_ES_VARIANTS = deepcopy(OR2M3_COMPOUND_HET_ES_VARIANTS)
 for var in MFSD9_COMPOUND_HET_ES_VARIANTS:
     var['_source']['variantId'] = '{}-het'.format(var['_source']['variantId'])
-COMPOUND_HET_INDEX_VARIANTS = {SECOND_INDEX_NAME: {
-    'ENSG00000135953': MFSD9_COMPOUND_HET_ES_VARIANTS, 'ENSG00000228198': OR2M3_COMPOUND_HET_ES_VARIANTS,
-}}
+EXTRA_FAMILY_ES_VARIANTS = deepcopy(ES_VARIANTS) + [deepcopy(ES_VARIANTS[0])]
+EXTRA_FAMILY_ES_VARIANTS[2]['matched_queries'][INDEX_NAME] = ['F000005_5']
+MISSING_SAMPLE_ES_VARIANTS = deepcopy(ES_VARIANTS)
+MISSING_SAMPLE_ES_VARIANTS[1]['_source']['samples_num_alt_1'] = []
+COMPOUND_HET_INDEX_VARIANTS = {
+    INDEX_NAME: {'ENSG00000135953': EXTRA_FAMILY_ES_VARIANTS, 'ENSG00000228198': EXTRA_FAMILY_ES_VARIANTS},
+    SECOND_INDEX_NAME: {
+        'ENSG00000135953': MFSD9_COMPOUND_HET_ES_VARIANTS, 'ENSG00000228198': OR2M3_COMPOUND_HET_ES_VARIANTS,
+    },
+    '{},{}'.format(SECOND_INDEX_NAME, INDEX_NAME): {'ENSG00000135953': MISSING_SAMPLE_ES_VARIANTS},
+}
 
 INDEX_ES_VARIANTS = {INDEX_NAME: ES_VARIANTS, SECOND_INDEX_NAME: [ES_VARIANTS[1]]}
 
@@ -782,7 +790,9 @@ class MockHit:
         if no_matched_queries:
             del self.meta.matched_queries
         else:
-            self.meta.matched_queries = matched_queries[index]
+            self.meta.matched_queries = []
+            for subindex in index.split(','):
+                self.meta.matched_queries += matched_queries[subindex]
         self.meta.index = index
         if sort or increment_sort:
             sort = _source['xpos']
@@ -828,10 +838,20 @@ def create_mock_response(search, index=INDEX_NAME):
 
     if search.get('aggs'):
         index_vars = COMPOUND_HET_INDEX_VARIANTS.get(index, {})
-        mock_response.aggregations.genes.buckets = [{
-            'key': gene_id,
-            'vars_by_gene': [MockHit(increment_sort=True, index=index, **var) for var in deepcopy(index_vars.get(gene_id, ES_VARIANTS))]
-        } for gene_id in ['ENSG00000135953', 'ENSG00000228198']]
+        mock_response.aggregations.genes.buckets = [{'key': gene_id, 'doc_count': 3}
+                                                    for gene_id in ['ENSG00000135953', 'ENSG00000228198']]
+        if search['aggs']['genes']['aggs'].get('vars_by_gene'):
+            for bucket in mock_response.aggregations.genes.buckets:
+                bucket['vars_by_gene'] = [MockHit(increment_sort=True, index=index, **var)
+                                          for var in deepcopy(index_vars.get(bucket['key'], ES_VARIANTS))]
+        else:
+            for bucket in mock_response.aggregations.genes.buckets:
+                for sample_field in ['samples_num_alt_1', 'samples_num_alt_2']:
+                    gene_samples = defaultdict(int)
+                    for var in index_vars.get(bucket['key'], ES_VARIANTS):
+                        for sample in var['_source'][sample_field]:
+                            gene_samples[sample] += 1
+                    bucket[sample_field] = {'buckets': [{'key': k, 'doc_count': v} for k, v in gene_samples.items()]}
     else:
         del mock_response.aggregations.genes
     return mock_response
@@ -857,15 +877,15 @@ class EsUtilsTest(TestCase):
             else:
                 return create_mock_response(self.executed_search, index=self.searched_indices[0])
 
-        patcher = mock.patch('seqr.utils.es_utils.EsSearch._execute_search')
+        patcher = mock.patch('seqr.utils.es_utils.BaseEsSearch._execute_search')
         patcher.start().side_effect = mock_execute_search
         self.addCleanup(patcher.stop)
 
-    def assertExecutedSearch(self, filters=None, start_index=0, size=2, sort=None, gene_aggs=False, index=INDEX_NAME):
+    def assertExecutedSearch(self, filters=None, start_index=0, size=2, sort=None, gene_aggs=False, gene_count_aggs=None, index=INDEX_NAME):
         self.assertIsInstance(self.executed_search, dict)
         self.assertEqual(self.searched_indices, [index])
         self.assertSameSearch(
-            self.executed_search, dict(filters=filters, start_index=start_index, size=size, sort=sort, gene_aggs=gene_aggs)
+            self.executed_search, dict(filters=filters, start_index=start_index, size=size, sort=sort, gene_aggs=gene_aggs, gene_count_aggs=gene_count_aggs)
         )
         self.executed_search = None
         self.searched_indices = []
@@ -900,14 +920,20 @@ class EsUtilsTest(TestCase):
                         'top_hits': {'sort': expected_search_params['sort'], '_source': mock.ANY, 'size': 100}
                     }
                 }}}
+        elif expected_search_params.get('gene_count_aggs'):
+            expected_search['aggs'] = {'genes': {
+                'terms': {'field': 'mainTranscript_gene_id', 'size': 1001},
+                'aggs': expected_search_params['gene_count_aggs']
+            }}
         else:
             expected_search['_source'] = mock.ANY
 
         self.assertDictEqual(executed_search, expected_search)
 
-        source = executed_search['aggs']['genes']['aggs']['vars_by_gene']['top_hits']['_source'] \
-            if expected_search_params.get('gene_aggs') else executed_search['_source']
-        self.assertSetEqual(SOURCE_FIELDS, set(source))
+        if not expected_search_params.get('gene_count_aggs'):
+            source = executed_search['aggs']['genes']['aggs']['vars_by_gene']['top_hits']['_source'] \
+                if expected_search_params.get('gene_aggs')  else executed_search['_source']
+            self.assertSetEqual(SOURCE_FIELDS, set(source))
 
     def assertCachedResults(self, results_model, expected_results, sort='xpos'):
         self.assertDictEqual(json.loads(REDIS_CACHE.get('search_results__{}__{}'.format(results_model.guid, sort))), expected_results)
@@ -969,7 +995,7 @@ class EsUtilsTest(TestCase):
         self.assertEqual(total_results, 5)
 
         # test load_all
-        variants, _ = get_es_variants(results_model, page=1, load_all=True)
+        variants, _ = get_es_variants(results_model, page=1, num_results=2, load_all=True)
         self.assertExecutedSearch(filters=[ALL_INHERITANCE_QUERY], sort=['xpos'], start_index=4, size=1)
         self.assertEqual(len(variants), 5)
         self.assertListEqual(variants, PARSED_VARIANTS + PARSED_VARIANTS + PARSED_VARIANTS[:1])
@@ -1261,7 +1287,7 @@ class EsUtilsTest(TestCase):
             'variant_results': [PARSED_VARIANTS[1]],
             'grouped_results': [{'null': [PARSED_VARIANTS[0]]}, {'ENSG00000228198': PARSED_COMPOUND_HET_VARIANTS}],
             'duplicate_doc_count': 0,
-            'loaded_variant_counts': {'test_index_compound_het': {'total': 2}, INDEX_NAME: {'loaded': 2, 'total': 5}},
+            'loaded_variant_counts': {'test_index_compound_het': {'total': 2, 'loaded': 2}, INDEX_NAME: {'loaded': 2, 'total': 5}},
             'total_results': 7,
         })
 
@@ -1293,7 +1319,7 @@ class EsUtilsTest(TestCase):
                 {'null': [PARSED_VARIANTS[0]]}, {'ENSG00000228198': PARSED_COMPOUND_HET_VARIANTS},
                 {'null': [PARSED_VARIANTS[0]]}, {'null': [PARSED_VARIANTS[1]]}],
             'duplicate_doc_count': 1,
-            'loaded_variant_counts': {'test_index_compound_het': {'total': 2}, INDEX_NAME: {'loaded': 4, 'total': 5}},
+            'loaded_variant_counts': {'test_index_compound_het': {'total': 2, 'loaded': 2}, INDEX_NAME: {'loaded': 4, 'total': 5}},
             'total_results': 6,
         })
 
@@ -1336,9 +1362,9 @@ class EsUtilsTest(TestCase):
             'duplicate_doc_count': 3,
             'loaded_variant_counts': {
                 SECOND_INDEX_NAME: {'loaded': 1, 'total': 5},
-                '{}_compound_het'.format(SECOND_INDEX_NAME): {'total': 4},
+                '{}_compound_het'.format(SECOND_INDEX_NAME): {'total': 4, 'loaded': 4},
                 INDEX_NAME: {'loaded': 2, 'total': 5},
-                '{}_compound_het'.format(INDEX_NAME): {'total': 2},
+                '{}_compound_het'.format(INDEX_NAME): {'total': 2, 'loaded': 2},
             },
             'total_results': 13,
         })
@@ -1415,9 +1441,9 @@ class EsUtilsTest(TestCase):
             'duplicate_doc_count': 5,
             'loaded_variant_counts': {
                 SECOND_INDEX_NAME: {'loaded': 2, 'total': 5},
-                '{}_compound_het'.format(SECOND_INDEX_NAME): {'total': 4},
+                '{}_compound_het'.format(SECOND_INDEX_NAME): {'total': 4, 'loaded': 4},
                 INDEX_NAME: {'loaded': 4, 'total': 5},
-                '{}_compound_het'.format(INDEX_NAME): {'total': 2},
+                '{}_compound_het'.format(INDEX_NAME): {'total': 2, 'loaded': 2},
             },
             'total_results': 11,
         })
@@ -1469,6 +1495,134 @@ class EsUtilsTest(TestCase):
             size=5,
             start_index=3,
         )
+
+    def test_get_es_variant_gene_counts(self):
+        search_model = VariantSearch.objects.create(search={
+            'annotations': {'frameshift': ['frameshift_variant']},
+            'qualityFilter': {'min_gq': 10},
+            'inheritance': {'mode': 'recessive'}
+        })
+        results_model = VariantSearchResults.objects.create(variant_search=search_model)
+        results_model.families.set(Family.objects.filter(guid__in=['F000011_11', 'F000003_3', 'F000002_2']))
+
+        initial_cached_results = {
+            'compound_het_results': [{'ENSG00000228198': PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT}],
+            'variant_results': [PARSED_MULTI_INDEX_VARIANT],
+            'grouped_results': [{'null': [PARSED_VARIANTS[0]]}, {'ENSG00000135953': PARSED_COMPOUND_HET_VARIANTS_PROJECT_2}],
+            'duplicate_doc_count': 3,
+            'loaded_variant_counts': {
+                SECOND_INDEX_NAME: {'loaded': 1, 'total': 5},
+                '{}_compound_het'.format(SECOND_INDEX_NAME): {'total': 4, 'loaded': 4},
+                INDEX_NAME: {'loaded': 2, 'total': 5},
+                '{}_compound_het'.format(INDEX_NAME): {'total': 2, 'loaded': 2},
+            },
+            'total_results': 13,
+        }
+        _set_cache('search_results__{}__xpos'.format(results_model.guid), json.dumps(initial_cached_results))
+
+        #  Test gene counts
+        gene_counts = get_es_variant_gene_counts(results_model)
+
+        self.assertDictEqual(gene_counts, {
+            'ENSG00000135953': {'total': 5, 'families': {'F000003_3': 2, 'F000002_2': 1, 'F000011_11': 4}},
+            'ENSG00000228198': {'total': 5, 'families': {'F000003_3': 4, 'F000002_2': 1, 'F000011_11': 4}}
+        })
+
+        expected_inheritance_q = RECESSIVE_INHERITANCE_QUERY['bool']['should'] + [{'bool': {
+            'must': [
+                {'bool': {'should': [
+                    {'bool': {'must': [
+                        {'match': {'contig': 'X'}},
+                        {'term': {'samples_num_alt_2': 'NA20885'}}
+                    ]}},
+                    {'term': {'samples_num_alt_2': 'NA20885'}},
+                ]}},
+                {'bool': {
+                    'must_not': [
+                        {'term': {'samples_gq_0_to_5': 'NA20885'}},
+                        {'term': {'samples_gq_5_to_10': 'NA20885'}},
+                    ]
+                }}
+            ],
+            '_name': 'F000011_11'
+        }}]
+        self.assertExecutedSearch(
+            filters=[
+                {'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}},
+                {'bool': {'should': expected_inheritance_q}}
+            ], size=1, index='{},{}'.format(SECOND_INDEX_NAME, INDEX_NAME),
+            gene_count_aggs={'vars_by_gene': {'top_hits': {'_source': 'none', 'size': 100}}})
+
+        expected_cached_results = {'gene_aggs': gene_counts}
+        expected_cached_results.update(initial_cached_results)
+        self.assertCachedResults(results_model, expected_cached_results)
+
+    def test_multi_project_all_samples_all_inheritance_get_es_variant_gene_counts(self):
+        search_model = VariantSearch.objects.create(search={'annotations': {'frameshift': ['frameshift_variant']}})
+        results_model = VariantSearchResults.objects.create(variant_search=search_model)
+        results_model.families.set(Family.objects.all())
+        _set_cache('search_results__{}__xpos'.format(results_model.guid), json.dumps({'total_results': 5}))
+
+        gene_counts = get_es_variant_gene_counts(results_model)
+
+        self.assertDictEqual(gene_counts, {
+            'ENSG00000135953': {'total': 3, 'families': {'F000003_3': 1, 'F000002_2': 1, 'F000011_11': 1}},
+            'ENSG00000228198': {'total': 3, 'families': {'F000003_3': 2, 'F000002_2': 2, 'F000011_11': 2}}
+        })
+
+        self.assertExecutedSearch(
+            index='{},{}'.format(SECOND_INDEX_NAME, INDEX_NAME),
+            filters=[{'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}}],
+            size=1,
+            gene_count_aggs={
+                'samples_num_alt_1': {'terms': {'field': 'samples_num_alt_1', 'size': 10000}},
+                'samples_num_alt_2': {'terms': {'field': 'samples_num_alt_2', 'size': 10000}}
+            }
+        )
+
+        self.assertCachedResults(results_model, {'gene_aggs': gene_counts, 'total_results': 5})
+
+    def test_cached_get_es_variant_gene_counts(self):
+        search_model = VariantSearch.objects.create(search={})
+        results_model = VariantSearchResults.objects.create(variant_search=search_model)
+        cache_key = 'search_results__{}__xpos'.format(results_model.guid)
+
+        cached_gene_counts = {
+            'ENSG00000135953': {'total': 5, 'families': {'F000003_3': 2, 'F000002_2': 1, 'F000011_11': 4}},
+            'ENSG00000228198': {'total': 5, 'families': {'F000003_3': 4, 'F000002_2': 1, 'F000011_11': 4}}
+        }
+        _set_cache(cache_key, json.dumps({'total_results': 5, 'gene_aggs': cached_gene_counts}))
+        gene_counts = get_es_variant_gene_counts(results_model)
+        self.assertDictEqual(gene_counts, cached_gene_counts)
+        self.assertIsNone(self.executed_search)
+
+        _set_cache(cache_key, json.dumps({'all_results': PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT, 'total_results': 2}))
+        gene_counts = get_es_variant_gene_counts(results_model)
+        self.assertDictEqual(gene_counts, {
+            'ENSG00000135953': {'total': 1, 'families': {'F000003_3': 1, 'F000011_11': 1}},
+            'ENSG00000228198': {'total': 1, 'families': {'F000003_3': 1, 'F000011_11': 1}}
+        })
+        self.assertIsNone(self.executed_search)
+
+        _set_cache(cache_key, json.dumps({
+            'grouped_results': [
+                {'null': [PARSED_VARIANTS[0]]}, {'ENSG00000228198': PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT}, {'null': [PARSED_MULTI_INDEX_VARIANT]}
+            ],
+            'loaded_variant_counts': {
+                SECOND_INDEX_NAME: {'loaded': 1, 'total': 1},
+                '{}_compound_het'.format(SECOND_INDEX_NAME): {'total': 0, 'loaded': 0},
+                INDEX_NAME: {'loaded': 1, 'total': 1},
+                '{}_compound_het'.format(INDEX_NAME): {'total': 2, 'loaded': 2},
+            },
+            'total_results': 4,
+        }))
+        gene_counts = get_es_variant_gene_counts(results_model)
+        self.assertDictEqual(gene_counts, {
+            'ENSG00000135953': {'total': 2, 'families': {'F000003_3': 2, 'F000002_2': 1, 'F000011_11': 1}},
+            'ENSG00000228198': {'total': 2, 'families': {'F000003_3': 2, 'F000011_11': 2}}
+        })
+        self.assertIsNone(self.executed_search)
+
 
     def test_genotype_inheritance_filter(self):
         samples_by_id = {'F000002_2': {
