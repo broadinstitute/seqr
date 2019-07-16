@@ -17,8 +17,6 @@ const UPDATE_CURRENT_PROJECT = 'UPDATE_CURRENT_PROJECT'
 const REQUEST_PROJECT_DETAILS = 'REQUEST_PROJECT_DETAILS'
 const RECEIVE_SAVED_VARIANT_FAMILIES = 'RECEIVE_SAVED_VARIANT_FAMILIES'
 const REQUEST_MME_MATCHES = 'REQUEST_MME_MATCHES'
-const REQUEST_USERS = 'REQUEST_USERS'
-const RECEIVE_USERS = 'RECEIVE_USERS'
 
 
 // Data actions
@@ -147,20 +145,6 @@ export const updateLocusLists = (values) => {
   }
 }
 
-export const loadUserOptions = () => {
-  return (dispatch) => {
-    dispatch({ type: REQUEST_USERS })
-    new HttpRequestHelper('/api/users/get_all',
-      (responseJson) => {
-        dispatch({ type: RECEIVE_USERS, newValue: responseJson })
-      },
-      (e) => {
-        dispatch({ type: RECEIVE_USERS, error: e.message, newValue: [] })
-      },
-    ).get()
-  }
-}
-
 export const updateCollaborator = (values) => {
   return updateEntity(values, RECEIVE_DATA, null, 'username', null, state => `/api/project/${state.currentProjectGuid}/collaborators`)
 }
@@ -226,8 +210,6 @@ export const reducers = {
   currentProjectGuid: createSingleValueReducer(UPDATE_CURRENT_PROJECT, null),
   projectDetailsLoading: loadingReducer(REQUEST_PROJECT_DETAILS, RECEIVE_DATA),
   matchmakerMatchesLoading: loadingReducer(REQUEST_MME_MATCHES, RECEIVE_DATA),
-  usersByUsername: createSingleValueReducer(RECEIVE_USERS, {}),
-  userOptionsLoading: loadingReducer(REQUEST_USERS, RECEIVE_USERS),
   mmeContactNotes: createObjectsByIdReducer(RECEIVE_DATA, 'mmeContactNotes'),
   familyTableState: createSingleObjectReducer(UPDATE_FAMILY_TABLE_STATE, {
     familiesFilter: SHOW_ALL,

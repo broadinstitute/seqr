@@ -19,7 +19,7 @@ import { toCamelcase, toSnakecase } from 'shared/utils/stringUtils'
 import {
   getCurrentProject, getFamiliesGroupedByProjectGuid, getIndividualsByGuid, getSamplesByGuid, getGenesById, getUser,
   getAnalysisGroupsGroupedByProjectGuid, getSavedVariantsByGuid, getFirstSampleByFamily, getSortedIndividualsByFamily,
-  getMmeResultsByGuid, getProjectGuid,
+  getMmeResultsByGuid, getProjectGuid, getAllUsers,
 } from 'redux/selectors'
 
 import {
@@ -373,13 +373,9 @@ export const getMmeDefaultContactEmail = createSelector(
 
 
 // user options selectors
-
-export const getUsersByUsername = state => state.usersByUsername
-export const getUserOptionsIsLoading = state => state.userOptionsLoading.isLoading
-
 export const getUserOptions = createSelector(
-  getUsersByUsername,
-  usersByUsername => Object.values(usersByUsername).map(
+  getAllUsers,
+  users => users.map(
     user => ({ key: user.username, value: user.username, text: user.email }),
   ),
 )

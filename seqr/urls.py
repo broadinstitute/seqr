@@ -61,9 +61,7 @@ from seqr.views.apis.gene_api import \
     update_gene_note_handler, \
     delete_gene_note_handler
 
-from seqr.views.pages.staff.staff_pages import \
-    seqr_stats_page, \
-    users_page, proxy_to_kibana, kibana_page
+from seqr.views.pages.staff.staff_pages import seqr_stats_page, proxy_to_kibana, kibana_page
 
 from seqr.views.apis.locus_list_api import \
     locus_lists, \
@@ -293,7 +291,6 @@ urlpatterns += [
 # other staff-only endpoints
 urlpatterns = [
     url("^staff/seqr_stats/?", seqr_stats_page, name="seqr_stats"),
-    url("^staff/users/?", users_page, name="users_page"),
     url("^staff/kibana/?", kibana_page, name="kibana_page"),
 ] + urlpatterns
 
