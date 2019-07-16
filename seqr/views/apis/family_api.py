@@ -15,7 +15,7 @@ from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.individual_api import delete_individuals
 
 from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file
-from seqr.views.utils.json_to_orm_utils import update_family_from_json, update_model_from_json
+from seqr.views.utils.json_to_orm_utils import update_family_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_family
 from seqr.models import Family, FamilyAnalysedBy, CAN_EDIT, Individual
