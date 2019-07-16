@@ -112,8 +112,10 @@ def _get_json_for_user(user):
         user = user._wrapped   # Django request.user actually stores the Django User objects in a ._wrapped attribute
 
     user_json = {_to_camel_case(field): getattr(user, field) for field in
-                ['username', 'email', 'first_name', 'last_name', 'last_login', 'is_staff', 'date_joined']}
+                ['username', 'email', 'first_name', 'last_name', 'last_login', 'is_staff', 'date_joined',
+                 'assigned_families']}
     user_json['displayName'] = user.get_full_name()
+    user_json['assignedFamilies'] = [family.guid for family in user_json['assignedFamilies'].all()]
     return user_json
 
 
@@ -180,6 +182,8 @@ def _get_json_for_families(families, user=None, add_individual_guids_field=False
                 'fullName': result['assignedAnalyst'].get_full_name(),
                 'email': result['assignedAnalyst'].email,
             }
+        else:
+            result['assignedAnalyst'] = ''
         pedigree_image = _get_pedigree_image_url(result.pop('pedigreeImage'))
         result['pedigreeImage'] = pedigree_image
         if add_individual_guids_field:

@@ -24,7 +24,6 @@ import {
   FAMILY_FIELD_RENDER_LOOKUP,
   FAMILY_FIELD_OMIM_NUMBER,
   FAMILY_FIELD_PMIDS,
-  USER_NAME_FIELDS,
 } from '../../utils/constants'
 import { getUserOptions, getUserOptionsIsLoading, getUsersByUsername } from '../../../pages/Project/selectors'
 import { loadAnalystOptions } from '../../../pages/Project/reducers'
@@ -100,7 +99,6 @@ const EDIT_FIELDS = [
     width: 16,
     inline: true,
   },
-  ...USER_NAME_FIELDS.map(({ name, ...field }) => ({ ...field, name: `user.${name}` })),
 ]
 
 const familyFieldRenderProps = {
