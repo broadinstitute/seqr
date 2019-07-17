@@ -26,7 +26,7 @@ import {
   FAMILY_FIELD_PMIDS,
 } from '../../utils/constants'
 import { getUserOptions, getUserOptionsIsLoading, getUsersByUsername } from '../../../pages/Project/selectors'
-import { loadAnalystOptions } from '../../../pages/Project/reducers'
+import { loadUserOptions } from '../../../redux/rootReducer'
 
 const FamilyGrid = styled(({ annotation, offset, ...props }) => <Grid {...props} />)`
   margin-left: ${props => ((props.annotation || props.offset) ? '25px !important' : 'inherit')};
@@ -77,7 +77,7 @@ const mapDropdownStateToProps = state => ({
 })
 
 const mapDropdownDispatchToProps = {
-  load: loadAnalystOptions,
+  load: loadUserOptions,
 }
 
 AnalystEmailDropdown.propTypes = {

@@ -43,10 +43,8 @@ def get_all_analysts(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user, permission_level=CAN_EDIT)
     analysts.update(_get_project_collaborators(project, include_permissions=False))
 
-    for staff in User.objects.filter(is_staff=True):
-        staff_json = _get_json_for_user(staff)
-        staff_json = {staff_json['username']: staff_json}
-        analysts.update(staff_json)
+    staff_analysts = {staff.username: _get_json_for_user(staff) for staff in User.objects.filter(is_staff=True)}
+    analysts.update(staff_analysts)
 
     return create_json_response(analysts)
 
