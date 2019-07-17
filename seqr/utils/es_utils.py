@@ -7,7 +7,6 @@ import logging
 from pyliftover.liftover import LiftOver
 from sys import maxint
 import redis
-import re
 
 import settings
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37, Omim, GeneConstraint
@@ -1007,20 +1006,15 @@ def _parse_variant_items(search_json):
         if item.startswith('rs'):
             rs_ids.append(item)
         else:
-            var_match = re.match('(?P<chrom>\w+):(?P<pos>\d+)-(?P<ref>\w+)/(?P<alt>\w+)', item)
-            if var_match:
-                variant = var_match.groupdict()
+            var_fields = item.split('-')
+            if len(var_fields) == 4:
                 try:
-                    chrom = variant['chrom'].lstrip('chr')
-                    pos = int(variant['pos'])
-                    ref = variant['ref']
-                    alt = variant['alt']
+                    chrom = var_fields[0].lstrip('chr')
+                    pos = int(var_fields[1])
                     get_xpos(chrom, pos)
-                    variant_ids.append('{}-{}-{}-{}'.format(chrom, pos, ref, alt))
+                    variant_ids.append(item.lstrip('chr'))
                 except (KeyError, ValueError):
-                    invalid_items.append('chr{chrom}:{pos}-{ref}/{alt}'.format(
-                        chrom=variant.get('chrom'), pos=variant.get('start'), ref=variant.get('ref'), alt=variant.get('alt')
-                    ))
+                    invalid_items.append(item)
             else:
                 invalid_items.append(item)
 

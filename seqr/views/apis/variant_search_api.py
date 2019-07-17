@@ -29,7 +29,7 @@ from seqr.views.utils.orm_to_json_utils import \
     get_json_for_saved_variants, \
     get_json_for_saved_search,\
     get_json_for_saved_searches
-from seqr.views.utils.permissions_utils import check_permissions
+from seqr.views.utils.permissions_utils import check_permissions, get_projects_user_can_view
 
 
 GENOTYPE_AC_LOOKUP = {
@@ -62,7 +62,17 @@ def query_variants_handler(request, search_hash):
         search_context = json.loads(request.body)
 
         project_families = search_context.get('projectFamilies')
-        if not project_families:
+        if project_families:
+            all_families = set()
+            for project_family in project_families:
+                all_families.update(project_family['familyGuids'])
+            families = Family.objects.filter(guid__in=all_families)
+        elif search_context.get('allProjectFamilies'):
+            omit_projects = ProjectCategory.objects.get(name='Demo').projects.all()
+            projects = [project for project in get_projects_user_can_view(request.user) 
+                        if project.has_new_search and project not in omit_projects]
+            families = Family.objects.filter(project__in=projects)
+        else:
             return create_json_response({}, status=400, reason='Invalid search: no projects/ families specified')
 
         search_dict = search_context.get('search', {})
@@ -72,10 +82,7 @@ def query_variants_handler(request, search_hash):
 
         results_model = VariantSearchResults.objects.create(search_hash=search_hash, variant_search=search_model)
 
-        all_families = set()
-        for project_family in project_families:
-            all_families.update(project_family['familyGuids'])
-        results_model.families.set(Family.objects.filter(guid__in=all_families))
+        results_model.families.set(families)
 
     _check_results_permission(results_model, request.user)
 

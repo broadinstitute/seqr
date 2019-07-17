@@ -298,7 +298,7 @@ export const LOCATION_FIELDS = [
   {
     name: 'rawVariantItems',
     label: 'Variants',
-    labelHelp: 'A list of variants. Can be separated by commas or whitespace. Variants can be represented by rsID or in the form <chrom>:<pos>-<ref>/<alt>',
+    labelHelp: 'A list of variants. Can be separated by commas or whitespace. Variants can be represented by rsID or in the form <chrom>-<pos>-<ref>-<alt>',
     component: BaseSemanticInput,
     inputType: 'TextArea',
     rows: 8,
