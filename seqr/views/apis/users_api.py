@@ -26,9 +26,12 @@ class CreateUserException(Exception):
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def get_all_collaborators(request):
-    collaborators = {}
-    for project in get_projects_user_can_view(request.user):
-        collaborators.update(_get_project_collaborators(project, include_permissions=False))
+    if request.user.is_staff:
+        collaborators = {user.username: _get_json_for_user(user) for user in User.objects.exclude(email='')}
+    else:
+        collaborators = {}
+        for project in get_projects_user_can_view(request.user):
+            collaborators.update(_get_project_collaborators(project, include_permissions=False))
 
     return create_json_response(collaborators)
 

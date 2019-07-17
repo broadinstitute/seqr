@@ -19,7 +19,7 @@ import { toCamelcase, toSnakecase } from 'shared/utils/stringUtils'
 import {
   getCurrentProject, getFamiliesGroupedByProjectGuid, getIndividualsByGuid, getSamplesByGuid, getGenesById, getUser,
   getAnalysisGroupsGroupedByProjectGuid, getSavedVariantsByGuid, getFirstSampleByFamily, getSortedIndividualsByFamily,
-  getMmeResultsByGuid, getProjectGuid,
+  getMmeResultsByGuid, getProjectGuid, getAllUsers,
 } from 'redux/selectors'
 
 import {
@@ -343,19 +343,29 @@ export const getMmeDefaultContactEmail = createSelector(
       const genotype = (savedVariant.genotypes || {})[individualGuid] || {}
       const mainTranscript = savedVariant.mainTranscript || {}
       const consequence = (mainTranscript.majorConsequence || '').replace(/_variant/g, '').replace(/_/g, ' ')
-      const hgvs = [(mainTranscript.hgvsc || '').split(':').pop(), (savedVariant.hgvsp || '').split(':').pop()].filter(val => val).join(' ')
+      const hgvs = [(mainTranscript.hgvsc || '').split(':').pop(), (mainTranscript.hgvsp || '').split(':').pop()].filter(val => val).join('/')
 
       return `a ${genotype.numAlt === 1 ? 'heterozygous' : 'homozygous'} ${consequence} variant ${chrom}:${pos} ${ref}>${alt}${hgvs ? ` (${hgvs})` : ''}`
     }).join(', ')
 
-    const submittedPhenotypes = (mmeSubmittedData.phenotypes || []).filter(
-      ({ observed }) => observed === 'yes').map(({ label }) => label).join(', ')
+    const submittedPhenotypeList = (mmeSubmittedData.phenotypes || []).filter(
+      ({ observed }) => observed === 'yes').map(({ label }) => label.toLowerCase())
+    const numPhenotypes = submittedPhenotypeList.length
+    if (numPhenotypes > 2) {
+      submittedPhenotypeList[numPhenotypes - 1] = `and ${submittedPhenotypeList[numPhenotypes - 1]}`
+    }
+    const submittedPhenotypes = submittedPhenotypeList.join(numPhenotypes === 2 ? ' and ' : ', ')
 
+    const contacts = [
+      patient.contact.href.replace('mailto:', ''),
+      mmeSubmittedData.patient.contact.href.replace('mailto:', '').replace('matchmaker@broadinstitute.org,', ''),
+      user.email,
+    ]
     return {
       matchmakerResultGuid,
       patientId: patient.id,
-      to: patient.contact.href.replace('mailto:', ''),
-      subject: `${geneName || `Patient ${patient.id}`} Matchmaker Exchange connection`,
+      to: contacts.filter(val => val).join(','),
+      subject: `${geneName || `Patient ${patient.id}`} Matchmaker Exchange connection (${mmeSubmittedData.patient.id})`,
       body: `Dear ${patient.contact.name},\n\nWe recently matched with one of your patients in Matchmaker Exchange harboring ${(mmeSubmittedData.geneVariants || []).length === 1 ? 'a variant' : 'variants'} in ${submittedGenes}. Our patient has ${submittedVariants}${submittedPhenotypes ? ` and presents with ${submittedPhenotypes}` : ''}. Would you be willing to share whether your patient's phenotype and genotype match with ours? We are very grateful for your help and look forward to hearing more.\n\nBest wishes,\n${user.displayName}`,
     }
   },
@@ -363,13 +373,9 @@ export const getMmeDefaultContactEmail = createSelector(
 
 
 // user options selectors
-
-export const getUsersByUsername = state => state.usersByUsername
-export const getUserOptionsIsLoading = state => state.userOptionsLoading.isLoading
-
 export const getUserOptions = createSelector(
-  getUsersByUsername,
-  usersByUsername => Object.values(usersByUsername).map(
+  getAllUsers,
+  users => users.map(
     user => ({ key: user.username, value: user.username, text: user.email }),
   ),
 )

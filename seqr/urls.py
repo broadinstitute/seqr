@@ -61,10 +61,6 @@ from seqr.views.apis.gene_api import \
     update_gene_note_handler, \
     delete_gene_note_handler
 
-from seqr.views.pages.staff.staff_pages import \
-    seqr_stats_page, \
-    users_page, proxy_to_kibana, kibana_page
-
 from seqr.views.apis.locus_list_api import \
     locus_lists, \
     locus_list_info, \
@@ -110,7 +106,9 @@ from seqr.views.apis.staff_api import \
     elasticsearch_status, \
     saved_variants, \
     mme_metrics_proxy, \
-    mme_submissions
+    mme_submissions, \
+    seqr_stats, \
+    proxy_to_kibana
 
 from seqr.views.apis.awesomebar_api import awesomebar_autocomplete_handler
 from seqr.views.apis.auth_api import login_required_error, API_LOGIN_REQUIRED_URL, login_view, logout_view
@@ -243,6 +241,7 @@ api_endpoints = {
     'staff/matchmaker_metrics': mme_metrics_proxy,
     'staff/matchmaker_submissions': mme_submissions,
     'staff/saved_variants/(?P<tag>[^/]+)': saved_variants,
+    'staff/seqr_stats': seqr_stats,
 
     # EXTERNAL APIS: DO NOT CHANGE
     # matchmaker public facing MME URLs
@@ -288,14 +287,6 @@ kibana_urls = '^(?:%s)' % ('|'.join([
 urlpatterns += [
     url(kibana_urls, proxy_to_kibana, name='proxy_to_kibana'),
 ]
-
-
-# other staff-only endpoints
-urlpatterns = [
-    url("^staff/seqr_stats/?", seqr_stats_page, name="seqr_stats"),
-    url("^staff/users/?", users_page, name="users_page"),
-    url("^staff/kibana/?", kibana_page, name="kibana_page"),
-] + urlpatterns
 
 urlpatterns += [
     url(r'^hijack/', include('hijack.urls')),

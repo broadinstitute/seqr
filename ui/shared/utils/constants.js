@@ -784,7 +784,7 @@ export const VARIANT_EXPORT_DATA = [
   { header: 'rsid', getVal: variant => variant.rsid },
   { header: 'hgvsc', getVal: variant => variant.mainTranscript.hgvsc },
   { header: 'hgvsp', getVal: variant => variant.mainTranscript.hgvsp },
-  { header: 'clinvar_clinical_significance', getVal: variant => variant.clinvar.clinsig },
+  { header: 'clinvar_clinical_significance', getVal: variant => variant.clinvar.clinicalSignificance },
   { header: 'clinvar_gold_stars', getVal: variant => variant.clinvar.goldStars },
   { header: 'filter', getVal: variant => variant.genotypeFilters },
 ]

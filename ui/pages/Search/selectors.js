@@ -10,6 +10,7 @@ import {
   getAnalysisGroupsGroupedByProjectGuid,
   getGenesById,
 } from 'redux/selectors'
+import { compareObjects } from 'shared/utils/sortUtils'
 import { SEARCH_FORM_NAME } from './constants'
 
 
@@ -116,7 +117,9 @@ const createSavedSearchesSelector = createSelectorCreator(
 
 export const getSavedSearchOptions = createSavedSearchesSelector(
   getSavedSearches,
-  savedSearches => savedSearches.map(search => ({ text: search.name, value: search.savedSearchGuid })),
+  savedSearches => savedSearches.map(({ name, savedSearchGuid, createdById }) => (
+    { text: name, value: savedSearchGuid, category: createdById ? 'My Searches' : 'Default Searches' }
+  )).sort(compareObjects('text')).sort(compareObjects('category')),
 )
 
 export const getTotalVariantsCount = createSelector(

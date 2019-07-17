@@ -7,7 +7,10 @@ from datetime import datetime, timedelta
 from dateutil import relativedelta as rdelta
 from django.contrib.admin.views.decorators import staff_member_required
 from django.db.models import prefetch_related_objects, Q, Prefetch, Max
+from django.http.response import HttpResponse
 from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
+from requests.exceptions import ConnectionError
 
 from seqr.utils.es_utils import get_es_client, get_latest_loaded_samples
 from seqr.utils.gene_utils import get_genes
@@ -28,7 +31,7 @@ from seqr.models import Project, Family, VariantTag, VariantTagType, Sample, Sav
     LocusList
 from reference_data.models import Omim
 
-from settings import ELASTICSEARCH_SERVER, MME_HEADERS, MME_MATCHBOX_METRICS_URL
+from settings import ELASTICSEARCH_SERVER, MME_HEADERS, MME_MATCHBOX_METRICS_URL, KIBANA_SERVER
 
 logger = logging.getLogger(__name__)
 
@@ -140,6 +143,26 @@ def mme_submissions(request):
     return create_json_response({
         'submissions': submissions,
         'genesById': genes_by_id,
+    })
+
+
+@staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
+def seqr_stats(request):
+
+    families_count = Family.objects.only('family_id').distinct('family_id').count()
+    individuals_count = Individual.objects.only('individual_id').distinct('individual_id').count()
+
+    sample_counts = defaultdict(set)
+    for sample in Sample.objects.filter(sample_status=Sample.SAMPLE_STATUS_LOADED).only('sample_id', 'sample_type'):
+        sample_counts[sample.sample_type].add(sample.sample_id)
+
+    for sample_type, sample_ids_set in sample_counts.items():
+        sample_counts[sample_type] = len(sample_ids_set)
+
+    return create_json_response({
+        'familyCount': families_count,
+        'individualCount': individuals_count,
+        'sampleCountByType': sample_counts,
     })
 
 
@@ -778,3 +801,15 @@ def saved_variants(request, tag):
         'individualsByGuid': {indiv['individualGuid']: indiv for indiv in individuals_json},
         'locusListsByGuid': locus_lists_by_guid,
     })
+
+
+@staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
+@csrf_exempt
+def proxy_to_kibana(request):
+    try:
+        return proxy_request(request, host=KIBANA_SERVER, url=request.get_full_path(), data=request.body, stream=True)
+        # use stream=True because kibana returns gziped responses, and this prevents the requests module from
+        # automatically unziping them
+    except ConnectionError as e:
+        logger.error(e)
+        return HttpResponse("Error: Unable to connect to Kibana {}".format(e))

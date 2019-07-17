@@ -19,7 +19,7 @@ class JSONUtilsTest(TestCase):
 
             self.assertSetEqual(
                 user_json_keys,
-                set(('dateJoined', 'email', 'firstName', 'isStaff', 'lastLogin', 'lastName', 'username', 'displayName'))
+                set(('dateJoined', 'email', 'firstName', 'isStaff', 'lastLogin', 'lastName', 'username', 'displayName', 'id'))
             )
 
     def test_json_for_project(self):
@@ -127,7 +127,7 @@ class JSONUtilsTest(TestCase):
         user = User.objects.filter(is_staff=True).first()
         json = get_json_for_saved_search(search, user)
 
-        fields = {'savedSearchGuid', 'name', 'search'}
+        fields = {'savedSearchGuid', 'name', 'search', 'createdById'}
         self.assertSetEqual(set(json.keys()), fields)
         self.assertTrue('hgmd' in json['search']['pathogenicity'])
 

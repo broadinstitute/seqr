@@ -112,7 +112,7 @@ def _get_json_for_user(user):
         user = user._wrapped   # Django request.user actually stores the Django User objects in a ._wrapped attribute
 
     user_json = {_to_camel_case(field): getattr(user, field) for field in
-                ['username', 'email', 'first_name', 'last_name', 'last_login', 'is_staff', 'date_joined']}
+                ['username', 'email', 'first_name', 'last_name', 'last_login', 'is_staff', 'date_joined', 'id']}
     user_json['displayName'] = user.get_full_name()
     return user_json
 

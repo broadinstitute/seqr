@@ -15,6 +15,9 @@ export const getMmeMetricsLoadingError = state => state.mmeMetricsLoading.errorM
 export const getMmeMetrics = state => state.mmeMetrics
 export const getMmeSubmissionsLoading = state => state.mmeSubmissionsLoading.isLoading
 export const getMmeSubmissions = state => state.mmeSubmissions
+export const getSeqrStatsLoading = state => state.seqrStatsLoading.isLoading
+export const getSeqrStatsLoadingError = state => state.seqrStatsLoading.errorMessage
+export const getSeqrStats = state => state.seqrStats
 
 export const getAnvilColumns = createSelector(
   getAnvilRows,

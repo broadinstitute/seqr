@@ -377,6 +377,7 @@ export const STATE_WITH_2_FAMILIES = {
       mmeResultGuids: ['MR0005038_HK018_0047','MR0004688_RGP_105_3'],
       mmeSubmittedDate: '2018-05-09T10:29:00.000Z',
       mmeSubmittedData: {
+        patient: { id: 'NA19675_1', contact: { href: 'mailto:matchmaker@broadinstitute.org,test@test.com'} },
         phenotypes: [
           {id: 'HP:0011405', label: 'Childhood onset short-limb short stature', observed: 'yes'},
           {id: "HP:0012638", label: "Abnormality of nervous system physiology", observed: "no"},
