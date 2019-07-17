@@ -5,8 +5,8 @@ import { Grid, Popup, Icon } from 'semantic-ui-react'
 import { Link } from 'react-router-dom'
 import styled from 'styled-components'
 
-import { updateFamily } from 'redux/rootReducer'
-import { getProjectsByGuid, getFirstSampleByFamily } from 'redux/selectors'
+import { updateFamily, loadUserOptions } from '../../../redux/rootReducer'
+import { getProjectsByGuid, getFirstSampleByFamily, getUserOptionsIsLoading, getUsersByUsername } from '../../../redux/selectors'
 import VariantTagTypeBar from '../graph/VariantTagTypeBar'
 import PedigreeImagePanel from './view-pedigree-image/PedigreeImagePanel'
 import TextFieldView from './view-fields/TextFieldView'
@@ -25,8 +25,7 @@ import {
   FAMILY_FIELD_OMIM_NUMBER,
   FAMILY_FIELD_PMIDS,
 } from '../../utils/constants'
-import { getUserOptions, getUserOptionsIsLoading, getUsersByUsername } from '../../../pages/Project/selectors'
-import { loadUserOptions } from '../../../redux/rootReducer'
+import { getUserOptions} from '../../../pages/Project/selectors'
 
 const FamilyGrid = styled(({ annotation, offset, ...props }) => <Grid {...props} />)`
   margin-left: ${props => ((props.annotation || props.offset) ? '25px !important' : 'inherit')};
