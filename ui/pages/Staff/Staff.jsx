@@ -17,12 +17,14 @@ import Matchmaker from './components/Matchmaker'
 import SeqrStats from './components/SeqrStats'
 import Users from './components/Users'
 
+const IFRAME_STYLE = { position: 'fixed', left: '0', top: '95px' }
 
 const STAFF_PAGES = [
   { path: 'anvil', params: '/:projectGuid?', component: Anvil },
   { path: 'create_user', component: CreateUser },
   { path: 'discovery_sheet', params: '/:projectGuid?', component: DiscoverySheet },
   { path: 'elasticsearch_status', component: ElasticsearchStatus },
+  { path: 'kibana', component: () => <iframe width="100%" height="100%" style={IFRAME_STYLE} src="/app/kibana" /> },
   { path: 'matchmaker', component: Matchmaker },
   { path: 'saved_variants', component: SavedVariants },
   { path: 'seqr_stats', component: SeqrStats },
