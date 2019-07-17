@@ -152,13 +152,12 @@ def update_family_assigned_analyst(request, family_guid):
     if not assigned_analyst:
         return create_json_response(
             {}, status=400, reason="'assigned analyst' is not specified")
-    else:
-        assigned_analyst = User.objects.get(username=assigned_analyst['username'])
-        update_seqr_model(family, assigned_analyst=assigned_analyst)
+    assigned_analyst = User.objects.get(username=assigned_analyst['username'])
+    update_seqr_model(family, assigned_analyst=assigned_analyst)
 
-        return create_json_response({
-            family.guid: _get_json_for_family(family, request.user)
-        })
+    return create_json_response({
+        family.guid: _get_json_for_family(family, request.user)
+    })
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -173,9 +172,6 @@ def update_family_analysed_by(request, family_guid):
 
     family = Family.objects.get(guid=family_guid)
     check_permissions(family.project, request.user, CAN_EDIT)
-
-    import pdb
-    pdb.set_trace()
 
     create_seqr_model(FamilyAnalysedBy, family=family, created_by=request.user)
 
