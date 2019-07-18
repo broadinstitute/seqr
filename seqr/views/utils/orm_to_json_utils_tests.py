@@ -19,8 +19,7 @@ class JSONUtilsTest(TestCase):
 
             self.assertSetEqual(
                 user_json_keys,
-                set(('dateJoined', 'email', 'firstName', 'isStaff', 'lastLogin', 'lastName', 'username', 'displayName',
-                     'assignedFamilies', 'id'))
+                set(('dateJoined', 'email', 'firstName', 'isStaff', 'lastLogin', 'lastName', 'username', 'displayName', 'id'))
             )
 
     def test_json_for_project(self):

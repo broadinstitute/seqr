@@ -36,7 +36,7 @@ class UsersAPITest(TransactionTestCase):
         self.assertSetEqual(
             set(collaborators[0].keys()),
             {'dateJoined', 'email', 'firstName', 'isStaff', 'lastLogin', 'lastName', 'username', 'displayName',
-             'hasViewPermissions', 'hasEditPermissions', 'assignedFamilies', 'id'}
+             'hasViewPermissions', 'hasEditPermissions', 'id'}
         )
         self.assertEqual(collaborators[0]['email'], 'test@test.com')
         self.assertEqual(collaborators[0]['displayName'], '')
@@ -74,8 +74,7 @@ class UsersAPITest(TransactionTestCase):
         self.assertSetEqual(set(response_json.keys()), {username, 'test_user'})
         self.assertSetEqual(
             set(response_json[username].keys()),
-            {'dateJoined', 'email', 'firstName', 'isStaff', 'lastLogin', 'lastName', 'username', 'displayName',
-             'assignedFamilies', 'id'}
+            {'dateJoined', 'email', 'firstName', 'isStaff', 'lastLogin', 'lastName', 'username', 'displayName', 'id'}
         )
 
         # calling create again just updates the existing user
