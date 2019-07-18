@@ -6,7 +6,8 @@ import { Link } from 'react-router-dom'
 import styled from 'styled-components'
 
 import { updateFamily, loadUserOptions } from '../../../redux/rootReducer'
-import { getProjectsByGuid, getFirstSampleByFamily, getUserOptionsIsLoading, getUsersByUsername } from '../../../redux/selectors'
+import { getProjectsByGuid, getFirstSampleByFamily, getUserOptionsIsLoading, getUsersByUsername,
+  getProjectGuid } from '../../../redux/selectors'
 import VariantTagTypeBar from '../graph/VariantTagTypeBar'
 import PedigreeImagePanel from './view-pedigree-image/PedigreeImagePanel'
 import TextFieldView from './view-fields/TextFieldView'
@@ -25,7 +26,7 @@ import {
   FAMILY_FIELD_OMIM_NUMBER,
   FAMILY_FIELD_PMIDS,
 } from '../../utils/constants'
-import { getUserOptions} from '../../../pages/Project/selectors'
+import { getUserOptions } from '../../../pages/Project/selectors'
 
 const FamilyGrid = styled(({ annotation, offset, ...props }) => <Grid {...props} />)`
   margin-left: ${props => ((props.annotation || props.offset) ? '25px !important' : 'inherit')};
@@ -50,8 +51,8 @@ const mapSampleDispatchToProps = (state, ownProps) => ({
 
 const FirstSample = connect(mapSampleDispatchToProps)(BaseFirstSample)
 
-const AnalystEmailDropdown = ({ load, loading, usersByUsername, onChange, value, ...props }) =>
-  <DataLoader load={load} loading={false} content>
+const AnalystEmailDropdown = ({ load, projectGuid, loading, usersByUsername, onChange, value, ...props }) =>
+  <DataLoader load={load(projectGuid)} loading={false} content>
     <AddableSelect
       loading={loading}
       additionLabel="Assigned Analyst: "
@@ -63,6 +64,7 @@ const AnalystEmailDropdown = ({ load, loading, usersByUsername, onChange, value,
 
 AnalystEmailDropdown.propTypes = {
   load: PropTypes.func,
+  projectGuid: PropTypes.string,
   loading: PropTypes.bool,
   usersByUsername: PropTypes.object,
   onChange: PropTypes.func,
@@ -73,6 +75,7 @@ const mapDropdownStateToProps = state => ({
   loading: getUserOptionsIsLoading(state),
   options: getUserOptions(state),
   usersByUsername: getUsersByUsername(state),
+  projectGuid: getProjectGuid(state),
 })
 
 const mapDropdownDispatchToProps = {
@@ -92,9 +95,6 @@ const EDIT_FIELDS = [
     name: 'user',
     label: 'Email',
     component: connect(mapDropdownStateToProps, mapDropdownDispatchToProps)(AnalystEmailDropdown),
-    validate: value => (
-      /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}$/i.test((value || {}).email) ? undefined : 'Invalid email address'
-    ),
     width: 16,
     inline: true,
   },
