@@ -389,7 +389,11 @@ export const getCollaborators = createSelector(
 export const getAnalystOptions = createSelector(
   getCollaborators,
   getAllUsers,
-  (collaborators, users) => [...collaborators, ...users].map(
-    user => ({ key: user.username, value: user.username, text: user.email }),
-  ),
+  (collaborators, users) => {
+    const staff = users.filter(user => user.isStaff)
+    const uniqueCollaborators = collaborators.filter(collaborator => !collaborator.isStaff)
+    return [...uniqueCollaborators, ...staff].map(
+      user => ({ key: user.username, value: user.username, text: user.email }),
+    )
+  },
 )
