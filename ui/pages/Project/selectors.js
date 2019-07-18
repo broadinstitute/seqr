@@ -380,3 +380,16 @@ export const getUserOptions = createSelector(
   ),
 )
 
+export const getCollaborators = createSelector(
+  getCurrentProject,
+  project => project.collaborators,
+)
+
+// analyst option selectors (add project collaborators to staff users)
+export const getAnalystOptions = createSelector(
+  getCollaborators,
+  getAllUsers,
+  (collaborators, users) => [...collaborators, ...users].map(
+    user => ({ key: user.username, value: user.username, text: user.email }),
+  ),
+)

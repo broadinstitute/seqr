@@ -25,7 +25,7 @@ import {
   FAMILY_FIELD_OMIM_NUMBER,
   FAMILY_FIELD_PMIDS,
 } from '../../utils/constants'
-import { getUserOptions } from '../../../pages/Project/selectors'
+import { getAnalystOptions } from '../../../pages/Project/selectors'
 
 const FamilyGrid = styled(({ annotation, offset, ...props }) => <Grid {...props} />)`
   margin-left: ${props => ((props.annotation || props.offset) ? '25px !important' : 'inherit')};
@@ -71,7 +71,7 @@ AnalystEmailDropdown.propTypes = {
 
 const mapDropdownStateToProps = state => ({
   loading: getUserOptionsIsLoading(state),
-  options: getUserOptions(state),
+  options: getAnalystOptions(state),
   usersByUsername: getUsersByUsername(state),
 })
 
