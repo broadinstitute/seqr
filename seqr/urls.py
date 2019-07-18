@@ -93,7 +93,7 @@ from seqr.views.apis.variant_search_api import \
 
 from seqr.views.apis.users_api import \
     get_all_collaborators, \
-    get_all_analysts, \
+    get_all_staff, \
     create_project_collaborator, \
     update_project_collaborator, \
     delete_project_collaborator, \
@@ -235,8 +235,8 @@ api_endpoints = {
     'users/(?P<username>[^/]+)/set_password': set_password,
 
     'users/get_all': get_all_collaborators,
+    'users/get_all_staff': get_all_staff,
     'users/create_staff_user': create_staff_user,
-    'project/(?P<project_guid>[^/]+)/collaborators': get_all_analysts,
     'project/(?P<project_guid>[^/]+)/collaborators/create': create_project_collaborator,
     'project/(?P<project_guid>[^/]+)/collaborators/(?P<username>[^/]+)/update': update_project_collaborator,
     'project/(?P<project_guid>[^/]+)/collaborators/(?P<username>[^/]+)/delete': delete_project_collaborator,

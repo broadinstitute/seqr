@@ -5,9 +5,8 @@ import { Grid, Popup, Icon } from 'semantic-ui-react'
 import { Link } from 'react-router-dom'
 import styled from 'styled-components'
 
-import { updateFamily, loadUserOptions } from '../../../redux/rootReducer'
-import { getProjectsByGuid, getFirstSampleByFamily, getUserOptionsIsLoading, getUsersByUsername,
-  getProjectGuid } from '../../../redux/selectors'
+import { updateFamily, loadStaffOptions } from '../../../redux/rootReducer'
+import { getProjectsByGuid, getFirstSampleByFamily, getUserOptionsIsLoading, getUsersByUsername} from '../../../redux/selectors'
 import VariantTagTypeBar from '../graph/VariantTagTypeBar'
 import PedigreeImagePanel from './view-pedigree-image/PedigreeImagePanel'
 import TextFieldView from './view-fields/TextFieldView'
@@ -51,8 +50,8 @@ const mapSampleDispatchToProps = (state, ownProps) => ({
 
 const FirstSample = connect(mapSampleDispatchToProps)(BaseFirstSample)
 
-const AnalystEmailDropdown = ({ load, projectGuid, loading, usersByUsername, onChange, value, ...props }) =>
-  <DataLoader load={load(projectGuid)} loading={false} content>
+const AnalystEmailDropdown = ({ load, loading, usersByUsername, onChange, value, ...props }) =>
+  <DataLoader load={load} loading={false} content>
     <AddableSelect
       loading={loading}
       additionLabel="Assigned Analyst: "
@@ -64,7 +63,6 @@ const AnalystEmailDropdown = ({ load, projectGuid, loading, usersByUsername, onC
 
 AnalystEmailDropdown.propTypes = {
   load: PropTypes.func,
-  projectGuid: PropTypes.string,
   loading: PropTypes.bool,
   usersByUsername: PropTypes.object,
   onChange: PropTypes.func,
@@ -75,11 +73,10 @@ const mapDropdownStateToProps = state => ({
   loading: getUserOptionsIsLoading(state),
   options: getUserOptions(state),
   usersByUsername: getUsersByUsername(state),
-  projectGuid: getProjectGuid(state),
 })
 
 const mapDropdownDispatchToProps = {
-  load: loadUserOptions,
+  load: loadStaffOptions,
 }
 
 AnalystEmailDropdown.propTypes = {

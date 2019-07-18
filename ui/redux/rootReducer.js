@@ -72,11 +72,24 @@ export const fetchProjects = () => {
   }
 }
 
-export const loadUserOptions = (projectGuid) => {
+export const loadUserOptions = () => {
   return (dispatch) => {
-    const url = projectGuid ? `/api/project/${projectGuid}/collaborators` : '/api/users/get_all'
     dispatch({ type: REQUEST_USERS })
-    new HttpRequestHelper(url,
+    new HttpRequestHelper('/api/users/get_all',
+      (responseJson) => {
+        dispatch({ type: RECEIVE_USERS, newValue: responseJson })
+      },
+      (e) => {
+        dispatch({ type: RECEIVE_USERS, error: e.message, newValue: [] })
+      },
+    ).get()
+  }
+}
+
+export const loadStaffOptions = () => {
+  return (dispatch) => {
+    dispatch({ type: REQUEST_USERS })
+    new HttpRequestHelper('/api/users/get_all_staff',
       (responseJson) => {
         dispatch({ type: RECEIVE_USERS, newValue: responseJson })
       },

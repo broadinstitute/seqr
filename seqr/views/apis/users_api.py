@@ -38,17 +38,11 @@ def get_all_collaborators(request):
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
-def get_all_analysts(request, project_guid):
-    project = get_project_and_check_permissions(project_guid, request.user, permission_level=CAN_EDIT)
-    analysts = _get_project_collaborators(project, include_permissions=False)
+def get_all_staff(request):
+    if request:
+        staff_analysts = {staff.username: _get_json_for_user(staff) for staff in User.objects.filter(is_staff=True)}
 
-    staff_analysts = {staff.username: _get_json_for_user(staff) for staff in User.objects.filter(is_staff=True)}
-    analysts.update(staff_analysts)
-
-    import pdb
-    pdb.set_trace()
-
-    return create_json_response(analysts)
+    return create_json_response(staff_analysts)
 
 
 @csrf_exempt
