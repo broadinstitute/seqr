@@ -73,8 +73,8 @@ export const fetchProjects = () => {
 }
 
 export const loadUserOptions = (projectGuid) => {
-  const url = { projectGuid } ? `/api/project/${projectGuid}/collaborators` : '/api/users/get_all'
   return (dispatch) => {
+    const url = projectGuid ? `/api/project/${projectGuid}/collaborators` : '/api/users/get_all'
     dispatch({ type: REQUEST_USERS })
     new HttpRequestHelper(url,
       (responseJson) => {
@@ -86,21 +86,6 @@ export const loadUserOptions = (projectGuid) => {
     ).get()
   }
 }
-
-// export const loadAnalystOptions = () => {
-//   return (dispatch) => {
-//     dispatch({ type: REQUEST_USERS })
-//     new HttpRequestHelper('/api/users/get_all_analysts',
-//       (responseJson) => {
-//         dispatch({ type: RECEIVE_USERS, newValue: responseJson })
-//       },
-//       (e) => {
-//         dispatch({ type: RECEIVE_USERS, error: e.message, newValue: [] })
-//       },
-//     ).get()
-//   }
-// }
-
 
 /**
  * POSTS a request to update the specified project and dispatches the appropriate events when the request finishes

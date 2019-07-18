@@ -154,7 +154,7 @@ export const FAMILY_FILTER_OPTIONS = [
     category: 'Analysed By:',
     name: 'Assigned To Me',
     createFilter: (individualsByGuid, samplesByGuid, user) => family =>
-      user.assignedFamilies.includes(family.familyGuid),
+      family.assignedAnalyst.email === (user.email),
   },
   {
     value: SHOW_ANALYSED_BY_ME,
