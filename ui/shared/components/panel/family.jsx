@@ -6,7 +6,7 @@ import { Link } from 'react-router-dom'
 import styled from 'styled-components'
 
 import { updateFamily, loadStaffOptions } from '../../../redux/rootReducer'
-import { getProjectsByGuid, getFirstSampleByFamily, getUserOptionsIsLoading, getUsersByUsername} from '../../../redux/selectors'
+import { getProjectsByGuid, getFirstSampleByFamily, getUserOptionsIsLoading, getUsersByUsername } from '../../../redux/selectors'
 import VariantTagTypeBar from '../graph/VariantTagTypeBar'
 import PedigreeImagePanel from './view-pedigree-image/PedigreeImagePanel'
 import TextFieldView from './view-fields/TextFieldView'
