@@ -152,7 +152,11 @@ def update_family_assigned_analyst(request, family_guid):
     if not assigned_analyst:
         return create_json_response(
             {}, status=400, reason="'assigned analyst' is not specified")
-    assigned_analyst = User.objects.get(username=assigned_analyst['username'])
+    try:
+        assigned_analyst = User.objects.get(username=assigned_analyst['username'])
+    except Exception:
+        return create_json_response(
+            {}, status=400, reason="user does not have access")
     update_seqr_model(family, assigned_analyst=assigned_analyst)
 
     return create_json_response({
