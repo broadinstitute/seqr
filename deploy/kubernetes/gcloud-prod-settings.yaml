@@ -31,6 +31,8 @@ SEQR_POD_MEMORY_LIMIT: 35Gi
 REDIS_POD_MEMORY_LIMIT: 10Gi
 PHENOTIPS_POD_MEMORY_LIMIT: 3Gi
 
+UPLOADED_PEDIGREE_FILE_RECIPIENTS: 'jchang@broadinstitute.org,larkin@broadinstitute.org'
+
 
 ###########################################################
 ####### SETTINGS THAT SHOULDN'T NEED TO BE MODIFIED #######
