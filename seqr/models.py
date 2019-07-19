@@ -24,7 +24,7 @@ CAN_VIEW = 'can_view'
 CAN_EDIT = 'can_edit'
 IS_OWNER = 'is_owner'
 
-_SEQR_OBJECT_PERMISSIONS = (u
+_SEQR_OBJECT_PERMISSIONS = (
     (CAN_VIEW, CAN_VIEW),
     (CAN_EDIT, CAN_EDIT),
     (IS_OWNER, IS_OWNER),
