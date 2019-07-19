@@ -148,6 +148,8 @@ spec:
           value: "{{ DATABASE_BACKUP_BUCKET }}"
         - name: ENABLE_DATABASE_BACKUPS
           value: "{{ ENABLE_DATABASE_BACKUPS }}"
+        - name: UPLOADED_PEDIGREE_FILE_RECIPIENTS
+          value: "{{ UPLOADED_PEDIGREE_FILE_RECIPIENTS }}"
         readinessProbe:
           exec:
             command:
