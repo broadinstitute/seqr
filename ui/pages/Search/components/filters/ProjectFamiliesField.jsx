@@ -149,7 +149,7 @@ const mapDispatchToProps = (dispatch, ownProps) => {
     const newVal = getProjectFamilies(
       ownProps.value, getFamiliesByGuid(state), getFamiliesGroupedByProjectGuid(state), getAnalysisGroupsByGuid(state),
     )
-    if (newVal) {
+    if (newVal && newVal !== ownProps.value) {
       ownProps.onChange(newVal)
     }
   }

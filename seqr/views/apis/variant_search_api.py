@@ -275,6 +275,9 @@ def search_context_handler(request):
         projects = Project.objects.filter(analysisgroup__guid=request.GET.get('analysisGroupGuid'))
     elif request.GET.get('projectCategoryGuid'):
         projects = Project.objects.filter(projectcategory__guid=request.GET.get('projectCategoryGuid'))
+    elif request.GET.get('searchHash'):
+        families = VariantSearchResults.objects.get(search_hash=request.GET.get('searchHash')).families.all()
+        projects = Project.objects.filter(family__in=families)
     else:
         return create_json_response({}, status=400, reason='Invalid query params: {}'.format(json.dumps(request.GET)))
 
