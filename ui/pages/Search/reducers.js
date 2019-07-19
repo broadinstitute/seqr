@@ -15,6 +15,8 @@ const RECEIVE_SEARCH_GENE_BREAKDOWN = 'RECEIVE_SEARCH_GENE_BREAKDOWN'
 const UPDATE_SEARCHED_VARIANT_DISPLAY = 'UPDATE_SEARCHED_VARIANT_DISPLAY'
 const REQUEST_SEARCH_CONTEXT = 'REQUEST_SEARCH_CONTEXT'
 const RECEIVE_SEARCH_CONTEXT = 'RECEIVE_SEARCH_CONTEXT'
+const REQUEST_MULTI_PROJECT_SEARCH_CONTEXT = 'REQUEST_MULTI_PROJECT_SEARCH_CONTEXT'
+const RECEIVE_MULTI_PROJECT_SEARCH_CONTEXT = 'RECEIVE_MULTI_PROJECT_SEARCH_CONTEXT'
 
 // actions
 
@@ -39,6 +41,7 @@ export const loadProjectFamiliesContext = ({ searchHash, projectGuid, familyGuid
       contextParams.analysisGroupGuid = analysisGroupGuid
     } else if (searchHash && (!state.searchesByHash[searchHash] || !state.searchesByHash[searchHash].projectFamilies ||
         state.searchesByHash[searchHash].projectFamilies.some(entry => !state.projectsByGuid[entry.projectGuid]))) {
+      dispatch({ type: REQUEST_MULTI_PROJECT_SEARCH_CONTEXT })
       contextParams.searchHash = searchHash
     }
 
@@ -48,11 +51,8 @@ export const loadProjectFamiliesContext = ({ searchHash, projectGuid, familyGuid
         (responseJson) => {
           dispatch({ type: RECEIVE_SAVED_SEARCHES, updatesById: responseJson })
           dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
-          if (onSuccess) {
-            // TODO unneccessary?
-            onSuccess(getState())
-          }
           dispatch({ type: RECEIVE_SEARCH_CONTEXT })
+          dispatch({ type: RECEIVE_MULTI_PROJECT_SEARCH_CONTEXT })
         },
         (e) => {
           dispatch({ type: RECEIVE_SEARCH_CONTEXT, error: e.message })
@@ -202,6 +202,7 @@ export const reducers = {
   searchGeneBreakdown: createObjectsByIdReducer(RECEIVE_SEARCH_GENE_BREAKDOWN, 'searchGeneBreakdown'),
   searchGeneBreakdownLoading: loadingReducer(REQUEST_SEARCH_GENE_BREAKDOWN, RECEIVE_SEARCH_GENE_BREAKDOWN),
   searchContextLoading: loadingReducer(REQUEST_SEARCH_CONTEXT, RECEIVE_SEARCH_CONTEXT),
+  multiProjectsearchContextLoading: loadingReducer(REQUEST_MULTI_PROJECT_SEARCH_CONTEXT, RECEIVE_MULTI_PROJECT_SEARCH_CONTEXT),
   variantSearchDisplay: createSingleObjectReducer(UPDATE_SEARCHED_VARIANT_DISPLAY, {
     sort: SORT_BY_XPOS,
     page: 1,

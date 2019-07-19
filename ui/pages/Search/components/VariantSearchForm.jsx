@@ -9,7 +9,7 @@ import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
 import { SaveSearchButton } from './SavedSearch'
 import VariantSearchFormContent from './VariantSearchFormContent'
 import { SEARCH_FORM_NAME } from '../constants'
-import { getIntitialSearch, getSearchContextIsLoading } from '../selectors'
+import { getIntitialSearch, getMultiProjectSearchContextIsLoading } from '../selectors'
 import { loadProjectFamiliesContext } from '../reducers'
 
 
@@ -26,7 +26,6 @@ const VariantSearchForm = ({ match, history, saveSearch, load, initialSearch, lo
       load={load}
       content={initialSearch}
       hideError
-      reloadOnIdUpdate
     >
       <ReduxFormWrapper
         initialValues={initialSearch}
@@ -57,7 +56,7 @@ VariantSearchForm.propTypes = {
 const mapStateToProps = (state, ownProps) => ({
   initialSearch: getIntitialSearch(state, ownProps),
   contentLoading: getLocusListIsLoading(state),
-  loading: getSearchContextIsLoading(state),
+  loading: getMultiProjectSearchContextIsLoading(state),
 })
 
 const mapDispatchToProps = {
