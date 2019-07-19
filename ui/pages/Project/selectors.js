@@ -349,7 +349,7 @@ export const getMmeDefaultContactEmail = createSelector(
     }).join(', ')
 
     const submittedPhenotypeList = (mmeSubmittedData.phenotypes || []).filter(
-      ({ observed }) => observed === 'yes').map(({ label }) => label.toLowerCase())
+      ({ observed, label }) => observed === 'yes' && label).map(({ label }) => label.toLowerCase())
     const numPhenotypes = submittedPhenotypeList.length
     if (numPhenotypes > 2) {
       submittedPhenotypeList[numPhenotypes - 1] = `and ${submittedPhenotypeList[numPhenotypes - 1]}`
