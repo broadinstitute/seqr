@@ -275,7 +275,7 @@ for url_endpoint, handler_function in api_endpoints.items():
 
 # login/ logout
 urlpatterns += [
-    url('logout', logout_view),
+    url('^logout$', logout_view),
     url(API_LOGIN_REQUIRED_URL.lstrip('/'), login_required_error)
 ]
 
