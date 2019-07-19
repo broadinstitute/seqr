@@ -55,7 +55,10 @@ def query_variants_handler(request, search_hash):
     if sort == PATHOGENICTY_SORT_KEY and request.user.is_staff:
         sort = PATHOGENICTY_HGMD_SORT_KEY
 
-    results_model = _get_or_create_results_model(search_hash, json.loads(request.body or '{}'), request.user)
+    try:
+        results_model = _get_or_create_results_model(search_hash, json.loads(request.body or '{}'), request.user)
+    except Exception as e:
+        return create_json_response({}, status=400, reason=e.message)
 
     _check_results_permission(results_model, request.user)
 
@@ -77,7 +80,7 @@ def _get_or_create_results_model(search_hash, search_context, user):
     results_model = VariantSearchResults.objects.filter(search_hash=search_hash).first()
     if not results_model:
         if not search_context:
-            return create_json_response({}, status=400, reason='Invalid search hash: {}'.format(search_hash))
+            raise Exception('Invalid search hash: {}'.format(search_hash))
 
         project_families = search_context.get('projectFamilies')
         if project_families:
@@ -91,7 +94,7 @@ def _get_or_create_results_model(search_hash, search_context, user):
                         if project.has_new_search and project not in omit_projects]
             families = Family.objects.filter(project__in=projects)
         else:
-            return create_json_response({}, status=400, reason='Invalid search: no projects/ families specified')
+            raise Exception('Invalid search: no projects/ families specified')
 
         search_dict = search_context.get('search', {})
         search_model = VariantSearch.objects.filter(search=search_dict).filter(
@@ -284,18 +287,21 @@ def search_context_handler(request):
     if context.get('projectGuid'):
         projects = Project.objects.filter(guid=context.get('projectGuid'))
     elif context.get('familyGuid'):
-        projects = Project.objects.filter(family__guid=request.GET.get('familyGuid'))
+        projects = Project.objects.filter(family__guid=context.get('familyGuid'))
     elif context.get('analysisGroupGuid'):
-        projects = Project.objects.filter(analysisgroup__guid=request.GET.get('analysisGroupGuid'))
+        projects = Project.objects.filter(analysisgroup__guid=context.get('analysisGroupGuid'))
     elif context.get('projectCategoryGuid'):
-        projects = Project.objects.filter(projectcategory__guid=request.GET.get('projectCategoryGuid'))
+        projects = Project.objects.filter(projectcategory__guid=context.get('projectCategoryGuid'))
     elif context.get('searchHash'):
-        results_model = _get_or_create_results_model(context['searchHash'], context.get('searchParams'), request.user)
+        try:
+            results_model = _get_or_create_results_model(context['searchHash'], context.get('searchParams'), request.user)
+        except Exception as e:
+            return create_json_response({}, status=400, reason=e.message)
         projects = Project.objects.filter(family__in=results_model.families.all())
     else:
-        return create_json_response({}, status=400, reason='Invalid query params: {}'.format(json.dumps(request.GET)))
+        return create_json_response({}, status=400, reason='Invalid context params: {}'.format(json.dumps(context)))
 
-    response.update(_get_projects_details(projects, request.user, project_category_guid=request.GET.get('projectCategoryGuid')))
+    response.update(_get_projects_details(projects, request.user, project_category_guid=context.get('projectCategoryGuid')))
 
     return create_json_response(response)
 

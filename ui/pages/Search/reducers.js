@@ -100,7 +100,7 @@ export const loadProjectGroupContext = (projectCategoryGuid, addElementCallback)
         (e) => {
           dispatch({ type: RECEIVE_SEARCH_CONTEXT, error: e.message })
         },
-      ).get({ projectCategoryGuid })
+      ).post({ projectCategoryGuid })
     }
   }
 }
@@ -204,7 +204,7 @@ export const reducers = {
   searchGeneBreakdown: createObjectsByIdReducer(RECEIVE_SEARCH_GENE_BREAKDOWN, 'searchGeneBreakdown'),
   searchGeneBreakdownLoading: loadingReducer(REQUEST_SEARCH_GENE_BREAKDOWN, RECEIVE_SEARCH_GENE_BREAKDOWN),
   searchContextLoading: loadingReducer(REQUEST_SEARCH_CONTEXT, RECEIVE_SEARCH_CONTEXT),
-  multiProjectsearchContextLoading: loadingReducer(REQUEST_MULTI_PROJECT_SEARCH_CONTEXT, RECEIVE_MULTI_PROJECT_SEARCH_CONTEXT),
+  multiProjectSearchContextLoading: loadingReducer(REQUEST_MULTI_PROJECT_SEARCH_CONTEXT, RECEIVE_MULTI_PROJECT_SEARCH_CONTEXT),
   variantSearchDisplay: createSingleObjectReducer(UPDATE_SEARCHED_VARIANT_DISPLAY, {
     sort: SORT_BY_XPOS,
     page: 1,

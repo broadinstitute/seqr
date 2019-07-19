@@ -1002,7 +1002,7 @@ class EsUtilsTest(TestCase):
 
     def test_filtered_get_es_variants(self):
         search_model = VariantSearch.objects.create(search={
-            'locus': {'rawItems': 'DDX11L1, chr2:1234-5678'},
+            'locus': {'rawItems': 'DDX11L1, chr2:1234-5678', 'rawVariantItems': 'rs9876,chr2-1234-A-C'},
             'pathogenicity': {
                 'clinvar': ['pathogenic', 'likely_pathogenic'],
                 'hgmd': ['disease_causing', 'likely_disease_causing'],
@@ -1034,7 +1034,9 @@ class EsUtilsTest(TestCase):
                 'bool': {
                     'should': [
                         {'range': {'xpos': {'gte': 2000001234, 'lte': 2000005678}}},
-                        {'terms': {'geneIds': ['ENSG00000223972']}}
+                        {'terms': {'geneIds': ['ENSG00000223972']}},
+                        {'terms': {'rsid': ['rs9876']}},
+                        {'terms': {'variantId': ['2-1234-A-C']}},
                     ]
                 }
             },

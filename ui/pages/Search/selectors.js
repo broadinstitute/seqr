@@ -22,7 +22,7 @@ export const getSearchGeneBreakdownLoading = state => state.searchGeneBreakdownL
 export const getSearchGeneBreakdownErrorMessage = state => state.searchGeneBreakdownLoading.errorMessage
 
 export const getSearchContextIsLoading = state => state.searchContextLoading.isLoading
-export const getMultiProjectSearchContextIsLoading = state => state.multiProjectsearchContextLoading.isLoading
+export const getMultiProjectSearchContextIsLoading = state => state.multiProjectSearchContextLoading.isLoading
 export const getSearchesByHash = state => state.searchesByHash
 export const getSavedSearchesByGuid = state => state.savedSearchesByGuid
 export const getSavedSearchesIsLoading = state => state.savedSearchesLoading.isLoading
