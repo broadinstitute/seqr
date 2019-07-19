@@ -233,6 +233,7 @@ class BaseSavedVariants extends React.Component {
                 project={this.props.project}
                 analysisGroup={this.props.analysisGroup}
                 familyGuid={familyGuid}
+                variantGuid={variantGuid}
                 hideExcluded={this.props.tableState.hideExcluded}
                 hideReviewOnly={this.props.tableState.hideReviewOnly}
               />
@@ -269,7 +270,7 @@ class BaseSavedVariants extends React.Component {
               <ExportTableButton downloads={exports} />
             </Grid.Column>
           </ControlsRow>
-        }
+        }s
         <Grid.Row>
           <Grid.Column width={16}>
             {this.props.loading ? <Loader inline="centered" active /> :
