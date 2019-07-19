@@ -5,13 +5,15 @@ import HorizontalStackedBar from '../graph/HorizontalStackedBar'
 import { EXCLUDED_TAG_NAME, REVIEW_TAG_NAME, NOTE_TAG_NAME } from '../../utils/constants'
 
 
-export const getVariantTagTypeCount = (vtt, familyGuids, variantGuid, filteredVariants) => {
+export const getVariantTagTypeCount = (vtt, familyGuids, variantGuid) => {
   if (familyGuids) {
-    return familyGuids.reduce((count, familyGuid) => count + (vtt.numTagsPerFamily[familyGuid] || 0), 0) : vtt.numTags
+    return familyGuids.reduce((count, familyGuid) => count + (vtt.numTagsPerFamily[familyGuid] || 0), 0)
   }
   else if (variantGuid) {
-    return
+    // TODO fill in later =========================================================================================
+    return vtt.numTags
   }
+  return vtt.numTags
 }
 
 export const getSavedVariantsLinkPath = ({ project, analysisGroup, familyGuid, variantGuid, tag }) => {
@@ -40,12 +42,9 @@ const VariantTagTypeBar = ({ project, familyGuid, variantGuid, filteredVariants,
     data={(project.variantTagTypes || []).filter(
       vtt => vtt.name !== NOTE_TAG_NAME && !(hideExcluded && vtt.name === EXCLUDED_TAG_NAME) && !(hideReviewOnly && vtt.name === REVIEW_TAG_NAME),
     ).map((vtt) => {
-      if (familyGuids) {
-        return { count: getVariantTagTypeCount(vtt, familyGuid ? [familyGuid] : (analysisGroup || {}).familyGuids), ...vtt }
-      }
-      else if (variantGuid) {
-        return
-      }
+      return { count: getVariantTagTypeCount(vtt,
+          familyGuid ? [familyGuid] : (analysisGroup || {}).familyGuids),
+        ...vtt }
     })}
   />
 )

@@ -41,7 +41,7 @@ export const getAllUsers = createSelector(
   getUsersByUsername,
   usersByUsername => Object.values(usersByUsername),
 )
-export const getCurrentProject = createSelector(
+export const getCurrentProject = createSetor(
   getProjectsByGuid, getProjectGuid, (projectsByGuid, currentProjectGuid) => projectsByGuid[currentProjectGuid],
 )
 
