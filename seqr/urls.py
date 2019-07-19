@@ -140,13 +140,6 @@ no_login_react_app_pages = [
 ]
 
 # NOTE: the actual url will be this with an '/api' prefix
-
-urlpatterns = []
-
-phenotips_urls = '^(?:%s)' % ('|'.join([
-    'ssx', 'skin', 'skins', 'get', 'lock', 'preview', 'download', 'export',
-    'XWiki', 'cancel', 'resources', 'rollback', 'rest', 'webjars', 'bin', 'jsx'
-]))
 api_endpoints = {
     'individual/(?P<individual_guid>[\w.|-]+)/update': update_individual_handler,
     'individual/(?P<individual_guid>[\w.|-]+)/update_hpo_terms': update_individual_hpo_terms,
@@ -260,6 +253,13 @@ api_endpoints = {
     'matchmaker/v1/metrics': external_api.mme_metrics_proxy,
 
 }
+
+urlpatterns = []
+
+phenotips_urls = '^(?:%s)' % ('|'.join([
+    'ssx', 'skin', 'skins', 'get', 'lock', 'preview', 'download', 'export',
+    'XWiki', 'cancel', 'resources', 'rollback', 'rest', 'webjars', 'bin', 'jsx'
+]))
 
 urlpatterns += [
     url(phenotips_urls, proxy_to_phenotips, name='proxy_to_phenotips'),

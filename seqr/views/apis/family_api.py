@@ -171,7 +171,7 @@ def update_family_analysed_by(request, family_guid):
 
     Args:
         family_guid (string): GUID of the family.
-      u  field_name (string): Family model field name to update
+        field_name (string): Family model field name to update
     """
 
     family = Family.objects.get(guid=family_guid)

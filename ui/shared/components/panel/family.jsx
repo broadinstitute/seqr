@@ -5,15 +5,15 @@ import { Grid, Popup, Icon } from 'semantic-ui-react'
 import { Link } from 'react-router-dom'
 import styled from 'styled-components'
 
-import { updateFamily, loadStaffOptions } from '../../../redux/rootReducer'
-import { getProjectsByGuid, getFirstSampleByFamily, getUserOptionsIsLoading, getUsersByUsername } from '../../../redux/selectors'
+import { updateFamily, loadStaffOptions } from 'redux/rootReducer'
+import { getProjectsByGuid, getFirstSampleByFamily, getUserOptionsIsLoading, getUsersByUsername } from 'redux/selectors'
 import VariantTagTypeBar from '../graph/VariantTagTypeBar'
 import PedigreeImagePanel from './view-pedigree-image/PedigreeImagePanel'
 import TextFieldView from './view-fields/TextFieldView'
 import Sample from './sample'
 import { ColoredIcon, InlineHeader } from '../StyledComponents'
 import { VerticalSpacer, HorizontalSpacer } from '../Spacers'
-import { AddableSelect } from '../form/Inputs'
+import { Select } from '../form/Inputs'
 import DataLoader from '../DataLoader'
 import {
   FAMILY_ANALYSIS_STATUS_OPTIONS,
@@ -52,7 +52,7 @@ const FirstSample = connect(mapSampleDispatchToProps)(BaseFirstSample)
 
 const AnalystEmailDropdown = ({ load, loading, usersByUsername, onChange, value, ...props }) =>
   <DataLoader load={load} loading={false} content>
-    <AddableSelect
+    <Select
       loading={loading}
       additionLabel="Assigned Analyst: "
       onChange={val => onChange(usersByUsername[val] || { email: val })}
@@ -108,7 +108,7 @@ const familyFieldRenderProps = {
   [FAMILY_FIELD_ASSIGNED_ANALYST]: {
     formFields: EDIT_FIELDS,
     addConfirm: 'Are you sure you want to add the analyst to this family?',
-    fieldDisplay: value => (value ? <div>{(value.fullName) ? (value.fullName).concat(' - ') : ''}{value.email}</div> :
+    fieldDisplay: value => (value ? <div>{(value.fullName) ? value.fullName : value.email}</div> :
       ''),
   },
   [FAMILY_FIELD_ANALYSED_BY]: {

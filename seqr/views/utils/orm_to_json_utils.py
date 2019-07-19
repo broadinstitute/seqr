@@ -187,7 +187,7 @@ def _get_json_for_families(families, user=None, add_individual_guids_field=False
                 'email': result['assignedAnalyst'].email,
             }
         else:
-            result['assignedAnalyst'] = ''
+            result['assignedAnalyst'] = None
 
     prefetch_related_objects(families, 'familyanalysedby_set__created_by')
     if add_individual_guids_field:
