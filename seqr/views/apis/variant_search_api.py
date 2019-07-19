@@ -3,6 +3,7 @@ import jmespath
 from collections import defaultdict
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import MultipleObjectsReturned
+from django.db import IntegrityError
 from django.db.models import Q, prefetch_related_objects
 from django.views.decorators.csrf import csrf_exempt
 from elasticsearch.exceptions import ConnectionTimeout
@@ -54,35 +55,7 @@ def query_variants_handler(request, search_hash):
     if sort == PATHOGENICTY_SORT_KEY and request.user.is_staff:
         sort = PATHOGENICTY_HGMD_SORT_KEY
 
-    results_model = VariantSearchResults.objects.filter(search_hash=search_hash).first()
-    if not results_model:
-        if not request.body:
-            return create_json_response({}, status=400, reason='Invalid search hash: {}'.format(search_hash))
-
-        search_context = json.loads(request.body)
-
-        project_families = search_context.get('projectFamilies')
-        if project_families:
-            all_families = set()
-            for project_family in project_families:
-                all_families.update(project_family['familyGuids'])
-            families = Family.objects.filter(guid__in=all_families)
-        elif search_context.get('allProjectFamilies'):
-            omit_projects = ProjectCategory.objects.get(name='Demo').projects.all()
-            projects = [project for project in get_projects_user_can_view(request.user) 
-                        if project.has_new_search and project not in omit_projects]
-            families = Family.objects.filter(project__in=projects)
-        else:
-            return create_json_response({}, status=400, reason='Invalid search: no projects/ families specified')
-
-        search_dict = search_context.get('search', {})
-        search_model = VariantSearch.objects.filter(search=search_dict).filter(Q(created_by=request.user) | Q(name__isnull=False)).first()
-        if not search_model:
-            search_model = VariantSearch.objects.create(created_by=request.user, search=search_dict)
-
-        results_model = VariantSearchResults.objects.create(search_hash=search_hash, variant_search=search_model)
-
-        results_model.families.set(families)
+    results_model = _get_or_create_results_model(search_hash, json.loads(request.body or '{}'), request.user)
 
     _check_results_permission(results_model, request.user)
 
@@ -98,6 +71,47 @@ def query_variants_handler(request, search_hash):
     response['search']['totalResults'] = total_results
 
     return create_json_response(response)
+
+
+def _get_or_create_results_model(search_hash, search_context, user):
+    results_model = VariantSearchResults.objects.filter(search_hash=search_hash).first()
+    if not results_model:
+        if not search_context:
+            return create_json_response({}, status=400, reason='Invalid search hash: {}'.format(search_hash))
+
+        project_families = search_context.get('projectFamilies')
+        if project_families:
+            all_families = set()
+            for project_family in project_families:
+                all_families.update(project_family['familyGuids'])
+            families = Family.objects.filter(guid__in=all_families)
+        elif search_context.get('allProjectFamilies'):
+            omit_projects = ProjectCategory.objects.get(name='Demo').projects.all()
+            projects = [project for project in get_projects_user_can_view(user)
+                        if project.has_new_search and project not in omit_projects]
+            families = Family.objects.filter(project__in=projects)
+        else:
+            return create_json_response({}, status=400, reason='Invalid search: no projects/ families specified')
+
+        search_dict = search_context.get('search', {})
+        search_model = VariantSearch.objects.filter(search=search_dict).filter(
+            Q(created_by=user) | Q(name__isnull=False)).first()
+        if not search_model:
+            search_model = VariantSearch.objects.create(created_by=user, search=search_dict)
+
+        try:
+            results_model = VariantSearchResults.objects.create(search_hash=search_hash, variant_search=search_model)
+        except IntegrityError:
+            # This can happen if a search_context request and results request are dispatched at the same time,
+            results_model = VariantSearchResults.objects.get(search_hash=search_hash)
+            try:
+                results_model.families.set(families)
+            except IntegrityError:
+                pass
+            return results_model
+
+        results_model.families.set(families)
+    return results_model
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -265,19 +279,19 @@ def search_context_handler(request):
     """Search variants.
     """
     response = _get_saved_searches(request.user)
-    project_guid = request.GET.get('projectGuid')
+    context = json.loads(request.body)
 
-    if project_guid:
-        projects = Project.objects.filter(guid=project_guid)
-    elif request.GET.get('familyGuid'):
+    if context.get('projectGuid'):
+        projects = Project.objects.filter(guid=context.get('projectGuid'))
+    elif context.get('familyGuid'):
         projects = Project.objects.filter(family__guid=request.GET.get('familyGuid'))
-    elif request.GET.get('analysisGroupGuid'):
+    elif context.get('analysisGroupGuid'):
         projects = Project.objects.filter(analysisgroup__guid=request.GET.get('analysisGroupGuid'))
-    elif request.GET.get('projectCategoryGuid'):
+    elif context.get('projectCategoryGuid'):
         projects = Project.objects.filter(projectcategory__guid=request.GET.get('projectCategoryGuid'))
-    elif request.GET.get('searchHash'):
-        families = VariantSearchResults.objects.get(search_hash=request.GET.get('searchHash')).families.all()
-        projects = Project.objects.filter(family__in=families)
+    elif context.get('searchHash'):
+        results_model = _get_or_create_results_model(context['searchHash'], context.get('searchParams'), request.user)
+        projects = Project.objects.filter(family__in=results_model.families.all())
     else:
         return create_json_response({}, status=400, reason='Invalid query params: {}'.format(json.dumps(request.GET)))
 

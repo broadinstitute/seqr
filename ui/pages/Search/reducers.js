@@ -43,6 +43,7 @@ export const loadProjectFamiliesContext = ({ searchHash, projectGuid, familyGuid
         state.searchesByHash[searchHash].projectFamilies.some(entry => !state.projectsByGuid[entry.projectGuid]))) {
       dispatch({ type: REQUEST_MULTI_PROJECT_SEARCH_CONTEXT })
       contextParams.searchHash = searchHash
+      contextParams.searchParams = state.searchesByHash[searchHash]
     }
 
     if (Object.keys(contextParams).length) {
@@ -55,9 +56,10 @@ export const loadProjectFamiliesContext = ({ searchHash, projectGuid, familyGuid
           dispatch({ type: RECEIVE_MULTI_PROJECT_SEARCH_CONTEXT })
         },
         (e) => {
+          dispatch({ type: RECEIVE_MULTI_PROJECT_SEARCH_CONTEXT })
           dispatch({ type: RECEIVE_SEARCH_CONTEXT, error: e.message })
         },
-      ).get(contextParams)
+      ).post(contextParams)
     } else if (onSuccess) {
       onSuccess(getState())
     }
