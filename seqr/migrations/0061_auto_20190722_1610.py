@@ -31,6 +31,14 @@ def remove_missing_family_saved_variants(apps, schema_editor):
         ['{}: {}'.format(k.split('.')[1], v) for k, v in cascaded_deleted_models.items()])))
 
 
+def add_project(apps, schema_editor):
+    SavedVariant = apps.get_model("seqr", "SavedVariant")
+    db_alias = schema_editor.connection.alias
+    project_ids = {agg['family__project_id'] for agg in SavedVariant.objects.using(db_alias).values('family__project_id').distinct()}
+    for project_id in project_ids:
+        SavedVariant.objects.using(db_alias).filter(family__project_id=project_id).update(project_id=project_id)
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -64,6 +72,12 @@ class Migration(migrations.Migration):
             name='savedvariant',
             index_together=set([]),
         ),
+        migrations.AlterField(
+            model_name='savedvariant',
+            name='project',
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='seqr.Project', null=True),
+        ),
+        migrations.RunPython(migrations.RunPython.noop, reverse_code=add_project),
         migrations.RemoveField(
             model_name='savedvariant',
             name='project',
