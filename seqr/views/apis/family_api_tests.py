@@ -65,7 +65,7 @@ class ProjectAPITest(TestCase):
         email = 'test@test.com'
         first_name = 'Test'
         last_name = 'User'
-        user = User.objects.create_user(
+        User.objects.create_user(
             username,
             email=email,
             first_name=first_name,
