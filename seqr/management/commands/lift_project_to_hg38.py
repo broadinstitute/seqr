@@ -77,7 +77,7 @@ class Command(BaseCommand):
                 ))
 
         # Get and clean up expected saved variants
-        saved_variant_models_by_guid = {v.guid: v for v in SavedVariant.objects.filter(project=project)}
+        saved_variant_models_by_guid = {v.guid: v for v in SavedVariant.objects.filter(family__project=project)}
         deleted_no_family = set()
         deleted_no_tags = set()
         for guid, variant in saved_variant_models_by_guid.items():
@@ -165,7 +165,7 @@ class Command(BaseCommand):
                 ))
             for saved_variant in saved_variant_models:
                 saved_variant.xpos_start = var['xpos']
-                saved_variant.saved_variant_json = json.dumps(var)
+                saved_variant.saved_variant_json = var
                 saved_variant.save()
 
         logger.info('Successfully updated {} variants'.format(len(es_variants)))

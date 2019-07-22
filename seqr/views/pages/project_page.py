@@ -156,13 +156,13 @@ def _get_json_for_variant_tag_types(project, user, individuals_by_guid):
         individual['individualId']: individual_guid for individual_guid, individual in individuals_by_guid.items()
     }
 
-    tag_counts_by_type_and_family = VariantTag.objects.filter(saved_variant__project=project).values('saved_variant__family__guid', 'variant_tag_type__name').annotate(count=Count('*'))
-    note_counts_by_family = VariantNote.objects.filter(saved_variant__project=project).values('saved_variant__family__guid').annotate(count=Count('*'))
+    tag_counts_by_type_and_family = VariantTag.objects.filter(saved_variant__family__project=project).values('saved_variant__family__guid', 'variant_tag_type__name').annotate(count=Count('*'))
+    note_counts_by_family = VariantNote.objects.filter(saved_variant__family__project=project).values('saved_variant__family__guid').annotate(count=Count('*'))
     project_variant_tags = get_project_variant_tag_types(project, tag_counts_by_type_and_family=tag_counts_by_type_and_family, note_counts_by_family=note_counts_by_family)
     discovery_tags = []
     for tag_type in project_variant_tags:
         if tag_type['category'] == 'CMG Discovery Tags' and tag_type['numTags'] > 0:
-            tags = VariantTag.objects.filter(saved_variant__project=project, variant_tag_type__guid=tag_type['variantTagTypeGuid']).select_related('saved_variant')
+            tags = VariantTag.objects.filter(saved_variant__family__project=project, variant_tag_type__guid=tag_type['variantTagTypeGuid']).select_related('saved_variant')
             saved_variants = [tag.saved_variant for tag in tags]
             discovery_tags += get_json_for_saved_variants(
                 saved_variants, add_tags=True, add_details=True, project=project, user=user, individual_guids_by_id=individual_guids_by_id)

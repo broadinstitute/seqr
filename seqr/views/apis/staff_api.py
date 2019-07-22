@@ -247,8 +247,8 @@ def _get_loaded_before_date_project_individuals(projects, loaded_before=None):
 def _get_saved_variants_by_family(projects, user):
     tag_type = VariantTagType.objects.get(name='Known gene for phenotype')
 
-    project_saved_variants = SavedVariant.objects.select_related('family', 'project').filter(
-        project__in=projects,
+    project_saved_variants = SavedVariant.objects.select_related('family').filter(
+        family__project__in=projects,
         varianttag__variant_tag_type=tag_type,
     )
 
@@ -425,17 +425,17 @@ def _get_loaded_samples_by_project_family(projects):
 def _get_saved_variants_by_project_family(projects):
     tag_types = VariantTagType.objects.filter(Q(project__isnull=True) & (Q(category='CMG Discovery Tags') | Q(name='Share with KOMP')))
 
-    project_saved_variants = SavedVariant.objects.select_related('project').select_related('family').prefetch_related(
+    project_saved_variants = SavedVariant.objects.select_related('family').prefetch_related(
         Prefetch('varianttag_set', to_attr='discovery_tags',
                  queryset=VariantTag.objects.filter(variant_tag_type__in=tag_types).select_related('variant_tag_type'),
                  )).prefetch_related('variantfunctionaldata_set').filter(
-        project__in=projects,
+        family__project__in=projects,
         varianttag__variant_tag_type__in=tag_types,
     )
 
     saved_variants_by_project_family =  defaultdict(lambda:  defaultdict(list))
     for saved_variant in project_saved_variants:
-        saved_variants_by_project_family[saved_variant.project.guid][saved_variant.family.guid].append(saved_variant)
+        saved_variants_by_project_family[saved_variant.family.project.guid][saved_variant.family.guid].append(saved_variant)
 
     return saved_variants_by_project_family
 
@@ -546,7 +546,7 @@ def _generate_rows(project, loaded_samples_by_project_family, saved_variants_by_
                 rows.append(row)
                 continue
 
-            saved_variant_json = variant_details(json.loads(variant.saved_variant_json), project, user=None)
+            saved_variant_json = variant_details(variant.saved_variant_json, project, user=None)
 
             if not saved_variant_json['transcripts']:
                 errors.append("%s - no gene ids" % variant)
@@ -768,10 +768,10 @@ def _update_initial_omim_numbers(rows):
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
 def saved_variants(request, tag):
     tag_type = VariantTagType.objects.get(name=tag, project__isnull=True)
-    saved_variant_models = SavedVariant.objects.filter(varianttag__variant_tag_type=tag_type, family__isnull=False)
+    saved_variant_models = SavedVariant.objects.filter(varianttag__variant_tag_type=tag_type)
     saved_variants = get_json_for_saved_variants(saved_variant_models, add_tags=True, add_details=True, user=request.user)
 
-    project_models_by_guid = {variant.project.guid: variant.project for variant in saved_variant_models}
+    project_models_by_guid = {variant.family.project.guid: variant.family.project for variant in saved_variant_models}
     families = {variant.family for variant in saved_variant_models}
     individuals = Individual.objects.filter(family__in=families)
 

@@ -28,9 +28,10 @@ def saved_variant_data(request, project_guid, variant_guid=None):
     project = get_project_and_check_permissions(project_guid, request.user)
     family_guids = request.GET['families'].split(',') if request.GET.get('families') else None
 
-    variant_query = SavedVariant.objects.filter(project=project)
     if family_guids:
-        variant_query = variant_query.filter(family__guid__in=family_guids)
+        variant_query = SavedVariant.objects.filter(family__guid__in=family_guids)
+    else:
+        variant_query = SavedVariant.objects.filter(family__project=project)
     if variant_guid:
         variant_query = variant_query.filter(guid=variant_guid)
         if variant_query.count() < 1:
@@ -73,8 +74,7 @@ def create_saved_variant_handler(request):
         ref=ref,
         alt=alt,
         family=family,
-        project=family.project,
-        saved_variant_json=json.dumps(variant_json)
+        saved_variant_json=variant_json
     )
 
     if non_variant_json.get('note'):
@@ -92,7 +92,7 @@ def create_saved_variant_handler(request):
 @csrf_exempt
 def create_variant_note_handler(request, variant_guid):
     saved_variant = SavedVariant.objects.get(guid=variant_guid)
-    check_permissions(saved_variant.project, request.user, CAN_VIEW)
+    check_permissions(saved_variant.family.project, request.user, CAN_VIEW)
 
     _create_variant_note(saved_variant, json.loads(request.body), request.user)
 
@@ -116,7 +116,7 @@ def _create_variant_note(saved_variant, note_json, user):
 @csrf_exempt
 def update_variant_note_handler(request, variant_guid, note_guid):
     saved_variant = SavedVariant.objects.get(guid=variant_guid)
-    check_permissions(saved_variant.project, request.user, CAN_VIEW)
+    check_permissions(saved_variant.family.project, request.user, CAN_VIEW)
     note = VariantNote.objects.get(guid=note_guid, saved_variant=saved_variant)
 
     request_json = json.loads(request.body)
@@ -131,7 +131,7 @@ def update_variant_note_handler(request, variant_guid, note_guid):
 @csrf_exempt
 def delete_variant_note_handler(request, variant_guid, note_guid):
     saved_variant = SavedVariant.objects.get(guid=variant_guid)
-    check_permissions(saved_variant.project, request.user, CAN_VIEW)
+    check_permissions(saved_variant.family.project, request.user, CAN_VIEW)
     note = VariantNote.objects.get(guid=note_guid, saved_variant=saved_variant)
     delete_seqr_model(note)
     return create_json_response({'savedVariantsByGuid': {variant_guid: {
@@ -143,7 +143,7 @@ def delete_variant_note_handler(request, variant_guid, note_guid):
 @csrf_exempt
 def update_variant_tags_handler(request, variant_guid):
     saved_variant = SavedVariant.objects.get(guid=variant_guid)
-    check_permissions(saved_variant.project, request.user, CAN_VIEW)
+    check_permissions(saved_variant.family.project, request.user, CAN_VIEW)
 
     request_json = json.loads(request.body)
     updated_tags = request_json.get('tags', [])
@@ -198,7 +198,7 @@ def _create_new_tags(saved_variant, tags_json, user):
     for tag in new_tags:
         variant_tag_type = VariantTagType.objects.get(
             Q(name=tag['name']),
-            Q(project=saved_variant.project) | Q(project__isnull=True)
+            Q(project=saved_variant.family.project) | Q(project__isnull=True)
         )
         create_seqr_model(
             VariantTag,

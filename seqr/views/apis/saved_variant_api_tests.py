@@ -91,7 +91,7 @@ class ProjectAPITest(TransactionTestCase):
         variant_guid = response.json()['savedVariantsByGuid'].keys()[0]
 
         saved_variant = SavedVariant.objects.get(guid=variant_guid, family__guid='F000001_1')
-        self.assertDictEqual(variant_json, json.loads(saved_variant.saved_variant_json))
+        self.assertDictEqual(variant_json, saved_variant.saved_variant_json)
 
         variant_json.update({
             'variantId': variant_guid,

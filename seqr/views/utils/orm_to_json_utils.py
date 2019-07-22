@@ -359,8 +359,8 @@ def get_json_for_saved_variants(saved_variants, add_tags=False, add_details=Fals
                 'notes': [get_json_for_variant_note(tag) for tag in saved_variant.variantnote_set.all()],
             })
         if add_details:
-            saved_variant_json = json.loads(saved_variant.saved_variant_json or '{}')
-            variant_json.update(variant_details(saved_variant_json, project or saved_variant.project, user, **kwargs))
+            variant_json.update(variant_details(
+                saved_variant.saved_variant_json, project or saved_variant.family.project, user, **kwargs))
         variant_json.update({
             'variantId': saved_variant.guid,  # TODO get from json
             'familyGuids': [saved_variant.family.guid],
@@ -369,7 +369,7 @@ def get_json_for_saved_variants(saved_variants, add_tags=False, add_details=Fals
 
     prefetch_related_objects(saved_variants, 'family')
     if not project:
-        prefetch_related_objects(saved_variants, 'project')
+        prefetch_related_objects(saved_variants, 'family__project')
     if add_tags:
         prefetch_related_objects(saved_variants, 'varianttag_set__variant_tag_type', 'varianttag_set__created_by',
                                  'variantnote_set__created_by', 'variantfunctionaldata_set__created_by')

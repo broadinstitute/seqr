@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 def update_project_saved_variant_json(project, family_id=None):
-    saved_variants = SavedVariant.objects.filter(project=project, family__isnull=False).select_related('family')
+    saved_variants = SavedVariant.objects.filter(family__project=project).select_related('family')
     if family_id:
         saved_variants = saved_variants.filter(family__family_id=family_id)
 
@@ -72,7 +72,7 @@ def _retrieve_saved_variants_json(project, variant_tuples, create_if_missing=Fal
 
 
 def _update_saved_variant_json(saved_variant, saved_variant_json):
-    saved_variant.saved_variant_json = json.dumps(saved_variant_json)
+    saved_variant.saved_variant_json = saved_variant_json
     saved_variant.save()
 
 

@@ -60,10 +60,6 @@ class Command(BaseCommand):
 
             # Update variant tags/ notes
             saved_variants = SavedVariant.objects.filter(family=f)
-            for saved_variant in saved_variants:
-                saved_variant.project = to_project
-                saved_variant.save()
-
             for variant_tag in VariantTag.objects.filter(saved_variant__in=saved_variants).select_related('variant_tag_type'):
                 if variant_tag.variant_tag_type.project:
                     to_tag_type, created = get_or_create_seqr_model(
