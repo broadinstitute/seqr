@@ -153,7 +153,7 @@ def update_family_assigned_analyst(request, family_guid):
         return create_json_response(
             {}, status=400, reason="'assigned analyst' is not specified")
     try:
-        assigned_analyst = User.objects.get(username=assigned_analyst['username'])
+        assigned_analyst = User.objects.get(username=assigned_analyst)
     except Exception:
         return create_json_response(
             {}, status=400, reason="user does not have access")

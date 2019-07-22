@@ -55,8 +55,8 @@ const AnalystEmailDropdown = ({ load, loading, usersByUsername, onChange, value,
     <Select
       loading={loading}
       additionLabel="Assigned Analyst: "
-      onChange={val => onChange(usersByUsername[val] || { email: val })}
-      value={value.username || value.email}
+      onChange={val => onChange(val)}
+      value={value}
       {...props}
     />
   </DataLoader>
