@@ -45,10 +45,6 @@ def saved_variant_data(request, project_guid, variant_guid=None):
     genes = _saved_variant_genes(variants.values())
     _add_locus_lists([project], variants.values(), genes)
 
-    # TODO remove ============================================================================
-    # import pdb
-    # pdb.set_trace()
-
     return create_json_response({
         'savedVariantsByGuid': variants,
         'genesById': genes,
