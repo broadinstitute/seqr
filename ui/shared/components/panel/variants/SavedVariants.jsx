@@ -271,7 +271,7 @@ class BaseSavedVariants extends React.Component {
               <ExportTableButton downloads={exports} />
             </Grid.Column>
           </ControlsRow>
-        }s
+        }
         <Grid.Row>
           <Grid.Column width={16}>
             {this.props.loading ? <Loader inline="centered" active /> :
