@@ -5,13 +5,14 @@ import HorizontalStackedBar from '../graph/HorizontalStackedBar'
 import { EXCLUDED_TAG_NAME, REVIEW_TAG_NAME, NOTE_TAG_NAME } from '../../utils/constants'
 
 
-export const getVariantTagTypeCount = (vtt, familyGuids, variantGuid) => {
+export const getVariantTagTypeCount = (vtt, familyGuids, variantGuid, variantsToDisplay) => {
   if (familyGuids) {
     return familyGuids.reduce((count, familyGuid) => count + (vtt.numTagsPerFamily[familyGuid] || 0), 0)
   }
   else if (variantGuid) {
-    // TODO fill in later =========================================================================================
-    return vtt.numTags
+    const variantTags = variantsToDisplay.length === 0 ? '' : variantsToDisplay['0'].tags
+    const variantTagNames = Object.keys(variantTags).map((index) => { return variantTags[index].name })
+    return variantTagNames.includes(vtt.name) ? 1 : 0
   }
   return vtt.numTags
 }
@@ -29,7 +30,7 @@ export const getSavedVariantsLinkPath = ({ project, analysisGroup, familyGuid, v
   return `${urlRoot}/saved_variants${path}`
 }
 
-const VariantTagTypeBar = ({ project, familyGuid, variantGuid, filteredVariants, analysisGroup, sectionLinks = true, hideExcluded, hideReviewOnly, ...props }) => (
+const VariantTagTypeBar = ({ project, familyGuid, variantGuid, analysisGroup, variantsToDisplay, sectionLinks = true, hideExcluded, hideReviewOnly, ...props }) => (
   <HorizontalStackedBar
     {...props}
     minPercent={0.1}
@@ -43,7 +44,8 @@ const VariantTagTypeBar = ({ project, familyGuid, variantGuid, filteredVariants,
       vtt => vtt.name !== NOTE_TAG_NAME && !(hideExcluded && vtt.name === EXCLUDED_TAG_NAME) && !(hideReviewOnly && vtt.name === REVIEW_TAG_NAME),
     ).map((vtt) => {
       return { count: getVariantTagTypeCount(vtt,
-          familyGuid ? [familyGuid] : (analysisGroup || {}).familyGuids),
+          familyGuid ? [familyGuid] : (analysisGroup || {}).familyGuids,
+          variantGuid, variantsToDisplay),
         ...vtt }
     })}
   />
@@ -54,7 +56,7 @@ VariantTagTypeBar.propTypes = {
   familyGuid: PropTypes.string,
   variantGuid: PropTypes.string,
   analysisGroup: PropTypes.object,
-  filteredVariants: PropTypes.object,
+  variantsToDisplay: PropTypes.array,
   sectionLinks: PropTypes.bool,
   hideExcluded: PropTypes.bool,
   hideReviewOnly: PropTypes.bool,
