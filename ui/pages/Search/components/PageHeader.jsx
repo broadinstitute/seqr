@@ -47,7 +47,7 @@ const PAGE_CONFIGS = {
       } else if (projectFamilies.length > 1) {
         description = `Projects: ${projectFamilies.map(
           ({ projectGuid }) => (projectsByGuid[projectGuid] || {}).name,
-        ).join(', ')}`
+        ).filter(val => val).join(', ')}`
       }
     }
     if (pageType) {
