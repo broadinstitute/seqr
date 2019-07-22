@@ -133,6 +133,6 @@ test('getMmeDefaultContactEmail', () => {
 
 test('getAnalystOptions', () => {
   const analystOptions = getAnalystOptions(STATE_WITH_2_FAMILIES)
-  expect(Object.keys(analystOptions).length).toEqual(2)
-  expect(analystOptions[0].username).toEqual('test_user1')
+  expect(Object.keys(analystOptions).length).toEqual(6)
+  expect(analystOptions[0].value).toEqual('test_user1')
 })
