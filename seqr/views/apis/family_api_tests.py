@@ -54,31 +54,16 @@ class ProjectAPITest(TestCase):
         self.assertEqual(response.reason_phrase, '\'assigned analyst\' is not specified')
 
         # send invalid username (without permission)
-        response = self.client.post(url, content_type='application/json', data=json.dumps({'user': {
-            'username': 'invalid_username'
-        }}))
+        response = self.client.post(url, content_type='application/json', data=json.dumps({'user': 'invalid_username'}))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.reason_phrase, 'user does not have access')
 
         # send valid request
-        username = 'test_new_user'
-        email = 'test@test.com'
-        first_name = 'Test'
-        last_name = 'User'
-        User.objects.create_user(
-            username,
-            email=email,
-            first_name=first_name,
-            last_name=last_name,
-            is_staff=True,
-        )
-        response = self.client.post(url, content_type='application/json', data=json.dumps({'user': {
-            'username': username, 'email': email, 'first_name': first_name, 'last_name': last_name
-        }}))
+        response = self.client.post(url, content_type='application/json', data=json.dumps({'user': 'test_user'}))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
 
         self.assertListEqual(response_json.keys(), ['F000001_1'])
-        self.assertEqual(response_json['F000001_1']['assignedAnalyst']['email'], email)
-        self.assertEqual(response_json['F000001_1']['assignedAnalyst']['fullName'], "{} {}".format(first_name, last_name))
+        self.assertEqual(response_json['F000001_1']['assignedAnalyst']['email'], 'test_user@test.com')
+        self.assertEqual(response_json['F000001_1']['assignedAnalyst']['fullName'], "{} {}".format('Test User', ''))
 

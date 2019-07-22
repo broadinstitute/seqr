@@ -147,13 +147,13 @@ def update_family_assigned_analyst(request, family_guid):
     check_permissions(family.project, request.user, CAN_EDIT)
 
     request_json = json.loads(request.body)
-    assigned_analyst = request_json.get('user')
+    assigned_analyst_username = request_json.get('assigned_analyst_username')
 
-    if not assigned_analyst:
+    if not assigned_analyst_username:
         return create_json_response(
             {}, status=400, reason="'assigned analyst' is not specified")
     try:
-        assigned_analyst = User.objects.get(username=assigned_analyst)
+        assigned_analyst = User.objects.get(username=assigned_analyst_username)
     except Exception:
         return create_json_response(
             {}, status=400, reason="user does not have access")

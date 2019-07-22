@@ -6,7 +6,7 @@ import { Link } from 'react-router-dom'
 import styled from 'styled-components'
 
 import { updateFamily, loadStaffOptions } from 'redux/rootReducer'
-import { getProjectsByGuid, getFirstSampleByFamily, getUserOptionsIsLoading, getUsersByUsername } from 'redux/selectors'
+import { getProjectsByGuid, getFirstSampleByFamily, getUserOptionsIsLoading } from 'redux/selectors'
 import VariantTagTypeBar from '../graph/VariantTagTypeBar'
 import PedigreeImagePanel from './view-pedigree-image/PedigreeImagePanel'
 import TextFieldView from './view-fields/TextFieldView'
@@ -50,7 +50,7 @@ const mapSampleDispatchToProps = (state, ownProps) => ({
 
 const FirstSample = connect(mapSampleDispatchToProps)(BaseFirstSample)
 
-const AnalystEmailDropdown = ({ load, loading, usersByUsername, onChange, value, ...props }) =>
+const AnalystEmailDropdown = ({ load, loading, onChange, value, ...props }) =>
   <DataLoader load={load} loading={false} content>
     <Select
       loading={loading}
@@ -64,7 +64,6 @@ const AnalystEmailDropdown = ({ load, loading, usersByUsername, onChange, value,
 AnalystEmailDropdown.propTypes = {
   load: PropTypes.func,
   loading: PropTypes.bool,
-  usersByUsername: PropTypes.object,
   onChange: PropTypes.func,
   value: PropTypes.any,
 }
@@ -72,7 +71,6 @@ AnalystEmailDropdown.propTypes = {
 const mapDropdownStateToProps = state => ({
   loading: getUserOptionsIsLoading(state),
   options: getAnalystOptions(state),
-  usersByUsername: getUsersByUsername(state),
 })
 
 const mapDropdownDispatchToProps = {
@@ -82,14 +80,13 @@ const mapDropdownDispatchToProps = {
 AnalystEmailDropdown.propTypes = {
   load: PropTypes.func,
   loading: PropTypes.bool,
-  usersByUsername: PropTypes.object,
   onChange: PropTypes.func,
   value: PropTypes.any,
 }
 
 const EDIT_FIELDS = [
   {
-    name: 'user',
+    name: 'assigned_analyst_username',
     label: 'Email',
     component: connect(mapDropdownStateToProps, mapDropdownDispatchToProps)(AnalystEmailDropdown),
     width: 16,
