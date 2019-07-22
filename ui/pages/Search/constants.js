@@ -293,7 +293,16 @@ export const LOCATION_FIELDS = [
     component: BaseSemanticInput,
     inputType: 'TextArea',
     rows: 8,
-    width: 11,
+    width: 7,
+  },
+  {
+    name: 'rawVariantItems',
+    label: 'Variants',
+    labelHelp: 'A list of variants. Can be separated by commas or whitespace. Variants can be represented by rsID or in the form <chrom>-<pos>-<ref>-<alt>',
+    component: BaseSemanticInput,
+    inputType: 'TextArea',
+    rows: 8,
+    width: 4,
   },
   {
     name: 'excludeLocations',

@@ -16,11 +16,13 @@ SearchResultsLink.propTypes = {
 const mapDispatchToProps = (dispatch, ownProps) => {
   return {
     openSearchResults: () => {
+      const search = {
+        locus: { rawItems: ownProps.geneId, rawVariantItems: ownProps.variantId },
+        ...(ownProps.initialSearch || {}),
+      }
+      const projectFamilies = ownProps.familyGuids ? [{ familyGuids: ownProps.familyGuids }] : ownProps.projectFamilies
       dispatch(navigateSavedHashedSearch(
-        {
-          projectFamilies: ownProps.projectFamilies || [{ familyGuids: ownProps.familyGuids }],
-          search: { locus: { rawItems: ownProps.geneId }, ...(ownProps.initialSearch || {}) },
-        },
+        { allProjectFamilies: !projectFamilies, projectFamilies, search },
         resultsLink => window.open(resultsLink, '_blank')),
       )
     },

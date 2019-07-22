@@ -4,6 +4,7 @@ import styled from 'styled-components'
 import { Popup, Label, Icon } from 'semantic-ui-react'
 
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
+import SearchResultsLink from '../../buttons/SearchResultsLink'
 import Modal from '../../modal/Modal'
 import { ButtonLink } from '../../StyledComponents'
 import Transcripts, { TranscriptLink } from './Transcripts'
@@ -195,6 +196,8 @@ const Annotations = ({ variant }) => {
       <VerticalSpacer height={5} />
       {mainTranscript.geneSymbol &&
         <div>
+          <SearchResultsLink buttonText="seqr" variantId={variant.variantId} />
+          <HorizontalSpacer width={5} />|<HorizontalSpacer width={5} />
           <a href={`https://www.google.com/search?q=${mainTranscript.geneSymbol}+${variations.join('+')}`} target="_blank">
             google
           </a>
