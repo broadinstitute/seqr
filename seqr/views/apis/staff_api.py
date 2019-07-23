@@ -11,7 +11,6 @@ from django.db.models import prefetch_related_objects, Q, Prefetch, Max
 from django.http.response import HttpResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.csrf import csrf_exempt
 from requests.exceptions import ConnectionError
 
 from seqr.utils.es_utils import get_es_client, get_latest_loaded_samples
@@ -810,7 +809,7 @@ def saved_variants(request, tag):
 @csrf_exempt
 def receive_qc_pipeline_output(request):
     try:
-        uploaded_file_id, filename, json_records = save_uploaded_file(request, process_records=_process_qc_records)
+        uploaded_file_id, _, json_records = save_uploaded_file(request, process_records=_process_qc_records)
     except Exception as e:
         return create_json_response({'errors': [e.message or str(e)]}, status=400, reason=e.message or str(e))
 
