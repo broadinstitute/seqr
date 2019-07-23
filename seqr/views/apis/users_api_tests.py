@@ -7,8 +7,7 @@ from django.test import TransactionTestCase
 from django.urls.base import reverse
 
 from seqr.views.apis.users_api import get_all_collaborators, set_password, create_staff_user, \
-    create_project_collaborator, update_project_collaborator, delete_project_collaborator, forgot_password, \
-    get_all_staff
+    create_project_collaborator, update_project_collaborator, delete_project_collaborator, forgot_password
 from seqr.views.utils.test_utils import _check_login
 
 
@@ -17,21 +16,6 @@ PROJECT_GUID = 'R0001_1kg'
 
 class UsersAPITest(TransactionTestCase):
     fixtures = ['users', '1kg_project']
-
-    def test_get_all_staff(self):
-        get_all_staff_url = reverse(get_all_staff)
-        _check_login(self, get_all_staff_url)
-        response = self.client.get(get_all_staff_url)
-        self.assertEqual(response.status_code, 200)
-        response_json = response.json()
-        all_staff_usernames = response_json.keys()
-        first_staff_user = response_json[all_staff_usernames[0]]
-
-        self.assertSetEqual(
-            set(first_staff_user),
-            {'username', 'displayName', 'firstName', 'lastName', 'dateJoined', 'email', 'isStaff', 'lastLogin', 'id'}
-        )
-        self.assertTrue(first_staff_user['isStaff'])
 
     @mock.patch('django.contrib.auth.models.send_mail')
     def test_create_update_and_delete_project_collaborator(self, mock_send_mail):
@@ -224,4 +208,3 @@ class UsersAPITest(TransactionTestCase):
             ['test_user@test.com'],
             fail_silently=False,
         )
-

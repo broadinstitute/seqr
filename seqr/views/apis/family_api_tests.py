@@ -1,11 +1,9 @@
 # -*- coding: utf-8 -*-
-import json
-
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls.base import reverse
 
-from seqr.views.apis.family_api import update_family_pedigree_image, update_family_assigned_analyst
+from seqr.views.apis.family_api import update_family_pedigree_image
 from seqr.views.utils.test_utils import _check_login
 
 FAMILY_GUID = 'F000001_1'
@@ -65,4 +63,3 @@ class ProjectAPITest(TestCase):
         self.assertListEqual(response_json.keys(), ['F000001_1'])
         self.assertEqual(response_json['F000001_1']['assignedAnalyst']['email'], 'test_user@test.com')
         self.assertEqual(response_json['F000001_1']['assignedAnalyst']['fullName'], 'Test User')
-

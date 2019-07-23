@@ -5,27 +5,23 @@ import { Grid, Popup, Icon } from 'semantic-ui-react'
 import { Link } from 'react-router-dom'
 import styled from 'styled-components'
 
-import { updateFamily, loadStaffOptions } from 'redux/rootReducer'
-import { getProjectsByGuid, getFirstSampleByFamily, getUserOptionsIsLoading } from 'redux/selectors'
+import { updateFamily } from 'redux/rootReducer'
+import { getProjectsByGuid, getFirstSampleByFamily } from 'redux/selectors'
 import VariantTagTypeBar from '../graph/VariantTagTypeBar'
 import PedigreeImagePanel from './view-pedigree-image/PedigreeImagePanel'
 import TextFieldView from './view-fields/TextFieldView'
 import Sample from './sample'
 import { ColoredIcon, InlineHeader } from '../StyledComponents'
 import { VerticalSpacer, HorizontalSpacer } from '../Spacers'
-import { Select } from '../form/Inputs'
-import DataLoader from '../DataLoader'
 import {
   FAMILY_ANALYSIS_STATUS_OPTIONS,
   FAMILY_FIELD_ANALYSIS_STATUS,
-  FAMILY_FIELD_ASSIGNED_ANALYST,
   FAMILY_FIELD_ANALYSED_BY,
   FAMILY_FIELD_FIRST_SAMPLE,
   FAMILY_FIELD_RENDER_LOOKUP,
   FAMILY_FIELD_OMIM_NUMBER,
   FAMILY_FIELD_PMIDS,
 } from '../../utils/constants'
-import { getAnalystOptions } from '../../../pages/Project/selectors'
 
 const FamilyGrid = styled(({ annotation, offset, ...props }) => <Grid {...props} />)`
   margin-left: ${props => ((props.annotation || props.offset) ? '25px !important' : 'inherit')};
@@ -50,50 +46,6 @@ const mapSampleDispatchToProps = (state, ownProps) => ({
 
 const FirstSample = connect(mapSampleDispatchToProps)(BaseFirstSample)
 
-const AnalystEmailDropdown = ({ load, loading, onChange, value, ...props }) =>
-  <DataLoader load={load} loading={false} content>
-    <Select
-      loading={loading}
-      additionLabel="Assigned Analyst: "
-      onChange={val => onChange(val)}
-      value={value}
-      {...props}
-    />
-  </DataLoader>
-
-AnalystEmailDropdown.propTypes = {
-  load: PropTypes.func,
-  loading: PropTypes.bool,
-  onChange: PropTypes.func,
-  value: PropTypes.any,
-}
-
-const mapDropdownStateToProps = state => ({
-  loading: getUserOptionsIsLoading(state),
-  options: getAnalystOptions(state),
-})
-
-const mapDropdownDispatchToProps = {
-  load: loadStaffOptions,
-}
-
-AnalystEmailDropdown.propTypes = {
-  load: PropTypes.func,
-  loading: PropTypes.bool,
-  onChange: PropTypes.func,
-  value: PropTypes.any,
-}
-
-const EDIT_FIELDS = [
-  {
-    name: 'assigned_analyst_username',
-    label: 'Email',
-    component: connect(mapDropdownStateToProps, mapDropdownDispatchToProps)(AnalystEmailDropdown),
-    width: 16,
-    inline: true,
-  },
-]
-
 const familyFieldRenderProps = {
   [FAMILY_FIELD_ANALYSIS_STATUS]: {
     tagOptions: FAMILY_ANALYSIS_STATUS_OPTIONS,
@@ -101,12 +53,6 @@ const familyFieldRenderProps = {
       <Popup trigger={<ColoredIcon name="stop" color={value.color} />} content={value.text} position="top center" /> :
       <ColoredIcon name="stop" color={value.color} />
     ),
-  },
-  [FAMILY_FIELD_ASSIGNED_ANALYST]: {
-    formFields: EDIT_FIELDS,
-    addConfirm: 'Are you sure you want to add the analyst to this family?',
-    fieldDisplay: value => (value ? <div>{(value.fullName) ? value.fullName : value.email}</div> :
-      ''),
   },
   [FAMILY_FIELD_ANALYSED_BY]: {
     addConfirm: 'Are you sure you want to add that you analysed this family?',

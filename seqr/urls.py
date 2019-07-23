@@ -15,7 +15,6 @@ from seqr.views.apis.family_api import \
     update_family_fields_handler, \
     edit_families_handler, \
     delete_families_handler, \
-    update_family_assigned_analyst, \
     update_family_analysed_by, \
     receive_families_table_handler, \
     update_family_pedigree_image
@@ -93,7 +92,6 @@ from seqr.views.apis.variant_search_api import \
 
 from seqr.views.apis.users_api import \
     get_all_collaborators, \
-    get_all_staff, \
     create_project_collaborator, \
     update_project_collaborator, \
     delete_project_collaborator, \
@@ -147,7 +145,6 @@ api_endpoints = {
     'family/(?P<family_guid>[\w.|-]+)/save_internal_case_review_notes': save_internal_case_review_notes,
     'family/(?P<family_guid>[\w.|-]+)/save_internal_case_review_summary': save_internal_case_review_summary,
     'family/(?P<family_guid>[\w.|-]+)/update': update_family_fields_handler,
-    'family/(?P<family_guid>[\w.|-]+)/update_assigned_analyst': update_family_assigned_analyst,
     'family/(?P<family_guid>[\w.|-]+)/update_analysed_by': update_family_analysed_by,
     'family/(?P<family_guid>[\w.|-]+)/update_pedigree_image': update_family_pedigree_image,
 
@@ -228,7 +225,6 @@ api_endpoints = {
     'users/(?P<username>[^/]+)/set_password': set_password,
 
     'users/get_all': get_all_collaborators,
-    'users/get_all_staff': get_all_staff,
     'users/create_staff_user': create_staff_user,
     'project/(?P<project_guid>[^/]+)/collaborators/create': create_project_collaborator,
     'project/(?P<project_guid>[^/]+)/collaborators/(?P<username>[^/]+)/update': update_project_collaborator,

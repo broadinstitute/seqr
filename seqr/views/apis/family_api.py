@@ -9,8 +9,6 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 
-from django.contrib.auth.models import User
-
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.individual_api import delete_individuals
 
@@ -137,6 +135,7 @@ def update_family_fields_handler(request, family_guid):
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
+<<<<<<< HEAD
 def update_family_assigned_analyst(request, family_guid):
     """Updates the specified field in the Family model.
 
