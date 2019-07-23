@@ -55,7 +55,7 @@ class ProjectAPITest(TestCase):
         # send invalid username (without permission)
         response = self.client.post(url, content_type='application/json', data=json.dumps({'assigned_analyst_username': 'invalid_username'}))
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.reason_phrase, 'user does not have access')
+        self.assertEqual(response.reason_phrase, 'specified user does not exist')
 
         # send valid request
         response = self.client.post(url, content_type='application/json', data=json.dumps({'assigned_analyst_username': 'test_user'}))
