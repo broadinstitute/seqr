@@ -14,6 +14,7 @@ import DiscoverySheet from './components/DiscoverySheet'
 import ElasticsearchStatus from './components/ElasticsearchStatus'
 import CreateUser from './components/CreateUser'
 import Matchmaker from './components/Matchmaker'
+import SampleQc from './components/SampleQc'
 import SeqrStats from './components/SeqrStats'
 import Users from './components/Users'
 
@@ -26,6 +27,7 @@ const STAFF_PAGES = [
   { path: 'elasticsearch_status', component: ElasticsearchStatus },
   { path: 'kibana', component: () => <iframe width="100%" height="100%" style={IFRAME_STYLE} src="/app/kibana" /> },
   { path: 'matchmaker', component: Matchmaker },
+  { path: 'sample_qc', component: SampleQc },
   { path: 'saved_variants', component: SavedVariants },
   { path: 'seqr_stats', component: SeqrStats },
   { path: 'users', component: Users },

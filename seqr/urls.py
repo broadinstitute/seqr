@@ -107,6 +107,8 @@ from seqr.views.apis.staff_api import \
     get_projects_for_category, \
     elasticsearch_status, \
     saved_variants, \
+    receive_qc_pipeline_output, \
+    save_qc_pipeline_output, \
     mme_metrics_proxy, \
     mme_submissions, \
     seqr_stats, \
@@ -246,6 +248,8 @@ api_endpoints = {
     'staff/matchmaker_submissions': mme_submissions,
     'staff/saved_variants/(?P<tag>[^/]+)': saved_variants,
     'staff/seqr_stats': seqr_stats,
+    'staff/upload_qc_pipeline_output': receive_qc_pipeline_output,
+    'staff/save_qc_pipeline_output/(?P<upload_file_id>[^/]+)': save_qc_pipeline_output,
 
     # EXTERNAL APIS: DO NOT CHANGE
     # matchmaker public facing MME URLs
