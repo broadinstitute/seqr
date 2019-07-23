@@ -15,16 +15,22 @@ import ElasticsearchStatus from './components/ElasticsearchStatus'
 import CreateUser from './components/CreateUser'
 import Matchmaker from './components/Matchmaker'
 import SampleQc from './components/SampleQc'
+import SeqrStats from './components/SeqrStats'
+import Users from './components/Users'
+
+const IFRAME_STYLE = { position: 'fixed', left: '0', top: '95px' }
 
 const STAFF_PAGES = [
   { path: 'anvil', params: '/:projectGuid?', component: Anvil },
   { path: 'create_user', component: CreateUser },
   { path: 'discovery_sheet', params: '/:projectGuid?', component: DiscoverySheet },
   { path: 'elasticsearch_status', component: ElasticsearchStatus },
+  { path: 'kibana', component: () => <iframe width="100%" height="100%" style={IFRAME_STYLE} src="/app/kibana" /> },
   { path: 'matchmaker', component: Matchmaker },
   { path: 'sample_qc', component: SampleQc },
   { path: 'saved_variants', component: SavedVariants },
-  { path: 'seqr_stats' },
+  { path: 'seqr_stats', component: SeqrStats },
+  { path: 'users', component: Users },
 ]
 
 // TODO shared 404 component
@@ -34,11 +40,9 @@ const Error401 = () => (<Header size="huge" textAlign="center">Error 401: Unauth
 export const StaffPageHeader = () =>
   <Menu attached>
     <Menu.Item><Header size="medium"><HorizontalSpacer width={90} /> Staff Pages:</Header></Menu.Item>
-    {STAFF_PAGES.map(({ path, component }) => {
-      const href = `/staff/${path}`
-      const linkProps = component ? { as: NavLink, to: href } : { as: 'a', href }
-      return <Menu.Item key={path} {...linkProps}>{snakecaseToTitlecase(path)}</Menu.Item>
-    })}
+    {STAFF_PAGES.map(({ path }) =>
+      <Menu.Item key={path} as={NavLink} to={`/staff/${path}`}>{snakecaseToTitlecase(path)}</Menu.Item>,
+    )}
   </Menu>
 
 const Staff = ({ match, user }) => (
@@ -46,7 +50,7 @@ const Staff = ({ match, user }) => (
     <div>
       <VerticalSpacer height={20} />
       <Switch>
-        {STAFF_PAGES.filter(({ component }) => component).map(({ path, params, component }) =>
+        {STAFF_PAGES.map(({ path, params, component }) =>
           <Route key={path} path={`${match.url}/${path}${params || ''}`} component={component} />,
         )}
         <Route path={match.url} component={null} />

@@ -66,7 +66,6 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -300,7 +299,6 @@ CONSTRUCTION_TEMPLATE = None
 
 VARIANT_QUERY_RESULTS_LIMIT = 2500
 
-UPLOADED_PEDIGREE_FILE_RECIPIENTS = []
 # READ_VIZ
 
 # The base directory where subdirectories contain bams to be shown
@@ -420,6 +418,8 @@ ANNOTATOR_REFERENCE_POPULATIONS_IN_ELASTICSEARCH = [
 
 ANNOTATOR_REFERENCE_POPULATIONS = ANNOTATOR_SETTINGS.reference_populations
 ANNOTATOR_REFERENCE_POPULATION_SLUGS = [pop['slug'] for pop in ANNOTATOR_SETTINGS.reference_populations]
+
+UPLOADED_PEDIGREE_FILE_RECIPIENTS = os.environ.get('UPLOADED_PEDIGREE_FILE_RECIPIENTS', '').split(',')
 
 MEDIA_URL = '/media/'
 

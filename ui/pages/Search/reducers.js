@@ -15,12 +15,18 @@ const RECEIVE_SEARCH_GENE_BREAKDOWN = 'RECEIVE_SEARCH_GENE_BREAKDOWN'
 const UPDATE_SEARCHED_VARIANT_DISPLAY = 'UPDATE_SEARCHED_VARIANT_DISPLAY'
 const REQUEST_SEARCH_CONTEXT = 'REQUEST_SEARCH_CONTEXT'
 const RECEIVE_SEARCH_CONTEXT = 'RECEIVE_SEARCH_CONTEXT'
+const REQUEST_MULTI_PROJECT_SEARCH_CONTEXT = 'REQUEST_MULTI_PROJECT_SEARCH_CONTEXT'
+const RECEIVE_MULTI_PROJECT_SEARCH_CONTEXT = 'RECEIVE_MULTI_PROJECT_SEARCH_CONTEXT'
 
 // actions
 
-export const loadProjectFamiliesContext = ({ projectGuid, familyGuids, analysisGroupGuid }, onSuccess) => {
+export const loadProjectFamiliesContext = ({ searchHash, projectGuid, familyGuids, analysisGroupGuid }, onSuccess) => {
   return (dispatch, getState) => {
     const state = getState()
+    if (state.searchContextLoading.isLoading) {
+      return
+    }
+
     const contextParams = {}
     if (projectGuid && !(state.projectsByGuid[projectGuid] && state.projectsByGuid[projectGuid].variantTagTypes)) {
       contextParams.projectGuid = projectGuid
@@ -33,6 +39,11 @@ export const loadProjectFamiliesContext = ({ projectGuid, familyGuids, analysisG
     }
     else if (analysisGroupGuid && !state.analysisGroupsByGuid[analysisGroupGuid]) {
       contextParams.analysisGroupGuid = analysisGroupGuid
+    } else if (searchHash && (!state.searchesByHash[searchHash] || !state.searchesByHash[searchHash].projectFamilies ||
+        state.searchesByHash[searchHash].projectFamilies.some(entry => !state.projectsByGuid[entry.projectGuid]))) {
+      dispatch({ type: REQUEST_MULTI_PROJECT_SEARCH_CONTEXT })
+      contextParams.searchHash = searchHash
+      contextParams.searchParams = state.searchesByHash[searchHash]
     }
 
     if (Object.keys(contextParams).length) {
@@ -41,14 +52,15 @@ export const loadProjectFamiliesContext = ({ projectGuid, familyGuids, analysisG
         (responseJson) => {
           dispatch({ type: RECEIVE_SAVED_SEARCHES, updatesById: responseJson })
           dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
-
           dispatch({ type: RECEIVE_SEARCH_CONTEXT })
+          dispatch({ type: RECEIVE_MULTI_PROJECT_SEARCH_CONTEXT })
         },
         (e) => {
+          dispatch({ type: RECEIVE_MULTI_PROJECT_SEARCH_CONTEXT })
           dispatch({ type: RECEIVE_SEARCH_CONTEXT, error: e.message })
         },
-      ).get(contextParams)
-    } else {
+      ).post(contextParams)
+    } else if (onSuccess) {
       onSuccess(getState())
     }
   }
@@ -88,7 +100,7 @@ export const loadProjectGroupContext = (projectCategoryGuid, addElementCallback)
         (e) => {
           dispatch({ type: RECEIVE_SEARCH_CONTEXT, error: e.message })
         },
-      ).get({ projectCategoryGuid })
+      ).post({ projectCategoryGuid })
     }
   }
 }
@@ -192,6 +204,7 @@ export const reducers = {
   searchGeneBreakdown: createObjectsByIdReducer(RECEIVE_SEARCH_GENE_BREAKDOWN, 'searchGeneBreakdown'),
   searchGeneBreakdownLoading: loadingReducer(REQUEST_SEARCH_GENE_BREAKDOWN, RECEIVE_SEARCH_GENE_BREAKDOWN),
   searchContextLoading: loadingReducer(REQUEST_SEARCH_CONTEXT, RECEIVE_SEARCH_CONTEXT),
+  multiProjectSearchContextLoading: loadingReducer(REQUEST_MULTI_PROJECT_SEARCH_CONTEXT, RECEIVE_MULTI_PROJECT_SEARCH_CONTEXT),
   variantSearchDisplay: createSingleObjectReducer(UPDATE_SEARCHED_VARIANT_DISPLAY, {
     sort: SORT_BY_XPOS,
     page: 1,

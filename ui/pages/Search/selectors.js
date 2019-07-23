@@ -10,6 +10,7 @@ import {
   getAnalysisGroupsGroupedByProjectGuid,
   getGenesById,
 } from 'redux/selectors'
+import { compareObjects } from 'shared/utils/sortUtils'
 import { SEARCH_FORM_NAME } from './constants'
 
 
@@ -21,6 +22,7 @@ export const getSearchGeneBreakdownLoading = state => state.searchGeneBreakdownL
 export const getSearchGeneBreakdownErrorMessage = state => state.searchGeneBreakdownLoading.errorMessage
 
 export const getSearchContextIsLoading = state => state.searchContextLoading.isLoading
+export const getMultiProjectSearchContextIsLoading = state => state.multiProjectSearchContextLoading.isLoading
 export const getSearchesByHash = state => state.searchesByHash
 export const getSavedSearchesByGuid = state => state.savedSearchesByGuid
 export const getSavedSearchesIsLoading = state => state.savedSearchesLoading.isLoading
@@ -116,7 +118,9 @@ const createSavedSearchesSelector = createSelectorCreator(
 
 export const getSavedSearchOptions = createSavedSearchesSelector(
   getSavedSearches,
-  savedSearches => savedSearches.map(search => ({ text: search.name, value: search.savedSearchGuid })),
+  savedSearches => savedSearches.map(({ name, savedSearchGuid, createdById }) => (
+    { text: name, value: savedSearchGuid, category: createdById ? 'My Searches' : 'Default Searches' }
+  )).sort(compareObjects('text')).sort(compareObjects('category')),
 )
 
 export const getTotalVariantsCount = createSelector(

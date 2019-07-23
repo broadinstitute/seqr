@@ -91,6 +91,7 @@ export const FAMILY_FIELD_ID = 'familyId'
 export const FAMILY_DISPLAY_NAME = 'displayName'
 export const FAMILY_FIELD_DESCRIPTION = 'description'
 export const FAMILY_FIELD_ANALYSIS_STATUS = 'analysisStatus'
+export const FAMILY_FIELD_ASSIGNED_ANALYST = 'assignedAnalyst'
 export const FAMILY_FIELD_ANALYSED_BY = 'analysedBy'
 export const FAMILY_FIELD_ANALYSIS_NOTES = 'analysisNotes'
 export const FAMILY_FIELD_ANALYSIS_SUMMARY = 'analysisSummary'
@@ -106,6 +107,11 @@ export const FAMILY_FIELD_CREATED_DATE = 'createdDate'
 export const FAMILY_FIELD_RENDER_LOOKUP = {
   [FAMILY_FIELD_DESCRIPTION]: { name: 'Family Description' },
   [FAMILY_FIELD_ANALYSIS_STATUS]: { name: 'Analysis Status', component: OptionFieldView },
+  [FAMILY_FIELD_ASSIGNED_ANALYST]: {
+    name: 'Assigned Analyst',
+    component: BaseFieldView,
+    submitArgs: { familyField: 'assigned_analyst' },
+  },
   [FAMILY_FIELD_ANALYSED_BY]: {
     name: 'Analysed By',
     component: BaseFieldView,
@@ -124,6 +130,7 @@ export const FAMILY_FIELD_RENDER_LOOKUP = {
 export const FAMILY_DETAIL_FIELDS = [
   { id: FAMILY_FIELD_DESCRIPTION, canEdit: true },
   { id: FAMILY_FIELD_ANALYSIS_STATUS, canEdit: true },
+  { id: FAMILY_FIELD_ASSIGNED_ANALYST, canEdit: true },
   { id: FAMILY_FIELD_ANALYSED_BY, canEdit: true },
   { id: FAMILY_FIELD_ANALYSIS_NOTES, canEdit: true },
   { id: FAMILY_FIELD_ANALYSIS_SUMMARY, canEdit: true },
@@ -784,7 +791,7 @@ export const VARIANT_EXPORT_DATA = [
   { header: 'rsid', getVal: variant => variant.rsid },
   { header: 'hgvsc', getVal: variant => variant.mainTranscript.hgvsc },
   { header: 'hgvsp', getVal: variant => variant.mainTranscript.hgvsp },
-  { header: 'clinvar_clinical_significance', getVal: variant => variant.clinvar.clinsig },
+  { header: 'clinvar_clinical_significance', getVal: variant => variant.clinvar.clinicalSignificance },
   { header: 'clinvar_gold_stars', getVal: variant => variant.clinvar.goldStars },
   { header: 'filter', getVal: variant => variant.genotypeFilters },
 ]

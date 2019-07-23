@@ -16,7 +16,7 @@ PyYAML==5.1                     # yaml parsing
 # runtime dependencies
 asciitree                        # used by print_project_tree django command
 beautifulsoup4==4.5.3            # used for html parsing utilites
-Django==1.11.20                  # core server-side framework
+Django==1.11.22                  # core server-side framework
 django-anymail==2.2              # for sending emails using cloud-based mail service providers
 django-debug-toolbar             # https://github.com/jazzband/django-debug-toolbar
 django-debug-toolbar-request-history  # for debugging database queries on async requests.

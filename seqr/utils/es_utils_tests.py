@@ -995,14 +995,14 @@ class EsUtilsTest(TestCase):
         self.assertEqual(total_results, 5)
 
         # test load_all
-        variants, _ = get_es_variants(results_model, page=1, load_all=True)
+        variants, _ = get_es_variants(results_model, page=1, num_results=2, load_all=True)
         self.assertExecutedSearch(filters=[ALL_INHERITANCE_QUERY], sort=['xpos'], start_index=4, size=1)
         self.assertEqual(len(variants), 5)
         self.assertListEqual(variants, PARSED_VARIANTS + PARSED_VARIANTS + PARSED_VARIANTS[:1])
 
     def test_filtered_get_es_variants(self):
         search_model = VariantSearch.objects.create(search={
-            'locus': {'rawItems': 'DDX11L1, chr2:1234-5678'},
+            'locus': {'rawItems': 'DDX11L1, chr2:1234-5678', 'rawVariantItems': 'rs9876,chr2-1234-A-C'},
             'pathogenicity': {
                 'clinvar': ['pathogenic', 'likely_pathogenic'],
                 'hgmd': ['disease_causing', 'likely_disease_causing'],
@@ -1034,7 +1034,9 @@ class EsUtilsTest(TestCase):
                 'bool': {
                     'should': [
                         {'range': {'xpos': {'gte': 2000001234, 'lte': 2000005678}}},
-                        {'terms': {'geneIds': ['ENSG00000223972']}}
+                        {'terms': {'geneIds': ['ENSG00000223972']}},
+                        {'terms': {'rsid': ['rs9876']}},
+                        {'terms': {'variantId': ['2-1234-A-C']}},
                     ]
                 }
             },
