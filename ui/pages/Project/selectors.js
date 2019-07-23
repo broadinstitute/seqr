@@ -19,7 +19,7 @@ import { toCamelcase, toSnakecase } from 'shared/utils/stringUtils'
 import {
   getCurrentProject, getFamiliesGroupedByProjectGuid, getIndividualsByGuid, getSamplesByGuid, getGenesById, getUser,
   getAnalysisGroupsGroupedByProjectGuid, getSavedVariantsByGuid, getFirstSampleByFamily, getSortedIndividualsByFamily,
-  getMmeResultsByGuid, getProjectGuid,
+  getMmeResultsByGuid, getProjectGuid, getAllUsers,
 } from 'redux/selectors'
 
 import {
@@ -349,7 +349,7 @@ export const getMmeDefaultContactEmail = createSelector(
     }).join(', ')
 
     const submittedPhenotypeList = (mmeSubmittedData.phenotypes || []).filter(
-      ({ observed }) => observed === 'yes').map(({ label }) => label.toLowerCase())
+      ({ observed, label }) => observed === 'yes' && label).map(({ label }) => label.toLowerCase())
     const numPhenotypes = submittedPhenotypeList.length
     if (numPhenotypes > 2) {
       submittedPhenotypeList[numPhenotypes - 1] = `and ${submittedPhenotypeList[numPhenotypes - 1]}`
@@ -373,13 +373,27 @@ export const getMmeDefaultContactEmail = createSelector(
 
 
 // user options selectors
-
-export const getUsersByUsername = state => state.usersByUsername
-export const getUserOptionsIsLoading = state => state.userOptionsLoading.isLoading
-
 export const getUserOptions = createSelector(
-  getUsersByUsername,
-  usersByUsername => Object.values(usersByUsername).map(
+  getAllUsers,
+  users => users.map(
     user => ({ key: user.username, value: user.username, text: user.email }),
   ),
+)
+
+export const getCollaborators = createSelector(
+  getCurrentProject,
+  project => project.collaborators,
+)
+
+// analyst option selectors (add project collaborators to staff users)
+export const getAnalystOptions = createSelector(
+  getCollaborators,
+  getAllUsers,
+  (collaborators, users) => {
+    const staff = users.filter(user => user.isStaff)
+    const uniqueCollaborators = collaborators.filter(collaborator => !collaborator.isStaff)
+    return [...uniqueCollaborators, ...staff].map(
+      user => ({ key: user.username, value: user.username, text: user.email }),
+    )
+  },
 )

@@ -7,7 +7,8 @@ from django.test import TransactionTestCase
 from django.urls.base import reverse
 
 from seqr.views.apis.users_api import get_all_collaborators, set_password, create_staff_user, \
-    create_project_collaborator, update_project_collaborator, delete_project_collaborator, forgot_password
+    create_project_collaborator, update_project_collaborator, delete_project_collaborator, forgot_password, \
+    get_all_staff
 from seqr.views.utils.test_utils import _check_login
 
 
@@ -16,6 +17,21 @@ PROJECT_GUID = 'R0001_1kg'
 
 class UsersAPITest(TransactionTestCase):
     fixtures = ['users', '1kg_project']
+
+    def test_get_all_staff(self):
+        get_all_staff_url = reverse(get_all_staff)
+        _check_login(self, get_all_staff_url)
+        response = self.client.get(get_all_staff_url)
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        all_staff_usernames = response_json.keys()
+        first_staff_user = response_json[all_staff_usernames[0]]
+
+        self.assertSetEqual(
+            set(first_staff_user),
+            {'username', 'displayName', 'firstName', 'lastName', 'dateJoined', 'email', 'isStaff', 'lastLogin', 'id'}
+        )
+        self.assertTrue(first_staff_user['isStaff'])
 
     @mock.patch('django.contrib.auth.models.send_mail')
     def test_create_update_and_delete_project_collaborator(self, mock_send_mail):
@@ -36,7 +52,7 @@ class UsersAPITest(TransactionTestCase):
         self.assertSetEqual(
             set(collaborators[0].keys()),
             {'dateJoined', 'email', 'firstName', 'isStaff', 'lastLogin', 'lastName', 'username', 'displayName',
-             'hasViewPermissions', 'hasEditPermissions'}
+             'hasViewPermissions', 'hasEditPermissions', 'id'}
         )
         self.assertEqual(collaborators[0]['email'], 'test@test.com')
         self.assertEqual(collaborators[0]['displayName'], '')
@@ -71,10 +87,10 @@ class UsersAPITest(TransactionTestCase):
         response = self.client.get(get_all_collaborators_url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertListEqual(response_json.keys(), [username])
+        self.assertSetEqual(set(response_json.keys()), {username, 'test_user'})
         self.assertSetEqual(
             set(response_json[username].keys()),
-            {'dateJoined', 'email', 'firstName', 'isStaff', 'lastLogin', 'lastName', 'username', 'displayName'}
+            {'dateJoined', 'email', 'firstName', 'isStaff', 'lastLogin', 'lastName', 'username', 'displayName', 'id'}
         )
 
         # calling create again just updates the existing user
@@ -106,10 +122,6 @@ class UsersAPITest(TransactionTestCase):
         self.assertEqual(response.status_code, 200)
         collaborators = response.json()['projectsByGuid'][PROJECT_GUID]['collaborators']
         self.assertEqual(len(collaborators), 0)
-
-        response = self.client.get(get_all_collaborators_url)
-        self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {})
 
         # check that user still exists
         self.assertEqual(User.objects.filter(username=username).count(), 1)
@@ -212,3 +224,4 @@ class UsersAPITest(TransactionTestCase):
             ['test_user@test.com'],
             fail_silently=False,
         )
+

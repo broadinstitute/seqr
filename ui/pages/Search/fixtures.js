@@ -24,6 +24,7 @@ export const LOCUS_LIST = {
 export const STATE = {
   savedSearchesLoading: { isLoading: false },
   searchContextLoading: { isLoading: false },
+  multiProjectSearchContextLoading: { isLoading: false },
   searchGeneBreakdownLoading: { isLoading: false },
   locusListLoading: { isLoading: false },
   currentSearchHash: SEARCH_HASH,

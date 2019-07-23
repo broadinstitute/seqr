@@ -16,6 +16,8 @@ const REQUEST_MME_METRICS = 'REQUEST_MME_METRICS'
 const RECEIVE_MME_METRICS = 'RECEIVE_MME_METRICS'
 const REQUEST_MME_SUBMISSIONS = 'REQUEST_MME_SUBMISSIONS'
 const RECEIVE_MME_SUBMISSIONS = 'RECEIVE_MME_SUBMISSIONS'
+const REQUEST_SEQR_STATS = 'REQUEST_SEQR_STATS'
+const RECEIVE_SEQR_STATS = 'RECEIVE_SEQR_STATS'
 
 
 // Data actions
@@ -142,6 +144,35 @@ export const createStaffUser = (values) => {
   }
 }
 
+export const loadSeqrStats = () => {
+  return (dispatch) => {
+    dispatch({ type: REQUEST_SEQR_STATS })
+    new HttpRequestHelper('/api/staff/seqr_stats',
+      (responseJson) => {
+        dispatch({ type: RECEIVE_SEQR_STATS, newValue: responseJson })
+      },
+      (e) => {
+        dispatch({ type: RECEIVE_SEQR_STATS, error: e.message, newValue: {} })
+      },
+    ).get()
+  }
+}
+
+export const uploadQcPipelineOutput = (values) => {
+  return () => {
+    return new HttpRequestHelper(`/api/staff/save_qc_pipeline_output/${values.file.uploadedFileId}`,
+      () => {},
+      (e) => {
+        if (e.body && e.body.errors) {
+          throw new SubmissionError({ _error: e.body.errors })
+        } else {
+          throw new SubmissionError({ _error: [e.message] })
+        }
+      },
+    ).post(values)
+  }
+}
+
 export const reducers = {
   anvilLoading: loadingReducer(REQUEST_ANVIL, RECEIVE_ANVIL),
   anvilRows: createSingleValueReducer(RECEIVE_ANVIL, []),
@@ -153,6 +184,8 @@ export const reducers = {
   mmeMetrics: createSingleValueReducer(RECEIVE_MME_METRICS, {}),
   mmeSubmissionsLoading: loadingReducer(REQUEST_MME_SUBMISSIONS, RECEIVE_MME_SUBMISSIONS),
   mmeSubmissions: createSingleValueReducer(RECEIVE_MME_SUBMISSIONS, []),
+  seqrStatsLoading: loadingReducer(REQUEST_SEQR_STATS, RECEIVE_SEQR_STATS),
+  seqrStats: createSingleValueReducer(RECEIVE_SEQR_STATS, {}),
 }
 
 const rootReducer = combineReducers(reducers)

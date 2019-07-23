@@ -15,6 +15,7 @@ from seqr.views.apis.family_api import \
     update_family_fields_handler, \
     edit_families_handler, \
     delete_families_handler, \
+    update_family_assigned_analyst, \
     update_family_analysed_by, \
     receive_families_table_handler, \
     update_family_pedigree_image
@@ -61,10 +62,6 @@ from seqr.views.apis.gene_api import \
     update_gene_note_handler, \
     delete_gene_note_handler
 
-from seqr.views.pages.staff.staff_pages import \
-    seqr_stats_page, \
-    users_page, proxy_to_kibana, kibana_page
-
 from seqr.views.apis.locus_list_api import \
     locus_lists, \
     locus_list_info, \
@@ -96,6 +93,7 @@ from seqr.views.apis.variant_search_api import \
 
 from seqr.views.apis.users_api import \
     get_all_collaborators, \
+    get_all_staff, \
     create_project_collaborator, \
     update_project_collaborator, \
     delete_project_collaborator, \
@@ -109,8 +107,12 @@ from seqr.views.apis.staff_api import \
     get_projects_for_category, \
     elasticsearch_status, \
     saved_variants, \
+    receive_qc_pipeline_output, \
+    save_qc_pipeline_output, \
     mme_metrics_proxy, \
-    mme_submissions
+    mme_submissions, \
+    seqr_stats, \
+    proxy_to_kibana
 
 from seqr.views.apis.awesomebar_api import awesomebar_autocomplete_handler
 from seqr.views.apis.auth_api import login_required_error, API_LOGIN_REQUIRED_URL, login_view, logout_view
@@ -147,6 +149,7 @@ api_endpoints = {
     'family/(?P<family_guid>[\w.|-]+)/save_internal_case_review_notes': save_internal_case_review_notes,
     'family/(?P<family_guid>[\w.|-]+)/save_internal_case_review_summary': save_internal_case_review_summary,
     'family/(?P<family_guid>[\w.|-]+)/update': update_family_fields_handler,
+    'family/(?P<family_guid>[\w.|-]+)/update_assigned_analyst': update_family_assigned_analyst,
     'family/(?P<family_guid>[\w.|-]+)/update_analysed_by': update_family_analysed_by,
     'family/(?P<family_guid>[\w.|-]+)/update_pedigree_image': update_family_pedigree_image,
 
@@ -227,6 +230,7 @@ api_endpoints = {
     'users/(?P<username>[^/]+)/set_password': set_password,
 
     'users/get_all': get_all_collaborators,
+    'users/get_all_staff': get_all_staff,
     'users/create_staff_user': create_staff_user,
     'project/(?P<project_guid>[^/]+)/collaborators/create': create_project_collaborator,
     'project/(?P<project_guid>[^/]+)/collaborators/(?P<username>[^/]+)/update': update_project_collaborator,
@@ -243,6 +247,9 @@ api_endpoints = {
     'staff/matchmaker_metrics': mme_metrics_proxy,
     'staff/matchmaker_submissions': mme_submissions,
     'staff/saved_variants/(?P<tag>[^/]+)': saved_variants,
+    'staff/seqr_stats': seqr_stats,
+    'staff/upload_qc_pipeline_output': receive_qc_pipeline_output,
+    'staff/save_qc_pipeline_output/(?P<upload_file_id>[^/]+)': save_qc_pipeline_output,
 
     # EXTERNAL APIS: DO NOT CHANGE
     # matchmaker public facing MME URLs
@@ -272,7 +279,7 @@ for url_endpoint, handler_function in api_endpoints.items():
 
 # login/ logout
 urlpatterns += [
-    url('logout', logout_view),
+    url('^logout$', logout_view),
     url(API_LOGIN_REQUIRED_URL.lstrip('/'), login_required_error)
 ]
 
@@ -288,14 +295,6 @@ kibana_urls = '^(?:%s)' % ('|'.join([
 urlpatterns += [
     url(kibana_urls, proxy_to_kibana, name='proxy_to_kibana'),
 ]
-
-
-# other staff-only endpoints
-urlpatterns = [
-    url("^staff/seqr_stats/?", seqr_stats_page, name="seqr_stats"),
-    url("^staff/users/?", users_page, name="users_page"),
-    url("^staff/kibana/?", kibana_page, name="kibana_page"),
-] + urlpatterns
 
 urlpatterns += [
     url(r'^hijack/', include('hijack.urls')),

@@ -6,8 +6,12 @@ import logging
 from datetime import datetime, timedelta
 from dateutil import relativedelta as rdelta
 from django.contrib.admin.views.decorators import staff_member_required
+from django.contrib.postgres.aggregates import ArrayAgg
 from django.db.models import prefetch_related_objects, Q, Prefetch, Max
+from django.http.response import HttpResponse
 from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
+from requests.exceptions import ConnectionError
 
 from seqr.utils.es_utils import get_es_client, get_latest_loaded_samples
 from seqr.utils.gene_utils import get_genes
@@ -17,6 +21,7 @@ from seqr.views.pages.project_page import get_project_variant_tag_types
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.matchmaker_api import get_mme_genes_phenotypes, parse_mme_patient
 from seqr.views.apis.saved_variant_api import _saved_variant_genes, _add_locus_lists
+from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file
 from seqr.views.utils.json_utils import create_json_response, _to_camel_case
 from seqr.views.utils.orm_to_json_utils import _get_json_for_individuals, get_json_for_saved_variants, \
     get_json_for_variant_functional_data_tag_types, get_json_for_projects, _get_json_for_families, \
@@ -28,7 +33,7 @@ from seqr.models import Project, Family, VariantTag, VariantTagType, Sample, Sav
     LocusList
 from reference_data.models import Omim
 
-from settings import ELASTICSEARCH_SERVER, MME_HEADERS, MME_MATCHBOX_METRICS_URL
+from settings import ELASTICSEARCH_SERVER, MME_HEADERS, MME_MATCHBOX_METRICS_URL, KIBANA_SERVER
 
 logger = logging.getLogger(__name__)
 
@@ -140,6 +145,26 @@ def mme_submissions(request):
     return create_json_response({
         'submissions': submissions,
         'genesById': genes_by_id,
+    })
+
+
+@staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
+def seqr_stats(request):
+
+    families_count = Family.objects.only('family_id').distinct('family_id').count()
+    individuals_count = Individual.objects.only('individual_id').distinct('individual_id').count()
+
+    sample_counts = defaultdict(set)
+    for sample in Sample.objects.filter(sample_status=Sample.SAMPLE_STATUS_LOADED).only('sample_id', 'sample_type'):
+        sample_counts[sample.sample_type].add(sample.sample_id)
+
+    for sample_type, sample_ids_set in sample_counts.items():
+        sample_counts[sample_type] = len(sample_ids_set)
+
+    return create_json_response({
+        'familyCount': families_count,
+        'individualCount': individuals_count,
+        'sampleCountByType': sample_counts,
     })
 
 
@@ -778,3 +803,181 @@ def saved_variants(request, tag):
         'individualsByGuid': {indiv['individualGuid']: indiv for indiv in individuals_json},
         'locusListsByGuid': locus_lists_by_guid,
     })
+
+
+@staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
+@csrf_exempt
+def receive_qc_pipeline_output(request):
+    try:
+        uploaded_file_id, _, json_records = save_uploaded_file(request, process_records=_process_qc_records)
+    except Exception as e:
+        return create_json_response({'errors': [e.message or str(e)]}, status=400, reason=e.message or str(e))
+
+    dataset_type = next(record['DATA_TYPE'].lower() for record in json_records if record['DATA_TYPE'].lower() != 'n/a')
+    info = ['Parsed {} {} samples'.format(len(json_records), dataset_type)]
+    warnings = []
+
+    filter_flags = set()
+    pop_filter_flags = set()
+    for record in json_records:
+        filter_flags.update(record['filter_flags'])
+        pop_filter_flags.update(record['pop_platform_filters'])
+
+    unknown_filter_flags = [flag for flag in filter_flags if FILTER_FLAG_COL_MAP.get(flag, flag) not in json_records[0]]
+    if unknown_filter_flags:
+        warnings.append('The following filter flags have no known corresponding value and will not be saved: {}'.format(
+            ', '.join(unknown_filter_flags)))
+
+    unknown_pop_filter_flags = [flag for flag in pop_filter_flags if 'sample_qc.{}'.format(flag) not in json_records[0]]
+    if unknown_pop_filter_flags:
+        warnings.append(
+            'The following population platform filters have no known corresponding value and will not be saved: {}'.format(
+                ', '.join(unknown_pop_filter_flags)))
+
+    missing_samples = {record['seqr_id'] for record in json_records if not record['individuals']}
+    multi_individual_samples = {record['seqr_id']: len(record['individuals'])
+                                for record in json_records if len(record['individuals']) > 1}
+
+    if multi_individual_samples:
+        warnings.append('The following {} samples will be added to multiple individuals: {}'.format(
+            len(multi_individual_samples), ', '.join(
+                sorted(['{} ({})'.format(sample_id, count) for sample_id, count in multi_individual_samples.items()]))))
+    if missing_samples:
+        warnings.append('The following {} samples will be skipped: {}'.format(
+            len(missing_samples), ', '.join(sorted(missing_samples))))
+
+    info.append('Found matching seqr individuals for {} samples'.format(len(json_records) - len(missing_samples)))
+
+    return create_json_response({
+        'uploadedFileId': uploaded_file_id,
+        'errors': [],
+        'warnings': warnings,
+        'info': info,
+    })
+
+
+FILTER_FLAG_COL_MAP = {
+    'callrate': 'filtered_callrate',
+    'contamination': 'PCT_CONTAMINATION',
+    'chimera': 'AL_PCT_CHIMERAS',
+    'coverage_exome': 'HS_PCT_TARGET_BASES_20X',
+    'coverage_genome': 'WGS_MEAN_COVERAGE'
+}
+
+DATASET_TYPE_MAP = {
+    'exome': 'exome',
+    'genome': 'genome',
+    'wes': 'exome',
+    'wgs': 'genome',
+}
+
+EXCLUDE_PROJECTS = [
+    '[DISABLED_OLD_CMG_Walsh_WES]', 'Old Engle Lab All Samples 352S', 'Old MEEI Engle Samples',
+    'kl_temp_manton_orphan-diseases_cmg-samples_exomes_v1', 'Interview Exomes',
+]
+EXCLUDE_PROJECT_CATEGORY = 'Demo'
+
+def _process_qc_records(rows, **kwargs):
+    json_records = [dict(zip(rows[0], row)) for row in rows[1:]]
+
+    missing_columns = [field for field in ['seqr_id', 'DATA_TYPE', 'filter_flags', 'pop_platform_filters', 'qc_pop']
+                       if field not in json_records[0]]
+    if missing_columns:
+        raise Exception('The following required columns are missing: {}'.format(', '.join(missing_columns)))
+
+    dataset_types = {record['DATA_TYPE'].lower() for record in json_records if record['DATA_TYPE'].lower() != 'n/a'}
+    if len(dataset_types) == 0:
+        raise Exception('No dataset type detected')
+    elif len(dataset_types) > 1:
+        raise Exception('Multiple dataset types detected: {}'.format(' ,'.join(dataset_types)))
+    elif list(dataset_types)[0] not in DATASET_TYPE_MAP:
+        raise Exception('Unexpected dataset type detected: "{}" (should be "exome" or "genome")'.format(list(dataset_types)[0]))
+
+    dataset_type = DATASET_TYPE_MAP[list(dataset_types)[0]]
+
+    for record in json_records:
+        record['filter_flags'] = ['{}_{}'.format(flag, dataset_type) if flag == 'coverage' else flag
+                                  for flag in json.loads(record['filter_flags'])]
+        record['pop_platform_filters'] = json.loads(record['pop_platform_filters'])
+
+    sample_ids = {record['seqr_id'] for record in json_records}
+    samples = Sample.objects.filter(
+        sample_id__in=sample_ids,
+        sample_type=Sample.SAMPLE_TYPE_WES if dataset_type == 'exome' else Sample.SAMPLE_TYPE_WGS,
+    ).exclude(
+        individual__family__project__name__in=EXCLUDE_PROJECTS
+    ).exclude(individual__family__project__projectcategory__name=EXCLUDE_PROJECT_CATEGORY)
+
+    sample_individuals = {
+        agg['sample_id']: agg['individuals'] for agg in
+        samples.values('sample_id').annotate(individuals=ArrayAgg('individual_id', distinct=True))
+    }
+
+    sample_individual_max_loaded_date = {
+        agg['individual_id']: agg['max_loaded_date'] for agg in
+        samples.values('individual_id').annotate(max_loaded_date=Max('loaded_date'))
+    }
+    individual_latest_sample = {
+        s.individual_id: s.sample_id for s in samples
+        if s.loaded_date == sample_individual_max_loaded_date.get(s.individual_id)
+    }
+
+    for record in json_records:
+        record['individuals'] = list({
+            individual_id for individual_id in sample_individuals.get(record['seqr_id'], [])
+            if individual_latest_sample[individual_id] == record['seqr_id']
+        })
+
+    missing_sample_ids = [record['seqr_id'] for record in json_records if not record['individuals']]
+    if missing_sample_ids:
+        individuals = Individual.objects.filter(individual_id__in=missing_sample_ids).exclude(
+            family__project__name__in=EXCLUDE_PROJECTS).exclude(
+            family__project__projectcategory__name=EXCLUDE_PROJECT_CATEGORY).exclude(
+            sample__sample_type=Sample.SAMPLE_TYPE_WGS if dataset_type == 'exome' else Sample.SAMPLE_TYPE_WES)
+        individual_id_map = defaultdict(list)
+        for individual in individuals:
+            individual_id_map[individual.individual_id].append(individual.id)
+        for record in json_records:
+            if not record['individuals'] and len(individual_id_map[record['seqr_id']]) == 1:
+                record['individuals'] = individual_id_map[record['seqr_id']]
+
+    return json_records
+
+
+@staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
+@csrf_exempt
+def save_qc_pipeline_output(request, upload_file_id):
+    json_records = load_uploaded_file(upload_file_id)
+
+    individual_model_ids = set()
+    for record in json_records:
+        individual_model_ids.update(record['individuals'])
+    individuals_by_id = {i.id: i for i in Individual.objects.filter(id__in=individual_model_ids)}
+
+    for record in json_records:
+        for individual_id in record['individuals']:
+            individual = individuals_by_id[individual_id]
+            individual.filter_flags = {
+                flag: record[FILTER_FLAG_COL_MAP.get(flag, flag)] for flag in record['filter_flags']
+                if FILTER_FLAG_COL_MAP.get(flag, flag) in record
+            } or None
+            individual.pop_platform_filters = {
+                flag: record['sample_qc.{}'.format(flag)] for flag in record['pop_platform_filters']
+                if 'sample_qc.{}'.format(flag) in record
+            } or None
+            individual.population = record['qc_pop'].upper()
+            individual.save()
+
+    return create_json_response({'info': ['Successfully updated {} individuals'.format(len(individuals_by_id))]})
+
+
+@staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
+@csrf_exempt
+def proxy_to_kibana(request):
+    try:
+        return proxy_request(request, host=KIBANA_SERVER, url=request.get_full_path(), data=request.body, stream=True)
+        # use stream=True because kibana returns gziped responses, and this prevents the requests module from
+        # automatically unziping them
+    except ConnectionError as e:
+        logger.error(e)
+        return HttpResponse("Error: Unable to connect to Kibana {}".format(e))
