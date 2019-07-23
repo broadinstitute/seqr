@@ -7,9 +7,7 @@ import { EXCLUDED_TAG_NAME, REVIEW_TAG_NAME, NOTE_TAG_NAME } from '../../utils/c
 
 export const getVariantTagTypeCount = (vtt, familyGuids, variantGuid, variantsToDisplay) => {
   if (familyGuids || variantGuid) {
-    familyGuids = familyGuids ? familyGuids : (variantsToDisplay['0'] || {}).familyGuids
-    familyGuids = familyGuids ? familyGuids : []
-    return familyGuids.reduce((count, familyGuid) => count + (vtt.numTagsPerFamily[familyGuid] || 0), 0)
+    return (familyGuids || (variantsToDisplay['0'] || {}).familyGuids || []).reduce((count, familyGuid) => count + (vtt.numTagsPerFamily[familyGuid] || 0), 0)
   }
   return vtt.numTags
 }
