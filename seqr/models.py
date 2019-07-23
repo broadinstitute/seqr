@@ -6,7 +6,7 @@ import random
 from django.contrib.auth.models import User, Group
 from django.contrib.postgres.fields import JSONField, ArrayField
 from django.db import models
-from django.db.models import options
+from django.db.models import options, ForeignKey
 from django.utils import timezone
 from django.utils.text import slugify as __slugify
 
@@ -234,6 +234,9 @@ class Family(ModelWithGUID):
 
     pedigree_image = models.ImageField(null=True, blank=True, upload_to='pedigree_images')
 
+    assigned_analyst = models.ForeignKey(User, null=True, on_delete=models.SET_NULL,
+                                    related_name='assigned_families')  # type: ForeignKey
+
     analysis_notes = models.TextField(null=True, blank=True)
     analysis_summary = models.TextField(null=True, blank=True)
 
@@ -271,7 +274,7 @@ class Family(ModelWithGUID):
         json_fields = [
             'guid', 'family_id', 'display_name', 'description', 'analysis_notes', 'analysis_summary',
             'causal_inheritance_mode', 'analysis_status', 'pedigree_image', 'created_date', 'coded_phenotype',
-            'post_discovery_omim_number', 'pubmed_ids'
+            'post_discovery_omim_number', 'pubmed_ids', 'assigned_analyst'
         ]
         internal_json_fields = [
             'internal_analysis_status', 'internal_case_review_notes', 'internal_case_review_summary'
@@ -290,7 +293,6 @@ class FamilyAnalysedBy(ModelWithGUID):
 
     class Meta:
         json_fields = ['last_modified_date', 'created_by']
-
 
 class Individual(ModelWithGUID):
     SEX_MALE = 'M'
