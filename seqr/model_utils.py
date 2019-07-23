@@ -54,6 +54,9 @@ SEQR_TO_XBROWSE_FIELD_MAPPING = {
         "notes": "other_notes",
         "mother": "maternal_id",
         "father": "paternal_id",
+        "filter_flags": _DELETED_FIELD,
+        "pop_platform_filters": _DELETED_FIELD,
+        "population": _DELETED_FIELD,
     },
     "VariantTagType": {
         "name": "tag",

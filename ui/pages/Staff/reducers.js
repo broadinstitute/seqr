@@ -158,6 +158,21 @@ export const loadSeqrStats = () => {
   }
 }
 
+export const uploadQcPipelineOutput = (values) => {
+  return () => {
+    return new HttpRequestHelper(`/api/staff/save_qc_pipeline_output/${values.file.uploadedFileId}`,
+      () => {},
+      (e) => {
+        if (e.body && e.body.errors) {
+          throw new SubmissionError({ _error: e.body.errors })
+        } else {
+          throw new SubmissionError({ _error: [e.message] })
+        }
+      },
+    ).post(values)
+  }
+}
+
 export const reducers = {
   anvilLoading: loadingReducer(REQUEST_ANVIL, RECEIVE_ANVIL),
   anvilRows: createSingleValueReducer(RECEIVE_ANVIL, []),
