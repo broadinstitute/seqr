@@ -1,7 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 
-import { Segment } from 'semantic-ui-react'
+import {Popup, Segment} from 'semantic-ui-react'
 import { ButtonLink } from '../StyledComponents'
 import ReduxFormWrapper from '../form/ReduxFormWrapper'
 import Modal from '../modal/Modal'
@@ -11,18 +11,26 @@ const UpdateButton = (
     disabled, confirmDialog, submitButtonText, buttonFloated, trigger, formContainer = <div /> },
 ) => {
   const updateButton = showInLine ?
-    React.cloneElement(formContainer = <Segment />, { children: (
-      <ReduxFormWrapper
-        onSubmit={onSubmit}
-        form={modalId}
-        initialValues={initialValues}
-        fields={formFields}
-        showErrorPanel={showErrorPanel}
-        confirmDialog={confirmDialog}
-        submitButtonText={submitButtonText}
-        confirmCloseIfNotSaved
-      />
-    ) })
+    // React.cloneElement(formContainer = <Segment />, { children: (
+    //   <ReduxFormWrapper
+    //     onSubmit={onSubmit}
+    //     form={modalId}
+    //     initialValues={initialValues}
+    //     fields={formFields}
+    //     showErrorPanel={showErrorPanel}
+    //     confirmDialog={confirmDialog}
+    //     submitButtonText={submitButtonText}
+    //     confirmCloseIfNotSaved
+    //   />
+    // ) })
+    <ButtonLink
+      content={buttonText}
+      icon={editIconName || 'write'}
+      labelPosition={buttonText && 'right'}
+      size={size}
+      disabled={disabled}
+      floated={buttonFloated}
+    />
     :
     <Modal
       title={modalTitle}

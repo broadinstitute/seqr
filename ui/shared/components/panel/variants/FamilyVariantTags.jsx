@@ -180,6 +180,7 @@ VariantTagField.propTypes = {
 const VariantNoteField = ({ action, note, variant, family, ...props }) => {
   const values = { ...variant, ...note }
   return <TextFieldView
+    // hideValue // TODO toggle true and false on click
     isEditable
     field="note"
     modalId={family.familyGuid}
