@@ -232,7 +232,7 @@ class BaseSavedVariants extends React.Component {
                 height={30}
                 project={this.props.project}
                 analysisGroup={this.props.analysisGroup}
-                familyGuid={familyGuid}
+                familyGuid={variantGuid ? ((this.props.variantsToDisplay[0] || {}).familyGuids || [])[0] : familyGuid}
                 variantGuid={variantGuid}
                 variantsToDisplay={this.props.variantsToDisplay}
                 hideExcluded={this.props.tableState.hideExcluded}
