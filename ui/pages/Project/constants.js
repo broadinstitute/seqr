@@ -18,7 +18,6 @@ import {
   FAMILY_DISPLAY_NAME,
   FAMILY_FIELD_DESCRIPTION,
   FAMILY_FIELD_ANALYSIS_STATUS,
-  FAMILY_FIELD_ASSIGNED_ANALYST,
   FAMILY_FIELD_ANALYSED_BY,
   FAMILY_FIELD_ANALYSIS_NOTES,
   FAMILY_FIELD_ANALYSIS_SUMMARY,
@@ -82,7 +81,6 @@ const SHOW_DATA_LOADED = 'SHOW_DATA_LOADED'
 const SHOW_PHENOTYPES_ENTERED = 'SHOW_PHENOTYPES_ENTERED'
 const SHOW_NO_PHENOTYPES_ENTERED = 'SHOW_NO_PHENOTYPES_ENTERED'
 
-const SHOW_ASSIGNED_TO_ME = 'SHOW_ASSIGNED_TO_ME'
 const SHOW_ANALYSED_BY_ME = 'SHOW_ANALYSED_BY_ME'
 const SHOW_NOT_ANALYSED_BY_ME = 'SHOW_NOT_ANALYSED_BY_ME'
 const SHOW_ANALYSED_BY_CMG = 'SHOW_ANALYSED_BY_CMG'
@@ -148,13 +146,6 @@ export const FAMILY_FILTER_OPTIONS = [
       family.individualGuids.map(individualGuid => individualsByGuid[individualGuid].phenotipsData).every(
         phenotipsData => !hasPhenotipsDetails(phenotipsData),
       ),
-  },
-  {
-    value: SHOW_ASSIGNED_TO_ME,
-    category: 'Analysed By:',
-    name: 'Assigned To Me',
-    createFilter: (individualsByGuid, samplesByGuid, user) => family =>
-      (family.assignedAnalyst ? family.assignedAnalyst.email === user.email : null),
   },
   {
     value: SHOW_ANALYSED_BY_ME,
@@ -355,7 +346,6 @@ const FAMILY_FIELD_CONFIGS = {
     label: 'Analysis Status',
     format: status => (FAMILY_ANALYSIS_STATUS_OPTIONS.find(option => option.value === status) || {}).name,
   },
-  [FAMILY_FIELD_ASSIGNED_ANALYST]: { label: 'Assigned Analyst' },
   [FAMILY_FIELD_ANALYSED_BY]: { label: 'Analysed By', format: analysedBy => analysedBy.map(o => o.createdBy.fullName || o.createdBy.email).join(',') },
   [FAMILY_FIELD_ANALYSIS_SUMMARY]: { label: 'Analysis Summary', format: stripMarkdown },
   [FAMILY_FIELD_ANALYSIS_NOTES]: { label: 'Analysis Notes', format: stripMarkdown },
@@ -373,7 +363,6 @@ export const FAMILY_EXPORT_DATA = [
   FAMILY_FIELD_FIRST_SAMPLE,
   FAMILY_FIELD_DESCRIPTION,
   FAMILY_FIELD_ANALYSIS_STATUS,
-  FAMILY_FIELD_ASSIGNED_ANALYST,
   FAMILY_FIELD_ANALYSED_BY,
   FAMILY_FIELD_ANALYSIS_SUMMARY,
   FAMILY_FIELD_ANALYSIS_NOTES,

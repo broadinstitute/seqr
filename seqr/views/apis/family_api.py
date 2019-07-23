@@ -9,8 +9,6 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 
-from django.contrib.auth.models import User
-
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.individual_api import delete_individuals
 
@@ -129,35 +127,6 @@ def update_family_fields_handler(request, family_guid):
 
     request_json = json.loads(request.body)
     update_family_from_json(family, request_json, user=request.user, allow_unknown_keys=True)
-
-    return create_json_response({
-        family.guid: _get_json_for_family(family, request.user)
-    })
-
-
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
-def update_family_assigned_analyst(request, family_guid):
-    """Updates the specified field in the Family model.
-
-    Args:
-        family_guid (string): GUID of the family.
-    """
-    family = Family.objects.get(guid=family_guid)
-    check_permissions(family.project, request.user, CAN_EDIT)
-
-    request_json = json.loads(request.body)
-    assigned_analyst_username = request_json.get('assigned_analyst_username')
-
-    if not assigned_analyst_username:
-        return create_json_response(
-            {}, status=400, reason="'assigned analyst' is not specified")
-    try:
-        assigned_analyst = User.objects.get(username=assigned_analyst_username)
-    except Exception:
-        return create_json_response(
-            {}, status=400, reason="user does not have access")
-    update_seqr_model(family, assigned_analyst=assigned_analyst)
 
     return create_json_response({
         family.guid: _get_json_for_family(family, request.user)

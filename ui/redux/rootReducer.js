@@ -72,12 +72,10 @@ export const fetchProjects = () => {
   }
 }
 
-export const loadUserOptions = (staffOnly) => {
-
+export const loadUserOptions = () => {
   return (dispatch) => {
-    const url = staffOnly ? '/api/users/get_all_staff' : '/api/users/get_all'
     dispatch({ type: REQUEST_USERS })
-    new HttpRequestHelper(url,
+    new HttpRequestHelper('/api/users/get_all',
       (responseJson) => {
         dispatch({ type: RECEIVE_USERS, newValue: responseJson })
       },
@@ -88,7 +86,6 @@ export const loadUserOptions = (staffOnly) => {
   }
 }
 
-export const loadStaffOptions = () => loadUserOptions(true)
 
 /**
  * POSTS a request to update the specified project and dispatches the appropriate events when the request finishes
