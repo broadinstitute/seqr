@@ -36,6 +36,14 @@ def get_all_collaborators(request):
     return create_json_response(collaborators)
 
 
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@csrf_exempt
+def get_all_staff(request):
+    staff_analysts = {staff.username: _get_json_for_user(staff) for staff in User.objects.filter(is_staff=True)}
+
+    return create_json_response(staff_analysts)
+
+
 @csrf_exempt
 def forgot_password(request):
     request_json = json.loads(request.body)
