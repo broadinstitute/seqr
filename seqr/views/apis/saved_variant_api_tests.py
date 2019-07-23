@@ -125,6 +125,12 @@ class ProjectAPITest(TransactionTestCase):
         self.assertEqual(new_variant_note.note, new_note_response['note'])
         self.assertEqual(new_variant_note.submit_to_clinvar, new_note_response['submitToClinvar'])
 
+        # save variant_note as gene_note
+        create_gene_note_url = reverse(create_variant_note_handler, args=[VARIANT_GUID])
+        response = self.client.post(create_gene_note_url, content_type='application/json', data=json.dumps(
+            {'note': 'new_variant_note_as_gene_note', 'saveAsGeneNote': True}
+        ))
+
         # update the variant_note
         update_variant_note_url = reverse(update_variant_note_handler, args=[VARIANT_GUID, new_variant_note.guid])
         response = self.client.post(update_variant_note_url, content_type='application/json',  data=json.dumps(
