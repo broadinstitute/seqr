@@ -10,6 +10,7 @@ from seqr.models import Individual, SavedVariant, VariantTagType, VariantTag, Va
 from seqr.model_utils import create_seqr_model, delete_seqr_model
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.locus_list_api import get_project_locus_list_models
+from seqr.views.apis.gene_api import create_gene_note_handler
 from seqr.utils.gene_utils import get_genes
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.json_utils import create_json_response
@@ -91,11 +92,15 @@ def create_saved_variant_handler(request):
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def create_variant_note_handler(request, variant_guid):
+    save_as_gene_note = json.loads(request.body).get('saveAsGeneNote') or False
     saved_variant = SavedVariant.objects.get(guid=variant_guid)
     check_permissions(saved_variant.project, request.user, CAN_VIEW)
 
-    _create_variant_note(saved_variant, json.loads(request.body), request.user)
+    if save_as_gene_note:
+        gene_id = json.loads(saved_variant.saved_variant_json)['transcripts'].keys()[0]
+        return create_gene_note_handler(request, gene_id)
 
+    _create_variant_note(saved_variant, json.loads(request.body), request.user)
     return create_json_response({'savedVariantsByGuid': {variant_guid: {
         'notes': [get_json_for_variant_note(tag) for tag in saved_variant.variantnote_set.all()]
     }}})

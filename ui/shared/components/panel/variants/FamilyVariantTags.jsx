@@ -81,6 +81,11 @@ const VARIANT_NOTE_FIELDS = [{
   label: <label>Add to <i style={{ color: 'red' }}>ClinVar</i> submission</label>, //eslint-disable-line jsx-a11y/label-has-for
   component: BooleanCheckbox,
   style: { paddingTop: '2em' },
+},
+{
+  name: 'saveAsGeneNote',
+  label: <label>Add to public gene notes</label>, //eslint-disable-line jsx-a11y/label-has-for
+  component: BooleanCheckbox,
 }]
 
 const taggedByPopup = (tag, title) => trigger =>
