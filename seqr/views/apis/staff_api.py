@@ -865,6 +865,18 @@ FILTER_FLAG_COL_MAP = {
     'coverage_genome': 'WGS_MEAN_COVERAGE'
 }
 
+DATASET_TYPE_MAP = {
+    'exome': 'exome',
+    'genome': 'genome',
+    'wes': 'exome',
+    'wgs': 'genome',
+}
+
+EXCLUDE_PROJECTS = [
+    '[DISABLED_OLD_CMG_Walsh_WES]', 'Old Engle Lab All Samples 352S', 'Old MEEI Engle Samples',
+    'kl_temp_manton_orphan-diseases_cmg-samples_exomes_v1', 'Interview Exomes',
+]
+EXCLUDE_PROJECT_CATEGORY = 'Demo'
 
 def _process_qc_records(rows, **kwargs):
     json_records = [dict(zip(rows[0], row)) for row in rows[1:]]
@@ -879,10 +891,10 @@ def _process_qc_records(rows, **kwargs):
         raise Exception('No dataset type detected')
     elif len(dataset_types) > 1:
         raise Exception('Multiple dataset types detected: {}'.format(' ,'.join(dataset_types)))
-    elif list(dataset_types)[0] not in {'exome', 'genome'}:
+    elif list(dataset_types)[0] not in DATASET_TYPE_MAP:
         raise Exception('Unexpected dataset type detected: "{}" (should be "exome" or "genome")'.format(list(dataset_types)[0]))
 
-    dataset_type = list(dataset_types)[0]
+    dataset_type = DATASET_TYPE_MAP[list(dataset_types)[0]]
 
     for record in json_records:
         record['filter_flags'] = ['{}_{}'.format(flag, dataset_type) if flag == 'coverage' else flag
@@ -894,11 +906,8 @@ def _process_qc_records(rows, **kwargs):
         sample_id__in=sample_ids,
         sample_type=Sample.SAMPLE_TYPE_WES if dataset_type == 'exome' else Sample.SAMPLE_TYPE_WGS,
     ).exclude(
-        individual__family__project__name__in=[
-            '[DISABLED_OLD_CMG_Walsh_WES]', 'Old Engle Lab All Samples 352S', 'Old MEEI Engle Samples',
-            'kl_temp_manton_orphan-diseases_cmg-samples_exomes_v1', 'Interview Exomes'
-        ]
-    ).exclude(individual__family__project__projectcategory__name='Demo')
+        individual__family__project__name__in=EXCLUDE_PROJECTS
+    ).exclude(individual__family__project__projectcategory__name=EXCLUDE_PROJECT_CATEGORY)
 
     sample_individuals = {
         agg['sample_id']: agg['individuals'] for agg in
@@ -919,6 +928,19 @@ def _process_qc_records(rows, **kwargs):
             individual_id for individual_id in sample_individuals.get(record['seqr_id'], [])
             if individual_latest_sample[individual_id] == record['seqr_id']
         })
+
+    missing_sample_ids = [record['seqr_id'] for record in json_records if not record['individuals']]
+    if missing_sample_ids:
+        individuals = Individual.objects.filter(individual_id__in=missing_sample_ids).exclude(
+            family__project__name__in=EXCLUDE_PROJECTS).exclude(
+            family__project__projectcategory__name=EXCLUDE_PROJECT_CATEGORY).exclude(
+            sample__sample_type=Sample.SAMPLE_TYPE_WGS if dataset_type == 'exome' else Sample.SAMPLE_TYPE_WES)
+        individual_id_map = defaultdict(list)
+        for individual in individuals:
+            individual_id_map[individual.individual_id].append(individual.id)
+        for record in json_records:
+            if not record['individuals'] and len(individual_id_map[record['seqr_id']]) == 1:
+                record['individuals'] = individual_id_map[record['seqr_id']]
 
     return json_records
 
@@ -944,7 +966,7 @@ def save_qc_pipeline_output(request, upload_file_id):
                 flag: record['sample_qc.{}'.format(flag)] for flag in record['pop_platform_filters']
                 if 'sample_qc.{}'.format(flag) in record
             } or None
-            individual.population = record['qc_pop'].title()
+            individual.population = record['qc_pop'].upper()
             individual.save()
 
     return create_json_response({'info': ['Successfully updated {} individuals'.format(len(individuals_by_id))]})
