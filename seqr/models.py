@@ -359,6 +359,10 @@ class Individual(ModelWithGUID):
     mme_deleted_date = models.DateTimeField(null=True)
     mme_deleted_by = models.ForeignKey(User, null=True, on_delete=models.SET_NULL)
 
+    filter_flags = JSONField(null=True)
+    pop_platform_filters = JSONField(null=True)
+    population = models.CharField(max_length=5, null=True)
+
     def __unicode__(self):
         return self.individual_id.strip()
 
@@ -371,7 +375,7 @@ class Individual(ModelWithGUID):
         json_fields = [
             'guid', 'individual_id', 'father', 'mother', 'sex', 'affected', 'display_name', 'notes',
             'phenotips_patient_id', 'phenotips_data', 'created_date', 'last_modified_date', 'mme_submitted_date',
-            'mme_deleted_date',
+            'mme_deleted_date', 'filter_flags', 'pop_platform_filters', 'population'
         ]
         internal_json_fields = [
             'case_review_status', 'case_review_discussion',
