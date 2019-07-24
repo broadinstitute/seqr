@@ -9,7 +9,7 @@ import Modal from '../../modal/Modal'
 import { ButtonLink } from '../../StyledComponents'
 import Transcripts, { TranscriptLink } from './Transcripts'
 import { LocusListLabels } from './VariantGene'
-import { GENOME_VERSION_37 } from '../../../utils/constants'
+import { GENOME_VERSION_37, getVariantMainTranscript } from '../../../utils/constants'
 
 
 const SequenceContainer = styled.span`
@@ -117,7 +117,8 @@ const annotationVariations = (mainTranscript, variant) => {
 }
 
 const Annotations = ({ variant }) => {
-  const { mainTranscript, rsid } = variant
+  const { rsid } = variant
+  const mainTranscript = getVariantMainTranscript(variant)
 
   const variations = annotationVariations(mainTranscript, variant)
   const lofDetails = (mainTranscript.lof === 'LC' || mainTranscript.lofFlags === 'NAGNAG_SITE') ? [

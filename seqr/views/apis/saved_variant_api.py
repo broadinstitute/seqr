@@ -37,10 +37,7 @@ def saved_variant_data(request, project_guid, variant_guid=None):
         if variant_query.count() < 1:
             return create_json_response({}, status=404, reason='Variant {} not found'.format(variant_guid))
 
-    individual_guids_by_id = {i.individual_id: i.guid for i in Individual.objects.filter(family__project=project)}
-
-    saved_variants = get_json_for_saved_variants(variant_query, add_tags=True, add_details=True, project=project,
-                                                 user=request.user, individual_guids_by_id=individual_guids_by_id)
+    saved_variants = get_json_for_saved_variants(variant_query, add_tags=True, add_details=True)
     variants = {variant['variantGuid']: variant for variant in saved_variants if variant['notes'] or variant['tags']}
     genes = _saved_variant_genes(variants.values())
     _add_locus_lists([project], variants.values(), genes)
@@ -66,7 +63,6 @@ def create_saved_variant_handler(request):
     xpos = variant_json['xpos']
     ref = variant_json['ref']
     alt = variant_json['alt']
-    # TODO remove project field from saved variants
     saved_variant = SavedVariant.objects.create(
         xpos=xpos,
         xpos_start=xpos,
@@ -82,7 +78,7 @@ def create_saved_variant_handler(request):
     elif non_variant_json.get('tags'):
         _create_new_tags(saved_variant, non_variant_json, request.user)
 
-    variant_json.update(get_json_for_saved_variant(saved_variant, add_tags=True, project_guid=family.project.guid))
+    variant_json.update(get_json_for_saved_variant(saved_variant, add_tags=True))
     return create_json_response({
         'savedVariantsByGuid': {saved_variant.guid: variant_json},
     })

@@ -126,7 +126,7 @@ class VariantSearchAPITest(TestCase):
         self.assertListEqual(
             export_content[1],
             ['21', '3343353', 'GAGA', 'G', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
-             '', '1', 'Tier 1 - Novel gene and phenotype (None)|Review (None)', '', '2', '', '', 'NA19675', '1',
+             '', '1', 'Review (None)|Tier 1 - Novel gene and phenotype (None)', '', '2', '', '', 'NA19675', '1',
              '14,33', '50', '46.0', '0.702127659574', 'NA19679', '0', '45,0', '45', '99.0', '0.0'])
 
         mock_get_variants.assert_called_with(results_model, page=1, load_all=True)

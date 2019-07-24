@@ -49,7 +49,7 @@ def project_page_data(request, project_guid):
 
     project_json = _get_json_for_project(project, request.user)
     project_json['collaborators'] = get_json_for_project_collaborator_list(project)
-    project_json.update(_get_json_for_variant_tag_types(project, request.user, individuals_by_guid))
+    project_json.update(_get_json_for_variant_tag_types(project))
     project_json['locusListGuids'] = locus_lists_by_guid.keys()
     project_json['detailsLoaded'] = True
 
@@ -151,11 +151,7 @@ def _retrieve_analysis_groups(project):
     return {group['analysisGroupGuid']: group for group in groups}
 
 
-def _get_json_for_variant_tag_types(project, user, individuals_by_guid):
-    individual_guids_by_id = {
-        individual['individualId']: individual_guid for individual_guid, individual in individuals_by_guid.items()
-    }
-
+def _get_json_for_variant_tag_types(project):
     tag_counts_by_type_and_family = VariantTag.objects.filter(saved_variant__family__project=project).values('saved_variant__family__guid', 'variant_tag_type__name').annotate(count=Count('*'))
     note_counts_by_family = VariantNote.objects.filter(saved_variant__family__project=project).values('saved_variant__family__guid').annotate(count=Count('*'))
     project_variant_tags = get_project_variant_tag_types(project, tag_counts_by_type_and_family=tag_counts_by_type_and_family, note_counts_by_family=note_counts_by_family)
@@ -164,8 +160,7 @@ def _get_json_for_variant_tag_types(project, user, individuals_by_guid):
         if tag_type['category'] == 'CMG Discovery Tags' and tag_type['numTags'] > 0:
             tags = VariantTag.objects.filter(saved_variant__family__project=project, variant_tag_type__guid=tag_type['variantTagTypeGuid']).select_related('saved_variant')
             saved_variants = [tag.saved_variant for tag in tags]
-            discovery_tags += get_json_for_saved_variants(
-                saved_variants, add_tags=True, add_details=True, project=project, user=user, individual_guids_by_id=individual_guids_by_id)
+            discovery_tags += get_json_for_saved_variants(saved_variants, add_tags=True, add_details=True)
 
     project_functional_tags = []
     for category, tags in VariantFunctionalData.FUNCTIONAL_DATA_CHOICES:

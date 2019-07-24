@@ -529,8 +529,8 @@ class SavedVariant(ModelWithGUID):
     ref = models.TextField()
     alt = models.TextField()
 
-    main_transcript_id = models.CharField(max_length=20, null=True)
-    saved_variant_json = JSONField(null=True)
+    selected_main_transcript_id = models.CharField(max_length=20, null=True)
+    saved_variant_json = JSONField(default=dict)
 
     def __unicode__(self):
         chrom, pos = get_chrom_pos(self.xpos_start)
@@ -542,7 +542,7 @@ class SavedVariant(ModelWithGUID):
     class Meta:
         unique_together = ('xpos_start', 'xpos_end', 'ref', 'alt', 'family')
 
-        json_fields = ['guid', 'xpos', 'ref', 'alt']
+        json_fields = ['guid', 'xpos', 'ref', 'alt', 'selected_main_transcript_id']
 
 
 class VariantTagType(ModelWithGUID):

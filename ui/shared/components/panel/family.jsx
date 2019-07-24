@@ -196,8 +196,8 @@ SearchLink.propTypes = {
 }
 
 const DiscoveryGenes = ({ project, familyGuid }) => {
-  const discoveryGenes = project.discoveryTags.filter(tag => tag.familyGuids.includes(familyGuid)).reduce(
-    (acc, tag) => (tag.mainTranscript.geneSymbol ? [...acc, tag.mainTranscript.geneSymbol] : acc), [],
+  const discoveryGenes = project.discoveryTags.filter(tag => tag.familyGuids.includes(familyGuid)).reduce((acc, tag) =>
+    [...acc, ...Object.values(tag.transcripts).flat().map(({ geneSymbol }) => geneSymbol).filter(val => val)],
   )
   return discoveryGenes.length > 0 ? (
     <span> <b>Discovery Genes:</b> {[...new Set(discoveryGenes)].join(', ')}</span>

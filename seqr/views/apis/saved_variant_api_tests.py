@@ -32,8 +32,8 @@ class ProjectAPITest(TransactionTestCase):
             set(variant.keys()),
             {'variantId', 'variantGuid', 'xpos', 'ref', 'alt', 'chrom', 'pos', 'genomeVersion', 'liftedOverGenomeVersion',
              'liftedOverChrom', 'liftedOverPos', 'familyGuids', 'tags', 'functionalData', 'notes', 'clinvar',
-             'originalAltAlleles', 'mainTranscript', 'genotypes', 'hgmd', 'transcripts', 'locusListGuids', 'populations',
-             'predictions', 'rsid', 'genotypeFilters'}
+             'originalAltAlleles', 'mainTranscriptId', 'selectedMainTranscriptId', 'genotypes', 'hgmd', 'transcripts', 
+             'locusListGuids', 'populations', 'predictions', 'rsid', 'genotypeFilters'}
         )
         self.assertSetEqual(set(variant['genotypes'].keys()), {'I000003_na19679', 'I000001_na19675', 'I000002_na19678'})
 
@@ -62,7 +62,7 @@ class ProjectAPITest(TransactionTestCase):
             'chrom': '2',
             'genotypes': {},
             'genomeVersion': '37',
-            'mainTranscript': {},
+            'mainTranscriptId': None,
             'originalAltAlleles': ['A'],
             'populations': {'callset': {'ac': 2, 'af': 0.063, 'an': 32}},
             'pos': 61413835,
@@ -96,6 +96,7 @@ class ProjectAPITest(TransactionTestCase):
         variant_json.update({
             'variantId': variant_guid,
             'variantGuid': variant_guid,
+            'selectedMainTranscriptId': None,
             'notes': [],
             'functionalData': [],
         })

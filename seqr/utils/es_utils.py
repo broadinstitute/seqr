@@ -98,7 +98,10 @@ def get_es_variant_gene_counts(search_model):
             if 'all_results' in previous_search_results:
                 if len(previous_search_results['all_results']) == total_results:
                     for var in previous_search_results['all_results']:
-                        gene_id = var['mainTranscript']['geneId']
+                        gene_id = next((
+                            gene_id for gene_id, transcripts in var['transcripts'].items()
+                            if any(t['transcriptId'] == var['mainTranscriptId'] for t in transcripts)
+                        ), None) if var['mainTranscriptId'] else None
                         if gene_id:
                             gene_aggs[gene_id]['total'] += 1
                             for family_guid in var['familyGuids']:
@@ -111,7 +114,10 @@ def get_es_variant_gene_counts(search_model):
                         variants = group.values()[0]
                         gene_id = group.keys()[0]
                         if not gene_id or gene_id == 'null':
-                            gene_id = variants[0]['mainTranscript']['geneId']
+                            gene_id = next((
+                                gene_id for gene_id, transcripts in variants[0]['transcripts'].items()
+                                if any(t['transcriptId'] == variants[0]['mainTranscriptId'] for t in transcripts)
+                            ), None) if variants[0]['mainTranscriptId'] else None
                         if gene_id:
                             gene_aggs[gene_id]['total'] += len(variants)
                             for family_guid in variants[0]['familyGuids']:
@@ -526,22 +532,27 @@ class EsSearch(BaseEsSearch):
                 continue
 
             # Do not include groups multiple times if identical variants are in the same multiple genes
-            if any(variant['mainTranscript']['geneId'] != gene_id for variant in gene_variants):
-                primary_genes = [variant['mainTranscript']['geneId'] for variant in gene_variants]
-                if all(gene == primary_genes[0] for gene in primary_genes):
+            if any(all(t['transcriptId'] != variant['mainTranscriptId'] for t in variant['transcripts'][gene_id]) for variant in gene_variants):
+                primary_genes = set()
+                for variant in gene_variants:
+                    for gene, transcripts in variant['transcripts'].items():
+                        if any(t['transcriptId'] == variant['mainTranscriptId'] for t in transcripts):
+                            primary_genes.add(gene)
+                            break
+                if len(primary_genes) == 1:
                     is_valid_gene = True
+                    primary_gene = primary_genes.pop()
                     if self._allowed_consequences:
                         is_valid_gene = all(any(
                             transcript['majorConsequence'] in self._allowed_consequences for transcript in
-                            variant['transcripts'][primary_genes[0]]
+                            variant['transcripts'][primary_gene]
                         ) for variant in gene_variants)
                     if is_valid_gene:
-                        gene_id = primary_genes[0]
-                        if gene_id in variants_by_gene:
+                        if primary_gene in variants_by_gene:
                             continue
                 else:
                     variant_ids = [variant['variantId'] for variant in gene_variants]
-                    for gene in set(primary_genes):
+                    for gene in primary_genes:
                         if variant_ids == [variant['variantId'] for variant in variants_by_gene.get(gene, [])]:
                             continue
 
@@ -646,7 +657,7 @@ class EsSearch(BaseEsSearch):
             'liftedOverGenomeVersion': lifted_over_genome_version,
             'liftedOverChrom': lifted_over_chrom,
             'liftedOverPos': lifted_over_pos,
-            'mainTranscript': sorted_transcripts[0] if len(sorted_transcripts) else {},
+            'mainTranscriptId': sorted_transcripts[0]['transcriptId'] if len(sorted_transcripts) else None,
             'populations': populations,
             'predictions': _get_field_values(
                 hit, PREDICTION_FIELDS_CONFIG, format_response_key=lambda key: key.split('_')[1].lower()

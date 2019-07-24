@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { Grid, Divider } from 'semantic-ui-react'
 
-import { CLINSIG_SEVERITY } from 'shared/utils/constants'
+import { CLINSIG_SEVERITY, getVariantMainGeneId } from 'shared/utils/constants'
 import FamilyVariantReads from './FamilyVariantReads'
 import FamilyVariantTags from './FamilyVariantTags'
 import Annotations from './Annotations'
@@ -47,10 +47,12 @@ const Variants = ({ variants }) =>
           </Grid.Column>,
         )}
         <Grid.Column>
-          {variant.mainTranscript.geneId && <VariantGene geneId={variant.mainTranscript.geneId} variant={variant} />}
+          <VariantGene geneId={getVariantMainGeneId(variant)} variant={variant} />
           {Object.keys(variant.transcripts).length > 1 && <Divider />}
-          {Object.keys(variant.transcripts).filter(geneId => geneId !== variant.mainTranscript.geneId).map(geneId =>
-            <VariantGene key={geneId} geneId={geneId} variant={variant} compact />,
+          {Object.entries(variant.transcripts).filter(entry =>
+            !entry[1].some(({ transcriptId }) => transcriptId === variant.mainTranscriptId),
+          ).map(entry =>
+            <VariantGene key={entry[0]} geneId={entry[0]} variant={variant} compact />,
           )}
         </Grid.Column>
         <Grid.Column><Annotations variant={variant} /></Grid.Column>

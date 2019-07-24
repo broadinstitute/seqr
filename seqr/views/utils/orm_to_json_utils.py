@@ -347,7 +347,7 @@ def get_json_for_analysis_group(analysis_group, **kwargs):
     return _get_json_for_model(analysis_group, get_json_for_models=get_json_for_analysis_groups, **kwargs)
 
 
-def get_json_for_saved_variants(saved_variants, add_tags=False, add_details=False, project=None, user=None, **kwargs):
+def get_json_for_saved_variants(saved_variants, add_tags=False, add_details=False):
     """Returns a JSON representation of the given variant.
 
     Args:
@@ -355,8 +355,6 @@ def get_json_for_saved_variants(saved_variants, add_tags=False, add_details=Fals
     Returns:
         dict: json object
     """
-    from seqr.views.utils.variant_utils import variant_details
-
     def _process_result(variant_json, saved_variant):
         if add_tags:
             variant_json.update({
@@ -366,8 +364,7 @@ def get_json_for_saved_variants(saved_variants, add_tags=False, add_details=Fals
                 'notes': [get_json_for_variant_note(tag) for tag in saved_variant.variantnote_set.all()],
             })
         if add_details:
-            variant_json.update(variant_details(
-                saved_variant.saved_variant_json, project or saved_variant.family.project, user, **kwargs))
+            variant_json.update(saved_variant.saved_variant_json)
         variant_json.update({
             'variantId': saved_variant.guid,  # TODO get from json
             'familyGuids': [saved_variant.family.guid],
@@ -375,8 +372,6 @@ def get_json_for_saved_variants(saved_variants, add_tags=False, add_details=Fals
         return variant_json
 
     prefetch_related_objects(saved_variants, 'family')
-    if not project:
-        prefetch_related_objects(saved_variants, 'family__project')
     if add_tags:
         prefetch_related_objects(saved_variants, 'varianttag_set__variant_tag_type', 'varianttag_set__created_by',
                                  'variantnote_set__created_by', 'variantfunctionaldata_set__created_by')
