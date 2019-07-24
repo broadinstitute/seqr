@@ -4,13 +4,9 @@ import PropTypes from 'prop-types'
 import HorizontalStackedBar from '../graph/HorizontalStackedBar'
 import { EXCLUDED_TAG_NAME, REVIEW_TAG_NAME, NOTE_TAG_NAME } from '../../utils/constants'
 
-
-export const getVariantTagTypeCount = (vtt, familyGuids) => {
-  if (familyGuids) {
-    return familyGuids.reduce((count, familyGuid) => count + (vtt.numTagsPerFamily[familyGuid] || 0), 0)
-  }
-  return vtt.numTags
-}
+export const getVariantTagTypeCount = (vtt, familyGuids) => (
+  familyGuids ? familyGuids.reduce((count, familyGuid) => count + (vtt.numTagsPerFamily[familyGuid] || 0), 0) : vtt.numTags
+)
 
 export const getSavedVariantsLinkPath = ({ project, analysisGroup, familyGuid, tag }) => {
   let path = tag ? `/${tag}` : ''
@@ -46,9 +42,7 @@ const VariantTagTypeBar = ({ project, familyGuid, analysisGroup, sectionLinks = 
 VariantTagTypeBar.propTypes = {
   project: PropTypes.object.isRequired,
   familyGuid: PropTypes.string,
-  variantGuid: PropTypes.string,
   analysisGroup: PropTypes.object,
-  variantsToDisplay: PropTypes.array,
   sectionLinks: PropTypes.bool,
   hideExcluded: PropTypes.bool,
   hideReviewOnly: PropTypes.bool,
