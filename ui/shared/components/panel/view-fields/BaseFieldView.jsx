@@ -2,7 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { connect } from 'react-redux'
-import { Icon } from 'semantic-ui-react'
+import { Icon, Segment } from 'semantic-ui-react'
 
 import { getUser } from 'redux/selectors'
 import StaffOnlyIcon from '../../icons/StaffOnlyIcon'
@@ -10,6 +10,8 @@ import DispatchRequestButton from '../../buttons/DispatchRequestButton'
 import DeleteButton from '../../buttons/DeleteButton'
 import UpdateButton from '../../buttons/UpdateButton'
 import { HorizontalSpacer } from '../../Spacers'
+import { ButtonLink } from '../..//StyledComponents'
+import ReduxFormWrapper from '../../form/ReduxFormWrapper'
 
 const FieldValue = styled.div`
   padding-bottom: ${props => (props.compact ? 0 : '15px')}; 
@@ -17,6 +19,61 @@ const FieldValue = styled.div`
   padding-right: ${props => (props.fieldName ? '20px' : '5px')};
   display: ${props => ((props.fieldName && !props.compact) ? 'block' : 'inline-block')};
 `
+
+class InLineButtonForm extends React.Component {
+  constructor(props) {
+    super(props)
+    this.state = {
+      showInLineButton: true,
+    }
+    this.toggleButtonVisibility = this.toggleButtonVisibility.bind(this)
+  }
+
+  toggleButtonVisibility() {
+    this.setState({
+      showInLineButton: !this.state.showInLineButton,
+    })
+  }
+
+  render() {
+    // TODO remove !!! line ============================
+    return (
+      <div>
+        Button is showing !!!!!!!!!!!!!!!
+        {this.state.showInLineButton &&
+        <ButtonLink
+          icon="write"
+          onClick={this.toggleButtonVisibility}
+        />}
+        {!this.state.showInLineButton &&
+        <ReduxFormWrapper
+          onSubmit={this.props.onSubmit}
+          form={this.props.modalId}
+          initialValues={this.props.initialValues}
+          fields={this.props.formFields}
+          showErrorPanel={this.props.showErrorPanel}
+          confirmDialog={this.props.confirmDialog}
+          confirmCloseIfNotSaved
+        />
+        }
+      </div>
+    )
+  }
+
+  // TODO nextProps, nextState // return nextState.activeIndex !== this.state.activeIndex
+  shouldComponentUpdate() {
+    return true
+  }
+}
+
+InLineButtonForm.propTypes = {
+  onSubmit: PropTypes.func,
+  modalId: PropTypes.string.isRequired,
+  initialValues: PropTypes.object,
+  formFields: PropTypes.array,
+  showErrorPanel: PropTypes.bool,
+  confirmDialog: PropTypes.string,
+}
 
 const BaseFieldView = (props) => {
   if (props.isVisible !== undefined && !props.isVisible) {
@@ -33,23 +90,40 @@ const BaseFieldView = (props) => {
   const fieldId = props.initialValues[props.idField]
   const modalId = props.isEditable ? `edit-${fieldId || 'new'}-${props.field}-${props.modalId}` : null
 
-  const editButton = props.isEditable && (props.formFields ?
-    <UpdateButton
-      showInLine={props.showInLine}
-      key="edit"
-      modalTitle={props.modalTitle}
-      modalId={modalId}
-      modalSize={props.modalSize}
-      buttonText={props.editLabel}
-      editIconName={props.editIconName}
+  // TODO showInLineButton ? Button : Form
+  // TODO and toggle show/hide state with button click and form close
+
+  const updateButton = props.showInLine ?
+    <InLineButtonForm
       onSubmit={props.onSubmit}
+      modalId={modalId}
       initialValues={props.initialValues}
       formFields={props.formFields}
-      formContainer={<div style={props.modalStyle} />}
       showErrorPanel={props.showErrorPanel}
+      formContainer={<Segment />}
       confirmDialog={props.addConfirm}
-      size="tiny"
     />
+    : (
+      <UpdateButton
+        showInLine={props.showInLine}
+        key="edit"
+        modalTitle={props.modalTitle}
+        modalId={modalId}
+        modalSize={props.modalSize}
+        buttonText={props.editLabel}
+        editIconName={props.editIconName}
+        onSubmit={props.onSubmit}
+        initialValues={props.initialValues}
+        formFields={props.formFields}
+        formContainer={<div style={props.modalStyle} />}
+        showErrorPanel={props.showErrorPanel}
+        confirmDialog={props.addConfirm}
+        size="tiny"
+      />
+    )
+
+  const editButton = props.isEditable && (props.formFields ?
+    updateButton
     : (
       <DispatchRequestButton
         key="edit"
@@ -58,6 +132,7 @@ const BaseFieldView = (props) => {
         confirmDialog={props.addConfirm}
       />
     ))
+
   const deleteButton = props.isDeletable && (
     <DeleteButton
       key="delete"

@@ -13,6 +13,7 @@ const TextFieldView = (props) => {
   const { textPopup, textAnnotation, additionalEditFields = [], ...baseProps } = props
   const fields = [{ name: props.field, component: RichTextEditor }, ...additionalEditFields]
   return <BaseFieldView
+    // hideValue={props.showInLine} // TODO move ================================
     fieldDisplay={(initialText) => {
       const style = props.textAnnotation ? INLINE_STYLE : {}
       const markdown = <MarkdownRenderer
