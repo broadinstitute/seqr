@@ -122,7 +122,7 @@ class BaseFieldView extends React.Component {
           !this.props.compact && <br key="br" />,
         ]}
         {
-          hasValue && !this.props.hideValue &&
+          hasValue && !this.props.hideValue && this.state.showInLineButton &&
           <FieldValue compact={this.props.compact} fieldName={this.props.fieldName}>
             {this.props.fieldDisplay(fieldValue, this.props.compact, fieldId)}
           </FieldValue>
