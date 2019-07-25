@@ -12,14 +12,16 @@ class BaseLocusListDropdown extends React.Component
   render() {
     const { locusList, projectLocusListOptions, onChange } = this.props
     return (
-      <Dropdown
-        inline
-        selection
-        label="Gene List"
-        value={locusList.locusListGuid}
-        onChange={locusListGuid => onChange({ locusListGuid })}
-        options={projectLocusListOptions}
-      />
+      <div>
+        <Dropdown
+          inline
+          selection
+          label="Gene List"
+          value={locusList.locusListGuid}
+          onChange={locusListGuid => onChange({ locusListGuid })}
+          options={[{text: 'None', value: null}].concat(projectLocusListOptions)}
+        />
+      </div>
     )
   }
 
