@@ -8,6 +8,7 @@ import {
   VEP_GROUP_FRAMESHIFT,
   VEP_GROUP_INFRAME,
   VEP_GROUP_SYNONYMOUS,
+  VEP_GROUP_OTHER,
   GROUPED_VEP_CONSEQUENCES,
   LOCUS_LIST_ITEMS_FIELD,
   AFFECTED,
@@ -189,6 +190,13 @@ export const STAFF_PATHOGENICITY_FIELDS = [
 
 export const STAFF_PATHOGENICITY_FILTER_OPTIONS = [
   {
+    text: 'Any',
+    value: {
+      [CLINVAR_NAME]: [],
+      [HGMD_NAME]: [],
+    },
+  },
+  {
     text: 'Pathogenic/ Likely Path.',
     value: {
       [CLINVAR_NAME]: [CLIVAR_PATH, CLINVAR_LIKELY_PATH],
@@ -211,6 +219,16 @@ export const ANNOTATION_GROUPS = Object.entries(GROUPED_VEP_CONSEQUENCES).map(([
   name, options, groupLabel: snakecaseToTitlecase(name),
 }))
 
+export const ALL_IMPACT_GROUPS = [
+  VEP_GROUP_NONSENSE,
+  VEP_GROUP_ESSENTIAL_SPLICE_SITE,
+  VEP_GROUP_EXTENDED_SPLICE_SITE,
+  VEP_GROUP_MISSENSE,
+  VEP_GROUP_FRAMESHIFT,
+  VEP_GROUP_INFRAME,
+  VEP_GROUP_SYNONYMOUS,
+  VEP_GROUP_OTHER,
+]
 export const HIGH_IMPACT_GROUPS = [
   VEP_GROUP_NONSENSE,
   VEP_GROUP_ESSENTIAL_SPLICE_SITE,
@@ -225,6 +243,10 @@ export const CODING_IMPACT_GROUPS = [
   VEP_GROUP_EXTENDED_SPLICE_SITE,
 ]
 export const ANNOTATION_FILTER_OPTIONS = [
+  {
+    text: 'All',
+    vepGroups: ALL_IMPACT_GROUPS,
+  },
   {
     text: 'High Impact',
     vepGroups: HIGH_IMPACT_GROUPS,
@@ -343,6 +365,14 @@ export const QUALITY_FILTER_FIELDS = [
 
 export const QUALITY_FILTER_OPTIONS = [
   {
+    text: 'All Variants',
+    value: {
+      vcf_filter: null,
+      min_gq: 0,
+      min_ab: 0,
+    },
+  },
+  {
     text: 'High Quality',
     value: {
       vcf_filter: 'pass',
@@ -354,14 +384,6 @@ export const QUALITY_FILTER_OPTIONS = [
     text: 'All Passing Variants',
     value: {
       vcf_filter: 'pass',
-      min_gq: 0,
-      min_ab: 0,
-    },
-  },
-  {
-    text: 'All Variants',
-    value: {
-      vcf_filter: null,
       min_gq: 0,
       min_ab: 0,
     },
