@@ -50,12 +50,6 @@ class BaseFieldView extends React.Component {
     const fieldId = this.props.initialValues[this.props.idField]
     const modalId = this.props.isEditable ? `edit-${fieldId || 'new'}-${this.props.field}-${this.props.modalId}` : null
 
-    const onSubmit = this.props.showInLine ?
-      this.toggleButtonVisibility : this.props.onSubmit
-    // TODO combine the following two functions ==================================
-    // this.toggleButtonVisibility
-    // this.props.onSubmit
-
     const updateButton = this.props.showInLine ?
       <div>
         {this.state.showInLineButton &&
@@ -66,7 +60,8 @@ class BaseFieldView extends React.Component {
         {!this.state.showInLineButton &&
         <Segment>
           <ReduxFormWrapper
-            onSubmit={onSubmit}
+            noModal
+            onSubmit={this.props.onSubmit}
             form={this.props.modalId}
             initialValues={this.props.initialValues}
             fields={this.props.formFields}
