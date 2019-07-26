@@ -188,14 +188,16 @@ export const STAFF_PATHOGENICITY_FIELDS = [
   },
 ]
 
-export const STAFF_PATHOGENICITY_FILTER_OPTIONS = [
-  {
-    text: 'Any',
-    value: {
-      [CLINVAR_NAME]: [],
-      [HGMD_NAME]: [],
-    },
+export const ANY_PATHOGENICITY_FILTER = {
+  text: 'Any',
+  value: {
+    [CLINVAR_NAME]: [],
+    [HGMD_NAME]: [],
   },
+}
+
+export const STAFF_PATHOGENICITY_FILTER_OPTIONS = [
+  ANY_PATHOGENICITY_FILTER,
   {
     text: 'Pathogenic/ Likely Path.',
     value: {
@@ -242,11 +244,12 @@ export const CODING_IMPACT_GROUPS = [
   VEP_GROUP_SYNONYMOUS,
   VEP_GROUP_EXTENDED_SPLICE_SITE,
 ]
+export const ALL_ANNOTATION_FILTER = {
+  text: 'All',
+  vepGroups: ALL_IMPACT_GROUPS,
+}
 export const ANNOTATION_FILTER_OPTIONS = [
-  {
-    text: 'All',
-    vepGroups: ALL_IMPACT_GROUPS,
-  },
+  ALL_ANNOTATION_FILTER,
   {
     text: 'High Impact',
     vepGroups: HIGH_IMPACT_GROUPS,
@@ -265,6 +268,13 @@ export const ANNOTATION_FILTER_OPTIONS = [
     { ...acc, [group]: GROUPED_VEP_CONSEQUENCES[group].map(({ value }) => value) }
   ), {}),
 }))
+export const ALL_ANNOTATION_FILTER_DETAILS =
+  [ALL_ANNOTATION_FILTER].map(({ vepGroups, ...option }) => ({
+    ...option,
+    value: vepGroups.reduce((acc, group) => (
+      { ...acc, [group]: GROUPED_VEP_CONSEQUENCES[group].map(({ value }) => value) }
+    ), {}),
+  }))[0]
 
 
 export const THIS_CALLSET_FREQUENCY = 'callset'
@@ -363,15 +373,17 @@ export const QUALITY_FILTER_FIELDS = [
   },
 ]
 
-export const QUALITY_FILTER_OPTIONS = [
-  {
-    text: 'All Variants',
-    value: {
-      vcf_filter: null,
-      min_gq: 0,
-      min_ab: 0,
-    },
+export const ALL_QUALITY_FILTER = {
+  text: 'All Variants',
+  value: {
+    vcf_filter: null,
+    min_gq: 0,
+    min_ab: 0,
   },
+}
+
+export const QUALITY_FILTER_OPTIONS = [
+  ALL_QUALITY_FILTER,
   {
     text: 'High Quality',
     value: {

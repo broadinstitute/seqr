@@ -22,7 +22,6 @@ import {
   INHERITANCE_LOOKUP,
   INHERITANCE_MODE_LOOKUP,
   ALL_INHERITANCE_FILTER,
-  ANY_PATHOGENICITY_FILTER,
   NUM_ALT_OPTIONS,
   THIS_CALLSET_FREQUENCY,
   FREQUENCIES,
@@ -30,10 +29,13 @@ import {
   PATHOGENICITY_FILTER_OPTIONS,
   STAFF_PATHOGENICITY_FIELDS,
   STAFF_PATHOGENICITY_FILTER_OPTIONS,
+  ANY_PATHOGENICITY_FILTER,
   ANNOTATION_GROUPS,
   ANNOTATION_FILTER_OPTIONS,
+  ALL_ANNOTATION_FILTER_DETAILS,
   QUALITY_FILTER_FIELDS,
   QUALITY_FILTER_OPTIONS,
+  ALL_QUALITY_FILTER,
   LOCATION_FIELDS,
 } from '../constants'
 
@@ -182,7 +184,7 @@ const PATHOGENICITY_PANEL = pathogenicityPanel(false)
 
 const ANNOTATION_PANEL = {
   name: 'annotations',
-  headerProps: { title: 'Annotations', inputProps: JsonSelectProps(ANNOTATION_FILTER_OPTIONS) },
+  headerProps: { title: 'Annotations', inputProps: JsonSelectProps(ANNOTATION_FILTER_OPTIONS, ALL_ANNOTATION_FILTER_DETAILS) },
   fields: ANNOTATION_GROUPS,
   fieldProps: { control: AlignedCheckboxGroup, format: val => val || [] },
   fieldLayout: annotationsFilterLayout,
@@ -222,7 +224,7 @@ const LOCATION_PANEL = {
     title: 'Location',
     name: 'locus',
     inputSize: 5,
-    inputProps: { component: LocusListSelector, format: val => val || {} },
+    inputProps: { component: LocusListSelector, format: val => val || { locusListGuid: '' } },
   },
   fields: LOCATION_FIELDS,
   helpText: 'Filter by variant location. Entries can be either gene symbols (e.g. CFTR) or intervals in the form <chrom>:<start>-<end> (e.g. 4:6935002-87141054). Variant entries can be either rsIDs (e.g. rs61753695) or variants in the form <chrom>-<pos>-<ref>-<alt> (e.g. 4-88047328-C-T). Entries can be separated by commas or whitespace.',
@@ -230,7 +232,7 @@ const LOCATION_PANEL = {
 
 const QUALITY_PANEL = {
   name: 'qualityFilter',
-  headerProps: { title: 'Call Quality', inputProps: JsonSelectProps(QUALITY_FILTER_OPTIONS) },
+  headerProps: { title: 'Call Quality', inputProps: JsonSelectProps(QUALITY_FILTER_OPTIONS, ALL_QUALITY_FILTER) },
   fields: QUALITY_FILTER_FIELDS,
   fieldProps: { control: LabeledSlider, format: val => val || null },
 }
