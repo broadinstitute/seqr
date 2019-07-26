@@ -78,8 +78,8 @@ const SavedSearches = ({ options, savedSearchesByGuid, selectedSearch, load, loa
       loading={loading}
       placeholder="Select a Saved Search"
       value={(selectedSearch || {}).savedSearchGuid}
-      onChange={val => (val === 'None' ? onChange({}) : onChange(savedSearchesByGuid[val].search))}
-      options={[{ text: 'None', value: 'None', category: 'Default Searches' }].concat(options)}
+      onChange={val => (val ? onChange(savedSearchesByGuid[val].search) : onChange({}))}
+      options={[{ text: 'None', value: null, category: 'Default Searches' }].concat(options)}
     />
   </DataLoader>
 
