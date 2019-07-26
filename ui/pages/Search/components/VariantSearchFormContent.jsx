@@ -22,6 +22,7 @@ import {
   INHERITANCE_LOOKUP,
   INHERITANCE_MODE_LOOKUP,
   ALL_INHERITANCE_FILTER,
+  ANY_PATHOGENICITY_FILTER,
   NUM_ALT_OPTIONS,
   THIS_CALLSET_FREQUENCY,
   FREQUENCIES,
@@ -170,7 +171,15 @@ const INHERITANCE_PANEL = {
 
 const pathogenicityPanel = isStaff => ({
   name: 'pathogenicity',
-  headerProps: { title: 'Pathogenicity', inputProps: JsonSelectProps(isStaff ? STAFF_PATHOGENICITY_FILTER_OPTIONS : PATHOGENICITY_FILTER_OPTIONS) },
+  headerProps: {
+    title: 'Pathogenicity',
+    inputProps: {
+      component: Select,
+      format: val => JSON.stringify(val) || JSON.stringify(ANY_PATHOGENICITY_FILTER.value),
+      parse: JSON.parse,
+      options: (isStaff ? STAFF_PATHOGENICITY_FILTER_OPTIONS : PATHOGENICITY_FILTER_OPTIONS).map(({ value, ...option }) => ({ ...option, value: JSON.stringify(value) })),
+    },
+  },
   fields: isStaff ? STAFF_PATHOGENICITY_FIELDS : PATHOGENICITY_FIELDS,
   fieldProps: { control: AlignedCheckboxGroup, format: val => val || [] },
   helpText: 'Filter by reported pathogenicity. Note this filter will override any annotations filter (i.e variants will be returned if they have either the specified pathogenicity OR transcript consequence)',
