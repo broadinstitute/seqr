@@ -262,7 +262,6 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, family_
         for field in family_fields:
             nested_fields.append({'fields': ('family', field), 'key': _to_camel_case(field)})
 
-    prefetch_related_objects(individuals, 'family')
     prefetch_related_objects(individuals, 'mother')
     prefetch_related_objects(individuals, 'father')
     prefetch_related_objects(individuals, 'case_review_status_last_modified_by')
@@ -325,7 +324,7 @@ def get_json_for_analysis_groups(analysis_groups, project_guid=None):
 
     def _process_result(result, group):
         result.update({
-            'familyGuids': [f.guid for f in group.families.only('guid').all()]
+            'familyGuids': [f.guid for f in group.families.all()]
         })
 
     prefetch_related_objects(analysis_groups, 'families')

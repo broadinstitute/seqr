@@ -581,6 +581,8 @@ class VariantTagType(ModelWithGUID):
     class Meta:
         unique_together = ('project', 'name', 'color')
 
+        json_fields = ['guid', 'name', 'category', 'description', 'color', 'order']
+
 
 class VariantTag(ModelWithGUID):
     saved_variant = models.ForeignKey('SavedVariant', on_delete=models.CASCADE, null=True)
