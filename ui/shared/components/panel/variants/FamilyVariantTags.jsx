@@ -84,7 +84,7 @@ const VARIANT_NOTE_FIELDS = [{
 },
 {
   name: 'saveAsGeneNote',
-  label: <label>Add to public gene notes</label>, //eslint-disable-line jsx-a11y/label-has-for
+  label: 'Add to public gene notes',
   component: BooleanCheckbox,
 }]
 

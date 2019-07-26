@@ -92,12 +92,12 @@ def create_saved_variant_handler(request):
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def create_variant_note_handler(request, variant_guid):
-    save_as_gene_note = json.loads(request.body).get('saveAsGeneNote') or False
+    save_as_gene_note = json.loads(request.body).get('saveAsGeneNote')
     saved_variant = SavedVariant.objects.get(guid=variant_guid)
     check_permissions(saved_variant.project, request.user, CAN_VIEW)
 
     if save_as_gene_note:
-        gene_id = json.loads(saved_variant.saved_variant_json)['transcripts'].keys()[0]
+        gene_id = json.loads(saved_variant.saved_variant_json)['mainTranscript']['geneId']
         return create_gene_note_handler(request, gene_id)
 
     _create_variant_note(saved_variant, json.loads(request.body), request.user)
