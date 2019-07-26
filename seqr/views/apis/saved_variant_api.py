@@ -30,6 +30,7 @@ def saved_variant_data(request, project_guid, variant_guid=None):
     family_guids = request.GET['families'].split(',') if request.GET.get('families') else None
 
     variant_query = SavedVariant.objects.filter(project=project)
+
     if family_guids:
         variant_query = variant_query.filter(family__guid__in=family_guids)
     if variant_guid:
