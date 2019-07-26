@@ -15,7 +15,6 @@ from seqr.utils.es_utils import get_es_variants, get_single_es_variant, get_es_v
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.locus_list_api import get_project_locus_list_models
 from seqr.views.apis.saved_variant_api import _saved_variant_genes, _add_locus_lists
-from seqr.views.pages.project_page import get_project_variant_tag_types
 from seqr.views.utils.export_table_utils import export_table
 from seqr.utils.gene_utils import get_genes
 from seqr.views.utils.json_utils import create_json_response
@@ -59,14 +58,14 @@ def query_variants_handler(request, search_hash):
     try:
         results_model = _get_or_create_results_model(search_hash, json.loads(request.body or '{}'), request.user)
     except Exception as e:
-        return create_json_response({}, status=400, reason=e.message)
+        return create_json_response({'error': e.message}, status=400, reason=e.message)
 
     _check_results_permission(results_model, request.user)
 
     try:
         variants, total_results = get_es_variants(results_model, sort=sort, page=page, num_results=per_page)
     except InvalidIndexException as e:
-        return create_json_response({}, status=400, reason=e.message)
+        return create_json_response({'error': e.message}, status=400, reason=e.message)
     except ConnectionTimeout as e:
         return create_json_response({}, status=504, reason='Query Time Out')
 
@@ -297,10 +296,11 @@ def search_context_handler(request):
         try:
             results_model = _get_or_create_results_model(context['searchHash'], context.get('searchParams'), request.user)
         except Exception as e:
-            return create_json_response({}, status=400, reason=e.message)
+            return create_json_response({'error': e.message}, status=400, reason=e.message)
         projects = Project.objects.filter(family__in=results_model.families.all()).distinct()
     else:
-        return create_json_response({}, status=400, reason='Invalid context params: {}'.format(json.dumps(context)))
+        error = 'Invalid context params: {}'.format(json.dumps(context))
+        return create_json_response({'error': error}, status=400, reason=error)
 
     response.update(_get_projects_details(projects, request.user, project_category_guid=context.get('projectCategoryGuid')))
 
