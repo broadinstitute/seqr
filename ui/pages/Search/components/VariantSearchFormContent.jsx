@@ -100,9 +100,9 @@ const ExpandCollapseCategoryContainer = styled.span`
   padding-top: 1em;
 `
 
-const JsonSelectProps = options => ({
+const JsonSelectProps = (options, all = '') => ({
   component: Select,
-  format: JSON.stringify,
+  format: val => JSON.stringify(val) || JSON.stringify(all.value),
   parse: JSON.parse,
   options: options.map(({ value, ...option }) => ({ ...option, value: JSON.stringify(value) })),
 })
@@ -171,15 +171,7 @@ const INHERITANCE_PANEL = {
 
 const pathogenicityPanel = isStaff => ({
   name: 'pathogenicity',
-  headerProps: {
-    title: 'Pathogenicity',
-    inputProps: {
-      component: Select,
-      format: val => JSON.stringify(val) || JSON.stringify(ANY_PATHOGENICITY_FILTER.value),
-      parse: JSON.parse,
-      options: (isStaff ? STAFF_PATHOGENICITY_FILTER_OPTIONS : PATHOGENICITY_FILTER_OPTIONS).map(({ value, ...option }) => ({ ...option, value: JSON.stringify(value) })),
-    },
-  },
+  headerProps: { title: 'Pathogenicity', inputProps: JsonSelectProps(isStaff ? STAFF_PATHOGENICITY_FILTER_OPTIONS : PATHOGENICITY_FILTER_OPTIONS, ANY_PATHOGENICITY_FILTER) },
   fields: isStaff ? STAFF_PATHOGENICITY_FIELDS : PATHOGENICITY_FIELDS,
   fieldProps: { control: AlignedCheckboxGroup, format: val => val || [] },
   helpText: 'Filter by reported pathogenicity. Note this filter will override any annotations filter (i.e variants will be returned if they have either the specified pathogenicity OR transcript consequence)',
