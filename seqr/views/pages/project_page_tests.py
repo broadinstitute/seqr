@@ -45,8 +45,7 @@ class ProjectPageTest(TestCase):
         )
         self.assertSetEqual(
             set(response_json['projectsByGuid'][PROJECT_GUID]['variantTagTypes'][0].keys()),
-            {'variantTagTypeGuid', 'name', 'category', 'description', 'color', 'order', 'is_built_in', 'numTags',
-             'numTagsPerFamily'}
+            {'variantTagTypeGuid', 'name', 'category', 'description', 'color', 'order', 'numTags', 'numTagsPerFamily'}
         )
         self.assertSetEqual(
             set(response_json['projectsByGuid'][PROJECT_GUID].keys()),
