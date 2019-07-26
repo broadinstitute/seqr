@@ -11,6 +11,7 @@ from seqr.views.utils.test_utils import _check_login
 
 
 VARIANT_GUID = 'SV0000001_2103343353_r0390_100'
+GENE_GUID = 'ENSG00000135953'
 VARIANT_GUID_2 = 'SV0000002_1248367227_r0390_100'
 
 
@@ -126,10 +127,14 @@ class ProjectAPITest(TransactionTestCase):
         self.assertEqual(new_variant_note.submit_to_clinvar, new_note_response['submitToClinvar'])
 
         # save variant_note as gene_note
-        create_gene_note_url = reverse(create_variant_note_handler, args=[VARIANT_GUID])
-        response = self.client.post(create_gene_note_url, content_type='application/json', data=json.dumps(
+        response = self.client.post(create_variant_note_url, content_type='application/json', data=json.dumps(
             {'note': 'new_variant_note_as_gene_note', 'saveAsGeneNote': True}
         ))
+        self.assertEqual(response.status_code, 200)
+        new_variant_note_response = response.json()['savedVariantsByGuid'][VARIANT_GUID]['notes'][0]
+        self.assertEqual(new_variant_note_response['note'], 'new_variant_note_as_gene_note')
+        new_gene_note_response = response.json()['genesById'][GENE_GUID]['notes'][0]
+        self.assertEqual(new_gene_note_response['note'], 'new_variant_note_as_gene_note')
 
         # update the variant_note
         update_variant_note_url = reverse(update_variant_note_handler, args=[VARIANT_GUID, new_variant_note.guid])
