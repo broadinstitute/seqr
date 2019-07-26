@@ -71,7 +71,6 @@ export const SaveSearchButton = connect(mapStateToProps, mapDispatchToProps)(Sav
 
 const SavedSearches = ({ options, savedSearchesByGuid, selectedSearch, load, loading, errorMessage, onChange }) =>
   <DataLoader load={load} errorMessage={errorMessage} loading={false} content>
-    {JSON.stringify(options)}
     <ButtonDropdown
       color="black"
       inline
@@ -79,8 +78,7 @@ const SavedSearches = ({ options, savedSearchesByGuid, selectedSearch, load, loa
       loading={loading}
       placeholder="Select a Saved Search"
       value={(selectedSearch || {}).savedSearchGuid}
-      // onChange={val => onChange(savedSearchesByGuid[val].search)}
-      onChange={val => (val === 'None' ? '' : onChange(savedSearchesByGuid[val].search))}
+      onChange={val => (val === 'None' ? onChange({}) : onChange(savedSearchesByGuid[val].search))}
       options={[{ text: 'None', value: 'None', category: 'Default Searches' }].concat(options)}
     />
   </DataLoader>
