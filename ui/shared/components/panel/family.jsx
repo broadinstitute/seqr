@@ -116,10 +116,7 @@ const familyFieldRenderProps = {
   },
   [FAMILY_FIELD_SUCCESS_STORY_TYPE]: {
     tagOptions: FAMILY_SUCCESS_STORY_TYPE_OPTIONS,
-    tagAnnotation: (value, compact) => (compact ?
-      <Popup trigger={<ColoredIcon name="stop" color={value.color} />} content={value.text} position="top center" /> :
-      <ColoredIcon name="stop" color={value.color} />
-    ),
+    tagAnnotation: value => <Popup content={value.text} position="top center" />,
   },
   [FAMILY_FIELD_FIRST_SAMPLE]: {
     showEmptyValues: true,

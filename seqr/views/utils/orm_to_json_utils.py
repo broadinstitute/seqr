@@ -171,6 +171,10 @@ def _get_json_for_families(families, user=None, add_individual_guids_field=False
         return os.path.join("/media/", pedigree_image) if pedigree_image else None
 
     def _process_result(result, family):
+        result['successStoryType'] = [
+            {'color': "#5D5D5F", 'name': "Other", 'optionIndex': 5},
+            {'color': "#FFAB57", 'name': "Altered Clinical Outcome", 'optionIndex': 1}
+        ]
         result['analysedBy'] = [{
             'createdBy': {'fullName': ab.created_by.get_full_name(), 'email': ab.created_by.email, 'isStaff': ab.created_by.is_staff},
             'lastModifiedDate': ab.last_modified_date,

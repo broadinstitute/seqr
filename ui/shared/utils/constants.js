@@ -88,20 +88,13 @@ export const FAMILY_ANALYSIS_STATUS_OPTIONS = [
 
 // SUCCESS STORY
 
-export const FAMILY_SUCCESS_STORY_NOVEL_DISCOVERY = 'ND'
-export const FAMILY_SUCCESS_STORY_ALTERED_CLINICAL_OUTCOME = 'ACO'
-export const FAMILY_SUCCESS_STORY_COLLABORATION = 'C'
-export const FAMILY_SUCCESS_STORY_TECHINICAL_WIN = 'TW'
-export const FAMILY_SUCCESS_STORY_DATA_SHARING = 'DS'
-export const FAMILY_SUCCESS_STORY_OTHER = 'O'
-
 export const FAMILY_SUCCESS_STORY_TYPE_OPTIONS = [
-  { value: FAMILY_SUCCESS_STORY_NOVEL_DISCOVERY, color: '#019143', name: 'Novel Discovery' },
-  { value: FAMILY_SUCCESS_STORY_ALTERED_CLINICAL_OUTCOME, color: '#FFAB57', name: 'Altered Clinical Outcome' },
-  { value: FAMILY_SUCCESS_STORY_COLLABORATION, color: '#833E7D', name: 'Collaboration' },
-  { value: FAMILY_SUCCESS_STORY_TECHINICAL_WIN, color: '#E76013', name: 'Technical Win' },
-  { value: FAMILY_SUCCESS_STORY_DATA_SHARING, color: '#6583EC', name: 'Data Sharing' },
-  { value: FAMILY_SUCCESS_STORY_OTHER, color: '#5D5D5F', name: 'Other' },
+  { color: '#019143', name: 'Novel Discovery' },
+  { color: '#FFAB57', name: 'Altered Clinical Outcome' },
+  { color: '#833E7D', name: 'Collaboration' },
+  { color: '#E76013', name: 'Technical Win' },
+  { color: '#6583EC', name: 'Data Sharing' },
+  { color: '#5D5D5F', name: 'Other' },
 ]
 
 // FAMILY FIELDS
