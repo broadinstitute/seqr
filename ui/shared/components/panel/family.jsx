@@ -20,10 +20,12 @@ import {
   FAMILY_FIELD_ANALYSIS_STATUS,
   FAMILY_FIELD_ASSIGNED_ANALYST,
   FAMILY_FIELD_ANALYSED_BY,
+  FAMILY_SUCCESS_STORY_TYPE_OPTIONS,
+  FAMILY_FIELD_SUCCESS_STORY_TYPE,
   FAMILY_FIELD_FIRST_SAMPLE,
   FAMILY_FIELD_RENDER_LOOKUP,
   FAMILY_FIELD_OMIM_NUMBER,
-  FAMILY_FIELD_PMIDS, FAMILY_FIELD_SUCCESS_STORY_TYPE,
+  FAMILY_FIELD_PMIDS,
 } from '../../utils/constants'
 import { getAnalystOptions } from '../../../pages/Project/selectors'
 
@@ -113,7 +115,7 @@ const familyFieldRenderProps = {
     fieldDisplay: (analysedByList, compact) => <AnalysedBy analysedByList={analysedByList} compact={compact} />,
   },
   [FAMILY_FIELD_SUCCESS_STORY_TYPE]: {
-    tagOptions: FAMILY_ANALYSIS_STATUS_OPTIONS,
+    tagOptions: FAMILY_SUCCESS_STORY_TYPE_OPTIONS,
     tagAnnotation: (value, compact) => (compact ?
       <Popup trigger={<ColoredIcon name="stop" color={value.color} />} content={value.text} position="top center" /> :
       <ColoredIcon name="stop" color={value.color} />
