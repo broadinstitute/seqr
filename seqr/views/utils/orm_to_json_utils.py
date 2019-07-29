@@ -11,7 +11,7 @@ from django.db.models import prefetch_related_objects, Prefetch
 from django.db.models.fields.files import ImageFieldFile
 
 from reference_data.models import GeneConstraint, dbNSFPGene
-from seqr.models import CAN_EDIT, Sample, GeneNote, VariantFunctionalData
+from seqr.models import CAN_EDIT, Sample, GeneNote, VariantFunctionalData, SuccessStoryType
 from seqr.views.utils.json_utils import _to_camel_case
 logger = logging.getLogger(__name__)
 
@@ -171,10 +171,8 @@ def _get_json_for_families(families, user=None, add_individual_guids_field=False
         return os.path.join("/media/", pedigree_image) if pedigree_image else None
 
     def _process_result(result, family):
-        result['successStoryType'] = [
-            {'color': "#5D5D5F", 'name': "Other", 'optionIndex': 5},
-            {'color': "#FFAB57", 'name': "Altered Clinical Outcome", 'optionIndex': 1}
-        ]
+        success_story_type = SuccessStoryType.objects.filter(family=family)
+        # result['successStoryType'] = _get_json_for_success_story_type(success_story_type)
         result['analysedBy'] = [{
             'createdBy': {'fullName': ab.created_by.get_full_name(), 'email': ab.created_by.email, 'isStaff': ab.created_by.is_staff},
             'lastModifiedDate': ab.last_modified_date,
@@ -192,6 +190,7 @@ def _get_json_for_families(families, user=None, add_individual_guids_field=False
             }
         else:
             result['assignedAnalyst'] = None
+
 
     prefetch_related_objects(families, 'familyanalysedby_set__created_by')
     if add_individual_guids_field:
@@ -627,3 +626,7 @@ def get_json_for_saved_searches(search, user):
 
 def get_json_for_saved_search(search, user):
     return _get_json_for_model(search, user=user, get_json_for_models=get_json_for_saved_searches)
+
+
+def _get_json_for_success_story_type(success_story):
+    return _get_json_for_model(success_story)

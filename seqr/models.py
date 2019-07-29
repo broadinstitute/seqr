@@ -297,7 +297,7 @@ class FamilyAnalysedBy(ModelWithGUID):
 
 
 class SuccessStoryType(ModelWithGUID):
-    family = models.ForeignKey('Family', null=True, on_delete=models.CASCADE)
+    family = models.ManyToManyField(Family)
 
     name = models.TextField()
     description = models.TextField(null=True, blank=True)
@@ -311,8 +311,6 @@ class SuccessStoryType(ModelWithGUID):
         return 'SST%05d_%s' % (self.id, _slugify(str(self)))
 
     class Meta:
-        unique_together = ('family', 'name', 'color')
-
         json_fields = ['guid', 'name', 'description', 'color', 'order']
 
 
