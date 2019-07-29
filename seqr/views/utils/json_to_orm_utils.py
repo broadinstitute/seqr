@@ -22,6 +22,10 @@ def update_family_from_json(family, json, verbose=False, user=None, allow_unknow
     if success_story_types:
         for success_story_type in success_story_types:
             success_story_type['family'] = family
+        json['successstorytype'] = success_story_types
+
+    import pdb
+    pdb.set_trace()
 
     update_model_from_json(
         family, json, user=user, verbose=verbose, allow_unknown_keys=allow_unknown_keys,

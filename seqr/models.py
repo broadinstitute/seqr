@@ -235,6 +235,7 @@ class Family(ModelWithGUID):
     assigned_analyst = models.ForeignKey(User, null=True, on_delete=models.SET_NULL,
                                     related_name='assigned_families')  # type: ForeignKey
 
+    success_story_types = models.ManyToManyField('SuccessStoryType')
     success_story = models.TextField(null=True, blank=True)
 
     analysis_notes = models.TextField(null=True, blank=True)
@@ -297,8 +298,6 @@ class FamilyAnalysedBy(ModelWithGUID):
 
 
 class SuccessStoryType(ModelWithGUID):
-    family = models.ManyToManyField(Family)
-
     name = models.TextField()
     description = models.TextField(null=True, blank=True)
     color = models.CharField(max_length=20, default="#1f78b4")
@@ -311,6 +310,8 @@ class SuccessStoryType(ModelWithGUID):
         return 'SST%05d_%s' % (self.id, _slugify(str(self)))
 
     class Meta:
+        unique_together = ('name', 'color')
+
         json_fields = ['guid', 'name', 'description', 'color', 'order']
 
 
