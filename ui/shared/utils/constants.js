@@ -93,6 +93,8 @@ export const FAMILY_FIELD_DESCRIPTION = 'description'
 export const FAMILY_FIELD_ANALYSIS_STATUS = 'analysisStatus'
 export const FAMILY_FIELD_ASSIGNED_ANALYST = 'assignedAnalyst'
 export const FAMILY_FIELD_ANALYSED_BY = 'analysedBy'
+export const FAMILY_FIELD_SUCCESS_STORY_TYPE = 'successStoryType'
+export const FAMILY_FIELD_SUCCESS_STORY = 'successStory'
 export const FAMILY_FIELD_ANALYSIS_NOTES = 'analysisNotes'
 export const FAMILY_FIELD_ANALYSIS_SUMMARY = 'analysisSummary'
 export const FAMILY_FIELD_INTERNAL_NOTES = 'internalCaseReviewNotes'
@@ -117,6 +119,8 @@ export const FAMILY_FIELD_RENDER_LOOKUP = {
     component: BaseFieldView,
     submitArgs: { familyField: 'analysed_by' },
   },
+  [FAMILY_FIELD_SUCCESS_STORY_TYPE]: { name: 'Success Story Type', component: OptionFieldView },
+  [FAMILY_FIELD_SUCCESS_STORY]: { name: 'Success Story' },
   [FAMILY_FIELD_FIRST_SAMPLE]: { name: 'Data Loaded?', component: BaseFieldView },
   [FAMILY_FIELD_ANALYSIS_NOTES]: { name: 'Notes' },
   [FAMILY_FIELD_ANALYSIS_SUMMARY]: { name: 'Analysis Summary' },
@@ -132,6 +136,8 @@ export const FAMILY_DETAIL_FIELDS = [
   { id: FAMILY_FIELD_ANALYSIS_STATUS, canEdit: true },
   { id: FAMILY_FIELD_ASSIGNED_ANALYST, canEdit: true },
   { id: FAMILY_FIELD_ANALYSED_BY, canEdit: true },
+  { id: FAMILY_FIELD_SUCCESS_STORY_TYPE, canEdit: true },
+  { id: FAMILY_FIELD_SUCCESS_STORY, canEdit: true },
   { id: FAMILY_FIELD_ANALYSIS_NOTES, canEdit: true },
   { id: FAMILY_FIELD_ANALYSIS_SUMMARY, canEdit: true },
   { id: FAMILY_FIELD_CODED_PHENOTYPE, canEdit: true },

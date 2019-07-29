@@ -214,14 +214,21 @@ class Family(ModelWithGUID):
         ('Q', 'Waiting for data'),
     )
 
+    SUCCESS_STORY_TYPE_CHOICES = (
+        ('ND', 'Novel Discovery'),
+        ('ACO', 'Altered Clinical Outcome'),
+        ('C', 'Collaboration'),
+        ('TW', 'Technical Win'),
+        ('DS', 'Data Sharing'),
+        ('O', 'Other'),
+    )
+
     CAUSAL_INHERITANCE_MODE_CHOICES = (
         ('r', 'recessive'),    # the actual inheritance model (the one in phenotips is the external inheritance model)
         ('u', 'unknown'),
         ('d', 'dominant'),
         ('x', 'x-linked recessive'),
         ('n', 'de novo'),
-
-
     )
 
     project = models.ForeignKey('Project', on_delete=models.PROTECT)
@@ -236,6 +243,14 @@ class Family(ModelWithGUID):
 
     assigned_analyst = models.ForeignKey(User, null=True, on_delete=models.SET_NULL,
                                     related_name='assigned_families')  # type: ForeignKey
+
+    success_story_type = models.CharField(
+        max_length=10,
+        choices=[(s[0], s[1][0]) for s in SUCCESS_STORY_TYPE_CHOICES],
+        null=True,
+        blank=True
+    )
+    success_story = models.TextField(null=True, blank=True)
 
     analysis_notes = models.TextField(null=True, blank=True)
     analysis_summary = models.TextField(null=True, blank=True)
@@ -277,7 +292,8 @@ class Family(ModelWithGUID):
             'post_discovery_omim_number', 'pubmed_ids', 'assigned_analyst'
         ]
         internal_json_fields = [
-            'internal_analysis_status', 'internal_case_review_notes', 'internal_case_review_summary'
+            'internal_analysis_status', 'internal_case_review_notes', 'internal_case_review_summary',
+            'success_story_type', 'success_story'
         ]
 
 
