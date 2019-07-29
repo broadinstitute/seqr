@@ -171,8 +171,11 @@ def _get_json_for_families(families, user=None, add_individual_guids_field=False
         return os.path.join("/media/", pedigree_image) if pedigree_image else None
 
     def _process_result(result, family):
-        success_story_type = SuccessStoryType.objects.filter(family=family)
-        # result['successStoryType'] = _get_json_for_success_story_type(success_story_type)
+        result['successStoryTypes'] = [{
+            'name': sst.name,
+            'color': sst.name,
+            'successStoryTypeGuid': sst.guid,
+        } for sst in family.success_story_types.all()]
         result['analysedBy'] = [{
             'createdBy': {'fullName': ab.created_by.get_full_name(), 'email': ab.created_by.email, 'isStaff': ab.created_by.is_staff},
             'lastModifiedDate': ab.last_modified_date,

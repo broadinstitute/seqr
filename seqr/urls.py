@@ -16,6 +16,7 @@ from seqr.views.apis.family_api import \
     edit_families_handler, \
     delete_families_handler, \
     update_family_assigned_analyst, \
+    update_family_success_story_types, \
     update_family_analysed_by, \
     receive_families_table_handler, \
     update_family_pedigree_image
@@ -149,6 +150,7 @@ api_endpoints = {
     'family/(?P<family_guid>[\w.|-]+)/save_internal_case_review_notes': save_internal_case_review_notes,
     'family/(?P<family_guid>[\w.|-]+)/save_internal_case_review_summary': save_internal_case_review_summary,
     'family/(?P<family_guid>[\w.|-]+)/update': update_family_fields_handler,
+    'family/(?P<family_guid>[\w.|-]+)/update_success_story_types': update_family_success_story_types,
     'family/(?P<family_guid>[\w.|-]+)/update_assigned_analyst': update_family_assigned_analyst,
     'family/(?P<family_guid>[\w.|-]+)/update_analysed_by': update_family_analysed_by,
     'family/(?P<family_guid>[\w.|-]+)/update_pedigree_image': update_family_pedigree_image,
