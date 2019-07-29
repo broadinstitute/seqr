@@ -77,7 +77,6 @@ const TagFieldView = ({ initialValues, field, tagOptions, popup, tagAnnotation, 
 
   const formFieldProps = {
     component: LargeMultiselect,
-    placeholder: 'Variant Tags',
     defaultOpen: true,
     normalize: (value, previousValue, allValues, previousAllValues) => value.map(option => previousAllValues[field].find(prevFieldValue => prevFieldValue.name === option) || tagOptionsMap[option]),
     format: options => options.map(tag => tag.name),

@@ -7,6 +7,7 @@ import BaseFieldView from '../components/panel/view-fields/BaseFieldView'
 import OptionFieldView from '../components/panel/view-fields/OptionFieldView'
 import ListFieldView from '../components/panel/view-fields/ListFieldView'
 import SingleFieldView from '../components/panel/view-fields/SingleFieldView'
+import TagFieldView from '../components/panel/view-fields/TagFieldView'
 
 import { stripMarkdown } from './stringUtils'
 
@@ -137,7 +138,7 @@ export const FAMILY_FIELD_RENDER_LOOKUP = {
     component: BaseFieldView,
     submitArgs: { familyField: 'analysed_by' },
   },
-  [FAMILY_FIELD_SUCCESS_STORY_TYPE]: { name: 'Success Story Type', component: OptionFieldView },
+  [FAMILY_FIELD_SUCCESS_STORY_TYPE]: { name: 'Success Story Type', component: TagFieldView },
   [FAMILY_FIELD_SUCCESS_STORY]: { name: 'Success Story' },
   [FAMILY_FIELD_FIRST_SAMPLE]: { name: 'Data Loaded?', component: BaseFieldView },
   [FAMILY_FIELD_ANALYSIS_NOTES]: { name: 'Notes' },

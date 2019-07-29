@@ -214,15 +214,6 @@ class Family(ModelWithGUID):
         ('Q', 'Waiting for data'),
     )
 
-    SUCCESS_STORY_TYPE_CHOICES = (
-        ('ND', 'Novel Discovery'),
-        ('ACO', 'Altered Clinical Outcome'),
-        ('C', 'Collaboration'),
-        ('TW', 'Technical Win'),
-        ('DS', 'Data Sharing'),
-        ('O', 'Other'),
-    )
-
     CAUSAL_INHERITANCE_MODE_CHOICES = (
         ('r', 'recessive'),    # the actual inheritance model (the one in phenotips is the external inheritance model)
         ('u', 'unknown'),
@@ -244,12 +235,6 @@ class Family(ModelWithGUID):
     assigned_analyst = models.ForeignKey(User, null=True, on_delete=models.SET_NULL,
                                     related_name='assigned_families')  # type: ForeignKey
 
-    success_story_type = models.CharField(
-        max_length=10,
-        choices=[(s[0], s[1][0]) for s in SUCCESS_STORY_TYPE_CHOICES],
-        null=True,
-        blank=True
-    )
     success_story = models.TextField(null=True, blank=True)
 
     analysis_notes = models.TextField(null=True, blank=True)
@@ -293,7 +278,7 @@ class Family(ModelWithGUID):
         ]
         internal_json_fields = [
             'internal_analysis_status', 'internal_case_review_notes', 'internal_case_review_summary',
-            'success_story_type', 'success_story'
+            'success_story'
         ]
 
 
@@ -309,6 +294,27 @@ class FamilyAnalysedBy(ModelWithGUID):
 
     class Meta:
         json_fields = ['last_modified_date', 'created_by']
+
+
+class SuccessStoryType(ModelWithGUID):
+    family = models.ForeignKey('Family', null=True, on_delete=models.CASCADE)
+
+    name = models.TextField()
+    description = models.TextField(null=True, blank=True)
+    color = models.CharField(max_length=20, default="#1f78b4")
+    order = models.FloatField(null=True)
+
+    def __unicode__(self):
+        return self.name.strip()
+
+    def _compute_guid(self):
+        return 'SST%05d_%s' % (self.id, _slugify(str(self)))
+
+    class Meta:
+        unique_together = ('family', 'name', 'color')
+
+        json_fields = ['guid', 'name', 'description', 'color', 'order']
+
 
 class Individual(ModelWithGUID):
     SEX_MALE = 'M'
