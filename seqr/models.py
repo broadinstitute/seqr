@@ -310,8 +310,6 @@ class SuccessStoryType(ModelWithGUID):
         return 'SST%05d_%s' % (self.id, _slugify(str(self)))
 
     class Meta:
-        unique_together = ('name', 'color')
-
         json_fields = ['guid', 'name', 'description', 'color', 'order']
 
 

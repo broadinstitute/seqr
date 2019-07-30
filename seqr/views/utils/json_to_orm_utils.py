@@ -18,19 +18,10 @@ def update_family_from_json(family, json, verbose=False, user=None, allow_unknow
     if json.get('displayName') and json['displayName'] == family.family_id:
         json['displayName'] = ''
 
-    success_story_types = json.get('successStoryType')
-    json['successStoryTypes'] = set()
-    if success_story_types:
-        for success_story_type in success_story_types:
-            success_story_type_model = SuccessStoryType.objects.create(
-                name=success_story_type['name'], color=success_story_type['color'])
-
     update_model_from_json(
         family, json, user=user, verbose=verbose, allow_unknown_keys=allow_unknown_keys,
         immutable_keys=['pedigree_image', 'assigned_analyst'], conditional_edit_keys={'family_id': can_edit_family_id}
     )
-
-    family.success_story_types.add(success_story_type_model)
 
 
 def update_individual_from_json(individual, json, verbose=False, user=None, allow_unknown_keys=False):
