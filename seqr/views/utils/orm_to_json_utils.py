@@ -626,7 +626,3 @@ def get_json_for_saved_searches(search, user):
 
 def get_json_for_saved_search(search, user):
     return _get_json_for_model(search, user=user, get_json_for_models=get_json_for_saved_searches)
-
-
-def _get_json_for_success_story_type(success_story):
-    return _get_json_for_model(success_story)

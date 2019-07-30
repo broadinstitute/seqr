@@ -5,7 +5,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls.base import reverse
 
-from seqr.views.apis.family_api import update_family_pedigree_image, update_family_assigned_analyst
+from seqr.views.apis.family_api import update_family_pedigree_image, update_family_assigned_analyst, update_family_success_story_types
 from seqr.views.utils.test_utils import _check_login
 
 FAMILY_GUID = 'F000001_1'
@@ -66,3 +66,54 @@ class ProjectAPITest(TestCase):
         self.assertEqual(response_json['F000001_1']['assignedAnalyst']['email'], 'test_user@test.com')
         self.assertEqual(response_json['F000001_1']['assignedAnalyst']['fullName'], 'Test User')
 
+    def test_update_success_story_types(self):
+        url = reverse(update_family_success_story_types, args=[FAMILY_GUID])
+        _check_login(self, url)
+
+        # clear all success story types
+        response = self.client.post(url, content_type='application/json', data=json.dumps({'successStoryTypes': []}))
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertListEqual(response_json['F000001_1']['successStoryTypes'], [])
+
+        # add multiple success story types
+        response = self.client.post(url, content_type='application/json', data=json.dumps({'successStoryTypes': [
+            {
+                "color": "#019143",
+                "name": "Novel Discovery",
+                "successStoryTypeGuid": "SST00001_novel_discovery",
+            },
+            {
+                "color": "#833E7D",
+                "name": "Collaboration",
+                "successStoryTypeGuid": "SST00002_collaboration",
+            },
+            {
+                "color": "#FFAB57",
+                "name": "Altered Clinical Outcome",
+                "successStoryTypeGuid": "SST00003_altered_clinical_outc",
+            },
+            {
+                "color": "#E76013",
+                "name": "Technical Win",
+                "successStoryTypeGuid": "SST00004_technical_win",
+            },
+            {
+                "color": "#6583EC",
+                "name": "Data Sharing",
+                "successStoryTypeGuid": "SST00005_data_sharing",
+            },
+            {
+                "color": "#5D5D5F",
+                "name": "Other",
+                "successStoryTypeGuid": "SST00006_other",
+            },
+        ]}))
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertEqual(len(response_json['F000001_1']['successStoryTypes']), 6)
+        self.assertEqual(response_json['F000001_1']['successStoryTypes'][0], {
+                u"color": u"#019143",
+                u"name": u"Novel Discovery",
+                u"successStoryTypeGuid": u"SST00001_novel_discovery",
+            })
