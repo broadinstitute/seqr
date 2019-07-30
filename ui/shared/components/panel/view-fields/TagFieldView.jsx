@@ -60,7 +60,7 @@ MetadataField.propTypes = {
 }
 
 
-const TagFieldView = ({ initialValues, field, tagOptions, popup, tagAnnotation, editMetadata, ...props }) => {
+const TagFieldView = ({ initialValues, field, tagOptions, popup, tagAnnotation, editMetadata, showIconOnly, ...props }) => {
   const fieldValues = initialValues[field] || []
 
   tagOptions = tagOptions.map((tag, i) => {
@@ -102,11 +102,15 @@ const TagFieldView = ({ initialValues, field, tagOptions, popup, tagAnnotation, 
         {displayFieldValues.map((tag) => {
           const label = <ColoredLabel size="small" color={tag.color} horizontal content={tag.name || tag.text} />
           return (
-            <span key={tag.name}>
-              <HorizontalSpacer width={5} />
-              {popup ? popup(tag)(label) : label}
-              {tagAnnotation && tagAnnotation(tag)}
-            </span>
+            showIconOnly ?
+              <span key={tag.name}>
+                {tagAnnotation && tagAnnotation(tag)}
+              </span> :
+              <span key={tag.name}>
+                <HorizontalSpacer width={5} />
+                {popup ? popup(tag)(label) : label}
+                {tagAnnotation && tagAnnotation(tag)}
+              </span>
           )
         })}
       </span>
@@ -124,6 +128,7 @@ TagFieldView.propTypes = {
   editMetadata: PropTypes.bool,
   popup: PropTypes.func,
   tagAnnotation: PropTypes.func,
+  showIconOnly: PropTypes.bool,
 }
 
 export default TagFieldView
