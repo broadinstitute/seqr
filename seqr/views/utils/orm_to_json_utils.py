@@ -173,7 +173,7 @@ def _get_json_for_families(families, user=None, add_individual_guids_field=False
     def _process_result(result, family):
         result['successStoryTypes'] = [{
             'name': sst.name,
-            'color': sst.name,
+            'color': sst.color,
             'successStoryTypeGuid': sst.guid,
         } for sst in family.success_story_types.all()]
         result['analysedBy'] = [{
