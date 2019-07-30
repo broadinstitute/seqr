@@ -93,18 +93,26 @@ def create_saved_variant_handler(request):
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def create_variant_note_handler(request, variant_guid):
-    save_as_gene_note = json.loads(request.body).get('saveAsGeneNote')
+    request_json = json.loads(request.body)
+
+    save_as_gene_note = request_json.get('saveAsGeneNote')
     saved_variant = SavedVariant.objects.get(guid=variant_guid)
     check_permissions(saved_variant.project, request.user, CAN_VIEW)
 
     if save_as_gene_note:
         gene_id = json.loads(saved_variant.saved_variant_json)['mainTranscript']['geneId']
-        _create_gene_note(gene_id, json.loads(request.body), request.user)
+        create_seqr_model(
+            GeneNote,
+            note=request_json.get('note'),
+            gene_id=gene_id,
+            created_by=request.user,
+        )
 
     gene_note = {gene_id: {
-        'notes': _get_gene_notes(gene_id, request.user)}} if save_as_gene_note else {}
+        'notes': get_json_for_gene_notes_by_gene_id([gene_id], request.user).get(gene_id, [])}} if save_as_gene_note else {}
 
-    _create_variant_note(saved_variant, json.loads(request.body), request.user)
+    _create_variant_note(saved_variant, request_json, request.user)
+
     variant_note = {variant_guid: {
         'notes': [get_json_for_variant_note(tag) for tag in saved_variant.variantnote_set.all()]},
     }
@@ -113,19 +121,6 @@ def create_variant_note_handler(request, variant_guid):
         'savedVariantsByGuid': variant_note,
         'genesById': gene_note
     })
-
-
-def _create_gene_note(gene_id, note_json, user):
-    create_seqr_model(
-        GeneNote,
-        note=note_json.get('note'),
-        gene_id=gene_id,
-        created_by=user,
-    )
-
-
-def _get_gene_notes(gene_id, user):
-    return get_json_for_gene_notes_by_gene_id([gene_id], user).get(gene_id, [])
 
 
 def _create_variant_note(saved_variant, note_json, user):
