@@ -9,13 +9,12 @@ from django.views.decorators.csrf import csrf_exempt
 from elasticsearch.exceptions import ConnectionTimeout
 
 from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, Sample,\
-    AnalysisGroup, ProjectCategory
+    AnalysisGroup, ProjectCategory, VariantTagType
 from seqr.utils.es_utils import get_es_variants, get_single_es_variant, get_es_variant_gene_counts,\
     InvalidIndexException, XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.locus_list_api import get_project_locus_list_models
 from seqr.views.apis.saved_variant_api import _saved_variant_genes, _add_locus_lists
-from seqr.views.pages.project_page import get_project_variant_tag_types
 from seqr.views.utils.export_table_utils import export_table
 from seqr.utils.gene_utils import get_genes
 from seqr.views.utils.json_utils import create_json_response
@@ -29,7 +28,8 @@ from seqr.views.utils.orm_to_json_utils import \
     get_json_for_locus_lists, \
     get_json_for_saved_variants, \
     get_json_for_saved_search,\
-    get_json_for_saved_searches
+    get_json_for_saved_searches, \
+    _get_json_for_models
 from seqr.views.utils.permissions_utils import check_permissions, get_projects_user_can_view
 
 
@@ -58,14 +58,14 @@ def query_variants_handler(request, search_hash):
     try:
         results_model = _get_or_create_results_model(search_hash, json.loads(request.body or '{}'), request.user)
     except Exception as e:
-        return create_json_response({}, status=400, reason=e.message)
+        return create_json_response({'error': e.message}, status=400, reason=e.message)
 
     _check_results_permission(results_model, request.user)
 
     try:
         variants, total_results = get_es_variants(results_model, sort=sort, page=page, num_results=per_page)
     except InvalidIndexException as e:
-        return create_json_response({}, status=400, reason=e.message)
+        return create_json_response({'error': e.message}, status=400, reason=e.message)
     except ConnectionTimeout as e:
         return create_json_response({}, status=504, reason='Query Time Out')
 
@@ -296,10 +296,11 @@ def search_context_handler(request):
         try:
             results_model = _get_or_create_results_model(context['searchHash'], context.get('searchParams'), request.user)
         except Exception as e:
-            return create_json_response({}, status=400, reason=e.message)
-        projects = Project.objects.filter(family__in=results_model.families.all())
+            return create_json_response({'error': e.message}, status=400, reason=e.message)
+        projects = Project.objects.filter(family__in=results_model.families.all()).distinct()
     else:
-        return create_json_response({}, status=400, reason='Invalid context params: {}'.format(json.dumps(context)))
+        error = 'Invalid context params: {}'.format(json.dumps(context))
+        return create_json_response({'error': error}, status=400, reason=error)
 
     response.update(_get_projects_details(projects, request.user, project_category_guid=context.get('projectCategoryGuid')))
 
@@ -315,7 +316,13 @@ def _get_projects_details(projects, user, project_category_guid=None):
     projects_json = get_json_for_projects(projects, user)
 
     locus_lists = set()
+
     functional_data_tag_types = get_json_for_variant_functional_data_tag_types()
+    variant_tag_types_by_guid = {
+        vtt.guid: vtt for vtt in
+        VariantTagType.objects.filter(Q(project__in=projects) | Q(project__isnull=True)).prefetch_related('project')
+    }
+    variant_tag_types = _get_json_for_models(variant_tag_types_by_guid.values())
     for project_json in projects_json:
         project = project_models_by_guid[project_json['projectGuid']]
         project_locus_lists = get_project_locus_list_models(project)
@@ -323,15 +330,29 @@ def _get_projects_details(projects, user, project_category_guid=None):
 
         project_json.update({
             'locusListGuids': [locus_list.guid for locus_list in project_locus_lists],
-            'variantTagTypes': get_project_variant_tag_types(project),
+            'variantTagTypes': [
+                vtt for vtt in variant_tag_types
+                if variant_tag_types_by_guid[vtt['variantTagTypeGuid']].project is None or
+                   variant_tag_types_by_guid[vtt['variantTagTypeGuid']].project.guid == project_json['projectGuid']],
             'variantFunctionalTagTypes': functional_data_tag_types,
         })
 
-    families = _get_json_for_families(Family.objects.filter(project__in=projects), user, add_individual_guids_field=True)
-    individuals = _get_json_for_individuals(
-        Individual.objects.filter(family__project__in=projects), user=user, add_sample_guids_field=True)
+    families = _get_json_for_families(Family.objects.filter(project__in=projects), user)
+    individuals = _get_json_for_individuals(Individual.objects.filter(family__project__in=projects), user=user)
     samples = get_json_for_samples(Sample.objects.filter(individual__family__project__in=projects))
     analysis_groups = get_json_for_analysis_groups(AnalysisGroup.objects.filter(project__in=projects))
+
+    individual_guids_by_family = defaultdict(list)
+    for individual in individuals:
+        individual_guids_by_family[individual['familyGuid']].append(individual['individualGuid'])
+    for family in families:
+         family['individualGuids'] = individual_guids_by_family[family['familyGuid']]
+
+    sample_guids_by_individual = defaultdict(list)
+    for sample in samples:
+        sample_guids_by_individual[sample['individualGuid']].append(sample['sampleGuid'])
+    for individual in individuals:
+        individual['sampleGuids'] = sample_guids_by_individual[individual['individualGuid']]
 
     response = {
         'projectsByGuid': {p['projectGuid']: p for p in projects_json},
