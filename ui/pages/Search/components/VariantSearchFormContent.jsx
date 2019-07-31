@@ -34,7 +34,6 @@ import {
   ALL_PATHOGENICITY_FILTER,
   ANNOTATION_GROUPS,
   ANNOTATION_FILTER_OPTIONS,
-  ALL_ANNOTATION_FILTER_DETAILS,
   QUALITY_FILTER_FIELDS,
   QUALITY_FILTER_OPTIONS,
   ALL_QUALITY_FILTER,
@@ -199,7 +198,21 @@ const PATHOGENICITY_PANEL = pathogenicityPanel(false)
 
 const ANNOTATION_PANEL = {
   name: 'annotations',
-  headerProps: { title: 'Annotations', inputProps: JsonSelectProps(ANNOTATION_FILTER_OPTIONS, ALL_ANNOTATION_FILTER_DETAILS) },
+  headerProps: {
+    title: 'Annotations',
+    inputProps: JsonSelectProps(ANNOTATION_FILTER_OPTIONS),
+    // inputProps: {
+    //   component: Select,
+    //   options: ANNOTATION_FILTER_OPTIONS,
+    //   format: (val) => {
+    //     if (!(val || {}).filter) {
+    //       return ALL_PATHOGENICITY_FILTER
+    //     }
+    //     return PATHOGENICITY_MODE_LOOKUP[JSON.stringify(val.filter)]
+    //   },
+    //   normalize: val => ({ mode: val, filter: { ...STAFF_PATHOGENICITY_FILTER_LOOKUP[val].filter } }),
+    // },
+  },
   fields: ANNOTATION_GROUPS,
   fieldProps: { control: AlignedCheckboxGroup, format: val => val || [] },
   fieldLayout: annotationsFilterLayout,
