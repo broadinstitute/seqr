@@ -181,6 +181,13 @@ def _get_json_for_families(families, user=None, add_individual_guids_field=False
             result['individualGuids'] = [i.guid for i in family.individual_set.all()]
         if not result['displayName']:
             result['displayName'] = result['familyId']
+        if result['assignedAnalyst']:
+            result['assignedAnalyst'] = {
+                'fullName': result['assignedAnalyst'].get_full_name(),
+                'email': result['assignedAnalyst'].email,
+            }
+        else:
+            result['assignedAnalyst'] = None
 
     prefetch_related_objects(families, 'familyanalysedby_set__created_by')
     if add_individual_guids_field:
@@ -255,7 +262,6 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, family_
         for field in family_fields:
             nested_fields.append({'fields': ('family', field), 'key': _to_camel_case(field)})
 
-    prefetch_related_objects(individuals, 'family')
     prefetch_related_objects(individuals, 'mother')
     prefetch_related_objects(individuals, 'father')
     prefetch_related_objects(individuals, 'case_review_status_last_modified_by')
@@ -318,7 +324,7 @@ def get_json_for_analysis_groups(analysis_groups, project_guid=None):
 
     def _process_result(result, group):
         result.update({
-            'familyGuids': [f.guid for f in group.families.only('guid').all()]
+            'familyGuids': [f.guid for f in group.families.all()]
         })
 
     prefetch_related_objects(analysis_groups, 'families')

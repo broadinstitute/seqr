@@ -41,7 +41,7 @@ class JSONUtilsTest(TestCase):
         family_fields = {
             'projectGuid', 'familyGuid', 'analysedBy', 'pedigreeImage', 'familyId', 'displayName', 'description',
             'analysisNotes', 'analysisSummary', 'causalInheritanceMode', 'analysisStatus', 'pedigreeImage', 'createdDate',
-            'codedPhenotype', 'postDiscoveryOmimNumber', 'pubmedIds',
+            'codedPhenotype', 'postDiscoveryOmimNumber', 'pubmedIds', 'assignedAnalyst',
         }
         self.assertSetEqual(set(json.keys()), family_fields)
 
@@ -60,7 +60,7 @@ class JSONUtilsTest(TestCase):
             'projectGuid', 'familyGuid', 'individualGuid', 'caseReviewStatusLastModifiedBy', 'phenotipsData',
             'individualId', 'paternalId', 'maternalId', 'sex', 'affected', 'displayName', 'notes',
             'phenotipsPatientId', 'phenotipsData', 'createdDate', 'lastModifiedDate', 'paternalGuid', 'maternalGuid',
-            'mmeSubmittedDate', 'mmeDeletedDate',
+            'mmeSubmittedDate', 'mmeDeletedDate', 'popPlatformFilters', 'filterFlags', 'population',
         }
         self.assertSetEqual(set(json.keys()), individual_fields)
 

@@ -20,7 +20,7 @@ def update_family_from_json(family, json, verbose=False, user=None, allow_unknow
 
     update_model_from_json(
         family, json, user=user, verbose=verbose, allow_unknown_keys=allow_unknown_keys,
-        immutable_keys=['pedigree_image'], conditional_edit_keys={'family_id': can_edit_family_id}
+        immutable_keys=['pedigree_image', 'assigned_analyst'], conditional_edit_keys={'family_id': can_edit_family_id}
     )
 
 
@@ -40,7 +40,8 @@ def update_individual_from_json(individual, json, verbose=False, user=None, allo
 
     update_model_from_json(
         individual, json, user=user, verbose=verbose, allow_unknown_keys=allow_unknown_keys,
-        immutable_keys=['phenotips_data'], conditional_edit_keys={'individual_id': can_edit_individual_id}
+        immutable_keys=['phenotips_data', 'filter_flags', 'pop_platform_filters', 'population'],
+        conditional_edit_keys={'individual_id': can_edit_individual_id}
     )
 
 

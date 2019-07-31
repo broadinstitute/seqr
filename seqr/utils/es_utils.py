@@ -143,14 +143,17 @@ def _get_es_variants_for_search(search_model, es_search_cls, process_previous_re
     genes, intervals, invalid_items = parse_locus_list_items(search.get('locus', {}))
     if invalid_items:
         raise Exception('Invalid genes/intervals: {}'.format(', '.join(invalid_items)))
+    rs_ids, variant_ids, invalid_items = _parse_variant_items(search.get('locus', {}))
+    if invalid_items:
+        raise Exception('Invalid variants: {}'.format(', '.join(invalid_items)))
 
     es_search = es_search_cls(search_model.families.all(), previous_search_results=previous_search_results, skip_unaffected_families=search.get('inheritance'))
 
     if sort:
         es_search.sort(sort)
 
-    if genes or intervals:
-        es_search.filter(_location_filter(genes, intervals, search['locus']))
+    if genes or intervals or rs_ids or variant_ids:
+        es_search.filter(_location_filter(genes, intervals, rs_ids, variant_ids, search['locus']))
 
     # Pathogencicity and transcript consequences act as "OR" filters instead of the usual "AND"
     pathogenicity_filter = _pathogenicity_filter(search.get('pathogenicity', {}))
@@ -954,7 +957,7 @@ def _family_genotype_inheritance_filter(inheritance_mode, inheritance_filter, sa
     return samples_q
 
 
-def _location_filter(genes, intervals, location_filter):
+def _location_filter(genes, intervals, rs_ids, variant_ids, location_filter):
     q = None
     if intervals:
         q = _build_or_filter('range', [{
@@ -971,10 +974,51 @@ def _location_filter(genes, intervals, location_filter):
         else:
             q = gene_q
 
+    if rs_ids:
+        rs_id_q = Q('terms', rsid=rs_ids)
+        if q:
+            q |= rs_id_q
+        else:
+            q = rs_id_q
+
+    if variant_ids:
+        variant_id_q = Q('terms', variantId=variant_ids)
+        if q:
+            q |= variant_id_q
+        else:
+            q = variant_id_q
+
     if location_filter.get('excludeLocations'):
         return ~q
     else:
         return q
+
+
+def _parse_variant_items(search_json):
+    raw_items = search_json.get('rawVariantItems')
+    if not raw_items:
+        return None, None, None
+
+    invalid_items = []
+    variant_ids = []
+    rs_ids = []
+    for item in raw_items.replace(',', ' ').split():
+        if item.startswith('rs'):
+            rs_ids.append(item)
+        else:
+            var_fields = item.split('-')
+            if len(var_fields) == 4:
+                try:
+                    chrom = var_fields[0].lstrip('chr')
+                    pos = int(var_fields[1])
+                    get_xpos(chrom, pos)
+                    variant_ids.append(item.lstrip('chr'))
+                except (KeyError, ValueError):
+                    invalid_items.append(item)
+            else:
+                invalid_items.append(item)
+
+    return rs_ids, variant_ids, invalid_items
 
 
 CLINVAR_SIGNFICANCE_MAP = {

@@ -3,7 +3,7 @@
 import orderBy from 'lodash/orderBy'
 import { getVisibleFamilies, getVisibleFamiliesInSortedOrder, getFamiliesExportData, getIndividualsExportData,
   getCaseReviewStatusCounts, getProjectAnalysisGroupFamiliesByGuid, getIndividualTaggedVariants,
-  getDefaultMmeSubmissionByIndividual, getMmeResultsByIndividual, getMmeDefaultContactEmail,
+  getDefaultMmeSubmissionByIndividual, getMmeResultsByIndividual, getMmeDefaultContactEmail, getAnalystOptions
 } from './selectors'
 
 import { STATE_WITH_2_FAMILIES } from './fixtures'
@@ -129,4 +129,10 @@ test('getMmeDefaultContactEmail', () => {
     subject: 'OR2M3 Matchmaker Exchange connection (NA19675_1)',
     body: 'Dear James Crowley,\n\nWe recently matched with one of your patients in Matchmaker Exchange harboring a variant in OR2M3. Our patient has a homozygous missense variant 1:248367227 TC>T and presents with childhood onset short-limb short stature and flexion contracture. Would you be willing to share whether your patient\'s phenotype and genotype match with ours? We are very grateful for your help and look forward to hearing more.\n\nBest wishes,\nTest User',
   })
+})
+
+test('getAnalystOptions', () => {
+  const analystOptions = getAnalystOptions(STATE_WITH_2_FAMILIES)
+  expect(Object.keys(analystOptions).length).toEqual(6)
+  expect(analystOptions[0].value).toEqual('test_user1')
 })
