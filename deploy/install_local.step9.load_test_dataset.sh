@@ -17,12 +17,14 @@ fi
 
 cd ${SEQR_DIR}/hail_elasticsearch_pipelines
 
-nohup python2.7 gcloud_dataproc/submit.py --cpu-limit 2 --num-executors 2  --run-locally hail_scripts/v01/load_dataset_to_es.py \
+NUM_CPUS_TO_USE=2
+
+nohup python2.7 gcloud_dataproc/submit.py --cpu-limit $NUM_CPUS_TO_USE --num-executors $NUM_CPUS_TO_USE  --run-locally hail_scripts/v01/load_dataset_to_es.py \
     --spark-home $SPARK_HOME --genome-version 37 --project-guid R001_test --sample-type WES --dataset-type VARIANTS \
-    --skip-validation  --exclude-hgmd --vep-block-size 100 --es-block-size 10 --num-shards 1 --hail-version 0.1 \
+    --skip-validation  --exclude-hgmd --vep-block-size 10 --es-block-size 10 --num-shards 1 --hail-version 0.1 \
     --use-nested-objects-for-vep --use-nested-objects-for-genotypes \
     gs://seqr-reference-data/test-projects/1kg.vcf.gz \
-    2>&1 | grep -v org.apache.parquet.hadoop 2>&1 | grep -v 'Use of uninitialized value in hash element' 2>&1 > load_1kg_test_dataset.log  &
+    2>&1 | grep -v org.apache.parquet.hadoop 2>&1 | grep -v 'Use of uninitialized value' 2>&1 > load_1kg_test_dataset.log  &
 
 set +x
 
