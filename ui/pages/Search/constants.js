@@ -118,11 +118,12 @@ export const INHERITANCE_FILTER_OPTIONS = [
   ALL_INHERITANCE_FILTER, RECESSIVE_FILTER, HOM_RECESSIVE_FILTER, X_LINKED_RECESSIVE_FILTER, COMPOUND_HET_FILTER, DE_NOVO_FILTER,
 ].map(value => ({ value, ...INHERITANCE_LOOKUP[value] }))
 
-
 const CLINVAR_NAME = 'clinvar'
 const CLIVAR_PATH = 'pathogenic'
 const CLINVAR_LIKELY_PATH = 'likely_pathogenic'
 const CLINVAR_UNCERTAIN = 'vus_or_conflicting'
+const CLINVAR_LIKELY_BENIGN = 'likely_benign'
+const CLINVAR_BENIGN = 'benign'
 const CLINVAR_OPTIONS = [
   {
     text: 'Pathogenic (P)',
@@ -139,16 +140,18 @@ const CLINVAR_OPTIONS = [
   },
   {
     text: 'Likely Benign (LB)',
-    value: 'likely_benign',
+    value: CLINVAR_LIKELY_BENIGN,
   },
   {
     text: 'Benign (B)',
-    value: 'benign',
+    value: CLINVAR_BENIGN,
   },
 ]
 
 const HGMD_NAME = 'hgmd'
 const HGMD_DM = 'disease_causing'
+const HGMD_LDM = 'likely_disease_causing'
+const HGMD_O = 'hgmd_other'
 const HGMD_OPTIONS = [ // see https://portal.biobase-international.com/hgmd/pro/global.php#cats
   {
     description: 'Pathological mutation reported to be disease causing in the corresponding report (i.e. all other HGMD data).',
@@ -158,12 +161,12 @@ const HGMD_OPTIONS = [ // see https://portal.biobase-international.com/hgmd/pro/
   {
     description: 'Likely pathological mutation reported to be disease causing in the corresponding report, but where the author has indicated that there may be some degree of doubt, or subsequent evidence has come to light in the literature, calling the deleterious nature of the variant into question.',
     text: 'Likely Disease Causing (DM?)',
-    value: 'likely_disease_causing',
+    value: HGMD_LDM,
   },
   {
     description: 'All other classifications present in HGMD (including: Disease-associated polymorphism (DP), Disease-associated polymorphism with additional supporting functional evidence (DFP), In vitro/laboratory or in vivo functional polymorphism (FP), Frameshift or truncating variant (FTV)',
     text: 'Other (DP, DFP, FP, FTV)',
-    value: 'hgmd_other',
+    value: HGMD_O,
   },
 ]
 
@@ -188,34 +191,45 @@ export const STAFF_PATHOGENICITY_FIELDS = [
   },
 ]
 
-export const ANY_PATHOGENICITY_FILTER = {
-  text: 'Any',
-  value: {
-    [CLINVAR_NAME]: [],
-    [HGMD_NAME]: [],
-  },
-}
+export const ALL_PATHOGENICITY_FILTER = 'any'
+export const PATH_LIKELY_PATH_FILTER = 'pathogenic_likely_pathogenic'
+export const NOT_BENIGN = 'not_benign'
 
-export const STAFF_PATHOGENICITY_FILTER_OPTIONS = [
-  ANY_PATHOGENICITY_FILTER,
-  {
+export const STAFF_PATHOGENICITY_FILTER_LOOKUP = {
+  [ALL_PATHOGENICITY_FILTER]: {
+    text: 'Any',
+    filter: {
+      [CLINVAR_NAME]: [CLIVAR_PATH, CLINVAR_LIKELY_PATH, CLINVAR_UNCERTAIN, CLINVAR_LIKELY_BENIGN, CLINVAR_BENIGN],
+      [HGMD_NAME]: [HGMD_DM, HGMD_LDM, HGMD_O],
+    },
+  },
+  [PATH_LIKELY_PATH_FILTER]: {
     text: 'Pathogenic/ Likely Path.',
-    value: {
+    filter: {
       [CLINVAR_NAME]: [CLIVAR_PATH, CLINVAR_LIKELY_PATH],
       [HGMD_NAME]: [HGMD_DM],
     },
   },
-  {
+  [NOT_BENIGN]: {
     text: 'Not Benign',
-    value: {
+    filter: {
       [CLINVAR_NAME]: [CLIVAR_PATH, CLINVAR_LIKELY_PATH, CLINVAR_UNCERTAIN],
       [HGMD_NAME]: HGMD_OPTIONS.map(({ value }) => value),
     },
   },
-]
+}
+
+export const STAFF_PATHOGENICITY_FILTER_OPTIONS = [
+  ALL_PATHOGENICITY_FILTER, PATH_LIKELY_PATH_FILTER, NOT_BENIGN,
+].map(value => ({ value, ...STAFF_PATHOGENICITY_FILTER_LOOKUP[value] }))
+
 export const PATHOGENICITY_FILTER_OPTIONS = STAFF_PATHOGENICITY_FILTER_OPTIONS.map(({ text, value }) => ({
   text, value: { [CLINVAR_NAME]: value[CLINVAR_NAME] },
 }))
+
+export const PATHOGENICITY_MODE_LOOKUP = Object.entries(STAFF_PATHOGENICITY_FILTER_LOOKUP).reduce((acc, [mode, { filter }]) =>
+  ({ ...acc, [JSON.stringify(filter)]: mode }), {},
+)
 
 export const ANNOTATION_GROUPS = Object.entries(GROUPED_VEP_CONSEQUENCES).map(([name, options]) => ({
   name, options, groupLabel: snakecaseToTitlecase(name),
