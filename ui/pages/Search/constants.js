@@ -122,8 +122,6 @@ const CLINVAR_NAME = 'clinvar'
 const CLIVAR_PATH = 'pathogenic'
 const CLINVAR_LIKELY_PATH = 'likely_pathogenic'
 const CLINVAR_UNCERTAIN = 'vus_or_conflicting'
-const CLINVAR_LIKELY_BENIGN = 'likely_benign'
-const CLINVAR_BENIGN = 'benign'
 const CLINVAR_OPTIONS = [
   {
     text: 'Pathogenic (P)',
@@ -140,18 +138,16 @@ const CLINVAR_OPTIONS = [
   },
   {
     text: 'Likely Benign (LB)',
-    value: CLINVAR_LIKELY_BENIGN,
+    value: 'likely_benign',
   },
   {
     text: 'Benign (B)',
-    value: CLINVAR_BENIGN,
+    value: 'benign',
   },
 ]
 
 const HGMD_NAME = 'hgmd'
 const HGMD_DM = 'disease_causing'
-const HGMD_LDM = 'likely_disease_causing'
-const HGMD_O = 'hgmd_other'
 const HGMD_OPTIONS = [ // see https://portal.biobase-international.com/hgmd/pro/global.php#cats
   {
     description: 'Pathological mutation reported to be disease causing in the corresponding report (i.e. all other HGMD data).',
@@ -161,12 +157,12 @@ const HGMD_OPTIONS = [ // see https://portal.biobase-international.com/hgmd/pro/
   {
     description: 'Likely pathological mutation reported to be disease causing in the corresponding report, but where the author has indicated that there may be some degree of doubt, or subsequent evidence has come to light in the literature, calling the deleterious nature of the variant into question.',
     text: 'Likely Disease Causing (DM?)',
-    value: HGMD_LDM,
+    value: 'likely_disease_causing',
   },
   {
     description: 'All other classifications present in HGMD (including: Disease-associated polymorphism (DP), Disease-associated polymorphism with additional supporting functional evidence (DFP), In vitro/laboratory or in vivo functional polymorphism (FP), Frameshift or truncating variant (FTV)',
     text: 'Other (DP, DFP, FP, FTV)',
-    value: HGMD_O,
+    value: 'hgmd_other',
   },
 ]
 
@@ -199,8 +195,8 @@ export const STAFF_PATHOGENICITY_FILTER_LOOKUP = {
   [ALL_PATHOGENICITY_FILTER]: {
     text: 'Any',
     filter: {
-      [CLINVAR_NAME]: [CLIVAR_PATH, CLINVAR_LIKELY_PATH, CLINVAR_UNCERTAIN, CLINVAR_LIKELY_BENIGN, CLINVAR_BENIGN],
-      [HGMD_NAME]: [HGMD_DM, HGMD_LDM, HGMD_O],
+      [CLINVAR_NAME]: [],
+      [HGMD_NAME]: [],
     },
   },
   [PATH_LIKELY_PATH_FILTER]: {
