@@ -220,7 +220,7 @@ export const STAFF_PATHOGENICITY_FILTER_OPTIONS = [
 ].map(value => ({ value, ...STAFF_PATHOGENICITY_FILTER_LOOKUP[value] }))
 
 export const PATHOGENICITY_FILTER_OPTIONS = STAFF_PATHOGENICITY_FILTER_OPTIONS.map(({ text, value }) => ({
-  text, value: { [CLINVAR_NAME]: value[CLINVAR_NAME] },
+  text, filter: { [CLINVAR_NAME]: value[CLINVAR_NAME] },
 }))
 
 export const PATHOGENICITY_MODE_LOOKUP = Object.entries(STAFF_PATHOGENICITY_FILTER_LOOKUP).reduce((acc, [mode, { filter }]) =>
@@ -260,7 +260,7 @@ const HIGH_IMPACT_FILTER = 'high_impact'
 const MODERATE_TO_HIGH_IMPACT_FILTER = 'moderate_to_high_impact'
 const ALL_RARE_CODING_VARIANT_FILTER = 'all_rare_coding_variants'
 
-const TF_VEPGROUPS = ({ vepGroups, ...option }) => ({
+const transformVepGroups = ({ vepGroups, ...option }) => ({
   ...option,
   filter: vepGroups.reduce((acc, group) => (
     { ...acc, [group]: GROUPED_VEP_CONSEQUENCES[group].map(({ value }) => value) }
@@ -268,19 +268,19 @@ const TF_VEPGROUPS = ({ vepGroups, ...option }) => ({
 })
 
 export const ANNOTATION_LOOKUP = {
-  [ALL_ANNOTATION_FILTER]: TF_VEPGROUPS({
+  [ALL_ANNOTATION_FILTER]: transformVepGroups({
     text: 'All',
     vepGroups: ALL_IMPACT_GROUPS,
   }),
-  [HIGH_IMPACT_FILTER]: TF_VEPGROUPS({
+  [HIGH_IMPACT_FILTER]: transformVepGroups({
     text: 'High Impact',
     vepGroups: HIGH_IMPACT_GROUPS,
   }),
-  [MODERATE_TO_HIGH_IMPACT_FILTER]: TF_VEPGROUPS({
+  [MODERATE_TO_HIGH_IMPACT_FILTER]: transformVepGroups({
     text: 'Moderate to High Impact',
     vepGroups: HIGH_IMPACT_GROUPS.concat(MODERATE_IMPACT_GROUPS),
   }),
-  [ALL_RARE_CODING_VARIANT_FILTER]: TF_VEPGROUPS({
+  [ALL_RARE_CODING_VARIANT_FILTER]: transformVepGroups({
     text: 'All rare coding variants',
     vepGroups: HIGH_IMPACT_GROUPS.concat(MODERATE_IMPACT_GROUPS).concat(CODING_IMPACT_GROUPS),
   }),

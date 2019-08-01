@@ -108,8 +108,13 @@ const ExpandCollapseCategoryContainer = styled.span`
 
 const JsonSelectProps = (options, all = '') => ({
   component: Select,
-  format: val => JSON.stringify(val) || JSON.stringify(all.value),
-  parse: JSON.parse,
+  format: (val) => {
+    return JSON.stringify(val) || JSON.stringify(all.value)
+  },
+  parse: (val) => {
+    // console.log(JSON.parse(val))
+    return JSON.parse(val)
+  },
   options: options.map(({ value, ...option }) => ({ ...option, value: JSON.stringify(value) })),
 })
 
@@ -202,7 +207,6 @@ const PATHOGENICITY_PANEL = pathogenicityPanel(false)
 const ANNOTATION_PANEL = {
   name: 'annotations',
   headerProps: {
-    title: 'Annotations',
     inputProps: {
       component: Select,
       options: ANNOTATION_FILTER_OPTIONS,
@@ -212,8 +216,11 @@ const ANNOTATION_PANEL = {
         }
         return ANNOTATION_MODE_LOOKUP[JSON.stringify(val.filter)]
       },
-      normalize: val => ({ mode: val, filter: { ...ANNOTATION_LOOKUP[val].filter } }),
+      normalize: (val) => {
+        return { mode: val, filter: { ...ANNOTATION_LOOKUP[val].filter } }
+      },
     },
+    title: 'Annotations',
   },
   fields: ANNOTATION_GROUPS,
   fieldProps: { control: AlignedCheckboxGroup, format: val => val || [] },
