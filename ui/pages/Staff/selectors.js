@@ -18,6 +18,7 @@ export const getMmeSubmissions = state => state.mmeSubmissions
 export const getSeqrStatsLoading = state => state.seqrStatsLoading.isLoading
 export const getSeqrStatsLoadingError = state => state.seqrStatsLoading.errorMessage
 export const getSeqrStats = state => state.seqrStats
+export const getQcUploadStats = state => state.qcUploadStats
 
 export const getAnvilColumns = createSelector(
   getAnvilRows,
