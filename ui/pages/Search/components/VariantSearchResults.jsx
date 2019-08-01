@@ -1,7 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Grid, Message } from 'semantic-ui-react'
+import { Grid, Message, Button } from 'semantic-ui-react'
 import styled from 'styled-components'
 
 import DataLoader from 'shared/components/DataLoader'
@@ -27,16 +27,17 @@ import GeneBreakdown from './GeneBreakdown'
 
 const LargeRow = styled(Grid.Row)`
   font-size: 1.15em;
-  
+
   label {
     font-size: 1em !important;
   }
 `
 
+const scrollToTop = () => window.scrollTo(0, 0)
+
 const FIELDS = [
   VARIANT_SORT_FIELD_NO_FAMILY_SORT,
 ]
-
 
 const BaseVariantSearchResults = ({
   match, searchedVariants, variantSearchDisplay, searchedVariantExportConfig, onSubmit, load, unload, loading, errorMessage, totalVariantsCount,
@@ -44,9 +45,8 @@ const BaseVariantSearchResults = ({
   const { searchHash, variantId } = match.params
   const { page = 1, recordsPerPage } = variantSearchDisplay
   const variantDisplayPageOffset = (page - 1) * recordsPerPage
-  const fields = totalVariantsCount > recordsPerPage ?
-    [...FIELDS, { ...VARIANT_PAGINATION_FIELD, totalPages: Math.ceil(totalVariantsCount / recordsPerPage) }]
-    : FIELDS
+  const paginationFields = totalVariantsCount > recordsPerPage ? [{ ...VARIANT_PAGINATION_FIELD, totalPages: Math.ceil(totalVariantsCount / recordsPerPage) }] : []
+  const fields = [...FIELDS, ...paginationFields]
   return (
     <DataLoader
       contentId={searchHash || variantId}
@@ -91,6 +91,24 @@ const BaseVariantSearchResults = ({
           <Variants variants={searchedVariants} />
         </Grid.Column>
       </Grid.Row>
+      {searchHash &&
+        <LargeRow>
+          <Grid.Column width={11} floated="right" textAlign="right">
+            <ReduxFormWrapper
+              onSubmit={onSubmit}
+              form="editSearchedVariantsDisplay"
+              initialValues={variantSearchDisplay}
+              closeOnSuccess={false}
+              submitOnChange
+              inline
+              fields={paginationFields}
+            />
+            <HorizontalSpacer width={10} />
+            <Button onClick={scrollToTop}>Scroll To Top</Button>
+            <HorizontalSpacer width={10} />
+          </Grid.Column>
+        </LargeRow>
+      }
     </DataLoader>
   )
 }
