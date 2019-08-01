@@ -18,7 +18,7 @@ from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file
 from seqr.views.utils.json_to_orm_utils import update_family_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_family
-from seqr.models import Family, FamilyAnalysedBy, CAN_EDIT, Individual, SuccessStoryType
+from seqr.models import Family, FamilyAnalysedBy, CAN_EDIT, Individual
 from seqr.model_utils import create_seqr_model, get_or_create_seqr_model, delete_seqr_model, update_seqr_model
 from seqr.views.utils.permissions_utils import check_permissions, get_project_and_check_permissions
 
@@ -134,6 +134,7 @@ def update_family_fields_handler(request, family_guid):
         family.guid: _get_json_for_family(family, request.user)
     })
 
+
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def update_family_success_story_types(request, family_guid):
@@ -147,11 +148,10 @@ def update_family_success_story_types(request, family_guid):
 
     request_json = json.loads(request.body)
     success_story_types = request_json.get('successStoryTypes')
-    family.success_story_types.clear()
-    for success_story_type in success_story_types:
-        success_story_type_model = SuccessStoryType.objects.create(
-            name=success_story_type['name'], color=success_story_type['color'])
-        family.success_story_types.add(success_story_type_model)
+
+    # [{u'color': u'#5D5D5F', u'name': u'Other', u'optionIndex': 5},
+    #  {u'color': u'#6583EC', u'name': u'Data Sharing', u'optionIndex': 4}]
+    family.success_story_types = [sst.name for sst in success_story_types]
 
     return create_json_response({
         family.guid: _get_json_for_family(family, request.user)

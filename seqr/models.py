@@ -215,11 +215,11 @@ class Family(ModelWithGUID):
     )
 
     SUCCESS_STORY_TYPE_CHOICES = (
-        ('ND', 'Novel Discovery'),
-        ('ACO', 'Altered Clinical Outcome'),
+        ('N', 'Novel Discovery'),
+        ('A', 'Altered Clinical Outcome'),
         ('C', 'Collaboration'),
-        ('TW', 'Technical Win'),
-        ('DS', 'Data Sharing'),
+        ('T', 'Technical Win'),
+        ('D', 'Data Sharing'),
         ('O', 'Other'),
     )
 
@@ -247,7 +247,7 @@ class Family(ModelWithGUID):
     # success_story_types = models.ManyToManyField('SuccessStoryType')
     success_story_types = ArrayField(models.CharField(
         max_length=10,
-        choices=[(t[0], t[1][0]) for t in SUCCESS_STORY_TYPE_CHOICES],
+        choices=SUCCESS_STORY_TYPE_CHOICES,
         null=True,
         blank=True
     ), default=list())
