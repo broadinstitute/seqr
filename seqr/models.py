@@ -294,7 +294,7 @@ class Family(ModelWithGUID):
         ]
         internal_json_fields = [
             'internal_analysis_status', 'internal_case_review_notes', 'internal_case_review_summary',
-            'success_story'
+            'success_story_types', 'success_story'
         ]
 
 

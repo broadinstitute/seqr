@@ -11,7 +11,7 @@ from django.db.models import prefetch_related_objects, Prefetch
 from django.db.models.fields.files import ImageFieldFile
 
 from reference_data.models import GeneConstraint, dbNSFPGene
-from seqr.models import CAN_EDIT, Sample, GeneNote, VariantFunctionalData, SuccessStoryType
+from seqr.models import CAN_EDIT, Sample, GeneNote, VariantFunctionalData
 from seqr.views.utils.json_utils import _to_camel_case
 logger = logging.getLogger(__name__)
 
@@ -180,8 +180,7 @@ def _get_json_for_families(families, user=None, add_individual_guids_field=False
         result['successStoryTypes'] = [{
             'name': sst.name,
             'color': sst.color,
-            'successStoryTypeGuid': sst.guid,
-        } for sst in family.success_story_types.all()]
+        } for sst in family.success_story_types]
         if add_individual_guids_field:
             result['individualGuids'] = [i.guid for i in family.individual_set.all()]
         if not result['displayName']:

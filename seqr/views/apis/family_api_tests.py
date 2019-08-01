@@ -81,32 +81,26 @@ class ProjectAPITest(TestCase):
             {
                 "color": "#019143",
                 "name": "Novel Discovery",
-                "successStoryTypeGuid": "SST00001_novel_discovery",
             },
             {
                 "color": "#833E7D",
                 "name": "Collaboration",
-                "successStoryTypeGuid": "SST00002_collaboration",
             },
             {
                 "color": "#FFAB57",
                 "name": "Altered Clinical Outcome",
-                "successStoryTypeGuid": "SST00003_altered_clinical_outc",
             },
             {
                 "color": "#E76013",
                 "name": "Technical Win",
-                "successStoryTypeGuid": "SST00004_technical_win",
             },
             {
                 "color": "#6583EC",
                 "name": "Data Sharing",
-                "successStoryTypeGuid": "SST00005_data_sharing",
             },
             {
                 "color": "#5D5D5F",
                 "name": "Other",
-                "successStoryTypeGuid": "SST00006_other",
             },
         ]}))
         self.assertEqual(response.status_code, 200)
@@ -115,5 +109,4 @@ class ProjectAPITest(TestCase):
         self.assertEqual(response_json['F000001_1']['successStoryTypes'][0], {
                 u"color": u"#019143",
                 u"name": u"Novel Discovery",
-                u"successStoryTypeGuid": u"SST00001_novel_discovery",
             })
