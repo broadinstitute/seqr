@@ -146,13 +146,6 @@ def update_family_success_story_types(request, family_guid):
     family = Family.objects.get(guid=family_guid)
     check_permissions(family.project, request.user, CAN_EDIT)
 
-    request_json = json.loads(request.body)
-    success_story_types = request_json.get('successStoryTypes')
-
-    # [{u'color': u'#5D5D5F', u'name': u'Other', u'optionIndex': 5},
-    #  {u'color': u'#6583EC', u'name': u'Data Sharing', u'optionIndex': 4}]
-    family.success_story_types = [sst.name for sst in success_story_types]
-
     return create_json_response({
         family.guid: _get_json_for_family(family, request.user)
     })
