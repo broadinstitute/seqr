@@ -214,6 +214,15 @@ class Family(ModelWithGUID):
         ('Q', 'Waiting for data'),
     )
 
+    SUCCESS_STORY_TYPE_CHOICES = (
+        ('ND', 'Novel Discovery'),
+        ('ACO', 'Altered Clinical Outcome'),
+        ('C', 'Collaboration'),
+        ('TW', 'Technical Win'),
+        ('DS', 'Data Sharing'),
+        ('O', 'Other'),
+    )
+
     CAUSAL_INHERITANCE_MODE_CHOICES = (
         ('r', 'recessive'),    # the actual inheritance model (the one in phenotips is the external inheritance model)
         ('u', 'unknown'),
@@ -235,7 +244,13 @@ class Family(ModelWithGUID):
     assigned_analyst = models.ForeignKey(User, null=True, on_delete=models.SET_NULL,
                                     related_name='assigned_families')  # type: ForeignKey
 
-    success_story_types = models.ManyToManyField('SuccessStoryType')
+    # success_story_types = models.ManyToManyField('SuccessStoryType')
+    success_story_types = ArrayField(models.CharField(
+        max_length=10,
+        choices=[(t[0], t[1][0]) for t in SUCCESS_STORY_TYPE_CHOICES],
+        null=True,
+        blank=True
+    ), default=list())
     success_story = models.TextField(null=True, blank=True)
 
     analysis_notes = models.TextField(null=True, blank=True)
