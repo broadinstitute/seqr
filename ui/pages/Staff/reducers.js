@@ -18,6 +18,7 @@ const REQUEST_MME_SUBMISSIONS = 'REQUEST_MME_SUBMISSIONS'
 const RECEIVE_MME_SUBMISSIONS = 'RECEIVE_MME_SUBMISSIONS'
 const REQUEST_SEQR_STATS = 'REQUEST_SEQR_STATS'
 const RECEIVE_SEQR_STATS = 'RECEIVE_SEQR_STATS'
+const RECEIVE_PIPELINE_UPLOAD_STATS = 'RECEIVE_PIPELINE_UPLOAD_STATS'
 
 
 // Data actions
@@ -159,9 +160,11 @@ export const loadSeqrStats = () => {
 }
 
 export const uploadQcPipelineOutput = (values) => {
-  return () => {
-    return new HttpRequestHelper(`/api/staff/save_qc_pipeline_output/${values.file.uploadedFileId}`,
-      () => {},
+  return (dispatch) => {
+    return new HttpRequestHelper('/api/staff/upload_qc_pipeline_output',
+      (responseJson) => {
+        dispatch({ type: RECEIVE_PIPELINE_UPLOAD_STATS, newValue: responseJson })
+      },
       (e) => {
         if (e.body && e.body.errors) {
           throw new SubmissionError({ _error: e.body.errors })
@@ -186,6 +189,7 @@ export const reducers = {
   mmeSubmissions: createSingleValueReducer(RECEIVE_MME_SUBMISSIONS, []),
   seqrStatsLoading: loadingReducer(REQUEST_SEQR_STATS, RECEIVE_SEQR_STATS),
   seqrStats: createSingleValueReducer(RECEIVE_SEQR_STATS, {}),
+  qcUploadStats: createSingleValueReducer(RECEIVE_PIPELINE_UPLOAD_STATS, {}),
 }
 
 const rootReducer = combineReducers(reducers)
