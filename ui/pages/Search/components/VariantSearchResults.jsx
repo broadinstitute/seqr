@@ -72,7 +72,7 @@ const BaseVariantSearchResults = ({
           <Grid.Column width={11} floated="right" textAlign="right">
             <ReduxFormWrapper
               onSubmit={onSubmit}
-              form="editSearchedVariantsDisplay"
+              form="editSearchedVariantsDisplayTop"
               initialValues={variantSearchDisplay}
               closeOnSuccess={false}
               submitOnChange
@@ -96,7 +96,7 @@ const BaseVariantSearchResults = ({
           <Grid.Column width={11} floated="right" textAlign="right">
             <ReduxFormWrapper
               onSubmit={onSubmit}
-              form="editSearchedVariantsDisplay"
+              form="editSearchedVariantsDisplayBottom"
               initialValues={variantSearchDisplay}
               closeOnSuccess={false}
               submitOnChange
