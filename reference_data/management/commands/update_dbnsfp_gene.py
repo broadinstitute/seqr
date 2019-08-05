@@ -17,7 +17,6 @@ FIELD_MAP = {
     'Function_description': "function_desc", # Function description of the gene (from Uniprot)
     'Disease_description': "disease_desc", # Disease(s) the gene caused or associated with (from Uniprot)
     'Trait_association(GWAS)': "trait_association_gwas", # Trait(s) the gene associated with (from GWAS catalog)
-    'Tissue_specificity(Uniprot)': "tissue_specificity",  # Tissue specificity description from Uniprot
     'Expression(egenetics)': "expression_egenetics", # Tissues/organs the gene expressed in (egenetics data from BioMart)
     'Expression(GNF/Atlas)': "expression_gnf_atlas", # Tissues/organs the gene expressed in (GNF/Atlas data from BioMart)
     'ZFIN_zebrafish_gene': "zebrafish_gene",  # Homolog zebrafish gene name from ZFIN
@@ -27,22 +26,26 @@ FIELD_MAP = {
 }
 
 EXCLUDE_FIELDS = (
-    'Gene damage prediction', 'P(', 'RVIS_percentile_ExAC', 'Known_rec_info', 'GDI', 'LoF', 'ExAC', 'Interactions',
-    'SORVA_LOF', 'Gene', 'Essential_gene', 'chr', 'MIM', 'RVIS_percentile_EVS', 'RVIS_EVS'
+    'Gene', 'P(', 'RVIS_percentile_ExAC', 'Known_rec_info', 'GDI', 'LoF', 'ExAC', 'Interactions', 'Orphanet', 'gnomAD',
+    'SORVA_LOF', 'Essential_gene', 'chr', 'MIM', 'OMIM', 'RVIS_percentile_EVS', 'RVIS_EVS', 'HIPred',
 )
 
 
 class DbNSFPReferenceDataHandler(ReferenceDataHandler):
 
     model_cls = dbNSFPGene
-    url = "http://storage.googleapis.com/seqr-reference-data/dbnsfp/dbNSFP3.5_gene"
+    url = "http://storage.googleapis.com/seqr-reference-data/dbnsfp/dbNSFP4.0_gene"
 
     @staticmethod
     def parse_record(record):
-        parsed_record = {FIELD_MAP.get(k, k.lower()): (v if v != '.' else '')
+        parsed_record = {FIELD_MAP.get(k, k.split('(')[0].lower()): (v if v != '.' else '')
                          for k, v in record.items() if not k.startswith(EXCLUDE_FIELDS)}
         parsed_record["function_desc"] = parsed_record["function_desc"].replace("FUNCTION: ", "")
-        yield parsed_record
+        parsed_record['gene_id'] = parsed_record['gene_id'].split(';')[0]
+        if parsed_record['gene_id']:
+            yield parsed_record
+        else:
+            yield None
 
 
 class Command(GeneCommand):

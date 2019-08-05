@@ -47,7 +47,8 @@ class Command(BaseCommand):
         if not options["skip_gencode"]:
             # Download latest version first, and then add any genes from old releases not included in the latest release
             # Old gene ids are used in the gene constraint table and other datasets, as well as older sequencing data
-            update_gencode(29, reset=True)
+            update_gencode(31, reset=True)
+            update_gencode(29)
             update_gencode(28)
             update_gencode(27)
             update_gencode(19)
