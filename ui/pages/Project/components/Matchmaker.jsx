@@ -113,7 +113,7 @@ const BaseEditPhenotypesTable = ({ individual, value, onChange }) =>
     idField="id"
     defaultSortColumn="label"
     columns={PHENOTYPE_FIELDS}
-    data={individual.phenotipsData.features}
+    data={(individual.phenotipsData || {}).features}
     value={value}
     onChange={newValue => onChange(individual.phenotipsData.features.filter(feature => newValue[feature.id]))}
   />
