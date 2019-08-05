@@ -103,7 +103,7 @@ export const FAMILY_SUCCESS_STORY_TYPE_OPTIONS = [
   { value: FAMILY_SUCCESS_STORY_DATA_SHARING, color: '#6583EC', name: 'Data Sharing' },
   { value: FAMILY_SUCCESS_STORY_OTHER, color: '#5D5D5F', name: 'Other' },
 ]
-//
+
 // export const FAMILY_SUCCESS_STORY_TYPE_OPTIONS = [
 //   { color: '#019143', name: 'Novel Discovery' },
 //   { color: '#FFAB57', name: 'Altered Clinical Outcome' },
