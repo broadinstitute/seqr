@@ -104,14 +104,9 @@ export const FAMILY_SUCCESS_STORY_TYPE_OPTIONS = [
   { value: FAMILY_SUCCESS_STORY_OTHER, color: '#5D5D5F', name: 'Other' },
 ]
 
-// export const FAMILY_SUCCESS_STORY_TYPE_OPTIONS = [
-//   { color: '#019143', name: 'Novel Discovery' },
-//   { color: '#FFAB57', name: 'Altered Clinical Outcome' },
-//   { color: '#833E7D', name: 'Collaboration' },
-//   { color: '#E76013', name: 'Technical Win' },
-//   { color: '#6583EC', name: 'Data Sharing' },
-//   { color: '#5D5D5F', name: 'Other' },
-// ]
+export const FAMILY_SUCCESS_STORY_TYPE_OPTIONS_LOOKUP = FAMILY_SUCCESS_STORY_TYPE_OPTIONS.reduce((acc, tag) => {
+  return { [tag.value]: tag, ...acc }
+}, {})
 
 // FAMILY FIELDS
 
@@ -150,7 +145,6 @@ export const FAMILY_FIELD_RENDER_LOOKUP = {
   [FAMILY_FIELD_SUCCESS_STORY_TYPE]: {
     name: 'Success Story Type',
     component: TagFieldView,
-    submitArgs: { familyField: 'success_story_types' },
   },
   [FAMILY_FIELD_SUCCESS_STORY]: { name: 'Success Story' },
   [FAMILY_FIELD_FIRST_SAMPLE]: { name: 'Data Loaded?', component: BaseFieldView },

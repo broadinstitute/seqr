@@ -21,6 +21,7 @@ import {
   FAMILY_FIELD_ASSIGNED_ANALYST,
   FAMILY_FIELD_ANALYSED_BY,
   FAMILY_SUCCESS_STORY_TYPE_OPTIONS,
+  FAMILY_SUCCESS_STORY_TYPE_OPTIONS_LOOKUP,
   FAMILY_FIELD_SUCCESS_STORY_TYPE,
   FAMILY_FIELD_FIRST_SAMPLE,
   FAMILY_FIELD_RENDER_LOOKUP,
@@ -96,6 +97,7 @@ const EDIT_FIELDS = [
   },
 ]
 
+
 const familyFieldRenderProps = {
   [FAMILY_FIELD_ANALYSIS_STATUS]: {
     tagOptions: FAMILY_ANALYSIS_STATUS_OPTIONS,
@@ -117,7 +119,13 @@ const familyFieldRenderProps = {
   [FAMILY_FIELD_SUCCESS_STORY_TYPE]: {
     tagOptions: FAMILY_SUCCESS_STORY_TYPE_OPTIONS,
     showIconOnly: true,
-    tagAnnotation: value => <div><ColoredIcon name="stop" color={value.color} />{value.name}</div>,
+    simplifiedValue: true,
+    fieldDisplay: value => value.map(tag =>
+      <div>
+        <ColoredIcon name="stop" color={FAMILY_SUCCESS_STORY_TYPE_OPTIONS_LOOKUP[tag].color} />
+        {FAMILY_SUCCESS_STORY_TYPE_OPTIONS_LOOKUP[tag].name}
+      </div>,
+    ),
   },
   [FAMILY_FIELD_FIRST_SAMPLE]: {
     showEmptyValues: true,
