@@ -312,22 +312,6 @@ class FamilyAnalysedBy(ModelWithGUID):
         json_fields = ['last_modified_date', 'created_by']
 
 
-class SuccessStoryType(ModelWithGUID):
-    name = models.TextField()
-    description = models.TextField(null=True, blank=True)
-    color = models.CharField(max_length=20, default="#1f78b4")
-    order = models.FloatField(null=True)
-
-    def __unicode__(self):
-        return self.name.strip()
-
-    def _compute_guid(self):
-        return 'SST%05d_%s' % (self.id, _slugify(str(self)))
-
-    class Meta:
-        json_fields = ['guid', 'name', 'description', 'color', 'order']
-
-
 class Individual(ModelWithGUID):
     SEX_MALE = 'M'
     SEX_CHOICES = (
