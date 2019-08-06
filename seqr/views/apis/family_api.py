@@ -137,22 +137,6 @@ def update_family_fields_handler(request, family_guid):
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
-def update_family_success_story_types(request, family_guid):
-    """Updates the specified field in the Family model.
-
-    Args:
-        family_guid (string): GUID of the family.
-    """
-    family = Family.objects.get(guid=family_guid)
-    check_permissions(family.project, request.user, CAN_EDIT)
-
-    return create_json_response({
-        family.guid: _get_json_for_family(family, request.user)
-    })
-
-
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
-@csrf_exempt
 def update_family_assigned_analyst(request, family_guid):
     """Updates the specified field in the Family model.
 
