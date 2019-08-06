@@ -5,7 +5,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls.base import reverse
 
-from seqr.views.apis.family_api import update_family_pedigree_image, update_family_assigned_analyst, update_family_success_story_types
+from seqr.views.apis.family_api import update_family_pedigree_image, update_family_assigned_analyst, update_family_fields_handler
 from seqr.views.utils.test_utils import _check_login
 
 FAMILY_GUID = 'F000001_1'
@@ -67,46 +67,11 @@ class ProjectAPITest(TestCase):
         self.assertEqual(response_json['F000001_1']['assignedAnalyst']['fullName'], 'Test User')
 
     def test_update_success_story_types(self):
-        url = reverse(update_family_success_story_types, args=[FAMILY_GUID])
+        url = reverse(update_family_fields_handler, args=[FAMILY_GUID])
         _check_login(self, url)
 
-        # clear all success story types
-        response = self.client.post(url, content_type='application/json', data=json.dumps({'successStoryTypes': []}))
+        # send valid request
+        response = self.client.post(url, content_type='application/json', data=json.dumps({'successStoryTypes': ['O', 'D']}))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertListEqual(response_json['F000001_1']['successStoryTypes'], [])
-
-        # add multiple success story types
-        response = self.client.post(url, content_type='application/json', data=json.dumps({'successStoryTypes': [
-            {
-                "color": "#019143",
-                "name": "Novel Discovery",
-            },
-            {
-                "color": "#833E7D",
-                "name": "Collaboration",
-            },
-            {
-                "color": "#FFAB57",
-                "name": "Altered Clinical Outcome",
-            },
-            {
-                "color": "#E76013",
-                "name": "Technical Win",
-            },
-            {
-                "color": "#6583EC",
-                "name": "Data Sharing",
-            },
-            {
-                "color": "#5D5D5F",
-                "name": "Other",
-            },
-        ]}))
-        self.assertEqual(response.status_code, 200)
-        response_json = response.json()
-        self.assertEqual(len(response_json['F000001_1']['successStoryTypes']), 6)
-        self.assertEqual(response_json['F000001_1']['successStoryTypes'][0], {
-                u"color": u"#019143",
-                u"name": u"Novel Discovery",
-            })
+        self.assertListEqual(response_json['F000001_1']['successStoryTypes'], ['O', 'D'])
