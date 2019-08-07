@@ -244,7 +244,6 @@ class Family(ModelWithGUID):
     assigned_analyst = models.ForeignKey(User, null=True, on_delete=models.SET_NULL,
                                     related_name='assigned_families')  # type: ForeignKey
 
-    # success_story_types = models.ManyToManyField('SuccessStoryType')
     success_story_types = ArrayField(models.CharField(
         max_length=10,
         choices=SUCCESS_STORY_TYPE_CHOICES,
