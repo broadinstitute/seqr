@@ -1,7 +1,7 @@
 import logging
 from django.utils import timezone
 
-from seqr.models import Individual, Family
+from seqr.models import Individual
 from seqr.model_utils import update_seqr_model
 from seqr.utils.model_sync_utils import can_edit_family_id, can_edit_individual_id
 from seqr.views.utils.json_utils import _to_snake_case
