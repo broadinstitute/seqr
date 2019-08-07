@@ -145,8 +145,9 @@ export const FAMILY_FIELD_RENDER_LOOKUP = {
   [FAMILY_FIELD_SUCCESS_STORY_TYPE]: {
     name: 'Success Story Type',
     component: TagFieldView,
+    internal: true,
   },
-  [FAMILY_FIELD_SUCCESS_STORY]: { name: 'Success Story' },
+  [FAMILY_FIELD_SUCCESS_STORY]: { name: 'Success Story', internal: true },
   [FAMILY_FIELD_FIRST_SAMPLE]: { name: 'Data Loaded?', component: BaseFieldView },
   [FAMILY_FIELD_ANALYSIS_NOTES]: { name: 'Notes' },
   [FAMILY_FIELD_ANALYSIS_SUMMARY]: { name: 'Analysis Summary' },

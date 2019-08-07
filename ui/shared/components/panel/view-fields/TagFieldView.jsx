@@ -71,6 +71,11 @@ const TagFieldView = ({ simplifiedValue, initialValues, field, tagOptions, popup
     return { [tag.name]: tag, ...acc }
   }, {})
 
+  const mappedValues = {
+    ...initialValues,
+    [field]: fieldValues.map(tag => tagOptionsMap[tag.name]).sort((a, b) => a.optionIndex - b.optionIndex),
+  }
+
   const formFieldProps = simplifiedValue ?
     {
       component: LargeMultiselect,
@@ -96,7 +101,7 @@ const TagFieldView = ({ simplifiedValue, initialValues, field, tagOptions, popup
     tagOptions={tagOptions}
     formFieldProps={formFieldProps}
     additionalEditFields={additionalFields}
-    initialValues={initialValues}
+    initialValues={simplifiedValue ? initialValues : mappedValues}
     modalStyle={MODAL_STYLE}
     fieldDisplay={displayFieldValues =>
       <span>
