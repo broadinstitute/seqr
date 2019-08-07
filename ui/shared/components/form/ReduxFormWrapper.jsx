@@ -147,6 +147,9 @@ class ReduxFormWrapper extends React.Component {
     /* React child component class. Mutually exclusive with fields */
     children: PropTypes.node,
 
+    /* Call if submit succeeded */
+    closeInlineModal: PropTypes.func,
+
     /*  These props are added by redux-form and should never be passed explicitly */
     submitting: PropTypes.bool,
     submitFailed: PropTypes.bool,
@@ -268,7 +271,11 @@ class ReduxFormWrapper extends React.Component {
   }
 
   componentWillUpdate(nextProps) {
-    if (nextProps.submitSucceeded && nextProps.closeOnSuccess && !nextProps.noModal) {
+    if (nextProps.submitSucceeded && nextProps.closeOnSuccess && nextProps.noModal) {
+      this.props.closeInlineModal()
+      this.props.handleClose(true)
+    }
+    else if (nextProps.submitSucceeded && nextProps.closeOnSuccess && !nextProps.noModal) {
       this.props.handleClose(true)
     } else if (this.props.confirmCloseIfNotSaved) {
       if (nextProps.dirty && !this.props.dirty) {

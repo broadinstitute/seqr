@@ -62,6 +62,7 @@ class BaseFieldView extends React.Component {
           <ReduxFormWrapper
             noModal
             onSubmit={this.props.onSubmit}
+            closeInlineModal={this.toggleButtonVisibility}
             form={this.props.modalId}
             initialValues={this.props.initialValues}
             fields={this.props.formFields}
