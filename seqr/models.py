@@ -245,7 +245,7 @@ class Family(ModelWithGUID):
                                     related_name='assigned_families')  # type: ForeignKey
 
     success_story_types = ArrayField(models.CharField(
-        max_length=10,
+        max_length=1,
         choices=SUCCESS_STORY_TYPE_CHOICES,
         null=True,
         blank=True
