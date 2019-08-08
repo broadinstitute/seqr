@@ -410,7 +410,7 @@ def discovery_sheet(request, project_guid):
 
 
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
-def discovery_sheet(request, success_story_types):
+def success_story(request, success_story_types):
     errors = []
 
     families = Family.objects.filter(success_story_types__contains=success_story_types)
