@@ -271,7 +271,7 @@ class ReduxFormWrapper extends React.Component {
   }
 
   componentWillUpdate(nextProps) {
-    if (this.props.onSubmitSucceeded && nextProps.submitSucceeded && nextProps.closeOnSuccess && nextProps.noModal) {
+    if (this.props.onSubmitSucceeded && nextProps.submitSucceeded) {
       this.props.onSubmitSucceeded()
       this.props.handleClose(true)
     }
