@@ -11,6 +11,7 @@ import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 
 import Anvil from './components/Anvil'
 import DiscoverySheet from './components/DiscoverySheet'
+import SuccessStory from './components/SuccessStory'
 import ElasticsearchStatus from './components/ElasticsearchStatus'
 import CreateUser from './components/CreateUser'
 import Matchmaker from './components/Matchmaker'
@@ -24,6 +25,7 @@ const STAFF_PAGES = [
   { path: 'anvil', params: '/:projectGuid?', component: Anvil },
   { path: 'create_user', component: CreateUser },
   { path: 'discovery_sheet', params: '/:projectGuid?', component: DiscoverySheet },
+  { path: 'success_story', params: '/:successStoryTypes?', component: SuccessStory },
   { path: 'elasticsearch_status', component: ElasticsearchStatus },
   { path: 'kibana', component: () => <iframe width="100%" height="100%" style={IFRAME_STYLE} src="/app/kibana" /> },
   { path: 'matchmaker', component: Matchmaker },
