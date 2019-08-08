@@ -409,6 +409,20 @@ def discovery_sheet(request, project_guid):
     })
 
 
+@staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
+def discovery_sheet(request, success_story_types):
+    errors = []
+
+    families = Family.objects.filter(success_story_types__contains=success_story_types)
+    rows = _generate_rows(families)
+
+    return create_json_response({
+        'rows': rows,
+        'errors': errors,
+    })
+
+
+
 def _get_loaded_samples_by_project_family(projects):
     loaded_samples = Sample.objects.filter(
         individual__family__project__in=projects,
