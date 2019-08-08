@@ -9,6 +9,9 @@ import BaseReport from './BaseReport'
 
 const getDownloadFilename = projectGuid => `discovery_sheet_${projectGuid}`
 
+// eslint-disable-next-line camelcase
+const getFamilyFilterVal = ({ family_id }) => `${family_id}`
+
 const DiscoverySheet = props =>
   <BaseReport
     page="discovery_sheet"
@@ -17,6 +20,7 @@ const DiscoverySheet = props =>
     defaultSortColumn="family_id"
     columns={DISCOVERY_SHEET_COLUMNS}
     getDownloadFilename={getDownloadFilename}
+    getRowFilterVal={getFamilyFilterVal}
     {...props}
   />
 
