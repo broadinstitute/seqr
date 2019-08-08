@@ -8,7 +8,7 @@ import SortableTable from 'shared/components/table/SortableTable'
 import { HorizontalSpacer } from 'shared/components/Spacers'
 import DataLoader from 'shared/components/DataLoader'
 import { InlineHeader } from 'shared/components/StyledComponents'
-import { DISCOVERY_SHEET_COLUMNS } from '../constants'
+import { SUCCESS_STORY_COLUMNS } from '../constants'
 import { loadDiscoverySheet } from '../reducers'
 import { getDiscoverySheetLoading, getDiscoverySheetLoadingError, getDiscoverySheetRows } from '../selectors'
 
@@ -50,7 +50,7 @@ const DiscoverySheet = ({ match, data, loading, loadingError, load, filters }) =
       emptyContent={loadingError || (match.params.projectGuid ? '0 cases found' : 'Select a project to view data')}
       loading={loading}
       data={data}
-      columns={DISCOVERY_SHEET_COLUMNS}
+      columns={SUCCESS_STORY_COLUMNS}
       loadingProps={LOADING_PROPS}
       getRowFilterVal={getFamilyFilterVal}
     />
