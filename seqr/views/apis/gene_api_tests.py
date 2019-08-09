@@ -25,6 +25,7 @@ class GeneAPITest(TransactionTestCase):
             'chromGrch37', 'chromGrch38', 'codingRegionSizeGrch37', 'codingRegionSizeGrch38', 'constraints',
             'diseaseDesc', 'endGrch37', 'endGrch38', 'functionDesc', 'gencodeGeneType', 'geneId', 'geneSymbol',
             'omimPhenotypes', 'mimNumber', 'startGrch37', 'startGrch38', 'notes', 'expression', 'mgiMarkerId',
+            'geneNames',
         })
 
     def test_create_update_and_delete_gene_note(self):

@@ -42,6 +42,13 @@ class DbNSFPReferenceDataHandler(ReferenceDataHandler):
                          for k, v in record.items() if not k.startswith(EXCLUDE_FIELDS)}
         parsed_record["function_desc"] = parsed_record["function_desc"].replace("FUNCTION: ", "")
         parsed_record['gene_id'] = parsed_record['gene_id'].split(';')[0]
+
+        gene_names = [record['Gene_name']]
+        for gene_name_key in ['Gene_old_names', 'Gene_other_names']:
+            names = record[gene_name_key] if record[gene_name_key] != '.' else ''
+            gene_names += names.split(';')
+        parsed_record['gene_names'] = ';'.join([name for name in gene_names if name])
+
         if parsed_record['gene_id']:
             yield parsed_record
         else:
