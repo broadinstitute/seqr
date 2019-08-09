@@ -118,6 +118,7 @@ export const INHERITANCE_FILTER_OPTIONS = [
   ALL_INHERITANCE_FILTER, RECESSIVE_FILTER, HOM_RECESSIVE_FILTER, X_LINKED_RECESSIVE_FILTER, COMPOUND_HET_FILTER, DE_NOVO_FILTER,
 ].map(value => ({ value, ...INHERITANCE_LOOKUP[value] }))
 
+
 const CLINVAR_NAME = 'clinvar'
 const CLIVAR_PATH = 'pathogenic'
 const CLINVAR_LIKELY_PATH = 'likely_pathogenic'
@@ -187,51 +188,38 @@ export const STAFF_PATHOGENICITY_FIELDS = [
   },
 ]
 
-export const ALL_PATHOGENICITY_FILTER = 'any'
-export const PATH_LIKELY_PATH_FILTER = 'pathogenic_likely_pathogenic'
-export const NOT_BENIGN = 'not_benign'
-
-export const STAFF_PATHOGENICITY_FILTER_LOOKUP = {
-  [ALL_PATHOGENICITY_FILTER]: {
-    text: 'Any',
-    filter: {
-      [CLINVAR_NAME]: [],
-      [HGMD_NAME]: [],
-    },
-  },
-  [PATH_LIKELY_PATH_FILTER]: {
-    text: 'Pathogenic/ Likely Path.',
-    filter: {
-      [CLINVAR_NAME]: [CLIVAR_PATH, CLINVAR_LIKELY_PATH],
-      [HGMD_NAME]: [HGMD_DM],
-    },
-  },
-  [NOT_BENIGN]: {
-    text: 'Not Benign',
-    filter: {
-      [CLINVAR_NAME]: [CLIVAR_PATH, CLINVAR_LIKELY_PATH, CLINVAR_UNCERTAIN],
-      [HGMD_NAME]: HGMD_OPTIONS.map(({ value }) => value),
-    },
+export const ANY_PATHOGENICITY_FILTER = {
+  text: 'Any',
+  value: {
+    [CLINVAR_NAME]: [],
+    [HGMD_NAME]: [],
   },
 }
 
 export const STAFF_PATHOGENICITY_FILTER_OPTIONS = [
-  ALL_PATHOGENICITY_FILTER, PATH_LIKELY_PATH_FILTER, NOT_BENIGN,
-].map(value => ({ value, ...STAFF_PATHOGENICITY_FILTER_LOOKUP[value] }))
-
+  ANY_PATHOGENICITY_FILTER,
+  {
+    text: 'Pathogenic/ Likely Path.',
+    value: {
+      [CLINVAR_NAME]: [CLIVAR_PATH, CLINVAR_LIKELY_PATH],
+      [HGMD_NAME]: [HGMD_DM],
+    },
+  },
+  {
+    text: 'Not Benign',
+    value: {
+      [CLINVAR_NAME]: [CLIVAR_PATH, CLINVAR_LIKELY_PATH, CLINVAR_UNCERTAIN],
+      [HGMD_NAME]: HGMD_OPTIONS.map(({ value }) => value),
+    },
+  },
+]
 export const PATHOGENICITY_FILTER_OPTIONS = STAFF_PATHOGENICITY_FILTER_OPTIONS.map(({ text, value }) => ({
-  text, filter: { [CLINVAR_NAME]: value[CLINVAR_NAME] },
+  text, value: { [CLINVAR_NAME]: value[CLINVAR_NAME] },
 }))
-
-export const PATHOGENICITY_MODE_LOOKUP = Object.entries(STAFF_PATHOGENICITY_FILTER_LOOKUP).reduce((acc, [mode, { filter }]) =>
-  ({ ...acc, [JSON.stringify(filter)]: mode }), {},
-)
 
 export const ANNOTATION_GROUPS = Object.entries(GROUPED_VEP_CONSEQUENCES).map(([name, options]) => ({
   name, options, groupLabel: snakecaseToTitlecase(name),
 }))
-
-console.log(ANNOTATION_GROUPS)
 
 export const ALL_IMPACT_GROUPS = [
   VEP_GROUP_NONSENSE,
@@ -256,45 +244,38 @@ export const CODING_IMPACT_GROUPS = [
   VEP_GROUP_SYNONYMOUS,
   VEP_GROUP_EXTENDED_SPLICE_SITE,
 ]
-
-export const ALL_ANNOTATION_FILTER = 'all'
-const HIGH_IMPACT_FILTER = 'high_impact'
-const MODERATE_TO_HIGH_IMPACT_FILTER = 'moderate_to_high_impact'
-const ALL_RARE_CODING_VARIANT_FILTER = 'all_rare_coding_variants'
-
-const transformVepGroups = ({ vepGroups, ...option }) => ({
-  ...option,
-  filter: vepGroups.reduce((acc, group) => (
-    { ...acc, [group]: GROUPED_VEP_CONSEQUENCES[group].map(({ value }) => value) }
-  ), {}),
-})
-
-export const ANNOTATION_LOOKUP = {
-  [ALL_ANNOTATION_FILTER]: transformVepGroups({
-    text: 'All',
-    vepGroups: ALL_IMPACT_GROUPS,
-  }),
-  [HIGH_IMPACT_FILTER]: transformVepGroups({
+export const ALL_ANNOTATION_FILTER = {
+  text: 'All',
+  vepGroups: ALL_IMPACT_GROUPS,
+}
+export const ANNOTATION_FILTER_OPTIONS = [
+  ALL_ANNOTATION_FILTER,
+  {
     text: 'High Impact',
     vepGroups: HIGH_IMPACT_GROUPS,
-  }),
-  [MODERATE_TO_HIGH_IMPACT_FILTER]: transformVepGroups({
+  },
+  {
     text: 'Moderate to High Impact',
     vepGroups: HIGH_IMPACT_GROUPS.concat(MODERATE_IMPACT_GROUPS),
-  }),
-  [ALL_RARE_CODING_VARIANT_FILTER]: transformVepGroups({
+  },
+  {
     text: 'All rare coding variants',
     vepGroups: HIGH_IMPACT_GROUPS.concat(MODERATE_IMPACT_GROUPS).concat(CODING_IMPACT_GROUPS),
-  }),
-}
+  },
+].map(({ vepGroups, ...option }) => ({
+  ...option,
+  value: vepGroups.reduce((acc, group) => (
+    { ...acc, [group]: GROUPED_VEP_CONSEQUENCES[group].map(({ value }) => value) }
+  ), {}),
+}))
+export const ALL_ANNOTATION_FILTER_DETAILS =
+  [ALL_ANNOTATION_FILTER].map(({ vepGroups, ...option }) => ({
+    ...option,
+    value: vepGroups.reduce((acc, group) => (
+      { ...acc, [group]: GROUPED_VEP_CONSEQUENCES[group].map(({ value }) => value) }
+    ), {}),
+  }))[0]
 
-export const ANNOTATION_FILTER_OPTIONS = [
-  ALL_ANNOTATION_FILTER, HIGH_IMPACT_FILTER, MODERATE_TO_HIGH_IMPACT_FILTER, ALL_RARE_CODING_VARIANT_FILTER,
-].map(value => ({ value, ...ANNOTATION_LOOKUP[value] }))
-
-export const ANNOTATION_MODE_LOOKUP = Object.entries(ANNOTATION_LOOKUP).reduce((acc, [mode, { filter }]) =>
-  ({ ...acc, [JSON.stringify(filter)]: mode }), {},
-)
 
 export const THIS_CALLSET_FREQUENCY = 'callset'
 export const FREQUENCIES = [

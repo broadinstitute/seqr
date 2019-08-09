@@ -28,15 +28,11 @@ import {
   PATHOGENICITY_FIELDS,
   PATHOGENICITY_FILTER_OPTIONS,
   STAFF_PATHOGENICITY_FIELDS,
-  STAFF_PATHOGENICITY_FILTER_LOOKUP,
   STAFF_PATHOGENICITY_FILTER_OPTIONS,
-  PATHOGENICITY_MODE_LOOKUP,
-  ALL_PATHOGENICITY_FILTER,
+  ANY_PATHOGENICITY_FILTER,
   ANNOTATION_GROUPS,
   ANNOTATION_FILTER_OPTIONS,
-  ANNOTATION_LOOKUP,
-  ANNOTATION_MODE_LOOKUP,
-  ALL_ANNOTATION_FILTER,
+  ALL_ANNOTATION_FILTER_DETAILS,
   QUALITY_FILTER_FIELDS,
   QUALITY_FILTER_OPTIONS,
   ALL_QUALITY_FILTER,
@@ -106,15 +102,17 @@ const ExpandCollapseCategoryContainer = styled.span`
   padding-top: 1em;
 `
 
-const JsonSelectProps = (options, all = '') => ({
+const JsonSelectProps = options => ({
   component: Select,
-  format: (val) => {
-    return JSON.stringify(val) || JSON.stringify(all.value)
-  },
-  parse: (val) => {
-    // console.log(JSON.parse(val))
-    return JSON.parse(val)
-  },
+  format: JSON.stringify,
+  parse: JSON.parse,
+  options: options.map(({ value, ...option }) => ({ ...option, value: JSON.stringify(value) })),
+})
+
+const JsonSelectPropsWithAll = (options, all) => ({
+  component: Select,
+  format: val => JSON.stringify(val) || JSON.stringify(all.value),
+  parse: val => JSON.parse(val),
   options: options.map(({ value, ...option }) => ({ ...option, value: JSON.stringify(value) })),
 })
 
@@ -182,46 +180,19 @@ const INHERITANCE_PANEL = {
 
 const pathogenicityPanel = isStaff => ({
   name: 'pathogenicity',
-  headerProps: {
-    title: 'Pathogenicity',
-    inputProps: {
-      component: Select,
-      options: isStaff ? STAFF_PATHOGENICITY_FILTER_OPTIONS : PATHOGENICITY_FILTER_OPTIONS,
-      format: (val) => {
-        if (!(val || {}).filter) {
-          return ALL_PATHOGENICITY_FILTER
-        }
-        return PATHOGENICITY_MODE_LOOKUP[JSON.stringify(val.filter)]
-      },
-      normalize: val => ({ mode: val, filter: { ...STAFF_PATHOGENICITY_FILTER_LOOKUP[val].filter } }),
-    },
-  },
+  headerProps: { title: 'Pathogenicity', inputProps: JsonSelectPropsWithAll(isStaff ? STAFF_PATHOGENICITY_FILTER_OPTIONS : PATHOGENICITY_FILTER_OPTIONS, ANY_PATHOGENICITY_FILTER) },
   fields: isStaff ? STAFF_PATHOGENICITY_FIELDS : PATHOGENICITY_FIELDS,
   fieldProps: { control: AlignedCheckboxGroup, format: val => val || [] },
   helpText: 'Filter by reported pathogenicity. Note this filter will override any annotations filter (i.e variants will be returned if they have either the specified pathogenicity OR transcript consequence)',
 })
+
 
 const STAFF_PATHOGENICITY_PANEL = pathogenicityPanel(true)
 const PATHOGENICITY_PANEL = pathogenicityPanel(false)
 
 const ANNOTATION_PANEL = {
   name: 'annotations',
-  headerProps: {
-    inputProps: {
-      component: Select,
-      options: ANNOTATION_FILTER_OPTIONS,
-      format: (val) => {
-        if (!(val || {}).filter) {
-          return ALL_ANNOTATION_FILTER
-        }
-        return ANNOTATION_MODE_LOOKUP[JSON.stringify(val.filter)]
-      },
-      normalize: (val) => {
-        return { mode: val, filter: { ...ANNOTATION_LOOKUP[val].filter } }
-      },
-    },
-    title: 'Annotations',
-  },
+  headerProps: { title: 'Annotations', inputProps: JsonSelectPropsWithAll(ANNOTATION_FILTER_OPTIONS, ALL_ANNOTATION_FILTER_DETAILS) },
   fields: ANNOTATION_GROUPS,
   fieldProps: { control: AlignedCheckboxGroup, format: val => val || [] },
   fieldLayout: annotationsFilterLayout,
@@ -269,7 +240,7 @@ const LOCATION_PANEL = {
 
 const QUALITY_PANEL = {
   name: 'qualityFilter',
-  headerProps: { title: 'Call Quality', inputProps: JsonSelectProps(QUALITY_FILTER_OPTIONS, ALL_QUALITY_FILTER) },
+  headerProps: { title: 'Call Quality', inputProps: JsonSelectPropsWithAll(QUALITY_FILTER_OPTIONS, ALL_QUALITY_FILTER) },
   fields: QUALITY_FILTER_FIELDS,
   fieldProps: { control: LabeledSlider, format: val => val || null },
 }
