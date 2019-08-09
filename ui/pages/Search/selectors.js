@@ -118,9 +118,13 @@ const createSavedSearchesSelector = createSelectorCreator(
 
 export const getSavedSearchOptions = createSavedSearchesSelector(
   getSavedSearches,
-  savedSearches => savedSearches.map(({ name, savedSearchGuid, createdById }) => (
-    { text: name, value: savedSearchGuid, category: createdById ? 'My Searches' : 'Default Searches' }
-  )).sort(compareObjects('text')).sort(compareObjects('category')),
+  (savedSearches) => {
+    const savedSeachOptions = savedSearches.map(({ name, savedSearchGuid, createdById }) => (
+      { text: name, value: savedSearchGuid, category: createdById ? 'My Searches' : 'Default Searches' }
+    )).sort(compareObjects('text')).sort(compareObjects('category'))
+    savedSeachOptions.push({ text: 'None', value: null, category: 'Default Searches', search: {} })
+    return savedSeachOptions
+  },
 )
 
 export const getTotalVariantsCount = createSelector(

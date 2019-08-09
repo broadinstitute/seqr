@@ -78,7 +78,7 @@ const SavedSearches = ({ options, savedSearchesByGuid, selectedSearch, load, loa
       loading={loading}
       placeholder="Select a Saved Search"
       value={(selectedSearch || {}).savedSearchGuid}
-      onChange={val => onChange(savedSearchesByGuid[val].search)}
+      onChange={val => onChange(savedSearchesByGuid[val] ? savedSearchesByGuid[val].search : {})}
       options={options}
     />
   </DataLoader>
