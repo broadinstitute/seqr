@@ -21,6 +21,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='family',
             name='success_story_types',
-            field=django.contrib.postgres.fields.ArrayField(base_field=models.CharField(blank=True, choices=[(b'N', b'Novel Discovery'), (b'A', b'Altered Clinical Outcome'), (b'C', b'Collaboration'), (b'T', b'Technical Win'), (b'D', b'Data Sharing'), (b'O', b'Other')], max_length=10, null=True), default=[], size=None),
+            field=django.contrib.postgres.fields.ArrayField(base_field=models.CharField(blank=True, choices=[(b'N', b'Novel Discovery'), (b'A', b'Altered Clinical Outcome'), (b'C', b'Collaboration'), (b'T', b'Technical Win'), (b'D', b'Data Sharing'), (b'O', b'Other')], max_length=1, null=True), default=[], size=None),
         ),
     ]
