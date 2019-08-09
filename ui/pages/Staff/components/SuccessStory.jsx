@@ -17,14 +17,14 @@ import { getDiscoverySheetLoading, getDiscoverySheetLoadingError, getDiscoverySh
 //   FAMILY_SUCCESS_STORY_TYPE_OPTIONS_LOOKUP,
 // } from '../../../shared/utils/constants'
 
-const getDownloadFilename = projectGuid => `discovery_sheet_${projectGuid}`
+const getDownloadFilename = projectGuid => `success_story_${projectGuid}`
 
 // eslint-disable-next-line camelcase
 const getFamilyFilterVal = ({ success_story }) => `${success_story}`
 
 const LOADING_PROPS = { inline: true }
 
-const EMPTY_SELECTION = { test: ['O', 'D', 'T', 'C', 'A', 'N'] }
+// const EMPTY_SELECTION = { test: ['O', 'D', 'T', 'C', 'A', 'N'] }
 
 const SEARCH_CATEGORIES = ['projects']
 
@@ -42,7 +42,7 @@ const DiscoverySheet = ({ match, data, loading, loadingError, load, filters }) =
       categories={SEARCH_CATEGORIES}
       placeholder="Enter project name"
       inputwidth="350px"
-      getResultHref={getResultHref('discovery_sheet')}
+      getResultHref={getResultHref('success_story')}
     />
     {/*<TagFieldView*/}
     {/*  field="selectedSuccessStoryTypes"*/}
@@ -58,7 +58,8 @@ const DiscoverySheet = ({ match, data, loading, loadingError, load, filters }) =
     {/*      {FAMILY_SUCCESS_STORY_TYPE_OPTIONS_LOOKUP[tag].name}*/}
     {/*    </div>)}*/}
     {/*/>*/}
-    or <NavLink to="/staff/discovery_sheet/all" activeStyle={ACTIVE_LINK_STYLE}>view all CMG projects</NavLink>
+    {/*or <NavLink to="/staff/discovery_sheet/all" activeStyle={ACTIVE_LINK_STYLE}>view all success stories</NavLink>*/}
+    or <NavLink to="/staff/success_story/all" activeStyle={ACTIVE_LINK_STYLE}>view all success stories</NavLink>
     <HorizontalSpacer width={20} />
     {filters}
     <VerticalSpacer height={15} />
