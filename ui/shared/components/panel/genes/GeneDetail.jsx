@@ -73,6 +73,9 @@ const textWithLinks = (text) => {
   )
 }
 
+export const getOtherGeneNames = gene =>
+  (gene.geneNames || '').split(';').filter(name => name !== gene.geneSymbol)
+
 const GeneDetailContent = ({ gene, updateGeneNote: dispatchUpdateGeneNote }) => {
   if (!gene) {
     return null
@@ -86,6 +89,10 @@ const GeneDetailContent = ({ gene, updateGeneNote: dispatchUpdateGeneNote }) => 
     { title: 'Coordinates', content: grch38Coords ? `${grch38Coords} (hg19: ${grch37Coords || 'liftover failed'})` : grch37Coords },
     { title: 'Gene Type', content: gene.gencodeGeneType },
   ]
+  const otherGeneNames = getOtherGeneNames(gene)
+  if (otherGeneNames.length > 0) {
+    basicDetails.splice(1, 0, { title: 'Other Gene Names', content: otherGeneNames.join(', ') })
+  }
   const constraints = gene.constraints || {}
   const statDetails = [
     { title: 'Coding Size', content: ((gene.codingRegionSizeGrch38 || gene.codingRegionSizeGrch37) / 1000).toPrecision(2) },
@@ -156,7 +163,7 @@ const GeneDetailContent = ({ gene, updateGeneNote: dispatchUpdateGeneNote }) => 
   }
   const linkDetails = [
     gene.mimNumber ? { title: 'OMIM', link: `http://www.omim.org/entry/${gene.mimNumber}`, description: 'Database of Mendelian phenotypes' } : null,
-    { title: 'PubMed', link: `http://www.ncbi.nlm.nih.gov/pubmed/?term=${gene.geneSymbol}`, description: `Search PubMed for ${gene.geneSymbol}` },
+    { title: 'PubMed', link: `http://www.ncbi.nlm.nih.gov/pubmed/?term=${[gene.geneSymbol, ...otherGeneNames].join(' OR ')}`, description: 'Search PubMed' },
     { title: 'GeneCards', link: `http://www.genecards.org/cgi-bin/carddisp.pl?gene=${gene.geneId}`, description: 'Reference of public data for this gene' },
     { title: 'Protein Atlas', link: `http://www.proteinatlas.org/${gene.geneId}/tissue`, description: 'Detailed protein and transcript expression' },
     { title: 'NCBI Gene', link: `http://www.ncbi.nlm.nih.gov/gene/?term=${gene.geneId}`, description: 'NCBI\'s gene information resource' },
