@@ -234,7 +234,7 @@ export const latestSamplesLoaded = (sampleGuids, samplesByGuid, datasetType) => 
 
 export const familySamplesLoaded = (family, individualsByGuid, samplesByGuid, datasetType) => {
   const sampleGuids = [...family.individualGuids.map(individualGuid => individualsByGuid[individualGuid]).reduce(
-    (acc, individual) => new Set([...acc, ...individual.sampleGuids]), new Set(),
+    (acc, individual) => new Set([...acc, ...(individual.sampleGuids || [])]), new Set(),
   )]
   return latestSamplesLoaded(sampleGuids, samplesByGuid, datasetType)
 }
