@@ -833,7 +833,9 @@ def upload_qc_pipeline_output(request):
 
     dataset_type = DATASET_TYPE_MAP[list(dataset_types)[0]]
 
-    info = ['Parsed {} {} samples'.format(len(json_records), dataset_type)]
+    info_message = 'Parsed {} {} samples'.format(len(json_records), dataset_type)
+    logger.info(info_message)
+    info = [info_message]
     warnings = []
 
     sample_ids = {record['seqr_id'] for record in json_records}
@@ -842,7 +844,7 @@ def upload_qc_pipeline_output(request):
         sample_type=Sample.SAMPLE_TYPE_WES if dataset_type == 'exome' else Sample.SAMPLE_TYPE_WGS,
     ).exclude(
         individual__family__project__name__in=EXCLUDE_PROJECTS
-    ).exclude(individual__family__project__projectcategory__name=EXCLUDE_PROJECT_CATEGORY).prefetch_related('individual')
+    ).exclude(individual__family__project__projectcategory__name=EXCLUDE_PROJECT_CATEGORY)
 
     sample_individuals = {
         agg['sample_id']: agg['individuals'] for agg in
@@ -853,45 +855,48 @@ def upload_qc_pipeline_output(request):
         agg['individual_id']: agg['max_loaded_date'] for agg in
         samples.values('individual_id').annotate(max_loaded_date=Max('loaded_date'))
     }
-    individual_latest_sample = {
-        s.individual_id: s for s in samples
+    individual_latest_sample_id = {
+        s.individual_id: s.sample_id for s in samples
         if s.loaded_date == sample_individual_max_loaded_date.get(s.individual_id)
     }
 
     for record in json_records:
-        record['individuals'] = list({
-            individual_latest_sample[individual_id] for individual_id in sample_individuals.get(record['seqr_id'], [])
-            if individual_latest_sample[individual_id].sample_id == record['seqr_id']
+        record['individual_ids'] = list({
+            individual_id for individual_id in sample_individuals.get(record['seqr_id'], [])
+            if individual_latest_sample_id[individual_id] == record['seqr_id']
         })
 
-    missing_sample_ids = {record['seqr_id'] for record in json_records if not record['individuals']}
+    missing_sample_ids = {record['seqr_id'] for record in json_records if not record['individual_ids']}
     if missing_sample_ids:
         individuals = Individual.objects.filter(individual_id__in=missing_sample_ids).exclude(
             family__project__name__in=EXCLUDE_PROJECTS).exclude(
             family__project__projectcategory__name=EXCLUDE_PROJECT_CATEGORY).exclude(
             sample__sample_type=Sample.SAMPLE_TYPE_WGS if dataset_type == 'exome' else Sample.SAMPLE_TYPE_WES)
-        individuals_by_id = defaultdict(list)
+        individual_db_ids_by_id = defaultdict(list)
         for individual in individuals:
-            individuals_by_id[individual.individual_id].append(individual)
+            individual_db_ids_by_id[individual.individual_id].append(individual.id)
         for record in json_records:
-            if not record['individuals'] and len(individuals_by_id[record['seqr_id']]) == 1:
-                record['individuals'] = individuals_by_id[record['seqr_id']]
+            if not record['individual_ids'] and len(individual_db_ids_by_id[record['seqr_id']]) == 1:
+                record['individual_ids'] = individual_db_ids_by_id[record['seqr_id']]
                 missing_sample_ids.remove(record['seqr_id'])
 
-    multi_individual_samples = {record['seqr_id']: len(record['individuals'])
-                                for record in json_records if len(record['individuals']) > 1}
+    multi_individual_samples = {record['seqr_id']: len(record['individual_ids'])
+                                for record in json_records if len(record['individual_ids']) > 1}
     if multi_individual_samples:
+        logger.info('Found {} multi-individual samples from qc output'.format(len(multi_individual_samples)))
         warnings.append('The following {} samples were added to multiple individuals: {}'.format(
             len(multi_individual_samples), ', '.join(
                 sorted(['{} ({})'.format(sample_id, count) for sample_id, count in multi_individual_samples.items()]))))
 
     if missing_sample_ids:
+        logger.info('Missing {} samples from qc output'.format(len(missing_sample_ids)))
         warnings.append('The following {} samples were skipped: {}'.format(
             len(missing_sample_ids), ', '.join(sorted(list(missing_sample_ids)))))
 
     unknown_filter_flags = set()
     unknown_pop_filter_flags = set()
 
+    inidividuals_by_population = defaultdict(list)
     for record in json_records:
         filter_flags = {}
         for flag in json.loads(record['filter_flags']):
@@ -910,22 +915,30 @@ def upload_qc_pipeline_output(request):
             else:
                 unknown_pop_filter_flags.add(flag)
 
-        for individual in record['individuals']:
-            individual.filter_flags = filter_flags or None
-            individual.pop_platform_filters = pop_platform_filters or None
-            individual.population = record['qc_pop'].upper()
-            individual.save()
+        if filter_flags or pop_platform_filters:
+            Individual.objects.filter(id__in=record['individual_ids']).update(
+                filter_flags=filter_flags or None, pop_platform_filters=pop_platform_filters or None)
+
+        inidividuals_by_population[record['qc_pop'].upper()] += record['individual_ids']
+
+    for population, indiv_ids in inidividuals_by_population.items():
+        Individual.objects.filter(id__in=indiv_ids).update(population=population)
 
     if unknown_filter_flags:
-        warnings.append('The following filter flags have no known corresponding value and were not saved: {}'.format(
-            ', '.join(unknown_filter_flags)))
+        message = 'The following filter flags have no known corresponding value and were not saved: {}'.format(
+            ', '.join(unknown_filter_flags))
+        logger.info(message)
+        warnings.append(message)
 
     if unknown_pop_filter_flags:
-        warnings.append(
-            'The following population platform filters have no known corresponding value and were not saved: {}'.format(
-                ', '.join(unknown_pop_filter_flags)))
+        message = 'The following population platform filters have no known corresponding value and were not saved: {}'.format(
+            ', '.join(unknown_pop_filter_flags))
+        logger.info(message)
+        warnings.append(message)
 
-    info.append('Found and updated matching seqr individuals for {} samples'.format(len(json_records) - len(missing_sample_ids)))
+    message = 'Found and updated matching seqr individuals for {} samples'.format(len(json_records) - len(missing_sample_ids))
+    info.append(message)
+    logger.info(message)
 
     return create_json_response({
         'errors': [],
