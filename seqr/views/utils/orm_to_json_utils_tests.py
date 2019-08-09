@@ -41,12 +41,13 @@ class JSONUtilsTest(TestCase):
         family_fields = {
             'projectGuid', 'familyGuid', 'analysedBy', 'pedigreeImage', 'familyId', 'displayName', 'description',
             'analysisNotes', 'analysisSummary', 'causalInheritanceMode', 'analysisStatus', 'pedigreeImage', 'createdDate',
-            'codedPhenotype', 'postDiscoveryOmimNumber', 'pubmedIds', 'assignedAnalyst',
+            'codedPhenotype', 'postDiscoveryOmimNumber', 'pubmedIds', 'assignedAnalyst'
         }
         self.assertSetEqual(set(json.keys()), family_fields)
 
         family_fields.update({
             'internalAnalysisStatus', 'internalCaseReviewNotes', 'internalCaseReviewSummary', 'individualGuids',
+            'successStory', 'successStoryTypes'
         })
         user = User.objects.filter(is_staff=True).first()
         json = _get_json_for_family(family, user, add_individual_guids_field=True)
