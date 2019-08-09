@@ -7,6 +7,7 @@ import BaseFieldView from '../components/panel/view-fields/BaseFieldView'
 import OptionFieldView from '../components/panel/view-fields/OptionFieldView'
 import ListFieldView from '../components/panel/view-fields/ListFieldView'
 import SingleFieldView from '../components/panel/view-fields/SingleFieldView'
+import TagFieldView from '../components/panel/view-fields/TagFieldView'
 
 import { stripMarkdown } from './stringUtils'
 
@@ -85,6 +86,28 @@ export const FAMILY_ANALYSIS_STATUS_OPTIONS = [
   { value: FAMILY_STATUS_WAITING_FOR_DATA, color: '#FFC107', name: 'Waiting for data' },
 ]
 
+// SUCCESS STORY
+
+const FAMILY_SUCCESS_STORY_NOVEL_DISCOVERY = 'N'
+const FAMILY_SUCCESS_STORY_ALTERED_CLINICAL_OUTCOME = 'A'
+const FAMILY_SUCCESS_STORY_COLLABORATION = 'C'
+const FAMILY_SUCCESS_STORY_TECHNICAL_WIN = 'T'
+const FAMILY_SUCCESS_STORY_DATA_SHARING = 'D'
+const FAMILY_SUCCESS_STORY_OTHER = 'O'
+
+export const FAMILY_SUCCESS_STORY_TYPE_OPTIONS = [
+  { value: FAMILY_SUCCESS_STORY_NOVEL_DISCOVERY, color: '#019143', name: 'Novel Discovery' },
+  { value: FAMILY_SUCCESS_STORY_ALTERED_CLINICAL_OUTCOME, color: '#FFAB57', name: 'Altered Clinical Outcome' },
+  { value: FAMILY_SUCCESS_STORY_COLLABORATION, color: '#833E7D', name: 'Collaboration' },
+  { value: FAMILY_SUCCESS_STORY_TECHNICAL_WIN, color: '#E76013', name: 'Technical Win' },
+  { value: FAMILY_SUCCESS_STORY_DATA_SHARING, color: '#6583EC', name: 'Data Sharing' },
+  { value: FAMILY_SUCCESS_STORY_OTHER, color: '#5D5D5F', name: 'Other' },
+]
+
+export const FAMILY_SUCCESS_STORY_TYPE_OPTIONS_LOOKUP = FAMILY_SUCCESS_STORY_TYPE_OPTIONS.reduce((acc, tag) => {
+  return { [tag.value]: tag, ...acc }
+}, {})
+
 // FAMILY FIELDS
 
 export const FAMILY_FIELD_ID = 'familyId'
@@ -93,6 +116,8 @@ export const FAMILY_FIELD_DESCRIPTION = 'description'
 export const FAMILY_FIELD_ANALYSIS_STATUS = 'analysisStatus'
 export const FAMILY_FIELD_ASSIGNED_ANALYST = 'assignedAnalyst'
 export const FAMILY_FIELD_ANALYSED_BY = 'analysedBy'
+export const FAMILY_FIELD_SUCCESS_STORY_TYPE = 'successStoryTypes'
+export const FAMILY_FIELD_SUCCESS_STORY = 'successStory'
 export const FAMILY_FIELD_ANALYSIS_NOTES = 'analysisNotes'
 export const FAMILY_FIELD_ANALYSIS_SUMMARY = 'analysisSummary'
 export const FAMILY_FIELD_INTERNAL_NOTES = 'internalCaseReviewNotes'
@@ -117,6 +142,12 @@ export const FAMILY_FIELD_RENDER_LOOKUP = {
     component: BaseFieldView,
     submitArgs: { familyField: 'analysed_by' },
   },
+  [FAMILY_FIELD_SUCCESS_STORY_TYPE]: {
+    name: 'Success Story Type',
+    component: TagFieldView,
+    internal: true,
+  },
+  [FAMILY_FIELD_SUCCESS_STORY]: { name: 'Success Story', internal: true },
   [FAMILY_FIELD_FIRST_SAMPLE]: { name: 'Data Loaded?', component: BaseFieldView },
   [FAMILY_FIELD_ANALYSIS_NOTES]: { name: 'Notes' },
   [FAMILY_FIELD_ANALYSIS_SUMMARY]: { name: 'Analysis Summary' },
@@ -132,6 +163,8 @@ export const FAMILY_DETAIL_FIELDS = [
   { id: FAMILY_FIELD_ANALYSIS_STATUS, canEdit: true },
   { id: FAMILY_FIELD_ASSIGNED_ANALYST, canEdit: true },
   { id: FAMILY_FIELD_ANALYSED_BY, canEdit: true },
+  { id: FAMILY_FIELD_SUCCESS_STORY_TYPE, canEdit: true },
+  { id: FAMILY_FIELD_SUCCESS_STORY, canEdit: true },
   { id: FAMILY_FIELD_ANALYSIS_NOTES, canEdit: true },
   { id: FAMILY_FIELD_ANALYSIS_SUMMARY, canEdit: true },
   { id: FAMILY_FIELD_CODED_PHENOTYPE, canEdit: true },
