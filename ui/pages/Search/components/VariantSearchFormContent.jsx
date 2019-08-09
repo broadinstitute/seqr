@@ -102,13 +102,6 @@ const ExpandCollapseCategoryContainer = styled.span`
   padding-top: 1em;
 `
 
-const JsonSelectProps = options => ({
-  component: Select,
-  format: JSON.stringify,
-  parse: JSON.parse,
-  options: options.map(({ value, ...option }) => ({ ...option, value: JSON.stringify(value) })),
-})
-
 const JsonSelectPropsWithAll = (options, all) => ({
   component: Select,
   format: val => JSON.stringify(val) || JSON.stringify(all.value),
