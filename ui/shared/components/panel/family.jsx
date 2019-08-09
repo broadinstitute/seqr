@@ -118,7 +118,6 @@ const familyFieldRenderProps = {
   },
   [FAMILY_FIELD_SUCCESS_STORY_TYPE]: {
     tagOptions: FAMILY_SUCCESS_STORY_TYPE_OPTIONS,
-    showIconOnly: true,
     simplifiedValue: true,
     fieldDisplay: value => value.map(tag =>
       <div>
