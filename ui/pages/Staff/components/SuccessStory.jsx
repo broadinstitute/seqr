@@ -9,13 +9,13 @@ import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
 import DataLoader from 'shared/components/DataLoader'
 import { InlineHeader } from 'shared/components/StyledComponents'
 import { SUCCESS_STORY_COLUMNS } from '../constants'
-import { loadDiscoverySheet } from '../reducers'
+import { loadSuccessStory } from '../reducers'
 import { getDiscoverySheetLoading, getDiscoverySheetLoadingError, getDiscoverySheetRows } from '../selectors'
 // import TagFieldView from '../../../shared/components/panel/view-fields/TagFieldView'
 // import {
 //   FAMILY_SUCCESS_STORY_TYPE_OPTIONS,
 //   FAMILY_SUCCESS_STORY_TYPE_OPTIONS_LOOKUP,
-// } from '../../../shared/utils/constants'
+// } from '/shared/utils/constants'
 
 const getDownloadFilename = projectGuid => `success_story_${projectGuid}`
 
@@ -95,7 +95,7 @@ const mapStateToProps = state => ({
 })
 
 const mapDispatchToProps = {
-  load: loadDiscoverySheet,
+  load: loadSuccessStory,
 }
 
 export default connect(mapStateToProps, mapDispatchToProps)(DiscoverySheet)

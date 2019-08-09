@@ -130,6 +130,55 @@ export const loadDiscoverySheet = (projectGuid) => {
   }
 }
 
+export const loadSuccessStory = (successStoryTypes) => {
+  return (dispatch) => {
+    if (successStoryTypes === 'all') {
+      dispatch({ type: REQUEST_DISCOVERY_SHEET })
+
+      const errors = new Set()
+      const rows = []
+      new HttpRequestHelper('/api/staff/projects_for_category/CMG',
+        (projectsResponseJson) => {
+          Promise.all(projectsResponseJson.projectGuids.map(cmgProjectGuid =>
+            new HttpRequestHelper(`/api/staff/discovery_sheet/${cmgProjectGuid}`,
+              (responseJson) => {
+                if (responseJson.errors.length) {
+                  console.log(responseJson.errors)
+                }
+                rows.push(...responseJson.rows)
+              },
+              e => errors.add(e.message),
+            ).get(),
+          )).then(() => {
+            if (errors.length) {
+              dispatch({ type: RECEIVE_DISCOVERY_SHEET, error: [...errors].join(', '), newValue: [] })
+            } else {
+              dispatch({ type: RECEIVE_DISCOVERY_SHEET, newValue: rows })
+            }
+          })
+        },
+        (e) => {
+          dispatch({ type: RECEIVE_DISCOVERY_SHEET, error: e.message, newValue: [] })
+        },
+      ).get()
+    }
+
+    else if (successStoryTypes) {
+      dispatch({ type: REQUEST_DISCOVERY_SHEET })
+      new HttpRequestHelper(`/api/staff/success_story/${successStoryTypes}`,
+        (responseJson) => {
+          console.log(responseJson.errors)
+          dispatch({ type: RECEIVE_DISCOVERY_SHEET, newValue: responseJson.rows })
+        },
+        (e) => {
+          dispatch({ type: RECEIVE_DISCOVERY_SHEET, error: e.message, newValue: [] })
+        },
+      ).get()
+    }
+  }
+}
+
+
 export const createStaffUser = (values) => {
   return () => {
     return new HttpRequestHelper('/api/users/create_staff_user',
