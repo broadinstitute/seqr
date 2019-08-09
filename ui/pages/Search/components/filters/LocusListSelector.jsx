@@ -17,9 +17,9 @@ class BaseLocusListDropdown extends React.Component
           inline
           selection
           label="Gene List"
-          value={locusList.locusListGuid === '' ? null : locusList.locusListGuid}
+          value={locusList.locusListGuid}
           onChange={locusListGuid => onChange({ locusListGuid })}
-          options={[{ text: 'None', value: '' }].concat(projectLocusListOptions)}
+          options={[{ text: 'None', value: null }].concat(projectLocusListOptions)}
         />
       </div>
     )

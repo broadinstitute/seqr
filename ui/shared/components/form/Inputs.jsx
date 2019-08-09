@@ -87,7 +87,6 @@ const styledOption = (option) => {
 }
 
 const processOptions = (options, includeCategories) => {
-  console.log(options)
   let currCategory = null
   return options.reduce((acc, option) => {
     if (includeCategories && option.category !== currCategory) {

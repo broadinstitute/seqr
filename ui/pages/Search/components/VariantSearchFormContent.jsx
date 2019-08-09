@@ -232,7 +232,7 @@ const LOCATION_PANEL = {
     title: 'Location',
     name: 'locus',
     inputSize: 5,
-    inputProps: { component: LocusListSelector, format: val => val || { locusListGuid: '' } },
+    inputProps: { component: LocusListSelector, format: val => val || {} },
   },
   fields: LOCATION_FIELDS,
   helpText: 'Filter by variant location. Entries can be either gene symbols (e.g. CFTR) or intervals in the form <chrom>:<start>-<end> (e.g. 4:6935002-87141054). Variant entries can be either rsIDs (e.g. rs61753695) or variants in the form <chrom>-<pos>-<ref>-<alt> (e.g. 4-88047328-C-T). Entries can be separated by commas or whitespace.',
