@@ -5,19 +5,26 @@ import { NavLink } from 'react-router-dom'
 
 import AwesomeBar from 'shared/components/page/AwesomeBar'
 import SortableTable from 'shared/components/table/SortableTable'
-import { HorizontalSpacer } from 'shared/components/Spacers'
+import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
 import DataLoader from 'shared/components/DataLoader'
 import { InlineHeader } from 'shared/components/StyledComponents'
 import { SUCCESS_STORY_COLUMNS } from '../constants'
 import { loadDiscoverySheet } from '../reducers'
 import { getDiscoverySheetLoading, getDiscoverySheetLoadingError, getDiscoverySheetRows } from '../selectors'
+// import TagFieldView from '../../../shared/components/panel/view-fields/TagFieldView'
+// import {
+//   FAMILY_SUCCESS_STORY_TYPE_OPTIONS,
+//   FAMILY_SUCCESS_STORY_TYPE_OPTIONS_LOOKUP,
+// } from '../../../shared/utils/constants'
 
 const getDownloadFilename = projectGuid => `discovery_sheet_${projectGuid}`
 
 // eslint-disable-next-line camelcase
-const getFamilyFilterVal = ({ family_id }) => `${family_id}`
+const getFamilyFilterVal = ({ success_story }) => `${success_story}`
 
 const LOADING_PROPS = { inline: true }
+
+const EMPTY_SELECTION = { test: ['O', 'D', 'T', 'C', 'A', 'N'] }
 
 const SEARCH_CATEGORIES = ['projects']
 
@@ -37,9 +44,24 @@ const DiscoverySheet = ({ match, data, loading, loadingError, load, filters }) =
       inputwidth="350px"
       getResultHref={getResultHref('discovery_sheet')}
     />
+    {/*<TagFieldView*/}
+    {/*  field="selectedSuccessStoryTypes"*/}
+    {/*  idField="test"*/}
+    {/*  initialValues={EMPTY_SELECTION}*/}
+    {/*  tagOptions={FAMILY_SUCCESS_STORY_TYPE_OPTIONS}*/}
+    {/*  onSubmit={values => load(match.params.projectGuid, values)} // TODO change this*/}
+    {/*  showIconOnly*/}
+    {/*  simplifiedValue*/}
+    {/*  fieldDisplay={value => value.map(tag =>*/}
+    {/*    <div>*/}
+    {/*      <ColoredIcon name="stop" color={FAMILY_SUCCESS_STORY_TYPE_OPTIONS_LOOKUP[tag].color} />*/}
+    {/*      {FAMILY_SUCCESS_STORY_TYPE_OPTIONS_LOOKUP[tag].name}*/}
+    {/*    </div>)}*/}
+    {/*/>*/}
     or <NavLink to="/staff/discovery_sheet/all" activeStyle={ACTIVE_LINK_STYLE}>view all CMG projects</NavLink>
     <HorizontalSpacer width={20} />
     {filters}
+    <VerticalSpacer height={15} />
     <SortableTable
       striped
       collapsing
