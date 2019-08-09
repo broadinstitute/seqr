@@ -162,7 +162,7 @@ export const DISCOVERY_SHEET_COLUMNS = [
 
 export const SUCCESS_STORY_COLUMNS = [
   { name: 'family_id', content: 'Family ID', format: formatIDLink, noFormatExport: true, style: { minWidth: '200px' } },
-  { name: 'success_story_type', content: 'Success Story Type', style: { minWidth: '400px' } },
+  { name: 'success_story_types', content: 'Success Story Types', style: { minWidth: '400px' } },
   { name: 'success_story', content: 'Success Story', style: { minWidth: '564px' } },
   { name: 'discovery_tags', content: 'Discovery Tags', format: formatDiscoveryTags, noFormatExport: true, style: { minWidth: '300px' } },
 ]
