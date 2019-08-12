@@ -489,8 +489,6 @@ def _generate_rows(project, loaded_samples_by_project_family, saved_variants_by_
             "project_guid": project.guid,
             "family_guid": family.guid,
             "family_id": family.family_id,
-            "success_story_types": family.success_story_types,
-            "success_story": family.success_story,
             "collaborator": project.name,
             "sequencing_approach": sequencing_approach,
             "extras_pedigree_url": family.pedigree_image.url if family.pedigree_image else "",
@@ -769,6 +767,7 @@ def _generate_family_rows(families):
 
     for family in families:
         project = family.project
+
         row = {
             "project_guid": project.guid,
             "family_guid": family.guid,

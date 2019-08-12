@@ -28,7 +28,7 @@ const ACTIVE_LINK_STYLE = {
   color: 'grey',
 }
 
-const getInitialValue = (match) => {
+const formatInitialValue = (match) => {
   const query = match.params.successStoryTypes
   let queryToArr = []
   if (query === 'all') {
@@ -47,8 +47,8 @@ const SuccessStory = ({ match, data, loading, loadingError, load, filters, histo
       isEditable
       editLabel="choose success story types"
       field="successStoryTypes"
-      idField="test"
-      initialValues={getInitialValue(match)}
+      idField="row_id"
+      initialValues={formatInitialValue(match)}
       tagOptions={FAMILY_SUCCESS_STORY_TYPE_OPTIONS}
       onSubmit={value => history.push(`/staff/success_story/${value.successStoryTypes}`)}
       showIconOnly
