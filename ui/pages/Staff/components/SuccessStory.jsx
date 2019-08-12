@@ -3,19 +3,18 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { NavLink } from 'react-router-dom'
 
-import AwesomeBar from 'shared/components/page/AwesomeBar'
 import SortableTable from 'shared/components/table/SortableTable'
 import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
 import DataLoader from 'shared/components/DataLoader'
-import { InlineHeader } from 'shared/components/StyledComponents'
+import { InlineHeader, ColoredIcon } from 'shared/components/StyledComponents'
+import {
+  FAMILY_SUCCESS_STORY_TYPE_OPTIONS,
+  FAMILY_SUCCESS_STORY_TYPE_OPTIONS_LOOKUP,
+} from '../../../shared/utils/constants'
 import { SUCCESS_STORY_COLUMNS } from '../constants'
 import { loadSuccessStory } from '../reducers'
 import { getSuccessStoryLoading, getSuccessStoryLoadingError, getSuccessStoryRows } from '../selectors'
-// import TagFieldView from '../../../shared/components/panel/view-fields/TagFieldView'
-// import {
-//   FAMILY_SUCCESS_STORY_TYPE_OPTIONS,
-//   FAMILY_SUCCESS_STORY_TYPE_OPTIONS_LOOKUP,
-// } from '/shared/utils/constants'
+import TagFieldView from '../../../shared/components/panel/view-fields/TagFieldView'
 
 const getDownloadFilename = successStoryTypes => `success_story_${successStoryTypes}`
 
@@ -24,40 +23,31 @@ const getFamilyFilterVal = ({ success_story }) => `${success_story}`
 
 const LOADING_PROPS = { inline: true }
 
-// const EMPTY_SELECTION = { test: ['O', 'D', 'T', 'C', 'A', 'N'] }
-
-const SEARCH_CATEGORIES = ['projects']
+const EMPTY_SELECTION = { successStoryTypes: ['O', 'D', 'T', 'C', 'A', 'N'] }
 
 const ACTIVE_LINK_STYLE = {
   cursor: 'notAllowed',
   color: 'grey',
 }
 
-const getResultHref = page => result => `/staff/${page}/${result.key}`
-
 const SuccessStory = ({ match, data, loading, loadingError, load, filters }) =>
   <DataLoader contentId={match.params.successStoryTypes} load={load} reloadOnIdUpdate content loading={false}>
-    <InlineHeader size="medium" content="Projects:" />
-    <AwesomeBar
-      categories={SEARCH_CATEGORIES}
-      placeholder="Enter project name"
-      inputwidth="350px"
-      getResultHref={getResultHref('success_story')}
+    <InlineHeader size="medium" content="Types:" />
+    <TagFieldView
+      isEditable
+      field="successStoryTypes"
+      idField="test"
+      initialValues={EMPTY_SELECTION}
+      tagOptions={FAMILY_SUCCESS_STORY_TYPE_OPTIONS}
+      onSubmit={values => load(match.params.successStoryTypes, values)}
+      showIconOnly
+      simplifiedValue
+      fieldDisplay={value => value.map(tag =>
+        <div>
+          <ColoredIcon name="stop" color={FAMILY_SUCCESS_STORY_TYPE_OPTIONS_LOOKUP[tag].color} />
+          {FAMILY_SUCCESS_STORY_TYPE_OPTIONS_LOOKUP[tag].name}
+        </div>)}
     />
-    {/*<TagFieldView*/}
-    {/*  field="selectedSuccessStoryTypes"*/}
-    {/*  idField="test"*/}
-    {/*  initialValues={EMPTY_SELECTION}*/}
-    {/*  tagOptions={FAMILY_SUCCESS_STORY_TYPE_OPTIONS}*/}
-    {/*  onSubmit={values => load(match.params.projectGuid, values)} // TODO change this*/}
-    {/*  showIconOnly*/}
-    {/*  simplifiedValue*/}
-    {/*  fieldDisplay={value => value.map(tag =>*/}
-    {/*    <div>*/}
-    {/*      <ColoredIcon name="stop" color={FAMILY_SUCCESS_STORY_TYPE_OPTIONS_LOOKUP[tag].color} />*/}
-    {/*      {FAMILY_SUCCESS_STORY_TYPE_OPTIONS_LOOKUP[tag].name}*/}
-    {/*    </div>)}*/}
-    {/*/>*/}
     or <NavLink to="/staff/success_story/all" activeStyle={ACTIVE_LINK_STYLE}>view all success stories</NavLink>
     <HorizontalSpacer width={20} />
     {filters}
@@ -69,7 +59,7 @@ const SuccessStory = ({ match, data, loading, loadingError, load, filters }) =>
       downloadFileName={getDownloadFilename(match.params.successStoryTypes, data)}
       idField="row_id"
       defaultSortColumn="family_id"
-      emptyContent={loadingError || (match.params.successStoryTypes ? '0 cases found' : 'Select a project to view data')}
+      emptyContent={loadingError || (match.params.successStoryTypes ? '0 cases found' : 'Select success story types to view data')}
       loading={loading}
       data={data}
       columns={SUCCESS_STORY_COLUMNS}
