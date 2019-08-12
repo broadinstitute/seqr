@@ -143,6 +143,7 @@ class Omim(models.Model):
 # based on dbNSFPv3.5a_gene fields
 class dbNSFPGene(models.Model):
     gene = models.ForeignKey(GeneInfo, on_delete=models.CASCADE)
+    gene_names = models.TextField(blank=True)
 
     function_desc = models.TextField(null=True, blank=True)
     disease_desc = models.TextField(null=True, blank=True)
@@ -178,7 +179,7 @@ class dbNSFPGene(models.Model):
     zebrafish_phenotype_tag = models.TextField(null=True, blank=True)   # Phenotype tag for the homolog zebrafish gene from ZFIN
 
     class Meta:
-        json_fields = ['function_desc', 'disease_desc']
+        json_fields = ['function_desc', 'disease_desc', 'gene_names']
 
 
 class PrimateAI(models.Model):
