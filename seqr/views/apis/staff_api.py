@@ -418,7 +418,7 @@ def success_story(request, success_story_types):
     else:
         all_families = Family.objects.none()
         for success_story_type in success_story_types:
-            families = Family.objects.filter(success_story_types__contains=success_story_type)
+            families = Family.objects.filter(success_story_types__contains=[success_story_type])
             all_families = all_families.union(families)
     rows = _generate_family_rows(all_families)
 

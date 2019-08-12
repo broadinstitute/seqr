@@ -23,7 +23,7 @@ const getFamilyFilterVal = ({ success_story }) => `${success_story}`
 
 const LOADING_PROPS = { inline: true }
 
-const EMPTY_SELECTION = { successStoryTypes: ['O', 'D', 'T', 'C', 'A', 'N'] }
+const EMPTY_SELECTION = { successStoryTypes: [] }
 
 const ACTIVE_LINK_STYLE = {
   cursor: 'notAllowed',
@@ -35,18 +35,20 @@ const SuccessStory = ({ match, data, loading, loadingError, load, filters }) =>
     <InlineHeader size="medium" content="Types:" />
     <TagFieldView
       isEditable
+      editLabel="choose success story types"
       field="successStoryTypes"
       idField="test"
       initialValues={EMPTY_SELECTION}
       tagOptions={FAMILY_SUCCESS_STORY_TYPE_OPTIONS}
-      onSubmit={values => load(match.params.successStoryTypes, values)}
+      onSubmit={values => load(values)}
       showIconOnly
       simplifiedValue
-      fieldDisplay={value => value.map(tag =>
-        <div>
+      fieldDisplay={values => values.map(tag =>
+        <span>
           <ColoredIcon name="stop" color={FAMILY_SUCCESS_STORY_TYPE_OPTIONS_LOOKUP[tag].color} />
           {FAMILY_SUCCESS_STORY_TYPE_OPTIONS_LOOKUP[tag].name}
-        </div>)}
+          <HorizontalSpacer width={4} />
+        </span>)}
     />
     or <NavLink to="/staff/success_story/all" activeStyle={ACTIVE_LINK_STYLE}>view all success stories</NavLink>
     <HorizontalSpacer width={20} />
