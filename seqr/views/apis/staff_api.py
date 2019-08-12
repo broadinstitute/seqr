@@ -409,46 +409,23 @@ def discovery_sheet(request, project_guid):
     })
 
 
-# @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
-# def success_story(request, success_story_types):
-#     errors = []
-#
-#     if success_story_types == 'all':
-#         families = Family.objects.filter(~Q(success_story_types__contains=[]))
-#     else:
-#         families = Family.objects.filter(success_story_types__contains=success_story_types)
-#     import pdb
-#     pdb.set_trace()
-#     rows = _generate_family_rows(families)
-#
-#     return create_json_response({
-#         'rows': rows,
-#         'errors': errors,
-#     })
-
-
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
 def success_story(request, success_story_types):
     errors = []
 
-    project = Project.objects.filter(guid=success_story_types).prefetch_related(
-        Prefetch('family_set', to_attr='families', queryset=Family.objects.prefetch_related('individual_set'))
-    ).distinct().first()
-    if not project:
-        raise Exception('Invalid project {}'.format(success_story_types))
-
-    loaded_samples_by_project_family = _get_loaded_samples_by_project_family([project])
-    saved_variants_by_project_family = _get_saved_variants_by_project_family([project])
-    rows = _generate_rows(project, loaded_samples_by_project_family, saved_variants_by_project_family, errors)
+    if success_story_types == 'all':
+        all_families = Family.objects.filter(~Q(success_story=None))
+    else:
+        all_families = Family.objects.none()
+        for success_story_type in success_story_types:
+            families = Family.objects.filter(success_story_types__contains=success_story_type)
+            all_families = all_families.union(families)
+    rows = _generate_family_rows(all_families)
 
     return create_json_response({
         'rows': rows,
         'errors': errors,
     })
-
-
-def _generate_family_rows(families):
-    return families
 
 
 def _get_loaded_samples_by_project_family(projects):
@@ -783,6 +760,24 @@ def _generate_rows(project, loaded_samples_by_project_family, saved_variants_by_
 
     _update_gene_symbols(rows)
     _update_initial_omim_numbers(rows)
+
+    return rows
+
+
+def _generate_family_rows(families):
+    rows = []
+
+    for family in families:
+        project = family.project
+        row = {
+            "project_guid": project.guid,
+            "family_guid": family.guid,
+            "family_id": family.family_id,
+            "success_story_types": family.success_story_types,
+            "success_story": family.success_story,
+            "row_id": family.guid,
+        }
+        rows.append(row)
 
     return rows
 
