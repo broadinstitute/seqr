@@ -10,14 +10,14 @@ import DataLoader from 'shared/components/DataLoader'
 import { InlineHeader } from 'shared/components/StyledComponents'
 import { SUCCESS_STORY_COLUMNS } from '../constants'
 import { loadSuccessStory } from '../reducers'
-import { getDiscoverySheetLoading, getDiscoverySheetLoadingError, getDiscoverySheetRows } from '../selectors'
+import { getSuccessStoryLoading, getSuccessStoryLoadingError, getSuccessStoryRows } from '../selectors'
 // import TagFieldView from '../../../shared/components/panel/view-fields/TagFieldView'
 // import {
 //   FAMILY_SUCCESS_STORY_TYPE_OPTIONS,
 //   FAMILY_SUCCESS_STORY_TYPE_OPTIONS_LOOKUP,
 // } from '/shared/utils/constants'
 
-const getDownloadFilename = projectGuid => `success_story_${projectGuid}`
+const getDownloadFilename = successStoryTypes => `success_story_${successStoryTypes}`
 
 // eslint-disable-next-line camelcase
 const getFamilyFilterVal = ({ success_story }) => `${success_story}`
@@ -35,8 +35,8 @@ const ACTIVE_LINK_STYLE = {
 
 const getResultHref = page => result => `/staff/${page}/${result.key}`
 
-const DiscoverySheet = ({ match, data, loading, loadingError, load, filters }) =>
-  <DataLoader contentId={match.params.projectGuid} load={load} reloadOnIdUpdate content loading={false}>
+const SuccessStory = ({ match, data, loading, loadingError, load, filters }) =>
+  <DataLoader contentId={match.params.successStoryTypes} load={load} reloadOnIdUpdate content loading={false}>
     <InlineHeader size="medium" content="Projects:" />
     <AwesomeBar
       categories={SEARCH_CATEGORIES}
@@ -58,7 +58,6 @@ const DiscoverySheet = ({ match, data, loading, loadingError, load, filters }) =
     {/*      {FAMILY_SUCCESS_STORY_TYPE_OPTIONS_LOOKUP[tag].name}*/}
     {/*    </div>)}*/}
     {/*/>*/}
-    {/*or <NavLink to="/staff/discovery_sheet/all" activeStyle={ACTIVE_LINK_STYLE}>view all success stories</NavLink>*/}
     or <NavLink to="/staff/success_story/all" activeStyle={ACTIVE_LINK_STYLE}>view all success stories</NavLink>
     <HorizontalSpacer width={20} />
     {filters}
@@ -67,10 +66,10 @@ const DiscoverySheet = ({ match, data, loading, loadingError, load, filters }) =
       striped
       collapsing
       horizontalScroll
-      downloadFileName={getDownloadFilename(match.params.projectGuid, data)}
+      downloadFileName={getDownloadFilename(match.params.successStoryTypes, data)}
       idField="row_id"
       defaultSortColumn="family_id"
-      emptyContent={loadingError || (match.params.projectGuid ? '0 cases found' : 'Select a project to view data')}
+      emptyContent={loadingError || (match.params.successStoryTypes ? '0 cases found' : 'Select a project to view data')}
       loading={loading}
       data={data}
       columns={SUCCESS_STORY_COLUMNS}
@@ -79,7 +78,7 @@ const DiscoverySheet = ({ match, data, loading, loadingError, load, filters }) =
     />
   </DataLoader>
 
-DiscoverySheet.propTypes = {
+SuccessStory.propTypes = {
   match: PropTypes.object,
   data: PropTypes.array,
   loading: PropTypes.bool,
@@ -89,13 +88,13 @@ DiscoverySheet.propTypes = {
 }
 
 const mapStateToProps = state => ({
-  data: getDiscoverySheetRows(state),
-  loading: getDiscoverySheetLoading(state),
-  loadingError: getDiscoverySheetLoadingError(state),
+  data: getSuccessStoryRows(state),
+  loading: getSuccessStoryLoading(state),
+  loadingError: getSuccessStoryLoadingError(state),
 })
 
 const mapDispatchToProps = {
   load: loadSuccessStory,
 }
 
-export default connect(mapStateToProps, mapDispatchToProps)(DiscoverySheet)
+export default connect(mapStateToProps, mapDispatchToProps)(SuccessStory)

@@ -8,6 +8,9 @@ export const getAnvilRows = state => state.anvilRows
 export const getDiscoverySheetLoading = state => state.discoverySheetLoading.isLoading
 export const getDiscoverySheetLoadingError = state => state.discoverySheetLoading.errorMessage
 export const getDiscoverySheetRows = state => state.discoverySheetRows
+export const getSuccessStoryLoading = state => state.successStoryLoading.isLoading
+export const getSuccessStoryLoadingError = state => state.successStoryLoading.errorMessage
+export const getSuccessStoryRows = state => state.successStoryRows
 export const getElasticsearchStatusLoading = state => state.elasticsearchStatusLoading.isLoading
 export const getElasticsearchStatusData = state => state.elasticsearchStatus
 export const getMmeMetricsLoading = state => state.mmeMetricsLoading.isLoading
