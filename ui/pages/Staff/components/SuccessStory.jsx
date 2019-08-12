@@ -23,14 +23,24 @@ const getFamilyFilterVal = ({ success_story }) => `${success_story}`
 
 const LOADING_PROPS = { inline: true }
 
-const EMPTY_SELECTION = { successStoryTypes: [] }
-
 const ACTIVE_LINK_STYLE = {
   cursor: 'notAllowed',
   color: 'grey',
 }
 
-const SuccessStory = ({ match, data, loading, loadingError, load, filters }) =>
+const getInitialValue = (match) => {
+  const query = match.params.successStoryTypes
+  let queryToArr = []
+  if (query === 'all') {
+    queryToArr = Object.keys(FAMILY_SUCCESS_STORY_TYPE_OPTIONS_LOOKUP)
+  }
+  else if (query) {
+    queryToArr = query.split(',')
+  }
+  return { successStoryTypes: queryToArr }
+}
+
+const SuccessStory = ({ match, data, loading, loadingError, load, filters, history }) =>
   <DataLoader contentId={match.params.successStoryTypes} load={load} reloadOnIdUpdate content loading={false}>
     <InlineHeader size="medium" content="Types:" />
     <TagFieldView
@@ -38,12 +48,12 @@ const SuccessStory = ({ match, data, loading, loadingError, load, filters }) =>
       editLabel="choose success story types"
       field="successStoryTypes"
       idField="test"
-      initialValues={EMPTY_SELECTION}
+      initialValues={getInitialValue(match)}
       tagOptions={FAMILY_SUCCESS_STORY_TYPE_OPTIONS}
-      onSubmit={values => load(values)}
+      onSubmit={value => history.push(`/staff/success_story/${value.successStoryTypes}`)}
       showIconOnly
       simplifiedValue
-      fieldDisplay={values => values.map(tag =>
+      fieldDisplay={value => value.map(tag =>
         <span>
           <ColoredIcon name="stop" color={FAMILY_SUCCESS_STORY_TYPE_OPTIONS_LOOKUP[tag].color} />
           {FAMILY_SUCCESS_STORY_TYPE_OPTIONS_LOOKUP[tag].name}
@@ -77,6 +87,7 @@ SuccessStory.propTypes = {
   loadingError: PropTypes.string,
   load: PropTypes.func,
   filters: PropTypes.node,
+  history: PropTypes.object,
 }
 
 const mapStateToProps = state => ({
