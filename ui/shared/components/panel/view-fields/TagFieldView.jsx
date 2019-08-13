@@ -60,12 +60,13 @@ MetadataField.propTypes = {
 }
 
 
-const TagFieldView = ({ initialValues, field, tagOptions, popup, tagAnnotation, editMetadata, ...props }) => {
+const TagFieldView = ({ simplifiedValue, initialValues, field, tagOptions, popup, tagAnnotation, editMetadata, ...props }) => {
   const fieldValues = initialValues[field] || []
 
   tagOptions = tagOptions.map((tag, i) => {
     return { ...tag, ...fieldValues.find(val => val.name === tag.name), optionIndex: i }
   })
+
   const tagOptionsMap = tagOptions.reduce((acc, tag) => {
     return { [tag.name]: tag, ...acc }
   }, {})
@@ -75,13 +76,17 @@ const TagFieldView = ({ initialValues, field, tagOptions, popup, tagAnnotation, 
     [field]: fieldValues.map(tag => tagOptionsMap[tag.name]).sort((a, b) => a.optionIndex - b.optionIndex),
   }
 
-  const formFieldProps = {
-    component: LargeMultiselect,
-    placeholder: 'Variant Tags',
-    defaultOpen: true,
-    normalize: (value, previousValue, allValues, previousAllValues) => value.map(option => previousAllValues[field].find(prevFieldValue => prevFieldValue.name === option) || tagOptionsMap[option]),
-    format: options => options.map(tag => tag.name),
-  }
+  const formFieldProps = simplifiedValue ?
+    {
+      component: LargeMultiselect,
+      defaultOpen: true,
+    } :
+    {
+      component: LargeMultiselect,
+      defaultOpen: true,
+      normalize: (value, previousValue, allValues, previousAllValues) => value.map(option => previousAllValues[field].find(prevFieldValue => prevFieldValue.name === option) || tagOptionsMap[option]),
+      format: options => options.map(tag => tag.name),
+    }
 
   const additionalFields = editMetadata ? [{
     name: field,
@@ -96,7 +101,7 @@ const TagFieldView = ({ initialValues, field, tagOptions, popup, tagAnnotation, 
     tagOptions={tagOptions}
     formFieldProps={formFieldProps}
     additionalEditFields={additionalFields}
-    initialValues={mappedValues}
+    initialValues={simplifiedValue ? initialValues : mappedValues}
     modalStyle={MODAL_STYLE}
     fieldDisplay={displayFieldValues =>
       <span>
@@ -125,6 +130,7 @@ TagFieldView.propTypes = {
   editMetadata: PropTypes.bool,
   popup: PropTypes.func,
   tagAnnotation: PropTypes.func,
+  simplifiedValue: PropTypes.bool,
 }
 
 export default TagFieldView
