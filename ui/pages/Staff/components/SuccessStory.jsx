@@ -40,7 +40,7 @@ const formatInitialValue = (match) => {
   return { successStoryTypes: queryToArr }
 }
 
-const SuccessStory = ({ match, data, loading, loadingError, load, filters, history }) =>
+const SuccessStory = ({ match, data, loading, loadingError, load, history }) =>
   <DataLoader contentId={match.params.successStoryTypes} load={load} reloadOnIdUpdate content loading={false}>
     <InlineHeader size="medium" content="Types:" />
     <TagFieldView
@@ -61,8 +61,6 @@ const SuccessStory = ({ match, data, loading, loadingError, load, filters, histo
         </span>)}
     />
     or <NavLink to="/staff/success_story/all" activeStyle={ACTIVE_LINK_STYLE}>view all success stories</NavLink>
-    <HorizontalSpacer width={20} />
-    {filters}
     <VerticalSpacer height={15} />
     <SortableTable
       downloadFileName={getDownloadFilename(match.params.successStoryTypes, data)}
@@ -83,7 +81,6 @@ SuccessStory.propTypes = {
   loading: PropTypes.bool,
   loadingError: PropTypes.string,
   load: PropTypes.func,
-  filters: PropTypes.node,
   history: PropTypes.object,
 }
 
