@@ -100,8 +100,8 @@ const formatIDLink = row =>
 const formatSuccessStoryTypes = row =>
   row.success_story_types && <div>{row.success_story_types.map(tag => <div><small>{FAMILY_SUCCESS_STORY_TYPE_OPTIONS_LOOKUP[tag].name}</small></div>)}</div>
 
-const formatDiscoveryTags = row => <div>{row.extras_variant_tag_list}</div>
-// row.extras_variant_tag_list && <div>{row.extras_variant_tag_list.map(tag => <div><small>{tag}</small></div>)}</div>
+const formatDiscoveryTags = row =>
+  row.extras_variant_tag_list && <div>{row.extras_variant_tag_list.map(tag => <div><small>{tag}</small></div>)}</div>
 
 export const DISCOVERY_SHEET_COLUMNS = [
   { name: 't0', content: 'T0', format: formatT0, style: { minWidth: '100px' } },
