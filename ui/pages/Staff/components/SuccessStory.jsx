@@ -65,9 +65,6 @@ const SuccessStory = ({ match, data, loading, loadingError, load, filters, histo
     {filters}
     <VerticalSpacer height={15} />
     <SortableTable
-      striped
-      collapsing
-      horizontalScroll
       downloadFileName={getDownloadFilename(match.params.successStoryTypes, data)}
       idField="row_id"
       defaultSortColumn="family_id"

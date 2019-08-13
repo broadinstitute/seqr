@@ -15,6 +15,7 @@ import {
   INDIVIDUAL_FIELD_AFFECTED,
   FAMILY_SUCCESS_STORY_TYPE_OPTIONS_LOOKUP,
 } from 'shared/utils/constants'
+import {ColoredIcon} from "../../shared/components/StyledComponents";
 
 
 const PROJECT_ID_FIELD = 'Project_ID'
@@ -98,7 +99,15 @@ const formatIDLink = row =>
   </div>
 
 const formatSuccessStoryTypes = row =>
-  row.success_story_types && <div>{row.success_story_types.map(tag => <div><small>{FAMILY_SUCCESS_STORY_TYPE_OPTIONS_LOOKUP[tag].name}</small></div>)}</div>
+  row.success_story_types &&
+  <div>
+    {row.success_story_types.map(tag =>
+      <div>
+        <ColoredIcon name="stop" color={FAMILY_SUCCESS_STORY_TYPE_OPTIONS_LOOKUP[tag].color} />
+        {FAMILY_SUCCESS_STORY_TYPE_OPTIONS_LOOKUP[tag].name}
+      </div>,
+    )}
+  </div>
 
 const formatDiscoveryTags = row =>
   row.extras_variant_tag_list && <div>{row.extras_variant_tag_list.map(tag => <div><small>{tag}</small></div>)}</div>
