@@ -45,6 +45,7 @@ def parse_pedigree_table(parsed_file, filename, user=None, project=None):
 
         headers = [parsed_file[0]] + [row for row in parsed_file[1:] if row[0].startswith('#')]
         header_string = ','.join(headers[0])
+        is_datstat_upload = 'DATSTAT' in header_string
         if "do not modify" in header_string.lower() and "Broad" in header_string:
             # the merged pedigree/sample manifest has 3 header rows, so use the known header and skip the next 2 rows.
             headers = rows[:2]
@@ -86,6 +87,9 @@ def parse_pedigree_table(parsed_file, filename, user=None, project=None):
     if is_merged_pedigree_sample_manifest:
         logger.info("Parsing merged pedigree-sample-manifest file")
         rows, sample_manifest_rows, kit_id = _parse_merged_pedigree_sample_manifest_format(rows)
+    elif is_datstat_upload:
+        logger.info("Parsing datstat export file")
+        rows = _parse_datstat_export_format(rows)
     else:
         logger.info("Parsing regular pedigree file")
 
@@ -263,7 +267,7 @@ def _is_header_row(row):
         True if it's a header row rather than data
     """
     row = row.lower()
-    if "family" in row and "indiv" in row:
+    if "family" in row and ("indiv" in row or "datstat" in row):
         return True
     else:
         return False
@@ -282,48 +286,44 @@ def _is_merged_pedigree_sample_manifest_header_row(header_row):
         return False
 
 
-def _parse_merged_pedigree_sample_manifest_format(rows):
-    """Does post-processing of rows from Broad's sample manifest + pedigree table format. Expected columns are:
-
-    Kit ID, Well Position, Sample ID, Family ID, Collaborator Participant ID, Collaborator Sample ID,
-    Paternal Sample ID, Maternal ID, Gender, Affected Status, Volume, Concentration, Notes, Coded Phenotype,
-    Data Use Restrictions
-
-    Args:
-        rows (list): A list of lists where each list contains values from each column in the table.
-
-    Returns:
-         3-tuple: rows, sample_manifest_rows, kit_id
-    """
-
-    c = MergedPedigreeSampleManifestConstants
-    kit_id = rows[0][c.KIT_ID_COLUMN]
-
-    RENAME_COLUMNS = {
-        MergedPedigreeSampleManifestConstants.FAMILY_ID_COLUMN: JsonConstants.FAMILY_ID_COLUMN,
-        # TODO change this to COLLABORATOR_PARTICIPANT_ID_COLUMN once Sample ids are used for database lookups
-        MergedPedigreeSampleManifestConstants.COLLABORATOR_SAMPLE_ID_COLUMN: JsonConstants.INDIVIDUAL_ID_COLUMN,
-        MergedPedigreeSampleManifestConstants.PATERNAL_ID_COLUMN: JsonConstants.PATERNAL_ID_COLUMN,
-        MergedPedigreeSampleManifestConstants.MATERNAL_ID_COLUMN: JsonConstants.MATERNAL_ID_COLUMN,
-        MergedPedigreeSampleManifestConstants.SEX_COLUMN: JsonConstants.SEX_COLUMN,
-        MergedPedigreeSampleManifestConstants.AFFECTED_COLUMN: JsonConstants.AFFECTED_COLUMN,
-        #MergedPedigreeSampleManifestConstants.COLLABORATOR_SAMPLE_ID_COLUMN: JsonConstants.SAMPLE_ID_COLUMN,
-        MergedPedigreeSampleManifestConstants.NOTES_COLUMN: JsonConstants.NOTES_COLUMN,
-        MergedPedigreeSampleManifestConstants.CODED_PHENOTYPE_COLUMN: JsonConstants.CODED_PHENOTYPE_COLUMN,
-    }
+def _parse_datstat_export_format(rows):
 
     pedigree_rows = []
-    sample_manifest_rows = []
     for row in rows:
-        sample_manifest_rows.append({
-            column_name: row[column_name] for column_name in MergedPedigreeSampleManifestConstants.SAMPLE_MANIFEST_COLUMN_NAMES
-        })
+        family_id = 'RGP_{}'.format(row[DatstatConstants.FAMILY_ID_COLUMN])
+        maternal_id = '{}_1'.format(family_id)
+        paternal_id = '{}_2'.format(family_id)
 
-        pedigree_rows.append({
-            RENAME_COLUMNS.get(column_name, column_name): row[column_name] for column_name in MergedPedigreeSampleManifestConstants.MERGED_PEDIGREE_COLUMN_NAMES
-        })
+        proband_row = {
+            JsonConstants.FAMILY_ID_COLUMN: family_id,
+            JsonConstants.INDIVIDUAL_ID_COLUMN: '{}_3'.format(family_id),
+            JsonConstants.MATERNAL_ID_COLUMN: maternal_id,
+            JsonConstants.PATERNAL_ID_COLUMN: paternal_id,
+            JsonConstants.SEX_COLUMN: DatstatConstants.SEX_OPTION_MAP[row[DatstatConstants.SEX_COLUMN].split(':')[0]],
+            JsonConstants.AFFECTED_COLUMN: 'A',
+            JsonConstants.FAMILY_NOTES_COLUMN: _get_datstat_family_notes(row),
+        }
+        mother_row = {
+            JsonConstants.FAMILY_ID_COLUMN: family_id,
+            JsonConstants.INDIVIDUAL_ID_COLUMN: maternal_id,
+            JsonConstants.SEX_COLUMN: 'F',
+            JsonConstants.AFFECTED_COLUMN: 'U',
+        }
+        father_row = {
+            JsonConstants.FAMILY_ID_COLUMN: family_id,
+            JsonConstants.INDIVIDUAL_ID_COLUMN: paternal_id,
+            JsonConstants.SEX_COLUMN: 'M',
+            JsonConstants.AFFECTED_COLUMN: 'U',
+        }
+        pedigree_rows += [mother_row, father_row, proband_row]
 
-    return pedigree_rows, sample_manifest_rows, kit_id
+        # TODO family notes
+
+    return pedigree_rows
+
+
+def _get_datstat_family_notes(row):
+    """"CLINICAL INFORMATION"&CHAR(10)&Calculations[@relationship]&Ct[@brtb]&Calculations[@Age]&Ct[@brtb]&Calculations[@[Age of Onset]]&Ct[@brtb]&Calculations[@RaceEthnicity]&CHAR(10)&Calculations[@[Case Description]]&Ct[@brtb]&Calculations[@[Clinical Diagnoses]]&Ct[@brtb]&Calculations[@[Genetic Diagnoses]]&Ct[@brtb]&Calculations[@website]&CHAR(10)&Calculations[@InFormation]&CHAR(10)&CHAR(10)&"PRIOR TESTING"&CHAR(10)&Calculations[@[Referring Physician]]&CHAR(10)&Calculations[@[Doctors Seen]]&CHAR(10)&Calculations[@[Previous Testing]]&CHAR(10)&Calculations[@Biopsies]&CHAR(10)&Calculations[@[Other Studies]]&CHAR(10)&CHAR(10)&"FAMILY INFORMATION"&CHAR(10)&Calculations[@mother]&CHAR(10)&Calculations[@father]&CHAR(10)&Calculations[@siblings]&CHAR(10)&Calculations[@children]&CHAR(10)&Calculations[@relatives]"""
 
 
 def _send_sample_manifest(sample_manifest_rows, kit_id, original_filename, original_file_rows, user=None, project=None):
@@ -382,6 +382,50 @@ def _send_sample_manifest(sample_manifest_rows, kit_id, original_filename, origi
     email_message.send()
 
 
+def _parse_merged_pedigree_sample_manifest_format(rows):
+    """Does post-processing of rows from Broad's sample manifest + pedigree table format. Expected columns are:
+
+    Kit ID, Well Position, Sample ID, Family ID, Collaborator Participant ID, Collaborator Sample ID,
+    Paternal Sample ID, Maternal ID, Gender, Affected Status, Volume, Concentration, Notes, Coded Phenotype,
+    Data Use Restrictions
+
+    Args:
+        rows (list): A list of lists where each list contains values from each column in the table.
+
+    Returns:
+         3-tuple: rows, sample_manifest_rows, kit_id
+    """
+
+    c = MergedPedigreeSampleManifestConstants
+    kit_id = rows[0][c.KIT_ID_COLUMN]
+
+    RENAME_COLUMNS = {
+        MergedPedigreeSampleManifestConstants.FAMILY_ID_COLUMN: JsonConstants.FAMILY_ID_COLUMN,
+        # TODO change this to COLLABORATOR_PARTICIPANT_ID_COLUMN once Sample ids are used for database lookups
+        MergedPedigreeSampleManifestConstants.COLLABORATOR_SAMPLE_ID_COLUMN: JsonConstants.INDIVIDUAL_ID_COLUMN,
+        MergedPedigreeSampleManifestConstants.PATERNAL_ID_COLUMN: JsonConstants.PATERNAL_ID_COLUMN,
+        MergedPedigreeSampleManifestConstants.MATERNAL_ID_COLUMN: JsonConstants.MATERNAL_ID_COLUMN,
+        MergedPedigreeSampleManifestConstants.SEX_COLUMN: JsonConstants.SEX_COLUMN,
+        MergedPedigreeSampleManifestConstants.AFFECTED_COLUMN: JsonConstants.AFFECTED_COLUMN,
+        #MergedPedigreeSampleManifestConstants.COLLABORATOR_SAMPLE_ID_COLUMN: JsonConstants.SAMPLE_ID_COLUMN,
+        MergedPedigreeSampleManifestConstants.NOTES_COLUMN: JsonConstants.NOTES_COLUMN,
+        MergedPedigreeSampleManifestConstants.CODED_PHENOTYPE_COLUMN: JsonConstants.CODED_PHENOTYPE_COLUMN,
+    }
+
+    pedigree_rows = []
+    sample_manifest_rows = []
+    for row in rows:
+        sample_manifest_rows.append({
+            column_name: row[column_name] for column_name in MergedPedigreeSampleManifestConstants.SAMPLE_MANIFEST_COLUMN_NAMES
+        })
+
+        pedigree_rows.append({
+            RENAME_COLUMNS.get(column_name, column_name): row[column_name] for column_name in MergedPedigreeSampleManifestConstants.MERGED_PEDIGREE_COLUMN_NAMES
+        })
+
+    return pedigree_rows, sample_manifest_rows, kit_id
+
+
 class JsonConstants:
     FAMILY_ID_COLUMN = 'familyId'
     INDIVIDUAL_ID_COLUMN = 'individualId'
@@ -392,6 +436,7 @@ class JsonConstants:
     AFFECTED_COLUMN = 'affected'
     SAMPLE_ID_COLUMN = 'sampleId'
     NOTES_COLUMN = 'notes'
+    FAMILY_NOTES_COLUMN = 'familyNotes'
 
     CODED_PHENOTYPE_COLUMN = 'codedPhenotype'
 
@@ -475,3 +520,8 @@ class MergedPedigreeSampleManifestConstants:
     SAMPLE_MANIFEST_HEADER_ROW2[6] = 'ng/ul'
 
 
+class DatstatConstants:
+    FAMILY_ID_COLUMN = 'FAMILY_ID'
+    SEX_COLUMN = 'PATIENT_SEX'
+
+    SEX_OPTION_MAP = {'1': 'MALE', '2': 'FEMALE', '3': 'UNKNOWN'}
