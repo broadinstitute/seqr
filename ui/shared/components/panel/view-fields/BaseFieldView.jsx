@@ -60,6 +60,8 @@ class BaseFieldView extends React.PureComponent {
                 <ButtonLink
                   icon={this.props.editIconName || 'write'}
                   content={this.props.editLabel}
+                  size="tiny"
+                  labelPosition="right"
                   onClick={this.toggleButtonVisibility}
                 />
                 :
