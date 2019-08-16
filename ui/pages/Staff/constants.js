@@ -8,14 +8,13 @@ import {
   INDIVIDUAL_HPO_EXPORT_DATA,
   FAMILY_FIELD_CODED_PHENOTYPE,
   FAMILY_FIELD_ID,
+  FAMILY_SUCCESS_STORY_TYPE_TAG,
   INDIVIDUAL_FIELD_ID,
   INDIVIDUAL_FIELD_PATERNAL_ID,
   INDIVIDUAL_FIELD_MATERNAL_ID,
   INDIVIDUAL_FIELD_SEX,
   INDIVIDUAL_FIELD_AFFECTED,
-  FAMILY_SUCCESS_STORY_TYPE_OPTIONS_LOOKUP,
 } from 'shared/utils/constants'
-import {ColoredIcon} from "../../shared/components/StyledComponents";
 
 
 const PROJECT_ID_FIELD = 'Project_ID'
@@ -94,20 +93,10 @@ const formatFamilySummary = row =>
   </div>
 
 const formatIDLink = row =>
-  <div>
-    <Link to={`/project/${row.project_guid}/family_page/${row.family_guid}`} target="_blank">{row.family_id}</Link>
-  </div>
+  <Link to={`/project/${row.project_guid}/family_page/${row.family_guid}`} target="_blank">{row.family_id}</Link>
 
 const formatSuccessStoryTypes = row =>
-  row.success_story_types &&
-  <div>
-    {row.success_story_types.map(tag =>
-      <div>
-        <ColoredIcon name="stop" color={FAMILY_SUCCESS_STORY_TYPE_OPTIONS_LOOKUP[tag].color} />
-        {FAMILY_SUCCESS_STORY_TYPE_OPTIONS_LOOKUP[tag].name}
-      </div>,
-    )}
-  </div>
+  row.success_story_types && row.success_story_types.map(tag => <div>{FAMILY_SUCCESS_STORY_TYPE_TAG(tag)}</div>)
 
 const formatDiscoveryTags = row =>
   row.extras_variant_tag_list && <div>{row.extras_variant_tag_list.map(tag => <div><small>{tag}</small></div>)}</div>

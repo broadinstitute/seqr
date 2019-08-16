@@ -1,3 +1,4 @@
+import React from 'react'
 import { Form } from 'semantic-ui-react'
 import orderBy from 'lodash/orderBy'
 
@@ -10,7 +11,7 @@ import SingleFieldView from '../components/panel/view-fields/SingleFieldView'
 import TagFieldView from '../components/panel/view-fields/TagFieldView'
 
 import { stripMarkdown } from './stringUtils'
-
+import { ColoredIcon } from '../components/StyledComponents'
 
 export const GENOME_VERSION_37 = '37'
 export const GENOME_VERSION_38 = '38'
@@ -107,6 +108,12 @@ export const FAMILY_SUCCESS_STORY_TYPE_OPTIONS = [
 export const FAMILY_SUCCESS_STORY_TYPE_OPTIONS_LOOKUP = FAMILY_SUCCESS_STORY_TYPE_OPTIONS.reduce((acc, tag) => {
   return { [tag.value]: tag, ...acc }
 }, {})
+
+export const FAMILY_SUCCESS_STORY_TYPE_TAG = tag =>
+  <span>
+    <ColoredIcon name="stop" color={FAMILY_SUCCESS_STORY_TYPE_OPTIONS_LOOKUP[tag].color} />
+    {FAMILY_SUCCESS_STORY_TYPE_OPTIONS_LOOKUP[tag].name}
+  </span>
 
 // FAMILY FIELDS
 
