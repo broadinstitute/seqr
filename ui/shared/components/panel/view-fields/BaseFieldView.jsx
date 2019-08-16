@@ -74,7 +74,6 @@ class BaseFieldView extends React.PureComponent {
                     initialValues={this.props.initialValues}
                     fields={this.props.formFields}
                     showErrorPanel={this.props.showErrorPanel}
-                    confirmCloseIfNotSaved
                   />
                 </Segment>
               }
@@ -110,11 +109,11 @@ class BaseFieldView extends React.PureComponent {
 
     const deleteButton = this.props.isDeletable && (
       <DeleteButton
+        size="tiny"
         key="delete"
         initialValues={this.props.initialValues}
         onSubmit={this.props.onSubmit}
         confirmDialog={this.props.deleteConfirm}
-        size="tiny"
       />
     )
     const buttons = [editButton, deleteButton]
