@@ -274,6 +274,7 @@ const FamilyVariantTags = (
               />,
             )}
             <VariantNoteField
+              showInLine
               variant={savedVariant || variant}
               family={family}
               editIconName="plus"

@@ -58,7 +58,8 @@ class BaseFieldView extends React.PureComponent {
             <div>
               {this.state.showInLineButton ?
                 <ButtonLink
-                  icon="write"
+                  icon={this.props.editIconName || 'write'}
+                  content={this.props.editLabel}
                   onClick={this.toggleButtonVisibility}
                 />
                 :
