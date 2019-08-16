@@ -411,9 +411,8 @@ def discovery_sheet(request, project_guid):
 
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
 def success_story(request, success_story_types):
-
     if success_story_types == 'all':
-        families = Family.objects.filter(~Q(success_story=None))
+        families = Family.objects.filter(success_story__isnull=False)
     else:
         success_story_types = success_story_types.split(',')
         families = Family.objects.filter(success_story_types__overlap=success_story_types)
