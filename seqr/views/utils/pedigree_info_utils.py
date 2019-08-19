@@ -76,7 +76,7 @@ def parse_pedigree_table(parsed_file, filename, user=None, project=None):
         for i, row in enumerate(rows):
             if len(row) != len(header):
                 raise ValueError("Row {} contains {} columns: {}, while header contains {}: {}".format(
-                    i + 1, len(row), row, len(header), header
+                    i + 1, len(row), ', '.join(row), len(header), ', '.join(header)
                 ))
 
         rows = [dict(zip(header, row)) for row in rows]
@@ -96,7 +96,7 @@ def parse_pedigree_table(parsed_file, filename, user=None, project=None):
 
     # convert to json and validate
     try:
-        json_records = convert_fam_file_rows_to_json(rows)
+        json_records = _convert_fam_file_rows_to_json(rows)
     except ValueError as e:
         errors.append("Error while converting %(filename)s rows to json: %(e)s" % locals())
         return json_records, errors, warnings
@@ -109,7 +109,7 @@ def parse_pedigree_table(parsed_file, filename, user=None, project=None):
     return json_records, errors, warnings
 
 
-def convert_fam_file_rows_to_json(rows):
+def _convert_fam_file_rows_to_json(rows):
     """Parse the values in rows and convert them to a json representation.
 
     Args:
