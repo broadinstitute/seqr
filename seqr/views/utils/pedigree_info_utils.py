@@ -289,6 +289,106 @@ def _is_merged_pedigree_sample_manifest_header_row(header_row):
         return False
 
 
+def _parse_merged_pedigree_sample_manifest_format(rows):
+    """Does post-processing of rows from Broad's sample manifest + pedigree table format. Expected columns are:
+
+    Kit ID, Well Position, Sample ID, Family ID, Collaborator Participant ID, Collaborator Sample ID,
+    Paternal Sample ID, Maternal ID, Gender, Affected Status, Volume, Concentration, Notes, Coded Phenotype,
+    Data Use Restrictions
+
+    Args:
+        rows (list): A list of lists where each list contains values from each column in the table.
+
+    Returns:
+         3-tuple: rows, sample_manifest_rows, kit_id
+    """
+
+    c = MergedPedigreeSampleManifestConstants
+    kit_id = rows[0][c.KIT_ID_COLUMN]
+
+    RENAME_COLUMNS = {
+        MergedPedigreeSampleManifestConstants.FAMILY_ID_COLUMN: JsonConstants.FAMILY_ID_COLUMN,
+        # TODO change this to COLLABORATOR_PARTICIPANT_ID_COLUMN once Sample ids are used for database lookups
+        MergedPedigreeSampleManifestConstants.COLLABORATOR_SAMPLE_ID_COLUMN: JsonConstants.INDIVIDUAL_ID_COLUMN,
+        MergedPedigreeSampleManifestConstants.PATERNAL_ID_COLUMN: JsonConstants.PATERNAL_ID_COLUMN,
+        MergedPedigreeSampleManifestConstants.MATERNAL_ID_COLUMN: JsonConstants.MATERNAL_ID_COLUMN,
+        MergedPedigreeSampleManifestConstants.SEX_COLUMN: JsonConstants.SEX_COLUMN,
+        MergedPedigreeSampleManifestConstants.AFFECTED_COLUMN: JsonConstants.AFFECTED_COLUMN,
+        #MergedPedigreeSampleManifestConstants.COLLABORATOR_SAMPLE_ID_COLUMN: JsonConstants.SAMPLE_ID_COLUMN,
+        MergedPedigreeSampleManifestConstants.NOTES_COLUMN: JsonConstants.NOTES_COLUMN,
+        MergedPedigreeSampleManifestConstants.CODED_PHENOTYPE_COLUMN: JsonConstants.CODED_PHENOTYPE_COLUMN,
+    }
+
+    pedigree_rows = []
+    sample_manifest_rows = []
+    for row in rows:
+        sample_manifest_rows.append({
+            column_name: row[column_name] for column_name in MergedPedigreeSampleManifestConstants.SAMPLE_MANIFEST_COLUMN_NAMES
+        })
+
+        pedigree_rows.append({
+            RENAME_COLUMNS.get(column_name, column_name): row[column_name] for column_name in MergedPedigreeSampleManifestConstants.MERGED_PEDIGREE_COLUMN_NAMES
+        })
+
+    return pedigree_rows, sample_manifest_rows, kit_id
+
+
+def _send_sample_manifest(sample_manifest_rows, kit_id, original_filename, original_file_rows, user=None, project=None):
+
+    # write out the sample manifest file
+    wb = xl.Workbook()
+    ws = wb.active
+    ws.title = "Sample Info"
+
+    ws.append(MergedPedigreeSampleManifestConstants.SAMPLE_MANIFEST_HEADER_ROW1)
+    ws.append(MergedPedigreeSampleManifestConstants.SAMPLE_MANIFEST_HEADER_ROW2)
+
+    for row in sample_manifest_rows:
+        ws.append([row[column_key] for column_key in MergedPedigreeSampleManifestConstants.SAMPLE_MANIFEST_COLUMN_NAMES])
+
+    temp_sample_manifest_file = tempfile.NamedTemporaryFile()
+    wb.save(temp_sample_manifest_file.name)
+    temp_sample_manifest_file.seek(0)
+
+    sample_manifest_filename = kit_id+".xls"
+    logger.info("Sending sample manifest file %s to %s" % (sample_manifest_filename, settings.UPLOADED_PEDIGREE_FILE_RECIPIENTS))
+
+    original_table_attachment_filename = os.path.basename(original_filename).replace(".xlsx", ".xls")
+
+    if user is not None and project is not None:
+        user_email_or_username = user.email or user.username
+        email_body = "User %(user_email_or_username)s just uploaded pedigree info to %(project)s.<br />" % locals()
+    else:
+        email_body = ""
+
+    email_body += """This email has 2 attached files:<br />
+    <br />
+    <b>%(sample_manifest_filename)s</b> is the sample manifest file in a format that can be sent to GP.<br />
+    <br />
+    <b>%(original_filename)s</b> is the original merged pedigree-sample-manifest file that the user uploaded.<br />
+    """ % locals()
+
+    temp_original_file = tempfile.NamedTemporaryFile()
+    wb_out = xl.Workbook()
+    ws_out = wb_out.active
+    for row in original_file_rows:
+        ws_out.append(row)
+    wb_out.save(temp_original_file.name)
+    temp_original_file.seek(0)
+
+    email_message = EmailMultiAlternatives(
+        subject=kit_id + " Merged Sample Pedigree File",
+        body=strip_tags(email_body),
+        to=settings.UPLOADED_PEDIGREE_FILE_RECIPIENTS,
+        attachments=[
+            (sample_manifest_filename, temp_sample_manifest_file.read(), "application/xls"),
+            (original_table_attachment_filename, temp_original_file.read(), "application/xls"),
+        ],
+    )
+    email_message.attach_alternative(email_body, 'text/html')
+    email_message.send()
+
+
 def _parse_datstat_export_format(rows):
 
     pedigree_rows = []
@@ -487,106 +587,6 @@ def _get_datstat_family_notes(row):
         children=_relative_list_summary(DC.CHILDREN),
         relatives=_relative_list_summary(DC.OTHER_RELATIVES, all_affected=True),
     )
-
-
-def _send_sample_manifest(sample_manifest_rows, kit_id, original_filename, original_file_rows, user=None, project=None):
-
-    # write out the sample manifest file
-    wb = xl.Workbook()
-    ws = wb.active
-    ws.title = "Sample Info"
-
-    ws.append(MergedPedigreeSampleManifestConstants.SAMPLE_MANIFEST_HEADER_ROW1)
-    ws.append(MergedPedigreeSampleManifestConstants.SAMPLE_MANIFEST_HEADER_ROW2)
-
-    for row in sample_manifest_rows:
-        ws.append([row[column_key] for column_key in MergedPedigreeSampleManifestConstants.SAMPLE_MANIFEST_COLUMN_NAMES])
-
-    temp_sample_manifest_file = tempfile.NamedTemporaryFile()
-    wb.save(temp_sample_manifest_file.name)
-    temp_sample_manifest_file.seek(0)
-
-    sample_manifest_filename = kit_id+".xls"
-    logger.info("Sending sample manifest file %s to %s" % (sample_manifest_filename, settings.UPLOADED_PEDIGREE_FILE_RECIPIENTS))
-
-    original_table_attachment_filename = os.path.basename(original_filename).replace(".xlsx", ".xls")
-
-    if user is not None and project is not None:
-        user_email_or_username = user.email or user.username
-        email_body = "User %(user_email_or_username)s just uploaded pedigree info to %(project)s.<br />" % locals()
-    else:
-        email_body = ""
-
-    email_body += """This email has 2 attached files:<br />
-    <br />
-    <b>%(sample_manifest_filename)s</b> is the sample manifest file in a format that can be sent to GP.<br />
-    <br />
-    <b>%(original_filename)s</b> is the original merged pedigree-sample-manifest file that the user uploaded.<br />
-    """ % locals()
-
-    temp_original_file = tempfile.NamedTemporaryFile()
-    wb_out = xl.Workbook()
-    ws_out = wb_out.active
-    for row in original_file_rows:
-        ws_out.append(row)
-    wb_out.save(temp_original_file.name)
-    temp_original_file.seek(0)
-
-    email_message = EmailMultiAlternatives(
-        subject=kit_id + " Merged Sample Pedigree File",
-        body=strip_tags(email_body),
-        to=settings.UPLOADED_PEDIGREE_FILE_RECIPIENTS,
-        attachments=[
-            (sample_manifest_filename, temp_sample_manifest_file.read(), "application/xls"),
-            (original_table_attachment_filename, temp_original_file.read(), "application/xls"),
-        ],
-    )
-    email_message.attach_alternative(email_body, 'text/html')
-    email_message.send()
-
-
-def _parse_merged_pedigree_sample_manifest_format(rows):
-    """Does post-processing of rows from Broad's sample manifest + pedigree table format. Expected columns are:
-
-    Kit ID, Well Position, Sample ID, Family ID, Collaborator Participant ID, Collaborator Sample ID,
-    Paternal Sample ID, Maternal ID, Gender, Affected Status, Volume, Concentration, Notes, Coded Phenotype,
-    Data Use Restrictions
-
-    Args:
-        rows (list): A list of lists where each list contains values from each column in the table.
-
-    Returns:
-         3-tuple: rows, sample_manifest_rows, kit_id
-    """
-
-    c = MergedPedigreeSampleManifestConstants
-    kit_id = rows[0][c.KIT_ID_COLUMN]
-
-    RENAME_COLUMNS = {
-        MergedPedigreeSampleManifestConstants.FAMILY_ID_COLUMN: JsonConstants.FAMILY_ID_COLUMN,
-        # TODO change this to COLLABORATOR_PARTICIPANT_ID_COLUMN once Sample ids are used for database lookups
-        MergedPedigreeSampleManifestConstants.COLLABORATOR_SAMPLE_ID_COLUMN: JsonConstants.INDIVIDUAL_ID_COLUMN,
-        MergedPedigreeSampleManifestConstants.PATERNAL_ID_COLUMN: JsonConstants.PATERNAL_ID_COLUMN,
-        MergedPedigreeSampleManifestConstants.MATERNAL_ID_COLUMN: JsonConstants.MATERNAL_ID_COLUMN,
-        MergedPedigreeSampleManifestConstants.SEX_COLUMN: JsonConstants.SEX_COLUMN,
-        MergedPedigreeSampleManifestConstants.AFFECTED_COLUMN: JsonConstants.AFFECTED_COLUMN,
-        #MergedPedigreeSampleManifestConstants.COLLABORATOR_SAMPLE_ID_COLUMN: JsonConstants.SAMPLE_ID_COLUMN,
-        MergedPedigreeSampleManifestConstants.NOTES_COLUMN: JsonConstants.NOTES_COLUMN,
-        MergedPedigreeSampleManifestConstants.CODED_PHENOTYPE_COLUMN: JsonConstants.CODED_PHENOTYPE_COLUMN,
-    }
-
-    pedigree_rows = []
-    sample_manifest_rows = []
-    for row in rows:
-        sample_manifest_rows.append({
-            column_name: row[column_name] for column_name in MergedPedigreeSampleManifestConstants.SAMPLE_MANIFEST_COLUMN_NAMES
-        })
-
-        pedigree_rows.append({
-            RENAME_COLUMNS.get(column_name, column_name): row[column_name] for column_name in MergedPedigreeSampleManifestConstants.MERGED_PEDIGREE_COLUMN_NAMES
-        })
-
-    return pedigree_rows, sample_manifest_rows, kit_id
 
 
 class JsonConstants:

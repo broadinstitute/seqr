@@ -247,8 +247,6 @@ def receive_individuals_table_handler(request, project_guid):
     except ErrorsWarningsException as e:
         return create_json_response({'errors': e.errors, 'warnings': e.warnings}, status=400, reason=e.errors)
     except Exception as e:
-        import traceback
-        traceback.print_exc()
         return create_json_response({'errors': [e.message or str(e)], 'warnings': []}, status=400, reason=e.message or str(e))
 
     # send back some stats
