@@ -362,7 +362,7 @@ def _get_datstat_family_notes(row):
 
         parent_details = [_bool_condition_val(DC.AFFECTED_KEY, 'affected', 'unaffected', 'unknown affected status')]
         if row[col_config[DC.AFFECTED_KEY]] == DC.YES:
-            parent_details.append(row[col_config[DC.PARENT_AGE_KEY]])
+            parent_details.append('age {}'.format(row[col_config[DC.PARENT_AGE_KEY]]))
         parent_details.append('available' if row[col_config[DC.CAN_PARTICIPATE_KEY]] == DC.YES else 'unavailable')
         if not row[col_config[DC.CAN_PARTICIPATE_KEY]] == DC.YES:
             parent_details.append(_bool_condition_val(DC.DECEASED_KEY, yes='deceased', no='living', unknown='unknown deceased status', default='unspecified deceased status'))
@@ -376,7 +376,7 @@ def _get_datstat_family_notes(row):
         sex_map = DC.RELATIVE_SEX_MAP[relative]
 
         if row[col_config[DC.NO_RELATIVES_KEY]] == DC.YES:
-            return '{}: None'.format(relative.title())
+            return 'None'
 
         def _bool_condition_val(val, display, unknown_display):
             if val == 'YES':
@@ -393,8 +393,7 @@ def _get_datstat_family_notes(row):
         ]) for rel in json.loads(row[col_config[DC.RELATIVES_LIST_KEY]] or '[]') or []]
 
         divider = '\n{tab}{tab}'.format(tab=DC.TAB)
-        return '{title}: {divider}{relatives}'.format(
-            title=relative.title(),
+        return '{divider}{relatives}'.format(
             divider=divider,
             relatives=divider.join(relatives),
         ).replace('UnknownUnsure', 'Unknown/Unsure')
@@ -418,7 +417,7 @@ def _get_datstat_family_notes(row):
         if _has_test(DC.GENE_PANEL_TEST):
             all_tests.append('Gene panel testing')
         if _has_test(DC.MITOCHON_GENOME_TEST):
-            all_tests.append('"Mitochondrial genome sequencing')
+            all_tests.append('Mitochondrial genome sequencing')
         if _has_test(DC.MICROARRAY_TEST):
             all_tests.append(_test_summary(DC.MICROARRAY_TEST, 'Microarray'))
         if _has_test(DC.WES_TEST):
@@ -426,34 +425,32 @@ def _get_datstat_family_notes(row):
         if _has_test(DC.WGS_TEST):
             all_tests.append(_test_summary(DC.WGS_TEST, 'Whole genome sequencing'))
         if _has_test(DC.OTHER_TEST):
-            all_tests.append('Other tests: {}'.format(row[DC.OTHER_TEST_COLUMN]))
+            all_tests.append('Other tests: {}'.format(row[DC.OTHER_TEST_COLUMN] or 'Unspecified'))
 
         testing = 'Yes;\n{tab}{tab}{tests}'.format(tab=DC.TAB, tests='\n{0}{0}'.format(DC.TAB).join(all_tests))
 
-    return """**CLINICAL INFORMATION**
-    {tab} __Patient is my:__ {specified_relationship}{relationship}
-    {tab} __Current Age:__ {age}
-    {tab} __Age of Onset:__ {age_of_onset}
-    {tab} __Race/Ethnicity:__ {race}; {ethnicity}
-    {tab} __Case Description:__ {description}
-    {tab} __Clinical Diagnoses:__ {clinical_diagnoses}{clinical_diagnoses_specify}
-    {tab} __Genetic Diagnoses:__ {genetic_diagnoses}{genetic_diagnoses_specify}
-    {tab} __Website/Blog:__ {website}
-    {tab} __Additional Information:__ {info}
-
-    **PRIOR TESTING**
-    {tab} __Referring Physician:__ {physician}
-    {tab} __Doctors Seen:__ {doctors}{other_doctors}
-    {tab} __Previous Testing:__ {testing}
-    {tab} __Biopsies Available:__ {biopses}{other_biopses}
-    {tab} __Other Research Studies:__ {studies}
-
-    **FAMILY INFORMATION**
-    {tab} __Mother:__ {mother}
-    {tab} __Father:__ {father}
-    {tab} __Siblings:__ {siblings}
-    {tab} __Children:__ {children}
-    {tab} __Relatives:__ {relatives}
+    return """#### Clinical Information 
+{tab} __Patient is my:__ {specified_relationship}{relationship}
+{tab} __Current Age:__ {age}
+{tab} __Age of Onset:__ {age_of_onset}
+{tab} __Race/Ethnicity:__ {race}; {ethnicity}
+{tab} __Case Description:__ {description}
+{tab} __Clinical Diagnoses:__ {clinical_diagnoses}{clinical_diagnoses_specify}
+{tab} __Genetic Diagnoses:__ {genetic_diagnoses}{genetic_diagnoses_specify}
+{tab} __Website/Blog:__ {website}
+{tab} __Additional Information:__ {info}
+#### Prior Testing
+{tab} __Referring Physician:__ {physician}
+{tab} __Doctors Seen:__ {doctors}{other_doctors}
+{tab} __Previous Testing:__ {testing}
+{tab} __Biopsies Available:__ {biopses}{other_biopses}
+{tab} __Other Research Studies:__ {studies}
+#### Family Information
+{tab} __Mother:__ {mother}
+{tab} __Father:__ {father}
+{tab} __Siblings:__ {siblings}
+{tab} __Children:__ {children}
+{tab} __Relatives:__ {relatives}
     """.format(
         tab=DC.TAB,
         specified_relationship=row[DC.RELATIONSHIP_SPECIFY_COLUMN] or 'Unspecified other relationship'
@@ -473,15 +470,15 @@ def _get_datstat_family_notes(row):
         genetic_diagnoses=genetic_diagnoses,
         genetic_diagnoses_specify='; {}'.format(row[DC.GENETIC_DIAGNOSES_SPECIFY_COLUMN]) if genetic_diagnoses == 'Yes' else '',
         website='Yes' if row[DC.WEBSITE_COLUMN] else 'No',
-        info=row[DC.FAMILY_INFO_COLUMN],
+        info=row[DC.FAMILY_INFO_COLUMN] or 'None specified',
         physician=row[DC.DOCTOR_DETAILS_COLUMN] or 'Not specified' if row[DC.HAS_DOCTOR_COLUMN] == DatstatConstants.YES else 'None',
         doctors=', '.join(doctors_list).replace('ClinGen', 'Clinical geneticist'),
         other_doctors=': {}'.format(row[DC.DOCTOR_TYPES_SPECIFY_COLUMN] or 'Unspecified') if 'Other' in doctors_list else '',
         testing=testing,
         biopses='None' if 'NONE' in biopsy_split[0] or not biopsy_split[0] else biopsy_split[1],
-        other_biopses=': {}'.format(row[DC.OTHER_BIOPSY_COLUMN]) if 'OTHER' in biopsy_split[0] else '',
+        other_biopses=': {}'.format(row[DC.OTHER_BIOPSY_COLUMN] or 'Unspecified') if 'OTHER' in biopsy_split[0] else '',
         studies='Yes, Name of studies: {study_names}, Expecting results: {expecting_results}'.format(
-            study_names=row[DC.OTHER_STUDIES_COLUMN],
+            study_names=row[DC.OTHER_STUDIES_COLUMN] or 'Unspecified',
             expecting_results=_get_column_val(DC.EXPECTING_RESULTS_COLUMN) if row[DC.EXPECTING_RESULTS_COLUMN] else 'Unspecified',
         ) if row[DC.HAS_OTHER_STUDIES_COLUMN] == DC.YES else 'No',
         mother=_parent_summary(DC.MOTHER),
