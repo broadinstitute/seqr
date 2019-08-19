@@ -10,7 +10,7 @@ import { InlineHeader } from 'shared/components/StyledComponents'
 import {
   FAMILY_SUCCESS_STORY_TYPE_OPTIONS,
   FAMILY_SUCCESS_STORY_TYPE_OPTIONS_LOOKUP,
-  FAMILY_SUCCESS_STORY_TYPE_TAG,
+  successStoryTypeDisplay,
 } from '../../../shared/utils/constants'
 import { SUCCESS_STORY_COLUMNS } from '../constants'
 import { loadSuccessStory } from '../reducers'
@@ -56,7 +56,7 @@ const SuccessStory = ({ match, data, loading, loadingError, load, history }) =>
       simplifiedValue
       fieldDisplay={value => value.map(tag =>
         <span>
-          {FAMILY_SUCCESS_STORY_TYPE_TAG(tag)}
+          {successStoryTypeDisplay(tag)}
           <HorizontalSpacer width={4} />
         </span>)}
     />

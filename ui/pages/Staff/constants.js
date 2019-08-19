@@ -8,7 +8,7 @@ import {
   INDIVIDUAL_HPO_EXPORT_DATA,
   FAMILY_FIELD_CODED_PHENOTYPE,
   FAMILY_FIELD_ID,
-  FAMILY_SUCCESS_STORY_TYPE_TAG,
+  successStoryTypeDisplay,
   INDIVIDUAL_FIELD_ID,
   INDIVIDUAL_FIELD_PATERNAL_ID,
   INDIVIDUAL_FIELD_MATERNAL_ID,
@@ -96,7 +96,7 @@ const formatIDLink = row =>
   <Link to={`/project/${row.project_guid}/family_page/${row.family_guid}`} target="_blank">{row.family_id}</Link>
 
 const formatSuccessStoryTypes = row =>
-  row.success_story_types && row.success_story_types.map(tag => <div>{FAMILY_SUCCESS_STORY_TYPE_TAG(tag)}</div>)
+  row.success_story_types && row.success_story_types.map(tag => <div>{successStoryTypeDisplay(tag)}</div>)
 
 const formatDiscoveryTags = row =>
   row.extras_variant_tag_list && <div>{row.extras_variant_tag_list.map(tag => <div><small>{tag}</small></div>)}</div>

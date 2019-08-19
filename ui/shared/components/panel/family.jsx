@@ -21,7 +21,7 @@ import {
   FAMILY_FIELD_ASSIGNED_ANALYST,
   FAMILY_FIELD_ANALYSED_BY,
   FAMILY_SUCCESS_STORY_TYPE_OPTIONS,
-  FAMILY_SUCCESS_STORY_TYPE_TAG,
+  successStoryTypeDisplay,
   FAMILY_FIELD_SUCCESS_STORY_TYPE,
   FAMILY_FIELD_FIRST_SAMPLE,
   FAMILY_FIELD_RENDER_LOOKUP,
@@ -119,7 +119,7 @@ const familyFieldRenderProps = {
   [FAMILY_FIELD_SUCCESS_STORY_TYPE]: {
     tagOptions: FAMILY_SUCCESS_STORY_TYPE_OPTIONS,
     simplifiedValue: true,
-    fieldDisplay: value => value.map(tag => <div>{FAMILY_SUCCESS_STORY_TYPE_TAG(tag)}</div>,
+    fieldDisplay: value => value.map(tag => <div>{successStoryTypeDisplay(tag)}</div>,
     ),
   },
   [FAMILY_FIELD_FIRST_SAMPLE]: {

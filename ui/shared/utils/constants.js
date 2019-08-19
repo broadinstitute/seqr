@@ -109,7 +109,7 @@ export const FAMILY_SUCCESS_STORY_TYPE_OPTIONS_LOOKUP = FAMILY_SUCCESS_STORY_TYP
   return { [tag.value]: tag, ...acc }
 }, {})
 
-export const FAMILY_SUCCESS_STORY_TYPE_TAG = tag =>
+export const successStoryTypeDisplay = tag =>
   <span>
     <ColoredIcon name="stop" color={FAMILY_SUCCESS_STORY_TYPE_OPTIONS_LOOKUP[tag].color} />
     {FAMILY_SUCCESS_STORY_TYPE_OPTIONS_LOOKUP[tag].name}
