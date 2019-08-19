@@ -182,9 +182,10 @@ VariantTagField.propTypes = {
   family: PropTypes.object.isRequired,
 }
 
-const VariantNoteField = ({ action, note, variant, family, ...props }) => {
+const VariantNoteField = ({ action, note, variant, family, showInLine, ...props }) => {
   const values = { ...variant, ...note }
   return <TextFieldView
+    showInLine
     isEditable
     field="note"
     modalId={family.familyGuid}
@@ -262,7 +263,6 @@ const FamilyVariantTags = (
           <NoteContainer>
             {savedVariant && savedVariant.notes.map(note =>
               <VariantNoteField
-                showInLine
                 key={note.noteGuid}
                 note={note}
                 variant={savedVariant}
@@ -274,7 +274,6 @@ const FamilyVariantTags = (
               />,
             )}
             <VariantNoteField
-              showInLine
               variant={savedVariant || variant}
               family={family}
               editIconName="plus"
