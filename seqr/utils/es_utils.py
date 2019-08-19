@@ -71,15 +71,15 @@ def get_es_variants(search_model, sort=XPOS_SORT_KEY, page=1, num_results=100, l
         if previous_search_results.get('total_results') is not None:
             end_index = min(end_index, previous_search_results['total_results'])
 
-        loaded_results = previous_search_results.get('all_results') or []
-        if len(loaded_results) >= end_index:
-            return loaded_results[start_index:end_index], {}
-
-        grouped_results = previous_search_results.get('grouped_results')
-        if grouped_results:
-            results = _get_compound_het_page(grouped_results, start_index, end_index)
-            if results is not None:
-                return results, {}
+        # loaded_results = previous_search_results.get('all_results') or []
+        # if len(loaded_results) >= end_index:
+        #     return loaded_results[start_index:end_index], {}
+        #
+        # grouped_results = previous_search_results.get('grouped_results')
+        # if grouped_results:
+        #     results = _get_compound_het_page(grouped_results, start_index, end_index)
+        #     if results is not None:
+        #         return results, {}
 
         return None, {'page': page, 'num_results': num_results_to_use}
 
@@ -712,19 +712,23 @@ class EsSearch(BaseEsSearch):
         loaded_result_count = sum(len(variants.values()[0]) for variants in grouped_variants + self.previous_search_results['grouped_results'])
 
         # Get requested page of variants
-        flattened_variant_results = []
+        merged_variant_results = []
         num_compound_hets = 0
         num_single_variants = 0
+        total_variant_count = 0
         for variants_group in grouped_variants:
             variants = variants_group.values()[0]
-            flattened_variant_results += variants
+
             if loaded_result_count != self.previous_search_results['total_results']:
                 self.previous_search_results['grouped_results'].append(variants_group)
             if len(variants) > 1:
                 num_compound_hets += 1
+                merged_variant_results.append(variants)
             else:
                 num_single_variants += 1
-            if len(flattened_variant_results) >= num_results:
+                merged_variant_results += variants
+            total_variant_count += len(variants)
+            if total_variant_count >= num_results:
                 break
 
         # Only save non-returned results separately if have not loaded all results
@@ -736,7 +740,7 @@ class EsSearch(BaseEsSearch):
             self.previous_search_results['compound_het_results'] = compound_het_results[num_compound_hets:]
             self.previous_search_results['variant_results'] = variant_results[num_single_variants:]
 
-        return flattened_variant_results
+        return merged_variant_results
 
 
 class EsGeneAggSearch(BaseEsSearch):
