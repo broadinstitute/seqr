@@ -462,7 +462,7 @@ def _get_datstat_family_notes(row):
 
         parent_details = [_bool_condition_val(DC.AFFECTED_KEY, 'affected', 'unaffected', 'unknown affected status')]
         if row[col_config[DC.AFFECTED_KEY]] == DC.YES:
-            parent_details.append('age {}'.format(row[col_config[DC.PARENT_AGE_KEY]]))
+            parent_details.append('onset age {}'.format(row[col_config[DC.PARENT_AGE_KEY]]))
         parent_details.append('available' if row[col_config[DC.CAN_PARTICIPATE_KEY]] == DC.YES else 'unavailable')
         if not row[col_config[DC.CAN_PARTICIPATE_KEY]] == DC.YES:
             parent_details.append(_bool_condition_val(DC.DECEASED_KEY, yes='deceased', no='living', unknown='unknown deceased status', default='unspecified deceased status'))
@@ -479,9 +479,9 @@ def _get_datstat_family_notes(row):
             return 'None'
 
         def _bool_condition_val(val, display, unknown_display):
-            if val == 'YES':
+            if val.upper() == 'YES':
                 return display
-            elif val == 'NO':
+            elif val.upper() == 'NO':
                 return 'un{}'.format(display)
             return 'unspecified {}'.format(unknown_display)
 
@@ -496,7 +496,7 @@ def _get_datstat_family_notes(row):
         return '{divider}{relatives}'.format(
             divider=divider,
             relatives=divider.join(relatives),
-        ).replace('UnknownUnsure', 'Unknown/Unsure')
+        )
 
     relationship_code = _get_column_code(DC.RELATIONSHIP_COLUMN)
     clinical_diagnoses = _get_column_val(DC.CLINICAL_DIAGNOSES_COLUMN)
@@ -529,7 +529,7 @@ def _get_datstat_family_notes(row):
 
         testing = 'Yes;\n{tab}{tab}{tests}'.format(tab=DC.TAB, tests='\n{0}{0}'.format(DC.TAB).join(all_tests))
 
-    return """#### Clinical Information 
+    return u"""#### Clinical Information 
 {tab} __Patient is my:__ {specified_relationship}{relationship}
 {tab} __Current Age:__ {age}
 {tab} __Age of Onset:__ {age_of_onset}
