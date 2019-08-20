@@ -68,6 +68,7 @@ class BaseFieldView extends React.PureComponent {
                 <Segment>
                   <ReduxFormWrapper
                     noModal
+                    inline
                     key="edit"
                     onSubmit={this.props.onSubmit}
                     onSubmitSucceeded={this.toggleButtonVisibility}
