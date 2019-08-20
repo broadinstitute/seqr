@@ -219,7 +219,7 @@ class ReduxFormWrapper extends React.Component {
               submitButtonText={this.props.submitButtonText}
               saveStatus={saveStatus}
               saveErrorMessage={saveErrorMessage}
-              handleClose={this.props.noModal && !this.props.onSubmitSucceeded ? null : this.handleUnconfirmedClose}
+              handleClose={this.props.onSubmitSucceeded || (this.props.noModal ? null : this.handleUnconfirmedClose)}
             />
         }
         <Confirm
@@ -324,16 +324,14 @@ const mapStateToProps = (state, ownProps) => ({
   warningMessages: getWarningMessages(state, ownProps),
 })
 
-const mapDispatchToProps = (dispatch, ownProps) => {
-  return (ownProps.onSubmitSucceeded ? null : {
-    handleClose: (confirmed) => {
-      dispatch(closeModal(ownProps.modalName || ownProps.form, confirmed))
-    },
-    setModalConfirm: (confirm) => {
-      dispatch(setModalConfirm(ownProps.modalName || ownProps.form, confirm))
-    },
-  })
-}
+const mapDispatchToProps = (dispatch, ownProps) => ({
+  handleClose: (confirmed) => {
+    dispatch(closeModal(ownProps.modalName || ownProps.form, confirmed))
+  },
+  setModalConfirm: (confirm) => {
+    dispatch(setModalConfirm(ownProps.modalName || ownProps.form, confirm))
+  },
+})
 
 
 export default reduxForm()(connect(mapStateToProps, mapDispatchToProps)(ReduxFormWrapper))
