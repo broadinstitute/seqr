@@ -243,7 +243,11 @@ def update_saved_variant_json(request, project_guid):
 def _saved_variant_genes(variants):
     gene_ids = set()
     for variant in variants:
-        gene_ids.update(variant['transcripts'].keys())
+        if isinstance(variant, list):
+            for compound_het in variant:
+                gene_ids.update(compound_het['transcripts'].keys())
+        else:
+            gene_ids.update(variant['transcripts'].keys())
     genes = get_genes(gene_ids, add_dbnsfp=True, add_omim=True, add_constraints=True, add_primate_ai=True)
     for gene in genes.values():
         if gene:
@@ -256,7 +260,11 @@ def _add_locus_lists(projects, variants, genes):
     for project in projects:
         locus_lists.update(get_project_locus_list_models(project))
     for variant in variants:
-        variant['locusListGuids'] = []
+        if isinstance(variant, list):
+            for compound_het in variant:
+                compound_het['locusListGuids'] = []
+        else:
+            variant['locusListGuids'] = []
 
     locus_list_intervals_by_chrom = defaultdict(list)
     for interval in LocusListInterval.objects.filter(locus_list__in=locus_lists):

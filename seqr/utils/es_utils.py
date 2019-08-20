@@ -722,11 +722,11 @@ class EsSearch(BaseEsSearch):
             if loaded_result_count != self.previous_search_results['total_results']:
                 self.previous_search_results['grouped_results'].append(variants_group)
             if len(variants) > 1:
-                num_compound_hets += 1
                 merged_variant_results.append(variants)
+                num_compound_hets += 1
             else:
-                num_single_variants += 1
                 merged_variant_results += variants
+                num_single_variants += 1
             total_variant_count += len(variants)
             if total_variant_count >= num_results:
                 break
