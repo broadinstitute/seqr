@@ -529,7 +529,7 @@ def _get_datstat_family_notes(row):
 
         testing = 'Yes;\n{tab}{tab}{tests}'.format(tab=DC.TAB, tests='\n{0}{0}'.format(DC.TAB).join(all_tests))
 
-    return u"""#### Clinical Information 
+    return u"""#### Clinical Information
 {tab} __Patient is my:__ {specified_relationship}{relationship}
 {tab} __Current Age:__ {age}
 {tab} __Age of Onset:__ {age_of_onset}
