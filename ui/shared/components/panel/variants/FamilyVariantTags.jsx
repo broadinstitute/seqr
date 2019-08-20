@@ -182,7 +182,7 @@ VariantTagField.propTypes = {
   family: PropTypes.object.isRequired,
 }
 
-const VariantNoteField = ({ action, note, variant, family, showInLine, noModal, ...props }) => {
+const VariantNoteField = ({ action, note, variant, family, ...props }) => {
   const values = { ...variant, ...note }
   return <TextFieldView
     noModal
@@ -201,8 +201,6 @@ const VariantNoteField = ({ action, note, variant, family, showInLine, noModal, 
 }
 
 VariantNoteField.propTypes = {
-  showInLine: PropTypes.bool,
-  noModal: PropTypes.bool,
   note: PropTypes.object,
   variant: PropTypes.object,
   action: PropTypes.string,
