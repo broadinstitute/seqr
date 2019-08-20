@@ -731,8 +731,8 @@ class DatstatConstants:
         '1': {'1': 'Myself (male)', '2': 'Myself (female)', '3': 'Myself (unspecified sex)'},
         '2': {'1': 'Son', '2': 'Daughter', '3': 'Child (unspecified sex)'},
         '3': {'1': 'Brother', '2': 'Sister', '3': 'Sibling (unspecified sex)'},
-        '4': {'1': 'Cousin (male)', '2': 'Cousin (female)', '3': 'Niece or nephew (unspecified sex)'},
-        '5': {'1': 'Nephew', '2': 'Niece', '3': 'Sibling (unspecified sex)'},
+        '4': {'1': 'Cousin (male)', '2': 'Cousin (female)', '3': 'Cousin (unspecified sex)'},
+        '5': {'1': 'Nephew', '2': 'Niece', '3': 'Niece or nephew (unspecified sex)'},
         OTHER_RELATIONSHIP_CODE: {'1': ' (male)', '2': ' (female)', '3': ' (unspecified sex)'},
     }
 
