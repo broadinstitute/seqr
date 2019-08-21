@@ -71,6 +71,9 @@ def get_es_variants(search_model, sort=XPOS_SORT_KEY, page=1, num_results=100, l
         if previous_search_results.get('total_results') is not None:
             end_index = min(end_index, previous_search_results['total_results'])
 
+        import pdb
+        pdb.set_trace()
+        #
         # loaded_results = previous_search_results.get('all_results') or []
         # if len(loaded_results) >= end_index:
         #     return loaded_results[start_index:end_index], {}
