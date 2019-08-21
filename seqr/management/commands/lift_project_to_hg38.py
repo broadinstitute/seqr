@@ -163,11 +163,14 @@ class Command(BaseCommand):
         #  Update saved variants
         for var in es_variants:
             saved_variant_models = saved_variants_map[(var['xpos'], var['ref'], var['alt'])]
-            missing_families = [v.family.guid for v in saved_variant_models if v.family.guid not in var['familyGuids']]
-            if missing_families:
-                raise Exception('Error with variant {}:{}-{}-{} not find for expected families {}; found in families {}'.format(
-                    var['chrom'], var['pos'], var['ref'], var['alt'], ', '.join(missing_families), ', '.join(var['familyGuids'])
-                ))
+            missing_saved_variants = [v for v in saved_variant_models if v.family.guid not in var['familyGuids']]
+            if missing_saved_variants:
+                if raw_input(('Variant {}-{}-{} not find for expected families {}; found in families {}. Continue with update (y/n)? '.format(
+                    missing_saved_variants[0].xpos, var['ref'], var['alt'],
+                    ', '.join(['{} ({})'.format(v.family.guid, v.guid) for v in missing_saved_variants]),
+                    ', '.join(var['familyGuids'])
+                ))) != 'y':
+                    raise Exception('Error: unable to find family data for lifted over variant')
             for saved_variant in saved_variant_models:
                 saved_variant.xpos_start = var['xpos']
                 saved_variant.saved_variant_json = json.dumps(var)
