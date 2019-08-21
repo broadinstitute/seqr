@@ -17,7 +17,7 @@ from seqr.views.apis.pedigree_image_api import update_pedigree_images
 from seqr.views.apis.phenotips_api import delete_patient, PhenotipsException
 from seqr.views.utils.export_table_utils import export_table
 from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file
-from seqr.views.utils.json_to_orm_utils import update_individual_from_json
+from seqr.views.utils.json_to_orm_utils import update_individual_from_json, update_family_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_individual, _get_json_for_individuals, _get_json_for_family, _get_json_for_families
 from seqr.views.utils.pedigree_info_utils import parse_pedigree_table, validate_fam_file_records, JsonConstants
@@ -398,6 +398,9 @@ def add_or_update_individuals_and_families(project, individual_records, user=Non
             })
 
         update_individual_from_json(individual, record, allow_unknown_keys=True, user=user)
+
+        if record.get(JsonConstants.FAMILY_NOTES_COLUMN):
+            update_family_from_json(family, {'analysis_notes': record[JsonConstants.FAMILY_NOTES_COLUMN]})
 
         updated_individuals.add(individual)
         families[family.family_id] = family

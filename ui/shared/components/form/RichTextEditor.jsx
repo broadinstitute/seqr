@@ -29,7 +29,6 @@ class RichTextEditor extends React.Component {
   static INLINE_STYLES = [
     { label: 'Bold', type: 'BOLD', icon: 'bold' },
     { label: 'Italic', type: 'ITALIC', icon: 'italic' },
-    { label: 'Underline', type: 'UNDERLINE', icon: 'underline' },
   ]
 
   static defaultProps = {
