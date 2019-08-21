@@ -123,23 +123,28 @@ class Command(BaseCommand):
 
         liftover_to_38 = LiftOver('hg19', 'hg38')
         hg37_to_hg38_xpos = {}
-        lift_failed = set()
+        lift_failed = {}
         for v in saved_variants_to_lift:
             if not (hg37_to_hg38_xpos.get(v['xpos']) or v['xpos'] in lift_failed):
                 hg38_coord = liftover_to_38.convert_coordinate('chr{}'.format(v['chrom'].lstrip('chr')), int(v['pos']))
                 if hg38_coord and hg38_coord[0]:
                     hg37_to_hg38_xpos[v['xpos']] = get_xpos(hg38_coord[0][0], hg38_coord[0][1])
                 else:
-                    lift_failed.add(v['xpos'])
+                    lift_failed[v['xpos']] = v
 
         if lift_failed:
-            raise Exception(
-                'Unable to lift over the following {} coordinates: {}'.format(len(lift_failed), ', '.join(lift_failed)))
+            if raw_input(
+                'Unable to lift over the following {} coordinates. Continue with update (y/n)?: {} '.format(
+                    len(lift_failed), ', '.join([
+                        '{}:{}-{}-{} ({})'.format(v['chrom'], v['pos'], v['ref'], v['alt'], ', '.join(v['familyGuids']))
+                        for v in lift_failed.values()]))) != 'y':
+                raise Exception('Error: unable to lift over {} variants'.format(len(lift_failed)))
 
         saved_variants_map = defaultdict(list)
         for v in saved_variants_to_lift:
-            variant_model = saved_variant_models_by_guid[v['variantGuid']]
-            saved_variants_map[(hg37_to_hg38_xpos[v['xpos']], v['ref'], v['alt'])].append(variant_model)
+            if hg37_to_hg38_xpos.get(v['xpos']):
+                variant_model = saved_variant_models_by_guid[v['variantGuid']]
+                saved_variants_map[(hg37_to_hg38_xpos[v['xpos']], v['ref'], v['alt'])].append(variant_model)
 
         es_variants = get_es_variants_for_variant_tuples(expected_families, saved_variants_map.keys())
 
@@ -183,4 +188,4 @@ class Command(BaseCommand):
 
         logger.info('---Done---')
         logger.info('Succesfully lifted over {} variants. Skipped {} failed variants.'.format(
-            len(es_variants), len(missing_variants)))
+            len(es_variants), len(missing_variants) + len(lift_failed)))
