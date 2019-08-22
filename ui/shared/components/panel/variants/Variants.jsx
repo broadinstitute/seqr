@@ -34,37 +34,137 @@ const StyledVariantRow = styled(Grid.Row)`
   }}
 `
 
+const SingleVariant = ({ variant }) =>
+  <StyledVariantRow key={variant.variantId} severity={CLINSIG_SEVERITY[(variant.clinvar.clinicalSignificance || '').toLowerCase()]}>
+    <Grid.Column width={16}>
+      <Pathogenicity variant={variant} />
+    </Grid.Column>
+    {variant.familyGuids.map(familyGuid =>
+      <Grid.Column key={familyGuid} width={16}>
+        <FamilyVariantTags familyGuid={familyGuid} variant={variant} />
+      </Grid.Column>,
+    )}
+    <Grid.Column>
+      {variant.mainTranscript.geneId && <VariantGene geneId={variant.mainTranscript.geneId} variant={variant} />}
+      {Object.keys(variant.transcripts).length > 1 && <Divider />}
+      {Object.keys(variant.transcripts).filter(geneId => geneId !== variant.mainTranscript.geneId).map(geneId =>
+        <VariantGene key={geneId} geneId={geneId} variant={variant} compact />,
+      )}
+    </Grid.Column>
+    <Grid.Column><Annotations variant={variant} /></Grid.Column>
+    <Grid.Column><Predictions variant={variant} /></Grid.Column>
+    <Grid.Column><Frequencies variant={variant} /></Grid.Column>
+    <Grid.Column width={16}>
+      {variant.familyGuids.map(familyGuid =>
+        <VariantIndividuals key={familyGuid} familyGuid={familyGuid} variant={variant} />,
+      )}
+    </Grid.Column>
+    <Grid.Column width={16}>
+      <FamilyVariantReads variant={variant} />
+    </Grid.Column>
+  </StyledVariantRow>
+
+SingleVariant.propTypes = {
+  variant: PropTypes.object,
+}
+
+const CompoundHets = ({ variants }) =>
+  <StyledVariantRow key={variants[0].variantId} severity={CLINSIG_SEVERITY[(variants[0].clinvar.clinicalSignificance || '').toLowerCase()]}>
+    <Grid.Column width={16}>
+      <Pathogenicity variant={variants[0]} />
+    </Grid.Column>
+    {variants[0].familyGuids.map(familyGuid =>
+      <Grid.Column key={familyGuid} width={16}>
+        <FamilyVariantTags familyGuid={familyGuid} variant={variants[0]} />
+      </Grid.Column>,
+    )}
+    <Grid.Column width={16}>
+      {variants[0].mainTranscript.geneId && <VariantGene geneId={variants[0].mainTranscript.geneId} variant={variants[0]} />}
+      {Object.keys(variants[0].transcripts).length > 1 && <Divider />}
+      {Object.keys(variants[0].transcripts).filter(geneId => geneId !== variants[0].mainTranscript.geneId).map(geneId =>
+        <VariantGene key={geneId} geneId={geneId} variant={variants[0]} compact />,
+      )}
+    </Grid.Column>
+    <Grid.Column>
+      {variants[0].familyGuids.map(familyGuid =>
+        <VariantIndividuals key={familyGuid} familyGuid={familyGuid} variant={variants[0]} />,
+      )}
+    </Grid.Column>
+    <Grid.Column><Annotations variant={variants[0]} /></Grid.Column>
+    <Grid.Column><Predictions variant={variants[0]} /></Grid.Column>
+    <Grid.Column><Frequencies variant={variants[0]} /></Grid.Column>
+    {/*<Grid.Column width={16}>*/}
+    {/*  {variants[0].familyGuids.map(familyGuid =>*/}
+    {/*    <VariantIndividuals key={familyGuid} familyGuid={familyGuid} variant={variants[0]} />,*/}
+    {/*  )}*/}
+    {/*</Grid.Column>*/}
+    <Grid.Column width={16}>
+      <FamilyVariantReads variant={variants[0]} />
+    </Grid.Column>
+    {/*<Grid.Column width={16}>*/}
+    {/*  <Pathogenicity variant={variants[1]} />*/}
+    {/*</Grid.Column>*/}
+    {/*<Grid.Column>*/}
+    {/*  {variants[1].mainTranscript.geneId && <VariantGene geneId={variants[1].mainTranscript.geneId} variant={variants[1]} />}*/}
+    {/*  {Object.keys(variants[1].transcripts).length > 1 && <Divider />}*/}
+    {/*  {Object.keys(variants[1].transcripts).filter(geneId => geneId !== variants[1].mainTranscript.geneId).map(geneId =>*/}
+    {/*    <VariantGene key={geneId} geneId={geneId} variant={variants[1]} compact />,*/}
+    {/*  )}*/}
+    {/*</Grid.Column>*/}
+    <Grid.Column>
+      {variants[1].familyGuids.map(familyGuid =>
+        <VariantIndividuals key={familyGuid} familyGuid={familyGuid} variant={variants[1]} />,
+      )}
+    </Grid.Column>
+    <Grid.Column><Annotations variant={variants[1]} /></Grid.Column>
+    <Grid.Column><Predictions variant={variants[1]} /></Grid.Column>
+    <Grid.Column><Frequencies variant={variants[1]} /></Grid.Column>
+    {/*<Grid.Column width={16}>*/}
+    {/*  {variants[1].familyGuids.map(familyGuid =>*/}
+    {/*    <VariantIndividuals key={familyGuid} familyGuid={familyGuid} variant={variants[1]} />,*/}
+    {/*  )}*/}
+    {/*</Grid.Column>*/}
+    <Grid.Column width={16}>
+      <FamilyVariantReads variant={variants[1]} />
+    </Grid.Column>
+  </StyledVariantRow>
+
+CompoundHets.propTypes = {
+  variants: PropTypes.object,
+}
+
 const Variants = ({ variants }) =>
   <Grid stackable divided="vertically" columns="equal">
     {variants.map(variant =>
-      <StyledVariantRow key={variant.variantId} severity={CLINSIG_SEVERITY[(variant.clinvar.clinicalSignificance || '').toLowerCase()]}>
-        <Grid.Column width={16}>
-          <Pathogenicity variant={variant} />
-        </Grid.Column>
-        {variant.familyGuids.map(familyGuid =>
-          <Grid.Column key={familyGuid} width={16}>
-            <FamilyVariantTags familyGuid={familyGuid} variant={variant} />
-          </Grid.Column>,
-        )}
-        <Grid.Column>
-          {variant.mainTranscript.geneId && <VariantGene geneId={variant.mainTranscript.geneId} variant={variant} />}
-          {Object.keys(variant.transcripts).length > 1 && <Divider />}
-          {Object.keys(variant.transcripts).filter(geneId => geneId !== variant.mainTranscript.geneId).map(geneId =>
-            <VariantGene key={geneId} geneId={geneId} variant={variant} compact />,
-          )}
-        </Grid.Column>
-        <Grid.Column><Annotations variant={variant} /></Grid.Column>
-        <Grid.Column><Predictions variant={variant} /></Grid.Column>
-        <Grid.Column><Frequencies variant={variant} /></Grid.Column>
-        <Grid.Column width={16}>
-          {variant.familyGuids.map(familyGuid =>
-            <VariantIndividuals key={familyGuid} familyGuid={familyGuid} variant={variant} />,
-          )}
-        </Grid.Column>
-        <Grid.Column width={16}>
-          <FamilyVariantReads variant={variant} />
-        </Grid.Column>
-      </StyledVariantRow>,
+      (variant.length > 1 ? <CompoundHets variants={variant} /> : <SingleVariant variant={variant} />),
+      // <StyledVariantRow key={variant.variantId} severity={CLINSIG_SEVERITY[(variant.clinvar.clinicalSignificance || '').toLowerCase()]}>
+      //   <Grid.Column width={16}>
+      //     <Pathogenicity variant={variant} />
+      //   </Grid.Column>
+      //   {variant.familyGuids.map(familyGuid =>
+      //     <Grid.Column key={familyGuid} width={16}>
+      //       <FamilyVariantTags familyGuid={familyGuid} variant={variant} />
+      //     </Grid.Column>,
+      //   )}
+      //   <Grid.Column>
+      //     {variant.mainTranscript.geneId && <VariantGene geneId={variant.mainTranscript.geneId} variant={variant} />}
+      //     {Object.keys(variant.transcripts).length > 1 && <Divider />}
+      //     {Object.keys(variant.transcripts).filter(geneId => geneId !== variant.mainTranscript.geneId).map(geneId =>
+      //       <VariantGene key={geneId} geneId={geneId} variant={variant} compact />,
+      //     )}
+      //   </Grid.Column>
+      //   <Grid.Column><Annotations variant={variant} /></Grid.Column>
+      //   <Grid.Column><Predictions variant={variant} /></Grid.Column>
+      //   <Grid.Column><Frequencies variant={variant} /></Grid.Column>
+      //   <Grid.Column width={16}>
+      //     {variant.familyGuids.map(familyGuid =>
+      //       <VariantIndividuals key={familyGuid} familyGuid={familyGuid} variant={variant} />,
+      //     )}
+      //   </Grid.Column>
+      //   <Grid.Column width={16}>
+      //     <FamilyVariantReads variant={variant} />
+      //   </Grid.Column>
+      // </StyledVariantRow>,
     )}
   </Grid>
 
