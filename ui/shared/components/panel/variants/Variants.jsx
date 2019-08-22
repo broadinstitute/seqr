@@ -69,6 +69,29 @@ SingleVariant.propTypes = {
   variant: PropTypes.object,
 }
 
+// const CompoundHet = ({ variant }) =>
+//   <div>
+//     <Grid.Column>
+//       {Object.keys(variant.transcripts).filter(geneId => geneId !== variant.mainTranscript.geneId).map(geneId =>
+//         <VariantGene key={geneId} geneId={geneId} variant={variant} compact />,
+//       )}
+//       {Object.keys(variant.transcripts).length > 1 && <VerticalSpacer height={20} />}
+//       {variant.familyGuids.map(familyGuid =>
+//         <VariantIndividuals key={familyGuid} familyGuid={familyGuid} variant={variant} />,
+//       )}
+//     </Grid.Column>
+//     <Grid.Column><Annotations variant={variant} /></Grid.Column>
+//     <Grid.Column><Predictions variant={variant} /></Grid.Column>
+//     <Grid.Column><Frequencies variant={variant} /></Grid.Column>
+//     <Grid.Column width={16}>
+//       <FamilyVariantReads variant={variant} />
+//     </Grid.Column>
+//   </div>
+//
+// CompoundHet.prototype = {
+//   variant: PropTypes.object,
+// }
+
 const CompoundHets = ({ variants }) =>
   <StyledVariantRow key={variants[0].variantId} severity={CLINSIG_SEVERITY[(variants[0].clinvar.clinicalSignificance || '').toLowerCase()]}>
     <Grid.Column width={16}>
@@ -82,21 +105,7 @@ const CompoundHets = ({ variants }) =>
     <Grid.Column width={16}>
       {variants[0].mainTranscript.geneId && <VariantGene geneId={variants[0].mainTranscript.geneId} variant={variants[0]} />}
     </Grid.Column>
-    {/*{variants.map(variant =>*/}
-    {/*  <Grid.Row>*/}
-    {/*    <Grid.Column>*/}
-    {/*      {variant.familyGuids.map(familyGuid =>*/}
-    {/*        <VariantIndividuals key={familyGuid} familyGuid={familyGuid} variant={variants[0]} />,*/}
-    {/*      )}*/}
-    {/*    </Grid.Column>*/}
-    {/*    <Grid.Column><Annotations variant={variant} /></Grid.Column>*/}
-    {/*    <Grid.Column><Predictions variant={variant} /></Grid.Column>*/}
-    {/*    <Grid.Column><Frequencies variant={variant} /></Grid.Column>*/}
-    {/*    <Grid.Column width={16}>*/}
-    {/*      <FamilyVariantReads variant={variant} />*/}
-    {/*    </Grid.Column>*/}
-    {/*  </Grid.Row>,*/}
-    {/*)}*/}
+    {/*<CompoundHet variant={variants[0]} />*/}
     <Grid.Column>
       {Object.keys(variants[0].transcripts).filter(geneId => geneId !== variants[0].mainTranscript.geneId).map(geneId =>
         <VariantGene key={geneId} geneId={geneId} variant={variants[0]} compact />,
@@ -112,7 +121,7 @@ const CompoundHets = ({ variants }) =>
     <Grid.Column width={16}>
       <FamilyVariantReads variant={variants[0]} />
     </Grid.Column>
-    {/*divider*/}
+    {/*<CompoundHet variant={variants[0]} />*/}
     <Grid.Column>
       {Object.keys(variants[1].transcripts).filter(geneId => geneId !== variants[0].mainTranscript.geneId).map(geneId =>
         <VariantGene key={geneId} geneId={geneId} variant={variants[1]} compact />,
