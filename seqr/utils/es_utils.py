@@ -68,21 +68,18 @@ def get_es_variants(search_model, sort=XPOS_SORT_KEY, page=1, num_results=100, l
             num_results_to_use = total_results or 10000
         start_index = (page - 1) * num_results_to_use
         end_index = page * num_results_to_use
-        if previous_search_results.get('total_results') is not None:
-            end_index = min(end_index, previous_search_results['total_results'])
+        if total_results is not None:
+            end_index = min(end_index, total_results)
 
-        import pdb
-        pdb.set_trace()
-        #
-        # loaded_results = previous_search_results.get('all_results') or []
-        # if len(loaded_results) >= end_index:
-        #     return loaded_results[start_index:end_index], {}
-        #
-        # grouped_results = previous_search_results.get('grouped_results')
-        # if grouped_results:
-        #     results = _get_compound_het_page(grouped_results, start_index, end_index)
-        #     if results is not None:
-        #         return results, {}
+        loaded_results = previous_search_results.get('all_results') or []
+        if len(loaded_results) >= end_index:
+            return loaded_results[start_index:end_index], {}
+
+        grouped_results = previous_search_results.get('grouped_results')
+        if grouped_results:
+            results = _get_compound_het_page(grouped_results, start_index, end_index)
+            if results is not None:
+                return results, {}
 
         return None, {'page': page, 'num_results': num_results_to_use}
 
@@ -737,7 +734,7 @@ class EsSearch(BaseEsSearch):
         # Only save non-returned results separately if have not loaded all results
         if loaded_result_count == self.previous_search_results['total_results']:
             self.previous_search_results['grouped_results'] += grouped_variants
-            self.previous_search_results['compound_het_results'] = []
+            self.previous_search_results['compound_het_results'] = compound_het_results
             self.previous_search_results['variant_results'] = []
         else:
             self.previous_search_results['compound_het_results'] = compound_het_results[num_compound_hets:]
