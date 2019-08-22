@@ -1247,8 +1247,8 @@ class EsUtilsTest(TestCase):
         results_model.families.set(self.families)
 
         variants, total_results = get_es_variants(results_model, num_results=2)
-        self.assertEqual(len(variants), 2)
-        self.assertListEqual(variants, PARSED_COMPOUND_HET_VARIANTS)
+        self.assertEqual(len(variants), 1)
+        self.assertListEqual(variants, [PARSED_COMPOUND_HET_VARIANTS])
         self.assertEqual(total_results, 2)
 
         self.assertCachedResults(results_model, {
@@ -1278,10 +1278,10 @@ class EsUtilsTest(TestCase):
         results_model.families.set(self.families)
 
         variants, total_results = get_es_variants(results_model, num_results=2)
-        self.assertEqual(len(variants), 3)
+        self.assertEqual(len(variants), 2)
         self.assertDictEqual(variants[0], PARSED_VARIANTS[0])
-        self.assertDictEqual(variants[1], PARSED_COMPOUND_HET_VARIANTS[0])
-        self.assertDictEqual(variants[2], PARSED_COMPOUND_HET_VARIANTS[1])
+        self.assertDictEqual(variants[1][0], PARSED_COMPOUND_HET_VARIANTS[0])
+        self.assertDictEqual(variants[1][1], PARSED_COMPOUND_HET_VARIANTS[1])
         self.assertEqual(total_results, 7)
 
         self.assertCachedResults(results_model, {
@@ -1351,10 +1351,10 @@ class EsUtilsTest(TestCase):
         results_model.families.set(Family.objects.filter(guid__in=['F000011_11', 'F000003_3', 'F000002_2']))
 
         variants, total_results = get_es_variants(results_model, num_results=2)
-        self.assertEqual(len(variants), 3)
+        self.assertEqual(len(variants), 2)
         self.assertDictEqual(variants[0], PARSED_VARIANTS[0])
-        self.assertDictEqual(variants[1], PARSED_COMPOUND_HET_VARIANTS_PROJECT_2[0])
-        self.assertDictEqual(variants[2], PARSED_COMPOUND_HET_VARIANTS_PROJECT_2[1])
+        self.assertDictEqual(variants[1][0], PARSED_COMPOUND_HET_VARIANTS_PROJECT_2[0])
+        self.assertDictEqual(variants[1][1], PARSED_COMPOUND_HET_VARIANTS_PROJECT_2[1])
         self.assertEqual(total_results, 13)
 
         self.assertCachedResults(results_model, {
@@ -1427,8 +1427,8 @@ class EsUtilsTest(TestCase):
 
         # test pagination
         variants, total_results = get_es_variants(results_model, num_results=2, page=2)
-        self.assertEqual(len(variants), 3)
-        self.assertListEqual(variants, [PARSED_VARIANTS[0]] + PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT)
+        self.assertEqual(len(variants), 2)
+        self.assertListEqual(variants, [PARSED_VARIANTS[0]] + [PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT])
         self.assertEqual(total_results, 11)
 
         self.assertCachedResults(results_model, {
