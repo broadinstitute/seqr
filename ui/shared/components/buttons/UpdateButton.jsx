@@ -38,6 +38,7 @@ const UpdateButton = (
     ) }) }
   </Modal>
 
+
 UpdateButton.propTypes = {
   formFields: PropTypes.array,
   onSubmit: PropTypes.func,
