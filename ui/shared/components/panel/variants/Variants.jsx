@@ -12,6 +12,7 @@ import Predictions from './Predictions'
 import Frequencies from './Frequencies'
 import VariantGene from './VariantGene'
 import VariantIndividuals from './VariantIndividuals'
+import { HorizontalSpacer } from '../../Spacers'
 
 
 const StyledVariantRow = styled(Grid.Row)`
@@ -80,10 +81,6 @@ const CompoundHets = ({ variants }) =>
     )}
     <Grid.Column width={16}>
       {variants[0].mainTranscript.geneId && <VariantGene geneId={variants[0].mainTranscript.geneId} variant={variants[0]} />}
-      {Object.keys(variants[0].transcripts).length > 1 && <Divider />}
-      {Object.keys(variants[0].transcripts).filter(geneId => geneId !== variants[0].mainTranscript.geneId).map(geneId =>
-        <VariantGene key={geneId} geneId={geneId} variant={variants[0]} compact />,
-      )}
     </Grid.Column>
     {/*{variants.map(variant =>*/}
     {/*  <Grid.Row>*/}
@@ -101,6 +98,10 @@ const CompoundHets = ({ variants }) =>
     {/*  </Grid.Row>,*/}
     {/*)}*/}
     <Grid.Column>
+      {Object.keys(variants[0].transcripts).filter(geneId => geneId !== variants[0].mainTranscript.geneId).map(geneId =>
+        <VariantGene key={geneId} geneId={geneId} variant={variants[0]} compact />,
+      )}
+      <HorizontalSpacer width={20} />
       {variants[0].familyGuids.map(familyGuid =>
         <VariantIndividuals key={familyGuid} familyGuid={familyGuid} variant={variants[0]} />,
       )}
@@ -112,6 +113,10 @@ const CompoundHets = ({ variants }) =>
       <FamilyVariantReads variant={variants[0]} />
     </Grid.Column>
     <Grid.Column>
+      {Object.keys(variants[1].transcripts).filter(geneId => geneId !== variants[0].mainTranscript.geneId).map(geneId =>
+        <VariantGene key={geneId} geneId={geneId} variant={variants[1]} compact />,
+      )}
+      <HorizontalSpacer width={20} />
       {variants[1].familyGuids.map(familyGuid =>
         <VariantIndividuals key={familyGuid} familyGuid={familyGuid} variant={variants[1]} />,
       )}

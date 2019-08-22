@@ -18,6 +18,7 @@ const IndividualsContainer = styled.div`
   border-right: .5px solid grey;
   margin-left: -1px;
   margin-bottom: 5px;
+  border-left: none;
   
   &:first-child {
     padding-left 0;
