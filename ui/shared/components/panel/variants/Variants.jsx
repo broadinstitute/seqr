@@ -94,9 +94,6 @@ SingleVariant.propTypes = {
 
 const CompoundHets = ({ variants }) =>
   <StyledVariantRow key={variants[0].variantId} severity={CLINSIG_SEVERITY[(variants[0].clinvar.clinicalSignificance || '').toLowerCase()]}>
-    <Grid.Column width={16}>
-      <Pathogenicity variant={variants[0]} />
-    </Grid.Column>
     {variants[0].familyGuids.map(familyGuid =>
       <Grid.Column key={familyGuid} width={16}>
         <FamilyVariantTags familyGuid={familyGuid} variant={variants[0]} />
@@ -106,6 +103,9 @@ const CompoundHets = ({ variants }) =>
       {variants[0].mainTranscript.geneId && <VariantGene geneId={variants[0].mainTranscript.geneId} variant={variants[0]} />}
     </Grid.Column>
     {/*<CompoundHet variant={variants[0]} />*/}
+    <Grid.Column width={16}>
+      <Pathogenicity variant={variants[0]} />
+    </Grid.Column>
     <Grid.Column>
       {Object.keys(variants[0].transcripts).filter(geneId => geneId !== variants[0].mainTranscript.geneId).map(geneId =>
         <VariantGene key={geneId} geneId={geneId} variant={variants[0]} compact />,
@@ -122,6 +122,9 @@ const CompoundHets = ({ variants }) =>
       <FamilyVariantReads variant={variants[0]} />
     </Grid.Column>
     {/*<CompoundHet variant={variants[0]} />*/}
+    <Grid.Column width={16}>
+      <Pathogenicity variant={variants[1]} />
+    </Grid.Column>
     <Grid.Column>
       {Object.keys(variants[1].transcripts).filter(geneId => geneId !== variants[0].mainTranscript.geneId).map(geneId =>
         <VariantGene key={geneId} geneId={geneId} variant={variants[1]} compact />,
