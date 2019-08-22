@@ -105,6 +105,7 @@ from seqr.views.apis.staff_api import \
     anvil_export, \
     discovery_sheet, \
     get_projects_for_category, \
+    success_story, \
     elasticsearch_status, \
     saved_variants, \
     upload_qc_pipeline_output, \
@@ -242,6 +243,7 @@ api_endpoints = {
     'staff/anvil/(?P<project_guid>[^/]+)': anvil_export,
     'staff/discovery_sheet/(?P<project_guid>[^/]+)': discovery_sheet,
     'staff/projects_for_category/(?P<project_category_name>[^/]+)': get_projects_for_category,
+    'staff/success_story/(?P<success_story_types>[^/]+)': success_story,
     'staff/elasticsearch_status': elasticsearch_status,
     'staff/matchmaker_metrics': mme_metrics_proxy,
     'staff/matchmaker_submissions': mme_submissions,

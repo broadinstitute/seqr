@@ -409,6 +409,28 @@ def discovery_sheet(request, project_guid):
     })
 
 
+@staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
+def success_story(request, success_story_types):
+    if success_story_types == 'all':
+        families = Family.objects.filter(success_story__isnull=False)
+    else:
+        success_story_types = success_story_types.split(',')
+        families = Family.objects.filter(success_story_types__overlap=success_story_types)
+
+    rows = [{
+        "project_guid": family.project.guid,
+        "family_guid": family.guid,
+        "family_id": family.family_id,
+        "success_story_types": family.success_story_types,
+        "success_story": family.success_story,
+        "row_id": family.guid,
+    } for family in families]
+
+    return create_json_response({
+        'rows': rows,
+    })
+
+
 def _get_loaded_samples_by_project_family(projects):
     loaded_samples = Sample.objects.filter(
         individual__family__project__in=projects,

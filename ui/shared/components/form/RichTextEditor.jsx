@@ -92,7 +92,7 @@ class RichTextEditor extends React.Component {
             }}
           />
         </div>
-        <div style={{ border: '1px #DDD solid', padding: '10px' }}>
+        <div style={{ minWidth: '590px', border: '1px #DDD solid', padding: '10px' }}>
           <Editor
             editorState={this.state.editorState}
             handleKeyCommand={this.handleKeyCommand}
