@@ -1306,12 +1306,18 @@ def _sort_compound_hets(grouped_variants):
 def _get_compound_het_page(grouped_variants, start_index, end_index):
     skipped = 0
     variant_results = []
+    variant_count = 0
     for i, variants in enumerate(grouped_variants):
+        curr_variant = variants.values()[0]
         if skipped < start_index:
-            skipped += len(variants.values()[0])
+            skipped += len(curr_variant)
         else:
-            variant_results += variants.values()[0]
-        if len(variant_results) + skipped >= end_index:
+            if len(curr_variant) == 1:
+                variant_results += curr_variant
+            else:
+                variant_results.append(curr_variant)
+            variant_count += len(curr_variant)
+        if variant_count + skipped >= end_index:
             return variant_results
     return None
 
