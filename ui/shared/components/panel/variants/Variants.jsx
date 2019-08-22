@@ -143,7 +143,7 @@ const CompoundHets = ({ variants }) =>
   </StyledVariantRow>
 
 CompoundHets.propTypes = {
-  variants: PropTypes.object,
+  variants: PropTypes.array,
 }
 
 const Variants = ({ variants }) =>
