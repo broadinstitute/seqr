@@ -88,7 +88,7 @@ if [ ! -f /vep/variant_effect_predictor ]; then
 fi
 
 if [ ! -f /vep/1var.vcf ]; then
-    cp -r ${SEQR_DIR}/hail_elasticsearch_pipelines/loftee /vep
+    git clone https://github.com/konradjk/loftee.git /vep/loftee
     cp ${SEQR_DIR}/hail_elasticsearch_pipelines/gcloud_dataproc/vep_init/vep-gcloud-grch38.properties /vep/vep-gcloud-grch38.properties
     cp ${SEQR_DIR}/hail_elasticsearch_pipelines/gcloud_dataproc/vep_init/vep-gcloud-grch37.properties /vep/vep-gcloud-grch37.properties
     cp ${SEQR_DIR}/hail_elasticsearch_pipelines/gcloud_dataproc/vep_init/run_hail_vep85_GRCh37_vcf.sh /vep/run_hail_vep85_GRCh37_vcf.sh
