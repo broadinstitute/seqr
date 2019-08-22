@@ -338,7 +338,7 @@ def _phenotips_patient_url(individual):
 
 
 def _phenotips_patient_exists(individual):
-    return individual.phenotips_patient_id
+    return individual.phenotips_patient_id or individual.phenotips_eid
 
 
 def _add_user_to_patient(username, patient_id, allow_edit=True):
