@@ -350,8 +350,8 @@ class Individual(ModelWithGUID):
     # WARNING: individual_id is unique within a family, but not necessarily unique globally
     individual_id = models.TextField(db_index=True)
 
-    mother = models.ForeignKey('seqr.Individual', null=True, on_delete=models.SET_NULL, related_name='maternal_children')
-    father = models.ForeignKey('seqr.Individual', null=True, on_delete=models.SET_NULL, related_name='paternal_children')
+    mother = models.ForeignKey('seqr.Individual', null=True, blank=True, on_delete=models.SET_NULL, related_name='maternal_children')
+    father = models.ForeignKey('seqr.Individual', null=True, blank=True, on_delete=models.SET_NULL, related_name='paternal_children')
 
     sex = models.CharField(max_length=1, choices=SEX_CHOICES, default='U')
     affected = models.CharField(max_length=1, choices=AFFECTED_STATUS_CHOICES, default=AFFECTED_STATUS_UNKNOWN)
