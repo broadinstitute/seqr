@@ -35,25 +35,11 @@ const StyledVariantRow = styled(Grid.Row)`
   }}
 `
 
-const StyledCompoundHetRow = styled(Grid.Row)`
+const StyledCompoundHetRow = styled(StyledVariantRow)`
   .column {
     margin-top: 0 !important;
-    margin-bottom: 0 !important;
     margin-left: 1em !important;
   }
-  
-  padding: 0;
-  color: #999;
-  background-color: ${({ severity }) => {
-    if (severity > 0) {
-      return '#eaa8a857'
-    } else if (severity === 0) {
-      return '#f5d55c57'
-    } else if (severity < 0) {
-      return '#21a92624'
-    }
-    return 'inherit'
-  }}
 `
 
 const StyledCompoundHetLink = styled(Grid.Column)`
