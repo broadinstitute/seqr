@@ -93,11 +93,11 @@ SingleVariant.propTypes = {
 
 const CompoundHet = ({ variant }) =>
   <StyledCompoundHetRow key={variant.variantId} severity={CLINSIG_SEVERITY[(variant.clinvar.clinicalSignificance || '').toLowerCase()]}>
+    <Grid.Column width={16}>
     {variant.familyGuids.map(familyGuid =>
-      <Grid.Column key={familyGuid} width={16}>
-        <FamilyVariantTags familyGuid={familyGuid} variant={variant} isCompoundHet />
-      </Grid.Column>,
+      <FamilyVariantTags familyGuid={familyGuid} variant={variant} isCompoundHet />,
     )}
+    </Grid.Column>
     <Grid.Column width={16}>
       <Pathogenicity variant={variant} />
     </Grid.Column>
