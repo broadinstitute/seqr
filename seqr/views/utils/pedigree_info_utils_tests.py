@@ -16,7 +16,6 @@ class JSONUtilsTest(TestCase):
         self.assertListEqual(
             errors, ['Error while parsing file: {}. Row 1 contains 3 columns: fam1, ind1, male, while header contains 4: family_id, individual_id, sex, affected'.format(FILENAME)])
         self.assertListEqual(warnings, [])
-        
         records, errors, warnings = parse_pedigree_table(
             [['family_id', 'individual_id', 'sex', 'affected', 'father', 'mother'],
              ['', '', 'male', 'u', '.', 'ind2']], FILENAME)
