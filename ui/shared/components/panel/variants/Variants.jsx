@@ -40,7 +40,6 @@ const StyledCompoundHetRow = styled(Grid.Row)`
     margin-top: 0 !important;
     margin-bottom: 0 !important;
     margin-left: 1em !important;
-    margin-right: 1em !important;
   }
   
   padding: 0;
@@ -55,6 +54,14 @@ const StyledCompoundHetRow = styled(Grid.Row)`
     }
     return 'inherit'
   }}
+`
+
+const StyledCompoundHetLink = styled(Grid.Column)`
+  margin-right: -1em !important;
+`
+
+const StyledCompoundHetRows = styled(Grid)`
+  margin-right: 1em !important;
 `
 
 const SingleVariant = ({ variant }) =>
@@ -93,11 +100,11 @@ SingleVariant.propTypes = {
 
 const CompoundHet = ({ variant }) =>
   <StyledCompoundHetRow key={variant.variantId} severity={CLINSIG_SEVERITY[(variant.clinvar.clinicalSignificance || '').toLowerCase()]}>
-    <Grid.Column width={16}>
-    {variant.familyGuids.map(familyGuid =>
-      <FamilyVariantTags familyGuid={familyGuid} variant={variant} isCompoundHet />,
-    )}
-    </Grid.Column>
+    <StyledCompoundHetLink width={16}>
+      {variant.familyGuids.map(familyGuid =>
+        <FamilyVariantTags familyGuid={familyGuid} variant={variant} isCompoundHet />,
+      )}
+    </StyledCompoundHetLink>
     <Grid.Column width={16}>
       <Pathogenicity variant={variant} />
     </Grid.Column>
@@ -132,11 +139,11 @@ const CompoundHets = ({ variants }) =>
     <Grid.Column width={16}>
       {variants[0].mainTranscript.geneId && <VariantGene geneId={variants[0].mainTranscript.geneId} variant={variants[0]} />}
     </Grid.Column>
-    <Grid stackable columns="equal">
+    <StyledCompoundHetRows stackable columns="equal">
       {variants.map(variant =>
         <CompoundHet variant={variant} />,
       )}
-    </Grid>
+    </StyledCompoundHetRows>
   </StyledVariantRow>
 
 CompoundHets.propTypes = {
