@@ -45,6 +45,18 @@ const FLAG_TITLE = {
   coverage_genome: 'Mean Coverage',
 }
 
+const POPULATION_MAP = {
+  AFR: 'African',
+  AMR: 'Latino',
+  ASJ: 'Ashkenazi Jewish',
+  EAS: 'East Asian',
+  FIN: 'European (Finnish)',
+  MDE: 'Middle Eastern',
+  NFE: 'European (non-Finnish)',
+  OTH: 'Other',
+  SAS: 'South Asian',
+}
+
 const ratioLabel = (flag) => {
   const words = snakecaseToTitlecase(flag).split(' ')
   return `Ratio ${words[1]}/${words[2]}`
@@ -209,13 +221,15 @@ class IndividualRow extends React.Component
       },
       {
         content: (
-          <TextFieldView
+          <BaseFieldView
             key="population"
             isEditable={false}
             fieldName="Imputed Population"
             field="population"
             idField="individualGuid"
             initialValues={individual}
+            fieldDisplay={population => POPULATION_MAP[population] || population}
+
           />
         ),
       },

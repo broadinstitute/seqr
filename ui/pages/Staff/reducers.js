@@ -10,6 +10,8 @@ const REQUEST_ANVIL = 'REQUEST_ANVIL'
 const RECEIVE_ANVIL = 'RECEIVE_ANVIL'
 const REQUEST_DISCOVERY_SHEET = 'REQUEST_DISCOVERY_SHEET'
 const RECEIVE_DISCOVERY_SHEET = 'RECEIVE_DISCOVERY_SHEET'
+const REQUEST_SUCCESS_STORY = 'REQUEST_SUCCESS_STORY'
+const RECEIVE_SUCCESS_STORY = 'RECEIVE_SUCCESS_STORY'
 const REQUEST_ELASTICSEARCH_STATUS = 'REQUEST_ELASTICSEARCH_STATUS'
 const RECEIVE_ELASTICSEARCH_STATUS = 'RECEIVE_ELASTICSEARCH_STATUS'
 const REQUEST_MME_METRICS = 'REQUEST_MME_METRICS'
@@ -130,6 +132,24 @@ export const loadDiscoverySheet = (projectGuid) => {
   }
 }
 
+export const loadSuccessStory = (successStoryTypes) => {
+  return (dispatch) => {
+    if (successStoryTypes) {
+      dispatch({ type: REQUEST_SUCCESS_STORY })
+      new HttpRequestHelper(`/api/staff/success_story/${successStoryTypes}`,
+        (responseJson) => {
+          console.log(responseJson.errors)
+          dispatch({ type: RECEIVE_SUCCESS_STORY, newValue: responseJson.rows })
+        },
+        (e) => {
+          dispatch({ type: RECEIVE_SUCCESS_STORY, error: e.message, newValue: [] })
+        },
+      ).get()
+    }
+  }
+}
+
+
 export const createStaffUser = (values) => {
   return () => {
     return new HttpRequestHelper('/api/users/create_staff_user',
@@ -181,6 +201,8 @@ export const reducers = {
   anvilRows: createSingleValueReducer(RECEIVE_ANVIL, []),
   discoverySheetLoading: loadingReducer(REQUEST_DISCOVERY_SHEET, RECEIVE_DISCOVERY_SHEET),
   discoverySheetRows: createSingleValueReducer(RECEIVE_DISCOVERY_SHEET, []),
+  successStoryLoading: loadingReducer(REQUEST_SUCCESS_STORY, RECEIVE_SUCCESS_STORY),
+  successStoryRows: createSingleValueReducer(RECEIVE_SUCCESS_STORY, []),
   elasticsearchStatusLoading: loadingReducer(REQUEST_ELASTICSEARCH_STATUS, RECEIVE_ELASTICSEARCH_STATUS),
   elasticsearchStatus: createSingleValueReducer(RECEIVE_ELASTICSEARCH_STATUS, {}),
   mmeMetricsLoading: loadingReducer(REQUEST_MME_METRICS, RECEIVE_MME_METRICS),

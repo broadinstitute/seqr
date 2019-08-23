@@ -409,6 +409,28 @@ def discovery_sheet(request, project_guid):
     })
 
 
+@staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
+def success_story(request, success_story_types):
+    if success_story_types == 'all':
+        families = Family.objects.filter(success_story__isnull=False)
+    else:
+        success_story_types = success_story_types.split(',')
+        families = Family.objects.filter(success_story_types__overlap=success_story_types)
+
+    rows = [{
+        "project_guid": family.project.guid,
+        "family_guid": family.guid,
+        "family_id": family.family_id,
+        "success_story_types": family.success_story_types,
+        "success_story": family.success_story,
+        "row_id": family.guid,
+    } for family in families]
+
+    return create_json_response({
+        'rows': rows,
+    })
+
+
 def _get_loaded_samples_by_project_family(projects):
     loaded_samples = Sample.objects.filter(
         individual__family__project__in=projects,
@@ -814,13 +836,13 @@ def upload_qc_pipeline_output(request):
 
     json_records = [dict(zip(raw_records[0], row)) for row in raw_records[1:]]
 
-    missing_columns = [field for field in ['seqr_id', 'DATA_TYPE', 'filter_flags', 'pop_platform_filters', 'qc_pop']
+    missing_columns = [field for field in ['seqr_id', 'data_type', 'filter_flags', 'pop_platform_filters', 'qc_pop']
                        if field not in json_records[0]]
     if missing_columns:
         message = 'The following required columns are missing: {}'.format(', '.join(missing_columns))
         return create_json_response({'errors': [message]}, status=400, reason=message)
 
-    dataset_types = {record['DATA_TYPE'].lower() for record in json_records if record['DATA_TYPE'].lower() != 'n/a'}
+    dataset_types = {record['data_type'].lower() for record in json_records if record['data_type'].lower() != 'n/a'}
     if len(dataset_types) == 0:
         message = 'No dataset type detected'
         return create_json_response({'errors': [message]}, status=400, reason=message)

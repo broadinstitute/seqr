@@ -8,12 +8,14 @@ import {
   INDIVIDUAL_HPO_EXPORT_DATA,
   FAMILY_FIELD_CODED_PHENOTYPE,
   FAMILY_FIELD_ID,
+  successStoryTypeDisplay,
   INDIVIDUAL_FIELD_ID,
   INDIVIDUAL_FIELD_PATERNAL_ID,
   INDIVIDUAL_FIELD_MATERNAL_ID,
   INDIVIDUAL_FIELD_SEX,
   INDIVIDUAL_FIELD_AFFECTED,
 } from 'shared/utils/constants'
+
 
 const PROJECT_ID_FIELD = 'Project_ID'
 
@@ -90,6 +92,14 @@ const formatFamilySummary = row =>
     }
   </div>
 
+const formatIDLink = row =>
+  <Link to={`/project/${row.project_guid}/family_page/${row.family_guid}`} target="_blank">{row.family_id}</Link>
+
+const formatSuccessStoryTypes = row =>
+  row.success_story_types && row.success_story_types.map(tag => <div>{successStoryTypeDisplay(tag)}</div>)
+
+const formatDiscoveryTags = row =>
+  row.extras_variant_tag_list && <div>{row.extras_variant_tag_list.map(tag => <div><small>{tag}</small></div>)}</div>
 
 export const DISCOVERY_SHEET_COLUMNS = [
   { name: 't0', content: 'T0', format: formatT0, style: { minWidth: '100px' } },
@@ -152,4 +162,11 @@ export const DISCOVERY_SHEET_COLUMNS = [
   { name: 'collaborator', content: 'Collaborator' },
   { name: 'num_individuals_sequenced', content: '# of Individuals Sequenced' },
   { name: 'analysis_summary', content: 'Analysis Summary', style: { minWidth: '800px' } },
+]
+
+export const SUCCESS_STORY_COLUMNS = [
+  { name: 'family_id', content: 'Family ID', format: formatIDLink, noFormatExport: true, style: { minWidth: '200px' } },
+  { name: 'success_story_types', content: 'Success Story Types', format: formatSuccessStoryTypes, noFormatExport: true, style: { minWidth: '300px' } },
+  { name: 'success_story', content: 'Success Story', style: { minWidth: '564px' } },
+  { name: 'discovery_tags', content: 'Discovery Tags', format: formatDiscoveryTags, noFormatExport: true, style: { minWidth: '400px' } },
 ]

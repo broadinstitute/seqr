@@ -185,6 +185,8 @@ VariantTagField.propTypes = {
 const VariantNoteField = ({ action, note, variant, family, ...props }) => {
   const values = { ...variant, ...note }
   return <TextFieldView
+    noModal
+    showInLine
     isEditable
     field="note"
     modalId={family.familyGuid}

@@ -1,7 +1,7 @@
 import logging
 import json
 from collections import defaultdict
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from django.db.models.query_utils import Q
 from pyliftover.liftover import LiftOver
 
@@ -53,7 +53,7 @@ class Command(BaseCommand):
 
         unmatched_samples = set(sample_ids) - set(matched_sample_id_to_sample_record.keys())
         if len(unmatched_samples) > 0:
-            raise Exception('Matches not found for ES sample ids: {}.'.format(', '.join(unmatched_samples)))
+            raise CommandError('Matches not found for ES sample ids: {}.'.format(', '.join(unmatched_samples)))
 
         included_family_individuals = defaultdict(set)
         individual_guids_by_id = {}
@@ -71,7 +71,7 @@ class Command(BaseCommand):
                     '{} ({})'.format(family.family_id, ', '.join([i.individual_id for i in missing_indivs]))
                 )
         if missing_family_individuals:
-            raise Exception(
+            raise CommandError(
                 'The following families are included in the callset but are missing some family members: {}.'.format(
                     ', '.join(missing_family_individuals)
                 ))
@@ -103,7 +103,7 @@ class Command(BaseCommand):
         expected_families = {sv.family for sv in saved_variant_models_by_guid.values()}
         missing_families = expected_families - set(included_family_individuals.keys())
         if missing_families:
-            raise Exception(
+            raise CommandError(
                 'The following families have saved variants but are missing from the callset: {}.'.format(
                     ', '.join([f.family_id for f in missing_families])
                 ))
@@ -116,8 +116,8 @@ class Command(BaseCommand):
 
         num_already_lifted = len(saved_variants) - len(saved_variants_to_lift)
         if num_already_lifted:
-            if raw_input('Found {} saved variants already on Hg38. Continue with liftover (y/n)?'.format(num_already_lifted)) != 'y':
-                raise Exception('Error: found {} saved variants already on Hg38'.format(num_already_lifted))
+            if raw_input('Found {} saved variants already on Hg38. Continue with liftover (y/n)? '.format(num_already_lifted)) != 'y':
+                raise CommandError('Error: found {} saved variants already on Hg38'.format(num_already_lifted))
         logger.info('Lifting over {} variants (skipping {} that are already lifted)'.format(
             len(saved_variants_to_lift), num_already_lifted))
 
@@ -138,7 +138,7 @@ class Command(BaseCommand):
                     len(lift_failed), ', '.join([
                         '{}:{}-{}-{} ({})'.format(v['chrom'], v['pos'], v['ref'], v['alt'], ', '.join(v['familyGuids']))
                         for v in lift_failed.values()]))) != 'y':
-                raise Exception('Error: unable to lift over {} variants'.format(len(lift_failed)))
+                raise CommandError('Error: unable to lift over {} variants'.format(len(lift_failed)))
 
         saved_variants_map = defaultdict(list)
         for v in saved_variants_to_lift:
@@ -150,13 +150,20 @@ class Command(BaseCommand):
 
         missing_variants = set(saved_variants_map.keys()) - {(v['xpos'], v['ref'], v['alt']) for v in es_variants}
         if missing_variants:
-            missing_variant_strings = ['{}-{}-{} ({})'.format(
-                xpos, ref, alt,
-                ', '.join(['{}: {}'.format(v.family.family_id, v.guid) for v in saved_variants_map[(xpos, ref, alt)]]))
-                for xpos, ref, alt in missing_variants]
-            if raw_input('Unable to find the following {} variants in the index. Continue with update (y/n)?: {} '.format(
-                    len(missing_variants), ', '.join(missing_variant_strings))) != 'y':
-                raise Exception('Error: unable to find {} lifted-over variants'.format(len(missing_variants)))
+            missing_variant_strings = []
+            for xpos, ref, alt in missing_variants:
+                var_id = '{}-{}-{}'.format(xpos, ref, alt)
+                for v in saved_variants_map[(xpos, ref, alt)]:
+                    tags = v.varianttag_set.all()
+                    notes = v.variantnote_set.all()
+                    missing_variant_strings.append('{var_id} {family_id}: {tags} ({guid})'.format(
+                        var_id=var_id, family_id=v.family.family_id, guid=v.guid,
+                        tags=', '.join([tag.variant_tag_type.name for tag in tags])if tags else 'No Tags; {}'.format(
+                            '; '.join([note.note for note in notes]))
+                    ))
+            if raw_input('Unable to find the following {} variants in the index. Continue with update (y/n)?: {}\n'.format(
+                    len(missing_variants), '\n'.join(missing_variant_strings))) != 'y':
+                raise CommandError('Error: unable to find {} lifted-over variants'.format(len(missing_variants)))
 
         logger.info('Successfully lifted over {} variants'.format(len(es_variants)))
 
@@ -170,7 +177,7 @@ class Command(BaseCommand):
                     ', '.join(['{} ({})'.format(v.family.guid, v.guid) for v in missing_saved_variants]),
                     ', '.join(var['familyGuids'])
                 ))) != 'y':
-                    raise Exception('Error: unable to find family data for lifted over variant')
+                    raise CommandError('Error: unable to find family data for lifted over variant')
             for saved_variant in saved_variant_models:
                 saved_variant.xpos_start = var['xpos']
                 saved_variant.saved_variant_json = json.dumps(var)
