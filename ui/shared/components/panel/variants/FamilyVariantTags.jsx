@@ -157,7 +157,6 @@ const ShortcutTags = ({ variant, dispatchUpdateFamilyVariantTags, familyGuid }) 
 
 ShortcutTags.propTypes = {
   variant: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
-  // variant: PropTypes.object,
   dispatchUpdateFamilyVariantTags: PropTypes.func,
   familyGuid: PropTypes.string.isRequired,
 }
@@ -179,7 +178,6 @@ const VariantTagField = ({ variant, fieldName, family, ...props }) =>
 
 VariantTagField.propTypes = {
   variant: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
-  // variant: PropTypes.object,
   fieldName: PropTypes.string,
   family: PropTypes.object.isRequired,
 }
@@ -205,9 +203,34 @@ const VariantNoteField = ({ action, note, variant, family, ...props }) => {
 VariantNoteField.propTypes = {
   note: PropTypes.object,
   variant: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
-  // variant: PropTypes.object,
   action: PropTypes.string,
   family: PropTypes.object.isRequired,
+}
+
+const VariantLink = (
+  { variant, savedVariant, family },
+) =>
+  <VariantLinkContainer>
+    <NavLink
+      to={savedVariant ?
+        `/project/${family.projectGuid}/saved_variants/variant/${savedVariant.variantGuid}` :
+        `/variant_search/variant/${variant.variantId}/family/${family.familyGuid}`
+      }
+      activeStyle={NO_DISPLAY}
+    >
+      <Popup
+        trigger={<Icon name="linkify" link />}
+        content="Go to the page for this individual variant. Note: There is no additional information on this page, it is intended for sharing specific variants."
+        position="right center"
+        wide
+      />
+    </NavLink>
+  </VariantLinkContainer>
+
+VariantLink.propTypes = {
+  variant: PropTypes.object,
+  savedVariant: PropTypes.object,
+  family: PropTypes.object,
 }
 
 const FamilyVariantTags = (
@@ -288,28 +311,13 @@ const FamilyVariantTags = (
           </NoteContainer>
         </div>
       </InlineContainer>
-      <VariantLinkContainer>
-        <NavLink
-          to={savedVariant ?
-            `/project/${family.projectGuid}/saved_variants/variant/${savedVariant.variantGuid}` :
-            `/variant_search/variant/${variant.variantId}/family/${family.familyGuid}`
-          }
-          activeStyle={NO_DISPLAY}
-        >
-          <Popup
-            trigger={<Icon name="linkify" link />}
-            content="Go to the page for this individual variant. Note: There is no additional information on this page, it is intended for sharing specific variants."
-            position="right center"
-            wide
-          />
-        </NavLink>
-      </VariantLinkContainer>
+      <VariantLink variant={variant} savedVariant={savedVariant} family={family} />
     </div> : null
 )
 
 FamilyVariantTags.propTypes = {
-  variant: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
-  // variant: PropTypes.object,
+  // variant: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
+  variant: PropTypes.object,
   savedVariant: PropTypes.object,
   project: PropTypes.object,
   family: PropTypes.object,
