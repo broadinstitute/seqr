@@ -234,42 +234,46 @@ VariantLink.propTypes = {
 }
 
 const FamilyVariantTags = (
-  { variant, savedVariant, family, project, dispatchUpdateVariantNote, dispatchUpdateFamilyVariantTags },
-) => (
-  family ?
-    <div>
-      <InlineContainer>
-        <InlineHeader size="small">
-          Family<HorizontalSpacer width={5} />
-          <PopupWithModal
-            hoverable
-            style={FAMILY_POPUP_STYLE}
-            position="right center"
-            keepInViewPort
-            trigger={
-              <NavLink to={`/project/${family.projectGuid}/family_page/${family.familyGuid}`}>
-                {family.displayName}
-              </NavLink>
-            }
-            content={<Family family={family} fields={FAMILY_FIELDS} useFullWidth disablePedigreeZoom />}
-          />
-        </InlineHeader>
-      </InlineContainer>
-      <InlineContainer>
-        <div>
-          <TagTitle>Tags:</TagTitle>
-          <HorizontalSpacer width={5} />
-          <ShortcutTags variant={savedVariant || variant} familyGuid={family.familyGuid} dispatchUpdateFamilyVariantTags={dispatchUpdateFamilyVariantTags} />
-          <VariantTagField
-            field="tags"
-            fieldName="Tags"
-            family={family}
-            variant={savedVariant || variant}
-            tagOptions={project.variantTagTypes.filter(vtt => vtt.name !== NOTE_TAG_NAME)}
-            onSubmit={dispatchUpdateFamilyVariantTags}
-          />
-          <HorizontalSpacer width={5} />
-          {savedVariant && savedVariant.tags.some(tag => tag.category === DISCOVERY_CATEGORY_NAME) &&
+  { variant, savedVariant, family, project, dispatchUpdateVariantNote, dispatchUpdateFamilyVariantTags, isCompoundHet, isCompoundHetHeader },
+) => {
+  if (family) {
+    if (isCompoundHet) {
+      return <VariantLink variant={variant} savedVariant={savedVariant} family={family} />
+    }
+    return (
+      <div>
+        <InlineContainer>
+          <InlineHeader size="small">
+            Family<HorizontalSpacer width={5} />
+            <PopupWithModal
+              hoverable
+              style={FAMILY_POPUP_STYLE}
+              position="right center"
+              keepInViewPort
+              trigger={
+                <NavLink to={`/project/${family.projectGuid}/family_page/${family.familyGuid}`}>
+                  {family.displayName}
+                </NavLink>
+              }
+              content={<Family family={family} fields={FAMILY_FIELDS} useFullWidth disablePedigreeZoom />}
+            />
+          </InlineHeader>
+        </InlineContainer>
+        <InlineContainer>
+          <div>
+            <TagTitle>Tags:</TagTitle>
+            <HorizontalSpacer width={5} />
+            <ShortcutTags variant={savedVariant || variant} familyGuid={family.familyGuid} dispatchUpdateFamilyVariantTags={dispatchUpdateFamilyVariantTags} />
+            <VariantTagField
+              field="tags"
+              fieldName="Tags"
+              family={family}
+              variant={savedVariant || variant}
+              tagOptions={project.variantTagTypes.filter(vtt => vtt.name !== NOTE_TAG_NAME)}
+              onSubmit={dispatchUpdateFamilyVariantTags}
+            />
+            <HorizontalSpacer width={5} />
+            {savedVariant && savedVariant.tags.some(tag => tag.category === DISCOVERY_CATEGORY_NAME) &&
             <span>
               <TagTitle>Fxnl Data:</TagTitle>
               <VariantTagField
@@ -283,37 +287,39 @@ const FamilyVariantTags = (
               />
               <HorizontalSpacer width={5} />
             </span>
-          }
-        </div>
-        <div>
-          <TagTitle>Notes:</TagTitle>
-          <NoteContainer>
-            {savedVariant && savedVariant.notes.map(note =>
+            }
+          </div>
+          <div>
+            <TagTitle>Notes:</TagTitle>
+            <NoteContainer>
+              {savedVariant && savedVariant.notes.map(note =>
+                <VariantNoteField
+                  key={note.noteGuid}
+                  note={note}
+                  variant={savedVariant}
+                  family={family}
+                  isDeletable
+                  compact
+                  action="Edit"
+                  onSubmit={dispatchUpdateVariantNote}
+                />,
+              )}
               <VariantNoteField
-                key={note.noteGuid}
-                note={note}
-                variant={savedVariant}
+                variant={savedVariant || variant}
                 family={family}
-                isDeletable
-                compact
-                action="Edit"
+                editIconName="plus"
+                editLabel="Add Note"
+                action="Add"
                 onSubmit={dispatchUpdateVariantNote}
-              />,
-            )}
-            <VariantNoteField
-              variant={savedVariant || variant}
-              family={family}
-              editIconName="plus"
-              editLabel="Add Note"
-              action="Add"
-              onSubmit={dispatchUpdateVariantNote}
-            />
-          </NoteContainer>
-        </div>
-      </InlineContainer>
-      <VariantLink variant={variant} savedVariant={savedVariant} family={family} />
-    </div> : null
-)
+              />
+            </NoteContainer>
+          </div>
+        </InlineContainer>
+        {!isCompoundHetHeader && <VariantLink variant={variant} savedVariant={savedVariant} family={family} />}
+      </div>)
+  }
+  return null
+}
 
 FamilyVariantTags.propTypes = {
   // variant: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
@@ -321,6 +327,8 @@ FamilyVariantTags.propTypes = {
   savedVariant: PropTypes.object,
   project: PropTypes.object,
   family: PropTypes.object,
+  isCompoundHet: PropTypes.bool,
+  isCompoundHetHeader: PropTypes.bool,
   dispatchUpdateVariantNote: PropTypes.func,
   dispatchUpdateFamilyVariantTags: PropTypes.func,
 }

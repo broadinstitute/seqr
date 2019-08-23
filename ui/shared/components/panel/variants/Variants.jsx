@@ -37,7 +37,7 @@ const StyledVariantRow = styled(Grid.Row)`
 
 const StyledCompoundHetRow = styled(Grid.Row)`
   .column {
-    margin-top: 1em !important;
+    margin-top: 0 !important;
     margin-bottom: 0 !important;
     margin-left: 1em !important;
     margin-right: 1em !important;
@@ -95,7 +95,7 @@ const CompoundHet = ({ variant }) =>
   <StyledCompoundHetRow key={variant.variantId} severity={CLINSIG_SEVERITY[(variant.clinvar.clinicalSignificance || '').toLowerCase()]}>
     {variant.familyGuids.map(familyGuid =>
       <Grid.Column key={familyGuid} width={16}>
-        <FamilyVariantTags familyGuid={familyGuid} variant={variant} />
+        <FamilyVariantTags familyGuid={familyGuid} variant={variant} isCompoundHet />
       </Grid.Column>,
     )}
     <Grid.Column width={16}>
@@ -126,7 +126,7 @@ const CompoundHets = ({ variants }) =>
   <StyledVariantRow key={variants[0].variantId} >
     {variants[0].familyGuids.map(familyGuid =>
       <Grid.Column key={familyGuid} width={16}>
-        <FamilyVariantTags familyGuid={familyGuid} variant={variants[0]} />
+        <FamilyVariantTags familyGuid={familyGuid} variant={variants[0]} isCompoundHetHeader />
       </Grid.Column>,
     )}
     <Grid.Column width={16}>
