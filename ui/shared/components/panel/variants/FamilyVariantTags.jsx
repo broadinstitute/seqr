@@ -156,8 +156,8 @@ const ShortcutTags = ({ variant, dispatchUpdateFamilyVariantTags, familyGuid }) 
 }
 
 ShortcutTags.propTypes = {
-  // variant: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
-  variant: PropTypes.object,
+  variant: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
+  // variant: PropTypes.object,
   dispatchUpdateFamilyVariantTags: PropTypes.func,
   familyGuid: PropTypes.string.isRequired,
 }
@@ -178,8 +178,8 @@ const VariantTagField = ({ variant, fieldName, family, ...props }) =>
   />
 
 VariantTagField.propTypes = {
-  // variant: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
-  variant: PropTypes.object,
+  variant: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
+  // variant: PropTypes.object,
   fieldName: PropTypes.string,
   family: PropTypes.object.isRequired,
 }
@@ -204,8 +204,8 @@ const VariantNoteField = ({ action, note, variant, family, ...props }) => {
 
 VariantNoteField.propTypes = {
   note: PropTypes.object,
-  // variant: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
-  variant: PropTypes.object,
+  variant: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
+  // variant: PropTypes.object,
   action: PropTypes.string,
   family: PropTypes.object.isRequired,
 }
@@ -308,8 +308,8 @@ const FamilyVariantTags = (
 )
 
 FamilyVariantTags.propTypes = {
-  // variant: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
-  variant: PropTypes.object,
+  variant: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
+  // variant: PropTypes.object,
   savedVariant: PropTypes.object,
   project: PropTypes.object,
   family: PropTypes.object,

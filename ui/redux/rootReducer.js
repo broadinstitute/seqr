@@ -268,7 +268,6 @@ const updateSavedVariant = (values, action = 'create') => {
 }
 
 export const updateVariantNote = (values) => {
-  console.log(values)
   if (values.variantGuid) {
     return updateEntity(values, RECEIVE_DATA, `/api/saved_variant/${values.variantGuid}/note`, 'noteGuid')
   }

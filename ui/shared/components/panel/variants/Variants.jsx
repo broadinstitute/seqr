@@ -1,7 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import { Grid, Divider, Segment } from 'semantic-ui-react'
+import { Grid, Divider } from 'semantic-ui-react'
 
 import { CLINSIG_SEVERITY } from 'shared/utils/constants'
 import FamilyVariantReads from './FamilyVariantReads'
@@ -113,7 +113,7 @@ const CompoundHet = ({ variant }) =>
     </Grid.Column>
   </StyledCompoundHetRow>
 
-CompoundHet.prototype = {
+CompoundHet.propTypes = {
   variant: PropTypes.object,
 }
 
@@ -125,7 +125,7 @@ const CompoundHets = ({ variants }) =>
       </Grid.Column>,
     )}
     <Grid.Column width={16}>
-      {variants[1].mainTranscript.geneId && <VariantGene geneId={variants[1].mainTranscript.geneId} variant={variants[1]} />}
+      {variants[0].mainTranscript.geneId && <VariantGene geneId={variants[0].mainTranscript.geneId} variant={variants[0]} />}
     </Grid.Column>
     <Grid stackable columns="equal">
       {variants.map(variant =>
