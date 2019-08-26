@@ -550,6 +550,8 @@ class SavedVariant(ModelWithGUID):
     project = models.ForeignKey('Project')
     family = models.ForeignKey('Family', null=True, blank=True, on_delete=models.SET_NULL)
 
+    # compound_hets = models.ManyToManyField("self", blank=True)
+
     def __unicode__(self):
         chrom, pos = get_chrom_pos(self.xpos_start)
         return "%s:%s-%s:%s" % (chrom, pos, self.project.guid, self.family.guid if self.family else '')
@@ -602,7 +604,7 @@ class VariantTagType(ModelWithGUID):
 
 
 class VariantTag(ModelWithGUID):
-    saved_variant = models.ForeignKey('SavedVariant', on_delete=models.CASCADE, null=True)
+    saved_variant = models.ManyToManyField('SavedVariant')
     variant_tag_type = models.ForeignKey('VariantTagType', on_delete=models.CASCADE)
 
     # context in which a variant tag was saved
@@ -617,13 +619,13 @@ class VariantTag(ModelWithGUID):
         return 'VT%07d_%s' % (self.id, _slugify(str(self)))
 
     class Meta:
-        unique_together = ('variant_tag_type', 'saved_variant')
+        # unique_together = ('variant_tag_type', 'saved_variant')
 
         json_fields = ['guid', 'search_parameters', 'search_hash', 'last_modified_date', 'created_by']
 
 
 class VariantNote(ModelWithGUID):
-    saved_variant = models.ForeignKey('SavedVariant', on_delete=models.CASCADE, null=True)
+    saved_variant = models.ManyToManyField('SavedVariant')
     note = models.TextField(null=True, blank=True)
     submit_to_clinvar = models.BooleanField(default=False)
 

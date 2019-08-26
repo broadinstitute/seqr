@@ -550,6 +550,7 @@ class EsSearch(BaseEsSearch):
                 for family_guid in variant['familyGuids']:
                     family_variants[family_guid].append(variant)
 
+            # TODO debug this >===================================================
             for family_guid, variants in family_variants.items():
                 for individual_guid in family_unaffected_individual_guids.get(family_guid, []):
                     # To be compound het all unaffected individuals need to be hom ref for at least one of the variants

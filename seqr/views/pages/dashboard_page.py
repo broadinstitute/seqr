@@ -87,6 +87,8 @@ def _retrieve_projects_by_guid(cursor, projects_user_can_view, projects_user_can
         WHERE project_id=p.id
     """.strip()
 
+    # TODO rewrite this ? =======================================================
+    # TODO ( ^select from mapping table)
     num_variant_tags_subquery = """
       SELECT count(*) FROM seqr_varianttag AS v
         JOIN seqr_savedvariant AS s ON v.saved_variant_id=s.id
