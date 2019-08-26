@@ -47,6 +47,10 @@ const BaseVariantSearchResults = ({
   const variantDisplayPageOffset = (page - 1) * recordsPerPage
   const paginationFields = totalVariantsCount > recordsPerPage ? [{ ...VARIANT_PAGINATION_FIELD, totalPages: Math.ceil(totalVariantsCount / recordsPerPage) }] : []
   const fields = [...FIELDS, ...paginationFields]
+  const searchedVariantsCount = searchedVariants.length ? searchedVariants.reduce(
+    (countSoFar, currentVariantSets) => (Array.isArray(currentVariantSets) ? countSoFar + currentVariantSets.length : countSoFar + 1), 0)
+    : 0
+  console.log(searchedVariants)
   return (
     <DataLoader
       contentId={searchHash || variantId}
@@ -66,7 +70,7 @@ const BaseVariantSearchResults = ({
       {searchHash &&
         <LargeRow>
           <Grid.Column width={5}>
-            {totalVariantsCount === searchedVariants.length ? 'Found ' : `Showing ${variantDisplayPageOffset + 1}-${variantDisplayPageOffset + searchedVariants.length} of `}
+            {totalVariantsCount === searchedVariants.length ? 'Found ' : `Showing ${variantDisplayPageOffset + 1}-${variantDisplayPageOffset + searchedVariantsCount} of `}
             <b>{totalVariantsCount}</b> variants
           </Grid.Column>
           <Grid.Column width={11} floated="right" textAlign="right">
