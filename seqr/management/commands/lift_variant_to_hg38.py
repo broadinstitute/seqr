@@ -1,21 +1,9 @@
 import logging
 import json
-from collections import defaultdict
 from django.core.management.base import BaseCommand, CommandError
-from django.db.models.query_utils import Q
-from pyliftover.liftover import LiftOver
 
-from reference_data.models import GENOME_VERSION_GRCh38
-from seqr.models import Project, SavedVariant, Sample
-from seqr.model_utils import update_xbrowse_vcfffiles
-from seqr.views.apis.dataset_api import _update_samples
-from seqr.views.utils.dataset_utils import match_sample_ids_to_sample_records, validate_index_metadata, \
-    get_elasticsearch_index_samples
-from seqr.views.utils.json_to_orm_utils import update_model_from_json
-from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants
-from seqr.views.utils.variant_utils import reset_cached_search_results
+from seqr.models import SavedVariant
 from seqr.utils.es_utils import get_single_es_variant
-from seqr.utils.xpos_utils import get_xpos
 
 logger = logging.getLogger(__name__)
 
