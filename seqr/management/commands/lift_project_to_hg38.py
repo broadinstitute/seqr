@@ -161,7 +161,7 @@ class Command(BaseCommand):
                         tags=', '.join([tag.variant_tag_type.name for tag in tags])if tags else 'No Tags; {}'.format(
                             '; '.join([note.note for note in notes]))
                     ))
-            if raw_input('Unable to find the following {} variants in the index. Continue with update (y/n)?: {}\n'.format(
+            if raw_input('Unable to find the following {} variants in the index. Continue with update (y/n)?:\n{}\n'.format(
                     len(missing_variants), '\n'.join(missing_variant_strings))) != 'y':
                 raise CommandError('Error: unable to find {} lifted-over variants'.format(len(missing_variants)))
 
