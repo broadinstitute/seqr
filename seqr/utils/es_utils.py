@@ -849,7 +849,6 @@ RECESSIVE = 'recessive'
 X_LINKED_RECESSIVE = 'x_linked_recessive'
 HOMOZYGOUS_RECESSIVE = 'homozygous_recessive'
 COMPOUND_HET = 'compound_het'
-ANY_AFFECTED = 'any_affected'
 IS_OR_INHERITANCE = 'is_or_inheritance'
 RECESSIVE_FILTER = {
     AFFECTED: ALT_ALT,
@@ -867,7 +866,7 @@ INHERITANCE_FILTERS = {
         AFFECTED: HAS_ALT,
         UNAFFECTED: REF_REF,
     },
-    ANY_AFFECTED: {
+    'any_affected': {
         AFFECTED: HAS_ALT,
         IS_OR_INHERITANCE: True,
     },
