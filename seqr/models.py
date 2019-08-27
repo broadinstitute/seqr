@@ -550,8 +550,6 @@ class SavedVariant(ModelWithGUID):
     project = models.ForeignKey('Project')
     family = models.ForeignKey('Family', null=True, blank=True, on_delete=models.SET_NULL)
 
-    # compound_hets = models.ManyToManyField("self", blank=True)
-
     def __unicode__(self):
         chrom, pos = get_chrom_pos(self.xpos_start)
         return "%s:%s-%s:%s" % (chrom, pos, self.project.guid, self.family.guid if self.family else '')
