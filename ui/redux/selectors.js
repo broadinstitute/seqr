@@ -12,7 +12,7 @@ import {
   VARIANT_SORT_LOOKUP,
   SHOW_ALL,
   DATASET_TYPE_READ_ALIGNMENTS,
-  getVariantsExportData,
+  VARIANT_EXPORT_DATA,
   familySamplesLoaded,
 } from 'shared/utils/constants'
 
@@ -247,7 +247,28 @@ export const getSavedVariantTotalPages = createSelector(
 
 export const getSavedVariantExportConfig = createSelector(
   getFilteredSavedVariants,
-  getVariantsExportData,
+  getFamiliesByGuid,
+  (variants, familiesByGuid) => {
+    const familyVariants = variants.map(({ genotypes, ...variant }) => ({
+      ...variant,
+      genotypes: Object.keys(genotypes).filter(
+        indGuid => variant.familyGuids.some(familyGuid => familiesByGuid[familyGuid].individualGuids.includes(indGuid)),
+      ).reduce((acc, indGuid) => ({ ...acc, [indGuid]: genotypes[indGuid] }), {}),
+    }))
+    const maxGenotypes = Math.max(...familyVariants.map(variant => Object.keys(variant.genotypes).length), 0)
+    return {
+      rawData: familyVariants,
+      headers: [
+        ...VARIANT_EXPORT_DATA.map(config => config.header),
+        ...[...Array(maxGenotypes).keys()].map(i => `sample_${i + 1}:num_alt_alleles:gq:ab`),
+      ],
+      processRow: variant => ([
+        ...VARIANT_EXPORT_DATA.map(config => (config.getVal ? config.getVal(variant) : variant[config.header])),
+        ...Object.values(variant.genotypes).map(
+          ({ sampleId, numAlt, gq, ab }) => `${sampleId}:${numAlt}:${gq}:${ab}`),
+      ]),
+    }
+  },
 )
 
 export const getParsedLocusList = createSelector(
