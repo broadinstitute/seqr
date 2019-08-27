@@ -55,35 +55,43 @@ GeneLabel.propTypes = {
   showEmpty: PropTypes.bool,
 }
 
-const BaseLocusListLabels = ({ locusListGuids, locusListsByGuid, compact }) => (
-  compact ?
-    <GeneDetailSection
-      compact
-      color="teal"
-      compactLabel="Gene Lists"
-      details={locusListGuids.length > 0 &&
-        <List bulleted items={locusListGuids.map(locusListGuid => locusListsByGuid[locusListGuid].name)} />
-      }
-    /> :
-    <div>
-      {locusListGuids.map(locusListGuid =>
-        <GeneDetailSection
-          key={locusListGuid}
-          color="teal"
-          maxWidth="7em"
-          showEmpty
-          label={(locusListsByGuid[locusListGuid] || {}).name}
-          description={(locusListsByGuid[locusListGuid] || {}).name}
-          details={(locusListsByGuid[locusListGuid] || {}).description}
-        />,
-      )}
-    </div>
-)
+const BaseLocusListLabels = ({ locusListGuids, locusListsByGuid, compact, isCompoundHetHeader }) => {
+  const NonCompondHetTagsWrapper = ({ condition, wrapper, tags }) => (condition ? wrapper(tags) : tags)
+  return (
+    compact ?
+      <GeneDetailSection
+        compact
+        color="teal"
+        compactLabel="Gene Lists"
+        details={locusListGuids.length > 0 &&
+          <List bulleted items={locusListGuids.map(locusListGuid => locusListsByGuid[locusListGuid].name)} />
+        }
+      /> :
+      <NonCompondHetTagsWrapper
+        condition={!isCompoundHetHeader}
+        wrapper={children => <div>{children}</div>}
+      >
+        <React.Fragment>
+          {locusListGuids.map(locusListGuid =>
+            <GeneDetailSection
+              key={locusListGuid}
+              color="teal"
+              maxWidth="7em"
+              showEmpty
+              label={(locusListsByGuid[locusListGuid] || {}).name}
+              description={(locusListsByGuid[locusListGuid] || {}).name}
+              details={(locusListsByGuid[locusListGuid] || {}).description}
+            />,
+          )}
+        </React.Fragment>
+      </NonCompondHetTagsWrapper>)
+}
 
 BaseLocusListLabels.propTypes = {
   locusListGuids: PropTypes.array.isRequired,
   compact: PropTypes.bool,
   locusListsByGuid: PropTypes.object,
+  isCompoundHetHeader: PropTypes.bool,
 }
 
 const mapLocusListStateToProps = state => ({

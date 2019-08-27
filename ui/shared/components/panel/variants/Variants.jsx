@@ -123,7 +123,8 @@ const CompoundHets = ({ variants }) =>
       </Grid.Column>,
     )}
     <Grid.Column width={16}>
-      {variants[0].mainTranscript.geneId && <VariantGene geneId={variants[0].mainTranscript.geneId} variant={variants[0]} />}
+      {variants[0].mainTranscript.geneId &&
+      <VariantGene geneId={variants[0].mainTranscript.geneId} variant={variants[0]} isCompoundHetHeader />}
     </Grid.Column>
     <StyledCompoundHetRows stackable columns="equal">
       {variants.map(variant =>
