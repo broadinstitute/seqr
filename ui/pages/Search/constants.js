@@ -60,6 +60,7 @@ const HOM_RECESSIVE_FILTER = 'homozygous_recessive'
 const X_LINKED_RECESSIVE_FILTER = 'x_linked_recessive'
 const COMPOUND_HET_FILTER = 'compound_het'
 const DE_NOVO_FILTER = 'de_novo'
+const ANY_AFFECTED = 'any_affected'
 
 export const INHERITANCE_LOOKUP = {
   [ALL_INHERITANCE_FILTER]: { text: 'All' },
@@ -108,6 +109,13 @@ export const INHERITANCE_LOOKUP = {
     text: 'Compound Heterozygous',
     detail: 'Affected individual(s) have two heterozygous mutations in the same gene on opposite haplotypes. Unaffected individuals cannot have the same combination of alleles as affected individuals, or be homozygous alternate for any of the variants. If parents are not present, this method only searches for pairs of heterozygous variants; they may not be on different haplotypes.',
   },
+  [ANY_AFFECTED]: {
+    filter: {
+      [AFFECTED]: HAS_ALT,
+    },
+    text: 'Any Affected',
+    detail: 'Finds variants where at least one affected individual has at least one alternate allele.',
+  },
 }
 
 export const INHERITANCE_MODE_LOOKUP = Object.entries(INHERITANCE_LOOKUP).reduce((acc, [mode, { filter }]) =>
@@ -115,7 +123,7 @@ export const INHERITANCE_MODE_LOOKUP = Object.entries(INHERITANCE_LOOKUP).reduce
 )
 
 export const INHERITANCE_FILTER_OPTIONS = [
-  ALL_INHERITANCE_FILTER, RECESSIVE_FILTER, HOM_RECESSIVE_FILTER, X_LINKED_RECESSIVE_FILTER, COMPOUND_HET_FILTER, DE_NOVO_FILTER,
+  ALL_INHERITANCE_FILTER, RECESSIVE_FILTER, HOM_RECESSIVE_FILTER, X_LINKED_RECESSIVE_FILTER, COMPOUND_HET_FILTER, DE_NOVO_FILTER, ANY_AFFECTED,
 ].map(value => ({ value, ...INHERITANCE_LOOKUP[value] }))
 
 
