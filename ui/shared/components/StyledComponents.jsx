@@ -29,9 +29,13 @@ export const ButtonLink = styled(({ color, padding, ...props }) => <Button {...p
   }
 `
 
-export const ColoredIcon = styled(({ color, ...props }) => <Icon {...props} />)`
+const BaseColoredComponent = styled.div`
   color: ${props => props.color} !important;
 `
+
+export const ColoredComponent = control => BaseColoredComponent.withComponent(({ color, ...props }) => React.createElement(control, props))
+
+export const ColoredIcon = ColoredComponent(Icon)
 
 export const ColoredLabel = styled(({ color, ...props }) => <Label {...props} />)`
   background-color: ${props => props.color} !important;

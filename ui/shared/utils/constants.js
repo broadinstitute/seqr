@@ -87,6 +87,10 @@ export const FAMILY_ANALYSIS_STATUS_OPTIONS = [
   { value: FAMILY_STATUS_WAITING_FOR_DATA, color: '#FFC107', name: 'Waiting for data' },
 ]
 
+export const FAMILY_ANALYSIS_STATUS_LOOKUP = FAMILY_ANALYSIS_STATUS_OPTIONS.reduce((acc, tag) => {
+  return { [tag.value]: tag, ...acc }
+}, {})
+
 // SUCCESS STORY
 
 const FAMILY_SUCCESS_STORY_NOVEL_DISCOVERY = 'N'
