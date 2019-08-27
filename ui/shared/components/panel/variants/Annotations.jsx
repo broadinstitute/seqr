@@ -82,7 +82,7 @@ const LOF_FILTER_MAP = {
   ANC_ALLELE: { title: 'Ancestral Allele', message: 'The alternate allele reverts the sequence back to the ancestral state' },
 }
 
-const BaseSearchLinks = ({ variant, mainGene }) => {
+const BaseSearchLinks = ({ variant, mainTranscript, mainGene }) => {
   const links = [<SearchResultsLink key="seqr" buttonText="seqr" variantId={variant.variantId} />]
   if (mainGene) {
     const geneNames = [mainGene.geneSymbol, ...getOtherGeneNames(mainGene)]
@@ -95,16 +95,16 @@ const BaseSearchLinks = ({ variant, mainGene }) => {
       `g.${variant.pos}${variant.ref}>${variant.alt}`, //g.179432185A>G
     ]
 
-    if (variant.mainTranscript.hgvsp) {
-      const hgvsp = variant.mainTranscript.hgvsp.split(':')[1].replace('p.', '')
+    if (mainTranscript.hgvsp) {
+      const hgvsp = mainTranscript.hgvsp.split(':')[1].replace('p.', '')
       variations.unshift(
         ...geneNames.map(geneName => `${geneName}:p.${hgvsp}`), //TTN:p.Ile26225Thr
         ...geneNames.map(geneName => `${geneName}:${hgvsp}`), //TTN:Ile26225Thr
       )
     }
 
-    if (variant.mainTranscript.hgvsc) {
-      const hgvsc = variant.mainTranscript.hgvsc.split(':')[1].replace('c.', '')
+    if (mainTranscript.hgvsc) {
+      const hgvsc = mainTranscript.hgvsc.split(':')[1].replace('c.', '')
       variations.unshift(
         ...geneNames.map(geneName => `${geneName}:c.${hgvsc}`), //TTN:c.78674T>C
         `c.${hgvsc}`, //c.1282C>T
@@ -132,7 +132,7 @@ const BaseSearchLinks = ({ variant, mainGene }) => {
 }
 
 const mapStateToProps = (state, ownProps) => ({
-  mainGene: getGenesById(state)[ownProps.variant.mainTranscript.geneId],
+  mainGene: getGenesById(state)[ownProps.mainTranscript.geneId],
 })
 
 const SearchLinks = connect(mapStateToProps)(BaseSearchLinks)
@@ -215,7 +215,7 @@ const Annotations = ({ variant }) => {
       <VerticalSpacer height={5} />
       <LocusListLabels locusListGuids={variant.locusListGuids} />
       <VerticalSpacer height={5} />
-      <SearchLinks variant={variant} />
+      <SearchLinks variant={variant} mainTranscript={mainTranscript} />
     </div>
   )
 }
