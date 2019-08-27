@@ -55,8 +55,9 @@ GeneLabel.propTypes = {
   showEmpty: PropTypes.bool,
 }
 
-const BaseLocusListLabels = ({ locusListGuids, locusListsByGuid, compact }) => (
-  compact ?
+const BaseLocusListLabels = ({ locusListGuids, locusListsByGuid, compact, isCompoundHet }) => {
+  const ConditionalWrapper = ({ condition, wrapper, children }) => (condition ? wrapper(children) : children)
+  return (compact ?
     <GeneDetailSection
       compact
       color="teal"
@@ -65,25 +66,31 @@ const BaseLocusListLabels = ({ locusListGuids, locusListsByGuid, compact }) => (
         <List bulleted items={locusListGuids.map(locusListGuid => locusListsByGuid[locusListGuid].name)} />
       }
     /> :
-    <div>
-      {locusListGuids.map(locusListGuid =>
-        <GeneDetailSection
-          key={locusListGuid}
-          color="teal"
-          maxWidth="7em"
-          showEmpty
-          label={(locusListsByGuid[locusListGuid] || {}).name}
-          description={(locusListsByGuid[locusListGuid] || {}).name}
-          details={(locusListsByGuid[locusListGuid] || {}).description}
-        />,
-      )}
-    </div>
-)
+    <ConditionalWrapper
+      condition={!isCompoundHet}
+      wrapper={children => <div>{children}</div>}
+    >
+      <React.Fragment>
+        {locusListGuids.map(locusListGuid =>
+          <GeneDetailSection
+            key={locusListGuid}
+            color="teal"
+            maxWidth="7em"
+            showEmpty
+            label={(locusListsByGuid[locusListGuid] || {}).name}
+            description={(locusListsByGuid[locusListGuid] || {}).name}
+            details={(locusListsByGuid[locusListGuid] || {}).description}
+          />,
+        )}
+      </React.Fragment>
+    </ConditionalWrapper>)
+}
 
 BaseLocusListLabels.propTypes = {
   locusListGuids: PropTypes.array.isRequired,
   compact: PropTypes.bool,
   locusListsByGuid: PropTypes.object,
+  isCompoundHet: PropTypes.bool,
 }
 
 const mapLocusListStateToProps = state => ({
@@ -168,7 +175,7 @@ export const GeneDetails = ({ gene, compact, showLocusLists, ...labelProps }) =>
          loss-of-function mutations`}
       {...labelProps}
     />
-    {showLocusLists && <LocusListLabels locusListGuids={gene.locusListGuids} compact={compact} />}
+    {showLocusLists && <LocusListLabels locusListGuids={gene.locusListGuids} compact={compact} {...labelProps} />}
   </div>
 
 GeneDetails.propTypes = {
