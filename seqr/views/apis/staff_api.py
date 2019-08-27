@@ -836,13 +836,13 @@ def upload_qc_pipeline_output(request):
 
     json_records = [dict(zip(raw_records[0], row)) for row in raw_records[1:]]
 
-    missing_columns = [field for field in ['seqr_id', 'DATA_TYPE', 'filter_flags', 'pop_platform_filters', 'qc_pop']
+    missing_columns = [field for field in ['seqr_id', 'data_type', 'filter_flags', 'pop_platform_filters', 'qc_pop']
                        if field not in json_records[0]]
     if missing_columns:
         message = 'The following required columns are missing: {}'.format(', '.join(missing_columns))
         return create_json_response({'errors': [message]}, status=400, reason=message)
 
-    dataset_types = {record['DATA_TYPE'].lower() for record in json_records if record['DATA_TYPE'].lower() != 'n/a'}
+    dataset_types = {record['data_type'].lower() for record in json_records if record['data_type'].lower() != 'n/a'}
     if len(dataset_types) == 0:
         message = 'No dataset type detected'
         return create_json_response({'errors': [message]}, status=400, reason=message)
