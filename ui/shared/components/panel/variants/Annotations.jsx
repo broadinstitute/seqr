@@ -1,12 +1,15 @@
 import React from 'react'
 import PropTypes from 'prop-types'
+import { connect } from 'react-redux'
 import styled from 'styled-components'
 import { Popup, Label, Icon } from 'semantic-ui-react'
 
+import { getGenesById } from 'redux/selectors'
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
 import SearchResultsLink from '../../buttons/SearchResultsLink'
 import Modal from '../../modal/Modal'
 import { ButtonLink } from '../../StyledComponents'
+import { getOtherGeneNames } from '../genes/GeneDetail'
 import Transcripts, { TranscriptLink } from './Transcripts'
 import { LocusListLabels } from './VariantGene'
 import { GENOME_VERSION_37, getVariantMainTranscript } from '../../../utils/constants'
@@ -79,48 +82,65 @@ const LOF_FILTER_MAP = {
   ANC_ALLELE: { title: 'Ancestral Allele', message: 'The alternate allele reverts the sequence back to the ancestral state' },
 }
 
-const annotationVariations = (mainTranscript, variant) => {
-  const variations = []
-  if (mainTranscript.hgvsc) {
-    const hgvsc = mainTranscript.hgvsc.split(':')[1].replace('c.', '')
-    variations.push(
-      `${mainTranscript.geneSymbol}:c.${hgvsc}`, //TTN:c.78674T>C
-      `c.${hgvsc}`, //c.1282C>T
-      hgvsc, //1282C>T
-      hgvsc.replace('>', '->'), //1282C->T
-      hgvsc.replace('>', '-->'), //1282C-->T
-      (`c.${hgvsc}`).replace('>', '/'), //c.1282C/T
-      hgvsc.replace('>', '/'), //1282C/T
-      `${mainTranscript.geneSymbol}:${hgvsc}`, //TTN:78674T>C
-    )
-  }
+const BaseSearchLinks = ({ variant, mainGene }) => {
+  const links = [<SearchResultsLink key="seqr" buttonText="seqr" variantId={variant.variantId} />]
+  if (mainGene) {
+    const geneNames = [mainGene.geneSymbol, ...getOtherGeneNames(mainGene)]
 
-  if (mainTranscript.hgvsp) {
-    const hgvsp = mainTranscript.hgvsp.split(':')[1].replace('p.', '')
-    variations.push(
-      `${mainTranscript.geneSymbol}:p.${hgvsp}`, //TTN:p.Ile26225Thr
-      `${mainTranscript.geneSymbol}:${hgvsp}`, //TTN:Ile26225Thr
-    )
-  }
-
-  if (variant.alt && variant.ref && variant.pos) {
-    variations.push(
+    const variations = [
       `${variant.pos}${variant.ref}->${variant.alt}`, //179432185A->G
       `${variant.pos}${variant.ref}-->${variant.alt}`, //179432185A-->G
       `${variant.pos}${variant.ref}/${variant.alt}`, //179432185A/G
       `${variant.pos}${variant.ref}>${variant.alt}`, //179432185A>G
       `g.${variant.pos}${variant.ref}>${variant.alt}`, //g.179432185A>G
+    ]
+
+    if (variant.mainTranscript.hgvsp) {
+      const hgvsp = variant.mainTranscript.hgvsp.split(':')[1].replace('p.', '')
+      variations.unshift(
+        ...geneNames.map(geneName => `${geneName}:p.${hgvsp}`), //TTN:p.Ile26225Thr
+        ...geneNames.map(geneName => `${geneName}:${hgvsp}`), //TTN:Ile26225Thr
+      )
+    }
+
+    if (variant.mainTranscript.hgvsc) {
+      const hgvsc = variant.mainTranscript.hgvsc.split(':')[1].replace('c.', '')
+      variations.unshift(
+        ...geneNames.map(geneName => `${geneName}:c.${hgvsc}`), //TTN:c.78674T>C
+        `c.${hgvsc}`, //c.1282C>T
+        hgvsc, //1282C>T
+        hgvsc.replace('>', '->'), //1282C->T
+        hgvsc.replace('>', '-->'), //1282C-->T
+        (`c.${hgvsc}`).replace('>', '/'), //c.1282C/T
+        hgvsc.replace('>', '/'), //1282C/T
+        ...geneNames.map(geneName => `${geneName}:${hgvsc}`), //TTN:78674T>C
+      )
+    }
+
+    links.push(
+      <span key="divider1"><HorizontalSpacer width={5} />|<HorizontalSpacer width={5} /></span>,
+      <a key="google" href={`https://www.google.com/search?q=(${variations.join('+')}`} target="_blank">
+        google
+      </a>,
+      <span key="divider2"><HorizontalSpacer width={5} />|<HorizontalSpacer width={5} /></span>,
+      <a key="pubmed" href={`https://www.ncbi.nlm.nih.gov/pubmed?term=(${geneNames.join(' OR ')}) AND ( ${variations.join(' OR ')})`} target="_blank">
+        pubmed
+      </a>,
     )
   }
-
-  return variations
+  return links
 }
+
+const mapStateToProps = (state, ownProps) => ({
+  mainGene: getGenesById(state)[ownProps.variant.mainTranscript.geneId],
+})
+
+const SearchLinks = connect(mapStateToProps)(BaseSearchLinks)
 
 const Annotations = ({ variant }) => {
   const { rsid } = variant
   const mainTranscript = getVariantMainTranscript(variant)
 
-  const variations = annotationVariations(mainTranscript, variant)
   const lofDetails = (mainTranscript.lof === 'LC' || mainTranscript.lofFlags === 'NAGNAG_SITE') ? [
     ...[...new Set(mainTranscript.lofFilter.split(/&|,/g))].map((lofFilterKey) => {
       const lofFilter = LOF_FILTER_MAP[lofFilterKey] || { message: lofFilterKey }
@@ -195,19 +215,7 @@ const Annotations = ({ variant }) => {
       <VerticalSpacer height={5} />
       <LocusListLabels locusListGuids={variant.locusListGuids} />
       <VerticalSpacer height={5} />
-      {mainTranscript.geneSymbol &&
-        <div>
-          <SearchResultsLink buttonText="seqr" variantId={variant.variantId} />
-          <HorizontalSpacer width={5} />|<HorizontalSpacer width={5} />
-          <a href={`https://www.google.com/search?q=${mainTranscript.geneSymbol}+${variations.join('+')}`} target="_blank">
-            google
-          </a>
-          <HorizontalSpacer width={5} />|<HorizontalSpacer width={5} />
-          <a href={`https://www.ncbi.nlm.nih.gov/pubmed?term=${mainTranscript.geneSymbol} AND ( ${variations.join(' OR ')})`} target="_blank">
-            pubmed
-          </a>
-        </div>
-      }
+      <SearchLinks variant={variant} />
     </div>
   )
 }

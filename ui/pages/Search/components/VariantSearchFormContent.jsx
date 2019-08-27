@@ -29,10 +29,13 @@ import {
   PATHOGENICITY_FILTER_OPTIONS,
   STAFF_PATHOGENICITY_FIELDS,
   STAFF_PATHOGENICITY_FILTER_OPTIONS,
+  ANY_PATHOGENICITY_FILTER,
   ANNOTATION_GROUPS,
   ANNOTATION_FILTER_OPTIONS,
+  ALL_ANNOTATION_FILTER_DETAILS,
   QUALITY_FILTER_FIELDS,
   QUALITY_FILTER_OPTIONS,
+  ALL_QUALITY_FILTER,
   LOCATION_FIELDS,
 } from '../constants'
 
@@ -99,10 +102,10 @@ const ExpandCollapseCategoryContainer = styled.span`
   padding-top: 1em;
 `
 
-const JsonSelectProps = options => ({
+const JsonSelectPropsWithAll = (options, all) => ({
   component: Select,
-  format: JSON.stringify,
-  parse: JSON.parse,
+  format: val => JSON.stringify(val) || JSON.stringify(all.value),
+  parse: val => JSON.parse(val),
   options: options.map(({ value, ...option }) => ({ ...option, value: JSON.stringify(value) })),
 })
 
@@ -170,18 +173,19 @@ const INHERITANCE_PANEL = {
 
 const pathogenicityPanel = isStaff => ({
   name: 'pathogenicity',
-  headerProps: { title: 'Pathogenicity', inputProps: JsonSelectProps(isStaff ? STAFF_PATHOGENICITY_FILTER_OPTIONS : PATHOGENICITY_FILTER_OPTIONS) },
+  headerProps: { title: 'Pathogenicity', inputProps: JsonSelectPropsWithAll(isStaff ? STAFF_PATHOGENICITY_FILTER_OPTIONS : PATHOGENICITY_FILTER_OPTIONS, ANY_PATHOGENICITY_FILTER) },
   fields: isStaff ? STAFF_PATHOGENICITY_FIELDS : PATHOGENICITY_FIELDS,
   fieldProps: { control: AlignedCheckboxGroup, format: val => val || [] },
   helpText: 'Filter by reported pathogenicity. Note this filter will override any annotations filter (i.e variants will be returned if they have either the specified pathogenicity OR transcript consequence)',
 })
+
 
 const STAFF_PATHOGENICITY_PANEL = pathogenicityPanel(true)
 const PATHOGENICITY_PANEL = pathogenicityPanel(false)
 
 const ANNOTATION_PANEL = {
   name: 'annotations',
-  headerProps: { title: 'Annotations', inputProps: JsonSelectProps(ANNOTATION_FILTER_OPTIONS) },
+  headerProps: { title: 'Annotations', inputProps: JsonSelectPropsWithAll(ANNOTATION_FILTER_OPTIONS, ALL_ANNOTATION_FILTER_DETAILS) },
   fields: ANNOTATION_GROUPS,
   fieldProps: { control: AlignedCheckboxGroup, format: val => val || [] },
   fieldLayout: annotationsFilterLayout,
@@ -229,7 +233,7 @@ const LOCATION_PANEL = {
 
 const QUALITY_PANEL = {
   name: 'qualityFilter',
-  headerProps: { title: 'Call Quality', inputProps: JsonSelectProps(QUALITY_FILTER_OPTIONS) },
+  headerProps: { title: 'Call Quality', inputProps: JsonSelectPropsWithAll(QUALITY_FILTER_OPTIONS, ALL_QUALITY_FILTER) },
   fields: QUALITY_FILTER_FIELDS,
   fieldProps: { control: LabeledSlider, format: val => val || null },
 }

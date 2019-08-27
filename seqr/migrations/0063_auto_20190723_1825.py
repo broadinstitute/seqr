@@ -48,7 +48,7 @@ def parse_saved_variant_json(apps, schema_editor):
         if variant.saved_variant_json:
             if 'populations' in variant.saved_variant_json:
                 main_transcript = variant.saved_variant_json.pop('mainTranscript')
-                variant.saved_variant_json['mainTranscriptId'] = main_transcript.get('transcriptId')
+                variant.saved_variant_json['mainTranscriptId'] = main_transcript['transcriptId']
             else:
                 variant.saved_variant_json = _variant_details(variant.saved_variant_json, family_guids_by_id, individual_guids_by_id)
 

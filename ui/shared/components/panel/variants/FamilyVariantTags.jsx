@@ -21,10 +21,11 @@ import {
   FAMILY_FIELD_ANALYSIS_SUMMARY,
   FAMILY_FIELD_INTERNAL_NOTES,
   FAMILY_FIELD_INTERNAL_SUMMARY,
+  FAMILY_ANALYSIS_STATUS_LOOKUP,
 } from 'shared/utils/constants'
 import PopupWithModal from '../../PopupWithModal'
 import { HorizontalSpacer } from '../../Spacers'
-import { InlineHeader } from '../../StyledComponents'
+import { InlineHeader, ColoredComponent } from '../../StyledComponents'
 import ReduxFormWrapper from '../../form/ReduxFormWrapper'
 import { InlineToggle, BooleanCheckbox } from '../../form/Inputs'
 import TagFieldView from '../view-fields/TagFieldView'
@@ -61,6 +62,8 @@ const VariantLinkContainer = styled(InlineContainer)`
   float: right;
 `
 
+const ColoredLink = ColoredComponent(NavLink)
+
 const FAMILY_FIELDS = [
   { id: FAMILY_FIELD_DESCRIPTION, canEdit: true },
   { id: FAMILY_FIELD_ANALYSIS_STATUS, canEdit: true },
@@ -81,6 +84,11 @@ const VARIANT_NOTE_FIELDS = [{
   label: <label>Add to <i style={{ color: 'red' }}>ClinVar</i> submission</label>, //eslint-disable-line jsx-a11y/label-has-for
   component: BooleanCheckbox,
   style: { paddingTop: '2em' },
+},
+{
+  name: 'saveAsGeneNote',
+  label: 'Add to public gene notes',
+  component: BooleanCheckbox,
 }]
 
 const taggedByPopup = (tag, title) => trigger =>
@@ -180,6 +188,8 @@ VariantTagField.propTypes = {
 const VariantNoteField = ({ action, note, variant, family, ...props }) => {
   const values = { ...variant, ...note }
   return <TextFieldView
+    noModal
+    showInLine
     isEditable
     field="note"
     modalId={family.familyGuid}
@@ -214,9 +224,12 @@ const FamilyVariantTags = (
             position="right center"
             keepInViewPort
             trigger={
-              <NavLink to={`/project/${family.projectGuid}/family_page/${family.familyGuid}`}>
+              <ColoredLink
+                to={`/project/${family.projectGuid}/family_page/${family.familyGuid}`}
+                color={FAMILY_ANALYSIS_STATUS_LOOKUP[family[FAMILY_FIELD_ANALYSIS_STATUS]].color}
+              >
                 {family.displayName}
-              </NavLink>
+              </ColoredLink>
             }
             content={<Family family={family} fields={FAMILY_FIELDS} useFullWidth disablePedigreeZoom />}
           />

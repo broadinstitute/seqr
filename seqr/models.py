@@ -214,14 +214,21 @@ class Family(ModelWithGUID):
         ('Q', 'Waiting for data'),
     )
 
+    SUCCESS_STORY_TYPE_CHOICES = (
+        ('N', 'Novel Discovery'),
+        ('A', 'Altered Clinical Outcome'),
+        ('C', 'Collaboration'),
+        ('T', 'Technical Win'),
+        ('D', 'Data Sharing'),
+        ('O', 'Other'),
+    )
+
     CAUSAL_INHERITANCE_MODE_CHOICES = (
         ('r', 'recessive'),    # the actual inheritance model (the one in phenotips is the external inheritance model)
         ('u', 'unknown'),
         ('d', 'dominant'),
         ('x', 'x-linked recessive'),
         ('n', 'de novo'),
-
-
     )
 
     project = models.ForeignKey('Project', on_delete=models.PROTECT)
@@ -236,6 +243,14 @@ class Family(ModelWithGUID):
 
     assigned_analyst = models.ForeignKey(User, null=True, on_delete=models.SET_NULL,
                                     related_name='assigned_families')  # type: ForeignKey
+
+    success_story_types = ArrayField(models.CharField(
+        max_length=1,
+        choices=SUCCESS_STORY_TYPE_CHOICES,
+        null=True,
+        blank=True
+    ), default=list())
+    success_story = models.TextField(null=True, blank=True)
 
     analysis_notes = models.TextField(null=True, blank=True)
     analysis_summary = models.TextField(null=True, blank=True)
@@ -277,7 +292,8 @@ class Family(ModelWithGUID):
             'post_discovery_omim_number', 'pubmed_ids', 'assigned_analyst'
         ]
         internal_json_fields = [
-            'internal_analysis_status', 'internal_case_review_notes', 'internal_case_review_summary'
+            'internal_analysis_status', 'internal_case_review_notes', 'internal_case_review_summary',
+            'success_story_types', 'success_story'
         ]
 
 
@@ -293,6 +309,7 @@ class FamilyAnalysedBy(ModelWithGUID):
 
     class Meta:
         json_fields = ['last_modified_date', 'created_by']
+
 
 class Individual(ModelWithGUID):
     SEX_MALE = 'M'
@@ -333,8 +350,8 @@ class Individual(ModelWithGUID):
     # WARNING: individual_id is unique within a family, but not necessarily unique globally
     individual_id = models.TextField(db_index=True)
 
-    mother = models.ForeignKey('seqr.Individual', null=True, on_delete=models.SET_NULL, related_name='maternal_children')
-    father = models.ForeignKey('seqr.Individual', null=True, on_delete=models.SET_NULL, related_name='paternal_children')
+    mother = models.ForeignKey('seqr.Individual', null=True, blank=True, on_delete=models.SET_NULL, related_name='maternal_children')
+    father = models.ForeignKey('seqr.Individual', null=True, blank=True, on_delete=models.SET_NULL, related_name='paternal_children')
 
     sex = models.CharField(max_length=1, choices=SEX_CHOICES, default='U')
     affected = models.CharField(max_length=1, choices=AFFECTED_STATUS_CHOICES, default=AFFECTED_STATUS_UNKNOWN)
@@ -577,6 +594,8 @@ class VariantTagType(ModelWithGUID):
 
     class Meta:
         unique_together = ('project', 'name', 'color')
+
+        json_fields = ['guid', 'name', 'category', 'description', 'color', 'order']
 
 
 class VariantTag(ModelWithGUID):

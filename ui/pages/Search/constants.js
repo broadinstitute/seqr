@@ -8,6 +8,7 @@ import {
   VEP_GROUP_FRAMESHIFT,
   VEP_GROUP_INFRAME,
   VEP_GROUP_SYNONYMOUS,
+  VEP_GROUP_OTHER,
   GROUPED_VEP_CONSEQUENCES,
   LOCUS_LIST_ITEMS_FIELD,
   AFFECTED,
@@ -59,6 +60,7 @@ const HOM_RECESSIVE_FILTER = 'homozygous_recessive'
 const X_LINKED_RECESSIVE_FILTER = 'x_linked_recessive'
 const COMPOUND_HET_FILTER = 'compound_het'
 const DE_NOVO_FILTER = 'de_novo'
+const ANY_AFFECTED = 'any_affected'
 
 export const INHERITANCE_LOOKUP = {
   [ALL_INHERITANCE_FILTER]: { text: 'All' },
@@ -107,6 +109,13 @@ export const INHERITANCE_LOOKUP = {
     text: 'Compound Heterozygous',
     detail: 'Affected individual(s) have two heterozygous mutations in the same gene on opposite haplotypes. Unaffected individuals cannot have the same combination of alleles as affected individuals, or be homozygous alternate for any of the variants. If parents are not present, this method only searches for pairs of heterozygous variants; they may not be on different haplotypes.',
   },
+  [ANY_AFFECTED]: {
+    filter: {
+      [AFFECTED]: HAS_ALT,
+    },
+    text: 'Any Affected',
+    detail: 'Finds variants where at least one affected individual has at least one alternate allele.',
+  },
 }
 
 export const INHERITANCE_MODE_LOOKUP = Object.entries(INHERITANCE_LOOKUP).reduce((acc, [mode, { filter }]) =>
@@ -114,7 +123,7 @@ export const INHERITANCE_MODE_LOOKUP = Object.entries(INHERITANCE_LOOKUP).reduce
 )
 
 export const INHERITANCE_FILTER_OPTIONS = [
-  ALL_INHERITANCE_FILTER, RECESSIVE_FILTER, HOM_RECESSIVE_FILTER, X_LINKED_RECESSIVE_FILTER, COMPOUND_HET_FILTER, DE_NOVO_FILTER,
+  ALL_INHERITANCE_FILTER, RECESSIVE_FILTER, HOM_RECESSIVE_FILTER, X_LINKED_RECESSIVE_FILTER, COMPOUND_HET_FILTER, DE_NOVO_FILTER, ANY_AFFECTED,
 ].map(value => ({ value, ...INHERITANCE_LOOKUP[value] }))
 
 
@@ -187,7 +196,16 @@ export const STAFF_PATHOGENICITY_FIELDS = [
   },
 ]
 
+export const ANY_PATHOGENICITY_FILTER = {
+  text: 'Any',
+  value: {
+    [CLINVAR_NAME]: [],
+    [HGMD_NAME]: [],
+  },
+}
+
 export const STAFF_PATHOGENICITY_FILTER_OPTIONS = [
+  ANY_PATHOGENICITY_FILTER,
   {
     text: 'Pathogenic/ Likely Path.',
     value: {
@@ -211,6 +229,16 @@ export const ANNOTATION_GROUPS = Object.entries(GROUPED_VEP_CONSEQUENCES).map(([
   name, options, groupLabel: snakecaseToTitlecase(name),
 }))
 
+export const ALL_IMPACT_GROUPS = [
+  VEP_GROUP_NONSENSE,
+  VEP_GROUP_ESSENTIAL_SPLICE_SITE,
+  VEP_GROUP_EXTENDED_SPLICE_SITE,
+  VEP_GROUP_MISSENSE,
+  VEP_GROUP_FRAMESHIFT,
+  VEP_GROUP_INFRAME,
+  VEP_GROUP_SYNONYMOUS,
+  VEP_GROUP_OTHER,
+]
 export const HIGH_IMPACT_GROUPS = [
   VEP_GROUP_NONSENSE,
   VEP_GROUP_ESSENTIAL_SPLICE_SITE,
@@ -224,7 +252,12 @@ export const CODING_IMPACT_GROUPS = [
   VEP_GROUP_SYNONYMOUS,
   VEP_GROUP_EXTENDED_SPLICE_SITE,
 ]
+export const ALL_ANNOTATION_FILTER = {
+  text: 'All',
+  vepGroups: ALL_IMPACT_GROUPS,
+}
 export const ANNOTATION_FILTER_OPTIONS = [
+  ALL_ANNOTATION_FILTER,
   {
     text: 'High Impact',
     vepGroups: HIGH_IMPACT_GROUPS,
@@ -243,6 +276,13 @@ export const ANNOTATION_FILTER_OPTIONS = [
     { ...acc, [group]: GROUPED_VEP_CONSEQUENCES[group].map(({ value }) => value) }
   ), {}),
 }))
+export const ALL_ANNOTATION_FILTER_DETAILS =
+  [ALL_ANNOTATION_FILTER].map(({ vepGroups, ...option }) => ({
+    ...option,
+    value: vepGroups.reduce((acc, group) => (
+      { ...acc, [group]: GROUPED_VEP_CONSEQUENCES[group].map(({ value }) => value) }
+    ), {}),
+  }))[0]
 
 
 export const THIS_CALLSET_FREQUENCY = 'callset'
@@ -341,7 +381,17 @@ export const QUALITY_FILTER_FIELDS = [
   },
 ]
 
+export const ALL_QUALITY_FILTER = {
+  text: 'All Variants',
+  value: {
+    vcf_filter: null,
+    min_gq: 0,
+    min_ab: 0,
+  },
+}
+
 export const QUALITY_FILTER_OPTIONS = [
+  ALL_QUALITY_FILTER,
   {
     text: 'High Quality',
     value: {
@@ -354,14 +404,6 @@ export const QUALITY_FILTER_OPTIONS = [
     text: 'All Passing Variants',
     value: {
       vcf_filter: 'pass',
-      min_gq: 0,
-      min_ab: 0,
-    },
-  },
-  {
-    text: 'All Variants',
-    value: {
-      vcf_filter: null,
       min_gq: 0,
       min_ab: 0,
     },

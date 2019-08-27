@@ -147,6 +147,9 @@ class ReduxFormWrapper extends React.Component {
     /* React child component class. Mutually exclusive with fields */
     children: PropTypes.node,
 
+    /* Call if submit succeeded */
+    onSubmitSucceeded: PropTypes.func,
+
     /*  These props are added by redux-form and should never be passed explicitly */
     submitting: PropTypes.bool,
     submitFailed: PropTypes.bool,
@@ -216,7 +219,7 @@ class ReduxFormWrapper extends React.Component {
               submitButtonText={this.props.submitButtonText}
               saveStatus={saveStatus}
               saveErrorMessage={saveErrorMessage}
-              handleClose={this.props.noModal ? null : this.handleUnconfirmedClose}
+              handleClose={this.props.onSubmitSucceeded || (this.props.noModal ? null : this.handleUnconfirmedClose)}
             />
         }
         <Confirm
@@ -268,6 +271,9 @@ class ReduxFormWrapper extends React.Component {
   }
 
   componentWillUpdate(nextProps) {
+    if (this.props.onSubmitSucceeded && nextProps.submitSucceeded) {
+      this.props.onSubmitSucceeded()
+    }
     if (nextProps.submitSucceeded && nextProps.closeOnSuccess && !nextProps.noModal) {
       this.props.handleClose(true)
     } else if (this.props.confirmCloseIfNotSaved) {
@@ -318,16 +324,14 @@ const mapStateToProps = (state, ownProps) => ({
   warningMessages: getWarningMessages(state, ownProps),
 })
 
-const mapDispatchToProps = (dispatch, ownProps) => {
-  return {
-    handleClose: (confirmed) => {
-      dispatch(closeModal(ownProps.modalName || ownProps.form, confirmed))
-    },
-    setModalConfirm: (confirm) => {
-      dispatch(setModalConfirm(ownProps.modalName || ownProps.form, confirm))
-    },
-  }
-}
+const mapDispatchToProps = (dispatch, ownProps) => ({
+  handleClose: (confirmed) => {
+    dispatch(closeModal(ownProps.modalName || ownProps.form, confirmed))
+  },
+  setModalConfirm: (confirm) => {
+    dispatch(setModalConfirm(ownProps.modalName || ownProps.form, confirm))
+  },
+})
 
 
 export default reduxForm()(connect(mapStateToProps, mapDispatchToProps)(ReduxFormWrapper))

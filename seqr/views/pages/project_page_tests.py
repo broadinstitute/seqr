@@ -45,8 +45,7 @@ class ProjectPageTest(TestCase):
         )
         self.assertSetEqual(
             set(response_json['projectsByGuid'][PROJECT_GUID]['variantTagTypes'][0].keys()),
-            {'variantTagTypeGuid', 'name', 'category', 'description', 'color', 'order', 'is_built_in', 'numTags',
-             'numTagsPerFamily'}
+            {'variantTagTypeGuid', 'name', 'category', 'description', 'color', 'order', 'numTags', 'numTagsPerFamily'}
         )
         self.assertSetEqual(
             set(response_json['projectsByGuid'][PROJECT_GUID].keys()),
@@ -64,7 +63,8 @@ class ProjectPageTest(TestCase):
             {'projectGuid', 'familyGuid', 'individualGuids', 'analysedBy', 'pedigreeImage', 'familyId', 'displayName',
              'description', 'analysisNotes', 'analysisSummary', 'causalInheritanceMode', 'analysisStatus',
              'pedigreeImage', 'internalAnalysisStatus', 'internalCaseReviewNotes', 'internalCaseReviewSummary',
-             'createdDate', 'codedPhenotype', 'postDiscoveryOmimNumber', 'pubmedIds', 'assignedAnalyst'}
+             'createdDate', 'codedPhenotype', 'postDiscoveryOmimNumber', 'pubmedIds', 'assignedAnalyst',
+             'successStoryTypes', 'successStory'}
         )
         self.assertSetEqual(
             set(response_json['individualsByGuid'].values()[0].keys()),

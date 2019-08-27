@@ -509,7 +509,7 @@ def _variant_details(variant_json, family_guids_by_id, individual_guids_by_id):
             'sift': annotation.get('sift'),
             'splice_ai': annotation.get('splice_ai_delta_score'),
         },
-        'mainTranscriptId':_variant_main_transcript_id(variant_json),
+        'mainTranscriptId': _variant_main_transcript_id(variant_json),
         'clinvar': {
             'clinicalSignificance': extras.get('clinvar_clinsig'),
             'variationId': extras.get('clinvar_variant_id'),

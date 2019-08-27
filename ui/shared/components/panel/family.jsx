@@ -20,6 +20,9 @@ import {
   FAMILY_FIELD_ANALYSIS_STATUS,
   FAMILY_FIELD_ASSIGNED_ANALYST,
   FAMILY_FIELD_ANALYSED_BY,
+  FAMILY_SUCCESS_STORY_TYPE_OPTIONS,
+  successStoryTypeDisplay,
+  FAMILY_FIELD_SUCCESS_STORY_TYPE,
   FAMILY_FIELD_FIRST_SAMPLE,
   FAMILY_FIELD_RENDER_LOOKUP,
   FAMILY_FIELD_OMIM_NUMBER,
@@ -94,6 +97,7 @@ const EDIT_FIELDS = [
   },
 ]
 
+
 const familyFieldRenderProps = {
   [FAMILY_FIELD_ANALYSIS_STATUS]: {
     tagOptions: FAMILY_ANALYSIS_STATUS_OPTIONS,
@@ -111,6 +115,12 @@ const familyFieldRenderProps = {
   [FAMILY_FIELD_ANALYSED_BY]: {
     addConfirm: 'Are you sure you want to add that you analysed this family?',
     fieldDisplay: (analysedByList, compact) => <AnalysedBy analysedByList={analysedByList} compact={compact} />,
+  },
+  [FAMILY_FIELD_SUCCESS_STORY_TYPE]: {
+    tagOptions: FAMILY_SUCCESS_STORY_TYPE_OPTIONS,
+    simplifiedValue: true,
+    fieldDisplay: value => value.map(tag => <div>{successStoryTypeDisplay(tag)}</div>,
+    ),
   },
   [FAMILY_FIELD_FIRST_SAMPLE]: {
     showEmptyValues: true,

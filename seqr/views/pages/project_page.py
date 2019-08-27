@@ -19,7 +19,8 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.json_to_orm_utils import update_project_from_json
 from seqr.views.utils.orm_to_json_utils import \
     _get_json_for_project, get_json_for_samples, _get_json_for_families, _get_json_for_individuals, \
-    get_json_for_saved_variants, get_json_for_analysis_groups, get_json_for_variant_functional_data_tag_types
+    get_json_for_saved_variants, get_json_for_analysis_groups, get_json_for_variant_functional_data_tag_types, \
+    _get_json_for_models
 
 
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions
@@ -196,27 +197,20 @@ def get_project_variant_tag_types(project, tag_counts_by_type_and_family=None, n
             'numTagsPerFamily': {count['saved_variant__family__guid']: count['count'] for count in
                                  note_counts_by_family},
         })
-    project_variant_tags = [note_tag_type]
-    for variant_tag_type in VariantTagType.objects.filter(Q(project=project) | Q(project__isnull=True)):
-        tag_type = {
-            'variantTagTypeGuid': variant_tag_type.guid,
-            'name': variant_tag_type.name,
-            'category': variant_tag_type.category,
-            'description': variant_tag_type.description,
-            'color': variant_tag_type.color,
-            'order': variant_tag_type.order,
-            'is_built_in': variant_tag_type.is_built_in,
-        }
-        if tag_counts_by_type_and_family is not None:
+
+    project_variant_tags = _get_json_for_models(VariantTagType.objects.filter(Q(project=project) | Q(project__isnull=True)))
+    if tag_counts_by_type_and_family is not None:
+        for tag_type in project_variant_tags:
             current_tag_type_counts = [counts for counts in tag_counts_by_type_and_family if
-                                       counts['variant_tag_type__name'] == variant_tag_type.name]
+                                       counts['variant_tag_type__name'] == tag_type['name']]
             num_tags = sum(count['count'] for count in current_tag_type_counts)
             tag_type.update({
                 'numTags': num_tags,
                 'numTagsPerFamily': {count['saved_variant__family__guid']: count['count'] for count in
                                      current_tag_type_counts},
             })
-        project_variant_tags.append(tag_type)
+
+        project_variant_tags.append(note_tag_type)
 
     return sorted(project_variant_tags, key=lambda variant_tag_type: variant_tag_type['order'])
 

@@ -41,12 +41,13 @@ class JSONUtilsTest(TestCase):
         family_fields = {
             'projectGuid', 'familyGuid', 'analysedBy', 'pedigreeImage', 'familyId', 'displayName', 'description',
             'analysisNotes', 'analysisSummary', 'causalInheritanceMode', 'analysisStatus', 'pedigreeImage', 'createdDate',
-            'codedPhenotype', 'postDiscoveryOmimNumber', 'pubmedIds', 'assignedAnalyst',
+            'codedPhenotype', 'postDiscoveryOmimNumber', 'pubmedIds', 'assignedAnalyst'
         }
         self.assertSetEqual(set(json.keys()), family_fields)
 
         family_fields.update({
             'internalAnalysisStatus', 'internalCaseReviewNotes', 'internalCaseReviewSummary', 'individualGuids',
+            'successStory', 'successStoryTypes'
         })
         user = User.objects.filter(is_staff=True).first()
         json = _get_json_for_family(family, user, add_individual_guids_field=True)
@@ -161,6 +162,7 @@ class JSONUtilsTest(TestCase):
             gene, user=user, add_dbnsfp=True, add_omim=True, add_constraints=True, add_notes=True, add_expression=True,
             add_primate_ai=True)
         fields.update({
-            'constraints', 'diseaseDesc', 'expression', 'functionDesc', 'notes', 'omimPhenotypes', 'mimNumber', 'primateAi'
+            'constraints', 'diseaseDesc', 'expression', 'functionDesc', 'notes', 'omimPhenotypes', 'mimNumber',
+            'primateAi', 'geneNames',
         })
         self.assertSetEqual(set(json.keys()), fields)

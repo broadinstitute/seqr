@@ -1,3 +1,4 @@
+import React from 'react'
 import { Form } from 'semantic-ui-react'
 import orderBy from 'lodash/orderBy'
 
@@ -7,9 +8,10 @@ import BaseFieldView from '../components/panel/view-fields/BaseFieldView'
 import OptionFieldView from '../components/panel/view-fields/OptionFieldView'
 import ListFieldView from '../components/panel/view-fields/ListFieldView'
 import SingleFieldView from '../components/panel/view-fields/SingleFieldView'
+import TagFieldView from '../components/panel/view-fields/TagFieldView'
 
 import { stripMarkdown } from './stringUtils'
-
+import { ColoredIcon } from '../components/StyledComponents'
 
 export const GENOME_VERSION_37 = '37'
 export const GENOME_VERSION_38 = '38'
@@ -85,6 +87,38 @@ export const FAMILY_ANALYSIS_STATUS_OPTIONS = [
   { value: FAMILY_STATUS_WAITING_FOR_DATA, color: '#FFC107', name: 'Waiting for data' },
 ]
 
+export const FAMILY_ANALYSIS_STATUS_LOOKUP = FAMILY_ANALYSIS_STATUS_OPTIONS.reduce((acc, tag) => {
+  return { [tag.value]: tag, ...acc }
+}, {})
+
+// SUCCESS STORY
+
+const FAMILY_SUCCESS_STORY_NOVEL_DISCOVERY = 'N'
+const FAMILY_SUCCESS_STORY_ALTERED_CLINICAL_OUTCOME = 'A'
+const FAMILY_SUCCESS_STORY_COLLABORATION = 'C'
+const FAMILY_SUCCESS_STORY_TECHNICAL_WIN = 'T'
+const FAMILY_SUCCESS_STORY_DATA_SHARING = 'D'
+const FAMILY_SUCCESS_STORY_OTHER = 'O'
+
+export const FAMILY_SUCCESS_STORY_TYPE_OPTIONS = [
+  { value: FAMILY_SUCCESS_STORY_NOVEL_DISCOVERY, color: '#019143', name: 'Novel Discovery' },
+  { value: FAMILY_SUCCESS_STORY_ALTERED_CLINICAL_OUTCOME, color: '#FFAB57', name: 'Altered Clinical Outcome' },
+  { value: FAMILY_SUCCESS_STORY_COLLABORATION, color: '#833E7D', name: 'Collaboration' },
+  { value: FAMILY_SUCCESS_STORY_TECHNICAL_WIN, color: '#E76013', name: 'Technical Win' },
+  { value: FAMILY_SUCCESS_STORY_DATA_SHARING, color: '#6583EC', name: 'Data Sharing' },
+  { value: FAMILY_SUCCESS_STORY_OTHER, color: '#5D5D5F', name: 'Other' },
+]
+
+export const FAMILY_SUCCESS_STORY_TYPE_OPTIONS_LOOKUP = FAMILY_SUCCESS_STORY_TYPE_OPTIONS.reduce((acc, tag) => {
+  return { [tag.value]: tag, ...acc }
+}, {})
+
+export const successStoryTypeDisplay = tag =>
+  <span>
+    <ColoredIcon name="stop" color={FAMILY_SUCCESS_STORY_TYPE_OPTIONS_LOOKUP[tag].color} />
+    {FAMILY_SUCCESS_STORY_TYPE_OPTIONS_LOOKUP[tag].name}
+  </span>
+
 // FAMILY FIELDS
 
 export const FAMILY_FIELD_ID = 'familyId'
@@ -93,6 +127,8 @@ export const FAMILY_FIELD_DESCRIPTION = 'description'
 export const FAMILY_FIELD_ANALYSIS_STATUS = 'analysisStatus'
 export const FAMILY_FIELD_ASSIGNED_ANALYST = 'assignedAnalyst'
 export const FAMILY_FIELD_ANALYSED_BY = 'analysedBy'
+export const FAMILY_FIELD_SUCCESS_STORY_TYPE = 'successStoryTypes'
+export const FAMILY_FIELD_SUCCESS_STORY = 'successStory'
 export const FAMILY_FIELD_ANALYSIS_NOTES = 'analysisNotes'
 export const FAMILY_FIELD_ANALYSIS_SUMMARY = 'analysisSummary'
 export const FAMILY_FIELD_INTERNAL_NOTES = 'internalCaseReviewNotes'
@@ -117,6 +153,12 @@ export const FAMILY_FIELD_RENDER_LOOKUP = {
     component: BaseFieldView,
     submitArgs: { familyField: 'analysed_by' },
   },
+  [FAMILY_FIELD_SUCCESS_STORY_TYPE]: {
+    name: 'Success Story Type',
+    component: TagFieldView,
+    internal: true,
+  },
+  [FAMILY_FIELD_SUCCESS_STORY]: { name: 'Success Story', internal: true },
   [FAMILY_FIELD_FIRST_SAMPLE]: { name: 'Data Loaded?', component: BaseFieldView },
   [FAMILY_FIELD_ANALYSIS_NOTES]: { name: 'Notes' },
   [FAMILY_FIELD_ANALYSIS_SUMMARY]: { name: 'Analysis Summary' },
@@ -132,6 +174,8 @@ export const FAMILY_DETAIL_FIELDS = [
   { id: FAMILY_FIELD_ANALYSIS_STATUS, canEdit: true },
   { id: FAMILY_FIELD_ASSIGNED_ANALYST, canEdit: true },
   { id: FAMILY_FIELD_ANALYSED_BY, canEdit: true },
+  { id: FAMILY_FIELD_SUCCESS_STORY_TYPE, canEdit: true },
+  { id: FAMILY_FIELD_SUCCESS_STORY, canEdit: true },
   { id: FAMILY_FIELD_ANALYSIS_NOTES, canEdit: true },
   { id: FAMILY_FIELD_ANALYSIS_SUMMARY, canEdit: true },
   { id: FAMILY_FIELD_CODED_PHENOTYPE, canEdit: true },
@@ -234,7 +278,7 @@ export const latestSamplesLoaded = (sampleGuids, samplesByGuid, datasetType) => 
 
 export const familySamplesLoaded = (family, individualsByGuid, samplesByGuid, datasetType) => {
   const sampleGuids = [...family.individualGuids.map(individualGuid => individualsByGuid[individualGuid]).reduce(
-    (acc, individual) => new Set([...acc, ...individual.sampleGuids]), new Set(),
+    (acc, individual) => new Set([...acc, ...(individual.sampleGuids || [])]), new Set(),
   )]
   return latestSamplesLoaded(sampleGuids, samplesByGuid, datasetType)
 }
@@ -787,9 +831,6 @@ export const VARIANT_EXPORT_DATA = [
   { header: 'alt' },
   { header: 'gene', getVal: variant => getVariantMainTranscript(variant).geneSymbol },
   { header: 'worst_consequence', getVal: variant => getVariantMainTranscript(variant).majorConsequence },
-  { header: 'family', getVal: variant => variant.familyGuids[0].split(/_(.+)/)[1] },
-  { header: 'tags', getVal: variant => variant.tags.map(tag => tag.name).join('|') },
-  { header: 'notes', getVal: variant => variant.notes.map(note => `${note.createdBy}: ${note.note}`).join('|') },
   { header: '1kg_freq', getVal: variant => variant.populations.g1k.af },
   { header: 'exac_freq', getVal: variant => variant.populations.exac.af },
   { header: 'gnomad_genomes_freq', getVal: variant => variant.populations.gnomad_genomes.af },
@@ -808,33 +849,10 @@ export const VARIANT_EXPORT_DATA = [
   { header: 'clinvar_clinical_significance', getVal: variant => variant.clinvar.clinicalSignificance },
   { header: 'clinvar_gold_stars', getVal: variant => variant.clinvar.goldStars },
   { header: 'filter', getVal: variant => variant.genotypeFilters },
+  { header: 'family', getVal: variant => variant.familyGuids[0].split(/_(.+)/)[1] },
+  { header: 'tags', getVal: variant => variant.tags.map(tag => tag.name).join('|') },
+  { header: 'notes', getVal: variant => variant.notes.map(note => `${note.createdBy}: ${note.note.replace(/\n/g, ' ')}`).join('|') },
 ]
-
-const VARIANT_GENOTYPE_EXPORT_DATA = [
-  { header: 'sample_id', getVal: genotype => genotype.sampleId },
-  { header: 'num_alt_alleles', getVal: genotype => genotype.numAlt },
-  { header: 'ad' },
-  { header: 'dp' },
-  { header: 'gq' },
-  { header: 'ab' },
-]
-
-export const getVariantsExportData = (variants) => {
-  const maxGenotypes = Math.max(...variants.map(variant => Object.keys(variant.genotypes).length), 0)
-  return {
-    rawData: variants,
-    headers: [...Array(maxGenotypes).keys()].reduce(
-      (acc, i) => [...acc, ...VARIANT_GENOTYPE_EXPORT_DATA.map(config => `${config.header}_${i + 1}`)],
-      VARIANT_EXPORT_DATA.map(config => config.header),
-    ),
-    processRow: variant => Object.values(variant.genotypes).reduce(
-      (acc, genotype) => [...acc, ...VARIANT_GENOTYPE_EXPORT_DATA.map((config) => {
-        return config.getVal ? config.getVal(genotype) : genotype[config.header]
-      })],
-      VARIANT_EXPORT_DATA.map(config => (config.getVal ? config.getVal(variant) : variant[config.header])),
-    ),
-  }
-}
 
 // Users
 
