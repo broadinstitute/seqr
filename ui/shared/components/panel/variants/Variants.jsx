@@ -48,6 +48,8 @@ const StyledCompoundHetLink = styled(Grid.Column)`
 
 const StyledCompoundHetRows = styled(Grid)`
   margin-right: 1em !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
 `
 
 const SingleVariant = ({ variant }) =>
