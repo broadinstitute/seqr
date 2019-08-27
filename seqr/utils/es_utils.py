@@ -937,7 +937,7 @@ def _family_genotype_inheritance_filter(inheritance_mode, inheritance_filter, sa
             individual_affected_status[individual.guid] = individual.affected
 
     if inheritance_mode == X_LINKED_RECESSIVE:
-        samples_q &= Q('match', contig='X')
+        samples_q = Q('match', contig='X')
         for individual in individuals:
             if individual_affected_status[individual.guid] == UNAFFECTED and individual.sex == Individual.SEX_MALE:
                 individual_genotype_filter[individual.guid] = REF_REF
