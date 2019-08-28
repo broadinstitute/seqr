@@ -92,9 +92,9 @@ def create_saved_variant_handler(request):
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
-def create_variant_note_handler(request, variant_guid):
+def create_variant_note_handler(request):
     request_json = json.loads(request.body)
-
+    variant_guid = request_json.get('variantGuid')
     save_as_gene_note = request_json.get('saveAsGeneNote')
     saved_variant = SavedVariant.objects.get(guid=variant_guid)
     check_permissions(saved_variant.project, request.user, CAN_VIEW)
@@ -111,7 +111,14 @@ def create_variant_note_handler(request, variant_guid):
     gene_note = {gene_id: {
         'notes': get_json_for_gene_notes_by_gene_id([gene_id], request.user).get(gene_id, [])}} if save_as_gene_note else {}
 
-    _create_variant_note(saved_variant, request_json, request.user)
+    # _create_variant_note(saved_variant, request_json, request.user)
+    # logging.info("create_seqr_model(%s, %s, %s)" % (saved_variant.__name__, request_json, request.user))
+    VariantNote.objects.create(
+        note=request_json.get('note'),
+        submit_to_clinvar=request_json.get('submitToClinvar') or False,
+        search_hash=request_json.get('searchHash'),
+        created_by=request.user,
+    ).saved_variants.add(saved_variant)
 
     variant_note = {variant_guid: {
         'notes': [get_json_for_variant_note(tag) for tag in saved_variant.variantnote_set.all()]},
@@ -126,7 +133,7 @@ def create_variant_note_handler(request, variant_guid):
 def _create_variant_note(saved_variant, note_json, user):
     create_seqr_model(
         VariantNote,
-        saved_variant=saved_variant,
+        saved_variants=[saved_variant],
         note=note_json.get('note'),
         submit_to_clinvar=note_json.get('submitToClinvar') or False,
         search_hash=note_json.get('searchHash'),
@@ -163,11 +170,12 @@ def delete_variant_note_handler(request, variant_guid, note_guid):
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
-def update_variant_tags_handler(request, variant_guid):
+def update_variant_tags_handler(request):
+    request_json = json.loads(request.body)
+    variant_guid = request_json.get('variantGuid')
     saved_variant = SavedVariant.objects.get(guid=variant_guid)
     check_permissions(saved_variant.project, request.user, CAN_VIEW)
 
-    request_json = json.loads(request.body)
     updated_tags = request_json.get('tags', [])
     updated_functional_data = request_json.get('functionalData', [])
 
@@ -224,7 +232,7 @@ def _create_new_tags(saved_variant, tags_json, user):
         )
         create_seqr_model(
             VariantTag,
-            saved_variant=saved_variant,
+            saved_variants=[saved_variant],
             variant_tag_type=variant_tag_type,
             search_hash=tags_json.get('searchHash'),
             created_by=user,

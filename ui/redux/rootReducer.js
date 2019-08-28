@@ -269,13 +269,13 @@ const updateSavedVariant = (values, action = 'create') => {
 
 export const updateVariantNote = (values) => {
   if (values.variantGuid) {
-    return updateEntity(values, RECEIVE_DATA, `/api/saved_variant/${values.variantGuid}/note`, 'noteGuid')
+    return updateEntity(values, RECEIVE_DATA, '/api/saved_variant/note', 'noteGuid')
   }
   return updateSavedVariant(values)
 }
 
 export const updateVariantTags = (values) => {
-  const urlPath = values.variantGuid ? `${values.variantGuid}/update_tags` : 'create'
+  const urlPath = values.variantGuid ? 'update_tags' : 'create'
   return updateSavedVariant(values, urlPath)
 }
 

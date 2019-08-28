@@ -602,7 +602,7 @@ class VariantTagType(ModelWithGUID):
 
 
 class VariantTag(ModelWithGUID):
-    saved_variant = models.ManyToManyField('SavedVariant')
+    saved_variants = models.ManyToManyField('SavedVariant')
     variant_tag_type = models.ForeignKey('VariantTagType', on_delete=models.CASCADE)
 
     # context in which a variant tag was saved
@@ -612,6 +612,7 @@ class VariantTag(ModelWithGUID):
 
     def __unicode__(self):
         return "%s:%s" % (str(self.saved_variant), self.variant_tag_type.name)
+        # return "%s:%s" % ("tags", self.variant_tag_type.name)
 
     def _compute_guid(self):
         return 'VT%07d_%s' % (self.id, _slugify(str(self)))
@@ -623,7 +624,7 @@ class VariantTag(ModelWithGUID):
 
 
 class VariantNote(ModelWithGUID):
-    saved_variant = models.ManyToManyField('SavedVariant')
+    saved_variants = models.ManyToManyField('SavedVariant')
     note = models.TextField(null=True, blank=True)
     submit_to_clinvar = models.BooleanField(default=False)
 
@@ -633,7 +634,8 @@ class VariantNote(ModelWithGUID):
     search_parameters = models.TextField(null=True, blank=True)  # aka. search url
 
     def __unicode__(self):
-        return "%s:%s" % (str(self.saved_variant), (self.note or "")[:20])
+        return "%s:%s" % (str(self.saved_variants), (self.note or "")[:20])
+        # return "%s:%s" % ("test", (self.note or "")[:20])
 
     def _compute_guid(self):
         return 'VN%07d_%s' % (self.id, _slugify(str(self)))

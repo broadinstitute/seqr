@@ -56,7 +56,6 @@ GeneLabel.propTypes = {
 }
 
 const BaseLocusListLabels = ({ locusListGuids, locusListsByGuid, compact, isCompoundHetHeader }) => {
-  console.log(isCompoundHetHeader)
   const CompondHetTagsInLine = ({ inline, wrapper, children }) => (inline ? children : wrapper(children))
   return (
     compact ?
