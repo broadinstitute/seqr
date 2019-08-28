@@ -855,22 +855,27 @@ RECESSIVE = 'recessive'
 X_LINKED_RECESSIVE = 'x_linked_recessive'
 HOMOZYGOUS_RECESSIVE = 'homozygous_recessive'
 COMPOUND_HET = 'compound_het'
+IS_OR_INHERITANCE = 'is_or_inheritance'
 RECESSIVE_FILTER = {
     AFFECTED: ALT_ALT,
     UNAFFECTED: HAS_REF,
 }
 INHERITANCE_FILTERS = {
-   RECESSIVE: RECESSIVE_FILTER,
-   X_LINKED_RECESSIVE: RECESSIVE_FILTER,
-   HOMOZYGOUS_RECESSIVE: RECESSIVE_FILTER,
-   COMPOUND_HET: {
-       AFFECTED: REF_ALT,
-       UNAFFECTED: HAS_REF,
-   },
-   'de_novo': {
-       AFFECTED: HAS_ALT,
-       UNAFFECTED: REF_REF,
-   },
+    RECESSIVE: RECESSIVE_FILTER,
+    X_LINKED_RECESSIVE: RECESSIVE_FILTER,
+    HOMOZYGOUS_RECESSIVE: RECESSIVE_FILTER,
+    COMPOUND_HET: {
+        AFFECTED: REF_ALT,
+        UNAFFECTED: HAS_REF,
+    },
+    'de_novo': {
+        AFFECTED: HAS_ALT,
+        UNAFFECTED: REF_REF,
+    },
+    'any_affected': {
+        AFFECTED: HAS_ALT,
+        IS_OR_INHERITANCE: True,
+    },
 }
 
 
@@ -926,7 +931,7 @@ def _genotype_inheritance_filter(inheritance_mode, inheritance_filter, family_sa
 
 
 def _family_genotype_inheritance_filter(inheritance_mode, inheritance_filter, samples_by_id):
-    samples_q = Q()
+    samples_q = None
 
     individuals = [sample.individual for sample in samples_by_id.values()]
 
@@ -937,7 +942,7 @@ def _family_genotype_inheritance_filter(inheritance_mode, inheritance_filter, sa
             individual_affected_status[individual.guid] = individual.affected
 
     if inheritance_mode == X_LINKED_RECESSIVE:
-        samples_q &= Q('match', contig='X')
+        samples_q = Q('match', contig='X')
         for individual in individuals:
             if individual_affected_status[individual.guid] == UNAFFECTED and individual.sex == Individual.SEX_MALE:
                 individual_genotype_filter[individual.guid] = REF_REF
@@ -958,7 +963,12 @@ def _family_genotype_inheritance_filter(inheritance_mode, inheritance_filter, sa
             if not_allowed_num_alt:
                 sample_q = ~Q(sample_q)
 
-            samples_q &= sample_q
+            if not samples_q:
+                samples_q = sample_q
+            elif inheritance_filter.get(IS_OR_INHERITANCE):
+                samples_q |= sample_q
+            else:
+                samples_q &= sample_q
 
     return samples_q
 

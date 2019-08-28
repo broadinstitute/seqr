@@ -55,7 +55,7 @@ class BaseFieldView extends React.PureComponent {
       if (this.props.formFields) {
         editButton =
           this.props.showInLine ?
-            <div>
+            <div key="edit">
               {this.state.showInLineButton ?
                 <ButtonLink
                   size="tiny"

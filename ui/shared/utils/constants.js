@@ -87,6 +87,10 @@ export const FAMILY_ANALYSIS_STATUS_OPTIONS = [
   { value: FAMILY_STATUS_WAITING_FOR_DATA, color: '#FFC107', name: 'Waiting for data' },
 ]
 
+export const FAMILY_ANALYSIS_STATUS_LOOKUP = FAMILY_ANALYSIS_STATUS_OPTIONS.reduce((acc, tag) => {
+  return { [tag.value]: tag, ...acc }
+}, {})
+
 // SUCCESS STORY
 
 const FAMILY_SUCCESS_STORY_NOVEL_DISCOVERY = 'N'
@@ -813,9 +817,6 @@ export const VARIANT_EXPORT_DATA = [
   { header: 'alt' },
   { header: 'gene', getVal: variant => variant.mainTranscript.geneSymbol },
   { header: 'worst_consequence', getVal: variant => variant.mainTranscript.majorConsequence },
-  { header: 'family', getVal: variant => variant.familyGuids[0].split(/_(.+)/)[1] },
-  { header: 'tags', getVal: variant => variant.tags.map(tag => tag.name).join('|') },
-  { header: 'notes', getVal: variant => variant.notes.map(note => `${note.createdBy}: ${note.note}`).join('|') },
   { header: '1kg_freq', getVal: variant => variant.populations.g1k.af },
   { header: 'exac_freq', getVal: variant => variant.populations.exac.af },
   { header: 'gnomad_genomes_freq', getVal: variant => variant.populations.gnomad_genomes.af },
@@ -834,33 +835,10 @@ export const VARIANT_EXPORT_DATA = [
   { header: 'clinvar_clinical_significance', getVal: variant => variant.clinvar.clinicalSignificance },
   { header: 'clinvar_gold_stars', getVal: variant => variant.clinvar.goldStars },
   { header: 'filter', getVal: variant => variant.genotypeFilters },
+  { header: 'family', getVal: variant => variant.familyGuids[0].split(/_(.+)/)[1] },
+  { header: 'tags', getVal: variant => variant.tags.map(tag => tag.name).join('|') },
+  { header: 'notes', getVal: variant => variant.notes.map(note => `${note.createdBy}: ${note.note.replace(/\n/g, ' ')}`).join('|') },
 ]
-
-const VARIANT_GENOTYPE_EXPORT_DATA = [
-  { header: 'sample_id', getVal: genotype => genotype.sampleId },
-  { header: 'num_alt_alleles', getVal: genotype => genotype.numAlt },
-  { header: 'ad' },
-  { header: 'dp' },
-  { header: 'gq' },
-  { header: 'ab' },
-]
-
-export const getVariantsExportData = (variants) => {
-  const maxGenotypes = Math.max(...variants.map(variant => Object.keys(variant.genotypes).length), 0)
-  return {
-    rawData: variants,
-    headers: [...Array(maxGenotypes).keys()].reduce(
-      (acc, i) => [...acc, ...VARIANT_GENOTYPE_EXPORT_DATA.map(config => `${config.header}_${i + 1}`)],
-      VARIANT_EXPORT_DATA.map(config => config.header),
-    ),
-    processRow: variant => Object.values(variant.genotypes).reduce(
-      (acc, genotype) => [...acc, ...VARIANT_GENOTYPE_EXPORT_DATA.map((config) => {
-        return config.getVal ? config.getVal(genotype) : genotype[config.header]
-      })],
-      VARIANT_EXPORT_DATA.map(config => (config.getVal ? config.getVal(variant) : variant[config.header])),
-    ),
-  }
-}
 
 // Users
 

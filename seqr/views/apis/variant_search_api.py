@@ -198,16 +198,7 @@ VARIANT_EXPORT_DATA = [
 VARIANT_FAMILY_EXPORT_DATA = [
     {'header': 'family_id'},
     {'header': 'tags', 'process': lambda tags: '|'.join(['{} ({})'.format(tag['name'], tag['createdBy']) for tag in tags or []])},
-    {'header': 'notes', 'process': lambda notes: '|'.join(['{} ({})'.format(note['note'], note['createdBy']) for note in notes or []])},
-]
-
-VARIANT_GENOTYPE_EXPORT_DATA = [
-    {'header': 'sample_id', 'value_path': 'sampleId'},
-    {'header': 'num_alt_alleles', 'value_path': 'numAlt'},
-    {'header': 'ad'},
-    {'header': 'dp'},
-    {'header': 'gq'},
-    {'header': 'ab'},
+    {'header': 'notes', 'process': lambda notes: '|'.join(['{} ({})'.format(note['note'].replace('\n', ' '), note['createdBy']) for note in notes or []])},
 ]
 
 
@@ -254,15 +245,16 @@ def export_variants_handler(request, search_hash):
             row += [_get_field_value(family_tags, config) for config in VARIANT_FAMILY_EXPORT_DATA]
         genotypes = variant['genotypes'].values()
         for i in range(max_samples_per_variant):
-            genotype = genotypes[i] if i < len(genotypes) else {}
-            row += [_get_field_value(genotype, config) for config in VARIANT_GENOTYPE_EXPORT_DATA]
+            if i < len(genotypes):
+                row.append('{sampleId}:{numAlt}:{gq}:{ab}'.format(**genotypes[i]))
+            else:
+                row.append('')
         rows.append(row)
 
     header = [config['header'] for config in VARIANT_EXPORT_DATA]
     for i in range(max_families_per_variant):
         header += ['{}_{}'.format(config['header'], i+1) for config in VARIANT_FAMILY_EXPORT_DATA]
-    for i in range(max_samples_per_variant):
-        header += ['{}_{}'.format(config['header'], i+1) for config in VARIANT_GENOTYPE_EXPORT_DATA]
+    header += ['sample_{}:num_alt_alleles:gq:ab'.format(i+1) for i in range(max_samples_per_variant)]
 
     file_format = request.GET.get('file_format', 'tsv')
 
