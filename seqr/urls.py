@@ -45,6 +45,7 @@ from seqr.views.apis.saved_variant_api import \
     create_variant_note_handler, \
     update_variant_note_handler, \
     delete_variant_note_handler, \
+    update_variant_main_transcript, \
     update_saved_variant_json
 
 from seqr.views.pages.dashboard_page import \
@@ -202,6 +203,7 @@ api_endpoints = {
     'saved_variant/(?P<variant_guid>[^/]+)/note/create': create_variant_note_handler,
     'saved_variant/(?P<variant_guid>[^/]+)/note/(?P<note_guid>[^/]+)/update': update_variant_note_handler,
     'saved_variant/(?P<variant_guid>[^/]+)/note/(?P<note_guid>[^/]+)/delete': delete_variant_note_handler,
+    'saved_variant/(?P<variant_guid>[^/]+)/update_transcript/(?P<transcript_id>[^/]+)': update_variant_main_transcript,
 
     'genes_info': genes_info,
     'gene_info/(?P<gene_id>[^/]+)': gene_info,

@@ -238,6 +238,18 @@ def update_saved_variant_json(request, project_guid):
     return create_json_response({variant_guid: None for variant_guid in updated_saved_variant_guids})
 
 
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@csrf_exempt
+def update_variant_main_transcript(request, variant_guid, transcript_id):
+    saved_variant = SavedVariant.objects.get(guid=variant_guid)
+    check_permissions(saved_variant.family.project, request.user, CAN_EDIT)
+
+    saved_variant.selected_main_transcript_id = transcript_id
+    saved_variant.save()
+
+    return create_json_response({'savedVariantsByGuid': {variant_guid: {'selectedMainTranscriptId': transcript_id}}})
+
+
 def _saved_variant_genes(variants):
     gene_ids = set()
     for variant in variants:
