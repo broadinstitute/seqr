@@ -228,7 +228,7 @@ const VariantLink = (
   </VariantLinkContainer>
 
 VariantLink.propTypes = {
-  variant: PropTypes.object,
+  variant: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
   savedVariant: PropTypes.object,
   family: PropTypes.object,
 }
@@ -322,8 +322,7 @@ const FamilyVariantTags = (
 }
 
 FamilyVariantTags.propTypes = {
-  // variant: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
-  variant: PropTypes.object,
+  variant: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
   savedVariant: PropTypes.object,
   project: PropTypes.object,
   family: PropTypes.object,

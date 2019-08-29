@@ -268,9 +268,23 @@ const updateSavedVariant = (values, action = 'create') => {
 }
 
 export const updateVariantNote = (values) => {
+  // single variant
   if (values.variantGuid) {
+    console.log('single')
+    console.log(values)
     return updateEntity(values, RECEIVE_DATA, '/api/saved_variant/note', 'noteGuid')
   }
+  // compound hets
+  if (values.familyGuid) {
+    console.log('compound het')
+    console.log(values)
+    const compoundHetsCount = Object.keys(values).length - 2
+    for (let i = 0; i < compoundHetsCount; i++) {
+      console.log(values[i])
+      return updateEntity(values[i], RECEIVE_DATA, '/api/saved_variant/note', 'noteGuid')
+    }
+  }
+  console.log('update?')
   return updateSavedVariant(values)
 }
 
