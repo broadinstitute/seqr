@@ -280,7 +280,6 @@ export const updateVariantNote = (values) => {
     console.log(values)
     const compoundHetsCount = Object.keys(values).length - 2
     for (let i = 0; i < compoundHetsCount; i++) {
-      console.log(values[i])
       return updateEntity(values[i], RECEIVE_DATA, '/api/saved_variant/note', 'noteGuid')
     }
   }

@@ -55,7 +55,7 @@ GeneLabel.propTypes = {
   showEmpty: PropTypes.bool,
 }
 
-const BaseLocusListLabels = ({ locusListGuids, locusListsByGuid, compact, isCompoundHetHeader }) => {
+const BaseLocusListLabels = ({ locusListGuids, locusListsByGuid, compact, areCompoundHets: areCompoundHets }) => {
   const CompondHetTagsInLine = ({ inline, wrapper, children }) => (inline ? children : wrapper(children))
   return (
     compact ?
@@ -68,7 +68,7 @@ const BaseLocusListLabels = ({ locusListGuids, locusListsByGuid, compact, isComp
         }
       /> :
       <CompondHetTagsInLine
-        inline={isCompoundHetHeader}
+        inline={areCompoundHets}
         wrapper={children => <div>{children}</div>}
       >
         <React.Fragment>
@@ -91,7 +91,7 @@ BaseLocusListLabels.propTypes = {
   locusListGuids: PropTypes.array.isRequired,
   compact: PropTypes.bool,
   locusListsByGuid: PropTypes.object,
-  isCompoundHetHeader: PropTypes.bool,
+  areCompoundHets: PropTypes.bool,
 }
 
 const mapLocusListStateToProps = state => ({
@@ -126,7 +126,7 @@ GeneDetailSection.propTypes = {
   showEmpty: PropTypes.bool,
 }
 
-export const GeneDetails = ({ gene, compact, showLocusLists, isCompoundHetHeader, ...labelProps }) =>
+export const GeneDetails = ({ gene, compact, showLocusLists, areCompoundHets, ...labelProps }) =>
   <div>
     <GeneDetailSection
       compact={compact}
@@ -176,17 +176,17 @@ export const GeneDetails = ({ gene, compact, showLocusLists, isCompoundHetHeader
          loss-of-function mutations`}
       {...labelProps}
     />
-    {showLocusLists && <LocusListLabels locusListGuids={gene.locusListGuids} compact={compact} isCompoundHetHeader={isCompoundHetHeader} />}
+    {showLocusLists && <LocusListLabels locusListGuids={gene.locusListGuids} compact={compact} areCompoundHets={areCompoundHets} />}
   </div>
 
 GeneDetails.propTypes = {
   gene: PropTypes.object,
   compact: PropTypes.bool,
   showLocusLists: PropTypes.bool,
-  isCompoundHetHeader: PropTypes.bool,
+  areCompoundHets: PropTypes.bool,
 }
 
-const VariantGene = ({ geneId, gene, project, variant, compact, isCompoundHetHeader }) => {
+const VariantGene = ({ geneId, gene, project, variant, compact, areCompoundHets }) => {
 
   const geneConsequence = variant.transcripts[geneId] && variant.transcripts[geneId][0].majorConsequence.replace(/_/g, ' ')
 
@@ -209,7 +209,7 @@ const VariantGene = ({ geneId, gene, project, variant, compact, isCompoundHetHea
     </div>
   )
 
-  const geneDetails = <GeneDetails gene={gene} compact={compact} isCompoundHetHeader={isCompoundHetHeader} showLocusLists />
+  const geneDetails = <GeneDetails gene={gene} compact={compact} areCompoundHets={areCompoundHets} showLocusLists />
 
   return compact ?
     <Popup
@@ -234,7 +234,7 @@ VariantGene.propTypes = {
   gene: PropTypes.object,
   variant: PropTypes.object.isRequired,
   compact: PropTypes.bool,
-  isCompoundHetHeader: PropTypes.bool,
+  areCompoundHets: PropTypes.bool,
 }
 
 const mapStateToProps = (state, ownProps) => ({
