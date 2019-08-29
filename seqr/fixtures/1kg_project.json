@@ -1183,7 +1183,35 @@
         "xpos_end": 22046859832,
         "ref": "C",
         "alt": "T",
-        "saved_variant_json": {"clinvar": {"clinicalSignificance": "", "alleleId": null, "variationId": null, "goldStars": null}, "liftedOverGenomeVersion": "38", "familyGuids": ["F000001_1"], "liftedOverPos": "", "genotypeFilters": "pass", "mainTranscriptId": "ENST00000262738", "populations": {"callset": {"ac": null, "an": null, "af": null}, "g1k": {"ac": null, "an": null, "af": 0.0}, "gnomad_genomes": {"hemi": null, "ac": null, "an": null, "hom": null, "af": 0.0}, "gnomad_exomes": {"hemi": null, "ac": null, "an": null, "hom": null, "af": 8.142526788913136e-06}, "exac": {"hemi": null, "ac": null, "an": null, "hom": null, "af": 0.0}, "topmed": {"ac": null, "an": null, "af": null}}, "genomeVersion": "37", "pos": 46859832, "predictions": {"eigen": null, "revel": null, "sift": "damaging", "cadd": "31", "metasvm": "D", "mpc": null, "splice_ai": null, "phastcons_100_vert": null, "mut_taster": "disease_causing", "fathmm": "tolerated", "polyphen": "probably_damaging", "dann": null, "primate_ai": null, "gerp_rs": null}, "hgmd": {"accession": null, "class": null}, "rsid": null, "liftedOverChrom": "", "originalAltAlleles": ["T"], "transcripts": {"ENSG00000075275": [{"transcriptId": "ENST00000262738", "lofFilter": "", "biotype": "protein_coding", "geneSymbol": "CELSR1", "majorConsequence": "missense_variant", "canonical": "YES", "hgvsp": "ENSP00000262738.3:p.Val1319Met", "lof": "", "lofFlags": "", "codons": "Gtg/Atg", "hgvsc": "ENST00000262738.3:c.3955G>A", "transcriptRank": 0, "geneId": "ENSG00000075275", "aminoAcids": "V/M", "cdnaPosition": "3955"}, {"transcriptId": "ENST00000395964", "lofFilter": "", "biotype": "protein_coding", "geneSymbol": "CELSR1", "majorConsequence": "missense_variant", "canonical": "", "hgvsp": "ENSP00000379293.1:p.Val1319Met", "lof": "", "lofFlags": "", "codons": "Gtg/Atg", "hgvsc": "ENST00000395964.1:c.3955G>A", "transcriptRank": 100, "geneId": "ENSG00000075275", "aminoAcids": "V/M", "cdnaPosition": "3955"}, {"transcriptId": "ENST00000454637", "lofFilter": "", "biotype": "protein_coding", "geneSymbol": "CELSR1", "majorConsequence": "missense_variant", "canonical": "", "hgvsp": "ENSP00000414689.1:p.Val694Met", "lof": "", "lofFlags": "", "codons": "Gtg/Atg", "hgvsc": "ENST00000454637.1:c.2079G>A", "transcriptRank": 100, "geneId": "ENSG00000075275", "aminoAcids": "V/M", "cdnaPosition": "2079"}]}, "chrom": "22", "genotypes": {"I000003_na19679": {"sampleId": "NA19679", "ab": 0.0, "ad": "23,0", "gq": 69.0, "dp": "23", "pl": "0,69,769", "cnvs": {"size": null, "snps": null, "cn": null, "LRR_sd": null, "array": null, "caller": null, "type": null, "freq": null, "LRR_median": null}, "numAlt": 0}, "I000002_na19678": {"sampleId": "NA19678", "ab": 0.0, "ad": "22,0", "gq": 66.0, "dp": "22", "pl": "0,66,736", "cnvs": {"size": null, "snps": null, "cn": null, "LRR_sd": null, "array": null, "caller": null, "type": null, "freq": null, "LRR_median": null}, "numAlt": 0}}},
+        "selected_main_transcript_id": "ENST00000258436",
+        "saved_variant_json": {
+            "clinvar": {"clinicalSignificance": "", "alleleId": null, "variationId": null, "goldStars": null},
+            "liftedOverGenomeVersion": "38",
+            "familyGuids": ["F000001_1"],
+            "liftedOverPos": "",
+            "genotypeFilters": "pass",
+            "mainTranscriptId": "ENST00000262738",
+            "populations": {"callset": {"ac": null, "an": null, "af": null}, "g1k": {"ac": null, "an": null, "af": 0.0}, "gnomad_genomes": {"hemi": null, "ac": null, "an": null, "hom": null, "af": 0.0}, "gnomad_exomes": {"hemi": null, "ac": null, "an": null, "hom": null, "af": 8.142526788913136e-06}, "exac": {"hemi": null, "ac": null, "an": null, "hom": null, "af": 0.0}, "topmed": {"ac": null, "an": null, "af": null}},
+            "genomeVersion": "37",
+            "pos": 46859832,
+            "predictions": {"eigen": null, "revel": null, "sift": "damaging", "cadd": "31", "metasvm": "D", "mpc": null, "splice_ai": null, "phastcons_100_vert": null, "mut_taster": "disease_causing", "fathmm": "tolerated", "polyphen": "probably_damaging", "dann": null, "primate_ai": null, "gerp_rs": null},
+            "hgmd": {"accession": null, "class": null},
+            "rsid": null,
+            "liftedOverChrom": "",
+            "originalAltAlleles": ["T"],
+            "transcripts": {
+                "ENSG00000075275": [
+                    {"transcriptId": "ENST00000262738", "lofFilter": "", "biotype": "protein_coding", "geneSymbol": "CELSR1", "majorConsequence": "missense_variant", "canonical": "YES", "hgvsp": "ENSP00000262738.3:p.Val1319Met", "lof": "", "lofFlags": "", "codons": "Gtg/Atg", "hgvsc": "ENST00000262738.3:c.3955G>A", "transcriptRank": 0, "geneId": "ENSG00000075275", "aminoAcids": "V/M", "cdnaPosition": "3955"},
+                    {"transcriptId": "ENST00000395964", "lofFilter": "", "biotype": "protein_coding", "geneSymbol": "CELSR1", "majorConsequence": "missense_variant", "canonical": "", "hgvsp": "ENSP00000379293.1:p.Val1319Met", "lof": "", "lofFlags": "", "codons": "Gtg/Atg", "hgvsc": "ENST00000395964.1:c.3955G>A", "transcriptRank": 100, "geneId": "ENSG00000075275", "aminoAcids": "V/M", "cdnaPosition": "3955"},
+                    {"transcriptId": "ENST00000454637", "lofFilter": "", "biotype": "protein_coding", "geneSymbol": "CELSR1", "majorConsequence": "missense_variant", "canonical": "", "hgvsp": "ENSP00000414689.1:p.Val694Met", "lof": "", "lofFlags": "", "codons": "Gtg/Atg", "hgvsc": "ENST00000454637.1:c.2079G>A", "transcriptRank": 100, "geneId": "ENSG00000075275", "aminoAcids": "V/M", "cdnaPosition": "2079"}
+                ], "ENSG00000135953": [
+                    {"transcriptId": "ENST00000258436", "lofFilter": "", "biotype": "protein_coding", "geneSymbol": "MFSD9", "majorConsequence": "inframe_deletion", "canonical": "YES", "hgvsp": "ENSP00000258436.5:p.Leu126del", "lof": "", "lofFlags": "", "codons": "ctTCTc/ctc", "hgvsc": "ENST00000258436.5:c.375_377delTCT", "transcriptRank": 0, "geneId": "ENSG00000135953", "aminoAcids": "LL/L", "cdnaPosition": "419-421"}
+                ]
+
+            },
+            "chrom": "22",
+            "genotypes": {"I000003_na19679": {"sampleId": "NA19679", "ab": 0.0, "ad": "23,0", "gq": 69.0, "dp": "23", "pl": "0,69,769", "cnvs": {"size": null, "snps": null, "cn": null, "LRR_sd": null, "array": null, "caller": null, "type": null, "freq": null, "LRR_median": null}, "numAlt": 0}, "I000002_na19678": {"sampleId": "NA19678", "ab": 0.0, "ad": "22,0", "gq": 66.0, "dp": "22", "pl": "0,66,736", "cnvs": {"size": null, "snps": null, "cn": null, "LRR_sd": null, "array": null, "caller": null, "type": null, "freq": null, "LRR_median": null}, "numAlt": 0}}
+        },
         "family": 1
     }
 },
