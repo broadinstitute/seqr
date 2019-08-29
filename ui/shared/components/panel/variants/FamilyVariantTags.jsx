@@ -184,12 +184,6 @@ VariantTagField.propTypes = {
 
 const VariantNoteField = ({ action, note, variant, family, ...props }) => {
   const values = { ...variant, ...note }
-  console.log('----------------initialValues:')
-  console.log(values)
-  // console.log('variant')
-  // console.log(variant[0] || values)
-  // console.log('note')
-  // console.log(note)
   return <TextFieldView
     noModal
     showInLine
@@ -280,7 +274,7 @@ const FamilyVariantTags = (
               onSubmit={dispatchUpdateFamilyVariantTags}
             />
             <HorizontalSpacer width={5} />
-            {savedVariant && savedVariant.tags.some(tag => tag.category === DISCOVERY_CATEGORY_NAME) &&
+            {((savedVariant && savedVariant.tags) || (savedVariant[0] === undefined ? [] : savedVariant[0].tags)).some(tag => tag.category === DISCOVERY_CATEGORY_NAME) &&
             <span>
               <TagTitle>Fxnl Data:</TagTitle>
               <VariantTagField
@@ -299,7 +293,7 @@ const FamilyVariantTags = (
           <div>
             <TagTitle>Notes:</TagTitle>
             <NoteContainer>
-              {savedVariant && savedVariant.notes.map(note =>
+              {((savedVariant && savedVariant.notes) || (savedVariant[0] === undefined ? [] : savedVariant[0].notes)).map(note =>
                 <VariantNoteField
                   key={note.noteGuid}
                   note={note}
@@ -342,15 +336,12 @@ FamilyVariantTags.propTypes = {
 const mapStateToProps = (state, ownProps) => ({
   family: getFamiliesByGuid(state)[ownProps.familyGuid],
   project: getProjectsByGuid(state)[(getFamiliesByGuid(state)[ownProps.familyGuid] || {}).projectGuid],
-  savedVariant: (getSavedVariantsGroupedByFamilyVariants(state)[ownProps.familyGuid] || {})[getVariantId(ownProps.variant)],
+  savedVariant: (getSavedVariantsGroupedByFamilyVariants(state)[ownProps.familyGuid] || {})[getVariantId(ownProps.variant)]
+  || (Array.isArray(ownProps.variant) ? ownProps.variant.map(eachVariant => (getSavedVariantsGroupedByFamilyVariants(state)[ownProps.familyGuid] || {})[getVariantId(eachVariant)]) : []),
 })
 
 const mapDispatchToProps = (dispatch, ownProps) => ({
   dispatchUpdateVariantNote: (updates) => {
-    console.log('updates:')
-    console.log(updates)
-    console.log('ownProps:')
-    console.log(ownProps)
     dispatch(updateVariantNote({ ...updates, familyGuid: ownProps.familyGuid }))
   },
   dispatchUpdateFamilyVariantTags: (updates) => {

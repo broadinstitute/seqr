@@ -55,7 +55,7 @@ GeneLabel.propTypes = {
   showEmpty: PropTypes.bool,
 }
 
-const BaseLocusListLabels = ({ locusListGuids, locusListsByGuid, compact, areCompoundHets: areCompoundHets }) => {
+const BaseLocusListLabels = ({ locusListGuids, locusListsByGuid, compact, areCompoundHets }) => {
   const CompondHetTagsInLine = ({ inline, wrapper, children }) => (inline ? children : wrapper(children))
   return (
     compact ?
