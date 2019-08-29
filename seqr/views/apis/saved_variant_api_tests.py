@@ -34,7 +34,7 @@ class ProjectAPITest(TransactionTestCase):
             set(variant.keys()),
             {'variantId', 'variantGuid', 'xpos', 'ref', 'alt', 'chrom', 'pos', 'genomeVersion', 'liftedOverGenomeVersion',
              'liftedOverChrom', 'liftedOverPos', 'familyGuids', 'tags', 'functionalData', 'notes', 'clinvar',
-             'originalAltAlleles', 'mainTranscriptId', 'selectedMainTranscriptId', 'genotypes', 'hgmd', 'transcripts', 
+             'originalAltAlleles', 'mainTranscriptId', 'selectedMainTranscriptId', 'genotypes', 'hgmd', 'transcripts',
              'locusListGuids', 'populations', 'predictions', 'rsid', 'genotypeFilters'}
         )
         self.assertSetEqual(set(variant['genotypes'].keys()), {'I000003_na19679', 'I000001_na19675', 'I000002_na19678'})

@@ -1,5 +1,4 @@
 import logging
-import json
 from collections import defaultdict
 from django.core.management.base import BaseCommand, CommandError
 from django.db.models.query_utils import Q

@@ -5,7 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.views.decorators.csrf import csrf_exempt
 
-from seqr.models import Individual, SavedVariant, VariantTagType, VariantTag, VariantNote, VariantFunctionalData,\
+from seqr.models import SavedVariant, VariantTagType, VariantTag, VariantNote, VariantFunctionalData,\
     LocusListInterval, LocusListGene, Family, CAN_VIEW, CAN_EDIT, GeneNote
 from seqr.model_utils import create_seqr_model, delete_seqr_model
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL

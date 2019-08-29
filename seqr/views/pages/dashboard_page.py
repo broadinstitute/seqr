@@ -7,7 +7,7 @@ import logging
 from django.db import connection, models
 from django.contrib.auth.decorators import login_required
 
-from seqr.models import ProjectCategory, Sample, Family, Project
+from seqr.models import ProjectCategory, Sample, Family
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.utils.export_table_utils import export_table
 from seqr.views.utils.json_utils import create_json_response, _to_camel_case
