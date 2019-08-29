@@ -238,6 +238,10 @@ const FamilyVariantTags = (
   { variant, savedVariant, family, project, dispatchUpdateVariantNote, dispatchUpdateFamilyVariantTags, isCompoundHet, areCompoundHets },
 ) => {
   if (family) {
+    console.log('------ variant: ')
+    console.log(variant)
+    console.log('------ saved variant: ')
+    console.log(savedVariant)
     if (isCompoundHet) {
       return <VariantLink variant={variant} savedVariant={savedVariant} family={family} />
     }

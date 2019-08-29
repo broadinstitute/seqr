@@ -284,6 +284,7 @@ export const updateVariantNote = (values) => {
     }
   }
   console.log('update?')
+  console.log(values)
   return updateSavedVariant(values)
 }
 
