@@ -1,6 +1,7 @@
 import React from 'react'
 import { Form } from 'semantic-ui-react'
 import orderBy from 'lodash/orderBy'
+import flatten from 'lodash/flatten'
 
 import { validators } from '../components/form/ReduxFormWrapper'
 import { BooleanCheckbox, RadioGroup, Dropdown, InlineToggle, Pagination, BaseSemanticInput } from '../components/form/Inputs'
@@ -822,7 +823,7 @@ export const getVariantMainGeneId = ({ transcripts, mainTranscriptId, selectedMa
   ) || [])[0]
 
 export const getVariantMainTranscript = ({ transcripts, mainTranscriptId, selectedMainTranscriptId }) =>
-  Object.values(transcripts).flat().find(
+  flatten(Object.values(transcripts)).find(
     ({ transcriptId }) => transcriptId === (selectedMainTranscriptId || mainTranscriptId),
   ) || {}
 
