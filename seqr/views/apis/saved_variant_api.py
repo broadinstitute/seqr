@@ -95,7 +95,7 @@ def create_variant_note_handler(request, variant_guid):
     check_permissions(saved_variant.family.project, request.user, CAN_VIEW)
 
     if save_as_gene_note:
-        main_transcript_id = saved_variant.saved_variant_json['mainTranscriptId']
+        main_transcript_id = saved_variant.selected_main_transcript_id or saved_variant.saved_variant_json['mainTranscriptId']
         gene_id = next(
             (gene_id for gene_id, transcripts in saved_variant.saved_variant_json['transcripts'].items()
              if any(t['transcriptId'] == main_transcript_id for t in transcripts)), None) if main_transcript_id else None

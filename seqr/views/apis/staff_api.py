@@ -233,13 +233,14 @@ def anvil_export(request, project_guid):
 
 
 def _get_variant_main_transcript(variant):
-    main_transcript_id = variant.get('mainTranscriptId')
+    main_transcript_id = variant.get('selectedMainTranscriptId') or variant.get('mainTranscriptId')
     if not main_transcript_id:
         return {}
     for transcripts in variant.get('transcripts', {}).values():
         main_transcript = next((t for t in transcripts if t['transcriptId'] == main_transcript_id), None)
         if main_transcript:
             return main_transcript
+
 
 def _get_loaded_before_date_project_individuals(projects, loaded_before=None):
     if loaded_before:
@@ -633,8 +634,9 @@ def _generate_rows(project, loaded_samples_by_project_family, saved_variants_by_
 
             variant.saved_variant_json['inheritance'] = inheritance_models
 
+            main_transcript_id = variant.selected_main_transcript_id or variant.saved_variant_json['mainTranscriptId']
             for gene_id, transcripts in variant.saved_variant_json['transcripts'].items():
-                if any(t['transcriptId'] == variant.saved_variant_json['mainTranscriptId'] for t in transcripts):
+                if any(t['transcriptId'] == main_transcript_id for t in transcripts):
                     variant.saved_variant_json['mainTranscriptGeneId'] = gene_id
                     break
 
