@@ -279,6 +279,19 @@ export const updateVariantTags = (values) => {
   return updateSavedVariant(values, urlPath)
 }
 
+export const updateVariantMainTranscript = (variantGuid, transcriptId) => {
+  return (dispatch) => {
+    return new HttpRequestHelper(`/api/saved_variant/${variantGuid}/update_transcript/${transcriptId}`,
+      (responseJson) => {
+        dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+      },
+      (e) => {
+        throw new SubmissionError({ _error: [e.message] })
+      },
+    ).get()
+  }
+}
+
 export const updateLocusList = (values) => {
   return (dispatch) => {
     let action = 'create'

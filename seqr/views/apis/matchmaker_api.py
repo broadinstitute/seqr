@@ -43,8 +43,7 @@ def get_individual_mme_matches(request, individual_guid):
     results = MatchmakerResult.objects.filter(individual=individual)
 
     saved_variants = get_json_for_saved_variants(
-        SavedVariant.objects.filter(family=individual.family), add_tags=True, add_details=True,
-        project=project, user=request.user)
+        SavedVariant.objects.filter(family=individual.family), add_tags=True, add_details=True)
 
     gene_ids = set()
     for variant in saved_variants:

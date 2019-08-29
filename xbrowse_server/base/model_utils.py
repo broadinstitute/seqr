@@ -117,7 +117,6 @@ def _deprecated_get_or_create_saved_variant(xpos=None, ref=None, alt=None, famil
         ref=ref,
         alt=alt,
         family=family,
-        project=project,
     )
     if not saved_variant.saved_variant_json:
         try:

@@ -6,7 +6,8 @@ from django.urls.base import reverse
 
 from seqr.models import SavedVariant, VariantNote, VariantTag, VariantFunctionalData
 from seqr.views.apis.saved_variant_api import saved_variant_data, create_variant_note_handler, create_saved_variant_handler, \
-    update_variant_note_handler, delete_variant_note_handler, update_variant_tags_handler, update_saved_variant_json
+    update_variant_note_handler, delete_variant_note_handler, update_variant_tags_handler, update_saved_variant_json, \
+    update_variant_main_transcript
 from seqr.views.utils.test_utils import _check_login
 
 
@@ -33,8 +34,8 @@ class ProjectAPITest(TransactionTestCase):
             set(variant.keys()),
             {'variantId', 'variantGuid', 'xpos', 'ref', 'alt', 'chrom', 'pos', 'genomeVersion', 'liftedOverGenomeVersion',
              'liftedOverChrom', 'liftedOverPos', 'familyGuids', 'tags', 'functionalData', 'notes', 'clinvar',
-             'originalAltAlleles', 'mainTranscript', 'genotypes', 'hgmd', 'transcripts', 'locusListGuids', 'populations',
-             'predictions', 'rsid', 'genotypeFilters'}
+             'originalAltAlleles', 'mainTranscriptId', 'selectedMainTranscriptId', 'genotypes', 'hgmd', 'transcripts',
+             'locusListGuids', 'populations', 'predictions', 'rsid', 'genotypeFilters'}
         )
         self.assertSetEqual(set(variant['genotypes'].keys()), {'I000003_na19679', 'I000001_na19675', 'I000002_na19678'})
 
@@ -63,7 +64,7 @@ class ProjectAPITest(TransactionTestCase):
             'chrom': '2',
             'genotypes': {},
             'genomeVersion': '37',
-            'mainTranscript': {},
+            'mainTranscriptId': None,
             'originalAltAlleles': ['A'],
             'populations': {'callset': {'ac': 2, 'af': 0.063, 'an': 32}},
             'pos': 61413835,
@@ -92,11 +93,12 @@ class ProjectAPITest(TransactionTestCase):
         variant_guid = response.json()['savedVariantsByGuid'].keys()[0]
 
         saved_variant = SavedVariant.objects.get(guid=variant_guid, family__guid='F000001_1')
-        self.assertDictEqual(variant_json, json.loads(saved_variant.saved_variant_json))
+        self.assertDictEqual(variant_json, saved_variant.saved_variant_json)
 
         variant_json.update({
             'variantId': variant_guid,
             'variantGuid': variant_guid,
+            'selectedMainTranscriptId': None,
             'notes': [],
             'functionalData': [],
         })
@@ -135,6 +137,17 @@ class ProjectAPITest(TransactionTestCase):
         self.assertEqual(new_variant_note_response['note'], 'new_variant_note_as_gene_note')
         new_gene_note_response = response.json()['genesById'][GENE_GUID]['notes'][0]
         self.assertEqual(new_gene_note_response['note'], 'new_variant_note_as_gene_note')
+
+        # save variant_note as gene_note for user selected main gene
+        create_variant_note_seetced_gene_url = reverse(create_variant_note_handler, args=['SV0000003_2246859832_r0390_100'])
+        response = self.client.post(create_variant_note_seetced_gene_url, content_type='application/json', data=json.dumps(
+            {'note': 'new user-selected gene note', 'saveAsGeneNote': True}
+        ))
+        self.assertEqual(response.status_code, 200)
+        new_variant_note_response = response.json()['savedVariantsByGuid']['SV0000003_2246859832_r0390_100']['notes'][0]
+        self.assertEqual(new_variant_note_response['note'], 'new user-selected gene note')
+        new_gene_note_response = response.json()['genesById'][GENE_GUID]['notes'][1]
+        self.assertEqual(new_gene_note_response['note'], 'new user-selected gene note')
 
         # update the variant_note
         update_variant_note_url = reverse(update_variant_note_handler, args=[VARIANT_GUID, new_variant_note.guid])
@@ -209,3 +222,17 @@ class ProjectAPITest(TransactionTestCase):
             set(response.json().keys()),
             {'SV0000002_1248367227_r0390_100', 'SV0000001_2103343353_r0390_100', 'SV0000003_2246859832_r0390_100'}
         )
+
+    def test_update_variant_main_transcript(self):
+        transcript_id = 'ENST00000438943'
+        update_main_transcript_url = reverse(update_variant_main_transcript, args=[VARIANT_GUID, transcript_id])
+        _check_login(self, update_main_transcript_url)
+
+        response = self.client.get(update_main_transcript_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'savedVariantsByGuid': {VARIANT_GUID: {'selectedMainTranscriptId': transcript_id}}})
+
+        saved_variant = SavedVariant.objects.get(guid=VARIANT_GUID)
+        self.assertEqual(saved_variant.selected_main_transcript_id, transcript_id)
+
+

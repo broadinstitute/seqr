@@ -4,14 +4,15 @@ APIs used by the main seqr dashboard page
 
 import logging
 
-from django.db import connection
+from django.db import connection, models
 from django.contrib.auth.decorators import login_required
 
-from seqr.models import ProjectCategory, Sample, Family, Project
+from seqr.models import ProjectCategory, Sample, Family
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.utils.export_table_utils import export_table
 from seqr.views.utils.json_utils import create_json_response, _to_camel_case
-from seqr.views.utils.permissions_utils import get_projects_user_can_view, get_projects_user_can_edit
+from seqr.views.utils.orm_to_json_utils import get_json_for_projects
+from seqr.views.utils.permissions_utils import get_projects_user_can_view
 
 logger = logging.getLogger(__name__)
 
@@ -28,22 +29,12 @@ def dashboard_page_data(request):
        }
     """
 
+    # TODO get rid of raw SQL execution
     cursor = connection.cursor()
 
-    projects_user_can_view = get_projects_user_can_view(request.user)
-    projects_user_can_edit = get_projects_user_can_edit(request.user)
+    projects_by_guid = _get_projects_json(request.user, cursor)
 
-    # defensive programming
-    edit_but_not_view_permissions = set(p.guid for p in projects_user_can_edit) - set(p.guid for p in projects_user_can_view)
-    if edit_but_not_view_permissions:
-        raise Exception('ERROR: %s has EDIT permissions but not VIEW permissions for: %s' % (request.user, edit_but_not_view_permissions))
-
-    projects_by_guid = _retrieve_projects_by_guid(cursor, projects_user_can_view, projects_user_can_edit)
-
-    _add_analysis_status_counts(cursor, projects_by_guid)
-    _add_sample_type_counts(cursor, projects_by_guid)
-
-    project_categories_by_guid = _retrieve_project_categories_by_guid(projects_by_guid)
+    project_categories_by_guid = _retrieve_project_categories_by_guid(projects_by_guid.keys())
 
     cursor.close()
 
@@ -55,6 +46,24 @@ def dashboard_page_data(request):
     return create_json_response(json_response)
 
 
+def _get_projects_json(user, cursor):
+    projects = get_projects_user_can_view(user)
+    projects_with_counts = projects.annotate(
+        models.Count('family', distinct=True), models.Count('family__individual', distinct=True),
+        models.Count('family__savedvariant', distinct=True))
+
+    projects_by_guid = {p['projectGuid']: p for p in get_json_for_projects(projects, user=user)}
+    for project in projects_with_counts:
+        projects_by_guid[project.guid]['numFamilies'] = project.family__count
+        projects_by_guid[project.guid]['numIndividuals'] = project.family__individual__count
+        projects_by_guid[project.guid]['numVariantTags'] = project.family__savedvariant__count
+
+    _add_analysis_status_counts(cursor, projects_by_guid)
+    _add_sample_type_counts(cursor, projects_by_guid)
+
+    return projects_by_guid
+
+
 def _to_WHERE_clause(project_guids):
     """Converts a list of project GUIDs to a SQL WHERE clause"""
     if len(project_guids) == 0:
@@ -63,75 +72,7 @@ def _to_WHERE_clause(project_guids):
     return 'WHERE p.guid in (%s)' % (','.join("'%s'" % guid for guid in project_guids))
 
 
-def _retrieve_projects_by_guid(cursor, projects_user_can_view, projects_user_can_edit):
-    """Retrieves all relevant metadata for each project from the database, and returns a 'projects_by_guid' dictionary.
-
-    Args:
-        cursor: connected database cursor that can be used to execute SQL queries.
-        projects_user_can_view (list): list of Django Project objects for which the user has CAN_VIEW permissions.
-        projects_user_can_edit (list): list of Django Project objects for which the user has CAN_EDIT permissions.
-    Returns:
-        Dictionary that maps each project's GUID to a dictionary of key-value pairs representing
-        attributes of that project.
-    """
-
-    if len(projects_user_can_view) == 0:
-        return {}
-
-    # get all projects this user has permissions to view
-    projects_WHERE_clause = _to_WHERE_clause([p.guid for p in projects_user_can_view])
-
-    # use raw SQL to avoid making N+1 queries.
-    num_families_subquery = """
-      SELECT count(*) FROM seqr_family
-        WHERE project_id=p.id
-    """.strip()
-
-    num_variant_tags_subquery = """
-      SELECT count(*) FROM seqr_varianttag AS v
-        JOIN seqr_savedvariant AS s ON v.saved_variant_id=s.id
-        WHERE project_id=p.id
-    """.strip()
-
-    num_individuals_subquery = """
-      SELECT count(*) FROM seqr_individual AS i
-        JOIN seqr_family AS f ON i.family_id=f.id
-        WHERE f.project_id=p.id
-    """.strip()
-
-    project_fields = ', '.join(Project._meta.json_fields)
-
-    projects_query = """
-      SELECT
-        guid AS project_guid,
-        {project_fields},
-        ({num_variant_tags_subquery}) AS num_variant_tags,
-        ({num_families_subquery}) AS num_families,
-        ({num_individuals_subquery}) AS num_individuals
-      FROM seqr_project AS p
-      {projects_WHERE_clause}
-    """.strip().format(
-        project_fields=project_fields, num_variant_tags_subquery=num_variant_tags_subquery,
-        num_families_subquery=num_families_subquery, num_individuals_subquery=num_individuals_subquery,
-        projects_WHERE_clause=projects_WHERE_clause
-    )
-
-    cursor.execute(projects_query)
-
-    columns = [_to_camel_case(col[0]) for col in cursor.description]
-
-    projects_by_guid = {
-        r['projectGuid']: r for r in (dict(zip(columns, row)) for row in cursor.fetchall())
-    }
-
-    # mark all projects where this user has edit permissions
-    for project in projects_user_can_edit:
-        projects_by_guid[project.guid]['canEdit'] = True
-
-    return projects_by_guid
-
-
-def _retrieve_project_categories_by_guid(projects_by_guid):
+def _retrieve_project_categories_by_guid(project_guids):
     """Retrieves project categories from the database, and returns a 'project_categories_by_guid' dictionary,
     while also adding a 'projectCategoryGuids' attribute to each project dict in 'projects_by_guid'.
 
@@ -143,22 +84,14 @@ def _retrieve_project_categories_by_guid(projects_by_guid):
         Dictionary that maps each category's GUID to a dictionary of key-value pairs representing
         attributes of that category.
     """
-    if len(projects_by_guid) == 0:
+    if len(project_guids) == 0:
         return {}
 
     # retrieve all project categories
-    for project_guid in projects_by_guid:
-        projects_by_guid[project_guid]['projectCategoryGuids'] = []
-
-    project_guids = [guid for guid in projects_by_guid]
     project_categories = ProjectCategory.objects.filter(projects__guid__in=project_guids).distinct()
 
     project_categories_by_guid = {}
     for project_category in project_categories:
-        projects = project_category.projects.filter(guid__in=project_guids)
-        for p in projects:
-            projects_by_guid[p.guid]['projectCategoryGuids'].append(project_category.guid)
-
         project_categories_by_guid[project_category.guid] = project_category.json()
 
     return project_categories_by_guid
@@ -262,12 +195,8 @@ def export_projects_table_handler(request):
 
     cursor = connection.cursor()
 
-    projects_user_can_view = get_projects_user_can_view(request.user)
-
-    projects_by_guid = _retrieve_projects_by_guid(cursor, projects_user_can_view, [])
-    _add_analysis_status_counts(cursor, projects_by_guid)
-    _add_sample_type_counts(cursor, projects_by_guid)
-    project_categories_by_guid = _retrieve_project_categories_by_guid(projects_by_guid)
+    projects_by_guid = _get_projects_json(request.user, cursor)
+    project_categories_by_guid = _retrieve_project_categories_by_guid(projects_by_guid.keys())
 
     cursor.close()
 

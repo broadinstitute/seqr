@@ -15,11 +15,7 @@ export const USER = {
 
 export const VARIANT = {
   alt: "T",
-  mainTranscript: {
-    aminoAcids: "P/X", hgvsc: "ENST00000456743.1:c.862delC", hgvsp: "ENSP00000389625.1:p.Leu288SerfsTer10", lof: "HC",
-    lofFilter: "", lofFlags: "SINGLE_EXON", proteinPosition: "287", symbol: "OR2M3", geneId: 'ENSG00000228198',
-    majorConsequence: 'frameshift_variant'
-  },
+  mainTranscriptId: 'ENST00000456743',
   chrom: "1",
   clinvar: { clinsig: "", variantId: null },
   familyGuids: ["F011652_1"],

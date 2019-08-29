@@ -14,6 +14,20 @@ class DashboardPageTest(TestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
 
+        response_json = response.json()
+        self.assertSetEqual(set(response_json.keys()), {'projectsByGuid', 'projectCategoriesByGuid'})
+        self.assertSetEqual(
+            set(response_json['projectCategoriesByGuid'].values()[0].keys()),
+            {'created_by_id', 'created_date', 'guid', 'id', 'last_modified_date', 'name'}
+        )
+        self.assertSetEqual(
+            set(response_json['projectsByGuid'].values()[0].keys()),
+            {'analysisStatusCounts', 'canEdit', 'createdDate', 'deprecatedProjectId', 'description', 'genomeVersion',
+             'hasNewSearch', 'isMmeEnabled', 'isPhenotipsEnabled', 'lastAccessedDate', 'lastModifiedDate',
+             'mmePrimaryDataOwner', 'mmeContactInstitution', 'mmeContactUrl', 'name', 'numFamilies', 'numIndividuals',
+             'numVariantTags', 'phenotipsUserId', 'projectGuid', 'projectCategoryGuids', 'sampleTypeCounts',}
+        )
+
     def test_export_projects_table(self):
         url = reverse(export_projects_table_handler)
 
