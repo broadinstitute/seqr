@@ -238,12 +238,24 @@ const FamilyVariantTags = (
   { variant, savedVariant, family, project, dispatchUpdateVariantNote, dispatchUpdateFamilyVariantTags, isCompoundHet, areCompoundHets },
 ) => {
   if (family) {
-    console.log('------ variant: ')
-    console.log(variant)
-    console.log('------ saved variant: ')
-    console.log(savedVariant)
+    // console.log('------ variant: ')
+    // console.log(variant)
+    // console.log('------ saved variant: ')
+    // console.log(savedVariant)
     if (isCompoundHet) {
       return <VariantLink variant={variant} savedVariant={savedVariant} family={family} />
+    }
+    let validVariant
+    if (Array.isArray(savedVariant)) {
+      if (typeof savedVariant[0] === 'undefined') {
+        validVariant = variant
+      }
+      else {
+        validVariant = savedVariant
+      }
+    }
+    else {
+      validVariant = (savedVariant || variant)
     }
     return (
       <div>
@@ -310,7 +322,7 @@ const FamilyVariantTags = (
                 />,
               )}
               <VariantNoteField
-                variant={savedVariant || variant}
+                variant={validVariant}
                 family={family}
                 editIconName="plus"
                 editLabel="Add Note"
@@ -346,6 +358,8 @@ const mapStateToProps = (state, ownProps) => ({
 
 const mapDispatchToProps = (dispatch, ownProps) => ({
   dispatchUpdateVariantNote: (updates) => {
+    console.log('updates ===========================================')
+    console.log(updates)
     dispatch(updateVariantNote({ ...updates, familyGuid: ownProps.familyGuid }))
   },
   dispatchUpdateFamilyVariantTags: (updates) => {
