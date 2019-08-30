@@ -168,13 +168,18 @@ MUTTASTR_MAP = {
 def _get_prediction_val(prediction):
     return PREDICTION_MAP.get(prediction[0]) if prediction else None
 
+def _get_variant_main_transcript_field_val(parsed_variant):
+    return next(
+        (t for t in parsed_variant['transcripts'] if t['transcriptId'] == parsed_variant['mainTranscriptId']), {}
+    ).get('value')
+
 VARIANT_EXPORT_DATA = [
     {'header': 'chrom'},
     {'header': 'pos'},
     {'header': 'ref'},
     {'header': 'alt'},
-    {'header': 'gene', 'value_path': 'mainTranscript.geneSymbol'},
-    {'header': 'worst_consequence', 'value_path': 'mainTranscript.majorConsequence'},
+    {'header': 'gene', 'value_path': '{transcripts: transcripts.*[].{value: geneSymbol, transcriptId: transcriptId}, mainTranscriptId: mainTranscriptId}', 'process': _get_variant_main_transcript_field_val},
+    {'header': 'worst_consequence', 'value_path': '{transcripts: transcripts.*[].{value: majorConsequence, transcriptId: transcriptId}, mainTranscriptId: mainTranscriptId}', 'process': _get_variant_main_transcript_field_val},
     {'header': '1kg_freq', 'value_path': 'populations.g1k.af'},
     {'header': 'exac_freq', 'value_path': 'populations.exac.af'},
     {'header': 'gnomad_genomes_freq', 'value_path': 'populations.gnomad_genomes.af'},
@@ -183,13 +188,13 @@ VARIANT_EXPORT_DATA = [
     {'header': 'cadd', 'value_path': 'predictions.cadd'},
     {'header': 'revel', 'value_path': 'predictions.revel'},
     {'header': 'eigen', 'value_path': 'predictions.eigen'},
-    {'header': 'polyphen', 'value_path': 'predictions.polyphen', 'process': lambda prediction: POLYPHEN_MAP.get(prediction[0]) if prediction else None},
-    {'header': 'sift', 'value_path': 'predictions.sift', 'process': lambda prediction: PREDICTION_MAP.get(prediction[0]) if prediction else None},
-    {'header': 'muttaster', 'value_path': 'predictions.mut_taster', 'process': lambda prediction: MUTTASTR_MAP.get(prediction[0]) if prediction else None},
-    {'header': 'fathmm', 'value_path': 'predictions.fathmm', 'process': lambda prediction: PREDICTION_MAP.get(prediction[0]) if prediction else None},
+    {'header': 'polyphen', 'value_path': 'predictions.polyphen', 'process': _get_prediction_val},
+    {'header': 'sift', 'value_path': 'predictions.sift', 'process': _get_prediction_val},
+    {'header': 'muttaster', 'value_path': 'predictions.mut_taster', 'process': _get_prediction_val},
+    {'header': 'fathmm', 'value_path': 'predictions.fathmm', 'process': _get_prediction_val},
     {'header': 'rsid', 'value_path': 'rsid'},
-    {'header': 'hgvsc', 'value_path': 'mainTranscript.hgvsc'},
-    {'header': 'hgvsp', 'value_path': 'mainTranscript.hgvsp'},
+    {'header': 'hgvsc', 'value_path': '{transcripts: transcripts.*[].{value: hgvsc, transcriptId: transcriptId}, mainTranscriptId: mainTranscriptId}', 'process': _get_variant_main_transcript_field_val},
+    {'header': 'hgvsp', 'value_path': '{transcripts: transcripts.*[].{value: hgvsp, transcriptId: transcriptId}, mainTranscriptId: mainTranscriptId}', 'process': _get_variant_main_transcript_field_val},
     {'header': 'clinvar_clinical_significance', 'value_path': 'clinvar.clinicalSignificance'},
     {'header': 'clinvar_gold_stars', 'value_path': 'clinvar.goldStars'},
     {'header': 'filter', 'value_path': 'genotypeFilters'},

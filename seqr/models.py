@@ -538,31 +538,28 @@ class AliasField(models.Field):
 
 
 class SavedVariant(ModelWithGUID):
+    family = models.ForeignKey('Family', on_delete=models.CASCADE)
+
     xpos_start = models.BigIntegerField()
     xpos_end = models.BigIntegerField(null=True)
     xpos = AliasField(db_column="xpos_start")
     ref = models.TextField()
     alt = models.TextField()
 
-    # Cache genotypes and annotations for the variant as gene id and consequence - in case the dataset gets deleted, etc.
-    saved_variant_json = models.TextField(null=True, blank=True)
-
-    project = models.ForeignKey('Project')
-    family = models.ForeignKey('Family', null=True, blank=True, on_delete=models.SET_NULL)
+    selected_main_transcript_id = models.CharField(max_length=20, null=True)
+    saved_variant_json = JSONField(default=dict)
 
     def __unicode__(self):
         chrom, pos = get_chrom_pos(self.xpos_start)
-        return "%s:%s-%s:%s" % (chrom, pos, self.project.guid, self.family.guid if self.family else '')
+        return "%s:%s-%s" % (chrom, pos, self.family.guid)
 
     def _compute_guid(self):
         return 'SV%07d_%s' % (self.id, _slugify(str(self)))
 
     class Meta:
-        index_together = ('xpos_start', 'ref', 'alt', 'project')
+        unique_together = ('xpos_start', 'xpos_end', 'ref', 'alt', 'family')
 
-        unique_together = ('xpos_start', 'xpos_end', 'ref', 'alt', 'project', 'family')
-
-        json_fields = ['guid', 'xpos', 'ref', 'alt']
+        json_fields = ['guid', 'xpos', 'ref', 'alt', 'selected_main_transcript_id']
 
 
 class VariantTagType(ModelWithGUID):

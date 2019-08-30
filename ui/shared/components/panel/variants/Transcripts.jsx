@@ -5,7 +5,9 @@ import { connect } from 'react-redux'
 import { Label, Header, Table, Segment } from 'semantic-ui-react'
 
 import { getGenesById } from 'redux/selectors'
+import { updateVariantMainTranscript } from 'redux/rootReducer'
 import { VerticalSpacer } from '../../Spacers'
+import DispatchRequestButton from '../../buttons/DispatchRequestButton'
 import ShowGeneModal from '../../buttons/ShowGeneModal'
 import { ProteinSequence } from './Annotations'
 import { GENOME_VERSION_37 } from '../../../utils/constants'
@@ -17,7 +19,7 @@ export const TranscriptLink = styled.a.attrs({
   children: ({ transcript }) => transcript.transcriptId,
 })`
   font-size: 1.3em;
-  font-weight: ${(props) => { return props.isChosen ? 'bold' : 'normal' }}
+  font-weight: normal;
 `
 
 const AnnotationSection = styled.div`
@@ -31,7 +33,7 @@ const AnnotationLabel = styled.small`
   padding-right: 10px;
 `
 
-const Transcripts = ({ variant, genesById }) =>
+const Transcripts = ({ variant, genesById, updateMainTranscript }) =>
   variant.transcripts && Object.entries(variant.transcripts).sort((transcriptsA, transcriptsB) => (
     Math.min(...transcriptsA[1].map(t => t.transcriptRank)) - Math.min(...transcriptsB[1].map(t => t.transcriptRank))
   )).map(([geneId, geneTranscripts]) =>
@@ -48,22 +50,32 @@ const Transcripts = ({ variant, genesById }) =>
             {geneTranscripts.map(transcript =>
               <Table.Row key={transcript.transcriptId}>
                 <Table.Cell width={3}>
-                  <TranscriptLink
-                    variant={variant}
-                    transcript={transcript}
-                    isChosen={transcript.transcriptRank === 0}
-                  />
+                  <TranscriptLink variant={variant} transcript={transcript} />
                   <div>
                     {transcript.transcriptRank === 0 &&
                       <span>
                         <VerticalSpacer height={5} />
-                        <Label content="Chosen Transcript" color="orange" size="small" />
+                        <Label content="seqr Chosen Transcript" color="blue" size="small" />
                       </span>
                     }
                     {transcript.canonical &&
                       <span>
                         <VerticalSpacer height={5} />
                         <Label content="Canonical Transcript" color="green" size="small" />
+                      </span>
+                    }
+                    {variant.variantGuid &&
+                      <span>
+                        <VerticalSpacer height={5} />
+                        {transcript.transcriptId === variant.selectedMainTranscriptId ?
+                          <Label content="User Chosen Transcript" color="purple" size="small" /> :
+                          <DispatchRequestButton
+                            onSubmit={updateMainTranscript(transcript.transcriptId)}
+                            confirmDialog="Are you sure want to update the main transcript for this variant?"
+                          >
+                            <Label as="a" content="Use as Main Transcript" color="violet" basic size="small" />
+                          </DispatchRequestButton>
+                        }
                       </span>
                     }
                   </div>
@@ -103,5 +115,11 @@ const mapStateToProps = state => ({
   genesById: getGenesById(state),
 })
 
-export default connect(mapStateToProps)(Transcripts)
+const mapDispatchToProps = (dispatch, ownProps) => ({
+  updateMainTranscript: transcriptId => () => {
+    return dispatch(updateVariantMainTranscript(ownProps.variant.variantGuid, transcriptId))
+  },
+})
+
+export default connect(mapStateToProps, mapDispatchToProps)(Transcripts)
 

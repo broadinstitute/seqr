@@ -5,7 +5,7 @@ import { connect } from 'react-redux'
 import { Icon, Transition } from 'semantic-ui-react'
 
 import { getGenesById } from 'redux/selectors'
-import { PREDICTION_INDICATOR_MAP, POLYPHEN_MAP, MUTTASTER_MAP } from 'shared/utils/constants'
+import { PREDICTION_INDICATOR_MAP, POLYPHEN_MAP, MUTTASTER_MAP, getVariantMainGeneId } from 'shared/utils/constants'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 import { HorizontalSpacer } from '../../Spacers'
 import { ButtonLink } from '../../StyledComponents'
@@ -130,7 +130,7 @@ class Predictions extends React.PureComponent {
 }
 
 const mapStateToProps = (state, ownProps) => ({
-  gene: getGenesById(state)[ownProps.variant.mainTranscript.geneId],
+  gene: getGenesById(state)[getVariantMainGeneId(ownProps.variant)],
 })
 
 export default connect(mapStateToProps)(Predictions)

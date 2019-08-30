@@ -189,9 +189,10 @@ export const getFilteredSavedVariants = createSelector(
   getSavedVariantHideReviewOnly,
   getSavedVariantHideKnownGeneForPhenotype,
   getSavedVariantGeneFilter,
+  getGenesById,
   getSavedVariantTaggedAfter,
   (state, props) => props.match.params.tag,
-  (savedVariants, categoryFilter, hideExcluded, hideReviewOnly, hideKnownGeneForPhenotype, geneFilter, taggedAfter, tag) => {
+  (savedVariants, categoryFilter, hideExcluded, hideReviewOnly, hideKnownGeneForPhenotype, geneFilter, genesById, taggedAfter, tag) => {
     let variantsToShow = savedVariants
     if (hideExcluded) {
       variantsToShow = variantsToShow.filter(variant => variant.tags.every(t => t.name !== EXCLUDED_TAG_NAME))
@@ -209,8 +210,8 @@ export const getFilteredSavedVariants = createSelector(
       }
     } else {
       if (geneFilter) {
-        variantsToShow = variantsToShow.filter(variant =>
-          (variant.mainTranscript.geneSymbol || '').toLowerCase().startsWith(geneFilter.toLowerCase()))
+        variantsToShow = variantsToShow.filter(variant => Object.keys(variant.transcripts).some(
+          geneId => (((genesById[geneId] || {}).geneSymbol || '').toLowerCase().startsWith(geneFilter.toLowerCase()))))
       }
 
       if (taggedAfter) {

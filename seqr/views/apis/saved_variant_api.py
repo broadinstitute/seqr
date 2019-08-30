@@ -5,7 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.views.decorators.csrf import csrf_exempt
 
-from seqr.models import Individual, SavedVariant, VariantTagType, VariantTag, VariantNote, VariantFunctionalData,\
+from seqr.models import SavedVariant, VariantTagType, VariantTag, VariantNote, VariantFunctionalData,\
     LocusListInterval, LocusListGene, Family, CAN_VIEW, CAN_EDIT, GeneNote
 from seqr.model_utils import create_seqr_model, delete_seqr_model
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
@@ -29,19 +29,16 @@ def saved_variant_data(request, project_guid, variant_guid=None):
     project = get_project_and_check_permissions(project_guid, request.user)
     family_guids = request.GET['families'].split(',') if request.GET.get('families') else None
 
-    variant_query = SavedVariant.objects.filter(project=project)
-
     if family_guids:
-        variant_query = variant_query.filter(family__guid__in=family_guids)
+        variant_query = SavedVariant.objects.filter(family__guid__in=family_guids)
+    else:
+        variant_query = SavedVariant.objects.filter(family__project=project)
     if variant_guid:
         variant_query = variant_query.filter(guid=variant_guid)
         if variant_query.count() < 1:
             return create_json_response({}, status=404, reason='Variant {} not found'.format(variant_guid))
 
-    individual_guids_by_id = {i.individual_id: i.guid for i in Individual.objects.filter(family__project=project)}
-
-    saved_variants = get_json_for_saved_variants(variant_query, add_tags=True, add_details=True, project=project,
-                                                 user=request.user, individual_guids_by_id=individual_guids_by_id)
+    saved_variants = get_json_for_saved_variants(variant_query, add_tags=True, add_details=True)
     variants = {variant['variantGuid']: variant for variant in saved_variants if variant['notes'] or variant['tags']}
     genes = _saved_variant_genes(variants.values())
     _add_locus_lists([project], variants.values(), genes)
@@ -69,7 +66,6 @@ def create_saved_variant_handler(request):
     xpos = variant_json['xpos']
     ref = variant_json['ref']
     alt = variant_json['alt']
-    # TODO remove project field from saved variants
     saved_variant = SavedVariant.objects.create(
         xpos=xpos,
         xpos_start=xpos,
@@ -77,8 +73,7 @@ def create_saved_variant_handler(request):
         ref=ref,
         alt=alt,
         family=family,
-        project=family.project,
-        saved_variant_json=json.dumps(variant_json)
+        saved_variant_json=variant_json
     )
 
     if non_variant_json.get('note'):
@@ -86,7 +81,7 @@ def create_saved_variant_handler(request):
     elif non_variant_json.get('tags'):
         _create_new_tags(saved_variant, non_variant_json, request.user)
 
-    variant_json.update(get_json_for_saved_variant(saved_variant, add_tags=True, project_guid=family.project.guid))
+    variant_json.update(get_json_for_saved_variant(saved_variant, add_tags=True))
     return create_json_response({
         'savedVariantsByGuid': {saved_variant.guid: variant_json},
     })
@@ -99,10 +94,13 @@ def create_variant_note_handler(request):
     variant_guid = request_json.get('variantGuid')
     save_as_gene_note = request_json.get('saveAsGeneNote')
     saved_variant = SavedVariant.objects.get(guid=variant_guid)
-    check_permissions(saved_variant.project, request.user, CAN_VIEW)
+    check_permissions(saved_variant.family.project, request.user, CAN_VIEW)
 
     if save_as_gene_note:
-        gene_id = json.loads(saved_variant.saved_variant_json)['mainTranscript']['geneId']
+        main_transcript_id = saved_variant.selected_main_transcript_id or saved_variant.saved_variant_json['mainTranscriptId']
+        gene_id = next(
+            (gene_id for gene_id, transcripts in saved_variant.saved_variant_json['transcripts'].items()
+             if any(t['transcriptId'] == main_transcript_id for t in transcripts)), None) if main_transcript_id else None
         create_seqr_model(
             GeneNote,
             note=request_json.get('note'),
@@ -147,7 +145,7 @@ def _create_variant_note(saved_variant, note_json, user):
 @csrf_exempt
 def update_variant_note_handler(request, variant_guid, note_guid):
     saved_variant = SavedVariant.objects.get(guid=variant_guid)
-    check_permissions(saved_variant.project, request.user, CAN_VIEW)
+    check_permissions(saved_variant.family.project, request.user, CAN_VIEW)
     note = VariantNote.objects.get(guid=note_guid, saved_variant=saved_variant)
 
     request_json = json.loads(request.body)
@@ -162,7 +160,7 @@ def update_variant_note_handler(request, variant_guid, note_guid):
 @csrf_exempt
 def delete_variant_note_handler(request, variant_guid, note_guid):
     saved_variant = SavedVariant.objects.get(guid=variant_guid)
-    check_permissions(saved_variant.project, request.user, CAN_VIEW)
+    check_permissions(saved_variant.family.project, request.user, CAN_VIEW)
     note = VariantNote.objects.get(guid=note_guid, saved_variant=saved_variant)
     delete_seqr_model(note)
     return create_json_response({'savedVariantsByGuid': {variant_guid: {
@@ -176,7 +174,7 @@ def update_variant_tags_handler(request):
     request_json = json.loads(request.body)
     variant_guid = request_json.get('variantGuid')
     saved_variant = SavedVariant.objects.get(guid=variant_guid)
-    check_permissions(saved_variant.project, request.user, CAN_VIEW)
+    check_permissions(saved_variant.family.project, request.user, CAN_VIEW)
 
     updated_tags = request_json.get('tags', [])
     updated_functional_data = request_json.get('functionalData', [])
@@ -230,7 +228,7 @@ def _create_new_tags(saved_variant, tags_json, user):
     for tag in new_tags:
         variant_tag_type = VariantTagType.objects.get(
             Q(name=tag['name']),
-            Q(project=saved_variant.project) | Q(project__isnull=True)
+            Q(project=saved_variant.family.project) | Q(project__isnull=True)
         )
         create_seqr_model(
             VariantTag,
@@ -248,6 +246,18 @@ def update_saved_variant_json(request, project_guid):
     updated_saved_variant_guids = update_project_saved_variant_json(project)
 
     return create_json_response({variant_guid: None for variant_guid in updated_saved_variant_guids})
+
+
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@csrf_exempt
+def update_variant_main_transcript(request, variant_guid, transcript_id):
+    saved_variant = SavedVariant.objects.get(guid=variant_guid)
+    check_permissions(saved_variant.family.project, request.user, CAN_EDIT)
+
+    saved_variant.selected_main_transcript_id = transcript_id
+    saved_variant.save()
+
+    return create_json_response({'savedVariantsByGuid': {variant_guid: {'selectedMainTranscriptId': transcript_id}}})
 
 
 def _saved_variant_genes(variants):

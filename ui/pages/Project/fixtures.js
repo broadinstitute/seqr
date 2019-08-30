@@ -603,11 +603,12 @@ export const STATE_WITH_2_FAMILIES = {
       liftedOverChrom: "",
       liftedOverGenomeVersion: "38",
       liftedOverPos: "",
-      mainTranscript: {
+      mainTranscriptId: 'ENST00000456743',
+      transcripts: {ENSG00000228198: [{
         aminoAcids: "P/X", hgvsc: "ENST00000456743.1:c.862delC", hgvsp: "ENSP00000389625.1:p.Leu288SerfsTer10", lof: "HC",
         lofFilter: "", lofFlags: "SINGLE_EXON", proteinPosition: "287", symbol: "OR2M3", geneId: 'ENSG00000228198',
-        majorConsequence: 'frameshift_variant'
-      },
+        majorConsequence: 'frameshift_variant', transcriptId: 'ENST00000456743'
+      }]},
       notes: [{
         dateSaved: "2018-05-29T17:25:23.770Z", note: "test note edited", noteGuid: "VN0727076_116042722_r0390_1000",
         submitToClinvar: true, user: "hsnow@broadinstitute.org"
@@ -716,7 +717,8 @@ export const STATE_WITH_2_FAMILIES = {
       liftedOverPos: "",
       notes: [],
       origAltAlleles: ["T"],
-      mainTranscript: {majorConsequence: 'missense_variant'},
+      mainTranscriptId: 'ENST00000262738',
+      transcripts: {ENSG00000228198: [{transcriptId: 'ENST00000262738',  majorConsequence: 'missense_variant'}]},
       pos: 248367227,
       projectGuid: 'R0237_1000_genomes_demo',
       ref: "TC",
@@ -822,7 +824,8 @@ export const STATE_WITH_2_FAMILIES = {
       liftedOverChrom: "",
       liftedOverGenomeVersion: "38",
       liftedOverPos: "",
-      mainTranscript: {},
+      mainTranscriptId: null,
+      transcripts: {},
       notes: [],
       origAltAlleles: ["T"],
       pos: 248367227,

@@ -121,7 +121,6 @@ const CompoundHets = ({ variants }) =>
   <StyledVariantRow key={variants[0].variantId} >
     {variants[0].familyGuids.map(familyGuid =>
       <Grid.Column key={familyGuid} width={16}>
-        {/*<FamilyVariantTags familyGuid={familyGuid} variant={variants[0]} areCompoundHets />*/}
         <FamilyVariantTags familyGuid={familyGuid} variant={variants} areCompoundHets />
       </Grid.Column>,
     )}
