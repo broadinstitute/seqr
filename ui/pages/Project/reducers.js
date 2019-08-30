@@ -213,6 +213,7 @@ export const reducers = {
   mmeContactNotes: createObjectsByIdReducer(RECEIVE_DATA, 'mmeContactNotes'),
   familyTableState: createSingleObjectReducer(UPDATE_FAMILY_TABLE_STATE, {
     familiesFilter: SHOW_ALL,
+    familiesSearch: '',
     familiesSortOrder: SORT_BY_FAMILY_NAME,
     familiesSortDirection: 1,
   }, false),

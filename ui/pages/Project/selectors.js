@@ -2,8 +2,6 @@ import orderBy from 'lodash/orderBy'
 import mapValues from 'lodash/mapValues'
 import { createSelector } from 'reselect'
 
-
-import { getSearchResults } from 'redux/utils/reduxSearchEnhancer'
 import {
   FAMILY_ANALYSIS_STATUS_OPTIONS,
   FAMILY_FIELD_ID,
@@ -120,6 +118,10 @@ export const getFamiliesFilter = createSelector(
   getFamiliesTableState,
   familyTableState => familyTableState.familiesFilter || SHOW_ALL,
 )
+export const getFamiliesSearch = createSelector(
+  getFamiliesTableState,
+  familyTableState => familyTableState.familiesSearch,
+)
 export const getFamiliesSortOrder = createSelector(
   getFamiliesTableState,
   familyTableState => familyTableState.familiesSortOrder || SORT_BY_FAMILY_NAME,
@@ -141,9 +143,13 @@ export const getVisibleFamilies = createSelector(
   getSamplesByGuid,
   getUser,
   getFamiliesFilter,
-  getSearchResults('familiesByGuid'),
-  (familiesByGuid, individualsByGuid, samplesByGuid, user, familiesFilter, familySearchResults) => {
-    const searchedFamilies = familySearchResults.map(family => familiesByGuid[family]).filter(family => family)
+  getFamiliesSearch,
+  (familiesByGuid, individualsByGuid, samplesByGuid, user, familiesFilter, familiesSearch) => {
+    const searchFilter = familiesSearch ? family =>
+      `${family.displayName};${family.familyId};${family.individualGuids.map(individualGuid =>
+        ((individualsByGuid[individualGuid].phenotipsData || {}).features || []).map(feature => feature.label).join(';'),
+      ).join(';')}`.toLowerCase().includes(familiesSearch) : family => family
+    const searchedFamilies = Object.values(familiesByGuid).filter(searchFilter)
 
     if (!familiesFilter || !FAMILY_FILTER_LOOKUP[familiesFilter]) {
       return searchedFamilies

@@ -2,7 +2,6 @@ import { createStore, applyMiddleware, compose } from 'redux'
 import thunkMiddleware from 'redux-thunk'
 
 import { loadState, saveState } from 'shared/utils/localStorage'
-import reduxSearchEnhancer from './reduxSearchEnhancer'
 
 
 const env = process.env.NODE_ENV || 'development'
@@ -21,7 +20,6 @@ const persistStoreMiddleware = store => next => (action) => {
 
 const enhancer = compose(
   applyMiddleware(thunkMiddleware, persistStoreMiddleware),
-  reduxSearchEnhancer,
 )
 
 
