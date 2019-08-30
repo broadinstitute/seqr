@@ -48,13 +48,9 @@ from seqr.views.apis.saved_variant_api import \
     update_variant_main_transcript, \
     update_saved_variant_json
 
-from seqr.views.pages.dashboard_page import \
+from seqr.views.apis.dashboard_api import \
     dashboard_page_data, \
     export_projects_table_handler
-
-from seqr.views.pages.project_page import \
-    project_page_data, \
-    export_project_individuals_handler
 
 from seqr.views.apis.gene_api import \
     gene_info, \
@@ -119,7 +115,8 @@ from seqr.views.apis.awesomebar_api import awesomebar_autocomplete_handler
 from seqr.views.apis.auth_api import login_required_error, API_LOGIN_REQUIRED_URL, login_view, logout_view
 from seqr.views.apis.igv_api import fetch_igv_track
 from seqr.views.apis.analysis_group_api import update_analysis_group_handler, delete_analysis_group_handler
-from seqr.views.apis.project_api import create_project_handler, update_project_handler, delete_project_handler
+from seqr.views.apis.project_api import create_project_handler, update_project_handler, delete_project_handler, \
+    project_page_data, export_project_individuals_handler
 from seqr.views.apis.project_categories_api import update_project_categories_handler
 from seqr.views.apis import external_api
 from seqr.views.utils.file_utils import save_temp_file

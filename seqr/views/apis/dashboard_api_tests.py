@@ -1,6 +1,6 @@
 from django.test import TestCase
 from django.urls.base import reverse
-from seqr.views.pages.dashboard_page import dashboard_page_data, export_projects_table_handler
+from seqr.views.apis.dashboard_api import dashboard_page_data, export_projects_table_handler
 from seqr.views.utils.test_utils import _check_login
 
 

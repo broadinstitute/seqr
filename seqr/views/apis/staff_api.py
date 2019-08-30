@@ -18,7 +18,7 @@ from seqr.utils.file_utils import file_iter
 from seqr.utils.gene_utils import get_genes
 from seqr.utils.xpos_utils import get_chrom_pos
 
-from seqr.views.pages.project_page import get_project_variant_tag_types
+from seqr.views.apis.project_api import get_project_variant_tag_types
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.matchmaker_api import get_mme_genes_phenotypes, parse_mme_patient
 from seqr.views.apis.saved_variant_api import _saved_variant_genes, _add_locus_lists
