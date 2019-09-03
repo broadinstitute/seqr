@@ -56,8 +56,7 @@ class ExportTableUtilsTest(TestCase):
             include_maternal_ancestry=True,
             include_age_of_onset=True)
         self.assertEqual(response.status_code, 200)
-        wb = load_workbook(StringIO(response.content))
-        worksheet = wb.active
+        load_workbook(StringIO(response.content))
 
         # test unknown format
         self.assertRaisesRegexp(ValueError, '.*format.*',

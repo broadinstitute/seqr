@@ -168,7 +168,7 @@ def export_project_individuals_handler(request, project_guid):
         project_guid (string): GUID of the project for which to export individual data
     """
 
-    format = request.GET.get('file_format', 'tsv')
+    file_format = request.GET.get('file_format', 'tsv')
     include_phenotypes = bool(request.GET.get('include_phenotypes'))
 
     project = get_project_and_check_permissions(project_guid, request.user)
@@ -181,7 +181,7 @@ def export_project_individuals_handler(request, project_guid):
     return export_individuals(
         filename_prefix,
         individuals,
-        format,
+        file_format,
         include_hpo_terms_present=include_phenotypes,
         include_hpo_terms_absent=include_phenotypes,
     )

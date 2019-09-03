@@ -74,7 +74,7 @@ def create_phenotips_user(username, password):
 def make_phenotips_api_call(
         method,
         url,
-        http_headers={},
+        http_headers=None,
         data=None,
         auth_tuple=None,
         expected_status_code=200,
@@ -95,7 +95,7 @@ def make_phenotips_api_call(
     """
 
     try:
-        response = proxy_request(None, url, headers=http_headers, method=method, scheme='http', data=data,
+        response = proxy_request(None, url, headers=http_headers or {}, method=method, scheme='http', data=data,
                                  auth_tuple=auth_tuple, host=settings.PHENOTIPS_SERVER, verbose=verbose)
     except requests.exceptions.RequestException as e:
         raise PhenotipsException(e.message)

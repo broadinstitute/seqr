@@ -51,13 +51,11 @@ def delete_individuals(project, individual_guids):
         try:
             delete_phenotips_patient(project, individual)
         except (PhenotipsException, ValueError) as e:
-            logger.error("Error: couldn't delete patient from phenotips: %s %s",
-                         individual.phenotips_eid,
-                         individual)
+            logger.error("Error: couldn't delete patient from phenotips: {} {} ({})".format(
+                individual.phenotips_eid, individual, e))
 
         # delete Individual
         delete_seqr_model(individual)
-
 
     update_pedigree_images(families.values())
 

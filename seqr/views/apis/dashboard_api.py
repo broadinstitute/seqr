@@ -119,9 +119,9 @@ def _add_analysis_status_counts(cursor, projects_by_guid):
       FROM seqr_family AS f
       JOIN seqr_project AS p
        ON f.project_id = p.id
-      %(projects_WHERE_clause)s
+      {projects_WHERE_clause}
       GROUP BY p.guid, f.analysis_status
-    """.strip() % locals()
+    """.format(projects_WHERE_clause=projects_WHERE_clause).strip()
 
     cursor.execute(analysis_status_counts_query)
 
