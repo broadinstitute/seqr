@@ -1,7 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Loader, Grid, Dropdown } from 'semantic-ui-react'
+import { Loader, Grid, Dropdown, Form } from 'semantic-ui-react'
 import { Route, Switch, Link } from 'react-router-dom'
 import styled from 'styled-components'
 
@@ -18,21 +18,20 @@ import {
   VARIANT_HIDE_KNOWN_GENE_FOR_PHENOTYPE_FIELD,
   VARIANT_PER_PAGE_FIELD,
   VARIANT_PAGINATION_FIELD,
-  VARIANT_GENE_FIELD,
   VARIANT_TAGGED_DATE_FIELD,
 } from 'shared/utils/constants'
 import { toSnakecase } from 'shared/utils/stringUtils'
 
 import ExportTableButton from '../../buttons/export-table/ExportTableButton'
 import VariantTagTypeBar, { getSavedVariantsLinkPath } from '../../graph/VariantTagTypeBar'
-import ReduxFormWrapper from '../../form/ReduxFormWrapper'
+import ReduxFormWrapper, { StyledForm } from '../../form/ReduxFormWrapper'
+import AwesomeBar from '../../page/AwesomeBar'
 import { HorizontalSpacer } from '../../Spacers'
 import Variants from './Variants'
 
 const ALL_FILTER = 'ALL'
 
 const NO_PROJECT_FILTER_FIELDS = [
-  VARIANT_GENE_FIELD,
   VARIANT_TAGGED_DATE_FIELD,
   VARIANT_SORT_FIELD,
   VARIANT_PER_PAGE_FIELD,
@@ -67,6 +66,8 @@ const TAG_TYPES = [
   'Submit to Clinvar',
   'Share with KOMP',
 ].map(name => ({ name, color: 'white' }))
+
+const GENE_SEARCH_CATEGORIES = ['genes']
 
 const ControlsRow = styled(Grid.Row)`
   font-size: 1.1em;
@@ -135,9 +136,9 @@ class BaseSavedVariants extends React.Component {
   }
 
   loadVariants = ({ match, analysisGroup }) => {
-    const { familyGuid, variantGuid, tag } = match.params
+    const { familyGuid, variantGuid, tag, gene } = match.params
     const familyGuids = familyGuid ? [familyGuid] : (analysisGroup || {}).familyGuids
-    this.props.loadSavedVariants(familyGuids, variantGuid, tag)
+    this.props.loadSavedVariants(familyGuids, variantGuid, tag, gene)
   }
 
 
@@ -152,6 +153,14 @@ class BaseSavedVariants extends React.Component {
     })
     this.props.updateSavedVariantTable({ categoryFilter: isCategory ? data.value : null })
     this.props.history.push(urlPath)
+  }
+
+  getGeneHref = (selectedGene) => {
+    const { tag } = this.props.match.params
+    if (!tag) {
+      return this.props.match.url
+    }
+    return getSavedVariantsLinkPath({ tag, gene: selectedGene.key })
   }
 
   render() {
@@ -254,6 +263,20 @@ class BaseSavedVariants extends React.Component {
 
             </Grid.Column>
             <Grid.Column width={11} floated="right" textAlign="right">
+              {!this.props.project &&
+                <StyledForm inline>
+                  <Form.Field
+                    control={AwesomeBar}
+                    categories={GENE_SEARCH_CATEGORIES}
+                    inputwidth="200px"
+                    label="Gene"
+                    placeholder="Search for a gene"
+                    getResultHref={this.getGeneHref}
+                    inline
+                  />
+                  <HorizontalSpacer width={10} />
+                </StyledForm>
+              }
               {!variantGuid &&
                 <ReduxFormWrapper
                   onSubmit={this.props.updateSavedVariantTable}
@@ -306,6 +329,7 @@ const RoutedSavedVariants = ({ match }) =>
     <Route path={`${match.url}/variant/:variantGuid`} component={SavedVariants} />
     <Route path={`${match.url}/family/:familyGuid/:tag?`} component={SavedVariants} />
     <Route path={`${match.url}/analysis_group/:analysisGroupGuid/:tag?`} component={SavedVariants} />
+    <Route path={`${match.url}/:tag/gene/:gene`} component={SavedVariants} />
     <Route path={`${match.url}/:tag?`} component={SavedVariants} />
   </Switch>
 

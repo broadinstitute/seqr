@@ -783,13 +783,6 @@ export const VARIANT_PAGINATION_FIELD = {
   lastItem: null,
   format: val => parseInt(val, 10),
 }
-export const VARIANT_GENE_FIELD = {
-  name: 'gene',
-  component: BaseSemanticInput,
-  inputType: 'Input',
-  label: 'Gene',
-  inline: true,
-}
 export const VARIANT_TAGGED_DATE_FIELD = {
   name: 'taggedAfter',
   component: BaseSemanticInput,
