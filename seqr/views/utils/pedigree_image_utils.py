@@ -30,7 +30,7 @@ def update_pedigree_images(families, project_guid=None):
     """
 
     for family in families:
-        update_pedigree_image(family, project_guid=project_guid)
+        _update_pedigree_image(family, project_guid=project_guid)
 
 
 def _get_parsed_individuals(family, project_guid=None):
@@ -97,7 +97,7 @@ def _get_parsed_individuals(family, project_guid=None):
     }
 
 
-def update_pedigree_image(family, project_guid=None):
+def _update_pedigree_image(family, project_guid=None):
     """Uses HaploPainter to (re)generate the pedigree image for the given family.
 
     Args:

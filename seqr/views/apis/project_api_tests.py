@@ -35,7 +35,7 @@ def get_objects_for_group(can_view_group, permission, object_cls):
 class ProjectAPITest(TestCase):
     fixtures = ['users', '1kg_project']
 
-    @mock.patch('seqr.views.apis.phenotips_api.proxy_request', create_proxy_request_stub(201))
+    @mock.patch('seqr.views.utils.phenotips_utils.proxy_request', create_proxy_request_stub(201))
     def test_create_update_and_delete_project(self):
         create_project_url = reverse(create_project_handler)
         _check_login(self, create_project_url)
@@ -88,7 +88,7 @@ class ProjectAPITest(TestCase):
         new_project = Project.objects.filter(name='new_project')
         self.assertEqual(len(new_project), 0)
 
-    @mock.patch('seqr.views.apis.locus_list_api.get_objects_for_group', get_objects_for_group)
+    @mock.patch('seqr.views.utils.orm_to_json_utils.get_objects_for_group', get_objects_for_group)
     def test_project_page_data(self):
         url = reverse(project_page_data, args=[PROJECT_GUID])
         _check_login(self, url)
@@ -150,7 +150,7 @@ class ProjectAPITest(TestCase):
             {'analysisGroupGuid', 'description', 'name', 'projectGuid', 'familyGuids'}
         )
 
-    @mock.patch('seqr.views.apis.locus_list_api.get_objects_for_group', get_objects_for_group)
+    @mock.patch('seqr.views.utils.orm_to_json_utils.get_objects_for_group', get_objects_for_group)
     def test_empty_project_page_data(self):
         url = reverse(project_page_data, args=[EMPTY_PROJECT_GUID])
         _check_login(self, url)

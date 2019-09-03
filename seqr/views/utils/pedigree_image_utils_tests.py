@@ -3,7 +3,7 @@
 from django.test import TestCase
 
 from seqr.models import Family, Individual
-from seqr.views.apis.pedigree_image_api import _get_parsed_individuals
+from seqr.views.utils.pedigree_image_utils import _get_parsed_individuals
 
 
 class PedigreeImageTest(TestCase):

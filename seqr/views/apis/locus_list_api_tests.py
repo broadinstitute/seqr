@@ -6,8 +6,8 @@ from django.urls.base import reverse
 
 from seqr.models import LocusList, Project
 from seqr.views.apis.locus_list_api import locus_lists, locus_list_info, create_locus_list_handler, \
-    update_locus_list_handler, delete_locus_list_handler, add_project_locus_lists, delete_project_locus_lists, \
-    get_project_locus_list_models
+    update_locus_list_handler, delete_locus_list_handler, add_project_locus_lists, delete_project_locus_lists
+from seqr.views.utils.orm_to_json_utils import get_project_locus_list_models
 from seqr.views.utils.test_utils import _check_login
 
 

@@ -34,11 +34,13 @@ from django.core.exceptions import ObjectDoesNotExist
 from reference_data.models import HumanPhenotypeOntology
 from seqr.model_utils import update_seqr_model
 from seqr.models import Project, CAN_EDIT, CAN_VIEW, Individual
-from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.utils.file_utils import save_uploaded_file
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.permissions_utils import check_permissions, get_project_and_check_permissions
+from seqr.views.utils.phenotips_utils import get_phenotips_uname_and_pwd_for_project, make_phenotips_api_call, \
+    phenotips_patient_url, phenotips_patient_exists
 from seqr.views.utils.proxy_request_utils import proxy_request
+from settings import API_LOGIN_REQUIRED_URL
 
 logger = logging.getLogger(__name__)
 
@@ -239,9 +241,9 @@ def update_individual_hpo_terms(request, individual_guid):
     patient_json["features"] = features
     patient_json_string = json.dumps(patient_json)
 
-    url = _phenotips_patient_url(individual)
-    auth_tuple = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=False)
-    _make_api_call('PUT', url, data=patient_json_string, auth_tuple=auth_tuple, expected_status_code=204)
+    url = phenotips_patient_url(individual)
+    auth_tuple = get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=False)
+    make_phenotips_api_call('PUT', url, data=patient_json_string, auth_tuple=auth_tuple, expected_status_code=204)
 
     phenotips_patient_id = patient_json['id']
     phenotips_eid = patient_json.get('external_id')
@@ -271,19 +273,19 @@ def _create_patient_if_missing(project, individual):
     Raises:
         PhenotipsException: if unable to create patient record
     """
-    if _phenotips_patient_exists(individual):
+    if phenotips_patient_exists(individual):
         return False
 
     url = '/rest/patients'
     headers = {"Content-Type": "application/json"}
     data = json.dumps({'external_id': individual.guid})
-    auth_tuple = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id)
+    auth_tuple = get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id)
 
-    response_items = _make_api_call('POST', url, auth_tuple=auth_tuple, http_headers=headers, data=data, expected_status_code=201, parse_json_resonse=False)
+    response_items = make_phenotips_api_call('POST', url, auth_tuple=auth_tuple, http_headers=headers, data=data, expected_status_code=201, parse_json_resonse=False)
     patient_id = response_items['Location'].split('/')[-1]
     logger.info("Created PhenoTips record with patient id {patient_id} and external id {external_id}".format(patient_id=patient_id, external_id=individual.guid))
 
-    username_read_only, _ = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=True)
+    username_read_only, _ = get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=True)
     _add_user_to_patient(username_read_only, patient_id, allow_edit=False)
     logger.info("Added PhenoTips user {username} to {patient_id}".format(username=username_read_only, patient_id=patient_id))
 
@@ -309,36 +311,10 @@ def _get_patient_data(project, individual):
     Raises:
         PhenotipsException: if unable to retrieve data from PhenoTips
     """
-    url = _phenotips_patient_url(individual)
+    url = phenotips_patient_url(individual)
 
-    auth_tuple = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id)
-    return _make_api_call('GET', url, auth_tuple=auth_tuple, verbose=False)
-
-
-def delete_patient(project, individual):
-    """Deletes patient from PhenoTips for the given patient_id.
-
-    Args:
-        project (Model): seqr Project - used to retrieve PhenoTips credentials
-        individual (Model): seqr Individual
-    Raises:
-        PhenotipsException: if api call fails
-    """
-    if _phenotips_patient_exists(individual):
-        url = _phenotips_patient_url(individual)
-        auth_tuple = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=False)
-        return _make_api_call('DELETE', url, auth_tuple=auth_tuple, expected_status_code=204)
-
-
-def _phenotips_patient_url(individual):
-    if individual.phenotips_patient_id:
-        return '/rest/patients/{0}'.format(individual.phenotips_patient_id)
-    else:
-        return '/rest/patients/eid/{0}'.format(individual.phenotips_eid)
-
-
-def _phenotips_patient_exists(individual):
-    return individual.phenotips_patient_id or individual.phenotips_eid
+    auth_tuple = get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id)
+    return make_phenotips_api_call('GET', url, auth_tuple=auth_tuple, verbose=False)
 
 
 def _add_user_to_patient(username, patient_id, allow_edit=True):
@@ -358,7 +334,7 @@ def _add_user_to_patient(username, patient_id, allow_edit=True):
     }
 
     url = '/bin/get/PhenoTips/PatientAccessRightsManagement?outputSyntax=plain'
-    _make_api_call(
+    make_phenotips_api_call(
         'POST',
         url,
         http_headers=headers,
@@ -366,42 +342,6 @@ def _add_user_to_patient(username, patient_id, allow_edit=True):
         auth_tuple=(settings.PHENOTIPS_ADMIN_UNAME, settings.PHENOTIPS_ADMIN_PWD),
         expected_status_code=204,
         parse_json_resonse=False,
-    )
-
-
-def create_phenotips_user(username, password):
-    """Creates a new user in PhenoTips"""
-
-    headers = { "Content-Type": "application/x-www-form-urlencoded" }
-    data = { 'parent': 'XWiki.XWikiUsers' }
-
-    url = '/rest/wikis/xwiki/spaces/XWiki/pages/{username}'.format(username=username)
-    _make_api_call(
-        'PUT',
-        url,
-        http_headers=headers,
-        data=data,
-        auth_tuple=(settings.PHENOTIPS_ADMIN_UNAME, settings.PHENOTIPS_ADMIN_PWD),
-        parse_json_resonse=False,
-        expected_status_code=[201, 202],
-    )
-
-    data = {
-        'className': 'XWiki.XWikiUsers',
-        'property#password': password,
-        #'property#first_name': first_name,
-        #'property#last_name': last_name,
-        #'property#email': email_address,
-    }
-
-    url = '/rest/wikis/xwiki/spaces/XWiki/pages/{username}/objects'.format(username=username)
-    return _make_api_call(
-        'POST',
-        url,
-        data=data,
-        auth_tuple=(settings.PHENOTIPS_ADMIN_UNAME, settings.PHENOTIPS_ADMIN_PWD),
-        parse_json_resonse=False,
-        expected_status_code=201,
     )
 
 
@@ -492,52 +432,6 @@ def proxy_to_phenotips(request):
     return http_response
 
 
-def _make_api_call(
-        method,
-        url,
-        http_headers={},
-        data=None,
-        auth_tuple=None,
-        expected_status_code=200,
-        parse_json_resonse=True,
-        verbose=False):
-    """Utility method for making an API call and then parsing & returning the json response.
-
-    Args:
-        method (string): 'GET' or 'POST'
-        url (string): url path, starting with '/' (eg. '/bin/edit/data/P0000001')
-        data (string): request body - used for POST, PUT, and other such requests.
-        auth_tuple (tuple): ("username", "password") pair
-        expected_status_code (int or list): expected server response code
-        parse_json_resonse (bool): whether to parse and return the json response
-        verbose (bool): whether to print details about the request & response
-    Returns:
-        json object or None if response content is empty
-    """
-
-    try:
-        response = proxy_request(None, url, headers=http_headers, method=method, scheme='http', data=data,
-                                 auth_tuple=auth_tuple, host=settings.PHENOTIPS_SERVER, verbose=verbose)
-    except requests.exceptions.RequestException as e:
-        raise PhenotipsException(e.message)
-    if (isinstance(expected_status_code, int) and response.status_code != expected_status_code) or (
-        isinstance(expected_status_code, list) and response.status_code not in expected_status_code):
-        raise PhenotipsException("Unable to retrieve %s. response code = %s: %s" % (
-            url, response.status_code, response.reason_phrase))
-
-    if parse_json_resonse:
-        if not response.content:
-            return {}
-
-        try:
-            return json.loads(response.content)
-        except ValueError as e:
-            logger.error("Unable to parse PhenoTips response for %s request to %s" % (method, url))
-            raise PhenotipsException("Unable to parse response for %s:\n%s" % (url, e))
-    else:
-        return dict(response.items())
-
-
 def _handle_phenotips_save_request(request, patient_id):
     """Update the seqr SQL database record for this patient with the just-saved phenotype data."""
 
@@ -592,17 +486,6 @@ def _update_individual_phenotips_data(individual, patient_json):
         phenotips_eid=patient_json.get('external_id'))  # phenotips external id
 
 
-def _get_phenotips_uname_and_pwd_for_project(phenotips_user_id, read_only=False):
-    """Return the PhenoTips username and password for this seqr project"""
-    if not phenotips_user_id:
-        raise ValueError("Invalid phenotips_user_id: " + str(phenotips_user_id))
-
-    uname = phenotips_user_id + ('_view' if read_only else '')
-    pwd = phenotips_user_id + phenotips_user_id
-
-    return uname, pwd
-
-
 def _get_phenotips_username_and_password(user, project, permissions_level):
     """Checks if user has permission to access the given project, and raises an exception if not.
 
@@ -616,16 +499,12 @@ def _get_phenotips_username_and_password(user, project, permissions_level):
         2-tuple: PhenoTips username, password that can be used to access patients in this project.
     """
     if permissions_level == CAN_EDIT:
-        uname, pwd = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=False)
+        uname, pwd = get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=False)
     elif permissions_level == CAN_VIEW:
-        uname, pwd = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=True)
+        uname, pwd = get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=True)
     else:
         raise ValueError("Unexpected auth_permissions value: %s" % permissions_level)
 
     auth_tuple = (uname, pwd)
 
     return auth_tuple
-
-
-class PhenotipsException(Exception):
-    pass

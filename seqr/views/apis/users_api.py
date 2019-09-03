@@ -1,4 +1,3 @@
-import itertools
 import json
 import urllib
 from anymail.exceptions import AnymailError
@@ -9,11 +8,13 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.views.decorators.csrf import csrf_exempt
 
-from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
+from seqr.utils.communication_utils import send_welcome_email
 from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.orm_to_json_utils import _get_json_for_user
+from seqr.views.utils.orm_to_json_utils import _get_json_for_user, get_json_for_project_collaborator_list, \
+    get_project_collaborators_by_username
 from seqr.views.utils.permissions_utils import get_projects_user_can_view, get_project_and_check_permissions, CAN_EDIT
 from seqr.model_utils import create_xbrowse_project_collaborator, delete_xbrowse_project_collaborator
+from settings import API_LOGIN_REQUIRED_URL
 
 
 class CreateUserException(Exception):
@@ -31,7 +32,7 @@ def get_all_collaborators(request):
     else:
         collaborators = {}
         for project in get_projects_user_can_view(request.user):
-            collaborators.update(_get_project_collaborators(project, include_permissions=False))
+            collaborators.update(get_project_collaborators_by_username(project, include_permissions=False))
 
     return create_json_response(collaborators)
 
@@ -151,25 +152,6 @@ def _create_user(request, is_staff=False):
     return user
 
 
-def send_welcome_email(user, referrer):
-    email_content = """
-    Hi there {full_name}--
-
-    {referrer} has added you as a collaborator in seqr.
-
-    Please click this link to set up your account:
-    {base_url}users/set_password/{password_token}
-
-    Thanks!
-    """.format(
-        full_name=user.get_full_name(),
-        referrer=referrer.get_full_name() or referrer.email,
-        base_url=settings.BASE_URL,
-        password_token=user.password,
-    )
-    user.email_user('Set up your seqr account', email_content, fail_silently=False)
-
-
 def _update_existing_user(user, project, request_json):
     user.first_name = request_json.get('firstName') or ''
     user.last_name = request_json.get('lastName') or ''
@@ -213,38 +195,3 @@ def delete_project_collaborator(request, project_guid, username):
     return create_json_response({
         'projectsByGuid': {project_guid: {'collaborators': get_json_for_project_collaborator_list(project)}}
     })
-
-
-def get_json_for_project_collaborator_list(project):
-    """Returns a JSON representation of the collaborators in the given project"""
-    collaborator_list = _get_project_collaborators(project).values()
-
-    return sorted(collaborator_list, key=lambda collaborator: (collaborator['lastName'], collaborator['displayName']))
-
-
-def _get_project_collaborators(project, include_permissions=True):
-    """Returns a JSON representation of the collaborators in the given project"""
-    collaborators = {}
-
-    for collaborator in project.can_view_group.user_set.all():
-        collaborators[collaborator.username] = _get_collaborator_json(
-            collaborator, include_permissions, can_edit=False
-        )
-
-    for collaborator in itertools.chain(project.owners_group.user_set.all(), project.can_edit_group.user_set.all()):
-        collaborators[collaborator.username] = _get_collaborator_json(
-            collaborator, include_permissions, can_edit=True
-        )
-
-    return collaborators
-
-
-def _get_collaborator_json(collaborator, include_permissions, can_edit):
-    collaborator_json = _get_json_for_user(collaborator)
-    if include_permissions:
-        collaborator_json.update({
-            'hasViewPermissions': True,
-            'hasEditPermissions': can_edit,
-        })
-    return collaborator_json
-

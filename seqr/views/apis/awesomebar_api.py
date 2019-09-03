@@ -7,9 +7,10 @@ from django.db.models import Q
 from django.views.decorators.http import require_GET
 
 from seqr.utils.gene_utils import get_queried_genes
-from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.utils.json_utils import create_json_response, _to_title_case
 from seqr.models import Project, Family, Individual, AnalysisGroup, ProjectCategory
+from settings import API_LOGIN_REQUIRED_URL
+
 
 logger = logging.getLogger(__name__)
 

@@ -5,25 +5,23 @@ APIs for updating project metadata, as well as creating or deleting projects
 import json
 import logging
 from django.contrib.auth.decorators import login_required
-from django.db.models import Q, Count
+from django.db.models import Count
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
-import settings
 from seqr.model_utils import get_or_create_seqr_model, delete_seqr_model
-from seqr.models import Project, Family, Individual, Sample, VariantTagType, VariantTag, VariantFunctionalData, \
+from seqr.models import Project, Family, Individual, Sample, VariantTag, VariantFunctionalData, \
     VariantNote, AnalysisGroup, _slugify, CAN_EDIT, IS_OWNER
-from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
-from seqr.views.apis.individual_api import export_individuals
-from seqr.views.apis.locus_list_api import get_sorted_project_locus_lists
-from seqr.views.apis.phenotips_api import create_phenotips_user, _get_phenotips_uname_and_pwd_for_project
-from seqr.views.apis.users_api import get_json_for_project_collaborator_list
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.json_to_orm_utils import update_project_from_json
 from seqr.views.utils.orm_to_json_utils import _get_json_for_project, get_json_for_samples, _get_json_for_families, \
     _get_json_for_individuals, get_json_for_saved_variants, get_json_for_analysis_groups, \
-    get_json_for_variant_functional_data_tag_types, _get_json_for_models
+    get_json_for_variant_functional_data_tag_types, get_sorted_project_locus_lists, \
+    get_json_for_project_collaborator_list, get_project_variant_tag_types
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_permissions
+from seqr.views.utils.phenotips_utils import create_phenotips_user, get_phenotips_uname_and_pwd_for_project
+from seqr.views.utils.individual_utils import export_individuals
+from settings import PHENOTIPS_SERVER, API_LOGIN_REQUIRED_URL
 
 
 logger = logging.getLogger(__name__)
@@ -57,7 +55,7 @@ def create_project_handler(request):
     #if not created:
     #    return create_json_response({}, status=400, reason="A project named '%(name)s' already exists" % locals())
 
-    project = create_project(name, description=description, genome_version=genome_version, user=request.user)
+    project = _create_project(name, description=description, genome_version=genome_version, user=request.user)
 
     return create_json_response({
         'projectsByGuid': {
@@ -117,7 +115,7 @@ def delete_project_handler(request, project_guid):
 
     project = get_project_and_check_permissions(project_guid, request.user, permission_level=IS_OWNER)
 
-    delete_project(project)
+    _delete_project(project)
 
     return create_json_response({
         'projectsByGuid': {
@@ -305,42 +303,7 @@ def _get_json_for_variant_tag_types(project):
     }
 
 
-def get_project_variant_tag_types(project, tag_counts_by_type_and_family=None, note_counts_by_family=None):
-    note_tag_type = {
-        'variantTagTypeGuid': 'notes',
-        'name': 'Has Notes',
-        'category': 'Notes',
-        'description': '',
-        'color': 'grey',
-        'order': 100,
-        'is_built_in': True,
-    }
-    if note_counts_by_family is not None:
-        num_tags = sum(count['count'] for count in note_counts_by_family)
-        note_tag_type.update({
-            'numTags': num_tags,
-            'numTagsPerFamily': {count['saved_variant__family__guid']: count['count'] for count in
-                                 note_counts_by_family},
-        })
-
-    project_variant_tags = _get_json_for_models(VariantTagType.objects.filter(Q(project=project) | Q(project__isnull=True)))
-    if tag_counts_by_type_and_family is not None:
-        for tag_type in project_variant_tags:
-            current_tag_type_counts = [counts for counts in tag_counts_by_type_and_family if
-                                       counts['variant_tag_type__name'] == tag_type['name']]
-            num_tags = sum(count['count'] for count in current_tag_type_counts)
-            tag_type.update({
-                'numTags': num_tags,
-                'numTagsPerFamily': {count['saved_variant__family__guid']: count['count'] for count in
-                                     current_tag_type_counts},
-            })
-
-        project_variant_tags.append(note_tag_type)
-
-    return sorted(project_variant_tags, key=lambda variant_tag_type: variant_tag_type['order'])
-
-
-def create_project(name, description=None, genome_version=None, user=None):
+def _create_project(name, description=None, genome_version=None, user=None):
     """Creates a new project.
 
     Args:
@@ -362,7 +325,7 @@ def create_project(name, description=None, genome_version=None, user=None):
 
     project, _ = get_or_create_seqr_model(Project, **project_args)
 
-    if settings.PHENOTIPS_SERVER:
+    if PHENOTIPS_SERVER:
         try:
             _enable_phenotips_for_project(project)
         except Exception as e:
@@ -372,7 +335,7 @@ def create_project(name, description=None, genome_version=None, user=None):
     return project
 
 
-def delete_project(project):
+def _delete_project(project):
     """Delete project.
 
     Args:
@@ -398,10 +361,10 @@ def _enable_phenotips_for_project(project):
     project.phenotips_user_id = _slugify(project.name)
 
     # view-only user
-    username, password = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=True)
+    username, password = get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=True)
     create_phenotips_user(username, password)
 
     # user with edit permissions
-    username, password = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=False)
+    username, password = get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=False)
     create_phenotips_user(username, password)
     project.save()

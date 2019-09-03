@@ -6,11 +6,11 @@ from django.views.decorators.csrf import csrf_exempt
 
 from seqr.models import AnalysisGroup, Family, CAN_EDIT
 from seqr.model_utils import create_seqr_model, delete_seqr_model, update_xbrowse_family_group_families
-from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_analysis_group
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions
+from settings import API_LOGIN_REQUIRED_URL
 
 
 logger = logging.getLogger(__name__)

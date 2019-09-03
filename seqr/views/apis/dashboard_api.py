@@ -8,11 +8,11 @@ from django.db import connection, models
 from django.contrib.auth.decorators import login_required
 
 from seqr.models import ProjectCategory, Sample, Family
-from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.utils.export_table_utils import export_table
 from seqr.views.utils.json_utils import create_json_response, _to_camel_case
 from seqr.views.utils.orm_to_json_utils import get_json_for_projects
 from seqr.views.utils.permissions_utils import get_projects_user_can_view
+from settings import API_LOGIN_REQUIRED_URL
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +58,7 @@ def _get_projects_json(user, cursor):
         projects_by_guid[project.guid]['numIndividuals'] = project.family__individual__count
         projects_by_guid[project.guid]['numVariantTags'] = project.family__savedvariant__count
 
+    #  TODO get rid of cursor
     _add_analysis_status_counts(cursor, projects_by_guid)
     _add_sample_type_counts(cursor, projects_by_guid)
 

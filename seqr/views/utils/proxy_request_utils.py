@@ -1,9 +1,12 @@
+import os
 import requests
 from requests.auth import HTTPBasicAuth
 from requests_toolbelt.utils import dump
 from django.http import HttpResponse
 import logging
 import urllib3
+
+from settings import READ_VIZ_CRAM_PATH, READ_VIZ_BAM_PATH
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -116,6 +119,19 @@ def proxy_request(request, url, host=None, scheme=None, method=None, session=Non
             proxy_response[key.title()] = value
 
     return proxy_response
+
+
+def proxy_to_igv(igv_track_path, params, request=None, **request_kwargs):
+    is_cram = igv_track_path.split('?')[0].endswith('.cram')
+    if is_cram:
+        absolute_path = "/alignments?reference=igvjs/static/data/public/Homo_sapiens_assembly38.fasta&file=igvjs/static/data/readviz-mounts/{0}&options={1}&region={2}".format(
+            igv_track_path, params.get('options', ''), params.get('region', ''))
+        request_kwargs.update({'host': READ_VIZ_CRAM_PATH, 'stream': True})
+    else:
+        absolute_path = os.path.join(READ_VIZ_BAM_PATH, igv_track_path)
+        request_kwargs.update({'auth_tuple': ('xbrowse-bams', 'xbrowse-bams'), 'verify': False})
+
+    return proxy_request(request, absolute_path, **request_kwargs)
 
 
 def _convert_django_META_to_http_headers(request_meta_dict):

@@ -7,20 +7,17 @@ from django.contrib.auth.decorators import login_required
 from django.core.mail.message import EmailMessage
 from django.views.decorators.csrf import csrf_exempt
 
-from reference_data.models import HumanPhenotypeOntology
-
 from seqr.models import Individual, MatchmakerResult, MatchmakerContactNotes, SavedVariant
 from seqr.model_utils import update_seqr_model
-from seqr.utils.gene_utils import get_genes, get_gene_ids_for_gene_symbols
-from seqr.utils.slack_utils import post_to_slack
-from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
+from seqr.utils.communication_utils import post_to_slack
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.json_utils import create_json_response
+from seqr.views.utils.matchmaker_utils import get_mme_genes_phenotypes, parse_mme_patient
 from seqr.views.utils.orm_to_json_utils import _get_json_for_model, get_json_for_saved_variants
 from seqr.views.utils.permissions_utils import check_permissions
 
 from settings import MME_HEADERS, MME_LOCAL_MATCH_URL, MME_EXTERNAL_MATCH_URL, SEQR_HOSTNAME_FOR_SLACK_POST,  \
-    MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL, MME_ADD_INDIVIDUAL_URL, MME_DELETE_INDIVIDUAL_URL
+    MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL, MME_ADD_INDIVIDUAL_URL, MME_DELETE_INDIVIDUAL_URL, API_LOGIN_REQUIRED_URL
 
 logger = logging.getLogger(__name__)
 
@@ -334,24 +331,6 @@ def update_mme_contact_note(request, institution):
     })
 
 
-def get_mme_genes_phenotypes(results, additional_genes=None):
-    hpo_ids = set()
-    genes = additional_genes if additional_genes else set()
-    for result in results:
-        hpo_ids.update({feature['id'] for feature in result['patient'].get('features', []) if feature.get('id')})
-        genes.update({gene_feature['gene']['id'] for gene_feature in result['patient'].get('genomicFeatures', [])})
-
-    gene_ids = {gene for gene in genes if gene.startswith('ENSG')}
-    gene_symols = {gene for gene in genes if not gene.startswith('ENSG')}
-    gene_symbols_to_ids = get_gene_ids_for_gene_symbols(gene_symols)
-    gene_ids.update({new_gene_ids[0] for new_gene_ids in gene_symbols_to_ids.values()})
-    genes_by_id = get_genes(gene_ids)
-
-    hpo_terms_by_id = {hpo.hpo_id: hpo.name for hpo in HumanPhenotypeOntology.objects.filter(hpo_id__in=hpo_ids)}
-
-    return hpo_terms_by_id, genes_by_id, gene_symbols_to_ids
-
-
 def _parse_mme_results(individual, saved_results, user, additional_genes=None, response_json=None):
     results = []
     contact_institutions = set()
@@ -398,39 +377,6 @@ def _parse_mme_result(result, hpo_terms_by_id, gene_symbols_to_ids, individual_g
         'id': result['patient']['id'],
         'score': result['score']['patient'],
     })
-    return parsed_result
-
-
-def parse_mme_patient(result, hpo_terms_by_id, gene_symbols_to_ids, individual_guid):
-    phenotypes = [feature for feature in result['patient'].get('features', [])]
-    for feature in phenotypes:
-        feature['label'] = hpo_terms_by_id.get(feature['id'])
-
-    gene_variants = []
-    for gene_feature in result['patient'].get('genomicFeatures', []):
-        gene_id = gene_feature['gene']['id']
-        if not gene_id.startswith('ENSG'):
-            gene_ids = gene_symbols_to_ids.get(gene_feature['gene']['id'])
-            gene_id = gene_ids[0] if gene_ids else None
-
-        gene_variant = {'geneId': gene_id}
-        if gene_id:
-            if gene_feature.get('variant'):
-                gene_variant.update({
-                    'alt': gene_feature['variant'].get('alternateBases'),
-                    'ref': gene_feature['variant'].get('referenceBases'),
-                    'chrom': gene_feature['variant'].get('referenceName'),
-                    'pos': gene_feature['variant'].get('start'),
-                    'genomeVersion':  gene_feature['variant'].get('assembly'),
-                })
-            gene_variants.append(gene_variant)
-
-    parsed_result = {
-        'geneVariants': gene_variants,
-        'phenotypes': phenotypes,
-        'individualGuid': individual_guid,
-    }
-    parsed_result.update(result)
     return parsed_result
 
 

@@ -5,7 +5,7 @@ The `urlpatterns` list routes URLs to views. For more information please see:
 """
 from seqr.views.react_app import main_app, no_login_main_app
 from seqr.views.apis.dataset_api import add_alignment_dataset_handler, add_variants_dataset_handler
-from settings import ENABLE_DJANGO_DEBUG_TOOLBAR, MEDIA_ROOT
+from settings import ENABLE_DJANGO_DEBUG_TOOLBAR, MEDIA_ROOT, API_LOGIN_REQUIRED_URL
 from django.conf.urls import url, include
 from django.contrib import admin
 import django.contrib.admindocs.urls
@@ -112,7 +112,7 @@ from seqr.views.apis.staff_api import \
     proxy_to_kibana
 
 from seqr.views.apis.awesomebar_api import awesomebar_autocomplete_handler
-from seqr.views.apis.auth_api import login_required_error, API_LOGIN_REQUIRED_URL, login_view, logout_view
+from seqr.views.apis.auth_api import login_required_error, login_view, logout_view
 from seqr.views.apis.igv_api import fetch_igv_track
 from seqr.views.apis.analysis_group_api import update_analysis_group_handler, delete_analysis_group_handler
 from seqr.views.apis.project_api import create_project_handler, update_project_handler, delete_project_handler, \
