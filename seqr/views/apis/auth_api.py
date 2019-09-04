@@ -14,8 +14,6 @@ from seqr.views.utils.json_utils import create_json_response
 
 logger = logging.getLogger(__name__)
 
-API_LOGIN_REQUIRED_URL = '/api/login-required-error'
-
 
 @csrf_exempt
 def login_view(request):

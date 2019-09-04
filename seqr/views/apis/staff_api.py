@@ -18,22 +18,20 @@ from seqr.utils.file_utils import file_iter
 from seqr.utils.gene_utils import get_genes
 from seqr.utils.xpos_utils import get_chrom_pos
 
-from seqr.views.pages.project_page import get_project_variant_tag_types
-from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
-from seqr.views.apis.matchmaker_api import get_mme_genes_phenotypes, parse_mme_patient
+from seqr.views.utils.matchmaker_utils import get_mme_genes_phenotypes, parse_mme_patient
 from seqr.views.apis.saved_variant_api import _saved_variant_genes, _add_locus_lists
 from seqr.views.utils.file_utils import parse_file
 from seqr.views.utils.json_utils import create_json_response, _to_camel_case
 from seqr.views.utils.orm_to_json_utils import _get_json_for_individuals, get_json_for_saved_variants, \
     get_json_for_variant_functional_data_tag_types, get_json_for_projects, _get_json_for_families, \
-    get_json_for_locus_lists
+    get_json_for_locus_lists, get_project_variant_tag_types
 from seqr.views.utils.proxy_request_utils import proxy_request
 
 from seqr.models import Project, Family, VariantTag, VariantTagType, Sample, SavedVariant, Individual, ProjectCategory, \
     LocusList
 from reference_data.models import Omim
 
-from settings import ELASTICSEARCH_SERVER, MME_HEADERS, MME_MATCHBOX_METRICS_URL, KIBANA_SERVER
+from settings import ELASTICSEARCH_SERVER, MME_HEADERS, MME_MATCHBOX_METRICS_URL, KIBANA_SERVER, API_LOGIN_REQUIRED_URL
 
 logger = logging.getLogger(__name__)
 

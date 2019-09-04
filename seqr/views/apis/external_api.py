@@ -4,8 +4,8 @@ from datetime import datetime
 from django.views.decorators.csrf import csrf_exempt
 
 from seqr.models import Individual
-from seqr.utils.slack_utils import post_to_slack
-from seqr.views.apis.matchmaker_api import get_mme_genes_phenotypes
+from seqr.utils.communication_utils import post_to_slack
+from seqr.views.utils.matchmaker_utils import get_mme_genes_phenotypes
 from seqr.views.utils.proxy_request_utils import proxy_request
 
 from settings import MME_LOCAL_MATCH_URL, MME_MATCHBOX_PUBLIC_METRICS_URL, MME_SLACK_MATCH_NOTIFICATION_CHANNEL,\

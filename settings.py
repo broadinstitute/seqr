@@ -429,6 +429,8 @@ LOGIN_URL = '/login'
 
 LOGOUT_URL = '/logout'
 
+API_LOGIN_REQUIRED_URL = '/api/login-required-error'
+
 SESSION_COOKIE_HTTPONLY = True
 CSRF_COOKIE_HTTPONLY = True
 # SESSION_EXPIRE_AT_BROWSER_CLOSE=True

@@ -1,6 +1,5 @@
 import { combineReducers } from 'redux'
 import { reducer as formReducer, SubmissionError } from 'redux-form'
-import { reducer as searchReducer } from 'redux-search'
 import hash from 'object-hash'
 
 import { reducers as dashboardReducers } from 'pages/Dashboard/reducers'
@@ -368,7 +367,6 @@ const rootReducer = combineReducers(Object.assign({
   usersByUsername: createSingleValueReducer(RECEIVE_USERS, {}),
   userOptionsLoading: loadingReducer(REQUEST_USERS, RECEIVE_USERS),
   form: formReducer,
-  search: searchReducer,
   savedVariantTableState: createSingleObjectReducer(UPDATE_SAVED_VARIANT_TABLE_STATE, {
     hideExcluded: false,
     hideReviewOnly: false,

@@ -8,10 +8,10 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.views.decorators.csrf import csrf_exempt
 
 from seqr.model_utils import update_seqr_model
-from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_family
 from seqr.models import Family
+from settings import API_LOGIN_REQUIRED_URL
 
 
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)

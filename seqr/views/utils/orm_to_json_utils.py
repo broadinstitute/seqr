@@ -2,16 +2,18 @@
 Utility functions for converting Django ORM object to JSON
 """
 
+import itertools
 import json
 import logging
 import os
 from collections import defaultdict
 from copy import copy
-from django.db.models import prefetch_related_objects, Prefetch
+from django.db.models import prefetch_related_objects, Prefetch, Q
 from django.db.models.fields.files import ImageFieldFile
+from guardian.shortcuts import get_objects_for_group
 
 from reference_data.models import GeneConstraint, dbNSFPGene
-from seqr.models import CAN_EDIT, Sample, GeneNote, VariantFunctionalData
+from seqr.models import CAN_VIEW, CAN_EDIT, Sample, GeneNote, VariantFunctionalData, LocusList, VariantTagType
 from seqr.views.utils.json_utils import _to_camel_case
 logger = logging.getLogger(__name__)
 
@@ -530,6 +532,84 @@ def get_json_for_locus_list(locus_list, user):
         dict: json object
     """
     return _get_json_for_model(locus_list, get_json_for_models=get_json_for_locus_lists, user=user, include_genes=True)
+
+
+def get_project_locus_list_models(project):
+    return get_objects_for_group(project.can_view_group, CAN_VIEW, LocusList)
+
+
+def get_sorted_project_locus_lists(project, user):
+    result = get_json_for_locus_lists(get_project_locus_list_models(project), user)
+    return sorted(result, key=lambda locus_list: locus_list['name'])
+
+
+def get_json_for_project_collaborator_list(project):
+    """Returns a JSON representation of the collaborators in the given project"""
+    collaborator_list = get_project_collaborators_by_username(project).values()
+
+    return sorted(collaborator_list, key=lambda collaborator: (collaborator['lastName'], collaborator['displayName']))
+
+
+def get_project_collaborators_by_username(project, include_permissions=True):
+    """Returns a JSON representation of the collaborators in the given project"""
+    collaborators = {}
+
+    for collaborator in project.can_view_group.user_set.all():
+        collaborators[collaborator.username] = _get_collaborator_json(
+            collaborator, include_permissions, can_edit=False
+        )
+
+    for collaborator in itertools.chain(project.owners_group.user_set.all(), project.can_edit_group.user_set.all()):
+        collaborators[collaborator.username] = _get_collaborator_json(
+            collaborator, include_permissions, can_edit=True
+        )
+
+    return collaborators
+
+
+def _get_collaborator_json(collaborator, include_permissions, can_edit):
+    collaborator_json = _get_json_for_user(collaborator)
+    if include_permissions:
+        collaborator_json.update({
+            'hasViewPermissions': True,
+            'hasEditPermissions': can_edit,
+        })
+    return collaborator_json
+
+
+def get_project_variant_tag_types(project, tag_counts_by_type_and_family=None, note_counts_by_family=None):
+    note_tag_type = {
+        'variantTagTypeGuid': 'notes',
+        'name': 'Has Notes',
+        'category': 'Notes',
+        'description': '',
+        'color': 'grey',
+        'order': 100,
+        'is_built_in': True,
+    }
+    if note_counts_by_family is not None:
+        num_tags = sum(count['count'] for count in note_counts_by_family)
+        note_tag_type.update({
+            'numTags': num_tags,
+            'numTagsPerFamily': {count['saved_variant__family__guid']: count['count'] for count in
+                                 note_counts_by_family},
+        })
+
+    project_variant_tags = _get_json_for_models(VariantTagType.objects.filter(Q(project=project) | Q(project__isnull=True)))
+    if tag_counts_by_type_and_family is not None:
+        for tag_type in project_variant_tags:
+            current_tag_type_counts = [counts for counts in tag_counts_by_type_and_family if
+                                       counts['variant_tag_type__name'] == tag_type['name']]
+            num_tags = sum(count['count'] for count in current_tag_type_counts)
+            tag_type.update({
+                'numTags': num_tags,
+                'numTagsPerFamily': {count['saved_variant__family__guid']: count['count'] for count in
+                                     current_tag_type_counts},
+            })
+
+        project_variant_tags.append(note_tag_type)
+
+    return sorted(project_variant_tags, key=lambda variant_tag_type: variant_tag_type['order'])
 
 
 def get_json_for_genes(genes, user=None, add_dbnsfp=False, add_omim=False, add_constraints=False, add_notes=False,

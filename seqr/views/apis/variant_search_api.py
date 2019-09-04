@@ -12,8 +12,6 @@ from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch
     AnalysisGroup, ProjectCategory, VariantTagType
 from seqr.utils.es_utils import get_es_variants, get_single_es_variant, get_es_variant_gene_counts,\
     InvalidIndexException, XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
-from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
-from seqr.views.apis.locus_list_api import get_project_locus_list_models
 from seqr.views.apis.saved_variant_api import _saved_variant_genes, _add_locus_lists
 from seqr.views.utils.export_table_utils import export_table
 from seqr.utils.gene_utils import get_genes
@@ -29,8 +27,10 @@ from seqr.views.utils.orm_to_json_utils import \
     get_json_for_saved_variants, \
     get_json_for_saved_search,\
     get_json_for_saved_searches, \
+    get_project_locus_list_models, \
     _get_json_for_models
 from seqr.views.utils.permissions_utils import check_permissions, get_projects_user_can_view
+from settings import API_LOGIN_REQUIRED_URL
 
 
 GENOTYPE_AC_LOOKUP = {

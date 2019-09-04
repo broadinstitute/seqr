@@ -1,7 +1,8 @@
 from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
 
-from seqr.views.apis.users_api import send_welcome_email
+from seqr.utils.communication_utils import send_welcome_email
+
 
 class Command(BaseCommand):
 

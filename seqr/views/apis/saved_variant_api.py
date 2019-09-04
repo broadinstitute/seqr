@@ -8,16 +8,15 @@ from django.views.decorators.csrf import csrf_exempt
 from seqr.models import SavedVariant, VariantTagType, VariantTag, VariantNote, VariantFunctionalData,\
     LocusListInterval, LocusListGene, Family, CAN_VIEW, CAN_EDIT, GeneNote
 from seqr.model_utils import create_seqr_model, delete_seqr_model
-from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
-from seqr.views.apis.locus_list_api import get_project_locus_list_models
 from seqr.utils.gene_utils import get_genes
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants, get_json_for_variant_tag, \
     get_json_for_variant_functional_data, get_json_for_variant_note, get_json_for_saved_variant, \
-    get_json_for_gene_notes_by_gene_id
+    get_json_for_gene_notes_by_gene_id, get_project_locus_list_models
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_permissions
 from seqr.views.utils.variant_utils import update_project_saved_variant_json
+from settings import API_LOGIN_REQUIRED_URL
 
 
 logger = logging.getLogger(__name__)
