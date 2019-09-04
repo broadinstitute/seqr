@@ -276,8 +276,8 @@ def _retrieve_analysis_groups(project):
 
 
 def _get_json_for_variant_tag_types(project):
-    tag_counts_by_type_and_family = VariantTag.objects.filter(saved_variant__family__project=project).values('saved_variant__family__guid', 'variant_tag_type__name').annotate(count=Count('*'))
-    note_counts_by_family = VariantNote.objects.filter(saved_variant__family__project=project).values('saved_variant__family__guid').annotate(count=Count('*'))
+    tag_counts_by_type_and_family = VariantTag.objects.filter(saved_variants__family__project=project).values('saved_variants__family__guid', 'variant_tag_type__name').annotate(count=Count('*'))
+    note_counts_by_family = VariantNote.objects.filter(saved_variants__family__project=project).values('saved_variants__family__guid').annotate(count=Count('*'))
     project_variant_tags = get_project_variant_tag_types(project, tag_counts_by_type_and_family=tag_counts_by_type_and_family, note_counts_by_family=note_counts_by_family)
     discovery_tags = []
     for tag_type in project_variant_tags:

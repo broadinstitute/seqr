@@ -591,7 +591,7 @@ def get_project_variant_tag_types(project, tag_counts_by_type_and_family=None, n
         num_tags = sum(count['count'] for count in note_counts_by_family)
         note_tag_type.update({
             'numTags': num_tags,
-            'numTagsPerFamily': {count['saved_variant__family__guid']: count['count'] for count in
+            'numTagsPerFamily': {count['saved_variants__family__guid']: count['count'] for count in
                                  note_counts_by_family},
         })
 
