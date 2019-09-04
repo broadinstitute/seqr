@@ -3,11 +3,11 @@ import elasticsearch_dsl
 from django.utils import timezone
 from django.db.models.query_utils import Q
 
-from seqr.views.apis.igv_api import proxy_to_igv
 from seqr.models import Sample, Individual
 from seqr.utils.es_utils import get_es_client, get_index_metadata
 from seqr.utils.file_utils import file_iter
 from seqr.views.utils.file_utils import load_uploaded_file, parse_file
+from seqr.views.utils.proxy_request_utils import proxy_to_igv
 
 logger = logging.getLogger(__name__)
 

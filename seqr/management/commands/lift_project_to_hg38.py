@@ -1,5 +1,4 @@
 import logging
-import json
 from collections import defaultdict
 from django.core.management.base import BaseCommand, CommandError
 from django.db.models.query_utils import Q
@@ -56,10 +55,6 @@ class Command(BaseCommand):
             raise CommandError('Matches not found for ES sample ids: {}.'.format(', '.join(unmatched_samples)))
 
         included_family_individuals = defaultdict(set)
-        individual_guids_by_id = {}
-        for sample in matched_sample_id_to_sample_record.values():
-            included_family_individuals[sample.individual.family].add(sample.individual.individual_id)
-            individual_guids_by_id[sample.individual.individual_id] = sample.individual.guid
         missing_family_individuals = []
         for family, individual_ids in included_family_individuals.items():
             missing_indivs = family.individual_set.filter(
@@ -77,7 +72,7 @@ class Command(BaseCommand):
                 ))
 
         # Get and clean up expected saved variants
-        saved_variant_models_by_guid = {v.guid: v for v in SavedVariant.objects.filter(project=project)}
+        saved_variant_models_by_guid = {v.guid: v for v in SavedVariant.objects.filter(family__project=project)}
         deleted_no_family = set()
         deleted_no_tags = set()
         for guid, variant in saved_variant_models_by_guid.items():
@@ -109,9 +104,7 @@ class Command(BaseCommand):
                 ))
 
         # Lift-over saved variants
-        saved_variants = get_json_for_saved_variants(
-            saved_variant_models_by_guid.values(), add_details=True, project=project,
-            individual_guids_by_id=individual_guids_by_id)
+        saved_variants = get_json_for_saved_variants(saved_variant_models_by_guid.values(), add_details=True)
         saved_variants_to_lift = [v for v in saved_variants if v['genomeVersion'] != GENOME_VERSION_GRCh38]
 
         num_already_lifted = len(saved_variants) - len(saved_variants_to_lift)
@@ -180,7 +173,7 @@ class Command(BaseCommand):
                     raise CommandError('Error: unable to find family data for lifted over variant')
             for saved_variant in saved_variant_models:
                 saved_variant.xpos_start = var['xpos']
-                saved_variant.saved_variant_json = json.dumps(var)
+                saved_variant.saved_variant_json = var
                 saved_variant.save()
 
         logger.info('Successfully updated {} variants'.format(len(es_variants)))

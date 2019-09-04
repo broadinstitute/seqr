@@ -1,15 +1,16 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Loader, Grid, Dropdown } from 'semantic-ui-react'
+import { Loader, Grid, Dropdown, Form, Message } from 'semantic-ui-react'
 import { Route, Switch, Link } from 'react-router-dom'
 import styled from 'styled-components'
 
 import { loadSavedVariants, updateSavedVariantTable } from 'redux/rootReducer'
 import { getAnalysisGroupsByGuid, getCurrentProject, getSavedVariantsIsLoading, getSelectedSavedVariants,
-  getVisibleSortedSavedVariants, getFilteredSavedVariants, getSavedVariantTableState,
+  getVisibleSortedSavedVariants, getFilteredSavedVariants, getSavedVariantTableState, getSavedVariantsLoadingError,
   getSavedVariantVisibleIndices, getSavedVariantTotalPages, getSavedVariantExportConfig } from 'redux/selectors'
 import {
+  REVIEW_TAG_NAME,
   KNOWN_GENE_FOR_PHENOTYPE_TAG_NAME,
   DISCOVERY_CATEGORY_NAME,
   VARIANT_SORT_FIELD,
@@ -18,21 +19,20 @@ import {
   VARIANT_HIDE_KNOWN_GENE_FOR_PHENOTYPE_FIELD,
   VARIANT_PER_PAGE_FIELD,
   VARIANT_PAGINATION_FIELD,
-  VARIANT_GENE_FIELD,
   VARIANT_TAGGED_DATE_FIELD,
 } from 'shared/utils/constants'
 import { toSnakecase } from 'shared/utils/stringUtils'
 
 import ExportTableButton from '../../buttons/export-table/ExportTableButton'
 import VariantTagTypeBar, { getSavedVariantsLinkPath } from '../../graph/VariantTagTypeBar'
-import ReduxFormWrapper from '../../form/ReduxFormWrapper'
+import ReduxFormWrapper, { StyledForm } from '../../form/ReduxFormWrapper'
+import AwesomeBar from '../../page/AwesomeBar'
 import { HorizontalSpacer } from '../../Spacers'
 import Variants from './Variants'
 
 const ALL_FILTER = 'ALL'
 
 const NO_PROJECT_FILTER_FIELDS = [
-  VARIANT_GENE_FIELD,
   VARIANT_TAGGED_DATE_FIELD,
   VARIANT_SORT_FIELD,
   VARIANT_PER_PAGE_FIELD,
@@ -59,6 +59,7 @@ const TAG_TYPES = [
   'Tier 2 - Phenotype not delineated',
   'Tier 2 - Known gene, new phenotype',
   KNOWN_GENE_FOR_PHENOTYPE_TAG_NAME,
+  REVIEW_TAG_NAME,
   'Send for Sanger validation',
   'Sanger validated',
   'Sanger did not confirm',
@@ -67,6 +68,8 @@ const TAG_TYPES = [
   'Submit to Clinvar',
   'Share with KOMP',
 ].map(name => ({ name, color: 'white' }))
+
+const GENE_SEARCH_CATEGORIES = ['genes']
 
 const ControlsRow = styled(Grid.Row)`
   font-size: 1.1em;
@@ -97,6 +100,7 @@ class BaseSavedVariants extends React.Component {
     analysisGroup: PropTypes.object,
     variantTagTypes: PropTypes.array,
     loading: PropTypes.bool,
+    error: PropTypes.string,
     variantsToDisplay: PropTypes.array,
     totalVariantsCount: PropTypes.number,
     filteredVariants: PropTypes.array,
@@ -121,12 +125,13 @@ class BaseSavedVariants extends React.Component {
   componentWillReceiveProps(nextProps) {
     const {
       familyGuid: nextFamilyGuid, analysisGroupGuid: nextAnalysisGroupGuid, variantGuid: nextVariantGuid, tag: nextTag,
+      gene: nextGene,
     } = nextProps.match.params
-    const { familyGuid, variantGuid, analysisGroupGuid, tag } = this.props.match.params
+    const { familyGuid, variantGuid, analysisGroupGuid, tag, gene } = this.props.match.params
     if (nextFamilyGuid !== familyGuid || nextAnalysisGroupGuid !== analysisGroupGuid || nextVariantGuid !== variantGuid) {
       this.loadVariants(nextProps)
       this.props.updateSavedVariantTable({ page: 1 })
-    } else if (nextTag !== tag) {
+    } else if (nextTag !== tag || nextGene !== gene) {
       this.props.updateSavedVariantTable({ page: 1 })
       if (!this.props.project) {
         this.loadVariants(nextProps)
@@ -135,9 +140,9 @@ class BaseSavedVariants extends React.Component {
   }
 
   loadVariants = ({ match, analysisGroup }) => {
-    const { familyGuid, variantGuid, tag } = match.params
+    const { familyGuid, variantGuid, tag, gene } = match.params
     const familyGuids = familyGuid ? [familyGuid] : (analysisGroup || {}).familyGuids
-    this.props.loadSavedVariants(familyGuids, variantGuid, tag)
+    this.props.loadSavedVariants(familyGuids, variantGuid, tag, gene)
   }
 
 
@@ -152,6 +157,14 @@ class BaseSavedVariants extends React.Component {
     })
     this.props.updateSavedVariantTable({ categoryFilter: isCategory ? data.value : null })
     this.props.history.push(urlPath)
+  }
+
+  getGeneHref = (selectedGene) => {
+    const { tag } = this.props.match.params
+    if (!tag) {
+      return this.props.match.url
+    }
+    return getSavedVariantsLinkPath({ tag, gene: selectedGene.key })
   }
 
   render() {
@@ -223,6 +236,16 @@ class BaseSavedVariants extends React.Component {
     if (!allShown) {
       shownSummary = `${this.props.variantsToDisplay.length > 0 ? this.props.firstRecordIndex + 1 : 0}-${this.props.firstRecordIndex + this.props.variantsToDisplay.length} of`
     }
+
+    let variantContent
+    if (this.props.loading) {
+      variantContent = <Loader inline="centered" active />
+    } else if (this.props.error) {
+      variantContent = <Message error content={this.props.error} />
+    } else {
+      variantContent = <Variants variants={this.props.variantsToDisplay} />
+    }
+
     return (
       <Grid stackable>
         {this.props.project &&
@@ -254,6 +277,20 @@ class BaseSavedVariants extends React.Component {
 
             </Grid.Column>
             <Grid.Column width={11} floated="right" textAlign="right">
+              {!this.props.project &&
+                <StyledForm inline>
+                  <Form.Field
+                    control={AwesomeBar}
+                    categories={GENE_SEARCH_CATEGORIES}
+                    inputwidth="200px"
+                    label="Gene"
+                    placeholder="Search for a gene"
+                    getResultHref={this.getGeneHref}
+                    inline
+                  />
+                  <HorizontalSpacer width={10} />
+                </StyledForm>
+              }
               {!variantGuid &&
                 <ReduxFormWrapper
                   onSubmit={this.props.updateSavedVariantTable}
@@ -272,8 +309,7 @@ class BaseSavedVariants extends React.Component {
         }
         <Grid.Row>
           <Grid.Column width={16}>
-            {this.props.loading ? <Loader inline="centered" active /> :
-            <Variants variants={this.props.variantsToDisplay} />}
+            {variantContent}
           </Grid.Column>
         </Grid.Row>
       </Grid>
@@ -284,6 +320,7 @@ class BaseSavedVariants extends React.Component {
 const mapStateToProps = (state, ownProps) => ({
   project: getCurrentProject(state),
   loading: getSavedVariantsIsLoading(state),
+  error: getSavedVariantsLoadingError(state),
   variantsToDisplay: getVisibleSortedSavedVariants(state, ownProps),
   totalVariantsCount: getSelectedSavedVariants(state, ownProps).length,
   filteredVariants: getFilteredSavedVariants(state, ownProps),
@@ -306,6 +343,7 @@ const RoutedSavedVariants = ({ match }) =>
     <Route path={`${match.url}/variant/:variantGuid`} component={SavedVariants} />
     <Route path={`${match.url}/family/:familyGuid/:tag?`} component={SavedVariants} />
     <Route path={`${match.url}/analysis_group/:analysisGroupGuid/:tag?`} component={SavedVariants} />
+    <Route path={`${match.url}/:tag/gene/:gene`} component={SavedVariants} />
     <Route path={`${match.url}/:tag?`} component={SavedVariants} />
   </Switch>
 

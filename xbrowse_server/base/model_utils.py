@@ -10,7 +10,7 @@ from seqr.models import Project as SeqrProject, Family as SeqrFamily, Individual
     VariantFunctionalData as SeqrVariantFunctionalData, LocusList as SeqrLocusList, LocusListGene as SeqrLocusListGene, \
     GeneNote as SeqrGeneNote, FamilyAnalysedBy as SeqrAnalysedBy, AnalysisGroup as SeqrAnalysisGroup, SavedVariant
 from seqr.utils.model_sync_utils import convert_html_to_plain_text
-from seqr.views.apis.locus_list_api import add_locus_list_user_permissions
+from seqr.views.apis.locus_list_api import _add_locus_list_user_permissions
 from seqr.views.utils.variant_utils import _retrieve_saved_variants_json, _update_saved_variant_json
 from xbrowse_server.base.models import Individual as BaseIndividual
 
@@ -117,7 +117,6 @@ def _deprecated_get_or_create_saved_variant(xpos=None, ref=None, alt=None, famil
         ref=ref,
         alt=alt,
         family=family,
-        project=project,
     )
     if not saved_variant.saved_variant_json:
         try:
@@ -335,7 +334,7 @@ def _create_seqr_model(xbrowse_model, **kwargs):
             setattr(xbrowse_model, xbrowse_model_foreign_key_name, seqr_model)
             xbrowse_model.save()
         if xbrowse_model_class_name == "GeneList":
-            add_locus_list_user_permissions(seqr_model)
+            _add_locus_list_user_permissions(seqr_model)
         return seqr_model
 
     except Exception as e:

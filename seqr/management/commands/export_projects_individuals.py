@@ -2,7 +2,7 @@ from django.core.management.base import BaseCommand
 import re
 
 from seqr.models import Individual, ProjectCategory
-from seqr.views.apis.individual_api import export_individuals
+from seqr.views.utils.individual_utils import export_individuals
 
 
 class Command(BaseCommand):

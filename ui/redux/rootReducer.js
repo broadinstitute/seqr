@@ -1,6 +1,5 @@
 import { combineReducers } from 'redux'
 import { reducer as formReducer, SubmissionError } from 'redux-form'
-import { reducer as searchReducer } from 'redux-search'
 import hash from 'object-hash'
 
 import { reducers as dashboardReducers } from 'pages/Dashboard/reducers'
@@ -25,6 +24,7 @@ export const RECEIVE_SAVED_SEARCHES = 'RECEIVE_SAVED_SEARCHES'
 export const REQUEST_SAVED_SEARCHES = 'REQUEST_SAVED_SEARCHES'
 const REQUEST_SAVED_VARIANTS = 'REQUEST_SAVED_VARIANTS'
 const RECEIVE_SAVED_VARIANT_FAMILIES = 'RECEIVE_SAVED_VARIANT_FAMILIES'
+const RECEIVE_SAVED_VARIANT_TAGS = 'RECEIVE_SAVED_VARIANT_TAGS'
 const REQUEST_GENES = 'REQUEST_GENES'
 const REQUEST_GENE_LISTS = 'REQUEST_GENE_LISTS'
 const REQUEST_GENE_LIST = 'REQUEST_GENE_LIST'
@@ -208,7 +208,7 @@ export const navigateSavedHashedSearch = (search, navigateSearch) => {
   }
 }
 
-export const loadSavedVariants = (familyGuids, variantGuid, tag) => {
+export const loadSavedVariants = (familyGuids, variantGuid, tag, gene = '') => {
   return (dispatch, getState) => {
     const state = getState()
     const projectGuid = state.currentProjectGuid
@@ -231,25 +231,34 @@ export const loadSavedVariants = (familyGuids, variantGuid, tag) => {
       if (expectedFamilyGuids.length > 0 && expectedFamilyGuids.every(family => state.savedVariantFamilies[family])) {
         return
       }
-    } else if (!tag) {
+    } else if (tag) {
+      if (state.savedVariantTags[tag]) {
+        return
+      }
+    } else {
       return
     }
 
     dispatch({ type: REQUEST_SAVED_VARIANTS })
     new HttpRequestHelper(url,
       (responseJson) => {
-        dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
         if (expectedFamilyGuids) {
           dispatch({
             type: RECEIVE_SAVED_VARIANT_FAMILIES,
             updates: expectedFamilyGuids.reduce((acc, family) => ({ ...acc, [family]: true }), {}),
           })
+        } else if (tag && !gene) {
+          dispatch({
+            type: RECEIVE_SAVED_VARIANT_TAGS,
+            updates: { [tag]: true },
+          })
         }
+        dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
       },
       (e) => {
         dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
       },
-    ).get(familyGuids ? { families: familyGuids.join(',') } : {})
+    ).get(familyGuids ? { families: familyGuids.join(',') } : { gene })
   }
 }
 
@@ -277,6 +286,19 @@ export const updateVariantNote = (values) => {
 export const updateVariantTags = (values) => {
   const urlPath = values.variantGuid ? `${values.variantGuid}/update_tags` : 'create'
   return updateSavedVariant(values, urlPath)
+}
+
+export const updateVariantMainTranscript = (variantGuid, transcriptId) => {
+  return (dispatch) => {
+    return new HttpRequestHelper(`/api/saved_variant/${variantGuid}/update_transcript/${transcriptId}`,
+      (responseJson) => {
+        dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+      },
+      (e) => {
+        throw new SubmissionError({ _error: [e.message] })
+      },
+    ).get()
+  }
 }
 
 export const updateLocusList = (values) => {
@@ -327,13 +349,13 @@ const rootReducer = combineReducers(Object.assign({
   searchesByHash: createObjectsByIdReducer(RECEIVE_SAVED_SEARCHES, 'searchesByHash'),
   savedSearchesByGuid: createObjectsByIdReducer(RECEIVE_SAVED_SEARCHES, 'savedSearchesByGuid'),
   savedVariantFamilies: createSingleObjectReducer(RECEIVE_SAVED_VARIANT_FAMILIES),
+  savedVariantTags: createSingleObjectReducer(RECEIVE_SAVED_VARIANT_TAGS),
   savedSearchesLoading: loadingReducer(REQUEST_SAVED_SEARCHES, RECEIVE_SAVED_SEARCHES),
   user: zeroActionsReducer,
   newUser: zeroActionsReducer,
   usersByUsername: createSingleValueReducer(RECEIVE_USERS, {}),
   userOptionsLoading: loadingReducer(REQUEST_USERS, RECEIVE_USERS),
   form: formReducer,
-  search: searchReducer,
   savedVariantTableState: createSingleObjectReducer(UPDATE_SAVED_VARIANT_TABLE_STATE, {
     hideExcluded: false,
     hideReviewOnly: false,

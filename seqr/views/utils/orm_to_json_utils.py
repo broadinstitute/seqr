@@ -2,6 +2,7 @@
 Utility functions for converting Django ORM object to JSON
 """
 
+import itertools
 import json
 import logging
 import os
@@ -9,9 +10,10 @@ from collections import defaultdict
 from copy import copy
 from django.db.models import prefetch_related_objects, Prefetch
 from django.db.models.fields.files import ImageFieldFile
+from guardian.shortcuts import get_objects_for_group
 
 from reference_data.models import GeneConstraint, dbNSFPGene
-from seqr.models import CAN_EDIT, Sample, GeneNote, VariantFunctionalData
+from seqr.models import CAN_VIEW, CAN_EDIT, Sample, GeneNote, VariantFunctionalData, LocusList
 from seqr.views.utils.json_utils import _to_camel_case
 logger = logging.getLogger(__name__)
 
@@ -345,7 +347,7 @@ def get_json_for_analysis_group(analysis_group, **kwargs):
     return _get_json_for_model(analysis_group, get_json_for_models=get_json_for_analysis_groups, **kwargs)
 
 
-def get_json_for_saved_variants(saved_variants, add_tags=False, add_details=False, project=None, user=None, **kwargs):
+def get_json_for_saved_variants(saved_variants, add_tags=False, add_details=False):
     """Returns a JSON representation of the given variant.
 
     Args:
@@ -353,8 +355,6 @@ def get_json_for_saved_variants(saved_variants, add_tags=False, add_details=Fals
     Returns:
         dict: json object
     """
-    from seqr.views.utils.variant_utils import variant_details
-
     def _process_result(variant_json, saved_variant):
         if add_tags:
             variant_json.update({
@@ -364,8 +364,7 @@ def get_json_for_saved_variants(saved_variants, add_tags=False, add_details=Fals
                 'notes': [get_json_for_variant_note(tag) for tag in saved_variant.variantnote_set.all()],
             })
         if add_details:
-            saved_variant_json = json.loads(saved_variant.saved_variant_json or '{}')
-            variant_json.update(variant_details(saved_variant_json, project or saved_variant.project, user, **kwargs))
+            variant_json.update(saved_variant.saved_variant_json)
         variant_json.update({
             'variantId': saved_variant.guid,  # TODO get from json
             'familyGuids': [saved_variant.family.guid],
@@ -373,8 +372,6 @@ def get_json_for_saved_variants(saved_variants, add_tags=False, add_details=Fals
         return variant_json
 
     prefetch_related_objects(saved_variants, 'family')
-    if not project:
-        prefetch_related_objects(saved_variants, 'project')
     if add_tags:
         prefetch_related_objects(saved_variants, 'varianttag_set__variant_tag_type', 'varianttag_set__created_by',
                                  'variantnote_set__created_by', 'variantfunctionaldata_set__created_by')
@@ -535,6 +532,49 @@ def get_json_for_locus_list(locus_list, user):
         dict: json object
     """
     return _get_json_for_model(locus_list, get_json_for_models=get_json_for_locus_lists, user=user, include_genes=True)
+
+
+def get_project_locus_list_models(project):
+    return get_objects_for_group(project.can_view_group, CAN_VIEW, LocusList)
+
+
+def get_sorted_project_locus_lists(project, user):
+    result = get_json_for_locus_lists(get_project_locus_list_models(project), user)
+    return sorted(result, key=lambda locus_list: locus_list['name'])
+
+
+def get_json_for_project_collaborator_list(project):
+    """Returns a JSON representation of the collaborators in the given project"""
+    collaborator_list = get_project_collaborators_by_username(project).values()
+
+    return sorted(collaborator_list, key=lambda collaborator: (collaborator['lastName'], collaborator['displayName']))
+
+
+def get_project_collaborators_by_username(project, include_permissions=True):
+    """Returns a JSON representation of the collaborators in the given project"""
+    collaborators = {}
+
+    for collaborator in project.can_view_group.user_set.all():
+        collaborators[collaborator.username] = _get_collaborator_json(
+            collaborator, include_permissions, can_edit=False
+        )
+
+    for collaborator in itertools.chain(project.owners_group.user_set.all(), project.can_edit_group.user_set.all()):
+        collaborators[collaborator.username] = _get_collaborator_json(
+            collaborator, include_permissions, can_edit=True
+        )
+
+    return collaborators
+
+
+def _get_collaborator_json(collaborator, include_permissions, can_edit):
+    collaborator_json = _get_json_for_user(collaborator)
+    if include_permissions:
+        collaborator_json.update({
+            'hasViewPermissions': True,
+            'hasEditPermissions': can_edit,
+        })
+    return collaborator_json
 
 
 def get_json_for_genes(genes, user=None, add_dbnsfp=False, add_omim=False, add_constraints=False, add_notes=False,

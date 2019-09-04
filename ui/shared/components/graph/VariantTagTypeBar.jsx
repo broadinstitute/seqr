@@ -8,12 +8,14 @@ export const getVariantTagTypeCount = (vtt, familyGuids) => (
   familyGuids ? familyGuids.reduce((count, familyGuid) => count + (vtt.numTagsPerFamily[familyGuid] || 0), 0) : vtt.numTags
 )
 
-export const getSavedVariantsLinkPath = ({ project, analysisGroup, familyGuid, tag }) => {
+export const getSavedVariantsLinkPath = ({ project, analysisGroup, familyGuid, tag, gene }) => {
   let path = tag ? `/${tag}` : ''
   if (familyGuid) {
     path = `/family/${familyGuid}${path}`
   } else if (analysisGroup) {
     path = `/analysis_group/${analysisGroup.analysisGroupGuid}${path}`
+  } else if (gene) {
+    path = `${path}/gene/${gene}`
   }
   const urlRoot = project ? `/project/${project.projectGuid}` : '/staff'
   return `${urlRoot}/saved_variants${path}`

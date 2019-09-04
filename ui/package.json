@@ -96,7 +96,6 @@
     "recursive-readdir": "2.2.1",
     "redux": "^3.7.2",
     "redux-form": "^7.3.0",
-    "redux-search": "^2.4.0",
     "redux-thunk": "2.2.0",
     "request": "^2.88.0",
     "reselect": "3.0.1",

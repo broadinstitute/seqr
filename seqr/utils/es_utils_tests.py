@@ -452,7 +452,7 @@ PARSED_VARIANTS = [
         'liftedOverChrom': None,
         'liftedOverGenomeVersion': None,
         'liftedOverPos': None,
-        'mainTranscript': TRANSCRIPT_3,
+        'mainTranscriptId': TRANSCRIPT_3['transcriptId'],
         'originalAltAlleles': ['T'],
         'populations': {
             'callset': {'an': 32, 'ac': 2, 'hom': None, 'af': 0.063, 'hemi': None},
@@ -493,7 +493,7 @@ PARSED_VARIANTS = [
         'liftedOverGenomeVersion': None,
         'liftedOverChrom': None,
         'liftedOverPos': None,
-        'mainTranscript': TRANSCRIPT_1,
+        'mainTranscriptId': TRANSCRIPT_1['transcriptId'],
         'originalAltAlleles': ['G'],
         'populations': {
             'callset': {'an': 32, 'ac': 1, 'hom': None, 'af': 0.031, 'hemi': None},
@@ -532,7 +532,7 @@ for variant in PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT:
         'I000015_na20885': {'ab': 0.631, 'ad': None, 'gq': 99, 'sampleId': 'NA20885', 'numAlt': 1, 'dp': 50, 'pl': None},
     })
 PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT[1]['transcripts']['ENSG00000135953'][0]['majorConsequence'] = 'frameshift_variant'
-PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT[1]['mainTranscript'] = TRANSCRIPT_2
+PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT[1]['mainTranscriptId'] = TRANSCRIPT_2['transcriptId']
 
 PARSED_COMPOUND_HET_VARIANTS_PROJECT_2 = deepcopy(PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT)
 for variant in PARSED_COMPOUND_HET_VARIANTS_PROJECT_2:
@@ -1631,6 +1631,7 @@ class EsUtilsTest(TestCase):
             sample_id: Sample.objects.get(sample_id=sample_id) for sample_id in ['HG00731', 'HG00732', 'HG00733']
         }}
         custom_affected = {'I000004_hg00731': 'N', 'I000005_hg00732': 'A'}
+        custom_multi_affected = {'I000005_hg00732': 'A'}
 
         # custom genotype
         inheritance_filter = _genotype_inheritance_filter(None, {
@@ -1684,6 +1685,29 @@ class EsUtilsTest(TestCase):
                     {'term': {'samples_num_alt_1': 'HG00732'}},
                     {'term': {'samples_num_alt_2': 'HG00732'}}
                 ]
+            }
+        }]}})
+        inheritance_filter = _genotype_inheritance_filter('de_novo', {'affected': custom_multi_affected}, samples_by_id, {})
+        self.assertDictEqual(inheritance_filter.to_dict(), {'bool': {'_name': 'F000002_2', 'must': [{
+            'bool': {
+                'minimum_should_match': 1,
+                'must_not': [
+                    {'term': {'samples_no_call': 'HG00733'}},
+                    {'term': {'samples_num_alt_1': 'HG00733'}},
+                    {'term': {'samples_num_alt_2': 'HG00733'}}
+                ],
+                'should': [
+                    {'term': {'samples_num_alt_1': 'HG00731'}},
+                    {'term': {'samples_num_alt_2': 'HG00731'}}
+                ],
+                'must': [{
+                    'bool': {
+                        'minimum_should_match': 1,
+                        'should': [
+                            {'term': {'samples_num_alt_1': 'HG00732'}},
+                            {'term': {'samples_num_alt_2': 'HG00732'}}
+                    ]}
+                }]
             }
         }]}})
 
@@ -1800,4 +1824,26 @@ class EsUtilsTest(TestCase):
         inheritance_filter = _genotype_inheritance_filter('recessive', {'affected': custom_affected}, samples_by_id, {})
         self.assertDictEqual(inheritance_filter.to_dict(), {'bool': {'_name': 'F000002_2', 'must': [{
             'bool': {'should': [custom_affected_recessive_filter, custom_affected_x_linked_filter]}
+        }]}})
+
+        # any affected
+        inheritance_filter = _genotype_inheritance_filter('any_affected', {}, samples_by_id, {})
+        self.assertDictEqual(inheritance_filter.to_dict(), {'bool': {'_name': 'F000002_2', 'must': [{
+            'bool': {
+                'should': [
+                    {'term': {'samples_num_alt_1': 'HG00731'}},
+                    {'term': {'samples_num_alt_2': 'HG00731'}}
+                ]
+            }
+        }]}})
+        inheritance_filter = _genotype_inheritance_filter('any_affected', {'affected': custom_multi_affected}, samples_by_id, {})
+        self.assertDictEqual(inheritance_filter.to_dict(), {'bool': {'_name': 'F000002_2', 'must': [{
+            'bool': {
+                'should': [
+                    {'term': {'samples_num_alt_1': 'HG00731'}},
+                    {'term': {'samples_num_alt_2': 'HG00731'}},
+                    {'term': {'samples_num_alt_1': 'HG00732'}},
+                    {'term': {'samples_num_alt_2': 'HG00732'}}
+                ]
+            }
         }]}})

@@ -64,7 +64,7 @@ const FreqSummary = ({ field, fieldTitle, variant, urls, hasLink, showAC, precis
         <b>
           {hasLink ?
             <FreqLink
-              url={urls ? urls[variant.genomeVersion] : `${field.split('_')[0]}.broadinstitute.org`}
+              url={urls ? urls[variant.genomeVersion || GENOME_VERSION_37] : `${field.split('_')[0]}.broadinstitute.org`}
               value={value}
               variant={variant}
               genomeVersions={urls && Object.keys(urls)}

@@ -1,6 +1,7 @@
 import React from 'react'
 import { Form } from 'semantic-ui-react'
 import orderBy from 'lodash/orderBy'
+import flatten from 'lodash/flatten'
 
 import { validators } from '../components/form/ReduxFormWrapper'
 import { BooleanCheckbox, RadioGroup, Dropdown, InlineToggle, Pagination, BaseSemanticInput } from '../components/form/Inputs'
@@ -86,6 +87,10 @@ export const FAMILY_ANALYSIS_STATUS_OPTIONS = [
   { value: FAMILY_STATUS_ANALYSIS_IN_PROGRESS, color: '#4682B4', name: 'Analysis in Progress' },
   { value: FAMILY_STATUS_WAITING_FOR_DATA, color: '#FFC107', name: 'Waiting for data' },
 ]
+
+export const FAMILY_ANALYSIS_STATUS_LOOKUP = FAMILY_ANALYSIS_STATUS_OPTIONS.reduce((acc, tag) => {
+  return { [tag.value]: tag, ...acc }
+}, {})
 
 // SUCCESS STORY
 
@@ -689,7 +694,10 @@ const VARIANT_SORT_OPTONS = [
     value: SORT_BY_PROTEIN_CONSQ,
     text: 'Protein Consequence',
     comparator: (a, b) =>
-      VEP_CONSEQUENCE_ORDER_LOOKUP[a.mainTranscript.majorConsequence] - VEP_CONSEQUENCE_ORDER_LOOKUP[b.mainTranscript.majorConsequence],
+      Math.min(...Object.values(a.transcripts).flat().map(
+        ({ majorConsequence }) => VEP_CONSEQUENCE_ORDER_LOOKUP[majorConsequence]).filter(val => val)) -
+      Math.min(...Object.values(b.transcripts).flat().map(
+        ({ majorConsequence }) => VEP_CONSEQUENCE_ORDER_LOOKUP[majorConsequence]).filter(val => val)),
   },
   { value: SORT_BY_GNOMAD, text: 'gnomAD Genomes Frequency', comparator: (a, b) => a.populations.gnomad_genomes.af - b.populations.gnomad_genomes.af },
   { value: SORT_BY_EXAC, text: 'ExAC Frequency', comparator: (a, b) => a.populations.exac.af - b.populations.exac.af },
@@ -714,7 +722,10 @@ const VARIANT_SORT_OPTONS = [
     value: SORT_BY_IN_OMIM,
     text: 'In OMIM',
     comparator: (a, b, genesById) =>
-      (genesById[b.mainTranscript.geneId] || { omimPhenotypes: [] }).omimPhenotypes.length - (genesById[a.mainTranscript.geneId] || { omimPhenotypes: [] }).omimPhenotypes.length,
+      Object.keys(b.transcripts).reduce(
+        (acc, geneId) => (genesById[geneId] ? acc + genesById[geneId].omimPhenotypes.length : acc), 0) -
+      Object.keys(a.transcripts).reduce(
+        (acc, geneId) => (genesById[geneId] ? acc + genesById[geneId].omimPhenotypes.length : acc), 0),
   },
 ]
 const VARIANT_SORT_OPTONS_NO_FAMILY_SORT = VARIANT_SORT_OPTONS.slice(1)
@@ -772,13 +783,6 @@ export const VARIANT_PAGINATION_FIELD = {
   lastItem: null,
   format: val => parseInt(val, 10),
 }
-export const VARIANT_GENE_FIELD = {
-  name: 'gene',
-  component: BaseSemanticInput,
-  inputType: 'Input',
-  label: 'Gene',
-  inline: true,
-}
 export const VARIANT_TAGGED_DATE_FIELD = {
   name: 'taggedAfter',
   component: BaseSemanticInput,
@@ -806,16 +810,23 @@ export const MUTTASTER_MAP = {
   D: { value: 'disease causing' },
 }
 
+export const getVariantMainGeneId = ({ transcripts, mainTranscriptId, selectedMainTranscriptId }) =>
+  (Object.entries(transcripts).find(entry =>
+    entry[1].some(({ transcriptId }) => transcriptId === (selectedMainTranscriptId || mainTranscriptId)),
+  ) || [])[0]
+
+export const getVariantMainTranscript = ({ transcripts, mainTranscriptId, selectedMainTranscriptId }) =>
+  flatten(Object.values(transcripts)).find(
+    ({ transcriptId }) => transcriptId === (selectedMainTranscriptId || mainTranscriptId),
+  ) || {}
+
 export const VARIANT_EXPORT_DATA = [
   { header: 'chrom' },
   { header: 'pos' },
   { header: 'ref' },
   { header: 'alt' },
-  { header: 'gene', getVal: variant => variant.mainTranscript.geneSymbol },
-  { header: 'worst_consequence', getVal: variant => variant.mainTranscript.majorConsequence },
-  { header: 'family', getVal: variant => variant.familyGuids[0].split(/_(.+)/)[1] },
-  { header: 'tags', getVal: variant => variant.tags.map(tag => tag.name).join('|') },
-  { header: 'notes', getVal: variant => variant.notes.map(note => `${note.createdBy}: ${note.note}`).join('|') },
+  { header: 'gene', getVal: variant => getVariantMainTranscript(variant).geneSymbol },
+  { header: 'worst_consequence', getVal: variant => getVariantMainTranscript(variant).majorConsequence },
   { header: '1kg_freq', getVal: variant => variant.populations.g1k.af },
   { header: 'exac_freq', getVal: variant => variant.populations.exac.af },
   { header: 'gnomad_genomes_freq', getVal: variant => variant.populations.gnomad_genomes.af },
@@ -829,38 +840,15 @@ export const VARIANT_EXPORT_DATA = [
   { header: 'muttaster', getVal: variant => (MUTTASTER_MAP[variant.predictions.mut_taster] || PREDICTION_INDICATOR_MAP[variant.predictions.mut_taster] || {}).value },
   { header: 'fathmm', getVal: variant => (PREDICTION_INDICATOR_MAP[variant.predictions.fathmm] || {}).value },
   { header: 'rsid', getVal: variant => variant.rsid },
-  { header: 'hgvsc', getVal: variant => variant.mainTranscript.hgvsc },
-  { header: 'hgvsp', getVal: variant => variant.mainTranscript.hgvsp },
+  { header: 'hgvsc', getVal: variant => getVariantMainTranscript(variant).hgvsc },
+  { header: 'hgvsp', getVal: variant => getVariantMainTranscript(variant).hgvsp },
   { header: 'clinvar_clinical_significance', getVal: variant => variant.clinvar.clinicalSignificance },
   { header: 'clinvar_gold_stars', getVal: variant => variant.clinvar.goldStars },
   { header: 'filter', getVal: variant => variant.genotypeFilters },
+  { header: 'family', getVal: variant => variant.familyGuids[0].split(/_(.+)/)[1] },
+  { header: 'tags', getVal: variant => variant.tags.map(tag => tag.name).join('|') },
+  { header: 'notes', getVal: variant => variant.notes.map(note => `${note.createdBy}: ${note.note.replace(/\n/g, ' ')}`).join('|') },
 ]
-
-const VARIANT_GENOTYPE_EXPORT_DATA = [
-  { header: 'sample_id', getVal: genotype => genotype.sampleId },
-  { header: 'num_alt_alleles', getVal: genotype => genotype.numAlt },
-  { header: 'ad' },
-  { header: 'dp' },
-  { header: 'gq' },
-  { header: 'ab' },
-]
-
-export const getVariantsExportData = (variants) => {
-  const maxGenotypes = Math.max(...variants.map(variant => Object.keys(variant.genotypes).length), 0)
-  return {
-    rawData: variants,
-    headers: [...Array(maxGenotypes).keys()].reduce(
-      (acc, i) => [...acc, ...VARIANT_GENOTYPE_EXPORT_DATA.map(config => `${config.header}_${i + 1}`)],
-      VARIANT_EXPORT_DATA.map(config => config.header),
-    ),
-    processRow: variant => Object.values(variant.genotypes).reduce(
-      (acc, genotype) => [...acc, ...VARIANT_GENOTYPE_EXPORT_DATA.map((config) => {
-        return config.getVal ? config.getVal(genotype) : genotype[config.header]
-      })],
-      VARIANT_EXPORT_DATA.map(config => (config.getVal ? config.getVal(variant) : variant[config.header])),
-    ),
-  }
-}
 
 // Users
 

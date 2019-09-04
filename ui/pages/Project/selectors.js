@@ -2,8 +2,6 @@ import orderBy from 'lodash/orderBy'
 import mapValues from 'lodash/mapValues'
 import { createSelector } from 'reselect'
 
-
-import { getSearchResults } from 'redux/utils/reduxSearchEnhancer'
 import {
   FAMILY_ANALYSIS_STATUS_OPTIONS,
   FAMILY_FIELD_ID,
@@ -13,6 +11,8 @@ import {
   SHOW_ALL,
   latestSamplesLoaded,
   familySamplesLoaded,
+  getVariantMainTranscript,
+  getVariantMainGeneId,
 } from 'shared/utils/constants'
 import { toCamelcase, toSnakecase } from 'shared/utils/stringUtils'
 
@@ -104,7 +104,7 @@ export const getIndividualTaggedVariants = createSelector(
       ...variant,
       variantId: `${variant.chrom}-${variant.pos}-${variant.ref}-${variant.alt}`,
       ...variant.genotypes[individualGuid],
-      ...genesById[variant.mainTranscript.geneId],
+      ...genesById[getVariantMainGeneId(variant)],
     }))
   },
 )
@@ -117,6 +117,10 @@ export const getFamiliesTableState = createSelector(
 export const getFamiliesFilter = createSelector(
   getFamiliesTableState,
   familyTableState => familyTableState.familiesFilter || SHOW_ALL,
+)
+export const getFamiliesSearch = createSelector(
+  getFamiliesTableState,
+  familyTableState => familyTableState.familiesSearch,
 )
 export const getFamiliesSortOrder = createSelector(
   getFamiliesTableState,
@@ -139,9 +143,13 @@ export const getVisibleFamilies = createSelector(
   getSamplesByGuid,
   getUser,
   getFamiliesFilter,
-  getSearchResults('familiesByGuid'),
-  (familiesByGuid, individualsByGuid, samplesByGuid, user, familiesFilter, familySearchResults) => {
-    const searchedFamilies = familySearchResults.map(family => familiesByGuid[family]).filter(family => family)
+  getFamiliesSearch,
+  (familiesByGuid, individualsByGuid, samplesByGuid, user, familiesFilter, familiesSearch) => {
+    const searchFilter = familiesSearch ? family =>
+      `${family.displayName};${family.familyId};${family.individualGuids.map(individualGuid =>
+        ((individualsByGuid[individualGuid].phenotipsData || {}).features || []).map(feature => feature.label).join(';'),
+      ).join(';')}`.toLowerCase().includes(familiesSearch) : family => family
+    const searchedFamilies = Object.values(familiesByGuid).filter(searchFilter)
 
     if (!familiesFilter || !FAMILY_FILTER_LOOKUP[familiesFilter]) {
       return searchedFamilies
@@ -328,20 +336,12 @@ export const getMmeDefaultContactEmail = createSelector(
     const submittedGenes = [...new Set((mmeSubmittedData.geneVariants || []).map(
       ({ geneId }) => (genesById[geneId] || {}).geneSymbol))].join(', ')
 
-    Object.values(savedVariants).filter(
-      o => o.familyGuids.includes(familyGuid) && o.tags.length).map(variant => ({
-      ...variant,
-      variantId: `${variant.chrom}-${variant.pos}-${variant.ref}-${variant.alt}`,
-      ...variant.genotypes[individualGuid],
-      ...genesById[variant.mainTranscript.geneId],
-    }))
-
     const submittedVariants = (mmeSubmittedData.geneVariants || []).map(({ alt, ref, chrom, pos }) => {
       const savedVariant = Object.values(savedVariants).find(
         o => o.chrom === chrom && o.pos === pos && o.ref === ref && o.alt === alt
           && o.familyGuids.includes(familyGuid)) || {}
       const genotype = (savedVariant.genotypes || {})[individualGuid] || {}
-      const mainTranscript = savedVariant.mainTranscript || {}
+      const mainTranscript = getVariantMainTranscript(savedVariant)
       const consequence = (mainTranscript.majorConsequence || '').replace(/_variant/g, '').replace(/_/g, ' ')
       const hgvs = [(mainTranscript.hgvsc || '').split(':').pop(), (mainTranscript.hgvsp || '').split(':').pop()].filter(val => val).join('/')
 

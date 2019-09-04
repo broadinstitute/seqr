@@ -10,7 +10,7 @@ import xlrd
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 
-from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
+from settings import API_LOGIN_REQUIRED_URL
 from seqr.views.utils.json_utils import create_json_response
 
 logger = logging.getLogger(__name__)

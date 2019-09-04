@@ -5,7 +5,7 @@ The `urlpatterns` list routes URLs to views. For more information please see:
 """
 from seqr.views.react_app import main_app, no_login_main_app
 from seqr.views.apis.dataset_api import add_alignment_dataset_handler, add_variants_dataset_handler
-from settings import ENABLE_DJANGO_DEBUG_TOOLBAR, MEDIA_ROOT
+from settings import ENABLE_DJANGO_DEBUG_TOOLBAR, MEDIA_ROOT, API_LOGIN_REQUIRED_URL
 from django.conf.urls import url, include
 from django.contrib import admin
 import django.contrib.admindocs.urls
@@ -45,15 +45,12 @@ from seqr.views.apis.saved_variant_api import \
     create_variant_note_handler, \
     update_variant_note_handler, \
     delete_variant_note_handler, \
+    update_variant_main_transcript, \
     update_saved_variant_json
 
-from seqr.views.pages.dashboard_page import \
+from seqr.views.apis.dashboard_api import \
     dashboard_page_data, \
     export_projects_table_handler
-
-from seqr.views.pages.project_page import \
-    project_page_data, \
-    export_project_individuals_handler
 
 from seqr.views.apis.gene_api import \
     gene_info, \
@@ -115,10 +112,11 @@ from seqr.views.apis.staff_api import \
     proxy_to_kibana
 
 from seqr.views.apis.awesomebar_api import awesomebar_autocomplete_handler
-from seqr.views.apis.auth_api import login_required_error, API_LOGIN_REQUIRED_URL, login_view, logout_view
+from seqr.views.apis.auth_api import login_required_error, login_view, logout_view
 from seqr.views.apis.igv_api import fetch_igv_track
 from seqr.views.apis.analysis_group_api import update_analysis_group_handler, delete_analysis_group_handler
-from seqr.views.apis.project_api import create_project_handler, update_project_handler, delete_project_handler
+from seqr.views.apis.project_api import create_project_handler, update_project_handler, delete_project_handler, \
+    project_page_data, export_project_individuals_handler
 from seqr.views.apis.project_categories_api import update_project_categories_handler
 from seqr.views.apis import external_api
 from seqr.views.utils.file_utils import save_temp_file
@@ -202,6 +200,7 @@ api_endpoints = {
     'saved_variant/(?P<variant_guid>[^/]+)/note/create': create_variant_note_handler,
     'saved_variant/(?P<variant_guid>[^/]+)/note/(?P<note_guid>[^/]+)/update': update_variant_note_handler,
     'saved_variant/(?P<variant_guid>[^/]+)/note/(?P<note_guid>[^/]+)/delete': delete_variant_note_handler,
+    'saved_variant/(?P<variant_guid>[^/]+)/update_transcript/(?P<transcript_id>[^/]+)': update_variant_main_transcript,
 
     'genes_info': genes_info,
     'gene_info/(?P<gene_id>[^/]+)': gene_info,

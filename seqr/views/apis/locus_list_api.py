@@ -4,19 +4,20 @@ import logging
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.views.decorators.csrf import csrf_exempt
-from guardian.shortcuts import assign_perm, remove_perm, get_objects_for_group
+from guardian.shortcuts import assign_perm, remove_perm
 
 
 from reference_data.models import GENOME_VERSION_GRCh37
 from seqr.models import LocusList, LocusListGene, LocusListInterval, IS_OWNER, CAN_VIEW, CAN_EDIT
 from seqr.model_utils import get_or_create_seqr_model, create_seqr_model, delete_seqr_model, \
     add_xbrowse_project_gene_lists, remove_xbrowse_project_gene_lists
-from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.utils.gene_utils import get_genes, parse_locus_list_items
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
-from seqr.views.utils.orm_to_json_utils import get_json_for_locus_lists, get_json_for_locus_list
+from seqr.views.utils.orm_to_json_utils import get_json_for_locus_lists, get_json_for_locus_list, get_sorted_project_locus_lists
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_object_permissions, check_public_object_permissions
+from settings import API_LOGIN_REQUIRED_URL
+
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +70,7 @@ def create_locus_list_handler(request):
         created_by=request.user,
     )
     _update_locus_list_items(locus_list, genes_by_id, intervals, request_json, request.user)
-    add_locus_list_user_permissions(locus_list)
+    _add_locus_list_user_permissions(locus_list)
 
     return create_json_response({
         'locusListsByGuid': {locus_list.guid: get_json_for_locus_list(locus_list, request.user)},
@@ -139,16 +140,7 @@ def delete_project_locus_lists(request, project_guid):
     })
 
 
-def get_project_locus_list_models(project):
-    return get_objects_for_group(project.can_view_group, CAN_VIEW, LocusList)
-
-
-def get_sorted_project_locus_lists(project, user):
-    result = get_json_for_locus_lists(get_project_locus_list_models(project), user)
-    return sorted(result, key=lambda locus_list: locus_list['name'])
-
-
-def add_locus_list_user_permissions(locus_list):
+def _add_locus_list_user_permissions(locus_list):
     assign_perm(user_or_group=locus_list.created_by, perm=IS_OWNER, obj=locus_list)
     assign_perm(user_or_group=locus_list.created_by, perm=CAN_EDIT, obj=locus_list)
     assign_perm(user_or_group=locus_list.created_by, perm=CAN_VIEW, obj=locus_list)
