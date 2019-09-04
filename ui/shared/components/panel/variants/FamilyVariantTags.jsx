@@ -184,6 +184,12 @@ VariantTagField.propTypes = {
 
 const VariantNoteField = ({ action, note, variant, family, ...props }) => {
   const values = { ...variant, ...note }
+  console.log('========= TextFieldView values')
+  console.log(values)
+  console.log('variant')
+  console.log(variant)
+  console.log('note')
+  console.log(note)
   return <TextFieldView
     noModal
     showInLine
@@ -193,7 +199,7 @@ const VariantNoteField = ({ action, note, variant, family, ...props }) => {
     modalTitle={`${action} Variant Note for Family ${family.displayName}`}
     additionalEditFields={VARIANT_NOTE_FIELDS}
     initialValues={values}
-    displayValues={values[0]}
+    displayValues="test"
     idField={note ? 'noteGuid' : 'variantId'}
     deleteConfirm="Are you sure you want to delete this note?"
     textPopup={note && taggedByPopup(note, 'Note By')}
@@ -244,18 +250,6 @@ const FamilyVariantTags = (
     // console.log(savedVariant)
     if (isCompoundHet) {
       return <VariantLink variant={variant} savedVariant={savedVariant} family={family} />
-    }
-    let validVariant
-    if (Array.isArray(savedVariant)) {
-      if (typeof savedVariant[0] === 'undefined') {
-        validVariant = variant
-      }
-      else {
-        validVariant = savedVariant
-      }
-    }
-    else {
-      validVariant = (savedVariant || variant)
     }
     return (
       <div>
@@ -322,7 +316,7 @@ const FamilyVariantTags = (
                 />,
               )}
               <VariantNoteField
-                variant={validVariant}
+                variant={variant}
                 family={family}
                 editIconName="plus"
                 editLabel="Add Note"
