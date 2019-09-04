@@ -13,7 +13,7 @@ import { closeModal, setModalConfirm } from 'redux/utils/modalReducer'
 import ButtonPanel from './ButtonPanel'
 import RequestStatus from './RequestStatus'
 
-const StyledForm = styled(({ hasSubmitButton, inline, ...props }) => <Form {...props} />)`
+export const StyledForm = styled(({ hasSubmitButton, inline, ...props }) => <Form {...props} />)`
   min-height: inherit;
   display: ${props => (props.inline ? 'inline-block' : 'block')};
   padding-bottom: ${props => props.hasSubmitButton && '50px'};
