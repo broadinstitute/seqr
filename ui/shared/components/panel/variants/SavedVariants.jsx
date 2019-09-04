@@ -1,15 +1,16 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Loader, Grid, Dropdown, Form } from 'semantic-ui-react'
+import { Loader, Grid, Dropdown, Form, Message } from 'semantic-ui-react'
 import { Route, Switch, Link } from 'react-router-dom'
 import styled from 'styled-components'
 
 import { loadSavedVariants, updateSavedVariantTable } from 'redux/rootReducer'
 import { getAnalysisGroupsByGuid, getCurrentProject, getSavedVariantsIsLoading, getSelectedSavedVariants,
-  getVisibleSortedSavedVariants, getFilteredSavedVariants, getSavedVariantTableState,
+  getVisibleSortedSavedVariants, getFilteredSavedVariants, getSavedVariantTableState, getSavedVariantsLoadingError,
   getSavedVariantVisibleIndices, getSavedVariantTotalPages, getSavedVariantExportConfig } from 'redux/selectors'
 import {
+  REVIEW_TAG_NAME,
   KNOWN_GENE_FOR_PHENOTYPE_TAG_NAME,
   DISCOVERY_CATEGORY_NAME,
   VARIANT_SORT_FIELD,
@@ -58,6 +59,7 @@ const TAG_TYPES = [
   'Tier 2 - Phenotype not delineated',
   'Tier 2 - Known gene, new phenotype',
   KNOWN_GENE_FOR_PHENOTYPE_TAG_NAME,
+  REVIEW_TAG_NAME,
   'Send for Sanger validation',
   'Sanger validated',
   'Sanger did not confirm',
@@ -98,6 +100,7 @@ class BaseSavedVariants extends React.Component {
     analysisGroup: PropTypes.object,
     variantTagTypes: PropTypes.array,
     loading: PropTypes.bool,
+    error: PropTypes.string,
     variantsToDisplay: PropTypes.array,
     totalVariantsCount: PropTypes.number,
     filteredVariants: PropTypes.array,
@@ -122,12 +125,13 @@ class BaseSavedVariants extends React.Component {
   componentWillReceiveProps(nextProps) {
     const {
       familyGuid: nextFamilyGuid, analysisGroupGuid: nextAnalysisGroupGuid, variantGuid: nextVariantGuid, tag: nextTag,
+      gene: nextGene,
     } = nextProps.match.params
-    const { familyGuid, variantGuid, analysisGroupGuid, tag } = this.props.match.params
+    const { familyGuid, variantGuid, analysisGroupGuid, tag, gene } = this.props.match.params
     if (nextFamilyGuid !== familyGuid || nextAnalysisGroupGuid !== analysisGroupGuid || nextVariantGuid !== variantGuid) {
       this.loadVariants(nextProps)
       this.props.updateSavedVariantTable({ page: 1 })
-    } else if (nextTag !== tag) {
+    } else if (nextTag !== tag || nextGene !== gene) {
       this.props.updateSavedVariantTable({ page: 1 })
       if (!this.props.project) {
         this.loadVariants(nextProps)
@@ -232,6 +236,16 @@ class BaseSavedVariants extends React.Component {
     if (!allShown) {
       shownSummary = `${this.props.variantsToDisplay.length > 0 ? this.props.firstRecordIndex + 1 : 0}-${this.props.firstRecordIndex + this.props.variantsToDisplay.length} of`
     }
+
+    let variantContent
+    if (this.props.loading) {
+      variantContent = <Loader inline="centered" active />
+    } else if (this.props.error) {
+      variantContent = <Message error content={this.props.error} />
+    } else {
+      variantContent = <Variants variants={this.props.variantsToDisplay} />
+    }
+
     return (
       <Grid stackable>
         {this.props.project &&
@@ -295,8 +309,7 @@ class BaseSavedVariants extends React.Component {
         }
         <Grid.Row>
           <Grid.Column width={16}>
-            {this.props.loading ? <Loader inline="centered" active /> :
-            <Variants variants={this.props.variantsToDisplay} />}
+            {variantContent}
           </Grid.Column>
         </Grid.Row>
       </Grid>
@@ -307,6 +320,7 @@ class BaseSavedVariants extends React.Component {
 const mapStateToProps = (state, ownProps) => ({
   project: getCurrentProject(state),
   loading: getSavedVariantsIsLoading(state),
+  error: getSavedVariantsLoadingError(state),
   variantsToDisplay: getVisibleSortedSavedVariants(state, ownProps),
   totalVariantsCount: getSelectedSavedVariants(state, ownProps).length,
   filteredVariants: getFilteredSavedVariants(state, ownProps),

@@ -798,8 +798,15 @@ def _update_initial_omim_numbers(rows):
 
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
 def saved_variants(request, tag):
+    gene = request.GET.get('gene')
     tag_type = VariantTagType.objects.get(name=tag, project__isnull=True)
     saved_variant_models = SavedVariant.objects.filter(varianttag__variant_tag_type=tag_type)
+    if gene:
+        saved_variant_models = saved_variant_models.filter(saved_variant_json__transcripts__has_key=gene)
+
+    if saved_variant_models.count() > 1000 and not gene:
+        return create_json_response({'message': 'Select a gene to filter variants'}, status=400)
+
     saved_variants = get_json_for_saved_variants(saved_variant_models, add_tags=True, add_details=True)
 
     project_models_by_guid = {variant.family.project.guid: variant.family.project for variant in saved_variant_models}

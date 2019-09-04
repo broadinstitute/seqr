@@ -35,6 +35,7 @@ export const getUsersByUsername = state => state.usersByUsername
 export const getUserOptionsIsLoading = state => state.userOptionsLoading.isLoading
 export const getProjectGuid = state => state.currentProjectGuid
 export const getSavedVariantsIsLoading = state => state.savedVariantsLoading.isLoading
+export const getSavedVariantsLoadingError = state => state.savedVariantsLoading.errorMessage
 export const getIgvReadsVisibility = state => state.igvReadsVisibility
 
 export const getAllUsers = createSelector(

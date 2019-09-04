@@ -208,7 +208,7 @@ export const navigateSavedHashedSearch = (search, navigateSearch) => {
   }
 }
 
-export const loadSavedVariants = (familyGuids, variantGuid, tag, gene) => {
+export const loadSavedVariants = (familyGuids, variantGuid, tag, gene = '') => {
   return (dispatch, getState) => {
     const state = getState()
     const projectGuid = state.currentProjectGuid
