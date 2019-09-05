@@ -69,6 +69,7 @@
     "draftjs-md-converter": "^0.1.6",
     "filesize": "3.5.11",
     "glob": "^7.1.2",
+    "gtex-d3": "github:broadinstitute/gtex-viz#f949928",
     "gzip-size": "4.1.0",
     "igv": "^2.2.2",
     "jquery": "3.2.1",
@@ -180,7 +181,8 @@
           ],
           "alias": {
             "shared": "./shared/",
-            "pages": "./pages/"
+            "pages": "./pages/",
+            "gtex-d3": "./node_modules/gtex-d3/src/"
           }
         }
       ]

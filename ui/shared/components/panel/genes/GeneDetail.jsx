@@ -8,6 +8,7 @@ import { Grid, Popup } from 'semantic-ui-react'
 
 import { loadGene, updateGeneNote } from 'redux/rootReducer'
 import { getGenesIsLoading, getGenesById } from 'redux/selectors'
+import Gtex from '../../graph/Gtex'
 import SectionHeader from '../../SectionHeader'
 import DataLoader from '../../DataLoader'
 import TextFieldView from '../view-fields/TextFieldView'
@@ -175,6 +176,7 @@ const GeneDetailContent = ({ gene, updateGeneNote: dispatchUpdateGeneNote }) => 
   ]
   return (
     <div>
+      <Gtex geneId={gene.geneId} />
       {linkDetails.filter(linkConfig => linkConfig).map(linkConfig =>
         <Popup
           key={linkConfig.title}
