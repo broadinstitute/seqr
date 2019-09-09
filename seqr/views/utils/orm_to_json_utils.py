@@ -8,12 +8,12 @@ import logging
 import os
 from collections import defaultdict
 from copy import copy
-from django.db.models import prefetch_related_objects, Prefetch, Q
+from django.db.models import prefetch_related_objects, Prefetch
 from django.db.models.fields.files import ImageFieldFile
 from guardian.shortcuts import get_objects_for_group
 
 from reference_data.models import GeneConstraint, dbNSFPGene
-from seqr.models import CAN_VIEW, CAN_EDIT, Sample, GeneNote, VariantFunctionalData, LocusList, VariantTagType
+from seqr.models import CAN_VIEW, CAN_EDIT, Sample, GeneNote, VariantFunctionalData, LocusList
 from seqr.views.utils.json_utils import _to_camel_case
 logger = logging.getLogger(__name__)
 

@@ -5,19 +5,19 @@ APIs for updating project metadata, as well as creating or deleting projects
 import json
 import logging
 from django.contrib.auth.decorators import login_required
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
 from seqr.model_utils import get_or_create_seqr_model, delete_seqr_model
 from seqr.models import Project, Family, Individual, Sample, VariantTag, VariantFunctionalData, \
-    VariantNote, AnalysisGroup, _slugify, CAN_EDIT, IS_OWNER
+    VariantNote, VariantTagType, AnalysisGroup, _slugify, CAN_EDIT, IS_OWNER
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.json_to_orm_utils import update_project_from_json
 from seqr.views.utils.orm_to_json_utils import _get_json_for_project, get_json_for_samples, _get_json_for_families, \
     _get_json_for_individuals, get_json_for_saved_variants, get_json_for_analysis_groups, \
     get_json_for_variant_functional_data_tag_types, get_sorted_project_locus_lists, \
-    get_json_for_project_collaborator_list, get_project_variant_tag_types
+    get_json_for_project_collaborator_list, _get_json_for_models
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_permissions
 from seqr.views.utils.phenotips_utils import create_phenotips_user, get_phenotips_uname_and_pwd_for_project
 from seqr.views.utils.individual_utils import export_individuals
@@ -276,9 +276,35 @@ def _retrieve_analysis_groups(project):
 
 
 def _get_json_for_variant_tag_types(project):
-    tag_counts_by_type_and_family = VariantTag.objects.filter(saved_variants__family__project=project).values('saved_variants__family__guid', 'variant_tag_type__name').annotate(count=Count('*'))
-    note_counts_by_family = VariantNote.objects.filter(saved_variants__family__project=project).values('saved_variants__family__guid').annotate(count=Count('*'))
-    project_variant_tags = get_project_variant_tag_types(project, tag_counts_by_type_and_family=tag_counts_by_type_and_family, note_counts_by_family=note_counts_by_family)
+    note_counts_by_family = VariantNote.objects.filter(saved_variant__family__project=project).values('saved_variant__family__guid').annotate(count=Count('*'))
+    num_tags = sum(count['count'] for count in note_counts_by_family)
+    note_tag_type = {
+        'variantTagTypeGuid': 'notes',
+        'name': 'Has Notes',
+        'category': 'Notes',
+        'description': '',
+        'color': 'grey',
+        'order': 100,
+        'is_built_in': True,
+        'numTags': num_tags,
+        'numTagsPerFamily': {count['saved_variant__family__guid']: count['count'] for count in note_counts_by_family},
+    }
+
+    tag_counts_by_type_and_family = VariantTag.objects.filter(saved_variant__family__project=project).values('saved_variant__family__guid', 'variant_tag_type__name').annotate(count=Count('*'))
+    project_variant_tags = _get_json_for_models(VariantTagType.objects.filter(Q(project=project) | Q(project__isnull=True)))
+    for tag_type in project_variant_tags:
+        current_tag_type_counts = [counts for counts in tag_counts_by_type_and_family if
+                                   counts['variant_tag_type__name'] == tag_type['name']]
+        num_tags = sum(count['count'] for count in current_tag_type_counts)
+        tag_type.update({
+            'numTags': num_tags,
+            'numTagsPerFamily': {count['saved_variant__family__guid']: count['count'] for count in
+                                 current_tag_type_counts},
+        })
+
+    project_variant_tags.append(note_tag_type)
+    project_variant_tags = sorted(project_variant_tags, key=lambda variant_tag_type: variant_tag_type['order'])
+
     discovery_tags = []
     for tag_type in project_variant_tags:
         if tag_type['category'] == 'CMG Discovery Tags' and tag_type['numTags'] > 0:

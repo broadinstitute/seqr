@@ -35,6 +35,7 @@ export const getUsersByUsername = state => state.usersByUsername
 export const getUserOptionsIsLoading = state => state.userOptionsLoading.isLoading
 export const getProjectGuid = state => state.currentProjectGuid
 export const getSavedVariantsIsLoading = state => state.savedVariantsLoading.isLoading
+export const getSavedVariantsLoadingError = state => state.savedVariantsLoading.errorMessage
 export const getIgvReadsVisibility = state => state.igvReadsVisibility
 
 export const getAllUsers = createSelector(
@@ -120,7 +121,6 @@ export const getSavedVariantHideReviewOnly = state => state.savedVariantTableSta
 const getSavedVariantHideKnownGeneForPhenotype = state => state.savedVariantTableState.hideKnownGeneForPhenotype
 export const getSavedVariantCurrentPage = state => state.savedVariantTableState.page || 1
 export const getSavedVariantRecordsPerPage = state => state.savedVariantTableState.recordsPerPage || 25
-export const getSavedVariantGeneFilter = state => state.savedVariantTableState.gene
 export const getSavedVariantTaggedAfter = state => state.savedVariantTableState.taggedAfter
 
 export const getVariantId = ({ xpos, ref, alt }) => `${xpos}-${ref}-${alt}`
@@ -188,11 +188,10 @@ export const getFilteredSavedVariants = createSelector(
   getSavedVariantHideExcluded,
   getSavedVariantHideReviewOnly,
   getSavedVariantHideKnownGeneForPhenotype,
-  getSavedVariantGeneFilter,
-  getGenesById,
   getSavedVariantTaggedAfter,
   (state, props) => props.match.params.tag,
-  (savedVariants, categoryFilter, hideExcluded, hideReviewOnly, hideKnownGeneForPhenotype, geneFilter, genesById, taggedAfter, tag) => {
+  (state, props) => props.match.params.gene,
+  (savedVariants, categoryFilter, hideExcluded, hideReviewOnly, hideKnownGeneForPhenotype, taggedAfter, tag, gene) => {
     let variantsToShow = savedVariants
     if (hideExcluded) {
       variantsToShow = variantsToShow.filter(variant => variant.tags.every(t => t.name !== EXCLUDED_TAG_NAME))
@@ -209,9 +208,8 @@ export const getFilteredSavedVariants = createSelector(
         variantsToShow = variantsToShow.filter(variant => variant.tags.some(t => t.category === categoryFilter))
       }
     } else {
-      if (geneFilter) {
-        variantsToShow = variantsToShow.filter(variant => Object.keys(variant.transcripts).some(
-          geneId => (((genesById[geneId] || {}).geneSymbol || '').toLowerCase().startsWith(geneFilter.toLowerCase()))))
+      if (gene) {
+        variantsToShow = variantsToShow.filter(variant => gene in variant.transcripts)
       }
 
       if (taggedAfter) {

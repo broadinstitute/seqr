@@ -24,7 +24,7 @@ from seqr.views.utils.file_utils import parse_file
 from seqr.views.utils.json_utils import create_json_response, _to_camel_case
 from seqr.views.utils.orm_to_json_utils import _get_json_for_individuals, get_json_for_saved_variants, \
     get_json_for_variant_functional_data_tag_types, get_json_for_projects, _get_json_for_families, \
-    get_json_for_locus_lists, get_project_variant_tag_types
+    get_json_for_locus_lists, _get_json_for_models
 from seqr.views.utils.proxy_request_utils import proxy_request
 
 from seqr.models import Project, Family, VariantTag, VariantTagType, Sample, SavedVariant, Individual, ProjectCategory, \
@@ -798,8 +798,16 @@ def _update_initial_omim_numbers(rows):
 
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
 def saved_variants(request, tag):
+    gene = request.GET.get('gene')
     tag_type = VariantTagType.objects.get(name=tag, project__isnull=True)
     saved_variant_models = SavedVariant.objects.filter(varianttag__variant_tag_type=tag_type)
+    if gene:
+        saved_variant_models = saved_variant_models.filter(saved_variant_json__transcripts__has_key=gene)
+
+    if saved_variant_models.count() > 1000 and not gene:
+        return create_json_response({'message': 'Select a gene to filter variants'}, status=400)
+
+    prefetch_related_objects(saved_variant_models, 'family__project')
     saved_variants = get_json_for_saved_variants(saved_variant_models, add_tags=True, add_details=True)
 
     project_models_by_guid = {variant.family.project.guid: variant.family.project for variant in saved_variant_models}
@@ -812,10 +820,18 @@ def saved_variants(request, tag):
     projects_json = get_json_for_projects(project_models_by_guid.values(), user=request.user, add_project_category_guids_field=False)
     functional_tag_types = get_json_for_variant_functional_data_tag_types()
 
+    variant_tag_types = VariantTagType.objects.filter(Q(project__in=project_models_by_guid.values()) | Q(project__isnull=True))
+    prefetch_related_objects(variant_tag_types, 'project')
+    variant_tags_json = _get_json_for_models(variant_tag_types)
+    tag_projects = {vt.guid: vt.project.guid for vt in variant_tag_types if vt.project}
+
     for project_json in projects_json:
+        project_guid = project_json['projectGuid']
+        project_variant_tags = [
+            vt for vt in variant_tags_json if tag_projects.get(vt['variantTagTypeGuid'], project_guid) == project_guid]
         project_json.update({
             'locusListGuids': locus_list_guids,
-            'variantTagTypes': get_project_variant_tag_types(project_models_by_guid[project_json['projectGuid']]),
+            'variantTagTypes': sorted(project_variant_tags, key=lambda variant_tag_type: variant_tag_type['order']),
             'variantFunctionalTagTypes': functional_tag_types,
         })
 
