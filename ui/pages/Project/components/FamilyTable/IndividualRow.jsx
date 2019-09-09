@@ -124,6 +124,43 @@ DataDetails.propTypes = {
   loadedSamples: PropTypes.array,
 }
 
+// eslint-disable-next-line react/require-optimization
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props)
+    this.state = { error: null, errorInfo: null }
+  }
+
+  componentDidCatch(error, errorInfo) {
+    // Catch errors in any components below and re-render with error message
+    this.setState({
+      error,
+      errorInfo,
+    })
+    // You can also log error messages to an error reporting service here
+  }
+
+  render() {
+    if (this.state.errorInfo) {
+      // Error path
+      return (
+        <div>
+          <h2>Something went wrong.</h2>
+          <details style={{ whiteSpace: 'pre-wrap' }}>
+            {this.state.error && this.state.error.toString()}
+            <br />
+            {this.state.errorInfo.componentStack}
+          </details>
+        </div>
+      )
+    }
+    // Normally, just render children
+    // eslint-disable-next-line react/prop-types
+    return this.props.children
+  }
+}
+
+// eslint-disable-next-line react/no-multi-comp
 class IndividualRow extends React.Component
 {
   static propTypes = {
@@ -288,12 +325,14 @@ class IndividualRow extends React.Component
     ]
 
     return (
-      <FamilyLayout
-        fields={fields}
-        fieldDisplay={field => field.content}
-        leftContent={leftContent}
-        rightContent={rightContent}
-      />
+      <ErrorBoundary>
+        <FamilyLayout
+          fields={fields}
+          fieldDisplay={field => field.content}
+          leftContent={leftContent}
+          rightContent={rightContent}
+        />
+      </ErrorBoundary>
     )
   }
 }

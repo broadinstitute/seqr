@@ -10,8 +10,6 @@ import FamilyVariantReads from 'shared/components/panel/variants/FamilyVariantRe
 import IndividualRow from './FamilyTable/IndividualRow'
 
 const BaseFamilyDetail = ({ family, individuals, editCaseReview, compact, ...props }) => {
-  console.log('family......')
-  console.log(family)
   return (
     <div>
       <Family
