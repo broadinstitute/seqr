@@ -267,6 +267,7 @@ const updateSavedVariant = (values, action = 'create') => {
 }
 
 export const updateVariantNote = (values) => {
+  console.log('updating variant note')
   // single variant
   if (values.variantGuid) {
     console.log('single ****************************************************************')

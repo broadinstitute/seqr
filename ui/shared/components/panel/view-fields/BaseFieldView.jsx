@@ -42,7 +42,9 @@ class BaseFieldView extends React.PureComponent {
     if (this.props.isPrivate && !this.props.user.isStaff) {
       return null
     }
-    const fieldValue = this.props.initialValues[this.props.field]
+    console.log('fieldValue: '.concat((this.props.displayValues)[this.props.field]))
+    console.log('field: '.concat(this.props.field))
+    const fieldValue = (this.props.displayValues || this.props.initialValues)[this.props.field]
     const hasValue = (fieldValue && (!Object.getOwnPropertyNames(fieldValue).includes('length') || fieldValue.length > 0)) || this.props.showEmptyValues
     if (!this.props.isEditable && !hasValue) {
       return null
@@ -119,10 +121,6 @@ class BaseFieldView extends React.PureComponent {
       />
     )
     const buttons = [editButton, deleteButton]
-    // console.log('======this.props.displayValues')
-    // console.log(this.props.displayValues)
-    // console.log('======fieldValue')
-    // console.log(fieldValue)
     return (
       <span style={this.props.style || {}}>
         {this.props.isPrivate && <StaffOnlyIcon />}
@@ -135,7 +133,7 @@ class BaseFieldView extends React.PureComponent {
         {
           hasValue && !this.props.hideValue && this.state.showInLineButton &&
           <FieldValue compact={this.props.compact} fieldName={this.props.fieldName}>
-            {this.props.fieldDisplay(this.props.displayValues || fieldValue, this.props.compact, fieldId)}
+            {this.props.fieldDisplay(fieldValue, this.props.compact, fieldId)}
           </FieldValue>
         }
         {!this.props.fieldName && buttons}
