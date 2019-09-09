@@ -1,8 +1,7 @@
 from copy import deepcopy
 from django.contrib import admin
 from django.core.exceptions import FieldDoesNotExist
-from reference_data.models import GeneInfo, HumanPhenotypeOntology, dbNSFPGene, GeneConstraint, GeneExpression, \
-    TranscriptInfo, Omim
+from reference_data.models import GeneInfo, HumanPhenotypeOntology, dbNSFPGene, GeneConstraint, TranscriptInfo, Omim
 
 
 def get_gene_symbol(obj):
@@ -17,7 +16,7 @@ get_gene_id.short_description = 'Gene Id'
 get_gene_id.admin_order_field = 'gene__gene_id'
 
 
-for model_class in [GeneInfo, HumanPhenotypeOntology, dbNSFPGene, GeneConstraint, GeneExpression, TranscriptInfo, Omim]:
+for model_class in [GeneInfo, HumanPhenotypeOntology, dbNSFPGene, GeneConstraint, TranscriptInfo, Omim]:
     @admin.register(model_class)
     class SpecificModelAdmin(admin.ModelAdmin):
         search_fields = deepcopy(model_class._meta.json_fields if hasattr(model_class._meta, 'json_fields') else [])
