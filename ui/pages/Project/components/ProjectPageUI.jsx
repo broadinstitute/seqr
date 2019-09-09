@@ -98,7 +98,6 @@ const ProjectPageUI = (props) => {
     { name: 'Individuals', data: props.individualsExportConfig },
     { name: 'Samples', data: props.samplesExportConfig },
   ]
-  console.log(props)
 
   return (
     <Grid stackable>

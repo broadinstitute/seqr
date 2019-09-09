@@ -167,10 +167,6 @@ AnalysedBy.propTypes = {
 }
 
 export const FamilyLayout = ({ leftContent, rightContent, annotation, offset, fields, fieldDisplay, useFullWidth, compact }) => {
-  console.log('console.log(fieldDisplay(fields))')
-  console.log(fields)
-  console.log(fieldDisplay)
-  console.log(fields.map(field => fieldDisplay(field)))
   return (
     <div>
       {annotation}
