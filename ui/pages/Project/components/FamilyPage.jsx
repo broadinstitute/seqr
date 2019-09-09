@@ -9,24 +9,29 @@ import Family from 'shared/components/panel/family'
 import FamilyVariantReads from 'shared/components/panel/variants/FamilyVariantReads'
 import IndividualRow from './FamilyTable/IndividualRow'
 
-const BaseFamilyDetail = ({ family, individuals, editCaseReview, compact, ...props }) =>
-  <div>
-    <Family
-      family={family}
-      compact={compact}
-      {...props}
-    />
-    {!compact && <ShowReadsButton familyGuid={family.familyGuid} igvId={family.familyGuid} padding="0.5em 0 1.5em 0" />}
-    <FamilyVariantReads igvId={family.familyGuid} />
-    {individuals && individuals.map(individual => (
-      <IndividualRow
-        key={individual.individualGuid}
+const BaseFamilyDetail = ({ family, individuals, editCaseReview, compact, ...props }) => {
+  console.log('family......')
+  console.log(family)
+  return (
+    <div>
+      <Family
         family={family}
-        individual={individual}
-        editCaseReview={editCaseReview}
-      />),
-    )}
-  </div>
+        compact={compact}
+        {...props}
+      />
+      {!compact && <ShowReadsButton familyGuid={family.familyGuid} igvId={family.familyGuid} padding="0.5em 0 1.5em 0" />}
+      <FamilyVariantReads igvId={family.familyGuid} />
+      {individuals && individuals.map(individual => (
+        <IndividualRow
+          key={individual.individualGuid}
+          family={family}
+          individual={individual}
+          editCaseReview={editCaseReview}
+        />),
+      )}
+    </div>
+  )
+}
 
 BaseFamilyDetail.propTypes = {
   family: PropTypes.object.isRequired,

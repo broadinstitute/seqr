@@ -471,11 +471,10 @@ def _get_saved_searches(user):
 
 
 def _get_saved_variants(variants):
-
     if not variants:
         return {}
-
-    variants = _flatten_variants(variants)
+    #
+    # variants = _flatten_variants(variants)
 
     variant_q = Q()
     for variant in variants:
@@ -497,12 +496,12 @@ def _get_saved_variants(variants):
     return saved_variants_by_guid
 
 
-def _flatten_variants(variants):
-    flattened_variants = []
-    for variant in variants:
-        if isinstance(variant, list):
-            for compound_het in variant:
-                flattened_variants.append(compound_het)
-        else:
-            flattened_variants.append(variant)
-    return flattened_variants
+# def _flatten_variants(variants):
+#     flattened_variants = []
+#     for variant in variants:
+#         if isinstance(variant, list):
+#             for compound_het in variant:
+#                 flattened_variants.append(compound_het)
+#         else:
+#             flattened_variants.append(variant)
+#     return flattened_variants
