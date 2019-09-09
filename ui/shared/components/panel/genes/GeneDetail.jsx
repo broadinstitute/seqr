@@ -12,7 +12,6 @@ import Gtex from '../../graph/Gtex'
 import SectionHeader from '../../SectionHeader'
 import DataLoader from '../../DataLoader'
 import TextFieldView from '../view-fields/TextFieldView'
-import GeneExpression from './GeneExpression'
 import { HorizontalSpacer } from '../../Spacers'
 
 
@@ -176,7 +175,6 @@ const GeneDetailContent = ({ gene, updateGeneNote: dispatchUpdateGeneNote }) => 
   ]
   return (
     <div>
-      <Gtex geneId={gene.geneId} />
       {linkDetails.filter(linkConfig => linkConfig).map(linkConfig =>
         <Popup
           key={linkConfig.title}
@@ -220,13 +218,6 @@ const GeneDetailContent = ({ gene, updateGeneNote: dispatchUpdateGeneNote }) => 
         onSubmit={dispatchUpdateGeneNote}
         style={NOTE_STYLE}
       />
-      <SectionHeader>Tissue-Specific Expression</SectionHeader>
-      <p>
-        This plot shows tissue-specific expression from GTEx release V6. These are normalized expression values with
-        units of reads-per-kilobase-per-million (RPKMs) plotted on a log<sub>10</sub> scale, so that lower
-        expression is to the left.
-      </p>
-      <GeneExpression expression={gene.expression} />
     </div>
   )
 }
@@ -237,9 +228,13 @@ GeneDetailContent.propTypes = {
 }
 
 const GeneDetail = ({ geneId, gene, loading, loadGene: dispatchLoadGene, updateGeneNote: dispatchUpdateGeneNote }) =>
-  <DataLoader contentId={geneId} content={gene} loading={loading} load={dispatchLoadGene}>
-    <GeneDetailContent gene={gene} updateGeneNote={dispatchUpdateGeneNote} />
-  </DataLoader>
+  <div>
+    <DataLoader contentId={geneId} content={gene} loading={loading} load={dispatchLoadGene}>
+      <GeneDetailContent gene={gene} updateGeneNote={dispatchUpdateGeneNote} />
+    </DataLoader>
+    <SectionHeader>Tissue-Specific Expression</SectionHeader>
+    <Gtex geneId={geneId} />
+  </div>
 
 GeneDetail.propTypes = {
   geneId: PropTypes.string.isRequired,
