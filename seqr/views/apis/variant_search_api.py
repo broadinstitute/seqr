@@ -482,17 +482,15 @@ def _get_saved_variants(variants):
             variant_q |= Q(xpos_start=variant['xpos'], ref=variant['ref'], alt=variant['alt'], family__guid__in=variant['familyGuids'])
         saved_variants = SavedVariant.objects.filter(variant_q)
 
-    for var in variants:
-        if len(var) == 23:
-            variants_by_id = {'{}-{}-{}'.format(var['xpos'], var['ref'], var['alt']): var}
+    variants_by_id = {'{}-{}-{}'.format(var['xpos'], var['ref'], var['alt']): var for var in variants if len(var) == 23}
+
     saved_variants_json = get_json_for_saved_variants(saved_variants, add_tags=True)
     saved_variants_by_guid = {}
     for saved_variant in saved_variants_json:
         family_guids = saved_variant['familyGuids']
-        if len(saved_variant) == 23:
-            saved_variant.update(
-                variants_by_id['{}-{}-{}'.format(saved_variant['xpos'], saved_variant['ref'], saved_variant['alt'])]
-            )
+        saved_variant.update(
+            variants_by_id['{}-{}-{}'.format(saved_variant['xpos'], saved_variant['ref'], saved_variant['alt'])]
+        )
         #  For saved variants only use family it was saved for, not all families in search
         saved_variant['familyGuids'] = family_guids
         saved_variants_by_guid[saved_variant['variantGuid']] = saved_variant

@@ -265,18 +265,6 @@ const FamilyVariantTags = (
               position="right center"
               keepInViewPort
               trigger={
-                <NavLink to={`/project/${family.projectGuid}/family_page/${family.familyGuid}`}>
-                  {family.displayName}
-                </NavLink>
-              }
-              content={<Family family={family} fields={FAMILY_FIELDS} useFullWidth disablePedigreeZoom />}
-            />
-            <PopupWithModal
-              hoverable
-              style={FAMILY_POPUP_STYLE}
-              position="right center"
-              keepInViewPort
-              trigger={
                 <ColoredLink
                   to={`/project/${family.projectGuid}/family_page/${family.familyGuid}`}
                   color={FAMILY_ANALYSIS_STATUS_LOOKUP[family[FAMILY_FIELD_ANALYSIS_STATUS]].color}
@@ -352,7 +340,7 @@ const FamilyVariantTags = (
 
 FamilyVariantTags.propTypes = {
   variant: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
-  savedVariant: PropTypes.object,
+  savedVariant: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
   project: PropTypes.object,
   family: PropTypes.object,
   isCompoundHet: PropTypes.bool,
