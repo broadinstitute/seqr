@@ -59,7 +59,6 @@ def create_saved_variant_handler(request):
 
     family = Family.objects.get(guid=family_guid)
     check_permissions(family.project, request.user, CAN_VIEW)
-
     xpos = variant_json['xpos']
     ref = variant_json['ref']
     alt = variant_json['alt']
@@ -88,6 +87,7 @@ def create_saved_variant_handler(request):
 @csrf_exempt
 def create_variant_note_handler(request):
     request_json = json.loads(request.body)
+
     variant_guid = request_json.get('variantGuid')
     save_as_gene_note = request_json.get('saveAsGeneNote')
     saved_variant = SavedVariant.objects.get(guid=variant_guid)

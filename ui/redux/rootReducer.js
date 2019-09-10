@@ -277,34 +277,44 @@ const updateSavedVariant = (values, action = 'create') => {
 }
 
 export const updateVariantNote = (values) => {
-  console.log('updating variant note')
-  // single variant
   if (values.variantGuid) {
-    console.log('single ****************************************************************')
-    console.log(values)
-    return updateEntity(values, RECEIVE_DATA, '/api/saved_variant/note', 'noteGuid')
+    return updateEntity({ ...values, variantGuid: values.variantGuid }, RECEIVE_DATA, `/api/saved_variant/note`, 'noteGuid')
   }
-  // compound hets
-  console.log('compound het ****************************************************************')
-  console.log(values)
-  if (values.familyGuid) {
-    const compoundHetsCount = Object.keys(values).length - 2
-    for (let i = 0; i < compoundHetsCount; i++) {
-      const variant = values[i]
-      if (variant.variantGuid) {
-        console.log('update entity')
-        return updateEntity(variant, RECEIVE_DATA, '/api/saved_variant/note', 'noteGuid')
-      }
-      console.log('update saved variant')
-      console.log({ ...variant, note: values.note, familyGuid: values.familyGuid })
-      // updateSavedVariant({ ...variant, note: values.note })
-      return updateSavedVariant(variant)
-    }
-  }
-  console.log('update? ****************************************************************')
-  console.log(values)
   return updateSavedVariant(values)
 }
+
+//   console.log('updating variant note >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>')
+//   // single variant
+//   if (values.familyGuids) {
+//     console.log('single ****************************************************************')
+//     console.log(values)
+//     // return updateSavedVariant(values)
+//     // return updateEntity({ ...values, variantGuid: values.variantGuid }, RECEIVE_DATA, '/api/saved_variant/note', 'noteGuid')
+//     return updateEntity(values, RECEIVE_DATA, '/api/saved_variant/note', 'noteGuid')
+//   }
+//   // compound hets
+//   console.log('compound het ****************************************************************')
+//   console.log(values)
+//   if (values.familyGuid) {
+//     const compoundHetsCount = Object.keys(values).length - 2
+//     for (let i = 0; i < compoundHetsCount; i++) {
+//       const variant = values[i]
+//       if (variant.variantGuid) {
+//         console.log('update entity')
+//         return updateEntity(variant, RECEIVE_DATA, '/api/saved_variant/note', 'noteGuid')
+//       }
+//       console.log('update saved variant')
+//       console.log({ ...variant, note: values.note, familyGuid: values.familyGuid })
+//       // console.log(updateSavedVariant(variant))
+//       // updateSavedVariant({ ...variant, note: values.note })
+//       // variant.forEach((eachVariant) => { return updateSavedVariant({ ...eachVariant, note: values.note, familyGuid: values.familyGuid }, 'note/create') })
+//       return updateSavedVariant(values)
+//     }
+//   }
+//   console.log('update? ****************************************************************')
+//   console.log(values)
+//   return updateSavedVariant(values)
+// }
 
 export const updateVariantTags = (values) => {
   const urlPath = values.variantGuid ? 'update_tags' : 'create'

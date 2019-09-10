@@ -359,7 +359,7 @@ const mapStateToProps = (state, ownProps) => ({
 const mapDispatchToProps = (dispatch, ownProps) => ({
   dispatchUpdateVariantNote: (updates) => {
     console.log('updates ===========================================')
-    console.log(updates)
+    console.log({ ...updates, familyGuid: ownProps.familyGuid })
     dispatch(updateVariantNote({ ...updates, familyGuid: ownProps.familyGuid }))
   },
   dispatchUpdateFamilyVariantTags: (updates) => {
