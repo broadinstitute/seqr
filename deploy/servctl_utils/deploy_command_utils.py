@@ -474,7 +474,7 @@ def deploy_nginx(settings):
 
     print_separator("nginx")
 
-    run("kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/1bd3fd2429db27b84230eb23a506db372a4bfc04/test/e2e-image/manifests/mandatory.yaml" % locals())
+    run("kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/master/deploy/mandatory.yaml" % locals())
 
     if settings["DELETE_BEFORE_DEPLOY"]:
         run("kubectl delete -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/nginx/nginx.yaml" % settings, errors_to_ignore=["not found"])
