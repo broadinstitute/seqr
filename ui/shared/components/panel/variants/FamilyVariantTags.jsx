@@ -239,7 +239,7 @@ const VariantLink = (
 
 VariantLink.propTypes = {
   variant: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
-  savedVariant: PropTypes.object,
+  savedVariant: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
   family: PropTypes.object,
 }
 
