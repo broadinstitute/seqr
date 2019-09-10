@@ -473,35 +473,28 @@ def _get_saved_searches(user):
 def _get_saved_variants(variants):
     if not variants:
         return {}
-    #
-    # variants = _flatten_variants(variants)
 
     variant_q = Q()
     for variant in variants:
-        variant_q |= Q(xpos_start=variant['xpos'], ref=variant['ref'], alt=variant['alt'], family__guid__in=variant['familyGuids'])
-    saved_variants = SavedVariant.objects.filter(variant_q)
+        # TODO ================================================================
+        # include cases when variant is not a list (contains 23)
+        if len(variant) == 23:
+            variant_q |= Q(xpos_start=variant['xpos'], ref=variant['ref'], alt=variant['alt'], family__guid__in=variant['familyGuids'])
+        saved_variants = SavedVariant.objects.filter(variant_q)
 
-    variants_by_id = {'{}-{}-{}'.format(var['xpos'], var['ref'], var['alt']): var for var in variants}
+    for var in variants:
+        if len(var) == 23:
+            variants_by_id = {'{}-{}-{}'.format(var['xpos'], var['ref'], var['alt']): var}
     saved_variants_json = get_json_for_saved_variants(saved_variants, add_tags=True)
     saved_variants_by_guid = {}
     for saved_variant in saved_variants_json:
         family_guids = saved_variant['familyGuids']
-        saved_variant.update(
-            variants_by_id['{}-{}-{}'.format(saved_variant['xpos'], saved_variant['ref'], saved_variant['alt'])]
-        )
+        if len(saved_variant) == 23:
+            saved_variant.update(
+                variants_by_id['{}-{}-{}'.format(saved_variant['xpos'], saved_variant['ref'], saved_variant['alt'])]
+            )
         #  For saved variants only use family it was saved for, not all families in search
         saved_variant['familyGuids'] = family_guids
         saved_variants_by_guid[saved_variant['variantGuid']] = saved_variant
 
     return saved_variants_by_guid
-
-
-# def _flatten_variants(variants):
-#     flattened_variants = []
-#     for variant in variants:
-#         if isinstance(variant, list):
-#             for compound_het in variant:
-#                 flattened_variants.append(compound_het)
-#         else:
-#             flattened_variants.append(variant)
-#     return flattened_variants

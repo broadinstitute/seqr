@@ -260,7 +260,6 @@ def update_variant_main_transcript(request, variant_guid, transcript_id):
 def _saved_variant_genes(variants):
     gene_ids = set()
     for variant in variants:
-        gene_ids.update(variant['transcripts'].keys())
         if isinstance(variant, list):
             for compound_het in variant:
                 gene_ids.update(compound_het['transcripts'].keys())
@@ -278,7 +277,6 @@ def _add_locus_lists(projects, variants, genes):
     for project in projects:
         locus_lists.update(get_project_locus_list_models(project))
     for variant in variants:
-        variant['locusListGuids'] = []
         if isinstance(variant, list):
             for compound_het in variant:
                 compound_het['locusListGuids'] = []
