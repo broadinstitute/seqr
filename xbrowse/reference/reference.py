@@ -181,7 +181,7 @@ class Reference(object):
 
         This is a list of ~60 expression values for each tissue, so it's pretty big, hence not part of get_gene()
         """
-        return self.gene_utils.get_genes([gene_id], add_expression=True).get(gene_id, {}).get('expression')
+        return None
 
     def get_gene_structure(self, gene_id):
         raise NotImplementedError

@@ -133,7 +133,7 @@ export const updateIndividual = (values) => {
 export const loadGene = (geneId) => {
   return (dispatch, getState) => {
     const gene = getState().genesById[geneId]
-    if (!gene || !gene.notes || !gene.expression) {
+    if (!gene || !gene.notes) {
       dispatch({ type: REQUEST_GENES })
       new HttpRequestHelper(`/api/gene_info/${geneId}`,
         (responseJson) => {
