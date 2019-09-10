@@ -470,19 +470,29 @@ def _get_saved_searches(user):
     return {'savedSearchesByGuid': {search['savedSearchGuid']: search for search in saved_searches}}
 
 
+def _flatten_variants(variants):
+    flattened_variants = []
+    for variant_set in variants:
+        if len(variant_set) != 23:
+            for compound_het in variant_set:
+                flattened_variants.append(compound_het)
+        else:
+            flattened_variants.append(variant_set)
+    return flattened_variants
+
+
 def _get_saved_variants(variants):
     if not variants:
         return {}
 
+    flattened_variants = _flatten_variants(variants)
+
     variant_q = Q()
-    for variant in variants:
-        # TODO ================================================================
-        # include cases when variant is not a list (contains 23)
-        if len(variant) == 23:
-            variant_q |= Q(xpos_start=variant['xpos'], ref=variant['ref'], alt=variant['alt'], family__guid__in=variant['familyGuids'])
+    for variant in flattened_variants:
+        variant_q |= Q(xpos_start=variant['xpos'], ref=variant['ref'], alt=variant['alt'], family__guid__in=variant['familyGuids'])
         saved_variants = SavedVariant.objects.filter(variant_q)
 
-    variants_by_id = {'{}-{}-{}'.format(var['xpos'], var['ref'], var['alt']): var for var in variants if len(var) == 23}
+    variants_by_id = {'{}-{}-{}'.format(var['xpos'], var['ref'], var['alt']): var for var in flattened_variants}
 
     saved_variants_json = get_json_for_saved_variants(saved_variants, add_tags=True)
     saved_variants_by_guid = {}
