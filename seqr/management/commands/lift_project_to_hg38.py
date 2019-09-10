@@ -55,6 +55,8 @@ class Command(BaseCommand):
             raise CommandError('Matches not found for ES sample ids: {}.'.format(', '.join(unmatched_samples)))
 
         included_family_individuals = defaultdict(set)
+        for sample in matched_sample_id_to_sample_record.values():
+            included_family_individuals[sample.individual.family].add(sample.individual.individual_id)
         missing_family_individuals = []
         for family, individual_ids in included_family_individuals.items():
             missing_indivs = family.individual_set.filter(
