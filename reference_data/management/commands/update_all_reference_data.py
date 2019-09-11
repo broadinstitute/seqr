@@ -3,7 +3,6 @@ from collections import OrderedDict
 from django.core.management.base import BaseCommand, CommandError
 
 from reference_data.management.commands.utils.update_utils import update_records
-from reference_data.management.commands.update_gtex import GtexReferenceDataHandler
 from reference_data.management.commands.update_human_phenotype_ontology import update_hpo
 from reference_data.management.commands.update_dbnsfp_gene import DbNSFPReferenceDataHandler
 from reference_data.management.commands.update_gencode import update_gencode
@@ -21,7 +20,6 @@ REFERENCE_DATA_SOURCES = OrderedDict([
     ("primate_ai", PrimateAIReferenceDataHandler),
     ("mgi", MGIReferenceDataHandler),
     ("hpo", None),
-    ("gtex", GtexReferenceDataHandler),
 ])
 
 

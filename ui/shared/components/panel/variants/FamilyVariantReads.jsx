@@ -32,12 +32,7 @@ const FamilyVariantReads = ({ variant, samples, individualsByGuid, hideReads }) 
 
   const locus = variant && getLocus(variant.chrom, variant.pos, 100)
 
-  const latestSamplesForIndividuals = samples.reduce((acc, sample) => {
-    if (!acc[sample.individualGuid]) {
-      acc[sample.individualGuid] = sample
-    }
-    return acc
-  }, {})
+  const latestSamplesForIndividuals = samples.reduce((acc, sample) => ({ ...acc, [sample.individualGuid]: sample }), {})
 
   const igvTracks = Object.values(latestSamplesForIndividuals).map((sample) => {
     const individual = individualsByGuid[sample.individualGuid]
