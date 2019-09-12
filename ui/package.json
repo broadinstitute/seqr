@@ -69,6 +69,7 @@
     "draftjs-md-converter": "^0.1.6",
     "filesize": "3.5.11",
     "glob": "^7.1.2",
+    "gtex-d3": "github:broadinstitute/gtex-viz#8d65862",
     "gzip-size": "4.1.0",
     "igv": "^2.2.2",
     "jquery": "3.2.1",
@@ -82,7 +83,6 @@
     "react-dev-utils": "^4.2.2",
     "react-document-title": "2.0.3",
     "react-dom": "^16.2.0",
-    "react-easy-chart": "^1.0.0",
     "react-hot-loader": "^3.0.0-beta.7",
     "react-markdown-renderer": "^1.4.0",
     "react-rangeslider": "^2.2.0",
@@ -134,7 +134,7 @@
       "^(?!.*\\.(js|jsx|mjs|css|json)$)": "<rootDir>/config/jest/fileTransform.js"
     },
     "transformIgnorePatterns": [
-      "<rootDir>[/\\\\]node_modules[/\\\\](?!(igv)/).+\\.(js|jsx|ts|tsx)$"
+      "<rootDir>[/\\\\]node_modules[/\\\\](?!(igv|gtex-d3)/).+\\.(js|jsx|ts|tsx)$"
     ],
     "moduleNameMapper": {
       "^react-native$": "react-native-web"
@@ -180,7 +180,8 @@
           ],
           "alias": {
             "shared": "./shared/",
-            "pages": "./pages/"
+            "pages": "./pages/",
+            "gtex-d3": "./node_modules/gtex-d3/"
           }
         }
       ]

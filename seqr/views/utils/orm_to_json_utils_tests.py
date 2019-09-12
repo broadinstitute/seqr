@@ -159,10 +159,9 @@ class JSONUtilsTest(TestCase):
 
         user = User.objects.filter().first()
         json = get_json_for_gene(
-            gene, user=user, add_dbnsfp=True, add_omim=True, add_constraints=True, add_notes=True, add_expression=True,
-            add_primate_ai=True)
+            gene, user=user, add_dbnsfp=True, add_omim=True, add_constraints=True, add_notes=True, add_primate_ai=True)
         fields.update({
-            'constraints', 'diseaseDesc', 'expression', 'functionDesc', 'notes', 'omimPhenotypes', 'mimNumber',
+            'constraints', 'diseaseDesc', 'functionDesc', 'notes', 'omimPhenotypes', 'mimNumber',
             'primateAi', 'geneNames',
         })
         self.assertSetEqual(set(json.keys()), fields)
