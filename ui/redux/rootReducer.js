@@ -280,35 +280,38 @@ const updateSavedVariant = (values, action = 'create') => {
 }
 
 export const updateVariantNote = (values) => {
-  console.log('updating variant note, values (rootReducer) >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>')
-  console.log(values)
-
-  // single variant
-  if (values.familyGuids) {
-    console.log('this is a single variant (rootReducer)')
-    if (values.variantGuid) {
-      return updateEntity({ ...values, variantGuid: values.variantGuid }, RECEIVE_DATA, '/api/saved_variant/note', 'noteGuid')
-    }
-    return updateSavedVariant(values)
+  // console.log('updating variant note, values (rootReducer) >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>')
+  // console.log(values)
+  //
+  // // single variant
+  // if (values.familyGuids) {
+  //   console.log('this is a single variant (rootReducer)')
+  //   if (values.variantGuid) {
+  //     return updateEntity({ ...values, variantGuid: values.variantGuid }, RECEIVE_DATA, '/api/saved_variant/note', 'noteGuid')
+  //   }
+  //   return updateSavedVariant(values)
+  // }
+  //
+  // // compound hets
+  // const compoundHetsCount = Object.keys(values).length - 2
+  // console.log('these are compound hets (rootReducer) '.concat(compoundHetsCount))
+  // for (let i = 0; i < compoundHetsCount; i++) {
+  //   const variant = values[i]
+  //   console.log('variant in the list (rootReducer')
+  //   console.log({ ...variant, note: values.note, familyGuid: values.familyGuid })
+  //   if (variant.variantGuid) {
+  //     console.log('update entity (rootReducer)')
+  //     return updateEntity({ ...variant, note: values.note, familyGuid: values.familyGuid }, RECEIVE_DATA, '/api/saved_variant/note', 'noteGuid')
+  //   }
+  //   console.log('update saved variant (rootReducer)')
+  //   console.log({ ...variant, note: values.note, familyGuid: values.familyGuid })
+  //   return updateSavedVariant({ ...variant, note: values.note, familyGuid: values.familyGuid }, 'note/create')
+  // }
+  //
+  // return updateSavedVariant(values)
+  if (values.variantGuid || values[0].variantGuid) {
+    return updateEntity(values, RECEIVE_DATA, `/api/saved_variant/${values.variantGuid}/note`, 'noteGuid')
   }
-
-  // compound hets
-  console.log('these are compound hets (rootReducer)')
-  const compoundHetsCount = Object.keys(values).length - 2
-  for (let i = 0; i < compoundHetsCount; i++) {
-    const variant = values[i]
-    console.log('variant in the list (rootReducer')
-    console.log({ ...variant, note: values.note, familyGuid: values.familyGuid })
-    if (variant.variantGuid) {
-      console.log('update entity (rootReducer)')
-      return updateEntity({ ...variant, note: values.note, familyGuid: values.familyGuid }, RECEIVE_DATA, '/api/saved_variant/note', 'noteGuid')
-    }
-    console.log('update saved variant (rootReducer)')
-    console.log({ ...variant, note: values.note, familyGuid: values.familyGuid })
-    return updateSavedVariant({ ...variant, note: values.note, familyGuid: values.familyGuid }, 'note/create')
-  }
-
-  // TODO should remove this and combine the return value of all compound hets
   return updateSavedVariant(values)
 }
 

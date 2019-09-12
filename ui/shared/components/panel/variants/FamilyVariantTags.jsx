@@ -252,8 +252,8 @@ const FamilyVariantTags = (
     const displayVariant = Array.isArray(variant) ?
       savedVariant.map((eachSavedVariant, index) => { return eachSavedVariant || variant[index] }) :
       (savedVariant || variant)
-    console.log('notes (FamilyVariantTags')
-    console.log((savedVariant && savedVariant.notes) || (savedVariant[0] === undefined ? [] : savedVariant[0].notes))
+    // console.log('notes (FamilyVariantTags')
+    // console.log((savedVariant && savedVariant.notes) || (savedVariant[0] === undefined ? [] : savedVariant[0].notes))
     return (
       <div>
         <InlineContainer>

@@ -85,8 +85,9 @@ def create_saved_variant_handler(request):
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
-def create_variant_note_handler(request):
+def create_variant_note_handler(request, variant_guid):
     request_json = json.loads(request.body)
+    variant_guids = variant_guid.split(',')
     variant_guid = request_json.get('variantGuid')
     save_as_gene_note = request_json.get('saveAsGeneNote')
     saved_variant = SavedVariant.objects.get(guid=variant_guid)
@@ -166,9 +167,10 @@ def delete_variant_note_handler(request, variant_guid, note_guid):
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
-def update_variant_tags_handler(request):
+def update_variant_tags_handler(request, variant_guid):
     request_json = json.loads(request.body)
     variant_guid = request_json.get('variantGuid')
+    variant_guids = variant_guid.split(",")
     saved_variant = SavedVariant.objects.get(guid=variant_guid)
     check_permissions(saved_variant.family.project, request.user, CAN_VIEW)
 
