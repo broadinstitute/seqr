@@ -1,5 +1,4 @@
 import logging
-import json
 from django.core.management.base import BaseCommand, CommandError
 
 from seqr.models import SavedVariant
@@ -31,7 +30,7 @@ class Command(BaseCommand):
         saved_variant.xpos_start = es_variant['xpos']
         saved_variant.ref = es_variant['ref']
         saved_variant.alt = es_variant['alt']
-        saved_variant.saved_variant_json = json.dumps(es_variant)
+        saved_variant.saved_variant_json = es_variant
         saved_variant.save()
 
         logger.info('---Done---')
