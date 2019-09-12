@@ -542,6 +542,19 @@ for variant in PARSED_COMPOUND_HET_VARIANTS_PROJECT_2:
         'genotypes': {
             'I000015_na20885': {'ab': 0.631, 'ad': None, 'gq': 99, 'sampleId': 'NA20885', 'numAlt': 1, 'dp': 50, 'pl': None},
         },
+        'genomeVersion': '38',
+        'liftedOverGenomeVersion': '37',
+        'liftedOverPos': variant['pos'] - 10,
+        'liftedOverChrom': variant['chrom'],
+    })
+
+PARSED_COMPOUND_HET_VARIANTS_MULTI_GENOME_VERSION = deepcopy(PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT)
+for variant in PARSED_COMPOUND_HET_VARIANTS_MULTI_GENOME_VERSION:
+    variant.update({
+        'genomeVersion': '38',
+        'liftedOverGenomeVersion': '37',
+        'liftedOverPos': variant['pos'] - 10,
+        'liftedOverChrom': variant['chrom'],
     })
 
 PARSED_NO_SORT_VARIANTS = deepcopy(PARSED_VARIANTS)
@@ -558,6 +571,14 @@ PARSED_MULTI_INDEX_VARIANT.update({
         'I000007_na20870': {'ab': 0.70212764, 'ad': None, 'gq': 46, 'sampleId': 'NA20870', 'numAlt': 1, 'dp': 50, 'pl': None},
         'I000015_na20885': {'ab': 0.631, 'ad': None, 'gq': 99, 'sampleId': 'NA20885', 'numAlt': 1, 'dp': 50, 'pl': None},
     },
+})
+
+PARSED_MULTI_GENOME_VERSION_VARIANT = deepcopy(PARSED_MULTI_INDEX_VARIANT)
+PARSED_MULTI_GENOME_VERSION_VARIANT.update({
+    'genomeVersion': '38',
+    'liftedOverGenomeVersion': '37',
+    'liftedOverPos': PARSED_MULTI_INDEX_VARIANT['pos'] - 10,
+    'liftedOverChrom': PARSED_MULTI_INDEX_VARIANT['chrom'],
 })
 
 MAPPING_FIELDS = [
@@ -640,6 +661,11 @@ MAPPING_FIELDS = [
 ]
 SOURCE_FIELDS = {'callset_Hom', 'callset_Hemi'}
 SOURCE_FIELDS.update(MAPPING_FIELDS)
+
+INDEX_METADATA = {
+    INDEX_NAME: {'genomeVersion': '37', 'fields': MAPPING_FIELDS},
+    SECOND_INDEX_NAME: {'genomeVersion': '38', 'fields': MAPPING_FIELDS},
+}
 
 ALL_INHERITANCE_QUERY = {
     'bool': {
@@ -782,6 +808,9 @@ MOCK_REDIS = mock.MagicMock()
 MOCK_REDIS.get.side_effect = REDIS_CACHE.get
 MOCK_REDIS.set.side_effect =_set_cache
 
+MOCK_LIFTOVER = mock.MagicMock()
+MOCK_LIFTOVER.convert_coordinate.side_effect = lambda chrom, pos: [[chrom, pos - 10]]
+
 
 class MockHit:
 
@@ -858,7 +887,8 @@ def create_mock_response(search, index=INDEX_NAME):
 
 
 @mock.patch('seqr.utils.es_utils.redis.StrictRedis', lambda **kwargs: MOCK_REDIS)
-@mock.patch('seqr.utils.es_utils.get_index_metadata', lambda index_name, client: {k: {'genomeVersion': '37', 'fields': MAPPING_FIELDS} for k in index_name.split(',')})
+@mock.patch('seqr.utils.es_utils.get_index_metadata', lambda index_name, client: {k: INDEX_METADATA[k] for k in index_name.split(',')})
+@mock.patch('seqr.utils.es_utils._liftover_grch38_to_grch37', lambda: MOCK_LIFTOVER)
 class EsUtilsTest(TestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
 
@@ -1367,8 +1397,8 @@ class EsUtilsTest(TestCase):
         self.assertEqual(total_results, 13)
 
         self.assertCachedResults(results_model, {
-            'compound_het_results': [{'ENSG00000228198': PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT}],
-            'variant_results': [PARSED_MULTI_INDEX_VARIANT],
+            'compound_het_results': [{'ENSG00000228198': PARSED_COMPOUND_HET_VARIANTS_MULTI_GENOME_VERSION}],
+            'variant_results': [PARSED_MULTI_GENOME_VERSION_VARIANT],
             'grouped_results': [{'null': [PARSED_VARIANTS[0]]}, {'ENSG00000135953': PARSED_COMPOUND_HET_VARIANTS_PROJECT_2}],
             'duplicate_doc_count': 3,
             'loaded_variant_counts': {
@@ -1437,17 +1467,17 @@ class EsUtilsTest(TestCase):
         # test pagination
         variants, total_results = get_es_variants(results_model, num_results=2, page=2)
         self.assertEqual(len(variants), 3)
-        self.assertListEqual(variants, [PARSED_VARIANTS[0]] + PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT)
+        self.assertListEqual(variants, [PARSED_VARIANTS[0]] + PARSED_COMPOUND_HET_VARIANTS_MULTI_GENOME_VERSION)
         self.assertEqual(total_results, 11)
 
         self.assertCachedResults(results_model, {
             'compound_het_results': [],
-            'variant_results': [PARSED_MULTI_INDEX_VARIANT],
+            'variant_results': [PARSED_MULTI_GENOME_VERSION_VARIANT],
             'grouped_results': [
                 {'null': [PARSED_VARIANTS[0]]},
                 {'ENSG00000135953': PARSED_COMPOUND_HET_VARIANTS_PROJECT_2},
                 {'null': [PARSED_VARIANTS[0]]},
-                {'ENSG00000228198': PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT}
+                {'ENSG00000228198': PARSED_COMPOUND_HET_VARIANTS_MULTI_GENOME_VERSION}
             ],
             'duplicate_doc_count': 5,
             'loaded_variant_counts': {
