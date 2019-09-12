@@ -202,7 +202,6 @@ const VariantNoteField = ({ action, note, variant, family, ...props }) => {
     modalTitle={`${action} Variant Note for Family ${family.displayName}`}
     additionalEditFields={VARIANT_NOTE_FIELDS}
     initialValues={values}
-    displayValues={values[0]}
     idField={note ? 'noteGuid' : 'variantId'}
     deleteConfirm="Are you sure you want to delete this note?"
     textPopup={note && taggedByPopup(note, 'Note By')}
@@ -247,13 +246,14 @@ const FamilyVariantTags = (
   { variant, savedVariant, family, project, dispatchUpdateVariantNote, dispatchUpdateFamilyVariantTags, isCompoundHet, areCompoundHets },
 ) => {
   if (family) {
-    // console.log('------ variant: ')
-    // console.log(variant)
-    // console.log('------ saved variant: ')
-    // console.log(savedVariant)
     if (isCompoundHet) {
       return <VariantLink variant={variant} savedVariant={savedVariant} family={family} />
     }
+    const displayVariant = Array.isArray(variant) ?
+      savedVariant.map((eachSavedVariant, index) => { return eachSavedVariant || variant[index] }) :
+      (savedVariant || variant)
+    console.log('notes (FamilyVariantTags')
+    console.log((savedVariant && savedVariant.notes) || (savedVariant[0] === undefined ? [] : savedVariant[0].notes))
     return (
       <div>
         <InlineContainer>
@@ -313,7 +313,7 @@ const FamilyVariantTags = (
                 <VariantNoteField
                   key={note.noteGuid}
                   note={note}
-                  variant={savedVariant}
+                  variant={displayVariant}
                   family={family}
                   isDeletable
                   compact
@@ -322,7 +322,7 @@ const FamilyVariantTags = (
                 />,
               )}
               <VariantNoteField
-                variant={variant}
+                variant={displayVariant}
                 family={family}
                 editIconName="plus"
                 editLabel="Add Note"
@@ -358,7 +358,7 @@ const mapStateToProps = (state, ownProps) => ({
 
 const mapDispatchToProps = (dispatch, ownProps) => ({
   dispatchUpdateVariantNote: (updates) => {
-    console.log('updates ===========================================')
+    console.log('updates (FamilyVariantTags) ===========================================')
     console.log({ ...updates, familyGuid: ownProps.familyGuid })
     dispatch(updateVariantNote({ ...updates, familyGuid: ownProps.familyGuid }))
   },

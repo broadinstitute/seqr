@@ -87,7 +87,6 @@ def create_saved_variant_handler(request):
 @csrf_exempt
 def create_variant_note_handler(request):
     request_json = json.loads(request.body)
-
     variant_guid = request_json.get('variantGuid')
     save_as_gene_note = request_json.get('saveAsGeneNote')
     saved_variant = SavedVariant.objects.get(guid=variant_guid)
@@ -149,7 +148,7 @@ def update_variant_note_handler(request, variant_guid, note_guid):
     update_model_from_json(note, request_json, allow_unknown_keys=True)
 
     return create_json_response({'savedVariantsByGuid': {variant_guid: {
-        'notes': [get_json_for_variant_note(tag) for tag in saved_variant.variantnote_set.all()]
+        'notes': [get_json_for_variant_note(tag) for tag in saved_variant.variantnote_set.all()],
     }}})
 
 
