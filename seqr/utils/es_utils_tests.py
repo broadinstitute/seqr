@@ -959,6 +959,15 @@ class EsUtilsTest(TestCase):
             filters=[{'term': {'variantId': '2-103343353-GAGA-G'}}], size=1
         )
 
+        variant = get_single_es_variant(self.families, '2-103343353-GAGA-G', return_all_queried_families=True)
+        all_family_variant = deepcopy(PARSED_NO_SORT_VARIANTS[0])
+        all_family_variant['familyGuids'] = ['F000002_2', 'F000003_3', 'F000005_5']
+        all_family_variant['genotypes']['I000004_hg00731'] = {'ab': 0, 'ad': None, 'gq': 99, 'sampleId': 'HG00731', 'numAlt': 0, 'dp': 88, 'pl': None}
+        self.assertDictEqual(variant, all_family_variant)
+        self.assertExecutedSearch(
+            filters=[{'term': {'variantId': '2-103343353-GAGA-G'}}], size=1
+        )
+
     def test_get_es_variants(self):
         search_model = VariantSearch.objects.create(search={})
         results_model = VariantSearchResults.objects.create(variant_search=search_model)

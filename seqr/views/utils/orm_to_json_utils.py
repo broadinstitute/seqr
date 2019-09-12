@@ -613,7 +613,7 @@ def _get_collaborator_json(collaborator, include_permissions, can_edit):
 #
 
 def get_json_for_genes(genes, user=None, add_dbnsfp=False, add_omim=False, add_constraints=False, add_notes=False,
-                       add_expression=False, add_primate_ai=False, add_mgi=False):
+                       add_primate_ai=False, add_mgi=False):
     """Returns a JSON representation of the given list of GeneInfo.
 
     Args:
@@ -654,8 +654,6 @@ def get_json_for_genes(genes, user=None, add_dbnsfp=False, add_omim=False, add_c
             result['constraints'] = _get_json_for_model(constraint, process_result=_add_total_constraint_count) if constraint else {}
         if add_notes:
             result['notes'] = gene_notes_json.get(result['geneId'], [])
-        if add_expression:
-            result['expression'] = {ge.tissue_type: ge.expression_values for ge in gene.geneexpression_set.all()}
 
     if add_dbnsfp:
         prefetch_related_objects(genes, 'dbnsfpgene_set')
@@ -667,8 +665,6 @@ def get_json_for_genes(genes, user=None, add_dbnsfp=False, add_omim=False, add_c
         prefetch_related_objects(genes, 'primateai_set')
     if add_mgi:
         prefetch_related_objects(genes, 'mgi_set')
-    if add_expression:
-        prefetch_related_objects(genes, 'geneexpression_set')
 
     return _get_json_for_models(genes, process_result=_process_result)
 

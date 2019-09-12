@@ -46,8 +46,10 @@ def get_index_metadata(index_name, client):
     return index_metadata
 
 
-def get_single_es_variant(families, variant_id):
-    variants = EsSearch(families).filter(_single_variant_id_filter(variant_id)).search(num_results=1)
+def get_single_es_variant(families, variant_id, return_all_queried_families=False):
+    variants = EsSearch(
+        families, return_all_queried_families=return_all_queried_families
+    ).filter(_single_variant_id_filter(variant_id)).search(num_results=1)
     if not variants:
         raise Exception('Variant {} not found'.format(variant_id))
     return variants[0]
@@ -213,7 +215,7 @@ class BaseEsSearch(object):
 
     AGGREGATION_NAME = 'compound het'
 
-    def __init__(self, families, previous_search_results=None, skip_unaffected_families=False):
+    def __init__(self, families, previous_search_results=None, skip_unaffected_families=False, return_all_queried_families=False):
         self._client = get_es_client()
 
         self.samples_by_family_index = defaultdict(lambda: defaultdict(dict))
@@ -241,6 +243,7 @@ class BaseEsSearch(object):
             ))
 
         self.previous_search_results = previous_search_results or {}
+        self._return_all_queried_families = return_all_queried_families
 
         self._search = Search()
         self._index_searches = defaultdict(list)
@@ -593,6 +596,8 @@ class EsSearch(BaseEsSearch):
 
         if hasattr(raw_hit.meta, 'matched_queries'):
             family_guids = list(raw_hit.meta.matched_queries)
+        elif self._return_all_queried_families:
+            family_guids = index_family_samples.keys()
         else:
             # Searches for all inheritance and all families do not filter on inheritance so there are no matched_queries
             alt_allele_samples = set()
