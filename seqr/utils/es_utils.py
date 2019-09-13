@@ -687,7 +687,7 @@ class EsSearch(BaseEsSearch):
         new_duplicates = len(sorted_new_results) - len(variant_results)
         self.previous_search_results['duplicate_doc_count'] = previous_duplicates + new_duplicates
 
-        self.previous_search_results['total_results'] -= new_duplicates
+        self.previous_search_results['total_results'] -= self.previous_search_results['duplicate_doc_count']
 
         return variant_results
 

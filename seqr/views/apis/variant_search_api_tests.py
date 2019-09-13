@@ -20,7 +20,8 @@ SEARCH_HASH = 'd380ed0fd28c3127d07a64ea2ba907d7'
 SEARCH = {'filters': {}, 'inheritance': None}
 PROJECT_FAMILIES = [{'projectGuid': PROJECT_GUID, 'familyGuids': ['F000001_1', 'F000002_2']}]
 VARIANTS = [
-    {'alt': 'G', 'ref': 'GAGA', 'chrom': '21', 'pos': 3343353, 'xpos': 2103343353, 'genomeVersion': '38',
+    {'alt': 'G', 'ref': 'GAGA', 'chrom': '21', 'pos': 3343400, 'xpos': 2103343400, 'genomeVersion': '38',
+     'liftedOverChrom': '21', 'liftedOverPos': 3343353, 'liftedOverGenomeVersion': '37', 'variantId': '21-3343400-GAGA-G',
      'mainTranscriptId': 'ENST00000623083', 'transcripts': {'ENSG00000227232': [{'aminoAcids': 'G/S', 'geneSymbol': 'WASH7P',
      'biotype': 'protein_coding', 'category': 'missense', 'cdnaEnd': 1075, 'cdnaStart': 1075, 'codons': 'Ggt/Agt',
      'consequenceTerms': ['missense_variant'], 'hgvs': 'ENSP00000485442.1:p.Gly359Ser', 'hgvsc': 'ENST00000623083.3:c.1075G>A',
@@ -33,8 +34,8 @@ VARIANTS = [
      }, 'familyGuids': ['F000001_1', 'F000002_2'],
      'genotypes': {'NA19675': {'sampleId': 'NA19675', 'ab': 0.7021276595744681, 'gq': 46.0, 'numAlt': 1, 'dp': '50', 'ad': '14,33'},
                    'NA19679': {'sampleId': 'NA19679', 'ab': 0.0, 'gq': 99.0, 'numAlt': 0, 'dp': '45', 'ad': '45,0'}}},
-    {'alt': 'A', 'ref': 'AAAG', 'chrom': '3', 'pos': 835, 'xpos': 3000000835, 'genomeVersion': '38', 'transcripts': {}, 'familyGuids': ['F000001_1'], 'genotypes': {'NA19679': {'sampleId': 'NA19679', 'ab': 0.0, 'gq': 99.0, 'numAlt': 0, 'dp': '45', 'ad': '45,0'}}},
-    {'alt': 'T', 'ref': 'TC', 'chrom': '12', 'pos': 48367227, 'xpos': 1248367227, 'genomeVersion': '38', 'transcripts': {'ENSG00000233653': {}}, 'familyGuids': ['F000002_2'], 'genotypes': {}},
+    {'alt': 'A', 'ref': 'AAAG', 'chrom': '3', 'pos': 835, 'xpos': 3000000835, 'genomeVersion': '37', 'liftedOverGenomeVersion': '', 'variantId': '3-835-AAAG-A', 'transcripts': {}, 'familyGuids': ['F000001_1'], 'genotypes': {'NA19679': {'sampleId': 'NA19679', 'ab': 0.0, 'gq': 99.0, 'numAlt': 0, 'dp': '45', 'ad': '45,0'}}},
+    {'alt': 'T', 'ref': 'TC', 'chrom': '12', 'pos': 48367227, 'xpos': 1248367227, 'genomeVersion': '37', 'liftedOverGenomeVersion': '', 'variantId': '12-48367227-TC-T', 'transcripts': {'ENSG00000233653': {}}, 'familyGuids': ['F000002_2'], 'genotypes': {}},
 ]
 EXPECTED_VARIANTS = deepcopy(VARIANTS)
 EXPECTED_VARIANTS[0]['locusListGuids'] = []
@@ -133,7 +134,7 @@ class VariantSearchAPITest(TestCase):
              'tags_1', 'notes_1', 'family_id_2', 'tags_2', 'notes_2', 'sample_1:num_alt_alleles:gq:ab', 'sample_2:num_alt_alleles:gq:ab'])
         self.assertListEqual(
             export_content[1],
-            ['21', '3343353', 'GAGA', 'G', 'WASH7P', 'missense_variant', '', '', '', '', '', '', '', '', '', '', '', '',
+            ['21', '3343400', 'GAGA', 'G', 'WASH7P', 'missense_variant', '', '', '', '', '', '', '', '', '', '', '', '',
              '', 'ENST00000623083.3:c.1075G>A', 'ENSP00000485442.1:p.Gly359Ser', '', '', '', '1',
              'Tier 1 - Novel gene and phenotype (None)|Review (None)', '', '2', '', '', 'NA19675:1:46.0:0.702127659574', 'NA19679:0:99.0:0.0'])
 

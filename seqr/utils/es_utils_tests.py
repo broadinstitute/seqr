@@ -325,6 +325,12 @@ ES_VARIANTS = [
         'matched_queries': {INDEX_NAME: ['F000003_3', 'F000002_2'], SECOND_INDEX_NAME: ['F000011_11']},
       },
 ]
+BUILD_38_ES_VARIANT = deepcopy(ES_VARIANTS[1])
+BUILD_38_ES_VARIANT['_source'].update({
+    'start': 103343363,
+    'xpos': 2103343363,
+    'variantId': '2-103343363-GAGA-G'
+})
 
 OR2M3_COMPOUND_HET_ES_VARIANTS = deepcopy(ES_VARIANTS)
 transcripts = OR2M3_COMPOUND_HET_ES_VARIANTS[1]['_source']['sortedTranscriptConsequences']
@@ -345,7 +351,7 @@ COMPOUND_HET_INDEX_VARIANTS = {
     '{},{}'.format(SECOND_INDEX_NAME, INDEX_NAME): {'ENSG00000135953': MISSING_SAMPLE_ES_VARIANTS},
 }
 
-INDEX_ES_VARIANTS = {INDEX_NAME: ES_VARIANTS, SECOND_INDEX_NAME: [ES_VARIANTS[1]]}
+INDEX_ES_VARIANTS = {INDEX_NAME: ES_VARIANTS, SECOND_INDEX_NAME: [BUILD_38_ES_VARIANT]}
 
 TRANSCRIPT_1 = {
   'aminoAcids': 'LL/L',
@@ -577,8 +583,14 @@ PARSED_MULTI_GENOME_VERSION_VARIANT = deepcopy(PARSED_MULTI_INDEX_VARIANT)
 PARSED_MULTI_GENOME_VERSION_VARIANT.update({
     'genomeVersion': '38',
     'liftedOverGenomeVersion': '37',
-    'liftedOverPos': PARSED_MULTI_INDEX_VARIANT['pos'] - 10,
+    'liftedOverPos': PARSED_MULTI_INDEX_VARIANT['pos'],
     'liftedOverChrom': PARSED_MULTI_INDEX_VARIANT['chrom'],
+    'pos': PARSED_MULTI_INDEX_VARIANT['pos'] + 10,
+    'xpos': PARSED_MULTI_INDEX_VARIANT['xpos'] + 10,
+    'variantId': PARSED_MULTI_INDEX_VARIANT['variantId'].replace(
+        str(PARSED_MULTI_INDEX_VARIANT['pos']), str(PARSED_MULTI_INDEX_VARIANT['pos'] + 10)
+    ),
+    '_sort': [PARSED_MULTI_INDEX_VARIANT['_sort'][0] + 10],
 })
 
 MAPPING_FIELDS = [
@@ -1500,7 +1512,7 @@ class EsUtilsTest(TestCase):
         results_model.families.set(Family.objects.all())
 
         variants, total_results = get_es_variants(results_model, num_results=2)
-        expected_variants = [PARSED_VARIANTS[0], PARSED_MULTI_INDEX_VARIANT]
+        expected_variants = [PARSED_VARIANTS[0], PARSED_MULTI_GENOME_VERSION_VARIANT]
         self.assertListEqual(variants, expected_variants)
         self.assertEqual(total_results, 4)
 
@@ -1519,7 +1531,7 @@ class EsUtilsTest(TestCase):
 
         # test pagination
         variants, total_results = get_es_variants(results_model, num_results=2, page=2)
-        expected_variants = [PARSED_VARIANTS[0], PARSED_MULTI_INDEX_VARIANT]
+        expected_variants = [PARSED_VARIANTS[0], PARSED_MULTI_GENOME_VERSION_VARIANT]
         self.assertListEqual(variants, expected_variants)
         self.assertEqual(total_results, 3)
 
@@ -1663,7 +1675,6 @@ class EsUtilsTest(TestCase):
             'ENSG00000228198': {'total': 2, 'families': {'F000003_3': 2, 'F000011_11': 2}}
         })
         self.assertIsNone(self.executed_search)
-
 
     def test_genotype_inheritance_filter(self):
         samples_by_id = {'F000002_2': {
