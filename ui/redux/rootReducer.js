@@ -326,8 +326,12 @@ export const updateVariantNote = (values) => {
     if (values[0].variantGuid) {
       const variantGuids = []
       for (let i = 0; i < compoundHetsCount; i++) {
+        variantGuids.push(values[i].variantGuid)
       }
+      console.log('variant guids are here:'.concat(variantGuids))
+      return updateEntity(values, RECEIVE_DATA, `/api/saved_variant/${variantGuids.join(',')}/note`, 'noteGuid')
     }
+    return updateSavedVariant(values)
   }
 }
 
