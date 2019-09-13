@@ -309,10 +309,26 @@ export const updateVariantNote = (values) => {
   // }
   //
   // return updateSavedVariant(values)
-  if (values.variantGuid || values[0].variantGuid) {
-    return updateEntity(values, RECEIVE_DATA, `/api/saved_variant/${values.variantGuid}/note`, 'noteGuid')
+
+  // TODO process variantGuids here! convert them into comma-separated values
+  console.log('updateVariantNote (rootReducer) +++++++++++++++++++++++++++++++++++++++')
+  console.log(values)
+  if (values.familyGuids) {
+    console.log('this is a single variant (rootReducer)')
+    if (values.variantGuid) {
+      return updateEntity(values, RECEIVE_DATA, `/api/saved_variant/${values.variantGuid}/note`, 'noteGuid')
+    }
+    return updateSavedVariant(values)
   }
-  return updateSavedVariant(values)
+  else {
+    const compoundHetsCount = Object.keys(values).length - 2
+    console.log('these are compound hets (rootReducer) '.concat(compoundHetsCount))
+    if (values[0].variantGuid) {
+      const variantGuids = []
+      for (let i = 0; i < compoundHetsCount; i++) {
+      }
+    }
+  }
 }
 
 
