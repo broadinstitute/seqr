@@ -12,6 +12,7 @@ from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch
     AnalysisGroup, ProjectCategory, VariantTagType
 from seqr.utils.es_utils import get_es_variants, get_single_es_variant, get_es_variant_gene_counts,\
     InvalidIndexException, XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
+from seqr.utils.xpos_utils import get_xpos
 from seqr.views.apis.saved_variant_api import _saved_variant_genes, _add_locus_lists
 from seqr.views.utils.export_table_utils import export_table
 from seqr.utils.gene_utils import get_genes
@@ -474,21 +475,30 @@ def _get_saved_variants(variants):
     if not variants:
         return {}
 
+    has_multiple_genome_builds = len({var['genomeVersion'] for var in variants}) > 1
+
     variant_q = Q()
     for variant in variants:
         variant_q |= Q(xpos_start=variant['xpos'], ref=variant['ref'], alt=variant['alt'], family__guid__in=variant['familyGuids'])
+        if has_multiple_genome_builds and variant['liftedOverGenomeVersion']:
+            lifted_xpos = get_xpos(variant['liftedOverChrom'], variant['liftedOverPos'])
+            variant_q |= Q(xpos_start=lifted_xpos, ref=variant['ref'], alt=variant['alt'], family__guid__in=variant['familyGuids'])
     saved_variants = SavedVariant.objects.filter(variant_q)
 
-    variants_by_id = {'{}-{}-{}'.format(var['xpos'], var['ref'], var['alt']): var for var in variants}
-    saved_variants_json = get_json_for_saved_variants(saved_variants, add_tags=True)
+    variants_by_id = {_get_variant_key(var): var for var in variants}
+    saved_variants_json = get_json_for_saved_variants(saved_variants, add_tags=True, add_details=True)
     saved_variants_by_guid = {}
     for saved_variant in saved_variants_json:
         family_guids = saved_variant['familyGuids']
         saved_variant.update(
-            variants_by_id['{}-{}-{}'.format(saved_variant['xpos'], saved_variant['ref'], saved_variant['alt'])]
+            variants_by_id[_get_variant_key(saved_variant)]
         )
         #  For saved variants only use family it was saved for, not all families in search
         saved_variant['familyGuids'] = family_guids
         saved_variants_by_guid[saved_variant['variantGuid']] = saved_variant
 
     return saved_variants_by_guid
+
+
+def _get_variant_key(variant):
+    '{}-{}-{}_{}'.format(variant['xpos'], variant['ref'], variant['alt'], variant['genomeVersion'])
