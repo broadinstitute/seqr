@@ -88,34 +88,37 @@ def create_saved_variant_handler(request):
 def create_variant_note_handler(request, variant_guid):
     request_json = json.loads(request.body)
     variant_guids = variant_guid.split(',')
-    variant_guid = request_json.get('variantGuid')
     save_as_gene_note = request_json.get('saveAsGeneNote')
-    saved_variant = SavedVariant.objects.get(guid=variant_guid)
-    check_permissions(saved_variant.family.project, request.user, CAN_VIEW)
 
-    if save_as_gene_note:
-        main_transcript_id = saved_variant.selected_main_transcript_id or saved_variant.saved_variant_json['mainTranscriptId']
-        gene_id = next(
-            (gene_id for gene_id, transcripts in saved_variant.saved_variant_json['transcripts'].items()
-             if any(t['transcriptId'] == main_transcript_id for t in transcripts)), None) if main_transcript_id else None
-        create_seqr_model(
-            GeneNote,
-            note=request_json.get('note'),
-            gene_id=gene_id,
-            created_by=request.user,
-        )
+    all_saved_variants = []
 
-    gene_note = {gene_id: {
-        'notes': get_json_for_gene_notes_by_gene_id([gene_id], request.user).get(gene_id, [])}} if save_as_gene_note else {}
+    for variant_guid in variant_guids:
+        saved_variant = SavedVariant.objects.get(guid=variant_guid)
+        check_permissions(saved_variant.family.project, request.user, CAN_VIEW)
 
-    # _create_variant_note(saved_variant, request_json, request.user)
-    # logging.info("create_seqr_model(%s, %s, %s)" % (saved_variant.__name__, request_json, request.user))
+        if save_as_gene_note:
+            main_transcript_id = saved_variant.selected_main_transcript_id or saved_variant.saved_variant_json['mainTranscriptId']
+            gene_id = next(
+                (gene_id for gene_id, transcripts in saved_variant.saved_variant_json['transcripts'].items()
+                 if any(t['transcriptId'] == main_transcript_id for t in transcripts)), None) if main_transcript_id else None
+            create_seqr_model(
+                GeneNote,
+                note=request_json.get('note'),
+                gene_id=gene_id,
+                created_by=request.user,
+            )
+
+        gene_note = {gene_id: {
+            'notes': get_json_for_gene_notes_by_gene_id([gene_id], request.user).get(gene_id, [])}} if save_as_gene_note else {}
+
+        all_saved_variants.append(saved_variant)
+
     VariantNote.objects.create(
         note=request_json.get('note'),
         submit_to_clinvar=request_json.get('submitToClinvar') or False,
         search_hash=request_json.get('searchHash'),
         created_by=request.user,
-    ).saved_variants.add(saved_variant)
+    ).saved_variants.add(*all_saved_variants)
 
     variant_note = {variant_guid: {
         'notes': [get_json_for_variant_note(tag) for tag in saved_variant.variantnote_set.all()]},

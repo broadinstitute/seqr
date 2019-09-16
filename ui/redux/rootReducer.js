@@ -320,19 +320,17 @@ export const updateVariantNote = (values) => {
     }
     return updateSavedVariant(values)
   }
-  else {
-    const compoundHetsCount = Object.keys(values).length - 2
-    console.log('these are compound hets (rootReducer) '.concat(compoundHetsCount))
-    if (values[0].variantGuid) {
-      const variantGuids = []
-      for (let i = 0; i < compoundHetsCount; i++) {
-        variantGuids.push(values[i].variantGuid)
-      }
-      console.log('variant guids are here:'.concat(variantGuids))
-      return updateEntity(values, RECEIVE_DATA, `/api/saved_variant/${variantGuids.join(',')}/note`, 'noteGuid')
+  const compoundHetsCount = Object.keys(values).length - 2
+  console.log('these are compound hets (rootReducer) '.concat(compoundHetsCount))
+  if (values[0].variantGuid) {
+    const variantGuids = []
+    for (let i = 0; i < compoundHetsCount; i++) {
+      variantGuids.push(values[i].variantGuid)
     }
-    return updateSavedVariant(values)
+    console.log('variant guids are here:'.concat(variantGuids))
+    return updateEntity(values, RECEIVE_DATA, `/api/saved_variant/${variantGuids.join(',')}/note`, 'noteGuid')
   }
+  return updateSavedVariant(values)
 }
 
 
