@@ -160,15 +160,19 @@ def update_variant_note_handler(request, variant_guids, note_guid):
 @csrf_exempt
 def delete_variant_note_handler(request, variant_guids, note_guid):
     saved_variants = []
+    variant_guids = variant_guids.split(',')
     for variant_guid in variant_guids:
         saved_variant = SavedVariant.objects.get(guid=variant_guid)
         check_permissions(saved_variant.family.project, request.user, CAN_VIEW)
         saved_variants.append(saved_variant)
     note = VariantNote.objects.get(guid=note_guid)
     delete_seqr_model(note)
-    return create_json_response({'savedVariantsByGuid': {variant_guid: {
-        'notes': [get_json_for_variant_note(tag) for tag in saved_variant.variantnote_set.all()]
-    }}})
+    update = {}
+    for variant_guid in variant_guids:
+        update[variant_guid] = {
+            'notes': [get_json_for_variant_note(tag) for tag in saved_variant.variantnote_set.all()]
+        }
+    return create_json_response({'savedVariantsByGuid': update})
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
