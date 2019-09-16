@@ -184,8 +184,6 @@ def delete_variant_note_handler(request, variant_guids, note_guid):
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def update_variant_tags_handler(request, variant_guids):
-    import pdb
-    pdb.set_trace()
     request_json = json.loads(request.body)
     variant_guids = variant_guids.split(',')
     saved_variants = []
