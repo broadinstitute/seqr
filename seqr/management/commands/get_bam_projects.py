@@ -19,7 +19,7 @@ class Command(BaseCommand):
         }
 
         samples = [s for s in all_samples if s.loaded_date == sample_individual_max_loaded_date[s.individual.guid] and
-                   s.dataset_file_path.endswith('.bam')]
+                   s.dataset_file_path.endswith('.bam') and not s.dataset_file_path.startswith('gs://')]
 
         project_bams = defaultdict(list)
         for sample in samples:
