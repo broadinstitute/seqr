@@ -9,7 +9,7 @@ import urllib3
 
 from settings import READ_VIZ_CRAM_PATH, READ_VIZ_BAM_PATH
 from seqr.utils.gcloud.google_bucket_file_utils import is_google_bucket_file_path, google_bucket_file_iter, \
-    does_google_bucket_file_exist, get_google_bucket_file_stats
+    does_google_bucket_file_exist
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -168,8 +168,8 @@ def _stream_google_file(request, path):
         first_byte = int(first_byte) if first_byte else 0
         last_byte = int(last_byte)
         length = last_byte - first_byte + 1
-        range = (first_byte, last_byte)
-        resp = StreamingHttpResponse(google_bucket_file_iter(path, byte_range=range), status=206, content_type=content_type)
+        resp = StreamingHttpResponse(
+            google_bucket_file_iter(path, byte_range=(first_byte, last_byte)), status=206, content_type=content_type)
         resp['Content-Length'] = str(length)
         resp['Content-Range'] = 'bytes %s-%s' % (first_byte, last_byte)
     else:
