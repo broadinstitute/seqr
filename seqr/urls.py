@@ -196,10 +196,10 @@ api_endpoints = {
     'saved_search/(?P<saved_search_guid>[^/]+)/delete': delete_saved_search_handler,
 
     'saved_variant/create': create_saved_variant_handler,
-    'saved_variant/(?P<variant_guid>[^/]+)/update_tags': update_variant_tags_handler,
-    'saved_variant/(?P<variant_guid>[^/]+)/note/create': create_variant_note_handler,
-    'saved_variant/(?P<variant_guid>[^/]+)/note/(?P<note_guid>[^/]+)/update': update_variant_note_handler,
-    'saved_variant/(?P<variant_guid>[^/]+)/note/(?P<note_guid>[^/]+)/delete': delete_variant_note_handler,
+    'saved_variant/(?P<variant_guids>[^/]+)/update_tags': update_variant_tags_handler,
+    'saved_variant/(?P<variant_guids>[^/]+)/note/create': create_variant_note_handler,
+    'saved_variant/(?P<variant_guids>[^/]+)/note/(?P<note_guid>[^/]+)/update': update_variant_note_handler,
+    'saved_variant/(?P<variant_guids>[^/]+)/note/(?P<note_guid>[^/]+)/delete': delete_variant_note_handler,
     'saved_variant/(?P<variant_guid>[^/]+)/update_transcript/(?P<transcript_id>[^/]+)': update_variant_main_transcript,
 
     'genes_info': genes_info,
