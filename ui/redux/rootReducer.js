@@ -283,7 +283,7 @@ export const updateVariantNote = (values) => {
   // console.log('updating variant note, values (rootReducer) >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>')
   // console.log(values)
   //
-  // // single variant
+  // // single variantu
   // if (values.familyGuids) {
   //   console.log('this is a single variant (rootReducer)')
   //   if (values.variantGuid) {

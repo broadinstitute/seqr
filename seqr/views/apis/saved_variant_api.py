@@ -161,7 +161,7 @@ def update_variant_note_handler(request, variant_guid, note_guid):
 def delete_variant_note_handler(request, variant_guid, note_guid):
     saved_variant = SavedVariant.objects.get(guid=variant_guid)
     check_permissions(saved_variant.family.project, request.user, CAN_VIEW)
-    note = VariantNote.objects.get(guid=note_guid, saved_variant=saved_variant)
+    note = VariantNote.objects.get(guid=note_guid, saved_variants=saved_variant)
     delete_seqr_model(note)
     return create_json_response({'savedVariantsByGuid': {variant_guid: {
         'notes': [get_json_for_variant_note(tag) for tag in saved_variant.variantnote_set.all()]

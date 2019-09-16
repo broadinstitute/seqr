@@ -187,12 +187,6 @@ VariantTagField.propTypes = {
 
 const VariantNoteField = ({ action, note, variant, family, ...props }) => {
   const values = { ...variant, ...note }
-  // console.log('========= TextFieldView values')
-  // console.log(values)
-  // console.log('variant')
-  // console.log(variant)
-  // console.log('note')
-  // console.log(note)
   return <TextFieldView
     noModal
     showInLine
@@ -252,8 +246,6 @@ const FamilyVariantTags = (
     const displayVariant = Array.isArray(variant) ?
       savedVariant.map((eachSavedVariant, index) => { return eachSavedVariant || variant[index] }) :
       (savedVariant || variant)
-    // console.log('notes (FamilyVariantTags')
-    // console.log((savedVariant && savedVariant.notes) || (savedVariant[0] === undefined ? [] : savedVariant[0].notes))
     return (
       <div>
         <InlineContainer>
@@ -358,8 +350,6 @@ const mapStateToProps = (state, ownProps) => ({
 
 const mapDispatchToProps = (dispatch, ownProps) => ({
   dispatchUpdateVariantNote: (updates) => {
-    console.log('updates (FamilyVariantTags) ===========================================')
-    console.log({ ...updates, familyGuid: ownProps.familyGuid })
     dispatch(updateVariantNote({ ...updates, familyGuid: ownProps.familyGuid }))
   },
   dispatchUpdateFamilyVariantTags: (updates) => {
