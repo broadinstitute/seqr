@@ -264,9 +264,6 @@ export const loadSavedVariants = (familyGuids, variantGuid, tag, gene = '') => {
 
 
 const updateSavedVariant = (values, action = 'create') => {
-  console.log('updateSavedVariant (rootReducer) >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>')
-  console.log(values)
-  console.log(action)
   return (dispatch, getState) => {
     return new HttpRequestHelper(`/api/saved_variant/${action}`,
       (responseJson) => {
@@ -313,8 +310,11 @@ export const updateVariantNote = (values) => {
 
 
 export const updateVariantTags = (values) => {
+  console.log('updateVariantTags (rootReducer.js)')
+  console.log(values)
   const urlPath = values.variantGuid ? 'update_tags' : 'create'
-  return updateSavedVariant(values, urlPath)
+  console.log(urlPath)
+  return updateSavedVariant(values, `${values.variantGuid}/${urlPath}`)
 }
 
 export const updateVariantMainTranscript = (variantGuid, transcriptId) => {

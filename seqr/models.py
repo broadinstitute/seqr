@@ -608,7 +608,7 @@ class VariantTag(ModelWithGUID):
     search_parameters = models.TextField(null=True, blank=True)  # aka. search url
 
     def __unicode__(self):
-        return "%s:%s" % (str(self.saved_variant), self.variant_tag_type.name)
+        return "%s:%s" % (str(self.saved_variants), self.variant_tag_type.name)
         # return "%s:%s" % ("tags", self.variant_tag_type.name)
 
     def _compute_guid(self):
