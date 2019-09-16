@@ -144,23 +144,30 @@ def _create_variant_note(saved_variant, note_json, user):
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def update_variant_note_handler(request, variant_guids, note_guid):
-    saved_variant = SavedVariant.objects.get(guid=variant_guid)
-    check_permissions(saved_variant.family.project, request.user, CAN_VIEW)
-    note = VariantNote.objects.get(guid=note_guid, saved_variants=saved_variant)
+    variant_guids = variant_guids.split(',')
+    saved_variants = []
+    for variant_guid in variant_guids:
+        saved_variant = SavedVariant.objects.get(guid=variant_guid)
+        check_permissions(saved_variant.family.project, request.user, CAN_VIEW)
+        saved_variants.append(saved_variant)
+    note = VariantNote.objects.get(guid=note_guid)
 
     request_json = json.loads(request.body)
     update_model_from_json(note, request_json, allow_unknown_keys=True)
 
-    return create_json_response({'savedVariantsByGuid': {variant_guid: {
-        'notes': [get_json_for_variant_note(tag) for tag in saved_variant.variantnote_set.all()],
-    }}})
+    update = {}
+    for variant_guid in variant_guids:
+        update[variant_guid] = {
+            'notes': [get_json_for_variant_note(note) for note in saved_variant.variantnote_set.all()],
+        }
+    return create_json_response({'savedVariantsByGuid': update})
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def delete_variant_note_handler(request, variant_guids, note_guid):
-    saved_variants = []
     variant_guids = variant_guids.split(',')
+    saved_variants = []
     for variant_guid in variant_guids:
         saved_variant = SavedVariant.objects.get(guid=variant_guid)
         check_permissions(saved_variant.family.project, request.user, CAN_VIEW)
@@ -170,7 +177,7 @@ def delete_variant_note_handler(request, variant_guids, note_guid):
     update = {}
     for variant_guid in variant_guids:
         update[variant_guid] = {
-            'notes': [get_json_for_variant_note(tag) for tag in saved_variant.variantnote_set.all()]
+            'notes': [get_json_for_variant_note(note) for note in saved_variant.variantnote_set.all()]
         }
     return create_json_response({'savedVariantsByGuid': update})
 
@@ -179,10 +186,12 @@ def delete_variant_note_handler(request, variant_guids, note_guid):
 @csrf_exempt
 def update_variant_tags_handler(request, variant_guids):
     request_json = json.loads(request.body)
-    variant_guid = request_json.get('variantGuid')
-    variant_guids = variant_guid.split(",")
-    saved_variant = SavedVariant.objects.get(guid=variant_guid)
-    check_permissions(saved_variant.family.project, request.user, CAN_VIEW)
+    variant_guids = variant_guids.split(',')
+    saved_variants = []
+    for variant_guid in variant_guids:
+        saved_variant = SavedVariant.objects.get(guid=variant_guid)
+        check_permissions(saved_variant.family.project, request.user, CAN_VIEW)
+        saved_variants.append(saved_variant)
 
     updated_tags = request_json.get('tags', [])
     updated_functional_data = request_json.get('functionalData', [])
