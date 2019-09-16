@@ -17,7 +17,10 @@ def is_google_bucket_file_path(file_path):
 
 
 def does_google_bucket_file_exist(gs_path):
-    return get_google_bucket_file_stats(gs_path) is not None
+    try:
+        return get_google_bucket_file_stats(gs_path) is not None
+    except RuntimeError:
+        return False
 
 
 def get_google_bucket_file_stats(gs_path):

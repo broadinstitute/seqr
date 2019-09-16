@@ -2,11 +2,12 @@ import os
 import requests
 from requests.auth import HTTPBasicAuth
 from requests_toolbelt.utils import dump
-from django.http import HttpResponse
+from django.http import HttpResponse, StreamingHttpResponse
 import logging
 import urllib3
 
 from settings import READ_VIZ_CRAM_PATH, READ_VIZ_BAM_PATH
+from seqr.utils.gcloud.google_bucket_file_utils import is_google_bucket_file_path, google_bucket_file_iter, does_google_bucket_file_exist
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -123,7 +124,14 @@ def proxy_request(request, url, host=None, scheme=None, method=None, session=Non
 
 def proxy_to_igv(igv_track_path, params, request=None, **request_kwargs):
     is_cram = igv_track_path.split('?')[0].endswith('.cram')
-    if is_cram:
+    if is_google_bucket_file_path(igv_track_path):
+        if igv_track_path.endswith('.bam.bai') and not does_google_bucket_file_exist(igv_track_path):
+            igv_track_path = igv_track_path.replace('.bam.bai', '.bai')
+        return StreamingHttpResponse(
+            streaming_content=google_bucket_file_iter(igv_track_path),
+            status=200,
+        )
+    elif is_cram:
         absolute_path = "/alignments?reference=igvjs/static/data/public/Homo_sapiens_assembly38.fasta&file=igvjs/static/data/readviz-mounts/{0}&options={1}&region={2}".format(
             igv_track_path, params.get('options', ''), params.get('region', ''))
         request_kwargs.update({'host': READ_VIZ_CRAM_PATH, 'stream': True})
