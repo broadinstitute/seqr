@@ -1,4 +1,5 @@
 import os
+import re
 import requests
 from requests.auth import HTTPBasicAuth
 from requests_toolbelt.utils import dump
@@ -7,7 +8,8 @@ import logging
 import urllib3
 
 from settings import READ_VIZ_CRAM_PATH, READ_VIZ_BAM_PATH
-from seqr.utils.gcloud.google_bucket_file_utils import is_google_bucket_file_path, google_bucket_file_iter, does_google_bucket_file_exist
+from seqr.utils.gcloud.google_bucket_file_utils import is_google_bucket_file_path, google_bucket_file_iter, \
+    does_google_bucket_file_exist, get_google_bucket_file_stats
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -127,10 +129,8 @@ def proxy_to_igv(igv_track_path, params, request=None, **request_kwargs):
     if is_google_bucket_file_path(igv_track_path):
         if igv_track_path.endswith('.bam.bai') and not does_google_bucket_file_exist(igv_track_path):
             igv_track_path = igv_track_path.replace('.bam.bai', '.bai')
-        return StreamingHttpResponse(
-            streaming_content=google_bucket_file_iter(igv_track_path),
-            status=200,
-        )
+
+        return _stream_google_file(request, igv_track_path)
     elif is_cram:
         absolute_path = "/alignments?reference=igvjs/static/data/public/Homo_sapiens_assembly38.fasta&file=igvjs/static/data/readviz-mounts/{0}&options={1}&region={2}".format(
             igv_track_path, params.get('options', ''), params.get('region', ''))
@@ -156,3 +156,28 @@ def _convert_django_META_to_http_headers(request_meta_dict):
     }
 
     return http_headers
+
+
+def _stream_google_file(request, path):
+    # based on https://gist.github.com/dcwatson/cb5d8157a8fa5a4a046e
+    file_stats = get_google_bucket_file_stats(path)
+    size = file_stats.size
+    content_type = 'application/octet-stream'
+    range_header = request.META.get('HTTP_RANGE', None)
+    if range_header:
+        range_match = re.compile(r'bytes\s*=\s*(\d+)\s*-\s*(\d*)', re.I).match(range_header)
+        first_byte, last_byte = range_match.groups()
+        first_byte = int(first_byte) if first_byte else 0
+        last_byte = int(last_byte) if last_byte else size - 1
+        if last_byte >= size:
+            last_byte = size - 1
+        length = last_byte - first_byte + 1
+        range = (first_byte, last_byte)
+        resp = StreamingHttpResponse(google_bucket_file_iter(path, range=range), status=206, content_type=content_type)
+        resp['Content-Length'] = str(length)
+        resp['Content-Range'] = 'bytes %s-%s/%s' % (first_byte, last_byte, size)
+    else:
+        resp = StreamingHttpResponse(google_bucket_file_iter(path), content_type=content_type)
+        resp['Content-Length'] = str(size)
+    resp['Accept-Ranges'] = 'bytes'
+    return resp

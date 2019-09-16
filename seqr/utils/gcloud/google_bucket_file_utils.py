@@ -57,9 +57,9 @@ def get_google_bucket_file_stats(gs_path):
     return FileStats(ctime=ctime, mtime=mtime, size=file_size, md5=file_md5)
 
 
-def google_bucket_file_iter(gs_path):
+def google_bucket_file_iter(gs_path, range=None):
     """Iterate over lines in the given file"""
-    command = "gsutil cat %(gs_path)s " % locals()
+    command = "gsutil cat {range_arg}{gs_path} ".format(gs_path=gs_path, range_arg='-r {}-{} '.format(range[0], range[1]) if range else '')
     if gs_path.endswith("gz"):
         command += "| gunzip -c -q - "
 
