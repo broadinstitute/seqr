@@ -152,9 +152,10 @@ class DatasetAPITest(TransactionTestCase):
 
         self.assertTrue(Project.objects.get(guid=PROJECT_GUID).has_new_search)
 
+    @mock.patch('seqr.views.utils.dataset_utils.does_google_bucket_file_exist')
     @mock.patch('seqr.views.utils.dataset_utils.proxy_to_igv')
     @mock.patch('seqr.views.utils.dataset_utils.load_uploaded_file')
-    def test_add_alignment_dataset(self, mock_load_file_utils, mock_igv_proxy):
+    def test_add_alignment_dataset(self, mock_load_file_utils, mock_igv_proxy, mock_google_bucket_proxy):
         url = reverse(add_alignment_dataset_handler, args=[PROJECT_GUID])
         _check_login(self, url)
 
@@ -178,9 +179,10 @@ class DatasetAPITest(TransactionTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['BAM / CRAM file "invalid_path.txt" must have a .bam or .cram extension']})
 
-        mock_load_file_utils.return_value = [('NA19675', '/readviz/NA19675.cram'), ('NA19679', '/readviz/NA19679.bam')]
+        mock_load_file_utils.return_value = [('NA19675', '/readviz/NA19675.cram'), ('NA19679', 'gs://readviz/NA19679.bam')]
         mock_igv_proxy.return_value.content = 'Read error'
         mock_igv_proxy.return_value.status_code = 400
+        mock_google_bucket_proxy.return_value = False
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'sampleType': 'WES',
             'mappingFile': {'uploadedFileId': 1234},
@@ -195,10 +197,18 @@ class DatasetAPITest(TransactionTestCase):
             'mappingFile': {'uploadedFileId': 1234},
         }))
         self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'errors': ['Error accessing "gs://readviz/NA19679.bam"']})
+
+        mock_google_bucket_proxy.return_value = True
+        response = self.client.post(url, content_type='application/json', data=json.dumps({
+            'sampleType': 'WES',
+            'mappingFile': {'uploadedFileId': 1234},
+        }))
+        self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['The following Individual IDs do not exist: NA19675']})
 
         # Send valid request
-        mock_load_file_utils.return_value = [('NA19675_1', '/readviz/NA19675.cram'), ('NA19679', '/readviz/NA19679.bam')]
+        mock_load_file_utils.return_value = [('NA19675_1', '/readviz/NA19675.cram'), ('NA19679', 'gs://readviz/NA19679.bam')]
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'sampleType': 'WES',
             'mappingFile': {'uploadedFileId': 1234},
@@ -222,7 +232,7 @@ class DatasetAPITest(TransactionTestCase):
         sample_guid_na19675 = next(guid for guid, sample in response_json['samplesByGuid'].items() if sample['sampleId'] == 'NA19675')
         sample_guid_na19679 = next(guid for guid, sample in response_json['samplesByGuid'].items() if sample['sampleId'] == 'NA19679')
         self.assertEqual(response_json['samplesByGuid'][sample_guid_na19675]['datasetFilePath'], '/readviz/NA19675.cram')
-        self.assertEqual(response_json['samplesByGuid'][sample_guid_na19679]['datasetFilePath'], '/readviz/NA19679.bam')
+        self.assertEqual(response_json['samplesByGuid'][sample_guid_na19679]['datasetFilePath'], 'gs://readviz/NA19679.bam')
 
         self.assertSetEqual( set(response_json['individualsByGuid'].keys()), {'I000001_na19675', 'I000003_na19679'})
         self.assertTrue(sample_guid_na19675 in response_json['individualsByGuid']['I000001_na19675']['sampleGuids'])
