@@ -57,12 +57,12 @@ def get_google_bucket_file_stats(gs_path):
     return FileStats(ctime=ctime, mtime=mtime, size=file_size, md5=file_md5)
 
 
-def google_bucket_file_iter(gs_path, range=None):
+def google_bucket_file_iter(gs_path, byte_range=None):
     """Iterate over lines in the given file"""
-    command = "gsutil cat {range_arg}{gs_path} ".format(gs_path=gs_path, range_arg='-r {}-{} '.format(range[0], range[1]) if range else '')
+    command = "gsutil cat {range_arg}{gs_path} ".format(
+        gs_path=gs_path, range_arg='-r {}-{} '.format(byte_range[0], byte_range[1]) if byte_range else '')
     if gs_path.endswith("gz"):
         command += "| gunzip -c -q - "
-
     process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
     for line in process.stdout:
         yield line

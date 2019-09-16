@@ -26,7 +26,7 @@ class ProxyRequestUtilsTest(TestCase):
         response = proxy_to_igv('gs://project_A/sample_1.bam.bai', {}, MOCK_REQUEST)
         self.assertEqual(response.status_code, 206)
         self.assertListEqual([val for val in response.streaming_content], STREAMING_READS_CONTENT)
-        mock_google_bucket_file_iter.assert_called_with('gs://project_A/sample_1.bai', range=(100, 200))
+        mock_google_bucket_file_iter.assert_called_with('gs://project_A/sample_1.bai', byte_range=(100, 200))
 
         # test cram
         response = proxy_to_igv('project_A/sample_1.cram', {'options': '-b,-H'}, MOCK_REQUEST)

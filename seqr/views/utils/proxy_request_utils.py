@@ -169,7 +169,7 @@ def _stream_google_file(request, path):
         last_byte = int(last_byte)
         length = last_byte - first_byte + 1
         range = (first_byte, last_byte)
-        resp = StreamingHttpResponse(google_bucket_file_iter(path, range=range), status=206, content_type=content_type)
+        resp = StreamingHttpResponse(google_bucket_file_iter(path, byte_range=range), status=206, content_type=content_type)
         resp['Content-Length'] = str(length)
         resp['Content-Range'] = 'bytes %s-%s' % (first_byte, last_byte)
     else:
