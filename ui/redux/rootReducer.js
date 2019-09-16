@@ -310,11 +310,26 @@ export const updateVariantNote = (values) => {
 
 
 export const updateVariantTags = (values) => {
-  console.log('updateVariantTags (rootReducer.js)')
-  console.log(values)
-  const urlPath = values.variantGuid ? 'update_tags' : 'create'
-  console.log(urlPath)
-  return updateSavedVariant(values, `${values.variantGuid}/${urlPath}`)
+  if (values.familyGuids) {
+    const urlPath = values.variantGuid ? 'update_tags' : 'create'
+    return updateSavedVariant(values, `${values.variantGuid}/${urlPath}`)
+  }
+  const variantGuids = []
+  let currVariantGuid
+  for (let i = 0; i < Object.keys(values).length; i++) {
+    try {
+      currVariantGuid = values[i].variantGuid
+    }
+    catch (err) {
+      currVariantGuid = null
+    }
+    if (currVariantGuid) {
+      variantGuids.push(currVariantGuid)
+    }
+  }
+  console.log('variant guids are: '.concat(variantGuids.join(',')))
+  const urlPath = values[0].variantGuid ? 'update_tags' : 'create'
+  return updateSavedVariant(values, `${variantGuids.join(',')}/${urlPath}`)
 }
 
 export const updateVariantMainTranscript = (variantGuid, transcriptId) => {

@@ -61,8 +61,7 @@ MetadataField.propTypes = {
 
 
 const TagFieldView = ({ simplifiedValue, initialValues, field, tagOptions, popup, tagAnnotation, editMetadata, ...props }) => {
-  const fieldValues = initialValues[field] || []
-
+  const fieldValues = (Array.isArray(initialValues) ? initialValues[0] : initialValues)[field] || []
   tagOptions = tagOptions.map((tag, i) => {
     return { ...tag, ...fieldValues.find(val => val.name === tag.name), optionIndex: i }
   })

@@ -165,19 +165,30 @@ ShortcutTags.propTypes = {
 }
 
 
-const VariantTagField = ({ variant, fieldName, family, ...props }) =>
-  <TagFieldView
-    idField="variantId"
-    modalId={family.familyGuid}
-    modalTitle={`Edit Variant ${fieldName} for Family ${family.displayName} for chr${variant.chrom}:${variant.pos} ${variant.ref} > ${variant.alt}`}
-    modalSize="large"
-    editLabel={`Edit ${fieldName}`}
-    initialValues={variant}
-    compact
-    isEditable
-    popup={taggedByPopup}
-    {...props}
-  />
+const VariantTagField = ({ variant, fieldName, family, ...props }) => {
+  const variantHeader = []
+  if (Array.isArray(variant)) {
+    variant.forEach(compoundHet => variantHeader.push(`chr${compoundHet.chrom}:${compoundHet.pos} ${compoundHet.ref} > ${compoundHet.alt}`))
+  }
+  else {
+    variantHeader.push(`chr${variant.chrom}:${variant.pos} ${variant.ref} > ${variant.alt}`)
+  }
+  return (
+    <TagFieldView
+      idField="variantId"
+      modalId={family.familyGuid}
+      modalTitle={`Edit Variant ${fieldName} for Family ${family.displayName} for ${variantHeader.join(', ')}`}
+      modalSize="large"
+      editLabel={`Edit ${fieldName}`}
+      initialValues={variant}
+      compact
+      isEditable
+      popup={taggedByPopup}
+      {...props}
+    />
+  )
+}
+
 
 VariantTagField.propTypes = {
   variant: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
@@ -277,7 +288,7 @@ const FamilyVariantTags = (
               field="tags"
               fieldName="Tags"
               family={family}
-              variant={savedVariant || variant}
+              variant={displayVariant}
               tagOptions={project.variantTagTypes.filter(vtt => vtt.name !== NOTE_TAG_NAME)}
               onSubmit={dispatchUpdateFamilyVariantTags}
             />
@@ -289,7 +300,7 @@ const FamilyVariantTags = (
                 field="functionalData"
                 fieldName="Fxnl Data"
                 family={family}
-                variant={savedVariant}
+                variant={displayVariant}
                 tagOptions={project.variantFunctionalTagTypes}
                 editMetadata
                 onSubmit={dispatchUpdateFamilyVariantTags}
