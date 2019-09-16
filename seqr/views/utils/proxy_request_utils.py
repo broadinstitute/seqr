@@ -160,24 +160,19 @@ def _convert_django_META_to_http_headers(request_meta_dict):
 
 def _stream_google_file(request, path):
     # based on https://gist.github.com/dcwatson/cb5d8157a8fa5a4a046e
-    file_stats = get_google_bucket_file_stats(path)
-    size = file_stats.size
     content_type = 'application/octet-stream'
     range_header = request.META.get('HTTP_RANGE', None)
     if range_header:
         range_match = re.compile(r'bytes\s*=\s*(\d+)\s*-\s*(\d*)', re.I).match(range_header)
         first_byte, last_byte = range_match.groups()
         first_byte = int(first_byte) if first_byte else 0
-        last_byte = int(last_byte) if last_byte else size - 1
-        if last_byte >= size:
-            last_byte = size - 1
+        last_byte = int(last_byte)
         length = last_byte - first_byte + 1
         range = (first_byte, last_byte)
         resp = StreamingHttpResponse(google_bucket_file_iter(path, range=range), status=206, content_type=content_type)
         resp['Content-Length'] = str(length)
-        resp['Content-Range'] = 'bytes %s-%s/%s' % (first_byte, last_byte, size)
+        resp['Content-Range'] = 'bytes %s-%s' % (first_byte, last_byte)
     else:
         resp = StreamingHttpResponse(google_bucket_file_iter(path), content_type=content_type)
-        resp['Content-Length'] = str(size)
     resp['Accept-Ranges'] = 'bytes'
     return resp
