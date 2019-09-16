@@ -13,7 +13,7 @@ from seqr.views.utils.dataset_utils import match_sample_ids_to_sample_records, v
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants
 from seqr.views.utils.variant_utils import reset_cached_search_results
-from seqr.utils.es_utils import get_es_variants_for_variant_tuples
+from seqr.utils.es_utils import get_es_variants_for_variant_tuples, get_single_es_variant
 from seqr.utils.xpos_utils import get_xpos
 
 logger = logging.getLogger(__name__)
@@ -163,15 +163,19 @@ class Command(BaseCommand):
         logger.info('Successfully lifted over {} variants'.format(len(es_variants)))
 
         #  Update saved variants
+        missing_family_count = 0
         for var in es_variants:
             saved_variant_models = saved_variants_map[(var['xpos'], var['ref'], var['alt'])]
             missing_saved_variants = [v for v in saved_variant_models if v.family.guid not in var['familyGuids']]
             if missing_saved_variants:
-                if raw_input(('Variant {}-{}-{} not find for expected families {}; found in families {}. Continue with update (y/n)? '.format(
-                    missing_saved_variants[0].xpos, var['ref'], var['alt'],
-                    ', '.join(['{} ({})'.format(v.family.guid, v.guid) for v in missing_saved_variants]),
-                    ', '.join(var['familyGuids'])
-                ))) != 'y':
+                variant_id = '{}-{}-{}-{}'.format(var['chrom'], var['pos'], var['ref'], var['alt'])
+                if raw_input(('Variant {} (hg37: {}) not find for expected families {}. Continue with update (y/n)? '.format(
+                    variant_id, missing_saved_variants[0].xpos,
+                    ', '.join(['{} ({})'.format(v.family.guid, v.guid) for v in missing_saved_variants]))
+                )) == 'y':
+                    var = get_single_es_variant([v.family for v in saved_variant_models], variant_id, return_all_queried_families=True)
+                    missing_family_count += len(missing_saved_variants)
+                else:
                     raise CommandError('Error: unable to find family data for lifted over variant')
             for saved_variant in saved_variant_models:
                 saved_variant.xpos_start = var['xpos']
@@ -192,5 +196,5 @@ class Command(BaseCommand):
         reset_cached_search_results(project)
 
         logger.info('---Done---')
-        logger.info('Succesfully lifted over {} variants. Skipped {} failed variants.'.format(
-            len(es_variants), len(missing_variants) + len(lift_failed)))
+        logger.info('Succesfully lifted over {} variants. Skipped {} failed variants. Family data not updated for {} variants'.format(
+            len(es_variants), len(missing_variants) + len(lift_failed), missing_family_count))

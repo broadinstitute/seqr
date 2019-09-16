@@ -46,8 +46,10 @@ def get_index_metadata(index_name, client):
     return index_metadata
 
 
-def get_single_es_variant(families, variant_id):
-    variants = EsSearch(families).filter(_single_variant_id_filter(variant_id)).search(num_results=1)
+def get_single_es_variant(families, variant_id, return_all_queried_families=False):
+    variants = EsSearch(
+        families, return_all_queried_families=return_all_queried_families
+    ).filter(_single_variant_id_filter(variant_id)).search(num_results=1)
     if not variants:
         raise Exception('Variant {} not found'.format(variant_id))
     return variants[0]
@@ -213,7 +215,7 @@ class BaseEsSearch(object):
 
     AGGREGATION_NAME = 'compound het'
 
-    def __init__(self, families, previous_search_results=None, skip_unaffected_families=False):
+    def __init__(self, families, previous_search_results=None, skip_unaffected_families=False, return_all_queried_families=False):
         self._client = get_es_client()
 
         self.samples_by_family_index = defaultdict(lambda: defaultdict(dict))
@@ -241,6 +243,7 @@ class BaseEsSearch(object):
             ))
 
         self.previous_search_results = previous_search_results or {}
+        self._return_all_queried_families = return_all_queried_families
 
         self._search = Search()
         self._index_searches = defaultdict(list)
@@ -591,6 +594,8 @@ class EsSearch(BaseEsSearch):
 
         if hasattr(raw_hit.meta, 'matched_queries'):
             family_guids = list(raw_hit.meta.matched_queries)
+        elif self._return_all_queried_families:
+            family_guids = index_family_samples.keys()
         else:
             # Searches for all inheritance and all families do not filter on inheritance so there are no matched_queries
             alt_allele_samples = set()
@@ -667,21 +672,65 @@ class EsSearch(BaseEsSearch):
         return result
 
     def _deduplicate_results(self, sorted_new_results):
-        duplicates = self.previous_search_results.get('duplicate_doc_count', 0)
-        variant_results = []
-        for variant in sorted_new_results:
-            if variant_results and variant_results[-1]['variantId'] == variant['variantId']:
-                variant_results[-1]['genotypes'].update(variant['genotypes'])
-                variant_results[-1]['familyGuids'] = sorted(set(variant_results[-1]['familyGuids'] + variant['familyGuids']))
-                duplicates += 1
-            else:
-                variant_results.append(variant)
+        genome_builds = {var['genomeVersion'] for var in sorted_new_results}
+        if len(genome_builds) > 1:
+            variant_results = self._deduplicate_multi_genome_variant_results(sorted_new_results)
+        else:
+            variant_results = []
+            for variant in sorted_new_results:
+                if variant_results and variant_results[-1]['variantId'] == variant['variantId']:
+                    self._merge_duplicate_variants(variant_results[-1], variant)
+                else:
+                    variant_results.append(variant)
 
-        self.previous_search_results['duplicate_doc_count'] = duplicates
+        previous_duplicates = self.previous_search_results.get('duplicate_doc_count', 0)
+        new_duplicates = len(sorted_new_results) - len(variant_results)
+        self.previous_search_results['duplicate_doc_count'] = previous_duplicates + new_duplicates
 
-        self.previous_search_results['total_results'] -= duplicates
+        self.previous_search_results['total_results'] -= self.previous_search_results['duplicate_doc_count']
 
         return variant_results
+
+    @classmethod
+    def _deduplicate_multi_genome_variant_results(cls, sorted_new_results):
+        hg_38_variant_indices = {}
+        hg_37_variant_indices = {}
+
+        variant_results = []
+        for i, variant in enumerate(sorted_new_results):
+            if variant['genomeVersion'] == GENOME_VERSION_GRCh38:
+                hg37_id = '{}-{}-{}-{}'.format(variant['liftedOverChrom'], variant['liftedOverPos'], variant['ref'], variant['alt'])
+                existing_38_index = hg_38_variant_indices.get(hg37_id)
+                if existing_38_index:
+                    cls._merge_duplicate_variants(variant_results[existing_38_index], variant)
+                    variant_results.append(None)
+                else:
+                    existing_37_index = hg_37_variant_indices.get(hg37_id)
+                    if existing_37_index:
+                        cls._merge_duplicate_variants(variant, variant_results[existing_37_index])
+                        variant_results[existing_37_index] = None
+
+                    hg_38_variant_indices[hg37_id] = i
+                    variant_results.append(variant)
+            else:
+                existing_38_index = hg_38_variant_indices.get(variant['variantId'])
+                existing_37_index = hg_37_variant_indices.get(variant['variantId'])
+                if existing_38_index:
+                    cls._merge_duplicate_variants(variant_results[existing_38_index], variant)
+                    variant_results.append(None)
+                elif existing_37_index:
+                    cls._merge_duplicate_variants(variant_results[existing_37_index], variant)
+                    variant_results.append(None)
+                else:
+                    hg_37_variant_indices[variant['variantId']] = i
+                    variant_results.append(variant)
+
+        return [var for var in variant_results if var]
+
+    @classmethod
+    def _merge_duplicate_variants(cls, variant, duplicate_variant):
+        variant['genotypes'].update(duplicate_variant['genotypes'])
+        variant['familyGuids'] = sorted(set(variant['familyGuids'] + duplicate_variant['familyGuids']))
 
     def _deduplicate_compound_het_results(self, compound_het_results):
         duplicates = 0
