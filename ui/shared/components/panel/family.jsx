@@ -27,6 +27,7 @@ import {
   FAMILY_FIELD_RENDER_LOOKUP,
   FAMILY_FIELD_OMIM_NUMBER,
   FAMILY_FIELD_PMIDS,
+  getVariantMainTranscript,
 } from '../../utils/constants'
 import { getAnalystOptions } from '../../../pages/Project/selectors'
 
@@ -209,9 +210,8 @@ SearchLink.propTypes = {
 }
 
 const DiscoveryGenes = ({ project, familyGuid }) => {
-  const discoveryGenes = project.discoveryTags.filter(tag => tag.familyGuids.includes(familyGuid)).reduce((acc, tag) =>
-    [...acc, ...Object.values(tag.transcripts).flat().map(({ geneSymbol }) => geneSymbol).filter(val => val)], [],
-  )
+  const discoveryGenes = project.discoveryTags.filter(tag => tag.familyGuids.includes(familyGuid)).map(tag =>
+    getVariantMainTranscript(tag).geneSymbol).filter(val => val)
   return discoveryGenes.length > 0 ? (
     <span> <b>Discovery Genes:</b> {[...new Set(discoveryGenes)].join(', ')}</span>
   ) : null

@@ -61,16 +61,25 @@ class DatasetAPITest(TransactionTestCase):
 
         mock_get_index_metadata.return_value = {INDEX_NAME: {
             'sampleType': 'WES',
+            'genomeVersion': '38',
+            'sourceFilePath': 'invalidpath.txt',
+        }}
+        response = self.client.post(url, content_type='application/json', data=json.dumps({'elasticsearchIndex': INDEX_NAME}))
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'errors': ['Index "test_index" has genome version 38 but this project uses version 37']})
+
+        mock_get_index_metadata.return_value = {INDEX_NAME: {
+            'sampleType': 'WES',
             'genomeVersion': '37',
             'sourceFilePath': 'invalidpath.txt',
         }}
         response = self.client.post(url, content_type='application/json', data=json.dumps({'elasticsearchIndex': INDEX_NAME}))
         self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'errors': ['Index "test_index" has genome version 37 but this project uses version 38']})
+        self.assertDictEqual(response.json(), {'errors': ['Variant call dataset path must end with .vcf.gz or .vds']})
 
         mock_get_index_metadata.return_value = {INDEX_NAME: {
             'sampleType': 'WES',
-            'genomeVersion': '38',
+            'genomeVersion': '37',
             'sourceFilePath': 'invalidpath.txt',
         }}
         response = self.client.post(url, content_type='application/json', data=json.dumps({'elasticsearchIndex': INDEX_NAME}))
@@ -79,16 +88,7 @@ class DatasetAPITest(TransactionTestCase):
 
         mock_get_index_metadata.return_value = {INDEX_NAME: {
             'sampleType': 'WES',
-            'genomeVersion': '38',
-            'sourceFilePath': 'invalidpath.txt',
-        }}
-        response = self.client.post(url, content_type='application/json', data=json.dumps({'elasticsearchIndex': INDEX_NAME}))
-        self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'errors': ['Variant call dataset path must end with .vcf.gz or .vds']})
-
-        mock_get_index_metadata.return_value = {INDEX_NAME: {
-            'sampleType': 'WES',
-            'genomeVersion': '38',
+            'genomeVersion': '37',
             'sourceFilePath': 'test_data.vds',
         }}
         response = self.client.post(url, content_type='application/json', data=json.dumps({'elasticsearchIndex': INDEX_NAME}))

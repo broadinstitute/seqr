@@ -30,8 +30,6 @@ const FamilyVariantReads = ({ variant, samples, individualsByGuid, hideReads }) 
     return null
   }
 
-  const locus = variant && getLocus(variant.chrom, variant.pos, 100)
-
   const latestSamplesForIndividuals = samples.reduce((acc, sample) => ({ ...acc, [sample.individualGuid]: sample }), {})
 
   const igvTracks = Object.values(latestSamplesForIndividuals).map((sample) => {
@@ -53,6 +51,10 @@ const FamilyVariantReads = ({ variant, samples, individualsByGuid, hideReads }) 
   // TODO better determiner of genome version?
   const isBuild38 = igvTracks.some(track => track.sourceType === 'pysam')
   const genome = isBuild38 ? 'hg38' : 'hg19'
+
+  const locus = variant && getLocus(
+    variant.chrom, (!isBuild38 && variant.liftedOverPos) ? variant.liftedOverPos : variant.pos, 100,
+  )
 
   // TODO confirm cnv_bed_file track is deprecated (is empty for all existing individuals, so it should be)
   igvTracks.push({
