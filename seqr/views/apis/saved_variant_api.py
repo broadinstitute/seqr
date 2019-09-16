@@ -146,7 +146,7 @@ def _create_variant_note(saved_variant, note_json, user):
 def update_variant_note_handler(request, variant_guid, note_guid):
     saved_variant = SavedVariant.objects.get(guid=variant_guid)
     check_permissions(saved_variant.family.project, request.user, CAN_VIEW)
-    note = VariantNote.objects.get(guid=note_guid, saved_variant=saved_variant)
+    note = VariantNote.objects.get(guid=note_guid, saved_variants=saved_variant)
 
     request_json = json.loads(request.body)
     update_model_from_json(note, request_json, allow_unknown_keys=True)
