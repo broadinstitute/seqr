@@ -286,6 +286,7 @@ class IndividualRow extends React.Component
         ),
       },
     ]
+
     return (
       <FamilyLayout
         fields={fields}

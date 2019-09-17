@@ -3,17 +3,14 @@ import PropTypes from 'prop-types'
 
 import DispatchRequestButton from './DispatchRequestButton'
 
-const DeleteButton = ({ initialValues, onSubmit, buttonText, ...props }) => {
-  return (
-    <DispatchRequestButton
-      onSubmit={() => onSubmit({ ...initialValues, delete: true })}
-      buttonContent={buttonText}
-      icon="trash"
-      labelPosition={buttonText && 'right'}
-      {...props}
-    />
-  )
-}
+const DeleteButton = ({ initialValues, onSubmit, buttonText, ...props }) =>
+  <DispatchRequestButton
+    onSubmit={() => onSubmit({ ...initialValues, delete: true })}
+    buttonContent={buttonText}
+    icon="trash"
+    labelPosition={buttonText && 'right'}
+    {...props}
+  />
 
 
 DeleteButton.propTypes = {
