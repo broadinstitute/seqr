@@ -48,7 +48,7 @@ def saved_variant_data(request, project_guid, variant_guid=None):
     })
 
 
-def _create_single_saved_variant(variant_json):
+def _create_single_saved_variant(variant_json, family):
     xpos = variant_json['xpos']
     ref = variant_json['ref']
     alt = variant_json['alt']
@@ -76,11 +76,11 @@ def create_saved_variant_handler(request):
     check_permissions(family.project, request.user, CAN_VIEW)
     # single gene
     if 'variantGuid' in variant_json.keys():
-        saved_variant = _create_single_saved_variant(variant_json)
+        saved_variant = _create_single_saved_variant(variant_json, family)
         if non_variant_json.get('note'):
-            _create_variant_note(saved_variant, non_variant_json, request.user)
+            _create_variant_note([saved_variant], non_variant_json, request.user)
         elif non_variant_json.get('tags'):
-            _create_new_tags(saved_variant, non_variant_json, request.user)
+            _create_new_tags([saved_variant], non_variant_json, request.user)
         variant_json.update(get_json_for_saved_variant(saved_variant, add_tags=True))
         return create_json_response({
             'savedVariantsByGuid': {saved_variant.guid: variant_json},
@@ -108,12 +108,12 @@ def create_saved_variant_handler(request):
                     _create_new_tags([saved_variant], non_variant_json, request.user)
             # not saved
             else:
-                saved_variant = _create_single_saved_variant(compound_het)
+                saved_variant = _create_single_saved_variant(compound_het, family)
             compound_het.update(get_json_for_saved_variant(saved_variant, add_tags=True))
             saved_variants.append(saved_variant)
             updates[compound_het['variantGuid']] = compound_het
         if non_variant_json.get('note'):
-            _create_new_tags(saved_variants, non_variant_json, request.user)
+            _create_variant_note(saved_variants, non_variant_json, request.user)
         elif non_variant_json.get('tags'):
             _create_new_tags(saved_variants, non_variant_json, request.user)
 

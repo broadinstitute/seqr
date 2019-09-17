@@ -130,13 +130,13 @@ def _deprecated_get_or_create_saved_variant(xpos=None, ref=None, alt=None, famil
 
 XBROWSE_TO_SEQR_ADDITIONAL_ENTITIES_MAPPING = {
     "VariantTag": {
-        "saved_variants": _deprecated_get_or_create_saved_variant
+        "saved_variant": _deprecated_get_or_create_saved_variant
     },
     "VariantFunctionalData": {
         "saved_variant": _deprecated_get_or_create_saved_variant
     },
     "VariantNote": {
-        "saved_variants": _deprecated_get_or_create_saved_variant
+        "saved_variant": _deprecated_get_or_create_saved_variant
     }
 }
 
