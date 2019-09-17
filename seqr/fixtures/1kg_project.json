@@ -1223,7 +1223,7 @@
         "created_date": "2018-05-15T14:51:58.410Z",
         "created_by": null,
         "last_modified_date": "2018-02-23T17:32:23.054Z",
-        "saved_variant": 2,
+        "saved_variants": [2],
         "note": "test",
         "submit_to_clinvar": false,
         "search_parameters": null
@@ -1237,7 +1237,7 @@
         "created_date": "2018-05-15T14:54:47.121Z",
         "created_by": null,
         "last_modified_date": "2018-02-23T17:32:30.373Z",
-        "saved_variant": 1,
+        "saved_variants": [1],
         "variant_tag_type": 2,
         "search_parameters": "https://seqr.broadinstitute.org/project/1kg/family/1/mendelian-variant-search#search/125897d6/results"
     }
@@ -1250,7 +1250,7 @@
         "created_date": "2018-05-25T21:01:33.193Z",
         "created_by": null,
         "last_modified_date": "2018-05-25T21:01:33.193Z",
-        "saved_variant": 2,
+        "saved_variants": [2],
         "variant_tag_type": 2,
         "search_parameters": null
     }
@@ -1263,7 +1263,7 @@
         "created_date": "2018-05-29T16:32:51.449Z",
         "created_by": null,
         "last_modified_date": "2018-05-29T16:32:51.449Z",
-        "saved_variant": 1,
+        "saved_variants": [1],
         "variant_tag_type": 1,
         "search_parameters": null
     }

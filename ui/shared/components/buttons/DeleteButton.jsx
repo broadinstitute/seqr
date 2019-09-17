@@ -12,7 +12,6 @@ const DeleteButton = ({ initialValues, onSubmit, buttonText, ...props }) =>
     {...props}
   />
 
-
 DeleteButton.propTypes = {
   onSubmit: PropTypes.func,
   confirmDialog: PropTypes.oneOfType([PropTypes.string, PropTypes.node]),
