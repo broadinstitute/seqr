@@ -53,7 +53,8 @@ def saved_variant_data(request, project_guid, variant_guid=None):
 def create_saved_variant_handler(request):
     variant_json = json.loads(request.body)
     non_variant_json = {
-        k: variant_json.pop(k, None) for k in ['searchHash', 'tags', 'functionalData', 'notes', 'note', 'submitToClinvar']
+        k: variant_json.pop(k, None) for k in
+        ['searchHash', 'tags', 'functionalData', 'notes', 'note', 'submitToClinvar']
     }
 
     family_guid = variant_json.pop('familyGuid')

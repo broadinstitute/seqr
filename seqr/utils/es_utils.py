@@ -564,6 +564,7 @@ class EsSearch(BaseEsSearch):
                 for family_guid in variant['familyGuids']:
                     family_variants[family_guid].append(variant)
 
+            # TODO Eliza debug this >===================================================
             # TODO (two compound hets from the same family should be placed together)
             for family_guid, variants in family_variants.items():
                 for individual_guid in family_unaffected_individual_guids.get(family_guid, []):

@@ -8,10 +8,9 @@ from django.db.models import Q, prefetch_related_objects
 from django.views.decorators.csrf import csrf_exempt
 from elasticsearch.exceptions import ConnectionTimeout
 
-from reference_data.models import GENOME_VERSION_GRCh37
-from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, Sample,\
+from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, Sample, \
     AnalysisGroup, ProjectCategory, VariantTagType
-from seqr.utils.es_utils import get_es_variants, get_single_es_variant, get_es_variant_gene_counts,\
+from seqr.utils.es_utils import get_es_variants, get_single_es_variant, get_es_variant_gene_counts, \
     InvalidIndexException, XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
 from seqr.views.apis.saved_variant_api import _saved_variant_genes, _add_locus_lists
 from seqr.views.utils.export_table_utils import export_table
@@ -138,7 +137,7 @@ def _process_variants(variants, families):
     # TODO add locus lists on the client side (?)
     projects = {family.project for family in families}
     _add_locus_lists(projects, variants, genes)
-    saved_variants_by_guid, _ = _get_saved_variants(variants, families)
+    saved_variants_by_guid = _get_saved_variants(variants)
 
     return {
         'searchedVariants': variants,
@@ -181,8 +180,12 @@ VARIANT_EXPORT_DATA = [
     {'header': 'pos'},
     {'header': 'ref'},
     {'header': 'alt'},
-    {'header': 'gene', 'value_path': '{transcripts: transcripts.*[].{value: geneSymbol, transcriptId: transcriptId}, mainTranscriptId: mainTranscriptId}', 'process': _get_variant_main_transcript_field_val},
-    {'header': 'worst_consequence', 'value_path': '{transcripts: transcripts.*[].{value: majorConsequence, transcriptId: transcriptId}, mainTranscriptId: mainTranscriptId}', 'process': _get_variant_main_transcript_field_val},
+    {'header': 'gene',
+     'value_path': '{transcripts: transcripts.*[].{value: geneSymbol, transcriptId: transcriptId}, mainTranscriptId: mainTranscriptId}',
+     'process': _get_variant_main_transcript_field_val},
+    {'header': 'worst_consequence',
+     'value_path': '{transcripts: transcripts.*[].{value: majorConsequence, transcriptId: transcriptId}, mainTranscriptId: mainTranscriptId}',
+     'process': _get_variant_main_transcript_field_val},
     {'header': '1kg_freq', 'value_path': 'populations.g1k.af'},
     {'header': 'exac_freq', 'value_path': 'populations.exac.af'},
     {'header': 'gnomad_genomes_freq', 'value_path': 'populations.gnomad_genomes.af'},
@@ -196,8 +199,12 @@ VARIANT_EXPORT_DATA = [
     {'header': 'muttaster', 'value_path': 'predictions.mut_taster', 'process': _get_prediction_val},
     {'header': 'fathmm', 'value_path': 'predictions.fathmm', 'process': _get_prediction_val},
     {'header': 'rsid', 'value_path': 'rsid'},
-    {'header': 'hgvsc', 'value_path': '{transcripts: transcripts.*[].{value: hgvsc, transcriptId: transcriptId}, mainTranscriptId: mainTranscriptId}', 'process': _get_variant_main_transcript_field_val},
-    {'header': 'hgvsp', 'value_path': '{transcripts: transcripts.*[].{value: hgvsp, transcriptId: transcriptId}, mainTranscriptId: mainTranscriptId}', 'process': _get_variant_main_transcript_field_val},
+    {'header': 'hgvsc',
+     'value_path': '{transcripts: transcripts.*[].{value: hgvsc, transcriptId: transcriptId}, mainTranscriptId: mainTranscriptId}',
+     'process': _get_variant_main_transcript_field_val},
+    {'header': 'hgvsp',
+     'value_path': '{transcripts: transcripts.*[].{value: hgvsp, transcriptId: transcriptId}, mainTranscriptId: mainTranscriptId}',
+     'process': _get_variant_main_transcript_field_val},
     {'header': 'clinvar_clinical_significance', 'value_path': 'clinvar.clinicalSignificance'},
     {'header': 'clinvar_gold_stars', 'value_path': 'clinvar.goldStars'},
     {'header': 'filter', 'value_path': 'genotypeFilters'},
@@ -205,8 +212,10 @@ VARIANT_EXPORT_DATA = [
 
 VARIANT_FAMILY_EXPORT_DATA = [
     {'header': 'family_id'},
-    {'header': 'tags', 'process': lambda tags: '|'.join(['{} ({})'.format(tag['name'], tag['createdBy']) for tag in tags or []])},
-    {'header': 'notes', 'process': lambda notes: '|'.join(['{} ({})'.format(note['note'].replace('\n', ' '), note['createdBy']) for note in notes or []])},
+    {'header': 'tags',
+     'process': lambda tags: '|'.join(['{} ({})'.format(tag['name'], tag['createdBy']) for tag in tags or []])},
+    {'header': 'notes', 'process': lambda notes: '|'.join(
+        ['{} ({})'.format(note['note'].replace('\n', ' '), note['createdBy']) for note in notes or []])},
 ]
 
 
@@ -230,12 +239,15 @@ def export_variants_handler(request, search_hash):
 
     _check_results_permission(results_model, request.user)
 
-    families = results_model.families.all()
-    family_ids_by_guid = {family.guid: family.family_id for family in families}
+    family_ids_by_guid = {family.guid: family.family_id for family in results_model.families.all()}
 
     variants, _ = get_es_variants(results_model, page=1, load_all=True)
 
-    saved_variants_by_guid, variants_to_saved_variants = _get_saved_variants(variants, families)
+    saved_variants_by_guid = _get_saved_variants(variants)
+    saved_variants_by_family = defaultdict(dict)
+    for var in saved_variants_by_guid.values():
+        for family_guid in var['familyGuids']:
+            saved_variants_by_family[family_guid]['{}-{}-{}'.format(var['xpos'], var['ref'], var['alt'])] = var
 
     max_families_per_variant = max([len(variant['familyGuids']) for variant in variants])
     max_samples_per_variant = max([len(variant['genotypes']) for variant in variants])
@@ -245,7 +257,8 @@ def export_variants_handler(request, search_hash):
         row = [_get_field_value(variant, config) for config in VARIANT_EXPORT_DATA]
         for i in range(max_families_per_variant):
             family_guid = variant['familyGuids'][i] if i < len(variant['familyGuids']) else ''
-            family_tags = saved_variants_by_guid.get(variants_to_saved_variants.get(variant['variantId'], {}).get(family_guid, '')) or {}
+            family_tags = saved_variants_by_family[family_guid].get(
+                '{}-{}-{}'.format(variant['xpos'], variant['ref'], variant['alt'])) or {}
             family_tags['family_id'] = family_ids_by_guid.get(family_guid)
             row += [_get_field_value(family_tags, config) for config in VARIANT_FAMILY_EXPORT_DATA]
         genotypes = variant['genotypes'].values()
@@ -258,8 +271,8 @@ def export_variants_handler(request, search_hash):
 
     header = [config['header'] for config in VARIANT_EXPORT_DATA]
     for i in range(max_families_per_variant):
-        header += ['{}_{}'.format(config['header'], i+1) for config in VARIANT_FAMILY_EXPORT_DATA]
-    header += ['sample_{}:num_alt_alleles:gq:ab'.format(i+1) for i in range(max_samples_per_variant)]
+        header += ['{}_{}'.format(config['header'], i + 1) for config in VARIANT_FAMILY_EXPORT_DATA]
+    header += ['sample_{}:num_alt_alleles:gq:ab'.format(i + 1) for i in range(max_samples_per_variant)]
 
     file_format = request.GET.get('file_format', 'tsv')
 
@@ -291,7 +304,8 @@ def search_context_handler(request):
         projects = Project.objects.filter(projectcategory__guid=context.get('projectCategoryGuid'))
     elif context.get('searchHash'):
         try:
-            results_model = _get_or_create_results_model(context['searchHash'], context.get('searchParams'), request.user)
+            results_model = _get_or_create_results_model(context['searchHash'], context.get('searchParams'),
+                                                         request.user)
         except Exception as e:
             return create_json_response({'error': e.message}, status=400, reason=e.message)
         projects = Project.objects.filter(family__in=results_model.families.all()).distinct()
@@ -299,7 +313,8 @@ def search_context_handler(request):
         error = 'Invalid context params: {}'.format(json.dumps(context))
         return create_json_response({'error': error}, status=400, reason=error)
 
-    response.update(_get_projects_details(projects, request.user, project_category_guid=context.get('projectCategoryGuid')))
+    response.update(
+        _get_projects_details(projects, request.user, project_category_guid=context.get('projectCategoryGuid')))
 
     return create_json_response(response)
 
@@ -470,49 +485,39 @@ def _get_saved_searches(user):
     return {'savedSearchesByGuid': {search['savedSearchGuid']: search for search in saved_searches}}
 
 
-def _get_saved_variants(variants, families):
+def _get_saved_variants(variants):
     if not variants:
         return {}
 
-    prefetch_related_objects(families, 'project')
-    hg37_family_guids = {family.guid for family in families if family.project.genome_version == GENOME_VERSION_GRCh37}
+    variants = _flatten_variants(variants)
 
     variant_q = Q()
-    variants_by_id = {}
     for variant in variants:
-        variants_by_id[_get_variant_key(**variant)] = variant
         variant_q |= Q(xpos_start=variant['xpos'], ref=variant['ref'], alt=variant['alt'],
                        family__guid__in=variant['familyGuids'])
-        if variant['liftedOverGenomeVersion'] == GENOME_VERSION_GRCh37 and hg37_family_guids:
-            variant_hg37_families = [family_guid for family_guid in variant['familyGuids'] if
-                                     family_guid in hg37_family_guids]
-            if variant_hg37_families:
-                lifted_xpos = get_xpos(variant['liftedOverChrom'], variant['liftedOverPos'])
-                variant_q |= Q(xpos_start=lifted_xpos, ref=variant['ref'], alt=variant['alt'],
-                               family__guid__in=variant_hg37_families)
-                variants_by_id[_get_variant_key(
-                    xpos=lifted_xpos, ref=variant['ref'], alt=variant['alt'],
-                    genomeVersion=variant['liftedOverGenomeVersion']
-                )] = variant
     saved_variants = SavedVariant.objects.filter(variant_q)
 
-    saved_variants_json = get_json_for_saved_variants(saved_variants, add_tags=True, add_details=True)
+    variants_by_id = {'{}-{}-{}'.format(var['xpos'], var['ref'], var['alt']): var for var in variants}
+    saved_variants_json = get_json_for_saved_variants(saved_variants, add_tags=True)
     saved_variants_by_guid = {}
-    variants_to_saved_variants = {}
     for saved_variant in saved_variants_json:
         family_guids = saved_variant['familyGuids']
-        searched_variant = variants_by_id[_get_variant_key(**saved_variant)]
-        saved_variant.update(searched_variant)
+        saved_variant.update(
+            variants_by_id['{}-{}-{}'.format(saved_variant['xpos'], saved_variant['ref'], saved_variant['alt'])]
+        )
         #  For saved variants only use family it was saved for, not all families in search
         saved_variant['familyGuids'] = family_guids
         saved_variants_by_guid[saved_variant['variantGuid']] = saved_variant
-        if searched_variant['variantId'] not in variants_to_saved_variants:
-            variants_to_saved_variants[searched_variant['variantId']] = {}
-        for family_guid in family_guids:
-            variants_to_saved_variants[searched_variant['variantId']][family_guid] = saved_variant['variantGuid']
 
-    return saved_variants_by_guid, variants_to_saved_variants
+    return saved_variants_by_guid
 
 
-def _get_variant_key(xpos=None, ref=None, alt=None, genomeVersion=None, **kwargs):
-    return '{}-{}-{}_{}'.format(xpos, ref, alt, genomeVersion)
+def _flatten_variants(variants):
+    flattened_variants = []
+    for variant in variants:
+        if isinstance(variant, list):
+            for compound_het in variant:
+                flattened_variants.append(compound_het)
+        else:
+            flattened_variants.append(variant)
+    return flattened_variants
