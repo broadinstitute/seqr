@@ -615,8 +615,6 @@ class VariantTag(ModelWithGUID):
         return 'VT%07d_%s' % (self.id, _slugify(str(self)))
 
     class Meta:
-        # unique_together = ('variant_tag_type', 'saved_variant')
-
         json_fields = ['guid', 'search_parameters', 'search_hash', 'last_modified_date', 'created_by']
 
 
@@ -632,7 +630,6 @@ class VariantNote(ModelWithGUID):
 
     def __unicode__(self):
         return "%s:%s" % (str(self.saved_variants), (self.note or "")[:20])
-        # return "%s:%s" % ("test", (self.note or "")[:20])
 
     def _compute_guid(self):
         return 'VN%07d_%s' % (self.id, _slugify(str(self)))
