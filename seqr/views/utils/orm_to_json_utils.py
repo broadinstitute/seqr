@@ -576,41 +576,6 @@ def _get_collaborator_json(collaborator, include_permissions, can_edit):
         })
     return collaborator_json
 
-#
-# def get_project_variant_tag_types(project, tag_counts_by_type_and_family=None, note_counts_by_family=None):
-#     note_tag_type = {
-#         'variantTagTypeGuid': 'notes',
-#         'name': 'Has Notes',
-#         'category': 'Notes',
-#         'description': '',
-#         'color': 'grey',
-#         'order': 100,
-#         'is_built_in': True,
-#     }
-#     if note_counts_by_family is not None:
-#         num_tags = sum(count['count'] for count in note_counts_by_family)
-#         note_tag_type.update({
-#             'numTags': num_tags,
-#             'numTagsPerFamily': {count['saved_variants__family__guid']: count['count'] for count in
-#                                  note_counts_by_family},
-#         })
-#
-#     project_variant_tags = _get_json_for_models(VariantTagType.objects.filter(Q(project=project) | Q(project__isnull=True)))
-#     if tag_counts_by_type_and_family is not None:
-#         for tag_type in project_variant_tags:
-#             current_tag_type_counts = [counts for counts in tag_counts_by_type_and_family if
-#                                        counts['variant_tag_type__name'] == tag_type['name']]
-#             num_tags = sum(count['count'] for count in current_tag_type_counts)
-#             tag_type.update({
-#                 'numTags': num_tags,
-#                 'numTagsPerFamily': {count['saved_variant__family__guid']: count['count'] for count in
-#                                      current_tag_type_counts},
-#             })
-#
-#         project_variant_tags.append(note_tag_type)
-#
-#     return sorted(project_variant_tags, key=lambda variant_tag_type: variant_tag_type['order'])
-#
 
 def get_json_for_genes(genes, user=None, add_dbnsfp=False, add_omim=False, add_constraints=False, add_notes=False,
                        add_primate_ai=False, add_mgi=False):
