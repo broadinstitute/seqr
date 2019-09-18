@@ -172,7 +172,7 @@ def find_matching_xbrowse_model(seqr_model):
         elif seqr_class_name == "VariantTag":
             match_filter = Q(
                 seqr_variant_tag__isnull=True,
-                project_tag__project__project_id=seqr_model.saved_variant.family.project.deprecated_project_id,
+                project_tag__project__project_id=seqr_model.saved_variants.family.project.deprecated_project_id,
                 project_tag__tag=seqr_model.variant_tag_type.name,
                 xpos=seqr_model.saved_variant.xpos_start,
                 ref=seqr_model.saved_variant.ref,
@@ -201,13 +201,13 @@ def find_matching_xbrowse_model(seqr_model):
             match_filter = Q(
                 seqr_variant_note__isnull=True,
                 note=seqr_model.note,
-                project__project_id=seqr_model.saved_variant.family.project.deprecated_project_id,
+                project__project_id=seqr_model.saved_variants.family.project.deprecated_project_id,
                 xpos=seqr_model.saved_variant.xpos_start,
                 ref=seqr_model.saved_variant.ref,
                 alt=seqr_model.saved_variant.alt
             )
             if seqr_model.saved_variant.family:
-                match_filter &= Q(family__family_id=seqr_model.saved_variant.family.family_id)
+                match_filter &= Q(family__family_id=seqr_model.saved_variants.family.family_id)
             return BaseVariantNote.objects.get(Q(seqr_variant_note=seqr_model) | match_filter)
         elif seqr_class_name == "LocusList":
             return BaseGeneList.objects.get(
@@ -273,7 +273,7 @@ def convert_seqr_kwargs_to_xbrowse_kwargs(seqr_model, **kwargs):
                     xbrowse_kwargs[key] = getattr(value, nested_config['field'], None)
             else:
                 if key == 'project_tag':
-                    value.project = seqr_model.saved_variants[0].family.project
+                    value.project = seqr_model.saved_variant.family.project
                 new_value = find_matching_xbrowse_model(value)
                 if new_value is not None:
                     xbrowse_kwargs[key] = new_value

@@ -226,11 +226,11 @@ def update_variant_tags_handler(request, variant_guids):
         saved_variants.append(saved_variant)
 
     updated_tags = request_json.get('tags', [])
-    updated_functional_data = request_json.get('functionalData', [])
 
     # Update tags
 
     existing_tag_guids = [tag['tagGuid'] for tag in updated_tags if tag.get('tagGuid')]
+    updated_functional_data = request_json.get('functionalData', [])
 
     for tag in saved_variant.varianttag_set.exclude(guid__in=existing_tag_guids):
         delete_seqr_model(tag)
@@ -268,6 +268,9 @@ def update_variant_tags_handler(request, variant_guids):
             'tags': [get_json_for_variant_tag(tag) for tag in saved_variant.varianttag_set.all()],
             'functionalData': [get_json_for_variant_functional_data(tag) for tag in saved_variant.variantfunctionaldata_set.all()]
         }
+
+    import pdb
+    pdb.set_trace()
 
     return create_json_response({'savedVariantsByGuid': update})
 

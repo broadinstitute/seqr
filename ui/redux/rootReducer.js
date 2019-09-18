@@ -104,7 +104,7 @@ export const updateProject = (values) => {
 }
 
 export const updateFamily = (values) => {
-  return (dispatch) => {
+  return (dispatch) => {i
     const familyField = values.familyField ? `_${values.familyField}` : ''
     return new HttpRequestHelper(`/api/family/${values.familyGuid}/update${familyField}`,
       (responseJson) => {
