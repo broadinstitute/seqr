@@ -328,6 +328,10 @@ def _create_seqr_model(xbrowse_model, **kwargs):
         seqr_model_class = XBROWSE_TO_SEQR_CLASS_MAPPING[xbrowse_model_class_name]
         seqr_model_class_name = seqr_model_class.__name__
         logging.info("_create_seqr_model(%s, %s)" % (seqr_model_class_name, seqr_kwargs))
+        if seqr_kwargs['saved_variants']:
+            saved_variants = seqr_kwargs.pop('saved_variants')
+            seqr_model = seqr_model_class.objects.create(**seqr_kwargs)
+            seqr_model.saved_variants.add(saved_variants)
         seqr_model = seqr_model_class.objects.create(**seqr_kwargs)
         xbrowse_model_foreign_key_name = "seqr_"+_to_snake_case(seqr_model_class_name)
         if hasattr(xbrowse_model, xbrowse_model_foreign_key_name):
