@@ -8,7 +8,8 @@ from django.db.models import Q
 from seqr.models import Project as SeqrProject, Family as SeqrFamily, Individual as SeqrIndividual, \
     VariantTagType as SeqrVariantTagType, VariantTag as SeqrVariantTag, VariantNote as SeqrVariantNote, \
     VariantFunctionalData as SeqrVariantFunctionalData, LocusList as SeqrLocusList, LocusListGene as SeqrLocusListGene, \
-    GeneNote as SeqrGeneNote, FamilyAnalysedBy as SeqrAnalysedBy, AnalysisGroup as SeqrAnalysisGroup, SavedVariant
+    GeneNote as SeqrGeneNote, FamilyAnalysedBy as SeqrAnalysedBy, AnalysisGroup as SeqrAnalysisGroup, \
+    SavedVariant as SeqrSavedVariant
 from seqr.utils.model_sync_utils import convert_html_to_plain_text
 from seqr.views.apis.locus_list_api import _add_locus_list_user_permissions
 from seqr.views.utils.variant_utils import _retrieve_saved_variants_json, _update_saved_variant_json
@@ -111,7 +112,7 @@ XBROWSE_TO_SEQR_FIELD_MAPPING = {
 def _deprecated_get_or_create_saved_variant(xpos=None, ref=None, alt=None, family=None, project=None, **kwargs):
     if not project:
         project = family.project
-    saved_variant, _ = SavedVariant.objects.get_or_create(
+    saved_variant, _ = SeqrSavedVariant.objects.get_or_create(
         xpos_start=xpos,
         xpos_end=xpos + len(ref) - 1,
         ref=ref,
@@ -133,7 +134,7 @@ XBROWSE_TO_SEQR_ADDITIONAL_ENTITIES_MAPPING = {
         "saved_variants": _deprecated_get_or_create_saved_variant
     },
     "VariantFunctionalData": {
-        "saved_variant": _deprecated_get_or_create_saved_variant
+        "saved_variants": _deprecated_get_or_create_saved_variant
     },
     "VariantNote": {
         "saved_variants": _deprecated_get_or_create_saved_variant
@@ -188,6 +189,8 @@ def find_matching_seqr_model(xbrowse_model):
 
             criteria = {
                 'variant_tag_type__name': xbrowse_model.project_tag.tag,
+            }
+            saved_variant_critera = {
                 'saved_variant__project__deprecated_project_id': xbrowse_model.project_tag.project.project_id,
                 'saved_variant__xpos_start': xbrowse_model.xpos,
                 'saved_variant__ref': xbrowse_model.ref,
@@ -195,7 +198,8 @@ def find_matching_seqr_model(xbrowse_model):
             }
             if xbrowse_model.family:
                 criteria['saved_variant__family__family_id'] = xbrowse_model.family.family_id
-            seqr_model = SeqrVariantTag.objects.get(**criteria)
+            saved_variant_model = SeqrSavedVariant.objects.get(**saved_variant_critera)
+            seqr_model = SeqrVariantTag.objects.get(**criteria).filter(saved_variant__contains=saved_variant_model)
         elif xbrowse_class_name == "VariantFunctionalData":
             criteria = {
                 'functional_data_tag': xbrowse_model.functional_data_tag,

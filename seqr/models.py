@@ -700,7 +700,7 @@ class VariantFunctionalData(ModelWithGUID):
          )),
     )
 
-    saved_variant = models.ForeignKey('SavedVariant', on_delete=models.CASCADE, null=True)
+    saved_variants = models.ManyToManyField('SavedVariant')
     functional_data_tag = models.TextField(choices=FUNCTIONAL_DATA_CHOICES)
     metadata = models.TextField(null=True)
 
@@ -709,14 +709,12 @@ class VariantFunctionalData(ModelWithGUID):
     search_parameters = models.TextField(null=True, blank=True)
 
     def __unicode__(self):
-        return "%s:%s" % (str(self.saved_variant), self.functional_data_tag)
+        return "%s:%s" % (str(self.saved_variants), self.functional_data_tag)
 
     def _compute_guid(self):
         return 'VFD%07d_%s' % (self.id, _slugify(str(self)))
 
     class Meta:
-        unique_together = ('functional_data_tag', 'saved_variant')
-
         json_fields = ['guid', 'functional_data_tag', 'metadata', 'last_modified_date', 'created_by']
 
 
