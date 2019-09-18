@@ -254,9 +254,12 @@ const FamilyVariantTags = (
     if (isCompoundHet) {
       return <VariantLink variant={variant} savedVariant={savedVariant} family={family} />
     }
-    const displayVariant = Array.isArray(variant) ?
-      savedVariant.map((eachSavedVariant, index) => { return eachSavedVariant || variant[index] }) :
-      (savedVariant || variant)
+    let displayVariant
+    if (Array.isArray(variant)) {
+      displayVariant = savedVariant.map((eachSavedVariant, index) => { return eachSavedVariant || variant[index] })
+    } else {
+      displayVariant = savedVariant.length === 0 ? variant : savedVariant
+    }
     return (
       <div>
         <InlineContainer>
@@ -361,7 +364,6 @@ const mapStateToProps = (state, ownProps) => ({
 
 const mapDispatchToProps = (dispatch, ownProps) => ({
   dispatchUpdateVariantNote: (updates) => {
-    console.log(ownProps.initialValue)
     dispatch(updateVariantNote({ ...updates, familyGuid: ownProps.familyGuid }))
   },
   dispatchUpdateFamilyVariantTags: (updates) => {

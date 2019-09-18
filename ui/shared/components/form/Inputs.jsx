@@ -75,7 +75,6 @@ IntegerInput.propTypes = {
 const labelStyle = (color) => { return color ? { color: 'white', backgroundColor: color } : {} }
 
 const styledOption = (option) => {
-  console.log([option.key, option.text, option.value].join(','))
   return {
     value: option.value,
     key: option.key || option.text || option.value,

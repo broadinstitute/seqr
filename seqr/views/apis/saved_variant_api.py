@@ -75,7 +75,7 @@ def create_saved_variant_handler(request):
     family = Family.objects.get(guid=family_guid)
     check_permissions(family.project, request.user, CAN_VIEW)
     # single gene
-    if 'variantGuid' in variant_json.keys():
+    if 'familyGuids' in variant_json.keys():
         saved_variant = _create_single_saved_variant(variant_json, family)
         if non_variant_json.get('note'):
             _create_variant_note([saved_variant], non_variant_json, request.user)
