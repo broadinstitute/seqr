@@ -15,8 +15,8 @@ class Command(BaseCommand):
             sample_status=Sample.SAMPLE_STATUS_LOADED,
         )
         if options['project']:
-            all_samples.filter(individual__family__project__guid=options['project'])
-        all_samples.prefetch_related('individual').prefetch_related('individual__family__project')
+            all_samples= all_samples.filter(individual__family__project__guid=options['project'])
+        all_samples= all_samples.prefetch_related('individual').prefetch_related('individual__family__project')
 
         sample_individual_max_loaded_date = {
             agg['individual__guid']: agg['max_loaded_date'] for agg in
