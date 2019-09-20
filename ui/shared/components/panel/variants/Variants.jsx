@@ -16,6 +16,13 @@ import { VerticalSpacer } from '../../Spacers'
 
 
 const StyledVariantRow = styled(Grid.Row)`
+  ${({ isCompoundHet }) => {
+    if (isCompoundHet) {
+      return '.column {margin-top: 1em !important; margin-bottom: 0 !important;}'
+    }
+    return '.column {margin-top: 0 !important; margin-left: 1em !important;}'
+  }}
+  
   .column {
     margin-top: 1em !important;
     margin-bottom: 0 !important;
@@ -35,13 +42,6 @@ const StyledVariantRow = styled(Grid.Row)`
   }}
 `
 
-const StyledCompoundHetRow = styled(StyledVariantRow)`
-  .column {
-    margin-top: 0 !important;
-    margin-left: 1em !important;
-  }
-`
-
 const StyledCompoundHetLink = styled(Grid.Column)`
   margin-right: -1em !important;
 `
@@ -51,6 +51,43 @@ const StyledCompoundHetRows = styled(Grid)`
   margin-top: 0 !important;
   margin-bottom: 0 !important;
 `
+
+const Variant = ({ variant, isCompoundHet }) => {
+  const mainGeneId = getVariantMainGeneId(variant)
+  return (
+    <StyledVariantRow key={variant.variantId} severity={CLINSIG_SEVERITY[(variant.clinvar.clinicalSignificance || '').toLowerCase()]}>
+      {isCompoundHet &&
+      <StyledCompoundHetLink width={16}>
+        {variant.familyGuids.map(familyGuid =>
+          <FamilyVariantTags familyGuid={familyGuid} variant={variant} key={variant.variantId} isCompoundHet />,
+        )}
+      </StyledCompoundHetLink>}
+      <Grid.Column width={16}>
+        <Pathogenicity variant={variant} />
+      </Grid.Column>
+      <Grid.Column>
+        {Object.keys(variant.transcripts).filter(geneId => geneId !== mainGeneId).map(geneId =>
+          <VariantGene key={geneId} geneId={geneId} variant={variant} compact />,
+        )}
+        {Object.keys(variant.transcripts).length > 1 && <VerticalSpacer height={20} />}
+        {variant.familyGuids.map(familyGuid =>
+          <VariantIndividuals key={familyGuid} familyGuid={familyGuid} variant={variant} />,
+        )}
+      </Grid.Column>
+      <Grid.Column><Annotations variant={variant} /></Grid.Column>
+      <Grid.Column><Predictions variant={variant} /></Grid.Column>
+      <Grid.Column><Frequencies variant={variant} /></Grid.Column>
+      <Grid.Column width={16}>
+        <FamilyVariantReads variant={variant} />
+      </Grid.Column>
+    </StyledVariantRow>
+  )
+}
+
+Variant.prototype = {
+  variant: PropTypes.object,
+  isCompoundHet: PropTypes.bool,
+}
 
 const SingleVariant = ({ variant }) => {
   const mainGeneId = getVariantMainGeneId(variant)
@@ -90,40 +127,40 @@ SingleVariant.propTypes = {
   variant: PropTypes.object,
 }
 
-const CompoundHet = ({ variant }) => {
-  const compoundHetGeneId = getVariantMainGeneId(variant)
-  return (
-    <StyledCompoundHetRow key={variant.variantId} severity={CLINSIG_SEVERITY[(variant.clinvar.clinicalSignificance || '').toLowerCase()]}>
-      <StyledCompoundHetLink width={16}>
-        {variant.familyGuids.map(familyGuid =>
-          <FamilyVariantTags familyGuid={familyGuid} variant={variant} key={variant.variantId} isCompoundHet />,
-        )}
-      </StyledCompoundHetLink>
-      <Grid.Column width={16}>
-        <Pathogenicity variant={variant} />
-      </Grid.Column>
-      <Grid.Column>
-        {Object.keys(variant.transcripts).filter(geneId => geneId !== compoundHetGeneId).map(geneId =>
-          <VariantGene key={geneId} geneId={geneId} variant={variant} compact />,
-        )}
-        {Object.keys(variant.transcripts).length > 1 && <VerticalSpacer height={20} />}
-        {variant.familyGuids.map(familyGuid =>
-          <VariantIndividuals key={familyGuid} familyGuid={familyGuid} variant={variant} />,
-        )}
-      </Grid.Column>
-      <Grid.Column><Annotations variant={variant} /></Grid.Column>
-      <Grid.Column><Predictions variant={variant} /></Grid.Column>
-      <Grid.Column><Frequencies variant={variant} /></Grid.Column>
-      <Grid.Column width={16}>
-        <FamilyVariantReads variant={variant} />
-      </Grid.Column>
-    </StyledCompoundHetRow>
-  )
-}
-
-CompoundHet.propTypes = {
-  variant: PropTypes.object,
-}
+// const CompoundHet = ({ variant }) => {
+//   const compoundHetGeneId = getVariantMainGeneId(variant)
+//   return (
+//     <StyledCompoundHetRow key={variant.variantId} severity={CLINSIG_SEVERITY[(variant.clinvar.clinicalSignificance || '').toLowerCase()]}>
+//       <StyledCompoundHetLink width={16}>
+//         {variant.familyGuids.map(familyGuid =>
+//           <FamilyVariantTags familyGuid={familyGuid} variant={variant} key={variant.variantId} isCompoundHet />,
+//         )}
+//       </StyledCompoundHetLink>
+//       <Grid.Column width={16}>
+//         <Pathogenicity variant={variant} />
+//       </Grid.Column>
+//       <Grid.Column>
+//         {Object.keys(variant.transcripts).filter(geneId => geneId !== compoundHetGeneId).map(geneId =>
+//           <VariantGene key={geneId} geneId={geneId} variant={variant} compact />,
+//         )}
+//         {Object.keys(variant.transcripts).length > 1 && <VerticalSpacer height={20} />}
+//         {variant.familyGuids.map(familyGuid =>
+//           <VariantIndividuals key={familyGuid} familyGuid={familyGuid} variant={variant} />,
+//         )}
+//       </Grid.Column>
+//       <Grid.Column><Annotations variant={variant} /></Grid.Column>
+//       <Grid.Column><Predictions variant={variant} /></Grid.Column>
+//       <Grid.Column><Frequencies variant={variant} /></Grid.Column>
+//       <Grid.Column width={16}>
+//         <FamilyVariantReads variant={variant} />
+//       </Grid.Column>
+//     </StyledCompoundHetRow>
+//   )
+// }
+//
+// CompoundHet.propTypes = {
+//   variant: PropTypes.object,
+// }
 
 const CompoundHets = ({ variants }) => {
   const geneId = getVariantMainGeneId(variants[0])
@@ -138,11 +175,11 @@ const CompoundHets = ({ variants }) => {
         {geneId &&
         <VariantGene geneId={geneId} variant={variants[0]} areCompoundHets />}
       </Grid.Column>
-      <StyledCompoundHetRows stackable columns="equal">
+      <StyledVariantRow stackable columns="equal">
         {variants.map(variant =>
-          <CompoundHet variant={variant} key={variant.variantId} />,
+          <Variant variant={variant} key={variant.variantId} isCompoundHet />,
         )}
-      </StyledCompoundHetRows>
+      </StyledVariantRow>
     </StyledVariantRow>
   )
 }
