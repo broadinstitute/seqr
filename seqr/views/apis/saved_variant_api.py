@@ -175,11 +175,8 @@ def _create_variant_note(saved_variants, note_json, user):
 
 def _get_note_from_variant_guids(user, variant_guids, note_guid):
     variant_guids = variant_guids.split(',')
-    saved_variants = []
-    for variant_guid in variant_guids:
-        saved_variant = SavedVariant.objects.get(guid=variant_guid)
-        check_permissions(saved_variant.family.project, user, CAN_VIEW)
-        saved_variants.append(saved_variant)
+    saved_variants = SavedVariant.objects.get(guid__in=variant_guids)
+    check_permissions(saved_variants[0].family.project, user, CAN_VIEW)
     note = VariantNote.objects.get(guid=note_guid)
     return note
 
@@ -190,11 +187,12 @@ def update_variant_note_handler(request, variant_guids, note_guid):
     note = _get_note_from_variant_guids(request.user, variant_guids, note_guid)
     request_json = json.loads(request.body)
     update_model_from_json(note, request_json, allow_unknown_keys=True)
+    saved_variants = SavedVariant.objects.get(guid__in=variant_guids)
 
     update = {}
     for variant_guid in variant_guids:
         update[variant_guid] = {
-            'notes': [get_json_for_variant_note(note) for note in saved_variant.variantnote_set.all()],
+            'notes': [get_json_for_variant_note(note) for note in saved_variants[0].variantnote_set.all()],
         }
     return create_json_response({'savedVariantsByGuid': update})
 
@@ -204,10 +202,12 @@ def update_variant_note_handler(request, variant_guids, note_guid):
 def delete_variant_note_handler(request, variant_guids, note_guid):
     note = _get_note_from_variant_guids(request.user, variant_guids, note_guid)
     delete_seqr_model(note)
+    saved_variants = SavedVariant.objects.get(guid__in=variant_guids)
+
     update = {}
     for variant_guid in variant_guids:
         update[variant_guid] = {
-            'notes': [get_json_for_variant_note(note) for note in saved_variant.variantnote_set.all()]
+            'notes': [get_json_for_variant_note(note) for note in saved_variants[0].variantnote_set.all()]
         }
     return create_json_response({'savedVariantsByGuid': update})
 
@@ -217,11 +217,7 @@ def delete_variant_note_handler(request, variant_guids, note_guid):
 def update_variant_tags_handler(request, variant_guids):
     request_json = json.loads(request.body)
     variant_guids = variant_guids.split(',')
-    saved_variants = []
-    for variant_guid in variant_guids:
-        saved_variant = SavedVariant.objects.get(guid=variant_guid)
-        check_permissions(saved_variant.family.project, request.user, CAN_VIEW)
-        saved_variants.append(saved_variant)
+    saved_variants = SavedVariant.objects.get(guid__in= variant_guids)
 
     updated_tags = request_json.get('tags', [])
 
@@ -230,6 +226,7 @@ def update_variant_tags_handler(request, variant_guids):
     existing_tag_guids = [tag['tagGuid'] for tag in updated_tags if tag.get('tagGuid')]
     updated_functional_data = request_json.get('functionalData', [])
 
+    saved_variant = saved_variants[0]
     for tag in saved_variant.varianttag_set.exclude(guid__in=existing_tag_guids):
         delete_seqr_model(tag)
         _create_new_tags(saved_variants, request_json, request.user)
@@ -266,9 +263,6 @@ def update_variant_tags_handler(request, variant_guids):
             'tags': [get_json_for_variant_tag(tag) for tag in saved_variant.varianttag_set.all()],
             'functionalData': [get_json_for_variant_functional_data(tag) for tag in saved_variant.variantfunctionaldata_set.all()]
         }
-
-    import pdb
-    pdb.set_trace()
 
     return create_json_response({'savedVariantsByGuid': update})
 
