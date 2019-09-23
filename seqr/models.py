@@ -525,16 +525,16 @@ class AliasField(models.Field):
         return getattr(instance, self.db_column)
 
 
-#class SampleBatch(ModelWithGUID):
-#    """Represents a set of biological samples that were processed together."""
-#
-#    notes = models.TextField(null=True, blank=True)
-#
-#    def __unicode__(self):
-#        return self.name.strip()
-#
-#    def _compute_guid(self):
-#        return 'D%05d_%s' % (self.id, _slugify(str(self)))
+class SampleBatch(ModelWithGUID):
+   """Represents a set of biological samples that were processed together."""
+
+   notes = models.TextField(null=True, blank=True)
+
+   def __unicode__(self):
+       return self.name.strip()
+
+   def _compute_guid(self):
+       return 'D%05d_%s' % (self.id, _slugify(str(self)))
 
 
 class SavedVariant(ModelWithGUID):
@@ -609,7 +609,6 @@ class VariantTag(ModelWithGUID):
 
     def __unicode__(self):
         return "%s:%s" % (str(self.saved_variants), self.variant_tag_type.name)
-        # return "%s:%s" % ("tags", self.variant_tag_type.name)
 
     def _compute_guid(self):
         return 'VT%07d_%s' % (self.id, _slugify(str(self)))
