@@ -15,18 +15,13 @@ import VariantIndividuals from './VariantIndividuals'
 import { VerticalSpacer } from '../../Spacers'
 
 
-const StyledVariantRow = styled(Grid.Row)`
+const StyledVariantRow = styled(Grid.Row)`  
   ${({ isCompoundHet }) => {
     if (isCompoundHet) {
-      return '.column {margin-top: 1em !important; margin-bottom: 0 !important;}'
+      return '.column { margin-top: 0 !important; margin-left: 1em !important; }'
     }
-    return '.column {margin-top: 0 !important; margin-left: 1em !important;}'
+    return '.column { margin-top: 1em !important; margin-bottom: 0 !important; }'
   }}
-  
-  .column {
-    margin-top: 1em !important;
-    margin-bottom: 0 !important;
-  }
   
   padding: 0;
   color: #999;
@@ -55,16 +50,22 @@ const StyledCompoundHetRows = styled(Grid)`
 const Variant = ({ variant, isCompoundHet }) => {
   const mainGeneId = getVariantMainGeneId(variant)
   return (
-    <StyledVariantRow key={variant.variantId} severity={CLINSIG_SEVERITY[(variant.clinvar.clinicalSignificance || '').toLowerCase()]}>
+    <StyledVariantRow key={variant.variantId} severity={CLINSIG_SEVERITY[(variant.clinvar.clinicalSignificance || '').toLowerCase()]} isCompoundHet={isCompoundHet} >
       {isCompoundHet &&
-      <StyledCompoundHetLink width={16}>
-        {variant.familyGuids.map(familyGuid =>
-          <FamilyVariantTags familyGuid={familyGuid} variant={variant} key={variant.variantId} isCompoundHet />,
-        )}
-      </StyledCompoundHetLink>}
+        <StyledCompoundHetLink width={16}>
+          {variant.familyGuids.map(familyGuid =>
+            <FamilyVariantTags familyGuid={familyGuid} variant={variant} key={variant.variantId} isCompoundHet />,
+          )}
+        </StyledCompoundHetLink>
+      }
       <Grid.Column width={16}>
         <Pathogenicity variant={variant} />
       </Grid.Column>
+      {!isCompoundHet && variant.familyGuids.map(familyGuid =>
+        <Grid.Column key={familyGuid} width={16}>
+          <FamilyVariantTags familyGuid={familyGuid} variant={variant} />
+        </Grid.Column>,
+      )}
       <Grid.Column>
         {Object.keys(variant.transcripts).filter(geneId => geneId !== mainGeneId).map(geneId =>
           <VariantGene key={geneId} geneId={geneId} variant={variant} compact />,
@@ -84,11 +85,12 @@ const Variant = ({ variant, isCompoundHet }) => {
   )
 }
 
-Variant.prototype = {
+Variant.propTypes = {
   variant: PropTypes.object,
   isCompoundHet: PropTypes.bool,
 }
 
+// TODO: merge singleVariant into Variant
 const SingleVariant = ({ variant }) => {
   const mainGeneId = getVariantMainGeneId(variant)
   return (
@@ -130,7 +132,7 @@ SingleVariant.propTypes = {
 // const CompoundHet = ({ variant }) => {
 //   const compoundHetGeneId = getVariantMainGeneId(variant)
 //   return (
-//     <StyledCompoundHetRow key={variant.variantId} severity={CLINSIG_SEVERITY[(variant.clinvar.clinicalSignificance || '').toLowerCase()]}>
+//     <StyledVariantRow key={variant.variantId} severity={CLINSIG_SEVERITY[(variant.clinvar.clinicalSignificance || '').toLowerCase()]} isCompoundHet >
 //       <StyledCompoundHetLink width={16}>
 //         {variant.familyGuids.map(familyGuid =>
 //           <FamilyVariantTags familyGuid={familyGuid} variant={variant} key={variant.variantId} isCompoundHet />,
@@ -154,7 +156,7 @@ SingleVariant.propTypes = {
 //       <Grid.Column width={16}>
 //         <FamilyVariantReads variant={variant} />
 //       </Grid.Column>
-//     </StyledCompoundHetRow>
+//     </StyledVariantRow>
 //   )
 // }
 //
@@ -175,11 +177,11 @@ const CompoundHets = ({ variants }) => {
         {geneId &&
         <VariantGene geneId={geneId} variant={variants[0]} areCompoundHets />}
       </Grid.Column>
-      <StyledVariantRow stackable columns="equal">
+      <StyledCompoundHetRows stackable columns="equal">
         {variants.map(variant =>
           <Variant variant={variant} key={variant.variantId} isCompoundHet />,
         )}
-      </StyledVariantRow>
+      </StyledCompoundHetRows>
     </StyledVariantRow>
   )
 }
@@ -192,7 +194,7 @@ CompoundHets.propTypes = {
 const Variants = ({ variants }) =>
   <Grid stackable divided="vertically" columns="equal">
     {variants.map(variant =>
-      (variant.length > 1 ? <CompoundHets variants={variant} key={variant[0].variantId} /> : <SingleVariant variant={variant} key={variant.variantId} />))}
+      (variant.length > 1 ? <CompoundHets variants={variant} key={variant[0].variantId} /> : <Variant variant={variant} key={variant.variantId} />))}
   </Grid>
 
 Variants.propTypes = {
