@@ -16,9 +16,9 @@ import { VerticalSpacer } from '../../Spacers'
 
 
 const StyledVariantRow = styled(Grid.Row)`  
-  ${({ isCompoundHet }) => {
-    if (isCompoundHet) {
-      return '.column { margin-top: 0 !important; margin-left: 1em !important; }'
+  ${({ iscompoundhet }) => {
+    if (iscompoundhet) {
+      return '.column { margin-top: 0em !important; margin-left: 1em !important; }'
     }
     return '.column { margin-top: 1em !important; margin-bottom: 0 !important; }'
   }}
@@ -43,14 +43,14 @@ const StyledCompoundHetLink = styled(Grid.Column)`
 
 const StyledCompoundHetRows = styled(Grid)`
   margin-right: 1em !important;
-  margin-top: 0 !important;
+  margin-top: 0.5em !important;
   margin-bottom: 0 !important;
 `
 
 const Variant = ({ variant, isCompoundHet }) => {
   const mainGeneId = getVariantMainGeneId(variant)
   return (
-    <StyledVariantRow key={variant.variantId} severity={CLINSIG_SEVERITY[(variant.clinvar.clinicalSignificance || '').toLowerCase()]} isCompoundHet={isCompoundHet} >
+    <StyledVariantRow key={variant.variantId} severity={CLINSIG_SEVERITY[(variant.clinvar.clinicalSignificance || '').toLowerCase()]} iscompoundhet={isCompoundHet} >
       {isCompoundHet &&
         <StyledCompoundHetLink width={16}>
           {variant.familyGuids.map(familyGuid =>
@@ -66,6 +66,7 @@ const Variant = ({ variant, isCompoundHet }) => {
           <FamilyVariantTags familyGuid={familyGuid} variant={variant} />
         </Grid.Column>,
       )}
+      {isCompoundHet &&
       <Grid.Column>
         {Object.keys(variant.transcripts).filter(geneId => geneId !== mainGeneId).map(geneId =>
           <VariantGene key={geneId} geneId={geneId} variant={variant} compact />,
@@ -74,10 +75,24 @@ const Variant = ({ variant, isCompoundHet }) => {
         {variant.familyGuids.map(familyGuid =>
           <VariantIndividuals key={familyGuid} familyGuid={familyGuid} variant={variant} />,
         )}
-      </Grid.Column>
+      </Grid.Column>}
+      {!isCompoundHet &&
+      <Grid.Column>
+        <VariantGene geneId={mainGeneId} variant={variant} />
+        {Object.keys(variant.transcripts).length > 1 && <Divider />}
+        {Object.keys(variant.transcripts).filter(geneId => geneId !== mainGeneId).map(geneId =>
+          <VariantGene key={geneId} geneId={geneId} variant={variant} compact />,
+        )}
+      </Grid.Column>}
       <Grid.Column><Annotations variant={variant} /></Grid.Column>
       <Grid.Column><Predictions variant={variant} /></Grid.Column>
       <Grid.Column><Frequencies variant={variant} /></Grid.Column>
+      {!isCompoundHet &&
+      <Grid.Column width={16}>
+        {variant.familyGuids.map(familyGuid =>
+          <VariantIndividuals key={familyGuid} familyGuid={familyGuid} variant={variant} />,
+        )}
+      </Grid.Column>}
       <Grid.Column width={16}>
         <FamilyVariantReads variant={variant} />
       </Grid.Column>
@@ -90,79 +105,6 @@ Variant.propTypes = {
   isCompoundHet: PropTypes.bool,
 }
 
-// TODO: merge singleVariant into Variant
-const SingleVariant = ({ variant }) => {
-  const mainGeneId = getVariantMainGeneId(variant)
-  return (
-    <StyledVariantRow severity={CLINSIG_SEVERITY[(variant.clinvar.clinicalSignificance || '').toLowerCase()]}>
-      <Grid.Column width={16}>
-        <Pathogenicity variant={variant} />
-      </Grid.Column>
-      {variant.familyGuids.map(familyGuid =>
-        <Grid.Column key={familyGuid} width={16}>
-          <FamilyVariantTags familyGuid={familyGuid} variant={variant} />
-        </Grid.Column>,
-      )}
-      <Grid.Column>
-        <VariantGene geneId={mainGeneId} variant={variant} />
-        {Object.keys(variant.transcripts).length > 1 && <Divider />}
-        {Object.keys(variant.transcripts).filter(geneId => geneId !== mainGeneId).map(geneId =>
-          <VariantGene key={geneId} geneId={geneId} variant={variant} compact />,
-        )}
-      </Grid.Column>
-      <Grid.Column><Annotations variant={variant} /></Grid.Column>
-      <Grid.Column><Predictions variant={variant} /></Grid.Column>
-      <Grid.Column><Frequencies variant={variant} /></Grid.Column>
-      <Grid.Column width={16}>
-        {variant.familyGuids.map(familyGuid =>
-          <VariantIndividuals key={familyGuid} familyGuid={familyGuid} variant={variant} />,
-        )}
-      </Grid.Column>
-      <Grid.Column width={16}>
-        <FamilyVariantReads variant={variant} />
-      </Grid.Column>
-    </StyledVariantRow>
-  )
-}
-
-SingleVariant.propTypes = {
-  variant: PropTypes.object,
-}
-
-// const CompoundHet = ({ variant }) => {
-//   const compoundHetGeneId = getVariantMainGeneId(variant)
-//   return (
-//     <StyledVariantRow key={variant.variantId} severity={CLINSIG_SEVERITY[(variant.clinvar.clinicalSignificance || '').toLowerCase()]} isCompoundHet >
-//       <StyledCompoundHetLink width={16}>
-//         {variant.familyGuids.map(familyGuid =>
-//           <FamilyVariantTags familyGuid={familyGuid} variant={variant} key={variant.variantId} isCompoundHet />,
-//         )}
-//       </StyledCompoundHetLink>
-//       <Grid.Column width={16}>
-//         <Pathogenicity variant={variant} />
-//       </Grid.Column>
-//       <Grid.Column>
-//         {Object.keys(variant.transcripts).filter(geneId => geneId !== compoundHetGeneId).map(geneId =>
-//           <VariantGene key={geneId} geneId={geneId} variant={variant} compact />,
-//         )}
-//         {Object.keys(variant.transcripts).length > 1 && <VerticalSpacer height={20} />}
-//         {variant.familyGuids.map(familyGuid =>
-//           <VariantIndividuals key={familyGuid} familyGuid={familyGuid} variant={variant} />,
-//         )}
-//       </Grid.Column>
-//       <Grid.Column><Annotations variant={variant} /></Grid.Column>
-//       <Grid.Column><Predictions variant={variant} /></Grid.Column>
-//       <Grid.Column><Frequencies variant={variant} /></Grid.Column>
-//       <Grid.Column width={16}>
-//         <FamilyVariantReads variant={variant} />
-//       </Grid.Column>
-//     </StyledVariantRow>
-//   )
-// }
-//
-// CompoundHet.propTypes = {
-//   variant: PropTypes.object,
-// }
 
 const CompoundHets = ({ variants }) => {
   const geneId = getVariantMainGeneId(variants[0])
