@@ -608,7 +608,7 @@ class VariantTag(ModelWithGUID):
     search_parameters = models.TextField(null=True, blank=True)  # aka. search url
 
     def __unicode__(self):
-        return "%s:%s" % (str(self.saved_variants), self.variant_tag_type.name)
+        return "%s:%s" % (str(self.saved_variants[0]), self.variant_tag_type.name)
 
     def _compute_guid(self):
         return 'VT%07d_%s' % (self.id, _slugify(str(self)))
@@ -628,7 +628,7 @@ class VariantNote(ModelWithGUID):
     search_parameters = models.TextField(null=True, blank=True)  # aka. search url
 
     def __unicode__(self):
-        return "%s:%s" % (str(self.saved_variants), (self.note or "")[:20])
+        return "%s:%s" % (str(self.saved_variants[0]), (self.note or "")[:20])
 
     def _compute_guid(self):
         return 'VN%07d_%s' % (self.id, _slugify(str(self)))
