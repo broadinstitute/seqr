@@ -8,60 +8,67 @@ import django.db.models.deletion
 import django.utils.timezone
 
 
-def _get_variant_notes(apps, schema_editor):
+def variant_note_to_multi_saved_variants(apps, schema_editor):
     VariantNote = apps.get_model("seqr", "VariantNote")
     db_alias = schema_editor.connection.alias
     variant_notes = VariantNote.objects.using(db_alias).all()
-    return variant_notes
-
-
-def variant_note_to_multi_saved_variants():
-    variant_notes = _get_variant_notes()
     for variant_note in variant_notes:
-        variant_note.saved_variants = [variant_note.saved_variant]
+        saved_variant = variant_note.saved_variant
+        if saved_variant is None:
+            saved_variants = []
+        else:
+            saved_variants = [saved_variant]
+        variant_note.saved_variants = saved_variants
 
 
-def variant_note_to_single_saved_variant():
-    variant_notes = _get_variant_notes()
+def variant_note_to_single_saved_variant(apps, schema_editor):
+    VariantNote = apps.get_model("seqr", "VariantNote")
+    db_alias = schema_editor.connection.alias
+    variant_notes = VariantNote.objects.using(db_alias).all()
     for variant_note in variant_notes:
-        variant_note.saved_variant = variant_note.saved_variants[0]
+        variant_note.saved_variant = variant_note.saved_variants.first()
 
 
-def _get_variant_tags(apps, schema_editor):
+def variant_tag_to_multi_saved_variants(apps, schema_editor):
     VariantTag = apps.get_model("seqr", "VariantTag")
     db_alias = schema_editor.connection.alias
     variant_tags = VariantTag.objects.using(db_alias).all()
-    return variant_tags
-
-
-def variant_tag_to_multi_saved_variants():
-    variant_tags = _get_variant_tags()
     for variant_tag in variant_tags:
-        variant_tag.saved_variants = [variant_tag.saved_variant]
+        curr_variant_tag = variant_tag.saved_variant
+        if curr_variant_tag is None:
+            variants_tag = []
+        else:
+            variants_tag = [curr_variant_tag]
+        variant_tag.saved_variants = variants_tag
 
 
-def variant_tag_to_single_saved_variant():
-    variant_tags = _get_variant_tags()
+def variant_tag_to_single_saved_variant(apps, schema_editor):
+    VariantTag = apps.get_model("seqr", "VariantTag")
+    db_alias = schema_editor.connection.alias
+    variant_tags = VariantTag.objects.using(db_alias).all()
     for variant_tag in variant_tags:
-        variant_tag.saved_variant = variant_tag.saved_variants[0]
+        variant_tag.saved_variant = variant_tag.saved_variants.first()
 
 
-def _get_functional_data(apps, schema_editor):
+def variant_functional_data_to_multi_saved_variants(apps, schema_editor):
     VariantFunctionalData = apps.get_model("seqr", "VariantFunctionalData")
     db_alias = schema_editor.connection.alias
-    functional_data = VariantFunctionalData.objects.using(db_alias).all()
-    return functional_data
-
-def variant_functional_data_to_multi_saved_variants():
-    all_functional_data = _get_functional_data()
+    all_functional_data = VariantFunctionalData.objects.using(db_alias).all()
     for functional_data in all_functional_data:
-        functional_data.saved_variants = [functional_data.saved_variant]
+        variant_functional_data = functional_data.saved_variant
+        if variant_functional_data is None:
+            variants_functional_data = []
+        else:
+            variants_functional_data = [variant_functional_data]
+        functional_data.saved_variants = variants_functional_data
 
 
-def variant_functional_data_to_single_saved_variant():
-    all_functional_data = _get_functional_data()
+def variant_functional_data_to_single_saved_variant(apps, schema_editor):
+    VariantFunctionalData = apps.get_model("seqr", "VariantFunctionalData")
+    db_alias = schema_editor.connection.alias
+    all_functional_data = VariantFunctionalData.objects.using(db_alias).all()
     for functional_data in all_functional_data:
-        functional_data.saved_variant = functional_data.saved_variants[0]
+        functional_data.saved_variant = functional_data.saved_variants.first()
 
 
 class Migration(migrations.Migration):
