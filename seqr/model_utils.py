@@ -201,13 +201,13 @@ def find_matching_xbrowse_model(seqr_model):
             match_filter = Q(
                 seqr_variant_note__isnull=True,
                 note=seqr_model.note,
-                project__project_id=seqr_model.saved_variants[0].family.project.deprecated_project_id,
-                xpos=seqr_model.saved_variants[0].xpos_start,
-                ref=seqr_model.saved_variants[0].ref,
-                alt=seqr_model.saved_variants[0].alt
+                project__project_id=seqr_model.saved_variants.first().family.project.deprecated_project_id,
+                xpos=seqr_model.saved_variants.first().xpos_start,
+                ref=seqr_model.saved_variants.first().ref,
+                alt=seqr_model.saved_variants.first().alt
             )
             if seqr_model.saved_variant.family:
-                match_filter &= Q(family__family_id=seqr_model.saved_variants[0].family.family_id)
+                match_filter &= Q(family__family_id=seqr_model.saved_variants.first().family.family_id)
             return BaseVariantNote.objects.get(Q(seqr_variant_note=seqr_model) | match_filter)
         elif seqr_class_name == "LocusList":
             return BaseGeneList.objects.get(
