@@ -1,3 +1,0 @@
-#define REDIS_GIT_SHA1 "708f7470"
-#define REDIS_GIT_DIRTY "      14"
-#define REDIS_BUILD_ID "wm73e-dce-1566396530"
