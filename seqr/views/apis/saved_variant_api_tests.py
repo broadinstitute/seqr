@@ -107,7 +107,7 @@ class ProjectAPITest(TransactionTestCase):
         self.assertDictEqual(variant_json, response_variant_json)
 
         self.assertListEqual(["Review"], [vt['name'] for vt in tags])
-        self.assertListEqual(["Review"], [vt.variant_tag_type.name for vt in VariantTag.objects.filter(saved_variant__guid=variant_guid)])
+        self.assertListEqual(["Review"], [vt.variant_tag_type.name for vt in VariantTag.objects.filter(saved_variants__guid__contains=variant_guid)])
 
     def test_create_update_and_delete_variant_note(self):
         create_variant_note_url = reverse(create_variant_note_handler, args=[VARIANT_GUID])
@@ -176,9 +176,9 @@ class ProjectAPITest(TransactionTestCase):
         self.assertEqual(len(new_variant_note), 0)
 
     def test_update_variant_tags(self):
-        variant_tags = VariantTag.objects.filter(saved_variant__guid=VARIANT_GUID)
+        variant_tags = VariantTag.objects.filter(saved_variants__guid__contains=VARIANT_GUID)
         self.assertSetEqual({"Review", "Tier 1 - Novel gene and phenotype"}, {vt.variant_tag_type.name for vt in variant_tags})
-        variant_functional_data = VariantFunctionalData.objects.filter(saved_variant__guid=VARIANT_GUID)
+        variant_functional_data = VariantFunctionalData.objects.filter(saved_variants__guid__contains=VARIANT_GUID)
         self.assertSetEqual({"Biochemical Function", "Genome-wide Linkage"}, {vt.functional_data_tag for vt in variant_functional_data})
         self.assertSetEqual({"A note", "2"}, {vt.metadata for vt in variant_functional_data})
 
@@ -197,13 +197,13 @@ class ProjectAPITest(TransactionTestCase):
         tags = response.json()['savedVariantsByGuid'][VARIANT_GUID]['tags']
         self.assertEqual(len(tags), 2)
         self.assertSetEqual({"Review", "Excluded"}, {vt['name'] for vt in tags})
-        self.assertSetEqual({"Review", "Excluded"}, {vt.variant_tag_type.name for vt in VariantTag.objects.filter(saved_variant__guid=VARIANT_GUID)})
+        self.assertSetEqual({"Review", "Excluded"}, {vt.variant_tag_type.name for vt in VariantTag.objects.filter(saved_variants__guid__contains=VARIANT_GUID)})
 
         functionalData = response.json()['savedVariantsByGuid'][VARIANT_GUID]['functionalData']
         self.assertEqual(len(functionalData), 2)
         self.assertSetEqual({"Biochemical Function", "Bonferroni corrected p-value"}, {vt['name'] for vt in functionalData})
         self.assertSetEqual({"An updated note", "0.05"}, {vt['metadata'] for vt in functionalData})
-        variant_functional_data = VariantFunctionalData.objects.filter(saved_variant__guid=VARIANT_GUID)
+        variant_functional_data = VariantFunctionalData.objects.filter(saved_variants__guid__contains=VARIANT_GUID)
         self.assertSetEqual({"Biochemical Function", "Bonferroni corrected p-value"}, {vt.functional_data_tag for vt in variant_functional_data})
         self.assertSetEqual({"An updated note", "0.05"}, {vt.metadata for vt in variant_functional_data})
 

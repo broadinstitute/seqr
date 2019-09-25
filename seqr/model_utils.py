@@ -273,7 +273,7 @@ def convert_seqr_kwargs_to_xbrowse_kwargs(seqr_model, **kwargs):
                     xbrowse_kwargs[key] = getattr(value, nested_config['field'], None)
             else:
                 if key == 'project_tag':
-                    value.project = seqr_model.saved_variant.family.project
+                    value.project = seqr_model.saved_variants.first().family.project
                 new_value = find_matching_xbrowse_model(value)
                 if new_value is not None:
                     xbrowse_kwargs[key] = new_value
@@ -327,9 +327,15 @@ def _create_xbrowse_model(seqr_model, **kwargs):
 
 def create_seqr_model(seqr_model_class, **kwargs):
     logging.info("create_seqr_model(%s, %s)" % (seqr_model_class.__name__, kwargs))
-    seqr_model = seqr_model_class.objects.create(**kwargs)
+    saved_variants = kwargs['saved_variants']
+    if saved_variants:
+        del saved_variants
+        seqr_model = seqr_model_class.objects.create(**kwargs)
+        seqr_model.saved_variants.add(*saved_variants)
+        kwargs.update({'saved_variants': saved_variants[0]})
+    else:
+        seqr_model = seqr_model_class.objects.create(**kwargs)
     _create_xbrowse_model(seqr_model, **kwargs)
-
     return seqr_model
 
 
