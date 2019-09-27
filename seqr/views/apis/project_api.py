@@ -12,6 +12,7 @@ from django.views.decorators.csrf import csrf_exempt
 from seqr.model_utils import get_or_create_seqr_model, delete_seqr_model
 from seqr.models import Project, Family, Individual, Sample, VariantTag, VariantFunctionalData, \
     VariantNote, VariantTagType, AnalysisGroup, _slugify, CAN_EDIT, IS_OWNER
+from seqr.utils.gene_utils import get_genes
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.json_to_orm_utils import update_project_from_json
 from seqr.views.utils.orm_to_json_utils import _get_json_for_project, get_json_for_samples, _get_json_for_families, \
@@ -146,9 +147,13 @@ def project_page_data(request, project_guid):
 
     project_json = _get_json_for_project(project, request.user)
     project_json['collaborators'] = get_json_for_project_collaborator_list(project)
-    project_json.update(_get_json_for_variant_tag_types(project))
     project_json['locusListGuids'] = locus_lists_by_guid.keys()
     project_json['detailsLoaded'] = True
+    project_json.update(_get_json_for_variant_tag_types(project))
+
+    gene_ids = set()
+    for tag in project_json['discoveryTags']:
+        gene_ids.update(tag['transcripts'].keys())
 
     return create_json_response({
         'projectsByGuid': {project_guid: project_json},
@@ -157,6 +162,7 @@ def project_page_data(request, project_guid):
         'samplesByGuid': samples_by_guid,
         'locusListsByGuid': locus_lists_by_guid,
         'analysisGroupsByGuid': analysis_groups_by_guid,
+        'genesById': get_genes(gene_ids),
     })
 
 

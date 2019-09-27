@@ -6,7 +6,7 @@ import { Link } from 'react-router-dom'
 import styled from 'styled-components'
 
 import { updateFamily, loadStaffOptions } from 'redux/rootReducer'
-import { getProjectsByGuid, getFirstSampleByFamily, getUserOptionsIsLoading } from 'redux/selectors'
+import { getProjectsByGuid, getFirstSampleByFamily, getUserOptionsIsLoading, getGenesById } from 'redux/selectors'
 import VariantTagTypeBar from '../graph/VariantTagTypeBar'
 import PedigreeImagePanel from './view-pedigree-image/PedigreeImagePanel'
 import TextFieldView from './view-fields/TextFieldView'
@@ -27,7 +27,7 @@ import {
   FAMILY_FIELD_RENDER_LOOKUP,
   FAMILY_FIELD_OMIM_NUMBER,
   FAMILY_FIELD_PMIDS,
-  getVariantMainTranscript,
+  getVariantMainGeneId,
 } from '../../utils/constants'
 import { getAnalystOptions } from '../../../pages/Project/selectors'
 
@@ -206,9 +206,9 @@ SearchLink.propTypes = {
   children: PropTypes.node,
 }
 
-const DiscoveryGenes = ({ project, familyGuid }) => {
+const DiscoveryGenes = ({ project, familyGuid, genesById }) => {
   const discoveryGenes = project.discoveryTags.filter(tag => tag.familyGuids.includes(familyGuid)).map(tag =>
-    getVariantMainTranscript(tag).geneSymbol).filter(val => val)
+    (genesById[getVariantMainGeneId(tag)] || {}).geneSymbol).filter(val => val)
   return discoveryGenes.length > 0 ? (
     <span> <b>Discovery Genes:</b> {[...new Set(discoveryGenes)].join(', ')}</span>
   ) : null
@@ -217,10 +217,11 @@ const DiscoveryGenes = ({ project, familyGuid }) => {
 DiscoveryGenes.propTypes = {
   project: PropTypes.object.isRequired,
   familyGuid: PropTypes.string.isRequired,
+  genesById: PropTypes.object.isRequired,
 }
 
 const Family = (
-  { project, family, fields = [], showVariantDetails, compact, useFullWidth, disablePedigreeZoom,
+  { project, family, genesById, fields = [], showVariantDetails, compact, useFullWidth, disablePedigreeZoom,
     showFamilyPageLink, annotation, updateFamily: dispatchUpdateFamily,
   }) => {
   if (!family) {
@@ -264,7 +265,7 @@ const Family = (
       <VariantTagTypeBar height={15} width="calc(100% - 2.5em)" project={project} familyGuid={family.familyGuid} sectionLinks={false} />
       <HorizontalSpacer width={10} />
       <SearchLink project={project} family={family}><Icon name="search" /></SearchLink>
-      <DiscoveryGenes project={project} familyGuid={family.familyGuid} />
+      <DiscoveryGenes project={project} familyGuid={family.familyGuid} genesById={genesById} />
     </div>,
     !compact ?
       <div key="links">
@@ -303,11 +304,13 @@ Family.propTypes = {
   showFamilyPageLink: PropTypes.bool,
   updateFamily: PropTypes.func,
   annotation: PropTypes.node,
+  genesById: PropTypes.object,
 }
 
 
 const mapStateToProps = (state, ownProps) => ({
   project: getProjectsByGuid(state)[ownProps.family.projectGuid],
+  genesById: getGenesById(state),
 })
 
 const mapDispatchToProps = {

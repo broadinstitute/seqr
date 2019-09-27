@@ -943,7 +943,7 @@
     "model": "reference_data.geneinfo",
     "pk": 48,
     "fields": {
-        "gene_id": "ENSG00000240618",
+        "gene_id": "ENSG00000135953",
         "gene_symbol": "RP11-206L10.5",
         "chrom_grch37": "1",
         "start_grch37": 694412,

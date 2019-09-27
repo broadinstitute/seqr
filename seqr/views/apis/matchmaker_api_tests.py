@@ -177,7 +177,7 @@ class VariantSearchAPITest(TestCase):
 
         self.assertSetEqual(
             set(response_json['genesById'].keys()),
-            {'ENSG00000186092', 'ENSG00000233750', 'ENSG00000223972'}
+            {'ENSG00000186092', 'ENSG00000233750', 'ENSG00000223972', 'ENSG00000135953'}
         )
         self.assertSetEqual(
             set(response_json['savedVariantsByGuid'].keys()),
