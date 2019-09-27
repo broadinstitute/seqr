@@ -33,7 +33,7 @@ def get_objects_for_group(can_view_group, permission, object_cls):
 
 
 class ProjectAPITest(TestCase):
-    fixtures = ['users', '1kg_project']
+    fixtures = ['users', '1kg_project', 'reference_data']
 
     @mock.patch('seqr.views.utils.phenotips_utils.proxy_request', create_proxy_request_stub(201))
     def test_create_update_and_delete_project(self):
@@ -100,7 +100,7 @@ class ProjectAPITest(TestCase):
         self.assertSetEqual(
             set(response_json.keys()),
             {'projectsByGuid', 'familiesByGuid', 'individualsByGuid', 'samplesByGuid', 'locusListsByGuid',
-             'analysisGroupsByGuid'}
+             'analysisGroupsByGuid', 'genesById'}
         )
         self.assertSetEqual(
             set(response_json['projectsByGuid'][PROJECT_GUID]['variantTagTypes'][0].keys()),
@@ -118,6 +118,10 @@ class ProjectAPITest(TestCase):
             response_json['projectsByGuid'][PROJECT_GUID]['lastAccessedDate'][:10],
             datetime.today().strftime('%Y-%m-%d')
         )
+        discovery_tags = response_json['projectsByGuid'][PROJECT_GUID]['discoveryTags']
+        self.assertEqual(len(discovery_tags), 1)
+        self.assertEqual(discovery_tags[0]['variantGuid'], 'SV0000001_2103343353_r0390_100')
+        self.assertListEqual(response_json['genesById'].keys(), ['ENSG00000135953'])
         self.assertSetEqual(
             set(response_json['familiesByGuid'].values()[0].keys()),
             {'projectGuid', 'familyGuid', 'individualGuids', 'analysedBy', 'pedigreeImage', 'familyId', 'displayName',
@@ -162,13 +166,14 @@ class ProjectAPITest(TestCase):
         self.assertSetEqual(
             set(response_json.keys()),
             {'projectsByGuid', 'familiesByGuid', 'individualsByGuid', 'samplesByGuid', 'locusListsByGuid',
-             'analysisGroupsByGuid'}
+             'analysisGroupsByGuid', 'genesById'}
         )
         self.assertListEqual(response_json['projectsByGuid'].keys(), [EMPTY_PROJECT_GUID])
         self.assertDictEqual(response_json['familiesByGuid'], {})
         self.assertDictEqual(response_json['individualsByGuid'], {})
         self.assertDictEqual(response_json['samplesByGuid'], {})
         self.assertDictEqual(response_json['analysisGroupsByGuid'], {})
+        self.assertDictEqual(response_json['genesById'], {})
 
     def test_export_tables(self):
         url = reverse(export_project_individuals_handler, args=['R0001_1kg'])

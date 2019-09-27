@@ -47,6 +47,10 @@ def _get_es_variants(results_model, **kwargs):
     results_model.save()
     return deepcopy(VARIANTS), len(VARIANTS)
 
+def _get_empty_es_variants(results_model, **kwargs):
+    results_model.save()
+    return [], 0
+
 
 class VariantSearchAPITest(TestCase):
     fixtures = ['users', '1kg_project', 'reference_data', 'variant_searches']
@@ -154,6 +158,24 @@ class VariantSearchAPITest(TestCase):
         self.assertSetEqual(set(response_json.keys()), {'searchGeneBreakdown', 'genesById'})
         self.assertDictEqual(response_json['searchGeneBreakdown'], {SEARCH_HASH: gene_counts})
         self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000227232', 'ENSG00000268903'})
+
+        # Test no results
+        mock_get_variants.side_effect = _get_empty_es_variants
+        response = self.client.post(url, content_type='application/json', data=json.dumps({
+            'projectFamilies': PROJECT_FAMILIES, 'search': SEARCH
+        }))
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertDictEqual(response_json, {
+            'searchedVariants': [],
+            'savedVariantsByGuid': {},
+            'genesById': {},
+            'search': {
+                'search': SEARCH,
+                'projectFamilies': PROJECT_FAMILIES,
+                'totalResults': 0,
+            }
+        })
 
     def test_search_context(self):
         search_context_url = reverse(search_context_handler)

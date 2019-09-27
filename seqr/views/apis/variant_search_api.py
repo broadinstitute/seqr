@@ -471,7 +471,7 @@ def _get_saved_searches(user):
 
 def _get_saved_variants(variants, families):
     if not variants:
-        return {}
+        return {}, {}
 
     prefetch_related_objects(families, 'project')
     hg37_family_guids = {family.guid for family in families if family.project.genome_version == GENOME_VERSION_GRCh37}
