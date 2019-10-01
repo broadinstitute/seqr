@@ -487,7 +487,7 @@ def _get_saved_searches(user):
 
 def _get_saved_variants(variants):
     if not variants:
-        return {}
+        return {}, {}
 
     variants = _flatten_variants(variants)
 
