@@ -161,8 +161,6 @@ def find_matching_xbrowse_model(seqr_model):
                  Q(family__family_id=seqr_model.family.family_id) &
                  Q(indiv_id=seqr_model.individual_id)))
         elif seqr_class_name == "VariantTagType":
-            import pdb
-            pdb.set_trace()
             return BaseProjectTag.objects.get(
                 Q(project__project_id=seqr_model.project.deprecated_project_id) &
                 (Q(seqr_variant_tag_type=seqr_model) |
@@ -333,7 +331,12 @@ def create_seqr_model(seqr_model_class, **kwargs):
         saved_variants = kwargs['saved_variants']
         del kwargs['saved_variants']
         seqr_model = seqr_model_class.objects.create(**kwargs)
-        seqr_model.saved_variants.add(*saved_variants)
+        import pdb
+        pdb.set_trace()
+        if isinstance(saved_variants, list):
+            seqr_model.saved_variants.add(*saved_variants)
+        else:
+            seqr_model.saved_variants.add(saved_variants)
         kwargs.update({'saved_variant': saved_variants[0]})
     else:
         seqr_model = seqr_model_class.objects.create(**kwargs)
