@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { Grid, Divider } from 'semantic-ui-react'
 
-import { CLINSIG_SEVERITY, getVariantMainGeneId } from 'shared/utils/constants'
+import { CLINSIG_SEVERITY, getVariantMainGeneId, getCompoundHetsAllGeneIds, getCompoundHetsSharedGeneIds } from 'shared/utils/constants'
 import FamilyVariantReads from './FamilyVariantReads'
 import FamilyVariantTags from './FamilyVariantTags'
 import Annotations from './Annotations'
@@ -50,7 +50,7 @@ const StyledCompoundHetRows = styled(Grid)`
 const Variant = ({ variant, isCompoundHet }) => {
   const mainGeneId = getVariantMainGeneId(variant)
   return (
-    <StyledVariantRow key={variant.variantId} severity={CLINSIG_SEVERITY[(variant.clinvar.clinicalSignificance || '').toLowerCase()]} iscompoundhet={isCompoundHet} >
+    <StyledVariantRow key={variant.variantId} severity={CLINSIG_SEVERITY[(variant.clinvar.clinicalSignificance || '').toLowerCase()]} iscompoundhet={(isCompoundHet || false).toString()} >
       {isCompoundHet &&
         <StyledCompoundHetLink width={16}>
           {variant.familyGuids.map(familyGuid =>
@@ -107,7 +107,8 @@ Variant.propTypes = {
 
 
 const CompoundHets = ({ variants }) => {
-  const geneId = getVariantMainGeneId(variants[0])
+  const allGeneIds = getCompoundHetsAllGeneIds(variants)
+  const sharedGeneId = getCompoundHetsSharedGeneIds(allGeneIds)
   return (
     <StyledVariantRow key={variants[0].variantId} >
       {variants[0].familyGuids.map(familyGuid =>
@@ -116,8 +117,8 @@ const CompoundHets = ({ variants }) => {
         </Grid.Column>,
       )}
       <Grid.Column width={16}>
-        {geneId &&
-        <VariantGene geneId={geneId} variant={variants[0]} areCompoundHets />}
+        {sharedGeneId &&
+        <VariantGene geneId={sharedGeneId} variant={variants[0]} areCompoundHets />}
       </Grid.Column>
       <StyledCompoundHetRows stackable columns="equal">
         {variants.map(variant =>

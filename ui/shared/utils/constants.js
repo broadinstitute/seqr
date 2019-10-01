@@ -815,6 +815,13 @@ export const getVariantMainGeneId = ({ transcripts, mainTranscriptId, selectedMa
     entry[1].some(({ transcriptId }) => transcriptId === (selectedMainTranscriptId || mainTranscriptId)),
   ) || [])[0]
 
+export const getCompoundHetsAllGeneIds = compoundHets => compoundHets.map(({ transcripts }) => Object.keys(transcripts))
+
+export const getCompoundHetsSharedGeneIds = geneIds =>
+  (geneIds.shift().filter(sameVariantGeneIds =>
+    geneIds.every(singleGeneId => singleGeneId.indexOf(sameVariantGeneIds) !== -1),
+  ) || [])[0]
+
 export const getVariantMainTranscript = ({ transcripts, mainTranscriptId, selectedMainTranscriptId }) =>
   flatten(Object.values(transcripts)).find(
     ({ transcriptId }) => transcriptId === (selectedMainTranscriptId || mainTranscriptId),
