@@ -4,8 +4,6 @@ from __future__ import unicode_literals
 
 from django.conf import settings
 from django.db import migrations, models
-import django.db.models.deletion
-import django.utils.timezone
 
 
 def variant_note_to_multi_saved_variants(apps, schema_editor):
