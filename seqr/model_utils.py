@@ -161,6 +161,8 @@ def find_matching_xbrowse_model(seqr_model):
                  Q(family__family_id=seqr_model.family.family_id) &
                  Q(indiv_id=seqr_model.individual_id)))
         elif seqr_class_name == "VariantTagType":
+            import pdb
+            pdb.set_trace()
             return BaseProjectTag.objects.get(
                 Q(project__project_id=seqr_model.project.deprecated_project_id) &
                 (Q(seqr_variant_tag_type=seqr_model) |
@@ -172,15 +174,15 @@ def find_matching_xbrowse_model(seqr_model):
         elif seqr_class_name == "VariantTag":
             match_filter = Q(
                 seqr_variant_tag__isnull=True,
-                project_tag__project__project_id=seqr_model.saved_variant.family.project.deprecated_project_id,
+                project_tag__project__project_id=seqr_model.saved_variants.first().family.project.deprecated_project_id,
                 project_tag__tag=seqr_model.variant_tag_type.name,
-                xpos=seqr_model.saved_variant.xpos_start,
-                ref=seqr_model.saved_variant.ref,
-                alt=seqr_model.saved_variant.alt
+                xpos=seqr_model.saved_variants.first().xpos_start,
+                ref=seqr_model.saved_variants.first().ref,
+                alt=seqr_model.saved_variants.first().alt
             )
-            if seqr_model.saved_variant.family:
+            if seqr_model.saved_variants.first().family:
                 match_filter &= Q(
-                    family__family_id=seqr_model.saved_variant.family.family_id,
+                    family__family_id=seqr_model.saved_variants.first().family.family_id,
                 )
             return BaseVariantTag.objects.get(Q(seqr_variant_tag=seqr_model) | match_filter)
         elif seqr_class_name == "VariantFunctionalData":
@@ -236,7 +238,7 @@ def find_matching_xbrowse_model(seqr_model):
                  Q(name=seqr_model.name) &
                  Q(project__project_id=seqr_model.project.deprecated_project_id)))
     except Exception as e:
-        logging.error("ERROR: when looking up xbrowse model for seqr %s model: %s" % (seqr_model, e))
+        logging.error("when looking up xbrowse model for seqr %s model: %s" % (seqr_model, e))
         #traceback.print_exc()
 
     return None
@@ -278,7 +280,7 @@ def convert_seqr_kwargs_to_xbrowse_kwargs(seqr_model, **kwargs):
                 if new_value is not None:
                     xbrowse_kwargs[key] = new_value
                 else:
-                    logging.info("ERROR: unable to find equivalent seqr model for %s: %s" % (key, value))
+                    logging.error("unable to find equivalent seqr model for %s: %s" % (key, value))
                     del xbrowse_kwargs[key]
 
     # Explicitly add timestamps
@@ -320,19 +322,19 @@ def _create_xbrowse_model(seqr_model, **kwargs):
         return xbrowse_model
 
     except Exception as e:
-        logging.error("ERROR: error when creating xbrowse model %s: %s" % (seqr_model, e))
+        logging.error("error when creating xbrowse model %s: %s" % (seqr_model, e))
         traceback.print_exc()
         return None
 
 
 def create_seqr_model(seqr_model_class, **kwargs):
     logging.info("create_seqr_model(%s, %s)" % (seqr_model_class.__name__, kwargs))
-    saved_variants = kwargs['saved_variants']
-    if saved_variants:
-        del saved_variants
+    if 'saved_variants' in kwargs.keys():
+        saved_variants = kwargs['saved_variants']
+        del kwargs['saved_variants']
         seqr_model = seqr_model_class.objects.create(**kwargs)
         seqr_model.saved_variants.add(*saved_variants)
-        kwargs.update({'saved_variants': saved_variants[0]})
+        kwargs.update({'saved_variant': saved_variants[0]})
     else:
         seqr_model = seqr_model_class.objects.create(**kwargs)
     _create_xbrowse_model(seqr_model, **kwargs)
@@ -346,9 +348,9 @@ def get_or_create_seqr_model(seqr_model_class, **kwargs):
     xbrowse_model = find_matching_xbrowse_model(seqr_model)
     if created or xbrowse_model is None:
         if xbrowse_model is not None:
-            logging.error("ERROR: created seqr model: %s while xbrowse model already exists: %s" % (seqr_model, xbrowse_model))
+            logging.error("created seqr model: %s while xbrowse model already exists: %s" % (seqr_model, xbrowse_model))
         elif seqr_model_class.__name__ not in SEQR_TO_XBROWSE_CLASS_MAPPING:
-            logging.error("ERROR: create operation not implemented for seqr model: %s" % (seqr_model_class.__name__))
+            logging.error("create operation not implemented for seqr model: %s" % (seqr_model_class.__name__))
         else:
             _create_xbrowse_model(seqr_model, **kwargs)
 
@@ -364,7 +366,7 @@ def delete_seqr_model(seqr_model):
         try:
             xbrowse_model.delete()
         except Exception as e:
-            logging.error("ERROR: error when deleting seqr model %s: %s" % (seqr_model, e))
+            logging.error("error when deleting seqr model %s: %s" % (seqr_model, e))
             traceback.print_exc()
 
 
