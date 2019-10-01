@@ -2,7 +2,6 @@ from abc import abstractmethod
 import uuid
 import json
 import random
-import logging
 
 from django.contrib.auth.models import User, Group
 from django.contrib.postgres.fields import JSONField, ArrayField
@@ -526,7 +525,7 @@ class AliasField(models.Field):
         return getattr(instance, self.db_column)
 
 
-# class SampleBatch(ModelWithGUID):
+#class SampleBatch(ModelWithGUID):
 #    """Represents a set of biological samples that were processed together."""
 #
 #    notes = models.TextField(null=True, blank=True)
