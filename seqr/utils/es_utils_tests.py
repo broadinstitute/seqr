@@ -1,6 +1,7 @@
 from copy import deepcopy
 import mock
 import json
+import collections
 from collections import defaultdict
 from django.test import TestCase
 
@@ -1479,7 +1480,32 @@ class EsUtilsTest(TestCase):
         # test pagination
         variants, total_results = get_es_variants(results_model, num_results=2, page=2)
         self.assertEqual(len(variants), 2)
-        self.assertListEqual(variants, [PARSED_VARIANTS[0]] + [PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT])
+        self.maxDiff = None
+        self.assertEqual(variants[0], PARSED_VARIANTS[0])
+
+        def _convert_unicode_to_string(data):
+            if isinstance(data, basestring):
+                return str(data)
+            elif isinstance(data, collections.Mapping):
+                return dict(map(_convert_unicode_to_string, data.iteritems()))
+            elif isinstance(data, collections.Iterable):
+                return type(data)(map(_convert_unicode_to_string, data))
+            else:
+                return data
+
+        expected_first_compound_het = PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT[0]
+        expected_first_compound_het['genomeVersion'] = '38'
+        expected_first_compound_het['liftedOverChrom'] = '1'
+        expected_first_compound_het['liftedOverGenomeVersion'] = '37'
+        expected_first_compound_het['liftedOverPos'] = 248367217
+        self.assertEqual(_convert_unicode_to_string(variants[1][0]), _convert_unicode_to_string(expected_first_compound_het))
+
+        expected_second_compound_het = PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT[1]
+        expected_second_compound_het['genomeVersion'] = '38'
+        expected_second_compound_het['liftedOverChrom'] = '2'
+        expected_second_compound_het['liftedOverGenomeVersion'] = '37'
+        expected_second_compound_het['liftedOverPos'] = 103343343
+        self.assertEqual(_convert_unicode_to_string(variants[1][1]), _convert_unicode_to_string(expected_second_compound_het))
         self.assertEqual(total_results, 11)
 
         self.assertCachedResults(results_model, {
