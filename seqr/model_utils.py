@@ -187,14 +187,14 @@ def find_matching_xbrowse_model(seqr_model):
             match_filter = Q(
                 seqr_variant_functional_data__isnull=True,
                 functional_data_tag=seqr_model.functional_data_tag,
-                xpos=seqr_model.saved_variant.xpos_start,
-                ref=seqr_model.saved_variant.ref,
-                alt=seqr_model.saved_variant.alt
+                xpos=seqr_model.saved_variants.first().xpos_start,
+                ref=seqr_model.saved_variants.first().ref,
+                alt=seqr_model.saved_variants.first().alt
             )
-            if seqr_model.saved_variant.family:
+            if seqr_model.saved_variants.first().family:
                 match_filter &= Q(
-                    family__family_id=seqr_model.saved_variant.family.family_id,
-                    family__project__project_id=seqr_model.saved_variant.family.project.deprecated_project_id,
+                    family__family_id=seqr_model.saved_variants.first().family.family_id,
+                    family__project__project_id=seqr_model.saved_variants.first().family.project.deprecated_project_id,
                 )
             return BaseVariantFunctionalData.objects.get(Q(seqr_variant_functional_data=seqr_model) | match_filter)
         elif seqr_class_name == "VariantNote":
@@ -206,7 +206,7 @@ def find_matching_xbrowse_model(seqr_model):
                 ref=seqr_model.saved_variants.first().ref,
                 alt=seqr_model.saved_variants.first().alt
             )
-            if seqr_model.saved_variant.family:
+            if seqr_model.saved_variants.first().family:
                 match_filter &= Q(family__family_id=seqr_model.saved_variants.first().family.family_id)
             return BaseVariantNote.objects.get(Q(seqr_variant_note=seqr_model) | match_filter)
         elif seqr_class_name == "LocusList":
@@ -236,7 +236,7 @@ def find_matching_xbrowse_model(seqr_model):
                  Q(name=seqr_model.name) &
                  Q(project__project_id=seqr_model.project.deprecated_project_id)))
     except Exception as e:
-        logging.error("when looking up xbrowse model for seqr %s model: %s" % (seqr_model, e))
+        logging.error("ERROR: when looking up xbrowse model for seqr %s model: %s" % (seqr_model, e))
         #traceback.print_exc()
 
     return None
@@ -274,6 +274,8 @@ def convert_seqr_kwargs_to_xbrowse_kwargs(seqr_model, **kwargs):
             else:
                 if key == 'project_tag':
                     value.project = seqr_model.saved_variants.first().family.project
+                import pdb
+                pdb.set_trace()
                 new_value = find_matching_xbrowse_model(value)
                 if new_value is not None:
                     xbrowse_kwargs[key] = new_value
@@ -327,20 +329,17 @@ def _create_xbrowse_model(seqr_model, **kwargs):
 
 def create_seqr_model(seqr_model_class, **kwargs):
     logging.info("create_seqr_model(%s, %s)" % (seqr_model_class.__name__, kwargs))
-    if 'saved_variants' in kwargs.keys():
+    if 'saved_variants' in kwargs:
         saved_variants = kwargs['saved_variants']
         del kwargs['saved_variants']
         seqr_model = seqr_model_class.objects.create(**kwargs)
-        import pdb
-        pdb.set_trace()
-        if isinstance(saved_variants, list):
-            seqr_model.saved_variants.add(*saved_variants)
-        else:
-            seqr_model.saved_variants.add(saved_variants)
-        kwargs.update({'saved_variant': saved_variants[0]})
+        seqr_model.save()
+        seqr_model.saved_variants.add(*saved_variants)
+        kwargs['saved_variant'] = saved_variants[0]
     else:
         seqr_model = seqr_model_class.objects.create(**kwargs)
     _create_xbrowse_model(seqr_model, **kwargs)
+
     return seqr_model
 
 

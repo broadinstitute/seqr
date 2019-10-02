@@ -20,7 +20,7 @@ const StyledVariantRow = styled(Grid.Row)`
     if (iscompoundhet) {
       return '.column { margin-top: 0em !important; margin-left: 1em !important; }'
     }
-    return '.column { margin-top: 1em !important; margin-bottom: 0 !important; }'
+    return '.column { margin-top: 0em !important; margin-bottom: 0 !important; }'
   }}
   
   padding: 0;
