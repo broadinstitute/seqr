@@ -274,8 +274,6 @@ def convert_seqr_kwargs_to_xbrowse_kwargs(seqr_model, **kwargs):
             else:
                 if key == 'project_tag':
                     value.project = seqr_model.saved_variants.first().family.project
-                import pdb
-                pdb.set_trace()
                 new_value = find_matching_xbrowse_model(value)
                 if new_value is not None:
                     xbrowse_kwargs[key] = new_value

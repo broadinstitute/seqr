@@ -314,8 +314,8 @@ def _get_json_for_variant_tag_types(project):
     discovery_tags = []
     for tag_type in project_variant_tags:
         if tag_type['category'] == 'CMG Discovery Tags' and tag_type['numTags'] > 0:
-            tags = VariantTag.objects.filter(saved_variants__family__project=project, variant_tag_type__guid=tag_type['variantTagTypeGuid']).select_related('saved_variant')
-            saved_variants = [tag.saved_variants for tag in tags]
+            tags = VariantTag.objects.filter(saved_variants__family__project=project, variant_tag_type__guid=tag_type['variantTagTypeGuid'])
+            saved_variants = [tag.saved_variants.all()[0] for tag in tags]
             discovery_tags += get_json_for_saved_variants(saved_variants, add_tags=True, add_details=True)
 
     project_functional_tags = []

@@ -349,9 +349,8 @@ def get_json_for_analysis_group(analysis_group, **kwargs):
 
 def get_json_for_saved_variants(saved_variants, add_tags=False, add_details=False):
     """Returns a JSON representation of the given variant.
-
     Args:
-        saved_variant (object): Django model for the SavedVariant.
+        saved_variants (object): Django model for the SavedVariant.
     Returns:
         dict: json object
     """

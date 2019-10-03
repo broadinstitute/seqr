@@ -272,7 +272,7 @@ def _create_new_tags(saved_variants, tags_json, user):
     for tag in new_tags:
         variant_tag_type = VariantTagType.objects.get(
             Q(name=tag['name']),
-            Q(project=saved_variants[0].family.project) | Q(project__isnull=True)
+            Q(project=saved_variants.first().family.project) | Q(project__isnull=True)
         )
         create_seqr_model(
             VariantTag,
