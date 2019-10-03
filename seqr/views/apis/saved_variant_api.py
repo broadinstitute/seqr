@@ -218,7 +218,7 @@ def delete_variant_note_handler(request, variant_guids, note_guid):
 def update_variant_tags_handler(request, variant_guids):
     request_json = json.loads(request.body)
     variant_guids = variant_guids.split(',')
-    saved_variants = SavedVariant.objects.get(guid__in= variant_guids)
+    saved_variants = [SavedVariant.objects.get(guid__in= variant_guids)]
 
     updated_tags = request_json.get('tags', [])
 
@@ -227,7 +227,7 @@ def update_variant_tags_handler(request, variant_guids):
     existing_tag_guids = [tag['tagGuid'] for tag in updated_tags if tag.get('tagGuid')]
     updated_functional_data = request_json.get('functionalData', [])
 
-    for tag in saved_variants.varianttag_set.exclude(guid__in=existing_tag_guids):
+    for tag in saved_variants[0].varianttag_set.exclude(guid__in=existing_tag_guids):
         delete_seqr_model(tag)
         _create_new_tags(saved_variants, request_json, request.user)
 
@@ -272,7 +272,7 @@ def _create_new_tags(saved_variants, tags_json, user):
     for tag in new_tags:
         variant_tag_type = VariantTagType.objects.get(
             Q(name=tag['name']),
-            Q(project=saved_variants.first().family.project) | Q(project__isnull=True)
+            Q(project=saved_variants[0].family.project) | Q(project__isnull=True)
         )
         create_seqr_model(
             VariantTag,
