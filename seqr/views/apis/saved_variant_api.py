@@ -176,7 +176,7 @@ def _create_variant_note(saved_variants, note_json, user):
 
 def _get_note_from_variant_guids(user, variant_guids, note_guid):
     variant_guids = variant_guids.split(',')
-    saved_variants = SavedVariant.objects.get(guid__in=variant_guids)
+    saved_variants = SavedVariant.objects.filter(guid__in=variant_guids)
     check_permissions(saved_variants[0].family.project, user, CAN_VIEW)
     note = VariantNote.objects.get(guid=note_guid)
     return note
@@ -203,7 +203,8 @@ def update_variant_note_handler(request, variant_guids, note_guid):
 def delete_variant_note_handler(request, variant_guids, note_guid):
     note = _get_note_from_variant_guids(request.user, variant_guids, note_guid)
     delete_seqr_model(note)
-    saved_variants = SavedVariant.objects.get(guid__in=variant_guids)
+    logging.info("variant_guids(%s)" % variant_guids)
+    saved_variants = SavedVariant.objects.filter(guid__in=variant_guids.split(','))
 
     update = {}
     for variant_guid in variant_guids:
