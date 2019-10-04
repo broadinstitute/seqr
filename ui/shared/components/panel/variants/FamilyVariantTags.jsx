@@ -226,9 +226,9 @@ const VariantLink = (
 ) =>
   <VariantLinkContainer>
     <NavLink
-      to={savedVariant ?
-        `/project/${family.projectGuid}/saved_variants/variant/${savedVariant.variantGuid}` :
-        `/variant_search/variant/${variant.variantId}/family/${family.familyGuid}`
+      to={Array.isArray(savedVariant) ?
+        `/variant_search/variant/${variant.variantId}/family/${family.familyGuid}` :
+        `/project/${family.projectGuid}/saved_variants/variant/${savedVariant.variantGuid}`
       }
       activeStyle={NO_DISPLAY}
     >
