@@ -191,7 +191,7 @@ def update_variant_note_handler(request, variant_guids, note_guid):
     saved_variants = SavedVariant.objects.get(guid__in=variant_guids)
 
     update = {}
-    for variant_guid in variant_guids:
+    for variant_guid in variant_guids.split(','):
         update[variant_guid] = {
             'notes': [get_json_for_variant_note(note) for note in saved_variants[0].variantnote_set.all()],
         }
@@ -207,7 +207,7 @@ def delete_variant_note_handler(request, variant_guids, note_guid):
     saved_variants = SavedVariant.objects.filter(guid__in=variant_guids.split(','))
 
     update = {}
-    for variant_guid in variant_guids:
+    for variant_guid in variant_guids.split(','):
         update[variant_guid] = {
             'notes': [get_json_for_variant_note(note) for note in saved_variants[0].variantnote_set.all()]
         }
