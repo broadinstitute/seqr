@@ -250,7 +250,7 @@ def find_matching_seqr_model(xbrowse_model):
     except ObjectDoesNotExist:
         pass
     except Exception as e:
-        logging.error("ERROR: when looking up seqr model for xbrowse %s model: %s" % (xbrowse_model, e))
+        logging.error("when looking up seqr model for xbrowse %s model: %s" % (xbrowse_model, e))
         traceback.print_exc()
 
     if seqr_model and xbrowse_model_foreign_key_name:
@@ -287,7 +287,7 @@ def _convert_xbrowse_kwargs_to_seqr_kwargs(xbrowse_model, include_all=False, **k
             if value is not None:
                 seqr_kwargs[key] = value
             else:
-                logging.info("ERROR: unable to find equivalent seqr model for %s: %s" % (key, value))
+                logging.error("unable to find equivalent seqr model for %s: %s" % (key, value))
                 del seqr_kwargs[key]
         elif key in html_field_mapping:
             seqr_kwargs[key] = convert_html_to_plain_text(value)
@@ -346,7 +346,7 @@ def _create_seqr_model(xbrowse_model, **kwargs):
         return seqr_model
 
     except Exception as e:
-        logging.error("ERROR: error when creating seqr model %s: %s" % (xbrowse_model, e))
+        logging.error("error when creating seqr model %s: %s" % (xbrowse_model, e))
         traceback.print_exc()
         return None
 
@@ -366,9 +366,9 @@ def get_or_create_xbrowse_model(xbrowse_model_class, **kwargs):
     seqr_model = find_matching_seqr_model(xbrowse_model)
     if created or seqr_model is None:
         if seqr_model is not None:
-            logging.error("ERROR: created xbrowse model: %s while seqr model already exists: %s" % (xbrowse_model, seqr_model))
+            logging.error("created xbrowse model: %s while seqr model already exists: %s" % (xbrowse_model, seqr_model))
         elif xbrowse_model_class.__name__ not in XBROWSE_TO_SEQR_CLASS_MAPPING:
-            logging.error("ERROR: create operation not implemented for xbrowse model: %s" % (xbrowse_model_class.__name__))
+            logging.error("create operation not implemented for xbrowse model: %s" % (xbrowse_model_class.__name__))
         else:
             _create_seqr_model(xbrowse_model, **kwargs)
 
@@ -388,5 +388,5 @@ def delete_xbrowse_model(xbrowse_model):
 
         seqr_model.delete()
     except Exception as e:
-        logging.error("ERROR: error when deleting seqr model %s: %s" % (seqr_model, e))
+        logging.error("error when deleting seqr model %s: %s" % (seqr_model, e))
         traceback.print_exc()

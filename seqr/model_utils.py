@@ -236,7 +236,7 @@ def find_matching_xbrowse_model(seqr_model):
                  Q(name=seqr_model.name) &
                  Q(project__project_id=seqr_model.project.deprecated_project_id)))
     except Exception as e:
-        logging.error("ERROR: when looking up xbrowse model for seqr %s model: %s" % (seqr_model, e))
+        logging.error("when looking up xbrowse model for seqr %s model: %s" % (seqr_model, e))
         #traceback.print_exc()
 
     return None
@@ -254,7 +254,7 @@ def convert_seqr_kwargs_to_xbrowse_kwargs(seqr_model, **kwargs):
         if field in xbrowse_kwargs and xbrowse_kwargs[field] is None:
             xbrowse_kwargs[field] = default_value
 
-    if seqr_class_name == "Individual" and "family" in xbrowse_kwargs:
+    if seqr_class_name in ["Individual", "VariantNote"] and "family" in xbrowse_kwargs:
         xbrowse_kwargs["project"] = getattr(seqr_model, "family").project
 
     if seqr_class_name in ["LocusList", "AnalysisGroup"] and 'name' in xbrowse_kwargs:
