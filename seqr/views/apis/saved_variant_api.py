@@ -175,7 +175,6 @@ def _create_variant_note(saved_variants, note_json, user):
 
 
 def _get_note_from_variant_guids(user, variant_guids, note_guid):
-    variant_guids = variant_guids.split(',')
     saved_variants = SavedVariant.objects.filter(guid__in=variant_guids)
     check_permissions(saved_variants[0].family.project, user, CAN_VIEW)
     note = VariantNote.objects.get(guid=note_guid)
@@ -185,13 +184,13 @@ def _get_note_from_variant_guids(user, variant_guids, note_guid):
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def update_variant_note_handler(request, variant_guids, note_guid):
+    variant_guids = variant_guids.split(',')
     note = _get_note_from_variant_guids(request.user, variant_guids, note_guid)
     request_json = json.loads(request.body)
     update_model_from_json(note, request_json, allow_unknown_keys=True)
-    saved_variants = SavedVariant.objects.get(guid__in=variant_guids)
-
+    saved_variants = SavedVariant.objects.filter(guid__in=variant_guids)
     update = {}
-    for variant_guid in variant_guids.split(','):
+    for variant_guid in variant_guids:
         update[variant_guid] = {
             'notes': [get_json_for_variant_note(note) for note in saved_variants[0].variantnote_set.all()],
         }
@@ -201,13 +200,14 @@ def update_variant_note_handler(request, variant_guids, note_guid):
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def delete_variant_note_handler(request, variant_guids, note_guid):
+    variant_guids = variant_guids.split(',')
     note = _get_note_from_variant_guids(request.user, variant_guids, note_guid)
     delete_seqr_model(note)
     logging.info("variant_guids(%s)" % variant_guids)
-    saved_variants = SavedVariant.objects.filter(guid__in=variant_guids.split(','))
+    saved_variants = SavedVariant.objects.filter(guid__in=variant_guids)
 
     update = {}
-    for variant_guid in variant_guids.split(','):
+    for variant_guid in variant_guids:
         update[variant_guid] = {
             'notes': [get_json_for_variant_note(note) for note in saved_variants[0].variantnote_set.all()]
         }
