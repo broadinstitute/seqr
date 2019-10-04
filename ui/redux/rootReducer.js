@@ -262,7 +262,6 @@ export const loadSavedVariants = (familyGuids, variantGuid, tag, gene = '') => {
   }
 }
 
-
 const updateSavedVariant = (values, action = 'create') => {
   return (dispatch, getState) => {
     return new HttpRequestHelper(`/api/saved_variant/${action}`,
@@ -276,32 +275,26 @@ const updateSavedVariant = (values, action = 'create') => {
   }
 }
 
-export const updateVariantNote = (values) => {
-  if (values.familyGuids) {
-    if (values.variantGuid) {
-      return updateEntity(values, RECEIVE_DATA, `/api/saved_variant/${values.variantGuid}/note`, 'noteGuid')
-    }
-    return updateSavedVariant(values)
-  }
-  if (values[0].variantGuid) {
-    const variantGuids = []
-    let currVariantGuid
-    for (let i = 0; i < Object.keys(values).length; i++) {
-      try {
-        currVariantGuid = values[i].variantGuid
-      }
-      catch (err) {
-        currVariantGuid = null
-      }
-      if (currVariantGuid) {
-        variantGuids.push(currVariantGuid)
-      }
-    }
-    return updateEntity(values, RECEIVE_DATA, `/api/saved_variant/${variantGuids.join(',')}/note`, 'noteGuid')
+const isSingleVariant = (values) => {
+  return values.familyGuids
+}
+
+const updateSingleVariantNote = (values) => {
+  if (values.variantGuid) {
+    return updateEntity(values, RECEIVE_DATA, `/api/saved_variant/${values.variantGuid}/note`, 'noteGuid')
   }
   return updateSavedVariant(values)
 }
 
+export const updateVariantNote = (values) => {
+  if (isSingleVariant(values)) {
+    updateSingleVariantNote(values)
+  }
+  const compoundHets = Object.values(values).filter(value => value instanceof Object)
+  const variantGuids = []
+  compoundHets.forEach(compoundHet => (compoundHet.variantGuid ? variantGuids.push(compoundHet.variantGuid) : null))
+  return updateEntity(values, RECEIVE_DATA, `/api/saved_variant/${variantGuids.join(',')}/note`, 'noteGuid')
+}
 
 export const updateVariantTags = (values) => {
   if (values.familyGuids) {
