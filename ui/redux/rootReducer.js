@@ -279,16 +279,12 @@ const isSingleVariant = (values) => {
   return values.familyGuids
 }
 
-const updateSingleVariantNote = (values) => {
-  if (values.variantGuid) {
-    return updateEntity(values, RECEIVE_DATA, `/api/saved_variant/${values.variantGuid}/note`, 'noteGuid')
-  }
-  return updateSavedVariant(values)
-}
-
 export const updateVariantNote = (values) => {
   if (isSingleVariant(values)) {
-    updateSingleVariantNote(values)
+    if (values.variantGuid) {
+      return updateEntity(values, RECEIVE_DATA, `/api/saved_variant/${values.variantGuid}/note`, 'noteGuid')
+    }
+    return updateSavedVariant(values)
   }
   const compoundHets = Object.values(values).filter(value => value instanceof Object)
   const variantGuids = []
