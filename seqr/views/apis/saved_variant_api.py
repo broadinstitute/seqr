@@ -217,41 +217,44 @@ def delete_variant_note_handler(request, variant_guids, note_guid):
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def update_variant_tags_handler(request, variant_guids):
-    request_json = json.loads(request.body)
     variant_guids = variant_guids.split(',')
-    saved_variants = [SavedVariant.objects.get(guid__in= variant_guids)]
+    saved_variants = SavedVariant.objects.filter(guid__in=variant_guids)
 
+    request_json = json.loads(request.body)
     updated_tags = request_json.get('tags', [])
+    updated_functional_data = request_json.get('functionalData', [])
 
     # Update tags
 
     existing_tag_guids = [tag['tagGuid'] for tag in updated_tags if tag.get('tagGuid')]
-    updated_functional_data = request_json.get('functionalData', [])
 
     for tag in saved_variants[0].varianttag_set.exclude(guid__in=existing_tag_guids):
         delete_seqr_model(tag)
-        _create_new_tags(saved_variants, request_json, request.user)
+
+    _create_new_tags(saved_variants, request_json, request.user)
 
     # Update functional data
 
-    existing_functional_guids = [tag['tagGuid'] for tag in updated_functional_data if tag.get('tagGuid')]
+    existing_functional_guids = [functional_data['tagGuid'] for functional_data in updated_functional_data if functional_data.get('tagGuid')]
 
-    for tag in saved_variants.variantfunctionaldata_set.exclude(guid__in=existing_functional_guids):
-        delete_seqr_model(tag)
+    for functional_data in saved_variants[0].variantfunctionaldata_set.exclude(guid__in=existing_functional_guids):
+        delete_seqr_model(functional_data)
 
-    for tag in updated_functional_data:
-        if tag.get('tagGuid'):
-            tag_model = VariantFunctionalData.objects.get(
-                guid=tag.get('tagGuid'),
-                functional_data_tag=tag.get('name'),
-            ).saved_variants.add(*saved_variants)
-            update_model_from_json(tag_model, tag, allow_unknown_keys=True)
+    for functional_data in updated_functional_data:
+        if functional_data.get('tagGuid'):
+            functional_data_model = VariantFunctionalData.objects.get(
+                guid=functional_data.get('tagGuid'),
+                # TODO check if need to use queryset
+                saved_variants=saved_variants,
+                functional_data_tag=functional_data.get('name'),
+            )
+            update_model_from_json(functional_data_model, functional_data, allow_unknown_keys=True)
         else:
             create_seqr_model(
                 VariantFunctionalData,
-                functional_data_tag=tag.get('name'),
+                functional_data_tag=functional_data.get('name'),
                 saved_variants=saved_variants,
-                metadata=tag.get('metadata'),
+                metadata=functional_data.get('metadata'),
                 search_hash=request_json.get('searchHash'),
                 created_by=request.user,
             )
@@ -259,8 +262,8 @@ def update_variant_tags_handler(request, variant_guids):
     update = {}
     for variant_guid in variant_guids:
         update[variant_guid] = {
-            'tags': [get_json_for_variant_tag(tag) for tag in saved_variants.varianttag_set.all()],
-            'functionalData': [get_json_for_variant_functional_data(tag) for tag in saved_variants.variantfunctionaldata_set.all()]
+            'tags': [get_json_for_variant_tag(tag) for tag in saved_variants[0].varianttag_set.all()],
+            'functionalData': [get_json_for_variant_functional_data(functional_data) for functional_data in saved_variants[0].variantfunctionaldata_set.all()]
         }
 
     return create_json_response({'savedVariantsByGuid': update})
@@ -269,6 +272,9 @@ def update_variant_tags_handler(request, variant_guids):
 def _create_new_tags(saved_variants, tags_json, user):
     tags = tags_json.get('tags', [])
     new_tags = [tag for tag in tags if not tag.get('tagGuid')]
+
+    # import pdb
+    # pdb.set_trace()
 
     for tag in new_tags:
         variant_tag_type = VariantTagType.objects.get(

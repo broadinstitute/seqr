@@ -17,10 +17,9 @@ import { VerticalSpacer } from '../../Spacers'
 
 const StyledVariantRow = styled(Grid.Row)`  
   ${({ iscompoundhet }) => {
-    if (iscompoundhet) {
-      return '.column { margin-top: 0em !important; margin-left: 1em !important; }'
-    }
-    return '.column { margin-top: 0em !important; margin-bottom: 0 !important; }'
+    return (iscompoundhet ?
+      '.column { margin-top: 0em !important; margin-left: 1em !important; }' :
+      '.column { margin-top: 1em !important; margin-bottom: 0 !important; margin-left: 1em !important; }')
   }}
   
   padding: 0;
@@ -42,6 +41,7 @@ const StyledCompoundHetLink = styled(Grid.Column)`
 `
 
 const StyledCompoundHetRows = styled(Grid)`
+  margin-left: 0em !important;
   margin-right: 1em !important;
   margin-top: 0.5em !important;
   margin-bottom: 0 !important;
