@@ -1,5 +1,4 @@
 from collections import defaultdict
-from django.db.models import Max
 import elasticsearch
 from elasticsearch_dsl import Search, Q, Index, MultiSearch
 import json
@@ -196,21 +195,6 @@ class InvalidIndexException(Exception):
     pass
 
 
-def get_latest_loaded_samples(families=None):
-    all_samples = Sample.objects.filter(
-        dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
-        sample_status=Sample.SAMPLE_STATUS_LOADED,
-        elasticsearch_index__isnull=False,
-    ).prefetch_related('individual', 'individual__family')
-    if families:
-        all_samples = all_samples.filter(individual__family__in=families,)
-    sample_individual_max_loaded_date = {
-        agg['individual__guid']: agg['max_loaded_date'] for agg in
-        all_samples.values('individual__guid').annotate(max_loaded_date=Max('loaded_date'))
-    }
-    return [s for s in all_samples if s.loaded_date == sample_individual_max_loaded_date[s.individual.guid]]
-
-
 class BaseEsSearch(object):
 
     AGGREGATION_NAME = 'compound het'
@@ -219,7 +203,11 @@ class BaseEsSearch(object):
         self._client = get_es_client()
 
         self.samples_by_family_index = defaultdict(lambda: defaultdict(dict))
-        for s in get_latest_loaded_samples(families):
+        for s in Sample.objects.filter(
+            dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
+            is_active=True,
+            individual__family__in=families
+        ).prefetch_related('individual', 'individual__family'):
             self.samples_by_family_index[s.elasticsearch_index][s.individual.family.guid][s.sample_id] = s
 
         if skip_unaffected_families:

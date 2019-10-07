@@ -11,17 +11,12 @@ class Command(BaseCommand):
         parser.add_argument('args', nargs='*')
 
     def handle(self, *args, **options):
-        all_samples = Sample.objects.filter(
+        samples = Sample.objects.filter(
             dataset_type=Sample.DATASET_TYPE_READ_ALIGNMENTS,
-            sample_status=Sample.SAMPLE_STATUS_LOADED,
+            is_active=True,
             dataset_file_path__isnull=False,
             individual__family__project__name__in=args,
         ).prefetch_related('individual', 'individual__family')
-        sample_individual_max_loaded_date = {
-            agg['individual__guid']: agg['max_loaded_date'] for agg in
-            all_samples.values('individual__guid').annotate(max_loaded_date=Max('loaded_date'))
-        }
-        samples = [s for s in all_samples if s.loaded_date == sample_individual_max_loaded_date[s.individual.guid]]
 
         failed = []
         for sample in samples:

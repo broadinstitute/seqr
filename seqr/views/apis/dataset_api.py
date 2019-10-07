@@ -87,7 +87,7 @@ def add_variants_dataset_handler(request, project_guid):
         missing_family_individuals = []
         for family, individual_ids in included_family_individuals.items():
             missing_indivs = family.individual_set.filter(
-                sample__sample_status=Sample.SAMPLE_STATUS_LOADED,
+                is_active=True,
                 sample__dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS
             ).exclude(individual_id__in=individual_ids)
             if missing_indivs:
@@ -216,8 +216,8 @@ def _update_samples(matched_sample_id_to_sample_record, elasticsearch_index=None
         }
         if elasticsearch_index:
             sample_update_json['elasticsearch_index'] = elasticsearch_index
-        if sample.sample_status != Sample.SAMPLE_STATUS_LOADED:
-            sample_update_json['sample_status'] = Sample.SAMPLE_STATUS_LOADED
+        if not sample.is_active:
+            sample_update_json['is_active'] = True
             sample_update_json['loaded_date'] = loaded_date
         update_model_from_json(sample, sample_update_json)
 
