@@ -87,7 +87,7 @@ def add_variants_dataset_handler(request, project_guid):
         missing_family_individuals = []
         for family, individual_ids in included_family_individuals.items():
             missing_indivs = family.individual_set.filter(
-                is_active=True,
+                sample__is_active=True,
                 sample__dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS
             ).exclude(individual_id__in=individual_ids)
             if missing_indivs:

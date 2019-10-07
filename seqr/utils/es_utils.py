@@ -205,6 +205,7 @@ class BaseEsSearch(object):
         self.samples_by_family_index = defaultdict(lambda: defaultdict(dict))
         for s in Sample.objects.filter(
             dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
+            elasticsearch_index__isnull=False,
             is_active=True,
             individual__family__in=families
         ).prefetch_related('individual', 'individual__family'):

@@ -136,8 +136,8 @@ class DatasetAPITest(TransactionTestCase):
             {sample['datasetFilePath'] for sample in response_json['samplesByGuid'].values()}
         )
         self.assertSetEqual(
-            {'loaded'},
-            {sample['sampleStatus'] for sample in response_json['samplesByGuid'].values()}
+            {True},
+            {sample['isActive'] for sample in response_json['samplesByGuid'].values()}
         )
         self.assertSetEqual(
             {'WES'},
@@ -221,8 +221,8 @@ class DatasetAPITest(TransactionTestCase):
             {'NA19675', 'NA19679'}
         )
         self.assertSetEqual(
-            {'loaded'},
-            {sample['sampleStatus'] for sample in response_json['samplesByGuid'].values()}
+            {True},
+            {sample['isActive'] for sample in response_json['samplesByGuid'].values()}
         )
         self.assertSetEqual(
             {'WES'},
