@@ -1,7 +1,8 @@
 from collections import defaultdict
 from django.db.models import Max
 import elasticsearch
-from elasticsearch_dsl import Search, Q, Index, MultiSearch
+from elasticsearch_dsl import Search, Q, MultiSearch
+import hashlib
 import json
 import logging
 from pyliftover.liftover import LiftOver
@@ -20,6 +21,7 @@ logger = logging.getLogger(__name__)
 
 VARIANT_DOC_TYPE = 'variant'
 MAX_COMPOUND_HET_GENES = 1000
+MAX_INDEX_NAME_LENGTH = 7500
 
 XPOS_SORT_KEY = 'xpos'
 
@@ -29,9 +31,8 @@ def get_es_client(timeout=30):
 
 
 def get_index_metadata(index_name, client):
-    index = Index(index_name, using=client)
     try:
-        mappings = index.get_mapping(doc_type=[VARIANT_DOC_TYPE])
+        mappings = client.indices.get_mapping(index=index_name, doc_type=[VARIANT_DOC_TYPE])
     except Exception as e:
         raise InvalidIndexException('Error accessing index "{}": {}'.format(
             index_name, e.error if hasattr(e, 'error') else e.message))
@@ -252,7 +253,14 @@ class BaseEsSearch(object):
         self._no_sample_filters = False
 
     def _set_index_metadata(self):
-        self.index_metadata = get_index_metadata(','.join(self.samples_by_family_index.keys()), self._client)
+        self.index_name = ','.join(self.samples_by_family_index.keys())
+        if len(self.index_name) > MAX_INDEX_NAME_LENGTH:
+            alias = hashlib.md5(self.index_name).hexdigest()
+            self._client.indices.update_aliases(body={'actions': [
+                {'add': {'indices': self.samples_by_family_index.keys(), 'alias': alias}}
+            ]})
+            self.index_name = alias
+        self.index_metadata = get_index_metadata(self.index_name, self._client)
 
     def filter(self, new_filter):
         self._search = self._search.filter(new_filter)
@@ -305,6 +313,7 @@ class BaseEsSearch(object):
                 if execute_single_search:
                     genotype_filters.append(genotypes_q)
                 else:
+                    import pdb; pdb.set_trace()
                     self._index_searches[index].append(self._search.filter(genotypes_q))
 
             if inheritance_mode == RECESSIVE:
@@ -319,6 +328,7 @@ class BaseEsSearch(object):
                 ).metric(
                     'vars_by_gene', 'top_hits', size=100, sort=self._sort, _source=QUERY_FIELD_NAMES
                 )
+                import pdb; pdb.set_trace()
                 self._index_searches[index].append(compound_het_search)
 
         if genotype_filters:
@@ -404,9 +414,8 @@ class EsSearch(BaseEsSearch):
             return self._execute_multi_search(page, num_results)
 
     def _execute_single_search(self, page, num_results, deduplicate=False, start_index=None):
-        index_name = ','.join(self.samples_by_family_index.keys())
         search = self._get_paginated_searches(
-            index_name, page, num_results*len(self.samples_by_family_index), start_index=start_index
+            self.index_name, page, num_results*len(self.samples_by_family_index), start_index=start_index
         )[0]
 
         response = self._execute_search(search)
@@ -824,8 +833,7 @@ class EsGeneAggSearch(BaseEsSearch):
 
         logger.info('Searching in elasticsearch indices: {}'.format(', '.join(indices)))
 
-        index_name = ','.join(self.samples_by_family_index.keys())
-        search = self._get_paginated_searches(index_name)[0]
+        search = self._get_paginated_searches(self.index_name)[0]
 
         response = self._execute_search(search)
         gene_aggs = self._parse_response(response)
