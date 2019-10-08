@@ -13,7 +13,7 @@ import {
   SHOW_ALL,
   DATASET_TYPE_READ_ALIGNMENTS,
   VARIANT_EXPORT_DATA,
-  familySamplesLoaded,
+  familyVariantSamples,
 } from 'shared/utils/constants'
 
 export const getProjectsIsLoading = state => state.projectsLoading.isLoading
@@ -90,7 +90,7 @@ export const getFirstSampleByFamily = createSelector(
   getSamplesByGuid,
   (familiesByGuid, individualsByGuid, samplesByGuid) => {
     return Object.entries(familiesByGuid).reduce((acc, [familyGuid, family]) => {
-      const familySamples = familySamplesLoaded(family, individualsByGuid, samplesByGuid)
+      const familySamples = familyVariantSamples(family, individualsByGuid, samplesByGuid)
 
       return {
         ...acc,
@@ -100,14 +100,18 @@ export const getFirstSampleByFamily = createSelector(
   },
 )
 
-export const getAlignmentSamplesByFamily = createSelector(
+export const getActiveAlignmentSamplesByFamily = createSelector(
   getFamiliesByGuid,
   getIndividualsByGuid,
   getSamplesByGuid,
   (familiesByGuid, individualsByGuid, samplesByGuid) => {
     return Object.entries(familiesByGuid).reduce((acc, [familyGuid, family]) => ({
       ...acc,
-      [familyGuid]: familySamplesLoaded(family, individualsByGuid, samplesByGuid, DATASET_TYPE_READ_ALIGNMENTS),
+      [familyGuid]: [...family.individualGuids.map(individualGuid => individualsByGuid[individualGuid]).reduce(
+        (acc2, individual) => new Set([...acc2, ...(individual.sampleGuids || [])]), new Set(),
+      )].map(sampleGuid => samplesByGuid[sampleGuid]).filter(sample =>
+        sample.isActive && sample.datasetType === DATASET_TYPE_READ_ALIGNMENTS,
+      ),
     }), {})
   },
 )

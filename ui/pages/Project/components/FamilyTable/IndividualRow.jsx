@@ -18,7 +18,7 @@ import { VerticalSpacer } from 'shared/components/Spacers'
 
 import { updateIndividual } from 'redux/rootReducer'
 import { getSamplesByGuid, getCurrentProject } from 'redux/selectors'
-import { SAMPLE_STATUS_LOADED, DATASET_TYPE_VARIANT_CALLS } from 'shared/utils/constants'
+import { DATASET_TYPE_VARIANT_CALLS } from 'shared/utils/constants'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 import { CASE_REVIEW_STATUS_MORE_INFO_NEEDED, CASE_REVIEW_STATUS_OPTIONS } from '../../constants'
 
@@ -96,9 +96,9 @@ MmeStatusLabel.propTypes = {
 
 const DataDetails = ({ loadedSamples, individual }) =>
   <div>
-    {loadedSamples.map((sample, i) =>
+    {loadedSamples.map(sample =>
       <div key={sample.sampleGuid}>
-        <Sample loadedSample={sample} isOutdated={i !== 0} />
+        <Sample loadedSample={sample} isOutdated={!sample.isActive} />
       </div>,
     )}
     {individual.mmeSubmittedDate && (
@@ -142,10 +142,7 @@ class IndividualRow extends React.Component
 
     let loadedSamples = sampleGuids.map(
       sampleGuid => this.props.samplesByGuid[sampleGuid],
-    ).filter(s =>
-      s.datasetType === DATASET_TYPE_VARIANT_CALLS &&
-      s.sampleStatus === SAMPLE_STATUS_LOADED,
-    )
+    ).filter(s => s.datasetType === DATASET_TYPE_VARIANT_CALLS)
     loadedSamples = orderBy(loadedSamples, [s => s.loadedDate], 'desc')
     // only show first and latest samples
     loadedSamples.splice(1, loadedSamples.length - 2)
