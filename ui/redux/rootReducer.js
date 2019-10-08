@@ -275,12 +275,9 @@ const updateSavedVariant = (values, action = 'create') => {
   }
 }
 
-const isSingleVariant = (values) => {
-  return values.familyGuids
-}
-
 export const updateVariantNote = (values) => {
-  if (isSingleVariant(values)) {
+  // is single variant
+  if (values.familyGuids) {
     if (values.variantGuid) {
       return updateEntity(values, RECEIVE_DATA, `/api/saved_variant/${values.variantGuid}/note`, 'noteGuid')
     }
@@ -293,15 +290,11 @@ export const updateVariantNote = (values) => {
 }
 
 export const updateVariantTags = (values) => {
-  if (isSingleVariant(values)) {
-    const urlPath = values.variantGuid ? `${values.variantGuid}/update_tags` : 'create'
+  if (values.compoundHetGuids) {
+    const urlPath = `${values.compoundHetGuids.join(',')}/update_tags`
     return updateSavedVariant(values, urlPath)
   }
-  const compoundHets = Object.values(values).filter(value => value instanceof Object)
-  const variantGuids = []
-  compoundHets.forEach(compoundHet => (compoundHet.variantGuid ? variantGuids.push(compoundHet.variantGuid) : null))
-  // TODO integrate 'create' when none of the compound het is a saved variant (does not have a variantGuid)
-  const urlPath = `${variantGuids}/update_tags`
+  const urlPath = values.variantGuid ? `${values.variantGuid}/update_tags` : 'create'
   return updateSavedVariant(values, urlPath)
 }
 

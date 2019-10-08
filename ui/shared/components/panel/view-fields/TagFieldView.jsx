@@ -72,6 +72,7 @@ const TagFieldView = ({ simplifiedValue, initialValues, field, tagOptions, popup
   const mappedValues = {
     ...(Array.isArray(initialValues) ? initialValues[0] : initialValues),
     [field]: fieldValues.map(tag => tagOptionsMap[tag.name]).sort((a, b) => a.optionIndex - b.optionIndex),
+    compoundHetGuids: Array.isArray(initialValues) ? initialValues.map(compoundHet => compoundHet.variantGuid) : null,
   }
 
   const formFieldProps = simplifiedValue ?
