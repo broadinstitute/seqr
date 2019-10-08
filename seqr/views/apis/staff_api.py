@@ -13,7 +13,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from requests.exceptions import ConnectionError
 
-from seqr.utils.es_utils import get_es_client, get_latest_loaded_samples
+from seqr.utils.es_utils import get_es_client
 from seqr.utils.file_utils import file_iter
 from seqr.utils.gene_utils import get_genes
 from seqr.utils.xpos_utils import get_chrom_pos
@@ -57,11 +57,15 @@ def elasticsearch_status(request):
 
     mappings = Index('_all', using=client).get_mapping(doc_type='variant')
 
-    latest_loaded_samples = get_latest_loaded_samples()
-    prefetch_related_objects(latest_loaded_samples, 'individual__family__project')
+    active_samples = Sample.objects.filter(
+        dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
+        is_active=True,
+        elasticsearch_index__isnull=False,
+    ).prefetch_related('individual', 'individual__family')
+    prefetch_related_objects(active_samples, 'individual__family__project')
     seqr_index_projects = defaultdict(lambda: defaultdict(set))
     es_projects = set()
-    for sample in latest_loaded_samples:
+    for sample in active_samples:
         for index_name in sample.elasticsearch_index.split(','):
             project = sample.individual.family.project
             es_projects.add(project)
@@ -90,17 +94,12 @@ def elasticsearch_status(request):
     # TODO remove once all projects are switched off of mongo
     all_mongo_samples = Sample.objects.filter(
         dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
-        sample_status=Sample.SAMPLE_STATUS_LOADED,
+        is_active=True,
         elasticsearch_index__isnull=True,
     ).exclude(individual__family__project__in=es_projects).prefetch_related('individual', 'individual__family__project')
-    mongo_sample_individual_max_loaded_date = {
-        agg['individual__guid']: agg['max_loaded_date'] for agg in
-        all_mongo_samples.values('individual__guid').annotate(max_loaded_date=Max('loaded_date'))
-    }
     mongo_project_samples = defaultdict(set)
     for s in all_mongo_samples:
-        if s.loaded_date == mongo_sample_individual_max_loaded_date[s.individual.guid]:
-            mongo_project_samples[s.individual.family.project].add(s.dataset_file_path)
+        mongo_project_samples[s.individual.family.project].add(s.dataset_file_path)
     mongo_projects = [{'projectGuid': project.guid, 'projectName': project.name, 'sourceFilePaths': sample_file_paths}
                       for project, sample_file_paths in mongo_project_samples.items()]
 
@@ -153,7 +152,7 @@ def seqr_stats(request):
     individuals_count = Individual.objects.only('individual_id').distinct('individual_id').count()
 
     sample_counts = defaultdict(set)
-    for sample in Sample.objects.filter(sample_status=Sample.SAMPLE_STATUS_LOADED).only('sample_id', 'sample_type'):
+    for sample in Sample.objects.filter(is_active=True).only('sample_id', 'sample_type'):
         sample_counts[sample.sample_type].add(sample.sample_id)
 
     for sample_type, sample_ids_set in sample_counts.items():
@@ -248,7 +247,6 @@ def _get_loaded_before_date_project_individuals(projects, loaded_before=None):
     loaded_samples = Sample.objects.filter(
         individual__family__project__in=projects,
         dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
-        sample_status=Sample.SAMPLE_STATUS_LOADED,
         loaded_date__isnull=False,
         loaded_date__lte=max_loaded_date,
     ).select_related('individual__family__project').order_by('loaded_date')
@@ -440,7 +438,6 @@ def _get_loaded_samples_by_project_family(projects):
     loaded_samples = Sample.objects.filter(
         individual__family__project__in=projects,
         dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
-        sample_status=Sample.SAMPLE_STATUS_LOADED,
         loaded_date__isnull=False
     ).select_related('individual__family__project').order_by('loaded_date')
 

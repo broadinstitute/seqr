@@ -39,8 +39,6 @@ export const PROJECT_FIELDS = [
 export const DATASET_TYPE_READ_ALIGNMENTS = 'ALIGN'
 export const DATASET_TYPE_VARIANT_CALLS = 'VARIANTS'
 
-export const SAMPLE_STATUS_LOADED = 'loaded'
-
 export const SAMPLE_TYPE_EXOME = 'WES'
 export const SAMPLE_TYPE_GENOME = 'WGS'
 export const SAMPLE_TYPE_RNA = 'RNA'
@@ -268,20 +266,14 @@ export const INDIVIDUAL_HPO_EXPORT_DATA = [
   },
 ]
 
-export const latestSamplesLoaded = (sampleGuids, samplesByGuid, datasetType) => {
-  const loadedSamples = sampleGuids.map(sampleGuid => samplesByGuid[sampleGuid]).filter(sample =>
-    sample.datasetType === (datasetType || DATASET_TYPE_VARIANT_CALLS) &&
-    sample.sampleStatus === SAMPLE_STATUS_LOADED &&
-    sample.loadedDate,
-  )
-  return orderBy(loadedSamples, [s => s.loadedDate], 'asc')
-}
-
-export const familySamplesLoaded = (family, individualsByGuid, samplesByGuid, datasetType) => {
+export const familyVariantSamples = (family, individualsByGuid, samplesByGuid) => {
   const sampleGuids = [...family.individualGuids.map(individualGuid => individualsByGuid[individualGuid]).reduce(
     (acc, individual) => new Set([...acc, ...(individual.sampleGuids || [])]), new Set(),
   )]
-  return latestSamplesLoaded(sampleGuids, samplesByGuid, datasetType)
+  const loadedSamples = sampleGuids.map(sampleGuid => samplesByGuid[sampleGuid]).filter(sample =>
+    sample.datasetType === DATASET_TYPE_VARIANT_CALLS && sample.loadedDate,
+  )
+  return orderBy(loadedSamples, [s => s.loadedDate], 'asc')
 }
 
 // CLINVAR

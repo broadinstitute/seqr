@@ -5,7 +5,7 @@ import { connect } from 'react-redux'
 import { Segment, Icon } from 'semantic-ui-react'
 
 import { updateIgvReadsVisibility } from 'redux/rootReducer'
-import { getIndividualsByGuid, getAlignmentSamplesByFamily, getIgvReadsVisibility } from 'redux/selectors'
+import { getIndividualsByGuid, getActiveAlignmentSamplesByFamily, getIgvReadsVisibility } from 'redux/selectors'
 import PedigreeIcon from '../../icons/PedigreeIcon'
 import IGV from '../../graph/IGV'
 import { ButtonLink } from '../../StyledComponents'
@@ -24,15 +24,13 @@ const BAM_TRACK_OPTIONS = {
   showSoftClips: true,
 }
 
-const FamilyVariantReads = ({ variant, samples, individualsByGuid, hideReads }) => {
+const FamilyVariantReads = ({ variant, activeSamples, individualsByGuid, hideReads }) => {
 
-  if (!samples || !samples.length) {
+  if (!activeSamples || !activeSamples.length) {
     return null
   }
 
-  const latestSamplesForIndividuals = samples.reduce((acc, sample) => ({ ...acc, [sample.individualGuid]: sample }), {})
-
-  const igvTracks = Object.values(latestSamplesForIndividuals).map((sample) => {
+  const igvTracks = activeSamples.map((sample) => {
     const individual = individualsByGuid[sample.individualGuid]
 
     const trackOptions = sample.datasetFilePath.endsWith('.cram') ? CRAM_TRACK_OPTIONS : BAM_TRACK_OPTIONS
@@ -87,7 +85,7 @@ const FamilyVariantReads = ({ variant, samples, individualsByGuid, hideReads }) 
 
 FamilyVariantReads.propTypes = {
   variant: PropTypes.object,
-  samples: PropTypes.array,
+  activeSamples: PropTypes.array,
   individualsByGuid: PropTypes.object,
   hideReads: PropTypes.func,
 }
@@ -95,7 +93,7 @@ FamilyVariantReads.propTypes = {
 const mapStateToProps = (state, ownProps) => {
   const familyGuid = getIgvReadsVisibility(state)[ownProps.igvId || ownProps.variant.variantId]
   return {
-    samples: getAlignmentSamplesByFamily(state)[familyGuid],
+    activeSamples: getActiveAlignmentSamplesByFamily(state)[familyGuid],
     individualsByGuid: getIndividualsByGuid(state),
   }
 }

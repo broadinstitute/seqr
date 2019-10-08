@@ -60,7 +60,7 @@ class Command(BaseCommand):
         missing_family_individuals = []
         for family, individual_ids in included_family_individuals.items():
             missing_indivs = family.individual_set.filter(
-                sample__sample_status=Sample.SAMPLE_STATUS_LOADED,
+                is_active=True,
                 sample__dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS
             ).exclude(individual_id__in=individual_ids)
             if missing_indivs:

@@ -142,7 +142,7 @@ class ProjectAPITest(TestCase):
         self.assertSetEqual(
             set(response_json['samplesByGuid'].values()[0].keys()),
             {'projectGuid', 'individualGuid', 'sampleGuid', 'createdDate', 'sampleType', 'datasetType', 'sampleId',
-             'sampleStatus', 'loadedDate', 'datasetFilePath', 'elasticsearchIndex'}
+             'isActive', 'loadedDate', 'datasetFilePath', 'elasticsearchIndex'}
         )
         self.assertSetEqual(
             set(response_json['locusListsByGuid'].values()[0].keys()),

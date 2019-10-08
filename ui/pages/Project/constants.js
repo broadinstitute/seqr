@@ -37,7 +37,7 @@ import {
   INDIVIDUAL_FIELD_CONFIGS,
   INDIVIDUAL_HPO_EXPORT_DATA,
   SHOW_ALL,
-  familySamplesLoaded,
+  familyVariantSamples,
 } from 'shared/utils/constants'
 
 export const CASE_REVIEW_TABLE_NAME = 'Case Review'
@@ -127,7 +127,7 @@ export const FAMILY_FILTER_OPTIONS = [
     name: 'Data Loaded',
     internalOmit: true,
     createFilter: (individualsByGuid, samplesByGuid) => family =>
-      familySamplesLoaded(family, individualsByGuid, samplesByGuid).length > 0,
+      familyVariantSamples(family, individualsByGuid, samplesByGuid).filter(sample => sample.isActive).length > 0,
   },
   {
     value: SHOW_PHENOTYPES_ENTERED,
@@ -303,7 +303,7 @@ export const FAMILY_SORT_OPTIONS = [
     value: SORT_BY_DATA_LOADED_DATE,
     name: 'Date Loaded',
     createSortKeyGetter: (individualsByGuid, samplesByGuid) => (family) => {
-      const loadedSamples = familySamplesLoaded(family, individualsByGuid, samplesByGuid)
+      const loadedSamples = familyVariantSamples(family, individualsByGuid, samplesByGuid)
       return loadedSamples.length ? loadedSamples[loadedSamples.length - 1].loadedDate : '2000-01-01T01:00:00.000Z'
     },
   },
@@ -311,7 +311,7 @@ export const FAMILY_SORT_OPTIONS = [
     value: SORT_BY_DATA_FIRST_LOADED_DATE,
     name: 'Date First Loaded',
     createSortKeyGetter: (individualsByGuid, samplesByGuid) => (family) => {
-      const loadedSamples = familySamplesLoaded(family, individualsByGuid, samplesByGuid)
+      const loadedSamples = familyVariantSamples(family, individualsByGuid, samplesByGuid)
       return loadedSamples.length ? loadedSamples[0].loadedDate : '2000-01-01T01:00:00.000Z'
     },
   },
