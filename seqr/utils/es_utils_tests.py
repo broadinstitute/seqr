@@ -905,6 +905,7 @@ class EsUtilsTest(TestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
 
     def setUp(self):
+        Sample.objects.filter(sample_id='NA19678').update(is_active=False)
         self.families = Family.objects.filter(guid__in=['F000003_3', 'F000002_2', 'F000005_5'])
         self.executed_search = None
         self.searched_indices = []

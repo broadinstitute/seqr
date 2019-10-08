@@ -29,10 +29,16 @@ class DatasetAPITest(TransactionTestCase):
         existing_index_sample = Sample.objects.get(sample_id='NA19675')
         self.assertEqual(existing_index_sample.elasticsearch_index, INDEX_NAME)
         self.assertNotEqual(existing_index_sample.dataset_file_path, 'test_data.vds')
+        self.assertTrue(existing_index_sample.is_active)
         existing_index_sample_guid = existing_index_sample.guid
+        existing_old_index_sample = Sample.objects.get(sample_id='NA19678')
+        self.assertNotEqual(existing_old_index_sample.elasticsearch_index, INDEX_NAME)
+        self.assertTrue(existing_old_index_sample.is_active)
+        existing_old_index_sample_guid = existing_old_index_sample.guid
         existing_sample = Sample.objects.get(sample_id='NA19679')
         self.assertIsNone(existing_sample.elasticsearch_index)
         self.assertNotEqual(existing_sample.dataset_file_path, 'test_data.vds')
+        self.assertFalse(existing_sample.is_active)
         existing_sample_guid = existing_sample.guid
         self.assertEqual(Sample.objects.filter(sample_id='NA19678_1').count(), 0)
 
@@ -100,7 +106,7 @@ class DatasetAPITest(TransactionTestCase):
             'ignoreExtraSamplesInCallset': True,
         }))
         self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'errors': ['The following families are included in the callset but are missing some family members: 1 (NA19675_1).']})
+        self.assertDictEqual(response.json(), {'errors': ['The following families are included in the callset but are missing some family members: 1 (NA19678, NA19675_1).']})
 
         # Send valid request
         mock_es_search.return_value.params.return_value.execute.return_value.aggregations.sample_ids.buckets = [
@@ -119,30 +125,32 @@ class DatasetAPITest(TransactionTestCase):
         new_sample = Sample.objects.get(sample_id='NA19678_1')
         self.assertSetEqual(
             set(response_json['samplesByGuid'].keys()),
-            {existing_index_sample_guid, existing_sample_guid, new_sample.guid}
+            {existing_index_sample_guid, existing_sample_guid, existing_old_index_sample_guid, new_sample.guid}
         )
         self.assertDictEqual(response_json['individualsByGuid'], {
             'I000001_na19675': {'sampleGuids': [existing_index_sample_guid]},
-            'I000002_na19678': {'sampleGuids': [new_sample.guid]},
+            'I000002_na19678': {'sampleGuids': [new_sample.guid, existing_old_index_sample_guid]},
             'I000003_na19679': {'sampleGuids': [existing_sample_guid]},
         })
         self.assertDictEqual(response_json['familiesByGuid'], {'F000001_1': {'analysisStatus': 'I'}})
+        updated_samples = [sample for sample_guid, sample in response_json['samplesByGuid'].items() if sample_guid != existing_old_index_sample_guid]
         self.assertSetEqual(
             {INDEX_NAME},
-            {sample['elasticsearchIndex'] for sample in response_json['samplesByGuid'].values()}
+            {sample['elasticsearchIndex'] for sample in updated_samples}
         )
         self.assertSetEqual(
             {'test_data.vds'},
-            {sample['datasetFilePath'] for sample in response_json['samplesByGuid'].values()}
-        )
-        self.assertSetEqual(
-            {True},
-            {sample['isActive'] for sample in response_json['samplesByGuid'].values()}
+            {sample['datasetFilePath'] for sample in updated_samples}
         )
         self.assertSetEqual(
             {'WES'},
-            {sample['sampleType'] for sample in response_json['samplesByGuid'].values()}
+            {sample['sampleType'] for sample in updated_samples}
         )
+        self.assertSetEqual(
+            {True},
+            {sample['isActive'] for sample in updated_samples}
+        )
+        self.assertDictEqual(response_json['samplesByGuid'][existing_old_index_sample_guid], {'isActive': False})
 
         # Only the new/updated samples should have an updated loaded date
         self.assertTrue(response_json['samplesByGuid'][existing_index_sample_guid]['loadedDate'].startswith('2017-02-05'))

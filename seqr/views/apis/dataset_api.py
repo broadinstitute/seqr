@@ -100,8 +100,9 @@ def add_variants_dataset_handler(request, project_guid):
                     ', '.join(missing_family_individuals)
                 ))
 
-        _update_samples(
-            matched_sample_id_to_sample_record, elasticsearch_index=elasticsearch_index, dataset_path=dataset_path
+        inactivate_sample_guids = _update_samples(
+            matched_sample_id_to_sample_record, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
+            elasticsearch_index=elasticsearch_index, dataset_path=dataset_path
         )
 
     except Exception as e:
@@ -123,7 +124,7 @@ def add_variants_dataset_handler(request, project_guid):
     for family in families_to_update:
         update_model_from_json(family, {'analysis_status': Family.ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS})
 
-    response_json = _get_samples_json(matched_sample_id_to_sample_record, project_guid)
+    response_json = _get_samples_json(matched_sample_id_to_sample_record, inactivate_sample_guids, project_guid)
     response_json['familiesByGuid'] = {family.guid: {'analysisStatus': Family.ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS}
                                        for family in families_to_update}
     return create_json_response(response_json)
@@ -189,7 +190,10 @@ def add_alignment_dataset_handler(request, project_guid):
         if len(unmatched_samples) > 0:
             raise Exception('The following Individual IDs do not exist: {}'.format(", ".join(unmatched_samples)))
 
-        _update_samples(matched_sample_id_to_sample_record, sample_dataset_path_mapping=sample_dataset_path_mapping)
+        inactivate_sample_guids = _update_samples(
+            matched_sample_id_to_sample_record, dataset_type=Sample.DATASET_TYPE_READ_ALIGNMENTS,
+            sample_dataset_path_mapping=sample_dataset_path_mapping
+        )
 
     except Exception as e:
         traceback.print_exc()
@@ -205,11 +209,18 @@ def add_alignment_dataset_handler(request, project_guid):
             base_indiv.bam_file_path = sample.dataset_file_path
             base_indiv.save()
 
-    return create_json_response(_get_samples_json(matched_sample_id_to_sample_record, project_guid))
+    return create_json_response(_get_samples_json(matched_sample_id_to_sample_record, inactivate_sample_guids, project_guid))
 
 
-def _update_samples(matched_sample_id_to_sample_record, elasticsearch_index=None, dataset_path=None, sample_dataset_path_mapping=None):
+def _update_samples(matched_sample_id_to_sample_record, dataset_type, elasticsearch_index=None, dataset_path=None, sample_dataset_path_mapping=None):
     loaded_date = timezone.now()
+    inactivate_samples = Sample.objects.filter(
+        individual__in={sample.individual for sample in matched_sample_id_to_sample_record.values()},
+        dataset_type=dataset_type,
+        is_active=True,
+    )
+    inactivate_sample_guids = [sample.guid for sample in inactivate_samples]
+    inactivate_samples.update(is_active=False)
     for sample_id, sample in matched_sample_id_to_sample_record.items():
         sample_update_json = {
             'dataset_file_path': dataset_path or sample_dataset_path_mapping[sample_id],
@@ -220,12 +231,15 @@ def _update_samples(matched_sample_id_to_sample_record, elasticsearch_index=None
             sample_update_json['is_active'] = True
             sample_update_json['loaded_date'] = loaded_date
         update_model_from_json(sample, sample_update_json)
+    return inactivate_sample_guids
 
 
-def _get_samples_json(matched_sample_id_to_sample_record, project_guid):
+def _get_samples_json(matched_sample_id_to_sample_record, inactivate_sample_guids, project_guid):
     updated_sample_json = get_json_for_samples(matched_sample_id_to_sample_record.values(), project_guid=project_guid)
+    sample_response = {sample_guid: {'isActive': False} for sample_guid in inactivate_sample_guids}
+    sample_response.update({s['sampleGuid']: s for s in updated_sample_json})
     response = {
-        'samplesByGuid': {s['sampleGuid']: s for s in updated_sample_json}
+        'samplesByGuid': sample_response
     }
     updated_individuals = {s['individualGuid'] for s in updated_sample_json}
     if updated_individuals:
