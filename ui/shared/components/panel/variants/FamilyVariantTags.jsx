@@ -166,18 +166,18 @@ ShortcutTags.propTypes = {
 
 
 const VariantTagField = ({ variant, fieldName, family, ...props }) => {
-  const variantHeader = []
+  const variantNames = []
   if (Array.isArray(variant)) {
-    variant.forEach(compoundHet => variantHeader.push(`chr${compoundHet.chrom}:${compoundHet.pos} ${compoundHet.ref} > ${compoundHet.alt}`))
+    variant.forEach(compoundHet => variantNames.push(`chr${compoundHet.chrom}:${compoundHet.pos} ${compoundHet.ref} > ${compoundHet.alt}`))
   }
   else {
-    variantHeader.push(`chr${variant.chrom}:${variant.pos} ${variant.ref} > ${variant.alt}`)
+    variantNames.push(`chr${variant.chrom}:${variant.pos} ${variant.ref} > ${variant.alt}`)
   }
   return (
     <TagFieldView
       idField="variantId"
       modalId={family.familyGuid}
-      modalTitle={`Edit Variant ${fieldName} for Family ${family.displayName} for ${variantHeader.join(', ')}`}
+      modalTitle={`Edit Variant ${fieldName} for Family ${family.displayName} for ${variantNames.join(', ')}`}
       modalSize="large"
       editLabel={`Edit ${fieldName}`}
       initialValues={variant}
@@ -286,7 +286,7 @@ const FamilyVariantTags = (
           <div>
             <TagTitle>Tags:</TagTitle>
             <HorizontalSpacer width={5} />
-            <ShortcutTags variant={savedVariant || variant} familyGuid={family.familyGuid} dispatchUpdateFamilyVariantTags={dispatchUpdateFamilyVariantTags} />
+            <ShortcutTags variant={displayVariant} familyGuid={family.familyGuid} dispatchUpdateFamilyVariantTags={dispatchUpdateFamilyVariantTags} />
             <VariantTagField
               field="tags"
               fieldName="Tags"
