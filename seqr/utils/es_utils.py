@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 VARIANT_DOC_TYPE = 'variant'
+MAX_VARIANTS = 10000
 MAX_COMPOUND_HET_GENES = 1000
 MAX_INDEX_NAME_LENGTH = 7500
 
@@ -302,7 +303,6 @@ class BaseEsSearch(object):
                 if execute_single_search:
                     genotype_filters.append(genotypes_q)
                 else:
-                    import pdb; pdb.set_trace()
                     self._index_searches[index].append(self._search.filter(genotypes_q))
 
             if inheritance_mode == RECESSIVE:
@@ -317,7 +317,6 @@ class BaseEsSearch(object):
                 ).metric(
                     'vars_by_gene', 'top_hits', size=100, sort=self._sort, _source=QUERY_FIELD_NAMES
                 )
-                import pdb; pdb.set_trace()
                 self._index_searches[index].append(compound_het_search)
 
         if genotype_filters:
@@ -342,6 +341,8 @@ class BaseEsSearch(object):
                 end_index = page * num_results
                 if start_index is None:
                     start_index = end_index - num_results
+                if end_index - start_index > MAX_VARIANTS:
+                    end_index = start_index + MAX_VARIANTS
 
                 search = search[start_index:end_index]
                 search = search.source(QUERY_FIELD_NAMES)
