@@ -293,7 +293,6 @@ export const updateVariantNote = (values) => {
 }
 
 export const updateVariantTags = (values) => {
-  console.log(values)
   if (isSingleVariant(values)) {
     const urlPath = values.variantGuid ? `${values.variantGuid}/update_tags` : 'create'
     return updateSavedVariant(values, urlPath)

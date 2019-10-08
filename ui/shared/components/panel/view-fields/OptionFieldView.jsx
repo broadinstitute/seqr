@@ -18,7 +18,6 @@ const OptionFieldView = ({ field, tagOptions, fieldDisplay, tagAnnotation, compa
       ...formFieldProps,
     },
   ]
-
   return (
     <BaseFieldView
       formFields={fields}

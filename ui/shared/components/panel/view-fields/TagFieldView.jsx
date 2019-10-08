@@ -70,7 +70,7 @@ const TagFieldView = ({ simplifiedValue, initialValues, field, tagOptions, popup
   }, {})
 
   const mappedValues = {
-    ...initialValues,
+    ...(Array.isArray(initialValues) ? initialValues[0] : initialValues),
     [field]: fieldValues.map(tag => tagOptionsMap[tag.name]).sort((a, b) => a.optionIndex - b.optionIndex),
   }
 
@@ -93,7 +93,6 @@ const TagFieldView = ({ simplifiedValue, initialValues, field, tagOptions, popup
     validate: (val) => { return (!val || val.category === NOTES_CATEGORY || val.metadata) ? undefined : 'Required' },
     component: MetadataField,
   }] : []
-
   return <OptionFieldView
     field={field}
     tagOptions={tagOptions}
