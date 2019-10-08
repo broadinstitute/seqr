@@ -79,7 +79,7 @@ class JSONUtilsTest(TestCase):
 
         self.assertSetEqual(
             set(json.keys()),
-            {'projectGuid', 'individualGuid', 'sampleGuid', 'createdDate', 'sampleType', 'sampleId', 'sampleStatus',
+            {'projectGuid', 'individualGuid', 'sampleGuid', 'createdDate', 'sampleType', 'sampleId', 'isActive',
              'datasetFilePath', 'loadedDate', 'datasetType', 'elasticsearchIndex'}
         )
 

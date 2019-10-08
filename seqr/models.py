@@ -467,20 +467,6 @@ class Sample(ModelWithGUID):
         (DATASET_TYPE_ASE, 'Allele Specific Expression'),
     )
 
-    SAMPLE_STATUS_IN_SEQUENCING = 'seq'
-    SAMPLE_STATUS_COMPLETED_SEQUENCING = 'seq_done'
-    SAMPLE_STATUS_SEQUENCING_FAILED = 'seq_fail_1'
-    SAMPLE_STATUS_LOADING = 'loading'
-    SAMPLE_STATUS_LOADED = 'loaded'
-
-    SAMPLE_STATUS_CHOICES = (
-        (SAMPLE_STATUS_IN_SEQUENCING, 'In Sequencing'),
-        (SAMPLE_STATUS_COMPLETED_SEQUENCING, 'Completed Sequencing'),
-        (SAMPLE_STATUS_SEQUENCING_FAILED, 'Failed Sequencing - Abandoned'),
-        (SAMPLE_STATUS_LOADING, 'Loading'),
-        (SAMPLE_STATUS_LOADED, 'Loaded'),
-    )
-
     individual = models.ForeignKey('Individual', on_delete=models.PROTECT, null=True)
 
     sample_type = models.CharField(max_length=20, choices=SAMPLE_TYPE_CHOICES, null=True, blank=True)
@@ -496,7 +482,7 @@ class Sample(ModelWithGUID):
     dataset_file_path = models.TextField(db_index=True, null=True, blank=True)
 
     # sample status
-    sample_status = models.CharField(max_length=20, choices=SAMPLE_STATUS_CHOICES, null=True, blank=True, db_index=True)
+    is_active = models.BooleanField(default=False)
     loaded_date = models.DateTimeField(null=True, blank=True)
 
     #funding_source = models.CharField(max_length=20, null=True)
@@ -511,7 +497,7 @@ class Sample(ModelWithGUID):
     class Meta:
        json_fields = [
            'guid', 'created_date', 'sample_type', 'dataset_type', 'sample_id', 'elasticsearch_index',
-           'dataset_file_path', 'sample_status', 'loaded_date',
+           'dataset_file_path', 'is_active', 'loaded_date',
        ]
 
 

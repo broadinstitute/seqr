@@ -2,7 +2,7 @@
 
 from django.test import TestCase
 
-from seqr.models import Family, Individual
+from seqr.models import Family, Individual, Sample
 from seqr.views.utils.pedigree_image_utils import _get_parsed_individuals
 
 
@@ -38,6 +38,7 @@ class PedigreeImageTest(TestCase):
         })
 
         # Create placeholder when only has one parent
+        Sample.objects.get(sample_id='NA19678').delete()
         Individual.objects.get(individual_id='NA19678').delete()
         parsed_data = _get_parsed_individuals(test_family)
         placeholders = {individual_id: record for individual_id, record in parsed_data.items() if

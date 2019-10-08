@@ -11,7 +11,6 @@ import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
 import {
   SAMPLE_TYPE_LOOKUP,
   DATASET_TYPE_VARIANT_CALLS,
-  SAMPLE_STATUS_LOADED,
 } from 'shared/utils/constants'
 import {
   getAnalysisStatusCounts,
@@ -57,7 +56,7 @@ const ProjectOverview = ({ project, familiesByGuid, individualsByGuid, samplesBy
     ), {})
 
   const loadedProjectSamples = Object.values(samplesByGuid).filter(sample =>
-    sample.datasetType === DATASET_TYPE_VARIANT_CALLS && sample.sampleStatus === SAMPLE_STATUS_LOADED,
+    sample.datasetType === DATASET_TYPE_VARIANT_CALLS,
   ).reduce((acc, sample) => {
     const loadedDate = sample.loadedDate.split('T')[0]
     const currentTypeSamplesByDate = acc[sample.sampleType] || {}
