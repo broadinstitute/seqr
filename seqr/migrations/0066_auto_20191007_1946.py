@@ -29,7 +29,7 @@ def set_active_samples(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('seqr', '0065_merge_20190827_2031'),
+        ('seqr', '0066_auto_20190924_1422'),
     ]
 
     atomic = False
