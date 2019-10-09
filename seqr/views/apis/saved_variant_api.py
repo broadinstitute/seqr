@@ -275,9 +275,6 @@ def _create_new_tags(saved_variants, tags_json, user):
     tags = tags_json.get('tags', [])
     new_tags = [tag for tag in tags if not tag.get('tagGuid')]
 
-    # import pdb
-    # pdb.set_trace()
-
     for tag in new_tags:
         variant_tag_type = VariantTagType.objects.get(
             Q(name=tag['name']),
