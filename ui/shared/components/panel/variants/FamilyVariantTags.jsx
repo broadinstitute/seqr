@@ -122,8 +122,9 @@ ShortcutTagToggle.propTypes = {
 }
 
 const ShortcutTags = ({ variant, dispatchUpdateFamilyVariantTags, familyGuid }) => {
+  const singleVariant = Array.isArray(variant) ? variant[0] : variant
   const appliedShortcutTags = SHORTCUT_TAGS.reduce((acc, tagName) => {
-    const appliedTag = (variant.tags || []).find(tag => tag.name === tagName)
+    const appliedTag = (singleVariant.tags || []).find(tag => tag.name === tagName)
     return appliedTag ? { ...acc, [tagName]: appliedTag } : acc
   }, {})
   const shortcutTagFields = SHORTCUT_TAGS.map(tagName => ({
@@ -140,8 +141,12 @@ const ShortcutTags = ({ variant, dispatchUpdateFamilyVariantTags, familyGuid }) 
         return [...allTags, { name: tagName }]
       }
       return allTags.filter(tag => tag.name !== tagName)
-    }, variant.tags || [])
-    return dispatchUpdateFamilyVariantTags({ ...variant, tags: updatedTags })
+    }, singleVariant.tags || [])
+    return dispatchUpdateFamilyVariantTags({
+      ...singleVariant,
+      tags: updatedTags,
+      compoundHetGuids: Array.isArray(variant) ? variant.map(compoundHet => compoundHet.variantGuid) : null,
+    })
   }
 
   return (

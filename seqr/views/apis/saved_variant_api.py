@@ -218,6 +218,9 @@ def delete_variant_note_handler(request, variant_guids, note_guid):
 @csrf_exempt
 def update_variant_tags_handler(request, variant_guids):
     variant_guids = variant_guids.split(',')
+    # TODO remove this after all unsaved_variants can be saved as saved_variant in one step
+    while '' in variant_guids:
+        variant_guids.remove('')
     saved_variants = SavedVariant.objects.filter(guid__in=variant_guids)
 
     request_json = json.loads(request.body)
