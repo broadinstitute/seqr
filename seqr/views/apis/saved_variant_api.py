@@ -238,26 +238,25 @@ def update_variant_tags_handler(request, variant_guids):
 
     # Update functional data
 
-    existing_functional_guids = [functional_data['tagGuid'] for functional_data in updated_functional_data if functional_data.get('tagGuid')]
+    existing_functional_guids = [tag['tagGuid'] for tag in updated_functional_data if tag.get('tagGuid')]
 
-    for functional_data in saved_variants[0].variantfunctionaldata_set.exclude(guid__in=existing_functional_guids):
-        delete_seqr_model(functional_data)
+    for tag in saved_variants[0].variantfunctionaldata_set.exclude(guid__in=existing_functional_guids):
+        delete_seqr_model(tag)
 
-    for functional_data in updated_functional_data:
-        if functional_data.get('tagGuid'):
-            functional_data_model = VariantFunctionalData.objects.get(
-                guid=functional_data.get('tagGuid'),
-                # TODO check if need to use queryset
-                saved_variants=saved_variants,
-                functional_data_tag=functional_data.get('name'),
+    for tag in updated_functional_data:
+        if tag.get('tagGuid'):
+            tag_model = VariantFunctionalData.objects.get(
+                guid=tag.get('tagGuid'),
+                functional_data_tag=tag.get('name'),
+                saved_variants=saved_variants
             )
-            update_model_from_json(functional_data_model, functional_data, allow_unknown_keys=True)
+            update_model_from_json(tag_model, tag, allow_unknown_keys=True)
         else:
             create_seqr_model(
                 VariantFunctionalData,
-                functional_data_tag=functional_data.get('name'),
                 saved_variants=saved_variants,
-                metadata=functional_data.get('metadata'),
+                functional_data_tag=tag.get('name'),
+                metadata=tag.get('metadata'),
                 search_hash=request_json.get('searchHash'),
                 created_by=request.user,
             )
