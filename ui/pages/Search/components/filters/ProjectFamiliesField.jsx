@@ -18,7 +18,7 @@ import DataLoader from 'shared/components/DataLoader'
 import { InlineHeader, ButtonLink } from 'shared/components/StyledComponents'
 import { VerticalSpacer } from 'shared/components/Spacers'
 import { getSelectedAnalysisGroups } from '../../constants'
-import { getProjectFamilies, getSearchContextIsLoading, getFamilyOptions, getAnalysisGroupOptions } from '../../selectors'
+import { getProjectFamilies, getSearchContextIsLoading, getFamilyOptions, getAnalysisGroupOptions, getInputProjectsCount } from '../../selectors'
 import { loadProjectFamiliesContext, loadProjectGroupContext } from '../../reducers'
 
 
@@ -205,4 +205,26 @@ const PROJECT_FAMILIES_FIELD = {
   isArrayField: true,
 }
 
-export default () => configuredField(PROJECT_FAMILIES_FIELD)
+class AllProjectFamiliesField extends React.PureComponent {
+  state = { viewAllProjects: false }
+
+  viewProjects = (e) => {
+    e.preventDefault()
+    this.setState({ viewAllProjects: true })
+  }
+
+  render() {
+    return this.props.numProjects < 20 || this.state.viewAllProjects ?
+      configuredField(PROJECT_FAMILIES_FIELD) : <ButtonLink onClick={this.viewProjects} content={`Show all ${this.props.numProjects} searched projects`} />
+  }
+}
+
+AllProjectFamiliesField.propTypes = {
+  numProjects: PropTypes.number,
+}
+
+const mapAllProjectFamiliesFieldStateToProps = state => ({
+  numProjects: getInputProjectsCount(state),
+})
+
+export default connect(mapAllProjectFamiliesFieldStateToProps)(AllProjectFamiliesField)

@@ -363,12 +363,12 @@ def get_json_for_saved_variants(saved_variants, add_tags=False, add_details=Fals
                                    saved_variant.variantfunctionaldata_set.all()],
                 'notes': [get_json_for_variant_note(tag) for tag in saved_variant.variantnote_set.all()],
             })
-        if add_details:
-            variant_json.update(saved_variant.saved_variant_json)
         variant_json.update({
-            'variantId': saved_variant.guid,  # TODO get from json
+            'variantId': saved_variant.guid,
             'familyGuids': [saved_variant.family.guid],
         })
+        if add_details:
+            variant_json.update(saved_variant.saved_variant_json)
         return variant_json
 
     prefetch_related_objects(saved_variants, 'family')
