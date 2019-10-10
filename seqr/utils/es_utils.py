@@ -163,7 +163,7 @@ def _get_es_variants_for_search(search_model, es_search_cls, process_previous_re
         es_search.sort(sort)
 
     if genes or intervals or rs_ids or variant_ids:
-        es_search.filter_by_location(genes, intervals, rs_ids, variant_ids, search['locus'], search['locus'].get('genomeVersion'))
+        es_search.filter_by_location(genes, intervals, rs_ids, variant_ids, search['locus'])
 
     # Pathogencicity and transcript consequences act as "OR" filters instead of the usual "AND"
     pathogenicity_filter = _pathogenicity_filter(search.get('pathogenicity', {}))
@@ -266,7 +266,8 @@ class BaseEsSearch(object):
             self.filter(consequences_filter)
             self._allowed_consequences = allowed_consequences
 
-    def filter_by_location(self, genes, intervals, rs_ids, variant_ids, locus, genome_version):
+    def filter_by_location(self, genes, intervals, rs_ids, variant_ids, locus):
+        genome_version = locus.get('genomeVersion')
         variant_id_genome_versions = {variant_id: genome_version for variant_id in variant_ids or []}
         if variant_id_genome_versions and genome_version:
             lifted_genome_version = GENOME_VERSION_GRCh37 if genome_version == GENOME_VERSION_GRCh38 else GENOME_VERSION_GRCh38
@@ -283,7 +284,7 @@ class BaseEsSearch(object):
                         variant_ids.append(lifted_variant_id)
         
         self.filter(_location_filter(genes, intervals, rs_ids, variant_ids, locus))
-        if len({genome_version for genome_version in variant_id_genome_versions.items()}) > 1:
+        if len({genome_version for genome_version in variant_id_genome_versions.items()}) > 1 and not (genes or intervals or rs_ids):
             self._filtered_variant_ids = variant_id_genome_versions
 
     def filter_by_genotype(self, inheritance, quality_filter=None, execute_single_search=False):
@@ -696,8 +697,7 @@ class EsSearch(BaseEsSearch):
         original_result_count = len(sorted_new_results)
         if self._filtered_variant_ids:
             sorted_new_results = [
-                v for v in sorted_new_results if v['variantId'] not in self._filtered_variant_ids
-                or self._filtered_variant_ids[v['variantId']] == v['genomeVersion']
+                v for v in sorted_new_results if self._filtered_variant_ids.get(v['variantId']) == v['genomeVersion']
             ]
 
         genome_builds = {var['genomeVersion'] for var in sorted_new_results}
