@@ -700,12 +700,12 @@ class EsSearch(BaseEsSearch):
             if variant['genomeVersion'] == GENOME_VERSION_GRCh38:
                 hg37_id = '{}-{}-{}-{}'.format(variant['liftedOverChrom'], variant['liftedOverPos'], variant['ref'], variant['alt'])
                 existing_38_index = hg_38_variant_indices.get(hg37_id)
-                if existing_38_index:
+                if existing_38_index is not None:
                     cls._merge_duplicate_variants(variant_results[existing_38_index], variant)
                     variant_results.append(None)
                 else:
                     existing_37_index = hg_37_variant_indices.get(hg37_id)
-                    if existing_37_index:
+                    if existing_37_index is not None:
                         cls._merge_duplicate_variants(variant, variant_results[existing_37_index])
                         variant_results[existing_37_index] = None
 
@@ -714,10 +714,10 @@ class EsSearch(BaseEsSearch):
             else:
                 existing_38_index = hg_38_variant_indices.get(variant['variantId'])
                 existing_37_index = hg_37_variant_indices.get(variant['variantId'])
-                if existing_38_index:
+                if existing_38_index is not None:
                     cls._merge_duplicate_variants(variant_results[existing_38_index], variant)
                     variant_results.append(None)
-                elif existing_37_index:
+                elif existing_37_index is not None:
                     cls._merge_duplicate_variants(variant_results[existing_37_index], variant)
                     variant_results.append(None)
                 else:
