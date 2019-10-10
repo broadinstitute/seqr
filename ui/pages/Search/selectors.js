@@ -145,6 +145,11 @@ const getProjectsInput = createSelector(
   projectFamilies => (projectFamilies || []).map(({ projectGuid }) => projectGuid),
 )
 
+export const getInputProjectsCount = createSelector(
+  getProjectsFamiliesFieldInput,
+  projectFamilies => (projectFamilies || []).length,
+)
+
 export const getSearchedProjectsLocusListOptions = createListEqualSelector(
   getProjectsInput,
   getProjectsByGuid,
