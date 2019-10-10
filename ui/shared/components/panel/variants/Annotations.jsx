@@ -83,7 +83,7 @@ const LOF_FILTER_MAP = {
 }
 
 const BaseSearchLinks = ({ variant, mainTranscript, mainGene }) => {
-  const links = [<SearchResultsLink key="seqr" buttonText="seqr" variantId={variant.variantId} />]
+  const links = [<SearchResultsLink key="seqr" buttonText="seqr" variantId={variant.variantId} genomeVersion={variant.genomeVersion} />]
   if (mainGene) {
     const geneNames = [mainGene.geneSymbol, ...getOtherGeneNames(mainGene)]
 

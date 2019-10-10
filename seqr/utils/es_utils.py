@@ -1,4 +1,5 @@
 from collections import defaultdict
+from copy import deepcopy
 import elasticsearch
 from elasticsearch_dsl import Search, Q, MultiSearch
 import hashlib
@@ -162,7 +163,7 @@ def _get_es_variants_for_search(search_model, es_search_cls, process_previous_re
         es_search.sort(sort)
 
     if genes or intervals or rs_ids or variant_ids:
-        es_search.filter(_location_filter(genes, intervals, rs_ids, variant_ids, search['locus']))
+        es_search.filter_by_location(genes, intervals, rs_ids, variant_ids, search['locus'], search['locus'].get('genomeVersion'))
 
     # Pathogencicity and transcript consequences act as "OR" filters instead of the usual "AND"
     pathogenicity_filter = _pathogenicity_filter(search.get('pathogenicity', {}))
@@ -240,6 +241,7 @@ class BaseEsSearch(object):
         self._index_searches = defaultdict(list)
         self._sort = None
         self._allowed_consequences = None
+        self._filtered_variant_ids = None
         self._no_sample_filters = False
 
     def _set_index_metadata(self):
@@ -263,6 +265,26 @@ class BaseEsSearch(object):
                 consequences_filter |= pathogenicity_filter
             self.filter(consequences_filter)
             self._allowed_consequences = allowed_consequences
+
+    def filter_by_location(self, genes, intervals, rs_ids, variant_ids, locus, genome_version):
+        variant_id_genome_versions = {variant_id: genome_version for variant_id in variant_ids or []}
+        if variant_id_genome_versions and genome_version:
+            lifted_genome_version = GENOME_VERSION_GRCh37 if genome_version == GENOME_VERSION_GRCh38 else GENOME_VERSION_GRCh38
+            liftover = _liftover_grch38_to_grch37() if genome_version == GENOME_VERSION_GRCh38 else _liftover_grch37_to_grch38()
+            if liftover:
+                for variant_id in deepcopy(variant_ids):
+                    chrom, pos, ref, alt = _parse_variant_id(variant_id)
+                    lifted_coord = liftover.convert_coordinate('chr{}'.format(chrom), pos)
+                    if lifted_coord and lifted_coord[0]:
+                        lifted_variant_id = '{chrom}-{pos}-{ref}-{alt}'.format(
+                            chrom=lifted_coord[0][0].lstrip('chr'), pos=lifted_coord[0][1], ref=ref, alt=alt
+                        )
+                        variant_id_genome_versions[lifted_variant_id] = lifted_genome_version
+                        variant_ids.append(lifted_variant_id)
+        
+        self.filter(_location_filter(genes, intervals, rs_ids, variant_ids, locus))
+        if len({genome_version for genome_version in variant_id_genome_versions.items()}) > 1:
+            self._filtered_variant_ids = variant_id_genome_versions
 
     def filter_by_genotype(self, inheritance, quality_filter=None, execute_single_search=False):
         has_previous_compound_hets = self.previous_search_results.get('grouped_results')
@@ -611,7 +633,7 @@ class EsSearch(BaseEsSearch):
                 for genotype_hit in hit[GENOTYPES_FIELD_KEY] if genotype_hit['sample_id'] in samples_by_id
             })
 
-        genome_version = self.index_metadata[index_name].get('genomeVersion')
+        genome_version = self.index_metadata[index_name]['genomeVersion']
         lifted_over_genome_version = None
         lifted_over_chrom = None
         lifted_over_pos = None
@@ -671,6 +693,13 @@ class EsSearch(BaseEsSearch):
         return result
 
     def _deduplicate_results(self, sorted_new_results):
+        original_result_count = len(sorted_new_results)
+        if self._filtered_variant_ids:
+            sorted_new_results = [
+                v for v in sorted_new_results if v['variantId'] not in self._filtered_variant_ids
+                or self._filtered_variant_ids[v['variantId']] == v['genomeVersion']
+            ]
+
         genome_builds = {var['genomeVersion'] for var in sorted_new_results}
         if len(genome_builds) > 1:
             variant_results = self._deduplicate_multi_genome_variant_results(sorted_new_results)
@@ -683,7 +712,7 @@ class EsSearch(BaseEsSearch):
                     variant_results.append(variant)
 
         previous_duplicates = self.previous_search_results.get('duplicate_doc_count', 0)
-        new_duplicates = len(sorted_new_results) - len(variant_results)
+        new_duplicates = original_result_count - len(variant_results)
         self.previous_search_results['duplicate_doc_count'] = previous_duplicates + new_duplicates
 
         self.previous_search_results['total_results'] -= self.previous_search_results['duplicate_doc_count']
@@ -930,6 +959,28 @@ INHERITANCE_FILTERS = {
     },
 }
 
+#  TODO move liftover to hail pipeline once upgraded to 0.2
+LIFTOVER_GRCH38_TO_GRCH37 = None
+def _liftover_grch38_to_grch37():
+    global LIFTOVER_GRCH38_TO_GRCH37
+    if not LIFTOVER_GRCH38_TO_GRCH37:
+        try:
+            LIFTOVER_GRCH38_TO_GRCH37 = LiftOver('hg38', 'hg19')
+        except Exception as e:
+            logger.warn('WARNING: Unable to set up liftover. {}'.format(e))
+    return LIFTOVER_GRCH38_TO_GRCH37
+
+
+LIFTOVER_GRCH37_TO_GRCH38 = None
+def _liftover_grch37_to_grch38():
+    global LIFTOVER_GRCH37_TO_GRCH38
+    if not LIFTOVER_GRCH37_TO_GRCH38:
+        try:
+            LIFTOVER_GRCH37_TO_GRCH38 = LiftOver('hg19', 'hg38')
+        except Exception as e:
+            logger.warn('WARNING: Unable to set up liftover. {}'.format(e))
+    return LIFTOVER_GRCH37_TO_GRCH38
+
 
 def _genotype_inheritance_filter(inheritance_mode, inheritance_filter, family_samples_by_id, quality_filter):
     if inheritance_mode:
@@ -1074,19 +1125,21 @@ def _parse_variant_items(search_json):
         if item.startswith('rs'):
             rs_ids.append(item)
         else:
-            var_fields = item.split('-')
-            if len(var_fields) == 4:
-                try:
-                    chrom = var_fields[0].lstrip('chr')
-                    pos = int(var_fields[1])
-                    get_xpos(chrom, pos)
-                    variant_ids.append(item.lstrip('chr'))
-                except (KeyError, ValueError):
-                    invalid_items.append(item)
-            else:
+            try:
+                chrom, pos, _, _ = _parse_variant_id(item)
+                get_xpos(chrom, pos)
+                variant_ids.append(item.lstrip('chr'))
+            except (KeyError, ValueError):
                 invalid_items.append(item)
 
     return rs_ids, variant_ids, invalid_items
+
+
+def _parse_variant_id(variant_id):
+    var_fields = variant_id.split('-')
+    if len(var_fields) != 4:
+        raise ValueError('Invalid variant id')
+    return var_fields[0].lstrip('chr'), int(var_fields[1]), var_fields[2], var_fields[3]
 
 
 CLINVAR_SIGNFICANCE_MAP = {
@@ -1378,18 +1431,6 @@ def _get_compound_het_page(grouped_variants, start_index, end_index):
         if len(variant_results) + skipped >= end_index:
             return variant_results
     return None
-
-
-#  TODO move liftover to hail pipeline once upgraded to 0.2
-LIFTOVER_GRCH38_TO_GRCH37 = None
-def _liftover_grch38_to_grch37():
-    global LIFTOVER_GRCH38_TO_GRCH37
-    if not LIFTOVER_GRCH38_TO_GRCH37:
-        try:
-            LIFTOVER_GRCH38_TO_GRCH37 = LiftOver('hg38', 'hg19')
-        except Exception as e:
-            logger.warn('WARNING: Unable to set up liftover. {}'.format(e))
-    return LIFTOVER_GRCH38_TO_GRCH37
 
 
 def _parse_es_sort(sort, sort_config):
