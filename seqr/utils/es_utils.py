@@ -308,7 +308,7 @@ class BaseEsSearch(object):
         for index, family_samples_by_id in self.samples_by_family_index.items():
             if not inheritance and not quality_filter['min_ab'] and not quality_filter['min_gq']:
                 search_sample_count = sum(len(samples) for samples in family_samples_by_id.values())
-                index_sample_count = Sample.objects.filter(elasticsearch_index=index).count()
+                index_sample_count = Sample.objects.filter(elasticsearch_index=index, is_active=True).count()
                 if search_sample_count == index_sample_count:
                     # If searching across all families in an index with no inheritance mode we do not need to explicitly
                     # filter on inheritance, as all variants have some inheritance for at least one family
