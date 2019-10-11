@@ -514,7 +514,8 @@ class EsSearch(BaseEsSearch):
             return self._process_compound_hets(compound_het_results, variant_results, num_results)
         else:
             self.previous_search_results['all_results'] = loaded_results + variant_results
-            return variant_results[:num_results]
+            end_index = page * num_results
+            return variant_results[end_index-num_results:end_index]
 
     def _parse_response(self, response):
         if hasattr(response.aggregations, 'genes') and response.hits:
@@ -573,8 +574,9 @@ class EsSearch(BaseEsSearch):
                             variant['transcripts'][primary_gene]
                         ) for variant in gene_variants)
                     if is_valid_gene:
-                        if primary_gene in variants_by_gene:
+                        if primary_gene != gene_id:
                             continue
+
                 else:
                     variant_ids = [variant['variantId'] for variant in gene_variants]
                     for gene in primary_genes:
