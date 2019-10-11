@@ -573,8 +573,9 @@ class EsSearch(BaseEsSearch):
                             variant['transcripts'][primary_gene]
                         ) for variant in gene_variants)
                     if is_valid_gene:
-                        if primary_gene in variants_by_gene:
+                        if primary_gene != gene_id:
                             continue
+
                 else:
                     variant_ids = [variant['variantId'] for variant in gene_variants]
                     for gene in primary_genes:
