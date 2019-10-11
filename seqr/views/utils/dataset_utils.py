@@ -1,7 +1,6 @@
 import logging
 import elasticsearch_dsl
 from django.utils import timezone
-from django.db.models.query_utils import Q
 
 from seqr.models import Sample, Individual
 from seqr.utils.es_utils import get_es_client, get_index_metadata
@@ -181,9 +180,7 @@ def find_matching_sample_records(project, sample_ids, sample_type, dataset_type,
         sample_id__in=sample_ids
     )
     if elasticsearch_index:
-        sample_query = sample_query.filter(
-            Q(elasticsearch_index=elasticsearch_index) | Q(elasticsearch_index__isnull=True)
-        )
+        sample_query = sample_query.filter(elasticsearch_index=elasticsearch_index)
     for sample in sample_query:
         sample_id_to_sample_record[sample.sample_id] = sample
 
