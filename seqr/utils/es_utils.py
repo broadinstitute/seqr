@@ -514,7 +514,8 @@ class EsSearch(BaseEsSearch):
             return self._process_compound_hets(compound_het_results, variant_results, num_results)
         else:
             self.previous_search_results['all_results'] = loaded_results + variant_results
-            return variant_results[:num_results]
+            end_index = page * num_results
+            return variant_results[end_index-num_results:end_index]
 
     def _parse_response(self, response):
         if hasattr(response.aggregations, 'genes') and response.hits:
