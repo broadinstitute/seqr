@@ -83,7 +83,7 @@ const LOF_FILTER_MAP = {
 }
 
 const BaseSearchLinks = ({ variant, mainTranscript, mainGene }) => {
-  const links = [<SearchResultsLink key="seqr" buttonText="seqr" variantId={variant.variantId} />]
+  const links = [<SearchResultsLink key="seqr" buttonText="seqr" variantId={variant.variantId} genomeVersion={variant.genomeVersion} />]
   if (mainGene) {
     const geneNames = [mainGene.geneSymbol, ...getOtherGeneNames(mainGene)]
 
@@ -142,12 +142,12 @@ const Annotations = ({ variant }) => {
   const mainTranscript = getVariantMainTranscript(variant)
 
   const lofDetails = (mainTranscript.lof === 'LC' || mainTranscript.lofFlags === 'NAGNAG_SITE') ? [
-    ...[...new Set(mainTranscript.lofFilter.split(/&|,/g))].map((lofFilterKey) => {
+    ...(mainTranscript.lofFilter ? [...new Set(mainTranscript.lofFilter.split(/&|,/g))] : []).map((lofFilterKey) => {
       const lofFilter = LOF_FILTER_MAP[lofFilterKey] || { message: lofFilterKey }
       return <div key={lofFilterKey}><b>LOFTEE: {lofFilter.title}</b><br />{lofFilter.message}.</div>
     }),
     mainTranscript.lofFlags === 'NAGNAG_SITE' ?
-      <div key="NAGNAG_SITE">LOFTEE: <b>NAGNAG site</b>This acceptor site is rescued by another adjacent in-frame acceptor site.</div>
+      <div key="NAGNAG_SITE"><b>LOFTEE: NAGNAG site</b><br />This acceptor site is rescued by another adjacent in-frame acceptor site.</div>
       : null,
   ] : null
 

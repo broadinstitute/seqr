@@ -44,6 +44,8 @@ const PAGE_CONFIGS = {
             entityGuid = projectGuid
           }
         }
+      } else if (projectFamilies.length > 20) {
+        description = `${projectFamilies.length} Projects`
       } else if (projectFamilies.length > 1) {
         description = `Projects: ${projectFamilies.map(
           ({ projectGuid }) => (projectsByGuid[projectGuid] || {}).name,

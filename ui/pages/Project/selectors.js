@@ -9,8 +9,8 @@ import {
   FAMILY_FIELD_FIRST_SAMPLE,
   SEX_LOOKUP,
   SHOW_ALL,
-  latestSamplesLoaded,
-  familySamplesLoaded,
+  DATASET_TYPE_VARIANT_CALLS,
+  familyVariantSamples,
   getVariantMainTranscript,
   getVariantMainGeneId,
 } from 'shared/utils/constants'
@@ -219,7 +219,9 @@ export const getIndividualsExportData = createSelector(
     [...acc, ...individualsByFamily[family.familyGuid].map(individual => ({
       ...individual,
       [FAMILY_FIELD_ID]: family.familyId,
-      [INDIVIDUAL_HAS_DATA_FIELD]: latestSamplesLoaded(individual.sampleGuids, samplesByGuid).length > 0,
+      [INDIVIDUAL_HAS_DATA_FIELD]: individual.sampleGuids.some(sampleGuid =>
+        samplesByGuid[sampleGuid].isActive && samplesByGuid[sampleGuid].datasetType === DATASET_TYPE_VARIANT_CALLS,
+      ),
     }))], [],
   ),
 )
@@ -239,7 +241,7 @@ const getSamplesExportData = createSelector(
   getSamplesByGuid,
   (visibleFamilies, individualsByGuid, samplesByGuid) =>
     visibleFamilies.reduce((acc, family) =>
-      [...acc, ...familySamplesLoaded(family, individualsByGuid, samplesByGuid).map(sample => ({
+      [...acc, ...familyVariantSamples(family, individualsByGuid, samplesByGuid).map(sample => ({
         ...sample,
         [FAMILY_FIELD_ID]: family.familyId,
         [INDIVIDUAL_FIELD_ID]: individualsByGuid[sample.individualGuid].individualId,

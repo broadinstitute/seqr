@@ -570,7 +570,7 @@ def variants_with_tag(request, project_id, tag=None):
                 "|".join([note['user']['display_name'] +":"+ note['note'] for note in variant.extras['family_notes']]) if 'family_notes' in variant.extras else '',
 
                 variant.extras["family_id"],
-                worst_annotation["gene_symbol"],
+                worst_annotation["gene_symbol"] if "gene_symbol" in worst_annotation else worst_annotation["symbol"],
                 variant.annotation.get("vep_consequence") or "",
 
                 variant.annotation["freqs"].get("1kg_wgs_phase3") or variant.annotation["freqs"].get("1kg_wgs_AF") or "",

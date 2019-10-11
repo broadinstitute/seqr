@@ -905,6 +905,7 @@ class EsUtilsTest(TestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
 
     def setUp(self):
+        Sample.objects.filter(sample_id='NA19678').update(is_active=False)
         self.families = Family.objects.filter(guid__in=['F000003_3', 'F000002_2', 'F000005_5'])
         self.executed_search = None
         self.searched_indices = []
@@ -1547,6 +1548,30 @@ class EsUtilsTest(TestCase):
             sort=['xpos'],
             size=5,
             start_index=3,
+        )
+
+    def test_multi_project_get_variants_by_id(self):
+        search_model = VariantSearch.objects.create(search={
+            'locus': {'rawVariantItems': '2-103343363-GAGA-G', 'genomeVersion': '38'},
+        })
+        results_model = VariantSearchResults.objects.create(variant_search=search_model)
+        results_model.families.set(Family.objects.all())
+
+        variants, total_results = get_es_variants(results_model, num_results=2)
+        self.assertEqual(len(variants), 1)
+        self.assertDictEqual(variants[0], PARSED_MULTI_GENOME_VERSION_VARIANT)
+
+        self.assertCachedResults(results_model, {
+            'all_results': [PARSED_MULTI_GENOME_VERSION_VARIANT],
+            'duplicate_doc_count': 2,
+            'total_results': 3,
+        })
+
+        self.assertExecutedSearch(
+            index='{},{}'.format(SECOND_INDEX_NAME, INDEX_NAME),
+            filters=[{'terms': {'variantId': ['2-103343363-GAGA-G', '2-103343353-GAGA-G']}}],
+            sort=['xpos'],
+            size=4,
         )
 
     def test_get_es_variant_gene_counts(self):

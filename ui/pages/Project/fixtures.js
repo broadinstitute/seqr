@@ -449,7 +449,7 @@ export const STATE_WITH_2_FAMILIES = {
       projectGuid: "R0237_1000_genomes_demo",
       sampleGuid: "S2310656_wal_mc16200_mc16203",
       sampleId: "WAL_MC16200_MC16203",
-      sampleStatus: "loaded",
+      isActive: true,
       sampleType: "WES",
     },
   },

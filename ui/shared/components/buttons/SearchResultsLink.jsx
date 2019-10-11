@@ -17,7 +17,7 @@ const mapDispatchToProps = (dispatch, ownProps) => {
   return {
     openSearchResults: () => {
       const search = {
-        locus: { rawItems: ownProps.geneId, rawVariantItems: ownProps.variantId },
+        locus: { rawItems: ownProps.geneId, rawVariantItems: ownProps.variantId, genomeVersion: ownProps.genomeVersion },
         ...(ownProps.initialSearch || {}),
       }
       const projectFamilies = ownProps.familyGuids ? [{ familyGuids: ownProps.familyGuids }] : ownProps.projectFamilies
