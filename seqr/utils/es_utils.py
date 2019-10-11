@@ -308,7 +308,7 @@ class BaseEsSearch(object):
         for index, family_samples_by_id in self.samples_by_family_index.items():
             if not inheritance and not quality_filter['min_ab'] and not quality_filter['min_gq']:
                 search_sample_count = sum(len(samples) for samples in family_samples_by_id.values())
-                index_sample_count = Sample.objects.filter(elasticsearch_index=index).count()
+                index_sample_count = Sample.objects.filter(elasticsearch_index=index, is_active=True).count()
                 if search_sample_count == index_sample_count:
                     # If searching across all families in an index with no inheritance mode we do not need to explicitly
                     # filter on inheritance, as all variants have some inheritance for at least one family
@@ -497,13 +497,7 @@ class EsSearch(BaseEsSearch):
 
         # combine new results with unsorted previously loaded results to correctly sort/paginate
         all_loaded_results = self.previous_search_results.get('all_results', [])
-        previous_page_record_count = (page - 1) * num_results
-        if len(all_loaded_results) >= previous_page_record_count:
-            loaded_results = all_loaded_results[:previous_page_record_count]
-            new_results += all_loaded_results[previous_page_record_count:]
-        else:
-            loaded_results = []
-            new_results += self.previous_search_results.get('variant_results', [])
+        new_results += self.previous_search_results.get('variant_results', [])
 
         new_results = sorted(new_results, key=lambda variant: variant['_sort'])
         variant_results = self._deduplicate_results(new_results)
@@ -513,9 +507,11 @@ class EsSearch(BaseEsSearch):
                 compound_het_results = self._deduplicate_compound_het_results(compound_het_results)
             return self._process_compound_hets(compound_het_results, variant_results, num_results)
         else:
-            self.previous_search_results['all_results'] = loaded_results + variant_results
-            end_index = page * num_results
-            return variant_results[end_index-num_results:end_index]
+            end_index = num_results * page
+            num_loaded = num_results * page - len(all_loaded_results)
+            self.previous_search_results['all_results'] = all_loaded_results + variant_results[:num_loaded]
+            self.previous_search_results['variant_results'] = variant_results[num_loaded:]
+            return self.previous_search_results['all_results'][end_index-num_results:end_index]
 
     def _parse_response(self, response):
         if hasattr(response.aggregations, 'genes') and response.hits:

@@ -36,7 +36,7 @@ class DatasetAPITest(TransactionTestCase):
         self.assertTrue(existing_old_index_sample.is_active)
         existing_old_index_sample_guid = existing_old_index_sample.guid
         existing_sample = Sample.objects.get(sample_id='NA19679')
-        self.assertIsNone(existing_sample.elasticsearch_index)
+        self.assertEqual(existing_sample.elasticsearch_index, INDEX_NAME)
         self.assertNotEqual(existing_sample.dataset_file_path, 'test_data.vds')
         self.assertFalse(existing_sample.is_active)
         existing_sample_guid = existing_sample.guid

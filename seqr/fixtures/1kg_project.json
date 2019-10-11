@@ -844,6 +844,7 @@
         "sample_id": "NA19679",
         "sample_type": "WES",
         "is_active": false,
+        "elasticsearch_index": "test_index",
         "individual": 3,
         "dataset_type": "VARIANTS",
         "dataset_file_path": "1kg.vcf.gz",
