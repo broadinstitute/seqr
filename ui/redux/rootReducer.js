@@ -283,6 +283,7 @@ export const updateVariantNote = (values) => {
     }
     return updateSavedVariant(values)
   }
+  // are compound hets
   const compoundHets = Object.values(values).filter(value => value instanceof Object)
   const variantGuids = []
   compoundHets.forEach(compoundHet => (compoundHet.variantGuid ? variantGuids.push(compoundHet.variantGuid) : null))

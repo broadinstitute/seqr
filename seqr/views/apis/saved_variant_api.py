@@ -74,62 +74,43 @@ def create_saved_variant_handler(request):
     family_guid = variant_json.pop('familyGuid')
     family = Family.objects.get(guid=family_guid)
     check_permissions(family.project, request.user, CAN_VIEW)
-    # single gene
-    if 'familyGuids' in variant_json.keys():
-        saved_variant = _create_single_saved_variant(variant_json, family)
-        if non_variant_json.get('note'):
-            _create_variant_note([saved_variant], non_variant_json, request.user)
-        elif non_variant_json.get('tags'):
-            _create_new_tags([saved_variant], non_variant_json, request.user)
-        variant_json.update(get_json_for_saved_variant(saved_variant, add_tags=True))
-        return create_json_response({
-            'savedVariantsByGuid': {saved_variant.guid: variant_json},
-        })
 
-    # compound hets
-    else:
-        compound_hets_json = variant_json
-        for k in ['searchHash', 'tags', 'functionalData', 'notes', 'note', 'submitToClinvar', 'familyGuid']:
-            try:
-                del compound_hets_json[k]
-            except KeyError:
-                pass
-        updates = {}
-        saved_variants = []
-        for key in compound_hets_json.keys():
-            compound_het = compound_hets_json[key]
-            # saved variant
-            if 'variantGuid' in compound_het.keys():
-                variant_guid = compound_het['variantGuid']
-                saved_variant = SavedVariant.objects.get(guid=variant_guid)
-                if non_variant_json.get('note'):
-                    _create_variant_note([saved_variant], non_variant_json, request.user)
-                elif non_variant_json.get('tags'):
-                    _create_new_tags([saved_variant], non_variant_json, request.user)
-            # not saved
-            else:
-                saved_variant = _create_single_saved_variant(compound_het, family)
-            compound_het.update(get_json_for_saved_variant(saved_variant, add_tags=True))
-            saved_variants.append(saved_variant)
-            updates[compound_het['variantGuid']] = compound_het
-        if non_variant_json.get('note'):
-            _create_variant_note(saved_variants, non_variant_json, request.user)
-        elif non_variant_json.get('tags'):
-            _create_new_tags(saved_variants, non_variant_json, request.user)
-
-        return create_json_response({
-            'savedVariantsByGuid': updates,
-        })
+    saved_variant = _create_single_saved_variant(variant_json, family)
+    if non_variant_json.get('note'):
+        _create_variant_note([saved_variant], non_variant_json, request.user)
+    elif non_variant_json.get('tags'):
+        _create_new_tags([saved_variant], non_variant_json, request.user)
+    variant_json.update(get_json_for_saved_variant(saved_variant, add_tags=True))
+    return create_json_response({
+        'savedVariantsByGuid': {saved_variant.guid: variant_json},
+    })
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def create_variant_note_handler(request, variant_guids):
     request_json = json.loads(request.body)
-    variant_guids = variant_guids.split(',')
     save_as_gene_note = request_json.get('saveAsGeneNote')
+
+    family_guid = request_json.pop('familyGuid')
+    family = Family.objects.get(guid=family_guid)
+    check_permissions(family.project, request.user, CAN_VIEW)
+
     saved_variants = []
 
+    # save unsaved variants in compound hets
+    if 'familyGuids' not in request_json.keys():  # are compound hets
+        non_variant_key = ['searchHash', 'tags', 'functionalData', 'notes', 'note', 'submitToClinvar']
+        for key in request_json.keys():
+            if key not in non_variant_key:
+                compound_het = request_json[key]
+                if 'variantGuid' not in compound_het.keys():  # not a saved_variant
+                    logging.info(compound_het)
+                    saved_variant = _create_single_saved_variant(compound_het, family)
+                    saved_variants.append(saved_variant)
+
+    # update saved_variants
+    variant_guids = variant_guids.split(',')
     for variant_guid in variant_guids:
         saved_variant = SavedVariant.objects.get(guid=variant_guid)
         check_permissions(saved_variant.family.project, request.user, CAN_VIEW)
