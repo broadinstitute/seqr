@@ -1576,6 +1576,30 @@ class EsUtilsTest(TestCase):
             start_index=3,
         )
 
+    def test_multi_project_get_variants_by_id(self):
+        search_model = VariantSearch.objects.create(search={
+            'locus': {'rawVariantItems': '2-103343363-GAGA-G', 'genomeVersion': '38'},
+        })
+        results_model = VariantSearchResults.objects.create(variant_search=search_model)
+        results_model.families.set(Family.objects.all())
+
+        variants, total_results = get_es_variants(results_model, num_results=2)
+        self.assertEqual(len(variants), 1)
+        self.assertDictEqual(variants[0], PARSED_MULTI_GENOME_VERSION_VARIANT)
+
+        self.assertCachedResults(results_model, {
+            'all_results': [PARSED_MULTI_GENOME_VERSION_VARIANT],
+            'duplicate_doc_count': 2,
+            'total_results': 3,
+        })
+
+        self.assertExecutedSearch(
+            index='{},{}'.format(SECOND_INDEX_NAME, INDEX_NAME),
+            filters=[{'terms': {'variantId': ['2-103343363-GAGA-G', '2-103343353-GAGA-G']}}],
+            sort=['xpos'],
+            size=4,
+        )
+
     def test_get_es_variant_gene_counts(self):
         search_model = VariantSearch.objects.create(search={
             'annotations': {'frameshift': ['frameshift_variant']},

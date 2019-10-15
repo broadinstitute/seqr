@@ -60,7 +60,7 @@ class Command(BaseCommand):
         missing_family_individuals = []
         for family, individual_ids in included_family_individuals.items():
             missing_indivs = family.individual_set.filter(
-                is_active=True,
+                sample__is_active=True,
                 sample__dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS
             ).exclude(individual_id__in=individual_ids)
             if missing_indivs:
@@ -187,7 +187,8 @@ class Command(BaseCommand):
         # Update project and sample data
         update_model_from_json(project, {'genome_version': GENOME_VERSION_GRCh38, 'has_new_search': True})
         _update_samples(
-            matched_sample_id_to_sample_record, elasticsearch_index=elasticsearch_index, dataset_path=dataset_path
+            matched_sample_id_to_sample_record, Sample.DATASET_TYPE_VARIANT_CALLS,
+            elasticsearch_index=elasticsearch_index, dataset_path=dataset_path
         )
         update_xbrowse_vcfffiles(
             project, sample_type, elasticsearch_index, dataset_path, matched_sample_id_to_sample_record
