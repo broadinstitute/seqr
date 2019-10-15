@@ -13,5 +13,3 @@ class Command(BaseCommand):
         response = discovery_sheet(GET_request)
         with open("discovery_sheet.xls", "w") as f:
             f.write(response.content)
-
-        

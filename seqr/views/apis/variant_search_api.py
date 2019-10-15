@@ -240,6 +240,7 @@ def export_variants_handler(request, search_hash):
     family_ids_by_guid = {family.guid: family.family_id for family in families}
 
     variants, _ = get_es_variants(results_model, page=1, load_all=True)
+    variants = _flatten_variants(variants)
 
     saved_variants_by_guid, variants_to_saved_variants = _get_saved_variants(variants, families)
 
