@@ -17,6 +17,7 @@ def variant_note_to_multi_saved_variants(apps, schema_editor):
         else:
             saved_variants = [saved_variant]
         variant_note.saved_variants = saved_variants
+        variant_note.save()
 
 
 def variant_note_to_single_saved_variant(apps, schema_editor):
@@ -25,6 +26,7 @@ def variant_note_to_single_saved_variant(apps, schema_editor):
     variant_notes = VariantNote.objects.using(db_alias).all()
     for variant_note in variant_notes:
         variant_note.saved_variant = variant_note.saved_variants.first()
+        variant_note.save()
 
 
 def variant_tag_to_multi_saved_variants(apps, schema_editor):
@@ -38,6 +40,7 @@ def variant_tag_to_multi_saved_variants(apps, schema_editor):
         else:
             variants_tag = [curr_variant_tag]
         variant_tag.saved_variants = variants_tag
+        variant_tag.save()
 
 
 def variant_tag_to_single_saved_variant(apps, schema_editor):
@@ -46,6 +49,7 @@ def variant_tag_to_single_saved_variant(apps, schema_editor):
     variant_tags = VariantTag.objects.using(db_alias).all()
     for variant_tag in variant_tags:
         variant_tag.saved_variant = variant_tag.saved_variants.first()
+        variant_tag.save()
 
 
 def variant_functional_data_to_multi_saved_variants(apps, schema_editor):
@@ -59,6 +63,7 @@ def variant_functional_data_to_multi_saved_variants(apps, schema_editor):
         else:
             variants_functional_data = [variant_functional_data]
         functional_data.saved_variants = variants_functional_data
+        functional_data.save()
 
 
 def variant_functional_data_to_single_saved_variant(apps, schema_editor):
@@ -67,6 +72,7 @@ def variant_functional_data_to_single_saved_variant(apps, schema_editor):
     all_functional_data = VariantFunctionalData.objects.using(db_alias).all()
     for functional_data in all_functional_data:
         functional_data.saved_variant = functional_data.saved_variants.first()
+        functional_data.save()
 
 
 class Migration(migrations.Migration):
