@@ -100,17 +100,17 @@ def create_variant_note_handler(request, variant_guids):
 
     # save unsaved variants in compound hets
     if 'familyGuids' not in request_json.keys():  # are compound hets
+        gene_note = {}
         non_variant_key = ['searchHash', 'tags', 'functionalData', 'notes', 'note', 'submitToClinvar']
         for key in request_json.keys():
             if key not in non_variant_key:
                 compound_het = request_json[key]
                 if 'variantGuid' not in compound_het.keys():  # not a saved_variant
-                    logging.info(compound_het)
                     saved_variant = _create_single_saved_variant(compound_het, family)
                     saved_variants.append(saved_variant)
 
     # update saved_variants
-    variant_guids = variant_guids.split(',')
+    variant_guids = [] if variant_guids == 'no_saved_variant' else variant_guids.split(',')
     for variant_guid in variant_guids:
         saved_variant = SavedVariant.objects.get(guid=variant_guid)
         check_permissions(saved_variant.family.project, request.user, CAN_VIEW)
@@ -135,12 +135,11 @@ def create_variant_note_handler(request, variant_guids):
     _create_variant_note(saved_variants, request_json, request.user)
 
     variant_note = {}
-    for variant_guid in variant_guids:
-        variant_note[variant_guid] = {'notes': [get_json_for_variant_note(tag) for tag in saved_variant.variantnote_set.all()]}
-
+    for saved_variant in saved_variants:
+        variant_note[saved_variant.guid] = get_json_for_saved_variant(saved_variant, add_tags=True)
     return create_json_response({
         'savedVariantsByGuid': variant_note,
-        'genesById': gene_note
+        'genesById': gene_note,
     })
 
 

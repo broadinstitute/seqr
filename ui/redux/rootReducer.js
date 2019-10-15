@@ -36,7 +36,7 @@ const RECEIVE_USERS = 'RECEIVE_USERS'
 // action creators
 
 // A helper action that handles create, update and delete requests
-export const updateEntity = (values, receiveDataAction, urlPath, idField, actionSuffix, getUrlPath) => {
+export const updateEntity = (values, receiveDataAction, urlPath, idField, actionSuffix, getUrlPath, containSavedVariant = false) => {
   return (dispatch, getState) => {
     if (getUrlPath) {
       urlPath = getUrlPath(getState())
@@ -47,7 +47,6 @@ export const updateEntity = (values, receiveDataAction, urlPath, idField, action
       urlPath = `${urlPath}/${values[idField]}`
       action = values.delete ? 'delete' : 'update'
     }
-
     return new HttpRequestHelper(`${urlPath}/${action}${actionSuffix || ''}`,
       (responseJson) => {
         dispatch({ type: receiveDataAction, updatesById: responseJson })
@@ -55,7 +54,7 @@ export const updateEntity = (values, receiveDataAction, urlPath, idField, action
       (e) => {
         throw new SubmissionError({ _error: [e.message] })
       },
-    ).post(values)
+    ).post(containSavedVariant ? { searchHash: getState().currentSearchHash, ...values } : values)
   }
 }
 
@@ -287,7 +286,8 @@ export const updateVariantNote = (values) => {
   const compoundHets = Object.values(values).filter(value => value instanceof Object)
   const variantGuids = []
   compoundHets.forEach(compoundHet => (compoundHet.variantGuid ? variantGuids.push(compoundHet.variantGuid) : null))
-  return updateEntity(values, RECEIVE_DATA, `/api/saved_variant/${variantGuids.join(',')}/note`, 'noteGuid')
+  return updateEntity(values, RECEIVE_DATA,
+    `/api/saved_variant/${(variantGuids.length < 1 ? 'no_saved_variant' : variantGuids.join(','))}/note`, 'noteGuid', undefined, undefined, true)
 }
 
 export const updateVariantTags = (values) => {
