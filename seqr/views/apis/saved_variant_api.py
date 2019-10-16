@@ -197,15 +197,28 @@ def delete_variant_note_handler(request, variant_guids, note_guid):
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def update_variant_tags_handler(request, variant_guids):
-    variant_guids = variant_guids.split(',')
-    # TODO remove this after all unsaved_variants can be saved as saved_variant in one step
-    while '' in variant_guids:
-        variant_guids.remove('')
-    saved_variants = SavedVariant.objects.filter(guid__in=variant_guids)
-
     request_json = json.loads(request.body)
+
+    family_guid = request_json.pop('familyGuid')
+    family = Family.objects.get(guid=family_guid)
+    check_permissions(family.project, request.user, CAN_VIEW)
+
     updated_tags = request_json.get('tags', [])
     updated_functional_data = request_json.get('functionalData', [])
+
+    saved_variants = []
+    unsaved_compound_hets = request_json.get('compoundHetsToSave') or []
+    variant_guids = [] if variant_guids == 'no_saved_variant' else variant_guids.split(',')
+
+    # get saved_variants
+    for variant_guid in variant_guids:
+        saved_variant = SavedVariant.objects.get(guid=variant_guid)
+        saved_variants.append(saved_variant)
+
+    # save compound hets that are not saved_variants
+    for compound_het in unsaved_compound_hets:
+        saved_variant = _create_single_saved_variant(compound_het, family)
+        saved_variants.append(saved_variant)
 
     # Update tags
 

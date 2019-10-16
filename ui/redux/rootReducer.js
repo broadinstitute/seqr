@@ -287,13 +287,14 @@ export const updateVariantNote = (values) => {
   const variantGuids = []
   compoundHets.forEach(compoundHet => (compoundHet.variantGuid ? variantGuids.push(compoundHet.variantGuid) : null))
   return updateEntity(values, RECEIVE_DATA,
-    `/api/saved_variant/${(variantGuids.length < 1 ? 'no_saved_variant' : variantGuids.join(','))}/note`, 'noteGuid', undefined, undefined, true)
+    `/api/saved_variant/${(variantGuids.length > 0 ? variantGuids.join(',') : 'no_saved_variant')}/note`, 'noteGuid', undefined, undefined, true)
 }
 
 export const updateVariantTags = (values) => {
   if (values.compoundHetGuids) {
-    const urlPath = `${values.compoundHetGuids.join(',')}/update_tags`
-    return updateSavedVariant(values, urlPath)
+    const urlPath = `${values.compoundHetGuids.length > 0 ? values.compoundHetGuids.join(',') : 'no_saved_variant'}/update_tags`
+    return updateEntity(values, RECEIVE_DATA,
+      `/api/saved_variant/${urlPath}`, undefined, undefined, undefined, true)
   }
   const urlPath = values.variantGuid ? `${values.variantGuid}/update_tags` : 'create'
   return updateSavedVariant(values, urlPath)
