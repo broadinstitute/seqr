@@ -32,7 +32,7 @@ const AF_OPTIONS = AF_STEPS.map(value => ({ value }))
 const FrequencyIntegerInput = ({ label, value, field, nullField, inlineAF, onChange }) =>
   <IntegerInput
     label={label}
-    value={value[field]}
+    value={(value || {})[field]}
     min={0}
     max={100}
     width={inlineAF ? 5 : 8}
@@ -56,7 +56,7 @@ FrequencyIntegerInput.propTypes = {
 
 const FrequencyFilter = ({ value, onChange, homHemi, inlineAF }) => {
   const afProps = {
-    value: value.af,
+    value: (value || {}).af,
     onChange: val => onChange({ ...value, af: val, ac: null }),
   }
   return (
