@@ -36,18 +36,18 @@ const RECEIVE_USERS = 'RECEIVE_USERS'
 // action creators
 
 // A helper action that handles create, update and delete requests
-export const updateEntity = (values, receiveDataAction, urlPath, idField, actionSuffix, getUrlPath, containSavedVariant = false) => {
+export const updateEntity = (values, receiveDataAction, urlPath, idField, actionSuffix, getUrlPath, containSavedVariant = false, givenAction = null) => {
   return (dispatch, getState) => {
     if (getUrlPath) {
       urlPath = getUrlPath(getState())
     }
 
-    let action = 'create'
+    let action = givenAction || '/create'
     if (values[idField]) {
       urlPath = `${urlPath}/${values[idField]}`
       action = values.delete ? 'delete' : 'update'
     }
-    return new HttpRequestHelper(`${urlPath}/${action}${actionSuffix || ''}`,
+    return new HttpRequestHelper(`${urlPath}${action}${actionSuffix || ''}`,
       (responseJson) => {
         dispatch({ type: receiveDataAction, updatesById: responseJson })
       },
@@ -294,7 +294,8 @@ export const updateVariantTags = (values) => {
   if (values.compoundHetGuids) {
     const urlPath = `${values.compoundHetGuids.length > 0 ? values.compoundHetGuids.join(',') : 'no_saved_variant'}/update_tags`
     return updateEntity(values, RECEIVE_DATA,
-      `/api/saved_variant/${urlPath}`, undefined, undefined, undefined, true)
+      `/api/saved_variant/${urlPath}`, undefined, undefined, undefined,
+      true, '')
   }
   const urlPath = values.variantGuid ? `${values.variantGuid}/update_tags` : 'create'
   return updateSavedVariant(values, urlPath)
