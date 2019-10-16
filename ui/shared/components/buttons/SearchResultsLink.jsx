@@ -17,8 +17,8 @@ const mapDispatchToProps = (dispatch, ownProps) => {
   return {
     openSearchResults: () => {
       const search = {
-        locus: { rawItems: ownProps.geneId, rawVariantItems: ownProps.variantId, genomeVersion: ownProps.genomeVersion },
         ...(ownProps.initialSearch || {}),
+        locus: { rawItems: ownProps.geneId, rawVariantItems: ownProps.variantId, genomeVersion: ownProps.genomeVersion },
       }
       const projectFamilies = ownProps.familyGuids ? [{ familyGuids: ownProps.familyGuids }] : ownProps.projectFamilies
       dispatch(navigateSavedHashedSearch(
