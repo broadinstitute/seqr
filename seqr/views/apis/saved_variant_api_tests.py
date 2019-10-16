@@ -190,7 +190,8 @@ class ProjectAPITest(TransactionTestCase):
             'functionalData': [
                 {'tagGuid': 'VFD0000023_1248367227_r0390_10', 'name': 'Biochemical Function', 'metadata': 'An updated note'},
                 {'name': 'Bonferroni corrected p-value', 'metadata': 0.05}
-            ]
+            ],
+            'familyGuid': 'F000001_1'
         }))
         self.assertEqual(response.status_code, 200)
 
