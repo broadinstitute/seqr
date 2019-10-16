@@ -1149,9 +1149,10 @@
         "ref": "GAGA",
         "alt": "G",
         "saved_variant_json": {
+            "variantId": "abc123",
             "clinvar": {"clinicalSignificance": "", "alleleId": null, "variationId": null, "goldStars": null},
             "liftedOverGenomeVersion": "",
-            "familyGuids": ["F000001_1"],
+            "familyGuids": ["F000001_1", "F000002_2"],
             "liftedOverPos": "",
             "genotypeFilters": "pass",
             "mainTranscriptId": "ENST00000258436",
