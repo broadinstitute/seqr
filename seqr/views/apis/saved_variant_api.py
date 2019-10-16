@@ -237,12 +237,13 @@ def update_variant_tags_handler(request, variant_guids):
         delete_seqr_model(tag)
 
     for tag in updated_functional_data:
+        logging.info(saved_variants)
         if tag.get('tagGuid'):
-            tag_model = VariantFunctionalData.objects.get(
+            tag_model = VariantFunctionalData.objects.filter(
                 guid=tag.get('tagGuid'),
                 functional_data_tag=tag.get('name'),
-                saved_variants=saved_variants
-            )
+                saved_variants__in=saved_variants
+            ).prefetch_related('saved_variants').first()
             update_model_from_json(tag_model, tag, allow_unknown_keys=True)
         else:
             create_seqr_model(
