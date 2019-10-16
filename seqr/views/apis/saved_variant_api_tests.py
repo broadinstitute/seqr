@@ -115,7 +115,7 @@ class ProjectAPITest(TransactionTestCase):
 
         # send valid request to create variant_note
         response = self.client.post(create_variant_note_url, content_type='application/json', data=json.dumps(
-            {'note': 'new_variant_note', 'submitToClinvar': True}
+            {'note': 'new_variant_note', 'submitToClinvar': True, 'familyGuid': 'F000001_1'}
         ))
 
         self.assertEqual(response.status_code, 200)
@@ -130,7 +130,7 @@ class ProjectAPITest(TransactionTestCase):
 
         # save variant_note as gene_note
         response = self.client.post(create_variant_note_url, content_type='application/json', data=json.dumps(
-            {'note': 'new_variant_note_as_gene_note', 'saveAsGeneNote': True}
+            {'note': 'new_variant_note_as_gene_note', 'saveAsGeneNote': True, 'familyGuid': 'F000001_1'}
         ))
         self.assertEqual(response.status_code, 200)
         new_variant_note_response = response.json()['savedVariantsByGuid'][VARIANT_GUID]['notes'][1]
@@ -141,7 +141,7 @@ class ProjectAPITest(TransactionTestCase):
         # save variant_note as gene_note for user selected main gene
         create_variant_note_seetced_gene_url = reverse(create_variant_note_handler, args=['SV0000003_2246859832_r0390_100'])
         response = self.client.post(create_variant_note_seetced_gene_url, content_type='application/json', data=json.dumps(
-            {'note': 'new user-selected gene note', 'saveAsGeneNote': True}
+            {'note': 'new user-selected gene note', 'saveAsGeneNote': True, 'familyGuid': 'F000001_1'}
         ))
         self.assertEqual(response.status_code, 200)
         new_variant_note_response = response.json()['savedVariantsByGuid']['SV0000003_2246859832_r0390_100']['notes'][0]

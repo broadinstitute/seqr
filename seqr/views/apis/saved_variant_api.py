@@ -101,7 +101,7 @@ def create_variant_note_handler(request, variant_guids):
     # save unsaved variants in compound hets
     if 'familyGuids' not in request_json.keys():  # are compound hets
         gene_note = {}
-        non_variant_key = ['searchHash', 'tags', 'functionalData', 'notes', 'note', 'submitToClinvar']
+        non_variant_key = ['searchHash', 'tags', 'functionalData', 'notes', 'note', 'submitToClinvar', 'saveAsGeneNote']
         for key in request_json.keys():
             if key not in non_variant_key:
                 compound_het = request_json[key]
