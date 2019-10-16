@@ -807,7 +807,7 @@ export const getVariantMainGeneId = ({ transcripts, mainTranscriptId, selectedMa
     entry[1].some(({ transcriptId }) => transcriptId === (selectedMainTranscriptId || mainTranscriptId)),
   ) || [])[0]
 
-export const getVariantMainTranscript = ({ transcripts, mainTranscriptId, selectedMainTranscriptId }) =>
+export const getVariantMainTranscript = ({ transcripts = {}, mainTranscriptId, selectedMainTranscriptId }) =>
   flatten(Object.values(transcripts)).find(
     ({ transcriptId }) => transcriptId === (selectedMainTranscriptId || mainTranscriptId),
   ) || {}
