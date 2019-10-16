@@ -10,6 +10,7 @@ def variant_note_to_multi_saved_variants(apps, schema_editor):
     VariantNote = apps.get_model("seqr", "VariantNote")
     db_alias = schema_editor.connection.alias
     variant_notes = VariantNote.objects.using(db_alias).all()
+    print('Updating saved_variants for {} variant notes'.format(len(variant_notes)))
     for variant_note in variant_notes:
         saved_variant = variant_note.saved_variant
         if saved_variant is None:
@@ -24,6 +25,7 @@ def variant_note_to_single_saved_variant(apps, schema_editor):
     VariantNote = apps.get_model("seqr", "VariantNote")
     db_alias = schema_editor.connection.alias
     variant_notes = VariantNote.objects.using(db_alias).all()
+    print('Updating saved_variant for {} variant notes'.format(len(variant_notes)))
     for variant_note in variant_notes:
         variant_note.saved_variant = variant_note.saved_variants.first()
         variant_note.save()
@@ -33,6 +35,7 @@ def variant_tag_to_multi_saved_variants(apps, schema_editor):
     VariantTag = apps.get_model("seqr", "VariantTag")
     db_alias = schema_editor.connection.alias
     variant_tags = VariantTag.objects.using(db_alias).all()
+    print('Updating saved_variants for {} variant tags'.format(len(variant_tags)))
     for variant_tag in variant_tags:
         curr_variant_tag = variant_tag.saved_variant
         if curr_variant_tag is None:
@@ -47,6 +50,7 @@ def variant_tag_to_single_saved_variant(apps, schema_editor):
     VariantTag = apps.get_model("seqr", "VariantTag")
     db_alias = schema_editor.connection.alias
     variant_tags = VariantTag.objects.using(db_alias).all()
+    print('Updating saved_variant for {} variant tags'.format(len(variant_tags)))
     for variant_tag in variant_tags:
         variant_tag.saved_variant = variant_tag.saved_variants.first()
         variant_tag.save()
@@ -56,6 +60,7 @@ def variant_functional_data_to_multi_saved_variants(apps, schema_editor):
     VariantFunctionalData = apps.get_model("seqr", "VariantFunctionalData")
     db_alias = schema_editor.connection.alias
     all_functional_data = VariantFunctionalData.objects.using(db_alias).all()
+    print('Updating saved_variants for {} functional data'.format(len(all_functional_data)))
     for functional_data in all_functional_data:
         variant_functional_data = functional_data.saved_variant
         if variant_functional_data is None:
@@ -70,6 +75,7 @@ def variant_functional_data_to_single_saved_variant(apps, schema_editor):
     VariantFunctionalData = apps.get_model("seqr", "VariantFunctionalData")
     db_alias = schema_editor.connection.alias
     all_functional_data = VariantFunctionalData.objects.using(db_alias).all()
+    print('Updating saved_variant for {} functional data'.format(len(all_functional_data)))
     for functional_data in all_functional_data:
         functional_data.saved_variant = functional_data.saved_variants.first()
         functional_data.save()
