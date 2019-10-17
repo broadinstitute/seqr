@@ -84,16 +84,20 @@ class JSONUtilsTest(TestCase):
         )
 
     def test_json_for_saved_variant(self):
-        variant = SavedVariant.objects.first()
+        variant = SavedVariant.objects.get(guid='SV0000001_2103343353_r0390_100')
         json = get_json_for_saved_variant(variant)
 
         fields = {'variantGuid', 'variantId', 'familyGuids', 'xpos', 'ref', 'alt', 'selectedMainTranscriptId'}
         self.assertSetEqual(set(json.keys()), fields)
+        self.assertListEqual(json['familyGuids'], ["F000001_1"])
+        self.assertEqual(json['variantId'], '21-3343353-GAGA-G')
 
         fields.update(variant.saved_variant_json.keys())
         fields.update({'tags', 'functionalData', 'notes'})
         json = get_json_for_saved_variant(variant, add_tags=True, add_details=True)
         self.assertSetEqual(set(json.keys()), fields)
+        self.assertListEqual(json['familyGuids'], ["F000001_1"])
+        self.assertEqual(json['variantId'], 'abc123')
 
     def test_json_for_variant_tag(self):
         tag = VariantTag.objects.first()

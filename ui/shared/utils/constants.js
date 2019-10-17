@@ -814,7 +814,7 @@ export const getCompoundHetsSharedGeneIds = geneIds =>
     geneIds.every(singleGeneId => singleGeneId.indexOf(sameVariantGeneIds) !== -1),
   ) || [])[0]
 
-export const getVariantMainTranscript = ({ transcripts, mainTranscriptId, selectedMainTranscriptId }) =>
+export const getVariantMainTranscript = ({ transcripts = {}, mainTranscriptId, selectedMainTranscriptId }) =>
   flatten(Object.values(transcripts)).find(
     ({ transcriptId }) => transcriptId === (selectedMainTranscriptId || mainTranscriptId),
   ) || {}
