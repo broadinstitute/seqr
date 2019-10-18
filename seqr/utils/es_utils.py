@@ -584,7 +584,6 @@ class EsSearch(BaseEsSearch):
                 for family_guid in variant['familyGuids']:
                     family_variants[family_guid].append(variant)
 
-            # TODO place compound hets from the same family together
             for family_guid, variants in family_variants.items():
                 for individual_guid in family_unaffected_individual_guids.get(family_guid, []):
                     # To be compound het all unaffected individuals need to be hom ref for at least one of the variants
@@ -601,7 +600,7 @@ class EsSearch(BaseEsSearch):
             gene_variants = [variant for variant in gene_variants if variant['familyGuids']]
 
             if gene_variants:
-                variants_by_gene[gene_id] = gene_variants
+                variants_by_gene[gene_id] = sorted(gene_variants, key=lambda gene_variant: gene_variant['familyGuids'])
 
         total_compound_het_results = sum(len(variants) for variants in variants_by_gene.values())
         logger.info('Total compound het hits: {}'.format(total_compound_het_results))
