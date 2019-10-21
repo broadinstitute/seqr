@@ -1231,6 +1231,132 @@
     }
 },
 {
+    "model": "seqr.savedvariant",
+    "pk": 4,
+    "fields": {
+        "guid": "SV0059956_11560662_f019313_1",
+        "created_date": "2018-05-15T14:51:57.255Z",
+        "created_by": null,
+        "last_modified_date": "2018-05-31T16:36:02.817Z",
+        "xpos_start": 1001560662,
+        "xpos_end": 1003121324,
+        "ref": "G",
+        "alt": "A",
+        "saved_variant_json": {
+            "clinvar": {"clinicalSignificance": "", "alleleId": null, "variationId": null, "goldStars": null},
+            "liftedOverGenomeVersion": "38",
+            "familyGuids": ["F000001_1"],
+            "liftedOverPos": "",
+            "genotypeFilters": "pass",
+            "mainTranscriptId": "ENST00000505820",
+            "populations": {"callset": {"ac": null, "an": null, "af": null}, "g1k": {"ac": null, "an": null, "af": 0.0}, "gnomad_genomes": {"hemi": null, "ac": null, "an": null, "hom": null, "af": 0.0}, "gnomad_exomes": {"hemi": null, "ac": null, "an": null, "hom": null, "af": 8.142526788913136e-06}, "exac": {"hemi": null, "ac": null, "an": null, "hom": null, "af": 0.0}, "topmed": {"ac": null, "an": null, "af": null}},
+            "genomeVersion": "37",
+            "pos": 46859832,
+            "predictions": {"eigen": null, "revel": null, "sift": "damaging", "cadd": "31", "metasvm": "D", "mpc": null, "splice_ai": null, "phastcons_100_vert": null, "mut_taster": "disease_causing", "fathmm": "tolerated", "polyphen": "probably_damaging", "dann": null, "primate_ai": null, "gerp_rs": null},
+            "hgmd": {"accession": null, "class": null},
+            "rsid": null,
+            "liftedOverChrom": "",
+            "originalAltAlleles": ["T"],
+            "transcripts": {
+                "ENSG00000197530": [
+                    {"transcriptId": "ENST00000505820", "lofFilter": "", "biotype": "protein_coding", "geneSymbol": "CELSR1", "majorConsequence": "splice_region_variant", "canonical": "YES", "hgvs": "ENST00000505820.2:c.1067-4G>A", "lof": "", "lofFlags": "", "codons": "Gtg/Atg", "hgvsc": "ENST00000505820.2:c.1067-4G>A", "transcriptRank": 0, "geneId": "ENSG00000197530", "aminoAcids": "V/M", "cdnaPosition": "3955"}
+                ]
+            },
+            "chrom": "1",
+            "genotypes": {
+                "I000003_na19679": {"sampleId": "NA19679", "ab": 0, "ad": null, "gq": 21, "dp": 7, "pl": null, "numAlt": 0},
+                "I000002_na19678": {"sampleId": "NA19678", "ab": 0, "ad": null, "gq": 6, "dp": 2, "pl": null, "numAlt": 0},
+                "I000002_na19675": {"sampleId": "NA19675", "ab": 0.125, "ad": null, "gq": 7, "dp": 8, "pl": null, "numAlt": 1}
+            }
+        },
+        "family": 1
+    }
+},
+{
+    "model": "seqr.savedvariant",
+    "pk": 5,
+    "fields": {
+        "guid": "SV0059957_11562437_f019313_1",
+        "created_date": "2018-05-15T14:51:57.255Z",
+        "created_by": null,
+        "last_modified_date": "2018-05-31T16:36:02.817Z",
+        "xpos_start": 1001562437,
+        "xpos_end": 1003124874,
+        "ref": "G",
+        "alt": "G",
+        "saved_variant_json": {
+            "clinvar": {"clinicalSignificance": "", "alleleId": null, "variationId": null, "goldStars": null},
+            "liftedOverGenomeVersion": "38",
+            "familyGuids": ["F000001_1"],
+            "liftedOverPos": "",
+            "genotypeFilters": "pass",
+            "mainTranscriptId": "ENST00000505820",
+            "populations": {
+                "callset": {
+                    "ac": 11,
+                    "af": 0.344,
+                    "an": 32,
+                    "hemi": null,
+                    "hom": null
+                    },
+                "exac": {
+                    "ac": 28869,
+                    "af": 0.6478622327790974,
+                    "an": 80512,
+                    "hemi": 0,
+                    "hom": 5122
+                    },
+                "g1k": {
+                    "ac": 2206,
+                    "af": 0.6838,
+                    "an": 5008,
+                    "hemi": null,
+                    "hom": null
+                    },
+                "gnomad_exomes": {
+                    "ac": 67263,
+                    "af": 0.6339977851605758,
+                    "an": 216284,
+                    "hemi": 0,
+                    "hom": 12201
+                    },
+                "gnomad_genomes": {
+                    "ac": 10595,
+                    "af": 0.6165093253511398,
+                    "an": 30852,
+                    "hemi": 0,
+                    "hom": 2311
+                    },
+                "topmed": {
+                    "ac": 45912,
+                    "af": 0.365635,
+                    "an": 125568,
+                    "hemi": null,
+                    "hom": 10332
+                    }
+                },
+            "genomeVersion": "37",
+            "pos": 1562437,
+            "hgmd": {"accession": null, "class": null},
+            "rsid": null,
+            "liftedOverChrom": "",
+            "originalAltAlleles": ["G"],
+            "transcripts": {
+                "ENSG00000197530": [
+                    {"transcriptId": "ENST00000505820", "lofFilter": "", "biotype": "protein_coding", "geneSymbol": "MIB2", "majorConsequence": "intron_variant", "canonical": 1, "hgvsp": "ENST00000505820.2:c.1586-17C>G", "lof": "", "lofFlags": "", "codons": "Gtg/Atg", "hgvsc": "ENST00000262738.3:c.3955G>A", "transcriptRank": 0, "geneId": "ENSG00000197530", "aminoAcids": "V/M", "cdnaPosition": "3955"}
+                ]
+            },
+            "chrom": "1",
+            "genotypes": {
+                "I000003_na19679": {"sampleId": "NA19679", "ab": 0.71428573, "ad": null, "gq": 58, "dp": 7, "pl": null, "numAlt": 1},
+                "I000002_na19678": {"sampleId": "NA19678", "ab": 0, "ad": null, "gq": 30, "dp": 10, "pl": null, "numAlt": 0},
+                "I000002_na19675": {"sampleId": "NA19675", "ab": 0.5555556, "ad": null, "gq": 99, "dp": 9, "pl": null, "numAlt": 1}
+            }
+        },
+        "family": 1
+    }
+},
+{
     "model": "seqr.variantnote",
     "pk": 714935,
     "fields": {

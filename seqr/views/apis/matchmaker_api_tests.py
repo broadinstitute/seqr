@@ -181,7 +181,7 @@ class VariantSearchAPITest(TestCase):
         )
         self.assertSetEqual(
             set(response_json['savedVariantsByGuid'].keys()),
-            {'SV0000001_2103343353_r0390_100', 'SV0000003_2246859832_r0390_100'})
+            {'SV0000001_2103343353_r0390_100', 'SV0000003_2246859832_r0390_100', 'SV0059957_11562437_f019313_1', 'SV0059956_11560662_f019313_1'})
         self.assertDictEqual(response_json['mmeContactNotes'], {})
 
     @mock.patch('seqr.views.apis.matchmaker_api.post_to_slack')
