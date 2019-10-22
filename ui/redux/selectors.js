@@ -138,6 +138,7 @@ export const getSavedVariantsGroupedByFamilyVariants = createSelector(
       }
       acc[familyGuid][getVariantId(variant)] = variant
     })
+
     return acc
 
   }, {}),

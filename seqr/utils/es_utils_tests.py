@@ -2,6 +2,7 @@ from copy import deepcopy
 import mock
 import json
 import collections
+
 from collections import defaultdict
 from django.test import TestCase
 
