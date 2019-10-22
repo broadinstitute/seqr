@@ -1,6 +1,5 @@
 import json
 import mock
-import logging
 
 from django.test import TransactionTestCase
 from django.urls.base import reverse
@@ -16,8 +15,8 @@ VARIANT_GUID = 'SV0000001_2103343353_r0390_100'
 GENE_GUID = 'ENSG00000135953'
 VARIANT_GUID_2 = 'SV0000002_1248367227_r0390_100'
 
-VARIANT_GUID_3 = 'SV0059956_11560662_f019313_1'
-VARIANT_GUID_4 = 'SV0059957_11562437_f019313_1'
+COMPOUND_HET_GUID_1 = 'SV0059956_11560662_f019313_1'
+COMPOUND_HET_GUID_2 = 'SV0059957_11562437_f019313_1'
 GENE_GUID_2 = 'ENSG00000197530'
 
 
@@ -183,7 +182,7 @@ class ProjectAPITest(TransactionTestCase):
 
     def test_create_update_and_delete_compound_hets_variant_note(self):
         # send valid request to create variant_note for compound hets
-        create_compound_hets_variant_note_url = reverse(create_variant_note_handler, args=[','.join([VARIANT_GUID_3, VARIANT_GUID_4])])
+        create_compound_hets_variant_note_url = reverse(create_variant_note_handler, args=[','.join([COMPOUND_HET_GUID_1, COMPOUND_HET_GUID_2])])
         _check_login(self, create_compound_hets_variant_note_url)
 
         response = self.client.post(create_compound_hets_variant_note_url, content_type='application/json', data=json.dumps(
@@ -191,8 +190,8 @@ class ProjectAPITest(TransactionTestCase):
         ))
 
         self.assertEqual(response.status_code, 200)
-        compound_het_1_new_note_response = response.json()['savedVariantsByGuid'][VARIANT_GUID_3]['notes'][0]
-        compound_het_2_new_note_response = response.json()['savedVariantsByGuid'][VARIANT_GUID_4]['notes'][0]
+        compound_het_1_new_note_response = response.json()['savedVariantsByGuid'][COMPOUND_HET_GUID_1]['notes'][0]
+        compound_het_2_new_note_response = response.json()['savedVariantsByGuid'][COMPOUND_HET_GUID_2]['notes'][0]
         self.assertEqual(compound_het_1_new_note_response['note'], 'new_compound_hets_variant_note')
         self.assertEqual(compound_het_2_new_note_response['note'], 'new_compound_hets_variant_note')
         self.assertEqual(compound_het_1_new_note_response['submitToClinvar'], True)
@@ -212,8 +211,8 @@ class ProjectAPITest(TransactionTestCase):
             {'note': 'new_compound_hets_variant_note_as_gene_note', 'saveAsGeneNote': True, 'familyGuid': 'F000001_1'}
         ))
         self.assertEqual(response.status_code, 200)
-        compound_het_1_new_variant_note_as_gene_note_response = response.json()['savedVariantsByGuid'][VARIANT_GUID_3]['notes'][1]
-        compound_het_2_new_variant_note_as_gene_note_response = response.json()['savedVariantsByGuid'][VARIANT_GUID_4]['notes'][1]
+        compound_het_1_new_variant_note_as_gene_note_response = response.json()['savedVariantsByGuid'][COMPOUND_HET_GUID_1]['notes'][1]
+        compound_het_2_new_variant_note_as_gene_note_response = response.json()['savedVariantsByGuid'][COMPOUND_HET_GUID_2]['notes'][1]
         self.assertEqual(compound_het_1_new_variant_note_as_gene_note_response['note'], 'new_compound_hets_variant_note_as_gene_note')
         self.assertEqual(compound_het_2_new_variant_note_as_gene_note_response['note'], 'new_compound_hets_variant_note_as_gene_note')
         new_gene_note_response_1 = response.json()['genesById'][GENE_GUID_2]['notes'][0]
@@ -222,14 +221,14 @@ class ProjectAPITest(TransactionTestCase):
         self.assertEqual(new_gene_note_response_2['note'], 'new_compound_hets_variant_note_as_gene_note')
 
         # update the variants_note for both compound hets
-        update_variant_note_url = reverse(update_variant_note_handler, args=[','.join([VARIANT_GUID_3, VARIANT_GUID_4]), compound_het_1_new_variant_note.guid])
+        update_variant_note_url = reverse(update_variant_note_handler, args=[','.join([COMPOUND_HET_GUID_1, COMPOUND_HET_GUID_2]), compound_het_1_new_variant_note.guid])
         response = self.client.post(update_variant_note_url, content_type='application/json', data=json.dumps(
             {'note': 'updated_variant_note', 'submitToClinvar': False}))
 
         self.assertEqual(response.status_code, 200)
 
-        updated_note_response_1 = response.json()['savedVariantsByGuid'][VARIANT_GUID_3]['notes'][0]
-        updated_note_response_2 = response.json()['savedVariantsByGuid'][VARIANT_GUID_4]['notes'][0]
+        updated_note_response_1 = response.json()['savedVariantsByGuid'][COMPOUND_HET_GUID_1]['notes'][0]
+        updated_note_response_2 = response.json()['savedVariantsByGuid'][COMPOUND_HET_GUID_2]['notes'][0]
         self.assertEqual(updated_note_response_1['note'], 'new_compound_hets_variant_note_as_gene_note')
         self.assertEqual(updated_note_response_2['note'], 'new_compound_hets_variant_note_as_gene_note')
         self.assertEqual(updated_note_response_1['submitToClinvar'], False)
@@ -243,7 +242,7 @@ class ProjectAPITest(TransactionTestCase):
         self.assertEqual(updated_variant_note.submit_to_clinvar, updated_note_response_2['submitToClinvar'])
 
         # delete the variant_note for both compound hets
-        delete_variant_note_url = reverse(delete_variant_note_handler, args=[','.join([VARIANT_GUID_3, VARIANT_GUID_4]), updated_variant_note.guid])
+        delete_variant_note_url = reverse(delete_variant_note_handler, args=[','.join([COMPOUND_HET_GUID_1, COMPOUND_HET_GUID_2]), updated_variant_note.guid])
         response = self.client.post(delete_variant_note_url, content_type='application/json')
 
         self.assertEqual(response.status_code, 200)
