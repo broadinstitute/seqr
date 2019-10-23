@@ -171,13 +171,7 @@ ShortcutTags.propTypes = {
 
 
 const VariantTagField = ({ variant, fieldName, family, ...props }) => {
-  const variantNames = []
-  if (Array.isArray(variant)) {
-    variant.forEach(compoundHet => variantNames.push(`chr${compoundHet.chrom}:${compoundHet.pos} ${compoundHet.ref} > ${compoundHet.alt}`))
-  }
-  else {
-    variantNames.push(`chr${variant.chrom}:${variant.pos} ${variant.ref} > ${variant.alt}`)
-  }
+  const variantNames = (Array.isArray(variant) ? variant : [variant]).map(eachVariant => `chr${eachVariant.chrom}:${eachVariant.pos} ${eachVariant.ref} > ${eachVariant.alt}`)
   return (
     <TagFieldView
       idField="variantId"
