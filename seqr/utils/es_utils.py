@@ -820,7 +820,7 @@ class EsSearch(BaseEsSearch):
         # Only save non-returned results separately if have not loaded all results
         if loaded_result_count == self.previous_search_results['total_results']:
             self.previous_search_results['grouped_results'] += grouped_variants
-            self.previous_search_results['compound_het_results'] = compound_het_results
+            self.previous_search_results['compound_het_results'] = []
             self.previous_search_results['variant_results'] = []
         else:
             self.previous_search_results['compound_het_results'] = compound_het_results[num_compound_hets:]
