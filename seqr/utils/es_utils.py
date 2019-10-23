@@ -353,10 +353,40 @@ class BaseEsSearch(object):
         indices = self.samples_by_family_index.keys()
         return len(indices) == 1 and len(self._index_searches.get(indices[0], [])) <= 1, {}
 
-    def _execute_single_search(self, **kwargs):
-        raise NotImplementedError
+    def _execute_single_search(self, page=1, num_results=100, start_index=None, **kwargs):
+        search = self._get_paginated_searches(
+            self.index_name, page=page, num_results=num_results * len(self.samples_by_family_index), start_index=start_index
+        )[0]
+        response = self._execute_search(search)
+        return self._parse_response(response)
 
-    def _execute_multi_search(self, **kwargs):
+    def _execute_multi_search(self, cached_counts_key=None, **kwargs):
+        indices = self.samples_by_family_index.keys()
+
+        if cached_counts_key and not self.previous_search_results.get(cached_counts_key):
+            self.previous_search_results[cached_counts_key] = {}
+
+        ms = MultiSearch()
+        for index_name in indices:
+            start_index = 0
+            if cached_counts_key:
+                if self.previous_search_results[cached_counts_key].get(index_name):
+                    index_total = self.previous_search_results[cached_counts_key][index_name]['total']
+                    start_index = self.previous_search_results[cached_counts_key][index_name]['loaded']
+                    if start_index >= index_total:
+                        continue
+                else:
+                    self.previous_search_results[cached_counts_key][index_name] = {'loaded': 0, 'total': 0}
+
+            searches = self._get_paginated_searches(index_name, start_index=start_index, **kwargs)
+            ms = ms.index(index_name)
+            for search in searches:
+                ms = ms.add(search)
+
+        responses = self._execute_search(ms)
+        return [self._parse_response(response) for response in responses]
+
+    def _parse_response(self, response):
         raise NotImplementedError
 
     def _get_paginated_searches(self, index_name, page=1, num_results=100, start_index=None):
@@ -428,13 +458,9 @@ class EsSearch(BaseEsSearch):
         else:
             return False, {'page': page, 'num_results': num_results}
 
-    def _execute_single_search(self,  page=1, num_results=100, deduplicate=False, start_index=None):
-        search = self._get_paginated_searches(
-            self.index_name, page, num_results*len(self.samples_by_family_index), start_index=start_index
-        )[0]
-
-        response = self._execute_search(search)
-        variant_results, total_results, is_compound_het = self._parse_response(response)
+    def _execute_single_search(self, page=1, num_results=100, deduplicate=False, **kwargs):
+        variant_results, total_results, is_compound_het, _ = super(EsSearch, self)._execute_single_search(
+            page=page, num_results=num_results, deduplicate=deduplicate, **kwargs)
         self.previous_search_results['total_results'] = total_results
 
         results_start_index = (page - 1) * num_results
@@ -456,37 +482,15 @@ class EsSearch(BaseEsSearch):
         return variant_results[:num_results]
 
     def _execute_multi_search(self, page=1, num_results=100):
-        indices = self.samples_by_family_index.keys()
-
-        if not self.previous_search_results.get('loaded_variant_counts'):
-            self.previous_search_results['loaded_variant_counts'] = {}
-
-        ms = MultiSearch()
-        for index_name in indices:
-            start_index = 0
-            if self.previous_search_results['loaded_variant_counts'].get(index_name):
-                index_total = self.previous_search_results['loaded_variant_counts'][index_name]['total']
-                start_index = self.previous_search_results['loaded_variant_counts'][index_name]['loaded']
-                if start_index >= index_total:
-                    continue
-            else:
-                self.previous_search_results['loaded_variant_counts'][index_name] = {'loaded': 0, 'total': 0}
-
-            searches = self._get_paginated_searches(index_name, page, num_results, start_index=start_index)
-            ms = ms.index(index_name)
-            for search in searches:
-                ms = ms.add(search)
-
-        responses = self._execute_search(ms)
+        parsed_responses = super(EsSearch, self)._execute_multi_search(
+            cached_counts_key='loaded_variant_counts', page=page, num_results=num_results)
 
         new_results = []
         compound_het_results = self.previous_search_results.get('compound_het_results', [])
-        for response in responses:
-            response_hits, response_total, is_compound_het = self._parse_response(response)
+        for response_hits, response_total, is_compound_het, index_name in parsed_responses:
             if not response_total:
                 continue
 
-            index_name = response.hits[0].meta.index
             if is_compound_het:
                 compound_het_results += response_hits
                 self.previous_search_results['loaded_variant_counts']['{}_compound_het'.format(index_name)] = {'total': response_total, 'loaded': response_total}
@@ -516,14 +520,15 @@ class EsSearch(BaseEsSearch):
             return self.previous_search_results['all_results'][end_index-num_results:end_index]
 
     def _parse_response(self, response):
+        index_name = response.hits[0].meta.index if response.hits else None
         if hasattr(response.aggregations, 'genes') and response.hits:
             response_hits, response_total = self._parse_compound_het_response(response)
-            return response_hits, response_total, True
+            return response_hits, response_total, True, index_name
 
         response_total = response.hits.total
         logger.info('Total hits: {} ({} seconds)'.format(response_total, response.took / 1000.0))
 
-        return [self._parse_hit(hit) for hit in response], response_total, False
+        return [self._parse_hit(hit) for hit in response], response_total, False, index_name
 
     def _parse_compound_het_response(self, response):
         if len(response.aggregations.genes.buckets) > MAX_COMPOUND_HET_GENES:
@@ -848,114 +853,41 @@ class EsGeneAggSearch(BaseEsSearch):
                 )
 
     def _execute_single_search(self, **kwargs):
-        # TODO this is from gene agg search
-        search = self._get_paginated_searches(self.index_name)[0]
-
-        response = self._execute_search(search)
-        gene_aggs = self._parse_response(response)
+        gene_aggs = super(EsGeneAggSearch, self)._execute_single_search(**kwargs)
+        gene_aggs = {gene_id: {k: counts[k] for k in ['total', 'families']} for gene_id, counts in gene_aggs.items()}
 
         self.previous_search_results['gene_aggs'] = gene_aggs
 
         return gene_aggs
 
-        # TODO this is from main search
-        search = self._get_paginated_searches(
-            self.index_name, page, num_results*len(self.samples_by_family_index), start_index=start_index
-        )[0]
+    def _execute_multi_search(self, **kwargs):
+        parsed_responses = super(EsGeneAggSearch, self)._execute_multi_search(**kwargs)
+        gene_aggs = parsed_responses[0] if parsed_responses else {}
+        for response in parsed_responses[1:]:
+            for gene_id, count_details in response.items():
+                gene_aggs[gene_id]['sample_ids'].update(count_details['sample_ids'])
+                gene_aggs[gene_id]['families'].update(count_details['families'])
 
-        response = self._execute_search(search)
-        variant_results, total_results, is_compound_het = self._parse_response(response)
-        self.previous_search_results['total_results'] = total_results
+        gene_aggs = {
+            gene_id: {'total': len(counts['sample_ids']), 'families': counts['families']}
+            for gene_id, counts in gene_aggs.items()
+        }
 
-        results_start_index = (page - 1) * num_results
-        if is_compound_het:
-            variant_results = _sort_compound_hets(variant_results)
-            self.previous_search_results['grouped_results'] = variant_results
-            end_index = min(results_start_index + num_results, total_results)
-            return _get_compound_het_page(variant_results, results_start_index, end_index)
+        self.previous_search_results['gene_aggs'] = gene_aggs
 
-        if deduplicate:
-            variant_results = self._deduplicate_results(variant_results)
-
-        # Only save contiguous pages of results:
-        previous_all_results = self.previous_search_results.get('all_results', [])
-        if len(previous_all_results) >= results_start_index:
-            self.previous_search_results['all_results'] = self.previous_search_results.get('all_results', []) + variant_results
-            variant_results = self.previous_search_results['all_results'][results_start_index:]
-
-        return variant_results[:num_results]
-
-    def _execute_multi_search(self, page, num_results):
-        # TODO this is from main search
-        indices = self.samples_by_family_index.keys()
-
-        if not self.previous_search_results.get('loaded_variant_counts'):
-            self.previous_search_results['loaded_variant_counts'] = {}
-
-        ms = MultiSearch()
-        for index_name in indices:
-            start_index = 0
-            if self.previous_search_results['loaded_variant_counts'].get(index_name):
-                index_total = self.previous_search_results['loaded_variant_counts'][index_name]['total']
-                start_index = self.previous_search_results['loaded_variant_counts'][index_name]['loaded']
-                if start_index >= index_total:
-                    continue
-            else:
-                self.previous_search_results['loaded_variant_counts'][index_name] = {'loaded': 0, 'total': 0}
-
-            searches = self._get_paginated_searches(index_name, page, num_results, start_index=start_index)
-            ms = ms.index(index_name)
-            for search in searches:
-                ms = ms.add(search)
-
-        responses = self._execute_search(ms)
-
-        new_results = []
-        compound_het_results = self.previous_search_results.get('compound_het_results', [])
-        for response in responses:
-            response_hits, response_total, is_compound_het = self._parse_response(response)
-            if not response_total:
-                continue
-
-            index_name = response.hits[0].meta.index
-            if is_compound_het:
-                compound_het_results += response_hits
-                self.previous_search_results['loaded_variant_counts']['{}_compound_het'.format(index_name)] = {'total': response_total, 'loaded': response_total}
-            else:
-                new_results += response_hits
-                self.previous_search_results['loaded_variant_counts'][index_name]['total'] = response_total
-                self.previous_search_results['loaded_variant_counts'][index_name]['loaded'] += len(response_hits)
-
-        self.previous_search_results['total_results'] = sum(counts['total'] for counts in self.previous_search_results['loaded_variant_counts'].values())
-
-        # combine new results with unsorted previously loaded results to correctly sort/paginate
-        all_loaded_results = self.previous_search_results.get('all_results', [])
-        new_results += self.previous_search_results.get('variant_results', [])
-
-        new_results = sorted(new_results, key=lambda variant: variant['_sort'])
-        variant_results = self._deduplicate_results(new_results)
-
-        if compound_het_results or self.previous_search_results.get('grouped_results'):
-            if compound_het_results:
-                compound_het_results = self._deduplicate_compound_het_results(compound_het_results)
-            return self._process_compound_hets(compound_het_results, variant_results, num_results)
-        else:
-            end_index = num_results * page
-            num_loaded = num_results * page - len(all_loaded_results)
-            self.previous_search_results['all_results'] = all_loaded_results + variant_results[:num_loaded]
-            self.previous_search_results['variant_results'] = variant_results[num_loaded:]
-            return self.previous_search_results['all_results'][end_index-num_results:end_index]
+        return gene_aggs
 
     def _parse_response(self, response):
         if len(response.aggregations.genes.buckets) > MAX_COMPOUND_HET_GENES:
             raise Exception('This search returned too many genes')
 
-        gene_counts = defaultdict(lambda: {'total': 0, 'families': defaultdict(int)})
+        gene_counts = defaultdict(lambda: {'total': 0, 'families': defaultdict(int), 'sample_ids': set()})
         for gene_agg in response.aggregations.genes.buckets:
             gene_id = gene_agg['key']
             gene_counts[gene_id]['total'] += gene_agg['doc_count']
             if 'vars_by_gene' in gene_agg:
                 for hit in gene_agg['vars_by_gene']:
+                    gene_counts[gene_id]['sample_ids'].add(hit.meta.id)
                     for family_guid in hit.meta.matched_queries:
                         gene_counts[gene_id]['families'][family_guid] += 1
             else:
