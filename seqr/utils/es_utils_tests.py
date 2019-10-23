@@ -1,7 +1,6 @@
 from copy import deepcopy
 import mock
 import json
-import collections
 
 from collections import defaultdict
 from django.test import TestCase
@@ -815,6 +814,22 @@ RECESSIVE_INHERITANCE_QUERY = {
     }
 }
 
+FIRST_COMPOUND_HET = deepcopy(PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT[0])
+FIRST_COMPOUND_HET.update({
+    'genomeVersion': '38',
+    'liftedOverGenomeVersion': '37',
+    'liftedOverPos': 248367217,
+    'liftedOverChrom': '1',
+})
+
+SECOND_COMPOUND_HET = deepcopy(PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT[1])
+SECOND_COMPOUND_HET.update({
+    'genomeVersion': '38',
+    'liftedOverGenomeVersion': '37',
+    'liftedOverPos': 103343343,
+    'liftedOverChrom': '2',
+})
+
 REDIS_CACHE = {}
 def _set_cache(k, v):
     REDIS_CACHE[k] = v
@@ -1484,20 +1499,8 @@ class EsUtilsTest(TestCase):
         self.assertEqual(len(variants), 2)
         self.maxDiff = None
         self.assertEqual(variants[0], PARSED_VARIANTS[0])
-
-        expected_first_compound_het = deepcopy(PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT[0])
-        expected_first_compound_het['genomeVersion'] = '38'
-        expected_first_compound_het['liftedOverChrom'] = '1'
-        expected_first_compound_het['liftedOverGenomeVersion'] = '37'
-        expected_first_compound_het['liftedOverPos'] = 248367217
-        self.assertEqual(variants[1][0], expected_first_compound_het)
-
-        expected_second_compound_het = deepcopy(PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT[1])
-        expected_second_compound_het['genomeVersion'] = '38'
-        expected_second_compound_het['liftedOverChrom'] = '2'
-        expected_second_compound_het['liftedOverGenomeVersion'] = '37'
-        expected_second_compound_het['liftedOverPos'] = 103343343
-        self.assertEqual(variants[1][1], expected_second_compound_het)
+        self.assertEqual(variants[1][0], FIRST_COMPOUND_HET)
+        self.assertEqual(variants[1][1], SECOND_COMPOUND_HET)
         self.assertEqual(total_results, 11)
 
         self.assertCachedResults(results_model, {
