@@ -49,8 +49,11 @@ const StyledCompoundHetRows = styled(Grid)`
 
 const Variant = ({ variant, isCompoundHet }) => {
   const mainGeneId = getVariantMainGeneId(variant)
-  const variantIndividuals = Object.keys(variant.transcripts).filter(geneId => geneId !== mainGeneId).map(geneId =>
+  const variantGenes = Object.keys(variant.transcripts).filter(geneId => geneId !== mainGeneId).map(geneId =>
     <VariantGene key={geneId} geneId={geneId} variant={variant} compact />,
+  )
+  const variantIndividuals = variant.familyGuids.map(familyGuid =>
+    <VariantIndividuals key={familyGuid} familyGuid={familyGuid} variant={variant} />,
   )
   return (
     <StyledVariantRow key={variant.variantId} severity={CLINSIG_SEVERITY[(variant.clinvar.clinicalSignificance || '').toLowerCase()]} iscompoundhet={(isCompoundHet || false).toString()} >
@@ -71,26 +74,22 @@ const Variant = ({ variant, isCompoundHet }) => {
       )}
       {isCompoundHet &&
       <Grid.Column>
-        {variantIndividuals}
+        {variantGenes}
         {Object.keys(variant.transcripts).length > 1 && <VerticalSpacer height={20} />}
-        {variant.familyGuids.map(familyGuid =>
-          <VariantIndividuals key={familyGuid} familyGuid={familyGuid} variant={variant} />,
-        )}
+        {variantIndividuals}
       </Grid.Column>}
       {!isCompoundHet &&
       <Grid.Column>
         <VariantGene geneId={mainGeneId} variant={variant} />
         {Object.keys(variant.transcripts).length > 1 && <Divider />}
-        {variantIndividuals}
+        {variantGenes}
       </Grid.Column>}
       <Grid.Column><Annotations variant={variant} /></Grid.Column>
       <Grid.Column><Predictions variant={variant} /></Grid.Column>
       <Grid.Column><Frequencies variant={variant} /></Grid.Column>
       {!isCompoundHet &&
       <Grid.Column width={16}>
-        {variant.familyGuids.map(familyGuid =>
-          <VariantIndividuals key={familyGuid} familyGuid={familyGuid} variant={variant} />,
-        )}
+        {variantIndividuals}
       </Grid.Column>}
       <Grid.Column width={16}>
         <FamilyVariantReads variant={variant} />
