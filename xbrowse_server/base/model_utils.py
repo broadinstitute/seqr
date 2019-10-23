@@ -126,7 +126,7 @@ def _deprecated_get_or_create_saved_variant(xpos=None, ref=None, alt=None, famil
                 _update_saved_variant_json(saved_variant, saved_variants_json[0])
         except Exception as e:
             logging.error("Unable to retrieve variant annotations for %s (%s, %s, %s): %s" % (family, xpos, ref, alt, e))
-    return saved_variant
+    return [saved_variant]
 
 
 XBROWSE_TO_SEQR_ADDITIONAL_ENTITIES_MAPPING = {
