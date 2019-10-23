@@ -16,11 +16,11 @@ import { VerticalSpacer } from '../../Spacers'
 
 
 const StyledVariantRow = styled(Grid.Row)`  
-  ${({ iscompoundhet }) => {
-    return (iscompoundhet ?
-      '.column { margin-top: 0em !important; margin-left: 1em !important; }' :
-      '.column { margin-top: 1em !important; margin-bottom: 0 !important; margin-left: 1em !important; }')
-  }}
+  .column {
+   ${({ iscompoundhet }) => (iscompoundhet ?
+    '{ margin-top: 0em !important; margin-left: 1em !important; }' :
+    '{ margin-top: 1em !important; margin-bottom: 0 !important; margin-left: 1em !important; }')}
+  }
   
   padding: 0;
   color: #999;
@@ -49,6 +49,9 @@ const StyledCompoundHetRows = styled(Grid)`
 
 const Variant = ({ variant, isCompoundHet }) => {
   const mainGeneId = getVariantMainGeneId(variant)
+  const variantIndividuals = Object.keys(variant.transcripts).filter(geneId => geneId !== mainGeneId).map(geneId =>
+    <VariantGene key={geneId} geneId={geneId} variant={variant} compact />,
+  )
   return (
     <StyledVariantRow key={variant.variantId} severity={CLINSIG_SEVERITY[(variant.clinvar.clinicalSignificance || '').toLowerCase()]} iscompoundhet={(isCompoundHet || false).toString()} >
       {isCompoundHet &&
@@ -68,9 +71,7 @@ const Variant = ({ variant, isCompoundHet }) => {
       )}
       {isCompoundHet &&
       <Grid.Column>
-        {Object.keys(variant.transcripts).filter(geneId => geneId !== mainGeneId).map(geneId =>
-          <VariantGene key={geneId} geneId={geneId} variant={variant} compact />,
-        )}
+        {variantIndividuals}
         {Object.keys(variant.transcripts).length > 1 && <VerticalSpacer height={20} />}
         {variant.familyGuids.map(familyGuid =>
           <VariantIndividuals key={familyGuid} familyGuid={familyGuid} variant={variant} />,
@@ -80,9 +81,7 @@ const Variant = ({ variant, isCompoundHet }) => {
       <Grid.Column>
         <VariantGene geneId={mainGeneId} variant={variant} />
         {Object.keys(variant.transcripts).length > 1 && <Divider />}
-        {Object.keys(variant.transcripts).filter(geneId => geneId !== mainGeneId).map(geneId =>
-          <VariantGene key={geneId} geneId={geneId} variant={variant} compact />,
-        )}
+        {variantIndividuals}
       </Grid.Column>}
       <Grid.Column><Annotations variant={variant} /></Grid.Column>
       <Grid.Column><Predictions variant={variant} /></Grid.Column>
@@ -137,7 +136,7 @@ CompoundHets.propTypes = {
 const Variants = ({ variants }) =>
   <Grid stackable divided="vertically" columns="equal">
     {variants.map(variant =>
-      (variant.length > 1 ? <CompoundHets variants={variant} key={variant[0].variantId} /> : <Variant variant={variant} key={variant.variantId} />))}
+      (variant.length > 1 ? <CompoundHets variants={variant} key={variant.map(v => v.variantId).join()} /> : <Variant variant={variant} key={variant.variantId} />))}
   </Grid>
 
 Variants.propTypes = {
