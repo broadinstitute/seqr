@@ -158,6 +158,9 @@ def _get_note_from_variant_guids(user, variant_guids, note_guid):
     saved_variants = SavedVariant.objects.filter(guid__in=variant_guids)
     check_permissions(saved_variants[0].family.project, user, CAN_VIEW)
     note = VariantNote.objects.get(guid=note_guid)
+    projects = {saved_variant.family.project for saved_variant in note.saved_variants.all()}
+    for project in projects:
+        check_permissions(project, user, CAN_VIEW)
     return note
 
 
