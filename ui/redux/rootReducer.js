@@ -287,8 +287,7 @@ export const updateVariantNote = (values) => {
   const compoundHets = Object.values(values).filter(value => value instanceof Object)
   const variantGuids = compoundHets.filter(compoundHet => compoundHet.variantGuid).map(savedCompoundHet => savedCompoundHet.variantGuid)
   if (variantGuids.length > 0) {
-    const action = (compoundHets.length > variantGuids.length ? 'create' : 'update')
-    return updateSavedVariant(values, `${variantGuids.join(',')}/note/${action}`)
+    return updateEntity(values, RECEIVE_DATA, `/api/saved_variant/${variantGuids.join(',')}/note`, 'noteGuid')
   }
   return updateSavedVariant(values)
 }
