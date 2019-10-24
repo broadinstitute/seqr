@@ -93,7 +93,6 @@ def get_es_variants(search_model, sort=XPOS_SORT_KEY, page=1, num_results=100, l
 def get_es_variant_gene_counts(search_model):
 
     def process_previous_results(previous_search_results):
-        return None, {}
         if previous_search_results.get('gene_aggs'):
             return previous_search_results['gene_aggs'], {}
 
@@ -855,6 +854,7 @@ class EsGeneAggSearch(BaseEsSearch):
     def _execute_single_search(self, **kwargs):
         gene_aggs = super(EsGeneAggSearch, self)._execute_single_search(**kwargs)
         gene_aggs = {gene_id: {k: counts[k] for k in ['total', 'families']} for gene_id, counts in gene_aggs.items()}
+        self._add_compound_hets(gene_aggs)
 
         self.previous_search_results['gene_aggs'] = gene_aggs
 
@@ -873,6 +873,7 @@ class EsGeneAggSearch(BaseEsSearch):
             for gene_id, counts in gene_aggs.items()
         }
 
+        self._add_compound_hets(gene_aggs)
         self.previous_search_results['gene_aggs'] = gene_aggs
 
         return gene_aggs
@@ -904,6 +905,9 @@ class EsGeneAggSearch(BaseEsSearch):
                     family_guid = families_by_sample[sample_agg['key']]
                     gene_counts[gene_id]['families'][family_guid] += sample_agg['doc_count']
 
+        return gene_counts
+
+    def _add_compound_hets(self, gene_counts):
         # Compound hets are always loaded as part of the initial search and are not part of the fetched aggregation
         loaded_compound_hets = self.previous_search_results.get('grouped_results', []) + \
                                self.previous_search_results.get('compound_het_results', [])
@@ -914,8 +918,6 @@ class EsGeneAggSearch(BaseEsSearch):
                 gene_counts[gene_id]['total'] += len(variants)
                 for family_guid in variants[0]['familyGuids']:
                     gene_counts[gene_id]['families'][family_guid] += len(variants)
-
-        return gene_counts
 
 
 def _variant_id_filter(xpos_ref_alt_tuples):
