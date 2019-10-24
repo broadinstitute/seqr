@@ -36,25 +36,26 @@ const RECEIVE_USERS = 'RECEIVE_USERS'
 // action creators
 
 // A helper action that handles create, update and delete requests
-export const updateEntity = (values, receiveDataAction, urlPath, idField, actionSuffix, getUrlPath, containSavedVariant = false, givenAction = null) => {
+export const updateEntity = (values, receiveDataAction, urlPath, idField, actionSuffix, getUrlPath) => {
   return (dispatch, getState) => {
     if (getUrlPath) {
       urlPath = getUrlPath(getState())
     }
 
-    let action = givenAction || '/create'
+    let action = 'create'
     if (values[idField]) {
       urlPath = `${urlPath}/${values[idField]}`
       action = values.delete ? 'delete' : 'update'
     }
-    return new HttpRequestHelper(`${urlPath}${action}${actionSuffix || ''}`,
+
+    return new HttpRequestHelper(`${urlPath}/${action}${actionSuffix || ''}`,
       (responseJson) => {
         dispatch({ type: receiveDataAction, updatesById: responseJson })
       },
       (e) => {
         throw new SubmissionError({ _error: [e.message] })
       },
-    ).post(containSavedVariant ? { searchHash: getState().currentSearchHash, ...values } : values)
+    ).post(values)
   }
 }
 
@@ -284,18 +285,20 @@ export const updateVariantNote = (values) => {
   }
   // are compound hets
   const compoundHets = Object.values(values).filter(value => value instanceof Object)
-  const variantGuids = []
-  compoundHets.forEach(compoundHet => (compoundHet.variantGuid ? variantGuids.push(compoundHet.variantGuid) : null))
-  return updateEntity(values, RECEIVE_DATA,
-    `/api/saved_variant/${(variantGuids.length > 0 ? variantGuids.join(',') : 'no_saved_variant')}/note`, 'noteGuid', undefined, undefined, true)
+  const variantGuids = compoundHets.filter(compoundHet => compoundHet.variantGuid).map(savedCompoundHet => savedCompoundHet.variantGuid)
+  if (variantGuids.length > 0) {
+    const action = (compoundHets.length > variantGuids.length ? 'create' : 'update')
+    return updateSavedVariant(values, `${variantGuids.join(',')}/note/${action}`)
+  }
+  return updateSavedVariant(values)
 }
 
 export const updateVariantTags = (values) => {
-  if (values.compoundHetGuids) {
-    const urlPath = `${values.compoundHetGuids.length > 0 ? values.compoundHetGuids.join(',') : 'no_saved_variant'}/update_tags`
-    return updateEntity(values, RECEIVE_DATA,
-      `/api/saved_variant/${urlPath}`, undefined, undefined, undefined,
-      true, '')
+  if (values.compoundHetsToSave) {
+    if (values.compoundHetsGuids.length > 0) {
+      return updateSavedVariant(values, `${values.compoundHetsGuids.join(',')}/update_tags`)
+    }
+    return updateSavedVariant({ tags: values.tags, familyGuid: values.familyGuid, ...values.compoundHetsToSave })
   }
   const urlPath = values.variantGuid ? `${values.variantGuid}/update_tags` : 'create'
   return updateSavedVariant(values, urlPath)
