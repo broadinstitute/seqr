@@ -105,8 +105,9 @@ Variant.propTypes = {
 
 
 const CompoundHets = ({ variants }) => {
-  const allGeneIds = getCompoundHetsAllGeneIds(variants)
-  const sharedGeneId = getCompoundHetsSharedGeneIds(allGeneIds)
+  const allGeneIds = variants.map(({ transcripts }) => Object.keys(transcripts))
+  const sharedGeneId = (allGeneIds.shift().filter(sameVariantGeneIds => allGeneIds.every(singleGeneId => singleGeneId.indexOf(sameVariantGeneIds) !== -1)) || [])[0]
+
   return (
     <StyledVariantRow key={variants[0].variantId} >
       {variants[0].familyGuids.map(familyGuid =>
