@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { Grid, Divider } from 'semantic-ui-react'
 
-import { CLINSIG_SEVERITY, getVariantMainGeneId, getCompoundHetsAllGeneIds, getCompoundHetsSharedGeneIds } from 'shared/utils/constants'
+import { CLINSIG_SEVERITY, getVariantMainGeneId } from 'shared/utils/constants'
 import FamilyVariantReads from './FamilyVariantReads'
 import FamilyVariantTags from './FamilyVariantTags'
 import Annotations from './Annotations'
@@ -15,11 +15,11 @@ import VariantIndividuals from './VariantIndividuals'
 import { VerticalSpacer } from '../../Spacers'
 
 
-const StyledVariantRow = styled(Grid.Row)`  
+const StyledVariantRow = styled(({ isCompoundHet, ...props }) => <Grid.Row {...props} />)`  
   .column {
-   ${({ iscompoundhet }) => (iscompoundhet ?
+   ${(props => props.isCompoundHet) ? // eslint-disable-line  no-constant-condition
     '{ margin-top: 0em !important; margin-left: 1em !important; }' :
-    '{ margin-top: 1em !important; margin-bottom: 0 !important; margin-left: 1em !important; }')}
+    '{ margin-top: 1em !important; margin-bottom: 0 !important; margin-left: 1em !important; }'}
   }
   
   padding: 0;
@@ -43,7 +43,7 @@ const StyledCompoundHetLink = styled(Grid.Column)`
 const StyledCompoundHetRows = styled(Grid)`
   margin-left: 0em !important;
   margin-right: 1em !important;
-  margin-top: 0.5em !important;
+  margin-top: 0em !important;
   margin-bottom: 0 !important;
 `
 
@@ -56,7 +56,7 @@ const Variant = ({ variant, isCompoundHet }) => {
     <VariantIndividuals key={familyGuid} familyGuid={familyGuid} variant={variant} />,
   )
   return (
-    <StyledVariantRow key={variant.variantId} severity={CLINSIG_SEVERITY[(variant.clinvar.clinicalSignificance || '').toLowerCase()]} iscompoundhet={(isCompoundHet || false).toString()} >
+    <StyledVariantRow key={variant.variantId} severity={CLINSIG_SEVERITY[(variant.clinvar.clinicalSignificance || '').toLowerCase()]} isCompoundHet >
       {isCompoundHet &&
         <StyledCompoundHetLink width={16}>
           {variant.familyGuids.map(familyGuid =>
@@ -110,6 +110,7 @@ const CompoundHets = ({ variants }) => {
 
   return (
     <StyledVariantRow key={variants[0].variantId} >
+      <VerticalSpacer height={16} />
       {variants[0].familyGuids.map(familyGuid =>
         <Grid.Column key={familyGuid} width={16}>
           <FamilyVariantTags familyGuid={familyGuid} variant={variants} key={variants[0].variantId} areCompoundHets />
