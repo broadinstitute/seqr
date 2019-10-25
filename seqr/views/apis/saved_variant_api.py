@@ -275,11 +275,7 @@ def update_variant_tags_handler(request, variant_guids):
             )
     update = {}
     for variant_guid in all_variant_guids:
-        update[variant_guid] = {
-            'tags': [get_json_for_variant_tag(tag) for tag in saved_variants[0].varianttag_set.all()],
-            'functionalData': [get_json_for_variant_functional_data(functional_data) for functional_data in saved_variants[0].variantfunctionaldata_set.all()]
-        }
-
+        update[variant_guid] = get_json_for_saved_variant(saved_variant, add_tags=True)
     return create_json_response({'savedVariantsByGuid': update})
 
 

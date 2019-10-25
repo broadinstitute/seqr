@@ -1283,7 +1283,7 @@
         "xpos_start": 1001562437,
         "xpos_end": 1003124874,
         "ref": "G",
-        "alt": "G",
+        "alt": "C",
         "saved_variant_json": {
             "clinvar": {"clinicalSignificance": "", "alleleId": null, "variationId": null, "goldStars": null},
             "liftedOverGenomeVersion": "38",
