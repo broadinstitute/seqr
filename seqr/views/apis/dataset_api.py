@@ -4,6 +4,7 @@ import traceback
 from collections import defaultdict
 
 from django.contrib.auth.decorators import login_required
+from django.db.models import prefetch_related_objects
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 
@@ -81,28 +82,28 @@ def add_variants_dataset_handler(request, project_guid):
                 'Matches not found for ES sample ids: {}. Uploading a mapping file for these samples, or select the "Ignore extra samples in callset" checkbox to ignore.'.format(
                     ", ".join(unmatched_samples)))
 
-        included_family_individuals = defaultdict(set)
-        for sample in matched_sample_id_to_sample_record.values():
-            included_family_individuals[sample.individual.family].add(sample.individual.individual_id)
-        missing_family_individuals = []
-        for family, individual_ids in included_family_individuals.items():
-            missing_indivs = family.individual_set.filter(
-                sample__is_active=True,
-                sample__dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS
-            ).exclude(individual_id__in=individual_ids)
-            if missing_indivs:
-                missing_family_individuals.append(
-                    '{} ({})'.format(family.family_id, ', '.join([i.individual_id for i in missing_indivs]))
-                )
+        prefetch_related_objects(matched_sample_id_to_sample_record.values(), 'individual__family')
+        included_families = {sample.individual.family for sample in matched_sample_id_to_sample_record.values()}
+
+        missing_individuals = Individual.objects.filter(
+            family__in=included_families,
+            sample__is_active=True,
+            sample__dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
+        ).exclude(sample__in=matched_sample_id_to_sample_record.values()).select_related('family')
+        missing_family_individuals = defaultdict(list)
+        for individual in missing_individuals:
+            missing_family_individuals[individual.family].append(individual)
+
         if missing_family_individuals:
             raise Exception(
                 'The following families are included in the callset but are missing some family members: {}.'.format(
-                    ', '.join(missing_family_individuals)
-                ))
+                    ', '.join(
+                        ['{} ({})'.format(family.family_id, ', '.join([i.individual_id for i in missing_indivs]))
+                         for family, missing_indivs in missing_family_individuals.items()]
+                )))
 
-        inactivate_sample_guids = _update_samples(
-            matched_sample_id_to_sample_record, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
-            elasticsearch_index=elasticsearch_index, dataset_path=dataset_path
+        inactivate_sample_guids = _update_variant_samples(
+            matched_sample_id_to_sample_record, elasticsearch_index=elasticsearch_index, dataset_path=dataset_path
         )
 
     except Exception as e:
@@ -119,8 +120,8 @@ def add_variants_dataset_handler(request, project_guid):
         project, sample_type, elasticsearch_index, dataset_path, matched_sample_id_to_sample_record
     )
 
-    families_to_update = [family for family in included_family_individuals.keys()
-                          if family.analysis_status == Family.ANALYSIS_STATUS_WAITING_FOR_DATA]
+    families_to_update = [
+        family for family in included_families if family.analysis_status == Family.ANALYSIS_STATUS_WAITING_FOR_DATA]
     for family in families_to_update:
         update_model_from_json(family, {'analysis_status': Family.ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS})
 
@@ -190,9 +191,8 @@ def add_alignment_dataset_handler(request, project_guid):
         if len(unmatched_samples) > 0:
             raise Exception('The following Individual IDs do not exist: {}'.format(", ".join(unmatched_samples)))
 
-        inactivate_sample_guids = _update_samples(
-            matched_sample_id_to_sample_record, dataset_type=Sample.DATASET_TYPE_READ_ALIGNMENTS,
-            sample_dataset_path_mapping=sample_dataset_path_mapping
+        inactivate_sample_guids = _update_alignment_samples(
+            matched_sample_id_to_sample_record, sample_dataset_path_mapping
         )
 
     except Exception as e:
@@ -212,21 +212,47 @@ def add_alignment_dataset_handler(request, project_guid):
     return create_json_response(_get_samples_json(matched_sample_id_to_sample_record, inactivate_sample_guids, project_guid))
 
 
-def _update_samples(matched_sample_id_to_sample_record, dataset_type, elasticsearch_index=None, dataset_path=None, sample_dataset_path_mapping=None):
+def _update_variant_samples(matched_sample_id_to_sample_record, elasticsearch_index, dataset_path):
+    loaded_date = timezone.now()
+    updated_samples = [sample.id for sample in matched_sample_id_to_sample_record.values()]
+
+    samples_to_activate = Sample.objects.filter(id__in=updated_samples, is_active=False)
+    activated_sample_ids = [sample.id for sample in samples_to_activate]
+    samples_to_activate.update(
+        elasticsearch_index=elasticsearch_index,
+        dataset_file_path=dataset_path,
+        is_active=True,
+        loaded_date=loaded_date,
+    )
+    matched_sample_id_to_sample_record.update({
+        sample.sample_id: sample for sample in Sample.objects.filter(id__in=activated_sample_ids)
+    })
+
+    inactivate_samples = Sample.objects.filter(
+        individual__in={sample.individual for sample in matched_sample_id_to_sample_record.values()},
+        dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
+        is_active=True,
+    ).exclude(id__in=updated_samples)
+    inactivate_sample_guids = [sample.guid for sample in inactivate_samples]
+    inactivate_samples.update(is_active=False)
+
+    return inactivate_sample_guids
+
+
+def _update_alignment_samples(matched_sample_id_to_sample_record, sample_dataset_path_mapping):
     loaded_date = timezone.now()
     inactivate_samples = Sample.objects.filter(
         individual__in={sample.individual for sample in matched_sample_id_to_sample_record.values()},
-        dataset_type=dataset_type,
+        dataset_type=Sample.DATASET_TYPE_READ_ALIGNMENTS,
         is_active=True,
     )
     inactivate_sample_guids = [sample.guid for sample in inactivate_samples]
     inactivate_samples.update(is_active=False)
+
     for sample_id, sample in matched_sample_id_to_sample_record.items():
         sample_update_json = {
-            'dataset_file_path': dataset_path or sample_dataset_path_mapping[sample_id],
+            'dataset_file_path': sample_dataset_path_mapping[sample_id],
         }
-        if elasticsearch_index:
-            sample_update_json['elasticsearch_index'] = elasticsearch_index
         if not sample.is_active:
             sample_update_json['is_active'] = True
             sample_update_json['loaded_date'] = loaded_date
@@ -243,9 +269,8 @@ def _get_samples_json(matched_sample_id_to_sample_record, inactivate_sample_guid
     }
     updated_individuals = {s['individualGuid'] for s in updated_sample_json}
     if updated_individuals:
-        individuals = Individual.objects.filter(guid__in=updated_individuals).prefetch_related('sample_set',
-                                                                                               'family').only('guid')
+        individuals = Individual.objects.filter(guid__in=updated_individuals).prefetch_related('sample_set')
         response['individualsByGuid'] = {
-            ind.guid: {'sampleGuids': [s.guid for s in ind.sample_set.only('guid').all()]} for ind in individuals
+            ind.guid: {'sampleGuids': [s.guid for s in ind.sample_set.all()]} for ind in individuals
         }
     return response

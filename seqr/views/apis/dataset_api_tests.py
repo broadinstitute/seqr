@@ -140,7 +140,8 @@ class DatasetAPITest(TransactionTestCase):
         )
         self.assertSetEqual(
             {'test_data.vds'},
-            {sample['datasetFilePath'] for sample in updated_samples}
+            {sample['datasetFilePath'] for sample in
+             [response_json['samplesByGuid'][existing_sample_guid], response_json['samplesByGuid'][new_sample.guid]]}
         )
         self.assertSetEqual(
             {'WES'},
