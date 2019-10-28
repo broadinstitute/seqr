@@ -5,10 +5,12 @@ import Timeago from 'timeago.js'
 import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
 
+import { fetchProjects } from 'redux/rootReducer'
 import { getProjectsIsLoading, getUser } from 'redux/selectors'
 import ExportTableButton from 'shared/components/buttons/export-table/ExportTableButton'
 import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
 import SortableTable from 'shared/components/table/SortableTable'
+import DataLoader from 'shared/components/DataLoader'
 import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
 import { InlineHeader } from 'shared/components/StyledComponents'
 import { FAMILY_ANALYSIS_STATUS_OPTIONS, SAMPLE_TYPE_EXOME, SAMPLE_TYPE_GENOME } from 'shared/utils/constants'
@@ -140,35 +142,38 @@ STAFF_COLUMNS.splice(3, 0, {
   format: project => (project.lastAccessedDate ? new Timeago().format(project.lastAccessedDate) : ''),
 })
 
-const ProjectsTable = ({ visibleProjects, loading, user }) =>
-  <ProjectTableContainer>
-    <VerticalSpacer height={10} />
-    <HorizontalSpacer width={10} />
-    <InlineHeader size="medium" content="Projects:" />
-    <FilterSelector />
-    <RightAligned>
-      <ExportTableButton downloads={PROJECT_EXPORT_URLS} />
-      <HorizontalSpacer width={45} />
-    </RightAligned>
-    <VerticalSpacer height={10} />
-    <SortableTable
-      striped
-      stackable
-      fixed
-      idField="projectGuid"
-      defaultSortColumn="name"
-      emptyContent="0 projects found"
-      loading={loading}
-      data={visibleProjects}
-      columns={user.isStaff ? STAFF_COLUMNS : COLUMNS}
-      footer={user.isStaff ? <CreateProjectButton /> : null}
-    />
-  </ProjectTableContainer>
+const ProjectsTable = ({ visibleProjects, loading, load, user }) =>
+  <DataLoader content load={load} loading={false}>
+    <ProjectTableContainer>
+      <VerticalSpacer height={10} />
+      <HorizontalSpacer width={10} />
+      <InlineHeader size="medium" content="Projects:" />
+      <FilterSelector />
+      <RightAligned>
+        <ExportTableButton downloads={PROJECT_EXPORT_URLS} />
+        <HorizontalSpacer width={45} />
+      </RightAligned>
+      <VerticalSpacer height={10} />
+      <SortableTable
+        striped
+        stackable
+        fixed
+        idField="projectGuid"
+        defaultSortColumn="name"
+        emptyContent="0 projects found"
+        loading={loading}
+        data={visibleProjects}
+        columns={user.isStaff ? STAFF_COLUMNS : COLUMNS}
+        footer={user.isStaff ? <CreateProjectButton /> : null}
+      />
+    </ProjectTableContainer>
+  </DataLoader>
 
 ProjectsTable.propTypes = {
   visibleProjects: PropTypes.array.isRequired,
   loading: PropTypes.bool.isRequired,
   user: PropTypes.object,
+  load: PropTypes.func,
 }
 
 export { ProjectsTable as ProjectsTableComponent }
@@ -179,4 +184,8 @@ const mapStateToProps = state => ({
   user: getUser(state),
 })
 
-export default connect(mapStateToProps)(ProjectsTable)
+const mapDispatchToProps = {
+  load: fetchProjects,
+}
+
+export default connect(mapStateToProps, mapDispatchToProps)(ProjectsTable)
