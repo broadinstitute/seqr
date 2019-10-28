@@ -17,12 +17,10 @@ const PAGE_CONFIGS = {
   family: (entityGuid, projectsByGuid, familiesByGuid) => ({
     entity: familiesByGuid[entityGuid],
     entityUrlPath: `family_page/${entityGuid}`,
-    originalPagePath: familiesByGuid[entityGuid] && `family/${familiesByGuid[entityGuid].familyId}/mendelian-variant-search`,
   }),
   analysis_group: (entityGuid, projectsByGuid, familiesByGuid, analysisGroupsByGuid) => ({
     entity: analysisGroupsByGuid[entityGuid],
     entityUrlPath: `analysis_group/${entityGuid}`,
-    originalPagePath: `family-group/guid/${entityGuid}/combine-mendelian-families`,
   }),
   results: (entityGuid, projectsByGuid, familiesByGuid, analysisGroupsByGuid, searchesByHash) => {
     const { projectFamilies } = searchesByHash[entityGuid] || {}
@@ -69,9 +67,8 @@ export const PageHeader = ({ projectsByGuid, familiesByGuid, analysisGroupsByGui
   const { pageType, entityGuid } = match.params
 
   let project
-  let originalPages
   const breadcrumbIdSections = []
-  const { entity, entityUrlPath, originalPagePath, actualPageType, description } =
+  const { entity, entityUrlPath, actualPageType, description } =
     PAGE_CONFIGS[pageType](entityGuid, projectsByGuid, familiesByGuid, analysisGroupsByGuid, searchesByHash)
   if (entity) {
     project = projectsByGuid[entity.projectGuid]
@@ -80,16 +77,6 @@ export const PageHeader = ({ projectsByGuid, familiesByGuid, analysisGroupsByGui
       content: entity.displayName || entity.name,
       link: project && `/project/${project.projectGuid}/${entityUrlPath}`,
     })
-    if (originalPagePath) {
-      originalPages = [{ path: originalPagePath }]
-    }
-  }
-
-  if (project) {
-    if (!originalPages) {
-      originalPages = []
-    }
-    originalPages.push({ path: 'gene', name: 'Gene Search' })
   }
 
   return (
@@ -97,8 +84,6 @@ export const PageHeader = ({ projectsByGuid, familiesByGuid, analysisGroupsByGui
       entity="variant_search"
       breadcrumbIdSections={breadcrumbIdSections}
       description={description}
-      originalPagePath={project && `project/${project.deprecatedProjectId}`}
-      originalPages={originalPages}
     />
   )
 }

@@ -36,7 +36,7 @@ const BreadcrumbContainer = styled.div`
 
 export const PageHeaderLayout = ({
   entity, entityGuid, breadcrumb, breadcrumbId, breadcrumbIdSections, title, header, entityLinkPath, entityGuidLinkPath,
-  entityLinks, originalPages = [], originalPagePath = '', button, description,
+  entityLinks, button, description,
 }) => {
   let breadcrumbSections = [
     { content: snakecaseToTitlecase(entity), link: entityLinkPath === undefined ? `/${entity}` : entityLinkPath },
@@ -100,20 +100,12 @@ export const PageHeaderLayout = ({
       <Grid.Column width={3}>
         {entityLinks &&
           <b><br />
-            {entityLinks.map(({ text, href, ...linkProps }) =>
-              <div key={text}>{href ? <a href={href}>{text}</a> : <NavLink {...linkProps}>{text}</NavLink>}</div>,
+            {entityLinks.map(({ text, ...linkProps }) =>
+              <div key={text}><NavLink {...linkProps}>{text}</NavLink></div>,
             )}
           </b>
         }
         <br />
-        {originalPages.map((page) => {
-          const linkTitle = page.name || snakecaseToTitlecase(entity)
-          return (
-            <a key={linkTitle} href={`/${originalPagePath}${originalPagePath ? '/' : ''}${page.path}`}>
-              Deprecated {linkTitle} Page <br />
-            </a>
-          )
-        })}
         <br />
       </Grid.Column>
       <Grid.Column width={1} />
@@ -132,22 +124,16 @@ PageHeaderLayout.propTypes = {
   entityLinkPath: PropTypes.string,
   entityGuidLinkPath: PropTypes.string,
   entityLinks: PropTypes.array,
-  originalPages: PropTypes.array,
-  originalPagePath: PropTypes.string,
   button: PropTypes.node,
   description: PropTypes.string,
 }
 
-
-const originalGenePage = geneId => [{ path: geneId || '' }]
 
 const BaseGenePageHeader = ({ gene, match }) =>
   <PageHeaderLayout
     entity="gene_info"
     entityGuid={match.params.geneId}
     title={match.params.geneId && (gene ? gene.geneSymbol : match.params.geneId)}
-    originalPagePath="gene"
-    originalPages={originalGenePage(match.params.geneId)}
   />
 
 BaseGenePageHeader.propTypes = {

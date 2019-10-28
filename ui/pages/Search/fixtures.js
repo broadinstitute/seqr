@@ -337,7 +337,6 @@ export const STATE = {
     [PROJECT_GUID] : {
       createdDate: '2016-05-16T05:37:08.634Z',
       deprecatedLastAccessedDate: '2017-03-14T15:15:42.580Z',
-      deprecatedProjectId: '1kg',
       description: '',
       isMmeEnabled: true,
       isPhenotipsEnabled: true,

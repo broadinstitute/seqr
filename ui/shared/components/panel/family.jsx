@@ -195,13 +195,11 @@ FamilyLayout.propTypes = {
   rightContent: PropTypes.node,
 }
 
-const SearchLink = ({ project, family, children }) => (
-  project.hasNewSearch ? <Link to={`/variant_search/family/${family.familyGuid}`}>{children}</Link>
-    : <a href={`/project/${project.deprecatedProjectId}/family/${family.familyId}/mendelian-variant-search`}>{children}</a>
+const SearchLink = ({ family, children }) => (
+  <Link to={`/variant_search/family/${family.familyGuid}`}>{children}</Link>
 )
 
 SearchLink.propTypes = {
-  project: PropTypes.object.isRequired,
   family: PropTypes.object.isRequired,
   children: PropTypes.node,
 }
@@ -264,13 +262,13 @@ const Family = (
     <div key="variants">
       <VariantTagTypeBar height={15} width="calc(100% - 2.5em)" project={project} familyGuid={family.familyGuid} sectionLinks={false} />
       <HorizontalSpacer width={10} />
-      <SearchLink project={project} family={family}><Icon name="search" /></SearchLink>
+      <SearchLink family={family}><Icon name="search" /></SearchLink>
       <DiscoveryGenes project={project} familyGuid={family.familyGuid} genesById={genesById} />
     </div>,
     !compact ?
       <div key="links">
         <VerticalSpacer height={20} />
-        <SearchLink project={project} family={family}><Icon name="search" /> Variant Search</SearchLink>
+        <SearchLink family={family}><Icon name="search" /> Variant Search</SearchLink>
         <VerticalSpacer height={10} />
         {project.isMmeEnabled &&
           <Link to={`/project/${project.projectGuid}/family_page/${family.familyGuid}/matchmaker_exchange`}>
