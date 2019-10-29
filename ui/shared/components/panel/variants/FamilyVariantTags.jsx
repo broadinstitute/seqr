@@ -105,8 +105,6 @@ const taggedByPopup = (tag, title) => trigger =>
         {tag.lastModifiedDate && <span>&nbsp; on {new Date(tag.lastModifiedDate).toLocaleDateString()}</span>}
         {tag.metadata && <div>{tag.metadataTitle ? <span><b>{tag.metadataTitle}:</b> {tag.metadata}</span> : <i>{tag.metadata}</i>}</div>}
         {tag.searchHash && <div><NavLink to={`/variant_search/results/${tag.searchHash}`}>Re-run search</NavLink></div>}
-        {/* TODO deprecate and migrate searchParameters to searchHash */}
-        {tag.searchParameters && <div><a href={tag.searchParameters} target="_blank">Re-run search</a></div>}
       </div>
     }
   />

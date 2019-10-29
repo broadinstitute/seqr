@@ -11,6 +11,7 @@ import VariantSearchPageHeader from 'pages/Search/components/PageHeader'
 import { LocusListPageHeader } from 'pages/LocusLists'
 import { StaffPageHeader } from 'pages/Staff/Staff'
 import { getGenesById } from 'redux/selectors'
+import { ButtonLink } from 'shared/components/StyledComponents'
 import { snakecaseToTitlecase } from '../../utils/stringUtils'
 
 
@@ -100,8 +101,8 @@ export const PageHeaderLayout = ({
       <Grid.Column width={3}>
         {entityLinks &&
           <b><br />
-            {entityLinks.map(({ text, ...linkProps }) =>
-              <div key={text}><NavLink {...linkProps}>{text}</NavLink></div>,
+            {entityLinks.map(linkProps =>
+              <div key={linkProps.content}><ButtonLink as={NavLink} {...linkProps} /></div>,
             )}
           </b>
         }
