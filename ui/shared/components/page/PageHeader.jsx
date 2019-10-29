@@ -4,7 +4,7 @@ import DocumentTitle from 'react-document-title'
 import { connect } from 'react-redux'
 import { Route, Switch, NavLink } from 'react-router-dom'
 import styled from 'styled-components'
-import { Grid, Breadcrumb } from 'semantic-ui-react'
+import { Grid, Breadcrumb, Popup, Icon } from 'semantic-ui-react'
 
 import ProjectPageHeader from 'pages/Project/components/PageHeader'
 import VariantSearchPageHeader from 'pages/Search/components/PageHeader'
@@ -101,8 +101,11 @@ export const PageHeaderLayout = ({
       <Grid.Column width={3}>
         {entityLinks &&
           <b><br />
-            {entityLinks.map(linkProps =>
-              <div key={linkProps.content}><ButtonLink as={NavLink} {...linkProps} /></div>,
+            {entityLinks.map(({ popup, ...linkProps }) =>
+              <div key={linkProps.content}>
+                <ButtonLink as={NavLink} {...linkProps} />
+                {popup && <Popup content={popup} trigger={<Icon name="help circle outline" color="grey" />} />}
+              </div>,
             )}
           </b>
         }

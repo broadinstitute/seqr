@@ -499,10 +499,12 @@ export const getPageHeaderEntityLinks = createSelector(
     }
 
     const familiesToConsider = searchType === 'family' ? [family.familyGuid] : Object.keys(familiesByGuid)
+    const disabled = familiesToConsider.every(familyGuid => !loadedSampleByFamilyGuid[familyGuid])
     const entityLinks = [{
       to: `/variant_search/${searchType}/${searchId}`,
       content: `${snakecaseToTitlecase(searchType)} Variant Search`,
-      disabled: familiesToConsider.every(familyGuid => !loadedSampleByFamilyGuid[familyGuid]),
+      disabled,
+      popup: disabled ? 'Search is disabled until data is loaded' : null,
 
     }]
     if (user.isStaff) {

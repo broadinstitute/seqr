@@ -11,7 +11,7 @@ import VariantTagTypeBar from '../graph/VariantTagTypeBar'
 import PedigreeImagePanel from './view-pedigree-image/PedigreeImagePanel'
 import TextFieldView from './view-fields/TextFieldView'
 import Sample from './sample'
-import { ColoredIcon, InlineHeader } from '../StyledComponents'
+import { ColoredIcon, InlineHeader, HelpIcon, ButtonLink } from '../StyledComponents'
 import { VerticalSpacer, HorizontalSpacer } from '../Spacers'
 import { Select } from '../form/Inputs'
 import DataLoader from '../DataLoader'
@@ -195,12 +195,13 @@ FamilyLayout.propTypes = {
   rightContent: PropTypes.node,
 }
 
-const SearchLink = ({ family, children }) => (
-  <Link to={`/variant_search/family/${family.familyGuid}`}>{children}</Link>
+const SearchLink = ({ family, disabled, children }) => (
+  <ButtonLink as={Link} to={`/variant_search/family/${family.familyGuid}`} disabled={disabled}>{children}</ButtonLink>
 )
 
 SearchLink.propTypes = {
   family: PropTypes.object.isRequired,
+  disabled: PropTypes.bool,
   children: PropTypes.node,
 }
 
@@ -220,7 +221,7 @@ DiscoveryGenes.propTypes = {
 
 const Family = (
   { project, family, genesById, fields = [], showVariantDetails, compact, useFullWidth, disablePedigreeZoom,
-    showFamilyPageLink, annotation, updateFamily: dispatchUpdateFamily,
+    showFamilyPageLink, annotation, updateFamily: dispatchUpdateFamily, firstFamilySample,
   }) => {
   if (!family) {
     return <div>Family Not Found</div>
@@ -262,13 +263,14 @@ const Family = (
     <div key="variants">
       <VariantTagTypeBar height={15} width="calc(100% - 2.5em)" project={project} familyGuid={family.familyGuid} sectionLinks={false} />
       <HorizontalSpacer width={10} />
-      <SearchLink family={family}><Icon name="search" /></SearchLink>
+      <SearchLink family={family} disabled={!firstFamilySample}><Icon name="search" /></SearchLink>
       <DiscoveryGenes project={project} familyGuid={family.familyGuid} genesById={genesById} />
     </div>,
     !compact ?
       <div key="links">
         <VerticalSpacer height={20} />
-        <SearchLink family={family}><Icon name="search" /> Variant Search</SearchLink>
+        <SearchLink family={family} disabled={!firstFamilySample}><Icon name="search" /> Variant Search</SearchLink>
+        {!firstFamilySample && <Popup trigger={<HelpIcon />} content="Search is disabled until data is loaded" />}
         <VerticalSpacer height={10} />
         {project.isMmeEnabled &&
           <Link to={`/project/${project.projectGuid}/family_page/${family.familyGuid}/matchmaker_exchange`}>
@@ -303,12 +305,14 @@ Family.propTypes = {
   updateFamily: PropTypes.func,
   annotation: PropTypes.node,
   genesById: PropTypes.object,
+  firstFamilySample: PropTypes.object,
 }
 
 
 const mapStateToProps = (state, ownProps) => ({
   project: getProjectsByGuid(state)[ownProps.family.projectGuid],
   genesById: getGenesById(state),
+  firstFamilySample: getFirstSampleByFamily(state)[ownProps.familyGuid],
 })
 
 const mapDispatchToProps = {
