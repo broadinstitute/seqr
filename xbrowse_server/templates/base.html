@@ -27,6 +27,14 @@
     <link rel='stylesheet' type='text/css' href='{% static "css/typeahead.js-bootstrap.css" %}' />
     <!-- link href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css" rel="stylesheet" type="text/css" -->
 
+    <script>
+        $(document).ready(
+          function() {
+            $('#deprecated-modal').modal('show')
+          }
+        );
+    </script>
+
 
 	{% block extrahead %}
 	{% endblock %}
@@ -37,13 +45,19 @@
 <body>
     <div id="main">
 
-        <div class="modal fade" id="independent-modal" role="dialog" tabindex="-1">
+        <div class="modal fade" id="deprecated-modal" role="dialog" tabindex="-1">
             <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
+                <div class="modal-content panel-danger">
+                    <div class="modal-header panel-heading">
+                        <h2 style="display: inline-block; border: none;">This page is deprecated, and will be removed on December 1, 2019.</h2>
                         <button type="button" class="close back-button" data-dismiss="modal" aria-hidden="true">&times;</button><br>
                     </div>
-                    <div class="modal-body" id="independent-modal-content"></div>
+                    <div class="modal-body" id="deprecated-modal-content">
+                        {% if new_page_url %}
+                            Click <b><a style="color: #b94a48;" href="{{ new_page_url }}">here</a></b> to access the current version of this page.
+                        {% endif %}
+                        If there is content you still need on this page, please contact the seqr team.
+                    </div>
                 </div>
             </div>
         </div>
@@ -78,12 +92,6 @@
                 </div>
             </div>
         {% endif %}
-        {% if new_page_url %}
-            <div class="alert alert-danger centered" role="alert" style="margin-bottom: 0;border-radius: 0;">
-                This page is deprecated. Click <a class="alert-link" href="{{ new_page_url }}">here</a> for the latest version
-            </div>
-        {% endif %}
-
         {% block content %}
         {% endblock %}
     </div>
