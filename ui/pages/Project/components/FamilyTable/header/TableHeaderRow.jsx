@@ -12,7 +12,7 @@ import { FAMILY_FIELD_RENDER_LOOKUP } from 'shared/utils/constants'
 
 import { getProjectAnalysisGroupFamiliesByGuid, getVisibleFamilies, getFamiliesTableState } from '../../../selectors'
 import { updateFamiliesTable } from '../../../reducers'
-import { FAMILY_FILTER_OPTIONS, FAMILY_SORT_OPTIONS } from '../../../constants'
+import { FAMILY_FILTER_OPTIONS, INTERNAL_FAMILY_FILTER_OPTIONS, FAMILY_SORT_OPTIONS } from '../../../constants'
 
 import SortDirectionToggle from './SortDirectionToggle'
 
@@ -66,8 +66,8 @@ const SORT_FILTER_FIELDS = [
     component: SortDirectionToggle,
   },
 ]
-const FILTER_FIELDS = [FAMILY_SEARCH, { ...FAMILY_FILTER, options: FAMILY_FILTER_OPTIONS.filter(f => !f.internalOnly) }, ...SORT_FILTER_FIELDS]
-const INTERNAL_FILTER_FIELDS = [FAMILY_SEARCH, { ...FAMILY_FILTER, options: FAMILY_FILTER_OPTIONS.filter(f => !f.internalOmit) }, ...SORT_FILTER_FIELDS]
+const FILTER_FIELDS = [FAMILY_SEARCH, { ...FAMILY_FILTER, options: FAMILY_FILTER_OPTIONS }, ...SORT_FILTER_FIELDS]
+const INTERNAL_FILTER_FIELDS = [FAMILY_SEARCH, { ...FAMILY_FILTER, options: INTERNAL_FAMILY_FILTER_OPTIONS }, ...SORT_FILTER_FIELDS]
 
 export const TableHeaderDetail = ({ fields, offset, showVariantDetails }) =>
   <FamilyLayout

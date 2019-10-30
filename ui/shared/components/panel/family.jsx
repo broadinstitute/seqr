@@ -61,6 +61,8 @@ const AnalystEmailDropdown = ({ load, loading, onChange, value, ...props }) =>
       additionLabel="Assigned Analyst: "
       onChange={val => onChange(val)}
       value={value}
+      placeholder="Unassigned"
+      search
       {...props}
     />
   </DataLoader>

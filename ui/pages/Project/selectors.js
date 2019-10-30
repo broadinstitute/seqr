@@ -146,7 +146,9 @@ export const getVisibleFamilies = createSelector(
   getFamiliesSearch,
   (familiesByGuid, individualsByGuid, samplesByGuid, user, familiesFilter, familiesSearch) => {
     const searchFilter = familiesSearch ? family =>
-      `${family.displayName};${family.familyId};${family.individualGuids.map(individualGuid =>
+      `${family.displayName};${family.familyId};${(family.assignedAnalyst || {}).fullName};${
+        (family.assignedAnalyst || {}).email};${family.analysedBy.map(({ createdBy }) =>
+        `${createdBy.fullName}${createdBy.email}`)};${family.individualGuids.map(individualGuid =>
         ((individualsByGuid[individualGuid].phenotipsData || {}).features || []).map(feature => feature.label).join(';'),
       ).join(';')}`.toLowerCase().includes(familiesSearch) : family => family
     const searchedFamilies = Object.values(familiesByGuid).filter(searchFilter)
@@ -395,7 +397,7 @@ export const getAnalystOptions = createSelector(
     const staff = users.filter(user => user.isStaff)
     const uniqueCollaborators = collaborators.filter(collaborator => !collaborator.isStaff)
     return [...uniqueCollaborators, ...staff].map(
-      user => ({ key: user.username, value: user.username, text: user.email }),
+      user => ({ key: user.username, value: user.username, text: user.displayName ? `${user.displayName} (${user.email})` : user.email }),
     )
   },
 )
