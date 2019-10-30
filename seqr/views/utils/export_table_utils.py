@@ -2,6 +2,7 @@ import datetime
 from collections import OrderedDict
 import json
 import openpyxl as xl
+from tempfile import NamedTemporaryFile
 
 from django.http.response import HttpResponse
 
@@ -56,8 +57,6 @@ def export_table(filename_prefix, header, rows, file_format, titlecase_header=Tr
             response.write(json.dumps(OrderedDict(zip(json_keys, json_values)))+'\n')
         return response
     elif file_format == "xls":
-        response = HttpResponse(content_type="application/ms-excel")
-        response['Content-Disposition'] = 'attachment; filename="{}.xlsx"'.format(filename_prefix)
         wb = xl.Workbook(write_only=True)
         ws = wb.create_sheet()
         if titlecase_header:
@@ -70,9 +69,12 @@ def export_table(filename_prefix, header, rows, file_format, titlecase_header=Tr
                 ws.append(row)
             except ValueError as e:
                 raise ValueError("Unable to append row to xls writer: " + ','.join(row))
-
-        wb.save(response)
-        return response
+        with NamedTemporaryFile() as temporary_file:
+            wb.save(temporary_file.name)
+            temporary_file.seek(0)
+            response = HttpResponse(temporary_file.read(), content_type="application/ms-excel")
+            response['Content-Disposition'] = 'attachment; filename="{}.xlsx"'.format(filename_prefix)
+            return response
     else:
         if not file_format:
             raise ValueError("file_format arg not specified")
