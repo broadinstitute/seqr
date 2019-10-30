@@ -265,5 +265,8 @@ class DatasetAPITest(TransactionTestCase):
             'datasetType': 'ALIGN', 'elasticsearchIndex': None})
         today = datetime.now().strftime('%Y-%m-%d')
         self.assertTrue(response_json['samplesByGuid'][sample_guid]['loadedDate'].startswith(today))
-        self.assertDictEqual(response_json['individualsByGuid'], {'I000003_na19679': {
-            'sampleGuids': ['S000131_na19679', sample_guid]}})
+        self.assertListEqual(response_json['individualsByGuid'].keys(), ['I000003_na19679'])
+        self.assertSetEqual(
+            set(response_json['individualsByGuid']['I000003_na19679']['sampleGuids']),
+            {'S000131_na19679', sample_guid}
+        )
