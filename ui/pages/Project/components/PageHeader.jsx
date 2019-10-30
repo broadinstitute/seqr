@@ -65,7 +65,7 @@ PageHeader.propTypes = {
   analysisGroup: PropTypes.object,
   match: PropTypes.object,
   breadcrumb: PropTypes.string,
-  breadcrumbIdSections: PropTypes.string,
+  breadcrumbIdSections: PropTypes.array,
   entityLinks: PropTypes.array,
 }
 

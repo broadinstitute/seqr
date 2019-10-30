@@ -1,14 +1,13 @@
 import React from 'react'
 import { connect } from 'react-redux'
 import PropTypes from 'prop-types'
-import { Popup } from 'semantic-ui-react'
 
 import DataLoader from 'shared/components/DataLoader'
+import FamilyLink from 'shared/components/buttons/FamilyLink'
 import SearchResultsLink from 'shared/components/buttons/SearchResultsLink'
 import ShowGeneModal from 'shared/components/buttons/ShowGeneModal'
 import Modal from 'shared/components/modal/Modal'
 import { GeneDetails } from 'shared/components/panel/variants/VariantGene'
-import Family from 'shared/components/panel/family'
 import SortableTable from 'shared/components/table/SortableTable'
 import { ButtonLink } from 'shared/components/StyledComponents'
 import {
@@ -71,12 +70,7 @@ const COLUMNS = [
         row.families.map(({ family, count }, index) =>
           <span key={family.familyGuid}>
             {index > 0 && <span>,&nbsp;</span>}
-            <Popup
-              hoverable
-              flowing
-              trigger={<ButtonLink content={family.displayName} />}
-              content={<Family family={family} fields={FAMILY_FIELDS} useFullWidth disablePedigreeZoom />}
-            />
+            <FamilyLink family={family} fields={FAMILY_FIELDS} />
             ({count})
           </span>)
     ),
