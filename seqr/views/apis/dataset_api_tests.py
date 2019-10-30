@@ -167,18 +167,18 @@ class DatasetAPITest(TransactionTestCase):
         _check_login(self, url)
 
         # Send invalid requests
-        f = SimpleUploadedFile('samples.csv', b"NA19675\n NA19679, gs://readviz/NA19679.bam")
+        f = SimpleUploadedFile('samples.csv', b"NA19675\nNA19679,gs://readviz/NA19679.bam")
         response = self.client.post(url, data={'f': f})
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['Must contain 2 columns: NA19675']})
 
-        f = SimpleUploadedFile('samples.csv', b"NA19675, /readviz/NA19675.cram\n NA19679, gs://readviz/NA19679.bam")
+        f = SimpleUploadedFile('samples.csv', b"NA19675, /readviz/NA19675.cram\nNA19679,gs://readviz/NA19679.bam")
         response = self.client.post(url, data={'f': f})
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['The following Individual IDs do not exist: NA19675']})
 
         # Send valid request
-        f = SimpleUploadedFile('samples.csv', b"NA19675_1, /readviz/NA19675.cram\n NA19679, gs://readviz/NA19679.bam")
+        f = SimpleUploadedFile('samples.csv', b"NA19675_1,/readviz/NA19675.cram\nNA19679,gs://readviz/NA19679.bam")
         response = self.client.post(url, data={'f': f})
         self.assertEqual(response.status_code, 200)
 
