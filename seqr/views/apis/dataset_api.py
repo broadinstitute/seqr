@@ -11,7 +11,7 @@ from django.utils import timezone
 from seqr.models import Individual, CAN_EDIT, Sample, Family
 from seqr.model_utils import update_xbrowse_vcfffiles, find_matching_xbrowse_model
 from seqr.views.utils.dataset_utils import match_sample_ids_to_sample_records, validate_index_metadata, \
-    get_elasticsearch_index_samples, load_mapping_file, load_uploaded_mapping_file, validate_alignment_dataset_path
+    get_elasticsearch_index_samples, load_mapping_file, validate_alignment_dataset_path
 from seqr.views.utils.file_utils import save_uploaded_file
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.json_to_orm_utils import update_project_from_json, update_model_from_json
