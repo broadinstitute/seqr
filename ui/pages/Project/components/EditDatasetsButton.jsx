@@ -4,6 +4,7 @@ import { connect } from 'react-redux'
 import styled from 'styled-components'
 import { Tab } from 'semantic-ui-react'
 
+import { getProjectGuid } from 'redux/selectors'
 import { SAMPLE_TYPE_OPTIONS, DATASET_TYPE_VARIANT_CALLS, DATASET_TYPE_READ_ALIGNMENTS } from 'shared/utils/constants'
 import Modal from 'shared/components/modal/Modal'
 import { ButtonLink } from 'shared/components/StyledComponents'
@@ -11,7 +12,7 @@ import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
 import FileUploadField, { validateUploadedFile } from 'shared/components/form/XHRUploaderField'
 import { BooleanCheckbox, Select } from 'shared/components/form/Inputs'
 
-import { addDataset } from '../reducers'
+import { addVariantsDataset, addAlignmentDataset } from '../reducers'
 
 const DropzoneLabel = styled.span`
   text-align: left;
@@ -20,7 +21,14 @@ const DropzoneLabel = styled.span`
   margin-right: -5em;
 `
 
+const UPLOADER_STYLE = { textAlign: 'left' }
+
 const MODAL_NAME = 'Datasets'
+
+const SUBMIT_FUNCTIONS = {
+  [DATASET_TYPE_VARIANT_CALLS]: addVariantsDataset,
+  [DATASET_TYPE_READ_ALIGNMENTS]: addAlignmentDataset,
+}
 
 const BaseUpdateDatasetForm = ({ datasetType, formFields, onSubmit }) => (
   <ReduxFormWrapper
@@ -31,6 +39,7 @@ const BaseUpdateDatasetForm = ({ datasetType, formFields, onSubmit }) => (
     showErrorPanel
     size="small"
     fields={formFields}
+    liveValidate={datasetType === DATASET_TYPE_READ_ALIGNMENTS}
   />
 )
 
@@ -42,7 +51,7 @@ BaseUpdateDatasetForm.propTypes = {
 
 const mapDispatchToProps = (dispatch, ownProps) => ({
   onSubmit: (values) => {
-    return dispatch(addDataset(values, ownProps.datasetType))
+    return dispatch(SUBMIT_FUNCTIONS[ownProps.datasetType](values))
   },
 })
 
@@ -69,6 +78,34 @@ const UPLOAD_CALLSET_FIELDS = [
   },
 ]
 
+const AlignmentFileUploadField = ({ projectGuid, ...props }) =>
+  <FileUploadField
+    clearTimeOut={0}
+    dropzoneLabel={
+      <DropzoneLabel>
+        Upload a file that maps seqr Individual Ids to their BAM or CRAM file path
+        <br />
+        <br />
+        <b>File Format:</b> Tab-separated file (.tsv) or Excel spreadsheet (.xls)<br />
+        <b>Column 1:</b> Individual ID<br />
+        <b>Column 2:</b> gs:// Google bucket path or server filesystem path of the BAM or CRAM file for this Individual<br />
+      </DropzoneLabel>
+    }
+    url={`/api/project/${projectGuid}/upload_alignment_dataset`}
+    auto
+    required
+    uploaderStyle={UPLOADER_STYLE}
+    {...props}
+  />
+
+AlignmentFileUploadField.propTypes = {
+  projectGuid: PropTypes.string,
+}
+
+const mapStateToProps = state => ({
+  projectGuid: getProjectGuid(state),
+})
+
 const UPLOAD_ALIGNMENT_FIELDS = [
   {
     name: 'sampleType',
@@ -80,22 +117,8 @@ const UPLOAD_ALIGNMENT_FIELDS = [
   },
   {
     name: 'mappingFile',
-    component: FileUploadField,
-    clearTimeOut: 0,
-    auto: true,
-    required: true,
+    component: connect(mapStateToProps)(AlignmentFileUploadField),
     validate: validateUploadedFile,
-    uploaderStyle: { textAlign: 'left' },
-    dropzoneLabel: (
-      <DropzoneLabel>
-        Upload a file that maps seqr Individual Ids to their BAM or CRAM file path
-        <br />
-        <br />
-        <b>File Format:</b> Tab-separated file (.tsv) or Excel spreadsheet (.xls)<br />
-        <b>Column 1:</b> Individual ID<br />
-        <b>Column 2:</b> gs:// Google bucket path or server filesystem path of the BAM or CRAM file for this Individual<br />
-      </DropzoneLabel>
-    ),
   },
 ]
 

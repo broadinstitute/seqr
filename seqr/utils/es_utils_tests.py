@@ -835,6 +835,7 @@ class MockHit:
             for subindex in index.split(','):
                 self.meta.matched_queries += matched_queries[subindex]
         self.meta.index = index
+        self.meta.id = _source['variantId']
         if sort or increment_sort:
             sort = _source['xpos']
             if increment_sort:
@@ -1581,7 +1582,41 @@ class EsUtilsTest(TestCase):
             'inheritance': {'mode': 'recessive'}
         })
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
-        results_model.families.set(Family.objects.filter(guid__in=['F000011_11', 'F000003_3', 'F000002_2']))
+        results_model.families.set(Family.objects.filter(guid__in=['F000003_3', 'F000002_2', 'F000005_5']))
+
+        initial_cached_results = {
+            'compound_het_results': [],
+            'variant_results': [PARSED_VARIANTS[1]],
+            'grouped_results': [{'null': [PARSED_VARIANTS[0]]}, {'ENSG00000228198': PARSED_COMPOUND_HET_VARIANTS}],
+            'duplicate_doc_count': 0,
+            'loaded_variant_counts': {'test_index_compound_het': {'total': 2, 'loaded': 2}, INDEX_NAME: {'loaded': 2, 'total': 5}},
+            'total_results': 7,
+        }
+        _set_cache('search_results__{}__xpos'.format(results_model.guid), json.dumps(initial_cached_results))
+
+        #  Test gene counts
+        gene_counts = get_es_variant_gene_counts(results_model)
+        self.assertDictEqual(gene_counts, {
+            'ENSG00000135953': {'total': 3, 'families': {'F000003_3': 2, 'F000002_2': 1, 'F000005_5': 1}},
+            'ENSG00000228198': {'total': 5, 'families': {'F000003_3': 4, 'F000002_2': 1, 'F000005_5': 1}}
+        })
+
+        self.assertExecutedSearch(
+            filters=[{'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}}, RECESSIVE_INHERITANCE_QUERY],
+            size=1, index=INDEX_NAME, gene_count_aggs={'vars_by_gene': {'top_hits': {'_source': 'none', 'size': 100}}})
+
+        expected_cached_results = {'gene_aggs': gene_counts}
+        expected_cached_results.update(initial_cached_results)
+        self.assertCachedResults(results_model, expected_cached_results)
+
+    def test_multi_project_get_es_variant_gene_counts(self):
+        search_model = VariantSearch.objects.create(search={
+            'annotations': {'frameshift': ['frameshift_variant']},
+            'qualityFilter': {'min_gq': 10},
+            'inheritance': {'mode': 'recessive'}
+        })
+        results_model = VariantSearchResults.objects.create(variant_search=search_model)
+        results_model.families.set(Family.objects.filter(guid__in=['F000011_11', 'F000003_3', 'F000002_2', 'F000005_5']))
 
         initial_cached_results = {
             'compound_het_results': [{'ENSG00000228198': PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT}],
@@ -1600,36 +1635,37 @@ class EsUtilsTest(TestCase):
 
         #  Test gene counts
         gene_counts = get_es_variant_gene_counts(results_model)
-
         self.assertDictEqual(gene_counts, {
-            'ENSG00000135953': {'total': 5, 'families': {'F000003_3': 2, 'F000002_2': 1, 'F000011_11': 4}},
-            'ENSG00000228198': {'total': 5, 'families': {'F000003_3': 4, 'F000002_2': 1, 'F000011_11': 4}}
+            'ENSG00000135953': {'total': 6, 'families': {'F000003_3': 2, 'F000002_2': 1, 'F000005_5': 1, 'F000011_11': 4}},
+            'ENSG00000228198': {'total': 4, 'families': {'F000003_3': 4, 'F000002_2': 1, 'F000005_5': 1, 'F000011_11': 4}}
         })
 
-        expected_inheritance_q = RECESSIVE_INHERITANCE_QUERY['bool']['should'] + [{'bool': {
-            'must': [
-                {'bool': {'should': [
-                    {'bool': {'must': [
-                        {'match': {'contig': 'X'}},
-                        {'term': {'samples_num_alt_2': 'NA20885'}}
-                    ]}},
-                    {'term': {'samples_num_alt_2': 'NA20885'}},
-                ]}},
+        annotation_query = {'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}}
+        expected_search = dict(size=1, start_index=0, gene_count_aggs={'vars_by_gene': {'top_hits': {'_source': 'none', 'size': 100}}})
+        self.assertExecutedSearches([
+            dict(filters=[
+                annotation_query,
                 {'bool': {
-                    'must_not': [
-                        {'term': {'samples_gq_0_to_5': 'NA20885'}},
-                        {'term': {'samples_gq_5_to_10': 'NA20885'}},
-                    ]
-                }}
-            ],
-            '_name': 'F000011_11'
-        }}]
-        self.assertExecutedSearch(
-            filters=[
-                {'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}},
-                {'bool': {'should': expected_inheritance_q}}
-            ], size=1, index='{},{}'.format(SECOND_INDEX_NAME, INDEX_NAME),
-            gene_count_aggs={'vars_by_gene': {'top_hits': {'_source': 'none', 'size': 100}}})
+                    'must': [
+                        {'bool': {'should': [
+                            {'bool': {'must': [
+                                {'match': {'contig': 'X'}},
+                                {'term': {'samples_num_alt_2': 'NA20885'}}
+                            ]}},
+                            {'term': {'samples_num_alt_2': 'NA20885'}},
+                        ]}},
+                        {'bool': {
+                            'must_not': [
+                                {'term': {'samples_gq_0_to_5': 'NA20885'}},
+                                {'term': {'samples_gq_5_to_10': 'NA20885'}},
+                            ]
+                        }}
+                    ],
+                    '_name': 'F000011_11'
+                }},
+            ], index=SECOND_INDEX_NAME, **expected_search),
+            dict(filters=[annotation_query, RECESSIVE_INHERITANCE_QUERY], index=INDEX_NAME, **expected_search),
+        ])
 
         expected_cached_results = {'gene_aggs': gene_counts}
         expected_cached_results.update(initial_cached_results)

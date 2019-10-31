@@ -102,11 +102,7 @@ const ProjectFamiliesFilterContent = ({ project, removeField, dispatch, ...props
     <Message
       color="red"
       header="This search is not enabled for this project"
-      content={
-        <div>
-          Please contact the seqr team to add this functionality. You can access this project&apos;s Gene Search
-          &nbsp;<a href={`/project/${project.deprecatedProjectId}/gene`}>here</a>
-        </div>}
+      content="Please contact the seqr team to add this functionality"
     />}
     <VerticalSpacer height={10} />
   </div>

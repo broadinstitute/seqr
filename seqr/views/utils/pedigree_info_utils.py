@@ -85,19 +85,19 @@ def parse_pedigree_table(parsed_file, filename, user=None, project=None):
         errors.append("Error while parsing file: %(filename)s. %(e)s" % locals())
         return json_records, errors, warnings
 
-    if is_merged_pedigree_sample_manifest:
-        logger.info("Parsing merged pedigree-sample-manifest file")
-        rows, sample_manifest_rows, kit_id = _parse_merged_pedigree_sample_manifest_format(rows)
-    elif is_datstat_upload:
-        logger.info("Parsing datstat export file")
-        rows = _parse_datstat_export_format(rows)
-    else:
-        logger.info("Parsing regular pedigree file")
-
     # convert to json and validate
     try:
+        if is_merged_pedigree_sample_manifest:
+            logger.info("Parsing merged pedigree-sample-manifest file")
+            rows, sample_manifest_rows, kit_id = _parse_merged_pedigree_sample_manifest_format(rows)
+        elif is_datstat_upload:
+            logger.info("Parsing datstat export file")
+            rows = _parse_datstat_export_format(rows)
+        else:
+            logger.info("Parsing regular pedigree file")
+
         json_records = _convert_fam_file_rows_to_json(rows)
-    except ValueError as e:
+    except Exception as e:
         errors.append("Error while converting %(filename)s rows to json: %(e)s" % locals())
         return json_records, errors, warnings
 
@@ -426,11 +426,8 @@ def _parse_datstat_export_format(rows):
 def _get_datstat_family_notes(row):
     DC = DatstatConstants
 
-    def _get_column_code(column):
-        return row[column].split(':')[0]
-
     def _get_column_val(column):
-        return row[column].split(': ')[1]
+        return DC.VALUE_MAP[column][row[column]]
 
     def _has_test(test):
         return row['TESTS.{}'.format(test)] == DC.YES
@@ -498,7 +495,7 @@ def _get_datstat_family_notes(row):
             relatives=divider.join(relatives),
         )
 
-    relationship_code = _get_column_code(DC.RELATIONSHIP_COLUMN)
+    relationship_code = row[DC.RELATIONSHIP_COLUMN]
     clinical_diagnoses = _get_column_val(DC.CLINICAL_DIAGNOSES_COLUMN)
     genetic_diagnoses = _get_column_val(DC.GENETIC_DIAGNOSES_COLUMN)
     doctors_list = json.loads(row[DC.DOCTOR_TYPES_COLUMN])
@@ -555,11 +552,11 @@ def _get_datstat_family_notes(row):
         tab=DC.TAB,
         specified_relationship=row[DC.RELATIONSHIP_SPECIFY_COLUMN] or 'Unspecified other relationship'
             if relationship_code == DC.OTHER_RELATIONSHIP_CODE else '',
-        relationship=DC.RELATIONSHIP_MAP[relationship_code][_get_column_code(DC.SEX_COLUMN)],
+        relationship=DC.RELATIONSHIP_MAP[relationship_code][row[DC.SEX_COLUMN]],
         age=u'Patient is deceased, age {deceased_age}, due to {cause}, sample {sample_availability}'.format(
             deceased_age=row[DC.DECEASED_AGE_COLUMN],
             cause=(row[DC.DECEASED_CAUSE_COLUMN] or 'unspecified cause').lower(),
-            sample_availability=DC.SAMPLE_AVAILABILITY_MAP[_get_column_code(DC.SAMPLE_AVAILABILITY_COLUMN)],
+            sample_availability=_get_column_val(DC.SAMPLE_AVAILABILITY_COLUMN),
         ) if row[DC.DECEASED_COLUMN] == DC.YES else row[DC.AGE_COLUMN],
         age_of_onset=row[DC.AGE_OF_ONSET_COLUMN],
         race=', '.join(json.loads(row[DC.RACE_COLUMN])),
@@ -684,10 +681,12 @@ class MergedPedigreeSampleManifestConstants:
 
 
 class DatstatConstants:
-    YES = '1: Yes'
-    NO = '2: No'
-    DONT_KNOW = "3: Don't know"
     TAB = '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'
+
+    YES = '1'
+    NO = '2'
+    DONT_KNOW = "3"
+    YES_NO_UNSURE_MAP = {YES: 'Yes', NO: 'No', DONT_KNOW: 'Unknown/Unsure'}
 
     FAMILY_ID_COLUMN = 'FAMILY_ID'
     SEX_COLUMN = 'PATIENT_SEX'
@@ -724,7 +723,16 @@ class DatstatConstants:
     EXPECTING_RESULTS_COLUMN = 'EXPECTING_GENETIC_RESULTS'
 
     SEX_OPTION_MAP = {'1': 'MALE', '2': 'FEMALE', '3': 'UNKNOWN'}
+    ETHNICITY_COLUMN_MAP = {'1': 'Hispanic', '2': 'Not Hispanic', '3': 'Unknown', '4': 'I prefer not to answer'}
     SAMPLE_AVAILABILITY_MAP = {'1': 'available', '2': 'not available', '3': 'availability unknown'}
+
+    VALUE_MAP = {
+        CLINICAL_DIAGNOSES_COLUMN: YES_NO_UNSURE_MAP,
+        GENETIC_DIAGNOSES_COLUMN: YES_NO_UNSURE_MAP,
+        ETHNICITY_COLUMN: ETHNICITY_COLUMN_MAP,
+        EXPECTING_RESULTS_COLUMN: YES_NO_UNSURE_MAP,
+        SAMPLE_AVAILABILITY_COLUMN: SAMPLE_AVAILABILITY_MAP,
+    }
 
     OTHER_RELATIONSHIP_CODE = '6'
     RELATIONSHIP_MAP = {

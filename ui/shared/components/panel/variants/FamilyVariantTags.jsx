@@ -21,16 +21,15 @@ import {
   FAMILY_FIELD_ANALYSIS_SUMMARY,
   FAMILY_FIELD_INTERNAL_NOTES,
   FAMILY_FIELD_INTERNAL_SUMMARY,
-  FAMILY_ANALYSIS_STATUS_LOOKUP,
 } from 'shared/utils/constants'
 import PopupWithModal from '../../PopupWithModal'
 import { HorizontalSpacer } from '../../Spacers'
-import { InlineHeader, ColoredComponent } from '../../StyledComponents'
+import { InlineHeader } from '../../StyledComponents'
+import FamilyLink from '../../buttons/FamilyLink'
 import ReduxFormWrapper from '../../form/ReduxFormWrapper'
 import { InlineToggle, BooleanCheckbox } from '../../form/Inputs'
 import TagFieldView from '../view-fields/TagFieldView'
 import TextFieldView from '../view-fields/TextFieldView'
-import Family from '../family'
 
 const TagTitle = styled.span`
   font-weight: bolder;
@@ -62,8 +61,6 @@ const VariantLinkContainer = styled(InlineContainer)`
   float: right;
 `
 
-const ColoredLink = ColoredComponent(NavLink)
-
 const FAMILY_FIELDS = [
   { id: FAMILY_FIELD_DESCRIPTION, canEdit: true },
   { id: FAMILY_FIELD_ANALYSIS_STATUS, canEdit: true },
@@ -72,8 +69,6 @@ const FAMILY_FIELDS = [
   { id: FAMILY_FIELD_INTERNAL_NOTES },
   { id: FAMILY_FIELD_INTERNAL_SUMMARY },
 ]
-
-const FAMILY_POPUP_STYLE = { maxWidth: '1200px' }
 
 const NO_DISPLAY = { display: 'none' }
 
@@ -105,8 +100,6 @@ const taggedByPopup = (tag, title) => trigger =>
         {tag.lastModifiedDate && <span>&nbsp; on {new Date(tag.lastModifiedDate).toLocaleDateString()}</span>}
         {tag.metadata && <div>{tag.metadataTitle ? <span><b>{tag.metadataTitle}:</b> {tag.metadata}</span> : <i>{tag.metadata}</i>}</div>}
         {tag.searchHash && <div><NavLink to={`/variant_search/results/${tag.searchHash}`}>Re-run search</NavLink></div>}
-        {/* TODO deprecate and migrate searchParameters to searchHash */}
-        {tag.searchParameters && <div><a href={tag.searchParameters} target="_blank">Re-run search</a></div>}
       </div>
     }
   />
@@ -218,21 +211,7 @@ const FamilyVariantTags = (
       <InlineContainer>
         <InlineHeader size="small">
           Family<HorizontalSpacer width={5} />
-          <PopupWithModal
-            hoverable
-            style={FAMILY_POPUP_STYLE}
-            position="right center"
-            keepInViewPort
-            trigger={
-              <ColoredLink
-                to={`/project/${family.projectGuid}/family_page/${family.familyGuid}`}
-                color={FAMILY_ANALYSIS_STATUS_LOOKUP[family[FAMILY_FIELD_ANALYSIS_STATUS]].color}
-              >
-                {family.displayName}
-              </ColoredLink>
-            }
-            content={<Family family={family} fields={FAMILY_FIELDS} useFullWidth disablePedigreeZoom />}
-          />
+          <FamilyLink family={family} fields={FAMILY_FIELDS} PopupClass={PopupWithModal} />
         </InlineHeader>
       </InlineContainer>
       <InlineContainer>

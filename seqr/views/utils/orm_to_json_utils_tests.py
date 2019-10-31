@@ -4,7 +4,7 @@ from reference_data.models import GeneInfo
 from seqr.models import Project, Family, Individual, Sample, SavedVariant, VariantTag, VariantFunctionalData, \
     VariantNote, LocusList, VariantSearch
 from seqr.views.utils.orm_to_json_utils import _get_json_for_user, _get_json_for_project, _get_json_for_family, \
-    _get_json_for_individual, _get_json_for_sample, get_json_for_saved_variant, get_json_for_variant_tag, \
+    _get_json_for_individual, get_json_for_sample, get_json_for_saved_variant, get_json_for_variant_tag, \
     get_json_for_variant_functional_data, get_json_for_variant_note, get_json_for_locus_list, get_json_for_gene, \
     get_json_for_saved_search
 
@@ -75,7 +75,7 @@ class JSONUtilsTest(TestCase):
 
     def test_json_for_sample(self):
         sample = Sample.objects.first()
-        json = _get_json_for_sample(sample)
+        json = get_json_for_sample(sample)
 
         self.assertSetEqual(
             set(json.keys()),

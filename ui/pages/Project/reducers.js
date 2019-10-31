@@ -111,9 +111,9 @@ export const updateIndividualsHpoTerms = ({ updatesByIndividualGuid }) => {
   }
 }
 
-export const addDataset = (values, datasetType) => {
+export const addVariantsDataset = (values) => {
   return (dispatch, getState) => {
-    return new HttpRequestHelper(`/api/project/${getState().currentProjectGuid}/add_dataset/${datasetType.toLowerCase()}`,
+    return new HttpRequestHelper(`/api/project/${getState().currentProjectGuid}/add_dataset/variants`,
       (responseJson) => {
         dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
 
@@ -129,6 +129,23 @@ export const addDataset = (values, datasetType) => {
         }
       },
     ).post(values)
+  }
+}
+
+export const addAlignmentDataset = ({ mappingFile, ...values }) => {
+  return (dispatch, getState) => {
+    const errors = []
+
+    return Promise.all(Object.entries(mappingFile.updatesByIndividualGuid).map(([individualGuid, datasetFilePath]) =>
+      new HttpRequestHelper(`/api/individual/${individualGuid}/update_alignment_sample`,
+        responseJson => dispatch({ type: RECEIVE_DATA, updatesById: responseJson }),
+        e => errors.push(`Error updating ${getState().individualsByGuid[individualGuid].individualId}: ${e.message}`),
+      ).post({ datasetFilePath, ...values }),
+    )).then(() => {
+      if (errors.length) {
+        throw new SubmissionError({ _error: errors })
+      }
+    })
   }
 }
 

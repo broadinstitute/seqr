@@ -1086,6 +1086,23 @@
     }
 },
 {
+    "model": "seqr.sample",
+    "pk": 145,
+    "fields": {
+        "guid": "S000145_na19675",
+        "created_date": "2017-02-05T06:42:55.397Z",
+        "created_by": null,
+        "last_modified_date": "2017-03-13T09:07:49.744Z",
+        "individual": 1,
+        "sample_type": "WGS",
+        "dataset_type": "ALIGN",
+        "sample_id": "NA19675",
+        "is_active": true,
+        "dataset_file_path": "/readviz/NA19675.cram",
+        "loaded_date": "2017-02-05T06:42:55.397Z"
+    }
+},
+{
     "model": "seqr.varianttagtype",
     "pk": 1,
     "fields": {

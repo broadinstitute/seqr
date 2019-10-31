@@ -4,17 +4,19 @@ import traceback
 from collections import defaultdict
 
 from django.contrib.auth.decorators import login_required
+from django.db.models import prefetch_related_objects
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 
 from seqr.models import Individual, CAN_EDIT, Sample, Family
 from seqr.model_utils import update_xbrowse_vcfffiles, find_matching_xbrowse_model
 from seqr.views.utils.dataset_utils import match_sample_ids_to_sample_records, validate_index_metadata, \
-    get_elasticsearch_index_samples, load_mapping_file, load_uploaded_mapping_file, validate_alignment_dataset_path
+    get_elasticsearch_index_samples, load_mapping_file, validate_alignment_dataset_path
+from seqr.views.utils.file_utils import save_uploaded_file
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.json_to_orm_utils import update_project_from_json, update_model_from_json
-from seqr.views.utils.orm_to_json_utils import get_json_for_samples
-from seqr.views.utils.permissions_utils import get_project_and_check_permissions
+from seqr.views.utils.orm_to_json_utils import get_json_for_samples, get_json_for_sample
+from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_permissions
 from seqr.views.utils.variant_utils import reset_cached_search_results
 from settings import API_LOGIN_REQUIRED_URL
 
@@ -81,28 +83,28 @@ def add_variants_dataset_handler(request, project_guid):
                 'Matches not found for ES sample ids: {}. Uploading a mapping file for these samples, or select the "Ignore extra samples in callset" checkbox to ignore.'.format(
                     ", ".join(unmatched_samples)))
 
-        included_family_individuals = defaultdict(set)
-        for sample in matched_sample_id_to_sample_record.values():
-            included_family_individuals[sample.individual.family].add(sample.individual.individual_id)
-        missing_family_individuals = []
-        for family, individual_ids in included_family_individuals.items():
-            missing_indivs = family.individual_set.filter(
-                sample__is_active=True,
-                sample__dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS
-            ).exclude(individual_id__in=individual_ids)
-            if missing_indivs:
-                missing_family_individuals.append(
-                    '{} ({})'.format(family.family_id, ', '.join([i.individual_id for i in missing_indivs]))
-                )
+        prefetch_related_objects(matched_sample_id_to_sample_record.values(), 'individual__family')
+        included_families = {sample.individual.family for sample in matched_sample_id_to_sample_record.values()}
+
+        missing_individuals = Individual.objects.filter(
+            family__in=included_families,
+            sample__is_active=True,
+            sample__dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
+        ).exclude(sample__in=matched_sample_id_to_sample_record.values()).select_related('family')
+        missing_family_individuals = defaultdict(list)
+        for individual in missing_individuals:
+            missing_family_individuals[individual.family].append(individual)
+
         if missing_family_individuals:
             raise Exception(
                 'The following families are included in the callset but are missing some family members: {}.'.format(
-                    ', '.join(missing_family_individuals)
-                ))
+                    ', '.join(
+                        ['{} ({})'.format(family.family_id, ', '.join([i.individual_id for i in missing_indivs]))
+                         for family, missing_indivs in missing_family_individuals.items()]
+                )))
 
-        inactivate_sample_guids = _update_samples(
-            matched_sample_id_to_sample_record, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
-            elasticsearch_index=elasticsearch_index, dataset_path=dataset_path
+        inactivate_sample_guids = _update_variant_samples(
+            matched_sample_id_to_sample_record, elasticsearch_index=elasticsearch_index, dataset_path=dataset_path
         )
 
     except Exception as e:
@@ -119,8 +121,8 @@ def add_variants_dataset_handler(request, project_guid):
         project, sample_type, elasticsearch_index, dataset_path, matched_sample_id_to_sample_record
     )
 
-    families_to_update = [family for family in included_family_individuals.keys()
-                          if family.analysis_status == Family.ANALYSIS_STATUS_WAITING_FOR_DATA]
+    families_to_update = [
+        family for family in included_families if family.analysis_status == Family.ANALYSIS_STATUS_WAITING_FOR_DATA]
     for family in families_to_update:
         update_model_from_json(family, {'analysis_status': Family.ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS})
 
@@ -132,7 +134,7 @@ def add_variants_dataset_handler(request, project_guid):
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
-def add_alignment_dataset_handler(request, project_guid):
+def receive_alignment_table_handler(request, project_guid):
     """Create or update samples for the given dataset
 
     Args:
@@ -155,10 +157,82 @@ def add_alignment_dataset_handler(request, project_guid):
 
     """
     project = get_project_and_check_permissions(project_guid, request.user, permission_level=CAN_EDIT)
+    info = []
+
+    def _process_alignment_records(rows, **kwargs):
+        invalid_row = next((row for row in rows if len(row) != 2), None)
+        if invalid_row:
+            raise ValueError("Must contain 2 columns: " + ', '.join(invalid_row))
+        return {row[0]: row[1] for row in rows}
+
+    try:
+        uploaded_file_id, filename, individual_dataset_mapping = save_uploaded_file(request, process_records=_process_alignment_records)
+
+        matched_individuals = Individual.objects.filter(family__project=project, individual_id__in=individual_dataset_mapping.keys())
+        unmatched_individuals = set(individual_dataset_mapping.keys()) - {i.individual_id for i in matched_individuals}
+        if len(unmatched_individuals) > 0:
+            raise Exception('The following Individual IDs do not exist: {}'.format(", ".join(unmatched_individuals)))
+
+        info.append('Parsed {} rows from {}'.format(len(individual_dataset_mapping), filename))
+
+        existing_samples = Sample.objects.select_related('individual').filter(
+            individual__in=matched_individuals,
+            dataset_type=Sample.DATASET_TYPE_READ_ALIGNMENTS,
+            is_active=True
+        )
+        unchanged_individual_ids = {s.individual.individual_id for s in existing_samples
+                                    if individual_dataset_mapping[s.individual.individual_id] == s.dataset_file_path}
+        if unchanged_individual_ids:
+            info.append('No change detected for {} individuals'.format(len(unchanged_individual_ids)))
+
+        updates_by_individual_guid = {i.guid: individual_dataset_mapping[i.individual_id] for i in matched_individuals
+                                      if i.individual_id not in unchanged_individual_ids}
+
+    except Exception as e:
+        traceback.print_exc()
+        return create_json_response({'errors': [e.message or str(e)]}, status=400)
+
+    response = {
+        'updatesByIndividualGuid': updates_by_individual_guid,
+        'uploadedFileId': uploaded_file_id,
+        'errors': [],
+        'info': info,
+    }
+    return create_json_response(response)
+
+
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@csrf_exempt
+def update_individual_alignment_sample(request, individual_guid):
+    """Create or update samples for the given dataset
+
+    Args:
+        request: Django request object
+        individual_guid (string): GUID of the individual that should be updated
+
+    HTTP POST
+        Request body - should contain the following json structure:
+        {
+            'sampleType':  <"WGS", "WES", or "RNA"> (required)
+            'datasetType': <"VARIANTS", or "ALIGN"> (required)
+            'elasticsearchIndex': <String>
+            'datasetPath': <String>
+            'datasetName': <String>
+            'ignoreExtraSamplesInCallset': <Boolean>
+            'mappingFile': { 'uploadedFileId': <Id for temporary uploaded file> }
+        }
+
+        Response body - will contain the following structure:
+
+    """
+    individual = Individual.objects.get(guid=individual_guid)
+    project = individual.family.project
+    check_permissions(project, request.user, CAN_EDIT)
+
     request_json = json.loads(request.body)
 
     try:
-        required_fields = ['sampleType', 'mappingFile']
+        required_fields = ['sampleType', 'datasetFilePath']
         if any(field not in request_json for field in required_fields):
             raise ValueError(
                 "request must contain fields: {}".format(', '.join(required_fields)))
@@ -166,71 +240,67 @@ def add_alignment_dataset_handler(request, project_guid):
         sample_type = request_json['sampleType']
         if sample_type not in {choice[0] for choice in Sample.SAMPLE_TYPE_CHOICES}:
             raise Exception("Sample type not supported: {}".format(sample_type))
-        mapping_file_id = request_json['mappingFile']['uploadedFileId']
 
-        sample_id_to_individual_id_mapping = {}
-        sample_dataset_path_mapping = {}
-        for individual_id, dataset_path in load_uploaded_mapping_file(mapping_file_id).items():
-            if not (dataset_path.endswith(".bam") or dataset_path.endswith(".cram")):
-                raise Exception('BAM / CRAM file "{}" must have a .bam or .cram extension'.format(dataset_path))
-            validate_alignment_dataset_path(dataset_path)
-            sample_id = dataset_path.split('/')[-1].split('.')[0]
-            sample_id_to_individual_id_mapping[sample_id] = individual_id
-            sample_dataset_path_mapping[sample_id] = dataset_path
+        dataset_path = request_json['datasetFilePath']
+        if not (dataset_path.endswith(".bam") or dataset_path.endswith(".cram")):
+            raise Exception('BAM / CRAM file "{}" must have a .bam or .cram extension'.format(dataset_path))
+        validate_alignment_dataset_path(dataset_path)
 
-        matched_sample_id_to_sample_record = match_sample_ids_to_sample_records(
-            project=project,
-            sample_ids=sample_id_to_individual_id_mapping.keys(),
-            sample_type=sample_type,
+        sample, created = Sample.objects.get_or_create(
+            individual=individual,
             dataset_type=Sample.DATASET_TYPE_READ_ALIGNMENTS,
-            sample_id_to_individual_id_mapping=sample_id_to_individual_id_mapping,
+            is_active=True,
         )
+        sample.dataset_file_path = dataset_path
+        sample.sample_type = sample_type
+        sample.sample_id = dataset_path.split('/')[-1].split('.')[0]
+        if created:
+            sample.loaded_date = timezone.now()
+        sample.save()
 
-        unmatched_samples = set(sample_id_to_individual_id_mapping.keys()) - set(matched_sample_id_to_sample_record.keys())
-        if len(unmatched_samples) > 0:
-            raise Exception('The following Individual IDs do not exist: {}'.format(", ".join(unmatched_samples)))
-
-        inactivate_sample_guids = _update_samples(
-            matched_sample_id_to_sample_record, dataset_type=Sample.DATASET_TYPE_READ_ALIGNMENTS,
-            sample_dataset_path_mapping=sample_dataset_path_mapping
-        )
-
-    except Exception as e:
-        traceback.print_exc()
-        return create_json_response({'errors': [e.message or str(e)]}, status=400)
-
-    if not matched_sample_id_to_sample_record:
-        return create_json_response({'samplesByGuid': {}})
-
-    # Deprecated update VCFFile records
-    for sample in matched_sample_id_to_sample_record.values():
-        base_indiv = find_matching_xbrowse_model(sample.individual)
+        # Deprecated update VCFFile records
+        base_indiv = find_matching_xbrowse_model(individual)
         if base_indiv:
-            base_indiv.bam_file_path = sample.dataset_file_path
+            base_indiv.bam_file_path = dataset_path
             base_indiv.save()
 
-    return create_json_response(_get_samples_json(matched_sample_id_to_sample_record, inactivate_sample_guids, project_guid))
+        response = {
+            'samplesByGuid': {
+                sample.guid: get_json_for_sample(sample, individual_guid=individual_guid, project_guid=project.guid)}
+        }
+        if created:
+            response['individualsByGuid'] = {
+                individual.guid: {'sampleGuids': [s.guid for s in individual.sample_set.all()]}
+            }
+        return create_json_response(response)
+    except Exception as e:
+        return create_json_response({}, status=400, reason=e.message or str(e))
 
 
-def _update_samples(matched_sample_id_to_sample_record, dataset_type, elasticsearch_index=None, dataset_path=None, sample_dataset_path_mapping=None):
+def _update_variant_samples(matched_sample_id_to_sample_record, elasticsearch_index, dataset_path):
     loaded_date = timezone.now()
+    updated_samples = [sample.id for sample in matched_sample_id_to_sample_record.values()]
+
+    samples_to_activate = Sample.objects.filter(id__in=updated_samples, is_active=False)
+    activated_sample_ids = [sample.id for sample in samples_to_activate]
+    samples_to_activate.update(
+        elasticsearch_index=elasticsearch_index,
+        dataset_file_path=dataset_path,
+        is_active=True,
+        loaded_date=loaded_date,
+    )
+    matched_sample_id_to_sample_record.update({
+        sample.sample_id: sample for sample in Sample.objects.filter(id__in=activated_sample_ids)
+    })
+
     inactivate_samples = Sample.objects.filter(
         individual__in={sample.individual for sample in matched_sample_id_to_sample_record.values()},
-        dataset_type=dataset_type,
+        dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
         is_active=True,
-    )
+    ).exclude(id__in=updated_samples)
     inactivate_sample_guids = [sample.guid for sample in inactivate_samples]
     inactivate_samples.update(is_active=False)
-    for sample_id, sample in matched_sample_id_to_sample_record.items():
-        sample_update_json = {
-            'dataset_file_path': dataset_path or sample_dataset_path_mapping[sample_id],
-        }
-        if elasticsearch_index:
-            sample_update_json['elasticsearch_index'] = elasticsearch_index
-        if not sample.is_active:
-            sample_update_json['is_active'] = True
-            sample_update_json['loaded_date'] = loaded_date
-        update_model_from_json(sample, sample_update_json)
+
     return inactivate_sample_guids
 
 
@@ -243,9 +313,8 @@ def _get_samples_json(matched_sample_id_to_sample_record, inactivate_sample_guid
     }
     updated_individuals = {s['individualGuid'] for s in updated_sample_json}
     if updated_individuals:
-        individuals = Individual.objects.filter(guid__in=updated_individuals).prefetch_related('sample_set',
-                                                                                               'family').only('guid')
+        individuals = Individual.objects.filter(guid__in=updated_individuals).prefetch_related('sample_set')
         response['individualsByGuid'] = {
-            ind.guid: {'sampleGuids': [s.guid for s in ind.sample_set.only('guid').all()]} for ind in individuals
+            ind.guid: {'sampleGuids': [s.guid for s in ind.sample_set.all()]} for ind in individuals
         }
     return response

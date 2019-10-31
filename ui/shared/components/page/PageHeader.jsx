@@ -4,13 +4,14 @@ import DocumentTitle from 'react-document-title'
 import { connect } from 'react-redux'
 import { Route, Switch, NavLink } from 'react-router-dom'
 import styled from 'styled-components'
-import { Grid, Breadcrumb } from 'semantic-ui-react'
+import { Grid, Breadcrumb, Popup, Icon } from 'semantic-ui-react'
 
 import ProjectPageHeader from 'pages/Project/components/PageHeader'
 import VariantSearchPageHeader from 'pages/Search/components/PageHeader'
 import { LocusListPageHeader } from 'pages/LocusLists'
 import { StaffPageHeader } from 'pages/Staff/Staff'
 import { getGenesById } from 'redux/selectors'
+import { ButtonLink } from 'shared/components/StyledComponents'
 import { snakecaseToTitlecase } from '../../utils/stringUtils'
 
 
@@ -36,7 +37,7 @@ const BreadcrumbContainer = styled.div`
 
 export const PageHeaderLayout = ({
   entity, entityGuid, breadcrumb, breadcrumbId, breadcrumbIdSections, title, header, entityLinkPath, entityGuidLinkPath,
-  entityLinks, originalPages = [], originalPagePath = '', button, description,
+  entityLinks, button, description,
 }) => {
   let breadcrumbSections = [
     { content: snakecaseToTitlecase(entity), link: entityLinkPath === undefined ? `/${entity}` : entityLinkPath },
@@ -100,20 +101,15 @@ export const PageHeaderLayout = ({
       <Grid.Column width={3}>
         {entityLinks &&
           <b><br />
-            {entityLinks.map(({ text, href, ...linkProps }) =>
-              <div key={text}>{href ? <a href={href}>{text}</a> : <NavLink {...linkProps}>{text}</NavLink>}</div>,
+            {entityLinks.map(({ popup, ...linkProps }) =>
+              <div key={linkProps.content}>
+                <ButtonLink as={NavLink} {...linkProps} />
+                {popup && <Popup content={popup} trigger={<Icon name="help circle outline" color="grey" />} />}
+              </div>,
             )}
           </b>
         }
         <br />
-        {originalPages.map((page) => {
-          const linkTitle = page.name || snakecaseToTitlecase(entity)
-          return (
-            <a key={linkTitle} href={`/${originalPagePath}${originalPagePath ? '/' : ''}${page.path}`}>
-              Deprecated {linkTitle} Page <br />
-            </a>
-          )
-        })}
         <br />
       </Grid.Column>
       <Grid.Column width={1} />
@@ -132,22 +128,16 @@ PageHeaderLayout.propTypes = {
   entityLinkPath: PropTypes.string,
   entityGuidLinkPath: PropTypes.string,
   entityLinks: PropTypes.array,
-  originalPages: PropTypes.array,
-  originalPagePath: PropTypes.string,
   button: PropTypes.node,
   description: PropTypes.string,
 }
 
-
-const originalGenePage = geneId => [{ path: geneId || '' }]
 
 const BaseGenePageHeader = ({ gene, match }) =>
   <PageHeaderLayout
     entity="gene_info"
     entityGuid={match.params.geneId}
     title={match.params.geneId && (gene ? gene.geneSymbol : match.params.geneId)}
-    originalPagePath="gene"
-    originalPages={originalGenePage(match.params.geneId)}
   />
 
 BaseGenePageHeader.propTypes = {

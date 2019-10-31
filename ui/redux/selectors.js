@@ -101,16 +101,14 @@ export const getFirstSampleByFamily = createSelector(
 )
 
 export const getActiveAlignmentSamplesByFamily = createSelector(
-  getFamiliesByGuid,
-  getIndividualsByGuid,
+  getSortedIndividualsByFamily,
   getSamplesByGuid,
-  (familiesByGuid, individualsByGuid, samplesByGuid) => {
-    return Object.entries(familiesByGuid).reduce((acc, [familyGuid, family]) => ({
+  (individualsByFamily, samplesByGuid) => {
+    return Object.entries(individualsByFamily).reduce((acc, [familyGuid, individuals]) => ({
       ...acc,
-      [familyGuid]: [...family.individualGuids.map(individualGuid => individualsByGuid[individualGuid]).reduce(
-        (acc2, individual) => new Set([...acc2, ...(individual.sampleGuids || [])]), new Set(),
-      )].map(sampleGuid => samplesByGuid[sampleGuid]).filter(sample =>
-        sample.isActive && sample.datasetType === DATASET_TYPE_READ_ALIGNMENTS,
+      [familyGuid]: individuals.reduce((acc2, individual) => [...acc2, ...(individual.sampleGuids || [])], []).map(
+        sampleGuid => samplesByGuid[sampleGuid]).filter(
+        sample => sample.isActive && sample.datasetType === DATASET_TYPE_READ_ALIGNMENTS,
       ),
     }), {})
   },

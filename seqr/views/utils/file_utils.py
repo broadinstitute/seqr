@@ -1,3 +1,4 @@
+import csv
 import gzip
 import hashlib
 import json
@@ -39,7 +40,7 @@ def parse_file(filename, stream):
         return [map(lambda s: s.strip().strip('"'), line.rstrip('\n').split('\t')) for line in stream]
 
     elif filename.endswith('.csv'):
-        return [map(lambda s: s.strip().strip('"'), line.rstrip('\n').split(',')) for line in stream]
+        return [row for row in csv.reader(stream)]
 
     elif filename.endswith('.xls') or filename.endswith('.xlsx'):
         wb = xlrd.open_workbook(file_contents=stream.read())
