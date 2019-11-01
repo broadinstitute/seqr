@@ -320,8 +320,6 @@ def update_variant_main_transcript(request, variant_guid, transcript_id):
 
 def _saved_variant_genes(variants):
     gene_ids = set()
-    if not variants:
-        raise ValueError('No variant fits the search criteria.')
     for variant in variants:
         if isinstance(variant, list):
             for compound_het in variant:
