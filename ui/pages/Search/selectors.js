@@ -132,6 +132,13 @@ export const getTotalVariantsCount = createSelector(
   searchParams => (searchParams || {}).totalResults,
 )
 
+export const getInhertanceFilterMode = createSelector(
+  getCurrentSearchParams,
+  (searchParams) => {
+    return (((searchParams || {}).search || {}).inheritance || {}).mode
+  },
+)
+
 export const getSearchedVariantExportConfig = createSelector(
   getCurrentSearchHash,
   searchHash => [{

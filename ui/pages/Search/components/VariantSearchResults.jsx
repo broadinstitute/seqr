@@ -21,8 +21,10 @@ import {
   getVariantSearchDisplay,
   getSearchedVariantExportConfig,
   getSearchContextIsLoading,
+  getInhertanceFilterMode,
 } from '../selectors'
 import GeneBreakdown from './GeneBreakdown'
+import { ALL_RECESSIVE_FILTERS } from '../constants'
 
 
 const LargeRow = styled(Grid.Row)`
@@ -35,23 +37,24 @@ const LargeRow = styled(Grid.Row)`
 
 const scrollToTop = () => window.scrollTo(0, 0)
 
-const FIELDS = [
-  VARIANT_SORT_FIELD_NO_FAMILY_SORT,
-  FLATTEN_COMPOUND_HET_TOGGLE_FIELD,
-]
-
 const BaseVariantSearchResults = ({
-  match, searchedVariants, variantSearchDisplay, searchedVariantExportConfig, onSubmit, load, unload, loading, errorMessage, totalVariantsCount,
+  match, searchedVariants, variantSearchDisplay, searchedVariantExportConfig, onSubmit, load, unload, loading, errorMessage, totalVariantsCount, inheritanceFilter,
 }) => {
+  console.log(inheritanceFilter)
   const { searchHash, variantId } = match.params
   const { page = 1, recordsPerPage, flattenCompoundHet } = variantSearchDisplay
   const variantDisplayPageOffset = (page - 1) * recordsPerPage
   const paginationFields = totalVariantsCount > recordsPerPage ? [{ ...VARIANT_PAGINATION_FIELD, totalPages: Math.ceil(totalVariantsCount / recordsPerPage) }] : []
-  const fields = [...FIELDS, ...paginationFields]
   const searchedVariantsCount = searchedVariants.length ?
     searchedVariants.reduce((countSoFar, currentVariantSets) => (Array.isArray(currentVariantSets) ? countSoFar + currentVariantSets.length : countSoFar + 1), 0)
     : 0
+
   const displayVariants = flattenCompoundHet ? searchedVariants.flat() : searchedVariants
+  const displayFlattenButton = ALL_RECESSIVE_FILTERS.includes(inheritanceFilter)
+  const FIELDS = displayFlattenButton ? [VARIANT_SORT_FIELD_NO_FAMILY_SORT, FLATTEN_COMPOUND_HET_TOGGLE_FIELD] :
+    [VARIANT_SORT_FIELD_NO_FAMILY_SORT]
+  const fields = [...FIELDS, ...paginationFields]
+
   return (
     <DataLoader
       contentId={searchHash || variantId}
@@ -129,6 +132,7 @@ BaseVariantSearchResults.propTypes = {
   variantSearchDisplay: PropTypes.object,
   searchedVariantExportConfig: PropTypes.array,
   totalVariantsCount: PropTypes.number,
+  inheritanceFilter: PropTypes.string,
 }
 
 const mapStateToProps = (state, ownProps) => ({
@@ -138,6 +142,7 @@ const mapStateToProps = (state, ownProps) => ({
   searchedVariantExportConfig: getSearchedVariantExportConfig(state, ownProps),
   totalVariantsCount: getTotalVariantsCount(state, ownProps),
   errorMessage: getSearchedVariantsErrorMessage(state),
+  inheritanceFilter: getInhertanceFilterMode(state),
 })
 
 const mapDispatchToProps = (dispatch, ownProps) => {
