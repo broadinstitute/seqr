@@ -82,6 +82,7 @@ const SHOW_DATA_LOADED = 'SHOW_DATA_LOADED'
 const SHOW_PHENOTYPES_ENTERED = 'SHOW_PHENOTYPES_ENTERED'
 const SHOW_NO_PHENOTYPES_ENTERED = 'SHOW_NO_PHENOTYPES_ENTERED'
 
+const SHOW_ASSIGNED_TO_ME_IN_REVIEW = 'SHOW_ASSIGNED_TO_ME_IN_REVIEW'
 const SHOW_ASSIGNED_TO_ME = 'SHOW_ASSIGNED_TO_ME'
 const SHOW_ANALYSED_BY_ME = 'SHOW_ANALYSED_BY_ME'
 const SHOW_NOT_ANALYSED_BY_ME = 'SHOW_NOT_ANALYSED_BY_ME'
@@ -115,17 +116,34 @@ const caseReviewStatusFilter = status => individualsByGuid => family =>
     individual => individual.caseReviewStatus === status,
   )
 
+const familyIsInReview = (family, individualsByGuid) =>
+  family.individualGuids.map(individualGuid => individualsByGuid[individualGuid]).every(
+    individual => individual.caseReviewStatus === CASE_REVIEW_STATUS_IN_REVIEW,
+  )
+
+const familyIsAssignedToMe = (family, user) =>
+  (family.assignedAnalyst ? family.assignedAnalyst.email === user.email : null)
+
+const ALL_FAMILIES_FILTER = { value: SHOW_ALL, name: 'All', createFilter: () => () => (true) }
+const IN_REVIEW_FAMILIES_FILTER = {
+  value: SHOW_IN_REVIEW,
+  category: 'Analysis Status:',
+  name: 'In Review',
+  createFilter: individualsByGuid => family => familyIsInReview(family, individualsByGuid),
+}
+const ACCEPTED_FILTER = {
+  value: SHOW_ACCEPTED,
+  category: 'Analysis Status:',
+  name: 'Accepted',
+  createFilter: caseReviewStatusFilter(CASE_REVIEW_STATUS_ACCEPTED),
+}
+
 export const FAMILY_FILTER_OPTIONS = [
-  {
-    value: SHOW_ALL,
-    name: 'All',
-    createFilter: () => () => (true),
-  },
+  ALL_FAMILIES_FILTER,
   {
     value: SHOW_DATA_LOADED,
     category: 'Data Status:',
     name: 'Data Loaded',
-    internalOmit: true,
     createFilter: (individualsByGuid, samplesByGuid) => family =>
       familyVariantSamples(family, individualsByGuid, samplesByGuid).filter(sample => sample.isActive).length > 0,
   },
@@ -133,7 +151,6 @@ export const FAMILY_FILTER_OPTIONS = [
     value: SHOW_PHENOTYPES_ENTERED,
     category: 'Data Status:',
     name: 'Phenotypes Entered',
-    internalOmit: true,
     createFilter: individualsByGuid => family =>
       family.individualGuids.map(individualGuid => individualsByGuid[individualGuid].phenotipsData).some(
         phenotipsData => hasPhenotipsDetails(phenotipsData),
@@ -143,7 +160,6 @@ export const FAMILY_FILTER_OPTIONS = [
     value: SHOW_NO_PHENOTYPES_ENTERED,
     category: 'Data Status:',
     name: 'No Phenotypes Entered',
-    internalOmit: true,
     createFilter: individualsByGuid => family =>
       family.individualGuids.map(individualGuid => individualsByGuid[individualGuid].phenotipsData).every(
         phenotipsData => !hasPhenotipsDetails(phenotipsData),
@@ -153,14 +169,12 @@ export const FAMILY_FILTER_OPTIONS = [
     value: SHOW_ASSIGNED_TO_ME,
     category: 'Analysed By:',
     name: 'Assigned To Me',
-    createFilter: (individualsByGuid, samplesByGuid, user) => family =>
-      (family.assignedAnalyst ? family.assignedAnalyst.email === user.email : null),
+    createFilter: (individualsByGuid, samplesByGuid, user) => family => familyIsAssignedToMe(family, user),
   },
   {
     value: SHOW_ANALYSED_BY_ME,
     category: 'Analysed By:',
     name: 'Analysed By Me',
-    internalOmit: true,
     createFilter: (individualsByGuid, samplesByGuid, user) => family =>
       family.analysedBy.map(analysedBy => analysedBy.createdBy.email).includes(user.email),
   },
@@ -168,7 +182,6 @@ export const FAMILY_FILTER_OPTIONS = [
     value: SHOW_NOT_ANALYSED_BY_ME,
     category: 'Analysed By:',
     name: 'Not Analysed By Me',
-    internalOmit: true,
     createFilter: (individualsByGuid, samplesByGuid, user) => family =>
       !family.analysedBy.map(analysedBy => analysedBy.createdBy.email).includes(user.email),
   },
@@ -176,7 +189,6 @@ export const FAMILY_FILTER_OPTIONS = [
     value: SHOW_ANALYSED_BY_CMG,
     category: 'Analysed By:',
     name: 'Analysed By CMG',
-    internalOmit: true,
     createFilter: () => family =>
       family.analysedBy.some(analysedBy => analysedBy.createdBy.isStaff),
   },
@@ -184,7 +196,6 @@ export const FAMILY_FILTER_OPTIONS = [
     value: SHOW_NOT_ANALYSED_BY_CMG,
     category: 'Analysed By:',
     name: 'Not Analysed By CMG',
-    internalOmit: true,
     createFilter: () => family =>
       family.analysedBy.every(analysedBy => !analysedBy.createdBy.isStaff),
   },
@@ -192,21 +203,18 @@ export const FAMILY_FILTER_OPTIONS = [
     value: SHOW_ANALYSED,
     category: 'Analysed By:',
     name: 'Analysed',
-    internalOmit: true,
     createFilter: () => family => family.analysedBy.length > 0,
   },
   {
     value: SHOW_NOT_ANALYSED,
     category: 'Analysed By:',
     name: 'Not Analysed',
-    internalOmit: true,
     createFilter: () => family => family.analysedBy.length < 1,
   },
   {
     value: SHOW_SOLVED,
     category: 'Analysis Status:',
     name: 'Solved',
-    internalOmit: true,
     createFilter: () => family =>
       SOLVED_STATUSES.has(family.analysisStatus),
   },
@@ -214,7 +222,6 @@ export const FAMILY_FILTER_OPTIONS = [
     value: SHOW_STRONG_CANDIDATE,
     category: 'Analysis Status:',
     name: 'Strong Candidate',
-    internalOmit: true,
     createFilter: () => family =>
       STRONG_CANDIDATE_STATUSES.has(family.analysisStatus),
   },
@@ -222,51 +229,46 @@ export const FAMILY_FILTER_OPTIONS = [
     value: SHOW_REVIEWED_NO_CLEAR_CANDIDATE,
     category: 'Analysis Status:',
     name: 'No Clear Candidate',
-    internalOmit: true,
     createFilter: () => family => family.analysisStatus === FAMILY_STATUS_REVIEWED_NO_CLEAR_CANDIDATE,
   },
   {
     value: SHOW_CLOSED,
     category: 'Analysis Status:',
     name: 'Closed',
-    internalOmit: true,
     createFilter: () => family => family.analysisStatus === FAMILY_STATUS_CLOSED,
   },
   {
     value: SHOW_ANALYSIS_IN_PROGRESS,
     category: 'Analysis Status:',
     name: 'Analysis In Progress',
-    internalOmit: true,
     createFilter: () => family =>
       ANALYSIS_IN_PROGRESS_STATUSES.has(family.analysisStatus),
   },
+  ACCEPTED_FILTER,
+  IN_REVIEW_FAMILIES_FILTER,
+]
+
+export const INTERNAL_FAMILY_FILTER_OPTIONS = [
+  ALL_FAMILIES_FILTER,
   {
-    value: SHOW_ACCEPTED,
-    category: 'Analysis Status:',
-    name: 'Accepted',
-    createFilter: caseReviewStatusFilter(CASE_REVIEW_STATUS_ACCEPTED),
+    value: SHOW_ASSIGNED_TO_ME_IN_REVIEW,
+    name: 'Assigned To Me - In Review',
+    createFilter: (individualsByGuid, samplesByGuid, user) => family =>
+      familyIsAssignedToMe(family, user) && familyIsInReview(family, individualsByGuid),
   },
-  {
-    value: SHOW_IN_REVIEW,
-    category: 'Analysis Status:',
-    name: 'In Review',
-    createFilter: individualsByGuid => family =>
-      family.individualGuids.map(individualGuid => individualsByGuid[individualGuid]).every(
-        individual => individual.caseReviewStatus === CASE_REVIEW_STATUS_IN_REVIEW,
-      ),
-  },
+  IN_REVIEW_FAMILIES_FILTER,
+  ACCEPTED_FILTER,
   ...CASE_REVIEW_STATUS_OPTIONS.filter(({ value }) =>
     value !== CASE_REVIEW_STATUS_ACCEPTED && value !== CASE_REVIEW_STATUS_IN_REVIEW,
   ).map(({ name, value }) => ({
     value: `SHOW_${name.toUpperCase()}`,
     category: 'Analysis Status:',
     name,
-    internalOnly: true,
     createFilter: caseReviewStatusFilter(value),
   })),
 ]
 
-export const FAMILY_FILTER_LOOKUP = FAMILY_FILTER_OPTIONS.reduce(
+export const FAMILY_FILTER_LOOKUP = [...FAMILY_FILTER_OPTIONS, ...INTERNAL_FAMILY_FILTER_OPTIONS].reduce(
   (acc, opt) => ({
     ...acc,
     [opt.value]: opt,

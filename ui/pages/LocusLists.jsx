@@ -11,8 +11,6 @@ import LocusListDetailPanel from 'shared/components/panel/genes/LocusListDetail'
 import { LocusListsLoader } from 'shared/components/LocusListLoader'
 import LocusListTables from 'shared/components/table/LocusListTables'
 
-const originalLocusListPage = locusList => [{ path: locusList ? `${locusList.locusListGuid}?guid=true` : '' }]
-
 const PageHeader = ({ locusList }) =>
   <PageHeaderLayout
     entity="gene_lists"
@@ -20,8 +18,6 @@ const PageHeader = ({ locusList }) =>
     title={locusList && locusList.name}
     description={!locusList && 'This page shows all of the gene lists that are available in your account'}
     button={locusList ? <DeleteLocusListButton locusList={locusList} /> : <CreateLocusListButton />}
-    originalPagePath="gene-lists"
-    originalPages={originalLocusListPage(locusList)}
   />
 
 PageHeader.propTypes = {

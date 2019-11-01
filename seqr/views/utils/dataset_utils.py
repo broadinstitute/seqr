@@ -1,6 +1,7 @@
 import logging
 import elasticsearch_dsl
 from django.utils import timezone
+import random
 
 from seqr.models import Sample, Individual
 from seqr.utils.es_utils import get_es_client, get_index_metadata
@@ -139,17 +140,19 @@ def match_sample_ids_to_sample_records(
 
         # create new Sample records for Individual records that matches
         if create_sample_records:
-            for sample_id, individual in sample_id_to_individual_record.items():
-                new_sample = Sample.objects.create(
+            new_samples = [
+                Sample(
+                    guid='S{}_{}'.format(random.randint(10**9, 10**10), sample_id),
                     sample_id=sample_id,
                     sample_type=sample_type,
                     dataset_type=dataset_type,
                     elasticsearch_index=elasticsearch_index,
                     individual=individual,
-                    is_active=True,
-                    loaded_date=timezone.now(),
-                )
-                sample_id_to_sample_record[sample_id] = new_sample
+                    created_date=timezone.now(),
+                ) for sample_id, individual in sample_id_to_individual_record.items()]
+            sample_id_to_sample_record.update({
+                sample.sample_id: sample for sample in Sample.objects.bulk_create(new_samples)
+            })
 
     return sample_id_to_sample_record
 

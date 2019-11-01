@@ -31,7 +31,7 @@ elasticsearch-dsl==6.1.0	     # elasticsearch query utilities
 ipython                          # used by shell.py
 jmespath==0.9.3
 numpy==1.12.1
-openpyxl==2.4.8                  # library for reading/writing Excel files
+openpyxl==2.6.4                  # library for reading/writing Excel files
 pandas==0.19.2
 psycopg2==2.7.5                  # postgres database access
 pyliftover==0.3                  # GRCh37/GRCh38 liftover

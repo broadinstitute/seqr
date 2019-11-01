@@ -14,7 +14,7 @@ import {
   getVariantMainTranscript,
   getVariantMainGeneId,
 } from 'shared/utils/constants'
-import { toCamelcase, toSnakecase } from 'shared/utils/stringUtils'
+import { toCamelcase, toSnakecase, snakecaseToTitlecase } from 'shared/utils/stringUtils'
 
 import {
   getCurrentProject, getFamiliesGroupedByProjectGuid, getIndividualsByGuid, getSamplesByGuid, getGenesById, getUser,
@@ -146,7 +146,9 @@ export const getVisibleFamilies = createSelector(
   getFamiliesSearch,
   (familiesByGuid, individualsByGuid, samplesByGuid, user, familiesFilter, familiesSearch) => {
     const searchFilter = familiesSearch ? family =>
-      `${family.displayName};${family.familyId};${family.individualGuids.map(individualGuid =>
+      `${family.displayName};${family.familyId};${(family.assignedAnalyst || {}).fullName};${
+        (family.assignedAnalyst || {}).email};${family.analysedBy.map(({ createdBy }) =>
+        `${createdBy.fullName}${createdBy.email}`)};${family.individualGuids.map(individualGuid =>
         ((individualsByGuid[individualGuid].phenotipsData || {}).features || []).map(feature => feature.label).join(';'),
       ).join(';')}`.toLowerCase().includes(familiesSearch) : family => family
     const searchedFamilies = Object.values(familiesByGuid).filter(searchFilter)
@@ -395,7 +397,125 @@ export const getAnalystOptions = createSelector(
     const staff = users.filter(user => user.isStaff)
     const uniqueCollaborators = collaborators.filter(collaborator => !collaborator.isStaff)
     return [...uniqueCollaborators, ...staff].map(
-      user => ({ key: user.username, value: user.username, text: user.email }),
+      user => ({ key: user.username, value: user.username, text: user.displayName ? `${user.displayName} (${user.email})` : user.email }),
     )
+  },
+)
+
+export const getPageHeaderFamily = createSelector(
+  getProjectFamiliesByGuid,
+  (state, props) => props.match.params.breadcrumbId,
+  (familiesByGuid, breadcrumbId) => familiesByGuid[breadcrumbId] || {},
+)
+
+export const getPageHeaderAnalysisGroup = createSelector(
+  getProjectAnalysisGroupsByGuid,
+  (state, props) => props.match.params.breadcrumbId,
+  (analysisGroupsByGuid, breadcrumbId) => analysisGroupsByGuid[breadcrumbId] || {},
+)
+
+export const getPageHeaderBreadcrumbIdSections = createSelector(
+  getCurrentProject,
+  getPageHeaderFamily,
+  getPageHeaderAnalysisGroup,
+  (state, props) => props.breadcrumb || props.match.params.breadcrumb,
+  (state, props) => props.match,
+  (project, family, analysisGroup, breadcrumb, match) => {
+    if (!project) {
+      return null
+    }
+
+    if (breadcrumb === 'project_page') {
+      return []
+    }
+
+    else if (breadcrumb === 'family_page') {
+      const breadcrumbIdSections = [{
+        content: `Family: ${family.displayName}`,
+        link: `/project/${project.projectGuid}/family_page/${family.familyGuid}`,
+      }]
+      if (match.params.breadcrumbIdSection) {
+        breadcrumbIdSections.push({ content: snakecaseToTitlecase(match.params.breadcrumbIdSection), link: match.url })
+      }
+      return breadcrumbIdSections
+    }
+
+    else if (breadcrumb === 'analysis_group') {
+      return [{ content: `Analysis Group: ${analysisGroup.name}`, link: match.url }]
+    }
+
+    else if (breadcrumb === 'saved_variants') {
+      const { variantPage, tag } = match.params
+      const path = `/project/${project.projectGuid}/saved_variants`
+      const breadcrumbIdSections = [{ content: 'Saved Variants', link: path }]
+      if (variantPage === 'variant') {
+        breadcrumbIdSections.push({ content: 'Variant', link: match.url })
+      } else if (variantPage === 'family') {
+        breadcrumbIdSections.push({ content: `Family: ${family.displayName}`, link: `${path}/family/${family.familyGuid}` })
+        if (tag) {
+          breadcrumbIdSections.push({ content: tag, link: `${path}/family/${family.familyGuid}/${tag}` })
+        }
+      } else if (variantPage === 'analysis_group') {
+        breadcrumbIdSections.push({ content: `Analysis Group: ${analysisGroup.name}`, link: `${path}/analysis_group/${analysisGroup.analysisGroupGuid}` })
+        if (tag) {
+          breadcrumbIdSections.push({ content: tag, link: `${path}/analysis_group/${analysisGroup.analysisGroupGuid}/${tag}` })
+        }
+      } else if (variantPage) {
+        breadcrumbIdSections.push({ content: variantPage, link: match.url })
+      }
+      return breadcrumbIdSections
+    }
+
+    return null
+  },
+)
+
+const getSearchType = ({ breadcrumb, variantPage }) => {
+  if (breadcrumb === 'family_page' || variantPage === 'family') {
+    return 'family'
+  }
+  if (breadcrumb === 'analysis_group' || variantPage === 'analysis_group') {
+    return 'analysis_group'
+  }
+  return 'project'
+}
+
+export const getPageHeaderEntityLinks = createSelector(
+  getUser,
+  getCurrentProject,
+  getPageHeaderFamily,
+  getPageHeaderAnalysisGroup,
+  (state, props) => getSearchType(props.match.params),
+  getProjectAnalysisGroupFamiliesByGuid,
+  getFirstSampleByFamily,
+  (user, project, family, analysisGroup, searchType, familiesByGuid, loadedSampleByFamilyGuid) => {
+    if (!project) {
+      return null
+    }
+
+    let searchId = project.projectGuid
+    if (searchType === 'family') {
+      searchId = family.familyGuid
+    } else if (searchType === 'analysis_group') {
+      searchId = analysisGroup.analysisGroupGuid
+    }
+
+    const familiesToConsider = searchType === 'family' ? [family.familyGuid] : Object.keys(familiesByGuid)
+    const disabled = familiesToConsider.every(familyGuid => !loadedSampleByFamilyGuid[familyGuid])
+    const entityLinks = [{
+      to: `/variant_search/${searchType}/${searchId}`,
+      content: `${snakecaseToTitlecase(searchType)} Variant Search`,
+      disabled,
+      popup: disabled ? 'Search is disabled until data is loaded' : null,
+
+    }]
+    if (user.isStaff) {
+      entityLinks.push({
+        to: `/project/${project.projectGuid}/case_review`,
+        content: 'Case Review',
+        activeStyle: { display: 'none' },
+      })
+    }
+    return entityLinks
   },
 )

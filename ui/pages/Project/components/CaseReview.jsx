@@ -10,6 +10,7 @@ import {
   FAMILY_FIELD_INTERNAL_NOTES,
   FAMILY_FIELD_INTERNAL_SUMMARY,
   FAMILY_FIELD_CODED_PHENOTYPE,
+  FAMILY_FIELD_ASSIGNED_ANALYST,
 } from 'shared/utils/constants'
 import { CASE_REVIEW_TABLE_NAME } from '../constants'
 import { getCaseReviewStatusCounts, getFamiliesExportConfig, getIndividualsExportConfig } from '../selectors'
@@ -17,6 +18,7 @@ import FamilyTable from './FamilyTable/FamilyTable'
 
 const FIELDS = [
   { id: FAMILY_FIELD_DESCRIPTION, canEdit: true },
+  { id: FAMILY_FIELD_ASSIGNED_ANALYST, canEdit: true },
   { id: FAMILY_FIELD_ANALYSED_BY },
   { id: FAMILY_FIELD_ANALYSIS_NOTES, canEdit: true },
   { id: FAMILY_FIELD_ANALYSIS_SUMMARY },

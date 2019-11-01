@@ -202,9 +202,7 @@ const VariantGene = ({ geneId, gene, project, variant, compact, areCompoundHets 
       <GeneLinks>
         <a href={`http://gnomad.broadinstitute.org/gene/${gene.geneId}`} target="_blank">gnomAD</a>
         <HorizontalSpacer width={5} />|<HorizontalSpacer width={5} />
-        {project && !project.hasNewSearch ?
-          <a href={`/project/${project.deprecatedProjectId}/gene/${gene.geneId}`} target="_blank" rel="noopener noreferrer">Gene Search</a> :
-          <SearchResultsLink geneId={gene.geneId} familyGuids={variant.familyGuids} />}
+        {project && <SearchResultsLink geneId={gene.geneId} familyGuids={variant.familyGuids} />}
       </GeneLinks>}
     </div>
   )
