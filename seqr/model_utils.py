@@ -587,6 +587,9 @@ def _variant_details(variant_json, family_guids_by_id, individual_guids_by_id):
         },
         'rsid': annotation.get('rsid'),
         'transcripts': transcripts,
+        'xpos': variant_json['xpos'],
+        'ref': variant_json['ref'],
+        'alt': variant_json['alt'],
     }
 
 
