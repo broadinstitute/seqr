@@ -10,7 +10,7 @@ import { HorizontalSpacer } from 'shared/components/Spacers'
 import ExportTableButton from 'shared/components/buttons/export-table/ExportTableButton'
 import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
 import Variants from 'shared/components/panel/variants/Variants'
-import { VARIANT_SORT_FIELD_NO_FAMILY_SORT, VARIANT_PAGINATION_FIELD } from 'shared/utils/constants'
+import { VARIANT_SORT_FIELD_NO_FAMILY_SORT, VARIANT_PAGINATION_FIELD, FLATTEN_COMPOUND_HET_TOGGLE_FIELD } from 'shared/utils/constants'
 
 import { loadSearchedVariants, unloadSearchResults } from '../reducers'
 import {
@@ -37,23 +37,26 @@ const scrollToTop = () => window.scrollTo(0, 0)
 
 const FIELDS = [
   VARIANT_SORT_FIELD_NO_FAMILY_SORT,
+  FLATTEN_COMPOUND_HET_TOGGLE_FIELD,
 ]
 
 const BaseVariantSearchResults = ({
   match, searchedVariants, variantSearchDisplay, searchedVariantExportConfig, onSubmit, load, unload, loading, errorMessage, totalVariantsCount,
 }) => {
   const { searchHash, variantId } = match.params
-  const { page = 1, recordsPerPage } = variantSearchDisplay
+  const { page = 1, recordsPerPage, flattenCompoundHet } = variantSearchDisplay
+  console.log(flattenCompoundHet)
   const variantDisplayPageOffset = (page - 1) * recordsPerPage
   const paginationFields = totalVariantsCount > recordsPerPage ? [{ ...VARIANT_PAGINATION_FIELD, totalPages: Math.ceil(totalVariantsCount / recordsPerPage) }] : []
   const fields = [...FIELDS, ...paginationFields]
   const searchedVariantsCount = searchedVariants.length ?
     searchedVariants.reduce((countSoFar, currentVariantSets) => (Array.isArray(currentVariantSets) ? countSoFar + currentVariantSets.length : countSoFar + 1), 0)
     : 0
+  const displayVariants = flattenCompoundHet ? searchedVariants.flat() : searchedVariants
   return (
     <DataLoader
       contentId={searchHash || variantId}
-      content={searchedVariants}
+      content={displayVariants}
       loading={loading}
       load={load}
       unload={unload}
@@ -91,7 +94,7 @@ const BaseVariantSearchResults = ({
       }
       <Grid.Row>
         <Grid.Column width={16}>
-          <Variants variants={searchedVariants} />
+          <Variants variants={displayVariants} />
         </Grid.Column>
       </Grid.Row>
       {searchHash &&
