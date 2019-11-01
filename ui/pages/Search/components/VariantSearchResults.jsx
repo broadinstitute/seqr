@@ -45,7 +45,6 @@ const BaseVariantSearchResults = ({
 }) => {
   const { searchHash, variantId } = match.params
   const { page = 1, recordsPerPage, flattenCompoundHet } = variantSearchDisplay
-  console.log(flattenCompoundHet)
   const variantDisplayPageOffset = (page - 1) * recordsPerPage
   const paginationFields = totalVariantsCount > recordsPerPage ? [{ ...VARIANT_PAGINATION_FIELD, totalPages: Math.ceil(totalVariantsCount / recordsPerPage) }] : []
   const fields = [...FIELDS, ...paginationFields]
