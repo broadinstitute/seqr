@@ -7,32 +7,32 @@ if [ -z "$SEQR_DIR"  ]; then
     exit 1
 fi
 
-#set +x
-#echo
-#echo "==== Installing legacy resources ===="
-#echo
+if [ -z "$(which python3)" ]; then
+    echo
+    echo "'python3' command not found. Please install python."
+    echo
+    exit 1
+fi
 
-#mkdir -p data/reference_data
 
-# install legacy resources
-#wget -nv https://storage.googleapis.com/seqr-reference-data/seqr-resource-bundle.tar.gz -O data/reference_data/seqr-resource-bundle.tar.gz
-#tar xzf data/reference_data/seqr-resource-bundle.tar.gz -C data/reference_data/
-#rm data/reference_data/seqr-resource-bundle.tar.gz
-
-#python -u manage.py load_resources
-#python -u manage.py load_omim
-
-echo "===== Install spark ===="
+echo "===== Install hail and other python3 dependencies ===="
 set -x
 
-SPARK_VERSION="spark-2.0.2-bin-hadoop2.7"
+sudo python3 -m pip install --upgrade -r ${SEQR_DIR}/hail_elasticsearch_pipelines/luigi_pipeline/requirements.txt
 
-cd ${SEQR_BIN_DIR} \
-    && wget -nv https://archive.apache.org/dist/spark/spark-2.0.2/${SPARK_VERSION}.tgz \
-    && tar xzf ${SPARK_VERSION}.tgz
-#    && rm spark-2.0.2-bin-hadoop2.7.tgz
+# set SPARK_HOME to the spark version installed as part of the hail install
+unset SPARK_HOME
+export SPARK_HOME=$(python3 - <<EOF
+from pyspark.find_spark_home import _find_spark_home
+_find_spark_home()
+EOF
+)
 
-export SPARK_HOME=${SEQR_BIN_DIR}'/'${SPARK_VERSION}
+if [ -z "$SPARK_HOME"  ]; then
+    echo "ERROR: Something went wrong while installing hail/pyspark. Make sure \"python3 -m pip install --upgrade hail\" ran successfully."
+    exit 1
+fi
+
 echo 'export SPARK_HOME='${SPARK_HOME} >> ~/.bashrc
 
 set +x
@@ -47,67 +47,88 @@ sudo $(which pip) install --ignore-installed decorator==4.2.1
 # install jupyter
 sudo $(which pip) install --upgrade pip jupyter
 
-# download and install VEP - steps based on gs://hail-common/vep/vep/GRCh37/vep85-GRCh37-init.sh and gs://hail-common/vep/vep/GRCh38/vep85-GRCh38-init.sh
-wget -nv https://raw.github.com/miyagawa/cpanminus/master/cpanm -O cpanm && chmod +x cpanm
-sudo chown -R $USER ~/.cpanm/  # make sure the user owns .cpanm
-# VEP dependencies
-cpanm --sudo --notest Set::IntervalTree
-cpanm --sudo --notest PerlIO::gzip
-cpanm --sudo --notest DBI
-cpanm --sudo --notest CGI
-cpanm --sudo --notest JSON
-# LoFTEE dependencies
-cpanm --sudo --notest DBD::SQLite
-cpanm --sudo --notest List::MoreUtils
+# Download and install VEP GRCh38 - steps based on gs://hail-common/vep/vep/vep95-loftee-1.0-GRCh38-init-docker.sh
+export ASSEMBLY=GRCh38  # For GRCh37, see gs://hail-common/vep/vep/vep85-loftee-1.0-GRCh37-init-docker.sh
+export VEP_DOCKER_IMAGE=konradjk/vep95_loftee:0.2
 
-# install google storage connector which allows hail to access vds's in google buckets without downloading them first
-cp ${SEQR_DIR}/hail_elasticsearch_pipelines/hail_builds/v01/gcs-connector-1.6.10-hadoop2.jar ${SPARK_HOME}/jars/
-cp ${SEQR_DIR}/deploy/docker/pipeline-runner/config/core-site.xml ${SPARK_HOME}/conf/
-
-mkdir -p ${SEQR_DIR}/vep/loftee_data_grch37 ${SEQR_DIR}/vep/loftee_data_grch38 ${SEQR_DIR}/vep/homo_sapiens
-sudo ln -s ${SEQR_DIR}/vep /vep
-sudo chmod -R 777 /vep
-
-if [ ! -f /usr/local/bin/perl ]
-then
-    sudo ln -s /usr/bin/perl /usr/local/bin/perl
-fi
-
-# copy large data files
-if [ -f /etc/boto.cfg ]
-then
-    sudo mv /etc/boto.cfg /etc/boto.cfg.aside  # /etc/boto.cfg leads to "ImportError: No module named google_compute_engine" on gcloud Ubuntu VMs, so move it out of the way
-fi
+sudo mkdir -p /vep_data/loftee_data
+sudo mkdir -p /vep_data/homo_sapiens
 
 
-[ ! -d /vep/loftee_data_grch37/loftee_data ] && gsutil -m cp -n -r gs://hail-common/vep/vep/GRCh37/loftee_data /vep/loftee_data_grch37
-[ ! -d /vep/loftee_data_grch38/loftee_data ] && gsutil -m cp -n -r gs://hail-common/vep/vep/GRCh38/loftee_data /vep/loftee_data_grch38
-[ ! -d /vep/homo_sapiens/85_GRCh37 ] && gsutil -m cp -n -r gs://hail-common/vep/vep/homo_sapiens/85_GRCh37 /vep/homo_sapiens
-[ ! -d /vep/homo_sapiens/85_GRCh38 ] && gsutil -m cp -n -r gs://hail-common/vep/vep/homo_sapiens/85_GRCh38 /vep/homo_sapiens
+if [ -z "$PLATFORM" ]; then
+    set +x
+    echo "PLATFORM environment variable not set. Please run previous install step(s)."
+    exit 1
 
-if [ ! -f /vep/variant_effect_predictor ]; then
-    gsutil -m cp -n -r gs://hail-common/vep/vep/ensembl-tools-release-85 /vep
-    gsutil -m cp -n -r gs://hail-common/vep/vep/Plugins /vep
-    ln -s /vep/ensembl-tools-release-85/scripts/variant_effect_predictor /vep/variant_effect_predictor
-fi
+elif [ $PLATFORM = "macos" ]; then
 
-if [ ! -f /vep/1var.vcf ]; then
-    git clone https://github.com/konradjk/loftee.git /vep/loftee
-    cp ${SEQR_DIR}/hail_elasticsearch_pipelines/gcloud_dataproc/vep_init/vep-gcloud-grch38.properties /vep/vep-gcloud-grch38.properties
-    cp ${SEQR_DIR}/hail_elasticsearch_pipelines/gcloud_dataproc/vep_init/vep-gcloud-grch37.properties /vep/vep-gcloud-grch37.properties
-    cp ${SEQR_DIR}/hail_elasticsearch_pipelines/gcloud_dataproc/vep_init/run_hail_vep85_GRCh37_vcf.sh /vep/run_hail_vep85_GRCh37_vcf.sh
-    cp ${SEQR_DIR}/hail_elasticsearch_pipelines/gcloud_dataproc/vep_init/run_hail_vep85_GRCh38_vcf.sh /vep/run_hail_vep85_GRCh38_vcf.sh
-    cp ${SEQR_DIR}/hail_elasticsearch_pipelines/gcloud_dataproc/vep_init/1var.vcf /vep/1var.vcf
+    echo "Steps not yet implemented for $PLATFORM"
+    exit 1
 
-    # (re)create the fasta index VEP uses
-    rm /vep/homo_sapiens/85_GRCh37/Homo_sapiens.GRCh37.75.dna.primary_assembly.fa.index
-    /vep/run_hail_vep85_GRCh37_vcf.sh /vep/1var.vcf
+elif [ $PLATFORM = "centos" ]; then
 
-    # (re)create the fasta index VEP uses
-    rm /vep/homo_sapiens/85_GRCh38/Homo_sapiens.GRCh38.dna.primary_assembly.fa.index
-    /vep/run_hail_vep85_GRCh38_vcf.sh /vep/1var.vcf
-fi
+    sudo yum update
+    sudo yum install -y yum-utils device-mapper-persistent-data lvm2
 
+    sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+    sudo yum install -y docker-ce
+
+elif [ $PLATFORM = "ubuntu" ]; then
+
+    # Install docker
+    sudo apt-get update
+    sudo apt-get -y install \
+        apt-transport-https \
+        ca-certificates \
+        curl \
+        gnupg2 \
+        software-properties-common \
+        tabix
+    curl -fsSL https://download.docker.com/linux/debian/gpg | sudo apt-key add -
+    sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/debian $(lsb_release -cs) stable"
+    sudo apt-get update
+    sudo apt-get install -y --allow-unauthenticated docker-ce
+
+else
+    set +x
+    echo "Unexpected operating system: $PLATFORM"
+    exit 1
+fi;
+
+# Get VEP cache and LOFTEE data
+gsutil cp gs://hail-common/vep/vep/vep85-loftee-gcloud.json /vep_data/vep85-gcloud.json
+gsutil -m cp -r gs://hail-common/vep/vep/loftee-beta/${ASSEMBLY}/* /vep_data/ &
+gsutil -m cp -r gs://hail-common/vep/vep/Plugins /vep_data &
+gsutil -m cp -r gs://hail-common/vep/vep/homo_sapiens/95_${ASSEMBLY} /vep_data/homo_sapiens/ &
+docker pull ${VEP_DOCKER_IMAGE} &
+wait
+
+cat > ./vep.c <<EOF
+#include <unistd.h>
+#include <stdio.h>
+
+int
+main(int argc, char *const argv[]) {
+  if (setuid(geteuid()))
+    perror( "setuid" );
+
+  execv("/vep.sh", argv);
+  return 0;
+}
+EOF
+
+sudo gcc -Wall -Werror -O2 ./vep.c -o /vep
+sudo chmod u+s /vep
+
+cat > ./vep.sh <<EOF
+#!/bin/bash
+
+docker run -i -v /vep_data/:/opt/vep/.vep/:ro ${VEP_DOCKER_IMAGE} \
+  /opt/vep/src/ensembl-vep/vep "\$@"
+EOF
+chmod +x ./vep.sh
+
+sudo mv ./vep.sh /
 
 set +x
 
