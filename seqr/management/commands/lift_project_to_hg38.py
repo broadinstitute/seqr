@@ -1,13 +1,14 @@
 import logging
 from collections import defaultdict
 from django.core.management.base import BaseCommand, CommandError
+from django.db.models import prefetch_related_objects
 from django.db.models.query_utils import Q
 from pyliftover.liftover import LiftOver
 
 from reference_data.models import GENOME_VERSION_GRCh38
-from seqr.models import Project, SavedVariant, Sample
+from seqr.models import Project, SavedVariant, Sample, Individual
 from seqr.model_utils import update_xbrowse_vcfffiles
-from seqr.views.apis.dataset_api import _update_samples
+from seqr.views.apis.dataset_api import _update_variant_samples
 from seqr.views.utils.dataset_utils import match_sample_ids_to_sample_records, validate_index_metadata, \
     get_elasticsearch_index_samples
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
@@ -54,41 +55,30 @@ class Command(BaseCommand):
         if len(unmatched_samples) > 0:
             raise CommandError('Matches not found for ES sample ids: {}.'.format(', '.join(unmatched_samples)))
 
-        included_family_individuals = defaultdict(set)
-        for sample in matched_sample_id_to_sample_record.values():
-            included_family_individuals[sample.individual.family].add(sample.individual.individual_id)
-        missing_family_individuals = []
-        for family, individual_ids in included_family_individuals.items():
-            missing_indivs = family.individual_set.filter(
-                sample__is_active=True,
-                sample__dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS
-            ).exclude(individual_id__in=individual_ids)
-            if missing_indivs:
-                missing_family_individuals.append(
-                    '{} ({})'.format(family.family_id, ', '.join([i.individual_id for i in missing_indivs]))
-                )
+        prefetch_related_objects(matched_sample_id_to_sample_record.values(), 'individual__family')
+        included_families = {sample.individual.family for sample in matched_sample_id_to_sample_record.values()}
+        missing_individuals = Individual.objects.filter(
+            family__in=included_families,
+            sample__is_active=True,
+            sample__dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
+        ).exclude(sample__in=matched_sample_id_to_sample_record.values()).select_related('family')
+        missing_family_individuals = defaultdict(list)
+        for individual in missing_individuals:
+            missing_family_individuals[individual.family].append(individual)
+
         if missing_family_individuals:
             raise CommandError(
                 'The following families are included in the callset but are missing some family members: {}.'.format(
-                    ', '.join(missing_family_individuals)
+                    ', '.join(['{} ({})'.format(family.family_id, ', '.join([i.individual_id for i in missing_indivs]))
+                               for family, missing_indivs in missing_family_individuals.items()])
                 ))
 
         # Get and clean up expected saved variants
         saved_variant_models_by_guid = {v.guid: v for v in SavedVariant.objects.filter(family__project=project)}
-        deleted_no_family = set()
         deleted_no_tags = set()
         for guid, variant in saved_variant_models_by_guid.items():
-            if not variant.family:
-                deleted_no_family.add(guid)
-            elif not (variant.varianttag_set.count() or variant.variantnote_set.count()):
+            if not (variant.varianttag_set.count() or variant.variantnote_set.count()):
                 deleted_no_tags.add(guid)
-
-        if deleted_no_family:
-            if raw_input('Do you want to delete the following {} saved variants with no family (y/n)?: {} '.format(
-                    len(deleted_no_family), ', '.join(deleted_no_family))) == 'y':
-                for guid in deleted_no_family:
-                    saved_variant_models_by_guid.pop(guid).delete()
-                logger.info('Deleted {} variants'.format(len(deleted_no_family)))
 
         if deleted_no_tags:
             if raw_input('Do you want to delete the following {} saved variants with no tags (y/n)?: {} '.format(
@@ -98,7 +88,7 @@ class Command(BaseCommand):
                 logger.info('Deleted {} variants'.format(len(deleted_no_tags)))
 
         expected_families = {sv.family for sv in saved_variant_models_by_guid.values()}
-        missing_families = expected_families - set(included_family_individuals.keys())
+        missing_families = expected_families - included_families
         if missing_families:
             raise CommandError(
                 'The following families have saved variants but are missing from the callset: {}.'.format(
@@ -106,6 +96,7 @@ class Command(BaseCommand):
                 ))
 
         # Lift-over saved variants
+        _update_variant_samples(matched_sample_id_to_sample_record, elasticsearch_index, dataset_path)
         saved_variants = get_json_for_saved_variants(saved_variant_models_by_guid.values(), add_details=True)
         saved_variants_to_lift = [v for v in saved_variants if v['genomeVersion'] != GENOME_VERSION_GRCh38]
 
@@ -186,10 +177,6 @@ class Command(BaseCommand):
 
         # Update project and sample data
         update_model_from_json(project, {'genome_version': GENOME_VERSION_GRCh38, 'has_new_search': True})
-        _update_samples(
-            matched_sample_id_to_sample_record, Sample.DATASET_TYPE_VARIANT_CALLS,
-            elasticsearch_index=elasticsearch_index, dataset_path=dataset_path
-        )
         update_xbrowse_vcfffiles(
             project, sample_type, elasticsearch_index, dataset_path, matched_sample_id_to_sample_record
         )
