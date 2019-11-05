@@ -99,6 +99,8 @@ else
 fi;
 
 # Get VEP cache and LOFTEE data
+sudo chmod 777 /vep_data/
+
 gsutil cp gs://hail-common/vep/vep/vep85-loftee-gcloud.json /vep_data/vep85-gcloud.json
 gsutil -m cp -r gs://hail-common/vep/vep/loftee-beta/${ASSEMBLY}/* /vep_data/ &
 gsutil -m cp -r gs://hail-common/vep/vep/Plugins /vep_data &
