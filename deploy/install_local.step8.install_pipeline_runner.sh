@@ -27,7 +27,7 @@ sudo python3 -m pip install --upgrade -r ${SEQR_DIR}/hail_elasticsearch_pipeline
 unset SPARK_HOME
 export SPARK_HOME=$(python3 - <<EOF
 from pyspark.find_spark_home import _find_spark_home
-_find_spark_home()
+print(_find_spark_home())
 EOF
 )
 
