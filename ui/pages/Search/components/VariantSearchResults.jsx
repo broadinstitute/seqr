@@ -40,7 +40,6 @@ const scrollToTop = () => window.scrollTo(0, 0)
 const BaseVariantSearchResults = ({
   match, searchedVariants, variantSearchDisplay, searchedVariantExportConfig, onSubmit, load, unload, loading, errorMessage, totalVariantsCount, inheritanceFilter,
 }) => {
-  console.log(inheritanceFilter)
   const { searchHash, variantId } = match.params
   const { page = 1, recordsPerPage, flattenCompoundHet } = variantSearchDisplay
   const variantDisplayPageOffset = (page - 1) * recordsPerPage

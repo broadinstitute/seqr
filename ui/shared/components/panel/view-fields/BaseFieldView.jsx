@@ -119,6 +119,7 @@ class BaseFieldView extends React.PureComponent {
       />
     )
     const buttons = [editButton, deleteButton]
+
     return (
       <span style={this.props.style || {}}>
         {this.props.isPrivate && <StaffOnlyIcon />}

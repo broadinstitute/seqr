@@ -154,11 +154,13 @@ PREDICTION_MAP = {
     'T': 'tolerated',
 }
 
+
 POLYPHEN_MAP = {
     'D': 'probably_damaging',
     'P': 'possibly_damaging',
     'B': 'benign',
 }
+
 
 MUTTASTR_MAP = {
     'A': 'disease_causing',
