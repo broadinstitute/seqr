@@ -1509,8 +1509,6 @@ class EsUtilsTest(TestCase):
         self.maxDiff = None
         # TODO fix test <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
         self.assertEqual(variants[0], PARSED_VARIANTS[0])
-        # import pdb
-        # pdb.set_trace()
         # self.assertEqual(variants[1][0], FIRST_COMPOUND_HET)
         # self.assertEqual(variants[1][1], SECOND_COMPOUND_HET)
         # self.assertEqual(total_results, 11)

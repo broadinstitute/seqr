@@ -24,7 +24,7 @@ import {
   FAMILY_ANALYSIS_STATUS_LOOKUP,
 } from 'shared/utils/constants'
 import PopupWithModal from '../../PopupWithModal'
-import { HorizontalSpacer } from '../../Spacers'
+import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
 import { InlineHeader, ColoredComponent } from '../../StyledComponents'
 import ReduxFormWrapper from '../../form/ReduxFormWrapper'
 import { InlineToggle, BooleanCheckbox } from '../../form/Inputs'
@@ -250,9 +250,6 @@ const FamilyVariantTags = (
   { variant, savedVariant, family, project, dispatchUpdateVariantNote, dispatchUpdateFamilyVariantTags, isCompoundHet, areCompoundHets },
 ) => {
   if (family) {
-    if (isCompoundHet) {
-      return <VariantLink variant={variant} savedVariant={savedVariant} family={family} />
-    }
     let displayVariant
     if (Array.isArray(variant)) {
       displayVariant = savedVariant.map((eachSavedVariant, index) => { return eachSavedVariant || variant[index] })
@@ -261,6 +258,7 @@ const FamilyVariantTags = (
     }
     return (
       <div>
+        {!isCompoundHet &&
         <InlineContainer>
           <InlineHeader size="small">
             Family<HorizontalSpacer width={5} />
@@ -280,8 +278,9 @@ const FamilyVariantTags = (
               content={<Family family={family} fields={FAMILY_FIELDS} useFullWidth disablePedigreeZoom />}
             />
           </InlineHeader>
-        </InlineContainer>
+        </InlineContainer>}
         <InlineContainer>
+          {isCompoundHet && <HorizontalSpacer height={5} />}
           <div>
             <TagTitle>Tags:</TagTitle>
             <HorizontalSpacer width={5} />
@@ -336,6 +335,7 @@ const FamilyVariantTags = (
               />
             </NoteContainer>
           </div>
+          {isCompoundHet && <HorizontalSpacer height={5} />}
         </InlineContainer>
         {!areCompoundHets && <VariantLink variant={variant} savedVariant={savedVariant} family={family} />}
       </div>)

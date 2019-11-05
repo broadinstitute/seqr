@@ -608,14 +608,17 @@ class EsSearch(BaseEsSearch):
 
                 valid_combinations = [[ch_1_index, ch_2_index] for ch_1_index, ch_2_index in combinations(range(len(variants)), 2)
                                       if is_a_valid_compound_het_pair(len(num_alts), ch_1_index, ch_2_index)]
-
                 compound_het_pairs = [[variants[valid_ch_1_index], variants[valid_ch_2_index]] for valid_ch_1_index, valid_ch_2_index in valid_combinations]
                 family_compound_het_pairs[family_guid] = compound_het_pairs
 
-                if len(compound_het_pairs) > 0:
-                    for compound_het_pair in compound_het_pairs:
-                        for compound_het in compound_het_pair:
-                            compound_het['familyGuids'] = [family_guid for family_guid in compound_het['familyGuids']]
+                # for variant in variants:
+                #     if variant['variantId'] == '16-1129586-C-T':
+                #         logging.info('\n\n')
+                #         logging.info(num_alts)
+                #         logging.info(valid_combinations)
+                #         logging.info('\n\n')
+                #         import pdb
+                #         pdb.set_trace()
 
                 compound_het_pairs_by_gene[gene_id] = compound_het_pairs
 
