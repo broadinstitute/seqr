@@ -74,7 +74,11 @@ then
 fi
 
 # copy large data files
-sudo mv /etc/boto.cfg /etc/boto.cfg.aside  # /etc/boto.cfg leads to "ImportError: No module named google_compute_engine" on gcloud Ubuntu VMs, so move it out of the way
+if [ -f /etc/boto.cfg ]
+then
+    sudo mv /etc/boto.cfg /etc/boto.cfg.aside  # /etc/boto.cfg leads to "ImportError: No module named google_compute_engine" on gcloud Ubuntu VMs, so move it out of the way
+fi
+
 
 [ ! -d /vep/loftee_data_grch37/loftee_data ] && gsutil -m cp -n -r gs://hail-common/vep/vep/GRCh37/loftee_data /vep/loftee_data_grch37
 [ ! -d /vep/loftee_data_grch38/loftee_data ] && gsutil -m cp -n -r gs://hail-common/vep/vep/GRCh38/loftee_data /vep/loftee_data_grch38
