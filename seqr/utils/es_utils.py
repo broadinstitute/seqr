@@ -1470,7 +1470,7 @@ def _get_compound_het_page(grouped_variants, start_index, end_index):
                 variant_results += curr_variant
             else:
                 variant_results.append(curr_variant)
-            variant_count += len(curr_variant)
+            variant_count += 1
         if variant_count + skipped >= end_index:
             return variant_results
     return None
