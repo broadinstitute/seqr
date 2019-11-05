@@ -96,6 +96,7 @@ class Command(BaseCommand):
                 ))
 
         # Lift-over saved variants
+        _update_variant_samples(matched_sample_id_to_sample_record, elasticsearch_index, dataset_path)
         saved_variants = get_json_for_saved_variants(saved_variant_models_by_guid.values(), add_details=True)
         saved_variants_to_lift = [v for v in saved_variants if v['genomeVersion'] != GENOME_VERSION_GRCh38]
 
@@ -176,7 +177,6 @@ class Command(BaseCommand):
 
         # Update project and sample data
         update_model_from_json(project, {'genome_version': GENOME_VERSION_GRCh38, 'has_new_search': True})
-        _update_variant_samples(matched_sample_id_to_sample_record, elasticsearch_index, dataset_path)
         update_xbrowse_vcfffiles(
             project, sample_type, elasticsearch_index, dataset_path, matched_sample_id_to_sample_record
         )
