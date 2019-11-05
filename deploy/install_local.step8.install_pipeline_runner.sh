@@ -74,7 +74,7 @@ elif [ $PLATFORM = "centos" ]; then
     sudo yum install -y yum-utils device-mapper-persistent-data lvm2
 
     sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
-    sudo yum install -y docker-ce
+    sudo yum install -y docker-ce docker-ce-cli containerd.io
 
 elif [ $PLATFORM = "ubuntu" ]; then
 
@@ -90,7 +90,7 @@ elif [ $PLATFORM = "ubuntu" ]; then
     curl -fsSL https://download.docker.com/linux/debian/gpg | sudo apt-key add -
     sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/debian $(lsb_release -cs) stable"
     sudo apt-get update
-    sudo apt-get install -y --allow-unauthenticated docker-ce
+    sudo apt-get install -y --allow-unauthenticated docker-ce docker-ce-cli containerd.io
 
 else
     set +x
@@ -99,7 +99,8 @@ else
 fi;
 
 # Get VEP cache and LOFTEE data
-sudo chmod 777 /vep_data/
+sudo mkdir -p /vep_data/homo_sapiens/
+sudo chmod -R 777 /vep_data/
 
 gsutil cp gs://hail-common/vep/vep/vep85-loftee-gcloud.json /vep_data/vep85-gcloud.json
 gsutil -m cp -r gs://hail-common/vep/vep/loftee-beta/${ASSEMBLY}/* /vep_data/ &
