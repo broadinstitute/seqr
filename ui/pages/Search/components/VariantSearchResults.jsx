@@ -44,9 +44,6 @@ const BaseVariantSearchResults = ({
   const { page = 1, recordsPerPage, flattenCompoundHet } = variantSearchDisplay
   const variantDisplayPageOffset = (page - 1) * recordsPerPage
   const paginationFields = totalVariantsCount > recordsPerPage ? [{ ...VARIANT_PAGINATION_FIELD, totalPages: Math.ceil(totalVariantsCount / recordsPerPage) }] : []
-  const searchedVariantsCount = searchedVariants.length ?
-    searchedVariants.reduce((countSoFar, currentVariantSets) => (Array.isArray(currentVariantSets) ? countSoFar + currentVariantSets.length : countSoFar + 1), 0)
-    : 0
 
   const displayVariants = flattenCompoundHet ? searchedVariants.flat() : searchedVariants
   const displayFlattenButton = ALL_RECESSIVE_FILTERS.includes(inheritanceFilter)
@@ -73,8 +70,8 @@ const BaseVariantSearchResults = ({
       {searchHash &&
         <LargeRow>
           <Grid.Column width={5}>
-            {totalVariantsCount === searchedVariants.length ? 'Found ' : `Showing ${variantDisplayPageOffset + 1}-${variantDisplayPageOffset + searchedVariantsCount} of `}
-            <b>{totalVariantsCount}</b> variants
+            {totalVariantsCount === displayVariants.length ? 'Found ' : `Showing ${variantDisplayPageOffset + 1}-${variantDisplayPageOffset + displayVariants.length} of `}
+            <b>{totalVariantsCount + (displayVariants.length - searchedVariants.length)}</b> variants
           </Grid.Column>
           <Grid.Column width={11} floated="right" textAlign="right">
             <ReduxFormWrapper
