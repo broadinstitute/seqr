@@ -21,7 +21,7 @@ set -x
 wget -nv https://bootstrap.pypa.io/get-pip.py -O get-pip.py
 sudo python3 get-pip.py
 sudo python3 -m pip install --upgrade pip setuptools
-sudo python3 -m pip install --upgrade -r ${SEQR_DIR}/hail_elasticsearch_pipelines/luigi_pipeline/requirements.txt
+sudo python3 -m pip install --upgrade -r ${SEQR_DIR}/hail-elasticsearch-pipelines/luigi_pipeline/requirements.txt
 
 # set SPARK_HOME to the spark version installed as part of the hail install
 unset SPARK_HOME
