@@ -584,7 +584,7 @@ class EsSearch(BaseEsSearch):
                     variant_ids = [variant['variantId'] for variant in gene_variants]
                     for gene in primary_genes:
                         if variant_ids == [compound_het_pair[0]['variantId'] for compound_het_pair in compound_het_pairs_by_gene.get(gene, [])] and \
-                           variant_ids == [compound_het_pair[1]['variantId'] for compound_het_pair in compound_het_pairs_by_gene.get(gene, [])]:
+                                variant_ids == [compound_het_pair[1]['variantId'] for compound_het_pair in compound_het_pairs_by_gene.get(gene, [])]:
                             continue
 
             family_compound_het_pairs = defaultdict(list)
@@ -611,16 +611,11 @@ class EsSearch(BaseEsSearch):
                 compound_het_pairs = [[variants[valid_ch_1_index], variants[valid_ch_2_index]] for valid_ch_1_index, valid_ch_2_index in valid_combinations]
                 family_compound_het_pairs[family_guid] = compound_het_pairs
 
-                # for variant in variants:
-                #     if variant['variantId'] == '16-1129586-C-T':
-                #         logging.info('\n\n')
-                #         logging.info(num_alts)
-                #         logging.info(valid_combinations)
-                #         logging.info('\n\n')
-                #         import pdb
-                #         pdb.set_trace()
-
-                compound_het_pairs_by_gene[gene_id] = compound_het_pairs
+                if gene_id in compound_het_pairs_by_gene.keys():
+                    if len(compound_het_pairs) > 0:
+                        compound_het_pairs_by_gene[gene_id].append(compound_het_pairs)
+                else:
+                    compound_het_pairs_by_gene[gene_id] = compound_het_pairs
 
         total_compound_het_results = sum(len(compound_het_pairs) for compound_het_pairs in compound_het_pairs_by_gene.values())
         logger.info('Total compound het hits: {}'.format(total_compound_het_results))
