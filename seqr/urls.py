@@ -301,8 +301,8 @@ urlpatterns += [
 
 urlpatterns += [
     url(r'^hijack/', include('hijack.urls')),
-    url(r'^xadmin/doc/', include(django.contrib.admindocs.urls)),
-    url(r'^xadmin/', admin.site.urls),
+    url(r'^admin/doc/', include(django.contrib.admindocs.urls)),
+    url(r'^admin/', admin.site.urls),
     url(r'^media/(?P<path>.*)$', django.views.static.serve, {
         'document_root': MEDIA_ROOT,
     }),
