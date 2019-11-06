@@ -39,6 +39,10 @@ fi
 echo 'export SPARK_HOME='${SPARK_HOME} >> ~/.bashrc
 echo 'export PYSPARK_PYTHON=python3' >> ~/.bashrc
 
+# set up gcloud connector
+sudo python3 -m pip install git+https://github.com/bw2/hail-utils.git
+
+
 set +x
 echo
 echo "==== Install data loading pipeline ===="
@@ -86,12 +90,15 @@ elif [ $PLATFORM = "ubuntu" ]; then
         ca-certificates \
         curl \
         gnupg2 \
+        gnupg-agent \
         software-properties-common \
         tabix
+
     curl -fsSL https://download.docker.com/linux/debian/gpg | sudo apt-key add -
+    sudo apt-key fingerprint 0EBFCD88
     sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/debian $(lsb_release -cs) stable"
     sudo apt-get update
-    sudo apt-get install -y --allow-unauthenticated docker-ce docker-ce-cli containerd.io
+    sudo apt-get install -y docker-ce docker-ce-cli containerd.io
 
 else
     set +x
