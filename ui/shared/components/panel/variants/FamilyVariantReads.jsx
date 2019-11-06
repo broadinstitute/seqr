@@ -12,16 +12,16 @@ import { ButtonLink } from '../../StyledComponents'
 import { VerticalSpacer } from '../../Spacers'
 import { getLocus } from './Annotations'
 
-const CRAM_TRACK_OPTIONS = {
+const CRAM_PROXY_TRACK_OPTIONS = {
   sourceType: 'pysam',
   alignmentFile: '/placeholder.cram',
   referenceFile: '/placeholder.fa',
-  showSoftClips: true,
+  format: 'bam',
 }
 
 const BAM_TRACK_OPTIONS = {
   indexed: true,
-  showSoftClips: true,
+  format: 'bam',
 }
 
 const FamilyVariantReads = ({ variant, activeSamples, individualsByGuid, hideReads }) => {
@@ -33,28 +33,41 @@ const FamilyVariantReads = ({ variant, activeSamples, individualsByGuid, hideRea
   const igvTracks = activeSamples.map((sample) => {
     const individual = individualsByGuid[sample.individualGuid]
 
-    const trackOptions = sample.datasetFilePath.endsWith('.cram') ? CRAM_TRACK_OPTIONS : BAM_TRACK_OPTIONS
+    const url = `/api/project/${sample.projectGuid}/igv_track/${encodeURIComponent(sample.datasetFilePath)}`
+
+    let trackOptions = BAM_TRACK_OPTIONS
+    if (sample.datasetFilePath.endsWith('.cram')) {
+      if (sample.datasetFilePath.startsWith('gs://')) {
+        trackOptions = {
+          format: 'cram',
+          indexURL: `${url}.crai`,
+        }
+      } else {
+        trackOptions = CRAM_PROXY_TRACK_OPTIONS
+      }
+    }
+
     const trackName = ReactDOMServer.renderToString(
       <span><PedigreeIcon sex={individual.sex} affected={individual.affected} />{individual.displayName}</span>,
     )
     return {
-      url: `/api/project/${sample.projectGuid}/igv_track/${encodeURIComponent(sample.datasetFilePath)}`,
+      url,
       name: trackName,
-      type: 'bam',
       alignmentShading: 'strand',
+      type: 'alignment',
+      showSoftClips: true,
       ...trackOptions,
     }
   }).filter(track => track)
 
   // TODO better determiner of genome version?
-  const isBuild38 = igvTracks.some(track => track.sourceType === 'pysam')
+  const isBuild38 = activeSamples.some(sample => sample.datasetFilePath.endsWith('.cram'))
   const genome = isBuild38 ? 'hg38' : 'hg19'
 
   const locus = variant && getLocus(
     variant.chrom, (!isBuild38 && variant.liftedOverPos) ? variant.liftedOverPos : variant.pos, 100,
   )
 
-  // TODO confirm cnv_bed_file track is deprecated (is empty for all existing individuals, so it should be)
   igvTracks.push({
     url: `https://storage.googleapis.com/seqr-reference-data/${isBuild38 ? 'GRCh38' : 'GRCh37'}/gencode/gencode.v27${isBuild38 ? '' : 'lift37'}.annotation.sorted.gtf.gz`,
     name: `gencode ${genome}v27`,
