@@ -37,6 +37,7 @@ if [ -z "$SPARK_HOME"  ]; then
 fi
 
 echo 'export SPARK_HOME='${SPARK_HOME} >> ~/.bashrc
+echo 'export PYSPARK_PYTHON=python3' >> ~/.bashrc
 
 set +x
 echo
