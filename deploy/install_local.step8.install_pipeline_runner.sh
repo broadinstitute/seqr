@@ -38,6 +38,7 @@ fi
 
 echo 'export SPARK_HOME='${SPARK_HOME} >> ~/.bashrc
 echo 'export PYSPARK_PYTHON=python3' >> ~/.bashrc
+echo 'export LUIGI_CONFIG_PATH=luigi_pipeline/configs/seqr-loading-local-GRCh38.cfg'  >> ~/.bashrc
 
 # set up gcloud connector
 sudo python3 -m pip install git+https://github.com/bw2/hail-utils.git
