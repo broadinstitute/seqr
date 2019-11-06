@@ -9,7 +9,7 @@ fi
 
 if [ -z "$(which python3)" ]; then
     echo
-    echo "'python3' command not found. Please install python."
+    echo "'python3' command not found. Please install python3."
     echo
     exit 1
 fi
@@ -21,7 +21,7 @@ set -x
 wget -nv https://bootstrap.pypa.io/get-pip.py -O get-pip.py
 sudo python3 get-pip.py
 sudo python3 -m pip install --upgrade pip setuptools
-sudo python3 -m pip install --upgrade -r ${SEQR_DIR}/hail-elasticsearch-pipelines/luigi_pipeline/requirements.txt
+sudo python3 -m pip install --upgrade -r ${SEQR_DIR}/hail_elasticsearch_pipelines/luigi_pipeline/requirements.txt
 
 # set SPARK_HOME to the spark version installed as part of the hail install
 unset SPARK_HOME
@@ -82,6 +82,8 @@ elif [ $PLATFORM = "centos" ]; then
     sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
     sudo yum install -y docker-ce docker-ce-cli containerd.io
 
+    sudo systemctl start docker
+    
 elif [ $PLATFORM = "ubuntu" ]; then
 
     # Install docker
