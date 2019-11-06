@@ -3,6 +3,7 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Grid, Message, Button } from 'semantic-ui-react'
 import styled from 'styled-components'
+import uniqBy from 'lodash/uniqBy'
 
 import DataLoader from 'shared/components/DataLoader'
 import { QueryParamsEditor } from 'shared/components/QueryParamEditor'
@@ -45,7 +46,7 @@ const BaseVariantSearchResults = ({
   const variantDisplayPageOffset = (page - 1) * recordsPerPage
   const paginationFields = totalVariantsCount > recordsPerPage ? [{ ...VARIANT_PAGINATION_FIELD, totalPages: Math.ceil(totalVariantsCount / recordsPerPage) }] : []
 
-  const displayVariants = flattenCompoundHet ? searchedVariants.flat() : searchedVariants
+  const displayVariants = flattenCompoundHet ? uniqBy(searchedVariants.flat(), 'variantId') : searchedVariants
   const displayFlattenButton = ALL_RECESSIVE_FILTERS.includes(inheritanceFilter)
   const FIELDS = displayFlattenButton ? [VARIANT_SORT_FIELD_NO_FAMILY_SORT, FLATTEN_COMPOUND_HET_TOGGLE_FIELD] :
     [VARIANT_SORT_FIELD_NO_FAMILY_SORT]
