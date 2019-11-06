@@ -280,11 +280,11 @@ const FamilyVariantTags = (
           </InlineHeader>
         </InlineContainer>}
         <InlineContainer>
-          {isCompoundHet && <HorizontalSpacer height={5} />}
+          {isCompoundHet && <VerticalSpacer height={5} />}
           <div>
             <TagTitle>Tags:</TagTitle>
             <HorizontalSpacer width={5} />
-            <ShortcutTags variant={displayVariant} familyGuid={family.familyGuid} dispatchUpdateFamilyVariantTags={dispatchUpdateFamilyVariantTags} />
+            {!isCompoundHet && <ShortcutTags variant={displayVariant} familyGuid={family.familyGuid} dispatchUpdateFamilyVariantTags={dispatchUpdateFamilyVariantTags} />}
             <VariantTagField
               field="tags"
               fieldName="Tags"
@@ -310,6 +310,7 @@ const FamilyVariantTags = (
             </span>
             }
           </div>
+          {isCompoundHet && <VerticalSpacer height={5} />}
           <div>
             <TagTitle>Notes:</TagTitle>
             <NoteContainer>
@@ -335,7 +336,7 @@ const FamilyVariantTags = (
               />
             </NoteContainer>
           </div>
-          {isCompoundHet && <HorizontalSpacer height={5} />}
+          {isCompoundHet && <VerticalSpacer height={5} />}
         </InlineContainer>
         {!areCompoundHets && <VariantLink variant={variant} savedVariant={savedVariant} family={family} />}
       </div>)
