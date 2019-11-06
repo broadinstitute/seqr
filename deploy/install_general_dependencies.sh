@@ -9,6 +9,13 @@ if [ -z "$(which python)" ]; then
     exit 1
 fi
 
+if [ -z "$(which python3)" ]; then
+    echo
+    echo "'python3' command not found. Please install python3."
+    echo
+    exit 1
+fi
+
 
 if [ -z "$PLATFORM" ]; then
 
