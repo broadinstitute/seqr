@@ -617,6 +617,11 @@ class EsSearch(BaseEsSearch):
                 else:
                     compound_het_pairs_by_gene[gene_id] = compound_het_pairs
 
+                # logging.info('\n')
+                # logging.info(num_alts)
+                # logging.info(valid_combinations)
+                # logging.info('\n')
+
         total_compound_het_results = sum(len(compound_het_pairs) for compound_het_pairs in compound_het_pairs_by_gene.values())
         logger.info('Total compound het hits: {}'.format(total_compound_het_results))
 

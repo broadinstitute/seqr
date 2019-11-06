@@ -1355,61 +1355,58 @@ class EsUtilsTest(TestCase):
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(self.families)
 
-        # TODO fix test <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-        # variants, total_results = get_es_variants(results_model, num_results=2)
-        # self.assertEqual(len(variants), 2)
-        # self.assertDictEqual(variants[0], PARSED_VARIANTS[0])
-        # self.assertDictEqual(variants[1][0], PARSED_COMPOUND_HET_VARIANTS[0])
-        # self.assertDictEqual(variants[1][1], PARSED_COMPOUND_HET_VARIANTS[1])
-        # self.assertEqual(total_results, 7)
+        variants, total_results = get_es_variants(results_model, num_results=2)
+        self.assertEqual(len(variants), 2)
+        self.assertDictEqual(variants[0], PARSED_VARIANTS[0])
+        self.assertDictEqual(variants[1][0], PARSED_COMPOUND_HET_VARIANTS[0])
+        self.assertDictEqual(variants[1][1], PARSED_COMPOUND_HET_VARIANTS[1])
+        self.assertEqual(total_results, 6)
 
-        # self.assertCachedResults(results_model, {
-        #     'compound_het_results': [],
-        #     'variant_results': [PARSED_VARIANTS[1]],
-        #     'grouped_results': [{'null': [PARSED_VARIANTS[0]]}, {'ENSG00000228198': PARSED_COMPOUND_HET_VARIANTS}],
-        #     'duplicate_doc_count': 0,
-        #     'loaded_variant_counts': {'test_index_compound_het': {'total': 2, 'loaded': 2}, INDEX_NAME: {'loaded': 2, 'total': 5}},
-        #     'total_results': 7,
-        # })
+        self.assertCachedResults(results_model, {
+            'compound_het_results': [],
+            'variant_results': [PARSED_VARIANTS[1]],
+            'grouped_results': [{'null': [PARSED_VARIANTS[0]]}, {'ENSG00000228198': PARSED_COMPOUND_HET_VARIANTS}],
+            'duplicate_doc_count': 0,
+            'loaded_variant_counts': {'test_index_compound_het': {'total': 1, 'loaded': 1}, INDEX_NAME: {'loaded': 2, 'total': 5}},
+            'total_results': 6,
+        })
 
         annotation_query = {'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}}
         pass_filter_query = {'bool': {'must_not': [{'exists': {'field': 'filters'}}]}}
 
-        # self.assertExecutedSearches([
-        #     dict(filters=[annotation_query, pass_filter_query, RECESSIVE_INHERITANCE_QUERY], start_index=0, size=2, sort=['xpos']),
-        #     dict(
-        #         filters=[annotation_query, pass_filter_query, COMPOUND_HET_INHERITANCE_QUERY],
-        #         gene_aggs=True,
-        #         sort=['xpos'],
-        #         start_index=0,
-        #         size=1
-        #     )
-        # ])
+        self.assertExecutedSearches([
+            dict(filters=[annotation_query, pass_filter_query, RECESSIVE_INHERITANCE_QUERY], start_index=0, size=2, sort=['xpos']),
+            dict(
+                filters=[annotation_query, pass_filter_query, COMPOUND_HET_INHERITANCE_QUERY],
+                gene_aggs=True,
+                sort=['xpos'],
+                start_index=0,
+                size=1
+            )
+        ])
 
         # test pagination
 
-        # TODO fix test <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-        # variants, total_results = get_es_variants(results_model, page=3, num_results=2)
-        # self.assertEqual(len(variants), 2)
-        # self.assertListEqual(variants, PARSED_VARIANTS)
-        # self.assertEqual(total_results, 6)
+        variants, total_results = get_es_variants(results_model, page=3, num_results=2)
+        self.assertEqual(len(variants), 2)
+        self.assertListEqual(variants, PARSED_VARIANTS)
+        self.assertEqual(total_results, 5)
 
-        # self.assertCachedResults(results_model, {
-        #     'compound_het_results': [],
-        #     'variant_results': [],
-        #     'grouped_results': [
-        #         {'null': [PARSED_VARIANTS[0]]}, {'ENSG00000228198': PARSED_COMPOUND_HET_VARIANTS},
-        #         {'null': [PARSED_VARIANTS[0]]}, {'null': [PARSED_VARIANTS[1]]}],
-        #     'duplicate_doc_count': 1,
-        #     'loaded_variant_counts': {'test_index_compound_het': {'total': 2, 'loaded': 2}, INDEX_NAME: {'loaded': 4, 'total': 5}},
-        #     'total_results': 6,
-        # })
+        self.assertCachedResults(results_model, {
+            'compound_het_results': [],
+            'variant_results': [],
+            'grouped_results': [
+                {'null': [PARSED_VARIANTS[0]]}, {'ENSG00000228198': PARSED_COMPOUND_HET_VARIANTS},
+                {'null': [PARSED_VARIANTS[0]]}, {'null': [PARSED_VARIANTS[1]]}],
+            'duplicate_doc_count': 1,
+            'loaded_variant_counts': {'test_index_compound_het': {'total': 1, 'loaded': 1}, INDEX_NAME: {'loaded': 4, 'total': 5}},
+            'total_results': 5,
+        })
 
-        # TODO fix test <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-        # self.assertExecutedSearches([dict(filters=[annotation_query, pass_filter_query, RECESSIVE_INHERITANCE_QUERY], start_index=2, size=4, sort=['xpos'])])
+        self.assertExecutedSearches([dict(filters=[annotation_query, pass_filter_query, RECESSIVE_INHERITANCE_QUERY], start_index=2, size=4, sort=['xpos'])])
 
-        # get_es_variants(results_model, page=2, num_results=2)
-        # self.assertIsNone(self.executed_search)
+        get_es_variants(results_model, page=2, num_results=2)
+        self.assertIsNone(self.executed_search)
 
     def test_all_samples_all_inheritance_get_es_variants(self):
         search_model = VariantSearch.objects.create(search={'annotations': {'frameshift': ['frameshift_variant']}})
