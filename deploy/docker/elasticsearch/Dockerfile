@@ -10,8 +10,8 @@ RUN apk add --no-cache openjdk8
 ENV JAVA_HOME /usr/lib/jvm/java-1.8-openjdk
 ENV PATH $PATH:/usr/lib/jvm/java-1.8-openjdk/jre/bin:/usr/lib/jvm/java-1.8-openjdk/bin
 
-#ENV ELASTICSEARCH_VERSION="6.3.2"
-ENV ELASTICSEARCH_VERSION="5.4.3"
+ENV ELASTICSEARCH_VERSION="6.3.2"
+#ENV ELASTICSEARCH_VERSION="5.4.3"
 
 # create 'elasticsearch' user
 RUN useradd -ms /bin/bash elasticsearch
@@ -24,6 +24,7 @@ RUN cd /usr/local \
   && chown -R elasticsearch /usr/local/elasticsearch-${ELASTICSEARCH_VERSION}
 
 # install plugins
+ENV ES_TMPDIR="/tmp"
 RUN /usr/local/elasticsearch-${ELASTICSEARCH_VERSION}/bin/elasticsearch-plugin install -b repository-gcs
 
 # environment and config
