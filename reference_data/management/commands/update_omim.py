@@ -68,7 +68,7 @@ OMIM_PHENOTYPE_MAP_METHOD_CHOICES = {
 class OmimReferenceDataHandler(ReferenceDataHandler):
 
     model_cls = Omim
-    url = "http://data.omim.org/downloads/{omim_key}/genemap2.txt"
+    url = "https://data.omim.org/downloads/{omim_key}/genemap2.txt"
 
     def __init__(self, omim_key=None, **kwargs):
         if not omim_key:
