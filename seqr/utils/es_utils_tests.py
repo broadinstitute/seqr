@@ -1,7 +1,6 @@
 from copy import deepcopy
 import mock
 import json
-import logging
 
 from collections import defaultdict
 from django.test import TestCase
@@ -565,8 +564,10 @@ for variant in PARSED_COMPOUND_HET_VARIANTS_MULTI_GENOME_VERSION:
     variant.update({
         'genomeVersion': '38',
         'liftedOverGenomeVersion': '37',
-        'liftedOverPos': variant['pos'] - 10,
+        'liftedOverPos': int(variant['pos'] - 10),
         'liftedOverChrom': variant['chrom'],
+        'pos': int(variant['pos']),
+        'xpos': int(variant['xpos']),
     })
 
 PARSED_NO_SORT_VARIANTS = deepcopy(PARSED_VARIANTS)
@@ -1433,22 +1434,22 @@ class EsUtilsTest(TestCase):
         self.assertDictEqual(variants[0], PARSED_VARIANTS[0])
         self.assertDictEqual(variants[1][0], PARSED_COMPOUND_HET_VARIANTS_PROJECT_2[0])
         self.assertDictEqual(variants[1][1], PARSED_COMPOUND_HET_VARIANTS_PROJECT_2[1])
-        # TODO fix test <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-        # self.assertEqual(total_results, 13)
+        self.assertEqual(total_results, 10)
 
-        # self.assertCachedResults(results_model, {
-        #     'compound_het_results': [{'ENSG00000228198': PARSED_COMPOUND_HET_VARIANTS_MULTI_GENOME_VERSION}],
-        #     'variant_results': [PARSED_MULTI_GENOME_VERSION_VARIANT],
-        #     'grouped_results': [{'null': [PARSED_VARIANTS[0]]}, {'ENSG00000135953': PARSED_COMPOUND_HET_VARIANTS_PROJECT_2}],
-        #     'duplicate_doc_count': 3,
-        #     'loaded_variant_counts': {
-        #         SECOND_INDEX_NAME: {'loaded': 1, 'total': 5},
-        #         '{}_compound_het'.format(SECOND_INDEX_NAME): {'total': 4, 'loaded': 4},
-        #         INDEX_NAME: {'loaded': 2, 'total': 5},
-        #         '{}_compound_het'.format(INDEX_NAME): {'total': 2, 'loaded': 2},
-        #     },
-        #     'total_results': 13,
-        # })
+        PARSED_COMPOUND_HET_VARIANTS_MULTI_GENOME_VERSION[1]['familyGuids'] = ['F000002_2', 'F000003_3', 'F000011_11']
+        self.assertCachedResults(results_model, {
+            'compound_het_results': [{'ENSG00000228198': PARSED_COMPOUND_HET_VARIANTS_MULTI_GENOME_VERSION}],
+            'variant_results': [PARSED_MULTI_GENOME_VERSION_VARIANT],
+            'grouped_results': [{'null': [PARSED_VARIANTS[0]]}, {'ENSG00000135953': PARSED_COMPOUND_HET_VARIANTS_PROJECT_2}],
+            'duplicate_doc_count': 3,
+            'loaded_variant_counts': {
+                SECOND_INDEX_NAME: {'loaded': 1, 'total': 5},
+                '{}_compound_het'.format(SECOND_INDEX_NAME): {'total': 2, 'loaded': 2},
+                INDEX_NAME: {'loaded': 2, 'total': 5},
+                '{}_compound_het'.format(INDEX_NAME): {'total': 1, 'loaded': 1},
+            },
+            'total_results': 10,
+        })
 
         annotation_query = {'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}}
 
@@ -1509,29 +1510,31 @@ class EsUtilsTest(TestCase):
         self.assertEqual(len(variants), 2)
         self.maxDiff = None
         self.assertEqual(variants[0], PARSED_VARIANTS[0])
-        # TODO fix test <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-        # self.assertEqual(variants[1][0], FIRST_COMPOUND_HET)
-        # self.assertEqual(variants[1][1], SECOND_COMPOUND_HET)
-        # self.assertEqual(total_results, 11)
+        self.assertEqual(variants[1][0], FIRST_COMPOUND_HET)
+        SECOND_COMPOUND_HET['familyGuids'] = ['F000002_2', 'F000003_3', 'F000011_11']
+        SECOND_COMPOUND_HET['xpos'] = int(SECOND_COMPOUND_HET['xpos'])
+        SECOND_COMPOUND_HET['pos'] = int(SECOND_COMPOUND_HET['pos'])
+        self.assertEqual(variants[1][1], SECOND_COMPOUND_HET)
+        self.assertEqual(total_results, 8)
 
-        # self.assertCachedResults(results_model, {
-        #     'compound_het_results': [],
-        #     'variant_results': [PARSED_MULTI_GENOME_VERSION_VARIANT],
-        #     'grouped_results': [
-        #         {'null': [PARSED_VARIANTS[0]]},
-        #         {'ENSG00000135953': PARSED_COMPOUND_HET_VARIANTS_PROJECT_2},
-        #         {'null': [PARSED_VARIANTS[0]]},
-        #         {'ENSG00000228198': PARSED_COMPOUND_HET_VARIANTS_MULTI_GENOME_VERSION}
-        #     ],
-        #     'duplicate_doc_count': 5,
-        #     'loaded_variant_counts': {
-        #         SECOND_INDEX_NAME: {'loaded': 2, 'total': 5},
-        #         '{}_compound_het'.format(SECOND_INDEX_NAME): {'total': 4, 'loaded': 4},
-        #         INDEX_NAME: {'loaded': 4, 'total': 5},
-        #         '{}_compound_het'.format(INDEX_NAME): {'total': 2, 'loaded': 2},
-        #     },
-        #     'total_results': 11,
-        # })
+        self.assertCachedResults(results_model, {
+            'compound_het_results': [],
+            'variant_results': [PARSED_MULTI_GENOME_VERSION_VARIANT],
+            'grouped_results': [
+                {'null': [PARSED_VARIANTS[0]]},
+                {'ENSG00000135953': PARSED_COMPOUND_HET_VARIANTS_PROJECT_2},
+                {'null': [PARSED_VARIANTS[0]]},
+                {'ENSG00000228198': PARSED_COMPOUND_HET_VARIANTS_MULTI_GENOME_VERSION}
+            ],
+            'duplicate_doc_count': 5,
+            'loaded_variant_counts': {
+                SECOND_INDEX_NAME: {'loaded': 2, 'total': 5},
+                '{}_compound_het'.format(SECOND_INDEX_NAME): {'total': 2, 'loaded': 2},
+                INDEX_NAME: {'loaded': 4, 'total': 5},
+                '{}_compound_het'.format(INDEX_NAME): {'total': 1, 'loaded': 1},
+            },
+            'total_results': 8,
+        })
 
         project_2_search['start_index'] = 1
         project_2_search['size'] = 3
