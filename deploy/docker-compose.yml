@@ -1,0 +1,65 @@
+version: '3'
+
+services:
+  postgres:
+    image: gcr.io/seqr-project/postgres
+    ports:
+      - 5432:5432
+    volumes:
+      - ./data/postgres:/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  redis:
+    image: gcr.io/seqr-project/redis
+    ports:
+      - 6379:6379
+
+  #elasticsearch:
+  #  image: gcr.io/seqr-project/elasticsearch
+  #  ports:
+  #    - 9200:9200
+  #  volumes:
+  #    - ./data/elasticsearch:/elasticsearch-data
+
+  #kibana:
+  #  image: gcr.io/seqr-project/kibana
+  #  ports:
+  #    - 5601:5601
+  #  depends_on:
+  #    - elasticsearch
+
+  #mongo:
+  #  image: gcr.io/seqr-project/mongo
+  #  ports:
+  #    - 27017:27017
+  #  volumes:
+  #    - ./data/mongo:/data/db
+  #    - ./config/ /matchbox_deployment/config
+
+  #matchbox:
+  #  image: gcr.io/seqr-project/matchbox
+  #  ports:
+  #    - 9020:9020
+  #  depends_on:
+  #    - mongo
+
+  #phenotips:
+  #  image: gcr.io/seqr-project/phenotips
+  #  ports:
+  #    - 8080:8080
+
+  seqr:
+    image: gcr.io/seqr-project/seqr
+
+    environment:
+      - PGHOST=postgres
+      - PGUSER=postgres
+      - POSTGRES_SERVICE_HOSTNAME=postgres
+      - ELASTICSEARCH_SERVICE_HOSTNAME=elasticsearch
+
+    depends_on:
+      - postgres
+      - redis
+      #- elasticsearch
+      #- matchbox
+      #- phenotips
