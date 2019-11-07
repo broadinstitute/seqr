@@ -231,6 +231,10 @@ export const ANNOTATION_GROUPS = Object.entries(GROUPED_VEP_CONSEQUENCES).map(([
   name, options, groupLabel: snakecaseToTitlecase(name),
 }))
 
+export const ANNOTATION_GROUPS_SECONDARY = Object.entries(GROUPED_VEP_CONSEQUENCES).map(([name, options]) => ({
+  name: name.concat('_secondary'), options, groupLabel: snakecaseToTitlecase(name),
+}))
+
 export const ALL_IMPACT_GROUPS = [
   VEP_GROUP_NONSENSE,
   VEP_GROUP_ESSENTIAL_SPLICE_SITE,
