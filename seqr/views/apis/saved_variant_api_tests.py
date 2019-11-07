@@ -328,7 +328,6 @@ class ProjectAPITest(TransactionTestCase):
 
         self.assertListEqual(["one_saved_one_not_saved_compount_hets_note"], [vn['note'] for vn in compound_het_5_notes])
         self.assertListEqual(["one_saved_one_not_saved_compount_hets_note"], [vn['note'] for vn in variant_notes])
-        # self.assertListEqual(["one_saved_one_not_saved_compount_hets_note", "one_saved_one_not_saved_compount_hets_note"], [vn.note for vn in VariantNote.objects.filter(saved_variants__guid__in=[compound_het_5_guid, COMPOUND_HET_4_GUID])])
 
     def test_create_update_and_delete_compound_hets_variant_note(self):
         # send valid request to create variant_note for compound hets
@@ -371,7 +370,8 @@ class ProjectAPITest(TransactionTestCase):
         self.assertEqual(new_gene_note_response_2['note'], 'new_compound_hets_variant_note_as_gene_note')
 
         # update the variants_note for both compound hets
-        update_variant_note_url = reverse(update_variant_note_handler, args=[','.join([COMPOUND_HET_1_GUID, COMPOUND_HET_2_GUID]), compound_het_1_new_variant_note.guid])
+        update_variant_note_url = reverse(update_variant_note_handler,
+                                          args=[','.join([COMPOUND_HET_1_GUID, COMPOUND_HET_2_GUID]), compound_het_1_new_variant_note.guid])
         response = self.client.post(update_variant_note_url, content_type='application/json', data=json.dumps(
             {'note': 'updated_variant_note', 'submitToClinvar': False}))
 
@@ -426,7 +426,8 @@ class ProjectAPITest(TransactionTestCase):
         tags = response.json()['savedVariantsByGuid'][VARIANT_GUID]['tags']
         self.assertEqual(len(tags), 2)
         self.assertSetEqual({"Review", "Excluded"}, {vt['name'] for vt in tags})
-        self.assertSetEqual({"Review", "Excluded"}, {vt.variant_tag_type.name for vt in VariantTag.objects.filter(saved_variants__guid__contains=VARIANT_GUID)})
+        self.assertSetEqual({"Review", "Excluded"},
+                            {vt.variant_tag_type.name for vt in VariantTag.objects.filter(saved_variants__guid__contains=VARIANT_GUID)})
 
         functionalData = response.json()['savedVariantsByGuid'][VARIANT_GUID]['functionalData']
         self.assertEqual(len(functionalData), 2)
@@ -464,7 +465,8 @@ class ProjectAPITest(TransactionTestCase):
         self.assertEqual(len(compound_het_2_tags), 2)
         self.assertSetEqual({"Review", "Excluded"}, {vt['name'] for vt in compound_het_1_tags})
         self.assertSetEqual({"Review", "Excluded"}, {vt['name'] for vt in compound_het_2_tags})
-        self.assertSetEqual({"Review", "Excluded"}, {vt.variant_tag_type.name for vt in VariantTag.objects.filter(saved_variants__guid__in=[COMPOUND_HET_1_GUID, COMPOUND_HET_2_GUID])})
+        self.assertSetEqual({"Review", "Excluded"},
+                            {vt.variant_tag_type.name for vt in VariantTag.objects.filter(saved_variants__guid__in=[COMPOUND_HET_1_GUID, COMPOUND_HET_2_GUID])})
 
         compound_het_1_functional_data = response.json()['savedVariantsByGuid'][COMPOUND_HET_1_GUID]['functionalData']
         compound_het_2_functional_data = response.json()['savedVariantsByGuid'][COMPOUND_HET_2_GUID]['functionalData']
@@ -491,7 +493,8 @@ class ProjectAPITest(TransactionTestCase):
 
         self.assertSetEqual(
             set(response.json().keys()),
-            {'SV0000002_1248367227_r0390_100', 'SV0000001_2103343353_r0390_100', 'SV0000003_2246859832_r0390_100', 'SV0059957_11562437_f019313_1', 'SV0059956_11560662_f019313_1'}
+            {'SV0000002_1248367227_r0390_100', 'SV0000001_2103343353_r0390_100',
+             'SV0000003_2246859832_r0390_100', 'SV0059957_11562437_f019313_1', 'SV0059956_11560662_f019313_1'}
         )
 
     def test_update_variant_main_transcript(self):
