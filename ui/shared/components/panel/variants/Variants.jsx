@@ -56,14 +56,9 @@ const Variant = ({ variant, isCompoundHet }) => {
       <Grid.Column width={16}>
         <Pathogenicity variant={variant} />
       </Grid.Column>
-      {isCompoundHet && variant.familyGuids.map(familyGuid =>
+      {variant.familyGuids.map(familyGuid =>
         <Grid.Column key={familyGuid} width={16}>
-          <FamilyVariantTags familyGuid={familyGuid} variant={variant} key={variant.variantId} isCompoundHet />
-        </Grid.Column>,
-      )}
-      {!isCompoundHet && variant.familyGuids.map(familyGuid =>
-        <Grid.Column key={familyGuid} width={16}>
-          <FamilyVariantTags familyGuid={familyGuid} variant={variant} />
+          <FamilyVariantTags familyGuid={familyGuid} variant={variant} key={variant.variantId} isCompoundHet={isCompoundHet} />
         </Grid.Column>,
       )}
       {isCompoundHet &&
