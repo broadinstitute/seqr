@@ -127,15 +127,18 @@ const familyIsAssignedToMe = (family, user) =>
 const ALL_FAMILIES_FILTER = { value: SHOW_ALL, name: 'All', createFilter: () => () => (true) }
 const IN_REVIEW_FAMILIES_FILTER = {
   value: SHOW_IN_REVIEW,
-  category: 'Analysis Status:',
   name: 'In Review',
   createFilter: individualsByGuid => family => familyIsInReview(family, individualsByGuid),
 }
 const ACCEPTED_FILTER = {
   value: SHOW_ACCEPTED,
-  category: 'Analysis Status:',
   name: 'Accepted',
   createFilter: caseReviewStatusFilter(CASE_REVIEW_STATUS_ACCEPTED),
+}
+const ASSIGNED_TO_ME_FILTER = {
+  value: SHOW_ASSIGNED_TO_ME,
+  name: 'Assigned To Me',
+  createFilter: (individualsByGuid, samplesByGuid, user) => family => familyIsAssignedToMe(family, user),
 }
 
 export const FAMILY_FILTER_OPTIONS = [
@@ -165,12 +168,7 @@ export const FAMILY_FILTER_OPTIONS = [
         phenotipsData => !hasPhenotipsDetails(phenotipsData),
       ),
   },
-  {
-    value: SHOW_ASSIGNED_TO_ME,
-    category: 'Analysed By:',
-    name: 'Assigned To Me',
-    createFilter: (individualsByGuid, samplesByGuid, user) => family => familyIsAssignedToMe(family, user),
-  },
+  { ...ASSIGNED_TO_ME_FILTER, category: 'Analysed By:' },
   {
     value: SHOW_ANALYSED_BY_ME,
     category: 'Analysed By:',
@@ -244,8 +242,8 @@ export const FAMILY_FILTER_OPTIONS = [
     createFilter: () => family =>
       ANALYSIS_IN_PROGRESS_STATUSES.has(family.analysisStatus),
   },
-  ACCEPTED_FILTER,
-  IN_REVIEW_FAMILIES_FILTER,
+  { ...ACCEPTED_FILTER, category: 'Analysis Status:' },
+  { ...IN_REVIEW_FAMILIES_FILTER, category: 'Analysis Status:' },
 ]
 
 export const INTERNAL_FAMILY_FILTER_OPTIONS = [
@@ -256,13 +254,14 @@ export const INTERNAL_FAMILY_FILTER_OPTIONS = [
     createFilter: (individualsByGuid, samplesByGuid, user) => family =>
       familyIsAssignedToMe(family, user) && familyIsInReview(family, individualsByGuid),
   },
-  IN_REVIEW_FAMILIES_FILTER,
-  ACCEPTED_FILTER,
+  { ...ASSIGNED_TO_ME_FILTER, name: 'Assigned To Me - All' },
+  { ...IN_REVIEW_FAMILIES_FILTER, category: 'Case Review Status:' },
+  { ...ACCEPTED_FILTER, category: 'Case Review Status:' },
   ...CASE_REVIEW_STATUS_OPTIONS.filter(({ value }) =>
     value !== CASE_REVIEW_STATUS_ACCEPTED && value !== CASE_REVIEW_STATUS_IN_REVIEW,
   ).map(({ name, value }) => ({
     value: `SHOW_${name.toUpperCase()}`,
-    category: 'Analysis Status:',
+    category: 'Case Review Status:',
     name,
     createFilter: caseReviewStatusFilter(value),
   })),
