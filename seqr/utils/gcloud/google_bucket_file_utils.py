@@ -8,8 +8,13 @@ from seqr.utils.shell_utils import run
 
 logger = logging.getLogger(__name__)
 
-#def get_gs_default_service_acount():
-#     "gs compute instances list --format=json"
+
+def _gsutil_command(command, gs_path):
+    #  Anvil buckets are requester-pays and we bill them to the anvil project
+    project_arg = '-u anvil-datastore ' if gs_path.startswith('gs://fc-secure') else ''
+    return 'gsutil {project_arg}{command} {gs_path}'.format(
+        project_arg=project_arg, command=command, gs_path=gs_path,
+    )
 
 
 def is_google_bucket_file_path(file_path):
@@ -18,13 +23,14 @@ def is_google_bucket_file_path(file_path):
 
 def does_google_bucket_file_exist(gs_path):
     try:
-        return get_google_bucket_file_stats(gs_path) is not None
+        run(_gsutil_command('ls', gs_path), verbose=False)
+        return True
     except RuntimeError:
         return False
 
 
 def get_google_bucket_file_stats(gs_path):
-    gsutil_stat_output = run("gsutil stat %(gs_path)s" % locals(), verbose=False)
+    gsutil_stat_output = run(_gsutil_command('stat', gs_path), verbose=False)
 
     """
     Example gsutil stat output:
@@ -59,8 +65,8 @@ def get_google_bucket_file_stats(gs_path):
 
 def google_bucket_file_iter(gs_path, byte_range=None):
     """Iterate over lines in the given file"""
-    command = "gsutil cat {range_arg}{gs_path} ".format(
-        gs_path=gs_path, range_arg='-r {}-{} '.format(byte_range[0], byte_range[1]) if byte_range else '')
+    range_arg = ' -r {}-{}'.format(byte_range[0], byte_range[1]) if byte_range else ''
+    command = _gsutil_command('cat{}'.format(range_arg), gs_path)
     if gs_path.endswith("gz"):
         command += "| gunzip -c -q - "
     process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)

@@ -801,7 +801,7 @@ def saved_variants(request, tag):
     if gene:
         saved_variant_models = saved_variant_models.filter(saved_variant_json__transcripts__has_key=gene)
 
-    if saved_variant_models.count() > 1000 and not gene:
+    if saved_variant_models.count() > 10000 and not gene:
         return create_json_response({'message': 'Select a gene to filter variants'}, status=400)
 
     prefetch_related_objects(saved_variant_models, 'family__project')

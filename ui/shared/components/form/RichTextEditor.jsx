@@ -8,6 +8,8 @@ import { mdToDraftjs, draftjsToMd } from 'draftjs-md-converter'
 
 import 'draft-js/dist/Draft.css'
 
+const TAB = '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'
+
 /*
  Draft.js-based rich text editor.
  It uses draftjs-md-converter to convert Draft.js content representation to/from Markdown.
@@ -55,7 +57,9 @@ class RichTextEditor extends React.Component {
 
   getMarkdown() {
     const content = this.state.editorState.getCurrentContent()
-    return draftjsToMd(convertToRaw(content))
+    const markdown = draftjsToMd(convertToRaw(content))
+    // Support for tabs. Required for RGP datstat imported notes
+    return markdown ? markdown.replace(/' '{5}/g, TAB).replace(/\u00A0{5}/g, TAB) : markdown
   }
 
   _handleKeyCommand(command, editorState) {

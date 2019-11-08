@@ -1,5 +1,4 @@
 from django.conf.urls import include, url
-from django.contrib import admin
 
 import xbrowse_server.base.views.individual_views
 import xbrowse_server.base.views.igv_views
@@ -8,9 +7,6 @@ import xbrowse_server.base.views.reference_views
 import xbrowse_server.gene_lists.urls
 import xbrowse_server.staff.urls
 import xbrowse_server.api.urls
-
-
-admin.autodiscover()
 
 
 urlpatterns = [
