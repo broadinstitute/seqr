@@ -191,7 +191,7 @@ def update_variant_note_handler(request, variant_guids, note_guid):
     update = {}
     for variant_guid in variant_guids:
         update[variant_guid] = {
-            'notes': [get_json_for_variant_note(note) for note in saved_variants[0].variantnote_set.all()],
+            'notes': [get_json_for_variant_note(updated_note) for updated_note in saved_variants[0].variantnote_set.all()],
         }
     return create_json_response({'savedVariantsByGuid': update})
 
@@ -208,7 +208,7 @@ def delete_variant_note_handler(request, variant_guids, note_guid):
     update = {}
     for variant_guid in variant_guids:
         update[variant_guid] = {
-            'notes': [get_json_for_variant_note(note) for note in saved_variants[0].variantnote_set.all()]
+            'notes': [get_json_for_variant_note(updated_note) for updated_note in saved_variants[0].variantnote_set.all()]
         }
     return create_json_response({'savedVariantsByGuid': update})
 

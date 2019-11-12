@@ -466,7 +466,8 @@ class ProjectAPITest(TransactionTestCase):
         self.assertSetEqual({"Review", "Excluded"}, {vt['name'] for vt in compound_het_1_tags})
         self.assertSetEqual({"Review", "Excluded"}, {vt['name'] for vt in compound_het_2_tags})
         self.assertSetEqual({"Review", "Excluded"},
-                            {vt.variant_tag_type.name for vt in VariantTag.objects.filter(saved_variants__guid__in=[COMPOUND_HET_1_GUID, COMPOUND_HET_2_GUID])})
+                            {vt.variant_tag_type.name for vt in
+                             VariantTag.objects.filter(saved_variants__guid__in=[COMPOUND_HET_1_GUID, COMPOUND_HET_2_GUID])})
 
         compound_het_1_functional_data = response.json()['savedVariantsByGuid'][COMPOUND_HET_1_GUID]['functionalData']
         compound_het_2_functional_data = response.json()['savedVariantsByGuid'][COMPOUND_HET_2_GUID]['functionalData']
