@@ -297,7 +297,8 @@ def _get_json_for_variant_tag_types(project):
         'numTagsPerFamily': {count['saved_variants__family__guid']: count['count'] for count in note_counts_by_family},
     }
 
-    tag_counts_by_type_and_family = VariantTag.objects.filter(saved_variants__family__project=project).values('saved_variants__family__guid', 'variant_tag_type__name').annotate(count=Count('*'))
+    tag_counts_by_type_and_family = VariantTag.objects.filter(saved_variants__family__project=project)\
+        .values('saved_variants__family__guid', 'variant_tag_type__name').annotate(count=Count('*'))
     project_variant_tags = _get_json_for_models(VariantTagType.objects.filter(Q(project=project) | Q(project__isnull=True)))
     for tag_type in project_variant_tags:
         current_tag_type_counts = [counts for counts in tag_counts_by_type_and_family if
