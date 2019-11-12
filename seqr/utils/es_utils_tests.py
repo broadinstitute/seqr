@@ -995,8 +995,6 @@ class EsUtilsTest(TestCase):
         else:
             expected_search['_source'] = mock.ANY
 
-        # import pdb
-        # pdb.set_trace()
         self.assertDictEqual(executed_search, expected_search)
 
         if not expected_search_params.get('gene_count_aggs'):
@@ -1136,6 +1134,7 @@ class EsUtilsTest(TestCase):
                             ]
                         }},
                         {'terms': {'hgmd_class': ['DM', 'DM?']}},
+                        {'terms': {'transcriptConsequenceTerms': []}},
                     ]
                 }
             },
@@ -1325,7 +1324,6 @@ class EsUtilsTest(TestCase):
         results_model.families.set(self.families)
 
         variants, total_results = get_es_variants(results_model, num_results=1)
-        self.maxDiff = None
         self.assertEqual(len(variants), 1)
         self.assertEqual(variants[0][0], PARSED_COMPOUND_HET_VARIANTS[0])
         PARSED_COMPOUND_HET_VARIANTS[1]['familyGuids'] = ['F000002_2', 'F000003_3']
@@ -1374,7 +1372,9 @@ class EsUtilsTest(TestCase):
             'total_results': 6,
         })
 
-        annotation_query = {'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}}
+        annotation_query = {'bool': {'should':
+                                     [{'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}},
+                                      {'terms': {'transcriptConsequenceTerms': []}}]}}
         pass_filter_query = {'bool': {'must_not': [{'exists': {'field': 'filters'}}]}}
 
         self.assertExecutedSearches([
@@ -1420,7 +1420,10 @@ class EsUtilsTest(TestCase):
         self.assertListEqual(variants, PARSED_VARIANTS)
         self.assertEqual(total_results, 5)
 
-        self.assertExecutedSearch(filters=[{'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}}], sort=['xpos'])
+        self.assertExecutedSearch(filters=[{'bool': {'should':
+                                                     [{'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}},
+                                                      {'terms': {'transcriptConsequenceTerms': []}}]}}],
+                                  sort=['xpos'])
 
     def test_multi_project_get_es_variants(self):
         search_model = VariantSearch.objects.create(search={
@@ -1453,7 +1456,9 @@ class EsUtilsTest(TestCase):
             'total_results': 10,
         })
 
-        annotation_query = {'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}}
+        annotation_query = {'bool': {'should':
+                                     [{'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}},
+                                      {'terms': {'transcriptConsequenceTerms': []}}]}}
 
         project_2_search = dict(
             filters=[
@@ -1510,7 +1515,6 @@ class EsUtilsTest(TestCase):
         # test pagination
         variants, total_results = get_es_variants(results_model, num_results=2, page=2)
         self.assertEqual(len(variants), 2)
-        self.maxDiff = None
         self.assertEqual(variants[0], PARSED_VARIANTS[0])
         self.assertEqual(variants[1][0], FIRST_COMPOUND_HET)
         SECOND_COMPOUND_HET['familyGuids'] = ['F000002_2', 'F000003_3', 'F000011_11']
@@ -1561,7 +1565,9 @@ class EsUtilsTest(TestCase):
 
         self.assertExecutedSearch(
             index='{},{}'.format(SECOND_INDEX_NAME, INDEX_NAME),
-            filters=[{'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}}],
+            filters=[{'bool': {'should':
+                               [{'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}},
+                                {'terms': {'transcriptConsequenceTerms': []}}]}}],
             sort=['xpos'],
             size=4,
         )
@@ -1580,7 +1586,9 @@ class EsUtilsTest(TestCase):
 
         self.assertExecutedSearch(
             index='{},{}'.format(SECOND_INDEX_NAME, INDEX_NAME),
-            filters=[{'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}}],
+            filters=[{'bool': {'should':
+                               [{'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}},
+                                {'terms': {'transcriptConsequenceTerms': []}}]}}],
             sort=['xpos'],
             size=5,
             start_index=3,
@@ -1637,7 +1645,9 @@ class EsUtilsTest(TestCase):
         })
 
         self.assertExecutedSearch(
-            filters=[{'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}}, RECESSIVE_INHERITANCE_QUERY],
+            filters=[{'bool': {'should':
+                               [{'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}},
+                                {'terms': {'transcriptConsequenceTerms': []}}]}}, RECESSIVE_INHERITANCE_QUERY],
             size=1, index=INDEX_NAME, gene_count_aggs={'vars_by_gene': {'top_hits': {'_source': 'none', 'size': 100}}})
 
         expected_cached_results = {'gene_aggs': gene_counts}
@@ -1675,10 +1685,12 @@ class EsUtilsTest(TestCase):
             'ENSG00000228198': {'total': 4, 'families': {'F000003_3': 4, 'F000002_2': 1, 'F000005_5': 1, 'F000011_11': 4}}
         })
 
-        annotation_query = {'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}}
+        annotation_query = {'bool': {'should':
+                                     [{'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}},
+                                      {'terms': {'transcriptConsequenceTerms': []}}]}}
         expected_search = dict(size=1, start_index=0, gene_count_aggs={'vars_by_gene': {'top_hits': {'_source': 'none', 'size': 100}}})
         self.assertExecutedSearches([
-            dict(filters=[
+        dict(filters=[
                 annotation_query,
                 {'bool': {
                     'must': [
@@ -1721,14 +1733,15 @@ class EsUtilsTest(TestCase):
 
         self.assertExecutedSearch(
             index='{},{}'.format(SECOND_INDEX_NAME, INDEX_NAME),
-            filters=[{'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}}],
+            filters=[{'bool': {'should':
+                               [{'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}},
+                                {'terms': {'transcriptConsequenceTerms': []}}]}}],
             size=1,
             gene_count_aggs={
                 'samples_num_alt_1': {'terms': {'field': 'samples_num_alt_1', 'size': 10000}},
                 'samples_num_alt_2': {'terms': {'field': 'samples_num_alt_2', 'size': 10000}}
             }
         )
-
         self.assertCachedResults(results_model, {'gene_aggs': gene_counts, 'total_results': 5})
 
     def test_cached_get_es_variant_gene_counts(self):
