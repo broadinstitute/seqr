@@ -1249,9 +1249,11 @@ def _pathogenicity_filter(pathogenicity):
 
 def _annotations_filter(annotations, annotations_secondary):
     vep_consequences = [ann for annotations in annotations.values() for ann in annotations]
-    vep_consequences_secondary = [ann for annotations_secondary in annotations_secondary.values() for ann in annotations_secondary]
-
     consequences_filter = Q('terms', transcriptConsequenceTerms=vep_consequences)
+
+    vep_consequences_secondary = []
+    if annotations_secondary:
+        vep_consequences_secondary = [ann for annotations_secondary in annotations_secondary.values() for ann in annotations_secondary]
     consequences_filter_secondary = Q('terms', transcriptConsequenceTerms=vep_consequences_secondary)
 
     # for many intergenic variants VEP doesn't add any annotations, so if user selected 'intergenic_variant', also match variants where transcriptConsequenceTerms is empty
