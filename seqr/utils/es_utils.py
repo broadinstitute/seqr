@@ -258,7 +258,8 @@ class BaseEsSearch(object):
         return self
 
     def filter_by_annotations(self, annotations, pathogenicity_filter, annotations_secondary=None):
-        consequences_filter, consequences_filter_secondary, allowed_consequences, allowed_consequences_secondary = _annotations_filter(annotations, annotations_secondary)
+        consequences_filter, consequences_filter_secondary, allowed_consequences, allowed_consequences_secondary = \
+            _annotations_filter(annotations, annotations_secondary)
 
         if allowed_consequences:
             if pathogenicity_filter:
@@ -636,7 +637,9 @@ class EsSearch(BaseEsSearch):
 
                 if self._allowed_consequences_secondary:
                     compound_het_pairs = [compound_het_pair for compound_het_pair in compound_het_pairs if
-                                          filter_compound_hets_by_annotations(self._allowed_consequences, self._allowed_consequences_secondary, compound_het_pair)]
+                                          filter_compound_hets_by_annotations(self._allowed_consequences,
+                                                                              self._allowed_consequences_secondary,
+                                                                              compound_het_pair)]
                 family_compound_het_pairs[family_guid] = compound_het_pairs
 
                 if gene_id in compound_het_pairs_by_gene.keys():
@@ -1256,7 +1259,8 @@ def _annotations_filter(annotations, annotations_secondary):
         vep_consequences_secondary = [ann for annotations_secondary in annotations_secondary.values() for ann in annotations_secondary]
     consequences_filter_secondary = Q('terms', transcriptConsequenceTerms=vep_consequences_secondary)
 
-    # for many intergenic variants VEP doesn't add any annotations, so if user selected 'intergenic_variant', also match variants where transcriptConsequenceTerms is empty
+    # for many intergenic variants VEP doesn't add any annotations, so if user selected 'intergenic_variant',
+    # also match variants where transcriptConsequenceTerms is empty
     if 'intergenic_variant' in vep_consequences:
         consequences_filter |= ~Q('exists', field='transcriptConsequenceTerms')
     if 'intergenic_variant' in vep_consequences_secondary:
