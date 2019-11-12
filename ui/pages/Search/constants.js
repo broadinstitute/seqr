@@ -62,7 +62,7 @@ const COMPOUND_HET_FILTER = 'compound_het'
 const DE_NOVO_FILTER = 'de_novo'
 const ANY_AFFECTED = 'any_affected'
 
-export const ALL_RECESSIVE_FILTERS = [RECESSIVE_FILTER, HOM_RECESSIVE_FILTER, X_LINKED_RECESSIVE_FILTER, COMPOUND_HET_FILTER]
+export const ALL_RECESSIVE_INHERITANCE_FILTERS = [RECESSIVE_FILTER, HOM_RECESSIVE_FILTER, X_LINKED_RECESSIVE_FILTER, COMPOUND_HET_FILTER]
 
 export const INHERITANCE_LOOKUP = {
   [ALL_INHERITANCE_FILTER]: { text: 'All' },
@@ -229,10 +229,6 @@ export const PATHOGENICITY_FILTER_OPTIONS = STAFF_PATHOGENICITY_FILTER_OPTIONS.m
 
 export const ANNOTATION_GROUPS = Object.entries(GROUPED_VEP_CONSEQUENCES).map(([name, options]) => ({
   name, options, groupLabel: snakecaseToTitlecase(name),
-}))
-
-export const ANNOTATION_GROUPS_SECONDARY = Object.entries(GROUPED_VEP_CONSEQUENCES).map(([name, options]) => ({
-  name: name.concat('_secondary'), options, groupLabel: snakecaseToTitlecase(name),
 }))
 
 export const ALL_IMPACT_GROUPS = [

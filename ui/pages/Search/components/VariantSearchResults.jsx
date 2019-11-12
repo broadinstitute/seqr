@@ -25,7 +25,7 @@ import {
   getInhertanceFilterMode,
 } from '../selectors'
 import GeneBreakdown from './GeneBreakdown'
-import { ALL_RECESSIVE_FILTERS } from '../constants'
+import { ALL_RECESSIVE_INHERITANCE_FILTERS } from '../constants'
 
 
 const LargeRow = styled(Grid.Row)`
@@ -47,7 +47,7 @@ const BaseVariantSearchResults = ({
   const paginationFields = totalVariantsCount > recordsPerPage ? [{ ...VARIANT_PAGINATION_FIELD, totalPages: Math.ceil(totalVariantsCount / recordsPerPage) }] : []
 
   const displayVariants = flattenCompoundHet ? uniqBy(searchedVariants.flat(), 'variantId') : searchedVariants
-  const displayFlattenButton = ALL_RECESSIVE_FILTERS.includes(inheritanceFilter)
+  const displayFlattenButton = ALL_RECESSIVE_INHERITANCE_FILTERS.includes(inheritanceFilter)
   const FIELDS = displayFlattenButton ? [VARIANT_SORT_FIELD_NO_FAMILY_SORT, FLATTEN_COMPOUND_HET_TOGGLE_FIELD] :
     [VARIANT_SORT_FIELD_NO_FAMILY_SORT]
   const fields = [...FIELDS, ...paginationFields]

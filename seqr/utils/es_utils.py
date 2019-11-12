@@ -168,11 +168,12 @@ def _get_es_variants_for_search(search_model, es_search_cls, process_previous_re
 
     # Pathogencicity and transcript consequences act as "OR" filters instead of the usual "AND"
     pathogenicity_filter = _pathogenicity_filter(search.get('pathogenicity', {}))
-    if search.get('annotations'):
+    if search.get('annotations_secondary'):
+        es_search.filter_by_annotations(search['annotations'], pathogenicity_filter, search['annotations_secondary'])
+    elif search.get('annotations'):
         es_search.filter_by_annotations(search['annotations'], pathogenicity_filter)
     elif pathogenicity_filter:
         es_search.filter(pathogenicity_filter)
-
     if search.get('freqs'):
         es_search.filter(_frequency_filter(search['freqs']))
 
@@ -204,10 +205,10 @@ class BaseEsSearch(object):
 
         self.samples_by_family_index = defaultdict(lambda: defaultdict(dict))
         for s in Sample.objects.filter(
-            dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
-            elasticsearch_index__isnull=False,
-            is_active=True,
-            individual__family__in=families
+                dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
+                elasticsearch_index__isnull=False,
+                is_active=True,
+                individual__family__in=families
         ).prefetch_related('individual', 'individual__family'):
             self.samples_by_family_index[s.elasticsearch_index][s.individual.family.guid][s.sample_id] = s
 
@@ -238,6 +239,7 @@ class BaseEsSearch(object):
         self._index_searches = defaultdict(list)
         self._sort = None
         self._allowed_consequences = None
+        self._allowed_consequences_secondary = None
         self._filtered_variant_ids = None
         self._no_sample_filters = False
 
@@ -255,11 +257,15 @@ class BaseEsSearch(object):
         self._search = self._search.filter(new_filter)
         return self
 
-    def filter_by_annotations(self, annotations, pathogenicity_filter):
-        consequences_filter, allowed_consequences = _annotations_filter(annotations)
+    def filter_by_annotations(self, annotations, pathogenicity_filter, annotations_secondary=None):
+        consequences_filter, consequences_filter_secondary, allowed_consequences, allowed_consequences_secondary = _annotations_filter(annotations, annotations_secondary)
+
         if allowed_consequences:
             if pathogenicity_filter:
                 consequences_filter |= pathogenicity_filter
+            if consequences_filter_secondary:
+                consequences_filter |= consequences_filter_secondary
+                self._allowed_consequences_secondary = allowed_consequences_secondary
             self.filter(consequences_filter)
             self._allowed_consequences = allowed_consequences
 
@@ -279,7 +285,7 @@ class BaseEsSearch(object):
                         )
                         variant_id_genome_versions[lifted_variant_id] = lifted_genome_version
                         variant_ids.append(lifted_variant_id)
-        
+
         self.filter(_location_filter(genes, intervals, rs_ids, variant_ids, locus))
         if len({genome_version for genome_version in variant_id_genome_versions.items()}) > 1 and not (genes or intervals or rs_ids):
             self._filtered_variant_ids = variant_id_genome_versions
@@ -592,12 +598,20 @@ class EsSearch(BaseEsSearch):
                 for family_guid in variant['familyGuids']:
                     family_compound_het_pairs[family_guid].append(variant)
 
+            if self._allowed_consequences:
+                # Variants are returned if any transcripts have the filtered consequence, but to be compound het
+                # the filtered consequence needs to be present in at least one transcript in the gene of interest
+                gene_variants = [variant for variant in gene_variants if any(
+                    transcript['majorConsequence'] in self._allowed_consequences for transcript in
+                    variant['transcripts'][gene_id]
+                )]
+
             for family_guid, variants in family_compound_het_pairs.items():
-                # To be a compound het pair, total no. of hom ref for each unaffected individual is less than 2
-                #   i.e., any of the following combinations: [0, 0], [0, 1], [1, 0]; but not [1, 1].
                 num_alts = [[variant['genotypes'].get(individual_guid, {}).get('numAlt') for variant in variants]
                             for individual_guid in family_unaffected_individual_guids.get(family_guid, [])]
 
+                # To be a compound het pair, total no. of hom ref for each unaffected individual is less than 2
+                #   i.e., any of the following combinations: [0, 0], [0, 1], [1, 0]; but not [1, 1].
                 def is_a_valid_compound_het_pair(num_unaffected_individuals, variant_1_index, variant_2_index):
                     if num_unaffected_individuals == 1:
                         return num_alts[0][variant_1_index] * num_alts[0][variant_2_index] != 1
@@ -609,6 +623,20 @@ class EsSearch(BaseEsSearch):
                 valid_combinations = [[ch_1_index, ch_2_index] for ch_1_index, ch_2_index in combinations(range(len(variants)), 2)
                                       if is_a_valid_compound_het_pair(len(num_alts), ch_1_index, ch_2_index)]
                 compound_het_pairs = [[variants[valid_ch_1_index], variants[valid_ch_2_index]] for valid_ch_1_index, valid_ch_2_index in valid_combinations]
+
+                # Compound het pair is returned if one satisfies one filtered consequence
+                # (and the other satisfies the other secondary filtered consequence if given)
+                def filter_compound_hets_by_annotations(allowed_consequence, allowed_consequence_secondary, compound_het_pair):
+                    def variant_fit_allowed_consequence(given_allowed_consequence, given_variant):
+                        return any(transcript['majorConsequence'] in given_allowed_consequence for transcript in given_variant['transcripts'][gene_id])
+                    return (variant_fit_allowed_consequence(allowed_consequence, compound_het_pair[0]) and
+                            variant_fit_allowed_consequence(allowed_consequence_secondary, compound_het_pair[1]) or
+                            (variant_fit_allowed_consequence(allowed_consequence, compound_het_pair[1]) and
+                            variant_fit_allowed_consequence(allowed_consequence_secondary, compound_het_pair[0])))
+
+                if self._allowed_consequences_secondary:
+                    compound_het_pairs = [compound_het_pair for compound_het_pair in compound_het_pairs if
+                                          filter_compound_hets_by_annotations(self._allowed_consequences, self._allowed_consequences_secondary, compound_het_pair)]
                 family_compound_het_pairs[family_guid] = compound_het_pairs
 
                 if gene_id in compound_het_pairs_by_gene.keys():
@@ -616,11 +644,6 @@ class EsSearch(BaseEsSearch):
                         compound_het_pairs_by_gene[gene_id].append(compound_het_pairs)
                 else:
                     compound_het_pairs_by_gene[gene_id] = compound_het_pairs
-
-                # logging.info('\n')
-                # logging.info(num_alts)
-                # logging.info(valid_combinations)
-                # logging.info('\n')
 
         total_compound_het_results = sum(len(compound_het_pairs) for compound_het_pairs in compound_het_pairs_by_gene.values())
         logger.info('Total compound het hits: {}'.format(total_compound_het_results))
@@ -1224,16 +1247,20 @@ def _pathogenicity_filter(pathogenicity):
     return pathogenicity_filter
 
 
-def _annotations_filter(annotations):
+def _annotations_filter(annotations, annotations_secondary):
     vep_consequences = [ann for annotations in annotations.values() for ann in annotations]
+    vep_consequences_secondary = [ann for annotations_secondary in annotations_secondary.values() for ann in annotations_secondary]
 
     consequences_filter = Q('terms', transcriptConsequenceTerms=vep_consequences)
+    consequences_filter_secondary = Q('terms', transcriptConsequenceTerms=vep_consequences_secondary)
 
+    # for many intergenic variants VEP doesn't add any annotations, so if user selected 'intergenic_variant', also match variants where transcriptConsequenceTerms is empty
     if 'intergenic_variant' in vep_consequences:
-        # for many intergenic variants VEP doesn't add any annotations, so if user selected 'intergenic_variant', also match variants where transcriptConsequenceTerms is emtpy
         consequences_filter |= ~Q('exists', field='transcriptConsequenceTerms')
+    if 'intergenic_variant' in vep_consequences_secondary:
+        consequences_filter_secondary |= ~Q('exists', field='transcriptConsequenceTerms')
 
-    return consequences_filter, vep_consequences
+    return consequences_filter, consequences_filter_secondary, vep_consequences, vep_consequences_secondary
 
 
 POPULATIONS = {

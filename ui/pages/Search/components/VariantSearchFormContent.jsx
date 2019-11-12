@@ -22,7 +22,7 @@ import {
   INHERITANCE_LOOKUP,
   INHERITANCE_MODE_LOOKUP,
   ALL_INHERITANCE_FILTER,
-  ALL_RECESSIVE_FILTERS,
+  ALL_RECESSIVE_INHERITANCE_FILTERS,
   NUM_ALT_OPTIONS,
   THIS_CALLSET_FREQUENCY,
   FREQUENCIES,
@@ -32,7 +32,6 @@ import {
   STAFF_PATHOGENICITY_FILTER_OPTIONS,
   ANY_PATHOGENICITY_FILTER,
   ANNOTATION_GROUPS,
-  ANNOTATION_GROUPS_SECONDARY,
   ANNOTATION_FILTER_OPTIONS,
   ALL_ANNOTATION_FILTER_DETAILS,
   QUALITY_FILTER_FIELDS,
@@ -135,7 +134,7 @@ const INHERITANCE_PANEL = {
         return INHERITANCE_MODE_LOOKUP[JSON.stringify(coreFilter)]
       },
       normalize: (val, prevVal) => (val === ALL_INHERITANCE_FILTER ? null :
-        { mode: val, filter: { affected: ((prevVal || {}).filter || {}).affected, ...INHERITANCE_LOOKUP[val].filter }, annotationSecondary: ALL_RECESSIVE_FILTERS.includes(val) }),
+        { mode: val, filter: { affected: ((prevVal || {}).filter || {}).affected, ...INHERITANCE_LOOKUP[val].filter }, annotationSecondary: ALL_RECESSIVE_INHERITANCE_FILTERS.includes(val) }),
     },
   },
   fields: [
@@ -196,7 +195,7 @@ const ANNOTATION_PANEL = {
 const ANNOTATION_PANEL_SECONDARY = {
   name: 'annotations_secondary',
   headerProps: { title: 'Annotations (Secondary)', inputProps: JsonSelectPropsWithAll(ANNOTATION_FILTER_OPTIONS, ALL_ANNOTATION_FILTER_DETAILS) },
-  fields: ANNOTATION_GROUPS_SECONDARY,
+  fields: ANNOTATION_GROUPS,
   fieldProps: { control: AlignedCheckboxGroup, format: val => val || [] },
   fieldLayout: annotationsFilterLayout,
 }
@@ -331,7 +330,7 @@ class VariantSearchFormContent extends React.Component {
 
   expandAll = (e) => {
     e.preventDefault()
-    this.setState({ activeIndex: [...(this.props.displayAnnotationSecondary ? PANELS : PANEL_DETAILS_WITH_ANNOTATION_PANEL_SECONDARY).keys()] })
+    this.setState({ activeIndex: [...(this.props.displayAnnotationSecondary ? PANEL_DETAILS_WITH_ANNOTATION_PANEL_SECONDARY : PANELS).keys()] })
   }
 
   collapseAll = (e) => {
