@@ -8,7 +8,7 @@ import logging
 from pyliftover.liftover import LiftOver
 from sys import maxint
 import redis
-from itertools import combinations
+from itertools import combinations, chain
 
 import settings
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37, Omim, GeneConstraint
@@ -1251,12 +1251,12 @@ def _pathogenicity_filter(pathogenicity):
 
 
 def _annotations_filter(annotations, annotations_secondary):
-    vep_consequences = [ann for annotations in annotations.values() for ann in annotations]
+    vep_consequences = [ann for annotation in annotations.values() for ann in annotation]
     consequences_filter = Q('terms', transcriptConsequenceTerms=vep_consequences)
 
     vep_consequences_secondary = []
     if annotations_secondary:
-        vep_consequences_secondary = [ann for annotations_secondary in annotations_secondary.values() for ann in annotations_secondary]
+        vep_consequences_secondary = [ann for annotation_secondary in annotations_secondary.values() for ann in annotation_secondary]
     consequences_filter_secondary = Q('terms', transcriptConsequenceTerms=vep_consequences_secondary)
 
     # for many intergenic variants VEP doesn't add any annotations, so if user selected 'intergenic_variant',
