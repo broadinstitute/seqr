@@ -1225,7 +1225,7 @@ def _pathogenicity_filter(pathogenicity):
 
 
 def _annotations_filter(annotations):
-    vep_consequences = [ann for annotations in annotations.values() for ann in annotations]
+    vep_consequences = [ann for annotation in annotations.values() for ann in annotation]
 
     consequences_filter = Q('terms', transcriptConsequenceTerms=vep_consequences)
 
