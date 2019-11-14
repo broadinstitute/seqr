@@ -8,7 +8,7 @@ import logging
 from pyliftover.liftover import LiftOver
 from sys import maxint
 import redis
-from itertools import combinations, chain
+from itertools import combinations
 
 import settings
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37, Omim, GeneConstraint
