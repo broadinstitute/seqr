@@ -33,37 +33,16 @@ For cloud-based deployments, there are Docker images and Kubernetes configs:
 **[Detailed instructions for Kubernetes deployments](deploy/KUBERNETES.md)**  
 
 
-## Updating / Migrating an older xBrowse Instance
+## Updating a local installation from the v01 to the v02 hail/elasticsearch loading pipeline:
 
-For notes on how to update an older xbrowse instance, see  
+For notes on how to update the pipeline, see:
 
-[Update/Migration Instructions](https://github.com/macarthur-lab/seqr/blob/master/deploy/MIGRATE.md)
+[Pipeline Update Instructions](https://github.com/macarthur-lab/seqr/blob/master/deploy/UPDATE_TO_v02_PIPELINE.md)
 
 
 ## Data loading pipelines
 
-seqr uses [hail](http://hail.is)-based pipelines to run VEP and add in other reference data before loading them into elasticsearch.
-These pipelines can be run locally on a single machine or on-prem spark cluster, or on a cloud-based spark cluster like Google Dataproc.
-We are working on integrating these pipelines so that they are launched and managed by seqr.
-For now, they must be run manually, as shown in the example below. 
-See [hail_elasticsearch_pipelines](https://github.com/macarthur-lab/hail-elasticsearch-pipelines)
-for additional documentation.
-
-Example with seqr deployed to google cloud GKE, and using Google Dataproc to run the pipeline:
-```
-# these commands should be run locally on your laptop
-git clone git@github.com:macarthur-lab/hail-elasticsearch-pipelines.git
-
-cd hail-elasticsearch-pipelines
-HOST=seqr-vm   # IP address or hostname of elasticsearch instance running on google cloud
-SEQR_PROJECT_GUID=R003_seqr_project3  # guid of existing seqr project
-SAMPLE_TYPE=WGS   # can be WGS or WES
-DATASET_TYPE=VARIANTS   # can be "VARIANTS" if the VCF contains GATK or other small variant calls, or "SV" if it contains Manta CNV calls
-INPUT_VCF=gs://seqr-datasets/GRCh38/my-new-dataset.vcf.gz  
-
-# this will create a new dataproc cluster and submit the pipeline to it
-./gcloud_dataproc/load_dataset.py --genome-version 38 --host ${HOST} --project-guid ${SEQR_PROJECT_GUID} --sample-type ${SAMPLE_TYPE} --dataset-type ${DATASET_TYPE} --es-block-size 50 ${INPUT_VCF}
-
-# after the pipeline completes successfully, you can link the new elasticsearch index to the seqr project by using the 'Edit Datasets' dialog on the project page.
-```
+seqr uses a [hail](http://hail.is)-based pipeline to run VEP, add annotations from reference datasets, and write the annotated variant and genotype records to elasticsearch.
+This pipeline can be executed locally on a single machine or on-prem spark cluster, or on a cloud-based spark cluster like Google Dataproc. In either case, the pipeline must run on a machine or cluster that has network access to the machine(s) running elasticsearch.
+See [hail_elasticsearch_pipelines](https://github.com/macarthur-lab/hail-elasticsearch-pipelines) for additional documentation.
 
