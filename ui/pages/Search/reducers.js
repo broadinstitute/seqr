@@ -1,5 +1,4 @@
 import { combineReducers } from 'redux'
-import uniqBy from 'lodash/uniqBy'
 
 import { updateEntity, RECEIVE_DATA, RECEIVE_SAVED_SEARCHES, REQUEST_SAVED_SEARCHES } from 'redux/rootReducer'
 import { loadingReducer, createSingleObjectReducer, createSingleValueReducer, createObjectsByIdReducer } from 'redux/utils/reducerFactories'
@@ -11,7 +10,6 @@ import { SORT_BY_XPOS } from 'shared/utils/constants'
 const UPDATE_CURRENT_SEARCH = 'UPDATE_CURRENT_SEARCH'
 const REQUEST_SEARCHED_VARIANTS = 'REQUEST_SEARCHED_VARIANTS'
 const RECEIVE_SEARCHED_VARIANTS = 'RECEIVE_SEARCHED_VARIANTS'
-const RECEIVE_FLATTENED_VARIANTS = 'RECEIVE_FLATTENED_VARIANTS'
 const REQUEST_SEARCH_GENE_BREAKDOWN = 'REQUEST_SEARCH_GENE_BREAKDOWN'
 const RECEIVE_SEARCH_GENE_BREAKDOWN = 'RECEIVE_SEARCH_GENE_BREAKDOWN'
 const UPDATE_SEARCHED_VARIANT_DISPLAY = 'UPDATE_SEARCHED_VARIANT_DISPLAY'
@@ -110,17 +108,9 @@ export const loadProjectGroupContext = (projectCategoryGuid, addElementCallback)
 
 export const saveSearch = search => updateEntity(search, RECEIVE_SAVED_SEARCHES, '/api/saved_search', 'savedSearchGuid')
 
-export const toggleFlattenCompoundHet = ({ updates }) => {
-  console.log(`updates ${updates}`)
-  return (dispatch, getState) => {
+export const updateCompoundHetDisplay = ({ updates }) => {
+  return (dispatch) => {
     dispatch({ type: UPDATE_COMPOUND_HET_DISPLAY, newValue: updates })
-    if ((updates || {}).flattenCompoundHet) {
-      const flattenedSearchedVariants = uniqBy(getState().searchedVariants.flat(), 'variantId')
-      dispatch({ type: RECEIVE_FLATTENED_VARIANTS, newValue: flattenedSearchedVariants })
-    }
-    else {
-      dispatch({ type: RECEIVE_FLATTENED_VARIANTS, newValue: [] })
-    }
   }
 }
 
@@ -217,7 +207,6 @@ export const loadSavedSearches = () => {
 export const reducers = {
   currentSearchHash: createSingleValueReducer(UPDATE_CURRENT_SEARCH, null),
   searchedVariants: createSingleValueReducer(RECEIVE_SEARCHED_VARIANTS, []),
-  flattenedVariants: createSingleValueReducer(RECEIVE_FLATTENED_VARIANTS, []),
   searchedVariantsLoading: loadingReducer(REQUEST_SEARCHED_VARIANTS, RECEIVE_SEARCHED_VARIANTS),
   searchGeneBreakdown: createObjectsByIdReducer(RECEIVE_SEARCH_GENE_BREAKDOWN, 'searchGeneBreakdown'),
   searchGeneBreakdownLoading: loadingReducer(REQUEST_SEARCH_GENE_BREAKDOWN, RECEIVE_SEARCH_GENE_BREAKDOWN),
@@ -230,7 +219,6 @@ export const reducers = {
     recordsPerPage: 100,
   }, false),
   compoundHetDisplay: createSingleValueReducer(UPDATE_COMPOUND_HET_DISPLAY, { flattenCompoundHet: false }),
-  compoundHetDisplayLoading: loadingReducer(UPDATE_COMPOUND_HET_DISPLAY, RECEIVE_FLATTENED_VARIANTS),
 }
 
 const rootReducer = combineReducers(reducers)

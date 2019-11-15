@@ -3,6 +3,7 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Grid, Message, Button } from 'semantic-ui-react'
 import styled from 'styled-components'
+import uniqBy from 'lodash/uniqBy'
 
 import DataLoader from 'shared/components/DataLoader'
 import { QueryParamsEditor } from 'shared/components/QueryParamEditor'
@@ -12,20 +13,18 @@ import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
 import Variants from 'shared/components/panel/variants/Variants'
 import { VARIANT_SORT_FIELD_NO_FAMILY_SORT, VARIANT_PAGINATION_FIELD, FLATTEN_COMPOUND_HET_TOGGLE_FIELD } from 'shared/utils/constants'
 
-import { loadSearchedVariants, unloadSearchResults, toggleFlattenCompoundHet } from '../reducers'
+import { loadSearchedVariants, unloadSearchResults, updateCompoundHetDisplay } from '../reducers'
 import {
   getSearchedVariants,
   getSearchedVariantsIsLoading,
   getSearchedVariantsErrorMessage,
   getTotalVariantsCount,
   getVariantSearchDisplay,
-  getFlattenedVariants,
   getCompoundHetDisplay,
   getSearchDisplayLoading,
   getSearchedVariantExportConfig,
   getSearchContextIsLoading,
   getInhertanceFilterMode,
-  getCompoundHetDisplayLoading,
 } from '../selectors'
 import GeneBreakdown from './GeneBreakdown'
 import { ALL_RECESSIVE_FILTERS } from '../constants'
@@ -41,20 +40,20 @@ const LargeRow = styled(Grid.Row)`
 
 const scrollToTop = () => window.scrollTo(0, 0)
 
+const FIELDS = [
+  VARIANT_SORT_FIELD_NO_FAMILY_SORT,
+]
+
 const BaseVariantSearchResults = ({
-  match, searchedVariants, variantSearchDisplay, searchedVariantExportConfig, onSubmit, load, unload, loading, errorMessage, totalVariantsCount, inheritanceFilter, compoundHetDisplay, toggleCompoundHetDisplay, flattenedVariants,
+  match, searchedVariants, variantSearchDisplay, searchedVariantExportConfig, onSubmit, load, unload, loading, errorMessage, totalVariantsCount, inheritanceFilter, compoundHetDisplay, toggleUnpair,
 }) => {
   const { searchHash, variantId } = match.params
   const { page = 1, recordsPerPage } = variantSearchDisplay
   const variantDisplayPageOffset = (page - 1) * recordsPerPage
   const paginationFields = totalVariantsCount > recordsPerPage ? [{ ...VARIANT_PAGINATION_FIELD, totalPages: Math.ceil(totalVariantsCount / recordsPerPage) }] : []
 
-  const displayVariants = (compoundHetDisplay || {}).flattenCompoundHet ? flattenedVariants : searchedVariants
-  const displayFlattenButton = ALL_RECESSIVE_FILTERS.includes(inheritanceFilter)
-  // const FIELDS = displayFlattenButton ? [VARIANT_SORT_FIELD_NO_FAMILY_SORT, FLATTEN_COMPOUND_HET_TOGGLE_FIELD] :
-  //   [VARIANT_SORT_FIELD_NO_FAMILY_SORT]
-  const FIELDS = [VARIANT_SORT_FIELD_NO_FAMILY_SORT]
-  const flattenField = displayFlattenButton ? [FLATTEN_COMPOUND_HET_TOGGLE_FIELD] : []
+  const displayVariants = compoundHetDisplay.flattenCompoundHet ? uniqBy(searchedVariants.flat(), 'variantId') : searchedVariants
+  const compoundHetDisplayFields = ALL_RECESSIVE_FILTERS.includes(inheritanceFilter) ? [FLATTEN_COMPOUND_HET_TOGGLE_FIELD] : []
   const fields = [...FIELDS, ...paginationFields]
 
   return (
@@ -81,13 +80,13 @@ const BaseVariantSearchResults = ({
           </Grid.Column>
           <Grid.Column width={11} floated="right" textAlign="right">
             <ReduxFormWrapper
-              onSubmit={toggleCompoundHetDisplay}
-              form="toggleFlattenCompoundHet"
+              onSubmit={toggleUnpair}
+              form="toggleUnpairCompoundHet"
               initialValues={compoundHetDisplay}
               closeOnSuccess={false}
               submitOnChange
               inline
-              fields={flattenField}
+              fields={compoundHetDisplayFields}
             />
             <HorizontalSpacer width={10} />
             <ReduxFormWrapper
@@ -139,27 +138,25 @@ BaseVariantSearchResults.propTypes = {
   unload: PropTypes.func,
   onSubmit: PropTypes.func,
   searchedVariants: PropTypes.array,
-  flattenedVariants: PropTypes.array,
   loading: PropTypes.bool,
   errorMessage: PropTypes.string,
   variantSearchDisplay: PropTypes.object,
-  compoundHetDisplay: PropTypes.object,
   searchedVariantExportConfig: PropTypes.array,
   totalVariantsCount: PropTypes.number,
   inheritanceFilter: PropTypes.string,
-  toggleCompoundHetDisplay: PropTypes.func,
+  compoundHetDisplay: PropTypes.object,
+  toggleUnpair: PropTypes.func,
 }
 
 const mapStateToProps = (state, ownProps) => ({
   searchedVariants: getSearchedVariants(state),
-  flattenedVariants: getFlattenedVariants(state),
-  loading: getSearchedVariantsIsLoading(state) || getSearchContextIsLoading(state) || getCompoundHetDisplayLoading(state),
+  loading: getSearchedVariantsIsLoading(state) || getSearchContextIsLoading(state),
   variantSearchDisplay: getVariantSearchDisplay(state) || getSearchDisplayLoading(state),
-  compoundHetDisplay: getCompoundHetDisplay(state),
   searchedVariantExportConfig: getSearchedVariantExportConfig(state, ownProps),
   totalVariantsCount: getTotalVariantsCount(state, ownProps),
   errorMessage: getSearchedVariantsErrorMessage(state),
   inheritanceFilter: getInhertanceFilterMode(state),
+  compoundHetDisplay: getCompoundHetDisplay(state),
 })
 
 const mapDispatchToProps = (dispatch, ownProps) => {
@@ -180,9 +177,8 @@ const mapDispatchToProps = (dispatch, ownProps) => {
     unload: () => {
       dispatch(unloadSearchResults())
     },
-    toggleCompoundHetDisplay: (updates) => {
-      console.log(`updates ${updates}`)
-      dispatch(toggleFlattenCompoundHet({
+    toggleUnpair: (updates) => {
+      dispatch(updateCompoundHetDisplay({
         updates,
       }))
     },

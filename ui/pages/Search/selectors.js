@@ -28,14 +28,8 @@ export const getSavedSearchesByGuid = state => state.savedSearchesByGuid
 export const getSavedSearchesIsLoading = state => state.savedSearchesLoading.isLoading
 export const getSavedSearchesLoadingError = state => state.savedSearchesLoading.errorMessage
 export const getVariantSearchDisplay = state => state.variantSearchDisplay
-export const getCompoundHetDisplay = state => state.compoundHetDisplay
 export const getSearchDisplayLoading = state => state.searchDisplayLoading.isLoading
-export const getFlattenedVariants = state => state.flattenedVariants
-export const getCompoundHetDisplayLoading = (state) => {
-  console.log(state.compoundHetDisplayLoading.isLoading)
-  return state.compoundHetDisplayLoading.isLoading
-}
-
+export const getCompoundHetDisplay = state => state.compoundHetDisplay
 
 const getCurrentSearchHash = state => state.currentSearchHash
 
