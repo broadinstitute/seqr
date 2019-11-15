@@ -11,7 +11,7 @@ const FreqValue = styled.span`
   color: black;
 `
 
-const FreqLink = ({ url, value, variant, genomeVersions = [GENOME_VERSION_37] }) => {
+const FreqLink = ({ url, value, variant, queryParams, genomeVersions = [GENOME_VERSION_37] }) => {
   let { chrom, pos } = variant
   if (!genomeVersions.includes(variant.genomeVersion) && genomeVersions.includes(variant.liftedOverGenomeVersion)) {
     chrom = variant.liftedOverChrom
@@ -28,7 +28,7 @@ const FreqLink = ({ url, value, variant, genomeVersions = [GENOME_VERSION_37] })
   }
 
   return (
-    <a href={`http://${url}/${isRegion ? 'region' : 'variant'}/${coords}`} target="_blank">
+    <a href={`http://${url}/${isRegion ? 'region' : 'variant'}/${coords}${queryParams ? `?${queryParams}` : ''}`} target="_blank">
       {value}
     </a>
   )
@@ -39,9 +39,10 @@ FreqLink.propTypes = {
   value: PropTypes.string,
   variant: PropTypes.object.isRequired,
   genomeVersions: PropTypes.array,
+  queryParams: PropTypes.string,
 }
 
-const FreqSummary = ({ field, fieldTitle, variant, urls, hasLink, showAC, precision = 2 }) => {
+const FreqSummary = ({ field, fieldTitle, variant, urls, queryParams, genomeVersions, hasLink, showAC, precision = 2 }) => {
   const { populations, chrom } = variant
   const population = populations[field]
   if (population.af === null) {
@@ -65,9 +66,10 @@ const FreqSummary = ({ field, fieldTitle, variant, urls, hasLink, showAC, precis
           {hasLink ?
             <FreqLink
               url={urls ? urls[variant.genomeVersion || GENOME_VERSION_37] : `${field.split('_')[0]}.broadinstitute.org`}
+              queryParams={queryParams && queryParams[variant.genomeVersion || GENOME_VERSION_37]}
               value={value}
               variant={variant}
-              genomeVersions={urls && Object.keys(urls)}
+              genomeVersions={genomeVersions || (urls && Object.keys(urls))}
             /> : value
           }
         </b>
@@ -91,6 +93,8 @@ FreqSummary.propTypes = {
   precision: PropTypes.number,
   fieldTitle: PropTypes.string,
   urls: PropTypes.object,
+  queryParams: PropTypes.object,
+  genomeVersions: PropTypes.array,
   hasLink: PropTypes.bool,
   showAC: PropTypes.bool,
 }
@@ -100,7 +104,14 @@ const POPULATIONS = [
   { field: 'g1k', fieldTitle: '1kg WGS' },
   { field: 'exac', fieldTitle: 'ExAC', hasLink: true },
   { field: 'gnomad_exomes', fieldTitle: 'gnomAD exomes', hasLink: true },
-  { field: 'gnomad_genomes', fieldTitle: 'gnomAD genomes', hasLink: true, precision: 3 },
+  {
+    field: 'gnomad_genomes',
+    fieldTitle: 'gnomAD genomes',
+    hasLink: true,
+    precision: 3,
+    genomeVersions: [GENOME_VERSION_37, GENOME_VERSION_38],
+    queryParams: { [GENOME_VERSION_38]: 'dataset=gnomad_r3' },
+  },
   {
     field: 'topmed',
     fieldTitle: 'TopMed',

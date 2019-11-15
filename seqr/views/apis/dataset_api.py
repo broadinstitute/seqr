@@ -294,7 +294,7 @@ def _update_variant_samples(matched_sample_id_to_sample_record, elasticsearch_in
     })
 
     inactivate_samples = Sample.objects.filter(
-        individual__in={sample.individual for sample in matched_sample_id_to_sample_record.values()},
+        individual_id__in={sample.individual_id for sample in matched_sample_id_to_sample_record.values()},
         dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
         is_active=True,
     ).exclude(id__in=updated_samples)
