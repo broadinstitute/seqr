@@ -3,7 +3,6 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Grid, Message, Button } from 'semantic-ui-react'
 import styled from 'styled-components'
-import uniqBy from 'lodash/uniqBy'
 
 import DataLoader from 'shared/components/DataLoader'
 import { QueryParamsEditor } from 'shared/components/QueryParamEditor'
@@ -42,11 +41,10 @@ const BaseVariantSearchResults = ({
   match, searchedVariants, variantSearchDisplay, searchedVariantExportConfig, onSubmit, load, unload, loading, errorMessage, totalVariantsCount, inheritanceFilter,
 }) => {
   const { searchHash, variantId } = match.params
-  const { page = 1, recordsPerPage, flattenCompoundHet } = variantSearchDisplay
+  const { page = 1, recordsPerPage } = variantSearchDisplay
   const variantDisplayPageOffset = (page - 1) * recordsPerPage
-  const paginationFields = totalVariantsCount > recordsPerPage ? [{ ...VARIANT_PAGINATION_FIELD, totalPages: Math.ceil(totalVariantsCount / recordsPerPage) }] : []
 
-  const displayVariants = flattenCompoundHet ? uniqBy(searchedVariants.flat(), 'variantId') : searchedVariants
+  const paginationFields = totalVariantsCount > recordsPerPage ? [{ ...VARIANT_PAGINATION_FIELD, totalPages: Math.ceil(totalVariantsCount / recordsPerPage) }] : []
   const displayFlattenButton = ALL_RECESSIVE_FILTERS.includes(inheritanceFilter)
   const FIELDS = displayFlattenButton ? [VARIANT_SORT_FIELD_NO_FAMILY_SORT, FLATTEN_COMPOUND_HET_TOGGLE_FIELD] :
     [VARIANT_SORT_FIELD_NO_FAMILY_SORT]
@@ -55,7 +53,7 @@ const BaseVariantSearchResults = ({
   return (
     <DataLoader
       contentId={searchHash || variantId}
-      content={displayVariants}
+      content={searchedVariants}
       loading={loading}
       load={load}
       unload={unload}
@@ -71,8 +69,8 @@ const BaseVariantSearchResults = ({
       {searchHash &&
         <LargeRow>
           <Grid.Column width={5}>
-            {totalVariantsCount === displayVariants.length ? 'Found ' : `Showing ${variantDisplayPageOffset + 1}-${variantDisplayPageOffset + displayVariants.length} of `}
-            <b>{totalVariantsCount + (displayVariants.length - searchedVariants.length)}</b> variants
+            {totalVariantsCount === searchedVariants.length ? 'Found ' : `Showing ${variantDisplayPageOffset + 1}-${variantDisplayPageOffset + searchedVariants.length} of `}
+            <b>{totalVariantsCount}</b> variants
           </Grid.Column>
           <Grid.Column width={11} floated="right" textAlign="right">
             <ReduxFormWrapper
@@ -93,7 +91,7 @@ const BaseVariantSearchResults = ({
       }
       <Grid.Row>
         <Grid.Column width={16}>
-          <Variants variants={displayVariants} />
+          <Variants variants={searchedVariants} />
         </Grid.Column>
       </Grid.Row>
       {searchHash &&

@@ -1,4 +1,5 @@
 import { combineReducers } from 'redux'
+import uniqBy from 'lodash/uniqBy'
 
 import { updateEntity, RECEIVE_DATA, RECEIVE_SAVED_SEARCHES, REQUEST_SAVED_SEARCHES } from 'redux/rootReducer'
 import { loadingReducer, createSingleObjectReducer, createSingleValueReducer, createObjectsByIdReducer } from 'redux/utils/reducerFactories'
@@ -108,6 +109,13 @@ export const loadProjectGroupContext = (projectCategoryGuid, addElementCallback)
 export const saveSearch = search => updateEntity(search, RECEIVE_SAVED_SEARCHES, '/api/saved_search', 'savedSearchGuid')
 
 export const loadSearchedVariants = ({ searchHash, variantId, familyGuid, displayUpdates, queryParams, updateQueryParams }) => {
+  console.log(displayUpdates)
+  if ((displayUpdates || {}).flattenCompoundHet) {
+    return (dispatch, getState) => {
+      const flattenedSearchedVariants = uniqBy(getState().searchedVariants.flat(), 'variantId')
+      dispatch({ type: RECEIVE_SEARCHED_VARIANTS, newValue: flattenedSearchedVariants })
+    }
+  }
   return (dispatch, getState) => {
     dispatch({ type: REQUEST_SEARCHED_VARIANTS })
 
@@ -116,23 +124,20 @@ export const loadSearchedVariants = ({ searchHash, variantId, familyGuid, displa
     const apiQueryParams = {}
     if (searchHash) {
       dispatch({ type: UPDATE_CURRENT_SEARCH, newValue: searchHash })
-      let { sort, page, flattenCompoundHet } = displayUpdates || queryParams
+
+      let { sort, page } = displayUpdates || queryParams
       if (!page) {
         page = 1
       }
       if (!sort) {
         sort = state.variantSearchDisplay.sort || SORT_BY_XPOS
       }
-      if (typeof flattenCompoundHet === 'undefined') {
-        flattenCompoundHet = false
-      }
 
       apiQueryParams.sort = sort.toLowerCase()
       apiQueryParams.page = page || 1
-      apiQueryParams.flattenCompoundHet = flattenCompoundHet
 
       // Update search table state and query params
-      dispatch({ type: UPDATE_SEARCHED_VARIANT_DISPLAY, updates: { sort: sort.toUpperCase(), page, flattenCompoundHet } })
+      dispatch({ type: UPDATE_SEARCHED_VARIANT_DISPLAY, updates: { sort: sort.toUpperCase(), page } })
       updateQueryParams(apiQueryParams)
     } else {
       apiQueryParams.familyGuid = familyGuid
