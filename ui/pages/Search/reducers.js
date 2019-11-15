@@ -1,5 +1,5 @@
 import { combineReducers } from 'redux'
-import uniqBy from 'lodash/uniqBy'
+// import uniqBy from 'lodash/uniqBy'
 
 import { updateEntity, RECEIVE_DATA, RECEIVE_SAVED_SEARCHES, REQUEST_SAVED_SEARCHES } from 'redux/rootReducer'
 import { loadingReducer, createSingleObjectReducer, createSingleValueReducer, createObjectsByIdReducer } from 'redux/utils/reducerFactories'
@@ -109,13 +109,13 @@ export const loadProjectGroupContext = (projectCategoryGuid, addElementCallback)
 export const saveSearch = search => updateEntity(search, RECEIVE_SAVED_SEARCHES, '/api/saved_search', 'savedSearchGuid')
 
 export const loadSearchedVariants = ({ searchHash, variantId, familyGuid, displayUpdates, queryParams, updateQueryParams }) => {
-  if ((displayUpdates || {}).flattenCompoundHet) {
-    return (dispatch, getState) => {
-      dispatch({ type: REQUEST_SEARCHED_VARIANTS })
-      const flattenedSearchedVariants = uniqBy(getState().searchedVariants.flat(), 'variantId')
-      dispatch({ type: RECEIVE_SEARCHED_VARIANTS, newValue: flattenedSearchedVariants })
-    }
-  }
+  // if ((displayUpdates || {}).flattenCompoundHet) {
+  //   return (dispatch, getState) => {
+  //     dispatch({ type: UPDATE_SEARCHED_VARIANT_DISPLAY, updates: {} })
+  //     const flattenedSearchedVariants = uniqBy(getState().searchedVariants.flat(), 'variantId')
+  //     dispatch({ type: RECEIVE_SEARCHED_VARIANTS, newValue: flattenedSearchedVariants })
+  //   }
+  // }
   return (dispatch, getState) => {
     dispatch({ type: REQUEST_SEARCHED_VARIANTS })
 
