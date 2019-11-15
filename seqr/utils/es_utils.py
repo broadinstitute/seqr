@@ -595,19 +595,18 @@ class EsSearch(BaseEsSearch):
             for family_guid, variants in family_compound_het_pairs.items():
                 # To be a compound het pair, total no. of hom ref for each unaffected individual is less than 2
                 #   i.e., any of the following combinations: [0, 0], [0, 1], [1, 0]; but not [1, 1].
-                num_alts = [[variant['genotypes'].get(individual_guid, {}).get('numAlt') for variant in variants]
+                unaffected_individual_num_alts = [[variant['genotypes'].get(individual_guid, {}).get('numAlt') for variant in variants]
                             for individual_guid in family_unaffected_individual_guids.get(family_guid, [])]
 
-                def is_a_valid_compound_het_pair(num_unaffected_individuals, variant_1_index, variant_2_index):
-                    if num_unaffected_individuals == 1:
-                        return num_alts[0][variant_1_index] * num_alts[0][variant_2_index] != 1
-                    if num_unaffected_individuals == 2:
-                        return (num_alts[0][ch_1_index] * num_alts[0][ch_2_index] != 1 and
-                                num_alts[1][ch_1_index] * num_alts[1][ch_2_index] != 1)
-                    return True
+                def is_a_valid_compound_het_pair(variant_1_index, variant_2_index):
+                    valid = True
+                    for individual_index in range(len(unaffected_individual_num_alts)):
+                        is_valid_for_individual = any(unaffected_individual_num_alts[individual_index][variant_index] != 1 for variant_index in [variant_1_index, variant_2_index])
+                        valid &= is_valid_for_individual
+                    return valid
 
                 valid_combinations = [[ch_1_index, ch_2_index] for ch_1_index, ch_2_index in combinations(range(len(variants)), 2)
-                                      if is_a_valid_compound_het_pair(len(num_alts), ch_1_index, ch_2_index)]
+                                      if is_a_valid_compound_het_pair(ch_1_index, ch_2_index)]
                 compound_het_pairs = [[variants[valid_ch_1_index], variants[valid_ch_2_index]] for valid_ch_1_index, valid_ch_2_index in valid_combinations]
                 family_compound_het_pairs[family_guid] = compound_het_pairs
 
@@ -616,11 +615,6 @@ class EsSearch(BaseEsSearch):
                         compound_het_pairs_by_gene[gene_id].append(compound_het_pairs)
                 else:
                     compound_het_pairs_by_gene[gene_id] = compound_het_pairs
-
-                # logging.info('\n')
-                # logging.info(num_alts)
-                # logging.info(valid_combinations)
-                # logging.info('\n')
 
         total_compound_het_results = sum(len(compound_het_pairs) for compound_het_pairs in compound_het_pairs_by_gene.values())
         logger.info('Total compound het hits: {}'.format(total_compound_het_results))
