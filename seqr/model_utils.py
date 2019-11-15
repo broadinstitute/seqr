@@ -395,9 +395,11 @@ def update_xbrowse_vcfffiles(project, sample_type, elasticsearch_index, dataset_
     vcf_file.loaded_date = matched_sample_id_to_sample_record.values()[0].loaded_date
     vcf_file.save()
 
-    for indiv in [s.individual for s in matched_sample_id_to_sample_record.values()]:
-        for base_indiv in BaseIndividual.objects.filter(seqr_individual=indiv).only('id'):
-            base_indiv.vcf_files.add(vcf_file)
+    base_individuals = BaseIndividual.objects.filter(
+        seqr_individual_id__in=[s.individual_id for s in matched_sample_id_to_sample_record.values()]
+    )
+    for base_indiv in base_individuals:
+        base_indiv.vcf_files.add(vcf_file)
 
 
 def add_xbrowse_project_gene_lists(project, locus_lists):
