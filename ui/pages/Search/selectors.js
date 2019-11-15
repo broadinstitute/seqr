@@ -28,6 +28,10 @@ export const getSavedSearchesByGuid = state => state.savedSearchesByGuid
 export const getSavedSearchesIsLoading = state => state.savedSearchesLoading.isLoading
 export const getSavedSearchesLoadingError = state => state.savedSearchesLoading.errorMessage
 export const getVariantSearchDisplay = state => state.variantSearchDisplay
+export const getSearchDisplayLoading = (state) => {
+  console.log(state.searchDisplayLoading)
+  return state.searchDisplayLoading
+}
 
 const getCurrentSearchHash = state => state.currentSearchHash
 

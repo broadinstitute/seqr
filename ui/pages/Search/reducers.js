@@ -109,9 +109,9 @@ export const loadProjectGroupContext = (projectCategoryGuid, addElementCallback)
 export const saveSearch = search => updateEntity(search, RECEIVE_SAVED_SEARCHES, '/api/saved_search', 'savedSearchGuid')
 
 export const loadSearchedVariants = ({ searchHash, variantId, familyGuid, displayUpdates, queryParams, updateQueryParams }) => {
-  console.log(displayUpdates)
   if ((displayUpdates || {}).flattenCompoundHet) {
     return (dispatch, getState) => {
+      dispatch({ type: REQUEST_SEARCHED_VARIANTS })
       const flattenedSearchedVariants = uniqBy(getState().searchedVariants.flat(), 'variantId')
       dispatch({ type: RECEIVE_SEARCHED_VARIANTS, newValue: flattenedSearchedVariants })
     }
@@ -213,6 +213,7 @@ export const reducers = {
   searchGeneBreakdownLoading: loadingReducer(REQUEST_SEARCH_GENE_BREAKDOWN, RECEIVE_SEARCH_GENE_BREAKDOWN),
   searchContextLoading: loadingReducer(REQUEST_SEARCH_CONTEXT, RECEIVE_SEARCH_CONTEXT),
   multiProjectSearchContextLoading: loadingReducer(REQUEST_MULTI_PROJECT_SEARCH_CONTEXT, RECEIVE_MULTI_PROJECT_SEARCH_CONTEXT),
+  searchDisplayLoading: loadingReducer(UPDATE_SEARCHED_VARIANT_DISPLAY, RECEIVE_SEARCHED_VARIANTS),
   variantSearchDisplay: createSingleObjectReducer(UPDATE_SEARCHED_VARIANT_DISPLAY, {
     sort: SORT_BY_XPOS,
     page: 1,

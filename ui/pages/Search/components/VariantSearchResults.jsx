@@ -19,6 +19,7 @@ import {
   getSearchedVariantsErrorMessage,
   getTotalVariantsCount,
   getVariantSearchDisplay,
+  getSearchDisplayLoading,
   getSearchedVariantExportConfig,
   getSearchContextIsLoading,
   getInhertanceFilterMode,
@@ -133,7 +134,7 @@ BaseVariantSearchResults.propTypes = {
 const mapStateToProps = (state, ownProps) => ({
   searchedVariants: getSearchedVariants(state),
   loading: getSearchedVariantsIsLoading(state) || getSearchContextIsLoading(state),
-  variantSearchDisplay: getVariantSearchDisplay(state),
+  variantSearchDisplay: getVariantSearchDisplay(state) || getSearchDisplayLoading(state),
   searchedVariantExportConfig: getSearchedVariantExportConfig(state, ownProps),
   totalVariantsCount: getTotalVariantsCount(state, ownProps),
   errorMessage: getSearchedVariantsErrorMessage(state),
