@@ -81,8 +81,10 @@ SAMPLE_TYPE="WES"          # can be "WES" or "WGS"
 DATASET_TYPE="VARIANTS"    # can be "VARIANTS" (for GATK VCFs) or "SV" (for Manta VCFs)
 PROJECT_GUID="R001_test"   # should match the ID in the url of the project page 
 INPUT_VCF="test.vcf.gz"    # local path of VCF file
+OUTPUT_MATRIX_TABLE="test.mt"  # hail matrix table that caches annotated variants & genotypes (results of the annotation step)
  
-python2.7 gcloud_dataproc/submit.py --run-locally hail_scripts/v01/load_dataset_to_es.py  --spark-home $SPARK_HOME --genome-version $GENOME_VERSION --project-guid $PROJECT_GUID --sample-type $SAMPLE_TYPE --dataset-type $DATASET_TYPE --skip-validation  --exclude-hgmd --vep-block-size 100 --es-block-size 10 --num-shards 1 --hail-version 0.1 --use-nested-objects-for-vep --use-nested-objects-for-genotypes $INPUT_VCF
+python3 -u gcloud_dataproc/submit.py --run-locally --hail-version 0.2  luigi_pipeline/seqr_loading.py SeqrVCFToMTTask --local-scheduler --genome-version 38 --sample-type=WGS --source-paths  $INPUT_VCF --dest-path $OUTPUT_MATRIX_TABLE
+
 ```
 
 Now that the dataset is loaded into elasticsearch, it can be added to the project:
