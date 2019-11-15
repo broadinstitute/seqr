@@ -40,11 +40,14 @@ def reset_cached_search_results(project):
         if project:
             result_guids = [res.guid for res in VariantSearchResults.objects.filter(families__project=project)]
             for guid in result_guids:
-                keys_to_delete += redis_client.scan_iter(match='search_results__{}*'.format(guid))
+                keys_to_delete += redis_client.keys(pattern='search_results__{}*'.format(guid))
         else:
             keys_to_delete = redis_client.keys(pattern='search_results__*')
-        redis_client.delete(*keys_to_delete)
-        logger.info('Reset {} cached results'.format(len(keys_to_delete)))
+        if keys_to_delete:
+            redis_client.delete(*keys_to_delete)
+            logger.info('Reset {} cached results'.format(len(keys_to_delete)))
+        else:
+            logger.info('No cached results to reset')
     except Exception as e:
         logger.error("Unable to reset cached search results: {}".format(e))
 
