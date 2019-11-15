@@ -75,7 +75,7 @@ const ElasticsearchStatus = ({ data, loading, load }) =>
     />
 
     <Header size="medium" content="Loaded Indices:" />
-    {data.errors && data.errors.length && <Message error list={data.errors} />}
+    {data.errors && data.errors.length > 0 && <Message error list={data.errors} />}
     <SortableTable
       striped
       collapsing
