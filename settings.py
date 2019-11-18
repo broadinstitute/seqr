@@ -2,7 +2,6 @@ import logging
 import os
 import random
 import string
-import sys
 
 logger = logging.getLogger(__name__)
 
