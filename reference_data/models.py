@@ -23,7 +23,7 @@ class ReferenceDataRouter(object):
         Attempts to read reference_data models go to reference_data_db.
         """
         if model._meta.app_label == 'reference_data':
-            return 'reference_data_db'
+            return 'reference_data'
         return None
 
     def db_for_write(self, model, **hints):
@@ -31,7 +31,7 @@ class ReferenceDataRouter(object):
         Attempts to write reference_data models go to reference_data_db.
         """
         if model._meta.app_label == 'reference_data':
-            return 'reference_data_db'
+            return 'reference_data'
         return None
 
     def allow_relation(self, obj1, obj2, **hints):
@@ -49,8 +49,8 @@ class ReferenceDataRouter(object):
         database.
         """
         if app_label == 'reference_data':
-            return db == 'reference_data_db'
-        elif db == 'reference_data_db':
+            return db == 'reference_data'
+        elif db == 'reference_data':
             return False
         return None
 
