@@ -448,19 +448,6 @@ DATABASES = {
 }
 DATABASE_ROUTERS = ['reference_data.models.ReferenceDataRouter']
 
-
-if len(sys.argv) >= 2 and sys.argv[1] == 'test':
-    # use in-memory database for running tests
-    TEST_DB_CONFIG = {
-        'ENGINE': 'django.db.backends.postgresql',
-        'USER': '',
-        'PASSWORD': '',
-        'HOST': '',
-        'PORT': '',
-    }
-    DATABASES['default'] = dict(NAME='seqr_test_db', **TEST_DB_CONFIG)
-    DATABASES['reference_data'] = dict(NAME='reference_data_test_db', **TEST_DB_CONFIG)
-
 logger.info("MONGO_SERVICE_HOSTNAME: " + MONGO_SERVICE_HOSTNAME)
 logger.info("PHENOTIPS_SERVICE_HOSTNAME: " + PHENOTIPS_SERVICE_HOSTNAME)
 logger.info("MATCHBOX_SERVICE_HOSTNAME: " + MATCHBOX_SERVICE_HOSTNAME)
