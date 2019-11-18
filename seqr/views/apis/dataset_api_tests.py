@@ -17,6 +17,7 @@ INDEX_NAME = 'test_index'
 class DatasetAPITest(TransactionTestCase):
     fixtures = ['users', '1kg_project']
 
+    @mock.patch('seqr.views.utils.dataset_utils.random.randint', lambda *args: 98765432101234567890)
     @mock.patch('seqr.views.apis.dataset_api.update_xbrowse_vcfffiles', lambda *args: args)
     @mock.patch('seqr.views.utils.dataset_utils.file_iter')
     @mock.patch('seqr.views.utils.dataset_utils.get_index_metadata')
@@ -123,14 +124,14 @@ class DatasetAPITest(TransactionTestCase):
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {'samplesByGuid', 'individualsByGuid', 'familiesByGuid'})
 
-        new_sample = Sample.objects.get(sample_id='NA19678_1')
+        new_sample_guid = 'S98765432101234567890_NA19678_'
         self.assertSetEqual(
             set(response_json['samplesByGuid'].keys()),
-            {existing_index_sample_guid, existing_sample_guid, existing_old_index_sample_guid, new_sample.guid}
+            {existing_index_sample_guid, existing_sample_guid, existing_old_index_sample_guid, new_sample_guid}
         )
         self.assertDictEqual(response_json['individualsByGuid'], {
             'I000001_na19675': {'sampleGuids': [existing_index_sample_guid, 'S000145_na19675']},
-            'I000002_na19678': {'sampleGuids': [new_sample.guid, existing_old_index_sample_guid]},
+            'I000002_na19678': {'sampleGuids': [new_sample_guid, existing_old_index_sample_guid]},
             'I000003_na19679': {'sampleGuids': [existing_sample_guid]},
         })
         self.assertDictEqual(response_json['familiesByGuid'], {'F000001_1': {'analysisStatus': 'I'}})
@@ -142,7 +143,7 @@ class DatasetAPITest(TransactionTestCase):
         self.assertSetEqual(
             {'test_data.vds'},
             {sample['datasetFilePath'] for sample in
-             [response_json['samplesByGuid'][existing_sample_guid], response_json['samplesByGuid'][new_sample.guid]]}
+             [response_json['samplesByGuid'][existing_sample_guid], response_json['samplesByGuid'][new_sample_guid]]}
         )
         self.assertSetEqual(
             {'WES'},
@@ -158,7 +159,7 @@ class DatasetAPITest(TransactionTestCase):
         self.assertTrue(response_json['samplesByGuid'][existing_index_sample_guid]['loadedDate'].startswith('2017-02-05'))
         today = datetime.now().strftime('%Y-%m-%d')
         self.assertTrue(response_json['samplesByGuid'][existing_sample_guid]['loadedDate'].startswith(today))
-        self.assertTrue(response_json['samplesByGuid'][new_sample.guid]['loadedDate'].startswith(today))
+        self.assertTrue(response_json['samplesByGuid'][new_sample_guid]['loadedDate'].startswith(today))
 
         self.assertTrue(Project.objects.get(guid=PROJECT_GUID).has_new_search)
 

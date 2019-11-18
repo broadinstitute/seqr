@@ -58,7 +58,7 @@ const ProjectOverview = ({ project, familiesByGuid, individualsByGuid, samplesBy
   const loadedProjectSamples = Object.values(samplesByGuid).filter(sample =>
     sample.datasetType === DATASET_TYPE_VARIANT_CALLS,
   ).reduce((acc, sample) => {
-    const loadedDate = sample.loadedDate.split('T')[0]
+    const loadedDate = (sample.loadedDate || '').split('T')[0]
     const currentTypeSamplesByDate = acc[sample.sampleType] || {}
     return { ...acc, [sample.sampleType]: { ...currentTypeSamplesByDate, [loadedDate]: (currentTypeSamplesByDate[loadedDate] || 0) + 1 } }
   }, {})

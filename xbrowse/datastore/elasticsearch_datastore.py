@@ -183,7 +183,7 @@ class ElasticsearchDatastore(datastore.Datastore):
         samples = Sample.objects.filter(
             individual__in=[i.seqr_individual for i in individuals if i.seqr_individual],
             dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
-            sample_status=Sample.SAMPLE_STATUS_LOADED,
+            is_active=True,
             elasticsearch_index__startswith=es_indices[0],
             loaded_date__isnull=False,
         ).order_by('-loaded_date')
