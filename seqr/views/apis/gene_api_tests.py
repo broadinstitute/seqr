@@ -12,6 +12,7 @@ GENE_ID = 'ENSG00000223972'
 
 class GeneAPITest(TransactionTestCase):
     fixtures = ['users', 'reference_data']
+    multi_db = True
 
     def test_gene_info(self):
         url = reverse(gene_info, args=[GENE_ID])

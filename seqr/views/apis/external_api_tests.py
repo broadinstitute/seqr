@@ -6,6 +6,7 @@ from django.test import TestCase
 
 class ExternalAPITest(TestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
+    multi_db = True
 
     @responses.activate
     def test_mme_metrics_proxy(self):
