@@ -73,6 +73,7 @@ class EmailException(Exception):
 
 class VariantSearchAPITest(TestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
+    multi_db = True
 
     def test_get_individual_mme_matches(self):
         url = reverse(get_individual_mme_matches, args=[INDIVIDUAL_GUID])
