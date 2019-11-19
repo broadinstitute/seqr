@@ -123,23 +123,20 @@ export const loadSearchedVariants = ({ searchHash, variantId, familyGuid, displa
     const apiQueryParams = {}
     if (searchHash) {
       dispatch({ type: UPDATE_CURRENT_SEARCH, newValue: searchHash })
-      let { sort, page, flattenCompoundHet } = displayUpdates || queryParams
+
+      let { sort, page } = displayUpdates || queryParams
       if (!page) {
         page = 1
       }
       if (!sort) {
         sort = state.variantSearchDisplay.sort || SORT_BY_XPOS
       }
-      if (typeof flattenCompoundHet === 'undefined') {
-        flattenCompoundHet = false
-      }
 
       apiQueryParams.sort = sort.toLowerCase()
       apiQueryParams.page = page || 1
-      apiQueryParams.flattenCompoundHet = flattenCompoundHet
 
       // Update search table state and query params
-      dispatch({ type: UPDATE_SEARCHED_VARIANT_DISPLAY, updates: { sort: sort.toUpperCase(), page, flattenCompoundHet } })
+      dispatch({ type: UPDATE_SEARCHED_VARIANT_DISPLAY, updates: { sort: sort.toUpperCase(), page } })
       updateQueryParams(apiQueryParams)
     } else {
       apiQueryParams.familyGuid = familyGuid
@@ -215,6 +212,7 @@ export const reducers = {
   searchGeneBreakdownLoading: loadingReducer(REQUEST_SEARCH_GENE_BREAKDOWN, RECEIVE_SEARCH_GENE_BREAKDOWN),
   searchContextLoading: loadingReducer(REQUEST_SEARCH_CONTEXT, RECEIVE_SEARCH_CONTEXT),
   multiProjectSearchContextLoading: loadingReducer(REQUEST_MULTI_PROJECT_SEARCH_CONTEXT, RECEIVE_MULTI_PROJECT_SEARCH_CONTEXT),
+  searchDisplayLoading: loadingReducer(UPDATE_SEARCHED_VARIANT_DISPLAY, RECEIVE_SEARCHED_VARIANTS),
   variantSearchDisplay: createSingleObjectReducer(UPDATE_SEARCHED_VARIANT_DISPLAY, {
     sort: SORT_BY_XPOS,
     page: 1,
