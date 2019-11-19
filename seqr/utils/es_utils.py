@@ -600,7 +600,8 @@ class EsSearch(BaseEsSearch):
 
                 def is_a_valid_compound_het_pair(variant_1_index, variant_2_index):
                     for unaffected_individual_num_alts in unaffected_individuals_num_alts:
-                        is_valid_for_individual = any(unaffected_individual_num_alts[variant_index] != 1 for variant_index in [variant_1_index, variant_2_index])
+                        is_valid_for_individual = any(unaffected_individual_num_alts[variant_index] != 1
+                                                      for variant_index in [variant_1_index, variant_2_index])
                         if not is_valid_for_individual:
                             return False
                     return True
@@ -608,13 +609,17 @@ class EsSearch(BaseEsSearch):
                 valid_combinations = [[ch_1_index, ch_2_index] for ch_1_index, ch_2_index in combinations(range(len(variants)), 2)
                                       if is_a_valid_compound_het_pair(ch_1_index, ch_2_index)]
                 compound_het_pairs = [[variants[valid_ch_1_index], variants[valid_ch_2_index]] for valid_ch_1_index, valid_ch_2_index in valid_combinations]
-                if len(compound_het_pairs) > 0:
-                    # TODO remove this logging <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-                    logging.info(family_guid)
-                    family_compound_het_pairs[family_guid] = compound_het_pairs
-                    if gene_id in compound_het_pairs_by_gene.keys():
-                        compound_het_pairs_by_gene[gene_id].append(compound_het_pairs)
-                    compound_het_pairs_by_gene[gene_id] = compound_het_pairs
+                family_compound_het_pairs[family_guid] = compound_het_pairs
+
+            gene_compound_het_pairs = [compound_het_pairs for compound_het_pairs_list in family_compound_het_pairs.values() for compound_het_pairs in compound_het_pairs_list]
+            for compound_het_pair in gene_compound_het_pairs:
+                for variant in compound_het_pair:
+                    variant['familyGuids'] = [family_guid for family_guid in variant['familyGuids']
+                                              if len(family_compound_het_pairs[family_guid]) > 0]
+            gene_compound_het_pairs = [compound_het_pair for compound_het_pair in gene_compound_het_pairs
+                                       if compound_het_pair[0]['familyGuids'] and compound_het_pair[1]['familyGuids']]
+            if gene_compound_het_pairs:
+                compound_het_pairs_by_gene[gene_id] = gene_compound_het_pairs
 
         total_compound_het_results = sum(len(compound_het_pairs) for compound_het_pairs in compound_het_pairs_by_gene.values())
         logger.info('Total compound het hits: {}'.format(total_compound_het_results))
