@@ -593,12 +593,11 @@ class EsSearch(BaseEsSearch):
                     family_compound_het_pairs[family_guid].append(variant)
 
             for family_guid, variants in family_compound_het_pairs.items():
-                # To be a compound het pair, total no. of hom ref for each unaffected individual is less than 2
-                #   i.e., any of the following combinations: [0, 0], [0, 1], [1, 0]; but not [1, 1].
                 unaffected_individuals_num_alts = [[variant['genotypes'].get(individual_guid, {}).get('numAlt') for variant in variants]
                                                    for individual_guid in family_unaffected_individual_guids.get(family_guid, [])]
 
                 def is_a_valid_compound_het_pair(variant_1_index, variant_2_index):
+                    # To be compound het all unaffected individuals need to be hom ref for at least one of the variants
                     for unaffected_individual_num_alts in unaffected_individuals_num_alts:
                         is_valid_for_individual = any(unaffected_individual_num_alts[variant_index] != 1
                                                       for variant_index in [variant_1_index, variant_2_index])
