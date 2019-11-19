@@ -610,7 +610,7 @@ class EsSearch(BaseEsSearch):
                 compound_het_pairs = [[variants[valid_ch_1_index], variants[valid_ch_2_index]] for valid_ch_1_index, valid_ch_2_index in valid_combinations]
                 family_compound_het_pairs[family_guid] = compound_het_pairs
 
-            gene_compound_het_pairs = [compound_het_pairs for compound_het_pairs_list in family_compound_het_pairs.values() for compound_het_pairs in compound_het_pairs_list]
+            gene_compound_het_pairs = [ch_pair for ch_pairs in family_compound_het_pairs.values() for ch_pair in ch_pairs]
             for compound_het_pair in gene_compound_het_pairs:
                 for variant in compound_het_pair:
                     variant['familyGuids'] = [family_guid for family_guid in variant['familyGuids']
