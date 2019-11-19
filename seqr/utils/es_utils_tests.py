@@ -1,7 +1,6 @@
 from copy import deepcopy
 import mock
 import json
-
 from collections import defaultdict
 from django.test import TestCase
 
@@ -529,11 +528,7 @@ PARSED_VARIANTS = [
 ]
 PARSED_COMPOUND_HET_VARIANTS = deepcopy(PARSED_VARIANTS)
 PARSED_COMPOUND_HET_VARIANTS[0]['_sort'] = [1248367327]
-PARSED_COMPOUND_HET_VARIANTS[0]['xpos'] = 1248367227L
-PARSED_COMPOUND_HET_VARIANTS[0]['pos'] = 248367227L
 PARSED_COMPOUND_HET_VARIANTS[1]['_sort'] = [2103343453]
-PARSED_COMPOUND_HET_VARIANTS[1]['xpos'] = 2103343353L
-PARSED_COMPOUND_HET_VARIANTS[1]['pos'] = 103343353L
 PARSED_COMPOUND_HET_VARIANTS[1]['familyGuids'] = ['F000003_3']
 
 PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT = deepcopy(PARSED_COMPOUND_HET_VARIANTS)
@@ -564,10 +559,8 @@ for variant in PARSED_COMPOUND_HET_VARIANTS_MULTI_GENOME_VERSION:
     variant.update({
         'genomeVersion': '38',
         'liftedOverGenomeVersion': '37',
-        'liftedOverPos': int(variant['pos'] - 10),
+        'liftedOverPos': variant['pos'] - 10,
         'liftedOverChrom': variant['chrom'],
-        'pos': int(variant['pos']),
-        'xpos': int(variant['xpos']),
     })
 
 PARSED_NO_SORT_VARIANTS = deepcopy(PARSED_VARIANTS)
@@ -820,22 +813,6 @@ RECESSIVE_INHERITANCE_QUERY = {
     }
 }
 
-FIRST_COMPOUND_HET = deepcopy(PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT[0])
-FIRST_COMPOUND_HET.update({
-    'genomeVersion': '38',
-    'liftedOverGenomeVersion': '37',
-    'liftedOverPos': 248367217,
-    'liftedOverChrom': '1',
-})
-
-SECOND_COMPOUND_HET = deepcopy(PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT[1])
-SECOND_COMPOUND_HET.update({
-    'genomeVersion': '38',
-    'liftedOverGenomeVersion': '37',
-    'liftedOverPos': 103343343,
-    'liftedOverChrom': '2',
-})
-
 REDIS_CACHE = {}
 def _set_cache(k, v):
     REDIS_CACHE[k] = v
@@ -927,6 +904,7 @@ def create_mock_response(search, index=INDEX_NAME):
 @mock.patch('seqr.utils.es_utils._liftover_grch38_to_grch37', lambda: MOCK_LIFTOVER)
 class EsUtilsTest(TestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
+    multi_db = True
 
     def setUp(self):
         Sample.objects.filter(sample_id='NA19678').update(is_active=False)
@@ -1322,12 +1300,9 @@ class EsUtilsTest(TestCase):
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(self.families)
 
-        variants, total_results = get_es_variants(results_model, num_results=1)
-        self.maxDiff = None
+        variants, total_results = get_es_variants(results_model, num_results=2)
         self.assertEqual(len(variants), 1)
-        self.assertEqual(variants[0][0], PARSED_COMPOUND_HET_VARIANTS[0])
-        PARSED_COMPOUND_HET_VARIANTS[1]['familyGuids'] = ['F000002_2', 'F000003_3']
-        self.assertEqual(variants[0][1], PARSED_COMPOUND_HET_VARIANTS[1])
+        self.assertListEqual(variants, [PARSED_COMPOUND_HET_VARIANTS])
         self.assertEqual(total_results, 1)
 
         self.assertCachedResults(results_model, {
@@ -1344,7 +1319,7 @@ class EsUtilsTest(TestCase):
         )
 
         # test pagination does not fetch
-        get_es_variants(results_model, page=2, num_results=1)
+        get_es_variants(results_model, page=2, num_results=2)
         self.assertIsNone(self.executed_search)
 
     def test_recessive_get_es_variants(self):
@@ -1436,7 +1411,6 @@ class EsUtilsTest(TestCase):
         self.assertDictEqual(variants[1][1], PARSED_COMPOUND_HET_VARIANTS_PROJECT_2[1])
         self.assertEqual(total_results, 10)
 
-        PARSED_COMPOUND_HET_VARIANTS_MULTI_GENOME_VERSION[1]['familyGuids'] = ['F000002_2', 'F000003_3', 'F000011_11']
         self.assertCachedResults(results_model, {
             'compound_het_results': [{'ENSG00000228198': PARSED_COMPOUND_HET_VARIANTS_MULTI_GENOME_VERSION}],
             'variant_results': [PARSED_MULTI_GENOME_VERSION_VARIANT],
@@ -1508,15 +1482,13 @@ class EsUtilsTest(TestCase):
         # test pagination
         variants, total_results = get_es_variants(results_model, num_results=2, page=2)
         self.assertEqual(len(variants), 2)
-        self.maxDiff = None
-        self.assertEqual(variants[0], PARSED_VARIANTS[0])
-        self.assertEqual(variants[1][0], FIRST_COMPOUND_HET)
-        SECOND_COMPOUND_HET['familyGuids'] = ['F000002_2', 'F000003_3', 'F000011_11']
-        SECOND_COMPOUND_HET['xpos'] = int(SECOND_COMPOUND_HET['xpos'])
-        SECOND_COMPOUND_HET['pos'] = int(SECOND_COMPOUND_HET['pos'])
-        self.assertEqual(variants[1][1], SECOND_COMPOUND_HET)
+        self.assertListEqual(variants, [PARSED_VARIANTS[0], PARSED_COMPOUND_HET_VARIANTS_MULTI_GENOME_VERSION])
         self.assertEqual(total_results, 8)
 
+        # self.maxDiff = None
+        # redis_cache = json.loads(REDIS_CACHE.get('search_results__{}__{}'.format(results_model.guid, 'xpos')))
+        # self.assertDictEqual({'loaded_variant_counts': redis_cache['loaded_variant_counts']},
+        #                      {'loaded_variant_counts': {}})
         self.assertCachedResults(results_model, {
             'compound_het_results': [],
             'variant_results': [PARSED_MULTI_GENOME_VERSION_VARIANT],
