@@ -20,6 +20,9 @@ export const GENOME_VERSION_OPTIONS = [
   { value: GENOME_VERSION_37, text: 'GRCh37' },
   { value: GENOME_VERSION_38, text: 'GRCh38' },
 ]
+export const GENOME_VERSION_FIELD = {
+  name: 'genomeVersion', label: 'Genome Version', component: RadioGroup, options: GENOME_VERSION_OPTIONS,
+}
 
 // PROJECT FIELDS
 
@@ -30,7 +33,7 @@ export const EDITABLE_PROJECT_FIELDS = [
 
 export const PROJECT_FIELDS = [
   ...EDITABLE_PROJECT_FIELDS,
-  { name: 'genomeVersion', label: 'Genome Version', component: RadioGroup, options: GENOME_VERSION_OPTIONS },
+  GENOME_VERSION_FIELD,
 ]
 
 
