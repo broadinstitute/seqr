@@ -805,10 +805,18 @@ export const MUTTASTER_MAP = {
   D: { value: 'disease causing' },
 }
 
-export const getVariantMainGeneId = ({ transcripts, mainTranscriptId, selectedMainTranscriptId }) =>
-  (Object.entries(transcripts).find(entry =>
-    entry[1].some(({ transcriptId }) => transcriptId === (selectedMainTranscriptId || mainTranscriptId)),
-  ) || [])[0]
+export const getVariantMainGeneId = ({ transcripts, mainTranscriptId, selectedMainTranscriptId }) => {
+  if (selectedMainTranscriptId || mainTranscriptId) {
+    return (Object.entries(transcripts).find(entry =>
+      entry[1].some(({ transcriptId }) => transcriptId === (selectedMainTranscriptId || mainTranscriptId)),
+    ) || [])[0]
+  }
+  if (Object.keys(transcripts).length === 1 && Object.values(transcripts)[0] && Object.values(transcripts)[0].length === 0) {
+    return Object.keys(transcripts)[0]
+  }
+  return null
+}
+
 
 export const getVariantMainTranscript = ({ transcripts = {}, mainTranscriptId, selectedMainTranscriptId }) =>
   flatten(Object.values(transcripts)).find(
