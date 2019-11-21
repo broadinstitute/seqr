@@ -1,17 +1,54 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
+import { FormSection } from 'redux-form'
+import { Grid, Divider } from 'semantic-ui-react'
 
 import { updateFamily } from 'redux/rootReducer'
-import { getUser, getProjectsByGuid } from 'redux/selectors'
+import { getUser, getProjectsByGuid, getSortedIndividualsByFamily } from 'redux/selectors'
 
 import UpdateButton from './UpdateButton'
 import { Select, IntegerInput } from '../form/Inputs'
-import { validators } from '../form/ReduxFormWrapper'
+import { validators, configuredField } from '../form/ReduxFormWrapper'
 import { AwesomeBarFormInput } from '../page/AwesomeBar'
 import { GENOME_VERSION_FIELD } from '../../utils/constants'
 
+const BASE_FORM_ID = 'addVariant-'
 const CHROMOSOMES = [...Array(23).keys(), 'X', 'Y'].splice(1)
+const ZYGOSITY_OPTIONS = [{ value: 0, name: 'Hom Ref' }, { value: 1, name: 'Het' }, { value: 2, name: 'Hom Alt' }]
+
+const ZygosityInput = ({ individuals, name }) =>
+  <FormSection name={name}>
+    <Divider horizontal>Zygosity</Divider>
+    <Grid columns="equal">
+      {individuals.map((({ individualGuid, displayName }) =>
+        <Grid.Column key={individualGuid}>
+          {configuredField({
+            name: individualGuid,
+            label: displayName,
+            options: ZYGOSITY_OPTIONS,
+            component: Select,
+          })}
+        </Grid.Column>
+      ))}
+    </Grid>
+  </FormSection>
+
+ZygosityInput.propTypes = {
+  individuals: PropTypes.array,
+  name: PropTypes.string,
+}
+
+const mapZygosityInputStateToProps = (state, ownProps) => ({
+  individuals: getSortedIndividualsByFamily(state)[ownProps.meta.form.replace(BASE_FORM_ID, '')],
+})
+
+const ZYGOSITY_FIELD = {
+  name: 'numAlt',
+  width: 16,
+  inline: true,
+  component: connect(mapZygosityInputStateToProps)(ZygosityInput),
+}
 
 const FIELDS = [...[
   {
@@ -24,7 +61,6 @@ const FIELDS = [...[
     fluid: true,
     placeholder: 'Search for gene',
   },
-  { name: 'zygosity', label: 'Zygosity TODO', width: 16 },
   {
     name: 'chrom',
     label: 'Chrom*',
@@ -40,12 +76,12 @@ const FIELDS = [...[
   { name: 'transcriptId', label: 'Transcript ID', width: 6 },
   { name: 'hgvsc', label: 'HGVSC', width: 5 },
   { name: 'hgvsp', label: 'HGVSP', width: 5 },
-].map(field => ({ inline: true, ...field })), GENOME_VERSION_FIELD]
+].map(field => ({ inline: true, ...field })), GENOME_VERSION_FIELD, ZYGOSITY_FIELD]
 
 const CreateVariantButton = ({ project, family, user, onSubmit }) => (
   user.isStaff ? <UpdateButton
     modalTitle={`Add a Manual Variant for Family ${family.displayName}`}
-    modalId={`addVariant-${family.familyGuid}`}
+    modalId={`${BASE_FORM_ID}${family.familyGuid}`}
     buttonText="Add Manual Variant"
     editIconName="plus"
     initialValues={project}
