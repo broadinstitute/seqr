@@ -5,13 +5,13 @@ import { FormSection } from 'redux-form'
 import { Grid, Divider } from 'semantic-ui-react'
 
 import { updateFamily } from 'redux/rootReducer'
-import { getUser, getProjectsByGuid, getSortedIndividualsByFamily } from 'redux/selectors'
+import { getUser, getProjectsByGuid, getFamiliesByGuid, getSortedIndividualsByFamily } from 'redux/selectors'
 
 import UpdateButton from './UpdateButton'
-import { Select, IntegerInput } from '../form/Inputs'
+import { Select, IntegerInput, LargeMultiselect } from '../form/Inputs'
 import { validators, configuredField } from '../form/ReduxFormWrapper'
 import { AwesomeBarFormInput } from '../page/AwesomeBar'
-import { GENOME_VERSION_FIELD } from '../../utils/constants'
+import { GENOME_VERSION_FIELD, NOTE_TAG_NAME } from '../../utils/constants'
 
 const BASE_FORM_ID = 'addVariant-'
 const CHROMOSOMES = [...Array(23).keys(), 'X', 'Y'].splice(1)
@@ -43,11 +43,32 @@ const mapZygosityInputStateToProps = (state, ownProps) => ({
   individuals: getSortedIndividualsByFamily(state)[ownProps.meta.form.replace(BASE_FORM_ID, '')],
 })
 
+const mapTagInputStateToProps = (state, ownProps) => {
+  const family = getFamiliesByGuid(state)[ownProps.meta.form.replace(BASE_FORM_ID, '')]
+  const { variantTagTypes } = getProjectsByGuid(state)[family.projectGuid]
+  return {
+    options: variantTagTypes.filter(vtt => vtt.name !== NOTE_TAG_NAME).map(
+      ({ name, variantTagTypeGuid, ...tag }) => ({ value: variantTagTypeGuid, text: name, ...tag }),
+    ),
+  }
+}
+
 const ZYGOSITY_FIELD = {
   name: 'numAlt',
   width: 16,
   inline: true,
   component: connect(mapZygosityInputStateToProps)(ZygosityInput),
+}
+
+const TAG_FIELD = {
+  name: 'tags',
+  label: 'Tags*',
+  width: 16,
+  inline: true,
+  includeCategories: true,
+  component: connect(mapTagInputStateToProps)(LargeMultiselect),
+  format: value => value || [],
+  validate: value => (value && value.length ? undefined : 'Required'),
 }
 
 const FIELDS = [...[
@@ -76,7 +97,7 @@ const FIELDS = [...[
   { name: 'transcriptId', label: 'Transcript ID', width: 6 },
   { name: 'hgvsc', label: 'HGVSC', width: 5 },
   { name: 'hgvsp', label: 'HGVSP', width: 5 },
-].map(field => ({ inline: true, ...field })), GENOME_VERSION_FIELD, ZYGOSITY_FIELD]
+].map(field => ({ inline: true, ...field })), GENOME_VERSION_FIELD, TAG_FIELD, ZYGOSITY_FIELD]
 
 const CreateVariantButton = ({ project, family, user, onSubmit }) => (
   user.isStaff ? <UpdateButton
