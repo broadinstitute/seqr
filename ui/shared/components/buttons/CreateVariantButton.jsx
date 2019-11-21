@@ -4,7 +4,7 @@ import { connect } from 'react-redux'
 import { FormSection } from 'redux-form'
 import { Grid, Divider } from 'semantic-ui-react'
 
-import { updateFamily } from 'redux/rootReducer'
+import { updateVariantTags } from 'redux/rootReducer'
 import { getUser, getProjectsByGuid, getFamiliesByGuid, getSortedIndividualsByFamily } from 'redux/selectors'
 
 import UpdateButton from './UpdateButton'
@@ -14,7 +14,7 @@ import { AwesomeBarFormInput } from '../page/AwesomeBar'
 import { GENOME_VERSION_FIELD, NOTE_TAG_NAME } from '../../utils/constants'
 
 const BASE_FORM_ID = 'addVariant-'
-const CHROMOSOMES = [...Array(23).keys(), 'X', 'Y'].splice(1)
+const CHROMOSOMES = [...Array(23).keys(), 'X', 'Y'].map(val => val.toString()).splice(1)
 const ZYGOSITY_OPTIONS = [{ value: 0, name: 'Hom Ref' }, { value: 1, name: 'Het' }, { value: 2, name: 'Hom Alt' }]
 
 const ZygosityInput = ({ individuals, name }) =>
@@ -28,6 +28,8 @@ const ZygosityInput = ({ individuals, name }) =>
             label: displayName,
             options: ZYGOSITY_OPTIONS,
             component: Select,
+            normalize: numAlt => ({ numAlt }),
+            format: value => (value || {}).numAlt,
           })}
         </Grid.Column>
       ))}
@@ -48,13 +50,21 @@ const mapTagInputStateToProps = (state, ownProps) => {
   const { variantTagTypes } = getProjectsByGuid(state)[family.projectGuid]
   return {
     options: variantTagTypes.filter(vtt => vtt.name !== NOTE_TAG_NAME).map(
-      ({ name, variantTagTypeGuid, ...tag }) => ({ value: variantTagTypeGuid, text: name, ...tag }),
+      ({ name, variantTagTypeGuid, ...tag }) => ({ value: name, text: name, ...tag }),
     ),
   }
 }
 
+const GENE_ID_FIELD_NAME = 'geneId'
+const TRANSCRIPT_ID_FIELD_NAME = 'mainTranscriptId'
+const HGVSC_FIELD_NAME = 'hgvsc'
+const HGVSP_FIELD_NAME = 'hgvsp'
+const FORMAT_RESPONSE_FIELDS = [
+  GENE_ID_FIELD_NAME, HGVSC_FIELD_NAME, HGVSP_FIELD_NAME,
+]
+
 const ZYGOSITY_FIELD = {
-  name: 'numAlt',
+  name: 'genotypes',
   width: 16,
   inline: true,
   component: connect(mapZygosityInputStateToProps)(ZygosityInput),
@@ -67,13 +77,21 @@ const TAG_FIELD = {
   inline: true,
   includeCategories: true,
   component: connect(mapTagInputStateToProps)(LargeMultiselect),
-  format: value => value || [],
+  format: value => (value || []).map(({ name }) => name),
+  normalize: value => (value || []).map(name => ({ name })),
   validate: value => (value && value.length ? undefined : 'Required'),
+}
+
+const validateHasTranscriptId = (value, allValues, props, name) => {
+  if (!value) {
+    return undefined
+  }
+  return allValues[TRANSCRIPT_ID_FIELD_NAME] ? undefined : `Transcript ID is required to include ${name}`
 }
 
 const FIELDS = [...[
   {
-    name: 'geneId',
+    name: GENE_ID_FIELD_NAME,
     label: 'Gene*',
     validate: validators.required,
     width: 16,
@@ -90,13 +108,13 @@ const FIELDS = [...[
     validate: validators.required,
     width: 2,
   },
-  { name: 'start', label: 'Start Position*', validate: validators.required, component: IntegerInput, width: 7 },
-  { name: 'stop', label: 'Stop Position', component: IntegerInput, width: 7 },
+  { name: 'pos', label: 'Start Position*', validate: validators.required, component: IntegerInput, width: 7 },
+  { name: 'pos_end', label: 'Stop Position', component: IntegerInput, width: 7 },
   { name: 'ref', label: 'Ref*', validate: validators.required, width: 8 },
   { name: 'alt', label: 'Alt*', validate: validators.required, width: 8 },
-  { name: 'transcriptId', label: 'Transcript ID', width: 6 },
-  { name: 'hgvsc', label: 'HGVSC', width: 5 },
-  { name: 'hgvsp', label: 'HGVSP', width: 5 },
+  { name: TRANSCRIPT_ID_FIELD_NAME, label: 'Transcript ID', width: 6 },
+  { name: HGVSC_FIELD_NAME, label: 'HGVSC', width: 5, validate: validateHasTranscriptId },
+  { name: HGVSP_FIELD_NAME, label: 'HGVSP', width: 5, validate: validateHasTranscriptId },
 ].map(field => ({ inline: true, ...field })), GENOME_VERSION_FIELD, TAG_FIELD, ZYGOSITY_FIELD]
 
 const CreateVariantButton = ({ project, family, user, onSubmit }) => (
@@ -108,6 +126,7 @@ const CreateVariantButton = ({ project, family, user, onSubmit }) => (
     initialValues={project}
     onSubmit={onSubmit}
     formFields={FIELDS}
+    showErrorPanel
   /> : null
 )
 
@@ -126,7 +145,22 @@ const mapStateToProps = (state, ownProps) => ({
 const mapDispatchToProps = (dispatch, ownProps) => {
   return {
     onSubmit: (values) => {
-      return dispatch(updateFamily({ ...values, familyGuid: ownProps.family.familyGuid, familyField: 'manual_variant' }))
+      const formattedValues = {
+        ...FIELDS.map(({ name }) => name).filter(name => !FORMAT_RESPONSE_FIELDS.includes(name)).reduce(
+          (acc, name) => ({ ...acc, [name]: values[name] }), {},
+        ),
+        familyGuid: ownProps.family.familyGuid,
+        variantId: `${values.chrom}-${values.pos}-${values.ref}-${values.alt}`,
+        transcripts: {
+          [values[GENE_ID_FIELD_NAME]]: values[TRANSCRIPT_ID_FIELD_NAME] ? [{
+            transcriptId: values[TRANSCRIPT_ID_FIELD_NAME],
+            [HGVSC_FIELD_NAME]: values[HGVSC_FIELD_NAME],
+            [HGVSP_FIELD_NAME]: values[HGVSP_FIELD_NAME],
+          }] : [],
+        },
+      }
+
+      return dispatch(updateVariantTags(formattedValues))
     },
   }
 }
