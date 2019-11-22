@@ -2,7 +2,6 @@ import logging
 import os
 import random
 import string
-import sys
 
 logger = logging.getLogger(__name__)
 
@@ -435,16 +434,18 @@ SESSION_COOKIE_HTTPONLY = True
 CSRF_COOKIE_HTTPONLY = True
 # SESSION_EXPIRE_AT_BROWSER_CLOSE=True
 
-if len(sys.argv) >= 2 and sys.argv[1] == 'test':
-    # use in-memory database for running tests
-    DATABASES['default'] = {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'seqr_test_db',
-        'USER': '',
-        'PASSWORD': '',
-        'HOST': '',
-        'PORT': '',
-    }
+POSTGRES_DB_CONFIG = {
+    'ENGINE': 'django.db.backends.postgresql_psycopg2',
+    'HOST': os.environ.get('POSTGRES_SERVICE_HOSTNAME', 'localhost'),
+    'PORT': int(os.environ.get('POSTGRES_SERVICE_PORT', '5432')),
+    'USER': os.environ.get('POSTGRES_USERNAME', 'postgres'),
+    'PASSWORD': os.environ.get('POSTGRES_PASSWORD', ''),
+}
+DATABASES = {
+    'default': dict(NAME='seqrdb', **POSTGRES_DB_CONFIG),
+    'reference_data': dict(NAME='reference_data_db', **POSTGRES_DB_CONFIG),
+}
+DATABASE_ROUTERS = ['reference_data.models.ReferenceDataRouter']
 
 logger.info("MONGO_SERVICE_HOSTNAME: " + MONGO_SERVICE_HOSTNAME)
 logger.info("PHENOTIPS_SERVICE_HOSTNAME: " + PHENOTIPS_SERVICE_HOSTNAME)

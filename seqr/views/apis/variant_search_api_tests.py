@@ -54,6 +54,7 @@ def _get_empty_es_variants(results_model, **kwargs):
 
 class VariantSearchAPITest(TestCase):
     fixtures = ['users', '1kg_project', 'reference_data', 'variant_searches']
+    multi_db = True
 
     @mock.patch('seqr.views.apis.variant_search_api.get_es_variant_gene_counts')
     @mock.patch('seqr.views.apis.variant_search_api.get_es_variants')

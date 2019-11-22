@@ -71,7 +71,6 @@ class ProjectAPITest(TransactionTestCase):
             'predictions': {'cadd': 21.9},
             'ref': 'AAAG',
             'transcripts': {},
-            'xpos': 2061413835,
             'projectGuid': 'R0001_1kg',
             'familyGuids': ['F000001_1', 'F000002_2'],
             'variantId': '2-61413835-AAAG-A',
@@ -93,10 +92,10 @@ class ProjectAPITest(TransactionTestCase):
         variant_guid = response.json()['savedVariantsByGuid'].keys()[0]
 
         saved_variant = SavedVariant.objects.get(guid=variant_guid, family__guid='F000001_1')
+        variant_json.update({'xpos': 2061413835})
         self.assertDictEqual(variant_json, saved_variant.saved_variant_json)
 
         variant_json.update({
-            'variantId': '2-61413835-AAAG-A',
             'variantGuid': variant_guid,
             'familyGuids': ['F000001_1'],
             'selectedMainTranscriptId': None,

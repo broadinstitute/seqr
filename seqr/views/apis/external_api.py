@@ -1,6 +1,7 @@
 import json
 import logging
 from datetime import datetime
+from django.core.mail.message import EmailMessage
 from django.views.decorators.csrf import csrf_exempt
 
 from seqr.models import Individual
@@ -61,7 +62,7 @@ def mme_match_proxy(request):
         try:
             _generate_notification_for_incoming_match(response, request, query_patient_data)
         except Exception:
-            logger.error('Unable to create slack notification for incoming MME match request')
+            logger.error('Unable to create notification for incoming MME match request')
     return response
 
 
@@ -101,7 +102,7 @@ def _generate_notification_for_incoming_match(response_from_matchbox, incoming_r
                 family_guid=individual.family.guid, family_id=individual.family.family_id,
                 insertion_date=individual.mme_submitted_date.strftime('%b %d, %Y'), host=SEQR_HOSTNAME_FOR_SLACK_POST)
             match_results.append(result_text)
-            emails.update([i for i in project.mme_contact_url.replace('mailto:', '').split(',')])
+            emails.update([i.strip() for i in project.mme_contact_url.replace('mailto:', '').split(',')])
 
         message = u"""Dear collaborators,
 
@@ -133,6 +134,13 @@ def _generate_notification_for_incoming_match(response_from_matchbox, incoming_r
         )
 
         post_to_slack(MME_SLACK_MATCH_NOTIFICATION_CHANNEL, message)
+        email_message = EmailMessage(
+            subject='Received new MME match',
+            body=message,
+            to=list(emails),
+            from_email='matchmaker@broadinstitute.org',
+        )
+        email_message.send()
     else:
         message = """Dear collaborators,
         

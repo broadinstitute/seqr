@@ -9,6 +9,7 @@ from seqr.models import SavedVariant, VariantTagType, VariantTag, VariantNote, V
     LocusListInterval, LocusListGene, Family, CAN_VIEW, CAN_EDIT, GeneNote
 from seqr.model_utils import create_seqr_model, delete_seqr_model
 from seqr.utils.gene_utils import get_genes
+from seqr.utils.xpos_utils import get_xpos
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants, get_json_for_variant_tag, \
@@ -60,13 +61,17 @@ def create_saved_variant_handler(request):
     family = Family.objects.get(guid=family_guid)
     check_permissions(family.project, request.user, CAN_VIEW)
 
+    if 'xpos' not in variant_json:
+        variant_json['xpos'] = get_xpos(variant_json['chrom'], variant_json['pos'])
+
     xpos = variant_json['xpos']
     ref = variant_json['ref']
     alt = variant_json['alt']
+    var_length = variant_json['pos_end'] - variant_json['pos'] if 'pos_end' in variant_json else len(ref) - 1
     saved_variant = SavedVariant.objects.create(
         xpos=xpos,
         xpos_start=xpos,
-        xpos_end=xpos + len(ref) - 1,
+        xpos_end=xpos + var_length,
         ref=ref,
         alt=alt,
         family=family,

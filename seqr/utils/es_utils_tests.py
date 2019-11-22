@@ -904,6 +904,7 @@ def create_mock_response(search, index=INDEX_NAME):
 @mock.patch('seqr.utils.es_utils._liftover_grch38_to_grch37', lambda: MOCK_LIFTOVER)
 class EsUtilsTest(TestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
+    multi_db = True
 
     def setUp(self):
         Sample.objects.filter(sample_id='NA19678').update(is_active=False)

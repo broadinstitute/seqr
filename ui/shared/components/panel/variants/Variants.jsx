@@ -37,7 +37,7 @@ const StyledVariantRow = styled(Grid.Row)`
 const Variant = ({ variant }) => {
   const mainGeneId = getVariantMainGeneId(variant)
   return (
-    <StyledVariantRow severity={CLINSIG_SEVERITY[(variant.clinvar.clinicalSignificance || '').toLowerCase()]}>
+    <StyledVariantRow severity={CLINSIG_SEVERITY[((variant.clinvar || {}).clinicalSignificance || '').toLowerCase()]}>
       <Grid.Column width={16}>
         <Pathogenicity variant={variant} />
       </Grid.Column>

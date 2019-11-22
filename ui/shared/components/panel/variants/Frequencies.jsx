@@ -43,9 +43,9 @@ FreqLink.propTypes = {
 }
 
 const FreqSummary = ({ field, fieldTitle, variant, urls, queryParams, genomeVersions, hasLink, showAC, precision = 2 }) => {
-  const { populations, chrom } = variant
-  const population = populations[field]
-  if (population.af === null) {
+  const { populations = {}, chrom } = variant
+  const population = populations[field] || {}
+  if (population.af === null || population.af === undefined) {
     return null
   }
   const value = population.af > 0 ? population.af.toPrecision(precision) : '0.0'
@@ -135,7 +135,7 @@ const Frequencies = ({ variant }) => {
   )
 
   return (
-    Object.values(populations).some(pop => pop.ac) ?
+    Object.values(populations || {}).some(pop => pop.ac) ?
       <Popup
         position="top center"
         flowing
