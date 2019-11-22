@@ -1,9 +1,0 @@
-Hi there --
-
-{{ referrer.profile }} has added you as a collaborator in seqr.  
-
-Please click this link to set up your account:
-{{ link }}
-
-Thanks!
-
