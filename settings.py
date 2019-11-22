@@ -2,6 +2,10 @@ import logging
 import os
 import random
 import string
+import pymongo
+import imp
+from pymongo import MongoClient
+
 
 logger = logging.getLogger(__name__)
 
@@ -10,7 +14,10 @@ SEQR_VERSION = 'v0.1'
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-ADMINS = ()
+ADMINS = [
+    ('Ben Weisburd', 'weisburd@broadinstitute.org'),
+    ('Hana Snow', 'hsnow@broadinstitute.org'),
+]
 
 MANAGERS = ADMINS
 
@@ -214,8 +221,6 @@ BASE_URL = os.environ.get("BASE_URL", "/")
 # ===========================================================
 # legacy settings that need to be reviewed
 
-from pymongo import MongoClient
-
 STATICFILES_FINDERS = (
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
@@ -252,9 +257,6 @@ TEMPLATES = [
         },
     },
 ]
-
-
-
 
 ROOT_URLCONF = 'xbrowse_server.urls'
 
@@ -299,31 +301,6 @@ FAMILY_LOAD_BATCH_SIZE = 25000
 CONSTRUCTION_TEMPLATE = None
 
 VARIANT_QUERY_RESULTS_LIMIT = 2500
-
-# READ_VIZ
-
-# The base directory where subdirectories contain bams to be shown
-# within Variant Search results in an IGV.js view.
-# This path can be a local directory or a url to which Django will
-# forward the IGV.js http requests.
-# The subdirectories under this path should be organized like:
-# <project_id1>/<project1_sample_id1>.bam
-#               <project1_sample_id1>.bam.bai
-#               <project1_sample_id2>.bam
-#               <project1_sample_id2>.bam.bai
-#               ..
-# <project_id2>/<project2_sample_id1>.bam
-#               <project2_sample_id1>.bam.bai
-#               <project2_sample_id2>.bam
-#               <project2_sample_id2>.bam.bai
-#               ..
-# to xbrowse project ids, and contain
-# .bam and .bai files for samples
-READ_VIZ_BAM_PATH = ""
-
-READ_VIZ_USERNAME=None   # used to authenticate to remote HTTP bam server
-READ_VIZ_PASSWD=None
-
 
 KIBANA_HOSTNAME = os.environ.get('KIBANA_SERVICE_HOSTNAME', 'localhost')
 KIBANA_PORT = os.environ.get('KIBANA_SERVICE_PORT', 5601)
@@ -396,8 +373,34 @@ SEQR_HOSTNAME_FOR_SLACK_POST='https://seqr.broadinstitute.org/project'
 
 PROJECT_IDS_TO_EXCLUDE_FROM_DISCOVERY_SHEET_DOWNLOAD = []
 
+GENERATED_FILES_DIR = os.path.join(os.path.dirname(__file__), 'generated_files')
+MEDIA_ROOT = os.path.join(GENERATED_FILES_DIR , 'media/')
 
-from local_settings import *
+ALLOWED_HOSTS = ['*']
+
+EMAIL_BACKEND = "anymail.backends.postmark.EmailBackend"
+DEFAULT_FROM_EMAIL = "seqr@broadinstitute.org"
+
+ANYMAIL = {
+    #"SENDGRID_API_KEY": os.environ.get('SENDGRID_API_KEY', 'sendgrid-api-key-placeholder'),
+    "POSTMARK_SERVER_TOKEN": os.environ.get('POSTMARK_SERVER_TOKEN', 'postmark-server-token-placeholder'),
+}
+
+DEFAULT_CONTROL_COHORT = 'controls'
+CONTROL_COHORTS = [
+    {
+        'slug': 'controls',
+        'vcf': '',
+    },
+]
+
+READ_VIZ_BAM_PATH = 'https://broad-seqr'
+READ_VIZ_CRAM_PATH = 'broad-seqr:5000'
+
+READ_VIZ_USERNAME = "xbrowse-bams"
+READ_VIZ_PASSWD = "xbrowse-bams"
+
+
 #
 # These are all settings that require the stuff in local_settings.py
 #
@@ -416,9 +419,6 @@ ANNOTATOR_REFERENCE_POPULATIONS_IN_ELASTICSEARCH = [
     {"slug": "topmed", "name": "TOPMed", "has_hom_hemi": False, "description": "Filter out variants that have a higher allele count (AC), or a higher allele frequency (AF) in TOPMed"},
     {"slug": "AF", "name": "This Callset", "has_hom_hemi": False, "description": ""},
 ]
-
-ANNOTATOR_REFERENCE_POPULATIONS = ANNOTATOR_SETTINGS.reference_populations
-ANNOTATOR_REFERENCE_POPULATION_SLUGS = [pop['slug'] for pop in ANNOTATOR_SETTINGS.reference_populations]
 
 UPLOADED_PEDIGREE_FILE_RECIPIENTS = os.environ.get('UPLOADED_PEDIGREE_FILE_RECIPIENTS', '').split(',')
 
