@@ -6,8 +6,6 @@ import django.contrib.postgres.fields.jsonb
 from django.db import migrations, models
 import django.db.models.deletion
 
-from seqr.model_utils import _variant_details
-
 
 def remove_missing_family_saved_variants(apps, schema_editor):
     # We get the model from the versioned app registry;

@@ -52,6 +52,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'xbrowse_server.base',
+    'xbrowse_server.gene_lists',
 ]
 
 MIDDLEWARE = [

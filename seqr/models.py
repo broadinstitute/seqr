@@ -123,8 +123,7 @@ class Project(ModelWithGUID):
 
     last_accessed_date = models.DateTimeField(null=True, blank=True, db_index=True)
 
-    # legacy
-    custom_reference_populations = models.ManyToManyField('base.ReferencePopulation', blank=True, related_name='+')
+    # TODO remove
     deprecated_project_id = models.TextField(default="", blank=True, db_index=True)  # replace with model's 'id' field
     has_new_search = models.BooleanField(default=False)
 
