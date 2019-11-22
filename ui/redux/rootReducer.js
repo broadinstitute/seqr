@@ -355,6 +355,7 @@ const rootReducer = combineReducers(Object.assign({
   newUser: zeroActionsReducer,
   usersByUsername: createSingleValueReducer(RECEIVE_USERS, {}),
   userOptionsLoading: loadingReducer(REQUEST_USERS, RECEIVE_USERS),
+  meta: zeroActionsReducer,
   form: formReducer,
   savedVariantTableState: createSingleObjectReducer(UPDATE_SAVED_VARIANT_TABLE_STATE, {
     hideExcluded: false,
