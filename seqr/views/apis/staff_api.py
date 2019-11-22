@@ -629,11 +629,14 @@ def _generate_rows(project, loaded_samples_by_project_family, saved_variants_by_
 
             variant.saved_variant_json['inheritance'] = inheritance_models
 
-            main_transcript_id = variant.selected_main_transcript_id or variant.saved_variant_json['mainTranscriptId']
-            for gene_id, transcripts in variant.saved_variant_json['transcripts'].items():
-                if any(t['transcriptId'] == main_transcript_id for t in transcripts):
-                    variant.saved_variant_json['mainTranscriptGeneId'] = gene_id
-                    break
+            main_transcript_id = variant.selected_main_transcript_id or variant.saved_variant_json.get('mainTranscriptId')
+            if main_transcript_id:
+                for gene_id, transcripts in variant.saved_variant_json['transcripts'].items():
+                    if any(t['transcriptId'] == main_transcript_id for t in transcripts):
+                        variant.saved_variant_json['mainTranscriptGeneId'] = gene_id
+                        break
+            elif len(variant.saved_variant_json['transcripts']) == 1 and not variant.saved_variant_json['transcripts'].values()[0]:
+                variant.saved_variant_json['mainTranscriptGeneId'] = variant.saved_variant_json['transcripts'].keys()[0]
 
         gene_ids_to_saved_variants = defaultdict(set)
         gene_ids_to_variant_tag_names = defaultdict(set)

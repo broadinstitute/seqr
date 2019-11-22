@@ -7,6 +7,7 @@ import styled from 'styled-components'
 
 import { updateFamily, loadStaffOptions } from 'redux/rootReducer'
 import { getProjectsByGuid, getFirstSampleByFamily, getUserOptionsIsLoading, getGenesById } from 'redux/selectors'
+import CreateVariantButton from '../buttons/CreateVariantButton'
 import VariantTagTypeBar from '../graph/VariantTagTypeBar'
 import PedigreeImagePanel from './view-pedigree-image/PedigreeImagePanel'
 import TextFieldView from './view-fields/TextFieldView'
@@ -273,6 +274,8 @@ const Family = (
         <VerticalSpacer height={20} />
         <SearchLink family={family} disabled={!firstFamilySample}><Icon name="search" /> Variant Search</SearchLink>
         {!firstFamilySample && <Popup trigger={<HelpIcon />} content="Search is disabled until data is loaded" />}
+        <VerticalSpacer height={10} />
+        <CreateVariantButton family={family} />
         <VerticalSpacer height={10} />
         {project.isMmeEnabled &&
           <Link to={`/project/${project.projectGuid}/family_page/${family.familyGuid}/matchmaker_exchange`}>
