@@ -250,12 +250,56 @@ const FamilyVariantTags = (
   { variant, savedVariant, family, project, dispatchUpdateVariantNote, dispatchUpdateFamilyVariantTags, isCompoundHet, areCompoundHets },
 ) => {
   if (family) {
+
     let displayVariant
-    if (Array.isArray(variant)) {
+    if (areCompoundHets) {
       displayVariant = savedVariant.map((eachSavedVariant, index) => { return eachSavedVariant || variant[index] })
     } else {
       displayVariant = savedVariant.length === 0 ? variant : savedVariant
     }
+
+    const notes = []
+    // let notes = []
+    // if (areCompoundHets) {
+    //   if (savedVariant[0] || savedVariant[1]) {
+    //     notes = []
+    //   }
+    //   else {
+    //     const noteGuids1 = ((savedVariant[0] || {}).notes || []).map(note => note.noteGuid)
+    //     const noteGuids2 = ((savedVariant[1] || {}).notes || []).map(note => note.noteGuid)
+    //     const sharedNoteGuids = noteGuids1.filter(noteGuid => noteGuids2.indexOf(noteGuid) !== -1)
+    //     const sharedNotes = ((savedVariant[0] || {}).notes || []).filter(note => sharedNoteGuids.includes(note.noteGuid))
+    //     notes = sharedNotes
+    //   }
+    // }
+
+    const tags = []
+    // let tags = []
+    // if (isCompoundHet) {
+    //   const individualNotes1 = savedVariant[0].notes.filter(note => !sharedNoteGuids.contains(note.noteGuid))
+    //   const individualNotes2 = savedVariant[1].notes.filter(note => !sharedNoteGuids.contains(note.noteGuid))
+    // }
+    // else {
+    //   notes = (savedVariant && savedVariant.notes) || []
+    // }
+    // if (areCompoundHets) {
+    //   if (savedVariant[0] || savedVariant[1]) {
+    //     tags = []
+    //   }
+    //   else {
+    //     const tagGuids1 = ((savedVariant[0] || {}).tags || []).map(tag => tag.tagGuid)
+    //     const tagGuids2 = ((savedVariant[1] || {}).tags || []).map(tag => tag.tagGuid)
+    //     const sharedTagGuids = tagGuids1.filter(tagGuid => tagGuids2.indexOf(tagGuid) !== -1)
+    //     const sharedTags = ((savedVariant[0] || {}).tags || []).filter(tag => sharedTagGuids.includes(tag.tagGuid))
+    //     const individualTags1 = savedVariant[0].tags.filter(tag => !sharedTagGuids.contains(tag.tagGuid))
+    //     const individualTags2 = savedVariant[1].tags.filter(tag => !sharedTagGuids.contains(tag.tagGuid))
+    //     tags = sharedTags
+    //   }
+    // }
+    // else {
+    //   tags = (savedVariant && savedVariant.tags) || []
+    // }
+
     return (
       <div>
         {!isCompoundHet &&
@@ -294,7 +338,7 @@ const FamilyVariantTags = (
               onSubmit={dispatchUpdateFamilyVariantTags}
             />
             <HorizontalSpacer width={5} />
-            {((savedVariant && savedVariant.tags) || (savedVariant[0] === undefined ? [] : savedVariant[0].tags)).some(tag => tag.category === DISCOVERY_CATEGORY_NAME) &&
+            {tags.some(tag => tag.category === DISCOVERY_CATEGORY_NAME) &&
             <span>
               <TagTitle>Fxnl Data:</TagTitle>
               <VariantTagField
@@ -314,7 +358,7 @@ const FamilyVariantTags = (
           <div>
             <TagTitle>Notes:</TagTitle>
             <NoteContainer>
-              {((savedVariant && savedVariant.notes) || (savedVariant[0] === undefined ? [] : savedVariant[0].notes)).map(note =>
+              {notes.map(note =>
                 <VariantNoteField
                   key={note.noteGuid}
                   note={note}
@@ -359,7 +403,7 @@ const mapStateToProps = (state, ownProps) => ({
   family: getFamiliesByGuid(state)[ownProps.familyGuid],
   project: getProjectsByGuid(state)[(getFamiliesByGuid(state)[ownProps.familyGuid] || {}).projectGuid],
   savedVariant: (getSavedVariantsGroupedByFamilyVariants(state)[ownProps.familyGuid] || {})[getVariantId(ownProps.variant)]
-  || (Array.isArray(ownProps.variant) ? ownProps.variant.map(eachVariant => (getSavedVariantsGroupedByFamilyVariants(state)[ownProps.familyGuid] || {})[getVariantId(eachVariant)]) : []),
+  || (ownProps.areCompoundHets ? ownProps.variant.map(eachVariant => (getSavedVariantsGroupedByFamilyVariants(state)[ownProps.familyGuid] || {})[getVariantId(eachVariant)]) : []),
 })
 
 const mapDispatchToProps = (dispatch, ownProps) => ({
