@@ -187,11 +187,12 @@ def update_variant_note_handler(request, variant_guids, note_guid):
     note = _get_note_from_variant_guids(request.user, variant_guids, note_guid)
     request_json = json.loads(request.body)
     update_model_from_json(note, request_json, allow_unknown_keys=True)
+
     update = {}
     for variant_guid in variant_guids:
         saved_variant = SavedVariant.objects.get(guid=variant_guid)
         update[variant_guid] = {
-            'notes': [get_json_for_variant_note(note) for note in saved_variant.variantnote_set.all()],
+            'notes': [get_json_for_variant_note(updated_note) for updated_note in saved_variant.variantnote_set.all()],
         }
     return create_json_response({'savedVariantsByGuid': update})
 
@@ -202,11 +203,12 @@ def delete_variant_note_handler(request, variant_guids, note_guid):
     variant_guids = variant_guids.split(',')
     note = _get_note_from_variant_guids(request.user, variant_guids, note_guid)
     delete_seqr_model(note)
+
     update = {}
     for variant_guid in variant_guids:
         saved_variant = SavedVariant.objects.get(guid=variant_guid)
         update[variant_guid] = {
-            'notes': [get_json_for_variant_note(note) for note in saved_variant.variantnote_set.all()],
+            'notes': [get_json_for_variant_note(updated_note) for updated_note in saved_variant.variantnote_set.all()]
         }
     return create_json_response({'savedVariantsByGuid': update})
 
