@@ -39,19 +39,19 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # Application definition
 INSTALLED_APPS = [
-    'seqr',
-    'reference_data',
-    'hijack',
-    'compat',
-    'corsheaders',
-    'guardian',
-    'anymail',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'hijack',
+    'compat',
+    'corsheaders',
+    'guardian',
+    'anymail',
+    'seqr',
+    'reference_data',
     'xbrowse_server.base',
     'xbrowse_server.gene_lists',
 ]
