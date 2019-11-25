@@ -136,10 +136,22 @@ export const getSavedVariantsGroupedByFamilyVariants = createSelector(
       }
       acc[familyGuid][getVariantId(variant)] = variant
     })
-
     return acc
 
   }, {}),
+)
+
+const getSavedVariantsNoteGuids = createSelector(
+  getSavedVariantsByGuid,
+  savedVariantsByGuid => Object.values(savedVariantsByGuid).reduce((acc, variant) => {
+    acc = [...acc, ...(variant.notes || []).map(note => note.noteGuid)]
+    return acc
+  }, []),
+)
+
+export const getSavedVariantsSharedNoteGuids = createSelector(
+  getSavedVariantsNoteGuids,
+  savedVariantsNoteGuids => savedVariantsNoteGuids.filter((noteGuid, index, self) => self.indexOf(noteGuid) !== index),
 )
 
 export const getSelectedSavedVariants = createSelector(
