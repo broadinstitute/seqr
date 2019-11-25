@@ -11,6 +11,7 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_user, _get_json_for
 
 class JSONUtilsTest(TestCase):
     fixtures = ['users.json', '1kg_project', 'reference_data', 'variant_searches']
+    multi_db = True
 
     def test_json_for_user(self):
         for user in User.objects.all():

@@ -34,6 +34,7 @@ def get_objects_for_group(can_view_group, permission, object_cls):
 
 class ProjectAPITest(TestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
+    multi_db = True
 
     @mock.patch('seqr.views.utils.phenotips_utils.proxy_request', create_proxy_request_stub(201))
     def test_create_update_and_delete_project(self):

@@ -9,6 +9,7 @@ from seqr.models import SavedVariant, VariantTagType, VariantTag, VariantNote, V
     LocusListInterval, LocusListGene, Family, CAN_VIEW, CAN_EDIT, GeneNote
 from seqr.model_utils import create_seqr_model, delete_seqr_model
 from seqr.utils.gene_utils import get_genes
+from seqr.utils.xpos_utils import get_xpos
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants, get_json_for_variant_tag, \
@@ -47,22 +48,21 @@ def saved_variant_data(request, project_guid, variant_guid=None):
         'genesById': genes,
     })
 
-
 def _create_single_saved_variant(variant_json, family):
     xpos = variant_json['xpos']
     ref = variant_json['ref']
     alt = variant_json['alt']
+    var_length = variant_json['pos_end'] - variant_json['pos'] if 'pos_end' in variant_json else len(ref) - 1
     saved_variant = SavedVariant.objects.create(
         xpos=xpos,
         xpos_start=xpos,
-        xpos_end=xpos + len(ref) - 1,
+        xpos_end=xpos + var_length,
         ref=ref,
         alt=alt,
         family=family,
         saved_variant_json=variant_json
     )
     return saved_variant
-
 
 def _create_multiple_saved_variants(request_json, family):
     saved_variants = []
@@ -75,17 +75,20 @@ def _create_multiple_saved_variants(request_json, family):
                 saved_variants.append(saved_variant)
     return saved_variants
 
-
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def create_saved_variant_handler(request):
     variant_json = json.loads(request.body)
-    non_variant_key = ['searchHash', 'tags', 'functionalData', 'notes', 'note', 'submitToClinvar', 'saveAsGeneNote']
-    non_variant_json = {k: variant_json.pop(k, None) for k in non_variant_key}
-
     family_guid = variant_json.pop('familyGuid')
+    non_variant_json = {
+        k: variant_json.pop(k, None) for k in ['searchHash', 'tags', 'functionalData', 'notes', 'note', 'submitToClinvar']
+    }
+
     family = Family.objects.get(guid=family_guid)
     check_permissions(family.project, request.user, CAN_VIEW)
+
+    if 'xpos' not in variant_json:
+        variant_json['xpos'] = get_xpos(variant_json['chrom'], variant_json['pos'])
 
     # are compound hets
     if 'familyGuids' not in variant_json.keys():

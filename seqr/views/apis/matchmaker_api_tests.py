@@ -71,8 +71,9 @@ class EmailException(Exception):
         self.status_code = 402
 
 
-class VariantSearchAPITest(TestCase):
+class MatchmakerAPITest(TestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
+    multi_db = True
 
     def test_get_individual_mme_matches(self):
         url = reverse(get_individual_mme_matches, args=[INDIVIDUAL_GUID])
@@ -184,9 +185,10 @@ class VariantSearchAPITest(TestCase):
             {'SV0000001_2103343353_r0390_100', 'SV0000003_2246859832_r0390_100', 'SV0059957_11562437_f019313_1', 'SV0059956_11560662_f019313_1'})
         self.assertDictEqual(response_json['mmeContactNotes'], {})
 
+    @mock.patch('seqr.views.apis.matchmaker_api.EmailMessage')
     @mock.patch('seqr.views.apis.matchmaker_api.post_to_slack')
     @responses.activate
-    def test_search_individual_mme_matches(self, mock_post_to_slack):
+    def test_search_individual_mme_matches(self, mock_post_to_slack, mock_email):
         url = reverse(search_individual_mme_matches, args=[INDIVIDUAL_GUID])
         _check_login(self, url)
 
@@ -318,15 +320,21 @@ class VariantSearchAPITest(TestCase):
         self.assertEqual(responses.calls[2].request.body, expected_body)
 
 
-        # Test slack notification
-        slack_message = u"""
+        # Test notification
+        message = u"""
     A search from a seqr user from project 1kg project n\xe5me with uni\xe7\xf8de individual NA19675_1 had the following new match(es):
     
      - From Reza Maroofian at institution St Georges, University of London with genes OR4F5 with phenotypes HP:0012469 (Infantile spasms).
     
     https://seqr.broadinstitute.org/project/R0001_1kg/family_page/F000001_1/matchmaker_exchange
     """
-        mock_post_to_slack.assert_called_with('matchmaker_seqr_match', slack_message)
+        mock_post_to_slack.assert_called_with('matchmaker_seqr_match', message)
+        mock_email.assert_called_with(
+            subject=u'New matches found for MME submission NA19675_1 (project: 1kg project n\xe5me with uni\xe7\xf8de)',
+            body=message,
+            to=['test@broadinstitute.org'],
+            from_email='matchmaker@broadinstitute.org')
+        mock_email.return_value.send.assert_called()
 
         # Test new result model created
         result_model = MatchmakerResult.objects.get(guid=new_result_guid)

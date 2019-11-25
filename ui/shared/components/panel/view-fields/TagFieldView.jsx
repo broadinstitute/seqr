@@ -6,27 +6,12 @@ import { Field } from 'redux-form'
 
 import { HorizontalSpacer } from '../../Spacers'
 import { ColoredLabel, ColoredOutlineLabel } from '../../StyledComponents'
-import { Multiselect } from '../../form/Inputs'
+import { LargeMultiselect } from '../../form/Inputs'
 import OptionFieldView from './OptionFieldView'
 
 const NOTES_CATEGORY = 'Functional Data'
 
 const MODAL_STYLE = { minHeight: 'calc(90vh - 100px)' }
-
-const LargeMultiselect = styled(Multiselect)`
-  .ui.search.dropdown .menu {
-    max-height: calc(90vh - 220px);
-    
-    .item {
-      clear: both;
-      
-      .description {
-        max-width: 50%;
-        text-align: right;
-      }
-    }
-  }
-`
 
 const MetadataFormGroup = styled(Form.Group).attrs({ inline: true })`
   label, .label {

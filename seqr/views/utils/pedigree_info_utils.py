@@ -350,10 +350,10 @@ def _send_sample_manifest(sample_manifest_rows, kit_id, original_filename, origi
     wb.save(temp_sample_manifest_file.name)
     temp_sample_manifest_file.seek(0)
 
-    sample_manifest_filename = kit_id+".xls"
+    sample_manifest_filename = kit_id+".xlsx"
     logger.info("Sending sample manifest file %s to %s" % (sample_manifest_filename, settings.UPLOADED_PEDIGREE_FILE_RECIPIENTS))
 
-    original_table_attachment_filename = os.path.basename(original_filename).replace(".xlsx", ".xls")
+    original_table_attachment_filename = '{}.xlsx'.format('.'.join(os.path.basename(original_filename).split('.')[:-1]))
 
     if user is not None and project is not None:
         user_email_or_username = user.email or user.username
@@ -381,8 +381,8 @@ def _send_sample_manifest(sample_manifest_rows, kit_id, original_filename, origi
         body=strip_tags(email_body),
         to=settings.UPLOADED_PEDIGREE_FILE_RECIPIENTS,
         attachments=[
-            (sample_manifest_filename, temp_sample_manifest_file.read(), "application/xls"),
-            (original_table_attachment_filename, temp_original_file.read(), "application/xls"),
+            (sample_manifest_filename, temp_sample_manifest_file.read(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+            (original_table_attachment_filename, temp_original_file.read(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
         ],
     )
     email_message.attach_alternative(email_body, 'text/html')

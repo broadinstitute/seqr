@@ -111,7 +111,10 @@ def _search_individual_matches(individual, user):
         saved_results[result['patient']['id']] = saved_result
 
     if new_results:
-        _generate_slack_notification_for_seqr_match(individual, new_results)
+        try:
+            _generate_notification_for_seqr_match(individual, new_results)
+        except Exception as e:
+            logger.error('Unable to create notification for new MME match: {}'.format(str(e)))
 
     logger.info('Found {} matches for {} ({} new)'.format(len(results), individual.individual_id, len(new_results)))
 
@@ -380,9 +383,9 @@ def _parse_mme_result(result, hpo_terms_by_id, gene_symbols_to_ids, individual_g
     return parsed_result
 
 
-def _generate_slack_notification_for_seqr_match(individual, results):
+def _generate_notification_for_seqr_match(individual, results):
     """
-    Generate a SLACK notifcation to say that a match happened initiated from a seqr user.
+    Generate a notifcation to say that a match happened initiated from a seqr user.
     """
     matches = []
     hpo_terms_by_id, genes_by_id, _ = get_mme_genes_phenotypes(results)
@@ -412,6 +415,7 @@ def _generate_slack_notification_for_seqr_match(individual, results):
             gene_message=gene_message, phenotypes_message=phenotypes_message,
         ))
 
+    project = individual.family.project
     message = u"""
     A search from a seqr user from project {project} individual {individual_id} had the following new match(es):
     
@@ -419,8 +423,15 @@ def _generate_slack_notification_for_seqr_match(individual, results):
     
     {host}/{project_guid}/family_page/{family_guid}/matchmaker_exchange
     """.format(
-        project=individual.family.project.name, individual_id=individual.individual_id, matches='\n\n'.join(matches),
-        host=SEQR_HOSTNAME_FOR_SLACK_POST, project_guid=individual.family.project.guid, family_guid=individual.family.guid,
+        project=project.name, individual_id=individual.individual_id, matches='\n\n'.join(matches),
+        host=SEQR_HOSTNAME_FOR_SLACK_POST, project_guid=project.guid, family_guid=individual.family.guid,
     )
 
     post_to_slack(MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL, message)
+    email_message = EmailMessage(
+        subject=u'New matches found for MME submission {} (project: {})'.format(individual.individual_id, project.name),
+        body=message,
+        to=map(lambda s: s.strip().split('mailto:')[-1], project.mme_contact_url.split(',')),
+        from_email='matchmaker@broadinstitute.org',
+    )
+    email_message.send()
