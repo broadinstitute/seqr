@@ -7,7 +7,7 @@ from django.db.models import Q
 from guardian.shortcuts import assign_perm
 
 from xbrowse_server.base.management.commands.transfer_mme_data import transfer_mme_submission_data, transfer_mme_results_data
-from xbrowse_server.base.model_utils import deprecated_get_or_create_saved_variant
+from xbrowse_server.base.model_utils import _deprecated_get_or_create_saved_variant
 from seqr.views.apis import phenotips_api
 from seqr.views.apis.phenotips_api import _get_patient_data, _update_individual_phenotips_data
 from xbrowse_server.base.models import \
@@ -53,32 +53,17 @@ class Command(BaseCommand):
     help = 'Transfer projects to the new seqr schema'
 
     def add_arguments(self, parser):
-        parser.add_argument('--reset-all-models', help='This flag causes all records to be cleared from the seqr schema\'s Project, Family, and Individual models before transferring data', action='store_true')
         parser.add_argument('--dont-connect-to-phenotips', help='dont retrieve phenotips internal id and latest data', action='store_true')
+        parser.add_argument('--remove-extra-seqr-models', help='delete seqr models with no coresponding xbrowse model', action='store_true')
         parser.add_argument('project_id', nargs="*", help='Project(s) to transfer. If not specified, defaults to all projects.')
 
     def handle(self, *args, **options):
         """transfer project"""
-        reset_all_models = options['reset_all_models']
+        remove_extra_seqr_models = options['remove_extra_seqr_models']
         connect_to_phenotips = not options['dont_connect_to_phenotips']
         project_ids_to_process = options['project_id']
         
         counters = OrderedDefaultDict(int)
-
-        #if reset_all_models:
-        #    print("Dropping all records from SeqrProject, SeqrFamily, SeqrIndividual")
-        #    SeqrIndividual.objects.all().delete()
-        #    SeqrFamily.objects.all().delete()
-        #    SeqrProject.objects.all().delete()
-
-        # reset models that'll be regenerated
-        #if not project_ids_to_process:
-        #    SeqrSample.objects.all().delete()
-        #    SeqrVariantTagType.objects.all().delete()
-        #    SeqrVariantTag.objects.all().delete()
-        #    SeqrVariantNote.objects.all().delete()
-
-
 
         if project_ids_to_process:
             projects = Project.objects.filter(project_id__in=project_ids_to_process)
@@ -93,7 +78,6 @@ class Command(BaseCommand):
             )
             logging.info("Processing all %s projects" % len(projects))
             project_ids_to_process = [p.project_id for p in projects]
-
 
         updated_seqr_project_guids = set()
         updated_seqr_family_guids = set()
@@ -192,115 +176,115 @@ class Command(BaseCommand):
 
                 if variant_note_created:   counters['variant_notes_created'] += 1
 
+        if remove_extra_seqr_models:
+            for deprecated_project_id in project_ids_to_process:
 
-        for deprecated_project_id in project_ids_to_process:
+                base_project = Project.objects.get(project_id=deprecated_project_id)
 
-            base_project = Project.objects.get(project_id=deprecated_project_id)
+                # delete Tag type
+                for seqr_variant_tag_type in SeqrVariantTagType.objects.filter(project__deprecated_project_id=deprecated_project_id):
+                    if not ProjectTag.objects.filter(
+                        project=base_project,
+                        tag=seqr_variant_tag_type.name,
+                        title=seqr_variant_tag_type.description,
+                        color=seqr_variant_tag_type.color,
+                        order=seqr_variant_tag_type.order
+                    ):
+                        seqr_variant_tag_type.delete()
+                        print("--- deleting variant tag type: " + str(seqr_variant_tag_type))
+                        counters['seqr_variant_tag_type_deleted'] += 1
 
-            # delete Tag type
-            for seqr_variant_tag_type in SeqrVariantTagType.objects.filter(project__deprecated_project_id=deprecated_project_id):
-                if not ProjectTag.objects.filter(
-                    project=base_project,
-                    tag=seqr_variant_tag_type.name,
-                    title=seqr_variant_tag_type.description,
-                    color=seqr_variant_tag_type.color,
-                    order=seqr_variant_tag_type.order
-                ):
-                    seqr_variant_tag_type.delete()
-                    print("--- deleting variant tag type: " + str(seqr_variant_tag_type))
-                    counters['seqr_variant_tag_type_deleted'] += 1
+                # delete Tag
+                delete_count, _ = SeqrVariantTag.objects.filter(saved_variant__isnull=True).delete()
+                counters['seqr_variant_tag_deleted'] += delete_count
+                for seqr_variant_tag in SeqrVariantTag.objects.filter(saved_variant__project__deprecated_project_id=deprecated_project_id):
 
-            # delete Tag
-            delete_count, _ = SeqrVariantTag.objects.filter(saved_variant__isnull=True).delete()
-            counters['seqr_variant_tag_deleted'] += delete_count
-            for seqr_variant_tag in SeqrVariantTag.objects.filter(saved_variant__project__deprecated_project_id=deprecated_project_id):
+                    if not VariantTag.objects.filter(
+                            project_tag__project=base_project,
+                            project_tag__tag=seqr_variant_tag.variant_tag_type.name,
+                            #project_tag__title=seqr_variant_tag.variant_tag_type.description,
+                            xpos=seqr_variant_tag.saved_variant.xpos_start,
+                            ref=seqr_variant_tag.saved_variant.ref,
+                            alt=seqr_variant_tag.saved_variant.alt,
+                    ):
+                        seqr_variant_tag.delete()
+                        print("--- deleting variant tag: " + str(seqr_variant_tag))
+                        counters['seqr_variant_tag_deleted'] += 1
 
-                if not VariantTag.objects.filter(
-                        project_tag__project=base_project,
-                        project_tag__tag=seqr_variant_tag.variant_tag_type.name,
-                        #project_tag__title=seqr_variant_tag.variant_tag_type.description,
-                        xpos=seqr_variant_tag.saved_variant.xpos_start,
-                        ref=seqr_variant_tag.saved_variant.ref,
-                        alt=seqr_variant_tag.saved_variant.alt,
-                ):
-                    seqr_variant_tag.delete()
-                    print("--- deleting variant tag: " + str(seqr_variant_tag))
-                    counters['seqr_variant_tag_deleted'] += 1
+                # delete functional data tags
+                delete_count, _ = SeqrVariantFunctionalData.objects.filter(saved_variant__isnull=True).delete()
+                counters['seqr_variant_functional_data_deleted'] += delete_count
+                for seqr_variant_functional_data in SeqrVariantFunctionalData.objects.filter(
+                        saved_variant__project__deprecated_project_id=deprecated_project_id):
 
-            # delete functional data tags
-            delete_count, _ = SeqrVariantFunctionalData.objects.filter(saved_variant__isnull=True).delete()
-            counters['seqr_variant_functional_data_deleted'] += delete_count
-            for seqr_variant_functional_data in SeqrVariantFunctionalData.objects.filter(
-                    saved_variant__project__deprecated_project_id=deprecated_project_id):
+                    if not VariantFunctionalData.objects.filter(
+                            family__project=base_project,
+                            functional_data_tag=seqr_variant_functional_data.functional_data_tag,
+                            metadata=seqr_variant_functional_data.metadata,
+                            xpos=seqr_variant_functional_data.saved_variant.xpos_start,
+                            ref=seqr_variant_functional_data.saved_variant.ref,
+                            alt=seqr_variant_functional_data.saved_variant.alt,
+                    ):
+                        seqr_variant_functional_data.delete()
+                        print("--- deleting variant tag: " + str(seqr_variant_functional_data))
+                        counters['seqr_variant_tag_deleted'] += 1
 
-                if not VariantFunctionalData.objects.filter(
-                        family__project=base_project,
-                        functional_data_tag=seqr_variant_functional_data.functional_data_tag,
-                        metadata=seqr_variant_functional_data.metadata,
-                        xpos=seqr_variant_functional_data.saved_variant.xpos_start,
-                        ref=seqr_variant_functional_data.saved_variant.ref,
-                        alt=seqr_variant_functional_data.saved_variant.alt,
-                ):
-                    seqr_variant_functional_data.delete()
-                    print("--- deleting variant tag: " + str(seqr_variant_functional_data))
-                    counters['seqr_variant_tag_deleted'] += 1
+                # delete Variant Note
+                delete_count, _ = SeqrVariantNote.objects.filter(saved_variant__isnull=True).delete()
+                counters['seqr_variant_note_deleted'] += delete_count
+                for seqr_variant_note in SeqrVariantNote.objects.filter(saved_variant__project__deprecated_project_id=deprecated_project_id):
 
-            # delete Variant Note
-            delete_count, _ = SeqrVariantNote.objects.filter(saved_variant__isnull=True).delete()
-            counters['seqr_variant_note_deleted'] += delete_count
-            for seqr_variant_note in SeqrVariantNote.objects.filter(saved_variant__project__deprecated_project_id=deprecated_project_id):
+                    if not VariantNote.objects.filter(
+                        project=base_project,
+                        note=seqr_variant_note.note,
+                        xpos=seqr_variant_note.saved_variant.xpos_start,
+                        ref=seqr_variant_note.saved_variant.ref,
+                        alt=seqr_variant_note.saved_variant.alt,
+                        date_saved=seqr_variant_note.last_modified_date,
+                        user=seqr_variant_note.created_by,
+                    ):
+                        print("--- deleting variant note: " + str(new_variant_note))
+                        seqr_variant_note.delete()
+                        counters['seqr_variant_note_deleted'] += 1
 
-                if not VariantNote.objects.filter(
-                    project=base_project,
-                    note=seqr_variant_note.note,
-                    xpos=seqr_variant_note.saved_variant.xpos_start,
-                    ref=seqr_variant_note.saved_variant.ref,
-                    alt=seqr_variant_note.saved_variant.alt,
-                    date_saved=seqr_variant_note.last_modified_date,
-                    user=seqr_variant_note.created_by,
-                ):
-                    print("--- deleting variant note: " + str(new_variant_note))
-                    seqr_variant_note.delete()
-                    counters['seqr_variant_note_deleted'] += 1
+                for indiv in SeqrIndividual.objects.filter(family__project__deprecated_project_id=deprecated_project_id):
+                    if indiv.guid not in updated_seqr_individual_guids:
+                        print("Deleting SeqrIndividual: %s" % indiv)
+                        counters["deleted SeqrIndividuals"] += 1
+                        indiv.sample_set.all().delete()
+                        indiv.delete()
 
-            for indiv in SeqrIndividual.objects.filter(family__project__deprecated_project_id=deprecated_project_id):
-                if indiv.guid not in updated_seqr_individual_guids:
-                    print("Deleting SeqrIndividual: %s" % indiv)
-                    counters["deleted SeqrIndividuals"] += 1
-                    indiv.sample_set.all().delete()
-                    indiv.delete()
+                # delete families that are in SeqrFamily table, but not in BaseProject table
+                for f in SeqrFamily.objects.filter(project__deprecated_project_id=deprecated_project_id):
+                    if f.guid not in updated_seqr_family_guids:
+                        print("--- deleting SeqrFamily: %s" % f)
+                        counters["deleted SeqrFamilys"] += 1
+                        f.delete()
 
-            # delete families that are in SeqrFamily table, but not in BaseProject table
-            for f in SeqrFamily.objects.filter(project__deprecated_project_id=deprecated_project_id):
-                if f.guid not in updated_seqr_family_guids:
-                    print("--- deleting SeqrFamily: %s" % f)
-                    counters["deleted SeqrFamilys"] += 1
-                    f.delete()
+                # if there's a set of samples without individuals
+                for sample in SeqrSample.objects.filter(individual__isnull=True):
+                    print("--- deleting SeqrSample without indiv: %s" % sample)
+                    counters["deleted SeqrSample"] += 1
+                    sample.delete()
 
-            # if there's a set of samples without individuals
-            for sample in SeqrSample.objects.filter(individual__isnull=True):
-                print("--- deleting SeqrSample without indiv: %s" % sample)
-                counters["deleted SeqrSample"] += 1
-                sample.delete()
+                # delete projects that are in SeqrProject table, but not in BaseProject table
+                #for p in SeqrProject.objects.filter():
+                #    if p.guid not in updated_seqr_project_guids:
+                #        while True:
+                #            i = raw_input('Delete SeqrProject %s? [Y/n]' % p.guid)
+                #            if i == 'Y':
+                #                p.delete()
+                #            else:
+                #                print("Keeping %s .." % p.guid)
+                #            break
 
             # delete projects that are in SeqrProject table, but not in BaseProject table
-            #for p in SeqrProject.objects.filter():
-            #    if p.guid not in updated_seqr_project_guids:
-            #        while True:
-            #            i = raw_input('Delete SeqrProject %s? [Y/n]' % p.guid)
-            #            if i == 'Y':
-            #                p.delete()
-            #            else:
-            #                print("Keeping %s .." % p.guid)
-            #            break
-
-        # delete projects that are in SeqrProject table, but not in BaseProject table
-        if not project_ids_to_process:
-            all_project_ids = set([project.project_id for project in Project.objects.all()])
-            for seqr_project in SeqrProject.objects.all():
-                if seqr_project.deprecated_project_id not in all_project_ids:
-                    #seqr_project.delete()
-                    print("--- Deleting SeqrProject: %s ??" % seqr_project)
+            if not project_ids_to_process:
+                all_project_ids = set([project.project_id for project in Project.objects.all()])
+                for seqr_project in SeqrProject.objects.all():
+                    if seqr_project.deprecated_project_id not in all_project_ids:
+                        #seqr_project.delete()
+                        print("--- Deleting SeqrProject: %s ??" % seqr_project)
 
         logger.info("Done")
         logger.info("Stats: ")
@@ -310,8 +294,8 @@ class Command(BaseCommand):
 
 
 def create_sample_records(source_individual, new_individual, counters):
-    loaded_vcf_files = source_individual.vcf_files.filter(dataset_type=VCFFile.DATASET_TYPE_VARIANT_CALLS, loaded_date__isnull=False)
-    for loaded_vcf_file in loaded_vcf_files:
+    loaded_vcf_files = source_individual.vcf_files.filter(dataset_type=VCFFile.DATASET_TYPE_VARIANT_CALLS, loaded_date__isnull=False).order_by('-loaded_date')
+    for i, loaded_vcf_file in enumerate(loaded_vcf_files):
         new_sample, sample_created = get_or_create_sample(
             source_individual,
             new_individual,
@@ -319,7 +303,7 @@ def create_sample_records(source_individual, new_individual, counters):
             dataset_type=SeqrSample.DATASET_TYPE_VARIANT_CALLS,
             elasticsearch_index=loaded_vcf_file.elasticsearch_index,
             dataset_file_path=loaded_vcf_file.file_path,
-            sample_status=SeqrSample.SAMPLE_STATUS_LOADED if loaded_vcf_file else None,
+            is_active=i is 0,
             loaded_date=loaded_vcf_file.loaded_date,
         )
 
@@ -335,8 +319,8 @@ def create_sample_records(source_individual, new_individual, counters):
                 dataset_type=SeqrSample.DATASET_TYPE_READ_ALIGNMENTS,
                 elasticsearch_index=None,
                 dataset_file_path=source_individual.bam_file_path,
-                loaded_date=loaded_vcf_file.loaded_date,
-                sample_status=SeqrSample.SAMPLE_STATUS_LOADED if loaded_vcf_file else None,
+                loaded_date=i is 0,
+                is_active=True,
             )
             if sample_created:
                 counters['samples_created'] += 1
@@ -510,7 +494,7 @@ def transfer_individual(source_individual, new_project, connect_to_phenotips):
             _update_individual_phenotips_data(new_individual, data_json)
 
             phenotips_data_retrieved = True
-        except phenotips_api.PhenotipsException as e:
+        except Exception as e:
             print("Couldn't retrieve latest data from phenotips for %s: %s" % (new_individual, e))
 
     return new_individual, created, phenotips_data_retrieved
@@ -539,7 +523,7 @@ def get_or_create_sample(
         dataset_type,
         elasticsearch_index,
         dataset_file_path,
-        sample_status,
+        is_active,
         loaded_date):
     """Creates and returns a new Sample based on the provided models."""
 
@@ -550,7 +534,7 @@ def get_or_create_sample(
         dataset_type=dataset_type,
         elasticsearch_index=elasticsearch_index,
         dataset_file_path=dataset_file_path,
-        sample_status=sample_status,
+        is_active=is_active,
         loaded_date=loaded_date,
     )
 
@@ -577,7 +561,7 @@ def get_or_create_variant_tag(source_variant_tag, new_family):
     new_variant_tag, created = safe_get_or_create(source_variant_tag)
     if created:
         print("=== created variant tag: " + str(new_variant_tag))
-        new_variant_tag.saved_variant = deprecated_get_or_create_saved_variant(
+        new_variant_tag.saved_variant = _deprecated_get_or_create_saved_variant(
             xpos=source_variant_tag.xpos,
             ref=source_variant_tag.ref,
             alt=source_variant_tag.alt,
@@ -593,7 +577,7 @@ def get_or_create_variant_functional_data(source_variant_functional_data, new_fa
     new_variant_functional_data, created = safe_get_or_create(source_variant_functional_data)
     if created:
         print("=== created variant functional data: " + str(new_variant_functional_data))
-        new_variant_functional_data.saved_variant = deprecated_get_or_create_saved_variant(
+        new_variant_functional_data.saved_variant = _deprecated_get_or_create_saved_variant(
             xpos=source_variant_functional_data.xpos,
             ref=source_variant_functional_data.ref,
             alt=source_variant_functional_data.alt,
@@ -610,7 +594,7 @@ def get_or_create_variant_note(source_variant_note, new_family):
 
     if created:
         print("=== created variant note: " + str(new_variant_note))
-        new_variant_note.saved_variant = deprecated_get_or_create_saved_variant(
+        new_variant_note.saved_variant = _deprecated_get_or_create_saved_variant(
             xpos=source_variant_note.xpos,
             ref=source_variant_note.ref,
             alt=source_variant_note.alt,
