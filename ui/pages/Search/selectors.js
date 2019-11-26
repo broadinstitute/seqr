@@ -20,14 +20,15 @@ export const getSearchedVariantsErrorMessage = state => state.searchedVariantsLo
 export const getSearchGeneBreakdown = state => state.searchGeneBreakdown
 export const getSearchGeneBreakdownLoading = state => state.searchGeneBreakdownLoading.isLoading
 export const getSearchGeneBreakdownErrorMessage = state => state.searchGeneBreakdownLoading.errorMessage
-
 export const getSearchContextIsLoading = state => state.searchContextLoading.isLoading
+
 export const getMultiProjectSearchContextIsLoading = state => state.multiProjectSearchContextLoading.isLoading
 export const getSearchesByHash = state => state.searchesByHash
 export const getSavedSearchesByGuid = state => state.savedSearchesByGuid
 export const getSavedSearchesIsLoading = state => state.savedSearchesLoading.isLoading
 export const getSavedSearchesLoadingError = state => state.savedSearchesLoading.errorMessage
 export const getVariantSearchDisplay = state => state.variantSearchDisplay
+export const getSearchDisplayLoading = state => state.searchDisplayLoading.isLoading
 export const getCompoundHetDisplay = state => state.compoundHetDisplay
 
 const getCurrentSearchHash = state => state.currentSearchHash

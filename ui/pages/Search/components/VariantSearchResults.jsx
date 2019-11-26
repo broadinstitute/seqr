@@ -32,6 +32,7 @@ import { ALL_RECESSIVE_FILTERS } from '../constants'
 
 const LargeRow = styled(Grid.Row)`
   font-size: 1.15em;
+
   label {
     font-size: 1em !important;
   }
