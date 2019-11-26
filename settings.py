@@ -242,8 +242,6 @@ WSGI_APPLICATION = 'wsgi.application'
 
 TEST_RUNNER = 'django.test.runner.DiscoverRunner'
 
-AUTH_PROFILE_MODULE = 'base.UserProfile'
-
 MONGO_SERVICE_HOSTNAME = os.environ.get('MONGO_SERVICE_HOSTNAME', 'localhost')
 
 FROM_EMAIL = "\"seqr\" <seqr@broadinstitute.org>"
