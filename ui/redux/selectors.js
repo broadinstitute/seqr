@@ -142,6 +142,8 @@ export const getSavedVariantsGroupedByFamilyVariants = createSelector(
   }, {}),
 )
 
+// TODO combine the next two functions into one and use onepass <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
 const getSavedVariantsNoteGuids = createSelector(
   getSavedVariantsByGuid,
   savedVariantsByGuid => Object.values(savedVariantsByGuid).reduce((acc, variant) => {

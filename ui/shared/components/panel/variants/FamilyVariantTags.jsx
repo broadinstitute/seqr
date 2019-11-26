@@ -251,13 +251,14 @@ const FamilyVariantTags = (
   { variant, savedVariant, family, project, dispatchUpdateVariantNote, dispatchUpdateFamilyVariantTags, isCompoundHet, areCompoundHets, savedVariantsSharedNoteGuids },
 ) => {
   if (family) {
+    // TODO move display variants and notes filter to selectors <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     let displayVariant
     if (areCompoundHets) {
       displayVariant = savedVariant.map((eachSavedVariant, index) => { return eachSavedVariant || variant[index] })
     } else {
       displayVariant = savedVariant.length === 0 ? variant : savedVariant
     }
-
+    // TODO move display variants and notes filter to selectors <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     let notes = []
     if (areCompoundHets) {
       notes = ((savedVariant[0] || {}).notes || []).filter(note => savedVariantsSharedNoteGuids.includes(note.noteGuid))
@@ -269,6 +270,7 @@ const FamilyVariantTags = (
       notes = notes.filter(note => !savedVariantsSharedNoteGuids.includes(note.noteGuid)) || []
     }
 
+    // TODO complete tag and test <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     const tags = []
     // let tags = []
     // if (areCompoundHets) {

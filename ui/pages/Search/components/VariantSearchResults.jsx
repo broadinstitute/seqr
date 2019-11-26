@@ -50,6 +50,7 @@ const BaseVariantSearchResults = ({
   const { page = 1, recordsPerPage } = variantSearchDisplay
   const variantDisplayPageOffset = (page - 1) * recordsPerPage
   const paginationFields = totalVariantsCount > recordsPerPage ? [{ ...VARIANT_PAGINATION_FIELD, totalPages: Math.ceil(totalVariantsCount / recordsPerPage) }] : []
+  // TODO move flatten into selector! <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   const displayVariants = compoundHetDisplay.flattenCompoundHet ? uniqBy(searchedVariants.flat(), 'variantId') : searchedVariants
   const compoundHetDisplayFields = ALL_RECESSIVE_INHERITANCE_FILTERS.includes(inheritanceFilter) ? [FLATTEN_COMPOUND_HET_TOGGLE_FIELD] : []
   const fields = [...FIELDS, ...paginationFields]

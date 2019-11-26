@@ -204,6 +204,7 @@ export const loadSavedSearches = () => {
 
 // reducers
 
+// TODO add loading sign for updateCompoundHetDisplay
 export const reducers = {
   currentSearchHash: createSingleValueReducer(UPDATE_CURRENT_SEARCH, null),
   searchedVariants: createSingleValueReducer(RECEIVE_SEARCHED_VARIANTS, []),
