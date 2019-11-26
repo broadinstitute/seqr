@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'reference_data',
     'xbrowse_server.base',
     'xbrowse_server.gene_lists',
+    'breakpoint_search'
 ]
 
 MIDDLEWARE = [
