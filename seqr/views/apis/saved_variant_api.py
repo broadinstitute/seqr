@@ -49,6 +49,8 @@ def saved_variant_data(request, project_guid, variant_guid=None):
     })
 
 def _create_single_saved_variant(variant_json, family):
+    if 'xpos' not in variant_json:
+        variant_json['xpos'] = get_xpos(variant_json['chrom'], variant_json['pos'])
     xpos = variant_json['xpos']
     ref = variant_json['ref']
     alt = variant_json['alt']
@@ -86,9 +88,6 @@ def create_saved_variant_handler(request):
 
     family = Family.objects.get(guid=family_guid)
     check_permissions(family.project, request.user, CAN_VIEW)
-
-    if 'xpos' not in variant_json:
-        variant_json['xpos'] = get_xpos(variant_json['chrom'], variant_json['pos'])
 
     # are compound hets
     if 'familyGuids' not in variant_json.keys():

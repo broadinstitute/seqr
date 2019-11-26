@@ -11,7 +11,7 @@ import {
   getFamiliesByGuid,
   getSavedVariantsGroupedByFamilyVariants,
   getVariantId,
-  getSavedVariantsSharedNoteGuids,
+  getNotes,
 } from 'redux/selectors'
 import {
   DISCOVERY_CATEGORY_NAME,
@@ -248,27 +248,23 @@ VariantLink.propTypes = {
 }
 
 const FamilyVariantTags = (
-  { variant, savedVariant, family, project, dispatchUpdateVariantNote, dispatchUpdateFamilyVariantTags, isCompoundHet, areCompoundHets, savedVariantsSharedNoteGuids },
+  { variant, savedVariant, family, project, dispatchUpdateVariantNote, dispatchUpdateFamilyVariantTags, isCompoundHet, areCompoundHets, notes },
 ) => {
   if (family) {
+    const displayVariant = areCompoundHets ? savedVariant.map((eachSavedVariant, index) => eachSavedVariant || variant[index]) : savedVariant || variant
+
     // TODO move display variants and notes filter to selectors <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-    let displayVariant
-    if (areCompoundHets) {
-      displayVariant = savedVariant.map((eachSavedVariant, index) => { return eachSavedVariant || variant[index] })
-    } else {
-      displayVariant = savedVariant.length === 0 ? variant : savedVariant
-    }
-    // TODO move display variants and notes filter to selectors <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-    let notes = []
-    if (areCompoundHets) {
-      notes = ((savedVariant[0] || {}).notes || []).filter(note => savedVariantsSharedNoteGuids.includes(note.noteGuid))
-    }
-    else {
-      notes = (savedVariant && savedVariant.notes) || []
-    }
-    if (isCompoundHet) {
-      notes = notes.filter(note => !savedVariantsSharedNoteGuids.includes(note.noteGuid)) || []
-    }
+    notes = []
+    // let notes = []
+    // if (areCompoundHets) {
+    //   notes = ((savedVariant[0] || {}).notes || []).filter(note => savedVariantsSharedNoteGuids.includes(note.noteGuid))
+    // }
+    // else {
+    //   notes = (savedVariant && savedVariant.notes) || []
+    // }
+    // if (isCompoundHet) {
+    //   notes = notes.filter(note => !savedVariantsSharedNoteGuids.includes(note.noteGuid)) || []
+    // }
 
     // TODO complete tag and test <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     const tags = []
@@ -388,15 +384,15 @@ FamilyVariantTags.propTypes = {
   areCompoundHets: PropTypes.bool,
   dispatchUpdateVariantNote: PropTypes.func,
   dispatchUpdateFamilyVariantTags: PropTypes.func,
-  savedVariantsSharedNoteGuids: PropTypes.array,
+  notes: PropTypes.array,
 }
 
 const mapStateToProps = (state, ownProps) => ({
   family: getFamiliesByGuid(state)[ownProps.familyGuid],
   project: getProjectsByGuid(state)[(getFamiliesByGuid(state)[ownProps.familyGuid] || {}).projectGuid],
   savedVariant: (getSavedVariantsGroupedByFamilyVariants(state)[ownProps.familyGuid] || {})[getVariantId(ownProps.variant)]
-  || (ownProps.areCompoundHets ? ownProps.variant.map(eachVariant => (getSavedVariantsGroupedByFamilyVariants(state)[ownProps.familyGuid] || {})[getVariantId(eachVariant)]) : []),
-  savedVariantsSharedNoteGuids: getSavedVariantsSharedNoteGuids(state),
+  || (ownProps.areCompoundHets ? ownProps.variant.map(eachVariant => (getSavedVariantsGroupedByFamilyVariants(state)[ownProps.familyGuid] || {})[getVariantId(eachVariant)]) : undefined),
+  notes: getNotes(state),
 })
 
 const mapDispatchToProps = (dispatch, ownProps) => ({

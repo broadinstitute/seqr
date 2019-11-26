@@ -142,19 +142,30 @@ export const getSavedVariantsGroupedByFamilyVariants = createSelector(
   }, {}),
 )
 
-// TODO combine the next two functions into one and use onepass <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-
-const getSavedVariantsNoteGuids = createSelector(
+const getSavedVariantsSharedNoteGuids = createSelector(
   getSavedVariantsByGuid,
   savedVariantsByGuid => Object.values(savedVariantsByGuid).reduce((acc, variant) => {
-    acc = [...acc, ...(variant.notes || []).map(note => note.noteGuid)]
-    return acc
-  }, []),
+    (variant.notes || []).map(note => note.noteGuid).forEach(noteGuid =>
+      (noteGuid in acc.uniques ? acc.duplicates.append(noteGuid) : acc.uniques.append(noteGuid)),
+    )
+    return acc.duplicates
+  }, { duplicates: [], uniques: [] }),
 )
 
-export const getSavedVariantsSharedNoteGuids = createSelector(
-  getSavedVariantsNoteGuids,
-  savedVariantsNoteGuids => savedVariantsNoteGuids.filter((noteGuid, index, self) => self.indexOf(noteGuid) !== index),
+// let notes = []
+// if (areCompoundHets) {
+//   notes = ((savedVariant[0] || {}).notes || []).filter(note => savedVariantsSharedNoteGuids.includes(note.noteGuid))
+// }
+// else {
+//   notes = (savedVariant && savedVariant.notes) || []
+// }
+// if (isCompoundHet) {
+//   notes = notes.filter(note => !savedVariantsSharedNoteGuids.includes(note.noteGuid)) || []
+// }
+
+export const getNotes = createSelector(
+  getSavedVariantsSharedNoteGuids,
+  guids => guids,
 )
 
 export const getSelectedSavedVariants = createSelector(
