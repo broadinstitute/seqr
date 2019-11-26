@@ -282,4 +282,16 @@ class Migration(migrations.Migration):
         migrations.DeleteModel(
             name='VCFFile',
         ),
+        migrations.RunSQL(
+            "DROP TABLE datasets_bamfile"
+        ),
+        migrations.RunSQL(
+            "DROP TABLE datasets_xhmmfile"
+        ),
+        migrations.RunSQL(
+            "DROP TABLE base_diseasegenelist CASCADE"
+        ),
+        migrations.RunSQL(
+            "DROP TABLE base_diseasegenelist_list_admins"
+        ),
     ]
