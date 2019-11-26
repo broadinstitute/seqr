@@ -283,15 +283,15 @@ class Migration(migrations.Migration):
             name='VCFFile',
         ),
         migrations.RunSQL(
-            "DROP TABLE datasets_bamfile"
+            "DROP TABLE IF EXISTS datasets_bamfile"
         ),
         migrations.RunSQL(
-            "DROP TABLE datasets_xhmmfile"
+            "DROP TABLE IF EXISTS datasets_xhmmfile"
         ),
         migrations.RunSQL(
-            "DROP TABLE base_diseasegenelist CASCADE"
+            "DROP TABLE IF EXISTS base_diseasegenelist CASCADE"
         ),
         migrations.RunSQL(
-            "DROP TABLE base_diseasegenelist_list_admins"
+            "DROP TABLE IF EXISTS base_diseasegenelist_list_admins"
         ),
     ]
