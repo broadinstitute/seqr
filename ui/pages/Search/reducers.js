@@ -15,7 +15,7 @@ const REQUEST_SEARCH_GENE_BREAKDOWN = 'REQUEST_SEARCH_GENE_BREAKDOWN'
 const RECEIVE_SEARCH_GENE_BREAKDOWN = 'RECEIVE_SEARCH_GENE_BREAKDOWN'
 const UPDATE_SEARCHED_VARIANT_DISPLAY = 'UPDATE_SEARCHED_VARIANT_DISPLAY'
 const UPDATE_COMPOUND_HET_DISPLAY = 'UPDATE_COMPOUND_HET_DISPLAY'
-const RECEIVE_COMPOUND_HET_DISPLAY = 'RECEIVE_COMPOUND_HET_DISPLAY'
+const RECEIVE_COMPOUND_HETS = 'RECEIVE_COMPOUND_HETS'
 const REQUEST_SEARCH_CONTEXT = 'REQUEST_SEARCH_CONTEXT'
 const RECEIVE_SEARCH_CONTEXT = 'RECEIVE_SEARCH_CONTEXT'
 const REQUEST_MULTI_PROJECT_SEARCH_CONTEXT = 'REQUEST_MULTI_PROJECT_SEARCH_CONTEXT'
@@ -115,7 +115,7 @@ export const updateCompoundHetDisplay = ({ updates }) => {
     dispatch({ type: UPDATE_COMPOUND_HET_DISPLAY, newValue: updates })
     const state = getState()
     const displayVariants = updates.flattenCompoundHet ? uniqBy(state.searchedVariants.flat(), 'variantId') : []
-    dispatch({ type: RECEIVE_COMPOUND_HET_DISPLAY, newValue: displayVariants })
+    dispatch({ type: RECEIVE_COMPOUND_HETS, newValue: displayVariants })
   }
 }
 
@@ -209,7 +209,6 @@ export const loadSavedSearches = () => {
 
 // reducers
 
-// TODO add loading sign for updateCompoundHetDisplay <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 export const reducers = {
   currentSearchHash: createSingleValueReducer(UPDATE_CURRENT_SEARCH, null),
   searchedVariants: createSingleValueReducer(RECEIVE_SEARCHED_VARIANTS, []),
@@ -225,8 +224,9 @@ export const reducers = {
     recordsPerPage: 100,
   }, false),
   compoundHetDisplay: createSingleValueReducer(UPDATE_COMPOUND_HET_DISPLAY, { flattenCompoundHet: false }),
-  compoundHetDisplayLoading: loadingReducer(UPDATE_COMPOUND_HET_DISPLAY, RECEIVE_COMPOUND_HET_DISPLAY),
-  flattenedCompoundHets: createSingleValueReducer(RECEIVE_COMPOUND_HET_DISPLAY, []),
+  // TODO debug loading for flatten compound hets (then rm debug) <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  compoundHetDisplayLoading: loadingReducer(UPDATE_COMPOUND_HET_DISPLAY, RECEIVE_COMPOUND_HETS, { isLoading: false, errorMessage: null }, true),
+  flattenedCompoundHets: createSingleValueReducer(RECEIVE_COMPOUND_HETS, []),
 }
 
 const rootReducer = combineReducers(reducers)

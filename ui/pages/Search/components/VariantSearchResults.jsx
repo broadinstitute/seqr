@@ -3,7 +3,6 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Grid, Message, Button } from 'semantic-ui-react'
 import styled from 'styled-components'
-import uniqBy from 'lodash/uniqBy'
 
 import DataLoader from 'shared/components/DataLoader'
 import { QueryParamsEditor } from 'shared/components/QueryParamEditor'
@@ -151,8 +150,7 @@ BaseVariantSearchResults.propTypes = {
 
 const mapStateToProps = (state, ownProps) => ({
   searchedVariants: getSearchedVariants(state),
-  loading: getSearchedVariantsIsLoading(state) || getSearchContextIsLoading(state),
-  // loading: getSearchedVariantsIsLoading(state) || getSearchContextIsLoading(state) || getCompoundHetDisplayLoading(state),
+  loading: getSearchedVariantsIsLoading(state) || getSearchContextIsLoading(state) || getCompoundHetDisplayLoading(state),
   variantSearchDisplay: getVariantSearchDisplay(state),
   searchedVariantExportConfig: getSearchedVariantExportConfig(state, ownProps),
   totalVariantsCount: getTotalVariantsCount(state, ownProps),
