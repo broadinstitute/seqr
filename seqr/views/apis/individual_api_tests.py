@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 import json
-import mock
 
 from django.test import TestCase
 from django.urls.base import reverse

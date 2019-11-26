@@ -2,8 +2,6 @@ import logging
 import os
 import random
 import string
-import pymongo
-import imp
 from pymongo import MongoClient
 
 
