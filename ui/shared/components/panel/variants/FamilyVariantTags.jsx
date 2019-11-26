@@ -11,7 +11,7 @@ import {
   getFamiliesByGuid,
   getSavedVariantsGroupedByFamilyVariants,
   getVariantId,
-  getNotes,
+  getNotesGroupedByFamilyVariants,
 } from 'redux/selectors'
 import {
   DISCOVERY_CATEGORY_NAME,
@@ -253,18 +253,15 @@ const FamilyVariantTags = (
   if (family) {
     const displayVariant = areCompoundHets ? savedVariant.map((eachSavedVariant, index) => eachSavedVariant || variant[index]) : savedVariant || variant
 
-    // TODO move display variants and notes filter to selectors <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-    notes = []
-    // let notes = []
-    // if (areCompoundHets) {
-    //   notes = ((savedVariant[0] || {}).notes || []).filter(note => savedVariantsSharedNoteGuids.includes(note.noteGuid))
-    // }
-    // else {
-    //   notes = (savedVariant && savedVariant.notes) || []
-    // }
-    // if (isCompoundHet) {
-    //   notes = notes.filter(note => !savedVariantsSharedNoteGuids.includes(note.noteGuid)) || []
-    // }
+    if (areCompoundHets) {
+      notes = notes.sharedNotes
+    }
+    else if (isCompoundHet) {
+      notes = notes.individualNotes
+    }
+    else {
+      notes = (savedVariant && savedVariant.notes) || []
+    }
 
     // TODO complete tag and test <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     const tags = []
@@ -384,7 +381,7 @@ FamilyVariantTags.propTypes = {
   areCompoundHets: PropTypes.bool,
   dispatchUpdateVariantNote: PropTypes.func,
   dispatchUpdateFamilyVariantTags: PropTypes.func,
-  notes: PropTypes.array,
+  notes: PropTypes.object,
 }
 
 const mapStateToProps = (state, ownProps) => ({
@@ -392,7 +389,7 @@ const mapStateToProps = (state, ownProps) => ({
   project: getProjectsByGuid(state)[(getFamiliesByGuid(state)[ownProps.familyGuid] || {}).projectGuid],
   savedVariant: (getSavedVariantsGroupedByFamilyVariants(state)[ownProps.familyGuid] || {})[getVariantId(ownProps.variant)]
   || (ownProps.areCompoundHets ? ownProps.variant.map(eachVariant => (getSavedVariantsGroupedByFamilyVariants(state)[ownProps.familyGuid] || {})[getVariantId(eachVariant)]) : undefined),
-  notes: getNotes(state),
+  notes: (getNotesGroupedByFamilyVariants(state)[ownProps.familyGuid] || {})[getVariantId(ownProps.areCompoundHets ? ownProps.variant[0] : ownProps.variant)] || { sharedNotes: [], individualNotes: [] },
 })
 
 const mapDispatchToProps = (dispatch, ownProps) => ({

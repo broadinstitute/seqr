@@ -146,27 +146,48 @@ const getSavedVariantsSharedNoteGuids = createSelector(
   getSavedVariantsByGuid,
   savedVariantsByGuid => Object.values(savedVariantsByGuid).reduce((acc, variant) => {
     (variant.notes || []).map(note => note.noteGuid).forEach(noteGuid =>
-      (noteGuid in acc.uniques ? acc.duplicates.append(noteGuid) : acc.uniques.append(noteGuid)),
+      (acc.uniques.includes(noteGuid) ? acc.duplicates.push(noteGuid) : acc.uniques.push(noteGuid)),
     )
-    return acc.duplicates
+    return acc
   }, { duplicates: [], uniques: [] }),
 )
 
-// let notes = []
-// if (areCompoundHets) {
-//   notes = ((savedVariant[0] || {}).notes || []).filter(note => savedVariantsSharedNoteGuids.includes(note.noteGuid))
-// }
-// else {
-//   notes = (savedVariant && savedVariant.notes) || []
-// }
-// if (isCompoundHet) {
-//   notes = notes.filter(note => !savedVariantsSharedNoteGuids.includes(note.noteGuid)) || []
-// }
-
-export const getNotes = createSelector(
+export const getNotesGroupedByFamilyVariants = createSelector(
   getSavedVariantsSharedNoteGuids,
-  guids => guids,
+  getSavedVariantsByGuid,
+  (savedVariantsSharedNoteGuids, savedVariantsByGuid) => Object.values(savedVariantsByGuid).reduce((acc, variant) => {
+    variant.familyGuids.forEach((familyGuid) => {
+      if (!(familyGuid in acc)) {
+        acc[familyGuid] = {}
+      }
+      const sharedNotes = variant.notes.filter(note => savedVariantsSharedNoteGuids.duplicates.includes(note.noteGuid)) || []
+      const individualNotes = variant.notes.filter(note => !savedVariantsSharedNoteGuids.duplicates.includes(note.noteGuid)) || []
+      acc[familyGuid][getVariantId(variant)] = { individualNotes, sharedNotes }
+    })
+    return acc
+
+  }, {}),
 )
+
+// export const getNotes = createSelector(
+//   getSavedVariantsSharedNoteGuids,
+//   (state, props) => props.savedVariant,
+//   (state, props) => props.isCompoundHet,
+//   (state, props) => props.areCompoundHets,
+//   (savedVariant, isCompoundHet, areCompoundHets, savedVariantsSharedNoteGuids) => {
+//     let notes = []
+//     if (areCompoundHets) {
+//       notes = ((savedVariant[0] || {}).notes || []).filter(note => savedVariantsSharedNoteGuids.uniques.includes(note.noteGuid))
+//     }
+//     else {
+//       notes = (savedVariant && savedVariant.notes) || []
+//     }
+//     if (isCompoundHet) {
+//       notes = notes.filter(note => !savedVariantsSharedNoteGuids.uniques.includes(note.noteGuid)) || []
+//     }
+//     return notes
+//   },
+// )
 
 export const getSelectedSavedVariants = createSelector(
   getSavedVariantsByGuid,
