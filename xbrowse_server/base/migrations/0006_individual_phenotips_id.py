@@ -4,10 +4,12 @@ from __future__ import unicode_literals
 
 from django.db import migrations, models
 
-from xbrowse_server.base.models import Individual
 
 
 def copy_guid_to_phenotips_id(apps, schema_editor):
+    return None
+    from xbrowse_server.base.models import Individual
+
     counter = 0
     for indiv in Individual.objects.raw("select * from base_individual"):
         # by default, for previously-existing Individual records, set guid = just the indiv_id
