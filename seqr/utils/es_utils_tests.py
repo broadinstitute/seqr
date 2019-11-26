@@ -1485,10 +1485,6 @@ class EsUtilsTest(TestCase):
         self.assertListEqual(variants, [PARSED_VARIANTS[0], PARSED_COMPOUND_HET_VARIANTS_MULTI_GENOME_VERSION])
         self.assertEqual(total_results, 8)
 
-        # self.maxDiff = None
-        # redis_cache = json.loads(REDIS_CACHE.get('search_results__{}__{}'.format(results_model.guid, 'xpos')))
-        # self.assertDictEqual({'loaded_variant_counts': redis_cache['loaded_variant_counts']},
-        #                      {'loaded_variant_counts': {}})
         self.assertCachedResults(results_model, {
             'compound_het_results': [],
             'variant_results': [PARSED_MULTI_GENOME_VERSION_VARIANT],

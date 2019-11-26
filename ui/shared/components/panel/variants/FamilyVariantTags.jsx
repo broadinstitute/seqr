@@ -234,7 +234,7 @@ const VariantLink = (
     >
       <Popup
         trigger={<Icon name="linkify" link />}
-        content={`Go to the page for this individual variant ${variant.variantId} from family ${family.familyGuid}. Note: There is no additional information on this page, it is intended for sharing specific variants.`}
+        content={`Go to the page for this individual variant ${variant.variantId} from family ${family.familyId}. Note: There is no additional information on this page, it is intended for sharing specific variants.`}
         position="right center"
         wide
       />
@@ -262,27 +262,6 @@ const FamilyVariantTags = (
     else {
       notes = (savedVariant && savedVariant.notes) || []
     }
-
-    // TODO complete tag and test <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-    const tags = []
-    // let tags = []
-    // if (areCompoundHets) {
-    //   if (savedVariant[0] || savedVariant[1]) {
-    //     tags = []
-    //   }
-    //   else {
-    //     const tagGuids1 = ((savedVariant[0] || {}).tags || []).map(tag => tag.tagGuid)
-    //     const tagGuids2 = ((savedVariant[1] || {}).tags || []).map(tag => tag.tagGuid)
-    //     const sharedTagGuids = tagGuids1.filter(tagGuid => tagGuids2.indexOf(tagGuid) !== -1)
-    //     const sharedTags = ((savedVariant[0] || {}).tags || []).filter(tag => sharedTagGuids.includes(tag.tagGuid))
-    //     const individualTags1 = savedVariant[0].tags.filter(tag => !sharedTagGuids.contains(tag.tagGuid))
-    //     const individualTags2 = savedVariant[1].tags.filter(tag => !sharedTagGuids.contains(tag.tagGuid))
-    //     tags = sharedTags
-    //   }
-    // }
-    // else {
-    //   tags = (savedVariant && savedVariant.tags) || []
-    // }
 
     return (
       <div>
@@ -322,7 +301,7 @@ const FamilyVariantTags = (
               onSubmit={dispatchUpdateFamilyVariantTags}
             />
             <HorizontalSpacer width={5} />
-            {tags.some(tag => tag.category === DISCOVERY_CATEGORY_NAME) &&
+            {[].some(tag => tag.category === DISCOVERY_CATEGORY_NAME) &&
             <span>
               <TagTitle>Fxnl Data:</TagTitle>
               <VariantTagField
