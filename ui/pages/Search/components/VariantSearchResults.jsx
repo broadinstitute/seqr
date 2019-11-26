@@ -21,6 +21,8 @@ import {
   getTotalVariantsCount,
   getVariantSearchDisplay,
   getCompoundHetDisplay,
+  getFlattenedCompoundHets,
+  getCompoundHetDisplayLoading,
   getSearchedVariantExportConfig,
   getSearchContextIsLoading,
   getInhertanceFilterMode,
@@ -44,14 +46,14 @@ const FIELDS = [
 ]
 
 const BaseVariantSearchResults = ({
-  match, searchedVariants, variantSearchDisplay, searchedVariantExportConfig, onSubmit, load, unload, loading, errorMessage, totalVariantsCount, inheritanceFilter, compoundHetDisplay, toggleUnpair,
+  match, searchedVariants, variantSearchDisplay, searchedVariantExportConfig, onSubmit, load, unload, loading, errorMessage, totalVariantsCount, inheritanceFilter, compoundHetDisplay, toggleUnpair, flattenedCompoundHets,
 }) => {
   const { searchHash, variantId } = match.params
   const { page = 1, recordsPerPage } = variantSearchDisplay
   const variantDisplayPageOffset = (page - 1) * recordsPerPage
   const paginationFields = totalVariantsCount > recordsPerPage ? [{ ...VARIANT_PAGINATION_FIELD, totalPages: Math.ceil(totalVariantsCount / recordsPerPage) }] : []
   // TODO move flatten into selector! <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-  const displayVariants = compoundHetDisplay.flattenCompoundHet ? uniqBy(searchedVariants.flat(), 'variantId') : searchedVariants
+  const displayVariants = compoundHetDisplay.flattenCompoundHet ? flattenedCompoundHets : searchedVariants
   const compoundHetDisplayFields = ALL_RECESSIVE_INHERITANCE_FILTERS.includes(inheritanceFilter) ? [FLATTEN_COMPOUND_HET_TOGGLE_FIELD] : []
   const fields = [...FIELDS, ...paginationFields]
   return (
@@ -143,18 +145,21 @@ BaseVariantSearchResults.propTypes = {
   totalVariantsCount: PropTypes.number,
   inheritanceFilter: PropTypes.string,
   compoundHetDisplay: PropTypes.object,
+  flattenedCompoundHets: PropTypes.array,
   toggleUnpair: PropTypes.func,
 }
 
 const mapStateToProps = (state, ownProps) => ({
   searchedVariants: getSearchedVariants(state),
   loading: getSearchedVariantsIsLoading(state) || getSearchContextIsLoading(state),
+  // loading: getSearchedVariantsIsLoading(state) || getSearchContextIsLoading(state) || getCompoundHetDisplayLoading(state),
   variantSearchDisplay: getVariantSearchDisplay(state),
   searchedVariantExportConfig: getSearchedVariantExportConfig(state, ownProps),
   totalVariantsCount: getTotalVariantsCount(state, ownProps),
   errorMessage: getSearchedVariantsErrorMessage(state),
   inheritanceFilter: getInhertanceFilterMode(state),
   compoundHetDisplay: getCompoundHetDisplay(state),
+  flattenedCompoundHets: getFlattenedCompoundHets(state),
 })
 
 const mapDispatchToProps = (dispatch, ownProps) => {

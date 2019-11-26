@@ -29,6 +29,8 @@ export const getSavedSearchesIsLoading = state => state.savedSearchesLoading.isL
 export const getSavedSearchesLoadingError = state => state.savedSearchesLoading.errorMessage
 export const getVariantSearchDisplay = state => state.variantSearchDisplay
 export const getCompoundHetDisplay = state => state.compoundHetDisplay
+export const getCompoundHetDisplayLoading = state => state.compoundHetDisplayLoading
+export const getFlattenedCompoundHets = state => state.flattenedCompoundHets
 
 const getCurrentSearchHash = state => state.currentSearchHash
 
