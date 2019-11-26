@@ -28,6 +28,7 @@ export const getSavedSearchesByGuid = state => state.savedSearchesByGuid
 export const getSavedSearchesIsLoading = state => state.savedSearchesLoading.isLoading
 export const getSavedSearchesLoadingError = state => state.savedSearchesLoading.errorMessage
 export const getVariantSearchDisplay = state => state.variantSearchDisplay
+export const getCompoundHetDisplay = state => state.compoundHetDisplay
 
 const getCurrentSearchHash = state => state.currentSearchHash
 
@@ -35,6 +36,13 @@ export const getCurrentSearchParams = createSelector(
   getSearchesByHash,
   getCurrentSearchHash,
   (searchesByHash, searchHash) => searchesByHash[searchHash],
+)
+
+export const getInhertanceFilterMode = createSelector(
+  getCurrentSearchParams,
+  (searchParams) => {
+    return (((searchParams || {}).search || {}).inheritance || {}).mode
+  },
 )
 
 export const getProjectFamilies = (params, familiesByGuid, familiesByProjectGuid, analysisGroupByGuid) => {
