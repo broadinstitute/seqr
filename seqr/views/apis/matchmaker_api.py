@@ -16,7 +16,7 @@ from seqr.views.utils.matchmaker_utils import get_mme_genes_phenotypes, parse_mm
 from seqr.views.utils.orm_to_json_utils import _get_json_for_model, get_json_for_saved_variants
 from seqr.views.utils.permissions_utils import check_permissions
 
-from settings import MME_HEADERS, MME_LOCAL_MATCH_URL, MME_EXTERNAL_MATCH_URL, SEQR_HOSTNAME_FOR_SLACK_POST,  \
+from settings import MME_HEADERS, MME_LOCAL_MATCH_URL, MME_EXTERNAL_MATCH_URL, BASE_URL,  \
     MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL, MME_ADD_INDIVIDUAL_URL, MME_DELETE_INDIVIDUAL_URL, API_LOGIN_REQUIRED_URL
 
 logger = logging.getLogger(__name__)
@@ -421,10 +421,10 @@ def _generate_notification_for_seqr_match(individual, results):
     
     {matches}
     
-    {host}/{project_guid}/family_page/{family_guid}/matchmaker_exchange
+    {host}project/{project_guid}/family_page/{family_guid}/matchmaker_exchange
     """.format(
         project=project.name, individual_id=individual.individual_id, matches='\n\n'.join(matches),
-        host=SEQR_HOSTNAME_FOR_SLACK_POST, project_guid=project.guid, family_guid=individual.family.guid,
+        host=BASE_URL, project_guid=project.guid, family_guid=individual.family.guid,
     )
 
     post_to_slack(MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL, message)
