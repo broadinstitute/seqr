@@ -190,6 +190,7 @@ except IOError:
 if DEPLOYMENT_TYPE == DEPLOYMENT_TYPE_PROD:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
+    DEBUG = False
 else:
     DEBUG = True
 
