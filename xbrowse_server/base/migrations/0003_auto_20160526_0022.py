@@ -3,7 +3,6 @@
 from __future__ import unicode_literals
 
 from django.db import migrations, models
-from xbrowse_server.base.models import Individual
 import django.db.utils
 import collections
 from datetime import datetime
@@ -11,10 +10,14 @@ import uuid
 import settings
 
 import requests.exceptions
-from xbrowse_server.phenotips.utilities import get_uname_pwd_for_project, get_phenotips_internal_id
 
 
 def generate_guid(apps, schema_editor):
+    return None
+    from xbrowse_server.base.models import Individual
+
+    from xbrowse_server.phenotips.utilities import get_uname_pwd_for_project, get_phenotips_internal_id
+
     # figure out which indiv. ids are unique
     indiv_id_counts = collections.Counter([indiv.indiv_id for indiv in Individual.objects.raw('select * from base_individual')])  
     non_unique_ids = set([indiv_id for indiv_id, count in indiv_id_counts.items() if count > 1])   

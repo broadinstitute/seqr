@@ -24,8 +24,8 @@ class Migration(migrations.Migration):
                 ('sample_count', models.IntegerField(db_index=True)),
                 ('consensus', models.FloatField()),
                 ('partner', models.TextField(blank=True, null=True)),
-                ('individual', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='base.Individual')),
-                ('project', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='base.Project')),
+                # ('individual', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='base.Individual')),
+                # ('project', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='base.Project')),
             ],
             options={
                 'db_table': 'base_breakpoint',
@@ -36,7 +36,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('file_path', models.CharField(blank=True, default=b'', max_length=500)),
-                ('project', models.ForeignKey(blank=True, on_delete=django.db.models.deletion.CASCADE, to='base.Project')),
+                # ('project', models.ForeignKey(blank=True, on_delete=django.db.models.deletion.CASCADE, to='base.Project')),
             ],
             options={
                 'db_table': 'base_breakpointfile',

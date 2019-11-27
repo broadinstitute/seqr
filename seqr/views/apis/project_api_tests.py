@@ -111,9 +111,8 @@ class ProjectAPITest(TestCase):
             set(response_json['projectsByGuid'][PROJECT_GUID].keys()),
             {'collaborators', 'locusListGuids', 'variantTagTypes', 'variantFunctionalTagTypes',
              'detailsLoaded', 'projectGuid', 'projectCategoryGuids', 'canEdit', 'name', 'description', 'createdDate',
-             'lastModifiedDate', 'isPhenotipsEnabled', 'phenotipsUserId', 'deprecatedProjectId', 'hasNewSearch',
-             'lastAccessedDate', 'isMmeEnabled', 'mmePrimaryDataOwner', 'mmeContactInstitution', 'mmeContactUrl',
-             'genomeVersion', 'discoveryTags'}
+             'lastModifiedDate', 'isPhenotipsEnabled', 'phenotipsUserId', 'genomeVersion', 'discoveryTags',
+             'lastAccessedDate', 'isMmeEnabled', 'mmePrimaryDataOwner', 'mmeContactInstitution', 'mmeContactUrl'}
         )
         self.assertEqual(
             response_json['projectsByGuid'][PROJECT_GUID]['lastAccessedDate'][:10],

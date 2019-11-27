@@ -2,15 +2,20 @@ import logging
 import os
 import random
 import string
+from pymongo import MongoClient
+
 
 logger = logging.getLogger(__name__)
 
-SEQR_VERSION = 'v0.1'
+SEQR_VERSION = 'v1.0'
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-ADMINS = ()
+ADMINS = [
+    ('Ben Weisburd', 'weisburd@broadinstitute.org'),
+    ('Hana Snow', 'hsnow@broadinstitute.org'),
+]
 
 MANAGERS = ADMINS
 
@@ -32,34 +37,22 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # Application definition
 INSTALLED_APPS = [
-    'hijack',
-    'compat',
-    'corsheaders',
-    'guardian',
-    'anymail',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'hijack',
+    'compat',
+    'corsheaders',
+    'guardian',
+    'anymail',
     'seqr',
     'reference_data',
-    'breakpoint_search',
-    #'structural_variants',
-    'crispy_forms',
-    # Other potentially useful django plugins
-    #   django-extensions  (https://django-extensions.readthedocs.io/en/latest/installation_instructions.html)
-    #   django-admin-tools
-    #   django-model-utils
-    #   django-autocomplete-lite     # add autocomplete to admin model
-    #   django-admin-honeypot
-    #   python-social-auth, or django-allauth
-    #   django-registration
-    #   django-mailer, django-post_office
-    #   django-constance
-    #   django-configurations
-    #   django-threadedcomments, django-contrib-comments    # create Comment class based on this (https://django-contrib-comments.readthedocs.io/en/latest/quickstart.html)
+    'xbrowse_server.base',
+    'xbrowse_server.gene_lists',
+    'breakpoint_search'
 ]
 
 MIDDLEWARE = [
@@ -214,27 +207,17 @@ BASE_URL = os.environ.get("BASE_URL", "/")
 # ===========================================================
 # legacy settings that need to be reviewed
 
-from pymongo import MongoClient
-
 STATICFILES_FINDERS = (
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
     'compressor.finders.CompressorFinder',
 )
 
-
-#CACHES = {
-#    'default': {
-#        'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
-#    }
-#}
-
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [
             os.path.dirname(os.path.realpath(__file__)) + '/ui/dist/',
-            os.path.dirname(os.path.realpath(__file__)) + '/xbrowse_server/templates/',
         ],
         'APP_DIRS': True,
         'OPTIONS': {
@@ -247,51 +230,21 @@ TEMPLATES = [
                 "django.template.context_processors.static",
                 "django.template.context_processors.tz",
                 "django.contrib.messages.context_processors.messages",
-                "xbrowse_server.base.context_processors.custom_processor",
             ],
         },
     },
 ]
 
-
-
-
-ROOT_URLCONF = 'xbrowse_server.urls'
+ROOT_URLCONF = 'seqr.urls'
 
 WSGI_APPLICATION = 'wsgi.application'
 
-INSTALLED_APPS += [
-    'compressor',
-
-    'xbrowse_server.base.apps.XBrowseBaseConfig',
-    'xbrowse_server.api',
-    'xbrowse_server.staff',
-    'xbrowse_server.gene_lists',
-    'xbrowse_server.search_cache',
-    'xbrowse_server.phenotips',
-    'xbrowse_server.matchmaker',
-]
-
-
 TEST_RUNNER = 'django.test.runner.DiscoverRunner'
 
-AUTH_PROFILE_MODULE = 'base.UserProfile'
-
 MONGO_SERVICE_HOSTNAME = os.environ.get('MONGO_SERVICE_HOSTNAME', 'localhost')
-LOGGING_DB = MongoClient(MONGO_SERVICE_HOSTNAME, 27017)['logging']
-COVERAGE_DB = MongoClient(MONGO_SERVICE_HOSTNAME, 27017)['xbrowse_reference']
-EVENTS_COLLECTION = LOGGING_DB.events
-
-UTILS_DB = MongoClient(MONGO_SERVICE_HOSTNAME, 27017)['xbrowse_server_utils']
 
 FROM_EMAIL = "\"seqr\" <seqr@broadinstitute.org>"
 
-DOCS_DIR = os.path.dirname(os.path.realpath(__file__)) + '/xbrowse_server/user_docs/'
-
-SHELL_PLUS_POST_IMPORTS = (
-    ('xbrowse_server.shell_helpers', 'getproj'),
-    ('xbrowse_server', 'mall'),
-)
 
 FAMILY_LOAD_BATCH_SIZE = 25000
 
@@ -299,31 +252,6 @@ FAMILY_LOAD_BATCH_SIZE = 25000
 CONSTRUCTION_TEMPLATE = None
 
 VARIANT_QUERY_RESULTS_LIMIT = 2500
-
-# READ_VIZ
-
-# The base directory where subdirectories contain bams to be shown
-# within Variant Search results in an IGV.js view.
-# This path can be a local directory or a url to which Django will
-# forward the IGV.js http requests.
-# The subdirectories under this path should be organized like:
-# <project_id1>/<project1_sample_id1>.bam
-#               <project1_sample_id1>.bam.bai
-#               <project1_sample_id2>.bam
-#               <project1_sample_id2>.bam.bai
-#               ..
-# <project_id2>/<project2_sample_id1>.bam
-#               <project2_sample_id1>.bam.bai
-#               <project2_sample_id2>.bam
-#               <project2_sample_id2>.bam.bai
-#               ..
-# to xbrowse project ids, and contain
-# .bam and .bai files for samples
-READ_VIZ_BAM_PATH = ""
-
-READ_VIZ_USERNAME=None   # used to authenticate to remote HTTP bam server
-READ_VIZ_PASSWD=None
-
 
 KIBANA_HOSTNAME = os.environ.get('KIBANA_SERVICE_HOSTNAME', 'localhost')
 KIBANA_PORT = os.environ.get('KIBANA_SERVICE_PORT', 5601)
@@ -396,17 +324,36 @@ SEQR_HOSTNAME_FOR_SLACK_POST='https://seqr.broadinstitute.org/project'
 
 PROJECT_IDS_TO_EXCLUDE_FROM_DISCOVERY_SHEET_DOWNLOAD = []
 
+GENERATED_FILES_DIR = os.path.join(os.path.dirname(__file__), 'generated_files')
+MEDIA_ROOT = os.path.join(GENERATED_FILES_DIR , 'media/')
 
-from local_settings import *
-#
-# These are all settings that require the stuff in local_settings.py
-#
+ALLOWED_HOSTS = ['*']
+
+EMAIL_BACKEND = "anymail.backends.postmark.EmailBackend"
+DEFAULT_FROM_EMAIL = "seqr@broadinstitute.org"
+
+ANYMAIL = {
+    #"SENDGRID_API_KEY": os.environ.get('SENDGRID_API_KEY', 'sendgrid-api-key-placeholder'),
+    "POSTMARK_SERVER_TOKEN": os.environ.get('POSTMARK_SERVER_TOKEN', 'postmark-server-token-placeholder'),
+}
+
+DEFAULT_CONTROL_COHORT = 'controls'
+CONTROL_COHORTS = [
+    {
+        'slug': 'controls',
+        'vcf': '',
+    },
+]
+
+READ_VIZ_BAM_PATH = 'https://broad-seqr'
+READ_VIZ_CRAM_PATH = 'broad-seqr:5000'
+
+READ_VIZ_USERNAME = "xbrowse-bams"
+READ_VIZ_PASSWD = "xbrowse-bams"
 
 STATICFILES_DIRS = (
-    os.path.dirname(os.path.realpath(__file__)) + '/xbrowse_server/staticfiles/',
     os.path.join(BASE_DIR, 'ui/dist/'),    # this is so django's collectstatic copies ui dist files to STATIC_ROOT
 )
-
 
 ANNOTATOR_REFERENCE_POPULATIONS_IN_ELASTICSEARCH = [
     {"slug": "1kg_wgs_phase3", "name": "1000G v3", "has_hom_hemi": False, "full_name": "1000 Genomes Samples", "description": "Filter out variants that have a higher allele count (AC) in the 1000 Genomes Phase 3 release (5/2/2013), or a higher allele frequency (popmax AF) in any one of these five subpopulations defined for 1000 Genomes Phase 3: AFR, AMR, EAS, EUR, SAS"},
@@ -416,9 +363,6 @@ ANNOTATOR_REFERENCE_POPULATIONS_IN_ELASTICSEARCH = [
     {"slug": "topmed", "name": "TOPMed", "has_hom_hemi": False, "description": "Filter out variants that have a higher allele count (AC), or a higher allele frequency (AF) in TOPMed"},
     {"slug": "AF", "name": "This Callset", "has_hom_hemi": False, "description": ""},
 ]
-
-ANNOTATOR_REFERENCE_POPULATIONS = ANNOTATOR_SETTINGS.reference_populations
-ANNOTATOR_REFERENCE_POPULATION_SLUGS = [pop['slug'] for pop in ANNOTATOR_SETTINGS.reference_populations]
 
 UPLOADED_PEDIGREE_FILE_RECIPIENTS = os.environ.get('UPLOADED_PEDIGREE_FILE_RECIPIENTS', '').split(',')
 
