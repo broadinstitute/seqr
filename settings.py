@@ -256,7 +256,7 @@ ELASTICSEARCH_SERVER = '{host}:{port}'.format(
 
 KIBANA_SERVER = '{host}:{port}'.format(
     host=os.environ.get('KIBANA_SERVICE_HOSTNAME', 'localhost'),
-    port=os.environ.get('KIBANA_SERVICE_PORT', 5601) #TODO not in deploy
+    port=os.environ.get('KIBANA_SERVICE_PORT', 5601)
 )
 
 PHENOTIPS_SERVER = '{host}:{port}'.format(
