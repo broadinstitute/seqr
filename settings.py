@@ -2,7 +2,6 @@ import logging
 import os
 import random
 import string
-from pymongo import MongoClient
 
 logger = logging.getLogger(__name__)
 
@@ -131,8 +130,7 @@ TEMPLATES = [
     },
 ]
 
-#  TODO do we use this?
-GENERATED_FILES_DIR = os.path.join(os.path.dirname(__file__), 'generated_files')
+GENERATED_FILES_DIR = os.path.join(BASE_DIR, 'generated_files')
 MEDIA_ROOT = os.path.join(GENERATED_FILES_DIR , 'media/')
 MEDIA_URL = '/media/'
 
