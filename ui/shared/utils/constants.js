@@ -279,6 +279,8 @@ export const familyVariantSamples = (family, individualsByGuid, samplesByGuid) =
   return orderBy(loadedSamples, [s => s.loadedDate], 'asc')
 }
 
+export const isActiveVariantSample = sample => sample.isActive && sample.datasetType === DATASET_TYPE_VARIANT_CALLS
+
 // CLINVAR
 
 export const CLINSIG_SEVERITY = {
