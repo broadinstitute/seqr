@@ -101,15 +101,12 @@ ENV SEQR_SERVICE_PORT=$SEQR_SERVICE_PORT
 
 EXPOSE $SEQR_SERVICE_PORT
 
-ENV PYTHONPATH=/seqr:/seqr_settings
 ENV TERM=xterm
-
-RUN mkdir /seqr_settings
 
 COPY readiness_probe /
 COPY bin/*.sh /usr/local/bin/
 COPY gitconfig /root/.gitconfig
-COPY config/*.py /seqr_settings/
+COPY config/guncorn_config.py /
 COPY bashrc /root/.bashrc
 
 COPY entrypoint.sh /

@@ -54,8 +54,8 @@ class ExternalAPITest(TestCase):
 
         We sent back:
 
-        seqr ID NA19675_1 from project 1kg project n\xe5me with uni\xe7\xf8de in family 1 inserted into matchbox on May 23, 2018, with seqr link https://seqr.broadinstitute.org/project/R0001_1kg/family_page/F000001_1/matchmaker_exchange
-seqr ID NA20885 from project Test Project in family 11 inserted into matchbox on Feb 05, 2019, with seqr link https://seqr.broadinstitute.org/project/R0003_test/family_page/F000011_11/matchmaker_exchange
+        seqr ID NA19675_1 from project 1kg project n\xe5me with uni\xe7\xf8de in family 1 inserted into matchbox on May 23, 2018, with seqr link /project/R0001_1kg/family_page/F000001_1/matchmaker_exchange
+seqr ID NA20885 from project Test Project in family 11 inserted into matchbox on Feb 05, 2019, with seqr link /project/R0003_test/family_page/F000011_11/matchmaker_exchange
 
         We sent this email alert to: seqr-test@gmail.com, test@broadinstitute.org
 

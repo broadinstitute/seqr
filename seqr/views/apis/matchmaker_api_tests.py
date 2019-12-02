@@ -326,7 +326,7 @@ class MatchmakerAPITest(TestCase):
     
      - From Reza Maroofian at institution St Georges, University of London with genes OR4F5 with phenotypes HP:0012469 (Infantile spasms).
     
-    https://seqr.broadinstitute.org/project/R0001_1kg/family_page/F000001_1/matchmaker_exchange
+    /project/R0001_1kg/family_page/F000001_1/matchmaker_exchange
     """
         mock_post_to_slack.assert_called_with('matchmaker_seqr_match', message)
         mock_email.assert_called_with(
