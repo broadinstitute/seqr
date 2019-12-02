@@ -10,7 +10,7 @@ from seqr.views.utils.matchmaker_utils import get_mme_genes_phenotypes
 from seqr.views.utils.proxy_request_utils import proxy_request
 
 from settings import MME_LOCAL_MATCH_URL, MME_MATCHBOX_PUBLIC_METRICS_URL, MME_SLACK_MATCH_NOTIFICATION_CHANNEL,\
-    MME_SLACK_EVENT_NOTIFICATION_CHANNEL, SEQR_HOSTNAME_FOR_SLACK_POST
+    MME_SLACK_EVENT_NOTIFICATION_CHANNEL, MME_DEFAULT_CONTACT_EMAIL, BASE_URL
 
 logger = logging.getLogger(__name__)
 
@@ -97,12 +97,13 @@ def _generate_notification_for_incoming_match(response_from_matchbox, incoming_r
 
             result_text = u'seqr ID {individual_id} from project {project_name} in family {family_id} ' \
                           u'inserted into matchbox on {insertion_date}, with seqr link ' \
-                          u'{host}/{project_guid}/family_page/{family_guid}/matchmaker_exchange'.format(
+                          u'{host}project/{project_guid}/family_page/{family_guid}/matchmaker_exchange'.format(
                 individual_id=individual.individual_id, project_guid=project.guid, project_name=project.name,
                 family_guid=individual.family.guid, family_id=individual.family.family_id,
-                insertion_date=individual.mme_submitted_date.strftime('%b %d, %Y'), host=SEQR_HOSTNAME_FOR_SLACK_POST)
+                insertion_date=individual.mme_submitted_date.strftime('%b %d, %Y'), host=BASE_URL)
             match_results.append(result_text)
             emails.update([i.strip() for i in project.mme_contact_url.replace('mailto:', '').split(',')])
+        emails = [email for email in emails if email != MME_DEFAULT_CONTACT_EMAIL]
 
         message = u"""Dear collaborators,
 
@@ -137,8 +138,8 @@ def _generate_notification_for_incoming_match(response_from_matchbox, incoming_r
         email_message = EmailMessage(
             subject='Received new MME match',
             body=message,
-            to=list(emails),
-            from_email='matchmaker@broadinstitute.org',
+            to=emails,
+            from_email=MME_DEFAULT_CONTACT_EMAIL,
         )
         email_message.send()
     else:

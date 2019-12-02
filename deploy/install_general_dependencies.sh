@@ -32,7 +32,6 @@ if [ -z "$SEQR_DIR"  ]; then
     export SEQR_BIN_DIR=${SEQR_DIR}/../bin
     cat <(echo 'export SEQR_DIR='${SEQR_DIR}) ~/.bashrc > /tmp/bashrc && mv /tmp/bashrc ~/.bashrc
     cat <(echo 'export SEQR_BIN_DIR='${SEQR_BIN_DIR}) ~/.bashrc > /tmp/bashrc && mv /tmp/bashrc ~/.bashrc
-    cat <(echo 'export PYTHONPATH='${SEQR_DIR}':'${SEQR_DIR}'/seqr_settings:$PYTHONPATH') ~/.bashrc > /tmp/bashrc && mv /tmp/bashrc ~/.bashrc
     cat <(echo 'export PATH='${SEQR_BIN_DIR}':$PATH') ~/.bashrc > /tmp/bashrc && mv /tmp/bashrc ~/.bashrc
 
 fi

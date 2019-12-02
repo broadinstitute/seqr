@@ -450,7 +450,7 @@ def _get_loaded_samples_by_project_family(projects):
 
 
 def _get_saved_variants_by_project_family(projects):
-    tag_types = VariantTagType.objects.filter(Q(project__isnull=True) & (Q(category='CMG Discovery Tags') | Q(name='Share with KOMP')))
+    tag_types = VariantTagType.objects.filter(project__isnull=True, category='CMG Discovery Tags')
 
     project_saved_variants = SavedVariant.objects.select_related('family').prefetch_related(
         Prefetch('varianttag_set', to_attr='discovery_tags',

@@ -8,7 +8,6 @@ from django.core.mail.message import EmailMessage
 from django.views.decorators.csrf import csrf_exempt
 
 from seqr.models import Individual, MatchmakerResult, MatchmakerContactNotes, SavedVariant
-from seqr.model_utils import update_seqr_model
 from seqr.utils.communication_utils import post_to_slack
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.json_utils import create_json_response
@@ -16,7 +15,7 @@ from seqr.views.utils.matchmaker_utils import get_mme_genes_phenotypes, parse_mm
 from seqr.views.utils.orm_to_json_utils import _get_json_for_model, get_json_for_saved_variants
 from seqr.views.utils.permissions_utils import check_permissions
 
-from settings import MME_HEADERS, MME_LOCAL_MATCH_URL, MME_EXTERNAL_MATCH_URL, SEQR_HOSTNAME_FOR_SLACK_POST,  \
+from settings import MME_HEADERS, MME_LOCAL_MATCH_URL, MME_EXTERNAL_MATCH_URL, MME_DEFAULT_CONTACT_EMAIL, BASE_URL,  \
     MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL, MME_ADD_INDIVIDUAL_URL, MME_DELETE_INDIVIDUAL_URL, API_LOGIN_REQUIRED_URL
 
 logger = logging.getLogger(__name__)
@@ -145,8 +144,7 @@ def update_mme_submission(request, individual_guid):
     Create or update the submission for the given individual.
     """
     individual = Individual.objects.get(guid=individual_guid)
-    project = individual.family.project
-    check_permissions(project, request.user)
+    check_permissions(individual.family.project, request.user)
 
     submission_json = json.loads(request.body)
 
@@ -194,17 +192,6 @@ def update_mme_submission(request, individual_guid):
     individual.mme_deleted_date = None
     individual.mme_deleted_by = None
     individual.save()
-
-    # update the project contact information if anything new was added
-    new_contact_names = set(submission_json['patient']['contact']['name'].split(',')) - set(project.mme_primary_data_owner.split(','))
-    new_contact_urls = set(submission_json['patient']['contact']['href'].replace('mailto:', '').split(',')) - set(project.mme_contact_url.replace('mailto:', '').split(','))
-    updates = {}
-    if new_contact_names:
-        updates['mme_primary_data_owner'] = '{},{}'.format(project.mme_primary_data_owner, ','.join(new_contact_names))
-    if new_contact_urls:
-        updates['mme_contact_url'] = '{},{}'.format(project.mme_contact_url, ','.join(new_contact_urls))
-    if updates:
-        update_seqr_model(project, **updates)
 
     # search for new matches
     return _search_individual_matches(individual, request.user)
@@ -289,7 +276,7 @@ def send_mme_contact_email(request, matchmaker_result_guid):
         subject=request_json['subject'],
         body=request_json['body'],
         to=map(lambda s: s.strip(), request_json['to'].split(',')),
-        from_email='matchmaker@broadinstitute.org',
+        from_email=MME_DEFAULT_CONTACT_EMAIL,
     )
     try:
         email_message.send()
@@ -421,17 +408,18 @@ def _generate_notification_for_seqr_match(individual, results):
     
     {matches}
     
-    {host}/{project_guid}/family_page/{family_guid}/matchmaker_exchange
+    {host}project/{project_guid}/family_page/{family_guid}/matchmaker_exchange
     """.format(
         project=project.name, individual_id=individual.individual_id, matches='\n\n'.join(matches),
-        host=SEQR_HOSTNAME_FOR_SLACK_POST, project_guid=project.guid, family_guid=individual.family.guid,
+        host=BASE_URL, project_guid=project.guid, family_guid=individual.family.guid,
     )
 
     post_to_slack(MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL, message)
+    emails = map(lambda s: s.strip().split('mailto:')[-1], project.mme_contact_url.split(','))
     email_message = EmailMessage(
         subject=u'New matches found for MME submission {} (project: {})'.format(individual.individual_id, project.name),
         body=message,
-        to=map(lambda s: s.strip().split('mailto:')[-1], project.mme_contact_url.split(',')),
-        from_email='matchmaker@broadinstitute.org',
+        to=[email for email in emails if email != MME_DEFAULT_CONTACT_EMAIL],
+        from_email=MME_DEFAULT_CONTACT_EMAIL,
     )
     email_message.send()
