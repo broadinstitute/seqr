@@ -10,11 +10,6 @@ alias more='less'
 
 export TERM=xterm
 
-# directories
-
-alias code='cd /seqr'
-alias settings='cd /seqr_settings'
-
 # databases
 
 alias mongo='mongo --host ${MONGO_SERVICE_HOSTNAME}'
