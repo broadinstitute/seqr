@@ -41,9 +41,6 @@ INSTALLED_APPS = [
     'anymail',
     'seqr',
     'reference_data',
-    'xbrowse_server.base',
-    'xbrowse_server.gene_lists',
-    'breakpoint_search'
 ]
 
 MIDDLEWARE = [
