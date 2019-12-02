@@ -123,8 +123,8 @@ TEMPLATES = [
     },
 ]
 
-GENERATED_FILES_DIR = os.path.join(BASE_DIR, 'generated_files')
-MEDIA_ROOT = os.path.join(GENERATED_FILES_DIR , 'media/')
+GENERATED_FILES_DIR = os.path.join(os.environ.get('STATIC_MEDIA_DIR', BASE_DIR), 'generated_files')
+MEDIA_ROOT = os.path.join(GENERATED_FILES_DIR, 'media/')
 MEDIA_URL = '/media/'
 
 LOGGING = {
