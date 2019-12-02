@@ -279,8 +279,9 @@ MME_HEADERS = {
 }
 
 MME_DEFAULT_CONTACT_NAME = 'Samantha Baxter'
-MME_DEFAULT_CONTACT_INSTITUTION = "Broad Center for Mendelian Genomics"
-MME_DEFAULT_CONTACT_HREF = "mailto:matchmaker@broadinstitute.org"
+MME_DEFAULT_CONTACT_INSTITUTION = 'Broad Center for Mendelian Genomics'
+MME_DEFAULT_CONTACT_EMAIL = 'matchmaker@broadinstitute.org'
+MME_DEFAULT_CONTACT_HREF = 'mailto:{}'.format(MME_DEFAULT_CONTACT_EMAIL)
 
 MME_SLACK_EVENT_NOTIFICATION_CHANNEL = 'matchmaker_alerts'
 MME_SLACK_MATCH_NOTIFICATION_CHANNEL = 'matchmaker_matches'

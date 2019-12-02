@@ -10,7 +10,7 @@ from seqr.views.utils.matchmaker_utils import get_mme_genes_phenotypes
 from seqr.views.utils.proxy_request_utils import proxy_request
 
 from settings import MME_LOCAL_MATCH_URL, MME_MATCHBOX_PUBLIC_METRICS_URL, MME_SLACK_MATCH_NOTIFICATION_CHANNEL,\
-    MME_SLACK_EVENT_NOTIFICATION_CHANNEL, BASE_URL
+    MME_SLACK_EVENT_NOTIFICATION_CHANNEL, MME_DEFAULT_CONTACT_EMAIL, BASE_URL
 
 logger = logging.getLogger(__name__)
 
@@ -103,6 +103,7 @@ def _generate_notification_for_incoming_match(response_from_matchbox, incoming_r
                 insertion_date=individual.mme_submitted_date.strftime('%b %d, %Y'), host=BASE_URL)
             match_results.append(result_text)
             emails.update([i.strip() for i in project.mme_contact_url.replace('mailto:', '').split(',')])
+        emails = [email for email in emails if email != MME_DEFAULT_CONTACT_EMAIL]
 
         message = u"""Dear collaborators,
 
@@ -137,8 +138,8 @@ def _generate_notification_for_incoming_match(response_from_matchbox, incoming_r
         email_message = EmailMessage(
             subject='Received new MME match',
             body=message,
-            to=list(emails),
-            from_email='matchmaker@broadinstitute.org',
+            to=emails,
+            from_email=MME_DEFAULT_CONTACT_EMAIL,
         )
         email_message.send()
     else:

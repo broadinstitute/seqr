@@ -16,7 +16,7 @@ from seqr.views.utils.matchmaker_utils import get_mme_genes_phenotypes, parse_mm
 from seqr.views.utils.orm_to_json_utils import _get_json_for_model, get_json_for_saved_variants
 from seqr.views.utils.permissions_utils import check_permissions
 
-from settings import MME_HEADERS, MME_LOCAL_MATCH_URL, MME_EXTERNAL_MATCH_URL, BASE_URL,  \
+from settings import MME_HEADERS, MME_LOCAL_MATCH_URL, MME_EXTERNAL_MATCH_URL, MME_DEFAULT_CONTACT_EMAIL, BASE_URL,  \
     MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL, MME_ADD_INDIVIDUAL_URL, MME_DELETE_INDIVIDUAL_URL, API_LOGIN_REQUIRED_URL
 
 logger = logging.getLogger(__name__)
@@ -289,7 +289,7 @@ def send_mme_contact_email(request, matchmaker_result_guid):
         subject=request_json['subject'],
         body=request_json['body'],
         to=map(lambda s: s.strip(), request_json['to'].split(',')),
-        from_email='matchmaker@broadinstitute.org',
+        from_email=MME_DEFAULT_CONTACT_EMAIL,
     )
     try:
         email_message.send()
@@ -428,10 +428,11 @@ def _generate_notification_for_seqr_match(individual, results):
     )
 
     post_to_slack(MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL, message)
+    emails = map(lambda s: s.strip().split('mailto:')[-1], project.mme_contact_url.split(','))
     email_message = EmailMessage(
         subject=u'New matches found for MME submission {} (project: {})'.format(individual.individual_id, project.name),
         body=message,
-        to=map(lambda s: s.strip().split('mailto:')[-1], project.mme_contact_url.split(',')),
-        from_email='matchmaker@broadinstitute.org',
+        to=[email for email in emails if email != MME_DEFAULT_CONTACT_EMAIL],
+        from_email=MME_DEFAULT_CONTACT_EMAIL,
     )
     email_message.send()
