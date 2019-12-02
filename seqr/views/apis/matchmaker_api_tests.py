@@ -541,11 +541,6 @@ class MatchmakerAPITest(TestCase):
         self.assertListEqual(response_json['genesById'].keys(), ['ENSG00000186092'])
         self.assertListEqual(response_json['mmeContactNotes'].keys(), ['st georges, university of london'])
 
-        # Test updates project MME contact
-        project = Project.objects.get(family__individual__guid=NO_SUBMISSION_INDIVIDUAL_GUID)
-        self.assertEqual(project.mme_primary_data_owner, 'PI,Test Name')
-        self.assertEqual(project.mme_contact_url, 'mailto:test@broadinstitute.org,matchmaker@broadinstitute.org')
-
         # Test proxy calls
         self.assertEqual(len(responses.calls), 7)
         expected_body = {

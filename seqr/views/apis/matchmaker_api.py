@@ -8,7 +8,6 @@ from django.core.mail.message import EmailMessage
 from django.views.decorators.csrf import csrf_exempt
 
 from seqr.models import Individual, MatchmakerResult, MatchmakerContactNotes, SavedVariant
-from seqr.model_utils import update_seqr_model
 from seqr.utils.communication_utils import post_to_slack
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.json_utils import create_json_response
@@ -145,8 +144,7 @@ def update_mme_submission(request, individual_guid):
     Create or update the submission for the given individual.
     """
     individual = Individual.objects.get(guid=individual_guid)
-    project = individual.family.project
-    check_permissions(project, request.user)
+    check_permissions(individual.family.project, request.user)
 
     submission_json = json.loads(request.body)
 
@@ -194,17 +192,6 @@ def update_mme_submission(request, individual_guid):
     individual.mme_deleted_date = None
     individual.mme_deleted_by = None
     individual.save()
-
-    # update the project contact information if anything new was added
-    new_contact_names = set(submission_json['patient']['contact']['name'].split(',')) - set(project.mme_primary_data_owner.split(','))
-    new_contact_urls = set(submission_json['patient']['contact']['href'].replace('mailto:', '').split(',')) - set(project.mme_contact_url.replace('mailto:', '').split(','))
-    updates = {}
-    if new_contact_names:
-        updates['mme_primary_data_owner'] = '{},{}'.format(project.mme_primary_data_owner, ','.join(new_contact_names))
-    if new_contact_urls:
-        updates['mme_contact_url'] = '{},{}'.format(project.mme_contact_url, ','.join(new_contact_urls))
-    if updates:
-        update_seqr_model(project, **updates)
 
     # search for new matches
     return _search_individual_matches(individual, request.user)
