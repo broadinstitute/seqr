@@ -500,7 +500,10 @@ def _get_saved_variants(variants, families):
     variants_to_saved_variants = {}
     for saved_variant in saved_variants_json:
         family_guids = saved_variant['familyGuids']
-        searched_variant = variants_by_id[_get_variant_key(**saved_variant)]
+        searched_variant = variants_by_id.get(_get_variant_key(**saved_variant))
+        if not searched_variant:
+            # This can occur when an hg38 family has a saved variant that did not successfully lift from hg37
+            continue
         saved_variant.update(searched_variant)
         #  For saved variants only use family it was saved for, not all families in search
         saved_variant['familyGuids'] = family_guids
