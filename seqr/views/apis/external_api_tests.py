@@ -63,10 +63,10 @@ seqr ID NA20885 from project Test Project in family 11 inserted into matchbox on
         Our website can be found at https://seqr.broadinstitute.org/matchmaker/matchbox and our legal disclaimers can 
         be found found at https://seqr.broadinstitute.org/matchmaker/disclaimer."""
         mock_post_to_slack.assert_called_with('matchmaker_matches', message)
-        mock_email.assert_called_with(
-            subject='Received new MME match',
-            body=message,
-            to=['seqr-test@gmail.com', 'test@broadinstitute.org'],
-            from_email='matchmaker@broadinstitute.org')
-        mock_email.return_value.send.assert_called()
+        # mock_email.assert_called_with(
+        #     subject='Received new MME match',
+        #     body=message,
+        #     to=['seqr-test@gmail.com', 'test@broadinstitute.org'],
+        #     from_email='matchmaker@broadinstitute.org')
+        # mock_email.return_value.send.assert_called()
 

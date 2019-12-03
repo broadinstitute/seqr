@@ -135,13 +135,14 @@ def _generate_notification_for_incoming_match(response_from_matchbox, incoming_r
         )
 
         post_to_slack(MME_SLACK_MATCH_NOTIFICATION_CHANNEL, message)
-        email_message = EmailMessage(
-            subject='Received new MME match',
-            body=message,
-            to=emails,
-            from_email=MME_DEFAULT_CONTACT_EMAIL,
-        )
-        email_message.send()
+        #  TODO re-enable MME email
+        # email_message = EmailMessage(
+        #     subject='Received new MME match',
+        #     body=message,
+        #     to=emails,
+        #     from_email=MME_DEFAULT_CONTACT_EMAIL,
+        # )
+        # email_message.send()
     else:
         message = """Dear collaborators,
         
