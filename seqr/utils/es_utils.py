@@ -306,7 +306,7 @@ class BaseEsSearch(object):
 
         annotations_secondary_search = None
         if annotations_secondary:
-            annotations_secondary_filter, allowed_secondary_consequences = _annotations_filter(annotations_secondary)
+            annotations_secondary_filter, _ = _annotations_filter(annotations_secondary)
             annotations_secondary_search = self._search.filter(annotations_secondary_filter)
         if annotations:
             self.filter_by_annotations(annotations, pathogenicity_filter)
