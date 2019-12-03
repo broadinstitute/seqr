@@ -2,7 +2,6 @@ from abc import abstractmethod
 import uuid
 import json
 import random
-import logging
 
 from django.contrib.auth.models import User, Group
 from django.contrib.postgres.fields import JSONField, ArrayField
