@@ -21,7 +21,15 @@ def update_seqr_model(seqr_model, **kwargs):
 
 def create_seqr_model(seqr_model_class, **kwargs):
     logging.info("create_seqr_model(%s, %s)" % (seqr_model_class.__name__, kwargs))
-    seqr_model = seqr_model_class.objects.create(**kwargs)
+    if 'saved_variants' in kwargs:
+        saved_variants = kwargs['saved_variants']
+        del kwargs['saved_variants']
+        seqr_model = seqr_model_class.objects.create(**kwargs)
+        seqr_model.save()
+        seqr_model.saved_variants.add(*saved_variants)
+        kwargs['saved_variant'] = saved_variants[0]
+    else:
+        seqr_model = seqr_model_class.objects.create(**kwargs)
 
     return seqr_model
 

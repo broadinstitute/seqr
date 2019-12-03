@@ -2,6 +2,7 @@ from abc import abstractmethod
 import uuid
 import json
 import random
+import logging
 
 from django.contrib.auth.models import User, Group
 from django.contrib.postgres.fields import JSONField, ArrayField
@@ -593,7 +594,8 @@ class VariantTag(ModelWithGUID):
     search_parameters = models.TextField(null=True, blank=True)  # aka. search url
 
     def __unicode__(self):
-        return "%s:%s" % (str(self.saved_variants.first()), self.variant_tag_type.name)
+        saved_variants_ids = "".join(str(saved_variant) for saved_variant in self.saved_variants.all())
+        return "%s:%s" % (saved_variants_ids, self.variant_tag_type.name)
 
     def _compute_guid(self):
         return 'VT%07d_%s' % (self.id, _slugify(str(self)))
@@ -613,7 +615,8 @@ class VariantNote(ModelWithGUID):
     search_parameters = models.TextField(null=True, blank=True)  # aka. search url
 
     def __unicode__(self):
-        return "%s:%s" % (str(self.saved_variants.first()), (self.note or "")[:20])
+        saved_variants_ids = "".join(str(saved_variant) for saved_variant in self.saved_variants.all())
+        return "%s:%s" % (saved_variants_ids, (self.note or "")[:20])
 
     def _compute_guid(self):
         return 'VN%07d_%s' % (self.id, _slugify(str(self)))
@@ -693,7 +696,8 @@ class VariantFunctionalData(ModelWithGUID):
     search_parameters = models.TextField(null=True, blank=True)
 
     def __unicode__(self):
-        return "%s:%s" % (str(self.saved_variants.first()), self.functional_data_tag)
+        saved_variants_ids = "".join(str(saved_variant) for saved_variant in self.saved_variants.all())
+        return "%s:%s" % (saved_variants_ids, self.functional_data_tag)
 
     def _compute_guid(self):
         return 'VFD%07d_%s' % (self.id, _slugify(str(self)))
