@@ -305,7 +305,7 @@ class BaseEsSearch(object):
             self.filter(~Q('exists', field='filters'))
 
         if annotations_secondary:
-            # TODO construct annotations_secondary
+            # TODO construct annotations_secondary <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
             annotations_secondary_search = self._search.filter(annotations_secondary_filter)
         self.filter_by_annotation(...)
 
