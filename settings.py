@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'anymail',
     'seqr',
     'reference_data',
+    'matchmaker',
 ]
 
 MIDDLEWARE = [

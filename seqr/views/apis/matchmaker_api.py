@@ -7,7 +7,8 @@ from django.contrib.auth.decorators import login_required
 from django.core.mail.message import EmailMessage
 from django.views.decorators.csrf import csrf_exempt
 
-from seqr.models import Individual, MatchmakerResult, MatchmakerContactNotes, SavedVariant
+from matchmaker.models import MatchmakerResult, MatchmakerContactNotes
+from seqr.models import Individual, SavedVariant
 from seqr.utils.communication_utils import post_to_slack
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.json_utils import create_json_response
