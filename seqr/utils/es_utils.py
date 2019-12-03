@@ -178,7 +178,7 @@ def _get_es_variants_for_search(search_model, es_search_cls, process_previous_re
     es_search.filter_by_annot_and_genotype(
         search.get('inheritance'), quality_filter=search.get('qualityFilter'),
         annotations=search.get('annotations'), annotations_secondary=search.get('annotations_secondary'),
-        path_filter=pathogenicity_filter)
+        pathogenicity_filter=pathogenicity_filter)
 
     if aggregate_by_gene:
         es_search.aggregate_by_gene()
@@ -287,7 +287,7 @@ class BaseEsSearch(object):
         if len({genome_version for genome_version in variant_id_genome_versions.items()}) > 1 and not (genes or intervals or rs_ids):
             self._filtered_variant_ids = variant_id_genome_versions
 
-    def filter_by_annot_and_genotype(self, inheritance, quality_filter=None, annotations=None, annotations_secondary=None, path_filter=None):
+    def filter_by_annot_and_genotype(self, inheritance, quality_filter=None, annotations=None, annotations_secondary=None, pathogenicity_filter=None):
         has_previous_compound_hets = self.previous_search_results.get('grouped_results')
 
         inheritance_mode = (inheritance or {}).get('mode')
@@ -304,10 +304,12 @@ class BaseEsSearch(object):
         if quality_filter and quality_filter.get('vcf_filter') is not None:
             self.filter(~Q('exists', field='filters'))
 
+        annotations_secondary_search = None
         if annotations_secondary:
-            # TODO construct annotations_secondary <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+            annotations_secondary_filter, allowed_secondary_consequences = _annotations_filter(annotations_secondary)
             annotations_secondary_search = self._search.filter(annotations_secondary_filter)
-        self.filter_by_annotation(...)
+        if annotations:
+            self.filter_by_annotations(annotations, pathogenicity_filter)
 
         for index, family_samples_by_id in self.samples_by_family_index.items():
             if not inheritance and not quality_filter['min_ab'] and not quality_filter['min_gq']:
@@ -1254,23 +1256,32 @@ def _pathogenicity_filter(pathogenicity):
     return pathogenicity_filter
 
 
-def _annotations_filter(annotations, annotations_secondary):
-    vep_consequences = [ann for annotation in annotations.values() for ann in annotation]
+def _annotations_filter(annotations):
+    vep_consequences = [ann for annotations in annotations.values() for ann in annotations]
+
     consequences_filter = Q('terms', transcriptConsequenceTerms=vep_consequences)
 
-    vep_consequences_secondary = []
-    if annotations_secondary:
-        vep_consequences_secondary = [ann for annotation_secondary in annotations_secondary.values() for ann in annotation_secondary]
-    consequences_filter_secondary = Q('terms', transcriptConsequenceTerms=vep_consequences_secondary)
-
-    # for many intergenic variants VEP doesn't add any annotations, so if user selected 'intergenic_variant',
-    # also match variants where transcriptConsequenceTerms is empty
     if 'intergenic_variant' in vep_consequences:
+        # for many intergenic variants VEP doesn't add any annotations, so if user selected 'intergenic_variant', also match variants where transcriptConsequenceTerms is emtpy
         consequences_filter |= ~Q('exists', field='transcriptConsequenceTerms')
-    if 'intergenic_variant' in vep_consequences_secondary:
-        consequences_filter_secondary |= ~Q('exists', field='transcriptConsequenceTerms')
 
-    return consequences_filter, consequences_filter_secondary, vep_consequences, vep_consequences_secondary
+    return consequences_filter, vep_consequences
+    # vep_consequences = [ann for annotation in annotations.values() for ann in annotation]
+    # consequences_filter = Q('terms', transcriptConsequenceTerms=vep_consequences)
+    #
+    # vep_consequences_secondary = []
+    # if annotations_secondary:
+    #     vep_consequences_secondary = [ann for annotation_secondary in annotations_secondary.values() for ann in annotation_secondary]
+    # consequences_filter_secondary = Q('terms', transcriptConsequenceTerms=vep_consequences_secondary)
+    #
+    # # for many intergenic variants VEP doesn't add any annotations, so if user selected 'intergenic_variant',
+    # # also match variants where transcriptConsequenceTerms is empty
+    # if 'intergenic_variant' in vep_consequences:
+    #     consequences_filter |= ~Q('exists', field='transcriptConsequenceTerms')
+    # if 'intergenic_variant' in vep_consequences_secondary:
+    #     consequences_filter_secondary |= ~Q('exists', field='transcriptConsequenceTerms')
+    #
+    # return consequences_filter, consequences_filter_secondary, vep_consequences, vep_consequences_secondary
 
 
 POPULATIONS = {

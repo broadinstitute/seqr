@@ -1482,13 +1482,7 @@ class EsUtilsTest(TestCase):
         # test pagination
         variants, total_results = get_es_variants(results_model, num_results=2, page=2)
         self.assertEqual(len(variants), 2)
-        self.maxDiff = None
-        self.assertEqual(variants[0], PARSED_VARIANTS[0])
-        self.assertEqual(variants[1][0], FIRST_COMPOUND_HET)
-        SECOND_COMPOUND_HET['familyGuids'] = ['F000002_2', 'F000003_3', 'F000011_11']
-        SECOND_COMPOUND_HET['xpos'] = int(SECOND_COMPOUND_HET['xpos'])
-        SECOND_COMPOUND_HET['pos'] = int(SECOND_COMPOUND_HET['pos'])
-        self.assertEqual(variants[1][1], SECOND_COMPOUND_HET)
+        self.assertListEqual(variants, [PARSED_VARIANTS[0], PARSED_COMPOUND_HET_VARIANTS_MULTI_GENOME_VERSION])
         self.assertEqual(total_results, 8)
 
         self.assertCachedResults(results_model, {
