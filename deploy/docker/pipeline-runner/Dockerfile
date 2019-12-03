@@ -105,7 +105,7 @@ RUN mkdir -p /hail/build/libs /hail/build/distributions \
     && cp /hail-elasticsearch-pipelines/hail_builds/v01/gcs-connector-1.6.10-hadoop2.jar /usr/local/spark-2.0.2-bin-hadoop2.7/jars/
 
 ENV TERM=xterm
-ENV PYTHONPATH="$PYTHONPATH:/seqr:/seqr_settings:/hail-elasticsearch-pipelines"
+ENV PYTHONPATH="$PYTHONPATH:/seqr:/hail-elasticsearch-pipelines"
 
 COPY config/gitconfig /root/.gitconfig
 COPY bashrc /root/.bashrc

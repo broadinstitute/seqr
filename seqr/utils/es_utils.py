@@ -10,7 +10,7 @@ from sys import maxint
 import redis
 from itertools import combinations
 
-import settings
+from settings import ELASTICSEARCH_SERVICE_HOSTNAME, REDIS_SERVICE_HOSTNAME
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37, Omim, GeneConstraint
 from seqr.models import Sample, Individual
 from seqr.utils.xpos_utils import get_xpos, get_chrom_pos
@@ -29,7 +29,7 @@ XPOS_SORT_KEY = 'xpos'
 
 
 def get_es_client(timeout=30):
-    return elasticsearch.Elasticsearch(host=settings.ELASTICSEARCH_SERVICE_HOSTNAME, timeout=timeout, retry_on_timeout=True)
+    return elasticsearch.Elasticsearch(host=ELASTICSEARCH_SERVICE_HOSTNAME, timeout=timeout, retry_on_timeout=True)
 
 
 def get_index_metadata(index_name, client):
@@ -140,10 +140,10 @@ def _get_es_variants_for_search(search_model, es_search_cls, process_previous_re
     redis_client = None
     previous_search_results = {}
     try:
-        redis_client = redis.StrictRedis(host=settings.REDIS_SERVICE_HOSTNAME, socket_connect_timeout=3)
+        redis_client = redis.StrictRedis(host=REDIS_SERVICE_HOSTNAME, socket_connect_timeout=3)
         previous_search_results = json.loads(redis_client.get(cache_key) or '{}')
     except Exception as e:
-        logger.warn("Unable to connect to redis host: {}".format(settings.REDIS_SERVICE_HOSTNAME) + str(e))
+        logger.warn("Unable to connect to redis host: {}".format(REDIS_SERVICE_HOSTNAME) + str(e))
 
     previously_loaded_results, search_kwargs = process_previous_results(previous_search_results)
     if previously_loaded_results is not None:
@@ -186,7 +186,7 @@ def _get_es_variants_for_search(search_model, es_search_cls, process_previous_re
     try:
         redis_client.set(cache_key, json.dumps(es_search.previous_search_results))
     except Exception as e:
-        logger.warn("Unable to write to redis: {}".format(settings.REDIS_SERVICE_HOSTNAME) + str(e))
+        logger.warn("Unable to write to redis: {}".format(REDIS_SERVICE_HOSTNAME) + str(e))
 
     return variant_results, es_search.previous_search_results['total_results']
 

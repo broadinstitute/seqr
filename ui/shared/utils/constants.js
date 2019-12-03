@@ -36,6 +36,15 @@ export const PROJECT_FIELDS = [
   GENOME_VERSION_FIELD,
 ]
 
+const MAILTO_CONTACT_URL_REGEX = /^mailto:[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}(,\s*[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{1,4})*$/i
+export const MATCHMAKER_CONTACT_NAME_FIELD = { label: 'Contact Name' }
+export const MATCHMAKER_CONTACT_URL_FIELD = {
+  label: 'Contact URL',
+  parse: val => `mailto:${val}`,
+  format: val => (val || '').replace('mailto:', ''),
+  validate: val => (MAILTO_CONTACT_URL_REGEX.test(val) ? undefined : 'Invalid contact url'),
+}
+
 
 // SAMPLES
 
@@ -278,6 +287,8 @@ export const familyVariantSamples = (family, individualsByGuid, samplesByGuid) =
   )
   return orderBy(loadedSamples, [s => s.loadedDate], 'asc')
 }
+
+export const isActiveVariantSample = sample => sample.isActive && sample.datasetType === DATASET_TYPE_VARIANT_CALLS
 
 // CLINVAR
 

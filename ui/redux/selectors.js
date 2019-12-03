@@ -14,6 +14,7 @@ import {
   DATASET_TYPE_READ_ALIGNMENTS,
   VARIANT_EXPORT_DATA,
   familyVariantSamples,
+  isActiveVariantSample,
 } from 'shared/utils/constants'
 
 export const getProjectsIsLoading = state => state.projectsLoading.isLoading
@@ -58,6 +59,7 @@ const groupEntitiesByProjectGuid = entities => Object.entries(entities).reduce((
 }, {})
 export const getFamiliesGroupedByProjectGuid = createSelector(getFamiliesByGuid, groupEntitiesByProjectGuid)
 export const getAnalysisGroupsGroupedByProjectGuid = createSelector(getAnalysisGroupsByGuid, groupEntitiesByProjectGuid)
+export const getSamplesGroupedByProjectGuid = createSelector(getSamplesByGuid, groupEntitiesByProjectGuid)
 
 /**
  * function that returns a mapping of each familyGuid to an array of individuals in that family.
@@ -98,6 +100,19 @@ export const getFirstSampleByFamily = createSelector(
         [familyGuid]: familySamples.length > 0 ? familySamples[0] : null,
       }
     }, {})
+  },
+)
+
+export const getHasActiveVariantSampleByFamily = createSelector(
+  getSortedIndividualsByFamily,
+  getSamplesByGuid,
+  (individualsByFamily, samplesByGuid) => {
+    return Object.entries(individualsByFamily).reduce((acc, [familyGuid, individuals]) => ({
+      ...acc,
+      [familyGuid]: individuals.some(individual => (individual.sampleGuids || []).some(
+        sampleGuid => isActiveVariantSample(samplesByGuid[sampleGuid]),
+      )),
+    }), {})
   },
 )
 

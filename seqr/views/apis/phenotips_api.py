@@ -24,8 +24,6 @@ import re
 import requests
 from collections import defaultdict
 
-import settings
-
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 from django.http import HttpResponse
@@ -40,7 +38,7 @@ from seqr.views.utils.permissions_utils import check_permissions, get_project_an
 from seqr.views.utils.phenotips_utils import get_phenotips_uname_and_pwd_for_project, make_phenotips_api_call, \
     phenotips_patient_url, phenotips_patient_exists
 from seqr.views.utils.proxy_request_utils import proxy_request
-from settings import API_LOGIN_REQUIRED_URL
+from settings import API_LOGIN_REQUIRED_URL, PHENOTIPS_ADMIN_UNAME, PHENOTIPS_ADMIN_PWD, PHENOTIPS_SERVER
 
 logger = logging.getLogger(__name__)
 
@@ -339,7 +337,7 @@ def _add_user_to_patient(username, patient_id, allow_edit=True):
         url,
         http_headers=headers,
         data=data,
-        auth_tuple=(settings.PHENOTIPS_ADMIN_UNAME, settings.PHENOTIPS_ADMIN_PWD),
+        auth_tuple=(PHENOTIPS_ADMIN_UNAME, PHENOTIPS_ADMIN_PWD),
         expected_status_code=204,
         parse_json_resonse=False,
     )
@@ -369,7 +367,7 @@ def _phenotips_view_handler(request, project_guid, individual_guid, url_template
 
     auth_tuple = _get_phenotips_username_and_password(request.user, project, permissions_level=permission_level)
 
-    return proxy_request(request, url, headers={}, auth_tuple=auth_tuple, host=settings.PHENOTIPS_SERVER)
+    return proxy_request(request, url, headers={}, auth_tuple=auth_tuple, host=PHENOTIPS_SERVER)
 
 
 @login_required
@@ -422,7 +420,7 @@ def proxy_to_phenotips(request):
         phenotips_session.cookies.set(key, value)
 
     http_response = proxy_request(request, url, data=request.body, session=phenotips_session,
-                                  host=settings.PHENOTIPS_SERVER, filter_request_headers=True)
+                                  host=PHENOTIPS_SERVER, filter_request_headers=True)
 
     # if this is the 'Quick Save' request, also save a copy of phenotips data in the seqr SQL db.
     match = re.match(PHENOTIPS_QUICK_SAVE_URL_REGEX, url)
@@ -439,7 +437,7 @@ def _handle_phenotips_save_request(request, patient_id):
 
     cookie_header = request.META.get('HTTP_COOKIE')
     http_headers = {'Cookie': cookie_header} if cookie_header else {}
-    response = proxy_request(request, url, headers=http_headers, method='GET', scheme='http', host=settings.PHENOTIPS_SERVER)
+    response = proxy_request(request, url, headers=http_headers, method='GET', scheme='http', host=PHENOTIPS_SERVER)
     if response.status_code != 200:
         logger.error("ERROR: unable to retrieve patient json. %s %s %s" % (
             url, response.status_code, response.reason_phrase))

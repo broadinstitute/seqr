@@ -16,7 +16,7 @@ import SortableTable, { SelectableTableFormInput } from 'shared/components/table
 import DataLoader from 'shared/components/DataLoader'
 import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
 import { ButtonLink, ColoredLabel } from 'shared/components/StyledComponents'
-import { AFFECTED } from 'shared/utils/constants'
+import { AFFECTED, MATCHMAKER_CONTACT_NAME_FIELD, MATCHMAKER_CONTACT_URL_FIELD } from 'shared/utils/constants'
 import { camelcaseToTitlecase } from 'shared/utils/stringUtils'
 
 import {
@@ -130,17 +130,10 @@ const mapPhenotypeStateToProps = (state, ownProps) => ({
 
 const EditPhenotypesTable = connect(mapPhenotypeStateToProps)(BaseEditPhenotypesTable)
 
-const MAILTO_CONTACT_URL_REGEX = /^mailto:[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}(,\s*[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{1,4})*$/i
 const CONTACT_URL_REGEX = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}(,\s*[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{1,4})*$/i
 const SUBMISSION_EDIT_FIELDS = [
-  { name: 'patient.contact.name', label: 'Contact Name' },
-  {
-    name: 'patient.contact.href',
-    label: 'Contact URL',
-    parse: val => `mailto:${val}`,
-    format: val => val.replace('mailto:', ''),
-    validate: val => (MAILTO_CONTACT_URL_REGEX.test(val) ? undefined : 'Invalid contact url'),
-  },
+  { ...MATCHMAKER_CONTACT_NAME_FIELD, name: 'patient.contact.name' },
+  { ...MATCHMAKER_CONTACT_URL_FIELD, name: 'patient.contact.href' },
   {
     name: 'geneVariants',
     component: EditGenotypesTable,

@@ -326,7 +326,7 @@ class MatchmakerAPITest(TestCase):
     
      - From Reza Maroofian at institution St Georges, University of London with genes OR4F5 with phenotypes HP:0012469 (Infantile spasms).
     
-    https://seqr.broadinstitute.org/project/R0001_1kg/family_page/F000001_1/matchmaker_exchange
+    /project/R0001_1kg/family_page/F000001_1/matchmaker_exchange
     """
         mock_post_to_slack.assert_called_with('matchmaker_seqr_match', message)
         mock_email.assert_called_with(
@@ -540,11 +540,6 @@ class MatchmakerAPITest(TestCase):
         )
         self.assertListEqual(response_json['genesById'].keys(), ['ENSG00000186092'])
         self.assertListEqual(response_json['mmeContactNotes'].keys(), ['st georges, university of london'])
-
-        # Test updates project MME contact
-        project = Project.objects.get(family__individual__guid=NO_SUBMISSION_INDIVIDUAL_GUID)
-        self.assertEqual(project.mme_primary_data_owner, 'PI,Test Name')
-        self.assertEqual(project.mme_contact_url, 'mailto:test@broadinstitute.org,matchmaker@broadinstitute.org')
 
         # Test proxy calls
         self.assertEqual(len(responses.calls), 7)

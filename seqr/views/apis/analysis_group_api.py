@@ -5,7 +5,7 @@ from django.db import IntegrityError
 from django.views.decorators.csrf import csrf_exempt
 
 from seqr.models import AnalysisGroup, Family, CAN_EDIT
-from seqr.model_utils import create_seqr_model, delete_seqr_model, update_xbrowse_family_group_families
+from seqr.model_utils import create_seqr_model, delete_seqr_model
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_analysis_group
@@ -57,7 +57,6 @@ def update_analysis_group_handler(request, project_guid, analysis_group_guid=Non
                 ))
 
     analysis_group.families.set(families)
-    update_xbrowse_family_group_families(analysis_group, families)
 
     return create_json_response({
         'analysisGroupsByGuid': {
