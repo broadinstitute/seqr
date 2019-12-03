@@ -143,6 +143,21 @@ export class Multiselect extends React.PureComponent {
   }
 }
 
+export const LargeMultiselect = styled(({ dispatch, ...props }) => <Multiselect {...props} />)`
+  .ui.search.dropdown .menu {
+    max-height: calc(90vh - 220px);
+    
+    .item {
+      clear: both;
+      
+      .description {
+        max-width: 50%;
+        text-align: right;
+      }
+    }
+  }
+`
+
 export class AddableSelect extends React.PureComponent {
   static propTypes = {
     options: PropTypes.array,

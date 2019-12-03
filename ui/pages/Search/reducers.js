@@ -110,7 +110,7 @@ export const saveSearch = search => updateEntity(search, RECEIVE_SAVED_SEARCHES,
 
 export const updateCompoundHetDisplay = ({ updates }) => {
   return (dispatch) => {
-    dispatch({ type: UPDATE_COMPOUND_HET_DISPLAY, newValue: updates })
+    dispatch({ type: UPDATE_COMPOUND_HET_DISPLAY, newValue: updates.flattenCompoundHet })
   }
 }
 
@@ -218,7 +218,7 @@ export const reducers = {
     page: 1,
     recordsPerPage: 100,
   }, false),
-  compoundHetDisplay: createSingleValueReducer(UPDATE_COMPOUND_HET_DISPLAY, { flattenCompoundHet: false }),
+  flattenCompoundHet: createSingleValueReducer(UPDATE_COMPOUND_HET_DISPLAY, false),
 }
 
 const rootReducer = combineReducers(reducers)

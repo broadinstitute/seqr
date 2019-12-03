@@ -1,17 +1,26 @@
 import React from 'react'
+import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { Table } from 'semantic-ui-react'
+import { connect } from 'react-redux'
+
+import { getVersion } from 'redux/selectors'
 
 const TableHeaderCell = styled(Table.HeaderCell)`
   border-radius: 0 !important;
   font-weight: normal !important;
+  
+  &.disabled {
+    color: grey !important;
+  }
 `
 
-const Footer = () =>
+const Footer = ({ version }) =>
   <Table>
     <Table.Header>
       <Table.Row>
-        <TableHeaderCell width={2} />
+        <TableHeaderCell width={1} />
+        <TableHeaderCell width={1} disabled>seqr {version}</TableHeaderCell>
         <TableHeaderCell width={7}>
           For bug reports or feature requests please submit  &nbsp;
           <a href="https://github.com/macarthur-lab/seqr/issues">Github Issues</a>
@@ -30,4 +39,12 @@ const Footer = () =>
     </Table.Header>
   </Table>
 
-export default Footer
+Footer.propTypes = {
+  version: PropTypes.string,
+}
+
+const mapStateToProps = state => ({
+  version: getVersion(state),
+})
+
+export default connect(mapStateToProps)(Footer)

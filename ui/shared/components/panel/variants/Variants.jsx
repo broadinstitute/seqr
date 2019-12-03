@@ -110,9 +110,8 @@ const CompoundHets = ({ variants }) => {
         <VariantGene geneId={sharedGeneId} variant={variants[0]} areCompoundHets />}
       </Grid.Column>
       <StyledCompoundHetRows stackable columns="equal">
-        {variants.map(variant =>
-          <Variant variant={variant} key={variant.variantId} isCompoundHet />,
-        )}
+        <Variant variant={variants[0]} key={variants[0].variantId} isCompoundHet />
+        <Variant variant={variants[1]} key={variants[1].variantId} isCompoundHet />
       </StyledCompoundHetRows>
     </StyledVariantRow>
   )

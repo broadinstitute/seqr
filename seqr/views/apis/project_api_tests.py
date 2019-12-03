@@ -34,6 +34,7 @@ def get_objects_for_group(can_view_group, permission, object_cls):
 
 class ProjectAPITest(TestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
+    multi_db = True
 
     @mock.patch('seqr.views.utils.phenotips_utils.proxy_request', create_proxy_request_stub(201))
     def test_create_update_and_delete_project(self):
@@ -110,9 +111,8 @@ class ProjectAPITest(TestCase):
             set(response_json['projectsByGuid'][PROJECT_GUID].keys()),
             {'collaborators', 'locusListGuids', 'variantTagTypes', 'variantFunctionalTagTypes',
              'detailsLoaded', 'projectGuid', 'projectCategoryGuids', 'canEdit', 'name', 'description', 'createdDate',
-             'lastModifiedDate', 'isPhenotipsEnabled', 'phenotipsUserId', 'deprecatedProjectId', 'hasNewSearch',
-             'lastAccessedDate', 'isMmeEnabled', 'mmePrimaryDataOwner', 'mmeContactInstitution', 'mmeContactUrl',
-             'genomeVersion', 'discoveryTags'}
+             'lastModifiedDate', 'isPhenotipsEnabled', 'phenotipsUserId', 'genomeVersion', 'discoveryTags',
+             'lastAccessedDate', 'isMmeEnabled', 'mmePrimaryDataOwner', 'mmeContactInstitution', 'mmeContactUrl'}
         )
         self.assertEqual(
             response_json['projectsByGuid'][PROJECT_GUID]['lastAccessedDate'][:10],

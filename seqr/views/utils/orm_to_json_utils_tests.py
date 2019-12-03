@@ -11,6 +11,7 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_user, _get_json_for
 
 class JSONUtilsTest(TestCase):
     fixtures = ['users.json', '1kg_project', 'reference_data', 'variant_searches']
+    multi_db = True
 
     def test_json_for_user(self):
         for user in User.objects.all():
@@ -30,8 +31,8 @@ class JSONUtilsTest(TestCase):
         self.assertSetEqual(
             set(json.keys()),
             {'projectGuid', 'projectCategoryGuids', 'canEdit', 'name', 'description', 'createdDate', 'lastModifiedDate',
-             'isPhenotipsEnabled', 'phenotipsUserId', 'deprecatedProjectId', 'lastAccessedDate', 'hasNewSearch',
-             'isMmeEnabled', 'mmePrimaryDataOwner', 'mmeContactInstitution', 'mmeContactUrl', 'genomeVersion'}
+             'isPhenotipsEnabled', 'phenotipsUserId', 'lastAccessedDate',  'mmeContactUrl', 'genomeVersion',
+             'isMmeEnabled', 'mmePrimaryDataOwner', 'mmeContactInstitution', }
         )
 
     def test_json_for_family(self):

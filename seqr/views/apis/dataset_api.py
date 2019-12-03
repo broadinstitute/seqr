@@ -9,7 +9,6 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 
 from seqr.models import Individual, CAN_EDIT, Sample, Family
-from seqr.model_utils import update_xbrowse_vcfffiles, find_matching_xbrowse_model
 from seqr.views.utils.dataset_utils import match_sample_ids_to_sample_records, validate_index_metadata, \
     get_elasticsearch_index_samples, load_mapping_file, validate_alignment_dataset_path
 from seqr.views.utils.file_utils import save_uploaded_file
@@ -116,10 +115,6 @@ def add_variants_dataset_handler(request, project_guid):
 
     update_project_from_json(project, {'has_new_search': True})
     reset_cached_search_results(project)
-
-    update_xbrowse_vcfffiles(
-        project, sample_type, elasticsearch_index, dataset_path, matched_sample_id_to_sample_record
-    )
 
     families_to_update = [
         family for family in included_families if family.analysis_status == Family.ANALYSIS_STATUS_WAITING_FOR_DATA]
@@ -257,12 +252,6 @@ def update_individual_alignment_sample(request, individual_guid):
         if created:
             sample.loaded_date = timezone.now()
         sample.save()
-
-        # Deprecated update VCFFile records
-        base_indiv = find_matching_xbrowse_model(individual)
-        if base_indiv:
-            base_indiv.bam_file_path = dataset_path
-            base_indiv.save()
 
         response = {
             'samplesByGuid': {

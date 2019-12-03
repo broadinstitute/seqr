@@ -14,6 +14,7 @@ import {
   DATASET_TYPE_READ_ALIGNMENTS,
   VARIANT_EXPORT_DATA,
   familyVariantSamples,
+  isActiveVariantSample,
 } from 'shared/utils/constants'
 
 export const getProjectsIsLoading = state => state.projectsLoading.isLoading
@@ -33,6 +34,7 @@ export const getLocusListIsLoading = state => state.locusListLoading.isLoading
 export const getUser = state => state.user
 export const getUsersByUsername = state => state.usersByUsername
 export const getUserOptionsIsLoading = state => state.userOptionsLoading.isLoading
+export const getVersion = state => state.meta.version
 export const getProjectGuid = state => state.currentProjectGuid
 export const getSavedVariantsIsLoading = state => state.savedVariantsLoading.isLoading
 export const getSavedVariantsLoadingError = state => state.savedVariantsLoading.errorMessage
@@ -66,6 +68,7 @@ const groupEntitiesByProjectGuid = entities => Object.entries(entities).reduce((
 }, {})
 export const getFamiliesGroupedByProjectGuid = createSelector(getFamiliesByGuid, groupEntitiesByProjectGuid)
 export const getAnalysisGroupsGroupedByProjectGuid = createSelector(getAnalysisGroupsByGuid, groupEntitiesByProjectGuid)
+export const getSamplesGroupedByProjectGuid = createSelector(getSamplesByGuid, groupEntitiesByProjectGuid)
 
 /**
  * function that returns a mapping of each familyGuid to an array of individuals in that family.
@@ -109,6 +112,19 @@ export const getFirstSampleByFamily = createSelector(
   },
 )
 
+export const getHasActiveVariantSampleByFamily = createSelector(
+  getSortedIndividualsByFamily,
+  getSamplesByGuid,
+  (individualsByFamily, samplesByGuid) => {
+    return Object.entries(individualsByFamily).reduce((acc, [familyGuid, individuals]) => ({
+      ...acc,
+      [familyGuid]: individuals.some(individual => (individual.sampleGuids || []).some(
+        sampleGuid => isActiveVariantSample(samplesByGuid[sampleGuid]),
+      )),
+    }), {})
+  },
+)
+
 export const getActiveAlignmentSamplesByFamily = createSelector(
   getSortedIndividualsByFamily,
   getSamplesByGuid,
@@ -145,11 +161,57 @@ export const getSavedVariantsGroupedByFamilyVariants = createSelector(
       }
       acc[familyGuid][getVariantId(variant)] = variant
     })
-
     return acc
 
   }, {}),
 )
+
+const getSavedVariantsSharedNoteGuids = createSelector(
+  getSavedVariantsByGuid,
+  savedVariantsByGuid => Object.values(savedVariantsByGuid).reduce((acc, variant) => {
+    (variant.notes || []).map(note => note.noteGuid).forEach(noteGuid =>
+      (acc.uniques.includes(noteGuid) ? acc.duplicates.push(noteGuid) : acc.uniques.push(noteGuid)),
+    )
+    return acc
+  }, { duplicates: [], uniques: [] }),
+)
+
+export const getNotesGroupedByFamilyVariants = createSelector(
+  getSavedVariantsSharedNoteGuids,
+  getSavedVariantsByGuid,
+  (savedVariantsSharedNoteGuids, savedVariantsByGuid) => Object.values(savedVariantsByGuid).reduce((acc, variant) => {
+    variant.familyGuids.forEach((familyGuid) => {
+      if (!(familyGuid in acc)) {
+        acc[familyGuid] = {}
+      }
+      const sharedNotes = variant.notes.filter(note => savedVariantsSharedNoteGuids.duplicates.includes(note.noteGuid)) || []
+      const individualNotes = variant.notes.filter(note => !savedVariantsSharedNoteGuids.duplicates.includes(note.noteGuid)) || []
+      acc[familyGuid][getVariantId(variant)] = { individualNotes, sharedNotes }
+    })
+    return acc
+
+  }, {}),
+)
+
+// export const getNotes = createSelector(
+//   getSavedVariantsSharedNoteGuids,
+//   (state, props) => props.savedVariant,
+//   (state, props) => props.isCompoundHet,
+//   (state, props) => props.areCompoundHets,
+//   (savedVariant, isCompoundHet, areCompoundHets, savedVariantsSharedNoteGuids) => {
+//     let notes = []
+//     if (areCompoundHets) {
+//       notes = ((savedVariant[0] || {}).notes || []).filter(note => savedVariantsSharedNoteGuids.uniques.includes(note.noteGuid))
+//     }
+//     else {
+//       notes = (savedVariant && savedVariant.notes) || []
+//     }
+//     if (isCompoundHet) {
+//       notes = notes.filter(note => !savedVariantsSharedNoteGuids.uniques.includes(note.noteGuid)) || []
+//     }
+//     return notes
+//   },
+// )
 
 export const getSelectedSavedVariants = createSelector(
   getSavedVariantsByGuid,

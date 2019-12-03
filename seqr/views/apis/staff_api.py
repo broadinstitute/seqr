@@ -450,7 +450,7 @@ def _get_loaded_samples_by_project_family(projects):
 
 
 def _get_saved_variants_by_project_family(projects):
-    tag_types = VariantTagType.objects.filter(Q(project__isnull=True) & (Q(category='CMG Discovery Tags') | Q(name='Share with KOMP')))
+    tag_types = VariantTagType.objects.filter(project__isnull=True, category='CMG Discovery Tags')
 
     project_saved_variants = SavedVariant.objects.select_related('family').prefetch_related(
         Prefetch('varianttag_set', to_attr='discovery_tags',
@@ -629,11 +629,14 @@ def _generate_rows(project, loaded_samples_by_project_family, saved_variants_by_
 
             variant.saved_variant_json['inheritance'] = inheritance_models
 
-            main_transcript_id = variant.selected_main_transcript_id or variant.saved_variant_json['mainTranscriptId']
-            for gene_id, transcripts in variant.saved_variant_json['transcripts'].items():
-                if any(t['transcriptId'] == main_transcript_id for t in transcripts):
-                    variant.saved_variant_json['mainTranscriptGeneId'] = gene_id
-                    break
+            main_transcript_id = variant.selected_main_transcript_id or variant.saved_variant_json.get('mainTranscriptId')
+            if main_transcript_id:
+                for gene_id, transcripts in variant.saved_variant_json['transcripts'].items():
+                    if any(t['transcriptId'] == main_transcript_id for t in transcripts):
+                        variant.saved_variant_json['mainTranscriptGeneId'] = gene_id
+                        break
+            elif len(variant.saved_variant_json['transcripts']) == 1 and not variant.saved_variant_json['transcripts'].values()[0]:
+                variant.saved_variant_json['mainTranscriptGeneId'] = variant.saved_variant_json['transcripts'].keys()[0]
 
         gene_ids_to_saved_variants = defaultdict(set)
         gene_ids_to_variant_tag_names = defaultdict(set)

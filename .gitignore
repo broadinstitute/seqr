@@ -6,10 +6,6 @@
 ui/node_modules
 ui/jest*
 
-docs/*.rst
-docs/_build
-docs/Makefile
-
 *.pyc
 *.DS_Store
 .ipynb_checkpoints
@@ -19,3 +15,5 @@ deploy/secrets/gcloud*/*
 
 pedigree_images/*
 seqr_settings
+
+django_key

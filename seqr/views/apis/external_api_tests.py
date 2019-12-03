@@ -6,6 +6,7 @@ from django.test import TestCase
 
 class ExternalAPITest(TestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
+    multi_db = True
 
     @responses.activate
     def test_mme_metrics_proxy(self):
@@ -17,9 +18,10 @@ class ExternalAPITest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'numSubmissions': 123})
 
+    @mock.patch('seqr.views.apis.external_api.EmailMessage')
     @mock.patch('seqr.views.apis.external_api.post_to_slack')
     @responses.activate
-    def test_mme_match_proxy(self, mock_post_to_slack):
+    def test_mme_match_proxy(self, mock_post_to_slack, mock_email):
         responses.add(responses.POST, 'http://localhost:9020/match', status=200, json={'results': [
             {'patient': {'id': 'NA19675_1_01'}},
             {'patient': {'id': 'NA20885'}},
@@ -52,8 +54,8 @@ class ExternalAPITest(TestCase):
 
         We sent back:
 
-        seqr ID NA19675_1 from project 1kg project n\xe5me with uni\xe7\xf8de in family 1 inserted into matchbox on May 23, 2018, with seqr link https://seqr.broadinstitute.org/project/R0001_1kg/family_page/F000001_1/matchmaker_exchange
-seqr ID NA20885 from project Test Project in family 11 inserted into matchbox on Feb 05, 2019, with seqr link https://seqr.broadinstitute.org/project/R0003_test/family_page/F000011_11/matchmaker_exchange
+        seqr ID NA19675_1 from project 1kg project n\xe5me with uni\xe7\xf8de in family 1 inserted into matchbox on May 23, 2018, with seqr link /project/R0001_1kg/family_page/F000001_1/matchmaker_exchange
+seqr ID NA20885 from project Test Project in family 11 inserted into matchbox on Feb 05, 2019, with seqr link /project/R0003_test/family_page/F000011_11/matchmaker_exchange
 
         We sent this email alert to: seqr-test@gmail.com, test@broadinstitute.org
 
@@ -61,4 +63,10 @@ seqr ID NA20885 from project Test Project in family 11 inserted into matchbox on
         Our website can be found at https://seqr.broadinstitute.org/matchmaker/matchbox and our legal disclaimers can 
         be found found at https://seqr.broadinstitute.org/matchmaker/disclaimer."""
         mock_post_to_slack.assert_called_with('matchmaker_matches', message)
+        # mock_email.assert_called_with(
+        #     subject='Received new MME match',
+        #     body=message,
+        #     to=['seqr-test@gmail.com', 'test@broadinstitute.org'],
+        #     from_email='matchmaker@broadinstitute.org')
+        # mock_email.return_value.send.assert_called()
 

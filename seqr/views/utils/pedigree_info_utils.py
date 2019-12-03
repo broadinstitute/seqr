@@ -10,7 +10,7 @@ import openpyxl as xl
 from django.core.mail.message import EmailMultiAlternatives
 from django.utils.html import strip_tags
 
-import settings
+from settings import UPLOADED_PEDIGREE_FILE_RECIPIENTS
 from seqr.models import Individual
 
 logger = logging.getLogger(__name__)
@@ -350,10 +350,10 @@ def _send_sample_manifest(sample_manifest_rows, kit_id, original_filename, origi
     wb.save(temp_sample_manifest_file.name)
     temp_sample_manifest_file.seek(0)
 
-    sample_manifest_filename = kit_id+".xls"
-    logger.info("Sending sample manifest file %s to %s" % (sample_manifest_filename, settings.UPLOADED_PEDIGREE_FILE_RECIPIENTS))
+    sample_manifest_filename = kit_id+".xlsx"
+    logger.info("Sending sample manifest file %s to %s" % (sample_manifest_filename, UPLOADED_PEDIGREE_FILE_RECIPIENTS))
 
-    original_table_attachment_filename = os.path.basename(original_filename).replace(".xlsx", ".xls")
+    original_table_attachment_filename = '{}.xlsx'.format('.'.join(os.path.basename(original_filename).split('.')[:-1]))
 
     if user is not None and project is not None:
         user_email_or_username = user.email or user.username
@@ -379,10 +379,10 @@ def _send_sample_manifest(sample_manifest_rows, kit_id, original_filename, origi
     email_message = EmailMultiAlternatives(
         subject=kit_id + " Merged Sample Pedigree File",
         body=strip_tags(email_body),
-        to=settings.UPLOADED_PEDIGREE_FILE_RECIPIENTS,
+        to=UPLOADED_PEDIGREE_FILE_RECIPIENTS,
         attachments=[
-            (sample_manifest_filename, temp_sample_manifest_file.read(), "application/xls"),
-            (original_table_attachment_filename, temp_original_file.read(), "application/xls"),
+            (sample_manifest_filename, temp_sample_manifest_file.read(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+            (original_table_attachment_filename, temp_original_file.read(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
         ],
     )
     email_message.attach_alternative(email_body, 'text/html')
@@ -428,6 +428,9 @@ def _get_datstat_family_notes(row):
 
     def _get_column_val(column):
         return DC.VALUE_MAP[column][row[column]]
+
+    def _get_list_column_val(column):
+        return ', '.join([DC.VALUE_MAP[column][raw_val] for raw_val in row[column].split(',')])
 
     def _has_test(test):
         return row['TESTS.{}'.format(test)] == DC.YES
@@ -499,7 +502,6 @@ def _get_datstat_family_notes(row):
     clinical_diagnoses = _get_column_val(DC.CLINICAL_DIAGNOSES_COLUMN)
     genetic_diagnoses = _get_column_val(DC.GENETIC_DIAGNOSES_COLUMN)
     doctors_list = json.loads(row[DC.DOCTOR_TYPES_COLUMN])
-    biopsy_split = row[DC.BIOPSY_COLUMN].split(': ')
 
     if _has_test(DC.NONE_TEST):
         testing = 'None'
@@ -572,8 +574,8 @@ def _get_datstat_family_notes(row):
         doctors=', '.join(doctors_list).replace('ClinGen', 'Clinical geneticist'),
         other_doctors=u': {}'.format(row[DC.DOCTOR_TYPES_SPECIFY_COLUMN] or 'Unspecified') if 'Other' in doctors_list else '',
         testing=testing,
-        biopses='None' if 'NONE' in biopsy_split[0] or not biopsy_split[0] else biopsy_split[1],
-        other_biopses=u': {}'.format(row[DC.OTHER_BIOPSY_COLUMN] or 'Unspecified') if 'OTHER' in biopsy_split[0] else '',
+        biopses='None' if (row[DC.NO_BIOPSY_COLUMN] == DC.YES or not row[DC.BIOPSY_COLUMN]) else _get_list_column_val(DC.BIOPSY_COLUMN),
+        other_biopses=u': {}'.format(row[DC.OTHER_BIOPSY_COLUMN] or 'Unspecified') if 'OTHER' in row[DC.BIOPSY_COLUMN] else '',
         studies=u'Yes, Name of studies: {study_names}, Expecting results: {expecting_results}'.format(
             study_names=row[DC.OTHER_STUDIES_COLUMN] or 'Unspecified',
             expecting_results=_get_column_val(DC.EXPECTING_RESULTS_COLUMN) if row[DC.EXPECTING_RESULTS_COLUMN] else 'Unspecified',
@@ -717,6 +719,7 @@ class DatstatConstants:
     MICROARRAY_RELATIVE_SPEC_COLUMN = 'TESTS_MICROARRAY_RELATIVE_SPEC'
     OTHER_TEST_COLUMN = 'TEST_OTHER_SPECIFY'
     BIOPSY_COLUMN = 'BIOPSY'
+    NO_BIOPSY_COLUMN = 'BIOPSY.NONE'
     OTHER_BIOPSY_COLUMN = 'BIOPSY_OTHER_SPECIFY'
     HAS_OTHER_STUDIES_COLUMN = 'OTHER_GENETIC_STUDIES'
     OTHER_STUDIES_COLUMN = 'OTHER_GENETIC_STUDIES_SPECIFY'
@@ -725,6 +728,11 @@ class DatstatConstants:
     SEX_OPTION_MAP = {'1': 'MALE', '2': 'FEMALE', '3': 'UNKNOWN'}
     ETHNICITY_COLUMN_MAP = {'1': 'Hispanic', '2': 'Not Hispanic', '3': 'Unknown', '4': 'I prefer not to answer'}
     SAMPLE_AVAILABILITY_MAP = {'1': 'available', '2': 'not available', '3': 'availability unknown'}
+    BIOPSY_MAP = {
+        biopsy_type: '{} Biopsy'.format(biopsy_type.replace('_', ' ').title())
+        for biopsy_type in ['MUSCLE', 'BONE_MARROW', 'LIVER', 'HEART', 'SKIN', 'CRANIOFACIAL']
+    }
+    BIOPSY_MAP['OTHER'] = 'Other Tissue Biopsy'
 
     VALUE_MAP = {
         CLINICAL_DIAGNOSES_COLUMN: YES_NO_UNSURE_MAP,
@@ -732,6 +740,7 @@ class DatstatConstants:
         ETHNICITY_COLUMN: ETHNICITY_COLUMN_MAP,
         EXPECTING_RESULTS_COLUMN: YES_NO_UNSURE_MAP,
         SAMPLE_AVAILABILITY_COLUMN: SAMPLE_AVAILABILITY_MAP,
+        BIOPSY_COLUMN: BIOPSY_MAP
     }
 
     OTHER_RELATIONSHIP_CODE = '6'

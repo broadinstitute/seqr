@@ -7,7 +7,6 @@ from pyliftover.liftover import LiftOver
 
 from reference_data.models import GENOME_VERSION_GRCh38
 from seqr.models import Project, SavedVariant, Sample, Individual
-from seqr.model_utils import update_xbrowse_vcfffiles
 from seqr.views.apis.dataset_api import _update_variant_samples
 from seqr.views.utils.dataset_utils import match_sample_ids_to_sample_records, validate_index_metadata, \
     get_elasticsearch_index_samples
@@ -177,9 +176,6 @@ class Command(BaseCommand):
 
         # Update project and sample data
         update_model_from_json(project, {'genome_version': GENOME_VERSION_GRCh38, 'has_new_search': True})
-        update_xbrowse_vcfffiles(
-            project, sample_type, elasticsearch_index, dataset_path, matched_sample_id_to_sample_record
-        )
 
         reset_cached_search_results(project)
 

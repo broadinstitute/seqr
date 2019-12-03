@@ -57,7 +57,7 @@ spec:
           mountPath: /.config
           readOnly: true
         - name: seqr-static-files
-          mountPath: /seqr_static_files
+          mountPath: {{ STATIC_MEDIA_DIR }}
         resources:
           requests:
             memory: "0.5Gi"
@@ -89,6 +89,16 @@ spec:
             secretKeyRef:
               name: seqr-secrets
               key: postmark_server_token
+        - name: SLACK_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: seqr-secrets
+              key: slack_token
+        - name: DJANGO_KEY
+          valueFrom:
+            secretKeyRef:
+              name: seqr-secrets
+              key: django_key
         - name: MME_NODE_ADMIN_TOKEN
           valueFrom:
             secretKeyRef:
@@ -100,16 +110,10 @@ spec:
           value: "{{ GCLOUD_ZONE }}"
         - name: GUNICORN_WORKER_THREADS
           value: "{{ GUNICORN_WORKER_THREADS }}"
-        - name: HOST_MACHINE_IP
-          value: "{{ HOST_MACHINE_IP }}"
         - name: MATCHBOX_SERVICE_HOSTNAME
           value: "{{ MATCHBOX_SERVICE_HOSTNAME }}"
         - name: POSTGRES_SERVICE_HOSTNAME
           value: "{{ POSTGRES_SERVICE_HOSTNAME }}"
-        - name: PGHOST
-          value: "{{ POSTGRES_SERVICE_HOSTNAME }}"
-        - name: PGUSER
-          value: "{{ POSTGRES_USERNAME }}"
         - name: MONGO_SERVICE_HOSTNAME
           value: "{{ MONGO_SERVICE_HOSTNAME }}"
         - name: PHENOTIPS_SERVICE_HOSTNAME
@@ -130,8 +134,8 @@ spec:
           value: "{{ MATCHBOX_SERVICE_PORT }}"
         - name: ELASTICSEARCH_SERVICE_PORT
           value: "{{ ELASTICSEARCH_SERVICE_PORT }}"
-        - name: MONGO_SERVICE_PORT
-          value: "{{ MONGO_SERVICE_PORT }}"
+        - name: KIBANA_SERVICE_PORT
+          value: "{{ KIBANA_SERVICE_PORT }}"
         - name: DEPLOY_TO
           value: "{{ DEPLOY_TO }}"
         - name: DEPLOY_TO_PREFIX
@@ -150,6 +154,8 @@ spec:
           value: "{{ ENABLE_DATABASE_BACKUPS }}"
         - name: UPLOADED_PEDIGREE_FILE_RECIPIENTS
           value: "{{ UPLOADED_PEDIGREE_FILE_RECIPIENTS }}"
+        - name: STATIC_MEDIA_DIR
+          value: "{{ STATIC_MEDIA_DIR }}"
         readinessProbe:
           exec:
             command:

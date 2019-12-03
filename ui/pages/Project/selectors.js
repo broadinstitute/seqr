@@ -9,17 +9,17 @@ import {
   FAMILY_FIELD_FIRST_SAMPLE,
   SEX_LOOKUP,
   SHOW_ALL,
-  DATASET_TYPE_VARIANT_CALLS,
   familyVariantSamples,
   getVariantMainTranscript,
   getVariantMainGeneId,
+  isActiveVariantSample,
 } from 'shared/utils/constants'
 import { toCamelcase, toSnakecase, snakecaseToTitlecase } from 'shared/utils/stringUtils'
 
 import {
   getCurrentProject, getFamiliesGroupedByProjectGuid, getIndividualsByGuid, getSamplesByGuid, getGenesById, getUser,
   getAnalysisGroupsGroupedByProjectGuid, getSavedVariantsByGuid, getFirstSampleByFamily, getSortedIndividualsByFamily,
-  getMmeResultsByGuid, getProjectGuid, getAllUsers,
+  getMmeResultsByGuid, getProjectGuid, getAllUsers, getHasActiveVariantSampleByFamily,
 } from 'redux/selectors'
 
 import {
@@ -222,7 +222,7 @@ export const getIndividualsExportData = createSelector(
       ...individual,
       [FAMILY_FIELD_ID]: family.familyId,
       [INDIVIDUAL_HAS_DATA_FIELD]: individual.sampleGuids.some(sampleGuid =>
-        samplesByGuid[sampleGuid].isActive && samplesByGuid[sampleGuid].datasetType === DATASET_TYPE_VARIANT_CALLS,
+        isActiveVariantSample(samplesByGuid[sampleGuid]),
       ),
     }))], [],
   ),
@@ -487,8 +487,8 @@ export const getPageHeaderEntityLinks = createSelector(
   getPageHeaderAnalysisGroup,
   (state, props) => getSearchType(props.match.params),
   getProjectAnalysisGroupFamiliesByGuid,
-  getFirstSampleByFamily,
-  (user, project, family, analysisGroup, searchType, familiesByGuid, loadedSampleByFamilyGuid) => {
+  getHasActiveVariantSampleByFamily,
+  (user, project, family, analysisGroup, searchType, familiesByGuid, hasActiveVariantSampleByFamilyGuid) => {
     if (!project) {
       return null
     }
@@ -501,7 +501,7 @@ export const getPageHeaderEntityLinks = createSelector(
     }
 
     const familiesToConsider = searchType === 'family' ? [family.familyGuid] : Object.keys(familiesByGuid)
-    const disabled = familiesToConsider.every(familyGuid => !loadedSampleByFamilyGuid[familyGuid])
+    const disabled = familiesToConsider.every(familyGuid => !hasActiveVariantSampleByFamilyGuid[familyGuid])
     const entityLinks = [{
       to: `/variant_search/${searchType}/${searchId}`,
       content: `${snakecaseToTitlecase(searchType)} Variant Search`,

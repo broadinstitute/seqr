@@ -291,25 +291,25 @@ export const THIS_CALLSET_FREQUENCY = 'callset'
 export const FREQUENCIES = [
   {
     name: 'g1k',
-    label: '1000 Genomes v3',
+    label: '1000 Genomes',
     homHemi: false,
     labelHelp: 'Filter by allele count (AC) in the 1000 Genomes Phase 3 release (5/2/2013), or by allele frequency (popmax AF) in any one of these five subpopulations defined for 1000 Genomes Phase 3: AFR, AMR, EAS, EUR, SAS',
   },
   {
     name: 'exac',
-    label: 'ExAC v0.3',
+    label: 'ExAC',
     homHemi: true,
     labelHelp: 'Filter by allele count (AC) or homozygous/hemizygous count (H/H) in ExAC, or by allele frequency (popmax AF) in any one of these six subpopulations defined for ExAC: AFR, AMR, EAS, FIN, NFE, SAS',
   },
   {
     name: 'gnomad_genomes',
-    label: 'gnomAD 15k genomes',
+    label: 'gnomAD genomes',
     homHemi: true,
     labelHelp: 'Filter by allele count (AC) or homozygous/hemizygous count (H/H) among gnomAD genomes, or by allele frequency (popmax AF) in any one of these six subpopulations defined for gnomAD genomes: AFR, AMR, EAS, FIN, NFE, ASJ',
   },
   {
     name: 'gnomad_exomes',
-    label: 'gnomAD 123k exomes',
+    label: 'gnomAD exomes',
     homHemi: true,
     labelHelp: 'Filter by allele count (AC) or homozygous/hemizygous count (H/H) among gnomAD exomes, or by allele frequency (popmax AF) in any one of these seven subpopulations defined for gnomAD genomes: AFR, AMR, EAS, FIN, NFE, ASJ, SAS',
   },

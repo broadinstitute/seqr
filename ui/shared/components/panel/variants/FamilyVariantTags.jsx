@@ -11,6 +11,7 @@ import {
   getFamiliesByGuid,
   getSavedVariantsGroupedByFamilyVariants,
   getVariantId,
+  getNotesGroupedByFamilyVariants,
 } from 'redux/selectors'
 import {
   DISCOVERY_CATEGORY_NAME,
@@ -225,15 +226,15 @@ const VariantLink = (
 ) =>
   <VariantLinkContainer>
     <NavLink
-      to={Array.isArray(savedVariant) ?
-        `/variant_search/variant/${variant.variantId}/family/${family.familyGuid}` :
-        `/project/${family.projectGuid}/saved_variants/variant/${savedVariant.variantGuid}`
+      to={savedVariant ?
+        `/project/${family.projectGuid}/saved_variants/variant/${savedVariant.variantGuid}` :
+        `/variant_search/variant/${variant.variantId}/family/${family.familyGuid}`
       }
       activeStyle={NO_DISPLAY}
     >
       <Popup
         trigger={<Icon name="linkify" link />}
-        content={`Go to the page for this individual variant ${variant.variantId} from family ${family.familyGuid}. Note: There is no additional information on this page, it is intended for sharing specific variants.`}
+        content={`Go to the page for this individual variant ${variant.variantId} from family ${family.familyId}. Note: There is no additional information on this page, it is intended for sharing specific variants.`}
         position="right center"
         wide
       />
@@ -247,15 +248,21 @@ VariantLink.propTypes = {
 }
 
 const FamilyVariantTags = (
-  { variant, savedVariant, family, project, dispatchUpdateVariantNote, dispatchUpdateFamilyVariantTags, isCompoundHet, areCompoundHets },
+  { variant, savedVariant, family, project, dispatchUpdateVariantNote, dispatchUpdateFamilyVariantTags, isCompoundHet, areCompoundHets, notes },
 ) => {
   if (family) {
-    let displayVariant
-    if (Array.isArray(variant)) {
-      displayVariant = savedVariant.map((eachSavedVariant, index) => { return eachSavedVariant || variant[index] })
-    } else {
-      displayVariant = savedVariant.length === 0 ? variant : savedVariant
+    const displayVariant = areCompoundHets ? savedVariant.map((eachSavedVariant, index) => eachSavedVariant || variant[index]) : savedVariant || variant
+
+    if (areCompoundHets) {
+      notes = notes.sharedNotes
     }
+    else if (isCompoundHet) {
+      notes = notes.individualNotes
+    }
+    else {
+      notes = (savedVariant && savedVariant.notes) || []
+    }
+
     return (
       <div>
         {!isCompoundHet &&
@@ -294,7 +301,7 @@ const FamilyVariantTags = (
               onSubmit={dispatchUpdateFamilyVariantTags}
             />
             <HorizontalSpacer width={5} />
-            {((savedVariant && savedVariant.tags) || (savedVariant[0] === undefined ? [] : savedVariant[0].tags)).some(tag => tag.category === DISCOVERY_CATEGORY_NAME) &&
+            {[].some(tag => tag.category === DISCOVERY_CATEGORY_NAME) &&
             <span>
               <TagTitle>Fxnl Data:</TagTitle>
               <VariantTagField
@@ -314,7 +321,7 @@ const FamilyVariantTags = (
           <div>
             <TagTitle>Notes:</TagTitle>
             <NoteContainer>
-              {((savedVariant && savedVariant.notes) || (savedVariant[0] === undefined ? [] : savedVariant[0].notes)).map(note =>
+              {notes.map(note =>
                 <VariantNoteField
                   key={note.noteGuid}
                   note={note}
@@ -353,13 +360,15 @@ FamilyVariantTags.propTypes = {
   areCompoundHets: PropTypes.bool,
   dispatchUpdateVariantNote: PropTypes.func,
   dispatchUpdateFamilyVariantTags: PropTypes.func,
+  notes: PropTypes.object,
 }
 
 const mapStateToProps = (state, ownProps) => ({
   family: getFamiliesByGuid(state)[ownProps.familyGuid],
   project: getProjectsByGuid(state)[(getFamiliesByGuid(state)[ownProps.familyGuid] || {}).projectGuid],
   savedVariant: (getSavedVariantsGroupedByFamilyVariants(state)[ownProps.familyGuid] || {})[getVariantId(ownProps.variant)]
-  || (Array.isArray(ownProps.variant) ? ownProps.variant.map(eachVariant => (getSavedVariantsGroupedByFamilyVariants(state)[ownProps.familyGuid] || {})[getVariantId(eachVariant)]) : []),
+  || (ownProps.areCompoundHets ? ownProps.variant.map(eachVariant => (getSavedVariantsGroupedByFamilyVariants(state)[ownProps.familyGuid] || {})[getVariantId(eachVariant)]) : undefined),
+  notes: (getNotesGroupedByFamilyVariants(state)[ownProps.familyGuid] || {})[getVariantId(ownProps.areCompoundHets ? ownProps.variant[0] : ownProps.variant)] || { sharedNotes: [], individualNotes: [] },
 })
 
 const mapDispatchToProps = (dispatch, ownProps) => ({

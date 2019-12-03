@@ -3,7 +3,6 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Grid, Message, Button } from 'semantic-ui-react'
 import styled from 'styled-components'
-import uniqBy from 'lodash/uniqBy'
 
 import DataLoader from 'shared/components/DataLoader'
 import { QueryParamsEditor } from 'shared/components/QueryParamEditor'
@@ -20,14 +19,14 @@ import {
   getSearchedVariantsErrorMessage,
   getTotalVariantsCount,
   getVariantSearchDisplay,
-  getCompoundHetDisplay,
-  getSearchDisplayLoading,
+  getFlattenCompoundHet,
+  getDisplayVariants,
   getSearchedVariantExportConfig,
   getSearchContextIsLoading,
   getInhertanceFilterMode,
 } from '../selectors'
 import GeneBreakdown from './GeneBreakdown'
-import { ALL_RECESSIVE_FILTERS } from '../constants'
+import { ALL_RECESSIVE_INHERITANCE_FILTERS } from '../constants'
 
 
 const LargeRow = styled(Grid.Row)`
@@ -45,17 +44,15 @@ const FIELDS = [
 ]
 
 const BaseVariantSearchResults = ({
-  match, searchedVariants, variantSearchDisplay, searchedVariantExportConfig, onSubmit, load, unload, loading, errorMessage, totalVariantsCount, inheritanceFilter, compoundHetDisplay, toggleUnpair,
+  match, searchedVariants, variantSearchDisplay, searchedVariantExportConfig, onSubmit, load, unload, loading, errorMessage, totalVariantsCount, inheritanceFilter, toggleUnpair, flattenCompoundHet, displayVariants,
 }) => {
   const { searchHash, variantId } = match.params
   const { page = 1, recordsPerPage } = variantSearchDisplay
   const variantDisplayPageOffset = (page - 1) * recordsPerPage
   const paginationFields = totalVariantsCount > recordsPerPage ? [{ ...VARIANT_PAGINATION_FIELD, totalPages: Math.ceil(totalVariantsCount / recordsPerPage) }] : []
-
-  const displayVariants = compoundHetDisplay.flattenCompoundHet ? uniqBy(searchedVariants.flat(), 'variantId') : searchedVariants
-  const compoundHetDisplayFields = ALL_RECESSIVE_FILTERS.includes(inheritanceFilter) ? [FLATTEN_COMPOUND_HET_TOGGLE_FIELD] : []
+  const compoundHetDisplayFields = ALL_RECESSIVE_INHERITANCE_FILTERS.includes(inheritanceFilter) ? [FLATTEN_COMPOUND_HET_TOGGLE_FIELD] : []
   const fields = [...FIELDS, ...paginationFields]
-
+  const compoundHetDisplay = { flattenCompoundHet }
   return (
     <DataLoader
       contentId={searchHash || variantId}
@@ -144,19 +141,21 @@ BaseVariantSearchResults.propTypes = {
   searchedVariantExportConfig: PropTypes.array,
   totalVariantsCount: PropTypes.number,
   inheritanceFilter: PropTypes.string,
-  compoundHetDisplay: PropTypes.object,
+  flattenCompoundHet: PropTypes.bool,
+  displayVariants: PropTypes.array,
   toggleUnpair: PropTypes.func,
 }
 
 const mapStateToProps = (state, ownProps) => ({
   searchedVariants: getSearchedVariants(state),
   loading: getSearchedVariantsIsLoading(state) || getSearchContextIsLoading(state),
-  variantSearchDisplay: getVariantSearchDisplay(state) || getSearchDisplayLoading(state),
+  variantSearchDisplay: getVariantSearchDisplay(state),
   searchedVariantExportConfig: getSearchedVariantExportConfig(state, ownProps),
   totalVariantsCount: getTotalVariantsCount(state, ownProps),
   errorMessage: getSearchedVariantsErrorMessage(state),
   inheritanceFilter: getInhertanceFilterMode(state),
-  compoundHetDisplay: getCompoundHetDisplay(state),
+  flattenCompoundHet: getFlattenCompoundHet(state),
+  displayVariants: getDisplayVariants(state),
 })
 
 const mapDispatchToProps = (dispatch, ownProps) => {
