@@ -1,5 +1,6 @@
 import { createSelector, createSelectorCreator, defaultMemoize } from 'reselect'
 import { formValueSelector } from 'redux-form'
+import uniqBy from 'lodash/uniqBy'
 
 import {
   getProjectsByGuid,
@@ -28,9 +29,13 @@ export const getSavedSearchesByGuid = state => state.savedSearchesByGuid
 export const getSavedSearchesIsLoading = state => state.savedSearchesLoading.isLoading
 export const getSavedSearchesLoadingError = state => state.savedSearchesLoading.errorMessage
 export const getVariantSearchDisplay = state => state.variantSearchDisplay
-export const getCompoundHetDisplay = state => state.compoundHetDisplay
-export const getCompoundHetDisplayLoading = state => state.compoundHetDisplayLoading.isLoading
-export const getFlattenedCompoundHets = state => state.flattenedCompoundHets
+export const getFlattenCompoundHet = state => state.flattenCompoundHet
+
+export const getDisplayVariants = createSelector(
+  getFlattenCompoundHet,
+  getSearchedVariants,
+  (flattenCompoundHet, searchedVariants) => (flattenCompoundHet ? (uniqBy(searchedVariants.flat(), 'variantId') || []) : searchedVariants),
+)
 
 const getCurrentSearchHash = state => state.currentSearchHash
 

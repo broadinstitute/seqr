@@ -1,5 +1,4 @@
 import { combineReducers } from 'redux'
-import uniqBy from 'lodash/uniqBy'
 
 import { updateEntity, RECEIVE_DATA, RECEIVE_SAVED_SEARCHES, REQUEST_SAVED_SEARCHES } from 'redux/rootReducer'
 import { loadingReducer, createSingleObjectReducer, createSingleValueReducer, createObjectsByIdReducer } from 'redux/utils/reducerFactories'
@@ -15,7 +14,6 @@ const REQUEST_SEARCH_GENE_BREAKDOWN = 'REQUEST_SEARCH_GENE_BREAKDOWN'
 const RECEIVE_SEARCH_GENE_BREAKDOWN = 'RECEIVE_SEARCH_GENE_BREAKDOWN'
 const UPDATE_SEARCHED_VARIANT_DISPLAY = 'UPDATE_SEARCHED_VARIANT_DISPLAY'
 const UPDATE_COMPOUND_HET_DISPLAY = 'UPDATE_COMPOUND_HET_DISPLAY'
-const RECEIVE_COMPOUND_HETS = 'RECEIVE_COMPOUND_HETS'
 const REQUEST_SEARCH_CONTEXT = 'REQUEST_SEARCH_CONTEXT'
 const RECEIVE_SEARCH_CONTEXT = 'RECEIVE_SEARCH_CONTEXT'
 const REQUEST_MULTI_PROJECT_SEARCH_CONTEXT = 'REQUEST_MULTI_PROJECT_SEARCH_CONTEXT'
@@ -111,11 +109,8 @@ export const loadProjectGroupContext = (projectCategoryGuid, addElementCallback)
 export const saveSearch = search => updateEntity(search, RECEIVE_SAVED_SEARCHES, '/api/saved_search', 'savedSearchGuid')
 
 export const updateCompoundHetDisplay = ({ updates }) => {
-  return (dispatch, getState) => {
-    dispatch({ type: UPDATE_COMPOUND_HET_DISPLAY, newValue: updates })
-    const state = getState()
-    const displayVariants = updates.flattenCompoundHet ? uniqBy(state.searchedVariants.flat(), 'variantId') : []
-    dispatch({ type: RECEIVE_COMPOUND_HETS, newValue: displayVariants })
+  return (dispatch) => {
+    dispatch({ type: UPDATE_COMPOUND_HET_DISPLAY, newValue: updates.flattenCompoundHet })
   }
 }
 
@@ -223,10 +218,7 @@ export const reducers = {
     page: 1,
     recordsPerPage: 100,
   }, false),
-  compoundHetDisplay: createSingleValueReducer(UPDATE_COMPOUND_HET_DISPLAY, { flattenCompoundHet: false }),
-  // TODO debug loading for flatten compound hets (then rm debug) <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-  compoundHetDisplayLoading: loadingReducer(UPDATE_COMPOUND_HET_DISPLAY, RECEIVE_COMPOUND_HETS, { isLoading: false, errorMessage: null }, true),
-  flattenedCompoundHets: createSingleValueReducer(RECEIVE_COMPOUND_HETS, []),
+  flattenCompoundHet: createSingleValueReducer(UPDATE_COMPOUND_HET_DISPLAY, false),
 }
 
 const rootReducer = combineReducers(reducers)
