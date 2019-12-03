@@ -415,11 +415,12 @@ def _generate_notification_for_seqr_match(individual, results):
     )
 
     post_to_slack(MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL, message)
-    emails = map(lambda s: s.strip().split('mailto:')[-1], project.mme_contact_url.split(','))
-    email_message = EmailMessage(
-        subject=u'New matches found for MME submission {} (project: {})'.format(individual.individual_id, project.name),
-        body=message,
-        to=[email for email in emails if email != MME_DEFAULT_CONTACT_EMAIL],
-        from_email=MME_DEFAULT_CONTACT_EMAIL,
-    )
-    email_message.send()
+    #  TODO re-enable MME email
+    # emails = map(lambda s: s.strip().split('mailto:')[-1], project.mme_contact_url.split(','))
+    # email_message = EmailMessage(
+    #     subject=u'New matches found for MME submission {} (project: {})'.format(individual.individual_id, project.name),
+    #     body=message,
+    #     to=[email for email in emails if email != MME_DEFAULT_CONTACT_EMAIL],
+    #     from_email=MME_DEFAULT_CONTACT_EMAIL,
+    # )
+    # email_message.send()
