@@ -1266,22 +1266,6 @@ def _annotations_filter(annotations):
         consequences_filter |= ~Q('exists', field='transcriptConsequenceTerms')
 
     return consequences_filter, vep_consequences
-    # vep_consequences = [ann for annotation in annotations.values() for ann in annotation]
-    # consequences_filter = Q('terms', transcriptConsequenceTerms=vep_consequences)
-    #
-    # vep_consequences_secondary = []
-    # if annotations_secondary:
-    #     vep_consequences_secondary = [ann for annotation_secondary in annotations_secondary.values() for ann in annotation_secondary]
-    # consequences_filter_secondary = Q('terms', transcriptConsequenceTerms=vep_consequences_secondary)
-    #
-    # # for many intergenic variants VEP doesn't add any annotations, so if user selected 'intergenic_variant',
-    # # also match variants where transcriptConsequenceTerms is empty
-    # if 'intergenic_variant' in vep_consequences:
-    #     consequences_filter |= ~Q('exists', field='transcriptConsequenceTerms')
-    # if 'intergenic_variant' in vep_consequences_secondary:
-    #     consequences_filter_secondary |= ~Q('exists', field='transcriptConsequenceTerms')
-    #
-    # return consequences_filter, consequences_filter_secondary, vep_consequences, vep_consequences_secondary
 
 
 POPULATIONS = {
