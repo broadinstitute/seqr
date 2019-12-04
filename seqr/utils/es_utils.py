@@ -782,24 +782,27 @@ class EsSearch(BaseEsSearch):
     def _deduplicate_compound_het_results(self, compound_het_results):
         duplicates = 0
         results = {}
-        for variant_group in compound_het_results:
-            gene = variant_group.keys()[0]
-            variants = variant_group[gene]
+        for gene_compound_het_pairs in compound_het_results:
+            gene = gene_compound_het_pairs.keys()[0]
+            compound_het_pair = gene_compound_het_pairs[gene]
             if gene in results:
-                for variant in variants:
-                    existing_index = next(
-                        (i for i, existing in enumerate(results[gene]) if existing['variantId'] == variant['variantId']), None,
-                    )
-                    if existing_index is not None:
-                        results[gene][existing_index]['genotypes'].update(variant['genotypes'])
-                        results[gene][existing_index]['familyGuids'] = sorted(
-                            results[gene][existing_index]['familyGuids'] + variant['familyGuids']
+                if len(self._index_searches) > 1 and False:
+                    for variant in compound_het_pair:
+                        existing_index = next(
+                            (i for i, existing in enumerate(results[gene]) if existing['variantId'] == variant['variantId']), None,
                         )
-                        duplicates += 1
+                        if existing_index is not None:
+                            results[gene][existing_index]['genotypes'].update(variant['genotypes'])
+                            results[gene][existing_index]['familyGuids'] = sorted(
+                                results[gene][existing_index]['familyGuids'] + variant['familyGuids']
+                            )
+                            duplicates += 1
+                        else:
+                            results[gene].append(variant)
                     else:
                         results[gene].append(variant)
             else:
-                results[gene] = variants
+                results[gene] = compound_het_pair
 
         self.previous_search_results['duplicate_doc_count'] = duplicates + self.previous_search_results.get('duplicate_doc_count', 0)
 

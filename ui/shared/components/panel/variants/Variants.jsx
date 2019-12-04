@@ -2,6 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { Grid, Divider } from 'semantic-ui-react'
+import intersection from 'lodash/intersection'
 
 import { CLINSIG_SEVERITY, getVariantMainGeneId } from 'shared/utils/constants'
 import FamilyVariantReads from './FamilyVariantReads'
@@ -69,7 +70,7 @@ const Variant = ({ variant, isCompoundHet }) => {
       </Grid.Column>}
       {!isCompoundHet &&
       <Grid.Column>
-        <VariantGene geneId={mainGeneId} variant={variant} />
+        {mainGeneId && <VariantGene geneId={mainGeneId} variant={variant} />}
         {Object.keys(variant.transcripts).length > 1 && <Divider />}
         {variantGenes}
       </Grid.Column>}
@@ -94,11 +95,9 @@ Variant.propTypes = {
 
 
 const CompoundHets = ({ variants }) => {
-  const allGeneIds = variants.map(({ transcripts }) => Object.keys(transcripts))
-  const sharedGeneId = (allGeneIds.shift().filter(sameVariantGeneIds => allGeneIds.every(singleGeneId => singleGeneId.indexOf(sameVariantGeneIds) !== -1)) || [])[0]
-
+  const sharedGeneIds = intersection(variants.map(({ transcripts }) => Object.keys(transcripts))[0]) || []
   return (
-    <StyledVariantRow key={variants[0].variantId} >
+    <StyledVariantRow key={variants.map(v => v.variantId).join()} >
       <VerticalSpacer height={16} />
       {variants[0].familyGuids.map(familyGuid =>
         <Grid.Column key={familyGuid} width={16}>
@@ -106,12 +105,12 @@ const CompoundHets = ({ variants }) => {
         </Grid.Column>,
       )}
       <Grid.Column width={16}>
-        {sharedGeneId &&
-        <VariantGene geneId={sharedGeneId} variant={variants[0]} areCompoundHets />}
+        {sharedGeneIds[0] && <VariantGene geneId={sharedGeneIds[0]} variant={variants[0]} areCompoundHets />}
       </Grid.Column>
       <StyledCompoundHetRows stackable columns="equal">
-        <Variant variant={variants[0]} key={variants[0].variantId} isCompoundHet />
-        <Variant variant={variants[1]} key={variants[1].variantId} isCompoundHet />
+        {variants.map(compoundHet =>
+          <Variant variant={compoundHet} key={compoundHet.variantId} isCompoundHet />,
+        )}
       </StyledCompoundHetRows>
     </StyledVariantRow>
   )
