@@ -664,3 +664,12 @@ def get_json_for_saved_searches(search, user):
 
 def get_json_for_saved_search(search, user):
     return _get_json_for_model(search, user=user, get_json_for_models=get_json_for_saved_searches)
+
+
+def get_json_for_matchmaker_submissions(models, individual_guid=None):
+    nested_fields = [{'fields': ('individual', 'guid'), 'value': individual_guid}]
+    return _get_json_for_models(models, nested_fields=nested_fields, guid_key='submissionGuid')
+
+
+def get_json_for_matchmaker_submission(submission, **kwargs):
+    return _get_json_for_model(submission, get_json_for_models=get_json_for_matchmaker_submissions, **kwargs)

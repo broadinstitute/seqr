@@ -13,7 +13,7 @@ from seqr.models import Individual, SavedVariant
 from seqr.utils.communication_utils import post_to_slack
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.orm_to_json_utils import _get_json_for_model, get_json_for_saved_variants
+from seqr.views.utils.orm_to_json_utils import _get_json_for_model, get_json_for_saved_variants, get_json_for_matchmaker_submission
 from seqr.views.utils.permissions_utils import check_mme_permissions
 
 from settings import MME_HEADERS, MME_LOCAL_MATCH_URL, MME_EXTERNAL_MATCH_URL, MME_DEFAULT_CONTACT_EMAIL, BASE_URL,  \
@@ -232,7 +232,7 @@ def delete_mme_submission(request, submission_guid):
         if not (saved_result.we_contacted or saved_result.host_contacted or saved_result.comments):
             saved_result.delete()
 
-    return create_json_response({'individualsByGuid': {submission.individual.guid: {'mmeDeletedDate': deleted_date}}})
+    return create_json_response({'mmeSubmissionsByGuid': {submission.guid: {'mmeDeletedDate': deleted_date}}})
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -345,16 +345,17 @@ def _parse_mme_results(submission, saved_results, user, additional_genes=None, r
         mme_submitted_data, hpo_terms_by_id, gene_symbols_to_ids, submission.guid
     ) if mme_submitted_data else None
 
+    submission_json = get_json_for_matchmaker_submission(submission, individual_guid=submission.individual.guid)
+    submission_json.update({
+        'mmeResultGuids': parsed_results_gy_guid.keys(),
+        'mmeSubmittedData': submitted_data,
+    })
+
     response = {
         'mmeResultsByGuid': parsed_results_gy_guid,
         'mmeContactNotes': contact_notes,
-        'individualsByGuid': {submission.individual.guid: {
-            'mmeResultGuids': parsed_results_gy_guid.keys(),
-            'mmeSubmittedData': submitted_data,
-            'mmeSubmissionGuid': submission.guid,
-            'mmeSubmittedDate': submission.last_modified_date,
-            'mmeDeletedDate': submission.deleted_date,
-        }},
+        'mmeSubmissionsByGuid': {submission.guid: submission_json},
+        'individualsByGuid': {submission.individual.guid: {'mmeSubmissionGuid': submission.guid}},
         'genesById': genes_by_id,
     }
     if response_json:

@@ -26,7 +26,7 @@ import {
   getMatchmakerMatchesLoading,
   getIndividualTaggedVariants,
   getDefaultMmeSubmissionByIndividual,
-  getMmeResultsByIndividual,
+  getMmeResultsBySubmission,
   getMmeDefaultContactEmail,
   getMatchmakerContactNotes,
 } from '../selectors'
@@ -325,14 +325,14 @@ const BaseMatchmakerIndividual = ({ loading, load, searchMme, individual, onSubm
   <div>
     <VerticalSpacer height={10} />
     <Header size="medium" content={individual.displayName} dividing />
-    {individual.mmeSubmittedData && !mmeSubmission.deletedDate ?
+    {mmeSubmission && mmeSubmission.mmeSubmittedData && !mmeSubmission.deletedDate ?
       <Grid padded>
         <Grid.Row>
           <Grid.Column width={2}><b>Submitted Genotypes:</b></Grid.Column>
           <Grid.Column width={14}>
-            {individual.mmeSubmittedData.geneVariants.length ?
+            {mmeSubmission.mmeSubmittedData.geneVariants.length ?
               <SubmissionGeneVariants
-                geneVariants={individual.mmeSubmittedData.geneVariants}
+                geneVariants={mmeSubmission.mmeSubmittedData.geneVariants}
                 modalId="submission"
                 horizontal
               /> : <i>None</i>}
@@ -341,8 +341,8 @@ const BaseMatchmakerIndividual = ({ loading, load, searchMme, individual, onSubm
         <Grid.Row>
           <Grid.Column width={2}><b>Submitted Phenotypes:</b></Grid.Column>
           <Grid.Column width={14}>
-            {individual.mmeSubmittedData.phenotypes.length ?
-              <Phenotypes phenotypes={individual.mmeSubmittedData.phenotypes} horizontal /> : <i>None</i>}
+            {mmeSubmission.mmeSubmittedData.phenotypes.length ?
+              <Phenotypes phenotypes={mmeSubmission.mmeSubmittedData.phenotypes} horizontal /> : <i>None</i>}
           </Grid.Column>
         </Grid.Row>
       </Grid> :
@@ -370,29 +370,29 @@ const BaseMatchmakerIndividual = ({ loading, load, searchMme, individual, onSubm
       </div>
     }
     <DataLoader content load={load} loading={false}>
-      {mmeSubmission && !mmeSubmission.deletedDate &&
+      {mmeSubmission && !mmeSubmission.deletedDate && mmeResults &&
         <div>
           <ButtonLink
-            disabled={!individual.mmeResultGuids}
+            disabled={loading}
             onClick={searchMme}
             icon="search"
             labelPosition="right"
             content="Search for New Matches"
           />|<HorizontalSpacer width={10} />
           <UpdateButton
-            disabled={!individual.mmeSubmittedData}
+            disabled={loading}
             buttonText="Update Submission"
             modalSize="large"
             modalTitle={`Update Submission for ${individual.displayName}`}
             modalId={`${individual.individualGuid}_-_updateMmeSubmission`}
             confirmDialog="Are you sure you want to update this submission?"
-            initialValues={individual.mmeSubmittedData}
+            initialValues={mmeSubmission.mmeSubmittedData}
             formFields={SUBMISSION_EDIT_FIELDS}
             onSubmit={onSubmit}
             showErrorPanel
           />|<HorizontalSpacer width={10} />
           <DeleteButton
-            disabled={!individual.mmeSubmittedData}
+            disabled={loading}
             onSubmit={onSubmit}
             buttonText="Delete Submission"
             confirmDialog="Are you sure you want to remove this patient from the Matchmaker Exchange"
@@ -409,7 +409,7 @@ const BaseMatchmakerIndividual = ({ loading, load, searchMme, individual, onSubm
             emptyContent="No matches found"
           />
         </div>}
-      {mmeResults.removed && mmeResults.removed.length > 0 &&
+      {mmeResults && mmeResults.removed && mmeResults.removed.length > 0 &&
         <div>
           <VerticalSpacer height={10} />
           <Header dividing disabled size="medium" content="Previous Matches" />
@@ -442,16 +442,16 @@ const mapStateToProps = (state, ownProps) => ({
   loading: getMatchmakerMatchesLoading(state),
   defaultMmeSubmission: getDefaultMmeSubmissionByIndividual(state, ownProps)[ownProps.individual.individualGuid],
   mmeSubmission: getMmeSubmissionsByGuid(state)[ownProps.individual.mmeSubmissionGuid],
-  mmeResults: getMmeResultsByIndividual(state, ownProps)[ownProps.individual.individualGuid],
+  mmeResults: getMmeResultsBySubmission(state, ownProps)[ownProps.individual.mmeSubmissionGuid],
 })
 
 const mapDispatchToProps = (dispatch, ownProps) => {
   return {
     load: () => {
-      return dispatch(loadMmeMatches(ownProps.individual.individualGuid, false))
+      return dispatch(loadMmeMatches(ownProps.individual.mmeSubmissionGuid, false))
     },
     searchMme: () => {
-      return dispatch(loadMmeMatches(ownProps.individual.individualGuid, true))
+      return dispatch(loadMmeMatches(ownProps.individual.mmeSubmissionGuid, true))
     },
     onSubmit: (values) => {
       return dispatch(updateMmeSubmission({ ...values, individualGuid: ownProps.individual.individualGuid }))

@@ -19,7 +19,7 @@ from seqr.views.utils.json_to_orm_utils import update_project_from_json
 from seqr.views.utils.orm_to_json_utils import _get_json_for_project, get_json_for_samples, _get_json_for_families, \
     _get_json_for_individuals, get_json_for_saved_variants, get_json_for_analysis_groups, \
     get_json_for_variant_functional_data_tag_types, get_sorted_project_locus_lists, \
-    get_json_for_project_collaborator_list, _get_json_for_models
+    get_json_for_project_collaborator_list, _get_json_for_models, get_json_for_matchmaker_submissions
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_permissions
 from seqr.views.utils.phenotips_utils import create_phenotips_user, get_phenotips_uname_and_pwd_for_project
 from seqr.views.utils.individual_utils import export_individuals
@@ -284,7 +284,7 @@ def _retrieve_samples(project_guid, individuals_by_guid, individual_models):
 def _retrieve_mme_submissions(individuals_by_guid, individual_models):
     models = MatchmakerSubmission.objects.filter(individual__in=individual_models)
 
-    submissions = _get_json_for_models(models, nested_fields=[{'fields': ('individual', 'guid')}], guid_key='submissionGuid')
+    submissions = get_json_for_matchmaker_submissions(models)
 
     submissions_by_guid = {}
     for s in submissions:

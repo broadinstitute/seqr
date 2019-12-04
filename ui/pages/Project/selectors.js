@@ -19,7 +19,7 @@ import { toCamelcase, toSnakecase, snakecaseToTitlecase } from 'shared/utils/str
 import {
   getCurrentProject, getFamiliesGroupedByProjectGuid, getIndividualsByGuid, getSamplesByGuid, getGenesById, getUser,
   getAnalysisGroupsGroupedByProjectGuid, getSavedVariantsByGuid, getFirstSampleByFamily, getSortedIndividualsByFamily,
-  getMmeResultsByGuid, getProjectGuid, getAllUsers, getHasActiveVariantSampleByFamily,
+  getMmeResultsByGuid, getMmeSubmissionsByGuid, getProjectGuid, getAllUsers, getHasActiveVariantSampleByFamily,
 } from 'redux/selectors'
 
 import {
@@ -305,38 +305,41 @@ export const getDefaultMmeSubmissionByIndividual = createSelector(
   })),
 )
 
-export const getMmeResultsByIndividual = createSelector(
+export const getMmeResultsBySubmission = createSelector(
   getMmeResultsByGuid,
-  getProjectAnalysisGroupIndividualsByGuid,
-  (mmeResultsByGuid, individualsByGuid) =>
-    mapValues(individualsByGuid, individual => (individual.mmeResultGuids || []).reduce((acc, resultGuid) => {
-      const result = {
-        ...mmeResultsByGuid[resultGuid].matchStatus,
-        ...mmeResultsByGuid[resultGuid],
+  getMmeSubmissionsByGuid,
+  (mmeResultsByGuid, mmeSubmissionsByGuid) =>
+    Object.values(mmeResultsByGuid).reduce((acc, result) => {
+      const { submissionGuid } = result
+      if (!acc[submissionGuid]) {
+        acc[submissionGuid] = { active: [], removed: [] }
       }
-      if (result.matchRemoved || individual.mmeDeletedDate) {
-        acc.removed.push(result)
+
+      const parsedResult = { ...result.matchStatus, ...result }
+      if (parsedResult.matchRemoved || mmeSubmissionsByGuid[submissionGuid].deletedDate) {
+        acc[submissionGuid].removed.push(parsedResult)
       }
       else {
-        acc.active.push(result)
+        acc[submissionGuid].active.push(parsedResult)
       }
       return acc
-    }, { active: [], removed: [] })),
+    }, { }),
 )
 
 export const getMmeDefaultContactEmail = createSelector(
   getMmeResultsByGuid,
+  getMmeSubmissionsByGuid,
   getIndividualsByGuid,
   getGenesById,
   getSavedVariantsByGuid,
   getUser,
   (state, ownProps) => ownProps.matchmakerResultGuid,
-  (mmeResultsByGuid, individualsByGuid, genesById, savedVariants, user, matchmakerResultGuid) => {
+  (mmeResultsByGuid, mmeSubmissionsByGuid, individualsByGuid, genesById, savedVariants, user, matchmakerResultGuid) => {
     const { patient, geneVariants, submissionGuid } = mmeResultsByGuid[matchmakerResultGuid]
-    const geneName = geneVariants && geneVariants.length && (genesById[geneVariants[0].geneId] || {}).geneSymbol
+    const { mmeSubmittedData, individualGuid } = mmeSubmissionsByGuid[submissionGuid]
+    const { familyGuid } = individualsByGuid[individualGuid]
 
-    // TODo fix contact email
-    const { mmeSubmittedData, familyGuid, individualGuid } = Object.values(individualsByGuid).find(({ mmeSubmissionGuid }) => mmeSubmissionGuid === submissionGuid)
+    const geneName = geneVariants && geneVariants.length && (genesById[geneVariants[0].geneId] || {}).geneSymbol
 
     const submittedGenes = [...new Set((mmeSubmittedData.geneVariants || []).map(
       ({ geneId }) => (genesById[geneId] || {}).geneSymbol))].join(', ')

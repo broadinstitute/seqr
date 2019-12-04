@@ -84,7 +84,10 @@ class MatchmakerAPITest(TestCase):
 
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), {'mmeResultsByGuid', 'individualsByGuid', 'genesById', 'savedVariantsByGuid', 'mmeContactNotes'})
+        self.assertSetEqual(set(response_json.keys()), {
+            'mmeResultsByGuid', 'individualsByGuid', 'genesById', 'savedVariantsByGuid', 'mmeContactNotes',
+            'mmeSubmissionsByGuid',
+        })
 
         self.assertSetEqual(
             set(response_json['mmeResultsByGuid'].keys()), {'MR0007228_VCGS_FAM50_156', 'MR0004688_RGP_105_3', RESULT_STATUS_GUID}
@@ -129,14 +132,15 @@ class MatchmakerAPITest(TestCase):
                 'createdDate': '2019-02-12T18:43:56.358Z',
             },
         })
-        self.assertDictEqual(response_json['individualsByGuid'], {INDIVIDUAL_GUID: {
+        self.assertDictEqual(response_json['mmeSubmissionsByGuid'], {SUBMISSION_GUID: {
             'mmeResultGuids': mock.ANY,
             'mmeSubmittedData': {
                 'submissionGuid': SUBMISSION_GUID,
                 'patient': {
                     'id': 'NA19675_1_01',
                     'label': 'NA19675_1',
-                    'contact': {'href': 'mailto:matchmaker@broadinstitute.org', 'name': 'Sam Baxter', 'institution': 'Broad Center for Mendelian Genomics'},
+                    'contact': {'href': 'mailto:matchmaker@broadinstitute.org', 'name': 'Sam Baxter',
+                                'institution': 'Broad Center for Mendelian Genomics'},
                     'species': 'NCBITaxon:9606',
                     'sex': 'MALE',
                     'features': [
@@ -171,12 +175,17 @@ class MatchmakerAPITest(TestCase):
                     'genomeVersion': 'GRCh38',
                 }],
             },
+            'submissionGuid': SUBMISSION_GUID,
+            'individualGuid': INDIVIDUAL_GUID,
+            'createdDate': '2018-05-23T09:07:49.719Z',
+            'lastModifiedDate': '2018-05-23T09:07:49.719Z',
+            'deletedDate': None,
+        }})
+        self.assertDictEqual(response_json['individualsByGuid'], {INDIVIDUAL_GUID: {
             'mmeSubmissionGuid': SUBMISSION_GUID,
-            'mmeSubmittedDate': '2018-05-23T09:07:49.719Z',
-            'mmeDeletedDate': None,
         }})
         self.assertSetEqual(
-            set(response_json['individualsByGuid'][INDIVIDUAL_GUID]['mmeResultGuids']),
+            set(response_json['mmeSubmissionsByGuid'][SUBMISSION_GUID]['mmeResultGuids']),
             {'MR0007228_VCGS_FAM50_156', 'MR0004688_RGP_105_3', RESULT_STATUS_GUID})
 
         self.assertSetEqual(
@@ -213,7 +222,9 @@ class MatchmakerAPITest(TestCase):
 
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), {'mmeResultsByGuid', 'individualsByGuid', 'genesById', 'mmeContactNotes'})
+        self.assertSetEqual(set(response_json.keys()), {
+            'mmeResultsByGuid', 'individualsByGuid', 'genesById', 'mmeContactNotes', 'mmeSubmissionsByGuid',
+        })
 
         self.assertEqual(len(response_json['mmeResultsByGuid']), 3)
         self.assertTrue(RESULT_STATUS_GUID in response_json['mmeResultsByGuid'])
@@ -222,13 +233,14 @@ class MatchmakerAPITest(TestCase):
 
         self.assertDictEqual(response_json['mmeResultsByGuid'][new_result_guid], PARSED_NEW_MATCH_JSON)
         self.assertTrue(response_json['mmeResultsByGuid']['MR0004688_RGP_105_3']['matchStatus']['matchRemoved'])
-        self.assertDictEqual(response_json['individualsByGuid'], {INDIVIDUAL_GUID: {
+        self.assertDictEqual(response_json['mmeSubmissionsByGuid'], {SUBMISSION_GUID: {
             'mmeResultGuids': mock.ANY,
             'mmeSubmittedData': {
                 'patient': {
                     'id': 'NA19675_1_01',
                     'label': 'NA19675_1',
-                    'contact': {'href': 'mailto:matchmaker@broadinstitute.org', 'name': 'Sam Baxter', 'institution': 'Broad Center for Mendelian Genomics'},
+                    'contact': {'href': 'mailto:matchmaker@broadinstitute.org', 'name': 'Sam Baxter',
+                                'institution': 'Broad Center for Mendelian Genomics'},
                     'species': 'NCBITaxon:9606',
                     'sex': 'MALE',
                     'features': [
@@ -264,12 +276,17 @@ class MatchmakerAPITest(TestCase):
                 }],
                 'submissionGuid': SUBMISSION_GUID,
             },
+            'individualGuid': INDIVIDUAL_GUID,
+            'submissionGuid': SUBMISSION_GUID,
+            'createdDate': '2018-05-23T09:07:49.719Z',
+            'lastModifiedDate': '2018-05-23T09:07:49.719Z',
+            'deletedDate': None,
+        }})
+        self.assertDictEqual(response_json['individualsByGuid'], {INDIVIDUAL_GUID: {
             'mmeSubmissionGuid': SUBMISSION_GUID,
-            'mmeSubmittedDate': '2018-05-23T09:07:49.719Z',
-            'mmeDeletedDate': None,
         }})
         self.assertSetEqual(
-            set(response_json['individualsByGuid'][INDIVIDUAL_GUID]['mmeResultGuids']),
+            set(response_json['mmeSubmissionsByGuid'][SUBMISSION_GUID]['mmeResultGuids']),
             set(response_json['mmeResultsByGuid'].keys()))
 
         self.assertSetEqual(
@@ -408,12 +425,13 @@ class MatchmakerAPITest(TestCase):
         }))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), {'mmeResultsByGuid', 'individualsByGuid', 'genesById', 'mmeContactNotes'})
+        self.assertSetEqual(set(response_json.keys()), {
+            'mmeResultsByGuid', 'individualsByGuid', 'genesById', 'mmeContactNotes', 'mmeSubmissionsByGuid',
+        })
 
-        self.assertEqual(len(response_json['mmeResultsByGuid']), 1)
-        self.assertDictEqual(response_json['mmeResultsByGuid'].values()[0], PARSED_NEW_MATCH_NEW_SUBMISSION_JSON)
-        new_submission_guid = response_json['mmeResultsByGuid'].values()[0]['submissionGuid']
-        self.assertDictEqual(response_json['individualsByGuid'], {NO_SUBMISSION_INDIVIDUAL_GUID: {
+        self.assertEqual(len(response_json['mmeSubmissionsByGuid']), 1)
+        new_submission_guid = response_json['mmeSubmissionsByGuid'].keys()[0]
+        self.assertDictEqual(response_json['mmeSubmissionsByGuid'], {new_submission_guid: {
             'mmeResultGuids': response_json['mmeResultsByGuid'].keys(),
             'mmeSubmittedData': {
                 'submissionGuid': new_submission_guid,
@@ -451,15 +469,26 @@ class MatchmakerAPITest(TestCase):
                     'genomeVersion': 'GRCh38',
                 }],
             },
-            'mmeSubmissionGuid': new_submission_guid,
-            'mmeSubmittedDate': mock.ANY,
-            'mmeDeletedDate': None,
+            'individualGuid': NO_SUBMISSION_INDIVIDUAL_GUID,
+            'submissionGuid': new_submission_guid,
+            'createdDate': mock.ANY,
+            'lastModifiedDate': mock.ANY,
+            'deletedDate': None,
         }})
-
         self.assertEqual(
-            response_json['individualsByGuid'][NO_SUBMISSION_INDIVIDUAL_GUID]['mmeSubmittedDate'][:10],
+            response_json['mmeSubmissionsByGuid'][new_submission_guid]['createdDate'][:10],
             datetime.today().strftime('%Y-%m-%d')
         )
+        self.assertEqual(
+            response_json['mmeSubmissionsByGuid'][new_submission_guid]['lastModifiedDate'][:10],
+            datetime.today().strftime('%Y-%m-%d')
+        )
+        self.assertDictEqual(response_json['individualsByGuid'], {NO_SUBMISSION_INDIVIDUAL_GUID: {
+            'mmeSubmissionGuid': new_submission_guid,
+        }})
+        self.assertEqual(len(response_json['mmeResultsByGuid']), 1)
+        self.assertDictEqual(response_json['mmeResultsByGuid'].values()[0], PARSED_NEW_MATCH_NEW_SUBMISSION_JSON)
+        self.assertEqual(response_json['mmeResultsByGuid'].values()[0]['submissionGuid'], new_submission_guid)
         self.assertListEqual(response_json['genesById'].keys(), ['ENSG00000186092'])
 
         self.assertDictEqual(response_json['mmeContactNotes'], {
@@ -524,11 +553,13 @@ class MatchmakerAPITest(TestCase):
 
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), {'mmeResultsByGuid', 'individualsByGuid', 'genesById', 'mmeContactNotes'})
+        self.assertSetEqual(set(response_json.keys()), {
+            'mmeResultsByGuid', 'individualsByGuid', 'genesById', 'mmeContactNotes', 'mmeSubmissionsByGuid',
+        })
 
         self.assertEqual(len(response_json['mmeResultsByGuid']), 1)
         self.assertDictEqual(response_json['mmeResultsByGuid'].values()[0], PARSED_NEW_MATCH_NEW_SUBMISSION_JSON)
-        self.assertDictEqual(response_json['individualsByGuid'], {NO_SUBMISSION_INDIVIDUAL_GUID: {
+        self.assertDictEqual(response_json['mmeSubmissionsByGuid'], {new_submission_guid: {
             'mmeResultGuids': response_json['mmeResultsByGuid'].keys(),
             'mmeSubmittedData': {
                 'submissionGuid': new_submission_guid,
@@ -551,14 +582,27 @@ class MatchmakerAPITest(TestCase):
                 ],
                 'geneVariants': [],
             },
-            'mmeSubmissionGuid': new_submission_guid,
-            'mmeSubmittedDate': mock.ANY,
-            'mmeDeletedDate': None,
+            'individualGuid': NO_SUBMISSION_INDIVIDUAL_GUID,
+            'submissionGuid': new_submission_guid,
+            'createdDate': mock.ANY,
+            'lastModifiedDate': mock.ANY,
+            'deletedDate': None,
         }})
         self.assertEqual(
-            response_json['individualsByGuid'][NO_SUBMISSION_INDIVIDUAL_GUID]['mmeSubmittedDate'][:10],
+            response_json['mmeSubmissionsByGuid'][new_submission_guid]['createdDate'][:10],
             datetime.today().strftime('%Y-%m-%d')
         )
+        self.assertEqual(
+            response_json['mmeSubmissionsByGuid'][new_submission_guid]['lastModifiedDate'][:10],
+            datetime.today().strftime('%Y-%m-%d')
+        )
+        self.assertNotEqual(
+            response_json['mmeSubmissionsByGuid'][new_submission_guid]['createdDate'],
+            response_json['mmeSubmissionsByGuid'][new_submission_guid]['lastModifiedDate']
+        )
+        self.assertDictEqual(response_json['individualsByGuid'], {NO_SUBMISSION_INDIVIDUAL_GUID: {
+            'mmeSubmissionGuid': new_submission_guid,
+        }})
         self.assertListEqual(response_json['genesById'].keys(), ['ENSG00000186092'])
         self.assertListEqual(response_json['mmeContactNotes'].keys(), ['st georges, university of london'])
 
@@ -602,11 +646,11 @@ class MatchmakerAPITest(TestCase):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertEqual(
-            response_json['individualsByGuid'][INDIVIDUAL_GUID]['mmeDeletedDate'][:10],
+            response_json['mmeSubmissionsByGuid'][SUBMISSION_GUID]['mmeDeletedDate'][:10],
             datetime.today().strftime('%Y-%m-%d')
         )
 
-        self.assertEqual(MatchmakerResult.objects.filter(submission__individual__guid=INDIVIDUAL_GUID).count(), 2)
+        self.assertEqual(MatchmakerResult.objects.filter(submission__guid=SUBMISSION_GUID).count(), 2)
 
         # Test proxy calls
         self.assertEqual(len(responses.calls), 2)

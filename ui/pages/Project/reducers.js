@@ -170,13 +170,13 @@ export const updateAnalysisGroup = (values) => {
   return updateEntity(values, RECEIVE_DATA, `/api/project/${values.projectGuid}/analysis_groups`, 'analysisGroupGuid')
 }
 
-export const loadMmeMatches = (individualGuid, search) => {
+export const loadMmeMatches = (submissionGuid, search) => {
   return (dispatch, getState) => {
     const state = getState()
-    const individual = state.individualsByGuid[individualGuid]
-    if (!individual.mmeResultGuids || search) {
+    const submission = state.mmeSubmissionsByGuid[submissionGuid]
+    if (submission && (!submission.mmeResultGuids || search)) {
       dispatch({ type: REQUEST_MME_MATCHES })
-      new HttpRequestHelper(`/api/matchmaker/${search ? 'search' : 'get'}_mme_matches/${individual.mmeSubmissionGuid}`,
+      new HttpRequestHelper(`/api/matchmaker/${search ? 'search' : 'get'}_mme_matches/${submissionGuid}`,
         (responseJson) => {
           dispatch({
             type: RECEIVE_DATA,
