@@ -3,7 +3,7 @@
 from __future__ import unicode_literals
 
 from django.db import migrations, models
-
+from matchmaker.matchmaker_utils import get_submission_json_for_external_match
 
 RESULT_FIELDS = [
     'guid', 'created_date', 'last_modified_date', 'result_data', 'we_contacted', 'host_contacted', 'deemed_irrelevant',
@@ -33,13 +33,10 @@ def bulk_copy_models(db_alias, source_model, dest_model, fields, field_process_f
     all_source_models = all_source_models.all()
     if all_source_models:
         print('Copying {} {} to {}'.format(all_source_models.count(), source_model.__name__, dest_model.__name__))
-        try:
-            new_models = [
-                dest_model(**{field: field_process_funcs.get(field, getattr)(model, field) for field in fields})
-                for model in all_source_models
-            ]
-        except Exception as e:
-            import pdb; pdb.set_trace()
+        new_models = [
+            dest_model(**{field: field_process_funcs.get(field, getattr)(model, field) for field in fields})
+            for model in all_source_models
+        ]
         dest_model.objects.bulk_create(new_models)
 
 
@@ -117,16 +114,16 @@ def reverse_migrate_submissions(apps, schema_editor):
         ind.mme_deleted_by_id = submission.deleted_by_id
         ind.mme_deleted_date = submission.deleted_date
         ind.mme_submitted_date = submission.created_date
-        ind.mme_submitted_data = submission.get_json_for_external_match()
+        ind.mme_submitted_data = get_submission_json_for_external_match(submission)
         ind.save()
 
 
 def reverse_copy_results(apps, schema_editor):
-    SeqrResult = apps.get_model("seqr", "MatchmakerContactNotes")
+    SeqrResult = apps.get_model("seqr", "MatchmakerResult")
     MatchmakerResult = apps.get_model("matchmaker", "MatchmakerResult")
     db_alias = schema_editor.connection.alias
 
-    field_process_funcs = {'individual_id': lambda model, field: model.matchmakersubmission.individual_id}
+    field_process_funcs = {'individual_id': lambda model, field: model.submission.individual_id}
     fields = RESULT_FIELDS + field_process_funcs.keys()
     bulk_copy_models(db_alias, MatchmakerResult, SeqrResult, fields, field_process_funcs=field_process_funcs)
 

@@ -18,7 +18,7 @@ from seqr.utils.file_utils import file_iter
 from seqr.utils.gene_utils import get_genes
 from seqr.utils.xpos_utils import get_chrom_pos
 
-from seqr.views.utils.matchmaker_utils import get_mme_genes_phenotypes, parse_mme_patient
+from matchmaker.matchmaker_utils import get_mme_genes_phenotypes, parse_mme_patient
 from seqr.views.apis.saved_variant_api import _saved_variant_genes, _add_locus_lists
 from seqr.views.utils.file_utils import parse_file
 from seqr.views.utils.json_utils import create_json_response, _to_camel_case

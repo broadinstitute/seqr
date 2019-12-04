@@ -2,7 +2,9 @@ import logging
 
 from reference_data.models import HumanPhenotypeOntology
 
+from matchmaker.models import MatchmakerSubmission
 from seqr.utils.gene_utils import get_genes, get_gene_ids_for_gene_symbols
+from settings import MME_DEFAULT_CONTACT_INSTITUTION
 
 logger = logging.getLogger(__name__)
 
@@ -56,3 +58,21 @@ def parse_mme_patient(result, hpo_terms_by_id, gene_symbols_to_ids, individual_g
     }
     parsed_result.update(result)
     return parsed_result
+
+
+def get_submission_json_for_external_match(submission):
+    return {
+        'patient': {
+            'id': submission.submission_id,
+            'label': submission.label,
+            'contact': {
+                'href': submission.contact_href,
+                'name': submission.contact_name,
+                'institution': MME_DEFAULT_CONTACT_INSTITUTION,
+            },
+            'species': 'NCBITaxon:9606',
+            'sex': MatchmakerSubmission.SEX_LOOKUP[submission.individual.sex],
+            'features': submission.features,
+            'genomicFeatures': submission.genomicFeatures,
+        }
+    }

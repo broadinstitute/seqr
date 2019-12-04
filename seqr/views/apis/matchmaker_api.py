@@ -8,11 +8,11 @@ from django.core.mail.message import EmailMessage
 from django.views.decorators.csrf import csrf_exempt
 
 from matchmaker.models import MatchmakerResult, MatchmakerContactNotes
+from matchmaker.matchmaker_utils import get_mme_genes_phenotypes, parse_mme_patient
 from seqr.models import Individual, SavedVariant
 from seqr.utils.communication_utils import post_to_slack
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.matchmaker_utils import get_mme_genes_phenotypes, parse_mme_patient
 from seqr.views.utils.orm_to_json_utils import _get_json_for_model, get_json_for_saved_variants
 from seqr.views.utils.permissions_utils import check_permissions
 

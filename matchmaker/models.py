@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 from django.contrib.postgres.fields import JSONField
 
 from seqr.models import ModelWithGUID, Individual
-from settings import MME_DEFAULT_CONTACT_NAME, MME_DEFAULT_CONTACT_HREF, MME_DEFAULT_CONTACT_INSTITUTION
+from settings import MME_DEFAULT_CONTACT_NAME, MME_DEFAULT_CONTACT_HREF
 
 
 class MatchmakerSubmission(ModelWithGUID):
@@ -27,23 +27,6 @@ class MatchmakerSubmission(ModelWithGUID):
 
     def _compute_guid(self):
         return 'MS%07d_%s' % (self.id, str(self.individual))
-
-    def get_json_for_external_match(self):
-        return {
-            'patient': {
-                'id': self.submission_id,
-                'label': self.label,
-                'contact': {
-                    'href': self.contact_href,
-                    'name': self.contact_name,
-                    'institution': MME_DEFAULT_CONTACT_INSTITUTION,
-                },
-                'species': 'NCBITaxon:9606',
-                'sex': self.SEX_LOOKUP[self.individual.sex],
-                'features': self.features,
-                'genomicFeatures': self.genomicFeatures,
-            }
-        }
 
     class Meta:
         json_fields = [
