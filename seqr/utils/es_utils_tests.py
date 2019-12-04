@@ -973,12 +973,7 @@ class EsUtilsTest(TestCase):
         else:
             expected_search['_source'] = mock.ANY
 
-        # TODO fix test_filtered_get_es_variants and test_recessive_get_es_variants <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-        # self.assertDictEqual(executed_search, expected_search)
-        # print_executed_search = deepcopy(executed_search)
-        # del print_executed_search['_source']
-        # logging.info(print_executed_search)
-        # logging.info(expected_search)
+        self.assertDictEqual(executed_search, expected_search)
 
         if not expected_search_params.get('gene_count_aggs'):
             source = executed_search['aggs']['genes']['aggs']['vars_by_gene']['top_hits']['_source'] \
@@ -1101,27 +1096,6 @@ class EsUtilsTest(TestCase):
             },
             {
                 'bool': {
-                    'should': [
-                        {'bool': {'must_not': [{'exists': {'field': 'transcriptConsequenceTerms'}}]}},
-                        {'terms': {
-                            'transcriptConsequenceTerms': [
-                                '5_prime_UTR_variant',
-                                'intergenic_variant',
-                                'inframe_insertion',
-                                'inframe_deletion',
-                            ]
-                        }},
-                        {'terms': {
-                            'clinvar_clinical_significance': [
-                                'Pathogenic', 'Likely_pathogenic', 'Pathogenic/Likely_pathogenic'
-                            ]
-                        }},
-                        {'terms': {'hgmd_class': ['DM', 'DM?']}},
-                    ]
-                }
-            },
-            {
-                'bool': {
                     'minimum_should_match': 1,
                     'should': [
                         {'bool': {'must_not': [{'exists': {'field': 'AF'}}]}},
@@ -1195,6 +1169,26 @@ class EsUtilsTest(TestCase):
                 }
             },
             {'bool': {'must_not': [{'exists': {'field': 'filters'}}]}},
+            {'bool': {
+                    'should': [
+                        {'bool': {'must_not': [{'exists': {'field': 'transcriptConsequenceTerms'}}]}},
+                        {'terms': {
+                            'transcriptConsequenceTerms': [
+                                '5_prime_UTR_variant',
+                                'intergenic_variant',
+                                'inframe_insertion',
+                                'inframe_deletion',
+                            ]
+                        }},
+                        {'terms': {
+                            'clinvar_clinical_significance': [
+                                'Pathogenic', 'Likely_pathogenic', 'Pathogenic/Likely_pathogenic'
+                            ]
+                        }},
+                        {'terms': {'hgmd_class': ['DM', 'DM?']}},
+                    ]
+                }
+            },
             {'bool': {
                 'should': [
                     {'bool': {
@@ -1356,9 +1350,9 @@ class EsUtilsTest(TestCase):
         pass_filter_query = {'bool': {'must_not': [{'exists': {'field': 'filters'}}]}}
 
         self.assertExecutedSearches([
-            dict(filters=[annotation_query, pass_filter_query, RECESSIVE_INHERITANCE_QUERY], start_index=0, size=2, sort=['xpos']),
+            dict(filters=[pass_filter_query, annotation_query, RECESSIVE_INHERITANCE_QUERY], start_index=0, size=2, sort=['xpos']),
             dict(
-                filters=[annotation_query, pass_filter_query, COMPOUND_HET_INHERITANCE_QUERY],
+                filters=[pass_filter_query, annotation_query, COMPOUND_HET_INHERITANCE_QUERY],
                 gene_aggs=True,
                 sort=['xpos'],
                 start_index=0,
@@ -1384,7 +1378,7 @@ class EsUtilsTest(TestCase):
             'total_results': 5,
         })
 
-        self.assertExecutedSearches([dict(filters=[annotation_query, pass_filter_query, RECESSIVE_INHERITANCE_QUERY], start_index=2, size=4, sort=['xpos'])])
+        self.assertExecutedSearches([dict(filters=[pass_filter_query, annotation_query, RECESSIVE_INHERITANCE_QUERY], start_index=2, size=4, sort=['xpos'])])
 
         get_es_variants(results_model, page=2, num_results=2)
         self.assertIsNone(self.executed_search)
