@@ -136,8 +136,8 @@ class ProjectAPITest(TestCase):
              'phenotipsData', 'individualId', 'paternalId', 'maternalId', 'sex', 'affected', 'displayName', 'notes',
              'phenotipsPatientId', 'phenotipsData', 'createdDate', 'lastModifiedDate', 'caseReviewStatus',
              'caseReviewDiscussion', 'caseReviewStatusLastModifiedDate', 'caseReviewStatusLastModifiedBy',
-             'paternalGuid', 'maternalGuid', 'mmeSubmittedDate', 'mmeDeletedDate', 'popPlatformFilters', 'filterFlags',
-             'population'}
+             'paternalGuid', 'maternalGuid', 'mmeSubmittedDate', 'mmeDeletedDate', 'mmeSubmissionGuid',
+             'popPlatformFilters', 'filterFlags', 'population'}
         )
         self.assertSetEqual(
             set(response_json['samplesByGuid'].values()[0].keys()),

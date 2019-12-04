@@ -270,6 +270,7 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, family_
             nested_fields.append({'fields': ('family', field), 'key': _to_camel_case(field)})
     if add_mme_fields:
         nested_fields += [
+            {'fields': ('matchmakersubmission', 'guid'), 'key': 'mmeSubmissionGuid'},
             {'fields': ('matchmakersubmission', 'last_modified_date'), 'key': 'mmeSubmittedDate'},
             {'fields': ('matchmakersubmission', 'deleted_date'), 'key': 'mmeDeletedDate'},
         ]

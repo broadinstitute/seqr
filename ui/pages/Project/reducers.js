@@ -174,9 +174,9 @@ export const loadMmeMatches = (individualGuid, search) => {
   return (dispatch, getState) => {
     const state = getState()
     const individual = state.individualsByGuid[individualGuid]
-    if (!individual.mmeResults || search) {
+    if (!individual.mmeResultGuids || search) {
       dispatch({ type: REQUEST_MME_MATCHES })
-      new HttpRequestHelper(`/api/matchmaker/${search ? 'search' : 'get'}_mme_matches/${individual.individualGuid}`,
+      new HttpRequestHelper(`/api/matchmaker/${search ? 'search' : 'get'}_mme_matches/${individual.mmeSubmissionGuid}`,
         (responseJson) => {
           dispatch({
             type: RECEIVE_DATA,
@@ -192,7 +192,7 @@ export const loadMmeMatches = (individualGuid, search) => {
 }
 
 export const updateMmeSubmission = (values) => {
-  return updateEntity(values, RECEIVE_DATA, '/api/matchmaker/submission', 'individualGuid')
+  return updateEntity(values, RECEIVE_DATA, '/api/matchmaker/submission', 'mmeSubmissionGuid')
 }
 
 export const updateMmeSubmissionStatus = (values) => {

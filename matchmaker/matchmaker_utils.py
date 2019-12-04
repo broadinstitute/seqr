@@ -27,7 +27,7 @@ def get_mme_genes_phenotypes(results, additional_genes=None):
     return hpo_terms_by_id, genes_by_id, gene_symbols_to_ids
 
 
-def parse_mme_patient(result, hpo_terms_by_id, gene_symbols_to_ids, individual_guid):
+def parse_mme_patient(result, hpo_terms_by_id, gene_symbols_to_ids, submission_guid):
     phenotypes = [feature for feature in result['patient'].get('features', [])]
     for feature in phenotypes:
         feature['label'] = hpo_terms_by_id.get(feature['id'])
@@ -54,7 +54,7 @@ def parse_mme_patient(result, hpo_terms_by_id, gene_symbols_to_ids, individual_g
     parsed_result = {
         'geneVariants': gene_variants,
         'phenotypes': phenotypes,
-        'individualGuid': individual_guid,
+        'submissionGuid': submission_guid,
     }
     parsed_result.update(result)
     return parsed_result

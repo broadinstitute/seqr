@@ -15,7 +15,7 @@
 	"is_phenotips_enabled": true,
 	"phenotips_user_id": "1kg",
     "genome_version": "37",
-	"is_mme_enabled": false,
+	"is_mme_enabled": true,
 	"mme_primary_data_owner": "PI",
     "mme_contact_url": "mailto:test@broadinstitute.org,matchmaker@broadinstitute.org",
 	"last_accessed_date": "2017-09-15T18:15:50.827Z",

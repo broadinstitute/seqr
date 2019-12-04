@@ -14,6 +14,7 @@ from matchmaker.views.matchmaker_api import get_individual_mme_matches, search_i
 from seqr.views.utils.test_utils import _check_login
 
 INDIVIDUAL_GUID = 'I000001_na19675'
+SUBMISSION_GUID = 'MS000001_na19675'
 NO_SUBMISSION_INDIVIDUAL_GUID = 'I000006_hg00733'
 RESULT_STATUS_GUID = 'MR0003552_SHE_1006P_1'
 
@@ -44,7 +45,7 @@ PARSED_NEW_MATCH_JSON = {
     'id': '33845',
     'score': 0.92,
     'patient': NEW_MATCH_JSON['patient'],
-    'individualGuid': INDIVIDUAL_GUID,
+    'submissionGuid': SUBMISSION_GUID,
     'phenotypes': [{'observed': 'yes', 'id': 'HP:0012469', 'label': 'Infantile spasms'}],
     'geneVariants': [{'geneId': 'ENSG00000186092'}],
     'matchStatus': {
@@ -59,7 +60,7 @@ PARSED_NEW_MATCH_JSON = {
     },
 }
 PARSED_NEW_MATCH_NEW_SUBMISSION_JSON = deepcopy(PARSED_NEW_MATCH_JSON)
-PARSED_NEW_MATCH_NEW_SUBMISSION_JSON['individualGuid'] = NO_SUBMISSION_INDIVIDUAL_GUID
+PARSED_NEW_MATCH_NEW_SUBMISSION_JSON['submissionGuid'] = mock.ANY
 
 
 class EmailException(Exception):
@@ -76,7 +77,7 @@ class MatchmakerAPITest(TestCase):
     multi_db = True
 
     def test_get_individual_mme_matches(self):
-        url = reverse(get_individual_mme_matches, args=[INDIVIDUAL_GUID])
+        url = reverse(get_individual_mme_matches, args=[SUBMISSION_GUID])
         _check_login(self, url)
 
         response = self.client.get(url)
@@ -91,7 +92,7 @@ class MatchmakerAPITest(TestCase):
         self.assertDictEqual(response_json['mmeResultsByGuid'][RESULT_STATUS_GUID], {
             'id': 'P0004515',
             'score': 0.5706712016939723,
-            'individualGuid': INDIVIDUAL_GUID,
+            'submissionGuid': SUBMISSION_GUID,
             'patient': {
                 'genomicFeatures': [
                     {'gene': {'id': 'OR4F5'}},
@@ -131,7 +132,7 @@ class MatchmakerAPITest(TestCase):
         self.assertDictEqual(response_json['individualsByGuid'], {INDIVIDUAL_GUID: {
             'mmeResultGuids': mock.ANY,
             'mmeSubmittedData': {
-                'individualGuid': INDIVIDUAL_GUID,
+                'submissionGuid': SUBMISSION_GUID,
                 'patient': {
                     'id': 'NA19675_1_01',
                     'label': 'NA19675_1',
@@ -170,6 +171,7 @@ class MatchmakerAPITest(TestCase):
                     'genomeVersion': 'GRCh38',
                 }],
             },
+            'mmeSubmissionGuid': SUBMISSION_GUID,
             'mmeSubmittedDate': '2018-05-23T09:07:49.719Z',
             'mmeDeletedDate': None,
         }})
@@ -190,7 +192,7 @@ class MatchmakerAPITest(TestCase):
     @mock.patch('matchmaker.views.matchmaker_api.post_to_slack')
     @responses.activate
     def test_search_individual_mme_matches(self, mock_post_to_slack, mock_email):
-        url = reverse(search_individual_mme_matches, args=[INDIVIDUAL_GUID])
+        url = reverse(search_individual_mme_matches, args=[SUBMISSION_GUID])
         _check_login(self, url)
 
         responses.add(responses.POST, 'http://localhost:9020/match', body='Failed request', status=400)
@@ -202,10 +204,6 @@ class MatchmakerAPITest(TestCase):
         })
 
         # Test invalid inputs
-        response = self.client.get(reverse(search_individual_mme_matches, args=['I000002_na19678']))
-        self.assertEqual(response.status_code, 404)
-        self.assertEqual(response.reason_phrase, 'No matchmaker submission found for NA19678')
-
         response = self.client.get(url)
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.reason_phrase, 'Error in local match')
@@ -264,8 +262,9 @@ class MatchmakerAPITest(TestCase):
                     'pos': 77027549,
                     'genomeVersion': 'GRCh38',
                 }],
-                'individualGuid': INDIVIDUAL_GUID,
+                'submissionGuid': SUBMISSION_GUID,
             },
+            'mmeSubmissionGuid': SUBMISSION_GUID,
             'mmeSubmittedDate': '2018-05-23T09:07:49.719Z',
             'mmeDeletedDate': None,
         }})
@@ -351,25 +350,36 @@ class MatchmakerAPITest(TestCase):
         responses.add(responses.POST, 'http://localhost:9020/patient/add', status=200)
         responses.add(responses.POST, 'http://localhost:9020/patient/add', status=409)
 
-        url = reverse(update_mme_submission, args=[NO_SUBMISSION_INDIVIDUAL_GUID])
+        url = reverse(update_mme_submission)
         _check_login(self, url)
 
         # Test invalid inputs
         response = self.client.post(url, content_type='application/json', data=json.dumps({}))
         self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.reason_phrase, 'Individual is required for a new submission')
+
+        response = self.client.post(
+            url, content_type='application/json', data=json.dumps({'individualGuid': NO_SUBMISSION_INDIVIDUAL_GUID})
+        )
+        self.assertEqual(response.status_code, 400)
         self.assertEqual(response.reason_phrase, 'Genotypes or phentoypes are required')
 
-        response = self.client.post(url, content_type='application/json', data=json.dumps({'geneVariants': [{'pos': 123345}]}))
+        response = self.client.post(url, content_type='application/json', data=json.dumps({
+            'geneVariants': [{'pos': 123345}], 'individualGuid': NO_SUBMISSION_INDIVIDUAL_GUID
+        }))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.reason_phrase, 'Patient id is required')
 
         response = self.client.post(url, content_type='application/json', data=json.dumps(
-            {'patient': {'id': 123}, 'geneVariants': [{'pos': 123345}]}))
+            {'patient': {'id': 123}, 'geneVariants': [{'pos': 123345}], 'individualGuid': NO_SUBMISSION_INDIVIDUAL_GUID}
+        ))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.reason_phrase, 'Gene id is required for genomic features')
 
-        response = self.client.post(url, content_type='application/json', data=json.dumps(
-            {'patient': {'id': 123}, 'phenotypes': [{'id': 'HP:0012469'}]}))
+        response = self.client.post(url, content_type='application/json', data=json.dumps({
+            'patient': {'id': 123}, 'phenotypes': [{'id': 'HP:0012469'}],
+            'individualGuid': NO_SUBMISSION_INDIVIDUAL_GUID,
+        }))
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.reason_phrase, 'Failed request')
 
@@ -402,10 +412,11 @@ class MatchmakerAPITest(TestCase):
 
         self.assertEqual(len(response_json['mmeResultsByGuid']), 1)
         self.assertDictEqual(response_json['mmeResultsByGuid'].values()[0], PARSED_NEW_MATCH_NEW_SUBMISSION_JSON)
+        new_submission_guid = response_json['mmeResultsByGuid'].values()[0]['submissionGuid']
         self.assertDictEqual(response_json['individualsByGuid'], {NO_SUBMISSION_INDIVIDUAL_GUID: {
             'mmeResultGuids': response_json['mmeResultsByGuid'].keys(),
             'mmeSubmittedData': {
-                'individualGuid': NO_SUBMISSION_INDIVIDUAL_GUID,
+                'submissionGuid': new_submission_guid,
                 'patient': {
                     'id': 'HG00733',
                     'label': 'HG00733',
@@ -440,9 +451,11 @@ class MatchmakerAPITest(TestCase):
                     'genomeVersion': 'GRCh38',
                 }],
             },
+            'mmeSubmissionGuid': new_submission_guid,
             'mmeSubmittedDate': mock.ANY,
             'mmeDeletedDate': None,
         }})
+
         self.assertEqual(
             response_json['individualsByGuid'][NO_SUBMISSION_INDIVIDUAL_GUID]['mmeSubmittedDate'][:10],
             datetime.today().strftime('%Y-%m-%d')
@@ -493,6 +506,7 @@ class MatchmakerAPITest(TestCase):
             self.assertDictEqual(json.loads(call.request.body), expected_body)
 
         # Test successful update
+        url = reverse(update_mme_submission, args=[new_submission_guid])
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'individualGuid': NO_SUBMISSION_INDIVIDUAL_GUID,
             'patient': {
@@ -517,7 +531,7 @@ class MatchmakerAPITest(TestCase):
         self.assertDictEqual(response_json['individualsByGuid'], {NO_SUBMISSION_INDIVIDUAL_GUID: {
             'mmeResultGuids': response_json['mmeResultsByGuid'].keys(),
             'mmeSubmittedData': {
-                'individualGuid': NO_SUBMISSION_INDIVIDUAL_GUID,
+                'submissionGuid': new_submission_guid,
                 'patient': {
                     'id': 'HG00733',
                     'label': 'HG00733',
@@ -537,6 +551,7 @@ class MatchmakerAPITest(TestCase):
                 ],
                 'geneVariants': [],
             },
+            'mmeSubmissionGuid': new_submission_guid,
             'mmeSubmittedDate': mock.ANY,
             'mmeDeletedDate': None,
         }})
@@ -573,7 +588,7 @@ class MatchmakerAPITest(TestCase):
 
     @responses.activate
     def test_delete_mme_submission(self):
-        url = reverse(delete_mme_submission, args=[INDIVIDUAL_GUID])
+        url = reverse(delete_mme_submission, args=[SUBMISSION_GUID])
         _check_login(self, url)
 
         responses.add(responses.DELETE, 'http://localhost:9020/patient/delete', body='Failed request', status=400)

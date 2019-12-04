@@ -66,7 +66,7 @@ class JSONUtilsTest(TestCase):
         }
         self.assertSetEqual(set(json.keys()), individual_fields)
 
-        individual_fields.update({'mmeSubmittedDate', 'mmeDeletedDate'})
+        individual_fields.update({'mmeSubmittedDate', 'mmeDeletedDate', 'mmeSubmissionGuid'})
         json = _get_json_for_individual(individual, add_mme_fields=True)
         self.assertSetEqual(set(json.keys()), individual_fields)
 

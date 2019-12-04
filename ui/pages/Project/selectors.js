@@ -332,10 +332,11 @@ export const getMmeDefaultContactEmail = createSelector(
   getUser,
   (state, ownProps) => ownProps.matchmakerResultGuid,
   (mmeResultsByGuid, individualsByGuid, genesById, savedVariants, user, matchmakerResultGuid) => {
-    const { patient, geneVariants, individualGuid } = mmeResultsByGuid[matchmakerResultGuid]
+    const { patient, geneVariants, submissionGuid } = mmeResultsByGuid[matchmakerResultGuid]
     const geneName = geneVariants && geneVariants.length && (genesById[geneVariants[0].geneId] || {}).geneSymbol
 
-    const { mmeSubmittedData, familyGuid } = individualsByGuid[individualGuid]
+    // TODo fix contact email
+    const { mmeSubmittedData, familyGuid, individualGuid } = Object.values(individualsByGuid).find(({ mmeSubmissionGuid }) => mmeSubmissionGuid === submissionGuid)
 
     const submittedGenes = [...new Set((mmeSubmittedData.geneVariants || []).map(
       ({ geneId }) => (genesById[geneId] || {}).geneSymbol))].join(', ')
