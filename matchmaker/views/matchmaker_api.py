@@ -14,7 +14,7 @@ from seqr.utils.communication_utils import post_to_slack
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_model, get_json_for_saved_variants, get_json_for_matchmaker_submission
-from seqr.views.utils.permissions_utils import check_mme_permissions
+from seqr.views.utils.permissions_utils import check_mme_permissions, check_permissions
 
 from settings import MME_HEADERS, MME_LOCAL_MATCH_URL, MME_EXTERNAL_MATCH_URL, MME_DEFAULT_CONTACT_EMAIL, BASE_URL,  \
     MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL, MME_ADD_INDIVIDUAL_URL, MME_DELETE_INDIVIDUAL_URL, API_LOGIN_REQUIRED_URL
@@ -138,13 +138,14 @@ def update_mme_submission(request, submission_guid=None):
 
     if submission_guid:
         submission = MatchmakerSubmission.objects.get(guid=submission_guid)
+        check_mme_permissions(submission, request.user)
     else:
+        submission = None
         individual_guid = submission_json.get('individualGuid')
         if not individual_guid:
             return create_json_response({}, status=400, reason='Individual is required for a new submission')
         individual = Individual.objects.get(guid=individual_guid)
-        submission, _ = MatchmakerSubmission.objects.get_or_create(individual=individual)
-    check_mme_permissions(submission, request.user)
+        check_permissions(individual.family.project, request.user)
 
     submission_json.pop('individualGuid', {})
     phenotypes = submission_json.pop('phenotypes', [])
@@ -184,15 +185,26 @@ def update_mme_submission(request, submission_guid=None):
             response_json = {}
         return create_json_response(response_json, status=response.status_code, reason=response.content)
 
-    submission.submission_id = submission_json['patient']['id']
-    submission.label = submission_json['patient'].get('label')
-    submission.contact_name = submission_json['patient']['contact']['name']
-    submission.contact_href = submission_json['patient']['contact']['href']
-    submission.features = phenotypes
-    submission.genomicFeatures = genomic_features
-    submission.deleted_date = None
-    submission.deleted_by = None
-    submission.save()
+    if submission:
+        submission.submission_id = submission_json['patient']['id']
+        submission.label = submission_json['patient'].get('label')
+        submission.contact_name = submission_json['patient']['contact']['name']
+        submission.contact_href = submission_json['patient']['contact']['href']
+        submission.features = phenotypes
+        submission.genomicFeatures = genomic_features
+        submission.deleted_date = None
+        submission.deleted_by = None
+        submission.save()
+    else:
+        submission = MatchmakerSubmission.objects.create(
+            individual=individual,
+            submission_id=submission_json['patient']['id'],
+            label=submission_json['patient'].get('label'),
+            contact_name=submission_json['patient']['contact']['name'],
+            contact_href=submission_json['patient']['contact']['href'],
+            features=phenotypes,
+            genomicFeatures=genomic_features,
+        )
 
     # search for new matches
     return _search_matches(submission, request.user)
