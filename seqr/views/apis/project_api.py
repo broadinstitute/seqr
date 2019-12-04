@@ -239,7 +239,7 @@ def _retrieve_individuals(project_guid, user):
 
     individual_models = Individual.objects.filter(family__project__guid=project_guid)
 
-    individuals = _get_json_for_individuals(individual_models, user=user, project_guid=project_guid)
+    individuals = _get_json_for_individuals(individual_models, user=user, project_guid=project_guid, add_mme_fields=True)
 
     individuals_by_guid = {}
     for i in individuals:

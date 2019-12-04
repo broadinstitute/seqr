@@ -4,11 +4,12 @@ import requests
 from datetime import datetime
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ObjectDoesNotExist
 from django.core.mail.message import EmailMessage
 from django.views.decorators.csrf import csrf_exempt
 
-from matchmaker.models import MatchmakerResult, MatchmakerContactNotes
-from matchmaker.matchmaker_utils import get_mme_genes_phenotypes, parse_mme_patient
+from matchmaker.models import MatchmakerResult, MatchmakerContactNotes, MatchmakerSubmission
+from matchmaker.matchmaker_utils import get_mme_genes_phenotypes, parse_mme_patient, get_submission_json_for_external_match
 from seqr.models import Individual, SavedVariant
 from seqr.utils.communication_utils import post_to_slack
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
@@ -37,7 +38,7 @@ def get_individual_mme_matches(request, individual_guid):
     project = individual.family.project
     check_permissions(project, request.user)
 
-    results = MatchmakerResult.objects.filter(individual=individual)
+    results = MatchmakerResult.objects.filter(submission__individual=individual)
 
     saved_variants = get_json_for_saved_variants(
         SavedVariant.objects.filter(family=individual.family), add_tags=True, add_details=True)
@@ -70,12 +71,14 @@ def search_individual_mme_matches(request, individual_guid):
 
 
 def _search_individual_matches(individual, user):
-    patient_data = individual.mme_submitted_data
-    if not patient_data:
+    try:
+        submission = individual.matchmakersubmission
+    except ObjectDoesNotExist:
         return create_json_response(
             {}, status=404, reason='No matchmaker submission found for {}'.format(individual.individual_id),
         )
 
+    patient_data = get_submission_json_for_external_match(submission)
     local_result = requests.post(url=MME_LOCAL_MATCH_URL, headers=MME_HEADERS, data=json.dumps(patient_data))
     if local_result.status_code != 200:
         try:
@@ -94,7 +97,7 @@ def _search_individual_matches(individual, user):
     results = local_result.json()['results'] + external_result.json()['results']
 
     initial_saved_results = {
-        result.result_data['patient']['id']: result for result in MatchmakerResult.objects.filter(individual=individual)
+        result.result_data['patient']['id']: result for result in MatchmakerResult.objects.filter(submission=submission)
     }
 
     new_results = []
@@ -103,7 +106,7 @@ def _search_individual_matches(individual, user):
         saved_result = initial_saved_results.get(result['patient']['id'])
         if not saved_result:
             saved_result = MatchmakerResult.objects.create(
-                individual=individual,
+                submission=submission,
                 result_data=result,
                 last_modified_by=user,
             )
@@ -187,12 +190,16 @@ def update_mme_submission(request, individual_guid):
             response_json = {}
         return create_json_response(response_json, status=response.status_code, reason=response.content)
 
-    submitted_date = datetime.now()
-    individual.mme_submitted_data = submission_json
-    individual.mme_submitted_date = submitted_date
-    individual.mme_deleted_date = None
-    individual.mme_deleted_by = None
-    individual.save()
+    submission, _ = MatchmakerSubmission.objects.get_or_create(individual=individual)
+    submission.submission_id = submission_json['patient']['id']
+    submission.label = submission_json['patient'].get('label')
+    submission.contact_name = submission_json['patient']['contact']['name']
+    submission.contact_href = submission_json['patient']['contact']['href']
+    submission.features = phenotypes
+    submission.genomicFeatures = genomic_features
+    submission.deleted_date = None
+    submission.deleted_by = None
+    submission.save()
 
     # search for new matches
     return _search_individual_matches(individual, request.user)
@@ -208,12 +215,20 @@ def delete_mme_submission(request, individual_guid):
     project = individual.family.project
     check_permissions(project, request.user)
 
-    if individual.mme_deleted_date:
+    try:
+        submission = individual.matchmakersubmission
+    except ObjectDoesNotExist:
         return create_json_response(
-            {}, status=402, reason='Matchmaker submission has already been deleted for {}'.format(individual.individual_id),
+            {}, status=402,
+            reason='Matchmaker submission has already been deleted for {}'.format(individual.individual_id),
+        )
+    if submission.deleted_date:
+        return create_json_response(
+            {}, status=402,
+            reason='Matchmaker submission has already been deleted for {}'.format(individual.individual_id),
         )
 
-    matchbox_id = individual.mme_submitted_data['patient']['id']
+    matchbox_id = submission.submission_id
     response = requests.delete(url=MME_DELETE_INDIVIDUAL_URL, headers=MME_HEADERS, data=json.dumps({'id': matchbox_id}))
 
     if response.status_code != 200:
@@ -224,11 +239,11 @@ def delete_mme_submission(request, individual_guid):
         return create_json_response(response_json, status=response.status_code, reason=response.content)
 
     deleted_date = datetime.now()
-    individual.mme_deleted_date = deleted_date
-    individual.mme_deleted_by = request.user
-    individual.save()
+    submission.deleted_date = deleted_date
+    submission.deleted_by = request.user
+    submission.save()
 
-    for saved_result in MatchmakerResult.objects.filter(individual=individual):
+    for saved_result in MatchmakerResult.objects.filter(submission=submission):
         if not (saved_result.we_contacted or saved_result.host_contacted or saved_result.comments):
             saved_result.delete()
 
@@ -247,7 +262,7 @@ def update_mme_result_status(request, matchmaker_result_guid):
         Status code and results
     """
     result = MatchmakerResult.objects.get(guid=matchmaker_result_guid)
-    project = result.individual.family.project
+    project = result.submission.individual.family.project
     check_permissions(project, request.user)
 
     request_json = json.loads(request.body)
@@ -269,7 +284,7 @@ def send_mme_contact_email(request, matchmaker_result_guid):
         Status code and results
     """
     result = MatchmakerResult.objects.get(guid=matchmaker_result_guid)
-    project = result.individual.family.project
+    project = result.submission.individual.family.project
     check_permissions(project, request.user)
 
     request_json = json.loads(request.body)
@@ -331,7 +346,8 @@ def _parse_mme_results(individual, saved_results, user, additional_genes=None, r
         results.append(result)
         contact_institutions.add(result['patient']['contact'].get('institution', '').strip().lower())
 
-    results_for_genes = [individual.mme_submitted_data] if individual.mme_submitted_data else []
+    mme_submitted_data = get_submission_json_for_external_match(individual.matchmakersubmission)
+    results_for_genes = [mme_submitted_data]
     results_for_genes += results
     hpo_terms_by_id, genes_by_id, gene_symbols_to_ids = get_mme_genes_phenotypes(
         results_for_genes, additional_genes=additional_genes)
@@ -343,8 +359,8 @@ def _parse_mme_results(individual, saved_results, user, additional_genes=None, r
                      for note in MatchmakerContactNotes.objects.filter(institution__in=contact_institutions)}
 
     submitted_data = parse_mme_patient(
-        individual.mme_submitted_data, hpo_terms_by_id, gene_symbols_to_ids, individual.guid
-    ) if individual.mme_submitted_data else None
+        mme_submitted_data, hpo_terms_by_id, gene_symbols_to_ids, individual.guid
+    ) if mme_submitted_data else None
 
     response = {
         'mmeResultsByGuid': parsed_results_gy_guid,
@@ -352,8 +368,8 @@ def _parse_mme_results(individual, saved_results, user, additional_genes=None, r
         'individualsByGuid': {individual.guid: {
             'mmeResultGuids': parsed_results_gy_guid.keys(),
             'mmeSubmittedData': submitted_data,
-            'mmeSubmittedDate': individual.mme_submitted_date,
-            'mmeDeletedDate': individual.mme_deleted_date,
+            'mmeSubmittedDate': individual.matchmakersubmission.last_modified_date,
+            'mmeDeletedDate': individual.matchmakersubmission.deleted_date,
         }},
         'genesById': genes_by_id,
     }

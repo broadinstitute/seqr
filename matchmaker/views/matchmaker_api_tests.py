@@ -7,8 +7,8 @@ from datetime import datetime
 from django.test import TestCase
 from django.urls.base import reverse
 
-from seqr.models import MatchmakerResult, Project, MatchmakerContactNotes
-from seqr.views.apis.matchmaker_api import get_individual_mme_matches, search_individual_mme_matches, \
+from matchmaker.models import MatchmakerResult, MatchmakerContactNotes
+from matchmaker.views.matchmaker_api import get_individual_mme_matches, search_individual_mme_matches, \
     update_mme_submission, delete_mme_submission, update_mme_result_status, send_mme_contact_email, \
     update_mme_contact_note
 from seqr.views.utils.test_utils import _check_login
@@ -137,6 +137,7 @@ class MatchmakerAPITest(TestCase):
                     'label': 'NA19675_1',
                     'contact': {'href': 'mailto:matchmaker@broadinstitute.org', 'name': 'Sam Baxter', 'institution': 'Broad Center for Mendelian Genomics'},
                     'species': 'NCBITaxon:9606',
+                    'sex': 'MALE',
                     'features': [
                         {'id': 'HP:0001252', 'label': 'Muscular hypotonia', 'observed': 'yes'},
                         {'id': 'HP:0001263', 'label': 'Global developmental delay', 'observed': 'no'},
@@ -185,8 +186,8 @@ class MatchmakerAPITest(TestCase):
             {'SV0000001_2103343353_r0390_100', 'SV0000003_2246859832_r0390_100'})
         self.assertDictEqual(response_json['mmeContactNotes'], {})
 
-    @mock.patch('seqr.views.apis.matchmaker_api.EmailMessage')
-    @mock.patch('seqr.views.apis.matchmaker_api.post_to_slack')
+    @mock.patch('matchmaker.views.matchmaker_api.EmailMessage')
+    @mock.patch('matchmaker.views.matchmaker_api.post_to_slack')
     @responses.activate
     def test_search_individual_mme_matches(self, mock_post_to_slack, mock_email):
         url = reverse(search_individual_mme_matches, args=[INDIVIDUAL_GUID])
@@ -231,6 +232,7 @@ class MatchmakerAPITest(TestCase):
                     'label': 'NA19675_1',
                     'contact': {'href': 'mailto:matchmaker@broadinstitute.org', 'name': 'Sam Baxter', 'institution': 'Broad Center for Mendelian Genomics'},
                     'species': 'NCBITaxon:9606',
+                    'sex': 'MALE',
                     'features': [
                         {'id': 'HP:0001252', 'label': 'Muscular hypotonia', 'observed': 'yes'},
                         {'id': 'HP:0001263', 'label': 'Global developmental delay', 'observed': 'no'},
@@ -293,6 +295,7 @@ class MatchmakerAPITest(TestCase):
                 'label': 'NA19675_1',
                 'contact': {'href': 'mailto:matchmaker@broadinstitute.org', 'name': 'Sam Baxter', 'institution': 'Broad Center for Mendelian Genomics'},
                 'species': 'NCBITaxon:9606',
+                'sex': 'MALE',
                 'features': [
                     {'id': 'HP:0001252', 'observed': 'yes'},
                     {'id': 'HP:0001263', 'observed': 'no'},
@@ -393,7 +396,6 @@ class MatchmakerAPITest(TestCase):
                 'numAlt': 2,
             }],
         }))
-
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {'mmeResultsByGuid', 'individualsByGuid', 'genesById', 'mmeContactNotes'})
@@ -410,6 +412,7 @@ class MatchmakerAPITest(TestCase):
                     'contact': {'href': 'mailto:test@broadinstitute.org', 'name': 'PI',
                                 'institution': 'Broad Center for Mendelian Genomics'},
                     'species': 'NCBITaxon:9606',
+                    'sex': 'FEMALE',
                     'features': [
                         {'id': 'HP:0012469', 'label': 'Infantile spasms', 'observed': 'yes'}
                     ],
@@ -480,7 +483,9 @@ class MatchmakerAPITest(TestCase):
         self.assertEqual(responses.calls[1].request.url, 'http://localhost:9020/patient/add')
         self.assertEqual(responses.calls[2].request.url, 'http://localhost:9020/match')
         self.assertEqual(responses.calls[3].request.url, 'http://localhost:9020/match/external')
-        for call in responses.calls[1:]:
+        for i, call in enumerate(responses.calls[1:]):
+            if i > 0:
+                expected_body['patient']['sex'] = 'FEMALE'
             self.assertEqual(call.request.headers['X-Auth-Token'], 'abcd')
             self.assertEqual(call.request.headers['Accept'], 'application/vnd.ga4gh.matchmaker.v1.0+json')
             self.assertEqual(call.request.headers['Content-Type'],
@@ -519,6 +524,7 @@ class MatchmakerAPITest(TestCase):
                     'contact': {'href': 'mailto:matchmaker@broadinstitute.org', 'name': 'Test Name',
                                 'institution': 'Broad Center for Mendelian Genomics'},
                     'species': 'NCBITaxon:9606',
+                    'sex': 'FEMALE',
                     'features': [
                         {'id': 'HP:0012469', 'label': 'Infantile spasms', 'observed': 'yes'},
                         {'id': 'HP:0001263', 'label': 'Global developmental delay', 'observed': 'no'},
@@ -585,7 +591,7 @@ class MatchmakerAPITest(TestCase):
             datetime.today().strftime('%Y-%m-%d')
         )
 
-        self.assertEqual(MatchmakerResult.objects.filter(individual__guid=INDIVIDUAL_GUID).count(), 2)
+        self.assertEqual(MatchmakerResult.objects.filter(submission__individual__guid=INDIVIDUAL_GUID).count(), 2)
 
         # Test proxy calls
         self.assertEqual(len(responses.calls), 2)
@@ -630,7 +636,7 @@ class MatchmakerAPITest(TestCase):
         result_model = MatchmakerResult.objects.get(guid=RESULT_STATUS_GUID)
         self.assertEqual(result_model.comments, 'test comment')
 
-    @mock.patch('seqr.views.apis.matchmaker_api.EmailMessage')
+    @mock.patch('matchmaker.views.matchmaker_api.EmailMessage')
     def test_send_mme_contact_email(self, mock_email):
         url = reverse(send_mme_contact_email, args=[RESULT_STATUS_GUID])
         _check_login(self, url)

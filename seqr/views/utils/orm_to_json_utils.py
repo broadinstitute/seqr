@@ -8,6 +8,7 @@ import logging
 import os
 from collections import defaultdict
 from copy import copy
+from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import prefetch_related_objects, Prefetch
 from django.db.models.fields.files import ImageFieldFile
 from guardian.shortcuts import get_objects_for_group
@@ -52,7 +53,11 @@ def _get_json_for_models(models, nested_fields=None, user=None, process_result=N
             if not field_value:
                 field_value = model
                 for field in nested_field['fields']:
-                    field_value = getattr(field_value, field) if field_value else None
+                    try:
+                        field_value = getattr(field_value, field) if field_value else None
+                    except ObjectDoesNotExist:
+                        field_value = None
+
             result[nested_field.get('key', _to_camel_case('_'.join(nested_field['fields'])))] = field_value
 
         if result.get('guid'):
@@ -214,7 +219,7 @@ def _get_json_for_family(family, user=None, **kwargs):
     return _get_json_for_model(family, get_json_for_models=_get_json_for_families, user=user, **kwargs)
 
 
-def _get_json_for_individuals(individuals, user=None, project_guid=None, family_guid=None, add_sample_guids_field=False, family_fields=None):
+def _get_json_for_individuals(individuals, user=None, project_guid=None, family_guid=None, add_sample_guids_field=False, family_fields=None, add_mme_fields=False):
     """Returns a JSON representation for the given list of Individuals.
 
     Args:
@@ -226,7 +231,6 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, family_
     Returns:
         array: array of json objects
     """
-    # TODO MME submitted/deleted date
 
     def _get_case_review_status_modified_by(modified_by):
         return modified_by.email or modified_by.username if hasattr(modified_by, 'email') else modified_by
@@ -264,6 +268,11 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, family_
     if family_fields:
         for field in family_fields:
             nested_fields.append({'fields': ('family', field), 'key': _to_camel_case(field)})
+    if add_mme_fields:
+        nested_fields += [
+            {'fields': ('matchmakersubmission', 'last_modified_date'), 'key': 'mmeSubmittedDate'},
+            {'fields': ('matchmakersubmission', 'deleted_date'), 'key': 'mmeDeletedDate'},
+        ]
 
     prefetch_related_objects(individuals, 'mother')
     prefetch_related_objects(individuals, 'father')

@@ -71,7 +71,7 @@ from seqr.views.apis.locus_list_api import \
     add_project_locus_lists, \
     delete_project_locus_lists
 
-from seqr.views.apis.matchmaker_api import \
+from matchmaker.views.matchmaker_api import \
     get_individual_mme_matches, \
     search_individual_mme_matches, \
     update_mme_submission, \
@@ -121,7 +121,7 @@ from seqr.views.apis.analysis_group_api import update_analysis_group_handler, de
 from seqr.views.apis.project_api import create_project_handler, update_project_handler, delete_project_handler, \
     project_page_data, export_project_individuals_handler
 from seqr.views.apis.project_categories_api import update_project_categories_handler
-from seqr.views.apis import external_api
+from matchmaker.views import external_api
 from seqr.views.utils.file_utils import save_temp_file
 
 react_app_pages = [

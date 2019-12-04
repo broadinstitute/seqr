@@ -18,8 +18,8 @@ class ExternalAPITest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'numSubmissions': 123})
 
-    @mock.patch('seqr.views.apis.external_api.EmailMessage')
-    @mock.patch('seqr.views.apis.external_api.post_to_slack')
+    @mock.patch('matchmaker.views.external_api.EmailMessage')
+    @mock.patch('matchmaker.views.external_api.post_to_slack')
     @responses.activate
     def test_mme_match_proxy(self, mock_post_to_slack, mock_email):
         responses.add(responses.POST, 'http://localhost:9020/match', status=200, json={'results': [

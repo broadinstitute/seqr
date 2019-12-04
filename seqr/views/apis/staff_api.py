@@ -119,6 +119,7 @@ def mme_metrics_proxy(request):
 
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
 def mme_submissions(request):
+    #  TODO fix this
     individuals = Individual.objects.filter(
         mme_submitted_date__isnull=False, mme_deleted_date__isnull=True,
     ).prefetch_related('family').prefetch_related('family__project')

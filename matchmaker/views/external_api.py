@@ -4,9 +4,10 @@ from datetime import datetime
 from django.core.mail.message import EmailMessage
 from django.views.decorators.csrf import csrf_exempt
 
-from seqr.models import Individual
-from seqr.utils.communication_utils import post_to_slack
+from matchmaker.models import MatchmakerSubmission
 from matchmaker.matchmaker_utils import get_mme_genes_phenotypes
+
+from seqr.utils.communication_utils import post_to_slack
 from seqr.views.utils.proxy_request_utils import proxy_request
 
 from settings import MME_LOCAL_MATCH_URL, MME_MATCHBOX_PUBLIC_METRICS_URL, MME_SLACK_MATCH_NOTIFICATION_CHANNEL,\
@@ -61,7 +62,8 @@ def mme_match_proxy(request):
     if response.status_code == 200:
         try:
             _generate_notification_for_incoming_match(response, request, query_patient_data)
-        except Exception:
+        except Exception as e:
+            import pdb; pdb.set_trace()
             logger.error('Unable to create notification for incoming MME match request')
     return response
 
@@ -92,7 +94,8 @@ def _generate_notification_for_incoming_match(response_from_matchbox, incoming_r
         match_results = []
         emails = set()
         for result in results_from_matchbox:
-            individual = Individual.objects.filter(mme_submitted_data__patient__id=result['patient']['id']).first()
+            submission = MatchmakerSubmission.objects.get(submission_id=result['patient']['id'])
+            individual = submission.individual
             project = individual.family.project
 
             result_text = u'seqr ID {individual_id} from project {project_name} in family {family_id} ' \
@@ -100,7 +103,7 @@ def _generate_notification_for_incoming_match(response_from_matchbox, incoming_r
                           u'{host}project/{project_guid}/family_page/{family_guid}/matchmaker_exchange'.format(
                 individual_id=individual.individual_id, project_guid=project.guid, project_name=project.name,
                 family_guid=individual.family.guid, family_id=individual.family.family_id,
-                insertion_date=individual.mme_submitted_date.strftime('%b %d, %Y'), host=BASE_URL)
+                insertion_date=submission.created_date.strftime('%b %d, %Y'), host=BASE_URL)
             match_results.append(result_text)
             emails.update([i.strip() for i in project.mme_contact_url.replace('mailto:', '').split(',')])
         emails = [email for email in emails if email != MME_DEFAULT_CONTACT_EMAIL]
