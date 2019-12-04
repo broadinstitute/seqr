@@ -66,16 +66,12 @@ class JSONUtilsTest(TestCase):
         }
         self.assertSetEqual(set(json.keys()), individual_fields)
 
-        individual_fields.update({'mmeSubmittedDate', 'mmeDeletedDate', 'mmeSubmissionGuid'})
-        json = _get_json_for_individual(individual, add_mme_fields=True)
-        self.assertSetEqual(set(json.keys()), individual_fields)
-
         individual_fields.update({
             'caseReviewStatus', 'caseReviewDiscussion',
             'caseReviewStatusLastModifiedDate', 'caseReviewStatusLastModifiedBy',
         })
         user = User.objects.filter(is_staff=True).first()
-        json = _get_json_for_individual(individual, user, add_mme_fields=True)
+        json = _get_json_for_individual(individual, user)
         self.assertSetEqual(set(json.keys()), individual_fields)
 
     def test_json_for_sample(self):

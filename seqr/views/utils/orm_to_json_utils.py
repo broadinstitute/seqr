@@ -219,7 +219,7 @@ def _get_json_for_family(family, user=None, **kwargs):
     return _get_json_for_model(family, get_json_for_models=_get_json_for_families, user=user, **kwargs)
 
 
-def _get_json_for_individuals(individuals, user=None, project_guid=None, family_guid=None, add_sample_guids_field=False, family_fields=None, add_mme_fields=False):
+def _get_json_for_individuals(individuals, user=None, project_guid=None, family_guid=None, add_sample_guids_field=False, family_fields=None):
     """Returns a JSON representation for the given list of Individuals.
 
     Args:
@@ -268,12 +268,6 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, family_
     if family_fields:
         for field in family_fields:
             nested_fields.append({'fields': ('family', field), 'key': _to_camel_case(field)})
-    if add_mme_fields:
-        nested_fields += [
-            {'fields': ('matchmakersubmission', 'guid'), 'key': 'mmeSubmissionGuid'},
-            {'fields': ('matchmakersubmission', 'last_modified_date'), 'key': 'mmeSubmittedDate'},
-            {'fields': ('matchmakersubmission', 'deleted_date'), 'key': 'mmeDeletedDate'},
-        ]
 
     prefetch_related_objects(individuals, 'mother')
     prefetch_related_objects(individuals, 'father')

@@ -9,6 +9,7 @@ from django.db.models import Count, Q
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
+from matchmaker.models import MatchmakerSubmission
 from seqr.model_utils import get_or_create_seqr_model, delete_seqr_model
 from seqr.models import Project, Family, Individual, Sample, VariantTag, VariantFunctionalData, \
     VariantNote, VariantTagType, AnalysisGroup, _slugify, CAN_EDIT, IS_OWNER
@@ -143,11 +144,11 @@ def project_page_data(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user)
     update_project_from_json(project, {'last_accessed_date': timezone.now()})
 
-    families_by_guid, individuals_by_guid, samples_by_guid, analysis_groups_by_guid, locus_lists_by_guid = _get_project_child_entities(project, request.user)
+    response = _get_project_child_entities(project, request.user)
 
     project_json = _get_json_for_project(project, request.user)
     project_json['collaborators'] = get_json_for_project_collaborator_list(project)
-    project_json['locusListGuids'] = locus_lists_by_guid.keys()
+    project_json['locusListGuids'] = response['locusListsByGuid'].keys()
     project_json['detailsLoaded'] = True
     project_json.update(_get_json_for_variant_tag_types(project))
 
@@ -155,15 +156,11 @@ def project_page_data(request, project_guid):
     for tag in project_json['discoveryTags']:
         gene_ids.update(tag['transcripts'].keys())
 
-    return create_json_response({
+    response.update({
         'projectsByGuid': {project_guid: project_json},
-        'familiesByGuid': families_by_guid,
-        'individualsByGuid': individuals_by_guid,
-        'samplesByGuid': samples_by_guid,
-        'locusListsByGuid': locus_lists_by_guid,
-        'analysisGroupsByGuid': analysis_groups_by_guid,
         'genesById': get_genes(gene_ids),
     })
+    return create_json_response(response)
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -195,14 +192,22 @@ def export_project_individuals_handler(request, project_guid):
 
 def _get_project_child_entities(project, user):
     families_by_guid = _retrieve_families(project.guid, user)
-    individuals_by_guid = _retrieve_individuals(project.guid, user)
+    individuals_by_guid, individual_models = _retrieve_individuals(project.guid, user)
     for individual_guid, individual in individuals_by_guid.items():
         families_by_guid[individual['familyGuid']]['individualGuids'].add(individual_guid)
-    samples_by_guid = _retrieve_samples(project.guid, individuals_by_guid)
+    samples_by_guid = _retrieve_samples(project.guid, individuals_by_guid, individual_models)
+    mme_submissions_by_guid = _retrieve_mme_submissions(individuals_by_guid, individual_models)
     analysis_groups_by_guid = _retrieve_analysis_groups(project)
     locus_lists = get_sorted_project_locus_lists(project, user)
     locus_lists_by_guid = {locus_list['locusListGuid']: locus_list for locus_list in locus_lists}
-    return families_by_guid, individuals_by_guid, samples_by_guid, analysis_groups_by_guid, locus_lists_by_guid
+    return {
+        'familiesByGuid': families_by_guid,
+        'individualsByGuid': individuals_by_guid,
+        'samplesByGuid': samples_by_guid,
+        'locusListsByGuid': locus_lists_by_guid,
+        'analysisGroupsByGuid': analysis_groups_by_guid,
+        'mmeSubmissionsByGuid': mme_submissions_by_guid,
+    }
 
 
 def _retrieve_families(project_guid, user):
@@ -239,18 +244,19 @@ def _retrieve_individuals(project_guid, user):
 
     individual_models = Individual.objects.filter(family__project__guid=project_guid)
 
-    individuals = _get_json_for_individuals(individual_models, user=user, project_guid=project_guid, add_mme_fields=True)
+    individuals = _get_json_for_individuals(individual_models, user=user, project_guid=project_guid)
 
     individuals_by_guid = {}
     for i in individuals:
         i['sampleGuids'] = set()
+        i['mmeSubmissionGuid'] = None
         individual_guid = i['individualGuid']
         individuals_by_guid[individual_guid] = i
 
-    return individuals_by_guid
+    return individuals_by_guid, individual_models
 
 
-def _retrieve_samples(project_guid, individuals_by_guid):
+def _retrieve_samples(project_guid, individuals_by_guid, individual_models):
     """Retrieves sample metadata for the given project.
 
         Args:
@@ -260,7 +266,7 @@ def _retrieve_samples(project_guid, individuals_by_guid):
         Returns:
             2-tuple with dictionaries: (samples_by_guid, sample_batches_by_guid)
         """
-    sample_models = Sample.objects.filter(individual__family__project__guid=project_guid)
+    sample_models = Sample.objects.filter(individual__in=individual_models)
 
     samples = get_json_for_samples(sample_models, project_guid=project_guid)
 
@@ -273,6 +279,22 @@ def _retrieve_samples(project_guid, individuals_by_guid):
         individuals_by_guid[individual_guid]['sampleGuids'].add(sample_guid)
 
     return samples_by_guid
+
+
+def _retrieve_mme_submissions(individuals_by_guid, individual_models):
+    models = MatchmakerSubmission.objects.filter(individual__in=individual_models)
+
+    submissions = _get_json_for_models(models, nested_fields=[{'fields': ('individual', 'guid')}], guid_key='submissionGuid')
+
+    submissions_by_guid = {}
+    for s in submissions:
+        guid = s['submissionGuid']
+        submissions_by_guid[guid] = s
+
+        individual_guid = s['individualGuid']
+        individuals_by_guid[individual_guid]['mmeSubmissionGuid'] = guid
+
+    return submissions_by_guid
 
 
 def _retrieve_analysis_groups(project):

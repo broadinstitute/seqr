@@ -4,7 +4,7 @@ import { connect } from 'react-redux'
 import { Header, Icon, Popup, Label, Grid } from 'semantic-ui-react'
 import styled from 'styled-components'
 
-import { getIndividualsByGuid, getSortedIndividualsByFamily, getUser } from 'redux/selectors'
+import { getIndividualsByGuid, getSortedIndividualsByFamily, getUser, getMmeSubmissionsByGuid } from 'redux/selectors'
 import DeleteButton from 'shared/components/buttons/DeleteButton'
 import UpdateButton from 'shared/components/buttons/UpdateButton'
 import { BooleanCheckbox, BaseSemanticInput } from 'shared/components/form/Inputs'
@@ -321,11 +321,11 @@ const DISPLAY_FIELDS = [
   },
 ]
 
-const BaseMatchmakerIndividual = ({ loading, load, searchMme, individual, onSubmit, defaultMmeSubmission, mmeResults }) =>
+const BaseMatchmakerIndividual = ({ loading, load, searchMme, individual, onSubmit, defaultMmeSubmission, mmeResults, mmeSubmission }) =>
   <div>
     <VerticalSpacer height={10} />
     <Header size="medium" content={individual.displayName} dividing />
-    {individual.mmeSubmittedData && !individual.mmeDeletedDate ?
+    {individual.mmeSubmittedData && !mmeSubmission.deletedDate ?
       <Grid padded>
         <Grid.Row>
           <Grid.Column width={2}><b>Submitted Genotypes:</b></Grid.Column>
@@ -370,7 +370,7 @@ const BaseMatchmakerIndividual = ({ loading, load, searchMme, individual, onSubm
       </div>
     }
     <DataLoader content load={load} loading={false}>
-      {individual.mmeSubmittedDate && !individual.mmeDeletedDate &&
+      {mmeSubmission && !mmeSubmission.deletedDate &&
         <div>
           <ButtonLink
             disabled={!individual.mmeResultGuids}
@@ -435,11 +435,13 @@ BaseMatchmakerIndividual.propTypes = {
   onSubmit: PropTypes.func,
   defaultMmeSubmission: PropTypes.object,
   mmeResults: PropTypes.object,
+  mmeSubmission: PropTypes.object,
 }
 
 const mapStateToProps = (state, ownProps) => ({
   loading: getMatchmakerMatchesLoading(state),
   defaultMmeSubmission: getDefaultMmeSubmissionByIndividual(state, ownProps)[ownProps.individual.individualGuid],
+  mmeSubmission: getMmeSubmissionsByGuid(state)[ownProps.individual.mmeSubmissionGuid],
   mmeResults: getMmeResultsByIndividual(state, ownProps)[ownProps.individual.individualGuid],
 })
 

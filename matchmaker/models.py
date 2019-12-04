@@ -30,7 +30,7 @@ class MatchmakerSubmission(ModelWithGUID):
 
     class Meta:
         json_fields = [
-            'last_modified_date', 'deleted_date'
+            'guid', 'created_date', 'last_modified_date', 'deleted_date'
         ]
 
 
