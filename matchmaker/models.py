@@ -17,7 +17,7 @@ class MatchmakerSubmission(ModelWithGUID):
     contact_name = models.TextField(default=MME_DEFAULT_CONTACT_NAME)
     contact_href = models.TextField(default=MME_DEFAULT_CONTACT_HREF)
     features = JSONField(null=True)
-    genomicFeatures = JSONField(null=True)
+    genomic_features = JSONField(null=True)
 
     deleted_date = models.DateTimeField(null=True)
     deleted_by = models.ForeignKey(User, null=True, on_delete=models.SET_NULL)

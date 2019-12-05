@@ -25,7 +25,7 @@ import {
 import {
   getMatchmakerMatchesLoading,
   getIndividualTaggedVariants,
-  getDefaultMmeSubmissionByIndividual,
+  getDefaultMmeSubmission,
   getMmeResultsBySubmission,
   getMmeDefaultContactEmail,
   getMatchmakerContactNotes,
@@ -132,8 +132,8 @@ const EditPhenotypesTable = connect(mapPhenotypeStateToProps)(BaseEditPhenotypes
 
 const CONTACT_URL_REGEX = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}(,\s*[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{1,4})*$/i
 const SUBMISSION_EDIT_FIELDS = [
-  { ...MATCHMAKER_CONTACT_NAME_FIELD, name: 'patient.contact.name' },
-  { ...MATCHMAKER_CONTACT_URL_FIELD, name: 'patient.contact.href' },
+  { ...MATCHMAKER_CONTACT_NAME_FIELD, name: 'contactName' },
+  { ...MATCHMAKER_CONTACT_URL_FIELD, name: 'contactHref' },
   {
     name: 'geneVariants',
     component: EditGenotypesTable,
@@ -325,14 +325,14 @@ const BaseMatchmakerIndividual = ({ loading, load, searchMme, individual, onSubm
   <div>
     <VerticalSpacer height={10} />
     <Header size="medium" content={individual.displayName} dividing />
-    {mmeSubmission && mmeSubmission.mmeSubmittedData && !mmeSubmission.deletedDate ?
+    {mmeSubmission && !mmeSubmission.deletedDate ?
       <Grid padded>
         <Grid.Row>
           <Grid.Column width={2}><b>Submitted Genotypes:</b></Grid.Column>
           <Grid.Column width={14}>
-            {mmeSubmission.mmeSubmittedData.geneVariants.length ?
+            {mmeSubmission.geneVariants && mmeSubmission.geneVariants.length ?
               <SubmissionGeneVariants
-                geneVariants={mmeSubmission.mmeSubmittedData.geneVariants}
+                geneVariants={mmeSubmission.geneVariants}
                 modalId="submission"
                 horizontal
               /> : <i>None</i>}
@@ -341,8 +341,8 @@ const BaseMatchmakerIndividual = ({ loading, load, searchMme, individual, onSubm
         <Grid.Row>
           <Grid.Column width={2}><b>Submitted Phenotypes:</b></Grid.Column>
           <Grid.Column width={14}>
-            {mmeSubmission.mmeSubmittedData.phenotypes.length ?
-              <Phenotypes phenotypes={mmeSubmission.mmeSubmittedData.phenotypes} horizontal /> : <i>None</i>}
+            {mmeSubmission.phenotypes && mmeSubmission.phenotypes.length ?
+              <Phenotypes phenotypes={mmeSubmission.phenotypes} horizontal /> : <i>None</i>}
           </Grid.Column>
         </Grid.Row>
       </Grid> :
@@ -370,7 +370,7 @@ const BaseMatchmakerIndividual = ({ loading, load, searchMme, individual, onSubm
       </div>
     }
     <DataLoader content load={load} loading={false}>
-      {mmeSubmission && !mmeSubmission.deletedDate && mmeResults &&
+      {mmeSubmission && !mmeSubmission.deletedDate &&
         <div>
           <ButtonLink
             disabled={loading}
@@ -386,7 +386,7 @@ const BaseMatchmakerIndividual = ({ loading, load, searchMme, individual, onSubm
             modalTitle={`Update Submission for ${individual.displayName}`}
             modalId={`${individual.individualGuid}_-_updateMmeSubmission`}
             confirmDialog="Are you sure you want to update this submission?"
-            initialValues={mmeSubmission.mmeSubmittedData}
+            initialValues={mmeSubmission}
             formFields={SUBMISSION_EDIT_FIELDS}
             onSubmit={onSubmit}
             showErrorPanel
@@ -440,7 +440,7 @@ BaseMatchmakerIndividual.propTypes = {
 
 const mapStateToProps = (state, ownProps) => ({
   loading: getMatchmakerMatchesLoading(state),
-  defaultMmeSubmission: getDefaultMmeSubmissionByIndividual(state, ownProps)[ownProps.individual.individualGuid],
+  defaultMmeSubmission: getDefaultMmeSubmission(state),
   mmeSubmission: getMmeSubmissionsByGuid(state)[ownProps.individual.mmeSubmissionGuid],
   mmeResults: getMmeResultsBySubmission(state, ownProps)[ownProps.individual.mmeSubmissionGuid],
 })

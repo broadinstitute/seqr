@@ -192,7 +192,7 @@ export const loadMmeMatches = (submissionGuid, search) => {
 }
 
 export const updateMmeSubmission = (values) => {
-  return updateEntity(values, RECEIVE_DATA, '/api/matchmaker/submission', 'mmeSubmissionGuid')
+  return updateEntity(values, RECEIVE_DATA, '/api/matchmaker/submission', 'submissionGuid')
 }
 
 export const updateMmeSubmissionStatus = (values) => {

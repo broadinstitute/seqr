@@ -9,8 +9,8 @@ from settings import MME_DEFAULT_CONTACT_INSTITUTION
 logger = logging.getLogger(__name__)
 
 
-def get_mme_genes_phenotypes(results, additional_genes=None):
-    hpo_ids = set()
+def get_mme_genes_phenotypes(results, additional_genes=None, additional_hpo_ids=None):
+    hpo_ids = additional_hpo_ids if additional_hpo_ids else set()
     genes = additional_genes if additional_genes else set()
     for result in results:
         hpo_ids.update({feature['id'] for feature in result['patient'].get('features', []) if feature.get('id')})
@@ -27,13 +27,16 @@ def get_mme_genes_phenotypes(results, additional_genes=None):
     return hpo_terms_by_id, genes_by_id, gene_symbols_to_ids
 
 
-def parse_mme_patient(result, hpo_terms_by_id, gene_symbols_to_ids, submission_guid):
-    phenotypes = [feature for feature in result['patient'].get('features', [])]
+def parse_mme_features(features, hpo_terms_by_id):
+    phenotypes = [feature for feature in (features or [])]
     for feature in phenotypes:
         feature['label'] = hpo_terms_by_id.get(feature['id'])
+    return phenotypes
 
+
+def parse_mme_gene_variants(genomic_features, gene_symbols_to_ids):
     gene_variants = []
-    for gene_feature in result['patient'].get('genomicFeatures', []):
+    for gene_feature in (genomic_features or []):
         gene_id = gene_feature['gene']['id']
         if not gene_id.startswith('ENSG'):
             gene_ids = gene_symbols_to_ids.get(gene_feature['gene']['id'])
@@ -47,9 +50,15 @@ def parse_mme_patient(result, hpo_terms_by_id, gene_symbols_to_ids, submission_g
                     'ref': gene_feature['variant'].get('referenceBases'),
                     'chrom': gene_feature['variant'].get('referenceName'),
                     'pos': gene_feature['variant'].get('start'),
-                    'genomeVersion':  gene_feature['variant'].get('assembly'),
+                    'genomeVersion': gene_feature['variant'].get('assembly'),
                 })
             gene_variants.append(gene_variant)
+    return gene_variants
+
+
+def parse_mme_patient(result, hpo_terms_by_id, gene_symbols_to_ids, submission_guid):
+    phenotypes = parse_mme_features(result['patient'].get('features'), hpo_terms_by_id)
+    gene_variants = parse_mme_gene_variants(result['patient'].get('genomicFeatures'), gene_symbols_to_ids)
 
     parsed_result = {
         'geneVariants': gene_variants,
@@ -73,6 +82,6 @@ def get_submission_json_for_external_match(submission):
             'species': 'NCBITaxon:9606',
             'sex': MatchmakerSubmission.SEX_LOOKUP[submission.individual.sex],
             'features': submission.features,
-            'genomicFeatures': submission.genomicFeatures,
+            'genomicFeatures': submission.genomic_features,
         }
     }

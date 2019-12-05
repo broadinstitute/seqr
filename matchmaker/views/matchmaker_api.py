@@ -8,7 +8,8 @@ from django.core.mail.message import EmailMessage
 from django.views.decorators.csrf import csrf_exempt
 
 from matchmaker.models import MatchmakerResult, MatchmakerContactNotes, MatchmakerSubmission
-from matchmaker.matchmaker_utils import get_mme_genes_phenotypes, parse_mme_patient, get_submission_json_for_external_match
+from matchmaker.matchmaker_utils import get_mme_genes_phenotypes, parse_mme_patient, \
+    get_submission_json_for_external_match, parse_mme_features, parse_mme_gene_variants
 from seqr.models import Individual, SavedVariant
 from seqr.utils.communication_utils import post_to_slack
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
@@ -135,26 +136,10 @@ def update_mme_submission(request, submission_guid=None):
     Create or update the submission for the given individual.
     """
     submission_json = json.loads(request.body)
-
-    if submission_guid:
-        submission = MatchmakerSubmission.objects.get(guid=submission_guid)
-        check_mme_permissions(submission, request.user)
-    else:
-        submission = None
-        individual_guid = submission_json.get('individualGuid')
-        if not individual_guid:
-            return create_json_response({}, status=400, reason='Individual is required for a new submission')
-        individual = Individual.objects.get(guid=individual_guid)
-        check_permissions(individual.family.project, request.user)
-
-    submission_json.pop('individualGuid', {})
     phenotypes = submission_json.pop('phenotypes', [])
     gene_variants = submission_json.pop('geneVariants', [])
     if not phenotypes and not gene_variants:
         return create_json_response({}, status=400, reason='Genotypes or phentoypes are required')
-
-    if not submission_json.get('patient', {}).get('id'):
-        return create_json_response({}, status=400, reason='Patient id is required')
 
     genomic_features = []
     for gene_variant in gene_variants:
@@ -173,38 +158,27 @@ def update_mme_submission(request, submission_guid=None):
             }
         genomic_features.append(feature)
 
-    submission_json['patient']['genomicFeatures'] = genomic_features
-    submission_json['patient']['features'] = phenotypes
+    submission_json.update({
+        'features': phenotypes,
+        'genomicFeatures': genomic_features,
+    })
 
-    response = requests.post(url=MME_ADD_INDIVIDUAL_URL, headers=MME_HEADERS, data=json.dumps(submission_json))
-
-    if response.status_code not in (200, 409):
-        try:
-            response_json = response.json()
-        except Exception:
-            response_json = {}
-        return create_json_response(response_json, status=response.status_code, reason=response.content)
-
-    if submission:
-        submission.submission_id = submission_json['patient']['id']
-        submission.label = submission_json['patient'].get('label')
-        submission.contact_name = submission_json['patient']['contact']['name']
-        submission.contact_href = submission_json['patient']['contact']['href']
-        submission.features = phenotypes
-        submission.genomicFeatures = genomic_features
-        submission.deleted_date = None
-        submission.deleted_by = None
-        submission.save()
+    if submission_guid:
+        submission = MatchmakerSubmission.objects.get(guid=submission_guid)
+        check_mme_permissions(submission, request.user)
     else:
+        individual_guid = submission_json.get('individualGuid')
+        if not individual_guid:
+            return create_json_response({}, status=400, reason='Individual is required for a new submission')
+        individual = Individual.objects.get(guid=individual_guid)
+        check_permissions(individual.family.project, request.user)
         submission = MatchmakerSubmission.objects.create(
             individual=individual,
-            submission_id=submission_json['patient']['id'],
-            label=submission_json['patient'].get('label'),
-            contact_name=submission_json['patient']['contact']['name'],
-            contact_href=submission_json['patient']['contact']['href'],
-            features=phenotypes,
-            genomicFeatures=genomic_features,
+            submission_id=individual.guid,
+            label=individual.individual_id,
         )
+
+    update_model_from_json(submission, submission_json, allow_unknown_keys=True)
 
     # search for new matches
     return _search_matches(submission, request.user)
@@ -341,11 +315,13 @@ def _parse_mme_results(submission, saved_results, user, additional_genes=None, r
         results.append(result)
         contact_institutions.add(result['patient']['contact'].get('institution', '').strip().lower())
 
-    mme_submitted_data = get_submission_json_for_external_match(submission)
-    results_for_genes = [mme_submitted_data]
-    results_for_genes += results
+    additional_hpo_ids = {feature['id'] for feature in (submission.features or []) if feature.get('id')}
+    if not additional_genes:
+        additional_genes = set()
+    additional_genes.update({gene_feature['gene']['id'] for gene_feature in (submission.genomic_features or [])})
+
     hpo_terms_by_id, genes_by_id, gene_symbols_to_ids = get_mme_genes_phenotypes(
-        results_for_genes, additional_genes=additional_genes)
+        results, additional_genes=additional_genes, additional_hpo_ids=additional_hpo_ids)
 
     parsed_results = [_parse_mme_result(result, hpo_terms_by_id, gene_symbols_to_ids, submission.guid) for result in results]
     parsed_results_gy_guid = {result['matchStatus']['matchmakerResultGuid']: result for result in parsed_results}
@@ -353,14 +329,14 @@ def _parse_mme_results(submission, saved_results, user, additional_genes=None, r
     contact_notes = {note.institution: _get_json_for_model(note, user=user)
                      for note in MatchmakerContactNotes.objects.filter(institution__in=contact_institutions)}
 
-    submitted_data = parse_mme_patient(
-        mme_submitted_data, hpo_terms_by_id, gene_symbols_to_ids, submission.guid
-    ) if mme_submitted_data else None
-
-    submission_json = get_json_for_matchmaker_submission(submission, individual_guid=submission.individual.guid)
+    submission_json = get_json_for_matchmaker_submission(
+        submission, individual_guid=submission.individual.guid,
+        additional_model_fields=['contact_name', 'contact_href', 'submission_id']
+    )
     submission_json.update({
         'mmeResultGuids': parsed_results_gy_guid.keys(),
-        'mmeSubmittedData': submitted_data,
+        'phenotypes': parse_mme_features(submission.features, hpo_terms_by_id),
+        'geneVariants': parse_mme_gene_variants(submission.genomic_features, gene_symbols_to_ids),
     })
 
     response = {

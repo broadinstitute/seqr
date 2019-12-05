@@ -1434,7 +1434,7 @@
                 "observed": "yes"
             }
         ],
-        "genomicFeatures": [
+        "genomic_features": [
             {
                 "gene": {
                     "id": "ENSG00000186092"
@@ -1481,7 +1481,7 @@
                 "observed": "yes"
             }
         ],
-        "genomicFeatures": [
+        "genomic_features": [
             {
                 "gene": {
                     "id": "ENSG00000277258"

@@ -134,52 +134,27 @@ class MatchmakerAPITest(TestCase):
         })
         self.assertDictEqual(response_json['mmeSubmissionsByGuid'], {SUBMISSION_GUID: {
             'mmeResultGuids': mock.ANY,
-            'mmeSubmittedData': {
-                'submissionGuid': SUBMISSION_GUID,
-                'patient': {
-                    'id': 'NA19675_1_01',
-                    'label': 'NA19675_1',
-                    'contact': {'href': 'mailto:matchmaker@broadinstitute.org', 'name': 'Sam Baxter',
-                                'institution': 'Broad Center for Mendelian Genomics'},
-                    'species': 'NCBITaxon:9606',
-                    'sex': 'MALE',
-                    'features': [
-                        {'id': 'HP:0001252', 'label': 'Muscular hypotonia', 'observed': 'yes'},
-                        {'id': 'HP:0001263', 'label': 'Global developmental delay', 'observed': 'no'},
-                        {'id': 'HP:0012469', 'label': 'Infantile spasms', 'observed': 'yes'}
-                    ],
-                    'genomicFeatures': [{
-                        'gene': {'id': 'ENSG00000186092'},
-                        'variant': {
-                            'end': 77027548,
-                            'start': 77027549,
-                            'assembly': 'GRCh38',
-                            'referenceName': '14',
-                            'alternateBases': 'C',
-                            'referenceBases': 'CCACT'
-                        },
-                        'zygosity': 1
-                    }],
-                },
-                'phenotypes': [
-                    {'id': 'HP:0001252', 'label': 'Muscular hypotonia', 'observed': 'yes'},
-                    {'id': 'HP:0001263', 'label': 'Global developmental delay', 'observed': 'no'},
-                    {'id': 'HP:0012469', 'label': 'Infantile spasms', 'observed': 'yes'}
-                ],
-                'geneVariants': [{
-                    'geneId': 'ENSG00000186092',
-                    'alt': 'C',
-                    'ref': 'CCACT',
-                    'chrom': '14',
-                    'pos': 77027549,
-                    'genomeVersion': 'GRCh38',
-                }],
-            },
             'submissionGuid': SUBMISSION_GUID,
             'individualGuid': INDIVIDUAL_GUID,
             'createdDate': '2018-05-23T09:07:49.719Z',
             'lastModifiedDate': '2018-05-23T09:07:49.719Z',
             'deletedDate': None,
+            'contactName': 'Sam Baxter',
+            'contactHref': 'mailto:matchmaker@broadinstitute.org',
+            'submissionId': 'NA19675_1_01',
+            'phenotypes': [
+                {'id': 'HP:0001252', 'label': 'Muscular hypotonia', 'observed': 'yes'},
+                {'id': 'HP:0001263', 'label': 'Global developmental delay', 'observed': 'no'},
+                {'id': 'HP:0012469', 'label': 'Infantile spasms', 'observed': 'yes'}
+            ],
+            'geneVariants': [{
+                'geneId': 'ENSG00000186092',
+                'alt': 'C',
+                'ref': 'CCACT',
+                'chrom': '14',
+                'pos': 77027549,
+                'genomeVersion': 'GRCh38',
+            }],
         }})
         self.assertDictEqual(response_json['individualsByGuid'], {INDIVIDUAL_GUID: {
             'mmeSubmissionGuid': SUBMISSION_GUID,
@@ -235,52 +210,27 @@ class MatchmakerAPITest(TestCase):
         self.assertTrue(response_json['mmeResultsByGuid']['MR0004688_RGP_105_3']['matchStatus']['matchRemoved'])
         self.assertDictEqual(response_json['mmeSubmissionsByGuid'], {SUBMISSION_GUID: {
             'mmeResultGuids': mock.ANY,
-            'mmeSubmittedData': {
-                'patient': {
-                    'id': 'NA19675_1_01',
-                    'label': 'NA19675_1',
-                    'contact': {'href': 'mailto:matchmaker@broadinstitute.org', 'name': 'Sam Baxter',
-                                'institution': 'Broad Center for Mendelian Genomics'},
-                    'species': 'NCBITaxon:9606',
-                    'sex': 'MALE',
-                    'features': [
-                        {'id': 'HP:0001252', 'label': 'Muscular hypotonia', 'observed': 'yes'},
-                        {'id': 'HP:0001263', 'label': 'Global developmental delay', 'observed': 'no'},
-                        {'id': 'HP:0012469', 'label': 'Infantile spasms', 'observed': 'yes'}
-                    ],
-                    'genomicFeatures': [{
-                        'gene': {'id': 'ENSG00000186092'},
-                        'variant': {
-                            'end': 77027548,
-                            'start': 77027549,
-                            'assembly': 'GRCh38',
-                            'referenceName': '14',
-                            'alternateBases': 'C',
-                            'referenceBases': 'CCACT'
-                        },
-                        'zygosity': 1
-                    }],
-                },
-                'phenotypes': [
-                    {'id': 'HP:0001252', 'label': 'Muscular hypotonia', 'observed': 'yes'},
-                    {'id': 'HP:0001263', 'label': 'Global developmental delay', 'observed': 'no'},
-                    {'id': 'HP:0012469', 'label': 'Infantile spasms', 'observed': 'yes'}
-                ],
-                'geneVariants': [{
-                    'geneId': 'ENSG00000186092',
-                    'alt': 'C',
-                    'ref': 'CCACT',
-                    'chrom': '14',
-                    'pos': 77027549,
-                    'genomeVersion': 'GRCh38',
-                }],
-                'submissionGuid': SUBMISSION_GUID,
-            },
             'individualGuid': INDIVIDUAL_GUID,
             'submissionGuid': SUBMISSION_GUID,
             'createdDate': '2018-05-23T09:07:49.719Z',
             'lastModifiedDate': '2018-05-23T09:07:49.719Z',
             'deletedDate': None,
+            'contactName': 'Sam Baxter',
+            'contactHref': 'mailto:matchmaker@broadinstitute.org',
+            'submissionId': 'NA19675_1_01',
+            'phenotypes': [
+                {'id': 'HP:0001252', 'label': 'Muscular hypotonia', 'observed': 'yes'},
+                {'id': 'HP:0001263', 'label': 'Global developmental delay', 'observed': 'no'},
+                {'id': 'HP:0012469', 'label': 'Infantile spasms', 'observed': 'yes'}
+            ],
+            'geneVariants': [{
+                'geneId': 'ENSG00000186092',
+                'alt': 'C',
+                'ref': 'CCACT',
+                'chrom': '14',
+                'pos': 77027549,
+                'genomeVersion': 'GRCh38',
+            }],
         }})
         self.assertDictEqual(response_json['individualsByGuid'], {INDIVIDUAL_GUID: {
             'mmeSubmissionGuid': SUBMISSION_GUID,
@@ -363,9 +313,6 @@ class MatchmakerAPITest(TestCase):
     def test_update_mme_submission(self):
         responses.add(responses.POST, 'http://localhost:9020/match', status=200, json={'results': []})
         responses.add(responses.POST, 'http://localhost:9020/match/external', status=200, json={'results': [NEW_MATCH_JSON]})
-        responses.add(responses.POST, 'http://localhost:9020/patient/add', status=403,  body='Failed request')
-        responses.add(responses.POST, 'http://localhost:9020/patient/add', status=200)
-        responses.add(responses.POST, 'http://localhost:9020/patient/add', status=409)
 
         url = reverse(update_mme_submission)
         _check_login(self, url)
@@ -373,43 +320,25 @@ class MatchmakerAPITest(TestCase):
         # Test invalid inputs
         response = self.client.post(url, content_type='application/json', data=json.dumps({}))
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.reason_phrase, 'Individual is required for a new submission')
-
-        response = self.client.post(
-            url, content_type='application/json', data=json.dumps({'individualGuid': NO_SUBMISSION_INDIVIDUAL_GUID})
-        )
-        self.assertEqual(response.status_code, 400)
         self.assertEqual(response.reason_phrase, 'Genotypes or phentoypes are required')
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({
-            'geneVariants': [{'pos': 123345}], 'individualGuid': NO_SUBMISSION_INDIVIDUAL_GUID
+            'geneVariants': [{'pos': 123345}],
         }))
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.reason_phrase, 'Patient id is required')
-
-        response = self.client.post(url, content_type='application/json', data=json.dumps(
-            {'patient': {'id': 123}, 'geneVariants': [{'pos': 123345}], 'individualGuid': NO_SUBMISSION_INDIVIDUAL_GUID}
-        ))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.reason_phrase, 'Gene id is required for genomic features')
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({
-            'patient': {'id': 123}, 'phenotypes': [{'id': 'HP:0012469'}],
-            'individualGuid': NO_SUBMISSION_INDIVIDUAL_GUID,
+            'phenotypes': [{'id': 'HP:0012469'}]
         }))
-        self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.reason_phrase, 'Failed request')
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.reason_phrase, 'Individual is required for a new submission')
 
         # Test successful creation
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'individualGuid': NO_SUBMISSION_INDIVIDUAL_GUID,
-            'patient': {
-                'id': 'HG00733',
-                'label': 'HG00733',
-                'contact': {'href': 'mailto:test@broadinstitute.org', 'name': 'PI',
-                            'institution': 'Broad Center for Mendelian Genomics'},
-                'species': 'NCBITaxon:9606',
-            },
+            'contactHref': 'mailto:test@broadinstitute.org',
+            'contactName': 'PI',
             'phenotypes': [
                 {'id': 'HP:0012469', 'label': 'Infantile spasms', 'observed': 'yes'}
             ],
@@ -433,47 +362,25 @@ class MatchmakerAPITest(TestCase):
         new_submission_guid = response_json['mmeSubmissionsByGuid'].keys()[0]
         self.assertDictEqual(response_json['mmeSubmissionsByGuid'], {new_submission_guid: {
             'mmeResultGuids': response_json['mmeResultsByGuid'].keys(),
-            'mmeSubmittedData': {
-                'submissionGuid': new_submission_guid,
-                'patient': {
-                    'id': 'HG00733',
-                    'label': 'HG00733',
-                    'contact': {'href': 'mailto:test@broadinstitute.org', 'name': 'PI',
-                                'institution': 'Broad Center for Mendelian Genomics'},
-                    'species': 'NCBITaxon:9606',
-                    'sex': 'FEMALE',
-                    'features': [
-                        {'id': 'HP:0012469', 'label': 'Infantile spasms', 'observed': 'yes'}
-                    ],
-                    'genomicFeatures': [{
-                        'gene': {'id': 'ENSG00000186092'},
-                        'variant': {
-                            'start': 77027549,
-                            'assembly': 'GRCh38',
-                            'referenceName': '14',
-                            'alternateBases': 'C',
-                            'referenceBases': 'CCACT'
-                        },
-                        'zygosity': 0
-                    }],
-                },
-                'phenotypes': [
-                    {'id': 'HP:0012469', 'label': 'Infantile spasms', 'observed': 'yes'}
-                ],
-                'geneVariants': [{
-                    'geneId': 'ENSG00000186092',
-                    'alt': 'C',
-                    'ref': 'CCACT',
-                    'chrom': '14',
-                    'pos': 77027549,
-                    'genomeVersion': 'GRCh38',
-                }],
-            },
             'individualGuid': NO_SUBMISSION_INDIVIDUAL_GUID,
             'submissionGuid': new_submission_guid,
             'createdDate': mock.ANY,
             'lastModifiedDate': mock.ANY,
             'deletedDate': None,
+            'contactName': 'PI',
+            'contactHref': 'mailto:test@broadinstitute.org',
+            'submissionId': NO_SUBMISSION_INDIVIDUAL_GUID,
+            'phenotypes': [
+                {'id': 'HP:0012469', 'label': 'Infantile spasms', 'observed': 'yes'}
+            ],
+            'geneVariants': [{
+                'geneId': 'ENSG00000186092',
+                'alt': 'C',
+                'ref': 'CCACT',
+                'chrom': '14',
+                'pos': 77027549,
+                'genomeVersion': 'GRCh38',
+            }],
         }})
         self.assertEqual(
             response_json['mmeSubmissionsByGuid'][new_submission_guid]['createdDate'][:10],
@@ -498,13 +405,14 @@ class MatchmakerAPITest(TestCase):
             }})
 
         # Test proxy calls
-        self.assertEqual(len(responses.calls), 4)
+        self.assertEqual(len(responses.calls), 2)
         expected_body = {
             'patient': {
-                'id': 'HG00733',
+                'id': NO_SUBMISSION_INDIVIDUAL_GUID,
                 'label': 'HG00733',
                 'contact': {'href': 'mailto:test@broadinstitute.org', 'name': 'PI',
                             'institution': 'Broad Center for Mendelian Genomics'},
+                'sex': 'FEMALE',
                 'species': 'NCBITaxon:9606',
                 'features': [
                     {'id': 'HP:0012469', 'label': 'Infantile spasms', 'observed': 'yes'}
@@ -522,12 +430,9 @@ class MatchmakerAPITest(TestCase):
                 }],
             }
         }
-        self.assertEqual(responses.calls[1].request.url, 'http://localhost:9020/patient/add')
-        self.assertEqual(responses.calls[2].request.url, 'http://localhost:9020/match')
-        self.assertEqual(responses.calls[3].request.url, 'http://localhost:9020/match/external')
-        for i, call in enumerate(responses.calls[1:]):
-            if i > 0:
-                expected_body['patient']['sex'] = 'FEMALE'
+        self.assertEqual(responses.calls[0].request.url, 'http://localhost:9020/match')
+        self.assertEqual(responses.calls[1].request.url, 'http://localhost:9020/match/external')
+        for call in responses.calls:
             self.assertEqual(call.request.headers['X-Auth-Token'], 'abcd')
             self.assertEqual(call.request.headers['Accept'], 'application/vnd.ga4gh.matchmaker.v1.0+json')
             self.assertEqual(call.request.headers['Content-Type'],
@@ -538,13 +443,8 @@ class MatchmakerAPITest(TestCase):
         url = reverse(update_mme_submission, args=[new_submission_guid])
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'individualGuid': NO_SUBMISSION_INDIVIDUAL_GUID,
-            'patient': {
-                'id': 'HG00733',
-                'label': 'HG00733',
-                'contact': {'href': 'mailto:matchmaker@broadinstitute.org', 'name': 'Test Name',
-                            'institution': 'Broad Center for Mendelian Genomics'},
-                'species': 'NCBITaxon:9606',
-            },
+            'contactHref': 'mailto:matchmaker@broadinstitute.org',
+            'contactName': 'Test Name',
             'phenotypes': [
                 {'id': 'HP:0012469', 'label': 'Infantile spasms', 'observed': 'yes'},
                 {'id': 'HP:0001263', 'label': 'Global developmental delay', 'observed': 'no'},
@@ -561,32 +461,19 @@ class MatchmakerAPITest(TestCase):
         self.assertDictEqual(response_json['mmeResultsByGuid'].values()[0], PARSED_NEW_MATCH_NEW_SUBMISSION_JSON)
         self.assertDictEqual(response_json['mmeSubmissionsByGuid'], {new_submission_guid: {
             'mmeResultGuids': response_json['mmeResultsByGuid'].keys(),
-            'mmeSubmittedData': {
-                'submissionGuid': new_submission_guid,
-                'patient': {
-                    'id': 'HG00733',
-                    'label': 'HG00733',
-                    'contact': {'href': 'mailto:matchmaker@broadinstitute.org', 'name': 'Test Name',
-                                'institution': 'Broad Center for Mendelian Genomics'},
-                    'species': 'NCBITaxon:9606',
-                    'sex': 'FEMALE',
-                    'features': [
-                        {'id': 'HP:0012469', 'label': 'Infantile spasms', 'observed': 'yes'},
-                        {'id': 'HP:0001263', 'label': 'Global developmental delay', 'observed': 'no'},
-                    ],
-                    'genomicFeatures': [],
-                },
-                'phenotypes': [
-                    {'id': 'HP:0012469', 'label': 'Infantile spasms', 'observed': 'yes'},
-                    {'id': 'HP:0001263', 'label': 'Global developmental delay', 'observed': 'no'},
-                ],
-                'geneVariants': [],
-            },
             'individualGuid': NO_SUBMISSION_INDIVIDUAL_GUID,
             'submissionGuid': new_submission_guid,
             'createdDate': mock.ANY,
             'lastModifiedDate': mock.ANY,
             'deletedDate': None,
+            'contactName': 'Test Name',
+            'contactHref': 'mailto:matchmaker@broadinstitute.org',
+            'submissionId': NO_SUBMISSION_INDIVIDUAL_GUID,
+            'phenotypes': [
+                {'id': 'HP:0012469', 'label': 'Infantile spasms', 'observed': 'yes'},
+                {'id': 'HP:0001263', 'label': 'Global developmental delay', 'observed': 'no'},
+            ],
+            'geneVariants': [],
         }})
         self.assertEqual(
             response_json['mmeSubmissionsByGuid'][new_submission_guid]['createdDate'][:10],
@@ -607,14 +494,15 @@ class MatchmakerAPITest(TestCase):
         self.assertListEqual(response_json['mmeContactNotes'].keys(), ['st georges, university of london'])
 
         # Test proxy calls
-        self.assertEqual(len(responses.calls), 7)
+        self.assertEqual(len(responses.calls), 4)
         expected_body = {
             'patient': {
-                'id': 'HG00733',
+                'id': NO_SUBMISSION_INDIVIDUAL_GUID,
                 'label': 'HG00733',
                 'contact': {'href': 'mailto:matchmaker@broadinstitute.org', 'name': 'Test Name',
                             'institution': 'Broad Center for Mendelian Genomics'},
                 'species': 'NCBITaxon:9606',
+                'sex': 'FEMALE',
                 'features': [
                     {'id': 'HP:0012469', 'label': 'Infantile spasms', 'observed': 'yes'},
                     {'id': 'HP:0001263', 'label': 'Global developmental delay', 'observed': 'no'},
@@ -622,13 +510,13 @@ class MatchmakerAPITest(TestCase):
                 'genomicFeatures': [],
             }
         }
-        self.assertEqual(responses.calls[4].request.url, 'http://localhost:9020/patient/add')
-        self.assertEqual(responses.calls[4].request.headers['X-Auth-Token'], 'abcd')
-        self.assertEqual(responses.calls[4].request.headers['Accept'], 'application/vnd.ga4gh.matchmaker.v1.0+json')
-        self.assertEqual(responses.calls[4].request.headers['Content-Type'],
+        self.assertEqual(responses.calls[2].request.url, 'http://localhost:9020/match')
+        self.assertEqual(responses.calls[3].request.url, 'http://localhost:9020/match/external')
+        self.assertEqual(responses.calls[3].request.headers['X-Auth-Token'], 'abcd')
+        self.assertEqual(responses.calls[3].request.headers['Accept'], 'application/vnd.ga4gh.matchmaker.v1.0+json')
+        self.assertEqual(responses.calls[3].request.headers['Content-Type'],
                          'application/vnd.ga4gh.matchmaker.v1.0+json')
-        self.assertDictEqual(json.loads(responses.calls[4].request.body), expected_body)
-        self.assertEqual(responses.calls[4].response.status_code, 409)
+        self.assertDictEqual(json.loads(responses.calls[3].request.body), expected_body)
 
     @responses.activate
     def test_delete_mme_submission(self):

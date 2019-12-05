@@ -30,7 +30,7 @@ class Migration(migrations.Migration):
                 ('contact_name', models.TextField(default=b'Samantha Baxter')),
                 ('contact_href', models.TextField(default=b'mailto:matchmaker@broadinstitute.org')),
                 ('features', django.contrib.postgres.fields.jsonb.JSONField(null=True)),
-                ('genomicFeatures', django.contrib.postgres.fields.jsonb.JSONField(null=True)),
+                ('genomic_features', django.contrib.postgres.fields.jsonb.JSONField(null=True)),
                 ('deleted_date', models.DateTimeField(null=True)),
                 ('created_by', models.ForeignKey(
                     blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL,

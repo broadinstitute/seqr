@@ -1,5 +1,4 @@
 import orderBy from 'lodash/orderBy'
-import mapValues from 'lodash/mapValues'
 import { createSelector } from 'reselect'
 
 import {
@@ -7,7 +6,6 @@ import {
   FAMILY_FIELD_ID,
   INDIVIDUAL_FIELD_ID,
   FAMILY_FIELD_FIRST_SAMPLE,
-  SEX_LOOKUP,
   SHOW_ALL,
   familyVariantSamples,
   getVariantMainTranscript,
@@ -285,43 +283,35 @@ export const getAnalysisStatusCounts = createSelector(
     )
   })
 
-export const getDefaultMmeSubmissionByIndividual = createSelector(
+export const getDefaultMmeSubmission = createSelector(
   getCurrentProject,
-  getProjectAnalysisGroupIndividualsByGuid,
-  (project, individualsByGuid) => mapValues(individualsByGuid, individual => ({
-    patient: {
-      contact: {
-        name: project.mmePrimaryDataOwner,
-        institution: project.mmeContactInstitution,
-        href: project.mmeContactUrl,
-      },
-      species: 'NCBITaxon:9606',
-      sex: SEX_LOOKUP[individual.sex].toUpperCase(),
-      id: individual.individualId,
-      label: individual.individualId,
-    },
+  project => ({
+    contactName: project.mmePrimaryDataOwner,
+    contactHref: project.mmeContactUrl,
     geneVariants: [],
     phenotypes: [],
-  })),
+  }),
 )
 
 export const getMmeResultsBySubmission = createSelector(
   getMmeResultsByGuid,
   getMmeSubmissionsByGuid,
   (mmeResultsByGuid, mmeSubmissionsByGuid) =>
-    Object.values(mmeResultsByGuid).reduce((acc, result) => {
-      const { submissionGuid } = result
+    Object.values(mmeSubmissionsByGuid).reduce((acc, submission) => {
+      const { submissionGuid, mmeResultGuids = [] } = submission
       if (!acc[submissionGuid]) {
         acc[submissionGuid] = { active: [], removed: [] }
       }
-
-      const parsedResult = { ...result.matchStatus, ...result }
-      if (parsedResult.matchRemoved || mmeSubmissionsByGuid[submissionGuid].deletedDate) {
-        acc[submissionGuid].removed.push(parsedResult)
-      }
-      else {
-        acc[submissionGuid].active.push(parsedResult)
-      }
+      mmeResultGuids.forEach((resultGuid) => {
+        const result = mmeResultsByGuid[resultGuid]
+        const parsedResult = { ...result.matchStatus, ...result }
+        if (parsedResult.matchRemoved || mmeSubmissionsByGuid[submissionGuid].deletedDate) {
+          acc[submissionGuid].removed.push(parsedResult)
+        }
+        else {
+          acc[submissionGuid].active.push(parsedResult)
+        }
+      })
       return acc
     }, { }),
 )
@@ -336,15 +326,15 @@ export const getMmeDefaultContactEmail = createSelector(
   (state, ownProps) => ownProps.matchmakerResultGuid,
   (mmeResultsByGuid, mmeSubmissionsByGuid, individualsByGuid, genesById, savedVariants, user, matchmakerResultGuid) => {
     const { patient, geneVariants, submissionGuid } = mmeResultsByGuid[matchmakerResultGuid]
-    const { mmeSubmittedData, individualGuid } = mmeSubmissionsByGuid[submissionGuid]
+    const { geneVariants: submissionGeneVariants, phenotypes, individualGuid, contactHref, submissionId } = mmeSubmissionsByGuid[submissionGuid]
     const { familyGuid } = individualsByGuid[individualGuid]
 
     const geneName = geneVariants && geneVariants.length && (genesById[geneVariants[0].geneId] || {}).geneSymbol
 
-    const submittedGenes = [...new Set((mmeSubmittedData.geneVariants || []).map(
+    const submittedGenes = [...new Set((submissionGeneVariants || []).map(
       ({ geneId }) => (genesById[geneId] || {}).geneSymbol))].join(', ')
 
-    const submittedVariants = (mmeSubmittedData.geneVariants || []).map(({ alt, ref, chrom, pos }) => {
+    const submittedVariants = (submissionGeneVariants || []).map(({ alt, ref, chrom, pos }) => {
       const savedVariant = Object.values(savedVariants).find(
         o => o.chrom === chrom && o.pos === pos && o.ref === ref && o.alt === alt
           && o.familyGuids.includes(familyGuid)) || {}
@@ -356,7 +346,7 @@ export const getMmeDefaultContactEmail = createSelector(
       return `a ${genotype.numAlt === 1 ? 'heterozygous' : 'homozygous'} ${consequence} variant ${chrom}:${pos} ${ref}>${alt}${hgvs ? ` (${hgvs})` : ''}`
     }).join(', ')
 
-    const submittedPhenotypeList = (mmeSubmittedData.phenotypes || []).filter(
+    const submittedPhenotypeList = (phenotypes || []).filter(
       ({ observed, label }) => observed === 'yes' && label).map(({ label }) => label.toLowerCase())
     const numPhenotypes = submittedPhenotypeList.length
     if (numPhenotypes > 2) {
@@ -366,15 +356,15 @@ export const getMmeDefaultContactEmail = createSelector(
 
     const contacts = [
       patient.contact.href.replace('mailto:', ''),
-      mmeSubmittedData.patient.contact.href.replace('mailto:', '').replace('matchmaker@broadinstitute.org,', ''),
+      contactHref.replace('mailto:', '').replace('matchmaker@broadinstitute.org,', ''),
       user.email,
     ]
     return {
       matchmakerResultGuid,
       patientId: patient.id,
       to: contacts.filter(val => val).join(','),
-      subject: `${geneName || `Patient ${patient.id}`} Matchmaker Exchange connection (${mmeSubmittedData.patient.id})`,
-      body: `Dear ${patient.contact.name},\n\nWe recently matched with one of your patients in Matchmaker Exchange harboring ${(mmeSubmittedData.geneVariants || []).length === 1 ? 'a variant' : 'variants'} in ${submittedGenes}. Our patient has ${submittedVariants}${submittedPhenotypes ? ` and presents with ${submittedPhenotypes}` : ''}. Would you be willing to share whether your patient's phenotype and genotype match with ours? We are very grateful for your help and look forward to hearing more.\n\nBest wishes,\n${user.displayName}`,
+      subject: `${geneName || `Patient ${patient.id}`} Matchmaker Exchange connection (${submissionId})`,
+      body: `Dear ${patient.contact.name},\n\nWe recently matched with one of your patients in Matchmaker Exchange harboring ${(submissionGeneVariants || []).length === 1 ? 'a variant' : 'variants'} in ${submittedGenes}. Our patient has ${submittedVariants}${submittedPhenotypes ? ` and presents with ${submittedPhenotypes}` : ''}. Would you be willing to share whether your patient's phenotype and genotype match with ours? We are very grateful for your help and look forward to hearing more.\n\nBest wishes,\n${user.displayName}`,
     }
   },
 )
