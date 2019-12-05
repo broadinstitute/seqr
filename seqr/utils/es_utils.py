@@ -813,7 +813,7 @@ class EsSearch(BaseEsSearch):
 
         deduplicated_results = []
         for gene, compound_het_pairs in results.items():
-            deduplicated_results += [{gene: compound_het_pair} for compound_het_pair in compound_het_pairs]
+            deduplicated_results += [{gene: ch_pair} for ch_pair in compound_het_pairs]
 
         self.previous_search_results['duplicate_doc_count'] = duplicates + self.previous_search_results.get('duplicate_doc_count', 0)
         self.previous_search_results['total_results'] -= duplicates
