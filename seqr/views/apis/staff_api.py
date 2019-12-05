@@ -49,7 +49,7 @@ def elasticsearch_status(request):
     indices = [{
         _to_camel_case(field.replace('.', '_')): index[field] for field in index_fields
     } for index in client.cat.indices(format="json", h=','.join(index_fields))
-        if index['index'] not in ['.kibana', 'index_operations_log']]
+        if all(not index['index'].startswith(omit_prefix) for omit_prefix in ['.', 'index_operations_log'])]
 
     aliases = defaultdict(list)
     for alias in client.cat.aliases(format="json", h='alias,index'):
@@ -79,7 +79,6 @@ def elasticsearch_status(request):
         index_name = index['index']
         index_mapping = mappings[index_name]['mappings']['variant']
         index.update(index_mapping.get('_meta', {}))
-        index['hasNestedGenotypes'] = 'samples_num_alt_1' in index_mapping['properties']
 
         projects_for_index = []
         for index_prefix in seqr_index_projects.keys():
@@ -91,23 +90,10 @@ def elasticsearch_status(request):
         index, ', '.join(['{} ({} samples)'.format(p.name, len(indivs)) for p, indivs in project_individuals.items()])
     ) for index, project_individuals in seqr_index_projects.items() if project_individuals]
 
-    # TODO remove once all projects are switched off of mongo
-    all_mongo_samples = Sample.objects.filter(
-        dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
-        is_active=True,
-        elasticsearch_index__isnull=True,
-    ).exclude(individual__family__project__in=es_projects).prefetch_related('individual', 'individual__family__project')
-    mongo_project_samples = defaultdict(set)
-    for s in all_mongo_samples:
-        mongo_project_samples[s.individual.family.project].add(s.dataset_file_path)
-    mongo_projects = [{'projectGuid': project.guid, 'projectName': project.name, 'sourceFilePaths': sample_file_paths}
-                      for project, sample_file_paths in mongo_project_samples.items()]
-
     return create_json_response({
         'indices': indices,
         'diskStats': disk_status,
         'elasticsearchHost': ELASTICSEARCH_SERVER,
-        'mongoProjects': mongo_projects,
         'errors': errors,
     })
 
