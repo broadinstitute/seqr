@@ -114,6 +114,7 @@ STATICFILES_FINDERS = (
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'APP_DIRS': True,
         'DIRS': [
             os.path.join(BASE_DIR, 'ui/dist'),
         ],

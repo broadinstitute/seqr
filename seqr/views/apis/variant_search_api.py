@@ -213,7 +213,7 @@ VARIANT_FAMILY_EXPORT_DATA = [
         '{} ({})'.format(tag['name'], tag['createdBy']) for tag in sorted(tags or [], key=lambda tag: tag['lastModifiedDate'], reverse=True)
     ])},
     {'header': 'notes', 'process': lambda notes: '|'.join([
-        '{} ({})'.format(note['note'].replace('\n', ' '), note['createdBy']) for note in sorted(notes or [], key=lambda note: note['lastModifiedDate'], reverse=True)
+        u'{} ({})'.format(note['note'].replace('\n', ' '), note['createdBy']) for note in sorted(notes or [], key=lambda note: note['lastModifiedDate'], reverse=True)
     ])},
 ]
 
