@@ -668,8 +668,14 @@ def get_json_for_saved_search(search, user):
     return _get_json_for_model(search, user=user, get_json_for_models=get_json_for_saved_searches)
 
 
-def get_json_for_matchmaker_submissions(models, individual_guid=None, additional_model_fields=None):
+def get_json_for_matchmaker_submissions(models, individual_guid=None, additional_model_fields=None, all_parent_guids=False):
     nested_fields = [{'fields': ('individual', 'guid'), 'value': individual_guid}]
+    if all_parent_guids:
+        nested_fields += [
+            {'fields': ('individual', 'individual_id'), 'key': 'individualId'},
+            {'fields': ('individual', 'family', 'guid'), 'key': 'familyGuid'},
+            {'fields': ('individual', 'family', 'project', 'guid'), 'key': 'projectGuid'},
+        ]
     return _get_json_for_models(
         models, nested_fields=nested_fields, guid_key='submissionGuid', additional_model_fields=additional_model_fields
     )

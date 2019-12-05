@@ -24,9 +24,10 @@ from seqr.views.utils.file_utils import parse_file
 from seqr.views.utils.json_utils import create_json_response, _to_camel_case
 from seqr.views.utils.orm_to_json_utils import _get_json_for_individuals, get_json_for_saved_variants, \
     get_json_for_variant_functional_data_tag_types, get_json_for_projects, _get_json_for_families, \
-    get_json_for_locus_lists, _get_json_for_models
+    get_json_for_locus_lists, _get_json_for_models, get_json_for_matchmaker_submissions
 from seqr.views.utils.proxy_request_utils import proxy_request
 
+from matchmaker.models import MatchmakerSubmission
 from seqr.models import Project, Family, VariantTag, VariantTagType, Sample, SavedVariant, Individual, ProjectCategory, \
     LocusList
 from reference_data.models import Omim
@@ -106,28 +107,21 @@ def mme_metrics_proxy(request):
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
 def mme_submissions(request):
     #  TODO fix this
-    individuals = Individual.objects.filter(
-        mme_submitted_date__isnull=False, mme_deleted_date__isnull=True,
-    ).prefetch_related('family').prefetch_related('family__project')
+    submissions = MatchmakerSubmission.objects.filter(deleted_date__isnull=True)
 
     hpo_terms_by_id, genes_by_id, gene_symbols_to_ids = get_mme_genes_phenotypes([i.mme_submitted_data for i in individuals])
 
-    submissions = []
-    for individual in individuals:
+    submissions_by_guid = {s['submissionGuid']: s for s in get_json_for_matchmaker_submissions(submissions, additional_model_fields=['label'], all_parent_guids=True)}
+    for submission in submissions:
         submitted_data = parse_mme_patient(individual.mme_submitted_data, hpo_terms_by_id, gene_symbols_to_ids, individual.guid)
         submissions.append({
-            'projectGuid': individual.family.project.guid,
-            'familyGuid': individual.family.guid,
-            'individualGuid': individual.guid,
-            'individualId': individual.individual_id,
-            'mmeSubmittedDate': individual.mme_submitted_date,
-            'mmeLabel': individual.mme_submitted_data['patient'].get('label'),
-            'mmeSubmittedData': submitted_data,
+            'geneVariants': [],
+            'phenotypes': [],
             'geneSymbols': ','.join({genes_by_id.get(gv['geneId'], {}).get('geneSymbol') for gv in submitted_data['geneVariants']})
         })
 
     return create_json_response({
-        'submissions': submissions,
+        'submissions': submissions_by_guid.values(),
         'genesById': genes_by_id,
     })
 

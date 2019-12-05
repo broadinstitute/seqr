@@ -39,21 +39,21 @@ const SUBMISSION_COLUMNS = [
         {row.individualId}
       </Link>,
   },
-  { name: 'mmeSubmittedDate', content: 'Submitted Date', format: row => new Date(row.mmeSubmittedDate).toLocaleDateString() },
+  { name: 'lastModifiedDate', content: 'Submitted Date', format: row => new Date(row.lastModifiedDate).toLocaleDateString() },
   {
-    name: 'mmeSubmittedData.geneVariants',
+    name: 'geneVariants',
     content: 'Genes',
     format: row =>
-      <SubmissionGeneVariants geneVariants={row.mmeSubmittedData.geneVariants} modalId={row.individualGuid} />,
+      <SubmissionGeneVariants geneVariants={row.geneVariants} modalId={row.submissionGuid} />,
   },
-  { name: 'mmeSubmittedData.phenotypes',
+  { name: 'phenotypes',
     content: 'Phenotypes',
-    format: row => <Phenotypes phenotypes={row.mmeSubmittedData.phenotypes} maxWidth="400px" />,
+    format: row => <Phenotypes phenotypes={row.phenotypes} maxWidth="400px" />,
   },
-  { name: 'mmeSubmittedData.patient.label', content: 'MME Patient Label', format: row => row.mmeSubmittedData.patient.label },
+  { name: 'label', content: 'MME Patient Label', format: row => row.label },
 ]
 
-const getRowFilterVal = row => row.geneSymbols + row.mmeSubmittedData.patient.label
+const getRowFilterVal = row => row.geneSymbols + row.label
 
 const Matchmaker = ({ metrics, submissions, error, metricsLoading, loadMetrics, submissionsLoading, loadSubmissions }) =>
   <div>
@@ -72,8 +72,8 @@ const Matchmaker = ({ metrics, submissions, error, metricsLoading, loadMetrics, 
     <DataLoader load={loadSubmissions} loading={false} content>
       <SortableTable
         collapsing
-        idField="individualGuid"
-        defaultSortColumn="mmeSubmittedDate"
+        idField="submissionGuid"
+        defaultSortColumn="lastModifiedDate"
         defaultSortDescending
         getRowFilterVal={getRowFilterVal}
         emptyContent="No MME Submissions Found"
