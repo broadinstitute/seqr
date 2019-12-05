@@ -518,17 +518,9 @@ class MatchmakerAPITest(TestCase):
                          'application/vnd.ga4gh.matchmaker.v1.0+json')
         self.assertDictEqual(json.loads(responses.calls[3].request.body), expected_body)
 
-    @responses.activate
     def test_delete_mme_submission(self):
         url = reverse(delete_mme_submission, args=[SUBMISSION_GUID])
         _check_login(self, url)
-
-        responses.add(responses.DELETE, 'http://localhost:9020/patient/delete', body='Failed request', status=400)
-        responses.add(responses.DELETE, 'http://localhost:9020/patient/delete', status=200)
-
-        response = self.client.post(url)
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.reason_phrase, 'Failed request')
 
         response = self.client.post(url)
         self.assertEqual(response.status_code, 200)
@@ -539,15 +531,6 @@ class MatchmakerAPITest(TestCase):
         )
 
         self.assertEqual(MatchmakerResult.objects.filter(submission__guid=SUBMISSION_GUID).count(), 2)
-
-        # Test proxy calls
-        self.assertEqual(len(responses.calls), 2)
-        self.assertEqual(responses.calls[1].request.url, 'http://localhost:9020/patient/delete')
-        self.assertEqual(responses.calls[1].request.headers['X-Auth-Token'], 'abcd')
-        self.assertEqual(responses.calls[1].request.headers['Accept'], 'application/vnd.ga4gh.matchmaker.v1.0+json')
-        self.assertEqual(responses.calls[1].request.headers['Content-Type'],
-                         'application/vnd.ga4gh.matchmaker.v1.0+json')
-        self.assertEqual(responses.calls[1].request.body, json.dumps({'id': 'NA19675_1_01'}))
 
         # Test do not delete if already deleted
         response = self.client.post(url)

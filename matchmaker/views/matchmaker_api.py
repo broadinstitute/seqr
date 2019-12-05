@@ -199,16 +199,6 @@ def delete_mme_submission(request, submission_guid):
             reason='Matchmaker submission has already been deleted for {}'.format(submission.individual.individual_id),
         )
 
-    matchbox_id = submission.submission_id
-    response = requests.delete(url=MME_DELETE_INDIVIDUAL_URL, headers=MME_HEADERS, data=json.dumps({'id': matchbox_id}))
-
-    if response.status_code != 200:
-        try:
-            response_json = response.json()
-        except Exception:
-            response_json = {}
-        return create_json_response(response_json, status=response.status_code, reason=response.content)
-
     deleted_date = datetime.now()
     submission.deleted_date = deleted_date
     submission.deleted_by = request.user
