@@ -295,9 +295,9 @@ kibana_urls = '^(?:%s)' % ('|'.join([
     "es_admin",
 ]))
 
-# urlpatterns += [
-#     url(kibana_urls, proxy_to_kibana, name='proxy_to_kibana'),
-# ]
+urlpatterns += [
+    url(kibana_urls, proxy_to_kibana, name='proxy_to_kibana'),
+]
 
 urlpatterns += [
     url(r'^hijack/', include('hijack.urls')),
