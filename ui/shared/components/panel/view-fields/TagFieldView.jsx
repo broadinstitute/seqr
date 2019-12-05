@@ -3,6 +3,7 @@ import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { Popup, Form } from 'semantic-ui-react'
 import { Field } from 'redux-form'
+import intersection from 'lodash/intersection'
 
 import { HorizontalSpacer } from '../../Spacers'
 import { ColoredLabel, ColoredOutlineLabel } from '../../StyledComponents'
@@ -46,7 +47,7 @@ MetadataField.propTypes = {
 
 
 const TagFieldView = ({ simplifiedValue, initialValues, field, tagOptions, popup, tagAnnotation, editMetadata, ...props }) => {
-  const fieldValues = ((Array.isArray(initialValues) ? initialValues[0] : initialValues) || {})[field] || []
+  const fieldValues = (Array.isArray(initialValues) ? intersection(initialValues[0][field], initialValues[1][field]) : initialValues[field]) || []
 
   tagOptions = tagOptions.map((tag, i) => {
     return { ...tag, ...fieldValues.find(val => val.name === tag.name), optionIndex: i }

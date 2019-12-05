@@ -928,6 +928,7 @@
         "created_date": "2017-02-05T06:42:55.397Z",
         "created_by": null,
         "last_modified_date": "2017-03-13T09:07:50.052Z",
+        
         "sample_id": "NA20872",
         "sample_type": "WES",
         "is_active": true,
@@ -963,6 +964,7 @@
         "created_date": "2017-02-05T06:42:55.397Z",
         "created_by": null,
         "last_modified_date": "2017-03-13T09:07:50.111Z",
+        
         "sample_id": "NA20875",
         "sample_type": "WES",
         "is_active": true,
@@ -980,6 +982,7 @@
         "created_date": "2017-02-05T06:42:55.397Z",
         "created_by": null,
         "last_modified_date": "2017-03-13T09:07:50.136Z",
+        
         "sample_id": "NA20876",
         "sample_type": "WES",
         "is_active": true,
@@ -997,6 +1000,7 @@
         "created_date": "2017-02-05T06:42:55.397Z",
         "created_by": null,
         "last_modified_date": "2017-03-13T09:07:50.165Z",
+        
         "sample_id": "NA20877",
         "sample_type": "WES",
         "is_active": true,
@@ -1014,6 +1018,7 @@
         "created_date": "2017-02-05T06:42:55.397Z",
         "created_by": null,
         "last_modified_date": "2017-03-13T09:07:50.193Z",
+        
         "sample_id": "NA20878",
         "sample_type": "WES",
         "is_active": true,
@@ -1031,6 +1036,7 @@
         "created_date": "2017-02-05T06:42:55.397Z",
         "created_by": null,
         "last_modified_date": "2017-03-13T09:07:50.220Z",
+        
         "sample_id": "NA20881",
         "sample_type": "WES",
         "is_active": true,
@@ -1066,7 +1072,7 @@
         "created_date": "2017-02-05T06:42:55.397Z",
         "created_by": null,
         "last_modified_date": "2017-03-13T09:07:50.277Z",
-
+        
         "sample_id": "NA20888",
         "sample_type": "WES",
         "is_active": true,
@@ -1379,7 +1385,7 @@
         "created_by": null,
         "last_modified_date": "2018-02-23T17:32:23.054Z",
         "saved_variants": [2],
-        "note": "test",
+        "note": "test n\u00f8te",
         "submit_to_clinvar": false,
         "search_parameters": null
     }

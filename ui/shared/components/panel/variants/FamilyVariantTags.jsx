@@ -4,6 +4,7 @@ import { connect } from 'react-redux'
 import { NavLink } from 'react-router-dom'
 import { Icon, Popup } from 'semantic-ui-react'
 import styled from 'styled-components'
+import intersection from 'lodash/intersection'
 
 import { updateVariantNote, updateVariantTags } from 'redux/rootReducer'
 import {
@@ -124,6 +125,7 @@ ShortcutTagToggle.propTypes = {
 
 const ShortcutTags = ({ variant, dispatchUpdateFamilyVariantTags, familyGuid }) => {
   const singleVariant = Array.isArray(variant) ? variant[0] : variant
+  const tags = Array.isArray(variant) ? intersection(variant[0].tags, variant[1].tags) : variant.tags
   const appliedShortcutTags = SHORTCUT_TAGS.reduce((acc, tagName) => {
     const appliedTag = (singleVariant.tags || []).find(tag => tag.name === tagName)
     return appliedTag ? { ...acc, [tagName]: appliedTag } : acc
@@ -142,7 +144,8 @@ const ShortcutTags = ({ variant, dispatchUpdateFamilyVariantTags, familyGuid }) 
         return [...allTags, { name: tagName }]
       }
       return allTags.filter(tag => tag.name !== tagName)
-    }, singleVariant.tags || [])
+    }, tags || [])
+    // TODO improve this to take in both variants <<<<<<<<<<<
     return dispatchUpdateFamilyVariantTags({
       ...singleVariant,
       tags: updatedTags,
@@ -227,7 +230,7 @@ const VariantLink = (
   <VariantLinkContainer>
     <NavLink
       to={savedVariant ?
-        `/project/${family.projectGuid}/saved_variants/variant/${savedVariant.variantGuid}` :
+        `/project/${family.projectGuid}/saved_variants/variant/${savedVariant.length > 0 ? savedVariant.map(sv => sv.variantGuid) : savedVariant.variantGuid}` :
         `/variant_search/variant/${variant.variantId}/family/${family.familyGuid}`
       }
       activeStyle={NO_DISPLAY}
@@ -262,6 +265,8 @@ const FamilyVariantTags = (
     else {
       notes = (savedVariant && savedVariant.notes) || []
     }
+
+    const tags = (areCompoundHets ? ((savedVariant || [])[0] || {}).tags : (savedVariant && savedVariant.tags)) || []
 
     return (
       <div>
@@ -301,7 +306,7 @@ const FamilyVariantTags = (
               onSubmit={dispatchUpdateFamilyVariantTags}
             />
             <HorizontalSpacer width={5} />
-            {[].some(tag => tag.category === DISCOVERY_CATEGORY_NAME) &&
+            {tags.some(tag => tag.category === DISCOVERY_CATEGORY_NAME) &&
             <span>
               <TagTitle>Fxnl Data:</TagTitle>
               <VariantTagField
@@ -345,7 +350,7 @@ const FamilyVariantTags = (
           </div>
           {isCompoundHet && <VerticalSpacer height={5} />}
         </InlineContainer>
-        {!areCompoundHets && <VariantLink variant={variant} savedVariant={savedVariant} family={family} />}
+        <VariantLink variant={variant} savedVariant={savedVariant} family={family} />
       </div>)
   }
   return null

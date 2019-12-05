@@ -816,30 +816,43 @@ class EsSearch(BaseEsSearch):
     def _deduplicate_compound_het_results(self, compound_het_results):
         duplicates = 0
         results = {}
-        for variant_group in compound_het_results:
-            gene = variant_group.keys()[0]
-            variants = variant_group[gene]
+        for gene_compound_het_pair in compound_het_results:
+            gene = gene_compound_het_pair.keys()[0]
+            compound_het_pair = gene_compound_het_pair[gene]
             if gene in results:
-                for variant in variants:
-                    existing_index = next(
-                        (i for i, existing in enumerate(results[gene]) if existing['variantId'] == variant['variantId']), None,
-                    )
-                    if existing_index is not None:
-                        results[gene][existing_index]['genotypes'].update(variant['genotypes'])
-                        results[gene][existing_index]['familyGuids'] = sorted(
-                            results[gene][existing_index]['familyGuids'] + variant['familyGuids']
+                variant_ids = {variant['variantId'] for variant in compound_het_pair}
+                existing_index = next(
+                    (i for i, existing in enumerate(results[gene]) if
+                     {variant['variantId'] for variant in existing} == variant_ids), None,
+                )
+                if existing_index is not None:
+                    existing_compound_het_pair = results[gene][existing_index]
+
+                    def _update_existing_variant(existing_variant, variant):
+                        existing_variant['genotypes'].update(variant['genotypes'])
+                        existing_variant['familyGuids'] = sorted(
+                            existing_variant['familyGuids'] + variant['familyGuids']
                         )
-                        duplicates += 1
+                    if existing_compound_het_pair[0]['variantId'] == compound_het_pair[0]['variantId']:
+                        _update_existing_variant(existing_compound_het_pair[0], compound_het_pair[0])
+                        _update_existing_variant(existing_compound_het_pair[1], compound_het_pair[1])
                     else:
-                        results[gene].append(variant)
+                        _update_existing_variant(existing_compound_het_pair[0], compound_het_pair[1])
+                        _update_existing_variant(existing_compound_het_pair[1], compound_het_pair[0])
+                    duplicates += 1
+                else:
+                    results[gene].append(compound_het_pair)
             else:
-                results[gene] = variants
+                results[gene] = [compound_het_pair]
+
+        deduplicated_results = []
+        for gene, compound_het_pairs in results.items():
+            deduplicated_results += [{gene: compound_het_pair} for compound_het_pair in compound_het_pairs]
 
         self.previous_search_results['duplicate_doc_count'] = duplicates + self.previous_search_results.get('duplicate_doc_count', 0)
-
         self.previous_search_results['total_results'] -= duplicates
 
-        return [{k: v} for k, v in results.items()]
+        return deduplicated_results
 
     def _process_compound_hets(self, compound_het_results, variant_results, num_results):
         if not self.previous_search_results.get('grouped_results'):

@@ -193,26 +193,6 @@ export const getNotesGroupedByFamilyVariants = createSelector(
   }, {}),
 )
 
-// export const getNotes = createSelector(
-//   getSavedVariantsSharedNoteGuids,
-//   (state, props) => props.savedVariant,
-//   (state, props) => props.isCompoundHet,
-//   (state, props) => props.areCompoundHets,
-//   (savedVariant, isCompoundHet, areCompoundHets, savedVariantsSharedNoteGuids) => {
-//     let notes = []
-//     if (areCompoundHets) {
-//       notes = ((savedVariant[0] || {}).notes || []).filter(note => savedVariantsSharedNoteGuids.uniques.includes(note.noteGuid))
-//     }
-//     else {
-//       notes = (savedVariant && savedVariant.notes) || []
-//     }
-//     if (isCompoundHet) {
-//       notes = notes.filter(note => !savedVariantsSharedNoteGuids.uniques.includes(note.noteGuid)) || []
-//     }
-//     return notes
-//   },
-// )
-
 export const getSelectedSavedVariants = createSelector(
   getSavedVariantsByGuid,
   (state, props) => props.match.params,

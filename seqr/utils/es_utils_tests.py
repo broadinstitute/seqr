@@ -1408,20 +1408,20 @@ class EsUtilsTest(TestCase):
         self.assertDictEqual(variants[0], PARSED_VARIANTS[0])
         self.assertDictEqual(variants[1][0], PARSED_COMPOUND_HET_VARIANTS_PROJECT_2[0])
         self.assertDictEqual(variants[1][1], PARSED_COMPOUND_HET_VARIANTS_PROJECT_2[1])
-        self.assertEqual(total_results, 10)
+        self.assertEqual(total_results, 11)
 
         self.assertCachedResults(results_model, {
             'compound_het_results': [{'ENSG00000228198': PARSED_COMPOUND_HET_VARIANTS_MULTI_GENOME_VERSION}],
             'variant_results': [PARSED_MULTI_GENOME_VERSION_VARIANT],
             'grouped_results': [{'null': [PARSED_VARIANTS[0]]}, {'ENSG00000135953': PARSED_COMPOUND_HET_VARIANTS_PROJECT_2}],
-            'duplicate_doc_count': 3,
+            'duplicate_doc_count': 2,
             'loaded_variant_counts': {
                 SECOND_INDEX_NAME: {'loaded': 1, 'total': 5},
                 '{}_compound_het'.format(SECOND_INDEX_NAME): {'total': 2, 'loaded': 2},
                 INDEX_NAME: {'loaded': 2, 'total': 5},
                 '{}_compound_het'.format(INDEX_NAME): {'total': 1, 'loaded': 1},
             },
-            'total_results': 10,
+            'total_results': 11,
         })
 
         annotation_query = {'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}}
@@ -1482,7 +1482,7 @@ class EsUtilsTest(TestCase):
         variants, total_results = get_es_variants(results_model, num_results=2, page=2)
         self.assertEqual(len(variants), 2)
         self.assertListEqual(variants, [PARSED_VARIANTS[0], PARSED_COMPOUND_HET_VARIANTS_MULTI_GENOME_VERSION])
-        self.assertEqual(total_results, 8)
+        self.assertEqual(total_results, 9)
 
         self.assertCachedResults(results_model, {
             'compound_het_results': [],
@@ -1493,14 +1493,14 @@ class EsUtilsTest(TestCase):
                 {'null': [PARSED_VARIANTS[0]]},
                 {'ENSG00000228198': PARSED_COMPOUND_HET_VARIANTS_MULTI_GENOME_VERSION}
             ],
-            'duplicate_doc_count': 5,
+            'duplicate_doc_count': 4,
             'loaded_variant_counts': {
                 SECOND_INDEX_NAME: {'loaded': 2, 'total': 5},
                 '{}_compound_het'.format(SECOND_INDEX_NAME): {'total': 2, 'loaded': 2},
                 INDEX_NAME: {'loaded': 4, 'total': 5},
                 '{}_compound_het'.format(INDEX_NAME): {'total': 1, 'loaded': 1},
             },
-            'total_results': 8,
+            'total_results': 9,
         })
 
         project_2_search['start_index'] = 1

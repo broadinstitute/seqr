@@ -4,6 +4,7 @@ import { connect } from 'react-redux'
 import { Loader, Grid, Dropdown, Form, Message } from 'semantic-ui-react'
 import { Route, Switch, Link } from 'react-router-dom'
 import styled from 'styled-components'
+import intersection from 'lodash/intersection'
 
 import { loadSavedVariants, updateSavedVariantTable } from 'redux/rootReducer'
 import { getAnalysisGroupsByGuid, getCurrentProject, getSavedVariantsIsLoading, getSelectedSavedVariants,
@@ -237,13 +238,29 @@ class BaseSavedVariants extends React.Component {
       shownSummary = `${this.props.variantsToDisplay.length > 0 ? this.props.firstRecordIndex + 1 : 0}-${this.props.firstRecordIndex + this.props.variantsToDisplay.length} of`
     }
 
+    const pairedVariants = this.props.variantsToDisplay.reduce((acc, variant, index, variants) => {
+      const guids = (variant.notes || []).map(n => n.noteGuid).concat((variant.tags || []).map(t => t.tagGuid))
+      const variantPaired = acc.allPrevGuids.reduce((paired, prevGuids, i) => {
+        if (intersection(prevGuids, guids).length > 0) {
+          acc.pairedVariants.push([variants[i], variant])
+          paired = true
+        }
+        return paired
+      }, false)
+      if (!variantPaired) {
+        acc.pairedVariants.push(variant)
+      }
+      acc.allPrevGuids.push(guids)
+      return acc
+    }, { allPrevGuids: [], pairedVariants: [] })
+
     let variantContent
     if (this.props.loading) {
       variantContent = <Loader inline="centered" active />
     } else if (this.props.error) {
       variantContent = <Message error content={this.props.error} />
     } else {
-      variantContent = <Variants variants={this.props.variantsToDisplay} />
+      variantContent = <Variants variants={pairedVariants.pairedVariants} />
     }
 
     return (
