@@ -1409,8 +1409,9 @@ class EsUtilsTest(TestCase):
         self.assertDictEqual(variants[0], PARSED_VARIANTS[0])
         self.assertDictEqual(variants[1][0], PARSED_COMPOUND_HET_VARIANTS_PROJECT_2[0])
         self.assertDictEqual(variants[1][1], PARSED_COMPOUND_HET_VARIANTS_PROJECT_2[1])
-        self.assertEqual(total_results, 10)
+        self.assertEqual(total_results, 12)
 
+        self.maxDiff = None
         self.assertCachedResults(results_model, {
             'compound_het_results': [{'ENSG00000228198': PARSED_COMPOUND_HET_VARIANTS_MULTI_GENOME_VERSION}],
             'variant_results': [PARSED_MULTI_GENOME_VERSION_VARIANT],
@@ -1422,7 +1423,7 @@ class EsUtilsTest(TestCase):
                 INDEX_NAME: {'loaded': 2, 'total': 5},
                 '{}_compound_het'.format(INDEX_NAME): {'total': 1, 'loaded': 1},
             },
-            'total_results': 10,
+            'total_results': 12,
         })
 
         annotation_query = {'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}}
