@@ -193,6 +193,7 @@ export const getSelectedSavedVariants = createSelector(
   (savedVariants, { tag, familyGuid, analysisGroupGuid, variantGuid }, familiesByGuid, analysisGroupsByGuid, projectGuid) => {
     let variants = Object.values(savedVariants)
     if (variantGuid) {
+      // TODO split on comma and filter by map of something <<<<<<<<<<<<<<<<<<<<<<<<<
       return variants.filter(o => o.variantGuid === variantGuid)
     }
 
