@@ -142,6 +142,10 @@ class VariantSearchAPITest(TestCase):
             ['21', '3343400', 'GAGA', 'G', 'WASH7P', 'missense_variant', '', '', '', '', '', '', '', '', '', '', '', '',
              '', 'ENST00000623083.3:c.1075G>A', 'ENSP00000485442.1:p.Gly359Ser', '', '', '', '1',
              'Tier 1 - Novel gene and phenotype (None)|Review (None)', '', '2', '', '', 'NA19675:1:46.0:0.702127659574', 'NA19679:0:99.0:0.0'])
+        self.assertListEqual(
+            export_content[3],
+            ['12', '48367227', 'TC', 'T', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
+             '', '2', 'Review (None)', 'test n\xc3\xb8te (None)', '', '', '', '', ''])
 
         mock_get_variants.assert_called_with(results_model, page=1, load_all=True)
 
