@@ -41,29 +41,3 @@ export const configureStore = (
 
   return createStore(rootReducer, initialState, enhancer)
 }
-
-// /* eslint-disable no-underscore-dangle */
-// const composeEnhancers = window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__ || compose
-// const enhancer = composeEnhancers(
-//   applyMiddleware(thunkMiddleware, persistStoreMiddleware),
-// )
-// /* eslint-enable */
-//
-// /**
-//  * Initialize the Redux store
-//  * @param rootReducer
-//  * @param initialState
-//  * @returns {*}
-//  */
-// export const configureStore = (
-//   rootReducer = state => state,
-//   initialState = {},
-// ) => {
-//
-//   PERSISTING_STATE.forEach((key) => { initialState[key] = loadState(key) })
-//
-//   console.log('Creating store with initial state:')
-//   console.log(initialState)
-//
-//   return createStore(rootReducer, initialState, /* preloadedState, */ enhancer)
-// }
