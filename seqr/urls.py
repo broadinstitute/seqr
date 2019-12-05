@@ -295,10 +295,10 @@ kibana_urls = '^(?:%s)' % ('|'.join([
     "api/kibana", "api/monitoring", "api/reporting", "api/saved_objects", "api/telemetry", "api/timelion", "api/xpack",
     "es_admin",
 ]))
-#
-# urlpatterns += [
-#     url(kibana_urls, proxy_to_kibana, name='proxy_to_kibana'),
-# ]
+
+urlpatterns += [
+    url(kibana_urls, proxy_to_kibana, name='proxy_to_kibana'),
+]
 
 urlpatterns += [
     url(r'^hijack/', include('hijack.urls')),
