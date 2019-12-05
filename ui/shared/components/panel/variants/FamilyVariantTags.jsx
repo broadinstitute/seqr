@@ -230,7 +230,7 @@ const VariantLink = (
   <VariantLinkContainer>
     <NavLink
       to={savedVariant ?
-        `/project/${family.projectGuid}/saved_variants/variant/${savedVariant.variantGuid}` :
+        `/project/${family.projectGuid}/saved_variants/variant/${savedVariant.length > 0 ? savedVariant.map(sv => sv.variantGuid) : savedVariant.variantGuid}` :
         `/variant_search/variant/${variant.variantId}/family/${family.familyGuid}`
       }
       activeStyle={NO_DISPLAY}
@@ -350,7 +350,7 @@ const FamilyVariantTags = (
           </div>
           {isCompoundHet && <VerticalSpacer height={5} />}
         </InlineContainer>
-        {!areCompoundHets && <VariantLink variant={variant} savedVariant={savedVariant} family={family} />}
+        <VariantLink variant={variant} savedVariant={savedVariant} family={family} />
       </div>)
   }
   return null

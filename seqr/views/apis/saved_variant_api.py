@@ -25,18 +25,19 @@ logger = logging.getLogger(__name__)
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
-def saved_variant_data(request, project_guid, variant_guid=None):
+def saved_variant_data(request, project_guid, variant_guids=None):
     project = get_project_and_check_permissions(project_guid, request.user)
     family_guids = request.GET['families'].split(',') if request.GET.get('families') else None
+    variant_guids = variant_guids.split(',') if variant_guids else None
 
     if family_guids:
         variant_query = SavedVariant.objects.filter(family__guid__in=family_guids)
     else:
         variant_query = SavedVariant.objects.filter(family__project=project)
-    if variant_guid:
-        variant_query = variant_query.filter(guid=variant_guid)
+    if variant_guids:
+        variant_query = variant_query.filter(guid__in=variant_guids)
         if variant_query.count() < 1:
-            return create_json_response({}, status=404, reason='Variant {} not found'.format(variant_guid))
+            return create_json_response({}, status=404, reason='Variant {} not found'.format(', '.join(variant_guids)))
 
     saved_variants = get_json_for_saved_variants(variant_query, add_tags=True, add_details=True)
     variants = {variant['variantGuid']: variant for variant in saved_variants if variant['notes'] or variant['tags']}
