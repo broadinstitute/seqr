@@ -9,12 +9,28 @@ from settings import MME_DEFAULT_CONTACT_INSTITUTION
 logger = logging.getLogger(__name__)
 
 
-def get_mme_genes_phenotypes(results, additional_genes=None, additional_hpo_ids=None):
+def get_mme_genes_phenotypes_for_results(results, **kwargs):
+    return _get_mme_genes_phenotypes(results, _get_patient_features, _get_patient_genomic_features, **kwargs)
+
+
+def get_mme_genes_phenotypes_for_submissions(submissions):
+    return _get_mme_genes_phenotypes(submissions, lambda model: model.features, lambda model: model.genomic_features)
+
+
+def _get_patient_features(result):
+    return result['patient'].get('features')
+
+
+def _get_patient_genomic_features(result):
+    return result['patient'].get('genomicFeatures')
+
+
+def _get_mme_genes_phenotypes(results, get_features, get_genomic_features, additional_genes=None, additional_hpo_ids=None):
     hpo_ids = additional_hpo_ids if additional_hpo_ids else set()
     genes = additional_genes if additional_genes else set()
     for result in results:
-        hpo_ids.update({feature['id'] for feature in result['patient'].get('features', []) if feature.get('id')})
-        genes.update({gene_feature['gene']['id'] for gene_feature in result['patient'].get('genomicFeatures', [])})
+        hpo_ids.update({feature['id'] for feature in (get_features(result) or []) if feature.get('id')})
+        genes.update({gene_feature['gene']['id'] for gene_feature in (get_genomic_features(result) or [])})
 
     gene_ids = {gene for gene in genes if gene.startswith('ENSG')}
     gene_symols = {gene for gene in genes if not gene.startswith('ENSG')}
@@ -57,8 +73,8 @@ def parse_mme_gene_variants(genomic_features, gene_symbols_to_ids):
 
 
 def parse_mme_patient(result, hpo_terms_by_id, gene_symbols_to_ids, submission_guid):
-    phenotypes = parse_mme_features(result['patient'].get('features'), hpo_terms_by_id)
-    gene_variants = parse_mme_gene_variants(result['patient'].get('genomicFeatures'), gene_symbols_to_ids)
+    phenotypes = parse_mme_features(_get_patient_features(result), hpo_terms_by_id)
+    gene_variants = parse_mme_gene_variants(_get_patient_genomic_features(result), gene_symbols_to_ids)
 
     parsed_result = {
         'geneVariants': gene_variants,

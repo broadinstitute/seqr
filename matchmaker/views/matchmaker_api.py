@@ -8,7 +8,7 @@ from django.core.mail.message import EmailMessage
 from django.views.decorators.csrf import csrf_exempt
 
 from matchmaker.models import MatchmakerResult, MatchmakerContactNotes, MatchmakerSubmission
-from matchmaker.matchmaker_utils import get_mme_genes_phenotypes, parse_mme_patient, \
+from matchmaker.matchmaker_utils import get_mme_genes_phenotypes_for_results, parse_mme_patient, \
     get_submission_json_for_external_match, parse_mme_features, parse_mme_gene_variants
 from seqr.models import Individual, SavedVariant
 from seqr.utils.communication_utils import post_to_slack
@@ -310,7 +310,7 @@ def _parse_mme_results(submission, saved_results, user, additional_genes=None, r
         additional_genes = set()
     additional_genes.update({gene_feature['gene']['id'] for gene_feature in (submission.genomic_features or [])})
 
-    hpo_terms_by_id, genes_by_id, gene_symbols_to_ids = get_mme_genes_phenotypes(
+    hpo_terms_by_id, genes_by_id, gene_symbols_to_ids = get_mme_genes_phenotypes_for_results(
         results, additional_genes=additional_genes, additional_hpo_ids=additional_hpo_ids)
 
     parsed_results = [_parse_mme_result(result, hpo_terms_by_id, gene_symbols_to_ids, submission.guid) for result in results]
@@ -355,7 +355,7 @@ def _generate_notification_for_seqr_match(submission, results):
     Generate a notifcation to say that a match happened initiated from a seqr user.
     """
     matches = []
-    hpo_terms_by_id, genes_by_id, _ = get_mme_genes_phenotypes(results)
+    hpo_terms_by_id, genes_by_id, _ = get_mme_genes_phenotypes_for_results(results)
     for result in results:
         patient = result['patient']
 

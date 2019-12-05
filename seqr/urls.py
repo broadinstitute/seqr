@@ -109,8 +109,7 @@ from seqr.views.apis.staff_api import \
     elasticsearch_status, \
     saved_variants, \
     upload_qc_pipeline_output, \
-    mme_metrics_proxy, \
-    mme_submissions, \
+    mme_details, \
     seqr_stats, \
     proxy_to_kibana
 
@@ -249,8 +248,7 @@ api_endpoints = {
     'staff/projects_for_category/(?P<project_category_name>[^/]+)': get_projects_for_category,
     'staff/success_story/(?P<success_story_types>[^/]+)': success_story,
     'staff/elasticsearch_status': elasticsearch_status,
-    'staff/matchmaker_metrics': mme_metrics_proxy,
-    'staff/matchmaker_submissions': mme_submissions,
+    'staff/matchmaker': mme_details,
     'staff/saved_variants/(?P<tag>[^/]+)': saved_variants,
     'staff/seqr_stats': seqr_stats,
     'staff/upload_qc_pipeline_output': upload_qc_pipeline_output,

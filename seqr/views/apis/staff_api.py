@@ -18,7 +18,7 @@ from seqr.utils.file_utils import file_iter
 from seqr.utils.gene_utils import get_genes
 from seqr.utils.xpos_utils import get_chrom_pos
 
-from matchmaker.matchmaker_utils import get_mme_genes_phenotypes, parse_mme_patient
+from matchmaker.matchmaker_utils import get_mme_genes_phenotypes_for_submissions, parse_mme_features, parse_mme_gene_variants
 from seqr.views.apis.saved_variant_api import _saved_variant_genes, _add_locus_lists
 from seqr.views.utils.file_utils import parse_file
 from seqr.views.utils.json_utils import create_json_response, _to_camel_case
@@ -32,7 +32,7 @@ from seqr.models import Project, Family, VariantTag, VariantTagType, Sample, Sav
     LocusList
 from reference_data.models import Omim
 
-from settings import ELASTICSEARCH_SERVER, MME_HEADERS, MME_MATCHBOX_METRICS_URL, KIBANA_SERVER, API_LOGIN_REQUIRED_URL
+from settings import ELASTICSEARCH_SERVER, KIBANA_SERVER, API_LOGIN_REQUIRED_URL
 
 logger = logging.getLogger(__name__)
 
@@ -100,27 +100,25 @@ def elasticsearch_status(request):
 
 
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
-def mme_metrics_proxy(request):
-    return proxy_request(request, MME_MATCHBOX_METRICS_URL, headers=MME_HEADERS)
-
-
-@staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
-def mme_submissions(request):
-    #  TODO fix this
+def mme_details(request):
     submissions = MatchmakerSubmission.objects.filter(deleted_date__isnull=True)
 
-    hpo_terms_by_id, genes_by_id, gene_symbols_to_ids = get_mme_genes_phenotypes([i.mme_submitted_data for i in individuals])
+    hpo_terms_by_id, genes_by_id, gene_symbols_to_ids = get_mme_genes_phenotypes_for_submissions(submissions)
 
-    submissions_by_guid = {s['submissionGuid']: s for s in get_json_for_matchmaker_submissions(submissions, additional_model_fields=['label'], all_parent_guids=True)}
+    submission_json = get_json_for_matchmaker_submissions(
+        submissions, additional_model_fields=['label'], all_parent_guids=True)
+    submissions_by_guid = {s['submissionGuid']: s for s in submission_json}
+
     for submission in submissions:
-        submitted_data = parse_mme_patient(individual.mme_submitted_data, hpo_terms_by_id, gene_symbols_to_ids, individual.guid)
-        submissions.append({
-            'geneVariants': [],
-            'phenotypes': [],
-            'geneSymbols': ','.join({genes_by_id.get(gv['geneId'], {}).get('geneSymbol') for gv in submitted_data['geneVariants']})
+        gene_variants = parse_mme_gene_variants(submission.genomic_features, gene_symbols_to_ids)
+        submissions_by_guid[submission.guid].update({
+            'phenotypes': parse_mme_features(submission.features, hpo_terms_by_id),
+            'geneVariants': gene_variants,
+            'geneSymbols': ','.join({genes_by_id.get(gv['geneId'], {}).get('geneSymbol') for gv in gene_variants})
         })
 
     return create_json_response({
+        'metrics': {}, # TODO
         'submissions': submissions_by_guid.values(),
         'genesById': genes_by_id,
     })

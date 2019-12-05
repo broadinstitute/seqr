@@ -5,7 +5,7 @@ from django.core.mail.message import EmailMessage
 from django.views.decorators.csrf import csrf_exempt
 
 from matchmaker.models import MatchmakerSubmission
-from matchmaker.matchmaker_utils import get_mme_genes_phenotypes
+from matchmaker.matchmaker_utils import get_mme_genes_phenotypes_for_results
 
 from seqr.utils.communication_utils import post_to_slack
 from seqr.views.utils.proxy_request_utils import proxy_request
@@ -89,7 +89,7 @@ def _generate_notification_for_incoming_match(response_from_matchbox, incoming_r
     institution = incoming_patient['patient']['contact'].get('institution', '(institution name not given)')
     contact_href = incoming_patient['patient']['contact'].get('href', '(sorry I was not able to read the information given for URL)')
     if len(results_from_matchbox) > 0:
-        hpo_terms_by_id, genes_by_id, _ = get_mme_genes_phenotypes([incoming_patient])
+        hpo_terms_by_id, genes_by_id, _ = get_mme_genes_phenotypes_for_results([incoming_patient])
 
         match_results = []
         emails = set()

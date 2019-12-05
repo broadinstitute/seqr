@@ -8,13 +8,12 @@ import DataLoader from 'shared/components/DataLoader'
 import { SubmissionGeneVariants, Phenotypes } from 'shared/components/panel/MatchmakerPanel'
 import SortableTable from 'shared/components/table/SortableTable'
 import {
-  getMmeMetricsLoading,
-  getMmeMetricsLoadingError,
+  getMmeLoading,
+  getMmeLoadingError,
   getMmeMetrics,
-  getMmeSubmissionsLoading,
   getMmeSubmissions,
 } from '../selectors'
-import { loadMmeMetrics, loadMmeSubmissions } from '../reducers'
+import { loadMme } from '../reducers'
 
 const METRICS_FIELDS = [
   { field: 'numberOfCases', title: 'Patients' },
@@ -55,10 +54,10 @@ const SUBMISSION_COLUMNS = [
 
 const getRowFilterVal = row => row.geneSymbols + row.label
 
-const Matchmaker = ({ metrics, submissions, error, metricsLoading, loadMetrics, submissionsLoading, loadSubmissions }) =>
+const Matchmaker = ({ metrics, submissions, error, loading, load }) =>
   <div>
     <Header size="medium" content="Matchmaker Metrics:" />
-    <DataLoader load={loadMetrics} content={Object.keys(metrics).length} loading={metricsLoading} errorMessage={error}>
+    <DataLoader load={load} content={Object.keys(metrics).length} loading={loading} errorMessage={error}>
       <Table collapsing basic="very">
         {METRICS_FIELDS.map(({ field, title, round }) =>
           <Table.Row key={field}>
@@ -69,42 +68,36 @@ const Matchmaker = ({ metrics, submissions, error, metricsLoading, loadMetrics, 
       </Table>
     </DataLoader>
     <Header size="medium" content="Matchmaker Submissions:" />
-    <DataLoader load={loadSubmissions} loading={false} content>
-      <SortableTable
-        collapsing
-        idField="submissionGuid"
-        defaultSortColumn="lastModifiedDate"
-        defaultSortDescending
-        getRowFilterVal={getRowFilterVal}
-        emptyContent="No MME Submissions Found"
-        loading={submissionsLoading}
-        data={submissions}
-        columns={SUBMISSION_COLUMNS}
-      />
-    </DataLoader>
+    <SortableTable
+      collapsing
+      idField="submissionGuid"
+      defaultSortColumn="lastModifiedDate"
+      defaultSortDescending
+      getRowFilterVal={getRowFilterVal}
+      emptyContent="No MME Submissions Found"
+      loading={loading}
+      data={submissions}
+      columns={SUBMISSION_COLUMNS}
+    />
   </div>
 
 Matchmaker.propTypes = {
   metrics: PropTypes.object,
-  metricsLoading: PropTypes.bool,
+  loading: PropTypes.bool,
   error: PropTypes.string,
-  loadMetrics: PropTypes.func,
+  load: PropTypes.func,
   submissions: PropTypes.array,
-  submissionsLoading: PropTypes.bool,
-  loadSubmissions: PropTypes.func,
 }
 
 const mapStateToProps = state => ({
   metrics: getMmeMetrics(state),
-  metricsLoading: getMmeMetricsLoading(state),
-  error: getMmeMetricsLoadingError(state),
+  loading: getMmeLoading(state),
+  error: getMmeLoadingError(state),
   submissions: getMmeSubmissions(state),
-  submissionsLoading: getMmeSubmissionsLoading(state),
 })
 
 const mapDispatchToProps = {
-  loadMetrics: loadMmeMetrics,
-  loadSubmissions: loadMmeSubmissions,
+  load: loadMme,
 }
 
 export default connect(mapStateToProps, mapDispatchToProps)(Matchmaker)
