@@ -45,12 +45,11 @@ def saved_variant_data(request, project_guid, variant_guids=None):
     _add_locus_lists([project], variants.values(), genes)
     notes_by_guid, tags_by_guid = get_notes_tags_by_guid(variants)
 
-
     return create_json_response({
         'savedVariantsByGuid': variants,
         'genesById': genes,
-        'notesByGuid': {},
-        'tagsByGuid': {},
+        'notesByGuid': notes_by_guid,
+        'tagsByGuid': tags_by_guid,
     })
 
 def _create_single_saved_variant(variant_json, family):

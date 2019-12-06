@@ -39,6 +39,8 @@ export const getProjectGuid = state => state.currentProjectGuid
 export const getSavedVariantsIsLoading = state => state.savedVariantsLoading.isLoading
 export const getSavedVariantsLoadingError = state => state.savedVariantsLoading.errorMessage
 export const getIgvReadsVisibility = state => state.igvReadsVisibility
+export const getNotesByGuid = state => state.notes
+export const getTagsByGuid = state => state.tags
 
 export const getAllUsers = createSelector(
   getUsersByUsername,
