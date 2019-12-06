@@ -190,11 +190,10 @@ export const getSelectedSavedVariants = createSelector(
   getFamiliesByGuid,
   getAnalysisGroupsByGuid,
   getProjectGuid,
-  (savedVariants, { tag, familyGuid, analysisGroupGuid, variantGuid }, familiesByGuid, analysisGroupsByGuid, projectGuid) => {
+  (savedVariants, { tag, familyGuid, analysisGroupGuid, variantGuids }, familiesByGuid, analysisGroupsByGuid, projectGuid) => {
     let variants = Object.values(savedVariants)
-    if (variantGuid) {
-      // TODO split on comma and filter by map of something <<<<<<<<<<<<<<<<<<<<<<<<<
-      return variants.filter(o => o.variantGuid === variantGuid)
+    if (variantGuids) {
+      return variants.filter(o => variantGuids.split(',').includes(o.variantGuid))
     }
 
     if (analysisGroupGuid && analysisGroupsByGuid[analysisGroupGuid]) {

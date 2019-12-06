@@ -357,7 +357,7 @@ const SavedVariants = connect(mapStateToProps, mapDispatchToProps)(BaseSavedVari
 
 const RoutedSavedVariants = ({ match }) =>
   <Switch>
-    <Route path={`${match.url}/variant/:variantGuid`} component={SavedVariants} />
+    <Route path={`${match.url}/variant/:variantGuids`} component={SavedVariants} />
     <Route path={`${match.url}/family/:familyGuid/:tag?`} component={SavedVariants} />
     <Route path={`${match.url}/analysis_group/:analysisGroupGuid/:tag?`} component={SavedVariants} />
     <Route path={`${match.url}/:tag/gene/:gene`} component={SavedVariants} />
