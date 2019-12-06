@@ -847,7 +847,7 @@ class EsSearch(BaseEsSearch):
             else:
                 merged_variant_results += variants
                 num_single_variants += 1
-            total_variant_count += len(variants)
+            total_variant_count += 1
             if total_variant_count >= num_results:
                 break
 
