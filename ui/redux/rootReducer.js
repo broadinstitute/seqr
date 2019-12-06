@@ -361,6 +361,8 @@ const rootReducer = combineReducers(Object.assign({
   locusListLoading: loadingReducer(REQUEST_GENE_LIST, RECEIVE_DATA),
   savedVariantsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'savedVariantsByGuid'),
   savedVariantsLoading: loadingReducer(REQUEST_SAVED_VARIANTS, RECEIVE_DATA),
+  notesByGuids: createObjectsByIdReducer(RECEIVE_DATA, 'notesByGuid'),
+  tagsByGuids: createObjectsByIdReducer(RECEIVE_DATA, 'tagsByGuid'),
   searchesByHash: createObjectsByIdReducer(RECEIVE_SAVED_SEARCHES, 'searchesByHash'),
   savedSearchesByGuid: createObjectsByIdReducer(RECEIVE_SAVED_SEARCHES, 'savedSearchesByGuid'),
   savedVariantFamilies: createSingleObjectReducer(RECEIVE_SAVED_VARIANT_FAMILIES),

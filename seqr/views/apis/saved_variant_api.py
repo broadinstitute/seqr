@@ -16,7 +16,7 @@ from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants, get_
     get_json_for_variant_note, get_json_for_saved_variant, \
     get_json_for_gene_notes_by_gene_id, get_project_locus_list_models
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_permissions
-from seqr.views.utils.variant_utils import update_project_saved_variant_json
+from seqr.views.utils.variant_utils import update_project_saved_variant_json, get_notes_tags_by_guid
 from settings import API_LOGIN_REQUIRED_URL
 
 
@@ -43,10 +43,14 @@ def saved_variant_data(request, project_guid, variant_guids=None):
     variants = {variant['variantGuid']: variant for variant in saved_variants if variant['notes'] or variant['tags']}
     genes = _saved_variant_genes(variants.values())
     _add_locus_lists([project], variants.values(), genes)
+    notes_by_guid, tags_by_guid = get_notes_tags_by_guid(variants)
+
 
     return create_json_response({
         'savedVariantsByGuid': variants,
         'genesById': genes,
+        'notesByGuid': {},
+        'tagsByGuid': {},
     })
 
 def _create_single_saved_variant(variant_json, family):
