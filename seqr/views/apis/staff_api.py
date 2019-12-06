@@ -18,7 +18,8 @@ from seqr.utils.file_utils import file_iter
 from seqr.utils.gene_utils import get_genes
 from seqr.utils.xpos_utils import get_chrom_pos
 
-from matchmaker.matchmaker_utils import get_mme_genes_phenotypes_for_submissions, parse_mme_features, parse_mme_gene_variants
+from matchmaker.matchmaker_utils import get_mme_genes_phenotypes_for_submissions, parse_mme_features, \
+    parse_mme_gene_variants, get_mme_metrics
 from seqr.views.apis.saved_variant_api import _saved_variant_genes, _add_locus_lists
 from seqr.views.utils.file_utils import parse_file
 from seqr.views.utils.json_utils import create_json_response, _to_camel_case
@@ -118,7 +119,7 @@ def mme_details(request):
         })
 
     return create_json_response({
-        'metrics': {}, # TODO
+        'metrics': get_mme_metrics(),
         'submissions': submissions_by_guid.values(),
         'genesById': genes_by_id,
     })

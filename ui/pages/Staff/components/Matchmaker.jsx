@@ -19,13 +19,8 @@ const METRICS_FIELDS = [
   { field: 'numberOfCases', title: 'Patients' },
   { field: 'numberOfUniqueGenes', title: 'Genes' },
   { field: 'numberOfUniqueFeatures', title: 'Phenotypes' },
-  { field: 'numberOfCasesWithDiagnosis', title: 'Patients with Diagnosis' },
-  { field: 'meanNumberOfGenesPerCase', title: 'Mean Number of Genes Per Patient', round: true },
-  { field: 'meanNumberOfPhenotypesPerCase', title: 'Mean Number of Phenotypes Per Patient', round: true },
-  { field: 'meanNumberOfVariantsPerCase', title: 'Mean Number of Detailed Variants Per Patient', round: true },
   { field: 'numberOfRequestsReceived', title: 'Match Requests Received' },
   { field: 'numberOfPotentialMatchesSent', title: 'Potential Matches Sent' },
-  { field: 'percentageOfGenesThatMatch', title: 'Percentage of Genes Contributing to Matches', round: true },
   { field: 'numberOfSubmitters', title: 'Submitters' },
 ]
 

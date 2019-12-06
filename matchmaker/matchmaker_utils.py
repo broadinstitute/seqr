@@ -1,7 +1,8 @@
 import logging
+from datetime import datetime
+from django.db.models import Count
 
 from reference_data.models import HumanPhenotypeOntology
-
 from matchmaker.models import MatchmakerSubmission
 from seqr.utils.gene_utils import get_genes, get_gene_ids_for_gene_symbols
 from settings import MME_DEFAULT_CONTACT_INSTITUTION
@@ -14,7 +15,7 @@ def get_mme_genes_phenotypes_for_results(results, **kwargs):
 
 
 def get_mme_genes_phenotypes_for_submissions(submissions):
-    return _get_mme_genes_phenotypes(submissions, lambda model: model.features, lambda model: model.genomic_features)
+    return _get_mme_genes_phenotypes(submissions, _get_submisson_features, _get_submisson_genomic_features)
 
 
 def _get_patient_features(result):
@@ -25,7 +26,15 @@ def _get_patient_genomic_features(result):
     return result['patient'].get('genomicFeatures')
 
 
-def _get_mme_genes_phenotypes(results, get_features, get_genomic_features, additional_genes=None, additional_hpo_ids=None):
+def _get_submisson_features(submisson):
+    return submisson.features
+
+
+def _get_submisson_genomic_features(submisson):
+    return submisson.genomic_features
+
+
+def _get_mme_gene_phenotype_ids(results, get_features, get_genomic_features, additional_genes=None, additional_hpo_ids=None):
     hpo_ids = additional_hpo_ids if additional_hpo_ids else set()
     genes = additional_genes if additional_genes else set()
     for result in results:
@@ -34,6 +43,11 @@ def _get_mme_genes_phenotypes(results, get_features, get_genomic_features, addit
 
     gene_ids = {gene for gene in genes if gene.startswith('ENSG')}
     gene_symols = {gene for gene in genes if not gene.startswith('ENSG')}
+    return hpo_ids, gene_ids, gene_symols
+
+
+def _get_mme_genes_phenotypes(results, get_features, get_genomic_features, **kwargs):
+    hpo_ids, gene_ids, gene_symols = _get_mme_gene_phenotype_ids(results, get_features, get_genomic_features, **kwargs)
     gene_symbols_to_ids = get_gene_ids_for_gene_symbols(gene_symols)
     gene_ids.update({new_gene_ids[0] for new_gene_ids in gene_symbols_to_ids.values()})
     genes_by_id = get_genes(gene_ids)
@@ -100,4 +114,28 @@ def get_submission_json_for_external_match(submission):
             'features': submission.features,
             'genomicFeatures': submission.genomic_features,
         }
+    }
+
+
+def get_mme_metrics():
+    submissions = MatchmakerSubmission.objects.filter(deleted_date__isnull=True)
+
+    hpo_ids, gene_ids, gene_symols = _get_mme_gene_phenotype_ids(
+        submissions, _get_submisson_features, _get_submisson_genomic_features
+    )
+    if gene_symols:
+        logger.error('Found unexpected gene in MME: {}'.format(', '.join(gene_symols)))
+
+    submitters = set()
+    for submission in submissions:
+        submitters.update({name.strip() for name in submission.contact_name.split(',')})
+
+    return {
+        "numberOfCases": submissions.count(),
+        "numberOfSubmitters": len(submitters),
+        "numberOfUniqueGenes": len(gene_ids),
+        "numberOfUniqueFeatures": len(hpo_ids),
+        "numberOfRequestsReceived": 'this.getNumOfIncomingMatchRequests()',
+        "numberOfPotentialMatchesSent": 'this.getNumOfMatches())',
+        "dateGenerated": datetime.now().strftime('%Y-%m-%d'),
     }
