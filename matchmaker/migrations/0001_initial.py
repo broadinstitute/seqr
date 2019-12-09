@@ -75,7 +75,27 @@ class Migration(migrations.Migration):
                 ('last_modified_by', models.ForeignKey(
                     null=True, on_delete=django.db.models.deletion.SET_NULL, to=settings.AUTH_USER_MODEL)),
                 ('submission', models.ForeignKey(
-                    on_delete=django.db.models.deletion.PROTECT, to='matchmaker.MatchmakerSubmission')),
+                    on_delete=django.db.models.deletion.PROTECT, to='matchmaker.MatchmakerSubmission', null=True)),
             ],
+        ),
+        migrations.CreateModel(
+            name='MatchmakerIncomingQuery',
+            fields=[
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('guid', models.CharField(db_index=True, max_length=30, unique=True)),
+                ('created_date', models.DateTimeField(db_index=True, default=django.utils.timezone.now)),
+                ('last_modified_date', models.DateTimeField(blank=True, db_index=True, null=True)),
+                ('institution', models.CharField(max_length=255)),
+                ('patient_id', models.CharField(null=True, max_length=255)),
+                ('created_by', models.ForeignKey(
+                    blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL,
+                    related_name='+', to=settings.AUTH_USER_MODEL)),
+            ],
+        ),
+        migrations.AddField(
+            model_name='matchmakerresult',
+            name='originating_query',
+            field=models.ForeignKey(
+                null=True, on_delete=django.db.models.deletion.SET_NULL, to='matchmaker.MatchmakerIncomingQuery'),
         ),
     ]

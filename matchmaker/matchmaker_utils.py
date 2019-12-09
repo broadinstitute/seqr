@@ -1,9 +1,8 @@
 import logging
 from datetime import datetime
-from django.db.models import Count
 
 from reference_data.models import HumanPhenotypeOntology
-from matchmaker.models import MatchmakerSubmission
+from matchmaker.models import MatchmakerSubmission, MatchmakerIncomingQuery
 from seqr.utils.gene_utils import get_genes, get_gene_ids_for_gene_symbols
 from settings import MME_DEFAULT_CONTACT_INSTITUTION
 
@@ -130,12 +129,16 @@ def get_mme_metrics():
     for submission in submissions:
         submitters.update({name.strip() for name in submission.contact_name.split(',')})
 
+    incoming_request_count = MatchmakerIncomingQuery.objects.count()
+    matched_incoming_request_count = MatchmakerIncomingQuery.objects.filter(
+        patient_id__isnull=False).distinct('patient_id').count()
+
     return {
         "numberOfCases": submissions.count(),
         "numberOfSubmitters": len(submitters),
         "numberOfUniqueGenes": len(gene_ids),
         "numberOfUniqueFeatures": len(hpo_ids),
-        "numberOfRequestsReceived": 'this.getNumOfIncomingMatchRequests()',
-        "numberOfPotentialMatchesSent": 'this.getNumOfMatches())',
+        "numberOfRequestsReceived": incoming_request_count,
+        "numberOfPotentialMatchesSent": matched_incoming_request_count,
         "dateGenerated": datetime.now().strftime('%Y-%m-%d'),
     }

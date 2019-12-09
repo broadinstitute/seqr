@@ -34,8 +34,23 @@ class MatchmakerSubmission(ModelWithGUID):
         ]
 
 
+class MatchmakerIncomingQuery(ModelWithGUID):
+    institution = models.CharField(max_length=255)
+    patient_id = models.CharField(max_length=255, null=True)
+
+    def __unicode__(self):
+        return '{}_{}_query'.format(self.patient_id or self.id, self.institution)
+
+    def _compute_guid(self):
+        return 'MIQ%07d_%s_%s' % (self.id, self.patient_id, self.institution.replace(' ', '_'))
+
+    class Meta:
+        json_fields = ['guid', 'created_date']
+
+
 class MatchmakerResult(ModelWithGUID):
-    submission = models.ForeignKey(MatchmakerSubmission, on_delete=models.PROTECT)
+    submission = models.ForeignKey(MatchmakerSubmission, on_delete=models.PROTECT, null=True)
+    originating_query = models.ForeignKey(MatchmakerIncomingQuery, on_delete=models.SET_NULL, null=True)
     result_data = JSONField()
 
     last_modified_by = models.ForeignKey(User, null=True, on_delete=models.SET_NULL)
