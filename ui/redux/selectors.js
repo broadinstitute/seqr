@@ -39,8 +39,8 @@ export const getProjectGuid = state => state.currentProjectGuid
 export const getSavedVariantsIsLoading = state => state.savedVariantsLoading.isLoading
 export const getSavedVariantsLoadingError = state => state.savedVariantsLoading.errorMessage
 export const getIgvReadsVisibility = state => state.igvReadsVisibility
-export const getNotesByGuid = state => state.notes
-export const getTagsByGuid = state => state.tags
+export const getNotesByGuid = state => state.notesByGuid
+export const getTagsByGuid = state => state.tagsByGuid
 
 export const getAllUsers = createSelector(
   getUsersByUsername,
@@ -192,10 +192,10 @@ export const getSelectedSavedVariants = createSelector(
   getFamiliesByGuid,
   getAnalysisGroupsByGuid,
   getProjectGuid,
-  (savedVariants, { tag, familyGuid, analysisGroupGuid, variantGuids }, familiesByGuid, analysisGroupsByGuid, projectGuid) => {
+  (savedVariants, { tag, familyGuid, analysisGroupGuid, variantGuid }, familiesByGuid, analysisGroupsByGuid, projectGuid) => {
     let variants = Object.values(savedVariants)
-    if (variantGuids) {
-      return variants.filter(o => variantGuids.split(',').includes(o.variantGuid))
+    if (variantGuid) {
+      return variants.filter(o => variantGuid.split(',').includes(o.variantGuid))
     }
 
     if (analysisGroupGuid && analysisGroupsByGuid[analysisGroupGuid]) {

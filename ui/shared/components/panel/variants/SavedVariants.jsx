@@ -4,12 +4,14 @@ import { connect } from 'react-redux'
 import { Loader, Grid, Dropdown, Form, Message } from 'semantic-ui-react'
 import { Route, Switch, Link } from 'react-router-dom'
 import styled from 'styled-components'
+import isEqual from 'lodash/isEqual'
+import flatten from 'lodash/flatten'
 
 import { loadSavedVariants, updateSavedVariantTable } from 'redux/rootReducer'
 import { getAnalysisGroupsByGuid, getCurrentProject, getSavedVariantsIsLoading, getSelectedSavedVariants,
   getVisibleSortedSavedVariants, getFilteredSavedVariants, getSavedVariantTableState, getSavedVariantsLoadingError,
   getSavedVariantVisibleIndices, getSavedVariantTotalPages, getSavedVariantExportConfig,
-  getNotesByGuid, getTagsByGuid } from 'redux/selectors'
+  getNotesByGuid, getTagsByGuid, getSavedVariantsByGuid } from 'redux/selectors'
 import {
   REVIEW_TAG_NAME,
   KNOWN_GENE_FOR_PHENOTYPE_TAG_NAME,
@@ -111,8 +113,9 @@ class BaseSavedVariants extends React.Component {
     totalPages: PropTypes.number,
     loadSavedVariants: PropTypes.func,
     updateSavedVariantTable: PropTypes.func,
-    notesByGuid: PropTypes.array,
-    tagsByGuid: PropTypes.array,
+    notesByGuid: PropTypes.object,
+    tagsByGuid: PropTypes.object,
+    variants: PropTypes.object,
   }
 
   constructor(props) {
@@ -240,24 +243,29 @@ class BaseSavedVariants extends React.Component {
       shownSummary = `${this.props.variantsToDisplay.length > 0 ? this.props.firstRecordIndex + 1 : 0}-${this.props.firstRecordIndex + this.props.variantsToDisplay.length} of`
     }
 
-    // TODO pair up variants from notesByGuid and TagsByGuid <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-    // const pairedVariants = this.props.variantsToDisplay.reduce((acc, variant, index, variants) => {
-    //   const guids = (variant.notes || []).map(n => n.noteGuid).concat((variant.tags || []).map(t => t.tagGuid))
-    //   const variantPaired = acc.allPrevGuids.reduce((paired, prevGuids, i) => {
-    //     if (intersection(prevGuids, guids).length > 0) {
-    //       acc.pairedVariants.push([variants[i], variant])
-    //       paired = true
-    //     }
-    //     return paired
-    //   }, false)
-    //   if (!variantPaired) {
-    //     acc.pairedVariants.push(variant)
-    //   }
-    //   acc.allPrevGuids.push(guids)
-    //   return acc
-    // }, { allPrevGuids: [], pairedVariants: [] })
-    // const pairedVariants = this.props.notesByGuid.values().map(n => n.variantGuids)
+    const allNotePairs = Object.values(this.props.notesByGuid).map(n => n.variantGuids)
+    const allTagPairs = Object.values(this.props.tagsByGuid).map(t => t.variantGuids)
+    const allPairs = allNotePairs.concat(allTagPairs)
+    const uniqPairs = allPairs.reduce((acc, guids) => {
+      if (guids.length > 1 && !acc.some(existingGuids => isEqual(existingGuids, guids))) {
+        acc.push(guids)
+      }
+      return acc
+    }, [])
+    const uniqPairedGuids = allPairs.reduce((acc, guids) => {
+      if (guids.length === 1 && !flatten(uniqPairs).includes(guids[0])) {
+        acc.push(guids)
+      }
+      return acc
+    }, uniqPairs)
+    const pairedVariants = uniqPairedGuids.reduce((acc, guids) => {
+      const variant = guids.map(guid => this.props.variants[guid])
+      acc.push(variant.length > 1 ? variant : variant[0])
+      return acc
+    }, [])
+
     // TODO move variant to display to reducer, and access notes and tags by guid there <<<<<<<<<<<<<<<<<<<<<<<<<<<
+    // TODO sort after pairing
 
     let variantContent
     if (this.props.loading) {
@@ -353,6 +361,7 @@ const mapStateToProps = (state, ownProps) => ({
   analysisGroup: getAnalysisGroupsByGuid(state)[ownProps.match.params.analysisGroupGuid],
   notesByGuid: getNotesByGuid(state),
   tagsByGuid: getTagsByGuid(state),
+  variants: getSavedVariantsByGuid(state),
 })
 
 const mapDispatchToProps = {
@@ -364,7 +373,7 @@ const SavedVariants = connect(mapStateToProps, mapDispatchToProps)(BaseSavedVari
 
 const RoutedSavedVariants = ({ match }) =>
   <Switch>
-    <Route path={`${match.url}/variant/:variantGuids`} component={SavedVariants} />
+    <Route path={`${match.url}/variant/:variantGuid`} component={SavedVariants} />
     <Route path={`${match.url}/family/:familyGuid/:tag?`} component={SavedVariants} />
     <Route path={`${match.url}/analysis_group/:analysisGroupGuid/:tag?`} component={SavedVariants} />
     <Route path={`${match.url}/:tag/gene/:gene`} component={SavedVariants} />

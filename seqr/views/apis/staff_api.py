@@ -19,7 +19,7 @@ from seqr.utils.gene_utils import get_genes
 from seqr.utils.xpos_utils import get_chrom_pos
 
 from seqr.views.utils.matchmaker_utils import get_mme_genes_phenotypes, parse_mme_patient
-from seqr.views.apis.saved_variant_api import _saved_variant_genes, _add_locus_lists
+from seqr.views.apis.saved_variant_api import _saved_variant_genes, _add_locus_lists, get_notes_tags_by_guid
 from seqr.views.utils.file_utils import parse_file
 from seqr.views.utils.json_utils import create_json_response, _to_camel_case
 from seqr.views.utils.orm_to_json_utils import _get_json_for_individuals, get_json_for_saved_variants, \
@@ -825,14 +825,18 @@ def saved_variants(request, tag):
     individuals_json = _get_json_for_individuals(individuals, user=request.user)
     locus_lists_by_guid = {locus_list['locusListGuid']: locus_list for locus_list in
                            get_json_for_locus_lists(LocusList.objects.filter(guid__in=locus_list_guids), request.user)}
+    saved_variants_by_guid = {variant['variantGuid']: variant for variant in saved_variants}
+    notes_by_guid, tags_by_guid = get_notes_tags_by_guid(saved_variants_by_guid)
 
     return create_json_response({
-        'savedVariantsByGuid': {variant['variantGuid']: variant for variant in saved_variants},
+        'savedVariantsByGuid': saved_variants_by_guid,
         'genesById': genes,
         'projectsByGuid': {project['projectGuid']: project for project in projects_json},
         'familiesByGuid': {family['familyGuid']: family for family in families_json},
         'individualsByGuid': {indiv['individualGuid']: indiv for indiv in individuals_json},
         'locusListsByGuid': locus_lists_by_guid,
+        'notesByGuid': notes_by_guid,
+        'tagsByGuid': tags_by_guid,
     })
 
 
