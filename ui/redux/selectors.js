@@ -39,8 +39,6 @@ export const getProjectGuid = state => state.currentProjectGuid
 export const getSavedVariantsIsLoading = state => state.savedVariantsLoading.isLoading
 export const getSavedVariantsLoadingError = state => state.savedVariantsLoading.errorMessage
 export const getIgvReadsVisibility = state => state.igvReadsVisibility
-export const getNotesByGuid = state => state.notesByGuid
-export const getTagsByGuid = state => state.tagsByGuid
 
 export const getAllUsers = createSelector(
   getUsersByUsername,
@@ -183,6 +181,44 @@ export const getNotesGroupedByFamilyVariants = createSelector(
     })
     return acc
 
+  }, {}),
+)
+
+export const getNotesByGuid = createSelector(
+  getSavedVariantsByGuid,
+  savedVariantsByGuid => Object.values(savedVariantsByGuid).reduce((acc, variant) => {
+    acc = {
+      ...acc,
+      ...(variant.notes || []).reduce((variantNotes, note) => {
+        if (note.noteGuid in variantNotes) {
+          variantNotes[note.noteGuid].variantGuid.append(variant.variantGuid)
+        }
+        else {
+          note.variantGuids = [variant.variantGuid]
+          variantNotes = { ...variantNotes, [note.noteGuid]: note }
+        }
+        return variantNotes
+      }, {}) }
+    return acc
+  }, {}),
+)
+
+export const getTagsByGuid = createSelector(
+  getSavedVariantsByGuid,
+  savedVariantsByGuid => Object.values(savedVariantsByGuid).reduce((acc, variant) => {
+    acc = {
+      ...acc,
+      ...(variant.tags || []).reduce((variantTags, tag) => {
+        if (tag.tagGuid in variantTags) {
+          variantTags[tag.tagGuid].variantGuid.append(variant.variantGuid)
+        }
+        else {
+          tag.variantGuids = [variant.variantGuid]
+          variantTags = { ...variantTags, [tag.tagGuid]: tag }
+        }
+        return variantTags
+      }, {}) }
+    return acc
   }, {}),
 )
 

@@ -243,6 +243,8 @@ class BaseSavedVariants extends React.Component {
       shownSummary = `${this.props.variantsToDisplay.length > 0 ? this.props.firstRecordIndex + 1 : 0}-${this.props.firstRecordIndex + this.props.variantsToDisplay.length} of`
     }
 
+    // TODO move variant to display to reducer, and access notes and tags by guid there <<<<<<<<<<<<<<<<<<<<<<<<<<<
+    // TODO sort after pairing
     const allNotePairs = Object.values(this.props.notesByGuid).map(n => n.variantGuids)
     const allTagPairs = Object.values(this.props.tagsByGuid).map(t => t.variantGuids)
     const allPairs = allNotePairs.concat(allTagPairs)
@@ -263,9 +265,6 @@ class BaseSavedVariants extends React.Component {
       acc.push(variant.length > 1 ? variant : variant[0])
       return acc
     }, [])
-
-    // TODO move variant to display to reducer, and access notes and tags by guid there <<<<<<<<<<<<<<<<<<<<<<<<<<<
-    // TODO sort after pairing
 
     let variantContent
     if (this.props.loading) {

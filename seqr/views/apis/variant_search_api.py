@@ -32,7 +32,6 @@ from seqr.views.utils.orm_to_json_utils import \
     get_project_locus_list_models, \
     _get_json_for_models
 from seqr.views.utils.permissions_utils import check_permissions, get_projects_user_can_view
-from seqr.views.utils.variant_utils import get_notes_tags_by_guid
 from settings import API_LOGIN_REQUIRED_URL
 
 
@@ -142,14 +141,11 @@ def _process_variants(variants, families):
     projects = {family.project for family in families}
     _add_locus_lists(projects, variants, genes)
     saved_variants_by_guid, _ = _get_saved_variants(variants, families)
-    notes_by_guid, tags_by_guid = get_notes_tags_by_guid(saved_variants_by_guid)
 
     return {
         'searchedVariants': variants,
         'savedVariantsByGuid': saved_variants_by_guid,
         'genesById': genes,
-        'notesByGuid': notes_by_guid,
-        'tagsByGuid': tags_by_guid,
     }
 
 

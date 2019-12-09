@@ -68,27 +68,3 @@ def _update_saved_variant_json(saved_variant, saved_variant_json):
     saved_variant.saved_variant_json = saved_variant_json
     saved_variant.save()
 
-
-def get_notes_tags_by_guid(saved_variants_by_guid):
-    notes_by_guid = {}
-    tags_by_guid = {}
-
-    for saved_variant_guid, variant in saved_variants_by_guid.items():
-
-        for note in variant['notes']:
-            note_guid = note['noteGuid']
-            if note_guid in notes_by_guid:
-                notes_by_guid[note_guid]['variantGuids'].append(saved_variant_guid)
-            else:
-                notes_by_guid[note_guid] = note
-                notes_by_guid[note_guid]['variantGuids'] = [saved_variant_guid]
-
-        for tag in variant['tags']:
-            tag_guid = tag['tagGuid']
-            if tag_guid in tags_by_guid:
-                tags_by_guid[tag_guid]['variantGuids'].append(saved_variant_guid)
-            else:
-                tags_by_guid[tag_guid] = tag
-                tags_by_guid[tag_guid]['variantGuids'] = [saved_variant_guid]
-
-    return notes_by_guid, tags_by_guid
