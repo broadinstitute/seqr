@@ -1,4 +1,5 @@
 import logging
+import json
 import os
 import random
 import string
@@ -277,11 +278,19 @@ MME_EXTERNAL_MATCH_URL = MME_SERVER_HOST + '/match/external'
 MME_MATCHBOX_METRICS_URL = MME_SERVER_HOST + '/metrics'
 MME_MATCHBOX_PUBLIC_METRICS_URL = MME_SERVER_HOST + '/metrics/public'
 
+MME_ACCEPT_HEADER = 'application/vnd.ga4gh.matchmaker.v1.0+json'
 MME_HEADERS = {
     'X-Auth-Token': os.environ.get("MME_NODE_ADMIN_TOKEN", "abcd"),
-    'Accept': 'application/vnd.ga4gh.matchmaker.v1.0+json',
+    'Accept': MME_ACCEPT_HEADER,
     'Content-Type': 'application/vnd.ga4gh.matchmaker.v1.0+json'
 }
+
+MME_NODES_CONFIG_FILE_PATH = os.environ.get('MME_NODES_CONFIG_FILE_PATH', '')
+MME_NODES = {}
+if MME_NODES_CONFIG_FILE_PATH:
+    with open(os.path.join(BASE_DIR, MME_NODES_CONFIG_FILE_PATH), 'r') as f:
+        for node in json.load(f)['nodes']:
+            MME_NODES[node['accessToken']] = node
 
 MME_DEFAULT_CONTACT_NAME = 'Samantha Baxter'
 MME_DEFAULT_CONTACT_INSTITUTION = 'Broad Center for Mendelian Genomics'

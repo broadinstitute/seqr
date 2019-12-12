@@ -1,22 +1,60 @@
 import mock
 import responses
 
+from datetime import datetime
 from django.test import TestCase
+
+TEST_ACCESS_TOKEN = 'abc123'
+TEST_MME_NODES = {TEST_ACCESS_TOKEN: {'name': 'Test Node'}}
 
 
 class ExternalAPITest(TestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
     multi_db = True
 
-    @responses.activate
-    def test_mme_metrics_proxy(self):
-        responses.add(responses.GET, 'http://localhost:9020/metrics/public', status=200, json={'numSubmissions': 123})
+    def _check_mme_authenticated(self, url):
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 406)
 
+        response = self.client.get(url, HTTP_ACCEPT='application/vnd.ga4gh.matchmaker.v1.0+json')
+        self.assertEqual(response.status_code, 401)
+
+        response = self.client.get(
+            url, HTTP_ACCEPT='application/vnd.ga4gh.matchmaker.v1.0+json', HTTP_X_AUTH_TOKEN='invalid',
+        )
+        self.assertEqual(response.status_code, 401)
+
+    def _make_mme_request(self, url, method):
+        call_func = getattr(self.client, method)
+        return call_func(
+            url, HTTP_ACCEPT='application/vnd.ga4gh.matchmaker.v1.0+json', HTTP_X_AUTH_TOKEN=TEST_ACCESS_TOKEN,
+        )
+
+    @mock.patch('matchmaker.views.external_api.MME_NODES', TEST_MME_NODES)
+    def test_mme_metrics_proxy(self):
         url = '/api/matchmaker/v1/metrics'
 
+        self._check_mme_authenticated(url)
+
         response = self.client.get(url)
+        self.assertEqual(response.status_code, 406)
+
+        response = self.client.get(url, HTTP_ACCEPT='application/vnd.ga4gh.matchmaker.v1.0+json')
+        self.assertEqual(response.status_code, 401)
+
+        response = self._make_mme_request(url, 'get')
         self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {'numSubmissions': 123})
+        self.assertDictEqual(response.json(), {
+            'metrics': {
+                'numberOfCases': 3,
+                'numberOfSubmitters': 2,
+                'numberOfUniqueGenes': 4,
+                'numberOfUniqueFeatures': 5,
+                'numberOfRequestsReceived': 3,
+                'numberOfPotentialMatchesSent': 1,
+                'dateGenerated': datetime.today().strftime('%Y-%m-%d'),
+            }
+        })
 
     @mock.patch('matchmaker.views.external_api.EmailMessage')
     @mock.patch('matchmaker.views.external_api.post_to_slack')

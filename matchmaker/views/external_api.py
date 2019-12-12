@@ -5,12 +5,13 @@ from django.core.mail.message import EmailMessage
 from django.views.decorators.csrf import csrf_exempt
 
 from matchmaker.models import MatchmakerSubmission
-from matchmaker.matchmaker_utils import get_mme_genes_phenotypes_for_results
+from matchmaker.matchmaker_utils import get_mme_genes_phenotypes_for_results, get_mme_metrics
 
 from seqr.utils.communication_utils import post_to_slack
+from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.proxy_request_utils import proxy_request
 
-from settings import MME_LOCAL_MATCH_URL, MME_MATCHBOX_PUBLIC_METRICS_URL, MME_SLACK_MATCH_NOTIFICATION_CHANNEL,\
+from settings import MME_LOCAL_MATCH_URL, MME_ACCEPT_HEADER, MME_NODES, MME_SLACK_MATCH_NOTIFICATION_CHANNEL,\
     MME_SLACK_EVENT_NOTIFICATION_CHANNEL, MME_DEFAULT_CONTACT_EMAIL, BASE_URL
 
 logger = logging.getLogger(__name__)
@@ -21,22 +22,32 @@ ENDPOINTS IN THIS FILE ARE ACCESSED BY NON_SEQR USERS. BE CAREFUL WHEN EDITING N
 """
 
 
+def authenticate_mme_request(view_func):
+    def _wrapped_view(request, *args, **kwargs):
+        accept_header = request.META.get('HTTP_ACCEPT')
+        if accept_header != MME_ACCEPT_HEADER:
+            return create_json_response({
+                'error': 'Not Acceptable',
+                'message': 'unsupported API version, supported versions=[1.0]',
+            }, status=406)
+
+        auth_token = request.META.get('HTTP_X_AUTH_TOKEN')
+        originating_node = MME_NODES.get(auth_token)
+        if not originating_node:
+            return create_json_response({
+                'error': 'Unauthorized',
+                'message': 'authentication failed',
+            }, status=401)
+
+        return view_func(request, originating_node, *args, **kwargs)
+    return _wrapped_view
+
+
+@authenticate_mme_request
 @csrf_exempt
-def mme_metrics_proxy(request):
-    """
-    -This is a proxy URL for backend MME server as per MME spec.
-    -Proxies public metrics endpoint
-
-    Args:
-        None, all data in POST under key "patient_data"
-    Returns:
-        Metric JSON from matchbox
-    NOTES:
-    1. seqr login IS NOT required, since AUTH via toke in POST is handled by MME server, hence no
-    decorator @login_required. This is a PUBLIC endpoint
-
-    """
-    return proxy_request(request, MME_MATCHBOX_PUBLIC_METRICS_URL)
+def mme_metrics_proxy(request, originating_node):
+    logger.info('Received MME metrics request from {}'.format(originating_node['name']))
+    return create_json_response({'metrics': get_mme_metrics()})
 
 
 @csrf_exempt
