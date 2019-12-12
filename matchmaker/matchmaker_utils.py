@@ -1,8 +1,10 @@
 import logging
+from collections import defaultdict
 from datetime import datetime
+from django.db.models import prefetch_related_objects
 
 from reference_data.models import HumanPhenotypeOntology
-from matchmaker.models import MatchmakerSubmission, MatchmakerIncomingQuery
+from matchmaker.models import MatchmakerSubmission, MatchmakerIncomingQuery, MatchmakerResult
 from seqr.utils.gene_utils import get_genes, get_gene_ids_for_gene_symbols
 from settings import MME_DEFAULT_CONTACT_INSTITUTION
 
@@ -98,8 +100,8 @@ def parse_mme_patient(result, hpo_terms_by_id, gene_symbols_to_ids, submission_g
     return parsed_result
 
 
-def get_submission_json_for_external_match(submission):
-    return {
+def get_submission_json_for_external_match(submission, score=None):
+    submission_json = {
         'patient': {
             'id': submission.submission_id,
             'label': submission.label,
@@ -114,6 +116,129 @@ def get_submission_json_for_external_match(submission):
             'genomicFeatures': submission.genomic_features,
         }
     }
+    if score:
+        submission_json['score'] = score
+    return submission_json
+
+
+def get_mme_matches(patient_data=None, submission=None, origin_request_host=None, user=None):
+    if not submission and not patient_data:
+        raise ValueError('Submission or patient data is required')
+
+    if not patient_data:
+        patient_data = get_submission_json_for_external_match(submission)
+
+    hpo_terms_by_id, genes_by_id, gene_symbols_to_ids = get_mme_genes_phenotypes_for_results([patient_data])
+
+    genomic_features = _get_patient_genomic_features(patient_data)
+    feature_ids = [
+        feature['id'] for feature in _get_patient_features(patient_data) if
+        feature.get('observed', 'yes') == 'yes' and feature['id'] in hpo_terms_by_id
+    ]
+
+    if genomic_features:
+        get_submission_kwargs = {
+            'query_ids': genes_by_id.keys(),
+            'filter_key': 'genomic_features',
+            'id_filter_func': lambda gene_id: {'gene': {'id': gene_id}},
+        }
+    else:
+        get_submission_kwargs = {
+            'query_ids': feature_ids,
+            'filter_key': 'features',
+            'id_filter_func': lambda feature_id: {'id': feature_id, 'observed': 'yes'},
+        }
+
+    scored_matches = _get_matched_submissions(
+        submission=submission,
+        get_match_genotype_score=lambda match: _get_genotype_score(genomic_features, match) if genomic_features else 0,
+        get_match_phenotype_score=lambda match: _get_phenotype_score(feature_ids, match) if feature_ids else 0,
+        **get_submission_kwargs
+    )
+
+    query_patient_id = patient_data['patient']['id']
+    incoming_query = MatchmakerIncomingQuery.objects.create(
+        institution=patient_data['patient']['contact'].get('institution') or origin_request_host,
+        patient_id=query_patient_id if scored_matches else None,
+    )
+    if not scored_matches:
+        return [], incoming_query
+
+    prefetch_related_objects(scored_matches.keys(), 'matchmakerresult_set')
+    for match_submission in scored_matches.keys():
+        if not match_submission.matchmakerresult_set.filter(result_data__patient__id=query_patient_id):
+            MatchmakerResult.objects.create(
+                submission=match_submission,
+                originating_query=incoming_query,
+                result_data=patient_data,
+                last_modified_by=user,
+            )
+
+    return [get_submission_json_for_external_match(match_submission, score=score)
+            for match_submission, score in scored_matches.items()], incoming_query
+
+
+def _get_matched_submissions(submission, get_match_genotype_score, get_match_phenotype_score, query_ids, filter_key, id_filter_func):
+    if not query_ids:
+        # no valid entities found for provided features
+        return {}
+    matches = MatchmakerSubmission.objects.filter(**{
+        '{}__contains'.format(filter_key): [id_filter_func(item_id) for item_id in query_ids]
+    })
+    if submission:
+        matches = matches.exclude(id=submission.id)
+
+    scored_matches = {}
+    for match in matches:
+        genotype_score = get_match_genotype_score(match)
+        phenotype_score = get_match_phenotype_score(match)
+
+        if genotype_score > 0 or phenotype_score > 0.65:
+            scored_matches[match] = {
+                '_genotypeScore': genotype_score,
+                '_phenotypeScore': phenotype_score,
+                'patient': 1 if genotype_score == 1 else round(genotype_score * (phenotype_score or 1), 4)
+            }
+    return scored_matches
+
+
+def _get_genotype_score(genomic_features, match):
+    match_features_by_gene_id = defaultdict(list)
+    for feature in match.genomic_features:
+        match_features_by_gene_id[feature['gene']['id']].append(feature)
+
+    score = 0
+    for feature in genomic_features:
+        feature_gene_matches = match_features_by_gene_id[feature['gene']['id']]
+        if feature_gene_matches:
+            score += 0.7
+            if feature.get('zygosty') and any(
+                    match_feature.get('zygosity') == feature['zygosity'] for match_feature in feature_gene_matches
+            ):
+                score += 0.15
+            if feature.get('variant') and any(
+                    _is_same_variant(feature['variant'], match_feature['variant'])
+                    for match_feature in feature_gene_matches if match_feature.get('variant')
+            ):
+                score += 0.15
+    return float(score) / len(genomic_features)
+
+
+def _is_same_variant(var1, var2):
+    for field in {'alternateBases', 'referenceBases', 'referenceName', 'start', 'assembly'}:
+        if var1.get(field) and var1.get(field) != var2.get(field):
+            return False
+    return True
+
+
+def _get_phenotype_score(hpo_ids, match):
+    if not match.features:
+        return 0.5
+    matched_hpo_ids = [
+        hpo_id for hpo_id in hpo_ids
+        if any(feature['id'] == hpo_id and feature.get('observed', 'yes') == 'yes' for feature in match.features)
+    ]
+    return float(len(matched_hpo_ids)) / len(hpo_ids)
 
 
 def get_mme_metrics():

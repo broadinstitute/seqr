@@ -65,7 +65,21 @@ def mme_match_proxy(request):
         except Exception as e:
             import pdb; pdb.set_trace()
             logger.error('Unable to create notification for incoming MME match request')
-    #  TODO create MatchmakerIncomingQuery
+    """
+    /**
+         * sort by score
+         */
+        results.sort(Comparator.comparingDouble(object -> {
+            MatchmakerResult matchmakerResult = (MatchmakerResult) object;
+            return matchmakerResult.getScore().get("patient");
+        }).reversed());
+    """
+    """
+    this.requestOriginHostname = requestOriginHostname;
+    this.institution=institution;
+    
+    institution=query.get('institution') or query['requestOriginHostname']
+    """
     return response
 
 

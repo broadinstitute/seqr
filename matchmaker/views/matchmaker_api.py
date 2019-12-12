@@ -9,7 +9,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 from matchmaker.models import MatchmakerResult, MatchmakerContactNotes, MatchmakerSubmission
 from matchmaker.matchmaker_utils import get_mme_genes_phenotypes_for_results, parse_mme_patient, \
-    get_submission_json_for_external_match, parse_mme_features, parse_mme_gene_variants
+    get_submission_json_for_external_match, parse_mme_features, parse_mme_gene_variants, get_mme_matches
 from seqr.models import Individual, SavedVariant
 from seqr.utils.communication_utils import post_to_slack
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
@@ -66,15 +66,7 @@ def search_individual_mme_matches(request, submission_guid):
 
 
 def _search_matches(submission, user):
-    patient_data = get_submission_json_for_external_match(submission)
-    local_result = requests.post(url=MME_LOCAL_MATCH_URL, headers=MME_HEADERS, data=json.dumps(patient_data))
-    if local_result.status_code != 200:
-        try:
-            response_json = local_result.json()
-        except Exception:
-            response_json = {}
-        return create_json_response(response_json, status=local_result.status_code, reason='Error in local match')
-    external_result = requests.post(url=MME_EXTERNAL_MATCH_URL, headers=MME_HEADERS, data=json.dumps(patient_data))
+    external_result = requests.post(url=MME_EXTERNAL_MATCH_URL, headers=MME_HEADERS, data=json.dumps(get_submission_json_for_external_match(submission)))
     if external_result.status_code != 200:
         try:
             response_json = external_result.json()
@@ -82,7 +74,9 @@ def _search_matches(submission, user):
             response_json = {}
         return create_json_response(response_json, status=external_result.status_code, reason='Error in external match')
 
-    results = local_result.json()['results'] + external_result.json()['results']
+    local_results, incoming_query = get_mme_matches(submission=submission, user=user)
+
+    results = local_results + external_result.json()['results']
 
     initial_saved_results = {
         result.result_data['patient']['id']: result for result in MatchmakerResult.objects.filter(submission=submission)
@@ -95,6 +89,7 @@ def _search_matches(submission, user):
         if not saved_result:
             saved_result = MatchmakerResult.objects.create(
                 submission=submission,
+                originating_query=incoming_query,
                 result_data=result,
                 last_modified_by=user,
             )

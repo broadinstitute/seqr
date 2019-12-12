@@ -179,10 +179,7 @@ class MatchmakerAPITest(TestCase):
         url = reverse(search_individual_mme_matches, args=[SUBMISSION_GUID])
         _check_login(self, url)
 
-        responses.add(responses.POST, 'http://localhost:9020/match', body='Failed request', status=400)
-        responses.add(responses.POST, 'http://localhost:9020/match', status=200, json={
-            'results': [{'patient': {'id': 'P0004515'}}]
-        })
+        responses.add(responses.POST, 'http://localhost:9020/match/external', body='Failed request', status=400)
         responses.add(responses.POST, 'http://localhost:9020/match/external', status=200, json={
             'results': [NEW_MATCH_JSON]
         })
@@ -190,7 +187,7 @@ class MatchmakerAPITest(TestCase):
         # Test invalid inputs
         response = self.client.get(url)
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.reason_phrase, 'Error in local match')
+        self.assertEqual(response.reason_phrase, 'Error in external match')
 
         # Test successful search
         response = self.client.get(url)
@@ -203,11 +200,13 @@ class MatchmakerAPITest(TestCase):
 
         self.assertEqual(len(response_json['mmeResultsByGuid']), 3)
         self.assertTrue(RESULT_STATUS_GUID in response_json['mmeResultsByGuid'])
+        self.assertTrue('MR0004688_RGP_105_3' in response_json['mmeResultsByGuid'])
         new_result_guid = next(k for k in response_json['mmeResultsByGuid'].keys()
-                               if k not in {'MR0007228_VCGS_FAM50_156', 'MR0004688_RGP_105_3', RESULT_STATUS_GUID})
+                               if k not in {'MR0004688_RGP_105_3', RESULT_STATUS_GUID})
 
         self.assertDictEqual(response_json['mmeResultsByGuid'][new_result_guid], PARSED_NEW_MATCH_JSON)
         self.assertTrue(response_json['mmeResultsByGuid']['MR0004688_RGP_105_3']['matchStatus']['matchRemoved'])
+        self.assertFalse(response_json['mmeResultsByGuid'][RESULT_STATUS_GUID]['matchStatus']['matchRemoved'])
         self.assertDictEqual(response_json['mmeSubmissionsByGuid'], {SUBMISSION_GUID: {
             'mmeResultGuids': mock.ANY,
             'individualGuid': INDIVIDUAL_GUID,
@@ -254,7 +253,7 @@ class MatchmakerAPITest(TestCase):
         self.assertEqual(MatchmakerResult.objects.filter(guid='MR0007228_VCGS_FAM50_156').count(), 0)
 
         # Test proxy calls
-        self.assertEqual(len(responses.calls), 3)
+        self.assertEqual(len(responses.calls), 2)
         expected_body = json.dumps({
             'patient': {
                 'id': 'NA19675_1_01',
@@ -277,17 +276,11 @@ class MatchmakerAPITest(TestCase):
                 }],
             }
         })
-        self.assertEqual(responses.calls[1].request.url, 'http://localhost:9020/match')
+        self.assertEqual(responses.calls[1].request.url, 'http://localhost:9020/match/external')
         self.assertEqual(responses.calls[1].request.headers['X-Auth-Token'], 'abcd')
         self.assertEqual(responses.calls[1].request.headers['Accept'], 'application/vnd.ga4gh.matchmaker.v1.0+json')
         self.assertEqual(responses.calls[1].request.headers['Content-Type'], 'application/vnd.ga4gh.matchmaker.v1.0+json')
         self.assertEqual(responses.calls[1].request.body, expected_body)
-        self.assertEqual(responses.calls[2].request.url, 'http://localhost:9020/match/external')
-        self.assertEqual(responses.calls[2].request.headers['X-Auth-Token'], 'abcd')
-        self.assertEqual(responses.calls[2].request.headers['Accept'], 'application/vnd.ga4gh.matchmaker.v1.0+json')
-        self.assertEqual(responses.calls[2].request.headers['Content-Type'], 'application/vnd.ga4gh.matchmaker.v1.0+json')
-        self.assertEqual(responses.calls[2].request.body, expected_body)
-
 
         # Test notification
         message = u"""
@@ -311,7 +304,6 @@ class MatchmakerAPITest(TestCase):
 
     @responses.activate
     def test_update_mme_submission(self):
-        responses.add(responses.POST, 'http://localhost:9020/match', status=200, json={'results': []})
         responses.add(responses.POST, 'http://localhost:9020/match/external', status=200, json={'results': [NEW_MATCH_JSON]})
 
         url = reverse(update_mme_submission)
@@ -343,7 +335,7 @@ class MatchmakerAPITest(TestCase):
                 {'id': 'HP:0012469', 'label': 'Infantile spasms', 'observed': 'yes'}
             ],
             'geneVariants': [{
-                'geneId': 'ENSG00000186092',
+                'geneId': 'ENSG00000237613',
                 'alt': 'C',
                 'ref': 'CCACT',
                 'chrom': '14',
@@ -374,7 +366,7 @@ class MatchmakerAPITest(TestCase):
                 {'id': 'HP:0012469', 'label': 'Infantile spasms', 'observed': 'yes'}
             ],
             'geneVariants': [{
-                'geneId': 'ENSG00000186092',
+                'geneId': 'ENSG00000237613',
                 'alt': 'C',
                 'ref': 'CCACT',
                 'chrom': '14',
@@ -394,9 +386,10 @@ class MatchmakerAPITest(TestCase):
             'mmeSubmissionGuid': new_submission_guid,
         }})
         self.assertEqual(len(response_json['mmeResultsByGuid']), 1)
-        self.assertDictEqual(response_json['mmeResultsByGuid'].values()[0], PARSED_NEW_MATCH_NEW_SUBMISSION_JSON)
+        new_match_result_guid = response_json['mmeResultsByGuid'].keys()[0]
+        self.assertDictEqual(response_json['mmeResultsByGuid'][new_match_result_guid], PARSED_NEW_MATCH_NEW_SUBMISSION_JSON)
         self.assertEqual(response_json['mmeResultsByGuid'].values()[0]['submissionGuid'], new_submission_guid)
-        self.assertListEqual(response_json['genesById'].keys(), ['ENSG00000186092'])
+        self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000186092', 'ENSG00000237613'})
 
         self.assertDictEqual(response_json['mmeContactNotes'], {
             'st georges, university of london': {
@@ -405,7 +398,6 @@ class MatchmakerAPITest(TestCase):
             }})
 
         # Test proxy calls
-        self.assertEqual(len(responses.calls), 2)
         expected_body = {
             'patient': {
                 'id': NO_SUBMISSION_INDIVIDUAL_GUID,
@@ -418,7 +410,7 @@ class MatchmakerAPITest(TestCase):
                     {'id': 'HP:0012469', 'label': 'Infantile spasms', 'observed': 'yes'}
                 ],
                 'genomicFeatures': [{
-                    'gene': {'id': 'ENSG00000186092'},
+                    'gene': {'id': 'ENSG00000237613'},
                     'variant': {
                         'start': 77027549,
                         'assembly': 'GRCh38',
@@ -430,14 +422,13 @@ class MatchmakerAPITest(TestCase):
                 }],
             }
         }
-        self.assertEqual(responses.calls[0].request.url, 'http://localhost:9020/match')
-        self.assertEqual(responses.calls[1].request.url, 'http://localhost:9020/match/external')
-        for call in responses.calls:
-            self.assertEqual(call.request.headers['X-Auth-Token'], 'abcd')
-            self.assertEqual(call.request.headers['Accept'], 'application/vnd.ga4gh.matchmaker.v1.0+json')
-            self.assertEqual(call.request.headers['Content-Type'],
-                             'application/vnd.ga4gh.matchmaker.v1.0+json')
-            self.assertDictEqual(json.loads(call.request.body), expected_body)
+        self.assertEqual(len(responses.calls), 1)
+        self.assertEqual(responses.calls[0].request.url, 'http://localhost:9020/match/external')
+        self.assertEqual(responses.calls[0].request.headers['X-Auth-Token'], 'abcd')
+        self.assertEqual(responses.calls[0].request.headers['Accept'], 'application/vnd.ga4gh.matchmaker.v1.0+json')
+        self.assertEqual(responses.calls[0].request.headers['Content-Type'],
+                         'application/vnd.ga4gh.matchmaker.v1.0+json')
+        self.assertDictEqual(json.loads(responses.calls[0].request.body), expected_body)
 
         # Test successful update
         url = reverse(update_mme_submission, args=[new_submission_guid])
@@ -446,8 +437,8 @@ class MatchmakerAPITest(TestCase):
             'contactHref': 'mailto:matchmaker@broadinstitute.org',
             'contactName': 'Test Name',
             'phenotypes': [
-                {'id': 'HP:0012469', 'label': 'Infantile spasms', 'observed': 'yes'},
-                {'id': 'HP:0001263', 'label': 'Global developmental delay', 'observed': 'no'},
+                {'id': 'HP:0012469', 'label': 'Infantile spasms', 'observed': 'no'},
+                {'id': 'HP:0002017', 'label': 'Nausea and vomiting', 'observed': 'yes'},
             ],
         }))
 
@@ -457,8 +448,86 @@ class MatchmakerAPITest(TestCase):
             'mmeResultsByGuid', 'individualsByGuid', 'genesById', 'mmeContactNotes', 'mmeSubmissionsByGuid',
         })
 
-        self.assertEqual(len(response_json['mmeResultsByGuid']), 1)
-        self.assertDictEqual(response_json['mmeResultsByGuid'].values()[0], PARSED_NEW_MATCH_NEW_SUBMISSION_JSON)
+        self.assertEqual(len(response_json['mmeResultsByGuid']), 2)
+        self.assertDictEqual(response_json['mmeResultsByGuid'][new_match_result_guid], PARSED_NEW_MATCH_NEW_SUBMISSION_JSON)
+        new_internal_match_guid = next(k for k in response_json['mmeResultsByGuid'].keys() if k != new_match_result_guid)
+        self.assertDictEqual(response_json['mmeResultsByGuid'][new_internal_match_guid], {
+            'id': 'NA20885',
+            'score': 0,
+            'patient': {
+                'genomicFeatures': [
+                    {
+                        'gene': {
+                            'id': 'ENSG00000277258'
+                        },
+                        'variant': {
+                            'end': 38739601,
+                            'start': 38739601,
+                            'assembly': 'GRCh38',
+                            'referenceName': '17',
+                            'alternateBases': 'A',
+                            'referenceBases': 'G'
+                        },
+                        'zygosity': 1
+                    }
+                ],
+                'features': [
+                    {
+                        'id': 'HP:0001252',
+                        'label': 'Muscular hypotonia',
+                        'observed': 'yes'
+                    },
+                    {
+                        'id': 'HP:0002017',
+                        'label': 'Nausea and vomiting',
+                        'observed': 'yes'
+                    }
+                ],
+                'contact': {
+                    'href': 'mailto:matchmaker@broadinstitute.org',
+                    'name': 'Sam Baxter',
+                    'institution': 'Broad Center for Mendelian Genomics'
+                },
+                'id': 'NA20885',
+                'label': 'NA20885',
+                'species': 'NCBITaxon:9606',
+                'sex': 'MALE',
+            },
+            'submissionGuid': new_submission_guid,
+            'phenotypes': [
+                {
+                    "id": "HP:0001252",
+                    "label": "Muscular hypotonia",
+                    "observed": "yes"
+                },
+                {
+                    "id": "HP:0002017",
+                    "label": "Nausea and vomiting",
+                    "observed": "yes"
+                }
+            ],
+            'geneVariants': [
+                {
+                    'geneId': 'ENSG00000277258',
+                    'chrom': '17',
+                    'genomeVersion': 'GRCh38',
+                    'pos': 38739601,
+                    'alt': 'A',
+                    'ref': 'G',
+                }
+            ],
+            'matchStatus': {
+                'matchmakerResultGuid': new_internal_match_guid,
+                'comments': None,
+                'weContacted': False,
+                'hostContacted': False,
+                'deemedIrrelevant': False,
+                'flagForAnalysis': False,
+                'matchRemoved': False,
+                'createdDate': mock.ANY,
+            }
+        })
+
         self.assertDictEqual(response_json['mmeSubmissionsByGuid'], {new_submission_guid: {
             'mmeResultGuids': response_json['mmeResultsByGuid'].keys(),
             'individualGuid': NO_SUBMISSION_INDIVIDUAL_GUID,
@@ -470,8 +539,8 @@ class MatchmakerAPITest(TestCase):
             'contactHref': 'mailto:matchmaker@broadinstitute.org',
             'submissionId': NO_SUBMISSION_INDIVIDUAL_GUID,
             'phenotypes': [
-                {'id': 'HP:0012469', 'label': 'Infantile spasms', 'observed': 'yes'},
-                {'id': 'HP:0001263', 'label': 'Global developmental delay', 'observed': 'no'},
+                {'id': 'HP:0012469', 'label': 'Infantile spasms', 'observed': 'no'},
+                {'id': 'HP:0002017', 'label': 'Nausea and vomiting', 'observed': 'yes'},
             ],
             'geneVariants': [],
         }})
@@ -494,7 +563,7 @@ class MatchmakerAPITest(TestCase):
         self.assertListEqual(response_json['mmeContactNotes'].keys(), ['st georges, university of london'])
 
         # Test proxy calls
-        self.assertEqual(len(responses.calls), 4)
+        self.assertEqual(len(responses.calls), 2)
         expected_body = {
             'patient': {
                 'id': NO_SUBMISSION_INDIVIDUAL_GUID,
@@ -504,19 +573,18 @@ class MatchmakerAPITest(TestCase):
                 'species': 'NCBITaxon:9606',
                 'sex': 'FEMALE',
                 'features': [
-                    {'id': 'HP:0012469', 'label': 'Infantile spasms', 'observed': 'yes'},
-                    {'id': 'HP:0001263', 'label': 'Global developmental delay', 'observed': 'no'},
+                    {'id': 'HP:0012469', 'label': 'Infantile spasms', 'observed': 'no'},
+                    {'id': 'HP:0002017', 'label': 'Nausea and vomiting', 'observed': 'yes'},
                 ],
                 'genomicFeatures': [],
             }
         }
-        self.assertEqual(responses.calls[2].request.url, 'http://localhost:9020/match')
-        self.assertEqual(responses.calls[3].request.url, 'http://localhost:9020/match/external')
-        self.assertEqual(responses.calls[3].request.headers['X-Auth-Token'], 'abcd')
-        self.assertEqual(responses.calls[3].request.headers['Accept'], 'application/vnd.ga4gh.matchmaker.v1.0+json')
-        self.assertEqual(responses.calls[3].request.headers['Content-Type'],
+        self.assertEqual(responses.calls[1].request.url, 'http://localhost:9020/match/external')
+        self.assertEqual(responses.calls[1].request.headers['X-Auth-Token'], 'abcd')
+        self.assertEqual(responses.calls[1].request.headers['Accept'], 'application/vnd.ga4gh.matchmaker.v1.0+json')
+        self.assertEqual(responses.calls[1].request.headers['Content-Type'],
                          'application/vnd.ga4gh.matchmaker.v1.0+json')
-        self.assertDictEqual(json.loads(responses.calls[3].request.body), expected_body)
+        self.assertDictEqual(json.loads(responses.calls[1].request.body), expected_body)
 
     def test_delete_mme_submission(self):
         url = reverse(delete_mme_submission, args=[SUBMISSION_GUID])

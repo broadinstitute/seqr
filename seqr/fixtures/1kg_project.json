@@ -1466,18 +1466,13 @@
         "contact_href": "mailto:matchmaker@broadinstitute.org",
         "features": [
             {
-                "id": "HP:0001249",
-                "label": "Intellectual disability",
-                "observed": "yes"
-            },
-            {
                 "id": "HP:0001252",
                 "label": "Muscular hypotonia",
                 "observed": "yes"
             },
             {
-                "id": "HP:0000505",
-                "label": "Visual impairment",
+                "id": "HP:0002017",
+                "label": "Nausea and vomiting",
                 "observed": "yes"
             }
         ],
@@ -1495,6 +1490,47 @@
                     "referenceBases": "G"
                 },
                 "zygosity": 1
+            }
+        ]
+    }
+},
+    {
+    "model": "matchmaker.matchmakersubmission",
+    "pk": 3,
+    "fields": {
+        "individual": 16,
+        "guid": "MS000016_P0004515",
+        "created_date": "2019-02-05T06:42:55.397Z",
+        "last_modified_date": "2019-02-05T06:42:55.397Z",
+        "submission_id": "P0004515",
+        "label": "P0004515",
+        "contact_name": "Baylor UDN Clinical Site",
+        "contact_href": "mailto:UDNCC@hms.harvard.edu,matchmaker@phenomecentral.org",
+        "features": [
+            {
+                "observed": "yes",
+                "id": "HP:0012469"
+            },
+            {
+                "observed": "no",
+                "id": "HP:0003273"
+            }
+        ],
+        "genomic_features": [
+            {
+                "gene": {
+                    "id": "ENSG00000186092"
+                }
+            },
+            {
+                "gene": {
+                    "id": "ENSG00000233750"
+                }
+            },
+            {
+                "gene": {
+                    "id": "ENSG00000223972"
+                }
             }
         ]
     }
