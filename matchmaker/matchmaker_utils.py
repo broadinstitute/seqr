@@ -68,13 +68,9 @@ def parse_mme_features(features, hpo_terms_by_id):
 def parse_mme_gene_variants(genomic_features, gene_symbols_to_ids):
     gene_variants = []
     for gene_feature in (genomic_features or []):
-        gene_id = gene_feature['gene']['id']
-        if not gene_id.startswith('ENSG'):
-            gene_ids = gene_symbols_to_ids.get(gene_feature['gene']['id'])
-            gene_id = gene_ids[0] if gene_ids else None
-
-        gene_variant = {'geneId': gene_id}
+        gene_id = _get_gene_id_for_feature(gene_feature, gene_symbols_to_ids)
         if gene_id:
+            gene_variant = {'geneId': gene_id}
             if gene_feature.get('variant'):
                 gene_variant.update({
                     'alt': gene_feature['variant'].get('alternateBases'),
@@ -85,6 +81,14 @@ def parse_mme_gene_variants(genomic_features, gene_symbols_to_ids):
                 })
             gene_variants.append(gene_variant)
     return gene_variants
+
+
+def _get_gene_id_for_feature(gene_feature, gene_symbols_to_ids):
+    gene_id = gene_feature['gene']['id']
+    if not gene_id.startswith('ENSG'):
+        gene_ids = gene_symbols_to_ids.get(gene_feature['gene']['id'])
+        gene_id = gene_ids[0] if gene_ids else None
+    return gene_id
 
 
 def parse_mme_patient(result, hpo_terms_by_id, gene_symbols_to_ids, submission_guid):
@@ -121,22 +125,18 @@ def get_submission_json_for_external_match(submission, score=None):
     return submission_json
 
 
-def get_mme_matches(patient_data=None, submission=None, origin_request_host=None, user=None):
-    if not submission and not patient_data:
-        raise ValueError('Submission or patient data is required')
-
-    if not patient_data:
-        patient_data = get_submission_json_for_external_match(submission)
-
+def get_mme_matches(patient_data, origin_request_host=None, user=None):
     hpo_terms_by_id, genes_by_id, gene_symbols_to_ids = get_mme_genes_phenotypes_for_results([patient_data])
 
     genomic_features = _get_patient_genomic_features(patient_data)
     feature_ids = [
-        feature['id'] for feature in _get_patient_features(patient_data) if
+        feature['id'] for feature in (_get_patient_features(patient_data) or []) if
         feature.get('observed', 'yes') == 'yes' and feature['id'] in hpo_terms_by_id
     ]
 
     if genomic_features:
+        for feature in genomic_features:
+            feature['gene_id'] = _get_gene_id_for_feature(feature, gene_symbols_to_ids)
         get_submission_kwargs = {
             'query_ids': genes_by_id.keys(),
             'filter_key': 'genomic_features',
@@ -149,14 +149,14 @@ def get_mme_matches(patient_data=None, submission=None, origin_request_host=None
             'id_filter_func': lambda feature_id: {'id': feature_id, 'observed': 'yes'},
         }
 
+    query_patient_id = patient_data['patient']['id']
     scored_matches = _get_matched_submissions(
-        submission=submission,
+        query_patient_id,
         get_match_genotype_score=lambda match: _get_genotype_score(genomic_features, match) if genomic_features else 0,
         get_match_phenotype_score=lambda match: _get_phenotype_score(feature_ids, match) if feature_ids else 0,
         **get_submission_kwargs
     )
 
-    query_patient_id = patient_data['patient']['id']
     incoming_query = MatchmakerIncomingQuery.objects.create(
         institution=patient_data['patient']['contact'].get('institution') or origin_request_host,
         patient_id=query_patient_id if scored_matches else None,
@@ -178,15 +178,16 @@ def get_mme_matches(patient_data=None, submission=None, origin_request_host=None
             for match_submission, score in scored_matches.items()], incoming_query
 
 
-def _get_matched_submissions(submission, get_match_genotype_score, get_match_phenotype_score, query_ids, filter_key, id_filter_func):
+def _get_matched_submissions(patient_id, get_match_genotype_score, get_match_phenotype_score, query_ids, filter_key, id_filter_func):
     if not query_ids:
         # no valid entities found for provided features
         return {}
-    matches = MatchmakerSubmission.objects.filter(**{
-        '{}__contains'.format(filter_key): [id_filter_func(item_id) for item_id in query_ids]
-    })
-    if submission:
-        matches = matches.exclude(id=submission.id)
+
+    matches = []
+    for item_id in query_ids:
+        matches += MatchmakerSubmission.objects.filter(**{
+            '{}__contains'.format(filter_key): [id_filter_func(item_id)]
+        }).exclude(submission_id=patient_id)
 
     scored_matches = {}
     for match in matches:
@@ -209,7 +210,7 @@ def _get_genotype_score(genomic_features, match):
 
     score = 0
     for feature in genomic_features:
-        feature_gene_matches = match_features_by_gene_id[feature['gene']['id']]
+        feature_gene_matches = match_features_by_gene_id[feature['gene_id']]
         if feature_gene_matches:
             score += 0.7
             if feature.get('zygosty') and any(

@@ -5,13 +5,13 @@ from django.core.mail.message import EmailMessage
 from django.views.decorators.csrf import csrf_exempt
 
 from matchmaker.models import MatchmakerSubmission
-from matchmaker.matchmaker_utils import get_mme_genes_phenotypes_for_results, get_mme_metrics
+from matchmaker.matchmaker_utils import get_mme_genes_phenotypes_for_results, get_mme_metrics, get_mme_matches
 
 from seqr.utils.communication_utils import post_to_slack
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.proxy_request_utils import proxy_request
 
-from settings import MME_LOCAL_MATCH_URL, MME_ACCEPT_HEADER, MME_NODES, MME_SLACK_MATCH_NOTIFICATION_CHANNEL,\
+from settings import MME_ACCEPT_HEADER, MME_NODES, MME_SLACK_MATCH_NOTIFICATION_CHANNEL,\
     MME_SLACK_EVENT_NOTIFICATION_CHANNEL, MME_DEFAULT_CONTACT_EMAIL, BASE_URL
 
 logger = logging.getLogger(__name__)
@@ -46,14 +46,19 @@ def authenticate_mme_request(view_func):
 @authenticate_mme_request
 @csrf_exempt
 def mme_metrics_proxy(request, originating_node):
+    """
+    -Proxies public metrics endpoint
+    Returns:
+        Metric JSON from matchbox
+    """
     logger.info('Received MME metrics request from {}'.format(originating_node['name']))
     return create_json_response({'metrics': get_mme_metrics()})
 
 
+@authenticate_mme_request
 @csrf_exempt
-def mme_match_proxy(request):
+def mme_match_proxy(request, originating_node):
     """
-    -This is a proxy URL for backend MME server as per MME spec.
     -Looks for matches for the given individual ONLY in the local MME DB.
     -Expects a single patient (as per MME spec) in the POST
 
@@ -61,40 +66,43 @@ def mme_match_proxy(request):
         None, all data in POST under key "patient_data"
     Returns:
         Status code and results (as per MME spec), returns raw results from MME Server
-    NOTES:
-    1. login is not required, since AUTH is handled by MME server, hence missing
-    decorator @login_required
+    """
+    logger.info('Received MME match request from {}'.format(originating_node['name']))
 
-    """
-    query_patient_data = ''
-    for line in request.readlines():
-        query_patient_data = query_patient_data + ' ' + line
-    response = proxy_request(request, MME_LOCAL_MATCH_URL, data=query_patient_data)
-    if response.status_code == 200:
-        try:
-            _generate_notification_for_incoming_match(response, request, query_patient_data)
-        except Exception as e:
-            import pdb; pdb.set_trace()
-            logger.error('Unable to create notification for incoming MME match request')
-    """
-    /**
-         * sort by score
-         */
-        results.sort(Comparator.comparingDouble(object -> {
-            MatchmakerResult matchmakerResult = (MatchmakerResult) object;
-            return matchmakerResult.getScore().get("patient");
-        }).reversed());
-    """
-    """
-    this.requestOriginHostname = requestOriginHostname;
-    this.institution=institution;
-    
-    institution=query.get('institution') or query['requestOriginHostname']
-    """
-    return response
+    try:
+        query_patient_data = json.loads(request.body)
+        _validate_patient_data(query_patient_data)
+    except Exception as e:
+        return create_json_response({'message': e.message}, status=400)
+
+    results, incoming_query = get_mme_matches(
+        patient_data=query_patient_data, origin_request_host=originating_node['name'],
+    )
+
+    try:
+        _generate_notification_for_incoming_match(results, request, query_patient_data)
+    except Exception as e:
+        logger.error('Unable to create notification for incoming MME match request: {}'.format(e.message))
+
+    return create_json_response({
+        'results': sorted(results, key=lambda result: result['score']['patient'], reverse=True),
+        '_disclaimer': MME_DISCLAIMER,
+    })
 
 
-def _generate_notification_for_incoming_match(response_from_matchbox, incoming_request, incoming_patient):
+def _validate_patient_data(query_patient_data):
+    patient_data = query_patient_data.get('patient')
+    if not patient_data:
+        raise ValueError('"patient" is required')
+    if not patient_data.get('id'):
+        raise ValueError('"id" is required')
+    if not patient_data.get('contact'):
+        raise ValueError('"contact" is required')
+    if not (patient_data.get('features') or patient_data.get('genomicFeatures')):
+        raise ValueError('"features" or "genomicFeatures" are required')
+
+
+def _generate_notification_for_incoming_match(results, incoming_request, incoming_patient):
     """
     Generate a SLACK notifcation to say that a VALID match request came in and the following
     results were sent back. If Slack is not supported, a message is not sent, but details persisted.
@@ -104,22 +112,20 @@ def _generate_notification_for_incoming_match(response_from_matchbox, incoming_r
         incoming_request (Django request object): The request that came into the view
         incoming_patient (JSON): The query patient JSON structure from outside MME node that was matched with
     """
-    results_from_matchbox = json.loads(response_from_matchbox.content)['results']
-    incoming_patient = json.loads(incoming_patient.strip())
     incoming_patient_id = incoming_patient['patient']['id']
 
     logger.info('{} MME matches found for patient {} from {}'.format(
-        len(results_from_matchbox), incoming_patient_id, incoming_request.get_host())
+        len(results), incoming_patient_id, incoming_request.get_host())
     )
 
     institution = incoming_patient['patient']['contact'].get('institution', '(institution name not given)')
     contact_href = incoming_patient['patient']['contact'].get('href', '(sorry I was not able to read the information given for URL)')
-    if len(results_from_matchbox) > 0:
+    if len(results) > 0:
         hpo_terms_by_id, genes_by_id, _ = get_mme_genes_phenotypes_for_results([incoming_patient])
 
         match_results = []
         emails = set()
-        for result in results_from_matchbox:
+        for result in results:
             submission = MatchmakerSubmission.objects.get(submission_id=result['patient']['id'])
             individual = submission.individual
             project = individual.family.project
@@ -154,7 +160,7 @@ def _generate_notification_for_incoming_match(response_from_matchbox, incoming_r
         Our website can be found at https://seqr.broadinstitute.org/matchmaker/matchbox and our legal disclaimers can 
         be found found at https://seqr.broadinstitute.org/matchmaker/disclaimer.""".format(
             query_institution=institution,
-            number_of_results=len(results_from_matchbox),
+            number_of_results=len(results),
             incoming_query_genes=', '.join(sorted([gene['geneSymbol'] for gene in genes_by_id.values()])),
             incoming_query_phenotypes=', '.join(['{} ({})'.format(hpo_id, term) for hpo_id, term in hpo_terms_by_id.items()]),
             incoming_query_contact_url=contact_href,
@@ -181,3 +187,23 @@ def _generate_notification_for_incoming_match(response_from_matchbox, incoming_r
         """.format(institution=institution, today=datetime.now().strftime('%b %d, %Y'), contact=contact_href)
 
         post_to_slack(MME_SLACK_EVENT_NOTIFICATION_CHANNEL, message)
+
+
+MME_DISCLAIMER = """The data in Matchmaker Exchange is provided for research use only. Broad Institute provides the data
+in Matchmaker Exchange 'as is'. Broad Institute makes no representations or warranties of any kind concerning the data,
+express or implied, including without limitation, warranties of merchantability, fitness for a particular purpose,
+noninfringement, or the absence of latent or other defects, whether or not discoverable. Broad will not be liable to the
+user or any third parties claiming through user, for any loss or damage suffered through the use of Matchmaker Exchange.
+In no event shall Broad Institute or its respective directors, officers, employees, affiliated investigators and
+affiliates be liable for indirect, special, incidental or consequential damages or injury to property and lost profits,
+regardless of whether the foregoing have been advised, shall have other reason to know, or in fact shall know of the
+possibility of the foregoing. Prior to using Broad Institute data in a publication, the user will contact the owner of
+the matching dataset to assess the integrity of the match. If the match is validated, the user will offer appropriate
+recognition of the data owner's contribution, in accordance with academic standards and custom. Proper acknowledgment
+shall be made for the contributions of a party to such results being published or otherwise disclosed, which may include
+co-authorship. If Broad Institute contributes to the results being published, the authors must acknowledge Broad
+Institute using the following wording: 'This study makes use of data shared through the Broad Institute matchbox
+repository. Funding for the Broad Institute was provided in part by National Institutes of Health grant UM1 HG008900 to
+Daniel MacArthur and Heidi Rehm.' User will not attempt to use the data or Matchmaker Exchange to establish the
+individual identities of any of the subjects from whom the data were obtained. This applies to matches made within Broad
+Institute or with any other database included in the Matchmaker Exchange.""".replace('\n', ' ')

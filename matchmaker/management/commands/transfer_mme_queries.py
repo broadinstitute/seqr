@@ -21,7 +21,7 @@ class Command(BaseCommand):
         MONGO_SERVICE_HOSTNAME = os.environ.get('MONGO_SERVICE_HOSTNAME', 'localhost')
         _client = pymongo.MongoClient(MONGO_SERVICE_HOSTNAME, 27017)
         external_queries_collection = _client['mme_primary']['externalMatchQuery']
-        # transfer_mme_queries(external_queries_collection)
+        transfer_mme_queries(external_queries_collection)
         set_mme_query_results(external_queries_collection, skip_validation=options['skip_match_result_validation'])
 
 

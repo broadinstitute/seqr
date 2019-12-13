@@ -278,24 +278,28 @@ MME_EXTERNAL_MATCH_URL = MME_SERVER_HOST + '/match/external'
 MME_MATCHBOX_METRICS_URL = MME_SERVER_HOST + '/metrics'
 MME_MATCHBOX_PUBLIC_METRICS_URL = MME_SERVER_HOST + '/metrics/public'
 
-MME_ACCEPT_HEADER = 'application/vnd.ga4gh.matchmaker.v1.0+json'
-MME_HEADERS = {
-    'X-Auth-Token': os.environ.get("MME_NODE_ADMIN_TOKEN", "abcd"),
-    'Accept': MME_ACCEPT_HEADER,
-    'Content-Type': 'application/vnd.ga4gh.matchmaker.v1.0+json'
-}
-
-MME_NODES_CONFIG_FILE_PATH = os.environ.get('MME_NODES_CONFIG_FILE_PATH', '')
-MME_NODES = {}
-if MME_NODES_CONFIG_FILE_PATH:
-    with open(os.path.join(BASE_DIR, MME_NODES_CONFIG_FILE_PATH), 'r') as f:
-        for node in json.load(f)['nodes']:
-            MME_NODES[node['accessToken']] = node
-
 MME_DEFAULT_CONTACT_NAME = 'Samantha Baxter'
 MME_DEFAULT_CONTACT_INSTITUTION = 'Broad Center for Mendelian Genomics'
 MME_DEFAULT_CONTACT_EMAIL = 'matchmaker@broadinstitute.org'
 MME_DEFAULT_CONTACT_HREF = 'mailto:{}'.format(MME_DEFAULT_CONTACT_EMAIL)
+
+MME_NODES_CONFIG_FILE_PATH = os.environ.get('MME_NODES_CONFIG_FILE_PATH', '')
+MME_NODES = {}
+MME_NODE_ADMIN_TOKEN = "abcd"
+if MME_NODES_CONFIG_FILE_PATH:
+    with open(os.path.join(BASE_DIR, MME_NODES_CONFIG_FILE_PATH), 'r') as f:
+        mme_config = json.load(f)
+        MME_NODE_ADMIN_TOKEN = mme_config['adminToken']
+        MME_NODES[MME_NODE_ADMIN_TOKEN] = {'name': MME_DEFAULT_CONTACT_INSTITUTION}
+        for node in mme_config['nodes']:
+            MME_NODES[node['accessToken']] = node
+
+MME_ACCEPT_HEADER = 'application/vnd.ga4gh.matchmaker.v1.0+json'
+MME_HEADERS = {
+    'X-Auth-Token': MME_NODE_ADMIN_TOKEN,
+    'Accept': MME_ACCEPT_HEADER,
+    'Content-Type': MME_ACCEPT_HEADER,
+}
 
 MME_SLACK_EVENT_NOTIFICATION_CHANNEL = 'matchmaker_alerts'
 MME_SLACK_MATCH_NOTIFICATION_CHANNEL = 'matchmaker_matches'

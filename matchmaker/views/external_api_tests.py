@@ -1,5 +1,5 @@
 import mock
-import responses
+import json
 
 from datetime import datetime
 from django.test import TestCase
@@ -8,6 +8,7 @@ TEST_ACCESS_TOKEN = 'abc123'
 TEST_MME_NODES = {TEST_ACCESS_TOKEN: {'name': 'Test Node'}}
 
 
+@mock.patch('matchmaker.views.external_api.MME_NODES', TEST_MME_NODES)
 class ExternalAPITest(TestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
     multi_db = True
@@ -24,23 +25,16 @@ class ExternalAPITest(TestCase):
         )
         self.assertEqual(response.status_code, 401)
 
-    def _make_mme_request(self, url, method):
+    def _make_mme_request(self, url, method, **kwargs):
         call_func = getattr(self.client, method)
         return call_func(
-            url, HTTP_ACCEPT='application/vnd.ga4gh.matchmaker.v1.0+json', HTTP_X_AUTH_TOKEN=TEST_ACCESS_TOKEN,
+            url, HTTP_ACCEPT='application/vnd.ga4gh.matchmaker.v1.0+json', HTTP_X_AUTH_TOKEN=TEST_ACCESS_TOKEN, **kwargs
         )
 
-    @mock.patch('matchmaker.views.external_api.MME_NODES', TEST_MME_NODES)
     def test_mme_metrics_proxy(self):
         url = '/api/matchmaker/v1/metrics'
 
         self._check_mme_authenticated(url)
-
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 406)
-
-        response = self.client.get(url, HTTP_ACCEPT='application/vnd.ga4gh.matchmaker.v1.0+json')
-        self.assertEqual(response.status_code, 401)
 
         response = self._make_mme_request(url, 'get')
         self.assertEqual(response.status_code, 200)
@@ -58,42 +52,88 @@ class ExternalAPITest(TestCase):
 
     @mock.patch('matchmaker.views.external_api.EmailMessage')
     @mock.patch('matchmaker.views.external_api.post_to_slack')
-    @responses.activate
     def test_mme_match_proxy(self, mock_post_to_slack, mock_email):
-        responses.add(responses.POST, 'http://localhost:9020/match', status=200, json={'results': [
-            {'patient': {'id': 'NA19675_1_01'}},
-            {'patient': {'id': 'NA20885'}},
-        ]})
+        # responses.add(responses.POST, 'http://localhost:9020/match', status=200, json={'results': [
+        #     {'patient': {'id': 'NA19675_1_01'}},
+        #     {'patient': {'id': 'NA20885'}},
+        # ]})
 
         url = '/api/matchmaker/v1/match'
-        request_body = """{
-            "patient": {
-                "id": "12345", 
-                "contact": {"institution": "Test Institute", "href": "test@test.com", "name": "PI"},
-                "genomicFeatures": [{"gene": {"id": "ENSG00000223972"}}, {"gene": {"id": "WASH7P"}}],
-                "features": [{"id": "HP:0003273"}, {"id": "HP:0002017"}]
-            }}"""
+        request_body = {
+            'patient': {
+                'id': '12345',
+                'contact': {'institution': 'Test Institute', 'href': 'test@test.com', 'name': 'PI'},
+                'genomicFeatures': [{'gene': {'id': 'ENSG00000237613'}}, {'gene': {'id': 'WASH7P'}}],
+                'features': [{'id': 'HP:0003273'}, {'id': 'HP:0002017'}]
+            }}
 
-        response = self.client.post(url, content_type='application/json', data=request_body)
+        self._check_mme_authenticated(url)
+
+        response = self._make_mme_request(url, 'post', content_type='application/json', data=json.dumps(request_body))
         self.assertEqual(response.status_code, 200)
+        results = response.json()['results']
 
-        self.assertEqual(len(responses.calls), 1)
-        self.assertEqual(responses.calls[0].request.body, ' ' + request_body.replace('\n', '\n '))
+        self.assertEqual(len(results), 1)
+        self.assertDictEqual(results[0], {
+            'patient': {
+                'id': 'NA20885',
+                'label': 'NA20885',
+                'contact': {
+                    'href': 'mailto:matchmaker@broadinstitute.org',
+                    'name': 'Sam Baxter',
+                    'institution': 'Broad Center for Mendelian Genomics',
+                },
+                'species': 'NCBITaxon:9606',
+                'sex': 'MALE',
+                'features': [
+                    {
+                        'id': 'HP:0001252',
+                        'label': 'Muscular hypotonia',
+                        'observed': 'yes'
+                    },
+                    {
+                        'id': 'HP:0002017',
+                        'label': 'Nausea and vomiting',
+                        'observed': 'yes'
+                    }
+                ],
+                'genomicFeatures': [
+                    {
+                        'gene': {
+                            'id': 'ENSG00000227232'
+                        },
+                        'variant': {
+                            'end': 38739601,
+                            'start': 38739601,
+                            'assembly': 'GRCh38',
+                            'referenceName': '17',
+                            'alternateBases': 'A',
+                            'referenceBases': 'G'
+                        },
+                        'zygosity': 1
+                    }
+                ],
+            },
+            'score': {
+                '_genotypeScore': 0.35,
+                '_phenotypeScore': 0.5,
+                'patient': 0.175,
+            }
+        })
 
         message = u"""Dear collaborators,
 
-        matchbox found a match between a patient from Test Institute and the following 2 case(s) 
+        matchbox found a match between a patient from Test Institute and the following 1 case(s) 
         in matchbox. The following information was included with the query,
 
-        genes: DDX11L1, WASH7P
+        genes: FAM138A, WASH7P
         phenotypes: HP:0003273 (Hip contracture), HP:0002017 (Nausea and vomiting)
         contact: PI
         email: test@test.com
 
         We sent back:
 
-        seqr ID NA19675_1 from project 1kg project n\xe5me with uni\xe7\xf8de in family 1 inserted into matchbox on May 23, 2018, with seqr link /project/R0001_1kg/family_page/F000001_1/matchmaker_exchange
-seqr ID NA20885 from project Test Project in family 11 inserted into matchbox on Feb 05, 2019, with seqr link /project/R0003_test/family_page/F000011_11/matchmaker_exchange
+        seqr ID NA20885 from project Test Project in family 11 inserted into matchbox on Feb 05, 2019, with seqr link /project/R0003_test/family_page/F000011_11/matchmaker_exchange
 
         We sent this email alert to: seqr-test@gmail.com, test@broadinstitute.org
 

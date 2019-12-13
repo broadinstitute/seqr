@@ -66,7 +66,9 @@ def search_individual_mme_matches(request, submission_guid):
 
 
 def _search_matches(submission, user):
-    external_result = requests.post(url=MME_EXTERNAL_MATCH_URL, headers=MME_HEADERS, data=json.dumps(get_submission_json_for_external_match(submission)))
+    patient_data = get_submission_json_for_external_match(submission)
+
+    external_result = requests.post(url=MME_EXTERNAL_MATCH_URL, headers=MME_HEADERS, data=json.dumps(patient_data))
     if external_result.status_code != 200:
         try:
             response_json = external_result.json()
@@ -74,7 +76,7 @@ def _search_matches(submission, user):
             response_json = {}
         return create_json_response(response_json, status=external_result.status_code, reason='Error in external match')
 
-    local_results, incoming_query = get_mme_matches(submission=submission, user=user)
+    local_results, incoming_query = get_mme_matches(patient_data, user=user)
 
     results = local_results + external_result.json()['results']
 

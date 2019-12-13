@@ -458,7 +458,7 @@ class MatchmakerAPITest(TestCase):
                 'genomicFeatures': [
                     {
                         'gene': {
-                            'id': 'ENSG00000277258'
+                            'id': 'ENSG00000227232'
                         },
                         'variant': {
                             'end': 38739601,
@@ -508,7 +508,7 @@ class MatchmakerAPITest(TestCase):
             ],
             'geneVariants': [
                 {
-                    'geneId': 'ENSG00000277258',
+                    'geneId': 'ENSG00000227232',
                     'chrom': '17',
                     'genomeVersion': 'GRCh38',
                     'pos': 38739601,
@@ -559,7 +559,7 @@ class MatchmakerAPITest(TestCase):
         self.assertDictEqual(response_json['individualsByGuid'], {NO_SUBMISSION_INDIVIDUAL_GUID: {
             'mmeSubmissionGuid': new_submission_guid,
         }})
-        self.assertListEqual(response_json['genesById'].keys(), ['ENSG00000186092'])
+        self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000186092','ENSG00000227232'})
         self.assertListEqual(response_json['mmeContactNotes'].keys(), ['st georges, university of london'])
 
         # Test proxy calls
