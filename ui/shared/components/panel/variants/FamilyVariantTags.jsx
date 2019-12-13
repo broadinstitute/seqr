@@ -12,7 +12,6 @@ import {
   getFamiliesByGuid,
   getSavedVariantsGroupedByFamilyVariants,
   getVariantId,
-  getNotesGroupedByFamilyVariants,
 } from 'redux/selectors'
 import {
   DISCOVERY_CATEGORY_NAME,
@@ -251,20 +250,21 @@ VariantLink.propTypes = {
 }
 
 const FamilyVariantTags = (
-  { variant, savedVariant, family, project, dispatchUpdateVariantNote, dispatchUpdateFamilyVariantTags, isCompoundHet, areCompoundHets, notes },
+  { variant, savedVariant, family, project, dispatchUpdateVariantNote, dispatchUpdateFamilyVariantTags, isCompoundHet, areCompoundHets },
 ) => {
   if (family) {
     const displayVariant = areCompoundHets ? savedVariant.map((eachSavedVariant, index) => eachSavedVariant || variant[index]) : savedVariant || variant
 
-    if (areCompoundHets) {
-      notes = notes.sharedNotes
-    }
-    else if (isCompoundHet) {
-      notes = notes.individualNotes
-    }
-    else {
-      notes = (savedVariant && savedVariant.notes) || []
-    }
+    // TODO get notes from savedVariants
+    // if (areCompoundHets) {
+    //   notes = notes.sharedNotes
+    // }
+    // else if (isCompoundHet) {
+    //   notes = notes.individualNotes
+    // }
+    // else {
+    //   notes = (savedVariant && savedVariant.notes) || []
+    // }
 
     const tags = (areCompoundHets ? ((savedVariant || [])[0] || {}).tags : (savedVariant && savedVariant.tags)) || []
     const hasVariantLink = areCompoundHets ? savedVariant[0] !== undefined && savedVariant[1] !== undefined : true
@@ -327,7 +327,7 @@ const FamilyVariantTags = (
           <div>
             <TagTitle>Notes:</TagTitle>
             <NoteContainer>
-              {notes.map(note =>
+              {[].map(note =>
                 <VariantNoteField
                   key={note.noteGuid}
                   note={note}
@@ -366,7 +366,6 @@ FamilyVariantTags.propTypes = {
   areCompoundHets: PropTypes.bool,
   dispatchUpdateVariantNote: PropTypes.func,
   dispatchUpdateFamilyVariantTags: PropTypes.func,
-  notes: PropTypes.object,
 }
 
 const mapStateToProps = (state, ownProps) => ({
@@ -374,7 +373,6 @@ const mapStateToProps = (state, ownProps) => ({
   project: getProjectsByGuid(state)[(getFamiliesByGuid(state)[ownProps.familyGuid] || {}).projectGuid],
   savedVariant: (getSavedVariantsGroupedByFamilyVariants(state)[ownProps.familyGuid] || {})[getVariantId(ownProps.variant)]
   || (ownProps.areCompoundHets ? ownProps.variant.map(eachVariant => (getSavedVariantsGroupedByFamilyVariants(state)[ownProps.familyGuid] || {})[getVariantId(eachVariant)]) : undefined),
-  notes: (getNotesGroupedByFamilyVariants(state)[ownProps.familyGuid] || {})[getVariantId(ownProps.areCompoundHets ? ownProps.variant[0] : ownProps.variant)] || { sharedNotes: [], individualNotes: [] },
 })
 
 const mapDispatchToProps = (dispatch, ownProps) => ({

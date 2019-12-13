@@ -8,7 +8,8 @@ import styled from 'styled-components'
 import { loadSavedVariants, updateSavedVariantTable } from 'redux/rootReducer'
 import { getAnalysisGroupsByGuid, getCurrentProject, getSavedVariantsIsLoading, getSelectedSavedVariants,
   getFilteredSavedVariants, getSavedVariantTableState, getSavedVariantsLoadingError,
-  getSavedVariantVisibleIndices, getSavedVariantTotalPages, getSavedVariantExportConfig, getPairedSavedVariants } from 'redux/selectors'
+  getSavedVariantVisibleIndices, getSavedVariantTotalPages, getSavedVariantExportConfig,
+  getVisibleSortedSavedVariants } from 'redux/selectors'
 import {
   REVIEW_TAG_NAME,
   KNOWN_GENE_FOR_PHENOTYPE_TAG_NAME,
@@ -321,7 +322,7 @@ const mapStateToProps = (state, ownProps) => ({
   project: getCurrentProject(state),
   loading: getSavedVariantsIsLoading(state),
   error: getSavedVariantsLoadingError(state),
-  variantsToDisplay: getPairedSavedVariants(state, ownProps),
+  variantsToDisplay: getVisibleSortedSavedVariants(state, ownProps),
   totalVariantsCount: getSelectedSavedVariants(state, ownProps).length,
   filteredVariants: getFilteredSavedVariants(state, ownProps),
   tableState: getSavedVariantTableState(state, ownProps),
