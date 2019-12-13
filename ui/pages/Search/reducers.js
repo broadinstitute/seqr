@@ -1,5 +1,4 @@
 import { combineReducers } from 'redux'
-import uniqBy from 'lodash/uniqBy'
 
 import { updateEntity, RECEIVE_DATA, RECEIVE_SAVED_SEARCHES, REQUEST_SAVED_SEARCHES } from 'redux/rootReducer'
 import { loadingReducer, createSingleObjectReducer, createSingleValueReducer, createObjectsByIdReducer } from 'redux/utils/reducerFactories'
@@ -19,7 +18,6 @@ const REQUEST_SEARCH_CONTEXT = 'REQUEST_SEARCH_CONTEXT'
 const RECEIVE_SEARCH_CONTEXT = 'RECEIVE_SEARCH_CONTEXT'
 const REQUEST_MULTI_PROJECT_SEARCH_CONTEXT = 'REQUEST_MULTI_PROJECT_SEARCH_CONTEXT'
 const RECEIVE_MULTI_PROJECT_SEARCH_CONTEXT = 'RECEIVE_MULTI_PROJECT_SEARCH_CONTEXT'
-const RECEIVE_FLATTENED_COMPOUND_HETS = 'RECEIVE_FLATTENED_COMPOUND_HETS'
 
 // actions
 
@@ -111,10 +109,8 @@ export const loadProjectGroupContext = (projectCategoryGuid, addElementCallback)
 export const saveSearch = search => updateEntity(search, RECEIVE_SAVED_SEARCHES, '/api/saved_search', 'savedSearchGuid')
 
 export const updateCompoundHetDisplay = ({ updates }) => {
-  return (dispatch, getState) => {
+  return (dispatch) => {
     dispatch({ type: UPDATE_COMPOUND_HET_DISPLAY, newValue: updates.flattenCompoundHet })
-    dispatch({ type: RECEIVE_FLATTENED_COMPOUND_HETS, updatesById: { flattenedCompoundHets: (uniqBy(getState().searchedVariants.flat(), 'variantId') || []) } })
-    dispatch({ type: RECEIVE_FLATTENED_COMPOUND_HETS, updatesById: { isLoading: false } })
   }
 }
 
@@ -223,8 +219,6 @@ export const reducers = {
     recordsPerPage: 100,
   }, false),
   flattenCompoundHet: createSingleValueReducer(UPDATE_COMPOUND_HET_DISPLAY, false),
-  flattenedCompoundHets: createObjectsByIdReducer(RECEIVE_FLATTENED_COMPOUND_HETS, 'flattenedCompoundHets', [], true),
-  flattenCompoundHetLoading: loadingReducer(UPDATE_COMPOUND_HET_DISPLAY, RECEIVE_FLATTENED_COMPOUND_HETS, { isLoading: false, errorMessage: null }, true),
 }
 
 const rootReducer = combineReducers(reducers)
