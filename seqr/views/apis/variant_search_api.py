@@ -532,8 +532,7 @@ def _flatten_variants(variants):
     flattened_variants = []
     for variant in variants:
         if isinstance(variant, list):
-            for compound_het in variant:
-                flattened_variants.append(compound_het)
+            flattened_variants += variant
         else:
             flattened_variants.append(variant)
     return flattened_variants

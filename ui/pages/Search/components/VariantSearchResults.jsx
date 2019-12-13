@@ -20,6 +20,7 @@ import {
   getTotalVariantsCount,
   getVariantSearchDisplay,
   getFlattenCompoundHet,
+  getFlattenCompoundHetLoading,
   getDisplayVariants,
   getSearchedVariantExportConfig,
   getSearchContextIsLoading,
@@ -46,6 +47,8 @@ const FIELDS = [
 const BaseVariantSearchResults = ({
   match, searchedVariants, variantSearchDisplay, searchedVariantExportConfig, onSubmit, load, unload, loading, errorMessage, totalVariantsCount, inheritanceFilter, toggleUnpair, flattenCompoundHet, displayVariants,
 }) => {
+  console.log('displayVariants in variant search results')
+  console.log(displayVariants)
   const { searchHash, variantId } = match.params
   const { page = 1, recordsPerPage } = variantSearchDisplay
   const variantDisplayPageOffset = (page - 1) * recordsPerPage
@@ -148,7 +151,7 @@ BaseVariantSearchResults.propTypes = {
 
 const mapStateToProps = (state, ownProps) => ({
   searchedVariants: getSearchedVariants(state),
-  loading: getSearchedVariantsIsLoading(state) || getSearchContextIsLoading(state),
+  loading: getSearchedVariantsIsLoading(state) || getSearchContextIsLoading(state) || getFlattenCompoundHetLoading(state),
   variantSearchDisplay: getVariantSearchDisplay(state),
   searchedVariantExportConfig: getSearchedVariantExportConfig(state, ownProps),
   totalVariantsCount: getTotalVariantsCount(state, ownProps),
