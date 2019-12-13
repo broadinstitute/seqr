@@ -279,7 +279,6 @@ export const getSavedVariantsGroupedByFamilyVariants = createSelector(
       acc[familyGuid][getVariantId(variant)] = variant
     })
     return acc
-
   }, {}),
 )
 
@@ -288,16 +287,16 @@ export const getPairedFilteredSavedVariants = createSelector(
   getNotesByGuid,
   getTagsByGuid,
   (filteredSavedVariants, notesByGuid, tagsByGuid) => {
-    const allNotePairs = Object.values(notesByGuid).map(n => n.variantGuids)
-    const allTagPairs = Object.values(tagsByGuid).map(t => t.variantGuids)
-    const allPairs = allNotePairs.concat(allTagPairs)
-    const uniqPairs = allPairs.reduce((acc, guids) => {
+    const allNoteGuids = Object.values(notesByGuid).map(n => n.variantGuids)
+    const allTagGuids = Object.values(tagsByGuid).map(t => t.variantGuids)
+    const allGuids = allNoteGuids.concat(allTagGuids)
+    const uniqPairs = allGuids.reduce((acc, guids) => {
       if (guids.length > 1 && !acc.some(existingGuids => isEqual(existingGuids, guids))) {
         acc.push(guids)
       }
       return acc
     }, [])
-    const uniqPairedGuids = allPairs.reduce((acc, guids) => {
+    const uniqPairedGuids = allGuids.reduce((acc, guids) => {
       if (guids.length === 1 && !flatten(uniqPairs).includes(guids[0])) {
         acc.push(guids)
       }

@@ -255,19 +255,29 @@ const FamilyVariantTags = (
   if (family) {
     const displayVariant = areCompoundHets ? savedVariant.map((eachSavedVariant, index) => eachSavedVariant || variant[index]) : savedVariant || variant
 
-    // TODO get notes from savedVariants
-    // if (areCompoundHets) {
-    //   notes = notes.sharedNotes
-    // }
-    // else if (isCompoundHet) {
-    //   notes = notes.individualNotes
-    // }
-    // else {
-    //   notes = (savedVariant && savedVariant.notes) || []
-    // }
+    let notes
+    if (areCompoundHets) {
+      notes = (displayVariant[0].notes || []).filter(note => (note.variantGuids || []).length > 1)
+    }
+    else if (isCompoundHet) {
+      notes = (displayVariant.notes || []).filter(note => (note.variantGuids || []).length === 1)
+    }
+    else {
+      notes = (savedVariant && savedVariant.notes) || []
+    }
 
-    const tags = (areCompoundHets ? ((savedVariant || [])[0] || {}).tags : (savedVariant && savedVariant.tags)) || []
-    const hasVariantLink = areCompoundHets ? savedVariant[0] !== undefined && savedVariant[1] !== undefined : true
+    let tags
+    if (areCompoundHets) {
+      tags = (displayVariant[0].tags || []).filter(tag => (tag.variantGuids || []).length > 1)
+    }
+    else if (isCompoundHet) {
+      tags = (displayVariant.tags || []).filter(tag => (tag.variantGuids || []).length === 1)
+    }
+    else {
+      tags = (savedVariant && savedVariant.tags) || []
+    }
+
+    const hasVariantLink = areCompoundHets ? !savedVariant.includes(undefined) : true
 
     return (
       <div>
@@ -327,7 +337,7 @@ const FamilyVariantTags = (
           <div>
             <TagTitle>Notes:</TagTitle>
             <NoteContainer>
-              {[].map(note =>
+              {notes.map(note =>
                 <VariantNoteField
                   key={note.noteGuid}
                   note={note}

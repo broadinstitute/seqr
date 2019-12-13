@@ -618,7 +618,7 @@ export const STATE_WITH_2_FAMILIES = {
       tags: [
         {
           category: "Collaboration", color: "#668FE3", dateSaved: "2018-05-25T21:00:51.260Z", name: "Review",
-          searchParameters: null, tagGuid: "VT1726942_1248367227_r0390_100", user: "hsnow@broadinstitute.org",
+          searchParameters: null, tagGuid: "VT1726942_1248367227_r0390_101", user: "hsnow@broadinstitute.org",
         },
       ],
       variantId: "SV0000004_116042722_r0390_1000",
@@ -832,7 +832,7 @@ export const STATE_WITH_2_FAMILIES = {
       tags: [
         {
           category: "Collaboration", color: "#668FE3", dateSaved: "2018-05-25T21:00:51.260Z", name: "Excluded",
-          searchParameters: null, tagGuid: "VT1726942_1248367227_r0390_100", user: "hsnow@broadinstitute.org",
+          searchParameters: null, tagGuid: "VT1726942_1248367227_r0390_102", user: "hsnow@broadinstitute.org",
         }
       ],
       variantId: "SV0000003_2246859832_r0390_100",
