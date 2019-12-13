@@ -4,14 +4,11 @@ import { connect } from 'react-redux'
 import { Loader, Grid, Dropdown, Form, Message } from 'semantic-ui-react'
 import { Route, Switch, Link } from 'react-router-dom'
 import styled from 'styled-components'
-import isEqual from 'lodash/isEqual'
-import flatten from 'lodash/flatten'
 
 import { loadSavedVariants, updateSavedVariantTable } from 'redux/rootReducer'
 import { getAnalysisGroupsByGuid, getCurrentProject, getSavedVariantsIsLoading, getSelectedSavedVariants,
-  getVisibleSortedSavedVariants, getFilteredSavedVariants, getSavedVariantTableState, getSavedVariantsLoadingError,
-  getSavedVariantVisibleIndices, getSavedVariantTotalPages, getSavedVariantExportConfig,
-  getNotesByGuid, getTagsByGuid, getSavedVariantsByGuid } from 'redux/selectors'
+  getFilteredSavedVariants, getSavedVariantTableState, getSavedVariantsLoadingError,
+  getSavedVariantVisibleIndices, getSavedVariantTotalPages, getSavedVariantExportConfig, getPairedSavedVariants } from 'redux/selectors'
 import {
   REVIEW_TAG_NAME,
   KNOWN_GENE_FOR_PHENOTYPE_TAG_NAME,
@@ -113,9 +110,6 @@ class BaseSavedVariants extends React.Component {
     totalPages: PropTypes.number,
     loadSavedVariants: PropTypes.func,
     updateSavedVariantTable: PropTypes.func,
-    notesByGuid: PropTypes.object,
-    tagsByGuid: PropTypes.object,
-    variants: PropTypes.object,
   }
 
   constructor(props) {
@@ -243,36 +237,13 @@ class BaseSavedVariants extends React.Component {
       shownSummary = `${this.props.variantsToDisplay.length > 0 ? this.props.firstRecordIndex + 1 : 0}-${this.props.firstRecordIndex + this.props.variantsToDisplay.length} of`
     }
 
-    // TODO move variant to display to reducer, and access notes and tags by guid there <<<<<<<<<<<<<<<<<<<<<<<<<<<
-    // TODO sort after pairing
-    const allNotePairs = Object.values(this.props.notesByGuid).map(n => n.variantGuids)
-    const allTagPairs = Object.values(this.props.tagsByGuid).map(t => t.variantGuids)
-    const allPairs = allNotePairs.concat(allTagPairs)
-    const uniqPairs = allPairs.reduce((acc, guids) => {
-      if (guids.length > 1 && !acc.some(existingGuids => isEqual(existingGuids, guids))) {
-        acc.push(guids)
-      }
-      return acc
-    }, [])
-    const uniqPairedGuids = allPairs.reduce((acc, guids) => {
-      if (guids.length === 1 && !flatten(uniqPairs).includes(guids[0])) {
-        acc.push(guids)
-      }
-      return acc
-    }, uniqPairs)
-    const pairedVariants = uniqPairedGuids.reduce((acc, guids) => {
-      const variant = guids.map(guid => this.props.variants[guid])
-      acc.push(variant.length > 1 ? variant : variant[0])
-      return acc
-    }, [])
-
     let variantContent
     if (this.props.loading) {
       variantContent = <Loader inline="centered" active />
     } else if (this.props.error) {
       variantContent = <Message error content={this.props.error} />
     } else {
-      variantContent = <Variants variants={pairedVariants} />
+      variantContent = <Variants variants={this.props.variantsToDisplay} />
     }
 
     return (
@@ -350,7 +321,7 @@ const mapStateToProps = (state, ownProps) => ({
   project: getCurrentProject(state),
   loading: getSavedVariantsIsLoading(state),
   error: getSavedVariantsLoadingError(state),
-  variantsToDisplay: getVisibleSortedSavedVariants(state, ownProps),
+  variantsToDisplay: getPairedSavedVariants(state, ownProps),
   totalVariantsCount: getSelectedSavedVariants(state, ownProps).length,
   filteredVariants: getFilteredSavedVariants(state, ownProps),
   tableState: getSavedVariantTableState(state, ownProps),
@@ -358,9 +329,6 @@ const mapStateToProps = (state, ownProps) => ({
   totalPages: getSavedVariantTotalPages(state, ownProps),
   variantExportConfig: getSavedVariantExportConfig(state, ownProps),
   analysisGroup: getAnalysisGroupsByGuid(state)[ownProps.match.params.analysisGroupGuid],
-  notesByGuid: getNotesByGuid(state),
-  tagsByGuid: getTagsByGuid(state),
-  variants: getSavedVariantsByGuid(state),
 })
 
 const mapDispatchToProps = {

@@ -16,6 +16,8 @@ import {
   familyVariantSamples,
   isActiveVariantSample,
 } from 'shared/utils/constants'
+import isEqual from 'lodash/isEqual'
+import flatten from 'lodash/flatten'
 
 export const getProjectsIsLoading = state => state.projectsLoading.isLoading
 export const getProjectsByGuid = state => state.projectsByGuid
@@ -184,44 +186,6 @@ export const getNotesGroupedByFamilyVariants = createSelector(
   }, {}),
 )
 
-export const getNotesByGuid = createSelector(
-  getSavedVariantsByGuid,
-  savedVariantsByGuid => Object.values(savedVariantsByGuid).reduce((acc, variant) => {
-    acc = {
-      ...acc,
-      ...(variant.notes || []).reduce((variantNotes, note) => {
-        if (note.noteGuid in variantNotes) {
-          variantNotes[note.noteGuid].variantGuid.append(variant.variantGuid)
-        }
-        else {
-          note.variantGuids = [variant.variantGuid]
-          variantNotes = { ...variantNotes, [note.noteGuid]: note }
-        }
-        return variantNotes
-      }, {}) }
-    return acc
-  }, {}),
-)
-
-export const getTagsByGuid = createSelector(
-  getSavedVariantsByGuid,
-  savedVariantsByGuid => Object.values(savedVariantsByGuid).reduce((acc, variant) => {
-    acc = {
-      ...acc,
-      ...(variant.tags || []).reduce((variantTags, tag) => {
-        if (tag.tagGuid in variantTags) {
-          variantTags[tag.tagGuid].variantGuid.append(variant.variantGuid)
-        }
-        else {
-          tag.variantGuids = [variant.variantGuid]
-          variantTags = { ...variantTags, [tag.tagGuid]: tag }
-        }
-        return variantTags
-      }, {}) }
-    return acc
-  }, {}),
-)
-
 export const getSelectedSavedVariants = createSelector(
   getSavedVariantsByGuid,
   (state, props) => props.match.params,
@@ -316,6 +280,73 @@ export const getVisibleSortedSavedVariants = createSelector(
       return VARIANT_SORT_LOOKUP[sort](a, b, genesById, user) || a.xpos - b.xpos
     })
     return filteredSavedVariants.slice(...visibleIndices)
+  },
+)
+
+export const getNotesByGuid = createSelector(
+  getVisibleSortedSavedVariants,
+  variants => variants.reduce((acc, variant) => {
+    acc = {
+      ...acc,
+      ...(variant.notes || []).reduce((variantNotes, note) => {
+        if (note.noteGuid in acc) {
+          acc[note.noteGuid].variantGuids.push(variant.variantGuid)
+        }
+        else {
+          note.variantGuids = [variant.variantGuid]
+          variantNotes = { ...variantNotes, [note.noteGuid]: note }
+        }
+        return variantNotes
+      }, {}) }
+    return acc
+  }, {}),
+)
+
+export const getTagsByGuid = createSelector(
+  getVisibleSortedSavedVariants,
+  variants => variants.reduce((acc, variant) => {
+    acc = {
+      ...acc,
+      ...(variant.tags || []).reduce((variantTags, tag) => {
+        if (tag.tagGuid in acc) {
+          acc[tag.tagGuid].variantGuids.push(variant.variantGuid)
+        }
+        else {
+          tag.variantGuids = [variant.variantGuid]
+          variantTags = { ...variantTags, [tag.tagGuid]: tag }
+        }
+        return variantTags
+      }, {}) }
+    return acc
+  }, {}),
+)
+
+export const getPairedSavedVariants = createSelector(
+  getSavedVariantsByGuid,
+  getNotesByGuid,
+  getTagsByGuid,
+  (savedVariantsByGuid, notesByGuid, tagsByGuid) => {
+    const allNotePairs = Object.values(notesByGuid).map(n => n.variantGuids)
+    const allTagPairs = Object.values(tagsByGuid).map(t => t.variantGuids)
+    const allPairs = allNotePairs.concat(allTagPairs)
+    const uniqPairs = allPairs.reduce((acc, guids) => {
+      if (guids.length > 1 && !acc.some(existingGuids => isEqual(existingGuids, guids))) {
+        acc.push(guids)
+      }
+      return acc
+    }, [])
+    const uniqPairedGuids = allPairs.reduce((acc, guids) => {
+      if (guids.length === 1 && !flatten(uniqPairs).includes(guids[0])) {
+        acc.push(guids)
+      }
+      return acc
+    }, uniqPairs)
+    const pairedVariants = uniqPairedGuids.reduce((acc, guids) => {
+      const variant = guids.map(guid => savedVariantsByGuid[guid])
+      acc.push(variant.length > 1 ? variant : variant[0])
+      return acc
+    }, [])
+    return pairedVariants
   },
 )
 

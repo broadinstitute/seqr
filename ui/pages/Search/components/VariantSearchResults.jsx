@@ -151,7 +151,7 @@ const mapStateToProps = (state, ownProps) => ({
   loading: getSearchedVariantsIsLoading(state) || getSearchContextIsLoading(state),
   variantSearchDisplay: getVariantSearchDisplay(state),
   searchedVariantExportConfig: getSearchedVariantExportConfig(state, ownProps),
-  totalVarifantsCount: getTotalVariantsCount(state, ownProps),
+  totalVariantsCount: getTotalVariantsCount(state, ownProps),
   errorMessage: getSearchedVariantsErrorMessage(state),
   inheritanceFilter: getInhertanceFilterMode(state),
   flattenCompoundHet: getFlattenCompoundHet(state),
