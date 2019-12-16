@@ -31,7 +31,7 @@ import {
   getMatchmakerContactNotes,
 } from '../selectors'
 
-const BreakWordLink = styled.a`
+const BreakWordLink = styled.a.attrs({ target: '_blank' })`
   word-break: break-all;
 `
 
@@ -293,6 +293,7 @@ const DISPLAY_FIELDS = [
       <div>
         <div><b>{patient.contact.institution}</b></div>
         <div>{patient.contact.name}</div>
+        <BreakWordLink href={patient.contact.email}>{patient.contact.email}</BreakWordLink>
         <BreakWordLink href={patient.contact.href}>{patient.contact.href.replace('mailto:', '')}</BreakWordLink>
         <VerticalSpacer height={10} />
         <ContactNotes contact={patient.contact} modalId={patient.id} />
