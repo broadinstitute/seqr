@@ -4,6 +4,8 @@ import json
 from datetime import datetime
 from django.test import TestCase
 
+from matchmaker.models import MatchmakerIncomingQuery
+
 TEST_ACCESS_TOKEN = 'abc123'
 TEST_MME_NODES = {TEST_ACCESS_TOKEN: {'name': 'Test Node'}}
 
@@ -53,11 +55,6 @@ class ExternalAPITest(TestCase):
     @mock.patch('matchmaker.views.external_api.EmailMessage')
     @mock.patch('matchmaker.views.external_api.post_to_slack')
     def test_mme_match_proxy(self, mock_post_to_slack, mock_email):
-        # responses.add(responses.POST, 'http://localhost:9020/match', status=200, json={'results': [
-        #     {'patient': {'id': 'NA19675_1_01'}},
-        #     {'patient': {'id': 'NA20885'}},
-        # ]})
-
         url = '/api/matchmaker/v1/match'
         request_body = {
             'patient': {
@@ -67,8 +64,40 @@ class ExternalAPITest(TestCase):
                 'features': [{'id': 'HP:0003273'}, {'id': 'HP:0002017'}]
             }}
 
+        # Test invalid requests
         self._check_mme_authenticated(url)
 
+        response = self._make_mme_request(url, 'post')
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'message': 'No JSON object could be decoded'})
+
+        response = self._make_mme_request(url, 'post', content_type='application/json', data='Invalid body')
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'message': 'No JSON object could be decoded'})
+
+        response = self._make_mme_request(url, 'post', content_type='application/json', data=json.dumps({}))
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'message': '"patient" object is required'})
+
+        response = self._make_mme_request(url, 'post', content_type='application/json', data=json.dumps({
+            'patient': {}
+        }))
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'message': '"id" is required'})
+
+        response = self._make_mme_request(url, 'post', content_type='application/json', data=json.dumps({
+            'patient': {'id': 123}
+        }))
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'message': '"contact" is required'})
+
+        response = self._make_mme_request(url, 'post', content_type='application/json', data=json.dumps({
+            'patient': {'id': 123, 'contact': {'href': 'test@test.com'}}
+        }))
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'message': '"features" or "genomicFeatures" are required'})
+
+        # Test valid request
         response = self._make_mme_request(url, 'post', content_type='application/json', data=json.dumps(request_body))
         self.assertEqual(response.status_code, 200)
         results = response.json()['results']
@@ -121,6 +150,8 @@ class ExternalAPITest(TestCase):
             }
         })
 
+        self.assertEqual(MatchmakerIncomingQuery.objects.filter(patient_id='12345').count(), 1)
+
         message = u"""Dear collaborators,
 
         matchbox found a match between a patient from Test Institute and the following 1 case(s) 
@@ -147,4 +178,10 @@ class ExternalAPITest(TestCase):
         #     to=['seqr-test@gmail.com', 'test@broadinstitute.org'],
         #     from_email='matchmaker@broadinstitute.org')
         # mock_email.return_value.send.assert_called()
+
+        # Test receive same request again
+        response = self._make_mme_request(url, 'post', content_type='application/json', data=json.dumps(request_body))
+        self.assertEqual(response.status_code, 200)
+        self.assertListEqual(response.json()['results'], results)
+        self.assertEqual(MatchmakerIncomingQuery.objects.filter(patient_id='12345').count(), 2)
 

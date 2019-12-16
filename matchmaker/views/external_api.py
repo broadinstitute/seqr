@@ -4,12 +4,11 @@ from datetime import datetime
 from django.core.mail.message import EmailMessage
 from django.views.decorators.csrf import csrf_exempt
 
-from matchmaker.models import MatchmakerSubmission
+from matchmaker.models import MatchmakerSubmission, MatchmakerIncomingQuery
 from matchmaker.matchmaker_utils import get_mme_genes_phenotypes_for_results, get_mme_metrics, get_mme_matches
 
 from seqr.utils.communication_utils import post_to_slack
 from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.proxy_request_utils import proxy_request
 
 from settings import MME_ACCEPT_HEADER, MME_NODES, MME_SLACK_MATCH_NOTIFICATION_CHANNEL,\
     MME_SLACK_EVENT_NOTIFICATION_CHANNEL, MME_DEFAULT_CONTACT_EMAIL, BASE_URL
@@ -92,8 +91,8 @@ def mme_match_proxy(request, originating_node):
 
 def _validate_patient_data(query_patient_data):
     patient_data = query_patient_data.get('patient')
-    if not patient_data:
-        raise ValueError('"patient" is required')
+    if not isinstance(patient_data, dict):
+        raise ValueError('"patient" object is required')
     if not patient_data.get('id'):
         raise ValueError('"id" is required')
     if not patient_data.get('contact'):
