@@ -39,7 +39,7 @@ const MatchContainer = styled.div`
   word-break: break-all;
 `
 
-const PATIENT_CORE_FIELDS = ['id', 'contact', 'features', 'genomicFeatures']
+const PATIENT_CORE_FIELDS = ['id', 'label', 'contact', 'features', 'genomicFeatures']
 
 const MATCH_STATUS_EDIT_FIELDS = [
   { name: 'weContacted', label: 'We Contacted Host', component: BooleanCheckbox, inline: true },
@@ -266,15 +266,20 @@ const DISPLAY_FIELDS = [
     verticalAlign: 'top',
     format: (val) => {
       const patientFields = Object.keys(val.patient).filter(k => val.patient[k] && !PATIENT_CORE_FIELDS.includes(k))
+      let displayName = val.id
+      if (val.patient.label) {
+        displayName = val.patient.label
+        patientFields.unshift('id')
+      }
       return patientFields.length ? <Popup
         header="Patient Details"
-        trigger={<MatchContainer>{val.id} <Icon link name="info circle" /></MatchContainer>}
+        trigger={<MatchContainer>{displayName} <Icon link name="info circle" /></MatchContainer>}
         content={patientFields.map(k =>
           <div key={k}>
             <b>{camelcaseToTitlecase(k)}:</b> {k === 'disorders' ? val.patient[k].map(({ id }) => id).join(', ') : val.patient[k]}
           </div>,
         )}
-      /> : <MatchContainer>{val.id}</MatchContainer>
+      /> : <MatchContainer>{displayName}</MatchContainer>
     },
   },
   {
@@ -293,7 +298,11 @@ const DISPLAY_FIELDS = [
       <div>
         <div><b>{patient.contact.institution}</b></div>
         <div>{patient.contact.name}</div>
-        <BreakWordLink href={patient.contact.email}>{patient.contact.email}</BreakWordLink>
+        {patient.contact.email &&
+          <div>
+            <BreakWordLink href={patient.contact.email}>{patient.contact.email.replace('mailto:', '')}</BreakWordLink>
+          </div>
+        }
         <BreakWordLink href={patient.contact.href}>{patient.contact.href.replace('mailto:', '')}</BreakWordLink>
         <VerticalSpacer height={10} />
         <ContactNotes contact={patient.contact} modalId={patient.id} />

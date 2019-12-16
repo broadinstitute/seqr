@@ -8,6 +8,7 @@ from django.test import TestCase
 from django.urls.base import reverse
 
 from matchmaker.models import MatchmakerResult, MatchmakerContactNotes
+from matchmaker.matchmaker_utils import MME_DISCLAIMER
 from matchmaker.views.matchmaker_api import get_individual_mme_matches, search_individual_mme_matches, \
     update_mme_submission, delete_mme_submission, update_mme_result_status, send_mme_contact_email, \
     update_mme_contact_note
@@ -174,22 +175,34 @@ class MatchmakerAPITest(TestCase):
 
     @mock.patch('matchmaker.views.matchmaker_api.EmailMessage')
     @mock.patch('matchmaker.views.matchmaker_api.post_to_slack')
+    @mock.patch('matchmaker.views.matchmaker_api.MME_NODES')
     @responses.activate
-    def test_search_individual_mme_matches(self, mock_post_to_slack, mock_email):
+    def test_search_individual_mme_matches(self, mock_nodes, mock_post_to_slack, mock_email):
         url = reverse(search_individual_mme_matches, args=[SUBMISSION_GUID])
         _check_login(self, url)
 
-        responses.add(responses.POST, 'http://localhost:9020/match/external', body='Failed request', status=400)
-        responses.add(responses.POST, 'http://localhost:9020/match/external', status=200, json={
+        responses.add(responses.POST, 'http://node_a.com/match', body='Failed request', status=400)
+        responses.add(responses.POST, 'http://node_b.mme.org/api', status=200, json={
             'results': [NEW_MATCH_JSON]
         })
 
         # Test invalid inputs
+        mock_nodes.values.return_value = []
         response = self.client.get(url)
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.reason_phrase, 'Error in external match')
+        self.assertEqual(response.reason_phrase, 'No external MME nodes are configured')
+
+        mock_nodes.values.return_value = [{'name': 'My node'}]
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.reason_phrase, 'No external MME nodes are configured')
 
         # Test successful search
+        mock_nodes.values.return_value = [
+            {'name': 'My node'},
+            {'name': 'Node A', 'token': 'abc', 'url': 'http://node_a.com/match'},
+            {'name': 'Node B', 'token': 'xyz', 'url': 'http://node_b.mme.org/api'},
+        ]
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, 200)
@@ -274,13 +287,19 @@ class MatchmakerAPITest(TestCase):
                     },
                     'zygosity': 1
                 }],
-            }
+            },
+            '_disclaimer': MME_DISCLAIMER,
         })
-        self.assertEqual(responses.calls[1].request.url, 'http://localhost:9020/match/external')
-        self.assertEqual(responses.calls[1].request.headers['X-Auth-Token'], 'abcd')
-        self.assertEqual(responses.calls[1].request.headers['Accept'], 'application/vnd.ga4gh.matchmaker.v1.0+json')
-        self.assertEqual(responses.calls[1].request.headers['Content-Type'], 'application/vnd.ga4gh.matchmaker.v1.0+json')
-        self.assertEqual(responses.calls[1].request.body, expected_body)
+
+        self.assertEqual(responses.calls[0].request.url, 'http://node_a.com/match')
+        self.assertEqual(responses.calls[0].request.headers['X-Auth-Token'], 'abc')
+        self.assertEqual(responses.calls[1].request.url, 'http://node_b.mme.org/api')
+        self.assertEqual(responses.calls[1].request.headers['X-Auth-Token'], 'xyz')
+        for call in responses.calls:
+            self.assertEqual(call.request.headers['Accept'], 'application/vnd.ga4gh.matchmaker.v1.0+json')
+            self.assertEqual(call.request.headers['Content-Type'], 'application/vnd.ga4gh.matchmaker.v1.0+json')
+            self.assertEqual(call.request.headers['Content-Language'], 'en-US')
+            self.assertEqual(call.request.body, expected_body)
 
         # Test notification
         message = u"""
@@ -290,7 +309,10 @@ class MatchmakerAPITest(TestCase):
     
     /project/R0001_1kg/family_page/F000001_1/matchmaker_exchange
     """
-        mock_post_to_slack.assert_called_with('matchmaker_seqr_match', message)
+        mock_post_to_slack.assert_has_calls([
+            mock.call('matchmaker_alerts', 'Error searching in Node A: Failed request (400)'),
+            mock.call('matchmaker_seqr_match', message),
+        ])
         mock_email.assert_called_with(
             subject=u'New matches found for MME submission NA19675_1 (project: 1kg project n\xe5me with uni\xe7\xf8de)',
             body=message,
@@ -302,9 +324,11 @@ class MatchmakerAPITest(TestCase):
         result_model = MatchmakerResult.objects.get(guid=new_result_guid)
         self.assertDictEqual(result_model.result_data, NEW_MATCH_JSON)
 
+    @mock.patch('matchmaker.views.matchmaker_api.MME_NODES')
     @responses.activate
-    def test_update_mme_submission(self):
-        responses.add(responses.POST, 'http://localhost:9020/match/external', status=200, json={'results': [NEW_MATCH_JSON]})
+    def test_update_mme_submission(self, mock_mme_nodes):
+        responses.add(responses.POST, 'http://node_a.com/match', status=200, json={'results': [NEW_MATCH_JSON]})
+        mock_mme_nodes.values.return_value = [{'name': 'Node A', 'token': 'abc', 'url': 'http://node_a.com/match'}]
 
         url = reverse(update_mme_submission)
         _check_login(self, url)
@@ -420,14 +444,14 @@ class MatchmakerAPITest(TestCase):
                     },
                     'zygosity': 0
                 }],
-            }
+            },
+            '_disclaimer': MME_DISCLAIMER,
         }
         self.assertEqual(len(responses.calls), 1)
-        self.assertEqual(responses.calls[0].request.url, 'http://localhost:9020/match/external')
-        self.assertEqual(responses.calls[0].request.headers['X-Auth-Token'], 'abcd')
+        self.assertEqual(responses.calls[0].request.url, 'http://node_a.com/match')
+        self.assertEqual(responses.calls[0].request.headers['X-Auth-Token'], 'abc')
         self.assertEqual(responses.calls[0].request.headers['Accept'], 'application/vnd.ga4gh.matchmaker.v1.0+json')
-        self.assertEqual(responses.calls[0].request.headers['Content-Type'],
-                         'application/vnd.ga4gh.matchmaker.v1.0+json')
+        self.assertEqual(responses.calls[0].request.headers['Content-Type'], 'application/vnd.ga4gh.matchmaker.v1.0+json')
         self.assertDictEqual(json.loads(responses.calls[0].request.body), expected_body)
 
         # Test successful update
@@ -577,13 +601,13 @@ class MatchmakerAPITest(TestCase):
                     {'id': 'HP:0002017', 'label': 'Nausea and vomiting', 'observed': 'yes'},
                 ],
                 'genomicFeatures': [],
-            }
+            },
+            '_disclaimer': MME_DISCLAIMER,
         }
-        self.assertEqual(responses.calls[1].request.url, 'http://localhost:9020/match/external')
-        self.assertEqual(responses.calls[1].request.headers['X-Auth-Token'], 'abcd')
+        self.assertEqual(responses.calls[1].request.url, 'http://node_a.com/match')
+        self.assertEqual(responses.calls[1].request.headers['X-Auth-Token'], 'abc')
         self.assertEqual(responses.calls[1].request.headers['Accept'], 'application/vnd.ga4gh.matchmaker.v1.0+json')
-        self.assertEqual(responses.calls[1].request.headers['Content-Type'],
-                         'application/vnd.ga4gh.matchmaker.v1.0+json')
+        self.assertEqual(responses.calls[1].request.headers['Content-Type'], 'application/vnd.ga4gh.matchmaker.v1.0+json')
         self.assertDictEqual(json.loads(responses.calls[1].request.body), expected_body)
 
     def test_delete_mme_submission(self):

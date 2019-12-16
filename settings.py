@@ -270,7 +270,7 @@ MME_SERVER_HOST = 'http://{host}:{port}'.format(
     host=os.environ.get('MATCHBOX_SERVICE_HOSTNAME', 'localhost'),
     port=os.environ.get('MATCHBOX_SERVICE_PORT', 9020)
 )
-
+#  TODO remove
 MME_ADD_INDIVIDUAL_URL = MME_SERVER_HOST + '/patient/add'
 MME_DELETE_INDIVIDUAL_URL = MME_SERVER_HOST + '/patient/delete'
 MME_LOCAL_MATCH_URL = MME_SERVER_HOST + '/match'
@@ -295,11 +295,6 @@ if MME_NODES_CONFIG_FILE_PATH:
             MME_NODES[node['accessToken']] = node
 
 MME_ACCEPT_HEADER = 'application/vnd.ga4gh.matchmaker.v1.0+json'
-MME_HEADERS = {
-    'X-Auth-Token': MME_NODE_ADMIN_TOKEN,
-    'Accept': MME_ACCEPT_HEADER,
-    'Content-Type': MME_ACCEPT_HEADER,
-}
 
 MME_SLACK_EVENT_NOTIFICATION_CHANNEL = 'matchmaker_alerts'
 MME_SLACK_MATCH_NOTIFICATION_CHANNEL = 'matchmaker_matches'

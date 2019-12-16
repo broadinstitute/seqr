@@ -9,7 +9,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 from matchmaker.models import MatchmakerResult, MatchmakerContactNotes, MatchmakerSubmission
 from matchmaker.matchmaker_utils import get_mme_genes_phenotypes_for_results, parse_mme_patient, \
-    get_submission_json_for_external_match, parse_mme_features, parse_mme_gene_variants, get_mme_matches
+    get_submission_json_for_external_match, parse_mme_features, parse_mme_gene_variants, get_mme_matches, MME_DISCLAIMER
 from reference_data.models import GENOME_VERSION_LOOKUP
 from seqr.models import Individual, SavedVariant
 from seqr.utils.communication_utils import post_to_slack
@@ -18,8 +18,8 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_model, get_json_for_saved_variants, get_json_for_matchmaker_submission
 from seqr.views.utils.permissions_utils import check_mme_permissions, check_permissions
 
-from settings import MME_HEADERS, MME_LOCAL_MATCH_URL, MME_EXTERNAL_MATCH_URL, MME_DEFAULT_CONTACT_EMAIL, BASE_URL,  \
-    MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL, MME_ADD_INDIVIDUAL_URL, MME_DELETE_INDIVIDUAL_URL, API_LOGIN_REQUIRED_URL
+from settings import BASE_URL, API_LOGIN_REQUIRED_URL, MME_ACCEPT_HEADER, MME_NODES, MME_DEFAULT_CONTACT_EMAIL, \
+    MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL, MME_SLACK_EVENT_NOTIFICATION_CHANNEL
 
 logger = logging.getLogger(__name__)
 
@@ -69,17 +69,15 @@ def search_individual_mme_matches(request, submission_guid):
 def _search_matches(submission, user):
     patient_data = get_submission_json_for_external_match(submission)
 
-    external_result = requests.post(url=MME_EXTERNAL_MATCH_URL, headers=MME_HEADERS, data=json.dumps(patient_data))
-    if external_result.status_code != 200:
-        try:
-            response_json = external_result.json()
-        except Exception:
-            response_json = {}
-        return create_json_response(response_json, status=external_result.status_code, reason='Error in external match')
+    nodes_to_query = [node for node in MME_NODES.values() if node.get('url')]
+    if not nodes_to_query:
+        message = 'No external MME nodes are configured'
+        return create_json_response({'message': message}, status=400, reason=message)
 
+    external_results = _search_external_matches(nodes_to_query, patient_data)
     local_results, incoming_query = get_mme_matches(patient_data, user=user)
 
-    results = local_results + external_result.json()['results']
+    results = local_results + external_results
 
     initial_saved_results = {
         result.result_data['patient']['id']: result for result in MatchmakerResult.objects.filter(submission=submission)
@@ -128,6 +126,38 @@ def _search_matches(submission, user):
         logger.info('Removed {} old matches for {}'.format(removed_count, submission.submission_id))
 
     return _parse_mme_results(submission, saved_results.values(), user)
+
+
+def _search_external_matches(nodes_to_query, patient_data):
+    body = {'_disclaimer': MME_DISCLAIMER}
+    body.update(patient_data)
+    external_results = []
+    for node in nodes_to_query:
+        headers = {
+            'X-Auth-Token': node['token'],
+            'Accept': MME_ACCEPT_HEADER,
+            'Content-Type': MME_ACCEPT_HEADER,
+            'Content-Language': 'en-US',
+        }
+        try:
+            external_result = requests.post(url=node['url'], headers=headers, data=json.dumps(body))
+            if external_result.status_code != 200:
+                try:
+                    message = external_result.json().get('message')
+                except Exception:
+                    message = external_result.content
+                error_message = '{} ({})'.format(message or 'Error', external_result.status_code)
+                raise Exception(error_message)
+
+            node_results = external_result.json()['results']
+            external_results += node_results
+            logger.info('Found {} matches from {}'.format(len(node_results), node['name']))
+        except Exception as e:
+            error_message = 'Error searching in {}: {}'.format(node['name'], e.message)
+            logger.error(error_message)
+            post_to_slack(MME_SLACK_EVENT_NOTIFICATION_CHANNEL, error_message)
+
+    return external_results
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
