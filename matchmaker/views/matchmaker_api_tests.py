@@ -340,7 +340,7 @@ class MatchmakerAPITest(TestCase):
                 'ref': 'CCACT',
                 'chrom': '14',
                 'pos': 77027549,
-                'genomeVersion': 'GRCh38',
+                'genomeVersion': '38',
                 'numAlt': 2,
             }],
         }))

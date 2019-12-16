@@ -10,6 +10,7 @@ from django.views.decorators.csrf import csrf_exempt
 from matchmaker.models import MatchmakerResult, MatchmakerContactNotes, MatchmakerSubmission
 from matchmaker.matchmaker_utils import get_mme_genes_phenotypes_for_results, parse_mme_patient, \
     get_submission_json_for_external_match, parse_mme_features, parse_mme_gene_variants, get_mme_matches
+from reference_data.models import GENOME_VERSION_LOOKUP
 from seqr.models import Individual, SavedVariant
 from seqr.utils.communication_utils import post_to_slack
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
@@ -154,7 +155,7 @@ def update_mme_submission(request, submission_guid=None):
                 'referenceBases': gene_variant['ref'],
                 'referenceName': gene_variant['chrom'],
                 'start': gene_variant['pos'],
-                'assembly': gene_variant['genomeVersion'],
+                'assembly': GENOME_VERSION_LOOKUP.get(gene_variant['genomeVersion'], gene_variant['genomeVersion']),
             }
         genomic_features.append(feature)
 
