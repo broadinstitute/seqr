@@ -1096,27 +1096,6 @@ class EsUtilsTest(TestCase):
             },
             {
                 'bool': {
-                    'should': [
-                        {'bool': {'must_not': [{'exists': {'field': 'transcriptConsequenceTerms'}}]}},
-                        {'terms': {
-                            'transcriptConsequenceTerms': [
-                                '5_prime_UTR_variant',
-                                'intergenic_variant',
-                                'inframe_insertion',
-                                'inframe_deletion',
-                            ]
-                        }},
-                        {'terms': {
-                            'clinvar_clinical_significance': [
-                                'Pathogenic', 'Likely_pathogenic', 'Pathogenic/Likely_pathogenic'
-                            ]
-                        }},
-                        {'terms': {'hgmd_class': ['DM', 'DM?']}},
-                    ]
-                }
-            },
-            {
-                'bool': {
                     'minimum_should_match': 1,
                     'should': [
                         {'bool': {'must_not': [{'exists': {'field': 'AF'}}]}},
@@ -1190,6 +1169,26 @@ class EsUtilsTest(TestCase):
                 }
             },
             {'bool': {'must_not': [{'exists': {'field': 'filters'}}]}},
+            {'bool': {
+                    'should': [
+                        {'bool': {'must_not': [{'exists': {'field': 'transcriptConsequenceTerms'}}]}},
+                        {'terms': {
+                            'transcriptConsequenceTerms': [
+                                '5_prime_UTR_variant',
+                                'intergenic_variant',
+                                'inframe_insertion',
+                                'inframe_deletion',
+                            ]
+                        }},
+                        {'terms': {
+                            'clinvar_clinical_significance': [
+                                'Pathogenic', 'Likely_pathogenic', 'Pathogenic/Likely_pathogenic'
+                            ]
+                        }},
+                        {'terms': {'hgmd_class': ['DM', 'DM?']}},
+                    ]
+                }
+            },
             {'bool': {
                 'should': [
                     {'bool': {
@@ -1322,6 +1321,41 @@ class EsUtilsTest(TestCase):
         get_es_variants(results_model, page=2, num_results=2)
         self.assertIsNone(self.executed_search)
 
+    def test_compound_het_get_es_variants_secondary_annotation(self):
+        search_model = VariantSearch.objects.create(search={
+            'qualityFilter': {'min_gq': 10},
+            'annotations': {'other': []},
+            'inheritance': {'mode': 'compound_het'},
+            'annotations_secondary': {'other': []}
+        })
+        results_model = VariantSearchResults.objects.create(variant_search=search_model)
+        results_model.families.set(self.families)
+
+        variants, total_results = get_es_variants(results_model, num_results=2)
+        self.assertEqual(len(variants), 1)
+        self.assertListEqual(variants, [PARSED_COMPOUND_HET_VARIANTS])
+        self.assertEqual(total_results, 1)
+
+        self.assertCachedResults(results_model, {
+            'grouped_results': [{'ENSG00000135953': PARSED_COMPOUND_HET_VARIANTS}],
+            'total_results': 1,
+        })
+
+        self.maxDiff = None
+        annotation_query = {'bool': {'should': [{'terms': {'transcriptConsequenceTerms': []}},
+                                                {'terms': {'transcriptConsequenceTerms': []}}]}}
+        self.assertExecutedSearch(
+            filters=[annotation_query, COMPOUND_HET_INHERITANCE_QUERY],
+            gene_aggs=True,
+            sort=['xpos'],
+            start_index=0,
+            size=1
+        )
+
+        # test pagination does not fetch
+        get_es_variants(results_model, page=2, num_results=2)
+        self.assertIsNone(self.executed_search)
+
     def test_recessive_get_es_variants(self):
         search_model = VariantSearch.objects.create(search={
             'annotations': {'frameshift': ['frameshift_variant']},
@@ -1351,9 +1385,9 @@ class EsUtilsTest(TestCase):
         pass_filter_query = {'bool': {'must_not': [{'exists': {'field': 'filters'}}]}}
 
         self.assertExecutedSearches([
-            dict(filters=[annotation_query, pass_filter_query, RECESSIVE_INHERITANCE_QUERY], start_index=0, size=2, sort=['xpos']),
+            dict(filters=[pass_filter_query, annotation_query, RECESSIVE_INHERITANCE_QUERY], start_index=0, size=2, sort=['xpos']),
             dict(
-                filters=[annotation_query, pass_filter_query, COMPOUND_HET_INHERITANCE_QUERY],
+                filters=[pass_filter_query, annotation_query, COMPOUND_HET_INHERITANCE_QUERY],
                 gene_aggs=True,
                 sort=['xpos'],
                 start_index=0,
@@ -1379,7 +1413,7 @@ class EsUtilsTest(TestCase):
             'total_results': 5,
         })
 
-        self.assertExecutedSearches([dict(filters=[annotation_query, pass_filter_query, RECESSIVE_INHERITANCE_QUERY], start_index=2, size=4, sort=['xpos'])])
+        self.assertExecutedSearches([dict(filters=[pass_filter_query, annotation_query, RECESSIVE_INHERITANCE_QUERY], start_index=2, size=4, sort=['xpos'])])
 
         get_es_variants(results_model, page=2, num_results=2)
         self.assertIsNone(self.executed_search)

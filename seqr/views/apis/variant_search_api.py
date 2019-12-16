@@ -71,7 +71,7 @@ def query_variants_handler(request, search_hash):
     except ConnectionTimeout as e:
         return create_json_response({}, status=504, reason='Query Time Out')
 
-    response = _process_variants(variants, results_model.families.all())
+    response = _process_variants(variants or [], results_model.families.all())
     response['search'] = _get_search_context(results_model)
     response['search']['totalResults'] = total_results
 
