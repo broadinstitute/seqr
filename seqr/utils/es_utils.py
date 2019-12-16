@@ -307,8 +307,9 @@ class BaseEsSearch(object):
         annotations_secondary_search = None
         if annotations_secondary:
             annotations_secondary_filter, allowed_consequences_secondary = _annotations_filter(annotations_secondary)
+            annotations_filter, _ = _annotations_filter(annotations)
+            annotations_secondary_search = self._search.filter(annotations_filter | annotations_secondary_filter)
             self._allowed_consequences_secondary = allowed_consequences_secondary
-            annotations_secondary_search = self._search.filter(annotations_secondary_filter)
         if annotations:
             self.filter_by_annotations(annotations, pathogenicity_filter)
 
@@ -338,7 +339,6 @@ class BaseEsSearch(object):
                 )
 
             if compound_het_q and not has_previous_compound_hets:
-                # compound_het_search = self._search.filter(compound_het_q)
                 compound_het_search = (annotations_secondary_search or self._search).filter(compound_het_q)
                 compound_het_search.aggs.bucket(
                     'genes', 'terms', field='geneIds', min_doc_count=2, size=MAX_COMPOUND_HET_GENES+1
@@ -556,8 +556,6 @@ class EsSearch(BaseEsSearch):
 
         allowed_consequences = self._allowed_consequences
         allowed_consequences_secondary = self._allowed_consequences_secondary
-        logging.info(allowed_consequences)
-        logging.info(allowed_consequences_secondary)
 
         compound_het_pairs_by_gene = {}
         for gene_agg in response.aggregations.genes.buckets:
@@ -569,14 +567,9 @@ class EsSearch(BaseEsSearch):
 
             # Variants are returned if any transcripts have the filtered consequence, but to be compound het
             # the filtered consequence needs to be present in at least one transcript in the gene of interest
-            if allowed_consequences and allowed_consequences_secondary:
+            if allowed_consequences:
                 gene_variants = [variant for variant in gene_variants if any(
-                    transcript['majorConsequence'] in allowed_consequences + allowed_consequences_secondary
-                    for transcript in variant['transcripts'][gene_id]
-                )]
-            elif allowed_consequences:
-                gene_variants = [variant for variant in gene_variants if any(
-                    transcript['majorConsequence'] in allowed_consequences
+                    transcript['majorConsequence'] in allowed_consequences + (allowed_consequences_secondary or [])
                     for transcript in variant['transcripts'][gene_id]
                 )]
 
