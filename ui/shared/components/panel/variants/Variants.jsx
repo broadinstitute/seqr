@@ -53,7 +53,7 @@ const Variant = ({ variant, isCompoundHet }) => {
     <VariantIndividuals key={familyGuid} familyGuid={familyGuid} variant={variant} />,
   )
   return (
-    <StyledVariantRow key={variant.variantId} severity={CLINSIG_SEVERITY[(variant.clinvar.clinicalSignificance || '').toLowerCase()]} isCompoundHet >
+    <StyledVariantRow key={variant.variant} severity={CLINSIG_SEVERITY[(variant.clinvar.clinicalSignificance || '').toLowerCase()]} isCompoundHet >
       <Grid.Column width={16}>
         <Pathogenicity variant={variant} />
       </Grid.Column>

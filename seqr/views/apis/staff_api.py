@@ -825,9 +825,10 @@ def saved_variants(request, tag):
     individuals_json = _get_json_for_individuals(individuals, user=request.user)
     locus_lists_by_guid = {locus_list['locusListGuid']: locus_list for locus_list in
                            get_json_for_locus_lists(LocusList.objects.filter(guid__in=locus_list_guids), request.user)}
+    saved_variants_by_guid = {variant['variantGuid']: variant for variant in saved_variants}
 
     return create_json_response({
-        'savedVariantsByGuid': {variant['variantGuid']: variant for variant in saved_variants},
+        'savedVariantsByGuid': saved_variants_by_guid,
         'genesById': genes,
         'projectsByGuid': {project['projectGuid']: project for project in projects_json},
         'familiesByGuid': {family['familyGuid']: family for family in families_json},

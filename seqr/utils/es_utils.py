@@ -614,7 +614,7 @@ class EsSearch(BaseEsSearch):
                 unaffected_individuals_num_alts = [[variant['genotypes'].get(individual_guid, {}).get('numAlt') for variant in variants]
                                                    for individual_guid in family_unaffected_individual_guids.get(family_guid, [])]
 
-                def is_a_valid_compound_het_pair(variant_1_index, variant_2_index):
+                def _is_a_valid_compound_het_pair(variant_1_index, variant_2_index):
                     # To be compound het all unaffected individuals need to be hom ref for at least one of the variants
                     for unaffected_individual_num_alts in unaffected_individuals_num_alts:
                         is_valid_for_individual = any(unaffected_individual_num_alts[variant_index] != 1
@@ -624,7 +624,7 @@ class EsSearch(BaseEsSearch):
                     return True
 
                 valid_combinations = [[ch_1_index, ch_2_index] for ch_1_index, ch_2_index in combinations(range(len(variants)), 2)
-                                      if is_a_valid_compound_het_pair(ch_1_index, ch_2_index)]
+                                      if _is_a_valid_compound_het_pair(ch_1_index, ch_2_index)]
                 compound_het_pairs = [[variants[valid_ch_1_index], variants[valid_ch_2_index]] for valid_ch_1_index, valid_ch_2_index in valid_combinations]
 
                 # Compound het pair is returned if one satisfies one filtered consequence
@@ -847,7 +847,7 @@ class EsSearch(BaseEsSearch):
 
         deduplicated_results = []
         for gene, compound_het_pairs in results.items():
-            deduplicated_results += [{gene: compound_het_pair} for compound_het_pair in compound_het_pairs]
+            deduplicated_results += [{gene: ch_pair} for ch_pair in compound_het_pairs]
 
         self.previous_search_results['duplicate_doc_count'] = duplicates + self.previous_search_results.get('duplicate_doc_count', 0)
         self.previous_search_results['total_results'] -= duplicates
@@ -863,13 +863,19 @@ class EsSearch(BaseEsSearch):
         grouped_variants = compound_het_results + grouped_variants
         grouped_variants = _sort_compound_hets(grouped_variants)
 
-        loaded_result_count = sum(len(variants.values()[0]) for variants in grouped_variants + self.previous_search_results['grouped_results'])
+        loaded_result_count = len(grouped_variants + self.previous_search_results['grouped_results'])
+
+        # TODO debug pagination <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+        # logging.info('compound_het_results count: %d' % len(compound_het_results))
+        # logging.info('grouped_variants count: %d' % len(grouped_variants))
+        # logging.info('prev grouped_results count: %d' % len(self.previous_search_results['grouped_results']))
+        # logging.info('loaded_result_count: %d' % loaded_result_count)
+        # logging.info('prev total results: %d' % self.previous_search_results['total_results'])
 
         # Get requested page of variants
         merged_variant_results = []
         num_compound_hets = 0
         num_single_variants = 0
-        total_variant_count = 0
         for variants_group in grouped_variants:
             variants = variants_group.values()[0]
 
@@ -881,8 +887,7 @@ class EsSearch(BaseEsSearch):
             else:
                 merged_variant_results += variants
                 num_single_variants += 1
-            total_variant_count += len(variants)
-            if total_variant_count >= num_results:
+            if len(merged_variant_results) >= num_results:
                 break
 
         # Only save non-returned results separately if have not loaded all results

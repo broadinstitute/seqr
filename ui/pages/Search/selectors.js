@@ -47,9 +47,7 @@ export const getCurrentSearchParams = createSelector(
 
 export const getInhertanceFilterMode = createSelector(
   getCurrentSearchParams,
-  (searchParams) => {
-    return (((searchParams || {}).search || {}).inheritance || {}).mode
-  },
+  searchParams => (((searchParams || {}).search || {}).inheritance || {}).mode,
 )
 
 export const getProjectFamilies = (params, familiesByGuid, familiesByProjectGuid, analysisGroupByGuid) => {

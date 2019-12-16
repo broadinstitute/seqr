@@ -16,6 +16,8 @@ import {
   familyVariantSamples,
   isActiveVariantSample,
 } from 'shared/utils/constants'
+import isEqual from 'lodash/isEqual'
+import flatten from 'lodash/flatten'
 
 export const getProjectsIsLoading = state => state.projectsLoading.isLoading
 export const getProjectsByGuid = state => state.projectsByGuid
@@ -152,47 +154,6 @@ export const getSavedVariantTaggedAfter = state => state.savedVariantTableState.
 
 export const getVariantId = ({ xpos, ref, alt }) => `${xpos}-${ref}-${alt}`
 
-export const getSavedVariantsGroupedByFamilyVariants = createSelector(
-  getSavedVariantsByGuid,
-  savedVariantsByGuid => Object.values(savedVariantsByGuid).reduce((acc, variant) => {
-    variant.familyGuids.forEach((familyGuid) => {
-      if (!(familyGuid in acc)) {
-        acc[familyGuid] = {}
-      }
-      acc[familyGuid][getVariantId(variant)] = variant
-    })
-    return acc
-
-  }, {}),
-)
-
-const getSavedVariantsSharedNoteGuids = createSelector(
-  getSavedVariantsByGuid,
-  savedVariantsByGuid => Object.values(savedVariantsByGuid).reduce((acc, variant) => {
-    (variant.notes || []).map(note => note.noteGuid).forEach(noteGuid =>
-      (acc.uniques.includes(noteGuid) ? acc.duplicates.push(noteGuid) : acc.uniques.push(noteGuid)),
-    )
-    return acc
-  }, { duplicates: [], uniques: [] }),
-)
-
-export const getNotesGroupedByFamilyVariants = createSelector(
-  getSavedVariantsSharedNoteGuids,
-  getSavedVariantsByGuid,
-  (savedVariantsSharedNoteGuids, savedVariantsByGuid) => Object.values(savedVariantsByGuid).reduce((acc, variant) => {
-    variant.familyGuids.forEach((familyGuid) => {
-      if (!(familyGuid in acc)) {
-        acc[familyGuid] = {}
-      }
-      const sharedNotes = variant.notes.filter(note => savedVariantsSharedNoteGuids.duplicates.includes(note.noteGuid)) || []
-      const individualNotes = variant.notes.filter(note => !savedVariantsSharedNoteGuids.duplicates.includes(note.noteGuid)) || []
-      acc[familyGuid][getVariantId(variant)] = { individualNotes, sharedNotes }
-    })
-    return acc
-
-  }, {}),
-)
-
 export const getSelectedSavedVariants = createSelector(
   getSavedVariantsByGuid,
   (state, props) => props.match.params,
@@ -202,8 +163,7 @@ export const getSelectedSavedVariants = createSelector(
   (savedVariants, { tag, familyGuid, analysisGroupGuid, variantGuid }, familiesByGuid, analysisGroupsByGuid, projectGuid) => {
     let variants = Object.values(savedVariants)
     if (variantGuid) {
-      // TODO split on comma and filter by map of something <<<<<<<<<<<<<<<<<<<<<<<<<
-      return variants.filter(o => o.variantGuid === variantGuid)
+      return variants.filter(o => variantGuid.split(',').includes(o.variantGuid))
     }
 
     if (analysisGroupGuid && analysisGroupsByGuid[analysisGroupGuid]) {
@@ -276,18 +236,105 @@ export const getFilteredSavedVariants = createSelector(
   },
 )
 
-export const getVisibleSortedSavedVariants = createSelector(
+export const getNotesByGuid = createSelector(
+  getSavedVariantsByGuid,
+  variants => Object.values(variants).reduce((acc, variant) => {
+    acc = {
+      ...acc,
+      ...(variant.notes || []).reduce((variantNotes, note) => {
+        if (note.noteGuid in acc) {
+          acc[note.noteGuid].variantGuids.push(variant.variantGuid)
+        }
+        else {
+          note.variantGuids = [variant.variantGuid]
+          variantNotes = { ...variantNotes, [note.noteGuid]: note }
+        }
+        return variantNotes
+      }, {}) }
+    return acc
+  }, {}),
+)
+
+export const getTagsByGuid = createSelector(
+  getSavedVariantsByGuid,
+  variants => Object.values(variants).reduce((acc, variant) => {
+    acc = {
+      ...acc,
+      ...(variant.tags || []).reduce((variantTags, tag) => {
+        if (tag.tagGuid in acc) {
+          acc[tag.tagGuid].variantGuids.push(variant.variantGuid)
+        }
+        else {
+          tag.variantGuids = [variant.variantGuid]
+          variantTags = { ...variantTags, [tag.tagGuid]: tag }
+        }
+        return variantTags
+      }, {}) }
+    return acc
+  }, {}),
+)
+
+export const getSavedVariantsGroupedByFamilyVariants = createSelector(
+  getSavedVariantsByGuid,
+  getNotesByGuid,
+  getTagsByGuid,
+  (savedVariantsByGuid, notesByGuid, tagsByGuid) => Object.values(savedVariantsByGuid).reduce((acc, variant) => {
+    variant.familyGuids.forEach((familyGuid) => {
+      if (!(familyGuid in acc)) {
+        acc[familyGuid] = {}
+      }
+      variant.notes.map(note => notesByGuid[note.noteGuid])
+      variant.tags.map(tag => tagsByGuid[tag.tagGuid])
+      acc[familyGuid][getVariantId(variant)] = variant
+    })
+    return acc
+  }, {}),
+)
+
+export const getPairedFilteredSavedVariants = createSelector(
   getFilteredSavedVariants,
+  getNotesByGuid,
+  getTagsByGuid,
+  (filteredSavedVariants, notesByGuid, tagsByGuid) => {
+    const allNoteGuids = Object.values(notesByGuid).map(n => n.variantGuids)
+    const allTagGuids = Object.values(tagsByGuid).map(t => t.variantGuids)
+    const allGuids = allNoteGuids.concat(allTagGuids)
+    const uniqPairs = allGuids.reduce((acc, guids) => {
+      if (guids.length > 1 && !acc.some(existingGuids => isEqual(existingGuids, guids))) {
+        acc.push(guids)
+      }
+      return acc
+    }, [])
+    const uniqPairedGuids = allGuids.reduce((acc, guids) => {
+      if (guids.length === 1 && !flatten(uniqPairs).includes(guids[0])) {
+        acc.push(guids)
+      }
+      return acc
+    }, uniqPairs)
+    const pairedVariants = uniqPairedGuids.reduce((acc, guids) => {
+      const variant = guids.map(guid => filteredSavedVariants.filter(v => v.variantGuid === guid)[0])
+      if (!variant.includes(undefined)) {
+        acc.push(variant.length > 1 ? variant : variant[0])
+      }
+      return acc
+    }, [])
+    return pairedVariants
+  },
+)
+
+export const getVisibleSortedSavedVariants = createSelector(
+  getPairedFilteredSavedVariants,
   getSavedVariantSortOrder,
   getSavedVariantVisibleIndices,
   getGenesById,
   getUser,
-  (filteredSavedVariants, sort, visibleIndices, genesById, user) => {
+  (pairedFilteredSavedVariants, sort, visibleIndices, genesById, user) => {
     // Always secondary sort on xpos
-    filteredSavedVariants.sort((a, b) => {
-      return VARIANT_SORT_LOOKUP[sort](a, b, genesById, user) || a.xpos - b.xpos
+    pairedFilteredSavedVariants.sort((a, b) => {
+      return VARIANT_SORT_LOOKUP[sort](Array.isArray(a) ? a[0] : a, Array.isArray(b) ? b[0] : b, genesById, user) ||
+        (Array.isArray(a) ? a[0] : a).xpos - (Array.isArray(b) ? b[0] : b).xpos
     })
-    return filteredSavedVariants.slice(...visibleIndices)
+    return pairedFilteredSavedVariants.slice(...visibleIndices)
   },
 )
 

@@ -49,6 +49,7 @@ def saved_variant_data(request, project_guid, variant_guids=None):
         'genesById': genes,
     })
 
+
 def _create_single_saved_variant(variant_json, family):
     if 'xpos' not in variant_json:
         variant_json['xpos'] = get_xpos(variant_json['chrom'], variant_json['pos'])
@@ -67,6 +68,7 @@ def _create_single_saved_variant(variant_json, family):
     )
     return saved_variant
 
+
 def _create_multiple_saved_variants(request_json, family):
     saved_variants = []
     non_variant_key = ['searchHash', 'tags', 'functionalData', 'notes', 'note', 'submitToClinvar', 'saveAsGeneNote']
@@ -77,6 +79,7 @@ def _create_multiple_saved_variants(request_json, family):
                 saved_variant = _create_single_saved_variant(compound_het, family)
                 saved_variants.append(saved_variant)
     return saved_variants
+
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt

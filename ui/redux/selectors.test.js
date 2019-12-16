@@ -1,7 +1,14 @@
 /* eslint-disable no-undef */
 
 import { STATE_WITH_2_FAMILIES } from 'pages/Project/fixtures'
-import { getSelectedSavedVariants, getFilteredSavedVariants, getVisibleSortedSavedVariants } from './selectors'
+import {
+  getSelectedSavedVariants,
+  getFilteredSavedVariants,
+  getVisibleSortedSavedVariants,
+  getPairedFilteredSavedVariants,
+  getNotesByGuid,
+  getTagsByGuid,
+} from './selectors'
 
 test('getSelectedSavedVariants', () => {
 
@@ -36,7 +43,7 @@ test('getSelectedSavedVariants', () => {
   expect(savedAnalysisGroupVariants[1].variantId).toEqual('SV0000002_1248367227_r0390_100')
 
 
-  const savedVariants= getSelectedSavedVariants(
+  const savedVariants = getSelectedSavedVariants(
     STATE_WITH_2_FAMILIES, { match: { params:  { variantGuid: 'SV0000004_116042722_r0390_1000' } } }
   )
   expect(savedVariants.length).toEqual(1)
@@ -52,6 +59,27 @@ test('getFilteredSavedVariants', () => {
   expect(savedVariants[1].variantId).toEqual('SV0000002_1248367227_r0390_100')
 })
 
+test('getNotesByGuid', () => {
+  const notesByGuid = getNotesByGuid(
+    STATE_WITH_2_FAMILIES,
+  )
+  expect(Object.keys(notesByGuid).length).toEqual(1)
+})
+
+test('getTagsByGuid', () => {
+  const tagsByGuid = getTagsByGuid(
+    STATE_WITH_2_FAMILIES,
+  )
+  expect(Object.keys(tagsByGuid).length).toEqual(4)
+})
+
+test('getPairedFilteredSavedVariants', () => {
+  const pairedSavedVariants = getPairedFilteredSavedVariants(
+    STATE_WITH_2_FAMILIES, { match: { params:  {} } }
+  )
+  expect(pairedSavedVariants.length).toEqual(2)
+})
+
 test('getVisibleSortedSavedVariants', () => {
   const savedVariants = getVisibleSortedSavedVariants(
     STATE_WITH_2_FAMILIES, { match: { params:  {} } }
@@ -59,3 +87,4 @@ test('getVisibleSortedSavedVariants', () => {
   expect(savedVariants.length).toEqual(1)
   expect(savedVariants[0].variantId).toEqual('SV0000002_1248367227_r0390_100')
 })
+
