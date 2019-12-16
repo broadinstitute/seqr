@@ -291,12 +291,12 @@ class MatchmakerAPITest(TestCase):
     /project/R0001_1kg/family_page/F000001_1/matchmaker_exchange
     """
         mock_post_to_slack.assert_called_with('matchmaker_seqr_match', message)
-        # mock_email.assert_called_with(
-        #     subject=u'New matches found for MME submission NA19675_1 (project: 1kg project n\xe5me with uni\xe7\xf8de)',
-        #     body=message,
-        #     to=['test@broadinstitute.org'],
-        #     from_email='matchmaker@broadinstitute.org')
-        # mock_email.return_value.send.assert_called()
+        mock_email.assert_called_with(
+            subject=u'New matches found for MME submission NA19675_1 (project: 1kg project n\xe5me with uni\xe7\xf8de)',
+            body=message,
+            to=['test_user@broadinstitute.org'],
+            from_email='matchmaker@broadinstitute.org')
+        mock_email.return_value.send.assert_called()
 
         # Test new result model created
         result_model = MatchmakerResult.objects.get(guid=new_result_guid)

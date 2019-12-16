@@ -96,6 +96,9 @@ def _search_matches(submission, user):
                 last_modified_by=user,
             )
             new_results.append(result)
+        else:
+            saved_result.result_data = result
+            saved_result.save()
         saved_results[result['patient']['id']] = saved_result
 
     if new_results:
@@ -379,7 +382,8 @@ def _generate_notification_for_seqr_match(submission, results):
             gene_message=gene_message, phenotypes_message=phenotypes_message,
         ))
 
-    project = submission.individual.family.project
+    individual = submission.individual
+    project = individual.family.project
     message = u"""
     A search from a seqr user from project {project} individual {individual_id} had the following new match(es):
     
@@ -387,17 +391,16 @@ def _generate_notification_for_seqr_match(submission, results):
     
     {host}project/{project_guid}/family_page/{family_guid}/matchmaker_exchange
     """.format(
-        project=project.name, individual_id=submission.individual.individual_id, matches='\n\n'.join(matches),
+        project=project.name, individual_id=individual.individual_id, matches='\n\n'.join(matches),
         host=BASE_URL, project_guid=project.guid, family_guid=submission.individual.family.guid,
     )
 
     post_to_slack(MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL, message)
-    #  TODO re-enable MME email
-    # emails = map(lambda s: s.strip().split('mailto:')[-1], project.mme_contact_url.split(','))
-    # email_message = EmailMessage(
-    #     subject=u'New matches found for MME submission {} (project: {})'.format(individual.individual_id, project.name),
-    #     body=message,
-    #     to=[email for email in emails if email != MME_DEFAULT_CONTACT_EMAIL],
-    #     from_email=MME_DEFAULT_CONTACT_EMAIL,
-    # )
-    # email_message.send()
+    emails = map(lambda s: s.strip().split('mailto:')[-1], submission.contact_href.split(','))
+    email_message = EmailMessage(
+        subject=u'New matches found for MME submission {} (project: {})'.format(individual.individual_id, project.name),
+        body=message,
+        to=[email for email in emails if email != MME_DEFAULT_CONTACT_EMAIL],
+        from_email=MME_DEFAULT_CONTACT_EMAIL,
+    )
+    email_message.send()

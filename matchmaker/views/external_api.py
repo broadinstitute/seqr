@@ -1,10 +1,9 @@
 import json
 import logging
-from datetime import datetime
 from django.core.mail.message import EmailMessage
 from django.views.decorators.csrf import csrf_exempt
 
-from matchmaker.models import MatchmakerSubmission, MatchmakerResult
+from matchmaker.models import MatchmakerResult
 from matchmaker.matchmaker_utils import get_mme_genes_phenotypes_for_results, get_mme_metrics, get_mme_matches
 
 from seqr.utils.communication_utils import post_to_slack
@@ -38,25 +37,25 @@ def authenticate_mme_request(view_func):
                 'message': 'authentication failed',
             }, status=401)
 
-        return view_func(request, originating_node, *args, **kwargs)
+        return view_func(request, originating_node['name'], *args, **kwargs)
     return _wrapped_view
 
 
 @authenticate_mme_request
 @csrf_exempt
-def mme_metrics_proxy(request, originating_node):
+def mme_metrics_proxy(request, originating_node_name):
     """
     -Proxies public metrics endpoint
     Returns:
         Metric JSON from matchbox
     """
-    logger.info('Received MME metrics request from {}'.format(originating_node['name']))
+    logger.info('Received MME metrics request from {}'.format(originating_node_name))
     return create_json_response({'metrics': get_mme_metrics()})
 
 
 @authenticate_mme_request
 @csrf_exempt
-def mme_match_proxy(request, originating_node):
+def mme_match_proxy(request, originating_node_name):
     """
     -Looks for matches for the given individual ONLY in the local MME DB.
     -Expects a single patient (as per MME spec) in the POST
@@ -66,7 +65,7 @@ def mme_match_proxy(request, originating_node):
     Returns:
         Status code and results (as per MME spec), returns raw results from MME Server
     """
-    logger.info('Received MME match request from {}'.format(originating_node['name']))
+    logger.info('Received MME match request from {}'.format(originating_node_name))
 
     try:
         query_patient_data = json.loads(request.body)
@@ -75,11 +74,11 @@ def mme_match_proxy(request, originating_node):
         return create_json_response({'message': e.message}, status=400)
 
     results, incoming_query = get_mme_matches(
-        patient_data=query_patient_data, origin_request_host=originating_node['name'],
+        patient_data=query_patient_data, origin_request_host=originating_node_name,
     )
 
     try:
-        _generate_notification_for_incoming_match(results, incoming_query, originating_node['name'], query_patient_data)
+        _generate_notification_for_incoming_match(results, incoming_query, originating_node_name, query_patient_data)
     except Exception as e:
         logger.error('Unable to create notification for incoming MME match request: {}'.format(e.message))
 
@@ -121,23 +120,23 @@ def _generate_notification_for_incoming_match(results, incoming_query, incoming_
     contact_href = incoming_patient['patient']['contact'].get('href', '(sorry I was not able to read the information given for URL)')
 
     if not results:
-        message = """A match request for {patient_id} came in from {institution} today. 
+        message_template = """A match request for {patient_id} came in from {institution} today. 
         The contact information given was: {contact}.
-        We didn't find any individuals in matchbox that matched that query well, *so no results were sent back*.
-        """.format(institution=institution, patient_id=incoming_patient_id, contact=contact_href)
-        post_to_slack(MME_SLACK_EVENT_NOTIFICATION_CHANNEL, message)
+        We didn't find any individuals in matchbox that matched that query well, *so no results were sent back*."""
+        post_to_slack(MME_SLACK_EVENT_NOTIFICATION_CHANNEL, message_template.format(
+            institution=institution, patient_id=incoming_patient_id, contact=contact_href
+        ))
         return
 
     new_matched_results = MatchmakerResult.objects.filter(
         originating_query=incoming_query).prefetch_related('submission')
     if not new_matched_results:
-        message = """A match request for {patient_id} came in from {institution} today. 
+        message_template = """A match request for {patient_id} came in from {institution} today. 
         The contact information given was: {contact}.
-        We found {existing_results} existing matching individuals but no new ones, *so no results were sent back*.
-        """.format(
+        We found {existing_results} existing matching individuals but no new ones, *so no results were sent back*."""
+        post_to_slack(MME_SLACK_EVENT_NOTIFICATION_CHANNEL, message_template.format(
             institution=institution, patient_id=incoming_patient_id, contact=contact_href, existing_results=len(results)
-        )
-        post_to_slack(MME_SLACK_EVENT_NOTIFICATION_CHANNEL, message)
+        ))
         return
 
     hpo_terms_by_id, genes_by_id, _ = get_mme_genes_phenotypes_for_results([incoming_patient])

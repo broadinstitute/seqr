@@ -243,8 +243,18 @@ be found found at https://seqr.broadinstitute.org/matchmaker/disclaimer."""
             mock.call().send()])
 
         # Test receive same request again
+        mock_post_to_slack.reset_mock()
+        mock_email.reset_mock()
         response = self._make_mme_request(url, 'post', content_type='application/json', data=json.dumps(request_body))
         self.assertEqual(response.status_code, 200)
         self.assertListEqual(response.json()['results'], results)
         self.assertEqual(MatchmakerIncomingQuery.objects.filter(patient_id='12345').count(), 2)
+        mock_post_to_slack.assert_called_with(
+            'matchmaker_alerts',
+            """A match request for 12345 came in from Test Institute today. 
+        The contact information given was: test@test.com.
+        We found 2 existing matching individuals but no new ones, *so no results were sent back*."""
+        )
+        mock_email.assert_not_called()
+
 
