@@ -222,7 +222,7 @@ export const getSearchGeneBreakdownValues = createSelector(
         numFamilies: Object.keys(counts.families).length,
         families: Object.entries(counts.families).map(([familyGuid, count]) => ({ family: familiesByGuid[familyGuid], count })),
         search: searchesByHash[searchHash].search,
-        ...genesById[geneId],
+        ...(genesById[geneId] || { geneId, geneSymbol: geneId, omimPhenotypes: [], constraints: {} }),
       }),
     ),
 )

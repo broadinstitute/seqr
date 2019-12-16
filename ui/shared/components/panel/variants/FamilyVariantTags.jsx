@@ -144,7 +144,6 @@ const ShortcutTags = ({ variant, dispatchUpdateFamilyVariantTags, familyGuid }) 
       }
       return allTags.filter(tag => tag.name !== tagName)
     }, tags || [])
-    // TODO improve this to take in both variants <<<<<<<<<<<
     return dispatchUpdateFamilyVariantTags({
       ...singleVariant,
       tags: updatedTags,
