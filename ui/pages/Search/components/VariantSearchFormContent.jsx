@@ -194,7 +194,7 @@ const ANNOTATION_PANEL = {
 
 const ANNOTATION_PANEL_SECONDARY = {
   name: 'annotations_secondary',
-  headerProps: { title: 'Annotations (Secondary)', inputProps: JsonSelectPropsWithAll(ANNOTATION_FILTER_OPTIONS, ALL_ANNOTATION_FILTER_DETAILS) },
+  headerProps: { title: 'Annotations (Second Hit)', inputProps: JsonSelectPropsWithAll(ANNOTATION_FILTER_OPTIONS, ALL_ANNOTATION_FILTER_DETAILS) },
   fields: ANNOTATION_GROUPS,
   fieldProps: { control: AlignedCheckboxGroup, format: val => val || [] },
   fieldLayout: annotationsFilterLayout,

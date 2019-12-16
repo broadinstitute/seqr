@@ -306,7 +306,8 @@ class BaseEsSearch(object):
 
         annotations_secondary_search = None
         if annotations_secondary:
-            annotations_secondary_filter, _ = _annotations_filter(annotations_secondary)
+            annotations_secondary_filter, allowed_consequences_secondary = _annotations_filter(annotations_secondary)
+            self._allowed_consequences_secondary = allowed_consequences_secondary
             annotations_secondary_search = self._search.filter(annotations_secondary_filter)
         if annotations:
             self.filter_by_annotations(annotations, pathogenicity_filter)
@@ -560,13 +561,18 @@ class EsSearch(BaseEsSearch):
             if gene_id in compound_het_pairs_by_gene:
                 continue
 
-            if self._allowed_consequences:
-                # Variants are returned if any transcripts have the filtered consequence, but to be compound het
-                # the filtered consequence needs to be present in at least one transcript in the gene of interest
+            # Variants are returned if any transcripts have the filtered consequence, but to be compound het
+            # the filtered consequence needs to be present in at least one transcript in the gene of interest
+            if self._allowed_consequences_secondary and self._allowed_consequence:
                 gene_variants = [variant for variant in gene_variants if any(
-                    transcript['majorConsequence'] in self._allowed_consequences for transcript in
-                    variant['transcripts'][gene_id]
-                )]
+                    (transcript['majorConsequence'] in self._allowed_consequences or
+                    transcript['majorConsequence'] in self._allowed_consequences_secondary)
+                    for transcript in variant['transcripts'][gene_id])]
+            elif self._allowed_consequences:
+                gene_variants = [variant for variant in gene_variants if any(
+                    transcript['majorConsequence'] in self._allowed_consequences
+                    for transcript in variant['transcripts'][gene_id])]
+
             if len(gene_variants) < 2:
                 continue
 
@@ -602,14 +608,6 @@ class EsSearch(BaseEsSearch):
                 for family_guid in variant['familyGuids']:
                     family_compound_het_pairs[family_guid].append(variant)
 
-            if self._allowed_consequences:
-                # Variants are returned if any transcripts have the filtered consequence, but to be compound het
-                # the filtered consequence needs to be present in at least one transcript in the gene of interest
-                gene_variants = [variant for variant in gene_variants if any(
-                    transcript['majorConsequence'] in self._allowed_consequences for transcript in
-                    variant['transcripts'][gene_id]
-                )]
-
             for family_guid, variants in family_compound_het_pairs.items():
                 unaffected_individuals_num_alts = [[variant['genotypes'].get(individual_guid, {}).get('numAlt') for variant in variants]
                                                    for individual_guid in family_unaffected_individual_guids.get(family_guid, [])]
@@ -627,21 +625,11 @@ class EsSearch(BaseEsSearch):
                                       if _is_a_valid_compound_het_pair(ch_1_index, ch_2_index)]
                 compound_het_pairs = [[variants[valid_ch_1_index], variants[valid_ch_2_index]] for valid_ch_1_index, valid_ch_2_index in valid_combinations]
 
-                # Compound het pair is returned if one satisfies one filtered consequence
-                # (and the other satisfies the other secondary filtered consequence if given)
-                def filter_compound_hets_by_annotations(allowed_consequence, allowed_consequence_secondary, compound_het_pair):
-                    def variant_fit_allowed_consequence(given_allowed_consequence, given_variant):
-                        return any(transcript['majorConsequence'] in given_allowed_consequence for transcript in given_variant['transcripts'][gene_id])
-                    return (variant_fit_allowed_consequence(allowed_consequence, compound_het_pair[0]) and
-                            variant_fit_allowed_consequence(allowed_consequence_secondary, compound_het_pair[1]) or
-                            (variant_fit_allowed_consequence(allowed_consequence, compound_het_pair[1]) and
-                            variant_fit_allowed_consequence(allowed_consequence_secondary, compound_het_pair[0])))
-
+                # remove compound hets pair that only satisfied secondary consequence
                 if self._allowed_consequences_secondary:
-                    compound_het_pairs = [compound_het_pair for compound_het_pair in compound_het_pairs if
-                                          filter_compound_hets_by_annotations(self._allowed_consequences,
-                                                                              self._allowed_consequences_secondary,
-                                                                              compound_het_pair)]
+                    compound_het_pairs = [compound_het_pair for compound_het_pair in compound_het_pairs if not all([
+                        any(transcript['majorConsequence'] in self._allowed_consequences for transcript in
+                            variant['transcripts'][gene_id]) for variant in compound_het_pair])]
                 family_compound_het_pairs[family_guid] = compound_het_pairs
 
             gene_compound_het_pairs = [ch_pair for ch_pairs in family_compound_het_pairs.values() for ch_pair in ch_pairs]
