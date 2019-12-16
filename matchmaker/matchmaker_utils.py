@@ -239,7 +239,7 @@ def _get_phenotype_score(hpo_ids, match):
         hpo_id for hpo_id in hpo_ids
         if any(feature['id'] == hpo_id and feature.get('observed', 'yes') == 'yes' for feature in match.features)
     ]
-    return float(len(matched_hpo_ids)) / len(hpo_ids)
+    return float(len(matched_hpo_ids)) / len(hpo_ids) or 0.1
 
 
 def get_mme_metrics():

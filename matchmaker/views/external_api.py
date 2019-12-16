@@ -4,7 +4,7 @@ from datetime import datetime
 from django.core.mail.message import EmailMessage
 from django.views.decorators.csrf import csrf_exempt
 
-from matchmaker.models import MatchmakerSubmission, MatchmakerIncomingQuery
+from matchmaker.models import MatchmakerSubmission, MatchmakerResult
 from matchmaker.matchmaker_utils import get_mme_genes_phenotypes_for_results, get_mme_metrics, get_mme_matches
 
 from seqr.utils.communication_utils import post_to_slack
@@ -79,7 +79,7 @@ def mme_match_proxy(request, originating_node):
     )
 
     try:
-        _generate_notification_for_incoming_match(results, request, query_patient_data)
+        _generate_notification_for_incoming_match(results, incoming_query, originating_node['name'], query_patient_data)
     except Exception as e:
         logger.error('Unable to create notification for incoming MME match request: {}'.format(e.message))
 
@@ -101,7 +101,7 @@ def _validate_patient_data(query_patient_data):
         raise ValueError('"features" or "genomicFeatures" are required')
 
 
-def _generate_notification_for_incoming_match(results, incoming_request, incoming_patient):
+def _generate_notification_for_incoming_match(results, incoming_query, incoming_request_node, incoming_patient):
     """
     Generate a SLACK notifcation to say that a VALID match request came in and the following
     results were sent back. If Slack is not supported, a message is not sent, but details persisted.
@@ -114,78 +114,94 @@ def _generate_notification_for_incoming_match(results, incoming_request, incomin
     incoming_patient_id = incoming_patient['patient']['id']
 
     logger.info('{} MME matches found for patient {} from {}'.format(
-        len(results), incoming_patient_id, incoming_request.get_host())
+        len(results), incoming_patient_id, incoming_request_node)
     )
 
-    institution = incoming_patient['patient']['contact'].get('institution', '(institution name not given)')
+    institution = incoming_patient['patient']['contact'].get('institution', incoming_request_node)
     contact_href = incoming_patient['patient']['contact'].get('href', '(sorry I was not able to read the information given for URL)')
-    if len(results) > 0:
-        hpo_terms_by_id, genes_by_id, _ = get_mme_genes_phenotypes_for_results([incoming_patient])
 
-        match_results = []
-        emails = set()
-        for result in results:
-            submission = MatchmakerSubmission.objects.get(submission_id=result['patient']['id'])
-            individual = submission.individual
-            project = individual.family.project
-
-            result_text = u'seqr ID {individual_id} from project {project_name} in family {family_id} ' \
-                          u'inserted into matchbox on {insertion_date}, with seqr link ' \
-                          u'{host}project/{project_guid}/family_page/{family_guid}/matchmaker_exchange'.format(
-                individual_id=individual.individual_id, project_guid=project.guid, project_name=project.name,
-                family_guid=individual.family.guid, family_id=individual.family.family_id,
-                insertion_date=submission.created_date.strftime('%b %d, %Y'), host=BASE_URL)
-            match_results.append(result_text)
-            emails.update([i.strip() for i in project.mme_contact_url.replace('mailto:', '').split(',')])
-        emails = [email for email in emails if email != MME_DEFAULT_CONTACT_EMAIL]
-
-        message = u"""Dear collaborators,
-
-        matchbox found a match between a patient from {query_institution} and the following {number_of_results} case(s) 
-        in matchbox. The following information was included with the query,
-
-        genes: {incoming_query_genes}
-        phenotypes: {incoming_query_phenotypes}
-        contact: {incoming_query_contact_name}
-        email: {incoming_query_contact_url}
-
-        We sent back:
-
-        {match_results}
-
-        We sent this email alert to: {email_addresses_alert_sent_to}
-
-        Thank you for using the matchbox system for the Matchmaker Exchange at the Broad Center for Mendelian Genomics. 
-        Our website can be found at https://seqr.broadinstitute.org/matchmaker/matchbox and our legal disclaimers can 
-        be found found at https://seqr.broadinstitute.org/matchmaker/disclaimer.""".format(
-            query_institution=institution,
-            number_of_results=len(results),
-            incoming_query_genes=', '.join(sorted([gene['geneSymbol'] for gene in genes_by_id.values()])),
-            incoming_query_phenotypes=', '.join(['{} ({})'.format(hpo_id, term) for hpo_id, term in hpo_terms_by_id.items()]),
-            incoming_query_contact_url=contact_href,
-            incoming_query_contact_name=incoming_patient['patient']['contact'].get('name', '(sorry I was not able to read the information given for name'),
-            match_results='\n'.join(match_results),
-            email_addresses_alert_sent_to=', '.join(emails),
-        )
-
-        post_to_slack(MME_SLACK_MATCH_NOTIFICATION_CHANNEL, message)
-        #  TODO re-enable MME email
-        # email_message = EmailMessage(
-        #     subject='Received new MME match',
-        #     body=message,
-        #     to=emails,
-        #     from_email=MME_DEFAULT_CONTACT_EMAIL,
-        # )
-        # email_message.send()
-    else:
-        message = """Dear collaborators,
-        
-        This match request came in from {institution} today ({today}). The contact information given was: {contact}.
-        
+    if not results:
+        message = """A match request for {patient_id} came in from {institution} today. 
+        The contact information given was: {contact}.
         We didn't find any individuals in matchbox that matched that query well, *so no results were sent back*.
-        """.format(institution=institution, today=datetime.now().strftime('%b %d, %Y'), contact=contact_href)
-
+        """.format(institution=institution, patient_id=incoming_patient_id, contact=contact_href)
         post_to_slack(MME_SLACK_EVENT_NOTIFICATION_CHANNEL, message)
+        return
+
+    new_matched_results = MatchmakerResult.objects.filter(
+        originating_query=incoming_query).prefetch_related('submission')
+    if not new_matched_results:
+        message = """A match request for {patient_id} came in from {institution} today. 
+        The contact information given was: {contact}.
+        We found {existing_results} existing matching individuals but no new ones, *so no results were sent back*.
+        """.format(
+            institution=institution, patient_id=incoming_patient_id, contact=contact_href, existing_results=len(results)
+        )
+        post_to_slack(MME_SLACK_EVENT_NOTIFICATION_CHANNEL, message)
+        return
+
+    hpo_terms_by_id, genes_by_id, _ = get_mme_genes_phenotypes_for_results([incoming_patient])
+
+    match_results = []
+    all_emails = set()
+    for result in new_matched_results:
+        submission = result.submission
+        individual = submission.individual
+        project = individual.family.project
+
+        result_text = u"""seqr ID {individual_id} from project {project_name} in family {family_id} inserted into
+matchbox on {insertion_date}, with seqr link
+{host}project/{project_guid}/family_page/{family_guid}/matchmaker_exchange""".replace('\n', ' ').format(
+            individual_id=individual.individual_id, project_guid=project.guid, project_name=project.name,
+            family_guid=individual.family.guid, family_id=individual.family.family_id,
+            insertion_date=submission.created_date.strftime('%b %d, %Y'), host=BASE_URL)
+        emails = [
+            email.strip() for email in submission.contact_href.replace('mailto:', '').split(',')
+            if email.strip() != MME_DEFAULT_CONTACT_EMAIL]
+        all_emails.update(emails)
+        match_results.append((result_text, emails))
+
+    base_message = u"""Dear collaborators,
+
+    matchbox found a match between a patient from {query_institution} and the following {number_of_results} case(s) 
+    in matchbox. The following information was included with the query,
+
+    genes: {incoming_query_genes}
+    phenotypes: {incoming_query_phenotypes}
+    contact: {incoming_query_contact_name}
+    email: {incoming_query_contact_url}
+
+    We sent back the following:
+
+    """.format(
+        query_institution=institution,
+        number_of_results=len(results),
+        incoming_query_genes=', '.join(sorted([gene['geneSymbol'] for gene in genes_by_id.values()])),
+        incoming_query_phenotypes=', '.join(['{} ({})'.format(hpo_id, term) for hpo_id, term in hpo_terms_by_id.items()]),
+        incoming_query_contact_url=contact_href,
+        incoming_query_contact_name=incoming_patient['patient']['contact'].get('name', '(sorry I was not able to read the information given for name'),
+    )
+
+    message_template = u"""{base_message}{match_results}
+
+    We sent this email alert to: {email_addresses_alert_sent_to}\n{footer}."""
+
+    post_to_slack(MME_SLACK_MATCH_NOTIFICATION_CHANNEL, message_template.format(
+        base_message=base_message, match_results='\n'.join([result_text for result_text, _ in match_results]),
+        email_addresses_alert_sent_to=', '.join(all_emails), footer=MME_EMAIL_FOOTER
+    ))
+
+    for result_text, emails in match_results:
+        email_message = EmailMessage(
+            subject='Received new MME match',
+            body=message_template.format(
+                base_message=base_message, match_results=result_text,
+                email_addresses_alert_sent_to=', '.join(emails), footer=MME_EMAIL_FOOTER
+            ),
+            to=emails,
+            from_email=MME_DEFAULT_CONTACT_EMAIL,
+        )
+        email_message.send()
 
 
 MME_DISCLAIMER = """The data in Matchmaker Exchange is provided for research use only. Broad Institute provides the data
@@ -206,3 +222,8 @@ repository. Funding for the Broad Institute was provided in part by National Ins
 Daniel MacArthur and Heidi Rehm.' User will not attempt to use the data or Matchmaker Exchange to establish the
 individual identities of any of the subjects from whom the data were obtained. This applies to matches made within Broad
 Institute or with any other database included in the Matchmaker Exchange.""".replace('\n', ' ')
+
+MME_EMAIL_FOOTER = """
+Thank you for using the matchbox system for the Matchmaker Exchange at the Broad Center for Mendelian Genomics. 
+Our website can be found at https://seqr.broadinstitute.org/matchmaker/matchbox and our legal disclaimers can 
+be found found at https://seqr.broadinstitute.org/matchmaker/disclaimer"""

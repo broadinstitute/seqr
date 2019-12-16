@@ -343,7 +343,7 @@
         "created_date": "2017-03-12T19:27:08.848Z",
         "created_by": null,
         "last_modified_date": "2017-03-12T22:37:17.555Z",
-        "project": 1,
+        "project": 3,
         "family_id": "12",
         "display_name": "12",
         "description": "",
@@ -1419,7 +1419,7 @@
         "submission_id": "NA19675_1_01",
         "label": "NA19675_1",
         "contact_name": "Sam Baxter",
-        "contact_href": "mailto:matchmaker@broadinstitute.org",
+        "contact_href": "mailto:matchmaker@broadinstitute.org,test_user@broadinstitute.org",
         "features": [
             {
                 "id": "HP:0001252",

@@ -60,8 +60,8 @@ class ExternalAPITest(TestCase):
             'patient': {
                 'id': '12345',
                 'contact': {'institution': 'Test Institute', 'href': 'test@test.com', 'name': 'PI'},
-                'genomicFeatures': [{'gene': {'id': 'ENSG00000237613'}}, {'gene': {'id': 'WASH7P'}}],
-                'features': [{'id': 'HP:0003273'}, {'id': 'HP:0002017'}]
+                'genomicFeatures': [{'gene': {'id': 'ENSG00000237613'}}, {'gene': {'id': 'OR4F5'}}],
+                'features': [{'id': 'HP:0003273'}, {'id': 'HP:0001252'}]
             }}
 
         # Test invalid requests
@@ -102,13 +102,13 @@ class ExternalAPITest(TestCase):
         self.assertEqual(response.status_code, 200)
         results = response.json()['results']
 
-        self.assertEqual(len(results), 1)
+        self.assertEqual(len(results), 2)
         self.assertDictEqual(results[0], {
             'patient': {
-                'id': 'NA20885',
-                'label': 'NA20885',
+                'id': 'NA19675_1_01',
+                'label': 'NA19675_1',
                 'contact': {
-                    'href': 'mailto:matchmaker@broadinstitute.org',
+                    'href': 'mailto:matchmaker@broadinstitute.org,test_user@broadinstitute.org',
                     'name': 'Sam Baxter',
                     'institution': 'Broad Center for Mendelian Genomics',
                 },
@@ -117,27 +117,29 @@ class ExternalAPITest(TestCase):
                 'features': [
                     {
                         'id': 'HP:0001252',
-                        'label': 'Muscular hypotonia',
                         'observed': 'yes'
                     },
                     {
-                        'id': 'HP:0002017',
-                        'label': 'Nausea and vomiting',
+                        'id': 'HP:0001263',
+                        'observed': 'no'
+                    },
+                    {
+                        'id': 'HP:0012469',
                         'observed': 'yes'
                     }
                 ],
                 'genomicFeatures': [
                     {
                         'gene': {
-                            'id': 'ENSG00000227232'
+                            'id': 'ENSG00000186092'
                         },
                         'variant': {
-                            'end': 38739601,
-                            'start': 38739601,
+                            'end': 77027548,
+                            'start': 77027549,
                             'assembly': 'GRCh38',
-                            'referenceName': '17',
-                            'alternateBases': 'A',
-                            'referenceBases': 'G'
+                            'referenceName': '14',
+                            'alternateBases': 'C',
+                            'referenceBases': 'CCACT'
                         },
                         'zygosity': 1
                     }
@@ -148,36 +150,97 @@ class ExternalAPITest(TestCase):
                 '_phenotypeScore': 0.5,
                 'patient': 0.175,
             }
+        }),
+        self.assertDictEqual(results[1], {
+            'patient': {
+                'id': 'P0004515',
+                'label': 'P0004515',
+                'contact': {
+                    'href': 'mailto:UDNCC@hms.harvard.edu,matchmaker@phenomecentral.org',
+                    'name': 'Baylor UDN Clinical Site',
+                    'institution': 'Broad Center for Mendelian Genomics',
+                },
+                'species': 'NCBITaxon:9606',
+                'sex': 'MALE',
+                'features': [
+                    {
+                        'observed': 'yes',
+                        'id': 'HP:0012469'
+                    },
+                    {
+                        'observed': 'no',
+                        'id': 'HP:0003273'
+                    }
+                ],
+                'genomicFeatures': [
+                    {
+                        'gene': {
+                            'id': 'ENSG00000186092'
+                        }
+                    },
+                    {
+                        'gene': {
+                            'id': 'ENSG00000233750'
+                        }
+                    },
+                    {
+                        'gene': {
+                            'id': 'ENSG00000223972'
+                        }
+                    }
+                ],
+            },
+            'score': {
+                '_genotypeScore': 0.35,
+                '_phenotypeScore': 0.1,
+                'patient': 0.035,
+            }
         })
 
         self.assertEqual(MatchmakerIncomingQuery.objects.filter(patient_id='12345').count(), 1)
 
-        message = u"""Dear collaborators,
+        message_template = u"""Dear collaborators,
 
-        matchbox found a match between a patient from Test Institute and the following 1 case(s) 
-        in matchbox. The following information was included with the query,
+    matchbox found a match between a patient from Test Institute and the following 2 case(s) 
+    in matchbox. The following information was included with the query,
 
-        genes: FAM138A, WASH7P
-        phenotypes: HP:0003273 (Hip contracture), HP:0002017 (Nausea and vomiting)
-        contact: PI
-        email: test@test.com
+    genes: FAM138A, OR4F5
+    phenotypes: HP:0001252 (Muscular hypotonia), HP:0003273 (Hip contracture)
+    contact: PI
+    email: test@test.com
 
-        We sent back:
+    We sent back the following:
 
-        seqr ID NA20885 from project Test Project in family 11 inserted into matchbox on Feb 05, 2019, with seqr link /project/R0003_test/family_page/F000011_11/matchmaker_exchange
+    {matches}
 
-        We sent this email alert to: seqr-test@gmail.com, test@broadinstitute.org
+    We sent this email alert to: {emails}
 
-        Thank you for using the matchbox system for the Matchmaker Exchange at the Broad Center for Mendelian Genomics. 
-        Our website can be found at https://seqr.broadinstitute.org/matchmaker/matchbox and our legal disclaimers can 
-        be found found at https://seqr.broadinstitute.org/matchmaker/disclaimer."""
-        mock_post_to_slack.assert_called_with('matchmaker_matches', message)
-        # mock_email.assert_called_with(
-        #     subject='Received new MME match',
-        #     body=message,
-        #     to=['seqr-test@gmail.com', 'test@broadinstitute.org'],
-        #     from_email='matchmaker@broadinstitute.org')
-        # mock_email.return_value.send.assert_called()
+Thank you for using the matchbox system for the Matchmaker Exchange at the Broad Center for Mendelian Genomics. 
+Our website can be found at https://seqr.broadinstitute.org/matchmaker/matchbox and our legal disclaimers can 
+be found found at https://seqr.broadinstitute.org/matchmaker/disclaimer."""
+        match1 = u'seqr ID NA19675_1 from project 1kg project n\u00e5me with uni\u00e7\u00f8de in family 1 inserted into matchbox on May 23, 2018, with seqr link /project/R0001_1kg/family_page/F000001_1/matchmaker_exchange'
+        match2 = 'seqr ID NA20888 from project Test Project in family 12 inserted into matchbox on Feb 05, 2019, with seqr link /project/R0003_test/family_page/F000012_12/matchmaker_exchange'
+
+        mock_post_to_slack.assert_called_with('matchmaker_matches', message_template.format(
+            matches=u'{}\n{}'.format(match1, match2),
+            emails='test_user@broadinstitute.org, UDNCC@hms.harvard.edu, matchmaker@phenomecentral.org'
+        ))
+
+        mock_email.assert_has_calls([
+            mock.call(
+                subject='Received new MME match',
+                body=message_template.format(matches=match1, emails='test_user@broadinstitute.org'),
+                to=['test_user@broadinstitute.org'],
+                from_email='matchmaker@broadinstitute.org',
+            ),
+            mock.call().send(),
+            mock.call(
+                subject='Received new MME match',
+                body=message_template.format(matches=match2, emails='UDNCC@hms.harvard.edu, matchmaker@phenomecentral.org'),
+                to=['UDNCC@hms.harvard.edu', 'matchmaker@phenomecentral.org'],
+                from_email='matchmaker@broadinstitute.org',
+            ),
+            mock.call().send()])
 
         # Test receive same request again
         response = self._make_mme_request(url, 'post', content_type='application/json', data=json.dumps(request_body))
