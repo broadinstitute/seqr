@@ -2,7 +2,7 @@
 mock                             # mock objects for unit tests
 pip                              # make sure the latest version of pip is installed
 psutil                           # library for process and system monitoring
-responses
+responses==0.10.6
 sphinx                           # doc generator
 #selenium
 
