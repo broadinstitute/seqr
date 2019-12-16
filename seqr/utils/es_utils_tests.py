@@ -1321,6 +1321,41 @@ class EsUtilsTest(TestCase):
         get_es_variants(results_model, page=2, num_results=2)
         self.assertIsNone(self.executed_search)
 
+    def test_compound_het_get_es_variants_secondary_annotation(self):
+        search_model = VariantSearch.objects.create(search={
+            'qualityFilter': {'min_gq': 10},
+            'annotations': {'other': []},
+            'inheritance': {'mode': 'compound_het'},
+            'annotations_secondary': {'other': []}
+        })
+        results_model = VariantSearchResults.objects.create(variant_search=search_model)
+        results_model.families.set(self.families)
+
+        variants, total_results = get_es_variants(results_model, num_results=2)
+        self.assertEqual(len(variants), 1)
+        self.assertListEqual(variants, [PARSED_COMPOUND_HET_VARIANTS])
+        self.assertEqual(total_results, 1)
+
+        self.assertCachedResults(results_model, {
+            'grouped_results': [{'ENSG00000135953': PARSED_COMPOUND_HET_VARIANTS}],
+            'total_results': 1,
+        })
+
+        self.maxDiff = None
+        annotation_query = {'bool': {'should': [{'terms': {'transcriptConsequenceTerms': []}},
+                                                {'terms': {'transcriptConsequenceTerms': []}}]}}
+        self.assertExecutedSearch(
+            filters=[annotation_query, COMPOUND_HET_INHERITANCE_QUERY],
+            gene_aggs=True,
+            sort=['xpos'],
+            start_index=0,
+            size=1
+        )
+
+        # test pagination does not fetch
+        get_es_variants(results_model, page=2, num_results=2)
+        self.assertIsNone(self.executed_search)
+
     def test_recessive_get_es_variants(self):
         search_model = VariantSearch.objects.create(search={
             'annotations': {'frameshift': ['frameshift_variant']},

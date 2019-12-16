@@ -853,13 +853,6 @@ class EsSearch(BaseEsSearch):
 
         loaded_result_count = len(grouped_variants + self.previous_search_results['grouped_results'])
 
-        # TODO debug pagination <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-        # logging.info('compound_het_results count: %d' % len(compound_het_results))
-        # logging.info('grouped_variants count: %d' % len(grouped_variants))
-        # logging.info('prev grouped_results count: %d' % len(self.previous_search_results['grouped_results']))
-        # logging.info('loaded_result_count: %d' % loaded_result_count)
-        # logging.info('prev total results: %d' % self.previous_search_results['total_results'])
-
         # Get requested page of variants
         merged_variant_results = []
         num_compound_hets = 0
