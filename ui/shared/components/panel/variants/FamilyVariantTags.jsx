@@ -276,7 +276,7 @@ const FamilyVariantTags = (
       tags = (savedVariant && savedVariant.tags) || []
     }
 
-    const hasVariantLink = areCompoundHets ? !savedVariant.includes(undefined) : true
+    const hasVariantLink = areCompoundHets ? notes.length + tags.length > 0 : true
 
     return (
       <div>

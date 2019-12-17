@@ -47,21 +47,19 @@ MetadataField.propTypes = {
 
 
 const TagFieldView = ({ simplifiedValue, initialValues, field, tagOptions, popup, tagAnnotation, editMetadata, ...props }) => {
-  const fieldValues = (Array.isArray(initialValues) ? intersection(initialValues[0][field], initialValues[1][field]) : initialValues[field]) || []
+  const fieldValues = initialValues[field] || []
 
   tagOptions = tagOptions.map((tag, i) => {
     return { ...tag, ...fieldValues.find(val => val.name === tag.name), optionIndex: i }
-  }).sort((a, b) => a.order - b.order)
+  })
 
   const tagOptionsMap = tagOptions.reduce((acc, tag) => {
     return { [tag.name]: tag, ...acc }
   }, {})
 
   const mappedValues = {
-    ...(Array.isArray(initialValues) ? initialValues[0] : initialValues),
+    ...initialValues,
     [field]: fieldValues.map(tag => tagOptionsMap[tag.name]).sort((a, b) => a.optionIndex - b.optionIndex),
-    compoundHetsGuids: Array.isArray(initialValues) ? initialValues.map(compoundHet => (compoundHet.variantGuid)).filter(variantGuid => variantGuid) : null,
-    compoundHetsToSave: Array.isArray(initialValues) ? initialValues.filter(compoundHet => !compoundHet.variantGuid) : null,
   }
 
   const formFieldProps = simplifiedValue ?
@@ -83,6 +81,7 @@ const TagFieldView = ({ simplifiedValue, initialValues, field, tagOptions, popup
     validate: (val) => { return (!val || val.category === NOTES_CATEGORY || val.metadata) ? undefined : 'Required' },
     component: MetadataField,
   }] : []
+
   return <OptionFieldView
     field={field}
     tagOptions={tagOptions}
