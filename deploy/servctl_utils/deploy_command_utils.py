@@ -169,6 +169,7 @@ def deploy_secrets(settings):
         "seqr-secrets",
         "postgres-secrets",
         "nginx-secrets",
+        "matchbox-secrets",
         "gcloud-client-secrets"
     ]:
         run("kubectl delete secret %(secret_label)s" % locals(), verbose=False, errors_to_ignore=["not found"])
