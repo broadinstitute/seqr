@@ -273,12 +273,11 @@ MME_DEFAULT_CONTACT_HREF = 'mailto:{}'.format(MME_DEFAULT_CONTACT_EMAIL)
 
 MME_CONFIG_DIR = os.environ.get('MME_CONFIG_DIR', '')
 MME_NODES = {}
-MME_NODE_ADMIN_TOKEN = "abcd"
 if MME_CONFIG_DIR:
     with open(os.path.join(MME_CONFIG_DIR, 'config.json'), 'r') as f:
         mme_config = json.load(f)
-        MME_NODE_ADMIN_TOKEN = mme_config['adminToken']
-        MME_NODES[MME_NODE_ADMIN_TOKEN] = {'name': MME_DEFAULT_CONTACT_INSTITUTION}
+        admin_token = mme_config['adminToken']
+        MME_NODES[admin_token] = {'name': MME_DEFAULT_CONTACT_INSTITUTION}
         for node in mme_config['nodes']:
             MME_NODES[node['accessToken']] = node
 

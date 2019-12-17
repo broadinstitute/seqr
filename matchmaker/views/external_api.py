@@ -132,7 +132,7 @@ def _generate_notification_for_incoming_match(results, incoming_query, incoming_
     new_matched_results = MatchmakerResult.objects.filter(
         originating_query=incoming_query).prefetch_related('submission')
     if not new_matched_results:
-        message_template = """A match request for {patient_id} came in from {institution} today. 
+        message_template = """A match request for {patient_id} came in from {institution} today.
         The contact information given was: {contact}.
         We found {existing_results} existing matching individuals but no new ones, *so no results were sent back*."""
         post_to_slack(MME_SLACK_EVENT_NOTIFICATION_CHANNEL, message_template.format(
@@ -187,7 +187,7 @@ matchbox on {insertion_date}, with seqr link
     We sent this email alert to: {email_addresses_alert_sent_to}\n{footer}."""
 
     post_to_slack(MME_SLACK_MATCH_NOTIFICATION_CHANNEL, message_template.format(
-        base_message=base_message, match_results='\n'.join([result_text for result_text, _ in match_results]),
+        base_message=base_message, match_results='\n'.join([text for text, _ in match_results]),
         email_addresses_alert_sent_to=', '.join(all_emails), footer=MME_EMAIL_FOOTER
     ))
 

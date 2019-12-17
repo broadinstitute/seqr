@@ -20,18 +20,19 @@ CONTACT_NOTE_FIELDS = ['guid', 'created_date', 'last_modified_date', 'institutio
 # This was actually a bug, as matchmaker replaces when it recieves a duplicate ID
 DUPLICATED_SUBMISSION_IDS = {
     '89dcbe5e752737cb1991dd34dfae68c1',
-     'BON_UC499_1_1',
-     'WAL_CH2900_CH2901',
-     'WAL_CH5200_CH5201',
-     'WAL_CH5700_CH5701',
-     'WAL_DC2200_DC2201',
-     'WAL_DC3500_DC3501',
-     'WAL_LIS4900_LIS4901',
-     'WAL_PAC2800_PAC2801',
+    'BON_UC499_1_1',
+    'WAL_CH2900_CH2901',
+    'WAL_CH5200_CH5201',
+    'WAL_CH5700_CH5701',
+    'WAL_DC2200_DC2201',
+    'WAL_DC3500_DC3501',
+    'WAL_LIS4900_LIS4901',
+    'WAL_PAC2800_PAC2801',
 }
 
 
-def bulk_copy_models(db_alias, source_model, dest_model, fields, field_process_funcs={}, db_filter=None):
+def bulk_copy_models(db_alias, source_model, dest_model, fields, field_process_funcs=None, db_filter=None):
+    field_process_funcs = field_process_funcs or {}
     all_source_models = source_model.objects.using(db_alias)
     if db_filter:
         all_source_models = all_source_models.filter(db_filter)

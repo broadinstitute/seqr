@@ -294,7 +294,7 @@ def send_mme_contact_email(request, matchmaker_result_guid):
             try:
                 json_body = e.response.json()
             except Exception:
-                pass
+                json_body = {'message':message}
         return create_json_response(json_body, status=getattr(e, 'status_code', 400), reason=message)
 
     update_model_from_json(result, {'weContacted': True})
@@ -344,7 +344,7 @@ def _parse_mme_results(submission, saved_results, user, additional_genes=None, r
     hpo_terms_by_id, genes_by_id, gene_symbols_to_ids = get_mme_genes_phenotypes_for_results(
         results, additional_genes=additional_genes, additional_hpo_ids=additional_hpo_ids)
 
-    parsed_results = [_parse_mme_result(result, hpo_terms_by_id, gene_symbols_to_ids, submission.guid) for result in results]
+    parsed_results = [_parse_mme_result(res, hpo_terms_by_id, gene_symbols_to_ids, submission.guid) for res in results]
     parsed_results_gy_guid = {result['matchStatus']['matchmakerResultGuid']: result for result in parsed_results}
 
     contact_notes = {note.institution: _get_json_for_model(note, user=user)

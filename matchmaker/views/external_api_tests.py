@@ -6,7 +6,7 @@ from django.test import TestCase
 
 from matchmaker.models import MatchmakerIncomingQuery
 
-TEST_ACCESS_TOKEN = 'abc123'
+TEST_ACCESS_TOKEN = 'erjhtg3558324u82'
 TEST_MME_NODES = {TEST_ACCESS_TOKEN: {'name': 'Test Node'}}
 
 
@@ -251,7 +251,7 @@ be found found at https://seqr.broadinstitute.org/matchmaker/disclaimer."""
         self.assertEqual(MatchmakerIncomingQuery.objects.filter(patient_id='12345').count(), 2)
         mock_post_to_slack.assert_called_with(
             'matchmaker_alerts',
-            """A match request for 12345 came in from Test Institute today. 
+            """A match request for 12345 came in from Test Institute today.
         The contact information given was: test@test.com.
         We found 2 existing matching individuals but no new ones, *so no results were sent back*."""
         )

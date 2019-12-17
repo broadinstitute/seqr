@@ -271,7 +271,11 @@ class MatchmakerAPITest(TestCase):
             'patient': {
                 'id': 'NA19675_1_01',
                 'label': 'NA19675_1',
-                'contact': {'href': 'mailto:matchmaker@broadinstitute.org,test_user@broadinstitute.org', 'name': 'Sam Baxter', 'institution': 'Broad Center for Mendelian Genomics'},
+                'contact': {
+                    'href': 'mailto:matchmaker@broadinstitute.org,test_user@broadinstitute.org',
+                    'name': 'Sam Baxter',
+                    'institution': 'Broad Center for Mendelian Genomics',
+                },
                 'species': 'NCBITaxon:9606',
                 'sex': 'MALE',
                 'features': [
