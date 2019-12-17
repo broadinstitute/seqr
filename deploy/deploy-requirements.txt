@@ -1,8 +1,7 @@
 pip                              # make sure the latest version of pip is installed
-mock                             # mock objects for unit tests
-psutil                           # library for process and system monitoring
+psutil==5.6.1                    # library for process and system monitoring
 
 # kubernetes deployment dependencies
-Jinja2==2.10.1                    # jinja templates are used in the kubernetes deployment scripts
-PyYAML==5.1                     # yaml parsing
+Jinja2==2.10.1                   # jinja templates are used in the kubernetes deployment scripts
+PyYAML==5.1                      # yaml parsing
 gunicorn==19.7.1                 # web server
