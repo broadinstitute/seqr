@@ -283,11 +283,11 @@ MME_DEFAULT_CONTACT_INSTITUTION = 'Broad Center for Mendelian Genomics'
 MME_DEFAULT_CONTACT_EMAIL = 'matchmaker@broadinstitute.org'
 MME_DEFAULT_CONTACT_HREF = 'mailto:{}'.format(MME_DEFAULT_CONTACT_EMAIL)
 
-MME_NODES_CONFIG_FILE_PATH = os.environ.get('MME_NODES_CONFIG_FILE_PATH', '')
+MME_CONFIG_DIR = os.environ.get('MME_CONFIG_DIR', '')
 MME_NODES = {}
 MME_NODE_ADMIN_TOKEN = "abcd"
-if MME_NODES_CONFIG_FILE_PATH:
-    with open(os.path.join(BASE_DIR, MME_NODES_CONFIG_FILE_PATH), 'r') as f:
+if MME_CONFIG_DIR:
+    with open(os.path.join(MME_CONFIG_DIR, 'config.json'), 'r') as f:
         mme_config = json.load(f)
         MME_NODE_ADMIN_TOKEN = mme_config['adminToken']
         MME_NODES[MME_NODE_ADMIN_TOKEN] = {'name': MME_DEFAULT_CONTACT_INSTITUTION}

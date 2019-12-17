@@ -189,7 +189,6 @@ def deploy_secrets(settings):
         "kubectl create secret generic seqr-secrets",
         "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/seqr/omim_key",
         "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/seqr/postmark_server_token",
-        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/seqr/mme_node_admin_token",
         "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/seqr/slack_token",
         "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/seqr/django_key",
     ]) % settings, errors_to_ignore=["already exists"])
@@ -208,9 +207,7 @@ def deploy_secrets(settings):
 
     run(" ".join([
         "kubectl create secret generic matchbox-secrets",
-        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/matchbox/nodes.json",
-        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/matchbox/application.properties",
-        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/matchbox/config.xml",
+        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/matchbox/config.json",
     ]) % settings, errors_to_ignore=["already exists"])
 
     account_key_path = "deploy/secrets/%(DEPLOY_TO_PREFIX)s/gcloud-client/service-account-key.json" % settings

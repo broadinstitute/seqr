@@ -35,6 +35,9 @@ spec:
       - name: gcloud-client-secrets-volume
         secret:
           secretName: gcloud-client-secrets
+      - name: matchbox-secrets-volume
+        secret:
+          secretName: matchbox-secrets
       - name: seqr-static-files
         gcePersistentDisk:
           # This disk must already exist.
@@ -55,6 +58,9 @@ spec:
         volumeMounts:
         - name: gcloud-client-secrets-volume
           mountPath: /.config
+          readOnly: true
+        - name: matchbox-secrets-volume
+          mountPath: {{ MME_CONFIG_DIR }}
           readOnly: true
         - name: seqr-static-files
           mountPath: {{ STATIC_MEDIA_DIR }}
@@ -99,11 +105,6 @@ spec:
             secretKeyRef:
               name: seqr-secrets
               key: django_key
-        - name: MME_NODE_ADMIN_TOKEN
-          valueFrom:
-            secretKeyRef:
-              name: seqr-secrets
-              key: mme_node_admin_token
         - name: GCLOUD_PROJECT      #  TODO can delete these and just rely on 'envFrom configMapRef' above once https://github.com/kubernetes/minikube/issues/2295 is fixed
           value: "{{ GCLOUD_PROJECT }}"
         - name: GCLOUD_ZONE
@@ -156,6 +157,8 @@ spec:
           value: "{{ UPLOADED_PEDIGREE_FILE_RECIPIENTS }}"
         - name: STATIC_MEDIA_DIR
           value: "{{ STATIC_MEDIA_DIR }}"
+        - name: MME_CONFIG_DIR
+          value: "{{ MME_CONFIG_DIR }}"
         readinessProbe:
           exec:
             command:
