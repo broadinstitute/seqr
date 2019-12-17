@@ -50,7 +50,7 @@ const TagFieldView = ({ simplifiedValue, initialValues, field, tagOptions, popup
 
   tagOptions = tagOptions.map((tag, i) => {
     return { ...tag, ...fieldValues.find(val => val.name === tag.name), optionIndex: i }
-  })
+  }).sort((a, b) => a.order - b.order)
 
   const tagOptionsMap = tagOptions.reduce((acc, tag) => {
     return { [tag.name]: tag, ...acc }
