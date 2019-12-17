@@ -327,6 +327,7 @@ const FamilyVariantTags = (
                 fieldName="Fxnl Data"
                 family={family}
                 variant={displayVariant}
+                tagValues={tags}
                 tagOptions={project.variantFunctionalTagTypes}
                 editMetadata
                 onSubmit={dispatchUpdateFamilyVariantTags}
