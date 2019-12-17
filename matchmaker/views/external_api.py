@@ -121,7 +121,7 @@ def _generate_notification_for_incoming_match(results, incoming_query, incoming_
     contact_href = incoming_patient['patient']['contact'].get('href', '(sorry I was not able to read the information given for URL)')
 
     if not results:
-        message_template = """A match request for {patient_id} came in from {institution} today. 
+        message_template = """A match request for {patient_id} came in from {institution} today.
         The contact information given was: {contact}.
         We didn't find any individuals in matchbox that matched that query well, *so no results were sent back*."""
         post_to_slack(MME_SLACK_EVENT_NOTIFICATION_CHANNEL, message_template.format(
