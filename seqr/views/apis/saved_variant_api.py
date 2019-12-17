@@ -13,7 +13,7 @@ from seqr.utils.xpos_utils import get_xpos
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants, get_json_for_variant_tag, \
-    get_json_for_variant_note, get_json_for_saved_variant, \
+    get_json_for_variant_functional_data, get_json_for_variant_note, get_json_for_saved_variant, \
     get_json_for_gene_notes_by_gene_id, get_project_locus_list_models
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_permissions
 from seqr.views.utils.variant_utils import update_project_saved_variant_json
@@ -279,9 +279,14 @@ def update_variant_tags_handler(request, variant_guids):
                 search_hash=request_json.get('searchHash'),
                 created_by=request.user,
             )
+
     update = {}
     for variant_guid in all_variant_guids:
-        update[variant_guid] = get_json_for_saved_variant(saved_variant, add_tags=True)
+        saved_variant = SavedVariant.objects.get(guid=variant_guid)
+        update[variant_guid] = {
+            'tags': [get_json_for_variant_tag(tag) for tag in saved_variant.varianttag_set.all()],
+            'functionalData': [get_json_for_variant_functional_data(tag) for tag in saved_variant.variantfunctionaldata_set.all()]
+        }
     return create_json_response({'savedVariantsByGuid': update})
 
 

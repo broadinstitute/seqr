@@ -172,8 +172,9 @@ ShortcutTags.propTypes = {
 }
 
 
-const VariantTagField = ({ variant, fieldName, family, ...props }) => {
-  const variantNames = (Array.isArray(variant) ? variant : [variant]).map(eachVariant => `chr${eachVariant.chrom}:${eachVariant.pos} ${eachVariant.ref} > ${eachVariant.alt}`)
+const VariantTagField = ({ variant, fieldName, family, tagValues, ...props }) => {
+  const variantNames = (Array.isArray(variant) ? variant : [variant]).map(v => `chr${v.chrom}:${v.pos} ${v.ref} > ${v.alt}`)
+  const initialValues = Array.isArray(variant) ? { tags: tagValues } : { ...variant, tags: tagValues }
   return (
     <TagFieldView
       idField="variantId"
@@ -181,7 +182,7 @@ const VariantTagField = ({ variant, fieldName, family, ...props }) => {
       modalTitle={`Edit Variant ${fieldName} for Family ${family.displayName} for ${variantNames.join(', ')}`}
       modalSize="large"
       editLabel={`Edit ${fieldName}`}
-      initialValues={variant}
+      initialValues={initialValues}
       compact
       isEditable
       popup={taggedByPopup}
@@ -195,6 +196,7 @@ VariantTagField.propTypes = {
   variant: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
   fieldName: PropTypes.string,
   family: PropTypes.object.isRequired,
+  tagValues: PropTypes.array,
 }
 
 const VariantNoteField = ({ action, note, variant, family, ...props }) => {
@@ -312,6 +314,7 @@ const FamilyVariantTags = (
               fieldName="Tags"
               family={family}
               variant={displayVariant}
+              tagValues={tags}
               tagOptions={project.variantTagTypes.filter(vtt => vtt.name !== NOTE_TAG_NAME)}
               onSubmit={dispatchUpdateFamilyVariantTags}
             />

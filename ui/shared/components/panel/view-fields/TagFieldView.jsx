@@ -3,7 +3,6 @@ import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { Popup, Form } from 'semantic-ui-react'
 import { Field } from 'redux-form'
-import intersection from 'lodash/intersection'
 
 import { HorizontalSpacer } from '../../Spacers'
 import { ColoredLabel, ColoredOutlineLabel } from '../../StyledComponents'
