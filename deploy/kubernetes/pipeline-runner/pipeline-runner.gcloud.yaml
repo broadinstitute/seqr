@@ -54,46 +54,14 @@ spec:
           - configMapRef:
               name: all-settings
         env:
-        - name: POSTMARK_SERVER_TOKEN
-          valueFrom:
-            secretKeyRef:
-              name: seqr-secrets
-              key: postmark_server_token
-        - name: SLACK_TOKEN
-          valueFrom:
-            secretKeyRef:
-              name: seqr-secrets
-              key: slack_token
         - name: GCLOUD_PROJECT      #  TODO can delete these and just rely on 'envFrom configMapRef' above once https://github.com/kubernetes/minikube/issues/2295 is fixed
           value: "{{ GCLOUD_PROJECT }}"
         - name: GCLOUD_ZONE
           value: "{{ GCLOUD_ZONE }}"
         - name: HOST_MACHINE_IP
           value: "{{ HOST_MACHINE_IP }}"
-        - name: MATCHBOX_SERVICE_HOSTNAME
-          value: "{{ MATCHBOX_SERVICE_HOSTNAME }}"
-        - name: POSTGRES_SERVICE_HOSTNAME
-          value: "{{ POSTGRES_SERVICE_HOSTNAME }}"
-        - name: MONGO_SERVICE_HOSTNAME
-          value: "{{ MONGO_SERVICE_HOSTNAME }}"
-        - name: PHENOTIPS_SERVICE_HOSTNAME
-          value: "{{ PHENOTIPS_SERVICE_HOSTNAME }}"
-        - name: ELASTICSEARCH_SERVICE_HOSTNAME
-          value: "{{ ELASTICSEARCH_SERVICE_HOSTNAME }}"
-        - name: REDIS_SERVICE_HOSTNAME
-          value: "{{ REDIS_SERVICE_HOSTNAME }}"
         - name: SEQR_SERVICE_PORT
           value: "{{ SEQR_SERVICE_PORT }}"
-        - name: PHENOTIPS_SERVICE_PORT
-          value: "{{ PHENOTIPS_SERVICE_PORT }}"
-        - name: POSTGRES_SERVICE_PORT
-          value: "{{ POSTGRES_SERVICE_PORT }}"
-        - name: MATCHBOX_SERVICE_PORT
-          value: "{{ MATCHBOX_SERVICE_PORT }}"
-        - name: ELASTICSEARCH_SERVICE_PORT
-          value: "{{ ELASTICSEARCH_SERVICE_PORT }}"
-        - name: MONGO_SERVICE_PORT
-          value: "{{ MONGO_SERVICE_PORT }}"
         - name: DEPLOY_TO
           value: "{{ DEPLOY_TO }}"
         - name: DEPLOY_TO_PREFIX

@@ -266,18 +266,6 @@ PHENOTIPS_ADMIN_PWD = 'admin'
 REDIS_SERVICE_HOSTNAME = os.environ.get('REDIS_SERVICE_HOSTNAME', 'localhost')
 
 # Matchmaker
-MME_SERVER_HOST = 'http://{host}:{port}'.format(
-    host=os.environ.get('MATCHBOX_SERVICE_HOSTNAME', 'localhost'),
-    port=os.environ.get('MATCHBOX_SERVICE_PORT', 9020)
-)
-#  TODO remove
-MME_ADD_INDIVIDUAL_URL = MME_SERVER_HOST + '/patient/add'
-MME_DELETE_INDIVIDUAL_URL = MME_SERVER_HOST + '/patient/delete'
-MME_LOCAL_MATCH_URL = MME_SERVER_HOST + '/match'
-MME_EXTERNAL_MATCH_URL = MME_SERVER_HOST + '/match/external'
-MME_MATCHBOX_METRICS_URL = MME_SERVER_HOST + '/metrics'
-MME_MATCHBOX_PUBLIC_METRICS_URL = MME_SERVER_HOST + '/metrics/public'
-
 MME_DEFAULT_CONTACT_NAME = 'Samantha Baxter'
 MME_DEFAULT_CONTACT_INSTITUTION = 'Broad Center for Mendelian Genomics'
 MME_DEFAULT_CONTACT_EMAIL = 'matchmaker@broadinstitute.org'

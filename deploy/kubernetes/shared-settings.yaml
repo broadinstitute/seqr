@@ -1,7 +1,6 @@
 #####################################################
 ####### SETTINGS THAT MAY NEED TO BE MODIFIED #######
 
-MONGO_DISK_SIZE: '200Gb'      # used when creating the GKE cluster on gcloud deployments
 POSTGRES_DISK_SIZE: '200Gb'   # used when creating the GKE cluster on gcloud deployments
 SEQR_STATIC_FILES_DISK_SIZE: '50Gb'  # used when creating the GKE cluster on gcloud deployments
 ELASTICSEARCH_DISK_SIZE: 200  # used when creating the GKE cluster on gcloud deployments
@@ -21,19 +20,15 @@ DATA_DIR: '/data'
 STATIC_MEDIA_DIR: '/seqr_static_files'
 MME_CONFIG_DIR: '/mme'
 
-MATCHBOX_SERVICE_HOSTNAME: matchbox
 POSTGRES_SERVICE_HOSTNAME: postgres
 POSTGRES_USERNAME: postgres
-MONGO_SERVICE_HOSTNAME: mongo
 ELASTICSEARCH_SERVICE_HOSTNAME: elasticsearch
 KIBANA_SERVICE_HOSTNAME: kibana
 PHENOTIPS_SERVICE_HOSTNAME: phenotips
 REDIS_SERVICE_HOSTNAME: redis
 
 COCKPIT_SERVICE_PORT: 9090
-MATCHBOX_SERVICE_PORT: 9020
 POSTGRES_SERVICE_PORT: 5432
-MONGO_SERVICE_PORT: 27017
 ELASTICSEARCH_SERVICE_PORT: 9200
 KIBANA_SERVICE_PORT: 5601
 PHENOTIPS_SERVICE_PORT: 8080
