@@ -1,21 +1,21 @@
-Django==1.11.23                  # core server-side framework
-django-anymail==2.2              # for sending emails using cloud-based mail service providers
-django-guardian==1.4.6           # object-level permissions for database records
-django-hijack==2.1.3             # allows admins to login as other user
-django-cors-headers==2.2.0       # allows CORS requests for client-side development
+Django==1.11.26                  # core server-side framework. Behind a major version due to missing Python 2 support
+django-anymail==7.0.0            # for sending emails using cloud-based mail service providers
+django-guardian==1.5.1           # object-level permissions for database records. Behind a major version due to missing Python 2 support
+django-hijack==2.1.10            # allows admins to login as other user
+django-cors-headers==3.0.2       # allows CORS requests for client-side development
 
-elasticsearch==6.2.0             # elasticsearch client
-elasticsearch-dsl==6.1.0	     # elasticsearch query utilities
+elasticsearch==6.4.0             # elasticsearch client
+elasticsearch-dsl==6.4.0	     # elasticsearch query utilities
 
-jmespath==0.9.3
+jmespath==0.9.4
 openpyxl==2.6.4                  # library for reading/writing Excel files
-Pillow==4.0.0                    # required dependency of Djagno ImageField-type database records
-psycopg2==2.7.5                  # postgres database access
-pyliftover==0.3                  # GRCh37/GRCh38 liftover
-requests==2.20.0                 # simpler way to make http requests
-redis==2.10.6                    # client lib for the redis in-memory database - used for caching server-side objects
-six==1.12.0                      # Django dependency. This version is required by gsutil
-slacker==0.9.42                  # library for sending slack messages
+pillow==6.2.1                    # required dependency of Djagno ImageField-type database records
+psycopg2==2.8.4                  # postgres database access
+pyliftover==0.4                  # GRCh37/GRCh38 liftover
+requests==2.22.0                 # simpler way to make http requests
+redis==3.3.11                    # client lib for the redis in-memory database - used for caching server-side objects
+six==1.13.0                      # Django dependency
+slacker==0.13.0                  # library for sending slack messages
 slugify==0.0.1                   # used for encoding names for guids
-tqdm==4.31.1                     # convenient way to create progress bar for long-running command-line operations
-whitenoise==3.3.0                # simplified static file handling
+tqdm==4.40.2                     # convenient way to create progress bar for long-running command-line operations
+whitenoise==3.3.0                # simplified static file handling. Behind a major version due to missing Python 2 support
