@@ -61,8 +61,8 @@ HIJACK_LOGIN_REDIRECT_URL = '/'
 
 # cors settings
 CORS_ORIGIN_WHITELIST = (
-    'localhost:3000',
-    'localhost:8000',
+    'http://localhost:3000',
+    'http://localhost:8000',
 )
 CORS_ALLOW_CREDENTIALS = True
 

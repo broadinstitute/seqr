@@ -12,7 +12,7 @@ GENOME_VERSION_CHOICES = [
     (GENOME_VERSION_GRCh37, "GRCh37"),
     (GENOME_VERSION_GRCh38, "GRCh38")
 ]
-
+GENOME_VERSION_LOOKUP = {k: v for (k, v) in GENOME_VERSION_CHOICES}
 
 class ReferenceDataRouter(object):
     """
