@@ -16,7 +16,7 @@ from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants, get_
     get_json_for_variant_functional_data, get_json_for_variant_note, get_json_for_saved_variant, \
     get_json_for_gene_notes_by_gene_id, get_project_locus_list_models
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_permissions
-from seqr.views.utils.variant_utils import update_project_saved_variant_json
+from seqr.views.utils.variant_utils import update_project_saved_variant_json, reset_cached_search_results
 from settings import API_LOGIN_REQUIRED_URL
 
 
@@ -237,6 +237,7 @@ def _create_new_tags(saved_variant, tags_json, user):
 @csrf_exempt
 def update_saved_variant_json(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user, permission_level=CAN_EDIT)
+    reset_cached_search_results(project)
     updated_saved_variant_guids = update_project_saved_variant_json(project)
 
     return create_json_response({variant_guid: None for variant_guid in updated_saved_variant_guids})

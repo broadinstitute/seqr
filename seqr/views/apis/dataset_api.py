@@ -13,10 +13,8 @@ from seqr.views.utils.dataset_utils import match_sample_ids_to_sample_records, v
     get_elasticsearch_index_samples, load_mapping_file, validate_alignment_dataset_path
 from seqr.views.utils.file_utils import save_uploaded_file
 from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.json_to_orm_utils import update_project_from_json, update_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_samples, get_json_for_sample
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_permissions
-from seqr.views.utils.variant_utils import reset_cached_search_results
 from settings import API_LOGIN_REQUIRED_URL
 
 
@@ -113,17 +111,17 @@ def add_variants_dataset_handler(request, project_guid):
     if not matched_sample_id_to_sample_record:
         return create_json_response({'samplesByGuid': {}})
 
-    update_project_from_json(project, {'has_new_search': True})
-    reset_cached_search_results(project)
-
-    families_to_update = [
-        family for family in included_families if family.analysis_status == Family.ANALYSIS_STATUS_WAITING_FOR_DATA]
-    for family in families_to_update:
-        update_model_from_json(family, {'analysis_status': Family.ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS})
+    family_guids_to_update = [
+        family.guid for family in included_families if family.analysis_status == Family.ANALYSIS_STATUS_WAITING_FOR_DATA
+    ]
+    Family.objects.filter(guid__in=family_guids_to_update).update(
+        analysis_status=Family.ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS
+    )
 
     response_json = _get_samples_json(matched_sample_id_to_sample_record, inactivate_sample_guids, project_guid)
-    response_json['familiesByGuid'] = {family.guid: {'analysisStatus': Family.ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS}
-                                       for family in families_to_update}
+    response_json['familiesByGuid'] = {family_guid: {'analysisStatus': Family.ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS}
+                                       for family_guid in family_guids_to_update}
+
     return create_json_response(response_json)
 
 
