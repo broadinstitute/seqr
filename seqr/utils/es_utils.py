@@ -40,9 +40,6 @@ def get_index_metadata(index_name, client):
     index_metadata = {}
     for index_name, mapping in mappings.items():
         variant_mapping = mapping['mappings'].get(VARIANT_DOC_TYPE, {})
-        # TODO remove this check once all projects are migrated
-        if not variant_mapping['properties'].get('samples_num_alt_1'):
-            raise InvalidIndexException('Index "{}" does not have a valid schema'.format(index_name))
         index_metadata[index_name] = variant_mapping.get('_meta', {})
         index_metadata[index_name]['fields'] = variant_mapping['properties'].keys()
     return index_metadata
@@ -984,7 +981,7 @@ INHERITANCE_FILTERS = {
     },
 }
 
-#  TODO move liftover to hail pipeline once upgraded to 0.2
+# TODO  move liftover to hail pipeline once upgraded to 0.2 (https://github.com/macarthur-lab/seqr/issues/1010)
 LIFTOVER_GRCH38_TO_GRCH37 = None
 def _liftover_grch38_to_grch37():
     global LIFTOVER_GRCH38_TO_GRCH37

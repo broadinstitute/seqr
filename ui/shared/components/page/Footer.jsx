@@ -20,8 +20,8 @@ const Footer = ({ version }) =>
     <Table.Header>
       <Table.Row>
         <TableHeaderCell width={1} />
-        <TableHeaderCell width={1} disabled>seqr {version}</TableHeaderCell>
-        <TableHeaderCell width={7}>
+        <TableHeaderCell width={2} disabled>seqr {version}</TableHeaderCell>
+        <TableHeaderCell width={6}>
           For bug reports or feature requests please submit  &nbsp;
           <a href="https://github.com/macarthur-lab/seqr/issues">Github Issues</a>
         </TableHeaderCell>
