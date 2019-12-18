@@ -58,8 +58,10 @@ const TagFieldView = ({ simplifiedValue, initialValues, tagValues, field, tagOpt
   }, {})
 
   const mappedValues = {
-    ...initialValues,
+    ...(Array.isArray(initialValues) ? initialValues[0] : initialValues),
     [field]: fieldValues.map(tag => tagOptionsMap[tag.name]).sort((a, b) => a.optionIndex - b.optionIndex),
+    compoundHetsGuids: Array.isArray(initialValues) ? initialValues.map(compoundHet => compoundHet.variantGuid).filter(guid => guid) : null,
+    compoundHetsToSave: Array.isArray(initialValues) ? initialValues.filter(compoundHet => !compoundHet.variantGuid) : null,
   }
 
   const formFieldProps = simplifiedValue ?
