@@ -1,0 +1,5 @@
+# dev dependencies
+django-debug-toolbar             # https://github.com/jazzband/django-debug-toolbar
+django-debug-toolbar-request-history  # for debugging database queries on async requests.
+mock                             # mock objects for unit tests
+responses==0.10.6                # mock HTTP responses for unit tests
