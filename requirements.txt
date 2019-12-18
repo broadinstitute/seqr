@@ -14,6 +14,7 @@ psycopg2==2.8.4                  # postgres database access
 pyliftover==0.4                  # GRCh37/GRCh38 liftover
 requests==2.22.0                 # simpler way to make http requests
 redis==3.3.11                    # client lib for the redis in-memory database - used for caching server-side objects
+requests-toolbelt==0.9.1         # for troubleshooting requests
 six==1.13.0                      # Django dependency
 slacker==0.13.0                  # library for sending slack messages
 slugify==0.0.1                   # used for encoding names for guids
