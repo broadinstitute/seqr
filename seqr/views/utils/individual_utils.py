@@ -157,7 +157,7 @@ def export_individuals(
             i.mother.individual_id if i.mother else None,
             _SEX_TO_EXPORTED_VALUE.get(i.sex),
             __AFFECTED_TO_EXPORTED_VALUE.get(i.affected),
-            i.notes,  # TODO should strip markdown (or be moved to client-side export)
+            i.notes,
         ])
 
         if include_display_name:

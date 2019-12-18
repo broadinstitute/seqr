@@ -96,7 +96,6 @@ Variant.propTypes = {
 
 const CompoundHets = ({ variants }) => {
   const sharedGeneIds = intersection(variants.map(({ transcripts }) => Object.keys(transcripts))[0]) || []
-  // console.log(variants)
   return (
     <StyledVariantRow key={variants.map(v => v.variantId).join()} >
       <VerticalSpacer height={16} />

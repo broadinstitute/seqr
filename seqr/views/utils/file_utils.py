@@ -5,7 +5,7 @@ import json
 import logging
 import os
 import tempfile
-import xlrd
+import openpyxl as xl
 
 
 from django.contrib.auth.decorators import login_required
@@ -43,9 +43,9 @@ def parse_file(filename, stream):
         return [row for row in csv.reader(stream)]
 
     elif filename.endswith('.xls') or filename.endswith('.xlsx'):
-        wb = xlrd.open_workbook(file_contents=stream.read())
-        ws = wb.sheet_by_index(0)
-        return [[_parse_excel_string_cell(ws.cell(rowx=i, colx=j)) for j in range(ws.ncols)] for i in iter(range(ws.nrows))]
+        wb = xl.load_workbook(stream, read_only=True)
+        ws = wb[wb.sheetnames[0]]
+        return [[_parse_excel_string_cell(cell) for cell in row] for row in ws.iter_rows()]
 
     elif filename.endswith('.json'):
         return json.loads(stream.read())
@@ -55,7 +55,7 @@ def parse_file(filename, stream):
 
 def _parse_excel_string_cell(cell):
     cell_value = cell.value
-    if cell.ctype in (2,3) and int(cell_value) == cell_value:
+    if cell_value and cell.data_type == 'n' and int(cell_value) == cell_value:
         cell_value = '{:.0f}'.format(cell_value)
     return cell_value
 

@@ -20,6 +20,8 @@ export const GENOME_VERSION_OPTIONS = [
   { value: GENOME_VERSION_37, text: 'GRCh37' },
   { value: GENOME_VERSION_38, text: 'GRCh38' },
 ]
+export const GENOME_VERSION_LOOKUP = GENOME_VERSION_OPTIONS.reduce((acc, { value, text }) =>
+  ({ ...acc, [value]: text }), {})
 export const GENOME_VERSION_FIELD = {
   name: 'genomeVersion', label: 'Genome Version', component: RadioGroup, options: GENOME_VERSION_OPTIONS,
 }

@@ -7,6 +7,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.mail.message import EmailMessage
 from django.views.decorators.csrf import csrf_exempt
 
+from reference_data.models import GENOME_VERSION_LOOKUP
 from seqr.models import Individual, MatchmakerResult, MatchmakerContactNotes, SavedVariant
 from seqr.utils.communication_utils import post_to_slack
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
@@ -170,7 +171,7 @@ def update_mme_submission(request, individual_guid):
                 'referenceBases': gene_variant['ref'],
                 'referenceName': gene_variant['chrom'],
                 'start': gene_variant['pos'],
-                'assembly': gene_variant['genomeVersion'],
+                'assembly': GENOME_VERSION_LOOKUP[gene_variant['genomeVersion']],
             }
         genomic_features.append(feature)
 

@@ -11,6 +11,7 @@ import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
 import {
   SAMPLE_TYPE_LOOKUP,
   DATASET_TYPE_VARIANT_CALLS,
+  GENOME_VERSION_LOOKUP,
 } from 'shared/utils/constants'
 import {
   getAnalysisStatusCounts,
@@ -85,6 +86,7 @@ const ProjectOverview = ({ project, familiesByGuid, individualsByGuid, samplesBy
         />
       </Grid.Column>
       <Grid.Column width={5}>
+        <DetailSection title="Genome Version" content={GENOME_VERSION_LOOKUP[project.genomeVersion]} />
         {Object.keys(loadedProjectSamples).length > 0 ?
           Object.keys(loadedProjectSamples).sort().map((sampleType, i) => (
             <DetailSection

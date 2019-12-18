@@ -28,8 +28,9 @@ def no_login_main_app(request, *args, **kwargs):
 
 
 def _render_app_html(request, initial_json):
-    initial_json['meta'] = {'version': SEQR_VERSION}
     html = loader.render_to_string('app.html')
+    ui_version = re.search('static/app-(.*)\.js', html).group(1)
+    initial_json['meta'] = {'version': '{}-{}'.format(SEQR_VERSION, ui_version)}
 
     html = html.replace(
         "window.initialJSON=null",

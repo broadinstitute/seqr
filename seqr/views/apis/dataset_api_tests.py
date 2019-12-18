@@ -160,8 +160,6 @@ class DatasetAPITest(TransactionTestCase):
         self.assertTrue(response_json['samplesByGuid'][existing_sample_guid]['loadedDate'].startswith(today))
         self.assertTrue(response_json['samplesByGuid'][new_sample_guid]['loadedDate'].startswith(today))
 
-        self.assertTrue(Project.objects.get(guid=PROJECT_GUID).has_new_search)
-
     def test_receive_alignment_table_handler(self):
         url = reverse(receive_alignment_table_handler, args=[PROJECT_GUID])
         _check_login(self, url)
