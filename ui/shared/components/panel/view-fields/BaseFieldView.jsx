@@ -42,7 +42,7 @@ class BaseFieldView extends React.PureComponent {
     if (this.props.isPrivate && !this.props.user.isStaff) {
       return null
     }
-    const fieldValue = this.props.initialValues[this.props.field]
+    const fieldValue = this.props.fieldValue || this.props.initialValues[this.props.field]
     const hasValue = (fieldValue && (!Object.getOwnPropertyNames(fieldValue).includes('length') || fieldValue.length > 0)) || this.props.showEmptyValues
     if (!this.props.isEditable && !hasValue) {
       return null
@@ -156,6 +156,7 @@ BaseFieldView.propTypes = {
   field: PropTypes.string.isRequired,
   idField: PropTypes.string,
   initialValues: PropTypes.object,
+  fieldValue: PropTypes.any,
   compact: PropTypes.bool,
   style: PropTypes.object,
   editLabel: PropTypes.string,

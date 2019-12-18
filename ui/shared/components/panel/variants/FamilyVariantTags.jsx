@@ -172,31 +172,26 @@ ShortcutTags.propTypes = {
 }
 
 
-const VariantTagField = ({ variant, fieldName, family, tagValues, areCompoundHets, ...props }) => {
-  const variantNames = (areCompoundHets ? variant : [variant]).map(v => `chr${v.chrom}:${v.pos} ${v.ref} > ${v.alt}`)
-  const initialValues = areCompoundHets ? variant : { ...variant, tags: tagValues }
-  return (
-    <TagFieldView
-      idField="variantId"
-      modalId={family.familyGuid}
-      modalTitle={`Edit Variant ${fieldName} for Family ${family.displayName} for ${variantNames.join(', ')} ${areCompoundHets}`}
-      modalSize="large"
-      editLabel={`Edit ${fieldName}`}
-      initialValues={initialValues}
-      compact
-      isEditable
-      popup={taggedByPopup}
-      {...props}
-    />
-  )
-}
+const VariantTagField = ({ variant, fieldName, family, tagValues, ...props }) =>
+  <TagFieldView
+    idField="variantId"
+    modalId={family.familyGuid}
+    modalTitle={`Edit Variant ${fieldName} for Family ${family.displayName} for ${(Array.isArray(variant) ? variant : [variant]).map(v => `chr${v.chrom}:${v.pos} ${v.ref} > ${v.alt}`).join(', ')}`}
+    modalSize="large"
+    editLabel={`Edit ${fieldName}`}
+    initialValues={variant}
+    tagValues={tagValues}
+    compact
+    isEditable
+    popup={taggedByPopup}
+    {...props}
+  />
 
 VariantTagField.propTypes = {
   variant: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
   fieldName: PropTypes.string,
   family: PropTypes.object.isRequired,
-  tagValues: PropTypes.array,
-  areCompoundHets: PropTypes.bool,
+  tagValues: PropTypes.object,
 }
 
 const VariantNoteField = ({ action, note, variant, family, ...props }) => {
@@ -277,6 +272,7 @@ const FamilyVariantTags = (
     else {
       tags = (savedVariant && savedVariant.tags) || []
     }
+    const tagValues = { tags }
 
     const hasVariantLink = areCompoundHets ? notes.length + tags.length > 0 : true
 
@@ -314,10 +310,9 @@ const FamilyVariantTags = (
               fieldName="Tags"
               family={family}
               variant={displayVariant}
-              tagValues={tags}
+              tagValues={tagValues}
               tagOptions={project.variantTagTypes.filter(vtt => vtt.name !== NOTE_TAG_NAME)}
               onSubmit={dispatchUpdateFamilyVariantTags}
-              areCompoundHets={areCompoundHets}
             />
             <HorizontalSpacer width={5} />
             {tags.some(tag => tag.category === DISCOVERY_CATEGORY_NAME) &&
@@ -328,11 +323,10 @@ const FamilyVariantTags = (
                 fieldName="Fxnl Data"
                 family={family}
                 variant={displayVariant}
-                tagValues={tags}
+                tagValues={tagValues}
                 tagOptions={project.variantFunctionalTagTypes}
                 editMetadata
                 onSubmit={dispatchUpdateFamilyVariantTags}
-                areCompoundHets={areCompoundHets}
               />
               <HorizontalSpacer width={5} />
             </span>

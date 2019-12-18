@@ -45,7 +45,10 @@ MetadataField.propTypes = {
 }
 
 
-const TagFieldView = ({ simplifiedValue, initialValues, field, tagOptions, popup, tagAnnotation, editMetadata, ...props }) => {
+const TagFieldView = ({ simplifiedValue, initialValues, tagValues, field, tagOptions, popup, tagAnnotation, editMetadata, ...props }) => {
+
+  initialValues = tagValues ? { ...initialValues, ...tagValues } : initialValues
+
   const fieldValues = initialValues[field] || []
 
   tagOptions = tagOptions.map((tag, i) => {
@@ -86,6 +89,7 @@ const TagFieldView = ({ simplifiedValue, initialValues, field, tagOptions, popup
     tagOptions={tagOptions}
     formFieldProps={formFieldProps}
     additionalEditFields={additionalFields}
+    fieldValue={tagValues[field]}
     initialValues={simplifiedValue ? initialValues : mappedValues}
     modalStyle={MODAL_STYLE}
     fieldDisplay={displayFieldValues =>
@@ -110,6 +114,7 @@ TagFieldView.propTypes = {
   field: PropTypes.string.isRequired,
   idField: PropTypes.string.isRequired,
   initialValues: PropTypes.oneOfType([PropTypes.object, PropTypes.array]).isRequired,
+  tagValues: PropTypes.object,
   tagOptions: PropTypes.array.isRequired,
   onSubmit: PropTypes.func.isRequired,
   editMetadata: PropTypes.bool,
