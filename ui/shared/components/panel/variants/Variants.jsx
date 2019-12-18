@@ -96,12 +96,13 @@ Variant.propTypes = {
 
 const CompoundHets = ({ variants }) => {
   const sharedGeneIds = intersection(variants.map(({ transcripts }) => Object.keys(transcripts))[0]) || []
+  // console.log(variants)
   return (
     <StyledVariantRow key={variants.map(v => v.variantId).join()} >
       <VerticalSpacer height={16} />
       {variants[0].familyGuids.map(familyGuid =>
         <Grid.Column key={familyGuid} width={16}>
-          <FamilyVariantTags familyGuid={familyGuid} variant={variants} key={variants[0].variantId} areCompoundHets />
+          <FamilyVariantTags familyGuid={familyGuid} variant={variants} key={variants.map(v => v.variantId).join()} areCompoundHets />
         </Grid.Column>,
       )}
       <Grid.Column width={16}>

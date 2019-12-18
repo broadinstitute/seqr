@@ -71,7 +71,8 @@ def _create_single_saved_variant(variant_json, family):
 
 def _create_multiple_saved_variants(request_json, family):
     saved_variants = []
-    non_variant_key = ['searchHash', 'tags', 'functionalData', 'notes', 'note', 'submitToClinvar', 'saveAsGeneNote']
+    non_variant_key = ['searchHash', 'tags', 'functionalData', 'notes', 'note', 'submitToClinvar', 'saveAsGeneNote',
+                       'compoundHetsGuids', 'compoundHetsToSave', 'familyGuid']
     for key in request_json.keys():
         if key not in non_variant_key:
             compound_het = request_json[key]
@@ -232,7 +233,7 @@ def update_variant_tags_handler(request, variant_guids):
     updated_functional_data = request_json.get('functionalData', [])
 
     saved_variants = []
-    unsaved_compound_hets = request_json.get('compoundHetsToSave') or []
+    unsaved_compound_hets = request_json.get('compoundHetsToSave', [])
     all_variant_guids = variant_guids.split(',')
 
     # get saved_variants
@@ -251,8 +252,11 @@ def update_variant_tags_handler(request, variant_guids):
     existing_tag_guids = [tag['tagGuid'] for tag in updated_tags if tag.get('tagGuid')]
 
     for tag in saved_variants[0].varianttag_set.exclude(guid__in=existing_tag_guids):
-        delete_seqr_model(tag)
-
+        if len(all_variant_guids) > 0:
+            if len(tag.saved_variants.all()) > 1:
+                delete_seqr_model(tag)
+        else:
+            delete_seqr_model(tag)
     _create_new_tags(saved_variants, request_json, request.user)
 
     # Update functional data
@@ -260,7 +264,11 @@ def update_variant_tags_handler(request, variant_guids):
     existing_functional_guids = [tag['tagGuid'] for tag in updated_functional_data if tag.get('tagGuid')]
 
     for tag in saved_variants[0].variantfunctionaldata_set.exclude(guid__in=existing_functional_guids):
-        delete_seqr_model(tag)
+        if len(all_variant_guids) > 0:
+            if len(tag.saved_variants.all()) > 1:
+                delete_seqr_model(tag)
+        else:
+            delete_seqr_model(tag)
 
     for tag in updated_functional_data:
         if tag.get('tagGuid'):

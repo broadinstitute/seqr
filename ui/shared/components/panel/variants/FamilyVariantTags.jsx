@@ -4,7 +4,6 @@ import { connect } from 'react-redux'
 import { NavLink } from 'react-router-dom'
 import { Icon, Popup } from 'semantic-ui-react'
 import styled from 'styled-components'
-import intersection from 'lodash/intersection'
 
 import { updateVariantNote, updateVariantTags } from 'redux/rootReducer'
 import {
@@ -122,11 +121,9 @@ ShortcutTagToggle.propTypes = {
   tag: PropTypes.object,
 }
 
-const ShortcutTags = ({ variant, dispatchUpdateFamilyVariantTags, familyGuid }) => {
-  const singleVariant = Array.isArray(variant) ? variant[0] : variant
-  const tags = Array.isArray(variant) ? intersection(variant[0].tags, variant[1].tags) : variant.tags
+const ShortcutTags = ({ variant, dispatchUpdateFamilyVariantTags, tagValues, familyGuid }) => {
   const appliedShortcutTags = SHORTCUT_TAGS.reduce((acc, tagName) => {
-    const appliedTag = (singleVariant.tags || []).find(tag => tag.name === tagName)
+    const appliedTag = (tagValues.tags || []).find(tag => tag.name === tagName)
     return appliedTag ? { ...acc, [tagName]: appliedTag } : acc
   }, {})
   const shortcutTagFields = SHORTCUT_TAGS.map(tagName => ({
@@ -143,11 +140,12 @@ const ShortcutTags = ({ variant, dispatchUpdateFamilyVariantTags, familyGuid }) 
         return [...allTags, { name: tagName }]
       }
       return allTags.filter(tag => tag.name !== tagName)
-    }, tags || [])
+    }, tagValues.tags || [])
     return dispatchUpdateFamilyVariantTags({
-      ...singleVariant,
+      ...variant,
       tags: updatedTags,
-      compoundHetGuids: Array.isArray(variant) ? variant.map(compoundHet => compoundHet.variantGuid) : null,
+      compoundHetsGuids: Array.isArray(variant) ? variant.map(compoundHet => compoundHet.variantGuid).filter(guid => guid) : null,
+      compoundHetsToSave: Array.isArray(variant) ? variant.filter(compoundHet => !compoundHet.variantGuid) : null,
     })
   }
 
@@ -169,6 +167,7 @@ ShortcutTags.propTypes = {
   variant: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
   dispatchUpdateFamilyVariantTags: PropTypes.func,
   familyGuid: PropTypes.string.isRequired,
+  tagValues: PropTypes.object,
 }
 
 
@@ -176,7 +175,8 @@ const VariantTagField = ({ variant, fieldName, family, tagValues, ...props }) =>
   <TagFieldView
     idField="variantId"
     modalId={family.familyGuid}
-    modalTitle={`Edit Variant ${fieldName} for Family ${family.displayName} for ${(Array.isArray(variant) ? variant : [variant]).map(v => `chr${v.chrom}:${v.pos} ${v.ref} > ${v.alt}`).join(', ')}`}
+    modalTitle={`Edit Variant ${fieldName} for Family ${family.displayName} for ${(Array.isArray(variant) ?
+      variant : [variant]).map(v => (v ? `chr${v.chrom}:${v.pos} ${v.ref} > ${v.alt}` : 'variant')).join(', ')}`}
     modalSize="large"
     editLabel={`Edit ${fieldName}`}
     initialValues={variant}
@@ -225,7 +225,7 @@ const VariantLink = (
   <VariantLinkContainer>
     <NavLink
       to={savedVariant ?
-        `/project/${family.projectGuid}/saved_variants/variant/${savedVariant.length > 0 ? savedVariant.map(sv => sv.variantGuid) : savedVariant.variantGuid}` :
+        `/project/${family.projectGuid}/saved_variants/variant/${savedVariant.length > 0 ? savedVariant.map(sv => (sv || {}).variantGuid) : savedVariant.variantGuid}` :
         `/variant_search/variant/${variant.variantId}/family/${family.familyGuid}`
       }
       activeStyle={NO_DISPLAY}
@@ -304,7 +304,7 @@ const FamilyVariantTags = (
           <div>
             <TagTitle>Tags:</TagTitle>
             <HorizontalSpacer width={5} />
-            {/*{!isCompoundHet && <ShortcutTags variant={displayVariant} familyGuid={family.familyGuid} dispatchUpdateFamilyVariantTags={dispatchUpdateFamilyVariantTags} />}*/}
+            {!isCompoundHet && <ShortcutTags variant={displayVariant} familyGuid={family.familyGuid} tagValues={tagValues} dispatchUpdateFamilyVariantTags={dispatchUpdateFamilyVariantTags} />}
             <VariantTagField
               field="tags"
               fieldName="Tags"

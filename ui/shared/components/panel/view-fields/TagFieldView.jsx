@@ -47,9 +47,7 @@ MetadataField.propTypes = {
 
 const TagFieldView = ({ simplifiedValue, initialValues, tagValues, field, tagOptions, popup, tagAnnotation, editMetadata, ...props }) => {
 
-  initialValues = tagValues ? { ...initialValues, ...tagValues } : initialValues
-
-  const fieldValues = initialValues[field] || []
+  const fieldValues = (tagValues || initialValues)[field] || []
 
   tagOptions = tagOptions.map((tag, i) => {
     return { ...tag, ...fieldValues.find(val => val.name === tag.name), optionIndex: i }
@@ -89,7 +87,7 @@ const TagFieldView = ({ simplifiedValue, initialValues, tagValues, field, tagOpt
     tagOptions={tagOptions}
     formFieldProps={formFieldProps}
     additionalEditFields={additionalFields}
-    fieldValue={tagValues[field]}
+    fieldValue={(tagValues || {})[field]}
     initialValues={simplifiedValue ? initialValues : mappedValues}
     modalStyle={MODAL_STYLE}
     fieldDisplay={displayFieldValues =>

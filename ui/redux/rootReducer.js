@@ -297,7 +297,7 @@ export const updateVariantTags = (values) => {
     if (values.compoundHetsGuids.length > 0) {
       return updateSavedVariant(values, `${values.compoundHetsGuids.join(',')}/update_tags`)
     }
-    return updateSavedVariant({ tags: values.tags, familyGuid: values.familyGuid, ...values.compoundHetsToSave })
+    return updateSavedVariant(values)
   }
   const urlPath = values.variantGuid ? `${values.variantGuid}/update_tags` : 'create'
   return updateSavedVariant(values, urlPath)
