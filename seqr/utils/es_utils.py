@@ -210,6 +210,9 @@ class BaseEsSearch(object):
         ).prefetch_related('individual', 'individual__family'):
             self.samples_by_family_index[s.elasticsearch_index][s.individual.family.guid][s.sample_id] = s
 
+        if len(self.samples_by_family_index) < 1:
+            raise InvalidIndexException('No es index found')
+
         if skip_unaffected_families:
             for index, family_samples in self.samples_by_family_index.items():
                 index_skipped_families = []
@@ -220,8 +223,11 @@ class BaseEsSearch(object):
                 for family_guid in index_skipped_families:
                     del self.samples_by_family_index[index][family_guid]
 
-        if len(self.samples_by_family_index) < 1:
-            raise InvalidIndexException('No es index found')
+                if not self.samples_by_family_index[index]:
+                    del self.samples_by_family_index[index]
+
+            if len(self.samples_by_family_index) < 1:
+                raise Exception('Inheritance based search is disabled in families with no affected individuals')
 
         self._set_index_metadata()
 

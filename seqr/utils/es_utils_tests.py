@@ -1077,8 +1077,17 @@ class EsUtilsTest(TestCase):
             'inheritance': {'mode': 'de_novo'}
         })
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
-        results_model.families.set(self.families)
 
+        # Test edge case where searching by inheritance with no affected individuals
+        results_model.families.set([family for family in self.families if family.guid == 'F000005_5'])
+        with self.assertRaises(Exception) as cm:
+            get_es_variants(results_model, sort='protein_consequence', num_results=2)
+        self.assertEqual(
+            cm.exception.message, 'Inheritance based search is disabled in families with no affected individuals',
+        )
+
+        # Test successful search
+        results_model.families.set(self.families)
         variants, total_results = get_es_variants(results_model, sort='protein_consequence', num_results=2)
         self.assertListEqual(variants, PARSED_VARIANTS)
         self.assertEqual(total_results, 5)
