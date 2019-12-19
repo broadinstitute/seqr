@@ -6,7 +6,7 @@ import styled from 'styled-components'
 
 import { Table, Popup } from 'semantic-ui-react'
 
-import { NoBorderTable, ButtonLink } from '../../StyledComponents'
+import { NoBorderTable, ButtonLink } from '../StyledComponents'
 
 const NameCell = styled(Table.Cell)`
  height: 20px;

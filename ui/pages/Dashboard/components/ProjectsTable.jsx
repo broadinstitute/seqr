@@ -7,7 +7,7 @@ import { Link } from 'react-router-dom'
 
 import { fetchProjects } from 'redux/rootReducer'
 import { getProjectsIsLoading, getUser } from 'redux/selectors'
-import ExportTableButton from 'shared/components/buttons/export-table/ExportTableButton'
+import ExportTableButton from 'shared/components/buttons/ExportTableButton'
 import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
 import SortableTable from 'shared/components/table/SortableTable'
 import DataLoader from 'shared/components/DataLoader'

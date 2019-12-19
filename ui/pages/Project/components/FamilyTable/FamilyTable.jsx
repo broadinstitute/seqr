@@ -5,7 +5,7 @@ import { Table, Icon } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 import { withRouter } from 'react-router'
 
-import ExportTableButton from 'shared/components/buttons/export-table/ExportTableButton'
+import ExportTableButton from 'shared/components/buttons/ExportTableButton'
 import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
 import TableLoading from 'shared/components/table/TableLoading'
 import { HorizontalSpacer } from 'shared/components/Spacers'

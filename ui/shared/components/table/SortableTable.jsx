@@ -4,7 +4,7 @@ import styled from 'styled-components'
 import { Table, Checkbox, Pagination, Form } from 'semantic-ui-react'
 
 import { compareObjects } from '../../utils/sortUtils'
-import ExportTableButton from '../buttons/export-table/ExportTableButton'
+import ExportTableButton from '../buttons/ExportTableButton'
 import { configuredField } from '../form/ReduxFormWrapper'
 import TableLoading from './TableLoading'
 
