@@ -19,7 +19,7 @@ import CreateProjectButton from './CreateProjectButton'
 import FilterSelector from './FilterSelector'
 import CategoryIndicator from './CategoryIndicator'
 import ProjectEllipsisMenu from './ProjectEllipsisMenu'
-import { getVisibleProjects } from '../utils/visibleProjectsSelector'
+import { getVisibleProjects } from '../selectors'
 
 
 const RightAligned = styled.span`

@@ -19,6 +19,3 @@ export const reducers = {
 const rootReducer = combineReducers(reducers)
 
 export default rootReducer
-
-// basic selectors
-export const getProjectFilter = state => state.projectsTableState.filter

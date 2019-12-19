@@ -1,5 +1,3 @@
-/* eslint-disable react/no-unused-prop-types */
-
 import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
@@ -7,7 +5,8 @@ import { connect } from 'react-redux'
 import { Form } from 'semantic-ui-react'
 
 import { getProjectCategoriesByGuid } from 'redux/selectors'
-import { getProjectFilter, updateFilter } from '../reducers'
+import { updateFilter } from '../reducers'
+import { getProjectFilter } from '../selectors'
 import {
   SHOW_ALL,
 } from '../constants'
