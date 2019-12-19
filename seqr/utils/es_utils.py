@@ -739,6 +739,7 @@ class EsSearch(BaseEsSearch):
 
     def _deduplicate_results(self, sorted_new_results):
         original_result_count = len(sorted_new_results)
+
         if self._filtered_variant_ids:
             sorted_new_results = [
                 v for v in sorted_new_results if self._filtered_variant_ids.get(v['variantId']) == v['genomeVersion']
@@ -1501,7 +1502,7 @@ def _get_compound_het_page(grouped_variants, start_index, end_index):
     for i, variants in enumerate(grouped_variants):
         curr_variant = variants.values()[0]
         if skipped < start_index:
-            skipped += len(curr_variant)
+            skipped += 1
         else:
             if len(curr_variant) == 1:
                 variant_results += curr_variant
