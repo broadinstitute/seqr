@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import { NavLink } from 'react-router-dom'
 
 import AwesomeBar from 'shared/components/page/AwesomeBar'
-import SortableTable from 'shared/components/table/SortableTable'
+import DataTable from 'shared/components/table/DataTable'
 import { HorizontalSpacer } from 'shared/components/Spacers'
 import DataLoader from 'shared/components/DataLoader'
 import { InlineHeader } from 'shared/components/StyledComponents'
@@ -31,7 +31,7 @@ const BaseReport = ({ page, viewAllCategory, idField, defaultSortColumn, getDown
     or <NavLink to={`/staff/${page}/all`} activeStyle={ACTIVE_LINK_STYLE}>view all {viewAllCategory} projects</NavLink>
     <HorizontalSpacer width={20} />
     {filters}
-    <SortableTable
+    <DataTable
       striped
       collapsing
       horizontalScroll

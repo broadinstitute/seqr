@@ -9,7 +9,7 @@ import { fetchProjects } from 'redux/rootReducer'
 import { getProjectsIsLoading, getUser } from 'redux/selectors'
 import ExportTableButton from 'shared/components/buttons/ExportTableButton'
 import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
-import SortableTable from 'shared/components/table/SortableTable'
+import DataTable from 'shared/components/table/DataTable'
 import DataLoader from 'shared/components/DataLoader'
 import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
 import { InlineHeader } from 'shared/components/StyledComponents'
@@ -154,7 +154,7 @@ const ProjectsTable = ({ visibleProjects, loading, load, user }) =>
         <HorizontalSpacer width={45} />
       </RightAligned>
       <VerticalSpacer height={10} />
-      <SortableTable
+      <DataTable
         striped
         stackable
         fixed

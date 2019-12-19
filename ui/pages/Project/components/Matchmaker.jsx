@@ -12,7 +12,7 @@ import { SubmissionGeneVariants, Phenotypes } from 'shared/components/panel/Matc
 import BaseFieldView from 'shared/components/panel/view-fields/BaseFieldView'
 import TextFieldView from 'shared/components/panel/view-fields/TextFieldView'
 import { Alleles } from 'shared/components/panel/variants/VariantIndividuals'
-import SortableTable, { SelectableTableFormInput } from 'shared/components/table/SortableTable'
+import DataTable, { SelectableTableFormInput } from 'shared/components/table/DataTable'
 import DataLoader from 'shared/components/DataLoader'
 import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
 import { ButtonLink, ColoredLabel } from 'shared/components/StyledComponents'
@@ -397,7 +397,7 @@ const BaseMatchmakerIndividual = ({ loading, load, searchMme, individual, onSubm
             buttonText="Delete Submission"
             confirmDialog="Are you sure you want to remove this patient from the Matchmaker Exchange"
           />
-          <SortableTable
+          <DataTable
             basic="very"
             fixed
             idField="id"
@@ -413,7 +413,7 @@ const BaseMatchmakerIndividual = ({ loading, load, searchMme, individual, onSubm
         <div>
           <VerticalSpacer height={10} />
           <Header dividing disabled size="medium" content="Previous Matches" />
-          <SortableTable
+          <DataTable
             basic="very"
             fixed
             idField="id"

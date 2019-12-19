@@ -8,7 +8,7 @@ import UpdateButton from 'shared/components/buttons/UpdateButton'
 import DeleteButton from 'shared/components/buttons/DeleteButton'
 import FileUploadField from 'shared/components/form/XHRUploaderField'
 import PedigreeImagePanel from 'shared/components/panel/view-pedigree-image/PedigreeImagePanel'
-import { SelectableTableFormInput } from 'shared/components/table/SortableTable'
+import { SelectableTableFormInput } from 'shared/components/table/DataTable'
 import {
   FAMILY_DISPLAY_NAME,
   FAMILY_FIELD_PEDIGREE,
