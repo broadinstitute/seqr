@@ -2,7 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { Confirm } from 'semantic-ui-react'
 
-import RequestStatus from '../form/RequestStatus'
+import RequestStatus, { NONE, SUCCEEDED, ERROR, IN_PROGRESS } from '../panel/RequestStatus'
 import { ButtonLink } from '../StyledComponents'
 
 
@@ -32,7 +32,7 @@ class DispatchRequestButton extends React.PureComponent {
     super(props)
 
     this.state = {
-      requestStatus: RequestStatus.NONE,
+      requestStatus: NONE,
       requestErrorMessage: null,
       isConfirmDialogVisible: false,
     }
@@ -65,7 +65,7 @@ class DispatchRequestButton extends React.PureComponent {
   }
 
   performAction = () => {
-    this.setState({ isConfirmDialogVisible: false, requestStatus: RequestStatus.IN_PROGRESS })
+    this.setState({ isConfirmDialogVisible: false, requestStatus: IN_PROGRESS })
 
     const dispatch = this.props.onSubmit()
     dispatch.onClear = this.handleReset
@@ -76,21 +76,20 @@ class DispatchRequestButton extends React.PureComponent {
   }
 
   handleRequestSuccess = () => {
-    this.setState({ requestStatus: RequestStatus.SUCCEEDED })
+    this.setState({ requestStatus: SUCCEEDED })
     if (this.props.onSuccess) {
       this.props.onSuccess()
     }
   }
 
   handleRequestError = (error) => {
-    //if deleteRequestStatus === RequestStatus.NONE, the status indicator has already been reset
-    if (this.state.requestStatus !== RequestStatus.NONE) {
-      this.setState({ requestStatus: RequestStatus.ERROR, requestErrorMessage: ((error.errors || {})._error || [])[0] || error.message }) //eslint-disable-line no-underscore-dangle
+    if (this.state.requestStatus !== NONE) {
+      this.setState({ requestStatus: ERROR, requestErrorMessage: ((error.errors || {})._error || [])[0] || error.message }) //eslint-disable-line no-underscore-dangle
     }
   }
 
   handleReset = () => {
-    this.setState({ requestStatus: RequestStatus.NONE, requestErrorMessage: null })
+    this.setState({ requestStatus: NONE, requestErrorMessage: null })
   }
 }
 
