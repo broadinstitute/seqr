@@ -19,7 +19,7 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_model, get_json_for
 from seqr.views.utils.permissions_utils import check_mme_permissions, check_permissions
 
 from settings import BASE_URL, API_LOGIN_REQUIRED_URL, MME_ACCEPT_HEADER, MME_NODES, MME_DEFAULT_CONTACT_EMAIL, \
-    MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL, MME_SLACK_EVENT_NOTIFICATION_CHANNEL
+    MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL, MME_SLACK_ALERT_NOTIFICATION_CHANNEL
 
 logger = logging.getLogger(__name__)
 
@@ -155,7 +155,7 @@ def _search_external_matches(nodes_to_query, patient_data):
         except Exception as e:
             error_message = 'Error searching in {}: {}'.format(node['name'], e.message)
             logger.error(error_message)
-            post_to_slack(MME_SLACK_EVENT_NOTIFICATION_CHANNEL, error_message)
+            post_to_slack(MME_SLACK_ALERT_NOTIFICATION_CHANNEL, error_message)
 
     return external_results
 

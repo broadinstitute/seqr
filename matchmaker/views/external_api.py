@@ -10,8 +10,8 @@ from matchmaker.matchmaker_utils import get_mme_genes_phenotypes_for_results, ge
 from seqr.utils.communication_utils import post_to_slack
 from seqr.views.utils.json_utils import create_json_response
 
-from settings import MME_ACCEPT_HEADER, MME_NODES, MME_SLACK_MATCH_NOTIFICATION_CHANNEL,\
-    MME_SLACK_EVENT_NOTIFICATION_CHANNEL, MME_DEFAULT_CONTACT_EMAIL, BASE_URL
+from settings import MME_ACCEPT_HEADER, MME_NODES, MME_SLACK_MATCH_NOTIFICATION_CHANNEL, MME_DEFAULT_CONTACT_EMAIL, \
+    BASE_URL
 
 logger = logging.getLogger(__name__)
 
@@ -124,7 +124,7 @@ def _generate_notification_for_incoming_match(results, incoming_query, incoming_
         message_template = """A match request for {patient_id} came in from {institution} today.
         The contact information given was: {contact}.
         We didn't find any individuals in matchbox that matched that query well, *so no results were sent back*."""
-        post_to_slack(MME_SLACK_EVENT_NOTIFICATION_CHANNEL, message_template.format(
+        post_to_slack(MME_SLACK_MATCH_NOTIFICATION_CHANNEL, message_template.format(
             institution=institution, patient_id=incoming_patient_id, contact=contact_href
         ))
         return
@@ -135,7 +135,7 @@ def _generate_notification_for_incoming_match(results, incoming_query, incoming_
         message_template = """A match request for {patient_id} came in from {institution} today.
         The contact information given was: {contact}.
         We found {existing_results} existing matching individuals but no new ones, *so no results were sent back*."""
-        post_to_slack(MME_SLACK_EVENT_NOTIFICATION_CHANNEL, message_template.format(
+        post_to_slack(MME_SLACK_MATCH_NOTIFICATION_CHANNEL, message_template.format(
             institution=institution, patient_id=incoming_patient_id, contact=contact_href, existing_results=len(results)
         ))
         return

@@ -250,7 +250,7 @@ be found found at https://seqr.broadinstitute.org/matchmaker/disclaimer."""
         self.assertListEqual(response.json()['results'], results)
         self.assertEqual(MatchmakerIncomingQuery.objects.filter(patient_id='12345').count(), 2)
         mock_post_to_slack.assert_called_with(
-            'matchmaker_alerts',
+            'matchmaker_matches',
             """A match request for 12345 came in from Test Institute today.
         The contact information given was: test@test.com.
         We found 2 existing matching individuals but no new ones, *so no results were sent back*."""
