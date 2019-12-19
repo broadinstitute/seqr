@@ -185,7 +185,7 @@ def update_mme_submission(request, submission_guid=None):
                 'referenceBases': gene_variant['ref'],
                 'referenceName': gene_variant['chrom'],
                 'start': gene_variant['pos'],
-                'assembly': GENOME_VERSION_LOOKUP.get(gene_variant['genomeVersion'], gene_variant['genomeVersion']),
+                'assembly': GENOME_VERSION_LOOKUP[gene_variant['genomeVersion']],
             }
         genomic_features.append(feature)
 

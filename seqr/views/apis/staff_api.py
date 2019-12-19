@@ -838,7 +838,7 @@ def upload_qc_pipeline_output(request):
 
     json_records = [dict(zip(raw_records[0], row)) for row in raw_records[1:]]
 
-    missing_columns = [field for field in ['seqr_id', 'data_type', 'filter_flags', 'pop_platform_filters', 'qc_pop']
+    missing_columns = [field for field in ['seqr_id', 'data_type', 'filter_flags', 'qc_metrics_filters', 'qc_pop']
                        if field not in json_records[0]]
     if missing_columns:
         message = 'The following required columns are missing: {}'.format(', '.join(missing_columns))
@@ -932,7 +932,7 @@ def upload_qc_pipeline_output(request):
                 unknown_filter_flags.add(flag)
 
         pop_platform_filters = {}
-        for flag in json.loads(record['pop_platform_filters']):
+        for flag in json.loads(record['qc_metrics_filters']):
             flag_col = 'sample_qc.{}'.format(flag)
             if flag_col in record:
                 pop_platform_filters[flag] = record[flag_col]

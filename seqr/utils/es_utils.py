@@ -40,9 +40,6 @@ def get_index_metadata(index_name, client):
     index_metadata = {}
     for index_name, mapping in mappings.items():
         variant_mapping = mapping['mappings'].get(VARIANT_DOC_TYPE, {})
-        # TODO remove this check once all projects are migrated
-        if not variant_mapping['properties'].get('samples_num_alt_1'):
-            raise InvalidIndexException('Index "{}" does not have a valid schema'.format(index_name))
         index_metadata[index_name] = variant_mapping.get('_meta', {})
         index_metadata[index_name]['fields'] = variant_mapping['properties'].keys()
     return index_metadata
@@ -210,6 +207,9 @@ class BaseEsSearch(object):
         ).prefetch_related('individual', 'individual__family'):
             self.samples_by_family_index[s.elasticsearch_index][s.individual.family.guid][s.sample_id] = s
 
+        if len(self.samples_by_family_index) < 1:
+            raise InvalidIndexException('No es index found')
+
         if skip_unaffected_families:
             for index, family_samples in self.samples_by_family_index.items():
                 index_skipped_families = []
@@ -220,8 +220,11 @@ class BaseEsSearch(object):
                 for family_guid in index_skipped_families:
                     del self.samples_by_family_index[index][family_guid]
 
-        if len(self.samples_by_family_index) < 1:
-            raise InvalidIndexException('No es index found')
+                if not self.samples_by_family_index[index]:
+                    del self.samples_by_family_index[index]
+
+            if len(self.samples_by_family_index) < 1:
+                raise Exception('Inheritance based search is disabled in families with no affected individuals')
 
         self._set_index_metadata()
 
@@ -978,7 +981,7 @@ INHERITANCE_FILTERS = {
     },
 }
 
-#  TODO move liftover to hail pipeline once upgraded to 0.2
+# TODO  move liftover to hail pipeline once upgraded to 0.2 (https://github.com/macarthur-lab/seqr/issues/1010)
 LIFTOVER_GRCH38_TO_GRCH37 = None
 def _liftover_grch38_to_grch37():
     global LIFTOVER_GRCH38_TO_GRCH37

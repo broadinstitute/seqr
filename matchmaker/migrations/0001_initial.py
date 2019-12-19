@@ -73,13 +73,7 @@ def migrate_submissions(apps, schema_editor):
         return submission_id
 
     def get_genomic_features(model, field):
-        features = model.mme_submitted_data['patient']['genomicFeatures']
-        if features:
-            for feature in features:
-                assembly = feature.get('variant', {}).get('assembly')
-                if assembly:
-                    feature['variant']['assembly'] = GENOME_VERSION_LOOKUP.get(assembly, assembly)
-        return features
+        return model.mme_submitted_data['patient']['genomicFeatures']
 
     field_process_funcs = {
         'guid': lambda model, field: model.guid.replace('I', 'MS')[:30],
