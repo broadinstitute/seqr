@@ -17,7 +17,6 @@ from seqr.views.utils.json_to_orm_utils import update_family_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_family
 from seqr.models import Family, FamilyAnalysedBy, CAN_EDIT, Individual
-from seqr.model_utils import update_seqr_model
 from seqr.views.utils.permissions_utils import check_permissions, get_project_and_check_permissions
 from settings import API_LOGIN_REQUIRED_URL
 
@@ -155,7 +154,8 @@ def update_family_assigned_analyst(request, family_guid):
                 {}, status=400, reason="specified user does not exist")
     else:
         assigned_analyst = None
-    update_seqr_model(family, assigned_analyst=assigned_analyst)
+    family.assigned_analyst = assigned_analyst
+    family.save()
 
     return create_json_response({
         family.guid: _get_json_for_family(family, request.user)
@@ -203,7 +203,8 @@ def update_family_pedigree_image(request, family_guid):
     else:
         pedigree_image = request.FILES.values()[0]
 
-    update_seqr_model(family, pedigree_image=pedigree_image)
+    family.pedigree_image = pedigree_image
+    family.save()
 
     return create_json_response({
         family.guid: _get_json_for_family(family, request.user)

@@ -14,7 +14,6 @@ import tempfile
 
 from django.core.files import File
 
-from seqr.model_utils import update_seqr_model
 from seqr.models import Individual
 from seqr.views.utils.orm_to_json_utils import _get_json_for_individuals
 from settings import BASE_DIR

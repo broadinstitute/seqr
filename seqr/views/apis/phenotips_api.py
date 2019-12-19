@@ -30,7 +30,6 @@ from django.http import HttpResponse
 from django.core.exceptions import ObjectDoesNotExist
 
 from reference_data.models import HumanPhenotypeOntology
-from seqr.model_utils import update_seqr_model
 from seqr.models import Project, CAN_EDIT, CAN_VIEW, Individual
 from seqr.views.utils.file_utils import save_uploaded_file
 from seqr.views.utils.json_utils import create_json_response
@@ -245,11 +244,11 @@ def update_individual_hpo_terms(request, individual_guid):
 
     phenotips_patient_id = patient_json['id']
     phenotips_eid = patient_json.get('external_id')
-    update_seqr_model(
-        individual,
-        phenotips_data=json.dumps(patient_json),
-        phenotips_patient_id=phenotips_patient_id,
-        phenotips_eid=phenotips_eid)
+
+    individual.phenotips_data = json.dumps(patient_json)
+    individual.phenotips_patient_id = phenotips_patient_id
+    individual.phenotips_eid = phenotips_eid
+    individual.save()
 
     return create_json_response({
         individual.guid: {
@@ -287,7 +286,9 @@ def _create_patient_if_missing(project, individual):
     _add_user_to_patient(username_read_only, patient_id, allow_edit=False)
     logger.info("Added PhenoTips user {username} to {patient_id}".format(username=username_read_only, patient_id=patient_id))
 
-    update_seqr_model(individual, phenotips_patient_id=patient_id, phenotips_eid=individual.guid)
+    individual.phenotips_patient_id = patient_id
+    individual.phenotips_eid = individual.guid
+    individual.save()
 
     return True
 
@@ -296,7 +297,8 @@ def _set_phenotips_patient_id_if_missing(project, individual):
     if individual.phenotips_patient_id:
         return
     patient_json = _get_patient_data(project, individual)
-    update_seqr_model(individual, phenotips_patient_id=patient_json['id'])
+    individual.phenotips_patient_id = patient_json['id']
+    individual.save()
 
 
 def _get_patient_data(project, individual):
@@ -477,11 +479,10 @@ def _update_individual_phenotips_data(individual, patient_json):
         except ObjectDoesNotExist:
             logger.error("ERROR: PhenoTips HPO id %s not found in seqr HumanPhenotypeOntology table." % hpo_id)
 
-    update_seqr_model(
-        individual,
-        phenotips_data=json.dumps(patient_json),
-        phenotips_patient_id=patient_json['id'],        # phenotips internal id
-        phenotips_eid=patient_json.get('external_id'))  # phenotips external id
+    individual.phenotips_data = json.dumps(patient_json)
+    individual.phenotips_patient_id = patient_json['id']  # phenotips internal id
+    individual.phenotips_eid = patient_json.get('external_id')  # phenotips external id
+    individual.save()
 
 
 def _get_phenotips_username_and_password(user, project, permissions_level):
