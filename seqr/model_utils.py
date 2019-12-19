@@ -31,8 +31,3 @@ def get_or_create_seqr_model(seqr_model_class, **kwargs):
     seqr_model, created = seqr_model_class.objects.get_or_create(**kwargs)
 
     return seqr_model, created
-
-
-def delete_seqr_model(seqr_model):
-    logging.info("delete_seqr_model(%s)" % seqr_model)
-    seqr_model.delete()

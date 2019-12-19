@@ -5,7 +5,7 @@ from django.db import IntegrityError
 from django.views.decorators.csrf import csrf_exempt
 
 from seqr.models import AnalysisGroup, Family, CAN_EDIT
-from seqr.model_utils import create_seqr_model, delete_seqr_model
+from seqr.model_utils import create_seqr_model
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_analysis_group
@@ -69,7 +69,6 @@ def update_analysis_group_handler(request, project_guid, analysis_group_guid=Non
 @csrf_exempt
 def delete_analysis_group_handler(request, project_guid, analysis_group_guid):
     project = get_project_and_check_permissions(project_guid, request.user, permission_level=CAN_EDIT)
-    analysis_group = AnalysisGroup.objects.get(guid=analysis_group_guid, project=project)
+    AnalysisGroup.objects.get(guid=analysis_group_guid, project=project).delete()
 
-    delete_seqr_model(analysis_group)
     return create_json_response({'analysisGroupsByGuid': {analysis_group_guid: None}})

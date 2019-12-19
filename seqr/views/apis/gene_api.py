@@ -6,7 +6,7 @@ from django.core.exceptions import PermissionDenied
 from django.views.decorators.csrf import csrf_exempt
 
 from seqr.models import GeneNote
-from seqr.model_utils import create_seqr_model, delete_seqr_model
+from seqr.model_utils import create_seqr_model
 from seqr.utils.gene_utils import get_gene, get_genes
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.json_utils import create_json_response
@@ -70,7 +70,7 @@ def delete_gene_note_handler(request, gene_id, note_guid):
     if not _can_edit_note(note, request.user):
         raise PermissionDenied("User does not have permission to delete this note")
 
-    delete_seqr_model(note)
+    note.delete()
     return create_json_response({'genesById': {gene_id: {
         'notes': _get_gene_notes(gene_id, request.user)
     }}})

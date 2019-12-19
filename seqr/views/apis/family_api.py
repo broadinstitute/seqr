@@ -17,7 +17,7 @@ from seqr.views.utils.json_to_orm_utils import update_family_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_family
 from seqr.models import Family, FamilyAnalysedBy, CAN_EDIT, Individual
-from seqr.model_utils import create_seqr_model, get_or_create_seqr_model, delete_seqr_model, update_seqr_model
+from seqr.model_utils import create_seqr_model, get_or_create_seqr_model, update_seqr_model
 from seqr.views.utils.permissions_utils import check_permissions, get_project_and_check_permissions
 from settings import API_LOGIN_REQUIRED_URL
 
@@ -96,8 +96,7 @@ def delete_families_handler(request, project_guid):
     delete_individuals(project, individual_guids_to_delete)
 
     # delete families
-    for family in Family.objects.filter(project=project, guid__in=family_guids_to_delete):
-        delete_seqr_model(family)
+    Family.objects.filter(project=project, guid__in=family_guids_to_delete).delete()
 
     # send response
     return create_json_response({

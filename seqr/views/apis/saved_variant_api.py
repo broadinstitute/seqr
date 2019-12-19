@@ -7,7 +7,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 from seqr.models import SavedVariant, VariantTagType, VariantTag, VariantNote, VariantFunctionalData,\
     LocusListInterval, LocusListGene, Family, CAN_VIEW, CAN_EDIT, GeneNote
-from seqr.model_utils import create_seqr_model, delete_seqr_model
+from seqr.model_utils import create_seqr_model
 from seqr.utils.gene_utils import get_genes
 from seqr.utils.xpos_utils import get_xpos
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
@@ -156,8 +156,7 @@ def update_variant_note_handler(request, variant_guid, note_guid):
 def delete_variant_note_handler(request, variant_guid, note_guid):
     saved_variant = SavedVariant.objects.get(guid=variant_guid)
     check_permissions(saved_variant.family.project, request.user, CAN_VIEW)
-    note = VariantNote.objects.get(guid=note_guid, saved_variant=saved_variant)
-    delete_seqr_model(note)
+    VariantNote.objects.get(guid=note_guid, saved_variant=saved_variant).delete()
     return create_json_response({'savedVariantsByGuid': {variant_guid: {
         'notes': [get_json_for_variant_note(tag) for tag in saved_variant.variantnote_set.all()]
     }}})
@@ -177,8 +176,7 @@ def update_variant_tags_handler(request, variant_guid):
 
     existing_tag_guids = [tag['tagGuid'] for tag in updated_tags if tag.get('tagGuid')]
 
-    for tag in saved_variant.varianttag_set.exclude(guid__in=existing_tag_guids):
-        delete_seqr_model(tag)
+    saved_variant.varianttag_set.exclude(guid__in=existing_tag_guids).delete()
 
     _create_new_tags(saved_variant, request_json, request.user)
 
@@ -186,8 +184,7 @@ def update_variant_tags_handler(request, variant_guid):
 
     existing_functional_guids = [tag['tagGuid'] for tag in updated_functional_data if tag.get('tagGuid')]
 
-    for tag in saved_variant.variantfunctionaldata_set.exclude(guid__in=existing_functional_guids):
-        delete_seqr_model(tag)
+    saved_variant.variantfunctionaldata_set.exclude(guid__in=existing_functional_guids).delete()
 
     for tag in updated_functional_data:
         if tag.get('tagGuid'):

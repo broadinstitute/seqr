@@ -9,7 +9,7 @@ from django.db.models import Count, Q
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
-from seqr.model_utils import get_or_create_seqr_model, delete_seqr_model
+from seqr.model_utils import get_or_create_seqr_model
 from seqr.models import Project, Family, Individual, Sample, VariantTag, VariantFunctionalData, \
     VariantNote, VariantTagType, AnalysisGroup, _slugify, CAN_EDIT, IS_OWNER
 from seqr.utils.gene_utils import get_genes
@@ -375,12 +375,10 @@ def _delete_project(project):
     """
 
     Sample.objects.filter(individual__family__project=project).delete()
-    for individual in Individual.objects.filter(family__project=project):
-        delete_seqr_model(individual)
-    for family in Family.objects.filter(project=project):
-        delete_seqr_model(family)
+    Individual.objects.filter(family__project=project).delete()
+    Family.objects.filter(project=project).delete()
 
-    delete_seqr_model(project)
+    project.delete()
 
     # TODO delete PhenoTips, etc. and other objects under this project
 

@@ -9,7 +9,7 @@ from guardian.shortcuts import assign_perm, remove_perm
 
 from reference_data.models import GENOME_VERSION_GRCh37
 from seqr.models import LocusList, LocusListGene, LocusListInterval, IS_OWNER, CAN_VIEW, CAN_EDIT
-from seqr.model_utils import get_or_create_seqr_model, create_seqr_model, delete_seqr_model
+from seqr.model_utils import get_or_create_seqr_model, create_seqr_model
 from seqr.utils.gene_utils import get_genes, parse_locus_list_items
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
@@ -105,7 +105,7 @@ def delete_locus_list_handler(request, locus_list_guid):
     locus_list = LocusList.objects.get(guid=locus_list_guid)
     check_object_permissions(locus_list, request.user, permission_level=CAN_EDIT)
 
-    delete_seqr_model(locus_list)
+    locus_list.delete()
     return create_json_response({'locusListsByGuid': {locus_list_guid: None}})
 
 
@@ -145,8 +145,7 @@ def _add_locus_list_user_permissions(locus_list):
 
 def _update_locus_list_items(locus_list, genes_by_id, intervals, request_json, user):
     # Update genes
-    for locus_list_gene in locus_list.locuslistgene_set.exclude(gene_id__in=genes_by_id.keys()):
-        delete_seqr_model(locus_list_gene)
+    locus_list.locuslistgene_set.exclude(gene_id__in=genes_by_id.keys()).delete()
 
     for gene_id in genes_by_id.keys():
         get_or_create_seqr_model(
