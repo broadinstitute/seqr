@@ -526,6 +526,7 @@ class EsSearch(BaseEsSearch):
         if compound_het_results or self.previous_search_results.get('grouped_results'):
             if compound_het_results:
                 compound_het_results = self._deduplicate_compound_het_results(compound_het_results)
+                compound_het_results = _sort_compound_hets(compound_het_results)
             return self._process_compound_hets(compound_het_results, variant_results, num_results)
         else:
             end_index = num_results * page
@@ -883,7 +884,6 @@ class EsSearch(BaseEsSearch):
         else:
             self.previous_search_results['compound_het_results'] = compound_het_results[num_compound_hets:]
             self.previous_search_results['variant_results'] = variant_results[num_single_variants:]
-
         return merged_variant_results
 
 
