@@ -5,8 +5,8 @@ import { Grid, Loader } from 'semantic-ui-react'
 import { Link } from 'react-router-dom'
 
 import { getCurrentProject } from 'redux/selectors'
-import SectionHeader from 'shared/components/SectionHeader'
 import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
+import { SectionHeader } from 'shared/components/StyledComponents'
 import VariantTagTypeBar from 'shared/components/graph/VariantTagTypeBar'
 import {
   FAMILY_FIELD_DESCRIPTION,
