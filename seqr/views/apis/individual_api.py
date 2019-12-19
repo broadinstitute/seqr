@@ -130,7 +130,6 @@ def edit_individuals_handler(request, project_guid):
     related_individuals_json = _get_json_for_individuals(related_individuals, project_guid=project_guid, family_fields=['family_id'])
     individuals_list = modified_individuals_list + related_individuals_json
 
-    # TODO more validation?
     errors, warnings = validate_fam_file_records(individuals_list, fail_on_warnings=True)
     if errors:
         return create_json_response({'errors': errors, 'warnings': warnings}, status=400, reason='Invalid updates')
