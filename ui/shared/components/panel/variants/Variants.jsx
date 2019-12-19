@@ -121,11 +121,14 @@ CompoundHets.propTypes = {
   variants: PropTypes.array,
 }
 
-const Variants = ({ variants }) =>
-  <Grid stackable divided="vertically" columns="equal">
-    {variants.map(variant =>
-      (variant.length > 1 ? <CompoundHets variants={variant} key={variant.map(v => v.variantId).join()} /> : <Variant variant={variant} key={variant.variantId} />))}
-  </Grid>
+const Variants = ({ variants }) => {
+  return (
+    <Grid stackable divided="vertically" columns="equal">
+      {variants.map(variant =>
+        (variant.length > 1 ? <CompoundHets variants={variant} key={variant.map(v => v.variantId).join()} /> : <Variant variant={variant} key={variant.variantId} />))}
+    </Grid>
+  )
+}
 
 Variants.propTypes = {
   variants: PropTypes.array,

@@ -232,7 +232,8 @@ const VariantLink = (
     >
       <Popup
         trigger={<Icon name="linkify" link />}
-        content={`Go to the page for this individual variant ${variant.variantId} from family ${family.familyId}. Note: There is no additional information on this page, it is intended for sharing specific variants.`}
+        content={`Go to the page for this individual variant ${(Array.isArray(variant) ?
+          variant : [variant]).map(v => (v ? `chr${v.chrom}:${v.pos} ${v.ref} > ${v.alt}` : 'variant')).join(', ')} from family ${family.familyId}. Note: There is no additional information on this page, it is intended for sharing specific variants.`}
         position="right center"
         wide
       />

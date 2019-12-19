@@ -56,9 +56,9 @@ const BaseVariantSearchResults = ({
   return (
     <DataLoader
       contentId={searchHash || variantId}
-      content={displayVariants}
+      content={searchedVariants}
       loading={loading}
-      load={load}
+      load={load}e
       unload={unload}
       reloadOnIdUpdate
       errorMessage={errorMessage &&
