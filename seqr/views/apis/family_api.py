@@ -17,7 +17,7 @@ from seqr.views.utils.json_to_orm_utils import update_family_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_family
 from seqr.models import Family, FamilyAnalysedBy, CAN_EDIT, Individual
-from seqr.model_utils import create_seqr_model, get_or_create_seqr_model, update_seqr_model
+from seqr.model_utils import update_seqr_model
 from seqr.views.utils.permissions_utils import check_permissions, get_project_and_check_permissions
 from settings import API_LOGIN_REQUIRED_URL
 
@@ -55,7 +55,7 @@ def edit_families_handler(request, project_guid):
         elif fields.get(PREVIOUS_FAMILY_ID_FIELD):
             family = Family.objects.get(project=project, family_id=fields[PREVIOUS_FAMILY_ID_FIELD])
         else:
-            family, _ = get_or_create_seqr_model(Family, project=project, family_id=fields[FAMILY_ID_FIELD])
+            family, _ = Family.objects.get_or_create(project=project, family_id=fields[FAMILY_ID_FIELD])
 
         update_family_from_json(family, fields, user=request.user, allow_unknown_keys=True)
         updated_families.append(family)
@@ -175,7 +175,7 @@ def update_family_analysed_by(request, family_guid):
     family = Family.objects.get(guid=family_guid)
     check_permissions(family.project, request.user, CAN_EDIT)
 
-    create_seqr_model(FamilyAnalysedBy, family=family, created_by=request.user)
+    FamilyAnalysedBy.objects.create(family=family, created_by=request.user)
 
     return create_json_response({
         family.guid: _get_json_for_family(family, request.user)

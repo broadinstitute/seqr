@@ -9,7 +9,6 @@ from guardian.shortcuts import assign_perm, remove_perm
 
 from reference_data.models import GENOME_VERSION_GRCh37
 from seqr.models import LocusList, LocusListGene, LocusListInterval, IS_OWNER, CAN_VIEW, CAN_EDIT
-from seqr.model_utils import get_or_create_seqr_model, create_seqr_model
 from seqr.utils.gene_utils import get_genes, parse_locus_list_items
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
@@ -61,8 +60,7 @@ def create_locus_list_handler(request):
     if invalid_items and not request_json.get('ignoreInvalidItems'):
         return create_json_response({'invalidLocusListItems': invalid_items}, status=400, reason=INVALID_ITEMS_ERROR)
 
-    locus_list = create_seqr_model(
-        LocusList,
+    locus_list = LocusList.objects.create(
         name=request_json['name'],
         description=request_json.get('description') or '',
         is_public=request_json.get('isPublic') or False,
@@ -148,8 +146,7 @@ def _update_locus_list_items(locus_list, genes_by_id, intervals, request_json, u
     locus_list.locuslistgene_set.exclude(gene_id__in=genes_by_id.keys()).delete()
 
     for gene_id in genes_by_id.keys():
-        get_or_create_seqr_model(
-            LocusListGene,
+        LocusListGene.objects.get_or_create(
             locus_list=locus_list,
             gene_id=gene_id,
             created_by=user,

@@ -28,7 +28,8 @@ def save_internal_case_review_notes(request, family_guid):
     if "value" not in request_json:
         raise ValueError("Request is missing 'value' key: %s" % (request.body,))
 
-    update_seqr_model(family, internal_case_review_notes=request_json['value'])
+    family.internal_case_review_notes = request_json['value']
+    family.save()
 
     return create_json_response({family.guid: _get_json_for_family(family, request.user, add_individual_guids_field=True)})
 

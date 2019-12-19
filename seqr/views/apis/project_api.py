@@ -9,7 +9,6 @@ from django.db.models import Count, Q
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
-from seqr.model_utils import get_or_create_seqr_model
 from seqr.models import Project, Family, Individual, Sample, VariantTag, VariantFunctionalData, \
     VariantNote, VariantTagType, AnalysisGroup, _slugify, CAN_EDIT, IS_OWNER
 from seqr.utils.gene_utils import get_genes
@@ -355,7 +354,7 @@ def _create_project(name, description=None, genome_version=None, user=None):
     if genome_version:
         project_args['genome_version'] = genome_version
 
-    project, _ = get_or_create_seqr_model(Project, **project_args)
+    project, _ = Project.objects.get_or_create(**project_args)
 
     if PHENOTIPS_SERVER:
         try:

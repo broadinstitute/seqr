@@ -9,7 +9,6 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 
-from seqr.model_utils import get_or_create_seqr_model
 from seqr.models import Individual, Family, CAN_EDIT
 from seqr.views.utils.pedigree_image_utils import update_pedigree_images
 from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file
@@ -358,7 +357,7 @@ def _add_or_update_individuals_and_families(project, individual_records, user=No
         if family:
             created = False
         else:
-            family, created = get_or_create_seqr_model(Family, project=project, family_id=family_id)
+            family, created = Family.objects.get_or_create(project=project, family_id=family_id)
 
         if created:
             logger.info("Created family: %s", family)
@@ -370,7 +369,7 @@ def _add_or_update_individuals_and_families(project, individual_records, user=No
             individual_id = record.get(JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN) or record[JsonConstants.INDIVIDUAL_ID_COLUMN]
             individual_filters = {'family': family, 'individual_id': individual_id}
 
-        individual, created = get_or_create_seqr_model(Individual, **individual_filters)
+        individual, created = Individual.objects.get_or_create(**individual_filters)
 
         if created:
             record.update({

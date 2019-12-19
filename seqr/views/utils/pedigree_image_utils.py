@@ -42,7 +42,8 @@ def _get_parsed_individuals(family, project_guid=None):
     individuals = Individual.objects.filter(family=family)
 
     if len(individuals) < 2:
-        update_seqr_model(family, pedigree_image=None)
+        family.pedigree_image = None
+        family.save()
         return None
 
     # convert individuals to json
@@ -128,7 +129,8 @@ def _update_pedigree_image(family, project_guid=None):
 
     if not os.path.isfile(png_file_path):
         logger.error("Failed to generated pedigree image for family: %s" % family_id)
-        update_seqr_model(family, pedigree_image=None)
+        family.pedigree_image = None
+        family.save()
         return
 
     _save_pedigree_image_file(family, png_file_path)

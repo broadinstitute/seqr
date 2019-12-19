@@ -7,7 +7,6 @@ from django.views.decorators.csrf import csrf_exempt
 
 from seqr.models import SavedVariant, VariantTagType, VariantTag, VariantNote, VariantFunctionalData,\
     LocusListInterval, LocusListGene, Family, CAN_VIEW, CAN_EDIT, GeneNote
-from seqr.model_utils import create_seqr_model
 from seqr.utils.gene_utils import get_genes
 from seqr.utils.xpos_utils import get_xpos
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
@@ -103,8 +102,7 @@ def create_variant_note_handler(request, variant_guid):
         gene_id = next(
             (gene_id for gene_id, transcripts in saved_variant.saved_variant_json['transcripts'].items()
              if any(t['transcriptId'] == main_transcript_id for t in transcripts)), None) if main_transcript_id else None
-        create_seqr_model(
-            GeneNote,
+        GeneNote.objects.create(
             note=request_json.get('note'),
             gene_id=gene_id,
             created_by=request.user,
@@ -126,8 +124,7 @@ def create_variant_note_handler(request, variant_guid):
 
 
 def _create_variant_note(saved_variant, note_json, user):
-    create_seqr_model(
-        VariantNote,
+    VariantNote.objects.create(
         saved_variant=saved_variant,
         note=note_json.get('note'),
         submit_to_clinvar=note_json.get('submitToClinvar') or False,
@@ -195,8 +192,7 @@ def update_variant_tags_handler(request, variant_guid):
             )
             update_model_from_json(tag_model, tag, allow_unknown_keys=True)
         else:
-            create_seqr_model(
-                VariantFunctionalData,
+            VariantFunctionalData.objects.create(
                 saved_variant=saved_variant,
                 functional_data_tag=tag.get('name'),
                 metadata=tag.get('metadata'),
@@ -221,8 +217,7 @@ def _create_new_tags(saved_variant, tags_json, user):
             Q(name=tag['name']),
             Q(project=saved_variant.family.project) | Q(project__isnull=True)
         )
-        create_seqr_model(
-            VariantTag,
+        VariantTag.objects.create(
             saved_variant=saved_variant,
             variant_tag_type=variant_tag_type,
             search_hash=tags_json.get('searchHash'),

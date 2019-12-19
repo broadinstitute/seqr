@@ -6,7 +6,6 @@ from django.core.exceptions import PermissionDenied
 from django.views.decorators.csrf import csrf_exempt
 
 from seqr.models import GeneNote
-from seqr.model_utils import create_seqr_model
 from seqr.utils.gene_utils import get_gene, get_genes
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.json_utils import create_json_response
@@ -36,8 +35,7 @@ def gene_info(request, gene_id):
 @csrf_exempt
 def create_gene_note_handler(request, gene_id):
     request_json = json.loads(request.body)
-    create_seqr_model(
-        GeneNote,
+    GeneNote.objects.create(
         note=request_json.get('note'),
         gene_id=gene_id,
         created_by=request.user,
