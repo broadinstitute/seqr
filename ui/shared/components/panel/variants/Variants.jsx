@@ -125,7 +125,7 @@ const Variants = ({ variants }) => {
   return (
     <Grid stackable divided="vertically" columns="equal">
       {variants.map(variant =>
-        (variant.length > 1 ? <CompoundHets variants={variant} key={variant.map(v => v.variantId).join()} /> : <Variant variant={variant} key={variant.variantId} />))}
+        (Array.isArray(variant) ? <CompoundHets variants={variant} key={variant.map(v => v.variantId).join()} /> : <Variant variant={variant} key={variant.variantId} />))}
     </Grid>
   )
 }

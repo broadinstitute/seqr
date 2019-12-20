@@ -1,5 +1,7 @@
 import { createSelector } from 'reselect'
 import orderBy from 'lodash/orderBy'
+import flatten from 'lodash/flatten'
+import isEqual from 'lodash/isEqual'
 
 import { compareObjects } from 'shared/utils/sortUtils'
 import {
@@ -16,8 +18,6 @@ import {
   familyVariantSamples,
   isActiveVariantSample,
 } from 'shared/utils/constants'
-import isEqual from 'lodash/isEqual'
-import flatten from 'lodash/flatten'
 
 export const getProjectsIsLoading = state => state.projectsLoading.isLoading
 export const getProjectsByGuid = state => state.projectsByGuid
@@ -295,11 +295,9 @@ export const getDisplayVariants = createSelector(
   getSavedVariantsGroupedByFamilyVariants,
   (state, props) => props.variant,
   (state, props) => props.familyGuid,
-  (savedVariantsGroupedByFamilyVariants, variant, familyGuid) => {
-    const savedVariant = (savedVariantsGroupedByFamilyVariants[familyGuid] || {})[getVariantId(variant)]
-    || (Array.isArray(variant) ? variant.map(v => (savedVariantsGroupedByFamilyVariants[familyGuid] || {})[getVariantId(v)]) : undefined)
-    return Array.isArray(variant) ? savedVariant.map((sv, index) => sv || variant[index]) : savedVariant || variant
-  },
+  (savedVariantsGroupedByFamilyVariants, variant, familyGuid) => (Array.isArray(variant) ?
+    variant.map(v => (savedVariantsGroupedByFamilyVariants[familyGuid] || {})[getVariantId(v)] || v) :
+    (savedVariantsGroupedByFamilyVariants[familyGuid] || {})[getVariantId(variant)] || variant),
 )
 
 export const getDisplayVariantTags = createSelector(
@@ -308,7 +306,8 @@ export const getDisplayVariantTags = createSelector(
   (displayVariant, isCompoundHet) => {
     let tags
     if (Array.isArray(displayVariant)) {
-      tags = (displayVariant[0].tags || []).filter(tag => (tag.variantGuids || []).length > 1)
+      const variantGuids = displayVariant.map(v => v.variantGuid)
+      tags = (displayVariant[0].tags || []).filter(tag => isEqual(tag.variantGuids, variantGuids))
     }
     else if (isCompoundHet) {
       tags = (displayVariant.tags || []).filter(tag => (tag.variantGuids || []).length === 1)
@@ -326,7 +325,8 @@ export const getDisplayVariantNotes = createSelector(
   (displayVariant, isCompoundHet) => {
     let notes
     if (Array.isArray(displayVariant)) {
-      notes = (displayVariant[0].notes || []).filter(note => (note.variantGuids || []).length > 1)
+      const variantGuids = displayVariant.map(v => v.variantGuid)
+      notes = (displayVariant[0].notes || []).filter(note => isEqual(note.variantGuids, variantGuids))
     }
     else if (isCompoundHet) {
       notes = (displayVariant.notes || []).filter(note => (note.variantGuids || []).length === 1)
