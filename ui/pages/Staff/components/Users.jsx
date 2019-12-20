@@ -5,7 +5,7 @@ import { Icon, Button } from 'semantic-ui-react'
 
 import { loadUserOptions } from 'redux/rootReducer'
 import { getAllUsers, getUserOptionsIsLoading } from 'redux/selectors'
-import SortableTable from 'shared/components/table/SortableTable'
+import DataTable from 'shared/components/table/DataTable'
 import DataLoader from 'shared/components/DataLoader'
 
 const COLUMNS = [
@@ -31,7 +31,7 @@ const getUserFilterVal = ({ email, displayName }) => `${email}-${displayName}`
 
 const Users = ({ users, loading, load }) =>
   <DataLoader load={load} content loading={false}>
-    <SortableTable
+    <DataTable
       striped
       idField="username"
       defaultSortColumn="email"

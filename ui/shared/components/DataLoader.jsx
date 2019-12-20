@@ -1,9 +1,9 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import { Loader, Header, Dimmer } from 'semantic-ui-react'
+import { Loader, Dimmer } from 'semantic-ui-react'
 
-// TODO shared 404 component
-const Error404 = () => (<Header size="huge" textAlign="center">Error 404: Not Found</Header>)
+import { Error404 } from 'shared/components/page/Errors'
+
 
 class DataLoader extends React.PureComponent
 {

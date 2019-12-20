@@ -5,7 +5,7 @@ import { Table } from 'semantic-ui-react'
 import styled from 'styled-components'
 
 import { getCurrentProject } from 'redux/selectors'
-import { FileLink } from 'shared/components/buttons/export-table/ExportTableButton'
+import { FileLink } from 'shared/components/buttons/ExportTableButton'
 import FileUploadField from 'shared/components/form/XHRUploaderField'
 import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
 import { INDIVIDUAL_HPO_EXPORT_DATA } from 'shared/utils/constants'

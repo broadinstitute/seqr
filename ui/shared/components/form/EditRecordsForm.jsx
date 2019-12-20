@@ -5,7 +5,7 @@ import styled from 'styled-components'
 
 import { closeModal } from 'redux/utils/modalReducer'
 import DeleteButton from '../buttons/DeleteButton'
-import SortableTable from '../table/SortableTable'
+import DataTable from '../table/DataTable'
 import ReduxFormWrapper from './ReduxFormWrapper'
 
 const ROWS_PER_PAGE = 12
@@ -112,7 +112,7 @@ class EditRecordsForm extends React.Component
           initialValues={records}
         >
           <TableContainer>
-            <SortableTable
+            <DataTable
               compact="very"
               basic="very"
               fixed

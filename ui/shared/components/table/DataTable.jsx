@@ -4,7 +4,7 @@ import styled from 'styled-components'
 import { Table, Checkbox, Pagination, Form } from 'semantic-ui-react'
 
 import { compareObjects } from '../../utils/sortUtils'
-import ExportTableButton from '../buttons/export-table/ExportTableButton'
+import ExportTableButton from '../buttons/ExportTableButton'
 import { configuredField } from '../form/ReduxFormWrapper'
 import TableLoading from './TableLoading'
 
@@ -18,7 +18,7 @@ const RightAligned = styled.span`
   top: 30px;
 `
 
-const StyledSortableTable = styled(Table)`
+const StyledDataTable = styled(Table)`
   &.ui.sortable.table thead th {
     border-left: none;
     overflow: initial;
@@ -41,7 +41,7 @@ const DESCENDING = 'descending'
 
 const getRowColumnContent = (row, isExport) => col => ((col.format && !(isExport && col.noFormatExport)) ? col.format(row, isExport) : row[col.name])
 
-class SortableTable extends React.PureComponent {
+class DataTable extends React.PureComponent {
 
   static propTypes = {
     data: PropTypes.array,
@@ -200,7 +200,7 @@ class SortableTable extends React.PureComponent {
             <ExportTableButton downloads={exportConfig} />
           </RightAligned>
         }
-        <StyledSortableTable
+        <StyledDataTable
           sortable
           selectable={!!selectRows}
           columns={!tableProps.collapsing && !fixedWidth && columns.length <= 16 ? columns.length : null}
@@ -225,7 +225,7 @@ class SortableTable extends React.PureComponent {
           <Table.Body>
             {tableContent}
           </Table.Body>
-        </StyledSortableTable>
+        </StyledDataTable>
         {hasFooter &&
           <Table {...tableProps} fixed={false} attached="bottom">
             <Table.Footer>
@@ -255,11 +255,11 @@ class SortableTable extends React.PureComponent {
   }
 }
 
-export default SortableTable
+export default DataTable
 
 const EMPTY_OBJECT = {}
 export const SelectableTableFormInput = ({ value, onChange, error, data = [], ...props }) =>
-  <SortableTable
+  <DataTable
     basic="very"
     fixed
     selectRows={onChange}

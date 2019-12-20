@@ -8,7 +8,7 @@ import SearchResultsLink from 'shared/components/buttons/SearchResultsLink'
 import ShowGeneModal from 'shared/components/buttons/ShowGeneModal'
 import Modal from 'shared/components/modal/Modal'
 import { GeneDetails } from 'shared/components/panel/variants/VariantGene'
-import SortableTable from 'shared/components/table/SortableTable'
+import DataTable from 'shared/components/table/DataTable'
 import { ButtonLink } from 'shared/components/StyledComponents'
 import {
   FAMILY_FIELD_DESCRIPTION,
@@ -85,7 +85,7 @@ const GeneBreakdown = ({ searchHash, geneBreakdown, loading, loadingErrorMessage
     trigger={<ButtonLink content="View Gene Breakdown" icon="search" />}
   >
     <DataLoader contentId={searchHash} load={load} loading={false} content>
-      <SortableTable
+      <DataTable
         idField="geneId"
         defaultSortColumn="geneSymbol"
         loading={loading}

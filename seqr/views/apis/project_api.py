@@ -20,7 +20,8 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_project, get_json_f
     get_json_for_variant_functional_data_tag_types, get_sorted_project_locus_lists, \
     get_json_for_project_collaborator_list, _get_json_for_models
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_permissions
-from seqr.views.utils.phenotips_utils import create_phenotips_user, get_phenotips_uname_and_pwd_for_project
+from seqr.views.utils.phenotips_utils import create_phenotips_user, get_phenotips_uname_and_pwd_for_project, \
+    delete_phenotips_patient
 from seqr.views.utils.individual_utils import export_individuals
 from settings import PHENOTIPS_SERVER, API_LOGIN_REQUIRED_URL
 
@@ -378,13 +379,12 @@ def _delete_project(project):
 
     Sample.objects.filter(individual__family__project=project).delete()
     for individual in Individual.objects.filter(family__project=project):
+        delete_phenotips_patient(project, individual)
         delete_seqr_model(individual)
     for family in Family.objects.filter(project=project):
         delete_seqr_model(family)
 
     delete_seqr_model(project)
-
-    # TODO delete PhenoTips, etc. and other objects under this project
 
 
 def _enable_phenotips_for_project(project):

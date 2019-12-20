@@ -4,13 +4,12 @@ import { Popup } from 'semantic-ui-react'
 
 import { ColoredIcon } from 'shared/components/StyledComponents'
 
+export const NONE = 'NONE'
+export const IN_PROGRESS = 'IN_PROGRESS'
+export const SUCCEEDED = 'SUCCEEDED'
+export const ERROR = 'ERROR'
 
 class RequestStatus extends React.PureComponent {
-
-  static NONE = 'NONE'
-  static IN_PROGRESS = 'IN_PROGRESS'
-  static SUCCEEDED = 'SUCCEEDED'
-  static ERROR = 'ERROR'
 
   static propTypes = {
     status: PropTypes.string,
@@ -19,9 +18,9 @@ class RequestStatus extends React.PureComponent {
 
   render() {
     switch (this.props.status) {
-      case RequestStatus.IN_PROGRESS:
+      case IN_PROGRESS:
         return <ColoredIcon loading name="spinner" color="#4183c4" />
-      case RequestStatus.SUCCEEDED:
+      case SUCCEEDED:
         return <Popup
           trigger={
             <ColoredIcon name="check circle" color="#00C000" />
@@ -30,7 +29,7 @@ class RequestStatus extends React.PureComponent {
           position="top center"
           size="small"
         />
-      case RequestStatus.ERROR:
+      case ERROR:
         return <Popup
           trigger={
             <ColoredIcon name="warning circle" color="#F00000" />
