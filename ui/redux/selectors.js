@@ -293,29 +293,48 @@ export const getSavedVariantsGroupedByFamilyVariants = createSelector(
 
 export const getDisplayVariants = createSelector(
   getSavedVariantsGroupedByFamilyVariants,
-  (savedVariants) => {
-    /*
-      (getSavedVariantsGroupedByFamilyVariants(state)[ownProps.familyGuid] || {})[getVariantId(ownProps.variant)]
-    || (Array.isArray(ownProps.variant) ? ownProps.variant.map(v => (getSavedVariantsGroupedByFamilyVariants(state)[ownProps.familyGuid] || {})[getVariantId(v)]) : undefined)
-     get
-     Array.isArray(variant) ? savedVariant.map((eachSavedVariant, index) => eachSavedVariant || variant[index]) : savedVariant || variant
-
-     */
-    return savedVariants
+  (state, props) => props.variant,
+  (state, props) => props.familyGuid,
+  (savedVariantsGroupedByFamilyVariants, variant, familyGuid) => {
+    const savedVariant = (savedVariantsGroupedByFamilyVariants[familyGuid] || {})[getVariantId(variant)]
+    || (Array.isArray(variant) ? variant.map(v => (savedVariantsGroupedByFamilyVariants[familyGuid] || {})[getVariantId(v)]) : undefined)
+    return Array.isArray(variant) ? savedVariant.map((sv, index) => sv || variant[index]) : savedVariant || variant
   },
 )
 
 export const getDisplayVariantTags = createSelector(
   getDisplayVariants,
-  displayVariant => {
-    displayVariant.tags
+  (state, props) => props.isCompoundHet,
+  (displayVariant, isCompoundHet) => {
+    let tags
+    if (Array.isArray(displayVariant)) {
+      tags = (displayVariant[0].tags || []).filter(tag => (tag.variantGuids || []).length > 1)
+    }
+    else if (isCompoundHet) {
+      tags = (displayVariant.tags || []).filter(tag => (tag.variantGuids || []).length === 1)
+    }
+    else {
+      tags = (displayVariant && displayVariant.tags) || []
+    }
+    return tags
   },
 )
 
 export const getDisplayVariantNotes = createSelector(
   getDisplayVariants,
-  displayVariant => {
-    displayVariant.notes
+  (state, props) => props.isCompoundHet,
+  (displayVariant, isCompoundHet) => {
+    let notes
+    if (Array.isArray(displayVariant)) {
+      notes = (displayVariant[0].notes || []).filter(note => (note.variantGuids || []).length > 1)
+    }
+    else if (isCompoundHet) {
+      notes = (displayVariant.notes || []).filter(note => (note.variantGuids || []).length === 1)
+    }
+    else {
+      notes = (displayVariant && displayVariant.notes) || []
+    }
+    return notes
   },
 )
 

@@ -9,11 +9,9 @@ import { updateVariantNote, updateVariantTags } from 'redux/rootReducer'
 import {
   getProjectsByGuid,
   getFamiliesByGuid,
-  // getSavedVariantsGroupedByFamilyVariants,
   getDisplayVariants,
   getDisplayVariantNotes,
   getDisplayVariantTags,
-  // getVariantId,
 } from 'redux/selectors'
 import {
   DISCOVERY_CATEGORY_NAME,
@@ -252,37 +250,8 @@ const FamilyVariantTags = (
   { variant, displayVariant, notes, tags, family, project, dispatchUpdateVariantNote, dispatchUpdateFamilyVariantTags, isCompoundHet },
 ) => {
   if (family) {
-    // displayVariant = Array.isArray(variant) ? savedVariant.map((eachSavedVariant, index) => eachSavedVariant || variant[index]) : savedVariant || variant
-    /*
-    let notes
-    if (Array.isArray(variant)) {
-      notes = (displayVariant[0].notes || []).filter(note => (note.variantGuids || []).length > 1)
-    }
-    else if (isCompoundHet) {
-      notes = (displayVariant.notes || []).filter(note => (note.variantGuids || []).length === 1)
-    }
-    else {
-      notes = (savedVariant && savedVariant.notes) || []
-    }
-
-     */
-
-    /*
-    let tags
-    if (Array.isArray(variant)) {
-      tags = (displayVariant[0].tags || []).filter(tag => (tag.variantGuids || []).length > 1)
-    }
-    else if (isCompoundHet) {
-      tags = (displayVariant.tags || []).filter(tag => (tag.variantGuids || []).length === 1)
-    }
-    else {
-      tags = (savedVariant && savedVariant.tags) || []
-    }
-     */
-
     const tagValues = { tags }
     const hasVariantLink = !Array.isArray(variant) || notes.length + tags.length > 0
-
     return (
       <div>
         {!isCompoundHet &&
@@ -375,7 +344,6 @@ const FamilyVariantTags = (
 
 FamilyVariantTags.propTypes = {
   variant: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
-  // savedVariant: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
   displayVariant: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
   notes: PropTypes.array,
   tags: PropTypes.array,
@@ -392,8 +360,6 @@ const mapStateToProps = (state, ownProps) => ({
   displayVariant: getDisplayVariants(state, ownProps),
   notes: getDisplayVariantNotes(state, ownProps),
   tags: getDisplayVariantTags(state, ownProps),
-  // savedVariant: (getSavedVariantsGroupedByFamilyVariants(state)[ownProps.familyGuid] || {})[getVariantId(ownProps.variant)]
-  // || (Array.isArray(ownProps.variant) ? ownProps.variant.map(v => (getSavedVariantsGroupedByFamilyVariants(state)[ownProps.familyGuid] || {})[getVariantId(v)]) : undefined),
 })
 
 const mapDispatchToProps = (dispatch, ownProps) => ({
