@@ -291,6 +291,13 @@ export const getSavedVariantsGroupedByFamilyVariants = createSelector(
   }, {}),
 )
 
+export const getSavedVariants = createSelector(
+  getSavedVariantsGroupedByFamilyVariants,
+  (savedVariants) => {
+    return savedVariants
+  },
+)
+
 export const getPairedFilteredSavedVariants = createSelector(
   getFilteredSavedVariants,
   getNotesByGuid,

@@ -10,6 +10,7 @@ import {
   getProjectsByGuid,
   getFamiliesByGuid,
   getSavedVariantsGroupedByFamilyVariants,
+  // getSavedVariants,
   getVariantId,
 } from 'redux/selectors'
 import {
@@ -121,9 +122,9 @@ ShortcutTagToggle.propTypes = {
   tag: PropTypes.object,
 }
 
-const ShortcutTags = ({ variant, dispatchUpdateFamilyVariantTags, tagValues, familyGuid }) => {
+const ShortcutTags = ({ variant, dispatchUpdateFamilyVariantTags, tags, familyGuid }) => {
   const appliedShortcutTags = SHORTCUT_TAGS.reduce((acc, tagName) => {
-    const appliedTag = (tagValues.tags || []).find(tag => tag.name === tagName)
+    const appliedTag = (tags || []).find(tag => tag.name === tagName)
     return appliedTag ? { ...acc, [tagName]: appliedTag } : acc
   }, {})
   const shortcutTagFields = SHORTCUT_TAGS.map(tagName => ({
@@ -140,7 +141,7 @@ const ShortcutTags = ({ variant, dispatchUpdateFamilyVariantTags, tagValues, fam
         return [...allTags, { name: tagName }]
       }
       return allTags.filter(tag => tag.name !== tagName)
-    }, tagValues.tags || [])
+    }, tags || [])
     return dispatchUpdateFamilyVariantTags({
       ...variant,
       tags: updatedTags,
@@ -167,7 +168,7 @@ ShortcutTags.propTypes = {
   variant: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
   dispatchUpdateFamilyVariantTags: PropTypes.func,
   familyGuid: PropTypes.string.isRequired,
-  tagValues: PropTypes.object,
+  tags: PropTypes.array,
 }
 
 
@@ -220,12 +221,12 @@ VariantNoteField.propTypes = {
 }
 
 const VariantLink = (
-  { variant, savedVariant, family },
+  { variant, family },
 ) =>
   <VariantLinkContainer>
     <NavLink
-      to={savedVariant ?
-        `/project/${family.projectGuid}/saved_variants/variant/${savedVariant.length > 0 ? savedVariant.map(sv => (sv || {}).variantGuid) : savedVariant.variantGuid}` :
+      to={variant.variantGuid || (variant[0] || {}).variantGuid ?
+        `/project/${family.projectGuid}/saved_variants/variant/${variant.length > 0 ? variant.map(sv => (sv || {}).variantGuid) : variant.variantGuid}` :
         `/variant_search/variant/${variant.variantId}/family/${family.familyGuid}`
       }
       activeStyle={NO_DISPLAY}
@@ -242,18 +243,17 @@ const VariantLink = (
 
 VariantLink.propTypes = {
   variant: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
-  savedVariant: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
   family: PropTypes.object,
 }
 
 const FamilyVariantTags = (
-  { variant, savedVariant, family, project, dispatchUpdateVariantNote, dispatchUpdateFamilyVariantTags, isCompoundHet, areCompoundHets },
+  { variant, savedVariant, family, project, dispatchUpdateVariantNote, dispatchUpdateFamilyVariantTags, isCompoundHet },
 ) => {
   if (family) {
-    const displayVariant = areCompoundHets ? savedVariant.map((eachSavedVariant, index) => eachSavedVariant || variant[index]) : savedVariant || variant
+    const displayVariant = Array.isArray(variant) ? savedVariant.map((eachSavedVariant, index) => eachSavedVariant || variant[index]) : savedVariant || variant
 
     let notes
-    if (areCompoundHets) {
+    if (Array.isArray(variant)) {
       notes = (displayVariant[0].notes || []).filter(note => (note.variantGuids || []).length > 1)
     }
     else if (isCompoundHet) {
@@ -264,7 +264,7 @@ const FamilyVariantTags = (
     }
 
     let tags
-    if (areCompoundHets) {
+    if (Array.isArray(variant)) {
       tags = (displayVariant[0].tags || []).filter(tag => (tag.variantGuids || []).length > 1)
     }
     else if (isCompoundHet) {
@@ -275,7 +275,7 @@ const FamilyVariantTags = (
     }
     const tagValues = { tags }
 
-    const hasVariantLink = areCompoundHets ? notes.length + tags.length > 0 : true
+    const hasVariantLink = !Array.isArray(variant) || notes.length + tags.length > 0
 
     return (
       <div>
@@ -305,7 +305,7 @@ const FamilyVariantTags = (
           <div>
             <TagTitle>Tags:</TagTitle>
             <HorizontalSpacer width={5} />
-            {!isCompoundHet && <ShortcutTags variant={displayVariant} familyGuid={family.familyGuid} tagValues={tagValues} dispatchUpdateFamilyVariantTags={dispatchUpdateFamilyVariantTags} />}
+            {!isCompoundHet && <ShortcutTags variant={displayVariant} familyGuid={family.familyGuid} tags={tags} dispatchUpdateFamilyVariantTags={dispatchUpdateFamilyVariantTags} />}
             <VariantTagField
               field="tags"
               fieldName="Tags"
@@ -361,7 +361,7 @@ const FamilyVariantTags = (
           </div>
           {isCompoundHet && <VerticalSpacer height={5} />}
         </InlineContainer>
-        {hasVariantLink && <VariantLink variant={variant} savedVariant={savedVariant} family={family} />}
+        {hasVariantLink && <VariantLink variant={displayVariant} family={family} />}
       </div>)
   }
   return null
@@ -373,7 +373,6 @@ FamilyVariantTags.propTypes = {
   project: PropTypes.object,
   family: PropTypes.object,
   isCompoundHet: PropTypes.bool,
-  areCompoundHets: PropTypes.bool,
   dispatchUpdateVariantNote: PropTypes.func,
   dispatchUpdateFamilyVariantTags: PropTypes.func,
 }
@@ -381,8 +380,9 @@ FamilyVariantTags.propTypes = {
 const mapStateToProps = (state, ownProps) => ({
   family: getFamiliesByGuid(state)[ownProps.familyGuid],
   project: getProjectsByGuid(state)[(getFamiliesByGuid(state)[ownProps.familyGuid] || {}).projectGuid],
+  // savedVariant: getSavedVariants(state, ownProps),
   savedVariant: (getSavedVariantsGroupedByFamilyVariants(state)[ownProps.familyGuid] || {})[getVariantId(ownProps.variant)]
-  || (ownProps.areCompoundHets ? ownProps.variant.map(eachVariant => (getSavedVariantsGroupedByFamilyVariants(state)[ownProps.familyGuid] || {})[getVariantId(eachVariant)]) : undefined),
+  || (Array.isArray(ownProps.variant) ? ownProps.variant.map(v => (getSavedVariantsGroupedByFamilyVariants(state)[ownProps.familyGuid] || {})[getVariantId(v)]) : undefined),
 })
 
 const mapDispatchToProps = (dispatch, ownProps) => ({

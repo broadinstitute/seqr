@@ -101,7 +101,7 @@ const CompoundHets = ({ variants }) => {
       <VerticalSpacer height={16} />
       {variants[0].familyGuids.map(familyGuid =>
         <Grid.Column key={familyGuid} width={16}>
-          <FamilyVariantTags familyGuid={familyGuid} variant={variants} key={variants.map(v => v.variantId).join()} areCompoundHets />
+          <FamilyVariantTags familyGuid={familyGuid} variant={variants} key={variants.map(v => v.variantId).join()} />
         </Grid.Column>,
       )}
       <Grid.Column width={16}>
