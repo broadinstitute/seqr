@@ -345,7 +345,8 @@ export const getPairedFilteredSavedVariants = createSelector(
   (filteredSavedVariants, notesByGuid, tagsByGuid) => {
     const allNoteGuids = Object.values(notesByGuid).map(n => n.variantGuids)
     const allTagGuids = Object.values(tagsByGuid).map(t => t.variantGuids)
-    const allGuids = allNoteGuids.concat(allTagGuids)
+    const allVariantGuids = Object.values(filteredSavedVariants).map(variant => [variant.variantGuid])
+    const allGuids = allNoteGuids.concat(allTagGuids).concat(allVariantGuids)
     const uniqPairs = allGuids.reduce((acc, guids) => {
       if (guids.length > 1 && !acc.some(existingGuids => isEqual(existingGuids, guids))) {
         acc.push(guids)
