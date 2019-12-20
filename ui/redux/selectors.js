@@ -291,10 +291,31 @@ export const getSavedVariantsGroupedByFamilyVariants = createSelector(
   }, {}),
 )
 
-export const getSavedVariants = createSelector(
+export const getDisplayVariants = createSelector(
   getSavedVariantsGroupedByFamilyVariants,
   (savedVariants) => {
+    /*
+      (getSavedVariantsGroupedByFamilyVariants(state)[ownProps.familyGuid] || {})[getVariantId(ownProps.variant)]
+    || (Array.isArray(ownProps.variant) ? ownProps.variant.map(v => (getSavedVariantsGroupedByFamilyVariants(state)[ownProps.familyGuid] || {})[getVariantId(v)]) : undefined)
+     get
+     Array.isArray(variant) ? savedVariant.map((eachSavedVariant, index) => eachSavedVariant || variant[index]) : savedVariant || variant
+
+     */
     return savedVariants
+  },
+)
+
+export const getDisplayVariantTags = createSelector(
+  getDisplayVariants,
+  displayVariant => {
+    displayVariant.tags
+  },
+)
+
+export const getDisplayVariantNotes = createSelector(
+  getDisplayVariants,
+  displayVariant => {
+    displayVariant.notes
   },
 )
 
