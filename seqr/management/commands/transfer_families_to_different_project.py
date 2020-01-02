@@ -1,7 +1,6 @@
 from django.core.management.base import BaseCommand
 
 from seqr.models import Project, Family, VariantTag, VariantTagType
-from seqr.model_utils import update_seqr_model, get_or_create_seqr_model
 from seqr.views.apis.phenotips_api import _add_user_to_patient, _get_patient_data
 from seqr.views.utils.phenotips_utils import phenotips_patient_exists, get_phenotips_uname_and_pwd_for_project
 
@@ -44,17 +43,15 @@ class Command(BaseCommand):
             variant_tags = VariantTag.objects.filter(saved_variant__family__in=families, variant_tag_type=variant_tag_type)
             if variant_tags:
                 print('Updating "{}" tags'.format(variant_tag_type.name))
-                to_tag_type, created = get_or_create_seqr_model(
-                    VariantTagType, project=to_project, name=variant_tag_type.name
+                to_tag_type, created = VariantTagType.objects.get_or_create(
+                    project=to_project, name=variant_tag_type.name
                 )
                 if created:
-                    update_seqr_model(
-                        to_tag_type,
-                        category=variant_tag_type.category,
-                        description=variant_tag_type.description,
-                        color=variant_tag_type.color,
-                        order=variant_tag_type.order,
-                    )
+                    to_tag_type.category = variant_tag_type.category
+                    to_tag_type.description = variant_tag_type.description
+                    to_tag_type.color = variant_tag_type.color
+                    to_tag_type.order = variant_tag_type.order
+                    to_tag_type.save()
                 variant_tags.update(variant_tag_type=to_tag_type)
 
         print("Updating families")
