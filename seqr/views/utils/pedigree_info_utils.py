@@ -42,12 +42,12 @@ def parse_pedigree_table(parsed_file, filename, user=None, project=None):
 
     # parse rows from file
     try:
-        rows = [row for row in parsed_file[1:] if row and not row[0].startswith('#')]
+        rows = [row for row in parsed_file[1:] if row and not (row[0] or '').startswith('#')]
 
-        headers = [parsed_file[0]] + [row for row in parsed_file[1:] if row[0].startswith('#')]
-        header_string = ','.join(headers[0])
+        header_string = str(parsed_file[0])
         is_datstat_upload = 'DATSTAT' in header_string
-        if "do not modify" in header_string.lower() and "Broad" in header_string:
+        is_merged_pedigree_sample_manifest = "do not modify" in header_string.lower() and "Broad" in header_string
+        if is_merged_pedigree_sample_manifest:
             # the merged pedigree/sample manifest has 3 header rows, so use the known header and skip the next 2 rows.
             headers = rows[:2]
             rows = rows[2:]
@@ -66,12 +66,15 @@ def parse_pedigree_table(parsed_file, filename, user=None, project=None):
                 raise ValueError("Expected vs. actual header columns: {}".format("\t".join(unexpected_header_columns)))
 
             header = expected_header_columns
-            is_merged_pedigree_sample_manifest = True
         else:
-            header = next(
-                ([field.strip('#') for field in row] for row in headers if _is_header_row(','.join(row))),
-                ['family_id', 'individual_id', 'paternal_id', 'maternal_id', 'sex', 'affected']
-            )
+            if _is_header_row(','.join(parsed_file[0])):
+                header_row = parsed_file[0]
+            else:
+                header_row = next(
+                    (row for row in parsed_file[1:] if row[0].startswith('#') and _is_header_row(','.join(row))),
+                    ['family_id', 'individual_id', 'paternal_id', 'maternal_id', 'sex', 'affected']
+                )
+            header = [field.strip('#') for field in header_row]
 
         for i, row in enumerate(rows):
             if len(row) != len(header):
@@ -98,6 +101,7 @@ def parse_pedigree_table(parsed_file, filename, user=None, project=None):
 
         json_records = _convert_fam_file_rows_to_json(rows)
     except Exception as e:
+        traceback.print_exc()
         errors.append("Error while converting %(filename)s rows to json: %(e)s" % locals())
         return json_records, errors, warnings
 
@@ -144,7 +148,7 @@ def _convert_fam_file_rows_to_json(rows):
         # parse
         for key, value in row_dict.items():
             key = key.lower()
-            value = value.strip()
+            value = (value or '').strip()
             if key.lower() == JsonConstants.FAMILY_NOTES_COLUMN.lower():
                 json_record[JsonConstants.FAMILY_NOTES_COLUMN] = value
             elif "family" in key:
