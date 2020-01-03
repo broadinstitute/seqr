@@ -10,7 +10,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
 from seqr.models import Project, Family, Individual, Sample, VariantTag, VariantFunctionalData, \
-    VariantNote, VariantTagType, AnalysisGroup, _slugify, CAN_EDIT, IS_OWNER
+    VariantNote, VariantTagType, SavedVariant, AnalysisGroup, _slugify, CAN_EDIT, IS_OWNER
 from seqr.utils.gene_utils import get_genes
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.json_to_orm_utils import update_project_from_json
@@ -313,12 +313,11 @@ def _get_json_for_variant_tag_types(project):
     project_variant_tags.append(note_tag_type)
     project_variant_tags = sorted(project_variant_tags, key=lambda variant_tag_type: variant_tag_type['order'])
 
-    discovery_tags = []
-    for tag_type in project_variant_tags:
-        if tag_type['category'] == 'CMG Discovery Tags' and tag_type['numTags'] > 0:
-            tags = VariantTag.objects.filter(saved_variants__family__project=project, variant_tag_type__guid=tag_type['variantTagTypeGuid'])
-            saved_variants = [tag.saved_variants.all()[0] for tag in tags]
-            discovery_tags += get_json_for_saved_variants(saved_variants, add_tags=True, add_details=True)
+    discovery_tag_type_guids = [tag_type['variantTagTypeGuid'] for tag_type in project_variant_tags
+                                if tag_type['category'] == 'CMG Discovery Tags' and tag_type['numTags'] > 0]
+    discovery_tags = get_json_for_saved_variants(SavedVariant.objects.filter(
+        family__project=project, varianttag__variant_tag_type__guid__in=discovery_tag_type_guids,
+    ), add_details=True)
 
     project_functional_tags = []
     for category, tags in VariantFunctionalData.FUNCTIONAL_DATA_CHOICES:

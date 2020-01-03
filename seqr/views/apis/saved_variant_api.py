@@ -11,8 +11,8 @@ from seqr.utils.gene_utils import get_genes
 from seqr.utils.xpos_utils import get_xpos
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants, get_json_for_variant_note, \
-    get_json_for_saved_variant, get_json_for_gene_notes_by_gene_id, get_project_locus_list_models
+from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_tags, get_json_for_variant_note, \
+    get_json_for_gene_notes_by_gene_id, get_project_locus_list_models
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_permissions
 from seqr.views.utils.variant_utils import update_project_saved_variant_json, reset_cached_search_results
 from settings import API_LOGIN_REQUIRED_URL
@@ -37,15 +37,14 @@ def saved_variant_data(request, project_guid, variant_guids=None):
         if variant_query.count() < 1:
             return create_json_response({}, status=404, reason='Variant {} not found'.format(', '.join(variant_guids)))
 
-    saved_variants = get_json_for_saved_variants(variant_query, add_tags=True, add_details=True)
-    variants = {variant['variantGuid']: variant for variant in saved_variants if variant['notes'] or variant['tags']}
-    genes = _saved_variant_genes(variants.values())
-    _add_locus_lists([project], variants.values(), genes)
+    response = get_json_for_saved_variants_with_tags(variant_query, add_details=True)
 
-    return create_json_response({
-        'savedVariantsByGuid': variants,
-        'genesById': genes,
-    })
+    variants = response['savedVariantsByGuid'].values()
+    genes = _saved_variant_genes(variants)
+    _add_locus_lists([project], variants, genes)
+    response['genesById'] = genes
+
+    return create_json_response(response)
 
 
 def _create_single_saved_variant(variant_json, family):
@@ -69,8 +68,9 @@ def _create_single_saved_variant(variant_json, family):
 
 def _create_multiple_saved_variants(request_json, family):
     saved_variants = []
-    non_variant_key = ['searchHash', 'tags', 'functionalData', 'notes', 'note', 'submitToClinvar', 'saveAsGeneNote',
-                       'compoundHetsGuids', 'compoundHetsToSave', 'familyGuid']
+    non_variant_key = ['searchHash', 'tags', 'tagGuids', 'functionalData', 'functinalDataGuids', 'notes', 'noteGuids',
+                       'note', 'submitToClinvar', 'saveAsGeneNote', 'compoundHetsGuids', 'compoundHetsToSave',
+                       'familyGuid']
     for key in request_json.keys():
         if key not in non_variant_key:
             compound_het = request_json[key]
@@ -85,9 +85,9 @@ def _create_multiple_saved_variants(request_json, family):
 def create_saved_variant_handler(request):
     variant_json = json.loads(request.body)
     family_guid = variant_json.pop('familyGuid')
-    non_variant_json = {
-        k: variant_json.pop(k, None) for k in ['searchHash', 'tags', 'functionalData', 'notes', 'note', 'submitToClinvar']
-    }
+    non_variant_json = {k: variant_json.pop(k, None) for k in [
+        'searchHash', 'tags', 'tagGuids', 'functionalData', 'functionalDataGuids', 'notes', 'noteGuids', 'note',
+        'submitToClinvar']}
 
     family = Family.objects.get(guid=family_guid)
     check_permissions(family.project, request.user, CAN_VIEW)
@@ -106,12 +106,7 @@ def create_saved_variant_handler(request):
     elif non_variant_json.get('tags'):
         _create_new_tags(saved_variants, non_variant_json, request.user)
 
-    update = {}
-    for saved_variant in saved_variants:
-        update[saved_variant.guid] = get_json_for_saved_variant(saved_variant, add_tags=True)
-    return create_json_response({
-        'savedVariantsByGuid': update,
-    })
+    return create_json_response(get_json_for_saved_variants_with_tags(saved_variants, add_details=True))
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -128,16 +123,23 @@ def create_variant_note_handler(request, variant_guids):
     saved_variants = list(SavedVariant.objects.filter(guid__in=all_variant_guids))
 
     # save unsaved variants in compound hets
-    if 'familyGuids' not in request_json.keys():
+    has_unsaved_compound_hets = 'familyGuids' not in request_json.keys()
+    if has_unsaved_compound_hets:
         saved_variants += _create_multiple_saved_variants(request_json, family)
 
     # update saved_variants
-    _create_variant_note(saved_variants, request_json, request.user)
-    response = {
-        'savedVariantsByGuid': {
-            saved_variant.guid: get_json_for_saved_variant(saved_variant, add_tags=True)
-            for saved_variant in saved_variants},
-    }
+    note = _create_variant_note(saved_variants, request_json, request.user)
+    note_json = get_json_for_variant_note(note, add_variant_guids=False)
+    note_json['variantGuids'] = all_variant_guids
+    if has_unsaved_compound_hets:
+        response = get_json_for_saved_variants_with_tags(saved_variants, add_details=True)
+    else:
+        response = {
+            'savedVariantsByGuid': {
+                saved_variant.guid: {'noteGuids': [n.guid for n in saved_variant.variantnote_set.all()]}
+                for saved_variant in saved_variants},
+            'variantNotesByGuid': {note.guid: note_json},
+        }
 
     if save_as_gene_note:
         main_transcript_id = saved_variants[0].selected_main_transcript_id or saved_variants[0].saved_variant_json['mainTranscriptId']
@@ -164,11 +166,10 @@ def _create_variant_note(saved_variants, note_json, user):
         created_by=user,
     )
     note.saved_variants.set(saved_variants)
+    return note
 
 
-def _get_note_from_variant_guids(user, variant_guids, note_guid):
-    saved_variants = SavedVariant.objects.filter(guid__in=variant_guids)
-    check_permissions(saved_variants[0].family.project, user, CAN_VIEW)
+def _get_note_from_variant_guids(user, note_guid):
     note = VariantNote.objects.get(guid=note_guid)
     projects = {saved_variant.family.project for saved_variant in note.saved_variants.all()}
     for project in projects:
@@ -180,33 +181,32 @@ def _get_note_from_variant_guids(user, variant_guids, note_guid):
 @csrf_exempt
 def update_variant_note_handler(request, variant_guids, note_guid):
     variant_guids = variant_guids.split(',')
-    note = _get_note_from_variant_guids(request.user, variant_guids, note_guid)
+    note = _get_note_from_variant_guids(request.user, note_guid)
     request_json = json.loads(request.body)
     update_model_from_json(note, request_json, allow_unknown_keys=True)
 
-    update = {}
-    for variant_guid in variant_guids:
-        saved_variant = SavedVariant.objects.get(guid=variant_guid)
-        update[variant_guid] = {
-            'notes': [get_json_for_variant_note(updated_note) for updated_note in saved_variant.variantnote_set.all()],
-        }
-    return create_json_response({'savedVariantsByGuid': update})
+    note_json = get_json_for_variant_note(note, add_variant_guids=False)
+    note_json['variantGuids'] = variant_guids
+
+    return create_json_response({
+        'variantNotesByGuid': {note.guid: note_json},
+    })
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def delete_variant_note_handler(request, variant_guids, note_guid):
     variant_guids = variant_guids.split(',')
-    note = _get_note_from_variant_guids(request.user, variant_guids, note_guid)
+    note = _get_note_from_variant_guids(request.user, note_guid)
     note.delete()
 
-    update = {}
-    for variant_guid in variant_guids:
-        saved_variant = SavedVariant.objects.get(guid=variant_guid)
-        update[variant_guid] = {
-            'notes': [get_json_for_variant_note(updated_note) for updated_note in saved_variant.variantnote_set.all()]
-        }
-    return create_json_response({'savedVariantsByGuid': update})
+    return create_json_response({
+        'savedVariantsByGuid': {
+            saved_variant.guid: {'noteGuids': [n.guid for n in saved_variant.variantnote_set.all()]}
+            for saved_variant in SavedVariant.objects.filter(guid__in=variant_guids)
+        },
+        'variantNotesByGuid': {note_guid: None},
+    })
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -275,12 +275,8 @@ def update_variant_tags_handler(request, variant_guids):
                 created_by=request.user,
             )
             functional_data.saved_variants.set(saved_variants)
-
-    update = {}
-    for variant_guid in all_variant_guids:
-        saved_variant = SavedVariant.objects.get(guid=variant_guid)
-        update[saved_variant.guid] = get_json_for_saved_variant(saved_variant, add_tags=True)
-    return create_json_response({'savedVariantsByGuid': update})
+    # TODO can actually just return the changes, do not need all the variant json
+    return create_json_response(get_json_for_saved_variants_with_tags(saved_variants))
 
 
 def _create_new_tags(saved_variants, tags_json, user):

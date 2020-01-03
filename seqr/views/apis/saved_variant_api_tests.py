@@ -36,7 +36,6 @@ COMPOUND_HET_3_JSON = {
     'familyGuids': ['F000001_1'],
     'variantId': '15-62456358-A-C',
 }
-COMPOUND_HET_3_GUID = 'SV0000007_1562456358_f000001_1'
 
 COMPOUND_HET_4_JSON = {
     'alt': 'A',
@@ -55,7 +54,6 @@ COMPOUND_HET_4_JSON = {
     'familyGuids': ['F000001_1'],
     'variantId': '15-62456406-G-A',
 }
-COMPOUND_HET_4_GUID = 'SV0000006_1562456406_f000001_1'
 
 COMPOUND_HET_5_JSON = {
     'alt': 'C',
@@ -74,7 +72,6 @@ COMPOUND_HET_5_JSON = {
     'familyGuids': ['F000001_1'],
     'variantId': '16-31096164-G-C',
 }
-COMPOUND_HET_5_GUID = 'SV0000006_1631096164_f000001_1'
 
 
 class ProjectAPITest(TransactionTestCase):
@@ -87,18 +84,33 @@ class ProjectAPITest(TransactionTestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
 
-        variants = response.json()['savedVariantsByGuid']
+        response_json = response.json()
+        self.assertSetEqual(set(response_json.keys()), {
+            'variantTagsByGuid', 'variantNotesByGuid', 'variantFunctionalDataByGuid', 'savedVariantsByGuid', 'genesById'
+        })
+
+        variants = response_json['savedVariantsByGuid']
         self.assertSetEqual(set(variants.keys()), {'SV0000002_1248367227_r0390_100', 'SV0000001_2103343353_r0390_100'})
 
         variant = variants['SV0000001_2103343353_r0390_100']
         self.assertSetEqual(
             set(variant.keys()),
             {'variantId', 'variantGuid', 'xpos', 'ref', 'alt', 'chrom', 'pos', 'genomeVersion', 'liftedOverGenomeVersion',
-             'liftedOverChrom', 'liftedOverPos', 'familyGuids', 'tags', 'functionalData', 'notes', 'clinvar',
+             'liftedOverChrom', 'liftedOverPos', 'familyGuids', 'tagGuids', 'functionalDataGuids', 'noteGuids',
              'originalAltAlleles', 'mainTranscriptId', 'selectedMainTranscriptId', 'genotypes', 'hgmd', 'transcripts',
-             'locusListGuids', 'populations', 'predictions', 'rsid', 'genotypeFilters'}
+             'locusListGuids', 'populations', 'predictions', 'rsid', 'genotypeFilters', 'clinvar',}
         )
         self.assertSetEqual(set(variant['genotypes'].keys()), {'I000003_na19679', 'I000001_na19675', 'I000002_na19678'})
+        self.assertSetEqual(
+            set(variant['tagGuids']), {'VT1708633_2103343353_r0390_100', 'VT1726961_2103343353_r0390_100'},
+        )
+
+        tag = response_json['variantTagsByGuid']['VT1708633_2103343353_r0390_100']
+        self.assertSetEqual(
+            set(tag.keys()),
+            {'tagGuid', 'searchParameters', 'searchHash', 'lastModifiedDate', 'createdBy', 'variantGuids',
+             'category', 'color', 'name'}
+        )
 
         # filter by family
         response = self.client.get('{}?families=F000002_2'.format(url))
@@ -156,18 +168,17 @@ class ProjectAPITest(TransactionTestCase):
         variant_json.update({'xpos': 2061413835})
         self.assertDictEqual(variant_json, saved_variant.saved_variant_json)
 
-        expected_variant_json = {k: variant_json.pop(k, None) for k in ['xpos', 'alt', 'ref', 'notes']}
-        expected_variant_json.update({
-            'variantId': '2-61413835-AAAG-A',
+        variant_json.update({
             'variantGuid': variant_guid,
             'familyGuids': ['F000001_1'],
             'selectedMainTranscriptId': None,
-            'notes': [],
-            'functionalData': [],
+            'noteGuids': [],
+            'functionalDataGuids': [],
         })
-        response_variant_json = response.json()['savedVariantsByGuid'][variant_guid]
-        tags = response_variant_json.pop('tags')
-        self.assertDictEqual(expected_variant_json, response_variant_json)
+        response_json = response.json()
+        response_variant_json = response_json['savedVariantsByGuid'][variant_guid]
+        tags = [response_json['variantTagsByGuid'][tag_guid] for tag_guid in response_variant_json.pop('tagGuids')]
+        self.assertDictEqual(variant_json, response_variant_json)
 
         self.assertListEqual(["Review"], [vt['name'] for vt in tags])
         self.assertListEqual(["Review"], [vt.variant_tag_type.name for vt in VariantTag.objects.filter(saved_variants__guid__contains=variant_guid)])
@@ -188,44 +199,40 @@ class ProjectAPITest(TransactionTestCase):
         response = self.client.post(create_saved_compound_hets_url, content_type='application/json', data=json.dumps(request_body))
         self.assertEqual(response.status_code, 200)
 
-        self.assertEqual(len(response.json()['savedVariantsByGuid']), 2)
-        compound_het_3_guid = response.json()['savedVariantsByGuid'].keys()[0]
-        compound_het_4_guid = response.json()['savedVariantsByGuid'].keys()[1]
+        new_compound_het_3_guid = response.json()['savedVariantsByGuid'].keys()[0]
+        new_compound_het_4_guid = response.json()['savedVariantsByGuid'].keys()[1]
 
-        saved_compound_het_3 = SavedVariant.objects.get(guid=compound_het_3_guid, family__guid='F000001_1')
-        saved_compound_het_4 = SavedVariant.objects.get(guid=compound_het_4_guid, family__guid='F000001_1')
+        saved_compound_het_3 = SavedVariant.objects.get(guid=new_compound_het_3_guid, family__guid='F000001_1')
+        saved_compound_het_4 = SavedVariant.objects.get(guid=new_compound_het_4_guid, family__guid='F000001_1')
         self.assertDictEqual(COMPOUND_HET_3_JSON, saved_compound_het_3.saved_variant_json)
         self.assertDictEqual(COMPOUND_HET_4_JSON, saved_compound_het_4.saved_variant_json)
 
-        expected_compound_het_3_json = {k: COMPOUND_HET_3_JSON.pop(k, None) for k in ['xpos', 'alt', 'ref']}
-        expected_compound_het_3_json.update({
-            'variantId': '15-62456358-A-C',
-            'variantGuid': compound_het_3_guid,
-            'familyGuids': ['F000001_1'],
+        expected_compound_het_3_json = {
+            'variantGuid': new_compound_het_3_guid,
             'selectedMainTranscriptId': None,
-            'notes': [],
-            'functionalData': [],
-        })
-        expected_compound_het_4_json = {k: COMPOUND_HET_4_JSON.pop(k, None) for k in ['xpos', 'alt', 'ref']}
-        expected_compound_het_4_json.update({
-            'variantId': '15-62456406-G-A',
-            'variantGuid': compound_het_4_guid,
-            'familyGuids': ['F000001_1'],
+            'noteGuids': [],
+            'functionalDataGuids': [],
+        }
+        expected_compound_het_3_json.update(COMPOUND_HET_3_JSON)
+        expected_compound_het_4_json = {
+            'variantGuid': new_compound_het_4_guid,
             'selectedMainTranscriptId': None,
-            'notes': [],
-            'functionalData': [],
-        })
-        response_compound_het_3_json = response.json()['savedVariantsByGuid'][compound_het_3_guid]
-        response_compound_het_4_json = response.json()['savedVariantsByGuid'][compound_het_4_guid]
-        compound_het_3_tags = response_compound_het_3_json.pop('tags')
-        compound_het_4_tags = response_compound_het_4_json.pop('tags')
+            'noteGuids': [],
+            'functionalDataGuids': [],
+        }
+        expected_compound_het_4_json.update(COMPOUND_HET_4_JSON)
+        response_json = response.json()
+        response_compound_het_3_json = response_json['savedVariantsByGuid'][new_compound_het_3_guid]
+        response_compound_het_4_json = response_json['savedVariantsByGuid'][new_compound_het_4_guid]
+        compound_het_3_tags = [response_json['variantTagsByGuid'][tag_guid] for tag_guid in response_compound_het_3_json.pop('tagGuids')]
+        compound_het_4_tags = [response_json['variantTagsByGuid'][tag_guid] for tag_guid in response_compound_het_4_json.pop('tagGuids')]
         self.assertDictEqual(expected_compound_het_3_json, response_compound_het_3_json)
         self.assertDictEqual(expected_compound_het_4_json, response_compound_het_4_json)
 
         self.assertListEqual(["Review"], [vt['name'] for vt in compound_het_3_tags])
         self.assertListEqual(["Review"], [vt['name'] for vt in compound_het_4_tags])
-        self.assertListEqual(["Review"], [vt.variant_tag_type.name for vt in VariantTag.objects.filter(saved_variants__guid__contains=compound_het_3_guid)])
-        self.assertListEqual(["Review"], [vt.variant_tag_type.name for vt in VariantTag.objects.filter(saved_variants__guid__contains=compound_het_4_guid)])
+        self.assertListEqual(["Review"], [vt.variant_tag_type.name for vt in VariantTag.objects.filter(saved_variants__guid__contains=new_compound_het_3_guid)])
+        self.assertListEqual(["Review"], [vt.variant_tag_type.name for vt in VariantTag.objects.filter(saved_variants__guid__contains=new_compound_het_4_guid)])
 
     def test_create_update_and_delete_variant_note(self):
         create_variant_note_url = reverse(create_variant_note_handler, args=[VARIANT_GUID])
@@ -237,11 +244,12 @@ class ProjectAPITest(TransactionTestCase):
         ))
 
         self.assertEqual(response.status_code, 200)
-        new_note_response = response.json()['savedVariantsByGuid'][VARIANT_GUID]['notes'][0]
+        new_note_guid = response.json()['savedVariantsByGuid'][VARIANT_GUID]['noteGuids'][0]
+        new_note_response = response.json()['variantNotesByGuid'][new_note_guid]
         self.assertEqual(new_note_response['note'], 'new_variant_note')
         self.assertEqual(new_note_response['submitToClinvar'], True)
 
-        new_variant_note = VariantNote.objects.filter(guid=new_note_response['noteGuid']).first()
+        new_variant_note = VariantNote.objects.filter(guid=new_note_guid).first()
         self.assertIsNotNone(new_variant_note)
         self.assertEqual(new_variant_note.note, new_note_response['note'])
         self.assertEqual(new_variant_note.submit_to_clinvar, new_note_response['submitToClinvar'])
@@ -251,7 +259,8 @@ class ProjectAPITest(TransactionTestCase):
             {'note': 'new_variant_note_as_gene_note', 'saveAsGeneNote': True, 'familyGuid': 'F000001_1'}
         ))
         self.assertEqual(response.status_code, 200)
-        new_variant_note_response = response.json()['savedVariantsByGuid'][VARIANT_GUID]['notes'][1]
+        new_variant_note_guid = response.json()['savedVariantsByGuid'][VARIANT_GUID]['noteGuids'][1]
+        new_variant_note_response = response.json()['variantNotesByGuid'][new_variant_note_guid]
         self.assertEqual(new_variant_note_response['note'], 'new_variant_note_as_gene_note')
         new_gene_note_response = response.json()['genesById'][GENE_GUID]['notes'][0]
         self.assertEqual(new_gene_note_response['note'], 'new_variant_note_as_gene_note')
@@ -262,19 +271,19 @@ class ProjectAPITest(TransactionTestCase):
             {'note': 'new user-selected gene note', 'saveAsGeneNote': True, 'familyGuid': 'F000001_1'}
         ))
         self.assertEqual(response.status_code, 200)
-        new_variant_note_response = response.json()['savedVariantsByGuid']['SV0000003_2246859832_r0390_100']['notes'][0]
+        new_variant_note_response = response.json()['variantNotesByGuid'].values()[0]
         self.assertEqual(new_variant_note_response['note'], 'new user-selected gene note')
         new_gene_note_response = response.json()['genesById'][GENE_GUID]['notes'][1]
         self.assertEqual(new_gene_note_response['note'], 'new user-selected gene note')
 
         # update the variant_note
-        update_variant_note_url = reverse(update_variant_note_handler, args=[VARIANT_GUID, new_variant_note.guid])
+        update_variant_note_url = reverse(update_variant_note_handler, args=[VARIANT_GUID, new_note_guid])
         response = self.client.post(update_variant_note_url, content_type='application/json',  data=json.dumps(
             {'note': 'updated_variant_note', 'submitToClinvar': False}))
 
         self.assertEqual(response.status_code, 200)
 
-        updated_note_response = response.json()['savedVariantsByGuid'][VARIANT_GUID]['notes'][1]
+        updated_note_response = response.json()['variantNotesByGuid'][new_note_guid]
         self.assertEqual(updated_note_response['note'], 'updated_variant_note')
         self.assertEqual(updated_note_response['submitToClinvar'], False)
 
@@ -306,28 +315,27 @@ class ProjectAPITest(TransactionTestCase):
         compound_het_guids = response.json()['savedVariantsByGuid'].keys()
         compound_het_guids.remove(VARIANT_GUID)
         compound_het_5_guid = compound_het_guids[0]
-        self.assertEqual(compound_het_5_guid, COMPOUND_HET_5_GUID)
 
         saved_compound_het_5 = SavedVariant.objects.get(guid=compound_het_5_guid, family__guid='F000001_1')
         self.assertDictEqual(COMPOUND_HET_5_JSON, saved_compound_het_5.saved_variant_json)
 
-        expected_compound_het_5_json = {k: COMPOUND_HET_5_JSON.pop(k, None) for k in ['xpos', 'alt', 'ref']}
-        expected_compound_het_5_json.update({
-            'variantId': '16-31096164-G-C',
+        expected_compound_het_5_json = {
             'variantGuid': compound_het_5_guid,
-            'familyGuids': ['F000001_1'],
             'selectedMainTranscriptId': None,
-            'tags': [],
-            'functionalData': [],
-        })
-        response_compound_het_5_json = response.json()['savedVariantsByGuid'][compound_het_5_guid]
-        response_variant_json = response.json()['savedVariantsByGuid'][VARIANT_GUID]
-        compound_het_5_notes = response_compound_het_5_json.pop('notes')
-        variant_notes = response_variant_json.pop('notes')
+            'tagGuids': [],
+            'functionalDataGuids': [],
+        }
+        expected_compound_het_5_json.update(COMPOUND_HET_5_JSON)
+        response_json = response.json()
+        response_compound_het_5_json = response_json['savedVariantsByGuid'][compound_het_5_guid]
+        note_guids = response_compound_het_5_json.pop('noteGuids')
         self.assertDictEqual(expected_compound_het_5_json, response_compound_het_5_json)
+        self.assertListEqual(note_guids, response_json['savedVariantsByGuid'][VARIANT_GUID]['noteGuids'])
+        self.assertEqual(len(note_guids), 1)
 
-        self.assertListEqual(["one_saved_one_not_saved_compount_hets_note"], [vn['note'] for vn in compound_het_5_notes])
-        self.assertListEqual(["one_saved_one_not_saved_compount_hets_note"], [vn['note'] for vn in variant_notes])
+        self.assertEqual(
+            'one_saved_one_not_saved_compount_hets_note', response_json['variantNotesByGuid'][note_guids[0]]['note'],
+        )
 
     def test_create_update_and_delete_compound_hets_variant_note(self):
         # send valid request to create variant_note for compound hets
@@ -339,69 +347,68 @@ class ProjectAPITest(TransactionTestCase):
         ))
 
         self.assertEqual(response.status_code, 200)
-        compound_het_1_new_note_response = response.json()['savedVariantsByGuid'][COMPOUND_HET_1_GUID]['notes'][0]
-        compound_het_2_new_note_response = response.json()['savedVariantsByGuid'][COMPOUND_HET_2_GUID]['notes'][0]
-        self.assertEqual(compound_het_1_new_note_response['note'], 'new_compound_hets_variant_note')
-        self.assertEqual(compound_het_2_new_note_response['note'], 'new_compound_hets_variant_note')
-        self.assertEqual(compound_het_1_new_note_response['submitToClinvar'], True)
-        self.assertEqual(compound_het_2_new_note_response['submitToClinvar'], True)
+        response_json = response.json()
+        for note in response.json()['variantNotesByGuid'].values():
+            self.assertEqual(note['note'], 'new_compound_hets_variant_note')
+            self.assertEqual(note['submitToClinvar'], True)
 
-        compound_het_1_new_variant_note = VariantNote.objects.filter(guid=compound_het_1_new_note_response['noteGuid']).first()
-        compound_het_2_new_variant_note = VariantNote.objects.filter(guid=compound_het_2_new_note_response['noteGuid']).first()
-        self.assertIsNotNone(compound_het_1_new_variant_note)
-        self.assertIsNotNone(compound_het_2_new_variant_note)
-        self.assertEqual(compound_het_1_new_variant_note.note, compound_het_1_new_note_response['note'])
-        self.assertEqual(compound_het_2_new_variant_note.note, compound_het_2_new_note_response['note'])
-        self.assertEqual(compound_het_1_new_variant_note.submit_to_clinvar, compound_het_1_new_note_response['submitToClinvar'])
-        self.assertEqual(compound_het_2_new_variant_note.submit_to_clinvar, compound_het_2_new_note_response['submitToClinvar'])
-
-        # save variant_note as gene_note for both compound hets
-        response = self.client.post(create_compound_hets_variant_note_url, content_type='application/json', data=json.dumps(
-            {'note': 'new_compound_hets_variant_note_as_gene_note', 'saveAsGeneNote': True, 'familyGuid': 'F000001_1'}
-        ))
-        self.assertEqual(response.status_code, 200)
-        compound_het_1_new_variant_note_as_gene_note_response = response.json()['savedVariantsByGuid'][COMPOUND_HET_1_GUID]['notes'][1]
-        compound_het_2_new_variant_note_as_gene_note_response = response.json()['savedVariantsByGuid'][COMPOUND_HET_2_GUID]['notes'][1]
-        self.assertEqual(compound_het_1_new_variant_note_as_gene_note_response['note'], 'new_compound_hets_variant_note_as_gene_note')
-        self.assertEqual(compound_het_2_new_variant_note_as_gene_note_response['note'], 'new_compound_hets_variant_note_as_gene_note')
-        new_gene_note_response_1 = response.json()['genesById'][GENE_GUID_2]['notes'][0]
-        new_gene_note_response_2 = response.json()['genesById'][GENE_GUID_2]['notes'][0]
-        self.assertEqual(new_gene_note_response_1['note'], 'new_compound_hets_variant_note_as_gene_note')
-        self.assertEqual(new_gene_note_response_2['note'], 'new_compound_hets_variant_note_as_gene_note')
+        self.assertEqual(
+            response_json['savedVariantsByGuid'][COMPOUND_HET_1_GUID]['noteGuids'][0],
+            response_json['savedVariantsByGuid'][COMPOUND_HET_2_GUID]['noteGuids'][0],
+        )
+        new_note_guid = response_json['savedVariantsByGuid'][COMPOUND_HET_1_GUID]['noteGuids'][0]
+        new_variant_note = VariantNote.objects.get(guid=new_note_guid)
+        self.assertEqual(new_variant_note.note, response_json['variantNotesByGuid'][new_note_guid]['note'])
+        self.assertEqual(
+            new_variant_note.submit_to_clinvar, response_json['variantNotesByGuid'][new_note_guid]['submitToClinvar']
+        )
 
         # update the variants_note for both compound hets
         update_variant_note_url = reverse(update_variant_note_handler,
-                                          args=[','.join([COMPOUND_HET_1_GUID, COMPOUND_HET_2_GUID]), compound_het_1_new_variant_note.guid])
+                                          args=[','.join([COMPOUND_HET_1_GUID, COMPOUND_HET_2_GUID]), new_note_guid])
         response = self.client.post(update_variant_note_url, content_type='application/json', data=json.dumps(
             {'note': 'updated_variant_note', 'submitToClinvar': False}))
 
         self.assertEqual(response.status_code, 200)
 
-        updated_note_response_1 = response.json()['savedVariantsByGuid'][COMPOUND_HET_1_GUID]['notes'][0]
-        updated_note_response_2 = response.json()['savedVariantsByGuid'][COMPOUND_HET_2_GUID]['notes'][0]
-        self.assertEqual(updated_note_response_1['note'], 'new_compound_hets_variant_note_as_gene_note')
-        self.assertEqual(updated_note_response_2['note'], 'new_compound_hets_variant_note_as_gene_note')
-        self.assertEqual(updated_note_response_1['submitToClinvar'], False)
-        self.assertEqual(updated_note_response_2['submitToClinvar'], False)
+        updated_note_response = response.json()['variantNotesByGuid'][new_note_guid]
+        self.assertEqual(updated_note_response['note'], 'updated_variant_note')
+        self.assertEqual(updated_note_response['submitToClinvar'], False)
 
-        updated_variant_note = VariantNote.objects.filter(guid=updated_note_response_1['noteGuid']).first()
-        self.assertIsNotNone(updated_variant_note)
-        self.assertEqual(updated_variant_note.note, updated_note_response_1['note'])
-        self.assertEqual(updated_variant_note.note, updated_note_response_2['note'])
-        self.assertEqual(updated_variant_note.submit_to_clinvar, updated_note_response_1['submitToClinvar'])
-        self.assertEqual(updated_variant_note.submit_to_clinvar, updated_note_response_2['submitToClinvar'])
+        updated_variant_note = VariantNote.objects.get(guid=new_note_guid)
+        self.assertEqual(updated_variant_note.note, updated_note_response['note'])
+        self.assertEqual(updated_variant_note.submit_to_clinvar, updated_note_response['submitToClinvar'])
 
         # delete the variant_note for both compound hets
-        delete_variant_note_url = reverse(delete_variant_note_handler, args=[','.join([COMPOUND_HET_1_GUID, COMPOUND_HET_2_GUID]), updated_variant_note.guid])
+        delete_variant_note_url = reverse(delete_variant_note_handler,
+                                          args=[','.join([COMPOUND_HET_1_GUID, COMPOUND_HET_2_GUID]), new_note_guid])
         response = self.client.post(delete_variant_note_url, content_type='application/json')
 
         self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {
+            'savedVariantsByGuid': {COMPOUND_HET_1_GUID: {'noteGuids': []}, COMPOUND_HET_2_GUID: {'noteGuids': []}},
+            'variantNotesByGuid': {new_note_guid: None}})
 
-        # check that variant_note was deleted for both compound hets
-        new_variant_note_1 = VariantNote.objects.filter(guid=updated_note_response_1['noteGuid'])
-        new_variant_note_2 = VariantNote.objects.filter(guid=updated_note_response_2['noteGuid'])
-        self.assertEqual(len(new_variant_note_1), 0)
-        self.assertEqual(len(new_variant_note_2), 0)
+        # check that variant_note was deleted
+        new_variant_note = VariantNote.objects.filter(guid=new_note_guid)
+        self.assertEqual(len(new_variant_note), 0)
+
+        # save variant_note as gene_note for both compound hets
+        response = self.client.post(
+            create_compound_hets_variant_note_url, content_type='application/json', data=json.dumps({
+                'note': 'new_compound_hets_variant_note_as_gene_note', 'saveAsGeneNote': True, 'familyGuid': 'F000001_1'
+            }))
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        new_gene_note_guid = response_json['savedVariantsByGuid'][COMPOUND_HET_1_GUID]['noteGuids'][0]
+        self.assertEqual(new_gene_note_guid, response_json['savedVariantsByGuid'][COMPOUND_HET_2_GUID]['noteGuids'][0])
+
+        self.assertEqual(
+            response_json['variantNotesByGuid'][new_gene_note_guid]['note'],
+            'new_compound_hets_variant_note_as_gene_note',
+        )
+        new_gene_note_response = response.json()['genesById'][GENE_GUID_2]['notes'][0]
+        self.assertEqual(new_gene_note_response['note'], 'new_compound_hets_variant_note_as_gene_note')
 
     def test_update_variant_tags(self):
         variant_tags = VariantTag.objects.filter(saved_variants__guid__contains=VARIANT_GUID)
@@ -423,16 +430,20 @@ class ProjectAPITest(TransactionTestCase):
         }))
         self.assertEqual(response.status_code, 200)
 
-        tags = response.json()['savedVariantsByGuid'][VARIANT_GUID]['tags']
+        tags = response.json()['variantTagsByGuid'].values()
         self.assertEqual(len(tags), 2)
         self.assertSetEqual({"Review", "Excluded"}, {vt['name'] for vt in tags})
         self.assertSetEqual({"Review", "Excluded"},
                             {vt.variant_tag_type.name for vt in VariantTag.objects.filter(saved_variants__guid__contains=VARIANT_GUID)})
 
-        functionalData = response.json()['savedVariantsByGuid'][VARIANT_GUID]['functionalData']
-        self.assertEqual(len(functionalData), 2)
-        self.assertSetEqual({"Biochemical Function", "Bonferroni corrected p-value"}, {vt['name'] for vt in functionalData})
-        self.assertSetEqual({"An updated note", "0.05"}, {vt['metadata'] for vt in functionalData})
+        functional_data_guids = response.json()['savedVariantsByGuid'][VARIANT_GUID]['functionalDataGuids']
+        self.assertEqual(len(functional_data_guids), 2)
+        self.assertSetEqual(
+            {"Biochemical Function", "Bonferroni corrected p-value"},
+            {vt['name'] for vt in response.json()['variantFunctionalDataByGuid'].values()})
+        self.assertSetEqual(
+            {"An updated note", "0.05"},
+            {vt['metadata'] for vt in response.json()['variantFunctionalDataByGuid'].values()})
         variant_functional_data = VariantFunctionalData.objects.filter(saved_variants__guid__contains=VARIANT_GUID)
         self.assertSetEqual({"Biochemical Function", "Bonferroni corrected p-value"}, {vt.functional_data_tag for vt in variant_functional_data})
         self.assertSetEqual({"An updated note", "0.05"}, {vt.metadata for vt in variant_functional_data})
@@ -459,24 +470,33 @@ class ProjectAPITest(TransactionTestCase):
         }))
         self.assertEqual(response.status_code, 200)
 
-        compound_het_1_tags = response.json()['savedVariantsByGuid'][COMPOUND_HET_1_GUID]['tags']
-        compound_het_2_tags = response.json()['savedVariantsByGuid'][COMPOUND_HET_2_GUID]['tags']
-        self.assertEqual(len(compound_het_1_tags), 2)
-        self.assertEqual(len(compound_het_2_tags), 2)
-        self.assertSetEqual({"Review", "Excluded"}, {vt['name'] for vt in compound_het_1_tags})
-        self.assertSetEqual({"Review", "Excluded"}, {vt['name'] for vt in compound_het_2_tags})
+        response_json = response.json()
+        compound_het_1_tag_guids = response_json['savedVariantsByGuid'][COMPOUND_HET_1_GUID]['tagGuids']
+        compound_het_2_tag_guids = response_json['savedVariantsByGuid'][COMPOUND_HET_2_GUID]['tagGuids']
+        self.assertEqual(len(compound_het_1_tag_guids), 2)
+        self.assertEqual(len(compound_het_2_tag_guids), 2)
+        self.assertSetEqual({"Review", "Excluded"}, {
+            vt['name'] for vt in response_json['variantTagsByGuid'].values()
+            if vt['tagGuid'] in compound_het_1_tag_guids
+        })
+        self.assertSetEqual({"Review", "Excluded"}, {
+            vt['name'] for vt in response_json['variantTagsByGuid'].values()
+            if vt['tagGuid'] in compound_het_2_tag_guids
+        })
         self.assertSetEqual({"Review", "Excluded"},
                             {vt.variant_tag_type.name for vt in
                              VariantTag.objects.filter(saved_variants__guid__in=[COMPOUND_HET_1_GUID, COMPOUND_HET_2_GUID])})
 
-        compound_het_1_functional_data = response.json()['savedVariantsByGuid'][COMPOUND_HET_1_GUID]['functionalData']
-        compound_het_2_functional_data = response.json()['savedVariantsByGuid'][COMPOUND_HET_2_GUID]['functionalData']
-        self.assertEqual(len(compound_het_1_functional_data), 2)
-        self.assertEqual(len(compound_het_2_functional_data), 2)
-        self.assertSetEqual({"Biochemical Function", "Bonferroni corrected p-value"}, {vt['name'] for vt in compound_het_1_functional_data})
-        self.assertSetEqual({"Biochemical Function", "Bonferroni corrected p-value"}, {vt['name'] for vt in compound_het_2_functional_data})
-        self.assertSetEqual({"An updated note", "0.05"}, {vt['metadata'] for vt in compound_het_1_functional_data})
-        self.assertSetEqual({"An updated note", "0.05"}, {vt['metadata'] for vt in compound_het_2_functional_data})
+        compound_het_1_functional_data_guids = response.json()['savedVariantsByGuid'][COMPOUND_HET_1_GUID]['functionalDataGuids']
+        compound_het_2_functional_data_guids = response.json()['savedVariantsByGuid'][COMPOUND_HET_2_GUID]['functionalDataGuids']
+        self.assertEqual(len(compound_het_1_functional_data_guids), 2)
+        self.assertEqual(len(compound_het_2_functional_data_guids), 2)
+        self.assertSetEqual(
+            {"Biochemical Function", "Bonferroni corrected p-value"},
+            {vt['name'] for vt in response.json()['variantFunctionalDataByGuid'].values()})
+        self.assertSetEqual(
+            {"An updated note", "0.05"},
+            {vt['metadata'] for vt in response.json()['variantFunctionalDataByGuid'].values()})
         variant_functional_data = VariantFunctionalData.objects.filter(saved_variants__guid__in=[COMPOUND_HET_1_GUID, COMPOUND_HET_2_GUID])
         self.assertSetEqual({"Biochemical Function", "Bonferroni corrected p-value"}, {vt.functional_data_tag for vt in variant_functional_data})
         self.assertSetEqual({"An updated note", "0.05"}, {vt.metadata for vt in variant_functional_data})

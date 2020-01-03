@@ -26,7 +26,7 @@ from seqr.views.utils.orm_to_json_utils import \
     get_json_for_analysis_groups, \
     get_json_for_samples, \
     get_json_for_locus_lists, \
-    get_json_for_saved_variants, \
+    get_json_for_saved_variants_with_tags, \
     get_json_for_saved_search,\
     get_json_for_saved_searches, \
     get_project_locus_list_models, \
@@ -140,13 +140,13 @@ def _process_variants(variants, families):
     # TODO add locus lists on the client side (?)
     projects = {family.project for family in families}
     _add_locus_lists(projects, variants, genes)
-    saved_variants_by_guid, _ = _get_saved_variants(variants, families)
+    response_json, _ = _get_saved_variants(variants, families)
 
-    return {
+    response_json.update({
         'searchedVariants': variants,
-        'savedVariantsByGuid': saved_variants_by_guid,
         'genesById': genes,
-    }
+    })
+    return response_json
 
 
 PREDICTION_MAP = {
@@ -244,7 +244,7 @@ def export_variants_handler(request, search_hash):
     variants, _ = get_es_variants(results_model, page=1, load_all=True)
     variants = _flatten_variants(variants)
 
-    saved_variants_by_guid, variants_to_saved_variants = _get_saved_variants(variants, families)
+    json, variants_to_saved_variants = _get_saved_variants(variants, families)
 
     max_families_per_variant = max([len(variant['familyGuids']) for variant in variants])
     max_samples_per_variant = max([len(variant['genotypes']) for variant in variants])
@@ -254,8 +254,12 @@ def export_variants_handler(request, search_hash):
         row = [_get_field_value(variant, config) for config in VARIANT_EXPORT_DATA]
         for i in range(max_families_per_variant):
             family_guid = variant['familyGuids'][i] if i < len(variant['familyGuids']) else ''
-            family_tags = saved_variants_by_guid.get(variants_to_saved_variants.get(variant['variantId'], {}).get(family_guid, '')) or {}
-            family_tags['family_id'] = family_ids_by_guid.get(family_guid)
+            variant_guid = variants_to_saved_variants.get(variant['variantId'], {}).get(family_guid, '')
+            family_tags = {
+                'family_id': family_ids_by_guid.get(family_guid),
+                'tags': [tag for tag in json['variantTagsByGuid'].values() if variant_guid in tag['variantGuids']],
+                'notes': [note for note in json['variantNotesByGuid'].values() if variant_guid in note['variantGuids']],
+            }
             row += [_get_field_value(family_tags, config) for config in VARIANT_FAMILY_EXPORT_DATA]
         genotypes = variant['genotypes'].values()
         for i in range(max_samples_per_variant):
@@ -503,10 +507,9 @@ def _get_saved_variants(variants, families):
                 )] = variant
     saved_variants = SavedVariant.objects.filter(variant_q)
 
-    saved_variants_json = get_json_for_saved_variants(saved_variants, add_tags=True, add_details=True)
-    saved_variants_by_guid = {}
+    json = get_json_for_saved_variants_with_tags(saved_variants, add_details=True)
     variants_to_saved_variants = {}
-    for saved_variant in saved_variants_json:
+    for saved_variant in json['savedVariantsByGuid'].values():
         family_guids = saved_variant['familyGuids']
         searched_variant = variants_by_id.get(_get_variant_key(**saved_variant))
         if not searched_variant:
@@ -515,13 +518,13 @@ def _get_saved_variants(variants, families):
         saved_variant.update(searched_variant)
         #  For saved variants only use family it was saved for, not all families in search
         saved_variant['familyGuids'] = family_guids
-        saved_variants_by_guid[saved_variant['variantGuid']] = saved_variant
+        json['savedVariantsByGuid'][saved_variant['variantGuid']] = saved_variant
         if searched_variant['variantId'] not in variants_to_saved_variants:
             variants_to_saved_variants[searched_variant['variantId']] = {}
         for family_guid in family_guids:
             variants_to_saved_variants[searched_variant['variantId']][family_guid] = saved_variant['variantGuid']
 
-    return saved_variants_by_guid, variants_to_saved_variants
+    return json, variants_to_saved_variants
 
 
 def _get_variant_key(xpos=None, ref=None, alt=None, genomeVersion=None, **kwargs):

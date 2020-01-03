@@ -4,9 +4,9 @@ from reference_data.models import GeneInfo
 from seqr.models import Project, Family, Individual, Sample, SavedVariant, VariantTag, VariantFunctionalData, \
     VariantNote, LocusList, VariantSearch
 from seqr.views.utils.orm_to_json_utils import _get_json_for_user, _get_json_for_project, _get_json_for_family, \
-    _get_json_for_individual, get_json_for_sample, get_json_for_saved_variant, get_json_for_variant_tag, \
-    get_json_for_variant_functional_data, get_json_for_variant_note, get_json_for_locus_list, get_json_for_gene, \
-    get_json_for_saved_search
+    _get_json_for_individual, get_json_for_sample, get_json_for_saved_variant, get_json_for_variant_tags, \
+    get_json_for_variant_functional_data_tags, get_json_for_variant_note, get_json_for_locus_list, get_json_for_gene, \
+    get_json_for_saved_search, get_json_for_saved_variants_with_tags
 
 
 class JSONUtilsTest(TestCase):
@@ -94,27 +94,82 @@ class JSONUtilsTest(TestCase):
         self.assertEqual(json['variantId'], '21-3343353-GAGA-G')
 
         fields.update(variant.saved_variant_json.keys())
-        fields.update({'tags', 'functionalData', 'notes'})
-        json = get_json_for_saved_variant(variant, add_tags=True, add_details=True)
+        json = get_json_for_saved_variant(variant, add_details=True)
         self.assertSetEqual(set(json.keys()), fields)
         self.assertListEqual(json['familyGuids'], ["F000001_1"])
         self.assertEqual(json['variantId'], 'abc123')
 
-    def test_json_for_variant_tag(self):
-        tag = VariantTag.objects.first()
-        json = get_json_for_variant_tag(tag)
+    def test_json_for_saved_variants_with_tags(self):
+        variant_guid_1 = 'SV0000001_2103343353_r0390_100'
+        variant_guid_2 = 'SV0000002_1248367227_r0390_100'
+        v1_tag_guids = {'VT1708633_2103343353_r0390_100', 'VT1726961_2103343353_r0390_100'}
+        v2_tag_guids = {'VT1726945_2103343353_r0390_100'}
+        v2_note_guids = ['VN0714935_2103343353_r0390_100']
+        v1_functional_guids = {'VFD0000023_1248367227_r0390_10', 'VFD0000024_1248367227_r0390_10'}
+
+        variants = SavedVariant.objects.filter(guid__in=[variant_guid_1, variant_guid_2])
+        json = get_json_for_saved_variants_with_tags(variants)
+
+        keys = {'variantTagsByGuid', 'variantNotesByGuid', 'variantFunctionalDataByGuid', 'savedVariantsByGuid'}
+        self.assertSetEqual(set(json.keys()), keys)
+
+        self.assertSetEqual(set(json['savedVariantsByGuid'].keys()), {variant_guid_1, variant_guid_2})
+        var_fields = {
+            'variantGuid', 'variantId', 'familyGuids', 'xpos', 'ref', 'alt', 'selectedMainTranscriptId',
+            'tagGuids', 'noteGuids', 'functionalDataGuids',
+        }
+        self.assertSetEqual(set(json['savedVariantsByGuid'][variant_guid_1].keys()), var_fields)
+        var_1 = json['savedVariantsByGuid'][variant_guid_1]
+        self.assertEqual(var_1['variantId'], '21-3343353-GAGA-G')
+        self.assertSetEqual(set(var_1['tagGuids']), v1_tag_guids)
+        self.assertSetEqual(set(var_1['functionalDataGuids']), v1_functional_guids)
+        var_2 = json['savedVariantsByGuid'][variant_guid_2]
+        self.assertEqual(var_2['variantId'], '1-248367227-TC-T')
+        self.assertSetEqual(set(var_2['tagGuids']), v2_tag_guids)
+        self.assertListEqual(var_2['noteGuids'], v2_note_guids)
+
+        self.assertSetEqual(set(json['variantTagsByGuid'].keys()), v1_tag_guids | v2_tag_guids)
+        tag_fields = {
+            'tagGuid', 'name', 'category', 'color', 'searchParameters', 'searchHash', 'lastModifiedDate', 'createdBy',
+            'variantGuids'
+        }
+        self.assertSetEqual(set(json['variantTagsByGuid'].values()[0].keys()), tag_fields)
+        for tag_guid in v1_tag_guids:
+            self.assertListEqual(json['variantTagsByGuid'][tag_guid]['variantGuids'], [variant_guid_1])
+        for tag_guid in v2_tag_guids:
+            self.assertListEqual(json['variantTagsByGuid'][tag_guid]['variantGuids'], [variant_guid_2])
+
+        self.assertListEqual(json['variantNotesByGuid'].keys(), v2_note_guids)
+        note_fields = {
+            'noteGuid', 'note', 'submitToClinvar', 'lastModifiedDate', 'createdBy', 'variantGuids'
+        }
+        self.assertSetEqual(set(json['variantNotesByGuid'][v2_note_guids[0]].keys()), note_fields)
+        self.assertListEqual(json['variantNotesByGuid'][v2_note_guids[0]]['variantGuids'], [variant_guid_2])
+
+        self.assertSetEqual(set(json['variantFunctionalDataByGuid'].keys()), v1_functional_guids)
+        functional_fields = {
+            'tagGuid', 'name', 'color', 'metadata', 'metadataTitle', 'lastModifiedDate', 'createdBy', 'variantGuids'
+        }
+        self.assertSetEqual(set(json['variantFunctionalDataByGuid'].values()[0].keys()), functional_fields)
+        for tag_guid in v1_functional_guids:
+            self.assertListEqual(json['variantFunctionalDataByGuid'][tag_guid]['variantGuids'], [variant_guid_1])
+
+    def test_json_for_variant_tags(self):
+        tags = VariantTag.objects.all()[:1]
+        json = get_json_for_variant_tags(tags)[0]
 
         fields = {
-             'tagGuid', 'name', 'category', 'color', 'searchParameters', 'searchHash', 'lastModifiedDate', 'createdBy'
+            'tagGuid', 'name', 'category', 'color', 'searchParameters', 'searchHash', 'lastModifiedDate', 'createdBy',
+            'variantGuids'
         }
         self.assertSetEqual(set(json.keys()), fields)
 
     def test_json_for_variant_functional_data(self):
-        tag = VariantFunctionalData.objects.first()
-        json = get_json_for_variant_functional_data(tag)
+        tags = VariantFunctionalData.objects.all()[:1]
+        json = get_json_for_variant_functional_data_tags(tags)[0]
 
         fields = {
-             'tagGuid', 'name', 'color', 'metadata', 'metadataTitle', 'lastModifiedDate', 'createdBy'
+             'tagGuid', 'name', 'color', 'metadata', 'metadataTitle', 'lastModifiedDate', 'createdBy', 'variantGuids'
         }
         self.assertSetEqual(set(json.keys()), fields)
 
@@ -123,7 +178,7 @@ class JSONUtilsTest(TestCase):
         json = get_json_for_variant_note(tag)
 
         fields = {
-             'noteGuid', 'note', 'submitToClinvar', 'lastModifiedDate', 'createdBy'
+             'noteGuid', 'note', 'submitToClinvar', 'lastModifiedDate', 'createdBy', 'variantGuids'
         }
         self.assertSetEqual(set(json.keys()), fields)
 

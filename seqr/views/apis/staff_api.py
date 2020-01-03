@@ -23,8 +23,8 @@ from seqr.views.apis.saved_variant_api import _saved_variant_genes, _add_locus_l
 from seqr.views.utils.file_utils import parse_file
 from seqr.views.utils.json_utils import create_json_response, _to_camel_case
 from seqr.views.utils.orm_to_json_utils import _get_json_for_individuals, get_json_for_saved_variants, \
-    get_json_for_variant_functional_data_tag_types, get_json_for_projects, _get_json_for_families, \
-    get_json_for_locus_lists, _get_json_for_models
+    get_json_for_saved_variants_with_tags, get_json_for_variant_functional_data_tag_types, get_json_for_projects, \
+    _get_json_for_families, get_json_for_locus_lists, _get_json_for_models
 from seqr.views.utils.proxy_request_utils import proxy_request
 
 from seqr.models import Project, Family, VariantTag, VariantTagType, Sample, SavedVariant, Individual, ProjectCategory, \
@@ -247,7 +247,7 @@ def _get_saved_variants_by_family(projects):
         varianttag__variant_tag_type=tag_type,
     )
 
-    project_saved_variants_json = get_json_for_saved_variants(project_saved_variants, add_tags=True, add_details=True)
+    project_saved_variants_json = get_json_for_saved_variants(project_saved_variants, add_details=True)
 
     saved_variants_by_family = defaultdict(list)
     for variant in project_saved_variants_json:
@@ -794,13 +794,13 @@ def saved_variants(request, tag):
         return create_json_response({'message': 'Select a gene to filter variants'}, status=400)
 
     prefetch_related_objects(saved_variant_models, 'family__project')
-    saved_variants = get_json_for_saved_variants(saved_variant_models, add_tags=True, add_details=True)
+    response_json = get_json_for_saved_variants_with_tags(saved_variant_models, add_details=True)
 
     project_models_by_guid = {variant.family.project.guid: variant.family.project for variant in saved_variant_models}
     families = {variant.family for variant in saved_variant_models}
     individuals = Individual.objects.filter(family__in=families)
 
-    genes = _saved_variant_genes(saved_variants)
+    genes = _saved_variant_genes(response_json['savedVariantsByGuid'].values())
     locus_list_guids = _add_locus_lists(project_models_by_guid.values(), saved_variants, genes)
 
     projects_json = get_json_for_projects(project_models_by_guid.values(), user=request.user, add_project_category_guids_field=False)
@@ -825,16 +825,15 @@ def saved_variants(request, tag):
     individuals_json = _get_json_for_individuals(individuals, user=request.user)
     locus_lists_by_guid = {locus_list['locusListGuid']: locus_list for locus_list in
                            get_json_for_locus_lists(LocusList.objects.filter(guid__in=locus_list_guids), request.user)}
-    saved_variants_by_guid = {variant['variantGuid']: variant for variant in saved_variants}
 
-    return create_json_response({
-        'savedVariantsByGuid': saved_variants_by_guid,
+    response_json.update({
         'genesById': genes,
         'projectsByGuid': {project['projectGuid']: project for project in projects_json},
         'familiesByGuid': {family['familyGuid']: family for family in families_json},
         'individualsByGuid': {indiv['individualGuid']: indiv for indiv in individuals_json},
         'locusListsByGuid': locus_lists_by_guid,
     })
+    return create_json_response(response_json)
 
 
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
