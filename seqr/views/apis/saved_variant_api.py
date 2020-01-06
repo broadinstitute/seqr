@@ -12,7 +12,8 @@ from seqr.utils.xpos_utils import get_xpos
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_tags, get_json_for_variant_note, \
-    get_json_for_gene_notes_by_gene_id, get_project_locus_list_models
+    get_json_for_variant_tags, get_json_for_variant_functional_data_tags, get_json_for_gene_notes_by_gene_id, \
+    get_project_locus_list_models
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_permissions
 from seqr.views.utils.variant_utils import update_project_saved_variant_json, reset_cached_search_results
 from settings import API_LOGIN_REQUIRED_URL
@@ -66,17 +67,15 @@ def _create_single_saved_variant(variant_json, family):
     return saved_variant
 
 
-def _create_multiple_saved_variants(request_json, family):
+def _create_multiple_saved_variants(variants_json, family):
     saved_variants = []
-    non_variant_key = ['searchHash', 'tags', 'tagGuids', 'functionalData', 'functinalDataGuids', 'notes', 'noteGuids',
-                       'note', 'submitToClinvar', 'saveAsGeneNote', 'compoundHetsGuids', 'compoundHetsToSave',
-                       'familyGuid']
-    for key in request_json.keys():
-        if key not in non_variant_key:
-            compound_het = request_json[key]
-            if 'variantGuid' not in compound_het.keys():  # not a saved_variant
-                saved_variant = _create_single_saved_variant(compound_het, family)
-                saved_variants.append(saved_variant)
+    for variant_json in variants_json:
+        variant_guid = variant_json.get('variantGuid')
+        if variant_guid:
+            saved_variant = SavedVariant.objects.get(guid=variant_guid)
+        else:
+            saved_variant = _create_single_saved_variant(variant_json, family)
+        saved_variants.append(saved_variant)
     return saved_variants
 
 
@@ -84,27 +83,22 @@ def _create_multiple_saved_variants(request_json, family):
 @csrf_exempt
 def create_saved_variant_handler(request):
     variant_json = json.loads(request.body)
-    family_guid = variant_json.pop('familyGuid')
-    non_variant_json = {k: variant_json.pop(k, None) for k in [
-        'searchHash', 'tags', 'tagGuids', 'functionalData', 'functionalDataGuids', 'notes', 'noteGuids', 'note',
-        'submitToClinvar']}
+    family_guid = variant_json['familyGuid']
 
     family = Family.objects.get(guid=family_guid)
     check_permissions(family.project, request.user, CAN_VIEW)
 
-    # are compound hets
-    if 'familyGuids' not in variant_json.keys():
-        saved_variants = _create_multiple_saved_variants(variant_json, family)
-
-    # is single variant
+    if isinstance(variant_json['variant'], list):
+        # are compound hets
+        saved_variants = _create_multiple_saved_variants(variant_json['variant'], family)
     else:
-        saved_variant = _create_single_saved_variant(variant_json, family)
+        saved_variant = _create_single_saved_variant(variant_json['variant'], family)
         saved_variants = [saved_variant]
 
-    if non_variant_json.get('note'):
-        _create_variant_note(saved_variants, non_variant_json, request.user)
-    elif non_variant_json.get('tags'):
-        _create_new_tags(saved_variants, non_variant_json, request.user)
+    if variant_json.get('note'):
+        _create_variant_note(saved_variants, variant_json, request.user)
+    elif variant_json.get('tags'):
+        _create_new_tags(saved_variants, variant_json, request.user)
 
     return create_json_response(get_json_for_saved_variants_with_tags(saved_variants, add_details=True))
 
@@ -120,26 +114,22 @@ def create_variant_note_handler(request, variant_guids):
     check_permissions(family.project, request.user, CAN_VIEW)
 
     all_variant_guids = variant_guids.split(',')
-    saved_variants = list(SavedVariant.objects.filter(guid__in=all_variant_guids))
-
-    # save unsaved variants in compound hets
-    has_unsaved_compound_hets = 'familyGuids' not in request_json.keys()
-    if has_unsaved_compound_hets:
-        saved_variants += _create_multiple_saved_variants(request_json, family)
+    saved_variants = SavedVariant.objects.filter(guid__in=all_variant_guids)
+    if len(saved_variants) != len(all_variant_guids):
+        error = 'Unable to find the following variant(s): {}'.format(
+            ', '.join([guid for guid in all_variant_guids if guid not in {sv.guid for sv in saved_variants}]))
+        return create_json_response({'error': error}, status=400, reason=error)
 
     # update saved_variants
     note = _create_variant_note(saved_variants, request_json, request.user)
     note_json = get_json_for_variant_note(note, add_variant_guids=False)
     note_json['variantGuids'] = all_variant_guids
-    if has_unsaved_compound_hets:
-        response = get_json_for_saved_variants_with_tags(saved_variants, add_details=True)
-    else:
-        response = {
-            'savedVariantsByGuid': {
-                saved_variant.guid: {'noteGuids': [n.guid for n in saved_variant.variantnote_set.all()]}
-                for saved_variant in saved_variants},
-            'variantNotesByGuid': {note.guid: note_json},
-        }
+    response = {
+        'savedVariantsByGuid': {
+            saved_variant.guid: {'noteGuids': [n.guid for n in saved_variant.variantnote_set.all()]}
+            for saved_variant in saved_variants},
+        'variantNotesByGuid': {note.guid: note_json},
+    }
 
     if save_as_gene_note:
         main_transcript_id = saved_variants[0].selected_main_transcript_id or saved_variants[0].saved_variant_json['mainTranscriptId']
@@ -169,24 +159,18 @@ def _create_variant_note(saved_variants, note_json, user):
     return note
 
 
-def _get_note_from_variant_guids(user, note_guid):
-    note = VariantNote.objects.get(guid=note_guid)
-    projects = {saved_variant.family.project for saved_variant in note.saved_variants.all()}
-    for project in projects:
-        check_permissions(project, user, CAN_VIEW)
-    return note
-
-
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def update_variant_note_handler(request, variant_guids, note_guid):
-    variant_guids = variant_guids.split(',')
-    note = _get_note_from_variant_guids(request.user, note_guid)
+    note = VariantNote.objects.get(guid=note_guid)
+    projects = {saved_variant.family.project for saved_variant in note.saved_variants.all()}
+    for project in projects:
+        check_permissions(project, request.user, CAN_VIEW)
     request_json = json.loads(request.body)
     update_model_from_json(note, request_json, allow_unknown_keys=True)
 
     note_json = get_json_for_variant_note(note, add_variant_guids=False)
-    note_json['variantGuids'] = variant_guids
+    note_json['variantGuids'] = variant_guids.split(',')
 
     return create_json_response({
         'variantNotesByGuid': {note.guid: note_json},
@@ -197,7 +181,10 @@ def update_variant_note_handler(request, variant_guids, note_guid):
 @csrf_exempt
 def delete_variant_note_handler(request, variant_guids, note_guid):
     variant_guids = variant_guids.split(',')
-    note = _get_note_from_variant_guids(request.user, note_guid)
+    note = VariantNote.objects.get(guid=note_guid)
+    projects = {saved_variant.family.project for saved_variant in note.saved_variants.all()}
+    for project in projects:
+        check_permissions(project, request.user, CAN_VIEW)
     note.delete()
 
     return create_json_response({
@@ -218,57 +205,29 @@ def update_variant_tags_handler(request, variant_guids):
     family = Family.objects.get(guid=family_guid)
     check_permissions(family.project, request.user, CAN_VIEW)
 
-    updated_tags = request_json.get('tags', [])
-    updated_functional_data = request_json.get('functionalData', [])
-
-    saved_variants = []
-    #  compoundHetsGuids: Array.isArray(variant) ? variant.map(compoundHet => compoundHet.variantGuid).filter(guid => guid) : null,
-    #  compoundHetsToSave: Array.isArray(variant) ? variant.filter(compoundHet => !compoundHet.variantGuid) : null,
-    unsaved_compound_hets = request_json.get('compoundHetsToSave', [])
-    all_variant_guids = variant_guids.split(',')
-
-    # get saved_variants
-    for variant_guid in all_variant_guids:
-        saved_variant = SavedVariant.objects.get(guid=variant_guid)
-        saved_variants.append(saved_variant)
-
-    # save compound hets that are not saved_variants
-    for compound_het in unsaved_compound_hets:
-        saved_variant = _create_single_saved_variant(compound_het, family)
-        saved_variants.append(saved_variant)
-        all_variant_guids.append(saved_variant.guid)
+    all_variant_guids = set(variant_guids.split(','))
+    saved_variants = SavedVariant.objects.filter(guid__in=all_variant_guids)
+    if len(saved_variants) != len(all_variant_guids):
+        error = 'Unable to find the following variant(s): {}'.format(
+            ', '.join([guid for guid in all_variant_guids if guid not in {sv.guid for sv in saved_variants}]))
+        return create_json_response({'error': error}, status=400, reason=error)
 
     # Update tags
-
-    existing_tag_guids = [tag['tagGuid'] for tag in updated_tags if tag.get('tagGuid')]
-
-    if len(all_variant_guids) > 1:
-        for tag in saved_variants[0].varianttag_set.exclude(guid__in=existing_tag_guids):
-            if len(tag.saved_variants.all()) > 1:
-                tag.delete()
-    else:
-        saved_variants[0].varianttag_set.exclude(guid__in=existing_tag_guids).delete()
-    _create_new_tags(saved_variants, request_json, request.user)
+    deleted_tag_guids = _delete_removed_tags(saved_variants, all_variant_guids, request_json.get('tags', []))
+    created_tags = _create_new_tags(saved_variants, request_json, request.user)
+    tag_updates = {tag['tagGuid']: tag for tag in get_json_for_variant_tags(created_tags)}
+    tag_updates.update({guid: None for guid in deleted_tag_guids})
 
     # Update functional data
+    updated_functional_data = request_json.get('functionalData', [])
+    deleted_functional_guids = _delete_removed_tags(
+        saved_variants, all_variant_guids, updated_functional_data, tag_type='functionaldata')
 
-    existing_functional_guids = [tag['tagGuid'] for tag in updated_functional_data if tag.get('tagGuid')]
-
-    if len(all_variant_guids) > 1:
-        for tag in saved_variants[0].variantfunctionaldata_set.exclude(guid__in=existing_functional_guids):
-            if len(tag.saved_variants.all()) > 1:
-                tag.delete()
-    else:
-        saved_variants[0].variantfunctionaldata_set.exclude(guid__in=existing_functional_guids).delete()
-
+    updated_functional_models = []
     for tag in updated_functional_data:
         if tag.get('tagGuid'):
-            tag_model = VariantFunctionalData.objects.filter(
-                guid=tag.get('tagGuid'),
-                functional_data_tag=tag.get('name'),
-                saved_variants__in=saved_variants
-            ).prefetch_related('saved_variants').first()
-            update_model_from_json(tag_model, tag, allow_unknown_keys=True)
+            functional_data = VariantFunctionalData.objects.get(guid=tag.get('tagGuid'))
+            update_model_from_json(functional_data, tag, allow_unknown_keys=True)
         else:
             functional_data = VariantFunctionalData.objects.create(
                 functional_data_tag=tag.get('name'),
@@ -277,14 +236,38 @@ def update_variant_tags_handler(request, variant_guids):
                 created_by=request.user,
             )
             functional_data.saved_variants.set(saved_variants)
-    # TODO can actually just return the changes, do not need all the variant json
-    return create_json_response(get_json_for_saved_variants_with_tags(saved_variants))
+        updated_functional_models.append(functional_data)
+
+    functional_updates = {tag['tagGuid']: tag for tag in get_json_for_variant_functional_data_tags(updated_functional_data)}
+    functional_updates.update({guid: None for guid in deleted_functional_guids})
+
+    return create_json_response({
+        'savedVariantsByGuid': {saved_variant.guid: {
+            'tagGuids': [t.guid for t in saved_variant.varianttag_set.all()],
+            'functionalDataGuids': [t.guid for t in saved_variant.variantfunctionaldata_set.all()],
+        } for saved_variant in saved_variants},
+        'variantTagsByGuid': tag_updates,
+        'variantFunctionalDataByGuid': functional_updates,
+    })
+
+
+def _delete_removed_tags(saved_variants, all_variant_guids, tag_updates, tag_type='tag'):
+    existing_tag_guids = [tag['tagGuid'] for tag in tag_updates if tag.get('tagGuid')]
+    deleted_tag_guids = []
+    tag_set = getattr(saved_variants[0], 'variant{}_set'.format(tag_type))
+    for tag in tag_set.exclude(guid__in=existing_tag_guids):
+        tag_variant_guids = {sv.guid for sv in tag.saved_variants.all()}
+        if tag_variant_guids == all_variant_guids:
+            deleted_tag_guids.append(tag.guid)
+            tag.delete()
+    return deleted_tag_guids
 
 
 def _create_new_tags(saved_variants, tags_json, user):
     tags = tags_json.get('tags', [])
     new_tags = [tag for tag in tags if not tag.get('tagGuid')]
 
+    new_tag_models = []
     for tag in new_tags:
         variant_tag_type = VariantTagType.objects.get(
             Q(name=tag['name']),
@@ -296,6 +279,8 @@ def _create_new_tags(saved_variants, tags_json, user):
             created_by=user,
         )
         tag_model.saved_variants.set(saved_variants)
+        new_tag_models.append(tag_model)
+    return new_tag_models
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)

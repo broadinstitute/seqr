@@ -276,30 +276,14 @@ const updateSavedVariant = (values, action = 'create') => {
 }
 
 export const updateVariantNote = (values) => {
-  // is single variant
-  if (values.familyGuids) {
-    if (values.variantGuid) {
-      return updateEntity(values, RECEIVE_DATA, `/api/saved_variant/${values.variantGuid}/note`, 'noteGuid')
-    }
-    return updateSavedVariant(values)
-  }
-  // are compound hets
-  const compoundHets = Object.values(values).filter(value => value instanceof Object)
-  const variantGuids = compoundHets.filter(compoundHet => compoundHet.variantGuid).map(savedCompoundHet => savedCompoundHet.variantGuid)
-  if (variantGuids.length > 0) {
-    return updateEntity(values, RECEIVE_DATA, `/api/saved_variant/${variantGuids.join(',')}/note`, 'noteGuid')
+  if (values.variantGuids) {
+    return updateEntity(values, RECEIVE_DATA, `/api/saved_variant/${values.variantGuids}/note`, 'noteGuid')
   }
   return updateSavedVariant(values)
 }
 
 export const updateVariantTags = (values) => {
-  if (values.compoundHetsToSave) {
-    if (values.compoundHetsGuids.length > 0) {
-      return updateSavedVariant(values, `${values.compoundHetsGuids.join(',')}/update_tags`)
-    }
-    return updateSavedVariant(values)
-  }
-  const urlPath = values.variantGuid ? `${values.variantGuid}/update_tags` : 'create'
+  const urlPath = values.variantGuids ? `${values.variantGuids}/update_tags` : 'create'
   return updateSavedVariant(values, urlPath)
 }
 

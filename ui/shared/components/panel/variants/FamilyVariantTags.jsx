@@ -185,7 +185,7 @@ VariantTagField.propTypes = {
 }
 
 const VariantNoteField = ({ action, note, variantTagNotes, family, ...props }) => {
-  const values = note || variantTagNotes
+  const values = { ...variantTagNotes, ...note }
   return <TextFieldView
     noModal
     showInLine
@@ -346,10 +346,10 @@ const mapStateToProps = (state, ownProps) => ({
 
 const mapDispatchToProps = (dispatch, ownProps) => ({
   dispatchUpdateVariantNote: (updates) => {
-    dispatch(updateVariantNote({ ...updates, variant: ownProps.variant, variantGuids: ownProps.variantGuids, familyGuid: ownProps.familyGuid }))
+    dispatch(updateVariantNote({ ...updates, variant: ownProps.variant, familyGuid: ownProps.familyGuid }))
   },
   dispatchUpdateFamilyVariantTags: (updates) => {
-    dispatch(updateVariantTags({ ...updates, variant: ownProps.variant, variantGuids: ownProps.variantGuids, familyGuid: ownProps.familyGuid }))
+    dispatch(updateVariantTags({ ...updates, variant: ownProps.variant, familyGuid: ownProps.familyGuid }))
   },
 })
 

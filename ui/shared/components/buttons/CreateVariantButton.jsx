@@ -146,17 +146,19 @@ const mapDispatchToProps = (dispatch, ownProps) => {
   return {
     onSubmit: (values) => {
       const formattedValues = {
-        ...FIELDS.map(({ name }) => name).filter(name => !FORMAT_RESPONSE_FIELDS.includes(name)).reduce(
-          (acc, name) => ({ ...acc, [name]: values[name] }), {},
-        ),
         familyGuid: ownProps.family.familyGuid,
-        variantId: `${values.chrom}-${values.pos}-${values.ref}-${values.alt}`,
-        transcripts: {
-          [values[GENE_ID_FIELD_NAME]]: values[TRANSCRIPT_ID_FIELD_NAME] ? [{
-            transcriptId: values[TRANSCRIPT_ID_FIELD_NAME],
-            [HGVSC_FIELD_NAME]: values[HGVSC_FIELD_NAME],
-            [HGVSP_FIELD_NAME]: values[HGVSP_FIELD_NAME],
-          }] : [],
+        variant: {
+          ...FIELDS.map(({ name }) => name).filter(name => !FORMAT_RESPONSE_FIELDS.includes(name)).reduce(
+            (acc, name) => ({ ...acc, [name]: values[name] }), {},
+          ),
+          variantId: `${values.chrom}-${values.pos}-${values.ref}-${values.alt}`,
+          transcripts: {
+            [values[GENE_ID_FIELD_NAME]]: values[TRANSCRIPT_ID_FIELD_NAME] ? [{
+              transcriptId: values[TRANSCRIPT_ID_FIELD_NAME],
+              [HGVSC_FIELD_NAME]: values[HGVSC_FIELD_NAME],
+              [HGVSP_FIELD_NAME]: values[HGVSP_FIELD_NAME],
+            }] : [],
+          },
         },
       }
 

@@ -342,6 +342,7 @@ export const getVariantTagNotes = createSelector(
     const variantGuids = variants.map(({ variantGuid }) => variantGuid).sort().join(',')
     return {
       variantId: variants.map(({ variantId }) => variantId).join(','),
+      variantGuids: variants.every(({ variantGuid }) => variantGuid) ? variantGuids : null,
       tags: tagsByGuids[variantGuids],
       notes: notesByGuids[variantGuids],
       functionalData: functionalDataByGuids[variantGuids],
