@@ -32,30 +32,6 @@ import FamilyTable from './FamilyTable/FamilyTable'
 import VariantTags from './VariantTags'
 
 
-/**
-Add charts:
-- variant tags - how many families have particular tags
-- analysis status
- Phenotypes:
-   Cardio - 32 individuals
-   Eye - 10 individuals
-   Ear - 5 individuals
-   Neuro - 10 individuals
-   Other - 5 individuals
-
- Data:
-    Exome - HaplotypeCaller variant calls (32 samples), read viz (10 samples)
-    Whole Genome - HaplotypeCaller variant calls (32 samples), Manta SV calls (10 samples), read data (5 samples)
-    RNA - HaplotypeCaller variant calls (32 samples)
-
-Phenotypes:
-- how many families have phenotype terms in each category
-
-What's new:
- - variant tags
-
-*/
-
 const ProjectSectionComponent = ({ loading, label, children, editButton, linkPath, linkText, project }) => {
   return ([
     <SectionHeader key="header">{label}</SectionHeader>,

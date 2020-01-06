@@ -41,7 +41,7 @@ FreqLink.propTypes = {
   urls: PropTypes.object.isRequired,
   value: PropTypes.string,
   variant: PropTypes.object.isRequired,
-  queryParams: PropTypes.string,
+  queryParams: PropTypes.object,
 }
 
 const FreqSummary = ({ field, fieldTitle, variant, urls, queryParams, showAC, precision = 2 }) => {

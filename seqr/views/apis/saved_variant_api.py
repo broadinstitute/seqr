@@ -222,6 +222,8 @@ def update_variant_tags_handler(request, variant_guids):
     updated_functional_data = request_json.get('functionalData', [])
 
     saved_variants = []
+    #  compoundHetsGuids: Array.isArray(variant) ? variant.map(compoundHet => compoundHet.variantGuid).filter(guid => guid) : null,
+    #  compoundHetsToSave: Array.isArray(variant) ? variant.filter(compoundHet => !compoundHet.variantGuid) : null,
     unsaved_compound_hets = request_json.get('compoundHetsToSave', [])
     all_variant_guids = variant_guids.split(',')
 

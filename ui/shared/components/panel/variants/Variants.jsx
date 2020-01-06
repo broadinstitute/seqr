@@ -62,18 +62,13 @@ const Variant = ({ variant, isCompoundHet }) => {
           <FamilyVariantTags familyGuid={familyGuid} variant={variant} key={variant.variantId} isCompoundHet={isCompoundHet} />
         </Grid.Column>,
       )}
-      {isCompoundHet &&
       <Grid.Column>
+        {!isCompoundHet && mainGeneId && <VariantGene geneId={mainGeneId} variant={variant} />}
+        {!isCompoundHet && Object.keys(variant.transcripts).length > 1 && <Divider />}
         {variantGenes}
-        {Object.keys(variant.transcripts).length > 1 && <VerticalSpacer height={20} />}
-        {variantIndividuals}
-      </Grid.Column>}
-      {!isCompoundHet &&
-      <Grid.Column>
-        {mainGeneId && <VariantGene geneId={mainGeneId} variant={variant} />}
-        {Object.keys(variant.transcripts).length > 1 && <Divider />}
-        {variantGenes}
-      </Grid.Column>}
+        {isCompoundHet && Object.keys(variant.transcripts).length > 1 && <VerticalSpacer height={20} />}
+        {isCompoundHet && variantIndividuals}
+      </Grid.Column>
       <Grid.Column><Annotations variant={variant} /></Grid.Column>
       <Grid.Column><Predictions variant={variant} /></Grid.Column>
       <Grid.Column><Frequencies variant={variant} /></Grid.Column>
@@ -121,14 +116,14 @@ CompoundHets.propTypes = {
   variants: PropTypes.array,
 }
 
-const Variants = ({ variants }) => {
-  return (
-    <Grid stackable divided="vertically" columns="equal">
-      {variants.map(variant =>
-        (Array.isArray(variant) ? <CompoundHets variants={variant} key={variant.map(v => v.variantId).join()} /> : <Variant variant={variant} key={variant.variantId} />))}
-    </Grid>
-  )
-}
+const Variants = ({ variants }) => (
+  <Grid stackable divided="vertically" columns="equal">
+    {variants.map(variant => (Array.isArray(variant) ?
+      <CompoundHets variants={variant} key={variant.map(v => v.variantId).join()} /> :
+      <Variant variant={variant} key={variant.variantId} />
+    ))}
+  </Grid>
+)
 
 Variants.propTypes = {
   variants: PropTypes.array,
