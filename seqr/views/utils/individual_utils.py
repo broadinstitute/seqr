@@ -6,7 +6,6 @@ import json
 import logging
 
 from reference_data.models import HumanPhenotypeOntology
-from seqr.model_utils import delete_seqr_model
 from seqr.models import Sample, Individual
 from seqr.views.utils.pedigree_image_utils import update_pedigree_images
 from seqr.views.utils.phenotips_utils import delete_phenotips_patient, PhenotipsException
@@ -54,8 +53,7 @@ def delete_individuals(project, individual_guids):
             logger.error("Error: couldn't delete patient from phenotips: {} {} ({})".format(
                 individual.phenotips_eid, individual, e))
 
-        # delete Individual
-        delete_seqr_model(individual)
+    individuals_to_delete.delete()
 
     update_pedigree_images(families.values())
 

@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom'
 import PropTypes from 'prop-types'
 import { Header, Message } from 'semantic-ui-react'
 
-import SortableTable from 'shared/components/table/SortableTable'
+import DataTable from 'shared/components/table/DataTable'
 import DataLoader from 'shared/components/DataLoader'
 import { InlineHeader } from 'shared/components/StyledComponents'
 import { getElasticsearchStatusLoading, getElasticsearchStatusData } from '../selectors'
@@ -41,7 +41,7 @@ const ElasticsearchStatus = ({ data, loading, load }) =>
     <InlineHeader size="small" content="Elasticsearch Host:" /> {data.elasticsearchHost}
 
     <Header size="medium" content="Disk Status:" />
-    <SortableTable
+    <DataTable
       striped
       collapsing
       singleLine
@@ -53,7 +53,7 @@ const ElasticsearchStatus = ({ data, loading, load }) =>
 
     <Header size="medium" content="Loaded Indices:" />
     {data.errors && data.errors.length > 0 && <Message error list={data.errors} />}
-    <SortableTable
+    <DataTable
       striped
       collapsing
       horizontalScroll

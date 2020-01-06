@@ -45,7 +45,16 @@ def parse_file(filename, stream):
     elif filename.endswith('.xls') or filename.endswith('.xlsx'):
         wb = xl.load_workbook(stream, read_only=True)
         ws = wb[wb.sheetnames[0]]
-        return [[_parse_excel_string_cell(cell) for cell in row] for row in ws.iter_rows()]
+        rows = [[_parse_excel_string_cell(cell) for cell in row] for row in ws.iter_rows()]
+        # trim trailing empty rows
+        last_row_index = max(i for i, row in enumerate(rows) if any(val for val in row))
+        rows = rows[:last_row_index+1]
+        # all rows should have same column count
+        last_col_index = max(max(i for i, val in enumerate(row) if val) for row in rows)
+        padding = [None] * last_col_index
+        rows = [(row + padding)[:last_col_index+1] for row in rows]
+
+        return rows
 
     elif filename.endswith('.json'):
         return json.loads(stream.read())
