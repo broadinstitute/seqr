@@ -220,6 +220,12 @@ export const getPairedSelectedSavedVariants = createSelector(
         new Set([...guidAcc, ...variantGuids.filter(variantGuid => variantGuid !== variant.variantGuid)]),
       new Set())].filter(variantGuid => selectedVariantsByGuid[variantGuid])
 
+      console.log([...[
+        ...variant.tagGuids.map(t => tagsByGuid[t].variantGuids),
+        ...variant.noteGuids.map(n => notesByGuid[n].variantGuids),
+      ].filter(variantGuids => variantGuids.length > 1)])
+      console.log(variantCompoundHetGuids)
+
       if (variantCompoundHetGuids.length) {
         seenCompoundHets.push(variant.variantGuid)
         return acc.concat(variantCompoundHetGuids.filter(variantGuid => !seenCompoundHets.includes(variantGuid)).map(
