@@ -239,7 +239,7 @@ VariantLink.propTypes = {
 
 const FamilyVariantTags = (
   { variant, variantTagNotes, family, projectTagTypes, projectFunctionalTagTypes, dispatchUpdateVariantNote,
-    dispatchUpdateFamilyVariantTags, isCompoundHet },
+    dispatchUpdateFamilyVariantTags, dispatchUpdateFamilyVariantFunctionalTags, isCompoundHet },
 ) => {
   if (family) {
     const hasVariantLink = !Array.isArray(variant) || variantTagNotes
@@ -300,7 +300,7 @@ const FamilyVariantTags = (
                 variantId={variantId}
                 tagOptions={projectFunctionalTagTypes}
                 editMetadata
-                onSubmit={dispatchUpdateFamilyVariantTags}
+                onSubmit={dispatchUpdateFamilyVariantFunctionalTags}
               />
               <HorizontalSpacer width={5} />
             </span>
@@ -350,6 +350,7 @@ FamilyVariantTags.propTypes = {
   isCompoundHet: PropTypes.bool,
   dispatchUpdateVariantNote: PropTypes.func,
   dispatchUpdateFamilyVariantTags: PropTypes.func,
+  dispatchUpdateFamilyVariantFunctionalTags: PropTypes.func,
 }
 
 const mapStateToProps = (state, ownProps) => {
@@ -369,6 +370,9 @@ const mapDispatchToProps = (dispatch, ownProps) => ({
   },
   dispatchUpdateFamilyVariantTags: (updates) => {
     dispatch(updateVariantTags({ ...updates, variant: ownProps.variant, familyGuid: ownProps.familyGuid }))
+  },
+  dispatchUpdateFamilyVariantFunctionalTags: (updates) => {
+    dispatch(updateVariantTags({ ...updates, variant: ownProps.variant, familyGuid: ownProps.familyGuid }, 'functional_data'))
   },
 })
 

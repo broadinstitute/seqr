@@ -212,13 +212,35 @@ def update_variant_tags_handler(request, variant_guids):
             ', '.join([guid for guid in all_variant_guids if guid not in {sv.guid for sv in saved_variants}]))
         return create_json_response({'error': error}, status=400, reason=error)
 
-    # Update tags
     deleted_tag_guids = _delete_removed_tags(saved_variants, all_variant_guids, request_json.get('tags', []))
     created_tags = _create_new_tags(saved_variants, request_json, request.user)
     tag_updates = {tag['tagGuid']: tag for tag in get_json_for_variant_tags(created_tags)}
     tag_updates.update({guid: None for guid in deleted_tag_guids})
 
-    # Update functional data
+    return create_json_response({
+        'savedVariantsByGuid': {saved_variant.guid: {
+            'tagGuids': [t.guid for t in saved_variant.varianttag_set.all()],
+        } for saved_variant in saved_variants},
+        'variantTagsByGuid': tag_updates,
+    })
+
+
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@csrf_exempt
+def update_variant_functional_data_handler(request, variant_guids):
+    request_json = json.loads(request.body)
+
+    family_guid = request_json.pop('familyGuid')
+    family = Family.objects.get(guid=family_guid)
+    check_permissions(family.project, request.user, CAN_VIEW)
+
+    all_variant_guids = set(variant_guids.split(','))
+    saved_variants = SavedVariant.objects.filter(guid__in=all_variant_guids)
+    if len(saved_variants) != len(all_variant_guids):
+        error = 'Unable to find the following variant(s): {}'.format(
+            ', '.join([guid for guid in all_variant_guids if guid not in {sv.guid for sv in saved_variants}]))
+        return create_json_response({'error': error}, status=400, reason=error)
+
     updated_functional_data = request_json.get('functionalData', [])
     deleted_functional_guids = _delete_removed_tags(
         saved_variants, all_variant_guids, updated_functional_data, tag_type='functionaldata')
@@ -238,15 +260,13 @@ def update_variant_tags_handler(request, variant_guids):
             functional_data.saved_variants.set(saved_variants)
         updated_functional_models.append(functional_data)
 
-    functional_updates = {tag['tagGuid']: tag for tag in get_json_for_variant_functional_data_tags(updated_functional_data)}
+    functional_updates = {tag['tagGuid']: tag for tag in get_json_for_variant_functional_data_tags(updated_functional_models)}
     functional_updates.update({guid: None for guid in deleted_functional_guids})
 
     return create_json_response({
         'savedVariantsByGuid': {saved_variant.guid: {
-            'tagGuids': [t.guid for t in saved_variant.varianttag_set.all()],
             'functionalDataGuids': [t.guid for t in saved_variant.variantfunctionaldata_set.all()],
         } for saved_variant in saved_variants},
-        'variantTagsByGuid': tag_updates,
         'variantFunctionalDataByGuid': functional_updates,
     })
 

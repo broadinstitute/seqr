@@ -282,8 +282,8 @@ export const updateVariantNote = (values) => {
   return updateSavedVariant(values)
 }
 
-export const updateVariantTags = (values) => {
-  const urlPath = values.variantGuids ? `${values.variantGuids}/update_tags` : 'create'
+export const updateVariantTags = (values, tagType = 'tags') => {
+  const urlPath = values.variantGuids ? `${values.variantGuids}/update_${tagType}` : 'create'
   return updateSavedVariant(values, urlPath)
 }
 
