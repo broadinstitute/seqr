@@ -7,7 +7,7 @@ from django.urls.base import reverse
 from seqr.models import SavedVariant, VariantNote, VariantTag, VariantFunctionalData
 from seqr.views.apis.saved_variant_api import saved_variant_data, create_variant_note_handler, create_saved_variant_handler, \
     update_variant_note_handler, delete_variant_note_handler, update_variant_tags_handler, update_saved_variant_json, \
-    update_variant_main_transcript
+    update_variant_main_transcript, update_variant_functional_data_handler
 from seqr.views.utils.test_utils import _check_login
 
 
@@ -155,8 +155,8 @@ class ProjectAPITest(TransactionTestCase):
             'tags': [{'name': 'Review'}],
             'notes': [],
             'functionalData': [],
+            'variant': variant_json,
         }
-        request_body.update(variant_json)
 
         response = self.client.post(create_saved_variant_url, content_type='application/json', data=json.dumps(request_body))
         self.assertEqual(response.status_code, 200)
@@ -193,14 +193,14 @@ class ProjectAPITest(TransactionTestCase):
             'tags': [{'name': 'Review'}],
             'notes': [],
             'functionalData': [],
+            'variant': [COMPOUND_HET_3_JSON, COMPOUND_HET_4_JSON]
         }
 
-        request_body.update({0: COMPOUND_HET_3_JSON, 1: COMPOUND_HET_4_JSON})
         response = self.client.post(create_saved_compound_hets_url, content_type='application/json', data=json.dumps(request_body))
         self.assertEqual(response.status_code, 200)
 
-        new_compound_het_3_guid = response.json()['savedVariantsByGuid'].keys()[0]
-        new_compound_het_4_guid = response.json()['savedVariantsByGuid'].keys()[1]
+        new_compound_het_3_guid = response.json()['savedVariantsByGuid'].keys()[1]
+        new_compound_het_4_guid = response.json()['savedVariantsByGuid'].keys()[0]
 
         saved_compound_het_3 = SavedVariant.objects.get(guid=new_compound_het_3_guid, family__guid='F000001_1')
         saved_compound_het_4 = SavedVariant.objects.get(guid=new_compound_het_4_guid, family__guid='F000001_1')
@@ -259,7 +259,7 @@ class ProjectAPITest(TransactionTestCase):
             {'note': 'new_variant_note_as_gene_note', 'saveAsGeneNote': True, 'familyGuid': 'F000001_1'}
         ))
         self.assertEqual(response.status_code, 200)
-        new_variant_note_guid = response.json()['savedVariantsByGuid'][VARIANT_GUID]['noteGuids'][1]
+        new_variant_note_guid = response.json()['savedVariantsByGuid'][VARIANT_GUID]['noteGuids'][0]
         new_variant_note_response = response.json()['variantNotesByGuid'][new_variant_note_guid]
         self.assertEqual(new_variant_note_response['note'], 'new_variant_note_as_gene_note')
         new_gene_note_response = response.json()['genesById'][GENE_GUID]['notes'][0]
@@ -304,11 +304,16 @@ class ProjectAPITest(TransactionTestCase):
 
     def test_create_partially_saved_compound_het_variant_note(self):
         # compound het 5 is not saved, whereas compound het 1 is saved
-        create_variant_note_url = reverse(create_variant_note_handler, args=[VARIANT_GUID])
-        _check_login(self, create_variant_note_url)
+        create_saved_variant_url = reverse(create_saved_variant_handler)
+        _check_login(self, create_saved_variant_url)
 
-        request_body = {0: COMPOUND_HET_5_JSON, 'note': 'one_saved_one_not_saved_compount_hets_note', 'submitToClinvar': True, 'familyGuid': 'F000001_1'}
-        response = self.client.post(create_variant_note_url, content_type='application/json', data=json.dumps(request_body))
+        request_body = {
+            'variant': [COMPOUND_HET_5_JSON, {'variantGuid': VARIANT_GUID}],
+            'note': 'one_saved_one_not_saved_compount_hets_note',
+            'submitToClinvar': True,
+            'familyGuid': 'F000001_1',
+        }
+        response = self.client.post(create_saved_variant_url, content_type='application/json', data=json.dumps(request_body))
         self.assertEqual(response.status_code, 200)
 
         self.assertEqual(len(response.json()['savedVariantsByGuid']), 2)
@@ -413,59 +418,75 @@ class ProjectAPITest(TransactionTestCase):
     def test_update_variant_tags(self):
         variant_tags = VariantTag.objects.filter(saved_variants__guid__contains=VARIANT_GUID)
         self.assertSetEqual({"Review", "Tier 1 - Novel gene and phenotype"}, {vt.variant_tag_type.name for vt in variant_tags})
-        variant_functional_data = VariantFunctionalData.objects.filter(saved_variants__guid__contains=VARIANT_GUID)
-        self.assertSetEqual({"Biochemical Function", "Genome-wide Linkage"}, {vt.functional_data_tag for vt in variant_functional_data})
-        self.assertSetEqual({"A note", "2"}, {vt.metadata for vt in variant_functional_data})
 
         update_variant_tags_url = reverse(update_variant_tags_handler, args=[VARIANT_GUID])
         _check_login(self, update_variant_tags_url)
 
         response = self.client.post(update_variant_tags_url, content_type='application/json', data=json.dumps({
             'tags': [{'tagGuid': 'VT1708633_2103343353_r0390_100', 'name': 'Review'}, {'name': 'Excluded'}],
+            'familyGuid': 'F000001_1'
+        }))
+        self.assertEqual(response.status_code, 200)
+
+        tags = response.json()['variantTagsByGuid']
+        self.assertEqual(len(tags), 2)
+        self.assertIsNone(tags.pop('VT1726961_2103343353_r0390_100'))
+        excluded_guid = tags.keys()[0]
+        self.assertEqual('Excluded', tags[excluded_guid]['name'])
+        self.assertSetEqual(
+            {excluded_guid, 'VT1708633_2103343353_r0390_100'},
+            set(response.json()['savedVariantsByGuid'][VARIANT_GUID]['tagGuids'])
+        )
+        self.assertSetEqual(
+            {"Review", "Excluded"}, {vt.variant_tag_type.name for vt in
+                                     VariantTag.objects.filter(saved_variants__guid__contains=VARIANT_GUID)})
+
+    def test_update_variant_functional_data(self):
+        variant_functional_data = VariantFunctionalData.objects.filter(saved_variants__guid__contains=VARIANT_GUID)
+        self.assertSetEqual(
+            {"Biochemical Function", "Genome-wide Linkage"}, {vt.functional_data_tag for vt in variant_functional_data})
+        self.assertSetEqual({"A note", "2"}, {vt.metadata for vt in variant_functional_data})
+
+        update_variant_tags_url = reverse(update_variant_functional_data_handler, args=[VARIANT_GUID])
+        _check_login(self, update_variant_tags_url)
+
+        response = self.client.post(update_variant_tags_url, content_type='application/json', data=json.dumps({
             'functionalData': [
-                {'tagGuid': 'VFD0000023_1248367227_r0390_10', 'name': 'Biochemical Function', 'metadata': 'An updated note'},
+                {'tagGuid': 'VFD0000023_1248367227_r0390_10', 'name': 'Biochemical Function',
+                 'metadata': 'An updated note'},
                 {'name': 'Bonferroni corrected p-value', 'metadata': 0.05}
             ],
             'familyGuid': 'F000001_1'
         }))
         self.assertEqual(response.status_code, 200)
 
-        tags = response.json()['variantTagsByGuid'].values()
-        self.assertEqual(len(tags), 2)
-        self.assertSetEqual({"Review", "Excluded"}, {vt['name'] for vt in tags})
-        self.assertSetEqual({"Review", "Excluded"},
-                            {vt.variant_tag_type.name for vt in VariantTag.objects.filter(saved_variants__guid__contains=VARIANT_GUID)})
-
         functional_data_guids = response.json()['savedVariantsByGuid'][VARIANT_GUID]['functionalDataGuids']
         self.assertEqual(len(functional_data_guids), 2)
+        new_guid = next(guid for guid in functional_data_guids if guid != 'VFD0000023_1248367227_r0390_10')
+
+        functional_data = response.json()['variantFunctionalDataByGuid']
+        self.assertIsNone(functional_data['VFD0000024_1248367227_r0390_10'])
+        self.assertEqual(functional_data['VFD0000023_1248367227_r0390_10']['name'], 'Biochemical Function')
+        self.assertEqual(functional_data['VFD0000023_1248367227_r0390_10']['metadata'], 'An updated note')
+        self.assertEqual(functional_data[new_guid]['name'], 'Bonferroni corrected p-value')
+        self.assertEqual(functional_data[new_guid]['metadata'], 0.05)
+
+        variant_functional_data = VariantFunctionalData.objects.filter(saved_variants__guid__contains=VARIANT_GUID)
         self.assertSetEqual(
             {"Biochemical Function", "Bonferroni corrected p-value"},
-            {vt['name'] for vt in response.json()['variantFunctionalDataByGuid'].values()})
-        self.assertSetEqual(
-            {"An updated note", "0.05"},
-            {vt['metadata'] for vt in response.json()['variantFunctionalDataByGuid'].values()})
-        variant_functional_data = VariantFunctionalData.objects.filter(saved_variants__guid__contains=VARIANT_GUID)
-        self.assertSetEqual({"Biochemical Function", "Bonferroni corrected p-value"}, {vt.functional_data_tag for vt in variant_functional_data})
+            {vt.functional_data_tag for vt in variant_functional_data})
         self.assertSetEqual({"An updated note", "0.05"}, {vt.metadata for vt in variant_functional_data})
 
     def test_update_compound_hets_variant_tags(self):
-        # check no tags or functional data exists in the compound hets
         variant_tags = VariantTag.objects.filter(saved_variants__guid__in=[COMPOUND_HET_1_GUID, COMPOUND_HET_2_GUID])
         self.assertEqual(len(variant_tags), 0)
-        variant_functional_data = VariantFunctionalData.objects.filter(saved_variants__guid__in=[COMPOUND_HET_1_GUID, COMPOUND_HET_2_GUID])
-        self.assertEqual(len(variant_functional_data), 0)
 
-        # send valid request to creat variant_tag for compound hets
-        update_variant_tags_url = reverse(update_variant_tags_handler, args=[','.join([COMPOUND_HET_1_GUID, COMPOUND_HET_2_GUID])])
+        update_variant_tags_url = reverse(
+            update_variant_tags_handler, args=[','.join([COMPOUND_HET_1_GUID, COMPOUND_HET_2_GUID])])
         _check_login(self, update_variant_tags_url)
 
         response = self.client.post(update_variant_tags_url, content_type='application/json', data=json.dumps({
             'tags': [{'name': 'Review'}, {'name': 'Excluded'}],
-            'functionalData': [
-                {'name': 'Biochemical Function',
-                 'metadata': 'An updated note'},
-                {'name': 'Bonferroni corrected p-value', 'metadata': 0.05}
-            ],
             'familyGuid': 'F000001_1'
         }))
         self.assertEqual(response.status_code, 200)
@@ -483,9 +504,30 @@ class ProjectAPITest(TransactionTestCase):
             vt['name'] for vt in response_json['variantTagsByGuid'].values()
             if vt['tagGuid'] in compound_het_2_tag_guids
         })
-        self.assertSetEqual({"Review", "Excluded"},
-                            {vt.variant_tag_type.name for vt in
-                             VariantTag.objects.filter(saved_variants__guid__in=[COMPOUND_HET_1_GUID, COMPOUND_HET_2_GUID])})
+        self.assertSetEqual(
+            {"Review", "Excluded"},
+            {vt.variant_tag_type.name for vt in VariantTag.objects.filter(
+                saved_variants__guid__in=[COMPOUND_HET_1_GUID, COMPOUND_HET_2_GUID])})
+
+    def test_update_compound_hets_variant_functional_data(self):
+        variant_functional_data = VariantFunctionalData.objects.filter(
+            saved_variants__guid__in=[COMPOUND_HET_1_GUID, COMPOUND_HET_2_GUID])
+        self.assertEqual(len(variant_functional_data), 0)
+
+        # send valid request to creat variant_tag for compound hets
+        update_variant_tags_url = reverse(
+            update_variant_functional_data_handler, args=[','.join([COMPOUND_HET_1_GUID, COMPOUND_HET_2_GUID])])
+        _check_login(self, update_variant_tags_url)
+
+        response = self.client.post(update_variant_tags_url, content_type='application/json', data=json.dumps({
+            'functionalData': [
+                {'name': 'Biochemical Function',
+                 'metadata': 'An updated note'},
+                {'name': 'Bonferroni corrected p-value', 'metadata': 0.05}
+            ],
+            'familyGuid': 'F000001_1'
+        }))
+        self.assertEqual(response.status_code, 200)
 
         compound_het_1_functional_data_guids = response.json()['savedVariantsByGuid'][COMPOUND_HET_1_GUID]['functionalDataGuids']
         compound_het_2_functional_data_guids = response.json()['savedVariantsByGuid'][COMPOUND_HET_2_GUID]['functionalDataGuids']
@@ -495,10 +537,13 @@ class ProjectAPITest(TransactionTestCase):
             {"Biochemical Function", "Bonferroni corrected p-value"},
             {vt['name'] for vt in response.json()['variantFunctionalDataByGuid'].values()})
         self.assertSetEqual(
-            {"An updated note", "0.05"},
+            {"An updated note", 0.05},
             {vt['metadata'] for vt in response.json()['variantFunctionalDataByGuid'].values()})
-        variant_functional_data = VariantFunctionalData.objects.filter(saved_variants__guid__in=[COMPOUND_HET_1_GUID, COMPOUND_HET_2_GUID])
-        self.assertSetEqual({"Biochemical Function", "Bonferroni corrected p-value"}, {vt.functional_data_tag for vt in variant_functional_data})
+        variant_functional_data = VariantFunctionalData.objects.filter(
+            saved_variants__guid__in=[COMPOUND_HET_1_GUID, COMPOUND_HET_2_GUID])
+        self.assertSetEqual(
+            {"Biochemical Function", "Bonferroni corrected p-value"},
+            {vt.functional_data_tag for vt in variant_functional_data})
         self.assertSetEqual({"An updated note", "0.05"}, {vt.metadata for vt in variant_functional_data})
 
     @mock.patch('seqr.views.utils.variant_utils._retrieve_saved_variants_json')
