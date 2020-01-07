@@ -58,7 +58,7 @@ const BaseVariantSearchResults = ({
       contentId={searchHash || variantId}
       content={searchedVariants}
       loading={loading}
-      load={load}e
+      load={load}
       unload={unload}
       reloadOnIdUpdate
       errorMessage={errorMessage &&

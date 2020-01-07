@@ -6,7 +6,13 @@ import { Icon, Popup } from 'semantic-ui-react'
 import styled from 'styled-components'
 
 import { updateVariantNote, updateVariantTags } from 'redux/rootReducer'
-import { getFamiliesByGuid, getVariantTagNotesByGuid, getProjectTagTypes, getProjectFunctionalTagTypes } from 'redux/selectors'
+import {
+  getFamiliesByGuid,
+  getVariantTagNotesByFamilyVariants,
+  getProjectTagTypes,
+  getProjectFunctionalTagTypes,
+  getVariantId,
+} from 'redux/selectors'
 import {
   DISCOVERY_CATEGORY_NAME,
   FAMILY_FIELD_DESCRIPTION,
@@ -239,111 +245,107 @@ VariantLink.propTypes = {
 
 const FamilyVariantTags = (
   { variant, variantTagNotes, family, projectTagTypes, projectFunctionalTagTypes, dispatchUpdateVariantNote,
-    dispatchUpdateFamilyVariantTags, dispatchUpdateFamilyVariantFunctionalTags, isCompoundHet },
-) => {
-  if (family) {
-    const hasVariantLink = !Array.isArray(variant) || variantTagNotes
-    const variantId = (Array.isArray(variant) ? variant : [variant]).map(sv => sv.variantId).join(',')
-    return (
-      <div>
-        {!isCompoundHet &&
-        <InlineContainer>
-          <InlineHeader size="small">
-            Family<HorizontalSpacer width={5} />
-            <PopupWithModal
-              hoverable
-              style={FAMILY_POPUP_STYLE}
-              position="right center"
-              keepInViewPort
-              trigger={
-                <ColoredLink
-                  to={`/project/${family.projectGuid}/family_page/${family.familyGuid}`}
-                  color={FAMILY_ANALYSIS_STATUS_LOOKUP[family[FAMILY_FIELD_ANALYSIS_STATUS]].color}
-                >
-                  {family.displayName}
-                </ColoredLink>
-              }
-              content={<Family family={family} fields={FAMILY_FIELDS} useFullWidth disablePedigreeZoom />}
-            />
-          </InlineHeader>
-        </InlineContainer>}
-        <InlineContainer>
-          {isCompoundHet && <VerticalSpacer height={5} />}
-          <div>
-            <TagTitle>Tags:</TagTitle>
-            <HorizontalSpacer width={5} />
-            {!isCompoundHet &&
-              <ShortcutTags
-                variantTagNotes={variantTagNotes}
-                variantId={variantId}
-                familyGuid={family.familyGuid}
-                dispatchUpdateFamilyVariantTags={dispatchUpdateFamilyVariantTags}
-              />}
+    dispatchUpdateFamilyVariantTags, dispatchUpdateFamilyVariantFunctionalTags, isCompoundHet, variantId },
+) => (
+  family ?
+    <div>
+      {!isCompoundHet &&
+      <InlineContainer>
+        <InlineHeader size="small">
+          Family<HorizontalSpacer width={5} />
+          <PopupWithModal
+            hoverable
+            style={FAMILY_POPUP_STYLE}
+            position="right center"
+            keepInViewPort
+            trigger={
+              <ColoredLink
+                to={`/project/${family.projectGuid}/family_page/${family.familyGuid}`}
+                color={FAMILY_ANALYSIS_STATUS_LOOKUP[family[FAMILY_FIELD_ANALYSIS_STATUS]].color}
+              >
+                {family.displayName}
+              </ColoredLink>
+            }
+            content={<Family family={family} fields={FAMILY_FIELDS} useFullWidth disablePedigreeZoom />}
+          />
+        </InlineHeader>
+      </InlineContainer>}
+      <InlineContainer>
+        {isCompoundHet && <VerticalSpacer height={5} />}
+        <div>
+          <TagTitle>Tags:</TagTitle>
+          <HorizontalSpacer width={5} />
+          {!isCompoundHet &&
+            <ShortcutTags
+              variantTagNotes={variantTagNotes}
+              variantId={variantId}
+              familyGuid={family.familyGuid}
+              dispatchUpdateFamilyVariantTags={dispatchUpdateFamilyVariantTags}
+            />}
+          <VariantTagField
+            field="tags"
+            fieldName="Tags"
+            family={family}
+            variantTagNotes={variantTagNotes}
+            variantId={variantId}
+            tagOptions={projectTagTypes}
+            onSubmit={dispatchUpdateFamilyVariantTags}
+          />
+          <HorizontalSpacer width={5} />
+          {((variantTagNotes || {}).tags || []).some(tag => tag.category === DISCOVERY_CATEGORY_NAME) &&
+          <span>
+            <TagTitle>Fxnl Data:</TagTitle>
             <VariantTagField
-              field="tags"
-              fieldName="Tags"
+              field="functionalData"
+              fieldName="Fxnl Data"
               family={family}
               variantTagNotes={variantTagNotes}
               variantId={variantId}
-              tagOptions={projectTagTypes}
-              onSubmit={dispatchUpdateFamilyVariantTags}
+              tagOptions={projectFunctionalTagTypes}
+              editMetadata
+              onSubmit={dispatchUpdateFamilyVariantFunctionalTags}
             />
             <HorizontalSpacer width={5} />
-            {((variantTagNotes || {}).tags || []).some(tag => tag.category === DISCOVERY_CATEGORY_NAME) &&
-            <span>
-              <TagTitle>Fxnl Data:</TagTitle>
-              <VariantTagField
-                field="functionalData"
-                fieldName="Fxnl Data"
-                family={family}
-                variantTagNotes={variantTagNotes}
-                variantId={variantId}
-                tagOptions={projectFunctionalTagTypes}
-                editMetadata
-                onSubmit={dispatchUpdateFamilyVariantFunctionalTags}
-              />
-              <HorizontalSpacer width={5} />
-            </span>
-            }
-          </div>
-          {isCompoundHet && <VerticalSpacer height={5} />}
-          <div>
-            <TagTitle>Notes:</TagTitle>
-            <NoteContainer>
-              {((variantTagNotes || {}).notes || []).map(note =>
-                <VariantNoteField
-                  key={note.noteGuid}
-                  note={note}
-                  variantTagNotes={variantTagNotes}
-                  family={family}
-                  isDeletable
-                  compact
-                  action="Edit"
-                  onSubmit={dispatchUpdateVariantNote}
-                />,
-              )}
+          </span>
+          }
+        </div>
+        {isCompoundHet && <VerticalSpacer height={5} />}
+        <div>
+          <TagTitle>Notes:</TagTitle>
+          <NoteContainer>
+            {((variantTagNotes || {}).notes || []).map(note =>
               <VariantNoteField
+                key={note.noteGuid}
+                note={note}
                 variantTagNotes={variantTagNotes}
-                defaultId={variantId}
                 family={family}
-                editIconName="plus"
-                editLabel="Add Note"
-                action="Add"
+                isDeletable
+                compact
+                action="Edit"
                 onSubmit={dispatchUpdateVariantNote}
-              />
-            </NoteContainer>
-          </div>
-          {isCompoundHet && <VerticalSpacer height={5} />}
-        </InlineContainer>
-        {hasVariantLink && <VariantLink variant={variant} family={family} />}
-      </div>)
-  }
-  return null
-}
+              />,
+            )}
+            <VariantNoteField
+              variantTagNotes={variantTagNotes}
+              defaultId={variantId}
+              family={family}
+              editIconName="plus"
+              editLabel="Add Note"
+              action="Add"
+              onSubmit={dispatchUpdateVariantNote}
+            />
+          </NoteContainer>
+        </div>
+        {isCompoundHet && <VerticalSpacer height={5} />}
+      </InlineContainer>
+      {(!Array.isArray(variant) || variantTagNotes) && <VariantLink variant={variant} family={family} />}
+    </div> : null
+)
 
 FamilyVariantTags.propTypes = {
   variant: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
   variantTagNotes: PropTypes.object,
+  variantId: PropTypes.string,
   family: PropTypes.object,
   projectTagTypes: PropTypes.array,
   projectFunctionalTagTypes: PropTypes.array,
@@ -354,13 +356,13 @@ FamilyVariantTags.propTypes = {
 }
 
 const mapStateToProps = (state, ownProps) => {
-  const variantGuids = (Array.isArray(ownProps.variant) ? ownProps.variant : [ownProps.variant]).map(
-    ({ variantGuid }) => variantGuid).sort().join(',')
+  const variantId = getVariantId(ownProps.variant)
   return {
+    variantId,
     family: getFamiliesByGuid(state)[ownProps.familyGuid],
     projectTagTypes: getProjectTagTypes(state, ownProps),
     projectFunctionalTagTypes: getProjectFunctionalTagTypes(state, ownProps),
-    variantTagNotes: getVariantTagNotesByGuid(state, ownProps)[variantGuids],
+    variantTagNotes: ((getVariantTagNotesByFamilyVariants(state) || {})[ownProps.familyGuid] || {})[variantId],
   }
 }
 

@@ -153,21 +153,6 @@ export const getSavedVariantCurrentPage = state => state.savedVariantTableState.
 export const getSavedVariantRecordsPerPage = state => state.savedVariantTableState.recordsPerPage || 25
 export const getSavedVariantTaggedAfter = state => state.savedVariantTableState.taggedAfter
 
-export const getVariantId = ({ xpos, ref, alt }) => `${xpos}-${ref}-${alt}`
-
-export const getSavedVariantsGroupedByFamilyVariants = createSelector(
-  getSavedVariantsByGuid,
-  savedVariantsByGuid => Object.values(savedVariantsByGuid).reduce((acc, variant) => {
-    variant.familyGuids.forEach((familyGuid) => {
-      if (!(familyGuid in acc)) {
-        acc[familyGuid] = {}
-      }
-      acc[familyGuid][getVariantId(variant)] = variant
-    })
-    return acc
-  }, {}),
-)
-
 const getSelectedSavedVariants = createSelector(
   getSavedVariantsByGuid,
   (state, props) => props.match.params,
@@ -219,12 +204,6 @@ export const getPairedSelectedSavedVariants = createSelector(
       ].filter(variantGuids => variantGuids.length > 1).reduce((guidAcc, variantGuids) =>
         new Set([...guidAcc, ...variantGuids.filter(variantGuid => variantGuid !== variant.variantGuid)]),
       new Set())].filter(variantGuid => selectedVariantsByGuid[variantGuid])
-
-      console.log([...[
-        ...variant.tagGuids.map(t => tagsByGuid[t].variantGuids),
-        ...variant.noteGuids.map(n => notesByGuid[n].variantGuids),
-      ].filter(variantGuids => variantGuids.length > 1)])
-      console.log(variantCompoundHetGuids)
 
       if (variantCompoundHetGuids.length) {
         seenCompoundHets.push(variant.variantGuid)
@@ -339,8 +318,10 @@ const getFunctionalDataByVariantGuids = createSelector(
   groupByVariantGuids,
 )
 
+export const getVariantId = variant =>
+  (Array.isArray(variant) ? variant : [variant]).map(({ variantId }) => variantId).sort().join(',')
 
-export const getVariantTagNotesByGuid = createSelector(
+export const getVariantTagNotesByFamilyVariants = createSelector(
   getTagsByVariantGuids,
   getNotesByVariantGuids,
   getFunctionalDataByVariantGuids,
@@ -365,12 +346,24 @@ export const getVariantTagNotesByGuid = createSelector(
       return acc
     }, variantDetails)
 
-    return Object.keys(savedVariantsByGuid).reduce((acc, variantGuid) => {
+    variantDetails = Object.keys(savedVariantsByGuid).reduce((acc, variantGuid) => {
       if (!acc[variantGuid]) {
         acc[variantGuid] = { variantGuids: variantGuid }
       }
       return acc
     }, variantDetails)
+
+    return Object.values(variantDetails).reduce((acc, variantDetail) => {
+      const variants = variantDetail.variantGuids.split(',').map(variantGuid => savedVariantsByGuid[variantGuid])
+      const variantId = getVariantId(variants)
+      variants[0].familyGuids.forEach((familyGuid) => {
+        if (!(familyGuid in acc)) {
+          acc[familyGuid] = {}
+        }
+        acc[familyGuid][variantId] = variantDetail
+      })
+      return acc
+    }, {})
   },
 )
 
