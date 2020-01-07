@@ -338,9 +338,11 @@ export const getVariantTagNotesByGuid = createSelector(
   getTagsByVariantGuids,
   getNotesByVariantGuids,
   getFunctionalDataByVariantGuids,
-  (tagsByGuids, notesByGuids, functionalDataByGuids) => {
+  getSavedVariantsByGuid,
+  (tagsByGuids, notesByGuids, functionalDataByGuids, savedVariantsByGuid) => {
     let variantDetails = Object.entries(tagsByGuids).reduce(
       (acc, [variantGuids, tags]) => ({ ...acc, [variantGuids]: { tags, variantGuids } }), {})
+
     variantDetails = Object.entries(notesByGuids).reduce((acc, [variantGuids, notes]) => {
       if (!acc[variantGuids]) {
         acc[variantGuids] = { variantGuids }
@@ -348,11 +350,19 @@ export const getVariantTagNotesByGuid = createSelector(
       acc[variantGuids].notes = notes
       return acc
     }, variantDetails)
-    return Object.entries(functionalDataByGuids).reduce((acc, [variantGuids, functionalData]) => {
+
+    variantDetails = Object.entries(functionalDataByGuids).reduce((acc, [variantGuids, functionalData]) => {
       if (!acc[variantGuids]) {
         acc[variantGuids] = { variantGuids }
       }
       acc[variantGuids].functionalData = functionalData
+      return acc
+    }, variantDetails)
+
+    return Object.keys(savedVariantsByGuid).reduce((acc, variantGuid) => {
+      if (!acc[variantGuid]) {
+        acc[variantGuid] = { variantGuids: variantGuid }
+      }
       return acc
     }, variantDetails)
   },
