@@ -333,20 +333,28 @@ const getFunctionalDataByVariantGuids = createSelector(
   groupByVariantGuids,
 )
 
-export const getVariantTagNotes = createSelector(
+
+export const getVariantTagNotesByGuid = createSelector(
   getTagsByVariantGuids,
   getNotesByVariantGuids,
   getFunctionalDataByVariantGuids,
-  (state, ownProps) => (Array.isArray(ownProps.variant) ? ownProps.variant : [ownProps.variant]),
-  (tagsByGuids, notesByGuids, functionalDataByGuids, variants) => {
-    const variantGuids = variants.map(({ variantGuid }) => variantGuid).sort().join(',')
-    return {
-      variantId: variants.map(({ variantId }) => variantId).join(','),
-      variantGuids: variants.every(({ variantGuid }) => variantGuid) ? variantGuids : null,
-      tags: tagsByGuids[variantGuids],
-      notes: notesByGuids[variantGuids],
-      functionalData: functionalDataByGuids[variantGuids],
-    }
+  (tagsByGuids, notesByGuids, functionalDataByGuids) => {
+    let variantDetails = Object.entries(tagsByGuids).reduce(
+      (acc, [variantGuids, tags]) => ({ ...acc, [variantGuids]: { tags, variantGuids } }), {})
+    variantDetails = Object.entries(notesByGuids).reduce((acc, [variantGuids, notes]) => {
+      if (!acc[variantGuids]) {
+        acc[variantGuids] = { variantGuids }
+      }
+      acc[variantGuids].notes = notes
+      return acc
+    }, variantDetails)
+    return Object.entries(functionalDataByGuids).reduce((acc, [variantGuids, functionalData]) => {
+      if (!acc[variantGuids]) {
+        acc[variantGuids] = { variantGuids }
+      }
+      acc[variantGuids].functionalData = functionalData
+      return acc
+    }, variantDetails)
   },
 )
 
@@ -381,6 +389,24 @@ export const getSavedVariantExportConfig = createSelector(
     }
   },
 )
+
+const getProjectForFamilyGuid = createSelector(
+  getProjectsByGuid,
+  getFamiliesByGuid,
+  (state, ownProps) => ownProps.familyGuid,
+  (projectsByGuid, familiesByGuid, familyGuid) => projectsByGuid[(familiesByGuid[familyGuid] || {}).projectGuid],
+)
+
+export const getProjectTagTypes = createSelector(
+  getProjectForFamilyGuid,
+  project => project.variantTagTypes.filter(vtt => vtt.name !== NOTE_TAG_NAME),
+)
+
+export const getProjectFunctionalTagTypes = createSelector(
+  getProjectForFamilyGuid,
+  project => project.variantFunctionalTagTypes,
+)
+
 
 export const getParsedLocusList = createSelector(
   getLocusListsByGuid,

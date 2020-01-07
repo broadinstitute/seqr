@@ -46,8 +46,7 @@ MetadataField.propTypes = {
 
 
 const TagFieldView = ({ simplifiedValue, initialValues, field, tagOptions, popup, tagAnnotation, editMetadata, ...props }) => {
-
-  const fieldValues = initialValues[field] || []
+  const fieldValues = (initialValues || {})[field] || []
 
   tagOptions = tagOptions.map((tag, i) => {
     return { ...tag, ...fieldValues.find(val => val.name === tag.name), optionIndex: i }
@@ -110,8 +109,7 @@ const TagFieldView = ({ simplifiedValue, initialValues, field, tagOptions, popup
 TagFieldView.propTypes = {
   field: PropTypes.string.isRequired,
   idField: PropTypes.string.isRequired,
-  initialValues: PropTypes.oneOfType([PropTypes.object, PropTypes.array]).isRequired,
-  tagValues: PropTypes.object,
+  initialValues: PropTypes.object.isRequired,
   tagOptions: PropTypes.array.isRequired,
   onSubmit: PropTypes.func.isRequired,
   editMetadata: PropTypes.bool,

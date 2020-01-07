@@ -47,7 +47,7 @@ class BaseFieldView extends React.PureComponent {
     if (!this.props.isEditable && !hasValue) {
       return null
     }
-    const fieldId = this.props.initialValues[this.props.idField]
+    const fieldId = this.props.initialValues[this.props.idField] || this.props.defaultId
     const modalId = this.props.isEditable ? `edit-${fieldId || 'new'}-${this.props.field}-${this.props.modalId}` : null
 
     let editButton
@@ -168,6 +168,7 @@ BaseFieldView.propTypes = {
   showErrorPanel: PropTypes.bool,
   modalId: PropTypes.string,
   modalSize: PropTypes.string,
+  defaultId: PropTypes.string,
 }
 
 BaseFieldView.defaultProps = {
