@@ -48,37 +48,6 @@ def saved_variant_data(request, project_guid, variant_guids=None):
     return create_json_response(response)
 
 
-def _create_single_saved_variant(variant_json, family):
-    if 'xpos' not in variant_json:
-        variant_json['xpos'] = get_xpos(variant_json['chrom'], variant_json['pos'])
-    xpos = variant_json['xpos']
-    ref = variant_json['ref']
-    alt = variant_json['alt']
-    var_length = variant_json['pos_end'] - variant_json['pos'] if 'pos_end' in variant_json else len(ref) - 1
-    saved_variant = SavedVariant.objects.create(
-        xpos=xpos,
-        xpos_start=xpos,
-        xpos_end=xpos + var_length,
-        ref=ref,
-        alt=alt,
-        family=family,
-        saved_variant_json=variant_json
-    )
-    return saved_variant
-
-
-def _create_multiple_saved_variants(variants_json, family):
-    saved_variants = []
-    for variant_json in variants_json:
-        variant_guid = variant_json.get('variantGuid')
-        if variant_guid:
-            saved_variant = SavedVariant.objects.get(guid=variant_guid)
-        else:
-            saved_variant = _create_single_saved_variant(variant_json, family)
-        saved_variants.append(saved_variant)
-    return saved_variants
-
-
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def create_saved_variant_handler(request):
@@ -90,9 +59,20 @@ def create_saved_variant_handler(request):
 
     if isinstance(variant_json['variant'], list):
         # are compound hets
-        saved_variants = _create_multiple_saved_variants(variant_json['variant'], family)
+        saved_variants = []
+        for single_variant_json in variant_json['variant']:
+            saved_variant, created = SavedVariant.objects.get_or_create(
+                **_get_parsed_variant_args(single_variant_json, family)
+            )
+            if created:
+                saved_variant.saved_variant_json = single_variant_json
+                saved_variant.save()
+            saved_variants.append(saved_variant)
     else:
-        saved_variant = _create_single_saved_variant(variant_json['variant'], family)
+        saved_variant = SavedVariant.objects.create(
+            saved_variant_json=variant_json['variant'],
+            **_get_parsed_variant_args(variant_json['variant'], family)
+        )
         saved_variants = [saved_variant]
 
     if variant_json.get('note'):
@@ -101,6 +81,23 @@ def create_saved_variant_handler(request):
         _create_new_tags(saved_variants, variant_json, request.user)
 
     return create_json_response(get_json_for_saved_variants_with_tags(saved_variants, add_details=True))
+
+
+def _get_parsed_variant_args(variant_json, family):
+    if 'xpos' not in variant_json:
+        variant_json['xpos'] = get_xpos(variant_json['chrom'], variant_json['pos'])
+    xpos = variant_json['xpos']
+    ref = variant_json['ref']
+    alt = variant_json['alt']
+    var_length = variant_json['pos_end'] - variant_json['pos'] if 'pos_end' in variant_json else len(ref) - 1
+    return {
+        'xpos': xpos,
+        'xpos_start':  xpos,
+        'xpos_end':  xpos + var_length,
+        'ref':  ref,
+        'alt':  alt,
+        'family':  family,
+    }
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)

@@ -308,7 +308,7 @@ class ProjectAPITest(TransactionTestCase):
         _check_login(self, create_saved_variant_url)
 
         request_body = {
-            'variant': [COMPOUND_HET_5_JSON, {'variantGuid': VARIANT_GUID}],
+            'variant': [COMPOUND_HET_5_JSON, {'variantId': 'abc123', 'xpos': 21003343353, 'ref': 'GAGA', 'alt': 'G'}],
             'note': 'one_saved_one_not_saved_compount_hets_note',
             'submitToClinvar': True,
             'familyGuid': 'F000001_1',
