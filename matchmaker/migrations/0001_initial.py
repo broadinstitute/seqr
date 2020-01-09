@@ -8,7 +8,6 @@ from django.db import migrations, models
 import django.utils.timezone
 
 from matchmaker.matchmaker_utils import get_submission_json_for_external_match
-from reference_data.models import GENOME_VERSION_LOOKUP
 
 RESULT_FIELDS = [
     'guid', 'created_date', 'last_modified_date', 'result_data', 'we_contacted', 'host_contacted', 'deemed_irrelevant',
@@ -21,6 +20,7 @@ CONTACT_NOTE_FIELDS = ['guid', 'created_date', 'last_modified_date', 'institutio
 DUPLICATED_SUBMISSION_IDS = {
     '89dcbe5e752737cb1991dd34dfae68c1',
     'BON_UC499_1_1',
+    'MAN_1024-01_2',
     'WAL_CH2900_CH2901',
     'WAL_CH5200_CH5201',
     'WAL_CH5700_CH5701',
