@@ -1,6 +1,7 @@
 import json
 import jmespath
 from collections import defaultdict
+from django.utils import timezone
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import MultipleObjectsReturned
 from django.db import IntegrityError
@@ -205,10 +206,12 @@ VARIANT_EXPORT_DATA = [
 VARIANT_FAMILY_EXPORT_DATA = [
     {'header': 'family_id'},
     {'header': 'tags', 'process': lambda tags: '|'.join([
-        '{} ({})'.format(tag['name'], tag['createdBy']) for tag in sorted(tags or [], key=lambda tag: tag['lastModifiedDate'], reverse=True)
+        '{} ({})'.format(tag['name'], tag['createdBy']) for tag in
+        sorted(tags or [], key=lambda tag: tag['lastModifiedDate'] or timezone.now(), reverse=True)
     ])},
     {'header': 'notes', 'process': lambda notes: '|'.join([
-        u'{} ({})'.format(note['note'].replace('\n', ' '), note['createdBy']) for note in sorted(notes or [], key=lambda note: note['lastModifiedDate'], reverse=True)
+        u'{} ({})'.format(note['note'].replace('\n', ' '), note['createdBy']) for note in
+        sorted(notes or [], key=lambda note: note['lastModifiedDate'] or timezone.now(), reverse=True)
     ])},
 ]
 
