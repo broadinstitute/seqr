@@ -8,6 +8,7 @@ import logging
 import os
 from collections import defaultdict
 from copy import copy
+from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import prefetch_related_objects, Prefetch
 from django.db.models.fields.files import ImageFieldFile
 from guardian.shortcuts import get_objects_for_group
@@ -19,7 +20,7 @@ from seqr.views.utils.json_utils import _to_camel_case
 logger = logging.getLogger(__name__)
 
 
-def _get_json_for_models(models, nested_fields=None, user=None, process_result=None, guid_key=None):
+def _get_json_for_models(models, nested_fields=None, user=None, process_result=None, guid_key=None, additional_model_fields=None):
     """Returns an array JSON representations of the given models.
 
     Args:
@@ -39,6 +40,8 @@ def _get_json_for_models(models, nested_fields=None, user=None, process_result=N
     fields = copy(model_class._meta.json_fields)
     if user and user.is_staff:
         fields += getattr(model_class._meta, 'internal_json_fields', [])
+    if additional_model_fields:
+        fields += additional_model_fields
 
     if 'created_by' in fields:
         prefetch_related_objects(models, 'created_by')
@@ -54,7 +57,11 @@ def _get_json_for_models(models, nested_fields=None, user=None, process_result=N
             if not field_value:
                 field_value = model
                 for field in nested_field['fields']:
-                    field_value = getattr(field_value, field) if field_value else None
+                    try:
+                        field_value = getattr(field_value, field) if field_value else None
+                    except ObjectDoesNotExist:
+                        field_value = None
+
             result[nested_field.get('key', _to_camel_case('_'.join(nested_field['fields'])))] = field_value
 
         if result.get('guid'):
@@ -711,3 +718,20 @@ def get_json_for_saved_searches(search, user):
 
 def get_json_for_saved_search(search, user):
     return _get_json_for_model(search, user=user, get_json_for_models=get_json_for_saved_searches)
+
+
+def get_json_for_matchmaker_submissions(models, individual_guid=None, additional_model_fields=None, all_parent_guids=False):
+    nested_fields = [{'fields': ('individual', 'guid'), 'value': individual_guid}]
+    if all_parent_guids:
+        nested_fields += [
+            {'fields': ('individual', 'individual_id'), 'key': 'individualId'},
+            {'fields': ('individual', 'family', 'guid'), 'key': 'familyGuid'},
+            {'fields': ('individual', 'family', 'project', 'guid'), 'key': 'projectGuid'},
+        ]
+    return _get_json_for_models(
+        models, nested_fields=nested_fields, guid_key='submissionGuid', additional_model_fields=additional_model_fields
+    )
+
+
+def get_json_for_matchmaker_submission(submission, **kwargs):
+    return _get_json_for_model(submission, get_json_for_models=get_json_for_matchmaker_submissions, **kwargs)

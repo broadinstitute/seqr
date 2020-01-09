@@ -14,6 +14,7 @@ GENOME_VERSION_CHOICES = [
 ]
 GENOME_VERSION_LOOKUP = {k: v for (k, v) in GENOME_VERSION_CHOICES}
 
+
 class ReferenceDataRouter(object):
     """
     A router to control all database operations on reference data models

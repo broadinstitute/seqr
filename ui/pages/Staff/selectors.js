@@ -13,10 +13,9 @@ export const getSuccessStoryLoadingError = state => state.successStoryLoading.er
 export const getSuccessStoryRows = state => state.successStoryRows
 export const getElasticsearchStatusLoading = state => state.elasticsearchStatusLoading.isLoading
 export const getElasticsearchStatusData = state => state.elasticsearchStatus
-export const getMmeMetricsLoading = state => state.mmeMetricsLoading.isLoading
-export const getMmeMetricsLoadingError = state => state.mmeMetricsLoading.errorMessage
+export const getMmeLoading = state => state.mmeLoading.isLoading
+export const getMmeLoadingError = state => state.mmeLoading.errorMessage
 export const getMmeMetrics = state => state.mmeMetrics
-export const getMmeSubmissionsLoading = state => state.mmeSubmissionsLoading.isLoading
 export const getMmeSubmissions = state => state.mmeSubmissions
 export const getSeqrStatsLoading = state => state.seqrStatsLoading.isLoading
 export const getSeqrStatsLoadingError = state => state.seqrStatsLoading.errorMessage

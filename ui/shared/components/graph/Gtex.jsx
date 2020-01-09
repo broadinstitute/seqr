@@ -128,14 +128,14 @@ class Gtex extends React.PureComponent {
   }
 
   componentDidMount() {
-    new HttpRequestHelper(`${GTEX_HOST}reference/gene?format=json&geneId=${this.props.geneId}`,
+    new HttpRequestHelper(`${GTEX_HOST}reference/gene`,
       (responseJson) => {
         launchGtex(responseJson.gene[0].gencodeId)
       },
       () => {
         launchGtex(this.props.geneId)
       },
-    ).get()
+    ).get({ format: 'json', geneId: this.props.geneId })
 
   }
 }

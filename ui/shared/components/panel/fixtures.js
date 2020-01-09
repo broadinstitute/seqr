@@ -431,6 +431,7 @@ export const STATE1 = {
     },
   },
   samplesByGuid: {},
+  mmeSubmissionsByGuid: {},
   project: {
     createdDate: '2016-05-16T05:37:08.634Z',
     deprecatedLastAccessedDate: '2017-03-14T15:15:42.580Z',

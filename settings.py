@@ -1,4 +1,5 @@
 import logging
+import json
 import os
 import random
 import string
@@ -42,6 +43,7 @@ INSTALLED_APPS = [
     'anymail',
     'seqr',
     'reference_data',
+    'matchmaker',
 ]
 
 MIDDLEWARE = [
@@ -264,30 +266,24 @@ PHENOTIPS_ADMIN_PWD = 'admin'
 REDIS_SERVICE_HOSTNAME = os.environ.get('REDIS_SERVICE_HOSTNAME', 'localhost')
 
 # Matchmaker
-MME_SERVER_HOST = 'http://{host}:{port}'.format(
-    host=os.environ.get('MATCHBOX_SERVICE_HOSTNAME', 'localhost'),
-    port=os.environ.get('MATCHBOX_SERVICE_PORT', 9020)
-)
-
-MME_ADD_INDIVIDUAL_URL = MME_SERVER_HOST + '/patient/add'
-MME_DELETE_INDIVIDUAL_URL = MME_SERVER_HOST + '/patient/delete'
-MME_LOCAL_MATCH_URL = MME_SERVER_HOST + '/match'
-MME_EXTERNAL_MATCH_URL = MME_SERVER_HOST + '/match/external'
-MME_MATCHBOX_METRICS_URL = MME_SERVER_HOST + '/metrics'
-MME_MATCHBOX_PUBLIC_METRICS_URL = MME_SERVER_HOST + '/metrics/public'
-
-MME_HEADERS = {
-    'X-Auth-Token': os.environ.get("MME_NODE_ADMIN_TOKEN", "abcd"),
-    'Accept': 'application/vnd.ga4gh.matchmaker.v1.0+json',
-    'Content-Type': 'application/vnd.ga4gh.matchmaker.v1.0+json'
-}
-
 MME_DEFAULT_CONTACT_NAME = 'Samantha Baxter'
 MME_DEFAULT_CONTACT_INSTITUTION = 'Broad Center for Mendelian Genomics'
 MME_DEFAULT_CONTACT_EMAIL = 'matchmaker@broadinstitute.org'
 MME_DEFAULT_CONTACT_HREF = 'mailto:{}'.format(MME_DEFAULT_CONTACT_EMAIL)
 
-MME_SLACK_EVENT_NOTIFICATION_CHANNEL = 'matchmaker_alerts'
+MME_CONFIG_DIR = os.environ.get('MME_CONFIG_DIR', '')
+MME_NODES = {}
+if MME_CONFIG_DIR:
+    with open(os.path.join(MME_CONFIG_DIR, 'config.json'), 'r') as f:
+        mme_config = json.load(f)
+        admin_token = mme_config['adminToken']
+        MME_NODES[admin_token] = {'name': MME_DEFAULT_CONTACT_INSTITUTION}
+        for node in mme_config['nodes']:
+            MME_NODES[node['accessToken']] = node
+
+MME_ACCEPT_HEADER = 'application/vnd.ga4gh.matchmaker.v1.0+json'
+
+MME_SLACK_ALERT_NOTIFICATION_CHANNEL = 'matchmaker_alerts'
 MME_SLACK_MATCH_NOTIFICATION_CHANNEL = 'matchmaker_matches'
 MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL = 'matchmaker_seqr_match'
 

@@ -18,20 +18,23 @@ from seqr.utils.file_utils import file_iter
 from seqr.utils.gene_utils import get_genes
 from seqr.utils.xpos_utils import get_chrom_pos
 
-from seqr.views.utils.matchmaker_utils import get_mme_genes_phenotypes, parse_mme_patient
+from matchmaker.matchmaker_utils import get_mme_genes_phenotypes_for_submissions, parse_mme_features, \
+    parse_mme_gene_variants, get_mme_metrics
 from seqr.views.apis.saved_variant_api import _saved_variant_genes, _add_locus_lists
 from seqr.views.utils.file_utils import parse_file
 from seqr.views.utils.json_utils import create_json_response, _to_camel_case
 from seqr.views.utils.orm_to_json_utils import _get_json_for_individuals, get_json_for_saved_variants, \
-    get_json_for_saved_variants_with_tags, get_json_for_variant_functional_data_tag_types, get_json_for_projects, \
-    _get_json_for_families, get_json_for_locus_lists, _get_json_for_models
+    get_json_for_variant_functional_data_tag_types, get_json_for_projects, _get_json_for_families, \
+    get_json_for_locus_lists, _get_json_for_models, get_json_for_matchmaker_submissions, \
+    get_json_for_saved_variants_with_tags
 from seqr.views.utils.proxy_request_utils import proxy_request
 
+from matchmaker.models import MatchmakerSubmission
 from seqr.models import Project, Family, VariantTag, VariantTagType, Sample, SavedVariant, Individual, ProjectCategory, \
     LocusList
 from reference_data.models import Omim
 
-from settings import ELASTICSEARCH_SERVER, MME_HEADERS, MME_MATCHBOX_METRICS_URL, KIBANA_SERVER, API_LOGIN_REQUIRED_URL
+from settings import ELASTICSEARCH_SERVER, KIBANA_SERVER, API_LOGIN_REQUIRED_URL
 
 logger = logging.getLogger(__name__)
 
@@ -99,34 +102,26 @@ def elasticsearch_status(request):
 
 
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
-def mme_metrics_proxy(request):
-    return proxy_request(request, MME_MATCHBOX_METRICS_URL, headers=MME_HEADERS)
+def mme_details(request):
+    submissions = MatchmakerSubmission.objects.filter(deleted_date__isnull=True)
 
+    hpo_terms_by_id, genes_by_id, gene_symbols_to_ids = get_mme_genes_phenotypes_for_submissions(submissions)
 
-@staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
-def mme_submissions(request):
-    individuals = Individual.objects.filter(
-        mme_submitted_date__isnull=False, mme_deleted_date__isnull=True,
-    ).prefetch_related('family').prefetch_related('family__project')
+    submission_json = get_json_for_matchmaker_submissions(
+        submissions, additional_model_fields=['label'], all_parent_guids=True)
+    submissions_by_guid = {s['submissionGuid']: s for s in submission_json}
 
-    hpo_terms_by_id, genes_by_id, gene_symbols_to_ids = get_mme_genes_phenotypes([i.mme_submitted_data for i in individuals])
-
-    submissions = []
-    for individual in individuals:
-        submitted_data = parse_mme_patient(individual.mme_submitted_data, hpo_terms_by_id, gene_symbols_to_ids, individual.guid)
-        submissions.append({
-            'projectGuid': individual.family.project.guid,
-            'familyGuid': individual.family.guid,
-            'individualGuid': individual.guid,
-            'individualId': individual.individual_id,
-            'mmeSubmittedDate': individual.mme_submitted_date,
-            'mmeLabel': individual.mme_submitted_data['patient'].get('label'),
-            'mmeSubmittedData': submitted_data,
-            'geneSymbols': ','.join({genes_by_id.get(gv['geneId'], {}).get('geneSymbol') for gv in submitted_data['geneVariants']})
+    for submission in submissions:
+        gene_variants = parse_mme_gene_variants(submission.genomic_features, gene_symbols_to_ids)
+        submissions_by_guid[submission.guid].update({
+            'phenotypes': parse_mme_features(submission.features, hpo_terms_by_id),
+            'geneVariants': gene_variants,
+            'geneSymbols': ','.join({genes_by_id.get(gv['geneId'], {}).get('geneSymbol') for gv in gene_variants})
         })
 
     return create_json_response({
-        'submissions': submissions,
+        'metrics': get_mme_metrics(),
+        'submissions': submissions_by_guid.values(),
         'genesById': genes_by_id,
     })
 

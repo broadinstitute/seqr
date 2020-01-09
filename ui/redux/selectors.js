@@ -28,6 +28,7 @@ export const getSavedVariantsByGuid = state => state.savedVariantsByGuid
 export const getVariantTagsByGuid = state => state.variantTagsByGuid
 export const getVariantNotesByGuid = state => state.variantNotesByGuid
 export const getVariantFunctionalDataByGuid = state => state.variantFunctionalDataByGuid
+export const getMmeSubmissionsByGuid = state => state.mmeSubmissionsByGuid
 export const getMmeResultsByGuid = state => state.mmeResultsByGuid
 export const getGenesById = state => state.genesById
 export const getGenesIsLoading = state => state.genesLoading.isLoading
@@ -82,12 +83,14 @@ export const getSamplesGroupedByProjectGuid = createSelector(getSamplesByGuid, g
 export const getSortedIndividualsByFamily = createSelector(
   getFamiliesByGuid,
   getIndividualsByGuid,
-  (familiesByGuid, individualsByGuid) => {
+  getMmeSubmissionsByGuid,
+  (familiesByGuid, individualsByGuid, mmeSubmissionsByGuid) => {
     const AFFECTED_STATUS_ORDER = { A: 1, N: 2, U: 3 }
     const getIndivAffectedSort = individual => AFFECTED_STATUS_ORDER[individual.affected] || 0
-    const getIndivMmeSort = individual => (
-      individual.mmeDeletedDate ? '2000-01-01' : (individual.mmeSubmittedDate || '1900-01-01')
-    )
+    const getIndivMmeSort = ({ mmeSubmissionGuid }) => {
+      const { deletedDate, createdDate = '1900-01-01' } = mmeSubmissionsByGuid[mmeSubmissionGuid] || {}
+      return deletedDate ? '2000-01-01' : createdDate
+    }
 
     return Object.entries(familiesByGuid).reduce((acc, [familyGuid, family]) => ({
       ...acc,
