@@ -231,8 +231,10 @@ class ProjectAPITest(TransactionTestCase):
 
         self.assertListEqual(["Review"], [vt['name'] for vt in compound_het_3_tags])
         self.assertListEqual(["Review"], [vt['name'] for vt in compound_het_4_tags])
-        self.assertListEqual(["Review"], [vt.variant_tag_type.name for vt in VariantTag.objects.filter(saved_variants__guid__contains=new_compound_het_3_guid)])
-        self.assertListEqual(["Review"], [vt.variant_tag_type.name for vt in VariantTag.objects.filter(saved_variants__guid__contains=new_compound_het_4_guid)])
+        self.assertListEqual(["Review"], [vt.variant_tag_type.name for vt in VariantTag.objects.filter(
+            saved_variants__guid__contains=new_compound_het_3_guid)])
+        self.assertListEqual(["Review"], [vt.variant_tag_type.name for vt in VariantTag.objects.filter(
+            saved_variants__guid__contains=new_compound_het_4_guid)])
 
     def test_create_update_and_delete_variant_note(self):
         create_variant_note_url = reverse(create_variant_note_handler, args=[VARIANT_GUID])
@@ -259,7 +261,8 @@ class ProjectAPITest(TransactionTestCase):
             {'note': 'new_variant_note_as_gene_note', 'saveAsGeneNote': True, 'familyGuid': 'F000001_1'}
         ))
         self.assertEqual(response.status_code, 200)
-        new_variant_note_guid = response.json()['savedVariantsByGuid'][VARIANT_GUID]['noteGuids'][0]
+        new_variant_note_guid = next(
+            guid for guid in response.json()['savedVariantsByGuid'][VARIANT_GUID]['noteGuids'] if guid != new_note_guid)
         new_variant_note_response = response.json()['variantNotesByGuid'][new_variant_note_guid]
         self.assertEqual(new_variant_note_response['note'], 'new_variant_note_as_gene_note')
         new_gene_note_response = response.json()['genesById'][GENE_GUID]['notes'][0]
