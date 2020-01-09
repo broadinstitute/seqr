@@ -5,6 +5,7 @@ import { NavLink, Route, Switch } from 'react-router-dom'
 import { Header, Menu } from 'semantic-ui-react'
 
 import { getUser } from 'redux/selectors'
+import { Error404, Error401 } from 'shared/components/page/Errors'
 import SavedVariants from 'shared/components/panel/variants/SavedVariants'
 import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
@@ -34,10 +35,6 @@ const STAFF_PAGES = [
   { path: 'seqr_stats', component: SeqrStats },
   { path: 'users', component: Users },
 ]
-
-// TODO shared 404 component
-const Error404 = () => (<Header size="huge" textAlign="center">Error 404: Page Not Found</Header>)
-const Error401 = () => (<Header size="huge" textAlign="center">Error 401: Unauthorized</Header>)
 
 export const StaffPageHeader = () =>
   <Menu attached>

@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom'
 
 import { getLocusListsByGuid } from 'redux/selectors'
 import { UpdateLocusListButton, DeleteLocusListButton } from '../buttons/LocusListButtons'
-import SortableTable from './SortableTable'
+import DataTable from './DataTable'
 import { LOCUS_LIST_FIELDS, LOCUS_LIST_IS_PUBLIC_FIELD_NAME, LOCUS_LIST_CURATOR_FIELD_NAME } from '../../utils/constants'
 
 const FIELDS = LOCUS_LIST_FIELDS.map(
@@ -43,7 +43,7 @@ const LocusListTable = ({ locusListsByGuid, showPublic, isEditable, showLinks, o
     data = data.filter(locusList => !omitLocusLists.includes(locusList.locusListGuid))
   }
   return (
-    <SortableTable
+    <DataTable
       basic="very"
       fixed
       idField="locusListGuid"

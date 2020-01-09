@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { NavLink } from 'react-router-dom'
 
-import SortableTable from 'shared/components/table/SortableTable'
+import DataTable from 'shared/components/table/DataTable'
 import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
 import DataLoader from 'shared/components/DataLoader'
 import { InlineHeader } from 'shared/components/StyledComponents'
@@ -62,7 +62,7 @@ const SuccessStory = ({ match, data, loading, loadingError, load, history }) =>
     />
     or <NavLink to="/staff/success_story/all" activeStyle={ACTIVE_LINK_STYLE}>view all success stories</NavLink>
     <VerticalSpacer height={15} />
-    <SortableTable
+    <DataTable
       downloadFileName={getDownloadFilename(match.params.successStoryTypes, data)}
       idField="row_id"
       defaultSortColumn="family_id"

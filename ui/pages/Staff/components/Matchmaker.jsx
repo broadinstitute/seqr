@@ -6,7 +6,7 @@ import { Header, Table } from 'semantic-ui-react'
 
 import DataLoader from 'shared/components/DataLoader'
 import { SubmissionGeneVariants, Phenotypes } from 'shared/components/panel/MatchmakerPanel'
-import SortableTable from 'shared/components/table/SortableTable'
+import DataTable from 'shared/components/table/DataTable'
 import {
   getMmeLoading,
   getMmeLoadingError,
@@ -63,7 +63,7 @@ const Matchmaker = ({ metrics, submissions, error, loading, load }) =>
       </Table>
     </DataLoader>
     <Header size="medium" content="Matchmaker Submissions:" />
-    <SortableTable
+    <DataTable
       collapsing
       idField="submissionGuid"
       defaultSortColumn="lastModifiedDate"

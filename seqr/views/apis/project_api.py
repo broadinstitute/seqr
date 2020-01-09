@@ -21,7 +21,8 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_project, get_json_f
     get_json_for_variant_functional_data_tag_types, get_sorted_project_locus_lists, \
     get_json_for_project_collaborator_list, _get_json_for_models, get_json_for_matchmaker_submissions
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_permissions
-from seqr.views.utils.phenotips_utils import create_phenotips_user, get_phenotips_uname_and_pwd_for_project
+from seqr.views.utils.phenotips_utils import create_phenotips_user, get_phenotips_uname_and_pwd_for_project, \
+    delete_phenotips_patient
 from seqr.views.utils.individual_utils import export_individuals
 from settings import PHENOTIPS_SERVER, API_LOGIN_REQUIRED_URL
 
@@ -377,7 +378,7 @@ def _create_project(name, description=None, genome_version=None, user=None):
     if genome_version:
         project_args['genome_version'] = genome_version
 
-    project, _ = get_or_create_seqr_model(Project, **project_args)
+    project, _ = Project.objects.get_or_create(**project_args)
 
     if PHENOTIPS_SERVER:
         try:
@@ -397,14 +398,15 @@ def _delete_project(project):
     """
 
     Sample.objects.filter(individual__family__project=project).delete()
-    for individual in Individual.objects.filter(family__project=project):
-        delete_seqr_model(individual)
-    for family in Family.objects.filter(project=project):
-        delete_seqr_model(family)
 
-    delete_seqr_model(project)
+    individuals = Individual.objects.filter(family__project=project)
+    for individual in individuals:
+        delete_phenotips_patient(project, individual)
+    individuals.delete()
 
-    # TODO delete PhenoTips, etc. and other objects under this project
+    Family.objects.filter(project=project).delete()
+
+    project.delete()
 
 
 def _enable_phenotips_for_project(project):

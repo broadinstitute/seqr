@@ -7,7 +7,6 @@ from django.views.decorators.csrf import csrf_exempt
 
 from seqr.models import SavedVariant, VariantTagType, VariantTag, VariantNote, VariantFunctionalData,\
     LocusListInterval, LocusListGene, Family, CAN_VIEW, CAN_EDIT, GeneNote
-from seqr.model_utils import create_seqr_model, delete_seqr_model
 from seqr.utils.gene_utils import get_genes
 from seqr.utils.xpos_utils import get_xpos
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
@@ -103,8 +102,7 @@ def create_variant_note_handler(request, variant_guid):
         gene_id = next(
             (gene_id for gene_id, transcripts in saved_variant.saved_variant_json['transcripts'].items()
              if any(t['transcriptId'] == main_transcript_id for t in transcripts)), None) if main_transcript_id else None
-        create_seqr_model(
-            GeneNote,
+        GeneNote.objects.create(
             note=request_json.get('note'),
             gene_id=gene_id,
             created_by=request.user,
@@ -126,8 +124,7 @@ def create_variant_note_handler(request, variant_guid):
 
 
 def _create_variant_note(saved_variant, note_json, user):
-    create_seqr_model(
-        VariantNote,
+    VariantNote.objects.create(
         saved_variant=saved_variant,
         note=note_json.get('note'),
         submit_to_clinvar=note_json.get('submitToClinvar') or False,
@@ -156,8 +153,7 @@ def update_variant_note_handler(request, variant_guid, note_guid):
 def delete_variant_note_handler(request, variant_guid, note_guid):
     saved_variant = SavedVariant.objects.get(guid=variant_guid)
     check_permissions(saved_variant.family.project, request.user, CAN_VIEW)
-    note = VariantNote.objects.get(guid=note_guid, saved_variant=saved_variant)
-    delete_seqr_model(note)
+    VariantNote.objects.get(guid=note_guid, saved_variant=saved_variant).delete()
     return create_json_response({'savedVariantsByGuid': {variant_guid: {
         'notes': [get_json_for_variant_note(tag) for tag in saved_variant.variantnote_set.all()]
     }}})
@@ -177,8 +173,7 @@ def update_variant_tags_handler(request, variant_guid):
 
     existing_tag_guids = [tag['tagGuid'] for tag in updated_tags if tag.get('tagGuid')]
 
-    for tag in saved_variant.varianttag_set.exclude(guid__in=existing_tag_guids):
-        delete_seqr_model(tag)
+    saved_variant.varianttag_set.exclude(guid__in=existing_tag_guids).delete()
 
     _create_new_tags(saved_variant, request_json, request.user)
 
@@ -186,8 +181,7 @@ def update_variant_tags_handler(request, variant_guid):
 
     existing_functional_guids = [tag['tagGuid'] for tag in updated_functional_data if tag.get('tagGuid')]
 
-    for tag in saved_variant.variantfunctionaldata_set.exclude(guid__in=existing_functional_guids):
-        delete_seqr_model(tag)
+    saved_variant.variantfunctionaldata_set.exclude(guid__in=existing_functional_guids).delete()
 
     for tag in updated_functional_data:
         if tag.get('tagGuid'):
@@ -198,8 +192,7 @@ def update_variant_tags_handler(request, variant_guid):
             )
             update_model_from_json(tag_model, tag, allow_unknown_keys=True)
         else:
-            create_seqr_model(
-                VariantFunctionalData,
+            VariantFunctionalData.objects.create(
                 saved_variant=saved_variant,
                 functional_data_tag=tag.get('name'),
                 metadata=tag.get('metadata'),
@@ -224,8 +217,7 @@ def _create_new_tags(saved_variant, tags_json, user):
             Q(name=tag['name']),
             Q(project=saved_variant.family.project) | Q(project__isnull=True)
         )
-        create_seqr_model(
-            VariantTag,
+        VariantTag.objects.create(
             saved_variant=saved_variant,
             variant_tag_type=variant_tag_type,
             search_hash=tags_json.get('searchHash'),

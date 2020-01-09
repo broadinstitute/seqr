@@ -23,7 +23,7 @@ import {
 } from 'shared/utils/constants'
 import { toSnakecase } from 'shared/utils/stringUtils'
 
-import ExportTableButton from '../../buttons/export-table/ExportTableButton'
+import ExportTableButton from '../../buttons/ExportTableButton'
 import VariantTagTypeBar, { getSavedVariantsLinkPath } from '../../graph/VariantTagTypeBar'
 import ReduxFormWrapper, { StyledForm } from '../../form/ReduxFormWrapper'
 import AwesomeBar from '../../page/AwesomeBar'

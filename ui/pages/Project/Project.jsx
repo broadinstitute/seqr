@@ -2,9 +2,10 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Route, Switch } from 'react-router-dom'
-import { Loader, Header } from 'semantic-ui-react'
+import { Loader } from 'semantic-ui-react'
 
 import { getCurrentProject, getUser } from 'redux/selectors'
+import { Error404 } from 'shared/components/page/Errors'
 import SavedVariants from 'shared/components/panel/variants/SavedVariants'
 import { loadProject, unloadProject } from './reducers'
 import { getProjectDetailsIsLoading } from './selectors'
@@ -12,10 +13,6 @@ import ProjectPageUI from './components/ProjectPageUI'
 import CaseReview from './components/CaseReview'
 import FamilyPage from './components/FamilyPage'
 import Matchmaker from './components/Matchmaker'
-
-
-// TODO shared 404 component
-const Error404 = () => (<Header size="huge" textAlign="center">Error 404: Page Not Found</Header>)
 
 
 class Project extends React.Component
