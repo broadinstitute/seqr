@@ -92,11 +92,6 @@ spec:
             secretKeyRef:
               name: seqr-secrets
               key: slack_token
-        - name: MME_NODE_ADMIN_TOKEN
-          valueFrom:
-            secretKeyRef:
-              name: seqr-secrets
-              key: mme_node_admin_token
         - name: GCLOUD_PROJECT      #  TODO can delete these and just rely on 'envFrom configMapRef' above once https://github.com/kubernetes/minikube/issues/2295 is fixed
           value: "{{ GCLOUD_PROJECT }}"
         - name: GCLOUD_ZONE
@@ -105,12 +100,8 @@ spec:
           value: "{{ GUNICORN_WORKER_THREADS }}"
         - name: HOST_MACHINE_IP
           value: "{{ HOST_MACHINE_IP }}"
-        - name: MATCHBOX_SERVICE_HOSTNAME
-          value: "{{ MATCHBOX_SERVICE_HOSTNAME }}"
         - name: POSTGRES_SERVICE_HOSTNAME
           value: "{{ POSTGRES_SERVICE_HOSTNAME }}"
-        - name: MONGO_SERVICE_HOSTNAME
-          value: "{{ MONGO_SERVICE_HOSTNAME }}"
         - name: PHENOTIPS_SERVICE_HOSTNAME
           value: "{{ PHENOTIPS_SERVICE_HOSTNAME }}"
         - name: ELASTICSEARCH_SERVICE_HOSTNAME
@@ -125,12 +116,8 @@ spec:
           value: "{{ PHENOTIPS_SERVICE_PORT }}"
         - name: POSTGRES_SERVICE_PORT
           value: "{{ POSTGRES_SERVICE_PORT }}"
-        - name: MATCHBOX_SERVICE_PORT
-          value: "{{ MATCHBOX_SERVICE_PORT }}"
         - name: ELASTICSEARCH_SERVICE_PORT
           value: "{{ ELASTICSEARCH_SERVICE_PORT }}"
-        - name: MONGO_SERVICE_PORT
-          value: "{{ MONGO_SERVICE_PORT }}"
         - name: DEPLOY_TO
           value: "{{ DEPLOY_TO }}"
         - name: DEPLOY_TO_PREFIX

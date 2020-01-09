@@ -10,10 +10,6 @@ alias more='less'
 
 export TERM=xterm
 
-# databases
-
-alias mongo='mongo --host ${MONGO_SERVICE_HOSTNAME}'
-
 resize
 
 alias gs='gsutil'

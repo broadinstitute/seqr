@@ -28,15 +28,12 @@ DEPLOYABLE_COMPONENTS = [
 
     "cockpit",
 
-    "external-mongo-connector",
     "external-elasticsearch-connector",
 
     "elasticsearch",  # a single elasticsearch instance
-    "mongo",
     "postgres",
     "redis",
     "phenotips",
-    "matchbox",
     "seqr",
     "kibana",
     "nginx",
@@ -57,10 +54,7 @@ DEPLOYMENT_TARGETS["minikube"] = [
     "init-cluster",
     "settings",
     "secrets",
-    "mongo",
-
     "postgres",
-    #"elasticsearch",
     "external-elasticsearch-connector",
     "kibana",
     "redis",
@@ -73,13 +67,8 @@ DEPLOYMENT_TARGETS["gcloud-prod"] = [
     "init-cluster",
     "settings",
     "secrets",
-    #"cockpit",
-    "external-mongo-connector",
-    "matchbox",
     "nginx",
-
     "postgres",
-    #"elasticsearch",
     "external-elasticsearch-connector",
     "kibana",
     "redis",
@@ -189,7 +178,6 @@ def deploy_secrets(settings):
         "kubectl create secret generic seqr-secrets",
         "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/seqr/omim_key",
         "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/seqr/postmark_server_token",
-        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/seqr/mme_node_admin_token",
         "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/seqr/slack_token",
         "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/seqr/django_key",
     ]) % settings, errors_to_ignore=["already exists"])
@@ -208,9 +196,7 @@ def deploy_secrets(settings):
 
     run(" ".join([
         "kubectl create secret generic matchbox-secrets",
-        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/matchbox/nodes.json",
-        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/matchbox/application.properties",
-        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/matchbox/config.xml",
+        "--from-file deploy/secrets/%(DEPLOY_TO_PREFIX)s/matchbox/config.json",
     ]) % settings, errors_to_ignore=["already exists"])
 
     account_key_path = "deploy/secrets/%(DEPLOY_TO_PREFIX)s/gcloud-client/service-account-key.json" % settings
@@ -249,16 +235,12 @@ def deploy_cockpit(settings):
     run("kubectl config view")
 
 
-def deploy_external_mongo_connector(settings):
-    deploy_external_connector(settings, "mongo")
-
-
 def deploy_external_elasticsearch_connector(settings):
     deploy_external_connector(settings, "elasticsearch")
 
 
 def deploy_external_connector(settings, connector_name):
-    if connector_name not in ["mongo", "elasticsearch"]:
+    if connector_name not in ["elasticsearch"]:
         raise ValueError("Invalid connector name: %s" % connector_name)
 
     if settings["ONLY_PUSH_TO_REGISTRY"]:
@@ -278,17 +260,6 @@ def deploy_elasticsearch(settings):
     docker_build("elasticsearch", settings, ["--build-arg ELASTICSEARCH_SERVICE_PORT=%s" % settings["ELASTICSEARCH_SERVICE_PORT"]])
 
     deploy_pod("elasticsearch", settings, wait_until_pod_is_ready=True)
-
-
-def deploy_mongo(settings):
-    print_separator("mongo")
-
-    if settings["DELETE_BEFORE_DEPLOY"]:
-        delete_pod("mongo", settings)
-
-    docker_build("mongo", settings)
-
-    deploy_pod("mongo", settings, wait_until_pod_is_running=True)
 
 
 def deploy_postgres(settings):
@@ -387,17 +358,6 @@ def deploy_phenotips(settings):
         run_in_pod("postgres", "rm /root/$(basename %(restore_phenotips_db_from_backup)s)" % locals(), deployment_target=deployment_target, verbose=True)
 
         deploy_pod("phenotips", settings, wait_until_pod_is_ready=True)
-
-
-def deploy_matchbox(settings):
-    print_separator("matchbox")
-
-    if settings["DELETE_BEFORE_DEPLOY"]:
-        delete_pod("matchbox", settings)
-
-    docker_build("matchbox", settings, ["--build-arg MATCHBOX_SERVICE_PORT=%s" % settings["MATCHBOX_SERVICE_PORT"]])
-
-    deploy_pod("matchbox", settings, wait_until_pod_is_ready=True)
 
 
 def deploy_seqr(settings):
@@ -783,7 +743,7 @@ spec:
     #]), is_interactive=True)
 
     # create persistent disks
-    for label in ("postgres", "seqr-static-files"): # "mongo"): # , "elasticsearch-sharded"):  # "elasticsearch"
+    for label in ("postgres", "seqr-static-files"):
         run(" ".join([
             "gcloud compute disks create",
             "--zone %(GCLOUD_ZONE)s",

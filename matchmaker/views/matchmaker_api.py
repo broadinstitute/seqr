@@ -7,94 +7,80 @@ from django.contrib.auth.decorators import login_required
 from django.core.mail.message import EmailMessage
 from django.views.decorators.csrf import csrf_exempt
 
+from matchmaker.models import MatchmakerResult, MatchmakerContactNotes, MatchmakerSubmission
+from matchmaker.matchmaker_utils import get_mme_genes_phenotypes_for_results, parse_mme_patient, \
+    get_submission_json_for_external_match, parse_mme_features, parse_mme_gene_variants, get_mme_matches, MME_DISCLAIMER
 from reference_data.models import GENOME_VERSION_LOOKUP
-from seqr.models import Individual, MatchmakerResult, MatchmakerContactNotes, SavedVariant
+from seqr.models import Individual, SavedVariant
 from seqr.utils.communication_utils import post_to_slack
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.matchmaker_utils import get_mme_genes_phenotypes, parse_mme_patient
-from seqr.views.utils.orm_to_json_utils import _get_json_for_model, get_json_for_saved_variants
-from seqr.views.utils.permissions_utils import check_permissions
+from seqr.views.utils.orm_to_json_utils import _get_json_for_model, get_json_for_saved_variants, get_json_for_matchmaker_submission
+from seqr.views.utils.permissions_utils import check_mme_permissions, check_permissions
 
-from settings import MME_HEADERS, MME_LOCAL_MATCH_URL, MME_EXTERNAL_MATCH_URL, MME_DEFAULT_CONTACT_EMAIL, BASE_URL,  \
-    MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL, MME_ADD_INDIVIDUAL_URL, MME_DELETE_INDIVIDUAL_URL, API_LOGIN_REQUIRED_URL
+from settings import BASE_URL, API_LOGIN_REQUIRED_URL, MME_ACCEPT_HEADER, MME_NODES, MME_DEFAULT_CONTACT_EMAIL, \
+    MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL, MME_SLACK_ALERT_NOTIFICATION_CHANNEL
 
 logger = logging.getLogger(__name__)
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
-def get_individual_mme_matches(request, individual_guid):
+def get_individual_mme_matches(request, submission_guid):
     """
-    Looks for matches for the given individual. Expects a single patient (MME spec) in the POST
+    Looks for matches for the given submission. Expects a single patient (MME spec) in the POST
     data field under key "patient_data"
     Args:
         project_id,indiv_id and POST all data in POST under key "patient_data"
     Returns:
         Status code and results
     """
-    individual = Individual.objects.get(guid=individual_guid)
-    project = individual.family.project
-    check_permissions(project, request.user)
+    submission = MatchmakerSubmission.objects.get(guid=submission_guid)
+    check_mme_permissions(submission, request.user)
 
-    results = MatchmakerResult.objects.filter(individual=individual)
+    results = MatchmakerResult.objects.filter(submission=submission)
 
     saved_variants = get_json_for_saved_variants(
-        SavedVariant.objects.filter(family=individual.family), add_tags=True, add_details=True)
+        SavedVariant.objects.filter(family=submission.individual.family), add_tags=True, add_details=True)
 
     gene_ids = set()
     for variant in saved_variants:
         gene_ids.update(variant['transcripts'].keys())
 
     return _parse_mme_results(
-        individual, results, request.user, additional_genes=gene_ids, response_json={
+        submission, results, request.user, additional_genes=gene_ids, response_json={
             'savedVariantsByGuid': {variant['variantGuid']: variant for variant in saved_variants}})
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
-def search_individual_mme_matches(request, individual_guid):
+def search_individual_mme_matches(request, submission_guid):
     """
-    Looks for matches for the given individual. Expects a single patient (MME spec) in the POST
-    data field under key "patient_data"
-    Args:
-        project_id,indiv_id and POST all data in POST under key "patient_data"
+    Looks for matches for the given submission.
     Returns:
         Status code and results
     """
 
-    individual = Individual.objects.get(guid=individual_guid)
-    project = individual.family.project
-    check_permissions(project, request.user)
-    return _search_individual_matches(individual, request.user)
+    submission = MatchmakerSubmission.objects.get(guid=submission_guid)
+    check_mme_permissions(submission, request.user)
+    return _search_matches(submission, request.user)
 
 
-def _search_individual_matches(individual, user):
-    patient_data = individual.mme_submitted_data
-    if not patient_data:
-        return create_json_response(
-            {}, status=404, reason='No matchmaker submission found for {}'.format(individual.individual_id),
-        )
+def _search_matches(submission, user):
+    patient_data = get_submission_json_for_external_match(submission)
 
-    local_result = requests.post(url=MME_LOCAL_MATCH_URL, headers=MME_HEADERS, data=json.dumps(patient_data))
-    if local_result.status_code != 200:
-        try:
-            response_json = local_result.json()
-        except Exception:
-            response_json = {}
-        return create_json_response(response_json, status=local_result.status_code, reason='Error in local match')
-    external_result = requests.post(url=MME_EXTERNAL_MATCH_URL, headers=MME_HEADERS, data=json.dumps(patient_data))
-    if external_result.status_code != 200:
-        try:
-            response_json = external_result.json()
-        except Exception:
-            response_json = {}
-        return create_json_response(response_json, status=external_result.status_code, reason='Error in external match')
+    nodes_to_query = [node for node in MME_NODES.values() if node.get('url')]
+    if not nodes_to_query:
+        message = 'No external MME nodes are configured'
+        return create_json_response({'message': message}, status=400, reason=message)
 
-    results = local_result.json()['results'] + external_result.json()['results']
+    external_results = _search_external_matches(nodes_to_query, patient_data)
+    local_results, incoming_query = get_mme_matches(patient_data, user=user)
+
+    results = local_results + external_results
 
     initial_saved_results = {
-        result.result_data['patient']['id']: result for result in MatchmakerResult.objects.filter(individual=individual)
+        result.result_data['patient']['id']: result for result in MatchmakerResult.objects.filter(submission=submission)
     }
 
     new_results = []
@@ -103,20 +89,24 @@ def _search_individual_matches(individual, user):
         saved_result = initial_saved_results.get(result['patient']['id'])
         if not saved_result:
             saved_result = MatchmakerResult.objects.create(
-                individual=individual,
+                submission=submission,
+                originating_query=incoming_query,
                 result_data=result,
                 last_modified_by=user,
             )
             new_results.append(result)
+        else:
+            saved_result.result_data = result
+            saved_result.save()
         saved_results[result['patient']['id']] = saved_result
 
     if new_results:
         try:
-            _generate_notification_for_seqr_match(individual, new_results)
+            _generate_notification_for_seqr_match(submission, new_results)
         except Exception as e:
             logger.error('Unable to create notification for new MME match: {}'.format(str(e)))
 
-    logger.info('Found {} matches for {} ({} new)'.format(len(results), individual.individual_id, len(new_results)))
+    logger.info('Found {} matches for {} ({} new)'.format(len(results), submission.submission_id, len(new_results)))
 
     removed_patients = set(initial_saved_results.keys()) - set(saved_results.keys())
     removed_count = 0
@@ -133,30 +123,54 @@ def _search_individual_matches(individual, user):
             removed_count += 1
 
     if removed_count:
-        logger.info('Removed {} old matches for {}'.format(removed_count, individual.individual_id))
+        logger.info('Removed {} old matches for {}'.format(removed_count, submission.submission_id))
 
-    return _parse_mme_results(individual, saved_results.values(), user)
+    return _parse_mme_results(submission, saved_results.values(), user)
+
+
+def _search_external_matches(nodes_to_query, patient_data):
+    body = {'_disclaimer': MME_DISCLAIMER}
+    body.update(patient_data)
+    external_results = []
+    for node in nodes_to_query:
+        headers = {
+            'X-Auth-Token': node['token'],
+            'Accept': MME_ACCEPT_HEADER,
+            'Content-Type': MME_ACCEPT_HEADER,
+            'Content-Language': 'en-US',
+        }
+        try:
+            external_result = requests.post(url=node['url'], headers=headers, data=json.dumps(body))
+            if external_result.status_code != 200:
+                try:
+                    message = external_result.json().get('message')
+                except Exception:
+                    message = external_result.content
+                error_message = '{} ({})'.format(message or 'Error', external_result.status_code)
+                raise Exception(error_message)
+
+            node_results = external_result.json()['results']
+            external_results += node_results
+            logger.info('Found {} matches from {}'.format(len(node_results), node['name']))
+        except Exception as e:
+            error_message = 'Error searching in {}: {}'.format(node['name'], e.message)
+            logger.error(error_message)
+            post_to_slack(MME_SLACK_ALERT_NOTIFICATION_CHANNEL, error_message)
+
+    return external_results
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
-def update_mme_submission(request, individual_guid):
+def update_mme_submission(request, submission_guid=None):
     """
     Create or update the submission for the given individual.
     """
-    individual = Individual.objects.get(guid=individual_guid)
-    check_permissions(individual.family.project, request.user)
-
     submission_json = json.loads(request.body)
-
-    submission_json.pop('individualGuid', {})
     phenotypes = submission_json.pop('phenotypes', [])
     gene_variants = submission_json.pop('geneVariants', [])
     if not phenotypes and not gene_variants:
         return create_json_response({}, status=400, reason='Genotypes or phentoypes are required')
-
-    if not submission_json.get('patient', {}).get('id'):
-        return create_json_response({}, status=400, reason='Patient id is required')
 
     genomic_features = []
     for gene_variant in gene_variants:
@@ -175,64 +189,57 @@ def update_mme_submission(request, individual_guid):
             }
         genomic_features.append(feature)
 
-    submission_json['patient']['genomicFeatures'] = genomic_features
-    submission_json['patient']['features'] = phenotypes
+    submission_json.update({
+        'features': phenotypes,
+        'genomicFeatures': genomic_features,
+    })
 
-    response = requests.post(url=MME_ADD_INDIVIDUAL_URL, headers=MME_HEADERS, data=json.dumps(submission_json))
+    if submission_guid:
+        submission = MatchmakerSubmission.objects.get(guid=submission_guid)
+        check_mme_permissions(submission, request.user)
+    else:
+        individual_guid = submission_json.get('individualGuid')
+        if not individual_guid:
+            return create_json_response({}, status=400, reason='Individual is required for a new submission')
+        individual = Individual.objects.get(guid=individual_guid)
+        check_permissions(individual.family.project, request.user)
+        submission = MatchmakerSubmission.objects.create(
+            individual=individual,
+            submission_id=individual.guid,
+            label=individual.individual_id,
+        )
 
-    if response.status_code not in (200, 409):
-        try:
-            response_json = response.json()
-        except Exception:
-            response_json = {}
-        return create_json_response(response_json, status=response.status_code, reason=response.content)
-
-    submitted_date = datetime.now()
-    individual.mme_submitted_data = submission_json
-    individual.mme_submitted_date = submitted_date
-    individual.mme_deleted_date = None
-    individual.mme_deleted_by = None
-    individual.save()
+    update_model_from_json(submission, submission_json, allow_unknown_keys=True)
 
     # search for new matches
-    return _search_individual_matches(individual, request.user)
+    return _search_matches(submission, request.user)
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
-def delete_mme_submission(request, individual_guid):
+def delete_mme_submission(request, submission_guid):
     """
     Create or update the submission for the given individual.
     """
-    individual = Individual.objects.get(guid=individual_guid)
-    project = individual.family.project
-    check_permissions(project, request.user)
+    submission = MatchmakerSubmission.objects.get(guid=submission_guid)
+    check_mme_permissions(submission, request.user)
 
-    if individual.mme_deleted_date:
+    if submission.deleted_date:
         return create_json_response(
-            {}, status=402, reason='Matchmaker submission has already been deleted for {}'.format(individual.individual_id),
+            {}, status=402,
+            reason='Matchmaker submission has already been deleted for {}'.format(submission.individual.individual_id),
         )
 
-    matchbox_id = individual.mme_submitted_data['patient']['id']
-    response = requests.delete(url=MME_DELETE_INDIVIDUAL_URL, headers=MME_HEADERS, data=json.dumps({'id': matchbox_id}))
-
-    if response.status_code != 200:
-        try:
-            response_json = response.json()
-        except Exception:
-            response_json = {}
-        return create_json_response(response_json, status=response.status_code, reason=response.content)
-
     deleted_date = datetime.now()
-    individual.mme_deleted_date = deleted_date
-    individual.mme_deleted_by = request.user
-    individual.save()
+    submission.deleted_date = deleted_date
+    submission.deleted_by = request.user
+    submission.save()
 
-    for saved_result in MatchmakerResult.objects.filter(individual=individual):
+    for saved_result in MatchmakerResult.objects.filter(submission=submission):
         if not (saved_result.we_contacted or saved_result.host_contacted or saved_result.comments):
             saved_result.delete()
 
-    return create_json_response({'individualsByGuid': {individual_guid: {'mmeDeletedDate': deleted_date}}})
+    return create_json_response({'mmeSubmissionsByGuid': {submission.guid: {'mmeDeletedDate': deleted_date}}})
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -247,8 +254,7 @@ def update_mme_result_status(request, matchmaker_result_guid):
         Status code and results
     """
     result = MatchmakerResult.objects.get(guid=matchmaker_result_guid)
-    project = result.individual.family.project
-    check_permissions(project, request.user)
+    check_mme_permissions(result.submission, request.user)
 
     request_json = json.loads(request.body)
     update_model_from_json(result, request_json, allow_unknown_keys=True)
@@ -269,8 +275,7 @@ def send_mme_contact_email(request, matchmaker_result_guid):
         Status code and results
     """
     result = MatchmakerResult.objects.get(guid=matchmaker_result_guid)
-    project = result.individual.family.project
-    check_permissions(project, request.user)
+    check_mme_permissions(result.submission, request.user)
 
     request_json = json.loads(request.body)
     email_message = EmailMessage(
@@ -289,7 +294,7 @@ def send_mme_contact_email(request, matchmaker_result_guid):
             try:
                 json_body = e.response.json()
             except Exception:
-                pass
+                json_body = {'message':message}
         return create_json_response(json_body, status=getattr(e, 'status_code', 400), reason=message)
 
     update_model_from_json(result, {'weContacted': True})
@@ -322,7 +327,7 @@ def update_mme_contact_note(request, institution):
     })
 
 
-def _parse_mme_results(individual, saved_results, user, additional_genes=None, response_json=None):
+def _parse_mme_results(submission, saved_results, user, additional_genes=None, response_json=None):
     results = []
     contact_institutions = set()
     for result_model in saved_results:
@@ -331,30 +336,35 @@ def _parse_mme_results(individual, saved_results, user, additional_genes=None, r
         results.append(result)
         contact_institutions.add(result['patient']['contact'].get('institution', '').strip().lower())
 
-    results_for_genes = [individual.mme_submitted_data] if individual.mme_submitted_data else []
-    results_for_genes += results
-    hpo_terms_by_id, genes_by_id, gene_symbols_to_ids = get_mme_genes_phenotypes(
-        results_for_genes, additional_genes=additional_genes)
+    additional_hpo_ids = {feature['id'] for feature in (submission.features or []) if feature.get('id')}
+    if not additional_genes:
+        additional_genes = set()
+    additional_genes.update({gene_feature['gene']['id'] for gene_feature in (submission.genomic_features or [])})
 
-    parsed_results = [_parse_mme_result(result, hpo_terms_by_id, gene_symbols_to_ids, individual.guid) for result in results]
+    hpo_terms_by_id, genes_by_id, gene_symbols_to_ids = get_mme_genes_phenotypes_for_results(
+        results, additional_genes=additional_genes, additional_hpo_ids=additional_hpo_ids)
+
+    parsed_results = [_parse_mme_result(res, hpo_terms_by_id, gene_symbols_to_ids, submission.guid) for res in results]
     parsed_results_gy_guid = {result['matchStatus']['matchmakerResultGuid']: result for result in parsed_results}
 
     contact_notes = {note.institution: _get_json_for_model(note, user=user)
                      for note in MatchmakerContactNotes.objects.filter(institution__in=contact_institutions)}
 
-    submitted_data = parse_mme_patient(
-        individual.mme_submitted_data, hpo_terms_by_id, gene_symbols_to_ids, individual.guid
-    ) if individual.mme_submitted_data else None
+    submission_json = get_json_for_matchmaker_submission(
+        submission, individual_guid=submission.individual.guid,
+        additional_model_fields=['contact_name', 'contact_href', 'submission_id']
+    )
+    submission_json.update({
+        'mmeResultGuids': parsed_results_gy_guid.keys(),
+        'phenotypes': parse_mme_features(submission.features, hpo_terms_by_id),
+        'geneVariants': parse_mme_gene_variants(submission.genomic_features, gene_symbols_to_ids),
+    })
 
     response = {
         'mmeResultsByGuid': parsed_results_gy_guid,
         'mmeContactNotes': contact_notes,
-        'individualsByGuid': {individual.guid: {
-            'mmeResultGuids': parsed_results_gy_guid.keys(),
-            'mmeSubmittedData': submitted_data,
-            'mmeSubmittedDate': individual.mme_submitted_date,
-            'mmeDeletedDate': individual.mme_deleted_date,
-        }},
+        'mmeSubmissionsByGuid': {submission.guid: submission_json},
+        'individualsByGuid': {submission.individual.guid: {'mmeSubmissionGuid': submission.guid}},
         'genesById': genes_by_id,
     }
     if response_json:
@@ -362,8 +372,8 @@ def _parse_mme_results(individual, saved_results, user, additional_genes=None, r
     return create_json_response(response)
 
 
-def _parse_mme_result(result, hpo_terms_by_id, gene_symbols_to_ids, individual_guid):
-    parsed_result = parse_mme_patient(result, hpo_terms_by_id, gene_symbols_to_ids, individual_guid)
+def _parse_mme_result(result, hpo_terms_by_id, gene_symbols_to_ids, submission_guid):
+    parsed_result = parse_mme_patient(result, hpo_terms_by_id, gene_symbols_to_ids, submission_guid)
     parsed_result.update({
         'id': result['patient']['id'],
         'score': result['score']['patient'],
@@ -371,12 +381,12 @@ def _parse_mme_result(result, hpo_terms_by_id, gene_symbols_to_ids, individual_g
     return parsed_result
 
 
-def _generate_notification_for_seqr_match(individual, results):
+def _generate_notification_for_seqr_match(submission, results):
     """
     Generate a notifcation to say that a match happened initiated from a seqr user.
     """
     matches = []
-    hpo_terms_by_id, genes_by_id, _ = get_mme_genes_phenotypes(results)
+    hpo_terms_by_id, genes_by_id, _ = get_mme_genes_phenotypes_for_results(results)
     for result in results:
         patient = result['patient']
 
@@ -403,6 +413,7 @@ def _generate_notification_for_seqr_match(individual, results):
             gene_message=gene_message, phenotypes_message=phenotypes_message,
         ))
 
+    individual = submission.individual
     project = individual.family.project
     message = u"""
     A search from a seqr user from project {project} individual {individual_id} had the following new match(es):
@@ -412,16 +423,15 @@ def _generate_notification_for_seqr_match(individual, results):
     {host}project/{project_guid}/family_page/{family_guid}/matchmaker_exchange
     """.format(
         project=project.name, individual_id=individual.individual_id, matches='\n\n'.join(matches),
-        host=BASE_URL, project_guid=project.guid, family_guid=individual.family.guid,
+        host=BASE_URL, project_guid=project.guid, family_guid=submission.individual.family.guid,
     )
 
     post_to_slack(MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL, message)
-    #  TODO re-enable MME email
-    # emails = map(lambda s: s.strip().split('mailto:')[-1], project.mme_contact_url.split(','))
-    # email_message = EmailMessage(
-    #     subject=u'New matches found for MME submission {} (project: {})'.format(individual.individual_id, project.name),
-    #     body=message,
-    #     to=[email for email in emails if email != MME_DEFAULT_CONTACT_EMAIL],
-    #     from_email=MME_DEFAULT_CONTACT_EMAIL,
-    # )
-    # email_message.send()
+    emails = map(lambda s: s.strip().split('mailto:')[-1], submission.contact_href.split(','))
+    email_message = EmailMessage(
+        subject=u'New matches found for MME submission {} (project: {})'.format(individual.individual_id, project.name),
+        body=message,
+        to=[email for email in emails if email != MME_DEFAULT_CONTACT_EMAIL],
+        from_email=MME_DEFAULT_CONTACT_EMAIL,
+    )
+    email_message.send()

@@ -7,21 +7,6 @@ if [ -z "$SEQR_DIR"  ]; then
     exit 1
 fi
 
-#set +x
-#echo
-#echo "==== Installing legacy resources ===="
-#echo
-
-#mkdir -p data/reference_data
-
-# install legacy resources
-#wget -nv https://storage.googleapis.com/seqr-reference-data/seqr-resource-bundle.tar.gz -O data/reference_data/seqr-resource-bundle.tar.gz
-#tar xzf data/reference_data/seqr-resource-bundle.tar.gz -C data/reference_data/
-#rm data/reference_data/seqr-resource-bundle.tar.gz
-
-#python -u manage.py load_resources
-#python -u manage.py load_omim
-
 echo "===== Install spark ===="
 set -x
 

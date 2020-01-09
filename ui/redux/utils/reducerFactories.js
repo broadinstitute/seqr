@@ -67,7 +67,7 @@ export const zeroActionsReducer = (state = {}) => {
  * @param updateActionType (string) action.type that will later be used to replace the state with a
  * new state.
  */
-export const createSingleValueReducer = (updateActionType, initialState = {}, debug = false) => {
+export const createSingleValueReducer = (updateActionType, initialState = {}, key = null, debug = false) => {
   const reducer = (state = initialState, action) => {
     if (!action) {
       return state
@@ -82,7 +82,14 @@ export const createSingleValueReducer = (updateActionType, initialState = {}, de
         if (debug) {
           console.log('singleValueReducer: applying action: ', action, 'State changing from ', state, ' to ', action.newValue)
         }
-        return action.newValue
+        let updates = action.newValue
+        if (key) {
+          if (!(key in updates)) {
+            return state
+          }
+          updates = updates[key]
+        }
+        return updates
       }
       default:
         return state
