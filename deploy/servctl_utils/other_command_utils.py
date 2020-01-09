@@ -20,7 +20,6 @@ logger.setLevel(logging.INFO)
 COMPONENT_PORTS = {
     "cockpit":         [9090],
 
-    "mongo":           [27017],
     "elasticsearch":   [9200],
     "kibana":          [5601],
 
@@ -31,7 +30,6 @@ COMPONENT_PORTS = {
 
     "redis":           [6379],
 
-    "matchbox":        [9020],
     "phenotips":       [8080],
     "postgres":        [5432],
     "seqr":            [8000],
@@ -218,7 +216,7 @@ def port_forward(component_port_pairs=[], deployment_target=None, wait=True, ope
 
     Args:
         component_port_pairs (list): 2-tuple(s) containing keyword to use for looking up a kubernetes
-            pod, along with the port to forward to that pod (eg. ('mongo', 27017), or ('phenotips', 8080))
+            pod, along with the port to forward to that pod (eg. ('phenotips', 8080))
         deployment_target (string): value from DEPLOYMENT_TARGETS - eg. "minikube", "gcloud-dev", etc.
         wait (bool): Whether to block indefinitely as long as the forwarding process is running.
         open_browser (bool): If component_port_pairs includes components that have an http server
@@ -335,7 +333,7 @@ def reset_database(database=[], deployment_target=None):
     """Runs kubectl commands to delete and reset the given database(s).
 
     Args:
-        component (list): one more database labels - "seqrdb", "phenotipsdb", "mongodb"
+        component (list): one more database labels - "seqrdb", "phenotipsdb",
         deployment_target (string): value from DEPLOYMENT_TARGETS - eg. "minikube", "gcloud-dev", etc.
     """
     if "seqrdb" in database:
@@ -354,13 +352,6 @@ def reset_database(database=[], deployment_target=None):
             run_in_pod(postgres_pod_name, "psql -U xwiki postgres -c 'drop database xwiki'" % locals(), errors_to_ignore=["does not exist"])
             run_in_pod(postgres_pod_name, "psql -U xwiki postgres -c 'create database xwiki'" % locals())
             #run("kubectl exec %(postgres_pod_name)s -- psql -U postgres xwiki < data/init_phenotipsdb.sql" % locals())
-
-    if "mongodb" in database:
-        mongo_pod_name = get_pod_name("mongo", deployment_target=deployment_target)
-        if not mongo_pod_name:
-            logger.error("mongo pod must be running")
-        else:
-            run_in_pod(mongo_pod_name, "mongo datastore --eval 'db.dropDatabase()'" % locals())
 
 
 def delete_all(deployment_target):
@@ -381,8 +372,6 @@ def delete_all(deployment_target):
         run("gcloud container clusters delete --project %(GCLOUD_PROJECT)s --zone %(GCLOUD_ZONE)s --no-async %(CLUSTER_NAME)s" % settings, is_interactive=True)
 
         run("gcloud compute disks delete --zone %(GCLOUD_ZONE)s %(CLUSTER_NAME)s-postgres-disk" % settings, is_interactive=True)
-        #run("gcloud compute disks delete --zone %(GCLOUD_ZONE)s %(CLUSTER_NAME)s-mongo-disk" % settings, is_interactive=True)
-        #run("gcloud compute disks delete --zone %(GCLOUD_ZONE)s %(CLUSTER_NAME)s-elasticsearch-disk" % settings, is_interactive=True)
     else:
         run('kubectl delete deployments --all')
         run('kubectl delete replicationcontrollers --all')

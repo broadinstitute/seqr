@@ -291,6 +291,7 @@ export const STATE1 = {
     },
   },
   samplesByGuid: {},
+  mmeSubmissionsByGuid: {},
   project: {
     createdDate: '2016-05-16T05:37:08.634Z',
     deprecatedLastAccessedDate: '2017-03-14T15:15:42.580Z',
@@ -373,17 +374,6 @@ export const STATE_WITH_2_FAMILIES = {
       caseReviewStatusLastModifiedBy: null,
       caseReviewStatusLastModifiedDate: '2016-12-05T10:29:00.000Z',
       createdDate: '2016-12-05T10:29:00.000Z',
-      mmeResultGuids: ['MR0005038_HK018_0047','MR0004688_RGP_105_3'],
-      mmeSubmittedDate: '2018-05-09T10:29:00.000Z',
-      mmeSubmittedData: {
-        patient: { id: 'NA19675_1', contact: { href: 'mailto:matchmaker@broadinstitute.org,test@test.com'} },
-        phenotypes: [
-          {id: 'HP:0011405', label: 'Childhood onset short-limb short stature', observed: 'yes'},
-          {id: "HP:0012638", label: "Abnormality of nervous system physiology", observed: "no"},
-          {id: "HP:0001371", label: "Flexion contracture", observed: "yes"}
-        ],
-        geneVariants: [{ geneId: "ENSG00000228198", alt: 'T', ref: 'TC', chrom: '1', pos: 248367227 }],
-      },
       sampleGuids: [],
       sex: 'M',
     },
@@ -840,9 +830,25 @@ export const STATE_WITH_2_FAMILIES = {
       xpos: 22046859832,
     },
   },
+  mmeSubmissionsByGuid: {
+    MS021475_na19675_1: {
+      submissionGuid: 'MS021475_na19675_1',
+      individualGuid: 'I021475_na19675_1',
+      mmeResultGuids: ['MR0005038_HK018_0047','MR0004688_RGP_105_3'],
+      createdDate: '2018-05-09T10:29:00.000Z',
+      submissionId: 'NA19675_1',
+      contactHref: 'mailto:matchmaker@broadinstitute.org,test@test.com',
+      phenotypes: [
+        {id: 'HP:0011405', label: 'Childhood onset short-limb short stature', observed: 'yes'},
+        {id: "HP:0012638", label: "Abnormality of nervous system physiology", observed: "no"},
+        {id: "HP:0001371", label: "Flexion contracture", observed: "yes"}
+      ],
+      geneVariants: [{ geneId: "ENSG00000228198", alt: 'T', ref: 'TC', chrom: '1', pos: 248367227 }],
+    }
+  },
   mmeResultsByGuid: {
     MR0005038_HK018_0047: {
-      individualGuid: 'I021475_na19675_1',
+      submissionGuid: 'MS021475_na19675_1',
       geneVariants: [{geneId: "ENSG00000228198"}],
       phenotypes: [
         {id: "HP:0012638", label: "Abnormality of nervous system physiology", observed: "yes"},
@@ -869,7 +875,7 @@ export const STATE_WITH_2_FAMILIES = {
     MR0004688_RGP_105_3: {
       geneVariants: [{ geneId: "ENSG00000272333" }],
       id: "10509",
-      individualGuid: "I021475_na19675_1",
+      submissionGuid: "MS021475_na19675_1",
       matchStatus: {
           comments: "",
           createdDate: "2018-07-26T17:36:25.422Z",

@@ -85,7 +85,8 @@ class ModelWithGUID(models.Model):
             # can occur if 2 objects are being created simultaneously and both attempt to save without setting guid.
             temp_guid = str(random.randint(10**10, 10**11))
             self.guid = kwargs.pop('guid', temp_guid)
-            self.created_date = current_time
+            # allows for overriding created_date during save, but this should only be used for migrations
+            self.created_date = kwargs.pop('created_date', current_time)
             super(ModelWithGUID, self).save(*args, **kwargs)
 
             self.guid = self._compute_guid()[:ModelWithGUID.MAX_GUID_SIZE]
@@ -312,6 +313,8 @@ class FamilyAnalysedBy(ModelWithGUID):
 
 class Individual(ModelWithGUID):
     SEX_MALE = 'M'
+    SEX_FEMALE = 'F'
+    SEX_UNKNOWN = 'U'
     SEX_CHOICES = (
         (SEX_MALE, 'Male'),
         ('F', 'Female'),
@@ -369,12 +372,6 @@ class Individual(ModelWithGUID):
     phenotips_eid = models.CharField(max_length=165, null=True, blank=True)  # PhenoTips external id
     phenotips_data = models.TextField(null=True, blank=True)
 
-    mme_id = models.CharField(max_length=50, null=True, blank=True)
-    mme_submitted_data = JSONField(null=True)
-    mme_submitted_date = models.DateTimeField(null=True)
-    mme_deleted_date = models.DateTimeField(null=True)
-    mme_deleted_by = models.ForeignKey(User, null=True, on_delete=models.SET_NULL)
-
     filter_flags = JSONField(null=True)
     pop_platform_filters = JSONField(null=True)
     population = models.CharField(max_length=5, null=True)
@@ -390,8 +387,8 @@ class Individual(ModelWithGUID):
 
         json_fields = [
             'guid', 'individual_id', 'father', 'mother', 'sex', 'affected', 'display_name', 'notes',
-            'phenotips_patient_id', 'phenotips_data', 'created_date', 'last_modified_date', 'mme_submitted_date',
-            'mme_deleted_date', 'filter_flags', 'pop_platform_filters', 'population'
+            'phenotips_patient_id', 'phenotips_data', 'created_date', 'last_modified_date',
+            'filter_flags', 'pop_platform_filters', 'population'
         ]
         internal_json_fields = [
             'case_review_status', 'case_review_discussion',
@@ -826,43 +823,3 @@ class VariantSearchResults(ModelWithGUID):
     def _compute_guid(self):
         return 'VSR%07d_%s' % (self.id, _slugify(str(self)))
 
-
-class MatchmakerResult(ModelWithGUID):
-    individual = models.ForeignKey(Individual, on_delete=models.PROTECT)
-    result_data = JSONField()
-
-    last_modified_by = models.ForeignKey(User, null=True, on_delete=models.SET_NULL)
-    we_contacted = models.BooleanField(default=False)
-    host_contacted = models.BooleanField(default=False)
-    deemed_irrelevant = models.BooleanField(default=False)
-    flag_for_analysis = models.BooleanField(default=False)
-    comments = models.TextField(null=True, blank=True)
-
-    match_removed = models.BooleanField(default=False)
-
-    def __unicode__(self):
-        return '{}_{}_result'.format(self.id, str(self.individual))
-
-    def _compute_guid(self):
-        return 'MR%07d_%s' % (self.id, str(self.individual))
-
-    class Meta:
-        json_fields = [
-            'guid', 'comments', 'we_contacted', 'host_contacted', 'deemed_irrelevant', 'flag_for_analysis',
-            'created_date', 'match_removed'
-        ]
-
-
-class MatchmakerContactNotes(ModelWithGUID):
-    institution = models.CharField(max_length=200, db_index=True, unique=True)
-    comments = models.TextField(blank=True)
-
-    def __unicode__(self):
-        return '{}_{}_result'.format(self.id, self.institution)
-
-    def _compute_guid(self):
-        return 'MCN%07d_%s' % (self.id, self.institution.replace(' ', '_'))
-
-    class Meta:
-        json_fields = []
-        internal_json_fields = ['institution', 'comments']

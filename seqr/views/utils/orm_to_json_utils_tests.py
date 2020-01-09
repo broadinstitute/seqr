@@ -62,7 +62,7 @@ class JSONUtilsTest(TestCase):
             'projectGuid', 'familyGuid', 'individualGuid', 'caseReviewStatusLastModifiedBy', 'phenotipsData',
             'individualId', 'paternalId', 'maternalId', 'sex', 'affected', 'displayName', 'notes',
             'phenotipsPatientId', 'phenotipsData', 'createdDate', 'lastModifiedDate', 'paternalGuid', 'maternalGuid',
-            'mmeSubmittedDate', 'mmeDeletedDate', 'popPlatformFilters', 'filterFlags', 'population',
+            'popPlatformFilters', 'filterFlags', 'population',
         }
         self.assertSetEqual(set(json.keys()), individual_fields)
 

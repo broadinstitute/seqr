@@ -17,7 +17,7 @@ import { ColoredIcon } from 'shared/components/StyledComponents'
 import { VerticalSpacer } from 'shared/components/Spacers'
 
 import { updateIndividual } from 'redux/rootReducer'
-import { getSamplesByGuid, getCurrentProject } from 'redux/selectors'
+import { getSamplesByGuid, getCurrentProject, getMmeSubmissionsByGuid } from 'redux/selectors'
 import { DATASET_TYPE_VARIANT_CALLS } from 'shared/utils/constants'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 import { CASE_REVIEW_STATUS_MORE_INFO_NEEDED, CASE_REVIEW_STATUS_OPTIONS } from '../../constants'
@@ -79,11 +79,11 @@ CaseReviewStatus.propTypes = {
   individual: PropTypes.object.isRequired,
 }
 
-const MmeStatusLabel = ({ title, dateField, color, individual }) =>
+const MmeStatusLabel = ({ title, dateField, color, individual, mmeSubmission }) =>
   <Link to={`/project/${individual.projectGuid}/family_page/${individual.familyGuid}/matchmaker_exchange`}>
     <VerticalSpacer height={5} />
     <Label color={color} size="small">
-      {title}: {new Date(individual[dateField]).toLocaleDateString()}
+      {title}: {new Date(mmeSubmission[dateField]).toLocaleDateString()}
     </Label>
   </Link>
 
@@ -92,34 +92,36 @@ MmeStatusLabel.propTypes = {
   dateField: PropTypes.string,
   color: PropTypes.string,
   individual: PropTypes.object,
+  mmeSubmission: PropTypes.object,
 }
 
-const DataDetails = ({ loadedSamples, individual }) =>
+const DataDetails = ({ loadedSamples, individual, mmeSubmission }) =>
   <div>
     {loadedSamples.map(sample =>
       <div key={sample.sampleGuid}>
         <Sample loadedSample={sample} isOutdated={!sample.isActive} />
       </div>,
     )}
-    {individual.mmeSubmittedDate && (
-      individual.mmeDeletedDate ? (
+    {mmeSubmission && (
+      mmeSubmission.deletedDate ? (
         <Popup
           flowing
           trigger={
-            <MmeStatusLabel title="Removed from MME" dateField="mmeDeletedDate" color="red" individual={individual} />
+            <MmeStatusLabel title="Removed from MME" dateField="deletedDate" color="red" individual={individual} mmeSubmission={mmeSubmission} />
           }
           content={
             <div>
-              <b>Originally Submitted: </b>{new Date(individual.mmeSubmittedDate).toLocaleDateString()}
+              <b>Originally Submitted: </b>{new Date(mmeSubmission.createdDate).toLocaleDateString()}
             </div>
           }
         />
-      ) : <MmeStatusLabel title="Submitted to MME" dateField="mmeSubmittedDate" color="violet" individual={individual} />
+      ) : <MmeStatusLabel title="Submitted to MME" dateField="lastModifiedDate" color="violet" individual={individual} mmeSubmission={mmeSubmission} />
     )
   }
   </div>
 
 DataDetails.propTypes = {
+  mmeSubmission: PropTypes.object,
   individual: PropTypes.object,
   loadedSamples: PropTypes.array,
 }
@@ -130,13 +132,14 @@ class IndividualRow extends React.Component
     project: PropTypes.object.isRequired,
     family: PropTypes.object.isRequired,
     individual: PropTypes.object.isRequired,
+    mmeSubmission: PropTypes.object,
     samplesByGuid: PropTypes.object.isRequired,
     updateIndividual: PropTypes.func,
     editCaseReview: PropTypes.bool,
   }
 
   render() {
-    const { project, family, individual, editCaseReview } = this.props
+    const { project, family, individual, editCaseReview, mmeSubmission } = this.props
 
     const { displayName, paternalId, maternalId, sex, affected, createdDate, sampleGuids, caseReviewStatus, caseReviewDiscussion } = individual
 
@@ -170,7 +173,7 @@ class IndividualRow extends React.Component
 
     const rightContent = editCaseReview ?
       <CaseReviewStatus individual={individual} /> :
-      <DataDetails loadedSamples={loadedSamples} individual={individual} />
+      <DataDetails loadedSamples={loadedSamples} individual={individual} mmeSubmission={mmeSubmission} />
 
     const fields = [
       {
@@ -297,9 +300,10 @@ class IndividualRow extends React.Component
 
 export { IndividualRow as IndividualRowComponent }
 
-const mapStateToProps = state => ({
+const mapStateToProps = (state, ownProps) => ({
   project: getCurrentProject(state),
   samplesByGuid: getSamplesByGuid(state),
+  mmeSubmission: getMmeSubmissionsByGuid(state)[ownProps.individual.mmeSubmissionGuid],
 })
 
 

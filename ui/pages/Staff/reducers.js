@@ -14,10 +14,8 @@ const REQUEST_SUCCESS_STORY = 'REQUEST_SUCCESS_STORY'
 const RECEIVE_SUCCESS_STORY = 'RECEIVE_SUCCESS_STORY'
 const REQUEST_ELASTICSEARCH_STATUS = 'REQUEST_ELASTICSEARCH_STATUS'
 const RECEIVE_ELASTICSEARCH_STATUS = 'RECEIVE_ELASTICSEARCH_STATUS'
-const REQUEST_MME_METRICS = 'REQUEST_MME_METRICS'
-const RECEIVE_MME_METRICS = 'RECEIVE_MME_METRICS'
-const REQUEST_MME_SUBMISSIONS = 'REQUEST_MME_SUBMISSIONS'
-const RECEIVE_MME_SUBMISSIONS = 'RECEIVE_MME_SUBMISSIONS'
+const REQUEST_MME = 'REQUEST_MME'
+const RECEIVE_MME = 'RECEIVE_MME'
 const REQUEST_SEQR_STATS = 'REQUEST_SEQR_STATS'
 const RECEIVE_SEQR_STATS = 'RECEIVE_SEQR_STATS'
 const RECEIVE_PIPELINE_UPLOAD_STATS = 'RECEIVE_PIPELINE_UPLOAD_STATS'
@@ -55,30 +53,16 @@ export const loadElasticsearchStatus = () => {
   }
 }
 
-export const loadMmeMetrics = () => {
+export const loadMme = () => {
   return (dispatch) => {
-    dispatch({ type: REQUEST_MME_METRICS })
-    new HttpRequestHelper('/api/staff/matchmaker_metrics',
-      (responseJson) => {
-        dispatch({ type: RECEIVE_MME_METRICS, newValue: responseJson.metrics })
-      },
-      (e) => {
-        dispatch({ type: RECEIVE_MME_METRICS, error: e.message, newValue: {} })
-      },
-    ).get()
-  }
-}
-
-export const loadMmeSubmissions = () => {
-  return (dispatch) => {
-    dispatch({ type: REQUEST_MME_SUBMISSIONS })
-    new HttpRequestHelper('/api/staff/matchmaker_submissions',
+    dispatch({ type: REQUEST_MME })
+    new HttpRequestHelper('/api/staff/matchmaker',
       (responseJson) => {
         dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
-        dispatch({ type: RECEIVE_MME_SUBMISSIONS, newValue: responseJson.submissions })
+        dispatch({ type: RECEIVE_MME, newValue: responseJson })
       },
       (e) => {
-        dispatch({ type: RECEIVE_MME_SUBMISSIONS, error: e.message, newValue: [] })
+        dispatch({ type: RECEIVE_MME, error: e.message, newValue: [] })
       },
     ).get()
   }
@@ -205,10 +189,9 @@ export const reducers = {
   successStoryRows: createSingleValueReducer(RECEIVE_SUCCESS_STORY, []),
   elasticsearchStatusLoading: loadingReducer(REQUEST_ELASTICSEARCH_STATUS, RECEIVE_ELASTICSEARCH_STATUS),
   elasticsearchStatus: createSingleValueReducer(RECEIVE_ELASTICSEARCH_STATUS, {}),
-  mmeMetricsLoading: loadingReducer(REQUEST_MME_METRICS, RECEIVE_MME_METRICS),
-  mmeMetrics: createSingleValueReducer(RECEIVE_MME_METRICS, {}),
-  mmeSubmissionsLoading: loadingReducer(REQUEST_MME_SUBMISSIONS, RECEIVE_MME_SUBMISSIONS),
-  mmeSubmissions: createSingleValueReducer(RECEIVE_MME_SUBMISSIONS, []),
+  mmeLoading: loadingReducer(REQUEST_MME, RECEIVE_MME),
+  mmeMetrics: createSingleValueReducer(RECEIVE_MME, {}, 'metrics'),
+  mmeSubmissions: createSingleValueReducer(RECEIVE_MME, [], 'submissions'),
   seqrStatsLoading: loadingReducer(REQUEST_SEQR_STATS, RECEIVE_SEQR_STATS),
   seqrStats: createSingleValueReducer(RECEIVE_SEQR_STATS, {}),
   qcUploadStats: createSingleValueReducer(RECEIVE_PIPELINE_UPLOAD_STATS, {}),

@@ -3,7 +3,7 @@
 import orderBy from 'lodash/orderBy'
 import { getVisibleFamilies, getVisibleFamiliesInSortedOrder, getFamiliesExportData, getIndividualsExportData,
   getCaseReviewStatusCounts, getProjectAnalysisGroupFamiliesByGuid, getIndividualTaggedVariants,
-  getDefaultMmeSubmissionByIndividual, getMmeResultsByIndividual, getMmeDefaultContactEmail, getAnalystOptions
+  getDefaultMmeSubmission, getMmeResultsBySubmission, getMmeDefaultContactEmail, getAnalystOptions
 } from './selectors'
 
 import { STATE_WITH_2_FAMILIES } from './fixtures'
@@ -88,37 +88,27 @@ test('getIndividualTaggedVariants', () => {
   expect(individualVariants[0].geneSymbol).toEqual('OR2M3')
 })
 
-test('getDefaultMmeSubmissionByIndividual', () => {
-  const defaultSubmissions = getDefaultMmeSubmissionByIndividual(STATE_WITH_2_FAMILIES, { match: { params:  {} } })
-  expect(Object.keys(defaultSubmissions).length).toEqual(6)
-  expect(defaultSubmissions.I021475_na19675_1).toEqual({
-    patient: {
-      contact: {
-        name: 'PI',
-        institution: 'Broad',
-        href: 'test@broadinstitute.org',
-      },
-      species: 'NCBITaxon:9606',
-      sex: 'MALE',
-      id: 'NA19675',
-      label: 'NA19675',
-    },
+test('getDefaultMmeSubmission', () => {
+  const defaultSubmissions = getDefaultMmeSubmission(STATE_WITH_2_FAMILIES)
+  expect(defaultSubmissions).toEqual({
+    contactName: 'PI',
+    contactHref: 'test@broadinstitute.org',
     geneVariants: [],
     phenotypes: [],
   })
 })
 
-test('getMmeResultsByIndividual', () => {
-  const mmeResults = getMmeResultsByIndividual(STATE_WITH_2_FAMILIES, {match: {params: {}}})
-  expect(Object.keys(mmeResults).length).toEqual(6)
-  expect(mmeResults.I021475_na19675_1.active.length).toEqual(1)
-  expect(mmeResults.I021475_na19675_1.active[0].id).toEqual('12531')
-  expect(mmeResults.I021475_na19675_1.active[0].geneVariants.length).toEqual(1)
-  expect(mmeResults.I021475_na19675_1.active[0].comments).toEqual('This seems promising')
-  expect(mmeResults.I021475_na19675_1.active[0].matchStatus.comments).toEqual('This seems promising')
+test('getMmeResultsBySubmission', () => {
+  const mmeResults = getMmeResultsBySubmission(STATE_WITH_2_FAMILIES, {match: {params: {}}})
+  expect(Object.keys(mmeResults).length).toEqual(1)
+  expect(mmeResults.MS021475_na19675_1.active.length).toEqual(1)
+  expect(mmeResults.MS021475_na19675_1.active[0].id).toEqual('12531')
+  expect(mmeResults.MS021475_na19675_1.active[0].geneVariants.length).toEqual(1)
+  expect(mmeResults.MS021475_na19675_1.active[0].comments).toEqual('This seems promising')
+  expect(mmeResults.MS021475_na19675_1.active[0].matchStatus.comments).toEqual('This seems promising')
 
-  expect(mmeResults.I021475_na19675_1.removed.length).toEqual(1)
-  expect(mmeResults.I021475_na19675_1.removed[0].id).toEqual('10509')
+  expect(mmeResults.MS021475_na19675_1.removed.length).toEqual(1)
+  expect(mmeResults.MS021475_na19675_1.removed[0].id).toEqual('10509')
 })
 
 test('getMmeDefaultContactEmail', () => {

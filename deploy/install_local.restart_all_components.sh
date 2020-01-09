@@ -3,7 +3,6 @@
 # this script restarts all server components needed for seqr
 
 sudo systemctl start postgresql-9.6    # though postgres should start up automatically after reboot
-sudo service mongod start
 
 cd ${SEQR_DIR}/..
 ./elasticsearch-6.4.0/start_elasticsearch.sh
