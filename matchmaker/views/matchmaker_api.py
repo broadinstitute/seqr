@@ -153,7 +153,8 @@ def _search_external_matches(nodes_to_query, patient_data):
             external_results += node_results
             logger.info('Found {} matches from {}'.format(len(node_results), node['name']))
         except Exception as e:
-            error_message = 'Error searching in {}: {}'.format(node['name'], e.message)
+            error_message = 'Error searching in {}: {}\n(Patient info: {})'.format(
+                node['name'], e.message, json.dumps(patient_data))
             logger.error(error_message)
             post_to_slack(MME_SLACK_ALERT_NOTIFICATION_CHANNEL, error_message)
 
@@ -178,14 +179,15 @@ def update_mme_submission(request, submission_guid=None):
             return create_json_response({}, status=400, reason='Gene id is required for genomic features')
         feature = {'gene': {'id': gene_variant['geneId']}}
         if 'numAlt' in gene_variant:
-            feature['zygosity'] = gene_variant['numAlt'] % 2
+            feature['zygosity'] = gene_variant['numAlt']
         if gene_variant.get('pos'):
+            genome_version = gene_variant['genomeVersion']
             feature['variant'] = {
                 'alternateBases': gene_variant['alt'],
                 'referenceBases': gene_variant['ref'],
                 'referenceName': gene_variant['chrom'],
                 'start': gene_variant['pos'],
-                'assembly': GENOME_VERSION_LOOKUP[gene_variant['genomeVersion']],
+                'assembly': GENOME_VERSION_LOOKUP.get(genome_version, genome_version),
             }
         genomic_features.append(feature)
 

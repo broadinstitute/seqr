@@ -267,7 +267,7 @@ class MatchmakerAPITest(TestCase):
 
         # Test proxy calls
         self.assertEqual(len(responses.calls), 2)
-        expected_body = json.dumps({
+        expected_patient_body = {
             'patient': {
                 'id': 'NA19675_1_01',
                 'label': 'NA19675_1',
@@ -292,8 +292,8 @@ class MatchmakerAPITest(TestCase):
                     'zygosity': 1
                 }],
             },
-            '_disclaimer': MME_DISCLAIMER,
-        })
+        }
+        expected_body = json.dumps(dict(_disclaimer=MME_DISCLAIMER, **expected_patient_body))
 
         self.assertEqual(responses.calls[0].request.url, 'http://node_a.com/match')
         self.assertEqual(responses.calls[0].request.headers['X-Auth-Token'], 'abc')
@@ -314,7 +314,8 @@ class MatchmakerAPITest(TestCase):
     /project/R0001_1kg/family_page/F000001_1/matchmaker_exchange
     """
         mock_post_to_slack.assert_has_calls([
-            mock.call('matchmaker_alerts', 'Error searching in Node A: Failed request (400)'),
+            mock.call('matchmaker_alerts', 'Error searching in Node A: Failed request (400)\n(Patient info: {})'.format(
+                json.dumps(expected_patient_body))),
             mock.call('matchmaker_seqr_match', message),
         ])
         mock_email.assert_called_with(
@@ -446,7 +447,7 @@ class MatchmakerAPITest(TestCase):
                         'alternateBases': 'C',
                         'referenceBases': 'CCACT'
                     },
-                    'zygosity': 0
+                    'zygosity': 2
                 }],
             },
             '_disclaimer': MME_DISCLAIMER,
